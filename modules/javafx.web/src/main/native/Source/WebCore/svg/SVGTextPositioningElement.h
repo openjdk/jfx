@@ -27,7 +27,7 @@
 namespace WebCore {
 
 class SVGTextPositioningElement : public SVGTextContentElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGTextPositioningElement);
+    WTF_MAKE_TZONE_ALLOCATED(SVGTextPositioningElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGTextPositioningElement);
 public:
     static RefPtr<SVGTextPositioningElement> elementFromRenderer(RenderBoxModelObject&);

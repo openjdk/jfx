@@ -83,7 +83,7 @@ bool deserializeIDBKeyPath(std::span<const uint8_t> data, std::optional<IDBKeyPa
         String string;
         if (!decoder->decodeString("string"_s, string))
             return false;
-        result = IDBKeyPath(WTFMove(string));
+        result = IDBKeyPath(WTF::move(string));
         break;
     }
     case KeyPathType::Array: {
@@ -93,7 +93,7 @@ bool deserializeIDBKeyPath(std::span<const uint8_t> data, std::optional<IDBKeyPa
         });
         if (!succeeded)
             return false;
-        result = IDBKeyPath(WTFMove(vector));
+        result = IDBKeyPath(WTF::move(vector));
         break;
     }
     }
@@ -286,10 +286,10 @@ RefPtr<SharedBuffer> serializeIDBKeyData(const IDBKeyData& key)
     data.append(SIDBKeyVersion);
 
     encodeKey(data, key);
-    return SharedBuffer::create(WTFMove(data));
+    return SharedBuffer::create(WTF::move(data));
 }
 
-static WARN_UNUSED_RETURN bool decodeKey(std::span<const uint8_t>& data, IDBKeyData& result)
+[[nodiscard]] static bool decodeKey(std::span<const uint8_t>& data, IDBKeyData& result)
 {
     if (data.empty())
         return false;
@@ -323,7 +323,7 @@ static WARN_UNUSED_RETURN bool decodeKey(std::span<const uint8_t>& data, IDBKeyD
         if (!readLittleEndian(data, length))
             return false;
 
-        if (data.size() < length * 2)
+        if (data.size() < static_cast<size_t>(length) * 2)
             return false;
 
         Vector<char16_t> buffer;
@@ -335,7 +335,7 @@ static WARN_UNUSED_RETURN bool decodeKey(std::span<const uint8_t>& data, IDBKeyD
             buffer.append(ch);
         }
 
-        result.setStringValue(String::adopt(WTFMove(buffer)));
+        result.setStringValue(String::adopt(WTF::move(buffer)));
 
         return true;
     }
@@ -351,10 +351,10 @@ static WARN_UNUSED_RETURN bool decodeKey(std::span<const uint8_t>& data, IDBKeyD
             return false;
 
         size_t size = static_cast<size_t>(size64);
-        Vector<uint8_t> dataVector(data);
+        Vector<uint8_t> dataVector(data.first(size));
         skip(data, size);
 
-        result.setBinaryValue(ThreadSafeDataBuffer::create(WTFMove(dataVector)));
+        result.setBinaryValue(ThreadSafeDataBuffer::create(WTF::move(dataVector)));
         return true;
     }
     case SIDBKeyType::Array: {
@@ -375,7 +375,7 @@ static WARN_UNUSED_RETURN bool decodeKey(std::span<const uint8_t>& data, IDBKeyD
                 return false;
 
             ASSERT(keyData.isValid());
-            array.append(WTFMove(keyData));
+            array.append(WTF::move(keyData));
         }
 
         result.setArrayValue(array);

@@ -28,10 +28,14 @@
 
 #pragma once
 
+#ifdef __OBJC__
+
 #include <wtf/BlockPtr.h>
 #include <wtf/Forward.h>
 #include <wtf/Vector.h>
 #include <wtf/cocoa/SpanCocoa.h>
+#include <wtf/darwin/DispatchExtras.h>
+#include <wtf/darwin/DispatchOSObject.h>
 
 namespace WTF {
 
@@ -82,7 +86,7 @@ template<typename CollectionType, typename MapFunctionType> RetainPtr<NSMutableA
     auto array = adoptNS([[NSMutableArray alloc] initWithCapacity:std::size(collection)]);
     for (auto&& element : std::forward<CollectionType>(collection)) {
         if constexpr (std::is_rvalue_reference_v<CollectionType&&> && !std::is_const_v<std::remove_reference_t<decltype(element)>>)
-            addUnlessNil(array.get(), getPtr(function(WTFMove(element))));
+            addUnlessNil(array.get(), getPtr(function(WTF::move(element))));
         else
             addUnlessNil(array.get(), getPtr(function(element)));
     }
@@ -110,11 +114,11 @@ inline Vector<uint8_t> makeVector(NSData *data)
 }
 
 template<typename T>
-inline RetainPtr<dispatch_data_t> makeDispatchData(Vector<T>&& vector)
+inline OSObjectPtr<dispatch_data_t> makeDispatchData(Vector<T>&& vector)
 {
     auto buffer = vector.releaseBuffer();
     auto span = buffer.span();
-    return adoptNS(dispatch_data_create(span.data(), span.size_bytes(), dispatch_get_main_queue(), makeBlockPtr([buffer = WTFMove(buffer)] { }).get()));
+    return adoptOSObject(dispatch_data_create(span.data(), span.size_bytes(), mainDispatchQueueSingleton(), makeBlockPtr([buffer = WTF::move(buffer)] { }).get()));
 }
 
 } // namespace WTF
@@ -122,3 +126,5 @@ inline RetainPtr<dispatch_data_t> makeDispatchData(Vector<T>&& vector)
 using WTF::createNSArray;
 using WTF::makeDispatchData;
 using WTF::makeVector;
+
+#endif // __OBJC__

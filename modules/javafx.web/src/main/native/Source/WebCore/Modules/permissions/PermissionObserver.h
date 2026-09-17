@@ -25,33 +25,27 @@
 
 #pragma once
 
-#include "PermissionState.h"
+#include <wtf/AbstractCanMakeCheckedPtr.h>
 #include <wtf/WeakPtr.h>
-
-namespace WebCore {
-class PermissionObserver;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::PermissionObserver> : std::true_type { };
-}
 
 namespace WebCore {
 
 class Page;
+class RegistrableDomain;
 class ScriptExecutionContext;
 enum class PermissionState : uint8_t;
 enum class PermissionQuerySource : uint8_t;
 struct ClientOrigin;
 struct PermissionDescriptor;
 
-class PermissionObserver : public CanMakeWeakPtr<PermissionObserver> {
+class PermissionObserver : public CanMakeWeakPtr<PermissionObserver>, public AbstractCanMakeCheckedPtr {
 public:
     virtual ~PermissionObserver() = default;
 
     virtual PermissionState currentState() const = 0;
     virtual void stateChanged(PermissionState) = 0;
+    virtual void addChangeListener(const RegistrableDomain& topFrameDomain, const RegistrableDomain& subFrameDomain) = 0;
+    virtual void removeChangeListener(const RegistrableDomain& topFrameDomain, const RegistrableDomain& subFrameDomain) = 0;
     virtual const ClientOrigin& origin() const = 0;
     virtual PermissionDescriptor descriptor() const = 0;
     virtual PermissionQuerySource source() const = 0;

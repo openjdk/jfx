@@ -58,7 +58,7 @@ public:
 
     bool isHiddenByStyle() const override;
 
-    std::unique_ptr<RenderStyle> getScrollbarPseudoStyle(ScrollbarPart, PseudoId) const;
+    std::unique_ptr<RenderStyle> getScrollbarPseudoStyle(ScrollbarPart, PseudoElementType) const;
 
 private:
     RenderScrollbar(ScrollableArea&, ScrollbarOrientation, Element*, LocalFrame*);

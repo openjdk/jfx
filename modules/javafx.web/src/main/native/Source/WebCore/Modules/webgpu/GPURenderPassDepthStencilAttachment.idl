@@ -29,10 +29,10 @@
 typedef [EnforceRange] unsigned long GPUStencilValue;
 
 [
-    EnabledBySetting=WebGPUEnabled
-]
-dictionary GPURenderPassDepthStencilAttachment {
-    required GPUTextureView view;
+    EnabledBySetting=WebGPUEnabled,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary GPURenderPassDepthStencilAttachment {
+    required (GPUTexture or GPUTextureView) view;
 
     float depthClearValue;
     GPULoadOp depthLoadOp;

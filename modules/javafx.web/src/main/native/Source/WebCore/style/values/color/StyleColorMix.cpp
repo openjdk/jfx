@@ -32,11 +32,12 @@
 #include "ColorSerialization.h"
 #include "StyleColorResolutionState.h"
 #include "StylePrimitiveNumericTypes+Conversions.h"
-#include "StylePrimitiveNumericTypes+Evaluation.h"
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
 namespace Style {
+
+using namespace CSS::Literals;
 
 // MARK: - Conversion
 
@@ -58,12 +59,12 @@ Color toStyleColor(const CSS::ColorMix& unresolved, ColorResolutionState& state)
             ColorMix {
                 unresolved.colorInterpolationMethod,
                 ColorMix::Component {
-                    WTFMove(component1Color),
-                    WTFMove(percentage1)
+                    WTF::move(component1Color),
+                    WTF::move(percentage1)
                 },
                 ColorMix::Component {
-                    WTFMove(component2Color),
-                    WTFMove(percentage2)
+                    WTF::move(component2Color),
+                    WTF::move(percentage2)
                 }
             }
         };
@@ -74,11 +75,11 @@ Color toStyleColor(const CSS::ColorMix& unresolved, ColorResolutionState& state)
             unresolved.colorInterpolationMethod,
             CSS::ColorMixResolver::Component {
                 component1Color.resolvedColor(),
-                WTFMove(percentage1)
+                WTF::move(percentage1)
             },
             CSS::ColorMixResolver::Component {
                 component2Color.resolvedColor(),
-                WTFMove(percentage2)
+                WTF::move(percentage2)
             }
         }
     );
@@ -171,9 +172,12 @@ static void serializationForColorMixPercentage2(StringBuilder& builder, const CS
 
 void serializationForCSSTokenization(StringBuilder& builder, const CSS::SerializationContext& context, const ColorMix& colorMix)
 {
-    builder.append("color-mix(in "_s);
+    builder.append("color-mix("_s);
+    if (colorMix.colorInterpolationMethod != CSS::defaultInterpolationMethodForColorMix) {
+        builder.append("in "_s);
     WebCore::serializationForCSS(builder, colorMix.colorInterpolationMethod);
     builder.append(", "_s);
+    }
     serializationForCSSTokenization(builder, context, colorMix.mixComponents1.color);
     ColorMixSerializationDetails::serializationForColorMixPercentage1(builder, context, colorMix);
     builder.append(", "_s);

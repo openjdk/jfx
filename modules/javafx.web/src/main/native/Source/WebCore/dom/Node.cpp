@@ -37,6 +37,7 @@
 #include "CustomElementRegistry.h"
 #include "DataTransfer.h"
 #include "DocumentInlines.h"
+#include "DocumentQuirks.h"
 #include "DocumentType.h"
 #include "ElementIterator.h"
 #include "ElementRareData.h"
@@ -46,6 +47,7 @@
 #include "EventLoop.h"
 #include "EventNames.h"
 #include "EventTargetInlines.h"
+#include "FrameInlines.h"
 #include "GCReachableRef.h"
 #include "HTMLAreaElement.h"
 #include "HTMLBodyElement.h"
@@ -55,7 +57,6 @@
 #include "HTMLSlotElement.h"
 #include "HTMLStyleElement.h"
 #include "InputEvent.h"
-#include "InspectorController.h"
 #include "InspectorInstrumentation.h"
 #include "KeyboardEvent.h"
 #include "LiveNodeListInlines.h"
@@ -67,6 +68,7 @@
 #include "NodeName.h"
 #include "NodeRareDataInlines.h"
 #include "NodeRenderStyle.h"
+#include "PageInspectorController.h"
 #include "PointerEvent.h"
 #include "ProcessingInstruction.h"
 #include "ProgressEvent.h"
@@ -84,6 +86,7 @@
 #include "StorageEvent.h"
 #include "StyleResolver.h"
 #include "StyleSheetContents.h"
+#include "SubmitEvent.h"
 #include "TemplateContentDocumentFragment.h"
 #include "TextEvent.h"
 #include "TextManipulationController.h"
@@ -95,7 +98,6 @@
 #include "XMLNames.h"
 #include <JavaScriptCore/HeapInlines.h>
 #include <wtf/HexNumber.h>
-#include <wtf/RefCountedLeakCounter.h>
 #include <wtf/SHA1.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -115,7 +117,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_PREFERABLY_COMPACT_TZONE_OR_ISO_ALLOCATED_IMPL(Node);
+WTF_MAKE_PREFERABLY_COMPACT_TZONE_ALLOCATED_IMPL(Node);
 
 using namespace HTMLNames;
 
@@ -133,6 +135,7 @@ public:
     uint32_t stateFlags;
     void* parentNode;
     void* treeScope;
+    void* shadowIncludingRoot;
     void* previous;
     void* next;
     void* renderer;
@@ -245,13 +248,13 @@ void Node::dumpStatistics()
     for (auto& node : liveNodeSet()) {
         if (node.hasRareData()) {
             ++nodesWithRareData;
-            if (auto* element = dynamicDowncast<Element>(node)) {
+            if (CheckedPtr element = dynamicDowncast<Element>(node)) {
                 ++elementsWithRareData;
                 if (element->hasNamedNodeMap())
                     ++elementsWithNamedNodeMap;
             }
             auto* rareData = node.rareData();
-            auto useTypes = is<Element>(node) ? static_cast<ElementRareData*>(rareData)->useTypes() : rareData->useTypes();
+            auto useTypes = is<Element>(node) ? downcast<ElementRareData>(rareData)->useTypes() : rareData->useTypes();
             unsigned useTypeCount = 0;
             for (auto type : useTypes) {
                 UNUSED_PARAM(type);
@@ -331,7 +334,6 @@ void Node::dumpStatistics()
         SAFE_PRINTF("  %s: %zu\n", stringForRareDataUseType(static_cast<NodeRareData::UseType>(it.key)), it.value);
     printf("\n");
 
-
     printf("NodeType distribution:\n");
     printf("  Number of Element nodes: %zu\n", elementNodes);
     printf("  Number of Attribute nodes: %zu\n", attrNodes);
@@ -358,42 +360,8 @@ void Node::dumpStatistics()
 #endif // DUMP_NODE_STATISTICS
 }
 
-DEFINE_DEBUG_ONLY_GLOBAL(WTF::RefCountedLeakCounter, nodeCounter, ("WebCoreNode"));
-
-#ifndef NDEBUG
-static bool shouldIgnoreLeaks = false;
-
-static WeakHashSet<Node, WeakPtrImplWithEventTargetData>& ignoreSet()
-{
-    static NeverDestroyed<WeakHashSet<Node, WeakPtrImplWithEventTargetData>> ignore;
-    return ignore;
-}
-
-#endif
-
-void Node::startIgnoringLeaks()
-{
-#ifndef NDEBUG
-    shouldIgnoreLeaks = true;
-#endif
-}
-
-void Node::stopIgnoringLeaks()
-{
-#ifndef NDEBUG
-    shouldIgnoreLeaks = false;
-#endif
-}
-
 void Node::trackForDebugging()
 {
-#ifndef NDEBUG
-    if (shouldIgnoreLeaks)
-        ignoreSet().add(*this);
-    else
-        nodeCounter.increment();
-#endif
-
 #if DUMP_NODE_STATISTICS
     liveNodeSet().add(*this);
 #endif
@@ -406,8 +374,8 @@ inline void NodeRareData::operator delete(NodeRareData* nodeRareData, std::destr
         RareDataType::freeAfterDestruction(&value);
     };
 
-    if (nodeRareData->m_isElementRareData)
-        destroyAndFree(static_cast<ElementRareData&>(*nodeRareData));
+    if (auto* elementRareData = dynamicDowncast<ElementRareData>(*nodeRareData))
+        destroyAndFree(*elementRareData);
     else
         destroyAndFree(*nodeRareData);
 }
@@ -416,6 +384,7 @@ Node::Node(Document& document, NodeType type, OptionSet<TypeFlag> flags)
     : EventTarget(ConstructNode)
     , m_typeBitFields(constructBitFieldsFromNodeTypeAndFlags(type, flags))
     , m_treeScope((isDocumentNode() || isShadowRoot()) ? nullptr : &document)
+    , m_shadowIncludingRoot(this)
 {
     ASSERT(nodeType() == type);
     ASSERT(isMainThread());
@@ -444,11 +413,6 @@ Node::~Node()
     ASSERT(!m_adoptionIsRequired);
 
     InspectorInstrumentation::willDestroyDOMNode(*this);
-
-#ifndef NDEBUG
-    if (!ignoreSet().remove(*this))
-        nodeCounter.decrement();
-#endif
 
     if (hasStateFlag(StateFlag::HasNodeIdentifier)) [[unlikely]]
         nodeIdentifiersMap().remove(*this);
@@ -486,7 +450,7 @@ Node::~Node()
 
 #if ASSERT_ENABLED
     if (m_refCountAndParentBit != s_refCountIncrement)
-        WTF::RefCountedBase::printRefDuringDestructionLogAndCrash(this);
+        WTF::RefCountDebugger::printRefDuringDestructionLogAndCrash(this);
 #endif
     RELEASE_ASSERT(m_refCountAndParentBit == s_refCountIncrement);
 }
@@ -538,7 +502,7 @@ ExceptionOr<void> Node::setNodeValue(const String&)
     return { };
 }
 
-RefPtr<NodeList> Node::childNodes()
+Ref<NodeList> Node::childNodes()
 {
     if (auto* containerNode = dynamicDowncast<ContainerNode>(*this))
         return ensureRareData().ensureNodeLists().ensureChildNodeList(*containerNode);
@@ -574,7 +538,7 @@ Element* Node::nextElementSibling() const
 ExceptionOr<void> Node::insertBefore(Node& newChild, RefPtr<Node>&& refChild)
 {
     if (auto* containerNode = dynamicDowncast<ContainerNode>(*this))
-        return containerNode->insertBefore(newChild, WTFMove(refChild));
+        return containerNode->insertBefore(newChild, WTF::move(refChild));
     return Exception { ExceptionCode::HierarchyRequestError };
 }
 
@@ -636,15 +600,15 @@ ExceptionOr<RefPtr<Node>> Node::convertNodesOrStringsIntoNode(FixedVector<NodeOr
         return nullptr;
 
     Ref document = this->document();
-    auto nodes = WTF::map(WTFMove(nodeOrStringVector), [&](auto&& variant) -> Ref<Node> {
-        return WTF::switchOn(WTFMove(variant),
+    auto nodes = WTF::map(WTF::move(nodeOrStringVector), [&](auto&& variant) -> Ref<Node> {
+        return WTF::switchOn(WTF::move(variant),
             [&](RefPtr<Node>&& node) { return node.releaseNonNull(); },
-            [&](String&& string) -> Ref<Node> { return Text::create(document, WTFMove(string)); }
+            [&](String&& string) -> Ref<Node> { return Text::create(document, WTF::move(string)); }
         );
     });
 
     if (nodes.size() == 1)
-        return RefPtr<Node> { WTFMove(nodes.first()) };
+        return RefPtr<Node> { WTF::move(nodes.first()) };
 
     auto nodeToReturn = DocumentFragment::create(document);
     for (auto& node : nodes) {
@@ -652,7 +616,7 @@ ExceptionOr<RefPtr<Node>> Node::convertNodesOrStringsIntoNode(FixedVector<NodeOr
         if (appendResult.hasException())
             return appendResult.releaseException();
     }
-    return RefPtr<Node> { WTFMove(nodeToReturn) };
+    return RefPtr<Node> { WTF::move(nodeToReturn) };
 }
 
 // https://dom.spec.whatwg.org/#converting-nodes-into-a-node except this returns a NodeVector
@@ -666,12 +630,12 @@ ExceptionOr<NodeVector> Node::convertNodesOrStringsIntoNodeVector(FixedVector<No
     nodeVector.reserveInitialCapacity(nodeOrStringVector.size());
     for (auto& variant : nodeOrStringVector) {
         if (std::holds_alternative<String>(variant)) {
-            nodeVector.append(Text::create(document, WTFMove(std::get<String>(variant))));
+            nodeVector.append(Text::create(document, WTF::move(std::get<String>(variant))));
             continue;
         }
 
         ASSERT(std::holds_alternative<RefPtr<Node>>(variant));
-        RefPtr node = WTFMove(std::get<RefPtr<Node>>(variant));
+        RefPtr node = WTF::move(std::get<RefPtr<Node>>(variant));
         ASSERT(node);
         if (auto* fragment = dynamicDowncast<DocumentFragment>(node.get()); fragment) [[unlikely]] {
             for (auto* child = fragment->firstChild(); child; child = child->nextSibling())
@@ -682,6 +646,17 @@ ExceptionOr<NodeVector> Node::convertNodesOrStringsIntoNodeVector(FixedVector<No
 
     if (nodeVector.size() == 1)
         return nodeVector; // step 3, if nodes contains one node, then set node to nodes[0].
+
+    // If the same node appears multiple times, keep only the last occurrence
+    // to match the spec behavior (as if a temporary DocumentFragment was used).
+    // https://dom.spec.whatwg.org/#converting-nodes-into-a-node
+    {
+        HashSet<Ref<Node>> seen;
+        for (size_t i = nodeVector.size(); i > 0; --i) {
+            if (!seen.add(nodeVector[i - 1]).isNewEntry)
+                nodeVector.removeAt(i - 1);
+        }
+    }
 
     for (auto& node : nodeVector) {
         auto result = node->remove();
@@ -701,7 +676,7 @@ ExceptionOr<void> Node::before(FixedVector<NodeOrString>&& nodeOrStringVector)
     auto nodeSet = nodeSetPreTransformedFromNodeOrStringVector(nodeOrStringVector);
     RefPtr viablePreviousSibling = firstPrecedingSiblingNotInNodeSet(*this, nodeSet);
 
-    auto result = convertNodesOrStringsIntoNodeVector(WTFMove(nodeOrStringVector));
+    auto result = convertNodesOrStringsIntoNodeVector(WTF::move(nodeOrStringVector));
     if (result.hasException())
         return result.releaseException();
 
@@ -710,7 +685,7 @@ ExceptionOr<void> Node::before(FixedVector<NodeOrString>&& nodeOrStringVector)
         return checkResult;
 
     RefPtr viableNextSibling = viablePreviousSibling ? viablePreviousSibling->nextSibling() : parent->firstChild();
-    return parent->insertChildrenBeforeWithoutPreInsertionValidityCheck(WTFMove(newChildren), viableNextSibling.get());
+    return parent->insertChildrenBeforeWithoutPreInsertionValidityCheck(WTF::move(newChildren), viableNextSibling.get());
 }
 
 ExceptionOr<void> Node::after(FixedVector<NodeOrString>&& nodeOrStringVector)
@@ -722,7 +697,7 @@ ExceptionOr<void> Node::after(FixedVector<NodeOrString>&& nodeOrStringVector)
     auto nodeSet = nodeSetPreTransformedFromNodeOrStringVector(nodeOrStringVector);
     RefPtr viableNextSibling = firstFollowingSiblingNotInNodeSet(*this, nodeSet);
 
-    auto result = convertNodesOrStringsIntoNodeVector(WTFMove(nodeOrStringVector));
+    auto result = convertNodesOrStringsIntoNodeVector(WTF::move(nodeOrStringVector));
     if (result.hasException())
         return result.releaseException();
 
@@ -730,7 +705,7 @@ ExceptionOr<void> Node::after(FixedVector<NodeOrString>&& nodeOrStringVector)
     if (auto checkResult = parent->ensurePreInsertionValidityForPhantomDocumentFragment(newChildren); checkResult.hasException())
         return checkResult;
 
-    return parent->insertChildrenBeforeWithoutPreInsertionValidityCheck(WTFMove(newChildren), viableNextSibling.get());
+    return parent->insertChildrenBeforeWithoutPreInsertionValidityCheck(WTF::move(newChildren), viableNextSibling.get());
 }
 
 ExceptionOr<void> Node::replaceWith(FixedVector<NodeOrString>&& nodeOrStringVector)
@@ -742,7 +717,7 @@ ExceptionOr<void> Node::replaceWith(FixedVector<NodeOrString>&& nodeOrStringVect
     auto nodeSet = nodeSetPreTransformedFromNodeOrStringVector(nodeOrStringVector);
     RefPtr viableNextSibling = firstFollowingSiblingNotInNodeSet(*this, nodeSet);
 
-    auto result = convertNodesOrStringsIntoNode(WTFMove(nodeOrStringVector));
+    auto result = convertNodesOrStringsIntoNode(WTF::move(nodeOrStringVector));
     if (result.hasException())
         return result.releaseException();
 
@@ -753,7 +728,7 @@ ExceptionOr<void> Node::replaceWith(FixedVector<NodeOrString>&& nodeOrStringVect
     }
 
     if (RefPtr node = result.releaseReturnValue())
-        return parent->insertBefore(*node, WTFMove(viableNextSibling));
+        return parent->insertBefore(*node, WTF::move(viableNextSibling));
     return { };
 }
 
@@ -773,7 +748,7 @@ ExceptionOr<void> Node::normalize()
     Ref document = this->document();
     RefPtr node = this;
     while (RefPtr firstChild = node->firstChild())
-        node = WTFMove(firstChild);
+        node = WTF::move(firstChild);
     while (node) {
         if (auto* element = dynamicDowncast<Element>(*node))
             element->normalizeAttributes();
@@ -1126,23 +1101,49 @@ void Node::invalidateNodeListAndCollectionCachesInAncestors()
     }
 }
 
-void Node::invalidateNodeListAndCollectionCachesInAncestorsForAttribute(const QualifiedName& attrName)
+void Node::invalidateNodeListCollectionAndInnerHTMLPrefixCachesInAncestorsForAttribute(const QualifiedName& attrName, const IsMutationBySetInnerHTML isMutationBySetInnerHTML)
 {
     ASSERT(is<Element>(*this));
 
-    if (!document().shouldInvalidateNodeListAndCollectionCachesForAttribute(attrName))
+    bool shouldInvalidate = document().shouldInvalidateNodeListAndCollectionCachesForAttribute(attrName);
+
+    WeakPtr cachedContainer = document().cachedSetInnerHTML().cachedContainer;
+    bool shouldSetMutationBit = isMutationBySetInnerHTML == IsMutationBySetInnerHTML::No && cachedContainer;
+
+    if (!shouldInvalidate && !shouldSetMutationBit)
         return;
 
+    if (shouldInvalidate) {
     document().invalidateNodeListAndCollectionCaches([&attrName](auto& list) {
         list.invalidateCacheForAttribute(attrName);
     });
+    }
 
     for (auto* node = this; node; node = node->parentNode()) {
-        if (!node->hasRareData())
+        if (shouldSetMutationBit && !node->hasDidMutateSubtreeAfterSetInnerHTML()) {
+            node->setDidMutateSubtreeAfterSetInnerHTML();
+            if (node == cachedContainer.get())
+                shouldSetMutationBit = false;
+        }
+
+        if (!shouldInvalidate || !node->hasRareData())
             continue;
 
         if (auto* lists = node->rareData()->nodeLists())
             lists->invalidateCachesForAttribute(attrName);
+    }
+}
+
+void Node::setDidMutateSubtreeAfterSetInnerHTMLOnAncestors()
+{
+    WeakPtr cachedContainer = document().cachedSetInnerHTML().cachedContainer;
+    if (!cachedContainer)
+        return;
+
+    for (auto* node = this; node; node = node->parentNode()) {
+        node->setDidMutateSubtreeAfterSetInnerHTML();
+        if (node == cachedContainer.get())
+            break;
     }
 }
 
@@ -1183,7 +1184,7 @@ bool Node::isDescendantOf(const Node& other) const
     // Return true if other is an ancestor of this.
     if (other.isTreeScope())
         return &treeScope().rootNode() == &other && !isTreeScope() && isInTreeScope();
-    if (!other.hasChildNodes() || isConnected() != other.isConnected())
+    if (!other.hasChildNodes() || isConnected() != other.isConnected() || &shadowIncludingRoot() != &other.shadowIncludingRoot())
         return false;
     for (auto ancestor = parentNode(); ancestor; ancestor = ancestor->parentNode()) {
         if (ancestor == &other)
@@ -1195,6 +1196,9 @@ bool Node::isDescendantOf(const Node& other) const
 // https://dom.spec.whatwg.org/#concept-shadow-including-inclusive-ancestor
 bool Node::isShadowIncludingDescendantOf(const Node& other) const
 {
+    if (&shadowIncludingRoot() != &other.shadowIncludingRoot())
+        return false;
+
     if (isDescendantOf(other))
         return true;
 
@@ -1208,8 +1212,10 @@ bool Node::isShadowIncludingDescendantOf(const Node& other) const
 
 bool Node::isComposedTreeDescendantOf(const Node& node) const
 {
-    for (CheckedPtr currentAncestor = parentElementInComposedTree(); currentAncestor; currentAncestor = currentAncestor->parentElementInComposedTree()) {
-        if (currentAncestor.get() == &node)
+    if (&shadowIncludingRoot() != &node.shadowIncludingRoot())
+        return false;
+    for (auto* currentAncestor = parentElementInComposedTree(); currentAncestor; currentAncestor = currentAncestor->parentElementInComposedTree()) {
+        if (currentAncestor == &node)
             return true;
     }
     return false;
@@ -1486,17 +1492,6 @@ Node& Node::traverseToRootNode() const
     return traverseToRootNodeInternal(*this);
 }
 
-// https://dom.spec.whatwg.org/#concept-shadow-including-root
-Node& Node::shadowIncludingRoot() const
-{
-    auto& root = this->rootNode();
-    if (auto* shadowRoot = dynamicDowncast<ShadowRoot>(root)) {
-        auto* host = shadowRoot->host();
-    return host ? host->shadowIncludingRoot() : root;
-    }
-    return root;
-}
-
 Node& Node::getRootNode(const GetRootNodeOptions& options) const
 {
     return options.composed ? shadowIncludingRoot() : rootNode();
@@ -1504,16 +1499,39 @@ Node& Node::getRootNode(const GetRootNodeOptions& options) const
 
 void Node::queueTaskKeepingThisNodeAlive(TaskSource source, Function<void ()>&& task)
 {
-    document().eventLoop().queueTask(source, [protectedThis = GCReachableRef(*this), task = WTFMove(task)] () {
+    document().eventLoop().queueTask(source, [protectedThis = GCReachableRef(*this), task = WTF::move(task)] () {
         task();
     });
 }
 
 void Node::queueTaskToDispatchEvent(TaskSource source, Ref<Event>&& event)
 {
-    queueTaskKeepingThisNodeAlive(source, [protectedThis = Ref { *this }, event = WTFMove(event)]() {
+    queueTaskKeepingThisNodeAlive(source, [protectedThis = Ref { *this }, event = WTF::move(event)]() {
         protectedThis->dispatchEvent(event);
     });
+}
+
+#if ASSERT_ENABLED
+static Node* traverseToShadowIncludingRoot(Node* current)
+{
+    while (auto* parent = current->parentOrShadowHostNode())
+        current = parent;
+    return current;
+}
+#endif
+
+ALWAYS_INLINE void Node::updateShadowIncludingRoot()
+{
+    if (auto* parent = parentNode())
+        m_shadowIncludingRoot = parent->m_shadowIncludingRoot;
+    else if (auto* shadowRoot = dynamicDowncast<ShadowRoot>(this)) [[unlikely]] {
+        auto* host = shadowRoot->host();
+        auto* root = host ? host->m_shadowIncludingRoot : shadowRoot;
+        shadowRoot->setShadowIncludingRoot(root);
+        m_shadowIncludingRoot = root;
+    } else
+        m_shadowIncludingRoot = this;
+    ASSERT(traverseToShadowIncludingRoot(this) == m_shadowIncludingRoot);
 }
 
 Node::InsertedIntoAncestorResult Node::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
@@ -1523,6 +1541,8 @@ Node::InsertedIntoAncestorResult Node::insertedIntoAncestor(InsertionType insert
         setEventTargetFlag(EventTargetFlag::IsConnected);
     if (parentOfInsertedTree.isInShadowTree())
         setEventTargetFlag(EventTargetFlag::IsInShadowTree);
+
+    updateShadowIncludingRoot();
 
     invalidateStyle(Style::Validity::SubtreeInvalid, Style::InvalidationMode::InsertedIntoAncestor);
 
@@ -1536,9 +1556,21 @@ void Node::removedFromAncestor(RemovalType removalType, ContainerNode& oldParent
         clearEventTargetFlag(EventTargetFlag::IsConnected);
     if (isInShadowTree() && !treeScope().rootNode().isShadowRoot())
         clearEventTargetFlag(EventTargetFlag::IsInShadowTree);
+
+    updateShadowIncludingRoot();
+
     if (removalType.disconnectedFromDocument) {
         if (CheckedPtr cache = oldParentOfRemovedTree.document().existingAXObjectCache())
             cache->remove(*this);
+    }
+}
+
+void Node::updateShadowIncludingRootForSubtree()
+{
+    SUPPRESS_UNCOUNTED_LOCAL for (auto* current = this; current; current = NodeTraversal::next(*current, this)) {
+        current->updateShadowIncludingRoot();
+        SUPPRESS_UNCOUNTED_LOCAL if (auto* shadowRoot = current->shadowRoot())
+            shadowRoot->updateShadowIncludingRootForSubtree();
     }
 }
 
@@ -1815,10 +1847,10 @@ ExceptionOr<void> Node::setTextContent(String&& text)
     case CDATA_SECTION_NODE:
     case COMMENT_NODE:
     case PROCESSING_INSTRUCTION_NODE:
-        return setNodeValue(WTFMove(text));
+        return setNodeValue(WTF::move(text));
     case ELEMENT_NODE:
     case DOCUMENT_FRAGMENT_NODE:
-        uncheckedDowncast<ContainerNode>(*this).stringReplaceAll(WTFMove(text));
+        uncheckedDowncast<ContainerNode>(*this).stringReplaceAll(WTF::move(text));
         return { };
     case DOCUMENT_NODE:
     case DOCUMENT_TYPE_NODE:
@@ -1861,7 +1893,6 @@ bool connectedInSameTreeScope(const Node* a, const Node* b)
     return a && b && a->isConnected() == b->isConnected() && &a->treeScope() == &b->treeScope();
 }
 
-// FIXME: Refactor so this calls treeOrder, with additional code for any exotic inefficient things that are needed only here.
 unsigned short Node::compareDocumentPosition(Node& otherNode)
 {
     if (&otherNode == this)
@@ -1870,90 +1901,49 @@ unsigned short Node::compareDocumentPosition(Node& otherNode)
     auto* attr1 = dynamicDowncast<Attr>(*this);
     auto* attr2 = dynamicDowncast<Attr>(otherNode);
 
-    Node* start1 = attr1 ? attr1->ownerElement() : this;
-    Node* start2 = attr2 ? attr2->ownerElement() : &otherNode;
+    auto* start1 = attr1 ? attr1->ownerElement() : this;
+    auto* start2 = attr2 ? attr2->ownerElement() : &otherNode;
 
-    // If either of start1 or start2 is null, then we are disconnected, since one of the nodes is
-    // an orphaned attribute node.
     if (!start1 || !start2)
         return compareDetachedElementsPosition(*this, otherNode);
 
-    Vector<Node*, 16> chain1;
-    Vector<Node*, 16> chain2;
-    if (attr1)
-        chain1.append(attr1);
-    if (attr2)
-        chain2.append(attr2);
-
-    if (attr1 && attr2 && start1 == start2 && start1) {
-        // We are comparing two attributes on the same node. Crawl our attribute map and see which one we hit first.
-        Element* owner1 = attr1->ownerElement();
-        owner1->synchronizeAllAttributes();
-        for (auto& attribute : owner1->attributes()) {
-            // If neither of the two determining nodes is a child node and nodeType is the same for both determining nodes, then an
-            // implementation-dependent order between the determining nodes is returned. This order is stable as long as no nodes of
-            // the same nodeType are inserted into or removed from the direct container. This would be the case, for example,
-            // when comparing two attributes of the same element, and inserting or removing additional attributes might change
-            // the order between existing attributes.
+    if (attr1 && attr2 && start1 == start2) {
+        auto& element = downcast<Element>(*start1);
+        element.synchronizeAllAttributes();
+        for (auto& attribute : element.attributes()) {
             if (attr1->qualifiedName() == attribute.name())
                 return DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC | DOCUMENT_POSITION_FOLLOWING;
             if (attr2->qualifiedName() == attribute.name())
                 return DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC | DOCUMENT_POSITION_PRECEDING;
         }
-
         ASSERT_NOT_REACHED();
         return DOCUMENT_POSITION_DISCONNECTED;
     }
 
-    // If one node is in the document and the other is not, we must be disconnected.
-    // If the nodes have different owning documents, they must be disconnected.
-    if (!connectedInSameTreeScope(start1, start2))
+    auto order = treeOrder<Tree>(*start1, *start2);
+
+    if (order == std::partial_ordering::unordered)
         return compareDetachedElementsPosition(*this, otherNode);
 
-    // We need to find a common ancestor container, and then compare the indices of the two immediate children.
-    Node* current;
-    for (current = start1; current; current = current->parentNode())
-        chain1.append(current);
-    for (current = start2; current; current = current->parentNode())
-        chain2.append(current);
-
-    unsigned index1 = chain1.size();
-    unsigned index2 = chain2.size();
-
-    // If the two elements don't have a common root, they're not in the same tree.
-    if (chain1[index1 - 1] != chain2[index2 - 1])
-        return compareDetachedElementsPosition(*this, otherNode);
-
-    // Walk the two chains backwards and look for the first difference.
-    for (unsigned i = std::min(index1, index2); i; --i) {
-        Node* child1 = chain1[--index1];
-        Node* child2 = chain2[--index2];
-        if (child1 != child2) {
-            // If one of the children is an attribute, it wins.
-            if (child1->nodeType() == ATTRIBUTE_NODE)
-                return DOCUMENT_POSITION_FOLLOWING;
-            if (child2->nodeType() == ATTRIBUTE_NODE)
-                return DOCUMENT_POSITION_PRECEDING;
-
-            if (!child2->nextSibling())
-                return DOCUMENT_POSITION_FOLLOWING;
-            if (!child1->nextSibling())
-                return DOCUMENT_POSITION_PRECEDING;
-
-            // Otherwise we need to see which node occurs first.  Crawl backwards from child2 looking for child1.
-            for (Node* child = child2->previousSibling(); child; child = child->previousSibling()) {
-                if (child == child1)
-                    return DOCUMENT_POSITION_FOLLOWING;
-            }
-            return DOCUMENT_POSITION_PRECEDING;
-        }
+    if (order == std::partial_ordering::equivalent) {
+        if (attr1)
+            return DOCUMENT_POSITION_PRECEDING | DOCUMENT_POSITION_CONTAINS;
+        if (attr2)
+            return DOCUMENT_POSITION_FOLLOWING | DOCUMENT_POSITION_CONTAINED_BY;
+        ASSERT_NOT_REACHED();
+        return DOCUMENT_POSITION_EQUIVALENT;
     }
 
-    // There was no difference between the two parent chains, i.e., one was a subset of the other.  The shorter
-    // chain is the ancestor.
-    return index1 < index2 ?
-               DOCUMENT_POSITION_FOLLOWING | DOCUMENT_POSITION_CONTAINED_BY :
-               DOCUMENT_POSITION_PRECEDING | DOCUMENT_POSITION_CONTAINS;
+    if (order == std::partial_ordering::less) {
+        if (!attr1 && start2->isDescendantOf(*this))
+            return DOCUMENT_POSITION_FOLLOWING | DOCUMENT_POSITION_CONTAINED_BY;
+                    return DOCUMENT_POSITION_FOLLOWING;
+            }
+
+    ASSERT(order == std::partial_ordering::greater);
+    if (!attr2 && start1->isDescendantOf(otherNode))
+        return DOCUMENT_POSITION_PRECEDING | DOCUMENT_POSITION_CONTAINS;
+    return DOCUMENT_POSITION_PRECEDING;
 }
 
 FloatPoint Node::convertToPage(const FloatPoint& p) const
@@ -2216,7 +2206,7 @@ static unsigned traverseSubtreeToUpdateTreeScope(Node& root, NOESCAPE const Move
 
         if (element->hasSyntheticAttrChildNodes()) {
             for (auto& attr : element->attrNodeList()) {
-                moveNode(*attr);
+                moveNode(attr);
                 ++count;
         }
         }
@@ -2240,9 +2230,18 @@ static ALWAYS_INLINE bool isDocumentEligibleForFastAdoption(Document& oldDocumen
         && oldDocument.inQuirksMode() == newDocument.inQuirksMode();
 }
 
+static ALWAYS_INLINE void adoptCustomElementRegistryIfNotExplicitlySet(ShadowRoot& shadowRoot, Document& newDocument)
+{
+    if (shadowRoot.hasScopedCustomElementRegistry() || !shadowRoot.usesNullCustomElementRegistry() || newDocument.usesNullCustomElementRegistry()) [[likely]]
+        return;
+    shadowRoot.clearUsesNullCustomElementRegistry();
+    shadowRoot.setCustomElementRegistry(newDocument.customElementRegistry());
+}
+
 inline unsigned Node::moveShadowTreeToNewDocumentFastCase(ShadowRoot& shadowRoot, Document& oldDocument, Document& newDocument)
 {
     ASSERT(isDocumentEligibleForFastAdoption(oldDocument, newDocument));
+    adoptCustomElementRegistryIfNotExplicitlySet(shadowRoot, newDocument);
     return traverseSubtreeToUpdateTreeScope(shadowRoot, [&](Node& node) {
         node.moveNodeToNewDocumentFastCase(oldDocument, newDocument);
     }, [&oldDocument, &newDocument](ShadowRoot& innerShadowRoot) {
@@ -2255,6 +2254,7 @@ inline unsigned Node::moveShadowTreeToNewDocumentFastCase(ShadowRoot& shadowRoot
 inline void Node::moveShadowTreeToNewDocumentSlowCase(ShadowRoot& shadowRoot, Document& oldDocument, Document& newDocument)
 {
     ASSERT(!isDocumentEligibleForFastAdoption(oldDocument, newDocument));
+    adoptCustomElementRegistryIfNotExplicitlySet(shadowRoot, newDocument);
     traverseSubtreeToUpdateTreeScope(shadowRoot, [&](Node& node) {
         node.moveNodeToNewDocumentSlowCase(oldDocument, newDocument);
     }, [&oldDocument, &newDocument](ShadowRoot& innerShadowRoot) {
@@ -2337,6 +2337,9 @@ void Node::moveNodeToNewDocumentFastCase(Document& oldDocument, Document& newDoc
     ASSERT(!transientMutationObserverRegistry());
     ASSERT(!oldDocument.numberOfIntersectionObservers());
 
+    if (usesNullCustomElementRegistry() && !newDocument.usesNullCustomElementRegistry()) [[unlikely]]
+        clearUsesNullCustomElementRegistry();
+
     if (!hasTypeFlag(TypeFlag::HasDidMoveToNewDocument) && !hasEventTargetFlag(EventTargetFlag::HasLangAttr) && !hasEventTargetFlag(EventTargetFlag::HasXMLLangAttr)
         && !isDefinedCustomElement())
         return;
@@ -2349,6 +2352,9 @@ void Node::moveNodeToNewDocumentSlowCase(Document& oldDocument, Document& newDoc
 {
     newDocument.incrementReferencingNodeCount();
     oldDocument.decrementReferencingNodeCount();
+
+    if (usesNullCustomElementRegistry() && !newDocument.usesNullCustomElementRegistry()) [[unlikely]]
+        clearUsesNullCustomElementRegistry();
 
     if (hasRareData()) {
         if (auto* nodeLists = rareData()->nodeLists())
@@ -2473,8 +2479,17 @@ static inline bool tryAddEventListener(Node* targetNode, const AtomString& event
     if (typeInfo.isInCategory(EventCategory::Wheel)) {
         document->didAddWheelEventHandler(*targetNode);
         document->invalidateEventListenerRegions();
-    } else if (isTouchRelatedEventType(typeInfo, *targetNode))
+    } else if (isTouchRelatedEventType(typeInfo, *targetNode)) {
         document->didAddTouchEventHandler(*targetNode);
+#if ENABLE(TOUCH_EVENT_REGIONS)
+        document->invalidateEventListenerRegions();
+#endif
+    } else if (typeInfo.isInCategory(EventCategory::Gesture)) {
+#if ENABLE(TOUCH_EVENT_REGIONS)
+        document->didAddTouchEventHandler(*targetNode);
+        document->invalidateEventListenerRegions();
+#endif
+    }
     else if (typeInfo.isInCategory(EventCategory::MouseClickRelated))
         document->didAddOrRemoveMouseEventHandler(*targetNode);
 
@@ -2510,7 +2525,7 @@ static inline bool tryAddEventListener(Node* targetNode, const AtomString& event
 
 bool Node::addEventListener(const AtomString& eventType, Ref<EventListener>&& listener, const AddEventListenerOptions& options)
 {
-    return tryAddEventListener(this, eventType, WTFMove(listener), options);
+    return tryAddEventListener(this, eventType, WTF::move(listener), options);
 }
 
 static inline bool didRemoveEventListenerOfType(Node& targetNode, const AtomString& eventType)
@@ -2525,8 +2540,17 @@ static inline bool didRemoveEventListenerOfType(Node& targetNode, const AtomStri
     if (typeInfo.isInCategory(EventCategory::Wheel)) {
         document->didRemoveWheelEventHandler(targetNode);
         document->invalidateEventListenerRegions();
-    } else if (isTouchRelatedEventType(typeInfo, targetNode))
+    } else if (isTouchRelatedEventType(typeInfo, targetNode)) {
         document->didRemoveTouchEventHandler(targetNode);
+#if ENABLE(TOUCH_EVENT_REGIONS)
+        document->invalidateEventListenerRegions();
+#endif
+    } else if (typeInfo.isInCategory(EventCategory::Gesture)) {
+#if ENABLE(TOUCH_EVENT_REGIONS)
+        document->didRemoveTouchEventHandler(targetNode);
+        document->invalidateEventListenerRegions();
+#endif
+    }
     else if (typeInfo.isInCategory(EventCategory::MouseClickRelated))
         document->didAddOrRemoveMouseEventHandler(targetNode);
 
@@ -2570,7 +2594,7 @@ void Node::removeAllEventListeners()
     });
 }
 
-Vector<std::unique_ptr<MutationObserverRegistration>>* Node::mutationObserverRegistry()
+Vector<Ref<MutationObserverRegistration>>* Node::mutationObserverRegistry()
 {
     if (!hasRareData())
         return nullptr;
@@ -2607,7 +2631,7 @@ HashMap<Ref<MutationObserver>, MutationRecordDeliveryOptions> Node::registeredMu
     for (RefPtr node = this; node; node = node->parentNode()) {
         if (auto* registry = node->mutationObserverRegistry()) {
             for (auto& registration : *registry)
-                collectMatchingObserversForMutation(*registration);
+                collectMatchingObserversForMutation(registration);
     }
         if (auto* registry = node->transientMutationObserverRegistry()) {
             for (auto& registration : *registry)
@@ -2620,19 +2644,19 @@ HashMap<Ref<MutationObserver>, MutationRecordDeliveryOptions> Node::registeredMu
 
 void Node::registerMutationObserver(MutationObserver& observer, MutationObserverOptions options, const MemoryCompactLookupOnlyRobinHoodHashSet<AtomString>& attributeFilter)
 {
-    MutationObserverRegistration* registration = nullptr;
+    RefPtr<MutationObserverRegistration> registration;
     auto& registry = ensureRareData().mutationObserverData().registry;
 
     for (auto& candidateRegistration : registry) {
         if (&candidateRegistration->observer() == &observer) {
-            registration = candidateRegistration.get();
+            registration = candidateRegistration.ptr();
             registration->resetObservation(options, attributeFilter);
         }
     }
 
     if (!registration) {
-        registry.append(makeUnique<MutationObserverRegistration>(observer, *this, options, attributeFilter));
-        registration = registry.last().get();
+        registry.append(MutationObserverRegistration::create(observer, *this, options, attributeFilter));
+        registration = registry.last().ptr();
     }
 
     document().addMutationObserverTypes(registration->mutationTypes());
@@ -2646,7 +2670,7 @@ void Node::unregisterMutationObserver(MutationObserverRegistration& registration
         return;
 
     registry->removeFirstMatching([&registration] (auto& current) {
-        return current.get() == &registration;
+        return current.ptr() == &registration;
     });
 }
 
@@ -2726,6 +2750,22 @@ void Node::dispatchInputEvent()
     dispatchScopedEvent(Event::create(eventNames().inputEvent, Event::CanBubble::Yes, Event::IsCancelable::No, Event::IsComposed::Yes));
 }
 
+void Node::dispatchWebKitSubmitEvent(Event& underlyingSubmitEvent)
+{
+    RefPtr submitEvent = dynamicDowncast<SubmitEvent>(underlyingSubmitEvent);
+    if (!submitEvent)
+        return;
+
+    SubmitEvent::Init init { };
+    init.bubbles = true;
+    init.cancelable = true;
+    init.composed = true;
+    init.submitter = submitEvent->submitter();
+    Ref webkitSubmitEvent = SubmitEvent::create(eventNames().webkitsubmitEvent, WTF::move(init));
+    webkitSubmitEvent->setIsAutofillEvent();
+    dispatchScopedEvent(webkitSubmitEvent);
+}
+
 void Node::defaultEventHandler(Event& event)
 {
     if (event.target() != this)
@@ -2753,6 +2793,9 @@ void Node::defaultEventHandler(Event& event)
         }
         break;
 #endif
+    case EventType::submit:
+        dispatchWebKitSubmitEvent(event);
+        break;
     case EventType::textInput:
         if (RefPtr textEvent = dynamicDowncast<TextEvent>(event)) {
             if (RefPtr frame = document().frame())
@@ -2983,19 +3026,6 @@ void Node::setUsesEffectiveTextDirection(bool value)
 bool Node::inRenderedDocument() const
 {
     return isConnected() && document().hasLivingRenderTree();
-}
-
-WebCoreOpaqueRoot Node::traverseToOpaqueRoot() const
-{
-    ASSERT_WITH_MESSAGE(!isConnected(), "Call opaqueRoot() or document() when the node is connected");
-    const Node* node = this;
-    for (;;) {
-        const Node* nextNode = node->parentOrShadowHostNode();
-        if (!nextNode)
-            break;
-        node = nextNode;
-    }
-    return WebCoreOpaqueRoot { const_cast<Node*>(node) };
 }
 
 void Node::notifyInspectorOfRendererChange()

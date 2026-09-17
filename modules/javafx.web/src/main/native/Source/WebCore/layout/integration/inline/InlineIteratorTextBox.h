@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "InlineIteratorBox.h"
-#include "RenderText.h"
+#include <WebCore/InlineIteratorBox.h>
+#include <WebCore/RenderText.h>
 
 namespace WebCore {
 
@@ -95,7 +95,7 @@ inline bool TextBox::hasHyphen() const
 }
 
 inline TextBox::TextBox(PathVariant&& path)
-    : Box(WTFMove(path))
+    : Box(WTF::move(path))
 {
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,6 +31,8 @@ import java.util.concurrent.TimeUnit;
 import javafx.application.Application;
 import javafx.stage.Stage;
 
+import test.util.Util;
+
 public class InitializeJavaFXLaunchBase extends InitializeJavaFXBase {
     public static final CountDownLatch appLatch = new CountDownLatch(1);
 
@@ -45,6 +47,6 @@ public class InitializeJavaFXLaunchBase extends InitializeJavaFXBase {
         new Thread(() -> {
             Application.launch(InitializeApp.class);
         }).start();
-        assertTrue(appLatch.await(5, TimeUnit.SECONDS));
+        assertTrue(appLatch.await(Util.STARTUP_TIMEOUT, TimeUnit.SECONDS));
     }
 }

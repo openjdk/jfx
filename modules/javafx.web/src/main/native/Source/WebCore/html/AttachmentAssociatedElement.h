@@ -52,7 +52,9 @@ public:
     virtual ~AttachmentAssociatedElement() = default;
 
     virtual HTMLElement& asHTMLElement() = 0;
+    Ref<HTMLElement> asProtectedHTMLElement();
     virtual const HTMLElement& asHTMLElement() const = 0;
+    Ref<const HTMLElement> asProtectedHTMLElement() const;
 
     virtual AttachmentAssociatedElementType attachmentAssociatedElementType() const = 0;
 

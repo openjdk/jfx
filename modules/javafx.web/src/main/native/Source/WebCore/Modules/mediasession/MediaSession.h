@@ -27,29 +27,20 @@
 
 #if ENABLE(MEDIA_SESSION)
 
-#include "ActiveDOMObject.h"
-#include "MediaPositionState.h"
-#include "MediaProducer.h"
-#include "MediaSessionAction.h"
-#include "MediaSessionActionHandler.h"
-#include "MediaSessionPlaybackState.h"
-#include "MediaSessionReadyState.h"
+#include <WebCore/ActiveDOMObject.h>
+#include <WebCore/MediaPositionState.h>
+#include <WebCore/MediaProducer.h>
+#include <WebCore/MediaSessionAction.h>
+#include <WebCore/MediaSessionActionHandler.h>
+#include <WebCore/MediaSessionPlaybackState.h>
+#include <WebCore/MediaSessionReadyState.h>
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 #include <wtf/Logger.h>
 #include <wtf/MonotonicTime.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/WeakHashSet.h>
-#include <wtf/WeakPtr.h>
-
-namespace WebCore {
-class MediaSessionObserver;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::MediaSessionObserver> : std::true_type { };
-}
 
 namespace WebCore {
 
@@ -64,7 +55,7 @@ struct NowPlayingInfo;
 template<typename> class DOMPromiseDeferred;
 template<typename> class ExceptionOr;
 
-class MediaSessionObserver : public CanMakeWeakPtr<MediaSessionObserver> {
+class MediaSessionObserver : public AbstractRefCountedAndCanMakeWeakPtr<MediaSessionObserver> {
 public:
     virtual ~MediaSessionObserver() = default;
 
@@ -78,7 +69,7 @@ public:
 #endif
 };
 
-class MediaSession : public RefCountedAndCanMakeWeakPtr<MediaSession>, public ActiveDOMObject {
+class MediaSession : public RefCounted<MediaSession>, public ActiveDOMObject {
     WTF_MAKE_TZONE_ALLOCATED(MediaSession);
 public:
     void ref() const final { RefCounted::ref(); }
@@ -107,7 +98,7 @@ public:
     void willBeginPlayback();
     void willPausePlayback();
 
-    Document* document() const;
+    WEBCORE_EXPORT Document* document() const;
     RefPtr<Document> protectedDocument() const;
 
 #if ENABLE(MEDIA_SESSION_COORDINATOR)
@@ -143,9 +134,9 @@ public:
     void updateNowPlayingInfo(NowPlayingInfo&);
 
 #if ENABLE(MEDIA_STREAM)
-    void setMicrophoneActive(bool isActive, DOMPromiseDeferred<void>&& promise) { updateCaptureState(isActive, WTFMove(promise), MediaProducerMediaCaptureKind::Microphone); }
-    void setCameraActive(bool isActive, DOMPromiseDeferred<void>&& promise) { updateCaptureState(isActive, WTFMove(promise), MediaProducerMediaCaptureKind::Camera); }
-    void setScreenshareActive(bool isActive, DOMPromiseDeferred<void>&& promise) { updateCaptureState(isActive, WTFMove(promise), MediaProducerMediaCaptureKind::Display); }
+    void setMicrophoneActive(bool isActive, DOMPromiseDeferred<void>&& promise) { updateCaptureState(isActive, WTF::move(promise), MediaProducerMediaCaptureKind::Microphone); }
+    void setCameraActive(bool isActive, DOMPromiseDeferred<void>&& promise) { updateCaptureState(isActive, WTF::move(promise), MediaProducerMediaCaptureKind::Camera); }
+    void setScreenshareActive(bool isActive, DOMPromiseDeferred<void>&& promise) { updateCaptureState(isActive, WTF::move(promise), MediaProducerMediaCaptureKind::Display); }
 #endif
 
     WEBCORE_EXPORT bool hasActionHandler(const MediaSessionAction) const;
@@ -214,8 +205,10 @@ void MediaSession::visitActionHandlers(Visitor& visitor) const
 {
     Locker lock { m_actionHandlersLock };
     for (auto& actionHandler : m_actionHandlers) {
-        if (actionHandler.value)
-            actionHandler.value->visitJSFunction(visitor);
+        if (actionHandler.value) {
+            // We are not ref'ing here as this function may get called from the GC thread.
+            SUPPRESS_UNCOUNTED_ARG actionHandler.value->visitJSFunction(visitor);
+        }
     }
 }
 

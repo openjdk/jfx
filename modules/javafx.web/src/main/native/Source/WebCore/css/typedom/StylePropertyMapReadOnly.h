@@ -72,6 +72,8 @@ public:
     static RefPtr<CSSStyleValue> reifyValue(Document&, RefPtr<CSSValue>&&, std::optional<CSSPropertyID>);
     static Vector<RefPtr<CSSStyleValue>> reifyValueToVector(Document&, RefPtr<CSSValue>&&, std::optional<CSSPropertyID>);
 
+    virtual bool isStylePropertyMap() const { return false; }
+
 protected:
     virtual Vector<StylePropertyMapEntry> entries(ScriptExecutionContext*) const = 0;
 };

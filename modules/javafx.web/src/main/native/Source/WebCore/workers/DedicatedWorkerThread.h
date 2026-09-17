@@ -40,7 +40,7 @@ class ContentSecurityPolicyResponseHeaders;
 class ScriptBuffer;
 class WorkerObjectProxy;
 
-class DedicatedWorkerThread : public WorkerThread {
+class DedicatedWorkerThread final : public WorkerThread {
 public:
     template<typename... Args> static Ref<DedicatedWorkerThread> create(Args&&... args)
     {
@@ -58,6 +58,7 @@ protected:
 
 private:
     DedicatedWorkerThread(const WorkerParameters&, const ScriptBuffer& sourceCode, WorkerLoaderProxy&, WorkerDebuggerProxy&, WorkerObjectProxy&, WorkerBadgeProxy&, WorkerThreadStartMode, const SecurityOrigin& topOrigin, IDBClient::IDBConnectionProxy*, SocketProvider*, JSC::RuntimeFlags);
+    bool isDedicatedWorkerThread() const final { return true; }
 
     ASCIILiteral threadName() const final { return "WebCore: Worker"_s; }
 
@@ -65,3 +66,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::DedicatedWorkerThread)
+    static bool isType(const WebCore::WorkerOrWorkletThread& thread) { return thread.isDedicatedWorkerThread(); }
+SPECIALIZE_TYPE_TRAITS_END()

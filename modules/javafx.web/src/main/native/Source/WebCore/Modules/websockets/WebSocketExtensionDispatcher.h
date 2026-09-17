@@ -30,7 +30,7 @@
 
 #pragma once
 
-#include "WebSocketExtensionProcessor.h"
+#include <WebCore/WebSocketExtensionProcessor.h>
 #include <wtf/Vector.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/WTFString.h>

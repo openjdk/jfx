@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
- * Copyright (C) 2003-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2010-2018 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -23,10 +23,10 @@
 
 #pragma once
 
-#include "FontBaseline.h"
-#include "LayoutRect.h"
-#include "RectEdges.h"
-#include "RenderLayerModelObject.h"
+#include <WebCore/FontBaseline.h>
+#include <WebCore/LayoutRect.h>
+#include <WebCore/RectEdges.h>
+#include <WebCore/RenderLayerModelObject.h>
 
 namespace WebCore {
 
@@ -44,7 +44,7 @@ enum class ContentChangeType : uint8_t {
     Image,
     HDRImage,
     MaskImage,
-    BackgroundIImage,
+    BackgroundImage,
     Canvas,
     CanvasPixels,
     Video,
@@ -59,36 +59,35 @@ class Image;
 class ImageBuffer;
 class RenderTextFragment;
 class StickyPositionViewportConstraints;
+class StyleImage;
 class TransformationMatrix;
 
 namespace InlineIterator {
 class InlineBoxIterator;
 };
 
-enum class BoxSideFlag : uint8_t;
+enum class BoxSide : uint8_t;
 enum class DecodingMode : uint8_t;
 enum class InterpolationQuality : uint8_t;
 
-using BoxSideSet = OptionSet<BoxSideFlag>;
+using BoxSideSet = EnumSet<BoxSide>;
 using BorderEdges = RectEdges<BorderEdge>;
 
 // This class is the base for all objects that adhere to the CSS box model as described
 // at http://www.w3.org/TR/CSS21/box.html
 
 class RenderBoxModelObject : public RenderLayerModelObject {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderBoxModelObject);
+    WTF_MAKE_TZONE_ALLOCATED(RenderBoxModelObject);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderBoxModelObject);
 public:
     virtual ~RenderBoxModelObject();
 
     LayoutSize relativePositionOffset() const;
-    inline LayoutSize relativePositionLogicalOffset() const;
 
     FloatRect constrainingRectForStickyPosition() const;
     std::pair<const RenderBox&, const RenderLayer*> enclosingClippingBoxForStickyPosition() const;
     void computeStickyPositionConstraints(StickyPositionViewportConstraints&, const FloatRect& constrainingRect) const;
     LayoutSize stickyPositionOffset() const;
-    inline LayoutSize stickyPositionLogicalOffset() const;
 
     LayoutSize offsetForInFlowPosition() const;
 
@@ -133,8 +132,10 @@ public:
     virtual inline LayoutUnit borderBottom() const;
     virtual inline LayoutUnit borderLeft() const;
     virtual inline LayoutUnit borderRight() const;
+
     virtual inline LayoutUnit horizontalBorderExtent() const;
     virtual inline LayoutUnit verticalBorderExtent() const;
+
     virtual inline LayoutUnit borderBefore() const;
     virtual inline LayoutUnit borderAfter() const;
     virtual inline LayoutUnit borderStart() const;
@@ -175,14 +176,14 @@ public:
     virtual LayoutUnit marginAfter(const WritingMode) const = 0;
     virtual LayoutUnit marginStart(const WritingMode) const = 0;
     virtual LayoutUnit marginEnd(const WritingMode) const = 0;
-    LayoutUnit marginBefore() const { return marginBefore(writingMode()); }
-    LayoutUnit marginAfter() const { return marginAfter(writingMode()); }
-    LayoutUnit marginStart() const { return marginStart(writingMode()); }
-    LayoutUnit marginEnd() const { return marginEnd(writingMode()); }
-    LayoutUnit verticalMarginExtent() const { return marginTop() + marginBottom(); }
-    LayoutUnit horizontalMarginExtent() const { return marginLeft() + marginRight(); }
-    LayoutUnit marginLogicalHeight() const { return marginBefore() + marginAfter(); }
-    LayoutUnit marginLogicalWidth() const { return marginStart() + marginEnd(); }
+    inline LayoutUnit marginBefore() const;
+    inline LayoutUnit marginAfter() const;
+    inline LayoutUnit marginStart() const;
+    inline LayoutUnit marginEnd() const;
+    inline LayoutUnit verticalMarginExtent() const;
+    inline LayoutUnit horizontalMarginExtent() const;
+    inline LayoutUnit marginLogicalHeight() const;
+    inline LayoutUnit marginLogicalWidth() const;
 
     BorderShape borderShapeForContentClipping(const LayoutRect& borderBoxRect, RectEdges<bool> closedEdges = { true }) const;
 
@@ -197,7 +198,7 @@ public:
 
     bool canHaveBoxInfoInFragment() const { return !isFloating() && !isBlockLevelReplacedOrAtomicInline() && !isInline() && !isRenderTableCell() && isRenderBlock() && !isRenderSVGBlock(); }
 
-    void contentChanged(ContentChangeType);
+    void contentChanged(ContentChangeType, const std::optional<FloatRect>& = std::nullopt);
     bool hasAcceleratedCompositing() const;
 
     RenderBoxModelObject* continuation() const;
@@ -210,8 +211,7 @@ public:
 
     bool hasRunningAcceleratedAnimations() const;
 
-
-    void applyTransform(TransformationMatrix&, const RenderStyle&, const FloatRect& boundingBox, OptionSet<RenderStyle::TransformOperationOption>) const override;
+    void applyTransform(TransformationMatrix&, const RenderStyle&, const FloatRect& boundingBox, OptionSet<Style::TransformResolverOption>) const override;
 
 protected:
     RenderBoxModelObject(Type, Element&, RenderStyle&&, OptionSet<TypeFlag>, TypeSpecificFlags);
@@ -219,7 +219,7 @@ protected:
 
     void willBeDestroyed() override;
 
-    void styleWillChange(StyleDifference, const RenderStyle& newStyle) override;
+    void styleWillChange(Style::Difference, const RenderStyle& newStyle) override;
 
     LayoutPoint adjustedPositionRelativeToOffsetParent(const LayoutPoint&) const;
 
@@ -234,7 +234,7 @@ public:
 
     void paintMaskForTextFillBox(GraphicsContext&, const FloatRect&, const InlineIterator::InlineBoxIterator&, const LayoutRect&);
 
-    // For RenderBlocks and RenderInlines with m_style->pseudoElementType() == PseudoId::FirstLetter, this tracks their remaining text fragments
+    // For RenderBlocks and RenderInlines with m_style->pseudoElementType() == PseudoElementType::FirstLetter, this tracks their remaining text fragments
     RenderTextFragment* firstLetterRemainingText() const;
     void setFirstLetterRemainingText(RenderTextFragment&);
     void clearFirstLetterRemainingText();
@@ -265,6 +265,7 @@ public:
 
 protected:
     LayoutUnit resolveLengthPercentageUsingContainerLogicalWidth(const auto&) const;
+    LayoutUnit resolveLengthPercentageUsingContainerLogicalWidth(const auto&, const Style::ZoomFactor&) const;
 
     virtual void absoluteQuadsIgnoringContinuation(const FloatRect&, Vector<FloatQuad>&, bool* /*wasFixed*/) const { ASSERT_NOT_REACHED(); }
     void collectAbsoluteQuadsForContinuation(Vector<FloatQuad>& quads, bool* wasFixed) const;
@@ -280,3 +281,7 @@ private:
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderBoxModelObject, isRenderBoxModelObject())
+
+#if PLATFORM(JAVA)
+#include "RenderBoxModelObjectInlines.h"
+#endif

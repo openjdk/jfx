@@ -35,6 +35,7 @@
 #include "AuthenticatorSupportedOptions.h"
 #include "CBORReader.h"
 #include "CBORWriter.h"
+#include "Pin.h"
 #include "WebAuthenticationConstants.h"
 #include "WebAuthenticationUtils.h"
 #include <wtf/StdSet.h>
@@ -93,60 +94,145 @@ static Vector<uint8_t> getCredentialId(const Vector<uint8_t>& authenticatorData)
     return Vector<uint8_t>(authenticatorData.subspan(credentialIdLengthOffset + credentialIdLengthLength, credentialIdLength));
 }
 
+static std::optional<AuthenticationExtensionsClientOutputs> parseAuthenticatorDataExtensions(const Vector<uint8_t>& authData, const std::optional<pin::HmacSecretRequest>& hmacSecretRequest = std::nullopt)
+{
+    constexpr size_t minAuthDataLength = rpIdHashLength + flagsLength + signCounterLength;
+    if (authData.size() < minAuthDataLength)
+        return std::nullopt;
 
-// Decodes byte array response from authenticator to CBOR value object and
-// checks for correct encoding format.
-RefPtr<AuthenticatorAttestationResponse> readCTAPMakeCredentialResponse(const Vector<uint8_t>& inBuffer, WebCore::AuthenticatorAttachment attachment, Vector<AuthenticatorTransport>&& transports, const AttestationConveyancePreference& attestation)
+    uint8_t flags = authData[rpIdHashLength];
+    bool extensionsPresent = flags & WebAuthn::extensionDataIncludedFlag;
+    if (!extensionsPresent)
+        return std::nullopt;
+
+    size_t offset = minAuthDataLength;
+
+    bool attestedCredentialDataPresent = flags & WebAuthn::attestedCredentialDataIncludedFlag;
+    if (attestedCredentialDataPresent) {
+        offset += aaguidLength;
+        if (authData.size() < offset + credentialIdLengthLength)
+            return std::nullopt;
+
+        size_t credentialIdLength = (static_cast<size_t>(authData[offset]) << 8) | static_cast<size_t>(authData[offset + 1]);
+        offset += credentialIdLengthLength + credentialIdLength;
+
+        if (authData.size() <= offset)
+            return std::nullopt;
+
+        auto publicKeyBytes = authData.subspan(offset);
+        auto publicKeyResult = cbor::CBORReader::readWithBytesConsumed(publicKeyBytes);
+        if (!publicKeyResult)
+            return std::nullopt;
+
+        offset += publicKeyResult->second;
+    }
+
+    if (authData.size() <= offset)
+        return std::nullopt;
+
+    auto extensionsBytes = authData.subspan(offset);
+    auto extensionsCBOR = cbor::CBORReader::read(extensionsBytes);
+    if (!extensionsCBOR || !extensionsCBOR->isMap())
+        return std::nullopt;
+
+    AuthenticationExtensionsClientOutputs outputs;
+    auto& extensionsMap = extensionsCBOR->getMap();
+
+    auto hmacIt = extensionsMap.find(CBOR(kExtensionHmacSecret));
+    bool searchedHmacSecretMc = false;
+    while (hmacIt != extensionsMap.end()) {
+        if (hmacIt->second.isBool()) {
+            if (!outputs.prf)
+                outputs.prf = AuthenticationExtensionsClientOutputs::PRFOutputs { };
+            outputs.prf->enabled = hmacIt->second.getBool();
+        } else if (hmacIt->second.isByteString() && hmacSecretRequest) {
+            auto& encryptedOutput = hmacIt->second.getByteString();
+
+            auto decryptedResponse = pin::HmacSecretResponse::parse(
+                hmacSecretRequest->protocol(),
+                Ref { hmacSecretRequest->sharedKey() }.get(),
+                encryptedOutput
+            );
+
+            if (decryptedResponse) {
+                auto& decryptedOutput = decryptedResponse->output();
+                RefPtr<ArrayBuffer> first = ArrayBuffer::tryCreate(
+                    decryptedOutput.span().first(std::min<size_t>(hmacSecretOutputLength, decryptedOutput.size()))
+                );
+                RefPtr<ArrayBuffer> second;
+                if (decryptedOutput.size() == hmacSecretDualOutputLength)
+                    second = ArrayBuffer::tryCreate(decryptedOutput.span().subspan(hmacSecretOutputLength, hmacSecretOutputLength));
+
+                if (first) {
+                    if (!outputs.prf)
+                        outputs.prf = AuthenticationExtensionsClientOutputs::PRFOutputs { };
+                    outputs.prf->results = AuthenticationExtensionsClientOutputs::PRFValues { first, second };
+                }
+            }
+        }
+        if (!searchedHmacSecretMc) {
+            searchedHmacSecretMc = true;
+            hmacIt = extensionsMap.find(CBOR(kExtensionHmacSecretMc));
+        } else
+            break;
+    }
+
+    return outputs;
+}
+
+RefPtr<AuthenticatorAttestationResponse> readCTAPMakeCredentialResponse(const Vector<uint8_t>& inBuffer, WebCore::AuthenticatorAttachment attachment, Vector<AuthenticatorTransport>&& transports, const AttestationConveyancePreference& attestation, const std::optional<pin::HmacSecretRequest>& hmacSecretRequest)
 {
     auto decodedMap = decodeResponseMap(inBuffer);
     if (!decodedMap)
         return nullptr;
     const auto& responseMap = decodedMap->getMap();
 
-    auto it = responseMap.find(CBOR(1));
+    auto it = responseMap.find(CBOR(kCtapMakeCredentialResponseFormatKey));
     if (it == responseMap.end() || !it->second.isString())
         return nullptr;
     auto format = it->second.clone();
 
-    it = responseMap.find(CBOR(2));
+    it = responseMap.find(CBOR(kCtapMakeCredentialResponseAuthDataKey));
     if (it == responseMap.end() || !it->second.isByteString())
         return nullptr;
     auto authenticatorData = it->second.clone();
+    auto& authDataBytes = authenticatorData.getByteString();
 
-    auto credentialId = getCredentialId(authenticatorData.getByteString());
+    auto credentialId = getCredentialId(authDataBytes);
     if (credentialId.isEmpty())
         return nullptr;
 
-    it = responseMap.find(CBOR(3));
+    it = responseMap.find(CBOR(kCtapMakeCredentialResponseAttStmtKey));
     if (it == responseMap.end() || !it->second.isMap())
         return nullptr;
     auto attStmt = it->second.clone();
 
+    auto extensions = parseAuthenticatorDataExtensions(authDataBytes, hmacSecretRequest);
+    if (!extensions)
+        extensions = AuthenticationExtensionsClientOutputs { };
+
     std::optional<Vector<uint8_t>> attestationObject;
     if (attestation == AttestationConveyancePreference::None) {
-        // The reason why we can't directly pass authenticatorData/format/attStmt to buildAttestationObject
-        // is that they are CBORValue instead of the raw type.
-        // Also, format and attStmt are omitted as they are not useful in none attestation.
-        attestationObject = buildAttestationObject(Vector<uint8_t>(authenticatorData.getByteString()), String { emptyString() }, { }, attestation, ShouldZeroAAGUID::Yes);
+        attestationObject = buildAttestationObject(Vector<uint8_t>(authDataBytes), String { emptyString() }, { }, attestation, ShouldZeroAAGUID::Yes);
     } else {
         CBOR::MapValue attestationObjectMap;
-        attestationObjectMap[CBOR("authData")] = WTFMove(authenticatorData);
-        attestationObjectMap[CBOR("fmt")] = WTFMove(format);
-        attestationObjectMap[CBOR("attStmt")] = WTFMove(attStmt);
-        attestationObject = cbor::CBORWriter::write(CBOR(WTFMove(attestationObjectMap)));
+        attestationObjectMap[CBOR("authData")] = WTF::move(authenticatorData);
+        attestationObjectMap[CBOR("fmt")] = WTF::move(format);
+        attestationObjectMap[CBOR("attStmt")] = WTF::move(attStmt);
+        attestationObject = cbor::CBORWriter::write(CBOR(WTF::move(attestationObjectMap)));
     }
 
-    return AuthenticatorAttestationResponse::create(credentialId, *attestationObject, attachment, WTFMove(transports));
+    return AuthenticatorAttestationResponse::create(credentialId, *attestationObject, WTF::move(extensions), attachment, WTF::move(transports));
 }
 
-RefPtr<AuthenticatorAssertionResponse> readCTAPGetAssertionResponse(const Vector<uint8_t>& inBuffer, WebCore::AuthenticatorAttachment attachment)
+RefPtr<AuthenticatorAssertionResponse> readCTAPGetAssertionResponse(const Vector<uint8_t>& inBuffer, WebCore::AuthenticatorAttachment attachment, const std::optional<pin::HmacSecretRequest>& hmacSecretRequest)
 {
     auto decodedMap = decodeResponseMap(inBuffer);
     if (!decodedMap)
         return nullptr;
     const auto& responseMap = decodedMap->getMap();
 
-    auto it = responseMap.find(CBOR(1));
+    auto it = responseMap.find(CBOR(kCtapGetAssertionResponseCredentialKey));
     if (it == responseMap.end() || !it->second.isMap())
         return nullptr;
     auto& credential = it->second.getMap();
@@ -155,25 +241,30 @@ RefPtr<AuthenticatorAssertionResponse> readCTAPGetAssertionResponse(const Vector
         return nullptr;
     auto& credentialId = itr->second.getByteString();
 
-    it = responseMap.find(CBOR(2));
+    it = responseMap.find(CBOR(kCtapGetAssertionResponseAuthDataKey));
     if (it == responseMap.end() || !it->second.isByteString())
         return nullptr;
     auto& authData = it->second.getByteString();
 
-    it = responseMap.find(CBOR(3));
+    it = responseMap.find(CBOR(kCtapGetAssertionResponseSignatureKey));
     if (it == responseMap.end() || !it->second.isByteString())
         return nullptr;
     auto& signature = it->second.getByteString();
 
+    // Parse extensions from authenticatorData
+    auto extensions = parseAuthenticatorDataExtensions(authData, hmacSecretRequest);
+    if (!extensions)
+        extensions = AuthenticationExtensionsClientOutputs { };
+
     RefPtr<AuthenticatorAssertionResponse> response;
-    it = responseMap.find(CBOR(4));
+    it = responseMap.find(CBOR(kCtapGetAssertionResponseUserKey));
     if (it != responseMap.end() && it->second.isMap()) {
         auto& user = it->second.getMap();
         auto itr = user.find(CBOR(kEntityIdMapKey));
         if (itr == user.end() || !itr->second.isByteString())
             return nullptr;
         auto& userHandle = itr->second.getByteString();
-        response = AuthenticatorAssertionResponse::create(credentialId, authData, signature, userHandle, attachment);
+        response = AuthenticatorAssertionResponse::create(credentialId, authData, signature, userHandle, WTF::move(extensions), attachment);
 
         itr = user.find(CBOR(kEntityNameMapKey));
         if (itr != user.end()) {
@@ -189,10 +280,10 @@ RefPtr<AuthenticatorAssertionResponse> readCTAPGetAssertionResponse(const Vector
             response->setDisplayName(itr->second.getString());
         }
     } else {
-        response = AuthenticatorAssertionResponse::create(credentialId, authData, signature, { }, attachment);
+        response = AuthenticatorAssertionResponse::create(credentialId, authData, signature, { }, WTF::move(extensions), attachment);
     }
 
-    it = responseMap.find(CBOR(5));
+    it = responseMap.find(CBOR(kCtapGetAssertionResponseNumberOfCredentialsKey));
     if (it != responseMap.end() && it->second.isUnsigned())
         response->setNumberOfCredentials(it->second.getUnsigned());
 
@@ -230,7 +321,7 @@ std::optional<AuthenticatorGetInfoResponse> readCTAPGetInfoResponse(const Vector
     if (it == responseMap.end() || !it->second.isByteString() || it->second.getByteString().size() != aaguidLength)
         return std::nullopt;
 
-    AuthenticatorGetInfoResponse response(WTFMove(protocolVersions), Vector<uint8_t>(it->second.getByteString()));
+    AuthenticatorGetInfoResponse response(WTF::move(protocolVersions), Vector<uint8_t>(it->second.getByteString()));
 
     it = responseMap.find(CBOR(kCtapAuthenticatorGetInfoExtensionsKey));
     if (it != responseMap.end()) {
@@ -244,7 +335,7 @@ std::optional<AuthenticatorGetInfoResponse> readCTAPGetInfoResponse(const Vector
 
             extensions.append(extension.getString());
         }
-        response.setExtensions(WTFMove(extensions));
+        response.setExtensions(WTF::move(extensions));
     }
 
     AuthenticatorSupportedOptions options;
@@ -300,7 +391,7 @@ std::optional<AuthenticatorGetInfoResponse> readCTAPGetInfoResponse(const Vector
             else
                 options.setClientPinAvailability(AuthenticatorSupportedOptions::ClientPinAvailability::kSupportedButPinNotSet);
         }
-        response.setOptions(WTFMove(options));
+        response.setOptions(WTF::move(options));
     }
 
     it = responseMap.find(CBOR(kCtapAuthenticatorGetInfoMaxMsgSizeKey));
@@ -316,14 +407,19 @@ std::optional<AuthenticatorGetInfoResponse> readCTAPGetInfoResponse(const Vector
         if (!it->second.isArray())
             return std::nullopt;
 
-        Vector<uint8_t> supportedPinProtocols;
+        StdSet<PINUVAuthProtocol> supportedPinProtocols;
         for (const auto& protocol : it->second.getArray()) {
             if (!protocol.isUnsigned())
                 return std::nullopt;
 
-            supportedPinProtocols.append(protocol.getUnsigned());
+            auto value = protocol.getUnsigned();
+            if (value == static_cast<uint8_t>(PINUVAuthProtocol::kPinProtocol1))
+                supportedPinProtocols.insert(PINUVAuthProtocol::kPinProtocol1);
+            else if (value == static_cast<uint8_t>(PINUVAuthProtocol::kPinProtocol2))
+                supportedPinProtocols.insert(PINUVAuthProtocol::kPinProtocol2);
+            // Ignore unknown protocols
         }
-        response.setPinProtocols(WTFMove(supportedPinProtocols));
+        response.setPinProtocols(WTF::move(supportedPinProtocols));
     }
 
     it = responseMap.find(CBOR(kCtapAuthenticatorGetInfoMaxCredentialCountInListKey));
@@ -354,7 +450,7 @@ std::optional<AuthenticatorGetInfoResponse> readCTAPGetInfoResponse(const Vector
             if (transport)
                 transports.append(*transport);
         }
-        response.setTransports(WTFMove(transports));
+        response.setTransports(WTF::move(transports));
     }
 
     it = responseMap.find(CBOR(kCtapAuthenticatorGetInfoMinPINLengthKey));
@@ -372,7 +468,7 @@ std::optional<AuthenticatorGetInfoResponse> readCTAPGetInfoResponse(const Vector
         response.setRemainingDiscoverableCredentials(it->second.getUnsigned());
     }
 
-    return WTFMove(response);
+    return WTF::move(response);
 }
 
 } // namespace fido

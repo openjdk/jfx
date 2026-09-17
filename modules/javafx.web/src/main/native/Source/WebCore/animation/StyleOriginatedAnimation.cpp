@@ -26,7 +26,6 @@
 #include "config.h"
 #include "StyleOriginatedAnimation.h"
 
-#include "Animation.h"
 #include "CSSAnimation.h"
 #include "CSSTransition.h"
 #include "DocumentTimeline.h"
@@ -35,6 +34,7 @@
 #include "EventTargetInlines.h"
 #include "KeyframeEffect.h"
 #include "Logging.h"
+#include "NodeDocument.h"
 #include "RenderStyle.h"
 #include "StyleOriginatedAnimationEvent.h"
 #include <wtf/TZoneMallocInlines.h>
@@ -42,13 +42,12 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(StyleOriginatedAnimation);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(StyleOriginatedAnimation);
 
-StyleOriginatedAnimation::StyleOriginatedAnimation(const Styleable& styleable, const Animation& backingAnimation)
+StyleOriginatedAnimation::StyleOriginatedAnimation(const Styleable& styleable)
     : WebAnimation(styleable.element.document())
     , m_owningElement(styleable.element)
     , m_owningPseudoElementIdentifier(styleable.pseudoElementIdentifier)
-    , m_backingAnimation(const_cast<Animation&>(backingAnimation))
 {
 }
 
@@ -98,12 +97,6 @@ void StyleOriginatedAnimation::disassociateFromOwningElement()
     m_owningElement = nullptr;
 }
 
-void StyleOriginatedAnimation::setBackingAnimation(const Animation& backingAnimation)
-{
-    m_backingAnimation = const_cast<Animation&>(backingAnimation);
-    syncPropertiesWithBackingAnimation();
-}
-
 void StyleOriginatedAnimation::initialize(const RenderStyle* oldStyle, const RenderStyle& newStyle, const Style::ResolutionContext& resolutionContext)
 {
     WebAnimation::initialize();
@@ -120,7 +113,7 @@ void StyleOriginatedAnimation::initialize(const RenderStyle* oldStyle, const Ren
     setTimeline(&m_owningElement->document().timeline());
     effect->computeStyleOriginatedAnimationBlendingKeyframes(oldStyle, newStyle, resolutionContext);
     syncPropertiesWithBackingAnimation();
-    if (backingAnimation().playState() == AnimationPlayState::Playing)
+    if (backingAnimationPlayState() == AnimationPlayState::Running)
         play();
     else
         pause();
@@ -188,7 +181,7 @@ ExceptionOr<void> StyleOriginatedAnimation::bindingsPause()
 
 void StyleOriginatedAnimation::flushPendingStyleChanges() const
 {
-    if (RefPtr keyframeEffect = dynamicDowncast<KeyframeEffect>(effect())) {
+    if (RefPtr keyframeEffect = this->keyframeEffect()) {
         if (RefPtr target = keyframeEffect->target())
             target->document().updateStyleIfNeeded();
     }
@@ -197,18 +190,37 @@ void StyleOriginatedAnimation::flushPendingStyleChanges() const
 void StyleOriginatedAnimation::setTimeline(RefPtr<AnimationTimeline>&& newTimeline)
 {
     if (timeline() && !newTimeline) {
-        invalidateDOMEvents([protectedThis = Ref { *this }] {
-            protectedThis->WebAnimation::setTimeline(nullptr);
-        });
+        auto cancelationTime = computeCancelationTime();
+        Ref { *this }->WebAnimation::setTimeline(nullptr);
+        invalidateDOMEvents(cancelationTime);
     } else
-    WebAnimation::setTimeline(WTFMove(newTimeline));
+        WebAnimation::setTimeline(WTF::move(newTimeline));
 }
 
 void StyleOriginatedAnimation::cancel(WebAnimation::Silently silently)
 {
-    invalidateDOMEvents([protectedThis = Ref { *this }, silently] {
-        protectedThis->WebAnimation::cancel(silently);
-    });
+    auto cancelationTime = computeCancelationTime();
+    Ref { *this }->WebAnimation::cancel(silently);
+
+    if (!m_owningElement)
+        return;
+
+    auto isPending = pending();
+    if (isPending && m_wasPending)
+        return;
+
+    bool wasIdle = m_previousPhase == AnimationEffectPhase::Idle;
+    bool wasAfter = m_previousPhase == AnimationEffectPhase::After;
+    if (!wasIdle && !wasAfter) {
+        if (isCSSAnimation())
+            enqueueDOMEvent(eventNames().animationcancelEvent, cancelationTime, cancelationTime);
+        else if (isCSSTransition())
+            enqueueDOMEvent(eventNames().transitioncancelEvent, cancelationTime, cancelationTime);
+    }
+
+    m_wasPending = isPending;
+    m_previousPhase = AnimationEffectPhase::Idle;
+    m_previousIteration = 0;
 }
 
 void StyleOriginatedAnimation::cancelFromStyle(WebAnimation::Silently silently)
@@ -257,20 +269,15 @@ WebAnimationTime StyleOriginatedAnimation::effectTimeAtEnd() const
     return 0_s;
 }
 
-template<typename F> void StyleOriginatedAnimation::invalidateDOMEvents(F&& callback)
+WebAnimationTime StyleOriginatedAnimation::computeCancelationTime() const
 {
-    WebAnimationTime cancelationTime = 0_s;
-
     if (m_owningElement) {
         if (RefPtr animationEffect = effect()) {
             if (auto activeTime = animationEffect->getBasicTiming().activeTime)
-                cancelationTime = *activeTime;
+                return *activeTime;
         }
     }
-
-    callback();
-
-    invalidateDOMEvents(cancelationTime);
+    return 0_s;
 }
 
 void StyleOriginatedAnimation::invalidateDOMEvents(WebAnimationTime cancelationTime)
@@ -401,7 +408,7 @@ void StyleOriginatedAnimation::enqueueDOMEvent(const AtomString& eventType, WebA
     };
     auto event = createEvent(eventType, scheduledTimelineTime, time(), m_owningPseudoElementIdentifier);
     event->setTarget(RefPtr { m_owningElement.get() });
-    enqueueAnimationEvent(WTFMove(event));
+    enqueueAnimationEvent(WTF::move(event));
 }
 
 } // namespace WebCore

@@ -53,7 +53,7 @@ static inline RTCSctpTransportState toRTCSctpTransportState(webrtc::SctpTranspor
 
 class LibWebRTCSctpTransportBackendObserver final : public ThreadSafeRefCounted<LibWebRTCSctpTransportBackendObserver>, public webrtc::SctpTransportObserverInterface {
 public:
-    static Ref<LibWebRTCSctpTransportBackendObserver> create(RTCSctpTransportBackendClient& client, Ref<webrtc::SctpTransportInterface>&& backend) { return adoptRef(*new LibWebRTCSctpTransportBackendObserver(client, WTFMove(backend))); }
+    static Ref<LibWebRTCSctpTransportBackendObserver> create(RTCSctpTransportBackendClient& client, Ref<webrtc::SctpTransportInterface>&& backend) { return adoptRef(*new LibWebRTCSctpTransportBackendObserver(client, WTF::move(backend))); }
 
     void start();
     void stop();
@@ -70,14 +70,15 @@ private:
 };
 
 LibWebRTCSctpTransportBackendObserver::LibWebRTCSctpTransportBackendObserver(RTCSctpTransportBackendClient& client, Ref<webrtc::SctpTransportInterface>&& backend)
-    : m_backend(WTFMove(backend))
+    : m_backend(WTF::move(backend))
     , m_client(client)
 {
 }
 
 void LibWebRTCSctpTransportBackendObserver::updateState(webrtc::SctpTransportInformation&& info)
 {
-    if (!m_client)
+    RefPtr client = m_client.get();
+    if (!client)
         return;
 
     std::optional<unsigned short> maxChannels;
@@ -86,15 +87,15 @@ void LibWebRTCSctpTransportBackendObserver::updateState(webrtc::SctpTransportInf
     std::optional<double> maxMessageSize;
     if (info.MaxMessageSize())
         maxMessageSize = *info.MaxMessageSize();
-    m_client->onStateChanged(toRTCSctpTransportState(info.state()), maxMessageSize, maxChannels);
+    client->onStateChanged(toRTCSctpTransportState(info.state()), maxMessageSize, maxChannels);
 }
 
 void LibWebRTCSctpTransportBackendObserver::start()
 {
     LibWebRTCProvider::callOnWebRTCNetworkThread([this, protectedThis = Ref { *this }]() mutable {
         m_backend->RegisterObserver(this);
-        callOnMainThread([protectedThis = WTFMove(protectedThis), info = m_backend->Information()]() mutable {
-            protectedThis->updateState(WTFMove(info));
+        callOnMainThread([protectedThis = WTF::move(protectedThis), info = m_backend->Information()]() mutable {
+            protectedThis->updateState(WTF::move(info));
         });
     });
 }
@@ -109,16 +110,16 @@ void LibWebRTCSctpTransportBackendObserver::stop()
 
 void LibWebRTCSctpTransportBackendObserver::OnStateChange(webrtc::SctpTransportInformation info)
 {
-    callOnMainThread([protectedThis = Ref { *this }, info = WTFMove(info)]() mutable {
-        protectedThis->updateState(WTFMove(info));
+    callOnMainThread([protectedThis = Ref { *this }, info = WTF::move(info)]() mutable {
+        protectedThis->updateState(WTF::move(info));
     });
 }
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(LibWebRTCSctpTransportBackend);
 
 LibWebRTCSctpTransportBackend::LibWebRTCSctpTransportBackend(Ref<webrtc::SctpTransportInterface>&& backend, Ref<webrtc::DtlsTransportInterface>&& dtlsBackend)
-    : m_backend(WTFMove(backend))
-    , m_dtlsBackend(WTFMove(dtlsBackend))
+    : m_backend(WTF::move(backend))
+    , m_dtlsBackend(WTF::move(dtlsBackend))
 {
 }
 

@@ -27,6 +27,7 @@
 
 #import "BindableResource.h"
 #import "CommandsMixin.h"
+#import "TextureOrTextureView.h"
 #import <wtf/FastMalloc.h>
 #import <wtf/HashMap.h>
 #import <wtf/HashSet.h>
@@ -108,8 +109,13 @@ public:
     static std::pair<id<MTLBuffer>, uint64_t> clampIndirectIndexBufferToValidValues(Buffer*, Buffer&, MTLIndexType, NSUInteger indexBufferOffsetInBytes, uint64_t indirectOffset, uint32_t minVertexCount, uint32_t minInstanceCount, MTLPrimitiveType, Device&, uint32_t rasterSampleCount, RenderPassEncoder&, bool& splitEncoder);
     static std::pair<id<MTLBuffer>, uint64_t> clampIndirectBufferToValidValues(Buffer&, uint64_t indirectOffset, uint32_t minVertexCount, uint32_t minInstanceCount, Device&, uint32_t rasterSampleCount, RenderPassEncoder&, bool& splitEncoder);
     enum class IndexCall { Draw, IndirectDraw, Skip, CachedIndirectDraw };
-    static std::pair<IndexCall, id<MTLBuffer>> clampIndexBufferToValidValues(uint32_t indexCount, uint32_t instanceCount, int32_t baseVertex, uint32_t firstInstance, MTLIndexType, NSUInteger indexBufferOffsetInBytes, Buffer*, uint32_t minVertexCount, uint32_t minInstanceCount, RenderPassEncoder&, Device&, uint32_t rasterSampleCount, MTLPrimitiveType);
-    bool WARN_UNUSED_RETURN splitRenderPass();
+    struct DrawIndexResult {
+        IndexCall result;
+        id<MTLBuffer> buffer;
+        uint64_t offset;
+    };
+    static DrawIndexResult clampIndexBufferToValidValues(uint32_t indexCount, uint32_t instanceCount, int32_t baseVertex, uint32_t firstInstance, MTLIndexType, NSUInteger indexBufferOffsetInBytes, Buffer*, uint32_t minVertexCount, uint32_t minInstanceCount, RenderPassEncoder&, Device&, uint32_t rasterSampleCount, MTLPrimitiveType);
+    [[nodiscard]] bool splitRenderPass();
     static std::pair<uint32_t, uint32_t> computeMininumVertexInstanceCount(const RenderPipeline*, bool& needsValidationLayerWorkaround, uint64_t (^)(uint32_t));
 
 private:
@@ -122,7 +128,10 @@ private:
     bool runIndexBufferValidation(uint32_t firstInstance, uint32_t instanceCount);
     void runVertexBufferValidation(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance);
     void addResourceToActiveResources(const TextureView&, OptionSet<BindGroupEntryUsage>);
+    void addResourceToActiveResources(const TextureOrTextureView&, OptionSet<BindGroupEntryUsage>);
     void addResourceToActiveResources(const TextureView&, OptionSet<BindGroupEntryUsage>, WGPUTextureAspect);
+    void addResourceToActiveResources(const TextureOrTextureView&, OptionSet<BindGroupEntryUsage>, WGPUTextureAspect);
+    void addResourceToActiveResources(const Texture&, OptionSet<BindGroupEntryUsage>);
     void addTextureToActiveResources(const void*, id<MTLResource>, OptionSet<BindGroupEntryUsage>, uint32_t baseMipLevel, uint32_t baseArrayLayer, WGPUTextureAspect);
     void addResourceToActiveResources(const void*, OptionSet<BindGroupEntryUsage>);
 
@@ -133,7 +142,7 @@ private:
     bool issuedDrawCall() const;
     void incrementDrawCount(uint32_t = 1);
     bool occlusionQueryIsDestroyed() const;
-    std::pair<IndexCall, id<MTLBuffer>> clampIndexBufferToValidValues(uint32_t indexCount, uint32_t instanceCount, int32_t baseVertex, uint32_t firstInstance, MTLIndexType, NSUInteger indexBufferOffsetInBytes, bool& needsValidationLayerWorkaround);
+    DrawIndexResult clampIndexBufferToValidValues(uint32_t indexCount, uint32_t instanceCount, int32_t baseVertex, uint32_t firstInstance, MTLIndexType, NSUInteger indexBufferOffsetInBytes, bool& needsValidationLayerWorkaround);
     std::pair<uint32_t, uint32_t> computeMininumVertexInstanceCount(bool& needsValidationLayerWorkaround) const;
     std::pair<id<MTLBuffer>, uint64_t> clampIndirectIndexBufferToValidValues(Buffer&, MTLIndexType, NSUInteger indexBufferOffsetInBytes, uint64_t indirectOffset, uint32_t minVertexCount, uint32_t minInstanceCount, bool& splitEncoder);
     std::pair<id<MTLBuffer>, uint64_t> clampIndirectBufferToValidValues(Buffer&, uint64_t indirectOffset, uint32_t minVertexCount, uint32_t minInstanceCount, bool& splitEncoder);
@@ -183,8 +192,8 @@ private:
     WGPURenderPassDescriptor m_descriptor;
     Vector<WGPURenderPassColorAttachment> m_descriptorColorAttachments;
     WGPURenderPassDepthStencilAttachment m_descriptorDepthStencilAttachment;
-    Vector<RefPtr<TextureView>> m_colorAttachmentViews;
-    RefPtr<TextureView> m_depthStencilView;
+    Vector<TextureOrTextureView> m_colorAttachmentViews;
+    std::optional<TextureOrTextureView> m_depthStencilView;
     struct BufferAndOffset {
         id<MTLBuffer> buffer { nil };
         uint64_t offset { 0 };
@@ -195,7 +204,7 @@ private:
     using ExistingBufferKey = std::pair<uint64_t, uint32_t>;
     std::array<ExistingBufferKey, maxBufferSlots> m_existingVertexBuffers;
     std::array<ExistingBufferKey, maxBufferSlots> m_existingFragmentBuffers;
-    HashMap<uint32_t, RefPtr<const BindGroup>, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_bindGroups;
+    HashMap<uint32_t, Ref<const BindGroup>, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_bindGroups;
     std::array<uint32_t, 32> m_maxDynamicOffsetAtIndex;
     NSString* m_lastErrorString { nil };
     MTLRenderPassDescriptor* m_metalDescriptor { nil };
@@ -205,25 +214,26 @@ private:
     float m_depthClearValue { 0 };
     uint64_t m_drawCount { 0 };
     const uint64_t m_maxDrawCount { 0 };
+    id<MTLRasterizationRateMap> m_rasterizationRateMap { nil };
     uint32_t m_stencilClearValue { 0 };
     std::optional<MTLViewport> m_viewport;
+    MTLDepthClipMode m_overrideDepthClipMode { MTLDepthClipModeClip };
     bool m_clearDepthAttachment { false };
     bool m_clearStencilAttachment { false };
     bool m_occlusionQueryActive { false };
     bool m_passEnded { false };
     bool m_ignoreBufferCache { false };
     Vector<bool> m_bindGroupDynamicOffsetsChanged;
-// FIXME: remove @safe once rdar://151039766 lands
-} __attribute__((swift_attr("@safe"))) SWIFT_SHARED_REFERENCE(refRenderPassEncoder, derefRenderPassEncoder);
+} SWIFT_SHARED_REFERENCE(refRenderPassEncoder, derefRenderPassEncoder);
 
 } // namespace WebGPU
 
 inline void refRenderPassEncoder(WebGPU::RenderPassEncoder* obj)
 {
-    ref(obj);
+    WTF::ref(obj);
 }
 
 inline void derefRenderPassEncoder(WebGPU::RenderPassEncoder* obj)
 {
-    deref(obj);
+    WTF::deref(obj);
 }

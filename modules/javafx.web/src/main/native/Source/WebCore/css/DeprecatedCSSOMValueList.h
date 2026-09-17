@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "CSSValueList.h"
-#include "DeprecatedCSSOMValue.h"
+#include <WebCore/CSSValueList.h>
+#include <WebCore/DeprecatedCSSOMValue.h>
 
 namespace WebCore {
 
@@ -34,7 +34,7 @@ class DeprecatedCSSOMValueList : public DeprecatedCSSOMValue {
 public:
     static Ref<DeprecatedCSSOMValueList> create(Vector<Ref<DeprecatedCSSOMValue>, 4> values, CSSValue::ValueSeparator separator, CSSStyleDeclaration& owner)
     {
-        return adoptRef(*new DeprecatedCSSOMValueList(WTFMove(values), separator, owner));
+        return adoptRef(*new DeprecatedCSSOMValueList(WTF::move(values), separator, owner));
     }
 
     static Ref<DeprecatedCSSOMValueList> create(const CSSValueContainingVector& values, CSSStyleDeclaration& owner)
@@ -51,7 +51,7 @@ public:
 private:
     DeprecatedCSSOMValueList(Vector<Ref<DeprecatedCSSOMValue>, 4> values, CSSValue::ValueSeparator separator, CSSStyleDeclaration& owner)
         : DeprecatedCSSOMValue(ClassType::List, owner)
-        , m_values { WTFMove(values) }
+        , m_values { WTF::move(values) }
     {
         m_valueSeparator = separator;
     }

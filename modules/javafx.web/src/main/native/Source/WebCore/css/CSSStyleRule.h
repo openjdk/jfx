@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include "CSSRule.h"
+#include <WebCore/CSSRule.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -67,7 +67,7 @@ private:
     String cssText(const CSS::SerializationContext&) const final;
     String cssTextInternal(StringBuilder& declarations, StringBuilder& rules) const;
     void reattach(StyleRuleBase&) final;
-    void getChildStyleSheets(HashSet<RefPtr<CSSStyleSheet>>&) final;
+    void getChildStyleSheets(HashSet<Ref<CSSStyleSheet>>&) final;
 
     String generateSelectorText() const;
     Vector<Ref<StyleRuleBase>> nestedRules() const;

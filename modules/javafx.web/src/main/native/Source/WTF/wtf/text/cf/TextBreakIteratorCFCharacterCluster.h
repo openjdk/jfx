@@ -20,10 +20,13 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/spi/cf/CFStringSPI.h>
 #include <wtf/text/StringView.h>
 #include <wtf/text/cocoa/ContextualizedCFString.h>
+
+#if PLATFORM(COCOA)
 
 namespace WTF {
 
@@ -99,3 +102,5 @@ private:
 };
 
 }
+
+#endif // PLATFORM(COCOA)

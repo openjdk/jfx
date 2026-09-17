@@ -26,9 +26,9 @@
 // https://gpuweb.github.io/gpuweb/#dictdef-gpustencilfacestate
 
 [
-    EnabledBySetting=WebGPUEnabled
-]
-dictionary GPUStencilFaceState {
+    EnabledBySetting=WebGPUEnabled,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary GPUStencilFaceState {
     GPUCompareFunction compare = "always";
     GPUStencilOperation failOp = "keep";
     GPUStencilOperation depthFailOp = "keep";

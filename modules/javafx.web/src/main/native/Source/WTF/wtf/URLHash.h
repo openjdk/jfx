@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef URLHash_h
-#define URLHash_h
+#pragma once
 
 #include <wtf/URL.h>
 #include <wtf/text/StringHash.h>
@@ -53,5 +52,3 @@ template<> struct DefaultHash<URL> : URLHash { };
 template<> struct HashTraits<URL> : SimpleClassHashTraits<URL> { };
 
 } // namespace WTF
-
-#endif // URLHash_h

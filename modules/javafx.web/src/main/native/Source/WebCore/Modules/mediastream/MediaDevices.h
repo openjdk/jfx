@@ -33,14 +33,14 @@
 
 #if ENABLE(MEDIA_STREAM)
 
-#include "ActiveDOMObject.h"
-#include "EventNames.h"
-#include "EventTarget.h"
-#include "EventTargetInterfaces.h"
-#include "IDLTypes.h"
-#include "MediaTrackConstraints.h"
-#include "RealtimeMediaSourceCenter.h"
-#include "UserMediaClient.h"
+#include <WebCore/ActiveDOMObject.h>
+#include <WebCore/EventNames.h>
+#include <WebCore/EventTarget.h>
+#include <WebCore/EventTargetInterfaces.h>
+#include <WebCore/IDLTypes.h>
+#include <WebCore/MediaTrackConstraints.h>
+#include <WebCore/RealtimeMediaSourceCenter.h>
+#include <WebCore/UserMediaClient.h>
 #include <wtf/RobinHoodHashMap.h>
 #include <wtf/RunLoop.h>
 #include <wtf/WeakPtr.h>
@@ -58,14 +58,16 @@ struct MediaTrackSupportedConstraints;
 template<typename IDLType> class DOMPromiseDeferred;
 
 class MediaDevices final : public RefCounted<MediaDevices>, public ActiveDOMObject, public EventTarget {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(MediaDevices);
+    WTF_MAKE_TZONE_ALLOCATED(MediaDevices);
 public:
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
-
     static Ref<MediaDevices> create(Document&);
 
     ~MediaDevices();
+
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
 
     Document* document() const;
 
@@ -145,5 +147,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(MediaDevices)
 
 #endif // ENABLE(MEDIA_STREAM)

@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "SQLValue.h"
-#include "SQLiteDatabase.h"
+#include <WebCore/SQLValue.h>
+#include <WebCore/SQLiteDatabase.h>
 #include <span>
 #include <wtf/CheckedRef.h>
 #include <wtf/TZoneMalloc.h>
@@ -82,7 +82,7 @@ public:
     WEBCORE_EXPORT Vector<uint8_t> columnBlob(int col);
 
     // The returned Span stays valid until the next step() / reset() or destruction of the statement.
-    std::span<const uint8_t> columnBlobAsSpan(int col);
+    std::span<const uint8_t> columnBlobAsSpan(int col) LIFETIME_BOUND;
 
     SQLiteDatabase& database() { return m_database.get(); }
 

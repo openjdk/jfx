@@ -30,6 +30,7 @@
 #if ENABLE(NOTIFICATIONS)
 
 #include "BitmapImage.h"
+#include "ContextDestructionObserverInlines.h"
 #include "EventTargetInlines.h"
 #include "GraphicsContext.h"
 #include "NotificationResources.h"
@@ -44,6 +45,7 @@ namespace WebCore {
 // https://notifications.spec.whatwg.org/#resources
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(NotificationResourcesLoader);
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(ResourceLoader);
 
 NotificationResourcesLoader::NotificationResourcesLoader(Notification& notification)
     : m_notification(notification)
@@ -72,34 +74,35 @@ bool NotificationResourcesLoader::resourceIsSupportedInPlatform(Resource resourc
 
 void NotificationResourcesLoader::start(CompletionHandler<void(RefPtr<NotificationResources>&&)>&& completionHandler)
 {
-    m_completionHandler = WTFMove(completionHandler);
+    m_completionHandler = WTF::move(completionHandler);
 
     // If the notification platform supports icons, fetch notification’s icon URL, if icon URL is set.
     if (resourceIsSupportedInPlatform(Resource::Icon)) {
-        const URL& iconURL = m_notification.icon();
+        Ref notification = m_notification.get();
+        const URL& iconURL = notification->icon();
         if (!iconURL.isEmpty()) {
-            auto loader = makeUnique<ResourceLoader>(*m_notification.protectedScriptExecutionContext(), iconURL, [this](ResourceLoader* loader, RefPtr<BitmapImage>&& image) {
+            Ref loader = ResourceLoader::create(*notification->protectedScriptExecutionContext(), iconURL, [this](ResourceLoader* loader, RefPtr<BitmapImage>&& image) {
                 if (m_stopped)
                     return;
 
                 if (image && !image->size().isEmpty()) {
                     if (!m_resources)
                         m_resources = NotificationResources::create();
-                    m_resources->setIcon(WTFMove(image));
+                    m_resources->setIcon(WTF::move(image));
                 }
 
                 didFinishLoadingResource(loader);
             });
 
             if (!loader->finished())
-                m_loaders.add(WTFMove(loader));
+                m_loaders.add(WTF::move(loader));
         }
     }
 
     // FIXME: Implement other resources.
 
     if (m_loaders.isEmpty())
-        m_completionHandler(WTFMove(m_resources));
+        m_completionHandler(WTF::move(m_resources));
 }
 
 void NotificationResourcesLoader::stop()
@@ -112,7 +115,7 @@ void NotificationResourcesLoader::stop()
     auto completionHandler = std::exchange(m_completionHandler, nullptr);
 
     while (!m_loaders.isEmpty()) {
-        auto loader = m_loaders.takeAny();
+        RefPtr loader = m_loaders.takeAny();
         loader->cancel();
     }
 
@@ -125,13 +128,20 @@ void NotificationResourcesLoader::didFinishLoadingResource(ResourceLoader* loade
     if (m_loaders.contains(loader)) {
         m_loaders.remove(loader);
         if (m_loaders.isEmpty() && m_completionHandler)
-            m_completionHandler(WTFMove(m_resources));
+            m_completionHandler(WTF::move(m_resources));
     }
 }
 
-NotificationResourcesLoader::ResourceLoader::ResourceLoader(ScriptExecutionContext& context, const URL& url, CompletionHandler<void(ResourceLoader*, RefPtr<BitmapImage>&&)>&& completionHandler)
-    : m_completionHandler(WTFMove(completionHandler))
+auto NotificationResourcesLoader::ResourceLoader::create(ScriptExecutionContext& context, const URL& url, CompletionHandler<void(ResourceLoader*, RefPtr<BitmapImage>&&)>&& completionHandler) -> Ref<ResourceLoader>
 {
+    return adoptRef(*new ResourceLoader(context, url, WTF::move(completionHandler)));
+}
+
+NotificationResourcesLoader::ResourceLoader::ResourceLoader(ScriptExecutionContext& context, const URL& url, CompletionHandler<void(ResourceLoader*, RefPtr<BitmapImage>&&)>&& completionHandler)
+    : m_completionHandler(WTF::move(completionHandler))
+{
+    relaxAdoptionRequirement();
+
     ThreadableLoaderOptions options;
     options.mode = FetchOptions::Mode::Cors;
     options.sendLoadCallbacks = SendCallbackPolicy::SendCallbacks;
@@ -164,7 +174,7 @@ void NotificationResourcesLoader::ResourceLoader::didReceiveData(const SharedBuf
 {
     if (RefPtr image = m_image) {
         m_buffer.append(buffer);
-        image->setData(m_buffer.get(), false);
+        image->setData(m_buffer.buffer(), false);
     }
 }
 
@@ -173,10 +183,10 @@ void NotificationResourcesLoader::ResourceLoader::didFinishLoading(ScriptExecuti
     m_finished = true;
 
     if (RefPtr image = m_image)
-        image->setData(m_buffer.take(), true);
+        image->setData(m_buffer.takeBuffer(), true);
 
     if (m_completionHandler)
-        m_completionHandler(this, WTFMove(m_image));
+        m_completionHandler(this, WTF::move(m_image));
 }
 
 void NotificationResourcesLoader::ResourceLoader::didFail(std::optional<ScriptExecutionContextIdentifier>, const ResourceError&)

@@ -27,6 +27,7 @@
 #include "ServerOpenDBRequest.h"
 
 #include "IDBResultData.h"
+#include "UniqueIDBDatabaseTransaction.h"
 
 namespace WebCore {
 namespace IDBServer {
@@ -63,24 +64,35 @@ void ServerOpenDBRequest::maybeNotifyRequestBlocked(uint64_t currentVersion)
     m_notifiedBlocked = true;
 }
 
-void ServerOpenDBRequest::notifyDidDeleteDatabase(const IDBDatabaseInfo& info)
-{
-    ASSERT(isDeleteRequest());
-
-    m_connection->didDeleteDatabase(IDBResultData::deleteDatabaseSuccess(m_requestData.requestIdentifier(), info));
-}
-
 void ServerOpenDBRequest::notifiedConnectionsOfVersionChange(HashSet<IDBDatabaseConnectionIdentifier>&& connectionIdentifiers)
 {
     ASSERT(!m_notifiedConnectionsOfVersionChange);
 
     m_notifiedConnectionsOfVersionChange = true;
-    m_connectionsPendingVersionChangeEvent = WTFMove(connectionIdentifiers);
+    m_connectionsPendingVersionChangeEvent = WTF::move(connectionIdentifiers);
 }
 
 void ServerOpenDBRequest::connectionClosedOrFiredVersionChangeEvent(IDBDatabaseConnectionIdentifier connectionIdentifier)
 {
     m_connectionsPendingVersionChangeEvent.remove(connectionIdentifier);
+}
+
+void ServerOpenDBRequest::setVersionChangeTransaction(UniqueIDBDatabaseTransaction& transaction)
+{
+    m_versionChangeTransaction = &transaction;
+}
+
+void ServerOpenDBRequest::didDeleteDatabase(const IDBResultData& result)
+{
+    m_connection->didDeleteDatabase(result);
+}
+
+void ServerOpenDBRequest::didOpenDatabase(const IDBResultData& result)
+{
+    m_connection->didOpenDatabase(result);
+
+    if (RefPtr transaction = m_versionChangeTransaction)
+        transaction->addOpenRequestResult(result.error());
 }
 
 } // namespace IDBServer

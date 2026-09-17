@@ -26,7 +26,6 @@
 #pragma once
 
 #include "ActiveDOMObject.h"
-#include "AddEventListenerOptions.h"
 #include "EventTarget.h"
 #include "EventTargetInterfaces.h"
 #include "IDLTypes.h"
@@ -57,15 +56,16 @@ struct CookieChangeSubscription;
 
 class ServiceWorkerContainer final : public EventTarget, public ActiveDOMObject, public ServiceWorkerJobClient {
     WTF_MAKE_NONCOPYABLE(ServiceWorkerContainer);
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(ServiceWorkerContainer);
+    WTF_MAKE_TZONE_ALLOCATED(ServiceWorkerContainer);
 public:
     static UniqueRef<ServiceWorkerContainer> create(ScriptExecutionContext*, NavigatorBase&);
 
     ~ServiceWorkerContainer();
 
-    // ActiveDOMObject.
+    // ContextDestructionObserver.
     void ref() const final;
     void deref() const final;
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
 
     ServiceWorker* controller() const;
 
@@ -75,7 +75,7 @@ public:
     using RegistrationOptions = ServiceWorkerRegistrationOptions;
     void addRegistration(Variant<RefPtr<TrustedScriptURL>, String>&&, const RegistrationOptions&, Ref<DeferredPromise>&&);
     void unregisterRegistration(ServiceWorkerRegistrationIdentifier, DOMPromiseDeferred<IDLBoolean>&&);
-    void updateRegistration(const URL& scopeURL, const URL& scriptURL, WorkerType, RefPtr<DeferredPromise>&&);
+    void updateRegistration(const URL& scopeURL, const URL& scriptURL, WorkerType, Ref<DeferredPromise>&&);
 
     void getRegistration(const String& clientURL, Ref<DeferredPromise>&&);
     void updateRegistrationState(ServiceWorkerRegistrationIdentifier, ServiceWorkerRegistrationState, const std::optional<ServiceWorkerData>&);
@@ -83,7 +83,7 @@ public:
     void queueTaskToFireUpdateFoundEvent(ServiceWorkerRegistrationIdentifier);
     void queueTaskToDispatchControllerChangeEvent();
 
-    void postMessage(MessageWithMessagePorts&&, ServiceWorkerData&& sourceData, String&& sourceOrigin);
+    void postMessage(MessageWithMessagePorts&&, ServiceWorkerData&& sourceData, Ref<SecurityOrigin>&& sourceOrigin);
 
     void getRegistrations(Ref<DeferredPromise>&&);
 
@@ -126,7 +126,7 @@ private:
 
     bool addEventListener(const AtomString& eventType, Ref<EventListener>&&, const AddEventListenerOptions& = { }) final;
 
-    void scheduleJob(std::unique_ptr<ServiceWorkerJob>&&);
+    void scheduleJob(Ref<ServiceWorkerJob>&&);
 
     void jobFailedWithException(ServiceWorkerJob&, const Exception&) final;
     void jobResolvedWithRegistration(ServiceWorkerJob&, ServiceWorkerRegistrationData&&, ShouldNotifyWhenResolved) final;
@@ -145,7 +145,8 @@ private:
     SWClientConnection& ensureSWClientConnection();
     Ref<SWClientConnection> ensureProtectedSWClientConnection();
 
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
+    ScriptExecutionContext* scriptExecutionContext() const final;
+    using ActiveDOMObject::protectedScriptExecutionContext;
     enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::ServiceWorkerContainer; }
     void refEventTarget() final;
     void derefEventTarget() final;
@@ -162,7 +163,7 @@ private:
     RefPtr<SWClientConnection> m_swConnection;
 
     struct OngoingJob {
-        std::unique_ptr<ServiceWorkerJob> job;
+        RefPtr<ServiceWorkerJob> job;
         RefPtr<PendingActivity<ServiceWorkerContainer>> pendingActivity;
     };
     HashMap<ServiceWorkerJobIdentifier, OngoingJob> m_jobMap;
@@ -182,3 +183,5 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(ServiceWorkerContainer)

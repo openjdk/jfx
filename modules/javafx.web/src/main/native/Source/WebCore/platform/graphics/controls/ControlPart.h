@@ -25,11 +25,11 @@
 
 #pragma once
 
-#include "Color.h"
-#include "ControlFactory.h"
-#include "PlatformControl.h"
-#include "StyleAppearance.h"
-#include <wtf/ThreadSafeRefCounted.h>
+#include <WebCore/Color.h>
+#include <WebCore/ControlFactory.h>
+#include <WebCore/PlatformControl.h>
+#include <WebCore/StyleAppearance.h>
+#include <wtf/ThreadSafeWeakPtr.h>
 
 namespace WebCore {
 
@@ -37,14 +37,15 @@ class FloatRect;
 class GraphicsContext;
 class ControlFactory;
 
-class ControlPart : public ThreadSafeRefCounted<ControlPart> {
+class ControlPart : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<ControlPart> {
 public:
     virtual ~ControlPart() = default;
 
     StyleAppearance type() const { return m_type; }
 
     WEBCORE_EXPORT ControlFactory& controlFactory() const;
-    void setOverrideControlFactory(RefPtr<ControlFactory>&& controlFactory) { m_overrideControlFactory = WTFMove(controlFactory); }
+    WEBCORE_EXPORT Ref<ControlFactory> protectedControlFactory() const;
+    void setOverrideControlFactory(RefPtr<ControlFactory>&& controlFactory) { m_overrideControlFactory = WTF::move(controlFactory); }
 
     FloatSize sizeForBounds(const FloatRect& bounds, const ControlStyle&);
     FloatRect rectForBounds(const FloatRect& bounds, const ControlStyle&);
@@ -59,7 +60,6 @@ protected:
     const StyleAppearance m_type;
 
     mutable std::unique_ptr<PlatformControl> m_platformControl;
-    RefPtr<ControlFactory> m_controlFactory;
     RefPtr<ControlFactory> m_overrideControlFactory;
 };
 

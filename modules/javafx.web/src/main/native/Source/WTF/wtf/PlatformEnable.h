@@ -73,7 +73,15 @@
 /* ==== Platform additions: additions to PlatformEnable.h from outside the main repository ==== */
 
 #if USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/AdditionalFeatureDefines.h>)
+/* FIXME: Properly support using WKA in modules. */
+#if defined(__clang__) && defined(__has_feature) && __has_feature(modules)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnon-modular-include-in-module"
+#endif
 #include <WebKitAdditions/AdditionalFeatureDefines.h>
+#if defined(__clang__) && defined(__has_feature) && __has_feature(modules)
+#pragma clang diagnostic pop
+#endif
 #endif
 
 
@@ -104,12 +112,12 @@
 
 /* Do not use PLATFORM() tests in this section ! */
 
-#if !defined(ENABLE_CONJECTURE_ASSERT)
-#define ENABLE_CONJECTURE_ASSERT 0
-#endif
-
 #if !defined(ENABLE_ACCESSIBILITY_ANIMATION_CONTROL)
 #define ENABLE_ACCESSIBILITY_ANIMATION_CONTROL 0
+#endif
+
+#if !defined(ENABLE_ACCESSIBILITY_LOCAL_FRAME)
+#define ENABLE_ACCESSIBILITY_LOCAL_FRAME 0
 #endif
 
 #if !defined(ENABLE_ACCESSIBILITY_NON_BLINKING_CURSOR)
@@ -124,8 +132,20 @@
 #define ENABLE_AIRPLAY_PICKER 0
 #endif
 
-#if !defined(ENABLE_COCOA_WEBM_PLAYER)
-#define ENABLE_COCOA_WEBM_PLAYER 0
+#if !defined(ARKIT_INLINE_PREVIEW)
+#define ARKIT_INLINE_PREVIEW 0
+#endif
+
+#if !defined(ENABLE_ARKIT_INLINE_PREVIEW_CAMERA_TRANSFORM)
+#define ENABLE_ARKIT_INLINE_PREVIEW_CAMERA_TRANSFORM 0
+#endif
+
+#if !defined(ENABLE_ARKIT_INLINE_PREVIEW_ANIMATIONS_CONTROL)
+#define ENABLE_ARKIT_INLINE_PREVIEW_ANIMATIONS_CONTROL 0
+#endif
+
+#if !defined(ENABLE_ARKIT_INLINE_PREVIEW_AUDIO_CONTROL)
+#define ENABLE_ARKIT_INLINE_PREVIEW_AUDIO_CONTROL 0
 #endif
 
 #if !defined(ENABLE_APP_HIGHLIGHTS)
@@ -146,6 +166,14 @@
 
 #if !defined(ENABLE_AUTOCAPITALIZE)
 #define ENABLE_AUTOCAPITALIZE 0
+#endif
+
+#if !defined(ENABLE_COCOA_WEBM_PLAYER)
+#define ENABLE_COCOA_WEBM_PLAYER 0
+#endif
+
+#if !defined(ENABLE_CONJECTURE_ASSERT)
+#define ENABLE_CONJECTURE_ASSERT 0
 #endif
 
 #if !defined(ENABLE_CONTENT_CHANGE_OBSERVER)
@@ -242,6 +270,10 @@
 
 #if !defined(ENABLE_GPU_PROCESS_WEBGL_BY_DEFAULT)
 #define ENABLE_GPU_PROCESS_WEBGL_BY_DEFAULT 0
+#endif
+
+#if !defined(ENABLE_GPU_PROCESS_MODEL)
+#define ENABLE_GPU_PROCESS_MODEL 0
 #endif
 
 #if !defined(ENABLE_HDR_FOR_WEBGPU)
@@ -345,6 +377,54 @@
 
 #if !defined(ENABLE_MHTML)
 #define ENABLE_MHTML 0
+#endif
+
+#if !defined(ENABLE_MODEL_CONTEXT)
+#define ENABLE_MODEL_CONTEXT 0
+#endif
+
+#if !defined(ENABLE_MODEL_ELEMENT)
+#define ENABLE_MODEL_ELEMENT 0
+#endif
+
+#if !defined(ENABLE_MODEL_ELEMENT_ACCESSIBILITY)
+#define ENABLE_MODEL_ELEMENT_ACCESSIBILITY 0
+#endif
+
+#if !defined(ENABLE_MODEL_ELEMENT_ANIMATIONS_CONTROL)
+#define ENABLE_MODEL_ELEMENT_ANIMATIONS_CONTROL 0
+#endif
+
+#if !defined(ENABLE_MODEL_ELEMENT_BOUNDING_BOX)
+#define ENABLE_MODEL_ELEMENT_BOUNDING_BOX 0
+#endif
+
+#if !defined(ENABLE_MODEL_ELEMENT_ENTITY_TRANSFORM)
+#define ENABLE_MODEL_ELEMENT_ENTITY_TRANSFORM 0
+#endif
+
+#if !defined(ENABLE_MODEL_ELEMENT_ENVIRONMENT_MAP)
+#define ENABLE_MODEL_ELEMENT_ENVIRONMENT_MAP 0
+#endif
+
+#if !defined(ENABLE_MODEL_ELEMENT_PORTAL)
+#define ENABLE_MODEL_ELEMENT_PORTAL 0
+#endif
+
+#if !defined(ENABLE_MODEL_ELEMENT_STAGE_MODE)
+#define ENABLE_MODEL_ELEMENT_STAGE_MODE 0
+#endif
+
+#if !defined(ENABLE_MODEL_ELEMENT_STAGE_MODE_INTERACTION)
+#define ENABLE_MODEL_ELEMENT_STAGE_MODE_INTERACTION 0
+#endif
+
+#if !defined(ENABLE_MODEL_PROCESS)
+#define ENABLE_MODEL_PROCESS 0
+#endif
+
+#if !defined(ENABLE_SCENE_GEOMETRY_UPDATE)
+#define ENABLE_SCENE_GEOMETRY_UPDATE 0
 #endif
 
 #if !defined(ENABLE_MONOSPACE_FONT_EXCEPTION)
@@ -473,10 +553,6 @@
 #define ENABLE_SPELLCHECK 0
 #endif
 
-#if !defined(ENABLE_STATIC_IPAD_USER_AGENT_VALUE)
-#define ENABLE_STATIC_IPAD_USER_AGENT_VALUE 0
-#endif
-
 #if !defined(ENABLE_TEXT_AUTOSIZING)
 #define ENABLE_TEXT_AUTOSIZING 0
 #endif
@@ -487,6 +563,10 @@
 
 #if !defined(ENABLE_TEXT_SELECTION)
 #define ENABLE_TEXT_SELECTION 1
+#endif
+
+#if !defined(ENABLE_THREADED_ANIMATIONS)
+#define ENABLE_THREADED_ANIMATIONS 0
 #endif
 
 #if !defined(ENABLE_THUNDER)
@@ -551,6 +631,14 @@
 
 #if !defined(ENABLE_WEBXR_WEBGPU_BY_DEFAULT)
 #define ENABLE_WEBXR_WEBGPU_BY_DEFAULT 0
+#endif
+
+#if !defined(ENABLE_WEBGPU)
+#define ENABLE_WEBGPU PLATFORM(COCOA)
+#endif
+
+#if !defined(ENABLE_WEBXR_HIT_TEST)
+#define ENABLE_WEBXR_HIT_TEST 0
 #endif
 
 #if !defined(ENABLE_WEBXR_LAYERS)
@@ -756,7 +844,7 @@
 #undef ENABLE_B3_JIT
 #define ENABLE_B3_JIT 1
 #undef ENABLE_WEBASSEMBLY_OMGJIT
-#define ENABLE_WEBASSEMBLY_OMGJIT 1
+#define ENABLE_WEBASSEMBLY_OMGJIT 0
 #undef ENABLE_WEBASSEMBLY_BBQJIT
 #define ENABLE_WEBASSEMBLY_BBQJIT 1
 #endif
@@ -934,7 +1022,7 @@
 #define ENABLE_JIT_OPERATION_DISASSEMBLY 1
 #endif
 
-#if CPU(ARM64E)
+#if CPU(ARM64E) && ENABLE(JIT)
 #define ENABLE_JIT_SIGN_ASSEMBLER_BUFFER 1
 #endif
 
@@ -996,6 +1084,10 @@
 #error "ENABLE(WEBXR_HANDS) requires ENABLE(WEBXR)"
 #endif
 
+#if ENABLE(WEBXR_HIT_TEST) && !ENABLE(WEBXR)
+#error "ENABLE(WEBXR_HIT_TEST) requires ENABLE(WEBXR)"
+#endif
+
 #if ENABLE(WEBXR_LAYERS) && !ENABLE(WEBXR)
 #error "ENABLE(WEBXR_LAYERS) requires ENABLE(WEBXR)"
 #endif
@@ -1036,4 +1128,17 @@
 
 #if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED < 260000
 #define ENABLE_TILED_CA_DRAWING_AREA 1
+#endif
+
+#if !defined(ENABLE_ALLOW_MULTIPLE_COMMIT_LAYER_TREE_PENDING)
+#define ENABLE_ALLOW_MULTIPLE_COMMIT_LAYER_TREE_PENDING 0
+#endif
+
+#if !defined(ENABLE_TLS_1_2_DEFAULT_MINIMUM) \
+    && ((PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 260000) \
+    || ((PLATFORM(IOS) || PLATFORM(MACCATALYST)) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 260000) \
+    || (PLATFORM(VISION) && __VISION_OS_VERSION_MIN_REQUIRED >= 260000) \
+    || (PLATFORM(WATCHOS) && __WATCH_OS_VERSION_MIN_REQUIRED >= 260000) \
+    || (PLATFORM(APPLETV) && __TV_OS_VERSION_MIN_REQUIRED >= 260000))
+#define ENABLE_TLS_1_2_DEFAULT_MINIMUM 1
 #endif

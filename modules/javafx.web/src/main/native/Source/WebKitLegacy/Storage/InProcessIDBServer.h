@@ -68,6 +68,9 @@ public:
     WebCore::IDBServer::IDBConnectionToClient& connectionToClient() const;
     WebCore::IDBServer::IDBServer& server() { return *m_server; }
 
+    void ref() const final { ThreadSafeRefCounted::ref(); }
+    void deref() const final { ThreadSafeRefCounted::deref(); }
+
     // IDBConnectionToServer
     void deleteDatabase(const WebCore::IDBOpenRequestData&) final;
     void openDatabase(const WebCore::IDBOpenRequestData&) final;

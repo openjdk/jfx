@@ -88,7 +88,7 @@ struct ConstantArray {
     }
 
     ConstantArray(FixedVector<ConstantValue>&& elements)
-        : elements(WTFMove(elements))
+        : elements(WTF::move(elements))
     {
     }
 
@@ -105,7 +105,7 @@ struct ConstantVector {
     }
 
     ConstantVector(FixedVector<ConstantValue>&& elements)
-        : elements(WTFMove(elements))
+        : elements(WTF::move(elements))
     {
     }
 

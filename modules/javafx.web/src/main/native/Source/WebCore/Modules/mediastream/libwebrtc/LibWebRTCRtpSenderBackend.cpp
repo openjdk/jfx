@@ -45,24 +45,24 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(LibWebRTCRtpSenderBackend);
 
 Ref<LibWebRTCRtpSenderBackend> LibWebRTCRtpSenderBackend::create(LibWebRTCPeerConnectionBackend& backend, RefPtr<webrtc::RtpSenderInterface>&& rtcSender, Source&& source)
 {
-    return adoptRef(*new LibWebRTCRtpSenderBackend(backend, WTFMove(rtcSender), WTFMove(source)));
+    return adoptRef(*new LibWebRTCRtpSenderBackend(backend, WTF::move(rtcSender), WTF::move(source)));
 }
 
 Ref<LibWebRTCRtpSenderBackend> LibWebRTCRtpSenderBackend::create(LibWebRTCPeerConnectionBackend& backend, RefPtr<webrtc::RtpSenderInterface>&& rtcSender)
 {
-    return adoptRef(*new LibWebRTCRtpSenderBackend(backend, WTFMove(rtcSender)));
+    return adoptRef(*new LibWebRTCRtpSenderBackend(backend, WTF::move(rtcSender)));
 }
 
 LibWebRTCRtpSenderBackend::LibWebRTCRtpSenderBackend(LibWebRTCPeerConnectionBackend& backend, RefPtr<webrtc::RtpSenderInterface>&& rtcSender)
     : m_peerConnectionBackend(backend)
-    , m_rtcSender(WTFMove(rtcSender))
+    , m_rtcSender(WTF::move(rtcSender))
 {
 }
 
 LibWebRTCRtpSenderBackend::LibWebRTCRtpSenderBackend(LibWebRTCPeerConnectionBackend& backend, RefPtr<webrtc::RtpSenderInterface>&& rtcSender, Source&& source)
     : m_peerConnectionBackend(backend)
-    , m_rtcSender(WTFMove(rtcSender))
-    , m_source(WTFMove(source))
+    , m_rtcSender(WTF::move(rtcSender))
+    , m_source(WTF::move(source))
 {
     startSource();
 }
@@ -271,7 +271,7 @@ void LibWebRTCRtpSenderBackend::setSource(Source&& source)
 void LibWebRTCRtpSenderBackend::takeSource(LibWebRTCRtpSenderBackend& backend)
 {
     ASSERT(backend.hasSource());
-    setSource(WTFMove(backend.m_source));
+    setSource(WTF::move(backend.m_source));
 }
 
 } // namespace WebCore

@@ -400,7 +400,7 @@ void BackForwardList::addItem(Ref<HistoryItem>&& newItem)
     // Toss the first item if the list is getting too big, as long as we're not using it
     // (or even if we are, if we only want 1 entry).
     if (m_entries.size() == m_capacity && (m_current || m_capacity == 1)) {
-        Ref<HistoryItem> item = WTFMove(m_entries[0]);
+        Ref<HistoryItem> item = WTF::move(m_entries[0]);
         m_entries.removeAt(0);
         m_entryHash.remove(item.ptr());
         BackForwardCache::singleton().remove(item);
@@ -408,7 +408,7 @@ void BackForwardList::addItem(Ref<HistoryItem>&& newItem)
     }
 
     m_entryHash.add(newItem.ptr());
-    m_entries.insert(m_current + 1, WTFMove(newItem));
+    m_entries.insert(m_current + 1, WTF::move(newItem));
     ++m_current;
 
     notifyBackForwardListChanged(m_hostObject);

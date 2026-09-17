@@ -25,7 +25,8 @@
 
 #pragma once
 
-#include "JSCBuiltins.h"
+#include <JavaScriptCore/JSCBuiltins.h>
+#include <cstdint>
 
 namespace JSC {
 
@@ -50,12 +51,27 @@ class JSGlobalObject;
     v(setIterationEntryKey, nullptr) \
     v(setIteratorNext, nullptr) \
     v(setIteratorKey, nullptr) \
-    v(setClone, nullptr) \
     v(setPrototypeDirect, nullptr) \
     v(setPrototypeDirectOrThrow, nullptr) \
     v(copyDataProperties, nullptr) \
     v(cloneObject, nullptr) \
-    v(enqueueJob, nullptr) \
+    v(resolvePromise, nullptr) \
+    v(rejectPromise, nullptr) \
+    v(fulfillPromise, nullptr) \
+    v(resolvePromiseWithFirstResolvingFunctionCallCheck, nullptr) \
+    v(rejectPromiseWithFirstResolvingFunctionCallCheck, nullptr) \
+    v(fulfillPromiseWithFirstResolvingFunctionCallCheck, nullptr) \
+    v(resolveWithInternalMicrotaskForAsyncAwait, nullptr) \
+    v(asyncGeneratorQueueEnqueue, nullptr) \
+    v(asyncGeneratorQueueDequeueResolve, nullptr) \
+    v(asyncGeneratorQueueDequeueReject, nullptr) \
+    v(driveAsyncFunction, nullptr) \
+    v(newHandledRejectedPromise, nullptr) \
+    v(promiseEmptyOnFulfilled, nullptr) \
+    v(promiseEmptyOnRejected, nullptr) \
+    v(promiseResolve, nullptr) \
+    v(promiseReject, nullptr) \
+    v(performPromiseThen, nullptr) \
     v(makeTypeError, nullptr) \
     v(AggregateError, nullptr) \
     v(typedArrayLength, nullptr) \
@@ -81,8 +97,6 @@ class JSGlobalObject;
     v(repeatCharacter, nullptr) \
     v(isArray, nullptr) \
     v(isArraySlow, nullptr) \
-    v(appendMemcpy, nullptr) \
-    v(hostPromiseRejectionTracker, nullptr) \
     v(Set, nullptr) \
     v(Map, nullptr) \
     v(importInRealm, nullptr) \
@@ -128,8 +142,7 @@ class JSGlobalObject;
     v(sentinelString, nullptr) \
     v(createRemoteFunction, nullptr) \
     v(isRemoteFunction, nullptr) \
-    v(arrayFromFastFillWithUndefined, nullptr) \
-    v(arrayFromFastFillWithEmpty, nullptr) \
+    v(arrayFromFastWithoutMapFn, nullptr) \
     v(jsonParse, nullptr) \
     v(jsonStringify, nullptr) \
     v(String, nullptr) \

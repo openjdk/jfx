@@ -24,17 +24,17 @@
 #include "HTMLProgressElement.h"
 #include "RenderBoxModelObjectInlines.h"
 #include "RenderElementInlines.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include "RenderTheme.h"
 #include <wtf/RefPtr.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderProgress);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderProgress);
 
 RenderProgress::RenderProgress(HTMLElement& element, RenderStyle&& style)
-    : RenderBlockFlow(Type::Progress, element, WTFMove(style))
+    : RenderBlockFlow(Type::Progress, element, WTF::move(style))
     , m_position(HTMLProgressElement::InvalidPosition)
     , m_animationTimer(*this, &RenderProgress::animationTimerFired)
 {
@@ -66,11 +66,11 @@ RenderBox::LogicalExtentComputedValues RenderProgress::computeLogicalHeight(Layo
     auto computedValues = RenderBox::computeLogicalHeight(logicalHeight, logicalTop);
     LayoutRect frame = frameRect();
     if (isHorizontalWritingMode())
-        frame.setHeight(computedValues.m_extent);
+        frame.setHeight(computedValues.extent);
     else
-        frame.setWidth(computedValues.m_extent);
+        frame.setWidth(computedValues.extent);
     IntSize frameSize = theme().progressBarRectForBounds(*this, snappedIntRect(frame)).size();
-    computedValues.m_extent = isHorizontalWritingMode() ? frameSize.height() : frameSize.width();
+    computedValues.extent = isHorizontalWritingMode() ? frameSize.height() : frameSize.width();
     return computedValues;
 }
 

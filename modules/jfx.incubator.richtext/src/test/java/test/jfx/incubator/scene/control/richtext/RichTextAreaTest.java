@@ -40,10 +40,14 @@ import javafx.beans.property.SimpleDoubleProperty;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.event.Event;
+import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.scene.AccessibleAttribute;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Control;
+import javafx.scene.control.Label;
+import javafx.scene.image.ImageView;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.DataFormat;
@@ -54,6 +58,7 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.text.Font;
+import javafx.scene.text.TextFlow;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 import org.junit.jupiter.api.AfterEach;
@@ -64,6 +69,9 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.jfx.incubator.scene.control.richtext.CaretInfo;
+import com.sun.jfx.incubator.scene.control.richtext.EmbeddedImageHelper;
+import com.sun.jfx.incubator.scene.control.richtext.SegmentStyledInput;
+import com.sun.jfx.incubator.scene.control.richtext.TextCell;
 import com.sun.jfx.incubator.scene.control.richtext.VFlow;
 import jfx.incubator.scene.control.richtext.LineEnding;
 import jfx.incubator.scene.control.richtext.RichTextArea;
@@ -73,16 +81,19 @@ import jfx.incubator.scene.control.richtext.StyleHandlerRegistry;
 import jfx.incubator.scene.control.richtext.TextPos;
 import jfx.incubator.scene.control.richtext.model.CodeTextModel;
 import jfx.incubator.scene.control.richtext.model.ContentChange;
+import jfx.incubator.scene.control.richtext.model.EmbeddedImage;
 import jfx.incubator.scene.control.richtext.model.RichTextFormatHandler;
 import jfx.incubator.scene.control.richtext.model.RichTextModel;
 import jfx.incubator.scene.control.richtext.model.SimpleViewOnlyStyledModel;
 import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
+import jfx.incubator.scene.control.richtext.model.StyledSegment;
 import jfx.incubator.scene.control.richtext.model.StyledTextModel;
 import jfx.incubator.scene.control.richtext.model.TabStops;
 import jfx.incubator.scene.control.richtext.skin.RichTextAreaSkin;
 import test.jfx.incubator.scene.control.richtext.model.TestRichTextModel;
 import test.jfx.incubator.scene.control.richtext.support.RTUtil;
 import test.jfx.incubator.scene.control.richtext.support.TestStyledInput;
+import test.jfx.incubator.scene.util.StageLoader;
 import test.jfx.incubator.scene.util.TUtil;
 
 /**
@@ -92,6 +103,7 @@ public class RichTextAreaTest {
     private RichTextArea control;
     private static final StyleAttributeMap BOLD = StyleAttributeMap.builder().setBold(true).build();
     private static final StyleAttributeMap ITALIC = StyleAttributeMap.builder().setItalic(true).build();
+    private static final StyleAttributeMap UNDER = StyleAttributeMap.builder().setUnderline(true).build();
     private static final String NL = System.getProperty("line.separator");
     private static final double EPSILON = 0.00001;
     private Stage stage;
@@ -557,7 +569,7 @@ public class RichTextAreaTest {
         control.select(p);
         control.insertTab();
         control.insertTab();
-        //            BB.B.IB
+                    //   BB.B.IB
         assertEquals("a\t\tbc", text());
         control.select(TextPos.ofLeading(0, 2));
         assertEquals(BOLD, control.getActiveStyleAttributeMap());
@@ -910,16 +922,6 @@ public class RichTextAreaTest {
         assertEquals("1 bold", new String(b, StandardCharsets.US_ASCII));
     }
 
-    /**
-     * Tests the shim.
-     */
-    // TODO remove once a real test which needs the shim is added.
-    @Test
-    public void testShim() {
-        RichTextArea t = new RichTextArea();
-        VFlow f = RichTextAreaShim.vflow(t);
-    }
-
     @Test
     public void undoRedoEnabled() {
         // api
@@ -1196,6 +1198,74 @@ public class RichTextAreaTest {
         assertX(2, 5, 60.5);
     }
 
+    private void assertAttrs(int index, int charIndex, boolean leading, boolean forInsert, StyleAttributeMap expected) {
+        int off = charIndex + (leading ? 0 : 1);
+        TextPos p = new TextPos(index, off, charIndex, leading);
+        StyleAttributeMap a = control.getStyleAttributeMap(p, forInsert);
+        assertEquals(expected, a);
+    }
+
+    @Test
+    public void getStyleAttributeMap() {
+        control.appendText("BB", BOLD);
+        control.appendText("II", ITALIC);
+        control.appendText("\n");
+        control.appendText("X", UNDER);
+
+        // exact
+        assertAttrs(0, 0, true, false, BOLD);
+        assertAttrs(0, 0, false, false, BOLD);
+        assertAttrs(0, 1, true, false, BOLD);
+        assertAttrs(0, 1, false, false, BOLD);
+        assertAttrs(0, 2, true, false, ITALIC);
+        assertAttrs(0, 2, false, false, ITALIC);
+        assertAttrs(0, 3, true, false, ITALIC);
+        assertAttrs(0, 3, false, false, ITALIC);
+        assertAttrs(0, 4, true, false, ITALIC);
+        assertAttrs(0, 4, false, false, ITALIC);
+        assertAttrs(0, 999, true, false, ITALIC);
+        assertAttrs(0, 999, false, false, ITALIC);
+
+        // for insert
+        assertAttrs(0, 0, true, true, BOLD);
+        assertAttrs(0, 0, false, true, BOLD);
+        assertAttrs(0, 1, true, true, BOLD);
+        assertAttrs(0, 1, false, true, BOLD);
+        assertAttrs(0, 2, true, true, BOLD);
+        assertAttrs(0, 2, false, true, ITALIC); // sic!
+        assertAttrs(0, 3, true, true, ITALIC);
+        assertAttrs(0, 3, false, true, ITALIC);
+        assertAttrs(0, 4, true, true, ITALIC);
+        assertAttrs(0, 4, false, true, ITALIC);
+        assertAttrs(0, 999, true, true, ITALIC);
+        assertAttrs(0, 999, false, true, ITALIC);
+
+        // line 2
+
+        // exact
+        assertAttrs(1, 0, true, false, UNDER);
+        assertAttrs(1, 0, false, false, UNDER);
+        assertAttrs(1, 1, true, false, UNDER);
+        assertAttrs(1, 1, false, false, UNDER);
+        assertAttrs(1, 999, true, false, UNDER);
+        assertAttrs(1, 999, false, false, UNDER);
+
+        // for insert
+
+        assertAttrs(1, 0, true, true, UNDER);
+        assertAttrs(1, 0, false, true, UNDER);
+        assertAttrs(1, 1, true, true, UNDER);
+        assertAttrs(1, 1, false, true, UNDER);
+        assertAttrs(1, 999, true, true, UNDER);
+        assertAttrs(1, 999, false, true, UNDER);
+
+        // beyond eof
+        assertAttrs(999, 999, false, false, StyleAttributeMap.EMPTY);
+        assertAttrs(999, 999, false, true, StyleAttributeMap.EMPTY);
+
+        // TODO grapheme clusters
+    }
+
     @Test
     public void queryAccessibilityEditable() {
         assertEquals(true, control.queryAccessibleAttribute(AccessibleAttribute.EDITABLE));
@@ -1260,5 +1330,120 @@ public class RichTextAreaTest {
         Object vsb = control.lookup(".scroll-bar:vertical");
         assertNotNull(vsb);
         assertEquals(vsb, control.queryAccessibleAttribute(AccessibleAttribute.VERTICAL_SCROLLBAR));
+    }
+
+    @Test
+    public void embeddedImages() {
+        double controlWidth = 1000;
+        double viewWidth = 982;
+
+        byte[] bytes = RTUtil.redPng32x32();
+        StyledSegment[] segments = {
+            StyledSegment.of(" ", StyleAttributeMap.of(StyleAttributeMap.EMBEDDED_IMAGE, EmbeddedImageHelper.create(bytes, 32, 32, 32, 32, true)))
+        };
+
+        control.setPrefWidth(controlWidth);
+        control.setPrefHeight(1000);
+
+        StageLoader sl = new StageLoader(control);
+        try {
+            control.replaceText(TextPos.ZERO, TextPos.ZERO, new SegmentStyledInput(segments));
+            control.setWrapText(true);
+            RTUtil.firePulse();
+            checkSizes(32, 32, 32);
+
+            // targetWidth       targetHeight        keepAspect      containerWidth  renderedWidth       renderedHeight
+            // ---------------------------------------------------------------------------------------------------
+            // negative          AUTO                false           view            original            original
+            c(-100, EmbeddedImage.AUTO, false, fix(viewWidth,2), fix(32,0), fix(32,0));
+            // negative          AUTO                true            view            original            original
+            c(-100, EmbeddedImage.AUTO, true, fix(viewWidth,2), fix(32,0), fix(32,0));
+            // negative          positive            false           original        original            target
+            c(-100, 320, false, fix(32,2), fix(32,0), 320);
+            // negative          positive            true            scale           scaled              target
+            c(-100, 320, true, fix(viewWidth,2), fix(320,0), 320);
+            // FIT_WIDTH         AUTO                false           view            original            original
+            c(EmbeddedImage.FIT_WIDTH, EmbeddedImage.AUTO, false, viewWidth, 32, 32);
+            // FIT_WIDTH         AUTO (ignored)      true            view            view                scaled
+            c(EmbeddedImage.FIT_WIDTH, EmbeddedImage.AUTO, true, viewWidth, 32, fix(222,0)); // FIX 32*scale
+            // FIT_WIDTH         positive            false           view            max(original,view)  target
+            c(EmbeddedImage.FIT_WIDTH, 320, false, viewWidth, 32, 320);
+            // FIT_WIDTH         positive (ignored)  true            view            max(original,view)  scaled
+            c(EmbeddedImage.FIT_WIDTH, 320, true, viewWidth, 32, fix(222,0)); // FIX 32*scale
+            // FIT_WIDTH_ALWAYS  AUTO                false           view            view                original
+            c(EmbeddedImage.FIT_WIDTH_ALWAYS, EmbeddedImage.AUTO, false, viewWidth, viewWidth, 32);
+            // FIT_WIDTH_ALWAYS  AUTO (ignored)      true            view            view                scaled
+            c(EmbeddedImage.FIT_WIDTH_ALWAYS, EmbeddedImage.AUTO, true, viewWidth, viewWidth, fix(32,0));
+            // FIT_WIDTH_ALWAYS  positive            false           view            view                target
+            c(EmbeddedImage.FIT_WIDTH_ALWAYS, 10, false, viewWidth, viewWidth, 10);
+            // FIT_WIDTH_ALWAYS  positive (ignored)  true            view            view                scaled
+            c(EmbeddedImage.FIT_WIDTH_ALWAYS, 10, true, viewWidth, viewWidth, fix(222,0)); // FIX 32*scale
+            // AUTO              AUTO                false           original        original            original
+            c(EmbeddedImage.AUTO, EmbeddedImage.AUTO, false, fix(32,2), fix(32,0), fix(32,0));
+            // AUTO              AUTO                true            original        original            original
+            c(EmbeddedImage.AUTO, EmbeddedImage.AUTO, true, fix(32,2), fix(32,0), fix(32,0));
+            // AUTO              positive            false           original        target              target
+            c(EmbeddedImage.AUTO, 320, false, fix(32,2), fix(32,0), 320);
+            // AUTO              positive            true            original        scaled              target
+            c(EmbeddedImage.AUTO, 320, true, fix(320,2), fix(320,0), 320);
+            // positive          AUTO                false           target          target              target
+            c(320, EmbeddedImage.AUTO, false, 320, 320, fix(320, 0));
+            // positive          AUTO                true            target          target              scaled
+            c(320, EmbeddedImage.AUTO, true, 320, 320, fix(320, 0));
+            // positive          positive            false           target          target              target
+            c(320, 100, false, 320, 320, 100);
+            // positive          positive            true (ignored)  ?               target              target
+            c(320, 100, true, 320, 320, 100);
+
+        } finally {
+            sl.dispose();
+        }
+    }
+
+    // StubToolkit does not support image resizing, see StubImageLoaderFactory:44
+    // We could remove this method once the resizing is implemented.
+    @Deprecated
+    private static double fix(double expected, double actual) {
+        return actual; // FIX
+    }
+
+    private void c(double w, double h, boolean keepAspectRatio, double expContainerWidth, double expectedWidth, double expectedHeight) {
+        updateImage(w, h, keepAspectRatio);
+        RTUtil.firePulse();
+        checkSizes(expContainerWidth, expectedWidth, expectedHeight);
+    }
+
+    private void updateImage(double w, double h, boolean keepAspectRatio) {
+        EmbeddedImage im = RTUtil.embeddedImageAt(control, TextPos.ZERO);
+        assertNotNull(im, "EmbeddedImage");
+        EmbeddedImage updated = im.copy(w, h, keepAspectRatio);
+        StyleAttributeMap a = StyleAttributeMap.of(StyleAttributeMap.EMBEDDED_IMAGE, updated);
+        control.applyStyle(TextPos.ZERO, new TextPos(0, 1, 1, true), a);
+        assertEquals(updated, RTUtil.embeddedImageAt(control, TextPos.ZERO));
+    }
+
+    // this check assumes specific structure of the EmbeddedImage containers
+    private void checkSizes(double containerWidth, double expectedWidth, double expectedHeight) {
+        List<TextCell> nodes = EmbeddedImageHelper.getVisibleTextCells(control);
+        assertTrue(nodes.size() > 0, "must have at least one image cell");
+        TextCell cell = nodes.get(0);
+        assertTrue(cell.getContent() instanceof TextFlow);
+        TextFlow f = (TextFlow)cell.getContent();
+        assertTrue(f.getChildren().size() > 0);
+        Node n = f.getChildren().get(0);
+        assertTrue(n instanceof Label);
+        Label container = (Label)n;
+        assertTrue(container.getGraphic() instanceof ImageView);
+        ImageView im = (ImageView)container.getGraphic();
+
+        // fails due to StubImageLoaderFactory:44
+        //assertNull(im.getImage().getException());
+        //assertEquals(32, im.getImage().getWidth(), "image width");
+        //assertEquals(32, im.getImage().getHeight(), "image height");
+
+        Bounds b = im.getLayoutBounds();
+        assertEquals(containerWidth, container.getWidth(), EPSILON, "container width");
+        assertEquals(expectedWidth, b.getWidth(), EPSILON, "width");
+        assertEquals(expectedHeight, b.getHeight(), EPSILON, "height");
     }
 }

@@ -28,13 +28,14 @@
 
 #include "CompositeEditCommand.h"
 #include "Element.h"
+#include "NodeDocument.h"
 #include <wtf/Assertions.h>
 
 namespace WebCore {
 
 SetNodeAttributeCommand::SetNodeAttributeCommand(Ref<Element>&& element, const QualifiedName& attribute, const AtomString& value)
     : SimpleEditCommand(element->document())
-    , m_element(WTFMove(element))
+    , m_element(WTF::move(element))
     , m_attribute(attribute)
     , m_value(value)
 {

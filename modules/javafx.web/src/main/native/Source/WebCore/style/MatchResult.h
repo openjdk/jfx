@@ -60,8 +60,6 @@ struct MatchResult : RefCounted<MatchResult> {
 
     bool isEmpty() const { return userAgentDeclarations.isEmpty() && userDeclarations.isEmpty() && authorDeclarations.isEmpty(); }
 
-    friend bool operator==(const RefCounted<MatchResult>&, const RefCounted<MatchResult>&) { return true; }
-    friend bool operator==(const MatchResult&, const MatchResult&) = default;
     bool cacheablePropertiesEqual(const MatchResult&) const;
 
 private:

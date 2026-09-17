@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2026 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -48,7 +49,7 @@ public:
     bool isTransparent() const { return m_isTransparent; }
     bool isPresent() const { return m_isPresent; }
 
-    inline bool hasVisibleColorAndStyle() const { return m_style > BorderStyle::Hidden && !m_isTransparent; }
+    inline bool hasVisibleColorAndStyle() const { return isVisibleBorderStyle(m_style) && !m_isTransparent; }
     inline bool shouldRender() const { return m_isPresent && widthForPainting() && hasVisibleColorAndStyle(); }
     inline bool presentButInvisible() const { return widthForPainting() && !hasVisibleColorAndStyle(); }
     inline float widthForPainting() const { return m_isPresent ?  m_flooredToDevicePixelWidth : 0; }
@@ -75,14 +76,12 @@ BorderEdges borderEdges(const RenderStyle&, float deviceScaleFactor, RectEdges<b
 BorderEdges borderEdgesForOutline(const RenderStyle&, BorderStyle, float deviceScaleFactor);
 
 inline bool edgesShareColor(const BorderEdge& firstEdge, const BorderEdge& secondEdge) { return equalIgnoringSemanticColor(firstEdge.color(), secondEdge.color()); }
-inline BoxSideFlag edgeFlagForSide(BoxSide side) { return static_cast<BoxSideFlag>(1 << static_cast<unsigned>(side)); }
-inline bool includesEdge(OptionSet<BoxSideFlag> flags, BoxSide side) { return flags.contains(edgeFlagForSide(side)); }
 
-inline bool includesAdjacentEdges(OptionSet<BoxSideFlag> flags)
+inline bool includesAdjacentEdges(EnumSet<BoxSide> sides)
 {
     // The set includes adjacent edges if and only if it contains at least one horizontal and one vertical edge.
-    return flags.containsAny({ BoxSideFlag::Top, BoxSideFlag::Bottom })
-        && flags.containsAny({ BoxSideFlag::Left, BoxSideFlag::Right });
+    return sides.containsAny({ BoxSide::Top, BoxSide::Bottom })
+        && sides.containsAny({ BoxSide::Left, BoxSide::Right });
 }
 
 } // namespace WebCore

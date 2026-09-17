@@ -57,13 +57,13 @@ Document* MainThreadStylePropertyMapReadOnly::documentFromContext(ScriptExecutio
 // https://drafts.css-houdini.org/css-typed-om-1/#dom-stylepropertymapreadonly-get
 ExceptionOr<MainThreadStylePropertyMapReadOnly::CSSStyleValueOrUndefined> MainThreadStylePropertyMapReadOnly::get(ScriptExecutionContext& context, const AtomString& property) const
 {
-    auto* document = documentFromContext(context);
+    RefPtr document = documentFromContext(context);
     if (!document)
         return { std::monostate { } };
 
     if (isCustomPropertyName(property)) {
         if (auto value = reifyValue(*document, customPropertyValue(property), CSSPropertyCustom))
-            return { WTFMove(value) };
+            return { WTF::move(value) };
 
         return { std::monostate { } };
     }
@@ -74,13 +74,13 @@ ExceptionOr<MainThreadStylePropertyMapReadOnly::CSSStyleValueOrUndefined> MainTh
 
     if (isShorthand(propertyID)) {
         if (auto value = CSSStyleValueFactory::constructStyleValueForShorthandSerialization(*document, shorthandPropertySerialization(propertyID)))
-            return { WTFMove(value) };
+            return { WTF::move(value) };
 
         return { std::monostate { } };
     }
 
     if (auto value = reifyValue(*document, propertyValue(propertyID), propertyID))
-        return { WTFMove(value) };
+        return { WTF::move(value) };
 
     return { std::monostate { } };
 }
@@ -88,7 +88,7 @@ ExceptionOr<MainThreadStylePropertyMapReadOnly::CSSStyleValueOrUndefined> MainTh
 // https://drafts.css-houdini.org/css-typed-om-1/#dom-stylepropertymapreadonly-getall
 ExceptionOr<Vector<RefPtr<CSSStyleValue>>> MainThreadStylePropertyMapReadOnly::getAll(ScriptExecutionContext& context, const AtomString& property) const
 {
-    auto* document = documentFromContext(context);
+    RefPtr document = documentFromContext(context);
     if (!document)
         return Vector<RefPtr<CSSStyleValue>> { };
 
@@ -101,7 +101,7 @@ ExceptionOr<Vector<RefPtr<CSSStyleValue>>> MainThreadStylePropertyMapReadOnly::g
 
     if (isShorthand(propertyID)) {
         if (RefPtr value = CSSStyleValueFactory::constructStyleValueForShorthandSerialization(*document, shorthandPropertySerialization(propertyID)))
-            return Vector<RefPtr<CSSStyleValue>> { WTFMove(value) };
+            return Vector<RefPtr<CSSStyleValue>> { WTF::move(value) };
         return Vector<RefPtr<CSSStyleValue>> { };
     }
 

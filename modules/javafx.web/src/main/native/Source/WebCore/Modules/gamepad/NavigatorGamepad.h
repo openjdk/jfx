@@ -27,8 +27,8 @@
 
 #if ENABLE(GAMEPAD)
 
-#include "Navigator.h"
-#include "Supplementable.h"
+#include <WebCore/Navigator.h>
+#include <WebCore/Supplementable.h>
 #include <wtf/CheckedRef.h>
 #include <wtf/MonotonicTime.h>
 #include <wtf/TZoneMalloc.h>

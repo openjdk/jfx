@@ -20,14 +20,16 @@
 
 #pragma once
 
-#include "CSSRuleList.h"
-#include "CommonAtomStrings.h"
-#include "ExceptionOr.h"
-#include "MediaList.h"
-#include "MediaQuery.h"
-#include "StyleSheet.h"
+#include <WebCore/CSSRuleList.h>
+#include <WebCore/CommonAtomStrings.h>
+#include <WebCore/ExceptionOr.h>
+#include <WebCore/MediaList.h>
+#include <WebCore/MediaQuery.h>
+#include <WebCore/StyleSheet.h>
+#include <WebCore/WebCoreOpaqueRoot.h>
 #include <memory>
 #include <wtf/CheckedPtr.h>
+#include <wtf/Lock.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/TypeCasts.h>
 #include <wtf/WeakHashSet.h>
@@ -105,10 +107,11 @@ public:
     URL baseURL() const final;
     bool isLoading() const final;
 
-    void clearOwnerRule() { m_ownerRule = nullptr; }
+    void clearOwnerRule();
 
     void removeAdoptingTreeScope(ContainerNode&);
     void addAdoptingTreeScope(ContainerNode&);
+    const WeakHashSet<ContainerNode, WeakPtrImplWithEventTargetData>& adoptingTreeScopes() const { return m_adoptingTreeScopes; }
 
     Document* ownerDocument() const;
     CSSStyleSheet& rootStyleSheet();
@@ -159,7 +162,9 @@ public:
 
     String debugDescription() const final;
     String cssText(const CSS::SerializationContext&);
-    void getChildStyleSheets(HashSet<RefPtr<CSSStyleSheet>>&);
+    void getChildStyleSheets(HashSet<Ref<CSSStyleSheet>>&);
+
+    WebCoreOpaqueRoot opaqueRootForGCThread() override;
 
     bool isDetached() const;
 
@@ -187,8 +192,9 @@ private:
     WeakPtr<Document, WeakPtrImplWithEventTargetData> m_constructorDocument;
     WeakHashSet<ContainerNode, WeakPtrImplWithEventTargetData> m_adoptingTreeScopes;
 
-    WeakPtr<Node, WeakPtrImplWithEventTargetData> m_ownerNode;
-    WeakPtr<CSSImportRule> m_ownerRule;
+    mutable Lock m_opaqueRootLockForGC;
+    CheckedPtr<Node> m_ownerNode;
+    CheckedPtr<CSSImportRule> m_ownerRule;
 
     TextPosition m_startPosition;
 

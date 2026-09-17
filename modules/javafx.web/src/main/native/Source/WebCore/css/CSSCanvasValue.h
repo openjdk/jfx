@@ -38,7 +38,7 @@ class BuilderState;
 
 class CSSCanvasValue final : public CSSValue {
 public:
-    static Ref<CSSCanvasValue> create(String name) { return adoptRef(*new CSSCanvasValue(WTFMove(name))); }
+    static Ref<CSSCanvasValue> create(String name) { return adoptRef(*new CSSCanvasValue(WTF::move(name))); }
     ~CSSCanvasValue();
 
     String customCSSText(const CSS::SerializationContext&) const;

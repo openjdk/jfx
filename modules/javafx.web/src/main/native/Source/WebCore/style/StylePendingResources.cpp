@@ -27,16 +27,13 @@
 #include "StylePendingResources.h"
 
 #include "CSSCursorImageValue.h"
-#include "CachedResourceLoader.h"
-#include "DocumentInlines.h"
-#include "FillLayer.h"
-#include "RenderStyleInlines.h"
+#include "DocumentResourceLoader.h"
+#include "DocumentView.h"
+#include "RenderStyle+GettersInlines.h"
 #include "SVGURIReference.h"
 #include "Settings.h"
 #include "StyleCursor.h"
 #include "StyleImage.h"
-#include "StyleReflection.h"
-#include "TransformOperationsBuilder.h"
 
 namespace WebCore {
 namespace Style {
@@ -51,6 +48,7 @@ static void loadPendingImage(Document& document, const StyleImage* styleImage, c
     bool isInUserAgentShadowTree = element && element->isInUserAgentShadowTree();
     ResourceLoaderOptions options = CachedResourceLoader::defaultCachedResourceOptions();
     options.contentSecurityPolicyImposition = isInUserAgentShadowTree ? ContentSecurityPolicyImposition::SkipPolicyCheck : ContentSecurityPolicyImposition::DoPolicyCheck;
+    options.shouldEnableContentExtensionsCheck = isInUserAgentShadowTree ? ShouldEnableContentExtensionsCheck::No : ShouldEnableContentExtensionsCheck::Yes;
 
     if (!isInUserAgentShadowTree && document.settings().useAnonymousModeWhenFetchingMaskImages()) {
         switch (loadPolicy) {
@@ -72,8 +70,8 @@ static void loadPendingImage(Document& document, const StyleImage* styleImage, c
 
 void loadPendingResources(RenderStyle& style, Document& document, const Element* element)
 {
-    for (auto* backgroundLayer = &style.backgroundLayers(); backgroundLayer; backgroundLayer = backgroundLayer->next())
-        loadPendingImage(document, backgroundLayer->image(), element);
+    for (auto& backgroundLayer : style.backgroundLayers().usedValues())
+        loadPendingImage(document, backgroundLayer.image().tryStyleImage().get(), element);
 
     if (auto* contentData = style.content().tryData()) {
         for (auto& contentItem : contentData->list) {
@@ -91,24 +89,24 @@ void loadPendingResources(RenderStyle& style, Document& document, const Element*
             loadPendingImage(document, cursorImage.image.ptr(), element);
     }
 
-    loadPendingImage(document, style.listStyleImage(), element);
-    loadPendingImage(document, style.borderImageSource(), element);
-    loadPendingImage(document, style.maskBorderSource(), element);
+    loadPendingImage(document, style.listStyleImage().tryStyleImage().get(), element);
+    loadPendingImage(document, style.borderImageSource().tryStyleImage().get(), element);
+    loadPendingImage(document, style.maskBorderSource().tryStyleImage().get(), element);
 
-    if (auto* reflection = style.boxReflect())
-        loadPendingImage(document, reflection->mask().image(), element);
+    if (auto reflection = style.boxReflect().tryReflection())
+        loadPendingImage(document, reflection->mask.source().tryStyleImage().get(), element);
 
     // Masking operations may be sensitive to timing attacks that can be used to reveal the pixel data of
     // the image used as the mask. As a means to mitigate such attacks CSS mask images and shape-outside
     // images are retrieved in "Anonymous" mode, which uses a potentially CORS-enabled fetch.
-    for (auto* maskLayer = &style.maskLayers(); maskLayer; maskLayer = maskLayer->next())
-        loadPendingImage(document, maskLayer->image(), element, LoadPolicy::CORS);
+    for (auto& maskLayer : style.maskLayers().usedValues())
+        loadPendingImage(document, maskLayer.image().tryStyleImage().get(), element, LoadPolicy::CORS);
 
     if (RefPtr shapeValueImage = style.shapeOutside().image())
         loadPendingImage(document, shapeValueImage.get(), element, LoadPolicy::Anonymous);
 
     // Are there other pseudo-elements that need resource loading?
-    if (auto* firstLineStyle = style.getCachedPseudoStyle({ PseudoId::FirstLine }))
+    if (auto* firstLineStyle = style.getCachedPseudoStyle({ PseudoElementType::FirstLine }))
         loadPendingResources(*firstLineStyle, document, element);
 }
 

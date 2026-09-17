@@ -27,6 +27,7 @@
 
 #include <wtf/Deque.h>
 #include <wtf/RefCounted.h>
+#include <wtf/ThreadSafeWeakPtr.h>
 
 namespace JSC {
 class JSGlobalObject;
@@ -36,39 +37,43 @@ namespace WebCore {
 
 class DOMPromise;
 class ReadableStream;
-class WritableStream;
+class ScriptExecutionContext;
+class WebTransport;
+class WebTransportDatagramsWritable;
+class WebTransportSession;
+struct WebTransportSendOptions;
 template<typename> class ExceptionOr;
 
 class WebTransportDatagramDuplexStream : public RefCounted<WebTransportDatagramDuplexStream> {
 public:
-    static Ref<WebTransportDatagramDuplexStream> create(Ref<ReadableStream>&&, Ref<WritableStream>&&);
+    static Ref<WebTransportDatagramDuplexStream> create(Ref<ReadableStream>&&);
     ~WebTransportDatagramDuplexStream();
 
     ReadableStream& readable() { return m_readable; }
-    WritableStream& writable() { return m_writable; }
-    unsigned maxDatagramSize() { return m_outgoingMaxDatagramSize; }
-    double incomingMaxAge() { return m_incomingDatagramsExpirationDuration; }
-    double outgoingMaxAge() { return m_outgoingDatagramsExpirationDuration; }
-    double incomingHighWaterMark() { return m_incomingDatagramsHighWaterMark; }
-    double outgoingHighWaterMark() { return m_outgoingDatagramsHighWaterMark; }
-    ExceptionOr<void> setIncomingMaxAge(double);
-    ExceptionOr<void> setOutgoingMaxAge(double);
+    ExceptionOr<Ref<WebTransportDatagramsWritable>> createWritable(ScriptExecutionContext&, WebTransportSendOptions&&);
+    unsigned maxDatagramSize() const { return std::numeric_limits<uint16_t>::max(); }
+    std::optional<double> incomingMaxAge() const { return m_incomingMaxAge; }
+    std::optional<double> outgoingMaxAge() const { return m_outgoingMaxAge; }
+    double incomingHighWaterMark() const { return m_incomingHighWaterMark; }
+    double outgoingHighWaterMark() const { return m_outgoingHighWaterMark; }
+    ExceptionOr<void> setIncomingMaxAge(std::optional<double>);
+    ExceptionOr<void> setOutgoingMaxAge(std::optional<double>);
     ExceptionOr<void> setIncomingHighWaterMark(double);
     ExceptionOr<void> setOutgoingHighWaterMark(double);
 
+    void attachTo(WebTransport&);
+
 private:
-    WebTransportDatagramDuplexStream(Ref<ReadableStream>&&, Ref<WritableStream>&&);
+    WebTransportDatagramDuplexStream(Ref<ReadableStream>&&);
+
+    RefPtr<WebTransportSession> session();
 
     const Ref<ReadableStream> m_readable;
-    const Ref<WritableStream> m_writable;
-    Deque<std::pair<Vector<uint8_t>, MonotonicTime>> m_incomingDatagramsQueue;
-    RefPtr<DOMPromise> m_incomingDatagramsPullPromise;
-    double m_incomingDatagramsHighWaterMark { 1 };
-    double m_incomingDatagramsExpirationDuration { std::numeric_limits<double>::infinity() };
-    Deque<std::tuple<Vector<uint8_t>, MonotonicTime, Ref<DOMPromise>>> m_outgoingDatagramsQueue;
-    double m_outgoingDatagramsHighWaterMark { 1 };
-    double m_outgoingDatagramsExpirationDuration { std::numeric_limits<double>::infinity() };
-    size_t m_outgoingMaxDatagramSize { 1024 };
+    double m_incomingHighWaterMark { 1 };
+    double m_outgoingHighWaterMark { 1 };
+    std::optional<double> m_incomingMaxAge;
+    std::optional<double> m_outgoingMaxAge;
+    ThreadSafeWeakPtr<WebTransport> m_transport;
 };
 
 }

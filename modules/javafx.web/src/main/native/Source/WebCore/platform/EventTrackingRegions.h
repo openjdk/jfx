@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "Region.h"
+#include <WebCore/Region.h>
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/text/StringHash.h>
@@ -42,6 +42,9 @@ enum class TrackingType : uint8_t {
 };
 
 enum class EventTrackingRegionsEventType : uint8_t {
+    Gesturechange,
+    Gestureend,
+    Gesturestart,
         Mousedown,
         Mousemove,
         Mouseup,

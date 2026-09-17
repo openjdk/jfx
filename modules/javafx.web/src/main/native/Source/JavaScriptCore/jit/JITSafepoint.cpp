@@ -60,7 +60,7 @@ Safepoint::Safepoint(JITPlan& plan, Result& result)
 Safepoint::~Safepoint()
 {
     RELEASE_ASSERT(m_didCallBegin);
-    if (JITWorklistThread* thread = m_plan.thread()) {
+    if (RefPtr thread = m_plan.thread()) {
         RELEASE_ASSERT(thread->m_safepoint == this);
         thread->m_rightToRun.lock();
         thread->m_safepoint = nullptr;
@@ -78,7 +78,7 @@ void Safepoint::begin(bool keepDependenciesLive) WTF_IGNORES_THREAD_SAFETY_ANALY
     RELEASE_ASSERT(!m_didCallBegin);
     m_didCallBegin = true;
     m_keepDependenciesLive = keepDependenciesLive;
-    if (JITWorklistThread* data = m_plan.thread()) {
+    if (RefPtr data = m_plan.thread()) {
         RELEASE_ASSERT(!data->m_safepoint);
         data->m_safepoint = this;
         data->m_rightToRun.unlockFairly();

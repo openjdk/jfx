@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "PortIdentifier.h"
-#include "ProcessIdentifier.h"
+#include <WebCore/PortIdentifier.h>
+#include <WebCore/ProcessIdentifier.h>
 #include <wtf/Hasher.h>
 #include <wtf/text/MakeString.h>
 
@@ -37,6 +37,7 @@ struct MessagePortIdentifier {
     PortIdentifier portIdentifier;
 
     friend bool operator==(const MessagePortIdentifier&, const MessagePortIdentifier&) = default;
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
 
 #if !LOG_DISABLED
     String logString() const;
@@ -61,12 +62,6 @@ inline String MessagePortIdentifier::logString() const
 
 namespace WTF {
 
-struct MessagePortIdentifierHash {
-    static unsigned hash(const WebCore::MessagePortIdentifier& key) { return computeHash(key); }
-    static bool equal(const WebCore::MessagePortIdentifier& a, const WebCore::MessagePortIdentifier& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = true;
-};
-
 template<> struct HashTraits<WebCore::MessagePortIdentifier> : GenericHashTraits<WebCore::MessagePortIdentifier> {
     static WebCore::MessagePortIdentifier emptyValue() { return { HashTraits<WebCore::ProcessIdentifier>::emptyValue(), HashTraits<WebCore::PortIdentifier>::emptyValue() }; }
     static bool isEmptyValue(const WebCore::MessagePortIdentifier& value) { return value.portIdentifier.isHashTableEmptyValue(); }
@@ -75,7 +70,5 @@ template<> struct HashTraits<WebCore::MessagePortIdentifier> : GenericHashTraits
 
     static bool isDeletedValue(const WebCore::MessagePortIdentifier& slot) { return slot.processIdentifier.isHashTableDeletedValue(); }
 };
-
-template<> struct DefaultHash<WebCore::MessagePortIdentifier> : MessagePortIdentifierHash { };
 
 } // namespace WTF

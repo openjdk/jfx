@@ -50,6 +50,7 @@ struct SameSizeAsFontCascadeDescription {
     AtomString string2;
     int16_t fontSelectionRequest[3];
     float size;
+    float zoom;
     TextSpacingTrim textSpacingTrim;
     TextAutospace textAutospace;
     unsigned bitfields1;
@@ -65,7 +66,7 @@ FontCascadeDescription::FontCascadeDescription()
     , m_isAbsoluteSize(false)
     , m_kerning(enumToUnderlyingType(Kerning::Auto))
     , m_keywordSize(0)
-    , m_fontSmoothing(enumToUnderlyingType(FontSmoothingMode::AutoSmoothing))
+    , m_fontSmoothing(enumToUnderlyingType(FontSmoothingMode::Auto))
     , m_isSpecifiedFont(false)
 {
 }
@@ -143,7 +144,7 @@ FontSmoothingMode FontCascadeDescription::usedFontSmoothing() const
 {
     auto fontSmoothingMode = fontSmoothing();
 #if USE(CORE_TEXT)
-    if (FontCascade::shouldDisableFontSubpixelAntialiasingForTesting() && (fontSmoothingMode == FontSmoothingMode::AutoSmoothing || fontSmoothingMode == FontSmoothingMode::SubpixelAntialiased))
+    if (FontCascade::shouldDisableFontSubpixelAntialiasingForTesting() && (fontSmoothingMode == FontSmoothingMode::Auto || fontSmoothingMode == FontSmoothingMode::SubpixelAntialiased))
         return FontSmoothingMode::Antialiased;
 #endif
     return fontSmoothingMode;
@@ -175,7 +176,7 @@ TextStream& operator<<(TextStream& ts, const FontCascadeDescription& fontCascade
     if (fontCascadeDescription.kerning() != Kerning::Auto)
         ts << ", kerning "_s << fontCascadeDescription.kerning();
 
-    if (fontCascadeDescription.fontSmoothing() != FontSmoothingMode::AutoSmoothing)
+    if (fontCascadeDescription.fontSmoothing() != FontSmoothingMode::Auto)
         ts << ", font smoothing "_s << fontCascadeDescription.fontSmoothing();
 
     ts << ", keyword size "_s << fontCascadeDescription.keywordSize();

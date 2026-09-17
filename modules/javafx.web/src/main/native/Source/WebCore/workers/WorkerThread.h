@@ -25,18 +25,18 @@
 
 #pragma once
 
-#include "ContentSecurityPolicyResponseHeaders.h"
-#include "CrossOriginEmbedderPolicy.h"
-#include "FetchRequestCredentials.h"
-#include "NotificationPermission.h"
-#include "ScriptExecutionContextIdentifier.h"
-#include "ServiceWorkerRegistrationData.h"
-#include "Settings.h"
-#include "WorkerClient.h"
-#include "WorkerOrWorkletThread.h"
-#include "WorkerRunLoop.h"
-#include "WorkerType.h"
 #include <JavaScriptCore/RuntimeFlags.h>
+#include <WebCore/ContentSecurityPolicyResponseHeaders.h>
+#include <WebCore/CrossOriginEmbedderPolicy.h>
+#include <WebCore/FetchRequestCredentials.h>
+#include <WebCore/NotificationPermission.h>
+#include <WebCore/ScriptExecutionContextIdentifier.h>
+#include <WebCore/ServiceWorkerRegistrationData.h>
+#include <WebCore/Settings.h>
+#include <WebCore/WorkerClient.h>
+#include <WebCore/WorkerOrWorkletThread.h>
+#include <WebCore/WorkerRunLoop.h>
+#include <WebCore/WorkerType.h>
 #include <memory>
 #include <pal/SessionID.h>
 #include <wtf/CheckedPtr.h>
@@ -106,17 +106,12 @@ public:
     // Number of active worker threads.
     WEBCORE_EXPORT static unsigned workerThreadCount();
 
-#if ENABLE(NOTIFICATIONS)
-    NotificationClient* getNotificationClient() { return m_notificationClient; }
-    void setNotificationClient(NotificationClient* client) { m_notificationClient = client; }
-#endif
-
     JSC::RuntimeFlags runtimeFlags() const { return m_runtimeFlags; }
     bool isInStaticScriptEvaluation() const { return m_isInStaticScriptEvaluation; }
 
     void clearProxies() override;
 
-    void setWorkerClient(std::unique_ptr<WorkerClient> client) { m_workerClient = WTFMove(client); }
+    void setWorkerClient(std::unique_ptr<WorkerClient> client) { m_workerClient = WTF::move(client); }
 protected:
     WorkerThread(const WorkerParameters&, const ScriptBuffer& sourceCode, WorkerLoaderProxy&, WorkerDebuggerProxy&, WorkerReportingProxy&, WorkerBadgeProxy&, WorkerThreadStartMode, const SecurityOrigin& topOrigin, IDBClient::IDBConnectionProxy*, SocketProvider*, JSC::RuntimeFlags);
 
@@ -133,6 +128,7 @@ private:
     virtual ASCIILiteral threadName() const = 0;
 
     virtual void finishedEvaluatingScript() { }
+    bool isWorkerThread() const final { return true; }
 
     // WorkerOrWorkletThread.
     Ref<Thread> createThread() final;
@@ -148,13 +144,13 @@ private:
 
     std::unique_ptr<WorkerThreadStartupData> m_startupData;
 
-#if ENABLE(NOTIFICATIONS)
-    NotificationClient* m_notificationClient { nullptr };
-#endif
-
     const RefPtr<IDBClient::IDBConnectionProxy> m_idbConnectionProxy;
     const RefPtr<SocketProvider> m_socketProvider;
     bool m_isInStaticScriptEvaluation { false };
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WorkerThread)
+    static bool isType(const WebCore::WorkerOrWorkletThread& thread) { return thread.isWorkerThread(); }
+SPECIALIZE_TYPE_TRAITS_END()

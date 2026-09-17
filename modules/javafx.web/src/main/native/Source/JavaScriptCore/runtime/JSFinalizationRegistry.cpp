@@ -151,13 +151,13 @@ void JSFinalizationRegistry::finalizeUnconditionally(VM& vm, CollectionScope)
     });
 
     if (!m_hasAlreadyScheduledWork && (readiedCell || deadCount(locker))) {
-        auto ticket = vm.deferredWorkTimer->addPendingWork(DeferredWorkTimer::WorkType::ImminentlyScheduled, vm, this, { });
-        ASSERT(vm.deferredWorkTimer->hasPendingWork(ticket));
-        vm.deferredWorkTimer->scheduleWorkSoon(ticket, [this](DeferredWorkTimer::Ticket) {
+        auto weakTicket = vm.deferredWorkTimer->addPendingWork(DeferredWorkTimer::WorkType::ImminentlyScheduled, vm, this, { });
+        bool queued = vm.deferredWorkTimer->scheduleWorkSoonIfActive(weakTicket, [this](DeferredWorkTimer::Ticket&) {
             JSGlobalObject* globalObject = this->globalObject();
             this->m_hasAlreadyScheduledWork = false;
             this->runFinalizationCleanup(globalObject);
         });
+        RELEASE_ASSERT(queued);
         m_hasAlreadyScheduledWork = true;
     }
 }
@@ -206,11 +206,11 @@ void JSFinalizationRegistry::registerTarget(VM& vm, JSCell* target, JSValue hold
     registration.target = target;
     registration.holdings.setWithoutWriteBarrier(holdings);
     if (token.isUndefined())
-        m_noUnregistrationLive.append(WTFMove(registration));
+        m_noUnregistrationLive.append(WTF::move(registration));
     else {
         RELEASE_ASSERT(token.isCell());
         auto result = m_liveRegistrations.add(token.asCell(), LiveRegistrations());
-        result.iterator->value.append(WTFMove(registration));
+        result.iterator->value.append(WTF::move(registration));
     }
     vm.writeBarrier(this);
 }

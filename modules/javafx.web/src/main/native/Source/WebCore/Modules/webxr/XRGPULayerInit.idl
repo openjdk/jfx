@@ -26,8 +26,9 @@
 // https://github.com/immersive-web/WebXR-WebGPU-Binding/blob/main/explainer.md
 typedef [EnforceRange] unsigned long GPUTextureUsageFlags;
 [
-    Conditional=WEBXR_LAYERS,
+    Conditional=WEBXR_LAYERS&WEBGPU,
     EnabledBySetting=WebXRLayersAPIEnabled,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary XRGPULayerInit {
     required GPUTextureFormat colorFormat;
     GPUTextureFormat? depthStencilFormat;

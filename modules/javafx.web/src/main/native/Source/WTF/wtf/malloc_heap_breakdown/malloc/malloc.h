@@ -25,6 +25,11 @@
 
 #pragma once
 
+#ifndef __cplusplus
+extern "C" {
+#endif
+
+#include <stdbool.h>
 #include <stddef.h>
 
 /* This file was inspired by malloc.h from MacOS. */
@@ -33,7 +38,6 @@ typedef struct _malloc_zone_t {
 } malloc_zone_t;
 
 typedef size_t vm_size_t;
-typedef bool boolean_t;
 
 /********* Creation and destruction ************/
 
@@ -79,5 +83,9 @@ size_t malloc_zone_pressure_relief(malloc_zone_t *zone, size_t goal);
 
 /********* Debug helpers ************/
 
-extern void malloc_zone_print(malloc_zone_t *zone, boolean_t verbose);
+extern void malloc_zone_print(malloc_zone_t *zone, bool verbose);
     /* Prints summary on zone; if !zone, prints all zones */
+
+#ifndef __cplusplus
+}
+#endif

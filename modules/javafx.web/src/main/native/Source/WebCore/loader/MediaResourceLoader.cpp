@@ -30,18 +30,20 @@
 #if ENABLE(VIDEO)
 
 #include "CachedRawResource.h"
-#include "CachedResourceLoader.h"
 #include "CachedResourceRequest.h"
+#include "ContentType.h"
 #include "CrossOriginAccessControl.h"
-#include "DocumentInlines.h"
+#include "DocumentQuirks.h"
+#include "DocumentResourceLoader.h"
+#include "DocumentSecurityOrigin.h"
 #include "Element.h"
 #include "FrameDestructionObserverInlines.h"
 #include "HTTPHeaderNames.h"
 #include "InspectorInstrumentation.h"
 #include "LocalFrameLoaderClient.h"
 #include "OriginAccessPatterns.h"
-#include "Quirks.h"
 #include "SecurityOrigin.h"
+#include "Settings.h"
 #include <wtf/NeverDestroyed.h>
 #include <wtf/SortedArrayMap.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -91,7 +93,7 @@ void MediaResourceLoader::sendH2Ping(const URL& url, CompletionHandler<void(Expe
     if (!m_document || !m_document->frame())
         return completionHandler(makeUnexpected(internalError(url)));
 
-    m_document->protectedFrame()->loader().client().sendH2Ping(url, WTFMove(completionHandler));
+    m_document->protectedFrame()->loader().client().sendH2Ping(url, WTF::move(completionHandler));
 }
 
 static LoadedFromOpaqueSource computeLoadedFromOpaqueSource(const Document& document, const HashSet<URL>& nonOpaqueLoadURLs, const URL& url, const std::optional<LoadedFromOpaqueSource> loadedFromOpaqueSource)
@@ -150,15 +152,15 @@ RefPtr<PlatformMediaResource> MediaResourceLoader::requestResource(ResourceReque
     loaderOptions.sameOriginDataURLFlag = SameOriginDataURLFlag::Set;
     loaderOptions.destination = m_destination;
     loaderOptions.loadedFromOpaqueSource = computeLoadedFromOpaqueSource(*m_document, m_nonOpaqueLoadURLs, request.url(), m_loadedFromOpaqueSource);
-    auto cachedRequest = createPotentialAccessControlRequest(WTFMove(request), WTFMove(loaderOptions), *document, m_crossOriginMode);
+    auto cachedRequest = createPotentialAccessControlRequest(WTF::move(request), WTF::move(loaderOptions), *document, m_crossOriginMode);
     if (RefPtr element = m_element.get())
         cachedRequest.setInitiator(*element);
 
-    auto resource = m_document->protectedCachedResourceLoader()->requestMedia(WTFMove(cachedRequest)).value_or(nullptr);
+    auto resource = m_document->protectedCachedResourceLoader()->requestMedia(WTF::move(cachedRequest)).value_or(nullptr);
     if (!resource)
         return nullptr;
 
-    Ref mediaResource = MediaResource::create(*this, WTFMove(resource));
+    Ref mediaResource = MediaResource::create(*this, WTF::move(resource));
     m_resources.add(mediaResource.get());
 
     return mediaResource;
@@ -211,15 +213,14 @@ Vector<ResourceResponse> MediaResourceLoader::responsesForTesting() const
 
 static bool isManifestMIMEType(const URL& url, const String& mimeType)
 {
-    static constexpr ComparableLettersLiteral staticManifestMIMETypesArray[] = {
+    static constexpr SortedArraySet staticManifestMIMETypesSet { std::to_array<ComparableLettersLiteral>({
         "application/json"_s,
         "application/vnd.apple.mpegurl"_s,
         "application/vnd.apple.steering-list"_s,
         "application/x-mpegurl"_s,
         "audio/mpegurl"_s,
         "audio/x-mpegurl"_s
-    };
-    static constexpr SortedArraySet staticManifestMIMETypesSet { staticManifestMIMETypesArray };
+    }) };
 
     if (mimeType.isEmpty() || equalLettersIgnoringASCIICase(mimeType, "application/octet-stream"_s))
         return staticManifestMIMETypesSet.contains(ContentType::fromURL(url).containerType());
@@ -243,7 +244,7 @@ bool MediaResourceLoader::verifyMediaResponse(const URL& requestURL, const Resou
         // Synthetic responses, whose origin is the service worker origin, have basic tainting but their url is the request URL, which may have a different origin
         bool hasContextOrigin = response.source() == ResourceResponse::Source::ServiceWorker && response.tainting() == ResourceResponse::Tainting::Basic;
         Ref origin = hasContextOrigin ? *contextOrigin : SecurityOrigin::create(response.url());
-        return { WTFMove(origin), response.tainting() == ResourceResponse::Tainting::Opaque, response.source() == ResourceResponse::Source::ServiceWorker };
+        return { WTF::move(origin), response.tainting() == ResourceResponse::Tainting::Opaque, response.source() == ResourceResponse::Source::ServiceWorker };
     });
 
     if (ensureResult.isNewEntry)
@@ -273,12 +274,12 @@ void MediaResourceLoader::redirectReceived(const URL& url)
 
 Ref<MediaResource> MediaResource::create(MediaResourceLoader& loader, CachedResourceHandle<CachedRawResource>&& resource)
 {
-    return adoptRef(*new MediaResource(loader, WTFMove(resource)));
+    return adoptRef(*new MediaResource(loader, WTF::move(resource)));
 }
 
 MediaResource::MediaResource(MediaResourceLoader& loader, CachedResourceHandle<CachedRawResource>&& resource)
     : m_loader(loader)
-    , m_resource(WTFMove(resource))
+    , m_resource(WTF::move(resource))
 {
     assertIsMainThread();
 
@@ -315,7 +316,7 @@ void MediaResource::responseReceived(const CachedResource& resource, const Resou
     assertIsMainThread();
 
     ASSERT_UNUSED(resource, &resource == m_resource);
-    CompletionHandlerCallingScope completionHandlerCaller(WTFMove(completionHandler));
+    CompletionHandlerCallingScope completionHandlerCaller(WTF::move(completionHandler));
 
     if (!m_loader->document())
         return;
@@ -375,9 +376,9 @@ void MediaResource::redirectReceived(CachedResource& resource, ResourceRequest&&
 
     Ref protectedThis { *this };
     if (RefPtr client = this->client())
-        client->redirectReceived(*this, WTFMove(request), response, WTFMove(completionHandler));
+        client->redirectReceived(*this, WTF::move(request), response, WTF::move(completionHandler));
     else
-        completionHandler(WTFMove(request));
+        completionHandler(WTF::move(request));
 }
 
 void MediaResource::dataSent(CachedResource& resource, unsigned long long bytesSent, unsigned long long totalBytesToBeSent)

@@ -49,9 +49,12 @@ public:
     DECLARE_INFO;
 
     static ISO8601::PlainDate toPlainDate(JSGlobalObject*, const ISO8601::Duration&);
-    static std::array<std::optional<double>, 3> toPartialDate(JSGlobalObject*, JSObject*);
-
-    static TemporalPlainDate* from(JSGlobalObject*, JSValue, std::optional<TemporalOverflow>);
+    static std::tuple<int32_t, unsigned, unsigned, std::optional<ParsedMonthCode>, TemporalOverflow, TemporalAnyProperties>
+    mergeDateFields(JSGlobalObject*, JSObject*, JSValue, int32_t, unsigned, unsigned);
+    static std::optional<int32_t> toDay(JSGlobalObject*, JSObject*);
+    static std::optional<int32_t> toYear(JSGlobalObject*, JSObject*);
+    std::tuple<std::optional<int32_t>, std::optional<ParsedMonthCode>, std::optional<int32_t>> static toYearMonth(JSGlobalObject*, JSObject*);
+    static TemporalPlainDate* from(JSGlobalObject*, JSValue, Variant<JSObject*, TemporalOverflow>);
 
     TemporalCalendar* calendar() { return m_calendar.get(this); }
     ISO8601::PlainDate plainDate() const { return m_plainDate; }
@@ -86,6 +89,9 @@ private:
     template<typename CharacterType>
     static std::optional<ISO8601::PlainDate> parse(StringParsingBuffer<CharacterType>&);
     static ISO8601::PlainDate fromObject(JSGlobalObject*, JSObject*);
+
+    ISO8601::Duration differenceTemporalPlainDate(JSGlobalObject*, DifferenceOperation,
+        TemporalPlainDate*, TemporalUnit, TemporalUnit, RoundingMode, double);
 
     ISO8601::PlainDate m_plainDate;
     LazyProperty<TemporalPlainDate, TemporalCalendar> m_calendar;

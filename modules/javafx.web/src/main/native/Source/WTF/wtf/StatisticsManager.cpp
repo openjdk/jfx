@@ -27,19 +27,25 @@
 #include "StatisticsManager.h"
 
 #include <wtf/DataLog.h>
+#include <wtf/MathExtras.h>
+#include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringHash.h>
 #include <wtf/text/WTFString.h>
 
 namespace WTF {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(StatisticsManager);
+
 StatisticsManager& StatisticsManager::singleton()
 {
-    static std::once_flag onceFlag;
-    static StatisticsManager* instance = nullptr;
-    std::call_once(onceFlag, [] {
-        instance = new StatisticsManager();
-    });
-    return *instance;
+    static NeverDestroyed<UniqueRef<StatisticsManager>> instance = makeUniqueRef<StatisticsManager>();
+    return instance.get();
+}
+
+NO_RETURN_DUE_TO_CRASH StatisticsManager::~StatisticsManager()
+{
+    RELEASE_ASSERT_NOT_REACHED();
 }
 
 void StatisticsManager::addDataPoint(ASCIILiteral id, double value)
@@ -57,7 +63,7 @@ static void dumpHistogram(const AbstractLocker&, const Vector<double>& values, d
     double binSize = (max - min) / binCount;
 
     for (double value : values) {
-        size_t index = std::min(binCount - 1, static_cast<size_t>((value - min) / binSize));
+        size_t index = std::min(binCount - 1, static_cast<size_t>(truncateDoubleToUint64((value - min) / binSize)));
         ++bins[index];
     }
 

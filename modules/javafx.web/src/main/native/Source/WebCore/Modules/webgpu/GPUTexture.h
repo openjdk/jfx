@@ -50,7 +50,7 @@ class GPUTexture : public RefCountedAndCanMakeWeakPtr<GPUTexture> {
 public:
     static Ref<GPUTexture> create(Ref<WebGPU::Texture>&& backing, const GPUTextureDescriptor& descriptor, const GPUDevice& device)
     {
-        return adoptRef(*new GPUTexture(WTFMove(backing), descriptor, device));
+        return adoptRef(*new GPUTexture(WTF::move(backing), descriptor, device));
     }
 
     String label() const;

@@ -12,10 +12,12 @@ StylePropertyShorthand allShorthand()
     static const CSSPropertyID allProperties[] = {
         CSSPropertyID::CSSPropertyTestTopPriority,
         CSSPropertyID::CSSPropertyTestHighPriority,
+        CSSPropertyID::CSSPropertyTestMediumPriority,
+        CSSPropertyID::CSSPropertyBackgroundCoordinatedValueListPropertyTestDiscrete,
+        CSSPropertyID::CSSPropertyBackgroundCoordinatedValueListPropertyTestTwo,
         CSSPropertyID::CSSPropertyTestAnimationWrapper,
         CSSPropertyID::CSSPropertyTestAnimationWrapperAccelerationAlways,
         CSSPropertyID::CSSPropertyTestAnimationWrapperAccelerationThreadedOnly,
-        CSSPropertyID::CSSPropertyTestAutoFunctions,
         CSSPropertyID::CSSPropertyTestBoundedRepetitionWithCommas,
         CSSPropertyID::CSSPropertyTestBoundedRepetitionWithCommasFixed,
         CSSPropertyID::CSSPropertyTestBoundedRepetitionWithCommasNoSingleItemOpt,
@@ -30,10 +32,8 @@ StylePropertyShorthand allShorthand()
         CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesWithTypeWithDefaultPreviousTwo,
         CSSPropertyID::CSSPropertyTestColor,
         CSSPropertyID::CSSPropertyTestColorAllowsTypesAbsolute,
-        CSSPropertyID::CSSPropertyTestColorPropertyWithNoVisitedLinkSupport,
         CSSPropertyID::CSSPropertyTestColorPropertyWithVisitedLinkSupport,
         CSSPropertyID::CSSPropertyTestCustomExtractor,
-        CSSPropertyID::CSSPropertyTestExtractorConverter,
         CSSPropertyID::CSSPropertyTestFunctionBoundedParameters,
         CSSPropertyID::CSSPropertyTestFunctionFixedParameters,
         CSSPropertyID::CSSPropertyTestFunctionNoParameters,
@@ -92,8 +92,18 @@ StylePropertyShorthand allShorthand()
         CSSPropertyID::CSSPropertyTestMatchOneWithSettingsFlag,
         CSSPropertyID::CSSPropertyTestNumericValueRange,
         CSSPropertyID::CSSPropertyTestProperty,
+        CSSPropertyID::CSSPropertyTestRenderStyleHasExplicitlySetPolicyAllAuthorOrigin,
+        CSSPropertyID::CSSPropertyTestRenderStyleHasExplicitlySetPolicyAllBorderRadius,
+        CSSPropertyID::CSSPropertyTestRenderStyleHasExplicitlySetPolicyValueOnly,
+        CSSPropertyID::CSSPropertyTestRenderStyleStorageOneLevelEnum,
+        CSSPropertyID::CSSPropertyTestRenderStyleStorageOneLevelRaw,
+        CSSPropertyID::CSSPropertyTestRenderStyleStorageOneLevelReference,
+        CSSPropertyID::CSSPropertyTestRenderStyleStorageOneLevelValue,
+        CSSPropertyID::CSSPropertyTestRenderStyleStorageTwoLevelEnum,
+        CSSPropertyID::CSSPropertyTestRenderStyleStorageTwoLevelRaw,
+        CSSPropertyID::CSSPropertyTestRenderStyleStorageTwoLevelReference,
+        CSSPropertyID::CSSPropertyTestRenderStyleStorageTwoLevelValue,
         CSSPropertyID::CSSPropertyTestSettingsOne,
-        CSSPropertyID::CSSPropertyTestSharedBuilderExtractorConverter,
         CSSPropertyID::CSSPropertyTestUnboundedRepetitionWithCommasWithMin,
         CSSPropertyID::CSSPropertyTestUnboundedRepetitionWithCommasWithMinNoSingleItemOpt,
         CSSPropertyID::CSSPropertyTestUnboundedRepetitionWithCommasWithMinSingleItemOpt,
@@ -171,10 +181,11 @@ StylePropertyShorthandVector matchingShorthandsForLonghand(CSSPropertyID id)
     case CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalBlock:
     case CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalInline:
         return StylePropertyShorthandVector{allShorthand(), testShorthandTwoShorthand()};
+    case CSSPropertyID::CSSPropertyBackgroundCoordinatedValueListPropertyTestDiscrete:
+    case CSSPropertyID::CSSPropertyBackgroundCoordinatedValueListPropertyTestTwo:
     case CSSPropertyID::CSSPropertyTestAnimationWrapper:
     case CSSPropertyID::CSSPropertyTestAnimationWrapperAccelerationAlways:
     case CSSPropertyID::CSSPropertyTestAnimationWrapperAccelerationThreadedOnly:
-    case CSSPropertyID::CSSPropertyTestAutoFunctions:
     case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithCommas:
     case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithCommasFixed:
     case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithCommasNoSingleItemOpt:
@@ -189,10 +200,8 @@ StylePropertyShorthandVector matchingShorthandsForLonghand(CSSPropertyID id)
     case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesWithTypeWithDefaultPreviousTwo:
     case CSSPropertyID::CSSPropertyTestColor:
     case CSSPropertyID::CSSPropertyTestColorAllowsTypesAbsolute:
-    case CSSPropertyID::CSSPropertyTestColorPropertyWithNoVisitedLinkSupport:
     case CSSPropertyID::CSSPropertyTestColorPropertyWithVisitedLinkSupport:
     case CSSPropertyID::CSSPropertyTestCustomExtractor:
-    case CSSPropertyID::CSSPropertyTestExtractorConverter:
     case CSSPropertyID::CSSPropertyTestFunctionBoundedParameters:
     case CSSPropertyID::CSSPropertyTestFunctionFixedParameters:
     case CSSPropertyID::CSSPropertyTestFunctionNoParameters:
@@ -249,10 +258,21 @@ StylePropertyShorthandVector matchingShorthandsForLonghand(CSSPropertyID id)
     case CSSPropertyID::CSSPropertyTestMatchOneWithMultipleKeywords:
     case CSSPropertyID::CSSPropertyTestMatchOneWithReferenceWithSettingsFlag:
     case CSSPropertyID::CSSPropertyTestMatchOneWithSettingsFlag:
+    case CSSPropertyID::CSSPropertyTestMediumPriority:
     case CSSPropertyID::CSSPropertyTestNumericValueRange:
     case CSSPropertyID::CSSPropertyTestProperty:
+    case CSSPropertyID::CSSPropertyTestRenderStyleHasExplicitlySetPolicyAllAuthorOrigin:
+    case CSSPropertyID::CSSPropertyTestRenderStyleHasExplicitlySetPolicyAllBorderRadius:
+    case CSSPropertyID::CSSPropertyTestRenderStyleHasExplicitlySetPolicyValueOnly:
+    case CSSPropertyID::CSSPropertyTestRenderStyleStorageOneLevelEnum:
+    case CSSPropertyID::CSSPropertyTestRenderStyleStorageOneLevelRaw:
+    case CSSPropertyID::CSSPropertyTestRenderStyleStorageOneLevelReference:
+    case CSSPropertyID::CSSPropertyTestRenderStyleStorageOneLevelValue:
+    case CSSPropertyID::CSSPropertyTestRenderStyleStorageTwoLevelEnum:
+    case CSSPropertyID::CSSPropertyTestRenderStyleStorageTwoLevelRaw:
+    case CSSPropertyID::CSSPropertyTestRenderStyleStorageTwoLevelReference:
+    case CSSPropertyID::CSSPropertyTestRenderStyleStorageTwoLevelValue:
     case CSSPropertyID::CSSPropertyTestSettingsOne:
-    case CSSPropertyID::CSSPropertyTestSharedBuilderExtractorConverter:
     case CSSPropertyID::CSSPropertyTestTopPriority:
     case CSSPropertyID::CSSPropertyTestUnboundedRepetitionWithCommasWithMin:
     case CSSPropertyID::CSSPropertyTestUnboundedRepetitionWithCommasWithMinNoSingleItemOpt:

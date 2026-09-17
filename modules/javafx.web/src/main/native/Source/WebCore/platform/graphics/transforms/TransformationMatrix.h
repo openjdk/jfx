@@ -25,14 +25,15 @@
 
 #pragma once
 
-#include "CompositeOperation.h"
-#include "FloatPoint.h"
-#include "FloatPoint3D.h"
-#include "IntPoint.h"
-#include "Quaternion.h"
+#include <WebCore/CompositeOperation.h>
+#include <WebCore/FloatPoint.h>
+#include <WebCore/FloatPoint3D.h>
+#include <WebCore/IntPoint.h>
+#include <WebCore/Quaternion.h>
 #include <array>
 #include <string.h> //for memcpy
 #include <wtf/Forward.h>
+#include <wtf/Platform.h>
 #include <wtf/TZoneMalloc.h>
 
 #if USE(CA)
@@ -135,7 +136,7 @@ public:
 
     WEBCORE_EXPORT TransformationMatrix(const AffineTransform&);
 
-    static TransformationMatrix fromQuaternion(const Quaternion&);
+    WEBCORE_EXPORT static TransformationMatrix fromQuaternion(const Quaternion&);
 
     // Field of view in radians
     static TransformationMatrix fromProjection(double fovUp, double fovDown, double fovLeft, double fovRight, double depthNear, double depthFar);
@@ -181,7 +182,7 @@ public:
     void map4ComponentPoint(double& x, double& y, double& z, double& w) const;
 
     // Maps a 3D point through the transform, returning a 3D point.
-    FloatPoint3D mapPoint(const FloatPoint3D&) const;
+    WEBCORE_EXPORT FloatPoint3D mapPoint(const FloatPoint3D&) const;
 
     // Maps a 2D point through the transform, returning a 2D point.
     // Note that this ignores the z component, effectively projecting the point into the z=0 plane.
@@ -342,10 +343,10 @@ public:
         friend bool operator==(const Decomposed4Type&, const Decomposed4Type&) = default;
     };
 
-    bool decompose2(Decomposed2Type&) const WARN_UNUSED_RETURN;
+    [[nodiscard]] bool decompose2(Decomposed2Type&) const;
     void recompose2(const Decomposed2Type&);
 
-    bool decompose4(Decomposed4Type&) const WARN_UNUSED_RETURN;
+    [[nodiscard]] WEBCORE_EXPORT bool decompose4(Decomposed4Type&) const;
     void recompose4(const Decomposed4Type&);
 
     WEBCORE_EXPORT void blend(const TransformationMatrix& from, double progress, CompositeOperation = CompositeOperation::Replace);

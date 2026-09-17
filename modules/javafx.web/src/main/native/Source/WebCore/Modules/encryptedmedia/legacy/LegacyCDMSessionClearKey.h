@@ -49,7 +49,7 @@ public:
     void deref() const final { RefCounted::deref(); }
 
     // CDMSessionPrivate
-    LegacyCDMSessionType type() override { return CDMSessionTypeClearKey; }
+    LegacyCDMSessionType type() const final { return CDMSessionTypeClearKey; }
     const String& sessionId() const override { return m_sessionId; }
     RefPtr<Uint8Array> generateKeyRequest(const String& mimeType, Uint8Array*, String&, unsigned short&, uint32_t&) override;
     void releaseKeys() override;

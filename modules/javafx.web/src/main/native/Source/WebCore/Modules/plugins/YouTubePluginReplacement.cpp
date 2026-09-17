@@ -30,7 +30,7 @@
 #include "HTMLIFrameElement.h"
 #include "HTMLNames.h"
 #include "HTMLPlugInElement.h"
-#include "NodeInlines.h"
+#include "NodeDocument.h"
 #include "RenderElement.h"
 #include "Settings.h"
 #include "ShadowRoot.h"
@@ -79,7 +79,7 @@ RenderPtr<RenderElement> YouTubePluginReplacement::createElementRenderer(HTMLPlu
     if (!embedShadowElement)
         return nullptr;
 
-    return embedShadowElement->createElementRenderer(WTFMove(style), insertionPosition);
+    return embedShadowElement->createElementRenderer(WTF::move(style), insertionPosition);
 }
 
 void YouTubePluginReplacement::installReplacement(ShadowRoot& root)

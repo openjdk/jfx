@@ -27,6 +27,7 @@
 #include "FontCascade.h"
 #include "LegacyInlineIterator.h"
 #include "LineInfo.h"
+#include <wtf/CheckedPtr.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -35,10 +36,10 @@ class RenderText;
 class TextLayout;
 
 struct RenderTextInfo {
-    RenderText* text { nullptr };
+    CheckedPtr<RenderText> text;
     std::unique_ptr<TextLayout, TextLayoutDeleter> layout;
     CachedLineBreakIteratorFactory lineBreakIteratorFactory;
-    const FontCascade* font { nullptr };
+    CheckedPtr<const FontCascade> font;
 };
 
 class LineBreaker {
@@ -56,7 +57,7 @@ private:
     void skipTrailingWhitespace(LegacyInlineIterator&, const LineInfo&);
     void skipLeadingWhitespace(InlineBidiResolver&, LineInfo&);
 
-    RenderBlockFlow& m_block;
+    CheckedRef<RenderBlockFlow> m_block;
 };
 
 } // namespace WebCore

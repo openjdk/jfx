@@ -26,10 +26,10 @@
 
 #pragma once
 
-#include "FontLoadRequest.h"
-#include "ResourceLoaderOptions.h"
-#include "SharedBuffer.h"
-#include "ThreadableLoaderClient.h"
+#include <WebCore/FontLoadRequest.h>
+#include <WebCore/ResourceLoaderOptions.h>
+#include <WebCore/SharedBuffer.h>
+#include <WebCore/ThreadableLoaderClient.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/URL.h>
 #include <wtf/WeakPtr.h>
@@ -42,16 +42,20 @@ class WorkerGlobalScope;
 
 struct FontCustomPlatformData;
 
-class WorkerFontLoadRequest final : public FontLoadRequest, public ThreadableLoaderClient {
+class WorkerFontLoadRequest final : public FontLoadRequest, public ThreadableLoaderClient, public RefCounted<WorkerFontLoadRequest> {
     WTF_MAKE_TZONE_ALLOCATED(WorkerFontLoadRequest);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(WorkerFontLoadRequest);
 public:
-    WorkerFontLoadRequest(URL&&, LoadedFromOpaqueSource);
-    ~WorkerFontLoadRequest() = default;
+    static Ref<WorkerFontLoadRequest> create(URL&&, LoadedFromOpaqueSource);
 
     void load(WorkerGlobalScope&);
 
+    // FontLoadRequest, ThreadableLoaderClient.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
 private:
+    WorkerFontLoadRequest(URL&&, LoadedFromOpaqueSource);
+
     const URL& url() const final { return m_url; }
     bool isPending() const final { return !m_isLoading && !m_errorOccurred && !m_data; }
     bool isLoading() const final { return m_isLoading; }
@@ -77,7 +81,7 @@ private:
     bool m_isLoading { false };
     bool m_notifyOnClientSet { false };
     bool m_errorOccurred { false };
-    FontLoadRequestClient* m_fontLoadRequestClient { nullptr };
+    WeakPtr<FontLoadRequestClient> m_fontLoadRequestClient;
 
     WeakPtr<ScriptExecutionContext> m_context;
     SharedBufferBuilder m_data;

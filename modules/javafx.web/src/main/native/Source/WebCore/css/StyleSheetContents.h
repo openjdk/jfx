@@ -20,7 +20,7 @@
 
 #pragma once
 
-#include "CSSParserContext.h"
+#include <WebCore/CSSParserContext.h>
 #include <optional>
 #include <wtf/CheckedRef.h>
 #include <wtf/Function.h>

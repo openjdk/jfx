@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2019 Apple Inc. All rights reserved.
+* Copyright (C) 2019-2025 Apple Inc. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions
@@ -63,21 +63,16 @@ public:
     unsigned hash() const { return intHash(m_packedBits); }
     static BytecodeIndex deletedValue() { return fromBits(invalidOffset - 1); }
     bool isHashTableDeletedValue() const { return *this == deletedValue(); }
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
 
     static BytecodeIndex fromBits(uint32_t bits);
     BytecodeIndex withCheckpoint(Checkpoint checkpoint) const { return BytecodeIndex(offset(), checkpoint); }
 
     // Comparison operators.
     explicit operator bool() const { return m_packedBits != invalidOffset && m_packedBits != deletedValue().offset(); }
-    bool operator ==(const BytecodeIndex& other) const { return asBits() == other.asBits(); }
+    friend auto operator<=>(const BytecodeIndex&, const BytecodeIndex&) = default;
 
-    bool operator <(const BytecodeIndex& other) const { return asBits() < other.asBits(); }
-    bool operator >(const BytecodeIndex& other) const { return asBits() > other.asBits(); }
-    bool operator <=(const BytecodeIndex& other) const { return asBits() <= other.asBits(); }
-    bool operator >=(const BytecodeIndex& other) const { return asBits() >= other.asBits(); }
-
-
-    void dump(WTF::PrintStream&) const;
+    void dump(WTF::PrintStream&, bool inIonGraph = false) const;
 
 private:
     static constexpr uint32_t invalidOffset = std::numeric_limits<uint32_t>::max();
@@ -101,18 +96,9 @@ inline BytecodeIndex BytecodeIndex::fromBits(uint32_t bits)
     return result;
 }
 
-struct BytecodeIndexHash {
-    static unsigned hash(const BytecodeIndex& key) { return key.hash(); }
-    static bool equal(const BytecodeIndex& a, const BytecodeIndex& b) { return a == b; }
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
-};
-
 } // namespace JSC
 
 namespace WTF {
-
-template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::BytecodeIndex> : JSC::BytecodeIndexHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::BytecodeIndex> : SimpleClassHashTraits<JSC::BytecodeIndex> {

@@ -37,9 +37,5 @@ enum class ScrollBehavior : bool {
     Smooth
 };
 
-// MARK: - Logging
-
-WTF::TextStream& operator<<(WTF::TextStream&, ScrollBehavior);
-
 } // namespace Style
 } // namespace WebCore

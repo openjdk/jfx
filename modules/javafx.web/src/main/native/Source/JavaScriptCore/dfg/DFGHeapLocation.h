@@ -172,6 +172,8 @@ public:
         return m_heap.isHashTableDeletedValue();
     }
 
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
+
     void dump(PrintStream& out) const;
 
 private:
@@ -181,12 +183,6 @@ private:
     LazyNode m_index;
     Node* m_descriptor;
     void* m_extraState { nullptr };
-};
-
-struct HeapLocationHash {
-    static unsigned hash(const HeapLocation& key) { return key.hash(); }
-    static bool equal(const HeapLocation& a, const HeapLocation& b) { return a == b; }
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
 };
 
 inline LocationKind indexedPropertyLocForResultType(NodeFlags canonicalResultRepresentation)
@@ -231,9 +227,6 @@ inline LocationKind indexedPropertyLocToOutOfBoundsSaneChain(LocationKind locati
 } } // namespace JSC::DFG
 
 namespace WTF {
-
-template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::DFG::HeapLocation> : JSC::DFG::HeapLocationHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::DFG::HeapLocation> : SimpleClassHashTraits<JSC::DFG::HeapLocation> {

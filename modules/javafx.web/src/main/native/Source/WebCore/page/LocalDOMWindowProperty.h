@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "LocalDOMWindow.h"
+#include <WebCore/LocalDOMWindow.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -35,6 +35,7 @@ class LocalFrame;
 class LocalDOMWindowProperty {
 public:
     WEBCORE_EXPORT LocalFrame* frame() const;
+    RefPtr<LocalFrame> protectedFrame() const;
     LocalDOMWindow* window() const;
     RefPtr<LocalDOMWindow> protectedWindow() const { return window(); }
 

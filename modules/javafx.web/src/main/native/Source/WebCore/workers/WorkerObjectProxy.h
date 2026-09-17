@@ -30,8 +30,8 @@
 
 #pragma once
 
-#include "MessageWithMessagePorts.h"
-#include "WorkerReportingProxy.h"
+#include <WebCore/MessageWithMessagePorts.h>
+#include <WebCore/WorkerReportingProxy.h>
 
 #include <memory>
 #include <wtf/Function.h>

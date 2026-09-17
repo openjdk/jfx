@@ -23,11 +23,11 @@
 
 #pragma once
 
-#include "FilterEffect.h"
-#include "Image.h"
-#include "ImageBuffer.h"
-#include "SVGPreserveAspectRatioValue.h"
-#include "SourceImage.h"
+#include <WebCore/FilterEffect.h>
+#include <WebCore/Image.h>
+#include <WebCore/ImageBuffer.h>
+#include <WebCore/SVGPreserveAspectRatioValue.h>
+#include <WebCore/SourceImage.h>
 
 namespace WebCore {
 
@@ -43,7 +43,7 @@ public:
     bool operator==(const FEImage&) const;
 
     const SourceImage& sourceImage() const { return m_sourceImage; }
-    void setImageSource(SourceImage&& sourceImage) { m_sourceImage = WTFMove(sourceImage); }
+    void setImageSource(SourceImage&& sourceImage) { m_sourceImage = WTF::move(sourceImage); }
 
     FloatRect sourceImageRect() const { return m_sourceImageRect; }
     const SVGPreserveAspectRatioValue& preserveAspectRatio() const { return m_preserveAspectRatio; }
@@ -60,6 +60,8 @@ private:
 
     FloatRect calculateImageRect(const Filter&, std::span<const FloatRect> inputImageRects, const FloatRect& primitiveSubregion) const override;
 
+    OptionSet<FilterRenderingMode> supportedFilterRenderingModes(OptionSet<FilterRenderingMode>) const override;
+    std::unique_ptr<FilterEffectApplier> createAcceleratedApplier() const override;
     std::unique_ptr<FilterEffectApplier> createSoftwareApplier() const final;
 
     WTF::TextStream& externalRepresentation(WTF::TextStream&, FilterRepresentation) const final;

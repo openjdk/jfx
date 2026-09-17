@@ -59,7 +59,7 @@ struct SVGPropertyTraits<SVGTextPathMethodType> {
         return emptyString();
     }
 
-    static SVGTextPathMethodType fromString(const String& value)
+    static SVGTextPathMethodType fromString(SVGElement&, const String& value)
     {
         if (value == "align"_s)
             return SVGTextPathMethodAlign;
@@ -88,7 +88,7 @@ struct SVGPropertyTraits<SVGTextPathSpacingType> {
         return emptyString();
     }
 
-    static SVGTextPathSpacingType fromString(const String& value)
+    static SVGTextPathSpacingType fromString(SVGElement&, const String& value)
     {
         if (value == autoAtom())
             return SVGTextPathSpacingAuto;
@@ -99,7 +99,7 @@ struct SVGPropertyTraits<SVGTextPathSpacingType> {
 };
 
 class SVGTextPathElement final : public SVGTextContentElement, public SVGURIReference {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGTextPathElement);
+    WTF_MAKE_TZONE_ALLOCATED(SVGTextPathElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGTextPathElement);
 public:
     // Forward declare enumerations in the W3C naming scheme, for IDL generation.

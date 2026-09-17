@@ -45,7 +45,7 @@ class ImageBitmap;
 class ImageCaptureVideoFrameObserver;
 
 class ImageCapture : public RefCounted<ImageCapture>, public ActiveDOMObject, public MediaStreamTrackPrivateObserver {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(ImageCapture);
+    WTF_MAKE_TZONE_ALLOCATED(ImageCapture);
 public:
     void ref() const final { RefCounted::ref(); }
     void deref() const final { RefCounted::deref(); }

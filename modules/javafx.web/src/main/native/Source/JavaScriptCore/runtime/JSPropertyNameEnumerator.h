@@ -25,11 +25,11 @@
 
 #pragma once
 
-#include "JSCast.h"
-#include "Operations.h"
-#include "PropertyNameArray.h"
-#include "ResourceExhaustion.h"
-#include "StructureChain.h"
+#include <JavaScriptCore/JSCast.h>
+#include <JavaScriptCore/Operations.h>
+#include <JavaScriptCore/PropertyNameArray.h>
+#include <JavaScriptCore/ResourceExhaustion.h>
+#include <JavaScriptCore/StructureChain.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
@@ -57,10 +57,10 @@ public:
         return &vm.propertyNameEnumeratorSpace();
     }
 
-    static JSPropertyNameEnumerator* tryCreate(VM&, Structure*, uint32_t, uint32_t, PropertyNameArray&&);
-    static JSPropertyNameEnumerator* create(VM& vm, Structure* structure, uint32_t indexedLength, uint32_t numberStructureProperties, PropertyNameArray&& propertyNames)
+    static JSPropertyNameEnumerator* tryCreate(VM&, Structure*, uint32_t, uint32_t, PropertyNameArrayBuilder&&);
+    static JSPropertyNameEnumerator* create(VM& vm, Structure* structure, uint32_t indexedLength, uint32_t numberStructureProperties, PropertyNameArrayBuilder&& propertyNames)
     {
-        auto* result = tryCreate(vm, structure, indexedLength, numberStructureProperties, WTFMove(propertyNames));
+        auto* result = tryCreate(vm, structure, indexedLength, numberStructureProperties, WTF::move(propertyNames));
         RELEASE_ASSERT_RESOURCE_AVAILABLE(result, MemoryExhaustion, "Crash intentionally because memory is exhausted.");
         return result;
     }
@@ -107,7 +107,7 @@ private:
     friend class LLIntOffsetsExtractor;
 
     JSPropertyNameEnumerator(VM&, Structure*, uint32_t, uint32_t, WriteBarrier<JSString>*, unsigned);
-    void finishCreation(VM&, RefPtr<PropertyNameArrayData>&&);
+    void finishCreation(VM&, RefPtr<PropertyNameArray>&&);
 
     // JSPropertyNameEnumerator is immutable data structure, which allows VM to cache the empty one.
     // After instantiating JSPropertyNameEnumerator, we must not change any fields.
@@ -120,7 +120,7 @@ private:
     uint32_t m_flags { 0 };
 };
 
-void getEnumerablePropertyNames(JSGlobalObject*, JSObject*, PropertyNameArray&, uint32_t& indexedLength, uint32_t& structurePropertyCount);
+void getEnumerablePropertyNames(JSGlobalObject*, JSObject*, PropertyNameArrayBuilder&, uint32_t& indexedLength, uint32_t& structurePropertyCount);
 
 inline JSPropertyNameEnumerator* propertyNameEnumerator(JSGlobalObject* globalObject, JSObject* base)
 {
@@ -142,7 +142,7 @@ inline JSPropertyNameEnumerator* propertyNameEnumerator(JSGlobalObject* globalOb
     }
 
     uint32_t numberStructureProperties = 0;
-    PropertyNameArray propertyNames(vm, PropertyNameMode::Strings, PrivateSymbolMode::Exclude);
+    PropertyNameArrayBuilder propertyNames(vm, PropertyNameMode::Strings, PrivateSymbolMode::Exclude);
     getEnumerablePropertyNames(globalObject, base, propertyNames, indexedLength, numberStructureProperties);
     RETURN_IF_EXCEPTION(scope, nullptr);
 
@@ -161,7 +161,7 @@ inline JSPropertyNameEnumerator* propertyNameEnumerator(JSGlobalObject* globalOb
     if (!indexedLength && !propertyNames.size())
         enumerator = vm.emptyPropertyNameEnumerator();
     else {
-        enumerator = JSPropertyNameEnumerator::tryCreate(vm, structureAfterGettingPropertyNames, indexedLength, numberStructureProperties, WTFMove(propertyNames));
+        enumerator = JSPropertyNameEnumerator::tryCreate(vm, structureAfterGettingPropertyNames, indexedLength, numberStructureProperties, WTF::move(propertyNames));
         if (!enumerator) [[unlikely]] {
             throwOutOfMemoryError(globalObject, scope);
             return nullptr;

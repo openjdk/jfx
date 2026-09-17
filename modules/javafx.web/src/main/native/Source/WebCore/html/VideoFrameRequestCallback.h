@@ -27,8 +27,8 @@
 
 #if ENABLE(VIDEO)
 
-#include "ActiveDOMCallback.h"
-#include "CallbackResult.h"
+#include <WebCore/ActiveDOMCallback.h>
+#include <WebCore/CallbackResult.h>
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
 
@@ -39,6 +39,10 @@ struct VideoFrameMetadata;
 class VideoFrameRequestCallback : public RefCounted<VideoFrameRequestCallback>, public ActiveDOMCallback {
 public:
     using ActiveDOMCallback::ActiveDOMCallback;
+
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     virtual CallbackResult<void> invoke(double, const VideoFrameMetadata&) = 0;
     virtual CallbackResult<void> invokeRethrowingException(double, const VideoFrameMetadata&) = 0;

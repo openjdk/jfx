@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,6 +30,7 @@
 #include <WebCore/Font.h>
 #include <WebCore/Frame.h>
 #include "FrameInlines.h"
+#include "DocumentPage.h"
 #include <WebCore/FrameView.h>
 #include <WebCore/NotImplemented.h>
 #include <WebCore/Page.h>
@@ -165,11 +166,11 @@ void PopupMenuJava::hide()
 
 void PopupMenuJava::updateFromElement()
 {
-    client()->setTextFromItem(client()->selectedIndex());
+    client()->setTextFromItem(client()->popupSelectedIndex());
     if (!m_popup) {
         return;
     }
-    setSelectedItem(m_popup, client()->selectedIndex());
+    setSelectedItem(m_popup, client()->popupSelectedIndex());
 }
 
 void PopupMenuJava::disconnectClient()

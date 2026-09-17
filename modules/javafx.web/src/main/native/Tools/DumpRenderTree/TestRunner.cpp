@@ -1787,6 +1787,11 @@ static JSValueRef setObscuredContentInsetsCallback(JSContextRef context, JSObjec
     return TestRunner::alwaysResolvePromise(context);
 }
 
+static JSValueRef setHasMouseDeviceForTestingCallback(JSContextRef context, JSObjectRef, JSObjectRef, size_t, const JSValueRef[], JSValueRef*)
+{
+    return JSValueMakeUndefined(context);
+}
+
 static JSValueRef failNextNewCodeBlock(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
 {
     if (argumentCount < 1)
@@ -2279,7 +2284,7 @@ void TestRunner::runUIScript(JSContextRef context, JSStringRef script, JSValueRe
     cacheTestRunnerCallback(callbackID, callback);
 
     if (!m_UIScriptContext)
-        m_UIScriptContext = makeUniqueWithoutFastMallocCheck<WTR::UIScriptContext>(*this, WTR::UIScriptController::create);
+        m_UIScriptContext = WTR::UIScriptContext::create(*this, WTR::UIScriptController::create);
 
     //String scriptString({ reinterpret_cast<const UChar*>(JSStringGetCharactersPtr(script)), JSStringGetLength(script) });
     String  scriptString;

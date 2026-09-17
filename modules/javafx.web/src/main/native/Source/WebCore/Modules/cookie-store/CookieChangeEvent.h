@@ -36,7 +36,7 @@ namespace WebCore {
 struct CookieListItem;
 
 class CookieChangeEvent final : public Event {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CookieChangeEvent);
+    WTF_MAKE_TZONE_ALLOCATED(CookieChangeEvent);
 public:
     static Ref<CookieChangeEvent> create(const AtomString& type, CookieChangeEventInit&&, IsTrusted = IsTrusted::No);
     ~CookieChangeEvent();

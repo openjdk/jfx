@@ -40,11 +40,11 @@ std::unique_ptr<RTCRtpTransform> RTCRtpTransform::from(std::optional<Internal>&&
 {
     if (!internal)
         return nullptr;
-    return makeUnique<RTCRtpTransform>(WTFMove(*internal));
+    return makeUnique<RTCRtpTransform>(WTF::move(*internal));
 }
 
 RTCRtpTransform::RTCRtpTransform(Internal&& transform)
-    : m_transform(WTFMove(transform))
+    : m_transform(WTF::move(transform))
 {
 }
 

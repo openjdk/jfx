@@ -104,8 +104,8 @@ public:
                 Workset::const_iterator m_sparceSetIterator;
             };
 
-            iterator begin() const { return iterator(m_liveness, m_liveness.m_workset.begin()); }
-            iterator end() const { return iterator(m_liveness, m_liveness.m_workset.end()); }
+            iterator begin() const LIFETIME_BOUND { return iterator(m_liveness, m_liveness.m_workset.begin()); }
+            iterator end() const LIFETIME_BOUND { return iterator(m_liveness, m_liveness.m_workset.end()); }
 
             bool contains(const typename Adapter::Thing& thing) const
             {
@@ -206,8 +206,8 @@ public:
             typename UnderlyingIterable::const_iterator m_iter;
         };
 
-        iterator begin() const { return iterator(m_liveness, m_iterable.begin()); }
-        iterator end() const { return iterator(m_liveness, m_iterable.end()); }
+        iterator begin() const LIFETIME_BOUND { return iterator(m_liveness, m_iterable.begin()); }
+        iterator end() const LIFETIME_BOUND { return iterator(m_liveness, m_iterable.end()); }
 
         bool contains(const typename Adapter::Thing& thing) const
         {
@@ -242,7 +242,7 @@ public:
                 if (!block)
                     continue;
 
-                std::sort(m_liveness.m_liveAtHead[block].begin(), m_liveness.m_liveAtHead[block].end());
+                std::ranges::sort(m_liveness.m_liveAtHead[block]);
             }
         }
 

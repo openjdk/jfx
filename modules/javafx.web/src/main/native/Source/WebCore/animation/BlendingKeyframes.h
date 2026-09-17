@@ -27,7 +27,7 @@
 #include "CompositeOperation.h"
 #include "KeyframeInterpolation.h"
 #include "RenderStyle.h"
-#include "TimelineRange.h"
+#include "StyleSingleAnimationRangeName.h"
 #include "WebAnimationTypes.h"
 #include <wtf/Vector.h>
 #include <wtf/HashSet.h>
@@ -47,16 +47,16 @@ class Resolver;
 class BlendingKeyframe final : public KeyframeInterpolation::Keyframe {
 public:
     struct Offset {
-        SingleTimelineRange::Name name;
+        Style::SingleAnimationRangeName name;
         double value;
 
         Offset(double value)
-            : name(SingleTimelineRange::Name::Omitted)
+            : name(Style::SingleAnimationRangeName::Omitted)
             , value(value)
     {
     }
 
-        Offset(SingleTimelineRange::Name name, double value)
+        Offset(Style::SingleAnimationRangeName name, double value)
             : name(name)
             , value(value)
         {
@@ -84,7 +84,7 @@ public:
     bool usesRangeOffset() const;
 
     const RenderStyle* style() const { return m_style.get(); }
-    void setStyle(std::unique_ptr<RenderStyle>&& style) { m_style = WTFMove(style); }
+    void setStyle(std::unique_ptr<RenderStyle>&& style) { m_style = WTF::move(style); }
 
     TimingFunction* timingFunction() const { return m_timingFunction.get(); }
     void setTimingFunction(const RefPtr<TimingFunction>& timingFunction) { m_timingFunction = timingFunction; }

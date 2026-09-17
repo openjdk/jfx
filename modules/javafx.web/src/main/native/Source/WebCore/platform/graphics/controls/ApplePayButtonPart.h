@@ -27,7 +27,7 @@
 
 #if ENABLE(APPLE_PAY)
 
-#include "ControlPart.h"
+#include <WebCore/ControlPart.h>
 
 namespace WebCore {
 

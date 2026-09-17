@@ -103,7 +103,7 @@ void Update::addElement(Element& element, Element* parent, ElementUpdate&& eleme
     if (elementUpdate.mayNeedRebuildRoot)
         addPossibleRebuildRoot(element, parent);
 
-    m_elements.add(&element, WTFMove(elementUpdate));
+    m_elements.add(element, WTF::move(elementUpdate));
 }
 
 void Update::addText(Text& text, Element* parent, TextUpdate&& textUpdate)
@@ -112,7 +112,7 @@ void Update::addText(Text& text, Element* parent, TextUpdate&& textUpdate)
 
     addPossibleRoot(parent);
 
-    auto result = m_texts.add(&text, WTFMove(textUpdate));
+    auto result = m_texts.add(text, WTF::move(textUpdate));
 
     if (!result.isNewEntry) {
         auto& entry = result.iterator->value;
@@ -123,26 +123,26 @@ void Update::addText(Text& text, Element* parent, TextUpdate&& textUpdate)
 
         ASSERT(!entry.inheritedDisplayContentsStyle || !textUpdate.inheritedDisplayContentsStyle);
         if (!entry.inheritedDisplayContentsStyle)
-            entry.inheritedDisplayContentsStyle = WTFMove(textUpdate.inheritedDisplayContentsStyle);
+            entry.inheritedDisplayContentsStyle = WTF::move(textUpdate.inheritedDisplayContentsStyle);
     }
 }
 
 void Update::addText(Text& text, TextUpdate&& textUpdate)
 {
-    addText(text, composedTreeAncestors(text).first(), WTFMove(textUpdate));
+    addText(text, composedTreeAncestors(text).first(), WTF::move(textUpdate));
 }
 
 void Update::addSVGRendererUpdate(SVGElement& element)
 {
-    auto parent = composedTreeAncestors(element).first();
+    RefPtr parent = composedTreeAncestors(element).first();
     m_roots.remove(&element);
-    addPossibleRoot(parent);
+    addPossibleRoot(parent.get());
     element.setNeedsSVGRendererUpdate(true);
 }
 
 void Update::addInitialContainingBlockUpdate(std::unique_ptr<RenderStyle> style)
 {
-    m_initialContainingBlockUpdate = WTFMove(style);
+    m_initialContainingBlockUpdate = WTF::move(style);
 }
 
 void Update::addPossibleRoot(Element* element)

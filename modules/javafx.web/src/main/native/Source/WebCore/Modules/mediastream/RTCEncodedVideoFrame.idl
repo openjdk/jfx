@@ -33,8 +33,8 @@ enum RTCEncodedVideoFrameType { "empty", "key", "delta" };
     Conditional=WEB_RTC,
     JSGenerateToJSObject,
     JSGenerateToNativeObject,
-]
-dictionary RTCEncodedVideoFrameMetadata {
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary RTCEncodedVideoFrameMetadata {
     long long frameId;
     sequence<long long> dependencies;
     unsigned short width;
@@ -55,8 +55,8 @@ dictionary RTCEncodedVideoFrameMetadata {
 
 [
     Conditional=WEB_RTC,
-]
-dictionary RTCEncodedVideoFrameOptions {
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary RTCEncodedVideoFrameOptions {
     RTCEncodedVideoFrameMetadata metadata;
 };
 

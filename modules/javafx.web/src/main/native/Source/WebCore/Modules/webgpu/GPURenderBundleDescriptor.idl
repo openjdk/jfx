@@ -26,7 +26,7 @@
 // https://gpuweb.github.io/gpuweb/#dictdef-gpurenderbundledescriptor
 
 [
-    EnabledBySetting=WebGPUEnabled
-]
-dictionary GPURenderBundleDescriptor : GPUObjectDescriptorBase {
+    EnabledBySetting=WebGPUEnabled,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary GPURenderBundleDescriptor : GPUObjectDescriptorBase {
 };

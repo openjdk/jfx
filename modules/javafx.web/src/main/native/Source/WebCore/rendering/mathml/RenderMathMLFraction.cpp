@@ -32,6 +32,7 @@
 
 #include "GraphicsContext.h"
 #include "MathMLFractionElement.h"
+#include "OpenTypeMathData.h"
 #include "PaintInfo.h"
 #include "RenderMathMLBlockInlines.h"
 #include "RenderObjectInlines.h"
@@ -40,10 +41,10 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderMathMLFraction);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderMathMLFraction);
 
 RenderMathMLFraction::RenderMathMLFraction(MathMLFractionElement& element, RenderStyle&& style)
-    : RenderMathMLRow(Type::MathMLFraction, element, WTFMove(style))
+    : RenderMathMLRow(Type::MathMLFraction, element, WTF::move(style))
 {
     ASSERT(isRenderMathMLFraction());
 }
@@ -283,10 +284,6 @@ void RenderMathMLFraction::layoutBlock(RelayoutChildren relayoutChildren, Layout
     adjustLayoutForBorderAndPadding();
 
     layoutOutOfFlowBoxes(relayoutChildren);
-
-    updateScrollInfoAfterLayout();
-
-    clearNeedsLayout();
 }
 
 void RenderMathMLFraction::paint(PaintInfo& info, const LayoutPoint& paintOffset)
@@ -297,21 +294,24 @@ void RenderMathMLFraction::paint(PaintInfo& info, const LayoutPoint& paintOffset
         return;
 
     LayoutUnit borderAndPaddingLeft = writingMode().isBidiLTR() ? borderAndPaddingStart() : borderAndPaddingEnd();
-    IntPoint adjustedPaintOffset = roundedIntPoint(paintOffset + location() + LayoutPoint(borderAndPaddingLeft, borderAndPaddingBefore() + fractionAscent() - mathAxisHeight()));
+    auto adjustedPaintOffset = roundPointToDevicePixels(paintOffset + location() + LayoutPoint(borderAndPaddingLeft, borderAndPaddingBefore() + fractionAscent() - mathAxisHeight()), document().deviceScaleFactor());
 
     GraphicsContextStateSaver stateSaver(info.context());
 
     info.context().setStrokeThickness(thickness);
     info.context().setStrokeStyle(StrokeStyle::SolidStroke);
-    info.context().setStrokeColor(style().visitedDependentColorWithColorFilter(CSSPropertyColor));
+    info.context().setStrokeColor(style().visitedDependentColorApplyingColorFilter());
     // MathML Core says the fraction bar takes the full width of the content box.
-    info.context().drawLine(adjustedPaintOffset, roundedIntPoint(LayoutPoint(adjustedPaintOffset.x() + logicalWidth() - borderAndPaddingLogicalWidth(), LayoutUnit(adjustedPaintOffset.y()))));
+    auto endPoint = roundPointToDevicePixels({ adjustedPaintOffset.x() + logicalWidth() - borderAndPaddingLogicalWidth(), adjustedPaintOffset.y() }, document().deviceScaleFactor());
+    info.context().drawLine(adjustedPaintOffset, endPoint);
 }
 
 std::optional<LayoutUnit> RenderMathMLFraction::firstLineBaseline() const
 {
-    if (isValid())
-        return LayoutUnit { roundf(static_cast<float>(borderAndPaddingBefore() + fractionAscent())) };
+    if (isValid()) {
+        auto baseline = settings().subpixelInlineLayoutEnabled() ? borderAndPaddingBefore() + fractionAscent() : LayoutUnit(roundf(borderAndPaddingBefore() + fractionAscent()));
+        return { baseline };
+    }
     return RenderMathMLRow::firstLineBaseline();
 }
 

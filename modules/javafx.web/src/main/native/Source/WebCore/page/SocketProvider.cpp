@@ -51,9 +51,9 @@ RefPtr<ThreadableWebSocketChannel> SocketProvider::createWebSocketChannel(Docume
     return nullptr;
 }
 #if PLATFORM(JAVA)
-Ref<WebCore::WebTransportSessionPromise> SocketProvider::initializeWebTransportSession(WebCore::ScriptExecutionContext&, WebCore::WebTransportSessionClient&, const URL&)
+std::pair<RefPtr<WebCore::WebTransportSession>, Ref<WebCore::WebTransportSessionPromise>> SocketProvider::initializeWebTransportSession(WebCore::ScriptExecutionContext&, WebCore::WebTransportSessionClient&, const URL&, const WebCore::WebTransportOptions&)
 {
-    return WebCore::WebTransportSessionPromise::createAndReject();
+    return { nullptr, WebCore::WebTransportSessionPromise::createAndReject() };
 }
 #endif
 }

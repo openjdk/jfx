@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "GPRInfo.h"
-#include "JSCJSValue.h"
-#include "ResultType.h"
-#include "TagRegistersMode.h"
+#include <JavaScriptCore/GPRInfo.h>
+#include <JavaScriptCore/JSCJSValue.h>
+#include <JavaScriptCore/ResultType.h>
+#include <JavaScriptCore/TagRegistersMode.h>
 
 namespace JSC {
 

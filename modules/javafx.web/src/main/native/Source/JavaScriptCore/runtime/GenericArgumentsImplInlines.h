@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "GenericArgumentsImpl.h"
-#include "JSCInlines.h"
+#include <JavaScriptCore/GenericArgumentsImpl.h>
+#include <JavaScriptCore/JSCInlines.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
@@ -95,7 +95,7 @@ bool GenericArgumentsImpl<Type>::getOwnPropertySlotByIndex(JSObject* object, JSG
 }
 
 template<typename Type>
-void GenericArgumentsImpl<Type>::getOwnPropertyNames(JSObject* object, JSGlobalObject* globalObject, PropertyNameArray& array, DontEnumPropertiesMode mode)
+void GenericArgumentsImpl<Type>::getOwnPropertyNames(JSObject* object, JSGlobalObject* globalObject, PropertyNameArrayBuilder& array, DontEnumPropertiesMode mode)
 {
     VM& vm = globalObject->vm();
     Type* thisObject = jsCast<Type*>(object);

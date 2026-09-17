@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "AXTextStateChangeIntent.h"
-#include "EditAction.h"
-#include "VisibleSelection.h"
+#include <WebCore/AXTextStateChangeIntent.h>
+#include <WebCore/EditAction.h>
+#include <WebCore/VisibleSelection.h>
 #include <wtf/WeakPtr.h>
 
 #ifndef NDEBUG

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,8 @@
 package com.sun.jfx.incubator.scene.control.richtext;
 
 import javafx.scene.Node;
+import javafx.scene.text.Text;
+import jfx.incubator.scene.control.richtext.model.StyleAttribute;
 import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 import jfx.incubator.scene.control.richtext.skin.CellContext;
 
@@ -33,6 +35,7 @@ import jfx.incubator.scene.control.richtext.skin.CellContext;
  * Assist in creating virtualized text cells.
  */
 class VFlowCellContext implements CellContext {
+    private TextCell cell;
     private Node node;
     private StyleAttributeMap attrs;
     private final StringBuilder style = new StringBuilder();
@@ -46,6 +49,12 @@ class VFlowCellContext implements CellContext {
     }
 
     @Override
+    public <T> void decorateRun(StyleAttribute<T> a, CellContext.RunDecor type, String styleName) {
+        int len = (node instanceof Text t) ? t.getText().length() : 1;
+        cell.decorateRun(len, a, type, styleName);
+    }
+
+    @Override
     public StyleAttributeMap getAttributes() {
         return attrs;
     }
@@ -55,7 +64,8 @@ class VFlowCellContext implements CellContext {
         return node;
     }
 
-    void reset(Node n, StyleAttributeMap a) {
+    void reset(TextCell cell, Node n, StyleAttributeMap a) {
+        this.cell = cell;
         this.node = n;
         this.attrs = a;
         style.setLength(0);

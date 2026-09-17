@@ -26,8 +26,9 @@
 #include "PluginDocument.h"
 
 #include "ContainerNodeInlines.h"
-#include "DocumentInlines.h"
 #include "DocumentLoader.h"
+#include "DocumentSettingsValues.h"
+#include "DocumentView.h"
 #include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
 #include "HTMLBodyElement.h"
@@ -37,7 +38,9 @@
 #include "HTMLNames.h"
 #include "HTMLStyleElement.h"
 #include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "LocalFrameLoaderClient.h"
+#include "LocalFrameView.h"
 #include "Logging.h"
 #include "PluginViewBase.h"
 #include "RawDataDocumentParser.h"
@@ -50,7 +53,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(PluginDocument);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PluginDocument);
 
 using namespace HTMLNames;
 
@@ -95,37 +98,37 @@ Ref<HTMLStyleElement> PluginDocumentParser::createStyleElement(Document& documen
 
 void PluginDocumentParser::createDocumentStructure()
 {
-    auto& document = downcast<PluginDocument>(*this->document());
+    Ref document = downcast<PluginDocument>(*this->document());
 
     LOG_WITH_STREAM(Plugins, stream << "PluginDocumentParser::createDocumentStructure() for document " << document);
 
-    auto rootElement = HTMLHtmlElement::create(document);
-    document.appendChild(rootElement);
+    Ref rootElement = HTMLHtmlElement::create(document);
+    document->appendChild(rootElement);
 
-    auto headElement = HTMLHeadElement::create(document);
-    auto styleElement = createStyleElement(document);
+    Ref headElement = HTMLHeadElement::create(document);
+    Ref styleElement = createStyleElement(document);
     headElement->appendChild(styleElement);
     rootElement->appendChild(headElement);
 
-    if (document.frame())
-        document.frame()->injectUserScripts(UserScriptInjectionTime::DocumentStart);
+    if (RefPtr frame = document->frame())
+        frame->injectUserScripts(UserScriptInjectionTime::DocumentStart);
 
-    auto body = HTMLBodyElement::create(document);
+    Ref body = HTMLBodyElement::create(document);
     rootElement->appendChild(body);
 
-    auto embedElement = HTMLEmbedElement::create(document);
+    Ref embedElement = HTMLEmbedElement::create(document);
     m_embedElement = embedElement.get();
     embedElement->setAttributeWithoutSynchronization(nameAttr, "plugin"_s);
-    embedElement->setAttributeWithoutSynchronization(srcAttr, AtomString { document.url().string() });
+    embedElement->setAttributeWithoutSynchronization(srcAttr, AtomString { document->url().string() });
 
-    ASSERT(document.loader());
-    if (RefPtr loader = document.loader())
-        m_embedElement->setAttributeWithoutSynchronization(typeAttr, AtomString { loader->writer().mimeType() });
+    ASSERT(document->loader());
+    if (RefPtr loader = document->loader())
+        embedElement->setAttributeWithoutSynchronization(typeAttr, AtomString { loader->writer().mimeType() });
 
-    document.setPluginElement(*m_embedElement);
+    document->setPluginElement(embedElement);
 
     body->appendChild(embedElement);
-    document.setHasVisuallyNonEmptyCustomContent();
+    document->setHasVisuallyNonEmptyCustomContent();
 }
 
 void PluginDocumentParser::appendBytes(DocumentWriter&, std::span<const uint8_t>)
@@ -135,27 +138,29 @@ void PluginDocumentParser::appendBytes(DocumentWriter&, std::span<const uint8_t>
 
     createDocumentStructure();
 
-    RefPtr frame = document()->frame();
+    Ref document = *this->document();
+    RefPtr frame = document->frame();
     if (!frame)
         return;
 
-    document()->updateLayout();
+    document->updateLayout();
 
     // Below we assume that renderer->widget() to have been created by
     // document()->updateLayout(). However, in some cases, updateLayout() will
     // recurse too many times and delay its post-layout tasks (such as creating
     // the widget). Here we kick off the pending post-layout tasks so that we
     // can synchronously redirect data to the plugin.
-    frame->view()->flushAnyPendingPostLayoutTasks();
+    frame->protectedView()->flushAnyPendingPostLayoutTasks();
 
-    if (auto renderer = m_embedElement->renderWidget()) {
+    if (CheckedPtr renderer = Ref { *m_embedElement }->renderWidget()) {
         if (RefPtr widget = renderer->widget()) {
+            renderer = nullptr;
             frame->loader().client().redirectDataToPlugin(*widget);
 
             // In a plugin document, the main resource is the plugin. If we have a null widget, that means
             // the loading of the plugin was cancelled, which gives us a null mainResourceLoader(), so we
             // need to have this call in a null check of the widget or of mainResourceLoader().
-            if (auto loader = frame->loader().activeDocumentLoader())
+            if (RefPtr loader = frame->loader().activeDocumentLoader())
                 loader->setMainResourceDataBufferingPolicy(DataBufferingPolicy::DoNotBufferData);
         }
     }

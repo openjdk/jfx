@@ -27,8 +27,8 @@
 
 #if ENABLE(WEB_RTC)
 
-#include "RTCPriorityType.h"
-#include "ScriptExecutionContextIdentifier.h"
+#include <WebCore/RTCPriorityType.h>
+#include <WebCore/ScriptExecutionContextIdentifier.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -55,8 +55,8 @@ inline RTCDataChannelInit RTCDataChannelInit::isolatedCopy() const &
 
 inline RTCDataChannelInit RTCDataChannelInit::isolatedCopy() &&
 {
-    auto copy = WTFMove(*this);
-    copy.protocol = WTFMove(copy.protocol).isolatedCopy();
+    auto copy = WTF::move(*this);
+    copy.protocol = WTF::move(copy.protocol).isolatedCopy();
     return copy;
 }
 

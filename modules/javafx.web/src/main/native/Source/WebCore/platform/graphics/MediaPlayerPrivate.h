@@ -25,26 +25,29 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
 #if ENABLE(VIDEO)
 
-#include "HostingContext.h"
-#include "MediaPlayer.h"
-#include "MediaPlayerIdentifier.h"
-#include "NativeImage.h"
-#include "PlatformTimeRanges.h"
-#include "ProcessIdentity.h"
+#include <WebCore/HostingContext.h>
+#include <WebCore/MediaPlayer.h>
+#include <WebCore/MediaPlayerIdentifier.h>
+#include <WebCore/NativeImage.h>
+#include <WebCore/PlatformTimeRanges.h>
+#include <WebCore/ProcessIdentity.h>
 #include <optional>
 #include <wtf/AbstractRefCounted.h>
 #include <wtf/CompletionHandler.h>
 
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA)
-#include "LegacyCDMSession.h"
+#include <WebCore/LegacyCDMSession.h>
 #endif
 
 namespace WebCore {
 
 class MessageClientForTesting;
 class VideoFrame;
+
+enum class MediaPlaybackTargetType : uint8_t;
 
 // MediaPlayerPrivateInterface subclasses should be ref-counted, but each subclass may choose whether
 // to be RefCounted or ThreadSafeRefCounted. Therefore, each subclass must implement a pair of
@@ -62,6 +65,8 @@ public:
 
 #if ENABLE(MEDIA_SOURCE)
     virtual void load(const URL&, const LoadOptions&, MediaSourcePrivateClient&) = 0;
+    virtual void readyStateFromMediaSourceChanged() { }
+    virtual void characteristicsFromMediaSourceChanged() { }
 #endif
 #if ENABLE(MEDIA_STREAM)
     virtual void load(MediaStreamPrivate&) = 0;
@@ -86,7 +91,7 @@ public:
     virtual RetainPtr<PlatformLayer> createVideoFullscreenLayer() { return nullptr; }
     virtual void setVideoFullscreenLayer(PlatformLayer*, Function<void()>&& completionHandler) { completionHandler(); }
     virtual void updateVideoFullscreenInlineImage() { }
-    virtual void setVideoFullscreenFrame(FloatRect) { }
+    virtual void setVideoFullscreenFrame(const FloatRect&) { }
     virtual void setVideoFullscreenGravity(MediaPlayer::VideoGravity) { }
     virtual void setVideoFullscreenMode(MediaPlayer::VideoFullscreenMode) { }
     virtual void videoFullscreenStandbyChanged() { }
@@ -128,6 +133,7 @@ public:
 
     virtual MediaTime duration() const { return MediaTime::zeroTime(); }
 
+    // Methods need to be thread-safe should MSE be enabled in a worker.
     WEBCORE_EXPORT virtual MediaTime currentOrPendingSeekTime() const;
     virtual MediaTime currentTime() const { return MediaTime::zeroTime(); }
     virtual bool timeIsProgressing() const { return !paused(); }
@@ -176,6 +182,10 @@ public:
     virtual MediaPlayer::NetworkState networkState() const = 0;
     virtual MediaPlayer::ReadyState readyState() const = 0;
 
+#if ENABLE(MEDIA_SOURCE)
+    virtual void mediaSourceHasRetrievedAllData() { };
+#endif
+
     WEBCORE_EXPORT virtual const PlatformTimeRanges& seekable() const;
     virtual MediaTime maxTimeSeekable() const { return MediaTime::zeroTime(); }
     virtual MediaTime minTimeSeekable() const { return MediaTime::zeroTime(); }
@@ -215,7 +225,7 @@ public:
     virtual bool wirelessVideoPlaybackDisabled() const { return true; }
     virtual void setWirelessVideoPlaybackDisabled(bool) { }
 
-    virtual bool canPlayToWirelessPlaybackTarget() const { return false; }
+    virtual OptionSet<MediaPlaybackTargetType> supportedPlaybackTargetTypes() const;
     virtual bool isCurrentPlaybackTargetWireless() const { return false; }
     virtual void setWirelessPlaybackTarget(Ref<MediaPlaybackTarget>&&) { }
 
@@ -283,9 +293,6 @@ public:
     virtual void simulateAudioInterruption() { }
 #endif
 
-    virtual void beginSimulatedHDCPError() { }
-    virtual void endSimulatedHDCPError() { }
-
     virtual String languageOfPrimaryAudioTrack() const { return emptyString(); }
 
     virtual size_t extraMemoryCost() const
@@ -319,7 +326,7 @@ public:
     virtual AVPlayer *objCAVFoundationAVPlayer() const { return nullptr; }
 #endif
 
-    virtual bool performTaskAtTime(Function<void()>&&, const MediaTime&) { return false; }
+    virtual bool performTaskAtTime(Function<void(const MediaTime&)>&&, const MediaTime&) { return false; }
 
     virtual bool shouldIgnoreIntrinsicSize() { return false; }
 
@@ -357,9 +364,9 @@ public:
     virtual void setVideoTarget(const PlatformVideoTarget&) { }
 
 #if HAVE(SPATIAL_TRACKING_LABEL)
-    virtual const String& defaultSpatialTrackingLabel() const { return emptyString(); }
+    virtual String defaultSpatialTrackingLabel() const { return emptyString(); }
     virtual void setDefaultSpatialTrackingLabel(const String&) { }
-    virtual const String& spatialTrackingLabel() const { return emptyString(); }
+    virtual String spatialTrackingLabel() const { return emptyString(); }
     virtual void setSpatialTrackingLabel(const String&) { }
 #endif
 
@@ -380,6 +387,8 @@ public:
     virtual void soundStageSizeDidChange() { }
 
     virtual void setMessageClientForTesting(WeakPtr<MessageClientForTesting>) { }
+
+    virtual void elementIdChanged(const String&) const { }
 
 protected:
     mutable PlatformTimeRanges m_seekable;

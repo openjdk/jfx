@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  *           (C) 2006 Alexey Proskuryakov (ap@nypop.com)
  *
  * This library is free software; you can redistribute it and/or
@@ -27,13 +27,17 @@
 
 #include "Document.h"
 #include "ElementAncestorIteratorInlines.h"
+#include "ElementChildIterator.h"
+#include "ElementChildIteratorInlines.h"
 #include "ElementIterator.h"
 #include "HTMLNames.h"
 #include "HTMLOptionElement.h"
 #include "HTMLSelectElement.h"
 #include "PseudoClassChangeInvalidation.h"
-#include "RenderMenuList.h"
 #include "NodeRenderStyle.h"
+#include "ScriptDisallowedScope.h"
+#include "ScriptElement.h"
+#include "Settings.h"
 #include "StyleResolver.h"
 #include "TypedElementDescendantIteratorInlines.h"
 #include <wtf/StdLibExtras.h>
@@ -41,7 +45,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLOptGroupElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLOptGroupElement);
 
 using namespace HTMLNames;
 
@@ -54,6 +58,37 @@ inline HTMLOptGroupElement::HTMLOptGroupElement(const QualifiedName& tagName, Do
 Ref<HTMLOptGroupElement> HTMLOptGroupElement::create(const QualifiedName& tagName, Document& document)
 {
     return adoptRef(*new HTMLOptGroupElement(tagName, document));
+}
+
+auto HTMLOptGroupElement::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree) -> InsertedIntoAncestorResult
+{
+    auto result = HTMLElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
+
+    if (!document().settings().htmlEnhancedSelectParsingEnabled() || m_ownerSelect)
+        return result;
+
+    if (RefPtr select = HTMLSelectElement::findOwnerSelect(protectedParentNode().get(), HTMLSelectElement::ExcludeOptGroup::Yes)) {
+        m_ownerSelect = select.get();
+        select->setRecalcListItems();
+    }
+
+    return result;
+}
+
+void HTMLOptGroupElement::removedFromAncestor(RemovalType removalType, ContainerNode& oldParentOfRemovedTree)
+{
+    HTMLElement::removedFromAncestor(removalType, oldParentOfRemovedTree);
+
+    if (!document().settings().htmlEnhancedSelectParsingEnabled() || !m_ownerSelect)
+        return;
+
+    if (RefPtr select = HTMLSelectElement::findOwnerSelect(protectedParentNode().get(), HTMLSelectElement::ExcludeOptGroup::Yes)) {
+        ASSERT_UNUSED(select, select == m_ownerSelect.get());
+        return;
+    }
+
+    if (RefPtr select = std::exchange(m_ownerSelect, nullptr).get())
+        select->setRecalcListItems();
 }
 
 bool HTMLOptGroupElement::isDisabledFormControl() const
@@ -77,6 +112,11 @@ const AtomString& HTMLOptGroupElement::formControlType() const
 
 void HTMLOptGroupElement::childrenChanged(const ChildChange& change)
 {
+    if (document().settings().htmlEnhancedSelectParsingEnabled()) {
+        HTMLElement::childrenChanged(change);
+        return;
+    }
+
     bool isRelevant = change.affectsElements == ChildChange::AffectsElements::Yes;
     RefPtr select = isRelevant ? ownerSelectElement() : nullptr;
     if (!isRelevant || !select) {
@@ -131,7 +171,10 @@ String HTMLOptGroupElement::groupLabelText() const
 
 HTMLSelectElement* HTMLOptGroupElement::ownerSelectElement() const
 {
+    if (!document().settings().htmlEnhancedSelectParsingEnabled())
     return dynamicDowncast<HTMLSelectElement>(parentNode());
+
+    return m_ownerSelect.get();
 }
 
 bool HTMLOptGroupElement::accessKeyAction(bool)

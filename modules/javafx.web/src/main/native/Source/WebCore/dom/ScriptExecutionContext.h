@@ -27,14 +27,15 @@
 
 #pragma once
 
-#include "ScriptExecutionContextIdentifier.h"
-#include "SecurityContext.h"
-#include "ServiceWorkerIdentifier.h"
-#include "Timer.h"
+#include <WebCore/ScriptExecutionContextIdentifier.h>
+#include <WebCore/SecurityContext.h>
+#include <WebCore/ServiceWorkerIdentifier.h>
+#include <WebCore/Timer.h>
 #include <wtf/Forward.h>
 #include <wtf/Function.h>
 #include <wtf/HashSet.h>
 #include <wtf/ObjectIdentifier.h>
+#include <wtf/ThreadSafeWeakHashSet.h>
 #include <wtf/WeakHashSet.h>
 #include <wtf/text/WTFString.h>
 
@@ -99,6 +100,7 @@ class ResourceRequest;
 class ServiceWorker;
 class ServiceWorkerContainer;
 class SocketProvider;
+class WeakPtrImplWithEventTargetData;
 class WebCoreOpaqueRoot;
 enum class AdvancedPrivacyProtections : uint16_t;
 enum class CrossOriginMode : bool;
@@ -125,7 +127,9 @@ enum class ScriptExecutionContextType : uint8_t {
     EmptyScriptExecutionContext
 };
 
-class ScriptExecutionContext : public SecurityContext, public TimerAlignment {
+class ScriptExecutionContext : public SecurityContext, public TimerAlignment, public CanMakeThreadSafeCheckedPtr<ScriptExecutionContext> {
+    WTF_MAKE_TZONE_ALLOCATED(ScriptExecutionContext);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ScriptExecutionContext);
 public:
     using Type = ScriptExecutionContextType;
 
@@ -165,6 +169,7 @@ public:
     virtual IDBClient::IDBConnectionProxy* idbConnectionProxy() = 0;
 
     virtual SocketProvider* socketProvider() = 0;
+    RefPtr<SocketProvider> protectedSocketProvider();
 
     virtual GraphicsClient* graphicsClient() { return nullptr; }
 
@@ -226,7 +231,7 @@ public:
 
     virtual CSSFontSelector* cssFontSelector() { return nullptr; }
     virtual CSSValuePool& cssValuePool();
-    virtual std::unique_ptr<FontLoadRequest> fontLoadRequest(const String& url, bool isSVG, bool isInitiatingElementInUserAgentShadowTree, LoadedFromOpaqueSource);
+    virtual RefPtr<FontLoadRequest> fontLoadRequest(const String& url, bool isSVG, bool isInitiatingElementInUserAgentShadowTree, LoadedFromOpaqueSource);
     virtual void beginLoadingFontSoon(FontLoadRequest&) { }
 
     WEBCORE_EXPORT static void setCrossOriginMode(CrossOriginMode);
@@ -235,7 +240,14 @@ public:
     WEBCORE_EXPORT void ref();
     WEBCORE_EXPORT void deref();
 
-    WEBCORE_EXPORT bool requiresScriptTrackingPrivacyProtection(ScriptTrackingPrivacyCategory);
+    uint32_t checkedPtrCount() const final { return CanMakeThreadSafeCheckedPtr::checkedPtrCount(); }
+    uint32_t checkedPtrCountWithoutThreadCheck() const final { return CanMakeThreadSafeCheckedPtr::checkedPtrCountWithoutThreadCheck(); }
+    void incrementCheckedPtrCount() const final { CanMakeThreadSafeCheckedPtr::incrementCheckedPtrCount(); }
+    void decrementCheckedPtrCount() const final { CanMakeThreadSafeCheckedPtr::decrementCheckedPtrCount(); }
+    void setDidBeginCheckedPtrDeletion() override { CanMakeThreadSafeCheckedPtr::setDidBeginCheckedPtrDeletion(); }
+
+    enum class IncludeConsoleLog : bool { No, Yes };
+    WEBCORE_EXPORT bool requiresScriptTrackingPrivacyProtection(ScriptTrackingPrivacyCategory, IncludeConsoleLog = IncludeConsoleLog::Yes);
 
     class Task {
         WTF_MAKE_TZONE_ALLOCATED(Task);
@@ -245,13 +257,13 @@ public:
         template<typename T>
             requires (!std::derived_from<T, Task> && std::convertible_to<T, Function<void(ScriptExecutionContext&)>>)
         Task(T task)
-            : m_task(WTFMove(task))
+            : m_task(WTF::move(task))
             , m_isCleanupTask(false)
         {
         }
 
         Task(Function<void()>&& task)
-            : m_task([task = WTFMove(task)](ScriptExecutionContext&) { task(); })
+            : m_task([task = WTF::move(task)](ScriptExecutionContext&) { task(); })
             , m_isCleanupTask(false)
         {
         }
@@ -259,7 +271,7 @@ public:
         template<typename T>
             requires std::convertible_to<T, Function<void(ScriptExecutionContext&)>>
         Task(CleanupTaskTag, T task)
-            : m_task(WTFMove(task))
+            : m_task(WTF::move(task))
             , m_isCleanupTask(true)
         {
         }
@@ -297,7 +309,7 @@ public:
     virtual Seconds domTimerAlignmentInterval(bool hasReachedMaxNestingLevel) const;
 
     // TimerAlignment
-    WEBCORE_EXPORT std::optional<MonotonicTime> alignedFireTime(bool hasReachedMaxNestingLevel, MonotonicTime fireTime) const final;
+    WEBCORE_EXPORT MonotonicTime alignedFireTime(bool hasReachedMaxNestingLevel, MonotonicTime fireTime) const final;
 
     virtual EventTarget* errorEventTarget() = 0;
 
@@ -329,7 +341,7 @@ public:
     WEBCORE_EXPORT JSC::JSGlobalObject* globalObject() const;
 
     WEBCORE_EXPORT String domainForCachePartition() const;
-    void setDomainForCachePartition(String&& domain) { m_domainForCachePartition = WTFMove(domain); }
+    void setDomainForCachePartition(String&& domain) { m_domainForCachePartition = WTF::move(domain); }
 
     bool allowsMediaDevices() const;
     ServiceWorker* activeServiceWorker() const { return m_activeServiceWorker.get(); }
@@ -337,7 +349,7 @@ public:
 
     void registerServiceWorker(ServiceWorker&);
     void unregisterServiceWorker(ServiceWorker&);
-    inline ServiceWorker* serviceWorker(ServiceWorkerIdentifier); // Defined in ScriptExecutionContextInlines.h.
+    inline ServiceWorker* serviceWorker(ServiceWorkerIdentifier); // Defined in ServiceWorker.h.
 
     ServiceWorkerContainer* serviceWorkerContainer();
     ServiceWorkerContainer* ensureServiceWorkerContainer();
@@ -355,7 +367,6 @@ public:
 
     void setStorageBlockingPolicy(StorageBlockingPolicy policy) { m_storageBlockingPolicy = policy; }
     enum class ResourceType : uint8_t {
-        ApplicationCache,
         Cookies,
         Geolocation,
         IndexedDB,
@@ -417,12 +428,13 @@ private:
 
     void checkConsistency() const;
     WEBCORE_EXPORT GuaranteedSerialFunctionDispatcher& nativePromiseDispatcher();
+    WEBCORE_EXPORT Ref<GuaranteedSerialFunctionDispatcher> protectedNativePromiseDispatcher();
 
-    HashSet<MessagePort*> m_messagePorts;
-    HashSet<ContextDestructionObserver*> m_destructionObservers;
-    HashSet<ActiveDOMObject*> m_activeDOMObjects;
+    WeakHashSet<MessagePort, WeakPtrImplWithEventTargetData> m_messagePorts;
+    WeakHashSet<ContextDestructionObserver> m_destructionObservers;
+    WeakHashSet<ActiveDOMObject> m_activeDOMObjects;
 
-    HashMap<int, RefPtr<DOMTimer>> m_timeouts;
+    HashMap<int, Ref<DOMTimer>> m_timeouts;
 
     struct PendingException;
     std::unique_ptr<Vector<std::unique_ptr<PendingException>>> m_pendingExceptions;
@@ -442,7 +454,7 @@ private:
 #endif
 
     RefPtr<ServiceWorker> m_activeServiceWorker;
-    HashMap<ServiceWorkerIdentifier, ServiceWorker*> m_serviceWorkers;
+    HashMap<ServiceWorkerIdentifier, WeakRef<ServiceWorker, WeakPtrImplWithEventTargetData>> m_serviceWorkers;
 
     String m_domainForCachePartition;
     mutable ScriptExecutionContextIdentifier m_identifier;
@@ -460,7 +472,7 @@ private:
     bool m_willprocessMessageWithMessagePortsSoon { false };
     bool m_hasLoggedAuthenticatedEncryptionWarning { false };
 
-    RefPtr<GuaranteedSerialFunctionDispatcher> m_nativePromiseDispatcher;
+    const RefPtr<GuaranteedSerialFunctionDispatcher> m_nativePromiseDispatcher;
     WeakHashSet<NativePromiseRequest> m_nativePromiseRequests;
 };
 

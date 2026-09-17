@@ -46,7 +46,9 @@ typedef (WindowProxy or MessagePort or ServiceWorker) MessageEventSource;
         optional sequence<MessagePort> messagePorts = []);
 };
 
-dictionary MessageEventInit : EventInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary MessageEventInit : EventInit {
     any data = null;
     USVString origin = "";
     DOMString lastEventId = "";

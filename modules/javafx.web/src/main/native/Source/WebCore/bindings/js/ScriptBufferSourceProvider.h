@@ -29,17 +29,8 @@
 #include <JavaScriptCore/SourceProvider.h>
 
 namespace WebCore {
-class AbstractScriptBufferHolder;
-}
 
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::AbstractScriptBufferHolder> : std::true_type { };
-}
-
-namespace WebCore {
-
-class AbstractScriptBufferHolder : public CanMakeWeakPtr<AbstractScriptBufferHolder> {
+class AbstractScriptBufferHolder {
 public:
     virtual void clearDecodedData() = 0;
     virtual void tryReplaceScriptBuffer(const ScriptBuffer&) = 0;
@@ -47,12 +38,12 @@ public:
     virtual ~AbstractScriptBufferHolder() { }
 };
 
-class ScriptBufferSourceProvider final : public JSC::SourceProvider, public AbstractScriptBufferHolder {
+class ScriptBufferSourceProvider final : public JSC::SourceProvider, public AbstractScriptBufferHolder, public CanMakeWeakPtr<ScriptBufferSourceProvider> {
     WTF_MAKE_TZONE_ALLOCATED(ScriptBufferSourceProvider);
 public:
     static Ref<ScriptBufferSourceProvider> create(const ScriptBuffer& scriptBuffer, const JSC::SourceOrigin& sourceOrigin, String sourceURL, String preRedirectURL, const TextPosition& startPosition = TextPosition(), JSC::SourceProviderSourceType sourceType = JSC::SourceProviderSourceType::Program)
     {
-        return adoptRef(*new ScriptBufferSourceProvider(scriptBuffer, sourceOrigin, WTFMove(sourceURL), WTFMove(preRedirectURL), startPosition, sourceType));
+        return adoptRef(*new ScriptBufferSourceProvider(scriptBuffer, sourceOrigin, WTF::move(sourceURL), WTF::move(preRedirectURL), startPosition, sourceType));
     }
 
     unsigned hash() const final
@@ -94,10 +85,12 @@ public:
 
 private:
     ScriptBufferSourceProvider(const ScriptBuffer& scriptBuffer, const JSC::SourceOrigin& sourceOrigin, String&& sourceURL, String&& preRedirectURL, const TextPosition& startPosition, JSC::SourceProviderSourceType sourceType)
-        : JSC::SourceProvider(sourceOrigin, WTFMove(sourceURL), WTFMove(preRedirectURL), JSC::SourceTaintedOrigin::Untainted, startPosition, sourceType)
+        : JSC::SourceProvider(sourceOrigin, WTF::move(sourceURL), WTF::move(preRedirectURL), JSC::SourceTaintedOrigin::Untainted, startPosition, sourceType)
         , m_scriptBuffer(scriptBuffer)
     {
     }
+
+    bool isScriptBufferSourceProvider() const final { return true; }
 
     StringView sourceImpl(const AbstractLocker&) const
     {
@@ -112,7 +105,7 @@ private:
                 m_scriptHash = StringHasher::computeHashAndMaskTop8Bits(m_contiguousBuffer->span());
         }
         if (*m_containsOnlyASCII)
-            return m_contiguousBuffer->span();
+            return byteCast<Latin1Character>(m_contiguousBuffer->span());
 
         if (!m_cachedScriptString) {
             m_cachedScriptString = m_scriptBuffer.toString();
@@ -132,3 +125,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ScriptBufferSourceProvider)
+    static bool isType(const JSC::SourceProvider& provider) { return provider.isScriptBufferSourceProvider(); }
+SPECIALIZE_TYPE_TRAITS_END()

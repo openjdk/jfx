@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2025 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,22 +40,25 @@ private:
     PlaceholderModelPlayer(bool suspended, const ModelPlayerAnimationState&, std::unique_ptr<ModelPlayerTransformState>&&);
 
     // ModelPlayer overrides.
-#if ENABLE(MODEL_PROCESS)
     ModelPlayerIdentifier identifier() const final { return m_id; }
-#endif
-
     bool isPlaceholder() const final { return true; }
     std::optional<ModelPlayerAnimationState> currentAnimationState() const final;
     std::optional<std::unique_ptr<ModelPlayerTransformState>> currentTransformState() const final;
     void load(Model&, LayoutSize) final;
     void reload(Model&, LayoutSize, ModelPlayerAnimationState&, std::unique_ptr<ModelPlayerTransformState>&&) final;
 
+#if ENABLE(MODEL_ELEMENT_BOUNDING_BOX)
     std::optional<FloatPoint3D> boundingBoxCenter() const final;
     std::optional<FloatPoint3D> boundingBoxExtents() const final;
+#endif
+
+#if ENABLE(MODEL_ELEMENT_ENTITY_TRANSFORM)
     std::optional<TransformationMatrix> entityTransform() const final;
     void setEntityTransform(TransformationMatrix) final;
     bool supportsTransform(TransformationMatrix) final;
-#if ENABLE(MODEL_PROCESS)
+#endif
+
+#if ENABLE(MODEL_ELEMENT_ANIMATIONS_CONTROL)
     void setAutoplay(bool) final;
     void setLoop(bool) final;
     void setPlaybackRate(double playbackRate, CompletionHandler<void(double effectivePlaybackRate)>&&) final;
@@ -63,14 +67,24 @@ private:
     void setPaused(bool, CompletionHandler<void(bool succeeded)>&&) final;
     Seconds currentTime() const final;
     void setCurrentTime(Seconds, CompletionHandler<void()>&&) final;
+#endif
+
+#if ENABLE(MODEL_ELEMENT_PORTAL)
     void setHasPortal(bool) final;
+#endif
+
+#if ENABLE(MODEL_ELEMENT_STAGE_MODE)
     void setStageMode(WebCore::StageModeOperation) final;
 #endif
 
+#if ENABLE(MODEL_ELEMENT_IMMERSIVE)
+    void ensureImmersivePresentation(CompletionHandler<void(std::optional<LayerHostingContextIdentifier>)>&&) final;
+    void exitImmersivePresentation(CompletionHandler<void()>&&) final;
+#endif
+
     // Empty implementation
+    void configureGraphicsLayer(GraphicsLayer&, ModelPlayerGraphicsLayerConfiguration&&) final;
     void sizeDidChange(LayoutSize) final;
-    PlatformLayer* layer() final;
-    std::optional<LayerHostingContextIdentifier> layerHostingContextIdentifier() final;
     void enterFullscreen() final;
     void handleMouseDown(const LayoutPoint&, MonotonicTime) final;
     void handleMouseMove(const LayoutPoint&, MonotonicTime) final;
@@ -87,16 +101,14 @@ private:
     void hasAudio(CompletionHandler<void(std::optional<bool>&&)>&&) final;
     void isMuted(CompletionHandler<void(std::optional<bool>&&)>&&) final;
     void setIsMuted(bool, CompletionHandler<void(bool success)>&&) final;
-#if PLATFORM(COCOA)
-    Vector<RetainPtr<id>> accessibilityChildren() final;
+#if ENABLE(MODEL_ELEMENT_ACCESSIBILITY)
+    ModelPlayerAccessibilityChildren accessibilityChildren() final;
 #endif
 
     std::optional<bool> m_lastPausedStateIfSuspended;
     ModelPlayerAnimationState m_animationState;
     std::unique_ptr<ModelPlayerTransformState> m_transformState;
-#if ENABLE(MODEL_PROCESS)
     ModelPlayerIdentifier m_id;
-#endif
 };
 
-}
+} // namespace WebCore

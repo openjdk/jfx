@@ -24,7 +24,8 @@
  */
 
 [
-    Conditional=NOTIFICATIONS
+    Conditional=NOTIFICATIONS,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary NotificationOptions {
     [Conditional=DECLARATIVE_WEB_PUSH, EnabledBySetting=DeclarativeWebPush] USVString navigate;
     NotificationDirection dir = "auto";

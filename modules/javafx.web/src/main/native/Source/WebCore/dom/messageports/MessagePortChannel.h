@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "MessagePortChannelProvider.h"
-#include "MessagePortIdentifier.h"
-#include "MessageWithMessagePorts.h"
-#include "ProcessIdentifier.h"
+#include <WebCore/MessagePortChannelProvider.h>
+#include <WebCore/MessagePortIdentifier.h>
+#include <WebCore/MessageWithMessagePorts.h>
+#include <WebCore/ProcessIdentifier.h>
 #include <wtf/HashSet.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/WeakPtr.h>

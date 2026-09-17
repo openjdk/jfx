@@ -58,18 +58,13 @@ PushManager& ServiceWorkerRegistrationPushAPI::pushManager()
 
 ServiceWorkerRegistrationPushAPI* ServiceWorkerRegistrationPushAPI::from(ServiceWorkerRegistration& serviceWorkerRegistration)
 {
-    auto* supplement = static_cast<ServiceWorkerRegistrationPushAPI*>(Supplement<ServiceWorkerRegistration>::from(&serviceWorkerRegistration, supplementName()));
+    auto* supplement = downcast<ServiceWorkerRegistrationPushAPI>(Supplement<ServiceWorkerRegistration>::from(&serviceWorkerRegistration, supplementName()));
     if (!supplement) {
         auto newSupplement = makeUnique<ServiceWorkerRegistrationPushAPI>(serviceWorkerRegistration);
         supplement = newSupplement.get();
-        provideTo(&serviceWorkerRegistration, supplementName(), WTFMove(newSupplement));
+        provideTo(&serviceWorkerRegistration, supplementName(), WTF::move(newSupplement));
     }
     return supplement;
 }
 
-ASCIILiteral ServiceWorkerRegistrationPushAPI::supplementName()
-{
-    return "ServiceWorkerRegistrationPushAPI"_s;
-}
-
-}
+} // namespace WebCore

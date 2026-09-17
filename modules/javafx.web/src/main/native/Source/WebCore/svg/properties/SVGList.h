@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
-#include "SVGProperty.h"
+#include <WebCore/ExceptionOr.h>
+#include <WebCore/SVGProperty.h>
 
 namespace WebCore {
 
@@ -71,7 +71,7 @@ public:
         // Spec: Clears all existing current items from the list.
         clearItems();
 
-        auto item = append(WTFMove(newItem));
+        auto item = append(WTF::move(newItem));
         commitChange();
         return item;
     }
@@ -88,7 +88,7 @@ public:
         if (index > numberOfItems())
             index = numberOfItems();
 
-        auto item = insertAt(index, WTFMove(newItem));
+        auto item = insertAt(index, WTF::move(newItem));
         commitChange();
         return item;
     }
@@ -100,7 +100,7 @@ public:
             return result.releaseException();
         ASSERT(result.releaseReturnValue());
 
-        auto item = replaceAt(index, WTFMove(newItem));
+        auto item = replaceAt(index, WTF::move(newItem));
         commitChange();
         return item;
     }
@@ -124,14 +124,14 @@ public:
             return result.releaseException();
         ASSERT(result.releaseReturnValue());
 
-        auto item = append(WTFMove(newItem));
+        auto item = append(WTF::move(newItem));
         commitChange();
         return item;
     }
 
     ExceptionOr<void> setItem(unsigned index, ItemType&& newItem)
     {
-        auto result = replaceItem(WTFMove(newItem), index);
+        auto result = replaceItem(WTF::move(newItem), index);
         if (result.hasException())
             return result.releaseException();
         return { };

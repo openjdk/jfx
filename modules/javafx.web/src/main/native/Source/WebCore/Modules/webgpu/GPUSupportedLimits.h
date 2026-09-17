@@ -33,7 +33,7 @@ class GPUSupportedLimits : public RefCounted<GPUSupportedLimits> {
 public:
     static Ref<GPUSupportedLimits> create(Ref<WebGPU::SupportedLimits>&& backing)
     {
-        return adoptRef(*new GPUSupportedLimits(WTFMove(backing)));
+        return adoptRef(*new GPUSupportedLimits(WTF::move(backing)));
     }
 
     uint32_t maxTextureDimension1D() const;
@@ -68,17 +68,13 @@ public:
     uint32_t maxComputeWorkgroupSizeY() const;
     uint32_t maxComputeWorkgroupSizeZ() const;
     uint32_t maxComputeWorkgroupsPerDimension() const;
-    uint32_t maxStorageBuffersInFragmentStage() const;
-    uint32_t maxStorageTexturesInFragmentStage() const;
-    uint32_t maxStorageBuffersInVertexStage() const;
-    uint32_t maxStorageTexturesInVertexStage() const;
 
     WebGPU::SupportedLimits& backing() { return m_backing; }
     const WebGPU::SupportedLimits& backing() const { return m_backing; }
 
 private:
     GPUSupportedLimits(Ref<WebGPU::SupportedLimits>&& backing)
-        : m_backing(WTFMove(backing))
+        : m_backing(WTF::move(backing))
     {
     }
 

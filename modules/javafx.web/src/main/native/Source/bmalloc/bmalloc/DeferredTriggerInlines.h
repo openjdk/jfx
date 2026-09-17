@@ -25,6 +25,10 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
+#include "BPlatform.h"
+
 #if !BUSE(TZONE)
 
 #include "BAssert.h"
@@ -60,3 +64,5 @@ void DeferredTrigger<trigger>::handleDeferral(const LockHolder& locker, IsoPage<
 
 #endif
 #endif // !BUSE(TZONE)
+
+#endif // __cplusplus

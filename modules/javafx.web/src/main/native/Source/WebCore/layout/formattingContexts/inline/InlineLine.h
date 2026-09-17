@@ -25,10 +25,12 @@
 
 #pragma once
 
-#include "InlineDisplayBox.h"
-#include "InlineItem.h"
-#include "InlineTextItem.h"
-#include "RenderStyleInlines.h"
+#include <WebCore/InlineDisplayBox.h>
+#include <WebCore/InlineItem.h>
+#include <WebCore/InlineLineTypes.h>
+#include <WebCore/InlineTextItem.h>
+#include <WebCore/RenderStyle.h>
+#include <ranges>
 #include <unicode/ubidi.h>
 #include <wtf/Range.h>
 
@@ -44,13 +46,21 @@ enum class IntrinsicWidthMode;
 class Line {
 public:
     Line(const InlineFormattingContext&);
-    ~Line() = default;
 
     void initialize(const Vector<InlineItem, 1>& lineSpanningInlineBoxes, bool isFirstFormattedLine);
 
-    void append(const InlineItem&, const RenderStyle&, InlineLayoutUnit logicalWidth, InlineLayoutUnit textSpacingAdjustment = 0.f);
-    // Reserved for TextOnlySimpleLineBuilder
-    void appendTextFast(const InlineTextItem&, const RenderStyle&, InlineLayoutUnit logicalWidth);
+    enum class ShapingBoundary : uint8_t { NotApplicable, Start, Inside, End };
+    void appendText(const InlineTextItem&, const RenderStyle&, InlineLayoutUnit logicalWidth, std::optional<ShapingBoundary>);
+    void appendTextFast(const InlineTextItem&, const RenderStyle&, InlineLayoutUnit logicalWidth); // Reserved for TextOnlySimpleLineBuilder
+    void appendAtomicInlineBox(const InlineItem&, const RenderStyle&, InlineLayoutUnit marginBoxLogicalWidth);
+    void appendInlineBoxStart(const InlineItem&, const RenderStyle&, InlineLayoutUnit logicalWidth, InlineLayoutUnit textSpacingAdjustment);
+    void appendInlineBoxEnd(const InlineItem&, const RenderStyle&, InlineLayoutUnit logicalWidth);
+    void appendLineBreak(const InlineItem&, const RenderStyle&);
+    void appendWordBreakOpportunity(const InlineItem&, const RenderStyle&);
+    void appendOpaqueBox(const InlineItem&, const RenderStyle&);
+    void appendBlock(const InlineItem&, InlineLayoutUnit marginBoxLogicalWidth);
+
+    void setContentNeedsBidiReordering() { m_hasNonDefaultBidiLevelRun = true; }
 
     bool hasContent() const;
     bool hasContentOrListMarker() const;
@@ -92,7 +102,8 @@ public:
             InlineBoxStart,
             InlineBoxEnd,
             LineSpanningInlineBoxStart,
-            Opaque
+            Opaque,
+            Block
         };
 
         bool isText() const { return m_type == Type::Text || isWordSeparator() || isNonBreakingSpace(); }
@@ -111,8 +122,9 @@ public:
         bool isLineSpanningInlineBoxStart() const { return m_type == Type::LineSpanningInlineBoxStart; }
         bool isInlineBoxEnd() const { return m_type == Type::InlineBoxEnd; }
         bool isOpaque() const { return m_type == Type::Opaque; }
+        bool isBlock() const { return m_type == Type::Block; }
 
-        bool isContentful() const { return (isText() && textContent()->length) || isAtomicInlineBox() || isLineBreak() || isListMarker(); }
+        bool isContentful() const { return (isText() && textContent().length) || isAtomicInlineBox() || isLineBreak() || isListMarker() || isBlock(); }
         bool isGenerated() const { return isListMarker(); }
         static bool isContentfulOrHasDecoration(const Run&, const InlineFormattingContext&);
 
@@ -122,7 +134,7 @@ public:
             size_t length { 0 };
             bool needsHyphen { false };
         };
-        const std::optional<Text>& textContent() const { return m_textContent; }
+        const Text& textContent() const { return m_textContent; }
 
         InlineLayoutUnit logicalWidth() const { return m_logicalWidth; }
         InlineLayoutUnit logicalLeft() const { return m_logicalLeft; }
@@ -130,21 +142,34 @@ public:
 
         const InlineDisplay::Box::Expansion& expansion() const { return m_expansion; }
 
-        bool hasTrailingWhitespace() const { return m_trailingWhitespace.has_value(); }
-        InlineLayoutUnit trailingWhitespaceWidth() const { return m_trailingWhitespace ? m_trailingWhitespace->width : 0.f; }
-        bool isWhitespaceOnly() const { return hasTrailingWhitespace() && m_trailingWhitespace->length == m_textContent->length; }
+        bool hasTrailingWhitespace() const { return m_trailingWhitespace.type != TrailingWhitespace::Type::NotApplicable; }
+        InlineLayoutUnit trailingWhitespaceWidth() const { return m_trailingWhitespace.width; }
+        bool isWhitespaceOnly() const { return hasTrailingWhitespace() && m_trailingWhitespace.length == m_textContent.length; }
 
-        TextDirection inlineDirection() const;
+        struct GlyphOverflow {
+            bool isEmpty() const { return !top && !bottom; }
+
+            uint8_t top : 5 { 0 };
+            uint8_t bottom: 3 { 0 };
+        };
+        GlyphOverflow glyphOverflow() const { return m_glyphOverflow; }
+
+        inline TextDirection inlineDirection() const;
         InlineLayoutUnit letterSpacing() const;
         bool hasTextCombine() const;
         InlineLayoutUnit textSpacingAdjustment() const { return m_textSpacingAdjustment; }
 
         UBiDiLevel bidiLevel() const { return m_bidiLevel; }
 
+        bool isShapingBoundaryStart() const { return m_shapingBoundary == Line::ShapingBoundary::Start; }
+        bool isShapingBoundaryEnd() const { return m_shapingBoundary == Line::ShapingBoundary::End; }
+        bool isInsideShapingBoundary() const { return m_shapingBoundary == Line::ShapingBoundary::Inside; }
+        bool isShapingBoundary() const { return m_shapingBoundary != Line::ShapingBoundary::NotApplicable; }
+
         // FIXME: Maybe add create functions intead?
         Run(const InlineItem&, const RenderStyle&, InlineLayoutUnit logicalLeft);
         Run(const InlineItem& lineSpanningInlineBoxItem, InlineLayoutUnit logicalLeft, InlineLayoutUnit logicalWidth, InlineLayoutUnit textSpacingAdjustment = 0.f);
-        Run(const InlineTextItem&, const RenderStyle&, InlineLayoutUnit logicalLeft, InlineLayoutUnit logicalWidth, InlineLayoutUnit textSpacingAdjustment = 0.f);
+        Run(const InlineTextItem&, const RenderStyle&, InlineLayoutUnit logicalLeft, InlineLayoutUnit logicalWidth, InlineLayoutUnit textSpacingAdjustment = 0.f, std::optional<Line::ShapingBoundary> = std::nullopt);
 
     private:
         friend class Line;
@@ -163,17 +188,18 @@ public:
         void setBidiLevel(UBiDiLevel bidiLevel) { m_bidiLevel = bidiLevel; }
 
         struct TrailingWhitespace {
-            enum class Type {
+            enum class Type : uint8_t {
+                NotApplicable,
                 NotCollapsible,
                 Collapsible,
                 Collapsed
             };
-            Type type { Type::NotCollapsible };
-            InlineLayoutUnit width { 0 };
-            size_t length { 0 };
+            Type type { Type::NotApplicable };
+            size_t length : 24 { 0 };
+            InlineLayoutUnit width { 0.f };
         };
-        bool hasCollapsibleTrailingWhitespace() const { return m_trailingWhitespace && (m_trailingWhitespace->type == TrailingWhitespace::Type::Collapsible || hasCollapsedTrailingWhitespace()); }
-        bool hasCollapsedTrailingWhitespace() const { return m_trailingWhitespace && m_trailingWhitespace->type == TrailingWhitespace::Type::Collapsed; }
+        bool hasCollapsibleTrailingWhitespace() const { return hasTrailingWhitespace() && (m_trailingWhitespace.type == TrailingWhitespace::Type::Collapsible || hasCollapsedTrailingWhitespace()); }
+        bool hasCollapsedTrailingWhitespace() const { return hasTrailingWhitespace() && m_trailingWhitespace.type == TrailingWhitespace::Type::Collapsed; }
         static std::optional<TrailingWhitespace::Type> trailingWhitespaceType(const InlineTextItem&);
         InlineLayoutUnit removeTrailingWhitespace();
 
@@ -183,19 +209,21 @@ public:
         InlineLayoutUnit trailingLetterSpacing() const;
         InlineLayoutUnit removeTrailingLetterSpacing();
 
+        TrailingWhitespace m_trailingWhitespace { };
         Type m_type { Type::Text };
+        Line::ShapingBoundary m_shapingBoundary { Line::ShapingBoundary::NotApplicable };
+        InlineLayoutUnit m_logicalLeft { 0 };
+        Markable<size_t> m_lastNonWhitespaceContentStart { };
+        InlineLayoutUnit m_logicalWidth { 0 };
+        UBiDiLevel m_bidiLevel { UBIDI_DEFAULT_LTR };
+        InlineLayoutUnit m_textSpacingAdjustment { 0 };
+        GlyphOverflow m_glyphOverflow;
         const Box* m_layoutBox { nullptr };
         const RenderStyle& m_style;
-        InlineLayoutUnit m_logicalLeft { 0 };
-        InlineLayoutUnit m_logicalWidth { 0 };
         InlineDisplay::Box::Expansion m_expansion;
-        UBiDiLevel m_bidiLevel { UBIDI_DEFAULT_LTR };
-        std::optional<TrailingWhitespace> m_trailingWhitespace { };
-        std::optional<size_t> m_lastNonWhitespaceContentStart { };
-        std::optional<Text> m_textContent;
-        InlineLayoutUnit m_textSpacingAdjustment { 0 };
+        Text m_textContent;
     };
-    using RunList = Vector<Run, 10>;
+    using RunList = Vector<Run, 1>;
     const RunList& runs() const { return m_runs; }
     RunList& runs() { return m_runs; }
     void inflateContentLogicalWidth(InlineLayoutUnit delta) { m_contentLogicalWidth += delta; }
@@ -209,6 +237,7 @@ public:
         RunList runs;
         InlineLayoutUnit contentLogicalWidth { 0.f };
         InlineLayoutUnit contentLogicalRight { 0.f };
+        bool isContentful { false };
         bool isHangingTrailingContentWhitespace { false };
         InlineLayoutUnit hangingTrailingContentWidth { 0.f };
         InlineLayoutUnit hangablePunctuationStartWidth { 0.f };
@@ -217,18 +246,11 @@ public:
     };
     Result close();
 
-    static bool restoreTrimmedTrailingWhitespace(InlineLayoutUnit trimmedTrailingWhitespaceWidth, RunList&);
+    static bool restoreTrimmedTrailingWhitespace(InlineLayoutUnit trimmedTrailingWhitespaceWidth, RunList&, InlineItemRange, const InlineItemList&);
+    static bool hasTrailingForcedLineBreak(const RunList&);
 
 private:
     InlineLayoutUnit lastRunLogicalRight() const { return m_runs.isEmpty() ? 0.0f : m_runs.last().logicalRight(); }
-
-    void appendTextContent(const InlineTextItem&, const RenderStyle&, InlineLayoutUnit logicalWidth);
-    void appendAtomicInlineBox(const InlineItem&, const RenderStyle&, InlineLayoutUnit marginBoxLogicalWidth);
-    void appendInlineBoxStart(const InlineItem&, const RenderStyle&, InlineLayoutUnit logicalWidth, InlineLayoutUnit textSpacingAdjustment = 0.f);
-    void appendInlineBoxEnd(const InlineItem&, const RenderStyle&, InlineLayoutUnit logicalWidth);
-    void appendLineBreak(const InlineItem&, const RenderStyle&);
-    void appendWordBreakOpportunity(const InlineItem&, const RenderStyle&);
-    void appendOpaqueBox(const InlineItem&, const RenderStyle&);
 
     void resetTrailingContent();
 
@@ -236,6 +258,8 @@ private:
 
     bool isFirstFormattedLine() const { return m_isFirstFormattedLine; }
     const InlineFormattingContext& formattingContext() const;
+
+    static bool appendTrailingInlineItemAsTrailingRun(RunList&, InlineLayoutUnit trimmedTrailingWhitespaceWidth, InlineItemRange, const InlineItemList&);
 
     struct TrimmableTrailingContent {
         TrimmableTrailingContent(RunList&);
@@ -322,7 +346,7 @@ inline bool Line::hasContentOrListMarker() const
 
 inline bool Line::hasContent() const
 {
-    for (auto& run : makeReversedRange(m_runs)) {
+    for (auto& run : m_runs | std::views::reverse) {
         if (run.isContentful() && !run.isGenerated())
             return true;
     }
@@ -368,19 +392,14 @@ inline size_t Line::HangingContent::length() const
 
 inline void Line::Run::setNeedsHyphen(InlineLayoutUnit hyphenLogicalWidth)
 {
-    ASSERT(m_textContent);
-    m_textContent->needsHyphen = true;
+    ASSERT(isText());
+    m_textContent.needsHyphen = true;
     m_logicalWidth += hyphenLogicalWidth;
 }
 
 inline TextDirection Line::Run::inlineDirection() const
 {
     return m_style.writingMode().bidiDirection();
-}
-
-inline InlineLayoutUnit Line::Run::letterSpacing() const
-{
-    return m_style.letterSpacing();
 }
 
 }

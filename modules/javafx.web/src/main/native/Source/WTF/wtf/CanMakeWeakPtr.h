@@ -39,7 +39,6 @@ public:
     using WeakValueType = typename WeakPtrFactoryType::ObjectType;
     using WeakPtrImplType = typename WeakPtrFactoryType::WeakPtrImplType;
 
-    WeakPtrImplType* weakImplIfExists() const { return m_weakPtrFactory.impl(); }
     WeakPtrImplType& weakImpl() const
     {
         initializeWeakPtrFactory();

@@ -169,8 +169,8 @@ void SelectorFilter::collectSimpleSelectorHash(CollectedSelectorHashes& collecte
         case CSSSelector::PseudoClass::Where:
             // We can use the filter in the trivial case of single argument :is()/:where().
             // Supporting the multiargument case would require more than one hash.
-            if (selector.selectorList()->listSize() == 1)
-                collectSelectorHashes(collectedHashes, *selector.selectorList()->first(), IncludeRightmost::Yes);
+            if (selector.selectorList()->size() == 1)
+                collectSelectorHashes(collectedHashes, selector.selectorList()->first(), IncludeRightmost::Yes);
             break;
         default:
             break;
@@ -185,12 +185,12 @@ void SelectorFilter::collectSelectorHashes(CollectedSelectorHashes& collectedHas
 {
     auto [selector, relation, skipOverSubselectors] = [&] {
         if (includeRightmost == IncludeRightmost::No)
-            return std::tuple { rightmostSelector.tagHistory(), rightmostSelector.relation(), true };
+            return std::tuple { rightmostSelector.precedingInComplexSelector(), rightmostSelector.relation(), true };
 
         return std::tuple { &rightmostSelector, CSSSelector::Relation::Subselector, false };
     }();
 
-    for (; selector; selector = selector->tagHistory()) {
+    for (; selector; selector = selector->precedingInComplexSelector()) {
         // Only collect identifiers that match ancestors.
         switch (relation) {
         case CSSSelector::Relation::Subselector:

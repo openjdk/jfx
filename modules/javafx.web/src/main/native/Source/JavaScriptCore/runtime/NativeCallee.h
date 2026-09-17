@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "CalleeBits.h"
-#include "ImplementationVisibility.h"
+#include <JavaScriptCore/CalleeBits.h>
+#include <JavaScriptCore/ImplementationVisibility.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/ThreadSafeWeakPtr.h>
@@ -35,7 +35,7 @@ namespace JSC {
 
 class LLIntOffsetsExtractor;
 
-class NativeCallee : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<NativeCallee> {
+class alignas(16) NativeCallee : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<NativeCallee> {
     WTF_MAKE_COMPACT_TZONE_ALLOCATED(NativeCallee);
 public:
     enum class Category : uint8_t {

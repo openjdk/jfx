@@ -111,12 +111,15 @@ b3/air/AirTmp.cpp
 b3/air/AirTmpWidth.cpp
 b3/air/AirValidate.cpp
 
+b3/B3AbstractHeap.cpp
+b3/B3AbstractHeapRepository.cpp
 b3/B3ArgumentRegValue.cpp
 b3/B3AtomicValue.cpp
 b3/B3Bank.cpp
 b3/B3BasicBlock.cpp
 b3/B3BlockInsertionSet.cpp
 b3/B3BottomTupleValue.cpp
+b3/B3BulkMemoryValue.cpp
 b3/B3BreakCriticalEdges.cpp
 b3/B3CanonicalizePrePostIncrements.cpp
 b3/B3CCallValue.cpp
@@ -159,6 +162,7 @@ b3/B3MathExtras.cpp
 b3/B3MemoryValue.cpp
 b3/B3MoveConstants.cpp
 b3/B3Opcode.cpp
+b3/B3Operations.cpp
 b3/B3OptimizeAssociativeExpressionTrees.cpp
 b3/B3Origin.cpp
 b3/B3OriginDump.cpp
@@ -470,8 +474,6 @@ disassembler/zydis/Zydis.c
 domjit/DOMJITAbstractHeap.cpp
 domjit/DOMJITHeapRange.cpp
 
-ftl/FTLAbstractHeap.cpp
-ftl/FTLAbstractHeapRepository.cpp
 ftl/FTLAvailableRecovery.cpp
 ftl/FTLCapabilities.cpp
 ftl/FTLCommonValues.cpp
@@ -618,6 +620,7 @@ inspector/agents/JSGlobalObjectAuditAgent.cpp
 inspector/agents/JSGlobalObjectDebuggerAgent.cpp
 inspector/agents/JSGlobalObjectRuntimeAgent.cpp
 
+interpreter/CachedCall.cpp
 interpreter/CLoopStack.cpp
 interpreter/CallFrame.cpp
 interpreter/Interpreter.cpp
@@ -689,6 +692,9 @@ jit/TagRegistersMode.cpp
 jit/ThunkGenerators.cpp
 jit/JITTZoneImpls.cpp
 jit/Width.cpp
+
+lol/LOLJIT.cpp
+lol/LOLJITOperations.cpp
 
 llint/InPlaceInterpreter.cpp
 llint/LLIntCLoop.cpp
@@ -814,6 +820,7 @@ runtime/FileBasedFuzzerAgent.cpp
 runtime/FileBasedFuzzerAgentBase.cpp
 runtime/FinalizationRegistryConstructor.cpp
 runtime/FinalizationRegistryPrototype.cpp
+runtime/FractionToDouble.cpp
 runtime/FunctionConstructor.cpp
 runtime/FunctionExecutable.cpp
 runtime/FunctionExecutableDump.cpp
@@ -890,6 +897,7 @@ runtime/JSBigInt.cpp
 runtime/JSBoundFunction.cpp
 runtime/JSCBytecodeCacheVersion.cpp
 runtime/JSCConfig.cpp
+runtime/JSHeapDouble.cpp
 runtime/JSCJSValue.cpp
 runtime/JSCPtrTag.cpp
 runtime/JSCallee.cpp
@@ -903,6 +911,7 @@ runtime/JSDestructibleObjectHeapCellType.cpp
 runtime/JSDisposableStack.cpp
 runtime/JSFinalizationRegistry.cpp
 runtime/JSFunction.cpp
+runtime/JSFunctionWithFields.cpp
 runtime/JSGenerator.cpp
 runtime/JSGeneratorFunction.cpp
 runtime/JSGenericTypedArrayViewConstructor.cpp
@@ -912,7 +921,8 @@ runtime/JSGlobalObject.cpp
 runtime/JSGlobalObjectDebuggable.cpp
 runtime/JSGlobalObjectFunctions.cpp
 runtime/JSGlobalProxy.cpp
-runtime/JSImmutableButterfly.cpp
+runtime/JSCellButterfly.cpp
+runtime/JSHeapInt32.cpp
 runtime/JSInternalPromise.cpp
 runtime/JSInternalPromiseConstructor.cpp
 runtime/JSInternalPromisePrototype.cpp
@@ -934,8 +944,11 @@ runtime/JSNativeStdFunction.cpp
 runtime/JSONObject.cpp
 runtime/JSObject.cpp
 runtime/JSPromise.cpp
+runtime/JSPromiseCombinatorsContext.cpp
+runtime/JSPromiseCombinatorsGlobalContext.cpp
 runtime/JSPromiseConstructor.cpp
 runtime/JSPromisePrototype.cpp
+runtime/JSPromiseReaction.cpp
 runtime/JSPropertyNameEnumerator.cpp
 runtime/JSRawJSONObject.cpp
 runtime/JSRegExpStringIterator.cpp
@@ -1041,6 +1054,7 @@ runtime/SimpleTypedArrayController.cpp
 runtime/SmallStrings.cpp
 runtime/SparseArrayValueMap.cpp
 runtime/StackFrame.cpp
+runtime/StackManager.cpp
 runtime/StrictEvalActivation.cpp
 runtime/StringConstructor.cpp
 runtime/StringIteratorPrototype.cpp
@@ -1079,9 +1093,15 @@ runtime/TemporalPlainDatePrototype.cpp
 runtime/TemporalPlainDateTime.cpp
 runtime/TemporalPlainDateTimeConstructor.cpp
 runtime/TemporalPlainDateTimePrototype.cpp
+runtime/TemporalPlainMonthDay.cpp
+runtime/TemporalPlainMonthDayConstructor.cpp
+runtime/TemporalPlainMonthDayPrototype.cpp
 runtime/TemporalPlainTime.cpp
 runtime/TemporalPlainTimeConstructor.cpp
 runtime/TemporalPlainTimePrototype.cpp
+runtime/TemporalPlainYearMonth.cpp
+runtime/TemporalPlainYearMonthConstructor.cpp
+runtime/TemporalPlainYearMonthPrototype.cpp
 runtime/TemporalTimeZone.cpp
 runtime/TemporalTimeZoneConstructor.cpp
 runtime/TemporalTimeZonePrototype.cpp
@@ -1096,6 +1116,7 @@ runtime/TypedArrayType.cpp
 runtime/TypeofType.cpp
 runtime/VM.cpp
 runtime/VMEntryScope.cpp
+runtime/VMManager.cpp
 runtime/VMTraps.cpp
 runtime/VarOffset.cpp
 runtime/WaiterListManager.cpp
@@ -1131,6 +1152,7 @@ wasm/WasmBBQJIT64.cpp @no-unify
 wasm/WasmBBQPlan.cpp
 wasm/WasmBinding.cpp
 wasm/WasmBranchHintsSectionParser.cpp
+wasm/WasmCallProfile.cpp
 wasm/WasmCallee.cpp
 wasm/WasmCalleeGroup.cpp
 wasm/WasmCallingConvention.cpp
@@ -1140,20 +1162,19 @@ wasm/WasmContext.cpp
 wasm/WasmEntryPlan.cpp
 wasm/WasmFaultSignalHandler.cpp
 wasm/WasmFormat.cpp
-wasm/WasmFunctionCodeBlockGenerator.cpp
 wasm/WasmFunctionIPIntMetadataGenerator.cpp
 wasm/WasmGlobal.cpp
 wasm/WasmHandlerInfo.cpp
 wasm/WasmIndexOrName.cpp
+wasm/WasmInliningDecision.cpp
+wasm/WasmInstanceAnchor.cpp
 wasm/WasmIPIntGenerator.cpp
 wasm/WasmIPIntPlan.cpp
 wasm/WasmIPIntSlowPaths.cpp @no-unify
-wasm/WasmLLIntGenerator.cpp
-wasm/WasmLLIntPlan.cpp
-wasm/WasmLLIntTierUpCounter.cpp
 wasm/WasmMachineThreads.cpp
 wasm/WasmMemory.cpp
 wasm/WasmMemoryInformation.cpp
+wasm/WasmMergedProfile.cpp
 wasm/WasmModule.cpp
 wasm/WasmModuleInformation.cpp
 wasm/WasmNameSectionParser.cpp
@@ -1165,7 +1186,6 @@ wasm/WasmPlan.cpp
 wasm/WasmSectionParser.cpp
 wasm/WasmTypeDefinition.cpp
 wasm/WasmOpcodeCounter.cpp
-wasm/WasmSlowPaths.cpp @no-unify
 wasm/WasmSourceMappingURLSectionParser.cpp
 wasm/WasmStreamingCompiler.cpp
 wasm/WasmStreamingParser.cpp
@@ -1198,8 +1218,11 @@ wasm/js/WasmToJS.cpp
 wasm/js/WasmToJS.h
 wasm/js/WebAssemblyArrayConstructor.cpp
 wasm/js/WebAssemblyArrayPrototype.cpp
+wasm/js/WebAssemblyBuiltin.cpp
+wasm/js/WebAssemblyBuiltinTrampoline.cpp
 wasm/js/WebAssemblyCompileErrorConstructor.cpp
 wasm/js/WebAssemblyCompileErrorPrototype.cpp
+wasm/js/WebAssemblyCompileOptions.cpp
 wasm/js/WebAssemblyExceptionConstructor.cpp
 wasm/js/WebAssemblyExceptionPrototype.cpp
 wasm/js/WebAssemblyFunction.cpp
@@ -1226,6 +1249,17 @@ wasm/js/WebAssemblyTablePrototype.cpp
 wasm/js/WebAssemblyTagConstructor.cpp
 wasm/js/WebAssemblyTagPrototype.cpp
 wasm/js/WebAssemblyWrapperFunction.cpp
+
+wasm/debugger/WasmBreakpointManager.cpp
+wasm/debugger/WasmDebugServer.cpp
+wasm/debugger/WasmDebugServerUtilities.cpp
+wasm/debugger/WasmExecutionHandler.cpp
+wasm/debugger/WasmGDBPacketParser.cpp
+wasm/debugger/WasmMemoryHandler.cpp
+wasm/debugger/WasmModuleManager.cpp
+wasm/debugger/WasmQueryHandler.cpp
+wasm/debugger/WasmVirtualAddress.cpp
+wasm/debugger/WasmModuleDebugInfo.cpp
 
 yarr/RegularExpression.cpp
 yarr/YarrCanonicalizeUCS2.cpp

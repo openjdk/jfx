@@ -25,9 +25,11 @@
 
 #pragma once
 
-#include "LayoutRect.h"
-#include "RenderLayer.h"
-#include "ScrollTypes.h"
+#include <WebCore/GraphicsLayer.h>
+#include <WebCore/LayoutRect.h>
+#include <WebCore/RenderLayer.h>
+#include <WebCore/ScrollTypes.h>
+#include <wtf/InlineWeakPtr.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakPtr.h>
@@ -50,7 +52,7 @@ struct CompositedClipData {
 
     friend bool operator==(const CompositedClipData&, const CompositedClipData&) = default;
 
-    SingleThreadWeakPtr<RenderLayer> clippingLayer; // For scroller entries, the scrolling layer. For other entries, the most-descendant layer that has a clip.
+    InlineWeakPtr<RenderLayer> clippingLayer; // For scroller entries, the scrolling layer. For other entries, the most-descendant layer that has a clip.
     LayoutRoundedRect clipRect; // In the coordinate system of the RenderLayer that owns the stack.
     bool isOverflowScroll { false };
 };

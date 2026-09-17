@@ -29,15 +29,15 @@
 #if ENABLE(WEBXR_LAYERS)
 
 #include "PlatformXR.h"
+#include "XRLayerBacking.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(XRProjectionLayer);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(XRProjectionLayer);
 
-XRProjectionLayer::XRProjectionLayer(ScriptExecutionContext& scriptExecutionContext, Ref<WebCore::WebGPU::XRProjectionLayer>&& backing)
-    : XRCompositionLayer(&scriptExecutionContext)
-    , m_backing(WTFMove(backing))
+XRProjectionLayer::XRProjectionLayer(ScriptExecutionContext& scriptExecutionContext, Ref<XRLayerBacking>&& backing)
+    : XRCompositionLayer(&scriptExecutionContext, WTF::move(backing))
 {
 }
 
@@ -45,6 +45,7 @@ XRProjectionLayer::~XRProjectionLayer() = default;
 
 void XRProjectionLayer::startFrame(PlatformXR::FrameData& data)
 {
+#if ENABLE(WEBGPU)
     static constexpr auto defaultLayerHandle = 1;
     auto it = data.layers.find(defaultLayerHandle);
     if (it == data.layers.end()) {
@@ -57,14 +58,19 @@ void XRProjectionLayer::startFrame(PlatformXR::FrameData& data)
     if (frameData->layerSetup && frameData->textureData) {
         m_layerData = frameData;
         auto& textureData = frameData->textureData;
-        m_backing->startFrame(frameData->renderingFrameIndex, WTFMove(textureData->colorTexture.handle), WTFMove(textureData->depthStencilBuffer.handle), WTFMove(frameData->layerSetup->completionSyncEvent), textureData->reusableTextureIndex);
+        m_backing->startFrame(frameData->renderingFrameIndex, WTF::move(textureData->colorTexture.handle), WTF::move(textureData->depthStencilBuffer.handle), WTF::move(frameData->layerSetup->completionSyncEvent), textureData->reusableTextureIndex, WTF::move(frameData->layerSetup->foveationRateMapDesc));
     }
+#else
+    UNUSED_PARAM(data);
+#endif
 }
 
+#if ENABLE(WEBGPU)
 std::optional<PlatformXR::FrameData::LayerData> XRProjectionLayer::layerData() const
 {
     return m_layerData;
 }
+#endif
 
 PlatformXR::Device::Layer XRProjectionLayer::endFrame()
 {
@@ -73,6 +79,9 @@ PlatformXR::Device::Layer XRProjectionLayer::endFrame()
         .handle = 0,
         .visible = true,
         .views = { },
+#if PLATFORM(GTK) || PLATFORM(WPE)
+        .fenceFD = { }
+#endif
     };
 }
 
@@ -98,32 +107,26 @@ uint32_t XRProjectionLayer::textureArrayLength() const
 
 bool XRProjectionLayer::ignoreDepthValues() const
 {
-    RELEASE_ASSERT_NOT_REACHED();
+    return false;
 }
 
 std::optional<float> XRProjectionLayer::fixedFoveation() const
 {
-    RELEASE_ASSERT_NOT_REACHED();
+    return 1.0;
 }
 
 void XRProjectionLayer::setFixedFoveation(std::optional<float>)
 {
-    RELEASE_ASSERT_NOT_REACHED();
 }
 
 WebXRRigidTransform* XRProjectionLayer::deltaPose() const
 {
-    RELEASE_ASSERT_NOT_REACHED();
+    return m_transform.get();
 }
 
-void XRProjectionLayer::setDeltaPose(WebXRRigidTransform*)
+void XRProjectionLayer::setDeltaPose(WebXRRigidTransform* deltaPose)
 {
-    RELEASE_ASSERT_NOT_REACHED();
-}
-
-WebCore::WebGPU::XRProjectionLayer& XRProjectionLayer::backing()
-{
-    return m_backing;
+    m_transform = deltaPose;
 }
 
 } // namespace WebCore

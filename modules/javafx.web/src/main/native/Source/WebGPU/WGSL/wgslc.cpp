@@ -74,11 +74,11 @@ private:
     unsigned m_appleGPUFamily { 4 };
 };
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunsafe-buffer-usage"
 void CommandLine::parseArguments(int argc, char** argv)
 {
     for (int i = 1; i < argc; ++i) {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunsafe-buffer-usage"
         const char* arg = argv[i];
         if (!strcmp(arg, "-h") || !strcmp(arg, "--help"))
             printUsageStatement(true);

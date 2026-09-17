@@ -67,7 +67,7 @@ public:
 };
 
 class LegacyRenderSVGResourceGradient : public LegacyRenderSVGResourceContainer {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(LegacyRenderSVGResourceGradient);
+    WTF_MAKE_TZONE_ALLOCATED(LegacyRenderSVGResourceGradient);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(LegacyRenderSVGResourceGradient);
 public:
     virtual ~LegacyRenderSVGResourceGradient();

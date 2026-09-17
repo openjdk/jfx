@@ -27,7 +27,6 @@
 
 #if ENABLE(MEDIA_SOURCE)
 
-
 namespace WebCore {
 
 struct MediaSourceInit {

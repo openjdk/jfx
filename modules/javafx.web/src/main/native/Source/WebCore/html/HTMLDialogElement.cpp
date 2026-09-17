@@ -28,7 +28,7 @@
 
 #include "ContainerNodeInlines.h"
 #include "CSSSelector.h"
-#include "DocumentInlines.h"
+#include "DocumentPage.h"
 #include "EventLoop.h"
 #include "EventNames.h"
 #include "FocusOptions.h"
@@ -42,6 +42,7 @@
 #include "RenderBlock.h"
 #include "RenderElement.h"
 #include "ScopedEventQueue.h"
+#include "Settings.h"
 #include "ToggleEvent.h"
 #include "ToggleEventTask.h"
 #include "TypedElementDescendantIteratorInlines.h"
@@ -49,7 +50,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLDialogElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLDialogElement);
 
 using namespace HTMLNames;
 
@@ -134,14 +135,17 @@ ExceptionOr<void> HTMLDialogElement::showModal()
 
     setIsModal(true);
 
-    auto containingBlockBeforeStyleResolution = SingleThreadWeakPtr<RenderBlock> { };
-    if (auto* renderer = this->renderer())
+    {
+        CheckedPtr<RenderBlock> containingBlockBeforeStyleResolution;
+        CheckedPtr renderer = this->renderer();
+        if (renderer)
         containingBlockBeforeStyleResolution = renderer->containingBlock();
 
     if (!isInTopLayer())
         addToTopLayer();
 
-    RenderElement::markRendererDirtyAfterTopLayerChange(this->checkedRenderer().get(), containingBlockBeforeStyleResolution.get());
+        RenderElement::markRendererDirtyAfterTopLayerChange(renderer.get(), containingBlockBeforeStyleResolution.get());
+    }
 
     m_previouslyFocusedElement = document->focusedElement();
 
@@ -213,11 +217,13 @@ bool HTMLDialogElement::handleCommandInternal(HTMLButtonElement& invoker, const 
 
     if (isOpen()) {
         if (command == CommandType::Close) {
-            close(invoker.value().string());
+            String value = invoker.value().string();
+            close(value);
             return true;
         }
         if (command == CommandType::RequestClose) {
-            requestClose(invoker.value().string());
+            String value = invoker.value().string();
+            requestClose(value);
             return true;
         }
     } else {
@@ -284,6 +290,16 @@ void HTMLDialogElement::removedFromAncestor(RemovalType removalType, ContainerNo
     setIsModal(false);
 }
 
+void HTMLDialogElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
+{
+    HTMLElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
+    if (name == openAttr) {
+        auto isOpen = !newValue.isNull();
+        Style::PseudoClassChangeInvalidation styleInvalidation(*this, CSSSelector::PseudoClass::Open, isOpen);
+        m_isOpen = isOpen;
+    }
+}
+
 void HTMLDialogElement::setIsModal(bool newValue)
 {
     if (m_isModal == newValue)
@@ -302,7 +318,7 @@ void HTMLDialogElement::queueDialogToggleEventTask(ToggleState oldState, ToggleS
 
 bool HTMLDialogElement::isOpen() const
 {
-    return hasAttributeWithoutSynchronization(HTMLNames::openAttr);
+    return m_isOpen;
 }
 
 }

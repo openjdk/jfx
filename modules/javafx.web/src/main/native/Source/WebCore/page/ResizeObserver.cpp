@@ -28,6 +28,7 @@
 
 #include "ResizeObserver.h"
 
+#include "ContextDestructionObserverInlines.h"
 #include "Element.h"
 #include "InspectorInstrumentation.h"
 #include "JSNodeCustom.h"
@@ -43,19 +44,19 @@ namespace WebCore {
 
 Ref<ResizeObserver> ResizeObserver::create(Document& document, Ref<ResizeObserverCallback>&& callback)
 {
-    return adoptRef(*new ResizeObserver(document, { RefPtr<ResizeObserverCallback> { WTFMove(callback) } }));
+    return adoptRef(*new ResizeObserver(document, { RefPtr<ResizeObserverCallback> { WTF::move(callback) } }));
 }
 
 Ref<ResizeObserver> ResizeObserver::createNativeObserver(Document& document, NativeResizeObserverCallback&& nativeCallback)
 {
-    return adoptRef(*new ResizeObserver(document, { WTFMove(nativeCallback) }));
+    return adoptRef(*new ResizeObserver(document, { WTF::move(nativeCallback) }));
 }
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ResizeObserver);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ResizeObserver);
 
 ResizeObserver::ResizeObserver(Document& document, JSOrNativeResizeObserverCallback&& callback)
     : m_document(document)
-    , m_JSOrNativeCallback(WTFMove(callback))
+    , m_JSOrNativeCallback(WTF::move(callback))
 {
 }
 
@@ -162,18 +163,36 @@ void ResizeObserver::deliverObservations()
 {
     LOG_WITH_STREAM(ResizeObserver, stream << "ResizeObserver " << this << " deliverObservations");
 
-    auto entries = m_activeObservations.map([](auto& observation) {
-        ASSERT(observation->target());
-        return ResizeObserverEntry::create(observation->target(), observation->computeContentRect(), observation->borderBoxSize(), observation->contentBoxSize());
+    auto entries = WTF::compactMap(m_activeObservations, [](auto& observation) -> RefPtr<ResizeObserverEntry> {
+        RefPtr target = observation->target();
+        ASSERT(target); // The target is supposed to be kept alive via `m_activeObservationTargets` and JSResizeObserver::visitAdditionalChildren().
+        if (!target)
+            return nullptr;
+        return ResizeObserverEntry::create(target.releaseNonNull(), observation->computeContentRect(), observation->borderBoxSize(), observation->contentBoxSize());
     });
     m_activeObservations.clear();
 
-    Vector<WeakPtr<Element, WeakPtrImplWithEventTargetData>> activeObservationTargets;
-    Vector<WeakPtr<Element, WeakPtrImplWithEventTargetData>> targetsWaitingForFirstObservation;
+    // Use GCReachableRef here to make sure the targets and their JS wrappers are kept alive while we deliver.
+    // It is important since m_activeObservationTargets / m_targetsWaitingForFirstObservation will get cleared and
+    // thus JSResizeObserver::visitAdditionalChildren() won't be able to visit them on the GC thread.
+    Vector<GCReachableRef<Element>> activeObservationTargets;
+    Vector<GCReachableRef<Element>> targetsWaitingForFirstObservation;
     {
         Locker locker { m_observationTargetsLock };
-        activeObservationTargets = std::exchange(m_activeObservationTargets, { });
-        targetsWaitingForFirstObservation = std::exchange(m_targetsWaitingForFirstObservation, { });
+        activeObservationTargets = WTF::compactMap(m_activeObservationTargets, [](auto& weakTarget) -> std::optional<GCReachableRef<Element>> {
+            if (weakTarget)
+                return GCReachableRef<Element> { *weakTarget };
+            ASSERT_NOT_REACHED(); // Targets are supposed to be kept alive via JSResizeObserver::visitAdditionalChildren().
+            return std::nullopt;
+        });
+        m_activeObservationTargets = { };
+        targetsWaitingForFirstObservation = WTF::compactMap(m_targetsWaitingForFirstObservation, [](auto& weakTarget) -> std::optional<GCReachableRef<Element>> {
+            if (weakTarget)
+                return GCReachableRef<Element> { *weakTarget };
+            ASSERT_NOT_REACHED(); // Targets are supposed to be kept alive via JSResizeObserver::visitAdditionalChildren().
+            return std::nullopt;
+        });
+        m_targetsWaitingForFirstObservation = { };
     }
 
     if (isNativeCallback()) {

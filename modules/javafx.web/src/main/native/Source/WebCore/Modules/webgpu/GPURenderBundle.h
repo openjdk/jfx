@@ -36,7 +36,7 @@ class GPURenderBundle : public RefCounted<GPURenderBundle> {
 public:
     static Ref<GPURenderBundle> create(Ref<WebGPU::RenderBundle>&& backing)
     {
-        return adoptRef(*new GPURenderBundle(WTFMove(backing)));
+        return adoptRef(*new GPURenderBundle(WTF::move(backing)));
     }
 
     String label() const;
@@ -47,7 +47,7 @@ public:
 
 private:
     GPURenderBundle(Ref<WebGPU::RenderBundle>&& backing)
-        : m_backing(WTFMove(backing))
+        : m_backing(WTF::move(backing))
     {
     }
 

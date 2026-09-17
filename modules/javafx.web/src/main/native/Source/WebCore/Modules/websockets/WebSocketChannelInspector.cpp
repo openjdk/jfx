@@ -44,58 +44,44 @@ WebSocketChannelInspector::~WebSocketChannelInspector() = default;
 
 void WebSocketChannelInspector::didCreateWebSocket(const URL& url) const
 {
-    if (!m_document)
-        return;
-
-    InspectorInstrumentation::didCreateWebSocket(m_document.get(), m_progressIdentifier, url);
+    if (RefPtr document = m_document.get())
+        InspectorInstrumentation::didCreateWebSocket(document.get(), m_progressIdentifier, url);
 }
 
 void WebSocketChannelInspector::willSendWebSocketHandshakeRequest(const ResourceRequest& request) const
 {
-    if (!m_document)
-        return;
-
-    InspectorInstrumentation::willSendWebSocketHandshakeRequest(m_document.get(), m_progressIdentifier, request);
+    if (RefPtr document = m_document.get())
+        InspectorInstrumentation::willSendWebSocketHandshakeRequest(document.get(), m_progressIdentifier, request);
 }
 
 void WebSocketChannelInspector::didReceiveWebSocketHandshakeResponse(const ResourceResponse& response) const
 {
-    if (!m_document)
-        return;
-
-    InspectorInstrumentation::didReceiveWebSocketHandshakeResponse(m_document.get(), m_progressIdentifier, response);
+    if (RefPtr document = m_document.get())
+        InspectorInstrumentation::didReceiveWebSocketHandshakeResponse(document.get(), m_progressIdentifier, response);
 }
 
 void WebSocketChannelInspector::didCloseWebSocket() const
 {
-    if (!m_document)
-        return;
-
-    InspectorInstrumentation::didCloseWebSocket(m_document.get(), m_progressIdentifier);
+    if (RefPtr document = m_document.get())
+        InspectorInstrumentation::didCloseWebSocket(document.get(), m_progressIdentifier);
 }
 
 void WebSocketChannelInspector::didReceiveWebSocketFrame(const WebSocketFrame& frame) const
 {
-    if (!m_document)
-        return;
-
-    InspectorInstrumentation::didReceiveWebSocketFrame(m_document.get(), m_progressIdentifier, frame);
+    if (RefPtr document = m_document.get())
+        InspectorInstrumentation::didReceiveWebSocketFrame(document.get(), m_progressIdentifier, frame);
 }
 
 void WebSocketChannelInspector::didSendWebSocketFrame(const WebSocketFrame& frame) const
 {
-    if (!m_document)
-        return;
-
-    InspectorInstrumentation::didSendWebSocketFrame(m_document.get(), m_progressIdentifier, frame);
+    if (RefPtr document = m_document.get())
+        InspectorInstrumentation::didSendWebSocketFrame(document.get(), m_progressIdentifier, frame);
 }
 
 void WebSocketChannelInspector::didReceiveWebSocketFrameError(const String& errorMessage) const
 {
-    if (!m_document)
-        return;
-
-    InspectorInstrumentation::didReceiveWebSocketFrameError(m_document.get(), m_progressIdentifier, errorMessage);
+    if (RefPtr document = m_document.get())
+        InspectorInstrumentation::didReceiveWebSocketFrameError(document.get(), m_progressIdentifier, errorMessage);
 }
 
 WebSocketFrame WebSocketChannelInspector::createFrame(std::span<const uint8_t> data, WebSocketFrame::OpCode opCode)

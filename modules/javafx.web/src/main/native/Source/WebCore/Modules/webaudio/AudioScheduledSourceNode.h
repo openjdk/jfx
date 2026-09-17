@@ -34,7 +34,8 @@
 namespace WebCore {
 
 class AudioScheduledSourceNode : public AudioNode, public ActiveDOMObject {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(AudioScheduledSourceNode);
+    WTF_MAKE_TZONE_ALLOCATED(AudioScheduledSourceNode);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(AudioScheduledSourceNode);
 public:
     // ActiveDOMObject.
     void ref() const final { AudioNode::ref(); }
@@ -66,6 +67,8 @@ public:
 
 protected:
     AudioScheduledSourceNode(BaseAudioContext&, NodeType);
+
+    bool isAudioScheduledSourceNode() const final { return true; }
 
     // Get frame information for the current time quantum.
     // We handle the transition into PLAYING_STATE and FINISHED_STATE here,
@@ -102,3 +105,7 @@ protected:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::AudioScheduledSourceNode)
+static bool isType(const WebCore::AudioNode& node) { return node.isAudioScheduledSourceNode(); }
+SPECIALIZE_TYPE_TRAITS_END()

@@ -65,6 +65,7 @@ ScrollingStateFrameScrollingNode::ScrollingStateFrameScrollingNode(
     MouseLocationState&& mouseLocationState,
     ScrollbarHoverState&& scrollbarHoverState,
     ScrollbarEnabledState&& scrollbarEnabledState,
+    std::optional<ScrollbarColor>&& scrollbarColor,
     UserInterfaceLayoutDirection scrollbarLayoutDirection,
     ScrollbarWidth scrollbarWidth,
     bool useDarkAppearanceForScrollbars,
@@ -84,6 +85,7 @@ ScrollingStateFrameScrollingNode::ScrollingStateFrameScrollingNode(
     bool wheelEventGesturesBecomeNonBlocking,
     bool scrollingPerformanceTestingEnabled,
     FloatRect layoutViewport,
+    FloatSize sizeForVisibleContent,
     FloatPoint minLayoutViewportOrigin,
     FloatPoint maxLayoutViewportOrigin,
     std::optional<FloatSize> overrideVisualViewportSize,
@@ -91,7 +93,7 @@ ScrollingStateFrameScrollingNode::ScrollingStateFrameScrollingNode(
 ) : ScrollingStateScrollingNode(
     isMainFrame ? ScrollingNodeType::MainFrame : ScrollingNodeType::Subframe,
     scrollingNodeID,
-    WTFMove(children),
+    WTF::move(children),
     changedProperties,
     layerID,
     scrollableAreaSize,
@@ -99,12 +101,12 @@ ScrollingStateFrameScrollingNode::ScrollingStateFrameScrollingNode(
     reachableContentsSize,
     scrollPosition,
     scrollOrigin,
-    WTFMove(scrollableAreaParameters),
+    WTF::move(scrollableAreaParameters),
 #if ENABLE(SCROLLING_THREAD)
     synchronousScrollingReasons,
 #endif
-    WTFMove(requestedScrollData),
-    WTFMove(snapOffsetsInfo),
+    WTF::move(requestedScrollData),
+    WTF::move(snapOffsetsInfo),
     currentHorizontalSnapPointIndex,
     currentVerticalSnapPointIndex,
     isMonitoringWheelEvents,
@@ -113,19 +115,21 @@ ScrollingStateFrameScrollingNode::ScrollingStateFrameScrollingNode(
     horizontalScrollbarLayer,
     verticalScrollbarLayer,
     mouseIsOverContentArea,
-    WTFMove(mouseLocationState),
-    WTFMove(scrollbarHoverState),
-    WTFMove(scrollbarEnabledState),
+    WTF::move(mouseLocationState),
+    WTF::move(scrollbarHoverState),
+    WTF::move(scrollbarEnabledState),
+    WTF::move(scrollbarColor),
     scrollbarLayoutDirection,
     scrollbarWidth,
     useDarkAppearanceForScrollbars,
-    WTFMove(keyboardScrollData))
+    WTF::move(keyboardScrollData))
     , m_rootContentsLayer(rootContentsLayer)
     , m_counterScrollingLayer(counterScrollingLayer)
     , m_insetClipLayer(insetClipLayer)
     , m_contentShadowLayer(contentShadowLayer)
-    , m_eventTrackingRegions(WTFMove(eventTrackingRegions))
+    , m_eventTrackingRegions(WTF::move(eventTrackingRegions))
     , m_layoutViewport(layoutViewport)
+    , m_sizeForVisibleContent(sizeForVisibleContent)
     , m_minLayoutViewportOrigin(minLayoutViewportOrigin)
     , m_maxLayoutViewportOrigin(maxLayoutViewportOrigin)
     , m_overrideVisualViewportSize(overrideVisualViewportSize)
@@ -133,7 +137,7 @@ ScrollingStateFrameScrollingNode::ScrollingStateFrameScrollingNode(
     , m_obscuredContentInsets(obscuredContentInsets)
     , m_headerHeight(headerHeight)
     , m_footerHeight(footerHeight)
-    , m_behaviorForFixed(WTFMove(scrollBehaviorForFixedElements))
+    , m_behaviorForFixed(WTF::move(scrollBehaviorForFixedElements))
 
     , m_visualViewportIsSmallerThanLayoutViewport(visualViewportIsSmallerThanLayoutViewport)
     , m_asyncFrameOrOverflowScrollingEnabled(asyncFrameOrOverflowScrollingEnabled)
@@ -154,6 +158,7 @@ ScrollingStateFrameScrollingNode::ScrollingStateFrameScrollingNode(const Scrolli
     : ScrollingStateScrollingNode(stateNode, adoptiveTree)
     , m_eventTrackingRegions(stateNode.eventTrackingRegions())
     , m_layoutViewport(stateNode.layoutViewport())
+    , m_sizeForVisibleContent(stateNode.sizeForVisibleContent())
     , m_minLayoutViewportOrigin(stateNode.minLayoutViewportOrigin())
     , m_maxLayoutViewportOrigin(stateNode.maxLayoutViewportOrigin())
     , m_overrideVisualViewportSize(stateNode.overrideVisualViewportSize())
@@ -214,6 +219,7 @@ OptionSet<ScrollingStateNode::Property> ScrollingStateFrameScrollingNode::applic
         Property::WheelEventGesturesBecomeNonBlocking,
         Property::ScrollingPerformanceTestingEnabled,
         Property::LayoutViewport,
+        Property::SizeForVisibleContent,
         Property::MinLayoutViewportOrigin,
         Property::MaxLayoutViewportOrigin,
         Property::OverrideVisualViewportSize,
@@ -260,6 +266,15 @@ void ScrollingStateFrameScrollingNode::setLayoutViewport(const FloatRect& r)
 
     m_layoutViewport = r;
     setPropertyChanged(Property::LayoutViewport);
+}
+
+void ScrollingStateFrameScrollingNode::setSizeForVisibleContent(const FloatSize& size)
+{
+    if (m_sizeForVisibleContent == size)
+        return;
+
+    m_sizeForVisibleContent = size;
+    setPropertyChanged(Property::SizeForVisibleContent);
 }
 
 void ScrollingStateFrameScrollingNode::setMinLayoutViewportOrigin(const FloatPoint& p)
@@ -455,6 +470,10 @@ void ScrollingStateFrameScrollingNode::dumpProperties(TextStream& ts, OptionSet<
         ts.dumpProperty("footer height"_s, m_footerHeight);
 
     ts.dumpProperty("layout viewport"_s, m_layoutViewport);
+
+    if (m_layoutViewport.size() != m_sizeForVisibleContent)
+        ts.dumpProperty("size for visible content"_s, m_sizeForVisibleContent);
+
     ts.dumpProperty("min layout viewport origin"_s, m_minLayoutViewportOrigin);
     ts.dumpProperty("max layout viewport origin"_s, m_maxLayoutViewportOrigin);
 

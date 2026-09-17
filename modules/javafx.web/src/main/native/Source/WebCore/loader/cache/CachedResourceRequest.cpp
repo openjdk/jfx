@@ -55,8 +55,8 @@
 namespace WebCore {
 
 CachedResourceRequest::CachedResourceRequest(ResourceRequest&& resourceRequest, const ResourceLoaderOptions& options, std::optional<ResourceLoadPriority> priority, String&& charset)
-    : m_resourceRequest(WTFMove(resourceRequest))
-    , m_charset(WTFMove(charset))
+    : m_resourceRequest(WTF::move(resourceRequest))
+    , m_charset(WTF::move(charset))
     , m_options(options)
     , m_priority(priority)
     , m_fragmentIdentifier(splitFragmentIdentifierFromRequestURL(m_resourceRequest))
@@ -70,7 +70,7 @@ String CachedResourceRequest::splitFragmentIdentifierFromRequestURL(ResourceRequ
     URL url = request.url();
     auto fragmentIdentifier = url.fragmentIdentifier().toString();
     url.removeFragmentIdentifier();
-    request.setURL(WTFMove(url));
+    request.setURL(WTF::move(url));
     return fragmentIdentifier;
 }
 
@@ -117,7 +117,7 @@ void upgradeInsecureResourceRequestIfNeeded(ResourceRequest& request, Document& 
     if (url == request.url())
         return;
 
-    request.setURL(WTFMove(url));
+    request.setURL(WTF::move(url));
 }
 
 void CachedResourceRequest::upgradeInsecureRequestIfNeeded(Document& document, ContentSecurityPolicy::AlwaysUpgradeRequest alwaysUpgradeRequest)
@@ -197,6 +197,8 @@ String CachedResourceRequest::acceptHeaderValueFromType(CachedResource::Type typ
         return acceptHeaderValueForImageResource(usingSecureProtocol);
     case CachedResource::Type::CSSStyleSheet:
         return "text/css,*/*;q=0.1"_s;
+    case CachedResource::Type::JSON:
+        return "application/json,*/*;q=0.5"_s;
     case CachedResource::Type::SVGDocumentResource:
         return "image/svg+xml"_s;
 #if ENABLE(XSLT)
@@ -278,14 +280,14 @@ void CachedResourceRequest::removeFragmentIdentifierIfNeeded()
 {
     URL url = MemoryCache::removeFragmentIdentifierIfNeeded(m_resourceRequest.url());
     if (url.string() != m_resourceRequest.url())
-        m_resourceRequest.setURL(WTFMove(url));
+        m_resourceRequest.setURL(WTF::move(url));
 }
 
 #if ENABLE(CONTENT_EXTENSIONS)
 
 void CachedResourceRequest::applyResults(ContentRuleListResults&& results, Page* page)
 {
-    ContentExtensions::applyResultsToRequest(WTFMove(results), page, m_resourceRequest);
+    ContentExtensions::applyResultsToRequest(WTF::move(results), page, m_resourceRequest);
 }
 
 #endif

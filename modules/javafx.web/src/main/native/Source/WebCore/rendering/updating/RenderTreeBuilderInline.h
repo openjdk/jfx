@@ -33,7 +33,7 @@ namespace WebCore {
 class RenderTreeBuilder::Inline {
     WTF_MAKE_TZONE_ALLOCATED(Inline);
 public:
-    static RenderBoxModelObject& parentCandidateInContinuation(RenderInline& parent, const RenderObject* beforeChild);
+    static CheckedRef<RenderBoxModelObject> parentCandidateInContinuation(RenderInline& parent, const RenderObject* beforeChild);
 
     Inline(RenderTreeBuilder&);
 
@@ -50,6 +50,7 @@ private:
     void splitFlow(RenderInline& parent, RenderObject* beforeChild, RenderPtr<RenderBlock> newBlockBox, RenderPtr<RenderObject> child, RenderBoxModelObject* oldCont);
 
     RenderTreeBuilder& m_builder;
+    const bool m_buildsContinuations;
 };
 
 }

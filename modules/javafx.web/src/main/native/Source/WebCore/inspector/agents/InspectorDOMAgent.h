@@ -34,8 +34,10 @@
 #include "InspectorWebAgentBase.h"
 #include "Timer.h"
 #include <JavaScriptCore/Breakpoint.h>
+#include <JavaScriptCore/InjectedScriptManager.h>
 #include <JavaScriptCore/InspectorBackendDispatchers.h>
 #include <JavaScriptCore/InspectorFrontendDispatchers.h>
+#include <wtf/CanMakeWeakPtr.h>
 #include <wtf/CheckedPtr.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
@@ -83,7 +85,7 @@ enum class PlatformEventModifier : uint8_t;
 
 struct Styleable;
 
-class InspectorDOMAgent final : public InspectorAgentBase, public Inspector::DOMBackendDispatcherHandler, public CanMakeCheckedPtr<InspectorDOMAgent> {
+class InspectorDOMAgent final : public InspectorAgentBase, public Inspector::DOMBackendDispatcherHandler, public CanMakeWeakPtr<InspectorDOMAgent>, public CanMakeCheckedPtr<InspectorDOMAgent> {
     WTF_MAKE_NONCOPYABLE(InspectorDOMAgent);
     WTF_MAKE_TZONE_ALLOCATED(InspectorDOMAgent);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(InspectorDOMAgent);
@@ -264,7 +266,7 @@ private:
     Ref<Inspector::Protocol::DOM::AccessibilityProperties> buildObjectForAccessibilityProperties(Node&);
     void processAccessibilityChildren(AXCoreObject&, JSON::ArrayOf<Inspector::Protocol::DOM::NodeId>&);
 
-    Node* nodeForPath(const String& path);
+    RefPtr<Node> nodeForPath(const String& path);
     Node* nodeForObjectId(const Inspector::Protocol::Runtime::RemoteObjectId&);
 
     void discardBindings();

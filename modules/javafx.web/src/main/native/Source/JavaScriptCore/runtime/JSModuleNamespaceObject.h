@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "AbstractModuleRecord.h"
-#include "JSDestructibleObject.h"
+#include <JavaScriptCore/AbstractModuleRecord.h>
+#include <JavaScriptCore/JSDestructibleObject.h>
 #include <wtf/FixedVector.h>
 
 namespace JSC {
@@ -49,7 +49,7 @@ public:
     {
         VM& vm = getVM(globalObject);
         JSModuleNamespaceObject* object = new (NotNull, allocateCell<JSModuleNamespaceObject>(vm)) JSModuleNamespaceObject(vm, structure);
-        object->finishCreation(globalObject, moduleRecord, WTFMove(resolutions));
+        object->finishCreation(globalObject, moduleRecord, WTF::move(resolutions));
         return object;
     }
 
@@ -59,7 +59,7 @@ public:
     JS_EXPORT_PRIVATE static bool putByIndex(JSCell*, JSGlobalObject*, unsigned propertyName, JSValue, bool shouldThrow);
     JS_EXPORT_PRIVATE static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName, DeletePropertySlot&);
     JS_EXPORT_PRIVATE static bool deletePropertyByIndex(JSCell*, JSGlobalObject*, unsigned propertyName);
-    JS_EXPORT_PRIVATE static void getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
+    JS_EXPORT_PRIVATE static void getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArrayBuilder&, DontEnumPropertiesMode);
     JS_EXPORT_PRIVATE static bool defineOwnProperty(JSObject*, JSGlobalObject*, PropertyName, const PropertyDescriptor&, bool shouldThrow);
 
     DECLARE_EXPORT_INFO;

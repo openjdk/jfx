@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "InlineLineBox.h"
+#include <WebCore/InlineLineBox.h>
 
 namespace WebCore {
 namespace Layout {

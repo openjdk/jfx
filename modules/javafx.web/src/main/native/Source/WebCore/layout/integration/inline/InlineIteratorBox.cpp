@@ -32,13 +32,14 @@
 #include "LayoutIntegrationLineLayout.h"
 #include "RenderBlockFlow.h"
 #include "RenderLineBreak.h"
+#include "RenderObjectDocument.h"
 #include "RenderView.h"
 
 namespace WebCore {
 namespace InlineIterator {
 
 BoxIterator::BoxIterator(Box::PathVariant&& pathVariant)
-    : m_box(WTFMove(pathVariant))
+    : m_box(WTF::move(pathVariant))
 {
 }
 
@@ -74,6 +75,14 @@ BoxIterator& BoxIterator::traverseLineRightwardOnLineSkippingChildren()
 {
     WTF::switchOn(m_box.m_pathVariant, [](auto& path) {
         path.traverseNextBoxOnLineSkippingChildren();
+    });
+    return *this;
+}
+
+BoxIterator& BoxIterator::traverseLineLeftwardOnLine()
+{
+    WTF::switchOn(m_box.m_pathVariant, [](auto& path) {
+        path.traversePreviousBoxOnLine();
     });
     return *this;
 }
@@ -141,7 +150,7 @@ RenderObject::HighlightState Box::selectionState() const
 }
 
 LeafBoxIterator::LeafBoxIterator(Box::PathVariant&& pathVariant)
-    : BoxIterator(WTFMove(pathVariant))
+    : BoxIterator(WTF::move(pathVariant))
 {
 }
 

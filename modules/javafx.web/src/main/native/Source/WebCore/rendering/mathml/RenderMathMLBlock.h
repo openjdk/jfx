@@ -39,7 +39,7 @@ class RenderMathMLOperator;
 class MathMLPresentationElement;
 
 class RenderMathMLBlock : public RenderBlock {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderMathMLBlock);
+    WTF_MAKE_TZONE_ALLOCATED(RenderMathMLBlock);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderMathMLBlock);
 public:
     RenderMathMLBlock(Type, MathMLPresentationElement&, RenderStyle&&);
@@ -60,7 +60,7 @@ public:
     virtual RenderMathMLOperator* unembellishedOperator() const { return nullptr; }
 
 protected:
-    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
+    void styleDidChange(Style::Difference, const RenderStyle* oldStyle) override;
 
     inline LayoutUnit ruleThicknessFallback() const;
 
@@ -105,7 +105,7 @@ private:
 };
 
 class RenderMathMLTable final : public RenderTable {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderMathMLTable);
+    WTF_MAKE_TZONE_ALLOCATED(RenderMathMLTable);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderMathMLTable);
 public:
     inline RenderMathMLTable(MathMLElement&, RenderStyle&&);

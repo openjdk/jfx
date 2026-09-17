@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "IDBKeyPath.h"
-#include "IDBResourceIdentifier.h"
+#include <WebCore/IDBKeyPath.h>
+#include <WebCore/IDBResourceIdentifier.h>
 #include <wtf/CheckedPtr.h>
 #include <wtf/Forward.h>
 #include <wtf/text/WTFString.h>

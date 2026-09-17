@@ -40,7 +40,7 @@
 #include "LayoutState.h"
 #include "Logging.h"
 #include "PlacedFloats.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include "TableWrapperBlockFormattingContext.h"
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
@@ -48,7 +48,7 @@
 namespace WebCore {
 namespace Layout {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(BlockFormattingContext);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(BlockFormattingContext);
 
 BlockFormattingContext::BlockFormattingContext(const ElementBox& formattingContextRoot, BlockFormattingState& blockFormattingState)
     : FormattingContext(formattingContextRoot, blockFormattingState.layoutState())
@@ -70,12 +70,12 @@ void BlockFormattingContext::layoutInFlowContent(const ConstraintsForInFlowConte
     auto& placedFloats = formattingState().placedFloats();
     auto floatingContext = FloatingContext { root(), layoutState(), placedFloats };
 
-    Vector<const ElementBox*> layoutQueue;
+    Vector<CheckedRef<const ElementBox>> layoutQueue;
     enum class LayoutDirection { Child, Sibling };
     auto appendNextToLayoutQueue = [&] (const auto& layoutBox, auto direction) {
         if (direction == LayoutDirection::Child) {
             for (auto* child = layoutBox.firstInFlowOrFloatingChild(); child; child = child->nextInFlowOrFloatingSibling()) {
-                layoutQueue.append(downcast<ElementBox>(child));
+                layoutQueue.append(*downcast<ElementBox>(child));
                 return true;
             }
             return false;
@@ -83,7 +83,7 @@ void BlockFormattingContext::layoutInFlowContent(const ConstraintsForInFlowConte
 
         if (direction == LayoutDirection::Sibling) {
             for (auto* nextSibling = layoutBox.nextInFlowOrFloatingSibling(); nextSibling; nextSibling = nextSibling->nextInFlowOrFloatingSibling()) {
-                layoutQueue.append(downcast<ElementBox>(nextSibling));
+                layoutQueue.append(*downcast<ElementBox>(nextSibling));
                 return true;
             }
             return false;
@@ -107,7 +107,7 @@ void BlockFormattingContext::layoutInFlowContent(const ConstraintsForInFlowConte
     while (!layoutQueue.isEmpty()) {
         // Traverse down on the descendants and compute width/static position until we find a leaf node.
         while (true) {
-            auto& layoutBox = *layoutQueue.last();
+            auto layoutBox = layoutQueue.last();
             auto containingBlockConstraints = constraintsForLayoutBox(layoutBox);
 
             computeBorderAndPadding(layoutBox, containingBlockConstraints.horizontal());
@@ -116,53 +116,53 @@ void BlockFormattingContext::layoutInFlowContent(const ConstraintsForInFlowConte
             computeStaticHorizontalPosition(layoutBox, containingBlockConstraints.horizontal());
             computePositionToAvoidFloats(floatingContext, layoutBox, { constraints, containingBlockConstraints });
 
-            if (layoutBox.establishesFormattingContext()) {
-                if (layoutBox.hasInFlowOrFloatingChild()) {
-                    if (layoutBox.establishesInlineFormattingContext()) {
+            if (layoutBox->establishesFormattingContext()) {
+                if (layoutBox->hasInFlowOrFloatingChild()) {
+                    if (layoutBox->establishesInlineFormattingContext()) {
                         // IFCs inherit floats from parent FCs. We need final vertical position to find intruding floats.
                         precomputeVerticalPositionForBoxAndAncestors(layoutBox, { constraints, containingBlockConstraints });
                     }
                     // Layout the inflow descendants of this formatting context root.
                     auto formattingContext = LayoutContext::createFormattingContext(layoutBox, layoutState());
-                    if (layoutBox.isTableWrapperBox())
+                    if (layoutBox->isTableWrapperBox())
                         downcast<TableWrapperBlockFormattingContext>(*formattingContext).setHorizontalConstraintsIgnoringFloats(containingBlockConstraints.horizontal());
                     formattingContext->layoutInFlowContent(formattingGeometry().constraintsForInFlowContent(layoutBox));
                 }
                 break;
             }
-            if (!appendNextToLayoutQueue(layoutBox, LayoutDirection::Child))
+            if (!appendNextToLayoutQueue(layoutBox.get(), LayoutDirection::Child))
                 break;
         }
 
         // Climb back on the ancestors and compute height/final position.
         while (!layoutQueue.isEmpty()) {
-            auto& layoutBox = *layoutQueue.takeLast();
+            auto layoutBox = layoutQueue.takeLast();
             auto containingBlockConstraints = constraintsForLayoutBox(layoutBox);
 
             // All inflow descendants (if there are any) are laid out by now. Let's compute the box's height and vertical margin.
             computeHeightAndMargin(layoutBox, containingBlockConstraints);
-            if (layoutBox.isFloatingPositioned())
-                placedFloats.append(floatingContext.makeFloatItem(layoutBox, geometryForBox(layoutBox)));
+            if (layoutBox->isFloatingPositioned())
+                placedFloats.add(floatingContext.makeFloatItem(layoutBox, geometryForBox(layoutBox)));
             else {
                 // Adjust the vertical position now that we've got final margin values for non-float avoider boxes.
                 // Float avoiders have pre-computed vertical positions when floats are present.
-                if (!layoutBox.isFloatAvoider() || floatingContext.isEmpty()) {
+                if (!layoutBox->isFloatAvoider() || floatingContext.isEmpty()) {
                     auto& formattingState = this->formattingState();
                     auto& boxGeometry = formattingState.boxGeometry(layoutBox);
                     boxGeometry.setTop(verticalPositionWithMargin(layoutBox, formattingState.usedVerticalMargin(layoutBox), containingBlockConstraints.logicalTop()));
                 }
             }
-            auto establishesBlockFormattingContext = layoutBox.establishesBlockFormattingContext();
+            auto establishesBlockFormattingContext = layoutBox->establishesBlockFormattingContext();
             if (establishesBlockFormattingContext) {
                 // Now that we computed the box's height, we can layout the out-of-flow descendants.
-                if (layoutBox.hasChild()) {
+                if (layoutBox->hasChild()) {
                     downcast<BlockFormattingContext>(*LayoutContext::createFormattingContext(layoutBox, layoutState())).layoutOutOfFlowContent(formattingGeometry().constraintsForOutOfFlowContent(layoutBox));
                 }
             }
-            if (!layoutBox.establishesFormattingContext())
+            if (!layoutBox->establishesFormattingContext())
                 placeInFlowPositionedChildren(layoutBox, containingBlockConstraints.horizontal());
 
-            if (appendNextToLayoutQueue(layoutBox, LayoutDirection::Sibling))
+            if (appendNextToLayoutQueue(layoutBox.get(), LayoutDirection::Sibling))
                 break;
         }
     }
@@ -548,9 +548,9 @@ IntrinsicWidthConstraints BlockFormattingContext::computedIntrinsicWidthConstrai
     // 2. Check if actually need to visit all the boxes as we traverse down (already computed, container's min/max does not depend on descendants etc)
     // 3. As we climb back on the tree, compute min/max intrinsic width
     // (Any subtrees with new formatting contexts need to layout synchronously)
-    Vector<const ElementBox*> queue;
+    Vector<CheckedRef<const ElementBox>> queue;
     if (root().hasInFlowOrFloatingChild())
-        queue.append(downcast<ElementBox>(root().firstInFlowOrFloatingChild()));
+        queue.append(*downcast<ElementBox>(root().firstInFlowOrFloatingChild()));
 
     IntrinsicWidthConstraints constraints;
     auto maximumHorizontalStackingWidth = LayoutUnit { };
@@ -558,9 +558,9 @@ IntrinsicWidthConstraints BlockFormattingContext::computedIntrinsicWidthConstrai
     while (!queue.isEmpty()) {
         while (true) {
             // Check if we have to deal with descendant content.
-            auto& layoutBox = *queue.last();
+            auto layoutBox = queue.last();
             // Float avoiders are all establish a new formatting context. No need to look inside them.
-            if (layoutBox.isFloatAvoider() && !layoutBox.hasFloatClear())
+            if (layoutBox->isFloatAvoider() && !layoutBox->hasFloatClear())
                 break;
             // Non-floating block level boxes reset the current horizontal float stacking.
             // SPEC: This is a bit odd as floating positioning is a formatting context level concept:
@@ -576,33 +576,33 @@ IntrinsicWidthConstraints BlockFormattingContext::computedIntrinsicWidthConstrai
             if (formattingState.intrinsicWidthConstraintsForBox(layoutBox))
                 break;
             // Box with fixed width defines their descendant content intrinsic width.
-            if (layoutBox.style().width().isFixed())
+            if (layoutBox->style().width().isFixed())
                 break;
             // Non-float avoider formatting context roots are opaque to intrinsic width computation.
-            if (layoutBox.establishesFormattingContext())
+            if (layoutBox->establishesFormattingContext())
                 break;
             // No relevant child content.
-            if (!layoutBox.hasInFlowOrFloatingChild())
+            if (!layoutBox->hasInFlowOrFloatingChild())
                 break;
-            queue.append(downcast<ElementBox>(layoutBox.firstInFlowOrFloatingChild()));
+            queue.append(*downcast<ElementBox>(layoutBox->firstInFlowOrFloatingChild()));
         }
         // Compute min/max intrinsic width bottom up if needed.
         while (!queue.isEmpty()) {
-            auto& layoutBox = *queue.takeLast();
+            auto layoutBox = queue.takeLast();
             auto desdendantConstraints = formattingState.intrinsicWidthConstraintsForBox(layoutBox);
             if (!desdendantConstraints) {
                 desdendantConstraints = formattingGeometry().intrinsicWidthConstraints(layoutBox);
                 formattingState.setIntrinsicWidthConstraintsForBox(layoutBox, *desdendantConstraints);
             }
             constraints.minimum = std::max(constraints.minimum, desdendantConstraints->minimum);
-            auto willStackHorizontally = layoutBox.isFloatAvoider() && !layoutBox.hasFloatClear();
+            auto willStackHorizontally = layoutBox->isFloatAvoider() && !layoutBox->hasFloatClear();
             if (willStackHorizontally)
                 currentHorizontalStackingWidth += desdendantConstraints->maximum;
             else
                 constraints.maximum = std::max(constraints.maximum, desdendantConstraints->maximum);
             // Move over to the next sibling or take the next box in the queue.
-            if (auto* nextSibling = downcast<ElementBox>(layoutBox.nextInFlowOrFloatingSibling())) {
-                queue.append(nextSibling);
+            if (auto* nextSibling = downcast<ElementBox>(layoutBox->nextInFlowOrFloatingSibling())) {
+                queue.append(*nextSibling);
                 break;
             }
         }

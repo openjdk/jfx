@@ -29,13 +29,15 @@
 #include "DOMFormData.h"
 #include "DOMTokenList.h"
 #include "DiagnosticLoggingClient.h"
-#include "Document.h"
+#include "DocumentPage.h"
+#include "DocumentView.h"
 #include "ElementAncestorIteratorInlines.h"
 #include "Event.h"
 #include "EventNames.h"
 #include "FormController.h"
 #include "FormData.h"
 #include "FormDataEvent.h"
+#include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
 #include "HTMLDialogElement.h"
 #include "HTMLFieldSetElement.h"
@@ -69,7 +71,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLFormElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLFormElement);
 
 using namespace HTMLNames;
 
@@ -118,9 +120,6 @@ HTMLFormElement::~HTMLFormElement()
     // formWillBeDestroyed below will try to update the validity of all radio buttons in a given group.
     m_radioButtonGroups.clear();
 
-    // formWillBeDestroyed below will try to update the validity of all radio buttons in a given group.
-    m_radioButtonGroups.clear();
-
     m_defaultButton = nullptr;
     for (auto& weakElement : m_listedElements) {
         ASSERT(weakElement);
@@ -142,7 +141,7 @@ Node::InsertedIntoAncestorResult HTMLFormElement::insertedIntoAncestor(Insertion
 
 void HTMLFormElement::removedFromAncestor(RemovalType removalType, ContainerNode& oldParentOfRemovedTree)
 {
-    auto& root = traverseToRootNode(); // Do not rely on rootNode() because our IsInTreeScope is outdated.
+    Ref root = traverseToRootNode(); // Do not rely on rootNode() because our IsInTreeScope is outdated.
     auto listedElements = copyListedElementsVector();
     for (auto& listedElement : listedElements)
         listedElement->formOwnerRemovedFromTree(root);
@@ -162,7 +161,7 @@ unsigned HTMLFormElement::length() const
     for (auto& weakElement : m_listedElements) {
         RefPtr element { weakElement.get() };
         ASSERT(element);
-        auto* listedElement = element->asFormListedElement();
+        RefPtr listedElement = element->asFormListedElement();
         ASSERT(listedElement);
         if (listedElement->isEnumeratable())
             ++length;
@@ -182,7 +181,7 @@ std::optional<Variant<RefPtr<RadioNodeList>, RefPtr<Element>>> HTMLFormElement::
     if (namedItems.isEmpty())
         return std::nullopt;
     if (namedItems.size() == 1)
-        return Variant<RefPtr<RadioNodeList>, RefPtr<Element>> { RefPtr<Element> { WTFMove(namedItems[0]) } };
+        return Variant<RefPtr<RadioNodeList>, RefPtr<Element>> { RefPtr<Element> { WTF::move(namedItems[0]) } };
 
     return Variant<RefPtr<RadioNodeList>, RefPtr<Element>> { RefPtr<RadioNodeList> { radioNodeList(name) } };
 }
@@ -224,7 +223,7 @@ bool HTMLFormElement::validateInteractively()
             control->hideVisibleValidationMessage();
     }
 
-    Vector<RefPtr<ValidatedFormListedElement>> unhandledInvalidControls;
+    Vector<Ref<ValidatedFormListedElement>> unhandledInvalidControls;
     if (!checkInvalidControlsAndCollectUnhandled(unhandledInvalidControls))
         return true;
     // Because the form has invalid controls, we abort the form submission and
@@ -287,7 +286,7 @@ void HTMLFormElement::submitIfPossible(Event* event, HTMLFormControlElement* sub
         targetFrame = frame.get();
     auto formState = FormState::create(*this, textFieldValues(), document(), NotSubmittedByJavaScript);
     if (RefPtr localTargetFrame = dynamicDowncast<LocalFrame>(targetFrame))
-        localTargetFrame->loader().client().dispatchWillSendSubmitEvent(WTFMove(formState));
+        localTargetFrame->loader().client().dispatchWillSendSubmitEvent(WTF::move(formState));
 
     Ref protectedThis { *this };
 
@@ -357,13 +356,13 @@ RefPtr<HTMLFormControlElement> HTMLFormElement::findSubmitButton(HTMLFormControl
         return nullptr;
     RefPtr<HTMLFormControlElement> firstSuccessfulSubmitButton;
     for (auto& listedElement : m_listedElements) {
-        auto* control = dynamicDowncast<HTMLFormControlElement>(*listedElement);
+        RefPtr control = dynamicDowncast<HTMLFormControlElement>(*listedElement);
         if (!control)
             continue;
         if (control->isActivatedSubmit())
             return nullptr;
         if (!firstSuccessfulSubmitButton && control->isSuccessfulSubmitButton())
-            firstSuccessfulSubmitButton = control;
+            firstSuccessfulSubmitButton = WTF::move(control);
     }
     return firstSuccessfulSubmitButton;
 }
@@ -474,12 +473,6 @@ void HTMLFormElement::attributeChanged(const QualifiedName& name, const AtomStri
     switch (name.nodeName()) {
     case AttributeNames::actionAttr:
         m_attributes.parseAction(newValue);
-        if (!m_attributes.action().isEmpty()) {
-            if (RefPtr f = document().frame()) {
-                if (auto* topFrame = dynamicDowncast<LocalFrame>(f->tree().top()))
-                    MixedContentChecker::checkFormForMixedContent(*topFrame, document().completeURL(m_attributes.action()));
-            }
-        }
         break;
     case AttributeNames::targetAttr:
         m_attributes.setTarget(newValue);
@@ -543,30 +536,30 @@ unsigned HTMLFormElement::formElementIndexWithFormAttribute(Element* element, un
 
 unsigned HTMLFormElement::formElementIndex(FormListedElement& listedElement)
 {
-    HTMLElement& listedHTMLElement = listedElement.asHTMLElement();
+    Ref listedHTMLElement = listedElement.asHTMLElement();
 
     // Treats separately the case where this element has the form attribute
     // for performance consideration.
-    if (listedHTMLElement.hasAttributeWithoutSynchronization(formAttr) && listedHTMLElement.isConnected()) {
+    if (listedHTMLElement->hasAttributeWithoutSynchronization(formAttr) && listedHTMLElement->isConnected()) {
         unsigned short position;
         if (document().settings().shadowRootReferenceTargetEnabled())
-            position = listedHTMLElement.treeScope().retargetToScope(*this)->compareDocumentPosition(listedHTMLElement);
+            position = listedHTMLElement->treeScope().retargetToScope(*this)->compareDocumentPosition(listedHTMLElement);
         else
             position = compareDocumentPosition(listedHTMLElement);
         ASSERT(!(position & DOCUMENT_POSITION_DISCONNECTED));
         if (position & DOCUMENT_POSITION_PRECEDING) {
             ++m_listedElementsBeforeIndex;
             ++m_listedElementsAfterIndex;
-            return HTMLFormElement::formElementIndexWithFormAttribute(&listedHTMLElement, 0, m_listedElementsBeforeIndex - 1);
+            return HTMLFormElement::formElementIndexWithFormAttribute(listedHTMLElement.ptr(), 0, m_listedElementsBeforeIndex - 1);
         }
         if (position & DOCUMENT_POSITION_FOLLOWING && !(position & DOCUMENT_POSITION_CONTAINED_BY))
-            return HTMLFormElement::formElementIndexWithFormAttribute(&listedHTMLElement, m_listedElementsAfterIndex, m_listedElements.size());
+            return HTMLFormElement::formElementIndexWithFormAttribute(listedHTMLElement.ptr(), m_listedElementsAfterIndex, m_listedElements.size());
     }
 
     unsigned currentListedElementsAfterIndex = m_listedElementsAfterIndex;
     ++m_listedElementsAfterIndex;
 
-    if (!listedHTMLElement.isDescendantOf(*this))
+    if (!listedHTMLElement->isDescendantOf(*this))
         return currentListedElementsAfterIndex;
 
     auto descendants = descendantsOfType<HTMLElement>(*this);
@@ -579,12 +572,12 @@ unsigned HTMLFormElement::formElementIndex(FormListedElement& listedElement)
         return currentListedElementsAfterIndex;
 
     unsigned i = m_listedElementsBeforeIndex;
-    for (auto& element : descendants) {
-        if (&element == &listedHTMLElement)
+    for (Ref element : descendants) {
+        if (element == listedHTMLElement)
             return i;
-        if (!element.isFormListedElement())
+        if (!element->isFormListedElement())
             continue;
-        if (element.asFormListedElement()->form() != this)
+        if (element->asFormListedElement()->form() != this)
             continue;
         ++i;
     }
@@ -673,7 +666,7 @@ Ref<HTMLFormControlsCollection> HTMLFormElement::elements()
         Ref controlsCollection = ensureRareData().ensureNodeLists().addCachedCollection<HTMLFormControlsCollection>(*this, CollectionType::FormControls);
         if (!isConnected())
             return controlsCollection;
-        m_controlsCollection = WTFMove(controlsCollection);
+        m_controlsCollection = WTF::move(controlsCollection);
     }
     return *m_controlsCollection;
 }
@@ -778,7 +771,7 @@ void HTMLFormElement::resetDefaultButton()
 
     ScriptDisallowedScope::InMainThread scriptDisallowedScope;
 
-    auto oldDefault = WTFMove(m_defaultButton);
+    auto oldDefault = WTF::move(m_defaultButton);
     defaultButton();
     if (m_defaultButton != oldDefault) {
         if (oldDefault)
@@ -790,11 +783,11 @@ void HTMLFormElement::resetDefaultButton()
 
 bool HTMLFormElement::checkValidity()
 {
-    Vector<RefPtr<ValidatedFormListedElement>> controls;
+    Vector<Ref<ValidatedFormListedElement>> controls;
     return !checkInvalidControlsAndCollectUnhandled(controls);
 }
 
-bool HTMLFormElement::checkInvalidControlsAndCollectUnhandled(Vector<RefPtr<ValidatedFormListedElement>>& unhandledInvalidControls)
+bool HTMLFormElement::checkInvalidControlsAndCollectUnhandled(Vector<Ref<ValidatedFormListedElement>>& unhandledInvalidControls)
 {
     Ref<HTMLFormElement> protectedThis(*this);
     // Copy m_listedElements because event handlers called from HTMLFormControlElement::checkValidity() might change m_listedElements.
@@ -838,10 +831,9 @@ RefPtr<HTMLElement> HTMLFormElement::elementFromPastNamesMap(const AtomString& p
 {
     if (pastName.isEmpty() || m_pastNamesMap.isEmpty())
         return nullptr;
-    auto weakElement = m_pastNamesMap.get(pastName);
-    if (!weakElement)
+    RefPtr element = m_pastNamesMap.get(pastName);
+    if (!element)
         return nullptr;
-    RefPtr element { weakElement.get() };
 #if ASSERT_ENABLED
     assertItemCanBeInPastNamesMap(*element->asFormAssociatedElement());
 #endif
@@ -979,8 +971,8 @@ RefPtr<DOMFormData> HTMLFormElement::constructEntryList(RefPtr<HTMLFormControlEl
         submitter->setActivatedSubmit(true);
 
     for (auto& control : this->copyListedElementsVector()) {
-        auto& element = control->asHTMLElement();
-        if (!element.isDisabledFormControl())
+        Ref element = control->asHTMLElement();
+        if (!element->isDisabledFormControl())
             control->appendFormData(domFormData.get());
         if (RefPtr input = dynamicDowncast<HTMLInputElement>(element); formValues && input) {
             if (input->isTextField()) {

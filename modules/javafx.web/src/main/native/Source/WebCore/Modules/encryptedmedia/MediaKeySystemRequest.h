@@ -26,10 +26,10 @@
 
 #if ENABLE(ENCRYPTED_MEDIA)
 
-#include "ActiveDOMObject.h"
-#include "IDLTypes.h"
-#include "JSDOMPromiseDeferredForward.h"
-#include "MediaKeySystemRequestIdentifier.h"
+#include <WebCore/ActiveDOMObject.h>
+#include <WebCore/IDLTypes.h>
+#include <WebCore/JSDOMPromiseDeferredForward.h>
+#include <WebCore/MediaKeySystemRequestIdentifier.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Forward.h>
 #include <wtf/Identified.h>
@@ -51,7 +51,7 @@ public:
     WEBCORE_EXPORT static Ref<MediaKeySystemRequest> create(Document&, const String& keySystem, RefPtr<DeferredPromise>&&);
     virtual ~MediaKeySystemRequest();
 
-    void setAllowCallback(CompletionHandler<void(String&& mediaKeysHashSalt, RefPtr<DeferredPromise>&&)>&& callback) { m_allowCompletionHandler = WTFMove(callback); }
+    void setAllowCallback(CompletionHandler<void(String&& mediaKeysHashSalt, RefPtr<DeferredPromise>&&)>&& callback) { m_allowCompletionHandler = WTF::move(callback); }
     WEBCORE_EXPORT void start();
 
     WEBCORE_EXPORT void allow(String&& mediaKeysHashSalt);

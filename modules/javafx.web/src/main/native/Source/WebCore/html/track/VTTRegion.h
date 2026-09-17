@@ -33,10 +33,11 @@
 
 #if ENABLE(VIDEO)
 
-#include "ContextDestructionObserver.h"
-#include "FloatPoint.h"
-#include "TextTrack.h"
-#include "Timer.h"
+#include <WebCore/ContextDestructionObserver.h>
+#include <WebCore/FloatPoint.h>
+#include <WebCore/TextTrack.h>
+#include <WebCore/Timer.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 
 namespace WebCore {
 
@@ -52,6 +53,10 @@ public:
     }
 
     virtual ~VTTRegion();
+
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     const String& id() const { return m_id; }
     void setId(const String&);

@@ -34,7 +34,7 @@
 #include "RenderChildIterator.h"
 #include "RenderIterator.h"
 #include "RenderObjectInlines.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include "RenderTable.h"
 #include "RenderTableCaption.h"
 #include "RenderTableCell.h"
@@ -46,10 +46,10 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderTableCol);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderTableCol);
 
 RenderTableCol::RenderTableCol(Element& element, RenderStyle&& style)
-    : RenderBox(Type::TableCol, element, WTFMove(style))
+    : RenderBox(Type::TableCol, element, WTF::move(style))
 {
     // init RenderObject attributes
     setInline(true); // our object is not Inline
@@ -58,7 +58,7 @@ RenderTableCol::RenderTableCol(Element& element, RenderStyle&& style)
 }
 
 RenderTableCol::RenderTableCol(Document& document, RenderStyle&& style)
-    : RenderBox(Type::TableCol, document, WTFMove(style))
+    : RenderBox(Type::TableCol, document, WTF::move(style))
 {
     setInline(true);
     ASSERT(isRenderTableCol());
@@ -66,7 +66,7 @@ RenderTableCol::RenderTableCol(Document& document, RenderStyle&& style)
 
 RenderTableCol::~RenderTableCol() = default;
 
-void RenderTableCol::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
+void RenderTableCol::styleDidChange(Style::Difference diff, const RenderStyle* oldStyle)
 {
     RenderBox::styleDidChange(diff, oldStyle);
     CheckedPtr table = this->table();

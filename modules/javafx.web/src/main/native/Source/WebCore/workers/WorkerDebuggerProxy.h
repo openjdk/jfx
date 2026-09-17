@@ -30,21 +30,16 @@
 
 #pragma once
 
+#include <wtf/AbstractCanMakeCheckedPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-class WorkerDebuggerProxy {
+class WorkerDebuggerProxy : public AbstractCanMakeCheckedPtr {
 public:
     virtual ~WorkerDebuggerProxy() = default;
     virtual void postMessageToDebugger(const String&) = 0;
     virtual void setResourceCachingDisabledByWebInspector(bool) = 0;
-
-    // CanMakeCheckedPtr.
-    virtual uint32_t checkedPtrCount() const = 0;
-    virtual uint32_t checkedPtrCountWithoutThreadCheck() const = 0;
-    virtual void incrementCheckedPtrCount() const = 0;
-    virtual void decrementCheckedPtrCount() const = 0;
 };
 
 } // namespace WebCore

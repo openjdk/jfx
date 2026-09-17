@@ -25,6 +25,9 @@
 
 #pragma once
 
+#include <wtf/Compiler.h>
+#include <wtf/Platform.h>
+
 DECLARE_SYSTEM_HEADER
 
 #include <CoreFoundation/CoreFoundation.h>
@@ -35,8 +38,8 @@ DECLARE_SYSTEM_HEADER
 
 #endif
 
-extern "C" {
+WTF_EXTERN_C_BEGIN
 
 CF_EXPORT Boolean _CFRunLoopSetPerCalloutAutoreleasepoolEnabled(Boolean enabled) API_AVAILABLE(macos(10.16), ios(14.0), watchos(7.0), tvos(14.0));
 
-}
+WTF_EXTERN_C_END

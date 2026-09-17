@@ -29,11 +29,11 @@
 
 #pragma once
 
-#include "CSSParserTokenRange.h"
-#include "CSSPropertyNames.h"
-#include "CSSValue.h"
-#include "CSSValueKeywords.h"
-#include "CSSVariableData.h"
+#include <WebCore/CSSParserTokenRange.h>
+#include <WebCore/CSSPropertyNames.h>
+#include <WebCore/CSSValue.h>
+#include <WebCore/CSSValueKeywords.h>
+#include <WebCore/CSSVariableData.h>
 #include <wtf/PointerComparison.h>
 #include <wtf/text/WTFString.h>
 
@@ -74,6 +74,8 @@ private:
 
     std::optional<Vector<CSSParserToken>> resolveTokenRange(CSSParserTokenRange, Style::Builder&) const;
     bool resolveVariableReference(CSSParserTokenRange, CSSValueID, Vector<CSSParserToken>&, Style::Builder&) const;
+    bool evaluateDashedFunction(StringView functionName, CSSParserTokenRange, Vector<CSSParserToken>&, Style::Builder&) const;
+
     enum class FallbackResult : uint8_t { None, Valid, Invalid };
     std::pair<FallbackResult, Vector<CSSParserToken>> resolveVariableFallback(const AtomString& variableName, CSSParserTokenRange, CSSValueID functionId, Style::Builder&) const;
 
@@ -104,7 +106,7 @@ bool CSSVariableReferenceValue::resolveAndCacheValue(Style::Builder& builder, NO
     if (auto data = tryResolveSimpleReference(builder)) {
         if (!arePointingToEqualData(m_cacheDependencyData, data))
             cacheFunction(data);
-        m_cacheDependencyData = WTFMove(data);
+        m_cacheDependencyData = WTF::move(data);
         return true;
     }
 

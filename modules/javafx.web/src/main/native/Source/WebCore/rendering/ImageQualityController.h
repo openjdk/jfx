@@ -62,7 +62,7 @@ private:
     void restartTimer();
     void removeObject(RenderBoxModelObject*);
 
-    const RenderView& m_renderView;
+    const CheckedRef<const RenderView> m_renderView;
     ObjectLayerSizeMap m_objectLayerSizeMap;
     DeferrableOneShotTimer m_timer;
     bool m_animatedResizeIsActive { false };

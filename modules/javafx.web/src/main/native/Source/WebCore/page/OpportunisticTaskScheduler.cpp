@@ -28,7 +28,7 @@
 
 #include "CommonVM.h"
 #include "Document.h"
-#include "GCController.h"
+#include "GarbageCollectionController.h"
 #include "IdleCallbackController.h"
 #include "Page.h"
 #include "Settings.h"

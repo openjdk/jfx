@@ -30,6 +30,8 @@
     readonly attribute boolean skipped;
 };
 
-dictionary ContentVisibilityAutoStateChangeEventInit : EventInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary ContentVisibilityAutoStateChangeEventInit : EventInit {
     boolean skipped = false;
 };

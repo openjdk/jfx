@@ -49,7 +49,7 @@ class MediaRecorder final
     , public EventTarget
     , private MediaStreamPrivateObserver
     , private MediaStreamTrackPrivateObserver {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(MediaRecorder);
+    WTF_MAKE_TZONE_ALLOCATED(MediaRecorder);
 public:
     void ref() const final { RefCounted::ref(); }
     void deref() const final { RefCounted::deref(); }
@@ -94,7 +94,7 @@ private:
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
     enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::MediaRecorder; }
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
+    ScriptExecutionContext* scriptExecutionContext() const final;
 
     // ActiveDOMObject.
     void suspend(ReasonForSuspension) final;
@@ -127,6 +127,8 @@ private:
     void computeBitRates(const MediaStreamPrivate*);
     void timeSlicerTimerFired();
 
+    CheckedPtr<MediaRecorderPrivate> checkedPrivate();
+
     static CreatorFunction m_customCreator;
 
     Options m_options;
@@ -149,5 +151,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(MediaRecorder)
 
 #endif // ENABLE(MEDIA_RECORDER)

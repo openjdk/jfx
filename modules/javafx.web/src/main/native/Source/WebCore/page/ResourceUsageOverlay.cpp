@@ -96,7 +96,7 @@ bool ResourceUsageOverlay::mouseEvent(PageOverlay&, const PlatformMouseEvent& ev
         m_overlay->setShouldIgnoreMouseEventsOutsideBounds(false);
         m_dragging = true;
         IntPoint location = m_overlay->frame().location();
-        m_dragPoint = event.position() + IntPoint(-location.x(), -location.y());
+        m_dragPoint = flooredIntPoint(event.position()) + IntPoint(-location.x(), -location.y());
         return true;
     }
     case PlatformEvent::Type::MouseReleased:
@@ -114,7 +114,7 @@ bool ResourceUsageOverlay::mouseEvent(PageOverlay&, const PlatformMouseEvent& ev
             IntRect newFrame = m_overlay->frame();
 
             // Move the new frame relative to the point where the drag was initiated.
-            newFrame.setLocation(event.position());
+            newFrame.setLocation(flooredIntPoint(event.position()));
             newFrame.moveBy(IntPoint(-m_dragPoint.x(), -m_dragPoint.y()));
 
             // Force the frame to stay inside the viewport entirely.

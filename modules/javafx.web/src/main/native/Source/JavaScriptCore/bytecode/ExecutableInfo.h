@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "ParserModes.h"
+#include <JavaScriptCore/ParserModes.h>
 
 namespace JSC {
 

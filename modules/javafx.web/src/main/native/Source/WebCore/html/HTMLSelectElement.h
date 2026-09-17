@@ -3,7 +3,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2000 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2010-2015 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -25,21 +25,53 @@
 
 #pragma once
 
-#include "HTMLFormControlElement.h"
-#include "HTMLOptionElement.h"
-#include "TypeAhead.h"
+#include <WebCore/HTMLFormControlElement.h>
+#include <WebCore/HTMLOptionElement.h>
+#include <WebCore/PopupMenuClient.h>
+#include <WebCore/TypeAhead.h>
 #include <wtf/CompletionHandler.h>
+
+#if PLATFORM(COCOA)
+#define POPUP_MENU_PULLS_DOWN 0
+#else
+#define POPUP_MENU_PULLS_DOWN 1
+#endif
 
 namespace WebCore {
 
 class HTMLOptionsCollection;
 
-class HTMLSelectElement : public HTMLFormControlElement, private TypeAheadDataSource {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLSelectElement);
+#if !PLATFORM(IOS_FAMILY)
+class PopupMenu;
+#endif
+
+class HTMLSelectElement final : public HTMLFormControlElement, public PopupMenuClient, private TypeAheadDataSource {
+    WTF_MAKE_TZONE_ALLOCATED(HTMLSelectElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLSelectElement);
 public:
+    USING_CAN_MAKE_WEAKPTR(HTMLElement);
+
+    // CheckedPtr interface disambiguation.
+    uint32_t checkedPtrCount() const final { return HTMLFormControlElement::checkedPtrCount(); }
+    uint32_t checkedPtrCountWithoutThreadCheck() const final { return HTMLFormControlElement::checkedPtrCountWithoutThreadCheck(); }
+    void incrementCheckedPtrCount() const final { HTMLFormControlElement::incrementCheckedPtrCount(); }
+    void decrementCheckedPtrCount() const final { HTMLFormControlElement::decrementCheckedPtrCount(); }
+    void setDidBeginCheckedPtrDeletion() final { CanMakeCheckedPtr::setDidBeginCheckedPtrDeletion(); }
+
     static Ref<HTMLSelectElement> create(const QualifiedName&, Document&, HTMLFormElement*);
     static Ref<HTMLSelectElement> create(Document&);
+    ~HTMLSelectElement();
+
+    enum class ExcludeOptGroup : bool { No, Yes };
+
+    enum SelectOptionFlag {
+        DeselectOtherOptions = 1 << 0,
+        DispatchChangeEvent = 1 << 1,
+        UserDriven = 1 << 2,
+    };
+
+    enum SkipDirection { SkipBackwards = -1, SkipForwards = 1 };
+    static HTMLSelectElement* findOwnerSelect(ContainerNode*, ExcludeOptGroup);
 
     WEBCORE_EXPORT int selectedIndex() const;
     WEBCORE_EXPORT void setSelectedIndex(int);
@@ -89,13 +121,51 @@ public:
 
     ExceptionOr<void> showPicker();
 
+    void showPopup();
+#if !PLATFORM(IOS_FAMILY)
+    void hidePopup();
+#endif
+
+    bool popupIsVisible() const { return m_popupIsVisible; }
+    WEBCORE_EXPORT void setPopupIsVisible(bool);
+
+    bool isOpen() const;
+
+    // PopupMenuClient methods
+    void valueChanged(unsigned listIndex, bool fireOnChange = true) override;
+    void selectionChanged(unsigned, bool) override { }
+    void selectionCleared() override { }
+    String itemText(unsigned listIndex) const override;
+    String itemLabel(unsigned listIndex) const override;
+    String itemIcon(unsigned listIndex) const override;
+    String itemToolTip(unsigned listIndex) const override;
+    String itemAccessibilityText(unsigned listIndex) const override;
+    bool itemIsEnabled(unsigned listIndex) const override;
+    PopupMenuStyle itemStyle(unsigned listIndex) const override;
+    PopupMenuStyle menuStyle() const override;
+    int clientInsetLeft() const override;
+    int clientInsetRight() const override;
+    LayoutUnit clientPaddingLeft() const override;
+    LayoutUnit clientPaddingRight() const override;
+    int listSize() const override;
+    int popupSelectedIndex() const override;
+    void popupDidHide() override;
+    bool itemIsSeparator(unsigned listIndex) const override;
+    bool itemIsLabel(unsigned listIndex) const override;
+    bool itemIsSelected(unsigned listIndex) const override;
+    bool shouldPopOver() const override { return !POPUP_MENU_PULLS_DOWN; }
+    void setTextFromItem(unsigned listIndex) override;
+    void listBoxSelectItem(int listIndex, bool allowMultiplySelections, bool shift, bool fireOnChangeNow = true) override;
+    bool popupMultiple() const override { return multiple(); }
+    FontSelector* fontSelector() const override;
+    HostWindow* hostWindow() const override;
+    Ref<Scrollbar> createScrollbar(ScrollableArea&, ScrollbarOrientation, ScrollbarWidth) override;
+
     WEBCORE_EXPORT HTMLOptionElement* namedItem(const AtomString& name);
     WEBCORE_EXPORT HTMLOptionElement* item(unsigned index);
     bool isSupportedPropertyIndex(unsigned index);
 
     void scrollToSelection();
-
-    void listBoxSelectItem(int listIndex, bool allowMultiplySelections, bool shift, bool fireOnChangeNow = true);
 
     bool canSelectAll() const;
     void selectAll();
@@ -168,12 +238,6 @@ private:
     bool isRequiredFormControl() const final;
 
     bool hasPlaceholderLabelOption() const;
-
-    enum SelectOptionFlag {
-        DeselectOtherOptions = 1 << 0,
-        DispatchChangeEvent = 1 << 1,
-        UserDriven = 1 << 2,
-    };
     typedef unsigned SelectOptionFlags;
     void selectOption(int optionIndex, SelectOptionFlags = 0);
     void deselectItemsWithoutValidation(HTMLElement* elementToExclude = nullptr);
@@ -185,8 +249,6 @@ private:
     void listBoxDefaultEventHandler(Event&);
     void setOptionsChangedOnRenderer();
     size_t searchOptionsForValue(const String&, size_t listIndexStart, size_t listIndexEnd) const;
-
-    enum SkipDirection { SkipBackwards = -1, SkipForwards = 1 };
     int nextValidIndex(int listIndex, SkipDirection, int skip) const;
     int nextSelectableListIndex(int startIndex) const;
     int previousSelectableListIndex(int startIndex) const;
@@ -195,6 +257,8 @@ private:
     int nextSelectableListIndexPageAway(int startIndex, SkipDirection) const;
 
     void childrenChanged(const ChildChange&) final;
+
+    void didDetachRenderers() final;
 
     // TypeAheadDataSource functions.
     int indexOfSelectedOption() const final;
@@ -216,6 +280,11 @@ private:
     bool m_activeSelectionState;
     bool m_allowsNonContiguousSelection;
     mutable bool m_shouldRecalcListItems;
+
+#if !PLATFORM(IOS_FAMILY)
+    RefPtr<PopupMenu> m_popup;
+#endif
+    bool m_popupIsVisible { false };
 };
 
 } // namespace

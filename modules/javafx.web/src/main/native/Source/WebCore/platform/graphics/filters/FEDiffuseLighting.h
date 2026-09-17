@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "FELighting.h"
+#include <WebCore/FELighting.h>
 
 namespace WebCore {
 

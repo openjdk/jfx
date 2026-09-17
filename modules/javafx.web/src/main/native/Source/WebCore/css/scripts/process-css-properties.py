@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 #
 # Copyright (C) 2022-2023 Apple Inc. All rights reserved.
-# Copyright (C) 2024-2025 Samuel Weinig <sam@webkit.org>
+# Copyright (C) 2024-2026 Samuel Weinig <sam@webkit.org>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -182,7 +182,7 @@ class Name(object):
 
     @staticmethod
     def convert_name_to_id(name):
-        return Name.special_case_name_to_id.get(name) or re.sub(r'(^[^-])|-(.)', lambda m: (m[1] or m[2]).upper(), name)
+        return Name.special_case_name_to_id.get(name) or re.sub(r'(^[^-])|-(.)', lambda m: (m[1] or m[2]).upper(), name).replace('.', '_').replace('(', '').replace(')', '')
 
     @property
     def id_without_prefix_with_lowercase_first_letter(self):
@@ -213,6 +213,12 @@ class PropertyName(Name):
 
 
 class ValueKeywordName(Name):
+    special_case_name_to_enum = {
+        'WindRule': { 'Nonzero': 'NonZero', 'Evenodd': 'EvenOdd' },
+        'FlexWrap': { 'Nowrap': 'NoWrap' },
+        'TextDirection': { 'Ltr': 'LTR', 'Rtl': 'RTL' }
+    }
+
     def __init__(self, name):
         super().__init__(name)
 
@@ -233,6 +239,122 @@ class ValueKeywordName(Name):
     @property
     def id(self):
         return f"CSSValueID::CSSValue{self.id_without_prefix}"
+
+    def cpp_enum_literal(self, base):
+        override_id = ValueKeywordName.special_case_name_to_enum.get(base, {}).get(self.id_without_prefix)
+        if override_id:
+            return f"{base}::{override_id}"
+        return f"{base}::{self.id_without_prefix}"
+
+    @property
+    def cpp_literal(self):
+        return f"CSS::Keyword::{self.id_without_prefix} {{ }}"
+
+    @property
+    def requires_using_namespace_css_literals(self):
+        return False
+
+
+class NumericLiteral(object):
+    class Kind(enum.Enum):
+        NUMBER      = ''
+        PERCENTAGE  = '%'
+        PX          = 'px'
+        S           = 's'
+        MS          = 'ms'
+        DEG         = 'deg'
+
+        @staticmethod
+        def from_suffix(suffix):
+            for kind in NumericLiteral.Kind:
+                if kind.value == suffix:
+                    return kind
+            raise Exception(f"Invalid numeric literal suffix: {suffix}")
+
+    def __init__(self, string):
+        match = re.fullmatch(r"(\d+)([a-z%]*)", string)
+        if not match:
+            raise Exception(f"Invalid numeric literal specified: {string}")
+
+        digits, suffix = match.groups()
+        self.digits = digits
+        self.kind = NumericLiteral.Kind.from_suffix(suffix)
+
+    def __str__(self):
+        return f"NumericLiteral {self.digits}{self.kind.value}"
+
+    def __repr__(self):
+        return self.__str__()
+
+    @property
+    def cpp_unit_type(self):
+        if self.kind == NumericLiteral.Kind.NUMBER:
+            return f"CSSUnitType::CSS_NUMBER"
+        elif self.kind == NumericLiteral.Kind.PERCENTAGE:
+            return f"CSSUnitType::CSS_PERCENTAGE"
+        else:
+            return f"CSSUnitType::CSS_{self.kind.value.upper()}"
+
+    @property
+    def cpp_literal(self):
+        if self.kind == NumericLiteral.Kind.NUMBER:
+            return f"{self.digits}_css_number"
+        elif self.kind == NumericLiteral.Kind.PERCENTAGE:
+            return f"{self.digits}_css_percentage"
+        else:
+            return f"{self.digits}_css_{self.kind.value}"
+
+    @property
+    def requires_using_namespace_css_literals(self):
+        return True
+
+
+class SpecialLiteral(Name):
+    def __init__(self, name):
+        super().__init__(name)
+
+    def __str__(self):
+        return f"SpecialLiteral {self.name}"
+
+    def __repr__(self):
+        return self.__str__()
+
+    @property
+    def requires_using_namespace_css_literals(self):
+        return False
+
+
+class InitialValue(object):
+    @staticmethod
+    def process(element):
+        if re.fullmatch(r"[A-Za-z-]+", element):
+            return ValueKeywordName(element)
+        elif re.fullmatch(r"\d+[a-z%]*", element):
+            return NumericLiteral(element)
+        elif re.fullmatch(r"@[A-Za-z-]+", element):
+            return SpecialLiteral(element)
+        else:
+            raise Exception(f"Unknown element '{element}' in initial value")
+
+    def __init__(self, string):
+        self.string = string
+        self.list = [InitialValue.process(element) for element in re.split(r",?\s+", string)]
+
+    def __str__(self):
+        return f"InitialValue {vars(self)}"
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __eq__(self, other):
+        return self.string == other.string
+
+    def __hash__(self):
+        return hash(self.string)
+
+    @property
+    def requires_using_namespace_css_literals(self):
+        return any(element.requires_using_namespace_css_literals for element in self.list)
 
 
 class Status:
@@ -455,30 +577,70 @@ class StylePropertyCodeGenProperties:
         Schema.Entry("accepts-quirky-color", allowed_types=[bool], default_value=False),
         Schema.Entry("accepts-quirky-length", allowed_types=[bool], default_value=False),
         Schema.Entry("aliases", allowed_types=[list], default_value=[]),
-        Schema.Entry("animation-getter", allowed_types=[str]),
-        Schema.Entry("animation-initial", allowed_types=[str]),
-        Schema.Entry("animation-name-for-methods", allowed_types=[str]),
-        Schema.Entry("animation-setter", allowed_types=[str]),
-        Schema.Entry("animation-property", allowed_types=[bool], default_value=False),
-        Schema.Entry("animation-wrapper", allowed_types=[str]),
         Schema.Entry("animation-wrapper-acceleration", allowed_types=[str]),
         Schema.Entry("animation-wrapper-requires-additional-parameters", allowed_types=[list], default_value=[]),
-        Schema.Entry("animation-wrapper-requires-computed-getter", allowed_types=[bool], default_value=False),
+        Schema.Entry("animation-wrapper-requires-getter", allowed_types=[str]),
         Schema.Entry("animation-wrapper-requires-non-additive-or-cumulative-interpolation", allowed_types=[bool], default_value=False),
         Schema.Entry("animation-wrapper-requires-non-normalized-discrete-interpolation", allowed_types=[bool], default_value=False),
         Schema.Entry("animation-wrapper-requires-override-parameters", allowed_types=[list]),
-        Schema.Entry("animation-wrapper-requires-render-style", allowed_types=[bool], default_value=False),
-        Schema.Entry("auto-functions", allowed_types=[bool], default_value=False),
+        Schema.Entry("animation-wrapper-requires-setter", allowed_types=[str]),
+        Schema.Entry("animation-wrapper", allowed_types=[str]),
         Schema.Entry("cascade-alias", allowed_types=[str]),
+        Schema.Entry("color-property-traits-color-custom", allowed_types=[bool], default_value=False),
+        Schema.Entry("color-property-traits-requires-excludes-visited-link-color", allowed_types=[bool], default_value=False),
+        Schema.Entry("color-property-traits-requires-resolving-current-color", allowed_types=[bool], default_value=False),
+        Schema.Entry("color-property-traits-visited-link-color-custom", allowed_types=[bool], default_value=False),
         Schema.Entry("color-property", allowed_types=[bool], default_value=False),
+        Schema.Entry("computed-style-changed-for-animation-custom", allowed_types=[bool], default_value=False),
+        Schema.Entry("computed-style-getter-constexpr", allowed_types=[bool], default_value=False),
+        Schema.Entry("computed-style-getter-custom", allowed_types=[bool], default_value=False),
+        Schema.Entry("computed-style-getter-exported", allowed_types=[bool], default_value=False),
+        Schema.Entry("computed-style-getter-inline", allowed_types=[bool], default_value=True),
+        Schema.Entry("computed-style-getter", allowed_types=[str]),
+        Schema.Entry("computed-style-has-explicitly-set-getter-custom", allowed_types=[bool], default_value=False),
+        Schema.Entry("computed-style-has-explicitly-set-policy", allowed_types=[str]),
+        Schema.Entry("computed-style-has-explicitly-set-setter-custom", allowed_types=[bool], default_value=False),
+        Schema.Entry("computed-style-has-explicitly-set-storage-container", allowed_types=[str], default_value='data'),
+        Schema.Entry("computed-style-has-explicitly-set-storage-name", allowed_types=[str]),
+        Schema.Entry("computed-style-has-explicitly-set-storage-path", allowed_types=[list]),
+        Schema.Entry("computed-style-initial-constexpr", allowed_types=[bool], default_value=False),
+        Schema.Entry("computed-style-initial-custom", allowed_types=[bool], default_value=False),
+        Schema.Entry("computed-style-initial-exported", allowed_types=[bool], default_value=False),
+        Schema.Entry("computed-style-initial-inline", allowed_types=[bool], default_value=True),
+        Schema.Entry("computed-style-initial", allowed_types=[str]),
+        Schema.Entry("computed-style-name-for-methods", allowed_types=[str]),
+        Schema.Entry("computed-style-resolving-current-color-applying-color-filter-exported", allowed_types=[bool], default_value=False),
+        Schema.Entry("computed-style-resolving-current-color-exported", allowed_types=[bool], default_value=False),
+        Schema.Entry("computed-style-setter-constexpr", allowed_types=[bool], default_value=False),
+        Schema.Entry("computed-style-setter-custom", allowed_types=[bool], default_value=False),
+        Schema.Entry("computed-style-setter-exported", allowed_types=[bool], default_value=False),
+        Schema.Entry("computed-style-setter-inline", allowed_types=[bool], default_value=True),
+        Schema.Entry("computed-style-setter-requires-did-set", allowed_types=[bool], default_value=False),
+        Schema.Entry("computed-style-setter-returns-if-changed", allowed_types=[bool], default_value=False),
+        Schema.Entry("computed-style-setter", allowed_types=[str]),
+        Schema.Entry("computed-style-storage-container", allowed_types=[str], default_value='data'),
+        Schema.Entry("computed-style-storage-kind", allowed_types=[str]),
+        Schema.Entry("computed-style-storage-name", allowed_types=[str]),
+        Schema.Entry("computed-style-storage-path", allowed_types=[list]),
+        Schema.Entry("computed-style-type", allowed_types=[str]),
+        Schema.Entry("computed-style-visited-dependent-applying-color-filter-exported", allowed_types=[bool], default_value=False),
+        Schema.Entry("computed-style-visited-dependent-exported", allowed_types=[bool], default_value=False),
+        Schema.Entry("computed-style-visited-link-getter-custom", allowed_types=[bool], default_value=False),
+        Schema.Entry("computed-style-visited-link-resolving-current-color-applying-color-filter-exported", allowed_types=[bool], default_value=False),
+        Schema.Entry("computed-style-visited-link-resolving-current-color-exported", allowed_types=[bool], default_value=False),
+        Schema.Entry("computed-style-visited-link-setter-custom", allowed_types=[bool], default_value=False),
+        Schema.Entry("computed-style-visited-link-storage-container", allowed_types=[str], default_value='data'),
+        Schema.Entry("computed-style-visited-link-storage-name", allowed_types=[str]),
+        Schema.Entry("computed-style-visited-link-storage-path", allowed_types=[list]),
+        Schema.Entry("coordinated-value-list-property-getter", allowed_types=[str]),
+        Schema.Entry("coordinated-value-list-property-initial", allowed_types=[str]),
+        Schema.Entry("coordinated-value-list-property-item-type", allowed_types=[str]),
+        Schema.Entry("coordinated-value-list-property-name-for-methods", allowed_types=[str]),
+        Schema.Entry("coordinated-value-list-property-setter", allowed_types=[str]),
+        Schema.Entry("coordinated-value-list-property", allowed_types=[bool], default_value=False),
         Schema.Entry("disables-native-appearance", allowed_types=[bool], default_value=False),
         Schema.Entry("enable-if", allowed_types=[str]),
         Schema.Entry("fast-path-inherited", allowed_types=[bool], default_value=False),
-        Schema.Entry("fill-layer-getter", allowed_types=[str]),
-        Schema.Entry("fill-layer-initial", allowed_types=[str]),
-        Schema.Entry("fill-layer-name-for-methods", allowed_types=[str]),
-        Schema.Entry("fill-layer-setter", allowed_types=[str]),
-        Schema.Entry("fill-layer-property", allowed_types=[bool], default_value=False),
         Schema.Entry("font-description-getter", allowed_types=[str]),
         Schema.Entry("font-description-initial", allowed_types=[str]),
         Schema.Entry("font-description-name-for-methods", allowed_types=[str]),
@@ -488,37 +650,37 @@ class StylePropertyCodeGenProperties:
         Schema.Entry("internal-only", allowed_types=[bool], default_value=False),
         Schema.Entry("logical-property-group", allowed_types=[dict]),
         Schema.Entry("longhands", allowed_types=[list]),
+        Schema.Entry("medium-priority", allowed_types=[bool], default_value=False),
         Schema.Entry("parser-exported", allowed_types=[bool]),
-        Schema.Entry("parser-function", allowed_types=[str]),
         Schema.Entry("parser-function-allows-number-or-integer-input", allowed_types=[bool], default_value=False),
-        Schema.Entry("parser-grammar", allowed_types=[str]),
-        Schema.Entry("parser-grammar-unused", allowed_types=[str]),
+        Schema.Entry("parser-function", allowed_types=[str]),
         Schema.Entry("parser-grammar-unused-reason", allowed_types=[str]),
+        Schema.Entry("parser-grammar-unused", allowed_types=[str]),
+        Schema.Entry("parser-grammar", allowed_types=[str]),
         Schema.Entry("parser-shorthand", allowed_types=[str]),
-        Schema.Entry("render-style-getter", allowed_types=[str]),
-        Schema.Entry("render-style-initial", allowed_types=[str]),
-        Schema.Entry("render-style-name-for-methods", allowed_types=[str]),
-        Schema.Entry("render-style-setter", allowed_types=[str]),
         Schema.Entry("separator", allowed_types=[str]),
         Schema.Entry("settings-flag", allowed_types=[str]),
-        Schema.Entry("sink-priority", allowed_types=[bool], default_value=False),
-        Schema.Entry("shorthand-pattern", allowed_types=[str]),
         Schema.Entry("shorthand-parser-pattern", allowed_types=[str]),
+        Schema.Entry("shorthand-pattern", allowed_types=[str]),
         Schema.Entry("shorthand-style-extractor-pattern", allowed_types=[str]),
+        Schema.Entry("sink-priority", allowed_types=[bool], default_value=False),
         Schema.Entry("skip-codegen", allowed_types=[bool], default_value=False),
+        Schema.Entry("skip-computed-style-getter", allowed_types=[bool], default_value=False),
+        Schema.Entry("skip-computed-style-initial", allowed_types=[bool], default_value=False),
+        Schema.Entry("skip-computed-style-setter", allowed_types=[bool], default_value=False),
+        Schema.Entry("skip-computed-style", allowed_types=[bool], default_value=False),
         Schema.Entry("skip-parser", allowed_types=[bool], default_value=False),
+        Schema.Entry("skip-render-style-getter", allowed_types=[bool], default_value=False),
+        Schema.Entry("skip-render-style-setter", allowed_types=[bool], default_value=False),
+        Schema.Entry("skip-render-style", allowed_types=[bool], default_value=False),
         Schema.Entry("skip-style-builder", allowed_types=[bool], default_value=False),
         Schema.Entry("skip-style-extractor", allowed_types=[bool], default_value=False),
         Schema.Entry("status", allowed_types=[str]),
-        Schema.Entry("style-builder-conditional-converter", allowed_types=[str]),
-        Schema.Entry("style-builder-converter", allowed_types=[str]),
         Schema.Entry("style-builder-custom", allowed_types=[str]),
-        Schema.Entry("style-converter", allowed_types=[str]),
-        Schema.Entry("style-extractor-converter", allowed_types=[str]),
+        Schema.Entry("style-builder-requires-system-font-shorthand-check", allowed_types=[bool], default_value=False),
         Schema.Entry("style-extractor-custom", allowed_types=[bool], default_value=False),
-        Schema.Entry("svg", allowed_types=[bool], default_value=False),
-        Schema.Entry("top-priority", allowed_types=[bool], default_value=False),
         Schema.Entry("top-priority-reason", allowed_types=[str]),
+        Schema.Entry("top-priority", allowed_types=[bool], default_value=False),
         Schema.Entry("url", allowed_types=[str]),
         Schema.Entry("visited-link-color-support", allowed_types=[bool], default_value=False),
     )
@@ -545,10 +707,7 @@ class StylePropertyCodeGenProperties:
             json_value[f"{family_name}-setter"] = "set" + json_value[f"{family_name}-name-for-methods"]
 
         if f"{family_name}-initial" not in json_value:
-            if family_name == "fill-layer":
-                json_value[f"{family_name}-initial"] = f"initialFill" + json_value[f"{family_name}-name-for-methods"]
-            else:
-                json_value[f"{family_name}-initial"] = f"initial" + json_value[f"{family_name}-name-for-methods"]
+            json_value[f"{family_name}-initial"] = f"initial" + json_value[f"{family_name}-name-for-methods"]
 
     @staticmethod
     def from_json(parsing_context, key_path, name, json_value):
@@ -560,36 +719,96 @@ class StylePropertyCodeGenProperties:
 
         property_name = PropertyName(name)
 
-        StylePropertyCodeGenProperties._complete_name_family(json_value, "render-style", property_name)
-
-        if "fill-layer-property" in json_value:
-            StylePropertyCodeGenProperties._complete_name_family(json_value, "fill-layer", property_name)
+        StylePropertyCodeGenProperties._complete_name_family(json_value, "computed-style", property_name)
 
         if "font-property" in json_value:
             StylePropertyCodeGenProperties._complete_name_family(json_value, "font-description", property_name)
 
-        if "animation-property" in json_value:
-            StylePropertyCodeGenProperties._complete_name_family(json_value, "animation", property_name)
+        if "coordinated-value-list-property" in json_value:
+            StylePropertyCodeGenProperties._complete_name_family(json_value, "coordinated-value-list-property", property_name)
 
         if "animation-wrapper-acceleration" in json_value:
             if json_value["animation-wrapper-acceleration"] not in ['always', 'threaded-only']:
                 raise Exception(f"{key_path} must be either 'always' or 'threaded-only'.")
-            if json_value["animation-wrapper-acceleration"] == 'threaded-only' and not parsing_context.is_enabled(conditional="ENABLE_THREADED_ANIMATION_RESOLUTION"):
+            if json_value["animation-wrapper-acceleration"] == 'threaded-only' and not parsing_context.is_enabled(conditional="ENABLE_THREADED_ANIMATIONS"):
                 json_value["animation-wrapper-acceleration"] = None
+
+        if "computed-style-storage-kind" in json_value:
+            if json_value["computed-style-storage-kind"] not in ['reference', 'value', 'enum', 'raw']:
+                raise Exception(f"{key_path} must be either 'reference', 'value', 'enum' or 'raw'.")
+
+            # Default the `computed-style-initial` function to constexpr if the values is an 'enum' or 'raw'.
+            # FIXME: This should eventually be replaced by inspecting the grammar in inferring 'constexpr' as long as the grammar does not rely on storing a variable number of elements or use <length-percentage>, <custom-ident>, <dashed-ident>, <string>.
+            if "computed-style-initial-constexpr" not in json_value:
+                if json_value["computed-style-storage-kind"] in ['enum', 'raw']:
+                    json_value["computed-style-initial-constexpr"] = True
+
+        if "computed-style-storage-container" in json_value:
+            if json_value["computed-style-storage-container"] not in ['data', 'struct', 'physical-group', 'opaque']:
+                raise Exception(f"{key_path} must be either 'data', 'struct', 'physical-group' or 'opaque'.")
+            if json_value["computed-style-storage-container"] == 'opaque':
+                json_value["computed-style-getter-custom"] = True
+                json_value["computed-style-setter-custom"] = True
+
+        if "computed-style-visited-link-storage-container" in json_value:
+            if json_value["computed-style-visited-link-storage-container"] not in ['data', 'struct', 'physical-group', 'opaque']:
+                raise Exception(f"{key_path} must be either 'data', 'struct', 'physical-group' or 'opaque'.")
+            if json_value["computed-style-visited-link-storage-container"] == 'opaque':
+                json_value["computed-style-visited-link-getter-custom"] = True
+                json_value["computed-style-visited-link-setter-custom"] = True
+
+        if "computed-style-has-explicitly-set-storage-container" in json_value:
+            if json_value["computed-style-has-explicitly-set-storage-container"] not in ['data', 'struct', 'physical-group', 'opaque']:
+                raise Exception(f"{key_path} must be either 'data', 'struct', 'physical-group' or 'opaque'.")
+            if json_value["computed-style-has-explicitly-set-storage-container"] == 'opaque':
+                json_value["computed-style-has-explicitly-set-getter-custom"] = True
+                json_value["computed-style-has-explicitly-set-setter-custom"] = True
+
+        if "computed-style-storage-name" not in json_value:
+            json_value["computed-style-storage-name"] = json_value["computed-style-getter"]
+
+        if "computed-style-visited-link-storage-name" not in json_value:
+            json_value["computed-style-visited-link-storage-name"] = f"visitedLink{json_value['computed-style-name-for-methods']}"
+
+        if "computed-style-has-explicitly-set-storage-name" not in json_value:
+            json_value["computed-style-has-explicitly-set-storage-name"] = f"hasExplicitlySet{json_value['computed-style-name-for-methods']}"
+
+        if "computed-style-has-explicitly-set-policy" in json_value:
+            if json_value["computed-style-has-explicitly-set-policy"] not in ['all-author-origin', 'all-border-radius', 'value-only']:
+                raise Exception(f"{key_path} must be either 'all-author-origin', 'all-border-radius', 'value-only'.")
+
+        # NOTE: `skip-computed-style{...}` implies `skip-render-style{...}` unless `skip-render-style{...}` has been explicitly set.
+        if "skip-computed-style" in json_value:
+            if "skip-computed-style-getter" not in json_value:
+                json_value["skip-computed-style-getter"] = json_value["skip-computed-style"]
+            if "skip-computed-style-initial" not in json_value:
+                json_value["skip-computed-style-initial"] = json_value["skip-computed-style"]
+            if "skip-computed-style-setter" not in json_value:
+                json_value["skip-computed-style-setter"] = json_value["skip-computed-style"]
+            if "skip-computed-style-setter" not in json_value:
+                json_value["skip-computed-style-setter"] = json_value["skip-computed-style"]
+            if "skip-render-style" not in json_value:
+                json_value["skip-render-style"] = json_value["skip-computed-style"]
+
+        if "skip-render-style" in json_value:
+            if "skip-render-style-getter" not in json_value:
+                json_value["skip-render-style-getter"] = json_value["skip-render-style"]
+            if "skip-render-style-setter" in json_value:
+                json_value["skip-render-style-setter"] = json_value["skip-render-style"]
+
+        if "skip-computed-style-getter" in json_value:
+            if "skip-render-style-getter" not in json_value:
+                json_value["skip-render-style-getter"] = json_value["skip-computed-style-getter"]
+
+        if "skip-computed-style-setter" in json_value:
+            if "skip-render-style-setter" not in json_value:
+                json_value["skip-render-style-setter"] = json_value["skip-computed-style-setter"]
 
         if "style-builder-custom" not in json_value:
             json_value["style-builder-custom"] = ""
         elif json_value["style-builder-custom"] == "All":
             json_value["style-builder-custom"] = "Initial|Inherit|Value"
         json_value["style-builder-custom"] = frozenset(json_value["style-builder-custom"].split("|"))
-
-        if "style-converter" in json_value:
-            if "style-builder-converter" in json_value:
-                raise Exception(f"{key_path} can't specify both 'style-converter' and 'style-builder-converter'.")
-            if "style-extractor-converter" in json_value:
-                raise Exception(f"{key_path} can't specify both 'style-converter' and 'style-extractor-converter'.")
-            json_value["style-builder-converter"] = json_value["style-converter"]
-            json_value["style-extractor-converter"] = json_value["style-converter"]
 
         if "shorthand-pattern" in json_value:
             if "shorthand-parser-pattern" in json_value:
@@ -619,10 +838,18 @@ class StylePropertyCodeGenProperties:
                 raise Exception(f"{key_path} is a shorthand, but has top priority.")
             if json_value.get("high-priority", False):
                 raise Exception(f"{key_path} can't have conflicting top/high priority.")
+            if json_value.get("medium-priority", False):
+                raise Exception(f"{key_path} can't have conflicting top/medium priority.")
 
         if json_value.get("high-priority", False):
+            if json_value.get("medium-priority", False):
+                raise Exception(f"{key_path} can't have conflicting high/medium priority.")
             if json_value.get("longhands"):
                 raise Exception(f"{key_path} is a shorthand, but has high priority.")
+
+        if json_value.get("medium-priority", False):
+            if json_value.get("longhands"):
+                raise Exception(f"{key_path} is a shorthand, but has medium priority.")
 
         if json_value.get("sink-priority", False):
             if json_value.get("longhands") is not None:
@@ -732,7 +959,9 @@ class StyleProperty:
             if not (codegen_properties.is_logical or codegen_properties.longhands):
                 raise Exception(f"'{name}' must specify an 'animation-type'.")
 
-        if "initial" not in json_value:
+        if "initial" in json_value:
+            json_value["initial"] = InitialValue(json_value["initial"])
+        else:
             if not (codegen_properties.is_logical or codegen_properties.longhands or codegen_properties.cascade_alias or codegen_properties.skip_style_builder):
                 raise Exception(f"'{name}' must specify 'initial'.")
 
@@ -814,6 +1043,12 @@ class StyleProperty:
     def id(self):
         return self.property_name.id
 
+    @property
+    def id_or_cascade_alias_id(self):
+        if self.codegen_properties.cascade_alias:
+            return self.codegen_properties.cascade_alias.id
+        return self.id
+
     # Used for parsing and consume methods. It is prefixed with a 'kind' for descriptors, and left un-prefixed for style properties.
     # Examples:
     #       style property 'column-width' would generate a consume method called `consumeColumnWidth`
@@ -848,47 +1083,169 @@ class StyleProperty:
 
         return False
 
-    # Specialized properties to compute method names.
+    @property
+    def is_animatable(self):
+        NOT_ANIMATABLE_TYPES = [
+            'not animatable',
+            'not animatable (needs triage)',
+            'not animatable (legacy)',
+            'not animatable (internal)'
+        ]
+        return self.animation_type not in NOT_ANIMATABLE_TYPES
+
+    # Specialized accessors for coordinated list value properties.
 
     @property
-    def method_name_for_ensure_animations_or_transitions(self):
+    def method_name_for_ensure_coordinated_value_list(self):
         if "animation-" in self.name:
             return "ensureAnimations"
         if "transition-" in self.name:
             return "ensureTransitions"
-        raise Exception(f"Unrecognized animation or transition property name: '{self.name}")
-
-    @property
-    def method_name_for_animations_or_transitions(self):
-        if "animation-" in self.name:
-            return "animations"
-        if "transition-" in self.name:
-            return "transitions"
-        raise Exception(f"Unrecognized animation or transition property name: '{self.name}")
-
-    @property
-    def method_name_for_ensure_layers(self):
         if "background-" in self.name:
             return "ensureBackgroundLayers"
         if "mask-" in self.name:
             return "ensureMaskLayers"
-        raise Exception(f"Unrecognized FillLayer property name: '{self.name}")
+        raise Exception(f"Unrecognized coordinated list value property name: '{self.name}")
 
     @property
-    def method_name_for_layers(self):
+    def method_name_for_get_coordinated_value_list(self):
+        if "animation-" in self.name:
+            return "animations"
+        if "transition-" in self.name:
+            return "transitions"
         if "background-" in self.name:
             return "backgroundLayers"
         if "mask-" in self.name:
             return "maskLayers"
-        raise Exception(f"Unrecognized FillLayer property name: '{self.name}")
+        raise Exception(f"Unrecognized coordinated list value property name: '{self.name}")
 
     @property
-    def enum_name_for_layers_type(self):
+    def method_name_for_set_coordinated_value_list(self):
+        if "animation-" in self.name:
+            return "setAnimations"
+        if "transition-" in self.name:
+            return "setTransitions"
         if "background-" in self.name:
-            return "FillLayerType::Background"
+            return "setBackgroundLayers"
         if "mask-" in self.name:
-            return "FillLayerType::Mask"
-        raise Exception(f"Unrecognized FillLayer property name: '{self.name}")
+            return "setMaskLayers"
+        raise Exception(f"Unrecognized coordinated list value property name: '{self.name}")
+
+    @property
+    def method_name_for_initial_coordinated_value_list(self):
+        if "animation-" in self.name:
+            return "initialAnimations"
+        if "transition-" in self.name:
+            return "initialTransitions"
+        if "background-" in self.name:
+            return "initialBackgroundLayers"
+        if "mask-" in self.name:
+            return "initialMaskLayers"
+        raise Exception(f"Unrecognized coordinated list value property name: '{self.name}")
+
+    @property
+    def type_name_for_coordinated_value_list(self):
+        if "animation-" in self.name:
+            return "Animations"
+        if "transition-" in self.name:
+            return "Transitions"
+        if "background-" in self.name:
+            return "BackgroundLayers"
+        if "mask-" in self.name:
+            return "MaskLayers"
+        raise Exception(f"Unrecognized coordinated list value property name: '{self.name}")
+
+    # Computes the return type of the getter.
+    @property
+    def getter_return_type(self):
+        if self.codegen_properties.computed_style_storage_kind == 'reference':
+            return f"const {self.codegen_properties.computed_style_type}&"
+        return f"{self.codegen_properties.computed_style_type}"
+
+    # Computes the argument type of the setter.
+    @property
+    def setter_argument_type(self):
+        if self.codegen_properties.computed_style_storage_kind == 'reference':
+            return f"{self.codegen_properties.computed_style_type}&&"
+        return f"{self.codegen_properties.computed_style_type}"
+
+    # Computes the return type of the setter.
+    @property
+    def setter_return_type(self):
+        if self.codegen_properties.computed_style_setter_returns_if_changed:
+            return f"bool"
+        return f"void"
+
+    # Computes the return type of the initial.
+    @property
+    def initial_return_type(self):
+        return f"{self.codegen_properties.computed_style_type}"
+
+    # Computes the function specifiers, if any, of the getter's declaration.
+    @property
+    def getter_declaration_function_specifiers(self):
+        function_specifiers = []
+        if self.codegen_properties.computed_style_getter_constexpr:
+            function_specifiers += ['constexpr']
+        elif self.codegen_properties.computed_style_getter_inline:
+            function_specifiers += ['inline']
+        elif self.codegen_properties.computed_style_getter_exported:
+            function_specifiers += ['WEBCORE_EXPORT']
+        return function_specifiers
+
+    # Computes the function specifiers, if any, of the getter's definition.
+    @property
+    def getter_definition_function_specifiers(self):
+        function_specifiers = []
+        if self.codegen_properties.computed_style_getter_constexpr:
+            function_specifiers += ['constexpr']
+        elif self.codegen_properties.computed_style_getter_inline:
+            function_specifiers += ['inline']
+        return function_specifiers
+
+    # Computes the function specifiers, if any, of the setter's declaration.
+    @property
+    def setter_declaration_function_specifiers(self):
+        function_specifiers = []
+        if self.codegen_properties.computed_style_setter_constexpr:
+            function_specifiers += ['constexpr']
+        elif self.codegen_properties.computed_style_setter_inline:
+            function_specifiers += ['inline']
+        elif self.codegen_properties.computed_style_setter_exported:
+            function_specifiers += ['WEBCORE_EXPORT']
+        return function_specifiers
+
+    # Computes the function specifiers, if any, of the setter's definition.
+    @property
+    def setter_definition_function_specifiers(self):
+        function_specifiers = []
+        if self.codegen_properties.computed_style_setter_constexpr:
+            function_specifiers += ['constexpr']
+        elif self.codegen_properties.computed_style_setter_inline:
+            function_specifiers += ['inline']
+        return function_specifiers
+
+    # Computes the function specifiers, if any, of the initial's declaration.
+    @property
+    def initial_declaration_function_specifiers(self):
+        function_specifiers = ["static"]
+        if self.codegen_properties.computed_style_initial_constexpr:
+            function_specifiers += ['constexpr']
+        elif self.codegen_properties.computed_style_initial_inline:
+            function_specifiers += ['inline']
+        elif self.codegen_properties.computed_style_initial_exported:
+            function_specifiers += ['WEBCORE_EXPORT']
+        return function_specifiers
+
+    # Computes the function specifiers, if any, of the initial's definition.
+    @property
+    def initial_definition_function_specifiers(self):
+        function_specifiers = []
+        if self.codegen_properties.computed_style_initial_constexpr:
+            function_specifiers += ['constexpr']
+        elif self.codegen_properties.computed_style_initial_inline:
+            function_specifiers += ['inline']
+        return function_specifiers
 
 
 class StyleProperties:
@@ -1009,6 +1366,14 @@ class StyleProperties:
         if not a_is_high_priority and b_is_high_priority:
             return 1
 
+        # Sort longhands with medium priority to the front
+        a_is_medium_priority = a.codegen_properties.medium_priority
+        b_is_medium_priority = b.codegen_properties.medium_priority
+        if a_is_medium_priority and not b_is_medium_priority:
+            return -1
+        if not a_is_medium_priority and b_is_medium_priority:
+            return 1
+
         # Sort logical longhands in a logical property group to the back, before shorthands.
         a_is_in_logical_property_group_logical = a.codegen_properties.logical_property_group and a.codegen_properties.logical_property_group.logic == 'logical'
         b_is_in_logical_property_group_logical = b.codegen_properties.logical_property_group and b.codegen_properties.logical_property_group.logic == 'logical'
@@ -1079,6 +1444,7 @@ class DescriptorCodeGenProperties:
         # By defining these to None, we can utilize the shared sorting method, StyleProperties._sort_by_descending_priority_and_name.
         self.top_priority = None
         self.high_priority = None
+        self.medium_priority = None
         self.sink_priority = None
         self.logical_property_group = None
 
@@ -1299,6 +1665,27 @@ class Descriptors:
         return itertools.chain.from_iterable(descriptor_set.all for descriptor_set in self.descriptor_sets)
 
 
+class ComputedStyleStorageTreeNode:
+    def __init__(self, name):
+        self.name = name
+        self.kind = "data"
+        self.children = {}
+        self.properties = []
+        self.visited_link_properties = []
+
+    def __str__(self):
+        return f"ComputedStyleStorageTreeNode {vars(self)}"
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __eq__(self, other):
+        return self.name == other.name
+
+    def __hash__(self):
+        return hash(self.name)
+
+
 class PropertiesAndDescriptors:
     def __init__(self, style_properties, descriptors):
         self.style_properties = style_properties
@@ -1307,6 +1694,7 @@ class PropertiesAndDescriptors:
         self._all_by_name = None
         self._all_unique = None
         self._settings_flags = None
+        self._computed_style_storage_model = None
 
     def __str__(self):
         return "PropertiesAndDescriptors"
@@ -1347,6 +1735,53 @@ class PropertiesAndDescriptors:
         # the current behavior and has no negative side effect. In the future, we should either separate
         # the descriptors out of CSSPropertyID or the descriptor-only ones together in some fashion.
         return sorted(result, key=functools.cmp_to_key(StyleProperties._sort_by_descending_priority_and_name))
+
+    def _compute_computed_style_storage_model(self):
+        root = ComputedStyleStorageTreeNode('ComputedStyle')
+
+        for property in self.style_properties.all:
+            if property.codegen_properties.skip_computed_style:
+                continue
+            if property.codegen_properties.is_logical:
+                continue
+            if property.codegen_properties.longhands:
+                continue
+            if property.codegen_properties.cascade_alias:
+                continue
+
+            if not property.codegen_properties.computed_style_storage_path:
+                raise Exception(f"Missing ComputedStyle storage path for property {property.id}.")
+
+            tree_node = root
+            for path_entry in property.codegen_properties.computed_style_storage_path:
+                path_entry_node = ComputedStyleStorageTreeNode(path_entry)
+
+                if path_entry_node.name not in tree_node.children:
+                    tree_node.children.update({ path_entry_node.name: path_entry_node })
+                tree_node = tree_node.children[path_entry_node.name]
+
+            if tree_node.kind != "data" and tree_node.kind != property.codegen_properties.computed_style_storage_container:
+                raise Exception(f"Storage container '{'/'.join(property.codegen_properties.computed_style_storage_path)}' has multiple container kinds specified: '{tree_node.kind}' and '{property.codegen_properties.computed_style_storage_container}'")
+
+            tree_node.kind = property.codegen_properties.computed_style_storage_container
+            tree_node.properties.append(property)
+
+            if property.codegen_properties.computed_style_visited_link_storage_path:
+                tree_node = root
+                for path_entry in property.codegen_properties.computed_style_visited_link_storage_path:
+                    path_entry_node = ComputedStyleStorageTreeNode(path_entry)
+
+                    if path_entry_node.name not in tree_node.children:
+                        tree_node.children.update({ path_entry_node.name: path_entry_node })
+                    tree_node = tree_node.children[path_entry_node.name]
+
+                if tree_node.kind != "data" and tree_node.kind != property.codegen_properties.computed_style_visited_link_storage_container:
+                    raise Exception(f"Storage container '{'/'.join(property.codegen_properties.computed_style_visited_link_storage_path)}' has multiple container kinds specified: '{tree_node.kind}' and '{property.codegen_properties.computed_style_visited_link_storage_container}'")
+
+                tree_node.kind = property.codegen_properties.computed_style_visited_link_storage_container
+                tree_node.visited_link_properties.append(property)
+
+        return root
 
     # Returns a generator for the set of all properties and descriptors.
     @property
@@ -1410,6 +1845,13 @@ class PropertiesAndDescriptors:
         if not self._settings_flags:
             self._settings_flags = sorted(list(set([property.codegen_properties.settings_flag for property in self.all_properties_and_descriptors if property.codegen_properties.settings_flag])))
         return self._settings_flags
+
+    # Returns a tree representing the storage structure underlying RenderStyle.
+    @property
+    def computed_style_storage_model(self):
+        if not self._computed_style_storage_model:
+            self._computed_style_storage_model = self._compute_computed_style_storage_model()
+        return self._computed_style_storage_model
 
 
 # MARK: - Property Parsing
@@ -2791,6 +3233,15 @@ class GenerationContext:
             to.write(f"class {class_};")
         to.newline()
 
+    def generate_function_declaration(self, *, to, function_specifiers=[], return_type, function_name, argument_types=[], function_qualifiers=[]):
+        to.write(
+              f"{''.join(map(lambda x: x + ' ', function_specifiers))}"
+            + f"{return_type} "
+            + f"{function_name}"
+            + f"({', '.join(argument_types)})"
+            + f"{''.join(map(lambda x: ' ' + x, function_qualifiers))};"
+        )
+
     def generate_property_id_switch_function(self, *, to, signature, iterable, mapping, default, mapping_to_property=lambda p: p, prologue=None, epilogue=None):
         to.write(f"{signature}")
         to.write(f"{{")
@@ -2851,6 +3302,112 @@ class GenerationContext:
         to.write(f"}})();")
         to.newline()
 
+
+# Generates `CSSPropertyInitialValuesGeneratedInlines.h`.
+class GenerateCSSPropertyInitialValues:
+    def __init__(self, generation_context):
+        self.generation_context = generation_context
+
+    @property
+    def properties_and_descriptors(self):
+        return self.generation_context.properties_and_descriptors
+
+    @property
+    def properties(self):
+        return self.generation_context.properties_and_descriptors.style_properties
+
+    def generate(self):
+        self.generate_css_property_initial_values_generated_inlines_h()
+
+    # MARK: - Helper generator functions for CSSPropertyInitialValuesGeneratedInlines.h
+
+    def _generate_css_property_initial_values_generated_inlines_h_types(self, *, to):
+        to.write(f"struct InitialNumericValue {{")
+        with to.indent():
+            to.write(f"double number;")
+            to.write(f"CSSUnitType type {{ CSSUnitType::CSS_NUMBER }};")
+        to.write(f"}};")
+        to.newline()
+
+        to.write(f"using InitialValue = Variant<CSSValueID, InitialNumericValue>;")
+        to.newline()
+
+    def _generate_css_property_initial_values_generated_inlines_h_initial_value_for_longhand(self, *, to):
+        to.write(f"static constexpr InitialValue initialValueForLonghand(CSSPropertyID longhand)")
+        to.write(f"{{")
+        with to.indent():
+            to.write(f"switch (longhand) {{")
+
+            initial_value_to_property_list = {}
+            for property in self.properties_and_descriptors.style_properties.all_non_shorthands:
+                if property.codegen_properties.internal_only:
+                    continue
+                if property.initial is None:
+                    if self.generation_context.verbose:
+                        to.write(f"// Skipping {property.id_without_scope}, initial is None")
+                    continue
+                if len(property.initial.list) != 1:
+                    if self.generation_context.verbose:
+                        to.write(f"// Skipping {property.id_without_scope}, initial is a list with multiple values {property.initial.list}")
+                    continue
+                if isinstance(property.initial.list[0], SpecialLiteral):
+                    if self.generation_context.verbose:
+                        to.write(f"// Skipping {property.id_without_scope}, initial is a special value {property.initial.list}")
+                    continue
+                initial_value_to_property_list.setdefault(property.initial, [])
+                initial_value_to_property_list[property.initial].append(property)
+
+            for initial, group in initial_value_to_property_list.items():
+                for property in sorted(group, key=lambda x: x.id):
+                    to.write(f"case {property.id}:")
+
+                with to.indent():
+                    if isinstance(initial.list[0], NumericLiteral):
+                        to.write(f"return InitialNumericValue {{ {initial.list[0].digits}, {initial.list[0].cpp_unit_type} }};")
+                    elif isinstance(initial.list[0], ValueKeywordName):
+                        to.write(f"return {initial.list[0].id_without_scope};")
+
+            to.write(f"default:")
+            with to.indent():
+                to.write(f"RELEASE_ASSERT_NOT_REACHED();")
+
+            to.write(f"}}")
+        to.write(f"}}")
+
+    def generate_css_property_initial_values_generated_inlines_h(self):
+        with open('CSSPropertyInitialValuesGeneratedInlines.h', 'w') as output_file:
+            writer = Writer(output_file)
+
+            self.generation_context.generate_heading(
+                to=writer
+            )
+
+            self.generation_context.generate_required_header_pragma(
+                to=writer
+            )
+
+            self.generation_context.generate_includes(
+                to=writer,
+                headers=[
+                    "CSSPropertyNames.h",
+                    "CSSUnits.h",
+                    "CSSValueKeywords.h",
+                ],
+                system_headers=[
+                    "<wtf/Variant.h>",
+                ]
+            )
+
+            with self.generation_context.namespace("WebCore", to=writer):
+                self._generate_css_property_initial_values_generated_inlines_h_types(
+                    to=writer
+                )
+
+                self._generate_css_property_initial_values_generated_inlines_h_initial_value_for_longhand(
+                    to=writer
+                )
+
+
 # Generates `CSSPropertyNames.h` and `CSSPropertyNames.cpp`.
 class GenerateCSSPropertyNames:
     def __init__(self, generation_context):
@@ -2896,7 +3453,10 @@ class GenerateCSSPropertyNames:
             to=to,
             headers=[
                 "BoxSides.h",
+                "CSSParserContext.h",
                 "CSSProperty.h",
+                "CSSValueKeywords.h",
+                "DeprecatedGlobalSettings.h",
                 "Settings.h",
             ],
             system_headers=[
@@ -2967,11 +3527,22 @@ class GenerateCSSPropertyNames:
             """)
 
     def _generate_gperf_keywords(self, *, to):
-        # Concatenates a list of unique 'property-name, property-id' strings with a second list of all 'property-alias, property-id' strings.
-        all_property_names_and_aliases_with_ids = itertools.chain(
-              [f'{property.name}, {property.id}'                        for property in self.properties_and_descriptors.all_unique],
-            *[[f'{alias}, {property.id}' for alias in property.aliases] for property in self.properties_and_descriptors.all_properties_and_descriptors]
-        )
+        # Use a set to automatically deduplicate entries that would cause gperf
+        # hash collisions. This handles cases where the same alias (like
+        # "font-stretch") is defined multiple times.
+        all_entries_set = set()
+
+        # Add unique property names.
+        for property in self.properties_and_descriptors.all_unique:
+            all_entries_set.add(f'{property.name}, {property.id}')
+
+        # Add aliases.
+        for property in self.properties_and_descriptors.all_properties_and_descriptors:
+            for alias in property.aliases:
+                all_entries_set.add(f'{alias}, {property.id}')
+
+        # Sort for consistent output.
+        all_property_names_and_aliases_with_ids = sorted(all_entries_set)
 
         to.write("%%")
         to.write_lines(all_property_names_and_aliases_with_ids)
@@ -3012,7 +3583,7 @@ class GenerateCSSPropertyNames:
 
             String nameForIDL(CSSPropertyID id)
             {
-                LChar characters[maxCSSPropertyNameLength];
+                Latin1Character characters[maxCSSPropertyNameLength];
                 const char* nameForCSS = nameLiteral(id);
                 if (!nameForCSS)
                     return emptyString();
@@ -3028,7 +3599,7 @@ class GenerateCSSPropertyNames:
                     }
                     *nextCharacter++ = character;
                 }
-                return std::span<const LChar> { characters, nextCharacter };
+                return std::span<const Latin1Character> { characters, nextCharacter };
             }
 
             """)
@@ -3219,7 +3790,7 @@ class GenerateCSSPropertyNames:
 
                 to.write(f"}};")
 
-                to.write(f"if (settings.threadedAnimationResolutionEnabled())")
+                to.write(f"if (settings.threadedScrollDrivenAnimationsEnabled() || settings.threadedTimeBasedAnimationsEnabled())")
                 with to.indent():
                     to.write(f"return std::span<const CSSPropertyID> {{ propertiesIncludingThreadedOnly }};")
 
@@ -3277,6 +3848,138 @@ class GenerateCSSPropertyNames:
             }
             """)
 
+    def _generate_valid_keywords_for_property(self, *, to):
+        # Generate static arrays of valid keyword CSSValueIDs for each property
+        # that has a 'values' array in CSSProperties.json. This is used by the
+        # Inspector to provide completions for properties that aren't keyword-fast-path
+        # eligible but still have enumerated values.
+
+        # First, collect all properties with values and generate static arrays for them
+        properties_with_values = []
+        seen_array_names = set()
+        for prop in self.properties_and_descriptors.style_properties.all:
+            if hasattr(prop, 'values') and prop.values:
+                # Filter to only include values that have a valid keyword_term (actual keywords)
+                keyword_values = [value for value in prop.values if hasattr(value, 'value_keyword_name') and value.value_keyword_name]
+                if keyword_values:
+                    array_name = f"validKeywordsFor{prop.property_name.name_for_methods}"
+                    # Skip if we've already generated an array with this name (handles aliases)
+                    if array_name not in seen_array_names:
+                        seen_array_names.add(array_name)
+                        properties_with_values.append((prop, keyword_values, array_name))
+
+        # Generate static arrays for each property with values
+        for prop, keywordValues, array_name in properties_with_values:
+            value_ids = [value.value_keyword_name.id for value in keywordValues]
+            to.write(f"static constexpr std::array {array_name} {{")
+            with to.indent():
+                for value_id in value_ids:
+                    to.write(f"{value_id},")
+            to.write("};")
+            to.newline()
+
+        # Generate the switch function - include all properties, even those with duplicate array names
+        all_properties_with_values = []
+        for prop in self.properties_and_descriptors.style_properties.all:
+            if hasattr(prop, 'values') and prop.values:
+                keyword_values = [value for value in prop.values if hasattr(value, 'value_keyword_name') and value.value_keyword_name]
+                if keyword_values:
+                    array_name = f"validKeywordsFor{prop.property_name.name_for_methods}"
+                    all_properties_with_values.append((prop, keyword_values, array_name))
+
+        to.write("std::span<const CSSValueID> CSSProperty::validKeywordsForProperty(CSSPropertyID id)")
+        to.write("{")
+        with to.indent():
+            to.write("switch (id) {")
+            for prop, keyword_values, array_name in all_properties_with_values:
+                to.write(f"case {prop.id}:")
+                with to.indent():
+                    to.write(f"return std::span<const CSSValueID> {{ {array_name} }};")
+            to.write("default:")
+            with to.indent():
+                to.write("return { };")
+            to.write("}")
+        to.write("}")
+        to.newline()
+
+        # Generate isKeywordValidForPropertyValues function to check settings flags.
+        # This is used by the Inspector to filter keywords based on enabled settings.
+
+        # Collect properties that have any keywords with settings-flags
+        properties_with_settings_flags = []
+        for prop, keyword_values, array_name in all_properties_with_values:
+            # Check if any keyword has a settings_flag
+            keywords_with_flags = [(value, value.settings_flag) for value in keyword_values if value.settings_flag]
+            if keywords_with_flags:
+                properties_with_settings_flags.append((prop, keyword_values))
+
+        # Generate helper functions for properties with settings-flagged keywords
+        for prop, keyword_values in properties_with_settings_flags:
+            func_name = f"isKeywordValidFor{prop.property_name.name_for_methods}Values"
+            to.write(f"static bool {func_name}(CSSValueID keyword, const CSSParserContext& context)")
+            to.write("{")
+            with to.indent():
+                to.write("switch (keyword) {")
+
+                # Group keywords by their settings_flag (or lack thereof)
+                # Keywords without settings_flag always return true
+                keywords_without_flag = [value for value in keyword_values if not value.settings_flag]
+                keywords_with_flag = [value for value in keyword_values if value.settings_flag]
+
+                if keywords_without_flag:
+                    for value in keywords_without_flag:
+                        to.write(f"case {value.value_keyword_name.id}:")
+                    with to.indent():
+                        to.write("return true;")
+
+                # Group keywords by their settings_flag for efficient switch generation
+                from collections import defaultdict
+                flag_to_keywords = defaultdict(list)
+                for value in keywords_with_flag:
+                    flag_to_keywords[value.settings_flag].append(value)
+
+                for flag, keywordValues in flag_to_keywords.items():
+                    for value in keywordValues:
+                        to.write(f"case {value.value_keyword_name.id}:")
+                    with to.indent():
+                        # Check if this is a function call (e.g., DeprecatedGlobalSettings::attachmentElementEnabled())
+                        if "::" in flag or "(" in flag:
+                            to.write(f"return {flag};")
+                        else:
+                            to.write(f"return context.{flag};")
+
+                to.write("default:")
+                with to.indent():
+                    to.write("return false;")
+                to.write("}")
+            to.write("}")
+            to.newline()
+
+        # Generate the main isKeywordValidForPropertyValues switch function
+        to.write("bool CSSProperty::isKeywordValidForPropertyValues(CSSPropertyID id, CSSValueID keyword, const CSSParserContext& context)")
+        to.write("{")
+        with to.indent():
+            to.write("switch (id) {")
+
+            for prop, keyword_values, array_name in all_properties_with_values:
+                to.write(f"case {prop.id}:")
+                with to.indent():
+                    # Check if this property has any keywords with settings flags
+                    has_settings_flags = any(value.settings_flag for value in keyword_values)
+                    if has_settings_flags:
+                        func_name = f"isKeywordValidFor{prop.property_name.name_for_methods}Values"
+                        to.write(f"return {func_name}(keyword, context);")
+                    else:
+                        # No settings flags, just check if keyword is in the valid set
+                        to.write(f"return std::ranges::find({array_name}, keyword) != {array_name}.end();")
+
+            to.write("default:")
+            with to.indent():
+                to.write("return false;")
+            to.write("}")
+        to.write("}")
+        to.newline()
+
     def _term_matches_number_or_integer(self, term):
         if isinstance(term, MatchOneTerm):
             return any(self._term_matches_number_or_integer(inner_term) for inner_term in term.subterms)
@@ -3324,7 +4027,7 @@ class GenerateCSSPropertyNames:
 
     def _property_is_accelerated_return_clause(self, p):
         if p.codegen_properties.animation_wrapper_acceleration == 'threaded-only':
-            return "settings.threadedAnimationResolutionEnabled()"
+            return "settings.threadedScrollDrivenAnimationsEnabled() || settings.threadedTimeBasedAnimationsEnabled()"
         return "true"
 
     def generate_css_property_names_gperf(self):
@@ -3502,6 +4205,10 @@ class GenerateCSSPropertyNames:
                 to=writer
             )
 
+            self._generate_valid_keywords_for_property(
+                to=writer
+            )
+
             self._generate_css_property_names_gperf_footing(
                 to=writer
             )
@@ -3523,6 +4230,8 @@ class GenerateCSSPropertyNames:
             last_top_priority_property = None
             first_high_priority_property = None
             last_high_priority_property = None
+            first_medium_priority_property = None
+            last_medium_priority_property = None
             first_low_priority_property = None
             last_low_priority_property = None
             first_logical_group_physical_property = None
@@ -3543,6 +4252,10 @@ class GenerateCSSPropertyNames:
                     if not first_high_priority_property:
                         first_high_priority_property = property
                     last_high_priority_property = property
+                elif property.codegen_properties.medium_priority:
+                    if not first_medium_priority_property:
+                        first_medium_priority_property = property
+                    last_medium_priority_property = property
                 elif not property.codegen_properties.logical_property_group:
                     if not first_low_priority_property:
                         first_low_priority_property = property
@@ -3585,6 +4298,8 @@ class GenerateCSSPropertyNames:
         to.write(f"constexpr auto lastTopPriorityProperty = {last_top_priority_property.id};")
         to.write(f"constexpr auto firstHighPriorityProperty = {first_high_priority_property.id};")
         to.write(f"constexpr auto lastHighPriorityProperty = {last_high_priority_property.id};")
+        to.write(f"constexpr auto firstMediumPriorityProperty = {first_medium_priority_property.id};")
+        to.write(f"constexpr auto lastMediumPriorityProperty = {last_medium_priority_property.id};")
         to.write(f"constexpr auto firstLowPriorityProperty = {first_low_priority_property.id};")
         to.write(f"constexpr auto lastLowPriorityProperty = {last_low_priority_property.id};")
         to.write(f"constexpr auto firstLogicalGroupPhysicalProperty = {first_logical_group_physical_property.id};")
@@ -3596,8 +4311,17 @@ class GenerateCSSPropertyNames:
         to.write(f"constexpr auto firstShorthandProperty = {first_shorthand_property.id};")
         to.write(f"constexpr auto lastShorthandProperty = {last_shorthand_property.id};")
         to.write(f"constexpr uint16_t numCSSPropertyLonghands = firstShorthandProperty - firstCSSProperty;")
+        to.newline()
 
         to.write(f"extern const std::array<CSSPropertyID, {count_iterable(self.properties_and_descriptors.style_properties.all_computed)}> computedPropertyIDs;")
+        to.newline()
+
+        to.write(f"template<CSSPropertyID C> struct PropertyNameConstant {{")
+        with to.indent():
+            to.write(f"static constexpr auto value = C;")
+            to.write(f"constexpr bool operator==(const PropertyNameConstant&) const = default;")
+            to.write(f"constexpr bool operator==(CSSPropertyID other) const {{ return value == other; }}")
+        to.write(f"}};")
         to.newline()
 
     def _generate_css_property_names_h_property_settings(self, *, to):
@@ -3919,160 +4643,64 @@ class GenerateStyleBuilderGenerated:
 
     # MARK: - Helper generator functions for StyleBuilderGenerated.cpp
 
+    def _converted_value(self, property, additional_parameters=[]):
+        parameters = ['builderState', 'value'] + additional_parameters
+        return f"toStyleFromCSSValue<{property.codegen_properties.computed_style_type}>({', '.join(parameters)})"
+
     # Color property setters.
 
-    def _generate_color_property_initial_value_setter(self, to, property):
-        if property.codegen_properties.render_style_initial == "currentColor":
-            initial_function = "Style::Color::currentColor"
-        else:
-            initial_function = "RenderStyle::" + property.codegen_properties.render_style_initial
+    def _generate_visited_link_color_supporting_property_initial_value_setter(self, to, property):
+        initial_function = "Style::ComputedStyle::" + property.codegen_properties.computed_style_initial
         to.write(f"if (builderState.applyPropertyToRegularStyle())")
-        to.write(f"    builderState.style().{property.codegen_properties.render_style_setter}({initial_function}());")
+        to.write(f"    builderState.style().{property.codegen_properties.computed_style_setter}({initial_function}());")
         to.write(f"if (builderState.applyPropertyToVisitedLinkStyle())")
-        to.write(f"    builderState.style().setVisitedLink{property.codegen_properties.render_style_name_for_methods}({initial_function}());")
+        to.write(f"    builderState.style().setVisitedLink{property.codegen_properties.computed_style_name_for_methods}({initial_function}());")
 
-    def _generate_color_property_inherit_value_setter(self, to, property):
+    def _generate_visited_link_color_supporting_property_inherit_value_setter(self, to, property):
         to.write(f"if (builderState.applyPropertyToRegularStyle())")
-        to.write(f"    builderState.style().{property.codegen_properties.render_style_setter}(forwardInheritedValue(builderState.parentStyle().{property.codegen_properties.render_style_getter}()));")
+        to.write(f"    builderState.style().{property.codegen_properties.computed_style_setter}(forwardInheritedValue(builderState.parentStyle().{property.codegen_properties.computed_style_getter}()));")
         to.write(f"if (builderState.applyPropertyToVisitedLinkStyle())")
-        to.write(f"    builderState.style().setVisitedLink{property.codegen_properties.render_style_name_for_methods}(forwardInheritedValue(builderState.parentStyle().{property.codegen_properties.render_style_getter}()));")
+        to.write(f"    builderState.style().setVisitedLink{property.codegen_properties.computed_style_name_for_methods}(forwardInheritedValue(builderState.parentStyle().{property.codegen_properties.computed_style_getter}()));")
 
-    def _generate_color_property_value_setter(self, to, property, value):
+    def _generate_visited_link_color_supporting_property_value_setter(self, to, property):
         to.write(f"if (builderState.applyPropertyToRegularStyle())")
-        to.write(f"    builderState.style().{property.codegen_properties.render_style_setter}(BuilderConverter::convertStyleType<Color>(builderState, {value}, ForVisitedLink::No));")
+        to.write(f"    builderState.style().{property.codegen_properties.computed_style_setter}({self._converted_value(property, ['ForVisitedLink::No'])});")
         to.write(f"if (builderState.applyPropertyToVisitedLinkStyle())")
-        to.write(f"    builderState.style().setVisitedLink{property.codegen_properties.render_style_name_for_methods}(BuilderConverter::convertStyleType<Color>(builderState, {value}, ForVisitedLink::Yes));")
+        to.write(f"    builderState.style().setVisitedLink{property.codegen_properties.computed_style_name_for_methods}({self._converted_value(property, ['ForVisitedLink::Yes'])});")
 
-    # Animation property setters.
+    # CoordinatedValueList property setters.
 
-    def _generate_animation_property_initial_value_setter(self, to, property):
-        to.write(f"auto& list = builderState.style().{property.method_name_for_ensure_animations_or_transitions}();")
-        to.write(f"if (list.isEmpty())")
-        to.write(f"    list.append(Animation::create());")
-        to.write(f"list.animation(0).{property.codegen_properties.animation_setter}(Animation::{property.codegen_properties.animation_initial}());")
-        to.write(f"for (auto& animation : list)")
-        to.write(f"    animation->clear{property.codegen_properties.animation_name_for_methods}();")
+    def _generate_coordinated_value_list_property_initial_value_setter(self, to, property):
+        to.write(f"applyInitialCoordinatedValueListProperty<{property.id_or_cascade_alias_id}, &ComputedStyle::{property.method_name_for_ensure_coordinated_value_list}, {property.type_name_for_coordinated_value_list}>(builderState);")
 
-    def _generate_animation_property_inherit_value_setter(self, to, property):
-        to.write(f"auto& list = builderState.style().{property.method_name_for_ensure_animations_or_transitions}();")
-        to.write(f"auto* parentList = builderState.parentStyle().{property.method_name_for_animations_or_transitions}();")
-        to.write(f"size_t i = 0, parentSize = parentList ? parentList->size() : 0;")
-        to.write(f"for ( ; i < parentSize && parentList->animation(i).is{property.codegen_properties.animation_name_for_methods}Set(); ++i) {{")
-        to.write(f"    if (list.size() <= i)")
-        to.write(f"        list.append(Animation::create());")
-        to.write(f"    list.animation(i).{property.codegen_properties.animation_setter}(parentList->animation(i).{property.codegen_properties.animation_getter}());")
-        to.write(f"}}")
-        to.write(f"// Reset any remaining animations to not have the property set.")
-        to.write(f"for ( ; i < list.size(); ++i)")
-        to.write(f"    list.animation(i).clear{property.codegen_properties.animation_name_for_methods}();")
+    def _generate_coordinated_value_list_property_inherit_value_setter(self, to, property):
+        to.write(f"applyInheritCoordinatedValueListProperty<{property.id_or_cascade_alias_id}, &ComputedStyle::{property.method_name_for_ensure_coordinated_value_list}, &ComputedStyle::{property.method_name_for_get_coordinated_value_list}, {property.type_name_for_coordinated_value_list}>(builderState);")
 
-    def _generate_animation_property_value_setter(self, to, property):
-        to.write(f"auto& list = builderState.style().{property.method_name_for_ensure_animations_or_transitions}();")
-        to.write(f"size_t childIndex = 0;")
-        to.write(f"if (auto* valueList = dynamicDowncast<CSSValueList>(value)) {{")
-        to.write(f"    // Walk each value and put it into an animation, creating new animations as needed.")
-        to.write(f"    for (auto& currentValue : *valueList) {{")
-        to.write(f"        if (childIndex >= list.size())")
-        to.write(f"            list.append(Animation::create());")
-        to.write(f"        builderState.styleMap().mapAnimation{property.codegen_properties.animation_name_for_methods}(list.animation(childIndex), currentValue);")
-        to.write(f"        ++childIndex;")
-        to.write(f"    }}")
-        to.write(f"}} else {{")
-        to.write(f"    if (list.isEmpty())")
-        to.write(f"        list.append(Animation::create());")
-        to.write(f"    builderState.styleMap().mapAnimation{property.codegen_properties.animation_name_for_methods}(list.animation(childIndex), value);")
-        to.write(f"    childIndex = 1;")
-        to.write(f"}}")
-        to.write(f"for ( ; childIndex < list.size(); ++childIndex) {{")
-        to.write(f"    // Reset all remaining animations to not have the property set.")
-        to.write(f"    list.animation(childIndex).clear{property.codegen_properties.animation_name_for_methods}();")
-        to.write(f"}}")
+    def _generate_coordinated_value_list_property_value_setter(self, to, property):
+        to.write(f"applyValueCoordinatedValueListProperty<{property.id_or_cascade_alias_id}, &ComputedStyle::{property.method_name_for_ensure_coordinated_value_list}, WebCore::{property.codegen_properties.coordinated_value_list_property_item_type}, {property.type_name_for_coordinated_value_list}>(builderState, value);")
 
     # Font property setters.
 
     def _generate_font_property_initial_value_setter(self, to, property):
-        to.write(f"builderState.{property.codegen_properties.font_description_setter.replace('set', 'setFontDescription', 1)}(FontCascadeDescription::{property.codegen_properties.font_description_initial}());")
+        to.write(f"builderState.{property.codegen_properties.font_description_setter.replace('set', 'setFontDescription', 1)}(Style::ComputedStyle::{property.codegen_properties.computed_style_initial}());")
 
     def _generate_font_property_inherit_value_setter(self, to, property):
-        to.write(f"auto inheritedValue = builderState.parentFontDescription().{property.codegen_properties.font_description_getter}();")
-        to.write(f"builderState.{property.codegen_properties.font_description_setter.replace('set', 'setFontDescription', 1)}(WTFMove(inheritedValue));")
+        to.write(f"auto inheritedValue = builderState.parentStyle().{property.codegen_properties.computed_style_getter}();")
+        to.write(f"builderState.{property.codegen_properties.font_description_setter.replace('set', 'setFontDescription', 1)}(WTF::move(inheritedValue));")
 
     def _generate_font_property_value_setter(self, to, property, value):
         to.write(f"builderState.{property.codegen_properties.font_description_setter.replace('set', 'setFontDescription', 1)}({value});")
 
-    # Fill Layer property setters.
-
-    def _generate_fill_layer_property_initial_value_setter(self, to, property):
-        initial = f"FillLayer::{property.codegen_properties.fill_layer_initial}({property.enum_name_for_layers_type})"
-        to.write(f"// Check for (single-layer) no-op before clearing anything.")
-        to.write(f"auto& layers = builderState.style().{property.method_name_for_layers}();")
-        to.write(f"if (!layers.next() && (!layers.is{property.codegen_properties.fill_layer_name_for_methods}Set() || layers.{property.codegen_properties.fill_layer_getter}() == {initial}))")
-        to.write(f"    return;")
-        to.write(f"auto* child = &builderState.style().{property.method_name_for_ensure_layers}();")
-        to.write(f"child->{property.codegen_properties.fill_layer_setter}({initial});")
-        to.write(f"for (child = child->next(); child; child = child->next())")
-        to.write(f"    child->clear{property.codegen_properties.fill_layer_name_for_methods}();")
-
-    def _generate_fill_layer_property_inherit_value_setter(self, to, property):
-        to.write(f"// Check for no-op before copying anything.")
-        to.write(f"if (builderState.parentStyle().{property.method_name_for_layers}() == builderState.style().{property.method_name_for_layers}())")
-        to.write(f"    return;")
-        to.write(f"auto* child = &builderState.style().{property.method_name_for_ensure_layers}();")
-        to.write(f"FillLayer* previousChild = nullptr;")
-        to.write(f"for (auto* parent = &builderState.parentStyle().{property.method_name_for_layers}(); parent && parent->is{property.codegen_properties.fill_layer_name_for_methods}Set(); parent = parent->next()) {{")
-        to.write(f"    if (!child) {{")
-        to.write(f"        previousChild->setNext(FillLayer::create({property.enum_name_for_layers_type}));")
-        to.write(f"        child = previousChild->next();")
-        to.write(f"    }}")
-        to.write(f"    child->{property.codegen_properties.fill_layer_setter}(forwardInheritedValue(parent->{property.codegen_properties.fill_layer_getter}()));")
-        to.write(f"    previousChild = child;")
-        to.write(f"    child = previousChild->next();")
-        to.write(f"}}")
-        to.write(f"for (; child; child = child->next())")
-        to.write(f"    child->clear{property.codegen_properties.fill_layer_name_for_methods}();")
-
-    def _generate_fill_layer_property_value_setter(self, to, property):
-        to.write(f"auto* child = &builderState.style().{property.method_name_for_ensure_layers}();")
-        to.write(f"FillLayer* previousChild = nullptr;")
-        to.write(f"if (auto* valueList = dynamicDowncast<CSSValueList>(value)) {{")
-        to.write(f"    // Walk each value and put it into a layer, creating new layers as needed.")
-        to.write(f"    for (auto& item : *valueList) {{")
-        to.write(f"        if (!child) {{")
-        to.write(f"            previousChild->setNext(FillLayer::create({property.enum_name_for_layers_type}));")
-        to.write(f"            child = previousChild->next();")
-        to.write(f"        }}")
-        to.write(f"        builderState.styleMap().mapFill{property.codegen_properties.fill_layer_name_for_methods}(id, *child, item);")
-        to.write(f"        previousChild = child;")
-        to.write(f"        child = child->next();")
-        to.write(f"    }}")
-        to.write(f"}} else {{")
-        to.write(f"    builderState.styleMap().mapFill{property.codegen_properties.fill_layer_name_for_methods}(id, *child, value);")
-        to.write(f"    child = child->next();")
-        to.write(f"}}")
-        to.write(f"for (; child; child = child->next())")
-        to.write(f"    child->clear{property.codegen_properties.fill_layer_name_for_methods}();")
-
-    # SVG property setters.
-
-    def _generate_svg_property_initial_value_setter(self, to, property):
-        to.write(f"builderState.style().accessSVGStyle().{property.codegen_properties.render_style_setter}(SVGRenderStyle::{property.codegen_properties.render_style_initial}());")
-
-    def _generate_svg_property_inherit_value_setter(self, to, property):
-        to.write(f"builderState.style().accessSVGStyle().{property.codegen_properties.render_style_setter}(forwardInheritedValue(builderState.parentStyle().svgStyle().{property.codegen_properties.render_style_getter}()));")
-
-    def _generate_svg_property_value_setter(self, to, property, value):
-        to.write(f"builderState.style().accessSVGStyle().{property.codegen_properties.render_style_setter}({value});")
-
     # All other property setters.
 
     def _generate_property_initial_value_setter(self, to, property):
-        to.write(f"builderState.style().{property.codegen_properties.render_style_setter}(RenderStyle::{property.codegen_properties.render_style_initial}());")
+        to.write(f"builderState.style().{property.codegen_properties.computed_style_setter}(Style::ComputedStyle::{property.codegen_properties.computed_style_initial}());")
 
     def _generate_property_inherit_value_setter(self, to, property):
-        to.write(f"builderState.style().{property.codegen_properties.render_style_setter}(forwardInheritedValue(builderState.parentStyle().{property.codegen_properties.render_style_getter}()));")
+        to.write(f"builderState.style().{property.codegen_properties.computed_style_setter}(forwardInheritedValue(builderState.parentStyle().{property.codegen_properties.computed_style_getter}()));")
 
     def _generate_property_value_setter(self, to, property, value):
-        to.write(f"builderState.style().{property.codegen_properties.render_style_setter}({value});")
+        to.write(f"builderState.style().{property.codegen_properties.computed_style_setter}({value});")
 
     # Property setter dispatch.
 
@@ -4081,20 +4709,20 @@ class GenerateStyleBuilderGenerated:
         to.write(f"{{")
 
         with to.indent():
-            if property.codegen_properties.auto_functions:
-                to.write(f"builderState.style().setHasAuto{property.codegen_properties.render_style_name_for_methods}();")
-            elif property.codegen_properties.visited_link_color_support:
-                self._generate_color_property_initial_value_setter(to, property)
-            elif property.codegen_properties.animation_property:
-                self._generate_animation_property_initial_value_setter(to, property)
+            if property.codegen_properties.visited_link_color_support:
+                self._generate_visited_link_color_supporting_property_initial_value_setter(to, property)
+            elif property.codegen_properties.coordinated_value_list_property:
+                self._generate_coordinated_value_list_property_initial_value_setter(to, property)
             elif property.codegen_properties.font_property:
                 self._generate_font_property_initial_value_setter(to, property)
-            elif property.codegen_properties.fill_layer_property:
-                self._generate_fill_layer_property_initial_value_setter(to, property)
-            elif property.codegen_properties.svg:
-                self._generate_svg_property_initial_value_setter(to, property)
             else:
                 self._generate_property_initial_value_setter(to, property)
+
+            if property.codegen_properties.computed_style_has_explicitly_set_policy:
+                if property.codegen_properties.computed_style_has_explicitly_set_policy == "all-author-origin":
+                    to.write(f"builderState.style().setHasExplicitlySet{property.codegen_properties.computed_style_name_for_methods}(builderState.isAuthorOrigin());")
+                elif property.codegen_properties.computed_style_has_explicitly_set_policy == "all-border-radius":
+                    to.write(f"builderState.style().setHasExplicitlySet{property.codegen_properties.computed_style_name_for_methods}(false);")
 
             if property.codegen_properties.fast_path_inherited:
                 to.write(f"builderState.style().setDisallowsFastPathInheritance();")
@@ -4106,29 +4734,20 @@ class GenerateStyleBuilderGenerated:
         to.write(f"{{")
 
         with to.indent():
-            if property.codegen_properties.auto_functions:
-                to.write(f"if (builderState.parentStyle().hasAuto{property.codegen_properties.render_style_name_for_methods}()) {{")
-                with to.indent():
-                    to.write(f"builderState.style().setHasAuto{property.codegen_properties.render_style_name_for_methods}();")
-                    to.write(f"return;")
-                to.write(f"}}")
-
-                if property.codegen_properties.svg:
-                    self._generate_svg_property_inherit_value_setter(to, property)
-                else:
-                    self._generate_property_inherit_value_setter(to, property)
-            elif property.codegen_properties.visited_link_color_support:
-                self._generate_color_property_inherit_value_setter(to, property)
-            elif property.codegen_properties.animation_property:
-                self._generate_animation_property_inherit_value_setter(to, property)
+            if property.codegen_properties.visited_link_color_support:
+                self._generate_visited_link_color_supporting_property_inherit_value_setter(to, property)
+            elif property.codegen_properties.coordinated_value_list_property:
+                self._generate_coordinated_value_list_property_inherit_value_setter(to, property)
             elif property.codegen_properties.font_property:
                 self._generate_font_property_inherit_value_setter(to, property)
-            elif property.codegen_properties.fill_layer_property:
-                self._generate_fill_layer_property_inherit_value_setter(to, property)
-            elif property.codegen_properties.svg:
-                self._generate_svg_property_inherit_value_setter(to, property)
             else:
                 self._generate_property_inherit_value_setter(to, property)
+
+            if property.codegen_properties.computed_style_has_explicitly_set_policy:
+                if property.codegen_properties.computed_style_has_explicitly_set_policy == "all-author-origin":
+                    to.write(f"builderState.style().setHasExplicitlySet{property.codegen_properties.computed_style_name_for_methods}(builderState.isAuthorOrigin());")
+                elif property.codegen_properties.computed_style_has_explicitly_set_policy == "all-border-radius":
+                    to.write(f"builderState.style().setHasExplicitlySet{property.codegen_properties.computed_style_name_for_methods}(builderState.parentStyle().hasExplicitlySet{property.codegen_properties.computed_style_name_for_methods}());")
 
             if property.codegen_properties.fast_path_inherited:
                 to.write(f"builderState.style().setDisallowsFastPathInheritance();")
@@ -4136,58 +4755,33 @@ class GenerateStyleBuilderGenerated:
         to.write(f"}}")
 
     def _generate_style_builder_generated_cpp_value_setter(self, to, property):
-        if property.codegen_properties.fill_layer_property:
-            to.write(f"static void applyValue{property.id_without_prefix}(CSSPropertyID id, BuilderState& builderState, CSSValue& value)")
-        else:
-            to.write(f"static void applyValue{property.id_without_prefix}(BuilderState& builderState, CSSValue& value)")
+        to.write(f"static void applyValue{property.id_without_prefix}(BuilderState& builderState, CSSValue& value)")
         to.write(f"{{")
 
         with to.indent():
-            def converted_value(property):
-                if property.codegen_properties.style_builder_converter:
-                    return f"BuilderConverter::convert{property.codegen_properties.style_builder_converter}(builderState, value)"
-                elif property.codegen_properties.style_builder_conditional_converter:
-                    return f"WTFMove(convertedValue.value())"
-                elif property.codegen_properties.color_property and not property.codegen_properties.visited_link_color_support:
-                    return f"BuilderConverter::convertStyleType<Color>(builderState, value, ForVisitedLink::No)"
-                else:
-                    return "fromCSSValueDeducingType(builderState, value)"
-
-            if property in self.style_properties.all_by_name["font"].codegen_properties.longhands and "Initial" not in property.codegen_properties.style_builder_custom and not property.codegen_properties.style_builder_converter:
+            if property in self.style_properties.all_by_name["font"].codegen_properties.longhands and "Initial" not in property.codegen_properties.style_builder_custom and property.codegen_properties.style_builder_requires_system_font_shorthand_check:
                 to.write(f"if (CSSPropertyParserHelpers::isSystemFontShorthand(value.valueID())) {{")
                 with to.indent():
                     to.write(f"applyInitial{property.id_without_prefix}(builderState);")
                     to.write(f"return;")
                 to.write(f"}}")
 
-            if property.codegen_properties.auto_functions:
-                to.write(f"if (value.valueID() == CSSValueAuto) {{")
-                with to.indent():
-                    to.write(f"builderState.style().setHasAuto{property.codegen_properties.render_style_name_for_methods}();")
-                    to.write(f"return;")
-                to.write(f"}}")
-
             if property.codegen_properties.visited_link_color_support:
-                self._generate_color_property_value_setter(to, property, converted_value(property))
-            elif property.codegen_properties.animation_property:
-                self._generate_animation_property_value_setter(to, property)
+                self._generate_visited_link_color_supporting_property_value_setter(to, property)
+            elif property.codegen_properties.coordinated_value_list_property:
+                self._generate_coordinated_value_list_property_value_setter(to, property)
             elif property.codegen_properties.font_property:
-                self._generate_font_property_value_setter(to, property, converted_value(property))
-            elif property.codegen_properties.fill_layer_property:
-                self._generate_fill_layer_property_value_setter(to, property)
-            elif property.codegen_properties.style_builder_conditional_converter:
-                to.write(f"auto convertedValue = BuilderConverter::convert{property.codegen_properties.style_builder_conditional_converter}(builderState, value);")
-                to.write(f"if (convertedValue)")
-                with to.indent():
-                    if property.codegen_properties.svg:
-                        self._generate_svg_property_value_setter(to, property, converted_value(property))
-                    else:
-                        self._generate_property_value_setter(to, property, converted_value(property))
+                self._generate_font_property_value_setter(to, property, self._converted_value(property))
             else:
-                if property.codegen_properties.svg:
-                    self._generate_svg_property_value_setter(to, property, converted_value(property))
-                else:
-                    self._generate_property_value_setter(to, property, converted_value(property))
+                self._generate_property_value_setter(to, property, self._converted_value(property))
+
+            if property.codegen_properties.computed_style_has_explicitly_set_policy:
+                if property.codegen_properties.computed_style_has_explicitly_set_policy == "all-author-origin":
+                    to.write(f"builderState.style().setHasExplicitlySet{property.codegen_properties.computed_style_name_for_methods}(builderState.isAuthorOrigin());")
+                elif property.codegen_properties.computed_style_has_explicitly_set_policy == "all-border-radius":
+                    to.write(f"builderState.style().setHasExplicitlySet{property.codegen_properties.computed_style_name_for_methods}(true);")
+                elif property.codegen_properties.computed_style_has_explicitly_set_policy == "value-only":
+                    to.write(f"builderState.style().setHasExplicitlySet{property.codegen_properties.computed_style_name_for_methods}(true);")
 
             if property.codegen_properties.fast_path_inherited:
                 to.write(f"builderState.style().setDisallowsFastPathInheritance();")
@@ -4251,8 +4845,6 @@ class GenerateStyleBuilderGenerated:
                         apply_initial_arguments = ["builderState"]
                         apply_inherit_arguments = ["builderState"]
                         apply_value_arguments = ["builderState", "value"]
-                        if property.codegen_properties.fill_layer_property:
-                            apply_value_arguments.insert(0, "id")
 
                         to.write(f"switch (valueType) {{")
                         to.write(f"case ApplyValueType::Initial:")
@@ -4293,10 +4885,11 @@ class GenerateStyleBuilderGenerated:
                 headers=[
                     "CSSPrimitiveValueMappings.h",
                     "CSSProperty.h",
-                    "RenderStyleSetters.h",
-                    "StyleBuilderConverter.h",
+                    "RenderStyle+GettersInlines.h",
+                    "RenderStyle+SettersInlines.h",
                     "StyleBuilderCustom.h",
                     "StyleBuilderState.h",
+                    "StyleComputedStyle+InitialInlines.h",
                     "StylePropertyShorthand.h",
                 ]
             )
@@ -4331,128 +4924,52 @@ class GenerateStyleExtractorGenerated:
 
     @staticmethod
     def wrap_in_converter(property, value):
-        if property.codegen_properties.style_extractor_converter:
-            return f"ExtractorConverter::convert{property.codegen_properties.style_extractor_converter}(extractorState, {value})"
-        elif property.codegen_properties.animation_property:
-            return f"ExtractorConverter::convertAnimation{property.codegen_properties.animation_name_for_methods}(extractorState, {value}, animation, animationList)"
-        elif property.codegen_properties.fill_layer_property:
-            return f"ExtractorConverter::convertFillLayer{property.codegen_properties.fill_layer_name_for_methods}(extractorState, {value})"
-        elif property.codegen_properties.color_property:
-            return f"ExtractorConverter::convertStyleType<Color>(extractorState, {value})"
-        else:
-            return f"ExtractorConverter::convert(extractorState, {value})"
+        return f"createCSSValue(extractorState.pool, extractorState.style, {value})"
 
     @staticmethod
     def wrap_in_serializer(property, value):
-        if property.codegen_properties.style_extractor_converter:
-            return f"ExtractorSerializer::serialize{property.codegen_properties.style_extractor_converter}(extractorState, builder, context, {value})"
-        elif property.codegen_properties.animation_property:
-            return f"ExtractorSerializer::serializeAnimation{property.codegen_properties.animation_name_for_methods}(extractorState, builder, context, {value}, animation, animationList)"
-        elif property.codegen_properties.fill_layer_property:
-            return f"ExtractorSerializer::serializeFillLayer{property.codegen_properties.fill_layer_name_for_methods}(extractorState, builder, context, {value})"
-        elif property.codegen_properties.color_property:
-            return f"ExtractorSerializer::serializeStyleType<Color>(extractorState, builder, context, {value})"
-        else:
-            return f"ExtractorSerializer::serialize(extractorState, builder, context, {value})"
+        return f"serializationForCSS(builder, context, extractorState.style, {value})"
 
     # Color property getters.
 
-    def _generate_color_property_value_getter(self, to, property):
+    def _generate_visited_link_color_supporting_property_value_getter(self, to, property):
         to.write(f"if (extractorState.allowVisitedStyle) {{")
         with to.indent():
-            to.write(f"return extractorState.pool.createColorValue(extractorState.style.visitedDependentColor({property.id}));")
+            to.write(f"return extractorState.pool.createColorValue(extractorState.style.visitedDependent{property.codegen_properties.computed_style_name_for_methods}());")
         to.write(f"}}")
         self._generate_property_value_getter(to, property)
 
-    def _generate_color_property_value_serialization_getter(self, to, property):
+    def _generate_visited_link_color_supporting_property_value_serialization_getter(self, to, property):
         to.write(f"if (extractorState.allowVisitedStyle) {{")
         with to.indent():
-            to.write(f"builder.append(WebCore::serializationForCSS(extractorState.style.visitedDependentColor({property.id})));")
+            to.write(f"builder.append(WebCore::serializationForCSS(extractorState.style.visitedDependent{property.codegen_properties.computed_style_name_for_methods}()));")
             to.write(f"return;")
         to.write(f"}}")
         self._generate_property_value_serialization_getter(to, property)
 
     # Animation property getters.
 
-    def _generate_animation_property_value_getter(self, to, property):
-        to.write(f"auto mapper = [](auto& extractorState, const Animation* animation, const AnimationList* animationList) -> RefPtr<CSSValue> {{")
+    def _generate_coordinated_value_list_property_value_getter(self, to, property):
+        to.write(f"auto mapper = [](auto& extractorState, const auto& value, const std::optional<{property.type_name_for_coordinated_value_list}::value_type>&, const auto&) -> Ref<CSSValue> {{")
         with to.indent():
-            to.write(f"if (!animation) {{")
-            with to.indent():
-                to.write(f"return {GenerateStyleExtractorGenerated.wrap_in_converter(property, f'Animation::{property.codegen_properties.animation_initial}()')};")
-            to.write(f"}}")
-            to.write(f"if (!animation->is{property.codegen_properties.animation_name_for_methods}Filled()) {{")
-            with to.indent():
-                to.write(f"return {GenerateStyleExtractorGenerated.wrap_in_converter(property, f'animation->{property.codegen_properties.animation_getter}()')};")
-            to.write(f"}}")
-            to.write(f"return nullptr;")
+            to.write(f"return {GenerateStyleExtractorGenerated.wrap_in_converter(property, 'value')};")
         to.write(f"}};")
-        to.write(f"return extractAnimationOrTransitionValue(extractorState, extractorState.style.{property.method_name_for_animations_or_transitions}(), mapper);")
+        to.write(f"return extractCoordinatedValueListValue<{property.id_or_cascade_alias_id}>(extractorState, extractorState.style.computedStyle().{property.method_name_for_get_coordinated_value_list}(), mapper);")
 
-    def _generate_animation_property_value_serialization_getter(self, to, property):
-        to.write(f"auto mapper = [](auto& extractorState, StringBuilder& builder, const CSS::SerializationContext& context, bool includeComma, const Animation* animation, const AnimationList* animationList) {{")
+    def _generate_coordinated_value_list_property_value_serialization_getter(self, to, property):
+        to.write(f"auto mapper = [](auto& extractorState, auto& builder, const auto& context, const auto& value, const std::optional<{property.type_name_for_coordinated_value_list}::value_type>&, const auto&) {{")
         with to.indent():
-            to.write(f"if (!animation) {{")
-            with to.indent():
-                to.write(f"if (includeComma)")
-                with to.indent():
-                    to.write(f"builder.append(\", \"_s);")
-                to.write(f"{GenerateStyleExtractorGenerated.wrap_in_serializer(property, f'Animation::{property.codegen_properties.animation_initial}()')};")
-                to.write(f"return;")
-            to.write(f"}}")
-            to.write(f"if (!animation->is{property.codegen_properties.animation_name_for_methods}Filled()) {{")
-            with to.indent():
-                to.write(f"if (includeComma)")
-                with to.indent():
-                    to.write(f"builder.append(\", \"_s);")
-                to.write(f"{GenerateStyleExtractorGenerated.wrap_in_serializer(property, f'animation->{property.codegen_properties.animation_getter}()')};")
-                to.write(f"return;")
-            to.write(f"}}")
+            to.write(f"{GenerateStyleExtractorGenerated.wrap_in_serializer(property, 'value')};")
         to.write(f"}};")
-        to.write(f"extractAnimationOrTransitionValueSerialization(extractorState, builder, context, extractorState.style.{property.method_name_for_animations_or_transitions}(), mapper);")
-
-    # Font property getters.
-
-    def _generate_font_property_value_getter(self, to, property):
-        to.write(f"return {GenerateStyleExtractorGenerated.wrap_in_converter(property, f'extractorState.style.fontDescription().{property.codegen_properties.font_description_getter}()')};")
-
-    def _generate_font_property_value_serialization_getter(self, to, property):
-        to.write(f"{GenerateStyleExtractorGenerated.wrap_in_serializer(property, f'extractorState.style.fontDescription().{property.codegen_properties.font_description_getter}()')};")
-
-    # Fill Layer property getters.
-
-    def _generate_fill_layer_property_value_getter(self, to, property):
-        to.write(f"auto mapper = [](auto& extractorState, auto& layer) -> Ref<CSSValue> {{")
-        with to.indent():
-            to.write(f"return {GenerateStyleExtractorGenerated.wrap_in_converter(property, f'layer.{property.codegen_properties.fill_layer_getter}()')};")
-        to.write(f"}};")
-        to.write(f"return extractFillLayerValue(extractorState, extractorState.style.{property.method_name_for_layers}(), mapper);")
-
-    def _generate_fill_layer_property_value_serialization_getter(self, to, property):
-        to.write(f"auto mapper = [](auto& extractorState, StringBuilder& builder, const CSS::SerializationContext& context, bool includeComma, auto& layer) {{")
-        with to.indent():
-            to.write(f"if (includeComma)")
-            with to.indent():
-                to.write(f"builder.append(\", \"_s);")
-            to.write(f"{GenerateStyleExtractorGenerated.wrap_in_serializer(property, f'layer.{property.codegen_properties.fill_layer_getter}()')};")
-        to.write(f"}};")
-        to.write(f"extractFillLayerValueSerialization(extractorState, builder, context, extractorState.style.{property.method_name_for_layers}(), mapper);")
-
-    # SVG property value/serialization getters.
-
-    def _generate_svg_property_value_getter(self, to, property):
-        to.write(f"return {GenerateStyleExtractorGenerated.wrap_in_converter(property, f'extractorState.style.svgStyle().{property.codegen_properties.render_style_getter}()')};")
-
-    def _generate_svg_property_value_serialization_getter(self, to, property):
-        to.write(f"{GenerateStyleExtractorGenerated.wrap_in_serializer(property, f'extractorState.style.svgStyle().{property.codegen_properties.render_style_getter}()')};")
+        to.write(f"extractCoordinatedValueListSerialization<{property.id_or_cascade_alias_id}>(extractorState, builder, context, extractorState.style.computedStyle().{property.method_name_for_get_coordinated_value_list}(), mapper);")
 
     # All other property value getters.
 
     def _generate_property_value_getter(self, to, property):
-        to.write(f"return {GenerateStyleExtractorGenerated.wrap_in_converter(property, f'extractorState.style.{property.codegen_properties.render_style_getter}()')};")
+        to.write(f"return {GenerateStyleExtractorGenerated.wrap_in_converter(property, f'extractorState.style.computedStyle().{property.codegen_properties.computed_style_getter}()')};")
 
     def _generate_property_value_serialization_getter(self, to, property):
-        to.write(f"{GenerateStyleExtractorGenerated.wrap_in_serializer(property, f'extractorState.style.{property.codegen_properties.render_style_getter}()')};")
+        to.write(f"{GenerateStyleExtractorGenerated.wrap_in_serializer(property, f'extractorState.style.computedStyle().{property.codegen_properties.computed_style_getter}()')};")
 
     # Shorthand property value getter.
 
@@ -4477,21 +4994,10 @@ class GenerateStyleExtractorGenerated:
         to.write(f"{{")
 
         with to.indent():
-            if property.codegen_properties.auto_functions:
-                to.write(f"if (extractorState.style.hasAuto{property.codegen_properties.render_style_name_for_methods}())")
-                with to.indent():
-                    to.write(f"return CSSPrimitiveValue::create(CSSValueAuto);")
-
             if property.codegen_properties.visited_link_color_support:
-                self._generate_color_property_value_getter(to, property)
-            elif property.codegen_properties.animation_property:
-                self._generate_animation_property_value_getter(to, property)
-            elif property.codegen_properties.font_property:
-                self._generate_font_property_value_getter(to, property)
-            elif property.codegen_properties.fill_layer_property:
-                self._generate_fill_layer_property_value_getter(to, property)
-            elif property.codegen_properties.svg:
-                self._generate_svg_property_value_getter(to, property)
+                self._generate_visited_link_color_supporting_property_value_getter(to, property)
+            elif property.codegen_properties.coordinated_value_list_property:
+                self._generate_coordinated_value_list_property_value_getter(to, property)
             else:
                 self._generate_property_value_getter(to, property)
 
@@ -4502,23 +5008,10 @@ class GenerateStyleExtractorGenerated:
         to.write(f"{{")
 
         with to.indent():
-            if property.codegen_properties.auto_functions:
-                to.write(f"if (extractorState.style.hasAuto{property.codegen_properties.render_style_name_for_methods}()) {{")
-                with to.indent():
-                    to.write(f"builder.append(nameLiteralForSerialization(CSSValueAuto));")
-                    to.write(f"return;")
-                to.write(f"}}")
-
             if property.codegen_properties.visited_link_color_support:
-                self._generate_color_property_value_serialization_getter(to, property)
-            elif property.codegen_properties.animation_property:
-                self._generate_animation_property_value_serialization_getter(to, property)
-            elif property.codegen_properties.font_property:
-                self._generate_font_property_value_serialization_getter(to, property)
-            elif property.codegen_properties.fill_layer_property:
-                self._generate_fill_layer_property_value_serialization_getter(to, property)
-            elif property.codegen_properties.svg:
-                self._generate_svg_property_value_serialization_getter(to, property)
+                self._generate_visited_link_color_supporting_property_value_serialization_getter(to, property)
+            elif property.codegen_properties.coordinated_value_list_property:
+                self._generate_coordinated_value_list_property_value_serialization_getter(to, property)
             else:
                 self._generate_property_value_serialization_getter(to, property)
 
@@ -4669,7 +5162,6 @@ class GenerateStyleExtractorGenerated:
                     "CSSProperty.h",
                     "ColorSerialization.h",
                     "RenderStyle.h",
-                    "StyleExtractorConverter.h",
                     "StyleExtractorCustom.h",
                     "StyleExtractorState.h",
                     "StylePropertyShorthand.h",
@@ -5294,11 +5786,16 @@ class GenerateStyleInterpolationWrapperMap:
         # Compute animation wrapper type.
         if property.codegen_properties.animation_wrapper is not None:
             property_wrapper_type = property.codegen_properties.animation_wrapper
+        elif property.animation_type == 'by computed value' or property.animation_type == 'repeatable list' or property.animation_type == 'see prose':
+            if property.codegen_properties.coordinated_value_list_property:
+                property_wrapper_type = 'CoordinatedValueListPropertyStyleTypeWrapper'
+            elif property.codegen_properties.visited_link_color_support:
+                property_wrapper_type = 'VisitedAffectedStyleTypeWrapper'
+            else:
+                property_wrapper_type = 'StyleTypeWrapper'
         elif property.animation_type == 'discrete':
-            if property.codegen_properties.svg:
-                property_wrapper_type = 'DiscreteSVGWrapper'
-            elif property.codegen_properties.font_property:
-                property_wrapper_type = 'DiscreteFontDescriptionTypedWrapper'
+            if property.codegen_properties.coordinated_value_list_property:
+                property_wrapper_type = 'DiscreteCoordinatedValueListPropertyWrapper'
             else:
                 property_wrapper_type = 'DiscreteWrapper'
         else:
@@ -5312,33 +5809,26 @@ class GenerateStyleInterpolationWrapperMap:
             property_wrapper_parameters = [property.id]
 
             # Compute style class.
-            if property.codegen_properties.svg and not property.codegen_properties.animation_wrapper_requires_render_style:
-                style_type = "SVGRenderStyle"
-                name_for_methods = property.codegen_properties.render_style_name_for_methods
-                getter = property.codegen_properties.render_style_getter
-                setter = property.codegen_properties.render_style_setter
-            elif property.codegen_properties.font_property and not property.codegen_properties.animation_wrapper_requires_render_style:
-                style_type = "FontCascadeDescription"
-                name_for_methods = property.codegen_properties.font_description_name_for_methods
-                getter = property.codegen_properties.font_description_getter
-                setter = property.codegen_properties.font_description_setter
-            else:
-                style_type = "RenderStyle"
-                name_for_methods = property.codegen_properties.render_style_name_for_methods
-                getter = property.codegen_properties.render_style_getter
-                setter = property.codegen_properties.render_style_setter
+            style_type = "ComputedStyle"
+            name_for_methods = property.codegen_properties.computed_style_name_for_methods
+            getter = property.codegen_properties.computed_style_getter
+            setter = property.codegen_properties.computed_style_setter
 
-            if property.codegen_properties.fill_layer_property and property.codegen_properties.animation_wrapper is not None:
-                property_wrapper_parameters += [f"&{style_type}::{property.method_name_for_layers}", f"&{style_type}::{property.method_name_for_ensure_layers}"]
+            if property.codegen_properties.coordinated_value_list_property and property_wrapper_type is not None:
+                property_wrapper_parameters += [f"&{style_type}::{property.method_name_for_get_coordinated_value_list}", f"&{style_type}::{property.method_name_for_ensure_coordinated_value_list}", f"&{style_type}::{property.method_name_for_set_coordinated_value_list}", f"{property_wrapper_type}({property.id}, &{property.type_name_for_coordinated_value_list}::value_type::{property.codegen_properties.coordinated_value_list_property_getter}, &{property.type_name_for_coordinated_value_list}::value_type::{property.codegen_properties.coordinated_value_list_property_setter})"]
+                property_wrapper_type = "CoordinatedValueListPropertyWrapper"
             else:
                 # Add getter
-                if property.codegen_properties.animation_wrapper_requires_computed_getter:
-                    property_wrapper_parameters += [f"&{style_type}::computed{name_for_methods}"]
+                if property.codegen_properties.animation_wrapper_requires_getter is not None:
+                    property_wrapper_parameters += [f"&{style_type}::{property.codegen_properties.animation_wrapper_requires_getter}"]
                 else:
                     property_wrapper_parameters += [f"&{style_type}::{getter}"]
 
                 # Add setter
-                property_wrapper_parameters += [f"&{style_type}::{setter}"]
+                if property.codegen_properties.animation_wrapper_requires_setter is not None:
+                    property_wrapper_parameters += [f"&{style_type}::{property.codegen_properties.animation_wrapper_requires_setter}"]
+                else:
+                    property_wrapper_parameters += [f"&{style_type}::{setter}"]
 
                 # Add property type specific parameters
                 if property.codegen_properties.visited_link_color_support:
@@ -5361,13 +5851,6 @@ class GenerateStyleInterpolationWrapperMap:
         return False
 
     def _generate_css_property_animation_wrapper_map_cpp_constructor(self, *, to):
-        NOT_ANIMATABLE_TYPES = [
-            'not animatable',
-            'not animatable (needs triage)',
-            'not animatable (legacy)',
-            'not animatable (internal)'
-        ]
-
         to.write_block("""\
             static WrapperBase* makeShorthandWrapper(CSSPropertyID id, const std::array<WrapperBase*, cssPropertyIDEnumValueCount>& wrappers)
             {
@@ -5381,7 +5864,7 @@ class GenerateStyleInterpolationWrapperMap:
                     return wrapper;
                 });
 
-                return new ShorthandWrapper(id, WTFMove(longhandWrappers));
+                return new ShorthandWrapper(id, WTF::move(longhandWrappers));
             }
             """)
 
@@ -5408,7 +5891,7 @@ class GenerateStyleInterpolationWrapperMap:
                             to.write(f"nullptr, // {property.id} - logical, handled via resolution to physical")
                             continue
                         # Don't include not animatable properties.
-                        if property.animation_type in NOT_ANIMATABLE_TYPES:
+                        if not property.is_animatable:
                             to.write(f"nullptr, // {property.id} - {property.animation_type}")
                             continue
 
@@ -5434,6 +5917,2205 @@ class GenerateStyleInterpolationWrapperMap:
 
         to.write("}")
         to.newline()
+
+
+# Generates `StyleComputedStyleProperties.h`, `StyleComputedStyleProperties.cpp`, `StyleComputedStyleProperties+GettersInlines.h`, `StyleComputedStyleProperties+SettersInlines.h` and `StyleComputedStyleProperties+InitialInlines.h`.
+class GenerateStyleComputedStyleProperties:
+    def __init__(self, generation_context):
+        self.generation_context = generation_context
+
+    @property
+    def properties_and_descriptors(self):
+        return self.generation_context.properties_and_descriptors
+
+    @property
+    def style_properties(self):
+        return self.generation_context.properties_and_descriptors.style_properties
+
+    def generate(self):
+        self.generate_style_computed_style_properties_h()
+        self.generate_style_computed_style_properties_cpp()
+        self.generate_style_computed_style_properties_getters_inlines_h()
+        self.generate_style_computed_style_properties_setters_inlines_h()
+        self.generate_style_computed_style_properties_initial_inlines_h()
+
+    # Computes the expression of loads needed to get the member variable used to store the property.
+    def _compute_get_expression(self, property, container_kind, container_path, storage_type, storage_name, storage_kind):
+        # Compute getter expression, starting with the base set of loads to access the storage container.
+        container = "->".join(container_path)
+
+        if container_kind == 'data':
+            expression = f"{container}->{storage_name}"
+        elif container_kind == 'struct':
+            expression = f"{container}.{storage_name}"
+        elif container_kind == 'physical-group':
+            expression = f"{container}.{Name(property.codegen_properties.logical_property_group.resolver).id_without_prefix_with_lowercase_first_letter}()"
+
+        # If necessary, wrap the load in a cast or conversion.
+        if storage_kind == 'enum':
+            expression = f"static_cast<{storage_type}>({expression})"
+        elif storage_kind == 'raw':
+            expression = f"{storage_type}::fromRaw({expression})"
+        return expression
+
+    # Computes the expression of loads and assignments needed to set the member variable used to store the property.
+    def _compute_set_expression(self, property, container_kind, container_path, storage_type, storage_name, storage_kind, argument_name):
+        # Compute the right side of the assignment expression for the setter expression.
+        if storage_kind == 'reference':
+            rhs = f"WTF::move({argument_name})"
+        elif storage_kind == 'enum':
+            rhs = f"static_cast<unsigned>({argument_name})"
+        elif storage_kind == 'raw':
+            rhs = f"{argument_name}.toRaw()"
+        else:
+            rhs = f"{argument_name}"
+
+        # Compute setter expression, starting with the base set of loads to access the storage container.
+        container = ".access().".join(container_path)
+
+        if container_kind == 'data':
+            expression = f"{container}.access().{storage_name} = {rhs}"
+        elif container_kind == 'struct':
+            expression = f"{container}.{storage_name} = {rhs}"
+        elif container_kind == 'physical-group':
+            expression = f"{container}.set{Name(property.codegen_properties.logical_property_group.resolver).id_without_prefix}({rhs})"
+
+        return expression
+
+    # Computes the expression, if any, to call after setting the value to storage.
+    def _compute_did_set_expression(self, property):
+        if not property.codegen_properties.computed_style_setter_requires_did_set:
+            return None
+        return f"didSet{property.codegen_properties.computed_style_name_for_methods}()"
+
+    # Computes the expression for the initial value function.
+    def _compute_initial_expression(self, property):
+        def pick_literal_expression(element):
+            if property.codegen_properties.computed_style_storage_kind == 'enum':
+                return element.cpp_enum_literal(property.codegen_properties.computed_style_type)
+            return element.cpp_literal
+
+        if len(property.initial.list) == 1:
+            if isinstance(property.initial.list[0], SpecialLiteral):
+                raise Exception(f"Special literals must have custom initial function implementation")
+            return pick_literal_expression(property.initial.list[0])
+        else:
+            return "{ " + ", ".join(pick_literal_expression(element) for element in property.initial.list) + " }"
+
+    # Generate StyleComputedStyleProperties.h
+
+    def _generate_property_function_declarations(self, *, to):
+        for property in self.style_properties.all:
+            if property.codegen_properties.skip_computed_style:
+                continue
+            if property.codegen_properties.is_logical:
+                continue
+            if property.codegen_properties.longhands:
+                continue
+            if property.codegen_properties.cascade_alias:
+                continue
+            if property.codegen_properties.coordinated_value_list_property:
+                continue
+
+            to.write(f"// '{property}'")
+
+            if not property.codegen_properties.skip_computed_style_getter:
+                getter_name = property.codegen_properties.computed_style_getter
+                getter_function_specifiers = property.getter_declaration_function_specifiers
+                getter_return_type = property.getter_return_type
+
+                self.generation_context.generate_function_declaration(
+                    to=to,
+                    function_name=getter_name,
+                    function_specifiers=getter_function_specifiers,
+                    return_type=getter_return_type,
+                    function_qualifiers=['const']
+                )
+
+            if not property.codegen_properties.skip_computed_style_setter:
+                setter_name = property.codegen_properties.computed_style_setter
+                setter_function_specifiers = property.setter_declaration_function_specifiers
+                setter_return_type = property.setter_return_type
+                setter_argument_type = property.setter_argument_type
+
+                self.generation_context.generate_function_declaration(
+                    to=to,
+                    function_name=setter_name,
+                    function_specifiers=setter_function_specifiers,
+                    return_type=setter_return_type,
+                    argument_types=[setter_argument_type]
+                )
+
+                if property.codegen_properties.computed_style_setter_requires_did_set:
+                    did_set_name = f"didSet{property.codegen_properties.computed_style_name_for_methods}"
+                    did_set_function_specifiers = ['inline']
+                    did_set_return_type = 'void'
+
+                    self.generation_context.generate_function_declaration(
+                        to=to,
+                        function_name=did_set_name,
+                        function_specifiers=did_set_function_specifiers,
+                        return_type=did_set_return_type
+                    )
+
+            if not property.codegen_properties.skip_computed_style_initial:
+                initial_name = property.codegen_properties.computed_style_initial
+                initial_function_specifiers = property.initial_declaration_function_specifiers
+                initial_return_type = property.initial_return_type
+
+                self.generation_context.generate_function_declaration(
+                    to=to,
+                    function_name=initial_name,
+                    function_specifiers=initial_function_specifiers,
+                    return_type=initial_return_type
+                )
+
+            if property.codegen_properties.color_property:
+                if property.codegen_properties.computed_style_visited_link_storage_path:
+                    if not property.codegen_properties.visited_link_color_support:
+                        raise Exception("Property {property} has computed_style_visited_link_storage_path but not visited_link_color_support")
+                    getter_name = f"visitedLink{property.codegen_properties.computed_style_name_for_methods}"
+                    setter_name = f"setVisitedLink{property.codegen_properties.computed_style_name_for_methods}"
+                    getter_function_specifiers = ['inline']
+                    getter_return_type = property.getter_return_type
+                    setter_function_specifiers = ['inline']
+                    setter_return_type = 'void'
+                    setter_argument_type = property.setter_argument_type
+
+                    self.generation_context.generate_function_declaration(
+                        to=to,
+                        function_name=getter_name,
+                        function_specifiers=getter_function_specifiers,
+                        return_type=getter_return_type,
+                        function_qualifiers=['const']
+                    )
+                    self.generation_context.generate_function_declaration(
+                        to=to,
+                        function_name=setter_name,
+                        function_specifiers=setter_function_specifiers,
+                        return_type=setter_return_type,
+                        argument_types=[setter_argument_type]
+                    )
+
+                self.generation_context.generate_function_declaration(
+                    to=to,
+                    function_name=f"{property.codegen_properties.computed_style_getter}Resolver",
+                    function_specifiers=['inline'],
+                    return_type="decltype(auto)",
+                    function_qualifiers=['const']
+                )
+
+                if property.codegen_properties.computed_style_resolving_current_color_exported:
+                    function_specifiers = ['WEBCORE_EXPORT']
+                else:
+                    function_specifiers = []
+
+                self.generation_context.generate_function_declaration(
+                    to=to,
+                    function_name=f"{property.codegen_properties.computed_style_getter}ResolvingCurrentColor",
+                    function_specifiers=function_specifiers,
+                    return_type='WebCore::Color',
+                    function_qualifiers=['const']
+                )
+
+                if property.codegen_properties.computed_style_resolving_current_color_applying_color_filter_exported:
+                    function_specifiers = ['WEBCORE_EXPORT']
+                else:
+                    function_specifiers = []
+
+                self.generation_context.generate_function_declaration(
+                    to=to,
+                    function_name=f"{property.codegen_properties.computed_style_getter}ResolvingCurrentColorApplyingColorFilter",
+                    function_specifiers=function_specifiers,
+                    return_type='WebCore::Color',
+                    function_qualifiers=['const']
+                )
+
+                if property.codegen_properties.computed_style_visited_link_storage_path:
+                    if property.codegen_properties.computed_style_visited_link_resolving_current_color_exported:
+                        function_specifiers = ['WEBCORE_EXPORT']
+                    else:
+                        function_specifiers = []
+
+                    self.generation_context.generate_function_declaration(
+                        to=to,
+                        function_name=f"visitedLink{property.codegen_properties.computed_style_name_for_methods}ResolvingCurrentColor",
+                        function_specifiers=function_specifiers,
+                        return_type='WebCore::Color',
+                        function_qualifiers=['const']
+                    )
+
+                    if property.codegen_properties.computed_style_visited_link_resolving_current_color_applying_color_filter_exported:
+                        function_specifiers = ['WEBCORE_EXPORT']
+                    else:
+                        function_specifiers = []
+
+                    self.generation_context.generate_function_declaration(
+                        to=to,
+                        function_name=f"visitedLink{property.codegen_properties.computed_style_name_for_methods}ResolvingCurrentColorApplyingColorFilter",
+                        function_specifiers=function_specifiers,
+                        return_type='WebCore::Color',
+                        function_qualifiers=['const']
+                    )
+
+                if property.codegen_properties.computed_style_visited_dependent_exported:
+                    function_specifiers = ['WEBCORE_EXPORT']
+                else:
+                    function_specifiers = []
+
+                self.generation_context.generate_function_declaration(
+                    to=to,
+                    function_name=f"visitedDependent{property.codegen_properties.computed_style_name_for_methods}",
+                    function_specifiers=function_specifiers,
+                    return_type='WebCore::Color',
+                    argument_types=['OptionSet<PaintBehavior>'],
+                    function_qualifiers=['const']
+                )
+
+                if property.codegen_properties.computed_style_visited_dependent_applying_color_filter_exported:
+                    function_specifiers = ['WEBCORE_EXPORT']
+                else:
+                    function_specifiers = []
+
+                self.generation_context.generate_function_declaration(
+                    to=to,
+                    function_name=f"visitedDependent{property.codegen_properties.computed_style_name_for_methods}ApplyingColorFilter",
+                    function_specifiers=function_specifiers,
+                    return_type='WebCore::Color',
+                    argument_types=['OptionSet<PaintBehavior>'],
+                    function_qualifiers=['const']
+                )
+
+            if property.codegen_properties.computed_style_has_explicitly_set_storage_path:
+                getter_name = f"hasExplicitlySet{property.codegen_properties.computed_style_name_for_methods}"
+                setter_name = f"setHasExplicitlySet{property.codegen_properties.computed_style_name_for_methods}"
+                getter_function_specifiers = ['inline']
+                getter_return_type = 'bool'
+                setter_function_specifiers = ['inline']
+                setter_return_type = f"void"
+                setter_argument_type = 'bool'
+
+                self.generation_context.generate_function_declaration(
+                    to=to,
+                    function_name=getter_name,
+                    function_specifiers=getter_function_specifiers,
+                    return_type=getter_return_type,
+                    function_qualifiers=['const']
+                )
+                self.generation_context.generate_function_declaration(
+                    to=to,
+                    function_name=setter_name,
+                    function_specifiers=setter_function_specifiers,
+                    return_type=setter_return_type,
+                    argument_types=[setter_argument_type]
+                )
+            to.newline()
+
+    def _generate_logical_property_function_declarations(self, *, to):
+        for property_group_name, property_group in self.style_properties.logical_property_groups.items():
+            to.write(f"// Logical getters and setters for '{property_group_name}' properties of type '{property_group['kind']}'.")
+            if property_group['kind'] == 'axis':
+                horizontal_property = property_group['physical']['horizontal']
+                vertical_property = property_group['physical']['vertical']
+
+                # NOTE: Choice of which property we use here is arbitrary, they must always have the same types.
+                getter_return_type = horizontal_property.getter_return_type
+                setter_argument_type = horizontal_property.setter_argument_type
+
+                for property in [horizontal_property, vertical_property]:
+                    self.generation_context.generate_function_declaration(
+                        to=to,
+                        function_name=f"logical{property.id_without_prefix}",
+                        function_specifiers=['inline'],
+                        return_type=getter_return_type,
+                        argument_types=['WritingMode'],
+                        function_qualifiers=['const']
+                    )
+                for property in [horizontal_property, vertical_property]:
+                    self.generation_context.generate_function_declaration(
+                        to=to,
+                        function_name=f"logical{property.id_without_prefix}",
+                        function_specifiers=['inline'],
+                        return_type=getter_return_type,
+                        argument_types=[],
+                        function_qualifiers=['const']
+                    )
+                for property in [horizontal_property, vertical_property]:
+                    self.generation_context.generate_function_declaration(
+                        to=to,
+                        function_name=f"setLogical{property.id_without_prefix}",
+                        function_specifiers=['inline'],
+                        return_type='void',
+                        argument_types=[setter_argument_type]
+                    )
+            elif property_group['kind'] == 'side':
+                property = property_group['physical']['bottom']
+                # NOTE: Choice of which property we use here is arbitrary, they must always have the same types.
+                getter_return_type = property.getter_return_type
+                setter_argument_type = property.setter_argument_type
+
+                prefix = Name(property_group_name)
+
+                for edge in ['Start', 'End', 'Before', 'After', 'LogicalLeft', 'LogicalRight']:
+                    self.generation_context.generate_function_declaration(
+                        to=to,
+                        function_name=f"{prefix.id_without_prefix_with_lowercase_first_letter}{edge}",
+                        function_specifiers=['inline'],
+                        return_type=getter_return_type,
+                        argument_types=['WritingMode'],
+                        function_qualifiers=['const']
+                    )
+                for edge in ['Start', 'End', 'Before', 'After', 'LogicalLeft', 'LogicalRight']:
+                    self.generation_context.generate_function_declaration(
+                        to=to,
+                        function_name=f"{prefix.id_without_prefix_with_lowercase_first_letter}{edge}",
+                        function_specifiers=['inline'],
+                        return_type=getter_return_type,
+                        argument_types=[],
+                        function_qualifiers=['const']
+                    )
+                for edge in ['Start', 'End', 'Before', 'After', 'LogicalLeft', 'LogicalRight']:
+                    self.generation_context.generate_function_declaration(
+                        to=to,
+                        function_name=f"set{prefix.id_without_prefix}{edge}",
+                        function_specifiers=['inline'],
+                        return_type='void',
+                        argument_types=[setter_argument_type]
+                    )
+            else:
+                # FIXME: Add logical getters / setters for other group kinds (like 'corner') if it would be useful.
+                to.write(f"// FIXME: Add support for logical getter/setters of kind '{property_group['kind']}'.")
+            to.newline()
+
+    def _generate_color_trait_declarations(self, *, to):
+        for property in self.style_properties.all:
+            if not property.codegen_properties.color_property:
+                continue
+            if property.codegen_properties.skip_computed_style:
+                continue
+            if property.codegen_properties.is_logical:
+                continue
+            if property.codegen_properties.longhands:
+                continue
+            if property.codegen_properties.cascade_alias:
+                continue
+            if property.codegen_properties.coordinated_value_list_property:
+                continue
+
+            to.write(f"template<> struct ColorPropertyTraits<PropertyNameConstant<{property.id_without_scope}>> {{")
+            with to.indent():
+                self.generation_context.generate_function_declaration(
+                    to=to,
+                    function_name='color',
+                    function_specifiers=['static', 'inline'],
+                    return_type='const Color&',
+                    argument_types=['const ComputedStyleProperties&']
+                )
+                if property.codegen_properties.visited_link_color_support:
+                    self.generation_context.generate_function_declaration(
+                        to=to,
+                        function_name='visitedLinkColor',
+                        function_specifiers=['static', 'inline'],
+                        return_type='const Color&',
+                        argument_types=['const ComputedStyleProperties&']
+                    )
+
+                if property.codegen_properties.color_property_traits_requires_resolving_current_color:
+                    self.generation_context.generate_function_declaration(
+                        to=to,
+                        function_name='colorResolvingCurrentColor',
+                        function_specifiers=['static', 'inline'],
+                        return_type='WebCore::Color',
+                        argument_types=['const ComputedStyleProperties&']
+                    )
+                    if property.codegen_properties.visited_link_color_support:
+                        self.generation_context.generate_function_declaration(
+                            to=to,
+                            function_name='visitedLinkColorResolvingCurrentColor',
+                            function_specifiers=['static', 'inline'],
+                            return_type='WebCore::Color',
+                            argument_types=['const ComputedStyleProperties&']
+                        )
+
+                if property.codegen_properties.color_property_traits_requires_excludes_visited_link_color:
+                    self.generation_context.generate_function_declaration(
+                        to=to,
+                        function_name='excludesVisitedLinkColor',
+                        function_specifiers=['static', 'inline'],
+                        return_type='bool',
+                        argument_types=['const WebCore::Color&']
+                    )
+
+            to.write(f"}};")
+            to.newline()
+
+    def generate_style_computed_style_properties_h(self):
+        with open('StyleComputedStyleProperties.h', 'w') as output_file:
+            writer = Writer(output_file)
+
+            self.generation_context.generate_heading(
+                to=writer
+            )
+
+            self.generation_context.generate_required_header_pragma(
+                to=writer
+            )
+
+            self.generation_context.generate_includes(
+                to=writer,
+                system_headers=[
+                    "<WebCore/StyleComputedStyleBase.h>",
+                ]
+            )
+
+            with self.generation_context.namespaces(["WebCore", "Style"], to=writer):
+                writer.write(f"class ComputedStyleProperties : public ComputedStyleBase {{")
+                writer.write(f"public:")
+
+                with writer.indent():
+                    self._generate_property_function_declarations(
+                        to=writer
+                    )
+                    self._generate_logical_property_function_declarations(
+                        to=writer
+                    )
+
+                writer.write(f"protected:")
+
+                with writer.indent():
+                    writer.write(f"ComputedStyleProperties(ComputedStyleProperties&&) = default;")
+                    writer.write(f"ComputedStyleProperties& operator=(ComputedStyleProperties&&) = default;")
+                    writer.newline()
+
+                    writer.write(f"ComputedStyleProperties(CreateDefaultStyleTag tag) : ComputedStyleBase {{ tag }} {{ }}")
+                    writer.write(f"ComputedStyleProperties(const ComputedStyleProperties& other, CloneTag tag) : ComputedStyleBase {{ other, tag }} {{ }}")
+                    writer.newline()
+
+                    writer.write(f"ComputedStyleProperties(ComputedStyleProperties& a, ComputedStyleProperties&& b) : ComputedStyleBase {{ a, WTF::move(b) }} {{ }}")
+
+                writer.write(f"}};")
+                writer.newline()
+
+                self._generate_color_trait_declarations(
+                    to=writer
+                )
+
+    # Generate StyleComputedStyleProperties.cpp
+
+    def _generate_color_resolution_function_definitions(self, *, to):
+        for property in self.style_properties.all:
+            if property.codegen_properties.skip_computed_style:
+                continue
+            if property.codegen_properties.is_logical:
+                continue
+            if property.codegen_properties.longhands:
+                continue
+            if property.codegen_properties.cascade_alias:
+                continue
+            if property.codegen_properties.coordinated_value_list_property:
+                continue
+            if not property.codegen_properties.color_property:
+                continue
+
+            color_resolver = f"{property.codegen_properties.computed_style_getter}Resolver()"
+
+            to.write(f"WebCore::Color ComputedStyleProperties::{property.codegen_properties.computed_style_getter}ResolvingCurrentColor() const")
+            to.write(f"{{")
+            with to.indent():
+                to.write(f"return {color_resolver}.colorResolvingCurrentColor();")
+            to.write(f"}}")
+            to.newline()
+
+            to.write(f"WebCore::Color ComputedStyleProperties::{property.codegen_properties.computed_style_getter}ResolvingCurrentColorApplyingColorFilter() const")
+            to.write(f"{{")
+            with to.indent():
+                to.write(f"return {color_resolver}.colorResolvingCurrentColorApplyingColorFilter();")
+            to.write(f"}}")
+            to.newline()
+
+            if property.codegen_properties.computed_style_visited_link_storage_path:
+                to.write(f"WebCore::Color ComputedStyleProperties::visitedLink{property.codegen_properties.computed_style_name_for_methods}ResolvingCurrentColor() const")
+                to.write(f"{{")
+                with to.indent():
+                    to.write(f"return {color_resolver}.visitedLinkColorResolvingCurrentColor();")
+                to.write(f"}}")
+                to.newline()
+
+                to.write(f"WebCore::Color ComputedStyleProperties::visitedLink{property.codegen_properties.computed_style_name_for_methods}ResolvingCurrentColorApplyingColorFilter() const")
+                to.write(f"{{")
+                with to.indent():
+                    to.write(f"return {color_resolver}.visitedLinkColorResolvingCurrentColorApplyingColorFilter();")
+                to.write(f"}}")
+                to.newline()
+
+            to.write(f"WebCore::Color ComputedStyleProperties::visitedDependent{property.codegen_properties.computed_style_name_for_methods}(OptionSet<PaintBehavior> paintBehavior) const")
+            to.write(f"{{")
+            with to.indent():
+                to.write(f"return {color_resolver}.visitedDependentColor(paintBehavior);")
+            to.write(f"}}")
+            to.newline()
+
+            to.write(f"WebCore::Color ComputedStyleProperties::visitedDependent{property.codegen_properties.computed_style_name_for_methods}ApplyingColorFilter(OptionSet<PaintBehavior> paintBehavior) const")
+            to.write(f"{{")
+            with to.indent():
+                to.write(f"return {color_resolver}.visitedDependentColorApplyingColorFilter(paintBehavior);")
+            to.write(f"}}")
+            to.newline()
+
+    def generate_style_computed_style_properties_cpp(self):
+        with open('StyleComputedStyleProperties.cpp', 'w') as output_file:
+            writer = Writer(output_file)
+
+            self.generation_context.generate_heading(
+                to=writer
+            )
+
+            self.generation_context.generate_cpp_required_includes(
+                to=writer,
+                header="StyleComputedStyleProperties.h"
+            )
+
+            self.generation_context.generate_includes(
+                to=writer,
+                headers=[
+                    "StyleComputedStyle+GettersInlines.h",
+                ]
+            )
+
+            with self.generation_context.namespaces(["WebCore", "Style"], to=writer):
+                self._generate_color_resolution_function_definitions(
+                    to=writer
+                )
+
+    # Generate StyleComputedStyleProperties+GettersInlines.h
+
+    def _generate_getters_inlines_property_function_definition(self, *, to, function_name, function_specifiers, return_type, get_expression):
+        to.write(f"{''.join(map(lambda x: x + ' ', function_specifiers))}{return_type} ComputedStyleProperties::{function_name}() const")
+        to.write(f"{{")
+        with to.indent():
+            to.write(f"return {get_expression};")
+        to.write(f"}}")
+        to.newline()
+
+    def _generate_getters_inlines_property_function_definitions(self, *, to):
+        for property in self.style_properties.all:
+            if property.codegen_properties.skip_computed_style:
+                continue
+            if property.codegen_properties.is_logical:
+                continue
+            if property.codegen_properties.longhands:
+                continue
+            if property.codegen_properties.cascade_alias:
+                continue
+            if property.codegen_properties.coordinated_value_list_property:
+                continue
+
+            if not property.codegen_properties.computed_style_storage_path and not property.codegen_properties.skip_computed_style_getter:
+                raise Exception(f"Missing ComputedStyle storage path for property {property.id}.")
+
+            if not property.codegen_properties.computed_style_getter_custom and not property.codegen_properties.skip_computed_style_getter:
+                function_name = property.codegen_properties.computed_style_getter
+                function_specifiers = property.getter_definition_function_specifiers
+                return_type = property.getter_return_type
+                storage_type = property.codegen_properties.computed_style_type
+                storage_name = property.codegen_properties.computed_style_storage_name
+                storage_kind = property.codegen_properties.computed_style_storage_kind
+                container_kind = property.codegen_properties.computed_style_storage_container
+                container_path = property.codegen_properties.computed_style_storage_path
+
+                self._generate_getters_inlines_property_function_definition(
+                    to=to,
+                    function_name=function_name,
+                    function_specifiers=function_specifiers,
+                    return_type=return_type,
+                    get_expression=self._compute_get_expression(property, container_kind, container_path, storage_type, storage_name, storage_kind)
+                )
+
+            if property.codegen_properties.color_property:
+                if property.codegen_properties.computed_style_visited_link_storage_path and not property.codegen_properties.skip_computed_style_getter:
+                    function_name = f"visitedLink{property.codegen_properties.computed_style_name_for_methods}"
+                    function_specifiers = ['inline']
+                    return_type = property.getter_return_type
+                    storage_type = property.codegen_properties.computed_style_type
+                    storage_kind = property.codegen_properties.computed_style_storage_kind  # the storage kind for visited links are always the same as the principle value
+                    storage_name = property.codegen_properties.computed_style_visited_link_storage_name
+                    container_kind = property.codegen_properties.computed_style_visited_link_storage_container
+                    container_path = property.codegen_properties.computed_style_visited_link_storage_path
+
+                    self._generate_getters_inlines_property_function_definition(
+                        to=to,
+                        function_name=function_name,
+                        function_specifiers=function_specifiers,
+                        return_type=return_type,
+                        get_expression=self._compute_get_expression(property, container_kind, container_path, storage_type, storage_name, storage_kind)
+                    )
+
+                color_resolver_getter_name = f"{property.codegen_properties.computed_style_getter}Resolver"
+                color_resolver_getter_function_specifiers = ['inline']
+                color_resolver_getter_return_type = 'decltype(auto)'
+                color_resolver_getter_expression = f"ColorPropertyResolver<ColorPropertyTraits<PropertyNameConstant<{property.id_without_scope}>>> {{ *this }}"
+
+                self._generate_getters_inlines_property_function_definition(
+                    to=to,
+                    function_name=color_resolver_getter_name,
+                    function_specifiers=color_resolver_getter_function_specifiers,
+                    return_type=color_resolver_getter_return_type,
+                    get_expression=color_resolver_getter_expression
+                )
+
+            if property.codegen_properties.computed_style_has_explicitly_set_storage_path:
+                function_name = f"hasExplicitlySet{property.codegen_properties.computed_style_name_for_methods}"
+                function_specifiers = ['inline']
+                return_type = 'bool'
+                storage_type = 'bool'
+                storage_kind = 'value'
+                storage_name = property.codegen_properties.computed_style_has_explicitly_set_storage_name
+                container_kind = property.codegen_properties.computed_style_has_explicitly_set_storage_container
+                container_path = property.codegen_properties.computed_style_has_explicitly_set_storage_path
+
+                self._generate_getters_inlines_property_function_definition(
+                    to=to,
+                    function_name=function_name,
+                    function_specifiers=function_specifiers,
+                    return_type=return_type,
+                    get_expression=self._compute_get_expression(property, container_kind, container_path, storage_type, storage_name, storage_kind)
+                )
+
+    def _generate_getters_inlines_function_definition_logical_axis(self, *, to, axis, getter_return_type, horizontal, vertical):
+        to.write(f"inline {getter_return_type} ComputedStyleProperties::logical{axis.id_without_prefix}(WritingMode writingMode) const")
+        to.write(f"{{")
+        with to.indent():
+            to.write(f"return writingMode.isHorizontal() ? {horizontal.codegen_properties.computed_style_getter}() : {vertical.codegen_properties.computed_style_getter}();")
+        to.write(f"}}")
+        to.newline()
+
+        to.write(f"inline {getter_return_type} ComputedStyleProperties::logical{axis.id_without_prefix}() const")
+        to.write(f"{{")
+        with to.indent():
+            to.write(f"return logical{axis.id_without_prefix}(writingMode());")
+        to.write(f"}}")
+        to.newline()
+
+    def _generate_getters_inlines_function_definition_logical_side_start_end(self, *, to, prefix, edge, getter_return_type, left, right, top, bottom):
+        to.write(f"inline {getter_return_type} ComputedStyleProperties::{prefix.id_without_prefix_with_lowercase_first_letter}{edge}(WritingMode writingMode) const")
+        to.write(f"{{")
+        with to.indent():
+            to.write(f"if (writingMode.isHorizontal())")
+            with to.indent():
+                to.write(f"return writingMode.isInlineLeftToRight() ? {left.codegen_properties.computed_style_getter}() : {right.codegen_properties.computed_style_getter}();")
+            to.write(f"else")
+            with to.indent():
+                to.write(f"return writingMode.isInlineTopToBottom() ? {top.codegen_properties.computed_style_getter}() : {bottom.codegen_properties.computed_style_getter}();")
+        to.write(f"}}")
+        to.newline()
+
+        to.write(f"inline {getter_return_type} ComputedStyleProperties::{prefix.id_without_prefix_with_lowercase_first_letter}{edge}() const")
+        to.write(f"{{")
+        with to.indent():
+            to.write(f"return {prefix.id_without_prefix_with_lowercase_first_letter}{edge}(writingMode());")
+        to.write(f"}}")
+        to.newline()
+
+    def _generate_getters_inlines_function_definition_logical_side_before_after(self, *, to, prefix, edge, getter_return_type, left, right, top, bottom):
+        to.write(f"inline {getter_return_type} ComputedStyleProperties::{prefix.id_without_prefix_with_lowercase_first_letter}{edge}(WritingMode writingMode) const")
+        to.write(f"{{")
+        with to.indent():
+            to.write(f"switch (writingMode.blockDirection()) {{")
+            to.write(f"case FlowDirection::LeftToRight:")
+            with to.indent():
+                to.write(f"return {left.codegen_properties.computed_style_getter}();")
+            to.write(f"case FlowDirection::RightToLeft:")
+            with to.indent():
+                to.write(f"return {right.codegen_properties.computed_style_getter}();")
+            to.write(f"case FlowDirection::TopToBottom:")
+            with to.indent():
+                to.write(f"return {top.codegen_properties.computed_style_getter}();")
+            to.write(f"case FlowDirection::BottomToTop:")
+            with to.indent():
+                to.write(f"return {bottom.codegen_properties.computed_style_getter}();")
+            to.write(f"}}")
+            to.write(f"ASSERT_NOT_REACHED();")
+            to.write(f"return {bottom.codegen_properties.computed_style_getter}();")
+        to.write(f"}}")
+        to.newline()
+
+        to.write(f"inline {getter_return_type} ComputedStyleProperties::{prefix.id_without_prefix_with_lowercase_first_letter}{edge}() const")
+        to.write(f"{{")
+        with to.indent():
+            to.write(f"return {prefix.id_without_prefix_with_lowercase_first_letter}{edge}(writingMode());")
+        to.write(f"}}")
+        to.newline()
+
+    def _generate_getters_inlines_function_definition_logical_side_left_right(self, *, to, prefix, edge, getter_return_type, left, right):
+        to.write(f"inline {getter_return_type} ComputedStyleProperties::{prefix.id_without_prefix_with_lowercase_first_letter}{edge}(WritingMode writingMode) const")
+        to.write(f"{{")
+        with to.indent():
+            to.write(f"if (writingMode.isHorizontal())")
+            with to.indent():
+                to.write(f"return {left.codegen_properties.computed_style_getter}();")
+            to.write(f"else")
+            with to.indent():
+                to.write(f"return {right.codegen_properties.computed_style_getter}();")
+        to.write(f"}}")
+        to.newline()
+
+        to.write(f"inline {getter_return_type} ComputedStyleProperties::{prefix.id_without_prefix_with_lowercase_first_letter}{edge}() const")
+        to.write(f"{{")
+        with to.indent():
+            to.write(f"return {prefix.id_without_prefix_with_lowercase_first_letter}{edge}(writingMode());")
+        to.write(f"}}")
+        to.newline()
+
+    def _generate_getters_inlines_logical_property_function_definitions(self, *, to):
+        for property_group_name, property_group in self.style_properties.logical_property_groups.items():
+            if property_group['kind'] == 'axis':
+                horizontal = property_group['physical']['horizontal']
+                vertical = property_group['physical']['vertical']
+
+                # NOTE: Choice of which property we use here is arbitrary, they must always have the same types.
+                getter_return_type = horizontal.getter_return_type
+
+                self._generate_getters_inlines_function_definition_logical_axis(
+                    to=to,
+                    axis=horizontal,
+                    getter_return_type=getter_return_type,
+                    horizontal=horizontal,
+                    vertical=vertical
+                )
+                self._generate_getters_inlines_function_definition_logical_axis(
+                    to=to,
+                    axis=vertical,
+                    getter_return_type=getter_return_type,
+                    horizontal=vertical,
+                    vertical=horizontal
+                )
+            elif property_group['kind'] == 'side':
+                left = property_group['physical']['left']
+                right = property_group['physical']['right']
+                bottom = property_group['physical']['bottom']
+                top = property_group['physical']['top']
+
+                # NOTE: Choice of which property we use here is arbitrary, they must always have the same types.
+                getter_return_type = left.getter_return_type
+
+                prefix = Name(property_group_name)
+
+                self._generate_getters_inlines_function_definition_logical_side_start_end(
+                    to=to,
+                    prefix=prefix,
+                    edge='Start',
+                    getter_return_type=getter_return_type,
+                    left=left,
+                    right=right,
+                    top=top,
+                    bottom=bottom
+                )
+                self._generate_getters_inlines_function_definition_logical_side_start_end(
+                    to=to,
+                    prefix=prefix,
+                    edge='End',
+                    getter_return_type=getter_return_type,
+                    left=right,
+                    right=left,
+                    top=bottom,
+                    bottom=top
+                )
+                self._generate_getters_inlines_function_definition_logical_side_before_after(
+                    to=to,
+                    prefix=prefix,
+                    edge='Before',
+                    getter_return_type=getter_return_type,
+                    left=left,
+                    right=right,
+                    top=top,
+                    bottom=bottom
+                )
+                self._generate_getters_inlines_function_definition_logical_side_before_after(
+                    to=to,
+                    prefix=prefix,
+                    edge='After',
+                    getter_return_type=getter_return_type,
+                    left=right,
+                    right=left,
+                    top=bottom,
+                    bottom=top
+                )
+                self._generate_getters_inlines_function_definition_logical_side_left_right(
+                    to=to,
+                    prefix=prefix,
+                    edge='LogicalLeft',
+                    getter_return_type=getter_return_type,
+                    left=left,
+                    right=top
+                )
+                self._generate_getters_inlines_function_definition_logical_side_left_right(
+                    to=to,
+                    prefix=prefix,
+                    edge='LogicalRight',
+                    getter_return_type=getter_return_type,
+                    left=right,
+                    right=bottom
+                )
+
+    def _generate_getters_inlines_color_trait_definitions(self, *, to):
+        for property in self.style_properties.all:
+            if not property.codegen_properties.color_property:
+                continue
+            if property.codegen_properties.skip_computed_style:
+                continue
+            if property.codegen_properties.is_logical:
+                continue
+            if property.codegen_properties.longhands:
+                continue
+            if property.codegen_properties.cascade_alias:
+                continue
+            if property.codegen_properties.coordinated_value_list_property:
+                continue
+
+            if not property.codegen_properties.color_property_traits_color_custom:
+                to.write(f"inline const Color& ColorPropertyTraits<PropertyNameConstant<{property.id_without_scope}>>::color(const ComputedStyleProperties& style)")
+                to.write(f"{{")
+                with to.indent():
+                    to.write(f"return style.{property.codegen_properties.computed_style_getter}();")
+                to.write(f"}}")
+                to.newline()
+
+            if property.codegen_properties.visited_link_color_support and not property.codegen_properties.color_property_traits_visited_link_color_custom:
+                to.write(f"inline const Color& ColorPropertyTraits<PropertyNameConstant<{property.id_without_scope}>>::visitedLinkColor(const ComputedStyleProperties& style)")
+                to.write(f"{{")
+                with to.indent():
+                    to.write(f"return style.visitedLink{property.codegen_properties.computed_style_name_for_methods}();")
+                to.write(f"}}")
+                to.newline()
+
+    def generate_style_computed_style_properties_getters_inlines_h(self):
+        with open('StyleComputedStyleProperties+GettersInlines.h', 'w') as output_file:
+            writer = Writer(output_file)
+
+            self.generation_context.generate_heading(
+                to=writer
+            )
+
+            self.generation_context.generate_required_header_pragma(
+                to=writer
+            )
+
+            writer.write("#ifndef COMPUTED_STYLE_PROPERTIES_GETTERS_INLINES_INCLUDE_TRAP")
+            writer.write("#error \"Please do not include this file anywhere except from StyleComputedStyle+GettersInlines.h.\"")
+            writer.write("#endif")
+            writer.newline()
+
+            self.generation_context.generate_includes(
+                to=writer,
+                system_headers=[
+                    "<WebCore/StyleComputedStyleProperties+GettersCustomInlines.h>",
+                ]
+            )
+
+            with self.generation_context.namespaces(["WebCore", "Style"], to=writer):
+                self._generate_getters_inlines_property_function_definitions(
+                    to=writer
+                )
+                self._generate_getters_inlines_logical_property_function_definitions(
+                    to=writer
+                )
+                self._generate_getters_inlines_color_trait_definitions(
+                    to=writer
+                )
+
+    # Generate StyleComputedStyleProperties+SettersInlines.h
+
+    def _generate_setters_inlines_property_function_definition(self, *, to, function_name, function_specifiers, return_type, argument_type, argument_name, get_expression, set_expression, did_set_expression=None):
+        to.write(f"{''.join(map(lambda x: x + ' ', function_specifiers))}{return_type} ComputedStyleProperties::{function_name}({argument_type} {argument_name})")
+        to.write(f"{{")
+        with to.indent():
+            if return_type == 'void':
+                to.write(f"if ({argument_name} != {get_expression}) {{")
+                with to.indent():
+                    to.write(f"{set_expression};")
+                    if did_set_expression:
+                        to.write(f"{did_set_expression};")
+                to.write(f"}}")
+            elif return_type == 'bool':
+                to.write(f"if ({argument_name} != {get_expression}) {{")
+                with to.indent():
+                    to.write(f"{set_expression};")
+                    if did_set_expression:
+                        to.write(f"{did_set_expression};")
+                    to.write(f"return true;")
+                to.write(f"}}")
+                to.write(f"return false;")
+        to.write(f"}}")
+        to.newline()
+
+    def _generate_setters_inlines_property_function_definitions(self, *, to):
+        for property in self.style_properties.all:
+            if property.codegen_properties.skip_computed_style:
+                continue
+            if property.codegen_properties.skip_computed_style_setter:
+                continue
+            if property.codegen_properties.is_logical:
+                continue
+            if property.codegen_properties.longhands:
+                continue
+            if property.codegen_properties.cascade_alias:
+                continue
+            if property.codegen_properties.coordinated_value_list_property:
+                continue
+
+            if not property.codegen_properties.computed_style_storage_path:
+                raise Exception(f"Missing ComputedStyle storage path for property {property.id}.")
+
+            if not property.codegen_properties.computed_style_setter_custom:
+                function_name = property.codegen_properties.computed_style_setter
+                function_specifiers = property.setter_definition_function_specifiers
+                return_type = "void"
+                argument_type = property.setter_argument_type
+                argument_name = "value"
+                storage_type = property.codegen_properties.computed_style_type
+                storage_kind = property.codegen_properties.computed_style_storage_kind
+                storage_name = property.codegen_properties.computed_style_storage_name
+                container_kind = property.codegen_properties.computed_style_storage_container
+                container_path = property.codegen_properties.computed_style_storage_path
+
+                self._generate_setters_inlines_property_function_definition(
+                    to=to,
+                    function_name=function_name,
+                    function_specifiers=function_specifiers,
+                    return_type=return_type,
+                    argument_type=argument_type,
+                    argument_name=argument_name,
+                    get_expression=self._compute_get_expression(property, container_kind, container_path, storage_type, storage_name, storage_kind),
+                    set_expression=self._compute_set_expression(property, container_kind, container_path, storage_type, storage_name, storage_kind, argument_name),
+                    did_set_expression=self._compute_did_set_expression(property)
+                )
+
+            if property.codegen_properties.computed_style_visited_link_storage_path:
+                function_name = f"setVisitedLink{property.codegen_properties.computed_style_name_for_methods}"
+                function_specifiers = ['inline']
+                return_type = "void"
+                argument_type = property.setter_argument_type
+                argument_name = "value"
+                storage_type = property.codegen_properties.computed_style_type
+                storage_kind = property.codegen_properties.computed_style_storage_kind  # the storage kind for visited links are always the same as the principle value
+                storage_name = property.codegen_properties.computed_style_visited_link_storage_name
+                container_kind = property.codegen_properties.computed_style_visited_link_storage_container
+                container_path = property.codegen_properties.computed_style_visited_link_storage_path
+
+                self._generate_setters_inlines_property_function_definition(
+                    to=to,
+                    function_name=function_name,
+                    function_specifiers=function_specifiers,
+                    return_type=return_type,
+                    argument_type=argument_type,
+                    argument_name=argument_name,
+                    get_expression=self._compute_get_expression(property, container_kind, container_path, storage_type, storage_name, storage_kind),
+                    set_expression=self._compute_set_expression(property, container_kind, container_path, storage_type, storage_name, storage_kind, argument_name)
+                )
+
+            if property.codegen_properties.computed_style_has_explicitly_set_storage_path:
+                function_name = f"setHasExplicitlySet{property.codegen_properties.computed_style_name_for_methods}"
+                function_specifiers = ['inline']
+                return_type = "void"
+                argument_type = 'bool'
+                argument_name = f"value"
+                storage_type = 'bool'
+                storage_kind = 'value'
+                storage_name = property.codegen_properties.computed_style_has_explicitly_set_storage_name
+                container_kind = property.codegen_properties.computed_style_has_explicitly_set_storage_container
+                container_path = property.codegen_properties.computed_style_has_explicitly_set_storage_path
+
+                self._generate_setters_inlines_property_function_definition(
+                    to=to,
+                    function_name=function_name,
+                    function_specifiers=function_specifiers,
+                    return_type=return_type,
+                    argument_type=argument_type,
+                    argument_name=argument_name,
+                    get_expression=self._compute_get_expression(property, container_kind, container_path, storage_type, storage_name, storage_kind),
+                    set_expression=self._compute_set_expression(property, container_kind, container_path, storage_type, storage_name, storage_kind, argument_name)
+                )
+
+    def _generate_setters_inlines_function_definition_logical_axis(self, *, to, axis, setter_argument_type, horizontal, vertical):
+        to.write(f"inline void ComputedStyleProperties::setLogical{axis.id_without_prefix}({setter_argument_type} value)")
+        to.write(f"{{")
+        with to.indent():
+            to.write(f"if (writingMode().isHorizontal())")
+            with to.indent():
+                to.write(f"{horizontal.codegen_properties.computed_style_setter}(WTF::move(value));")
+            to.write(f"else")
+            with to.indent():
+                to.write(f"{vertical.codegen_properties.computed_style_setter}(WTF::move(value));")
+        to.write(f"}}")
+        to.newline()
+
+    def _generate_setters_inlines_function_definition_logical_side_start_end(self, *, to, prefix, edge, setter_argument_type, left, right, top, bottom):
+        to.write(f"void ComputedStyleProperties::set{prefix.id_without_prefix}{edge}({setter_argument_type} value)")
+        to.write(f"{{")
+        with to.indent():
+            to.write(f"if (writingMode().isHorizontal()) {{")
+            with to.indent():
+                to.write(f"if (writingMode().isInlineLeftToRight())")
+                with to.indent():
+                    to.write(f"{left.codegen_properties.computed_style_setter}(WTF::move(value));")
+                to.write(f"else")
+                with to.indent():
+                    to.write(f"{right.codegen_properties.computed_style_setter}(WTF::move(value));")
+            to.write(f"}} else {{")
+            with to.indent():
+                to.write(f"if (writingMode().isInlineTopToBottom())")
+                with to.indent():
+                    to.write(f"{top.codegen_properties.computed_style_setter}(WTF::move(value));")
+                to.write(f"else")
+                with to.indent():
+                    to.write(f"{bottom.codegen_properties.computed_style_setter}(WTF::move(value));")
+            to.write(f"}}")
+        to.write(f"}}")
+        to.newline()
+
+    def _generate_setters_inlines_function_definition_logical_side_before_after(self, *, to, prefix, edge, setter_argument_type, left, right, top, bottom):
+        to.write(f"void ComputedStyleProperties::set{prefix.id_without_prefix}{edge}({setter_argument_type} value)")
+        to.write(f"{{")
+        with to.indent():
+            to.write(f"switch (writingMode().blockDirection()) {{")
+            to.write(f"case FlowDirection::LeftToRight:")
+            with to.indent():
+                to.write(f"return {left.codegen_properties.computed_style_setter}(WTF::move(value));")
+            to.write(f"case FlowDirection::RightToLeft:")
+            with to.indent():
+                to.write(f"return {right.codegen_properties.computed_style_setter}(WTF::move(value));")
+            to.write(f"case FlowDirection::TopToBottom:")
+            with to.indent():
+                to.write(f"return {top.codegen_properties.computed_style_setter}(WTF::move(value));")
+            to.write(f"case FlowDirection::BottomToTop:")
+            with to.indent():
+                to.write(f"return {bottom.codegen_properties.computed_style_setter}(WTF::move(value));")
+            to.write(f"}}")
+        to.write(f"}}")
+        to.newline()
+
+    def _generate_setters_inlines_function_definition_logical_side_left_right(self, *, to, prefix, edge, setter_argument_type, left, right):
+        to.write(f"void ComputedStyleProperties::set{prefix.id_without_prefix}{edge}({setter_argument_type} value)")
+        to.write(f"{{")
+        with to.indent():
+            to.write(f"if (writingMode().isHorizontal())")
+            with to.indent():
+                to.write(f"{left.codegen_properties.computed_style_setter}(WTF::move(value));")
+            to.write(f"else")
+            with to.indent():
+                to.write(f"{right.codegen_properties.computed_style_setter}(WTF::move(value));")
+        to.write(f"}}")
+        to.newline()
+
+    def _generate_setters_inlines_logical_property_function_definitions(self, *, to):
+        for property_group_name, property_group in self.style_properties.logical_property_groups.items():
+            if property_group['kind'] == 'axis':
+                horizontal = property_group['physical']['horizontal']
+                vertical = property_group['physical']['vertical']
+
+                # NOTE: Choice of which property we use here is arbitrary, they must always have the same types.
+                setter_argument_type = horizontal.setter_argument_type
+
+                self._generate_setters_inlines_function_definition_logical_axis(
+                    to=to,
+                    axis=horizontal,
+                    setter_argument_type=setter_argument_type,
+                    horizontal=horizontal,
+                    vertical=vertical
+                )
+                self._generate_setters_inlines_function_definition_logical_axis(
+                    to=to,
+                    axis=vertical,
+                    setter_argument_type=setter_argument_type,
+                    horizontal=vertical,
+                    vertical=horizontal
+                )
+
+            elif property_group['kind'] == 'side':
+                left = property_group['physical']['left']
+                right = property_group['physical']['right']
+                bottom = property_group['physical']['bottom']
+                top = property_group['physical']['top']
+
+                # NOTE: Choice of which property we use here is arbitrary, they must always have the same types.
+                setter_argument_type = left.setter_argument_type
+
+                prefix = Name(property_group_name)
+
+                self._generate_setters_inlines_function_definition_logical_side_start_end(
+                    to=to,
+                    prefix=prefix,
+                    edge='Start',
+                    setter_argument_type=setter_argument_type,
+                    left=left,
+                    right=right,
+                    top=top,
+                    bottom=bottom
+                )
+                self._generate_setters_inlines_function_definition_logical_side_start_end(
+                    to=to,
+                    prefix=prefix,
+                    edge='End',
+                    setter_argument_type=setter_argument_type,
+                    left=right,
+                    right=left,
+                    top=bottom,
+                    bottom=top
+                )
+                self._generate_setters_inlines_function_definition_logical_side_before_after(
+                    to=to,
+                    prefix=prefix,
+                    edge='Before',
+                    setter_argument_type=setter_argument_type,
+                    left=left,
+                    right=right,
+                    top=top,
+                    bottom=bottom
+                )
+                self._generate_setters_inlines_function_definition_logical_side_before_after(
+                    to=to,
+                    prefix=prefix,
+                    edge='After',
+                    setter_argument_type=setter_argument_type,
+                    left=right,
+                    right=left,
+                    top=bottom,
+                    bottom=top
+                )
+                self._generate_setters_inlines_function_definition_logical_side_left_right(
+                    to=to,
+                    prefix=prefix,
+                    edge='LogicalLeft',
+                    setter_argument_type=setter_argument_type,
+                    left=left,
+                    right=top
+                )
+                self._generate_setters_inlines_function_definition_logical_side_left_right(
+                    to=to,
+                    prefix=prefix,
+                    edge='LogicalRight',
+                    setter_argument_type=setter_argument_type,
+                    left=right,
+                    right=bottom
+                )
+
+    def generate_style_computed_style_properties_setters_inlines_h(self):
+        with open('StyleComputedStyleProperties+SettersInlines.h', 'w') as output_file:
+            writer = Writer(output_file)
+
+            self.generation_context.generate_heading(
+                to=writer
+            )
+
+            self.generation_context.generate_required_header_pragma(
+                to=writer
+            )
+
+            writer.write("#ifndef COMPUTED_STYLE_PROPERTIES_SETTERS_INLINES_INCLUDE_TRAP")
+            writer.write("#error \"Please do not include this file anywhere except from StyleComputedStyle+SettersInlines.h.\"")
+            writer.write("#endif")
+            writer.newline()
+
+            self.generation_context.generate_includes(
+                to=writer,
+                headers=[
+                    "StyleComputedStyleProperties+SettersCustomInlines.h",
+                ]
+            )
+
+            with self.generation_context.namespaces(["WebCore", "Style"], to=writer):
+                self._generate_setters_inlines_property_function_definitions(
+                    to=writer
+                )
+                self._generate_setters_inlines_logical_property_function_definitions(
+                    to=writer
+                )
+
+    # Generate StyleComputedStyleProperties+InitialInlines.h
+
+    def _generate_initial_inlines_function_definition(self, *, to, function_name, function_specifiers, return_type, initial_expression, requires_using_namespace_css_literals):
+        to.write(f"{''.join(map(lambda x: x + ' ', function_specifiers))}{return_type} ComputedStyleProperties::{function_name}()")
+        to.write(f"{{")
+        with to.indent():
+            if requires_using_namespace_css_literals:
+                to.write(f"using namespace CSS::Literals;")
+            to.write(f"return {initial_expression};")
+        to.write(f"}}")
+        to.newline()
+
+    def _generate_initial_inlines_property_function_definitions(self, *, to):
+        for property in self.style_properties.all:
+            if property.codegen_properties.skip_computed_style:
+                continue
+            if property.codegen_properties.skip_computed_style_initial:
+                continue
+            if property.codegen_properties.is_logical:
+                continue
+            if property.codegen_properties.longhands:
+                continue
+            if property.codegen_properties.cascade_alias:
+                continue
+            if property.codegen_properties.coordinated_value_list_property:
+                continue
+
+            if not property.codegen_properties.computed_style_initial_custom:
+                function_name = property.codegen_properties.computed_style_initial
+                function_specifiers = property.initial_definition_function_specifiers
+                return_type = property.initial_return_type
+                requires_using_namespace_css_literals = property.initial.requires_using_namespace_css_literals
+
+                self._generate_initial_inlines_function_definition(
+                    to=to,
+                    function_name=function_name,
+                    function_specifiers=function_specifiers,
+                    return_type=return_type,
+                    initial_expression=self._compute_initial_expression(property),
+                    requires_using_namespace_css_literals=requires_using_namespace_css_literals
+                )
+
+    def generate_style_computed_style_properties_initial_inlines_h(self):
+        with open('StyleComputedStyleProperties+InitialInlines.h', 'w') as output_file:
+            writer = Writer(output_file)
+
+            self.generation_context.generate_heading(
+                to=writer
+            )
+
+            self.generation_context.generate_required_header_pragma(
+                to=writer
+            )
+
+            writer.write("#ifndef COMPUTED_STYLE_PROPERTIES_INITIAL_INLINES_INCLUDE_TRAP")
+            writer.write("#error \"Please do not include this file anywhere except from StyleComputedStyle+InitialInlines.h.\"")
+            writer.write("#endif")
+            writer.newline()
+
+            self.generation_context.generate_includes(
+                to=writer,
+                system_headers=[
+                    "<WebCore/StyleComputedStyleProperties+InitialCustomInlines.h>",
+                ]
+            )
+
+            with self.generation_context.namespaces(["WebCore", "Style"], to=writer):
+                self._generate_initial_inlines_property_function_definitions(
+                    to=writer
+                )
+
+
+# Generates `RenderStyleProperties.h`, `RenderStyleProperties+GettersInlines.h` and `RenderStyleProperties+SettersInlines.h`.
+class GenerateRenderStyleProperties:
+    def __init__(self, generation_context):
+        self.generation_context = generation_context
+
+    @property
+    def properties_and_descriptors(self):
+        return self.generation_context.properties_and_descriptors
+
+    @property
+    def style_properties(self):
+        return self.generation_context.properties_and_descriptors.style_properties
+
+    def generate(self):
+        self.generate_render_style_properties_h()
+        self.generate_render_style_properties_getters_inlines_h()
+        self.generate_render_style_properties_setters_inlines_h()
+
+    def _compute_forwarding_expression(self, storage_kind, argument_name):
+        if storage_kind == 'reference':
+            return f"WTF::move({argument_name})"
+        else:
+            return f"{argument_name}"
+
+    # Computes the function specifiers, if any, of the getter's declaration.
+    def _compute_getter_declaration_function_specifiers(self, property):
+        function_specifiers = ['inline']
+        if property.codegen_properties.computed_style_getter_constexpr:
+            function_specifiers += ['constexpr']
+        return function_specifiers
+
+    # Computes the function specifiers, if any, of the getter's definition.
+    def _compute_getter_definition_function_specifiers(self, property):
+        function_specifiers = ['inline']
+        if property.codegen_properties.computed_style_getter_constexpr:
+            function_specifiers += ['constexpr']
+        return function_specifiers
+
+    # Computes the function specifiers, if any, of the setter's declaration.
+    def _compute_setter_declaration_function_specifiers(self, property):
+        function_specifiers = ['inline']
+        if property.codegen_properties.computed_style_setter_constexpr:
+            function_specifiers += ['constexpr']
+        return function_specifiers
+
+    # Computes the function specifiers, if any, of the setter's definition.
+    def _compute_setter_definition_function_specifiers(self, property):
+        function_specifiers = ['inline']
+        if property.codegen_properties.computed_style_setter_constexpr:
+            function_specifiers += ['constexpr']
+        return function_specifiers
+
+    # Generate RenderStyleProperties.h
+
+    def _generate_property_function_declarations(self, *, to):
+        for property in self.style_properties.all:
+            if property.codegen_properties.skip_render_style:
+                continue
+            if property.codegen_properties.is_logical:
+                continue
+            if property.codegen_properties.longhands:
+                continue
+            if property.codegen_properties.cascade_alias:
+                continue
+            if property.codegen_properties.coordinated_value_list_property:
+                continue
+
+            to.write(f"// '{property}'")
+
+            if not property.codegen_properties.skip_render_style_getter:
+                getter_name = property.codegen_properties.computed_style_getter
+                getter_function_specifiers = self._compute_getter_declaration_function_specifiers(property)
+                getter_return_type = property.getter_return_type
+
+                self.generation_context.generate_function_declaration(
+                    to=to,
+                    function_name=getter_name,
+                    function_specifiers=getter_function_specifiers,
+                    return_type=getter_return_type,
+                    function_qualifiers=['const']
+                )
+
+            if not property.codegen_properties.skip_render_style_setter:
+                setter_name = property.codegen_properties.computed_style_setter
+                setter_function_specifiers = self._compute_setter_declaration_function_specifiers(property)
+                setter_return_type = property.setter_return_type
+                setter_argument_type = property.setter_argument_type
+
+                self.generation_context.generate_function_declaration(
+                    to=to,
+                    function_name=setter_name,
+                    function_specifiers=setter_function_specifiers,
+                    return_type=setter_return_type,
+                    argument_types=[setter_argument_type]
+                )
+
+            if property.codegen_properties.color_property:
+                if property.codegen_properties.computed_style_visited_link_storage_path:
+                    getter_name = f"visitedLink{property.codegen_properties.computed_style_name_for_methods}"
+                    setter_name = f"setVisitedLink{property.codegen_properties.computed_style_name_for_methods}"
+                    getter_function_specifiers = ['inline']
+                    getter_return_type = property.getter_return_type
+                    setter_function_specifiers = ['inline']
+                    setter_return_type = f"void"
+                    setter_argument_type = property.setter_argument_type
+
+                    self.generation_context.generate_function_declaration(
+                        to=to,
+                        function_name=getter_name,
+                        function_specifiers=getter_function_specifiers,
+                        return_type=getter_return_type,
+                        function_qualifiers=['const']
+                    )
+                    self.generation_context.generate_function_declaration(
+                        to=to,
+                        function_name=setter_name,
+                        function_specifiers=setter_function_specifiers,
+                        return_type=setter_return_type,
+                        argument_types=[setter_argument_type]
+                    )
+
+                self.generation_context.generate_function_declaration(
+                    to=to,
+                    function_name=f"{property.codegen_properties.computed_style_getter}Resolver",
+                    function_specifiers=['inline'],
+                    return_type="decltype(auto)",
+                    function_qualifiers=['const']
+                )
+
+                self.generation_context.generate_function_declaration(
+                    to=to,
+                    function_name=f"{property.codegen_properties.computed_style_getter}ResolvingCurrentColor",
+                    function_specifiers=['inline'],
+                    return_type='WebCore::Color',
+                    function_qualifiers=['const']
+                )
+                self.generation_context.generate_function_declaration(
+                    to=to,
+                    function_name=f"{property.codegen_properties.computed_style_getter}ResolvingCurrentColorApplyingColorFilter",
+                    function_specifiers=['inline'],
+                    return_type='WebCore::Color',
+                    function_qualifiers=['const']
+                )
+
+                if property.codegen_properties.computed_style_visited_link_storage_path:
+                    self.generation_context.generate_function_declaration(
+                        to=to,
+                        function_name=f"visitedLink{property.codegen_properties.computed_style_name_for_methods}ResolvingCurrentColor",
+                        function_specifiers=['inline'],
+                        return_type='WebCore::Color',
+                        function_qualifiers=['const']
+                    )
+                    self.generation_context.generate_function_declaration(
+                        to=to,
+                        function_name=f"visitedLink{property.codegen_properties.computed_style_name_for_methods}ResolvingCurrentColorApplyingColorFilter",
+                        function_specifiers=['inline'],
+                        return_type='WebCore::Color',
+                        function_qualifiers=['const']
+                    )
+
+                self.generation_context.generate_function_declaration(
+                    to=to,
+                    function_name=f"visitedDependent{property.codegen_properties.computed_style_name_for_methods}",
+                    function_specifiers=['inline'],
+                    return_type='WebCore::Color',
+                    argument_types=['OptionSet<PaintBehavior> = { }'],
+                    function_qualifiers=['const']
+                )
+                self.generation_context.generate_function_declaration(
+                    to=to,
+                    function_name=f"visitedDependent{property.codegen_properties.computed_style_name_for_methods}ApplyingColorFilter",
+                    function_specifiers=['inline'],
+                    return_type='WebCore::Color',
+                    argument_types=['OptionSet<PaintBehavior> = { }'],
+                    function_qualifiers=['const']
+                )
+
+            if property.codegen_properties.computed_style_has_explicitly_set_storage_path:
+                getter_name = f"hasExplicitlySet{property.codegen_properties.computed_style_name_for_methods}"
+                setter_name = f"setHasExplicitlySet{property.codegen_properties.computed_style_name_for_methods}"
+                getter_function_specifiers = ['inline']
+                getter_return_type = 'bool'
+                setter_function_specifiers = ['inline']
+                setter_return_type = f"void"
+                setter_argument_type = 'bool'
+
+                self.generation_context.generate_function_declaration(
+                    to=to,
+                    function_name=getter_name,
+                    function_specifiers=getter_function_specifiers,
+                    return_type=getter_return_type,
+                    function_qualifiers=['const']
+                )
+                self.generation_context.generate_function_declaration(
+                    to=to,
+                    function_name=setter_name,
+                    function_specifiers=setter_function_specifiers,
+                    return_type=setter_return_type,
+                    argument_types=[setter_argument_type]
+                )
+            to.newline()
+
+    def _generate_logical_property_function_declarations(self, *, to):
+        for property_group_name, property_group in self.style_properties.logical_property_groups.items():
+            to.write(f"// Logical getters and setters for '{property_group_name}' properties of type '{property_group['kind']}'.")
+            if property_group['kind'] == 'axis':
+                horizontal_property = property_group['physical']['horizontal']
+                vertical_property = property_group['physical']['vertical']
+
+                if horizontal_property.codegen_properties.skip_render_style:
+                    continue
+
+                # NOTE: Choice of which property we use here is arbitrary, they must always have the same types.
+                getter_return_type = horizontal_property.getter_return_type
+                setter_argument_type = horizontal_property.setter_argument_type
+
+                if not horizontal_property.codegen_properties.skip_render_style_getter:
+                    for property in [horizontal_property, vertical_property]:
+                        to.write(f"inline {getter_return_type} logical{property.id_without_prefix}(WritingMode) const;")
+                    for property in [horizontal_property, vertical_property]:
+                        to.write(f"inline {getter_return_type} logical{property.id_without_prefix}() const;")
+                if not horizontal_property.codegen_properties.skip_render_style_setter:
+                    for property in [horizontal_property, vertical_property]:
+                        to.write(f"inline void setLogical{property.id_without_prefix}({setter_argument_type});")
+            elif property_group['kind'] == 'side':
+                property = property_group['physical']['bottom']
+                # NOTE: Choice of which property we use here is arbitrary, they must always have the same types.
+                getter_return_type = property.getter_return_type
+                setter_argument_type = property.setter_argument_type
+
+                prefix = Name(property_group_name)
+
+                if not property.codegen_properties.skip_render_style_getter:
+                    for edge in ['Start', 'End', 'Before', 'After', 'LogicalLeft', 'LogicalRight']:
+                        to.write(f"inline {getter_return_type} {prefix.id_without_prefix_with_lowercase_first_letter}{edge}(WritingMode) const;")
+                    for edge in ['Start', 'End', 'Before', 'After', 'LogicalLeft', 'LogicalRight']:
+                        to.write(f"inline {getter_return_type} {prefix.id_without_prefix_with_lowercase_first_letter}{edge}() const;")
+                if not property.codegen_properties.skip_render_style_setter:
+                    for edge in ['Start', 'End', 'Before', 'After', 'LogicalLeft', 'LogicalRight']:
+                        to.write(f"inline void set{prefix.id_without_prefix}{edge}({setter_argument_type});")
+            else:
+                # FIXME: Add logical getters / setters for other group kinds (like 'corner') if it would be useful.
+                to.write(f"// FIXME: Add support for logical getter/setters of kind '{property_group['kind']}'.")
+            to.newline()
+
+    def generate_render_style_properties_h(self):
+        with open('RenderStyleProperties.h', 'w') as output_file:
+            writer = Writer(output_file)
+
+            self.generation_context.generate_heading(
+                to=writer
+            )
+
+            self.generation_context.generate_required_header_pragma(
+                to=writer
+            )
+
+            self.generation_context.generate_includes(
+                to=writer,
+                system_headers=[
+                    "<WebCore/RenderStyleBase.h>",
+                ]
+            )
+
+            with self.generation_context.namespace("WebCore", to=writer):
+                writer.write(f"class RenderStyleProperties : public RenderStyleBase {{")
+                writer.write(f"public:")
+
+                with writer.indent():
+                    self._generate_property_function_declarations(
+                        to=writer
+                    )
+                    self._generate_logical_property_function_declarations(
+                        to=writer
+                    )
+
+                writer.write(f"protected:")
+
+                with writer.indent():
+                    writer.write(f"RenderStyleProperties(RenderStyleProperties&&) = default;")
+                    writer.write(f"RenderStyleProperties& operator=(RenderStyleProperties&&) = default;")
+                    writer.newline()
+
+                    writer.write(f"RenderStyleProperties(CreateDefaultStyleTag tag) : RenderStyleBase {{ tag }} {{ }}")
+                    writer.write(f"RenderStyleProperties(const RenderStyleProperties& other, CloneTag tag) : RenderStyleBase {{ other, tag }} {{ }}")
+                    writer.newline()
+
+                    writer.write(f"RenderStyleProperties(RenderStyleProperties& a, RenderStyleProperties&& b) : RenderStyleBase {{ a, WTF::move(b) }} {{ }}")
+
+                writer.write(f"}};")
+                writer.newline()
+
+    # Generate RenderStyleProperties+GettersInlines.h
+
+    def _generate_getters_inlines_function_definition(self, *, to, function_name, function_specifiers, return_type, arguments=[]):
+        to.write(f"{''.join(map(lambda x: x + ' ', function_specifiers))}{return_type} RenderStyleProperties::{function_name}({', '.join(map(lambda x: x['type'] + ' ' + x['name'], arguments))}) const")
+        to.write(f"{{")
+        with to.indent():
+            to.write(f"return m_computedStyle.{function_name}({', '.join(map(lambda x: x['name'], arguments))});")
+        to.write(f"}}")
+        to.newline()
+
+    def _generate_getters_inlines_property_function_definitions(self, *, to):
+        for property in self.style_properties.all:
+            if property.codegen_properties.skip_render_style:
+                continue
+            if property.codegen_properties.is_logical:
+                continue
+            if property.codegen_properties.longhands:
+                continue
+            if property.codegen_properties.cascade_alias:
+                continue
+            if property.codegen_properties.coordinated_value_list_property:
+                continue
+
+            if not property.codegen_properties.computed_style_storage_path and not property.codegen_properties.skip_render_style_getter:
+                raise Exception(f"Missing ComputedStyle storage path for property {property.id}.")
+
+            if not property.codegen_properties.skip_render_style_getter:
+                self._generate_getters_inlines_function_definition(
+                    to=to,
+                    function_name=property.codegen_properties.computed_style_getter,
+                    function_specifiers=self._compute_getter_definition_function_specifiers(property),
+                    return_type=property.getter_return_type
+                )
+
+            if property.codegen_properties.color_property:
+                if property.codegen_properties.computed_style_visited_link_storage_path:
+                    self._generate_getters_inlines_function_definition(
+                        to=to,
+                        function_name=f"visitedLink{property.codegen_properties.computed_style_name_for_methods}",
+                        function_specifiers=['inline'],
+                        return_type=property.getter_return_type
+                    )
+
+                self._generate_getters_inlines_function_definition(
+                    to=to,
+                    function_name=f"{property.codegen_properties.computed_style_getter}Resolver",
+                    function_specifiers=['inline'],
+                    return_type="decltype(auto)"
+                )
+
+                self._generate_getters_inlines_function_definition(
+                    to=to,
+                    function_name=f"{property.codegen_properties.computed_style_getter}ResolvingCurrentColor",
+                    function_specifiers=['inline'],
+                    return_type='WebCore::Color'
+                )
+                self._generate_getters_inlines_function_definition(
+                    to=to,
+                    function_name=f"{property.codegen_properties.computed_style_getter}ResolvingCurrentColorApplyingColorFilter",
+                    function_specifiers=['inline'],
+                    return_type='WebCore::Color'
+                )
+
+                if property.codegen_properties.computed_style_visited_link_storage_path:
+                    self._generate_getters_inlines_function_definition(
+                        to=to,
+                        function_name=f"visitedLink{property.codegen_properties.computed_style_name_for_methods}ResolvingCurrentColor",
+                        function_specifiers=['inline'],
+                        return_type='WebCore::Color'
+                    )
+                    self._generate_getters_inlines_function_definition(
+                        to=to,
+                        function_name=f"visitedLink{property.codegen_properties.computed_style_name_for_methods}ResolvingCurrentColorApplyingColorFilter",
+                        function_specifiers=['inline'],
+                        return_type='WebCore::Color'
+                    )
+
+                self._generate_getters_inlines_function_definition(
+                    to=to,
+                    function_name=f"visitedDependent{property.codegen_properties.computed_style_name_for_methods}",
+                    function_specifiers=['inline'],
+                    return_type='WebCore::Color',
+                    arguments=[{'type': 'OptionSet<PaintBehavior>', 'name': 'paintBehavior'}]
+                )
+                self._generate_getters_inlines_function_definition(
+                    to=to,
+                    function_name=f"visitedDependent{property.codegen_properties.computed_style_name_for_methods}ApplyingColorFilter",
+                    function_specifiers=['inline'],
+                    return_type='WebCore::Color',
+                    arguments=[{'type': 'OptionSet<PaintBehavior>', 'name': 'paintBehavior'}]
+                )
+
+            if property.codegen_properties.computed_style_has_explicitly_set_storage_path:
+                self._generate_getters_inlines_function_definition(
+                    to=to,
+                    function_name=f"hasExplicitlySet{property.codegen_properties.computed_style_name_for_methods}",
+                    function_specifiers=['inline'],
+                    return_type='bool'
+                )
+
+    def _generate_getters_inlines_function_definition_taking_writing_mode(self, *, to, function_name, function_specifiers, return_type):
+        to.write(f"{''.join(map(lambda x: x + ' ', function_specifiers))}{return_type} RenderStyleProperties::{function_name}(WritingMode writingMode) const")
+        to.write(f"{{")
+        with to.indent():
+            to.write(f"return m_computedStyle.{function_name}(writingMode);")
+        to.write(f"}}")
+        to.newline()
+
+    def _generate_getters_inlines_logical_property_function_definitions(self, *, to):
+        for property_group_name, property_group in self.style_properties.logical_property_groups.items():
+            if property_group['kind'] == 'axis':
+                horizontal_property = property_group['physical']['horizontal']
+                vertical_property = property_group['physical']['vertical']
+
+                if horizontal_property.codegen_properties.skip_render_style or horizontal_property.codegen_properties.skip_render_style_getter:
+                    continue
+
+                # NOTE: Choice of which property we use here is arbitrary, they must always have the same types.
+                function_specifiers = ['inline']
+                return_type = horizontal_property.getter_return_type
+
+                for property in [horizontal_property, vertical_property]:
+                    self._generate_getters_inlines_function_definition_taking_writing_mode(
+                        to=to,
+                        function_name=f"logical{property.id_without_prefix}",
+                        function_specifiers=function_specifiers,
+                        return_type=return_type
+                    )
+                for property in [horizontal_property, vertical_property]:
+                    self._generate_getters_inlines_function_definition(
+                        to=to,
+                        function_name=f"logical{property.id_without_prefix}",
+                        function_specifiers=function_specifiers,
+                        return_type=return_type
+                    )
+            elif property_group['kind'] == 'side':
+                property = property_group['physical']['bottom']
+
+                if property.codegen_properties.skip_render_style or property.codegen_properties.skip_render_style_getter:
+                    continue
+
+                # NOTE: Choice of which property we use here is arbitrary, they must always have the same types.
+                function_specifiers = ['inline']
+                return_type = property.getter_return_type
+
+                prefix = Name(property_group_name)
+
+                for edge in ['Start', 'End', 'Before', 'After', 'LogicalLeft', 'LogicalRight']:
+                    self._generate_getters_inlines_function_definition_taking_writing_mode(
+                        to=to,
+                        function_name=f"{prefix.id_without_prefix_with_lowercase_first_letter}{edge}",
+                        function_specifiers=function_specifiers,
+                        return_type=return_type
+                    )
+                for edge in ['Start', 'End', 'Before', 'After', 'LogicalLeft', 'LogicalRight']:
+                    self._generate_getters_inlines_function_definition(
+                        to=to,
+                        function_name=f"{prefix.id_without_prefix_with_lowercase_first_letter}{edge}",
+                        function_specifiers=function_specifiers,
+                        return_type=return_type
+                    )
+
+    def generate_render_style_properties_getters_inlines_h(self):
+        with open('RenderStyleProperties+GettersInlines.h', 'w') as output_file:
+            writer = Writer(output_file)
+
+            self.generation_context.generate_heading(
+                to=writer
+            )
+
+            self.generation_context.generate_required_header_pragma(
+                to=writer
+            )
+
+            writer.write("#ifndef RENDER_STYLE_PROPERTIES_GETTERS_INLINES_INCLUDE_TRAP")
+            writer.write("#error \"Please do not include this file anywhere except from RenderStyle+GettersInlines.h.\"")
+            writer.write("#endif")
+            writer.newline()
+
+            self.generation_context.generate_includes(
+                to=writer,
+                system_headers=[
+                    "<WebCore/RenderStyleBase+GettersInlines.h>",
+                    "<WebCore/StyleComputedStyle+GettersInlines.h>",
+                ]
+            )
+
+            with self.generation_context.namespace("WebCore", to=writer):
+                self._generate_getters_inlines_property_function_definitions(
+                    to=writer
+                )
+                self._generate_getters_inlines_logical_property_function_definitions(
+                    to=writer
+                )
+
+    # Generate RenderStyleProperties+SettersInlines.h
+
+    def _generate_setters_inlines_function_definition(self, *, to, function_name, function_specifiers, return_type, argument_type, argument_name, forwarding_expression):
+        to.write(f"{''.join(map(lambda x: x + ' ', function_specifiers))}{return_type} RenderStyleProperties::{function_name}({argument_type} {argument_name})")
+        to.write(f"{{")
+        with to.indent():
+            if return_type == 'void':
+                to.write(f"m_computedStyle.{function_name}({forwarding_expression});")
+            else:
+                to.write(f"return m_computedStyle.{function_name}({forwarding_expression});")
+        to.write(f"}}")
+        to.newline()
+
+    def _generate_setters_inlines_property_function_definitions(self, *, to):
+        for property in self.style_properties.all:
+            if property.codegen_properties.skip_render_style:
+                continue
+            if property.codegen_properties.skip_render_style_setter:
+                continue
+            if property.codegen_properties.is_logical:
+                continue
+            if property.codegen_properties.longhands:
+                continue
+            if property.codegen_properties.cascade_alias:
+                continue
+            if property.codegen_properties.coordinated_value_list_property:
+                continue
+
+            if not property.codegen_properties.computed_style_storage_path:
+                raise Exception(f"Missing ComputedStyle storage path for property {property.id}.")
+
+            function_name = property.codegen_properties.computed_style_setter
+            function_specifiers = self._compute_setter_definition_function_specifiers(property)
+            return_type = property.setter_return_type
+            argument_type = property.setter_argument_type
+            argument_name = "value"
+            storage_kind = property.codegen_properties.computed_style_storage_kind
+
+            self._generate_setters_inlines_function_definition(
+                to=to,
+                function_name=function_name,
+                function_specifiers=function_specifiers,
+                return_type=return_type,
+                argument_type=argument_type,
+                argument_name=argument_name,
+                forwarding_expression=self._compute_forwarding_expression(storage_kind, argument_name)
+            )
+
+            if property.codegen_properties.computed_style_visited_link_storage_path:
+                function_name = f"setVisitedLink{property.codegen_properties.computed_style_name_for_methods}"
+                function_specifiers = ['inline']
+                return_type = "void"
+                argument_type = property.setter_argument_type
+                argument_name = "value"
+                storage_kind = property.codegen_properties.computed_style_storage_kind  # the storage kind for visited links are always the same as the principle value
+
+                self._generate_setters_inlines_function_definition(
+                    to=to,
+                    function_name=function_name,
+                    function_specifiers=function_specifiers,
+                    return_type=return_type,
+                    argument_type=argument_type,
+                    argument_name=argument_name,
+                    forwarding_expression=self._compute_forwarding_expression(storage_kind, argument_name)
+                )
+
+            if property.codegen_properties.computed_style_has_explicitly_set_storage_path:
+                function_name = f"setHasExplicitlySet{property.codegen_properties.computed_style_name_for_methods}"
+                function_specifiers = ['inline']
+                return_type = "void"
+                argument_type = 'bool'
+                argument_name = "value"
+                storage_kind = 'value'
+
+                self._generate_setters_inlines_function_definition(
+                    to=to,
+                    function_name=function_name,
+                    function_specifiers=function_specifiers,
+                    return_type=return_type,
+                    argument_type=argument_type,
+                    argument_name=argument_name,
+                    forwarding_expression=self._compute_forwarding_expression(storage_kind, argument_name)
+                )
+
+    def _generate_setters_inlines_logical_property_function_definitions(self, *, to):
+        for property_group_name, property_group in self.style_properties.logical_property_groups.items():
+            if property_group['kind'] == 'axis':
+                horizontal_property = property_group['physical']['horizontal']
+                vertical_property = property_group['physical']['vertical']
+
+                if horizontal_property.codegen_properties.skip_render_style or horizontal_property.codegen_properties.skip_render_style_setter:
+                    continue
+
+                # NOTE: Choice of which property we use here is arbitrary, they must always have the same types.
+                function_specifiers = ['inline']
+                argument_type = horizontal_property.setter_argument_type
+                argument_name = "value"
+                storage_kind = horizontal_property.codegen_properties.computed_style_storage_kind
+
+                for property in [horizontal_property, vertical_property]:
+                    self._generate_setters_inlines_function_definition(
+                        to=to,
+                        function_name=f"setLogical{property.id_without_prefix}",
+                        function_specifiers=function_specifiers,
+                        return_type="void",
+                        argument_type=argument_type,
+                        argument_name=argument_name,
+                        forwarding_expression=self._compute_forwarding_expression(storage_kind, argument_name)
+                    )
+            elif property_group['kind'] == 'side':
+                property = property_group['physical']['bottom']
+
+                if property.codegen_properties.skip_render_style or property.codegen_properties.skip_render_style_getter:
+                    continue
+
+                # NOTE: Choice of which property we use here is arbitrary, they must always have the same types.
+                function_specifiers = ['inline']
+                argument_type = property.setter_argument_type
+                argument_name = "value"
+                storage_kind = property.codegen_properties.computed_style_storage_kind
+
+                prefix = Name(property_group_name)
+
+                for edge in ['Start', 'End', 'Before', 'After', 'LogicalLeft', 'LogicalRight']:
+                    self._generate_setters_inlines_function_definition(
+                        to=to,
+                        function_name=f"set{prefix.id_without_prefix}{edge}",
+                        function_specifiers=function_specifiers,
+                        return_type="void",
+                        argument_type=argument_type,
+                        argument_name=argument_name,
+                        forwarding_expression=self._compute_forwarding_expression(storage_kind, argument_name)
+                    )
+
+    def generate_render_style_properties_setters_inlines_h(self):
+        with open('RenderStyleProperties+SettersInlines.h', 'w') as output_file:
+            writer = Writer(output_file)
+
+            self.generation_context.generate_heading(
+                to=writer
+            )
+
+            self.generation_context.generate_required_header_pragma(
+                to=writer
+            )
+
+            writer.write("#ifndef RENDER_STYLE_PROPERTIES_SETTERS_INLINES_INCLUDE_TRAP")
+            writer.write("#error \"Please do not include this file anywhere except from RenderStyle+SettersInlines.h.\"")
+            writer.write("#endif")
+            writer.newline()
+
+            self.generation_context.generate_includes(
+                to=writer,
+                headers=[
+                    "RenderStyleBase+SettersInlines.h",
+                    "StyleComputedStyle+SettersInlines.h",
+                ]
+            )
+
+            with self.generation_context.namespace("WebCore", to=writer):
+                self._generate_setters_inlines_property_function_definitions(
+                    to=writer
+                )
+                self._generate_setters_inlines_logical_property_function_definitions(
+                    to=writer
+                )
+
+
+# Generates `StyleChangedAnimatablePropertiesGenerated.cpp`.
+class GenerateStyleChangedAnimatablePropertiesGenerated:
+    def __init__(self, generation_context):
+        self.generation_context = generation_context
+
+    @property
+    def properties_and_descriptors(self):
+        return self.generation_context.properties_and_descriptors
+
+    @property
+    def style_properties(self):
+        return self.generation_context.properties_and_descriptors.style_properties
+
+    def generate(self):
+        self.generate_style_changed_animatable_properties_generated_cpp()
+
+    def _generate_conservatively_collect_changed_animatable_properties_opaque(self, *, to, tree_node, generated_children, function_name):
+        assert(tree_node.kind == 'opaque')
+        assert(not tree_node.children)
+
+        to.write(f"static void {function_name}(const auto&, const auto&, CSSPropertiesBitSet& changingProperties)")
+        to.write(f"{{")
+
+        with to.indent():
+            animatable_properties = set()
+            non_animatable_properties = set()
+
+            for property in itertools.chain(tree_node.properties, tree_node.visited_link_properties):
+                if not property.is_animatable:
+                    non_animatable_properties.add(property)
+                else:
+                    animatable_properties.add(property)
+
+            for property in sorted(animatable_properties, key=lambda x: x.id):
+                to.write(f"changingProperties.m_properties.set({property.id_without_scope});")
+
+            if non_animatable_properties:
+                to.newline()
+                to.write("// Non-animatable properties:")
+                for property in sorted(non_animatable_properties, key=lambda x: x.id):
+                    to.write(f"// SKIPPED '{property}' - {property.animation_type}")
+
+        to.write(f"}}")
+        to.newline()
+
+    def _generate_conservatively_collect_changed_animatable_properties_function(self, *, to, tree_node, generated_children, function_name):
+        # Special case `opaque` nodes, as they can only have very specific kinds of children.
+        if tree_node.kind == 'opaque':
+            self._generate_conservatively_collect_changed_animatable_properties_opaque(
+                to=to,
+                tree_node=tree_node,
+                generated_children=generated_children,
+                function_name=function_name
+            )
+            return
+
+        to.write(f"static void {function_name}(const auto& a, const auto& b, CSSPropertiesBitSet& changingProperties)")
+        to.write(f"{{")
+
+        with to.indent():
+            # Partition children into 'data', 'opaque', and 'struct', based on the what kind of container the child is.
+            # Each of these have a slightly different dispatch needs.
+            data_children = []
+            opaque_children = []
+            struct_children = []
+
+            for child in sorted(generated_children, key=lambda x: x.name):
+                if child.kind == 'data':
+                    data_children.append(child)
+                elif child.kind == 'opaque':
+                    opaque_children.append(child)
+                else:
+                    struct_children.append(child)
+
+            animatable_properties = []
+            non_animatable_properties = []
+
+            for property in sorted(tree_node.properties, key=lambda x: x.id):
+                if not property.is_animatable:
+                    non_animatable_properties.append(property)
+                else:
+                    animatable_properties.append(property)
+
+            animatable_visited_link_properties = []
+            non_animatable_visited_link_properties = []
+
+            for property in sorted(tree_node.visited_link_properties, key=lambda x: x.id):
+                if not property.is_animatable:
+                    non_animatable_visited_link_properties.append(property)
+                else:
+                    animatable_visited_link_properties.append(property)
+
+            # Generate the "data" children, which require an additional check.
+            for child in data_children:
+                child_function_name = Name(f"{function_name}_{child.name}").id_without_prefix_with_lowercase_first_letter
+                child_value_getter =  f"{child.name}"
+
+                # For "data" nodes, first check if both point to the same object.
+                to.write(f"if (a.{child_value_getter}.ptr() != b.{child_value_getter}.ptr())")
+                with to.indent():
+                    to.write(f"{child_function_name}(*a.{child_value_getter}, *b.{child_value_getter}, changingProperties);")
+
+            if data_children and opaque_children:
+                to.newline()
+
+            # Generate the "opaque" children, which also require an additional check.
+            for child in opaque_children:
+                child_function_name = Name(f"{function_name}_{child.name}").id_without_prefix_with_lowercase_first_letter
+                child_value_getter =  f"{child.name}"
+
+                to.write(f"if (a.{child_value_getter} != b.{child_value_getter})")
+                with to.indent():
+                    to.write(f"{child_function_name}(a.{child_value_getter}, b.{child_value_getter}, changingProperties);")
+
+            if (data_children or opaque_children) and struct_children:
+                to.newline()
+
+            # Generate the "struct" children, which get called without any check.
+            for child in struct_children:
+                child_function_name = Name(f"{function_name}_{child.name}").id_without_prefix_with_lowercase_first_letter
+                child_value_getter =  f"{child.name}"
+
+                to.write(f"{child_function_name}(a.{child_value_getter}, b.{child_value_getter}, changingProperties);")
+
+            if (data_children or opaque_children or struct_children) and animatable_properties:
+                to.newline()
+
+            # Generate the animatable property children.
+            for property in animatable_properties:
+                if property.codegen_properties.computed_style_changed_for_animation_custom:
+                    to.write(f"ChangedAnimatablePropertiesCustom::conservativelyCollectChangedAnimatablePropertiesFor{property.id_without_prefix}(a, b, changingProperties);")
+                    continue
+
+                if tree_node.kind == 'data':
+                    expression = f"{property.codegen_properties.computed_style_storage_name}"
+                elif tree_node.kind == 'struct':
+                    expression = f"{property.codegen_properties.computed_style_storage_name}"
+                elif tree_node.kind == 'physical-group':
+                    expression = f"{Name(property.codegen_properties.logical_property_group.resolver).id_without_prefix_with_lowercase_first_letter}()"
+
+                to.write(f"if (a.{expression} != b.{expression})")
+                with to.indent():
+                    to.write(f"changingProperties.m_properties.set({property.id_without_scope});")
+
+            if (data_children or opaque_children or struct_children or animatable_properties) and animatable_visited_link_properties:
+                to.newline()
+
+            # Generate the animatable visited link property children.
+            for property in animatable_visited_link_properties:
+                if property.codegen_properties.computed_style_changed_for_animation_custom:
+                    to.write(f"ChangedAnimatablePropertiesCustom::conservativelyCollectChangedAnimatablePropertiesForVisitedLink{property.id_without_prefix}(a, b, changingProperties);")
+                    continue
+
+                if tree_node.kind == 'data':
+                    expression = f"{property.codegen_properties.computed_style_visited_link_storage_name}"
+                elif tree_node.kind == 'struct':
+                    expression = f"{property.codegen_properties.computed_style_visited_link_storage_name}"
+                elif tree_node.kind == 'physical-group':
+                    expression = f"{Name(property.codegen_properties.logical_property_group.resolver).id_without_prefix_with_lowercase_first_letter}()"
+
+                to.write(f"if (a.{expression} != b.{expression})")
+                with to.indent():
+                    to.write(f"changingProperties.m_properties.set({property.id_without_scope});")
+
+            # Print out comments detailing the non-animatable properties that were skipped.
+            if non_animatable_properties:
+                to.newline()
+                to.write("// Non-animatable properties:")
+                for property in non_animatable_properties:
+                    to.write(f"// SKIPPED '{property}' - {property.animation_type}")
+
+            # Print out comments detailing the non-animatable visited link properties that were skipped.
+            if non_animatable_visited_link_properties:
+                to.newline()
+                to.write("// Non-animatable visited link properties:")
+                for property in non_animatable_visited_link_properties:
+                    to.write(f"// SKIPPED '{property}' - {property.animation_type}")
+
+        to.write(f"}}")
+        to.newline()
+
+    def _generate_conservatively_collect_changed_animatable_properties_recursive(self, *, to, tree_node, function_name):
+        # First, recursively generate the collection functions for all child nodes, assuring they are callable.
+        generated_children = []
+
+        for child in tree_node.children.values():
+            child_function_name = Name(f"{function_name}_{child.name}").id_without_prefix_with_lowercase_first_letter
+
+            did_generate = self._generate_conservatively_collect_changed_animatable_properties_recursive(
+                to=to,
+                tree_node=child,
+                function_name=child_function_name
+            )
+
+            if did_generate:
+                generated_children.append(child)
+
+        # If we didn't generate any callable children, and we don't have any animatable properties, there is nothing to generate here.
+        if not generated_children and not any(property.is_animatable for property in tree_node.properties) and not any(property.is_animatable for property in tree_node.visited_link_properties):
+            return False
+
+        # Second, generate the function for this tree node.
+        self._generate_conservatively_collect_changed_animatable_properties_function(
+            to=to,
+            tree_node=tree_node,
+            generated_children=generated_children,
+            function_name=function_name
+        )
+        return True
+
+    def _generate_conservatively_collect_changed_animatable_properties(self, *, to):
+        to.write(f"class ChangedAnimatablePropertiesFunctions final {{")
+        to.write(f"public:")
+
+        with to.indent():
+            function_name = 'collect'
+            root = self.properties_and_descriptors.computed_style_storage_model
+
+            self._generate_conservatively_collect_changed_animatable_properties_recursive(
+                to=to,
+                tree_node=root,
+                function_name=function_name
+            )
+
+        to.write(f"}};")
+        to.newline()
+
+        to.write(f"void ChangedAnimatablePropertiesGenerated::conservativelyCollectChangedAnimatableProperties(const ComputedStyle& a, const ComputedStyle& b, CSSPropertiesBitSet& changingProperties)")
+        to.write(f"{{")
+
+        with to.indent():
+            to.write(f"ChangedAnimatablePropertiesFunctions::collect(a, b, changingProperties);")
+
+        to.write(f"}}")
+        to.newline()
+
+    def generate_style_changed_animatable_properties_generated_cpp(self):
+        with open('StyleChangedAnimatablePropertiesGenerated.cpp', 'w') as output_file:
+            writer = Writer(output_file)
+
+            self.generation_context.generate_heading(
+                to=writer
+            )
+
+            self.generation_context.generate_cpp_required_includes(
+                to=writer,
+                header="StyleChangedAnimatablePropertiesGenerated.h"
+            )
+
+            self.generation_context.generate_includes(
+                to=writer,
+                headers=[
+                    "StyleChangedAnimatablePropertiesCustom.h",
+                ]
+            )
+
+            with self.generation_context.namespaces(["WebCore", "Style"], to=writer):
+                self._generate_conservatively_collect_changed_animatable_properties(to=writer)
 
 
 # Helper class for representing a function parameter.
@@ -5624,7 +8306,7 @@ class TermGeneratorFunctionTerm(TermGenerator):
                 to.write(f"return {{ }};")
 
             to.write(f"range = rangeCopy;")
-            to.write(f"return CSSFunctionValue::create({self.term.name.id}, WTFMove(*result));")
+            to.write(f"return CSSFunctionValue::create({self.term.name.id}, WTF::move(*result));")
         to.write(f"}};")
 
     def _generate_call_string(self, *, range_string, state_string):
@@ -6082,27 +8764,27 @@ class TermGeneratorMatchAllOrderedTerm(TermGenerator):
                         # can kick in and it hasn't been explicitly disabled via @(no-single-item-opt).
                         to.write(f"if (list.size() == 1)")
                         with to.indent():
-                            to.write(f"return WTFMove(list[0]); // single item optimization")
-                    to.write(f"return {return_type_create}(WTFMove(list));")
+                            to.write(f"return WTF::move(list[0]); // single item optimization")
+                    to.write(f"return {return_type_create}(WTF::move(list));")
                 else:
                     min_values = self.number_of_terms - self.number_of_optional_terms
                     max_values = self.number_of_terms
 
                     list_value_strings = []
                     for list_index in range(0, min_values - 1):
-                        list_value_strings.append(f"WTFMove(list[{list_index}])")
+                        list_value_strings.append(f"WTF::move(list[{list_index}])")
 
                     for list_index in range(min_values - 1, max_values - 1):
-                        list_value_strings.append(f"WTFMove(list[{list_index}])")
+                        list_value_strings.append(f"WTF::move(list[{list_index}])")
 
                         to.write(f"if (list.size() == {list_index + 1})")
                         with to.indent():
                             if list_index == 0 and self.term.single_value_optimization:
-                                to.write(f"return WTFMove(list[0]); // single item optimization")
+                                to.write(f"return WTF::move(list[0]); // single item optimization")
                             else:
                                 to.write(f"return {return_type_create}({', '.join(list_value_strings)});")
 
-                    list_value_strings.append(f"WTFMove(list[{max_values - 1}])")
+                    list_value_strings.append(f"WTF::move(list[{max_values - 1}])")
                     to.write(f"return {return_type_create}({', '.join(list_value_strings)});")
             else:
                 return_value_strings = []
@@ -6149,7 +8831,7 @@ class TermGeneratorMatchAllOrderedTerm(TermGenerator):
                     with to.indent():
                         to.write(f"return {{ }};")
 
-            to.write(f"return {{ WTFMove(list) }};")
+            to.write(f"return {{ WTF::move(list) }};")
 
         to.write(f"}};")
 
@@ -6295,8 +8977,8 @@ class TermGeneratorMatchAllAnyOrderTerm(TermGenerator):
                         # can kick in and it hasn't been explicitly disabled via @(no-single-item-opt).
                         to.write(f"if (list.size() == 1)")
                         with to.indent():
-                            to.write(f"return WTFMove(list[0]); // single item optimization")
-                    to.write(f"return CSSValueList::createSpaceSeparated(WTFMove(list));")
+                            to.write(f"return WTF::move(list[0]); // single item optimization")
+                    to.write(f"return CSSValueList::createSpaceSeparated(WTF::move(list));")
                 else:
                     return_type_create = f"{self.term.type}::create"
 
@@ -6305,19 +8987,19 @@ class TermGeneratorMatchAllAnyOrderTerm(TermGenerator):
 
                     list_value_strings = []
                     for list_index in range(0, min_values - 1):
-                        list_value_strings.append(f"WTFMove(list[{list_index}])")
+                        list_value_strings.append(f"WTF::move(list[{list_index}])")
 
                     for list_index in range(min_values - 1, max_values - 1):
-                        list_value_strings.append(f"WTFMove(list[{list_index}])")
+                        list_value_strings.append(f"WTF::move(list[{list_index}])")
 
                         to.write(f"if (list.size() == {list_index + 1})")
                         with to.indent():
                             if list_index == 0 and self.term.single_value_optimization:
-                                to.write(f"return WTFMove(list[0]); // single item optimization")
+                                to.write(f"return WTF::move(list[0]); // single item optimization")
                             else:
                                 to.write(f"return {return_type_create}({', '.join(list_value_strings)});")
 
-                    list_value_strings.append(f"WTFMove(list[{max_values - 1}])")
+                    list_value_strings.append(f"WTF::move(list[{max_values - 1}])")
                     to.write(f"return {return_type_create}({', '.join(list_value_strings)});")
             else:
                 if self.term.type == 'CSSValueList':
@@ -6363,7 +9045,7 @@ class TermGeneratorMatchAllAnyOrderTerm(TermGenerator):
                         with to.indent():
                             to.write(f"return {{ }};")
 
-            to.write(f"return {{ WTFMove(list) }};")
+            to.write(f"return {{ WTF::move(list) }};")
         to.write(f"}};")
 
     def _generate_call_string(self, *, range_string, state_string):
@@ -6496,8 +9178,8 @@ class TermGeneratorMatchOneOrMoreAnyOrderTerm(TermGenerator):
                 if self.term.single_value_optimization:
                     to.write(f"if (list.size() == 1)")
                     with to.indent():
-                        to.write(f"return WTFMove(list[0]); // single item optimization")
-                to.write(f"return CSSValueList::createSpaceSeparated(WTFMove(list));")
+                        to.write(f"return WTF::move(list[0]); // single item optimization")
+                to.write(f"return CSSValueList::createSpaceSeparated(WTF::move(list));")
             else:
                 return_type_create = f"{self.term.type}::create"
 
@@ -6506,19 +9188,19 @@ class TermGeneratorMatchOneOrMoreAnyOrderTerm(TermGenerator):
 
                 list_value_strings = []
                 for list_index in range(0, min_values - 1):
-                    list_value_strings.append(f"WTFMove(list[{list_index}])")
+                    list_value_strings.append(f"WTF::move(list[{list_index}])")
 
                 for list_index in range(min_values - 1, max_values - 1):
-                    list_value_strings.append(f"WTFMove(list[{list_index}])")
+                    list_value_strings.append(f"WTF::move(list[{list_index}])")
 
                     to.write(f"if (list.size() == {list_index + 1})")
                     with to.indent():
                         if list_index == 0 and self.term.single_value_optimization:
-                            to.write(f"return WTFMove(list[0]); // single item optimization")
+                            to.write(f"return WTF::move(list[0]); // single item optimization")
                         else:
                             to.write(f"return {return_type_create}({', '.join(list_value_strings)});")
 
-                list_value_strings.append(f"WTFMove(list[{max_values - 1}])")
+                list_value_strings.append(f"WTF::move(list[{max_values - 1}])")
                 to.write(f"return {return_type_create}({', '.join(list_value_strings)});")
         to.write(f"}};")
 
@@ -6541,7 +9223,7 @@ class TermGeneratorMatchOneOrMoreAnyOrderTerm(TermGenerator):
             to.write(f"if (list.isEmpty())")
             with to.indent():
                 to.write(f"return {{ }};")
-            to.write(f"return {{ WTFMove(list) }};")
+            to.write(f"return {{ WTF::move(list) }};")
         to.write(f"}};")
 
     def _generate_call_string(self, *, range_string, state_string):
@@ -8647,13 +11329,17 @@ def main():
     generation_context = GenerationContext(parsing_context.parsed_properties_and_descriptors, parsing_context.parsed_shared_grammar_rules, verbose=args.verbose, gperf_executable=args.gperf_executable)
 
     generators = [
+        GenerateCSSPropertyInitialValues,
         GenerateCSSPropertyNames,
         GenerateCSSPropertyParsing,
         GenerateCSSStylePropertiesPropertyNames,
         GenerateStyleBuilderGenerated,
+        GenerateStyleChangedAnimatablePropertiesGenerated,
+        GenerateStyleComputedStyleProperties,
         GenerateStyleExtractorGenerated,
         GenerateStyleInterpolationWrapperMap,
         GenerateStylePropertyShorthandFunctions,
+        GenerateRenderStyleProperties,
     ]
 
     for generator in generators:

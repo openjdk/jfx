@@ -22,13 +22,15 @@
 
 #pragma once
 
-#include "Document.h"
-#include "TreeScopeOrderedMap.h"
+#include <WebCore/Document.h>
+#include <WebCore/JSDOMConvertInterface.h>
+#include <WebCore/JSDOMConvertNullable.h>
+#include <WebCore/TreeScopeOrderedMap.h>
 
 namespace WebCore {
 
 class HTMLDocument : public Document {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(HTMLDocument, WEBCORE_EXPORT);
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(HTMLDocument, WEBCORE_EXPORT);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLDocument);
 public:
     static Ref<HTMLDocument> create(LocalFrame*, const Settings&, const URL&, std::optional<ScriptExecutionContextIdentifier> = std::nullopt);

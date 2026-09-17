@@ -58,7 +58,9 @@
 
 // https://w3c.github.io/uievents/#idl-keyboardeventinit
 
-dictionary KeyboardEventInit : EventModifierInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary KeyboardEventInit : EventModifierInit {
     DOMString key = "";
     DOMString code = "";
     unsigned long location = 0;

@@ -25,11 +25,11 @@
 
 #pragma once
 
-#include "JSBigInt.h"
-#include "JSCJSValue.h"
-#include "MathCommon.h"
-#include "TypedArrayAdaptersForwardDeclarations.h"
-#include "TypedArrayType.h"
+#include <JavaScriptCore/JSBigInt.h>
+#include <JavaScriptCore/JSCJSValue.h>
+#include <JavaScriptCore/MathCommon.h>
+#include <JavaScriptCore/TypedArrayAdaptersForwardDeclarations.h>
+#include <JavaScriptCore/TypedArrayType.h>
 #include <wtf/MathExtras.h>
 
 namespace JSC {
@@ -71,7 +71,7 @@ struct IntegralTypedArrayAdaptor {
 #if HAVE(FJCVTZS_INSTRUCTION)
         return static_cast<Type>(toInt32(value));
 #else
-        int32_t result = static_cast<int32_t>(value);
+        int32_t result = truncateDoubleToInt32(value);
         if (static_cast<double>(result) != value)
             result = toInt32(value);
         return static_cast<Type>(result);

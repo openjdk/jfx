@@ -29,7 +29,8 @@
 
 #pragma once
 
-#include "LayoutUnit.h"
+#include <WebCore/LayoutUnit.h>
+#include <wtf/CheckedRef.h>
 
 namespace WebCore {
 
@@ -76,7 +77,7 @@ private:
     bool fitsOnLineExcludingTrailingCollapsedWhitespace() const;
     void updateLineDimension(LayoutUnit newLineTop, LayoutUnit newLineWidth, float newLineLeft, float newLineRight);
 
-    RenderBlockFlow& m_block;
+    const CheckedRef<RenderBlockFlow> m_block;
     float m_uncommittedWidth { 0 };
     float m_committedWidth { 0 };
     float m_trailingWhitespaceWidth { 0 };

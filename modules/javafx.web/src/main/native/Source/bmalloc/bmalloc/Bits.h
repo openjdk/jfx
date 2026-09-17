@@ -25,6 +25,8 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
 #include "Algorithm.h"
 #include "BInline.h"
 #include <climits>
@@ -39,7 +41,7 @@ class BitsWordView {
 public:
     typedef BitsWordView ViewType;
 
-    BitsWordView() { }
+    BitsWordView() = default;
 
     BitsWordView(const uint32_t* array, size_t numBits)
         : m_words(array)
@@ -379,7 +381,7 @@ private:
 template<size_t passedNumBits>
 class Bits : public BitsImpl<BitsWordOwner<passedNumBits>> {
 public:
-    Bits() { }
+    Bits() = default;
 
     Bits(const Bits&) = default;
     Bits& operator=(const Bits&) = default;
@@ -459,7 +461,7 @@ public:
 
     class BitReference {
     public:
-        BitReference() { }
+        BitReference() = default;
 
         BitReference(uint32_t* word, uint32_t mask)
             : m_word(word)
@@ -501,3 +503,5 @@ public:
 } // namespace bmalloc
 
 #endif
+
+#endif // __cplusplus

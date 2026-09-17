@@ -30,9 +30,9 @@ typedef [EnforceRange] unsigned long GPUIntegerCoordinate;
 typedef (sequence<GPUIntegerCoordinate> or GPUOrigin2DDict) GPUOrigin2D;
 
 [
-    EnabledBySetting=WebGPUEnabled
-]
-dictionary GPUImageCopyExternalImage {
+    EnabledBySetting=WebGPUEnabled,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary GPUImageCopyExternalImage {
     required (ImageBitmap or
 #if defined(ENABLE_VIDEO) && ENABLE_VIDEO && defined(ENABLE_WEB_CODECS) && ENABLE_WEB_CODECS
         ImageData or HTMLImageElement or HTMLVideoElement or WebCodecsVideoFrame or

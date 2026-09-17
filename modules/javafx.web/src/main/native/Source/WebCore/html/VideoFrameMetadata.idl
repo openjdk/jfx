@@ -28,6 +28,7 @@ typedef double DOMHighResTimeStamp;
 [
     Conditional=VIDEO,
     JSGenerateToJSObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary VideoFrameMetadata {
     required DOMHighResTimeStamp presentationTime;
     required DOMHighResTimeStamp expectedDisplayTime;

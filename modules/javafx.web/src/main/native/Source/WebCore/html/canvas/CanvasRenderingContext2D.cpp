@@ -33,13 +33,14 @@
 #include "config.h"
 #include "CanvasRenderingContext2D.h"
 
-#include "CSSFilter.h"
+#include "CSSFilterRenderer.h"
 #include "CSSFontSelector.h"
 #include "CSSPropertyNames.h"
 #include "CSSPropertyParserConsumer+Filter.h"
 #include "CSSPropertyParserConsumer+Font.h"
 #include "ContainerNodeInlines.h"
 #include "DocumentInlines.h"
+#include "DocumentPage.h"
 #include "Gradient.h"
 #include "ImageBuffer.h"
 #include "ImageData.h"
@@ -69,11 +70,11 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(CanvasRenderingContext2D);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CanvasRenderingContext2D);
 
 std::unique_ptr<CanvasRenderingContext2D> CanvasRenderingContext2D::create(CanvasBase& canvas, CanvasRenderingContext2DSettings&& settings, bool usesCSSCompatibilityParseMode)
 {
-    auto renderingContext = std::unique_ptr<CanvasRenderingContext2D>(new CanvasRenderingContext2D(canvas, WTFMove(settings), usesCSSCompatibilityParseMode));
+    auto renderingContext = std::unique_ptr<CanvasRenderingContext2D>(new CanvasRenderingContext2D(canvas, WTF::move(settings), usesCSSCompatibilityParseMode));
 
     InspectorInstrumentation::didCreateCanvasRenderingContext(*renderingContext);
 
@@ -81,13 +82,13 @@ std::unique_ptr<CanvasRenderingContext2D> CanvasRenderingContext2D::create(Canva
 }
 
 CanvasRenderingContext2D::CanvasRenderingContext2D(CanvasBase& canvas, CanvasRenderingContext2DSettings&& settings, bool usesCSSCompatibilityParseMode)
-    : CanvasRenderingContext2DBase(canvas, Type::CanvasElement2D, WTFMove(settings), usesCSSCompatibilityParseMode)
+    : CanvasRenderingContext2DBase(canvas, Type::CanvasElement2D, WTF::move(settings), usesCSSCompatibilityParseMode)
 {
 }
 
 CanvasRenderingContext2D::~CanvasRenderingContext2D() = default;
 
-std::optional<FilterOperations> CanvasRenderingContext2D::setFilterStringWithoutUpdatingStyle(const String& filterString)
+std::optional<Style::Filter> CanvasRenderingContext2D::setFilterStringWithoutUpdatingStyle(const String& filterString)
 {
     Ref canvas = this->canvas();
     Ref document = canvas->document();
@@ -121,27 +122,31 @@ RefPtr<Filter> CanvasRenderingContext2D::createFilter(const FloatRect& bounds) c
     if (!page)
         return nullptr;
 
-    auto preferredFilterRenderingModes = page->preferredFilterRenderingModes();
-    auto filter = CSSFilter::create(*renderer, state().filterOperations, preferredFilterRenderingModes, { 1, 1 }, bounds, *context);
+    auto outsets = calculateFilterOutsets(bounds);
+    auto filterRegion = bounds + toFloatBoxExtent(outsets);
+
+    auto preferredFilterRenderingModes = page->preferredFilterRenderingModes(*context);
+    auto filter = CSSFilterRenderer::create(*renderer, state().filter, {
+            .referenceBox = bounds,
+            .filterRegion = filterRegion,
+            .scale = { 1, 1 },
+        }, preferredFilterRenderingModes, false, *context);
     if (!filter)
         return nullptr;
 
-    auto outsets = calculateFilterOutsets(bounds);
-
-    filter->setFilterRegion(bounds + toFloatBoxExtent(outsets));
     return filter;
 }
 
 IntOutsets CanvasRenderingContext2D::calculateFilterOutsets(const FloatRect& bounds) const
 {
-    if (state().filterOperations.isEmpty())
+    if (state().filter.isNone())
         return { };
 
     CheckedPtr renderer = canvas().renderer();
     if (!renderer)
         return { };
 
-    return CSSFilter::calculateOutsets(*renderer, state().filterOperations, bounds);
+    return CSSFilterRenderer::calculateOutsets(*renderer, state().filter, bounds);
 }
 
 void CanvasRenderingContext2D::drawFocusIfNeeded(Element& element)
@@ -188,11 +193,11 @@ void CanvasRenderingContext2D::setFontWithoutUpdatingStyle(const String& newFont
         return;
 
     Ref canvas = this->canvas();
-    auto& document = canvas->document();
+    Ref document = canvas->document();
 
     // According to http://lists.w3.org/Archives/Public/public-html/2009Jul/0947.html,
     // the "inherit" and "initial" values must be ignored. CSSPropertyParserHelpers::parseUnresolvedFont() ignores these.
-    auto unresolvedFont = CSSPropertyParserHelpers::parseUnresolvedFont(newFont, document, strictToCSSParserMode(!usesCSSCompatibilityParseMode()));
+    auto unresolvedFont = CSSPropertyParserHelpers::parseUnresolvedFont(newFont, document.get(), strictToCSSParserMode(!usesCSSCompatibilityParseMode()));
     if (!unresolvedFont)
         return;
 
@@ -208,7 +213,7 @@ void CanvasRenderingContext2D::setFontWithoutUpdatingStyle(const String& newFont
 
     // Map the <canvas> font into the text style. If the font uses keywords like larger/smaller, these will work
     // relative to the canvas.
-    auto fontCascade = Style::resolveForUnresolvedFont(*unresolvedFont, WTFMove(fontDescription), document);
+    auto fontCascade = Style::resolveForUnresolvedFont(*unresolvedFont, WTF::move(fontDescription), document.get());
     if (!fontCascade)
         return;
 
@@ -216,7 +221,7 @@ void CanvasRenderingContext2D::setFontWithoutUpdatingStyle(const String& newFont
     realizeSaves();
     modifiableState().unparsedFont = newFontSafeCopy;
 
-    modifiableState().font.initialize(document.fontSelector(), *fontCascade);
+    modifiableState().font.initialize(document->fontSelector(), *fontCascade);
     ASSERT(state().font.realized());
     ASSERT(state().font.isPopulated());
 
@@ -270,8 +275,8 @@ Ref<TextMetrics> CanvasRenderingContext2D::measureText(const String& text)
     ScriptDisallowedScope::InMainThread scriptDisallowedScope;
 
     if (document->settings().webAPIStatisticsEnabled()) {
-        ResourceLoadObserver::shared().logCanvasWriteOrMeasure(document, text);
-        ResourceLoadObserver::shared().logCanvasRead(document);
+        ResourceLoadObserver::singleton().logCanvasWriteOrMeasure(document, text);
+        ResourceLoadObserver::singleton().logCanvasRead(document);
     }
 
     String normalizedText = normalizeSpaces(text);
@@ -303,7 +308,7 @@ void CanvasRenderingContext2D::drawTextInternal(const String& text, double x, do
     ScriptDisallowedScope::InMainThread scriptDisallowedScope;
 
     if (document->settings().webAPIStatisticsEnabled())
-        ResourceLoadObserver::shared().logCanvasWriteOrMeasure(document, text);
+        ResourceLoadObserver::singleton().logCanvasWriteOrMeasure(document, text);
 
     if (!canDrawText(x, y, fill, maxWidth))
         return;

@@ -27,8 +27,8 @@
 
 #if ENABLE(WEB_RTC)
 
-#include "DOMException.h"
-#include "RTCErrorDetailType.h"
+#include <WebCore/DOMException.h>
+#include <WebCore/RTCErrorDetailType.h>
 #include <optional>
 #include <wtf/text/WTFString.h>
 
@@ -44,8 +44,8 @@ public:
         std::optional<unsigned> sentAlert;
     };
 
-    static Ref<RTCError> create(const Init& init, String&& message) { return adoptRef(*new RTCError(init, WTFMove(message))); }
-    static Ref<RTCError> create(RTCErrorDetailType type, String&& message) { return create({ type, { }, { }, { }, { } }, WTFMove(message)); }
+    static Ref<RTCError> create(const Init& init, String&& message) { return adoptRef(*new RTCError(init, WTF::move(message))); }
+    static Ref<RTCError> create(RTCErrorDetailType type, String&& message) { return create({ type, { }, { }, { }, { } }, WTF::move(message)); }
 
     RTCErrorDetailType errorDetail() const { return m_values.errorDetail; }
     std::optional<int> sdpLineNumber() const  { return m_values.sdpLineNumber; }
@@ -60,5 +60,9 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::RTCError)
+    static bool isType(const WebCore::DOMException& exception) { return exception.type() == WebCore::DOMException::Type::RTCError; }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(WEB_RTC)

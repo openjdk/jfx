@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "StyleScopeOrdinal.h"
-#include "StyleValueTypes.h"
+#include <WebCore/StyleScopeOrdinal.h>
+#include <WebCore/StyleValueTypes.h>
 
 namespace WebCore {
 namespace Style {
@@ -52,7 +52,7 @@ struct ViewTransitionName {
     }
 
     ViewTransitionName(CustomIdentifier&& customIdentifier, ScopeOrdinal ordinal)
-        : m_value { WTFMove(customIdentifier) }
+        : m_value { WTF::move(customIdentifier) }
         , m_scopeOrdinal { ordinal }
     {
     }

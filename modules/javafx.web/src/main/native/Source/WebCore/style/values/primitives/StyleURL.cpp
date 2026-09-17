@@ -27,6 +27,7 @@
 
 #include "CSSURLValue.h"
 #include "Document.h"
+#include "StyleBuilderChecking.h"
 #include "StyleBuilderState.h"
 #include <wtf/text/TextStream.h>
 
@@ -83,6 +84,13 @@ auto ToStyle<CSS::URL>::operator()(const CSS::URL& url, const BuilderState& stat
 Ref<CSSValue> CSSValueCreation<URL>::operator()(CSSValuePool&, const RenderStyle& style, const URL& value)
 {
     return CSSURLValue::create(toCSS(value, style));
+}
+
+auto CSSValueConversion<URL>::operator()(BuilderState& state, const CSSValue& value) -> URL
+{
+    if (RefPtr url = requiredDowncast<CSSURLValue>(state, value))
+        return toStyle(url->url(), state);
+    return { .resolved = WTF::URL { emptyString() }, .modifiers = { } };
 }
 
 // MARK: - Serialization

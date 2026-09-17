@@ -34,7 +34,7 @@ namespace WebCore {
 
 RefPtr<WebGLTimerQueryEXT> WebGLTimerQueryEXT::create(WebGLRenderingContextBase& context)
 {
-    auto object = context.protectedGraphicsContextGL()->createQueryEXT();
+    auto object = context.graphicsContextGL()->createQueryEXT();
     if (!object)
         return nullptr;
     return adoptRef(*new WebGLTimerQueryEXT { context, object });

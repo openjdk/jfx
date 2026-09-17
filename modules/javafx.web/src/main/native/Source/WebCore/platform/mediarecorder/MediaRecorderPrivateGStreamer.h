@@ -60,7 +60,7 @@ public:
     void resumeRecording(CompletionHandler<void()>&&);
     const String& mimeType() const { return m_mimeType; }
 
-    void setSelectTracksCallback(SelectTracksCallback&& callback) { m_selectTracksCallback = WTFMove(callback); }
+    void setSelectTracksCallback(SelectTracksCallback&& callback) { m_selectTracksCallback = WTF::move(callback); }
 
 private:
     MediaRecorderPrivateBackend(MediaStreamPrivate&, const MediaRecorderPrivateOptions&);

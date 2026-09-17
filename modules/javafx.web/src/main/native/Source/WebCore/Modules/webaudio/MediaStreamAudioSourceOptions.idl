@@ -23,7 +23,8 @@
  */
 
 [
-    Conditional=WEB_AUDIO&MEDIA_STREAM
+    Conditional=WEB_AUDIO&MEDIA_STREAM,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary MediaStreamAudioSourceOptions {
     required MediaStream mediaStream;
 };

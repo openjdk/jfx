@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "PixelBufferFormat.h"
-#include "RenderingMode.h"
+#include <WebCore/PixelBufferFormat.h>
+#include <WebCore/RenderingMode.h>
 #include <wtf/RefPtr.h>
 #include <wtf/TZoneMalloc.h>
 

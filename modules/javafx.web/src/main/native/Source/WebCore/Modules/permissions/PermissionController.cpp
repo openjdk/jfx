@@ -47,7 +47,7 @@ PermissionController& PermissionController::singleton()
 void PermissionController::setSharedController(Ref<PermissionController>&& controller)
 {
     ASSERT(!sharedController());
-    sharedController() = WTFMove(controller);
+    sharedController() = WTF::move(controller);
 }
 
 } // namespace WebCore

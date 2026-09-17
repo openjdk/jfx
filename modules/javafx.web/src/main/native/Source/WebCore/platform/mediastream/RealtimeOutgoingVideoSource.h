@@ -41,7 +41,7 @@
 namespace WebCore {
 
 class RealtimeOutgoingVideoSource
-    : public ThreadSafeRefCounted<RealtimeOutgoingVideoSource, WTF::DestructionThread::Main>
+    : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<RealtimeOutgoingVideoSource, WTF::DestructionThread::Main>
     , public webrtc::VideoTrackSourceInterface
     , private MediaStreamTrackPrivateObserver
     , private RealtimeMediaSource::VideoFrameObserver
@@ -52,6 +52,9 @@ class RealtimeOutgoingVideoSource
 public:
     static Ref<RealtimeOutgoingVideoSource> create(Ref<MediaStreamTrackPrivate>&& videoSource);
     ~RealtimeOutgoingVideoSource();
+
+    void ref() const final { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr::ref(); }
+    void deref() const final { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr::deref(); }
 
     void start() { observeSource(); }
     void stop();
@@ -76,7 +79,7 @@ protected:
 
     virtual webrtc::scoped_refptr<webrtc::VideoFrameBuffer> createBlackFrame(size_t width, size_t height) = 0;
 
-    bool m_shouldApplyRotation { false };
+    bool m_isApplyingRotation { false };
     webrtc::VideoRotation m_currentRotation { webrtc::kVideoRotation_0 };
 
 #if !RELEASE_LOG_DISABLED

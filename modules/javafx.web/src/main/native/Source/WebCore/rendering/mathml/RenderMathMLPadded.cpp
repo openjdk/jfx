@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 Igalia S.L. All rights reserved.
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,15 +35,20 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderMathMLPadded);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderMathMLPadded);
 
 RenderMathMLPadded::RenderMathMLPadded(MathMLPaddedElement& element, RenderStyle&& style)
-    : RenderMathMLRow(Type::MathMLPadded, element, WTFMove(style))
+    : RenderMathMLRow(Type::MathMLPadded, element, WTF::move(style))
 {
     ASSERT(isRenderMathMLPadded());
 }
 
 RenderMathMLPadded::~RenderMathMLPadded() = default;
+
+MathMLPaddedElement& RenderMathMLPadded::element() const
+{
+    return static_cast<MathMLPaddedElement&>(nodeForNonAnonymous());
+}
 
 LayoutUnit RenderMathMLPadded::voffset() const
 {
@@ -51,24 +57,35 @@ LayoutUnit RenderMathMLPadded::voffset() const
 
 LayoutUnit RenderMathMLPadded::lspace() const
 {
-    LayoutUnit lspace = toUserUnits(element().lspace(), style(), 0);
     // FIXME: Negative lspace values are not supported yet (https://bugs.webkit.org/show_bug.cgi?id=85730).
-    return std::max<LayoutUnit>(0, lspace);
+    return std::max(0_lu, toUserUnits(element().lspace(), style(), 0));
 }
 
 LayoutUnit RenderMathMLPadded::mpaddedWidth(LayoutUnit contentWidth) const
 {
-    return std::max<LayoutUnit>(0, toUserUnits(element().width(), style(), contentWidth));
+    auto& widthAttr = element().width();
+    // If parsing failed (attribute not set) or it's a percentage, use the content width as default.
+    if (widthAttr.type == MathMLElement::LengthType::ParsingFailed ||  widthAttr.type == MathMLElement::LengthType::Percentage)
+        return contentWidth;
+    return std::max(0_lu, toUserUnits(widthAttr, style(), 0));
 }
 
 LayoutUnit RenderMathMLPadded::mpaddedHeight(LayoutUnit contentHeight) const
 {
-    return std::max<LayoutUnit>(0, toUserUnits(element().height(), style(), contentHeight));
+    auto& heightAttr = element().height();
+    // If parsing failed (attribute not set) or it's a percentage, use the content height as default.
+    if (heightAttr.type == MathMLElement::LengthType::ParsingFailed ||  heightAttr.type == MathMLElement::LengthType::Percentage)
+        return contentHeight;
+    return std::max(0_lu, toUserUnits(heightAttr, style(), 0));
 }
 
 LayoutUnit RenderMathMLPadded::mpaddedDepth(LayoutUnit contentDepth) const
 {
-    return std::max<LayoutUnit>(0, toUserUnits(element().depth(), style(), contentDepth));
+    auto& depthAttr = element().depth();
+    // If parsing failed (attribute not set) or it's a percentage, use the content depth as default.
+    if (depthAttr.type == MathMLElement::LengthType::ParsingFailed ||  depthAttr.type == MathMLElement::LengthType::Percentage)
+        return contentDepth;
+    return std::max(0_lu, toUserUnits(depthAttr, style(), 0));
 }
 
 void RenderMathMLPadded::computePreferredLogicalWidths()
@@ -114,8 +131,10 @@ void RenderMathMLPadded::layoutBlock(RelayoutChildren relayoutChildren, LayoutUn
     LayoutUnit ascent = mpaddedHeight(contentAscent);
     LayoutUnit descent = mpaddedDepth(contentDescent);
 
+    auto inlineShift = style().writingMode().inlineDirection() == FlowDirection::RightToLeft ? (width - contentWidth - lspace()) : lspace();
+
     // Align children on the new baseline and shift them by (lspace, -voffset)
-    shiftInFlowChildren(lspace(), ascent - contentAscent - voffset());
+    shiftInFlowChildren(inlineShift, ascent - contentAscent - voffset());
 
     // Set the final metrics.
     setLogicalWidth(width);
@@ -128,10 +147,6 @@ void RenderMathMLPadded::layoutBlock(RelayoutChildren relayoutChildren, LayoutUn
     adjustLayoutForBorderAndPadding();
 
     layoutOutOfFlowBoxes(relayoutChildren);
-
-    updateScrollInfoAfterLayout();
-
-    clearNeedsLayout();
 }
 
 std::optional<LayoutUnit> RenderMathMLPadded::firstLineBaseline() const

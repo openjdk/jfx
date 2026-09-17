@@ -45,7 +45,7 @@ SourceGraphic::SourceGraphic(DestinationColorSpace colorSpace)
 {
 }
 
-OptionSet<FilterRenderingMode> SourceGraphic::supportedFilterRenderingModes() const
+OptionSet<FilterRenderingMode> SourceGraphic::supportedFilterRenderingModes(OptionSet<FilterRenderingMode> preferredFilterRenderingModes) const
 {
     OptionSet<FilterRenderingMode> modes = FilterRenderingMode::Software;
 #if USE(CORE_IMAGE) || USE(SKIA)
@@ -54,7 +54,7 @@ OptionSet<FilterRenderingMode> SourceGraphic::supportedFilterRenderingModes() co
 #if USE(GRAPHICS_CONTEXT_FILTERS)
     modes.add(FilterRenderingMode::GraphicsContext);
 #endif
-    return modes;
+    return modes & preferredFilterRenderingModes;
 }
 
 std::unique_ptr<FilterEffectApplier> SourceGraphic::createAcceleratedApplier() const

@@ -28,13 +28,14 @@
 #include "CachedResource.h"
 #include "DOMTokenList.h"
 #include "Document.h"
-#include "DocumentInlines.h"
+#include "DocumentPage.h"
 #include "Event.h"
 #include "EventNames.h"
 #include "EventSender.h"
 #include "HTMLNames.h"
 #include "MediaQueryParser.h"
 #include "MediaQueryParserContext.h"
+#include "NodeDocument.h"
 #include "NodeName.h"
 #include "Page.h"
 #include "ScriptableDocumentParser.h"
@@ -47,11 +48,11 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLStyleElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLStyleElement);
 
 using namespace HTMLNames;
 
-static StyleEventSender& styleLoadEventSender()
+static StyleEventSender& styleLoadEventSenderSingleton()
 {
     static NeverDestroyed<StyleEventSender> sharedLoadEventSender;
     return sharedLoadEventSender;
@@ -68,7 +69,7 @@ HTMLStyleElement::~HTMLStyleElement()
 {
     m_styleSheetOwner.clearDocumentData(*this);
 
-    styleLoadEventSender().cancelEvent(*this);
+    styleLoadEventSenderSingleton().cancelEvent(*this);
 }
 
 Ref<HTMLStyleElement> HTMLStyleElement::create(const QualifiedName& tagName, Document& document, bool createdByParser)
@@ -157,19 +158,19 @@ void HTMLStyleElement::childrenChanged(const ChildChange& change)
 
 void HTMLStyleElement::dispatchPendingLoadEvents(Page* page)
 {
-    styleLoadEventSender().dispatchPendingEvents(page);
+    styleLoadEventSenderSingleton().dispatchPendingEvents(page);
 }
 
 void HTMLStyleElement::dispatchPendingEvent(StyleEventSender* eventSender, const AtomString& eventType)
 {
-    ASSERT_UNUSED(eventSender, eventSender == &styleLoadEventSender());
+    ASSERT_UNUSED(eventSender, eventSender == &styleLoadEventSenderSingleton());
     dispatchEvent(Event::create(eventType, Event::CanBubble::No, Event::IsCancelable::No));
 }
 
 void HTMLStyleElement::notifyLoadedSheetAndAllCriticalSubresources(bool errorOccurred)
 {
     m_loadedSheet = !errorOccurred;
-    styleLoadEventSender().dispatchEventSoon(*this, m_loadedSheet ? eventNames().loadEvent : eventNames().errorEvent);
+    styleLoadEventSenderSingleton().dispatchEventSoon(*this, m_loadedSheet ? eventNames().loadEvent : eventNames().errorEvent);
 }
 
 void HTMLStyleElement::addSubresourceAttributeURLs(ListHashSet<URL>& urls) const

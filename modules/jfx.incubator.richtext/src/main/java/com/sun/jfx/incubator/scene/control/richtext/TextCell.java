@@ -27,7 +27,14 @@
 
 package com.sun.jfx.incubator.scene.control.richtext;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.CopyOnWriteArrayList;
+import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
@@ -37,12 +44,17 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.PathElement;
+import javafx.scene.text.HitInfo;
+import javafx.scene.text.LayoutInfo;
 import javafx.scene.text.TabStopPolicy;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import com.sun.jfx.incubator.scene.control.richtext.util.RichUtils;
+import jfx.incubator.scene.control.richtext.TextPos;
+import jfx.incubator.scene.control.richtext.model.StyleAttribute;
 import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 import jfx.incubator.scene.control.richtext.model.TabStops;
+import jfx.incubator.scene.control.richtext.skin.CellContext;
 
 /**
  * Provides a visual representation of a paragraph.
@@ -62,6 +74,8 @@ public final class TextCell extends BorderPane {
     private double height;
     private double y;
     private boolean embedsNode;
+    private Decorator decorator;
+    private List<RequiresComplexLayout> clients;
 
     /**
      * Creates a text cell with the specified {@code Region} as its content.
@@ -76,6 +90,7 @@ public final class TextCell extends BorderPane {
         this.embedsNode = embedsNode;
         setManaged(false);
         setCenter(content);
+        checkClient(content);
     }
 
     /**
@@ -107,6 +122,16 @@ public final class TextCell extends BorderPane {
     public void add(Node node) {
         flow().getChildren().add(node);
         embedsNode = true;
+        checkClient(node);
+    }
+
+    private void checkClient(Node n) {
+        if (n instanceof RequiresComplexLayout r) {
+            if (clients == null) {
+                clients = new CopyOnWriteArrayList<>();
+            }
+            clients.add(r);
+        }
     }
 
     /**
@@ -137,7 +162,7 @@ public final class TextCell extends BorderPane {
     }
 
     private TextFlow flow() {
-        if(content instanceof TextFlow f) {
+        if (content instanceof TextFlow f) {
             return f;
         } else {
             throw new IllegalArgumentException("Not a TextFlow: " + content.getClass());
@@ -302,26 +327,26 @@ public final class TextCell extends BorderPane {
     }
 
     /**
-     * Underlines the specified text range using squiggly line (as typically used by a spell checker).
+     * Underlines the specified text range with wavy underline (as typically used by a spell checker).
      *
      * @param start start offset for the range
      * @param end end offset for the range
      * @param color highlight color
      */
-    public void addSquiggly(int start, int end, Color color) {
-        HighlightShape.addTo(content, HighlightShape.Type.SQUIGGLY, start, end, color);
+    public void addWavyUnderline(int start, int end, Color color) {
+        HighlightShape.addTo(content, HighlightShape.Type.WAVY_UNDERLINE, start, end, color);
     }
 
     /**
-     * Underlines the specified text range using squiggly line (as typically used by a spell checker),
+     * Underlines the specified text range with wavy underline (as typically used by a spell checker),
      * using style names.
      *
      * @param start start offset for the range
      * @param end end offset for the range
      * @param styles CSS style names
      */
-    public void addSquiggly(int start, int end, String... styles) {
-        HighlightShape.addTo(content, HighlightShape.Type.SQUIGGLY, start, end, styles);
+    public void addWavyUnderline(int start, int end, String... styles) {
+        HighlightShape.addTo(content, HighlightShape.Type.WAVY_UNDERLINE, start, end, styles);
     }
 
     /**
@@ -387,57 +412,62 @@ public final class TextCell extends BorderPane {
         return null;
     }
 
-    private RangeInfo getTextRange() {
+    private RangeInfo textRange() {
         if (content instanceof TextFlow f) {
-            int len = getTextLength();
-            PathElement[] pe = f.getRangeShape(0, len, true);
-            if (pe.length > 0) {
-                double sp = f.getLineSpacing();
-                return RangeInfo.of(pe, sp);
-            }
+            LayoutInfo la = f.getLayoutInfo();
+            double sp = f.getLineSpacing();
+            return RangeInfo.of(la, sp, height);
         }
-        return RangeInfo.of(width, height);
+        return RangeInfo.of(height);
     }
 
-    public boolean isInsideText(double x, double y, boolean down) {
-        y -= snappedTopInset();
-        y -= content.snappedTopInset();
-
-        RangeInfo ri = getTextRange();
-        int sz = ri.getSegmentCount();
-        for (int i = 0; i < sz; i++) {
-            if(ri.contains(i, x, y)) {
-                return true;
-            }
-        }
-        if (ri.insideY(y)) {
+    public boolean isOutsideTextRangeY(double y) {
+        if (getTextLength() == 0) {
+            // there is no text
             return true;
         }
-        return false;
+        RangeInfo ri = textRange();
+        return ri.isOutsideTextRangeY(y - snappedTopInset());
     }
 
-    public double findHitCandidate(double py, boolean down) {
-        double dy = snappedTopInset() + content.snappedTopInset();
-        double y = py - dy;
+    public double getFirstLineMidY() {
+        RangeInfo ri = textRange();
+        return snappedTopInset() + ri.getFirstLineMidY();
+    }
 
-        RangeInfo ri = getTextRange();
-        int sz = ri.getSegmentCount();
-        if (down) {
-            for (int i = 0; i < sz; i++) {
-                if (ri.getMaxY(i) >= y) {
-                    return ri.midPointY(i) + dy;
-                }
+    public double getLastLineMidY() {
+        RangeInfo ri = textRange();
+        return snappedTopInset() + ri.getLastLineMidY();
+    }
+
+    public double findHitCandidate(double cellY) {
+        double dy = snappedTopInset();
+        RangeInfo ri = textRange();
+        return ri.findHitMidpoint(cellY - dy) + dy;
+    }
+
+    public TextPos getTextPos(double cellX, double cellY) {
+        double py = cellY - y;
+        if (py < 0) {
+            return TextPos.ofLeading(index, 0);
+        } else if (py < height) {
+            if (content instanceof TextFlow f) {
+                Point2D p = new Point2D(cellX - content.getLayoutX(), py - content.getLayoutY());
+                HitInfo h = f.getHitInfo(p);
+                int ii = h.getInsertionIndex();
+                int ci = h.getCharIndex();
+                boolean leading = h.isLeading();
+                return new TextPos(index, ii, ci, leading);
+            } else {
+                return TextPos.ofLeading(index, 0);
             }
-            return ri.midPointY(0) + dy;
-        } else {
-            for (int i = sz - 1; i >= 0; i--) {
-                if (ri.getMinY(i) <= y) {
-                    return ri.midPointY(i) + dy;
-                }
-            }
-            int ix = ri.getSegmentCount() - 1;
-            return ri.midPointY(ix) + dy;
         }
+
+        int cix = 0;
+        if (content instanceof TextFlow f) {
+            cix = RichUtils.getTextLength(f);
+        }
+        return TextPos.ofLeading(index, cix);
     }
 
     public Integer lineEdge(boolean start, int caretIndex, int caretOffset) {
@@ -478,8 +508,113 @@ public final class TextCell extends BorderPane {
         if (embedsNode) {
             VFlow vf = RichUtils.getParentOfClass(VFlow.class, this);
             if (vf != null) {
-                vf.requestLayout();
+                if (!vf.inReflow()) {
+                    vf.requestLayout();
+                }
             }
+        }
+    }
+
+    public void updateVFlowContext(VFlow f) {
+        if (clients != null) {
+            for (RequiresComplexLayout r : clients) {
+                r.updateVFlowContext(f);
+            }
+        }
+    }
+
+    // collects and coalesces decorations that run over more than one segment
+    public void decorateRun(int length, StyleAttribute<?> a, CellContext.RunDecor type, String styleName) {
+        if (decorator == null) {
+            decorator = new Decorator(flow());
+        }
+        decorator.addRun(length, a, type, styleName);
+    }
+
+    /// Applies decorations in a consistent order (sorted by style name).
+    public void applyDecorations() {
+        if (decorator != null) {
+            for (DecorationRun d : decorator.getSortedRuns()) {
+                switch (d.type) {
+                case HIGHLIGHT:
+                    addHighlight(d.start, d.end, d.styleName);
+                    break;
+                case WAVY_UNDERLINE:
+                    addWavyUnderline(d.start, d.end, d.styleName);
+                    break;
+                }
+            }
+            decorator = null;
+        }
+    }
+
+    /// Decoration run spans multiple segments.
+    private static class DecorationRun {
+        public final CellContext.RunDecor type;
+        public final String styleName;
+        public final int start;
+        public int end;
+
+        public DecorationRun(CellContext.RunDecor type, String styleName, int start, int length) {
+            this.type = type;
+            this.styleName = styleName;
+            this.start = start;
+            this.end = start + length;
+        }
+
+        public void extend(int length) {
+            end += length;
+        }
+    }
+
+    /// keeps track of coalesced decorated runs
+    private static class Decorator {
+        private final TextFlow flow;
+        private int offset;
+        private int lastCount;
+        private final ArrayList<DecorationRun> runs = new ArrayList<>(4);
+        private HashMap<StyleAttribute<?>, DecorationRun> byType = new HashMap<>();
+        private static Comparator<DecorationRun> sorter;
+
+        public Decorator(TextFlow flow) {
+            this.flow = flow;
+        }
+
+        public void addRun(int length, StyleAttribute<?> a, CellContext.RunDecor type, String styleName) {
+            // compute offset
+            int count = flow.getChildren().size();
+            for (int i = lastCount; i < count; i++) {
+                Node n = flow.getChildren().get(i);
+                if (n instanceof Text t) {
+                    offset += t.getText().length();
+                } else if (n.isManaged()) { // ignoring highlights added in VFlow:824
+                    offset++;
+                }
+            }
+
+            DecorationRun d = byType.get(a);
+            if ((d != null) && (d.end == offset)) {
+                // coalesce runs
+                d.extend(length);
+            } else {
+                d = new DecorationRun(type, styleName, offset, length);
+                runs.add(d);
+                byType.put(a, d);
+            }
+            lastCount = count;
+        }
+
+        public ArrayList<DecorationRun> getSortedRuns() {
+            if (sorter == null) {
+                sorter = new Comparator<DecorationRun>() {
+                    @Override
+                    public int compare(DecorationRun a, DecorationRun b) {
+                        return a.styleName.compareTo(b.styleName);
+                    }
+                };
+            }
+            Collections.sort(runs, sorter);
+            return runs;
         }
     }
 }

@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "JITOperationValidation.h"
-#include "ThrowScope.h"
+#include <JavaScriptCore/JITOperationValidation.h>
+#include <JavaScriptCore/ThrowScope.h>
 
 #include <type_traits>
 #include <wtf/FunctionTraits.h>
@@ -55,10 +55,14 @@ concept canMakeExceptionOperationResult =
 #if USE(JSVALUE64)
 
 template<typename T>
+concept shouldZeroExtendInExceptionResult = sizeof(T) < sizeof(UCPURegister) && std::is_integral_v<T>;
+
+template<typename T>
 struct ExceptionOperationResult {
     using ResultType = T;
     static_assert(assertNotOperationSignature<T>);
-    T value;
+    // Use UCPURegister for small integral types to ensure full register width is written with zero-extension.
+    std::conditional_t<shouldZeroExtendInExceptionResult<T>, UCPURegister, T> value;
     Exception* exception;
 };
 
@@ -99,6 +103,13 @@ struct ExceptionOperationImplicitResult {
     {
         // For whatever reason aggregate initialization doesn't seem to work here.
         ExceptionOperationResult<To> result;
+        // To ensure no undefined bits in the return register, zero-extend to register width.
+        if constexpr (shouldZeroExtendInExceptionResult<From>) {
+            if constexpr (std::is_same_v<From, bool>)
+                result.value = static_cast<UCPURegister>(value);
+            else
+                result.value = static_cast<std::make_unsigned_t<From>>(value);
+        } else
         result.value = value;
         result.exception = exception;
         return result;

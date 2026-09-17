@@ -42,26 +42,26 @@
 
     [Reflect] attribute boolean interactive;
 
-    [Conditional=MODEL_PROCESS, EnabledBySetting=ModelProcessEnabled, CEReactions=NotNeeded] readonly attribute DOMPointReadOnly boundingBoxCenter;
-    [Conditional=MODEL_PROCESS, EnabledBySetting=ModelProcessEnabled, CEReactions=NotNeeded] readonly attribute DOMPointReadOnly boundingBoxExtents;
+    [Conditional=MODEL_ELEMENT_BOUNDING_BOX, CEReactions=NotNeeded] readonly attribute DOMPointReadOnly boundingBoxCenter;
+    [Conditional=MODEL_ELEMENT_BOUNDING_BOX, CEReactions=NotNeeded] readonly attribute DOMPointReadOnly boundingBoxExtents;
 
-    [Conditional=MODEL_PROCESS, EnabledBySetting=ModelProcessEnabled, CEReactions=NotNeeded] attribute DOMMatrixReadOnly entityTransform;
+    [Conditional=MODEL_ELEMENT_ENTITY_TRANSFORM, CEReactions=NotNeeded] attribute DOMMatrixReadOnly entityTransform;
 
-    [Conditional=MODEL_PROCESS, EnabledBySetting=ModelProcessEnabled, Reflect] attribute boolean autoplay;
-    [Conditional=MODEL_PROCESS, EnabledBySetting=ModelProcessEnabled, Reflect] attribute boolean loop;
-    [Conditional=MODEL_PROCESS, EnabledBySetting=ModelProcessEnabled] attribute double playbackRate;
-    [Conditional=MODEL_PROCESS, EnabledBySetting=ModelProcessEnabled] readonly attribute double duration;
-    [Conditional=MODEL_PROCESS, EnabledBySetting=ModelProcessEnabled] readonly attribute boolean paused;
-    [Conditional=MODEL_PROCESS, EnabledBySetting=ModelProcessEnabled] Promise<undefined> play();
-    [Conditional=MODEL_PROCESS, EnabledBySetting=ModelProcessEnabled] Promise<undefined> pause();
-    [Conditional=MODEL_PROCESS, EnabledBySetting=ModelProcessEnabled] attribute double currentTime;
+    [Conditional=MODEL_ELEMENT_ANIMATIONS_CONTROL, Reflect] attribute boolean autoplay;
+    [Conditional=MODEL_ELEMENT_ANIMATIONS_CONTROL, Reflect] attribute boolean loop;
+    [Conditional=MODEL_ELEMENT_ANIMATIONS_CONTROL] attribute double playbackRate;
+    [Conditional=MODEL_ELEMENT_ANIMATIONS_CONTROL] readonly attribute double duration;
+    [Conditional=MODEL_ELEMENT_ANIMATIONS_CONTROL] readonly attribute boolean paused;
+    [Conditional=MODEL_ELEMENT_ANIMATIONS_CONTROL] Promise<undefined> play();
+    [Conditional=MODEL_ELEMENT_ANIMATIONS_CONTROL] Promise<undefined> pause();
+    [Conditional=MODEL_ELEMENT_ANIMATIONS_CONTROL] attribute double currentTime;
 
-    [Conditional=MODEL_PROCESS, EnabledBySetting=ModelProcessEnabled, Reflect] attribute DOMString stageMode;
+    [Conditional=MODEL_ELEMENT_STAGE_MODE, Reflect] attribute DOMString stageMode;
 
-    [Conditional=MODEL_PROCESS, EnabledBySetting=ModelProcessEnabled, CEReactions=NotNeeded, ReflectURL] attribute USVString environmentMap;
-    [Conditional=MODEL_PROCESS, EnabledBySetting=ModelProcessEnabled] readonly attribute Promise<undefined> environmentMapReady;
+    [Conditional=MODEL_ELEMENT_ENVIRONMENT_MAP, CEReactions=NotNeeded, ReflectURL] attribute USVString environmentMap;
+    [Conditional=MODEL_ELEMENT_ENVIRONMENT_MAP] readonly attribute Promise<undefined> environmentMapReady;
 
-    [Conditional=MODEL_PROCESS, EnabledBySetting=ModelProcessEnabled&ModelNoPortalAttributeEnabled, Reflect] attribute boolean noportal;
+    [Conditional=MODEL_ELEMENT_PORTAL, EnabledBySetting=ModelProcessEnabled&ModelNoPortalAttributeEnabled, Reflect] attribute boolean noportal;
 
     undefined enterFullscreen();
 
@@ -82,4 +82,8 @@
     [Conditional=ARKIT_INLINE_PREVIEW_AUDIO_CONTROL] Promise<boolean> hasAudio();
     [Conditional=ARKIT_INLINE_PREVIEW_AUDIO_CONTROL] Promise<boolean> isMuted();
     [Conditional=ARKIT_INLINE_PREVIEW_AUDIO_CONTROL] Promise<undefined> setIsMuted(boolean isMuted);
+
+    [Conditional=MODEL_ELEMENT_IMMERSIVE, EnabledBySetting=ModelElementImmersiveEnabled] attribute EventHandler onimmersivechange;
+    [Conditional=MODEL_ELEMENT_IMMERSIVE, EnabledBySetting=ModelElementImmersiveEnabled] attribute EventHandler onimmersiveerror;
+    [Conditional=MODEL_ELEMENT_IMMERSIVE, EnabledBySetting=ModelElementImmersiveEnabled] Promise<undefined> requestImmersive();
 };

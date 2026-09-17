@@ -30,10 +30,9 @@
 
 #include "CSSFontSelector.h"
 #include "CachedFont.h"
-#include "CachedResourceLoader.h"
 #include "CachedResourceRequest.h"
 #include "CachedResourceRequestInitiatorTypes.h"
-#include "DocumentInlines.h"
+#include "DocumentResourceLoader.h"
 #include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
 #include "LocalFrame.h"
@@ -71,9 +70,9 @@ CachedFont* DocumentFontLoader::cachedFont(URL&& url, bool isSVG, bool isInitiat
     options.loadedFromOpaqueSource = loadedFromOpaqueSource;
     options.sameOriginDataURLFlag = SameOriginDataURLFlag::Set;
 
-    CachedResourceRequest request(ResourceRequest(WTFMove(url)), options);
+    CachedResourceRequest request(ResourceRequest(WTF::move(url)), options);
     request.setInitiatorType(cachedResourceRequestInitiatorTypes().css);
-    return protectedDocument()->protectedCachedResourceLoader()->requestFont(WTFMove(request), isSVG).value_or(nullptr).get();
+    return protectedDocument()->protectedCachedResourceLoader()->requestFont(WTF::move(request), isSVG).value_or(nullptr).get();
 }
 
 void DocumentFontLoader::beginLoadingFontSoon(CachedFont& font)

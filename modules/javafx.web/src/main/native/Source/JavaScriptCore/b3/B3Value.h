@@ -54,9 +54,21 @@ class SIMDValue;
 class PhiChildren;
 class Procedure;
 
+// B3 purposefully only represents signed 32-bit offsets because that's what x86 can encode, and
+// ARM64 cannot encode anything bigger. The IsLegalOffset concept is then used on B3 Value
+// methods to prevent implicit conversions by C++ from invalid offset types: these cause compilation
+// to fail, instead of causing implementation-defined behavior (which often turns to exploit).
+// OffsetType isn't sufficient to determine offset validity! Each Value opcode further has an
+// isLegalOffset runtime method used to determine value legality at runtime. This is exposed to users
+// of B3 to force them to reason about the target's offset.
+template<typename Int>
+concept IsLegalOffset = std::signed_integral<Int> && sizeof(Int) <= sizeof(int32_t);
+
 class JS_EXPORT_PRIVATE Value {
     WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(Value);
 public:
+    using OffsetType = int32_t;
+
     static const char* const dumpPrefix;
 
     static bool accepts(Kind) { return true; }
@@ -346,21 +358,6 @@ public:
     template<typename Functor>
     void walk(const Functor& functor, PhiChildren* = nullptr);
 
-    // B3 purposefully only represents signed 32-bit offsets because that's what x86 can encode, and
-    // ARM64 cannot encode anything bigger. The IsLegalOffset type trait is then used on B3 Value
-    // methods to prevent implicit conversions by C++ from invalid offset types: these cause compilation
-    // to fail, instead of causing implementation-defined behavior (which often turns to exploit).
-    // OffsetType isn't sufficient to determine offset validity! Each Value opcode further has an
-    // isLegalOffset runtime method used to determine value legality at runtime. This is exposed to users
-    // of B3 to force them to reason about the target's offset.
-    typedef int32_t OffsetType;
-    template<typename Int>
-    struct IsLegalOffset {
-        static constexpr bool value = std::is_integral<Int>::value
-            && std::is_signed<Int>::value
-            && sizeof(Int) <= sizeof(OffsetType);
-    };
-
 protected:
     Value* cloneImpl() const;
 
@@ -564,6 +561,8 @@ protected:
         case VectorRelaxedMAdd:
         case VectorRelaxedNMAdd:
         case VectorRelaxedLaneSelect:
+        case MemoryFill:
+        case MemoryCopy:
             return 3 * sizeof(Value*);
         case CCall:
         case Check:
@@ -802,6 +801,8 @@ private:
         case VectorRelaxedMAdd:
         case VectorRelaxedNMAdd:
         case VectorRelaxedLaneSelect:
+        case MemoryCopy:
+        case MemoryFill:
             if (numArgs != 3) [[unlikely]]
                 badKind(kind, numArgs);
             return Three;

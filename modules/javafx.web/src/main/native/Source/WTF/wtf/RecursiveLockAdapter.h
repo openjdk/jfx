@@ -40,16 +40,16 @@ public:
     // which doesn't support analysis.
     void lock() WTF_IGNORES_THREAD_SAFETY_ANALYSIS
     {
-        auto& me = Thread::currentSingleton();
-        if (&me == m_owner) {
+        auto currentThreadUID = Thread::currentSingleton().uid();
+        if (currentThreadUID == m_ownerThreadUID) {
             m_recursionCount++;
             return;
         }
 
         m_lock.lock();
-        ASSERT(!m_owner);
+        ASSERT(!m_ownerThreadUID);
         ASSERT(!m_recursionCount);
-        m_owner = &me;
+        m_ownerThreadUID = currentThreadUID;
         m_recursionCount = 1;
     }
 
@@ -60,7 +60,7 @@ public:
     {
         if (--m_recursionCount)
             return;
-        m_owner = nullptr;
+        m_ownerThreadUID = 0;
         m_lock.unlock();
     }
 
@@ -69,8 +69,8 @@ public:
     // which doesn't support analysis.
     bool tryLock() WTF_IGNORES_THREAD_SAFETY_ANALYSIS
     {
-        auto& me = Thread::currentSingleton();
-        if (&me == m_owner) {
+        auto currentThreadUID = Thread::currentSingleton().uid();
+        if (currentThreadUID == m_ownerThreadUID) {
             m_recursionCount++;
             return true;
         }
@@ -78,9 +78,9 @@ public:
         if (!m_lock.tryLock())
             return false;
 
-        ASSERT(!m_owner);
+        ASSERT(!m_ownerThreadUID);
         ASSERT(!m_recursionCount);
-        m_owner = &me;
+        m_ownerThreadUID = currentThreadUID;
         m_recursionCount = 1;
         return true;
     }
@@ -90,10 +90,10 @@ public:
         return m_lock.isLocked();
     }
 
-    bool isOwner() const { return m_owner == &Thread::currentSingleton(); }
+    bool isOwner() const { return m_ownerThreadUID == Thread::currentSingleton().uid(); }
 
 private:
-    Thread* m_owner { nullptr }; // Use Thread* instead of RefPtr<Thread> since m_owner thread is always alive while m_onwer is set.
+    uint32_t m_ownerThreadUID { 0 };
     unsigned m_recursionCount { 0 };
     LockType m_lock;
 };

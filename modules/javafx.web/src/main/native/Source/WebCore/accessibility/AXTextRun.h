@@ -27,10 +27,11 @@
 
 #if ENABLE(AX_THREAD_TEXT_APIS)
 
-#include "FloatRect.h"
-#include "TextAffinity.h"
-#include "TextFlags.h"
 #include <CoreText/CTFont.h>
+#include <WebCore/AXLoggerBase.h>
+#include <WebCore/FloatRect.h>
+#include <WebCore/TextAffinity.h>
+#include <WebCore/TextFlags.h>
 #include <wtf/FixedVector.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/TextStream.h>
@@ -93,8 +94,8 @@ struct AXTextRun {
 
     AXTextRun(size_t lineIndex, unsigned startIndex, unsigned endIndexInclusive, Vector<std::array<uint16_t, 2>>&& domOffsets, Vector<uint16_t>&& characterAdvances, float lineHeight, float distanceFromBoundsInDirection)
         : lineIndex(lineIndex)
-        , textRunDomOffsets(WTFMove(domOffsets))
-        , characterAdvances(WTFMove(characterAdvances))
+        , textRunDomOffsets(WTF::move(domOffsets))
+        , characterAdvances(WTF::move(characterAdvances))
         , lineHeight(lineHeight)
         , distanceFromBoundsInDirection(distanceFromBoundsInDirection)
         , startIndex(startIndex)
@@ -102,7 +103,7 @@ struct AXTextRun {
     {
         // Runs should have a non-zero length (i.e. endIndex should strictly be greater than startIndex).
         // This is important because several parts of AXTextMarker rely on this assumption.
-        ASSERT(endIndex > startIndex);
+        AX_ASSERT(endIndex > startIndex);
     }
 
     const FixedVector<std::array<uint16_t, 2>>& domOffsets() const { return textRunDomOffsets; }
@@ -112,6 +113,8 @@ struct AXTextRun {
 };
 
 struct AXTextRuns {
+    WTF_MAKE_TZONE_ALLOCATED(AXTextRuns);
+public:
     // The text for all runs, concatenated into a single string.
     String text;
     // The containing block for the text runs. This is required because based on the structure
@@ -124,9 +127,9 @@ struct AXTextRuns {
 
     AXTextRuns() = default;
     AXTextRuns(RenderBlock* containingBlock, Vector<AXTextRun>&& textRuns, String&& text, bool containsOnlyASCII = true)
-        : text(WTFMove(text))
+        : text(WTF::move(text))
         , containingBlock(containingBlock)
-        , runs(WTFMove(textRuns))
+        , runs(WTF::move(textRuns))
         , containsOnlyASCII(containsOnlyASCII)
     { }
 

@@ -124,7 +124,7 @@ void determineTZoneMallocFallback()
         if (tzoneMallocFallback != TZoneMallocFallback::Undecided)
             return;
 
-    if (Environment::get()->isSystemHeapEnabled()) {
+    if (Environment::get()->shouldBmallocAllocateThroughSystemHeap()) {
             tzoneMallocFallback = TZoneMallocFallback::ForceDebugMalloc;
             return;
         }
@@ -296,7 +296,6 @@ void TZoneHeapManager::init()
     }
 #endif
     s_state = State::Seeded;
-    initializeTZoneDynamicCompactMode();
 
     if (verbose)
         atexit(dumpRegisteredTypesAtExit);
@@ -385,7 +384,7 @@ void TZoneHeapManager::dumpRegisteredTypes()
         if (!m_typeSizes.size())
             return;
 
-        std::sort(m_typeSizes.begin(), m_typeSizes.end());
+        std::ranges::sort(m_typeSizes);
         auto typeSizesEnd = m_typeSizes.end();
 
         Vector<unsigned> bucketCountHistogram;
@@ -533,42 +532,6 @@ BINLINE unsigned TZoneHeapManager::tzoneBucketForKey(const TZoneSpecification& s
     return bucket;
 }
 
-#if BUSE_DYNAMIC_TZONE_COMPACTION
-bool g_tzoneDynamicCompactModeEnabled = false;
-#endif
-
-void TZoneHeapManager::initializeTZoneDynamicCompactMode()
-{
-#if BUSE_DYNAMIC_TZONE_COMPACTION
-    RELEASE_BASSERT(s_state >= State::Seeded);
-    const char* envEnable = getenv("bmalloc_TZoneDynamicCompactModeEnable");
-    if (envEnable && (!strcasecmp(envEnable, "true") || !strcasecmp(envEnable, "yes") || !strcmp(envEnable, "1"))) {
-        g_tzoneDynamicCompactModeEnabled = true;
-
-        const char* envSeed = getenv("bmalloc_TZoneDynamicCompactModeSeed");
-        if (envSeed) {
-            errno = 0;
-            m_tzoneDynamicCompactModeSeed = std::strtoull(envSeed, nullptr, 16);
-            if (verbose && errno)
-                TZONE_LOG_DEBUG("Error in strtoull for bmalloc_TZoneDynamicCompactModeSeed: %s\n", strerror(errno));
-            RELEASE_BASSERT(!errno);
-        } else
-            m_tzoneDynamicCompactModeSeed = m_tzoneKeySeed;
-
-        // The generated seed can be zero, but that's OK:
-        // that corresponds to dynamic compaction being enabled for no types,
-        // which is a valid configuration that's worth fuzzing.
-        m_tzoneDynamicCompactModeSalt = WeakRandom::generate(m_tzoneDynamicCompactModeSeed);
-
-        if constexpr (verbose) {
-            TZONE_LOG_DEBUG("dynamicCompactionSeed: 0x%llx\n", m_tzoneDynamicCompactModeSeed);
-            TZONE_LOG_DEBUG("dynamicCompactionSalt: 0x%llx\n", m_tzoneDynamicCompactModeSalt);
-        }
-        RELEASE_BASSERT(m_tzoneDynamicCompactModeSalt);
-    }
-#endif
-}
-
 BALLOW_UNSAFE_BUFFER_USAGE_END
 
 TZoneHeapManager::TZoneTypeBuckets* TZoneHeapManager::populateBucketsForSizeClass(LockHolder& lock, SizeAndAlignment::Value sizeAndAlignment)
@@ -675,7 +638,7 @@ pas_heap_ref* TZoneHeapManager::TZoneHeapManager::heapRefForTZoneTypeDifferentSi
     LockHolder lock(differentSizeMutex());
     RELEASE_BASSERT(tzoneMallocFallback == TZoneMallocFallback::DoNotFallBack);
 
-    unsigned newSize = sizeClassFor(requestedSize);
+    unsigned newSize = TZone::sizeClassFor(requestedSize);
     unsigned alignment = SizeAndAlignment::decodeAlignment(spec.sizeAndAlignment);
     TZoneTypeKey key(spec.addressOfHeapRef, newSize, alignment);
 
@@ -699,9 +662,6 @@ pas_heap_ref* TZoneHeapManager::TZoneHeapManager::heapRefForTZoneTypeDifferentSi
         SizeAndAlignment::encode(newSize, alignment),
 #if BUSE_TZONE_SPEC_NAME_ARG
         spec.name,
-#endif
-#if BUSE_DYNAMIC_TZONE_COMPACTION
-        spec.dynamicCompactionKey,
 #endif
     };
     pas_heap_ref* result = heapRefForTZoneType(newSpec);

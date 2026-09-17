@@ -35,6 +35,7 @@
 #include "DFGInsertionSet.h"
 #include "DFGJITCode.h"
 #include "DFGPhase.h"
+#include "JSBoundFunctionInlines.h"
 #include "JSObjectInlines.h"
 #include "JSWebAssemblyInstance.h"
 #include "MathCommon.h"
@@ -322,6 +323,30 @@ private:
                     break;
                 }
             }
+            break;
+        }
+
+        case GetUndetachedTypeArrayLength: {
+            if (m_node->child1()->op() != NewTypedArray)
+                break;
+
+            auto* typedArray = m_node->child1().node();
+            if (typedArray->child1().useKind() != UntypedUse)
+                break;
+            if (typedArray->child1()->op() != NewTypedArrayBuffer)
+                break;
+            TypedArrayType typedArrayType = typedArray->typedArrayType();
+            if (elementSize(typedArrayType) != 1)
+                break;
+
+            auto* arrayBuffer = typedArray->child1().node();
+            if (arrayBuffer->child1().useKind() != Int32Use)
+                break;
+
+            m_changed = true;
+            m_insertionSet.insertCheck(m_nodeIndex, m_node->origin, Edge(arrayBuffer->child1().node(), Int32Use));
+            m_insertionSet.insertNode(m_nodeIndex, SpecNone, Check, m_node->origin, m_node->children.justChecks());
+            m_node->convertToIdentityOn(arrayBuffer->child1().node());
             break;
         }
 
@@ -888,6 +913,9 @@ private:
 
                 FrozenValue* globalObjectFrozenValue = m_graph.freeze(globalObject);
 
+                if (regExpObjectNode && regExpObjectNode->op() == NewRegExp && regExpObjectNode->child1()->isInt32Constant())
+                    lastIndex = regExpObjectNode->child1()->asUInt32();
+
                 MatchResult result;
                 Vector<int> ovector;
                 // We have to call the kind of match function that the main thread would have called.
@@ -1280,7 +1308,7 @@ private:
 
             m_changed = true;
             m_insertionSet.insertNode(m_nodeIndex, SpecNone, Check, m_node->origin, m_node->children.justChecks());
-            m_node->convertToLazyJSConstant(m_graph, LazyJSValue::newString(m_graph, WTFMove(result)));
+            m_node->convertToLazyJSConstant(m_graph, LazyJSValue::newString(m_graph, WTF::move(result)));
             break;
         }
 
@@ -1328,6 +1356,36 @@ private:
             break;
         }
 
+        case StringIndexOf: {
+            Node* stringNode = m_node->child1().node();
+            String string = stringNode->tryGetString(m_graph);
+            if (!string)
+                break;
+
+            String searchString = m_node->child2()->tryGetString(m_graph);
+            if (!searchString)
+                break;
+
+            unsigned startPosition = 0;
+            if (m_node->child3()) {
+                if (!m_node->child3()->isInt32Constant())
+                    break;
+                int32_t pos = m_node->child3()->asInt32();
+                if (pos < 0)
+                    startPosition = 0;
+                else
+                    startPosition = std::min<unsigned>(pos, string.length());
+            }
+
+            size_t result = string.find(searchString, startPosition);
+            int32_t indexResult = (result == notFound) ? -1 : static_cast<int32_t>(result);
+
+            m_changed = true;
+            m_insertionSet.insertNode(m_nodeIndex, SpecNone, Check, m_node->origin, m_node->children.justChecks());
+            m_graph.convertToConstant(m_node, jsNumber(indexResult));
+            break;
+        }
+
         case GetByVal:
         case GetByValMegamorphic: {
             Edge& baseEdge = m_graph.child(m_node, 0);
@@ -1343,7 +1401,7 @@ private:
 
         case PutByVal:
         case PutByValDirect:
-        case PutByValAlias:
+        case PutByValDirectResolved:
         case PutByValMegamorphic: {
             Edge& baseEdge = m_graph.child(m_node, 0);
             Edge& keyEdge = m_graph.child(m_node, 1);
@@ -1360,7 +1418,7 @@ private:
             case Array::Float16Array:
             case Array::Float32Array:
             case Array::Float64Array: {
-                if (m_node->op() == PutByVal || m_node->op() == PutByValDirect || m_node->op() == PutByValAlias) {
+                if (m_node->op() == PutByVal || m_node->op() == PutByValDirect || m_node->op() == PutByValDirectResolved) {
                     Edge& valueEdge = m_graph.child(m_node, 2);
                     if (valueEdge.useKind() == DoubleRepUse) {
                         if (foldPurifyNaN(valueEdge))
@@ -1373,7 +1431,7 @@ private:
             case Array::Uint8Array:
             case Array::Uint16Array:
             case Array::Uint32Array: {
-                if (m_node->op() == PutByVal || m_node->op() == PutByValDirect || m_node->op() == PutByValAlias) {
+                if (m_node->op() == PutByVal || m_node->op() == PutByValDirect || m_node->op() == PutByValDirectResolved) {
                     Edge& valueEdge = m_graph.child(m_node, 2);
                     if (valueEdge.useKind() == Int32Use) {
                         if (valueEdge->op() == UInt32ToNumber && valueEdge->child1().useKind() == Int32Use) {
@@ -1519,7 +1577,7 @@ private:
             // DirectCall to wasm function has suboptimal implementation. We avoid using DirectCall if we know that function is a wasm function.
             // https://bugs.webkit.org/show_bug.cgi?id=220339
             if (executable->intrinsic() == WasmFunctionIntrinsic && !Options::forceICFailure()) {
-                if (m_node->op() != Call) // FIXME: We should support tail-call.
+                if (m_node->op() != Call && m_node->op() != TailCallInlinedCaller) // FIXME: We should support tail-call.
                     break;
                 if (!function)
                     break;

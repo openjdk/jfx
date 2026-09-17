@@ -51,7 +51,7 @@ public:
 
     static Ref<SVGTransform> create(SVGTransformValue&& value)
     {
-        return adoptRef(*new SVGTransform(WTFMove(value)));
+        return adoptRef(*new SVGTransform(WTF::move(value)));
     }
 
     template<typename T>
@@ -173,7 +173,7 @@ private:
     }
 
     SVGTransform(SVGTransformValue&& value)
-        : Base(WTFMove(value))
+        : Base(WTF::move(value))
     {
         m_value.protectedMatrix()->attach(this, SVGPropertyAccess::ReadWrite);
     }

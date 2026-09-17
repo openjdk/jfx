@@ -27,21 +27,21 @@
 #include "LayoutElementBox.h"
 
 #include "RenderElement.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 namespace Layout {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ElementBox);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ElementBox);
 
-ElementBox::ElementBox(ElementAttributes&& attributes, RenderStyle&& style, std::unique_ptr<RenderStyle>&& firstLineStyle, OptionSet<BaseTypeFlag> baseTypeFlags)
-    : Box(WTFMove(attributes), WTFMove(style), WTFMove(firstLineStyle), baseTypeFlags | ElementBoxFlag)
+ElementBox::ElementBox(ElementAttributes&& attributes, RenderStyle&& style, std::unique_ptr<RenderStyle>&& firstLineStyle, EnumSet<BaseTypeFlag> baseTypeFlags)
+    : Box(WTF::move(attributes), WTF::move(style), WTF::move(firstLineStyle), baseTypeFlags | ElementBoxFlag)
 {
 }
 
-ElementBox::ElementBox(ElementAttributes&& attributes, OptionSet<ListMarkerAttribute> listMarkerAttributes, RenderStyle&& style, std::unique_ptr<RenderStyle>&& firstLineStyle)
-    : Box(WTFMove(attributes), WTFMove(style), WTFMove(firstLineStyle), ElementBoxFlag)
+ElementBox::ElementBox(ElementAttributes&& attributes, EnumSet<ListMarkerAttribute> listMarkerAttributes, RenderStyle&& style, std::unique_ptr<RenderStyle>&& firstLineStyle)
+    : Box(WTF::move(attributes), WTF::move(style), WTF::move(firstLineStyle), ElementBoxFlag)
     , m_replacedData(makeUnique<ReplacedData>())
 {
     ASSERT(isListMarkerBox());
@@ -49,7 +49,7 @@ ElementBox::ElementBox(ElementAttributes&& attributes, OptionSet<ListMarkerAttri
 }
 
 ElementBox::ElementBox(ElementAttributes&& attributes, ReplacedAttributes&& replacedAttributes, RenderStyle&& style, std::unique_ptr<RenderStyle>&& firstLineStyle)
-    : Box(WTFMove(attributes), WTFMove(style), WTFMove(firstLineStyle), ElementBoxFlag)
+    : Box(WTF::move(attributes), WTF::move(style), WTF::move(firstLineStyle), ElementBoxFlag)
     , m_replacedData(makeUnique<ReplacedData>())
 {
     m_replacedData->intrinsicSize = replacedAttributes.intrinsicSize;
@@ -129,7 +129,7 @@ bool ElementBox::hasOutOfFlowChild() const
 
 void ElementBox::appendChild(UniqueRef<Box> childRef)
 {
-    insertChild(WTFMove(childRef), m_lastChild.get());
+    insertChild(WTF::move(childRef), m_lastChild.get());
 }
 
 void ElementBox::insertChild(UniqueRef<Box> childRef, Box* beforeChild)
@@ -148,7 +148,7 @@ void ElementBox::insertChild(UniqueRef<Box> childRef, Box* beforeChild)
     ASSERT(!nextOrFirst);
 
     m_lastChild = childBox.get();
-    nextOrFirst = WTFMove(childBox);
+        nextOrFirst = WTF::move(childBox);
         return;
     }
 
@@ -156,8 +156,8 @@ void ElementBox::insertChild(UniqueRef<Box> childRef, Box* beforeChild)
         // Insert as first.
         ASSERT(m_firstChild && m_lastChild);
         m_firstChild->m_previousSibling = childBox.get();
-        childBox->m_nextSibling = WTFMove(m_firstChild);
-        m_firstChild = WTFMove(childBox);
+        childBox->m_nextSibling = WTF::move(m_firstChild);
+        m_firstChild = WTF::move(childBox);
         return;
     }
 
@@ -165,9 +165,9 @@ void ElementBox::insertChild(UniqueRef<Box> childRef, Box* beforeChild)
     auto* nextSibling = beforeChild->m_nextSibling.get();
     ASSERT(nextSibling);
     childBox->m_previousSibling = beforeChild;
-    childBox->m_nextSibling = WTFMove(beforeChild->m_nextSibling);
+    childBox->m_nextSibling = WTF::move(beforeChild->m_nextSibling);
     nextSibling->m_previousSibling = childBox.get();
-    beforeChild->m_nextSibling = WTFMove(childBox);
+    beforeChild->m_nextSibling = WTF::move(childBox);
 }
 
 void ElementBox::destroyChildren()
@@ -208,7 +208,7 @@ LayoutUnit ElementBox::intrinsicWidth() const
         return m_replacedData->intrinsicSize->width();
 
     // FIXME: Document what invariant holds to allow not checking if the logicalWidth() is fixed.
-    return LayoutUnit { style().logicalWidth().tryFixed()->value };
+    return LayoutUnit { style().logicalWidth().tryFixed()->resolveZoom(style().usedZoomForLength()) };
 }
 
 LayoutUnit ElementBox::intrinsicHeight() const
@@ -218,7 +218,7 @@ LayoutUnit ElementBox::intrinsicHeight() const
         return m_replacedData->intrinsicSize->height();
 
     // FIXME: Document what invariant holds to allow not checking if the logicalHeight() is fixed.
-    return LayoutUnit { style().logicalHeight().tryFixed()->value };;
+    return LayoutUnit { style().logicalHeight().tryFixed()->resolveZoom(style().usedZoomForLength()) };
 }
 
 LayoutUnit ElementBox::intrinsicRatio() const

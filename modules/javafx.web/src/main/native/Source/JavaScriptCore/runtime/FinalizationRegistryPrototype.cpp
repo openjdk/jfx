@@ -107,3 +107,4 @@ JSC_DEFINE_HOST_FUNCTION(protoFuncFinalizationRegistryUnregister, (JSGlobalObjec
 }
 
 }
+

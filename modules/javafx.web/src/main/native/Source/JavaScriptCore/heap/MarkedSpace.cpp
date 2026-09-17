@@ -127,7 +127,7 @@ static Vector<size_t> sizeClasses()
 
     {
         // Sort and deduplicate.
-        std::sort(result.begin(), result.end());
+        std::ranges::sort(result);
         auto it = std::unique(result.begin(), result.end());
         result.shrinkCapacity(it - result.begin());
     }
@@ -398,16 +398,6 @@ void MarkedSpace::freeBlock(MarkedBlock::Handle* block)
     m_capacity -= MarkedBlock::blockSize;
     m_blocks.remove(&block->block());
     delete block;
-}
-
-void MarkedSpace::freeOrShrinkBlock(MarkedBlock::Handle* block)
-{
-    if (!block->isEmpty()) {
-        block->shrink();
-        return;
-    }
-
-    freeBlock(block);
 }
 
 void MarkedSpace::shrink()

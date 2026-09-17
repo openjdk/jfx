@@ -292,6 +292,15 @@ bool BitmapImageDescriptor::isSpatial() const
 }
 #endif
 
+#if ENABLE(SPATIAL_IMAGE_CONTROLS)
+bool BitmapImageDescriptor::isMaybePanoramic() const
+{
+    if (RefPtr decoder = m_source->decoderIfExists())
+        return decoder->isMaybePanoramic();
+    return false;
+}
+#endif
+
 void BitmapImageDescriptor::dump(TextStream& ts) const
 {
     ts.dumpProperty("size"_s, size());

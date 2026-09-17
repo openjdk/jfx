@@ -56,22 +56,21 @@ struct SVGPropertyTraits<ComponentTransferType> {
         return emptyString();
     }
 
-    static ComponentTransferType fromString(const String& value)
+    static ComponentTransferType fromString(SVGElement&, const String& value)
     {
-        static constexpr std::pair<PackedASCIILiteral<uint64_t>, ComponentTransferType> mappings[] = {
+        static constexpr SortedArrayMap map { std::to_array<std::pair<PackedASCIILiteral<uint64_t>, ComponentTransferType>>({
             { "discrete"_s, ComponentTransferType::FECOMPONENTTRANSFER_TYPE_DISCRETE },
             { "gamma"_s, ComponentTransferType::FECOMPONENTTRANSFER_TYPE_GAMMA },
             { "identity"_s, ComponentTransferType::FECOMPONENTTRANSFER_TYPE_IDENTITY },
             { "linear"_s, ComponentTransferType::FECOMPONENTTRANSFER_TYPE_LINEAR },
             { "table"_s, ComponentTransferType::FECOMPONENTTRANSFER_TYPE_TABLE }
-        };
-        static constexpr SortedArrayMap map { mappings };
+        }) };
         return map.get(value, ComponentTransferType::FECOMPONENTTRANSFER_TYPE_UNKNOWN);
     }
 };
 
 class SVGComponentTransferFunctionElement : public SVGElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGComponentTransferFunctionElement);
+    WTF_MAKE_TZONE_ALLOCATED(SVGComponentTransferFunctionElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGComponentTransferFunctionElement);
 public:
     virtual ComponentTransferChannel channel() const = 0;

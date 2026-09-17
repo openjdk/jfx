@@ -25,11 +25,11 @@
 
 #pragma once
 
-#include "Position.h"
-#include "QualifiedName.h"
-#include "TextManipulationControllerExclusionRule.h"
-#include "TextManipulationControllerManipulationFailure.h"
-#include "TextManipulationItem.h"
+#include <WebCore/Position.h>
+#include <WebCore/QualifiedName.h>
+#include <WebCore/TextManipulationControllerExclusionRule.h>
+#include <WebCore/TextManipulationControllerManipulationFailure.h>
+#include <WebCore/TextManipulationItem.h>
 #include <wtf/CheckedRef.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Markable.h>

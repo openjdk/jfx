@@ -25,13 +25,13 @@
 
 #pragma once
 
-#include "FloatPoint.h"
-#include "FloatSize.h"
-#include "LayoutPoint.h"
-#include "PlatformWheelEvent.h"
-#include "ScrollAnimationMomentum.h"
-#include "ScrollSnapOffsetsInfo.h"
-#include "ScrollTypes.h"
+#include <WebCore/FloatPoint.h>
+#include <WebCore/FloatSize.h>
+#include <WebCore/LayoutPoint.h>
+#include <WebCore/PlatformWheelEvent.h>
+#include <WebCore/ScrollAnimationMomentum.h>
+#include <WebCore/ScrollSnapOffsetsInfo.h>
+#include <WebCore/ScrollTypes.h>
 #include <wtf/MonotonicTime.h>
 #include <wtf/TZoneMalloc.h>
 

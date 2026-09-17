@@ -28,6 +28,22 @@
 #import <UIKit/UIKit.h>
 
 #if USE(APPLE_INTERNAL_SDK)
+#import <Foundation/NSGeometry.h>
+#endif
+
+#ifndef WK_HAS_DEFINED_NS_RECT_EDGE
+#ifndef NSGEOMETRY_TYPES_SAME_AS_CGGEOMETRY_TYPES
+typedef NS_ENUM(NSUInteger, NSRectEdge) {
+    NSRectEdgeMinX = CGRectMinXEdge,
+    NSRectEdgeMinY = CGRectMinYEdge,
+    NSRectEdgeMaxX = CGRectMaxXEdge,
+    NSRectEdgeMaxY = CGRectMaxYEdge,
+};
+#define WK_HAS_DEFINED_NS_RECT_EDGE 1
+#endif // !defined(NSGEOMETRY_TYPES_SAME_AS_CGGEOMETRY_TYPES)
+#endif // !defined(WK_HAS_DEFINED_NS_RECT_EDGE)
+
+#if USE(APPLE_INTERNAL_SDK)
 
 #import <UIKit/NSParagraphStyle_Private.h>
 #import <UIKit/NSTextAlternatives.h>
@@ -63,6 +79,7 @@
 #import <UIKit/UIWebFormAccessory.h>
 #import <UIKit/UIWindowScene_RequiresApproval.h>
 #import <UIKit/UIWindow_Private.h>
+#import <UIKit/_UIClickInteractionDriving.h>
 #import <UIKit/_UINavigationInteractiveTransition.h>
 
 IGNORE_WARNINGS_BEGIN("deprecated-implementations")
@@ -131,6 +148,7 @@ WTF_EXTERN_C_END
 
 @protocol UITextInputPrivate <UITextInput, UITextInputTraits_Private>
 - (UITextInputTraits *)textInputTraits;
+- (void)insertText:(NSString *)text;
 - (void)insertTextSuggestion:(UITextSuggestion *)textSuggestion;
 - (void)handleKeyWebEvent:(WebEvent *)theEvent withCompletionHandler:(void (^)(WebEvent *, BOOL))completionHandler;
 - (NSDictionary *)_autofillContext;
@@ -322,6 +340,8 @@ typedef NS_ENUM(NSInteger, _UITextSearchMatchMethod) {
 @property (nonatomic, readonly, getter=_isAnimatingZoom) BOOL isAnimatingZoom;
 @property (nonatomic, readonly, getter=_isAnimatingScroll) BOOL isAnimatingScroll;
 @property (nonatomic, getter=_isFirstResponderKeyboardAvoidanceEnabled, setter=_setFirstResponderKeyboardAvoidanceEnabled:) BOOL firstResponderKeyboardAvoidanceEnabled;
+- (UIColor *)_pocketColorForEdge:(UIRectEdge)edge;
+- (BOOL)_prefersSolidColorHardPocketForEdge:(UIRectEdge)edge;
 @end
 
 @interface UIView ()
@@ -476,9 +496,30 @@ typedef enum {
 @end
 #endif
 
+typedef NS_ENUM(NSUInteger, _UIClickInteractionEvent) {
+    _UIClickInteractionEventBegan = 0,
+    _UIClickInteractionEventClickedDown,
+    _UIClickInteractionEventClickedUp,
+    _UIClickInteractionEventEnded,
+};
+
+typedef NS_ENUM(NSUInteger, _UIClickInteractionShouldBeginResult) {
+    _UIClickInteractionShouldBeginResultBegin
+};
+
+@protocol _UIClickInteractionDriving;
+@protocol _UIClickInteractionDriverDelegate <NSObject>
+- (void)clickDriver:(id<_UIClickInteractionDriving>)driver shouldBegin:(void(^)(_UIClickInteractionShouldBeginResult))completion;
+- (void)clickDriver:(id<_UIClickInteractionDriving>)driver didPerformEvent:(_UIClickInteractionEvent)event;
+@end
+
 #endif // USE(APPLE_INTERNAL_SDK)
 
 // Start of UIKit IPI
+
+@interface UITextChecker (TestingSupport2)
+- (void)requestProofreadingReviewOfString:(NSString *)stringToCheck range:(NSRange)range language:(NSString *)language options:(NSDictionary<NSString *, id> *)options completionHandler:(void (^)(NSArray<NSTextCheckingResult *> *results))completionHandler;
+@end
 
 @class UITextInputArrowKeyHistory;
 
@@ -504,31 +545,6 @@ typedef enum {
 @property (nonatomic, readonly) BOOL hardwareKeyboardAttached;
 @end
 
-#if PLATFORM(IOS) || PLATFORM(VISION)
-
-@protocol UIDropInteractionDelegate_Private <UIDropInteractionDelegate>
-- (void)_dropInteraction:(UIDropInteraction *)interaction delayedPreviewProviderForDroppingItem:(UIDragItem *)item previewProvider:(void(^)(UITargetedDragPreview *preview))previewProvider;
-@end
-
-#endif // PLATFORM(IOS) || PLATFORM(VISION)
-
-typedef NS_ENUM(NSUInteger, _UIClickInteractionEvent) {
-    _UIClickInteractionEventBegan = 0,
-    _UIClickInteractionEventClickedDown,
-    _UIClickInteractionEventClickedUp,
-    _UIClickInteractionEventEnded,
-    _UIClickInteractionEventCount
-};
-
-@protocol _UIClickInteractionDriving;
-@protocol _UIClickInteractionDriverDelegate <NSObject>
-- (void)clickDriver:(id<_UIClickInteractionDriving>)driver shouldBegin:(void(^)(BOOL))completion;
-- (void)clickDriver:(id<_UIClickInteractionDriving>)driver didPerformEvent:(_UIClickInteractionEvent)event;
-@optional
-- (void)clickDriver:(id<_UIClickInteractionDriving>)driver didUpdateHighlightProgress:(CGFloat)progress;
-- (BOOL)clickDriver:(id<_UIClickInteractionDriving>)driver shouldDelayGestureRecognizer:(UIGestureRecognizer *)gestureRecognizer;
-@end
-
 @protocol UITextInputInternal
 - (UTF32Char)_characterInRelationToCaretSelection:(int)amount;
 - (CGRect)_selectionClipRect;
@@ -540,14 +556,18 @@ typedef NS_ENUM(NSUInteger, _UIClickInteractionEvent) {
 - (UITextInputArrowKeyHistory *)_moveToStartOfParagraph:(BOOL)extending withHistory:(UITextInputArrowKeyHistory *)history;
 @end
 
+#if __has_include(<UIFoundation/NSTextTable.h>)
+#import <UIFoundation/NSTextTable.h>
+#else
+
 typedef NS_ENUM(NSInteger, NSTextBlockLayer) {
-    NSTextBlockPadding  = -1,
-    NSTextBlockBorder   =  0,
-    NSTextBlockMargin   =  1
+    NSTextBlockLayerPadding  = -1,
+    NSTextBlockLayerBorder   =  0,
+    NSTextBlockLayerMargin   =  1
 };
 
 @interface NSTextBlock : NSObject
-- (CGFloat)widthForLayer:(NSTextBlockLayer)layer edge:(CGRectEdge)edge;
+- (CGFloat)widthForLayer:(NSTextBlockLayer)layer edge:(NSRectEdge)edge;
 @property (nonatomic, copy) UIColor *backgroundColor;
 @end
 
@@ -563,9 +583,11 @@ typedef NS_ENUM(NSInteger, NSTextBlockLayer) {
 - (NSInteger)rowSpan;
 @end
 
-@interface NSParagraphStyle ()
+@interface NSParagraphStyle (TextBlocks)
 - (NSArray<NSTextBlock *> *)textBlocks;
 @end
+
+#endif // !__has_include(<UIFoundation/NSTextTable.h>)
 
 @interface UIResponder (Internal)
 - (void)_share:(id)sender;
@@ -589,6 +611,15 @@ typedef NS_ENUM(NSInteger, NSTextBlockLayer) {
 @property (nonatomic, readwrite) UITextSearchMatchMethod wordMatchMethod;
 @property (nonatomic, readwrite) NSStringCompareOptions stringCompareOptions;
 @end
+
+#if !__has_include(<UIKit/_UITextSearching.h>)
+// Define SPI type when private header is not available (older SDKs)
+typedef NS_ENUM(NSUInteger, _UIFoundTextStyle) {
+    _UIFoundTextStyleNormal,
+    _UIFoundTextStyleFound,
+    _UIFoundTextStyleHighlighted,
+};
+#endif
 
 #endif
 

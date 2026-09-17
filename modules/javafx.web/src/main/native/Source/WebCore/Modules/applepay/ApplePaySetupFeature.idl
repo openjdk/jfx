@@ -35,3 +35,4 @@
     [CachedAttribute] readonly attribute ApplePaySetupFeatureState state;
     [CachedAttribute, Conditional=APPLE_PAY_INSTALLMENTS] readonly attribute boolean supportsInstallments;
 };
+

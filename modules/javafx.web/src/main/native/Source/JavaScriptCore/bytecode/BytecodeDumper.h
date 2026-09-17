@@ -80,7 +80,6 @@ protected:
 };
 
 extern template class BytecodeDumperBase<JSInstructionStream>;
-extern template class BytecodeDumperBase<WasmInstructionStream>;
 
 template<class Block>
 class BytecodeDumper : public BytecodeDumperBase<JSInstructionStream> {
@@ -133,42 +132,5 @@ private:
 
 extern template class CodeBlockBytecodeDumper<UnlinkedCodeBlockGenerator>;
 extern template class CodeBlockBytecodeDumper<CodeBlock>;
-
-#if ENABLE(WEBASSEMBLY)
-
-namespace Wasm {
-
-class FunctionCodeBlockGenerator;
-struct ModuleInformation;
-
-class BytecodeDumper final : public JSC::BytecodeDumperBase<WasmInstructionStream> {
-public:
-    static void dumpBlock(FunctionCodeBlockGenerator*, const ModuleInformation&, PrintStream& out);
-
-    BytecodeDumper(FunctionCodeBlockGenerator* block, PrintStream& out)
-        : BytecodeDumperBase(out)
-        , m_block(block)
-    {
-    }
-
-    ~BytecodeDumper() override { }
-
-    FunctionCodeBlockGenerator* block() const { return m_block; }
-
-    CString registerName(VirtualRegister) const override;
-    int outOfLineJumpOffset(WasmInstructionStream::Offset) const override;
-
-private:
-    void dumpConstants();
-    void dumpExceptionHandlers();
-    CString constantName(VirtualRegister index) const;
-    CString formatConstant(Type, uint64_t) const;
-
-    FunctionCodeBlockGenerator* m_block;
-};
-
-} // namespace Wasm
-
-#endif // ENABLE(WEBASSEMBLY)
 
 }

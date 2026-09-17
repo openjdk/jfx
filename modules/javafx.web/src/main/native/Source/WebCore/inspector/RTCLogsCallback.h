@@ -27,7 +27,6 @@
 
 #include "ActiveDOMCallback.h"
 #include "CallbackResult.h"
-#include "ContextDestructionObserverInlines.h"
 #include "RTCPeerConnection.h"
 
 namespace WebCore {
@@ -35,6 +34,10 @@ namespace WebCore {
 class RTCLogsCallback : public RefCounted<RTCLogsCallback>, public ActiveDOMCallback {
 public:
     using ActiveDOMCallback::ActiveDOMCallback;
+
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     struct Logs {
         String type;

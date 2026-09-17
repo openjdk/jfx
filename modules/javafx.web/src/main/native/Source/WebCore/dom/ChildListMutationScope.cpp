@@ -33,6 +33,7 @@
 
 #include "MutationObserverInterestGroup.h"
 #include "MutationRecord.h"
+#include "NodeInlines.h"
 #include "StaticNodeList.h"
 #include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
@@ -48,7 +49,7 @@ static AccumulatorMap& accumulatorMap()
 
 ChildListMutationAccumulator::ChildListMutationAccumulator(ContainerNode& target, std::unique_ptr<MutationObserverInterestGroup> observers)
     : m_target(target)
-    , m_observers(WTFMove(observers))
+    , m_observers(WTF::move(observers))
 {
 }
 
@@ -123,8 +124,8 @@ void ChildListMutationAccumulator::enqueueMutationRecord()
     ASSERT(hasObservers());
     ASSERT(!isEmpty());
 
-    Ref record = MutationRecord::createChildList(m_target, StaticNodeList::create(WTFMove(m_addedNodes)), StaticNodeList::create(WTFMove(m_removedNodes)), WTFMove(m_previousSibling), WTFMove(m_nextSibling));
-    m_observers->enqueueMutationRecord(WTFMove(record));
+    Ref record = MutationRecord::createChildList(m_target, StaticNodeList::create(WTF::move(m_addedNodes)), StaticNodeList::create(WTF::move(m_removedNodes)), WTF::move(m_previousSibling), WTF::move(m_nextSibling));
+    m_observers->enqueueMutationRecord(WTF::move(record));
     m_lastAdded = nullptr;
     ASSERT(isEmpty());
 }

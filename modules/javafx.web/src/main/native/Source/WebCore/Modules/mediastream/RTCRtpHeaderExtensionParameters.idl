@@ -27,9 +27,10 @@
     Conditional=WEB_RTC,
     EnabledBySetting=PeerConnectionEnabled,
     JSGenerateToJSObject,
-    JSGenerateToNativeObject
+    JSGenerateToNativeObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary RTCRtpHeaderExtensionParameters {
-    DOMString uri;
-    unsigned short id;
-    // FIXME: Add boolean encrypted;
+    required DOMString uri;
+    required unsigned short id;
+    boolean encrypted = false;
 };

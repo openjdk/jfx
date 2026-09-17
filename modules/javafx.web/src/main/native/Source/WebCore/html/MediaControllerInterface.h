@@ -27,7 +27,7 @@
 
 #if ENABLE(VIDEO)
 
-#include "HTMLMediaElementEnums.h"
+#include <WebCore/HTMLMediaElementEnums.h>
 
 namespace WebCore {
 

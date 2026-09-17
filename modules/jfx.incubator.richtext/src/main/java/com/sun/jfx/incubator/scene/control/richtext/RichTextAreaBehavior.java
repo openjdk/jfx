@@ -291,8 +291,10 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
 
                 StyleAttributeMap a = control.getInsertStyles();
                 if (a == null) {
-                    a = m.getStyleAttributeMap(vflow, start);
+                    a = m.getStyleAttributeMap(vflow, start, true);
                 }
+                a = RichUtils.filterOutNodeAttributes(a);
+
                 StyledInput in = StyledInput.of(typed, a);
                 TextPos p = m.replace(vflow, start, end, in);
                 moveCaret(p, false);
@@ -522,7 +524,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
 
         vflow.scrollToVisible(x, y);
 
-        TextPos p = vflow.getTextPosLocal(x, y);
+        TextPos p = vflow.findTextPosLocal(x, y);
         control.extendSelection(p);
     }
 
@@ -677,9 +679,10 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         }
 
         boolean down = (deltaPixels > 0);
+        // make sure the target y is outside of the current line of text
         double y = down ?
-            ci.getMaxY() + deltaPixels + 0.5 :
-            ci.getMinY() + deltaPixels - 0.5;
+            ci.getMaxY() + ci.getLineSpacing() + deltaPixels + 1.0 :
+            ci.getMinY() + deltaPixels - 1.0;
 
         TextPos p = vflow.moveVertically(caret.index(), x, y, down);
         if (p != null) {
@@ -1177,19 +1180,13 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
 
             StyledTextModel m = control.getModel();
             DataFormatHandler h = m.getDataFormatHandler(f, false);
-            Object x = Clipboard.getSystemClipboard().getContent(f);
-            String text;
-            if (x instanceof String s) {
-                text = s;
-            } else {
-                return;
-            }
-
+            Object data = Clipboard.getSystemClipboard().getContent(f);
             StyleAttributeMap a = control.getActiveStyleAttributeMap();
-            try (StyledInput in = h.createStyledInput(text, a)) {
+            a = RichUtils.filterOutNodeAttributes(a);
+            try (StyledInput in = h.createStyledInput(data, a)) {
                 TextPos p = m.replace(vflow, start, end, in);
                 moveCaret(p, false);
-            } catch (IOException e) {
+            } catch (IOException | RuntimeException e) {
                 control.errorFeedback();
             }
         }

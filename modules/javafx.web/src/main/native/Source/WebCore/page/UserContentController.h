@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "UserContentProvider.h"
-#include "UserScriptTypes.h"
-#include "UserStyleSheetTypes.h"
+#include <WebCore/UserContentProvider.h>
+#include <WebCore/UserScriptTypes.h>
+#include <WebCore/UserStyleSheetTypes.h>
 
 namespace WebCore {
 
@@ -55,8 +55,10 @@ private:
 #if ENABLE(USER_MESSAGE_HANDLERS)
     void forEachUserMessageHandler(NOESCAPE const Function<void(const UserMessageHandlerDescriptor&)>&) const final;
 #endif
+    bool hasBuffersForWorld(const DOMWrapperWorld&) const override { return false; }
+    WebKitBuffer* buffer(const DOMWrapperWorld&, const String&) const override { return nullptr; }
 #if ENABLE(CONTENT_EXTENSIONS)
-    ContentExtensions::ContentExtensionsBackend& userContentExtensionBackend() override { return m_contentExtensionBackend; }
+    const ContentExtensions::ContentExtensionsBackend& userContentExtensionBackend() const override { return m_contentExtensionBackend; }
 #endif
 
     UserScriptMap m_userScripts;

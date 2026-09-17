@@ -25,10 +25,15 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
+#include "BPlatform.h"
+
 #if !BUSE(TZONE)
 
 #include "FixedVector.h"
 #include "IsoPage.h"
+#include "IsoTLS.h"
 #include "Mutex.h"
 
 #if !BUSE(LIBPAS)
@@ -58,3 +63,5 @@ private:
 
 #endif
 #endif // !BUSE(TZONE)
+
+#endif // __cplusplus

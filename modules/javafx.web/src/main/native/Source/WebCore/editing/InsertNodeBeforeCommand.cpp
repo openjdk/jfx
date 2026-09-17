@@ -27,8 +27,10 @@
 #include "InsertNodeBeforeCommand.h"
 
 #include "CompositeEditCommand.h"
+#include "ContainerNodeInlines.h"
 #include "Document.h"
 #include "Editing.h"
+#include "NodeDocument.h"
 #include "RenderElement.h"
 #include "Text.h"
 
@@ -36,7 +38,7 @@ namespace WebCore {
 
 InsertNodeBeforeCommand::InsertNodeBeforeCommand(Ref<Node>&& insertChild, Node& refChild, ShouldAssumeContentIsAlwaysEditable shouldAssumeContentIsAlwaysEditable, EditAction editingAction)
     : SimpleEditCommand(refChild.document(), editingAction)
-    , m_insertChild(WTFMove(insertChild))
+    , m_insertChild(WTF::move(insertChild))
     , m_refChild(refChild)
     , m_shouldAssumeContentIsAlwaysEditable(shouldAssumeContentIsAlwaysEditable)
 {

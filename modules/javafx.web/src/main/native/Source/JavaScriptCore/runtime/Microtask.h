@@ -30,6 +30,40 @@
 namespace JSC {
 
 enum class MicrotaskIdentifierType { };
-using MicrotaskIdentifier = AtomicObjectIdentifier<MicrotaskIdentifierType>;
+using MicrotaskIdentifier = ObjectIdentifier<MicrotaskIdentifierType>;
+
+enum class InternalMicrotask : uint8_t {
+    PromiseResolveThenableJobFast = 0,
+    PromiseResolveThenableJobWithInternalMicrotaskFast,
+
+    PromiseResolveThenableJob,
+    PromiseResolveThenableJobWithInternalMicrotask,
+
+    PromiseResolveWithoutHandlerJob,
+
+    PromiseRaceResolveJob,
+    PromiseAllResolveJob,
+    PromiseAllSettledResolveJob,
+    PromiseAnyResolveJob,
+    PromiseFinallyReactionJob,
+    PromiseFinallyAwaitJob,
+
+    InternalPromiseAllResolveJob,
+
+    PromiseReactionJob,
+
+    AsyncFunctionResume,
+    AsyncFromSyncIteratorContinue,
+    AsyncFromSyncIteratorDone,
+    AsyncGeneratorYieldAwaited,
+    AsyncGeneratorBodyCallNormal,
+    AsyncGeneratorBodyCallReturn,
+    AsyncGeneratorResumeNext,
+
+    InvokeFunctionJob,
+    Opaque, // Dispatch must handle everything.
+};
+
+constexpr unsigned maxMicrotaskArguments = 3;
 
 } // namespace JSC

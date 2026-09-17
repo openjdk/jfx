@@ -85,7 +85,7 @@ using SessionDescriptionPromise = DOMPromiseDeferred<IDLDictionary<RTCSessionDes
 using StatsPromise = DOMPromiseDeferred<IDLInterface<RTCStatsReport>>;
 }
 
-using CreatePeerConnectionBackend = const std::unique_ptr<PeerConnectionBackend> (*)(RTCPeerConnection&);
+using CreatePeerConnectionBackend = const std::unique_ptr<PeerConnectionBackend> (*)(RTCPeerConnection&, MediaEndpointConfiguration&&);
 
 class PeerConnectionBackend
     : public CanMakeWeakPtr<PeerConnectionBackend>
@@ -116,6 +116,9 @@ public:
 
     void stop();
 
+#if USE(GSTREAMER_WEBRTC)
+    virtual void prepareForClose() = 0;
+#endif
     virtual void close() = 0;
 
     virtual void restartIce() = 0;
@@ -135,8 +138,6 @@ public:
 
     void markAsNeedingNegotiation(uint32_t);
     virtual bool isNegotiationNeeded(uint32_t) const = 0;
-
-    virtual void emulatePlatformEvent(const String& action) = 0;
 
     struct DescriptionStates {
         std::optional<RTCSignalingState> signalingState;
@@ -298,13 +299,13 @@ inline PeerConnectionBackend::DescriptionStates PeerConnectionBackend::Descripti
     return DescriptionStates {
         signalingState,
         currentLocalDescriptionSdpType,
-        WTFMove(currentLocalDescriptionSdp).isolatedCopy(),
+        WTF::move(currentLocalDescriptionSdp).isolatedCopy(),
         pendingLocalDescriptionSdpType,
-        WTFMove(pendingLocalDescriptionSdp).isolatedCopy(),
+        WTF::move(pendingLocalDescriptionSdp).isolatedCopy(),
         currentRemoteDescriptionSdpType,
-        WTFMove(currentRemoteDescriptionSdp).isolatedCopy(),
+        WTF::move(currentRemoteDescriptionSdp).isolatedCopy(),
         pendingRemoteDescriptionSdpType,
-        WTFMove(pendingRemoteDescriptionSdp).isolatedCopy()
+        WTF::move(pendingRemoteDescriptionSdp).isolatedCopy()
     };
 }
 } // namespace WebCore

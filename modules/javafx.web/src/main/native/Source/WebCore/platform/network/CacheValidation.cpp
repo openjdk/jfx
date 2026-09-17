@@ -29,6 +29,7 @@
 #include "CookieJar.h"
 #include "HTTPHeaderMap.h"
 #include "NetworkStorageSession.h"
+#include "ResourceLoaderOptions.h"
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
 #include "SameSiteInfo.h"
@@ -41,7 +42,7 @@ namespace WebCore {
 // These response headers are not copied from a revalidated response to the
 // cached response headers. For compatibility, this list is based on Chromium's
 // net/http/http_response_headers.cc.
-static constexpr ASCIILiteral headersToIgnoreAfterRevalidation[] = {
+static constexpr std::array headersToIgnoreAfterRevalidation {
     "allow"_s,
     "connection"_s,
     "etag"_s,
@@ -60,7 +61,7 @@ static constexpr ASCIILiteral headersToIgnoreAfterRevalidation[] = {
 // Some header prefixes mean "Don't copy this header from a 304 response.".
 // Rather than listing all the relevant headers, we can consolidate them into
 // this list, also grabbed from Chromium's net/http/http_response_headers.cc.
-static constexpr ASCIILiteral headerPrefixesToIgnoreAfterRevalidation[] = {
+static constexpr std::array headerPrefixesToIgnoreAfterRevalidation {
     "content-"_s,
     "x-content-"_s,
     "x-webkit-"_s
@@ -147,11 +148,11 @@ Seconds computeFreshnessLifetimeForHTTPFamily(const ResourceResponse& response, 
     }
 }
 
-void updateRedirectChainStatus(RedirectChainCacheStatus& redirectChainCacheStatus, const ResourceResponse& response)
+void updateRedirectChainStatus(RedirectChainCacheStatus& redirectChainCacheStatus, const ResourceResponse& response, const ResourceLoaderOptions& options)
 {
     if (redirectChainCacheStatus.status == RedirectChainCacheStatus::Status::NotCachedRedirection)
         return;
-    if (response.cacheControlContainsNoStore() || response.cacheControlContainsNoCache() || response.cacheControlContainsMustRevalidate()) {
+    if (options.cachingPolicy != CachingPolicy::AllowCachingMainResourcePrefetch && (response.cacheControlContainsNoStore() || response.cacheControlContainsNoCache() || response.cacheControlContainsMustRevalidate())) {
         redirectChainCacheStatus.status = RedirectChainCacheStatus::Status::NotCachedRedirection;
         return;
     }
@@ -348,7 +349,7 @@ CacheControlDirectives parseCacheControlDirectives(const HTTPHeaderMap& headers)
 
 static String cookieRequestHeaderFieldValue(const NetworkStorageSession& session, const ResourceRequest& request)
 {
-    return session.cookieRequestHeaderFieldValue(request.firstPartyForCookies(), SameSiteInfo::create(request), request.url(), std::nullopt, std::nullopt, request.url().protocolIs("https"_s) ? IncludeSecureCookies::Yes : IncludeSecureCookies::No, ApplyTrackingPrevention::Yes, ShouldRelaxThirdPartyCookieBlocking::No).first;
+    return session.cookieRequestHeaderFieldValue(request.firstPartyForCookies(), SameSiteInfo::create(request), request.url(), std::nullopt, std::nullopt, request.url().protocolIs("https"_s) ? IncludeSecureCookies::Yes : IncludeSecureCookies::No, ApplyTrackingPrevention::Yes, ShouldRelaxThirdPartyCookieBlocking::No, IsKnownCrossSiteTracker::No).first;
 }
 
 static String cookieRequestHeaderFieldValue(const CookieJar* cookieJar, const ResourceRequest& request)

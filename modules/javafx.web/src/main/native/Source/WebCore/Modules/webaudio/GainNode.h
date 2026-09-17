@@ -37,7 +37,8 @@ class AudioContext;
 // De-zippering (smoothing) is applied when the gain value is changed dynamically.
 
 class GainNode final : public AudioNode {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(GainNode);
+    WTF_MAKE_TZONE_ALLOCATED(GainNode);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(GainNode);
 public:
     static ExceptionOr<Ref<GainNode>> create(BaseAudioContext& context, const GainOptions& = { });
 
@@ -63,3 +64,5 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_AUDIONODE(GainNode, NodeTypeGain);

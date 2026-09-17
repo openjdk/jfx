@@ -23,12 +23,14 @@
 
 #if ENABLE(XSLT)
 
-#include "CachedResourceLoader.h"
-#include "DocumentInlines.h"
+#include "DocumentResourceLoader.h"
+#include "FrameConsoleClient.h"
 #include "FrameDestructionObserverInlines.h"
+#include "JSNodeCustomInlines.h"
 #include "LocalFrame.h"
+#include "NodeDocument.h"
 #include "Page.h"
-#include "PageConsoleClient.h"
+#include "Text.h"
 #include "TransformSource.h"
 #include "XMLDocumentParser.h"
 #include "XMLDocumentParserScope.h"
@@ -44,8 +46,7 @@
 namespace WebCore {
 
 XSLStyleSheet::XSLStyleSheet(XSLStyleSheet* parentSheet, const String& originalURL, const URL& finalURL)
-    : m_ownerNode(nullptr)
-    , m_originalURL(originalURL)
+    : m_originalURL(originalURL)
     , m_finalURL(finalURL)
     , m_embedded(false)
     , m_processed(false) // Child sheets get marked as processed when the libxslt engine has finally seen them.
@@ -72,6 +73,20 @@ XSLStyleSheet::~XSLStyleSheet()
     }
 }
 
+void XSLStyleSheet::clearOwnerNode()
+{
+    Locker locker { m_opaqueRootLockForGC };
+    m_ownerNode = nullptr;
+}
+
+WebCoreOpaqueRoot XSLStyleSheet::opaqueRootForGCThread()
+{
+    Locker locker { m_opaqueRootLockForGC };
+    if (m_ownerNode)
+        return root(m_ownerNode.get());
+    return WebCoreOpaqueRoot { this };
+}
+
 bool XSLStyleSheet::isLoading() const
 {
     for (auto& import : m_children) {
@@ -87,8 +102,8 @@ void XSLStyleSheet::checkLoaded()
         return;
     if (RefPtr styleSheet = parentStyleSheet())
         styleSheet->checkLoaded();
-    if (ownerNode())
-        ownerNode()->sheetLoaded();
+    if (RefPtr ownerNode = this->ownerNode())
+        ownerNode->sheetLoaded();
 }
 
 xmlDocPtr XSLStyleSheet::document()
@@ -103,8 +118,8 @@ void XSLStyleSheet::clearDocuments()
     clearXSLStylesheetDocument();
 
     for (auto& import : m_children) {
-        if (import->styleSheet())
-            import->styleSheet()->clearDocuments();
+        if (RefPtr styleSheet = import->styleSheet())
+            styleSheet->clearDocuments();
     }
 }
 
@@ -132,10 +147,9 @@ bool XSLStyleSheet::parseString(const String& string)
     const unsigned char BOMHighByte = *reinterpret_cast<const unsigned char*>(&byteOrderMark);
     clearXSLStylesheetDocument();
 
-    PageConsoleClient* console = nullptr;
-    RefPtr frame = ownerDocument()->frame();
-    if (frame && frame->page())
-        console = &frame->page()->console();
+    FrameConsoleClient* console = nullptr;
+    if (RefPtr frame = ownerDocument()->frame())
+        console = &frame->console();
 
     XMLDocumentParserScope scope(cachedResourceLoader(), XSLTProcessor::genericErrorFunc, XSLTProcessor::parseErrorFunc, console);
 
@@ -151,16 +165,19 @@ bool XSLStyleSheet::parseString(const String& string)
     if (!ctxt)
         return false;
 
-    if (m_parentStyleSheet && m_parentStyleSheet->m_stylesheetDoc) {
+    if (m_parentStyleSheet && m_parentStyleSheet->m_stylesheetDoc && !m_parentStyleSheet->m_stylesheetDocTaken) {
         // The XSL transform may leave the newly-transformed document
         // with references to the symbol dictionaries of the style sheet
         // and any of its children. XML document disposal can corrupt memory
         // if a document uses more than one symbol dictionary, so we
         // ensure that all child stylesheets use the same dictionaries as their
         // parents.
-        xmlDictFree(ctxt->dict);
+        // Only share the parent's dict if the parent still owns the document.
+        // Once m_stylesheetDocTaken is set, libxslt owns the doc and may free
+        // it at any time (e.g. on compilation failure), making the pointer unsafe.
+        SUPPRESS_FORWARD_DECL_ARG xmlDictFree(ctxt->dict);
         ctxt->dict = m_parentStyleSheet->m_stylesheetDoc->dict;
-        xmlDictReference(ctxt->dict);
+        SUPPRESS_FORWARD_DECL_ARG xmlDictReference(ctxt->dict);
     }
 
     m_stylesheetDoc = xmlCtxtReadMemory(ctxt, buffer, size,
@@ -229,9 +246,9 @@ void XSLStyleSheet::loadChildSheets()
 
 void XSLStyleSheet::loadChildSheet(const String& href)
 {
-    auto childRule = makeUnique<XSLImportRule>(*this, href);
-    m_children.append(childRule.release());
-    m_children.last()->loadSheet();
+    Ref rule = XSLImportRule::create(*this, href);
+    m_children.append(rule.copyRef());
+    rule->loadSheet();
 }
 
 xsltStylesheetPtr XSLStyleSheet::compileStyleSheet()

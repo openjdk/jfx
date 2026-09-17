@@ -25,14 +25,14 @@
 
 #pragma once
 
-#include "AnimationList.h"
-#include "AnimationMalloc.h"
-#include "CSSPropertyNames.h"
-#include "WebAnimationTypes.h"
+#include <WebCore/AnimationMalloc.h>
+#include <WebCore/CSSPropertyNames.h>
+#include <WebCore/StyleAnimations.h>
+#include <WebCore/WebAnimationTypes.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakPtr.h>
 
-#if ENABLE(THREADED_ANIMATION_RESOLUTION)
+#if ENABLE(THREADED_ANIMATIONS)
 #include <wtf/WeakListHashSet.h>
 #endif
 
@@ -43,7 +43,7 @@ class KeyframeEffect;
 class RenderStyle;
 class Settings;
 
-#if ENABLE(THREADED_ANIMATION_RESOLUTION)
+#if ENABLE(THREADED_ANIMATIONS)
 class AcceleratedEffect;
 #endif
 
@@ -60,14 +60,14 @@ public:
     bool addEffect(KeyframeEffect&);
     void removeEffect(KeyframeEffect&);
     bool hasEffects() const { return !m_effects.isEmpty(); }
-    Vector<WeakPtr<KeyframeEffect>> sortedEffects();
-    const AnimationList* cssAnimationList() const { return m_cssAnimationList.get(); }
-    void setCSSAnimationList(RefPtr<const AnimationList>&&);
+    const Vector<WeakPtr<KeyframeEffect>>& sortedEffects();
+    const std::optional<Style::Animations>& cssAnimationList() const { return m_cssAnimationList; }
+    void setCSSAnimationList(std::optional<Style::Animations>&&);
     bool containsProperty(CSSPropertyID) const;
     bool isCurrentlyAffectingProperty(CSSPropertyID) const;
     bool requiresPseudoElement() const;
     OptionSet<AnimationImpact> applyKeyframeEffects(RenderStyle& targetStyle, HashSet<AnimatableCSSProperty>& affectedProperties, const RenderStyle* previousLastStyleChangeEventStyle, const Style::ResolutionContext&);
-    bool hasEffectWithImplicitKeyframes() const;
+    bool hasMatchingEffect(NOESCAPE const Function<bool(const KeyframeEffect&)>&) const;
 
     void effectAbilityToBeAcceleratedDidChange(const KeyframeEffect&);
     bool allowsAcceleration() const;
@@ -85,23 +85,21 @@ public:
     void applyPendingAcceleratedActions() const;
 
     bool hasAcceleratedEffects(const Settings&) const;
-#if ENABLE(THREADED_ANIMATION_RESOLUTION)
-    void setAcceleratedEffects(WeakListHashSet<AcceleratedEffect>&& acceleratedEffects) { m_acceleratedEffects = WTFMove(acceleratedEffects); }
+#if ENABLE(THREADED_ANIMATIONS)
+    void setAcceleratedEffects(WeakListHashSet<AcceleratedEffect>&& acceleratedEffects) { m_acceleratedEffects = WTF::move(acceleratedEffects); }
 #endif
 
 private:
-    void ensureEffectsAreSorted();
-    bool hasMatchingEffect(NOESCAPE const Function<bool(const KeyframeEffect&)>&) const;
     void startAcceleratedAnimationsIfPossible();
     void stopAcceleratedAnimations();
 
     Vector<WeakPtr<KeyframeEffect>> m_effects;
-#if ENABLE(THREADED_ANIMATION_RESOLUTION)
+#if ENABLE(THREADED_ANIMATIONS)
     WeakListHashSet<AcceleratedEffect> m_acceleratedEffects;
 #endif
     HashSet<String> m_invalidCSSAnimationNames;
     HashSet<AnimatableCSSProperty> m_acceleratedPropertiesOverriddenByCascade;
-    RefPtr<const AnimationList> m_cssAnimationList;
+    std::optional<Style::Animations> m_cssAnimationList;
     bool m_isSorted { true };
 };
 

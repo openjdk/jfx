@@ -24,8 +24,8 @@
 
 #pragma once
 
-#include "HTMLFormControlElement.h"
-#include "PointerEventTypeNames.h"
+#include <WebCore/HTMLFormControlElement.h>
+#include <WebCore/PointerEventTypeNames.h>
 #include <wtf/ValueOrReference.h>
 
 namespace WebCore {
@@ -44,7 +44,7 @@ enum TextFieldEventBehavior { DispatchNoEvent, DispatchChangeEvent, DispatchInpu
 enum TextControlSetValueSelection { SetSelectionToEnd, Clamp, DoNotSet };
 
 class HTMLTextFormControlElement : public HTMLFormControlElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLTextFormControlElement);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLTextFormControlElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLTextFormControlElement);
 public:
     // Common flag for HTMLInputElement::tooLong() / tooShort() and HTMLTextAreaElement::tooLong() / tooShort().
@@ -106,16 +106,19 @@ public:
 
     bool selectionChanged(bool shouldFireSelectEvent);
     WEBCORE_EXPORT bool lastChangeWasUserEdit() const;
+    bool wasEverChangedByUserEdit() const;
     void setInnerTextValue(String&&);
     String innerTextValue() const;
 
     String directionForFormData() const;
 
-    void setTextAsOfLastFormControlChangeEvent(String&& text) { m_textAsOfLastFormControlChangeEvent = WTFMove(text); }
+    void setTextAsOfLastFormControlChangeEvent(String&& text) { m_textAsOfLastFormControlChangeEvent = WTF::move(text); }
 
     WEBCORE_EXPORT virtual bool isInnerTextElementEditable() const;
 
     bool canContainRangeEndPoint() const override { return false; }
+
+    WEBCORE_EXPORT void dispatchUserTextInputEvent();
 
 protected:
     HTMLTextFormControlElement(const QualifiedName&, Document&, HTMLFormElement*);
@@ -149,6 +152,8 @@ protected:
     void internalSetMaxLength(int maxLength) { m_maxLength = maxLength; }
     void internalSetMinLength(int minLength) { m_minLength = minLength; }
 
+    bool shouldApplyScriptTrackingPrivacyProtection() const;
+
 private:
     TextFieldSelectionDirection cachedSelectionDirection() const { return static_cast<TextFieldSelectionDirection>(m_cachedSelectionDirection); }
 
@@ -177,6 +182,7 @@ private:
     unsigned m_lastChangeWasUserEdit : 1 { false };
     unsigned m_isPlaceholderVisible : 1 { false };
     unsigned m_canShowPlaceholder : 1 { true };
+    unsigned m_wasEverChangedByUserEdit : 1 { false };
 
     int m_maxLength { -1 };
     int m_minLength { -1 };

@@ -34,7 +34,7 @@ class FilterEffect;
 class SVGFilterPrimitiveStandardAttributes;
 
 class RenderSVGResourceFilterPrimitive final : public RenderSVGHiddenContainer {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderSVGResourceFilterPrimitive);
+    WTF_MAKE_TZONE_ALLOCATED(RenderSVGResourceFilterPrimitive);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSVGResourceFilterPrimitive);
 public:
     RenderSVGResourceFilterPrimitive(SVGFilterPrimitiveStandardAttributes&, RenderStyle&&);
@@ -43,7 +43,7 @@ public:
     void markFilterEffectForRepaint(FilterEffect*);
     void markFilterEffectForRebuild();
 
-    void styleDidChange(StyleDifference, const RenderStyle*) override;
+    void styleDidChange(Style::Difference, const RenderStyle*) override;
 };
 
 } // namespace WebCore

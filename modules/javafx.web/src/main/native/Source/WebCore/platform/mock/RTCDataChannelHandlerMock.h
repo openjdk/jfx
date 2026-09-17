@@ -45,7 +45,7 @@ private:
     bool sendRawData(std::span<const uint8_t>) final;
     void close() final;
 
-    RTCDataChannelHandlerClient* m_client { nullptr };
+    WeakPtr<RTCDataChannelHandlerClient> m_client;
 
     String m_label;
     String m_protocol;

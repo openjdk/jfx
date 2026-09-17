@@ -69,13 +69,13 @@ class TracksSupport extends MediaControllerSupport
 
     _canPickAudioTracks()
     {
-        const audioTracks = this._audioTracks();
+        const audioTracks = this.mediaController.media.audioTracks;
         return audioTracks && audioTracks.length > 1;
     }
 
     _canPickTextTracks()
     {
-        const textTracks = this._textTracks();
+        const textTracks = this.mediaController.media.textTracks;
         return textTracks && textTracks.length > 0;
     }
 

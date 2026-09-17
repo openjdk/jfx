@@ -25,11 +25,11 @@
 
 #pragma once
 
-#include "ContextDestructionObserver.h"
-#include "Element.h"
-#include "EventTarget.h"
-#include "QualifiedName.h"
-#include "TreeScope.h"
+#include <WebCore/ContextDestructionObserver.h>
+#include <WebCore/Element.h>
+#include <WebCore/EventTarget.h>
+#include <WebCore/QualifiedName.h>
+#include <WebCore/TreeScope.h>
 #include <wtf/Lock.h>
 #include <wtf/RobinHoodHashMap.h>
 #include <wtf/RobinHoodHashSet.h>
@@ -63,6 +63,10 @@ public:
     static Ref<CustomElementRegistry> create(ScriptExecutionContext&, LocalDOMWindow&);
     static Ref<CustomElementRegistry> create(ScriptExecutionContext&);
     ~CustomElementRegistry();
+
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     bool isScoped() const { return !m_window; }
     Document* document() const;

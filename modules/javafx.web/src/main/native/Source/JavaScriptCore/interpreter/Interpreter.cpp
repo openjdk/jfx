@@ -34,6 +34,7 @@
 #include "AbstractModuleRecord.h"
 #include "ArgList.h"
 #include "BatchedTransitionOptimizer.h"
+#include "BuiltinNames.h"
 #include "Bytecodes.h"
 #include "CallLinkInfo.h"
 #include "CatchScope.h"
@@ -50,13 +51,17 @@
 #include "InterpreterInlines.h"
 #include "JITCode.h"
 #include "JSArrayInlines.h"
-#include "JSBoundFunction.h"
+#include "JSBoundFunctionInlines.h"
 #include "JSCInlines.h"
-#include "JSImmutableButterfly.h"
+#include "JSCellButterfly.h"
 #include "JSLexicalEnvironment.h"
 #include "JSModuleEnvironment.h"
 #include "JSModuleRecord.h"
 #include "JSObject.h"
+#include "JSPromise.h"
+#include "JSPromiseCombinatorsContext.h"
+#include "JSPromiseCombinatorsGlobalContext.h"
+#include "JSPromiseReaction.h"
 #include "JSRemoteFunction.h"
 #include "JSString.h"
 #include "JSWebAssemblyException.h"
@@ -78,6 +83,7 @@
 #include "VMTrapsInlines.h"
 #include "VirtualRegister.h"
 #include "WasmThunks.h"
+#include "parser/ParserModes.h"
 #include <stdio.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/Scope.h>
@@ -167,6 +173,12 @@ JSValue eval(CallFrame* callFrame, JSValue thisValue, JSScope* callerScopeChain,
     RETURN_IF_EXCEPTION(scope, { });
     DirectEvalExecutable* eval = callerBaselineCodeBlock->directEvalCodeCache().get(cacheKey);
     if (!eval) {
+        // GC needs to be deferred as it's possible cacheKey holds one of programString's fibers'
+        // contents as a raw StringImpl*. Even though programString is on the stack, rope
+        // flattening could cause that fiber JSString to be unreachable by the GC, causing its
+        // content StringImpl to be deref'd if when the JSString is swept.
+        DeferGC deferGC(vm);
+
         auto programSource = programString->value(globalObject).data;
         if (SourceProfiler::g_profilerHook) [[unlikely]] {
             SourceTaintedOrigin sourceTaintedOrigin = computeNewSourceTaintedOriginFromStack(vm, callFrame);
@@ -177,7 +189,7 @@ JSValue eval(CallFrame* callFrame, JSValue thisValue, JSScope* callerScopeChain,
         if (!(lexicallyScopedFeatures & StrictModeLexicallyScopedFeature)) {
             JSValue parsedValue;
             if (programSource.is8Bit()) {
-                LiteralParser<LChar, JSONReviverMode::Disabled> preparser(globalObject, programSource.span8(), SloppyJSON, callerBaselineCodeBlock);
+                LiteralParser<Latin1Character, JSONReviverMode::Disabled> preparser(globalObject, programSource.span8(), SloppyJSON, callerBaselineCodeBlock);
                 parsedValue = preparser.tryEval();
             } else {
                 LiteralParser<char16_t, JSONReviverMode::Disabled> preparser(globalObject, programSource.span16(), SloppyJSON, callerBaselineCodeBlock);
@@ -253,8 +265,8 @@ unsigned sizeOfVarargs(JSGlobalObject* globalObject, JSValue arguments, uint32_t
     case ClonedArgumentsType:
         length = jsCast<ClonedArguments*>(cell)->length(globalObject);
         break;
-    case JSImmutableButterflyType:
-        length = jsCast<JSImmutableButterfly*>(cell)->length();
+    case JSCellButterflyType:
+        length = jsCast<JSCellButterfly*>(cell)->length();
         break;
     case StringType:
     case SymbolType:
@@ -286,7 +298,7 @@ unsigned sizeFrameForForwardArguments(JSGlobalObject* globalObject, CallFrame* c
 
     unsigned length = callFrame->argumentCount();
     CallFrame* calleeFrame = calleeFrameForVarargs(callFrame, numUsedStackSlots, length + 1);
-    if (!vm.ensureStackCapacityFor(calleeFrame->registers())) [[unlikely]]
+    if (!vm.ensureJSStackCapacityFor(calleeFrame->registers())) [[unlikely]]
         throwStackOverflowError(globalObject, scope);
 
     return length;
@@ -300,7 +312,7 @@ unsigned sizeFrameForVarargs(JSGlobalObject* globalObject, CallFrame* callFrame,
     RETURN_IF_EXCEPTION(scope, 0);
 
     CallFrame* calleeFrame = calleeFrameForVarargs(callFrame, numUsedStackSlots, length + 1);
-    if (length > maxArguments || !vm.ensureStackCapacityFor(calleeFrame->registers())) [[unlikely]] {
+    if (length > maxArguments || !vm.ensureJSStackCapacityFor(calleeFrame->registers())) [[unlikely]] {
         throwStackOverflowError(globalObject, scope);
         return 0;
     }
@@ -334,9 +346,9 @@ void loadVarargs(JSGlobalObject* globalObject, JSValue* firstElementDest, JSValu
         scope.release();
         jsCast<ClonedArguments*>(cell)->copyToArguments(globalObject, firstElementDest, offset, length);
         return;
-    case JSImmutableButterflyType:
+    case JSCellButterflyType:
         scope.release();
-        jsCast<JSImmutableButterfly*>(cell)->copyToArguments(globalObject, firstElementDest, offset, length);
+        jsCast<JSCellButterfly*>(cell)->copyToArguments(globalObject, firstElementDest, offset, length);
         return;
     default: {
         ASSERT(arguments.isObject());
@@ -396,9 +408,6 @@ void setupForwardArgumentsFrameAndSetThis(JSGlobalObject* globalObject, CallFram
 }
 
 Interpreter::Interpreter()
-#if ENABLE(C_LOOP)
-    : m_cloopStack(vm())
-#endif
 {
 #if ASSERT_ENABLED
     static std::once_flag assertOnceKey;
@@ -451,6 +460,98 @@ bool Interpreter::isOpcode(Opcode opcode)
 }
 #endif // ASSERT_ENABLED
 
+
+void Interpreter::getAsyncStackTrace(JSCell* owner, Vector<StackFrame>& results, JSGenerator* generator, size_t maxStackSize)
+{
+    RELEASE_ASSERT(Options::useAsyncStackTrace());
+    ASSERT(generator);
+
+    AssertNoGC assertNoGC;
+
+    VM& vm = this->vm();
+
+    auto getContextValueFromPromise = [&](JSPromise* promise) -> JSValue {
+        if (promise && promise->status() == JSPromise::Status::Pending) {
+            JSValue reactionsValue = promise->internalField(JSPromise::Field::ReactionsOrResult).get();
+            if (auto* reaction = jsDynamicCast<JSPromiseReaction*>(reactionsValue))
+                return reaction->context();
+        }
+        return JSValue();
+    };
+
+    auto getParentGenerator = [&](JSGenerator* gen) -> JSGenerator* {
+        JSValue generatorContext = gen->internalField(static_cast<unsigned>(JSGenerator::Field::Context)).get();
+        ASSERT(generatorContext);
+        JSPromise* awaitedPromise = jsDynamicCast<JSPromise*>(generatorContext);
+        JSValue promiseContext = getContextValueFromPromise(awaitedPromise);
+
+        if (!promiseContext)
+            return nullptr;
+
+        // handle simple `await`
+        if (auto* generator = jsDynamicCast<JSGenerator*>(promiseContext))
+            return generator;
+
+        // handle `Promise.all`, `Promise.allSettled`, and `Promise.any`
+        if (auto* promiseCombinatorsContext = jsDynamicCast<JSPromiseCombinatorsContext*>(promiseContext)) {
+            if (auto* globalContext = jsDynamicCast<JSPromiseCombinatorsGlobalContext*>(promiseCombinatorsContext->globalContext())) {
+                JSValue promiseValue = globalContext->promise();
+                ASSERT(promiseValue);
+                if (auto* promise = jsDynamicCast<JSPromise*>(promiseValue)) {
+                    if (JSValue promiseContext = getContextValueFromPromise(promise)) {
+                        if (auto* generator = jsDynamicCast<JSGenerator*>(promiseContext))
+                            return generator;
+                    }
+                }
+            }
+        }
+
+        // handle and `Promise.race`
+        if (auto* contextPromise = jsDynamicCast<JSPromise*>(promiseContext)) {
+            if (JSValue parentContext = getContextValueFromPromise(contextPromise)) {
+                if (auto* generator = jsDynamicCast<JSGenerator*>(parentContext))
+                    return generator;
+            }
+        }
+
+        return nullptr;
+    };
+
+    auto computeBytecodeIndex = [&](CodeBlock* codeBlock, JSGenerator* generator) -> BytecodeIndex {
+        BytecodeIndex bytecodeIndex(0);
+        JSValue stateValue = generator->internalField(static_cast<unsigned>(JSGenerator::Field::State)).get();
+        if (stateValue.isInt32()) {
+            int32_t state = stateValue.asInt32();
+            size_t numberOfJumpTables = codeBlock->numberOfUnlinkedSwitchJumpTables();
+            if (state > 0 && numberOfJumpTables > 0) {
+                size_t lastTableIndex = numberOfJumpTables - 1;
+                const UnlinkedSimpleJumpTable& jumpTable = codeBlock->unlinkedSwitchJumpTable(lastTableIndex);
+                int32_t offset = jumpTable.offsetForValue(state);
+                if (offset)
+                    bytecodeIndex = BytecodeIndex(offset);
+            }
+        }
+        return bytecodeIndex;
+    };
+
+    JSGenerator* currentGenerator = getParentGenerator(generator);
+    while (currentGenerator && results.size() < maxStackSize) {
+        JSValue nextValue = currentGenerator->internalField(static_cast<unsigned>(JSGenerator::Field::Next)).get();
+        JSFunction* asyncFunction = jsDynamicCast<JSFunction*>(nextValue);
+        if (asyncFunction && !asyncFunction->isHostOrBuiltinFunction()) {
+            if (FunctionExecutable* executable = asyncFunction->jsExecutable()) {
+                // If a CodeBlock doesn't already exist, the stack trace will only show the filename and won't show line column
+                if (CodeBlock* codeBlock = executable->codeBlockForCall()) {
+                    BytecodeIndex bytecodeIndex = computeBytecodeIndex(codeBlock, currentGenerator);
+                    results.append(StackFrame(vm, owner, asyncFunction, codeBlock, bytecodeIndex, /* isAsyncFrame */ true));
+                } else
+                    results.append(StackFrame(vm, owner, asyncFunction, /* isAsyncFrame */ true));
+            }
+        }
+        currentGenerator = getParentGenerator(currentGenerator);
+    }
+}
+
 void Interpreter::getStackTrace(JSCell* owner, Vector<StackFrame>& results, size_t framesToSkip, size_t maxStackSize, JSCell* caller, JSCell* ownerOfCallLinkInfo, CallLinkInfo* callLinkInfo)
 {
     AssertNoGC assertNoGC;
@@ -500,6 +601,21 @@ void Interpreter::getStackTrace(JSCell* owner, Vector<StackFrame>& results, size
     }
 
     bool foundCaller = !caller;
+    JSGenerator* asyncStackTraceOriginGenerator = nullptr;
+    size_t asyncStackTraceInsertPos = 0;
+    EntryFrame* previousEntryFrame = nullptr;
+    size_t previousEntryFrameStackTraceInsertPos = 0;
+    auto updateAsyncStackTraceOriginGenerator = [&]() -> void {
+        ASSERT(Options::useAsyncStackTrace());
+        auto* record = vmEntryRecord(previousEntryFrame);
+        if (record->m_context) {
+            if (auto* generator = jsDynamicCast<JSGenerator*>(record->m_context)) {
+                asyncStackTraceOriginGenerator = generator;
+                asyncStackTraceInsertPos = previousEntryFrameStackTraceInsertPos;
+            }
+        }
+    };
+
     StackVisitor::visit(callFrame, vm, [&] (StackVisitor& visitor) ALWAYS_INLINE_LAMBDA {
         if (results.size() >= maxStackSize)
             return IterationStatus::Done;
@@ -516,9 +632,13 @@ void Interpreter::getStackTrace(JSCell* owner, Vector<StackFrame>& results, size
             return IterationStatus::Continue;
         }
 
-        if (visitor->isImplementationVisibilityPrivate())
-            return IterationStatus::Continue;
+        auto* currentEntryFrame = visitor->entryFrame();
+        if (Options::useAsyncStackTrace()) {
+            if (currentEntryFrame != previousEntryFrame && previousEntryFrame)
+                updateAsyncStackTraceOriginGenerator();
+        }
 
+        if (!visitor->isImplementationVisibilityPrivate()) {
         if (visitor->isNativeCalleeFrame()) {
             auto* nativeCallee = visitor->callee().asNativeCallee();
             switch (nativeCallee->category()) {
@@ -534,8 +654,25 @@ void Interpreter::getStackTrace(JSCell* owner, Vector<StackFrame>& results, size
             results.append(StackFrame(vm, owner, visitor->callee().asCell(), visitor->codeBlock(), visitor->bytecodeIndex()));
         else
             results.append(StackFrame(vm, owner, visitor->callee().asCell()));
+
+            previousEntryFrame = currentEntryFrame;
+            previousEntryFrameStackTraceInsertPos = results.size();
+        }
             return IterationStatus::Continue;
     });
+
+    if (Options::useAsyncStackTrace()) {
+        // Check if the last entry frame had a generator context
+        // that wasn't captured during stack traversal (e.g. TLA)
+        if (!asyncStackTraceOriginGenerator && previousEntryFrame)
+            updateAsyncStackTraceOriginGenerator();
+        if (asyncStackTraceOriginGenerator) {
+            Vector<StackFrame> asyncFrames;
+            getAsyncStackTrace(owner, asyncFrames, asyncStackTraceOriginGenerator, maxStackSize);
+            if (!asyncFrames.isEmpty())
+                results.insertVector(asyncStackTraceInsertPos, asyncFrames);
+        }
+    }
 }
 
 String Interpreter::stackTraceAsString(VM& vm, const Vector<StackFrame>& stackTrace)
@@ -627,10 +764,8 @@ CatchInfo::CatchInfo(const Wasm::HandlerInfo* handler, const Wasm::Callee* calle
         m_nativeCode = handler->m_nativeCode;
         m_nativeCodeForDispatchAndCatch = nullptr;
 #endif
-        m_catchPCForInterpreter = { static_cast<WasmInstruction*>(nullptr) };
-        if (callee->compilationMode() == Wasm::CompilationMode::LLIntMode)
-            m_catchPCForInterpreter = { static_cast<const Wasm::LLIntCallee*>(callee)->instructions().at(handler->m_target).ptr() };
-        else if (callee->compilationMode() == Wasm::CompilationMode::IPIntMode) {
+        m_catchPCForInterpreter = { static_cast<JSInstruction*>(nullptr) };
+        if (callee->compilationMode() == Wasm::CompilationMode::IPIntMode) {
             m_catchPCForInterpreter = handler->m_target;
             m_catchMetadataPCForInterpreter = handler->m_targetMetadata;
             m_tryDepthForThrow = handler->m_tryDepth;
@@ -644,22 +779,25 @@ CatchInfo::CatchInfo(const Wasm::HandlerInfo* handler, const Wasm::Callee* calle
 }
 #endif
 
-class UnwindFunctor {
+class UnwindFunctor : UnwindFunctorBase {
 public:
     UnwindFunctor(VM& vm, CallFrame*& callFrame, Exception* exception, JSValue thrownValue, CodeBlock*& codeBlock, CatchInfo& handler, JSRemoteFunction*& seenRemoteFunction)
-        : m_vm(vm)
+        : UnwindFunctorBase(vm)
         , m_callFrame(callFrame)
-        , m_exception(exception)
         , m_isTermination(vm.isTerminationException(exception))
         , m_codeBlock(codeBlock)
         , m_handler(handler)
         , m_seenRemoteFunction(seenRemoteFunction)
-    {
 #if ENABLE(WEBASSEMBLY)
+        , m_exception(exception)
+    {
+
         if (!m_isTermination) {
             if (JSWebAssemblyException* wasmException = jsDynamicCast<JSWebAssemblyException*>(thrownValue)) {
                 m_catchableFromWasm = true;
                 m_wasmTag = &wasmException->tag();
+                if (m_wasmTag == &Wasm::Tag::jsExceptionTag())
+                    m_exception->tryUnwrapValueForJSTag(m_vm);
             } else if (ErrorInstance* error = jsDynamicCast<ErrorInstance*>(thrownValue))
                 m_catchableFromWasm = error->isCatchableFromWasm();
             else
@@ -669,10 +807,12 @@ public:
             if (!m_wasmTag)
                 m_wasmTag = &Wasm::Tag::jsExceptionTag();
         }
-#else
-        UNUSED_PARAM(thrownValue);
-#endif
     }
+#else
+    {
+        UNUSED_PARAM(thrownValue);
+    }
+#endif
 
     IterationStatus operator()(StackVisitor& visitor) const
     {
@@ -696,15 +836,16 @@ public:
             case NativeCallee::Category::Wasm: {
 #if ENABLE(WEBASSEMBLY)
                 if (m_catchableFromWasm) {
-                    auto* wasmCallee = static_cast<Wasm::Callee*>(nativeCallee);
+                    auto* wasmCallee = uncheckedDowncast<Wasm::Callee>(nativeCallee);
             if (wasmCallee->hasExceptionHandlers()) {
                         JSWebAssemblyInstance* instance = m_callFrame->wasmInstance();
-                unsigned exceptionHandlerIndex = m_callFrame->callSiteIndex().bits();
+                        unsigned exceptionHandlerIndex = visitor->wasmCallSiteIndex().bits();
                         auto* wasmHandler = wasmCallee->handlerForIndex(*instance, exceptionHandlerIndex, m_wasmTag.get());
                         m_handler = { wasmHandler, wasmCallee };
                         if (m_handler.m_valid) {
                             if (m_wasmTag == &Wasm::Tag::jsExceptionTag())
                                 m_exception->wrapValueForJSTag(instance->globalObject());
+                            m_callFrame->setCallSiteIndex(visitor->wasmCallSiteIndex());
                     return IterationStatus::Done;
             }
         }
@@ -725,7 +866,7 @@ public:
         }
 
         JSGlobalObject* globalObject = m_callFrame->lexicalGlobalObject(m_vm);
-        notifyDebuggerOfUnwinding(globalObject, m_vm, m_callFrame);
+        notifyDebuggerOfUnwinding(globalObject, m_callFrame);
 
         copyCalleeSavesToEntryFrameCalleeSavesBuffer(visitor);
 
@@ -737,86 +878,17 @@ public:
     }
 
 private:
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
-    void copyCalleeSavesToEntryFrameCalleeSavesBuffer(StackVisitor& visitor) const
-    {
-#if ENABLE(ASSEMBLER)
-        std::optional<RegisterAtOffsetList> currentCalleeSaves = visitor->calleeSaveRegistersForUnwinding();
-
-        if (!currentCalleeSaves)
-            return;
-
-        RegisterAtOffsetList* allCalleeSaves = RegisterSetBuilder::vmCalleeSaveRegisterOffsets();
-        auto dontCopyRegisters = RegisterSetBuilder::stackRegisters();
-        CPURegister* frame = reinterpret_cast<CPURegister*>(m_callFrame->registers());
-
-        unsigned registerCount = currentCalleeSaves->registerCount();
-        VMEntryRecord* record = vmEntryRecord(m_vm.topEntryFrame);
-        for (unsigned i = 0; i < registerCount; i++) {
-            RegisterAtOffset currentEntry = currentCalleeSaves->at(i);
-            if (dontCopyRegisters.contains(currentEntry.reg(), IgnoreVectors))
-                continue;
-            RegisterAtOffset* calleeSavesEntry = allCalleeSaves->find(currentEntry.reg());
-
-            if (!calleeSavesEntry) {
-                if constexpr (!isARM_THUMB2())
-                    RELEASE_ASSERT_NOT_REACHED();
-                // This can happen on ARMv7, because there are more callee save
-                // registers in the system convention than in the VM convention,
-                // so frames generated by Air callees might restore any system
-                // callee-save registers and we don't know the correct offset to
-                // restore them to in the destination record if the register is
-                // not callee-save in the VM convention.
-
-                // Luckily, it is correct for us to drop these--since the
-                // Air-generated callee is only expected to preserve the VM
-                // callee registers (when called from the VM), it doesn't need
-                // to appear to preserve the non-VM-callee-saves if we unwind
-                // its frame.
-                continue;
-            }
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-            record->calleeSaveRegistersBuffer[calleeSavesEntry->offsetAsIndex()] = *(frame + currentEntry.offsetAsIndex());
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
-        }
-#else
-        UNUSED_PARAM(visitor);
-#endif
-    }
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
-
-    ALWAYS_INLINE static void notifyDebuggerOfUnwinding(JSGlobalObject* globalObject, VM& vm, CallFrame* callFrame)
-    {
-        Debugger* debugger = globalObject->debugger();
-        if (!debugger) [[likely]]
-            return;
-
-        DeferTermination deferScope(vm);
-        auto catchScope = DECLARE_CATCH_SCOPE(vm);
-
-        SuspendExceptionScope scope(vm);
-        if (callFrame->isNativeCalleeFrame()
-            || (callFrame->callee().isCell() && callFrame->callee().asCell()->inherits<JSFunction>()))
-            debugger->unwindEvent(callFrame);
-        else
-            debugger->didExecuteProgram(callFrame);
-        catchScope.assertNoException();
-    }
-
-    VM& m_vm;
     CallFrame*& m_callFrame;
-    Exception* m_exception;
     bool m_isTermination;
     CodeBlock*& m_codeBlock;
     CatchInfo& m_handler;
+    JSRemoteFunction*& m_seenRemoteFunction;
+
 #if ENABLE(WEBASSEMBLY)
+    Exception* m_exception;
     mutable RefPtr<const Wasm::Tag> m_wasmTag;
     bool m_catchableFromWasm { false };
 #endif
-
-    JSRemoteFunction*& m_seenRemoteFunction;
 };
 
 // Replace an exception which passes across a marshalling boundary with a TypeError for its handler's global object.
@@ -829,7 +901,7 @@ static void sanitizeRemoteFunctionException(VM& vm, JSRemoteFunction* remoteFunc
 
     JSGlobalObject* globalObject = remoteFunction->globalObject();
     JSValue exceptionValue = exception->value();
-    scope.clearException();
+    TRY_CLEAR_EXCEPTION(scope, void());
 
     // Avoid user-observable ToString()
     String exceptionString;
@@ -922,17 +994,17 @@ void Interpreter::notifyDebuggerOfExceptionToBeThrown(VM& vm, JSGlobalObject* gl
         HandlerInfo* handler = functor.handler();
         ASSERT(!handler || handler->isCatchHandler());
         bool hasCatchHandler = !!handler;
+        if (!hasCatchHandler) {
+            if (vm.topEntryFrame) {
+                auto* entryRecord = vmEntryRecord(vm.topEntryFrame);
+                if (entryRecord->m_context)
+                    hasCatchHandler = true;
+            }
+        }
 
         debugger->exception(globalObject, callFrame, exception->value(), hasCatchHandler);
     }
     exception->setDidNotifyInspectorOfThrow();
-}
-
-NEVER_INLINE JSValue Interpreter::checkVMEntryPermission()
-{
-    if (Options::crashOnDisallowedVMEntry() || g_jscConfig.vmEntryDisallowed)
-        CRASH_WITH_EXTRA_SECURITY_IMPLICATION_AND_INFO(VMEntryDisallowed, "VM entry disallowed"_s);
-    return jsUndefined();
 }
 
 JSValue Interpreter::executeProgram(const SourceCode& source, JSGlobalObject*, JSObject* thisObj)
@@ -966,7 +1038,7 @@ JSValue Interpreter::executeProgram(const SourceCode& source, JSGlobalObject*, J
         return throwStackOverflowError(globalObject, throwScope);
 
     if (vm.disallowVMEntryCount) [[unlikely]]
-        return checkVMEntryPermission();
+        return VM::checkVMEntryPermission();
 
     // First check if the "program" is actually just a JSON object. If so,
     // we'll handle the JSON object here. Else, we'll handle real JS code
@@ -983,7 +1055,7 @@ JSValue Interpreter::executeProgram(const SourceCode& source, JSGlobalObject*, J
     if (programSource.isNull())
         return jsUndefined();
     if (programSource.is8Bit()) {
-        LiteralParser<LChar, JSONReviverMode::Disabled> literalParser(globalObject, programSource.span8(), JSONP);
+        LiteralParser<Latin1Character, JSONReviverMode::Disabled> literalParser(globalObject, programSource.span8(), JSONP);
         parseResult = literalParser.tryJSONPParse(JSONPData, globalObject->globalObjectMethodTable()->supportsRichSourceInfo(globalObject));
     } else {
         LiteralParser<char16_t, JSONReviverMode::Disabled> literalParser(globalObject, programSource.span16(), JSONP);
@@ -1069,7 +1141,7 @@ JSValue Interpreter::executeProgram(const SourceCode& source, JSGlobalObject*, J
                     PropertySlot slot(scope, PropertySlot::InternalMethodType::Get);
                     JSGlobalLexicalEnvironment::getOwnPropertySlot(scope, globalObject, ident, slot);
                     if (slot.getValue(globalObject, ident) == jsTDZValue())
-                        return throwException(globalObject, throwScope, createTDZError(globalObject));
+                        return throwException(globalObject, throwScope, createTDZError(globalObject, ident.string()));
                     baseObject = scope;
                 }
             }
@@ -1079,7 +1151,7 @@ JSValue Interpreter::executeProgram(const SourceCode& source, JSGlobalObject*, J
             case JSONPPathEntryTypeCall: {
                 JSValue function = baseObject.get(globalObject, ident);
                 RETURN_IF_EXCEPTION(throwScope, JSValue());
-                auto callData = JSC::getCallData(function);
+                auto callData = JSC::getCallDataInline(function);
                 if (callData.type == CallData::Type::None)
                     return throwException(globalObject, throwScope, createNotAFunctionError(globalObject, function));
                 MarkedArgumentBuffer jsonArg;
@@ -1139,7 +1211,7 @@ failedJSONP:
         {
             AssertNoGC assertNoGC; // Ensure no GC happens. GC can replace CodeBlock in Executable.
             jitCode = program->generatedJITCode();
-            protoCallFrame.init(codeBlock, globalObject, globalCallee, thisObj, 1);
+            protoCallFrame.init(codeBlock, globalObject, globalCallee, thisObj, nullptr, 1);
         }
     }
 
@@ -1149,7 +1221,7 @@ failedJSONP:
     return JSValue::decode(vmEntryToJavaScript(jitCode->addressForCall(), &vm, &protoCallFrame));
 }
 
-JSValue Interpreter::executeBoundCall(VM& vm, JSBoundFunction* function, const ArgList& args)
+JSValue Interpreter::executeBoundCall(VM& vm, JSBoundFunction* function, JSCell* context, const ArgList& args)
 {
     auto scope = DECLARE_THROW_SCOPE(vm);
 
@@ -1169,13 +1241,13 @@ JSValue Interpreter::executeBoundCall(VM& vm, JSBoundFunction* function, const A
 
     JSObject* targetFunction = function->targetFunction();
     JSValue boundThis = function->boundThis();
-    auto callData = JSC::getCallData(targetFunction);
+    auto callData = JSC::getCallDataInline(targetFunction);
     ASSERT(callData.type != CallData::Type::None);
 
-    RELEASE_AND_RETURN(scope, executeCallImpl(vm, targetFunction, callData, boundThis, combinedArgs));
+    RELEASE_AND_RETURN(scope, executeCallImpl(vm, targetFunction, callData, boundThis, context, combinedArgs));
 }
 
-ALWAYS_INLINE JSValue Interpreter::executeCallImpl(VM& vm, JSObject* function, const CallData& callData, JSValue thisValue, const ArgList& args)
+ALWAYS_INLINE JSValue Interpreter::executeCallImpl(VM& vm, JSObject* function, const CallData& callData, JSValue thisValue, JSCell* context, const ArgList& args)
 {
     auto clobberizeValidator = makeScopeExit([&] {
         vm.didEnterVM = true;
@@ -1210,7 +1282,7 @@ ALWAYS_INLINE JSValue Interpreter::executeCallImpl(VM& vm, JSObject* function, c
         return throwStackOverflowError(globalObject, scope);
 
     if (vm.disallowVMEntryCount) [[unlikely]]
-        return checkVMEntryPermission();
+        return VM::checkVMEntryPermission();
 
     RefPtr<JSC::JITCode> jitCode;
     ProtoCallFrame protoCallFrame;
@@ -1230,7 +1302,7 @@ ALWAYS_INLINE JSValue Interpreter::executeCallImpl(VM& vm, JSObject* function, c
             AssertNoGC assertNoGC; // Ensure no GC happens. GC can replace CodeBlock in Executable.
             if (isJSCall)
                 jitCode = functionExecutable->generatedJITCodeForCall();
-            protoCallFrame.init(newCodeBlock, globalObject, function, thisValue, argsCount, args.data());
+            protoCallFrame.init(newCodeBlock, globalObject, function, thisValue, context, argsCount, args.data());
         }
     }
 
@@ -1243,17 +1315,17 @@ ALWAYS_INLINE JSValue Interpreter::executeCallImpl(VM& vm, JSObject* function, c
 
 #if ENABLE(WEBASSEMBLY)
     if (callData.native.isWasm)
-        return JSValue::decode(vmEntryToWasm(jsCast<WebAssemblyFunction*>(function)->jsEntrypoint(ArityCheckMode::MustCheckArity).taggedPtr(), &vm, &protoCallFrame));
+        return JSValue::decode(vmEntryToWasm(jsCast<WebAssemblyFunction*>(function)->jsToWasm(ArityCheckMode::MustCheckArity).taggedPtr(), &vm, &protoCallFrame));
 #endif
 
     return JSValue::decode(vmEntryToNative(nativeFunction.taggedPtr(), &vm, &protoCallFrame));
 }
 
-JSValue Interpreter::executeCall(JSObject* function, const CallData& callData, JSValue thisValue, const ArgList& args)
+JSValue Interpreter::executeCall(JSObject* function, const CallData& callData, JSValue thisValue, JSCell* context, const ArgList& args)
 {
     VM& vm = this->vm();
     if (callData.type == CallData::Type::JS || !callData.native.isBoundFunction)
-        return executeCallImpl(vm, function, callData, thisValue, args);
+        return executeCallImpl(vm, function, callData, thisValue, context, args);
 
     // Only one-level unwrap is enough! We already made JSBoundFunction's nest smaller.
     auto* boundFunction = jsCast<JSBoundFunction*>(function);
@@ -1264,11 +1336,11 @@ JSValue Interpreter::executeCall(JSObject* function, const CallData& callData, J
         // Let's just replace and get unwrapped functions again.
         JSObject* targetFunction = boundFunction->targetFunction();
         JSValue boundThis = boundFunction->boundThis();
-        auto targetFunctionCallData = JSC::getCallData(targetFunction);
+        auto targetFunctionCallData = JSC::getCallDataInline(targetFunction);
         ASSERT(targetFunctionCallData.type != CallData::Type::None);
-        return executeCallImpl(vm, targetFunction, targetFunctionCallData, boundThis, args);
+        return executeCallImpl(vm, targetFunction, targetFunctionCallData, boundThis, context, args);
     }
-    return executeBoundCall(vm, boundFunction, args);
+    return executeBoundCall(vm, boundFunction, context, args);
 }
 
 JSObject* Interpreter::executeConstruct(JSObject* constructor, const CallData& constructData, const ArgList& args, JSValue newTarget)
@@ -1304,7 +1376,7 @@ JSObject* Interpreter::executeConstruct(JSObject* constructor, const CallData& c
     }
 
     if (vm.disallowVMEntryCount) [[unlikely]] {
-        checkVMEntryPermission();
+        VM::checkVMEntryPermission();
         return globalObject->globalThis();
     }
 
@@ -1326,7 +1398,7 @@ JSObject* Interpreter::executeConstruct(JSObject* constructor, const CallData& c
             AssertNoGC assertNoGC; // Ensure no GC happens. GC can replace CodeBlock in Executable.
             if (isJSConstruct)
                 jitCode = constructData.js.functionExecutable->generatedJITCodeForConstruct();
-            protoCallFrame.init(newCodeBlock, globalObject, constructor, newTarget, argsCount, args.data());
+            protoCallFrame.init(newCodeBlock, globalObject, constructor, newTarget, nullptr, argsCount, args.data());
         }
     }
 
@@ -1533,7 +1605,7 @@ JSValue Interpreter::executeEval(EvalExecutable* eval, JSValue thisValue, JSScop
         }
     }
     callee->setScope(vm, scope);
-    EncodedJSValue result = vmEntryToJavaScriptWith0Arguments(entry, &vm, codeBlock, callee, thisValue);
+    EncodedJSValue result = vmEntryToJavaScriptWith0Arguments(entry, &vm, codeBlock, callee, thisValue, nullptr);
     callee->setScope(vm, nullptr);
 #else
     RefPtr<JSC::JITCode> jitCode;
@@ -1553,7 +1625,7 @@ JSValue Interpreter::executeEval(EvalExecutable* eval, JSValue thisValue, JSScop
         {
             AssertNoGC assertNoGC; // Ensure no GC happens. GC can replace CodeBlock in Executable.
             jitCode = eval->generatedJITCode();
-            protoCallFrame.init(codeBlock, globalObject, callee, thisValue, 1);
+            protoCallFrame.init(codeBlock, globalObject, callee, thisValue, nullptr, 1);
         }
     }
 
@@ -1591,7 +1663,7 @@ JSValue Interpreter::executeModuleProgram(JSModuleRecord* record, ModuleProgramE
         return throwStackOverflowError(globalObject, throwScope);
 
     if (vm.disallowVMEntryCount) [[unlikely]]
-        return checkVMEntryPermission();
+        return VM::checkVMEntryPermission();
 
     if (scope->structure()->isUncacheableDictionary())
         scope->flattenDictionaryObject(vm);
@@ -1628,7 +1700,7 @@ JSValue Interpreter::executeModuleProgram(JSModuleRecord* record, ModuleProgramE
             // The |this| of the module is always `undefined`.
             // http://www.ecma-international.org/ecma-262/6.0/#sec-module-environment-records-hasthisbinding
             // http://www.ecma-international.org/ecma-262/6.0/#sec-module-environment-records-getthisbinding
-            protoCallFrame.init(codeBlock, globalObject, callee, jsUndefined(), numberOfArguments + 1, args);
+            protoCallFrame.init(codeBlock, globalObject, callee, jsUndefined(), nullptr, numberOfArguments + 1, args);
         }
 
         record->internalField(JSModuleRecord::Field::State).set(vm, record, jsNumber(static_cast<int>(JSModuleRecord::State::Executing)));

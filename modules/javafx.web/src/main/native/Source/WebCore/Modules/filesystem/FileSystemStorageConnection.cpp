@@ -25,7 +25,6 @@
 
 #include "config.h"
 #include "FileSystemStorageConnection.h"
-#include "FileSystemWritableFileStream.h"
 
 #include "Exception.h"
 #include "FileSystemWritableFileStream.h"

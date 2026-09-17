@@ -29,11 +29,20 @@
 #include <wtf/Noncopyable.h>
 #include <wtf/OptionSet.h>
 #include <wtf/RetainPtr.h>
+#include <wtf/RunLoop.h>
 #include <wtf/TZoneMalloc.h>
+
+#if USE(GLIB_EVENT_LOOP)
+#include <wtf/Lock.h>
+#include <wtf/glib/ActivityObserver.h>
+#endif
 
 #if USE(CF)
 using PlatformRunLoopObserver = struct __CFRunLoopObserver*;
 using PlatformRunLoop = struct __CFRunLoop*;
+#elif USE(GLIB)
+using PlatformRunLoopObserver = ActivityObserver;
+using PlatformRunLoop = RefPtr<RunLoop>;
 #else
 using PlatformRunLoopObserver = void*;
 using PlatformRunLoop = void*;
@@ -58,18 +67,13 @@ public:
         DisplayRefreshMonitor,
     };
 
-    enum class Activity : uint8_t {
-        BeforeWaiting   = 1 << 0,
-        Entry           = 1 << 1,
-        Exit            = 1 << 2,
-        AfterWaiting    = 1 << 3,
-    };
+    using Activity = RunLoop::Activity;
 
     enum class Type : bool { Repeating, OneShot };
     RunLoopObserver(WellKnownOrder order, RunLoopObserverCallback&& callback, Type type = Type::Repeating)
-        : m_callback(WTFMove(callback))
+        : m_callback(WTF::move(callback))
         , m_type(type)
-#if USE(CF)
+#if USE(CF) || USE(GLIB)
         , m_order(order)
     { }
 #else
@@ -99,6 +103,10 @@ private:
 #if USE(CF)
     WellKnownOrder m_order { WellKnownOrder::GraphicsCommit };
     RetainPtr<PlatformRunLoopObserver> m_runLoopObserver;
+#elif USE(GLIB_EVENT_LOOP)
+    WellKnownOrder m_order { WellKnownOrder::GraphicsCommit };
+    mutable Lock m_runLoopObserverLock;
+    RefPtr<ActivityObserver> m_runLoopObserver WTF_GUARDED_BY_LOCK(m_runLoopObserverLock);
 #endif
 };
 

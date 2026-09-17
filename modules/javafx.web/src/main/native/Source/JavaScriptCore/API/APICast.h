@@ -29,17 +29,17 @@
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
-#include "Integrity.h"
-#include "JSAPIValueWrapper.h"
-#include "JSCJSValue.h"
-#include "JSCJSValueInlines.h"
-#include "HeapCellInlines.h"
+#include <JavaScriptCore/HeapCellInlines.h>
+#include <JavaScriptCore/Integrity.h>
+#include <JavaScriptCore/JSAPIValueWrapper.h>
+#include <JavaScriptCore/JSCJSValue.h>
+#include <JavaScriptCore/JSCJSValueInlines.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 namespace JSC {
     class CallFrame;
-    class PropertyNameArray;
+    class PropertyNameArrayBuilder;
     class VM;
     class JSObject;
     class JSValue;
@@ -134,9 +134,9 @@ inline JSC::JSObject* toJS(JSObjectRef o)
     return object;
 }
 
-inline JSC::PropertyNameArray* toJS(JSPropertyNameAccumulatorRef a)
+inline JSC::PropertyNameArrayBuilder* toJS(JSPropertyNameAccumulatorRef a)
 {
-    return reinterpret_cast<JSC::PropertyNameArray*>(a);
+    return reinterpret_cast<JSC::PropertyNameArrayBuilder*>(a);
 }
 
 inline JSC::VM* toJS(JSContextGroupRef g)
@@ -191,9 +191,9 @@ inline JSGlobalContextRef toGlobalRef(JSC::JSGlobalObject* globalObject)
     return reinterpret_cast<JSGlobalContextRef>(JSC::Integrity::audit(globalObject));
 }
 
-inline JSPropertyNameAccumulatorRef toRef(JSC::PropertyNameArray* l)
+inline JSPropertyNameAccumulatorRef toRef(JSC::PropertyNameArrayBuilder* propertyNameArrayBuilder)
 {
-    return reinterpret_cast<JSPropertyNameAccumulatorRef>(l);
+    return reinterpret_cast<JSPropertyNameAccumulatorRef>(propertyNameArrayBuilder);
 }
 
 inline JSContextGroupRef toRef(JSC::VM* g)

@@ -28,6 +28,7 @@
 
 #if HAVE(WEBGPU_IMPLEMENTATION)
 
+#include "ModelDowncastConvertToBackingContext.h"
 #include "ProcessIdentity.h"
 #include "WebGPUAdapterImpl.h"
 #include "WebGPUDowncastConvertToBackingContext.h"
@@ -49,23 +50,21 @@ RefPtr<GPU> create(ScheduleWorkFunction&& scheduleWorkFunction, const WebCore::P
 #if !HAVE(TASK_IDENTITY_TOKEN)
     UNUSED_PARAM(webProcessIdentity);
 #endif
-    auto scheduleWorkBlock = makeBlockPtr([scheduleWorkFunction = WTFMove(scheduleWorkFunction)](WGPUWorkItem workItem)
+    auto scheduleWorkBlock = makeBlockPtr([scheduleWorkFunction = WTF::move(scheduleWorkFunction)](WGPUWorkItem workItem)
     {
-        scheduleWorkFunction(Function<void()>(makeBlockPtr(WTFMove(workItem))));
+        scheduleWorkFunction(Function<void()>(makeBlockPtr(WTF::move(workItem))));
     });
-    WGPUInstanceCocoaDescriptor cocoaDescriptor {
-        {
-            nullptr,
-            static_cast<WGPUSType>(WGPUSTypeExtended_InstanceCocoaDescriptor),
-        },
-        scheduleWorkBlock.get(),
+
+    WGPUInstanceDescriptor descriptor = {
+        .cocoaDescriptor = WGPUInstanceCocoaDescriptor {
+            .scheduleWorkBlock = scheduleWorkBlock.get(),
 #if HAVE(TASK_IDENTITY_TOKEN)
-        webProcessIdentity ? &webProcessIdentity->taskId() : nullptr,
+            .webProcessResourceOwner = webProcessIdentity ? &webProcessIdentity->taskId() : nullptr,
 #else
-        nullptr,
+            .webProcessResourceOwner = nullptr,
 #endif
+        }
     };
-    WGPUInstanceDescriptor descriptor = { &cocoaDescriptor.chain };
 
     if (!&wgpuCreateInstance)
         return nullptr;
@@ -73,7 +72,8 @@ RefPtr<GPU> create(ScheduleWorkFunction&& scheduleWorkFunction, const WebCore::P
     if (!instance)
         return nullptr;
     auto convertToBackingContext = DowncastConvertToBackingContext::create();
-    return GPUImpl::create(WTFMove(instance), convertToBackingContext);
+    auto modelConvertToBackingContext = DDModel::DowncastConvertToBackingContext::create();
+    return GPUImpl::create(WTF::move(instance), convertToBackingContext, modelConvertToBackingContext);
 }
 
 } // namespace WebCore::WebGPU

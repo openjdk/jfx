@@ -27,7 +27,6 @@
 #include "JSTrustedTypePolicy.h"
 
 #include <JavaScriptCore/SlotVisitorInlines.h>
-#include <JavaScriptCore/StructureInlines.h>
 
 namespace WebCore {
 

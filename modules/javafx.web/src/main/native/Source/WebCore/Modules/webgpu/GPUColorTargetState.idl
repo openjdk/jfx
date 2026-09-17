@@ -29,9 +29,9 @@ typedef [EnforceRange] unsigned long GPUColorWriteFlags;
 // https://gpuweb.github.io/gpuweb/#dictdef-gpucolortargetstate
 
 [
-    EnabledBySetting=WebGPUEnabled
-]
-dictionary GPUColorTargetState {
+    EnabledBySetting=WebGPUEnabled,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary GPUColorTargetState {
     required GPUTextureFormat format;
 
     GPUBlendState blend;

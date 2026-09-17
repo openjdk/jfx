@@ -34,6 +34,7 @@
 #include "ContainerNodeInlines.h"
 #include "ElementInlines.h"
 #include "EventHandler.h"
+#include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
 #include "HTMLAnchorElement.h"
 #include "HTMLElement.h"
@@ -43,14 +44,16 @@
 #include "MathMLNames.h"
 #include "MouseEvent.h"
 #include "NodeName.h"
+#include "RenderStyle+GettersInlines.h"
 #include "RenderTableCell.h"
 #include "Settings.h"
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
+#include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(MathMLElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MathMLElement);
 
 using namespace MathMLNames;
 
@@ -121,6 +124,7 @@ bool MathMLElement::hasPresentationalHintsForAttribute(const QualifiedName& name
     case AttributeNames::mathcolorAttr:
     case AttributeNames::mathsizeAttr:
     case AttributeNames::displaystyleAttr:
+    case AttributeNames::scriptlevelAttr:
         return true;
     default:
         break;
@@ -164,6 +168,12 @@ static String convertMathSizeIfNeeded(const AtomString& value)
     return makeString(FormattedNumber::fixedWidth(unitlessValue * 100, 3), '%');
 }
 
+enum class ScriptLevelSyntax : uint8_t {
+    Unsigned,
+    AddUnsigned,
+    AddMinusUnsigned,
+};
+
 void MathMLElement::collectPresentationalHintsForAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
 {
     switch (name.nodeName()) {
@@ -189,6 +199,43 @@ void MathMLElement::collectPresentationalHintsForAttribute(const QualifiedName& 
         else if (equalLettersIgnoringASCIICase(value, "true"_s))
             addPropertyToPresentationalHintStyle(style, CSSPropertyMathStyle, CSSValueNormal);
         return;
+    // https://w3c.github.io/mathml-core/#dfn-scriptlevel
+    case AttributeNames::scriptlevelAttr: {
+        StringView view = value;
+
+        ScriptLevelSyntax syntax;
+        if (value.startsWith('+'))
+            syntax = ScriptLevelSyntax::AddUnsigned;
+        else if (value.startsWith('-'))
+            syntax = ScriptLevelSyntax::AddMinusUnsigned;
+        else
+            syntax = ScriptLevelSyntax::Unsigned;
+
+        if (syntax == ScriptLevelSyntax::AddUnsigned || syntax == ScriptLevelSyntax::AddMinusUnsigned)
+            view = view.substring(1);
+
+        // Validate that the value (excluding an optional '+' or '-' initial character) is an integer
+        if (!parseInteger<uint64_t>(view, 10, WTF::ParseIntegerWhitespacePolicy::Disallow).has_value())
+            return;
+
+        switch (syntax) {
+        case ScriptLevelSyntax::AddUnsigned:
+        case ScriptLevelSyntax::AddMinusUnsigned: {
+            StringBuilder builder = { };
+            builder.append("add("_s);
+            if (syntax == ScriptLevelSyntax::AddMinusUnsigned)
+                builder.append('-');
+            builder.append(view);
+            builder.append(')');
+            addPropertyToPresentationalHintStyle(style, CSSPropertyMathDepth, builder.toString());
+            break;
+        }
+        case ScriptLevelSyntax::Unsigned:
+            addPropertyToPresentationalHintStyle(style, CSSPropertyMathDepth, value);
+            break;
+        };
+        return;
+    }
     default:
         break;
     }

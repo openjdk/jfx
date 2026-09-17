@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "IterationKind.h"
-#include "JSInternalFieldObjectImpl.h"
-#include "JSSet.h"
+#include <JavaScriptCore/IterationKind.h>
+#include <JavaScriptCore/JSInternalFieldObjectImpl.h>
+#include <JavaScriptCore/JSSet.h>
 
 namespace JSC {
 
@@ -54,7 +54,7 @@ public:
         return { {
             jsNumber(0),
             jsNull(),
-            jsNull(),
+            JSValue(),
             jsNumber(0),
         } };
     }
@@ -70,11 +70,10 @@ public:
 
     inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
-    static JSSetIterator* create(JSGlobalObject* globalObject, Structure* structure, JSSet* iteratedObject, IterationKind kind)
+    static JSSetIterator* create(VM& vm, Structure* structure, JSSet* iteratedObject, IterationKind kind)
     {
-        VM& vm = getVM(globalObject);
         JSSetIterator* instance = new (NotNull, allocateCell<JSSetIterator>(vm)) JSSetIterator(vm, structure);
-        instance->finishCreation(globalObject, iteratedObject, kind);
+        instance->finishCreation(vm, iteratedObject, kind);
         return instance;
     }
 
@@ -82,14 +81,28 @@ public:
 
     ALWAYS_INLINE JSValue nextWithAdvance(VM& vm)
     {
-        JSCell* storage = this->storage();
-        if (storage == vm.orderedHashTableSentinel())
+        JSCell* sentinel = vm.orderedHashTableSentinel();
+        JSCell* storage = this->tryGetStorage();
+        if (storage == sentinel)
             return { };
+
+        if (!storage) {
+            storage = iteratedObject()->storage();
+            if (!storage) {
+                markClosed(sentinel);
+            return { };
+            }
+
+            // This path is very unlikely path. This happens only when
+            // the iterator is created with empty set and set gets a new
+            // entry before this iterator.next() is called.
+            setStorage(vm, storage);
+        }
 
         JSSet::Storage& storageRef = *jsCast<JSSet::Storage*>(storage);
         auto result = JSSet::Helper::transitAndNext(vm, storageRef, entry());
         if (!result.storage) {
-            setStorage(vm, vm.orderedHashTableSentinel());
+            markClosed(sentinel);
             return { };
         }
 
@@ -111,7 +124,7 @@ public:
             value = nextKey;
             break;
         case IterationKind::Entries:
-            value = createTuple(globalObject, nextKey, nextKey);
+            value = constructArrayPair(globalObject, nextKey, nextKey);
             break;
         }
         return true;
@@ -122,18 +135,26 @@ public:
         JSValue key = nextWithAdvance(vm);
         return key.isEmpty() ? jsBoolean(true) : jsBoolean(false);
     }
-    JSValue nextKey(VM& vm)
+
+    JSValue peekKey(VM& vm)
     {
         JSSet::Helper::Entry entry = this->entry() - 1;
-        JSCell* storage = this->storage();
+        JSCell* storage = this->tryGetStorage();
+        ASSERT(storage);
         ASSERT_UNUSED(vm, storage != vm.orderedHashTableSentinel());
         JSSet::Storage& storageRef = *jsCast<JSSet::Storage*>(storage);
         return JSSet::Helper::getKey(storageRef, entry);
     }
 
     IterationKind kind() const { return static_cast<IterationKind>(internalField(Field::Kind).get().asUInt32AsAnyInt()); }
-    JSObject* iteratedObject() const { return jsCast<JSObject*>(internalField(Field::IteratedObject).get()); }
-    JSCell* storage() const { return internalField(Field::Storage).get().asCell(); }
+    JSSet* iteratedObject() const { return jsCast<JSSet*>(internalField(Field::IteratedObject).get()); }
+    JSCell* tryGetStorage() const
+    {
+        JSValue value = internalField(Field::Storage).get();
+        if (!value)
+            return nullptr;
+        return value.asCell();
+    }
     JSSet::Helper::Entry entry() const { return JSSet::Helper::toNumber(internalField(Field::Entry).get()); }
 
     void setIteratedObject(VM& vm, JSSet* set) { internalField(Field::IteratedObject).set(vm, this, set); }
@@ -146,7 +167,12 @@ private:
     {
     }
 
-    JS_EXPORT_PRIVATE void finishCreation(JSGlobalObject*, JSSet*, IterationKind);
+    void markClosed(JSCell* sentinel)
+    {
+        internalField(Field::Storage).setWithoutWriteBarrier(sentinel);
+    }
+
+    JS_EXPORT_PRIVATE void finishCreation(VM&, JSSet*, IterationKind);
     void finishCreation(VM&);
 };
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(JSSetIterator);

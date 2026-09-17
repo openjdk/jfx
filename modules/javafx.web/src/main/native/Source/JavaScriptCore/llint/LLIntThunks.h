@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "MacroAssemblerCodeRef.h"
-#include "OpcodeSize.h"
-#include "VM.h"
+#include <JavaScriptCore/MacroAssemblerCodeRef.h>
+#include <JavaScriptCore/OpcodeSize.h>
+#include <JavaScriptCore/VM.h>
 #include <wtf/Scope.h>
 
 namespace JSC {
@@ -36,17 +36,20 @@ struct ProtoCallFrame;
 typedef int64_t EncodedJSValue;
 
 extern "C" {
-    EncodedJSValue SYSV_ABI vmEntryToJavaScript(void*, VM*, ProtoCallFrame*);
-    EncodedJSValue SYSV_ABI vmEntryToNative(void*, VM*, ProtoCallFrame*);
-    EncodedJSValue SYSV_ABI vmEntryCustomGetter(JSGlobalObject*, EncodedJSValue, PropertyName, void*);
-    void SYSV_ABI vmEntryCustomSetter(JSGlobalObject*, EncodedJSValue, EncodedJSValue, PropertyName, void*);
-    EncodedJSValue SYSV_ABI vmEntryHostFunction(JSGlobalObject*, CallFrame*, void*);
+    EncodedJSValue SYSV_ABI NOT_TAIL_CALLED vmEntryToJavaScript(void*, VM*, ProtoCallFrame*);
+    EncodedJSValue SYSV_ABI NOT_TAIL_CALLED vmEntryToNative(void*, VM*, ProtoCallFrame*);
+    EncodedJSValue SYSV_ABI NOT_TAIL_CALLED vmEntryCustomGetter(JSGlobalObject*, EncodedJSValue, PropertyName, void*);
+    void SYSV_ABI NOT_TAIL_CALLED vmEntryCustomSetter(JSGlobalObject*, EncodedJSValue, EncodedJSValue, PropertyName, void*);
+    EncodedJSValue SYSV_ABI NOT_TAIL_CALLED vmEntryHostFunction(JSGlobalObject*, CallFrame*, void*);
 
 #if CPU(ARM64) && CPU(ADDRESS64) && !ENABLE(C_LOOP)
-    EncodedJSValue vmEntryToJavaScriptWith0Arguments(void*, VM*, CodeBlock*, JSObject*, JSValue);
-    EncodedJSValue vmEntryToJavaScriptWith1Arguments(void*, VM*, CodeBlock*, JSObject*, JSValue, JSValue);
-    EncodedJSValue vmEntryToJavaScriptWith2Arguments(void*, VM*, CodeBlock*, JSObject*, JSValue, JSValue, JSValue);
-    EncodedJSValue vmEntryToJavaScriptWith3Arguments(void*, VM*, CodeBlock*, JSObject*, JSValue, JSValue, JSValue, JSValue);
+    EncodedJSValue SYSV_ABI NOT_TAIL_CALLED vmEntryToJavaScriptWith0Arguments(void*, VM*, CodeBlock*, JSObject*, JSValue, JSCell*);
+    EncodedJSValue SYSV_ABI NOT_TAIL_CALLED vmEntryToJavaScriptWith1Arguments(void*, VM*, CodeBlock*, JSObject*, JSValue, JSCell*, JSValue);
+    EncodedJSValue SYSV_ABI NOT_TAIL_CALLED vmEntryToJavaScriptWith2Arguments(void*, VM*, CodeBlock*, JSObject*, JSValue, JSCell*, JSValue, JSValue);
+    EncodedJSValue SYSV_ABI NOT_TAIL_CALLED vmEntryToJavaScriptWith3Arguments(void*, VM*, CodeBlock*, JSObject*, JSValue, JSCell*, JSValue, JSValue, JSValue);
+    EncodedJSValue SYSV_ABI NOT_TAIL_CALLED vmEntryToJavaScriptWith4Arguments(void*, VM*, CodeBlock*, JSObject*, JSValue, JSCell*, JSValue, JSValue, JSValue, JSValue);
+    EncodedJSValue SYSV_ABI NOT_TAIL_CALLED vmEntryToJavaScriptWith5Arguments(void*, VM*, CodeBlock*, JSObject*, JSValue, JSCell*, JSValue, JSValue, JSValue, JSValue, JSValue);
+    EncodedJSValue SYSV_ABI NOT_TAIL_CALLED vmEntryToJavaScriptWith6Arguments(void*, VM*, CodeBlock*, JSObject*, JSValue, JSCell*, JSValue, JSValue, JSValue, JSValue, JSValue, JSValue);
 #endif
 }
 
@@ -96,12 +99,6 @@ MacroAssemblerCodeRef<ExceptionHandlerPtrTag> callToThrowThunk();
 MacroAssemblerCodeRef<ExceptionHandlerPtrTag> handleUncaughtExceptionThunk();
 MacroAssemblerCodeRef<ExceptionHandlerPtrTag> handleCatchThunk(OpcodeSize);
 
-#if ENABLE(WEBASSEMBLY)
-MacroAssemblerCodeRef<ExceptionHandlerPtrTag> handleWasmCatchThunk(OpcodeSize);
-MacroAssemblerCodeRef<ExceptionHandlerPtrTag> handleWasmCatchAllThunk(OpcodeSize);
-MacroAssemblerCodeRef<ExceptionHandlerPtrTag> handleWasmTryTableThunk(WasmOpcodeID, OpcodeSize);
-#endif
-
 #if ENABLE(JIT_CAGE)
 MacroAssemblerCodeRef<NativeToJITGatePtrTag> jitCagePtrThunk();
 #endif
@@ -128,10 +125,7 @@ MacroAssemblerCodeRef<JSEntryPtrTag> returnLocationThunk(OpcodeID, OpcodeSize);
 #endif
 
 #if ENABLE(WEBASSEMBLY)
-MacroAssemblerCodeRef<JITThunkPtrTag> wasmFunctionEntryThunk();
-MacroAssemblerCodeRef<JITThunkPtrTag> wasmFunctionEntryThunkSIMD();
 MacroAssemblerCodeRef<JITThunkPtrTag> inPlaceInterpreterEntryThunk();
-MacroAssemblerCodeRef<JITThunkPtrTag> inPlaceInterpreterSIMDEntryThunk();
 MacroAssemblerCodeRef<JITThunkPtrTag> inPlaceInterpreterCatchEntryThunk();
 MacroAssemblerCodeRef<JITThunkPtrTag> inPlaceInterpreterCatchAllEntryThunk();
 MacroAssemblerCodeRef<JITThunkPtrTag> inPlaceInterpreterTableCatchEntryThunk();

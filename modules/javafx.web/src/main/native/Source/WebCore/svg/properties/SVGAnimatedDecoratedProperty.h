@@ -47,7 +47,7 @@ public:
 
     SVGAnimatedDecoratedProperty(SVGElement* contextElement, Ref<SVGDecoratedProperty<DecorationType>>&& baseVal)
         : SVGAnimatedProperty(contextElement)
-        , m_baseVal(WTFMove(baseVal))
+        , m_baseVal(WTF::move(baseVal))
     {
     }
 

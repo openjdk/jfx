@@ -24,9 +24,9 @@
 
 #pragma once
 
-#include "Element.h"
-#include "ElementData.h"
-#include "IsImportant.h"
+#include <WebCore/Element.h>
+#include <WebCore/ElementData.h>
+#include <WebCore/IsImportant.h>
 
 namespace WebCore {
 
@@ -43,7 +43,7 @@ enum CSSValueID : uint16_t;
 enum class CSSUnitType : uint8_t;
 
 class StyledElement : public Element {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(StyledElement);
+    WTF_MAKE_TZONE_ALLOCATED(StyledElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(StyledElement);
 public:
     virtual ~StyledElement();
@@ -101,7 +101,7 @@ private:
     void inlineStyleChanged();
     CSSStyleProperties* inlineStyleCSSOMWrapper();
     void setInlineStyleFromString(const AtomString&);
-    MutableStyleProperties& ensureMutableInlineStyle();
+    Ref<MutableStyleProperties> ensureMutableInlineStyle();
 
     void rebuildPresentationalHintStyle();
 };

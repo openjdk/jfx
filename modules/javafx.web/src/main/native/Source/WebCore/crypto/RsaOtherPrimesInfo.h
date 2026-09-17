@@ -34,9 +34,9 @@ namespace WebCore {
 struct RsaOtherPrimesInfo {
     RsaOtherPrimesInfo isolatedCopy() && {
         return {
-            crossThreadCopy(WTFMove(r)),
-            crossThreadCopy(WTFMove(d)),
-            crossThreadCopy(WTFMove(t))
+            crossThreadCopy(WTF::move(r)),
+            crossThreadCopy(WTF::move(d)),
+            crossThreadCopy(WTF::move(t))
         };
     }
 

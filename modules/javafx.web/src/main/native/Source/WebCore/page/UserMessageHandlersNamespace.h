@@ -27,9 +27,9 @@
 
 #if ENABLE(USER_MESSAGE_HANDLERS)
 
-#include "FrameDestructionObserver.h"
-#include "UserContentProvider.h"
-#include "UserMessageHandler.h"
+#include <WebCore/FrameDestructionObserver.h>
+#include <WebCore/UserContentProvider.h>
+#include <WebCore/UserMessageHandler.h>
 #include <wtf/HashMap.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
@@ -52,8 +52,12 @@ public:
     virtual ~UserMessageHandlersNamespace();
 
     Vector<AtomString> supportedPropertyNames() const;
-    UserMessageHandler* namedItem(DOMWrapperWorld&, const AtomString&);
+    RefPtr<UserMessageHandler> namedItem(DOMWrapperWorld&, const AtomString&);
     bool isSupportedPropertyName(const AtomString&);
+
+    // UserContentProviderInvalidationClient, FrameDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
 private:
     explicit UserMessageHandlersNamespace(LocalFrame&, UserContentProvider&);
@@ -62,7 +66,10 @@ private:
     void didInvalidate(UserContentProvider&) override;
 
     const Ref<UserContentProvider> m_userContentProvider;
-    HashMap<std::pair<AtomString, RefPtr<DOMWrapperWorld>>, RefPtr<UserMessageHandler>> m_messageHandlers;
+
+    // FIXME: This could be a Ref<const DOMWrapperWorld> but PairHashTraits doesn't have hasIsEmptyValueFunction,
+    // so HashTraitsEmptyValueChecker calls operator== with a null Ref which asserts.
+    HashMap<std::pair<AtomString, RefPtr<const DOMWrapperWorld>>, Ref<UserMessageHandler>> m_messageHandlers;
 };
 
 } // namespace WebCore

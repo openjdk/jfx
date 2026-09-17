@@ -24,7 +24,7 @@
 
 #include "FEMorphology.h"
 #include "NodeName.h"
-#include "SVGFilter.h"
+#include "SVGFilterRenderer.h"
 #include "SVGNames.h"
 #include "SVGParserUtilities.h"
 #include "SVGPropertyOwnerRegistry.h"
@@ -32,19 +32,20 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGFEMorphologyElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SVGFEMorphologyElement);
 
 inline SVGFEMorphologyElement::SVGFEMorphologyElement(const QualifiedName& tagName, Document& document)
     : SVGFilterPrimitiveStandardAttributes(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
 {
     ASSERT(hasTagName(SVGNames::feMorphologyTag));
 
-    static std::once_flag onceFlag;
-    std::call_once(onceFlag, [] {
+    static bool didRegistration = false;
+    if (!didRegistration) [[unlikely]] {
+        didRegistration = true;
         PropertyRegistry::registerProperty<SVGNames::inAttr, &SVGFEMorphologyElement::m_in1>();
         PropertyRegistry::registerProperty<SVGNames::operatorAttr, MorphologyOperatorType, &SVGFEMorphologyElement::m_svgOperator>();
         PropertyRegistry::registerProperty<SVGNames::radiusAttr, &SVGFEMorphologyElement::m_radiusX, &SVGFEMorphologyElement::m_radiusY>();
-    });
+    }
 }
 
 Ref<SVGFEMorphologyElement> SVGFEMorphologyElement::create(const QualifiedName& tagName, Document& document)
@@ -56,7 +57,7 @@ void SVGFEMorphologyElement::attributeChanged(const QualifiedName& name, const A
 {
     switch (name.nodeName()) {
     case AttributeNames::operatorAttr: {
-        MorphologyOperatorType propertyValue = SVGPropertyTraits<MorphologyOperatorType>::fromString(newValue);
+        MorphologyOperatorType propertyValue = SVGPropertyTraits<MorphologyOperatorType>::fromString(*this, newValue);
         if (propertyValue != MorphologyOperatorType::Unknown)
             Ref { m_svgOperator }->setBaseValInternal<MorphologyOperatorType>(propertyValue);
         break;
@@ -120,10 +121,9 @@ bool SVGFEMorphologyElement::isIdentity() const
 
 IntOutsets SVGFEMorphologyElement::outsets(const FloatRect& targetBoundingBox, SVGUnitTypes::SVGUnitType primitiveUnits) const
 {
-    auto radius = SVGFilter::calculateResolvedSize({ radiusX(), radiusY() }, targetBoundingBox, primitiveUnits);
+    auto radius = SVGFilterRenderer::calculateResolvedSize({ radiusX(), radiusY() }, targetBoundingBox, primitiveUnits);
     return { static_cast<int>(radius.height()), static_cast<int>(radius.width()), static_cast<int>(radius.height()), static_cast<int>(radius.width()) };
 }
-
 
 RefPtr<FilterEffect> SVGFEMorphologyElement::createFilterEffect(const FilterEffectVector&, const GraphicsContext&) const
 {

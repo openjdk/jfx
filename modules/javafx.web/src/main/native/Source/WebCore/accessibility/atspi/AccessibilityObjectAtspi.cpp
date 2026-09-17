@@ -24,13 +24,13 @@
 #include "AXCoreObject.h"
 #include "AXObjectCache.h"
 #include "AccessibilityAtspiInterfaces.h"
+#include "AccessibilityObjectInlines.h"
+#include "AccessibilityNodeObject.h"
 #include "AccessibilityRootAtspi.h"
-#include "AccessibilityTableCell.h"
 #include "ElementInlines.h"
 #include "HTMLSpanElement.h"
 #include "RenderAncestorIterator.h"
 #include "RenderBlock.h"
-#include "RenderElementInlines.h"
 #include "RenderInline.h"
 #include "RenderObject.h"
 #include "RenderTableCell.h"
@@ -366,6 +366,8 @@ static Atspi::Role atspiRole(AccessibilityRole role)
     case AccessibilityRole::TableHeaderContainer:
     case AccessibilityRole::Suggestion:
     case AccessibilityRole::RemoteFrame:
+    case AccessibilityRole::LocalFrame:
+    case AccessibilityRole::FrameHost:
         return Atspi::Role::Unknown;
     // Add most new roles above. The release assert is for roles that are handled specially.
     case AccessibilityRole::ListMarker:
@@ -491,7 +493,7 @@ bool AccessibilityObjectAtspi::registerObject()
     if (m_interfaces.contains(Interface::Collection))
         interfaces.append({ const_cast<GDBusInterfaceInfo*>(&webkit_collection_interface), &s_collectionFunctions });
 
-    m_path = AccessibilityAtspi::singleton().registerObject(*this, WTFMove(interfaces));
+    m_path = AccessibilityAtspi::singleton().registerObject(*this, WTF::move(interfaces));
     return true;
 }
 
@@ -886,7 +888,7 @@ HashMap<String, String> AccessibilityObjectAtspi::attributes() const
     if (std::optional columnIndex = m_coreObject->axColumnIndex())
         map.add("colindex"_s, String::number(*columnIndex));
 
-    if (auto* cell = dynamicDowncast<AccessibilityTableCell>(m_coreObject.get())) {
+    if (auto* cell = dynamicDowncast<AccessibilityNodeObject>(m_coreObject.get()); cell && cell->isTableCell()) {
         int rowSpan = cell->axRowSpan();
         if (rowSpan != -1)
             map.add("rowspan"_s, String::number(rowSpan));
@@ -1028,7 +1030,7 @@ RelationMap AccessibilityObjectAtspi::relationMap() const
                 wrappers.append(*wrapper);
         }
         if (!wrappers.isEmpty())
-            map.add(relation, WTFMove(wrappers));
+            map.add(relation, WTF::move(wrappers));
     };
 
     AccessibilityObject::AccessibilityChildrenVector ariaLabelledByElements;

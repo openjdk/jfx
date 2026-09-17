@@ -53,7 +53,7 @@ struct ListMarkerTextContent {
 // Used to render the list item's marker.
 // The RenderListMarker always has to be a child of a RenderListItem.
 class RenderListMarker final : public RenderBox {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderListMarker);
+    WTF_MAKE_TZONE_ALLOCATED(RenderListMarker);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderListMarker);
 public:
     RenderListMarker(RenderListItem&, RenderStyle&&);
@@ -63,6 +63,7 @@ public:
     String textWithSuffix() const { return m_textContent.textWithSuffix; };
 
     bool isInside() const;
+    bool isDisclosureMarker() const;
 
     void updateInlineMarginsAndContent();
 
@@ -71,7 +72,7 @@ public:
     LayoutUnit lineLogicalOffsetForListItem() const { return m_lineLogicalOffsetForListItem; }
     const RenderListItem* listItem() const;
 
-    std::pair<int, int> layoutBounds() const { return m_layoutBounds; }
+    std::pair<float, float> layoutBounds() const { return m_layoutBounds; }
 
 private:
     void willBeDestroyed() final;
@@ -83,10 +84,11 @@ private:
     void imageChanged(WrappedImagePtr, const IntRect*) final;
     LayoutRect selectionRectForRepaint(const RenderLayerModelObject* repaintContainer, bool clipToVisibleContent) final;
     bool canBeSelectionLeaf() const final { return true; }
-    void styleWillChange(StyleDifference, const RenderStyle& newStyle) final;
-    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) final;
+    void styleWillChange(Style::Difference, const RenderStyle& newStyle) final;
+    void styleDidChange(Style::Difference, const RenderStyle* oldStyle) final;
+    Node* nodeForHitTest() const final;
     void computeIntrinsicLogicalWidths(LayoutUnit&, LayoutUnit&) const override { ASSERT_NOT_REACHED(); }
-    std::pair<int, int> layoutBoundForTextContent(String) const;
+    std::pair<float, float> layoutBoundForTextContent(String) const;
 
     void element() const = delete;
 
@@ -95,17 +97,19 @@ private:
     RenderBox* parentBox(RenderBox&);
     FloatRect relativeMarkerRect();
     LayoutRect localSelectionRect();
+    void paintDisclosureMarker(GraphicsContext&, const FloatRect& markerRect);
 
     RefPtr<CSSCounterStyle> counterStyle() const;
     bool widthUsesMetricsOfPrimaryFont() const;
 
+private:
     ListMarkerTextContent m_textContent;
     RefPtr<StyleImage> m_image;
 
     SingleThreadWeakPtr<RenderListItem> m_listItem;
     LayoutUnit m_lineOffsetForListItem;
     LayoutUnit m_lineLogicalOffsetForListItem;
-    std::pair<int, int> m_layoutBounds;
+    std::pair<float, float> m_layoutBounds;
 };
 
 } // namespace WebCore

@@ -25,14 +25,16 @@
 
 #pragma once
 
-#include "EventTarget.h"
-#include "FetchOptions.h"
-#include "ScriptExecutionContext.h"
-#include "WorkerThreadType.h"
+#include <WebCore/EventTarget.h>
+#include <WebCore/EventTargetInlines.h>
+#include <WebCore/FetchOptions.h>
+#include <WebCore/ScriptExecutionContext.h>
+#include <WebCore/WorkerThreadType.h>
 #include <pal/SessionID.h>
 
 namespace WebCore {
 
+class ContentSecurityPolicyResponseHeaders;
 class EventLoopTaskGroup;
 class ScriptModuleLoader;
 class WorkerEventLoop;
@@ -44,7 +46,7 @@ enum class AdvancedPrivacyProtections : uint16_t;
 enum class NoiseInjectionPolicy : uint8_t;
 
 class WorkerOrWorkletGlobalScope : public RefCounted<WorkerOrWorkletGlobalScope>, public ScriptExecutionContext, public EventTarget {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WorkerOrWorkletGlobalScope);
+    WTF_MAKE_TZONE_ALLOCATED(WorkerOrWorkletGlobalScope);
     WTF_MAKE_NONCOPYABLE(WorkerOrWorkletGlobalScope);
 public:
     virtual ~WorkerOrWorkletGlobalScope();
@@ -52,7 +54,7 @@ public:
     USING_CAN_MAKE_WEAKPTR(ScriptExecutionContext);
 
     bool isClosing() const { return m_isClosing; }
-    WorkerOrWorkletThread* workerOrWorkletThread() const { return m_thread; }
+    RefPtr<WorkerOrWorkletThread> workerOrWorkletThread() const;
 
     WorkerOrWorkletScriptController* script() const { return m_script.get(); }
     void clearScript();
@@ -69,7 +71,7 @@ public:
     void postTask(Task&&) final; // Executes the task on context's thread asynchronously.
     std::optional<PAL::SessionID> sessionID() const final { return m_sessionID; }
 
-    // Defined specifcially for WorkerOrWorkletGlobalScope for cooperation with
+    // Defined specifically for WorkerOrWorkletGlobalScope for cooperation with
     // WorkerEventLoop and WorkerRunLoop, not part of ScriptExecutionContext.
     void postTaskForMode(Task&&, const String&);
 
@@ -89,6 +91,8 @@ public:
 
 protected:
     WorkerOrWorkletGlobalScope(WorkerThreadType, PAL::SessionID, Ref<JSC::VM>&&, ReferrerPolicy, WorkerOrWorkletThread*, std::optional<uint64_t>, OptionSet<AdvancedPrivacyProtections>, std::optional<ScriptExecutionContextIdentifier> = std::nullopt);
+
+    void applyContentSecurityPolicyResponseHeaders(const ContentSecurityPolicyResponseHeaders&);
 
     // ScriptExecutionContext.
     bool isJSExecutionForbidden() const final;
@@ -113,7 +117,7 @@ private:
     uint32_t m_contextThreadUID { 0 };
     std::unique_ptr<WorkerOrWorkletScriptController> m_script;
     const UniqueRef<ScriptModuleLoader> m_moduleLoader;
-    WorkerOrWorkletThread* m_thread;
+    ThreadSafeWeakPtr<WorkerOrWorkletThread> m_thread;
     const RefPtr<WorkerEventLoop> m_eventLoop;
     const std::unique_ptr<EventLoopTaskGroup> m_defaultTaskGroup;
     const UniqueRef<WorkerInspectorController> m_inspectorController;

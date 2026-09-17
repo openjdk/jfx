@@ -25,14 +25,14 @@
 
 #pragma once
 
+#include <JavaScriptCore/AssemblerCommon.h>
+#include <JavaScriptCore/ExecutableMemoryHandle.h>
+#include <JavaScriptCore/FastJITPermissions.h>
+#include <JavaScriptCore/JITCompilationEffort.h>
+#include <JavaScriptCore/JSCConfig.h>
+#include <JavaScriptCore/JSCPtrTag.h>
+#include <JavaScriptCore/Options.h>
 #include <bit>
-#include "AssemblerCommon.h"
-#include "ExecutableMemoryHandle.h"
-#include "FastJITPermissions.h"
-#include "JITCompilationEffort.h"
-#include "JSCConfig.h"
-#include "JSCPtrTag.h"
-#include "Options.h"
 #include <limits>
 #include <wtf/Assertions.h>
 #include <wtf/ForbidHeapAllocation.h>
@@ -210,19 +210,9 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
-static ALWAYS_INLINE void* performJITMemcpy(void *dst, const void *src, size_t n)
-{
-#if CPU(ARM64)
-    static constexpr size_t instructionSize = sizeof(unsigned);
-    RELEASE_ASSERT(roundUpToMultipleOf<instructionSize>(dst) == dst);
-    RELEASE_ASSERT(roundUpToMultipleOf<instructionSize>(src) == src);
-#endif
-    if (isJITPC(dst)) {
-        RELEASE_ASSERT(!Gigacage::contains(src));
-        RELEASE_ASSERT(static_cast<uint8_t*>(dst) + n <= endOfFixedExecutableMemoryPool());
-
 #if ENABLE(JIT_SCAN_ASSEMBLER_BUFFER_FOR_ZEROES)
-        auto checkForZeroes = [dst, src, n] () {
+ALWAYS_INLINE void jitMemcpyCheckForZeros(void *dst, const void *src, size_t n)
+{
             if (Options::zeroExecutableMemoryOnFree()) [[unlikely]]
                 return;
             // On x86-64, the maximum immediate size is 8B, no opcodes/prefixes have 0x00
@@ -261,27 +251,49 @@ static ALWAYS_INLINE void* performJITMemcpy(void *dst, const void *src, size_t n
                     }
                 }
             }
-        };
+}
+#else
+ALWAYS_INLINE void jitMemcpyCheckForZeros(void *, const void *, size_t) { }
+
 #endif
+
+ALWAYS_INLINE void jitMemcpyChecks(void *dst, const void *src, size_t n)
+{
+#if CPU(ARM64)
+    static constexpr size_t instructionSize = sizeof(unsigned);
+    RELEASE_ASSERT(roundUpToMultipleOf<instructionSize>(dst) == dst);
+    RELEASE_ASSERT(roundUpToMultipleOf<instructionSize>(src) == src);
+#endif
+    if (isJITPC(dst)) {
+        RELEASE_ASSERT(!Gigacage::contains(src));
+        RELEASE_ASSERT(static_cast<uint8_t*>(dst) + n <= endOfFixedExecutableMemoryPool());
 
         if (Options::dumpJITMemoryPath()) [[unlikely]]
             dumpJITMemory(dst, src, n);
+    }
+}
 
+template<RepatchingInfo repatch>
+ALWAYS_INLINE void* performJITMemcpy(void *dst, const void *src, size_t n)
+{
+    static_assert(!(*repatch).contains(RepatchingFlag::Memcpy));
+    static_assert(!(*repatch).contains(RepatchingFlag::Flush));
+    jitMemcpyChecks(dst, src, n);
+    if (isJITPC(dst)) {
 #if ENABLE(MPROTECT_RX_TO_RWX)
         auto ret = performJITMemcpyWithMProtect(dst, src, n);
-#if ENABLE(JIT_SCAN_ASSEMBLER_BUFFER_FOR_ZEROES)
-        checkForZeroes();
-#endif
+        jitMemcpyCheckForZeros(dst, src, n);
         return ret;
 #endif
 
         if (g_jscConfig.useFastJITPermissions) {
             threadSelfRestrict<MemoryRestriction::kRwxToRw>();
+            if constexpr ((*repatch).contains(RepatchingFlag::Atomic))
+                memcpyAtomic(dst, src, n);
+            else
             memcpyAtomicIfPossible(dst, src, n);
             threadSelfRestrict<MemoryRestriction::kRwxToRx>();
-#if ENABLE(JIT_SCAN_ASSEMBLER_BUFFER_FOR_ZEROES)
-            checkForZeroes();
-#endif
+            jitMemcpyCheckForZeros(dst, src, n);
             return dst;
         }
 
@@ -292,18 +304,13 @@ static ALWAYS_INLINE void* performJITMemcpy(void *dst, const void *src, size_t n
             off_t offset = (off_t)((uintptr_t)dst - startOfFixedExecutableMemoryPool<uintptr_t>());
             retagCodePtr<JITThunkPtrTag, CFunctionPtrTag>(g_jscConfig.jitWriteSeparateHeaps)(offset, src, n);
             RELEASE_ASSERT(!Gigacage::contains(src));
-#if ENABLE(JIT_SCAN_ASSEMBLER_BUFFER_FOR_ZEROES)
-            checkForZeroes();
-#endif
+            jitMemcpyCheckForZeros(dst, src, n);
             return dst;
         }
 #endif
-
-        auto ret = memcpyAtomicIfPossible(dst, src, n);
-#if ENABLE(JIT_SCAN_ASSEMBLER_BUFFER_FOR_ZEROES)
-        checkForZeroes();
-#endif
-        return ret;
+        memcpyAtomicIfPossible(dst, src, n);
+        jitMemcpyCheckForZeros(dst, src, n);
+        return dst;
     }
 
     return memcpyAtomicIfPossible(dst, src, n);
@@ -376,7 +383,15 @@ private:
     ~ExecutableAllocator() = default;
 };
 
-static inline void* performJITMemcpy(void *dst, const void *src, size_t n)
+inline void* performJITMemcpy(void *dst, const void *src, size_t n)
+{
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+    return memcpy(dst, src, n);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+}
+
+template<RepatchingInfo>
+inline void* performJITMemcpy(void *dst, const void *src, size_t n)
 {
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     return memcpy(dst, src, n);

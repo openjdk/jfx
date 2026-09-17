@@ -59,8 +59,8 @@ void appendNumber<2>(StringBuilder& builder, int value)
 
 String formatDateTime(const GregorianDateTime& t, DateTimeFormat format, bool asUTCVariant, DateCache& dateCache)
 {
-    bool appendDate = format & DateTimeFormatDate;
-    bool appendTime = format & DateTimeFormatTime;
+    bool appendDate = static_cast<int>(format) & static_cast<int>(DateTimeFormat::Date);
+    bool appendTime = static_cast<int>(format) & static_cast<int>(DateTimeFormat::Time);
 
     StringBuilder builder;
 

@@ -27,9 +27,9 @@
 
 #pragma once
 
-#include "Yarr.h"
-#include "YarrPattern.h"
-#include "YarrUnicodeProperties.h"
+#include <JavaScriptCore/Yarr.h>
+#include <JavaScriptCore/YarrPattern.h>
+#include <JavaScriptCore/YarrUnicodeProperties.h>
 #include <wtf/ASCIICType.h>
 #include <wtf/HashSet.h>
 #include <wtf/text/StringBuilder.h>
@@ -65,7 +65,6 @@ template <class T> concept YarrSyntaxCheckable = requires (T& checker, Vector<Ve
     { checker.atomCharacterClassPushNested(bool { }) } -> std::same_as<void>;
     { checker.atomCharacterClassPopNested(bool { }) } -> std::same_as<void>;
     { checker.atomCharacterClassEnd() } -> std::same_as<void>;
-    { checker.atomParenthesesSubpatternBegin() } -> std::same_as<void>;
     { checker.atomParenthesesSubpatternBegin(bool { }) } -> std::same_as<void>;
     { checker.atomParenthesesSubpatternBegin(bool { }, std::optional<String> { }) } -> std::same_as<void>;
     { checker.atomParentheticalAssertionBegin(bool { }, MatchDirection { }) } -> std::same_as<void>;
@@ -76,6 +75,8 @@ template <class T> concept YarrSyntaxCheckable = requires (T& checker, Vector<Ve
     { checker.atomNamedForwardReference(subpatternName) } -> std::same_as<void>;
     { checker.quantifyAtom(unsigned { }, unsigned { }, bool { }) } -> std::same_as<void>;
     { checker.disjunction(CreateDisjunctionPurpose { }) } -> std::same_as<void>;
+    { checker.abortedDueToError() } -> std::same_as<bool>;
+    { checker.abortErrorCode() } -> std::same_as<ErrorCode>;
     { checker.resetForReparsing() } -> std::same_as<void>;
 };
 
@@ -83,10 +84,10 @@ template <class T> concept YarrSyntaxCheckable = requires (T& checker, Vector<Ve
 template<YarrSyntaxCheckable Delegate, typename CharType>
 class Parser {
 public:
-    Parser(Delegate& delegate, StringView pattern, CompileMode compileMode, unsigned backReferenceLimit, bool isNamedForwardReferenceAllowed)
+    Parser(Delegate& delegate, std::span<const CharType> pattern, CompileMode compileMode, unsigned backReferenceLimit, bool isNamedForwardReferenceAllowed)
         : m_delegate(delegate)
-        , m_data(pattern.span<CharType>().data())
-        , m_size(pattern.length())
+        , m_data(pattern.data())
+        , m_size(pattern.size())
         , m_compileMode(compileMode)
         , m_backReferenceLimit(backReferenceLimit)
         , m_isNamedForwardReferenceAllowed(isNamedForwardReferenceAllowed)
@@ -100,7 +101,7 @@ public:
      */
     ErrorCode parse()
     {
-        if (m_size > MAX_PATTERN_SIZE)
+        if (m_size > maxPatternSize)
             return ErrorCode::PatternTooLarge;
 
         parseTokens();
@@ -182,10 +183,10 @@ private:
         {
             ASSERT(m_nestedCaptureGroupNames.size() > 1);
             ASSERT(m_activeCaptureGroupNames.size() > 1);
-            m_nestedCaptureGroupNames.last().addAll(WTFMove(m_activeCaptureGroupNames.last()));
+            m_nestedCaptureGroupNames.last().addAll(WTF::move(m_activeCaptureGroupNames.last()));
 
             // Add all the names seen in this parenthesis to the containing alternative.
-            m_activeCaptureGroupNames[m_activeCaptureGroupNames.size() - 2].addAll(WTFMove(m_nestedCaptureGroupNames.last()));
+            m_activeCaptureGroupNames[m_activeCaptureGroupNames.size() - 2].addAll(WTF::move(m_nestedCaptureGroupNames.last()));
 
             m_nestedCaptureGroupNames.removeLast();
             m_activeCaptureGroupNames.removeLast();
@@ -856,6 +857,8 @@ private:
         Vector<char32_t> m_stringInProgress;
         Vector<Vector<char32_t>> m_strings;
     };
+
+    enum class ParenthesesType : uint8_t { Subpattern, Assertion, LookbehindAssertion };
 
     // The handling of IdentityEscapes is different depending on which unicode flag if any is active.
     // For both Unicode and UnicodeSet patterns, IdentityEscapes only include SyntaxCharacters or '/'.
@@ -1555,9 +1558,10 @@ private:
                     }
 
                     auto setAddResult = m_namedCaptureGroups.add(groupName.value());
-                    if (setAddResult.isNewEntry)
+                    if (setAddResult.isNewEntry) {
                         m_delegate.atomParenthesesSubpatternBegin(true, groupName);
-                    else
+                        countCaptures();
+                    } else
                         m_errorCode = ErrorCode::DuplicateGroupName;
                 } else {
                     if (tryConsume('=')) {
@@ -1641,8 +1645,10 @@ private:
             default:
                 m_errorCode = ErrorCode::ParenthesesTypeInvalid;
             }
-        } else
-            m_delegate.atomParenthesesSubpatternBegin();
+        } else {
+            m_delegate.atomParenthesesSubpatternBegin(true);
+            countCaptures();
+        }
 
         if (type == ParenthesesType::Subpattern)
             ++m_numSubpatterns;
@@ -2185,12 +2191,16 @@ private:
         return std::nullopt;
     }
 
+    void countCaptures()
+    {
+        if (++m_numCaptures > maxCapturesCount)
+            m_errorCode = ErrorCode::TooManyCaptures;
+    }
+
     bool isLegacyCompilation() const { return m_compileMode == CompileMode::Legacy; }
     bool isUnicodeCompilation() const { return m_compileMode == CompileMode::Unicode; }
     bool isUnicodeSetsCompilation() const { return m_compileMode == CompileMode::UnicodeSets; }
     bool isEitherUnicodeCompilation() const { return isUnicodeCompilation() || isUnicodeSetsCompilation(); }
-
-    enum class ParenthesesType : uint8_t { Subpattern, Assertion, LookbehindAssertion };
 
     Delegate& m_delegate;
     ErrorCode m_errorCode { ErrorCode::NoError };
@@ -2201,14 +2211,15 @@ private:
     unsigned m_backReferenceLimit;
     unsigned m_numSubpatterns { 0 };
     unsigned m_maxSeenBackReference { 0 };
+    unsigned m_numCaptures { 0 };
     bool m_isNamedForwardReferenceAllowed;
     bool m_kIdentityEscapeSeen { false };
     Vector<ParenthesesType, 16> m_parenthesesStack;
     NamedCaptureGroups m_namedCaptureGroups;
     UncheckedKeyHashSet<String> m_forwardReferenceNames;
 
-    // Derived by empirical testing of compile time in PCRE and WREC.
-    static constexpr unsigned MAX_PATTERN_SIZE = 1024 * 1024;
+    static constexpr unsigned maxPatternSize = 1024 * 1024; // Derived by empirical testing of compile time in PCRE and WREC.
+    static constexpr unsigned maxCapturesCount = (1 << 16) / 2; // Derived from V8's configuration.
 };
 
 /*
@@ -2219,39 +2230,8 @@ private:
  * Yarr::parse() returns null on success, or a const C string providing an error
  * message where a parse error occurs.
  *
- * The Delegate must implement `YarrSyntaxCheckable` concept.
- * The Delegate must implement the following interface:
- *
- *    void assertionBOL();
- *    void assertionEOL();
- *    void assertionWordBoundary(bool invert);
- *
- *    void atomPatternCharacter(char32_t ch);
- *    void atomBuiltInCharacterClass(BuiltInCharacterClassID classID, bool invert);
- *    void atomCharacterClassBegin(bool invert)
- *    void atomCharacterClassAtom(char32_t ch)
- *    void atomCharacterClassRange(char32_t begin, char32_t end)
- *    void atomCharacterClassBuiltIn(BuiltInCharacterClassID classID, bool invert)
- *    void atomClassStringDisjunction(Vector<Vector<char32_t>>&)
- *    void atomCharacterClassSetOp(CharacterClassSetOp setOp)
- *    void atomCharacterClassPushNested(bool invert)
- *    void atomCharacterClassPopNested(bool invert)
- *    void atomCharacterClassEnd()
- *    void atomParenthesesSubpatternBegin(bool capture = true, std::optional<String> groupName);
- *    void atomParentheticalAssertionBegin(bool invert, MatchDirection matchDirection);
- *    void atomParenthesesEnd();
- *    void atomBackReference(unsigned subpatternId);
- *    void atomNamedBackReference(const String& subpatternName);
- *    void atomNamedForwardReference(const String& subpatternName);
- *
- *    void quantifyAtom(unsigned min, unsigned max, bool greedy);
- *
- *    void disjunction(CreateDisjunctionPurpose purpose);
- *
- *    bool abortedDueToError() const;
- *    ErrorCode abortErrorCode() const;
- *
- *    void resetForReparsing();
+ * The Delegate must implement `YarrSyntaxCheckable` concept. Don't forget to
+ * modify the concept if adding new methods.
  *
  * The regular expression is described by a sequence of assertion*() and atom*()
  * callbacks to the delegate, describing the terms in the regular expression.
@@ -2297,8 +2277,8 @@ template<YarrSyntaxCheckable Delegate>
 ErrorCode parse(Delegate& delegate, const StringView pattern, CompileMode compileMode, unsigned backReferenceLimit = quantifyInfinite, bool isNamedForwardReferenceAllowed = true)
 {
     if (pattern.is8Bit())
-        return Parser<Delegate, LChar>(delegate, pattern, compileMode, backReferenceLimit, isNamedForwardReferenceAllowed).parse();
-    return Parser<Delegate, char16_t>(delegate, pattern, compileMode, backReferenceLimit, isNamedForwardReferenceAllowed).parse();
+        return Parser<Delegate, Latin1Character>(delegate, pattern.span8(), compileMode, backReferenceLimit, isNamedForwardReferenceAllowed).parse();
+    return Parser<Delegate, char16_t>(delegate, pattern.span16(), compileMode, backReferenceLimit, isNamedForwardReferenceAllowed).parse();
 }
 
 } } // namespace JSC::Yarr

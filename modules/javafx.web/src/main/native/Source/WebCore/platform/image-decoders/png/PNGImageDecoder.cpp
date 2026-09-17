@@ -57,7 +57,7 @@
 #define JMPBUF(png_ptr) png_ptr->jmpbuf
 #endif
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // non-Apple ports
 
 namespace WebCore {
 
@@ -90,7 +90,7 @@ static void PNGAPI decodingWarning(png_structp png, png_const_charp warningMsg)
     // Mozilla did this, so we will too.
     // Convert a tRNS warning to be an error (see
     // http://bugzilla.mozilla.org/show_bug.cgi?id=251381 )
-    if (spanHasPrefix(unsafeSpan(warningMsg), "Missing PLTE before tRNS"_span))
+    if (spanHasPrefix(unsafeSpan(byteCast<char>(warningMsg)), "Missing PLTE before tRNS"_span))
         png_error(png, warningMsg);
 }
 
@@ -575,7 +575,7 @@ void PNGImageDecoder::decode(bool onlySize, unsigned haltAtFrame, bool allDataRe
 
 void PNGImageDecoder::readChunks(png_unknown_chunkp chunk)
 {
-    if (chunk->size == 8 && spanHasPrefix(unsafeSpan(chunk->name), "acTL"_span)) {
+    if (chunk->size == 8 && spanHasPrefix(byteCast<char>(std::span { chunk->name }), "acTL"_span)) {
         if (m_hasInfo || m_isAnimated)
             return;
 
@@ -595,7 +595,7 @@ void PNGImageDecoder::readChunks(png_unknown_chunkp chunk)
             return;
 
         m_frameBufferCache.resize(m_frameCount);
-    } else if (chunk->size == 26 && spanHasPrefix(unsafeSpan(chunk->name), "fcTL"_span)) {
+    } else if (chunk->size == 26 && spanHasPrefix(byteCast<char>(std::span { chunk->name }), "fcTL"_span)) {
         if (m_hasInfo && !m_isAnimated)
             return;
 
@@ -665,7 +665,7 @@ void PNGImageDecoder::readChunks(png_unknown_chunkp chunk)
             fallbackNotAnimated();
             return;
         }
-    } else if (chunk->size >= 4 && spanHasPrefix(unsafeSpan(chunk->name), "fdAT"_span)) {
+    } else if (chunk->size >= 4 && spanHasPrefix(byteCast<char>(std::span { chunk->name }), "fdAT"_span)) {
         if (!m_frameInfo || !m_isAnimated)
             return;
 

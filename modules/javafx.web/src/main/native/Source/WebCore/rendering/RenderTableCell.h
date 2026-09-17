@@ -37,7 +37,7 @@ static const unsigned maxColumnIndex = 0x1FFFFFE; // 33554430
 enum IncludeBorderColorOrNot { DoNotIncludeBorderColor, IncludeBorderColor };
 
 class RenderTableCell final : public RenderBlockFlow {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderTableCell);
+    WTF_MAKE_TZONE_ALLOCATED(RenderTableCell);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderTableCell);
 public:
     RenderTableCell(Element&, RenderStyle&&);
@@ -59,11 +59,14 @@ public:
     RenderTableRow* row() const { return downcast<RenderTableRow>(parent()); }
     RenderTableSection* section() const;
     RenderTable* table() const;
+    CheckedPtr<RenderTable> checkedTable() const;
     unsigned rowIndex() const;
-    inline Style::PreferredSize styleOrColLogicalWidth() const;
-    inline LayoutUnit logicalHeightForRowSizing() const;
+    inline std::pair<Style::PreferredSize, Style::ZoomFactor> styleOrColLogicalWidth() const;
+    LayoutUnit logicalHeightForRowSizing() const;
+    LayoutUnit minLogicalWidthForColumnSizing();
+    LayoutUnit maxLogicalWidthForColumnSizing();
 
-    void setCellLogicalWidth(LayoutUnit constrainedLogicalWidth);
+    void setCellLogicalWidth(LayoutUnit logicalWidthInTableDirection);
 
     RectEdges<LayoutUnit> borderWidths() const override;
     LayoutUnit borderLeft() const override;
@@ -88,7 +91,7 @@ public:
     LayoutUnit cellBaselinePosition() const;
     bool isBaselineAligned() const;
 
-    bool computeIntrinsicPadding(LayoutUnit rowHeight);
+    bool computeIntrinsicPadding(LayoutUnit heightConstraint);
     void clearIntrinsicPadding() { setIntrinsicPadding(0, 0); }
 
     LayoutUnit intrinsicPaddingBefore() const { return m_intrinsicPaddingBefore; }
@@ -131,8 +134,15 @@ public:
     void invalidateHasEmptyCollapsedBorders();
     void setHasEmptyCollapsedBorder(CollapsedBorderSide, bool empty) const;
 
+    inline bool isOrthogonal() const;
+
+    bool isComputingPreferredSize() const { return m_isComputingPreferredSize; }
+
+protected:
+    LogicalExtentComputedValues computeLogicalHeight(LayoutUnit logicalHeight, LayoutUnit logicalTop) const override;
+
 private:
-    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
+    void styleDidChange(Style::Difference, const RenderStyle* oldStyle) override;
     void computePreferredLogicalWidths() override;
 
     LayoutRect frameRectForStickyPositioning() const override;
@@ -185,6 +195,8 @@ private:
 
     Style::PreferredSize logicalWidthFromColumns(RenderTableCol* firstColForThisCell, const Style::PreferredSize& widthFromStyle) const;
 
+    CollapsedBorderValue emptyBorder() const;
+
     void updateColAndRowSpanFlags();
 
     unsigned parseRowSpanFromDOM() const;
@@ -204,8 +216,10 @@ private:
     mutable unsigned m_hasEmptyCollapsedAfterBorder: 1;
     mutable unsigned m_hasEmptyCollapsedStartBorder: 1;
     mutable unsigned m_hasEmptyCollapsedEndBorder: 1;
+    bool m_isComputingPreferredSize { false };
     LayoutUnit m_intrinsicPaddingBefore { 0 };
     LayoutUnit m_intrinsicPaddingAfter { 0 };
+    mutable std::optional<LayoutUnit> m_orthogonalCellContentIntrinsicHeight;
 };
 
 inline RenderTableCell* RenderTableCell::nextCell() const
@@ -259,6 +273,11 @@ inline RenderTable* RenderTableCell::table() const
     if (!section)
         return nullptr;
     return downcast<RenderTable>(section->parent());
+}
+
+inline CheckedPtr<RenderTable> RenderTableCell::checkedTable() const
+{
+    return table();
 }
 
 inline unsigned RenderTableCell::rowIndex() const

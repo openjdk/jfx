@@ -26,19 +26,19 @@
 
 #pragma once
 
-#include "AdvancedPrivacyProtections.h"
-#include "CertificateInfo.h"
-#include "ContentSecurityPolicyResponseHeaders.h"
-#include "CrossOriginEmbedderPolicy.h"
-#include "FetchOptions.h"
-#include "ResourceError.h"
-#include "ResourceRequest.h"
-#include "ResourceResponse.h"
-#include "ScriptBuffer.h"
-#include "ScriptExecutionContextIdentifier.h"
-#include "ServiceWorkerRegistrationData.h"
-#include "ThreadableLoader.h"
-#include "ThreadableLoaderClient.h"
+#include <WebCore/AdvancedPrivacyProtections.h>
+#include <WebCore/CertificateInfo.h>
+#include <WebCore/ContentSecurityPolicyResponseHeaders.h>
+#include <WebCore/CrossOriginEmbedderPolicy.h>
+#include <WebCore/FetchOptions.h>
+#include <WebCore/ResourceError.h>
+#include <WebCore/ResourceRequest.h>
+#include <WebCore/ResourceResponse.h>
+#include <WebCore/ScriptBuffer.h>
+#include <WebCore/ScriptExecutionContextIdentifier.h>
+#include <WebCore/ServiceWorkerRegistrationData.h>
+#include <WebCore/ThreadableLoader.h>
+#include <WebCore/ThreadableLoaderClient.h>
 #include <memory>
 #include <wtf/OptionSet.h>
 #include <wtf/RefCounted.h>
@@ -59,11 +59,11 @@ enum class CertificateInfoPolicy : uint8_t;
 
 class WorkerScriptLoader final : public RefCounted<WorkerScriptLoader>, public ThreadableLoaderClient {
     WTF_MAKE_TZONE_ALLOCATED(WorkerScriptLoader);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(WorkerScriptLoader);
 public:
-    static Ref<WorkerScriptLoader> create()
+    enum class AlwaysUseUTF8 : bool { No, Yes };
+    static Ref<WorkerScriptLoader> create(AlwaysUseUTF8 alwaysUseUTF8 = AlwaysUseUTF8::No)
     {
-        return adoptRef(*new WorkerScriptLoader);
+        return adoptRef(*new WorkerScriptLoader(alwaysUseUTF8));
     }
 
     enum class Source : uint8_t { ClassicWorkerScript, ClassicWorkerImport, ModuleScript };
@@ -72,6 +72,10 @@ public:
     void loadAsynchronously(ScriptExecutionContext&, ResourceRequest&&, Source, FetchOptions&&, ContentSecurityPolicyEnforcement, ServiceWorkersMode, WorkerScriptLoaderClient&, String&& taskMode, std::optional<ScriptExecutionContextIdentifier> clientIdentifier = std::nullopt);
 
     void notifyError(std::optional<ScriptExecutionContextIdentifier>);
+
+    // ThreadableLoaderClient.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     OptionSet<AdvancedPrivacyProtections> advancedPrivacyProtections() const { return m_advancedPrivacyProtections; }
 
@@ -131,7 +135,7 @@ private:
     friend class RefCounted<WorkerScriptLoader>;
     friend struct std::default_delete<WorkerScriptLoader>;
 
-    WorkerScriptLoader();
+    explicit WorkerScriptLoader(AlwaysUseUTF8);
     ~WorkerScriptLoader();
 
     std::unique_ptr<ResourceRequest> createResourceRequest(const String& initiatorIdentifier);
@@ -151,6 +155,7 @@ private:
     String m_referrerPolicy;
     CrossOriginEmbedderPolicy m_crossOriginEmbedderPolicy;
     Markable<ResourceLoaderIdentifier> m_identifier;
+    bool m_alwaysUseUTF8 { false };
     bool m_failed { false };
     bool m_finishing { false };
     bool m_isRedirected { false };

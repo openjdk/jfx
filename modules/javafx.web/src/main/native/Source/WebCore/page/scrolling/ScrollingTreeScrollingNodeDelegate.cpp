@@ -45,27 +45,27 @@ ScrollingTreeScrollingNodeDelegate::~ScrollingTreeScrollingNodeDelegate() = defa
 
 RefPtr<ScrollingTree> ScrollingTreeScrollingNodeDelegate::scrollingTree() const
 {
-    return protectedScrollingNode()->scrollingTree();
+    return scrollingNode()->scrollingTree();
 }
 
 FloatPoint ScrollingTreeScrollingNodeDelegate::lastCommittedScrollPosition() const
 {
-    return protectedScrollingNode()->lastCommittedScrollPosition();
+    return scrollingNode()->lastCommittedScrollPosition();
 }
 
 FloatSize ScrollingTreeScrollingNodeDelegate::totalContentsSize()
 {
-    return protectedScrollingNode()->totalContentsSize();
+    return scrollingNode()->totalContentsSize();
 }
 
 FloatSize ScrollingTreeScrollingNodeDelegate::reachableContentsSize()
 {
-    return protectedScrollingNode()->reachableContentsSize();
+    return scrollingNode()->reachableContentsSize();
 }
 
 IntPoint ScrollingTreeScrollingNodeDelegate::scrollOrigin() const
 {
-    return protectedScrollingNode()->scrollOrigin();
+    return scrollingNode()->scrollOrigin();
 }
 
 } // namespace WebCore

@@ -31,13 +31,16 @@
 #include <atomic>
 #include <wtf/Forward.h>
 #include <wtf/HashSet.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/StringHash.h>
 
 namespace WebCore {
 
-class DNSResolveQueue {
-    friend NeverDestroyed<DNSResolveQueue>;
+class DNSResolveQueue : public CanMakeCheckedPtr<DNSResolveQueue> {
+    WTF_MAKE_TZONE_ALLOCATED(DNSResolveQueue);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DNSResolveQueue);
 
+    friend NeverDestroyed<DNSResolveQueue>;
 public:
     virtual ~DNSResolveQueue() = default;
 

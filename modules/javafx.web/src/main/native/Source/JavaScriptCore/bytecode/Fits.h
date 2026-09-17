@@ -45,25 +45,28 @@ enum FitsAssertion {
 };
 
 // Fits template
-template<typename, OpcodeSize, typename = std::true_type>
+template<typename, OpcodeSize>
 struct Fits;
 
 // Implicit conversion for types of the same size
 template<typename T, OpcodeSize size>
-struct Fits<T, size, std::enable_if_t<sizeof(T) == size && std::is_constructible<T>::value, std::true_type>> {
+    requires (sizeof(T) == size && std::is_constructible_v<T>)
+struct Fits<T, size> {
     using TargetType = typename TypeBySize<size>::unsignedType;
 
     static bool check(T) { return true; }
 
     static TargetType convert(T t) { return std::bit_cast<TargetType>(t); }
 
-    template<class T1 = T, OpcodeSize size1 = size, typename = std::enable_if_t<!std::is_same<T1, TargetType>::value, std::true_type>>
+    template<class T1 = T, OpcodeSize size1 = size>
+        requires (!std::same_as<T1, TargetType>)
     static T1 convert(TargetType t) { return std::bit_cast<T1>(t); }
 };
 
 template<typename T, OpcodeSize size>
-struct Fits<T, size, std::enable_if_t<std::is_integral<T>::value && sizeof(T) != size && !std::is_same<bool, T>::value, std::true_type>> {
-    using TargetType = std::conditional_t<std::is_unsigned<T>::value, typename TypeBySize<size>::unsignedType, typename TypeBySize<size>::signedType>;
+    requires (std::integral<T> && sizeof(T) != size && !std::same_as<T, bool>)
+struct Fits<T, size> {
+    using TargetType = std::conditional_t<std::is_unsigned_v<T>, typename TypeBySize<size>::unsignedType, typename TypeBySize<size>::signedType>;
 
     static bool check(T t)
     {
@@ -76,12 +79,14 @@ struct Fits<T, size, std::enable_if_t<std::is_integral<T>::value && sizeof(T) !=
         return static_cast<TargetType>(t);
     }
 
-    template<class T1 = T, OpcodeSize size1 = size, typename TargetType1 = TargetType, typename = std::enable_if_t<!std::is_same<T1, TargetType1>::value, std::true_type>>
+    template<class T1 = T, OpcodeSize size1 = size, typename TargetType1 = TargetType>
+        requires (!std::same_as<T1, TargetType1>)
     static T1 convert(TargetType1 t) { return static_cast<T1>(t); }
 };
 
 template<OpcodeSize size>
-struct Fits<bool, size, std::enable_if_t<size != sizeof(bool), std::true_type>> : public Fits<uint8_t, size> {
+    requires (size != sizeof(bool))
+struct Fits<bool, size> : public Fits<uint8_t, size> {
     using Base = Fits<uint8_t, size>;
 
     static bool check(bool e) { return Base::check(static_cast<uint8_t>(e)); }
@@ -111,7 +116,8 @@ struct FirstConstant<OpcodeSize::Wide16> {
 };
 
 template<OpcodeSize size>
-struct Fits<VirtualRegister, size, std::enable_if_t<size != OpcodeSize::Wide32, std::true_type>> {
+    requires (size != OpcodeSize::Wide32)
+struct Fits<VirtualRegister, size> {
     // Narrow:
     // -128..-1  local variables
     //    0..15  arguments
@@ -150,7 +156,8 @@ struct Fits<VirtualRegister, size, std::enable_if_t<size != OpcodeSize::Wide32, 
 };
 
 template<OpcodeSize size>
-struct Fits<SymbolTableOrScopeDepth, size, std::enable_if_t<size != OpcodeSize::Wide32, std::true_type>> : public Fits<unsigned, size> {
+    requires (size != OpcodeSize::Wide32)
+struct Fits<SymbolTableOrScopeDepth, size> : public Fits<unsigned, size> {
     static_assert(sizeof(SymbolTableOrScopeDepth) == sizeof(unsigned));
     using TargetType = typename TypeBySize<size>::unsignedType;
     using Base = Fits<unsigned, size>;
@@ -169,7 +176,8 @@ struct Fits<SymbolTableOrScopeDepth, size, std::enable_if_t<size != OpcodeSize::
 };
 
 template<OpcodeSize size>
-struct Fits<GetPutInfo, size, std::enable_if_t<size != OpcodeSize::Wide32, std::true_type>> {
+    requires (size != OpcodeSize::Wide32)
+struct Fits<GetPutInfo, size> {
     using TargetType = typename TypeBySize<size>::unsignedType;
 
     // 13 Resolve Types
@@ -259,7 +267,8 @@ struct Fits<PutByIdFlags, size> {
 };
 
 template<typename E, OpcodeSize size>
-struct Fits<E, size, std::enable_if_t<sizeof(E) != size && std::is_enum<E>::value, std::true_type>> : public Fits<std::underlying_type_t<E>, size> {
+    requires (sizeof(E) != size && std::is_enum_v<E>)
+struct Fits<E, size> : public Fits<std::underlying_type_t<E>, size> {
     using Base = Fits<std::underlying_type_t<E>, size>;
 
     static bool check(E e) { return Base::check(static_cast<std::underlying_type_t<E>>(e)); }
@@ -276,7 +285,8 @@ struct Fits<E, size, std::enable_if_t<sizeof(E) != size && std::is_enum<E>::valu
 };
 
 template<OpcodeSize size>
-struct Fits<ResultType, size, std::enable_if_t<sizeof(ResultType) != size, std::true_type>> : public Fits<uint8_t, size> {
+    requires (sizeof(ResultType) != size)
+struct Fits<ResultType, size> : public Fits<uint8_t, size> {
     static_assert(sizeof(ResultType) == sizeof(uint8_t));
     using Base = Fits<uint8_t, size>;
 
@@ -288,7 +298,8 @@ struct Fits<ResultType, size, std::enable_if_t<sizeof(ResultType) != size, std::
 };
 
 template<OpcodeSize size>
-struct Fits<OperandTypes, size, std::enable_if_t<sizeof(OperandTypes) != size, std::true_type>> {
+    requires (sizeof(OperandTypes) != size)
+struct Fits<OperandTypes, size> {
     static_assert(sizeof(OperandTypes) == sizeof(uint16_t));
     using TargetType = typename TypeBySize<size>::unsignedType;
 

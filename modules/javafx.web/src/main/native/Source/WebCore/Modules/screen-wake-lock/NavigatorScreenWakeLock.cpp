@@ -26,6 +26,7 @@
 #include "config.h"
 #include "NavigatorScreenWakeLock.h"
 
+#include "ContextDestructionObserverInlines.h"
 #include "Document.h"
 #include "Navigator.h"
 #include "WakeLock.h"
@@ -44,18 +45,13 @@ NavigatorScreenWakeLock::~NavigatorScreenWakeLock() = default;
 
 NavigatorScreenWakeLock* NavigatorScreenWakeLock::from(Navigator& navigator)
 {
-    auto* supplement = static_cast<NavigatorScreenWakeLock*>(Supplement<Navigator>::from(&navigator, supplementName()));
+    auto* supplement = downcast<NavigatorScreenWakeLock>(Supplement<Navigator>::from(&navigator, supplementName()));
     if (!supplement) {
         auto newSupplement = makeUnique<NavigatorScreenWakeLock>(navigator);
         supplement = newSupplement.get();
-        provideTo(&navigator, supplementName(), WTFMove(newSupplement));
+        provideTo(&navigator, supplementName(), WTF::move(newSupplement));
     }
     return supplement;
-}
-
-ASCIILiteral NavigatorScreenWakeLock::supplementName()
-{
-    return "NavigatorScreenWakeLock"_s;
 }
 
 WakeLock& NavigatorScreenWakeLock::wakeLock(Navigator& navigator)

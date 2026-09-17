@@ -42,7 +42,7 @@ namespace JSC { namespace B3 { namespace Air {
 namespace {
 
 template<typename BankInfo>
-void marshallCCallArgumentImpl(Vector<Arg>& result, unsigned& argumentCount, unsigned& stackOffset, Type childType)
+void marshallCCallArgumentImpl(Vector<Arg>& result, unsigned& argumentCount, Value::OffsetType& stackOffset, Type childType)
 {
     const auto registerCount = cCallArgumentRegisterCount(childType);
     if constexpr (is32Bit())
@@ -81,7 +81,7 @@ void marshallCCallArgumentImpl(Vector<Arg>& result, unsigned& argumentCount, uns
 }
 
 
-void marshallCCallArgument(Vector<Arg> &result, unsigned& gpArgumentCount, unsigned& fpArgumentCount, unsigned& stackOffset, Type childType)
+void marshallCCallArgument(Vector<Arg> &result, unsigned& gpArgumentCount, unsigned& fpArgumentCount, Value::OffsetType& stackOffset, Type childType)
 {
     switch (bankForType(childType)) {
     case GP:
@@ -102,7 +102,7 @@ Vector<Arg> computeCCallingConvention(Code& code, CCallValue* value)
     result.append(Tmp(CCallSpecial::scratchRegister)); // For callee
     unsigned gpArgumentCount = 0;
     unsigned fpArgumentCount = 0;
-    unsigned stackOffset = 0;
+    Value::OffsetType stackOffset = 0;
     for (unsigned i = 1; i < value->numChildren(); ++i)
         marshallCCallArgument(result, gpArgumentCount, fpArgumentCount, stackOffset, value->child(i)->type());
     code.requestCallArgAreaSizeInBytes(WTF::roundUpToMultipleOf<stackAlignmentBytes()>(stackOffset));
@@ -250,7 +250,7 @@ Value* ArgumentValueList::makeCCallValue(B3::BasicBlock* block, Type type, Air::
         type,
         Origin(),
         block->appendNew<Value>(procedure, FramePointer, Origin()),
-        arg.offset() + 2 * sizeof(void*)
+        arg.offset() + static_cast<int32_t>(2 * sizeof(void*))
     );
 }
 
@@ -292,7 +292,7 @@ ArgumentValueList computeCCallArguments(Procedure& procedure, B3::BasicBlock* bl
     Vector<unsigned> argUnderlyingCounts;
     unsigned gpArgumentCount = 0;
     unsigned fpArgumentCount = 0;
-    unsigned stackOffset = 0;
+    Value::OffsetType stackOffset = 0;
 
     for (auto type : types) {
         argUnderlyingCounts.append(underlyingArgs.size());
@@ -309,7 +309,7 @@ ArgumentValueList computeCCallArguments(Procedure& procedure, B3::BasicBlock* bl
         marshallCCallArgument(underlyingArgs, gpArgumentCount, fpArgumentCount, stackOffset, type);
     }
 
-    return ArgumentValueList { procedure, block, types, WTFMove(underlyingArgs), WTFMove(argUnderlyingCounts) };
+    return ArgumentValueList { procedure, block, types, WTF::move(underlyingArgs), WTF::move(argUnderlyingCounts) };
 }
 
 } } } // namespace JSC::B3::Air

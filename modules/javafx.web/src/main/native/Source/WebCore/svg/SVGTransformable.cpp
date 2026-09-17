@@ -74,7 +74,7 @@ std::optional<SVGTransformValue::SVGTransformType> SVGTransformable::parseTransf
     });
 }
 
-std::optional<SVGTransformValue::SVGTransformType> SVGTransformable::parseTransformType(StringParsingBuffer<LChar>& buffer)
+std::optional<SVGTransformValue::SVGTransformType> SVGTransformable::parseTransformType(StringParsingBuffer<Latin1Character>& buffer)
 {
     return parseTransformTypeGeneric(buffer);
 }

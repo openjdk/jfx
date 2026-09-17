@@ -23,7 +23,7 @@
 
 #pragma once
 
-#include "LightSource.h"
+#include <WebCore/LightSource.h>
 #include <wtf/Ref.h>
 
 namespace WebCore {

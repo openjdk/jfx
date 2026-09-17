@@ -26,7 +26,8 @@
 [
     Conditional=MEDIA_SESSION,
     JSGenerateToJSObject,
-    JSGenerateToNativeObject
+    JSGenerateToNativeObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary MediaImage {
     required USVString src;
     DOMString sizes = "";

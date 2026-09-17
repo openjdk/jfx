@@ -42,7 +42,7 @@ enum class ContactProperty : uint8_t;
 struct ContactsSelectOptions;
 
 class ContactsManager final : public RefCountedAndCanMakeWeakPtr<ContactsManager> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(ContactsManager);
+    WTF_MAKE_TZONE_ALLOCATED(ContactsManager);
 public:
     static Ref<ContactsManager> create(Navigator&);
     ~ContactsManager();

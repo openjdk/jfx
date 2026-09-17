@@ -65,7 +65,7 @@ template<typename ReturnType> inline CallbackResult<ReturnType>::CallbackResult(
 }
 
 template<typename ReturnType> inline CallbackResult<ReturnType>::CallbackResult(ReturnType&& returnValue)
-    : m_value(WTFMove(returnValue))
+    : m_value(WTF::move(returnValue))
 {
 }
 
@@ -77,7 +77,7 @@ template<typename ReturnType> inline CallbackResultType CallbackResult<ReturnTyp
 template<typename ReturnType> inline auto CallbackResult<ReturnType>::releaseReturnValue() -> ReturnType&&
 {
     ASSERT(m_value.has_value());
-    return WTFMove(m_value.value());
+    return WTF::move(m_value.value());
 }
 
 

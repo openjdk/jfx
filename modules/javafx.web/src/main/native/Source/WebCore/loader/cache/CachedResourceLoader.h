@@ -25,15 +25,15 @@
 
 #pragma once
 
-#include "CachedResource.h"
-#include "CachedResourceHandle.h"
-#include "CachedResourceRequest.h"
-#include "ContentSecurityPolicy.h"
-#include "Document.h"
-#include "KeepaliveRequestTracker.h"
-#include "MixedContentChecker.h"
-#include "ResourceTimingInformation.h"
-#include "Timer.h"
+#include <WebCore/CachedResource.h>
+#include <WebCore/CachedResourceHandle.h>
+#include <WebCore/CachedResourceRequest.h>
+#include <WebCore/ContentSecurityPolicy.h>
+#include <WebCore/Document.h>
+#include <WebCore/KeepaliveRequestTracker.h>
+#include <WebCore/MixedContentChecker.h>
+#include <WebCore/ResourceTimingInformation.h>
+#include <WebCore/Timer.h>
 #include <wtf/CheckedPtr.h>
 #include <wtf/Expected.h>
 #include <wtf/HashMap.h>
@@ -175,7 +175,7 @@ public:
 
     ResourceTimingInformation& resourceTimingInformation() { return m_resourceTimingInfo; }
 
-    KeepaliveRequestTracker& keepaliveRequestTracker() { return m_keepaliveRequestTracker; }
+    KeepaliveRequestTracker& keepaliveRequestTracker() { return m_keepaliveRequestTracker.get(); }
 
     Vector<CachedResourceHandle<CachedResource>> visibleResourcesToPrioritize();
 
@@ -231,7 +231,7 @@ private:
     Timer m_garbageCollectDocumentResourcesTimer;
 
     ResourceTimingInformation m_resourceTimingInfo;
-    KeepaliveRequestTracker m_keepaliveRequestTracker;
+    const Ref<KeepaliveRequestTracker> m_keepaliveRequestTracker;
 
     bool m_autoLoadImages { true };
     bool m_imagesEnabled { true };

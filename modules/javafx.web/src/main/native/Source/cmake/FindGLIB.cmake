@@ -1,24 +1,4 @@
-# - Try to find Glib and its components (gio, gobject etc)
-# Once done, this will define
-#
-#  GLIB_FOUND - system has Glib
-#  GLIB_INCLUDE_DIRS - the Glib include directories
-#  GLIB_LIBRARIES - link these to use Glib
-#
-# Optionally, the COMPONENTS keyword can be passed to find_package()
-# and Glib components can be looked for.  Currently, the following
-# components can be used, and they define the following variables if
-# found:
-#
-#  gio:             GLIB_GIO_LIBRARIES
-#  gobject:         GLIB_GOBJECT_LIBRARIES
-#  gmodule:         GLIB_GMODULE_LIBRARIES
-#  gthread:         GLIB_GTHREAD_LIBRARIES
-#
-# Note that the respective _INCLUDE_DIR variables are not set, since
-# all headers are in the same directory as GLIB_INCLUDE_DIRS.
-#
-# Copyright (C) 2012 Raphael Kubo da Costa <rakuco@webkit.org>
+# Copyright (C) 2025 Igalia S.L.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -41,82 +21,202 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#[=======================================================================[.rst:
+FindGLib
+--------
+
+Find the GLib headers and libraries.
+
+Optional Components
+^^^^^^^^^^^^^^^^^^^
+
+The ``COMPONENTS`` (or ``OPTIONAL_COMPONENTS``) keyword can be passed to
+``find_package()``, the followin GLib components can be searched for:
+
+- ``Module``
+- ``Object``
+- ``Thread``
+- ``Gio``
+- ``GioUnix``
+
+For each one of the requested components, a matching target with the
+``GLib::`` prefix will be defined.
+
+Imported Targets
+^^^^^^^^^^^^^^^^
+
+``GLib::GLib``
+  The GLib library; if found.
+``GLib::Module``
+  The GLib dynamic module loader library; if found. This is an optional
+  component.
+``GLib::Object``
+  The GLib object, parameter, and signal library; if found. This is an
+  optional component.
+``GLib::Thread``
+  The GLib threading support library; if found. This is an optional
+  component.
+``GLib::Gio``
+  The GLib input/output library; if found. This is an optional component.
+``GLib::GioUnix``
+  Unix additions to the GLib input/output library; if found. This is an
+  optional component.
+
+Note that targets are aware of their dependencies. For example ``GLib::Gio``
+requires ``GLib::Object``, and targets linking against ``GLib::Gio`` do _not_
+need to also specify ``GLib::Object`` manually.
+
+Result Variables
+^^^^^^^^^^^^^^^^
+
+This will define the following variables in your project:
+
+``GLib_FOUND``
+  true if (the requested version of) GLib is available.
+``GLib_VERSION``
+  Version of GLib and its components.
+``GLib_Module_FOUND``
+  true if the optional ``Module`` component is available.
+``GLib_Object_FOUND``
+  true if the optional ``Object`` component is available.
+``GLib_Thread_FOUND``
+  true if the optional ``Thread`` component is available.
+``GLib_Gio_FOUND``
+  true if the optional ``Gio`` component is available.
+``GLib_GioUnix_FOUND``
+  true if the optional ``GioUnix`` component is available.
+
+#]=======================================================================]
+
 find_package(PkgConfig QUIET)
-pkg_check_modules(PC_GLIB QUIET glib-2.0)
+pkg_check_modules(PC_GLib QUIET glib-2.0)
+set(GLib_COMPILE_OPTIONS ${PC_GLib_CFLAGS_OTHER})
+set(GLib_VERSION ${PC_GLib_VERSION})
 
-find_library(GLIB_LIBRARIES
+find_library(GLib_LIBRARY
     NAMES glib-2.0
-    HINTS ${PC_GLIB_LIBDIR}
-          ${PC_GLIB_LIBRARY_DIRS}
+    HINTS ${PC_GLib_LIBDIR}
+          ${PC_GLib_LIBRARY_DIRS}
 )
 
-# Files in glib's main include path may include glibconfig.h, which,
-# for some odd reason, is normally in $LIBDIR/glib-2.0/include.
-get_filename_component(_GLIB_LIBRARY_DIR ${GLIB_LIBRARIES} PATH)
-find_path(GLIBCONFIG_INCLUDE_DIR
-    NAMES glibconfig.h
-    HINTS ${PC_LIBDIR} ${PC_LIBRARY_DIRS} ${_GLIB_LIBRARY_DIR}
-          ${PC_GLIB_INCLUDEDIR} ${PC_GLIB_INCLUDE_DIRS}
-    PATH_SUFFIXES glib-2.0/include
-)
-
-find_path(GLIB_INCLUDE_DIR
+find_path(GLib_INCLUDE_DIR
     NAMES glib.h
-    HINTS ${PC_GLIB_INCLUDEDIR}
-          ${PC_GLIB_INCLUDE_DIRS}
+    HINTS ${PC_GLib_INCLUDEDIR}
+          ${PC_GLib_INCLUDE_DIRS}
     PATH_SUFFIXES glib-2.0
 )
 
-set(GLIB_INCLUDE_DIRS ${GLIB_INCLUDE_DIR} ${GLIBCONFIG_INCLUDE_DIR})
+# The glibconfig.h file is usually installed under $PREFIX/lib/glib-2.0
+# instead of $PREFIX/include/glib-2.0, but the needed include path will
+# be provided by pkg-config, so we can use the same set of HINTS here,
+# plus a path derived from the location of the library.
+cmake_path(REPLACE_FILENAME GLib_LIBRARY
+    OUTPUT_VARIABLE GLib_LIBRARY_DIR)
+cmake_path(APPEND GLib_LIBRARY_DIR
+    glib-2.0 include
+    OUTPUT_VARIABLE GLib_Config_LIBDIR_INCLUDE_HINT)
 
-# Version detection
-if (EXISTS "${GLIBCONFIG_INCLUDE_DIR}/glibconfig.h")
-    file(READ "${GLIBCONFIG_INCLUDE_DIR}/glibconfig.h" GLIBCONFIG_H_CONTENTS)
-    string(REGEX MATCH "#define GLIB_MAJOR_VERSION ([0-9]+)" _dummy "${GLIBCONFIG_H_CONTENTS}")
-    set(GLIB_VERSION_MAJOR "${CMAKE_MATCH_1}")
-    string(REGEX MATCH "#define GLIB_MINOR_VERSION ([0-9]+)" _dummy "${GLIBCONFIG_H_CONTENTS}")
-    set(GLIB_VERSION_MINOR "${CMAKE_MATCH_1}")
-    string(REGEX MATCH "#define GLIB_MICRO_VERSION ([0-9]+)" _dummy "${GLIBCONFIG_H_CONTENTS}")
-    set(GLIB_VERSION_MICRO "${CMAKE_MATCH_1}")
-    set(GLIB_VERSION "${GLIB_VERSION_MAJOR}.${GLIB_VERSION_MINOR}.${GLIB_VERSION_MICRO}")
+find_path(GLib_Config_INCLUDE_DIR
+    NAMES glibconfig.h
+    HINTS ${PC_GLib_INCLUDEDIR}
+          ${PC_GLib_INCLUDE_DIRS}
+          ${GLib_Config_LIBDIR_INCLUDE_HINT}
+)
+
+set(GLib_INCLUDE_DIRS "${GLib_INCLUDE_DIR};${GLib_Config_INCLUDE_DIR}")
+
+if (NOT GLib_VERSION AND EXISTS "${GLib_Config_INCLUDE_DIR}/glibconfig.h")
+    file(READ "${GLib_Config_INCLUDE_DIR}/glibconfig.h" GLib_Config_CONTENT)
+
+    string(REGEX MATCH "#define +GLIB_MAJOR_VERSION +([0-9]+)" _dummy "${GLib_Config_CONTENT")
+    set(GLib_VERSION_MAJOR "${CMAKE_MATCH_1}")
+
+    string(REGEX MATCH "#define +GLIB_MINOR_VERSION +([0-9]+)" _dummy "${GLib_Config_CONTENT")
+    set(GLib_VERSION_MINOR "${CMAKE_MATCH_1}")
+
+    string(REGEX MATCH "#define +GLIB_MICRO_VERSION +([0-9]+)" _dummy "${GLib_Config_CONTENT")
+    set(GLib_VERSION_MICRO "${CMAKE_MATCH_1}")
+
+    set(GLib_VERSION "${GLib_VERSION_MAJOR}.${GLib_VERSION_MINOR}.${GLib_VERSION_MICRO}")
 endif ()
 
-# Additional Glib components.  We only look for libraries, as not all of them
-# have corresponding headers and all headers are installed alongside the main
-# glib ones.
-foreach (_component ${GLIB_FIND_COMPONENTS})
-    if (${_component} STREQUAL "gio")
-        find_library(GLIB_GIO_LIBRARIES NAMES gio-2.0 HINTS ${_GLIB_LIBRARY_DIR})
-        set(ADDITIONAL_REQUIRED_VARS ${ADDITIONAL_REQUIRED_VARS} GLIB_GIO_LIBRARIES)
-    elseif (${_component} STREQUAL "gobject")
-        find_library(GLIB_GOBJECT_LIBRARIES NAMES gobject-2.0 HINTS ${_GLIB_LIBRARY_DIR})
-        set(ADDITIONAL_REQUIRED_VARS ${ADDITIONAL_REQUIRED_VARS} GLIB_GOBJECT_LIBRARIES)
-    elseif (${_component} STREQUAL "gmodule")
-        find_library(GLIB_GMODULE_LIBRARIES NAMES gmodule-2.0 HINTS ${_GLIB_LIBRARY_DIR})
-        set(ADDITIONAL_REQUIRED_VARS ${ADDITIONAL_REQUIRED_VARS} GLIB_GMODULE_LIBRARIES)
-    elseif (${_component} STREQUAL "gthread")
-        find_library(GLIB_GTHREAD_LIBRARIES NAMES gthread-2.0 HINTS ${_GLIB_LIBRARY_DIR})
-        set(ADDITIONAL_REQUIRED_VARS ${ADDITIONAL_REQUIRED_VARS} GLIB_GTHREAD_LIBRARIES)
-    elseif (${_component} STREQUAL "gio-unix")
-        # gio-unix is compiled as part of the gio library, but the include paths
-        # are separate from the shared glib ones. Since this is currently only used
-        # by WebKitGTK we don't go to extraordinary measures beyond pkg-config.
-        pkg_check_modules(GIO_UNIX QUIET gio-unix-2.0)
+if (GLib_LIBRARY AND NOT TARGET GLib::GLib)
+    add_library(GLib::GLib UNKNOWN IMPORTED GLOBAL)
+    set_target_properties(GLib::GLib PROPERTIES
+        IMPORTED_LOCATION "${GLib_LIBRARY}"
+        INTERFACE_COMPILE_OPTIONS "${GLib_COMPILE_OPTIONS}"
+        INTERFACE_INCLUDE_DIRECTORIES "${GLib_INCLUDE_DIRS}"
+    )
+endif ()
+
+macro(GLib_DeclareComponent name module library)
+    set(GLib_${name}__module "${module}")
+    set(GLib_${name}__library "${library}")
+    set(GLib_${name}__dependencies "${ARGN}")
+endmacro()
+
+function(GLib_HandleComponent name)
+    if (TARGET GLib::${name})
+        set(GLib_${name}_FOUND TRUE PARENT_SCOPE)
+        return()
     endif ()
+
+    set(module "${GLib_${name}__module}")
+    set(library "${GLib_${name}__library}")
+    set(dependencies "${GLib_${name}__dependencies}")
+
+    if (NOT dependencies)
+        set(dependencies GLib)
+    endif ()
+
+    foreach (depname IN LISTS dependencies)
+        GLib_HandleComponent(${depname})
+        set(GLib_${depname}_FOUND "${GLib_${depname}_FOUND}" PARENT_SCOPE)
+    endforeach ()
+
+    pkg_check_modules(PC_GLib_${name} QUIET ${module})
+
+    find_library(GLib_${name}_LIBRARY
+        NAMES ${library}
+        HINTS ${PC_GLib_LIBDIR}
+              ${PC_GLib_LIBRARY_DIRS}
+              ${PC_GLib_${name}_LIBDIR}
+              ${PC_GLib_${name}_LIBRARY_DIRS}
+    )
+    if (NOT GLib_${name}_LIBRARY)
+        return()
+    endif ()
+
+    set(GLib_${name}_FOUND TRUE PARENT_SCOPE)
+    list(TRANSFORM dependencies PREPEND GLib::)
+    add_library(GLib::${name} UNKNOWN IMPORTED GLOBAL)
+    set_target_properties(GLib::${name} PROPERTIES IMPORTED_LOCATION "${GLib_${name}_LIBRARY}")
+    target_include_directories(GLib::${name} INTERFACE ${PC_GLib_${name}_INCLUDEDIR})
+    target_include_directories(GLib::${name} INTERFACE ${PC_GLib_${name}_INCLUDE_DIRS})
+    target_compile_options(GLib::${name} INTERFACE ${PC_GLib_${name}_CFLAGS})
+    target_compile_options(GLib::${name} INTERFACE ${PC_GLib_${name}_CFLAGS_OTHER})
+    target_link_libraries(GLib::${name} INTERFACE ${dependencies})
+endfunction()
+
+GLib_DeclareComponent(Module  gmodule-2.0  gmodule-2.0)
+GLib_DeclareComponent(Object  gobject-2.0  gobject-2.0)
+GLib_DeclareComponent(Thread  gthread-2.0  gthread-2.0)
+GLib_DeclareComponent(Gio     gio-2.0      gio-2.0 Object)
+GLib_DeclareComponent(GioUnix gio-unix-2.0 gio-2.0 Gio)
+
+foreach (component IN LISTS GLib_FIND_COMPONENTS)
+    GLib_HandleComponent(${component})
 endforeach ()
 
-include(FindPackageHandleStandardArgs)
-FIND_PACKAGE_HANDLE_STANDARD_ARGS(GLIB REQUIRED_VARS GLIB_INCLUDE_DIRS GLIB_LIBRARIES ${ADDITIONAL_REQUIRED_VARS}
-                                       VERSION_VAR   GLIB_VERSION)
-
 mark_as_advanced(
-    GLIBCONFIG_INCLUDE_DIR
-    GLIB_GIO_LIBRARIES
-    GLIB_GIO_UNIX_LIBRARIES
-    GLIB_GMODULE_LIBRARIES
-    GLIB_GOBJECT_LIBRARIES
-    GLIB_GTHREAD_LIBRARIES
-    GLIB_INCLUDE_DIR
-    GLIB_INCLUDE_DIRS
-    GLIB_LIBRARIES
+    GLib_INCLUDE_DIR
+    GLib_Config_INCLUDE_DIR
+    GLib_LIBRARY
+)
+
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(GLib
+    REQUIRED_VARS GLib_LIBRARY GLib_INCLUDE_DIRS
+    VERSION_VAR GLib_VERSION
+    HANDLE_COMPONENTS
 )

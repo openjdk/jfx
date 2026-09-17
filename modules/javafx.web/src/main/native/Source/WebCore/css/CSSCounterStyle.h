@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "CSSCounterStyleDescriptors.h"
-#include "WritingMode.h"
+#include <WebCore/CSSCounterStyleDescriptors.h>
+#include <WebCore/WritingMode.h>
 #include <wtf/Forward.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/WeakPtr.h>

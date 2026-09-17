@@ -27,8 +27,8 @@
 
 #if ENABLE(VIDEO) && USE(AVFOUNDATION)
 
-#include "ImageOrientation.h"
-#include "VideoFrame.h"
+#include <WebCore/ImageOrientation.h>
+#include <WebCore/VideoFrame.h>
 #include <wtf/ArgumentCoder.h>
 #include <wtf/RetainPtr.h>
 
@@ -54,7 +54,7 @@ public:
     bool isCV() const final { return true; }
 
 private:
-    friend struct IPC::ArgumentCoder<VideoFrameCV, void>;
+    friend struct IPC::ArgumentCoder<VideoFrameCV>;
     WEBCORE_EXPORT VideoFrameCV(MediaTime presentationTime, bool isMirrored, Rotation, RetainPtr<CVPixelBufferRef>&&, std::optional<PlatformVideoColorSpace>&&);
     VideoFrameCV(MediaTime presentationTime, bool isMirrored, Rotation, RetainPtr<CVPixelBufferRef>&&, PlatformVideoColorSpace&&);
 

@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "IDBActiveDOMObject.h"
-#include "IDBDatabaseNameAndVersion.h"
-#include "IDBResourceIdentifier.h"
+#include <WebCore/IDBActiveDOMObject.h>
+#include <WebCore/IDBDatabaseNameAndVersion.h>
+#include <WebCore/IDBResourceIdentifier.h>
 #include <wtf/Forward.h>
 #include <wtf/Function.h>
 #include <wtf/Ref.h>
@@ -43,7 +43,7 @@ class IDBConnectionProxy;
 }
 
 class IDBDatabaseNameAndVersionRequest final : public ThreadSafeRefCounted<IDBDatabaseNameAndVersionRequest>, public IDBActiveDOMObject {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(IDBDatabaseNameAndVersionRequest, WEBCORE_EXPORT);
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(IDBDatabaseNameAndVersionRequest, WEBCORE_EXPORT);
 public:
     using InfoCallback = Function<void(std::optional<Vector<IDBDatabaseNameAndVersion>>&&)>;
 

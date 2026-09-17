@@ -32,7 +32,6 @@
 #include "CSSStyleSheet.h"
 #include "DeprecatedCSSOMValue.h"
 #include "Document.h"
-#include "DocumentInlines.h"
 #include "HTMLNames.h"
 #include "InspectorInstrumentation.h"
 #include "JSDOMGlobalObject.h"
@@ -52,10 +51,10 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(CSSStyleProperties);
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(PropertySetCSSStyleProperties);
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(StyleRuleCSSStyleProperties);
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(InlineCSSStyleProperties);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CSSStyleProperties);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PropertySetCSSStyleProperties);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(StyleRuleCSSStyleProperties);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(InlineCSSStyleProperties);
 
 namespace {
 
@@ -533,7 +532,7 @@ RefPtr<DeprecatedCSSOMValue> PropertySetCSSStyleProperties::wrapForDeprecatedCSS
 
 StyleSheetContents* PropertySetCSSStyleProperties::contextStyleSheet() const
 {
-    CSSStyleSheet* cssStyleSheet = parentStyleSheet();
+    RefPtr cssStyleSheet = parentStyleSheet();
     return cssStyleSheet ? &cssStyleSheet->contents() : nullptr;
 }
 
@@ -587,9 +586,14 @@ CSSStyleSheet* StyleRuleCSSStyleProperties::parentStyleSheet() const
     return m_parentRule ? m_parentRule->parentStyleSheet() : nullptr;
 }
 
+CSSRule* StyleRuleCSSStyleProperties::parentRule() const
+{
+    return m_parentRule.get();
+}
+
 OptionalOrReference<CSSParserContext> StyleRuleCSSStyleProperties::cssParserContext() const
 {
-    auto* styleSheet = contextStyleSheet();
+    RefPtr styleSheet = contextStyleSheet();
     if (!styleSheet)
         return PropertySetCSSStyleProperties::cssParserContext();
 
@@ -630,6 +634,10 @@ void InlineCSSStyleProperties::didMutate(MutationType type)
     if (!m_parentElement)
         return;
 
+    // Inline style changes from JavaScript (e.g., element.style.color = 'red') need to set
+    // the mutation bit for innerHTML prefix cache invalidation, since they don't go through
+    // the normal attribute change notification path.
+    m_parentElement->setDidMutateSubtreeAfterSetInnerHTMLOnAncestors();
     m_parentElement->invalidateStyleAttribute();
     InspectorInstrumentation::didInvalidateStyleAttr(*m_parentElement);
 }

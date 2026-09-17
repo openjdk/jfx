@@ -47,11 +47,12 @@ public:
     template<typename CellType, SubspaceAccess mode>
     static CompleteSubspace* subspaceFor(VM& vm)
     {
-        return &vm.heap.variableSizedCellSpace;
+        return &vm.heap.cellSpace;
     }
 
     DECLARE_INFO;
 
+    static inline TypeInfoBlob typeInfoBlob();
     static inline WebAssemblyGCStructure* createStructure(VM&, JSGlobalObject*, Ref<const Wasm::TypeDefinition>&&, Ref<const Wasm::RTT>&&);
     static JSWebAssemblyStruct* tryCreate(VM&, WebAssemblyGCStructure*);
     static JSWebAssemblyStruct* create(VM&, WebAssemblyGCStructure*);
@@ -59,6 +60,7 @@ public:
     DECLARE_VISIT_CHILDREN;
 
     uint64_t get(uint32_t) const;
+    v128_t getVector(uint32_t) const;
     void set(uint32_t, uint64_t);
     void set(uint32_t, v128_t);
     const Wasm::TypeDefinition& typeDefinition() const { return gcStructure()->typeDefinition(); }
@@ -77,12 +79,18 @@ protected:
     DECLARE_DEFAULT_FINISH_CREATION;
 };
 
+
+TypeInfoBlob JSWebAssemblyStruct::typeInfoBlob()
+{
+    return TypeInfoBlob(0, TypeInfo(WebAssemblyGCObjectType, StructureFlags));
+}
+
 WebAssemblyGCStructure* JSWebAssemblyStruct::createStructure(VM& vm, JSGlobalObject* globalObject, Ref<const Wasm::TypeDefinition>&& unexpandedType, Ref<const Wasm::RTT>&& rtt)
 {
-    const Wasm::TypeDefinition& type = unexpandedType->expand();
+    Ref<const Wasm::TypeDefinition> type { unexpandedType->expand() };
+    RELEASE_ASSERT(type->is<Wasm::StructType>());
     RELEASE_ASSERT(rtt->kind() == Wasm::RTTKind::Struct);
-    RELEASE_ASSERT(type.is<Wasm::StructType>());
-    return WebAssemblyGCStructure::create(vm, globalObject, TypeInfo(WebAssemblyGCObjectType, StructureFlags), info(), WTFMove(unexpandedType), type, WTFMove(rtt));
+    return WebAssemblyGCStructure::create(vm, globalObject, TypeInfo(WebAssemblyGCObjectType, StructureFlags), info(), WTF::move(unexpandedType), WTF::move(type), WTF::move(rtt));
 }
 
 } // namespace JSC

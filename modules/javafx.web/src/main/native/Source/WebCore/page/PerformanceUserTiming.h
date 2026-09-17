@@ -27,8 +27,10 @@
 
 #include "PerformanceMark.h"
 #include "PerformanceMeasure.h"
+#include "PerformanceMeasureOptions.h"
 #include <wtf/HashMap.h>
 #include <wtf/TZoneMalloc.h>
+#include <wtf/WeakRef.h>
 #include <wtf/text/StringHash.h>
 
 namespace JSC {
@@ -38,6 +40,7 @@ class JSGlobalObject;
 namespace WebCore {
 
 class Performance;
+class WeakPtrImplWithEventTargetData;
 template<typename> class ExceptionOr;
 
 using PerformanceEntryMap = HashMap<String, Vector<Ref<PerformanceEntry>>>;

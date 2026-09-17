@@ -56,18 +56,12 @@ public:
 
     bool operator==(const TemplateObjectDescriptor& other) const { return m_hash == other.m_hash && m_rawStrings == other.m_rawStrings; }
 
-    struct Hasher {
-        static unsigned hash(const TemplateObjectDescriptor& key) { return key.hash(); }
-        static bool equal(const TemplateObjectDescriptor& a, const TemplateObjectDescriptor& b) { return a == b; }
-        static constexpr bool safeToCompareToEmptyOrDeleted = false;
-    };
-
     static unsigned calculateHash(const StringVector& rawStrings);
     ~TemplateObjectDescriptor();
 
     static Ref<TemplateObjectDescriptor> create(StringVector&& rawStrings, OptionalStringVector&& cookedStrings)
     {
-        return adoptRef(*new TemplateObjectDescriptor(WTFMove(rawStrings), WTFMove(cookedStrings)));
+        return adoptRef(*new TemplateObjectDescriptor(WTF::move(rawStrings), WTF::move(cookedStrings)));
     }
 
 private:
@@ -79,8 +73,8 @@ private:
 };
 
 inline TemplateObjectDescriptor::TemplateObjectDescriptor(StringVector&& rawStrings, OptionalStringVector&& cookedStrings)
-    : m_rawStrings(WTFMove(rawStrings))
-    , m_cookedStrings(WTFMove(cookedStrings))
+    : m_rawStrings(WTF::move(rawStrings))
+    , m_cookedStrings(WTF::move(cookedStrings))
     , m_hash(calculateHash(m_rawStrings))
 {
 }
@@ -110,10 +104,6 @@ inline unsigned TemplateObjectDescriptor::calculateHash(const StringVector& rawS
 } // namespace JSC
 
 namespace WTF {
-template<typename> struct DefaultHash;
-
-template<> struct DefaultHash<JSC::TemplateObjectDescriptor> : JSC::TemplateObjectDescriptor::Hasher { };
-
 template<> struct HashTraits<JSC::TemplateObjectDescriptor> : CustomHashTraits<JSC::TemplateObjectDescriptor> {
 };
 

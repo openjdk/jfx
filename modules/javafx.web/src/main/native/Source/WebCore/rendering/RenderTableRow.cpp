@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 1997 Martin Jones (mjones@kde.org)
  *           (C) 1997 Torben Weis (weis@kde.org)
  *           (C) 1998 Waldo Bastian (bastian@kde.org)
@@ -6,6 +6,7 @@
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  * Copyright (C) 2003-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2015 Google Inc. All rights reserved.
+ * Copyright (C) 2026 Samuel Weinig <sam@webkit.org>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -26,6 +27,7 @@
 #include "config.h"
 #include "RenderTableRow.h"
 
+#include "BackgroundPainter.h"
 #include "Document.h"
 #include "HTMLNames.h"
 #include "HitTestResult.h"
@@ -33,12 +35,12 @@
 #include "RenderBoxInlines.h"
 #include "RenderBoxModelObjectInlines.h"
 #include "RenderElementInlines.h"
+#include "RenderElementStyleInlines.h"
 #include "RenderLayoutState.h"
 #include "RenderObjectInlines.h"
 #include "RenderTableCell.h"
 #include "RenderTreeBuilder.h"
 #include "RenderView.h"
-#include "StyleInheritedData.h"
 #include <wtf/StackStats.h>
 #include <wtf/TZoneMallocInlines.h>
 
@@ -46,10 +48,10 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderTableRow);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderTableRow);
 
 RenderTableRow::RenderTableRow(Element& element, RenderStyle&& style)
-    : RenderBox(Type::TableRow, element, WTFMove(style))
+    : RenderBox(Type::TableRow, element, WTF::move(style))
     , m_rowIndex(unsetRowIndex)
 {
     setInline(false);
@@ -57,7 +59,7 @@ RenderTableRow::RenderTableRow(Element& element, RenderStyle&& style)
 }
 
 RenderTableRow::RenderTableRow(Document& document, RenderStyle&& style)
-    : RenderBox(Type::TableRow, document, WTFMove(style))
+    : RenderBox(Type::TableRow, document, WTF::move(style))
     , m_rowIndex(unsetRowIndex)
 {
     setInline(false);
@@ -80,13 +82,13 @@ void RenderTableRow::willBeRemovedFromTree()
 
 static bool borderWidthChanged(const RenderStyle* oldStyle, const RenderStyle* newStyle)
 {
-    return oldStyle->borderLeftWidth() != newStyle->borderLeftWidth()
-        || oldStyle->borderTopWidth() != newStyle->borderTopWidth()
-        || oldStyle->borderRightWidth() != newStyle->borderRightWidth()
-        || oldStyle->borderBottomWidth() != newStyle->borderBottomWidth();
+    return oldStyle->usedBorderLeftWidth() != newStyle->usedBorderLeftWidth()
+        || oldStyle->usedBorderTopWidth() != newStyle->usedBorderTopWidth()
+        || oldStyle->usedBorderRightWidth() != newStyle->usedBorderRightWidth()
+        || oldStyle->usedBorderBottomWidth() != newStyle->usedBorderBottomWidth();
 }
 
-void RenderTableRow::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
+void RenderTableRow::styleDidChange(Style::Difference diff, const RenderStyle* oldStyle)
 {
     ASSERT(style().display() == DisplayType::TableRow);
 
@@ -101,7 +103,7 @@ void RenderTableRow::styleDidChange(StyleDifference diff, const RenderStyle* old
         if (oldStyle)
             table->invalidateCollapsedBordersAfterStyleChangeIfNeeded(*oldStyle, style());
 
-        if (oldStyle && diff == StyleDifference::Layout && needsLayout() && table->collapseBorders() && borderWidthChanged(oldStyle, &style())) {
+        if (oldStyle && diff == Style::DifferenceResult::Layout && needsLayout() && table->collapseBorders() && borderWidthChanged(oldStyle, &style())) {
             // If the border width changes on a row, we need to make sure the cells in the row know to lay out again.
             // This only happens when borders are collapsed, since they end up affecting the border sides of the cell
             // itself.
@@ -231,10 +233,11 @@ bool RenderTableRow::nodeAtPoint(const HitTestRequest& request, HitTestResult& r
 
 void RenderTableRow::paintOutlineForRowIfNeeded(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
-    LayoutPoint adjustedPaintOffset = paintOffset + location();
     PaintPhase paintPhase = paintInfo.phase;
-    if ((paintPhase == PaintPhase::Outline || paintPhase == PaintPhase::SelfOutline) && style().usedVisibility() == Visibility::Visible)
+    if ((paintPhase == PaintPhase::Outline || paintPhase == PaintPhase::SelfOutline) && style().usedVisibility() == Visibility::Visible) {
+        auto adjustedPaintOffset = paintOffset + location();
         paintOutline(paintInfo, LayoutRect(adjustedPaintOffset, size()));
+    }
 }
 
 void RenderTableRow::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)

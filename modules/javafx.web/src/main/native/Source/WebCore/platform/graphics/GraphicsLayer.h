@@ -25,40 +25,43 @@
 
 #pragma once
 
-#include "Color.h"
-#include "EventRegion.h"
-#include "FilterOperations.h"
-#include "FloatPoint.h"
-#include "FloatPoint3D.h"
-#include "FloatRoundedRect.h"
-#include "FloatSize.h"
-#include "GraphicsLayerClient.h"
-#include "GraphicsTypes.h"
-#include "HTMLMediaElementIdentifier.h"
-#include "LayerHostingContextIdentifier.h"
-#include "MediaPlayerEnums.h"
-#include "Path.h"
-#include "PlatformLayer.h"
-#include "PlatformLayerIdentifier.h"
-#include "ProcessIdentifier.h"
-#include "ProcessQualified.h"
-#include "Region.h"
-#include "ScrollableArea.h"
-#include "ScrollTypes.h"
-#include "TimingFunction.h"
-#include "TransformOperations.h"
-#include "WindRule.h"
+#include <WebCore/Color.h>
+#include <WebCore/EventRegion.h>
+#include <WebCore/FilterOperations.h>
+#include <WebCore/FloatPoint.h>
+#include <WebCore/FloatPoint3D.h>
+#include <WebCore/FloatRoundedRect.h>
+#include <WebCore/FloatSize.h>
+#include <WebCore/GraphicsLayerClient.h>
+#include <WebCore/GraphicsLayerEnums.h>
+#include <WebCore/GraphicsTypes.h>
+#include <WebCore/HTMLMediaElementIdentifier.h>
+#include <WebCore/LayerHostingContextIdentifier.h>
+#include <WebCore/MediaPlayerEnums.h>
+#include <WebCore/Path.h>
+#include <WebCore/PlatformLayer.h>
+#include <WebCore/PlatformLayerIdentifier.h>
+#include <WebCore/ProcessIdentifier.h>
+#include <WebCore/ProcessQualified.h>
+#include <WebCore/Region.h>
+#include <WebCore/ScrollTypes.h>
+#include <WebCore/ScrollableArea.h>
+#include <WebCore/TimingFunction.h>
+#include <WebCore/TransformOperations.h>
+#include <WebCore/WindRule.h>
 #include <wtf/CheckedRef.h>
 #include <wtf/Function.h>
+#include <wtf/Platform.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/TypeCasts.h>
 
-#if ENABLE(THREADED_ANIMATION_RESOLUTION)
-#include "AcceleratedEffectStack.h"
+#if ENABLE(THREADED_ANIMATIONS)
+#include <WebCore/AcceleratedEffectStack.h>
 #endif
 
 #if HAVE(CORE_MATERIAL)
-#include "AppleVisualEffect.h"
+#include <WebCore/AppleVisualEffect.h>
 #endif
 
 namespace WTF {
@@ -67,11 +70,12 @@ class TextStream;
 
 namespace WebCore {
 
-class Animation;
 class GraphicsContext;
-class GraphicsLayerFactory;
-class GraphicsLayerContentsDisplayDelegate;
+class GraphicsLayerAnimation;
 class GraphicsLayerAsyncContentsDisplayDelegate;
+class GraphicsLayerContentsDisplayDelegate;
+class GraphicsLayerFactory;
+class GraphicsLayerKeyframeValueList;
 class HTMLVideoElement;
 class Image;
 class ImageBuffer;
@@ -83,11 +87,11 @@ class TransformationMatrix;
 
 typedef unsigned TileCoverage;
 
-#if ENABLE(MODEL_PROCESS)
+#if ENABLE(MODEL_CONTEXT)
 class ModelContext;
 #endif
 
-#if ENABLE(THREADED_ANIMATION_RESOLUTION)
+#if ENABLE(THREADED_ANIMATIONS)
 struct AcceleratedEffectValues;
 String acceleratedEffectPropertyIDAsString(AcceleratedEffectProperty);
 #endif
@@ -100,198 +104,21 @@ enum class AsTextFlag : uint8_t;
 
 using LayerHostingContextID = uint32_t;
 
-// Base class for animation values (also used for transitions). Here to
-// represent values for properties being animated via the GraphicsLayer,
-// without pulling in style-related data from outside of the platform directory.
-// FIXME: Should be moved to its own header file.
-class AnimationValue {
-    WTF_MAKE_TZONE_ALLOCATED_EXPORT(AnimationValue, WEBCORE_EXPORT);
-public:
-    virtual ~AnimationValue() = default;
-
-    double keyTime() const { return m_keyTime; }
-    const TimingFunction* timingFunction() const { return m_timingFunction.get(); }
-    virtual std::unique_ptr<AnimationValue> clone() const = 0;
-
-protected:
-    AnimationValue(double keyTime, TimingFunction* timingFunction = nullptr)
-        : m_keyTime(keyTime)
-        , m_timingFunction(timingFunction)
-    {
-    }
-
-    AnimationValue(const AnimationValue& other)
-        : m_keyTime(other.m_keyTime)
-        , m_timingFunction(other.m_timingFunction ? RefPtr<TimingFunction> { other.m_timingFunction->clone() } : nullptr)
-    {
-    }
-
-    AnimationValue(AnimationValue&&) = default;
-
-private:
-    void operator=(const AnimationValue&) = delete;
-
-    double m_keyTime;
-    RefPtr<TimingFunction> m_timingFunction;
-};
-
-// Used to store one float value of an animation.
-// FIXME: Should be moved to its own header file.
-class FloatAnimationValue : public AnimationValue {
-    WTF_MAKE_TZONE_ALLOCATED_EXPORT(FloatAnimationValue, WEBCORE_EXPORT);
-public:
-    FloatAnimationValue(double keyTime, float value, TimingFunction* timingFunction = nullptr)
-        : AnimationValue(keyTime, timingFunction)
-        , m_value(value)
-    {
-    }
-
-    std::unique_ptr<AnimationValue> clone() const override
-    {
-        return makeUnique<FloatAnimationValue>(*this);
-    }
-
-    float value() const { return m_value; }
-
-private:
-    float m_value;
-};
-
-// Used to store one transform value in a keyframe list.
-// FIXME: Should be moved to its own header file.
-class TransformAnimationValue : public AnimationValue {
-    WTF_MAKE_TZONE_ALLOCATED_EXPORT(TransformAnimationValue, WEBCORE_EXPORT);
-public:
-    TransformAnimationValue(double keyTime, const TransformOperations& value, TimingFunction* timingFunction = nullptr)
-        : AnimationValue(keyTime, timingFunction)
-        , m_value(value)
-    {
-    }
-
-    TransformAnimationValue(double keyTime, TransformOperation* value, TimingFunction* timingFunction = nullptr)
-        : AnimationValue(keyTime, timingFunction)
-        , m_value(value ? TransformOperations { *value } : TransformOperations { })
-    {
-    }
-
-    std::unique_ptr<AnimationValue> clone() const override
-    {
-        return makeUnique<TransformAnimationValue>(*this);
-    }
-
-    TransformAnimationValue(const TransformAnimationValue& other)
-        : AnimationValue(other)
-        , m_value(other.m_value.clone())
-    {
-    }
-
-    TransformAnimationValue(TransformAnimationValue&&) = default;
-
-    const TransformOperations& value() const { return m_value; }
-
-private:
-    TransformOperations m_value;
-};
-
-// Used to store one filter value in a keyframe list.
-// FIXME: Should be moved to its own header file.
-class FilterAnimationValue : public AnimationValue {
-    WTF_MAKE_TZONE_ALLOCATED_EXPORT(FilterAnimationValue, WEBCORE_EXPORT);
-public:
-    FilterAnimationValue(double keyTime, const FilterOperations& value, TimingFunction* timingFunction = nullptr)
-        : AnimationValue(keyTime, timingFunction)
-        , m_value(value)
-    {
-    }
-
-    std::unique_ptr<AnimationValue> clone() const override
-    {
-        return makeUnique<FilterAnimationValue>(*this);
-    }
-
-    FilterAnimationValue(const FilterAnimationValue& other)
-        : AnimationValue(other)
-        , m_value(other.m_value.clone())
-    {
-    }
-
-    FilterAnimationValue(FilterAnimationValue&&) = default;
-
-    const FilterOperations& value() const { return m_value; }
-
-private:
-    FilterOperations m_value;
-};
-
-// Used to store a series of values in a keyframe list.
-// Values will all be of the same type, which can be inferred from the property.
-// FIXME: Should be moved to its own header file.
-class KeyframeValueList {
-    WTF_MAKE_TZONE_ALLOCATED(KeyframeValueList);
-public:
-    explicit KeyframeValueList(AnimatedProperty property)
-        : m_property(property)
-    {
-    }
-
-    KeyframeValueList(const KeyframeValueList& other)
-        : m_property(other.property())
-    {
-        m_values = WTF::map(other.m_values, [](auto& value) -> std::unique_ptr<const AnimationValue> {
-            return value->clone();
-        });
-    }
-
-    KeyframeValueList(KeyframeValueList&&) = default;
-
-    KeyframeValueList& operator=(const KeyframeValueList& other)
-    {
-        KeyframeValueList copy(other);
-        swap(copy);
-        return *this;
-    }
-
-    KeyframeValueList& operator=(KeyframeValueList&&) = default;
-
-    void swap(KeyframeValueList& other)
-    {
-        std::swap(m_property, other.m_property);
-        m_values.swap(other.m_values);
-    }
-
-    AnimatedProperty property() const { return m_property; }
-
-    size_t size() const { return m_values.size(); }
-    const AnimationValue& at(size_t i) const { return *m_values.at(i); }
-
-    // Insert, sorted by keyTime.
-    WEBCORE_EXPORT void insert(std::unique_ptr<const AnimationValue>);
-
-protected:
-    Vector<std::unique_ptr<const AnimationValue>> m_values;
-    AnimatedProperty m_property;
-};
-
 // GraphicsLayer is an abstraction for a rendering surface with backing store,
 // which may have associated transformation and animations.
 
-class GraphicsLayer : public RefCounted<GraphicsLayer> {
+class GraphicsLayer : public RefCountedAndCanMakeWeakPtr<GraphicsLayer> {
     WTF_MAKE_TZONE_ALLOCATED_EXPORT(GraphicsLayer, WEBCORE_EXPORT);
 public:
-    enum class Type : uint8_t {
-        Normal,
-        Structural, // Supports position and transform only, and doesn't flatten (i.e. behaves like preserves3D is true). Uses CATransformLayer on Cocoa platforms.
-        PageTiledBacking,
-        TiledBacking,
-        ScrollContainer,
-        ScrolledContents,
-        Shape
-    };
-
-    enum class LayerMode : uint8_t {
-        PlatformLayer,
-        LayerHostingContextId
-    };
+    // Enums from GraphicsLayerEnums.h:
+    using Type = GraphicsLayerType;
+    using LayerMode = GraphicsLayerMode;
+    using ShouldSetNeedsDisplay = GraphicsLayerShouldSetNeedsDisplay;
+    using ShouldClipToLayer = GraphicsLayerShouldClipToLayer;
+    using CompositingCoordinatesOrientation = GraphicsLayerCompositingCoordinatesOrientation;
+    using ScalingFilter = GraphicsLayerScalingFilter;
+    using CustomAppearance = GraphicsLayerCustomAppearance;
+    using ContentsLayerPurpose = GraphicsLayerContentsLayerPurpose;
 
     virtual LayerMode layerMode() const { return LayerMode::PlatformLayer; }
 
@@ -321,8 +148,8 @@ public:
     virtual void setName(const String& name) { m_name = name; }
     WEBCORE_EXPORT virtual String debugName() const;
 
-    GraphicsLayer* parent() const { return m_parent; }
-    RefPtr<GraphicsLayer> protectedParent() const { return m_parent; }
+    GraphicsLayer* parent() const { return m_parent.get(); }
+    RefPtr<GraphicsLayer> protectedParent() const { return m_parent.get(); }
     void setParent(GraphicsLayer*); // Internal use only.
 
     // Returns true if the layer has the given layer as an ancestor (excluding self).
@@ -364,18 +191,13 @@ public:
     const FloatPoint& replicatedLayerPosition() const { return m_replicatedLayerPosition; }
     void setReplicatedLayerPosition(const FloatPoint& p) { m_replicatedLayerPosition = p; }
 
-    enum ShouldSetNeedsDisplay {
-        DontSetNeedsDisplay,
-        SetNeedsDisplay
-    };
-
     // Offset is origin of the renderer minus origin of the graphics layer.
     FloatSize offsetFromRenderer() const { return m_offsetFromRenderer; }
-    void setOffsetFromRenderer(const FloatSize&, ShouldSetNeedsDisplay = SetNeedsDisplay);
+    void setOffsetFromRenderer(const FloatSize&, ShouldSetNeedsDisplay = ShouldSetNeedsDisplay::Set);
 
     // Scroll offset of the content layer inside its scrolling parent layer.
     ScrollOffset scrollOffset() const { return m_scrollOffset; }
-    void setScrollOffset(const ScrollOffset&, ShouldSetNeedsDisplay = SetNeedsDisplay);
+    void setScrollOffset(const ScrollOffset&, ShouldSetNeedsDisplay = ShouldSetNeedsDisplay::Set);
 
 #if ENABLE(SCROLLING_THREAD)
     std::optional<ScrollingNodeID> scrollingNodeID() const { return m_scrollingNodeID; }
@@ -501,16 +323,12 @@ public:
     OptionSet<GraphicsLayerPaintingPhase> paintingPhase() const { return m_paintingPhase; }
     void setPaintingPhase(OptionSet<GraphicsLayerPaintingPhase>);
 
-    enum ShouldClipToLayer {
-        DoNotClipToLayer,
-        ClipToLayer
-    };
-
     virtual void setNeedsDisplay() = 0;
     // mark the given rect (in layer coords) as needing dispay. Never goes deep.
-    virtual void setNeedsDisplayInRect(const FloatRect&, ShouldClipToLayer = ClipToLayer) = 0;
+    virtual void setNeedsDisplayInRect(const FloatRect&, ShouldClipToLayer = ShouldClipToLayer::Clip) = 0;
 
     virtual void setContentsNeedsDisplay() { };
+    virtual void setContentsNeedsDisplayInRect(const FloatRect&) { setContentsNeedsDisplay(); }
 
     // The tile phase is relative to the GraphicsLayer bounds.
     virtual void setContentsTilePhase(const FloatSize& p) { m_contentsTilePhase = p; }
@@ -549,14 +367,19 @@ public:
     static String animationNameForTransition(AnimatedProperty);
 
     // Return true if the animation is handled by the compositing system.
-    virtual bool addAnimation(const KeyframeValueList&, const FloatSize& /*boxSize*/, const Animation*, const String& /*animationName*/, double /*timeOffset*/)  { return false; }
+    virtual bool addAnimation(const GraphicsLayerKeyframeValueList&, const GraphicsLayerAnimation*, const String& /*animationName*/, double /*timeOffset*/)  { return false; }
     virtual void pauseAnimation(const String& /*animationName*/, double /*timeOffset*/) { }
     virtual void removeAnimation(const String& /*animationName*/, std::optional<AnimatedProperty>) { }
     virtual void transformRelatedPropertyDidChange() { }
     WEBCORE_EXPORT virtual void suspendAnimations(MonotonicTime);
     WEBCORE_EXPORT virtual void resumeAnimations();
 
-    virtual Vector<std::pair<String, double>> acceleratedAnimationsForTesting(const Settings&) const { return { }; }
+    struct AcceleratedAnimationForTesting {
+        String property;
+        double speed;
+        bool isThreaded;
+    };
+    virtual Vector<AcceleratedAnimationForTesting> acceleratedAnimationsForTesting() const { return { }; }
 
     // Layer contents
     virtual void setContentsToImage(Image*) { }
@@ -570,30 +393,21 @@ public:
     virtual PlatformLayer* contentsLayerForMedia() const { return 0; }
 #endif
 
-    enum class ContentsLayerPurpose : uint8_t {
-        None = 0,
-        Image,
-        Media,
-        Canvas,
-        BackgroundColor,
-        Plugin,
-        Model,
-        HostedModel,
-        Host,
-    };
-
     // Pass an invalid color to remove the contents layer.
     virtual void setContentsToSolidColor(const Color&) { }
     virtual void setContentsToPlatformLayer(PlatformLayer*, ContentsLayerPurpose) { }
     virtual void setContentsToPlatformLayerHost(LayerHostingContextIdentifier) { }
-#if ENABLE(MODEL_PROCESS)
+#if ENABLE(MODEL_CONTEXT)
     virtual void setContentsToModelContext(Ref<ModelContext>, ContentsLayerPurpose) { }
+#endif
+#if ENABLE(MODEL_ELEMENT_IMMERSIVE)
+    virtual void removeModelContents() { }
 #endif
     virtual void setContentsToVideoElement(HTMLVideoElement&, ContentsLayerPurpose) { }
     virtual void setContentsDisplayDelegate(RefPtr<GraphicsLayerContentsDisplayDelegate>&&, ContentsLayerPurpose);
     WEBCORE_EXPORT virtual RefPtr<GraphicsLayerAsyncContentsDisplayDelegate> createAsyncContentsDisplayDelegate(GraphicsLayerAsyncContentsDisplayDelegate* existing);
 #if ENABLE(MODEL_ELEMENT)
-    enum class ModelInteraction : uint8_t { Enabled, Disabled };
+    using ModelInteraction = GraphicsLayerModelInteraction;
     virtual void setContentsToModel(RefPtr<Model>&&, ModelInteraction) { }
     virtual std::optional<PlatformLayerIdentifier> contentsLayerIDForModel() const { return std::nullopt; }
 #endif
@@ -604,14 +418,14 @@ public:
 
     // For hosting this GraphicsLayer in a native layer hierarchy.
     virtual PlatformLayer* platformLayer() const { return nullptr; }
-
-    enum class CompositingCoordinatesOrientation : uint8_t { TopDown, BottomUp };
+#if PLATFORM(COCOA)
+    WEBCORE_EXPORT RetainPtr<CALayer> protectedPlatformLayer() const;
+#endif
 
     // Flippedness of the contents of this layer. Does not affect sublayer geometry.
     virtual void setContentsOrientation(CompositingCoordinatesOrientation orientation) { m_contentsOrientation = orientation; }
     CompositingCoordinatesOrientation contentsOrientation() const { return m_contentsOrientation; }
 
-    enum class ScalingFilter { Linear, Nearest, Trilinear };
     virtual void setContentsMinificationFilter(ScalingFilter filter) { m_contentsMinificationFilter = filter; }
     ScalingFilter contentsMinificationFilter() const { return m_contentsMinificationFilter; }
     virtual void setContentsMagnificationFilter(ScalingFilter filter) { m_contentsMagnificationFilter = filter; }
@@ -635,10 +449,6 @@ public:
     virtual void setDebugBackgroundColor(const Color&) { }
     virtual void setDebugBorder(const Color&, float /*borderWidth*/) { }
 
-    enum class CustomAppearance : bool {
-        None,
-        ScrollingShadow
-    };
     virtual void setCustomAppearance(CustomAppearance customAppearance) { m_customAppearance = customAppearance; }
     CustomAppearance customAppearance() const { return m_customAppearance; }
 
@@ -732,13 +542,15 @@ public:
 
     virtual void markFrontBufferVolatileForTesting() { }
 
-#if ENABLE(THREADED_ANIMATION_RESOLUTION)
+#if ENABLE(THREADED_ANIMATIONS)
     AcceleratedEffectStack* acceleratedEffectStack() const { return m_effectStack.get(); }
     WEBCORE_EXPORT virtual void setAcceleratedEffectsAndBaseValues(AcceleratedEffects&&, AcceleratedEffectValues&&);
 #endif
 
     virtual void purgeFrontBufferForTesting() { }
     virtual void purgeBackBufferForTesting() { }
+
+    virtual void setShadowPath(const Path&);
 
 protected:
     WEBCORE_EXPORT explicit GraphicsLayer(Type, GraphicsLayerClient&);
@@ -755,15 +567,15 @@ protected:
     void clearFilters() { m_filters = { }; }
     void clearBackdropFilters() { m_backdropFilters = { }; }
 
-    // Given a KeyframeValueList containing filterOperations, return true if the operations are valid.
-    static int validateFilterOperations(const KeyframeValueList&);
+    // Given a GraphicsLayerKeyframeValueList containing filterOperations, return true if the operations are valid.
+    static int validateFilterOperations(const GraphicsLayerKeyframeValueList&);
 
     virtual bool shouldRepaintOnSizeChange() const { return drawsContent(); }
 
     void removeFromParentInternal();
 
     // The layer being replicated.
-    GraphicsLayer* replicatedLayer() const { return m_replicatedLayer; }
+    GraphicsLayer* replicatedLayer() const { return m_replicatedLayer.get(); }
     virtual void setReplicatedLayer(GraphicsLayer* layer) { m_replicatedLayer = layer; }
 
 #if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
@@ -778,7 +590,7 @@ protected:
 
     WEBCORE_EXPORT virtual void getDebugBorderInfo(Color&, float& width) const;
 
-#if ENABLE(THREADED_ANIMATION_RESOLUTION)
+#if ENABLE(THREADED_ANIMATIONS)
     RefPtr<AcceleratedEffectStack> m_effectStack;
 #endif
 
@@ -866,13 +678,13 @@ protected:
     int m_repaintCount { 0 };
 
     Vector<Ref<GraphicsLayer>> m_children;
-    GraphicsLayer* m_parent { nullptr };
+    WeakPtr<GraphicsLayer> m_parent;
 
-    RefPtr<GraphicsLayer> m_maskLayer { nullptr }; // Reference to mask layer.
+    RefPtr<GraphicsLayer> m_maskLayer; // Reference to mask layer.
 
-    RefPtr<GraphicsLayer> m_replicaLayer { nullptr }; // A layer that replicates this layer. We only allow one, for now.
+    RefPtr<GraphicsLayer> m_replicaLayer; // A layer that replicates this layer. We only allow one, for now.
                                    // The replica is not parented; this is the primary reference to it.
-    GraphicsLayer* m_replicatedLayer { nullptr }; // For a replica layer, a reference to the original layer.
+    WeakPtr<GraphicsLayer> m_replicatedLayer; // For a replica layer, a reference to the original layer.
     FloatPoint m_replicatedLayerPosition; // For a replica layer, the position of the replica.
 
     FloatRect m_contentsRect;
@@ -886,6 +698,7 @@ protected:
 
     EventRegion m_eventRegion;
 #if USE(CA)
+    Path m_shadowPath;
     MediaPlayerVideoGravity m_videoGravity { MediaPlayerVideoGravity::ResizeAspect };
     WindRule m_shapeLayerWindRule { WindRule::NonZero };
     Path m_shapeLayerPath;

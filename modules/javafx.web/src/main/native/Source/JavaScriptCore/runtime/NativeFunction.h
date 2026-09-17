@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "JSCJSValue.h"
-#include "JSCPtrTag.h"
+#include <JavaScriptCore/JSCJSValue.h>
+#include <JavaScriptCore/JSCPtrTag.h>
 #include <wtf/FunctionPtr.h>
 #include <wtf/Hasher.h>
 
@@ -35,20 +35,7 @@ namespace JSC {
 class CallFrame;
 
 using NativeFunction = FunctionPtr<CFunctionPtrTag, EncodedJSValue(JSGlobalObject*, CallFrame*), FunctionAttributes::JSCHostCall>;
-
-struct NativeFunctionHash {
-    static unsigned hash(NativeFunction key) { return computeHash(key); }
-    static bool equal(NativeFunction a, NativeFunction b) { return a == b; }
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
-};
-
 using TaggedNativeFunction = FunctionPtr<HostFunctionPtrTag, EncodedJSValue(JSGlobalObject*, CallFrame*), FunctionAttributes::JSCHostCall>;
-
-struct TaggedNativeFunctionHash {
-    static unsigned hash(TaggedNativeFunction key) { return computeHash(key); }
-    static bool equal(TaggedNativeFunction a, TaggedNativeFunction b) { return a == b; }
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
-};
 
 static_assert(sizeof(NativeFunction) == sizeof(void*));
 static_assert(sizeof(TaggedNativeFunction) == sizeof(void*));
@@ -67,15 +54,9 @@ inline void add(Hasher& hasher, JSC::NativeFunction key)
     add(hasher, key.taggedPtr());
 }
 
-template<typename> struct DefaultHash;
-template<> struct DefaultHash<JSC::NativeFunction> : JSC::NativeFunctionHash { };
-
 inline void add(Hasher& hasher, JSC::TaggedNativeFunction key)
 {
     add(hasher, key.taggedPtr());
 }
-
-template<typename> struct DefaultHash;
-template<> struct DefaultHash<JSC::TaggedNativeFunction> : JSC::TaggedNativeFunctionHash { };
 
 } // namespace WTF

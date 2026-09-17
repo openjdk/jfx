@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "FilterEffect.h"
+#include <WebCore/FilterEffect.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -49,6 +49,7 @@ public:
     const Vector<float>& values() const { return m_values; }
     bool setValues(const Vector<float>&);
 
+    WEBCORE_EXPORT static bool areValuesValidForType(ColorMatrixType, const Vector<float>& values);
     static void calculateSaturateComponents(std::span<float, 9> components, float value);
     static void calculateHueRotateComponents(std::span<float, 9> components, float value);
     static Vector<float> normalizedFloats(const Vector<float>& values);
@@ -60,7 +61,7 @@ private:
 
     bool resultIsAlphaImage(std::span<const Ref<FilterImage>> inputs) const override;
 
-    OptionSet<FilterRenderingMode> supportedFilterRenderingModes() const override;
+    OptionSet<FilterRenderingMode> supportedFilterRenderingModes(OptionSet<FilterRenderingMode> preferredFilterRenderingModes) const override;
 
     std::unique_ptr<FilterEffectApplier> createAcceleratedApplier() const override;
     std::unique_ptr<FilterEffectApplier> createSoftwareApplier() const override;

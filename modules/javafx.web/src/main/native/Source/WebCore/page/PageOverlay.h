@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "Color.h"
-#include "FloatPoint.h"
-#include "IntRect.h"
-#include "Timer.h"
+#include <WebCore/Color.h>
+#include <WebCore/FloatPoint.h>
+#include <WebCore/IntRect.h>
+#include <WebCore/Timer.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WallTime.h>

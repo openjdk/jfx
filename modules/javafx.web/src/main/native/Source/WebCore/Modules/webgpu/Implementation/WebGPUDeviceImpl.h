@@ -45,7 +45,7 @@ class DeviceImpl final : public Device {
 public:
     static Ref<DeviceImpl> create(WebGPUPtr<WGPUDevice>&& device, Ref<SupportedFeatures>&& features, Ref<SupportedLimits>&& limits, ConvertToBackingContext& convertToBackingContext)
     {
-        return adoptRef(*new DeviceImpl(WTFMove(device), WTFMove(features), WTFMove(limits), convertToBackingContext));
+        return adoptRef(*new DeviceImpl(WTF::move(device), WTF::move(features), WTF::move(limits), convertToBackingContext));
     }
 
     virtual ~DeviceImpl();
@@ -62,6 +62,7 @@ private:
     DeviceImpl& operator=(DeviceImpl&&) = delete;
 
     WGPUDevice backing() const { return m_backing.get(); }
+    bool isDeviceImpl() const final { return true; }
 
     Ref<Queue> queue() final;
 
@@ -109,5 +110,9 @@ private:
 };
 
 } // namespace WebCore::WebGPU
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WebGPU::DeviceImpl)
+    static bool isType(const WebCore::WebGPU::Device& device) { return device.isDeviceImpl(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // HAVE(WEBGPU_IMPLEMENTATION)

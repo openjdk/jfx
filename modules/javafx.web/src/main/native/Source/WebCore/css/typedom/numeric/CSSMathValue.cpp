@@ -29,7 +29,6 @@
 #include "CSSCalcTree.h"
 #include "CSSCalcValue.h"
 #include "CSSPrimitiveValue.h"
-#include "Length.h"
 
 namespace WebCore {
 
@@ -44,8 +43,8 @@ RefPtr<CSSValue> CSSMathValue::toCSSValue() const
     if (!category)
         return nullptr;
 
-    return CSSPrimitiveValue::create(CSSCalcValue::create(*category, CSS::All, CSSCalc::Tree {
-        .root = WTFMove(*node),
+    return CSSPrimitiveValue::create(CSSCalc::Value::create(*category, CSS::All, CSSCalc::Tree {
+        .root = WTF::move(*node),
         .type = type,
         .stage = CSSCalc::Stage::Specified,
     }));

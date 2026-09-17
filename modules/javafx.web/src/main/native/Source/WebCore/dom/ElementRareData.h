@@ -33,6 +33,7 @@
 #include "FormAssociatedCustomElement.h"
 #include "IntersectionObserver.h"
 #include "KeyframeEffectStack.h"
+#include "LargestContentfulPaintData.h"
 #include "NamedNodeMap.h"
 #include "NodeRareData.h"
 #include "PopoverData.h"
@@ -72,13 +73,13 @@ public:
 
     void clearShadowRoot() { m_shadowRoot = nullptr; }
     ShadowRoot* shadowRoot() const { return m_shadowRoot.get(); }
-    void setShadowRoot(RefPtr<ShadowRoot>&& shadowRoot) { m_shadowRoot = WTFMove(shadowRoot); }
+    void setShadowRoot(RefPtr<ShadowRoot>&& shadowRoot) { m_shadowRoot = WTF::move(shadowRoot); }
 
     CustomElementReactionQueue* customElementReactionQueue() { return m_customElementReactionQueue.get(); }
-    void setCustomElementReactionQueue(std::unique_ptr<CustomElementReactionQueue>&& queue) { m_customElementReactionQueue = WTFMove(queue); }
+    void setCustomElementReactionQueue(std::unique_ptr<CustomElementReactionQueue>&& queue) { m_customElementReactionQueue = WTF::move(queue); }
 
     CustomElementDefaultARIA* customElementDefaultARIA() { return m_customElementDefaultARIA.get(); }
-    void setCustomElementDefaultARIA(std::unique_ptr<CustomElementDefaultARIA>&& defaultARIA) { m_customElementDefaultARIA = WTFMove(defaultARIA); }
+    void setCustomElementDefaultARIA(std::unique_ptr<CustomElementDefaultARIA>&& defaultARIA) { m_customElementDefaultARIA = WTF::move(defaultARIA); }
 
     FormAssociatedCustomElement* formAssociatedCustomElement() { return m_formAssociatedCustomElement.get(); }
     void setFormAssociatedCustomElement(const std::unique_ptr<FormAssociatedCustomElement>&& element) { lazyInitialize(m_formAssociatedCustomElement, std::move(element)); }
@@ -87,13 +88,13 @@ public:
     void setAttributeMap(const std::unique_ptr<NamedNodeMap>&& attributeMap) { lazyInitialize(m_attributeMap, std::move(attributeMap)); }
 
     String userInfo() const { return m_userInfo; }
-    void setUserInfo(String&& userInfo) { m_userInfo = WTFMove(userInfo); }
+    void setUserInfo(String&& userInfo) { m_userInfo = WTF::move(userInfo); }
 
     RenderStyle* computedStyle() const { return m_computedStyle.get(); }
-    void setComputedStyle(std::unique_ptr<RenderStyle>&& computedStyle) { m_computedStyle = WTFMove(computedStyle); }
+    void setComputedStyle(std::unique_ptr<RenderStyle>&& computedStyle) { m_computedStyle = WTF::move(computedStyle); }
 
     RenderStyle* displayContentsOrNoneStyle() const { return m_displayContentsOrNoneStyle.get(); }
-    void setDisplayContentsOrNoneStyle(std::unique_ptr<RenderStyle> style) { m_displayContentsOrNoneStyle = WTFMove(style); }
+    void setDisplayContentsOrNoneStyle(std::unique_ptr<RenderStyle> style) { m_displayContentsOrNoneStyle = WTF::move(style); }
 
     const AtomString& effectiveLang() const { return m_effectiveLang; }
     void setEffectiveLang(const AtomString& lang) { m_effectiveLang = lang; }
@@ -118,13 +119,16 @@ public:
     void setPartList(const std::unique_ptr<DOMTokenList>&& partList) { lazyInitialize(m_partList, std::move(partList)); }
 
     const SpaceSplitString& partNames() const { return m_partNames; }
-    void setPartNames(SpaceSplitString&& partNames) { m_partNames = WTFMove(partNames); }
+    void setPartNames(SpaceSplitString&& partNames) { m_partNames = WTF::move(partNames); }
 
     IntersectionObserverData* intersectionObserverData() { return m_intersectionObserverData.get(); }
-    void setIntersectionObserverData(std::unique_ptr<IntersectionObserverData>&& data) { m_intersectionObserverData = WTFMove(data); }
+    void setIntersectionObserverData(std::unique_ptr<IntersectionObserverData>&& data) { m_intersectionObserverData = WTF::move(data); }
 
     ResizeObserverData* resizeObserverData() { return m_resizeObserverData.get(); }
-    void setResizeObserverData(std::unique_ptr<ResizeObserverData>&& data) { m_resizeObserverData = WTFMove(data); }
+    void setResizeObserverData(std::unique_ptr<ResizeObserverData>&& data) { m_resizeObserverData = WTF::move(data); }
+
+    ElementLargestContentfulPaintData* largestContentfulPaintData() { return m_largestContentfulPaintData.get(); }
+    void setLargestContentfulPaintData(std::unique_ptr<ElementLargestContentfulPaintData>&& data) { m_largestContentfulPaintData = WTF::move(data); }
 
     std::optional<LayoutUnit> lastRememberedLogicalWidth() const { return m_lastRememberedLogicalWidth; }
     std::optional<LayoutUnit> lastRememberedLogicalHeight() const { return m_lastRememberedLogicalHeight; }
@@ -137,24 +141,24 @@ public:
     void setNonce(const AtomString& value) { m_nonce = value; }
 
     StylePropertyMap* attributeStyleMap() { return m_attributeStyleMap.get(); }
-    void setAttributeStyleMap(Ref<StylePropertyMap>&& map) { m_attributeStyleMap = WTFMove(map); }
+    void setAttributeStyleMap(Ref<StylePropertyMap>&& map) { m_attributeStyleMap = WTF::move(map); }
 
     StylePropertyMapReadOnly* computedStyleMap() { return m_computedStyleMap.get(); }
-    void setComputedStyleMap(Ref<StylePropertyMapReadOnly>&& map) { m_computedStyleMap = WTFMove(map); }
+    void setComputedStyleMap(Ref<StylePropertyMapReadOnly>&& map) { m_computedStyleMap = WTF::move(map); }
 
     ExplicitlySetAttrElementsMap& explicitlySetAttrElementsMap() { return m_explicitlySetAttrElementsMap; }
 
     PopoverData* popoverData() { return m_popoverData.get(); }
-    void setPopoverData(std::unique_ptr<PopoverData>&& popoverData) { m_popoverData = WTFMove(popoverData); }
+    void setPopoverData(std::unique_ptr<PopoverData>&& popoverData) { m_popoverData = WTF::move(popoverData); }
 
     Element* invokedPopover() const { return m_invokedPopover.get(); }
-    void setInvokedPopover(RefPtr<Element>&& element) { m_invokedPopover = WTFMove(element); }
+    void setInvokedPopover(RefPtr<Element>&& element) { m_invokedPopover = WTF::move(element); }
 
     const std::optional<OptionSet<ContentRelevancy>>& contentRelevancy() const { return m_contentRelevancy; }
     void setContentRelevancy(OptionSet<ContentRelevancy>& contentRelevancy) { m_contentRelevancy = contentRelevancy; }
 
     CustomStateSet* customStateSet() { return m_customStateSet.get(); }
-    void setCustomStateSet(Ref<CustomStateSet>&& customStateSet) { m_customStateSet = WTFMove(customStateSet); }
+    void setCustomStateSet(Ref<CustomStateSet>&& customStateSet) { m_customStateSet = WTF::move(customStateSet); }
 
     OptionSet<VisibilityAdjustment> visibilityAdjustment() const { return m_visibilityAdjustment; }
     void setVisibilityAdjustment(OptionSet<VisibilityAdjustment> adjustment) { m_visibilityAdjustment = adjustment; }
@@ -246,8 +250,8 @@ private:
     const std::unique_ptr<NamedNodeMap> m_attributeMap;
 
     std::unique_ptr<IntersectionObserverData> m_intersectionObserverData;
-
     std::unique_ptr<ResizeObserverData> m_resizeObserverData;
+    std::unique_ptr<ElementLargestContentfulPaintData> m_largestContentfulPaintData;
 
     Markable<LayoutUnit> m_lastRememberedLogicalWidth;
     Markable<LayoutUnit> m_lastRememberedLogicalHeight;
@@ -295,13 +299,13 @@ inline ElementRareData::~ElementRareData()
 inline void ElementRareData::setBeforePseudoElement(RefPtr<PseudoElement>&& pseudoElement)
 {
     ASSERT(!m_beforePseudoElement || !pseudoElement);
-    m_beforePseudoElement = WTFMove(pseudoElement);
+    m_beforePseudoElement = WTF::move(pseudoElement);
 }
 
 inline void ElementRareData::setAfterPseudoElement(RefPtr<PseudoElement>&& pseudoElement)
 {
     ASSERT(!m_afterPseudoElement || !pseudoElement);
-    m_afterPseudoElement = WTFMove(pseudoElement);
+    m_afterPseudoElement = WTF::move(pseudoElement);
 }
 
 inline void ElementRareData::resetComputedStyle()
@@ -361,7 +365,7 @@ inline bool ElementRareData::hasRandomCachingKeyMap() const
 inline ElementRareData* Element::elementRareData() const
 {
     ASSERT_WITH_SECURITY_IMPLICATION(hasRareData());
-    return static_cast<ElementRareData*>(rareData());
+    return downcast<ElementRareData>(rareData());
 }
 
 inline ShadowRoot* Node::shadowRoot() const
@@ -390,3 +394,7 @@ inline void Element::removeShadowRoot()
 }
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ElementRareData)
+    static bool isType(const WebCore::NodeRareData& rareData) { return rareData.isElementRareData(); }
+SPECIALIZE_TYPE_TRAITS_END()
