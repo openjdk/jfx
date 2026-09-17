@@ -174,6 +174,21 @@ public class TestRunnerApp extends Application {
         log.clear();
     }
 
+    public static String getExitCodeString(int code) {
+        switch (code) {
+        case TestRunner.CANCELLED:
+            return "Cancelled";
+        case TestRunner.FAILED:
+            return "Failed";
+        case TestRunner.PASSED:
+            return "Passed";
+        case TestRunner.SKIPPED:
+            return "Skipped";
+        default:
+            return "(" + code + ")";
+        }
+    }
+
     private void runTest() {
         DataRow d = table.getSelectionModel().getSelectedItem();
         if (d != null) {
@@ -183,7 +198,7 @@ public class TestRunnerApp extends Application {
                     String t = DATE_TIME_FMT.format(time);
                     String result;
                     if (error == null) {
-                        result = (exitCode == 0) ? "Pass" : "Fail";
+                        result = getExitCodeString(exitCode);
                     } else {
                         result = "Error";
                         error.printStackTrace();

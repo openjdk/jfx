@@ -89,6 +89,7 @@ public abstract class ManualTestWindow extends Application {
     private final String instructions;
     private double width = 1000;
     private double height = 800;
+    private int exitCode = TestRunner.CANCELLED;
 
     public ManualTestWindow(String title, String instructions) {
         this.title = title;
@@ -102,6 +103,9 @@ public abstract class ManualTestWindow extends Application {
     }
 
     private Parent createContent(Stage stage) {
+        stage.setOnHiding((ev) -> {
+            exit(exitCode);
+        });
         Node content = createContent();
 
         BlurType blurType = BlurType.GAUSSIAN;
@@ -125,9 +129,7 @@ public abstract class ManualTestWindow extends Application {
         setIcon(failButton, "✘", Color.RED);
         failButton.setMinWidth(100);
         failButton.setOnAction((ev) -> {
-            Platform.exit();
-            System.err.println("FAIL");
-            System.exit(-1);
+            exit(TestRunner.FAILED);
             throw new AssertionError("Failed Manual Test: " + stage.getTitle());
         });
 
@@ -135,9 +137,7 @@ public abstract class ManualTestWindow extends Application {
         setIcon(passButton, "✔", Color.GREEN);
         passButton.setMinWidth(100);
         passButton.setOnAction((ev) -> {
-            Platform.exit();
-            System.out.println("PASS");
-            System.exit(0);
+            exit(TestRunner.PASSED);
         });
 
         HBox buttons = new HBox(
@@ -159,6 +159,14 @@ public abstract class ManualTestWindow extends Application {
         return vb;
     }
 
+    private void exit(int code) {
+        exitCode = code;
+        Platform.exit();
+        String s = TestRunnerApp.getExitCodeString(code);
+        IO.println(title + ": " + s);
+        System.exit(code);
+    }
+
     /**
      * Prepares the Application primary stage: creates the content {@code Node} to be tested,
      * creates the manual test UI, sets the {@code Scene}.
@@ -166,6 +174,8 @@ public abstract class ManualTestWindow extends Application {
      * @param stage the primary stage
      */
     protected void prepareStage(Stage stage) {
+        // TODO skip test on this platform?
+
         Parent content = createContent(stage);
         stage.setWidth(width);
         stage.setHeight(height);

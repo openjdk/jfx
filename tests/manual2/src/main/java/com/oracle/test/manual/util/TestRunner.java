@@ -34,6 +34,15 @@ import java.util.concurrent.Future;
  */
 public class TestRunner {
 
+    /// process exit code for a passed test
+    public static final int PASSED = 0;
+    /// process exit code for a failed test
+    public static final int FAILED = 1;
+    /// process exit code for a cancelled or aborted test
+    public static final int CANCELLED = 2;
+    /// process exit code for a skipped test
+    public static final int SKIPPED = 126;
+
     public interface Client {
         public void onProcessFinished(int exitCode, Throwable error, LocalDateTime time);
 
@@ -87,7 +96,7 @@ public class TestRunner {
                 int result = p.exitValue();
                 setResult(result, null);
             } catch (Throwable e) {
-                setResult(-1, e);
+                setResult(FAILED, e);
             }
         }
 
