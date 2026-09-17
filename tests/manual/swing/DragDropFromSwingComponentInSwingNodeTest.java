@@ -83,11 +83,13 @@ public class DragDropFromSwingComponentInSwingNodeTest extends Application {
         });
 
         VBox rootNode = new VBox(6,
-                new Label("1. This test verifies drag-and-drop from a Swing component inside a SwingNode."),
-                new Label("2. Open a plain-text editor, such as TextEdit on macOS or Notepad on Windows."),
-                new Label("3. Create a blank document, then drag the \"Drag me!\" item into the document."),
-                new Label("4. Click Pass if the exact text \"some string data\" is inserted; otherwise, click Fail."),
-                new Label(""),
+                new Label("""
+        1. This test verifies drag-and-drop from a Swing component inside a SwingNode.
+        2. Open a plain-text editor, such as TextEdit on macOS or Notepad on Windows.
+        3. Create a blank document, then drag the "Drag me!" item into the document.
+        4. Click Pass if the exact text "some string data" is inserted; otherwise, click Fail.
+
+        """),
                 new HBox(10, passButton, failButton), pane);
 
         stage.setScene(new Scene(rootNode, 600, 250));

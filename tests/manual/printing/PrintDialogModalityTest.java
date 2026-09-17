@@ -36,26 +36,30 @@ import javafx.scene.text.Text;
 
 public class PrintDialogModalityTest extends Application {
 
-    static final String infoText =
-            "PRECONDITION: At least one printer must be installed. \n" +
-            "Without a printer, the operating system might not display the dialogs, " +
-            "and the test is not valid.\n\n" +
+    static final String infoText = """
+        PRECONDITION: At least one printer must be installed.
+        Without a printer, the operating system might not display the dialogs, 
+        and the test is not valid.
 
-            "Test each of the four buttons, closing each print or page-setup dialog " +
-            "before continuing to the next one.\n\n" +
+        Test each of the four buttons, closing each print or page-setup dialog 
+        before continuing to the next one.
 
-            "MODAL CASES:\n" + "While a modal dialog is open, the main test window must not accept input " +
-            "or allow another dialog to be opened. The main window must also remain " + "behind the dialog.\n\n" +
+        MODAL CASES:
+        While a modal dialog is open, the main test window must not accept input 
+        or allow another dialog to be opened. The main window must also remain 
+        behind the dialog.
 
-            "NON-MODAL CASES:\n" + "While a non-modal dialog is open, the main test window should normally " +
-            "accept input and be movable in front of the dialog.\n\n" +
+        NON-MODAL CASES:
+        While a non-modal dialog is open, the main test window should normally 
+        accept input and be movable in front of the dialog.
 
-            "PLATFORM-SPECIFIC BEHAVIOR:\n" +
-            "A modal dialog may remain above only its parent window, above all windows " +
-            "in the application, or above all desktop windows. All of these behaviors " +
-            "are acceptable. \n" +
-            "On macOS, the non-modal cases may behave like the modal cases. " +
-            "This is expected operating-system behavior and must not be reported as a failure.";
+        PLATFORM-SPECIFIC BEHAVIOR:
+        A modal dialog may remain above only its parent window, above all windows 
+        in the application, or above all desktop windows. All of these behaviors 
+        are acceptable.
+        On macOS, the non-modal cases may behave like the modal cases. 
+        This is expected operating-system behavior and must not be reported as a failure.
+        """;
 
     @Override
     public void start(Stage primaryStage) {
