@@ -40,10 +40,10 @@ import javafx.scene.transform.Rotate;
 /// Utility class for creating 3D shapes.
 final class Models {
 
-    private final static double SPHERE_RADIUS = 50;
-    private final static int DEFAULT_SPHERE_SUBDIVISIONS = 50;
-    private final static double CYLINDER_RADIUS = 30;
-    private final static double CYLINDER_HEIGHT = 150;
+    private static final double SPHERE_RADIUS = 50;
+    private static final int DEFAULT_SPHERE_SUBDIVISIONS = 50;
+    private static final double CYLINDER_RADIUS = 30;
+    private static final double CYLINDER_HEIGHT = 150;
 
     enum Model {
         NONE,
