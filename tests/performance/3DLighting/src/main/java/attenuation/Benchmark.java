@@ -56,8 +56,7 @@ final class Benchmark {
     }
 
     Button createStopButton() {
-        var stopGraphic = new Text("⏹");
-        stopGraphic.setBoundsType(TextBoundsType.VISUAL);
+        var stopGraphic = createGraphic("⏹");
         stopGraphic.setFill(Color.RED);
         stopGraphic.setFont(Font.font(20));
 
@@ -70,10 +69,8 @@ final class Benchmark {
     }
 
     Button createPlayButton() {
-        var playGraphic = new Text("▶");
-        playGraphic.setBoundsType(TextBoundsType.VISUAL);
+        var playGraphic = createGraphic("▶");
         playGraphic.setFill(Color.GREEN);
-        playGraphic.setFont(Font.font(40));
 
         var playButton = new Button("", playGraphic);
         playButton.setPadding(new Insets(1, 2, 2, 3));
@@ -86,38 +83,38 @@ final class Benchmark {
         var subdivisionSlider = createSlider();
         HBox sliderControl = Controls.createSliderControl(subdivisionSlider);
 
-        var sphere = new Button("Sphere");
-        sphere.setOnAction(_ -> switchTo(Models.createSphere((int) subdivisionSlider.getValue())));
+        var button = createButton("Sphere", "◍", "Sphere subdivisions");
+        button.setOnAction(_ -> switchTo(Models.createSphere((int) subdivisionSlider.getValue())));
 
-        return new HBox(sphere, sliderControl);
+        return new HBox(button, sliderControl);
     }
 
     HBox createStackedQuadsControls() {
         var quadSlider = createSlider();
         HBox sliderControl = Controls.createSliderControl(quadSlider);
 
-        var mesh = new Button("Stacked\nQuads");
-        mesh.setOnAction(_ -> switchTo(Models.createStackedQuads((int) quadSlider.getValue())));
+        var button = createButton("Quads", "□", "Stacked quads");
+        button.setOnAction(_ -> switchTo(Models.createStackedQuads((int) quadSlider.getValue())));
 
-        return new HBox(mesh, sliderControl);
+        return new HBox(button, sliderControl);
     }
 
     HBox createSpreadQuadsControls() {
         var quadSlider = createSlider();
         HBox sliderControl = Controls.createSliderControl(quadSlider);
 
-        var mesh = new Button("Spread\nQuads");
-        mesh.setOnAction(_ -> switchTo(Models.createSpreadQuads((int) quadSlider.getValue())));
+        var button = createButton("Quads", "▦", "Spread quads");
+        button.setOnAction(_ -> switchTo(Models.createSpreadQuads((int) quadSlider.getValue())));
 
-        return new HBox(mesh, sliderControl);
+        return new HBox(button, sliderControl);
     }
 
     HBox createStackedMeshesControls() {
         var meshSlider = createSlider();
         HBox sliderControl = Controls.createSliderControl(meshSlider);
 
-        var mesh = new Button("Stacked\nMeshes");
-        mesh.setOnAction(_ -> {
+        var button = createButton("Meshes", "□", "Stacked MeshViews");
+        button.setOnAction(_ -> {
             var group = new Group();
             for (int i = 0; i < meshSlider.getValue(); i++) {
                 var meshView = Models.createStackedQuads(1);
@@ -126,25 +123,25 @@ final class Benchmark {
             switchTo(group);
         });
 
-        return new HBox(mesh, sliderControl);
+        return new HBox(button, sliderControl);
     }
 
     HBox createSpreadMeshesControls() {
         var meshSlider = createSlider();
         HBox sliderControl = Controls.createSliderControl(meshSlider);
 
-        var mesh = new Button("Spread\nMeshes");
-        mesh.setOnAction(_ -> switchTo(Models.createSpreadMeshes((int) meshSlider.getValue())));
+        var button = createButton("Meshes", "▦", "Spread MeshViews (single animation)");
+        button.setOnAction(_ -> switchTo(Models.createSpreadMeshes((int) meshSlider.getValue())));
 
-        return new HBox(mesh, sliderControl);
+        return new HBox(button, sliderControl);
     }
 
     HBox createSpreadMeshesAnimControls() {
         var meshSlider = createSlider();
         HBox sliderControl = Controls.createSliderControl(meshSlider);
 
-        var mesh = new Button("Spread\nMeshes▶");
-        mesh.setOnAction(_ -> {
+        var button = createButton("Meshes", "▦▶", "Spread MeshViews multi-animation");
+        button.setOnAction(_ -> {
             var meshesAnim = new ParallelTransition();
             Group spreadMeshes = Models.createSpreadMeshes((int) meshSlider.getValue());
             spreadMeshes.getChildren().forEach(meshView -> {
@@ -155,7 +152,7 @@ final class Benchmark {
             switchTo(spreadMeshes, meshesAnim);
         });
 
-        return new HBox(mesh, sliderControl);
+        return new HBox(button, sliderControl);
     }
 
     private static Slider createSlider() {
@@ -166,6 +163,20 @@ final class Benchmark {
         slider.setShowTickMarks(true);
         slider.setSnapToTicks(true);
         return slider;
+    }
+
+    private static Button createButton(String text, String icon, String tooltip) {
+        var graphic = createGraphic(icon);
+        var button = new Button(text, graphic);
+        button.setTooltip(new Tooltip(tooltip));
+        return button;
+    }
+
+    private static Text createGraphic(String icon) {
+        var graphic = new Text(icon);
+        graphic.setBoundsType(TextBoundsType.VISUAL);
+        graphic.setFont(new Font(40));
+        return graphic;
     }
 
     private void switchTo(Node node) {
@@ -193,6 +204,7 @@ final class Benchmark {
         var anim = new TranslateTransition(Duration.seconds(1), node);
         anim.setAutoReverse(true);
         anim.setCycleCount(Animation.INDEFINITE);
+        anim.setFromZ(Environment.LIGHT_Z_DIST);
         anim.setToZ(10);
         return anim;
     }
