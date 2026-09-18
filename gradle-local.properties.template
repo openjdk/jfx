@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
 # DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 #
 # This code is free software; you can redistribute it and/or modify it
@@ -26,8 +26,11 @@
 #####################################################################################
 #                                                                                   #
 # This properties file allows for a developer to override various properties used   #
-# when building JavaFX. Any settings you configure in the gradle.properties file    #
-# will have precedence over any values specified in the build script itself.        #
+# when building JavaFX. Any settings you configure in the gradle-local.properties   #
+# file will have precedence over any values specified in the build script itself.   #
+# Don't place Gradle properties (org.gradle.*) or system properties (systemProp.*)  #
+# here as they will be read too late. Either pass them with -D, set GRADLE_OPTS,    #
+# or put them in <GRADLE_USER_HOME>/gradle.properties.                              #
 #                                                                                   #
 #####################################################################################
 
@@ -68,6 +71,13 @@
 # Uncomment this flag in order to include the ES2 pipeline in the build.
 
 #INCLUDE_ES2 = true
+
+# Specifies whether the applications in the "apps" directory are built or cleaned.
+# They are built with a separate Ant based build,
+# which is not needed to build or test the JavaFX modules themselves.
+# Uncomment this flag in order to not build and clean the apps.
+
+#INCLUDE_APPS = false
 
 # Specifies whether to build SDK for running the provided test task.
 # By default, it is set to false and the tests are running of the
