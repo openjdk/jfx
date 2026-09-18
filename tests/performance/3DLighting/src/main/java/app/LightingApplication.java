@@ -41,6 +41,8 @@ import javafx.stage.Stage;
 
 /// A utility application for testing 3D features, including lighting, materials, and performance.
 ///
+/// Run from Gradle from the jfx root with: `gradlew -p tests\performance\3DLighting run`
+///
 /// **Important**: when measuring performance, make sure that no other application on your system is rendering heavy
 /// graphics, like videos, to a screen, as this will corrupt the measurement.
 public class LightingApplication extends Application {
