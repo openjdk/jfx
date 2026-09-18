@@ -133,12 +133,13 @@ public abstract class BaseShaderContext extends BaseContext {
     private final Shader[] stockATShaders = new Shader[NUM_STOCK_SHADER_SLOTS];
 
     public enum SpecialShaderType {
-        TEXTURE_RGB          ("Solid_TextureRGB"),
-        TEXTURE_MASK_RGB     ("Mask_TextureRGB"),
-        TEXTURE_YV12         ("Solid_TextureYV12"),
-        TEXTURE_First_LCD    ("Solid_TextureFirstPassLCD"),
-        TEXTURE_SECOND_LCD   ("Solid_TextureSecondPassLCD"),
-        SUPER                ("Mask_TextureSuper");
+        TEXTURE_RGB            ("Solid_TextureRGB"),
+        TEXTURE_MASK_RGB       ("Mask_TextureRGB"),
+        TEXTURE_YV12           ("Solid_TextureYV12"),
+        TEXTURE_First_LCD      ("Solid_TextureFirstPassLCD"),
+        TEXTURE_SECOND_LCD     ("Solid_TextureSecondPassLCD"),
+        TEXTURE_SECOND_LCD_NEW ("Solid_TextureSecondPassLCDNew"),
+        SUPER                  ("Mask_TextureSuper");
 
         private String name;
         private SpecialShaderType(String name) {
@@ -528,12 +529,18 @@ public abstract class BaseShaderContext extends BaseContext {
     //This function sets the first LCD sample shader.
     public Shader validateLCDOp(BaseShaderGraphics g, BaseTransform xform,
                                 Texture tex0, Texture tex1, boolean firstPass,
-                                Paint fillColor)
+                                boolean newLCDRendering, Paint fillColor)
     {
         if (checkDisposed()) return null;
 
-        Shader shader = firstPass ? getSpecialShader(g, SpecialShaderType.TEXTURE_First_LCD) :
-                                    getSpecialShader(g, SpecialShaderType.TEXTURE_SECOND_LCD);
+        Shader shader;
+        if (firstPass) {
+            shader = getSpecialShader(g, SpecialShaderType.TEXTURE_First_LCD);
+        } else if (newLCDRendering) {
+            shader = getSpecialShader(g, SpecialShaderType.TEXTURE_SECOND_LCD_NEW);
+        } else {
+            shader = getSpecialShader(g, SpecialShaderType.TEXTURE_SECOND_LCD);
+        }
 
         checkState(g, CHECK_TEXTURE_OP_MASK, xform, shader);
         setTexture(0, tex0);
