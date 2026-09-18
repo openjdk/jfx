@@ -168,6 +168,33 @@ void loadProperties(String sourceFileName) {
 }
 
 /**
+ * Reads the JavaFX local user properties file (gradle-local.properties).
+ */
+void loadLocalProperties(String sourceFileName) {
+    def propFile = new File(sourceFileName)
+    if (!propFile.canRead()) {
+        return
+    }
+
+    def localProps = new Properties()
+    propFile.withInputStream { localProps.load(it) }
+
+    def cliProps = gradle.startParameter.projectProperties
+    localProps.forEach((name, value) -> {
+        if (name.startsWith("org.gradle") || name.startsWith("systemProp")) {
+            throw new GradleException(
+                    "Gradle and system properties are not allowed in the local properties file: $name")
+        }
+        if (cliProps.containsKey(name)) {
+            logger.info("gradle-local.properties: $name overriden by CLI arg")
+            return
+        }
+        ext[name] = value
+        logger.info("gradle-local.properties: defined $name=$value")
+    })
+}
+
+/**
  * Iterates over each of the compile targets, passing the given closure
  * a CompileTarget instance.
  *
@@ -300,6 +327,7 @@ void setFileTimestamps(Provider<RegularFile> archive, Instant instant) {
  *****************************************************************************/
 
 loadProperties("$projectDir/build.properties")
+loadLocalProperties("$projectDir/gradle-local.properties")
 
 // If the ../rt-closed directory exists, then we are doing a closed build.
 // In this case, build and property files will be read from
@@ -445,6 +473,11 @@ ext.IS_COMPILE_HARFBUZZ = Boolean.parseBoolean(COMPILE_HARFBUZZ)
 // COMPILE_PARFAIT specifies whether to build parfait
 defineProperty("COMPILE_PARFAIT", "false")
 ext.IS_COMPILE_PARFAIT = Boolean.parseBoolean(COMPILE_PARFAIT)
+
+// INCLUDE_APPS specifies whether the "apps" directory is part of the build.
+// When disabled, the "apps", "appsjar" and "clean" tasks will not compile or clean the "apps" directory.
+defineProperty("INCLUDE_APPS", "true")
+ext.IS_INCLUDE_APPS = Boolean.parseBoolean(INCLUDE_APPS)
 
 defineProperty("STATIC_BUILD", "false")
 ext.IS_STATIC_BUILD = Boolean.parseBoolean(STATIC_BUILD)
@@ -923,8 +956,8 @@ void fetchExternalTools(String configName, List packages, File destdir, boolean 
 void ant(String conf,   // platform configuration
          String dir,    // directory to run from
          String target, // ant target
-         List<String>  params // parameters (usually -Dxxx=yyy)
-         ) {
+         List<String> params // parameters (usually -Dxxx=yyy)
+) {
     // Try to use ANT_HOME
     String antHomeEnv = System.getenv("ANT_HOME")
     String antHome = antHomeEnv != null ? cygpath(antHomeEnv) : null;
@@ -1537,6 +1570,7 @@ logger.quiet("STUB_RUNTIME: $STUB_RUNTIME")
 logger.quiet("CONF: $CONF")
 logger.quiet("NUM_COMPILE_THREADS: $NUM_COMPILE_THREADS")
 logger.quiet("COMPILE_TARGETS: $COMPILE_TARGETS")
+logger.quiet("INCLUDE_APPS: $IS_INCLUDE_APPS")
 logger.quiet("COMPILE_FLAGS_FILES: $COMPILE_FLAGS_FILES")
 logger.quiet("HUDSON_JOB_NAME: $HUDSON_JOB_NAME")
 logger.quiet("HUDSON_BUILD_NUMBER: $HUDSON_BUILD_NUMBER")
@@ -4865,8 +4899,11 @@ compileTargets { t ->
 }
 
 project(":apps") {
-    // The apps build is Ant based, we will exec ant from gradle.
+    if (!IS_INCLUDE_APPS) {
+        return
+    }
 
+    // The apps build is Ant based, we will exec ant from gradle.
     // Download the Lucene libraries needed for the Ensemble8 app
     getConfigurations().create("lucene");
     dependencies {
@@ -4913,9 +4950,9 @@ project(":apps") {
             dependsOn(sdk, getLucene)
             doLast() {
                 ant(t.name,
-                      projectDir.path,
-                      "appsJar",
-                      params);
+                        projectDir.path,
+                        "appsJar",
+                        params);
             }
         }
         rootProject.appsjar.dependsOn(appsJar)
@@ -4923,9 +4960,9 @@ project(":apps") {
         def appsClean = project.task("clean${t.capital}") {
             doLast() {
                 ant(t.name,
-                      project.projectDir.path,
-                      "clean",
-                      params);
+                        project.projectDir.path,
+                        "clean",
+                        params);
                 delete(ensembleLibDir);
             }
         }
