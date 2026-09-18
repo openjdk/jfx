@@ -31,6 +31,7 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.ContentDisplay;
+import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TitledPane;
 import javafx.scene.layout.HBox;
@@ -39,8 +40,6 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 /// A utility application for testing 3D features, including lighting, materials, and performance.
-///
-/// To measure the true fps, run with `-Djavafx.animation.pulse=1000` (arbitrary cap) and `-Dprism.vsync=false`.
 ///
 /// **Important**: when measuring performance, make sure that no other application on your system is rendering heavy
 /// graphics, like videos, to a screen, as this will corrupt the measurement.
@@ -66,7 +65,11 @@ public class LightingApplication extends Application {
         HBox.setHgrow(environment, Priority.ALWAYS);
 
         stage.setScene(new Scene(hBox));
-        stage.setTitle("3DLighting");
+        environment.boundsInLocalProperty().subscribe(bounds -> {
+            String dims = Math.round(bounds.getWidth()) + "x" + Math.round(bounds.getHeight());
+            IO.println(dims); // print for ease of copy paste
+            stage.setTitle("3DLighting " + dims);
+        });
         stage.show();
     }
 
@@ -81,9 +84,12 @@ public class LightingApplication extends Application {
         Node spreadMeshesControls = benchmark.createSpreadMeshesControls();
         Node spreadMeshesAnimControls = benchmark.createSpreadMeshesAnimControls();
 
+        var fpsLabel = new Label();
+        fpsLabel.textProperty().bind(benchmark.instantFps.asString("%.2f")
+                .concat(" / avg: ").concat(benchmark.averageFps.asString("%.2f")));
         var titlePane = new TitledPane("Performance", new VBox(sphereControls, stackedQuadsControls,
                 spreadQuadsControls, stackedMeshesControls, spreadMeshesControls, spreadMeshesAnimControls));
-        titlePane.setGraphic(new HBox(5, playButton, stopButton));
+        titlePane.setGraphic(new HBox(5, playButton, stopButton, fpsLabel));
         titlePane.setContentDisplay(ContentDisplay.RIGHT);
         titlePane.setExpanded(false);
         return titlePane;

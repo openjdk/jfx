@@ -30,6 +30,8 @@ import javafx.animation.AnimationTimer;
 import javafx.animation.ParallelTransition;
 import javafx.animation.PauseTransition;
 import javafx.animation.TranslateTransition;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Group;
@@ -48,8 +50,10 @@ import javafx.util.Duration;
 final class Benchmark {
 
     private final Environment environment;
-    private final FPSCounter fpsCouner = new FPSCounter();
     private Animation animation = new PauseTransition();
+    private final FPSCounter fpsCouner = new FPSCounter();
+    final DoubleProperty instantFps = new SimpleDoubleProperty();
+    final DoubleProperty averageFps = new SimpleDoubleProperty();
 
     Benchmark(Environment environment) {
         this.environment = environment;
@@ -244,9 +248,10 @@ final class Benchmark {
             double totalElapsedSeconds = totalElapsedTime / 1e9;
             if (elapsedSeconds >= 5.0) {
                 double fps = elapsedFrames / elapsedSeconds;
-                System.out.println();
-                System.out.println("instant fps: " + fps);
+                instantFps.set(fps);
+                System.out.println("\ninstant fps: " + fps);
                 double avgFps = totalElapsedFrames / totalElapsedSeconds;
+                averageFps.set(avgFps);
                 System.out.println("average fps: " + avgFps);
                 System.out.flush();
                 elapsedTime = 0;
@@ -263,8 +268,7 @@ final class Benchmark {
             elapsedFrames = 0;
             totalElapsedTime = 0;
             totalElapsedFrames = 0;
-            System.out.println();
-            System.out.println("reset benchmark");
+            System.out.println("\nreset benchmark");
         }
     }
 }
