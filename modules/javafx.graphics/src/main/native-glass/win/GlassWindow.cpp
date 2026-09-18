@@ -1602,10 +1602,13 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_win_WinWindow__1createWindow
         closeable = (mask & com_sun_glass_ui_Window_CLOSABLE) != 0;
 
         if (mask & com_sun_glass_ui_Window_EXTENDED) {
+            // Needed for constructing the GlassWindow
+            mask |= com_sun_glass_ui_Window_TITLED;
+            // Remove the DWM window controls but retain the window edge
+            // provided by WS_CAPTION (possibly obsolete).
+            dwStyle = WS_CLIPCHILDREN | WS_BORDER;
             dwExStyle = WS_EX_WINDOWEDGE;
-        }
-
-        if (mask & com_sun_glass_ui_Window_TITLED) {
+        } else if (mask & com_sun_glass_ui_Window_TITLED) {
             dwExStyle = WS_EX_WINDOWEDGE;
             dwStyle |= WS_CAPTION;
 
