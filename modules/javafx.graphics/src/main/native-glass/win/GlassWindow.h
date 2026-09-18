@@ -103,6 +103,14 @@ public:
 
     void SetIcon(HICON hIcon);
     void SetDarkFrame(bool);
+
+    enum BackdropStyle {
+        Window,
+        Tabbed,
+        Transient
+    };
+    void EnableBackdrop(BackdropStyle style);
+
     void HandleWindowPosChangedEvent();
     void ShowSystemMenu(int x, int y);
 
@@ -150,6 +158,7 @@ private:
     const bool m_isExtended;
 
     bool m_isResizable;
+    bool m_hasBackdrop;
 
     BYTE m_alpha;
 
