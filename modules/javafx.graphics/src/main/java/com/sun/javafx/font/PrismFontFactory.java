@@ -60,6 +60,9 @@ public abstract class PrismFontFactory implements FontFactory {
 
     private static boolean lcdEnabled;
     private static float lcdContrast = -1;
+    private static boolean newLCDRendering;
+    private static boolean symmetricGlyphs;
+
     private static String jreFontDir;
     private static final String jreDefaultFont   = "Lucida Sans Regular";
     private static final String jreDefaultFontLC = "lucida sans regular";
@@ -128,6 +131,11 @@ public abstract class PrismFontFactory implements FontFactory {
         String defLCDProp = lcdTextOff ? "false" : "true";
         String lcdProp = System.getProperty("prism.lcdtext", defLCDProp);
         lcdEnabled = lcdProp.equals("true");
+        String lcdRenderProp = System.getProperty("prism.lcdrendering", "default");
+        newLCDRendering = lcdEnabled && lcdRenderProp.equals("new");
+
+        String glyphShapingProp = System.getProperty("prism.glyphshaping", "default");
+        symmetricGlyphs = glyphShapingProp.equals("symmetric");
 
         s = System.getProperty("prism.cacheLayoutSize");
         if (s != null) {
@@ -1288,6 +1296,14 @@ public abstract class PrismFontFactory implements FontFactory {
 
     public boolean isLCDTextSupported() {
         return lcdEnabled;
+    }
+
+    public static boolean useNewLCDRendering() {
+        return newLCDRendering;
+    }
+
+    public static boolean useSymmetricGlyphs() {
+        return symmetricGlyphs;
     }
 
     @Override

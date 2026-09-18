@@ -50,6 +50,10 @@ class ID2D1RenderTarget extends IUnknown {
         OS.SetTextAntialiasMode(ptr, textAntialiasMode);
     }
 
+    void SetTextRenderingMode(IDWriteFactory factory, int mode) {
+        OS.SetTextRenderingMode(ptr, factory.ptr, mode);
+    }
+
     void DrawGlyphRun(D2D1_POINT_2F baselineOrigin, DWRITE_GLYPH_RUN glyphRun, ID2D1Brush foregroundBrush, int measuringMode) {
         OS.DrawGlyphRun(ptr, baselineOrigin, glyphRun, foregroundBrush.ptr, measuringMode);
     }

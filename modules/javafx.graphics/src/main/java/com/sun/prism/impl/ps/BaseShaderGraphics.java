@@ -1962,7 +1962,7 @@ public abstract class BaseShaderGraphics
             // Note this also sets the current RenderTarget as the LCDBuffer
             BaseShaderGraphics bsg = (BaseShaderGraphics) context.getLCDBuffer().createGraphics();
             bsg.setCompositeMode(CompositeMode.SRC);
-            context.validateLCDOp(bsg, IDENT, (Texture) getRenderTarget(), null, true, null);
+            context.validateLCDOp(bsg, IDENT, (Texture) getRenderTarget(), null, true, false, null);
 
             int srch = getRenderTarget().getPhysicalHeight();
             int srcw = getRenderTarget().getPhysicalWidth();
@@ -2098,19 +2098,26 @@ public abstract class BaseShaderGraphics
             } else {
                 initLCDSampleRT();
             }
-            // To convert sRGB to (approximately) linear the gamma we use is
-            // 2.233333 which more closely approximates the real sRGB
-            // function compared to the usual value of 2.2.
-            float gamma = 2.233333f;
-            textColor = new Color((float)Math.pow(textColor.getRed(),   gamma),
-                                  (float)Math.pow(textColor.getGreen(), gamma),
-                                  (float)Math.pow(textColor.getBlue(),  gamma),
+
+            float invgamma = PrismFontFactory.getLCDContrast();
+            float gamma = 1.0f/invgamma;
+            if (PrismFontFactory.useNewLCDRendering()) {
+                // To convert sRGB to (approximately) linear the gamma we use is
+                // 2.233333 which more closely approximates the real sRGB
+                // function compared to the usual value of 2.2.
+                invgamma = 2.233333f;
+                gamma = invgamma;
+            }
+
+            textColor = new Color((float)Math.pow(textColor.getRed(),   invgamma),
+                                  (float)Math.pow(textColor.getGreen(), invgamma),
+                                  (float)Math.pow(textColor.getBlue(),  invgamma),
                                   (float)textColor.getAlpha());
             if (selectColor != null) {
                 selectColor = new Color(
-                        (float)Math.pow(selectColor.getRed(),   gamma),
-                        (float)Math.pow(selectColor.getGreen(), gamma),
-                        (float)Math.pow(selectColor.getBlue(),  gamma),
+                        (float)Math.pow(selectColor.getRed(),   invgamma),
+                        (float)Math.pow(selectColor.getGreen(), invgamma),
+                        (float)Math.pow(selectColor.getBlue(),  invgamma),
                         (float)selectColor.getAlpha());
             }
 
@@ -2122,10 +2129,11 @@ public abstract class BaseShaderGraphics
             //set our 2nd LCD shader.
             Shader shader = context.validateLCDOp(this, IDENT,
                                                 context.getLCDBuffer(),
-                                                cacheTex, false, textColor);
+                                                cacheTex, false, PrismFontFactory.useNewLCDRendering(),
+                                                textColor);
 
             float unitXCoord = 1.0f / cacheTex.getPhysicalWidth();
-            shader.setConstant("gamma", gamma, gamma, unitXCoord);
+            shader.setConstant("gamma", gamma, invgamma, unitXCoord);
             setCompositeMode(blendMode); // Restore composite mode
         } else {
             context.validatePaintOp(this, IDENT, cacheTex, bx, by, bw, bh);
