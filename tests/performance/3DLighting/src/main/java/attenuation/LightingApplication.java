@@ -40,6 +40,8 @@ import javafx.stage.Stage;
 
 /// A utility application for testing 3D features, including lighting, materials, and performance.
 ///
+/// To measure the true fps, run with `-Djavafx.animation.pulse=1000` (arbitrary cap) and `-Dprism.vsync=false`.
+///
 /// **Important**: when measuring performance, make sure that no other application on your system is rendering heavy
 /// graphics, like videos, to a screen, as this will corrupt the measurement.
 public class LightingApplication extends Application {
