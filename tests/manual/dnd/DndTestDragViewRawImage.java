@@ -59,6 +59,8 @@ public class DndTestDragViewRawImage extends Application {
         Label label = new Label("Click the image and drag. " +
                 "The drag image displayed with the cursor (drag view) " +
                 "should match the source image");
+        label.setWrapText(true);
+        label.setMaxWidth(440);
 
         VBox vBox = new VBox(label, imageView);
         vBox.setSpacing(5.0);

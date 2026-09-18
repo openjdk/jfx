@@ -59,6 +59,8 @@ public class InputTypeAcceptAttributeTest extends Application {
             new Label(" STEPS:"),
             new Label("  1. Click Choose File, it will display file chooser dialog."),
             new Label("  2. Navigate to above mentioned path."),
+            new Label("  3. Select a file allowed by the current scenario and click Open."),
+            new Label("  4. Verify that the selected file's name appears next to the corresponding Choose File button."),
             new Label(" Expected behaviour: File Chooser dialog should show only the files of specified type."),
             new Label(" On Mac, the behaviour is little different than windows/linux. " +
                         "It shows all files, but user can select files of specified type only."));

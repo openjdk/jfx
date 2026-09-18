@@ -251,13 +251,15 @@ public class EventListenerLeak extends Application {
                 new Label("Issue: calling eventtarget.removeEventListener doesn't remove the Eventlistener"),
                 new Label(" "),
                 new Label(" STEPS:"),
-                new Label("  1. In one panel, remove the WebView."),
-                new Label("  2.  In the other panel, remove the listeners one at a time, making \n" +
-                        "\t sure that the removed link is not active, and the other links are. \n" +
-                        "\t The count should not change when the first of the three listeners \n" +
-                        "\tis removed (because that listener is still in use),\n" +
+                new Label("  1. In one panel, Check the 'Active Listener Count' in the bottom of the window is 5"),
+                new Label("  2. Remove the WebView (WebView#1). Check 'Active Listener Count' again the count should be 3"),
+                new Label("  3.  In the other panel, remove the listeners one at a time, making \n" +
+                        "\t sure that the removed link is not active by clicking on it, and the other links \n" +
+                        "\t are working (the links are removed starting with 'Link: click me A' and going down). \n" +
+                        "\t The 'Active Listener Count' should not change when the first of the three listeners \n" +
+                        "\t is removed (because that listener is still in use) the count should still show 3,\n" +
                         "\t but then should decrease when the second and third are removed.\n"),
-                new Label("  3. The count of number of listeners should go to 0 after doing both of the above."));
+                new Label("  4. The count of number of listeners should go to 0 after doing both of the above."));
 
 
         root.setTop(instructions);
