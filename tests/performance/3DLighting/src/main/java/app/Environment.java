@@ -23,14 +23,14 @@
  * questions.
  */
 
-package attenuation;
+package app;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
-import attenuation.CaptureUtils.Format;
+import app.CaptureUtils.Format;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.geometry.Insets;
 import javafx.geometry.Point3D;

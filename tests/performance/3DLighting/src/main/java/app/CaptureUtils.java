@@ -23,7 +23,7 @@
  * questions.
  */
 
-package attenuation;
+package app;
 
 import java.awt.Desktop;
 import java.awt.image.BufferedImage;

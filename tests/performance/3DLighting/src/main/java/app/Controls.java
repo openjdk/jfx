@@ -23,7 +23,7 @@
  * questions.
  */
 
-package attenuation;
+package app;
 
 import java.util.List;
 

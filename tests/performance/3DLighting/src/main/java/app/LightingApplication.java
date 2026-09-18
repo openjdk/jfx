@@ -23,9 +23,9 @@
  * questions.
  */
 
-package attenuation;
+package app;
 
-import attenuation.Models.Model;
+import app.Models.Model;
 import javafx.application.Application;
 import javafx.scene.Node;
 import javafx.scene.Scene;

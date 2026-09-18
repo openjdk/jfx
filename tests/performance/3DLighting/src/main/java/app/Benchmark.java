@@ -23,7 +23,7 @@
  * questions.
  */
 
-package attenuation;
+package app;
 
 import javafx.animation.Animation;
 import javafx.animation.AnimationTimer;

@@ -23,7 +23,7 @@
  * questions.
  */
 
-package attenuation;
+package app;
 
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
