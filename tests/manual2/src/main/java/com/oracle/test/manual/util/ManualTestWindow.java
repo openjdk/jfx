@@ -38,6 +38,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.TextArea;
 import javafx.scene.effect.BlurType;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.input.Clipboard;
@@ -50,7 +51,6 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
-import javafx.scene.text.TextFlow;
 import javafx.stage.Stage;
 
 /**
@@ -171,7 +171,7 @@ public abstract class ManualTestWindow extends Application {
         cp.setBackground(Background.fill(Color.gray(1)));
         cp.setEffect(shadow);
 
-        Node instructionField = toTextFlow(instructions);
+        Node instructionField = createInstructionsNode(instructions);
 
         Region fill = new Region();
 
@@ -247,11 +247,12 @@ public abstract class ManualTestWindow extends Application {
         stage.show();
     }
 
-    private static Node toTextFlow(String text) {
-        TextFlow f = new TextFlow();
-        Text t = new Text(text);
-        f.getChildren().add(t);
-        f.setOnContextMenuRequested((ev) -> {
+    private static Node createInstructionsNode(String text) {
+        TextArea t = new TextArea(text);
+        t.setFocusTraversable(false);
+        t.setWrapText(true);
+        t.setEditable(false);
+        t.setOnContextMenuRequested((ev) -> {
             ContextMenu m = new ContextMenu();
             MenuItem mi = new MenuItem("Copy Instructions");
             mi.setOnAction((e) -> {
@@ -260,9 +261,9 @@ public abstract class ManualTestWindow extends Application {
                 Clipboard.getSystemClipboard().setContent(cc);
             });
             m.getItems().setAll(mi);
-            m.show(f, ev.getScreenX(), ev.getScreenY());
+            m.show(t, ev.getScreenX(), ev.getScreenY());
         });
-        return f;
+        return t;
     }
 
     private static void setIcon(Button b, String text, Color c) {
