@@ -39,12 +39,56 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
-/// A utility application for testing 3D features, including lighting, materials, and performance.
+/// A utility application for testing 3D features.
 ///
-/// Run from Gradle from the jfx root with: `gradlew -p tests\performance\3DLighting run`
+/// ## Camera Movements
+///
+/// The camera can be position in the 3D environment by moving it with the following controls:
+/// - Primary mouse button drag to pan
+/// - Secondary mouse button to rotate
+/// - Shift + secondary mouse button to swivel
+/// - Mouse scrollwheel to zoom
+///
+/// ## Background
+///
+/// A background can be set to allow for better contrast or test transparency. It can be a solid color or a selected
+/// image. A background does not interact with lights.
+///
+/// ## Screenshots
+///
+/// The screenshot button will save an image of the current 3D environment. These are written to the `/screenshots` dir
+/// of this application. They are useful for demonstrations in issues, docs, or presentations.
+///
+/// ## Performance Measurements
+///
+/// The 'Performance' pane is used to measure the FPS of 3D setups. An animation will play during the measurement
+/// to keep the content dirty, otherwise no render request will be made. By default (see the Gradle build file), vsync
+/// is turned off and the animation pulse is increased from 60 to 1000 to allow less capped measurements.
+///
+/// To measure performance:
+/// 1. Create the setup:
+///    - Add the 3D content
+///    - Set up the lights
+///    - Position the camera
+///    - Resize the window to the desired size
+/// 2. Press the start button. Measurements will appear in the header area and be printed to the console.
+/// 3. Press the stop button. The measurements will stop and the application will be ready for the next measurement.
 ///
 /// **Important**: when measuring performance, make sure that no other application on your system is rendering heavy
 /// graphics, like videos, to a screen, as this will corrupt the measurement.
+///
+/// ## Models Inspection
+///
+/// The 'Models' pane is used to visually inspect the light-material behavior.
+///
+/// - Choose a model
+/// - Set up its material (the maps can be a solid color or an image, like the background described above)
+/// - Set up the lights
+///
+/// ## Running
+///
+/// Run with Gradle from the jfx root with: `gradlew -p tests\performance\3DLighting run`. This reuses the parent Gradle
+/// wrapper.
 public class LightingApplication extends Application {
 
     private final Environment environment = new Environment();
