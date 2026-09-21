@@ -55,8 +55,10 @@ public class NotResizableWindowTest extends Application{
 
 
         VBox root = new VBox(8,
-                new Label("Check window button state (Focused) before and after clicking the “Press this button” button"),
-                new Label("If the state is the same before and after clicking, Press Pass otherwise Fail"),
+                new Label("""
+                        Check window button state (Focused) before and after clicking the “Press this button” button\n
+                        If the state is the same before and after clicking, Press Pass otherwise Fail
+                        """),
                 openDialogButton,passButton,failButton);
         root.setPadding(new Insets(8));
         Scene scene = new Scene(root);

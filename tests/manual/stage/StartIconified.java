@@ -42,11 +42,11 @@ public class StartIconified extends Application {
     @Override
     public void start(Stage primaryStage) {
         Text instructionText = new Text("""
-            1. The "Iconified Window Test" must initially appear only on the
-               operating-system taskbar or Dock.
-            2. It must not appear normally on the screen before becoming iconified.
-            3. Restore the iconified window and verify that it displays normally.
-            """);
+                1. The "Iconified Window Test" must initially appear only on the
+                   operating-system taskbar or Dock.
+                2. It must not appear normally on the screen before becoming iconified, even briefly. If it does, the test fails.
+                3. Restore the iconified window and verify that it displays normally.
+                """);
         instructionText.setWrappingWidth(560);
 
         StackPane instructionRoot = new StackPane(instructionText);
@@ -63,8 +63,8 @@ public class StartIconified extends Application {
         primaryStage.setIconified(true);
 
         Text text = new Text("""
-                1. This stage must initially appear on the OS taskbar (iconified), but not on the Screen
-                2. Observe if the stage pops and then iconifies (wrong)""");
+                    This stage must initially appear on the OS taskbar (iconified), but not on the Screen.
+                """);
 
         Scene scene = new Scene(new StackPane(text));
         primaryStage.setScene(scene);
