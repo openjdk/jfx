@@ -124,7 +124,7 @@ class CameraScene3D extends Pane {
                 case PRIMARY -> pan(deltaX, deltaY);
                 case SECONDARY -> {
                     if (e.isShiftDown()) {
-                        swivle(deltaY);
+                        swivel(deltaY);
                     } else {
                         boolean positiveX = curX > getWidth() / 2;
                         boolean positiveY = curY > getHeight() / 2;
@@ -133,7 +133,7 @@ class CameraScene3D extends Pane {
                         rotate((deltaX + deltaY) / 2);
                     }
                 }
-                case MIDDLE -> swivle(deltaY);
+                case MIDDLE -> swivel(deltaY);
                 case BACK, FORWARD, NONE -> {}
             }
         });
@@ -162,7 +162,7 @@ class CameraScene3D extends Pane {
         zAngle.set(zAngle.get() - amount * zRotationSensitivity.get());
     }
 
-    private void swivle(double amount) {
+    private void swivel(double amount) {
         isometricAngle.set(isometricAngle.get() - amount * isoRotationSensitivity.get());
     }
 }
