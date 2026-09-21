@@ -123,11 +123,15 @@ class CameraScene3D extends Pane {
             switch (e.getButton()) {
                 case PRIMARY -> pan(deltaX, deltaY);
                 case SECONDARY -> {
-                    boolean positiveX = curX > getWidth() / 2;
-                    boolean positiveY = curY > getHeight() / 2;
-                    deltaX = positiveY ? -deltaX : deltaX;
-                    deltaY = positiveX ? deltaY : -deltaY;
-                    rotate((deltaX + deltaY)/2);
+                    if (e.isShiftDown()) {
+                        swivle(deltaY);
+                    } else {
+                        boolean positiveX = curX > getWidth() / 2;
+                        boolean positiveY = curY > getHeight() / 2;
+                        deltaX = positiveY ? -deltaX : deltaX;
+                        deltaY = positiveX ? deltaY : -deltaY;
+                        rotate((deltaX + deltaY) / 2);
+                    }
                 }
                 case MIDDLE -> swivle(deltaY);
                 case BACK, FORWARD, NONE -> {}
