@@ -38,7 +38,7 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.image.Image;
 
-/// Utility class for creating screenshots.
+/// Utility class for creating screenshots. Screenshots are saved in the `/screenshots` directory of this project.
 final class CaptureUtils {
 
     enum Format {
