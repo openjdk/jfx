@@ -58,7 +58,9 @@ import javafx.util.converter.NumberStringConverter;
 final class Controls {
 
     static Node createLightControls(AmbientLight light) {
-        return createTitlePane(light, null);
+        var titlePane = createTitlePane(light, null);
+        titlePane.setCollapsible(false);
+        return titlePane;
     }
 
     static Node createLightControls(PointLight light) {
