@@ -2069,8 +2069,8 @@ allprojects {
         sourceCompatibility = JAVA_TARGET_VERSION
     }
 
-    // By default all of our projects require junit for testing so we can just
-    // setup this dependency here.
+    // By default all of our projects require junit for testing so we can just setup this dependency here.
+    // All transitive dependencies are explicitly declared because closed builds may need them.
     dependencies {
         testImplementation group: "org.apiguardian", name: "apiguardian-api", version: "${apiguardianVersion}"
         testImplementation group: "org.jspecify", name: "jspecify", version: "${jspecifyVersion}"
