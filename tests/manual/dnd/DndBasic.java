@@ -112,9 +112,9 @@ public class DndBasic extends Application {
                 also be used as either the drag source or the drop destination.
                 The names inside each Source and Destination box show its supported actions.
                 An action is compatible when it appears in both boxes.
-                
+
                 %s
-                
+
                 For each Source/Destination pair being tested, first drag without holding any modifier keys.
                 Then repeat with each modifier combination listed above, holding the keys until the drop completes.
                 A successful drop must show 'accepted MODE' in the Source and

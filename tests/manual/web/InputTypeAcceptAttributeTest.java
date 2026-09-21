@@ -57,7 +57,7 @@ public class InputTypeAcceptAttributeTest extends Application {
                          This test creates four files (TEXT.txt, PNG.png, PDF.pdf, JPG.jpg) at below mentioned path:
                           %s
                          There are five different scenarios, follow below steps for each scenario.
-                        
+
                          STEPS:
                           1. Click Choose File, it will display file chooser dialog.
                           2. Navigate to above mentioned path.

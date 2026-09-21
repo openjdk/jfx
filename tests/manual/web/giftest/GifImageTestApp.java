@@ -47,7 +47,7 @@ public class GifImageTestApp extends Application {
         VBox instructions = new VBox(
                 new Label("""
                         This test verifies animated GIF rendering, please follow below steps.
-                        
+
                         STEPS:
                         1. Click the RunTest button.
                         2. Observe the red-and-black GIF for at least 10 seconds.

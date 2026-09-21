@@ -70,12 +70,12 @@ public class PrintOrientTest extends Application {
     static final String instructions = """
             This test verifies paper orientation for all supported cases:
             portrait, reverse portrait, landscape, and reverse landscape.
-            
+
             Press 'Print' button and inspect each sheet in the same orientation in which it emerges from the printer.
             DO NOT rotate, flip, or reorder the sheets.
             If a page says that its orientation is 'unsupported on this printer',
             ignore that page.
-            
+
             For every supported orientation, verify that the rectangle has uniform 1-inch margins from the edges of the paper.
             The reverse portrait and reverse landscape pages must emerge rotated 180 degrees relative to their corresponding non-reversed pages.
             The test passes only if all supported orientations meet these conditions.

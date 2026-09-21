@@ -40,19 +40,19 @@ public class PrintDialogModalityTest extends Application {
             PRECONDITION: At least one printer must be installed.
             Without a printer, the operating system might not display the dialogs,
             and the test is not valid.
-            
+
             Test each of the four buttons, closing each print or page-setup dialog
             before continuing to the next one.
-            
+
             MODAL CASES:
             While a modal dialog is open, the main test window must not accept input
             or allow another dialog to be opened. The main window must also remain
             behind the dialog.
-            
+
             NON-MODAL CASES:
             While a non-modal dialog is open, the main test window should normally
             accept input and be movable in front of the dialog.
-            
+
             PLATFORM-SPECIFIC BEHAVIOR:
             A modal dialog may remain above only its parent window, above all windows
             in the application, or above all desktop windows. All of these behaviors
