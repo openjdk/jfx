@@ -24,6 +24,8 @@
  */
 
 #include <iostream>
+#define _USE_MATH_DEFINES
+#include <math.h>
 #include "D3DMeshView.h"
 #include "D3DPhongShader.h"
 
@@ -56,14 +58,12 @@ void D3DMeshView::setWireframe(bool wf) {
     wireframe = wf;
 }
 
-// Prepares the ambient light that will be used in a future 'render' call.
 void D3DMeshView::setAmbientLight(float r, float g, float b) {
     ambientLightColor[0] = r;
     ambientLightColor[1] = g;
     ambientLightColor[2] = b;
 }
 
-// Prepares the (non-ambient) lights that will be used in a future 'render' call.
 void D3DMeshView::setLight(int index, float x, float y, float z, float r, float g, float b, float lightOn,
         float ca, float la, float qa, float isAttenuated, float maxRange,
         float dirX, float dirY, float dirZ, float innerAngle, float outerAngle, float falloff) {
@@ -92,7 +92,6 @@ void D3DMeshView::setLight(int index, float x, float y, float z, float r, float 
     }
 }
 
-// Computes the number of active lights for the pixel shader permutation.
 void D3DMeshView::computeNumLights() {
     if (!lightsDirty)
         return;
@@ -139,10 +138,55 @@ void D3DMeshView::render() {
 
     computeNumLights();
 
-    status = SUCCEEDED(context->updateLightsConstants(lights, ambientLightColor));
-    if (!status) {
-        cout << "D3DMeshView.render() - updateLightsConstants failed !!!" << endl;
-        return;
+    // Prepare lights data
+    float lightsPosition[MAX_NUM_LIGHTS * 4];      // 3 coords + 1 padding
+    float lightsNormDirection[MAX_NUM_LIGHTS * 4]; // 3 coords + 1 padding
+    float lightsColor[MAX_NUM_LIGHTS * 4];         // 3 color + 1 padding
+    float lightsAttenuation[MAX_NUM_LIGHTS * 4];   // 3 attenuation factors + 1 isAttenuated
+    float lightsRange[MAX_NUM_LIGHTS * 4];         // 1 maxRange + 3 padding
+    float spotLightsFactors[MAX_NUM_LIGHTS * 4];   // 2 angles + 1 falloff + 1 padding
+    for (int i = 0, d = 0, p = 0, c = 0, a = 0, r = 0, s = 0; i < MAX_NUM_LIGHTS; i++) {
+        D3DLight& light = lights[i];
+
+        lightsPosition[p++] = light.position[0];
+        lightsPosition[p++] = light.position[1];
+        lightsPosition[p++] = light.position[2];
+        lightsPosition[p++] = 0;
+
+        lightsNormDirection[d++] = light.direction[0];
+        lightsNormDirection[d++] = light.direction[1];
+        lightsNormDirection[d++] = light.direction[2];
+        lightsNormDirection[d++] = 0;
+
+        lightsColor[c++] = light.color[0];
+        lightsColor[c++] = light.color[1];
+        lightsColor[c++] = light.color[2];
+        lightsColor[c++] = 1;
+
+        lightsAttenuation[a++] = light.attenuation[0];
+        lightsAttenuation[a++] = light.attenuation[1];
+        lightsAttenuation[a++] = light.attenuation[2];
+        lightsAttenuation[a++] = light.attenuation[3];
+
+        lightsRange[r++] = light.maxRange;
+        lightsRange[r++] = 0;
+        lightsRange[r++] = 0;
+        lightsRange[r++] = 0;
+
+        if (light.isPointLight() || light.isDirectionalLight()) {
+            spotLightsFactors[s++] = -1; // cos(180)
+            spotLightsFactors[s++] = 2;  // cos(0) - cos(180)
+            spotLightsFactors[s++] = 0;
+            spotLightsFactors[s++] = 0;
+        } else {
+            // preparing for: I = pow((cosAngle - cosOuter) / (cosInner - cosOuter), falloff)
+            float cosInner = cos(light.innerAngle * M_PI / 180);
+            float cosOuter = cos(light.outerAngle * M_PI / 180);
+            spotLightsFactors[s++] = cosOuter;
+            spotLightsFactors[s++] = cosInner - cosOuter;
+            spotLightsFactors[s++] = light.falloff;
+            spotLightsFactors[s++] = 0;
+        }
     }
 
     // Set Vertex Shader constants //
@@ -150,7 +194,6 @@ void D3DMeshView::render() {
     // ProjViewMatrix position is set from D3DContext.cc::SetProjViewMatrix at VSR_VIEWPROJMATRIX
     // Camera position is set from D3DContext.cc::SetCameraPosition at VSR_CAMERAPOS
 
-    /*
     status = SUCCEEDED(device->SetVertexShaderConstantF(VSR_LIGHT_POS, lightsPosition, MAX_NUM_LIGHTS));
     if (!status) {
         cout << "D3DMeshView.render() - SetVertexShaderConstantF(VSR_LIGHT_POS) failed !!!" << endl;
@@ -162,7 +205,6 @@ void D3DMeshView::render() {
         cout << "D3DMeshView.render() - SetVertexShaderConstantF (VSR_LIGHT_DIRS) failed !!!" << endl;
         return;
     }
-        */
 
     D3DMATRIX mat;
     matrixTransposed(mat, *(context->GetWorldTx()));
@@ -192,7 +234,6 @@ void D3DMeshView::render() {
         return;
     }
 
-    /*
     status = SUCCEEDED(device->SetPixelShaderConstantF(PSR_LIGHT_AMBIENT_COLOR, ambientLightColor, 1));
     if (!status) {
         cout << "D3DMeshView.render() - SetPixelShaderConstantF (PSR_LIGHT_AMBIENT_COLOR) failed !!!" << endl;
@@ -222,7 +263,6 @@ void D3DMeshView::render() {
         cout << "D3DMeshView.render() - SetPixelShaderConstantF(PSR_SPOTLIGHT_FACTORS) failed !!!" << endl;
         return;
     }
-        */
 
 // needed for pixel lighting
 //    status = SUCCEEDED(device->SetPixelShaderConstantF(PSR_LIGHT_DIRS, lightsNormDirection, MAX_NUM_LIGHTS));

@@ -31,6 +31,8 @@
 #include "D3DMesh.h"
 #include "D3DPhongMaterial.h"
 
+#define MAX_NUM_LIGHTS 3
+
 class D3DMeshView {
 public:
     D3DMeshView(D3DContext *pCtx, D3DMesh *pMesh);
