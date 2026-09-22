@@ -242,12 +242,6 @@ public class Node_effectiveOrientation_Css_Test {
 
     @Test
     public void testChangeNodeOrientationWillReapplyCss() {
-        Group root = new Group();
-        Scene scene = new Scene(root);
-        Stage stage = new Stage();
-        stage.setScene(scene);
-        stage.show();
-
         Stylesheet stylesheet = new CssParser().parse(
                 ".rect:dir(rtl) { -fx-fill: #ff0000; }" +
                 ".rect:dir(ltr) { -fx-fill: #00ff00; }" +
@@ -270,5 +264,4 @@ public class Node_effectiveOrientation_Css_Test {
         root.applyCss();
         assertEquals(Color.web("#00ff00"), rect.getFill());
     }
-
 }
