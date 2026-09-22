@@ -63,7 +63,7 @@ public class StartIconified extends Application {
         primaryStage.setIconified(true);
 
         Text text = new Text("""
-                    This stage must initially appear on the OS taskbar (iconified), but not on the Screen.
+                This stage must initially appear on the OS taskbar (iconified), but not on the Screen.
                 """);
 
         Scene scene = new Scene(new StackPane(text));
