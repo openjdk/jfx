@@ -61,7 +61,8 @@ public class DndTestDragViewRawImage extends Application {
                 Click the image and drag.
                 The colors of the drag image displayed with the cursor (drag view)
                 must be similar to those of the source image, but may not be identical
-                due to transparency. You may ignore this size difference of the drag image in some cases.
+                due to transparency. You may ignore any difference in the size of the drag image.
+                The test fails if the drag image is not identical to the source image.
                 """);
         label.setWrapText(true);
         label.setMaxWidth(440);
