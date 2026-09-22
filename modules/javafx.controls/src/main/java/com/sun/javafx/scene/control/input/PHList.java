@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.jfx.incubator.scene.control.input;
+package com.sun.javafx.scene.control.input;
 
 import java.util.ArrayList;
 import java.util.Arrays;

@@ -52,11 +52,6 @@
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="src" path="/incubator.input">
-		<attributes>
-			<attribute name="module" value="true"/>
-		</attributes>
-	</classpathentry>
 	<classpathentry kind="src" path="/incubator.richtext">
 		<attributes>
 			<attribute name="module" value="true"/>

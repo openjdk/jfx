@@ -26,6 +26,7 @@
 package javafx.scene.control;
 
 import javafx.scene.Node;
+import javafx.scene.control.input.SkinInputMap;
 
 /**
  * An interface for defining the visual representation of user interface controls.
