@@ -150,20 +150,6 @@ void D3DMeshView::render() {
     // ProjViewMatrix position is set from D3DContext.cc::SetProjViewMatrix at VSR_VIEWPROJMATRIX
     // Camera position is set from D3DContext.cc::SetCameraPosition at VSR_CAMERAPOS
 
-    /*
-    status = SUCCEEDED(device->SetVertexShaderConstantF(VSR_LIGHT_POS, lightsPosition, MAX_NUM_LIGHTS));
-    if (!status) {
-        cout << "D3DMeshView.render() - SetVertexShaderConstantF(VSR_LIGHT_POS) failed !!!" << endl;
-        return;
-    }
-
-    status = SUCCEEDED(device->SetVertexShaderConstantF(VSR_LIGHT_DIRS, lightsNormDirection, MAX_NUM_LIGHTS));
-    if (!status) {
-        cout << "D3DMeshView.render() - SetVertexShaderConstantF (VSR_LIGHT_DIRS) failed !!!" << endl;
-        return;
-    }
-        */
-
     D3DMATRIX mat;
     matrixTransposed(mat, *(context->GetWorldTx()));
 //    std::cerr << "Transposed world transform:\n";
@@ -191,38 +177,6 @@ void D3DMeshView::render() {
         cout << "D3DMeshView.render() - SetPixelShaderConstantF (PSR_MAT_SPECULAR_COLOR) failed !!!" << endl;
         return;
     }
-
-    /*
-    status = SUCCEEDED(device->SetPixelShaderConstantF(PSR_LIGHT_AMBIENT_COLOR, ambientLightColor, 1));
-    if (!status) {
-        cout << "D3DMeshView.render() - SetPixelShaderConstantF (PSR_LIGHT_AMBIENT_COLOR) failed !!!" << endl;
-        return;
-    }
-
-    status = SUCCEEDED(device->SetPixelShaderConstantF(PSR_LIGHT_COLOR, lightsColor, MAX_NUM_LIGHTS));
-    if (!status) {
-        cout << "D3DMeshView.render() - SetPixelShaderConstantF(PSR_LIGHT_COLOR) failed !!!" << endl;
-        return;
-    }
-
-    status = SUCCEEDED(device->SetPixelShaderConstantF(PSR_LIGHT_ATTENUATION, lightsAttenuation, MAX_NUM_LIGHTS));
-    if (!status) {
-        cout << "D3DMeshView.render() - SetPixelShaderConstantF(PSR_LIGHT_ATTENUATION) failed !!!" << endl;
-        return;
-    }
-
-    status = SUCCEEDED(device->SetPixelShaderConstantF(PSR_LIGHT_RANGE, lightsRange, MAX_NUM_LIGHTS));
-    if (!status) {
-        cout << "D3DMeshView.render() - SetPixelShaderConstantF(PSR_LIGHT_RANGE) failed !!!" << endl;
-        return;
-    }
-
-    status = SUCCEEDED(device->SetPixelShaderConstantF(PSR_SPOTLIGHT_FACTORS, spotLightsFactors, MAX_NUM_LIGHTS));
-    if (!status) {
-        cout << "D3DMeshView.render() - SetPixelShaderConstantF(PSR_SPOTLIGHT_FACTORS) failed !!!" << endl;
-        return;
-    }
-        */
 
 // needed for pixel lighting
 //    status = SUCCEEDED(device->SetPixelShaderConstantF(PSR_LIGHT_DIRS, lightsNormDirection, MAX_NUM_LIGHTS));
