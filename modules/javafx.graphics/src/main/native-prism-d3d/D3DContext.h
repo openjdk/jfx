@@ -255,7 +255,7 @@ public:
      * MeshViews tend to share the same lights since the lights' default scope is the whole scene.
      * To avoid reuploading them to the GPU registers per-mesh per-frame, they are cached and only reuploaded on change.
      * See MeshView::render.
-     */ 
+     */
     HRESULT updateLightsConstants(D3DLight (&lights)[MAX_NUM_LIGHTS], float (&ambient)[3]);
 
 private:

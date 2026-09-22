@@ -1375,7 +1375,7 @@ HRESULT D3DContext::updateLightsConstants(D3DLight (&lights)[MAX_NUM_LIGHTS], fl
     }
     std::copy(ambient, ambient + 3, newConsts.ambient);
     newConsts.ambient[3] = 1; // pad 4th element
-    
+
     // avoid uploading the constants if they are cached already
     // C++20: newConstants == lightsConstants
     if (lightsConstantsValid && memcmp(&newConsts, &lightsConstants, sizeof(LightsConstants)) == 0) {
