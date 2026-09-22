@@ -28,6 +28,7 @@
 #include "D3DPipeline.h"
 #include "D3DResourceManager.h"
 #include "D3DPhongShader.h"
+#include "D3DLight.h"
 
 #if !defined NO_PERF_COUNTERS && !defined PERF_COUNTERS
     #define PERF_COUNTERS
@@ -235,6 +236,28 @@ public:
         int cullMode;
     } state;
 
+    // 3D lights cache state. See the updateLightsConstants method.
+    struct LightsConstants {
+        float position[MAX_NUM_LIGHTS * 4];
+        float direction[MAX_NUM_LIGHTS * 4];
+        float color[MAX_NUM_LIGHTS * 4];
+        float attenuation[MAX_NUM_LIGHTS * 4];
+        float range[MAX_NUM_LIGHTS * 4];
+        float spotlightFactors[MAX_NUM_LIGHTS * 4];
+        float ambient[4];
+
+        // C++20
+        //bool operator==(const LightsConstants&) const = default;
+    };
+
+    /**
+     * Caches lights used in a device context (MeshView-wide) if the current cache is invalid.
+     * MeshViews tend to share the same lights since the lights' default scope is the whole scene.
+     * To avoid reuploading them to the GPU registers per-mesh per-frame, they are cached and only reuploaded on change.
+     * See MeshView::render.
+     */ 
+    HRESULT updateLightsConstants(D3DLight (&lights)[MAX_NUM_LIGHTS], float (&ambient)[3]);
+
 private:
     ~D3DContext();
 
@@ -248,6 +271,10 @@ private:
     D3DMATRIX projection; // projection view transform (TODO: This should now include the camera's world to local tx?)
     BOOL depthTest;
     float pixadjustx, pixadjusty;
+
+    // 3D lights cache. See the updateLightsConstants method.
+    LightsConstants lightsConstants;
+    bool lightsConstantsValid;
 
     // finds appropriate to the target surface depth format,
     // creates the depth buffer and installs it onto the device
