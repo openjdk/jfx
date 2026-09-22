@@ -51,17 +51,17 @@ import javafx.stage.Stage;
 ///
 /// ## Background
 ///
-/// A background can be set to allow for better contrast or test transparency. It can be a solid color or a selected
+/// A background can be set to allow for better contrast or to test transparency. It can be a solid color or a selected
 /// image. A background does not interact with lights.
 ///
 /// ## Screenshots
 ///
-/// The screenshot button will save an image of the current 3D environment. These are written to the `/screenshots` dir
-/// of this application. They are useful for demonstrations in issues, docs, or presentations.
+/// The screenshot button will save an image of the current 3D environment (background included). These are written to
+/// the `/screenshots` dir of this application. They are useful for demonstrations in issues, docs, or presentations.
 ///
 /// ## Performance Measurements
 ///
-/// The 'Performance' pane is used to measure the FPS of 3D setups. An animation will play during the measurement
+/// The 'Performance' pane is used to measure the FPS of 3D setups. The 3D setup will be animated during the measurement
 /// to keep the content dirty, otherwise no render request will be made. By default (see the Gradle build file), vsync
 /// is turned off and the animation pulse is increased from 60 to 1000 to allow less capped measurements.
 ///
