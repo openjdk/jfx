@@ -2,6 +2,7 @@ plugins {
     id("application")
 }
 
+// Relative path - if the project is moved, this needs to be updated
 def jarsPath = layout.projectDirectory.dir("../../../build/sdk/lib")
 
 dependencies {
