@@ -479,6 +479,9 @@
     if (depthTest &&
         ([rtt getDepthTexture] != nil)) {
         depthEnabled = true;
+        if (encoderHasDepthAttachment == false) {
+            [self endCurrentRenderEncoder];
+        }
     } else {
         depthEnabled = false;
     }
