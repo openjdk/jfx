@@ -101,7 +101,7 @@ public class PrintDialogModalityTest extends Application {
             vbox = new VBox(2, info, noprinters);
         }
         vbox.setAlignment(Pos.TOP_CENTER);
-        Scene scene = new Scene(vbox, 500, 400);
+        Scene scene = new Scene(vbox, 500, 450);
         primaryStage.setScene(scene);
         primaryStage.show();
     }
