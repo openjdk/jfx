@@ -49,7 +49,7 @@ public abstract class View {
 
         /* By default accessibility is enabled for Mac 10.9 or greater and Windows 7 or greater. */
         try {
-            String platform = GlassPlatform.determinePlatform();
+            String platform = GlassPlatform.getPlatform();
             String major = System.getProperty("os.version").replaceFirst("(\\d+)\\.\\d+.*", "$1");
             String minor = System.getProperty("os.version").replaceFirst("\\d+\\.(\\d+).*", "$1");
             int v = Integer.parseInt(major) * 100 + Integer.parseInt(minor);

@@ -25,6 +25,7 @@
 
 package com.sun.prism.es2;
 
+import com.sun.glass.ui.GlassPlatform;
 import com.sun.glass.ui.Screen;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.prism.GraphicsResource;
@@ -33,7 +34,6 @@ import com.sun.prism.PresentableState;
 import com.sun.prism.RTTexture;
 import com.sun.prism.CompositeMode;
 import com.sun.prism.impl.PrismSettings;
-import com.sun.javafx.PlatformUtil;
 import com.sun.prism.ResourceFactory;
 import com.sun.prism.Texture.WrapMode;
 
@@ -261,7 +261,7 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
     public int getContentX() {
         // EGL doesn't have a window manager, so we need to ask the window for
         // the x/y offset to use
-        if (PlatformUtil.useEGL()) {
+        if (GlassPlatform.useEGL()) {
             return (int) (pState.getWindowX() * pState.getOutputScaleX());
         } else {
             return 0;
@@ -272,7 +272,7 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
     public int getContentY() {
         // EGL doesn't have a window manager, so we need to ask the window
         // for the x/y offset to use
-        if (PlatformUtil.useEGL()) {
+        if (GlassPlatform.useEGL()) {
             return ((int) (pState.getScreenHeight() * pState.getOutputScaleY())) -
                     pState.getOutputHeight() - ((int) (pState.getWindowY() * pState.getOutputScaleY()));
         } else {

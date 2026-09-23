@@ -26,7 +26,12 @@ package com.sun.glass.ui;
 
 import com.sun.javafx.PlatformUtil;
 
-final class GlassPlatform {
+import java.util.Locale;
+
+/**
+ * Graphics related platform checks, based on the Glass and Prism system properties.
+ */
+public final class GlassPlatform {
 
     public static final String MAC = "Mac";
     public static final String WINDOWS = "Win";
@@ -34,36 +39,71 @@ final class GlassPlatform {
     public static final String IOS = "Ios";
     public static final String HEADLESS = "Headless";
 
-    private static String type;
+    private static final String PLATFORM;
+    private static final boolean USE_EGL;
+    private static final boolean IS_HEADLESS;
+    private static final boolean IS_MONOCLE;
 
     static {
+        // PlatformUtil must be initialized first, as it may set the system properties read below.
+        String osType = null;
+        if (PlatformUtil.isMac()) {
+            osType = MAC;
+        } else if (PlatformUtil.isWindows()) {
+            osType = WINDOWS;
+        } else if (PlatformUtil.isLinux()) {
+            osType = GTK;
+        } else if (PlatformUtil.isIOS()) {
+            osType = IOS;
+        }
+
         // Provide for a runtime override, allowing EGL for example
         String userPlatform = System.getProperty("glass.platform");
-
-        if (userPlatform != null) {
-            type = switch (userPlatform) {
+        if (userPlatform == null) {
+            PLATFORM = osType;
+        } else {
+            PLATFORM = switch (userPlatform) {
                 case "macosx" -> MAC;
                 case "windows" -> WINDOWS;
-                case "linux" -> GTK;
-                case "gtk" -> GTK;
+                case "linux", "gtk" -> GTK;
                 case "ios" -> IOS;
                 case "headless" -> HEADLESS;
                 default -> userPlatform;
             };
         }
 
-        if (PlatformUtil.isMac()) {
-            type = MAC;
-        } else if (PlatformUtil.isWindows()) {
-            type = WINDOWS;
-        } else if (PlatformUtil.isLinux()) {
-            type = GTK;
-        } else if (PlatformUtil.isIOS()) {
-            type = IOS;
-        }
+        USE_EGL = Boolean.getBoolean("use.egl");
+
+        String embeddedType = System.getProperty("glass.platform", "").toLowerCase(Locale.ROOT);
+        IS_HEADLESS = "headless".equals(embeddedType);
+        IS_MONOCLE = "monocle".equals(embeddedType);
     }
 
-    public static String determinePlatform() {
-        return type;
+    /**
+     * Returns the Glass platform in use, or {@code null} if it could not be determined.
+     */
+    public static String getPlatform() {
+        return PLATFORM;
+    }
+
+    /**
+     * Returns true if the Headless glass platform is selected.
+     */
+    public static boolean isHeadless() {
+        return IS_HEADLESS;
+    }
+
+    /**
+     * Returns true if EGL is used.
+     */
+    public static boolean useEGL() {
+        return USE_EGL;
+    }
+
+    /**
+     * Returns true if the Monocle glass platform is selected.
+     */
+    public static boolean isMonocle() {
+        return IS_MONOCLE;
     }
 }
