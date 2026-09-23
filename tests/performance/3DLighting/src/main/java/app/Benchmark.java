@@ -41,9 +41,6 @@ import javafx.scene.control.Slider;
 import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
-import javafx.scene.text.Font;
-import javafx.scene.text.Text;
-import javafx.scene.text.TextBoundsType;
 import javafx.util.Duration;
 
 /// Responsible for performance measurements.
@@ -60,9 +57,8 @@ final class Benchmark {
     }
 
     Button createStopButton() {
-        var stopGraphic = createGraphic("⏹");
+        var stopGraphic = Controls.createGraphic("⏹");
         stopGraphic.setFill(Color.RED);
-        stopGraphic.setFont(Font.font(20));
 
         var stopButton = new Button("", stopGraphic);
         stopButton.setPadding(new Insets(2.5));
@@ -73,7 +69,7 @@ final class Benchmark {
     }
 
     Button createPlayButton() {
-        var playGraphic = createGraphic("▶");
+        var playGraphic = Controls.createGraphic("▶");
         playGraphic.setFill(Color.GREEN);
 
         var playButton = new Button("", playGraphic);
@@ -170,17 +166,10 @@ final class Benchmark {
     }
 
     private static Button createButton(String text, String icon, String tooltip) {
-        var graphic = createGraphic(icon);
+        var graphic = Controls.createGraphic(icon);
         var button = new Button(text, graphic);
         button.setTooltip(new Tooltip(tooltip));
         return button;
-    }
-
-    private static Text createGraphic(String icon) {
-        var graphic = new Text(icon);
-        graphic.setBoundsType(TextBoundsType.VISUAL);
-        graphic.setFont(new Font(40));
-        return graphic;
     }
 
     private void switchTo(Node node) {
@@ -194,6 +183,7 @@ final class Benchmark {
     }
 
     private void startMeasurement() {
+        System.out.println("starting benchmark");
         animation.playFromStart();
         fpsCouner.start();
     }

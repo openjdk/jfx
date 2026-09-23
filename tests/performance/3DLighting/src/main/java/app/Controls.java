@@ -50,6 +50,9 @@ import javafx.scene.control.Tooltip;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
+import javafx.scene.text.Font;
+import javafx.scene.text.Text;
+import javafx.scene.text.TextBoundsType;
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Transform;
 import javafx.util.converter.NumberStringConverter;
@@ -192,5 +195,12 @@ final class Controls {
         slider.setShowTickMarks(true);
         slider.setShowTickLabels(true);
         return slider;
+    }
+
+    static Text createGraphic(String icon) {
+        var graphic = new Text(icon);
+        graphic.setBoundsType(TextBoundsType.VISUAL);
+        graphic.setFont(new Font(30));
+        return graphic;
     }
 }
