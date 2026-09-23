@@ -43,6 +43,7 @@ public final class GlassPlatform {
     private static final boolean USE_EGL;
     private static final boolean IS_HEADLESS;
     private static final boolean IS_MONOCLE;
+    private static final boolean IS_ACCESSIBILITY_ENABLED;
 
     static {
         // PlatformUtil must be initialized first, as it may set the system properties read below.
@@ -77,6 +78,13 @@ public final class GlassPlatform {
         String embeddedType = System.getProperty("glass.platform", "").toLowerCase(Locale.ROOT);
         IS_HEADLESS = "headless".equals(embeddedType);
         IS_MONOCLE = "monocle".equals(embeddedType);
+
+        String override = System.getProperty("glass.accessible.force");
+        if (override != null) {
+            IS_ACCESSIBILITY_ENABLED = Boolean.parseBoolean(override);
+        } else {
+            IS_ACCESSIBILITY_ENABLED = true;
+        }
     }
 
     /**
@@ -105,5 +113,12 @@ public final class GlassPlatform {
      */
     public static boolean isMonocle() {
         return IS_MONOCLE;
+    }
+
+    /**
+     * Returns true if accessibility is enabled for the current platform.
+     */
+    public static boolean isAccessibilityEnabled() {
+        return IS_ACCESSIBILITY_ENABLED;
     }
 }
