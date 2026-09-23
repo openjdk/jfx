@@ -52,7 +52,8 @@ import javafx.stage.Stage;
 /// ## Background
 ///
 /// A background can be set to allow for better contrast or to test transparency. It can be a solid color or a selected
-/// image. A background does not interact with lights.
+/// image. A default image is taken from the doc-files of [PhoneMaterial].
+/// A background does not interact with lights.
 ///
 /// ## Screenshots
 ///
