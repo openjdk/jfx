@@ -39,39 +39,16 @@ public final class GlassPlatform {
     public static final String IOS = "Ios";
     public static final String HEADLESS = "Headless";
 
-    private static final String PLATFORM;
+    private static final String PLATFORM_FACTORY;
     private static final boolean USE_EGL;
     private static final boolean IS_HEADLESS;
     private static final boolean IS_MONOCLE;
     private static final boolean IS_ACCESSIBILITY_ENABLED;
 
     static {
-        // PlatformUtil must be initialized first, as it may set the system properties read below.
-        String osType = null;
-        if (PlatformUtil.isMac()) {
-            osType = MAC;
-        } else if (PlatformUtil.isWindows()) {
-            osType = WINDOWS;
-        } else if (PlatformUtil.isLinux()) {
-            osType = GTK;
-        } else if (PlatformUtil.isIOS()) {
-            osType = IOS;
-        }
-
-        // Provide for a runtime override, allowing EGL for example
-        String userPlatform = System.getProperty("glass.platform");
-        if (userPlatform == null) {
-            PLATFORM = osType;
-        } else {
-            PLATFORM = switch (userPlatform) {
-                case "macosx" -> MAC;
-                case "windows" -> WINDOWS;
-                case "linux", "gtk" -> GTK;
-                case "ios" -> IOS;
-                case "headless" -> HEADLESS;
-                default -> userPlatform;
-            };
-        }
+        // PlatformUtil must be initialized first (in getPlatform()), as it may set the system properties read below.
+        String platform = getPlatform();
+        PLATFORM_FACTORY = "com.sun.glass.ui." + platform.toLowerCase(Locale.ROOT) + "." + platform + "PlatformFactory";
 
         USE_EGL = Boolean.getBoolean("use.egl");
 
@@ -90,8 +67,8 @@ public final class GlassPlatform {
     /**
      * Returns the Glass platform in use, or {@code null} if it could not be determined.
      */
-    public static String getPlatform() {
-        return PLATFORM;
+    public static String getPlatformFactory() {
+        return "com.sun.glass.ui." + PLATFORM_FACTORY.toLowerCase(Locale.ROOT) + "." + PLATFORM_FACTORY + "PlatformFactory";
     }
 
     /**
@@ -120,5 +97,33 @@ public final class GlassPlatform {
      */
     public static boolean isAccessibilityEnabled() {
         return IS_ACCESSIBILITY_ENABLED;
+    }
+
+    private static String getPlatform() {
+        String osType = null;
+        if (PlatformUtil.isMac()) {
+            osType = MAC;
+        } else if (PlatformUtil.isWindows()) {
+            osType = WINDOWS;
+        } else if (PlatformUtil.isLinux()) {
+            osType = GTK;
+        } else if (PlatformUtil.isIOS()) {
+            osType = IOS;
+        }
+
+        // Provide for a runtime override, allowing EGL for example
+        String userPlatform = System.getProperty("glass.platform");
+        if (userPlatform == null) {
+            return osType;
+        } else {
+            return switch (userPlatform) {
+                case "macosx" -> MAC;
+                case "windows" -> WINDOWS;
+                case "linux", "gtk" -> GTK;
+                case "ios" -> IOS;
+                case "headless" -> HEADLESS;
+                default -> userPlatform;
+            };
+        }
     }
 }
