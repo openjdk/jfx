@@ -40,6 +40,8 @@ import javafx.event.EventDispatcher;
 import javafx.event.EventHandler;
 import javafx.scene.input.MouseEvent;
 
+import java.util.List;
+
 public class TwoLevelFocusListBehavior extends TwoLevelFocusBehavior {
 
     public TwoLevelFocusListBehavior(Node node) {
@@ -192,7 +194,8 @@ public class TwoLevelFocusListBehavior extends TwoLevelFocusBehavior {
                 */
                 Parent p = tlNode.getParent();
                 if (p != null) {
-                    if (p.getStyleClass().size() == 1 && p.getStyleClass().contains(Properties.COMBO_BOX_STYLE_CLASS)) {
+                    List<String> styleClass = NodeHelper.getStyleClassOrNull(p);
+                    if (styleClass != null && styleClass.size() == 1 && styleClass.contains(Properties.COMBO_BOX_STYLE_CLASS)) {
                         b = false;
                     }
                 }
