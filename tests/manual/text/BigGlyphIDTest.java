@@ -68,8 +68,7 @@ public class BigGlyphIDTest extends Application {
         Text txt = new Text("\u8002\u0362"); // U+8002(32773) + U+0362(869)
         txt.setFont(font);
         box.getChildren().add(txt);
-
-        Image img = new Image("BigGlyphIDTest_Expected.png");
+        Image img = new Image(getClass().getResourceAsStream("BigGlyphIDTest_Expected.png"));
         ImageView iv = new ImageView();
         iv.setImage(img);
         box.getChildren().add(iv);
