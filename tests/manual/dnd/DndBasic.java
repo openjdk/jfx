@@ -100,7 +100,7 @@ public class DndBasic extends Application {
         if (os.startsWith("Mac")) {
             modifiers =
                     "macOS: Use no modifier for COPY, 'Command' for MOVE, " +
-                            "and 'Control+Option' for LINK.";
+                            "and 'Control' for LINK.";
         } else {
             modifiers =
                     "Windows/Linux: Use 'Ctrl' for COPY, 'Shift' for MOVE, " +
@@ -108,19 +108,19 @@ public class DndBasic extends Application {
         }
 
         return """
-                Drag from a green Source to a blue Destination. The desktop applications may
-                also be used as either the drag source or the drop destination.
-                The names inside each Source and Destination box show its supported actions.
-                An action is compatible when it appears in both boxes.
+               Drag from a green Source to a blue Destination. The desktop applications may
+               also be used as either the drag source or the drop destination.
+               The names inside each Source and Destination box show its supported actions.
+               An action is compatible when it appears in both boxes.
 
-                %s
+               %s
 
-                For each Source/Destination pair being tested, first drag without holding any modifier keys.
-                Then repeat with each modifier combination listed above, holding the keys until the drop completes.
-                A successful drop must show 'accepted MODE' in the Source and
-                'Dropped here, proposed MODE' in the Destination, where MODE is
-                supported by both boxes. An unsupported combination must be rejected.
-                """.formatted(modifiers);
+               For each Source/Destination pair being tested, first drag without holding any modifier keys.
+               Then repeat with each modifier combination listed above, holding the keys until the drop completes.
+               A successful drop must show 'accepted MODE' in the Source and
+               'Dropped here, proposed MODE' in the Destination, where MODE is
+               supported by both boxes. An unsupported combination must be rejected.
+               """.formatted(modifiers);
     }
 
     private Text modesToText(String l, TransferMode[] modes) {

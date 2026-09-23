@@ -56,9 +56,14 @@ public class DndTestDragViewRawImage extends Application {
             dragboard.setDragView(image);
         });
 
-        Label label = new Label("Click the image and drag. " +
-                "The drag image displayed with the cursor (drag view) " +
-                "should match the source image");
+        Label label = new Label(
+                """
+                Click the image and drag.
+                The colors of the drag image displayed with the cursor (drag view)
+                must be similar to those of the source image, but may not be identical
+                due to transparency. You may ignore any difference in the size of the drag image.
+                The test fails if the drag image is not similar to the source image.
+                """);
         label.setWrapText(true);
         label.setMaxWidth(440);
 

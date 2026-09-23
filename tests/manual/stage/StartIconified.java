@@ -42,9 +42,10 @@ public class StartIconified extends Application {
     @Override
     public void start(Stage primaryStage) {
         Text instructionText = new Text("""
-                1. The "Iconified Window Test" must initially appear only on the
-                   operating-system taskbar or Dock.
-                2. It must not appear normally on the screen before becoming iconified, even briefly. If it does, the test fails.
+                1. The "Iconified Window Test" must initially appear only on the operating-system taskbar or Dock.
+                2. On macOS, the window may appear briefly before becoming iconified.
+                On other platforms it must not appear normally on the screen before becoming iconified, even briefly.
+                If it does, the test fails.
                 3. Restore the iconified window and verify that it displays normally.
                 """);
         instructionText.setWrappingWidth(560);
@@ -63,7 +64,7 @@ public class StartIconified extends Application {
         primaryStage.setIconified(true);
 
         Text text = new Text("""
-                    This stage must initially appear on the OS taskbar (iconified), but not on the Screen.
+                This stage must initially appear on the OS taskbar (iconified), but not on the Screen.
                 """);
 
         Scene scene = new Scene(new StackPane(text));
