@@ -42,10 +42,8 @@ public class EmojiTest extends Application {
             """
             This tests rendering of Emoji glyphs, which is only supported on macOS.
 
-            On macOS, you should see a yellow-coloured smiling face image embedded
+            You should see a yellow-coloured smiling face image embedded
             between 'ab' and 'cd'.
-            On other platforms, it may be a missing glyph, an empty space, or a
-            similar rendering as a greyscale/B&W glyph.
 
             Principally, you are checking that the emoji is rendered on macOS in
             each of the controls and nodes displayed in the test. You are also
@@ -63,6 +61,10 @@ public class EmojiTest extends Application {
             If what you see is not explained here, ask before filing a bug.
             """;
 
+    private static boolean isMac() {
+        return System.getProperty("os.name").contains("Mac");
+    }
+
     public static void main(String[] args) {
         launch(args);
     }
@@ -73,6 +75,12 @@ public class EmojiTest extends Application {
 
     @Override
     public void start(Stage stage) {
+        if (!isMac()) {
+            System.out.println("This test is supported only on macOS. Exiting.");
+            Platform.exit();
+            return;
+        }
+
         Button passButton = new Button("Pass");
         Button failButton = new Button("Fail");
         passButton.setOnAction(e -> this.quit());
