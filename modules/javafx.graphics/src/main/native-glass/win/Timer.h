@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -56,9 +56,7 @@ class Timer {
 
         virtual ~Timer()
         {
-            if (id) {
-                ::timeKillEvent(id);
-            }
+            (void)cancel();
             if (--timersCount == 0 && wTimerRes != 0) {
                 ::timeEndPeriod(wTimerRes);
             }
@@ -69,9 +67,21 @@ class Timer {
             // on the internets say is provides less accurate timers, so
             // let's use timeSetEvent.
             id = ::timeSetEvent(period, wTimerRes, StaticTimeCallback,
-                    (DWORD_PTR)this, TIME_PERIODIC);
+                    (DWORD_PTR)this,
+                    TIME_PERIODIC | TIME_KILL_SYNCHRONOUS | TIME_CALLBACK_FUNCTION);
 
             return id != 0;
+        }
+
+        bool cancel() {
+            if (id == 0) {
+                return true;
+            }
+            if (::timeKillEvent(id) == TIMERR_NOERROR) {
+                id = 0;
+                return true;
+            }
+            return false;
         }
 
         virtual void TimerCallback() = 0;
