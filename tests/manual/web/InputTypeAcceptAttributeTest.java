@@ -34,6 +34,7 @@ import javafx.scene.Scene;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
 import javafx.stage.Stage;
+import javafx.scene.layout.Region;
 
 import java.io.File;
 
@@ -51,17 +52,21 @@ public class InputTypeAcceptAttributeTest extends Application {
 
         String currentDirPath = file.getCanonicalPath();
         currentDirPath = currentDirPath.substring(0, currentDirPath.lastIndexOf(file.separator));
-        VBox instructions =  new VBox(
-            new Label(" This test creates four files (TEXT.txt, PNG.png, PDF.pdf, JPG.jpg) at below mentioned path:"),
-            new Label("  " + currentDirPath),
-            new Label(" There are five different scenarios, follow below steps for each scenario."),
-            new Label(""),
-            new Label(" STEPS:"),
-            new Label("  1. Click Choose File, it will display file chooser dialog."),
-            new Label("  2. Navigate to above mentioned path."),
-            new Label(" Expected behaviour: File Chooser dialog should show only the files of specified type."),
-            new Label(" On Mac, the behaviour is little different than windows/linux. " +
-                        "It shows all files, but user can select files of specified type only."));
+        VBox instructions = new VBox(
+                new Label("""
+                         This test creates four files (TEXT.txt, PNG.png, PDF.pdf, JPG.jpg) at below mentioned path:
+                          %s
+                         There are five different scenarios, follow below steps for each scenario.
+
+                         STEPS:
+                          1. Click Choose File, it will display file chooser dialog.
+                          2. Navigate to above mentioned path.
+                          3. Select a file allowed by the current scenario and click Open.
+                          4. Verify that the selected file's name appears next to the corresponding Choose File button.
+                         Expected behaviour: File Chooser dialog should show only the files of specified type.
+                         On Mac, the behaviour is little different than windows/linux. It shows all files, but user can select files of specified type only.\
+                        """.formatted(currentDirPath)));
+        instructions.setMinHeight(Region.USE_PREF_SIZE);
 
         Button passButton = new Button("Pass");
         passButton.setOnAction(e -> {
