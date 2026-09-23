@@ -59,8 +59,8 @@ public class StartIconified extends Application {
         instructionStage.show();
 
         primaryStage.setTitle("Iconified Window Test");
-        primaryStage.setWidth(600);
-        primaryStage.setHeight(150);
+        primaryStage.setWidth(700);
+        primaryStage.setHeight(600);
         primaryStage.setIconified(true);
 
         Text text = new Text("""
