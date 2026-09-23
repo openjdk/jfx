@@ -68,7 +68,7 @@ public final class GlassPlatform {
      * Returns the Glass platform in use, or {@code null} if it could not be determined.
      */
     public static String getPlatformFactory() {
-        return "com.sun.glass.ui." + PLATFORM_FACTORY.toLowerCase(Locale.ROOT) + "." + PLATFORM_FACTORY + "PlatformFactory";
+        return PLATFORM_FACTORY;
     }
 
     /**
