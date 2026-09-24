@@ -184,9 +184,7 @@ public abstract class GraphicsPipeline {
     public static GraphicsPipeline createPipeline() {
         if (PrismSettings.tryOrder.isEmpty()) {
             // if no pipelines specified just return null
-            if (PrismSettings.verbose) {
-                System.out.println("No Prism pipelines specified");
-            }
+            System.err.println("No Prism pipelines specified");
             return null;
         }
 
@@ -248,11 +246,9 @@ public abstract class GraphicsPipeline {
                     }
                 }
             } catch (Throwable t) {
-                if (PrismSettings.verbose) {
-                    System.err.println("GraphicsPipeline.createPipeline " +
-                                       "failed for " + className);
-                    t.printStackTrace();
-                }
+                System.err.println("GraphicsPipeline.createPipeline " +
+                                   "failed for " + className);
+                t.printStackTrace();
             }
         }
         StringBuffer sBuf = new StringBuffer("Graphics Device initialization failed for :  ");
