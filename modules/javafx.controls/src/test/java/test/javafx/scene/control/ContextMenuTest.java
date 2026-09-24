@@ -30,6 +30,7 @@ import static com.sun.javafx.scene.control.ContextMenuContentShim.getCurrentFocu
 import static com.sun.javafx.scene.control.ContextMenuContentShim.getOpenSubMenu;
 import static com.sun.javafx.scene.control.ContextMenuContentShim.getShowingMenuContent;
 import static com.sun.javafx.scene.control.ContextMenuContentShim.getShowingSubMenu;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -370,8 +371,10 @@ public class ContextMenuTest {
         // previously selected container is no longer part of the scene
         cm.getItems().add(new MenuItem("MenuItem 2"));
 
-        // Fail on internal exceptions
-        ControlTestUtils.runWithExceptionHandler(() -> subMenu.show());
+        assertDoesNotThrow(() -> {
+            // Fail on internal exceptions that are not propagated to the caller by the show() method
+            ControlTestUtils.runWithExceptionHandler(() -> subMenu.show());
+        });
     }
 
     @Test public void test_navigateMenu_downwards() {
