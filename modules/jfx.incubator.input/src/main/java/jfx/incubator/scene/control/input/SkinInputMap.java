@@ -49,7 +49,7 @@ import com.sun.jfx.incubator.scene.control.input.PHList;
  * Skins whose behavior requires no state, or when the state is fully encapsulated by the Control itself,
  * could use the {@code Stateless} variant obtained with the {@link #createStateless()} method.
  *
- * @since 999 TODO
+ * @since 28
  */
 public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInputMap.Stateless {
     /// ```

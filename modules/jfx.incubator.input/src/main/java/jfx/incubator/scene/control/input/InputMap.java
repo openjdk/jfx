@@ -391,7 +391,7 @@ public final class InputMap {
      * This method removes all the mappings added by the previous skin input map, if any.
      *
      * @param m the skin input map
-     * @since 999 TODO
+     * @since 28
      */
     // TODO
     // to avoid potential mususe, it might be better to hide this method inside of
