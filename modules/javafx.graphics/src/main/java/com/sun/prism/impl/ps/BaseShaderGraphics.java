@@ -2101,12 +2101,14 @@ public abstract class BaseShaderGraphics
 
             float invgamma = PrismFontFactory.getLCDContrast();
             float gamma = 1.0f/invgamma;
-            if (PrismFontFactory.useNewLCDRendering()) {
-                // To convert sRGB to (approximately) linear the gamma we use is
-                // 2.233333 which more closely approximates the real sRGB
-                // function compared to the usual value of 2.2.
+            boolean useContrast = PrismFontFactory.useContrastLCDRendering();
+            if (useContrast) {
+                // To convert sRGB to (approximately) linear the gamma we use
+                // is 2.233333 which more closely approximates the real sRGB
+                // function compared to the usual value of 2.2. These values
+                // are not used by the shader.
                 invgamma = 2.233333f;
-                gamma = invgamma;
+                gamma = 1.0f/invgamma;
             }
 
             textColor = new Color((float)Math.pow(textColor.getRed(),   invgamma),
@@ -2129,7 +2131,7 @@ public abstract class BaseShaderGraphics
             //set our 2nd LCD shader.
             Shader shader = context.validateLCDOp(this, IDENT,
                                                 context.getLCDBuffer(),
-                                                cacheTex, false, PrismFontFactory.useNewLCDRendering(),
+                                                cacheTex, false, useContrast,
                                                 textColor);
 
             float unitXCoord = 1.0f / cacheTex.getPhysicalWidth();

@@ -529,14 +529,14 @@ public abstract class BaseShaderContext extends BaseContext {
     //This function sets the first LCD sample shader.
     public Shader validateLCDOp(BaseShaderGraphics g, BaseTransform xform,
                                 Texture tex0, Texture tex1, boolean firstPass,
-                                boolean newLCDRendering, Paint fillColor)
+                                boolean contrastLCDRendering, Paint fillColor)
     {
         if (checkDisposed()) return null;
 
         Shader shader;
         if (firstPass) {
             shader = getSpecialShader(g, SpecialShaderType.TEXTURE_First_LCD);
-        } else if (newLCDRendering) {
+        } else if (contrastLCDRendering) {
             shader = getSpecialShader(g, SpecialShaderType.TEXTURE_SECOND_LCD_NEW);
         } else {
             shader = getSpecialShader(g, SpecialShaderType.TEXTURE_SECOND_LCD);

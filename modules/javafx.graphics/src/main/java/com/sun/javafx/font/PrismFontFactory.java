@@ -60,7 +60,7 @@ public abstract class PrismFontFactory implements FontFactory {
 
     private static boolean lcdEnabled;
     private static float lcdContrast = -1;
-    private static boolean newLCDRendering;
+    private static boolean contrastLCDRendering;
     private static boolean symmetricGlyphs;
 
     private static String jreFontDir;
@@ -132,7 +132,7 @@ public abstract class PrismFontFactory implements FontFactory {
         String lcdProp = System.getProperty("prism.lcdtext", defLCDProp);
         lcdEnabled = lcdProp.equals("true");
         String lcdRenderProp = System.getProperty("prism.lcdrendering", "default");
-        newLCDRendering = lcdEnabled && lcdRenderProp.equals("new");
+        contrastLCDRendering = lcdEnabled && lcdRenderProp.equals("increasecontrast");
 
         String glyphShapingProp = System.getProperty("prism.glyphshaping", "default");
         symmetricGlyphs = glyphShapingProp.equals("symmetric");
@@ -1298,8 +1298,8 @@ public abstract class PrismFontFactory implements FontFactory {
         return lcdEnabled;
     }
 
-    public static boolean useNewLCDRendering() {
-        return newLCDRendering;
+    public static boolean useContrastLCDRendering() {
+        return contrastLCDRendering;
     }
 
     public static boolean useSymmetricGlyphs() {
