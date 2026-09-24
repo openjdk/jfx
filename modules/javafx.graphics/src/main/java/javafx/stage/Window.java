@@ -53,6 +53,7 @@ import javafx.event.EventHandler;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.geometry.Rectangle2D;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 
 import com.sun.javafx.util.Utils;
@@ -69,6 +70,7 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 
 import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.scene.SceneHelper;
 
 
@@ -485,6 +487,10 @@ public class Window implements EventTarget {
             @Override
             protected void invalidated() {
                 peerBoundsConfigurator.setRenderScaleX(get());
+
+                if (getScene() instanceof Scene scene && scene.getRoot() instanceof Parent root) {
+                    ParentHelper.notifyLayoutContextChanged(root);
+                }
             }
         };
     public final void setRenderScaleX(double scale) {
@@ -515,6 +521,10 @@ public class Window implements EventTarget {
             @Override
             protected void invalidated() {
                 peerBoundsConfigurator.setRenderScaleY(get());
+
+                if (getScene() instanceof Scene scene && scene.getRoot() instanceof Parent root) {
+                    ParentHelper.notifyLayoutContextChanged(root);
+                }
             }
         };
     public final void setRenderScaleY(double scale) {

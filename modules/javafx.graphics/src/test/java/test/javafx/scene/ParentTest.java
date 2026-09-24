@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,24 +27,35 @@ package test.javafx.scene;
 
 import com.sun.javafx.scene.LayoutFlags;
 import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.ParentHelper;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.sg.prism.NGGroup;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.scene.input.PickResultChooser;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.Property;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.scene.Group;
 import javafx.scene.GroupShim;
 import javafx.scene.Node;
+import javafx.scene.NodeShim;
 import javafx.scene.Parent;
 import javafx.scene.ParentShim;
 import javafx.scene.Scene;
+import javafx.scene.SubScene;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.Mnemonic;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.TilePane;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
@@ -52,6 +63,8 @@ import javafx.stage.Stage;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -365,6 +378,445 @@ public class ParentTest {
 
         assertEquals(150, g.prefWidth(-1), 1e-100);
         assertEquals(250, g.prefHeight(-1), 1e-100);
+    }
+
+    @Test
+    public void testPrefWidthCacheInvalidatedWhenRenderScaleChanges() {
+        Region region = new Region() {
+            @Override
+            protected double computePrefWidth(double height) {
+                return snapSizeX(10.2);
+            }
+        };
+
+        stage.setScene(new Scene(region));
+        stage.setRenderScaleX(1.0);
+
+        assertEquals(11.0, region.prefWidth(-1), 0.0);
+
+        stage.setRenderScaleX(1.5);
+        double expected = region.snapSizeX(10.2);
+
+        assertEquals(10.666666666666666, expected, 0.0);
+        assertEquals(expected, region.prefWidth(-1), 0.0);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"true", "false"})
+    public void testLayoutContextInvalidationClearsSubclassCachesBeforeNeedsLayout(boolean horizontal) {
+        var child = new TilePane(new Rectangle(10.2, 10.2));
+        child.setPrefColumns(1);
+
+        // The final requestLayout() is made on the root. Keeping the tested node below
+        // it prevents that call from masking a stale size cache on the child.
+        var root = new MockParent(child);
+        stage.setScene(new Scene(root, 300, 300));
+        root.layout();
+        assertFalse(child.isNeedsLayout());
+        assertEquals(11.0, child.prefWidth(-1), 0.0);
+        assertEquals(11.0, child.prefHeight(-1), 0.0);
+
+        var observedSizes = new ArrayList<Double>();
+
+        child.needsLayoutProperty().addListener((observable, oldValue, needsLayout) -> {
+            if (needsLayout) {
+                observedSizes.add(child.prefWidth(-1));
+                observedSizes.add(child.prefHeight(-1));
+            }
+        });
+
+        if (horizontal) {
+            stage.setRenderScaleX(2.0);
+        } else {
+            stage.setRenderScaleY(2.0);
+        }
+
+        double expectedWidth = horizontal ? 10.5 : 11.0;
+        double expectedHeight = horizontal ? 11.0 : 10.5;
+        assertEquals(List.of(expectedWidth, expectedHeight), observedSizes);
+        assertEquals(expectedWidth, child.prefWidth(-1), 0.0);
+        assertEquals(expectedHeight, child.prefHeight(-1), 0.0);
+    }
+
+    @Test
+    public void testLayoutContextInvalidationClearsSizesCachedDuringNotification() {
+        var child = new TilePane(new Rectangle(10.2, 10.2));
+        child.setPrefColumns(1);
+        var root = new MockParent(child);
+        stage.setScene(new Scene(root, 300, 300));
+        root.layout();
+        assertEquals(11.0, child.prefWidth(-1), 0.0);
+        assertEquals(11.0, child.prefHeight(-1), 0.0);
+
+        var measuredDuringNotification = new AtomicBoolean();
+
+        child.tileWidthProperty().addListener(observable -> {
+            // The notification invalidates tile width before tile height. A listener can thus
+            // refill the Parent's prefHeight cache before the tileHeight cache is cleared.
+            child.prefHeight(-1);
+            measuredDuringNotification.set(true);
+        });
+
+        stage.setRenderScaleY(2.0);
+
+        assertTrue(measuredDuringNotification.get());
+        assertEquals(10.5, child.getTileHeight(), 0.0);
+        assertEquals(10.5, child.prefHeight(-1), 0.0);
+    }
+
+    @Test
+    public void testSceneAttachmentInvalidatesMeasurementsAfterUpdatingDescendants() {
+        var child = new MockParent() {
+            @Override
+            protected double computePrefWidth(double height) {
+                return snapSizeX(10.2);
+            }
+        };
+
+        var observedWidths = new ArrayList<Double>();
+
+        var branch = new MockParent(child) {
+            @Override
+            protected void layoutContextInvalidated() {
+                super.layoutContextInvalidated();
+
+                // Invalidating an observable measurement can synchronously query children.
+                observedWidths.add(child.prefWidth(-1));
+            }
+        };
+
+        // Populate the child's size cache before attaching the subtree to a scaled scene.
+        assertEquals(11.0, child.prefWidth(-1), 0.0);
+
+        var root = new MockParent();
+        stage.setRenderScaleX(1.5);
+        stage.setScene(new Scene(root, 300, 300));
+        ParentShim.getChildren(root).add(branch);
+
+        double expectedWidth = Math.ceil(10.2 * 1.5) / 1.5;
+        assertEquals(List.of(expectedWidth), observedWidths);
+        assertEquals(expectedWidth, child.prefWidth(-1), 0.0);
+
+        root.layout();
+        assertEquals(expectedWidth, child.prefWidth(-1), 0.0);
+
+        ParentShim.getChildren(root).remove(branch);
+        assertEquals(List.of(expectedWidth, 11.0), observedWidths);
+        assertEquals(11.0, child.prefWidth(-1), 0.0);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"true, false", "false, false", "true, true", "false, true"})
+    public void testReentrantRenderScaleChange(boolean horizontal, boolean fromNeedsLayoutListener) {
+        var trigger = new LayoutContextParent();
+        var subSceneSibling = new LayoutContextParent();
+        var subSceneRoot = new LayoutContextParent(trigger, subSceneSibling);
+        var subSceneClip = new LayoutContextParent();
+        var subScene = new SubScene(subSceneRoot, 100, 100);
+        subScene.setClip(subSceneClip);
+
+        var sibling = new LayoutContextParent();
+        var root = new LayoutContextParent(subScene, sibling);
+        var rootClip = new LayoutContextParent();
+        root.setClip(rootClip);
+
+        List<LayoutContextParent> parents = List.of(
+            root, subSceneRoot, trigger, subSceneSibling,
+            sibling, subSceneClip, rootClip);
+
+        stage.setRenderScaleX(1.0);
+        stage.setRenderScaleY(1.0);
+        stage.setScene(new Scene(root, 300, 300));
+        root.layout();
+        assertFalse(trigger.isNeedsLayout());
+
+        for (Parent parent : parents) {
+            assertEquals(11.0, parent.prefWidth(-1), 0.0);
+            assertEquals(11.0, parent.prefHeight(-1), 0.0);
+        }
+
+        DoubleProperty scale = horizontal ? stage.renderScaleXProperty() : stage.renderScaleYProperty();
+        DoubleProperty input = fromNeedsLayoutListener ? new SimpleDoubleProperty(1.0) : scale;
+
+        if (fromNeedsLayoutListener) {
+            scale.bind(input);
+            trigger.needsLayoutProperty().addListener((observable, oldValue, needsLayout) -> {
+                if (needsLayout) {
+                    input.set(2.0);
+                }
+            });
+        } else {
+            trigger.onInvalidation = () -> input.set(2.0);
+        }
+
+        // The older traversal must not restore 1.5 after the nested change to 2.0 returns.
+        input.set(1.5);
+        assertEquals(2.0, scale.get(), 0.0);
+
+        for (Parent parent : parents) {
+            assertEquals(horizontal ? 10.5 : 11.0, parent.snapSizeX(10.2), 0.0);
+            assertEquals(horizontal ? 11.0 : 10.5, parent.snapSizeY(10.2), 0.0);
+            assertEquals(horizontal ? 10.5 : 11.0, parent.prefWidth(-1), 0.0);
+            assertEquals(horizontal ? 11.0 : 10.5, parent.prefHeight(-1), 0.0);
+        }
+    }
+
+    @Test
+    public void testReentrantSnapToPixelChange() {
+        var trigger = new LayoutContextParent();
+        var subSceneSibling = new LayoutContextParent();
+        var subSceneRoot = new LayoutContextParent(trigger, subSceneSibling);
+        var clip = new LayoutContextParent();
+        var subScene = new SubScene(subSceneRoot, 100, 100);
+        subScene.setClip(clip);
+
+        var sibling = new LayoutContextParent();
+        var root = new LayoutContextParent(subScene, sibling);
+        List<LayoutContextParent> parents = List.of(root, subSceneRoot, trigger, subSceneSibling, sibling);
+        root.setSnapToPixel(false);
+
+        for (Parent parent : parents) {
+            assertEquals(10.2, parent.prefWidth(-1), 0.0);
+        }
+
+        trigger.onInvalidation = () -> root.setSnapToPixel(false);
+        root.setSnapToPixel(true);
+
+        assertNull(trigger.onInvalidation);
+
+        for (Parent parent : parents) {
+            assertFalse(parent.isSnappedToPixel());
+            assertEquals(10.2, parent.prefWidth(-1), 0.0);
+        }
+
+        assertTrue(trigger.isSnapToPixel());
+        assertTrue(clip.isSnappedToPixel());
+        assertEquals(11.0, clip.prefWidth(-1), 0.0);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "removeSelf, scale", "removeNext, scale", "insert, scale", "reorder, scale", "reparent, scale",
+        "removeSelf, snapping", "removeNext, snapping", "insert, snapping", "reorder, snapping", "reparent, snapping",
+        "removeSelf, attach", "removeNext, attach", "insert, attach", "reorder, attach", "reparent, attach"
+    })
+    public void testStructuralChangesDuringNotification(String mutation, String notification) {
+        var trigger = new LayoutContextParent();
+        var next = new LayoutContextParent();
+        var last = new LayoutContextParent();
+        var added = new LayoutContextParent();
+        var branch = new LayoutContextParent(trigger, next, last);
+        var destination = new LayoutContextParent();
+        var root = new MockParent(destination);
+        boolean attaching = notification.equals("attach");
+        var scene = new Scene(root, 300, 300);
+        stage.setRenderScaleX(attaching ? 2.0 : 1.0);
+        stage.setScene(scene);
+
+        if (!attaching) {
+            ParentShim.getChildren(root).add(branch);
+        }
+
+        for (Parent parent : List.of(trigger, next, last, added)) {
+            assertEquals(11.0, parent.prefWidth(-1), 0.0);
+        }
+
+        trigger.onInvalidation = () -> {
+            switch (mutation) {
+                case "removeSelf" -> ParentShim.getChildren(branch).remove(trigger);
+                case "removeNext" -> ParentShim.getChildren(branch).remove(next);
+                case "insert" -> ParentShim.getChildren(branch).add(0, added);
+                case "reorder" -> last.toBack();
+                case "reparent" -> ParentShim.getChildren(destination).add(next);
+                default -> throw new AssertionError(mutation);
+            }
+        };
+
+        switch (notification) {
+            case "scale" -> stage.setRenderScaleX(2.0);
+            case "snapping" -> branch.setSnapToPixel(false);
+            case "attach" -> ParentShim.getChildren(root).add(branch);
+            default -> throw new AssertionError(notification);
+        }
+
+        assertNull(trigger.onInvalidation);
+
+        List<LayoutContextParent> expectedChildren = switch (mutation) {
+            case "removeSelf" -> List.of(next, last);
+            case "removeNext", "reparent" -> List.of(trigger, last);
+            case "insert" -> List.of(added, trigger, next, last);
+            case "reorder" -> List.of(last, trigger, next);
+            default -> throw new AssertionError(mutation);
+        };
+
+        assertEquals(expectedChildren, branch.getChildrenUnmodifiable());
+
+        for (Parent child : expectedChildren) {
+            assertSame(branch, child.getParent());
+            assertSame(scene, child.getScene());
+            assertEquals(notification.equals("snapping") ? 10.2 : 10.5, child.prefWidth(-1), 0.0);
+        }
+
+        if (mutation.equals("removeSelf") || mutation.equals("removeNext")) {
+            Parent removed = mutation.equals("removeSelf") ? trigger : next;
+            assertNull(removed.getParent());
+            assertNull(removed.getScene());
+            assertEquals(11.0, removed.prefWidth(-1), 0.0);
+        } else if (mutation.equals("reparent")) {
+            assertSame(destination, next.getParent());
+            assertSame(scene, next.getScene());
+            assertEquals(notification.equals("snapping") ? 11.0 : 10.5, next.prefWidth(-1), 0.0);
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource({"false", "true"})
+    public void testStructuralMoveDuringSceneAttachment(boolean fromClip) {
+        var trigger = new LayoutContextParent();
+        var sibling = new LayoutContextParent();
+        var branch = new LayoutContextParent(sibling);
+
+        if (fromClip) {
+            branch.setClip(trigger);
+        } else {
+            ParentShim.getChildren(branch).add(0, trigger);
+        }
+
+        var source = new MockParent();
+        stage.setRenderScaleX(1.5);
+        stage.setScene(new Scene(source, 300, 300));
+
+        var destStage = new Stage();
+
+        try {
+            var destSubScene = new SubScene(new MockParent(), 100, 100);
+            var destRoot = new MockParent(destSubScene);
+            var destScene = new Scene(destRoot, 300, 300);
+
+            destStage.setRenderScaleX(2.0);
+            destStage.setScene(destScene);
+            trigger.onInvalidation = () -> {
+                ParentShim.getChildren(source).remove(branch);
+                destSubScene.setRoot(branch);
+            };
+
+            ParentShim.getChildren(source).add(branch);
+
+            assertSame(branch, destSubScene.getRoot());
+
+            for (Parent parent : List.of(branch, trigger, sibling)) {
+                assertSame(destScene, parent.getScene());
+                assertSame(destSubScene, NodeShim.getSubScene(parent));
+                assertEquals(10.5, parent.prefWidth(-1), 0.0);
+            }
+
+            // The resumed attachment must retain the branch's new role as a SubScene layout root.
+            destRoot.layout();
+            int layoutCount = branch.layoutCount;
+            branch.requestLayout();
+            destRoot.layout();
+            assertEquals(layoutCount + 1, branch.layoutCount);
+        } finally {
+            destStage.close();
+        }
+    }
+
+    @Test
+    public void testStructuralMoveOfSubSceneDuringClipNotification() {
+        var clip = new LayoutContextParent();
+        var child = new LayoutContextParent();
+        var subSceneRoot = new LayoutContextParent(child);
+        var subScene = new SubScene(subSceneRoot, 100, 100);
+        subScene.setClip(clip);
+
+        var source = new MockParent();
+        stage.setRenderScaleX(1.5);
+        stage.setScene(new Scene(source, 300, 300));
+
+        Stage destStage = new Stage();
+
+        try {
+            var dest = new MockParent();
+            var destScene = new Scene(dest, 300, 300);
+            destStage.setRenderScaleX(2.0);
+            destStage.setScene(destScene);
+            clip.onInvalidation = () -> ParentShim.getChildren(dest).add(subScene);
+
+            ParentShim.getChildren(source).add(subScene);
+
+            assertSame(dest, subScene.getParent());
+            assertSame(destScene, subScene.getScene());
+
+            for (Parent parent : List.of(clip, subSceneRoot, child)) {
+                assertSame(destScene, parent.getScene());
+                assertEquals(10.5, parent.prefWidth(-1), 0.0);
+            }
+
+            assertSame(subScene, NodeShim.getSubScene(subSceneRoot));
+            assertSame(subScene, NodeShim.getSubScene(child));
+        } finally {
+            destStage.close();
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource({"false", "true"})
+    public void testStructuralReattachmentDuringDetach(boolean fromClip) {
+        var trigger = new LayoutContextParent();
+        var sibling = new LayoutContextParent();
+        var branch = new LayoutContextParent(sibling);
+
+        if (fromClip) {
+            branch.setClip(trigger);
+        } else {
+            ParentShim.getChildren(branch).add(0, trigger);
+        }
+
+        var released = new AtomicBoolean();
+        var peer = new NGGroup() {
+            @Override
+            public void release() {
+                released.set(true);
+                super.release();
+            }
+        };
+
+        new ParentHelper() {
+            { setHelper(branch, this); }
+
+            @Override
+            protected NGGroup createPeerImpl(Node node) {
+                return peer;
+            }
+        };
+
+        var dest = new MockParent();
+        var source = new MockParent(branch, dest);
+        stage.setRenderScaleX(1.5);
+        Scene scene = new Scene(source, 300, 300);
+        stage.setScene(scene);
+        assertSame(peer, NodeHelper.getPeer(branch));
+
+        var key = new KeyCodeCombination(KeyCode.A);
+        var oldMnemonic = new Mnemonic(branch, key);
+        var newMnemonic = new Mnemonic(branch, key);
+        scene.addMnemonic(oldMnemonic);
+        trigger.onInvalidation = () -> {
+            ParentShim.getChildren(dest).add(branch);
+            scene.addMnemonic(newMnemonic);
+        };
+
+        ParentShim.getChildren(source).remove(branch);
+
+        assertSame(dest, branch.getParent());
+
+        for (Parent parent : List.of(branch, trigger, sibling)) {
+            assertSame(scene, parent.getScene());
+            assertEquals(10.666666666666666, parent.prefWidth(-1), 0.0);
+        }
+
+        assertFalse(released.get(), "The outer detach must not release the reattached node's peer");
+        assertEquals(List.of(newMnemonic), scene.getMnemonics().get(key));
     }
 
     @Test
@@ -1069,6 +1521,41 @@ public class ParentTest {
 
         // below call should throw no exception - if it does, internal state is corrupted
         g.getChildren().remove(0);
+    }
+
+    private static final class LayoutContextParent extends MockParent {
+        Runnable onInvalidation;
+        int layoutCount;
+
+        LayoutContextParent(Node... children) {
+            super(children);
+        }
+
+        @Override
+        protected double computePrefWidth(double height) {
+            return snapSizeX(10.2);
+        }
+
+        @Override
+        protected double computePrefHeight(double width) {
+            return snapSizeY(10.2);
+        }
+
+        @Override
+        protected void layoutChildren() {
+            ++layoutCount;
+            super.layoutChildren();
+        }
+
+        @Override
+        protected void layoutContextInvalidated() {
+            super.layoutContextInvalidated();
+            Runnable callback = onInvalidation;
+            onInvalidation = null;
+            if (callback != null) {
+                callback.run();
+            }
+        }
     }
 
     public static class MockParent extends Parent {
