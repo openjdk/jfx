@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -64,9 +64,10 @@ public class JSWLinearConvolvePeer extends JSWEffectPeer<LinearConvolveRenderSta
                             ImageData... inputs)
     {
         setRenderState(lcrstate);
+        // If the non-VECTOR loops below could handle clipped output, then
+        // we would not need to compute the pass result bounds twice (JDK-8091117)
         Rectangle dstRawBounds = getResultBounds(lcrstate, null, inputs);
-        Rectangle dstBounds = new Rectangle(dstRawBounds);
-        dstBounds.intersectWith(outputClip);
+        Rectangle dstBounds = getResultBounds(lcrstate, outputClip, inputs);
         setDestBounds(dstBounds);
         int dstw = dstBounds.width;
         int dsth = dstBounds.height;
@@ -101,10 +102,6 @@ public class JSWLinearConvolvePeer extends JSWEffectPeer<LinearConvolveRenderSta
             // JDK-8092042
             // TODO: Fix the optimized loops to deal with non-zero srcxy0
             // and transforms...
-            type = PassType.GENERAL_VECTOR;
-        }
-        if (count >= 0) {
-            // REMIND: Why was this hard-coded?
             type = PassType.GENERAL_VECTOR;
         }
         if (type == PassType.HORIZONTAL_CENTERED) {
@@ -167,7 +164,10 @@ public class JSWLinearConvolvePeer extends JSWEffectPeer<LinearConvolveRenderSta
     }
 
     private static final float cmin = 1f;
-    private static final float cmax = 254f + 15f/16f;
+    // The value the decora_sse loops used for on-screen software rendering (255 - 1/32): a channel sum in
+    // (254.9375, 254.96875] truncates to 254 rather than clamping to 255. Printing always used this Java
+    // peer, so printed output of these kernels moves by one step for a channel sum in that window.
+    private static final float cmax = 255f - 1f/32f;
 
     protected void filterVector(int dstPixels[], int dstw, int dsth, int dstscan,
                                 int srcPixels[], int srcw, int srch, int srcscan,

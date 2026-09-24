@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -119,8 +119,6 @@ public class NativeLibLoader {
         // - the java.library.path is searched for the library in definition
         //   order
         // - the library is loaded via System#loadLibrary
-        // - on iOS native library is staticly linked and detected from the
-        //   existence of a JNI_OnLoad_libraryname funtion
         try {
             // FIXME: JIGSAW -- We should eventually remove this legacy path,
             // since it isn't applicable to Jigsaw.
@@ -158,28 +156,10 @@ public class NativeLibLoader {
             }
 
             // Finally we will use System.loadLibrary.
-            try {
-                System.loadLibrary(libraryName);
-                if (verbose) {
-                    System.err.println("System.loadLibrary("
-                            + libraryName + ") succeeded");
-                }
-            } catch (UnsatisfiedLinkError ex2) {
-                //On iOS we link all libraries staticaly. Presence of library
-                //is recognized by existence of JNI_OnLoad_libraryname() C function.
-                //If libraryname contains hyphen, it needs to be translated
-                //to underscore to form valid C function indentifier.
-                if (PlatformUtil.isIOS() && libraryName.contains("-")) {
-                    libraryName = libraryName.replace("-", "_");
-                    try {
-                        System.loadLibrary(libraryName);
-                        return;
-                    } catch (UnsatisfiedLinkError ex3) {
-                        throw ex3;
-                    }
-                }
-                // Rethrow exception
-                throw ex2;
+            System.loadLibrary(libraryName);
+            if (verbose) {
+                System.err.println("System.loadLibrary("
+                        + libraryName + ") succeeded");
             }
         }
     }

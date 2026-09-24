@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,7 +39,7 @@
 #include <PiscesSurface.h>
 #include <PiscesTransform.h>
 
-#include "com_sun_pisces_RendererBase.h"
+#include "prism_sw_api.h"
 
 /**
  * @defgroup CompositingRules Compositing rules supported by PISCES
@@ -72,9 +72,9 @@
  * renderer_setComposite(Renderer *, jint, jfloat)
  */
 //Compositing rules
-#define COMPOSITE_CLEAR    com_sun_pisces_RendererBase_COMPOSITE_CLEAR
-#define COMPOSITE_SRC      com_sun_pisces_RendererBase_COMPOSITE_SRC
-#define COMPOSITE_SRC_OVER com_sun_pisces_RendererBase_COMPOSITE_SRC_OVER
+#define COMPOSITE_CLEAR    PSW_COMPOSITE_CLEAR
+#define COMPOSITE_SRC      PSW_COMPOSITE_SRC
+#define COMPOSITE_SRC_OVER PSW_COMPOSITE_SRC_OVER
 
 /**
  * @defgroup WindingRules Winding rules - shape interior
@@ -131,12 +131,12 @@
 #define PAINT_TEXTURE8888 4
 #define PAINT_TEXTURE8888_MULTIPLY 5
 
-#define IMAGE_MODE_NORMAL   com_sun_pisces_RendererBase_IMAGE_MODE_NORMAL
-#define IMAGE_MODE_MULTIPLY com_sun_pisces_RendererBase_IMAGE_MODE_MULTIPLY
+#define IMAGE_MODE_NORMAL   PSW_IMAGE_MODE_NORMAL
+#define IMAGE_MODE_MULTIPLY PSW_IMAGE_MODE_MULTIPLY
 
-#define IMAGE_FRAC_EDGE_KEEP com_sun_pisces_RendererBase_IMAGE_FRAC_EDGE_KEEP
-#define IMAGE_FRAC_EDGE_PAD  com_sun_pisces_RendererBase_IMAGE_FRAC_EDGE_PAD
-#define IMAGE_FRAC_EDGE_TRIM com_sun_pisces_RendererBase_IMAGE_FRAC_EDGE_TRIM
+#define IMAGE_FRAC_EDGE_KEEP PSW_IMAGE_FRAC_EDGE_KEEP
+#define IMAGE_FRAC_EDGE_PAD  PSW_IMAGE_FRAC_EDGE_PAD
+#define IMAGE_FRAC_EDGE_TRIM PSW_IMAGE_FRAC_EDGE_TRIM
 
 #define LG_GRADIENT_MAP_SIZE 8
 #define GRADIENT_MAP_SIZE (1 << LG_GRADIENT_MAP_SIZE)

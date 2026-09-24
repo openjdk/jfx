@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,32 +28,27 @@ package com.sun.prism.es2;
 
 class X11GLDrawable extends GLDrawable {
 
-    private static native long nCreateDrawable(long nativeWindow, long nativeCtxInfo);
-    private static native void nReleaseDrawable(long nativeCtxInfo);
-    private static native long nGetDummyDrawable(long nativeCtxInfo);
-    private static native boolean nSwapBuffers(long nativeDInfo);
-
     X11GLDrawable(GLPixelFormat pixelFormat) {
 
         super(0L, pixelFormat);
-        long nDInfo = nGetDummyDrawable(pixelFormat.getNativePFInfo());
+        long nDInfo = ES2Native.drawableCreateDummy(pixelFormat.getNativePFInfo());
         setNativeDrawableInfo(nDInfo);
     }
 
     X11GLDrawable(long nativeWindow, GLPixelFormat pixelFormat) {
         super(nativeWindow, pixelFormat);
-        long nDInfo = nCreateDrawable(nativeWindow, pixelFormat.getNativePFInfo());
+        long nDInfo = ES2Native.drawableCreate(pixelFormat.getNativePFInfo(), nativeWindow);
         setNativeDrawableInfo(nDInfo);
     }
 
     @Override
     boolean swapBuffers(GLContext glCtx) {
-        return nSwapBuffers(getNativeDrawableInfo());
+        return ES2Native.drawableSwapBuffers(glCtx.getNativeCtxInfo(), getNativeDrawableInfo());
     }
 
     @Override
     public void dispose() {
-        nReleaseDrawable(nativeDrawableInfo);
+        ES2Native.drawableRelease(nativeDrawableInfo);
         nativeDrawableInfo = 0;
     }
 }

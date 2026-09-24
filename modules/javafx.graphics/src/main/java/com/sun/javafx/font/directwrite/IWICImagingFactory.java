@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,8 +30,18 @@ class IWICImagingFactory extends IUnknown {
         super(ptr);
     }
 
+    /**
+     * {@code CoCreateInstance(CLSID_WICImagingFactory, NULL, CLSCTX_INPROC_SERVER,
+     * IID_IWICImagingFactory, &factory)}. The apartment must already be entered on this thread -
+     * {@code DWFactory.getWICFactory} does that first, as the C did.
+     */
+    static IWICImagingFactory create() {
+        long ptr = DWNative.wicCreateImagingFactory();
+        return ptr != 0 ? new IWICImagingFactory(ptr) : null;
+    }
+
     IWICBitmap CreateBitmap(int uiWidth, int uiHeight, int pixelFormat, int options) {
-        long result = OS.CreateBitmap(ptr, uiWidth, uiHeight, pixelFormat, options);
+        long result = DWNative.createBitmap(ptr, uiWidth, uiHeight, pixelFormat, options);
         return result != 0 ? new IWICBitmap(result) : null;
     }
 }

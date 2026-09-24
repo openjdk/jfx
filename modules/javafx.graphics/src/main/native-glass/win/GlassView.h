@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,13 +26,20 @@
 #ifndef _GLASS_VIEW_
 #define _GLASS_VIEW_
 
+#include "glass_win_api.h"
 
 class BaseWnd;
 class FullScreenWindow;
 
 class GlassView {
 public:
-    GlassView(jobject jrefThis);
+    /*
+     * viewId is the Java-assigned identity the callback tables carry (glass_win_api.h, IDENTITY):
+     * gwin_view_create - the only way a GlassView is made; the JNI WinView._create is gone since
+     * ABI 5 - passes its int64_t view_id, and that value is what every slot delivers as
+     * view_id. The view holds no jobject.
+     */
+    explicit GlassView(int64_t viewId);
     virtual ~GlassView();
 
     BOOL Close();
@@ -43,14 +50,39 @@ public:
     inline HWND GetHostHwnd() { return m_hostHwnd; }
     void SetHostHwnd(HWND m_hostHwnd);
 
-    inline jobject GetView() { return m_grefThis; }
+    inline int64_t GetViewId() const { return m_viewId; }
 
     inline BOOL IsInputMethodEventEnabled() { return m_InputMethodEventsEnabled; }
     void EnableInputMethodEvents(BOOL enable);
     void FinishInputMethodComposition();
 
+    // The former _uploadPixels GDI sequence - SetDIBitsToDevice, or UpdateLayeredWindow for a
+    // transparent GlassWindow host - called by gwin_view_upload_pixels (the JNI body that shared it
+    // is gone). bits is width * height 32-bit BGRA pixels, top-down, borrowed for the
+    // call; NULL is passed through.
+    void UploadPixels(int width, int height, const void* bits);
+
+    /*
+     * The callback tables of glass_win_api.h's view section. NULL while Java has installed nothing,
+     * and an upcall site that finds NULL delivers nothing (there is no JNI path to take over).
+     * Once installed no slot is ever NULL: the setters replace a NULL slot with a
+     * no-op. Written on the launcher
+     * thread before the toolkit thread exists and read on the toolkit thread only - no lock, like
+     * the application, menu and preferences tables.
+     */
+    static inline const GwinViewCallbacks* ViewCallbacks()
+    {
+        return sm_viewCallbacksInstalled ? &sm_viewCallbacks : NULL;
+    }
+    static inline const GwinGestureCallbacks* GestureCallbacks()
+    {
+        return sm_gestureCallbacksInstalled ? &sm_gestureCallbacks : NULL;
+    }
+    static void SetViewCallbacks(const GwinViewCallbacks* cb);
+    static void SetGestureCallbacks(const GwinGestureCallbacks* cb);
+
 private:
-    jobject m_grefThis;
+    int64_t m_viewId;
 
     BaseWnd* m_fullScreenWindow;
 
@@ -63,6 +95,11 @@ private:
     BOOL m_InputMethodEventsEnabled;
 
     void NotifyFullscreen(bool entered);
+
+    static GwinViewCallbacks sm_viewCallbacks;
+    static bool sm_viewCallbacksInstalled;
+    static GwinGestureCallbacks sm_gestureCallbacks;
+    static bool sm_gestureCallbacksInstalled;
 };
 
 #endif // _GLASS_VIEW_

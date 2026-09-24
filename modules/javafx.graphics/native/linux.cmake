@@ -43,11 +43,11 @@ find_package(PkgConfig REQUIRED)
 # Glass Gtk is built with GTK+ 3. Requires GTK+ 3.20.0 or newer.
 set(GTK3_MIN_MINOR_VERSION 20)
 set(GTK3_MIN_MICRO_VERSION 0)
+# xtst is deliberately absent: GlassRobot.cpp of commit 033187ad90 was the last C
+# to call libXtst; com.sun.glass.ui.gtk.GtkGlassNative binds libXtst.so.6 at run time.
 pkg_check_modules(GTK3 REQUIRED IMPORTED_TARGET
     "gtk+-3.0>=3.${GTK3_MIN_MINOR_VERSION}.${GTK3_MIN_MICRO_VERSION}"
-    gthread-2.0 xtst gio-unix-2.0)
-pkg_check_modules(FREETYPE2 REQUIRED IMPORTED_TARGET freetype2)
-pkg_check_modules(PANGOFT2 REQUIRED IMPORTED_TARGET pangoft2)
+    gthread-2.0 gio-unix-2.0)
 
 # ---------------------------------------------------------------------------
 # Global flags: exact parity with the retired Gradle Linux toolchain config,
@@ -124,43 +124,36 @@ function(add_jfx_library name)
     target_compile_options(${name} PRIVATE
         ${JFX_COMMON_COMPILE_OPTIONS} ${JFX_COMPILE_OPTIONS})
     target_include_directories(${name} PRIVATE
-        "${JDK_HOME}/include" "${JDK_HOME}/include/linux"
-        "${HEADERS_DIR}"
         ${JFX_SOURCE_DIRS} ${JFX_INCLUDE_DIRS})
     target_link_libraries(${name} PRIVATE ${JFX_LINK_LIBS})
     target_link_options(${name} PRIVATE ${JFX_COMMON_LINK_OPTIONS})
 endfunction()
 
 # ---------------------------------------------------------------------------
-# libglass.so (the GTK launcher/loader only)
-# ---------------------------------------------------------------------------
-add_jfx_library(glass
-    OUTPUT_NAME glass
-    EXTRA_SOURCES "${GRAPHICS_SRC}/native-glass/gtk/launcher.c"
-    INCLUDE_DIRS "${GRAPHICS_SRC}/native-glass/gtk"
-    COMPILE_OPTIONS -Werror
-    LINK_LIBS X11 dl)
-
-# ---------------------------------------------------------------------------
-# libglassgtk3.so (all GTK glass sources except the launcher)
+# libglassgtk3.so (the GTK glass sources). Linux builds no libglass.so: the
+# launcher.c of commit 033187ad90 was the whole of it, and the library query it
+# answered, GtkApplication._queryLibrary, is done by
+# com.sun.glass.ui.gtk.GtkGlassNative in Java. GtkApplication still maps a
+# library of that name when the deployment has one, which is how a glassgtk3
+# build renamed to libglass.so is found.
+#
+# The only target of this file that still needs HEADERS_DIR and the JDK
+# include directories: the GTK glass sources declare no JNI function and
+# include no jni.h, but they do include the javac -h constant headers of
+# com.sun.glass.events.* and com.sun.glass.ui.* (glass_key.cpp and
+# glass_window.cpp alone read most of them), and every javac -h header starts
+# with #include <jni.h>. prismSW, prismES2 and iio need neither, so both sets
+# are named here instead of in add_jfx_library.
 # ---------------------------------------------------------------------------
 add_jfx_library(glassgtk3
     OUTPUT_NAME glassgtk3
     SOURCE_DIRS "${GRAPHICS_SRC}/native-glass/gtk"
-    EXCLUDE_REGEX "launcher\\.c$"
     INCLUDE_DIRS "${GRAPHICS_SRC}/native-glass/gtk/libpipewire/include"
+        "${HEADERS_DIR}" "${JDK_HOME}/include" "${JDK_HOME}/include/linux"
     COMPILE_OPTIONS -Werror -Wno-deprecated-declarations
         -DGTK_3_MIN_MINOR_VERSION=${GTK3_MIN_MINOR_VERSION}
         -DGTK_3_MIN_MICRO_VERSION=${GTK3_MIN_MICRO_VERSION}
     LINK_LIBS PkgConfig::GTK3)
-
-# ---------------------------------------------------------------------------
-# libprism_common.so
-# ---------------------------------------------------------------------------
-add_jfx_library(prism
-    OUTPUT_NAME prism_common
-    SOURCE_DIRS "${GRAPHICS_SRC}/native-prism"
-    COMPILE_OPTIONS ${JFX_C_STRICT_OPTIONS} -DINLINE=inline)
 
 # ---------------------------------------------------------------------------
 # libprism_sw.so
@@ -180,37 +173,65 @@ if(INCLUDE_ES2)
             "${GRAPHICS_SRC}/native-prism-es2/GL"
             "${GRAPHICS_SRC}/native-prism-es2/x11"
         COMPILE_OPTIONS -DLINUX ${JFX_C_STRICT_OPTIONS}
-        LINK_LIBS X11 Xxf86vm GL)
+        LINK_LIBS X11 GL)
 endif()
 
 # ---------------------------------------------------------------------------
-# libjavafx_font.so (platform-independent font sources; the platform-specific
-# files self-exclude via #ifdef guards)
+# libprism_es2_monocle.so (optional): the generic prism_es2 sources compiled
+# for Monocle (-DIS_EGLFB: EGL / OpenGL ES 2, no X11, no GLX) plus the stub
+# lifecycle exports of native-prism-es2/monocle. Java owns the EGL display,
+# surface and context (com.sun.glass.ui.monocle.AcceleratedScreen) and hands
+# the current context over through es2_context_adopt, so the library links
+# neither libEGL nor libX11. Gradle built this library only in the embedded
+# armv6hf target this fork dropped; this is its first desktop build.
+#
+# INCLUDE_ES2_MONOCLE (declared in CMakeLists.txt): AUTO builds it when
+# INCLUDE_ES2 is on and pkg-config finds glesv2 (CI's Linux runner has no
+# libgles-dev and skips it silently; WSL/Ubuntu with libgles-dev builds it);
+# ON insists and fails the configure step when glesv2 is missing; OFF never
+# builds it.
+#
+# Linking -lGLESv2 replaces the JNI-era arrangement, in which the ~25 gl*
+# functions the generic sources call directly (glEnable, glGetString,
+# glTexImage2D, ...) were left undefined in the .so and bound lazily against
+# the libGLESv2.so that AcceleratedScreen had dlopen'ed RTLD_GLOBAL earlier -
+# a load-order dependence SymbolLookup.libraryLookup does not reproduce. With
+# the soname in NEEDED the dynamic loader resolves them itself.
 # ---------------------------------------------------------------------------
-add_jfx_library(font
-    OUTPUT_NAME javafx_font
-    SOURCE_DIRS "${GRAPHICS_SRC}/native-font"
-    COMPILE_OPTIONS -DJFXFONT_PLUS)
-
-# ---------------------------------------------------------------------------
-# libjavafx_font_freetype.so
-# ---------------------------------------------------------------------------
-add_jfx_library(fontFreetype
-    OUTPUT_NAME javafx_font_freetype
-    EXTRA_SOURCES "${GRAPHICS_SRC}/native-font/freetype.c"
-    INCLUDE_DIRS "${GRAPHICS_SRC}/native-font"
-    COMPILE_OPTIONS -DJFXFONT_PLUS ${JFX_C_STRICT_OPTIONS} -D_ENABLE_PANGO
-    LINK_LIBS PkgConfig::FREETYPE2)
-
-# ---------------------------------------------------------------------------
-# libjavafx_font_pango.so
-# ---------------------------------------------------------------------------
-add_jfx_library(fontPango
-    OUTPUT_NAME javafx_font_pango
-    EXTRA_SOURCES "${GRAPHICS_SRC}/native-font/pango.c"
-    INCLUDE_DIRS "${GRAPHICS_SRC}/native-font"
-    COMPILE_OPTIONS -DJFXFONT_PLUS ${JFX_C_STRICT_OPTIONS} -D_ENABLE_PANGO
-    LINK_LIBS PkgConfig::PANGOFT2)
+if(INCLUDE_ES2)
+    pkg_check_modules(GLESV2 IMPORTED_TARGET glesv2)
+endif()
+string(TOUPPER "${INCLUDE_ES2_MONOCLE}" JFX_ES2_MONOCLE_MODE)
+if(JFX_ES2_MONOCLE_MODE STREQUAL "AUTO")
+    if(INCLUDE_ES2 AND GLESV2_FOUND)
+        set(JFX_BUILD_ES2_MONOCLE ON)
+    else()
+        set(JFX_BUILD_ES2_MONOCLE OFF)
+    endif()
+elseif(INCLUDE_ES2_MONOCLE)
+    if(NOT INCLUDE_ES2)
+        message(FATAL_ERROR
+            "INCLUDE_ES2_MONOCLE=${INCLUDE_ES2_MONOCLE} needs INCLUDE_ES2 (the generic prism_es2 sources)")
+    endif()
+    if(NOT GLESV2_FOUND)
+        message(FATAL_ERROR
+            "INCLUDE_ES2_MONOCLE=${INCLUDE_ES2_MONOCLE} but pkg-config found no glesv2 (install libgles-dev)")
+    endif()
+    set(JFX_BUILD_ES2_MONOCLE ON)
+else()
+    set(JFX_BUILD_ES2_MONOCLE OFF)
+endif()
+message(STATUS "prism_es2_monocle: ${JFX_BUILD_ES2_MONOCLE} "
+    "(INCLUDE_ES2_MONOCLE=${INCLUDE_ES2_MONOCLE}, glesv2 found: ${GLESV2_FOUND})")
+if(JFX_BUILD_ES2_MONOCLE)
+    add_jfx_library(prismES2Monocle
+        OUTPUT_NAME prism_es2_monocle
+        SOURCE_DIRS "${GRAPHICS_SRC}/native-prism-es2"
+            "${GRAPHICS_SRC}/native-prism-es2/GL"
+            "${GRAPHICS_SRC}/native-prism-es2/monocle"
+        COMPILE_OPTIONS -DLINUX -DIS_EGLFB ${JFX_C_STRICT_OPTIONS}
+        LINK_LIBS PkgConfig::GLESV2)
+endif()
 
 # ---------------------------------------------------------------------------
 # libjavafx_iio.so
@@ -219,13 +240,3 @@ add_jfx_library(iio
     OUTPUT_NAME javafx_iio
     SOURCE_DIRS "${GRAPHICS_SRC}/native-iio" "${GRAPHICS_SRC}/native-iio/libjpeg"
     COMPILE_OPTIONS ${JFX_C_STRICT_OPTIONS} -fvisibility=hidden)
-
-# ---------------------------------------------------------------------------
-# libdecora_sse.so (generated JSL .cc files + native-decora; despite the name
-# the sources are scalar C++ without SSE intrinsics, so this also builds on
-# non-x86 architectures, matching the Gradle build)
-# ---------------------------------------------------------------------------
-add_jfx_library(decora
-    OUTPUT_NAME decora_sse
-    SOURCE_DIRS "${GENSRC_DIR}/jsl-decora" "${GRAPHICS_SRC}/native-decora"
-    COMPILE_OPTIONS -ffast-math)

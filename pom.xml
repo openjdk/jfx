@@ -153,6 +153,9 @@
         <CONF>Release</CONF>
         <skipNative>false</skipNative>
         <INCLUDE_ES2>false</INCLUDE_ES2>
+        <!-- The Monocle (EGL / OpenGL ES 2) variant of prism_es2, Linux only: AUTO builds it when
+             INCLUDE_ES2 is on and pkg-config finds glesv2 (libgles-dev); true requires it, false skips it -->
+        <INCLUDE_ES2_MONOCLE>AUTO</INCLUDE_ES2_MONOCLE>
 
         <!-- Extra JVM args appended to every surefire run; overridden by the headless profile -->
         <jfx.headless.args/>

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,14 +25,13 @@
 
 package com.sun.javafx.font.directwrite;
 
-import com.sun.glass.utils.NativeLibLoader;
-import com.sun.javafx.geom.Path2D;
-
+/**
+ * The DirectWrite, Direct2D and WIC constants shared by the peers in this package; the Java side of
+ * the DirectWrite API itself is {@link DWNative}. The {@code native} declarations that used to sit
+ * beside these constants, and {@code directwrite.cpp} - the only source of the Windows
+ * {@code javafx_font} library - are gone.
+ */
 class OS {
-    static {
-        NativeLibLoader.loadLibrary("javafx_font");
-    }
-
     static final int S_OK = 0x0;
     static final int E_NOT_SUFFICIENT_BUFFER = 0x8007007A;
 
@@ -153,213 +152,4 @@ class OS {
     static final int DWRITE_INFORMATIONAL_STRING_FULL_NAME = 16;
     static final int DWRITE_INFORMATIONAL_STRING_POSTSCRIPT_NAME = 17;
     static final int DWRITE_INFORMATIONAL_STRING_POSTSCRIPT_CID_NAME = 18;
-
-    /* Constructors */
-    private static final native long _DWriteCreateFactory(int factoryType);
-    static final IDWriteFactory DWriteCreateFactory(int factoryType) {
-        long ptr = _DWriteCreateFactory(factoryType);
-        return ptr != 0 ? new IDWriteFactory(ptr) : null;
-    }
-
-    private static final native long _D2D1CreateFactory(int factoryType);
-    static final ID2D1Factory D2D1CreateFactory(int factoryType) {
-        long ptr = _D2D1CreateFactory(factoryType);
-        return ptr != 0 ? new ID2D1Factory(ptr) : null;
-    }
-
-    private static final native long _WICCreateImagingFactory();
-    static final IWICImagingFactory WICCreateImagingFactory() {
-        long ptr = _WICCreateImagingFactory();
-        return ptr != 0 ? new IWICImagingFactory(ptr) : null;
-    }
-
-    static final native boolean CoInitializeEx(int dwCoInit);
-    static final native void CoUninitialize();
-
-    private static final native long _NewJFXTextAnalysisSink(char[] text,
-                                                             int start,
-                                                             int length,
-                                                             char[] locale,
-                                                             int direction,
-                                                             long numberSubstitution);
-
-    static final JFXTextAnalysisSink NewJFXTextAnalysisSink(char[] text,
-                                                            int start,
-                                                            int length,
-                                                            String locale,
-                                                            int direction) {
-        long ptr = _NewJFXTextAnalysisSink(text, //NOT NULL terminator
-                                           start, length,
-                                           (locale+'\0').toCharArray(),//NULL terminator
-                                           direction, 0);
-        return ptr != 0 ? new JFXTextAnalysisSink(ptr) : null;
-    }
-
-    private static final native long _NewJFXTextRenderer();
-    static final JFXTextRenderer NewJFXTextRenderer() {
-        long ptr = _NewJFXTextRenderer();
-        return ptr != 0 ? new JFXTextRenderer(ptr) : null;
-    }
-
-    //JFXTextAnalysisSink
-    static final native boolean Next(long ptr);
-    static final native int GetStart(long ptr);
-    static final native int GetLength(long ptr);
-    static final native DWRITE_SCRIPT_ANALYSIS GetAnalysis(long ptr);
-
-    //JFXTextRenderer
-    static final native boolean JFXTextRendererNext(long ptr);
-    static final native int JFXTextRendererGetStart(long ptr);
-    static final native int JFXTextRendererGetLength(long ptr);
-    static final native int JFXTextRendererGetGlyphCount(long ptr);
-    static final native int JFXTextRendererGetTotalGlyphCount(long ptr);
-    static final native long JFXTextRendererGetFontFace(long ptr);
-    static final native int JFXTextRendererGetGlyphIndices(long ptr, int[] glyphs, int start, int slot);
-    static final native int JFXTextRendererGetGlyphAdvances(long ptr, float[] advances, int start);
-    static final native int JFXTextRendererGetGlyphOffsets(long ptr, float[] offsets, int start);
-    static final native int JFXTextRendererGetClusterMap(long ptr, short[] clusterMap, int textStart, int glyphStart);
-
-    //IDWriteFontFace
-    static final native DWRITE_GLYPH_METRICS GetDesignGlyphMetrics(long ptr, short glyphIndex, boolean isSideways);
-    static final native Path2D GetGlyphRunOutline(long ptr, float emSize, short glyphIndex, boolean isSideways);
-
-    //IDWriteFont
-    static final native long CreateFontFace(long ptr);
-    static final native long GetFaceNames(long ptr);
-    static final native long GetFontFamily(long ptr);
-    static final native int GetStretch(long ptr);
-    static final native int GetStyle(long ptr);
-    static final native int GetWeight(long ptr);
-    static final native long GetInformationalStrings(long ptr, int informationalStringID);
-    static final native int GetSimulations(long ptr);
-
-    //IDWriteFontList
-    static final native int GetFontCount(long ptr);
-    static final native long GetFont(long ptr, int index);
-
-    //IDWriteFontFile
-    static final native int Analyze(long ptr, boolean[] isSupportedFontType, int[] fontFileType, int[] fontFaceType, int[] numberOfFaces);
-
-    //IDWriteLocalizedStrings
-    static final native char[] GetString(long ptr, int index, int size);
-    static final native int GetStringLength(long ptr, int index);
-    static final native int FindLocaleName(long ptr, char[] locale);
-
-    //IDWriteFontFamily
-    static final native long GetFamilyNames(long ptr);
-    static final native long GetFirstMatchingFont(long ptr, int weight, int stretch, int style);
-
-    //IDWriteFontCollection
-    static final native int GetFontFamilyCount(long ptr);
-    static final native long GetFontFamily(long ptr, int index);
-    static final native int FindFamilyName(long ptr, char[] familyName);
-    static final native long GetFontFromFontFace (long ptr, long fontface);
-
-    //IDWriteGlyphRunAnalysis
-    static final native byte[] CreateAlphaTexture(long ptr, int textureType, RECT textureBounds);
-    static final native RECT GetAlphaTextureBounds(long ptr, int textureType);
-
-    //IDWriteFactory
-    static final native long GetSystemFontCollection(long ptr, boolean checkforupdates);
-    static final native long CreateGlyphRunAnalysis(long ptr,
-                                                    DWRITE_GLYPH_RUN glyphRun,
-                                                    float pixelsPerDip,
-                                                    DWRITE_MATRIX transform,
-                                                    int renderingMode,
-                                                    int measuringMode,
-                                                    float baselineOriginX,
-                                                    float baselineOriginY);
-    static final native long CreateTextAnalyzer(long ptr);
-    static final native long CreateTextFormat(long ptr,
-                                              char[] fontFamily,
-                                              long fontCollection,
-                                              int fontWeight,
-                                              int fontStyle,
-                                              int fontStretch,
-                                              float fontSize,
-                                              char[] localeName);
-    static final native long CreateTextLayout(long ptr,
-                                              char[] text,
-                                              int stringStart,
-                                              int stringLength,
-                                              long textFormat,
-                                              float maxWidth,
-                                              float maxHeight);
-    static final native long CreateFontFileReference(long ptr, char[] filePath);
-    static final native long CreateFontFace(long ptr,
-                                            int fontFaceType,
-                                            long fontFiles,
-                                            int faceIndex,
-                                            int fontFaceSimulationFlags);
-
-    //IUnknown
-    static final native int AddRef(long ptr);
-    static final native int Release(long ptr);
-
-    //IDWriteTextAnalyzer
-    static final native int AnalyzeScript(long ptr, long source, int start, int length, long sink);
-    static final native int GetGlyphs(long ptr,
-                                      char[] textString,
-                                      int textStart,
-                                      int textLength,
-                                      long fontFace,
-                                      boolean isSideways,
-                                      boolean isRightToLeft,
-                                      DWRITE_SCRIPT_ANALYSIS scriptAnalysis,
-                                      char[] localeName,
-                                      long numberSubstitution,
-                                      long[] features,
-                                      int[] featureRangeLengths,
-                                      int featureRanges,
-                                      int maxGlyphCount,
-                                      short[] clusterMap,
-                                      short[] textProps,
-                                      short[] glyphIndices,
-                                      short[] glyphProps,
-                                      int[] actualGlyphCount);
-    static final native int GetGlyphPlacements(long ptr,
-                                               char[] textString,
-                                               short[] clusterMap,
-                                               short[] textProps,
-                                               int textStart,
-                                               int textLength,
-                                               short[] glyphIndices,
-                                               short[] glyphProps,
-                                               int glyphCount,
-                                               long fontFace,
-                                               float fontEmSize,
-                                               boolean isSideways,
-                                               boolean isRightToLeft,
-                                               DWRITE_SCRIPT_ANALYSIS scriptAnalysis,
-                                               char[] localeName,
-                                               long[] features,
-                                               int[] featureRangeLengths,
-                                               int featureRanges,
-                                               float[] glyphAdvances,
-                                               float[] glyphOffsets);
-
-    //IDWriteTextLayout
-    static final native int Draw(long ptr, long clientData, long renderer, float x , float y);
-
-    //IWICImagingFactory
-    static final native long CreateBitmap(long ptr, int uiWidth, int uiHeight, int pixelFormat, int options);
-
-    //IWICBitmap
-    static final native long Lock(long ptr, int x, int y, int width, int height, int flags);
-
-    //IWICBitmapLock
-    static final native byte[] GetDataPointer(long ptr);
-    static final native int GetStride(long ptr);
-
-    //ID2D1Factory
-    static final native long CreateWicBitmapRenderTarget(long ptr, long target, D2D1_RENDER_TARGET_PROPERTIES renderTargetProperties);
-
-    //ID2D1RenderTarget
-    static final native void BeginDraw(long ptr);
-    static final native int EndDraw(long ptr);
-    static final native void Clear(long ptr, D2D1_COLOR_F clearColor);
-    static final native void SetTextAntialiasMode(long ptr, int textAntialiasMode);
-    static final native void SetTransform(long ptr, D2D1_MATRIX_3X2_F transform);
-    static final native void DrawGlyphRun(long ptr, D2D1_POINT_2F baselineOrigin, DWRITE_GLYPH_RUN glyphRun, long foregroundBrush, int measuringMode);
-    static final native long CreateSolidColorBrush(long ptr, D2D1_COLOR_F color);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,15 +31,15 @@ class IDWriteLocalizedStrings extends IUnknown {
     }
 
     int FindLocaleName(String locale) {
-        return OS.FindLocaleName(ptr, (locale+'\0').toCharArray());
+        return DWNative.findLocaleName(ptr, (locale+'\0').toCharArray());
     }
 
     int GetStringLength(int index) {
-        return OS.GetStringLength(ptr, index);
+        return DWNative.getStringLength(ptr, index);
     }
 
     String GetString(int index, int size) {
-        char[] buffer = OS.GetString(ptr, index, size + 1);//length must include space for null-terminator
+        char[] buffer = DWNative.getString(ptr, index, size + 1);//length must include space for null-terminator
         return buffer != null ? new String(buffer, 0, size) : null;
     }
 }

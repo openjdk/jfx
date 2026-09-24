@@ -1,0 +1,206 @@
+# GTK glass boundary trace golden: gtk-dnd-throwing-target
+# Every call the GTK glass event code (glass_window.cpp, glass_window_ime.cpp, glass_dnd.cpp,
+# GlassView.cpp, glass_screen.cpp, glass_general.cpp) made across the C -> Java boundary for the
+# scripted scenario, captured from the JNI build of commit 033187ad90 and normalised
+# by the RULES of the test class. For an X server without a window manager; machine-specific:
+# compared only where every machine.* key matches, elsewhere skipped, or failed under
+# -Djfx.parity.require=true.
+# Capture: -Djfx.gtk.trace.capture=true on the JNI build (refused elsewhere);
+# overwrite: add -Djfx.gtk.trace.regenerate=true.
+# Lines as in the event trace; '# source ...' is what the drag source did around
+# ClipboardAssistance.flush, '# target ...' what the drop target read through its ClipboardAssistance,
+# '# peer ...' what it read through the GtkDnDClipboard peer methods themselves. Two-process traces are
+# the two children's, P then Q.
+machine.compositing=supports=1 composited=0
+machine.depth=24
+machine.env.GDK_BACKEND=unset
+machine.env.GDK_DPI_SCALE=unset
+machine.env.GDK_SCALE=unset
+machine.env.GTK_IM_MODULE=unset
+machine.env.XMODIFIERS=unset
+machine.gtk=3.24.52
+machine.libgdk3=47bb58ca25405353b0546b932ddc5a92e74ee006a1904e4d0eca3df162ddd562
+machine.libgtk3=8dc29a8cc4eabd2f08316dbb74bb585a2738aba4e4895450487d736792eda425
+machine.monitors=1
+machine.resolution=96.0
+machine.scale=1.0x1.0
+machine.screen=1920x1080
+machine.windowManager=unknown
+machine.xkb=evdev|pc105|us
+machine.xserver=The X.Org Foundation 12101022
+capture.java=OpenJDK 64-Bit Server VM 25.0.4
+capture.jniEntryPoints=6/6
+--- trace
+== create and show w1 (left) and w2 (right)
+v1.view ADD
+v1.view MOVE at 0,0
+w1.notifyResize 511 300 200
+w1.handler RESIZE
+v1.view RESIZE 300x200
+w1.notifyMove 100 100
+w1.handler MOVE
+v1.view MOVE at 0,0
+w1.isEnabled=true
+w1.notifyFocus 542
+w1.handler FOCUS_GAINED
+v1.view MOVE at 0,0
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.notifyResize 511 300 200
+w1.handler RESIZE
+w1.notifyMove 100 100
+w1.handler MOVE
+v1.view MOVE at 0,0
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+v2.view ADD
+v2.view MOVE at 0,0
+w2.notifyResize 511 300 200
+w2.handler RESIZE
+v2.view RESIZE 300x200
+w2.notifyMove 600 100
+w2.handler MOVE
+v2.view MOVE at 0,0
+w2.isEnabled=true
+w2.notifyFocus 542
+w2.handler FOCUS_GAINED
+v2.view MOVE at 0,0
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.notifyResize 511 300 200
+w2.handler RESIZE
+w2.notifyMove 600 100
+w2.handler MOVE
+v2.view MOVE at 0,0
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+v1.view REPAINT
+v2.view REPAINT
+== left to right, the target throwing: press in the source
+w1.isEnabled=true
+w1.notifyFocus 542
+w1.isEnabled=true
+v1.mouse ENTER BUTTON_NONE 100,100 200,200 mods=0x0 popup=false synth=false
+w1.isEnabled=true
+v1.mouse DOWN BUTTON_LEFT 100,100 200,200 mods=0x20 popup=false synth=false
+w1.isEnabled=true
+== left to right, the target throwing: drag start
+w1.isEnabled=true
+v1.mouse DRAG BUTTON_LEFT 110,105 210,205 mods=0x20 popup=false synth=false
+v1.dragStart BUTTON_LEFT 110,105 210,205
+# source flush
+w1.notifyFocus 541
+w1.handler FOCUS_LOST
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+v1.mouse EXIT BUTTON_NONE 110,105 210,205 mods=0x20 popup=false synth=false
+w1.isEnabled=true
+w1.isEnabled=true
+v1.dragEnter 130,110 230,210 COPY
+~ # target mimes application/x-jfx-dnd-test|text/html|text/uri-list|application/x-java-file-list|application/x-java-rawimage|text/plain
+~ # target source actions COPY_OR_MOVE
+v1.view REPAINT
+== left to right, the target throwing: across the gap
+w1.isEnabled=true
+v1.dragLeave
+w1.isEnabled=true
+w1.isEnabled=true
+v1.view REPAINT
+== left to right, the target throwing: into the target and over it
+w2.isEnabled=true
+w2.notifyFocus 542
+w2.isEnabled=true
+w2.isEnabled=true
+v2.dragEnter 50,100 650,200 COPY !throws
+reported ArmedException: "armed v2.dragEnter 50,100 650,200 COPY"
+w2.isEnabled=true
+w2.isEnabled=true
+w2.notifyFocus 541
+w2.handler FOCUS_LOST
+v2.view REPAINT
+== left to right, the target throwing: out of the target
+w2.isEnabled=true
+v2.dragLeave
+w2.isEnabled=true
+w2.isEnabled=true
+v2.view REPAINT
+== left to right, the target throwing: back into the target and over it
+w2.isEnabled=true
+w2.notifyFocus 542
+w2.handler FOCUS_GAINED
+w2.isEnabled=true
+w2.isEnabled=true
+v2.dragEnter 80,120 680,220 COPY
+~ # target mimes application/x-jfx-dnd-test|text/html|text/uri-list|application/x-java-file-list|application/x-java-rawimage|text/plain
+~ # target source actions COPY_OR_MOVE
+w2.isEnabled=true
+w2.isEnabled=true
+w2.notifyFocus 541
+w2.handler FOCUS_LOST
+w2.isEnabled=true
+v2.dragOver 90,130 690,230 COPY
+v2.view REPAINT
+== left to right, the target throwing: release over the target
+w2.isEnabled=true
+v2.dragDrop 90,130 690,230 COPY !throws
+reported ArmedException: "armed v2.dragDrop 90,130 690,230 COPY"
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.notifyFocus 542
+w2.handler FOCUS_GAINED
+w2.isEnabled=true
+v1.dragEnd COPY
+# source flush returned
+w2.isEnabled=true
+v2.mouse ENTER BUTTON_NONE 90,130 690,230 mods=0x0 popup=false synth=false
+v2.view REPAINT
+== close both
+v1.mouse EXIT BUTTON_NONE 0,0 0,0 mods=0x0 popup=false synth=false
+v1.view REMOVE
+v1.view MOVE
+w1.notifyDestroy
+w1.handler DESTROY
+v2.mouse EXIT BUTTON_NONE 0,0 0,0 mods=0x0 popup=false synth=false
+v2.view REMOVE
+v2.view MOVE
+w2.notifyDestroy
+w2.handler DESTROY

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -49,7 +49,6 @@ import java.nio.IntBuffer;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.Supplier;
-import java.lang.annotation.Native;
 
 
 final class GtkApplication extends Application implements
@@ -63,7 +62,13 @@ final class GtkApplication extends Application implements
             "WARNING: A command line option tried to select an invalid GTK library version.";
     private static final String GTK3_FALLBACK_WARNING = "WARNING: The GTK 3 library will be used instead.";
 
-    private static native int _openURI(String uri);
+    /**
+     * {@code Java_com_sun_glass_ui_gtk_GtkApplication__1openURI} ({@code GlassApplication.cpp}, commit
+     * {@code 033187ad90}), bound directly.
+     */
+    private static int _openURI(String uri) {
+        return GtkGlassNative.openURI(uri);
+    }
 
     static  {
         String gtkVersion = System.getProperty("org.eclipse.swt.internal.gtk.version");
@@ -82,7 +87,19 @@ final class GtkApplication extends Application implements
             forcedGtkVersion = 0;
         }
 
-        Application.loadNativeLibrary();
+        // Up to commit 033187ad90 this mapped libglass.so, the launcher library whose _queryLibrary (launcher.c)
+        // the query below does in Java. A deployment that renames a glassgtk3 build to libglass.so - the one the
+        // copy of _queryLibrary in GlassApplication.cpp answered QUERY_USE_CURRENT for - still has a library of
+        // that name, and mapping it here is what lets the query find it. A machine with none is the ordinary case.
+        // The catch also covers a libglass.so that is there and cannot be loaded (a wrong architecture, a missing
+        // dependency): that deployment then goes on to the glassgtk3 path with this the only record of why. FINE
+        // and not WARNING for both, because the Linux build produces no libglass.so at all any more, so a warning
+        // here would be on every start.
+        try {
+            Application.loadNativeLibrary();
+        } catch (UnsatisfiedLinkError e) {
+            Logging.getJavaFXLogger().fine("no glass library to load ahead of the GTK one", e);
+        }
     }
 
     public static  int screen = -1;
@@ -90,6 +107,12 @@ final class GtkApplication extends Application implements
     public static  long visualID = 0;
 
     static float overrideUIScale;
+
+    /**
+     * {@code jdk.gtk.verbose}, as {@code _initGTK} stored it in the C global {@code gtk_verbose}; read by the
+     * verbose messages {@link GtkGlassNative} reproduces.
+     */
+    static volatile boolean verbose;
 
     private final InvokeLaterDispatcher invokeLaterDispatcher;
 
@@ -164,6 +187,16 @@ final class GtkApplication extends Application implements
             throw new UnsupportedOperationException("Unable to load glass GTK library.");
         }
 
+        // Both branches that get here have a glass GTK library loaded: glassgtk3, or - QUERY_USE_CURRENT - a glassgtk3
+        // build that was itself loaded as the "glass" library (Java_com_sun_glass_ui_gtk_GtkApplication__1queryLibrary
+        // of GlassApplication.cpp, commit 033187ad90). Bind the system libraries now: a missing one fails the startup
+        // here, as loading that library did when it still linked them (GtkGlassNative.link).
+        GtkGlassNative.link();
+        // The callback tables of glass_gtk_api.h, before _initGTK and _init connect any signal of the library and
+        // before the first window exists
+        GtkGlassNative.installCallbacks();
+
+        verbose = gtkVersionVerbose;
         _initGTK(gtkVersion, gtkVersionVerbose, overrideUIScale);
 
         // Embedded in SWT, with shared event thread
@@ -176,17 +209,32 @@ final class GtkApplication extends Application implements
         }
     }
 
-    @Native private static final int QUERY_ERROR = -2;
-    @Native private static final int QUERY_NO_DISPLAY = -1;
-    @Native private static final int QUERY_USE_CURRENT = 1;
-    @Native private static final int QUERY_LOAD_GTK3 = 3;
     /*
-     * check the system and return an indication of which library to load
-     *  return values are the QUERY_ constants
+     * The answers of _queryLibrary this class acts on; anything else is a failure to load a GTK library
+     * (GtkGlassNative.Loader.QUERY_ERROR). The glass GTK library's C states the same values as GGTK_QUERY_* in
+     * native-glass/gtk/glass_gtk_api.h for the loader C of commit 033187ad90 that still carries them.
      */
-    private static native int _queryLibrary(int version, boolean verbose);
+    private static final int QUERY_NO_DISPLAY = GtkGlassNative.Loader.QUERY_NO_DISPLAY;
+    private static final int QUERY_USE_CURRENT = GtkGlassNative.Loader.QUERY_USE_CURRENT;
+    private static final int QUERY_LOAD_GTK3 = GtkGlassNative.Loader.QUERY_LOAD_GTK3;
 
-    private static native void _initGTK(int version, boolean verbose, float overrideUIScale);
+    /**
+     * {@code Java_com_sun_glass_ui_gtk_GtkApplication__1queryLibrary} ({@code launcher.c}, the whole of
+     * {@code libglass.so}, and its copy in {@code GlassApplication.cpp}; commit {@code 033187ad90}): checks the
+     * system and answers which library to load, one of the {@code QUERY_} constants.
+     */
+    private static int _queryLibrary(int version, boolean verbose) {
+        return GtkGlassNative.Loader.queryLibrary(version, verbose);
+    }
+
+    /**
+     * {@code Java_com_sun_glass_ui_gtk_GtkApplication__1initGTK} ({@code GlassApplication.cpp}, commit
+     * {@code 033187ad90}), now {@code ggtk_application_init_gtk}: throws the
+     * {@code UnsupportedOperationException} the JNI native left pending when GTK is too old.
+     */
+    private static void _initGTK(int version, boolean verbose, float overrideUIScale) {
+        GtkGlassNative.applicationInitGtk(version, verbose, overrideUIScale);
+    }
 
     private void initDisplay() {
         Map ds = getDeviceDetails();
@@ -220,6 +268,8 @@ final class GtkApplication extends Application implements
                Boolean.getBoolean("glass.disableGrab"));
 
         _init(eventProc, disableGrab);
+        // the "platformSupport = new PlatformSupport(env, obj)" that _init ran last at commit 033187ad90
+        GtkGlassNative.platformSupportCreate(this);
     }
 
     @Override
@@ -250,6 +300,8 @@ final class GtkApplication extends Application implements
         final Thread toolkitThread = getEventThread();
         if (toolkitThread != null) {
             _terminateLoop();
+            // the "delete platformSupport" that _terminateLoop ran after gtk_main_quit at commit 033187ad90
+            GtkGlassNative.platformSupportDestroy();
             setEventThread(null);
         }
         super.finishTerminating();
@@ -259,11 +311,39 @@ final class GtkApplication extends Application implements
         return true;
     }
 
-    private native void _terminateLoop();
+    /**
+     * {@code Java_com_sun_glass_ui_gtk_GtkApplication__1terminateLoop} ({@code GlassApplication.cpp}, commit
+     * {@code 033187ad90}): {@code gtk_main_quit}, through GTK directly.
+     */
+    private void _terminateLoop() {
+        GtkGlassNative.applicationTerminateLoop();
+    }
 
-    private native void _init(long eventProc, boolean disableGrab);
+    /**
+     * {@code Java_com_sun_glass_ui_gtk_GtkApplication__1init} ({@code GlassApplication.cpp}, commit
+     * {@code 033187ad90}), now {@code ggtk_application_init}.
+     */
+    private void _init(long eventProc, boolean disableGrab) {
+        GtkGlassNative.applicationInit(eventProc, disableGrab);
+    }
 
-    private native void _runLoop(Runnable launchable, boolean noErrorTrap);
+    /**
+     * {@code Java_com_sun_glass_ui_gtk_GtkApplication__1runLoop} ({@code GlassApplication.cpp}, commit
+     * {@code 033187ad90}). Its first statements are Java: it ran {@code launchable.run()} before anything else and,
+     * when that threw, reported the {@code Throwable} as {@code check_and_clear_exception} did
+     * ({@code CHECK_JNI_EXCEPTION}) and returned before the loop; a {@code null} launchable was the
+     * {@code NullPointerException} {@code CallVoidMethod} raised for it. The rest - the error trap and
+     * {@code gtk_main} - is {@code ggtk_application_run_loop}, on this same thread.
+     */
+    private void _runLoop(Runnable launchable, boolean noErrorTrap) {
+        try {
+            launchable.run();
+        } catch (Throwable t) {
+            GtkGlassNative.reportException(t);
+            return;
+        }
+        GtkGlassNative.applicationRunLoop(noErrorTrap);
+    }
 
     @Override
     protected void _invokeAndWait(final Runnable runnable) {
@@ -283,10 +363,9 @@ final class GtkApplication extends Application implements
         }
     }
 
-    private native void _submitForLaterInvocation(Runnable r);
     // InvokeLaterDispatcher.InvokeLaterSubmitter
     @Override public void submitForLaterInvocation(Runnable r) {
-        _submitForLaterInvocation(r);
+        GtkGlassNative.submitForLaterInvocation(r);
     }
 
     @Override protected void _invokeLater(Runnable runnable) {
@@ -299,9 +378,13 @@ final class GtkApplication extends Application implements
 
     private Object eventLoopExitEnterPassValue;
 
-    private native void enterNestedEventLoopImpl();
+    private void enterNestedEventLoopImpl() {
+        GtkGlassNative.enterNestedEventLoop();
+    }
 
-    private native void leaveNestedEventLoopImpl();
+    private void leaveNestedEventLoopImpl() {
+        GtkGlassNative.leaveNestedEventLoop();
+    }
 
     @Override
     protected Object _enterNestedEventLoop() {
@@ -393,17 +476,38 @@ final class GtkApplication extends Application implements
         return new GtkTimer(runnable);
     }
 
+    /**
+     * {@code Java_com_sun_glass_ui_gtk_GtkApplication_staticTimer_1getMinPeriod} ({@code GlassApplication.cpp},
+     * commit {@code 033187ad90}) returned this constant: there are no restrictions on the period of a GLib timeout.
+     */
     @Override
-    protected native int staticTimer_getMinPeriod();
+    protected int staticTimer_getMinPeriod() {
+        return 0;
+    }
 
+    /**
+     * {@code Java_com_sun_glass_ui_gtk_GtkApplication_staticTimer_1getMaxPeriod} ({@code GlassApplication.cpp},
+     * commit {@code 033187ad90}) returned this constant.
+     */
     @Override
-    protected native int staticTimer_getMaxPeriod();
+    protected int staticTimer_getMaxPeriod() {
+        return 10000;
+    }
 
     @Override protected double staticScreen_getVideoRefreshPeriod() {
         return 0.0;     // indicate millisecond resolution
     }
 
-    @Override native protected Screen[] staticScreen_getScreens();
+    /**
+     * {@code Java_com_sun_glass_ui_gtk_GtkApplication_staticScreen_1getScreens} ({@code GlassApplication.cpp},
+     * commit {@code 033187ad90}), which called {@code rebuild_screens} of {@code glass_screen.cpp} and answered
+     * {@code NULL} when building a {@code Screen} threw. Nothing here throws where that C caught, so the array is
+     * always built; {@code Screen.initScreens} turned that {@code NULL} into a {@code RuntimeException}.
+     */
+    @Override
+    protected Screen[] staticScreen_getScreens() {
+        return GtkGlassNative.screens();
+    }
 
     @Override
     protected FileChooserResult staticCommonDialogs_showFileChooser(
@@ -425,13 +529,23 @@ final class GtkApplication extends Application implements
     }
 
     @Override
-    protected native long staticView_getMultiClickTime();
+    protected long staticView_getMultiClickTime() {
+        return GtkGlassNative.multiClickTime();
+    }
 
     @Override
-    protected native int staticView_getMultiClickMaxX();
+    protected int staticView_getMultiClickMaxX() {
+        return GtkGlassNative.multiClickMaxX();
+    }
 
+    /**
+     * {@code Java_com_sun_glass_ui_gtk_GtkApplication_staticView_1getMultiClickMaxY} ({@code GlassApplication.cpp},
+     * commit {@code 033187ad90}) answered the X distance.
+     */
     @Override
-    protected native int staticView_getMultiClickMaxY();
+    protected int staticView_getMultiClickMaxY() {
+        return GtkGlassNative.multiClickMaxX();
+    }
 
     @Override
     protected boolean _supportsInputMethods() {
@@ -439,7 +553,9 @@ final class GtkApplication extends Application implements
     }
 
     @Override
-    protected native boolean _supportsTransparentWindows();
+    protected boolean _supportsTransparentWindows() {
+        return GtkGlassNative.supportsTransparentWindows();
+    }
 
     @Override protected boolean _supportsUnifiedWindows() {
         return false;
@@ -450,14 +566,43 @@ final class GtkApplication extends Application implements
         return true;
     }
 
+    /**
+     * {@code Java_com_sun_glass_ui_gtk_GtkApplication__1getKeyCodeForChar} ({@code glass_key.cpp}, commit
+     * {@code 033187ad90}), now {@code ggtk_application_get_key_code_for_char}.
+     */
     @Override
-    protected native int _getKeyCodeForChar(char c, int hint);
+    protected int _getKeyCodeForChar(char c, int hint) {
+        return GtkGlassNative.applicationKeyCodeForChar(c, hint);
+    }
 
+    /**
+     * {@code Java_com_sun_glass_ui_gtk_GtkApplication__1isKeyLocked} ({@code glass_key.cpp}, commit
+     * {@code 033187ad90}), bound directly.
+     */
     @Override
-    protected native int _isKeyLocked(int keyCode);
+    protected int _isKeyLocked(int keyCode) {
+        return GtkGlassNative.isKeyLocked(keyCode);
+    }
 
+    /**
+     * {@code Java_com_sun_glass_ui_gtk_GtkApplication_getPlatformPreferences} ({@code GlassApplication.cpp},
+     * commit {@code 033187ad90}), which called {@code PlatformSupport::collectPreferences} and answered
+     * {@code NULL} before {@code _init} had created the {@code PlatformSupport} and after
+     * {@code _terminateLoop} had deleted it.
+     */
     @Override
-    public native Map<String, Object> getPlatformPreferences();
+    public Map<String, Object> getPlatformPreferences() {
+        return GtkGlassNative.platformPreferences();
+    }
+
+    /**
+     * {@code Application.notifyPreferencesChanged}, which {@code PlatformSupport::updatePreferences}
+     * ({@code PlatformSupport.cpp}, commit {@code 033187ad90}) called on this object from the GtkSettings and
+     * GNetworkMonitor handlers.
+     */
+    void notifyPlatformPreferencesChanged(Map<String, Object> preferences) {
+        notifyPreferencesChanged(preferences);
+    }
 
     @Override
     public Map<String, PreferenceMapping<?, ?>> getPlatformKeyMappings() {

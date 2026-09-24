@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,33 +30,74 @@ import java.util.HashMap;
 
 final class GtkDnDClipboard extends SystemClipboard{
 
+    /**
+     * The data map of the drag in progress: the argument of the {@link #pushToSystemImpl} that is running, which
+     * {@code dnd_source_push_data} ({@code glass_dnd.cpp}) attached to its drag widget as a JNI global reference at
+     * commit {@code 033187ad90} and the drag-and-drop table's {@code source_get_data} slot now reads here. Every read
+     * of it happens inside that call - {@code gtk_drag_begin} and the loop that runs until the drag widget is gone -
+     * so it is set around the call. Only touched on the thread that iterates the main context.
+     */
+    private static HashMap<String, Object> dragInProgress;
+
     public GtkDnDClipboard() {
         super(Clipboard.DND);
+    }
+
+    /** The data map of the drag in progress, {@code null} when no {@link #pushToSystemImpl} is running. */
+    static HashMap<String, Object> dragInProgress() {
+        return dragInProgress;
     }
 
     @Override
     protected void pushToSystem(HashMap<String, Object> cacheData,
                                 int supportedActions) {
-        final int performedAction = pushToSystemImpl(cacheData,
-                                                     supportedActions);
+        HashMap<String, Object> outer = dragInProgress;
+        dragInProgress = cacheData;
+        final int performedAction;
+        try {
+            performedAction = pushToSystemImpl(cacheData,
+                                               supportedActions);
+        } finally {
+            dragInProgress = outer;
+        }
         actionPerformed(performedAction);
     }
 
-    @Override
-    protected native boolean isOwner();
-
-    protected native int pushToSystemImpl(HashMap<String, Object> cacheData, int supportedActions);
-
-    @Override
-    protected native void pushTargetActionToSystem(int actionDone);
+    /*
+     * The natives of GlassDnDClipboard.cpp at commit 033187ad90, now the ggtk_dnd_* functions of glass_gtk_api.h,
+     * through GtkGlassNative.
+     */
 
     @Override
-    protected native Object popFromSystem(String mimeType);
+    protected boolean isOwner() {
+        return GtkGlassNative.dndIsOwner();
+    }
+
+    protected int pushToSystemImpl(HashMap<String, Object> cacheData, int supportedActions) {
+        return GtkGlassNative.dndPushToSystem(cacheData, supportedActions);
+    }
+
+    /**
+     * {@code Java_com_sun_glass_ui_gtk_GtkDnDClipboard_pushTargetActionToSystem} ({@code GlassDnDClipboard.cpp},
+     * commit {@code 033187ad90}) did nothing ("Never called").
+     */
+    @Override
+    protected void pushTargetActionToSystem(int actionDone) {
+    }
 
     @Override
-    protected native int supportedSourceActionsFromSystem();
+    protected Object popFromSystem(String mimeType) {
+        return GtkGlassNative.dndPopFromSystem(mimeType);
+    }
 
     @Override
-    protected native String[] mimesFromSystem();
+    protected int supportedSourceActionsFromSystem() {
+        return GtkGlassNative.dndSupportedSourceActions();
+    }
+
+    @Override
+    protected String[] mimesFromSystem() {
+        return GtkGlassNative.dndMimesFromSystem();
+    }
 
 }

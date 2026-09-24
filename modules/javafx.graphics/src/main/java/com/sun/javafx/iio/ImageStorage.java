@@ -25,12 +25,10 @@
 
 package com.sun.javafx.iio;
 
-import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.iio.ImageFormatDescription.Signature;
 import com.sun.javafx.iio.bmp.BMPImageLoaderFactory;
 import com.sun.javafx.iio.common.ImageTools;
 import com.sun.javafx.iio.gif.GIFImageLoaderFactory;
-import com.sun.javafx.iio.ios.IosImageLoaderFactory;
 import com.sun.javafx.iio.jpeg.JPEGImageLoaderFactory;
 import com.sun.javafx.iio.png.PNGImageLoaderFactory;
 import com.sun.javafx.logging.PlatformLogger;
@@ -182,8 +180,6 @@ public class ImageStorage {
     private Optional<ImageLoaderFactory> j2dImageLoaderFactory;
     private int maxSignatureLength;
 
-    private static final boolean isIOS = PlatformUtil.isIOS();
-
     private static class InstanceHolder {
         static final ImageStorage INSTANCE = new ImageStorage();
     }
@@ -193,21 +189,13 @@ public class ImageStorage {
     }
 
     public ImageStorage() {
-        if (isIOS) {
-            //On iOS we have single factory/ native loader
-            //for all image formats
-            loaderFactories = new ImageLoaderFactory[]{
-                IosImageLoaderFactory.getInstance()
-            };
-        } else {
-            loaderFactories = new ImageLoaderFactory[]{
-                GIFImageLoaderFactory.getInstance(),
-                JPEGImageLoaderFactory.getInstance(),
-                PNGImageLoaderFactory.getInstance(),
-                BMPImageLoaderFactory.getInstance()
-                // Note: append ImageLoadFactory for any new format here.
-            };
-        }
+        loaderFactories = new ImageLoaderFactory[]{
+            GIFImageLoaderFactory.getInstance(),
+            JPEGImageLoaderFactory.getInstance(),
+            PNGImageLoaderFactory.getInstance(),
+            BMPImageLoaderFactory.getInstance()
+            // Note: append ImageLoadFactory for any new format here.
+        };
 
 //        loaderFactoriesByExtension = new HashMap(numExtensions);
         loaderFactoriesBySignature = new HashMap<>(loaderFactories.length);
@@ -559,10 +547,6 @@ public class ImageStorage {
     }
 
     private ImageLoader findImageLoader(InputStream stream, ImageLoadListener listener) throws IOException {
-        if (isIOS) {
-            return IosImageLoaderFactory.getInstance().createImageLoader(stream);
-        }
-
         // We need a stream that supports the mark and reset methods, since J2DImageLoader
         // is used as a fallback after our built-in loader selection has already consumed
         // part of the input stream.

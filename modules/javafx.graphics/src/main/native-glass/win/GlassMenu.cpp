@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,350 +25,56 @@
 
 #include "common.h"
 
-#include "GlassDnD.h"
-#include "GlassWindow.h"
+#include "glass_win_api.h"
 
-#include "com_sun_glass_ui_win_WinMenuImpl.h"
-
-static jclass jMenuClass = NULL;
-static jmethodID midNotifyCommand = NULL;
-
-
-// helper functions
-void* GetMenuItemDataPtr(HMENU hMenu, int pos)
-{
-    MENUITEMINFOW itemInfo;
-    memset(&itemInfo, 0, sizeof(itemInfo));
-    itemInfo.cbSize = sizeof(itemInfo);
-    itemInfo.fMask  = MIIM_DATA;
-    if (::GetMenuItemInfo(hMenu, pos, TRUE, &itemInfo)) {
-        return (void *)itemInfo.dwItemData;
-    }
-    return NULL;
-}
-
-// returns -1 if item not found
-int FindItemBySubmenu(HMENU hMenu, HMENU hSubmenu)
-{
-    if (hSubmenu == NULL) {
-        return -1;
-    }
-    int count = ::GetMenuItemCount(hMenu);
-    for (int pos=0; pos<count; pos++) {
-        MENUITEMINFOW itemInfo;
-        memset(&itemInfo, 0, sizeof(itemInfo));
-        itemInfo.cbSize = sizeof(itemInfo);
-        itemInfo.fMask  = MIIM_SUBMENU;
-        if (::GetMenuItemInfo(hMenu, pos, TRUE, &itemInfo)) {
-            if (itemInfo.hSubMenu == hSubmenu) {
-                return pos;
-            }
-        }
-    }
-    return -1;
-
-}
-
+/*
+ * ---- glass_win_api.h: the menu callback table ----
+ *
+ * The menu callback table. Written once by gwin_menu_set_callbacks, from Java, before any window can
+ * receive WM_COMMAND; read by HandleMenuCommand, which runs on the Glass toolkit thread only - every
+ * WM_COMMAND arrives through DispatchMessage -> BaseWnd::StaticWindowProc -> GlassWindow::WindowProc
+ * -> GlassWindow::HandleCommand, and an inter-thread SendMessage still executes the WndProc on the
+ * window's owning thread. No lock, by design, same as g_prefsCallbacks in PlatformSupport.cpp.
+ */
+static GwinMenuCallbacks g_menuCallbacks = { NULL };
+static void* g_menuUser = NULL;
 
 bool HandleMenuCommand(HWND hWnd, WORD cmdID)
 {
-    if (jMenuClass != NULL && midNotifyCommand != NULL) {
-        JNIEnv *env = GetEnv();
-        jobject jWindow = NULL;
-        GlassWindow *pWnd = GlassWindow::FromHandle(hWnd);
-        if (pWnd != NULL) {
-            jWindow = pWnd->GetJObject();
-        }
-
-        jboolean result = env->CallStaticBooleanMethod(jMenuClass,
-                midNotifyCommand, jWindow, cmdID);
-        CheckAndClearException(env);
-        if (result == JNI_TRUE) {
-            return true;
-        }
+    /*
+     * Java installs the callback table through gwin_menu_set_callbacks before any window can receive
+     * WM_COMMAND; the cmd_id is the whole message, and WinMenuItemDelegate's CommandIDManager - not
+     * this library - maps it to a peer. While no table is installed the command is "not handled",
+     * which is what the JNI path answered before WinMenuImpl._initIDs had run.
+     *
+     * The contract is "non-zero means handled", never "== 1": a handled command makes
+     * GlassWindow::WindowProc answer `return 0` instead of falling through to DefWindowProc. A
+     * target that fails must answer 0, which is what CallStaticBooleanMethod yielded when the Java
+     * threw and CheckAndClearException swallowed it.
+     *
+     * hWnd is not forwarded: notifyCommand's com.sun.glass.ui.Window argument, which the JNI path
+     * computed here with GlassWindow::FromHandle(hWnd)->GetJObject(), was never read on the Java side.
+     */
+    if (g_menuCallbacks.notify_command != NULL) {
+        return g_menuCallbacks.notify_command(g_menuUser, (int32_t) cmdID) != 0;
     }
     return false;
 }
 
+/* ---- glass_win_api.h exports. Definitions take C linkage from that header's extern "C" block. ---- */
 
 extern "C" {
-/*
- * Class:     com_sun_glass_ui_win_WinMenuImpl
- * Method:    _initIDs
- * Signature: ()V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinMenuImpl__1initIDs
-  (JNIEnv *env, jclass cls)
-{
-    jMenuClass = (jclass)env->NewGlobalRef(cls);
-//private boolean notifyCommand(com.sun.glass.ui.windows.WindowsWindowDelegate, int);
-//  Signature: (Lcom/sun/glass/ui/windows/WindowsWindowDelegate;I)Z
-    midNotifyCommand = env->GetStaticMethodID(cls,
-            "notifyCommand", "(Lcom/sun/glass/ui/Window;I)Z");
-    ASSERT(midNotifyCommand);
-}
 
-/*
- * Class:     com_sun_glass_ui_win_WinMenuImpl
- * Method:    _create
- * Signature: ()J
- */
-JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_win_WinMenuImpl__1create
-  (JNIEnv *env, jobject jThis)
+int32_t gwin_menu_set_callbacks(const GwinMenuCallbacks* cb, void* user)
 {
-    return (jlong)::CreateMenu();
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinMenuImpl
- * Method:    _destroy
- * Signature: (J)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinMenuImpl__1destroy
-  (JNIEnv *env, jobject jThis, jlong ptr)
-{
-    HMENU hMenu = (HMENU)ptr;
-    if (::IsMenu(hMenu)) {
-        // remove items (to keep HMENU for submenus)
-        int count = ::GetMenuItemCount(hMenu);
-        for (int pos=count-1; pos>=0; pos--) {
-            MENUITEMINFOW itemInfo;
-            memset(&itemInfo, 0, sizeof(itemInfo));
-            itemInfo.cbSize = sizeof(itemInfo);
-            itemInfo.fMask  = MIIM_SUBMENU | MIIM_DATA;
-            if (::GetMenuItemInfo(hMenu, pos, TRUE, &itemInfo)) {
-                if (itemInfo.hSubMenu != NULL) {
-                    ::RemoveMenu(hMenu, pos, MF_BYPOSITION);
-                }
-                /* we don't store callback in itemData
-                if (itemInfo.dwItemData != NULL) {
-                    env->DeleteGlobalRef((jobject)itemInfo.dwItemData);
-                }
-                */
-            }
-        }
-        ::DestroyMenu(hMenu);
+    if (cb == NULL) {
+        g_menuCallbacks.notify_command = NULL;
+        g_menuUser = NULL;
+    } else {
+        g_menuCallbacks = *cb;   // by value: this library never retains the caller's struct
+        g_menuUser = user;
     }
+    return GWIN_OK;
 }
 
-/*
- * Class:     com_sun_glass_ui_win_WinMenuImpl
- * Method:    _insertItem
- * Signature: (JIILjava/lang/String;ZZLcom/sun/glass/ui/Menu/Callback;II)Z
- */
-JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinMenuImpl__1insertItem
-  (JNIEnv *env, jobject jThis, jlong ptr, jint pos, jint cmdID,
-    jstring title, jboolean enabled, jboolean checked,
-    jobject callback, jint shortcut, jint modifiers)
-{
-    HMENU hMenu = (HMENU)ptr;
-    if (::IsMenu(hMenu)) {
-        JString strTitle(env, title);
-        jobject grefCallback = callback == NULL ? NULL : env->NewGlobalRef(callback);
-        MENUITEMINFOW itemInfo;
-        itemInfo.cbSize     = sizeof(itemInfo);
-        itemInfo.fMask      = MIIM_FTYPE | MIIM_STATE | MIIM_ID | /*MIIM_DATA | */MIIM_STRING;
-        itemInfo.fType      = MFT_STRING;
-        itemInfo.fState     = (enabled == JNI_TRUE ? MFS_ENABLED : MFS_GRAYED)
-                            | (checked == JNI_TRUE ? MFS_CHECKED : MFS_UNCHECKED);
-        itemInfo.wID        = cmdID;
-        itemInfo.hSubMenu   = NULL;         // not used
-        itemInfo.hbmpChecked    = NULL;     // not used
-        itemInfo.hbmpUnchecked  = NULL;     // not used
-        //itemInfo.dwItemData = (ULONG_PTR)grefCallback;
-        itemInfo.dwItemData = NULL;
-        itemInfo.dwTypeData = strTitle;
-        itemInfo.cch        = strTitle.length();
-        itemInfo.hbmpItem   = NULL;         // not used
-        if (::InsertMenuItemW(hMenu, pos, TRUE, &itemInfo)) {
-            return JNI_TRUE;
-        }
-    }
-    return JNI_FALSE;
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinMenuImpl
- * Method:    _insertSubmenu
- * Signature: (JIJLjava/lang/String;Z)Z
- */
-JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinMenuImpl__1insertSubmenu
-  (JNIEnv *env, jobject jThis, jlong ptr, jint pos, jlong submenuPtr,
-    jstring title, jboolean enabled)
-{
-    HMENU hMenu = (HMENU)ptr;
-    HMENU hSubmenu = (HMENU)submenuPtr;
-    if (::IsMenu(hMenu) && ::IsMenu(hSubmenu)) {
-        JString strTitle(env, title);
-        MENUITEMINFOW itemInfo;
-        itemInfo.cbSize     = sizeof(itemInfo);
-        itemInfo.fMask      = MIIM_FTYPE | MIIM_STATE | MIIM_STRING | MIIM_SUBMENU;
-        itemInfo.fType      = MFT_STRING;
-        itemInfo.fState     = (enabled == JNI_TRUE ? MFS_ENABLED : MFS_GRAYED);
-        itemInfo.wID        = 0;            // not used
-        itemInfo.hSubMenu   = hSubmenu;
-        itemInfo.hbmpChecked    = NULL;     // not used
-        itemInfo.hbmpUnchecked  = NULL;     // not used
-        itemInfo.dwItemData = NULL;         // not used
-        itemInfo.dwTypeData = strTitle;
-        itemInfo.cch        = strTitle.length();
-        itemInfo.hbmpItem   = NULL;         // not used
-        if (::InsertMenuItemW(hMenu, pos, TRUE, &itemInfo)) {
-            return JNI_TRUE;
-        }
-    }
-    return JNI_FALSE;
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinMenuImpl
- * Method:    _insertSeparator
- * Signature: (JI)Z
- */
-JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinMenuImpl__1insertSeparator
-  (JNIEnv *env, jobject jThis, jlong ptr, jint pos)
-{
-    HMENU hMenu = (HMENU)ptr;
-    if (::IsMenu(hMenu)) {
-        return bool_to_jbool(::InsertMenu(hMenu, pos, MF_SEPARATOR, NULL, NULL));
-    }
-    return JNI_FALSE;
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinMenuImpl
- * Method:    _removeAtPos
- * Signature: (JI)Z
- */
-JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinMenuImpl__1removeAtPos
-  (JNIEnv *env, jobject jThis, jlong ptr, jint pos)
-{
-    HMENU hMenu = (HMENU)ptr;
-    if (::IsMenu(hMenu)) {
-        /* we don't store callback in itemData
-        // if item to delete is MenuItem, free global ref to callback
-        void *data = GetMenuItemDataPtr(hMenu, pos);
-        if (data != NULL) {
-            env->DeleteGlobalRef((jobject)data);
-        }
-        */
-        if (::RemoveMenu(hMenu, pos, MF_BYPOSITION)) {
-            return JNI_TRUE;
-        }
-    }
-    return JNI_FALSE;
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinMenuImpl
- * Method:    _setItemTitle
- * Signature: (JILjava/lang/String;)Z
- */
-JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinMenuImpl__1setItemTitle
-  (JNIEnv *env, jobject jThis, jlong ptr, jint cmdID, jstring title)
-{
-    HMENU hMenu = (HMENU)ptr;
-    if (::IsMenu(hMenu)) {
-        JString strTitle(env, title);
-        MENUITEMINFOW itemInfo;
-        memset(&itemInfo, 0, sizeof(itemInfo));
-        itemInfo.cbSize     = sizeof(itemInfo);
-        itemInfo.fMask      = MIIM_STRING;
-        itemInfo.dwTypeData = strTitle;
-        itemInfo.cch        = strTitle.length();
-        if (::SetMenuItemInfoW(hMenu, cmdID, FALSE, &itemInfo)) {
-            return JNI_TRUE;
-        }
-    }
-    return JNI_FALSE;
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinMenuImpl
- * Method:    _setSubmenuTitle
- * Signature: (JJLjava/lang/String;)Z
- */
-JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinMenuImpl__1setSubmenuTitle
-  (JNIEnv *env, jobject jThis, jlong ptr, jlong subPtr, jstring title)
-{
-    HMENU hMenu = (HMENU)ptr;
-    HMENU hSubmenu = (HMENU)subPtr;
-    if (::IsMenu(hMenu)) {
-        int pos = FindItemBySubmenu(hMenu, hSubmenu);
-        if (pos > 0) {
-            JString strTitle(env, title);
-            MENUITEMINFOW itemInfo;
-            memset(&itemInfo, 0, sizeof(itemInfo));
-            itemInfo.cbSize     = sizeof(itemInfo);
-            itemInfo.fMask      = MIIM_STRING;
-            itemInfo.dwTypeData = strTitle;
-            itemInfo.cch        = strTitle.length();
-            if (::SetMenuItemInfoW(hMenu, pos, TRUE, &itemInfo)) {
-                return JNI_TRUE;
-            }
-        }
-    }
-    return JNI_FALSE;
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinMenuImpl
- * Method:    _enableItem
- * Signature: (JIZ)Z
- */
-JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinMenuImpl__1enableItem
-  (JNIEnv *env, jobject jThis, jlong ptr, jint cmdID, jboolean enable)
-{
-    HMENU hMenu = (HMENU)ptr;
-    if (::IsMenu(hMenu)) {
-        if (0 <= EnableMenuItem(hMenu, cmdID,
-                MF_BYCOMMAND | (enable == JNI_TRUE ? MF_ENABLED : MF_GRAYED))) {
-            return JNI_TRUE;
-        }
-    }
-    return JNI_FALSE;
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinMenuImpl
- * Method:    _enableSubmenu
- * Signature: (JJZ)Z
- */
-JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinMenuImpl__1enableSubmenu
-  (JNIEnv *env, jobject jThis, jlong ptr, jlong subPtr, jboolean enable)
-{
-    HMENU hMenu = (HMENU)ptr;
-    HMENU hSubmenu = (HMENU)subPtr;
-    if (::IsMenu(hMenu)) {
-        int pos = FindItemBySubmenu(hMenu, hSubmenu);
-        if (pos > 0) {
-            if (0 <= EnableMenuItem(hMenu, pos,
-                    MF_BYPOSITION | (enable == JNI_TRUE ? MF_ENABLED : MF_GRAYED))) {
-                return JNI_TRUE;
-            }
-        }
-    }
-    return JNI_FALSE;
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinMenuImpl
- * Method:    _checkItem
- * Signature: (JIZ)Z
- */
-JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinMenuImpl__1checkItem
-  (JNIEnv *env, jobject jThis, jlong ptr, jint cmdID, jboolean check)
-{
-    HMENU hMenu = (HMENU)ptr;
-    if (::IsMenu(hMenu)) {
-        if (0 <= ::CheckMenuItem(hMenu, cmdID,
-                MF_BYCOMMAND | (check == JNI_TRUE ? MF_CHECKED : MF_UNCHECKED))) {
-            return JNI_TRUE;
-        }
-    }
-    return JNI_FALSE;
-}
-
-
-}   // extern "C"
-
+} // extern "C"

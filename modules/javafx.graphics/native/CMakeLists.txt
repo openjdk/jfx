@@ -49,6 +49,12 @@ if(WIN32)
 else()
     option(INCLUDE_ES2 "Build the prism_es2 (OpenGL) library" ON)
 endif()
+# Linux only (linux.cmake decides; ignored elsewhere): the Monocle (EGL /
+# OpenGL ES 2) variant of prism_es2. AUTO = ON when INCLUDE_ES2 is on and
+# pkg-config finds glesv2, else OFF.
+set(INCLUDE_ES2_MONOCLE "AUTO" CACHE STRING
+    "Build the prism_es2_monocle (Monocle EGL / OpenGL ES 2) library on Linux: AUTO, ON or OFF")
+set_property(CACHE INCLUDE_ES2_MONOCLE PROPERTY STRINGS AUTO ON OFF)
 
 if(NOT GENSRC_DIR OR NOT HEADERS_DIR OR NOT BIN_DIR)
     message(FATAL_ERROR "GENSRC_DIR, HEADERS_DIR and BIN_DIR must be provided")

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,6 +32,7 @@ import com.sun.prism.TextureMap;
 import com.sun.prism.impl.BasePhongMaterial;
 import com.sun.prism.impl.Disposer;
 import com.sun.javafx.logging.PlatformLogger;
+import java.lang.foreign.MemorySegment;
 
 /**
  * TODO: 3D - Need documentation
@@ -41,10 +42,11 @@ class D3DPhongMaterial extends BasePhongMaterial {
     static int count = 0;
 
     private final D3DContext context;
-    private final long nativeHandle;
+    /** The native {@code D3DPhongMaterial*}; {@link MemorySegment#NULL} when creation failed. */
+    private final MemorySegment nativeHandle;
     private TextureMap maps[] = new TextureMap[MAX_MAP_TYPE];
 
-    private D3DPhongMaterial(D3DContext context, long nativeHandle,
+    private D3DPhongMaterial(D3DContext context, MemorySegment nativeHandle,
             Disposer.Record disposerRecord) {
         super(disposerRecord);
         this.context = context;
@@ -53,11 +55,11 @@ class D3DPhongMaterial extends BasePhongMaterial {
     }
 
     static D3DPhongMaterial create(D3DContext context) {
-        long nativeHandle = context.createD3DPhongMaterial();
+        MemorySegment nativeHandle = context.createD3DPhongMaterial();
         return new D3DPhongMaterial(context, nativeHandle, new D3DPhongMaterialDisposerRecord(context, nativeHandle));
     }
 
-    long getNativeHandle() {
+    MemorySegment getNativeHandle() {
         return nativeHandle;
     }
 
@@ -80,7 +82,9 @@ class D3DPhongMaterial extends BasePhongMaterial {
         Image image = map.getImage();
         Texture texture = (image == null) ? null
                 : context.getResourceFactory().getCachedTexture(image, Texture.WrapMode.REPEAT, useMipmap);
-        long hTexture = (texture != null) ? ((D3DTexture) texture).getNativeTextureObject() : 0;
+        // the D3DResource handle; the native side reads the IDirect3DTexture9 out of it
+        MemorySegment hTexture = (texture != null) ? ((D3DTexture) texture).getNativeSourceHandle()
+                : MemorySegment.NULL;
         context.setMap(nativeHandle, map.getType().ordinal(), hTexture);
         return texture;
     }
@@ -136,9 +140,9 @@ class D3DPhongMaterial extends BasePhongMaterial {
     static class D3DPhongMaterialDisposerRecord implements Disposer.Record {
 
         private final D3DContext context;
-        private long nativeHandle;
+        private MemorySegment nativeHandle;
 
-        D3DPhongMaterialDisposerRecord(D3DContext context, long nativeHandle) {
+        D3DPhongMaterialDisposerRecord(D3DContext context, MemorySegment nativeHandle) {
             this.context = context;
             this.nativeHandle = nativeHandle;
         }
@@ -147,10 +151,10 @@ class D3DPhongMaterial extends BasePhongMaterial {
 
         @Override
         public void dispose() {
-            if (nativeHandle != 0L) {
+            if (nativeHandle.address() != 0L) {
                 traceDispose();
                 context.releaseD3DPhongMaterial(nativeHandle);
-                nativeHandle = 0L;
+                nativeHandle = MemorySegment.NULL;
             }
         }
     }

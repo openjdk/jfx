@@ -30,36 +30,4 @@
 #include <math.h>
 
 #include "../PrismES2Defs.h"
-#include "com_sun_prism_es2_MacGLPixelFormat.h"
 
-/*
- * Class:     com_sun_prism_es2_MacGLPixelFormat
- * Method:    nCreatePixelFormat
- * Signature: (J[I)J
- */
-JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_MacGLPixelFormat_nCreatePixelFormat
-(JNIEnv *env, jclass class, jlong nativeScreen, jintArray attrArr) {
-    jint *attrs;
-    jlong pixelFormat = 0;
-    PixelFormatInfo *pfInfo = NULL;
-
-    if (attrArr == NULL) {
-        return 0;
-    }
-
-    attrs = (*env)->GetIntArrayElements(env, attrArr, NULL);
-    pixelFormat = (jlong) (intptr_t) createPixelFormat(attrs);
-    (*env)->ReleaseIntArrayElements(env, attrArr, attrs, JNI_ABORT);
-
-    /* allocate the structure */
-    pfInfo = (PixelFormatInfo *) malloc(sizeof (PixelFormatInfo));
-    if (pfInfo == NULL) {
-        fprintf(stderr, "nCreatePixelFormat: Failed in malloc\n");
-    }
-
-    /* initialize the structure */
-    initializePixelFormatInfo(pfInfo);
-    pfInfo->pixelFormat = pixelFormat;
-
-    return ptr_to_jlong(pfInfo);
-}

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,6 +30,12 @@
 #include "GlassApplication.h"
 
 #include "com_sun_glass_events_MouseEvent.h"
+
+/*
+ * Every site below dials GwinDndCallbacks (glass_win_api.h); with no table installed
+ * (GlassDndCallbacks() == NULL) a site delivers nothing and answers S_OK, as it does without a view.
+ * The drop target identifies its view by ViewContainer::GetViewId() - the view_id of glass_win_api.h's IDENTITY.
+ */
 
 //Ctrl + Shift -> ACTION_LINK
 //Ctrl         -> ACTION_COPY
@@ -63,52 +69,53 @@ GlassDropTarget::~GlassDropTarget()
 HRESULT  GlassDropTarget::UpdateDnDClipboardData(
     IDataObject *pDataObj)
 {
-    JNIEnv *env = GetEnv();
-    //Get "DnD" clipboard
-    JLClass jcWinDnDClipboard(env,
-        GlassApplication::ClassForName(env, "com.sun.glass.ui.win.WinDnDClipboard"));
-    ASSERT(jcWinDnDClipboard)
-    static jmethodID midGetInstance = env->GetStaticMethodID(jcWinDnDClipboard, "getInstance",
-        "()Lcom/sun/glass/ui/win/WinDnDClipboard;");
-    ASSERT(midGetInstance)
-    HRESULT result = checkJavaException(env);
-    if (result != S_OK) {
-        return result;
+    const GwinDndCallbacks* cb = GlassDndCallbacks();
+    if (cb == NULL) {
+        return S_OK;
     }
-    JLObject jDnDClipboard(env, env->CallStaticObjectMethod(jcWinDnDClipboard, midGetInstance));
-    ASSERT(jDnDClipboard)
-    result = checkJavaException(env);
+
+    //Get "DnD" clipboard: dnd_get_data_object resolves WinDnDClipboard.getInstance() itself
+    void* pOld = NULL;
+    HRESULT result = GwinStatusToHR(cb->dnd_get_data_object(&pOld));
     if (result != S_OK) {
         return result;
     }
 
-    IDataObject *pOldDataObj = getPtr(env, jDnDClipboard);
+    IDataObject *pOldDataObj = reinterpret_cast<IDataObject *>(pOld);
     if (pOldDataObj != pDataObj) {
         if (NULL != pDataObj) {
             //lock it till clipboard close
             pDataObj->AddRef();
         }
-        setPtr(env, jDnDClipboard, pDataObj);
+        result = GwinStatusToHR(cb->dnd_set_data_object(pDataObj));
+        if (result != S_OK) {
+            //the set did not happen: give back the reference just taken, keep the old one
+            if (NULL != pDataObj) {
+                pDataObj->Release();
+            }
+            return result;
+        }
         if (NULL != pOldDataObj) {
             //unlock old data instance
             pOldDataObj->Release();
         }
     }
 
-    return checkJavaException(env);
+    return S_OK;
 }
 
 HRESULT  GlassDropTarget::CallbackToJava(
-    /* [in] */ jmethodID method,
+    /* [in] */ DragCallback which,
     /* [in] */ DWORD grfKeyState,
     /* [in] */ POINTL pt,
     /* [out][in] */ DWORD *pdwEffect)
 {
-    if (!m_viewContainer->GetView()) {
+    const GwinDndCallbacks* cb = GlassDndCallbacks();
+    //no view (or no table): S_OK, no upcall, *pdwEffect untouched
+    if (cb == NULL || m_viewContainer->GetGlassView() == NULL) {
         return S_OK;
     }
 
-    JNIEnv *env = GetEnv();
     POINT ptClient = *(LPPOINT)&pt;
     ::ScreenToClient(m_hwnd, &ptClient);
 
@@ -143,10 +150,18 @@ HRESULT  GlassDropTarget::CallbackToJava(
         like = DesiredActions[iDesiredIndex];
     }
 
-    *pdwEffect = getDROPEFFECT(DROPEFFECT(env->CallIntMethod(m_viewContainer->GetView(), method,
-        jint(ptClient.x), jint(ptClient.y), jint(pt.x), jint(pt.y), getACTION(like))));
-
-    return checkJavaException(env);
+    //a failed slot leaves 0 here: DROPEFFECT_NONE, what CallIntMethod's 0 with a pending exception gave
+    int32_t action = 0;
+    int32_t (*slot)(int64_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t*) =
+        which == DRAG_ENTER ? cb->drag_enter
+        : which == DRAG_OVER ? cb->drag_over
+        : cb->drag_drop;
+    const int32_t status = slot(m_viewContainer->GetViewId(),
+        (int32_t) ptClient.x, (int32_t) ptClient.y, (int32_t) pt.x, (int32_t) pt.y,
+        (int32_t) getACTION(like), &action);
+    //written before the status test, as the JNI wrote it before its exception check
+    *pdwEffect = getDROPEFFECT(DROPEFFECT(action));
+    return GwinStatusToHR(status);
 }
 
 HRESULT GlassDropTarget::DragEnter(
@@ -158,7 +173,7 @@ HRESULT GlassDropTarget::DragEnter(
     OLE_TRY
     OLE_HRT(UpdateDnDClipboardData(pDataObj))
     //dragAction = View.notifyDragEnter(...)
-    OLE_HRT(CallbackToJava(javaIDs.View.notifyDragEnter, grfKeyState, pt, pdwEffect))
+    OLE_HRT(CallbackToJava(DRAG_ENTER, grfKeyState, pt, pdwEffect))
     //ignore HRESULT - just no image
     m_spDropTargetHelper->DragEnter(m_hwnd, pDataObj, (LPPOINT)&pt, *pdwEffect);
     OLE_CATCH
@@ -172,7 +187,7 @@ HRESULT GlassDropTarget::DragOver(
 {
     OLE_TRY
     //dragAction = View.notifyDragOver(...)
-    OLE_HRT(OLE_HRT(CallbackToJava(javaIDs.View.notifyDragOver, grfKeyState, pt, pdwEffect)))
+    OLE_HRT(OLE_HRT(CallbackToJava(DRAG_OVER, grfKeyState, pt, pdwEffect)))
     //ignore HRESULT - just no image
     m_spDropTargetHelper->DragOver((LPPOINT)&pt, *pdwEffect);
     OLE_CATCH
@@ -181,15 +196,14 @@ HRESULT GlassDropTarget::DragOver(
 
 HRESULT GlassDropTarget::DragLeave()
 {
-    if (!m_viewContainer->GetView()) {
+    const GwinDndCallbacks* cb = GlassDndCallbacks();
+    if (cb == NULL || m_viewContainer->GetGlassView() == NULL) {
         return S_OK;
     }
 
     OLE_TRY
-    JNIEnv *env = GetEnv();
     //View.notifyDragLeave()
-    env->CallIntMethod(m_viewContainer->GetView(), javaIDs.View.notifyDragLeave);
-    OLE_HRT(checkJavaException(env))
+    OLE_HRT(GwinStatusToHR(cb->drag_leave(m_viewContainer->GetViewId())))
     //ignore HRESULT - just no image
     m_spDropTargetHelper->DragLeave();
     OLE_CATCH
@@ -205,7 +219,7 @@ HRESULT GlassDropTarget::Drop(
     OLE_TRY
     OLE_HRT(UpdateDnDClipboardData(pDataObj))
     //performedAction = View.notifyDragDrop(...)
-    OLE_HRT(OLE_HRT(CallbackToJava(javaIDs.View.notifyDragDrop, grfKeyState, pt, pdwEffect)))
+    OLE_HRT(OLE_HRT(CallbackToJava(DRAG_DROP, grfKeyState, pt, pdwEffect)))
     //ignore HRESULT - just no image
     m_spDropTargetHelper->Drop(pDataObj, (LPPOINT)&pt, *pdwEffect);
     OLE_CATCH
@@ -213,38 +227,15 @@ HRESULT GlassDropTarget::Drop(
 }
 
 /*static*/
-HRESULT GlassDropTarget::SetSourceSupportedActions(/*in*/jint actions)
+HRESULT GlassDropTarget::SetSourceSupportedActions(/*in*/int32_t actions)
 {
-    JNIEnv *env = GetEnv();
-    //Get "DnD" clipboard
-    JLClass jcWinDnDClipboard(env,
-        GlassApplication::ClassForName(env, "com.sun.glass.ui.win.WinDnDClipboard"));
-    ASSERT(jcWinDnDClipboard)
-    static jmethodID midGetInstance = env->GetStaticMethodID(jcWinDnDClipboard, "getInstance",
-        "()Lcom/sun/glass/ui/win/WinDnDClipboard;");
-    ASSERT(midGetInstance)
-    HRESULT result = checkJavaException(env);
-    if (result != S_OK) {
-        return result;
+    const GwinDndCallbacks* cb = GlassDndCallbacks();
+    if (cb == NULL) {
+        return S_OK;
     }
 
-    static jmethodID midSetSourceSupportedActions = env->GetMethodID(jcWinDnDClipboard, "setSourceSupportedActions",
-        "(I)V");
-    ASSERT(midSetSourceSupportedActions)
-    result = checkJavaException(env);
-    if (result != S_OK) {
-        return result;
-    }
-
-    JLObject jDnDClipboard(env, env->CallStaticObjectMethod(jcWinDnDClipboard, midGetInstance));
-    ASSERT(jDnDClipboard)
-    result = checkJavaException(env);
-    if (result != S_OK) {
-        return result;
-    }
-    env->CallVoidMethod(jDnDClipboard, midSetSourceSupportedActions, actions);
-
-    return checkJavaException(env);
+    //WinDnDClipboard.getInstance().setSourceSupportedActions(actions), resolved by the slot
+    return GwinStatusToHR(cb->dnd_set_source_supported_actions((int32_t) actions));
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -252,60 +243,28 @@ HRESULT GlassDropTarget::SetSourceSupportedActions(/*in*/jint actions)
 //////////////////////////////////////////////////////////////////////////
 
 /*static*/
-HRESULT  GlassDropSource::SetDragButton(jint button)
+HRESULT  GlassDropSource::SetDragButton(int32_t button)
 {
-    JNIEnv *env = GetEnv();
-    //Get "DnD" clipboard
-    JLClass jcWinDnDClipboard(env,
-        GlassApplication::ClassForName(env, "com.sun.glass.ui.win.WinDnDClipboard"));
-    ASSERT(jcWinDnDClipboard)
-    static jmethodID midGetInstance = env->GetStaticMethodID(jcWinDnDClipboard, "getInstance",
-        "()Lcom/sun/glass/ui/win/WinDnDClipboard;");
-    ASSERT(midGetInstance)
-    HRESULT result = checkJavaException(env);
-    if (result != S_OK) {
-        return result;
+    const GwinDndCallbacks* cb = GlassDndCallbacks();
+    if (cb == NULL) {
+        return S_OK;
     }
 
-    static jmethodID midSetDragButton = env->GetMethodID(jcWinDnDClipboard, "setDragButton",
-        "(I)V");
-    ASSERT(midSetDragButton)
-    result = checkJavaException(env);
-    if (result != S_OK) {
-        return result;
-    }
-
-    JLObject jDnDClipboard(env, env->CallStaticObjectMethod(jcWinDnDClipboard, midGetInstance));
-    ASSERT(jDnDClipboard)
-    result = checkJavaException(env);
-    if (result != S_OK) {
-        return result;
-    }
-
-    env->CallVoidMethod(jDnDClipboard, midSetDragButton, button);
-
-    return checkJavaException(env);
+    //WinDnDClipboard.getInstance().setDragButton(button), resolved by the slot
+    return GwinStatusToHR(cb->dnd_set_drag_button((int32_t) button));
 }
 
-GlassDropSource::GlassDropSource(jobject jDnDClipboard)
+GlassDropSource::GlassDropSource()
 {
-    JNIEnv *env = GetEnv();
-    static jmethodID midGetDragButton = 0;
-    if (0 == midGetDragButton) {
-        JLClass jcWinDnDClipboard(env,
-            GlassApplication::ClassForName(env, "com.sun.glass.ui.win.WinDnDClipboard"));
-        ASSERT(jcWinDnDClipboard)
-
-        midGetDragButton = env->GetMethodID(jcWinDnDClipboard, "getDragButton",
-            "()I");
-        ASSERT(midGetDragButton)
-        HRESULT result = checkJavaException(env);
-        if (result != S_OK) {
-            return;
-        }
+    int32_t jbutton = 0;
+    const GwinDndCallbacks* cb = GlassDndCallbacks();
+    if (cb != NULL) {
+        //WinDnDClipboard.getDragButton(), resolved by the slot. The JNI never checked for a pending
+        //exception here - a throw left 0 and made the drop immediate - so the status is not consulted.
+        int32_t button = 0;
+        (void) cb->dnd_get_drag_button(&button);
+        jbutton = button;
     }
-
-    jint jbutton = env->CallIntMethod(jDnDClipboard, midGetDragButton);
     switch (jbutton) {
     case com_sun_glass_events_MouseEvent_BUTTON_LEFT:
         m_button = MK_LBUTTON;

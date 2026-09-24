@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,7 +33,20 @@ class GlassTextRangeProvider : public ITextRangeProvider
 {
 
 public:
-    GlassTextRangeProvider(JNIEnv* env, jobject jTextRangeProvider, GlassAccessible* glassProvider);
+    /*
+     * rangeId is the id Java assigns to the WinTextRangeProvider (glass_win_api.h, IDENTITY); 0 is
+     * this library's "no Java peer" value, which the sibling-range guards test for. The range AddRefs
+     * the accessible it belongs to, so a live range pins its provider.
+     */
+    GlassTextRangeProvider(int64_t rangeId, GlassAccessible* glassProvider);
+
+    int64_t GetId() { return m_id; }
+
+    /* glass_win_api.h's gwin_a11y_text_range_set_callbacks: by value, NULL slots become no-ops. */
+    static void SetCallbacks(const GwinTextRangeCallbacks* cb);
+
+    /* The installed table, or NULL when none is installed and every upcall site answers E_FAIL. */
+    static const GwinTextRangeCallbacks* Callbacks();
 
     // IUnknown methods
     IFACEMETHODIMP_(ULONG) AddRef();
@@ -67,7 +80,7 @@ private:
     virtual ~GlassTextRangeProvider();
 
     ULONG m_refCount;
-    jobject m_jTextRangeProvider;  // The GlobalRef Java side object
+    int64_t m_id;                  // The Java-assigned id every callback slot carries; 0 = no Java peer
     GlassAccessible* m_glassAccessible;
 
 };

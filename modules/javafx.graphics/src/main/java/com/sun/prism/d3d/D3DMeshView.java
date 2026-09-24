@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,7 @@ import com.sun.prism.Graphics;
 import com.sun.prism.Material;
 import com.sun.prism.impl.BaseMeshView;
 import com.sun.prism.impl.Disposer;
+import java.lang.foreign.MemorySegment;
 
 /**
  * TODO: 3D - Need documentation
@@ -38,14 +39,15 @@ class D3DMeshView extends BaseMeshView {
     static int count = 0;
 
     private final D3DContext context;
-    private final long nativeHandle;
+    /** The native {@code D3DMeshView*}; {@link MemorySegment#NULL} when creation failed. */
+    private final MemorySegment nativeHandle;
 
     // TODO: 3D - Need a mechanism to "decRefCount" Mesh and Material
     //            if we need to do eager clean up
     final private D3DMesh mesh;
     private D3DPhongMaterial material;
 
-    private D3DMeshView(D3DContext context, long nativeHandle, D3DMesh mesh,
+    private D3DMeshView(D3DContext context, MemorySegment nativeHandle, D3DMesh mesh,
             Disposer.Record disposerRecord) {
         super(disposerRecord);
         this.context = context;
@@ -55,7 +57,7 @@ class D3DMeshView extends BaseMeshView {
     }
 
     static D3DMeshView create(D3DContext context, D3DMesh mesh) {
-        long nativeHandle = context.createD3DMeshView(mesh.getNativeHandle());
+        MemorySegment nativeHandle = context.createD3DMeshView(mesh.getNativeHandle());
         return new D3DMeshView(context, nativeHandle, mesh, new D3DMeshViewDisposerRecord(context, nativeHandle));
     }
 
@@ -119,9 +121,9 @@ class D3DMeshView extends BaseMeshView {
     static class D3DMeshViewDisposerRecord implements Disposer.Record {
 
         private final D3DContext context;
-        private long nativeHandle;
+        private MemorySegment nativeHandle;
 
-        D3DMeshViewDisposerRecord(D3DContext context, long nativeHandle) {
+        D3DMeshViewDisposerRecord(D3DContext context, MemorySegment nativeHandle) {
             this.context = context;
             this.nativeHandle = nativeHandle;
         }
@@ -130,10 +132,10 @@ class D3DMeshView extends BaseMeshView {
 
         @Override
         public void dispose() {
-            if (nativeHandle != 0L) {
+            if (nativeHandle.address() != 0L) {
                 traceDispose();
                 context.releaseD3DMeshView(nativeHandle);
-                nativeHandle = 0L;
+                nativeHandle = MemorySegment.NULL;
             }
         }
     }

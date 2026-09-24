@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,16 +25,16 @@
 
 #include "common.h"
 
+#include "glass_win_api.h"
 #include "KeyTable.h"
 #include "GlassApplication.h"
 
 #include "com_sun_glass_events_KeyEvent.h"
-#include "com_sun_glass_ui_win_WinApplication.h"
 
 
 struct KeyMapEntry
 {
-    jint javaKey;
+    int32_t javaKey;
     UINT windowsKey;
 };
 
@@ -175,7 +175,7 @@ static const KeyMapEntry keyMapTable[] =
     {com_sun_glass_events_KeyEvent_VK_UNDEFINED,        0}
 };
 
-jint WindowsKeyToJavaKey(UINT wKey)
+int32_t WindowsKeyToJavaKey(UINT wKey)
 {
     for (int i = 0; keyMapTable[i].windowsKey; i++) {
         if (keyMapTable[i].windowsKey == wKey) {
@@ -212,9 +212,9 @@ static BOOL isOEMKey(UINT vkey)
     return false;
 }
 
-jint OEMCharToJavaKey(UINT ch, bool deadKey)
+int32_t OEMCharToJavaKey(UINT ch, bool deadKey)
 {
-    jint jKeyCode = com_sun_glass_events_KeyEvent_VK_UNDEFINED;
+    int32_t jKeyCode = com_sun_glass_events_KeyEvent_VK_UNDEFINED;
     if (deadKey) {
         switch (ch) {
             case L'`':   jKeyCode = com_sun_glass_events_KeyEvent_VK_DEAD_GRAVE; break;
@@ -276,7 +276,7 @@ jint OEMCharToJavaKey(UINT ch, bool deadKey)
     return jKeyCode;
 }
 
-void JavaKeyToWindowsKey(jint jkey, UINT &vkey, UINT& modifiers)
+void JavaKeyToWindowsKey(int32_t jkey, UINT &vkey, UINT& modifiers)
 {
     vkey = 0;
     modifiers = 0;
@@ -303,7 +303,7 @@ void JavaKeyToWindowsKey(jint jkey, UINT &vkey, UINT& modifiers)
         for (size_t i = 0; i < numOEMKeys; ++i) {
             UINT ch = ::MapVirtualKey(oemKeys[i], 2);
             bool deadKey = (ch & 0x80000000);
-            jint trialCode = OEMCharToJavaKey(LOWORD(ch), deadKey);
+            int32_t trialCode = OEMCharToJavaKey(LOWORD(ch), deadKey);
             if (trialCode == jkey) {
                 vkey = oemKeys[i];
                 break;
@@ -366,16 +366,22 @@ BOOL IsNumericKeypadCode(int javaCode) {
 }
 
 /*
- * Class:     Java_com_sun_glass_ui_win_WinApplication
- * Method:    _getKeyCodeForChar
- * Signature: (CI)I
+ * gwin_key_code_for_char - glass_win_api.h. Implemented here, not in glass_win_api.cpp: oemKeys,
+ * numOEMKeys and isOEMKey have internal linkage in this file, IsNumericKeypadCode is not declared in
+ * KeyTable.h, and glass_win_api.cpp does not include GlassApplication.h. The body below is the body
+ * Java_com_sun_glass_ui_win_WinApplication__1getKeyCodeForChar had, with jchar -> uint16_t and
+ * (TCHAR)c -> (WCHAR)c (glass.dll is compiled /DUNICODE, so those are the same type). That JNI entry
+ * point is gone - WinApplication._getKeyCodeForChar is no longer `native` - so this is the only copy
+ * of the logic.
+ *
+ * The definition takes C linkage from the explicit extern "C" here, which also makes a stale
+ * declaration in glass_win_api.h a link error rather than a silently mangled, unexported function.
  */
-JNIEXPORT jint JNICALL Java_com_sun_glass_ui_win_WinApplication__1getKeyCodeForChar
-  (JNIEnv * env, jobject jApplication, jchar c, jint hint)
+extern "C" int32_t gwin_key_code_for_char(uint16_t c, int32_t hint)
 {
     // The Delete key doesn't generate a character so ViewContainer::HandleViewKeyEvent
     // synthesizes one. Here we reverse that process.
-    if ((TCHAR)c == 0x7F) {
+    if ((WCHAR)c == 0x7F) {
         return com_sun_glass_events_KeyEvent_VK_DELETE;
     }
 
@@ -394,7 +400,7 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_win_WinApplication__1getKeyCodeForC
         }
     }
 
-    BYTE vkey = 0xFF & ::VkKeyScanEx((TCHAR)c, layout);
+    BYTE vkey = 0xFF & ::VkKeyScanEx((WCHAR)c, layout);
 
     if (!vkey || vkey == 0xFF) {
         return com_sun_glass_events_KeyEvent_VK_UNDEFINED;
@@ -411,29 +417,4 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_win_WinApplication__1getKeyCodeForC
     }
 
     return WindowsKeyToJavaKey(vkey);
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinApplication
- * Method:    _isKeyLocked
- * Signature: (I)I
- */
-JNIEXPORT jint JNICALL Java_com_sun_glass_ui_win_WinApplication__1isKeyLocked
-  (JNIEnv * env, jobject obj, jint keyCode)
-{
-    SHORT keyState = 0;
-    switch (keyCode) {
-        case com_sun_glass_events_KeyEvent_VK_CAPS_LOCK:
-            keyState = ::GetKeyState(VK_CAPITAL);
-            break;
-
-        case com_sun_glass_events_KeyEvent_VK_NUM_LOCK:
-            keyState = ::GetKeyState(VK_NUMLOCK);
-            break;
-
-        default:
-            return com_sun_glass_events_KeyEvent_KEY_LOCK_UNKNOWN;
-    }
-    return (keyState & 0x1) ? com_sun_glass_events_KeyEvent_KEY_LOCK_ON
-                            : com_sun_glass_events_KeyEvent_KEY_LOCK_OFF;
 }

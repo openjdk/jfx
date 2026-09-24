@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,7 +28,7 @@
 
 #include <PiscesDefs.h>
 
-#include "com_sun_pisces_RendererBase.h"
+#include "prism_sw_api.h"
 
 //Color models - supported surfaces
 /**
@@ -60,7 +60,7 @@
  * Surface type TYPE_BYTE_GRAY. This color model uses 256 grades of shade to
  * view data. We use one byte to represent one pixel.
  */
-#define TYPE_INT_ARGB_PRE   com_sun_pisces_RendererBase_TYPE_INT_ARGB_PRE
+#define TYPE_INT_ARGB_PRE   PSW_TYPE_INT_ARGB_PRE
 
 typedef struct _Surface {
     jint width;

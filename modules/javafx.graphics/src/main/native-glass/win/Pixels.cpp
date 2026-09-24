@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,44 +26,6 @@
 #include "common.h"
 
 #include "Pixels.h"
-
-#include "com_sun_glass_ui_Pixels_Format.h"
-#include "com_sun_glass_ui_win_WinPixels.h"
-
-Bitmap::Bitmap(int width, int height)
-{
-    if (width <= 0 || height <= 0) {
-        return;
-    }
-
-    int numPlanes = 1;
-    int bitCount = 1; // monochrome bitmap
-    // refer : Doc of ::CreateBitmap(): Each scan line in the rectangle must be word aligned
-    if (width > INT_MAX - 15) {
-        fprintf(stderr, "Bitmap: Failed to create monochrome bitmap for icon.\n");
-        return;
-    }
-    int scanLength = (((width * numPlanes * bitCount + 15) >> 4) << 1);
-
-    if (scanLength > INT_MAX / height) {
-        fprintf(stderr, "Bitmap: Failed to create monochrome bitmap for icon.\n");
-        return;
-    }
-
-    int bufSize = scanLength * height;
-    BYTE *mpixels = new BYTE[bufSize];
-    if (mpixels != NULL) {
-        memset(mpixels, 0, bufSize);
-        HBITMAP bmp = ::CreateBitmap(width, height, numPlanes, bitCount, mpixels);
-        if (bmp != NULL) {
-            Attach(bmp);
-        } else {
-            fprintf(stderr, "Bitmap: Failed to create monochrome bitmap for icon.\n");
-        }
-        delete[] mpixels;
-    }
-    ASSERT((HBITMAP)*this);
-}
 
 Bitmap::Bitmap(int width, int height, void **data, HDC hdc)
 {
@@ -95,20 +57,10 @@ Bitmap::Bitmap(int width, int height, void **data, HDC hdc)
     ASSERT((HBITMAP)*this);
 }
 
-Bitmap::Bitmap(Pixels & pixels)
+DIBitmap::DIBitmap(int width, int height, const void* bits)
 {
-    Attach(::CreateBitmap(pixels.GetWidth(), pixels.GetHeight(), 1, 32, pixels.GetBits()));
-    ASSERT((HBITMAP)*this);
-}
-
-DIBitmap::DIBitmap(Pixels & pixels)
-{
-    int const width = pixels.GetWidth();
-    int const height = pixels.GetHeight();
-    void * const bits = pixels.GetBits();
-
     void *bitmapBits = NULL;
-    jsize imageSize = width * height * 4;
+    int32_t imageSize = width * height * 4;
 
     BITMAPINFOHEADER bmi = {0};
     bmi.biSize = sizeof(bmi);
@@ -128,66 +80,13 @@ DIBitmap::DIBitmap(Pixels & pixels)
     ASSERT((HBITMAP)*this);
 }
 
-HICON Pixels::CreateIcon(JNIEnv *env, jobject jPixels, BOOL fIcon, jint x, jint y)
-{
-    Pixels pixels(env, jPixels);
-
-    Bitmap mask(pixels.GetWidth(), pixels.GetHeight());
-    DIBitmap bitmap(pixels);
-
-    ICONINFO iconInfo;
-    memset(&iconInfo, 0, sizeof(ICONINFO));
-    iconInfo.hbmMask = mask;
-    iconInfo.hbmColor = bitmap;
-    iconInfo.fIcon = fIcon;
-    iconInfo.xHotspot = x;
-    iconInfo.yHotspot = y;
-    HICON hIcon = ::CreateIconIndirect(&iconInfo);
-    ASSERT(hIcon);
-
-    ::GdiFlush();
-
-    return hIcon;
-}
-
-Pixels::Pixels(JNIEnv *env, jobject jPixels)
-{
-    env->CallVoidMethod(jPixels, javaIDs.Pixels.attachData, ptr_to_jlong(this));
-    CheckAndClearException(env);
-}
-
-void Pixels::AttachInt(JNIEnv *env, jint w, jint h, jobject buf, jintArray array, jint offset)
-{
-    width = w;
-    height = h;
-    ints.Attach(env, buf, array, offset);
-}
-
-void Pixels::AttachByte(JNIEnv *env, jint w, jint h, jobject buf, jbyteArray array, jint offset)
-{
-    width = w;
-    height = h;
-    bytes.Attach(env, buf, array, offset);
-}
-
-void * Pixels::GetBits()
-{
-    if (ints) {
-        return ints.GetPtr();
-    }
-    if (bytes) {
-        return bytes.GetPtr();
-    }
-    return NULL;
-}
-
 HANDLE BaseBitmap::GetGlobalDIB()
 {
     HBITMAP hBitmap = (HBITMAP)*this;
     BITMAP bm;
     ::GetObject(hBitmap, sizeof(bm), &bm);
 
-    jsize imageSize = bm.bmWidth*bm.bmHeight*4;
+    int32_t imageSize = bm.bmWidth*bm.bmHeight*4;
 
     //BITMAPV5HEADER converts to ordinal BITMAPINFOHEADER
     //as in/out parameter of GetDIBits call.
@@ -225,75 +124,3 @@ HANDLE BaseBitmap::GetGlobalDIB()
     }
     return hDIB;
 }
-
-extern "C" {
-
-/*
- * Class:     com_sun_glass_ui_win_WinPixels
- * Method:    _initIDs
- * Signature: ()I
- */
-JNIEXPORT jint JNICALL Java_com_sun_glass_ui_win_WinPixels__1initIDs
-    (JNIEnv *env, jclass cls)
-{
-    javaIDs.Pixels.attachData = env->GetMethodID(cls, "attachData", "(J)V");
-    ASSERT(javaIDs.Pixels.attachData);
-
-    return com_sun_glass_ui_Pixels_Format_BYTE_BGRA_PRE;
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinPixels
- * Method:    _attachInt
- * Signature: (JIILjava/nio/IntBuffer;[II)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinPixels__1attachInt
-    (JNIEnv *env, jobject pixels, jlong ptr, jint w, jint h, jobject buf, jintArray array, jint offset)
-{
-    ((Pixels*)jlong_to_ptr(ptr))->AttachInt(env, w, h, buf, array, offset);
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinPixels
- * Method:    _attachByte
- * Signature: (JIILjava/nio/ByteBuffer;[BI)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinPixels__1attachByte
-    (JNIEnv *env, jobject pixels, jlong ptr, jint w, jint h, jobject buf, jbyteArray array, jint offset)
-{
-    ((Pixels*)jlong_to_ptr(ptr))->AttachByte(env, w, h, buf, array, offset);
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinPixels
- * Method:    _fillDirectByteBuffer
- * Signature: (Ljava/nio/ByteBuffer;)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinPixels__1fillDirectByteBuffer
-    (JNIEnv *env, jobject jPixels, jobject bb)
-{
-    Pixels pixels(env, jPixels);
-
-    if (bb == NULL) {
-        return;
-    }
-
-    const int width = pixels.GetWidth();
-    const int height = pixels.GetHeight();
-    if (width <= 0 || height <= 0 || width > ((INT_MAX / 4) / height)) {
-        return;
-    }
-    const int size = width * height * 4;
-    const int bbCapacity = env->GetDirectBufferCapacity(bb);
-    if (bbCapacity < size) {
-        return;
-    }
-
-    void *bbAddr = env->GetDirectBufferAddress(bb);
-    if (bbAddr == NULL) {
-        return;
-    }
-    memcpy(bbAddr, pixels.GetBits(), size);
-}
-
-} // extern "C"

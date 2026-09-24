@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,93 +22,25 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-#include <com_sun_glass_ui_gtk_GtkDnDClipboard.h>
 #include "glass_general.h"
 #include "glass_dnd.h"
 
 extern gboolean is_dnd_owner;
+
+/*
+ * The natives of GtkDnDClipboard at commit 033187ad90 as ggtk_dnd_* functions (glass_gtk_api.h), which
+ * GtkDnDClipboard calls through GtkGlassNative. isOwner is here; pushToSystemImpl, popFromSystem,
+ * supportedSourceActionsFromSystem and mimesFromSystem live in glass_dnd.cpp (ggtk_dnd_push_to_system,
+ * ggtk_dnd_target_get_data, ggtk_dnd_target_get_supported_actions, ggtk_dnd_target_get_mimes), because the drag
+ * state they read is file-static there. pushTargetActionToSystem did nothing ("Never called") and has no
+ * function: GtkDnDClipboard does nothing in Java.
+ */
+
 extern "C" {
 
-/*
- * Class:     com_sun_glass_ui_gtk_GtkDnDClipboard
- * Method:    isOwner
- * Signature: ()Z
- */
-JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkDnDClipboard_isOwner
-  (JNIEnv *env , jobject obj)
+int32_t ggtk_dnd_is_owner(void)
 {
-    (void)env;
-    (void)obj;
-
-    return (is_dnd_owner) ? JNI_TRUE : JNI_FALSE;
-}
-
-/*
- * Class:     com_sun_glass_ui_gtk_GtkDnDClipboard
- * Method:    pushToSystemImpl
- * Signature: (Ljava/util/HashMap;I)I
- */
-JNIEXPORT jint JNICALL
-Java_com_sun_glass_ui_gtk_GtkDnDClipboard_pushToSystemImpl
-  (JNIEnv * env, jobject obj, jobject data, jint supported)
-{
-    (void)obj;
-
-    return execute_dnd(env, data, supported);
-}
-
-/*
- * Class:     com_sun_glass_ui_gtk_GtkDnDClipboard
- * Method:    pushTargetActionToSystem
- * Signature: (I)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkDnDClipboard_pushTargetActionToSystem
-  (JNIEnv * env, jobject obj, jint action)
-{
-    (void)env;
-    (void)obj;
-    (void)action;
-
-    // Never called.
-}
-
-/*
- * Class:     com_sun_glass_ui_gtk_GtkDnDClipboard
- * Method:    popFromSystem
- * Signature: (Ljava/lang/String;)Ljava/lang/Object;
- */
-JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_gtk_GtkDnDClipboard_popFromSystem
-  (JNIEnv * env, jobject obj, jstring mime)
-{
-    (void)obj;
-
-    return dnd_target_get_data(env, mime);
-}
-
-/*
- * Class:     com_sun_glass_ui_gtk_GtkDnDClipboard
- * Method:    supportedSourceActionsFromSystem
- * Signature: ()I
- */
-JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkDnDClipboard_supportedSourceActionsFromSystem
-  (JNIEnv *env, jobject obj)
-{
-    (void)obj;
-
-    return dnd_target_get_supported_actions(env);
-}
-
-/*
- * Class:     com_sun_glass_ui_gtk_GtkDnDClipboard
- * Method:    mimesFromSystem
- * Signature: ()[Ljava/lang/String;
- */
-JNIEXPORT jobjectArray JNICALL Java_com_sun_glass_ui_gtk_GtkDnDClipboard_mimesFromSystem
-  (JNIEnv * env, jobject obj)
-{
-    (void)obj;
-
-    return dnd_target_get_mimes(env);
+    return (is_dnd_owner) ? 1 : 0;
 }
 
 } // extern "C"

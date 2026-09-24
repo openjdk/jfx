@@ -243,8 +243,13 @@ public class CommonDialogs {
         return (title != null) ? title : "";
     }
 
-    /* a helper method for some platform implementations */
-    protected static FileChooserResult createFileChooserResult(String[] files,
+    /*
+     * A helper method for some platform implementations. Public rather than protected: the Windows
+     * peer, com.sun.glass.ui.win.WinCommonDialogs, builds the result in Java now (its JNI used to
+     * reach this method by id from C, which access control never saw), and it is neither a subclass
+     * nor in this package. No behaviour change; gtk and mac get the same access when their turn comes.
+     */
+    public static FileChooserResult createFileChooserResult(String[] files,
             ExtensionFilter[] extensionFilters, int index)
     {
         List<File> list = new ArrayList<>();

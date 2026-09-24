@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,10 +37,17 @@ class ES2MeshView extends BaseMeshView {
 
     static int count = 0;
     private final ES2Context context;
-    private final long nativeHandle;
     private float ambientLightRed = 0;
     private float ambientLightBlue = 0;
     private float ambientLightGreen = 0;
+
+    // The cull and fill state the folded-away native MeshViewInfo used to carry;
+    // es2_mesh_render now receives these directly. Initialised to the values
+    // nCreateES2MeshView used to set (cullEnable = GL_TRUE, cullMode = GL_BACK,
+    // fillMode = GL_FILL) so behaviour is unchanged by the FFM migration.
+    private int cullEnable = 1;
+    private int cullModeGL = ES2Native.GL_BACK;
+    private int fillModeGL = ES2Native.GL_FILL;
 
     // NOTE: We only support up to 3 point lights at the present
     private ES2Light[] lights = new ES2Light[3];
@@ -50,42 +57,64 @@ class ES2MeshView extends BaseMeshView {
     final private ES2Mesh mesh;
     private ES2PhongMaterial material;
 
-    private ES2MeshView(ES2Context context, long nativeHandle, ES2Mesh mesh,
+    private ES2MeshView(ES2Context context, ES2Mesh mesh,
             Disposer.Record disposerRecord) {
         super(disposerRecord);
         this.context = context;
         this.mesh = mesh;
-        this.nativeHandle = nativeHandle;
         count++;
     }
 
     static ES2MeshView create(ES2Context context, ES2Mesh mesh) {
-        long nativeHandle = context.createES2MeshView(mesh);
-        return new ES2MeshView(context, nativeHandle, mesh, new ES2MeshViewDisposerRecord(context, nativeHandle));
+        return new ES2MeshView(context, mesh, new ES2MeshViewDisposerRecord());
     }
 
     @Override
     public void setCullingMode(int cullingMode) {
-        context.setCullingMode(nativeHandle, cullingMode);
+        // Faithful port of the JNI nSetCullingMode switch (GLContext.c). NGShape3D
+        // passes CullFace.ordinal() i.e. MeshView.CULL_* (0/1/2), which never matched
+        // these GLContext.GL_BACK / GL_FRONT / GL_NONE cases (110/111/112), so the
+        // native MeshViewInfo always kept its nCreateES2MeshView init defaults
+        // (cullEnable = GL_TRUE, cullMode = GL_BACK). Preserved verbatim so the FFM
+        // migration is behaviour-neutral (see ES2 migration notes).
+        switch (cullingMode) {
+            case GLContext.GL_BACK:
+                cullEnable = 1;
+                cullModeGL = ES2Native.GL_BACK;
+                break;
+            case GLContext.GL_FRONT:
+                cullEnable = 1;
+                cullModeGL = ES2Native.GL_FRONT;
+                break;
+            case GLContext.GL_NONE:
+                cullEnable = 0;
+                cullModeGL = ES2Native.GL_BACK;
+                break;
+            default:
+                // No-op, exactly as the JNI switch (which had no default clause) did
+                // for the CullFace-ordinal values actually supplied at runtime.
+                break;
+        }
     }
 
     @Override
     public void setMaterial(Material material) {
-        context.setMaterial(nativeHandle, material);
         this.material = (ES2PhongMaterial) material;
     }
 
     @Override
     public void setWireframe(boolean wireframe) {
-        context.setWireframe(nativeHandle, wireframe);
+        // nSetWireframe stored GL_LINE / GL_FILL into MeshViewInfo.fillMode.
+        fillModeGL = wireframe ? ES2Native.GL_LINE : ES2Native.GL_FILL;
     }
 
     @Override
     public void setAmbientLight(float r, float g, float b) {
+        // The native nSetAmbientLight store was dead (never read); ES2PhongShader
+        // reads these Java fields directly.
         ambientLightRed = r;
         ambientLightGreen = g;
         ambientLightBlue = b;
-        context.setAmbientLight(nativeHandle, r, g, b);
     }
 
     float getAmbientLightRed() {
@@ -106,9 +135,9 @@ class ES2MeshView extends BaseMeshView {
             float innerAngle, float outerAngle, float falloff) {
         // NOTE: We only support up to 3 point lights at the present
         if (index >= 0 && index <= 2) {
+            // The native nSetLight store was dead (never read); ES2PhongShader reads
+            // this lights[] array directly.
             lights[index] = new ES2Light(x, y, z, r, g, b, w, ca, la, qa, isAttenuated,
-                    maxRange, dirX, dirY, dirZ, innerAngle, outerAngle, falloff);
-            context.setLight(nativeHandle, index, x, y, z, r, g, b, w, ca, la, qa, isAttenuated,
                     maxRange, dirX, dirY, dirZ, innerAngle, outerAngle, falloff);
         }
     }
@@ -117,10 +146,31 @@ class ES2MeshView extends BaseMeshView {
         return lights;
     }
 
+    ES2Mesh getMesh() {
+        return mesh;
+    }
+
+    int getCullEnable() {
+        return cullEnable;
+    }
+
+    int getCullModeGL() {
+        return cullModeGL;
+    }
+
+    int getFillModeGL() {
+        return fillModeGL;
+    }
+
     @Override
     public void render(Graphics g) {
+        // nRenderMeshView early-returned when phongMaterialInfo was NULL; es2_mesh_render
+        // no longer tracks the material, so reproduce that gate here.
+        if (material == null) {
+            return;
+        }
         material.lockTextureMaps();
-        context.renderMeshView(nativeHandle, g, this);
+        context.renderMeshView(g, this);
         material.unlockTextureMaps();
     }
 
@@ -141,25 +191,16 @@ class ES2MeshView extends BaseMeshView {
         return count;
     }
 
+    /**
+     * ES2MeshView no longer owns a native MeshViewInfo: nCreateES2MeshView /
+     * nReleaseES2MeshView were folded away and es2_mesh_render now takes the mesh
+     * handle plus the cull / fill state directly. This record therefore has nothing
+     * to release; it exists only so BaseGraphicsResource has a Disposer.Record to
+     * register.
+     */
     static class ES2MeshViewDisposerRecord implements Disposer.Record {
 
-        private final ES2Context context;
-        private long nativeHandle;
-
-        ES2MeshViewDisposerRecord(ES2Context context, long nativeHandle) {
-            this.context = context;
-            this.nativeHandle = nativeHandle;
-        }
-
-        void traceDispose() { }
-
         @Override
-        public void dispose() {
-            if (nativeHandle != 0L) {
-                traceDispose();
-                context.releaseES2MeshView(nativeHandle);
-                nativeHandle = 0L;
-            }
-        }
+        public void dispose() { }
     }
 }

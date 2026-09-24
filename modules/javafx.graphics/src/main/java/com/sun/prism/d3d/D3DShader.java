@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,7 +27,7 @@ package com.sun.prism.d3d;
 
 import com.sun.prism.impl.BufferUtil;
 import com.sun.prism.ps.Shader;
-import java.nio.ByteBuffer;
+import java.lang.foreign.MemorySegment;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.util.Map;
@@ -39,39 +39,25 @@ final class D3DShader extends D3DResource implements Shader {
     private final Map<String, Integer> registers;
     private boolean valid;
 
-    D3DShader(D3DContext context, long pData, Map<String, Integer> registers) {
+    /** @param pData the {@code D3DPixelShaderResource*} from {@code D3DNative.shaderCreate}, or NULL */
+    D3DShader(D3DContext context, MemorySegment pData, Map<String, Integer> registers) {
         super(new D3DRecord(context, pData));
-        this.valid = (pData != 0L);
+        this.valid = (pData.address() != 0L);
         this.registers = registers;
     }
-
-    static native long init(long pCtx, ByteBuffer buf,
-            int maxTexCoordIndex, boolean isPixcoordUsed, boolean isPerVertexColorUsed);
-
-    private static native int enable(long pCtx, long pData);
-    private static native int disable(long pCtx, long pData);
-    private static native int setConstantsF(long pCtx, long pData, int register,
-                                             FloatBuffer buf, int off,
-                                             int count);
-    private static native int setConstantsI(long pCtx, long pData, int register,
-                                             IntBuffer buf, int off,
-                                             int count);
-
-    private static native int nGetRegister(long pCtx, long pData, String name);
 
     @Override
     public void enable() {
         // res >= 0 is equivalent to D3D's SUCCEEDED(res) macro
-        int res = enable(d3dResRecord.getContext().getContextHandle(),
-                          d3dResRecord.getResource());
+        int res = D3DNative.shaderEnable(d3dResRecord.getContext().getContextHandle(),
+                                         d3dResRecord.getResource());
         valid &= res >= 0;
         D3DContext.validate(res);
     }
 
     @Override
     public void disable() {
-        int res = disable(d3dResRecord.getContext().getContextHandle(),
-                           d3dResRecord.getResource());
+        int res = D3DNative.shaderDisable(d3dResRecord.getContext().getContextHandle());
         valid &= res >= 0;
         D3DContext.validate(res);
     }
@@ -182,9 +168,8 @@ final class D3DShader extends D3DResource implements Shader {
 
     @Override
     public void setConstants(String name, FloatBuffer buf, int off, int count) {
-            int res = setConstantsF(d3dResRecord.getContext().getContextHandle(),
-                                     d3dResRecord.getResource(),
-                                     getRegister(name), buf, off, count);
+            int res = D3DNative.shaderSetConstantsF(d3dResRecord.getContext().getContextHandle(),
+                                                    getRegister(name), buf, off, count);
             valid &= res >= 0;
             D3DContext.validate(res);
     }
@@ -192,19 +177,11 @@ final class D3DShader extends D3DResource implements Shader {
     private int getRegister(String name) {
         Integer reg = registers.get(name);
         if (reg == null) {
-            // if we did not find the register in the map, we add it
-            // it hapens when a shader is compiled in run-time
-            int nRegister = nGetRegister(
-                    d3dResRecord.getContext().getContextHandle(),
-                    d3dResRecord.getResource(), name);
-            if (nRegister < 0) {
+            // The register map is the only source of registers: the native lookup the JNI version
+            // fell back to here (nGetRegister) answered -1 for every name, so a name missing from
+            // the map has always been this error.
             throw new IllegalArgumentException("Register not found for: " +
                                                name);
-
-            }
-
-            registers.put(name, nRegister);
-            return nRegister;
         }
         return reg;
     }

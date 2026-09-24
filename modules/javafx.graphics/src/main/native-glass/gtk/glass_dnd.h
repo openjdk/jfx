@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,17 +27,12 @@
 
 #include "glass_general.h"
 #include "glass_window.h"
-#include <jni.h>
 
 #include <gtk/gtk.h>
 
 void process_dnd_target(WindowContext *, GdkEventDND *);
-jint dnd_target_get_supported_actions(JNIEnv *);
-jobjectArray dnd_target_get_mimes(JNIEnv *);
-jobject dnd_target_get_data(JNIEnv *, jstring);
 
 void process_dnd_source(GdkWindow *, GdkEvent *);
-jint execute_dnd(JNIEnv *, jobject, jint);
 
 gboolean is_in_drag();
 

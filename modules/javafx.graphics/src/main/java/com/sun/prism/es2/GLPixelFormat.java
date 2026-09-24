@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,8 +24,6 @@
  */
 
 package com.sun.prism.es2;
-
-import java.lang.annotation.Native;
 
 class GLPixelFormat {
     final private Attributes attributes;
@@ -57,15 +55,15 @@ class GLPixelFormat {
 
     static class Attributes {
         //  These definitions are used by both the Mac, Win and X11 subclasses
-        @Native final static int RED_SIZE      = 0;
-        @Native final static int GREEN_SIZE    = 1;
-        @Native final static int BLUE_SIZE     = 2;
-        @Native final static int ALPHA_SIZE    = 3;
-        @Native final static int DEPTH_SIZE    = 4;
-        @Native final static int DOUBLEBUFFER  = 5;
-        @Native final static int ONSCREEN      = 6;
+        final static int RED_SIZE      = 0;
+        final static int GREEN_SIZE    = 1;
+        final static int BLUE_SIZE     = 2;
+        final static int ALPHA_SIZE    = 3;
+        final static int DEPTH_SIZE    = 4;
+        final static int DOUBLEBUFFER  = 5;
+        final static int ONSCREEN      = 6;
 
-        @Native final static int NUM_ITEMS     = 7;
+        final static int NUM_ITEMS     = 7;
 
         private boolean onScreen;
         private boolean doubleBuffer;

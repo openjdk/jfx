@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,52 +27,9 @@
 
 #include "com_sun_glass_events_KeyEvent.h"
 
-/*
- * Initialize the Java VM instance variable when the library is
- * first loaded
- */
-static JavaVM *jvm;
-
-JavaIDs javaIDs;
-
-JavaVM* GetJVM()
+int32_t GetModifiers()
 {
-    return jvm;
-}
-
-JNIEnv* GetEnv()
-{
-    void* env;
-    jvm->GetEnv(&env, JNI_VERSION_1_2);
-    return (JNIEnv*)env;
-}
-
-jboolean CheckAndClearException(JNIEnv* env)
-{
-    jthrowable t = env->ExceptionOccurred();
-    if (!t) {
-        return JNI_FALSE;
-    }
-    env->ExceptionClear();
-
-    jclass cls = env->FindClass("com/sun/glass/ui/Application");
-    if (env->ExceptionOccurred()) {
-        env->ExceptionClear();
-        return JNI_TRUE;
-    }
-    env->CallStaticVoidMethod(cls, javaIDs.Application.reportExceptionMID, t);
-    if (env->ExceptionOccurred()) {
-        env->ExceptionClear();
-        return JNI_TRUE;
-    }
-    env->DeleteLocalRef(cls);
-
-    return JNI_TRUE;
-}
-
-jint GetModifiers()
-{
-    jint modifiers = 0;
+    int32_t modifiers = 0;
     if (HIBYTE(::GetKeyState(VK_CONTROL)) != 0) {
         modifiers |= com_sun_glass_events_KeyEvent_MODIFIER_CONTROL;
     }
@@ -106,18 +63,3 @@ jint GetModifiers()
 
     return modifiers;
 }
-
-extern "C" {
-
-#ifdef STATIC_BUILD
-JNIEXPORT jint JNICALL JNI_OnLoad_glass(JavaVM *vm, void *reserved)
-#else
-JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
-#endif
-{
-    memset(&javaIDs, 0, sizeof(javaIDs));
-    jvm = vm;
-    return JNI_VERSION_1_2;
-}
-
-} // extern "C"

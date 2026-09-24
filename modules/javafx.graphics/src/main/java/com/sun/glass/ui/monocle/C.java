@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,13 +25,19 @@
 
 package com.sun.glass.ui.monocle;
 
+import java.lang.foreign.MemorySegment;
 import java.nio.ByteBuffer;
 
 /**
- * The C class provides ways to wrap pointers to native C structures in Java
+ * The C class provides ways to wrap pointers to C structures in Java
  * objects.
  *
  * C is a singleton. Its instance is obtained by calling C.getC().
+ * <p>
+ * Both methods are Java over {@code java.lang.foreign} where C.c of commit 21d5a654f6 called the JNI functions
+ * of the same names. {@link #NewDirectByteBuffer} holds the one restricted call of this class
+ * ({@code MemorySegment.reinterpret}); every other restricted call of the package is in {@link LinuxSystem}.
+ * Neither method needs a system library, so a Structure can be allocated on every platform.
  */
 class C {
 
@@ -77,21 +83,35 @@ class C {
     }
 
     /** Create a new ByteBuffer that provides access to the memory at a given
-     *  address
+     *  address. The buffer has big-endian byte order, like the buffers of
+     *  ByteBuffer.allocateDirect and of the JNI NewDirectByteBuffer it
+     *  replaces; a caller wanting the platform byte order sets it. The memory is not
+     *  owned by the buffer: it stays mapped for as long as its owner keeps it.
      *
      * @param ptr The memory address for which to create a ByteBuffer.
      * @param size The byte length of memory to be wrapped in the ByteBuffer.
      * @return a new ByteBuffer providing direct access to the requested
      * memory region
      */
-    native ByteBuffer NewDirectByteBuffer(long ptr, int size);
+    @SuppressWarnings("restricted")
+    ByteBuffer NewDirectByteBuffer(long ptr, int size) {
+        return MemorySegment.ofAddress(ptr).reinterpret(size).asByteBuffer();
+    }
 
     /**
-     * Finds the memory address pointed to by a direct ByteBuffer
+     * Finds the memory address pointed to by a direct ByteBuffer: the start
+     * of its backing memory whatever its position and limit, as
+     * GetDirectBufferAddress answered it.
      *
      * @param b a direct ByteBuffer
-     * @return the memory address referenced by b
+     * @return the memory address referenced by b, or 0 for null or for a
+     * buffer that is not direct
      */
-    native long GetDirectBufferAddress(ByteBuffer b);
+    long GetDirectBufferAddress(ByteBuffer b) {
+        if (b == null || !b.isDirect()) {
+            return 0L;
+        }
+        return MemorySegment.ofBuffer(b.duplicate().clear()).address();
+    }
 
 }

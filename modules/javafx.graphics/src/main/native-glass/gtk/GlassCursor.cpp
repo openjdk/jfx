@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,11 +22,8 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-#include <com_sun_glass_ui_gtk_GtkCursor.h>
-
 #include <gdk/gdk.h>
 #include <stdlib.h>
-#include <jni.h>
 
 #include "com_sun_glass_ui_Cursor.h"
 #include "glass_general.h"
@@ -170,53 +167,3 @@ GdkCursor* get_native_cursor(int type)
 
     return cursor;
 }
-
-extern "C" {
-
-/*
- * Class:     com_sun_glass_ui_gtk_GtkCursor
- * Method:    _createCursor
- * Signature: (IILcom/sun/glass/ui/Pixels;)J
- */
-JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_gtk_GtkCursor__1createCursor
-  (JNIEnv * env, jobject obj, jint x, jint y, jobject pixels)
-{
-    (void)obj;
-
-    GdkPixbuf *pixbuf = NULL;
-    GdkCursor *cursor = NULL;
-    env->CallVoidMethod(pixels, jPixelsAttachData, PTR_TO_JLONG(&pixbuf));
-    if (!EXCEPTION_OCCURED(env)) {
-        cursor = gdk_cursor_new_from_pixbuf(gdk_display_get_default(), pixbuf, x, y);
-    }
-    g_object_unref(pixbuf);
-
-    return PTR_TO_JLONG(cursor);
-}
-
-/*
- * Class:     com_sun_glass_ui_gtk_GtkCursor
- * Method:    _getBestSize
- * Signature: (II)Lcom.sun.glass.ui.Size
- */
-JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_gtk_GtkCursor__1getBestSize
-        (JNIEnv *env, jclass jCursorClass, jint width, jint height)
-{
-    (void)jCursorClass;
-    (void)width;
-    (void)height;
-
-    int size = gdk_display_get_default_cursor_size(gdk_display_get_default());
-
-    jclass jc = env->FindClass("com/sun/glass/ui/Size");
-    if (env->ExceptionCheck()) return NULL;
-    jobject jo =  env->NewObject(
-            jc,
-            jSizeInit,
-            size,
-            size);
-    EXCEPTION_OCCURED(env);
-    return jo;
-}
-
-} // extern "C"

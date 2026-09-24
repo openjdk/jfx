@@ -1,0 +1,127 @@
+# glass/win menu parity golden: the transcript of WinMenuNativeTest's operation script.
+# Captured from GlassMenu.cpp's JNI bodies, through WinMenuImplShim on Windows 10 10.0.
+# Lines beginning with # are ignored by the comparison.
+001 bar = create() -> a menu
+002 file = create() -> a menu
+003 edit = create() -> a menu
+004 view = create() -> a menu
+005 recent = create() -> a menu
+006 insertSubmenu(bar, pos=0, sub=file, 'File', enabled=true) -> true
+007 insertSubmenu(bar, pos=1, sub=edit, 'Edit', enabled=true) -> true
+008 insertSubmenu(bar, pos=2, sub=view, 'View', enabled=false) -> true
+009 insertSubmenu(bar, pos=3, sub=zero, 'Nothing', enabled=true) -> false
+010 insertSubmenu(bar, pos=3, sub=bogus, 'Bogus', enabled=true) -> false
+011 dump bar: isMenu=true count=3
+      bar[0] type=0x0000 state=0x0000 id=0 sub=file cch=4 title='File'
+      bar[1] type=0x0000 state=0x0000 id=0 sub=edit cch=4 title='Edit'
+      bar[2] type=0x0000 state=0x0003 id=0 sub=view cch=4 title='View'
+012 insertItem(file, pos=0, id=101, 'New', enabled=true, checked=false) -> true
+013 insertItem(file, pos=1, id=102, 'Open', enabled=false, checked=false) -> true
+014 insertItem(file, pos=2, id=103, 'Auto-save', enabled=true, checked=true) -> true
+015 insertItem(file, pos=3, id=104, 'Exit', enabled=true, checked=false) -> true
+016 dump file: isMenu=true count=4
+      file[0] type=0x0000 state=0x0000 id=101 sub=zero cch=3 title='New'
+      file[1] type=0x0000 state=0x0003 id=102 sub=zero cch=4 title='Open'
+      file[2] type=0x0000 state=0x0008 id=103 sub=zero cch=9 title='Auto-save'
+      file[3] type=0x0000 state=0x0000 id=104 sub=zero cch=4 title='Exit'
+017 insertSeparator(file, pos=3) -> true
+018 dump file: isMenu=true count=5
+      file[0] type=0x0000 state=0x0000 id=101 sub=zero cch=3 title='New'
+      file[1] type=0x0000 state=0x0003 id=102 sub=zero cch=4 title='Open'
+      file[2] type=0x0000 state=0x0008 id=103 sub=zero cch=9 title='Auto-save'
+      file[3] type=0x0000 state=0x0000 id=104 sub=zero cch=4 title='Exit'
+      file[4] type=0x0800 state=0x0003 id=0 sub=zero cch=0 title=''
+019 insertSeparator(file, pos=104) -> true
+020 dump file: isMenu=true count=6
+      file[0] type=0x0000 state=0x0000 id=101 sub=zero cch=3 title='New'
+      file[1] type=0x0000 state=0x0003 id=102 sub=zero cch=4 title='Open'
+      file[2] type=0x0000 state=0x0008 id=103 sub=zero cch=9 title='Auto-save'
+      file[3] type=0x0800 state=0x0003 id=0 sub=zero cch=0 title=''
+      file[4] type=0x0000 state=0x0000 id=104 sub=zero cch=4 title='Exit'
+      file[5] type=0x0800 state=0x0003 id=0 sub=zero cch=0 title=''
+021 insertSubmenu(edit, pos=0, sub=recent, 'Recent', enabled=true) -> true
+022 insertItem(recent, pos=0, id=201, 'One', enabled=true, checked=false) -> true
+023 insertItem(recent, pos=1, id=202, 'Two', enabled=true, checked=false) -> true
+024 dump edit: isMenu=true count=1
+      edit[0] type=0x0000 state=0x0000 id=0 sub=recent cch=6 title='Recent'
+025 dump recent: isMenu=true count=2
+      recent[0] type=0x0000 state=0x0000 id=201 sub=zero cch=3 title='One'
+      recent[1] type=0x0000 state=0x0000 id=202 sub=zero cch=3 title='Two'
+026 setSubmenuTitle(bar, sub=file, 'Fichier') -> false
+027 setSubmenuTitle(bar, sub=edit, 'Edition') -> true
+028 setSubmenuTitle(bar, sub=recent, 'NotAChildOfTheBar') -> false
+029 setSubmenuTitle(bar, sub=zero, 'NullSubmenu') -> false
+030 dump bar: isMenu=true count=3
+      bar[0] type=0x0000 state=0x0000 id=0 sub=file cch=4 title='File'
+      bar[1] type=0x0000 state=0x0000 id=0 sub=edit cch=7 title='Edition'
+      bar[2] type=0x0000 state=0x0003 id=0 sub=view cch=4 title='View'
+031 enableSubmenu(bar, sub=file, enable=false) -> false
+032 enableSubmenu(bar, sub=view, enable=true) -> true
+033 enableSubmenu(bar, sub=view, enable=false) -> true
+034 dump bar: isMenu=true count=3
+      bar[0] type=0x0000 state=0x0000 id=0 sub=file cch=4 title='File'
+      bar[1] type=0x0000 state=0x0000 id=0 sub=edit cch=7 title='Edition'
+      bar[2] type=0x0000 state=0x0001 id=0 sub=view cch=4 title='View'
+035 enableItem(file, id=102, enable=true) -> true
+036 enableItem(file, id=48879, enable=false) -> false
+037 dump file: isMenu=true count=6
+      file[0] type=0x0000 state=0x0000 id=101 sub=zero cch=3 title='New'
+      file[1] type=0x0000 state=0x0000 id=102 sub=zero cch=4 title='Open'
+      file[2] type=0x0000 state=0x0008 id=103 sub=zero cch=9 title='Auto-save'
+      file[3] type=0x0800 state=0x0003 id=0 sub=zero cch=0 title=''
+      file[4] type=0x0000 state=0x0000 id=104 sub=zero cch=4 title='Exit'
+      file[5] type=0x0800 state=0x0003 id=0 sub=zero cch=0 title=''
+038 checkItem(file, id=103, check=false) -> true
+039 checkItem(file, id=103, check=true) -> true
+040 checkItem(file, id=48879, check=true) -> true
+041 dump file: isMenu=true count=6
+      file[0] type=0x0000 state=0x0000 id=101 sub=zero cch=3 title='New'
+      file[1] type=0x0000 state=0x0000 id=102 sub=zero cch=4 title='Open'
+      file[2] type=0x0000 state=0x0008 id=103 sub=zero cch=9 title='Auto-save'
+      file[3] type=0x0800 state=0x0003 id=0 sub=zero cch=0 title=''
+      file[4] type=0x0000 state=0x0000 id=104 sub=zero cch=4 title='Exit'
+      file[5] type=0x0800 state=0x0003 id=0 sub=zero cch=0 title=''
+042 setItemTitle(file, id=101, 'Neu') -> true
+043 setItemTitle(file, id=48879, 'Nowhere') -> false
+044 setItemTitle(file, id=104, 'Exit \ud83d\ude00 \u00e9\u00df') -> true
+045 setItemTitle(file, id=102, 'OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO') -> true
+046 dump file: isMenu=true count=6
+      file[0] type=0x0000 state=0x0000 id=101 sub=zero cch=3 title='Neu'
+      file[1] type=0x0000 state=0x0000 id=102 sub=zero cch=300 title='OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO'
+      file[2] type=0x0000 state=0x0008 id=103 sub=zero cch=9 title='Auto-save'
+      file[3] type=0x0800 state=0x0003 id=0 sub=zero cch=0 title=''
+      file[4] type=0x0000 state=0x0000 id=104 sub=zero cch=10 title='Exit \ud83d\ude00 \u00e9\u00df'
+      file[5] type=0x0800 state=0x0003 id=0 sub=zero cch=0 title=''
+047 removeAtPos(edit, pos=0) -> true
+048 removeAtPos(edit, pos=99) -> false
+049 dump edit: isMenu=true count=0
+050 recent still a menu after removeAtPos: true
+051 insertItem(zero, pos=0, id=1, 'X', enabled=true, checked=false) -> false
+052 insertSubmenu(zero, pos=0, sub=file, 'X', enabled=true) -> false
+053 insertSeparator(zero, pos=0) -> false
+054 removeAtPos(zero, pos=0) -> false
+055 setItemTitle(zero, id=1, 'X') -> false
+056 setSubmenuTitle(zero, sub=file, 'X') -> false
+057 enableItem(zero, id=1, enable=true) -> false
+058 enableSubmenu(zero, sub=file, enable=true) -> false
+059 checkItem(zero, id=1, check=true) -> false
+060 destroy(zero)
+061 insertItem(bogus, pos=0, id=1, 'X', enabled=true, checked=false) -> false
+062 enableItem(bogus, id=1, enable=true) -> false
+063 checkItem(bogus, id=1, check=true) -> false
+064 destroy(bogus)
+065 destroy(bar)
+066 after destroy(bar): bar=false file=true edit=true view=true recent=true
+067 dump file: isMenu=true count=6
+      file[0] type=0x0000 state=0x0000 id=101 sub=zero cch=3 title='Neu'
+      file[1] type=0x0000 state=0x0000 id=102 sub=zero cch=300 title='OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO'
+      file[2] type=0x0000 state=0x0008 id=103 sub=zero cch=9 title='Auto-save'
+      file[3] type=0x0800 state=0x0003 id=0 sub=zero cch=0 title=''
+      file[4] type=0x0000 state=0x0000 id=104 sub=zero cch=10 title='Exit \ud83d\ude00 \u00e9\u00df'
+      file[5] type=0x0800 state=0x0003 id=0 sub=zero cch=0 title=''
+068 destroy(edit)
+069 after destroy(edit): edit=false recent=true
+070 destroy(file)
+071 destroy(view)
+072 destroy(recent)
+073 all destroyed: file=false view=false recent=false

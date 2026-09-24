@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,19 +27,17 @@ package com.sun.glass.ui.monocle;
 
 import com.sun.glass.ui.Size;
 
+/**
+ * The hardware cursor of the EGL platform, driven through the vendor library by {@link EglVendorNative} as
+ * eglBridge.c of commit 21d5a654f6 drove it through JNI.
+ */
 class EGLCursor extends NativeCursor {
 
-    private static final int CURSOR_WIDTH = 16;
-    private static final int CURSOR_HEIGHT = 16;
-
-
-    private native void _initEGLCursor(int cursorWidth, int cursorHeight);
-    private native void _setVisible(boolean visible);
-    private native void _setLocation(int x, int y);
-    private native void _setImage(byte[] cursorImage);
+    static final int CURSOR_WIDTH = 16;
+    static final int CURSOR_HEIGHT = 16;
 
     EGLCursor() {
-        _initEGLCursor(CURSOR_WIDTH, CURSOR_HEIGHT);
+        EglVendorNative.doInitCursor(CURSOR_WIDTH, CURSOR_HEIGHT);
     }
 
     @Override
@@ -50,7 +48,7 @@ class EGLCursor extends NativeCursor {
     @Override
     void setVisibility(boolean visibility) {
         isVisible = visibility;
-        _setVisible(visibility);
+        EglVendorNative.doSetCursorVisibility(visibility);
     }
 
     private void updateImage(boolean always) {
@@ -59,12 +57,12 @@ class EGLCursor extends NativeCursor {
 
     @Override
     void setImage(byte[] cursorImage) {
-        _setImage(cursorImage);
+        EglVendorNative.doSetCursorImage(cursorImage);
     }
 
     @Override
     void setLocation(int x, int y) {
-        _setLocation(x, y);
+        EglVendorNative.doSetLocation(x, y);
     }
 
     @Override

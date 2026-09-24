@@ -39,7 +39,6 @@
 #include "com_sun_glass_events_ViewEvent.h"
 #include "com_sun_glass_events_KeyEvent.h"
 #include "com_sun_glass_events_MouseEvent.h"
-#include "com_sun_glass_events_DndEvent.h"
 #include "com_sun_glass_events_TouchEvent.h"
 
 static UINT LangToCodePage(LANGID idLang)
@@ -84,7 +83,6 @@ ViewContainer::ViewContainer() :
     m_manipProc(NULL),
     m_inertiaProc(NULL),
     m_manipEventSink(NULL),
-    m_gestureSupportCls(NULL),
     m_lastMouseMovePosition(-1),
     m_mouseButtonDownCounter(0),
     m_deadKeyWParam(0)
@@ -95,9 +93,9 @@ ViewContainer::ViewContainer() :
     m_lastTouchInputCount = 0;
 }
 
-jobject ViewContainer::GetView()
+int64_t ViewContainer::GetViewId()
 {
-    return GetGlassView() != NULL ? GetGlassView()->GetView() : NULL;
+    return GetGlassView() != NULL ? GetGlassView()->GetViewId() : 0;
 }
 
 void ViewContainer::InitDropTarget(HWND hwnd)
@@ -144,16 +142,6 @@ void ViewContainer::InitManipProcessor(HWND hwnd)
              TABLET_DISABLE_PENBARRELFEEDBACK |
              TABLET_DISABLE_FLICKS;
         ::SetProp(hwnd, MICROSOFT_TABLETPENSERVICE_PROPERTY, reinterpret_cast<HANDLE>(dwHwndTabletProperty));
-
-        if (!m_gestureSupportCls) {
-            JNIEnv *env = GetEnv();
-            const jclass cls = GlassApplication::ClassForName(env,
-                    "com.sun.glass.ui.win.WinGestureSupport");
-
-            m_gestureSupportCls = (jclass)env->NewGlobalRef(cls);
-            env->DeleteLocalRef(cls);
-            ASSERT(m_gestureSupportCls);
-        }
     }
 }
 
@@ -172,12 +160,6 @@ void ViewContainer::ReleaseManipProcessor()
             m_manipEventSink->Release();
             m_manipEventSink = NULL;
         }
-    }
-
-    if (m_gestureSupportCls) {
-        JNIEnv *env = GetEnv();
-        env->DeleteGlobalRef(m_gestureSupportCls);
-        m_gestureSupportCls = 0;
     }
 }
 
@@ -200,10 +182,10 @@ void ViewContainer::NotifyViewMoved(HWND hwnd)
         return;
     }
 
-    JNIEnv* env = GetEnv();
-    env->CallVoidMethod(GetView(), javaIDs.View.notifyView,
-                        com_sun_glass_events_ViewEvent_MOVE);
-    CheckAndClearException(env);
+    const GwinViewCallbacks* cb = GlassView::ViewCallbacks();
+    if (cb != NULL) {
+        cb->notify_view(GetViewId(), com_sun_glass_events_ViewEvent_MOVE);
+    }
 }
 
 void ViewContainer::NotifyViewSize(HWND hwnd)
@@ -214,10 +196,10 @@ void ViewContainer::NotifyViewSize(HWND hwnd)
 
     RECT r;
     if (::GetClientRect(hwnd, &r)) {
-        JNIEnv* env = GetEnv();
-        env->CallVoidMethod(GetView(), javaIDs.View.notifyResize,
-                            r.right-r.left, r.bottom - r.top);
-        CheckAndClearException(env);
+        const GwinViewCallbacks* cb = GlassView::ViewCallbacks();
+        if (cb != NULL) {
+            cb->notify_resize(GetViewId(), r.right-r.left, r.bottom - r.top);
+        }
     }
 }
 
@@ -232,10 +214,10 @@ void ViewContainer::HandleViewPaintEvent(HWND hwnd, UINT msg, WPARAM wParam, LPA
         return;
     }
 
-    JNIEnv* env = GetEnv();
-    env->CallVoidMethod(GetView(), javaIDs.View.notifyRepaint,
-            r.left, r.top, r.right-r.left, r.bottom-r.top);
-    CheckAndClearException(env);
+    const GwinViewCallbacks* cb = GlassView::ViewCallbacks();
+    if (cb != NULL) {
+        cb->notify_repaint(GetViewId(), r.left, r.top, r.right-r.left, r.bottom-r.top);
+    }
 }
 
 
@@ -252,10 +234,11 @@ LRESULT ViewContainer::HandleViewGetAccessible(HWND hwnd, WPARAM wParam, LPARAM 
     if (static_cast<long>(lParam) == static_cast<long>(UiaRootObjectId)) {
 
         /* The client is requesting UI Automation. */
-        JNIEnv* env = GetEnv();
-        if (!env) return NULL;
-        jlong pProvider = env->CallLongMethod(GetView(), javaIDs.View.getAccessible);
-        CheckAndClearException(env);
+        int64_t pProvider = 0;
+        const GwinViewCallbacks* cb = GlassView::ViewCallbacks();
+        if (cb != NULL) {
+            pProvider = (int64_t) cb->get_accessible(GetViewId());
+        }
 
         /* It is possible WM_GETOBJECT is sent before the toolkit is ready to
          * create the accessible object (getAccessible returns NULL).
@@ -278,9 +261,8 @@ LRESULT ViewContainer::HandleViewGetAccessible(HWND hwnd, WPARAM wParam, LPARAM 
         UINT screenReader = 0;
         ::SystemParametersInfo(SPI_GETSCREENREADER, 0, &screenReader, 0);
         if (screenReader && UiaClientsAreListening()) {
-            JNIEnv* env = GetEnv();
-            if (env) {
-
+            const GwinViewCallbacks* cb = GlassView::ViewCallbacks();
+            if (cb != NULL) {
                 /* Calling getAccessible() initializes accessibility which
                  * eventually raises the focus events required to indicate to
                  * JAWS to use UIA for this window.
@@ -290,8 +272,7 @@ LRESULT ViewContainer::HandleViewGetAccessible(HWND hwnd, WPARAM wParam, LPARAM 
                  * bridge is that it does not respect
                  * ProviderOptions_UseComThreading.
                  */
-                env->CallLongMethod(GetView(), javaIDs.View.getAccessible);
-                CheckAndClearException(env);
+                (void) cb->get_accessible(GetViewId());
             }
         }
     }
@@ -315,7 +296,7 @@ void ViewContainer::HandleViewMenuEvent(HWND hwnd, UINT msg, WPARAM wParam, LPAR
     if ((HWND)wParam != hwnd) {
         return;
     }
-    jboolean isKeyboardTrigger = lParam == (LPARAM)-1;
+    uint8_t isKeyboardTrigger = lParam == (LPARAM)-1;
     if (isKeyboardTrigger) {
         lParam = ::GetMessagePos ();
     }
@@ -337,9 +318,10 @@ void ViewContainer::HandleViewMenuEvent(HWND hwnd, UINT msg, WPARAM wParam, LPAR
         ::GetClientRect(hwnd, &rect);
         pt.x = max(0, rect.right - rect.left) - pt.x;
     }
-    JNIEnv* env = GetEnv();
-    env->CallVoidMethod(GetView(), javaIDs.View.notifyMenu, pt.x, pt.y, absX, absY, isKeyboardTrigger);
-    CheckAndClearException(env);
+    const GwinViewCallbacks* cb = GlassView::ViewCallbacks();
+    if (cb != NULL) {
+        cb->notify_menu(GetViewId(), pt.x, pt.y, absX, absY, isKeyboardTrigger ? 1 : 0);
+    }
 }
 
 void ViewContainer::HandleViewKeyEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -353,7 +335,7 @@ void ViewContainer::HandleViewKeyEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARA
     UINT wKey = static_cast<UINT>(wParam);
     UINT flags = HIWORD(lParam);
 
-    jint jKeyCode = WindowsKeyToJavaKey(wKey);
+    int32_t jKeyCode = WindowsKeyToJavaKey(wKey);
     if (flags & (1 << 8)) {
         // this is an extended key (e.g. Right ALT == AltGr)
         switch (jKeyCode) {
@@ -368,7 +350,7 @@ void ViewContainer::HandleViewKeyEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARA
         return;
     }
 
-    jint jModifiers = GetModifiers();
+    int32_t jModifiers = GetModifiers();
 
     if (jModifiers & com_sun_glass_events_KeyEvent_MODIFIER_CONTROL) {
         kbState[VK_CONTROL] &= ~KEY_STATE_DOWN;
@@ -417,7 +399,7 @@ void ViewContainer::HandleViewKeyEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARA
 
 
     int keyCharCount = 0;
-    jchar keyChars[4];
+    uint16_t keyChars[4];
     const bool isAutoRepeat = (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN)
         && (lParam & (1 << 30));
 
@@ -448,78 +430,67 @@ void ViewContainer::HandleViewKeyEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARA
         } else {
             keyCharCount = ::MultiByteToWideChar(m_codePage, MB_PRECOMPOSED,
                                                  (LPCSTR)&mbChar, 2, (LPWSTR)keyChars,
-                                                 4 * sizeof(jchar)) - 1;
+                                                 4 * sizeof(uint16_t)) - 1;
             if (keyCharCount <= 0) {
                 return;
             }
         }
     }
 
-    JNIEnv* env = GetEnv();
+    const GwinViewCallbacks* cb = GlassView::ViewCallbacks();
+    if (cb == NULL) {
+        return;
+    }
 
-    jcharArray jKeyChars = env->NewCharArray(keyCharCount);
-    if (jKeyChars) {
-        if (keyCharCount) {
-            env->SetCharArrayRegion(jKeyChars, 0, keyCharCount, keyChars);
-            CheckAndClearException(env);
-        }
-
-        if (jKeyCode == com_sun_glass_events_KeyEvent_VK_PRINTSCREEN &&
-                (msg == WM_KEYUP || msg == WM_SYSKEYUP))
-        {
-            // MS Windows doesn't send WM_KEYDOWN for the PrintScreen key,
-            // so we synthesize one
-            env->CallVoidMethod(GetView(), javaIDs.View.notifyKey,
-                    com_sun_glass_events_KeyEvent_PRESS,
-                    jKeyCode, jKeyChars, jModifiers);
-            CheckAndClearException(env);
-        }
-
-        if (GetGlassView()) {
-            env->CallVoidMethod(GetView(), javaIDs.View.notifyKey,
-                    (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN) ?
-                    com_sun_glass_events_KeyEvent_PRESS : com_sun_glass_events_KeyEvent_RELEASE,
-                    jKeyCode, jKeyChars, jModifiers);
-            CheckAndClearException(env);
-        }
-
-        // MS Windows doesn't send WM_CHAR for the Delete key,
+    if (jKeyCode == com_sun_glass_events_KeyEvent_VK_PRINTSCREEN &&
+            (msg == WM_KEYUP || msg == WM_SYSKEYUP))
+    {
+        // MS Windows doesn't send WM_KEYDOWN for the PrintScreen key,
         // so we synthesize one
-        if (jKeyCode == com_sun_glass_events_KeyEvent_VK_DELETE &&
-                (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN) &&
-                GetGlassView())
-        {
-            // 0x7F == U+007F - a Unicode character for DELETE
-            SendViewTypedEvent(1, (jchar)0x7F);
-        }
+        cb->notify_key(GetViewId(), com_sun_glass_events_KeyEvent_PRESS,
+                jKeyCode, keyChars, keyCharCount, jModifiers);
+    }
 
-        env->DeleteLocalRef(jKeyChars);
+    if (GetGlassView()) {
+        cb->notify_key(GetViewId(),
+                (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN) ?
+                com_sun_glass_events_KeyEvent_PRESS : com_sun_glass_events_KeyEvent_RELEASE,
+                jKeyCode, keyChars, keyCharCount, jModifiers);
+    }
+
+    // MS Windows doesn't send WM_CHAR for the Delete key,
+    // so we synthesize one
+    if (jKeyCode == com_sun_glass_events_KeyEvent_VK_DELETE &&
+            (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN) &&
+            GetGlassView())
+    {
+        // 0x7F == U+007F - a Unicode character for DELETE
+        SendViewTypedEvent(1, (uint16_t)0x7F);
     }
 }
 
-void ViewContainer::SendViewTypedEvent(int repCount, jchar wChar)
+void ViewContainer::SendViewTypedEvent(int repCount, uint16_t wChar)
 {
     if (!GetGlassView()) {
         return;
     }
 
-    JNIEnv* env = GetEnv();
-    jcharArray jKeyChars = env->NewCharArray(repCount);
-    if (jKeyChars) {
-        jchar* nKeyChars = env->GetCharArrayElements(jKeyChars, NULL);
-        if (nKeyChars) {
-            for (int i = 0; i < repCount; i++) {
-                nKeyChars[i] = wChar;
-            }
-            env->ReleaseCharArrayElements(jKeyChars, nKeyChars, 0);
+    const GwinViewCallbacks* cb = GlassView::ViewCallbacks();
+    if (cb == NULL) {
+        return;
+    }
 
-            env->CallVoidMethod(GetView(), javaIDs.View.notifyKey,
-                                com_sun_glass_events_KeyEvent_TYPED,
-                                com_sun_glass_events_KeyEvent_VK_UNDEFINED, jKeyChars,
-                                GetModifiers());
-            CheckAndClearException(env);
+    // repCount copies of wChar, as the jcharArray held; an allocation failure is skipped
+    // silently, as the JNI skipped a NULL NewCharArray.
+    uint16_t* nKeyChars = new (std::nothrow) uint16_t[repCount];
+    if (nKeyChars) {
+        for (int i = 0; i < repCount; i++) {
+            nKeyChars[i] = wChar;
         }
-        env->DeleteLocalRef(jKeyChars);
+        cb->notify_key(GetViewId(), com_sun_glass_events_KeyEvent_TYPED,
+                       com_sun_glass_events_KeyEvent_VK_UNDEFINED, nKeyChars, repCount,
+                       GetModifiers());
+        delete [] nKeyChars;
     }
 }
 
@@ -540,8 +511,8 @@ void ViewContainer::HandleViewDeadKeyEvent(HWND hwnd, UINT msg, WPARAM wParam, L
         // There already was another dead key pressed previously. Clear it
         // and send two separate TYPED events instead to emulate native behavior.
 
-        SendViewTypedEvent(1, (jchar)m_deadKeyWParam);
-        SendViewTypedEvent(1, (jchar)wParam);
+        SendViewTypedEvent(1, (uint16_t)m_deadKeyWParam);
+        SendViewTypedEvent(1, (uint16_t)wParam);
 
         m_deadKeyWParam = 0;
     }
@@ -561,10 +532,10 @@ void ViewContainer::HandleViewTypedEvent(HWND hwnd, UINT msg, WPARAM wParam, LPA
     }
 
     int repCount = LOWORD(lParam);
-    jchar wChar;
+    uint16_t wChar;
 
     if (!m_deadKeyWParam) {
-        wChar = (jchar)wParam;
+        wChar = (uint16_t)wParam;
     } else {
         // The character is composed together with the dead key, which
         // may be translated into one or more combining characters.
@@ -666,7 +637,7 @@ void ViewContainer::HandleViewTypedEvent(HWND hwnd, UINT msg, WPARAM wParam, LPA
         int res = ::FoldString(MAP_PRECOMPOSED, (LPWSTR)comp, compSize, (LPWSTR)out, 3);
 
         if (res > 0) {
-            wChar = (jchar)out[0];
+            wChar = (uint16_t)out[0];
 
             if (res == 3) {
                 // The character cannot be accented. If it's a Space
@@ -675,12 +646,12 @@ void ViewContainer::HandleViewTypedEvent(HWND hwnd, UINT msg, WPARAM wParam, LPA
                 if (wChar == 0x20) {
                     wChar = m_deadKeyWParam;
                 } else {
-                    SendViewTypedEvent(1, (jchar)m_deadKeyWParam);
+                    SendViewTypedEvent(1, (uint16_t)m_deadKeyWParam);
                 }
             }
         } else {
             // Folding failed. Use the untranslated original character then
-            wChar = (jchar)wParam;
+            wChar = (uint16_t)wParam;
         }
 
         // Clear the dead key
@@ -699,7 +670,7 @@ BOOL ViewContainer::HandleViewMouseEvent(HWND hwnd, UINT msg, WPARAM wParam, LPA
     int type = 0;
     int button = com_sun_glass_events_MouseEvent_BUTTON_NONE;
     POINT pt;   // client coords
-    jdouble wheelRotation = 0.0;
+    double wheelRotation = 0.0;
 
     // Windows with the EXTENDED style have an unusual anatomy: the entire window (excluding borders) comprises
     // the client area with regards to geometry, but not with regards to hit testing. The title bar is classified
@@ -860,7 +831,7 @@ BOOL ViewContainer::HandleViewMouseEvent(HWND hwnd, UINT msg, WPARAM wParam, LPA
 
                     // if there's none, proceed as usual
                     type = com_sun_glass_events_MouseEvent_WHEEL;
-                    wheelRotation = (jdouble)GET_WHEEL_DELTA_WPARAM(wParam) / WHEEL_DELTA;
+                    wheelRotation = (double)GET_WHEEL_DELTA_WPARAM(wParam) / WHEEL_DELTA;
                 }
                 break;
         }
@@ -902,11 +873,11 @@ BOOL ViewContainer::HandleViewMouseEvent(HWND hwnd, UINT msg, WPARAM wParam, LPA
         pt.x = max(0, rect.right - rect.left) - pt.x;
     }
 
-    jint jModifiers = GetModifiers();
+    int32_t jModifiers = GetModifiers();
 
-    const jboolean isSynthesized = jboolean(IsTouchEvent());
+    const uint8_t isSynthesized = uint8_t(IsTouchEvent());
 
-    JNIEnv *env = GetEnv();
+    const GwinViewCallbacks* cb = GlassView::ViewCallbacks();
 
     if (!m_bTrackingMouse && type != com_sun_glass_events_MouseEvent_EXIT) {
         TRACKMOUSEEVENT trackData;
@@ -924,12 +895,13 @@ BOOL ViewContainer::HandleViewMouseEvent(HWND hwnd, UINT msg, WPARAM wParam, LPA
         // already deleted. So we use FromHandle() which is safe.
         const BaseWnd *origWnd = BaseWnd::FromHandle(hwnd);
 
-        env->CallVoidMethod(GetView(), javaIDs.View.notifyMouse,
-                com_sun_glass_events_MouseEvent_ENTER,
-                com_sun_glass_events_MouseEvent_BUTTON_NONE,
-                pt.x, pt.y, ptAbs.x, ptAbs.y,
-                jModifiers, JNI_FALSE, isSynthesized);
-        CheckAndClearException(env);
+        if (cb != NULL) {
+            cb->notify_mouse(GetViewId(),
+                    com_sun_glass_events_MouseEvent_ENTER,
+                    com_sun_glass_events_MouseEvent_BUTTON_NONE,
+                    pt.x, pt.y, ptAbs.x, ptAbs.y,
+                    jModifiers, 0, isSynthesized ? 1 : 0);
+        }
 
         // At this point 'this' might have already been deleted if the app
         // closed the window while processing the ENTER event. Hence the check:
@@ -950,7 +922,7 @@ BOOL ViewContainer::HandleViewMouseEvent(HWND hwnd, UINT msg, WPARAM wParam, LPA
     }
 
     if (type == com_sun_glass_events_MouseEvent_WHEEL) {
-        jdouble dx, dy;
+        double dx, dy;
         if (msg == WM_MOUSEHWHEEL) { // native horizontal scroll
             // Negate the value to be more "natural"
             dx = -wheelRotation;
@@ -964,27 +936,30 @@ BOOL ViewContainer::HandleViewMouseEvent(HWND hwnd, UINT msg, WPARAM wParam, LPA
             dy = wheelRotation;
         }
 
-        jint ls, cs;
+        int32_t ls, cs;
 
         UINT val = 0;
         ::SystemParametersInfo(SPI_GETWHEELSCROLLLINES, 0, &val, 0);
-        ls = (jint)val;
+        ls = (int32_t)val;
 
         val = 0;
         ::SystemParametersInfo(SPI_GETWHEELSCROLLCHARS, 0, &val, 0);
-        cs = (jint)val;
+        cs = (int32_t)val;
 
-        env->CallVoidMethod(GetView(), javaIDs.View.notifyScroll,
-                pt.x, pt.y, ptAbs.x, ptAbs.y,
-                dx, dy, jModifiers, ls, cs, 3, 3, (jdouble)40.0, (jdouble)40.0);
+        if (cb != NULL) {
+            cb->notify_scroll(GetViewId(),
+                    pt.x, pt.y, ptAbs.x, ptAbs.y,
+                    dx, dy, jModifiers, ls, cs, 3, 3, 40.0, 40.0);
+        }
     } else {
-        env->CallVoidMethod(GetView(), javaIDs.View.notifyMouse,
-                type, button, pt.x, pt.y, ptAbs.x, ptAbs.y,
-                jModifiers,
-                type == com_sun_glass_events_MouseEvent_UP && button == com_sun_glass_events_MouseEvent_BUTTON_RIGHT,
-                isSynthesized);
+        if (cb != NULL) {
+            const int32_t isPopupTrigger = (type == com_sun_glass_events_MouseEvent_UP &&
+                    button == com_sun_glass_events_MouseEvent_BUTTON_RIGHT) ? 1 : 0;
+            cb->notify_mouse(GetViewId(),
+                    type, button, pt.x, pt.y, ptAbs.x, ptAbs.y,
+                    jModifiers, isPopupTrigger, isSynthesized ? 1 : 0);
+        }
     }
-    CheckAndClearException(env);
 
     return TRUE;
 }
@@ -1121,9 +1096,9 @@ void ViewContainer::HandleViewNonClientMouseEvent(HWND hwnd, UINT msg, WPARAM wP
         pt.x = max(0, rect.right - rect.left) - pt.x;
     }
 
-    jint jModifiers = GetModifiers();
-    jboolean isSynthesized = jboolean(IsTouchEvent());
-    JNIEnv* env = GetEnv();
+    int32_t jModifiers = GetModifiers();
+    uint8_t isSynthesized = uint8_t(IsTouchEvent());
+    const GwinViewCallbacks* cb = GlassView::ViewCallbacks();
 
     if (!m_bTrackingMouse && type != com_sun_glass_events_MouseEvent_EXIT) {
         TRACKMOUSEEVENT trackData;
@@ -1137,20 +1112,22 @@ void ViewContainer::HandleViewNonClientMouseEvent(HWND hwnd, UINT msg, WPARAM wP
             m_bTrackingMouse = TRUE;
         }
 
-        env->CallVoidMethod(GetView(), javaIDs.View.notifyMouse,
-            com_sun_glass_events_MouseEvent_ENTER,
-            com_sun_glass_events_MouseEvent_BUTTON_NONE,
-            pt.x, pt.y, ptAbs.x, ptAbs.y,
-            jModifiers, JNI_FALSE, isSynthesized);
-        CheckAndClearException(env);
+        if (cb != NULL) {
+            cb->notify_mouse(GetViewId(),
+                com_sun_glass_events_MouseEvent_ENTER,
+                com_sun_glass_events_MouseEvent_BUTTON_NONE,
+                pt.x, pt.y, ptAbs.x, ptAbs.y,
+                jModifiers, 0, isSynthesized ? 1 : 0);
+        }
     }
 
-    env->CallVoidMethod(GetView(), javaIDs.View.notifyMouse,
-        type, button, pt.x, pt.y, ptAbs.x, ptAbs.y,
-        jModifiers,
-        type == com_sun_glass_events_MouseEvent_UP && button == com_sun_glass_events_MouseEvent_BUTTON_RIGHT,
-        isSynthesized);
-    CheckAndClearException(env);
+    if (cb != NULL) {
+        const int32_t isPopupTrigger = (type == com_sun_glass_events_MouseEvent_UP &&
+                button == com_sun_glass_events_MouseEvent_BUTTON_RIGHT) ? 1 : 0;
+        cb->notify_mouse(GetViewId(),
+            type, button, pt.x, pt.y, ptAbs.x, ptAbs.y,
+            jModifiers, isPopupTrigger, isSynthesized ? 1 : 0);
+    }
 }
 
 void ViewContainer::NotifyCaptureChanged(HWND hwnd, HWND to)
@@ -1192,13 +1169,12 @@ void ViewContainer::ResetMouseTracking(HWND hwnd)
         pt.x = max(0, rect.right - rect.left) - pt.x;
     }
 
-    JNIEnv *env = GetEnv();
-    env->CallVoidMethod(GetView(), javaIDs.View.notifyMouse,
-            com_sun_glass_events_MouseEvent_EXIT, 0, pt.x, pt.y, ptAbs.x, ptAbs.y,
-            GetModifiers(),
-            JNI_FALSE,
-            JNI_FALSE);
-    CheckAndClearException(env);
+    const GwinViewCallbacks* cb = GlassView::ViewCallbacks();
+    if (cb != NULL) {
+        cb->notify_mouse(GetViewId(),
+                com_sun_glass_events_MouseEvent_EXIT, 0, pt.x, pt.y, ptAbs.x, ptAbs.y,
+                GetModifiers(), 0, 0);
+    }
 }
 
 BOOL ViewContainer::HandleViewInputMethodEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -1211,7 +1187,7 @@ BOOL ViewContainer::HandleViewInputMethodEvent(HWND hwnd, UINT msg, WPARAM wPara
 
     switch (msg) {
     case WM_IME_ENDCOMPOSITION:
-        SendInputMethodEvent(NULL, 0, NULL, 0, NULL, NULL, 0, 0, 0);
+        SendInputMethodEvent(NULL, 0, 0, NULL, 0, NULL, NULL, 0, 0, 0);
     case WM_IME_STARTCOMPOSITION:
         return gv->IsInputMethodEventEnabled();
 
@@ -1239,8 +1215,6 @@ void ViewContainer::WmImeComposition(HWND hwnd, WPARAM wParam, LPARAM lParam)
 {
     BOOL ret = FALSE;
 
-    JNIEnv *env = GetEnv();
-
     int*      bndClauseW = NULL;
     int*      bndAttrW = NULL;
     BYTE*     valAttrW = NULL;
@@ -1252,14 +1226,15 @@ void ViewContainer::WmImeComposition(HWND hwnd, WPARAM wParam, LPARAM lParam)
     try {
         textInfo.GetContextData(hIMC, lParam);
 
-        jstring jtextString = textInfo.GetText();
-        if ((lParam & GCS_RESULTSTR && jtextString != NULL) ||
+        int cTextW = 0;
+        const wchar_t* lpTextW = textInfo.GetTextW(&cTextW);   // borrowed from textInfo
+        if ((lParam & GCS_RESULTSTR && lpTextW != NULL) ||
             (lParam & GCS_COMPSTR)) {
             int       cursorPosW = textInfo.GetCursorPosition();
             int       cAttrW = textInfo.GetAttributeInfo(bndAttrW, valAttrW);
             cClauseW = textInfo.GetClauseInfo(bndClauseW);
 
-            SendInputMethodEvent(jtextString,
+            SendInputMethodEvent(lpTextW, cTextW,
                                  cClauseW, bndClauseW,
                                  cAttrW, bndAttrW, valAttrW,
                                  textInfo.GetCommittedTextLength(),
@@ -1277,21 +1252,15 @@ void ViewContainer::WmImeComposition(HWND hwnd, WPARAM wParam, LPARAM lParam)
         throw;
     }
 
-    /* Free the storage allocated. Since jtextString won't be passed from threads
-     *  to threads, we just use the local ref and it will be deleted within the destructor
-     *  of GlassInputTextInfo object.
-     */
-
+    /* Free the storage allocated. The text buffer is textInfo's and goes with it. */
     delete [] bndClauseW;
     delete [] bndAttrW;
     delete [] valAttrW;
-    CheckAndClearException(env);
 }
 
 void ViewContainer::WmImeNotify(HWND hwnd, WPARAM wParam, LPARAM lParam)
 {
     if (wParam == IMN_OPENCANDIDATE || wParam == IMN_CHANGECANDIDATE) {
-        JNIEnv *env = GetEnv();
         POINT curPos;
         UINT bits = 1;
         HIMC hIMC = ImmGetContext(hwnd);
@@ -1317,77 +1286,42 @@ void ViewContainer::WmImeNotify(HWND hwnd, WPARAM wParam, LPARAM lParam)
 //
 // generate and post InputMethodEvent
 //
-void ViewContainer::SendInputMethodEvent(jstring text,
+void ViewContainer::SendInputMethodEvent(const wchar_t* textW, int cTextW,
     int cClause, int* rgClauseBoundary,
     int cAttrBlock, int* rgAttrBoundary, BYTE *rgAttrValue,
     int commitedTextLength, int caretPos, int visiblePos)
 {
-    JNIEnv *env = GetEnv();
-
-    // assumption for array type casting
-    ASSERT(sizeof(int)==sizeof(jint));
-    ASSERT(sizeof(BYTE)==sizeof(jbyte));
-
-    // caluse information
-    jintArray clauseBoundary = NULL;
-    if (cClause && rgClauseBoundary) {
-        // convert clause boundary offset array to java array
-        clauseBoundary = env->NewIntArray(cClause+1);
-        if (clauseBoundary) {
-            env->SetIntArrayRegion(clauseBoundary, 0, cClause+1, (jint *)rgClauseBoundary);
-            CheckAndClearException(env);
-        }
+    const GwinViewCallbacks* cb = GlassView::ViewCallbacks();
+    if (cb == NULL) {
+        return;
     }
 
-    // attribute information
-    jintArray attrBoundary = NULL;
-    jbyteArray attrValue = NULL;
+    // NULL-ness travels in the pointers, under exactly the guards the JNI arrays used to be built
+    // under; a count that goes with a NULL pointer is to be ignored by Java.
+    const int32_t* clauseBoundary = (cClause && rgClauseBoundary) ? rgClauseBoundary : NULL;
+    const int32_t* attrBoundary = NULL;
+    const uint8_t* attrValue = NULL;
     if (cAttrBlock && rgAttrBoundary && rgAttrValue) {
-        // convert attribute boundary offset array to java array
-        attrBoundary = env->NewIntArray(cAttrBlock+1);
-        if (attrBoundary) {
-            env->SetIntArrayRegion(attrBoundary, 0, cAttrBlock+1, (jint *)rgAttrBoundary);
-            CheckAndClearException(env);
-        }
-        // convert attribute value byte array to java array
-        attrValue = env->NewByteArray(cAttrBlock);
-        if (attrValue) {
-            env->SetByteArrayRegion(attrValue, 0, cAttrBlock, (jbyte *)rgAttrValue);
-            CheckAndClearException(env);
-        }
+        attrBoundary = rgAttrBoundary;
+        attrValue = rgAttrValue;
     }
-
-    env->CallBooleanMethod(GetView(), javaIDs.View.notifyInputMethod,
-                        text, clauseBoundary, attrBoundary,
-                        attrValue, commitedTextLength, caretPos, visiblePos);
-    CheckAndClearException(env);
-
-    if (clauseBoundary) {
-        env->DeleteLocalRef(clauseBoundary);
-    }
-    if (attrBoundary) {
-        env->DeleteLocalRef(attrBoundary);
-    }
-    if (attrValue) {
-        env->DeleteLocalRef(attrValue);
-    }
+    cb->notify_input_method(GetViewId(),
+                            reinterpret_cast<const uint16_t*>(textW), cTextW,
+                            clauseBoundary, cClause,
+                            attrBoundary, attrValue, cAttrBlock,
+                            commitedTextLength, caretPos, visiblePos);
 }
 
 // Gets the candidate position
 void ViewContainer::GetCandidatePos(LPPOINT curPos)
 {
-    JNIEnv *env = GetEnv();
-    double* nativePos;
-
-    jdoubleArray pos = (jdoubleArray)env->CallObjectMethod(GetView(),
-                        javaIDs.View.notifyInputMethodCandidatePosRequest,
-                        0);
-    nativePos = env->GetDoubleArrayElements(pos, NULL);
-    if (nativePos) {
-        curPos->x = (int)nativePos[0];
-        curPos->y  = (int)nativePos[1];
-
-        env->ReleaseDoubleArrayElements(pos, nativePos, 0);
+    const GwinViewCallbacks* cb = GlassView::ViewCallbacks();
+    if (cb != NULL) {
+        double xy[2] = { 0.0, 0.0 };
+        if (cb->notify_ime_candidate_pos_request(GetViewId(), 0, xy) != 0) {
+            curPos->x = (int)xy[0];
+            curPos->y = (int)xy[1];
+        }
     }
 }
 
@@ -1427,27 +1361,26 @@ static char * touchEventName(unsigned int dwFlags) {
 }
 
 void NotifyTouchInput(
-        HWND hWnd, jobject view, jclass gestureSupportCls,
+        HWND hWnd, int64_t viewId,
         const TOUCHINPUT* ti, unsigned count)
 {
 
-    JNIEnv *env = GetEnv();
+    const GwinGestureCallbacks* cb = GlassView::GestureCallbacks();
+    if (cb == NULL) {
+        return;
+    }
 
     // Sets to 'true' if source device is a touch screen
     // and to 'false' if source device is a touch pad/pen.
     const bool isDirect = (ti->dwFlags & TOUCHEVENTF_PEN) == 0;
 
-    jint modifiers = GetModifiers();
-    env->CallStaticObjectMethod(gestureSupportCls,
-                                javaIDs.Gestures.notifyBeginTouchEventMID,
-                                view, modifiers, jboolean(isDirect),
-                                jint(count));
-    CheckAndClearException(env);
+    int32_t modifiers = GetModifiers();
+    cb->notify_begin_touch_event(viewId, modifiers, isDirect ? 1 : 0, (int32_t) count);
 
     for (; count; --count, ++ti) {
-        jlong touchID = jlong(ti->dwID);
+        int64_t touchID = int64_t(ti->dwID);
 
-        jint eventID = 0;
+        int32_t eventID = 0;
         if (ti->dwFlags & TOUCHEVENTF_MOVE) {
             eventID = com_sun_glass_events_TouchEvent_TOUCH_MOVED;
         }
@@ -1472,17 +1405,12 @@ void NotifyTouchInput(
             client.x = max(0, rect.right - rect.left) - client.x;
         }
 
-        env->CallStaticObjectMethod(gestureSupportCls,
-                                    javaIDs.Gestures.notifyNextTouchEventMID,
-                                    view, eventID, touchID,
-                                    jint(client.x), jint(client.y),
-                                    jint(screen.x), jint(screen.y));
-        CheckAndClearException(env);
+        cb->notify_next_touch_event(viewId, eventID, touchID,
+                                    int32_t(client.x), int32_t(client.y),
+                                    int32_t(screen.x), int32_t(screen.y));
     }
 
-    env->CallStaticObjectMethod(
-            gestureSupportCls, javaIDs.Gestures.notifyEndTouchEventMID, view);
-    CheckAndClearException(env);
+    cb->notify_end_touch_event(viewId);
 }
 
 void NotifyManipulationProcessor(
@@ -1614,8 +1542,8 @@ unsigned int ViewContainer::HandleViewTouchEvent(
      }
 
      if (debugTouch) {
-        printf("Touch Sequence %d/%d win=%d view=%d %d,%d,%d\n",pointsCount,activeCount,
-            hWnd, GetView(),
+        printf("Touch Sequence %d/%d win=%p view=%lld %d,%d,%d\n",pointsCount,activeCount,
+            hWnd, (long long) GetViewId(),
             m_lastTouchInputCount, newCount, pointsCount);
         for (unsigned int i = 0 ; i < m_lastTouchInputCount; i++) {
             printf("  old  %d, %s\n", m_lastTouchInputBuf[i].dwID, touchEventName(m_lastTouchInputBuf[i].dwFlags));
@@ -1631,7 +1559,7 @@ unsigned int ViewContainer::HandleViewTouchEvent(
      }
 
     if (pointsCount > 0) {
-        NotifyTouchInput(hWnd, GetView(), m_gestureSupportCls, &m_thisTouchInputBuf[0], pointsCount);
+        NotifyTouchInput(hWnd, GetViewId(), &m_thisTouchInputBuf[0], pointsCount);
 
         if (m_manipProc) {
             NotifyManipulationProcessor(*m_manipProc, &m_thisTouchInputBuf[0], pointsCount);
@@ -1656,10 +1584,10 @@ void ViewContainer::HandleViewTimerEvent(HWND hwnd, UINT_PTR timerID)
         if (SUCCEEDED(hr) && completed) {
             StopTouchInputInertia(hwnd);
 
-            JNIEnv *env = GetEnv();
-            env->CallStaticVoidMethod(m_gestureSupportCls,
-                    javaIDs.Gestures.inertiaGestureFinishedMID, GetView());
-            CheckAndClearException(env);
+            const GwinGestureCallbacks* cb = GlassView::GestureCallbacks();
+            if (cb != NULL) {
+                cb->inertia_gesture_finished(GetViewId());
+            }
         }
     }
 }
@@ -1672,8 +1600,6 @@ void ViewContainer::NotifyGesturePerformed(HWND hWnd,
         FLOAT cumulativeScale, FLOAT cumulativeExpansion,
         FLOAT cumulativeRotation)
 {
-    JNIEnv *env = GetEnv();
-
     POINT screen;
     screen.x = LONG((x + 0.5) / 100);
     screen.y = LONG((y + 0.5) / 100);
@@ -1691,18 +1617,18 @@ void ViewContainer::NotifyGesturePerformed(HWND hWnd,
         client.x = max(0, rect.right - rect.left) - client.x;
     }
 
-    jint modifiers = GetModifiers();
-    env->CallStaticVoidMethod(m_gestureSupportCls,
-                              javaIDs.Gestures.gesturePerformedMID,
-                              GetView(), modifiers,
-                              jboolean(isDirect), jboolean(isInertia),
-                              jint(client.x), jint(client.y),
-                              jint(screen.x), jint(screen.y),
+    int32_t modifiers = GetModifiers();
+    const GwinGestureCallbacks* cb = GlassView::GestureCallbacks();
+    if (cb != NULL) {
+        cb->gesture_performed(GetViewId(), modifiers,
+                              isDirect ? 1 : 0, isInertia ? 1 : 0,
+                              int32_t(client.x), int32_t(client.y),
+                              int32_t(screen.x), int32_t(screen.y),
                               deltaX / 100, deltaY / 100,
                               cumulativeDeltaX / 100, cumulativeDeltaY / 100,
                               cumulativeScale, cumulativeExpansion / 100,
                               cumulativeRotation);
-    CheckAndClearException(env);
+    }
 }
 
 void ViewContainer::StartTouchInputInertia(HWND hwnd)
@@ -1753,35 +1679,3 @@ void ViewContainer::StopTouchInputInertia(HWND hwnd)
     ::KillTimer(hwnd, IDT_GLASS_INERTIAPROCESSOR);
 }
 
-
-extern "C" {
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinGestureSupport__1initIDs(
-        JNIEnv *env, jclass cls)
-{
-    javaIDs.Gestures.gesturePerformedMID =
-        env->GetStaticMethodID(cls, "gesturePerformed",
-                                "(Lcom/sun/glass/ui/View;IZZIIIIFFFFFFF)V");
-    CheckAndClearException(env);
-
-    javaIDs.Gestures.inertiaGestureFinishedMID =
-        env->GetStaticMethodID(cls, "inertiaGestureFinished",
-                                "(Lcom/sun/glass/ui/View;)V");
-    CheckAndClearException(env);
-
-    javaIDs.Gestures.notifyBeginTouchEventMID =
-        env->GetStaticMethodID(cls, "notifyBeginTouchEvent",
-                                "(Lcom/sun/glass/ui/View;IZI)V");
-    CheckAndClearException(env);
-
-    javaIDs.Gestures.notifyNextTouchEventMID =
-        env->GetStaticMethodID(cls, "notifyNextTouchEvent",
-                                "(Lcom/sun/glass/ui/View;IJIIII)V");
-    CheckAndClearException(env);
-
-    javaIDs.Gestures.notifyEndTouchEventMID =
-        env->GetStaticMethodID(cls, "notifyEndTouchEvent",
-                                "(Lcom/sun/glass/ui/View;)V");
-    CheckAndClearException(env);
-}
-
-} // extern "C"

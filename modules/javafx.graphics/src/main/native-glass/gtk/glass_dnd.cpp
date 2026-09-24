@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,9 +27,8 @@
 #include "glass_evloop.h"
 
 #include "com_sun_glass_events_DndEvent.h"
-#include "com_sun_glass_ui_gtk_GtkDnDClipboard.h"
+#include "com_sun_glass_ui_Clipboard.h"
 
-#include <jni.h>
 #include <cstring>
 
 #include <gtk/gtk.h>
@@ -37,21 +36,21 @@
 #include <gdk/gdkkeysyms.h>
 
 /************************* COMMON *********************************************/
-static jint translate_gdk_action_to_glass(GdkDragAction action)
+static int32_t translate_gdk_action_to_glass(GdkDragAction action)
 {
-    jint result = 0;
-    result |= (action & GDK_ACTION_COPY)? com_sun_glass_ui_gtk_GtkDnDClipboard_ACTION_COPY : 0;
-    result |= (action & GDK_ACTION_MOVE)? com_sun_glass_ui_gtk_GtkDnDClipboard_ACTION_MOVE : 0;
-    result |= (action & GDK_ACTION_LINK)? com_sun_glass_ui_gtk_GtkDnDClipboard_ACTION_REFERENCE : 0;
+    int32_t result = 0;
+    result |= (action & GDK_ACTION_COPY)? com_sun_glass_ui_Clipboard_ACTION_COPY : 0;
+    result |= (action & GDK_ACTION_MOVE)? com_sun_glass_ui_Clipboard_ACTION_MOVE : 0;
+    result |= (action & GDK_ACTION_LINK)? com_sun_glass_ui_Clipboard_ACTION_REFERENCE : 0;
     return result;
 }
 
-static GdkDragAction translate_glass_action_to_gdk(jint action)
+static GdkDragAction translate_glass_action_to_gdk(int32_t action)
 {
     int result = 0;
-    result |= (action & com_sun_glass_ui_gtk_GtkDnDClipboard_ACTION_COPY)? GDK_ACTION_COPY : 0;
-    result |= (action & com_sun_glass_ui_gtk_GtkDnDClipboard_ACTION_MOVE)? GDK_ACTION_MOVE : 0;
-    result |= (action & com_sun_glass_ui_gtk_GtkDnDClipboard_ACTION_REFERENCE)? GDK_ACTION_LINK : 0;
+    result |= (action & com_sun_glass_ui_Clipboard_ACTION_COPY)? GDK_ACTION_COPY : 0;
+    result |= (action & com_sun_glass_ui_Clipboard_ACTION_MOVE)? GDK_ACTION_MOVE : 0;
+    result |= (action & com_sun_glass_ui_Clipboard_ACTION_REFERENCE)? GDK_ACTION_LINK : 0;
     return static_cast<GdkDragAction>(result);
 }
 
@@ -113,13 +112,8 @@ static gboolean target_is_image(GdkAtom target)
             target == TARGET_MIME_BMP_ATOM);
 }
 
-static void clear_global_ref(gpointer data)
-{
-    mainEnv->DeleteGlobalRef((jobject)data);
-}
-
-static void dnd_set_performed_action(jint performed_action);
-static jint dnd_get_performed_action();
+static void dnd_set_performed_action(int32_t performed_action);
+static int32_t dnd_get_performed_action();
 
 /************************* TARGET *********************************************/
 struct selection_data_ctx {
@@ -130,15 +124,22 @@ struct selection_data_ctx {
     gint length;
 };
 
-static gboolean dnd_target_receive_data(JNIEnv *env, GdkAtom target, selection_data_ctx *selection_ctx);
+static gboolean dnd_target_receive_data(GdkAtom target, selection_data_ctx *selection_ctx, int32_t *oom_reports);
 
 static struct {
     GdkDragContext *ctx;
     gboolean just_entered;
     gboolean dropped;
-    jobjectArray mimes;
     gint dx, dy;
-} enter_ctx = {NULL, FALSE, FALSE, NULL, 0, 0};
+    // The mimes of this drag as ggtk_dnd_target_get_mimes answers them (NULL until the first call): every
+    // string the JNI added to its HashSet, in order, NUL-terminated back to back
+    GString *mime_adds;
+    int32_t mime_add_count;
+    int64_t mimes_generation;
+} enter_ctx = {NULL, FALSE, FALSE, 0, 0, NULL, 0, 0};
+
+// Numbers the mime lists ggtk_dnd_target_get_mimes computes
+static int64_t mimes_generation_counter = 0;
 
 gboolean is_dnd_owner = FALSE;
 
@@ -149,8 +150,8 @@ gboolean is_in_drag() {
 }
 
 static void reset_enter_ctx() {
-    if (enter_ctx.mimes != NULL) {
-        mainEnv->DeleteGlobalRef(enter_ctx.mimes);
+    if (enter_ctx.mime_adds != NULL) {
+        g_string_free(enter_ctx.mime_adds, TRUE);
     }
 
     memset(&enter_ctx, 0, sizeof(enter_ctx));
@@ -171,13 +172,20 @@ static void process_dnd_target_drag_motion(WindowContext *ctx, GdkEventDND *even
         gdk_drag_status(event->context, static_cast<GdkDragAction>(0), GDK_CURRENT_TIME);
         return; // Do not process motion events if no enter event was received
     }
-    jmethodID method = enter_ctx.just_entered ? jViewNotifyDragEnter : jViewNotifyDragOver;
-    GdkDragAction suggested = gdk_drag_context_get_suggested_action(event->context);
-    GdkDragAction result = translate_glass_action_to_gdk(mainEnv->CallIntMethod(ctx->get_jview(), method,
-            (jint)event->x_root - enter_ctx.dx, (jint)event->y_root - enter_ctx.dy,
-            (jint)event->x_root, (jint)event->y_root,
-            translate_gdk_action_to_glass(suggested)));
-    CHECK_JNI_EXCEPTION(mainEnv)
+    auto notify_drag = enter_ctx.just_entered ? glass_dnd_cb.notify_drag_enter : glass_dnd_cb.notify_drag_over;
+    // A NULL slot makes no call: action stays 0 and the drag is answered with no action
+    int32_t action = 0;
+    if (notify_drag) {
+        // jview is not checked here: without a view the id is 0 (see glass_gtk_api.h, IDENTITY)
+        GdkDragAction suggested = gdk_drag_context_get_suggested_action(event->context);
+        if (notify_drag(ctx->get_view_id(),
+                (int32_t)event->x_root - enter_ctx.dx, (int32_t)event->y_root - enter_ctx.dy,
+                (int32_t)event->x_root, (int32_t)event->y_root,
+                translate_gdk_action_to_glass(suggested), &action)) {
+            return;
+        }
+    }
+    GdkDragAction result = translate_glass_action_to_gdk(action);
 
     if (enter_ctx.just_entered) {
         enter_ctx.just_entered = FALSE;
@@ -192,41 +200,48 @@ static void process_dnd_target_drag_leave(WindowContext *ctx, GdkEventDND *event
     // if there is a drop going on do not report drag leave to java because
     // it will reset the drag gesture.
     if (!enter_ctx.dropped) {
-        mainEnv->CallVoidMethod(ctx->get_jview(), jViewNotifyDragLeave, NULL);
-        CHECK_JNI_EXCEPTION(mainEnv)
+        if (glass_dnd_cb.notify_drag_leave) {
+            // CHECK_JNI_EXCEPTION site at the end of the function: nothing follows, the status is ignored
+            glass_dnd_cb.notify_drag_leave(ctx->get_view_id());
+        }
     }
 }
 
 static void process_dnd_target_drop_start(WindowContext *ctx, GdkEventDND *event)
 {
-    if (!enter_ctx.ctx || enter_ctx.just_entered) {
-        gdk_drop_finish(event->context, FALSE, GDK_CURRENT_TIME);
-        gdk_drop_reply(event->context, FALSE, GDK_CURRENT_TIME);
-        return; // Do not process drop events if no enter event and subsequent motion event were received
-    }
-    GdkDragAction selected = gdk_drag_context_get_selected_action(event->context);
-    enter_ctx.dropped = TRUE;
-    mainEnv->CallIntMethod(ctx->get_jview(), jViewNotifyDragDrop,
-            (jint)event->x_root - enter_ctx.dx, (jint)event->y_root - enter_ctx.dy,
-            (jint)event->x_root, (jint)event->y_root,
-            translate_gdk_action_to_glass(selected));
-    LOG_EXCEPTION(mainEnv)
-
-    gdk_drop_finish(event->context, TRUE, GDK_CURRENT_TIME);
-    gdk_drop_reply(event->context, TRUE, GDK_CURRENT_TIME);
-}
-
-static gboolean check_state_in_drag(JNIEnv *env)
-{
-    if (!enter_ctx.ctx) {
-        jclass jc = env->FindClass("java/lang/IllegalStateException");
-        if (!env->ExceptionCheck()) {
-            env->ThrowNew(jc,
-                    "Cannot get supported actions. Drag pointer haven't entered the application window");
+    // Do not process drop events if no enter event and subsequent motion event were received
+    gboolean accepted = enter_ctx.ctx != NULL && !enter_ctx.just_entered;
+    if (accepted) {
+        GdkDragAction selected = gdk_drag_context_get_selected_action(event->context);
+        enter_ctx.dropped = TRUE;
+        if (glass_dnd_cb.notify_drag_drop) {
+            // LOG_EXCEPTION site: the status is ignored
+            glass_dnd_cb.notify_drag_drop(ctx->get_view_id(),
+                    (int32_t)event->x_root - enter_ctx.dx, (int32_t)event->y_root - enter_ctx.dy,
+                    (int32_t)event->x_root, (int32_t)event->y_root,
+                    translate_gdk_action_to_glass(selected));
         }
-        return TRUE;
     }
-    return FALSE;
+
+    gdk_drop_finish(event->context, accepted, GDK_CURRENT_TIME);
+    gdk_drop_reply(event->context, accepted, GDK_CURRENT_TIME);
+
+    // The drag ends here, accepted or rejected. Commit 033187ad90 left enter_ctx.ctx set, so the exports
+    // guarded by it - ggtk_dnd_target_get_mimes, ggtk_dnd_target_get_data and
+    // ggtk_dnd_target_get_supported_actions, the check_state_in_drag of that commit - still passed the in-drag
+    // check after the drop and worked on a GdkDragContext GDK may already have released. This single exit
+    // clears it at the end of every drop: after the notify_drag_drop upcall, which runs a nested main loop in
+    // which the target legitimately reads mimes and data, and at the very end of the function so the drop is
+    // finished first. Only the drop's own context is cleared: a second drag whose GDK_DRAG_ENTER is dispatched
+    // inside that nested main loop must keep the context that enter installed. enter_ctx.dropped keeps its
+    // value, as at that commit, so that a GDK_DRAG_LEAVE arriving after the drop still suppresses the
+    // drag-leave upcall (process_dnd_target_drag_leave). A GDK_DRAG_LEAVE without a drop deliberately leaves
+    // the context set, as at that commit: the drag is still alive while it continues in other windows, and
+    // clearing there would turn reads after a leave into errors (the context itself may already be released
+    // then - a carried defect of that commit, kept for behaviour-neutrality).
+    if (enter_ctx.ctx == event->context) {
+        enter_ctx.ctx = NULL;
+    }
 }
 
 // Events coming from application that are related to us being a DnD target
@@ -250,80 +265,96 @@ void process_dnd_target(WindowContext *ctx, GdkEventDND *event)
     }
 }
 
-jobjectArray dnd_target_get_mimes(JNIEnv *env)
+// Appends one mime to the list the JNI built its HashSet from (the argument of one Set.add call)
+static void dnd_target_add_mime(GString *adds, int32_t *count, const gchar *mime)
 {
-    if (check_state_in_drag(env)) {
-        return NULL;
-    }
-    if (!enter_ctx.mimes) {
-        GList* targets = gdk_drag_context_list_targets(enter_ctx.ctx);
-        jobject set = env->NewObject(jHashSetCls, jHashSetInit, NULL);
-        EXCEPTION_OCCURED(env);
-
-        while (targets) {
-            GdkAtom target = GDK_POINTER_TO_ATOM(targets->data);
-            gchar *name = gdk_atom_name(target);
-
-            if (target_is_text(target)) {
-                jstring jStr = env->NewStringUTF("text/plain");
-                EXCEPTION_OCCURED(env);
-                env->CallBooleanMethod(set, jSetAdd, jStr, NULL);
-                EXCEPTION_OCCURED(env);
-            }
-
-            if (target_is_image(target)) {
-                jstring jStr = env->NewStringUTF("application/x-java-rawimage");
-                EXCEPTION_OCCURED(env);
-                env->CallBooleanMethod(set, jSetAdd, jStr, NULL);
-                EXCEPTION_OCCURED(env);
-            }
-
-            if (target_is_uri(target)) {
-                selection_data_ctx ctx;
-                if (dnd_target_receive_data(env, TARGET_MIME_URI_LIST_ATOM, &ctx)) {
-                    gchar** uris = g_uri_list_extract_uris((gchar *) ctx.data);
-                    guint size = g_strv_length(uris);
-                    guint files_cnt = get_files_count(uris);
-                    if (files_cnt) {
-                        jstring jStr = env->NewStringUTF("application/x-java-file-list");
-                        EXCEPTION_OCCURED(env);
-                        env->CallBooleanMethod(set, jSetAdd, jStr, NULL);
-                        EXCEPTION_OCCURED(env);
-                    }
-                    if (size - files_cnt) {
-                        jstring jStr = env->NewStringUTF("text/uri-list");
-                        EXCEPTION_OCCURED(env);
-                        env->CallBooleanMethod(set, jSetAdd, jStr, NULL);
-                        EXCEPTION_OCCURED(env);
-                    }
-                    g_strfreev(uris);
-                }
-                g_free(ctx.data);
-            } else {
-                jstring jStr = env->NewStringUTF(name);
-                EXCEPTION_OCCURED(env);
-                env->CallBooleanMethod(set, jSetAdd, jStr, NULL);
-                EXCEPTION_OCCURED(env);
-            }
-
-            g_free(name);
-            targets = targets->next;
-        }
-        enter_ctx.mimes = env->NewObjectArray(env->CallIntMethod(set, jSetSize, NULL),
-                jStringCls, NULL);
-        EXCEPTION_OCCURED(env);
-        enter_ctx.mimes = (jobjectArray)env->CallObjectMethod(set, jSetToArray, enter_ctx.mimes, NULL);
-        enter_ctx.mimes = (jobjectArray)env->NewGlobalRef(enter_ctx.mimes);
-    }
-    return enter_ctx.mimes;
+    g_string_append_len(adds, mime, (gssize) strlen(mime) + 1);
+    (*count)++;
 }
 
-jint dnd_target_get_supported_actions(JNIEnv *env)
+// The walk of dnd_target_get_mimes at commit 033187ad90 over the targets of the drag, with the arguments of its
+// Set.add calls collected in order (repeats included) instead of added to a HashSet. Answers them in a GString.
+static GString* dnd_target_collect_mimes(int32_t *count, int32_t *oom_reports)
 {
-    if (check_state_in_drag(env)) {
-        return 0;
+    GList* targets = gdk_drag_context_list_targets(enter_ctx.ctx);
+    GString* adds = g_string_new(NULL);
+    *count = 0;
+
+    while (targets) {
+        GdkAtom target = GDK_POINTER_TO_ATOM(targets->data);
+        gchar *name = gdk_atom_name(target);
+
+        if (target_is_text(target)) {
+            dnd_target_add_mime(adds, count, "text/plain");
+        }
+
+        if (target_is_image(target)) {
+            dnd_target_add_mime(adds, count, "application/x-java-rawimage");
+        }
+
+        if (target_is_uri(target)) {
+            selection_data_ctx ctx;
+            if (dnd_target_receive_data(TARGET_MIME_URI_LIST_ATOM, &ctx, oom_reports)) {
+                gchar** uris = g_uri_list_extract_uris((gchar *) ctx.data);
+                guint size = g_strv_length(uris);
+                guint files_cnt = get_files_count(uris);
+                if (files_cnt) {
+                    dnd_target_add_mime(adds, count, "application/x-java-file-list");
+                }
+                if (size - files_cnt) {
+                    dnd_target_add_mime(adds, count, "text/uri-list");
+                }
+                g_strfreev(uris);
+            }
+            g_free(ctx.data);
+        } else {
+            dnd_target_add_mime(adds, count, name);
+        }
+
+        g_free(name);
+        targets = targets->next;
     }
-    return translate_gdk_action_to_glass(gdk_drag_context_get_actions(enter_ctx.ctx));
+    return adds;
+}
+
+extern "C" int32_t ggtk_dnd_target_get_mimes(char** out_strings, int32_t* out_count, int64_t* out_generation)
+{
+    *out_strings = NULL;
+    *out_count = 0;
+    *out_generation = 0;
+    if (!enter_ctx.ctx) { // check_state_in_drag of commit 033187ad90
+        return GGTK_ERR_NOT_IN_DRAG;
+    }
+    int32_t oom_reports = 0;
+    if (!enter_ctx.mime_adds) {
+        int32_t count = 0;
+        GString *adds = dnd_target_collect_mimes(&count, &oom_reports);
+        // The walk may have run nested main loops; store into the drag state as it is now, as the JNI stored
+        // its String[] into enter_ctx after the walk.
+        if (enter_ctx.mime_adds != NULL) {
+            g_string_free(enter_ctx.mime_adds, TRUE);
+        }
+        enter_ctx.mime_adds = adds;
+        enter_ctx.mime_add_count = count;
+        enter_ctx.mimes_generation = ++mimes_generation_counter;
+    }
+    // At least one byte, so that the block is never NULL
+    gsize len = enter_ctx.mime_adds->len;
+    *out_strings = (char *) g_malloc(len > 0 ? len : 1);
+    memcpy(*out_strings, enter_ctx.mime_adds->str, len);
+    *out_count = enter_ctx.mime_add_count;
+    *out_generation = enter_ctx.mimes_generation;
+    return oom_reports;
+}
+
+extern "C" int32_t ggtk_dnd_target_get_supported_actions(int32_t* out_actions)
+{
+    *out_actions = 0;
+    if (!enter_ctx.ctx) { // check_state_in_drag of commit 033187ad90
+        return GGTK_ERR_NOT_IN_DRAG;
+    }
+    *out_actions = translate_gdk_action_to_glass(gdk_drag_context_get_actions(enter_ctx.ctx));
+    return GGTK_OK;
 }
 
 static void wait_for_selection_data_hook(GdkEvent * event, void * data)
@@ -339,7 +370,9 @@ static void wait_for_selection_data_hook(GdkEvent * event, void * data)
     }
 }
 
-static gboolean dnd_target_receive_data(JNIEnv *env, GdkAtom target, selection_data_ctx *selection_ctx)
+// *oom_reports counts the OutOfMemoryError the JNI reported (HANDLE_MEM_ALLOC_ERROR) when the hook could not be
+// allocated; the caller reports them.
+static gboolean dnd_target_receive_data(GdkAtom target, selection_data_ctx *selection_ctx, int32_t *oom_reports)
 {
     GevlHookRegistration hookReg;
 
@@ -352,9 +385,14 @@ static gboolean dnd_target_receive_data(JNIEnv *env, GdkAtom target, selection_d
             glass_evloop_hook_add(
                     (GevlHookFunction) wait_for_selection_data_hook,
                     selection_ctx);
-    if (HANDLE_MEM_ALLOC_ERROR(env, hookReg,
-                               "Failed to allocate event hook")) {
-        return TRUE;
+    if (hookReg == NULL) {
+        // The hook is what fills selection_ctx, so nothing was received. Commit 033187ad90 answered TRUE
+        // here (HANDLE_MEM_ALLOC_ERROR, then return TRUE), which told every caller the data had arrived and
+        // left them decoding the zeroed selection_data_ctx; answer FALSE, as the normal exit below does when
+        // the conversion produced no data. The OutOfMemoryError that commit reported for the failed
+        // allocation still reaches Java through *oom_reports.
+        (*oom_reports)++;
+        return FALSE;
     }
 
     do {
@@ -366,55 +404,128 @@ static gboolean dnd_target_receive_data(JNIEnv *env, GdkAtom target, selection_d
     return selection_ctx->data != NULL;
 }
 
-static jobject dnd_target_get_string(JNIEnv *env)
+// A string value: the bytes the JNI handed to NewStringUTF, which `data` (a g_malloc'd block) now owns
+static void dnd_target_set_string(GgtkDndTargetValue *out, gchar *data)
 {
-    jobject result = NULL;
+    out->kind = GGTK_DND_VALUE_STRING;
+    out->count = (int32_t) strlen(data);
+    out->data = data;
+}
+
+static void dnd_target_get_string(GgtkDndTargetValue *out, int32_t *oom_reports)
+{
     selection_data_ctx ctx;
 
-    if (dnd_target_receive_data(env, TARGET_UTF8_STRING_ATOM, &ctx)) {
-        result = env->NewStringUTF((char *)ctx.data);
-        EXCEPTION_OCCURED(env);
+    if (dnd_target_receive_data(TARGET_UTF8_STRING_ATOM, &ctx, oom_reports)) {
+        if (ctx.data != NULL) { // NewStringUTF((char *) NULL) answered null
+            dnd_target_set_string(out, (gchar *) ctx.data);
+            ctx.data = NULL;
+        }
         g_free(ctx.data);
     }
-    if (!result && dnd_target_receive_data(env, TARGET_MIME_TEXT_PLAIN_ATOM, &ctx)) {
-        result = env->NewStringUTF((char *)ctx.data);
-        EXCEPTION_OCCURED(env);
+    if (out->kind == GGTK_DND_VALUE_NONE && dnd_target_receive_data(TARGET_MIME_TEXT_PLAIN_ATOM, &ctx, oom_reports)) {
+        if (ctx.data != NULL) {
+            dnd_target_set_string(out, (gchar *) ctx.data);
+            ctx.data = NULL;
+        }
         g_free(ctx.data);
     }
     // TODO find out how to convert from compound text
     // if (!result && dnd_target_receive_data(env, TARGET_COMPOUND_TEXT_ATOM, &ctx)) {
     // }
-    if (!result && dnd_target_receive_data(env, TARGET_STRING_ATOM, &ctx)) {
+    if (out->kind == GGTK_DND_VALUE_NONE && dnd_target_receive_data(TARGET_STRING_ATOM, &ctx, oom_reports)) {
         gchar *str;
         str = g_convert( (gchar *)ctx.data, -1, "UTF-8", "ISO-8859-1", NULL, NULL, NULL);
         if (str != NULL) {
-            result = env->NewStringUTF(str);
-            EXCEPTION_OCCURED(env);
-            g_free(str);
+            dnd_target_set_string(out, str);
         }
         g_free(ctx.data);
     }
-    return result;
 }
 
-static jobject dnd_target_get_list(JNIEnv *env, gboolean files)
+// A file-list record of GGTK_DND_VALUE_FILES (see glass_gtk_api.h): index, byte length (-1 for a NULL path),
+// the bytes and their NUL, zero padding to a multiple of 4
+static void dnd_target_add_file_record(GByteArray *records, int32_t index, const gchar *path)
 {
-    jobject result = NULL;
-    selection_data_ctx ctx;
+    static const guint8 padding[4] = {0, 0, 0, 0};
+    int32_t len = (path != NULL) ? (int32_t) strlen(path) : -1;
 
-    if (dnd_target_receive_data(env, TARGET_MIME_URI_LIST_ATOM, &ctx)) {
-        result = uris_to_java(env, g_uri_list_extract_uris((gchar *)ctx.data), files);
-        g_free(ctx.data);
+    g_byte_array_append(records, (const guint8 *) &index, sizeof(index));
+    g_byte_array_append(records, (const guint8 *) &len, sizeof(len));
+    if (path != NULL) {
+        g_byte_array_append(records, (const guint8 *) path, (guint) len + 1);
+        guint rest = ((guint) len + 1) % 4;
+        if (rest != 0) {
+            g_byte_array_append(records, padding, 4 - rest);
+        }
+    }
+}
+
+// glass_general.cpp uris_to_java at commit 033187ad90 without its Java objects (uris is freed here, as there)
+static void dnd_target_uris_to_value(gchar **uris, gboolean files, GgtkDndTargetValue *out)
+{
+    if (uris == NULL) {
+        return;
     }
 
-    return result;
+    guint size = g_strv_length(uris);
+    guint files_cnt = get_files_count(uris);
+
+    if (files) {
+        if (files_cnt) {
+            // new String[files_cnt]: the file uris in order, the n-th of them at index n. Commit
+            // 033187ad90 passed the position in the whole uri list as the index instead, so a file uri
+            // that followed a non-file one was stored past the end of the array and left a null behind.
+            GByteArray *records = g_byte_array_new();
+            int32_t record_count = 0;
+
+            for (gsize i = 0; i < size; ++i) {
+                if (g_str_has_prefix(uris[i], FILE_PREFIX)) {
+                    gchar* path = g_filename_from_uri(uris[i], NULL, NULL);
+                    dnd_target_add_file_record(records, record_count, path);
+                    record_count++;
+                    g_free(path);
+                }
+            }
+            out->kind = GGTK_DND_VALUE_FILES;
+            out->count = (int32_t) files_cnt;
+            out->records = record_count;
+            out->data = g_byte_array_free(records, FALSE);
+        }
+    } else if (size - files_cnt) {
+        GString* str = g_string_new(NULL); //http://www.ietf.org/rfc/rfc2483.txt
+
+        for (guint i = 0; i < size; ++i) {
+            if (!g_str_has_prefix(uris[i], FILE_PREFIX)
+                    && !g_str_has_prefix(uris[i], URI_LIST_COMMENT_PREFIX)) {
+                g_string_append(str, uris[i]);
+                g_string_append(str, URI_LIST_LINE_BREAK);
+            }
+        }
+
+        if (str->len > 2) {
+            g_string_erase(str, str->len - 2, 2);
+        }
+
+        dnd_target_set_string(out, g_string_free(str, FALSE));
+    }
+    g_strfreev(uris);
 }
 
-static jobject dnd_target_get_image(JNIEnv *env)
+static void dnd_target_get_list(gboolean files, GgtkDndTargetValue *out, int32_t *oom_reports)
+{
+    selection_data_ctx ctx;
+
+    if (dnd_target_receive_data(TARGET_MIME_URI_LIST_ATOM, &ctx, oom_reports)) {
+        dnd_target_uris_to_value(g_uri_list_extract_uris((gchar *)ctx.data), files, out);
+        g_free(ctx.data);
+    }
+}
+
+static void dnd_target_get_image(GgtkDndTargetValue *out, int32_t *oom_reports)
 {
     GdkPixbuf *buf;
     GInputStream *stream;
-    jobject result = NULL;
     GdkAtom targets[] = {
         TARGET_MIME_PNG_ATOM,
         TARGET_MIME_JPEG_ATOM,
@@ -424,10 +535,14 @@ static jobject dnd_target_get_image(JNIEnv *env)
     GdkAtom *cur_target = targets;
     selection_data_ctx ctx;
 
-    for (; *cur_target != 0 && result == NULL; ++cur_target) {
-        if (dnd_target_receive_data(env, *cur_target, &ctx)) {
+    for (; *cur_target != 0 && out->kind == GGTK_DND_VALUE_NONE; ++cur_target) {
+        if (dnd_target_receive_data(*cur_target, &ctx, oom_reports)) {
             const gint fmtDiv8 = ctx.format / 8;
             if (ctx.length <= 0 || fmtDiv8 <= 0 || ctx.length >= INT_MAX / fmtDiv8) {
+                // g_memory_input_stream_new_from_data below is what takes ownership of ctx.data (g_free as
+                // its GDestroyNotify), so on this path the block has no owner. Commit 033187ad90 leaked it
+                // here; free it, as the same check in dnd_target_get_raw does.
+                g_free(ctx.data);
                 continue;
             }
             stream = g_memory_input_stream_new_from_data(ctx.data, ctx.length * fmtDiv8,
@@ -438,8 +553,6 @@ static jobject dnd_target_get_image(JNIEnv *env)
                 int h;
                 int stride;
                 guchar *data;
-                jbyteArray data_array;
-                jobject buffer;
 
                 if (!gdk_pixbuf_get_has_alpha(buf)) {
                     GdkPixbuf *tmp_buf = gdk_pixbuf_add_alpha(buf, FALSE, 0, 0, 0);
@@ -467,93 +580,85 @@ static jobject dnd_target_get_image(JNIEnv *env)
                     continue;
                 }
 
-                data_array = env->NewByteArray(stride * h);
-                EXCEPTION_OCCURED(env);
-                env->SetByteArrayRegion(data_array, 0, stride*h, (jbyte*) data);
-                EXCEPTION_OCCURED(env);
-
-                buffer = env->CallStaticObjectMethod(jByteBufferCls, jByteBufferWrap, data_array);
-                EXCEPTION_OCCURED(env);
-                result = env->NewObject(jGtkPixelsCls, jGtkPixelsInit, w, h, buffer);
-                EXCEPTION_OCCURED(env);
+                // new GtkPixels(w, h, ByteBuffer.wrap(the stride * h bytes of data)); the block from
+                // convert_BGRA_to_RGBA now belongs to the value
+                out->kind = GGTK_DND_VALUE_IMAGE;
+                out->count = stride * h;
+                out->data = data;
+                out->width = w;
+                out->height = h;
 
                 g_object_unref(buf);
-                g_free(data); // data from convert_BGRA_to_RGBA
             }
             g_object_unref(stream);
         }
     }
-    return result;
 }
 
-static jobject dnd_target_get_raw(JNIEnv *env, GdkAtom target, gboolean string_data)
+static void dnd_target_get_raw(GdkAtom target, gboolean string_data, GgtkDndTargetValue *out,
+                               int32_t *oom_reports)
 {
     selection_data_ctx ctx;
-    jobject result = NULL;
-    if (dnd_target_receive_data(env, target, &ctx)) {
+    if (dnd_target_receive_data(target, &ctx, oom_reports)) {
         if (string_data) {
-             result = env->NewStringUTF((char *)ctx.data);
-             EXCEPTION_OCCURED(env);
+            if (ctx.data != NULL) { // NewStringUTF((char *) NULL) answered null
+                dnd_target_set_string(out, (gchar *) ctx.data);
+                ctx.data = NULL;
+            }
         } else {
             const gint fmtDiv8 = ctx.format / 8;
             if (ctx.length <= 0 || fmtDiv8 <= 0 || ctx.length >= INT_MAX / fmtDiv8) {
                 g_free(ctx.data);
-                return result;
+                return;
             }
-            jsize length = ctx.length * fmtDiv8;
-            jbyteArray array = env->NewByteArray(length);
-            EXCEPTION_OCCURED(env);
-            env->SetByteArrayRegion(array, 0, length, (const jbyte*)ctx.data);
-            EXCEPTION_OCCURED(env);
-            result = env->CallStaticObjectMethod(jByteBufferCls, jByteBufferWrap, array);
-            EXCEPTION_OCCURED(env);
+            // ByteBuffer.wrap(the first ctx.length * fmtDiv8 bytes of ctx.data)
+            out->kind = GGTK_DND_VALUE_BYTES;
+            out->count = ctx.length * fmtDiv8;
+            out->data = ctx.data;
+            ctx.data = NULL;
         }
     }
     g_free(ctx.data);
-    return result;
 }
 
-jobject dnd_target_get_data(JNIEnv *env, jstring mime)
+extern "C" int32_t ggtk_dnd_target_get_data(const char* mime, GgtkDndTargetValue* out)
 {
-    if (check_state_in_drag(env)) {
-        return NULL;
+    memset(out, 0, sizeof(*out));
+    if (!enter_ctx.ctx) { // check_state_in_drag of commit 033187ad90
+        return GGTK_ERR_NOT_IN_DRAG;
     }
-    const char *cmime = env->GetStringUTFChars(mime, NULL);
-    jobject ret = NULL;
+    const char *cmime = mime;
+    int32_t oom_reports = 0;
 
     init_target_atoms();
 
     if (g_strcmp0(cmime, "text/plain") == 0) {
-        ret = dnd_target_get_string(env);
+        dnd_target_get_string(out, &oom_reports);
     } else if (g_strcmp0(cmime, "text/uri-list") == 0) {
-        ret = dnd_target_get_list(env, FALSE);
+        dnd_target_get_list(FALSE, out, &oom_reports);
     } else if (g_str_has_prefix(cmime, "text/")) {
-        ret = dnd_target_get_raw(env, gdk_atom_intern(cmime, FALSE), TRUE);
+        dnd_target_get_raw(gdk_atom_intern(cmime, FALSE), TRUE, out, &oom_reports);
     } else if (g_strcmp0(cmime, "application/x-java-file-list") == 0) {
-        ret = dnd_target_get_list(env, TRUE);
+        dnd_target_get_list(TRUE, out, &oom_reports);
     } else if (g_strcmp0(cmime, "application/x-java-rawimage") == 0 ) {
-        ret = dnd_target_get_image(env);
+        dnd_target_get_image(out, &oom_reports);
     } else {
-        ret = dnd_target_get_raw(env, gdk_atom_intern(cmime, FALSE), FALSE);
+        dnd_target_get_raw(gdk_atom_intern(cmime, FALSE), FALSE, out, &oom_reports);
     }
-    LOG_EXCEPTION(env)
-    env->ReleaseStringUTFChars(mime, cmime);
 
-    return ret;
+    return oom_reports;
 }
 
 /************************* SOURCE *********************************************/
 
-static jint dnd_performed_action;
+static int32_t dnd_performed_action;
 
-const char * const SOURCE_DND_DATA = "fx-dnd-data";
-
-static void dnd_set_performed_action(jint performed_action)
+static void dnd_set_performed_action(int32_t performed_action)
 {
     dnd_performed_action = performed_action;
 }
 
-static jint dnd_get_performed_action()
+static int32_t dnd_get_performed_action()
 {
     return dnd_performed_action;
 }
@@ -565,20 +670,22 @@ static void pixbufDestroyNotifyFunc(guchar *pixels, gpointer)
     }
 }
 
-static jobject dnd_source_get_data(GtkWidget *widget, const char *key)
-{
-    jobject data = (jobject)g_object_get_data(G_OBJECT(widget), SOURCE_DND_DATA);
-    jstring string = mainEnv->NewStringUTF(key);
-    EXCEPTION_OCCURED(mainEnv);
-    jobject result = mainEnv->CallObjectMethod(data, jMapGet, string, NULL);
+// dnd_source_get_data of commit 033187ad90 (Map.get on the drag source's data map) together with the conversion
+// its caller applied to the value: the value `key` has in the data map of the drag in progress, converted as `as`
+// says (see GgtkDndCallbacks.source_get_data). `out` is zero-filled first, so a slot that answers nothing reads
+// as GGTK_DND_DATA_NONE. The key crosses as the bytes NewStringUTF decoded. Every caller makes no call when the
+// slot is NULL.
+typedef int32_t (*dnd_source_pull_t)(const char*, int32_t, int32_t, GgtkDndData*);
 
-    return (EXCEPTION_OCCURED(mainEnv)) ? NULL : result;
+static int32_t dnd_source_pull(dnd_source_pull_t pull, const char *key, int32_t as, GgtkDndData *out)
+{
+    memset(out, 0, sizeof(*out));
+    return pull(key, (key != NULL) ? (int32_t) strlen(key) : 0, as, out);
 }
 
-static void add_gtk_target_from_jstring(JNIEnv *env, GtkTargetList **list, jstring string, guint flags)
+// The drag targets of one key of the drag source's data map; gstring is the key as GetStringUTFChars gave it
+static void add_gtk_target_for_mime(GtkTargetList **list, const char *gstring, guint flags)
 {
-    const char *gstring = env->GetStringUTFChars(string, NULL);
-
     if (g_strcmp0(gstring, "text/plain") == 0) {
         gtk_target_list_add(*list, TARGET_UTF8_STRING_ATOM, flags, 0);
         gtk_target_list_add(*list, TARGET_MIME_TEXT_PLAIN_ATOM, flags, 0);
@@ -598,17 +705,13 @@ static void add_gtk_target_from_jstring(JNIEnv *env, GtkTargetList **list, jstri
         GdkAtom atom = gdk_atom_intern(gstring, FALSE);
         gtk_target_list_add(*list, atom, flags, 0);
     }
-
-    env->ReleaseStringUTFChars(string, gstring);
 }
 
-static GtkTargetList* data_to_gtk_target_list(JNIEnv *env, jobject data)
+// The keys of the drag source's data map arrive as a list (see ggtk_dnd_push_to_system): key_count NUL-terminated
+// strings back to back, in the order commit 033187ad90 walked Map.keySet() here.
+static GtkTargetList* data_to_gtk_target_list(const char *keys, int32_t key_count)
 {
     guint flags = GTK_TARGET_OTHER_APP | GTK_TARGET_SAME_APP;
-
-    jobject keys;
-    jobject keysIterator;
-    jstring next;
 
     GtkTargetList *tlist = gtk_target_list_new (NULL, 0);
 
@@ -616,14 +719,10 @@ static GtkTargetList* data_to_gtk_target_list(JNIEnv *env, jobject data)
 
     gint added_count = 0;
 
-    keys = env->CallObjectMethod(data, jMapKeySet, NULL);
-    JNI_EXCEPTION_TO_CPP(env)
-    keysIterator = env->CallObjectMethod(keys, jIterableIterator, NULL);
-    JNI_EXCEPTION_TO_CPP(env)
-    while (env->CallBooleanMethod(keysIterator, jIteratorHasNext) == JNI_TRUE) {
-        next = (jstring)env->CallObjectMethod(keysIterator, jIteratorNext, NULL);
-        JNI_EXCEPTION_TO_CPP(env)
-        add_gtk_target_from_jstring(env, &tlist, next, flags);
+    const char *key = keys;
+    for (int32_t i = 0; i < key_count; ++i) {
+        add_gtk_target_for_mime(&tlist, key, flags);
+        key += strlen(key) + 1;
     }
 
     return tlist;
@@ -633,136 +732,146 @@ static gboolean dnd_source_set_string(GtkWidget *widget, GtkSelectionData *data,
 {
     gboolean is_data_set;
 
-    jstring string = (jstring)dnd_source_get_data(widget, "text/plain");
-    if (!string) {
-        return FALSE;
-    }
-
-    const char *cstring = mainEnv->GetStringUTFChars(string, NULL);
-    if (cstring) {
-        if (atom == TARGET_MIME_TEXT_PLAIN_ATOM) {
-            gchar *res_str = g_convert((gchar *) cstring, -1, "ISO-8859-1", "UTF-8", NULL, NULL, NULL);
-            if (res_str) {
-                is_data_set = gtk_selection_data_set_text(data, res_str, strlen(res_str));
-                g_free(res_str);
-            }
-        } else {
-            gint size = strlen(cstring);
-            is_data_set = gtk_selection_data_set_text(data, (gchar *) cstring, size);
+    dnd_source_pull_t pull = glass_dnd_cb.source_get_data;
+    if (pull) {
+        // The JNI steps of commit 033187ad90, with the String's GetStringUTFChars bytes from the slot
+        GgtkDndData value;
+        dnd_source_pull(pull, "text/plain", GGTK_DND_AS_STRING, &value);
+        if (value.kind != GGTK_DND_DATA_STRING) {
+            g_free(value.data);
+            return FALSE;
         }
+
+        const char *cstring = (const char *) value.data;
+        if (cstring) {
+            if (atom == TARGET_MIME_TEXT_PLAIN_ATOM) {
+                gchar *res_str = g_convert((gchar *) cstring, -1, "ISO-8859-1", "UTF-8", NULL, NULL, NULL);
+                if (res_str) {
+                    is_data_set = gtk_selection_data_set_text(data, res_str, strlen(res_str));
+                    g_free(res_str);
+                }
+            } else {
+                gint size = strlen(cstring);
+                is_data_set = gtk_selection_data_set_text(data, (gchar *) cstring, size);
+            }
+        }
+
+        g_free(value.data);
+
+        return is_data_set;
     }
-
-    mainEnv->ReleaseStringUTFChars(string, cstring);
-
-    return is_data_set;
+    return FALSE; // no slot, no call: no data
 }
 
 static gboolean dnd_source_set_image(GtkWidget *widget, GtkSelectionData *data, GdkAtom atom)
 {
-    jobject pixels = dnd_source_get_data(widget, "application/x-java-rawimage");
-    if (!pixels) {
-        return FALSE;
+    dnd_source_pull_t pull = glass_dnd_cb.source_get_data;
+    if (pull) {
+        // The JNI steps of commit 033187ad90; Pixels.attachData ran inside the slot and wrote value.pixbuf
+        GgtkDndData value;
+        int32_t status = dnd_source_pull(pull, "application/x-java-rawimage", GGTK_DND_AS_PIXBUF, &value);
+        if (value.kind != GGTK_DND_DATA_PIXBUF) {
+            return FALSE;
+        }
+
+        GdkPixbuf *pixbuf = (GdkPixbuf *) value.pixbuf;
+        gboolean is_data_set;
+
+        if (status == GGTK_UPCALL_OK) { // EXCEPTION_OCCURED site: a throw of attachData skips the set
+            is_data_set = gtk_selection_data_set_pixbuf(data, pixbuf);
+        }
+
+        g_object_unref(pixbuf);
+
+        return is_data_set;
     }
-
-    gchar *buffer;
-    gsize size;
-    const char * type;
-    GdkPixbuf *pixbuf = NULL;
-    gboolean is_data_set;
-
-    mainEnv->CallVoidMethod(pixels, jPixelsAttachData, PTR_TO_JLONG(&pixbuf));
-
-    if (!EXCEPTION_OCCURED(mainEnv)) {
-        is_data_set = gtk_selection_data_set_pixbuf(data, pixbuf);
-    }
-
-    g_object_unref(pixbuf);
-
-    return is_data_set;
+    return FALSE; // no slot, no call: no data
 }
 
 static gboolean dnd_source_set_uri(GtkWidget *widget, GtkSelectionData *data, GdkAtom atom)
 {
-    const gchar* url = NULL;
-    jstring jurl = NULL;
+    dnd_source_pull_t pull = glass_dnd_cb.source_get_data;
+    if (pull) {
+        // The JNI steps of commit 033187ad90, in the same order: the URI string, then the file names (the
+        // String[] arrives as `count` NUL-terminated strings back to back)
+        GgtkDndData url_value;
+        GgtkDndData files_value;
+        dnd_source_pull(pull, "text/uri-list", GGTK_DND_AS_STRING, &url_value);
+        dnd_source_pull(pull, "application/x-java-file-list", GGTK_DND_AS_STRINGS, &files_value);
 
-    jobjectArray files_array = NULL;
-    gsize files_cnt = 0;
+        const gchar* url = (url_value.kind == GGTK_DND_DATA_STRING) ? (const gchar*) url_value.data : NULL;
+        gsize files_cnt = (files_value.kind == GGTK_DND_DATA_STRINGS) ? files_value.count : 0;
 
-    if (jurl = (jstring) dnd_source_get_data(widget, "text/uri-list")) {
-        url = mainEnv->GetStringUTFChars(jurl, NULL);
-    }
-
-    if (files_array = (jobjectArray) dnd_source_get_data(widget, "application/x-java-file-list")) {
-        files_cnt = mainEnv->GetArrayLength(files_array);
-    }
-
-    if (!url && !files_cnt) {
-        return FALSE;
-    }
-
-    gboolean is_data_set;
-    GString* res = g_string_new (NULL); //http://www.ietf.org/rfc/rfc2483.txt
-
-    if (files_cnt > 0) {
-        for (gsize i = 0; i < files_cnt; ++i) {
-            jstring string = (jstring) mainEnv->GetObjectArrayElement(files_array, i);
-            EXCEPTION_OCCURED(mainEnv);
-            const gchar* file = mainEnv->GetStringUTFChars(string, NULL);
-            gchar* uri = g_filename_to_uri(file, NULL, NULL);
-
-            g_string_append(res, uri);
-            g_string_append(res, URI_LIST_LINE_BREAK);
-
-            g_free(uri);
-            mainEnv->ReleaseStringUTFChars(string, file);
+        if (!url && !files_cnt) {
+            g_free(url_value.data);
+            g_free(files_value.data);
+            return FALSE;
         }
+
+        gboolean is_data_set;
+        GString* res = g_string_new (NULL); //http://www.ietf.org/rfc/rfc2483.txt
+
+        if (files_cnt > 0) {
+            const gchar* file = (const gchar*) files_value.data;
+            for (gsize i = 0; i < files_cnt; ++i) {
+                gchar* uri = g_filename_to_uri(file, NULL, NULL);
+
+                g_string_append(res, uri);
+                g_string_append(res, URI_LIST_LINE_BREAK);
+
+                g_free(uri);
+                file += strlen(file) + 1;
+            }
+        }
+        if (url) {
+            g_string_append(res, url);
+            g_string_append(res, URI_LIST_LINE_BREAK);
+        }
+        g_free(url_value.data);
+        g_free(files_value.data);
+
+        gchar *uri[2];
+        uri[0] = g_string_free(res, FALSE);
+        uri[1] = NULL;
+
+        is_data_set = gtk_selection_data_set_uris(data, uri);
+
+        g_free(uri[0]);
+
+        return is_data_set;
     }
-    if (url) {
-        g_string_append(res, url);
-        g_string_append(res, URI_LIST_LINE_BREAK);
-        mainEnv->ReleaseStringUTFChars(jurl, url);
-    }
-
-    gchar *uri[2];
-    uri[0] = g_string_free(res, FALSE);
-    uri[1] = NULL;
-
-    is_data_set = gtk_selection_data_set_uris(data, uri);
-
-    g_free(uri[0]);
-
-    return is_data_set;
+    return FALSE; // no slot, no call: no data
 }
 
 static gboolean dnd_source_set_raw(GtkWidget *widget, GtkSelectionData *sel_data, GdkAtom atom)
 {
-    gchar *target_name = gdk_atom_name(atom);
-    jobject data = dnd_source_get_data(widget, target_name);
-    gboolean is_data_set = FALSE;
-    if (data) {
-        if (mainEnv->IsInstanceOf(data, jStringCls)) {
-            const char *cstring = mainEnv->GetStringUTFChars((jstring)data, NULL);
+    dnd_source_pull_t pull = glass_dnd_cb.source_get_data;
+    if (pull) {
+        // The JNI steps of commit 033187ad90: a String is set as text, a ByteBuffer's whole backing array as
+        // format-8 data
+        gchar *target_name = gdk_atom_name(atom);
+        GgtkDndData value;
+        int32_t status = dnd_source_pull(pull, target_name, GGTK_DND_AS_RAW, &value);
+        gboolean is_data_set = FALSE;
+        if (value.kind == GGTK_DND_DATA_STRING) {
+            const char *cstring = (const char *) value.data;
             if (cstring) {
                 is_data_set = gtk_selection_data_set_text(sel_data, (gchar *) cstring, strlen(cstring));
-                mainEnv->ReleaseStringUTFChars((jstring)data, cstring);
             }
-        } else if (mainEnv->IsInstanceOf(data, jByteBufferCls)) {
-            jbyteArray byteArray = (jbyteArray)mainEnv->CallObjectMethod(data, jByteBufferArray);
-            if (!EXCEPTION_OCCURED(mainEnv)) {
-                jbyte* raw = mainEnv->GetByteArrayElements(byteArray, NULL);
-                if (raw) {
-                    jsize nraw = mainEnv->GetArrayLength(byteArray);
-                    gtk_selection_data_set(sel_data, atom, 8, (guchar *) raw, nraw);
-                    mainEnv->ReleaseByteArrayElements(byteArray, raw, JNI_ABORT);
-                    is_data_set = TRUE;
-                }
+        } else if (value.kind == GGTK_DND_DATA_BYTES && status == GGTK_UPCALL_OK) {
+            // EXCEPTION_OCCURED site: a throw of ByteBuffer.array() sets nothing
+            guchar *raw = (guchar *) value.data;
+            if (raw) {
+                gtk_selection_data_set(sel_data, atom, 8, raw, value.count);
+                is_data_set = TRUE;
             }
         }
-    }
 
-    g_free(target_name);
-    return is_data_set;
+        g_free(value.data);
+        g_free(target_name);
+        return is_data_set;
+    }
+    return FALSE; // no slot, no call: no data
 }
 
 static gboolean dnd_destroy_drag_widget_callback(gpointer) {
@@ -790,7 +899,7 @@ static gboolean dnd_drag_failed_callback(GtkWidget *widget,
                                      GtkDragResult result,
                                      gpointer user_data)
 {
-    dnd_set_performed_action(com_sun_glass_ui_gtk_GtkDnDClipboard_ACTION_NONE);
+    dnd_set_performed_action(com_sun_glass_ui_Clipboard_ACTION_NONE);
     gdk_threads_add_idle((GSourceFunc) dnd_destroy_drag_widget_callback, NULL);
 
     return FALSE;
@@ -823,13 +932,11 @@ static void dnd_drag_begin_callback(GtkWidget *widget,
     DragView::set_drag_view(widget, context);
 }
 
-static void dnd_source_push_data(JNIEnv *env, jobject data, jint supported)
+static void dnd_source_push_data(const char *keys, int32_t key_count, int32_t supported)
 {
     if (supported == 0) {
         return; // No supported actions, do nothing
     }
-
-    data = env->NewGlobalRef(data);
 
     GdkDragAction actions = translate_glass_action_to_gdk(supported);
 
@@ -839,8 +946,6 @@ static void dnd_source_push_data(JNIEnv *env, jobject data, jint supported)
     gtk_window_resize(GTK_WINDOW(drag_widget), 1, 1);
     gtk_window_move(GTK_WINDOW(drag_widget), -200, -200);
     gtk_widget_show(drag_widget);
-
-    g_object_set_data_full(G_OBJECT(drag_widget), SOURCE_DND_DATA, data, clear_global_ref);
 
     g_signal_connect(drag_widget, "drag-begin",
         G_CALLBACK(dnd_drag_begin_callback), NULL);
@@ -854,7 +959,7 @@ static void dnd_source_push_data(JNIEnv *env, jobject data, jint supported)
     g_signal_connect(drag_widget, "drag-end",
         G_CALLBACK(dnd_end_callback), NULL);
 
-    GtkTargetList *tlist = data_to_gtk_target_list(env, data);
+    GtkTargetList *tlist = data_to_gtk_target_list(keys, key_count);
 
     GdkDragContext *context;
 
@@ -868,14 +973,12 @@ static void dnd_source_push_data(JNIEnv *env, jobject data, jint supported)
     gtk_target_list_unref(tlist);
 }
 
-jint execute_dnd(JNIEnv *env, jobject data, jint supported)
+// execute_dnd of commit 033187ad90 (glass_dnd.cpp), which GtkDnDClipboard.pushToSystemImpl now reaches through
+// GtkGlassNative. Its catch (jni_exception&) - a throw of the JNI walk of the data map's keys - has no source any
+// more: Java walks the keys before the call (see glass_gtk_api.h).
+extern "C" int32_t ggtk_dnd_push_to_system(const char* keys, int32_t key_count, int32_t supported)
 {
-    try {
-        dnd_source_push_data(env, data, supported);
-    } catch (jni_exception&) {
-        gdk_threads_add_idle((GSourceFunc) dnd_destroy_drag_widget_callback, NULL);
-        return com_sun_glass_ui_gtk_GtkDnDClipboard_ACTION_NONE;
-    }
+    dnd_source_push_data(keys, key_count, supported);
 
     while (is_in_drag()) {
         gtk_main_iteration();
@@ -890,22 +993,24 @@ jint execute_dnd(JNIEnv *env, jobject data, jint supported)
  gboolean DragView::get_drag_image_offset(GtkWidget *widget, int* x, int* y)
  {
     gboolean offset_set = FALSE;
-    jobject bb = dnd_source_get_data(widget, "application/x-java-drag-image-offset");
-    if (bb) {
-        jbyteArray byteArray = (jbyteArray)mainEnv->CallObjectMethod(bb, jByteBufferArray);
-        if (!EXCEPTION_OCCURED(mainEnv)) {
-            jbyte* raw = mainEnv->GetByteArrayElements(byteArray, NULL);
-            jsize nraw = mainEnv->GetArrayLength(byteArray);
 
-            if ((size_t) nraw >= sizeof(jint) * 2) {
-                jint* r = (jint*) raw;
+    dnd_source_pull_t pull = glass_dnd_cb.source_get_data;
+    if (pull) {
+        // The JNI steps of commit 033187ad90, with the ByteBuffer's whole backing array from the slot
+        GgtkDndData value;
+        int32_t status = dnd_source_pull(pull, "application/x-java-drag-image-offset", GGTK_DND_AS_BYTES,
+                &value);
+        if (value.kind == GGTK_DND_DATA_BYTES && status == GGTK_UPCALL_OK) { // EXCEPTION_OCCURED site
+            const int32_t* r = (const int32_t*) value.data;
+            int32_t nraw = value.count;
+
+            if ((size_t) nraw >= sizeof(int32_t) * 2) {
                 *x = BSWAP_32(r[0]);
                 *y = BSWAP_32(r[1]);
                 offset_set = TRUE;
             }
-
-            mainEnv->ReleaseByteArrayElements(byteArray, raw, JNI_ABORT);
         }
+        g_free(value.data);
     }
     return offset_set;
 }
@@ -915,20 +1020,20 @@ GdkPixbuf* DragView::get_drag_image(GtkWidget *widget, gboolean* is_raw_image, g
     GdkPixbuf *pixbuf = NULL;
     gboolean is_raw = FALSE;
 
-    jobject drag_image = dnd_source_get_data(widget, "application/x-java-drag-image");
-
-    if (drag_image) {
-        jbyteArray byteArray = (jbyteArray) mainEnv->CallObjectMethod(drag_image, jByteBufferArray);
-        if (!EXCEPTION_OCCURED(mainEnv)) {
-
-            jbyte* raw = mainEnv->GetByteArrayElements(byteArray, NULL);
-            jsize nraw = mainEnv->GetArrayLength(byteArray);
+    dnd_source_pull_t pull = glass_dnd_cb.source_get_data;
+    if (pull) {
+        // The JNI steps of commit 033187ad90, with the ByteBuffer's whole backing array from the slot
+        GgtkDndData value;
+        int32_t status = dnd_source_pull(pull, "application/x-java-drag-image", GGTK_DND_AS_BYTES, &value);
+        if (value.kind == GGTK_DND_DATA_BYTES && status == GGTK_UPCALL_OK) { // EXCEPTION_OCCURED site
+            const guchar* raw = (const guchar*) value.data;
+            int32_t nraw = value.count;
 
             int w = 0, h = 0;
-            int whsz = sizeof(jint) * 2; // Pixels are stored right after two ints
+            int whsz = sizeof(int32_t) * 2; // Pixels are stored right after two ints
             // in this byteArray: width and height
             if (nraw > whsz) {
-                jint* int_raw = (jint*) raw;
+                const int32_t* int_raw = (const int32_t*) raw;
                 w = BSWAP_32(int_raw[0]);
                 h = BSWAP_32(int_raw[1]);
 
@@ -952,16 +1057,21 @@ GdkPixbuf* DragView::get_drag_image(GtkWidget *widget, gboolean* is_raw_image, g
                     }
                 }
             }
-            mainEnv->ReleaseByteArrayElements(byteArray, raw, JNI_ABORT);
         }
+        g_free(value.data);
     }
 
-    if (!GDK_IS_PIXBUF(pixbuf)) {
-        jobject pixels = dnd_source_get_data(widget, "application/x-java-rawimage");
-        if (pixels) {
+    if (!GDK_IS_PIXBUF(pixbuf) && pull) {
+        // The fallback of the JNI steps of commit 033187ad90; Pixels.attachData ran inside the slot and wrote
+        // value.pixbuf
+        GgtkDndData value;
+        int32_t status = dnd_source_pull(pull, "application/x-java-rawimage", GGTK_DND_AS_PIXBUF, &value);
+        if (value.kind == GGTK_DND_DATA_PIXBUF) {
             is_raw = TRUE;
-            mainEnv->CallVoidMethod(pixels, jPixelsAttachData, PTR_TO_JLONG(&pixbuf));
-            CHECK_JNI_EXCEPTION_RET(mainEnv, NULL)
+            pixbuf = (GdkPixbuf *) value.pixbuf;
+            if (status != GGTK_UPCALL_OK) { // CHECK_JNI_EXCEPTION_RET site
+                return NULL;
+            }
         }
     }
 

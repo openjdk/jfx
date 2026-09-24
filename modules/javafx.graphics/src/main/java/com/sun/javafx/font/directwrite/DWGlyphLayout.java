@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -53,28 +53,34 @@ public class DWGlyphLayout extends GlyphLayout {
 
         int dir = (level & 1) != 0 ? OS.DWRITE_READING_DIRECTION_RIGHT_TO_LEFT :
                                      OS.DWRITE_READING_DIRECTION_LEFT_TO_RIGHT;
-        JFXTextAnalysisSink sink = OS.NewJFXTextAnalysisSink(chars, start, length, LOCALE, dir);
+        JFXTextAnalysisSink sink = JFXTextAnalysisSink.create(chars, start, length, LOCALE, dir);
         if (sink == null) {
+            analyzer.Release();
             return new TextRun(start, length, level, false, 0, span, 0, false);
         }
         sink.AddRef();
 
         TextRun textRun = null;
-        int hr = analyzer.AnalyzeScript(sink, 0, length, sink);
-        if (hr == OS.S_OK) {
-            while (sink.Next()) {
-                int runStart = sink.GetStart();
-                int runLength = sink.GetLength();
-                DWRITE_SCRIPT_ANALYSIS analysis = sink.GetAnalysis();
-                textRun = new TextRun(start + runStart, runLength, level, true,
-                                      analysis.script, span,
-                                      analysis.shapes, false);
-                layout.addTextRun(textRun);
+        try {
+            int hr = analyzer.AnalyzeScript(sink, 0, length, sink);
+            if (hr == OS.S_OK) {
+                while (sink.Next()) {
+                    int runStart = sink.GetStart();
+                    int runLength = sink.GetLength();
+                    DWRITE_SCRIPT_ANALYSIS analysis = sink.GetAnalysis();
+                    textRun = new TextRun(start + runStart, runLength, level, true,
+                                          analysis.script, span,
+                                          analysis.shapes, false);
+                    layout.addTextRun(textRun);
+                }
             }
+        } finally {
+            analyzer.Release();
+            /* The C++ sink deleted itself at refcount zero; this one owns a confined arena that
+             * only this thread can close, so the release must be followed by a dispose. */
+            sink.Release();
+            sink.dispose();
         }
-
-        analyzer.Release();
-        sink.Release();
         return textRun;
     }
 
@@ -358,37 +364,49 @@ public class DWGlyphLayout extends GlyphLayout {
         int length = run.getLength();
         IDWriteTextLayout layout = factory.CreateTextLayout(text, start, length, format, 100000, 100000);
         if (layout != null) {
-            JFXTextRenderer renderer = OS.NewJFXTextRenderer();
+            JFXTextRenderer renderer = JFXTextRenderer.create();
             if (renderer != null) {
-                renderer.AddRef();
+                int glyphCount;
+                int[] glyphs;
+                float[] advances;
+                float[] offsets;
+                short[] clusterMap;
+                try {
+                    renderer.AddRef();
 
-                /* Use renderer to produce glyph information */
-                layout.Draw(0, renderer, 0, 0);
+                    /* Use renderer to produce glyph information */
+                    layout.Draw(0, renderer, 0, 0);
 
-                /* Read data from renderer */
-                int glyphCount = renderer.GetTotalGlyphCount();
-                int[] glyphs = new int[glyphCount];
-                float[] advances = new float[glyphCount];
-                float[] offsets = new float[glyphCount * 2];
-                short[] clusterMap = new short[length];
-                int glyphStart = 0;
-                int textStart = 0;
-                while (renderer.Next()) {
-                    IDWriteFontFace fallback = renderer.GetFontFace();
-                    int slot = getFontSlot(fallback, composite, fullName, baseSlot);
-                    if (slot >= 0) {
-                        renderer.GetGlyphIndices(glyphs, glyphStart, slot << 24);
-                        renderer.GetGlyphOffsets(offsets, glyphStart * 2);
+                    /* Read data from renderer */
+                    glyphCount = renderer.GetTotalGlyphCount();
+                    glyphs = new int[glyphCount];
+                    advances = new float[glyphCount];
+                    offsets = new float[glyphCount * 2];
+                    clusterMap = new short[length];
+                    int glyphStart = 0;
+                    int textStart = 0;
+                    while (renderer.Next()) {
+                        IDWriteFontFace fallback = renderer.GetFontFace();
+                        int slot = getFontSlot(fallback, composite, fullName, baseSlot);
+                        if (slot >= 0) {
+                            renderer.GetGlyphIndices(glyphs, glyphStart, slot << 24);
+                            renderer.GetGlyphOffsets(offsets, glyphStart * 2);
+                        }
+                        if (size > 0) {
+                            /* Keep advances to zero if font size is zero */
+                            renderer.GetGlyphAdvances(advances, glyphStart);
+                        }
+                        renderer.GetClusterMap(clusterMap, textStart, glyphStart);
+                        glyphStart += renderer.GetGlyphCount();
+                        textStart += renderer.GetLength();
                     }
-                    if (size > 0) {
-                        /* Keep advances to zero if font size is zero */
-                        renderer.GetGlyphAdvances(advances, glyphStart);
-                    }
-                    renderer.GetClusterMap(clusterMap, textStart, glyphStart);
-                    glyphStart += renderer.GetGlyphCount();
-                    textStart += renderer.GetLength();
+                } finally {
+                    /* The C++ renderer deleted itself at refcount zero; this one owns a confined
+                     * arena that only this thread can close, so the release must be followed by a
+                     * dispose. Everything above has already been copied into the arrays. */
+                    renderer.Release();
+                    renderer.dispose();
                 }
-                renderer.Release();
 
                 /* Converting data to be used by the JavaFX run */
                 boolean rtl = !run.isLeftToRight();

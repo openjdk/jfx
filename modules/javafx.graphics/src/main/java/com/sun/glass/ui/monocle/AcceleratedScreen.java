@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -181,6 +181,18 @@ public class AcceleratedScreen {
      *
      */
     protected long getEGLHandle() { return eglLibraryHandle; }
+
+    /**
+     * The address of the GL entry point {@code name} in the library {@code handle} that
+     * {@link #initPlatformLibraries} opened, or in the global scope of the process when {@code handle} is 0:
+     * {@code dlsym(RTLD_DEFAULT, name)}, the fallback of MonocleGLFactory.c of commit 21d5a654f6. The loader
+     * the Monocle GL factory hands to {@code ES2Native.contextAdopt}.
+     *
+     * @return the address, or 0 when the symbol is not found
+     */
+    public static long lookupGLProc(long handle, String name) {
+        return ls.dlsym(handle, name);
+    }
 
     /** Copy the contents of the GL backbuffer to the screen
      *

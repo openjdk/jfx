@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -820,15 +820,6 @@ public abstract class Application {
      * and if so, emits a warning.
      */
     public void checkPlatformPreferencesSupport() {}
-
-    private static native void _overrideNativeWindowHandle(Class lwFrameWrapperClass,
-                                                           Object frame,
-                                                           long handle, Runnable closeWindow);
-
-    public static void overrideNativeWindowHandle(Class lwFrameWrapperClass, Object frame,
-                                                  long handle, Runnable closeWindow) {
-        _overrideNativeWindowHandle(lwFrameWrapperClass, frame, handle, closeWindow);
-    }
 
     public void showDocument(String uri) {
         _showDocument(uri);

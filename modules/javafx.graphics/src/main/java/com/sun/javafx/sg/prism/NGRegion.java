@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1102,7 +1102,8 @@ public class NGRegion extends NGGroup {
                 // This is a workaround for JDK-8087965 so we use path rasterizer for small radius's We are
                 // keeping old rendering. We do not apply workaround when using Caspian or Embedded
                 if (radii.isUniform() &&
-                        !(!PlatformImpl.isCaspian() && !(PlatformUtil.isEmbedded() || PlatformUtil.isIOS()) && radii.getTopLeftHorizontalRadius() > 0 && radii.getTopLeftHorizontalRadius() <= 4)) {
+                        !(!PlatformImpl.isCaspian() && !PlatformUtil.isEmbedded() &&
+                          radii.getTopLeftHorizontalRadius() > 0 && radii.getTopLeftHorizontalRadius() <= 4)) {
                     // If the radii is uniform then we know every corner matches, so we can do some
                     // faster rendering paths.
                     float tlhr = (float) radii.getTopLeftHorizontalRadius();

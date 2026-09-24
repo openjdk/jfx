@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,17 +46,17 @@ public class FTFactory extends PrismFontFactory {
     public static PrismFontFactory getFactory() {
         PrismFontFactory factory = null;
         long[] ptr = new long[1];
-        int error = OSFreetype.FT_Init_FreeType(ptr);
+        int error = FTNative.FT_Init_FreeType(ptr);
         long library = ptr[0];
         int[] major = new int[1], minor = new int[1], patch = new int[1];
         if (error == 0) {
             factory = new FTFactory();
-            OSFreetype.FT_Library_Version(library, major, minor, patch);
+            FTNative.FT_Library_Version(library, major, minor, patch);
 
             /* This implementation only supports LCD if freetype has support. */
-            error = OSFreetype.FT_Library_SetLcdFilter(library, OSFreetype.FT_LCD_FILTER_DEFAULT);
+            error = FTNative.FT_Library_SetLcdFilter(library, FTNative.FT_LCD_FILTER_DEFAULT);
             LCD_SUPPORT = error == 0;
-            OSFreetype.FT_Done_FreeType(library);
+            FTNative.FT_Done_FreeType(library);
         }
         if (PrismFontFactory.debugFonts) {
             if (factory != null) {
@@ -85,10 +85,10 @@ public class FTFactory extends PrismFontFactory {
 
     @Override
     public GlyphLayout createGlyphLayout() {
-        if (OSFreetype.isPangoEnabled()) {
+        if (FTNative.isPangoEnabled()) {
             return new PangoGlyphLayout();
         }
-        if (OSFreetype.isHarfbuzzEnabled()) {
+        if (FTNative.isHarfbuzzEnabled()) {
             return new HBGlyphLayout();
         }
         return new FTStubGlyphLayout();
@@ -102,19 +102,21 @@ public class FTFactory extends PrismFontFactory {
     @Override
     protected boolean registerEmbeddedFont(String path) {
         long[] ptr = new long[1];
-        int error = OSFreetype.FT_Init_FreeType(ptr);
+        int error = FTNative.FT_Init_FreeType(ptr);
         if (error != 0) return false;
         long library = ptr[0];
         byte[] buffer = (path+"\0").getBytes();
-        error = OSFreetype.FT_New_Face(library, buffer, 0, ptr);
-        if (error != 0) {
-            long face = ptr[0];
-            OSFreetype.FT_Done_Face(face);
-        }
-        OSFreetype.FT_Done_FreeType(library);
+        error = FTNative.FT_New_Face(library, buffer, 0, ptr);
+        /* FT_New_Face stores a face in its out parameter only when it
+         * returns 0, and on an error it has already released everything it
+         * allocated: there is no face to pass to FT_Done_Face, and ptr[0]
+         * still holds the library. A face that was created is released
+         * with its library by FT_Done_FreeType.
+         */
+        FTNative.FT_Done_FreeType(library);
         if (error != 0) return false;
-        if (OSFreetype.isPangoEnabled()) {
-            return OSPango.FcConfigAppFontAddFile(0, path);
+        if (FTNative.isPangoEnabled()) {
+            return PangoNative.FcConfigAppFontAddFile(0, path);
         }
         return true;
     }

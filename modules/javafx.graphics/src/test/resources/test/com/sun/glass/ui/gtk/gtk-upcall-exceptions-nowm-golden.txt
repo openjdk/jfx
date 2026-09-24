@@ -1,0 +1,200 @@
+# GTK glass boundary trace golden: gtk-upcall-exceptions
+# Every call the GTK glass event code (glass_window.cpp, glass_window_ime.cpp, glass_dnd.cpp,
+# GlassView.cpp, glass_screen.cpp, glass_general.cpp) made across the C -> Java boundary for the
+# scripted scenario, captured from the JNI build of commit 033187ad90 and normalised
+# by the RULES of the test class. For an X server without a window manager; machine-specific:
+# compared only where every machine.* key matches, elsewhere skipped, or failed under
+# -Djfx.parity.require=true.
+# Capture: -Djfx.gtk.trace.capture=true on the JNI build (refused elsewhere);
+# overwrite: add -Djfx.gtk.trace.regenerate=true.
+# Lines as in the event trace; '!throws' marks the recorded call that threw into the C, 'reported'
+# what Application.reportException delivered to the FX thread's uncaught-exception handler.
+machine.compositing=supports=1 composited=0
+machine.depth=24
+machine.env.GDK_BACKEND=unset
+machine.env.GDK_DPI_SCALE=unset
+machine.env.GDK_SCALE=unset
+machine.env.GTK_IM_MODULE=unset
+machine.env.XMODIFIERS=unset
+machine.gtk=3.24.52
+machine.libgdk3=47bb58ca25405353b0546b932ddc5a92e74ee006a1904e4d0eca3df162ddd562
+machine.libgtk3=8dc29a8cc4eabd2f08316dbb74bb585a2738aba4e4895450487d736792eda425
+machine.monitors=1
+machine.resolution=96.0
+machine.scale=1.0x1.0
+machine.screen=1920x1080
+machine.windowManager=unknown
+machine.xkb=evdev|pc105|us
+machine.xserver=The X.Org Foundation 12101022
+capture.java=OpenJDK 64-Bit Server VM 25.0.4
+capture.jniEntryPoints=6/6
+--- trace
+== create and show w1 with v1 at 100,100 300x200, w2 with v2 at 600,100 300x200
+v1.view ADD
+v1.view MOVE at 0,0
+w1.notifyResize 511 300 200
+w1.handler RESIZE
+v1.view RESIZE 300x200
+w1.notifyMove 100 100
+w1.handler MOVE
+v1.view MOVE at 0,0
+w1.isEnabled=true
+w1.notifyFocus 542
+w1.handler FOCUS_GAINED
+v1.view MOVE at 0,0
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.notifyResize 511 300 200
+w1.handler RESIZE
+w1.notifyMove 100 100
+w1.handler MOVE
+v1.view MOVE at 0,0
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+v2.view ADD
+v2.view MOVE at 0,0
+w2.notifyResize 511 300 200
+w2.handler RESIZE
+v2.view RESIZE 300x200
+w2.notifyMove 600 100
+w2.handler MOVE
+v2.view MOVE at 0,0
+w2.isEnabled=true
+w2.notifyFocus 542
+w2.handler FOCUS_GAINED
+v2.view MOVE at 0,0
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.notifyResize 511 300 200
+w2.handler RESIZE
+w2.notifyMove 600 100
+w2.handler MOVE
+v2.view MOVE at 0,0
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w1.isEnabled=true
+w1.notifyFocus 542
+v1.view REPAINT
+v2.view REPAINT
+== setPosition with notifyMove throwing
+w1.notifyResize 511 300 200
+w1.handler RESIZE
+w1.notifyMove 150 130 !throws
+reported ArmedException: "armed w1.notifyMove 150 130"
+w1.notifyResize 511 300 200
+w1.handler RESIZE
+w1.notifyMove 150 130
+w1.handler MOVE
+v1.view MOVE at 0,0
+== pointer into v1 with isEnabled throwing
+w1.isEnabled=true !throws
+reported ArmedException: "armed w1.isEnabled=true"
+w1.isEnabled=true
+v1.mouse ENTER BUTTON_NONE 51,70 201,200 mods=0x0 popup=false synth=false
+v1.mouse MOVE BUTTON_NONE 51,70 201,200 mods=0x0 popup=false synth=false
+== setSize with w1.notifyResize throwing twice (set_bounds, then process_configure)
+w1.notifyResize 511 320 220 !throws
+reported ArmedException: "armed w1.notifyResize 511 320 220"
+w1.notifyResize 511 320 220 !throws
+reported ArmedException: "armed w1.notifyResize 511 320 220"
+v1.view REPAINT
+== focus to w2 with w1's notifyFocus throwing
+w1.notifyFocus 541 !throws
+reported ArmedException: "armed w1.notifyFocus 541"
+w2.isEnabled=true
+w2.notifyFocus 542
+== close request with notifyClose throwing
+w1.isEnabled=true
+w1.isEnabled=true
+w1.notifyClose !throws
+reported ArmedException: "armed w1.notifyClose"
+w1.isEnabled=true
+== right button with DOWN throwing
+w2.notifyFocus 541
+w2.handler FOCUS_LOST
+w1.isEnabled=true
+w1.notifyFocus 542
+w1.isEnabled=true
+v1.mouse DOWN BUTTON_RIGHT 51,70 201,200 mods=0x40 popup=true synth=false !throws
+reported ArmedException: "armed v1.mouse DOWN BUTTON_RIGHT 51,70 201,200 mods=0x40 popup=true synth=false"
+w1.isEnabled=true
+w1.isEnabled=true
+v1.mouse UP BUTTON_RIGHT 51,70 201,200 mods=0x0 popup=false synth=false
+== key a with PRESS throwing
+w1.isEnabled=true
+v1.key PRESS 0x41 chars=[61] mods=0x0 !throws
+reported ArmedException: "armed v1.key PRESS 0x41 chars=[61] mods=0x0"
+w1.isEnabled=true
+w1.isEnabled=true
+v1.key RELEASE 0x41 chars=[61] mods=0x0
+== w2 view swap v2 -> v2b with v2's EXIT throwing (set_view does not test it)
+w1.isEnabled=true
+v1.mouse EXIT BUTTON_NONE 550,70 700,200 mods=0x0 popup=false synth=false
+w2.isEnabled=true
+v2.mouse ENTER BUTTON_NONE 100,100 700,200 mods=0x0 popup=false synth=false
+w2.isEnabled=true
+v2.mouse MOVE BUTTON_NONE 100,100 700,200 mods=0x0 popup=false synth=false
+v2.view REMOVE
+v2.view MOVE
+v2.mouse EXIT BUTTON_NONE 0,0 0,0 mods=0x0 popup=false synth=false !throws
+# threw ArmedException out of Window.setView: armed v2.mouse EXIT BUTTON_NONE 0,0 0,0 mods=0x0 popup=false synth=false
+# the window's view is v2b: false
+== w2 view swap -> v2c with v2c's ADD throwing (GtkView._setParent tests it)
+v2.view ADD
+v2.view MOVE
+v2b.mouse EXIT BUTTON_NONE 0,0 0,0 mods=0x0 popup=false synth=false
+v2c.view ADD !throws
+reported ArmedException: "armed v2c.view ADD"
+# setView returned
+# the window's view is v2c: true
+== _NET_WORKAREA set with Screen.notifySettingsChanged throwing, then removed
+screen.handleSettingsChanged !throws
+reported ArmedException: "armed screen.handleSettingsChanged"
+screen.handleSettingsChanged
+== close w2 with notifyDestroy throwing, then w1
+v2c.mouse EXIT BUTTON_NONE 0,0 0,0 mods=0x0 popup=false synth=false
+v2c.view REMOVE
+v2c.view MOVE
+w2.notifyDestroy !throws
+reported ArmedException: "armed w2.notifyDestroy"
+v1.mouse EXIT BUTTON_NONE 0,0 0,0 mods=0x0 popup=false synth=false
+v1.view REMOVE
+v1.view MOVE
+w1.notifyDestroy
+w1.handler DESTROY

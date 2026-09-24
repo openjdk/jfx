@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,8 @@
 #include "CommonDialogs_COM.h"
 #include "CommonDialogs_Standard.h"
 #include "BaseWnd.h"
+#include "GlassStringBlock.h"
+#include "glass_win_api.h"
 
 class CommonDialogOwner {
     private:
@@ -50,83 +52,61 @@ class CommonDialogOwner {
 };
 
 /*
- * JNI methods section
+ * ---- The exports of glass_win_api.h's common-dialog section ----
  *
+ * Not marshalled (the dialogs run a modal loop on the calling thread, as the former JNI entry points
+ * did); the CommonDialogOwner marking and the Vista / legacy switch are what those entry points did
+ * around the show functions. C linkage comes from glass_win_api.h.
  */
 
-extern "C" {
-
-/*
- * Class:     com_sun_glass_ui_win_WinCommonDialogs
- * Method:    _initIDs
- * Signature: ()V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinCommonDialogs__1initIDs
-    (JNIEnv *env, jclass cls)
+int32_t gwin_dialog_file(void* owner, const uint16_t* folder, const uint16_t* filename, const uint16_t* title,
+                         int32_t type, int32_t multiple, const GwinFileFilter* filters, int32_t filter_count,
+                         int32_t default_filter_index,
+                         uint16_t** out_files, int32_t* out_count, int32_t* out_filter_index)
 {
-    cls = env->FindClass("com/sun/glass/ui/CommonDialogs");
-    ASSERT(cls);
-    if (env->ExceptionCheck()) return;
+    if (out_files == NULL || out_count == NULL || out_filter_index == NULL) {
+        return GWIN_DIALOG_FAILED;
+    }
+    *out_files = NULL;
+    *out_count = 0;
+    *out_filter_index = 0;
+    try {
+        CommonDialogOwner cdo((HWND) owner);
 
-    javaIDs.CommonDialogs.createFileChooserResult = env->GetStaticMethodID(cls,
-            "createFileChooserResult",
-            "([Ljava/lang/String;[Lcom/sun/glass/ui/CommonDialogs$ExtensionFilter;I)Lcom/sun/glass/ui/CommonDialogs$FileChooserResult;");
-    ASSERT(javaIDs.CommonDialogs.createFileChooserResult);
-    if (env->ExceptionCheck()) return;
-
-    cls = env->FindClass("com/sun/glass/ui/CommonDialogs$ExtensionFilter");
-    ASSERT(cls);
-    if (env->ExceptionCheck()) return;
-
-    javaIDs.CommonDialogs.ExtensionFilter.getDescription = env->GetMethodID(cls,
-                                         "getDescription", "()Ljava/lang/String;");
-    ASSERT(javaIDs.CommonDialogs.ExtensionFilter.getDescription);
-    if (env->ExceptionCheck()) return;
-
-    javaIDs.CommonDialogs.ExtensionFilter.extensionsToArray = env->GetMethodID(cls,
-                                         "extensionsToArray", "()[Ljava/lang/String;");
-    ASSERT(javaIDs.CommonDialogs.ExtensionFilter.extensionsToArray);
-    if (env->ExceptionCheck()) return;
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinCommonDialogs
- * Method:    _showFileChooser
- * Signature: (JLjava/lang/String;Ljava/lang/String;Ljava/lang/String;IZ[Lcom/sun/glass/ui/CommonDialogs$ExtensionFilter;)Lcom/sun/glass/ui/CommonDialogs$FileChooserResult;
- */
-JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_win_WinCommonDialogs__1showFileChooser
-  (JNIEnv *env, jobject jThis, jlong owner, jstring jFolder, jstring jFilename, jstring jTitle, jint type,
-        jboolean multipleMode, jobjectArray jFilters, jint defaultFilterIndex)
-{
-    CommonDialogOwner cdo((HWND)jlong_to_ptr(owner));
-    JString folder(env, jFolder);
-    JString filename(env, jFilename);
-    JString title(env, jTitle);
-
-    if (IS_WINVISTA) {
-        return COMFileChooser_Show((HWND)jlong_to_ptr(owner), folder, filename, title, type, multipleMode, jFilters, defaultFilterIndex);
-    } else {
-        return StandardFileChooser_Show((HWND)jlong_to_ptr(owner), folder, filename, title, type, multipleMode, jFilters, defaultFilterIndex);
+        if (IS_WINVISTA) {
+            return COMFileChooser_Show((HWND) owner, reinterpret_cast<LPCWSTR>(folder),
+                                       reinterpret_cast<LPCWSTR>(filename), reinterpret_cast<LPCWSTR>(title),
+                                       type, multiple, filters, filter_count, default_filter_index,
+                                       out_files, out_count, out_filter_index);
+        } else {
+            return StandardFileChooser_Show((HWND) owner, reinterpret_cast<LPCWSTR>(folder),
+                                            reinterpret_cast<LPCWSTR>(filename), reinterpret_cast<LPCWSTR>(title),
+                                            type, multiple, filters, filter_count, default_filter_index,
+                                            out_files, out_count, out_filter_index);
+        }
+    } catch (...) {
+        return GWIN_DIALOG_FAILED;
     }
 }
 
-/*
- * Class:     com_sun_glass_ui_win_WinCommonDialogs
- * Method:    _showFolderChooser
- * Signature: (JLjava/lang/String;Ljava/lang/String;)Ljava/lang/String;
- */
-JNIEXPORT jstring JNICALL Java_com_sun_glass_ui_win_WinCommonDialogs__1showFolderChooser
-  (JNIEnv *env, jclass cls, jlong owner, jstring jFolder, jstring jTitle)
+int32_t gwin_dialog_folder(void* owner, const uint16_t* folder, const uint16_t* title, uint16_t** out_path)
 {
-    CommonDialogOwner cdo((HWND)jlong_to_ptr(owner));
-    JString folder(env, jFolder);
-    JString title(env, jTitle);
+    if (out_path == NULL) {
+        return GWIN_DIALOG_FAILED;
+    }
+    *out_path = NULL;
+    try {
+        CommonDialogOwner cdo((HWND) owner);
 
-    if (IS_WINVISTA) {
-        return COMFolderChooser_Show((HWND)jlong_to_ptr(owner), folder, title);
-    } else {
-        return StandardFolderChooser_Show((HWND)jlong_to_ptr(owner), folder, title);
+        if (IS_WINVISTA) {
+            return COMFolderChooser_Show((HWND) owner, reinterpret_cast<LPCWSTR>(folder),
+                                         reinterpret_cast<LPCWSTR>(title), out_path);
+        } else {
+            return StandardFolderChooser_Show((HWND) owner, reinterpret_cast<LPCWSTR>(folder),
+                                              reinterpret_cast<LPCWSTR>(title), out_path);
+        }
+    } catch (...) {
+        return GWIN_DIALOG_FAILED;
     }
 }
 
-}   // extern "C"

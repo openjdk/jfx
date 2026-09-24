@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -263,10 +263,13 @@ final class TokenStorage {
         }
     }
 
-    // called from native
-    private static void storeTokenFromNative(String oldToken,
-                                             String newToken,
-                                             int[] allowedScreenBounds) {
+    // called from native: the target of the token callback table of
+    // native-glass/gtk/screencast_api.h, which the C dials when the portal
+    // answers a Start request. At commit 033187ad90 it was reached through
+    // JNI, which ignores access.
+    static void storeTokenFromNative(String oldToken,
+                                     String newToken,
+                                     int[] allowedScreenBounds) {
         if (SCREENCAST_DEBUG) {
             System.out.printf("// storeToken old: |%s| new |%s| " +
                             "allowed bounds %s\n",

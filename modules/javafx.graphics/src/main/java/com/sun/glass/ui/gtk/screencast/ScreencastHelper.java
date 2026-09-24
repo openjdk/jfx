@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -91,14 +91,32 @@ public final class ScreencastHelper {
         return IS_NATIVE_LOADED;
     }
 
-    private static native boolean loadPipewire(int method, boolean isDebug);
+    /**
+     * What {@code Java_com_sun_glass_ui_gtk_screencast_ScreencastHelper_loadPipewire} of
+     * {@code native-glass/gtk/screencast_pipewire.c} did at commit {@code 033187ad90}, function for function: the
+     * PipeWire library and its symbols, then the restore-token target - a class reference and a method id there,
+     * the callback table of {@code native-glass/gtk/screencast_api.h} here - and only then the probe of the
+     * xdg-desktop-portal. A failure of either of the first two answers {@code false} without touching the portal.
+     */
+    private static boolean loadPipewire(int method, boolean isDebug) {
+        if (!ScreencastNative.loadPipewire(method, isDebug)) {
+            return false;
+        }
 
-    private static native int getRGBPixelsImpl(
+        ScreencastNative.installTokenCallbacks();
+
+        return ScreencastNative.initXdgDesktopPortal();
+    }
+
+    private static int getRGBPixelsImpl(
             int x, int y, int width, int height,
             int[] pixelArray,
             int[] affectedScreensBoundsArray,
             String token
-    );
+    ) {
+        return ScreencastNative.getRgbPixels(x, y, width, height,
+                pixelArray, affectedScreensBoundsArray, token);
+    }
 
     public static int clipRound(final double coordinate) {
         final double newv = coordinate - 0.5;
@@ -124,7 +142,9 @@ public final class ScreencastHelper {
                 .toList();
     }
 
-    private static synchronized native void closeSession();
+    private static synchronized void closeSession() {
+        ScreencastNative.closeSession();
+    }
 
     private static void timerCloseSessionRestart() {
         if (timerTask != null) {
@@ -264,8 +284,19 @@ public final class ScreencastHelper {
         performWithToken((token) -> remoteDesktopKeyImpl(isPress, key, token));
     }
 
-    private static synchronized native int remoteDesktopMouseMoveImpl(int x, int y, String token);
-    private static synchronized native int remoteDesktopMouseButtonImpl(boolean isPress, int buttons, String token);
-    private static synchronized native int remoteDesktopMouseWheelImpl(int wheelAmt, String token);
-    private static synchronized native int remoteDesktopKeyImpl(boolean isPress, int key, String token);
+    private static synchronized int remoteDesktopMouseMoveImpl(int x, int y, String token) {
+        return ScreencastNative.remoteDesktopMouseMove(x, y, token);
+    }
+
+    private static synchronized int remoteDesktopMouseButtonImpl(boolean isPress, int buttons, String token) {
+        return ScreencastNative.remoteDesktopMouseButton(isPress, buttons, token);
+    }
+
+    private static synchronized int remoteDesktopMouseWheelImpl(int wheelAmt, String token) {
+        return ScreencastNative.remoteDesktopMouseWheel(wheelAmt, token);
+    }
+
+    private static synchronized int remoteDesktopKeyImpl(boolean isPress, int key, String token) {
+        return ScreencastNative.remoteDesktopKey(isPress, key, token);
+    }
 }

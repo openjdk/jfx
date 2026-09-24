@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,12 +28,18 @@ import com.sun.glass.ui.Timer;
 
 /**
  * MS Windows platform implementation class for Timer.
+ * <p>
+ * Every one of the four natives this class used to declare has become a call into
+ * {@link WinGlassNative}, which binds {@code winmm!timeGetDevCaps}, {@code timeBeginPeriod},
+ * {@code timeEndPeriod}, {@code timeSetEvent} and {@code timeKillEvent} directly; there is no
+ * {@code Timer.cpp} behind it any more. Behaviour is unchanged, including the two period bounds being
+ * queried once and cached here for the life of the JVM.
  */
 final class WinTimer extends Timer {
 
     static {
-        minPeriod = _getMinPeriod();
-        maxPeriod = _getMaxPeriod();
+        minPeriod = WinGlassNative.timerMinPeriod();
+        maxPeriod = WinGlassNative.timerMaxPeriod();
     }
 
     private static final int minPeriod, maxPeriod;
@@ -41,9 +47,6 @@ final class WinTimer extends Timer {
     protected WinTimer(Runnable runnable) {
         super(runnable);
     }
-
-    native private static int _getMinPeriod();
-    native private static int _getMaxPeriod();
 
     static int getMinPeriod_impl() {
         return minPeriod;
@@ -56,8 +59,12 @@ final class WinTimer extends Timer {
     @Override protected long _start(Runnable runnable) {
         throw new RuntimeException("vsync timer not supported");
     }
-    @Override native protected long _start(Runnable runnable, int period);
-    @Override native protected void _stop(long timer);
+    @Override protected long _start(Runnable runnable, int period) {
+        return WinGlassNative.timerStart(runnable, period);
+    }
+    @Override protected void _stop(long timer) {
+        WinGlassNative.timerStop(timer);
+    }
     @Override protected void _pause(long timer) {}
     @Override protected void _resume(long timer) {}
 }

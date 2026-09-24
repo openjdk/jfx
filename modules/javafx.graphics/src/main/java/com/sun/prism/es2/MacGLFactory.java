@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,10 +29,6 @@ import com.sun.prism.es2.GLPixelFormat.Attributes;
 import java.util.HashMap;
 
 class MacGLFactory extends GLFactory {
-    private static native long nInitialize(int[] attrArr);
-    private static native int nGetAdapterOrdinal(long nativeScreen);
-    private static native int nGetAdapterCount();
-    private static native boolean nGetIsGL2(long nativeCtxInfo);
 
     // Entries must be in lowercase and null string is a wild card
     private GLGPUInfo preQualificationFilter[] = null;
@@ -104,25 +100,31 @@ class MacGLFactory extends GLFactory {
         attrArr[GLPixelFormat.Attributes.ONSCREEN] = attrs.isOnScreen() ? 1 : 0;
 
         // return the context info object create on the default screen
-        nativeCtxInfo = nInitialize(attrArr);
+        nativeCtxInfo = ES2Native.factoryInitialize(attrArr);
 
         if (nativeCtxInfo == 0) {
             // current pipe doesn't support this pixelFormat request
             return false;
         } else {
-            gl2 = nGetIsGL2(nativeCtxInfo);
+            // The desktop ES2 pipe always uses the GL2 profile, not GLES2; nGetIsGL2
+            // returned true here on macOS. Absorbed as a constant (exact parity),
+            // matching X11GLFactory.
+            gl2 = DESKTOP_GL2;
             return true;
         }
     }
 
     @Override
     int getAdapterCount() {
-        return nGetAdapterCount();
+        // Single / homogeneous GPU assumption; the native nGetAdapterCount always
+        // returned 1 (JDK-8091992). Absorbed as a constant (exact parity).
+        return 1;
     }
 
     @Override
     int getAdapterOrdinal(long nativeScreen) {
-        return nGetAdapterOrdinal(nativeScreen);
+        // The native nGetAdapterOrdinal always returned 0 (JDK-8091992).
+        return 0;
     }
 
     @Override

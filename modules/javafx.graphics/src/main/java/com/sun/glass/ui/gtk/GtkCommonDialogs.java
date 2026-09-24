@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,21 +30,15 @@ import com.sun.glass.ui.Window;
 
 import java.io.File;
 
+/**
+ * The GTK file and folder choosers. Both were {@code native} methods of {@code GlassCommonDialogs.cpp} at commit
+ * {@code 033187ad90}; the GTK calls they made are now in {@code GtkGlassNative}, which names each of them.
+ * <p>
+ * The C took the owner as its {@code WindowContext *} and asked that object for its {@code GtkWindow}; here the
+ * owner is identified by the X11 window id its peer already exposes, and GDK is asked for the widget of that
+ * window.
+ */
 final class GtkCommonDialogs {
-
-    private static native FileChooserResult _showFileChooser(
-                                            long parent,
-                                            String folder,
-                                            String filename,
-                                            String title,
-                                            int type,
-                                            boolean multipleMode,
-                                            ExtensionFilter[] extensionFilters,
-                                            int defaultFilterIndex);
-
-    private static native String _showFolderChooser(long parent,
-                                                    String folder,
-                                                    String title);
 
     static FileChooserResult showFileChooser(Window owner,
                                     String folder,
@@ -55,7 +49,7 @@ final class GtkCommonDialogs {
                                     ExtensionFilter[] extensionFilters, int defaultFilterIndex) {
 
         if (owner != null) owner.setEnabled(false);
-        FileChooserResult result = _showFileChooser(owner == null? 0L : owner.getNativeHandle(),
+        FileChooserResult result = GtkGlassNative.showFileChooser(nativeWindow(owner),
                 folder, filename, title, type, multipleMode, extensionFilters, defaultFilterIndex);
         if (owner != null) owner.setEnabled(true);
         return result;
@@ -66,7 +60,7 @@ final class GtkCommonDialogs {
             owner.setEnabled(false);
         }
         try {
-            String filename = _showFolderChooser((owner != null) ? owner.getNativeHandle() : 0, folder, title);
+            String filename = GtkGlassNative.showFolderChooser(nativeWindow(owner), folder, title);
             return filename != null ? new File(filename) : null;
 
         } finally {
@@ -75,5 +69,10 @@ final class GtkCommonDialogs {
             }
         }
 
+    }
+
+    /** The X11 window id of {@code owner}, or 0 for no owner and for an owner without a window yet. */
+    private static long nativeWindow(Window owner) {
+        return owner == null ? 0L : owner.getNativeWindow();
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,20 +31,20 @@ class IDWriteFontCollection extends IUnknown {
     }
 
     int GetFontFamilyCount() {
-        return OS.GetFontFamilyCount(ptr);
+        return DWNative.getFontFamilyCount(ptr);
     }
 
     IDWriteFontFamily GetFontFamily(int index) {
-        long result = OS.GetFontFamily(ptr, index);
+        long result = DWNative.getFontFamily(ptr, index);
         return result != 0 ? new IDWriteFontFamily(result) : null;
     }
 
     int FindFamilyName(String familyName) {
-        return OS.FindFamilyName(ptr, (familyName+'\0').toCharArray());
+        return DWNative.findFamilyName(ptr, (familyName+'\0').toCharArray());
     }
 
     IDWriteFont GetFontFromFontFace(IDWriteFontFace fontface) {
-        long result = OS.GetFontFromFontFace(ptr, fontface.ptr);
+        long result = DWNative.getFontFromFontFace(ptr, fontface.ptr);
         return result != 0 ? new IDWriteFont(result) : null;
     }
 }

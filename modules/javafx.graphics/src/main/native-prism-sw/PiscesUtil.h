@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -146,15 +146,5 @@
 #define CONVERT_565_TO_888(x) ( ((x & 0x001F) << 3) | ((x & 0x001C) >> 2) |\
                               ((x & 0x07E0) << 5) | ((x & 0x0600) >> 1) |\
                               ((x & 0xF800) << 8) | ((x & 0xE000) << 3) )
-
-extern jint PISCES_STROKE_X_BIAS;
-extern jint PISCES_STROKE_Y_BIAS;
-
-jboolean piscesutil_moduleInitialize();
-void piscesutil_moduleFinalize();
-void piscesutil_setStrokeBias(jint xbias, jint ybias);
-
-#define PointerToJLong ptr_to_jlong
-#define JLongToPointer jlong_to_ptr
 
 #endif

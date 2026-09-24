@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,17 +25,12 @@
 
 #include "common.h"
 
-#include <shlwapi.h>
-
 #include "GlassApplication.h"
 #include "GlassClipboard.h"
 #include "GlassScreen.h"
 #include "GlassWindow.h"
-#include "Timer.h"
 #include "RoActivationSupport.h"
 
-#include "com_sun_glass_ui_win_WinApplication.h"
-#include "com_sun_glass_ui_win_WinSystemClipboard.h"
 
 /**********************************
  * GlassApplication
@@ -45,65 +40,14 @@ static LPCTSTR szGlassToolkitWindow = TEXT("GlassToolkitWindowClass");
 
 GlassApplication *GlassApplication::pInstance = NULL;
 bool GlassApplication::sm_shouldLeaveNestedLoop = false;
-JGlobalRef<jobject> GlassApplication::sm_nestedLoopReturnValue;
-
-jobject GlassApplication::sm_glassClassLoader;
-HINSTANCE GlassApplication::hInstace = NULL;
-
-jfloat GlassApplication::overrideUIScale = -1.0f;
-
-/* static */
-void GlassApplication::SetGlassClassLoader(JNIEnv *env, jobject classLoader)
-{
-    sm_glassClassLoader = env->NewGlobalRef(classLoader);
-}
 
 /*
- * Function to find a glass class using the glass class loader. All glass
- * classes except those called from initIDs must be looked up using this
- * function rather than FindClass so that the correct ClassLoader is used.
- *
- * Note that the className passed to this function must use "." rather than "/"
- * as a package separator.
+ * gwin_app_create's constructor (glass_win_api.h, ABI 5): the four statements of the former JNI
+ * constructor GlassApplication(jobject), with the no-JNI PlatformSupport - the same WinRT activation.
  */
-/* static */
-jclass GlassApplication::ClassForName(JNIEnv *env, char *className)
+GlassApplication::GlassApplication() : BaseWnd(), m_platformSupport()
 {
-    // TODO: cache classCls as JNI global ref
-    jclass classCls = env->FindClass("java/lang/Class");
-    if (CheckAndClearException(env) || !classCls) {
-        fprintf(stderr, "ClassForName error: classCls == NULL");
-        return NULL;
-    }
-
-    // TODO: cache forNameMID as static
-    jmethodID forNameMID =
-        env->GetStaticMethodID(classCls, "forName", "(Ljava/lang/String;ZLjava/lang/ClassLoader;)Ljava/lang/Class;");
-    if (CheckAndClearException(env) || !forNameMID) {
-        fprintf(stderr, "ClassForName error: forNameMID == NULL");
-        return NULL;
-    }
-
-    jstring classNameStr = env->NewStringUTF(className);
-    if (CheckAndClearException(env) || classNameStr == NULL) {
-        fprintf(stderr, "ClassForName error: classNameStrs == NULL");
-        return NULL;
-    }
-
-    jclass foundClass = (jclass)env->CallStaticObjectMethod(classCls,
-        forNameMID, classNameStr, JNI_TRUE, sm_glassClassLoader);
-    if (CheckAndClearException(env)) return NULL;
-
-    env->DeleteLocalRef(classNameStr);
-    env->DeleteLocalRef(classCls);
-
-    return foundClass;
-}
-
-GlassApplication::GlassApplication(jobject jrefThis) : BaseWnd(), m_platformSupport(GetEnv(), jrefThis)
-{
-    m_grefThis = GetEnv()->NewGlobalRef(jrefThis);
-    m_clipboard = NULL;
+    m_clipboardId = 0;
     m_hNextClipboardView = NULL;
     m_mainThreadId = ::GetCurrentThreadId();
 
@@ -112,12 +56,6 @@ GlassApplication::GlassApplication(jobject jrefThis) : BaseWnd(), m_platformSupp
 
 GlassApplication::~GlassApplication()
 {
-    if (m_grefThis) {
-        GetEnv()->DeleteGlobalRef(m_grefThis);
-    }
-    if (m_clipboard) {
-        GetEnv()->DeleteGlobalRef(m_clipboard);
-    }
 }
 
 LPCTSTR GlassApplication::GetWindowClassNameSuffix()
@@ -144,8 +82,8 @@ LRESULT GlassApplication::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
             break;
         case WM_DESTROY:
             //Alarm clipboard dispose if any.
-            //Please, use RegisterClipboardViewer(NULL) instead of UnregisterClipboardViewer.
-            RegisterClipboardViewer(NULL);
+            //Please, use RegisterClipboardViewerId(0) instead of UnregisterClipboardViewer.
+            RegisterClipboardViewerId(0);
             return 0;
         case WM_NCDESTROY:
             // pInstance is deleted in BaseWnd::StaticWindowProc
@@ -160,9 +98,12 @@ LRESULT GlassApplication::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
             }
             break;
         case WM_DRAWCLIPBOARD:
-            if (NULL != m_clipboard) {
-                GetEnv()->CallVoidMethod(m_clipboard, midContentChanged);
-                CheckAndClearException(GetEnv());
+            {
+                // The slot fires only for a peer that registered through gwin_clipboard_register_viewer.
+                const GwinClipboardCallbacks* cb = GlassClipboardCallbacks();
+                if (cb != NULL && 0 != m_clipboardId) {
+                    cb->content_changed(m_clipboardId);
+                }
             }
             if (NULL != m_hNextClipboardView) {
                 ::SendMessage(m_hNextClipboardView, WM_DRAWCLIPBOARD, wParam, lParam);
@@ -193,21 +134,32 @@ LRESULT GlassApplication::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
     return ::DefWindowProc(GetHWND(), msg, wParam, lParam);
 }
 
-/* static */
-void GlassApplication::RegisterClipboardViewer(jobject clipboard)
+/*
+ * The "alarm dispose" of whatever clipboard peer is registered: GwinClipboardCallbacks.dispose_peer
+ * (glass_win_api.h) runs the peer's dispose body, which calls UnregisterClipboardViewer; if it did not (no
+ * table, no-op slot, unknown id) the viewer is unregistered here so a re-registration never enters
+ * the chain twice.
+ */
+void GlassApplication::DisposeRegisteredClipboard()
 {
-    JNIEnv *env = GetEnv();
-    if (NULL != m_clipboard) {
-        //Alarm dispose. We need to release all native resources
-        //of previous instance.
-        //It means that user skipped ClipboardAssistance close.
-        JLObject _clipboard(env, env->NewLocalRef(m_clipboard));
-        Java_com_sun_glass_ui_win_WinSystemClipboard_dispose(env, _clipboard);
+    if (0 != m_clipboardId) {
+        const GwinClipboardCallbacks* cb = GlassClipboardCallbacks();
+        if (cb != NULL) {
+            cb->dispose_peer(m_clipboardId);
+        }
+        if (0 != m_clipboardId) {
+            UnregisterClipboardViewer();
+        }
     }
-    if (NULL != clipboard) {
-        m_clipboard = env->NewGlobalRef(clipboard);
+}
+
+void GlassApplication::RegisterClipboardViewerId(int64_t clipboardId)
+{
+    DisposeRegisteredClipboard();
+    if (0 != clipboardId) {
+        m_clipboardId = clipboardId;
         m_hNextClipboardView = ::SetClipboardViewer(GetHWND()) ;
-        STRACE(_T("RegisterClipboardViewer"));
+        STRACE(_T("RegisterClipboardViewerId"));
     }
 }
 
@@ -219,10 +171,7 @@ void GlassApplication::UnregisterClipboardViewer()
         m_hNextClipboardView = NULL;
         STRACE(_T("UnregisterClipboardViewer"));
     }
-    if (NULL != m_clipboard) {
-        GetEnv()->DeleteGlobalRef(m_clipboard);
-        m_clipboard = NULL;
-    }
+    m_clipboardId = 0;
 }
 
 /* static */
@@ -244,8 +193,14 @@ void GlassApplication::ExecActionLater(Action *action)
     ::PostMessage(pInstance->GetHWND(), WM_DO_ACTION_LATER, (WPARAM)action, (LPARAM)0);
 }
 
-/* static */
-jobject GlassApplication::EnterNestedEventLoop(JNIEnv * env)
+/*
+ * static
+ *
+ * The pump itself, with no JVM in it: glass_win_api.h's gwin_enter_nested_event_loop forwards here.
+ * The loop's return value is not this library's business: it never left Java, and WinApplication
+ * holds it itself and stores it before calling gwin_leave_nested_event_loop.
+ */
+void GlassApplication::EnterNestedEventLoop()
 {
     sm_shouldLeaveNestedLoop = false;
 
@@ -259,20 +214,11 @@ jobject GlassApplication::EnterNestedEventLoop(JNIEnv * env)
     }
 
     sm_shouldLeaveNestedLoop = false;
-
-    if (!sm_nestedLoopReturnValue) {
-        return NULL;
-    }
-
-    jobject ret = env->NewLocalRef(sm_nestedLoopReturnValue);
-    sm_nestedLoopReturnValue.Attach(env, NULL);
-    return ret;
 }
 
 /* static */
-void GlassApplication::LeaveNestedEventLoop(JNIEnv * env, jobject retValue)
+void GlassApplication::LeaveNestedEventLoop()
 {
-    sm_nestedLoopReturnValue.Attach(env, retValue);
     sm_shouldLeaveNestedLoop = true;
 }
 
@@ -296,267 +242,8 @@ ULONG GlassApplication::GetAccessibilityCount()
     return GlassApplication::s_accessibilityCount;
 }
 
-/*******************************************************
- * JNI section
- *******************************************************/
-
-extern "C" {
-
-#ifndef STATIC_BUILD
-BOOL WINAPI DllMain(HANDLE hinstDLL, DWORD dwReason, LPVOID lpvReserved)
-{
-    if (dwReason == DLL_PROCESS_ATTACH) {
-        GlassApplication::SetHInstance((HINSTANCE)hinstDLL);
-    }
-    return TRUE;
-}
-#endif
-
 /*
- * Class:     com_sun_glass_ui_win_WinApplication
- * Method:    initIDs
- * Signature: ()V
+ * No DllMain here, deliberately: the one that stored the module handle for the cursor code was dead. The CRT's
+ * default DllMain calls DisableThreadLibraryCalls, which is ignored for a DLL with static TLS, as this one is;
+ * nothing here consumes thread attach/detach notifications either way - do not re-add a DllMain.
  */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinApplication_initIDs
-  (JNIEnv *env, jclass cls, jfloat overrideUIScale)
-{
-#ifdef STATIC_BUILD
-    HINSTANCE hInstExe = ::GetModuleHandle(NULL);
-    GlassApplication::SetHInstance((HINSTANCE)hInstExe);
-#endif
-
-    GlassApplication::overrideUIScale = overrideUIScale;
-
-    javaIDs.Application.reportExceptionMID =
-        env->GetStaticMethodID(cls, "reportException", "(Ljava/lang/Throwable;)V");
-    ASSERT(javaIDs.Application.reportExceptionMID);
-    if (CheckAndClearException(env)) return;
-
-    javaIDs.Application.notifyPreferencesChangedMID =
-        env->GetMethodID(cls, "notifyPreferencesChanged", "(Ljava/util/Map;)V");
-    ASSERT(javaIDs.Application.notifyPreferencesChangedMID);
-    if (CheckAndClearException(env)) return;
-
-    //NOTE: substitute the cls
-    cls = (jclass)env->FindClass("java/lang/Runnable");
-    if (CheckAndClearException(env)) return;
-
-    javaIDs.Runnable.run = env->GetMethodID(cls, "run", "()V");
-    ASSERT(javaIDs.Runnable.run);
-    if (CheckAndClearException(env)) return;
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinApplication
- * Method:    _init
- * Signature: (I)J
- */
-JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_win_WinApplication__1init
-  (JNIEnv *env, jobject _this, jint awareRequested)
-{
-    // TODO: if/when we introduce JavaFX launcher, DPI awareness should
-    // be specified in its manifest instead of this call below
-    // Specifying awareness in the manifest ensures that it happens before
-    // any system calls that might depend on it.  The downside is losing
-    // the ability to control the awareness level programmatically via
-    // property settings.
-    if (IS_WINVISTA) {
-        GlassScreen::LoadDPIFuncs(awareRequested);
-    }
-
-    GlassApplication *pApp = new GlassApplication(_this);
-
-    HWND hWnd = GlassApplication::GetToolkitHWND();
-    if (hWnd == NULL) {
-        delete pApp;
-    }
-
-    return (jlong)hWnd;
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinApplication
- * Method:    _setClassLoader
- * Signature: (Ljava/lang/ClassLoader;)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinApplication__1setClassLoader
-  (JNIEnv * env, jobject self, jobject jClassLoader)
-{
-    GlassApplication::SetGlassClassLoader(env, jClassLoader);
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinApplication
- * Method:    _runLoop
- * Signature: (Ljava/lang/Runnable;)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinApplication__1runLoop
-  (JNIEnv * env, jobject self, jobject jLaunchable)
-{
-    OLEHolder _ole_;
-    if (jLaunchable != NULL) {
-        env->CallVoidMethod(jLaunchable, javaIDs.Runnable.run);
-        CheckAndClearException(env);
-    }
-
-    MSG msg;
-    // The GlassApplication instance may be destroyed in a nested loop.
-    // Note that we leave the WM_QUIT message on the queue but who cares?
-    while (GlassApplication::GetInstance() && ::GetMessage(&msg, NULL, 0, 0) > 0) {
-        ::TranslateMessage(&msg);
-        ::DispatchMessage(&msg);
-    }
-
-    if (GlassApplication::GetAccessibilityCount() > 0 && !IS_WIN8) {
-        // Bug in Windows 7. For some reason, JavaFX crashes when the application
-        // is shutting down while Narrator (the screen reader) is running. It is
-        // suspected the crash happens because the event thread is finalized while
-        // accessible objects are still receiving release messages. Not all the
-        // circumstances around this crash are well understood,  but calling
-        // GetMessage() one last time fixes the crash.
-        UINT_PTR timerId = ::SetTimer(NULL, NULL, 1000, NULL);
-        ::GetMessage(&msg, NULL, 0, 0);
-        ::KillTimer(NULL, timerId);
-    }
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinApplication
- * Method:    _terminateLoop
- * Signature: ()V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinApplication__1terminateLoop
-  (JNIEnv * env, jobject self)
-{
-    HWND hWnd = GlassApplication::GetToolkitHWND();
-    if (::IsWindow(hWnd)) {
-        ::DestroyWindow(hWnd);
-    }
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinApplication
- * Method:    _enterNestedEventLoopImpl
- * Signature: ()Ljava/lang/Object;
- */
-JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_win_WinApplication__1enterNestedEventLoopImpl
-  (JNIEnv * env, jobject self)
-{
-    return GlassApplication::EnterNestedEventLoop(env);
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinApplication
- * Method:    _leaveNestedEventLoopImpl
- * Signature: (Ljava/lang/Object;)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinApplication__1leaveNestedEventLoopImpl
-  (JNIEnv * env, jobject self, jobject retValue)
-{
-    GlassApplication::LeaveNestedEventLoop(env, retValue);
-}
-
-/*
- * Class:     com_sun_glass_ui_Application
- * Method:    _invokeAndWait
- * Signature: (Ljava/lang/Runnable;)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinApplication__1invokeAndWait
-  (JNIEnv * env, jobject japplication, jobject runnable)
-{
-    ENTER_MAIN_THREAD()
-    {
-        GetEnv()->CallVoidMethod(runnable, javaIDs.Runnable.run);
-        CheckAndClearException(GetEnv());
-    }
-    DECL_jobject(runnable);
-    LEAVE_MAIN_THREAD;
-
-    ARG(runnable) = runnable;
-    PERFORM();
-}
-
-/*
- * Class:     com_sun_glass_ui_Application
- * Method:    _submitForLaterInvocation
- * Signature: (Ljava/lang/Runnable;)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinApplication__1submitForLaterInvocation
-  (JNIEnv * env, jobject japplication, jobject runnable)
-{
-    ENTER_MAIN_THREAD()
-    {
-        GetEnv()->CallVoidMethod(runnable, javaIDs.Runnable.run);
-        CheckAndClearException(GetEnv());
-    }
-    DECL_jobject(runnable);
-    LEAVE_MAIN_THREAD_LATER;
-
-    ARG(runnable) = runnable;
-    PERFORM_LATER();
-}
-
-/*
- * Class:     com_sun_glass_ui_Application
- * Method:    _supportsUnifiedWindows
- * Signature: ()Z
- */
-JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinApplication__1supportsUnifiedWindows
-    (JNIEnv * env, jobject japplication)
-{
-    return (IS_WINVISTA);
-}
-
-/*
- * Class:     com_sun_glass_ui_Application
- * Method:    staticScreen_getScreens
- * Signature: ()[Lcom/sun/glass/ui/Screen;
- */
-JNIEXPORT jobjectArray JNICALL Java_com_sun_glass_ui_win_WinApplication_staticScreen_1getScreens
-    (JNIEnv * env, jobject japplication)
-{
-    return GlassScreen::CreateJavaScreens(env);
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinApplication
- * Method:    getPlatformPreferences
- * Signature: ()Ljava/util/Map;
- */
-JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_win_WinApplication_getPlatformPreferences
-    (JNIEnv * env, jobject self)
-{
-    return GlassApplication::GetPlatformPreferences();
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinApplication
- * Method:    _getDefaultBrowser
- * Signature: ()Ljava/lang/String;
- */
-JNIEXPORT jstring JNICALL Java_com_sun_glass_ui_win_WinApplication__1getDefaultBrowser
-        (JNIEnv *env, jclass cls)
-{
-    LPCWSTR fileExtension = L"https";
-    WCHAR defaultBrowser_c [MAX_PATH];
-    DWORD cchBuffer = MAX_PATH;
-
-    // Use AssocQueryString to get the default browser
-    HRESULT hr = AssocQueryStringW(
-        ASSOCF_NONE,            // No special flags
-        ASSOCSTR_COMMAND,       // Request the command string
-        fileExtension,          // File extension
-        NULL,                   // pszExtra (optional)
-        defaultBrowser_c,       // Output buffer - result
-        &cchBuffer              // Size of the output buffer
-    );
-
-    if (FAILED(hr)) {
-        return NULL;
-    }
-
-    return CreateJString(env, defaultBrowser_c);;
-}
-
-} // extern "C"
-

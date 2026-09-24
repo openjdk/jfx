@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,8 +26,6 @@
 #ifndef PIXELS_H
 #define PIXELS_H
 
-
-class Pixels;
 
 class BaseBitmap {
     public:
@@ -56,37 +54,14 @@ class BaseBitmap {
 
 class Bitmap : public BaseBitmap {
     public:
-        Bitmap(int width, int height);
         Bitmap(int width, int height, void **data, HDC hdc = NULL);
-        Bitmap(Pixels & pixels);
 };
 
 class DIBitmap : public BaseBitmap {
     public:
-        DIBitmap(Pixels & pixels);
-};
-
-class Pixels {
-    public:
-        static HICON CreateIcon(JNIEnv *env, jobject jPixels, BOOL fIcon = TRUE, jint x = 0, jint y = 0);
-        static HCURSOR CreateCursor(JNIEnv *env, jobject jPixels, jint x, jint y)
-        {
-            return (HCURSOR)CreateIcon(env, jPixels, FALSE, x, y);
-        }
-
-        Pixels(JNIEnv *env, jobject jPixels);
-
-        void AttachInt(JNIEnv *env, jint w, jint h, jobject buf, jintArray array, jint offset);
-        void AttachByte(JNIEnv *env, jint w, jint h, jobject buf, jbyteArray array, jint offset);
-
-        int GetWidth() { return width; }
-        int GetHeight() { return height; }
-        void* GetBits();
-
-    private:
-        int width, height;
-        JBufferArray<jint> ints;
-        JBufferArray<jbyte> bytes;
+        // The same DIB section from raw pixels - width * height 32-bit BGRA, top-down - for
+        // GlassView::UploadPixels, whose bits arrive without a Pixels object.
+        DIBitmap(int width, int height, const void* bits);
 };
 
 #endif //PIXELS_H

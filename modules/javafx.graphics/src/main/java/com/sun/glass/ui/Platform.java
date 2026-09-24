@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,7 +31,6 @@ final class Platform {
     public static final String MAC = "Mac";
     public static final String WINDOWS = "Win";
     public static final String GTK = "Gtk";
-    public static final String IOS = "Ios";
     public static final String HEADLESS = "Headless";
     public static final String UNKNOWN = "unknown";
 
@@ -52,8 +51,6 @@ final class Platform {
                    type = GTK;
                 else if (userPlatform.equals("gtk"))
                    type = GTK;
-                else if (userPlatform.equals("ios"))
-                   type = IOS;
                 else if (userPlatform.equals("headless"))
                    type = HEADLESS;
                 else
@@ -67,8 +64,6 @@ final class Platform {
                 type = WINDOWS;
             } else if (PlatformUtil.isLinux()) {
                 type = GTK;
-            } else if (PlatformUtil.isIOS()) {
-                type = IOS;
             }
         }
 

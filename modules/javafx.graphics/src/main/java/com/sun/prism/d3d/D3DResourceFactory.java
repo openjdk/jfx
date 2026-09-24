@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,11 +28,8 @@ package com.sun.prism.d3d;
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.foreign.MemorySegment;
 import java.lang.reflect.Method;
-import java.nio.Buffer;
-import java.nio.ByteBuffer;
-import java.nio.FloatBuffer;
-import java.nio.IntBuffer;
 import java.util.LinkedList;
 import java.util.ListIterator;
 import java.util.Map;
@@ -73,7 +70,7 @@ class D3DResourceFactory extends BaseShaderFactory {
     private final LinkedList<D3DResource.D3DRecord> records =
         new LinkedList<>();
 
-    D3DResourceFactory(long pContext, Screen screen) {
+    D3DResourceFactory(MemorySegment pContext, Screen screen) {
         super(clampTexCache, repeatTexCache, mipmapTexCache);
         context = new D3DContext(pContext, screen, this);
         context.initState();
@@ -179,15 +176,19 @@ class D3DResourceFactory extends BaseShaderFactory {
         if (!pool.prepareForAllocation(size)) {
             return null;
         }
-        long pResource = nCreateTexture(context.getContextHandle(),
-                                        format.ordinal(), usagehint.ordinal(),
-                                        false /*isRTT*/, allocw, alloch, 0, useMipmap);
-        if (pResource == 0L) {
+        // The HRESULT is not looked at, as nCreateTexture did not surface it: a failed create leaves
+        // the handle NULL, which is what the caller keyed on.
+        MemorySegment info = context.textureInfoScratch();
+        D3DNative.textureCreate(context.getContextHandle(),
+                                format.ordinal(), usagehint.ordinal(),
+                                false /*isRTT*/, allocw, alloch, 0, useMipmap, info);
+        MemorySegment pResource = D3DNative.textureInfoHandle(info);
+        if (pResource.address() == 0L) {
             return null;
         }
 
-        int texw = nGetTextureWidth(pResource);
-        int texh = nGetTextureHeight(pResource);
+        int texw = D3DNative.textureInfoWidth(info);
+        int texh = D3DNative.textureInfoHeight(info);
         if (wrapMode != WrapMode.CLAMP_NOT_NEEDED && (w < texw || h < texh)) {
             wrapMode = wrapMode.simulatedVersion();
         }
@@ -252,15 +253,17 @@ class D3DResourceFactory extends BaseShaderFactory {
             if (!pool.prepareForAllocation(size)) {
                 return null;
             }
-            long pResource = nCreateTexture(context.getContextHandle(),
+            MemorySegment info = context.textureInfoScratch();
+            D3DNative.textureCreate(context.getContextHandle(),
                     texFormat.ordinal(), Usage.DYNAMIC.ordinal(),
-                    false, texWidth, texHeight, 0, false);
-            if (0 == pResource) {
+                    false, texWidth, texHeight, 0, false, info);
+            MemorySegment pResource = D3DNative.textureInfoHandle(info);
+            if (pResource.address() == 0L) {
                 return null;
             }
 
-            int physWidth = nGetTextureWidth(pResource);
-            int physHeight = nGetTextureHeight(pResource);
+            int physWidth = D3DNative.textureInfoWidth(info);
+            int physHeight = D3DNative.textureInfoHeight(info);
             WrapMode wrapMode = (texWidth < physWidth || texHeight < physHeight)
                     ? WrapMode.CLAMP_TO_EDGE_SIMULATED : WrapMode.CLAMP_TO_EDGE;
             D3DTexture tex = new D3DTexture(context, texFormat, wrapMode, pResource,
@@ -342,16 +345,18 @@ class D3DResourceFactory extends BaseShaderFactory {
             return null;
         }
 
-        long pResource = nCreateTexture(context.getContextHandle(),
-                                        format.ordinal(),
-                                        Usage.DEFAULT.ordinal(),
-                                        true /*isRTT*/, createw, createh, aaSamples, false);
-        if (pResource == 0L) {
+        MemorySegment info = context.textureInfoScratch();
+        D3DNative.textureCreate(context.getContextHandle(),
+                                format.ordinal(),
+                                Usage.DEFAULT.ordinal(),
+                                true /*isRTT*/, createw, createh, aaSamples, false, info);
+        MemorySegment pResource = D3DNative.textureInfoHandle(info);
+        if (pResource.address() == 0L) {
             return null;
         }
 
-        int texw = nGetTextureWidth(pResource);
-        int texh = nGetTextureHeight(pResource);
+        int texw = D3DNative.textureInfoWidth(info);
+        int texh = D3DNative.textureInfoHeight(info);
         D3DRTTexture rtt = new D3DRTTexture(context, wrapMode, pResource, texw, texh,
                                             cx, cy, width, height, aaSamples);
         // ensure the RTTexture is cleared to all zeros before returning
@@ -369,11 +374,13 @@ class D3DResourceFactory extends BaseShaderFactory {
             System.err.println("SwapChain allocation while the device is lost");
         }
 
-        long pResource = nCreateSwapChain(context.getContextHandle(),
-                                          pState.getNativeView(),
-                                          PrismSettings.isVsyncEnabled);
+        MemorySegment info = context.textureInfoScratch();
+        D3DNative.swapchainCreate(context.getContextHandle(),
+                                  pState.getNativeView(),
+                                  PrismSettings.isVsyncEnabled, info);
+        MemorySegment pResource = D3DNative.textureInfoHandle(info);
 
-        if (pResource != 0L) {
+        if (pResource.address() != 0L) {
             int width = pState.getRenderWidth();
             int height = pState.getRenderHeight();
             D3DRTTexture rtt = createRTTexture(width, height, WrapMode.CLAMP_NOT_NEEDED, pState.isMSAA());
@@ -385,13 +392,14 @@ class D3DResourceFactory extends BaseShaderFactory {
                 return new D3DSwapChain(context, pResource, rtt, pState.getRenderScaleX(), pState.getRenderScaleY());
             }
 
-            D3DResourceFactory.nReleaseResource(context.getContextHandle(), pResource);
+            D3DNative.resourceRelease(context.getContextHandle(), pResource);
         }
 
         return null;
     }
 
-    private static ByteBuffer getBuffer(InputStream is) {
+    /** Reads a compiled pixel shader ({@code fxc} token stream) to its end. */
+    private static byte[] readShaderCode(InputStream is) {
         if (is == null) {
            throw new RuntimeException("InputStream must be non-null");
         }
@@ -415,12 +423,11 @@ class D3DResourceFactory extends BaseShaderFactory {
                 }
             }
             bis.close();
-            // NOTE: for now the D3DShader native code only knows how to
-            // deal with direct ByteBuffers, so we have to dump the byte[]
-            // into a newly allocated direct buffer...
-            ByteBuffer buf = ByteBuffer.allocateDirect(offset);
-            buf.put(data, 0, offset);
-            return buf;
+            // The token stream is handed to D3D through a per-call off-heap copy of exactly these
+            // bytes (D3DNative.shaderCreate), where the JNI code needed a direct ByteBuffer.
+            byte[] code = new byte[offset];
+            System.arraycopy(data, 0, code, 0, offset);
+            return code;
         } catch (IOException e) {
             throw new RuntimeException("Error loading D3D shader object", e);
         }
@@ -437,9 +444,8 @@ class D3DResourceFactory extends BaseShaderFactory {
     {
         if (checkDisposed()) return null;
 
-        long shaderHandle = D3DShader.init(
-                context.getContextHandle(), getBuffer(pixelShaderCode),
-                maxTexCoordIndex, isPixcoordUsed, isPerVertexColorUsed);
+        byte[] code = readShaderCode(pixelShaderCode);
+        MemorySegment shaderHandle = D3DNative.shaderCreate(context.getContextHandle(), code, code.length);
 
         return new D3DShader(context, shaderHandle, params);
     }
@@ -477,7 +483,7 @@ class D3DResourceFactory extends BaseShaderFactory {
     }
 
     private int computeMaxTextureSize() {
-        int size = nGetMaximumTextureSize(context.getContextHandle());
+        int size = D3DNative.contextGetMaxTextureSize(context.getContextHandle());
         if (PrismSettings.verbose) {
             System.err.println("Maximum supported texture size: " + size);
         }
@@ -545,47 +551,4 @@ class D3DResourceFactory extends BaseShaderFactory {
         if (checkDisposed()) return null;
         return D3DMesh.create(context);
     }
-
-    static native long nGetContext(int adapterOrdinal);
-    static native boolean nIsDefaultPool(long pResource);
-    static native int nTestCooperativeLevel(long pContext);
-    static native int nResetDevice(long pContext);
-    static native long nCreateTexture(long pContext,
-                                      int format, int hint,
-                                      boolean isRTT,
-                                      int width, int height, int samples,
-                                      boolean useMipmap);
-    static native long nCreateSwapChain(long pContext, long hwnd,
-                                        boolean isVsyncEnabled);
-    static native int nReleaseResource(long pContext, long resource);
-    static native int nGetMaximumTextureSize(long pContext);
-    static native int nGetTextureWidth(long pResource);
-    static native int nGetTextureHeight(long pResource);
-    static native int nReadPixelsI(long pContext, long pResource,
-                                    long length,
-                                    Buffer pixels, int[] arr,
-                                    int contentWidth, int contentHeight);
-    static native int nReadPixelsB(long pContext, long pResource,
-                                    long length,
-                                    Buffer pixels, byte[] arr,
-                                    int contentWidth, int contentHeight);
-    static native int nUpdateTextureI(long contextHandle, long pResource,
-                                      IntBuffer buf, int[] pixels,
-                                      int dstx, int dsty,
-                                      int srcx, int srcy,
-                                      int srcw, int srch, int srcscan);
-    static native int nUpdateTextureF(long contextHandle, long pResource,
-                                      FloatBuffer buf, float[] pixels,
-                                      int dstx, int dsty,
-                                      int srcx, int srcy,
-                                      int srcw, int srch, int srcscan);
-    static native int nUpdateTextureB(long contextHandle, long pResource,
-                                      ByteBuffer buf, byte[] pixels,
-                                      int formatHint,
-                                      int dstx, int dsty,
-                                      int srcx, int srcy,
-                                      int srcw, int srch, int srcscan);
-
-    static native long nGetDevice(long pContext);
-    static native long nGetNativeTextureObject(long pResource);
 }

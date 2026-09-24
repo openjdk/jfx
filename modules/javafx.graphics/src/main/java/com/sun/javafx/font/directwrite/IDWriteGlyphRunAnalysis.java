@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,10 +31,10 @@ class IDWriteGlyphRunAnalysis extends IUnknown {
     }
 
     byte[] CreateAlphaTexture(int textureType, RECT textureBounds) {
-        return OS.CreateAlphaTexture(ptr, textureType, textureBounds);
+        return DWNative.createAlphaTexture(ptr, textureType, textureBounds);
     }
 
     RECT GetAlphaTextureBounds(int textureType) {
-        return OS.GetAlphaTextureBounds(ptr, textureType);
+        return DWNative.getAlphaTextureBounds(ptr, textureType);
     }
 }

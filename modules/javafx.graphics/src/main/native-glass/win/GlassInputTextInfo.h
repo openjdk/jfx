@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,7 +46,10 @@ class GlassInputTextInfo {
 
     int GetCommittedTextLength() const;
 
-    jstring GetText() const { return m_jtext; }
+    /* The composing / result / merged text as a borrowed UTF-16 buffer (NOT NUL-terminated) plus its
+     * length in code units, for the notify_input_method callback slot. Never freed by the caller;
+     * NULL / 0 when there is no text, including a result + composition join that failed. */
+    const wchar_t* GetTextW(int* outLen) const;
 
     int GetClauseInfo(int*& lpBndClauseW);
     int GetAttributeInfo(int*& lpBndAttrW, BYTE*& lpValAttrW);
@@ -55,13 +58,11 @@ class GlassInputTextInfo {
  private:
     ViewContainer * m_viewContainer;
 
-    /* helper function to return a java string.*/
-    static jstring MakeJavaString(JNIEnv* env, LPWSTR lpStrW, int cStrW);
-
 
     LPARAM m_flags;            /* The message LPARAM. */
     int m_cursorPosW;          /* the current cursor position of composition string */
-    jstring m_jtext;           /* Composing string/result string or merged one */
+    LPWSTR  m_lpMergedW;       /* owned; the result + composition join, non-NULL only when both existed */
+    int     m_cMergedW;        /* its length in WCHARs */
     GlassInputTextInfo* m_pResultTextInfo; /* pointer to result string */
 
     int m_cStrW;            /* size of the current composition/result string */

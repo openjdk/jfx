@@ -119,7 +119,7 @@
                         <!-- Generate and compile the Decora/Prism JSL shaders. This mirrors the
                              Gradle addJSL/compileFullJava pipeline:
                              1. compile the JSL shader compilers against pass-one classes
-                             2. run GenAllDecoraShaders / CompileJSL to emit .java/.hlsl/.frag/.cc
+                             2. run GenAllDecoraShaders / CompileJSL to emit .java/.hlsl/.frag
                              3. recompile the whole module (main + generated) as a second pass,
                                 emitting the JNI headers used by the native build -->
                         <id>jsl-codegen</id>
@@ -173,6 +173,7 @@
                                     <arg value="-pkg"/>
                                     <arg value="com/sun/scenario/effect"/>
                                     <arg line="${jfx.jsl.backends}"/>
+                                    <!-- placeholders: GenAllDecoraShaders.java drops the last two args and sets each shader's output types -->
                                     <arg value="-all"/>
                                     <arg value="GenAllDecoraShaders"/>
                                 </java>
@@ -401,9 +402,6 @@
                                 <exclude>com/sun/prism/es2/X11GL*</exclude>
                                 <exclude>com/sun/glass/ui/monocle/**</exclude>
                                 <exclude>com/sun/prism/es2/Monocle*</exclude>
-                                <exclude>com/sun/glass/ui/ios/**</exclude>
-                                <exclude>com/sun/prism/es2/IOS*</exclude>
-                                <exclude>com/sun/glass/ui/android/**</exclude>
                             </excludes>
                         </configuration>
                     </plugin>
@@ -473,11 +471,9 @@
                                 <exclude>com/sun/prism/mtl/**</exclude>
                                 <exclude>com/sun/scenario/effect/impl/hw/mtl/**</exclude>
                                 <exclude>com/sun/prism/es2/EGL*</exclude>
-                                <exclude>com/sun/glass/ui/monocle/**</exclude>
-                                <exclude>com/sun/prism/es2/Monocle*</exclude>
-                                <exclude>com/sun/glass/ui/ios/**</exclude>
-                                <exclude>com/sun/prism/es2/IOS*</exclude>
-                                <exclude>com/sun/glass/ui/android/**</exclude>
+                                <!-- com/sun/glass/ui/monocle/** and com/sun/prism/es2/Monocle* ship in
+                                     the Linux jar: Monocle is pure Java (its JNI became FFM bindings);
+                                     Windows and macOS keep excluding it -->
                             </excludes>
                         </configuration>
                     </plugin>
@@ -547,9 +543,6 @@
                                 <exclude>com/sun/prism/es2/X11GL*</exclude>
                                 <exclude>com/sun/glass/ui/monocle/**</exclude>
                                 <exclude>com/sun/prism/es2/Monocle*</exclude>
-                                <exclude>com/sun/glass/ui/ios/**</exclude>
-                                <exclude>com/sun/prism/es2/IOS*</exclude>
-                                <exclude>com/sun/glass/ui/android/**</exclude>
                             </excludes>
                         </configuration>
                     </plugin>
@@ -796,6 +789,7 @@
                                         <argument>-DHEADERS_DIR=${jfx.graphics.gensrc}/headers/javafx.graphics</argument>
                                         <argument>-DBIN_DIR=${project.build.directory}/native/bin</argument>
                                         <argument>-DINCLUDE_ES2=${INCLUDE_ES2}</argument>
+                                        <argument>-DINCLUDE_ES2_MONOCLE=${INCLUDE_ES2_MONOCLE}</argument>
                                     </arguments>
                                 </configuration>
                             </execution>

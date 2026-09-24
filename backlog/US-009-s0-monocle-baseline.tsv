@@ -1,0 +1,1373 @@
+test	run1	run2	run3	verdict	cause
+CreateDeviceTest.testCreateKeyDevice	PASS	PASS	PASS	stable-pass	
+CreateDeviceTest.testCreateMouseDevice	PASS	PASS	PASS	stable-pass	
+CreateDeviceTest.testCreateTouchDevice	PASS	PASS	PASS	stable-pass	
+DoubleClickTest.testDoubleClick1(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+DoubleClickTest.testDoubleClick1(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+DoubleClickTest.testDoubleClick1(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+DoubleClickTest.testDoubleClick1(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+DoubleClickTest.testDoubleClick1(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+DoubleClickTest.testDoubleClick1(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+DoubleClickTest.testDoubleClick1(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+DoubleClickTest.testDoubleClick1(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+DoubleClickTest.testDoubleClick1(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+DoubleClickTest.testDoubleClick1(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+DoubleClickTest.testDoubleClick1(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+DoubleClickTest.testDoubleClick1(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+DoubleClickTest.testDoubleClick1(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+DoubleClickTest.testDoubleClick1(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+DoubleClickTest.testDoubleClick1(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+DoubleClickTest.testDoubleClick2(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+DoubleClickTest.testDoubleClick2(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+DoubleClickTest.testDoubleClick2(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+DoubleClickTest.testDoubleClick2(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+DoubleClickTest.testDoubleClick2(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+DoubleClickTest.testDoubleClick2(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+DoubleClickTest.testDoubleClick2(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+DoubleClickTest.testDoubleClick2(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+DoubleClickTest.testDoubleClick2(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+DoubleClickTest.testDoubleClick2(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+DoubleClickTest.testDoubleClick2(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+DoubleClickTest.testDoubleClick2(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+DoubleClickTest.testDoubleClick2(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+DoubleClickTest.testDoubleClick2(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+DoubleClickTest.testDoubleClick2(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+DragAndDropTest.testDragOneNodeToAnother(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+DragAndDropTest.testDragOneNodeToAnother(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+DragAndDropTest.testDragOneNodeToAnother(TestTouchDevice)[12]	PASS	ERROR	PASS	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3001ms waiting for 'Drag detected on n1'
+DragAndDropTest.testDragOneNodeToAnother(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+DragAndDropTest.testDragOneNodeToAnother(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+DragAndDropTest.testDragOneNodeToAnother(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+DragAndDropTest.testDragOneNodeToAnother(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+DragAndDropTest.testDragOneNodeToAnother(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+DragAndDropTest.testDragOneNodeToAnother(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+DragAndDropTest.testDragOneNodeToAnother(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+DragAndDropTest.testDragOneNodeToAnother(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+DragAndDropTest.testDragOneNodeToAnother(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+DragAndDropTest.testDragOneNodeToAnother(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+DragAndDropTest.testDragOneNodeToAnother(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+DragAndDropTest.testDragOneNodeToAnother(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.multiTouch_dragPointInandOutAwindow(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.multiTouch_dragPointInandOutAwindow(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.multiTouch_dragPointInandOutAwindow(TestTouchDevice)[12]	FAILURE	FAILURE	FAILURE	persistent	org.opentest4j.AssertionFailedError: expected: <0> but was: <6>
+DragTouchInAndOutAWindowTest.multiTouch_dragPointInandOutAwindow(TestTouchDevice)[13]	SKIP	SKIP	SKIP	skipped	
+DragTouchInAndOutAWindowTest.multiTouch_dragPointInandOutAwindow(TestTouchDevice)[14]	SKIP	SKIP	SKIP	skipped	
+DragTouchInAndOutAWindowTest.multiTouch_dragPointInandOutAwindow(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.multiTouch_dragPointInandOutAwindow(TestTouchDevice)[1]	SKIP	SKIP	SKIP	skipped	
+DragTouchInAndOutAWindowTest.multiTouch_dragPointInandOutAwindow(TestTouchDevice)[2]	SKIP	SKIP	SKIP	skipped	
+DragTouchInAndOutAWindowTest.multiTouch_dragPointInandOutAwindow(TestTouchDevice)[3]	SKIP	SKIP	SKIP	skipped	
+DragTouchInAndOutAWindowTest.multiTouch_dragPointInandOutAwindow(TestTouchDevice)[4]	SKIP	SKIP	SKIP	skipped	
+DragTouchInAndOutAWindowTest.multiTouch_dragPointInandOutAwindow(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.multiTouch_dragPointInandOutAwindow(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.multiTouch_dragPointInandOutAwindow(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.multiTouch_dragPointInandOutAwindow(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.multiTouch_dragPointInandOutAwindow(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.multiTouch_dragTwoPointsIntoTheWindow(TestTouchDevice)	SKIP	SKIP	SKIP	skipped	
+DragTouchInAndOutAWindowTest.singleTouch_dragPointInandOutAwindow(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.singleTouch_dragPointInandOutAwindow(TestTouchDevice)[11]	PASS	ERROR	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'TouchPoint: MOVED'
+DragTouchInAndOutAWindowTest.singleTouch_dragPointInandOutAwindow(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.singleTouch_dragPointInandOutAwindow(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.singleTouch_dragPointInandOutAwindow(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.singleTouch_dragPointInandOutAwindow(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.singleTouch_dragPointInandOutAwindow(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.singleTouch_dragPointInandOutAwindow(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.singleTouch_dragPointInandOutAwindow(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.singleTouch_dragPointInandOutAwindow(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.singleTouch_dragPointInandOutAwindow(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.singleTouch_dragPointInandOutAwindow(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.singleTouch_dragPointInandOutAwindow(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.singleTouch_dragPointInandOutAwindow(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.singleTouch_dragPointInandOutAwindow(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.singleTouch_dragPointIntoTheWindow(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.singleTouch_dragPointIntoTheWindow(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.singleTouch_dragPointIntoTheWindow(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.singleTouch_dragPointIntoTheWindow(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.singleTouch_dragPointIntoTheWindow(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.singleTouch_dragPointIntoTheWindow(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.singleTouch_dragPointIntoTheWindow(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.singleTouch_dragPointIntoTheWindow(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.singleTouch_dragPointIntoTheWindow(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.singleTouch_dragPointIntoTheWindow(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.singleTouch_dragPointIntoTheWindow(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.singleTouch_dragPointIntoTheWindow(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.singleTouch_dragPointIntoTheWindow(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.singleTouch_dragPointIntoTheWindow(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.singleTouch_dragPointIntoTheWindow(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.singleTouch_dragPointoutsideAwindow(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.singleTouch_dragPointoutsideAwindow(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.singleTouch_dragPointoutsideAwindow(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.singleTouch_dragPointoutsideAwindow(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.singleTouch_dragPointoutsideAwindow(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.singleTouch_dragPointoutsideAwindow(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.singleTouch_dragPointoutsideAwindow(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.singleTouch_dragPointoutsideAwindow(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.singleTouch_dragPointoutsideAwindow(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.singleTouch_dragPointoutsideAwindow(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.singleTouch_dragPointoutsideAwindow(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.singleTouch_dragPointoutsideAwindow(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.singleTouch_dragPointoutsideAwindow(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.singleTouch_dragPointoutsideAwindow(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+DragTouchInAndOutAWindowTest.singleTouch_dragPointoutsideAwindow(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+EPDSettingsTest.testAllFlags	PASS	PASS	PASS	stable-pass	
+EPDSettingsTest.testBitsPerPixel	PASS	PASS	PASS	stable-pass	
+EPDSettingsTest.testFlagEnableInversion	PASS	PASS	PASS	stable-pass	
+EPDSettingsTest.testFlagForceMonochrome	PASS	PASS	PASS	stable-pass	
+EPDSettingsTest.testFlagUseDitheringY1	PASS	PASS	PASS	stable-pass	
+EPDSettingsTest.testFlagUseDitheringY4	PASS	PASS	PASS	stable-pass	
+EPDSettingsTest.testNoWait	PASS	PASS	PASS	stable-pass	
+EPDSettingsTest.testRotate	PASS	PASS	PASS	stable-pass	
+EPDSettingsTest.testWaveformMode	PASS	PASS	PASS	stable-pass	
+EPDSettingsTest.testY8Inverted	PASS	PASS	PASS	stable-pass	
+FramebufferTest.testOverflow16	PASS	PASS	PASS	stable-pass	
+FramebufferTest.testOverflow32	PASS	PASS	PASS	stable-pass	
+FramebufferY8Test.copyTo16	PASS	PASS	PASS	stable-pass	
+FramebufferY8Test.copyTo32	PASS	PASS	PASS	stable-pass	
+FramebufferY8Test.saveImage	SKIP	SKIP	SKIP	skipped	
+FramebufferY8Test.saveImageY8	SKIP	SKIP	SKIP	skipped	
+FramebufferY8Test.timeCopyTo16	PASS	PASS	PASS	stable-pass	
+FramebufferY8Test.timeWriteTo16	PASS	PASS	PASS	stable-pass	
+FramebufferY8Test.writeTo16	PASS	PASS	PASS	stable-pass	
+FramebufferY8Test.writeTo32	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap1(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap1(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap1(TestTouchDevice)[12]	ERROR	ERROR	ERROR	persistent	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'Mouse pressed: 640, 400'
+FuzzyTapTest.tap1(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap1(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap1(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap1(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap1(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap1(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap1(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap1(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap1(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap1(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap1(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap1(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap1a(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap1a(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap1a(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap1a(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap1a(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap1a(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap1a(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap1a(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap1a(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap1a(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap1a(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap1a(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap1a(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap1a(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap1a(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap2(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap2(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap2(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap2(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap2(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap2(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap2(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap2(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap2(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap2(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap2(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap2(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap2(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap2(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap2(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap2a(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap2a(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap2a(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap2a(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap2a(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap2a(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap2a(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap2a(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap2a(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap2a(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap2a(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap2a(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap2a(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap2a(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap2a(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap3b(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap3b(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap3b(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap3b(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap3b(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap3b(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap3b(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap3b(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap3b(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap3b(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap3b(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap3b(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap3b(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap3b(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+FuzzyTapTest.tap3b(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+HeadlessGeometry1Test.setScreenBounds	PASS	PASS	PASS	stable-pass	
+HeadlessGeometry2Test.setScreenBounds	PASS	PASS	PASS	stable-pass	
+InputDevicePropertyTest.testMultiTouch(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+InputDevicePropertyTest.testMultiTouch(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+InputDevicePropertyTest.testMultiTouch(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+InputDevicePropertyTest.testMultiTouch(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+InputDevicePropertyTest.testMultiTouch(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+InputDevicePropertyTest.testMultiTouch(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+InputDevicePropertyTest.testMultiTouch(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+InputDevicePropertyTest.testMultiTouch(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+InputDevicePropertyTest.testMultiTouch(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+InputDevicePropertyTest.testMultiTouch(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+InputDevicePropertyTest.testMultiTouch(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+InputDevicePropertyTest.testMultiTouch(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+InputDevicePropertyTest.testMultiTouch(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+InputDevicePropertyTest.testMultiTouch(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+InputDevicePropertyTest.testMultiTouch(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+InputDevicePropertyTest.testPointer(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+InputDevicePropertyTest.testPointer(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+InputDevicePropertyTest.testPointer(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+InputDevicePropertyTest.testPointer(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+InputDevicePropertyTest.testPointer(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+InputDevicePropertyTest.testPointer(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+InputDevicePropertyTest.testPointer(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+InputDevicePropertyTest.testPointer(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+InputDevicePropertyTest.testPointer(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+InputDevicePropertyTest.testPointer(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+InputDevicePropertyTest.testPointer(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+InputDevicePropertyTest.testPointer(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+InputDevicePropertyTest.testPointer(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+InputDevicePropertyTest.testPointer(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+InputDevicePropertyTest.testPointer(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+InputDevicePropertyTest.testTouch(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+InputDevicePropertyTest.testTouch(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+InputDevicePropertyTest.testTouch(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+InputDevicePropertyTest.testTouch(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+InputDevicePropertyTest.testTouch(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+InputDevicePropertyTest.testTouch(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+InputDevicePropertyTest.testTouch(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+InputDevicePropertyTest.testTouch(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+InputDevicePropertyTest.testTouch(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+InputDevicePropertyTest.testTouch(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+InputDevicePropertyTest.testTouch(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+InputDevicePropertyTest.testTouch(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+InputDevicePropertyTest.testTouch(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+InputDevicePropertyTest.testTouch(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+InputDevicePropertyTest.testTouch(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+IntSetTest.testAddInOrderRemoveInOrder(Parameter)[1]	PASS	PASS	PASS	stable-pass	
+IntSetTest.testAddInOrderRemoveInOrder(Parameter)[2]	PASS	PASS	PASS	stable-pass	
+IntSetTest.testAddInOrderRemoveInOrder(Parameter)[3]	PASS	PASS	PASS	stable-pass	
+IntSetTest.testAddInOrderRemoveInOrder(Parameter)[4]	PASS	PASS	PASS	stable-pass	
+IntSetTest.testAddInOrderRemoveInOrder(Parameter)[5]	PASS	PASS	PASS	stable-pass	
+IntSetTest.testAddInOrderRemoveInOrder(Parameter)[6]	PASS	PASS	PASS	stable-pass	
+IntSetTest.testAddInOrderRemoveInReverse(Parameter)[1]	PASS	PASS	PASS	stable-pass	
+IntSetTest.testAddInOrderRemoveInReverse(Parameter)[2]	PASS	PASS	PASS	stable-pass	
+IntSetTest.testAddInOrderRemoveInReverse(Parameter)[3]	PASS	PASS	PASS	stable-pass	
+IntSetTest.testAddInOrderRemoveInReverse(Parameter)[4]	PASS	PASS	PASS	stable-pass	
+IntSetTest.testAddInOrderRemoveInReverse(Parameter)[5]	PASS	PASS	PASS	stable-pass	
+IntSetTest.testAddInOrderRemoveInReverse(Parameter)[6]	PASS	PASS	PASS	stable-pass	
+IntSetTest.testAddInReverseRemoveInOrder(Parameter)[1]	PASS	PASS	PASS	stable-pass	
+IntSetTest.testAddInReverseRemoveInOrder(Parameter)[2]	PASS	PASS	PASS	stable-pass	
+IntSetTest.testAddInReverseRemoveInOrder(Parameter)[3]	PASS	PASS	PASS	stable-pass	
+IntSetTest.testAddInReverseRemoveInOrder(Parameter)[4]	PASS	PASS	PASS	stable-pass	
+IntSetTest.testAddInReverseRemoveInOrder(Parameter)[5]	PASS	PASS	PASS	stable-pass	
+IntSetTest.testAddInReverseRemoveInOrder(Parameter)[6]	PASS	PASS	PASS	stable-pass	
+IntSetTest.testAddInReverseRemoveInReverse(Parameter)[1]	PASS	PASS	PASS	stable-pass	
+IntSetTest.testAddInReverseRemoveInReverse(Parameter)[2]	PASS	PASS	PASS	stable-pass	
+IntSetTest.testAddInReverseRemoveInReverse(Parameter)[3]	PASS	PASS	PASS	stable-pass	
+IntSetTest.testAddInReverseRemoveInReverse(Parameter)[4]	PASS	PASS	PASS	stable-pass	
+IntSetTest.testAddInReverseRemoveInReverse(Parameter)[5]	PASS	PASS	PASS	stable-pass	
+IntSetTest.testAddInReverseRemoveInReverse(Parameter)[6]	PASS	PASS	PASS	stable-pass	
+ModalDialogTest.test1	PASS	PASS	PASS	stable-pass	
+MonocleApplicationTest.testCharToKeyCode	PASS	PASS	PASS	stable-pass	
+MouseLagTest.testMouseLag	PASS	PASS	PASS	stable-pass	
+MultiTouch2Test.pressReleasePressTest(TestTouchDevice)[1]	PASS	ERROR	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3001ms waiting for 'TouchPoint: PRESSED 640, 240'
+MultiTouch2Test.pressReleasePressTest(TestTouchDevice)[2]	PASS	ERROR	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3001ms waiting for 'TouchPoint: PRESSED 640, 240'
+MultiTouch2Test.pressReleasePressTest(TestTouchDevice)[3]	PASS	ERROR	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3001ms waiting for 'TouchPoint: PRESSED 640, 240'
+MultiTouch2Test.pressReleasePressTest(TestTouchDevice)[4]	PASS	ERROR	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'TouchPoint: PRESSED 640, 240'
+MultiTouch2Test.pressReleasePressTest(TestTouchDevice)[5]	PASS	ERROR	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'TouchPoint: PRESSED 640, 240'
+MultiTouch2Test.pressReleasePressTest(TestTouchDevice)[6]	PASS	ERROR	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'TouchPoint: PRESSED 640, 240'
+MultiTouch2Test.pressReleasePressTest(TestTouchDevice)[7]	PASS	ERROR	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'TouchPoint: PRESSED 640, 240'
+MultiTouch2Test.pressReleasePressTest(TestTouchDevice)[8]	PASS	ERROR	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'TouchPoint: PRESSED 640, 240'
+MultiTouch2Test.pressReleasePressTest(TestTouchDevice)[9]	PASS	ERROR	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'TouchPoint: PRESSED 640, 240'
+MultiTouch2Test.pressTwoFingersReleaseOne(TestTouchDevice)[1]	ERROR	ERROR	ERROR	persistent	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3001ms waiting for 'Mouse pressed: 160, 100'
+MultiTouch2Test.pressTwoFingersReleaseOne(TestTouchDevice)[2]	ERROR	ERROR	ERROR	persistent	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'Mouse pressed: 160, 100'
+MultiTouch2Test.pressTwoFingersReleaseOne(TestTouchDevice)[3]	ERROR	ERROR	ERROR	persistent	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'Mouse pressed: 160, 100'
+MultiTouch2Test.pressTwoFingersReleaseOne(TestTouchDevice)[4]	ERROR	ERROR	ERROR	persistent	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'Mouse pressed: 160, 100'
+MultiTouch2Test.pressTwoFingersReleaseOne(TestTouchDevice)[5]	ERROR	ERROR	ERROR	persistent	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3001ms waiting for 'Mouse pressed: 160, 100'
+MultiTouch2Test.pressTwoFingersReleaseOne(TestTouchDevice)[6]	ERROR	ERROR	ERROR	persistent	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'Mouse pressed: 160, 100'
+MultiTouch2Test.pressTwoFingersReleaseOne(TestTouchDevice)[7]	ERROR	ERROR	ERROR	persistent	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3001ms waiting for 'Mouse pressed: 160, 100'
+MultiTouch2Test.pressTwoFingersReleaseOne(TestTouchDevice)[8]	ERROR	ERROR	ERROR	persistent	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'Mouse pressed: 160, 100'
+MultiTouch2Test.pressTwoFingersReleaseOne(TestTouchDevice)[9]	PASS	ERROR	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3001ms waiting for 'Mouse pressed: 160, 100'
+MultiTouch2Test.twoFingerDrag(TestTouchDevice)[1]	PASS	ERROR	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3001ms waiting for 'TouchPoint: PRESSED 640, 400'
+MultiTouch2Test.twoFingerDrag(TestTouchDevice)[2]	PASS	ERROR	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3001ms waiting for 'TouchPoint: PRESSED 640, 400'
+MultiTouch2Test.twoFingerDrag(TestTouchDevice)[3]	PASS	ERROR	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3001ms waiting for 'TouchPoint: PRESSED 640, 400'
+MultiTouch2Test.twoFingerDrag(TestTouchDevice)[4]	PASS	ERROR	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3001ms waiting for 'TouchPoint: PRESSED 640, 400'
+MultiTouch2Test.twoFingerDrag(TestTouchDevice)[5]	PASS	ERROR	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'TouchPoint: PRESSED 640, 400'
+MultiTouch2Test.twoFingerDrag(TestTouchDevice)[6]	PASS	ERROR	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'TouchPoint: PRESSED 640, 400'
+MultiTouch2Test.twoFingerDrag(TestTouchDevice)[7]	PASS	ERROR	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'TouchPoint: PRESSED 640, 400'
+MultiTouch2Test.twoFingerDrag(TestTouchDevice)[8]	ERROR	ERROR	ERROR	persistent	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'TouchPoint: STATIONARY 640, 400'
+MultiTouch2Test.twoFingerDrag(TestTouchDevice)[9]	ERROR	ERROR	ERROR	persistent	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'TouchPoint: PRESSED 640, 400'
+MultiTouch2Test.twoFingerDragSingleFingerTap(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+MultiTouch2Test.twoFingerDragSingleFingerTap(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+MultiTouch2Test.twoFingerDragSingleFingerTap(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+MultiTouch2Test.twoFingerDragSingleFingerTap(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+MultiTouch2Test.twoFingerDragSingleFingerTap(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+MultiTouch2Test.twoFingerDragSingleFingerTap(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+MultiTouch2Test.twoFingerDragSingleFingerTap(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+MultiTouch2Test.twoFingerDragSingleFingerTap(TestTouchDevice)[8]	ERROR	ERROR	ERROR	persistent	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'TouchPoint: MOVED 660, 400'
+MultiTouch2Test.twoFingerDragSingleFingerTap(TestTouchDevice)[9]	ERROR	ERROR	ERROR	persistent	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'TouchPoint: PRESSED 640, 400'
+MultiTouch2Test.twoFingerTap(TestTouchDevice)[1]	PASS	ERROR	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'Touch pressed: 640, 400'
+MultiTouch2Test.twoFingerTap(TestTouchDevice)[2]	PASS	ERROR	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'Touch pressed: 640, 400'
+MultiTouch2Test.twoFingerTap(TestTouchDevice)[3]	PASS	ERROR	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'Touch pressed: 640, 400'
+MultiTouch2Test.twoFingerTap(TestTouchDevice)[4]	PASS	ERROR	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'Touch pressed: 640, 400'
+MultiTouch2Test.twoFingerTap(TestTouchDevice)[5]	PASS	ERROR	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'Touch pressed: 640, 400'
+MultiTouch2Test.twoFingerTap(TestTouchDevice)[6]	PASS	ERROR	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3001ms waiting for 'Touch pressed: 640, 400'
+MultiTouch2Test.twoFingerTap(TestTouchDevice)[7]	PASS	ERROR	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3001ms waiting for 'Touch pressed: 640, 400'
+MultiTouch2Test.twoFingerTap(TestTouchDevice)[8]	PASS	ERROR	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3001ms waiting for 'Touch pressed: 640, 400'
+MultiTouch2Test.twoFingerTap(TestTouchDevice)[9]	PASS	ERROR	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'Touch pressed: 640, 400'
+MultiTouch2Test.twoFingersPressDragOne(TestTouchDevice)[1]	PASS	ERROR	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3001ms waiting for 'TouchPoint: PRESSED 256, 160'
+MultiTouch2Test.twoFingersPressDragOne(TestTouchDevice)[2]	PASS	ERROR	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3001ms waiting for 'TouchPoint: PRESSED 256, 160'
+MultiTouch2Test.twoFingersPressDragOne(TestTouchDevice)[3]	PASS	ERROR	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3001ms waiting for 'TouchPoint: PRESSED 256, 160'
+MultiTouch2Test.twoFingersPressDragOne(TestTouchDevice)[4]	PASS	ERROR	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'TouchPoint: PRESSED 256, 160'
+MultiTouch2Test.twoFingersPressDragOne(TestTouchDevice)[5]	PASS	ERROR	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'TouchPoint: PRESSED 256, 160'
+MultiTouch2Test.twoFingersPressDragOne(TestTouchDevice)[6]	PASS	ERROR	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'TouchPoint: PRESSED 256, 160'
+MultiTouch2Test.twoFingersPressDragOne(TestTouchDevice)[7]	PASS	ERROR	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'TouchPoint: PRESSED 256, 160'
+MultiTouch2Test.twoFingersPressDragOne(TestTouchDevice)[8]	PASS	ERROR	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'TouchPoint: PRESSED 256, 160'
+MultiTouch2Test.twoFingersPressDragOne(TestTouchDevice)[9]	PASS	ERROR	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3001ms waiting for 'TouchPoint: PRESSED 256, 160'
+MultiTouch3Test.touchSequence(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+MultiTouch3Test.touchSequence(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+MultiTouch3Test.touchSequence(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+MultiTouch3Test.touchSequence(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+MultiTouch3Test.touchSequence(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+MultiTouch3Test.touchSequence(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+MultiTouch3Test.touchSequence(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+MultiTouch3Test.touchSequence(TestTouchDevice)[8]	ERROR	ERROR	ERROR	persistent	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3001ms waiting for 'TouchPoint: PRESSED 640, 400'
+MultiTouch3Test.touchSequence(TestTouchDevice)[9]	PASS	PASS	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3001ms waiting for 'TouchPoint: PRESSED 640, 400'
+RapidTapTest.tapTwentyTimes(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+RapidTapTest.tapTwentyTimes(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+RapidTapTest.tapTwentyTimes(TestTouchDevice)[12]	FAILURE	FAILURE	FAILURE	persistent	org.opentest4j.AssertionFailedError: expected: <20> but was: <19>
+RapidTapTest.tapTwentyTimes(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+RapidTapTest.tapTwentyTimes(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+RapidTapTest.tapTwentyTimes(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+RapidTapTest.tapTwentyTimes(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+RapidTapTest.tapTwentyTimes(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+RapidTapTest.tapTwentyTimes(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+RapidTapTest.tapTwentyTimes(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+RapidTapTest.tapTwentyTimes(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+RapidTapTest.tapTwentyTimes(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+RapidTapTest.tapTwentyTimes(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+RapidTapTest.tapTwentyTimes(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+RapidTapTest.tapTwentyTimes(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+RapidTapTest.tapTwentyTimesUnderStress(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+RapidTapTest.tapTwentyTimesUnderStress(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+RapidTapTest.tapTwentyTimesUnderStress(TestTouchDevice)[12]	FAILURE	FAILURE	FAILURE	persistent	org.opentest4j.AssertionFailedError: expected: <20> but was: <17>
+RapidTapTest.tapTwentyTimesUnderStress(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+RapidTapTest.tapTwentyTimesUnderStress(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+RapidTapTest.tapTwentyTimesUnderStress(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+RapidTapTest.tapTwentyTimesUnderStress(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+RapidTapTest.tapTwentyTimesUnderStress(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+RapidTapTest.tapTwentyTimesUnderStress(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+RapidTapTest.tapTwentyTimesUnderStress(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+RapidTapTest.tapTwentyTimesUnderStress(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+RapidTapTest.tapTwentyTimesUnderStress(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+RapidTapTest.tapTwentyTimesUnderStress(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+RapidTapTest.tapTwentyTimesUnderStress(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+RapidTapTest.tapTwentyTimesUnderStress(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+RobotTest.clickKeyModifierTest	PASS	PASS	PASS	stable-pass	
+RobotTest.clickTest	PASS	PASS	PASS	stable-pass	
+RobotTest.scrollTest	PASS	PASS	PASS	stable-pass	
+RobotTest.typeTest	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeft(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeft(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeft(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeft(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeft(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeft(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeft(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeft(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeft(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftBigSteps(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftBigSteps(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftBigSteps(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftBigSteps(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftBigSteps(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftBigSteps(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftBigSteps(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftBigSteps(TestTouchDevice)[8]	ERROR	ERROR	ERROR	persistent	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3001ms waiting for 'TouchPoint: PRESSED 640, 40'
+RotateTest.testRotateLeftBigSteps(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftByFewSmallSteps(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftByFewSmallSteps(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftByFewSmallSteps(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftByFewSmallSteps(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftByFewSmallSteps(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftByFewSmallSteps(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftByFewSmallSteps(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftByFewSmallSteps(TestTouchDevice)[8]	ERROR	ERROR	ERROR	persistent	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'TouchPoint: MOVED 541, 54'
+RotateTest.testRotateLeftByFewSmallSteps(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftFrom140Degrees(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftFrom140Degrees(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftFrom140Degrees(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftFrom140Degrees(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftFrom140Degrees(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftFrom140Degrees(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftFrom140Degrees(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftFrom140Degrees(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftFrom140Degrees(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftFrom45Degrees(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftFrom45Degrees(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftFrom45Degrees(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftFrom45Degrees(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftFrom45Degrees(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftFrom45Degrees(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftFrom45Degrees(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftFrom45Degrees(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftFrom45Degrees(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftFromMinus140Degrees(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftFromMinus140Degrees(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftFromMinus140Degrees(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftFromMinus140Degrees(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftFromMinus140Degrees(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftFromMinus140Degrees(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftFromMinus140Degrees(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftFromMinus140Degrees(TestTouchDevice)[8]	ERROR	ERROR	ERROR	persistent	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3001ms waiting for 'TouchPoint: MOVED 517, 738'
+RotateTest.testRotateLeftFromMinus140Degrees(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftFromMinus45Degrees(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftFromMinus45Degrees(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftFromMinus45Degrees(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftFromMinus45Degrees(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftFromMinus45Degrees(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftFromMinus45Degrees(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftFromMinus45Degrees(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftFromMinus45Degrees(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftFromMinus45Degrees(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateLeftOneBigStep(TestTouchDevice)	SKIP	SKIP	SKIP	skipped	
+RotateTest.testRotateRight(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRight(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRight(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRight(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRight(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRight(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRight(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRight(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRight(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightBigSteps(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightBigSteps(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightBigSteps(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightBigSteps(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightBigSteps(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightBigSteps(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightBigSteps(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightBigSteps(TestTouchDevice)[8]	PASS	PASS	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'TouchPoint: MOVED 916, 169'
+RotateTest.testRotateRightBigSteps(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightByFewSmallSteps(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightByFewSmallSteps(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightByFewSmallSteps(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightByFewSmallSteps(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightByFewSmallSteps(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightByFewSmallSteps(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightByFewSmallSteps(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightByFewSmallSteps(TestTouchDevice)[8]	ERROR	ERROR	ERROR	persistent	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'TouchPoint: PRESSED 640, 40'
+RotateTest.testRotateRightByFewSmallSteps(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightFrom140Degrees(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightFrom140Degrees(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightFrom140Degrees(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightFrom140Degrees(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightFrom140Degrees(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightFrom140Degrees(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightFrom140Degrees(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightFrom140Degrees(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightFrom140Degrees(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightFrom45Degrees(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightFrom45Degrees(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightFrom45Degrees(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightFrom45Degrees(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightFrom45Degrees(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightFrom45Degrees(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightFrom45Degrees(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightFrom45Degrees(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightFrom45Degrees(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightFromMinus140Degrees(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightFromMinus140Degrees(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightFromMinus140Degrees(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightFromMinus140Degrees(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightFromMinus140Degrees(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightFromMinus140Degrees(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightFromMinus140Degrees(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightFromMinus140Degrees(TestTouchDevice)[8]	ERROR	PASS	PASS	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'TouchPoint: MOVED 285, 463'
+RotateTest.testRotateRightFromMinus140Degrees(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightFromMinus45Degrees(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightFromMinus45Degrees(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightFromMinus45Degrees(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightFromMinus45Degrees(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightFromMinus45Degrees(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightFromMinus45Degrees(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightFromMinus45Degrees(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightFromMinus45Degrees(TestTouchDevice)[8]	ERROR	PASS	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3001ms waiting for 'TouchPoint: MOVED 733, 52'
+RotateTest.testRotateRightFromMinus45Degrees(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+RotateTest.testRotateRightOneBigStep(TestTouchDevice)	SKIP	SKIP	SKIP	skipped	
+RotateTest.testSmallStepLeftNoRotateSent(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+RotateTest.testSmallStepLeftNoRotateSent(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+RotateTest.testSmallStepLeftNoRotateSent(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+RotateTest.testSmallStepLeftNoRotateSent(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+RotateTest.testSmallStepLeftNoRotateSent(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+RotateTest.testSmallStepLeftNoRotateSent(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+RotateTest.testSmallStepLeftNoRotateSent(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+RotateTest.testSmallStepLeftNoRotateSent(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+RotateTest.testSmallStepLeftNoRotateSent(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+RotateTest.testSmallStepRightNoRotateSent(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+RotateTest.testSmallStepRightNoRotateSent(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+RotateTest.testSmallStepRightNoRotateSent(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+RotateTest.testSmallStepRightNoRotateSent(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+RotateTest.testSmallStepRightNoRotateSent(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+RotateTest.testSmallStepRightNoRotateSent(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+RotateTest.testSmallStepRightNoRotateSent(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+RotateTest.testSmallStepRightNoRotateSent(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+RotateTest.testSmallStepRightNoRotateSent(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollDown(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollDown(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollDown(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollDown(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollDown(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollDown(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollDown(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollDown(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollDown(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollDown(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollDown(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollDown(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollDown(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollDown(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollDown(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollDownAndLeft(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollDownAndLeft(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollDownAndLeft(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollDownAndLeft(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollDownAndLeft(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollDownAndLeft(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollDownAndLeft(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollDownAndLeft(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollDownAndLeft(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollDownAndLeft(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollDownAndLeft(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollDownAndLeft(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollDownAndLeft(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollDownAndLeft(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollDownAndLeft(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollDownAndRight(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollDownAndRight(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollDownAndRight(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollDownAndRight(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollDownAndRight(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollDownAndRight(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollDownAndRight(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollDownAndRight(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollDownAndRight(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollDownAndRight(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollDownAndRight(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollDownAndRight(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollDownAndRight(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollDownAndRight(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollDownAndRight(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollLeft(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollLeft(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollLeft(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollLeft(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollLeft(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollLeft(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollLeft(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollLeft(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollLeft(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollLeft(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollLeft(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollLeft(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollLeft(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollLeft(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollLeft(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollRight(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollRight(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollRight(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollRight(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollRight(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollRight(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollRight(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollRight(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollRight(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollRight(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollRight(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollRight(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollRight(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollRight(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollRight(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollUp(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollUp(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollUp(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollUp(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollUp(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollUp(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollUp(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollUp(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollUp(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollUp(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollUp(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollUp(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollUp(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollUp(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollUp(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollUpAndLeft(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollUpAndLeft(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollUpAndLeft(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollUpAndLeft(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollUpAndLeft(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollUpAndLeft(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollUpAndLeft(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollUpAndLeft(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollUpAndLeft(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollUpAndLeft(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollUpAndLeft(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollUpAndLeft(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollUpAndLeft(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollUpAndLeft(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollUpAndLeft(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollUpAndRight(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollUpAndRight(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollUpAndRight(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollUpAndRight(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollUpAndRight(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollUpAndRight(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollUpAndRight(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollUpAndRight(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollUpAndRight(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollUpAndRight(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollUpAndRight(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollUpAndRight(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollUpAndRight(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollUpAndRight(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testScrollUpAndRight(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersAsymmetricScroll(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersAsymmetricScroll(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersAsymmetricScroll(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersAsymmetricScroll(TestTouchDevice)[13]	SKIP	SKIP	SKIP	skipped	
+ScrollTest.testTwoFingersAsymmetricScroll(TestTouchDevice)[14]	SKIP	SKIP	SKIP	skipped	
+ScrollTest.testTwoFingersAsymmetricScroll(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersAsymmetricScroll(TestTouchDevice)[1]	SKIP	SKIP	SKIP	skipped	
+ScrollTest.testTwoFingersAsymmetricScroll(TestTouchDevice)[2]	SKIP	SKIP	SKIP	skipped	
+ScrollTest.testTwoFingersAsymmetricScroll(TestTouchDevice)[3]	SKIP	SKIP	SKIP	skipped	
+ScrollTest.testTwoFingersAsymmetricScroll(TestTouchDevice)[4]	SKIP	SKIP	SKIP	skipped	
+ScrollTest.testTwoFingersAsymmetricScroll(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersAsymmetricScroll(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersAsymmetricScroll(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersAsymmetricScroll(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersAsymmetricScroll(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersScroll1(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersScroll1(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersScroll1(TestTouchDevice)[12]	ERROR	ERROR	PASS	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3001ms waiting for 'TouchPoint: STATIONARY 640, 462'
+ScrollTest.testTwoFingersScroll1(TestTouchDevice)[13]	SKIP	SKIP	SKIP	skipped	
+ScrollTest.testTwoFingersScroll1(TestTouchDevice)[14]	SKIP	SKIP	SKIP	skipped	
+ScrollTest.testTwoFingersScroll1(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersScroll1(TestTouchDevice)[1]	SKIP	SKIP	SKIP	skipped	
+ScrollTest.testTwoFingersScroll1(TestTouchDevice)[2]	SKIP	SKIP	SKIP	skipped	
+ScrollTest.testTwoFingersScroll1(TestTouchDevice)[3]	SKIP	SKIP	SKIP	skipped	
+ScrollTest.testTwoFingersScroll1(TestTouchDevice)[4]	SKIP	SKIP	SKIP	skipped	
+ScrollTest.testTwoFingersScroll1(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersScroll1(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersScroll1(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersScroll1(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersScroll1(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersScroll2(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersScroll2(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersScroll2(TestTouchDevice)[12]	PASS	ERROR	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'TouchPoint: STATIONARY 640, 400'
+ScrollTest.testTwoFingersScroll2(TestTouchDevice)[13]	SKIP	SKIP	SKIP	skipped	
+ScrollTest.testTwoFingersScroll2(TestTouchDevice)[14]	SKIP	SKIP	SKIP	skipped	
+ScrollTest.testTwoFingersScroll2(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersScroll2(TestTouchDevice)[1]	SKIP	SKIP	SKIP	skipped	
+ScrollTest.testTwoFingersScroll2(TestTouchDevice)[2]	SKIP	SKIP	SKIP	skipped	
+ScrollTest.testTwoFingersScroll2(TestTouchDevice)[3]	SKIP	SKIP	SKIP	skipped	
+ScrollTest.testTwoFingersScroll2(TestTouchDevice)[4]	SKIP	SKIP	SKIP	skipped	
+ScrollTest.testTwoFingersScroll2(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersScroll2(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersScroll2(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersScroll2(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersScroll2(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersScroll3(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersScroll3(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersScroll3(TestTouchDevice)[12]	PASS	PASS	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3001ms waiting for 'TouchPoint: STATIONARY 640, 462'
+ScrollTest.testTwoFingersScroll3(TestTouchDevice)[13]	SKIP	SKIP	SKIP	skipped	
+ScrollTest.testTwoFingersScroll3(TestTouchDevice)[14]	SKIP	SKIP	SKIP	skipped	
+ScrollTest.testTwoFingersScroll3(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersScroll3(TestTouchDevice)[1]	SKIP	SKIP	SKIP	skipped	
+ScrollTest.testTwoFingersScroll3(TestTouchDevice)[2]	SKIP	SKIP	SKIP	skipped	
+ScrollTest.testTwoFingersScroll3(TestTouchDevice)[3]	SKIP	SKIP	SKIP	skipped	
+ScrollTest.testTwoFingersScroll3(TestTouchDevice)[4]	SKIP	SKIP	SKIP	skipped	
+ScrollTest.testTwoFingersScroll3(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersScroll3(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersScroll3(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersScroll3(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersScroll3(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersScrollTwice(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersScrollTwice(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersScrollTwice(TestTouchDevice)[12]	PASS	PASS	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3001ms waiting for 'TouchPoint: MOVED 640, 431'
+ScrollTest.testTwoFingersScrollTwice(TestTouchDevice)[13]	SKIP	SKIP	SKIP	skipped	
+ScrollTest.testTwoFingersScrollTwice(TestTouchDevice)[14]	SKIP	SKIP	SKIP	skipped	
+ScrollTest.testTwoFingersScrollTwice(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersScrollTwice(TestTouchDevice)[1]	SKIP	SKIP	SKIP	skipped	
+ScrollTest.testTwoFingersScrollTwice(TestTouchDevice)[2]	SKIP	SKIP	SKIP	skipped	
+ScrollTest.testTwoFingersScrollTwice(TestTouchDevice)[3]	SKIP	SKIP	SKIP	skipped	
+ScrollTest.testTwoFingersScrollTwice(TestTouchDevice)[4]	SKIP	SKIP	SKIP	skipped	
+ScrollTest.testTwoFingersScrollTwice(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersScrollTwice(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersScrollTwice(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersScrollTwice(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersScrollTwice(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersScrollUp(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersScrollUp(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersScrollUp(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersScrollUp(TestTouchDevice)[13]	SKIP	SKIP	SKIP	skipped	
+ScrollTest.testTwoFingersScrollUp(TestTouchDevice)[14]	SKIP	SKIP	SKIP	skipped	
+ScrollTest.testTwoFingersScrollUp(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersScrollUp(TestTouchDevice)[1]	SKIP	SKIP	SKIP	skipped	
+ScrollTest.testTwoFingersScrollUp(TestTouchDevice)[2]	SKIP	SKIP	SKIP	skipped	
+ScrollTest.testTwoFingersScrollUp(TestTouchDevice)[3]	SKIP	SKIP	SKIP	skipped	
+ScrollTest.testTwoFingersScrollUp(TestTouchDevice)[4]	SKIP	SKIP	SKIP	skipped	
+ScrollTest.testTwoFingersScrollUp(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersScrollUp(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersScrollUp(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersScrollUp(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+ScrollTest.testTwoFingersScrollUp(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+ScrollThresholdTest.testMoveDownCheckThreshold(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+ScrollThresholdTest.testMoveDownCheckThreshold(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+ScrollThresholdTest.testMoveDownCheckThreshold(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+ScrollThresholdTest.testMoveDownCheckThreshold(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+ScrollThresholdTest.testMoveDownCheckThreshold(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+ScrollThresholdTest.testMoveDownCheckThreshold(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+ScrollThresholdTest.testMoveDownCheckThreshold(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+ScrollThresholdTest.testMoveDownCheckThreshold(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+ScrollThresholdTest.testMoveDownCheckThreshold(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+ScrollThresholdTest.testMoveDownCheckThreshold(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+ScrollThresholdTest.testMoveDownCheckThreshold(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+ScrollThresholdTest.testMoveDownCheckThreshold(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+ScrollThresholdTest.testMoveDownCheckThreshold(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+ScrollThresholdTest.testMoveDownCheckThreshold(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+ScrollThresholdTest.testMoveDownCheckThreshold(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+ScrollThresholdTest.testMoveUpCheckThreshold(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+ScrollThresholdTest.testMoveUpCheckThreshold(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+ScrollThresholdTest.testMoveUpCheckThreshold(TestTouchDevice)[12]	ERROR	ERROR	ERROR	persistent	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3001ms waiting for 'TouchPoint: RELEASED 640, 391'
+ScrollThresholdTest.testMoveUpCheckThreshold(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+ScrollThresholdTest.testMoveUpCheckThreshold(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+ScrollThresholdTest.testMoveUpCheckThreshold(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+ScrollThresholdTest.testMoveUpCheckThreshold(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+ScrollThresholdTest.testMoveUpCheckThreshold(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+ScrollThresholdTest.testMoveUpCheckThreshold(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+ScrollThresholdTest.testMoveUpCheckThreshold(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+ScrollThresholdTest.testMoveUpCheckThreshold(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+ScrollThresholdTest.testMoveUpCheckThreshold(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+ScrollThresholdTest.testMoveUpCheckThreshold(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+ScrollThresholdTest.testMoveUpCheckThreshold(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+ScrollThresholdTest.testMoveUpCheckThreshold(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+SimpleMouseTest.testClickLeft	PASS	PASS	PASS	stable-pass	
+SimpleMouseTest.testClickRight	PASS	PASS	PASS	stable-pass	
+SimpleMouseTest.testDragLookahead	PASS	PASS	PASS	stable-pass	
+SimpleMouseTest.testGrab1	PASS	PASS	PASS	stable-pass	
+SimpleMouseTest.testGrab2	PASS	PASS	PASS	stable-pass	
+SimpleMouseTest.testMoveLookahead	PASS	PASS	PASS	stable-pass	
+SimpleMouseTest.testRelativeDrag	PASS	PASS	PASS	stable-pass	
+SimpleMouseTest.testRelativeMove	PASS	PASS	PASS	stable-pass	
+SimpleMouseTest.testWheel	PASS	PASS	PASS	stable-pass	
+SimpleMouseTest.testWheelSequence	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tap(TestTouchDevice, TestCase)[10]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tap(TestTouchDevice, TestCase)[11]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tap(TestTouchDevice, TestCase)[12]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tap(TestTouchDevice, TestCase)[13]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tap(TestTouchDevice, TestCase)[14]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tap(TestTouchDevice, TestCase)[15]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tap(TestTouchDevice, TestCase)[16]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tap(TestTouchDevice, TestCase)[17]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tap(TestTouchDevice, TestCase)[18]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tap(TestTouchDevice, TestCase)[19]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tap(TestTouchDevice, TestCase)[1]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tap(TestTouchDevice, TestCase)[20]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tap(TestTouchDevice, TestCase)[21]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tap(TestTouchDevice, TestCase)[22]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tap(TestTouchDevice, TestCase)[23]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tap(TestTouchDevice, TestCase)[24]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tap(TestTouchDevice, TestCase)[25]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tap(TestTouchDevice, TestCase)[26]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tap(TestTouchDevice, TestCase)[27]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tap(TestTouchDevice, TestCase)[28]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tap(TestTouchDevice, TestCase)[29]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tap(TestTouchDevice, TestCase)[2]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tap(TestTouchDevice, TestCase)[30]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tap(TestTouchDevice, TestCase)[3]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tap(TestTouchDevice, TestCase)[4]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tap(TestTouchDevice, TestCase)[5]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tap(TestTouchDevice, TestCase)[6]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tap(TestTouchDevice, TestCase)[7]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tap(TestTouchDevice, TestCase)[8]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tap(TestTouchDevice, TestCase)[9]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tapAndDrag(TestTouchDevice, TestCase)[10]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tapAndDrag(TestTouchDevice, TestCase)[11]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tapAndDrag(TestTouchDevice, TestCase)[12]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tapAndDrag(TestTouchDevice, TestCase)[13]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tapAndDrag(TestTouchDevice, TestCase)[14]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tapAndDrag(TestTouchDevice, TestCase)[15]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tapAndDrag(TestTouchDevice, TestCase)[16]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tapAndDrag(TestTouchDevice, TestCase)[17]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tapAndDrag(TestTouchDevice, TestCase)[18]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tapAndDrag(TestTouchDevice, TestCase)[19]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tapAndDrag(TestTouchDevice, TestCase)[1]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tapAndDrag(TestTouchDevice, TestCase)[20]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tapAndDrag(TestTouchDevice, TestCase)[21]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tapAndDrag(TestTouchDevice, TestCase)[22]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tapAndDrag(TestTouchDevice, TestCase)[23]	PASS	PASS	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'Mouse pressed: 200, 100'
+SingleTouchNonFullScreenTest.tapAndDrag(TestTouchDevice, TestCase)[24]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tapAndDrag(TestTouchDevice, TestCase)[25]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tapAndDrag(TestTouchDevice, TestCase)[26]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tapAndDrag(TestTouchDevice, TestCase)[27]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tapAndDrag(TestTouchDevice, TestCase)[28]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tapAndDrag(TestTouchDevice, TestCase)[29]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tapAndDrag(TestTouchDevice, TestCase)[2]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tapAndDrag(TestTouchDevice, TestCase)[30]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tapAndDrag(TestTouchDevice, TestCase)[3]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tapAndDrag(TestTouchDevice, TestCase)[4]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tapAndDrag(TestTouchDevice, TestCase)[5]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tapAndDrag(TestTouchDevice, TestCase)[6]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tapAndDrag(TestTouchDevice, TestCase)[7]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tapAndDrag(TestTouchDevice, TestCase)[8]	PASS	PASS	PASS	stable-pass	
+SingleTouchNonFullScreenTest.tapAndDrag(TestTouchDevice, TestCase)[9]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tap(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tap(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tap(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tap(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tap(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tap(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tap(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tap(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tap(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tap(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tap(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tap(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tap(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tap(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tap(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapAndDrag1(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapAndDrag1(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapAndDrag1(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapAndDrag1(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapAndDrag1(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapAndDrag1(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapAndDrag1(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapAndDrag1(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapAndDrag1(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapAndDrag1(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapAndDrag1(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapAndDrag1(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapAndDrag1(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapAndDrag1(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapAndDrag1(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapAndDrag2(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapAndDrag2(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapAndDrag2(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapAndDrag2(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapAndDrag2(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapAndDrag2(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapAndDrag2(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapAndDrag2(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapAndDrag2(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapAndDrag2(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapAndDrag2(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapAndDrag2(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapAndDrag2(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapAndDrag2(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapAndDrag2(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapAndDrag3(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapAndDrag3(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapAndDrag3(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapAndDrag3(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapAndDrag3(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapAndDrag3(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapAndDrag3(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapAndDrag3(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapAndDrag3(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapAndDrag3(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapAndDrag3(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapAndDrag3(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapAndDrag3(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapAndDrag3(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapAndDrag3(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapDragReleaseTapAgain(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapDragReleaseTapAgain(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapDragReleaseTapAgain(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapDragReleaseTapAgain(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapDragReleaseTapAgain(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapDragReleaseTapAgain(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapDragReleaseTapAgain(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapDragReleaseTapAgain(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapDragReleaseTapAgain(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapDragReleaseTapAgain(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapDragReleaseTapAgain(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapDragReleaseTapAgain(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapDragReleaseTapAgain(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapDragReleaseTapAgain(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapDragReleaseTapAgain(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapHoldRelease(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapHoldRelease(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapHoldRelease(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapHoldRelease(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapHoldRelease(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapHoldRelease(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapHoldRelease(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapHoldRelease(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapHoldRelease(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapHoldRelease(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapHoldRelease(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapHoldRelease(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapHoldRelease(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapHoldRelease(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapHoldRelease(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapWithTinyDrag(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapWithTinyDrag(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapWithTinyDrag(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapWithTinyDrag(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapWithTinyDrag(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapWithTinyDrag(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapWithTinyDrag(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapWithTinyDrag(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapWithTinyDrag(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapWithTinyDrag(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapWithTinyDrag(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapWithTinyDrag(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapWithTinyDrag(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapWithTinyDrag(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.tapWithTinyDrag(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+SingleTouchTest.testChangeSceneDuringTap(TestTouchDevice)	SKIP	SKIP	SKIP	skipped	
+SwipeSimpleTest.testNoSwipeRight(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testNoSwipeRight(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testNoSwipeRight(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testNoSwipeRight(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testNoSwipeRight(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testNoSwipeRight(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testNoSwipeRight(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testNoSwipeRight(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testNoSwipeRight(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testNoSwipeRight(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testNoSwipeRight(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testNoSwipeRight(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testNoSwipeRight(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testNoSwipeRight(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testNoSwipeRight(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testNoSwipeUp(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testNoSwipeUp(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testNoSwipeUp(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testNoSwipeUp(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testNoSwipeUp(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testNoSwipeUp(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testNoSwipeUp(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testNoSwipeUp(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testNoSwipeUp(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testNoSwipeUp(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testNoSwipeUp(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testNoSwipeUp(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testNoSwipeUp(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testNoSwipeUp(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testNoSwipeUp(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeDown1(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeDown1(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeDown1(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeDown1(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeDown1(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeDown1(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeDown1(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeDown1(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeDown1(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeDown1(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeDown1(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeDown1(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeDown1(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeDown1(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeDown1(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeDown2(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeDown2(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeDown2(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeDown2(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeDown2(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeDown2(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeDown2(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeDown2(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeDown2(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeDown2(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeDown2(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeDown2(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeDown2(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeDown2(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeDown2(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeDown3(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeDown3(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeDown3(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeDown3(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeDown3(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeDown3(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeDown3(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeDown3(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeDown3(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeDown3(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeDown3(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeDown3(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeDown3(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeDown3(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeDown3(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft1(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft1(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft1(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft1(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft1(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft1(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft1(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft1(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft1(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft1(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft1(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft1(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft1(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft1(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft1(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft2(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft2(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft2(TestTouchDevice)[12]	PASS	ERROR	PASS	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'Touch released: 621, 391'
+SwipeSimpleTest.testSwipeLeft2(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft2(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft2(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft2(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft2(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft2(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft2(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft2(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft2(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft2(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft2(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft2(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft3(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft3(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft3(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft3(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft3(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft3(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft3(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft3(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft3(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft3(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft3(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft3(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft3(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft3(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft3(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft4(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft4(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft4(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft4(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft4(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft4(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft4(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft4(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft4(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft4(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft4(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft4(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft4(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft4(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeLeft4(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight1(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight1(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight1(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight1(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight1(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight1(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight1(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight1(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight1(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight1(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight1(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight1(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight1(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight1(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight1(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight2(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight2(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight2(TestTouchDevice)[12]	PASS	ERROR	PASS	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'Touch released: 659, 391'
+SwipeSimpleTest.testSwipeRight2(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight2(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight2(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight2(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight2(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight2(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight2(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight2(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight2(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight2(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight2(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight2(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight3(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight3(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight3(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight3(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight3(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight3(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight3(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight3(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight3(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight3(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight3(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight3(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight3(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight3(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight3(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight4(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight4(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight4(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight4(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight4(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight4(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight4(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight4(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight4(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight4(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight4(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight4(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight4(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight4(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeRight4(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp1(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp1(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp1(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp1(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp1(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp1(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp1(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp1(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp1(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp1(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp1(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp1(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp1(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp1(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp1(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp2(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp2(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp2(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp2(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp2(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp2(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp2(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp2(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp2(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp2(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp2(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp2(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp2(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp2(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp2(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp3(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp3(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp3(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp3(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp3(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp3(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp3(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp3(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp3(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp3(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp3(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp3(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp3(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp3(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp3(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp4Points(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp4Points(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp4Points(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp4Points(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp4Points(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp4Points(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp4Points(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp4Points(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp4Points(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp4Points(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp4Points(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp4Points(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp4Points(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp4Points(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+SwipeSimpleTest.testSwipeUp4Points(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+SwipeTest.testSwipe(TestTouchDevice, SwipeTestCase)	SKIP	SKIP	SKIP	skipped	
+TouchButtonTest.tapAndDrag(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapAndDrag(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapAndDrag(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapAndDrag(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapAndDrag(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapAndDrag(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapAndDrag(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapAndDrag(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapAndDrag(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapAndDrag(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapAndDrag(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapAndDrag(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapAndDrag(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapAndDrag(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapAndDrag(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapAndDrag_fail(TestTouchDevice)	SKIP	SKIP	SKIP	skipped	
+TouchButtonTest.tapInAndOutLoop(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapInAndOutLoop(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapInAndOutLoop(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapInAndOutLoop(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapInAndOutLoop(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapInAndOutLoop(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapInAndOutLoop(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapInAndOutLoop(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapInAndOutLoop(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapInAndOutLoop(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapInAndOutLoop(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapInAndOutLoop(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapInAndOutLoop(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapInAndOutLoop(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapInAndOutLoop(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOn2Buttons(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOn2Buttons(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOn2Buttons(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOn2Buttons(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOn2Buttons(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOn2Buttons(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOn2Buttons(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOn2Buttons(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOn2Buttons(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOn2Buttons(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOn2Buttons(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOn2Buttons(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOn2Buttons(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOn2Buttons(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOn2Buttons(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOnButton(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOnButton(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOnButton(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOnButton(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOnButton(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOnButton(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOnButton(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOnButton(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOnButton(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOnButton(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOnButton(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOnButton(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOnButton(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOnButton(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOnButton(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOutAndInButton(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOutAndInButton(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOutAndInButton(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOutAndInButton(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOutAndInButton(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOutAndInButton(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOutAndInButton(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOutAndInButton(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOutAndInButton(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOutAndInButton(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOutAndInButton(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOutAndInButton(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOutAndInButton(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOutAndInButton(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOutAndInButton(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOutInAndOutButton(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOutInAndOutButton(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOutInAndOutButton(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOutInAndOutButton(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOutInAndOutButton(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOutInAndOutButton(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOutInAndOutButton(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOutInAndOutButton(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOutInAndOutButton(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOutInAndOutButton(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOutInAndOutButton(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOutInAndOutButton(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOutInAndOutButton(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOutInAndOutButton(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapOutInAndOutButton(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapping_oneButtonOnScreen(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapping_oneButtonOnScreen(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapping_oneButtonOnScreen(TestTouchDevice)[12]	PASS	ERROR	PASS	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'Mouse clicked: 50, 10'
+TouchButtonTest.tapping_oneButtonOnScreen(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapping_oneButtonOnScreen(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapping_oneButtonOnScreen(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapping_oneButtonOnScreen(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapping_oneButtonOnScreen(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapping_oneButtonOnScreen(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapping_oneButtonOnScreen(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapping_oneButtonOnScreen(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapping_oneButtonOnScreen(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapping_oneButtonOnScreen(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapping_oneButtonOnScreen(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+TouchButtonTest.tapping_oneButtonOnScreen(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+TouchEventLookaheadTest.mergeMoves(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+TouchEventLookaheadTest.mergeMoves(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+TouchEventLookaheadTest.mergeMoves(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+TouchEventLookaheadTest.mergeMoves(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+TouchEventLookaheadTest.mergeMoves(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+TouchEventLookaheadTest.mergeMoves(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+TouchEventLookaheadTest.mergeMoves(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+TouchEventLookaheadTest.mergeMoves(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+TouchEventLookaheadTest.mergeMoves(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+TouchEventLookaheadTest.mergeMoves(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+TouchEventLookaheadTest.mergeMoves(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+TouchEventLookaheadTest.mergeMoves(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+TouchEventLookaheadTest.mergeMoves(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+TouchEventLookaheadTest.mergeMoves(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+TouchEventLookaheadTest.mergeMoves(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+TouchExceptionTest.testRuntimeException(TestTouchDevice)[10]	PASS	PASS	PASS	stable-pass	
+TouchExceptionTest.testRuntimeException(TestTouchDevice)[11]	PASS	PASS	PASS	stable-pass	
+TouchExceptionTest.testRuntimeException(TestTouchDevice)[12]	PASS	PASS	PASS	stable-pass	
+TouchExceptionTest.testRuntimeException(TestTouchDevice)[13]	PASS	PASS	PASS	stable-pass	
+TouchExceptionTest.testRuntimeException(TestTouchDevice)[14]	PASS	PASS	PASS	stable-pass	
+TouchExceptionTest.testRuntimeException(TestTouchDevice)[15]	PASS	PASS	PASS	stable-pass	
+TouchExceptionTest.testRuntimeException(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+TouchExceptionTest.testRuntimeException(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+TouchExceptionTest.testRuntimeException(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+TouchExceptionTest.testRuntimeException(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+TouchExceptionTest.testRuntimeException(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+TouchExceptionTest.testRuntimeException(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+TouchExceptionTest.testRuntimeException(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+TouchExceptionTest.testRuntimeException(TestTouchDevice)[8]	PASS	PASS	PASS	stable-pass	
+TouchExceptionTest.testRuntimeException(TestTouchDevice)[9]	PASS	PASS	PASS	stable-pass	
+TouchLagTest.testMultitouchLag	PASS	PASS	PASS	stable-pass	
+TouchLagTest.testTouchLag	PASS	PASS	PASS	stable-pass	
+TouchPipelineTest.testFilters	PASS	PASS	PASS	stable-pass	
+USKeyboardTest.testBackspace	PASS	PASS	PASS	stable-pass	
+USKeyboardTest.testCapsLock	PASS	PASS	PASS	stable-pass	
+USKeyboardTest.testPressReleaseOrder	PASS	PASS	PASS	stable-pass	
+USKeyboardTest.testShift	PASS	PASS	PASS	stable-pass	
+ZoomTest.testZoomIn(TestTouchDevice)[1]	ERROR	ERROR	ERROR	persistent	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'TouchPoint: PRESSED 640, 240'
+ZoomTest.testZoomIn(TestTouchDevice)[2]	ERROR	ERROR	ERROR	persistent	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3001ms waiting for 'TouchPoint: PRESSED 640, 240'
+ZoomTest.testZoomIn(TestTouchDevice)[3]	ERROR	ERROR	ERROR	persistent	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3001ms waiting for 'TouchPoint: PRESSED 640, 240'
+ZoomTest.testZoomIn(TestTouchDevice)[4]	ERROR	ERROR	ERROR	persistent	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3001ms waiting for 'TouchPoint: PRESSED 640, 240'
+ZoomTest.testZoomIn(TestTouchDevice)[5]	ERROR	ERROR	ERROR	persistent	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'TouchPoint: PRESSED 640, 240'
+ZoomTest.testZoomIn(TestTouchDevice)[6]	ERROR	ERROR	ERROR	persistent	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3001ms waiting for 'TouchPoint: PRESSED 640, 240'
+ZoomTest.testZoomIn(TestTouchDevice)[7]	ERROR	ERROR	ERROR	persistent	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'TouchPoint: PRESSED 640, 240'
+ZoomTest.testZoomIn(TestTouchDevice)[8]	ERROR	ERROR	ERROR	persistent	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'TouchPoint: PRESSED 640, 240'
+ZoomTest.testZoomIn(TestTouchDevice)[9]	ERROR	PASS	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3001ms waiting for 'TouchPoint: PRESSED 640, 240'
+ZoomTest.testZoomInSmallStepBigStep(TestTouchDevice)[1]	ERROR	ERROR	ERROR	persistent	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'TouchPoint: PRESSED 640, 240'
+ZoomTest.testZoomInSmallStepBigStep(TestTouchDevice)[2]	ERROR	ERROR	ERROR	persistent	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3001ms waiting for 'TouchPoint: PRESSED 640, 240'
+ZoomTest.testZoomInSmallStepBigStep(TestTouchDevice)[3]	ERROR	ERROR	ERROR	persistent	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3001ms waiting for 'TouchPoint: PRESSED 640, 240'
+ZoomTest.testZoomInSmallStepBigStep(TestTouchDevice)[4]	ERROR	ERROR	ERROR	persistent	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'TouchPoint: PRESSED 640, 240'
+ZoomTest.testZoomInSmallStepBigStep(TestTouchDevice)[5]	ERROR	ERROR	ERROR	persistent	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'TouchPoint: PRESSED 640, 240'
+ZoomTest.testZoomInSmallStepBigStep(TestTouchDevice)[6]	ERROR	ERROR	ERROR	persistent	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3001ms waiting for 'TouchPoint: PRESSED 640, 240'
+ZoomTest.testZoomInSmallStepBigStep(TestTouchDevice)[7]	ERROR	ERROR	ERROR	persistent	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'TouchPoint: PRESSED 640, 240'
+ZoomTest.testZoomInSmallStepBigStep(TestTouchDevice)[8]	ERROR	ERROR	ERROR	persistent	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'TouchPoint: PRESSED 640, 240'
+ZoomTest.testZoomInSmallStepBigStep(TestTouchDevice)[9]	ERROR	ERROR	ERROR	persistent	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'TouchPoint: PRESSED 640, 240'
+ZoomTest.testZoomOut(TestTouchDevice)[1]	PASS	ERROR	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3001ms waiting for 'TouchPoint: PRESSED 640, 80'
+ZoomTest.testZoomOut(TestTouchDevice)[2]	PASS	ERROR	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'TouchPoint: PRESSED 640, 80'
+ZoomTest.testZoomOut(TestTouchDevice)[3]	PASS	ERROR	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'TouchPoint: PRESSED 640, 80'
+ZoomTest.testZoomOut(TestTouchDevice)[4]	PASS	ERROR	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'TouchPoint: PRESSED 640, 80'
+ZoomTest.testZoomOut(TestTouchDevice)[5]	PASS	ERROR	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3001ms waiting for 'TouchPoint: PRESSED 640, 80'
+ZoomTest.testZoomOut(TestTouchDevice)[6]	PASS	ERROR	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'TouchPoint: PRESSED 640, 80'
+ZoomTest.testZoomOut(TestTouchDevice)[7]	PASS	ERROR	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'TouchPoint: PRESSED 640, 80'
+ZoomTest.testZoomOut(TestTouchDevice)[8]	ERROR	ERROR	ERROR	persistent	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'TouchPoint: MOVED 640, 240'
+ZoomTest.testZoomOut(TestTouchDevice)[9]	ERROR	ERROR	ERROR	persistent	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3000ms waiting for 'TouchPoint: PRESSED 640, 80'
+ZoomTest.testZoomOutSmallStepBigStep(TestTouchDevice)[1]	PASS	PASS	PASS	stable-pass	
+ZoomTest.testZoomOutSmallStepBigStep(TestTouchDevice)[2]	PASS	PASS	PASS	stable-pass	
+ZoomTest.testZoomOutSmallStepBigStep(TestTouchDevice)[3]	PASS	PASS	PASS	stable-pass	
+ZoomTest.testZoomOutSmallStepBigStep(TestTouchDevice)[4]	PASS	PASS	PASS	stable-pass	
+ZoomTest.testZoomOutSmallStepBigStep(TestTouchDevice)[5]	PASS	PASS	PASS	stable-pass	
+ZoomTest.testZoomOutSmallStepBigStep(TestTouchDevice)[6]	PASS	PASS	PASS	stable-pass	
+ZoomTest.testZoomOutSmallStepBigStep(TestTouchDevice)[7]	PASS	PASS	PASS	stable-pass	
+ZoomTest.testZoomOutSmallStepBigStep(TestTouchDevice)[8]	ERROR	ERROR	ERROR	persistent	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3001ms waiting for 'TouchPoint: PRESSED 640, 80'
+ZoomTest.testZoomOutSmallStepBigStep(TestTouchDevice)[9]	PASS	ERROR	ERROR	flaky	com.sun.glass.ui.monocle.TestLogShim$TestLogAssertion: Timed out after 3001ms waiting for 'TouchPoint: PRESSED 640, 80'

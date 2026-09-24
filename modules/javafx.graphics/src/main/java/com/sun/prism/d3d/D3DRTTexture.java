@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,6 +33,7 @@ import com.sun.prism.RTTexture;
 import com.sun.prism.ReadbackRenderTarget;
 import com.sun.prism.Texture;
 
+import java.lang.foreign.MemorySegment;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
@@ -43,7 +44,7 @@ class D3DRTTexture extends D3DTexture
 
     private boolean opaque;
 
-    D3DRTTexture(D3DContext context, WrapMode wrapMode, long pResource,
+    D3DRTTexture(D3DContext context, WrapMode wrapMode, MemorySegment pResource,
                  int physicalWidth, int physicalHeight,
                  int contentWidth, int contentHeight)
     {
@@ -53,7 +54,7 @@ class D3DRTTexture extends D3DTexture
         this.opaque = false;
     }
 
-    D3DRTTexture(D3DContext context, WrapMode wrapMode, long pResource,
+    D3DRTTexture(D3DContext context, WrapMode wrapMode, MemorySegment pResource,
                  int physicalWidth, int physicalHeight,
                  int contentX, int contentY,
                  int contentWidth, int contentHeight,
@@ -71,7 +72,7 @@ class D3DRTTexture extends D3DTexture
     }
 
     @Override
-    public long getResourceHandle() {
+    public MemorySegment getResourceHandle() {
         return resource.getResource().getResource();
     }
 
@@ -102,23 +103,23 @@ class D3DRTTexture extends D3DTexture
             return false;
         }
         context.flushVertexBuffer();
-        long ctx = getContext().getContextHandle();
+        MemorySegment ctx = getContext().getContextHandle();
         int res = D3DContext.D3D_OK;
         if (pixels instanceof ByteBuffer) {
             ByteBuffer buf = (ByteBuffer) pixels;
             byte[] arr = buf.hasArray() ? buf.array() : null;
             // because of bug 6446635 we take capacity at the java level
             long length = buf.capacity();
-            res = D3DResourceFactory.nReadPixelsB(ctx, getNativeSourceHandle(),
-                                                  length, pixels, arr,
-                                                  getContentWidth(), getContentHeight());
+            res = D3DNative.textureReadPixels(ctx, getNativeSourceHandle(),
+                                              buf, arr, length,
+                                              getContentWidth(), getContentHeight());
         } else if (pixels instanceof IntBuffer) {
             IntBuffer buf = (IntBuffer) pixels;
             int[] arr = buf.hasArray() ? buf.array() : null;
             long length = buf.capacity()*4;
-            res = D3DResourceFactory.nReadPixelsI(ctx, getNativeSourceHandle(),
-                                                  length, pixels, arr,
-                                                  getContentWidth(), getContentHeight());
+            res = D3DNative.textureReadPixels(ctx, getNativeSourceHandle(),
+                                              buf, arr, length,
+                                              getContentWidth(), getContentHeight());
         } else {
             throw new IllegalArgumentException("Buffer of this type is " +
                                                "not supported: "+pixels);

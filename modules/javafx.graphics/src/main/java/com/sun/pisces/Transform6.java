@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,8 +38,6 @@ public final class Transform6 {
                       int m10, int m11,
                       int m02, int m12)
     {
-        initialize();
-
         this.m00 = m00;
         this.m01 = m01;
         this.m10 = m10;
@@ -133,5 +131,17 @@ public final class Transform6 {
             "m12=" + (m12/65536.0) + "]";
     }
 
-    private native void initialize();
+    /**
+     * Writes the six entries into {@code dst[0..5]} in the {@code PswTransform6} field order of
+     * {@code prism_sw_api.h} - m00, m01, m10, m11, m02, m12 - which is how {@link PiscesNative} hands
+     * a transform to the C side.
+     */
+    void fill(int[] dst) {
+        dst[0] = m00;
+        dst[1] = m01;
+        dst[2] = m10;
+        dst[3] = m11;
+        dst[4] = m02;
+        dst[5] = m12;
+    }
 }

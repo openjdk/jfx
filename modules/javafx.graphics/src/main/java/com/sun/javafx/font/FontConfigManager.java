@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -96,7 +96,7 @@ public class FontConfigManager {
     };
 
     /* This array has the array elements created in Java code and is
-     * passed down to native to be filled in.
+     * filled in by FontConfigNative.getLogicalFonts.
      */
     private static FcCompFont[] fontConfigFonts;
 
@@ -116,13 +116,6 @@ public class FontConfigManager {
         }
         return localeStr;
     }
-
-    /* Return an array of FcCompFont structs describing the primary
-     * font located for each of fontconfig/GTK/Pango's logical font names.
-     */
-    private static native boolean getFontConfig(String locale,
-                                                FcCompFont[] fonts,
-                                                boolean includeFallbacks);
 
     private static synchronized void initFontConfigLogFonts() {
 
@@ -148,7 +141,7 @@ public class FontConfigManager {
 
         boolean foundFontConfig = false;
         if (useFontConfig) {
-            foundFontConfig = getFontConfig(getFCLocaleStr(), fontArr, true);
+            foundFontConfig = FontConfigNative.getLogicalFonts(getFCLocaleStr(), fontArr, true);
         } else {
             if (debugFonts) {
                 System.err.println("Not using FontConfig");
@@ -216,12 +209,6 @@ public class FontConfigManager {
         }
     }
 
-    private static native boolean populateMapsNative
-        (HashMap<String,String> fontToFileMap,
-         HashMap<String,String> fontToFamilyNameMap,
-         HashMap<String,ArrayList<String>> familyToFontListMap,
-         Locale locale);
-
     public static void populateMaps
         (HashMap<String,String> fontToFileMap,
          HashMap<String,String> fontToFamilyNameMap,
@@ -230,8 +217,8 @@ public class FontConfigManager {
 
         boolean pnm = false;
         if (useFontConfig && !fontConfigFailed) {
-            pnm = populateMapsNative(fontToFileMap, fontToFamilyNameMap,
-                                familyToFontListMap, locale);
+            pnm = FontConfigNative.populateFontMaps(fontToFileMap, fontToFamilyNameMap,
+                                                    familyToFontListMap, locale);
 
         }
 

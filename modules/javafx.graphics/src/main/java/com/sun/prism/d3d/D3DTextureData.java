@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,7 @@ package com.sun.prism.d3d;
 
 import com.sun.prism.PixelFormat;
 import com.sun.prism.impl.PrismTrace;
+import java.lang.foreign.MemorySegment;
 
 public class D3DTextureData extends D3DResource.D3DRecord {
     private final long size;
@@ -46,7 +47,7 @@ public class D3DTextureData extends D3DResource.D3DRecord {
     }
 
     D3DTextureData(D3DContext context,
-                   long pResource, boolean isRTT,
+                   MemorySegment pResource, boolean isRTT,
                    int physicalWidth, int physicalHeight,
                    PixelFormat format, int numberOfSamples)
     {
@@ -57,9 +58,9 @@ public class D3DTextureData extends D3DResource.D3DRecord {
         this.isRTT = isRTT;
         this.samples = numberOfSamples;
         if (isRTT) {
-            PrismTrace.rttCreated(pResource, physicalWidth, physicalHeight, size);
+            PrismTrace.rttCreated(pResource.address(), physicalWidth, physicalHeight, size);
         } else {
-            PrismTrace.textureCreated(pResource, physicalWidth, physicalHeight, size);
+            PrismTrace.textureCreated(pResource.address(), physicalWidth, physicalHeight, size);
         }
     }
 
@@ -73,7 +74,7 @@ public class D3DTextureData extends D3DResource.D3DRecord {
 
     @Override
     protected void markDisposed() {
-        long pResource = getResource();
+        long pResource = getResource().address();
         if (pResource != 0L) {
             if (isRTT) {
                 PrismTrace.rttDisposed(pResource);
@@ -86,7 +87,7 @@ public class D3DTextureData extends D3DResource.D3DRecord {
 
     @Override
     public void dispose() {
-        long pResource = getResource();
+        long pResource = getResource().address();
         if (pResource != 0L) {
             if (isRTT) {
                 PrismTrace.rttDisposed(pResource);

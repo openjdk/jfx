@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,8 +31,7 @@ import com.sun.glass.ui.SystemClipboard;
 import java.util.HashMap;
 
 /** There is no system clipboard on embedded Linux systems using a
- * framebuffer. For X11 and Android a different implementation will
- * be needed. */
+ * framebuffer. For X11 a different implementation will be needed. */
 final class MonocleSystemClipboard extends SystemClipboard {
 
     MonocleSystemClipboard() {

@@ -1,0 +1,328 @@
+# GTK glass boundary trace golden: gtk-dnd-between-processes
+# Every call the GTK glass event code (glass_window.cpp, glass_window_ime.cpp, glass_dnd.cpp,
+# GlassView.cpp, glass_screen.cpp, glass_general.cpp) made across the C -> Java boundary for the
+# scripted scenario, captured from the JNI build of commit 033187ad90 and normalised
+# by the RULES of the test class. For an X server without a window manager; machine-specific:
+# compared only where every machine.* key matches, elsewhere skipped, or failed under
+# -Djfx.parity.require=true.
+# Capture: -Djfx.gtk.trace.capture=true on the JNI build (refused elsewhere);
+# overwrite: add -Djfx.gtk.trace.regenerate=true.
+# Lines as in the event trace; '# source ...' is what the drag source did around
+# ClipboardAssistance.flush, '# target ...' what the drop target read through its ClipboardAssistance,
+# '# peer ...' what it read through the GtkDnDClipboard peer methods themselves. Two-process traces are
+# the two children's, P then Q.
+machine.compositing=supports=1 composited=0
+machine.depth=24
+machine.env.GDK_BACKEND=unset
+machine.env.GDK_DPI_SCALE=unset
+machine.env.GDK_SCALE=unset
+machine.env.GTK_IM_MODULE=unset
+machine.env.XMODIFIERS=unset
+machine.gtk=3.24.52
+machine.libgdk3=47bb58ca25405353b0546b932ddc5a92e74ee006a1904e4d0eca3df162ddd562
+machine.libgtk3=8dc29a8cc4eabd2f08316dbb74bb585a2738aba4e4895450487d736792eda425
+machine.monitors=1
+machine.resolution=96.0
+machine.scale=1.0x1.0
+machine.screen=1920x1080
+machine.windowManager=unknown
+machine.xkb=evdev|pc105|us
+machine.xserver=The X.Org Foundation 12101022
+capture.java=OpenJDK 64-Bit Server VM 25.0.4
+capture.jniEntryPoints=6/6
+--- trace
+=== child P
+== create and show w1
+v1.view ADD
+v1.view MOVE at 0,0
+w1.notifyResize 511 300 200
+w1.handler RESIZE
+v1.view RESIZE 300x200
+w1.notifyMove 100 100
+w1.handler MOVE
+v1.view MOVE at 0,0
+w1.isEnabled=true
+w1.notifyFocus 542
+w1.handler FOCUS_GAINED
+v1.view MOVE at 0,0
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.notifyResize 511 300 200
+w1.handler RESIZE
+w1.notifyMove 100 100
+w1.handler MOVE
+v1.view MOVE at 0,0
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+v1.view REPAINT
+== P drags to Q: press in the source
+w1.isEnabled=true
+w1.notifyFocus 542
+w1.isEnabled=true
+v1.mouse ENTER BUTTON_NONE 100,100 200,200 mods=0x0 popup=false synth=false
+w1.isEnabled=true
+v1.mouse DOWN BUTTON_LEFT 100,100 200,200 mods=0x20 popup=false synth=false
+w1.isEnabled=true
+== P drags to Q: drag start
+w1.isEnabled=true
+v1.mouse DRAG BUTTON_LEFT 110,105 210,205 mods=0x20 popup=false synth=false
+v1.dragStart BUTTON_LEFT 110,105 210,205
+# source flush
+w1.notifyFocus 541
+w1.handler FOCUS_LOST
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+v1.mouse EXIT BUTTON_NONE 110,105 210,205 mods=0x20 popup=false synth=false
+w1.isEnabled=true
+w1.isEnabled=true
+v1.dragEnter 130,110 230,210 COPY
+~ # target mimes application/x-jfx-dnd-test|text/html|application/x-java-drag-image-offset|text/uri-list|application/x-java-file-list|application/x-java-rawimage|application/x-java-drag-image|text/plain
+~ # target source actions COPY_OR_MOVE
+v1.view REPAINT
+== P drags to Q: across the gap
+w1.isEnabled=true
+v1.dragLeave
+w1.isEnabled=true
+w1.isEnabled=true
+v1.view REPAINT
+== P drags to Q: into the target and over it
+== P drags to Q: out of the target
+== P drags to Q: back into the target and over it
+== P drags to Q: release over the target
+v1.dragEnd COPY
+# source flush returned
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+v1.dragEnter 50,100 150,200 COPY
+~ # target mimes application/x-jfx-dnd-test|image/png|text/html|image/jpeg|image/tiff|image/bmp|UTF8_STRING|STRING|application/x-java-file-list|text/uri-list|application/x-java-rawimage|text/plain
+~ # target source actions COPY_OR_MOVE
+~ w1.isEnabled=true
+~ w1.isEnabled=true
+~ w1.isEnabled=true
+~ w1.isEnabled=true
+w1.isEnabled=true
+v1.dragOver 60,110 160,210 COPY
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+v1.dragLeave
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+v1.dragEnter 80,120 180,220 COPY
+~ # target mimes application/x-jfx-dnd-test|image/png|text/html|image/jpeg|image/tiff|image/bmp|UTF8_STRING|STRING|application/x-java-file-list|text/uri-list|application/x-java-rawimage|text/plain
+~ # target source actions COPY_OR_MOVE
+~ w1.isEnabled=true
+~ w1.isEnabled=true
+~ w1.isEnabled=true
+~ w1.isEnabled=true
+w1.isEnabled=true
+v1.dragOver 90,130 190,230 COPY
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.notifyFocus 542
+w1.handler FOCUS_GAINED
+w1.isEnabled=true
+v1.mouse ENTER BUTTON_NONE 90,130 190,230 mods=0x0 popup=false synth=false
+w1.isEnabled=true
+v1.dragDrop 90,130 190,230 COPY
+~ # target data 0 text/html = "file:///tmp/jfx-dnd-a.txt\u000d\u000afile:///tmp/jfx%20dnd%20b.txt\u000d\u000ahttps://example.invalid/dnd\u000d\u000a\u000d\u000a"
+~ # target data 1 text/plain = "dnd from Q \u00e9 \u2603 \ud83d\ude00"
+~ # target data 2 text/html = "dnd from Q \u00e9 \u2603 \ud83d\ude00"
+~ # target data 3 text/uri-list = "https://example.invalid/dnd"
+~ # target data 4 application/x-java-file-list = /tmp/jfx-dnd-a.txt|/tmp/jfx dnd b.txt
+~ # target data 5 application/x-jfx-dnd-test = f0e3d6c9bcafa295887b6e6154473a2d
+~ # target data 6 application/x-java-rawimage = 3x2 2060a0ff2161a1ff2262a2ff2363a3ff2464a4ff2565a5ff
+~ w1.isEnabled=true
+~ w1.isEnabled=true
+~ w1.isEnabled=true
+~ w1.isEnabled=true
+~ w1.isEnabled=true
+~ w1.isEnabled=true
+~ w1.isEnabled=true
+~ w1.isEnabled=true
+~ w1.isEnabled=true
+~ w1.isEnabled=true
+~ w1.isEnabled=true
+~ w1.isEnabled=true
+~ w1.isEnabled=true
+v1.view REPAINT
+v1.view REPAINT
+v1.view REPAINT
+v1.view REPAINT
+== close w1
+v1.mouse EXIT BUTTON_NONE 0,0 0,0 mods=0x0 popup=false synth=false
+v1.view REMOVE
+v1.view MOVE
+w1.notifyDestroy
+w1.handler DESTROY
+=== child Q
+== create and show w1
+v1.view ADD
+v1.view MOVE at 0,0
+w1.notifyResize 511 300 200
+w1.handler RESIZE
+v1.view RESIZE 300x200
+w1.notifyMove 600 100
+w1.handler MOVE
+v1.view MOVE at 0,0
+w1.isEnabled=true
+w1.notifyFocus 542
+w1.handler FOCUS_GAINED
+v1.view MOVE at 0,0
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.notifyResize 511 300 200
+w1.handler RESIZE
+w1.notifyMove 600 100
+w1.handler MOVE
+v1.view MOVE at 0,0
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+v1.dragEnter 50,100 650,200 COPY
+~ # target mimes application/x-jfx-dnd-test|image/png|text/html|image/jpeg|image/tiff|image/bmp|UTF8_STRING|STRING|application/x-java-file-list|text/uri-list|application/x-java-rawimage|text/plain
+~ # target source actions COPY_OR_MOVE
+~ w1.isEnabled=true
+~ w1.isEnabled=true
+~ w1.isEnabled=true
+~ w1.isEnabled=true
+w1.isEnabled=true
+v1.dragOver 60,110 660,210 COPY
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+v1.dragLeave
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+v1.dragEnter 80,120 680,220 COPY
+~ # target mimes application/x-jfx-dnd-test|image/png|text/html|image/jpeg|image/tiff|image/bmp|UTF8_STRING|STRING|application/x-java-file-list|text/uri-list|application/x-java-rawimage|text/plain
+~ # target source actions COPY_OR_MOVE
+~ w1.isEnabled=true
+~ w1.isEnabled=true
+~ w1.isEnabled=true
+~ w1.isEnabled=true
+w1.isEnabled=true
+v1.dragOver 90,130 690,230 COPY
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.notifyFocus 542
+w1.isEnabled=true
+v1.mouse ENTER BUTTON_NONE 90,130 690,230 mods=0x0 popup=false synth=false
+w1.isEnabled=true
+v1.dragDrop 90,130 690,230 COPY
+~ # target data 0 text/html = "file:///tmp/jfx-dnd-a.txt\u000d\u000afile:///tmp/jfx%20dnd%20b.txt\u000d\u000ahttps://example.invalid/dnd\u000d\u000a\u000d\u000a"
+~ # target data 1 text/plain = "dnd from P \u00e9 \u2603 \ud83d\ude00"
+~ # target data 2 text/html = "dnd from P \u00e9 \u2603 \ud83d\ude00"
+~ # target data 3 text/uri-list = "https://example.invalid/dnd"
+~ # target data 4 application/x-java-file-list = /tmp/jfx-dnd-a.txt|/tmp/jfx dnd b.txt
+~ # target data 5 application/x-jfx-dnd-test = f0e3d6c9bcafa295887b6e6154473a2d
+~ # target data 6 application/x-java-rawimage = 3x2 2060a0ff2161a1ff2262a2ff2363a3ff2464a4ff2565a5ff
+~ w1.isEnabled=true
+~ w1.isEnabled=true
+~ w1.isEnabled=true
+~ w1.isEnabled=true
+~ w1.isEnabled=true
+~ w1.isEnabled=true
+~ w1.isEnabled=true
+~ w1.isEnabled=true
+~ w1.isEnabled=true
+~ w1.isEnabled=true
+~ w1.isEnabled=true
+~ w1.isEnabled=true
+~ w1.isEnabled=true
+v1.view REPAINT
+v1.view REPAINT
+v1.view REPAINT
+v1.view REPAINT
+v1.view REPAINT
+== Q drags to P: press in the source
+w1.isEnabled=true
+v1.mouse MOVE BUTTON_NONE 100,100 700,200 mods=0x0 popup=false synth=false
+w1.isEnabled=true
+v1.mouse DOWN BUTTON_LEFT 100,100 700,200 mods=0x20 popup=false synth=false
+w1.isEnabled=true
+== Q drags to P: drag start
+w1.isEnabled=true
+v1.mouse DRAG BUTTON_LEFT 110,105 710,205 mods=0x20 popup=false synth=false
+v1.dragStart BUTTON_LEFT 110,105 710,205
+# source flush
+w1.notifyFocus 541
+w1.handler FOCUS_LOST
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+v1.mouse EXIT BUTTON_NONE 110,105 710,205 mods=0x20 popup=false synth=false
+w1.isEnabled=true
+w1.isEnabled=true
+v1.dragEnter 130,110 730,210 COPY
+~ # target mimes application/x-jfx-dnd-test|text/html|application/x-java-drag-image-offset|text/uri-list|application/x-java-file-list|application/x-java-rawimage|application/x-java-drag-image|text/plain
+~ # target source actions COPY_OR_MOVE
+v1.view REPAINT
+== Q drags to P: across the gap
+w1.isEnabled=true
+v1.dragLeave
+w1.isEnabled=true
+w1.isEnabled=true
+v1.view REPAINT
+== Q drags to P: into the target and over it
+== Q drags to P: out of the target
+== Q drags to P: back into the target and over it
+== Q drags to P: release over the target
+v1.dragEnd COPY
+# source flush returned
+== close w1
+v1.mouse EXIT BUTTON_NONE 0,0 0,0 mods=0x0 popup=false synth=false
+v1.view REMOVE
+v1.view MOVE
+w1.notifyDestroy
+w1.handler DESTROY

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,18 +26,23 @@
 #ifndef PISCES_DEFS_H
 #define PISCES_DEFS_H
 
-#include <jni.h>
+#include <stddef.h>
+#include <stdint.h>
 
-#if defined (_LP64) || defined(_WIN64)
-#define jlong_to_ptr(a) ((void*)(a))
-#define ptr_to_jlong(a) ((jlong)(a))
-#else
-#define jlong_to_ptr(a) ((void*)(int)(a))
-#define ptr_to_jlong(a) ((jlong)(int)(a))
-#endif
+/*
+ * Fixed-width spellings inherited from the JNI era, kept so the rasteriser sources stay as they
+ * were. They are internal to the library - the exported ABI (prism_sw_api.h) uses the <stdint.h>
+ * types directly. jboolean is a plain int32_t: nothing in the library depends on its width (it is
+ * only ever a Renderer field, a local, a parameter or a return value, never an array element).
+ */
+typedef int32_t jint;
+typedef int64_t jlong;
+typedef int8_t jbyte;
+typedef float jfloat;
+typedef int32_t jboolean;
 
-#define XNI_TRUE JNI_TRUE
-#define XNI_FALSE JNI_FALSE
+#define XNI_TRUE 1
+#define XNI_FALSE 0
 
 #ifndef INTEGER_MIN_VALUE
 #define INTEGER_MIN_VALUE 0x80000000

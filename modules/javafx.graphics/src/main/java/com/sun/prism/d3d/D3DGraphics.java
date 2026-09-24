@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,6 +31,7 @@ import com.sun.prism.RenderTarget;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.prism.impl.ps.BaseShaderGraphics;
 import com.sun.prism.paint.Color;
+import java.lang.foreign.MemorySegment;
 
 class D3DGraphics extends BaseShaderGraphics implements D3DContextSource {
 
@@ -51,8 +52,8 @@ class D3DGraphics extends BaseShaderGraphics implements D3DContextSource {
         if (target == null) {
             return null;
         }
-        long resourceHandle = ((D3DRenderTarget)target).getResourceHandle();
-        if (resourceHandle == 0) {
+        MemorySegment resourceHandle = ((D3DRenderTarget)target).getResourceHandle();
+        if (resourceHandle.address() == 0L) {
             return null;
         }
 
@@ -67,8 +68,8 @@ class D3DGraphics extends BaseShaderGraphics implements D3DContextSource {
     public void clear(Color color) {
         context.validateClearOp(this);
         this.getRenderTarget().setOpaque(color.isOpaque());
-        int res = nClear(context.getContextHandle(),
-                          color.getIntArgbPre(), isDepthBuffer(), false);
+        int res = D3DNative.contextClear(context.getContextHandle(),
+                                         color.getIntArgbPre(), isDepthBuffer(), false);
         D3DContext.validate(res);
     }
 
@@ -81,7 +82,4 @@ class D3DGraphics extends BaseShaderGraphics implements D3DContextSource {
     public D3DContext getContext() {
         return context;
     }
-
-    private static native int nClear(long pContext, int colorArgbPre,
-                                      boolean clearDepth, boolean ignoreScissor);
 }

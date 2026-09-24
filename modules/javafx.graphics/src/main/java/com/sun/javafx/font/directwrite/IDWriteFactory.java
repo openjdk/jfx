@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,13 +30,24 @@ class IDWriteFactory extends IUnknown {
         super(ptr);
     }
 
+    /**
+     * {@code dwrite.dll!DWriteCreateFactory}, the one exported entry point of the whole port:
+     * everything else is reached through a vtable slot of what this returns. Answers {@code null}
+     * where the system has no usable DirectWrite, which is what {@code DWFactory.getFactory} turns
+     * into "this pipeline is not available".
+     */
+    static IDWriteFactory create(int factoryType) {
+        long ptr = DWNative.dwriteCreateFactory(factoryType);
+        return ptr != 0 ? new IDWriteFactory(ptr) : null;
+    }
+
     IDWriteFontCollection GetSystemFontCollection(boolean checkForUpdates) {
-        long result = OS.GetSystemFontCollection(ptr, checkForUpdates);
+        long result = DWNative.getSystemFontCollection(ptr, checkForUpdates);
         return result != 0 ? new IDWriteFontCollection(result) : null;
     }
 
     IDWriteTextAnalyzer CreateTextAnalyzer() {
-        long result = OS.CreateTextAnalyzer(ptr);
+        long result = DWNative.createTextAnalyzer(ptr);
         return result != 0 ? new IDWriteTextAnalyzer(result) : null;
     }
 
@@ -47,7 +58,7 @@ class IDWriteFactory extends IUnknown {
                                        int fontStretch,
                                        float fontSize,
                                        String localeName) {
-        long result = OS.CreateTextFormat(ptr,
+        long result = DWNative.createTextFormat(ptr,
                                           (fontFamily+'\0').toCharArray(),
                                           fontCollection.ptr,
                                           fontWeight,
@@ -64,7 +75,7 @@ class IDWriteFactory extends IUnknown {
                                        IDWriteTextFormat textFormat,
                                        float maxWidth,
                                        float maxHeight) {
-        long result = OS.CreateTextLayout(ptr,
+        long result = DWNative.createTextLayout(ptr,
                                           text,
                                           stringStart,
                                           stringLength,
@@ -81,7 +92,7 @@ class IDWriteFactory extends IUnknown {
                                                    int measuringMode,
                                                    float baselineOriginX,
                                                    float baselineOriginY) {
-        long result = OS.CreateGlyphRunAnalysis(ptr,
+        long result = DWNative.createGlyphRunAnalysis(ptr,
                                                 glyphRun,
                                                 pixelsPerDip,
                                                 transform,
@@ -93,7 +104,7 @@ class IDWriteFactory extends IUnknown {
     }
 
     IDWriteFontFile CreateFontFileReference(String filePath) {
-        long result = OS.CreateFontFileReference(ptr, (filePath+'\0').toCharArray());
+        long result = DWNative.createFontFileReference(ptr, (filePath+'\0').toCharArray());
         return result != 0 ? new IDWriteFontFile(result) : null;
     }
 
@@ -102,7 +113,7 @@ class IDWriteFactory extends IUnknown {
                                    int faceIndex,
                                    int fontFaceSimulationFlags) {
 
-        long result = OS.CreateFontFace(ptr, fontFaceType, fontFiles.ptr, faceIndex, fontFaceSimulationFlags);
+        long result = DWNative.createFontFace(ptr, fontFaceType, fontFiles.ptr, faceIndex, fontFaceSimulationFlags);
         return result != 0 ? new IDWriteFontFace(result) : null;
     }
 }

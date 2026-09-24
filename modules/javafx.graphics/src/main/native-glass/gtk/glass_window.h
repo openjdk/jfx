@@ -28,7 +28,7 @@
 #include <gtk/gtk.h>
 #include <X11/Xlib.h>
 
-#include <jni.h>
+#include <stdint.h>
 #include <set>
 #include <vector>
 
@@ -109,7 +109,7 @@ public:
     virtual void setOnPreEdit(bool) = 0;
     virtual void commitIME(gchar *) = 0;
 
-    virtual void paint(void* data, jint width, jint height) = 0;
+    virtual void paint(void* data, int32_t width, int32_t height) = 0;
     virtual WindowGeometry get_geometry() = 0;
 
     virtual void show_system_menu(int x, int y) = 0;
@@ -156,19 +156,21 @@ public:
     virtual void process_key(GdkEventKey*) = 0;
     virtual void process_state(GdkEventWindowState*) = 0;
 
-    virtual void notify_state(jint) = 0;
+    virtual void notify_state(int32_t) = 0;
     virtual void notify_on_top(bool) {}
     virtual void update_view_size() = 0;
     virtual void notify_view_resize() = 0;
 
     virtual void add_child(WindowContextTop* child) = 0;
     virtual void remove_child(WindowContextTop* child) = 0;
-    virtual bool set_view(jobject) = 0;
+    virtual bool set_view(GlassView*) = 0;
 
     virtual GdkWindow *get_gdk_window() = 0;
     virtual GtkWindow *get_gtk_window() = 0;
-    virtual jobject get_jview() = 0;
-    virtual jobject get_jwindow() = 0;
+
+    // The ids the GgtkWindowCallbacks / GgtkViewCallbacks / GgtkDndCallbacks slots receive (glass_gtk_api.h)
+    virtual int64_t get_window_id() = 0;
+    virtual int64_t get_view_id() = 0;
 
     virtual void increment_events_counter() = 0;
     virtual void decrement_events_counter() = 0;
@@ -193,8 +195,18 @@ class WindowContextBase: public WindowContext {
     bool can_be_deleted;
 protected:
     std::set<WindowContextTop*> children;
-    jobject jwindow;
-    jobject jview;
+    // Java's ids of the window and of its current view: what the callback-table slots receive in place of the
+    // global references jwindow / jview of commit 033187ad90. window_id is set by ggtk_window_create; view_id is
+    // copied from the GlassView passed to set_view. Each is cleared exactly where that global reference was
+    // deleted.
+    int64_t window_id = 0;
+    int64_t view_id = 0;
+
+    // Whether the window / its view has a Java peer, i.e. what the C tested as `jwindow` / `jview` at commit
+    // 033187ad90: a non-zero id.
+    bool has_window_peer() { return window_id != 0; }
+    bool has_view_peer() { return view_id != 0; }
+
     GtkWidget* gtk_widget;
     GdkWindow* gdk_window = NULL;
     GdkCursor* gdk_cursor = NULL;
@@ -233,17 +245,17 @@ public:
     void commitIME(gchar *);
     void updateCaretPos();
     void disableIME();
-    void paint(void*, jint, jint);
+    void paint(void*, int32_t, int32_t);
     GdkWindow *get_gdk_window();
-    jobject get_jwindow();
-    jobject get_jview();
+    int64_t get_window_id();
+    int64_t get_view_id();
 
     void add_child(WindowContextTop*);
     void remove_child(WindowContextTop*);
     void set_visible(bool);
     bool is_visible();
     bool is_resizable();
-    bool set_view(jobject);
+    bool set_view(GlassView*);
     bool grab_focus();
     bool grab_mouse_drag_focus();
     void ungrab_focus();
@@ -264,7 +276,7 @@ public:
     void process_key(GdkEventKey*);
     void process_state(GdkEventWindowState*);
 
-    void notify_state(jint);
+    void notify_state(int32_t);
 
     void increment_events_counter();
     void decrement_events_counter();
@@ -278,7 +290,7 @@ protected:
 };
 
 class WindowContextTop: public WindowContextBase {
-    jlong screen;
+    int64_t screen;
     WindowFrameType frame_type;
     WindowType window_type;
     struct WindowContext *owner;
@@ -299,7 +311,7 @@ class WindowContextTop: public WindowContextBase {
 
     WindowManager wmanager;
 public:
-    WindowContextTop(jobject, WindowContext*, long, WindowFrameType, WindowType, GdkWMFunction);
+    WindowContextTop(int64_t, WindowContext*, long, WindowFrameType, WindowType, GdkWMFunction, glong);
 
     void process_realize();
     void process_property_notify(GdkEventProperty*);
@@ -343,7 +355,6 @@ public:
     void set_owner(WindowContext*);
 
     GtkWindow *get_gtk_window();
-    void detach_from_java();
 
 protected:
     void applyShapeMask(void*, uint width, uint height);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -136,7 +136,7 @@ renderer_create(Surface* surface) {
 static INLINE void
 renderer_dispose(Renderer* rdr) {
     my_free(rdr->_rowAAInt);
-    if (rdr->_texture_free == JNI_TRUE) {
+    if (rdr->_texture_free == XNI_TRUE) {
         my_free(rdr->_texture_intData);
         my_free(rdr->_texture_byteData);
         my_free(rdr->_texture_alphaData);
@@ -319,7 +319,7 @@ renderer_setTexture(Renderer* rdr, jint renderMode, jint* data, jint width, jint
     setPaintMode(rdr, (renderMode == IMAGE_MODE_NORMAL) ?
         PAINT_TEXTURE8888 : PAINT_TEXTURE8888_MULTIPLY);
 
-    if (rdr->_texture_free == JNI_TRUE) {
+    if (rdr->_texture_free == XNI_TRUE) {
         my_free(rdr->_texture_intData);
         my_free(rdr->_texture_byteData);
         my_free(rdr->_texture_alphaData);
@@ -390,7 +390,7 @@ static INLINE void
 renderer_setMask(Renderer* rdr, jint maskType, jbyte* data, jint width, jint height,
     jboolean freeData)
 {
-    if (rdr->_mask_free == JNI_TRUE) {
+    if (rdr->_mask_free == XNI_TRUE) {
         my_free(rdr->_mask_byteData);
     }
 
@@ -408,7 +408,7 @@ renderer_setMask(Renderer* rdr, jint maskType, jbyte* data, jint width, jint hei
 static INLINE void
 renderer_removeMask(Renderer* rdr)
 {
-    if (rdr->_mask_free == JNI_TRUE) {
+    if (rdr->_mask_free == XNI_TRUE) {
         my_free(rdr->_mask_byteData);
     }
     rdr->_maskType = NO_MASK;
@@ -654,7 +654,7 @@ updatePaintDependedRoutines(Renderer* rdr) {
 static void 
 setPaintMode(Renderer* rdr, jint newPaintMode) {
     if (rdr->_paintMode != newPaintMode) {
-        if (rdr->_texture_free == JNI_TRUE) {
+        if (rdr->_texture_free == XNI_TRUE) {
             my_free(rdr->_texture_intData);
             my_free(rdr->_texture_byteData);
             my_free(rdr->_texture_alphaData);

@@ -1,0 +1,16 @@
+# glass/win screen snapshot golden (slice 10 T0): every value the JNI WinApplication.staticScreen_getScreens()
+# put into each Screen on the capturing machine, before slice 10 changed any C. No UI scale override
+# (glass.win.uiScale unset, WinApplication.overrideUIScale -1.0).
+# Captured by WinScreenSnapshotTest from GlassScreen::CreateJavaScreens of glass.dll md5
+# a3c3e119950319543d44a6c370c34007 (commit 8492cb03b0 + the uncommitted working tree, GlassScreen.cpp md5
+# 9196ac6caaa16e8a6fedc5a63b580948, x64 MSVC) under JDK 26 java.exe (PerMonitorV2 manifest), 2026-09-13.
+# The data lines are that capture byte for byte (md5 b4a57d1e24dd20ba27b0305cda3e8060). Before the JNI was
+# removed, WinScreenLayout.arrange(collectMonitors(), overrideUIScale) wrote the same bytes headless and on a
+# started toolkit, where the JNI enumeration agreed with it on every value.
+# machine.monitors=1
+# machine.monitor.0=primary true rect 0 0 1920 1080 work 0 0 1920 1040 effectiveDpi 96 96
+# One line per screen: the twenty Screen.<init>(JIIIIIIIIIIIIIIIFFFF)V arguments by getter, ints and the long in
+# decimal, floats as 0x + Float.floatToRawIntBits. nativeScreen is an HMONITOR, a session handle: recorded,
+# never compared. Lines beginning with # are ignored but for the machine.* gate.
+# Never regenerate: the JNI that produced it is gone, and a capture now could only copy the Java under test.
+screen 0 nativeScreen=65537 depth=32 x=0 y=0 width=1920 height=1080 platformX=0 platformY=0 platformWidth=1920 platformHeight=1080 visibleX=0 visibleY=0 visibleWidth=1920 visibleHeight=1040 resolutionX=81 resolutionY=81 platformScaleX=0x3f800000 platformScaleY=0x3f800000 outputScaleX=0x3f800000 outputScaleY=0x3f800000

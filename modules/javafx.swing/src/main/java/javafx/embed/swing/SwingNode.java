@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,7 +41,6 @@ import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
 import javafx.beans.InvalidationListener;
 import javafx.beans.value.ChangeListener;
-import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.geometry.Point2D;
@@ -64,10 +63,8 @@ import com.sun.javafx.sg.prism.NGExternalNode;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.stage.FocusUngrabEvent;
 import com.sun.javafx.stage.WindowHelper;
-import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.scene.NodeHelper;
-import static javafx.stage.WindowEvent.WINDOW_HIDDEN;
 
 import com.sun.javafx.embed.swing.DisposerRecord;
 import com.sun.javafx.embed.swing.SwingNodeHelper;
@@ -266,59 +263,6 @@ public class SwingNode extends AbstractNode {
         javafx.scene.text.Font.getFamilies();
     }
 
-
-    private EventHandler windowHiddenHandler = (Event event) -> {
-        if (lwFrame != null &&  event.getTarget() instanceof Window) {
-            final Window w = (Window) event.getTarget();
-            TKStage tk = WindowHelper.getPeer(w);
-            if (tk != null) {
-                if (isThreadMerged) {
-                    var hFrame = lwFrame;
-                    if (hFrame != null) {
-                        swNodeIOP.overrideNativeWindowHandle(hFrame, 0L, null);
-                    }
-                } else {
-                    // Postpone actual window closing to ensure that
-                    // a native window handler is valid on a Swing side
-                    tk.postponeClose();
-                    SwingNodeHelper.runOnEDT(() -> {
-                        if (lwFrame != null) {
-                            swNodeIOP.overrideNativeWindowHandle(lwFrame, 0L,
-                                (Runnable) () -> SwingNodeHelper.runOnFxThread(
-                                        () -> tk.closePostponed()));
-                        }
-                    });
-                }
-            }
-        }
-
-    };
-
-    private Window hWindow = null;
-    private void notifyNativeHandle(Window window) {
-        if (hWindow != window) {
-            if (hWindow != null) {
-                hWindow.removeEventHandler(WINDOW_HIDDEN, windowHiddenHandler);
-            }
-            if (window != null) {
-                window.addEventHandler(WINDOW_HIDDEN, windowHiddenHandler);
-            }
-            hWindow = window;
-        }
-
-        var hFrame = lwFrame;
-        if (hFrame != null) {
-            long rawHandle = 0L;
-            if (window != null) {
-                TKStage tkStage = WindowHelper.getPeer(window);
-                if (tkStage != null) {
-                    rawHandle = tkStage.getRawHandle();
-                }
-            }
-            swNodeIOP.overrideNativeWindowHandle(hFrame, rawHandle, null);
-        }
-    }
-
     /**
      * Attaches a {@code JComponent} instance to display in this {@code SwingNode}.
      * <p>
@@ -385,9 +329,6 @@ public class SwingNode extends AbstractNode {
             disposerRecRef = Disposer.addRecord(this, rec);
 
             SwingNodeHelper.runOnFxThread(() -> {
-                if (getScene() != null) {
-                    notifyNativeHandle(getScene().getWindow());
-                }
                 locateLwFrame();// initialize location
 
                 if (focusedProperty().get()) {
@@ -573,8 +514,6 @@ public class SwingNode extends AbstractNode {
             removeWindowListeners(oldValue);
         }
 
-        notifyNativeHandle(newValue);
-
         if (newValue != null) {
             addWindowListeners(newValue);
         }
@@ -592,7 +531,6 @@ public class SwingNode extends AbstractNode {
         Window window = scene.getWindow();
         if (window != null) {
             addWindowListeners(window);
-            notifyNativeHandle(window);
         }
         scene.windowProperty().addListener(sceneWindowListener);
     }

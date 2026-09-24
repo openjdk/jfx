@@ -32,42 +32,85 @@
 #include "GlassMenu.h"
 #include "GlassView.h"
 #include "GlassDnD.h"
-#include "Pixels.h"
-#include "GlassCursor.h"
-#include "GlassScreen.h"
 
 #include "com_sun_glass_events_WindowEvent.h"
 #include "com_sun_glass_ui_Window.h"
-#include "com_sun_glass_ui_Window_Level.h"
 #include "com_sun_glass_ui_win_WinWindow.h"
 
 #define ABM_GETAUTOHIDEBAREX 0x0000000b // multimon aware autohide bars
 
 #define HTUNSPECIFIED ('H' << 24 | 'T' << 16 | 'U' << 8 | 'N') // see WinWindow.java:nonClientHitTest
 
-// Helper LEAVE_MAIN_THREAD for GlassWindow
-#define LEAVE_MAIN_THREAD_WITH_hWnd  \
-    HWND hWnd;  \
-    LEAVE_MAIN_THREAD;  \
-    ARG(hWnd) = (HWND)ptr;
-
 static LPCTSTR szGlassWindowClassName = TEXT("GlassWindowClass");
-
-static jmethodID midNotifyClose;
-static jmethodID midNotifyMoving;
-static jmethodID midNotifyMove;
-static jmethodID midNotifyResize;
-static jmethodID midNotifyScaleChanged;
-static jmethodID midNotifyMoveToAnotherScreen;
 
 unsigned int GlassWindow::sm_instanceCounter = 0;
 HHOOK GlassWindow::sm_hCBTFilter = NULL;
 HWND GlassWindow::sm_grabWindow = NULL;
 static HWND activeTouchWindow = NULL;
 
-GlassWindow::GlassWindow(jobject jrefThis, bool isTransparent, bool isDecorated, bool isUnified,
-                         bool isExtended, HWND parentOrOwner)
+/*
+ * ---- The callback table of glass_win_api.h's window section ----
+ *
+ * Installed by gwin_window_set_callbacks. A slot Java leaves NULL is replaced by the matching no-op
+ * below, so the 11 upcall sites in this file and ~GlassWindow dial slots without testing them; what
+ * they test is WindowCallbacks() returning NULL, which means "nothing installed, deliver nothing".
+ */
+namespace {
+
+void NoopNotifyClose(int64_t) {}
+void NoopNotifyDestroy(int64_t) {}
+int32_t NoopNotifyMoving(int64_t, int32_t, int32_t, int32_t, int32_t, float, float, int32_t, int32_t,
+                         int32_t, int32_t, int32_t, int32_t, int32_t, int32_t*) { return 0; }
+void NoopNotifyMove(int64_t, int32_t, int32_t) {}
+void NoopNotifyResize(int64_t, int32_t, int32_t, int32_t) {}
+void NoopNotifyScaleChanged(int64_t, float, float, float, float) {}
+void NoopNotifyFocus(int64_t, int32_t) {}
+void NoopNotifyFocusDisabled(int64_t) {}
+void NoopNotifyFocusUngrab(int64_t) {}
+void NoopNotifyDelegatePtr(int64_t, void*) {}
+int32_t NoopNonClientHitTest(int64_t, int32_t, int32_t) { return 0; }
+void NoopNotifyDispose(int64_t) {}
+
+const GwinWindowCallbacks NOOP_WINDOW_CALLBACKS = {
+    NoopNotifyClose, NoopNotifyDestroy, NoopNotifyMoving, NoopNotifyMove, NoopNotifyResize,
+    NoopNotifyScaleChanged, NoopNotifyFocus, NoopNotifyFocusDisabled, NoopNotifyFocusUngrab,
+    NoopNotifyDelegatePtr, NoopNonClientHitTest, NoopNotifyDispose
+};
+
+} // namespace
+
+GwinWindowCallbacks GlassWindow::sm_windowCallbacks = NOOP_WINDOW_CALLBACKS;
+bool GlassWindow::sm_windowCallbacksInstalled = false;
+
+/* By value - this library never retains the caller's struct - and a NULL slot keeps its no-op.
+ * Installed once, before any window can exist; not safe against a concurrent install - the flag is a
+ * plain bool and the table a plain struct assignment, with no release store between them. */
+void GlassWindow::SetWindowCallbacks(const GwinWindowCallbacks* cb)
+{
+    GwinWindowCallbacks t = NOOP_WINDOW_CALLBACKS;
+    if (cb != NULL) {
+        if (cb->notify_close) t.notify_close = cb->notify_close;
+        if (cb->notify_destroy) t.notify_destroy = cb->notify_destroy;
+        if (cb->notify_moving) t.notify_moving = cb->notify_moving;
+        if (cb->notify_move) t.notify_move = cb->notify_move;
+        if (cb->notify_resize) t.notify_resize = cb->notify_resize;
+        if (cb->notify_scale_changed) t.notify_scale_changed = cb->notify_scale_changed;
+        if (cb->notify_focus) t.notify_focus = cb->notify_focus;
+        if (cb->notify_focus_disabled) t.notify_focus_disabled = cb->notify_focus_disabled;
+        if (cb->notify_focus_ungrab) t.notify_focus_ungrab = cb->notify_focus_ungrab;
+        if (cb->notify_delegate_ptr) t.notify_delegate_ptr = cb->notify_delegate_ptr;
+        if (cb->non_client_hit_test) t.non_client_hit_test = cb->non_client_hit_test;
+        if (cb->notify_dispose) t.notify_dispose = cb->notify_dispose;
+    }
+    sm_windowCallbacksInstalled = false;
+    sm_windowCallbacks = t;
+    sm_windowCallbacksInstalled = cb != NULL;
+}
+
+GlassWindow::GlassWindow(bool isTransparent, bool isDecorated, bool isUnified,
+                         bool isExtended, HWND parentOrOwner, int64_t windowId)
     : BaseWnd(parentOrOwner),
+    m_windowId(windowId),
     ViewContainer(),
     m_winChangingReason(Unknown),
     m_state(Normal),
@@ -89,7 +132,6 @@ GlassWindow::GlassWindow(jobject jrefThis, bool isTransparent, bool isDecorated,
     m_beforeFullScreenMenu(NULL),
     m_hIcon(NULL)
 {
-    m_grefThis = GetEnv()->NewGlobalRef(jrefThis);
     m_minSize.x = m_minSize.y = -1;   // "not set" value
     m_maxSize.x = m_maxSize.y = -1;   // "not set" value
     m_hMonitor = NULL;
@@ -111,8 +153,10 @@ GlassWindow::~GlassWindow()
         ::DestroyIcon(m_hIcon);
     }
 
-    if (m_grefThis) {
-        GetEnv()->DeleteGlobalRef(m_grefThis);
+    // Java's registry entry for m_windowId goes exactly where the JNI global ref used to go
+    // (glass_win_api.h, GwinWindowCallbacks.notify_dispose).
+    if (const GwinWindowCallbacks* cb = WindowCallbacks()) {
+        cb->notify_dispose(m_windowId);
     }
 
     if (--GlassWindow::sm_instanceCounter == 0) {
@@ -754,18 +798,16 @@ void GlassWindow::HandleNonClientMouseEvents(UINT msg, WPARAM wParam, LPARAM lPa
 
 void GlassWindow::HandleCloseEvent()
 {
-    JNIEnv* env = GetEnv();
-
-    env->CallVoidMethod(m_grefThis, midNotifyClose);
-    CheckAndClearException(env);
+    if (const GwinWindowCallbacks* cb = WindowCallbacks()) {
+        cb->notify_close(m_windowId);
+    }
 }
 
 void GlassWindow::HandleDestroyEvent()
 {
-    JNIEnv* env = GetEnv();
-
-    env->CallVoidMethod(m_grefThis, javaIDs.Window.notifyDestroy);
-    CheckAndClearException(env);
+    if (const GwinWindowCallbacks* cb = WindowCallbacks()) {
+        cb->notify_destroy(m_windowId);
+    }
 }
 
 #if 0
@@ -796,6 +838,28 @@ void printFlags(int flags)
 #undef _PFLAG
 #endif
 
+// The tail of HandleWindowPosChangingEvent once Java has answered with four ints (the out-parameter
+// of GwinWindowCallbacks.notify_moving). Verbatim from the former JNI block.
+static void ApplyMovingOverride(WINDOWPOS *pWinPos, const int32_t ret[4], uint8_t noMove, uint8_t noSize)
+{
+    if (noMove &&
+        (pWinPos->x != ret[0] ||
+         pWinPos->y != ret[1]))
+    {
+        pWinPos->flags &= ~SWP_NOMOVE;
+    }
+    pWinPos->x  = ret[0];
+    pWinPos->y  = ret[1];
+    if (noSize &&
+        (pWinPos->cx != ret[2] ||
+         pWinPos->cy != ret[3]))
+    {
+        pWinPos->flags &= ~SWP_NOSIZE;
+    }
+    pWinPos->cx = ret[2];
+    pWinPos->cy = ret[3];
+}
+
 void GlassWindow::HandleWindowPosChangingEvent(WINDOWPOS *pWinPos)
 {
 //    fprintf(stdout, "WM_POSCHANGING enter: (%d, %d), [%d x %d]",
@@ -804,17 +868,16 @@ void GlassWindow::HandleWindowPosChangingEvent(WINDOWPOS *pWinPos)
 //    fprintf(stdout, "\n");
 //    fflush(stdout);
 
-    jint resizeMode = (m_winChangingReason == WasSized)
+    int32_t resizeMode = (m_winChangingReason == WasSized)
             ? com_sun_glass_ui_win_WinWindow_RESIZE_DISABLE
             : com_sun_glass_ui_win_WinWindow_RESIZE_AROUND_ANCHOR;
     m_winChangingReason = Unknown;
 
-    jboolean noMove = ((pWinPos->flags & SWP_NOMOVE) != 0);
-    jboolean noSize = ((pWinPos->flags & SWP_NOSIZE) != 0);
+    uint8_t noMove = ((pWinPos->flags & SWP_NOMOVE) != 0);
+    uint8_t noSize = ((pWinPos->flags & SWP_NOSIZE) != 0);
     // Only evaluate bounds if they have changed...
     if (noMove && noSize) return;
 
-    JNIEnv* env = GetEnv();
     HWND hWnd = GetHWND();
 
     POINT anchor;
@@ -844,93 +907,57 @@ void GlassWindow::HandleWindowPosChangingEvent(WINDOWPOS *pWinPos)
 
     UpdateInsets();
 
-    jintArray jret = (jintArray) env->CallObjectMethod(m_grefThis, midNotifyMoving,
-                                                       pWinPos->x, pWinPos->y,
-                                                       pWinPos->cx, pWinPos->cy,
-                                                       0, 0, anchor.x, anchor.y,
-                                                       resizeMode,
-                                                       m_insets.left, m_insets.top,
-                                                       m_insets.right, m_insets.bottom);
-    if (CheckAndClearException(env)) {
-//        fprintf(stderr, "Exception from upcall");
-    } else if (jret == NULL) {
-//        fprintf(stdout, "ret val is null\n");
-//        fflush(stdout);
-    } else {
-        if (env->GetArrayLength(jret) != 4) {
-            fprintf(stderr, "bad array length = %d\n", env->GetArrayLength(jret));
-        } else {
-            jint ret[4];
-            env->GetIntArrayRegion(jret, 0, 4, ret);
-            if (!CheckAndClearException(env)) {
-                if (noMove &&
-                    (pWinPos->x != ret[0] ||
-                     pWinPos->y != ret[1]))
-                {
-                    pWinPos->flags &= ~SWP_NOMOVE;
-                }
-                pWinPos->x  = ret[0];
-                pWinPos->y  = ret[1];
-                if (noSize &&
-                    (pWinPos->cx != ret[2] ||
-                     pWinPos->cy != ret[3]))
-                {
-                    pWinPos->flags &= ~SWP_NOSIZE;
-                }
-                pWinPos->cx = ret[2];
-                pWinPos->cy = ret[3];
-//                fprintf(stdout, "WM_POSCHANGING override: (%d, %d), [%d x %d]",
-//                        pWinPos->x, pWinPos->y, pWinPos->cx, pWinPos->cy);
-//                printFlags(pWinPos->flags);
-//                fprintf(stdout, "\n");
-//                fflush(stdout);
-            }
+    if (const GwinWindowCallbacks* cb = WindowCallbacks()) {
+        // The jintArray became an out-parameter; the "bad array length" branch is unreachable here.
+        // The two floats were dead int literals in the JNI varargs call (see glass_win_api.h).
+        int32_t ret[4];
+        if (cb->notify_moving(m_windowId, pWinPos->x, pWinPos->y, pWinPos->cx, pWinPos->cy,
+                              0.0f, 0.0f, anchor.x, anchor.y, resizeMode,
+                              m_insets.left, m_insets.top, m_insets.right, m_insets.bottom,
+                              ret)) {
+            ApplyMovingOverride(pWinPos, ret, noMove, noSize);
         }
-        env->DeleteLocalRef(jret);
     }
 }
 
 // if pRect == NULL => get position/size by GetWindowRect
 void GlassWindow::HandleMoveEvent(RECT *pRect)
 {
-    JNIEnv* env = GetEnv();
-
     RECT r;
     if (pRect == NULL) {
         ::GetWindowRect(GetHWND(), &r);
         pRect = &r;
     }
 
-    env->CallVoidMethod(m_grefThis, midNotifyMove, pRect->left, pRect->top);
-    CheckAndClearException(env);
+    if (const GwinWindowCallbacks* cb = WindowCallbacks()) {
+        cb->notify_move(m_windowId, pRect->left, pRect->top);
+    }
 }
 
 // if pRect == NULL => get position/size by GetWindowRect
 void GlassWindow::HandleSizeEvent(int type, RECT *pRect)
 {
-    JNIEnv* env = GetEnv();
-
     RECT r;
     if (pRect == NULL) {
         ::GetWindowRect(GetHWND(), &r);
         pRect = &r;
     }
 
-    env->CallVoidMethod(m_grefThis, midNotifyResize,
-                        type, pRect->right-pRect->left, pRect->bottom-pRect->top);
-    CheckAndClearException(env);
+    if (const GwinWindowCallbacks* cb = WindowCallbacks()) {
+        cb->notify_resize(m_windowId, type, pRect->right-pRect->left, pRect->bottom-pRect->top);
+    }
 }
 
 void GlassWindow::HandleDPIEvent(WPARAM wParam, LPARAM lParam)
 {
-    JNIEnv* env = GetEnv();
     float scale = (float) LOWORD(wParam) / USER_DEFAULT_SCREEN_DPI;
 
-    env->CallVoidMethod(m_grefThis, midNotifyScaleChanged, scale, scale, scale, scale);
-    CheckAndClearException(env);
+    if (const GwinWindowCallbacks* cb = WindowCallbacks()) {
+        cb->notify_scale_changed(m_windowId, scale, scale, scale, scale);
+    }
 }
 
-void GlassWindow::HandleActivateEvent(jint event)
+void GlassWindow::HandleActivateEvent(int32_t event)
 {
     const bool active = event != com_sun_glass_events_WindowEvent_FOCUS_LOST;
 
@@ -938,17 +965,16 @@ void GlassWindow::HandleActivateEvent(jint event)
         UngrabFocus();
     }
 
-    JNIEnv* env = GetEnv();
-    env->CallVoidMethod(m_grefThis, javaIDs.Window.notifyFocus, event);
-    CheckAndClearException(env);
+    if (const GwinWindowCallbacks* cb = WindowCallbacks()) {
+        cb->notify_focus(m_windowId, event);
+    }
 }
 
 void GlassWindow::HandleFocusDisabledEvent()
 {
-    JNIEnv* env = GetEnv();
-
-    env->CallVoidMethod(m_grefThis, javaIDs.Window.notifyFocusDisabled);
-    CheckAndClearException(env);
+    if (const GwinWindowCallbacks* cb = WindowCallbacks()) {
+        cb->notify_focus_disabled(m_windowId);
+    }
 }
 
 LRESULT GlassWindow::HandleNCCalcSizeEvent(UINT msg, WPARAM wParam, LPARAM lParam)
@@ -1030,9 +1056,10 @@ BOOL GlassWindow::HandleNCHitTestEvent(SHORT x, SHORT y, LRESULT& result)
         pt.x = max(0, rect.right - rect.left) - pt.x;
     }
 
-    JNIEnv* env = GetEnv();
-    jint res = env->CallIntMethod(m_grefThis, javaIDs.WinWindow.nonClientHitTest, pt.x, pt.y);
-    CheckAndClearException(env);
+    int32_t res = HTNOWHERE;   // no table: what a failed upcall answered
+    if (const GwinWindowCallbacks* cb = WindowCallbacks()) {
+        res = cb->non_client_hit_test(m_windowId, pt.x, pt.y);
+    }
 
     // The left, right, and bottom resize borders are outside of the client area and are provided for free.
     // In contrast, the top resize border is not outside, but inside the client area and may be below user
@@ -1212,9 +1239,9 @@ void GlassWindow::UngrabFocus()
         return;
     }
 
-    JNIEnv* env = GetEnv();
-    env->CallVoidMethod(m_grefThis, javaIDs.Window.notifyFocusUngrab);
-    CheckAndClearException(env);
+    if (const GwinWindowCallbacks* cb = WindowCallbacks()) {
+        cb->notify_focus_ungrab(m_windowId);
+    }
 
     sm_grabWindow = NULL;
 }
@@ -1237,7 +1264,7 @@ void GlassWindow::CheckUngrab()
     GlassWindow::ResetGrab();
 }
 
-bool GlassWindow::RequestFocus(jint event)
+bool GlassWindow::RequestFocus(int32_t event)
 {
     ASSERT(event == com_sun_glass_events_WindowEvent_FOCUS_GAINED);
     // The event will be delivered as a part of WM_ACTIVATE message handling
@@ -1294,9 +1321,9 @@ void GlassWindow::SetDelegateWindow(HWND hWnd)
 
     m_delegateWindow = hWnd;
 
-    GetEnv()->CallVoidMethod(m_grefThis,
-            javaIDs.Window.notifyDelegatePtr, (jlong)hWnd);
-    CheckAndClearException(GetEnv());
+    if (const GwinWindowCallbacks* cb = WindowCallbacks()) {
+        cb->notify_delegate_ptr(m_windowId, (void*)hWnd);
+    }
 }
 
 BOOL GlassWindow::EnterFullScreenMode(GlassView * view, BOOL animate, BOOL keepRatio)
@@ -1494,882 +1521,157 @@ void GlassWindow::ShowSystemMenu(int x, int y)
 }
 
 /*
- * JNI methods section
- *
+ * ---- The action bodies of the gwin_window_* exports of glass_win_api.cpp (the JNI entry
+ * points that once shared them are gone). Each runs INSIDE its caller's ENTER_MAIN_THREAD
+ * action. ----
  */
 
-extern "C" {
-
-/*
- * Class:     com_sun_glass_ui_win_WinWindow
- * Method:    _initIDs
- * Signature: ()V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinWindow__1initIDs
-    (JNIEnv *env, jclass cls)
+/* gwin_window_create's action, verbatim from the former Java_..._1createWindow: windowId is the
+ * IDENTITY of glass_win_api.h. */
+/* static */ HWND GlassWindow::CreateFromMask(int64_t windowId, HWND owner,
+                                              HMONITOR hMonitor, int32_t mask)
 {
-     midNotifyClose = env->GetMethodID(cls, "notifyClose", "()V");
-     ASSERT(midNotifyClose);
-     if (env->ExceptionCheck()) return;
+    DWORD dwStyle;
+    DWORD dwExStyle;
+    bool closeable;
 
-     midNotifyMoving = env->GetMethodID(cls, "notifyMoving", "(IIIIFFIIIIIII)[I");
-     ASSERT(midNotifyMoving);
-     if (env->ExceptionCheck()) return;
+    dwStyle = WS_CLIPCHILDREN | WS_SYSMENU;
+    closeable = (mask & com_sun_glass_ui_Window_CLOSABLE) != 0;
 
-     midNotifyMove = env->GetMethodID(cls, "notifyMove", "(II)V");
-     ASSERT(midNotifyMove);
-     if (env->ExceptionCheck()) return;
+    if (mask & com_sun_glass_ui_Window_EXTENDED) {
+        mask |= com_sun_glass_ui_Window_TITLED;
+    }
 
-     midNotifyResize = env->GetMethodID(cls, "notifyResize", "(III)V");
-     ASSERT(midNotifyResize);
-     if (env->ExceptionCheck()) return;
+    if (mask & com_sun_glass_ui_Window_TITLED) {
+        dwExStyle = WS_EX_WINDOWEDGE;
+        dwStyle |= WS_CAPTION;
 
-     midNotifyScaleChanged = env->GetMethodID(cls, "notifyScaleChanged", "(FFFF)V");
-     ASSERT(midNotifyScaleChanged);
-     if (env->ExceptionCheck()) return;
-
-     javaIDs.Window.notifyFocus = env->GetMethodID(cls, "notifyFocus", "(I)V");
-     ASSERT(javaIDs.Window.notifyFocus);
-     if (env->ExceptionCheck()) return;
-
-     javaIDs.Window.notifyFocusDisabled = env->GetMethodID(cls, "notifyFocusDisabled", "()V");
-     ASSERT(javaIDs.Window.notifyFocusDisabled);
-     if (env->ExceptionCheck()) return;
-
-     javaIDs.Window.notifyFocusUngrab = env->GetMethodID(cls, "notifyFocusUngrab", "()V");
-     ASSERT(javaIDs.Window.notifyFocusUngrab);
-     if (env->ExceptionCheck()) return;
-
-     midNotifyMoveToAnotherScreen = env->GetMethodID(cls, "notifyMoveToAnotherScreen", "(Lcom/sun/glass/ui/Screen;)V");
-     ASSERT(midNotifyMoveToAnotherScreen);
-     if (env->ExceptionCheck()) return;
-
-     javaIDs.Window.notifyDestroy = env->GetMethodID(cls, "notifyDestroy", "()V");
-     ASSERT(javaIDs.Window.notifyDestroy);
-     if (env->ExceptionCheck()) return;
-
-     javaIDs.Window.notifyDelegatePtr = env->GetMethodID(cls, "notifyDelegatePtr", "(J)V");
-     ASSERT(javaIDs.Window.notifyDelegatePtr);
-     if (env->ExceptionCheck()) return;
-
-     javaIDs.WinWindow.nonClientHitTest = env->GetMethodID(cls, "nonClientHitTest", "(II)I");
-     ASSERT(javaIDs.WinWindow.nonClientHitTest);
-     if (env->ExceptionCheck()) return;
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinWindow
- * Method:    _createWindow
- * Signature: (JJZI)J
- */
-JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_win_WinWindow__1createWindow
-    (JNIEnv *env, jobject jThis, jlong ownerPtr, jlong screenPtr, jint mask)
-{
-    ENTER_MAIN_THREAD_AND_RETURN(jlong)
-    {
-        DWORD dwStyle;
-        DWORD dwExStyle;
-        bool closeable;
-
-        dwStyle = WS_CLIPCHILDREN | WS_SYSMENU;
-        closeable = (mask & com_sun_glass_ui_Window_CLOSABLE) != 0;
-
-        if (mask & com_sun_glass_ui_Window_EXTENDED) {
-            mask |= com_sun_glass_ui_Window_TITLED;
+        if (mask & com_sun_glass_ui_Window_MINIMIZABLE) {
+            dwStyle |= WS_MINIMIZEBOX;
         }
+        if (mask & com_sun_glass_ui_Window_MAXIMIZABLE) {
+            dwStyle |= WS_MAXIMIZEBOX;
+        }
+    } else {
+        dwExStyle = 0;
+        dwStyle |= WS_POPUP;
+        // if undecorated or transparent and not modal, enable taskbar iconification toggling
+        if (!(mask & com_sun_glass_ui_Window_MODAL)) {
+            dwStyle |= WS_MINIMIZEBOX;
+        }
+    }
 
-        if (mask & com_sun_glass_ui_Window_TITLED) {
-            dwExStyle = WS_EX_WINDOWEDGE;
-            dwStyle |= WS_CAPTION;
+    if (mask & com_sun_glass_ui_Window_TRANSPARENT) {
+        dwExStyle |= WS_EX_LAYERED;
+    }
 
-            if (mask & com_sun_glass_ui_Window_MINIMIZABLE) {
-                dwStyle |= WS_MINIMIZEBOX;
-            }
-            if (mask & com_sun_glass_ui_Window_MAXIMIZABLE) {
-                dwStyle |= WS_MAXIMIZEBOX;
-            }
-        } else {
-            dwExStyle = 0;
-            dwStyle |= WS_POPUP;
-            // if undecorated or transparent and not modal, enable taskbar iconification toggling
-            if (!(mask & com_sun_glass_ui_Window_MODAL)) {
-                dwStyle |= WS_MINIMIZEBOX;
+    if (mask & com_sun_glass_ui_Window_POPUP) {
+        dwStyle |= WS_POPUP;
+        // Popups should not appear in the taskbar, so WS_EX_TOOLWINDOW
+        dwExStyle |= WS_EX_TOOLWINDOW;
+    }
+
+    if (mask & com_sun_glass_ui_Window_UTILITY) {
+        dwExStyle |= WS_EX_TOOLWINDOW;
+    }
+
+    if (mask & com_sun_glass_ui_Window_RIGHT_TO_LEFT) {
+        dwExStyle |= WS_EX_NOINHERITLAYOUT | WS_EX_LAYOUTRTL;
+    }
+
+    GlassWindow *pWindow =
+        new GlassWindow(
+            (mask & com_sun_glass_ui_Window_TRANSPARENT) != 0,
+            (mask & com_sun_glass_ui_Window_TITLED) != 0,
+            (mask & com_sun_glass_ui_Window_UNIFIED) != 0,
+            (mask & com_sun_glass_ui_Window_EXTENDED) != 0,
+            owner, windowId);
+
+    HWND hWnd = pWindow->Create(dwStyle, dwExStyle, hMonitor, owner);
+
+    if (!hWnd) {
+        delete pWindow;
+    } else {
+        if (!closeable) {
+            HMENU hSysMenu = ::GetSystemMenu(hWnd, FALSE);
+            if (hSysMenu != NULL) {
+                ::EnableMenuItem(hSysMenu, SC_CLOSE,
+                        MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
             }
         }
 
-        if (mask & com_sun_glass_ui_Window_TRANSPARENT) {
-            dwExStyle |= WS_EX_LAYERED;
-        }
-
-        if (mask & com_sun_glass_ui_Window_POPUP) {
-            dwStyle |= WS_POPUP;
-            // Popups should not appear in the taskbar, so WS_EX_TOOLWINDOW
-            dwExStyle |= WS_EX_TOOLWINDOW;
-        }
-
-        if (mask & com_sun_glass_ui_Window_UTILITY) {
-            dwExStyle |= WS_EX_TOOLWINDOW;
-        }
-
-        if (mask & com_sun_glass_ui_Window_RIGHT_TO_LEFT) {
-            dwExStyle |= WS_EX_NOINHERITLAYOUT | WS_EX_LAYOUTRTL;
-        }
-
-        GlassWindow *pWindow =
-            new GlassWindow(jThis,
-                (mask & com_sun_glass_ui_Window_TRANSPARENT) != 0,
-                (mask & com_sun_glass_ui_Window_TITLED) != 0,
-                (mask & com_sun_glass_ui_Window_UNIFIED) != 0,
-                (mask & com_sun_glass_ui_Window_EXTENDED) != 0,
-                owner);
-
-        HWND hWnd = pWindow->Create(dwStyle, dwExStyle, hMonitor, owner);
-
-        if (!hWnd) {
-            delete pWindow;
-        } else {
-            if (!closeable) {
-                HMENU hSysMenu = ::GetSystemMenu(hWnd, FALSE);
-                if (hSysMenu != NULL) {
-                    ::EnableMenuItem(hSysMenu, SC_CLOSE,
-                            MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
-                }
-            }
-
-            if (mask & com_sun_glass_ui_Window_DARK_FRAME) {
-                pWindow->SetDarkFrame(true);
-            }
-        }
-
-        return (jlong)hWnd;
-    }
-    DECL_jobject(jThis);
-    HWND owner;
-    HMONITOR hMonitor;
-    jint mask;
-    LEAVE_MAIN_THREAD;
-
-    ARG(jThis) = jThis;
-    ARG(owner) = (HWND)ownerPtr;
-    ARG(hMonitor) = (HMONITOR)screenPtr;
-    ARG(mask) = mask;
-
-    return PERFORM_AND_RETURN();
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinWindow
- * Method:    _close
- * Signature: (J)Z
- */
-JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinWindow__1close
-    (JNIEnv *env, jobject jThis, jlong ptr)
-{
-    ENTER_MAIN_THREAD_AND_RETURN(jboolean)
-    {
-        GlassWindow *pWindow = GlassWindow::FromHandle(hWnd);
-        pWindow->Close();
-        return bool_to_jbool(::DestroyWindow(hWnd));
-    }
-    LEAVE_MAIN_THREAD_WITH_hWnd;
-
-    return PERFORM_AND_RETURN();
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinWindow
- * Method:    _setView
- * Signature: (JJ)Z
- */
-JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinWindow__1setView
-    (JNIEnv * env, jobject jThis, jlong ptr, jobject view)
-{
-    ENTER_MAIN_THREAD()
-    {
-        GlassWindow *pWindow = GlassWindow::FromHandle(hWnd);
-
-        if (activeTouchWindow == hWnd) {
-            activeTouchWindow = 0;
-        }
-        pWindow->ResetMouseTracking(hWnd);
-        pWindow->SetGlassView(view);
-    }
-    GlassView * view;
-    LEAVE_MAIN_THREAD_WITH_hWnd;
-
-    ARG(view) = view == NULL ? NULL : (GlassView*)env->GetLongField(view, javaIDs.View.ptr);
-
-    PERFORM();
-    return JNI_TRUE;
-}
-
-/**
- * Class:     com_sun_glass_ui_win_WinWindow
- * Method:    _updateViewSize
- * Signature: (J)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinWindow__1updateViewSize
-    (JNIEnv * env, jobject jThis, jlong ptr)
-{
-    ENTER_MAIN_THREAD()
-    {
-        GlassWindow *pWindow = GlassWindow::FromHandle(hWnd);
-
-        // The condition below may be restricted to WS_POPUP windows
-        if (::IsWindowVisible(hWnd)) {
-            pWindow->NotifyViewSize(hWnd);
+        if (mask & com_sun_glass_ui_Window_DARK_FRAME) {
+            pWindow->SetDarkFrame(true);
         }
     }
-    LEAVE_MAIN_THREAD_WITH_hWnd;
 
-    PERFORM();
+    return hWnd;
 }
 
-/*
- * Class:     com_sun_glass_ui_win_WinWindow
- * Method:    _setMenubar
- * Signature: (JJ)Z
- */
-JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinWindow__1setMenubar
-    (JNIEnv *env, jobject jThis, jlong ptr, jlong menuPtr)
+/* The set_view action, verbatim from the former Java_..._1setView (no null check of the GlassWindow). */
+/* static */ void GlassWindow::DoSetView(HWND hWnd, GlassView* view)
 {
-    ENTER_MAIN_THREAD_AND_RETURN(jboolean)
-    {
-        if (::SetMenu(hWnd, hMenu))
-        {
-            GlassWindow *pWindow = GlassWindow::FromHandle(hWnd);
-            if (pWindow) {
-                pWindow->SetMenu(hMenu);
-            }
-
-            return JNI_TRUE;
-        }
-        return JNI_FALSE;
-    }
-    HMENU hMenu;
-    LEAVE_MAIN_THREAD_WITH_hWnd;
-
-    ARG(hMenu) = (HMENU)menuPtr;
-    return PERFORM_AND_RETURN();
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinWindow
- * Method:    _setLevel
- * Signature: (JI)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinWindow__1setLevel
-(JNIEnv *env, jobject jwindow, jlong ptr, jint jLevel)
-{
-    ENTER_MAIN_THREAD()
-    {
-        ::SetWindowPos(hWnd, hWndInsertAfter, 0, 0, 0, 0,
-                SWP_ASYNCWINDOWPOS | SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOOWNERZORDER | SWP_NOSIZE);
-    }
-    HWND hWndInsertAfter;
-    LEAVE_MAIN_THREAD_WITH_hWnd;
-
-    ARG(hWndInsertAfter) = HWND_NOTOPMOST;
-    switch (jLevel) {
-        case com_sun_glass_ui_Window_Level_FLOATING:
-        case com_sun_glass_ui_Window_Level_TOPMOST:
-            ARG(hWndInsertAfter) = HWND_TOPMOST;
-            break;
-    }
-    PERFORM();
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinWindow
- * Method:    _setFocusable
- * Signature: (JZ)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinWindow__1setFocusable
-(JNIEnv *env, jobject jwindow, jlong ptr, jboolean isFocusable)
-{
-    ENTER_MAIN_THREAD()
-    {
-        GlassWindow *pWindow = GlassWindow::FromHandle(hWnd);
-        pWindow->SetFocusable(isFocusable);
-    }
-    bool isFocusable;
-    LEAVE_MAIN_THREAD_WITH_hWnd;
-
-    ARG(isFocusable) = isFocusable == JNI_TRUE;
-    PERFORM();
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinWindow
- * Method:    _setEnabled
- * Signature: (JZ)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinWindow__1setEnabled
-(JNIEnv *env, jobject jwindow, jlong ptr, jboolean isEnabled)
-{
-    ENTER_MAIN_THREAD()
-    {
-        GlassWindow *pWindow = GlassWindow::FromHandle(hWnd);
-        pWindow->SetEnabled(isEnabled);
-        ::EnableWindow(hWnd, isEnabled);
-    }
-    bool isEnabled;
-    LEAVE_MAIN_THREAD_WITH_hWnd;
-
-    ARG(isEnabled) = isEnabled == JNI_TRUE;
-    PERFORM();
-}
-
-// Converts a float [0..1] to a BYTE [0..255]
-#define F2B(value) BYTE(255.f * (value))
-
-/*
- * Class:     com_sun_glass_ui_win_WinWindow
- * Method:    _setAlpha
- * Signature: (JF)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinWindow__1setAlpha
-    (JNIEnv *env, jobject jThis, jlong ptr, jfloat alpha)
-{
-    ENTER_MAIN_THREAD()
-    {
-        GlassWindow *pWindow = GlassWindow::FromHandle(hWnd);
-        pWindow->SetAlpha(alpha);
-    }
-    BYTE alpha;
-    LEAVE_MAIN_THREAD_WITH_hWnd;
-
-    ARG(alpha) = F2B(alpha);
-    PERFORM();
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinWindow
- * Method:    _setBackground2
- * Signature: (JFFF)Z
- */
-JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinWindow__1setBackground2
-    (JNIEnv *env, jobject jThis, jlong ptr, jfloat r, jfloat g, jfloat b)
-{
-    ENTER_MAIN_THREAD()
-    {
-        HBRUSH hbrBackground;
-
-        // That's a hack with 'negative' color
-        if (r < 0) {
-            hbrBackground = NULL;
-        } else {
-            hbrBackground = ::CreateSolidBrush(RGB(F2B(r), F2B(g), F2B(b)));
-        }
-
-        HBRUSH oldBrush = (HBRUSH)::SetClassLongPtr(hWnd, GCLP_HBRBACKGROUND, (LONG_PTR)hbrBackground);
-
-        if (oldBrush) {
-            ::DeleteObject(oldBrush);
-        }
-    }
-    jfloat r, g, b;
-    LEAVE_MAIN_THREAD_WITH_hWnd;
-
-    ARG(r) = r;
-    ARG(g) = g;
-    ARG(b) = b;
-    PERFORM();
-
-    return JNI_TRUE;
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinWindow
- * Method:    _setDarkFrame
- * Signature: (JZ)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinWindow__1setDarkFrame
-    (JNIEnv *env, jobject jThis, jlong ptr, jboolean dark)
-{
-    ENTER_MAIN_THREAD()
-    {
-        GlassWindow *pWindow = GlassWindow::FromHandle(hWnd);
-        if (pWindow) {
-            pWindow->SetDarkFrame(dark);
-        }
-    }
-    jboolean dark;
-    LEAVE_MAIN_THREAD_WITH_hWnd;
-
-    ARG(dark) = dark;
-    PERFORM();
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinWindow
- * Method:    _getAnchor
- * Signature: (J)J
- */
-JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_win_WinWindow__1getAnchor
-    (JNIEnv *env, jobject jThis, jlong ptr)
-{
-    HWND hWnd = (HWND) ptr;
-    if (!::IsWindow(hWnd)) return 0L;
-
-    RECT wRect;
-    POINT anchor;
-    if (hWnd == ::GetCapture()) {
-        if (::GetCursorPos(&anchor) && ::GetWindowRect(hWnd, &wRect)) {
-            anchor.x -= wRect.left;
-            anchor.y -= wRect.top;
-            return ((((jlong) anchor.x) << 32) |
-                    (((jlong) anchor.y) & 0xffffffffL));
-        }
-    }
-    return com_sun_glass_ui_win_WinWindow_ANCHOR_NO_CAPTURE;
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinWindow
- * Method:    _getInsets
- * Signature: (J)J
- */
-JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_win_WinWindow__1getInsets
-    (JNIEnv *env, jobject jThis, jlong ptr)
-{
-    HWND hWnd = (HWND) ptr;
-    if (!::IsWindow(hWnd)) return 0L;
     GlassWindow *pWindow = GlassWindow::FromHandle(hWnd);
 
-    pWindow->UpdateInsets();
-    RECT is = pWindow->GetInsets();
-
-    return ((((jlong) is.left)  << 48) |
-            (((jlong) is.top)   << 32) |
-            (((jlong) is.right) << 16) |
-            (((jlong) is.bottom)     ));
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinWindow
- * Method:    _setBounds
- * Signature: (JIIZZIIIIFF)Z
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinWindow__1setBounds
-    (JNIEnv *env, jobject jThis, jlong ptr,
-     jint x, jint y, jboolean xSet, jboolean ySet,
-     jint w, jint h, jint cw, jint ch,
-     jfloat xGravity, jfloat yGravity)
-{
-    ENTER_MAIN_THREAD()
-    {
-        if (!::IsWindow(hWnd)) return;
-        GlassWindow *pWindow = GlassWindow::FromHandle(hWnd);
-
-        pWindow->UpdateInsets();
-        RECT is = pWindow->GetInsets();
-
-        RECT r;
-        ::GetWindowRect(hWnd, &r);
-
-        int newX = jbool_to_bool(xSet) ? x : r.left;
-        int newY = jbool_to_bool(ySet) ? y : r.top;
-        int newW = w > 0 ? w :
-                       cw > 0 ? cw + is.right + is.left : r.right - r.left;
-        int newH = h > 0 ? h :
-                       ch > 0 ? ch + is.bottom + is.top : r.bottom - r.top;
-
-        POINT minSize = pWindow->getMinSize();
-        POINT maxSize = pWindow->getMaxSize();
-        if (minSize.x >= 0) newW = max(newW, minSize.x);
-        if (minSize.y >= 0) newH = max(newH, minSize.y);
-        if (maxSize.x >= 0) newW = min(newW, maxSize.x);
-        if (maxSize.y >= 0) newH = min(newH, maxSize.y);
-
-        if (xSet || ySet) {
-            ::SetWindowPos(hWnd, NULL, newX, newY, newW, newH,
-                           SWP_NOACTIVATE | SWP_NOZORDER | SWP_NOSENDCHANGING);
-        } else {
-            ::SetWindowPos(hWnd, NULL, 0, 0, newW, newH,
-                           SWP_NOACTIVATE | SWP_NOZORDER | SWP_NOMOVE | SWP_NOSENDCHANGING);
-        }
+    if (activeTouchWindow == hWnd) {
+        activeTouchWindow = 0;
     }
-    jint x, y;
-    jboolean xSet, ySet;
-    jint w, h, cw, ch;
-    LEAVE_MAIN_THREAD_WITH_hWnd;
-
-    ARG(x) = x;
-    ARG(y) = y;
-    ARG(xSet) = xSet;
-    ARG(ySet) = ySet;
-    ARG(w) = w;
-    ARG(h) = h;
-    ARG(cw) = cw;
-    ARG(ch) = ch;
-    PERFORM();
-
+    pWindow->ResetMouseTracking(hWnd);
+    pWindow->SetGlassView(view);
 }
 
-/*
- * Class:     com_sun_glass_ui_win_WinWindow
- * Method:    _setTitle
- * Signature: (JLjava/lang/String;)Z
- */
-JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinWindow__1setTitle
-    (JNIEnv *env, jobject jThis, jlong ptr, jstring jTitle)
+/* The set_visible action, verbatim from the former Java_..._1setVisible (the touch tail does not null-check). */
+/* static */ void GlassWindow::DoSetVisible(HWND hWnd, bool visible)
 {
-    ENTER_MAIN_THREAD_AND_RETURN(jboolean)
-    {
-        if (::SetWindowText(hWnd, title)) {
-            return JNI_TRUE;
-        }
-        return JNI_FALSE;
-    }
-    LPCTSTR title;
-    LEAVE_MAIN_THREAD_WITH_hWnd;
-
-    JString title(env, jTitle);
-    ARG(title) = title;
-    return PERFORM_AND_RETURN();
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinWindow
- * Method:    _setResizable
- * Signature: (Z)Z
- */
-JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinWindow__1setResizable
-(JNIEnv *env, jobject jWindow, jlong ptr, jboolean jResizable)
-{
-    ENTER_MAIN_THREAD_AND_RETURN(jboolean)
-    {
-        GlassWindow *pWindow = GlassWindow::FromHandle(hWnd);
-        if (pWindow && pWindow->SetResizable(jbool_to_bool(jResizable))) {
-            return JNI_TRUE;
-        }
-
-        return JNI_FALSE;
-    }
-    jboolean jResizable;
-    LEAVE_MAIN_THREAD_WITH_hWnd;
-
-    ARG(jResizable) = jResizable;
-    return PERFORM_AND_RETURN();
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinWindow
- * Method:    _setVisible
- * Signature: (JZ)Z
- */
-JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinWindow__1setVisible
-    (JNIEnv *env, jobject jThis, jlong ptr, jboolean visible)
-{
-    ENTER_MAIN_THREAD()
-    {
-        GlassWindow *pWindow = GlassWindow::FromHandle(hWnd);
-        if (!visible) {
-            if (pWindow) {
-                pWindow->UngrabFocus();
-            }
-
-            if (activeTouchWindow == hWnd) {
-                pWindow->HandleViewTouchEvent(hWnd, 0, 0, 0);
-                activeTouchWindow = 0;
-            }
-        }
-
-
-        ::ShowWindow(hWnd, visible ? SW_SHOW : SW_HIDE);
-
-        if (visible) {
-            if (pWindow) {
-                if (pWindow->IsFocusable()) {
-                    ::SetForegroundWindow(hWnd);
-                } else {
-                    // JDK-8112905:
-                    // On some latest platform versions, unfocusable windows
-                    // are shown below the currently active window, so we
-                    // need to pull them to front explicitly. However,
-                    // neither BringWindowToTop nor SetForegroundWindow()
-                    // can be used because of the window unfocusability, so
-                    // here is a workaround: we first made the window TOPMOST
-                    // and then reset this flag to just TOP.
-                    ::SetWindowPos(hWnd, HWND_TOPMOST, 0, 0, 0, 0,
-                                   SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE);
-                    ::SetWindowPos(hWnd, HWND_TOP, 0, 0, 0, 0,
-                                   SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE);
-                }
-            }
-            ::UpdateWindow(hWnd);
-        }
-    }
-    jboolean visible;
-    LEAVE_MAIN_THREAD_WITH_hWnd;
-
-    ARG(visible) = visible;
-    PERFORM();
-    return visible;
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinWindow
- * Method:    _requestFocus
- * Signature: (JI)Z
- */
-JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinWindow__1requestFocus
-    (JNIEnv *env, jobject jThis, jlong ptr, jint event)
-{
-    ENTER_MAIN_THREAD_AND_RETURN(jboolean)
-    {
-        GlassWindow *pWindow = GlassWindow::FromHandle(hWnd);
-        return bool_to_jbool(pWindow && pWindow->RequestFocus(event));
-    }
-    jint event;
-    LEAVE_MAIN_THREAD_WITH_hWnd;
-
-    ARG(event) = event;
-
-    return PERFORM_AND_RETURN();
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinWindow
- * Method:    _grabFocus
- * Signature: (J)Z
- */
-JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinWindow__1grabFocus
-    (JNIEnv *env, jobject jThis, jlong ptr)
-{
-    ENTER_MAIN_THREAD_AND_RETURN(jboolean)
-    {
-        GlassWindow *pWindow = GlassWindow::FromHandle(hWnd);
-        return bool_to_jbool(pWindow && pWindow->GrabFocus());
-    }
-    LEAVE_MAIN_THREAD_WITH_hWnd;
-
-    return PERFORM_AND_RETURN();
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinWindow
- * Method:    _ungrabFocus
- * Signature: (J)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinWindow__1ungrabFocus
-    (JNIEnv *env, jobject jThis, jlong ptr)
-{
-    ENTER_MAIN_THREAD()
-    {
-        GlassWindow *pWindow = GlassWindow::FromHandle(hWnd);
+    GlassWindow *pWindow = GlassWindow::FromHandle(hWnd);
+    if (!visible) {
         if (pWindow) {
             pWindow->UngrabFocus();
         }
-    }
-    LEAVE_MAIN_THREAD_WITH_hWnd;
 
-    PERFORM();
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinWindow
- * Method:    _minimize
- * Signature: (JZ)Z
- */
-JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinWindow__1minimize
-    (JNIEnv *env, jobject jThis, jlong ptr, jboolean minimize)
-{
-    ENTER_MAIN_THREAD()
-    {
-        ::ShowWindow(hWnd, minimize ? SW_MINIMIZE : SW_RESTORE);
-    }
-    jboolean minimize;
-    LEAVE_MAIN_THREAD_WITH_hWnd;
-
-    ARG(minimize) = minimize;
-    PERFORM();
-
-    return JNI_TRUE;
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinWindow
- * Method:    _maximize
- * Signature: (JZ)Z
- */
-JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinWindow__1maximize
-  (JNIEnv *env, jobject jThis, jlong ptr, jboolean maximize, jboolean wasMaximized)
-{
-    ENTER_MAIN_THREAD()
-    {
-        ::ShowWindow(hWnd, maximize ? SW_MAXIMIZE : SW_RESTORE);
-    }
-    jboolean maximize;
-    LEAVE_MAIN_THREAD_WITH_hWnd;
-
-    ARG(maximize) = maximize;
-    PERFORM();
-
-    return JNI_TRUE;
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinWindow
- * Method:    _setMinimumSize
- * Signature: (JII)Z
- */
-JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinWindow__1setMinimumSize
-    (JNIEnv *env, jobject jThis, jlong ptr, jint minWidth, jint minHeight)
-{
-    ENTER_MAIN_THREAD_AND_RETURN(jboolean)
-    {
-        GlassWindow *pWindow = GlassWindow::FromHandle(hWnd);
-        if (pWindow) {
-            pWindow->setMinSize(minWidth, minHeight);
-            return JNI_TRUE;
+        if (activeTouchWindow == hWnd) {
+            pWindow->HandleViewTouchEvent(hWnd, 0, 0, 0);
+            activeTouchWindow = 0;
         }
-        return JNI_FALSE;
     }
-    jint minWidth;
-    jint minHeight;
-    LEAVE_MAIN_THREAD_WITH_hWnd;
 
-    ARG(minWidth) = minWidth == 0 ? -1 : minWidth;
-    ARG(minHeight) = minHeight == 0 ? -1 : minHeight;
-    return PERFORM_AND_RETURN();
-}
 
-/*
- * Class:     com_sun_glass_ui_win_WinWindow
- * Method:    _setMaximumSize
- * Signature: (JII)Z
- */
-JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinWindow__1setMaximumSize
-    (JNIEnv *env, jobject jThis, jlong ptr, jint maxWidth, jint maxHeight)
-{
-    ENTER_MAIN_THREAD_AND_RETURN(jboolean)
-    {
-        GlassWindow *pWindow = GlassWindow::FromHandle(hWnd);
+    ::ShowWindow(hWnd, visible ? SW_SHOW : SW_HIDE);
+
+    if (visible) {
         if (pWindow) {
-            pWindow->setMaxSize(maxWidth, maxHeight);
-            return JNI_TRUE;
-        }
-        return JNI_FALSE;
-    }
-    jint maxWidth;
-    jint maxHeight;
-    LEAVE_MAIN_THREAD_WITH_hWnd;
-
-    ARG(maxWidth) = maxWidth;
-    ARG(maxHeight) = maxHeight;
-    return PERFORM_AND_RETURN();
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinWindow
- * Method:    _setIcon
- * Signature: (JLcom/sun/glass/ui/Pixels;)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinWindow__1setIcon
-    (JNIEnv *env, jobject jThis, jlong ptr, jobject jPixels)
-{
-    HWND hWnd = (HWND)ptr;
-    GlassWindow *pWindow = GlassWindow::FromHandle(hWnd);
-    if (pWindow) {
-        pWindow->SetIcon(!jPixels ? NULL : Pixels::CreateIcon(env, jPixels));
-    }
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinWindow
- * Method:    _toFront
- * Signature: (J)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinWindow__1toFront
-    (JNIEnv *env, jobject jThis, jlong ptr)
-{
-    ENTER_MAIN_THREAD()
-    {
-        GlassWindow *pWindow = GlassWindow::FromHandle(hWnd);
-        // See comment in __1setVisible() above about unfocusable windows
-        if (pWindow && !pWindow->IsFocusable()) {
-            ::SetWindowPos(hWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
-        }
-        ::SetWindowPos(hWnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
-    }
-    LEAVE_MAIN_THREAD_WITH_hWnd;
-
-    PERFORM();
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinWindow
- * Method:    _toBack
- * Signature: (J)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinWindow__1toBack
-    (JNIEnv *env, jobject jThis, jlong ptr)
-{
-    ENTER_MAIN_THREAD()
-    {
-        ::SetWindowPos(hWnd, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
-    }
-    LEAVE_MAIN_THREAD_WITH_hWnd;
-
-    PERFORM();
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinWindow
- * Method:    _setCursor
- * Signature: (Lcom/sun/glass/ui/Cursor;)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinWindow__1setCursor
-    (JNIEnv *env, jobject jThis, jlong ptr, jobject jCursor)
-{
-    ENTER_MAIN_THREAD()
-    {
-        const HCURSOR cursor = JCursorToHCURSOR(GetEnv(), jCursor);
-
-        GlassWindow *pWindow = GlassWindow::FromHandle(hWnd);
-        if (pWindow) {
-            pWindow->SetCursor(cursor);
-
-            // Update the delegate window as well if present
-            HWND delegateHwnd = pWindow->GetDelegateWindow();
-            if (delegateHwnd) {
-                BaseWnd *pDelegateWindow = BaseWnd::FromHandle(delegateHwnd);
-                if (pDelegateWindow) {
-                    pDelegateWindow->SetCursor(cursor);
-                }
+            if (pWindow->IsFocusable()) {
+                ::SetForegroundWindow(hWnd);
+            } else {
+                // JDK-8112905:
+                // On some latest platform versions, unfocusable windows
+                // are shown below the currently active window, so we
+                // need to pull them to front explicitly. However,
+                // neither BringWindowToTop nor SetForegroundWindow()
+                // can be used because of the window unfocusability, so
+                // here is a workaround: we first made the window TOPMOST
+                // and then reset this flag to just TOP.
+                ::SetWindowPos(hWnd, HWND_TOPMOST, 0, 0, 0, 0,
+                               SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE);
+                ::SetWindowPos(hWnd, HWND_TOP, 0, 0, 0, 0,
+                               SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE);
             }
         }
+        ::UpdateWindow(hWnd);
     }
-    DECL_jobject(jCursor);
-    LEAVE_MAIN_THREAD_WITH_hWnd;
-
-    ARG(jCursor) = jCursor;
-    PERFORM();
 }
 
-/*
- * Class:     com_sun_glass_ui_win_WinWindow
- * Method:    _showSystemMenu
- * Signature: (JII)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinWindow__1showSystemMenu
-    (JNIEnv *env, jobject jThis, jlong ptr, jint x, jint y)
+/* The tail of gwin_window_set_cursor's action: this window, then the delegate window if present. */
+void GlassWindow::ApplyCursor(HCURSOR cursor)
 {
-    ENTER_MAIN_THREAD()
-    {
-        GlassWindow *pWindow = GlassWindow::FromHandle(hWnd);
-        if (pWindow) {
-            pWindow->ShowSystemMenu(x, y);
+    SetCursor(cursor);
+
+    // Update the delegate window as well if present
+    HWND delegateHwnd = GetDelegateWindow();
+    if (delegateHwnd) {
+        BaseWnd *pDelegateWindow = BaseWnd::FromHandle(delegateHwnd);
+        if (pDelegateWindow) {
+            pDelegateWindow->SetCursor(cursor);
         }
     }
-    jint x, y;
-    LEAVE_MAIN_THREAD_WITH_hWnd;
-
-    ARG(x) = x;
-    ARG(y) = y;
-    PERFORM();
 }
-
-}   // extern "C"

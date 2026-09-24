@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -119,21 +119,6 @@ public class PSWRenderer extends PrRenderer {
         return ret;
     }
 
-    /**
-     * Returns an {@code SSE} (SIMD/CPU) renderer for the given screen.
-     *
-     * @return an {@code SSE} (SIMD/CPU) renderer
-     */
-    private synchronized static PSWRenderer createSSEInstance(Screen screen) {
-        PSWRenderer ret = null;
-        try {
-            Class klass = Class.forName(rootPkg + ".impl.sw.sse.SSERendererDelegate");
-            RendererDelegate delegate = (RendererDelegate)klass.getDeclaredConstructor().newInstance();
-            ret = new PSWRenderer(screen, delegate);
-        } catch (Throwable e) {}
-        return ret;
-    }
-
     public static Renderer createRenderer(FilterContext fctx) {
         Object ref = fctx.getReferent();
         GraphicsPipeline pipe = GraphicsPipeline.getPipeline();
@@ -141,11 +126,7 @@ public class PSWRenderer extends PrRenderer {
             return null;
         }
         Screen screen = (Screen)ref;
-        Renderer renderer = createSSEInstance(screen);
-        if (renderer == null) {
-            renderer = createJSWInstance(screen);
-        }
-        return renderer;
+        return createJSWInstance(screen);
     }
 
     @Override

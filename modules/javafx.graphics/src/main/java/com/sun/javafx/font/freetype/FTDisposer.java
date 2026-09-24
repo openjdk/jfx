@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,14 +40,14 @@ class FTDisposer implements DisposerRecord  {
     @Override
     public synchronized void dispose() {
         if (face != 0) {
-            OSFreetype.FT_Done_Face(face);
+            FTNative.FT_Done_Face(face);
             if (PrismFontFactory.debugFonts) {
                 System.err.println("Done Face=" + face);
             }
             face = 0;
         }
         if (library != 0) {
-            OSFreetype.FT_Done_FreeType(library);
+            FTNative.FT_Done_FreeType(library);
             if (PrismFontFactory.debugFonts) {
                 System.err.println("Done Library=" + library);
             }

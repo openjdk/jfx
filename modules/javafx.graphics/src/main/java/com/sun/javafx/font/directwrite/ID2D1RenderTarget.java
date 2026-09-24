@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,31 +31,31 @@ class ID2D1RenderTarget extends IUnknown {
     }
 
     void BeginDraw() {
-        OS.BeginDraw(ptr);
+        DWNative.beginDraw(ptr);
     }
 
     int EndDraw() {
-        return OS.EndDraw(ptr);
+        return DWNative.endDraw(ptr);
     }
 
     void Clear(D2D1_COLOR_F clearColor) {
-        OS.Clear(ptr, clearColor);
+        DWNative.clear(ptr, clearColor);
     }
 
     void SetTransform(D2D1_MATRIX_3X2_F transform) {
-        OS.SetTransform(ptr, transform);
+        DWNative.setTransform(ptr, transform);
     }
 
     void SetTextAntialiasMode(int textAntialiasMode) {
-        OS.SetTextAntialiasMode(ptr, textAntialiasMode);
+        DWNative.setTextAntialiasMode(ptr, textAntialiasMode);
     }
 
     void DrawGlyphRun(D2D1_POINT_2F baselineOrigin, DWRITE_GLYPH_RUN glyphRun, ID2D1Brush foregroundBrush, int measuringMode) {
-        OS.DrawGlyphRun(ptr, baselineOrigin, glyphRun, foregroundBrush.ptr, measuringMode);
+        DWNative.drawGlyphRun(ptr, baselineOrigin, glyphRun, foregroundBrush.ptr, measuringMode);
     }
 
     ID2D1Brush CreateSolidColorBrush(D2D1_COLOR_F color) {
-        long result = OS.CreateSolidColorBrush(ptr, color);
+        long result = DWNative.createSolidColorBrush(ptr, color);
         return result != 0 ? new ID2D1Brush(result) : null;
     }
 }

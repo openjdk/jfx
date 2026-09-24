@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,7 +24,6 @@
  */
 #include "glass_key.h"
 #include <com_sun_glass_events_KeyEvent.h>
-#include <com_sun_glass_ui_gtk_GtkApplication.h>
 
 #include <glib.h>
 #include "glass_general.h"
@@ -45,7 +44,7 @@ static GHashTable *keymap;
 // keymap. That can produce unpredictable results when a Robot tries to work
 // backward from KeyCode to keyvalue. This map is consulted first to resolve
 // the ambiguity.
-static std::map<jint, guint32> robot_java_to_keyval;
+static std::map<int32_t, guint32> robot_java_to_keyval;
 
 // GDK_KEY_{A..Z} to scancode map for QWERTY layout
 static std::map<gint, guint32> keyval_to_scancode;
@@ -55,7 +54,7 @@ static std::map<gint, guint32> keyval_to_scancode;
 // are on the user's keyboard. GDK calls that query the GdkKeymap are slow
 // (they scan all the maps each time) and can return keys not present on the
 // keyboard.
-static std::map<guint32, jint> char_to_java_code;
+static std::map<guint32, int32_t> char_to_java_code;
 
 static void glass_g_hash_table_insert_int(GHashTable *table, gint key, gint value)
 {
@@ -368,7 +367,7 @@ static void init_keymap() {
     }
 }
 
-jint gdk_keyval_to_glass(guint keyval)
+int32_t gdk_keyval_to_glass(guint keyval)
 {
     init_keymap();
     return GPOINTER_TO_INT(g_hash_table_lookup(keymap, GINT_TO_POINTER(keyval)));
@@ -376,7 +375,7 @@ jint gdk_keyval_to_glass(guint keyval)
 
 // For a given keypress event we update the char => KeyCode map multiple times
 // each with a different shift level encoded in the state argument.
-static void record_character(GdkKeymap *keymap, GdkEventKey *e, guint state, jint javaKeyCode) {
+static void record_character(GdkKeymap *keymap, GdkEventKey *e, guint state, int32_t javaKeyCode) {
     guint keyValue;
 
     if (gdk_keymap_translate_keyboard_state(keymap, e->hardware_keycode,
@@ -389,7 +388,7 @@ static void record_character(GdkKeymap *keymap, GdkEventKey *e, guint state, jin
     };
 }
 
-jint get_glass_key(GdkEventKey* e) {
+int32_t get_glass_key(GdkEventKey* e) {
     init_keymap();
 
     guint keyValue;
@@ -400,7 +399,7 @@ jint get_glass_key(GdkEventKey* e) {
             e->hardware_keycode, static_cast<GdkModifierType>(state), e->group,
             &keyValue, NULL, NULL, NULL);
 
-    jint key = GPOINTER_TO_INT(g_hash_table_lookup(keymap,
+    int32_t key = GPOINTER_TO_INT(g_hash_table_lookup(keymap,
             GINT_TO_POINTER(keyValue)));
 
     if (!key) {
@@ -431,7 +430,7 @@ jint get_glass_key(GdkEventKey* e) {
     return key;
 }
 
-gint find_gdk_keyval_for_glass_keycode(jint code) {
+gint find_gdk_keyval_for_glass_keycode(int32_t code) {
     gint result = -1;
     init_keymap();
 
@@ -558,9 +557,9 @@ gint find_gdk_keycode_for_keyval(gint keyval) {
     return result;
 }
 
-jint gdk_modifier_mask_to_glass(guint mask)
+int32_t gdk_modifier_mask_to_glass(guint mask)
 {
-    jint glass_mask = 0;
+    int32_t glass_mask = 0;
     glass_mask |= (mask & GDK_SHIFT_MASK) ? com_sun_glass_events_KeyEvent_MODIFIER_SHIFT : 0;
     glass_mask |= (mask & GDK_CONTROL_MASK) ? com_sun_glass_events_KeyEvent_MODIFIER_CONTROL : 0;
     glass_mask |= (mask & GDK_MOD1_MASK) ? com_sun_glass_events_KeyEvent_MODIFIER_ALT : 0;
@@ -575,7 +574,7 @@ jint gdk_modifier_mask_to_glass(guint mask)
     return glass_mask;
 }
 
-jint glass_key_to_modifier(jint glassKey) {
+int32_t glass_key_to_modifier(int32_t glassKey) {
     switch (glassKey) {
         case com_sun_glass_events_KeyEvent_VK_SHIFT:
             return com_sun_glass_events_KeyEvent_MODIFIER_SHIFT;
@@ -592,16 +591,11 @@ jint glass_key_to_modifier(jint glassKey) {
 }
 extern "C" {
 
-/*
- * Class:     com_sun_glass_ui_gtk_GtkApplication
- * Method:    _getKeyCodeForChar
- * Signature: (CI)I
- */
-JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1getKeyCodeForChar
-  (JNIEnv *env, jobject jApplication, jchar character, jint hint)
+// The body of Java_com_sun_glass_ui_gtk_GtkApplication__1getKeyCodeForChar at commit 033187ad90, which
+// GtkApplication now calls through GtkGlassNative (contract in glass_gtk_api.h)
+int32_t ggtk_application_get_key_code_for_char(uint16_t character, int32_t hint)
 {
-    (void)env;
-    (void)jApplication;
+    (void)hint;
 
     gunichar *ucs_char = g_utf16_to_ucs4(&character, 1, NULL, NULL, NULL);
     if (ucs_char == NULL) {
@@ -663,45 +657,5 @@ static Bool isXkbAvailable(Display *display) {
      }
      return -1;
  }
-
-/*
- * Class:     com_sun_glass_ui_gtk_GtkApplication
- * Method:    _isKeyLocked
- * Signature: (I)I
- */
-JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1isKeyLocked
-  (JNIEnv * env, jobject obj, jint keyCode)
-{
-    Display* display = gdk_x11_display_get_xdisplay(gdk_display_get_default());
-    if (!isXkbAvailable(display)) {
-        return com_sun_glass_events_KeyEvent_KEY_LOCK_UNKNOWN;
-    }
-
-    Atom keyCodeAtom = None;
-    switch (keyCode) {
-        case com_sun_glass_events_KeyEvent_VK_CAPS_LOCK:
-            keyCodeAtom = XInternAtom(display, "Caps Lock", True);
-            break;
-
-        case com_sun_glass_events_KeyEvent_VK_NUM_LOCK:
-            keyCodeAtom = XInternAtom(display, "Num Lock", True);
-            break;
-    }
-
-    if (keyCodeAtom == None) {
-        return com_sun_glass_events_KeyEvent_KEY_LOCK_UNKNOWN;
-    }
-
-    Bool isLocked = False;
-    if (XkbGetNamedIndicator(display, keyCodeAtom, NULL, &isLocked, NULL, NULL)) {
-        if (isLocked) {
-            return com_sun_glass_events_KeyEvent_KEY_LOCK_ON;
-        } else {
-            return com_sun_glass_events_KeyEvent_KEY_LOCK_OFF;
-        }
-    }
-
-    return com_sun_glass_events_KeyEvent_KEY_LOCK_UNKNOWN;
-}
 
 } // extern "C"

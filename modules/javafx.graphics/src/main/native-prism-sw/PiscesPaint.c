@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,9 +27,9 @@
 #include <PiscesRenderer.h>
 
 #include <PiscesSysutils.h>
-#include <PiscesMath.h>
 
 #include <limits.h>
+#include <stdio.h>
 
 #define NO_REPEAT_NO_INTERPOLATE        0
 #define REPEAT_NO_INTERPOLATE           1

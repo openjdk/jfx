@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,10 @@ package com.sun.glass.ui.monocle;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 
+/**
+ * A screen of the EGL platform: its nine properties are asked of the vendor library once, at
+ * construction, through {@link EglVendorNative}, in the order eglBridge.c of commit 21d5a654f6 served them.
+ */
 public class EGLScreen implements NativeScreen {
 
     final int depth;
@@ -39,15 +43,15 @@ public class EGLScreen implements NativeScreen {
     final float scale;
 
     public EGLScreen(int idx) {
-        this.handle = nGetHandle(idx);
-        this.depth = nGetDepth(idx);
-        this.nativeFormat = nGetNativeFormat(idx);
-        this.width = nGetWidth(idx);
-        this.height = nGetHeight(idx);
-        this.offsetX = nGetOffsetX(idx);
-        this.offsetY = nGetOffsetY(idx);
-        this.dpi = nGetDpi(idx);
-        this.scale = nGetScale(idx);
+        this.handle = EglVendorNative.doGetHandle(idx);
+        this.depth = EglVendorNative.doGetDepth(idx);
+        this.nativeFormat = EglVendorNative.doGetNativeFormat(idx);
+        this.width = EglVendorNative.doGetWidth(idx);
+        this.height = EglVendorNative.doGetHeight(idx);
+        this.offsetX = EglVendorNative.doGetOffsetX(idx);
+        this.offsetY = EglVendorNative.doGetOffsetY(idx);
+        this.dpi = EglVendorNative.doGetDpi(idx);
+        this.scale = EglVendorNative.doGetScale(idx);
     }
 
     @Override
@@ -111,15 +115,5 @@ public class EGLScreen implements NativeScreen {
     public float getScale() {
         return this.scale;
     }
-
-    private native long nGetHandle(int idx);
-    private native int nGetDepth(int idx);
-    private native int nGetWidth(int idx);
-    private native int nGetHeight(int idx);
-    private native int nGetOffsetX(int idx);
-    private native int nGetOffsetY(int idx);
-    private native int nGetDpi(int idx);
-    private native int nGetNativeFormat(int idx);
-    private native float nGetScale(int idx);
 
 }

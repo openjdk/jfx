@@ -48,8 +48,6 @@ public abstract class PrismFontFactory implements FontFactory {
     public static final boolean isWindows;
     public static final boolean isLinux;
     public static final boolean isMacOSX;
-    public static final boolean isIOS;
-    public static final boolean isAndroid;
     public static final boolean isEmbedded;
     public static final int cacheLayoutSize;
     private static int subPixelMode;
@@ -82,12 +80,22 @@ public abstract class PrismFontFactory implements FontFactory {
         isWindows = PlatformUtil.isWindows();
         isMacOSX  = PlatformUtil.isMac();
         isLinux   = PlatformUtil.isLinux();
-        isIOS     = PlatformUtil.isIOS();
-        isAndroid = PlatformUtil.isAndroid();
         isEmbedded = PlatformUtil.isEmbedded();
         int[] tempCacheLayoutSize = {0x10000};
 
-        NativeLibLoader.loadLibrary("javafx_font");
+        /* javafx_font exists only for the CoreText path of macOS (MacFontFinder.c,
+         * coretext.c, dfontdecoder.c behind MacFontFinder, com.sun.javafx.font.coretext.OS and
+         * DFontDecoder). Windows and Linux build no such library: font enumeration is
+         * com.sun.javafx.font.WinFontNative and DirectWrite is com.sun.javafx.font.directwrite.DWNative
+         * on Windows; fontconfig is com.sun.javafx.font.FontConfigNative, FreeType
+         * com.sun.javafx.font.freetype.FTNative and Pango com.sun.javafx.font.freetype.PangoNative on
+         * Linux, each binding the system library it needs from Java on first use (the JNI sources
+         * fontpath_linux.c, freetype.c and pango.c of commit 7b43255b30 are gone). Loading
+         * javafx_font where it is not built would be an UnsatisfiedLinkError in this static
+         * initializer, i.e. no fonts at all. */
+        if (isMacOSX) {
+            NativeLibLoader.loadLibrary("javafx_font");
+        }
         String dbg = System.getProperty("prism.debugfonts", "");
         debugFonts = "true".equals(dbg);
         jreFontDir = getJDKFontDir();
@@ -124,7 +132,7 @@ public abstract class PrismFontFactory implements FontFactory {
             }
         }
 
-        boolean lcdTextOff = isMacOSX || isIOS || isAndroid || isEmbedded;
+        boolean lcdTextOff = isMacOSX || isEmbedded;
         String defLCDProp = lcdTextOff ? "false" : "true";
         String lcdProp = System.getProperty("prism.lcdtext", defLCDProp);
         lcdEnabled = lcdProp.equals("true");
@@ -152,8 +160,8 @@ public abstract class PrismFontFactory implements FontFactory {
 
     private static String getNativeFactoryName() {
         if (isWindows) return DW_FACTORY;
-        if (isMacOSX || isIOS) return CT_FACTORY;
-        if (isLinux || isAndroid) return FT_FACTORY;
+        if (isMacOSX) return CT_FACTORY;
+        if (isLinux) return FT_FACTORY;
         return null;
     }
 
@@ -942,7 +950,9 @@ public abstract class PrismFontFactory implements FontFactory {
     private static String sysFontDir = null;
     private static String userFontDir = null;
 
-    private static native String getFontPath();
+    private static String getFontPath() {
+        return WinFontPath.getFontPath();
+    }
 
     private static void getPlatformFontDirs() {
 
@@ -1130,12 +1140,15 @@ public abstract class PrismFontFactory implements FontFactory {
         }
     }
 
-    static native void
+    static void
         populateFontFileNameMap(HashMap<String,String> fontToFileMap,
                                  HashMap<String,String> fontToFamilyNameMap,
                                  HashMap<String,ArrayList<String>>
                                      familyToFontListMap,
-                                 Locale locale);
+                                 Locale locale) {
+        WinFontPath.populateFontFileNameMap(fontToFileMap, fontToFamilyNameMap,
+                                            familyToFontListMap, locale);
+    }
 
     protected static String getPathNameWindows(final String filename) {
         if (filename == null) {
@@ -1651,7 +1664,7 @@ public abstract class PrismFontFactory implements FontFactory {
                                 familyToFontListMap);
                 }
 
-            } else if (isMacOSX || isIOS) {
+            } else if (isMacOSX) {
                 MacFontFinder.populateFontFileNameMap(tmpFontToFileMap,
                                                       fontToFamilyNameMap,
                                                       familyToFontListMap,
@@ -1674,12 +1687,7 @@ public abstract class PrismFontFactory implements FontFactory {
                                 fontToFamilyNameMap,
                                 familyToFontListMap);
                 }
-            } else if (isAndroid) {
-               AndroidFontFinder.populateFontFileNameMap(tmpFontToFileMap,
-                        fontToFamilyNameMap,
-                        familyToFontListMap,
-                        Locale.ENGLISH);
-           } else { /* unrecognised OS */
+            } else { /* unrecognised OS */
                 fontToFileMap = tmpFontToFileMap;
                 return fontToFileMap;
             }
@@ -1693,10 +1701,6 @@ public abstract class PrismFontFactory implements FontFactory {
             }
 
             fontToFileMap = tmpFontToFileMap;
-            if (isAndroid) {
-                populateFontFileNameMapGeneric(
-                       AndroidFontFinder.getSystemFontsDir());
-            }
             populateFontFileNameMapGeneric(jreFontDir);
 
 //             for (String keyName : fontToFileMap.keySet()) {
@@ -1806,9 +1810,18 @@ public abstract class PrismFontFactory implements FontFactory {
         }
     }
 
-    static native int getLCDContrastWin32();
-    private static native float getSystemFontSizeNative();
-    private static native String getSystemFontNative();
+    static int getLCDContrastWin32() {
+        return WinFontPath.getLCDContrastWin32();
+    }
+
+    private static float getSystemFontSizeNative() {
+        return WinFontPath.getSystemFontSizeNative();
+    }
+
+    private static String getSystemFontNative() {
+        return WinFontPath.getSystemFontNative();
+    }
+
     private static float systemFontSize;
     private static String systemFontFamily = null;
     private static String monospaceFontFamily = null;
@@ -1817,10 +1830,8 @@ public abstract class PrismFontFactory implements FontFactory {
         if (systemFontSize == -1) {
             if (isWindows) {
                 systemFontSize = getSystemFontSizeNative();
-            } else if (isMacOSX || isIOS) {
+            } else if (isMacOSX) {
                 systemFontSize = MacFontFinder.getSystemFontSize();
-            } else if (isAndroid) {
-               systemFontSize = AndroidFontFinder.getSystemFontSize();
             } else if (isEmbedded) {
                 try {
                     int screenDPI = Screen.getMainScreen().getResolutionY();
@@ -1846,13 +1857,11 @@ public abstract class PrismFontFactory implements FontFactory {
                     if (systemFontFamily == null) {
                         systemFontFamily = "Arial"; // play it safe.
                     }
-                } else if (isMacOSX || isIOS) {
+                } else if (isMacOSX) {
                     systemFontFamily = MacFontFinder.getSystemFont();
                     if (systemFontFamily == null) {
                         systemFontFamily = "Lucida Grande";
                     }
-                } else if (isAndroid) {
-                   systemFontFamily = AndroidFontFinder.getSystemFont();
                 } else {
                     systemFontFamily = "Lucida Sans"; // for now.
                 }
@@ -1882,7 +1891,9 @@ public abstract class PrismFontFactory implements FontFactory {
     }
 
     /* Called from PrismFontFile which caches the return value */
-    static native short getSystemLCID();
+    static short getSystemLCID() {
+        return WinFontPath.getSystemLCID();
+    }
 
     public abstract FontFallbackInfo getFallbacks(FontResource primaryResource);
 }

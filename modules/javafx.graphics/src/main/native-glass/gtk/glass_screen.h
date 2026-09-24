@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,15 +26,11 @@
 #ifndef GLASS_SCREEN_H
 #define GLASS_SCREEN_H
 
-#include <jni.h>
-
 #include <gtk/gtk.h>
 
-extern jfloat OverrideUIScale;
-jfloat getUIScale(GdkScreen* screen);
-jobject createJavaScreen(JNIEnv* env, gint monitor_idx);
+extern float OverrideUIScale;
+float getUIScale(GdkScreen* screen);
 glong getScreenPtrForLocation(gint x, gint y);
-jobjectArray rebuild_screens(JNIEnv* env);
 void screen_settings_changed(GdkScreen* screen, gpointer user_data);
 
 #endif

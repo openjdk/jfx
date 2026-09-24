@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,7 +43,6 @@
 #include <comdef.h>
 #include <comutil.h>
 #include <imm.h>
-#include <jni.h>
 #include <malloc.h>
 #include <manipulations.h>
 #include <memory>
@@ -51,6 +50,7 @@
 #include <new>
 #include <ole2.h>
 #include <shlobj.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <Tpcshrd.h>

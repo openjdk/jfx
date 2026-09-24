@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,12 +31,6 @@ import java.util.HashMap;
 
 abstract class GLFactory {
 
-    private static native boolean
-            nIsGLExtensionSupported(long nativeContextObject, String glExtStr);
-    private static native String nGetGLVendor(long nativeCtxInfo);
-    private static native String nGetGLRenderer(long nativeCtxInfo);
-    private static native String nGetGLVersion(long nativeCtxInfo);
-
     private static final GLFactory platformFactory;
 
     /* Note: We are only storing the string information of a driver in this
@@ -46,6 +40,13 @@ abstract class GLFactory {
     long nativeCtxInfo;
     boolean gl2 = false;
     private GLContext shareCtx = null;
+
+    /**
+     * What {@code nGetIsGL2} answered on X11, WGL and NSOpenGL - always {@code JNI_TRUE}: the desktop ES2
+     * pipe is the GL2 profile, never GLES2 - absorbed by the FFM port as the value the three desktop
+     * factories assign to {@link #gl2} once {@code es2_factory_init} has succeeded. Monocle still asks.
+     */
+    static final boolean DESKTOP_GL2 = true;
 
     /**
      * Creates a new GLFactory instance. End users do not need
@@ -69,10 +70,6 @@ abstract class GLFactory {
             factoryClassName = "com.sun.prism.es2.WinGLFactory";
         } else if (PlatformUtil.isMac()) {
             factoryClassName = "com.sun.prism.es2.MacGLFactory";
-        } else if (PlatformUtil.isIOS()) {
-            factoryClassName = "com.sun.prism.es2.IOSGLFactory";
-        } else if (PlatformUtil.isAndroid()) {
-            factoryClassName = "com.sun.prism.es2.MonocleGLFactory";
         } else {
             factoryClassName = null;
             System.err.println("GLFactory.static - No Platform Factory for: " + System.getProperty("os.name"));
@@ -113,8 +110,8 @@ abstract class GLFactory {
     abstract GLGPUInfo[] getRejectList();
 
     private static GLGPUInfo readGPUInfo(long nativeCtxInfo) {
-        String glVendor = nGetGLVendor(nativeCtxInfo);
-        String glRenderer = nGetGLRenderer(nativeCtxInfo);
+        String glVendor = ES2Native.contextGetString(nativeCtxInfo, ES2Native.STR_VENDOR);
+        String glRenderer = ES2Native.contextGetString(nativeCtxInfo, ES2Native.STR_RENDERER);
         return new GLGPUInfo(glVendor.toLowerCase(),
                 glRenderer.toLowerCase());
     }
@@ -189,7 +186,12 @@ abstract class GLFactory {
     }
 
     boolean isGLExtensionSupported(String sglExtStr) {
-        return nIsGLExtensionSupported(nativeCtxInfo, sglExtStr);
+        // Fold of nIsGLExtensionSupported: fetch the GL_EXTENSIONS string and do the
+        // space-bounded token match in Java. ES2Native.isExtensionSupported mirrors the
+        // native isExtensionSupported (GLFactory.c) exactly, so "GL_ARB_texture" does not
+        // match inside "GL_ARB_texture_float".
+        String extensions = ES2Native.contextGetString(nativeCtxInfo, ES2Native.STR_EXTENSIONS);
+        return ES2Native.isExtensionSupported(extensions, sglExtStr);
     }
 
     boolean isNPOTSupported() {
@@ -205,8 +207,8 @@ abstract class GLFactory {
 
     void printDriverInformation(int adapter) {
         /* We are assuming a system with a single or homogeneous GPUs. */
-        System.out.println("Graphics Vendor: " + nGetGLVendor(nativeCtxInfo));
-        System.out.println("       Renderer: " + nGetGLRenderer(nativeCtxInfo));
-        System.out.println("        Version: " + nGetGLVersion(nativeCtxInfo));
+        System.out.println("Graphics Vendor: " + ES2Native.contextGetString(nativeCtxInfo, ES2Native.STR_VENDOR));
+        System.out.println("       Renderer: " + ES2Native.contextGetString(nativeCtxInfo, ES2Native.STR_RENDERER));
+        System.out.println("        Version: " + ES2Native.contextGetString(nativeCtxInfo, ES2Native.STR_VERSION));
     }
 }

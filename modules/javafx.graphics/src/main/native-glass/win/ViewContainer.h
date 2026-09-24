@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,7 +42,6 @@ class ViewContainer {
         IManipulationProcessor*             m_manipProc;
         IInertiaProcessor*                  m_inertiaProc;
         _IManipulationEvents*               m_manipEventSink;
-        jclass                              m_gestureSupportCls;
 
         LPARAM m_lastMouseMovePosition; // or -1
         unsigned int m_mouseButtonDownCounter;
@@ -53,13 +52,13 @@ class ViewContainer {
 
         void WmImeComposition(HWND hwnd, WPARAM wParam, LPARAM lParam);
         void WmImeNotify(HWND hwnd, WPARAM wParam, LPARAM lParam);
-        void SendInputMethodEvent(jstring text,
+        void SendInputMethodEvent(const wchar_t* textW, int cTextW,
             int cClause, int* rgClauseBoundary,
             int cAttrBlock, int* rgAttrBoundary, BYTE *rgAttrValue,
             int commitedTextLength, int caretPos, int visiblePos);
         void GetCandidatePos(LPPOINT curPos);
 
-        void SendViewTypedEvent(int repCount, jchar wChar);
+        void SendViewTypedEvent(int repCount, uint16_t wChar);
 
     protected:
         void HandleViewMenuEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -101,7 +100,7 @@ class ViewContainer {
         inline void SetGlassView(GlassView * view) { m_view = view; }
         inline LANGID GetInputLanguage() { return m_idLang; }
 
-        jobject GetView();
+        int64_t GetViewId();   // the attached view's callback-table id, 0 without a view
 
         void ResetMouseTracking(HWND hwnd);
 

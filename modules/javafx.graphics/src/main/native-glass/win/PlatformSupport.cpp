@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 #include "PlatformSupport.h"
 #include "RoActivationSupport.h"
+#include "GlassApplication.h"
 #include <tuple>
 
 using namespace Microsoft::WRL;
@@ -33,53 +34,42 @@ using namespace ABI::Windows::UI;
 using namespace ABI::Windows::UI::ViewManagement;
 using namespace ABI::Windows::Networking::Connectivity;
 
-PlatformSupport::PlatformSupport(JNIEnv* env, jobject application)
-    : env(env), application(application), initialized(false), networkInformation(NULL), preferences(NULL)
+/*
+ * ---- the flat C ABI half of this file (glass_win_api.h) ----
+ *
+ * The preferences callback table. Written once by gwin_prefs_set_callbacks, from Java, on the
+ * launcher thread before the Glass toolkit thread exists; read by updatePreferences, which runs on
+ * the toolkit thread and on whatever thread WinRT dispatches the two sinks on. No lock, by design -
+ * see gwin_prefs_set_callbacks in glass_win_api.h for why that is safe and what breaks if the
+ * installation is made lazy instead.
+ */
+static GwinPrefsCallbacks g_prefsCallbacks = { NULL };
+static void* g_prefsUser = NULL;
+
+/*
+ * updatePreferences hands its PreferenceType straight to preferences_changed as `types`, so the two
+ * enums have to be the same numbers. This is the only place both are visible; glass_win_api.cpp
+ * cannot see PlatformSupport::PreferenceType and PlatformSupport.h does not spell the ABI values.
+ */
+static_assert((int)PlatformSupport::PT_SYSTEM_COLORS == GWIN_PT_SYSTEM_COLORS
+        && (int)PlatformSupport::PT_SYSTEM_PARAMS == GWIN_PT_SYSTEM_PARAMS
+        && (int)PlatformSupport::PT_UI_SETTINGS == GWIN_PT_UI_SETTINGS
+        && (int)PlatformSupport::PT_NETWORK_INFORMATION == GWIN_PT_NETWORK_INFORMATION
+        && (int)PlatformSupport::PT_ALL == GWIN_PT_ALL,
+        "GwinPreferenceType must mirror PlatformSupport::PreferenceType");
+
+/*
+ * gwin_app_create's instance: WinRT activation only. The JNI constructor, which also looked up
+ * the Java classes the preferences map was built from, is gone.
+ */
+PlatformSupport::PlatformSupport()
+    : networkInformation(NULL)
 {
-    javaClasses.Object = (jclass)env->FindClass("java/lang/Object");
-    if (CheckAndClearException(env)) return;
+    InitializeWinRT();
+}
 
-    javaIDs.Object.equals = env->GetMethodID(javaClasses.Object, "equals", "(Ljava/lang/Object;)Z");
-    if (CheckAndClearException(env)) return;
-
-    javaClasses.Collections = (jclass)env->FindClass("java/util/Collections");
-    if (CheckAndClearException(env)) return;
-
-    javaIDs.Collections.unmodifiableMap = env->GetStaticMethodID(
-        javaClasses.Collections, "unmodifiableMap", "(Ljava/util/Map;)Ljava/util/Map;");
-    if (CheckAndClearException(env)) return;
-
-    javaClasses.Map = (jclass)env->FindClass("java/util/Map");
-    if (CheckAndClearException(env)) return;
-
-    javaIDs.Map.put = env->GetMethodID(
-        javaClasses.Map, "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;");
-    if (CheckAndClearException(env)) return;
-
-    javaClasses.HashMap = (jclass)env->FindClass("java/util/HashMap");
-    if (CheckAndClearException(env)) return;
-
-    javaIDs.HashMap.init = env->GetMethodID(javaClasses.HashMap, "<init>", "()V");
-    if (CheckAndClearException(env)) return;
-
-    javaClasses.Color = (jclass)env->FindClass("javafx/scene/paint/Color");
-    if (CheckAndClearException(env)) return;
-
-    javaIDs.Color.rgb = env->GetStaticMethodID(javaClasses.Color, "rgb", "(IIID)Ljavafx/scene/paint/Color;");
-    if (CheckAndClearException(env)) return;
-
-    javaClasses.Boolean = (jclass)env->FindClass("java/lang/Boolean");
-    if (CheckAndClearException(env)) return;
-
-    javaIDs.Boolean.trueID = env->GetStaticFieldID(javaClasses.Boolean, "TRUE", "Ljava/lang/Boolean;");
-    if (CheckAndClearException(env)) return;
-
-    javaIDs.Boolean.falseID = env->GetStaticFieldID(javaClasses.Boolean, "FALSE", "Ljava/lang/Boolean;");
-    if (CheckAndClearException(env)) return;
-
-    // Mandatory fields are now initialized, after this point we will initialize optional APIs.
-    initialized = true;
-
+void PlatformSupport::InitializeWinRT()
+{
     tryInitializeRoActivationSupport();
 
     if (!isRoActivationSupported()) {
@@ -139,63 +129,18 @@ PlatformSupport::~PlatformSupport()
     uninitializeRoActivationSupport();
 }
 
-jobject PlatformSupport::collectPreferences(PreferenceType preferenceType) const
-{
-    if (!initialized) {
-        return NULL;
-    }
-
-    jobject prefs = env->NewObject(javaClasses.HashMap, javaIDs.HashMap.init);
-    if (CheckAndClearException(env)) return NULL;
-
-    if (preferenceType & PT_SYSTEM_COLORS) {
-        querySystemColors(prefs);
-    }
-
-    if (preferenceType & PT_SYSTEM_PARAMS) {
-        querySystemParameters(prefs);
-    }
-
-    if (preferenceType & PT_UI_SETTINGS) {
-        queryUISettings(prefs);
-    }
-
-    if (preferenceType & PT_NETWORK_INFORMATION) {
-        queryNetworkInformation(prefs);
-    }
-
-    return prefs;
-}
-
 bool PlatformSupport::updatePreferences(PreferenceType preferenceType) const
 {
-    if (!initialized) {
-        return false;
-    }
-
-    jobject newPreferences = collectPreferences(preferenceType);
-
-    jboolean preferencesChanged =
-        newPreferences != NULL &&
-        !env->CallBooleanMethod(newPreferences, javaIDs.Object.equals, preferences);
-
-    if (!CheckAndClearException(env) && preferencesChanged) {
-        preferences = newPreferences;
-        jobject unmodifiablePreferences = env->CallStaticObjectMethod(
-            javaClasses.Collections, javaIDs.Collections.unmodifiableMap, newPreferences);
-
-        if (!CheckAndClearException(env)) {
-            env->CallVoidMethod(application, javaIDs.Application.notifyPreferencesChangedMID, unmodifiablePreferences);
-            env->DeleteLocalRef(unmodifiablePreferences);
-            env->DeleteLocalRef(newPreferences);
-            CheckAndClearException(env);
-            return true;
-        }
-    }
-
-    env->DeleteLocalRef(newPreferences);
-    CheckAndClearException(env);
-    return false;
+    /*
+     * Java owns the whole collect / compare / notify cycle: WinPreferences reads GetSysColor and
+     * SystemParametersInfoW itself and calls gwin_prefs_query_ui_settings / gwin_prefs_query_network
+     * for the WinRT half, so no java/util/Map is ever built in C (the JNI arm that built one is
+     * gone). With no table installed nothing is delivered and the answer is false. The callback
+     * returns 1 when the preferences changed; see GwinPrefsCallbacks in glass_win_api.h for the exact
+     * mapping - notably a notify that throws still counts as changed.
+     */
+    return g_prefsCallbacks.preferences_changed != NULL
+        && g_prefsCallbacks.preferences_changed(g_prefsUser, (int32_t)preferenceType) != 0;
 }
 
 bool PlatformSupport::onSettingChanged(WPARAM wParam, LPARAM lParam) const
@@ -215,74 +160,51 @@ bool PlatformSupport::onSettingChanged(WPARAM wParam, LPARAM lParam) const
     return false;
 }
 
-void PlatformSupport::querySystemParameters(jobject properties) const
+/*
+ * The former queryUISettings without the JNI: same three try blocks, same order, same three
+ * ignored HRESULTs. Each block's "valid" flag stands for the map keys that block used to put, so a 0 flag
+ * means those keys are absent - the C dropped every later key too once one block threw, and returning early here
+ * reproduces that. The one deliberate deviation is that `out` and the locals feeding it start zeroed,
+ * where the C read uninitialised stack when an ignored HRESULT failed.
+ */
+void PlatformSupport::collectUISettings(GwinUiSettings& out) const
 {
-    HIGHCONTRAST contrastInfo;
-    contrastInfo.cbSize = sizeof(HIGHCONTRAST);
-    if (::SystemParametersInfo(SPI_GETHIGHCONTRAST, sizeof(HIGHCONTRAST), &contrastInfo, 0)) {
-        // Property names need to be kept in sync with WinApplication.java:
-        if (contrastInfo.dwFlags & HCF_HIGHCONTRASTON) {
-            putBoolean(properties, "Windows.SPI.HighContrast", true);
-            putString(properties, "Windows.SPI.HighContrastColorScheme", contrastInfo.lpszDefaultScheme);
-        } else {
-            putBoolean(properties, "Windows.SPI.HighContrast", false);
-            putString(properties, "Windows.SPI.HighContrastColorScheme", (const char*)NULL);
-        }
-    }
+    ::memset(&out, 0, sizeof(GwinUiSettings));
 
-    BOOL value;
-    if (::SystemParametersInfo(SPI_GETCLIENTAREAANIMATION, 0, &value, 0)) {
-        putBoolean(properties, "Windows.SPI.ClientAreaAnimation", value);
-    }
-}
-
-void PlatformSupport::querySystemColors(jobject properties) const
-{
-    // Property names need to be kept in sync with WinApplication.java:
-    putColor(properties, "Windows.SysColor.COLOR_3DFACE", GetSysColor(COLOR_3DFACE));
-    putColor(properties, "Windows.SysColor.COLOR_BTNTEXT", GetSysColor(COLOR_BTNTEXT));
-    putColor(properties, "Windows.SysColor.COLOR_GRAYTEXT", GetSysColor(COLOR_GRAYTEXT));
-    putColor(properties, "Windows.SysColor.COLOR_HIGHLIGHT", GetSysColor(COLOR_HIGHLIGHT));
-    putColor(properties, "Windows.SysColor.COLOR_HIGHLIGHTTEXT", GetSysColor(COLOR_HIGHLIGHTTEXT));
-    putColor(properties, "Windows.SysColor.COLOR_HOTLIGHT", GetSysColor(COLOR_HOTLIGHT));
-    putColor(properties, "Windows.SysColor.COLOR_WINDOW", GetSysColor(COLOR_WINDOW));
-    putColor(properties, "Windows.SysColor.COLOR_WINDOWTEXT", GetSysColor(COLOR_WINDOWTEXT));
-}
-
-void PlatformSupport::queryUISettings(jobject properties) const
-{
     if (!this->settings) {
         return;
     }
+
+    out.available = 1;
 
     try {
         ComPtr<IUISettings3> settings3;
         RO_CHECKED("IUISettings::QueryInterface<IUISettings3>",
                    this->settings->QueryInterface<IUISettings3>(&settings3));
 
-        Color background, foreground, accentDark3, accentDark2, accentDark1, accent,
-              accentLight1, accentLight2, accentLight3;
+        // The order of the former queryUISettings, and the order WinPreferences names the keys in.
+        static const UIColorType colorTypes[GWIN_UI_COLOR_COUNT] = {
+            UIColorType::UIColorType_Background,
+            UIColorType::UIColorType_Foreground,
+            UIColorType::UIColorType_AccentDark3,
+            UIColorType::UIColorType_AccentDark2,
+            UIColorType::UIColorType_AccentDark1,
+            UIColorType::UIColorType_Accent,
+            UIColorType::UIColorType_AccentLight1,
+            UIColorType::UIColorType_AccentLight2,
+            UIColorType::UIColorType_AccentLight3
+        };
 
-        settings3->GetColorValue(UIColorType::UIColorType_Background, &background);
-        settings3->GetColorValue(UIColorType::UIColorType_Foreground, &foreground);
-        settings3->GetColorValue(UIColorType::UIColorType_AccentDark3, &accentDark3);
-        settings3->GetColorValue(UIColorType::UIColorType_AccentDark2, &accentDark2);
-        settings3->GetColorValue(UIColorType::UIColorType_AccentDark1, &accentDark1);
-        settings3->GetColorValue(UIColorType::UIColorType_Accent, &accent);
-        settings3->GetColorValue(UIColorType::UIColorType_AccentLight1, &accentLight1);
-        settings3->GetColorValue(UIColorType::UIColorType_AccentLight2, &accentLight2);
-        settings3->GetColorValue(UIColorType::UIColorType_AccentLight3, &accentLight3);
+        for (int i = 0; i < GWIN_UI_COLOR_COUNT; ++i) {
+            Color color = {};
+            // The HRESULT is ignored, as it was in queryUISettings; `color` is zeroed, so a failure
+            // yields transparent black rather than the stack garbage the C would have published.
+            settings3->GetColorValue(colorTypes[i], &color);
+            out.colors[i] = ((uint32_t)color.A << 24) | ((uint32_t)color.R << 16)
+                          | ((uint32_t)color.G << 8) | (uint32_t)color.B;
+        }
 
-        // Property names need to be kept in sync with WinApplication.java:
-        putColor(properties, "Windows.UIColor.Background", background);
-        putColor(properties, "Windows.UIColor.Foreground", foreground);
-        putColor(properties, "Windows.UIColor.AccentDark3", accentDark3);
-        putColor(properties, "Windows.UIColor.AccentDark2", accentDark2);
-        putColor(properties, "Windows.UIColor.AccentDark1", accentDark1);
-        putColor(properties, "Windows.UIColor.Accent", accent);
-        putColor(properties, "Windows.UIColor.AccentLight1", accentLight1);
-        putColor(properties, "Windows.UIColor.AccentLight2", accentLight2);
-        putColor(properties, "Windows.UIColor.AccentLight3", accentLight3);
+        out.colors_valid = 1;
     } catch (RoException const&) {
         return;
     }
@@ -292,9 +214,10 @@ void PlatformSupport::queryUISettings(jobject properties) const
         RO_CHECKED("IUISettings::QueryInterface<IUISettings4>",
                    this->settings->QueryInterface<IUISettings4>(&settings4));
 
-        unsigned char value;
-        settings4->get_AdvancedEffectsEnabled(&value);
-        putBoolean(properties, "Windows.UISettings.AdvancedEffectsEnabled", value);
+        unsigned char value = 0;
+        settings4->get_AdvancedEffectsEnabled(&value);   // HRESULT ignored, as in the former queryUISettings
+        out.advanced_effects_enabled = value != 0;       // the former putBoolean(const bool): nonzero is true
+        out.advanced_effects_valid = 1;
     } catch (RoException const&) {
         return;
     }
@@ -304,16 +227,25 @@ void PlatformSupport::queryUISettings(jobject properties) const
         RO_CHECKED("IUISettings::QueryInterface<IUISettings5>",
                    this->settings->QueryInterface<IUISettings5>(&settings5));
 
-        unsigned char value;
-        settings5->get_AutoHideScrollBars(&value);
-        putBoolean(properties, "Windows.UISettings.AutoHideScrollBars", value);
+        unsigned char value = 0;
+        settings5->get_AutoHideScrollBars(&value);       // HRESULT ignored, as in the former queryUISettings
+        out.auto_hide_scroll_bars = value != 0;          // the former putBoolean(const bool): nonzero is true
+        out.auto_hide_valid = 1;
     } catch (RoException const&) {
         return;
     }
 }
 
-void PlatformSupport::queryNetworkInformation(jobject properties) const
+/*
+ * The former queryNetworkInformation without the JNI. available is set exactly where the C
+ * reached its putString, so available == 0 means "no key" and available == 1 with GWIN_NET_COST_UNKNOWN
+ * means the key was written with the value "Unknown" - either there is no internet connection profile, or the profile
+ * reported a cost the switch does not name. The GwinNetworkCost values are this ABI's, not WinRT's.
+ */
+void PlatformSupport::collectNetworkInfo(GwinNetworkInfo& out) const
 {
+    ::memset(&out, 0, sizeof(GwinNetworkInfo));
+
     if (!this->networkInformation) {
         return;
     }
@@ -321,8 +253,8 @@ void PlatformSupport::queryNetworkInformation(jobject properties) const
     try {
         ComPtr<IConnectionProfile> connectionProfile;
         ComPtr<IConnectionCost> connectionCost;
-        NetworkCostType networkCostType;
-        const char* internetCostType = NULL;
+        NetworkCostType networkCostType = NetworkCostType_Unknown;
+        int32_t costType = GWIN_NET_COST_UNKNOWN;
 
         RO_CHECKED("INetworkInformation::GetInternetConnectionProfile",
                    this->networkInformation->GetInternetConnectionProfile(&connectionProfile));
@@ -335,86 +267,66 @@ void PlatformSupport::queryNetworkInformation(jobject properties) const
                        connectionCost->get_NetworkCostType(&networkCostType));
 
             switch (networkCostType) {
-                case NetworkCostType_Unrestricted: internetCostType = "Unrestricted"; break;
-                case NetworkCostType_Variable: internetCostType = "Variable"; break;
-                case NetworkCostType_Fixed: internetCostType = "Fixed"; break;
+                case NetworkCostType_Unrestricted: costType = GWIN_NET_COST_UNRESTRICTED; break;
+                case NetworkCostType_Variable: costType = GWIN_NET_COST_VARIABLE; break;
+                case NetworkCostType_Fixed: costType = GWIN_NET_COST_FIXED; break;
+                default: break;   // the C left internetCostType NULL and put "Unknown"
             }
         }
 
-        putString(properties, "Windows.NetworkInformation.InternetCostType",
-                  internetCostType != NULL ? internetCostType : "Unknown");
+        out.available = 1;
+        out.cost_type = costType;
     } catch (RoException const&) {
     }
 }
 
-void PlatformSupport::putString(jobject properties, const char* key, const char* value) const
-{
-    jobject prefKey = env->NewStringUTF(key);
-    if (CheckAndClearException(env)) return;
+/* ---- glass_win_api.h exports. Definitions take C linkage from that header's extern "C" block. ---- */
 
-    jobject prefValue = NULL;
-    if (value != NULL) {
-        prefValue = env->NewStringUTF(value);
-        if (CheckAndClearException(env)) return;
+extern "C" {
+
+int32_t gwin_prefs_set_callbacks(const GwinPrefsCallbacks* cb, void* user)
+{
+    if (cb == NULL) {
+        g_prefsCallbacks.preferences_changed = NULL;
+        g_prefsUser = NULL;
+    } else {
+        g_prefsCallbacks = *cb;   // by value: this library never retains the caller's struct
+        g_prefsUser = user;
+    }
+    return GWIN_OK;
+}
+
+int32_t gwin_prefs_query_ui_settings(GwinUiSettings* out)
+{
+    if (out == NULL) {
+        return GWIN_ERR_INVALID_ARG;
     }
 
-    env->CallObjectMethod(properties, javaIDs.Map.put, prefKey, prefValue);
-    CheckAndClearException(env);
-}
-
-void PlatformSupport::putString(jobject properties, const char* key, const wchar_t* value) const
-{
-    jobject prefKey = env->NewStringUTF(key);
-    if (CheckAndClearException(env)) return;
-
-    jobject prefValue = NULL;
-    if (value != NULL) {
-        prefValue = env->NewString((jchar*)value, (jsize)wcslen(value));
-        if (CheckAndClearException(env)) return;
+    PlatformSupport* support = GlassApplication::GetPlatformSupport();
+    if (support == NULL) {
+        // No toolkit window, so nothing was ever activated. Same "no keys" as collectUISettings.
+        ::memset(out, 0, sizeof(GwinUiSettings));
+        return GWIN_OK;
     }
 
-    env->CallObjectMethod(properties, javaIDs.Map.put, prefKey, prefValue);
-    CheckAndClearException(env);
+    support->collectUISettings(*out);
+    return GWIN_OK;
 }
 
-void PlatformSupport::putBoolean(jobject properties, const char* key, const bool value) const
+int32_t gwin_prefs_query_network(GwinNetworkInfo* out)
 {
-    jobject prefKey = env->NewStringUTF(key);
-    if (CheckAndClearException(env)) return;
+    if (out == NULL) {
+        return GWIN_ERR_INVALID_ARG;
+    }
 
-    jobject prefValue = value ?
-        env->GetStaticObjectField(javaClasses.Boolean, javaIDs.Boolean.trueID) :
-        env->GetStaticObjectField(javaClasses.Boolean, javaIDs.Boolean.falseID);
-    if (CheckAndClearException(env)) return;
+    PlatformSupport* support = GlassApplication::GetPlatformSupport();
+    if (support == NULL) {
+        ::memset(out, 0, sizeof(GwinNetworkInfo));
+        return GWIN_OK;
+    }
 
-    env->CallObjectMethod(properties, javaIDs.Map.put, prefKey, prefValue);
-    CheckAndClearException(env);
+    support->collectNetworkInfo(*out);
+    return GWIN_OK;
 }
 
-void PlatformSupport::putColor(jobject properties, const char* colorName, int colorValue) const
-{
-    jobject prefKey = env->NewStringUTF(colorName);
-    if (CheckAndClearException(env)) return;
-
-    jobject prefValue = env->CallStaticObjectMethod(
-        javaClasses.Color, javaIDs.Color.rgb,
-        GetRValue(colorValue), GetGValue(colorValue), GetBValue(colorValue), 1.0);
-    if (CheckAndClearException(env)) return;
-
-    env->CallObjectMethod(properties, javaIDs.Map.put, prefKey, prefValue);
-    CheckAndClearException(env);
-}
-
-void PlatformSupport::putColor(jobject properties, const char* colorName, Color colorValue) const
-{
-    jobject prefKey = env->NewStringUTF(colorName);
-    if (CheckAndClearException(env)) return;
-
-    jobject prefValue = env->CallStaticObjectMethod(
-        javaClasses.Color, javaIDs.Color.rgb,
-        colorValue.R, colorValue.G, colorValue.B, (double)colorValue.A / 255.0);
-    if (CheckAndClearException(env)) return;
-
-    env->CallObjectMethod(properties, javaIDs.Map.put, prefKey, prefValue);
-    CheckAndClearException(env);
-}
+} // extern "C"

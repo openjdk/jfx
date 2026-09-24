@@ -316,9 +316,8 @@ public abstract class Renderer {
     }
 
     /**
-     * This method can be used by subclasses to create a backup renderer,
-     * either a SW (Java) renderer or an SSE (native) renderer, depending
-     * on what is available.
+     * This method can be used by subclasses to create a backup renderer:
+     * the SW (Java) renderer.
      *
      * @return an instance of Renderer that uses CPU filtering
      */

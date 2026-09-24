@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,50 +28,187 @@ import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.SystemClipboard;
 import java.io.UnsupportedEncodingException;
+import java.lang.foreign.MemorySegment;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
+/**
+ * The Windows system clipboard peer on the {@code gwin_clipboard_*} ABI of {@code glass_win_api.h}.
+ * Every former {@code native} of this class has a {@code gwin_*} twin - the
+ * {@code OleSetClipboard} / {@code OleGetClipboard} / {@code IDataObject} bodies of
+ * {@code GlassClipboard.cpp} stay in C, because {@code ClipboardData} is a COM vtable that Windows and
+ * other processes call through the OLE marshaller - except {@code isOwner}, whose whole JNI body was
+ * {@code ole32!OleIsCurrentClipboard} behind a NULL test and which {@link WinGlassNative} binds
+ * directly, and {@code initIDs}, which cached the three method ids and one field id the callback
+ * table below replaces.
+ * <p>
+ * <b>The handle.</b> {@link #ptr} is the {@code IDataObject*} the C holds for this peer: the
+ * library's own {@code ClipboardData} after a push, a foreign object after a pop, {@code NULL} for
+ * none. The push exports return a <em>status</em>, not the handle: the C publishes the new object
+ * through the {@code set_data_object} slot ({@link #dispatchSetDataObject}) at the instant the JNI
+ * wrote this field - before {@code pushCommit}, {@code OleSetClipboard} and {@code DoDragDrop} - so
+ * that a {@code content_changed} nested inside {@code OleSetClipboard} (Windows sends
+ * {@code WM_DRAWCLIPBOARD} synchronously from inside it) or a self-drag's {@code drag_enter} inside
+ * {@code DoDragDrop} already sees it. A handle returned from the push would re-store an object this
+ * peer may have closed in between. {@link #pop} stores the return of {@code gwin_clipboard_pop}
+ * unconditionally, {@code NULL} on failure, exactly as the JNI did.
+ * <p>
+ * <b>The registry.</b> The C never holds a Java reference; every slot carries the {@code int64_t}
+ * id this peer registered itself under in its constructor, before {@link #create} could name it.
+ * The JNI's {@code ClipboardData} held a global ref on the peer for its own lifetime, and a
+ * {@code ClipboardData} can outlive {@link #close}: when another application holds the clipboard
+ * open, the {@code OleFlushClipboard} retries of {@code gwin_clipboard_dispose} give up and the
+ * object stays on the OLE clipboard, and the next cross-process paste still reaches
+ * {@code fos_serialize} for this id. The entry is therefore strong and is removed only once the
+ * peer is closed <em>and</em> every {@code ClipboardData} bound to it has fired
+ * {@code data_object_disposed} ({@link #liveObjects}, counted up when {@code set_data_object}
+ * publishes a non-NULL object and down when {@code ~ClipboardData} runs) - from whichever of
+ * {@link #close} and {@link #dispatchDataObjectDisposed} gets there last.
+ * <p>
+ * <b>Threads and re-entrancy.</b> Everything here runs on the JavaFX application thread, which is
+ * the Glass toolkit STA; every downcall can pump messages and every slot can arrive nested inside a
+ * downcall or with no Java frame below it at all (a paste from another application). No method
+ * takes a lock the C could re-enter through.
+ */
 class WinSystemClipboard extends SystemClipboard {
 
-    private static native void initIDs();
-    static {
-        initIDs();
-    }
+    /**
+     * Every open peer by the id it registered under: strong, so that a {@code fos_serialize} for a
+     * {@code ClipboardData} that outlived {@link #close} still finds its data (see the class
+     * comment). Read by the seven {@code dispatch*} statics from inside upcall stubs on the
+     * application thread; written in the constructor, {@link #close} and
+     * {@link #dispatchDataObjectDisposed}.
+     */
+    private static final Map<Long, WinSystemClipboard> CLIPBOARDS = new ConcurrentHashMap<>();
 
-    private long ptr = 0L; //native pointer
+    /** Ids count up from 1; 0 is what the C carries for "no peer" and is never handed out. */
+    private static final AtomicLong NEXT_CLIPBOARD_ID = new AtomicLong(1L);
+
+    /** Deliberately no initializer: it is assigned in the constructor after {@code super()} ran. */
+    private long nativeId;
+
+    /** The {@code IDataObject*} the C holds for this peer; see the class comment for who writes it. */
+    private MemorySegment ptr = MemorySegment.NULL;
+
+    /** {@code ClipboardData} objects bound to {@link #nativeId} that the C has not destroyed yet. */
+    private int liveObjects;
+
+    /** Set by {@link #close}; with {@link #liveObjects} it decides when the registry entry goes. */
+    private boolean closed;
 
     protected WinSystemClipboard(String name) {
         super(name);
+        nativeId = register(this);
         create();
     }
 
-    protected final long getPtr() {
+    /** Registers {@code clipboard} under a fresh id and returns it. */
+    private static long register(WinSystemClipboard clipboard) {
+        long id = NEXT_CLIPBOARD_ID.getAndIncrement();
+        CLIPBOARDS.put(id, clipboard);
+        return id;
+    }
+
+    /** Drops the entry for {@code id}, whatever its state; for tests that never close a peer. */
+    static void unregister(long id) {
+        CLIPBOARDS.remove(id);
+    }
+
+    static int clipboardRegistrySize() {
+        return CLIPBOARDS.size();
+    }
+
+    /** The peer registered under {@code id}, or {@code null} for 0 and for an id that is gone. */
+    static WinSystemClipboard clipboardFor(long id) {
+        return CLIPBOARDS.get(id);
+    }
+
+    /** The id every clipboard slot carries for this peer. */
+    final long nativeId() {
+        return nativeId;
+    }
+
+    protected final MemorySegment getPtr() {
         return ptr;
     }
 
+    /**
+     * The {@code dnd_set_data_object} write: the object being dragged <em>in</em> from elsewhere,
+     * which the C AddRef'd for the drag clipboard. Not a {@code ClipboardData} of this peer, so it
+     * is not counted in {@link #liveObjects}; only {@link WinDnDClipboard} calls this.
+     */
+    final void setPtr(MemorySegment dataObject) {
+        ptr = dataObject;
+    }
+
+    final int liveObjects() {
+        return liveObjects;
+    }
+
+    final boolean isClosed() {
+        return closed;
+    }
+
+    /**
+     * {@code ole32!OleIsCurrentClipboard(ptr) == S_OK}, with the JNI body's {@code ptr == NULL ->
+     * false} short-circuit first ({@code GlassClipboard.cpp}, the former {@code isOwner} export).
+     */
     @Override
-    protected native boolean isOwner();
+    protected boolean isOwner() {
+        return WinGlassNative.oleIsCurrentClipboard(ptr);
+    }
 
-    protected native void create();
-    protected native void dispose();
+    /**
+     * {@code gwin_clipboard_register_viewer}: joins the clipboard viewer chain for
+     * {@link #contentChanged} and, if a previous peer was registered, disposes it first through the
+     * {@code dispose_peer} slot. The status is ignored because the JNI was {@code void}: without a
+     * toolkit it did nothing, and so does this.
+     */
+    protected void create() {
+        int ignoredStatus = WinGlassNative.clipboardRegisterViewer(nativeId);
+    }
+
+    /**
+     * {@code gwin_clipboard_dispose}: leaves the viewer chain, flushes the delayed data if this
+     * object is the current OLE clipboard (so a paste still works after the application quit), then
+     * releases it. Pumps messages; re-entrant. The library does not null the handle, {@link #close}
+     * does.
+     */
+    protected void dispose() {
+        WinGlassNative.clipboardDispose(ptr);
+    }
 
     /*
-     * public mime types to system clipboard
+     * public mime types to system clipboard: gwin_clipboard_push. The status (GWIN_ERR_OLE when
+     * pushCommit or OleSetClipboard failed) is ignored to stay neutral - the JNI swallowed the
+     * HRESULT - and the handle is NOT taken from the call: set_data_object stored it already, even
+     * on the failure path, so the peer owns the object either way and the next push or dispose
+     * releases it, as it always did.
      */
-    protected native void push(Object[] keys, int supportedActions);
+    protected void push(Object[] keys, int supportedActions) {
+        int ignoredStatus = WinGlassNative.clipboardPush(ptr, nativeId, keys, supportedActions);
+    }
 
     /*
-     * extract clipboard snap-shot
+     * extract clipboard snap-shot: gwin_clipboard_pop releases the old object whether or not
+     * OleGetClipboard succeeds and answers the new one, or NULL - stored unconditionally, as the
+     * JNI's setPtr was.
      */
-    protected native boolean pop();
+    protected boolean pop() {
+        ptr = WinGlassNative.clipboardPop(ptr);
+        return !MemorySegment.NULL.equals(ptr);
+    }
 
     static final byte[] terminator = new byte[] { 0, 0 };
     static final String defaultCharset = "UTF-16LE";
     static final String RTFCharset = "US-ASCII";
 
-    // Called from native code
+    // Called from native code, through dispatchFosSerialize
     private byte[] fosSerialize(String mime, long index) {
         Object data = getLocalData(mime);
         if (data instanceof ByteBuffer) {
@@ -150,6 +287,89 @@ class WinSystemClipboard extends SystemClipboard {
         }
         //TODO: customizes for OS specific cases
         return null;
+    }
+
+    /*
+     * The dispatch half of the seven GwinClipboardCallbacks slots: registry lookup, then the
+     * instance method. The marshalling and the exception barrier are WinGlassNative's; an id the
+     * registry does not know is a stale peer and answers the slot default silently. All on the
+     * application thread, possibly with no Java frame below, possibly nested in a downcall.
+     */
+
+    /**
+     * {@code fos_serialize}: the delayed render of one format for whoever pastes. {@code null} when
+     * the peer is gone (the C answers {@code E_POINTER}, as it did for a null {@code byte[]}).
+     */
+    static byte[] dispatchFosSerialize(long clipboardId, String mime, long index) {
+        WinSystemClipboard clipboard = CLIPBOARDS.get(clipboardId);
+        return clipboard == null ? null : clipboard.fosSerialize(mime, index);
+    }
+
+    /** {@code action_performed} and {@code drag_action_performed}: {@code Clipboard.actionPerformed(int)}. */
+    static void dispatchActionPerformed(long clipboardId, int action) {
+        WinSystemClipboard clipboard = CLIPBOARDS.get(clipboardId);
+        if (clipboard != null) {
+            clipboard.actionPerformed(action);
+        }
+    }
+
+    /** {@code content_changed}: {@code Clipboard.contentChanged()} from {@code WM_DRAWCLIPBOARD}. */
+    static void dispatchContentChanged(long clipboardId) {
+        WinSystemClipboard clipboard = CLIPBOARDS.get(clipboardId);
+        if (clipboard != null) {
+            clipboard.contentChanged();
+        }
+    }
+
+    /**
+     * {@code dispose_peer}: the previously registered peer, disposed from inside the next
+     * {@code gwin_clipboard_register_viewer} (a second {@link #create}) or from the toolkit window's
+     * {@code WM_DESTROY} - the flush that keeps a paste working after the application quit. The
+     * JNI ran the dispose export on the old peer and left its field alone, so a later
+     * {@link #close} released a dead object; the handle is nulled here instead, which the header
+     * allows and which is the one divergence on this path.
+     */
+    static void dispatchDisposePeer(long clipboardId) {
+        WinSystemClipboard clipboard = CLIPBOARDS.get(clipboardId);
+        if (clipboard != null) {
+            clipboard.dispose();
+            clipboard.ptr = MemorySegment.NULL;
+        }
+    }
+
+    /**
+     * {@code set_data_object}: the JNI's {@code setPtr}, fired by both push exports right after the
+     * {@code ClipboardData} is constructed and before anything can fail or upcall. A non-NULL
+     * object is one more the C will destroy later.
+     */
+    static void dispatchSetDataObject(long clipboardId, MemorySegment dataObject) {
+        WinSystemClipboard clipboard = CLIPBOARDS.get(clipboardId);
+        if (clipboard != null) {
+            clipboard.ptr = dataObject;
+            if (!MemorySegment.NULL.equals(dataObject)) {
+                clipboard.liveObjects++;
+            }
+        }
+    }
+
+    /**
+     * {@code data_object_disposed}: {@code ~ClipboardData}, where the JNI's {@code DeleteGlobalRef}
+     * was - possibly long after {@link #close}. Touches the registry and nothing else.
+     */
+    static void dispatchDataObjectDisposed(long clipboardId) {
+        WinSystemClipboard clipboard = CLIPBOARDS.get(clipboardId);
+        if (clipboard != null) {
+            if (clipboard.liveObjects > 0) {
+                clipboard.liveObjects--;
+            }
+            clipboard.removeIfDead();
+        }
+    }
+
+    private void removeIfDead() {
+        if (closed && liveObjects == 0) {
+            CLIPBOARDS.remove(nativeId);
+        }
     }
 
     private static final class MimeTypeParser {
@@ -234,7 +454,15 @@ class WinSystemClipboard extends SystemClipboard {
         push(mimesForSystem.toArray(), supportedActions);
     }
 
-    private native byte[] popBytes(String mime, long index);
+    /**
+     * {@code gwin_clipboard_pop_bytes}: {@code null} for no data, an empty medium and an OLE failure
+     * alike, as the JNI's null {@code byte[]} was - {@link #popFromSystem} relies on the conflation
+     * for its {@code ;locale} and file-list fallbacks.
+     */
+    private byte[] popBytes(String mime, long index) {
+        return WinGlassNative.clipboardPopBytes(ptr, mime, index);
+    }
+
     @Override
     protected final Object popFromSystem(String mimeFull) {
         //we have to syncronize with system ones per
@@ -321,7 +549,14 @@ class WinSystemClipboard extends SystemClipboard {
         return null;
     }
 
-    private native String[] popMimesFromSystem();
+    /**
+     * {@code gwin_clipboard_pop_mimes}: {@code null} when there is no data object or the set came
+     * out empty, else the mimes in an order that was never specified on either side.
+     */
+    private String[] popMimesFromSystem() {
+        return WinGlassNative.clipboardPopMimes(ptr);
+    }
+
     @Override
     protected final String[] mimesFromSystem() {
         //we have to syncronize with system
@@ -336,14 +571,26 @@ class WinSystemClipboard extends SystemClipboard {
         return "Windows System Clipboard";
     }
 
+    /**
+     * Disposes, nulls the handle (the library cannot), and drops the registry entry - now, or when
+     * the last {@code ClipboardData} bound to this peer is destroyed (see the class comment).
+     */
     @Override protected final void close() {
         dispose();
-        ptr = 0L;
+        ptr = MemorySegment.NULL;
+        closed = true;
+        removeIfDead();
     }
 
-    @Override protected native void pushTargetActionToSystem(int actionDone);
+    /** {@code gwin_clipboard_push_target_action}: silent on failure and on a NULL handle, like the JNI. */
+    @Override protected void pushTargetActionToSystem(int actionDone) {
+        WinGlassNative.clipboardPushTargetAction(ptr, actionDone);
+    }
 
-    private native int popSupportedSourceActions();
+    private int popSupportedSourceActions() {
+        return WinGlassNative.clipboardPopSupportedActions(ptr);
+    }
+
     @Override protected int supportedSourceActionsFromSystem() {
         if (!pop()) {
             return ACTION_NONE;
@@ -351,4 +598,3 @@ class WinSystemClipboard extends SystemClipboard {
         return popSupportedSourceActions();
    }
 }
-

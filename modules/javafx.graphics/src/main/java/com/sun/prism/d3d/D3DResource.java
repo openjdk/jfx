@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,7 @@ package com.sun.prism.d3d;
 
 import com.sun.prism.impl.BaseGraphicsResource;
 import com.sun.prism.impl.Disposer;
+import java.lang.foreign.MemorySegment;
 
 /**
  * This class provides base functionality for tracking and releasing native
@@ -77,23 +78,24 @@ class D3DResource extends BaseGraphicsResource {
     static class D3DRecord implements Disposer.Record {
 
         private final D3DContext context;
-        private long pResource;
+        private MemorySegment pResource;
         private boolean isDefaultPool;
 
-        D3DRecord(D3DContext context, long pResource) {
+        D3DRecord(D3DContext context, MemorySegment pResource) {
             this.context = context;
             this.pResource = pResource;
-            if (pResource != 0L) {
+            if (pResource.address() != 0L) {
                 // only add to the list of resources if there's something to
                 // dispose of
                 context.getResourceFactory().addRecord(this);
-                isDefaultPool = D3DResourceFactory.nIsDefaultPool(pResource);
+                isDefaultPool = D3DNative.resourceIsDefaultPool(pResource);
             } else {
                 isDefaultPool = false;
             }
         }
 
-        long getResource() {
+        /** The native {@code D3DResource*}; {@link MemorySegment#NULL} once disposed. */
+        MemorySegment getResource() {
             return pResource;
         }
 
@@ -106,16 +108,15 @@ class D3DResource extends BaseGraphicsResource {
         }
 
         protected void markDisposed() {
-            pResource = 0L;
+            pResource = MemorySegment.NULL;
         }
 
         @Override
         public void dispose() {
-            if (pResource != 0L) {
+            if (pResource.address() != 0L) {
                 context.getResourceFactory().removeRecord(this);
-                D3DResourceFactory.nReleaseResource(context.getContextHandle(),
-                                                               pResource);
-                pResource = 0L;
+                D3DNative.resourceRelease(context.getContextHandle(), pResource);
+                pResource = MemorySegment.NULL;
 
                 // res is always S_OK, no need to validate anything here
                 // context.validate(res);

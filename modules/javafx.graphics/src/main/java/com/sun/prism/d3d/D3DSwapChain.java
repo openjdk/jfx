@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,6 +32,7 @@ import com.sun.prism.Graphics;
 import com.sun.prism.Presentable;
 import com.sun.prism.PresentableState;
 import com.sun.prism.RTTexture;
+import java.lang.foreign.MemorySegment;
 
 class D3DSwapChain
     extends D3DResource
@@ -41,7 +42,8 @@ class D3DSwapChain
     private final float pixelScaleFactorX;
     private final float pixelScaleFactorY;
 
-    D3DSwapChain(D3DContext context, long pResource, D3DRTTexture rtt, float pixelScaleX, float pixelScaleY) {
+    D3DSwapChain(D3DContext context, MemorySegment pResource, D3DRTTexture rtt, float pixelScaleX,
+                 float pixelScaleY) {
         super(new D3DRecord(context, pResource));
         texBackBuffer = rtt;
         pixelScaleFactorX = pixelScaleX;
@@ -84,23 +86,23 @@ class D3DSwapChain
         if (context.isDisposed()) {
             return false;
         }
-        int res = nPresent(context.getContextHandle(), d3dResRecord.getResource());
+        int res = D3DNative.swapchainPresent(context.getContextHandle(), d3dResRecord.getResource());
         return context.validatePresent(res);
     }
 
     @Override
-    public long getResourceHandle() {
+    public MemorySegment getResourceHandle() {
         return d3dResRecord.getResource();
     }
 
     @Override
     public int getPhysicalWidth() {
-        return D3DResourceFactory.nGetTextureWidth(d3dResRecord.getResource());
+        return getContext().getResourceWidth(d3dResRecord.getResource());
     }
 
     @Override
     public int getPhysicalHeight() {
-        return D3DResourceFactory.nGetTextureHeight(d3dResRecord.getResource());
+        return getContext().getResourceHeight(d3dResRecord.getResource());
     }
 
     @Override
@@ -122,8 +124,6 @@ class D3DSwapChain
     public int getContentY() {
         return 0;
     }
-
-    private static native int nPresent(long context, long pSwapChain);
 
     @Override
     public D3DContext getContext() {

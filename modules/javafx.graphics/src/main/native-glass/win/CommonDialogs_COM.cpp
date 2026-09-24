@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,13 +27,24 @@
 
 #include <ShObjIdl.h>
 
+#include <string>
+#include <vector>
+
 #include "CommonDialogs_COM.h"
+#include "GlassStringBlock.h"
 
 #include "com_sun_glass_ui_CommonDialogs_Type.h"
 
 /*****************************
  * IFileDialog implementation
  *****************************/
+
+/*
+ * JNI-free: the ExtensionFilter getters and the String[] / FileChooserResult building
+ * moved to Java, the caller of gwin_dialog_file (ABI 4, the only path), and what remains is the COM
+ * half of every former helper, with the same OLE_TRY structure and the same
+ * failure shapes - see the comments at each former JNI boundary.
+ */
 
 _COM_SMARTPTR_TYPEDEF(IFileDialog, __uuidof(IFileDialog));
 _COM_SMARTPTR_TYPEDEF(IFileOpenDialog, __uuidof(IFileOpenDialog));
@@ -46,116 +57,74 @@ SHSTDAPI SHCreateItemFromParsingName(__in PCWSTR pszPath, __in_opt IBindCtx *pbc
 
 const HRESULT CANCEL_HRT = HRESULT_FROM_WIN32(ERROR_CANCELLED);
 
-jstring CreateJString(JNIEnv *env, IShellItemPtr pFile)
+// The former CreateJString(env, IShellItemPtr): the item's file-system path, or false where the JNI
+// produced a null jstring (a NULL item, or GetDisplayName failed).
+static bool GetShellItemPath(IShellItemPtr pFile, std::wstring &out)
 {
     LPWSTR path = NULL;
-    jstring ret = NULL;
 
     OLE_TRY
     OLE_HRT( pFile->GetDisplayName(SIGDN_FILESYSPATH, &path) );
     OLE_CATCH
 
-    ret = CreateJString(env, path);
-    CoTaskMemFree(path);
-    return ret;
-}
-
-wchar_t *GetDescription(JNIEnv *env, jobject jFilter)
-{
-    JLString jDesc(env, (jstring)env->CallObjectMethod(jFilter,
-                        javaIDs.CommonDialogs.ExtensionFilter.getDescription));
-    CheckAndClearException(env);
-    JString desc(env, jDesc, false);
-    return desc;
-}
-
-wchar_t *GetExtensions(JNIEnv *env, jobject jFilter)
-{
-    JLObjectArray jExts(env, (jobjectArray)env->CallObjectMethod(jFilter,
-                               javaIDs.CommonDialogs.ExtensionFilter.extensionsToArray));
-    CheckAndClearException(env);
-
-    jsize size = env->GetArrayLength(jExts);
-    BOOL isHeading = TRUE; // extension without semicolon
-
-    JLString jExt(env, CreateJString(env, _T("")));
-    JLString semicolon(env, CreateJString(env, _T(";")));
-
-    for (int j = 0; j < size; j++) {
-        if (!isHeading) {
-            jExt.Attach( ConcatJStrings(env, jExt, semicolon) );
-        }
-        isHeading = FALSE;
-
-        JLString jExtension(env, (jstring)env->GetObjectArrayElement(jExts, j));
-        jExt.Attach( ConcatJStrings(env, jExt, jExtension) );
+    if (path == NULL) {
+        return false;
     }
-
-    JString ext(env, jExt, false);
-    return ext;
+    out = path;
+    CoTaskMemFree(path);
+    return true;
 }
 
-void SetFilters(IFileDialogPtr pDialog, jobjectArray jFilters, jint defaultFilterIndex)
+// The COM half of the former SetFilters: the description / extension strings arrive flattened.
+static void SetFilters(IFileDialogPtr pDialog, const GwinFileFilter* filters, int32_t filterCount,
+                       int32_t defaultFilterIndex)
 {
-    JNIEnv *env = GetEnv();
+    // one spare element so that &filterSpec[0] is a valid (non-NULL) pointer for an empty array, as
+    // the former new COMDLG_FILTERSPEC[0] was
+    std::vector<COMDLG_FILTERSPEC> filterSpec(size_t(filterCount > 0 ? filterCount : 0) + 1);
 
-    jsize size = env->GetArrayLength(jFilters);
-    COMDLG_FILTERSPEC *filterSpec = new COMDLG_FILTERSPEC[size];
-
-    for (int i = 0; i < size; i++) {
-        JLObject jFilter(env, env->GetObjectArrayElement(jFilters, i));
-        COMDLG_FILTERSPEC c = {GetDescription(env, jFilter),
-                               GetExtensions(env, jFilter)};
-        filterSpec[i] = c;
+    for (int32_t i = 0; i < filterCount; i++) {
+        filterSpec[i].pszName = reinterpret_cast<LPCWSTR>(filters[i].description);
+        filterSpec[i].pszSpec = reinterpret_cast<LPCWSTR>(filters[i].extensions);
     }
 
     OLE_TRY
     OLE_HRT( pDialog->SetDefaultExtension(L"") );
-    OLE_HRT( pDialog->SetFileTypes(size, filterSpec) );
-    if (size > 0) {
+    OLE_HRT( pDialog->SetFileTypes(filterCount > 0 ? filterCount : 0, &filterSpec[0]) );
+    if (filterCount > 0) {
         OLE_HRT( pDialog->SetFileTypeIndex(defaultFilterIndex + 1) ); // 1-based index required
     }
     OLE_CATCH
-
-    for (int i = 0; i < size; i++) {
-        if (filterSpec[i].pszName) {
-            delete[] filterSpec[i].pszName;
-        }
-        if (filterSpec[i].pszSpec) {
-            delete[] filterSpec[i].pszSpec;
-        }
-    }
-    delete[] filterSpec;
 }
 
-jobjectArray GetFiles(IFileDialogPtr pDialog, BOOL isCancelled, jint type)
+/*
+ * The COM half of the former GetFiles. Returns false exactly where the JNI returned a NULL array
+ * (which made createFileChooserResult throw NullPointerException and the entry point return null):
+ * an OPEN dialog whose results could not be read. Cancel is an empty list; a SAVE dialog whose
+ * GetResult failed is an empty list too (the JNI's one-element array held a null the Java skipped);
+ * an OPEN item whose path could not be read is skipped for the same reason.
+ */
+static bool GetFiles(IFileDialogPtr pDialog, BOOL isCancelled, int32_t type, std::vector<std::wstring> &files)
 {
-    JNIEnv* env = GetEnv();
-    jclass jc = env->FindClass("java/lang/String");
-    if (CheckAndClearException(env)) return NULL;
-    JLClass cls(env, jc);
-
-    jobjectArray ret = NULL;
-
     if (isCancelled) {
-        ret = env->NewObjectArray(0, cls, NULL);
-        if (CheckAndClearException(env)) return NULL;
-        return ret;
+        return true;
     }
+
+    bool haveArray = false;
 
     OLE_TRY
     if (type == com_sun_glass_ui_CommonDialogs_Type_SAVE) {
-        ret = env->NewObjectArray(1, cls, NULL);
-        if (CheckAndClearException(env)) return NULL;
+        haveArray = true;   // the JNI allocated its one-element array before GetResult
 
         IShellItemPtr pFile;
         OLE_HRT( pDialog->GetResult(&pFile) );
         OLE_CHECK_NOTNULLSP(pFile)
 
-        env->SetObjectArrayElement(ret, 0,
-                    jstring(JLString(env, CreateJString(env, pFile))));
-        CheckAndClearException(env);
-        return ret;
+        std::wstring path;
+        if (GetShellItemPath(pFile, path)) {
+            files.push_back(path);
+        }
+        return true;
     }
 
     IFileOpenDialogPtr pOpenDialog(pDialog);
@@ -168,28 +137,31 @@ jobjectArray GetFiles(IFileDialogPtr pDialog, BOOL isCancelled, jint type)
     DWORD count = 0;
     OLE_HRT( pFiles->GetCount(&count) );
 
-    ret = env->NewObjectArray(count, cls, NULL);
-    if (CheckAndClearException(env)) return NULL;
+    haveArray = true;   // the JNI allocated its count-element array here
 
     for (DWORD i = 0; i < count; i++) {
         IShellItemPtr pFile;
         OLE_HRT( pFiles->GetItemAt(i, &pFile) );
         OLE_CHECK_NOTNULLSP(pFile)
 
-        env->SetObjectArrayElement(ret, i,
-                    jstring(JLString(env, CreateJString(env, pFile))));
-        CheckAndClearException(env);
+        std::wstring path;
+        if (GetShellItemPath(pFile, path)) {
+            files.push_back(path);
+        }
     }
     OLE_CATCH
 
-    return ret;
+    return haveArray;
 }
 
-jobject COMFileChooser_Show(HWND owner, LPCTSTR folder, LPCTSTR filename, LPCTSTR title, jint type,
-                                 jboolean multipleMode, jobjectArray jFilters, jint defaultFilterIndex)
+int32_t COMFileChooser_Show(HWND owner, LPCWSTR folder, LPCWSTR filename, LPCWSTR title, int32_t type,
+                            int32_t multipleMode, const GwinFileFilter* filters, int32_t filterCount,
+                            int32_t defaultFilterIndex,
+                            uint16_t** outFiles, int32_t* outCount, int32_t* outFilterIndex)
 {
     OLEHolder _ole_;
     IFileDialogPtr pDialog;
+    HRESULT showResult = E_FAIL;
 
     OLE_TRY
 
@@ -229,55 +201,62 @@ jobject COMFileChooser_Show(HWND owner, LPCTSTR folder, LPCTSTR filename, LPCTST
         OLE_HRT( pDialog->SetTitle(title) );
     }
 
-    if (jFilters != NULL) {
-        SetFilters(pDialog, jFilters, defaultFilterIndex);
+    if (filters != NULL) {
+        SetFilters(pDialog, filters, filterCount, defaultFilterIndex);
     }
 
     OLE_HR = pDialog->Show(owner);
+    showResult = OLE_HR;
     if (OLE_HR != CANCEL_HRT && FAILED(OLE_HR)) {
         OLE_THROW_LASTERROR(_T("pDialog->Show(NULL)"))
     }
     OLE_CATCH
 
-    jobjectArray ret = GetFiles(pDialog, OLE_HR == CANCEL_HRT, type);
+    std::vector<std::wstring> files;
+    const bool haveFiles = GetFiles(pDialog, OLE_HR == CANCEL_HRT, type, files);
 
+    // Outside any try block on a possibly-NULL pDialog, as it always was (a failed CoCreateInstance
+    // throws _com_error out of here); the export's catch reports it, the JNI entry point did not.
     UINT index = 0;
     pDialog->GetFileTypeIndex(&index);
 
-    JNIEnv* env = GetEnv();
-    jclass jc = env->FindClass("com/sun/glass/ui/CommonDialogs");
-    if (CheckAndClearException(env)) return NULL;
-    JLClass cls(env, jc);
-    jobject jobj = env->CallStaticObjectMethod(cls, javaIDs.CommonDialogs.createFileChooserResult,
-            ret, jFilters, (jint)(index - 1));
-    if (CheckAndClearException(env)) return NULL;
-    return jobj;
+    *outFilterIndex = (int32_t)(index - 1);
+    *outFiles = haveFiles ? GwinMakeStringBlock(files) : NULL;
+    *outCount = (*outFiles != NULL) ? (int32_t) files.size() : 0;
+
+    if (*outFiles == NULL) {
+        return GWIN_DIALOG_FAILED;
+    }
+    if (showResult == CANCEL_HRT) {
+        return GWIN_DIALOG_CANCELLED;
+    }
+    return SUCCEEDED(showResult) ? GWIN_DIALOG_OK : GWIN_DIALOG_FAILED;
 }
 
 /*****************************
  * IFileDialog implementation
  *****************************/
 
-jstring GetFolder(IFileDialogPtr pDialog, BOOL isCancelled)
+static bool GetFolder(IFileDialogPtr pDialog, BOOL isCancelled, std::wstring &out)
 {
     if (isCancelled) {
-        return NULL;
+        return false;
     }
 
-    JNIEnv* env = GetEnv();
     IShellItemPtr pFile;
 
     OLE_TRY
     OLE_HRT( pDialog->GetResult(&pFile) );
     OLE_CATCH
 
-    return CreateJString(env, pFile);
+    return GetShellItemPath(pFile, out);
 }
 
-jstring COMFolderChooser_Show(HWND owner, LPCTSTR folder, LPCTSTR title)
+int32_t COMFolderChooser_Show(HWND owner, LPCWSTR folder, LPCWSTR title, uint16_t** outPath)
 {
     OLEHolder _ole_;
     IFileDialogPtr pDialog;
+    HRESULT showResult = E_FAIL;
 
     OLE_TRY
     OLE_HRT( ::CoCreateInstance(CLSID_FileOpenDialog, NULL, CLSCTX_ALL,
@@ -302,10 +281,17 @@ jstring COMFolderChooser_Show(HWND owner, LPCTSTR folder, LPCTSTR title)
     }
 
     OLE_HR = pDialog->Show(owner);
+    showResult = OLE_HR;
     if (OLE_HR != CANCEL_HRT && FAILED(OLE_HR)) {
         OLE_THROW_LASTERROR(_T("pDialog->Show(NULL)"))
     }
     OLE_CATCH
 
-    return GetFolder(pDialog, OLE_HR == CANCEL_HRT);
+    std::wstring path;
+    *outPath = GetFolder(pDialog, OLE_HR == CANCEL_HRT, path) ? GwinMakeString(path.c_str()) : NULL;
+
+    if (*outPath != NULL) {
+        return GWIN_DIALOG_OK;
+    }
+    return showResult == CANCEL_HRT ? GWIN_DIALOG_CANCELLED : GWIN_DIALOG_FAILED;
 }

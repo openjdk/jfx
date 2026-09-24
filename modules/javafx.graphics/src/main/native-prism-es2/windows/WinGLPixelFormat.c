@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,7 +23,6 @@
  * questions.
  */
 
-#include <jni.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <stdio.h>
@@ -31,72 +30,12 @@
 #include <math.h>
 
 #include "../PrismES2Defs.h"
-#include "com_sun_prism_es2_WinGLPixelFormat.h"
+#include "../prism_es2_api.h"
 
 extern HWND createDummyWindow(LPCTSTR szAppName);
 extern LONG WINAPI WndProc(HWND hWnd, UINT msg,
         WPARAM wParam, LPARAM lParam);
-extern PIXELFORMATDESCRIPTOR getPFD(jint *attrArr);
+extern PIXELFORMATDESCRIPTOR getPFD(const Es2PixelFormatAttrs *attrs);
 extern void printAndReleaseResources(HWND hwnd, HGLRC hglrc,
         HDC hdc, LPCTSTR szAppName, char *message);
 
-/*
- * Class:     com_sun_prism_es2_WinGLPixelFormat
- * Method:    nCreatePixelFormat
- * Signature: (J[I)J
- */
-JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_WinGLPixelFormat_nCreatePixelFormat
-(JNIEnv *env, jclass class, jlong nativeScreen, jintArray attrArr) {
-    static LPCTSTR szAppName = L"Choose Pixel Format";
-    HWND hwnd = NULL;
-    HDC hdc = NULL;
-    int pixelFormat;
-    PIXELFORMATDESCRIPTOR pfd;
-    jint *attrs;
-    PixelFormatInfo *pfInfo = NULL;
-
-    if ((env == NULL) || (attrArr == NULL)) {
-        return 0;
-    }
-    attrs = (*env)->GetIntArrayElements(env, attrArr, NULL);
-    pfd = getPFD(attrs);
-    (*env)->ReleaseIntArrayElements(env, attrArr, attrs, JNI_ABORT);
-
-    // JDK-8090498
-    // TODO: Need to use nativeScreen to create this requested pixelformat
-    // currently hack to work on a single monitor system
-    hwnd = createDummyWindow(szAppName);
-
-    if (!hwnd) {
-        return 0;
-    }
-    hdc = GetDC(hwnd);
-    if (hdc == NULL) {
-        printAndReleaseResources(hwnd, NULL, hdc, szAppName,
-                "Failed in GetDC");
-        return 0;
-    }
-
-    pixelFormat = ChoosePixelFormat(hdc, &pfd);
-    if (pixelFormat < 1) {
-        printAndReleaseResources(hwnd, NULL, hdc, szAppName,
-                "Failed in ChoosePixelFormat");
-        return 0;
-    }
-
-    /* allocate the structure */
-    pfInfo = (PixelFormatInfo *) malloc(sizeof (PixelFormatInfo));
-    if (pfInfo == NULL) {
-        fprintf(stderr, "nCreatePixelFormat: Failed in malloc\n");
-        return 0;
-    }
-
-    /* initialize the structure */
-    initializePixelFormatInfo(pfInfo);
-    pfInfo->pixelFormat = pixelFormat;
-    pfInfo->dummyHwnd = hwnd;
-    pfInfo->dummyHdc = hdc;
-    pfInfo->dummySzAppName = szAppName;
-
-    return ptr_to_jlong(pfInfo);
-}

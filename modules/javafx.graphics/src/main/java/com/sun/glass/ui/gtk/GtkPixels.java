@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -66,10 +66,19 @@ final class GtkPixels extends Pixels {
         }
     }
 
+    /**
+     * Called by {@code Pixels.attachData} from {@link GtkGlassNative} - for the cursor, the window icon, the clipboard
+     * and the drag source's image, where the C of commit {@code 033187ad90} called it - which also binds
+     * {@code gdk_pixbuf_new_from_data} where {@code GlassPixels.cpp} wrapped it.
+     */
     @Override
-    protected native void _attachInt(long ptr, int w, int h, IntBuffer ints, int[] array, int offset);
+    protected void _attachInt(long ptr, int w, int h, IntBuffer ints, int[] array, int offset) {
+        GtkGlassNative.pixelsAttachInt(ptr, w, h, ints, array, offset);
+    }
 
     @Override
-    protected native void _attachByte(long ptr, int w, int h, ByteBuffer bytes, byte[] array, int offset);
+    protected void _attachByte(long ptr, int w, int h, ByteBuffer bytes, byte[] array, int offset) {
+        GtkGlassNative.pixelsAttachByte(ptr, w, h, bytes, array, offset);
+    }
 
 }

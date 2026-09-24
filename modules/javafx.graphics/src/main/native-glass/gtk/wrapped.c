@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,13 +32,13 @@
 #include <dlfcn.h>
 #include <sys/ioctl.h>
 
-#include <jni.h>
+#include <stdint.h>
 #include <gtk/gtk.h>
 #include <gdk/gdk.h>
 
 #include "wrapped.h"
 
-extern jboolean gtk_verbose;
+extern uint8_t gtk_verbose;
 
 /*
  * cpp and dlsym don't play nicely together. Do all dynamic loading in C

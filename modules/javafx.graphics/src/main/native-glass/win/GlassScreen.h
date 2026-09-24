@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,14 +26,19 @@
 #ifndef _GLASS_SCREEN_
 #define _GLASS_SCREEN_
 
+#include "glass_win_api.h"
+
 class GlassScreen {
 public:
-    static void LoadDPIFuncs(jint awareRequested);
-    static jobject GetJavaMonitor(JNIEnv *env, HMONITOR monitor);
     static void HandleDisplayChange();
-    static jobjectArray CreateJavaScreens(JNIEnv* env);
-    static BOOL FX2Win(jfloat *pX, jfloat *pY);
-    static BOOL Win2FX(jfloat *pX, jfloat *pY);
+
+    /*
+     * The callback table of glass_win_api.h's screen section. NULL while Java has installed
+     * nothing, in which case HandleDisplayChange delivers nothing; once installed its slot is never
+     * NULL (the setter substitutes a no-op). The state is file-static in GlassScreen.cpp.
+     */
+    static const GwinScreenCallbacks* ScreenCallbacks();
+    static void SetScreenCallbacks(const GwinScreenCallbacks* cb);
 };
 
 #endif

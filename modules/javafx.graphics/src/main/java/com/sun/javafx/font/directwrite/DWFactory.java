@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,7 @@ import com.sun.javafx.font.FontFallbackInfo;
 import com.sun.javafx.font.FontResource;
 import com.sun.javafx.font.PrismFontFactory;
 import com.sun.javafx.font.PrismFontFile;
+import com.sun.javafx.font.WinFontPath;
 import com.sun.javafx.text.GlyphLayout;
 import com.sun.prism.GraphicsPipeline;
 
@@ -92,7 +93,7 @@ public class DWFactory extends PrismFontFactory {
         /* Using multi threaded DWrite factory as the JFX thread requires access
          * to DWrite resources for measuring and the Prism thread for rendering */
         if (DWRITE_FACTORY == null) {
-            DWRITE_FACTORY = OS.DWriteCreateFactory(OS.DWRITE_FACTORY_TYPE_SHARED);
+            DWRITE_FACTORY = IDWriteFactory.create(OS.DWRITE_FACTORY_TYPE_SHARED);
         }
         return DWRITE_FACTORY;
     }
@@ -126,11 +127,11 @@ public class DWFactory extends PrismFontFactory {
             /* Initialize COM in order to create a WICImagingFactory.
              * It runs on the prism thread and expects no other code in this thread
              * to interface with COM. */
-            if (!OS.CoInitializeEx(OS.COINIT_APARTMENTTHREADED | OS.COINIT_DISABLE_OLE1DDE)) {
+            if (!DWNative.coInitializeEx(OS.COINIT_APARTMENTTHREADED | OS.COINIT_DISABLE_OLE1DDE)) {
                 return null;
             }
 
-            WIC_FACTORY = OS.WICCreateImagingFactory();
+            WIC_FACTORY = IWICImagingFactory.create();
             if (WIC_FACTORY == null) {
                 return null;
             }
@@ -138,7 +139,7 @@ public class DWFactory extends PrismFontFactory {
             GraphicsPipeline.getPipeline().addDisposeHook(() -> {
                 checkThread();
                 WIC_FACTORY.Release();
-                OS.CoUninitialize();
+                DWNative.coUninitialize();
                 WIC_FACTORY = null;
             });
         }
@@ -149,13 +150,18 @@ public class DWFactory extends PrismFontFactory {
         checkThread();
         /* Using single threaded D2D Factory as it should only be used by the rendering thread */
         if (D2D_FACTORY == null) {
-            D2D_FACTORY = OS.D2D1CreateFactory(OS.D2D1_FACTORY_TYPE_SINGLE_THREADED);
+            D2D_FACTORY = ID2D1Factory.create(OS.D2D1_FACTORY_TYPE_SINGLE_THREADED);
         }
         return D2D_FACTORY;
     }
 
-    private static native String regReadFontLink(String searchfont);
-    private static native String getEUDCFontFile();
+    private static String regReadFontLink(String searchfont) {
+        return WinFontPath.regReadFontLink(searchfont);
+    }
+
+    private static String getEUDCFontFile() {
+        return WinFontPath.getEUDCFontFile();
+    }
 
     /*
      * Ignoring the primary on Windows - this should change some day.

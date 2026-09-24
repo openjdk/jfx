@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -146,96 +146,6 @@ inline void raise_error_empty(HRESULT hr) { }
 #define OLE_HR             _hr_
 
 #define E_JAVAEXCEPTION  MAKE_HRESULT(SEVERITY_ERROR, 0xDE, 1)
-
-#ifndef JNI_UTIL_H
-inline void JNICALL JNU_ThrowByName(JNIEnv *env, const char *name, const char *msg)
-{
-    jclass cls = env->FindClass(name);
-    if (cls != 0) /* Otherwise an exception has already been thrown */
-        env->ThrowNew(cls, msg);
-}
-inline void JNICALL JNU_ThrowIllegalAccessException(JNIEnv *env, const char *msg)
-{
-    JNU_ThrowByName(env, "java/lang/IllegalAccessException", msg);
-}
-inline void JNICALL JNU_ThrowIOException(JNIEnv *env, const char *msg)
-{
-    JNU_ThrowByName(env, "java/io/IOException", msg);
-}
-#endif
-
-// The function is currently unused.
-// Commented out to suppress a compiler warning on using unsafe _itow.
-// Consider using _itow_s (req. VS2005+), or removing the function.
-/*
-inline void ThrowJNIErrorOnOleError(JNIEnv *env, HRESULT hr, const char *msg)
-{
-    if (SUCCEEDED(hr)) {
-        return;
-    }
-
-    _bstr_t err(msg);
-    WCHAR conv[64] = L"COM error:0x";
-    _itow(hr, conv + 12, 16);
-    err += conv;
-    msg = err;
-
-    WORD fs = (WORD)HRESULT_FACILITY(hr);
-    WORD sc = (WORD)SCODE_CODE(hr);
-    if (
-        FACILITY_SECURITY == fs
-        || (
-                (
-                    FACILITY_WINDOWS == fs ||
-                    FACILITY_STORAGE == fs ||
-                    FACILITY_RPC == fs ||
-                    FACILITY_WIN32 == fs
-                ) && ERROR_ACCESS_DENIED == sc
-            )
-    ) {
-        JNU_ThrowIllegalAccessException(env, msg);
-        return;
-    }
-    JNU_ThrowIOException(env, msg);
-}
-*/
-
-inline HRESULT checkJavaException(JNIEnv *env)
-{
-    if (!env->ExceptionCheck()) {
-        return S_OK;
-    } else {
-        JLocalRef<jthrowable> ex(env, env->ExceptionOccurred());
-        if(ex){
-            env->ExceptionClear();
-            jclass cls = env->FindClass("java/lang/Throwable");
-            if (env->ExceptionCheck()) {
-                env->ExceptionDescribe();
-                env->ExceptionClear();
-                return E_JAVAEXCEPTION;
-            }
-            static jmethodID s_jcidThrowable_getMessage = env->GetMethodID(
-                JLClass(env, cls),
-                "getMessage",
-                "()Ljava/lang/String;");
-            if (env->ExceptionCheck()) {
-                env->ExceptionDescribe();
-                env->ExceptionClear();
-                return E_JAVAEXCEPTION;
-            }
-            JLString jsMessage(env, (jstring)env->CallObjectMethod(
-                ex,
-                s_jcidThrowable_getMessage
-            ));
-            if(jsMessage){
-                STRACE1(_T("Java Message:%s"), (LPCWSTR)JString(env, jsMessage) );
-            }
-            env->ExceptionDescribe();
-        }
-        env->ExceptionClear();
-    }
-    return E_JAVAEXCEPTION;
-}
 
 struct OLEHolder
 {

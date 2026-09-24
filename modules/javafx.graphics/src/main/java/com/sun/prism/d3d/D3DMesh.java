@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,7 @@ package com.sun.prism.d3d;
 
 import com.sun.prism.impl.BaseMesh;
 import com.sun.prism.impl.Disposer;
+import java.lang.foreign.MemorySegment;
 
 /**
  * TODO: 3D - Need documentation
@@ -35,9 +36,10 @@ class D3DMesh extends BaseMesh {
     static int count = 0;
 
     private final D3DContext context;
-    private final long nativeHandle;
+    /** The native {@code D3DMesh*}; {@link MemorySegment#NULL} when creation failed. */
+    private final MemorySegment nativeHandle;
 
-    private D3DMesh(D3DContext context, long nativeHandle, Disposer.Record disposerRecord) {
+    private D3DMesh(D3DContext context, MemorySegment nativeHandle, Disposer.Record disposerRecord) {
         super(disposerRecord);
         this.context = context;
         this.nativeHandle = nativeHandle;
@@ -45,11 +47,11 @@ class D3DMesh extends BaseMesh {
     }
 
     static D3DMesh create(D3DContext context) {
-        long nativeHandle = context.createD3DMesh();
+        MemorySegment nativeHandle = context.createD3DMesh();
         return new D3DMesh(context, nativeHandle, new D3DMeshDisposerRecord(context, nativeHandle));
     }
 
-    long getNativeHandle() {
+    MemorySegment getNativeHandle() {
         return nativeHandle;
     }
 
@@ -86,9 +88,9 @@ class D3DMesh extends BaseMesh {
     static class D3DMeshDisposerRecord implements Disposer.Record {
 
         private final D3DContext context;
-        private long nativeHandle;
+        private MemorySegment nativeHandle;
 
-        D3DMeshDisposerRecord(D3DContext context, long nativeHandle) {
+        D3DMeshDisposerRecord(D3DContext context, MemorySegment nativeHandle) {
             this.context = context;
             this.nativeHandle = nativeHandle;
         }
@@ -97,12 +99,11 @@ class D3DMesh extends BaseMesh {
 
         @Override
         public void dispose() {
-            if (nativeHandle != 0L) {
+            if (nativeHandle.address() != 0L) {
                 traceDispose();
                 context.releaseD3DMesh(nativeHandle);
-                nativeHandle = 0L;
+                nativeHandle = MemorySegment.NULL;
             }
         }
     }
 }
-

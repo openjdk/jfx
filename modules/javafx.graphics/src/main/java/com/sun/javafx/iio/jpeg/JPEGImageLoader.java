@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,11 +28,11 @@ package com.sun.javafx.iio.jpeg;
 import com.sun.javafx.iio.ImageFrame;
 import com.sun.javafx.iio.ImageMetadata;
 import com.sun.javafx.iio.ImageStorage.ImageType;
-import com.sun.glass.utils.NativeLibLoader;
 import com.sun.javafx.iio.common.ImageLoaderImpl;
 import com.sun.javafx.iio.common.ImageTools;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.foreign.MemorySegment;
 import java.nio.ByteBuffer;
 
 public class JPEGImageLoader extends ImageLoaderImpl {
@@ -51,31 +51,54 @@ public class JPEGImageLoader extends ImageLoaderImpl {
     public static final int JCS_YCCA = 10;         // PhotoYCC-Alpha
     public static final int JCS_YCCK = 11;         // Y/Cb/Cr/K
     /**
-     * The following variable contains a pointer to the IJG library
-     * structure for this reader.  It is assigned in the constructor
-     * and then is passed in to every native call.  It is set to 0
-     * by dispose to avoid disposing twice.
+     * The IJG library decoder for this reader, an opaque handle owned by the
+     * javafx_iio library. It is assigned in the constructor and then is passed
+     * in to every JPEGNative call. It is set to NULL by dispose to avoid
+     * disposing twice.
      */
-    private long structPointer = 0L;
-    /** Set by setInputAttributes native code callback */
+    private MemorySegment decoder = MemorySegment.NULL;
+    /**
+     * The stream the decoder pulls compressed bytes from, through the read and
+     * skip callbacks of {@link JPEGNative}.
+     */
+    private final InputStream input;
+    /**
+     * Scratch array for the read callback, sized to the decoder's request; the
+     * per-reader stream buffer the JNI decoder kept.
+     */
+    private byte[] streamBuffer;
+    /**
+     * The exception a callback caught while native code was on the stack. The
+     * callback returns an error to the decoder instead of throwing, the
+     * decoder aborts, and {@link JPEGNative} rethrows this from the downcall.
+     */
+    private Throwable pendingUpcallFailure;
+    /**
+     * This loader's registration under the process-wide callback table of
+     * {@link JPEGNative}: the id the decoder hands back as {@code user}.
+     * Registered before the decoder is created, unregistered after it is
+     * disposed.
+     */
+    private final JPEGNative.Callbacks callbacks;
+    /** Set from the image header read by the decoder */
     private int inWidth;
-    /** Set by setInputAttributes native code callback */
+    /** Set from the image header read by the decoder */
     private int inHeight;
     /**
-     * Set by setInputAttributes native code callback.  A modified
+     * Set from the image header read by the decoder.  A modified
      * IJG+NIFTY colorspace code.
      */
     private int inColorSpaceCode;
     /**
-     * Set by setInputAttributes native code callback.  A modified
+     * Set from the image header read by the decoder.  A modified
      * IJG+NIFTY colorspace code.
      */
     private int outColorSpaceCode;
-    /** Set by setInputAttributes native code callback */
+    /** Set from the image header read by the decoder */
     private byte[] iccData;
-    /** Set by setOutputAttributes native code callback. */
+    /** Set by setOutputAttributes after starting decompression. */
     private int outWidth;
-    /** Set by setOutputAttributes native code callback. */
+    /** Set by setOutputAttributes after starting decompression. */
     private int outHeight;
     private ImageType outImageType;
 
@@ -83,31 +106,8 @@ public class JPEGImageLoader extends ImageLoaderImpl {
 
     private Lock accessLock = new Lock();
 
-    /** Sets up static C structures. */
-    private static native void initJPEGMethodIDs(Class inputStreamClass);
-
-    private static native void disposeNative(long structPointer);
-
-    /** Sets up per-reader C structure and returns a pointer to it. */
-    private native long initDecompressor(InputStream stream) throws IOException;
-
-    /** Sets output color space and scale factor.
-     *  Returns number of components which native decoder
-     *  will produce for requested output color space.
-     */
-    private native int startDecompression(long structPointer,
-            int outColorSpaceCode, int scaleNum, int scaleDenom);
-
-    private native boolean decompressIndirect(long structPointer, boolean reportProgress, byte[] array) throws IOException;
-
-    static {
-        NativeLibLoader.loadLibrary("javafx_iio");
-
-        initJPEGMethodIDs(InputStream.class);
-    }
-
     /*
-     * Called by the native code when the image header has been read.
+     * Called when the image header has been read.
      */
     private void setInputAttributes(int width,
             int height,
@@ -160,15 +160,52 @@ public class JPEGImageLoader extends ImageLoaderImpl {
     }
 
     /*
-     * Called by the native code after starting decompression.
+     * Called after starting decompression.
      */
     private void setOutputAttributes(int width, int height) {
         this.outWidth = width;
         this.outHeight = height;
     }
 
-    private void updateImageProgress(int outLinesDecoded) {
+    /*
+     * Called by the decoder's update_progress callback (see JPEGNative), once
+     * per scanline before it is read and once more with the output height.
+     */
+    void updateImageProgress(int outLinesDecoded) {
         updateImageProgress(100.0F * outLinesDecoded / outHeight);
+    }
+
+    /*
+     * Called by the decoder's emit_warning callback (see JPEGNative). The
+     * message is null when the stream ended before the EOI marker.
+     */
+    void emitDecoderWarning(String message) {
+        emitWarning(message);
+    }
+
+    /* The stream the decoder's read and skip callbacks pull from. */
+    InputStream stream() {
+        return input;
+    }
+
+    /* Scratch for the read callback, holding at least capacity bytes. */
+    byte[] streamBuffer(int capacity) {
+        if (streamBuffer == null || streamBuffer.length < capacity) {
+            streamBuffer = new byte[capacity];
+        }
+        return streamBuffer;
+    }
+
+    /* Stashes the exception a callback caught; the decoder is aborting. */
+    void setPendingUpcallFailure(Throwable failure) {
+        pendingUpcallFailure = failure;
+    }
+
+    /* Takes the stashed exception, leaving the slot empty. */
+    Throwable takePendingUpcallFailure() {
+        Throwable failure = pendingUpcallFailure;
+        pendingUpcallFailure = null;
+        return failure;
     }
 
     JPEGImageLoader(InputStream input) throws IOException {
@@ -176,25 +213,46 @@ public class JPEGImageLoader extends ImageLoaderImpl {
         if (input == null) {
             throw new IllegalArgumentException("input == null!");
         }
+        this.input = input;
+        this.callbacks = JPEGNative.register(this);
 
         try {
-            this.structPointer = initDecompressor(input);
-        } catch (IOException e) {
+            initDecompressor();
+        } catch (IOException | RuntimeException | Error e) {
             dispose();
             throw e;
         }
 
-        if (this.structPointer == 0L) {
+        if (this.decoder.address() == 0L) {
+            dispose();
             throw new IOException("Unable to initialize JPEG decompressor");
+        }
+    }
+
+    /*
+     * Creates the decoder and reads the image header. A tables-only datastream
+     * leaves the header width 0, for which no input attributes are set.
+     */
+    private void initDecompressor() throws IOException {
+        JPEGNative.Header header = JPEGNative.create(this, callbacks);
+        this.decoder = header.decoder();
+        if (header.width() != 0) {
+            setInputAttributes(header.width(), header.height(),
+                    header.jpegColorSpace(), header.outColorSpace(),
+                    header.numComponents(), JPEGNative.iccProfile(decoder));
         }
     }
 
     @Override
     public synchronized void dispose() {
-        if(!accessLock.isLocked() && !isDisposed && structPointer != 0L) {
+        if(!accessLock.isLocked() && !isDisposed) {
             isDisposed = true;
-            disposeNative(structPointer);
-            structPointer = 0L;
+            if (decoder.address() != 0L) {
+                JPEGNative.dispose(decoder);
+                decoder = MemorySegment.NULL;
+            }
+            // Only now: the id must resolve for as long as a downcall on the decoder can call back.
+            callbacks.unregister();
         }
     }
 
@@ -225,8 +283,10 @@ public class JPEGImageLoader extends ImageLoaderImpl {
 
         int outNumComponents;
         try {
-            outNumComponents = startDecompression(structPointer,
+            JPEGNative.Geometry geometry = JPEGNative.startDecompression(this, decoder,
                     outColorSpaceCode, width, height);
+            setOutputAttributes(geometry.width(), geometry.height());
+            outNumComponents = geometry.components();
 
             if (outWidth < 0 || outHeight < 0 || outNumComponents < 0) {
                throw new IOException("negative dimension.");
@@ -241,7 +301,7 @@ public class JPEGImageLoader extends ImageLoaderImpl {
 
             byte[] array = new byte[scanlineStride*outHeight];
             buffer = ByteBuffer.wrap(array);
-            decompressIndirect(structPointer, listeners != null && !listeners.isEmpty(), buffer.array());
+            JPEGNative.decompress(this, decoder, listeners != null && !listeners.isEmpty(), array);
         } catch (IOException e) {
             throw e;
         } catch (Throwable t) {

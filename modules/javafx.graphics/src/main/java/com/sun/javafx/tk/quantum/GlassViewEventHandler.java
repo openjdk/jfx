@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -84,7 +84,7 @@ class GlassViewEventHandler extends View.EventHandler {
         dndHandler = new GlassSceneDnDEventHandler(scene);
 
         gestures = new GestureRecognizers();
-        if (PlatformUtil.isWindows() || PlatformUtil.isIOS() || PlatformUtil.isEmbedded()) {
+        if (PlatformUtil.isWindows() || PlatformUtil.isEmbedded()) {
             gestures.add(new SwipeGestureRecognizer(scene));
         }
         if (zoomGestureEnabled) {

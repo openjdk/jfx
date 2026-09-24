@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,9 @@
 package com.sun.glass.ui.win;
 
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -68,10 +71,32 @@ import static javafx.scene.AccessibleAttribute.*;
 
 final class WinAccessible extends Accessible {
 
-    private native static void _initIDs();
+    /*
+     * Where _initIDs stood, and for the same reason: this is the first thing that runs before any
+     * GlassAccessible can exist, because the only way to make one is the constructor below. The install
+     * writes both accessibility tables, so WinTextRangeProvider's is in place too whichever class
+     * initializes first - the library picks its arm per table and the two must never be mixed. Nothing
+     * is cached here any more: the 69 jmethodIDs are table slots and the nine WinVariant fieldIDs are a
+     * StructLayout, which is what lets glass.dll stop looking anything up (commit 033187ad90,
+     * GlassAccessible.cpp).
+     */
     static {
-        _initIDs();
+        WinGlassNative.installAccessibilityCallbacks();
     }
+
+    /**
+     * Every live platform accessible, by the id the callback tables carry - what the {@code NewGlobalRef}
+     * of {@code GlassAccessible}'s constructor used to keep reachable. An entry is dropped only by
+     * {@link #dispatchDisposed}, which the library fires from {@code ~GlassAccessible} where that
+     * {@code DeleteGlobalRef} stood, and <b>not</b> by {@link #dispose()}: UI Automation holds its own
+     * references, so the COM object routinely outlives the Java peer's disposal and keeps sending
+     * provider calls, which the {@code isDisposed()} guards below answer. Dropping the entry at
+     * {@code dispose()} would turn those into silent no-ops instead.
+     */
+    private static final Map<Long, WinAccessible> ACCESSIBLES = new ConcurrentHashMap<>();
+
+    /** Ids from 1: 0 is the library's "no Java peer". Monotone, never reused. */
+    private static final AtomicLong NEXT_ACCESSIBLE_ID = new AtomicLong(1L);
 
     private static int idCount = 1;
 
@@ -228,20 +253,44 @@ final class WinAccessible extends Accessible {
      */
     private int lastIndex = 0;
 
-    /* Creates a GlassAccessible linked to the caller (GlobalRef) */
-    private native long _createGlassAccessible();
+    /** The id {@link #ACCESSIBLES} holds this accessible under; 0 when it was never registered. */
+    private long accessibleId;
 
-    /* Releases the GlassAccessible and deletes the GlobalRef */
-    private native void _destroyGlassAccessible(long accessible);
+    /*
+     * The three UI Automation entry points WinAccessible calls, keeping their names so that the twenty
+     * call sites below are untouched. UiaRaiseAutomationEvent and UiaClientsAreListening are bound
+     * straight from UIAutomationCore, because their JNI bodies were a cast and the OS call; the property
+     * change keeps a C body, because building its two VARIANTs is the copyVariant marshalling the
+     * inbound direction needs in C anyway (commit 033187ad90, GlassAccessible.cpp).
+     */
 
-    private native static long UiaRaiseAutomationEvent(long pProvider, int id);
-    private native static long UiaRaiseAutomationPropertyChangedEvent(long pProvider, int id, WinVariant oldV, WinVariant newV);
-    private native static boolean UiaClientsAreListening();
+    private static long UiaRaiseAutomationEvent(long pProvider, int id) {
+        return WinGlassNative.raiseAutomationEvent(pProvider, id);
+    }
 
+    private static long UiaRaiseAutomationPropertyChangedEvent(long pProvider, int id, WinVariant oldV,
+                                                               WinVariant newV) {
+        return WinGlassNative.raiseAutomationPropertyChangedEvent(pProvider, id, oldV, newV);
+    }
+
+    private static boolean UiaClientsAreListening() {
+        return WinGlassNative.uiaClientsAreListening();
+    }
+
+    /*
+     * The registry entry is published before gwin_a11y_create, so that a callback arriving inside the
+     * creating downcall finds its peer - WinView.register's rule. A create that fails takes the entry
+     * back out: no GlassAccessible exists, so nothing will ever fire accessible_disposed for it, and the
+     * RuntimeException is the one the JNI's zero peer produced, at the same point.
+     */
     WinAccessible() {
         Application.checkEventThread();
-        this.peer = _createGlassAccessible();
+        this.accessibleId = NEXT_ACCESSIBLE_ID.getAndIncrement();
+        ACCESSIBLES.put(this.accessibleId, this);
+        this.peer = WinGlassNative.createAccessible(this.accessibleId);
         if (this.peer == 0L) {
+            ACCESSIBLES.remove(this.accessibleId);
+            this.accessibleId = 0L;
             throw new RuntimeException("could not create platform accessible");
         }
         this.id = idCount++;
@@ -260,7 +309,8 @@ final class WinAccessible extends Accessible {
             documentRange = null;
         }
         if (peer != 0L) {
-            _destroyGlassAccessible(peer);
+            // Release, not delete: the registry entry stays until the library fires accessible_disposed.
+            WinGlassNative.destroyAccessible(peer);
             peer = 0L;
         }
     }
@@ -1967,6 +2017,429 @@ final class WinAccessible extends Accessible {
         }
         if (item != null) {
             container.executeAction(AccessibleAction.SHOW_ITEM, item);
+        }
+    }
+
+    /*
+     * The dispatch half of the 70 slots of GwinAccessibleCallbacks: registry lookup, then the private
+     * provider method - which is why this lives here and not in the facade. An id the registry does not
+     * know answers the slot default silently, as WinView's dispatch does; it cannot happen while the COM
+     * object is alive, because the entry outlives it by construction. The facade's stub does the
+     * marshalling and catches everything, so nothing here needs a try.
+     */
+
+    /** The id this accessible is registered under, 0 if it never was; for the tests that drive a slot. */
+    long accessibleId() {
+        return accessibleId;
+    }
+
+    /** How many accessibles the registry holds: the FFM counterpart of the JNI's live global refs. */
+    static int accessibleRegistrySize() {
+        return ACCESSIBLES.size();
+    }
+
+    /**
+     * {@code accessible_disposed}: the last COM reference on the {@code GlassAccessible} of
+     * {@code accessibleId} is gone. This is where {@code DeleteGlobalRef} stood in
+     * {@code ~GlassAccessible} and the only place an entry may be dropped. It can arrive on the COM/RPC
+     * thread that released that reference, so the map is concurrent; the JNI leaked its global ref on
+     * exactly that path, because the destructor skipped {@code DeleteGlobalRef} when {@code GetEnv()}
+     * answered {@code NULL}, and this cleans up where the JNI did not.
+     * <p>
+     * <b>Constraint.</b> This is one of the four slots that can arrive on a COM/RPC thread, which the
+     * upcall stub attaches to the JVM as a daemon thread with a {@code null} context class loader and
+     * no {@code FX Application Thread} anywhere below it. It must therefore touch the registry and
+     * nothing else: no scene graph, no {@code Toolkit}, no class loading.
+     */
+    static void dispatchDisposed(long accessibleId) {
+        ACCESSIBLES.remove(accessibleId);
+    }
+
+    static long dispatchGetPatternProvider(long accessibleId, int patternId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.GetPatternProvider(patternId) : 0L;
+    }
+
+    static long dispatchGetHostRawElementProvider(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.get_HostRawElementProvider() : 0L;
+    }
+
+    static WinVariant dispatchGetPropertyValue(long accessibleId, int propertyId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.GetPropertyValue(propertyId) : null;
+    }
+
+    static float[] dispatchGetBoundingRectangle(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.get_BoundingRectangle() : null;
+    }
+
+    static long dispatchGetFragmentRoot(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.get_FragmentRoot() : 0L;
+    }
+
+    static long[] dispatchGetEmbeddedFragmentRoots(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.GetEmbeddedFragmentRoots() : null;
+    }
+
+    static int[] dispatchGetRuntimeId(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.GetRuntimeId() : null;
+    }
+
+    static long dispatchNavigate(long accessibleId, int direction) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.Navigate(direction) : 0L;
+    }
+
+    static void dispatchSetFocus(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        if (accessible != null) {
+            accessible.SetFocus();
+        }
+    }
+
+    static long dispatchElementProviderFromPoint(long accessibleId, double x, double y) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.ElementProviderFromPoint(x, y) : 0L;
+    }
+
+    static long dispatchGetFocus(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.GetFocus() : 0L;
+    }
+
+    /**
+     * {@code advise_event_added}, and {@link #dispatchAdviseEventRemoved} below it, carry the same
+     * constraint as {@link #dispatchDisposed}: UI Automation calls them from the client's RPC thread,
+     * which the upcall stub attaches with a {@code null} context class loader, so the body must stay
+     * off the scene graph and the toolkit. {@code AdviseEventAdded} is empty today, which is what makes
+     * that safe; a body that stopped being empty would need to hop to the FX thread.
+     */
+    static void dispatchAdviseEventAdded(long accessibleId, int eventId, long propertyIds) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        if (accessible != null) {
+            accessible.AdviseEventAdded(eventId, propertyIds);
+        }
+    }
+
+    static void dispatchAdviseEventRemoved(long accessibleId, int eventId, long propertyIds) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        if (accessible != null) {
+            accessible.AdviseEventRemoved(eventId, propertyIds);
+        }
+    }
+
+    static void dispatchInvoke(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        if (accessible != null) {
+            accessible.Invoke();
+        }
+    }
+
+    static long[] dispatchGetSelection(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.GetSelection() : null;
+    }
+
+    static boolean dispatchGetCanSelectMultiple(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.get_CanSelectMultiple() : false;
+    }
+
+    static boolean dispatchGetIsSelectionRequired(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.get_IsSelectionRequired() : false;
+    }
+
+    static void dispatchSelect(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        if (accessible != null) {
+            accessible.Select();
+        }
+    }
+
+    static void dispatchAddToSelection(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        if (accessible != null) {
+            accessible.AddToSelection();
+        }
+    }
+
+    static void dispatchRemoveFromSelection(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        if (accessible != null) {
+            accessible.RemoveFromSelection();
+        }
+    }
+
+    static boolean dispatchGetIsSelected(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.get_IsSelected() : false;
+    }
+
+    static long dispatchGetSelectionContainer(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.get_SelectionContainer() : 0L;
+    }
+
+    static void dispatchSetValue(long accessibleId, double value) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        if (accessible != null) {
+            accessible.SetValue(value);
+        }
+    }
+
+    static double dispatchGetValue(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.get_Value() : 0.0;
+    }
+
+    static boolean dispatchGetIsReadOnly(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.get_IsReadOnly() : false;
+    }
+
+    static double dispatchGetMaximum(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.get_Maximum() : 0.0;
+    }
+
+    static double dispatchGetMinimum(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.get_Minimum() : 0.0;
+    }
+
+    static double dispatchGetLargeChange(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.get_LargeChange() : 0.0;
+    }
+
+    static double dispatchGetSmallChange(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.get_SmallChange() : 0.0;
+    }
+
+    static void dispatchSetValueString(long accessibleId, String value) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        if (accessible != null) {
+            accessible.SetValueString(value);
+        }
+    }
+
+    static String dispatchGetValueString(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.get_ValueString() : null;
+    }
+
+    static long[] dispatchGetVisibleRanges(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.GetVisibleRanges() : null;
+    }
+
+    static long dispatchRangeFromChild(long accessibleId, long childElement) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.RangeFromChild(childElement) : 0L;
+    }
+
+    static long dispatchRangeFromPoint(long accessibleId, double x, double y) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.RangeFromPoint(x, y) : 0L;
+    }
+
+    static long dispatchGetDocumentRange(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.get_DocumentRange() : 0L;
+    }
+
+    static int dispatchGetSupportedTextSelection(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.get_SupportedTextSelection() : 0;
+    }
+
+    static int dispatchGetColumnCount(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.get_ColumnCount() : 0;
+    }
+
+    static int dispatchGetRowCount(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.get_RowCount() : 0;
+    }
+
+    static long dispatchGetItem(long accessibleId, int row, int column) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.GetItem(row, column) : 0L;
+    }
+
+    static int dispatchGetColumn(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.get_Column() : 0;
+    }
+
+    static int dispatchGetColumnSpan(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.get_ColumnSpan() : 0;
+    }
+
+    static long dispatchGetContainingGrid(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.get_ContainingGrid() : 0L;
+    }
+
+    static int dispatchGetRow(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.get_Row() : 0;
+    }
+
+    static int dispatchGetRowSpan(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.get_RowSpan() : 0;
+    }
+
+    static long[] dispatchGetColumnHeaders(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.GetColumnHeaders() : null;
+    }
+
+    static long[] dispatchGetRowHeaders(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.GetRowHeaders() : null;
+    }
+
+    static int dispatchGetRowOrColumnMajor(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.get_RowOrColumnMajor() : 0;
+    }
+
+    static long[] dispatchGetColumnHeaderItems(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.GetColumnHeaderItems() : null;
+    }
+
+    static long[] dispatchGetRowHeaderItems(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.GetRowHeaderItems() : null;
+    }
+
+    static void dispatchToggle(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        if (accessible != null) {
+            accessible.Toggle();
+        }
+    }
+
+    static int dispatchGetToggleState(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.get_ToggleState() : 0;
+    }
+
+    static void dispatchCollapse(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        if (accessible != null) {
+            accessible.Collapse();
+        }
+    }
+
+    static void dispatchExpand(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        if (accessible != null) {
+            accessible.Expand();
+        }
+    }
+
+    static int dispatchGetExpandCollapseState(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.get_ExpandCollapseState() : 0;
+    }
+
+    static boolean dispatchGetCanMove(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.get_CanMove() : false;
+    }
+
+    static boolean dispatchGetCanResize(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.get_CanResize() : false;
+    }
+
+    static boolean dispatchGetCanRotate(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.get_CanRotate() : false;
+    }
+
+    static void dispatchMove(long accessibleId, double x, double y) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        if (accessible != null) {
+            accessible.Move(x, y);
+        }
+    }
+
+    static void dispatchResize(long accessibleId, double width, double height) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        if (accessible != null) {
+            accessible.Resize(width, height);
+        }
+    }
+
+    static void dispatchRotate(long accessibleId, double degrees) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        if (accessible != null) {
+            accessible.Rotate(degrees);
+        }
+    }
+
+    static void dispatchScroll(long accessibleId, int horizontalAmount, int verticalAmount) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        if (accessible != null) {
+            accessible.Scroll(horizontalAmount, verticalAmount);
+        }
+    }
+
+    static void dispatchSetScrollPercent(long accessibleId, double horizontalPercent, double verticalPercent) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        if (accessible != null) {
+            accessible.SetScrollPercent(horizontalPercent, verticalPercent);
+        }
+    }
+
+    static boolean dispatchGetHorizontallyScrollable(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.get_HorizontallyScrollable() : false;
+    }
+
+    static double dispatchGetHorizontalScrollPercent(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.get_HorizontalScrollPercent() : 0.0;
+    }
+
+    static double dispatchGetHorizontalViewSize(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.get_HorizontalViewSize() : 0.0;
+    }
+
+    static boolean dispatchGetVerticallyScrollable(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.get_VerticallyScrollable() : false;
+    }
+
+    static double dispatchGetVerticalScrollPercent(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.get_VerticalScrollPercent() : 0.0;
+    }
+
+    static double dispatchGetVerticalViewSize(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        return accessible != null ? accessible.get_VerticalViewSize() : 0.0;
+    }
+
+    static void dispatchScrollIntoView(long accessibleId) {
+        WinAccessible accessible = ACCESSIBLES.get(accessibleId);
+        if (accessible != null) {
+            accessible.ScrollIntoView();
         }
     }
 }

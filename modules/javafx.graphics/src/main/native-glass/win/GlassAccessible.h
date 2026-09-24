@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,7 @@
 #define _GLASSACCESSIBLE_
 
 #include <UIAutomation.h>
+#include "glass_win_api.h"
 
 class GlassAccessible : public IRawElementProviderSimple,
                         public IRawElementProviderFragment,
@@ -50,7 +51,19 @@ class GlassAccessible : public IRawElementProviderSimple,
 {
 
 public:
-    GlassAccessible(JNIEnv* env, jobject jAccessible);
+    /*
+     * accessibleId is the id Java assigns to the WinAccessible (glass_win_api.h, IDENTITY). 0 is this
+     * library's "no Java peer" value and is what the sibling-range guards test for.
+     */
+    GlassAccessible(int64_t accessibleId);
+
+    int64_t GetId() { return m_id; }
+
+    /* glass_win_api.h's gwin_a11y_set_callbacks: by value, NULL slots become no-ops, NULL clears. */
+    static void SetCallbacks(const GwinAccessibleCallbacks* cb);
+
+    /* The installed table, or NULL when none is installed and every upcall site answers E_FAIL. */
+    static const GwinAccessibleCallbacks* Callbacks();
 
     // IUnknown methods
     IFACEMETHODIMP_(ULONG) AddRef();
@@ -167,21 +180,72 @@ public:
     // IScrollItemProvider
     IFACEMETHODIMP ScrollIntoView();
 
-    static HRESULT copyVariant(JNIEnv *env, jobject jVariant, VARIANT* pRetVal);
-    static HRESULT copyString(JNIEnv *env, jstring jString, BSTR* pbstrVal);
-    static HRESULT copyList(JNIEnv *env, jarray list, SAFEARRAY** pparrayVal, VARTYPE vt);
+    /*
+     * The callback-table forms of GlassAccessible::copyString / copyList / copyVariant as commit
+     * 033187ad90 had them: same steps, same failure codes, a gwin_alloc-ed block instead of a jarray /
+     * jstring. Each RELEASES the block it was given with gwin_free on every path - a slot hands its
+     * block over (glass_win_api.h, OWNERSHIP) - and treats a NULL block as the null the Java target
+     * returned, i.e. E_FAIL. A status other than GWIN_OK is E_FAIL with pRetVal untouched, which is
+     * where the JNI arm returned after CheckAndClearException.
+     */
+    static HRESULT copyBlockString(int32_t status, uint16_t* block, int32_t len, BSTR* pbstrVal);
+    static HRESULT copyBlockList(int32_t status, void* block, int32_t count, SAFEARRAY** pparrayVal,
+                                 VARTYPE vt);
+
+    /*
+     * GwinVariant -> VARIANT, copyVariant's switch over a flat struct. takeOwnership frees the
+     * variant's two blocks with gwin_free (the out-parameter direction: a slot handed them over);
+     * false leaves them to the caller (the gwin_a11y_raise_property_changed direction).
+     */
+    static HRESULT variantFromGwin(const GwinVariant* variant, VARIANT* pRetVal, bool takeOwnership);
+
+    /* GWIN_OK -> S_OK, anything else -> the E_FAIL every JNI arm returned for a pending Throwable. */
+    static HRESULT statusToHr(int32_t status);
+
+    /*
+     * The GlassAccessible* a slot handed back, AddRefed as GlassAccessible::callLongMethod of commit
+     * 033187ad90 AddRefed it - and NULL when the slot failed, where callLongMethod returned before
+     * touching the caller's pointer.
+     */
+    static GlassAccessible* takeAccessible(int32_t status, int64_t value);
 
 private:
     virtual ~GlassAccessible();
 
-    /* Call the method specified by 'mid', AddRef the returning ptr (expects result to be IUnkonwn) */
-    virtual HRESULT callLongMethod(jmethodID mid, GlassAccessible **pRetVal, ...);
+    /* The copyBlockString / copyBlockList steps without the gwin_free, for the GwinVariant fields,
+     * whose blocks are released once for the whole struct. A NULL buffer is E_FAIL, as it was. */
+    static HRESULT copyRawString(const uint16_t* text, int32_t len, BSTR* pbstrVal);
+    static HRESULT copyRawList(const void* data, int32_t count, SAFEARRAY** pparrayVal, VARTYPE vt);
 
-    /* Call the method specified by 'mid' and converts the returning jarray to a SAFEARRAY */
-    virtual HRESULT callArrayMethod(jmethodID mid, VARTYPE vt, SAFEARRAY **pRetVal);
+    /*
+     * The three slot shapes that repeat: no out-parameter, one int32 out-parameter (BOOL and the UIA
+     * enums are int-sized, hence the template) and one double out-parameter. Each pre-zeroes the
+     * out-parameter and writes it BEFORE it looks at the status, because the JNI arm wrote *pRetVal
+     * before it checked for a pending exception.
+     */
+    HRESULT slotVoid(int32_t (*slot)(int64_t))
+    {
+        return statusToHr(slot(m_id));
+    }
+
+    template <typename T> HRESULT slotInt(int32_t (*slot)(int64_t, int32_t*), T* pRetVal)
+    {
+        int32_t value = 0;
+        int32_t status = slot(m_id, &value);
+        *pRetVal = (T) value;
+        return statusToHr(status);
+    }
+
+    HRESULT slotDouble(int32_t (*slot)(int64_t, double*), double* pRetVal)
+    {
+        double value = 0.0;
+        int32_t status = slot(m_id, &value);
+        *pRetVal = value;
+        return statusToHr(status);
+    }
 
     ULONG m_refCount;
-    jobject m_jAccessible;  // The GlobalRef Java side object
+    int64_t m_id;           // The Java-assigned id every callback slot carries; 0 = no Java peer
 
 };
 

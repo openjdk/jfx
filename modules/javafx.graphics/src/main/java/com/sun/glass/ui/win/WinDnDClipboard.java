@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,18 @@
  */
 package com.sun.glass.ui.win;
 
+import java.lang.foreign.MemorySegment;
+
+/**
+ * The drag-and-drop clipboard: the same peer as {@link WinSystemClipboard} wired to
+ * {@code DoDragDrop} instead of {@code OleSetClipboard}. Its two former natives are
+ * {@code gwin_dnd_push} and {@code gwin_dnd_dispose}; the other direction is the five id-less slots
+ * of {@code GwinDndCallbacks} whose peer is {@link #getInstance()} - the static method the JNI
+ * called by name, which <em>creates</em> the peer through {@code Clipboard.get(DND)} when none
+ * exists yet and throws off the application thread. Both are load-bearing (a drag from another
+ * application arrives before any Java code has asked for this clipboard), so the five
+ * {@code dispatch*} statics call it every time and never cache the instance.
+ */
 final class WinDnDClipboard extends WinSystemClipboard {
     public WinDnDClipboard(String name) {
         super(name);
@@ -31,7 +43,13 @@ final class WinDnDClipboard extends WinSystemClipboard {
 
     @Override protected void create() {}
 
-    @Override protected native void dispose();
+    /**
+     * {@code gwin_dnd_dispose}: {@code Release} and nothing else - no viewer chain, no flush; this
+     * peer never joined the chain ({@link #create} is a no-op) and that asymmetry is deliberate.
+     */
+    @Override protected void dispose() {
+        WinGlassNative.dndDispose(getPtr());
+    }
 
     @Override protected boolean isOwner() {
         return getDragButton() != 0;
@@ -43,9 +61,15 @@ final class WinDnDClipboard extends WinSystemClipboard {
     }
 
     /*
-     * public mime types to system clipboard
+     * public mime types to system clipboard: gwin_dnd_push publishes the new ClipboardData through
+     * set_data_object (before pushCommit, setDragImage and DoDragDrop), then BLOCKS for the whole
+     * drag in DoDragDrop's modal loop, during which the drag slots, fos_serialize and the dnd_*
+     * slots fire nested inside this call, and finally fires drag_action_performed then
+     * dnd_set_drag_button(0). The status is ignored, as the JNI ignored the HRESULT.
      */
-    @Override protected native void push(Object[] keys, int supportedActions);
+    @Override protected void push(Object[] keys, int supportedActions) {
+        int ignoredStatus = WinGlassNative.dndPush(getPtr(), nativeId(), keys, supportedActions);
+    }
 
     /*
      * extract clipboard snap-shot
@@ -53,11 +77,11 @@ final class WinDnDClipboard extends WinSystemClipboard {
     @Override protected boolean pop() {
         //The DnD buffer ownership coild not be suddenly changed
         //while active DnD operation.
-        return getPtr() != 0L;
+        return !MemorySegment.NULL.equals(getPtr());
     }
 
     /*
-     * called from native
+     * called from native, through the five dispatch statics below
      */
     private static WinDnDClipboard getInstance() {
         return (WinDnDClipboard)get(DND);
@@ -81,7 +105,7 @@ final class WinDnDClipboard extends WinSystemClipboard {
     }
 
     /*
-     * Called from native code
+     * Called from native code, through dispatchSetDragButton
      */
     private void setDragButton(int dragButton) {
         this.dragButton = dragButton;
@@ -99,10 +123,40 @@ final class WinDnDClipboard extends WinSystemClipboard {
     }
 
     /*
-     * Called from native code
+     * Called from native code, through dispatchSetSourceSupportedActions
      */
     private void setSourceSupportedActions(int sourceSupportedActions) {
         this.sourceSupportedActions = sourceSupportedActions;
     }
 
+    /*
+     * The dispatch half of the five id-less GwinDndCallbacks slots. Each resolves the peer with
+     * getInstance() - creating it, or throwing off the application thread, exactly as the JNI's
+     * CallStaticObjectMethod did - and the marshalling and exception barrier are WinGlassNative's.
+     */
+
+    /** {@code dnd_get_data_object}: the handle the drag clipboard holds, for the AddRef / Release in C. */
+    static MemorySegment dispatchGetDataObject() {
+        return getInstance().getPtr();
+    }
+
+    /** {@code dnd_set_data_object}: the object being dragged in, already AddRef'd by the C. */
+    static void dispatchSetDataObject(MemorySegment dataObject) {
+        getInstance().setPtr(dataObject);
+    }
+
+    /** {@code dnd_set_source_supported_actions}, from the prologue of every drag_enter / over / drop. */
+    static void dispatchSetSourceSupportedActions(int actions) {
+        getInstance().setSourceSupportedActions(actions);
+    }
+
+    /** {@code dnd_set_drag_button}: 0 from the tail of {@code gwin_dnd_push}; writes the static. */
+    static void dispatchSetDragButton(int button) {
+        getInstance().setDragButton(button);
+    }
+
+    /** {@code dnd_get_drag_button}: the static, read by the {@code GlassDropSource} constructor. */
+    static int dispatchGetDragButton() {
+        return getInstance().getDragButton();
+    }
 }

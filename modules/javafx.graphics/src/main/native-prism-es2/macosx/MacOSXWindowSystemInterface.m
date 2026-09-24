@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,34 +28,33 @@
 #import <OpenGL/CGLTypes.h>
 
 #import "../macosx-window-system.h"
-#import "com_sun_prism_es2_GLPixelFormat_Attributes.h"
 
-void *createPixelFormat(jint *ivalues) {
+void *createPixelFormat(const Es2PixelFormatAttrs *attrs) {
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
     NSOpenGLPixelFormatAttribute attribs[20];
     int index = 0;
 
-    if (ivalues == NULL) {
+    if (attrs == NULL) {
         return NULL;
     }
     attribs[index++] = NSOpenGLPFAAccelerated;
 
-    if (ivalues[com_sun_prism_es2_GLPixelFormat_Attributes_DOUBLEBUFFER] != 0) {
+    if (attrs->double_buffer != 0) {
         attribs[index++] = NSOpenGLPFADoubleBuffer;
     }
 
     attribs[index++] = NSOpenGLPFAAlphaSize;
-    attribs[index++] = ivalues[com_sun_prism_es2_GLPixelFormat_Attributes_ALPHA_SIZE];
+    attribs[index++] = attrs->alpha_size;
 
     attribs[index++] = NSOpenGLPFAColorSize;
     attribs[index++] =
-            ivalues[com_sun_prism_es2_GLPixelFormat_Attributes_RED_SIZE]
-            + ivalues[com_sun_prism_es2_GLPixelFormat_Attributes_GREEN_SIZE]
-            + ivalues[com_sun_prism_es2_GLPixelFormat_Attributes_BLUE_SIZE]
-            + ivalues[com_sun_prism_es2_GLPixelFormat_Attributes_ALPHA_SIZE];
+            attrs->red_size
+            + attrs->green_size
+            + attrs->blue_size
+            + attrs->alpha_size;
 
     attribs[index++] = NSOpenGLPFADepthSize;
-    attribs[index++] = ivalues[com_sun_prism_es2_GLPixelFormat_Attributes_DEPTH_SIZE];
+    attribs[index++] = attrs->depth_size;
 
 
     // Lets OpenGL know this context is offline renderer aware.
@@ -88,15 +87,15 @@ void *createContext(void *shareContext, void *view, void *pixelFormat,
     }
 
     if (nsView != NULL) {
-        jboolean viewReady = true;
+        int viewReady = 1;
 
         if ([nsView lockFocusIfCanDraw] == NO) {
-            viewReady = false;
+            viewReady = 0;
         } else {
             NSRect frame = [nsView frame];
             if ((frame.size.width == 0) || (frame.size.height == 0)) {
                 [nsView unlockFocus];
-                viewReady = false;
+                viewReady = 0;
             }
         }
 
@@ -135,16 +134,16 @@ void *getCurrentContext() {
     return nsContext;
 }
 
-jboolean makeCurrentContext(void *nsJContext) {
+int makeCurrentContext(void *nsJContext) {
     NSOpenGLContext *nsContext = (NSOpenGLContext *) nsJContext;
 
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
     [nsContext makeCurrentContext];
     [pool release];
-    return JNI_TRUE;
+    return 1;
 }
 
-jboolean clearCurrentContext(void *nsJContext) {
+int clearCurrentContext(void *nsJContext) {
     NSOpenGLContext *nsContext = (NSOpenGLContext *) nsJContext;
 
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
@@ -154,26 +153,26 @@ jboolean clearCurrentContext(void *nsJContext) {
     }
     [NSOpenGLContext clearCurrentContext];
     [pool release];
-    return JNI_TRUE;
+    return 1;
 }
 
-jboolean deleteContext(void *nsJContext) {
+int deleteContext(void *nsJContext) {
     NSOpenGLContext *nsContext = (NSOpenGLContext *) nsJContext;
 
     NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
     [nsContext clearDrawable];
     [nsContext release];
     [pool release];
-    return JNI_TRUE;
+    return 1;
 }
 
-jboolean flushBuffer(void *nsJContext) {
+int flushBuffer(void *nsJContext) {
     NSOpenGLContext *nsContext = (NSOpenGLContext *) nsJContext;
 
     NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
     [nsContext flushBuffer];
     [pool release];
-    return JNI_TRUE;
+    return 1;
 }
 
 void setSwapInterval(void *nsJContext, int swapInterval) {

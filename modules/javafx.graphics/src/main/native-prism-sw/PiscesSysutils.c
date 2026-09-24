@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,18 +25,18 @@
 
 #include <PiscesSysutils.h>
 
-static jboolean mem_Error_Flag = JNI_FALSE;
+static jboolean mem_Error_Flag = XNI_FALSE;
 
 void setMemErrorFlag() {
-    mem_Error_Flag = JNI_TRUE;
+    mem_Error_Flag = XNI_TRUE;
 }
 
 jboolean readAndClearMemErrorFlag() {
-    if (JNI_TRUE == mem_Error_Flag) {
-        mem_Error_Flag = JNI_FALSE;
-        return JNI_TRUE;
+    if (XNI_TRUE == mem_Error_Flag) {
+        mem_Error_Flag = XNI_FALSE;
+        return XNI_TRUE;
     } else {
-        return JNI_FALSE;
+        return XNI_FALSE;
     }
 }
 

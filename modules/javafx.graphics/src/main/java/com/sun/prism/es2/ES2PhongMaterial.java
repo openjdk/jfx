@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,28 +42,20 @@ class ES2PhongMaterial extends BasePhongMaterial {
 
     static int count = 0;
     private final ES2Context context;
-    private final long nativeHandle;
     TextureMap maps[] = new TextureMap[MAX_MAP_TYPE];
 
     Color diffuseColor = Color.WHITE;
     Color specularColor = Color.WHITE;
     boolean specularColorSet = false;
 
-    private ES2PhongMaterial(ES2Context context, long nativeHandle,
-            Disposer.Record disposerRecord) {
+    private ES2PhongMaterial(ES2Context context, Disposer.Record disposerRecord) {
         super(disposerRecord);
         this.context = context;
-        this.nativeHandle = nativeHandle;
         count++;
     }
 
     static ES2PhongMaterial create(ES2Context context) {
-        long nativeHandle = context.createES2PhongMaterial();
-        return new ES2PhongMaterial(context, nativeHandle, new ES2PhongMaterialDisposerRecord(context, nativeHandle));
-    }
-
-    long getNativeHandle() {
-        return nativeHandle;
+        return new ES2PhongMaterial(context, new ES2PhongMaterialDisposerRecord());
     }
 
     @Override
@@ -132,25 +124,16 @@ class ES2PhongMaterial extends BasePhongMaterial {
         return count;
     }
 
+    /**
+     * ES2PhongMaterial no longer owns a native PhongMaterialInfo: nCreateES2PhongMaterial
+     * / nReleaseES2PhongMaterial were dead (the struct's colour / map / light fields were
+     * never read - ES2PhongShader reads this object's Java fields directly) and have been
+     * removed. This record has nothing to release; it exists only so BaseGraphicsResource
+     * has a Disposer.Record to register.
+     */
     static class ES2PhongMaterialDisposerRecord implements Disposer.Record {
 
-        private final ES2Context context;
-        private long nativeHandle;
-
-        ES2PhongMaterialDisposerRecord(ES2Context context, long nativeHandle) {
-            this.context = context;
-            this.nativeHandle = nativeHandle;
-        }
-
-        void traceDispose() {}
-
         @Override
-        public void dispose() {
-            if (nativeHandle != 0L) {
-                traceDispose();
-                context.releaseES2PhongMaterial(nativeHandle);
-                nativeHandle = 0L;
-            }
-        }
+        public void dispose() {}
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,8 +26,6 @@
 #ifndef _Included_Trace
 #define _Included_Trace
 
-#include <jni.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -49,7 +47,7 @@ extern "C" {
 #define NWT_TRACE_VERBOSE2      5
 #define NWT_TRACE_MAX           (NWT_TRACE_VERBOSE2+1)
 
-void TraceImpl(int level, jboolean cr, const char *string, ...);
+void TraceImpl(int level, int cr, const char *string, ...);
 
 #if !defined DEBUG && !defined _DEBUG
     #define Trace(level, string)
@@ -72,58 +70,58 @@ void TraceImpl(int level, jboolean cr, const char *string, ...);
     #define TraceLn8(level, string, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)
 #else /* DEBUG  or _DEBUG */
 #define Trace(level, string) { \
-            TraceImpl(level, JNI_FALSE, string); \
+            TraceImpl(level, 0, string); \
         }
 #define Trace1(level, string, arg1) { \
-            TraceImpl(level, JNI_FALSE, string, arg1); \
+            TraceImpl(level, 0, string, arg1); \
         }
 #define Trace2(level, string, arg1, arg2) { \
-            TraceImpl(level, JNI_FALSE, string, arg1, arg2); \
+            TraceImpl(level, 0, string, arg1, arg2); \
         }
 #define Trace3(level, string, arg1, arg2, arg3) { \
-            TraceImpl(level, JNI_FALSE, string, arg1, arg2, arg3); \
+            TraceImpl(level, 0, string, arg1, arg2, arg3); \
         }
 #define Trace4(level, string, arg1, arg2, arg3, arg4) { \
-            TraceImpl(level, JNI_FALSE, string, arg1, arg2, arg3, arg4); \
+            TraceImpl(level, 0, string, arg1, arg2, arg3, arg4); \
         }
 #define Trace5(level, string, arg1, arg2, arg3, arg4, arg5) { \
-            TraceImpl(level, JNI_FALSE, string, arg1, arg2, arg3, arg4, arg5); \
+            TraceImpl(level, 0, string, arg1, arg2, arg3, arg4, arg5); \
         }
 #define Trace6(level, string, arg1, arg2, arg3, arg4, arg5, arg6) { \
-            TraceImpl(level, JNI_FALSE, string, arg1, arg2, arg3, arg4, arg5, arg6); \
+            TraceImpl(level, 0, string, arg1, arg2, arg3, arg4, arg5, arg6); \
         }
 #define Trace7(level, string, arg1, arg2, arg3, arg4, arg5, arg6, arg7) { \
-            TraceImpl(level, JNI_FALSE, string, arg1, arg2, arg3, arg4, arg5, arg6, arg7); \
+            TraceImpl(level, 0, string, arg1, arg2, arg3, arg4, arg5, arg6, arg7); \
         }
 #define Trace8(level, string, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) { \
-            TraceImpl(level, JNI_FALSE, string, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8); \
+            TraceImpl(level, 0, string, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8); \
         }
 #define TraceLn(level, string) { \
-            TraceImpl(level, JNI_TRUE, string); \
+            TraceImpl(level, 1, string); \
         }
 #define TraceLn1(level, string, arg1) { \
-            TraceImpl(level, JNI_TRUE, string, arg1); \
+            TraceImpl(level, 1, string, arg1); \
         }
 #define TraceLn2(level, string, arg1, arg2) { \
-            TraceImpl(level, JNI_TRUE, string, arg1, arg2); \
+            TraceImpl(level, 1, string, arg1, arg2); \
         }
 #define TraceLn3(level, string, arg1, arg2, arg3) { \
-            TraceImpl(level, JNI_TRUE, string, arg1, arg2, arg3); \
+            TraceImpl(level, 1, string, arg1, arg2, arg3); \
         }
 #define TraceLn4(level, string, arg1, arg2, arg3, arg4) { \
-            TraceImpl(level, JNI_TRUE, string, arg1, arg2, arg3, arg4); \
+            TraceImpl(level, 1, string, arg1, arg2, arg3, arg4); \
         }
 #define TraceLn5(level, string, arg1, arg2, arg3, arg4, arg5) { \
-            TraceImpl(level, JNI_TRUE, string, arg1, arg2, arg3, arg4, arg5); \
+            TraceImpl(level, 1, string, arg1, arg2, arg3, arg4, arg5); \
         }
 #define TraceLn6(level, string, arg1, arg2, arg3, arg4, arg5, arg6) { \
-            TraceImpl(level, JNI_TRUE, string, arg1, arg2, arg3, arg4, arg5, arg6); \
+            TraceImpl(level, 1, string, arg1, arg2, arg3, arg4, arg5, arg6); \
         }
 #define TraceLn7(level, string, arg1, arg2, arg3, arg4, arg5, arg6, arg7) { \
-            TraceImpl(level, JNI_TRUE, string, arg1, arg2, arg3, arg4, arg5, arg6, arg7); \
+            TraceImpl(level, 1, string, arg1, arg2, arg3, arg4, arg5, arg6, arg7); \
         }
 #define TraceLn8(level, string, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) { \
-            TraceImpl(level, JNI_TRUE, string, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8); \
+            TraceImpl(level, 1, string, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8); \
         }
 #endif /* DEBUG */
 
@@ -135,40 +133,40 @@ void TraceImpl(int level, jboolean cr, const char *string, ...);
  */
 
 #define RlsTrace(level, string) { \
-            TraceImpl(level, JNI_FALSE, string); \
+            TraceImpl(level, 0, string); \
         }
 #define RlsTrace1(level, string, arg1) { \
-            TraceImpl(level, JNI_FALSE, string, arg1); \
+            TraceImpl(level, 0, string, arg1); \
         }
 #define RlsTrace2(level, string, arg1, arg2) { \
-            TraceImpl(level, JNI_FALSE, string, arg1, arg2); \
+            TraceImpl(level, 0, string, arg1, arg2); \
         }
 #define RlsTrace3(level, string, arg1, arg2, arg3) { \
-            TraceImpl(level, JNI_FALSE, string, arg1, arg2, arg3); \
+            TraceImpl(level, 0, string, arg1, arg2, arg3); \
         }
 #define RlsTrace4(level, string, arg1, arg2, arg3, arg4) { \
-            TraceImpl(level, JNI_FALSE, string, arg1, arg2, arg3, arg4); \
+            TraceImpl(level, 0, string, arg1, arg2, arg3, arg4); \
         }
 #define RlsTrace5(level, string, arg1, arg2, arg3, arg4, arg5) { \
-            TraceImpl(level, JNI_FALSE, string, arg1, arg2, arg3, arg4, arg5); \
+            TraceImpl(level, 0, string, arg1, arg2, arg3, arg4, arg5); \
         }
 #define RlsTraceLn(level, string) { \
-            TraceImpl(level, JNI_TRUE, string); \
+            TraceImpl(level, 1, string); \
         }
 #define RlsTraceLn1(level, string, arg1) { \
-            TraceImpl(level, JNI_TRUE, string, arg1); \
+            TraceImpl(level, 1, string, arg1); \
         }
 #define RlsTraceLn2(level, string, arg1, arg2) { \
-            TraceImpl(level, JNI_TRUE, string, arg1, arg2); \
+            TraceImpl(level, 1, string, arg1, arg2); \
         }
 #define RlsTraceLn3(level, string, arg1, arg2, arg3) { \
-            TraceImpl(level, JNI_TRUE, string, arg1, arg2, arg3); \
+            TraceImpl(level, 1, string, arg1, arg2, arg3); \
         }
 #define RlsTraceLn4(level, string, arg1, arg2, arg3, arg4) { \
-            TraceImpl(level, JNI_TRUE, string, arg1, arg2, arg3, arg4); \
+            TraceImpl(level, 1, string, arg1, arg2, arg3, arg4); \
         }
 #define RlsTraceLn5(level, string, arg1, arg2, arg3, arg4, arg5) { \
-            TraceImpl(level, JNI_TRUE, string, arg1, arg2, arg3, arg4, arg5); \
+            TraceImpl(level, 1, string, arg1, arg2, arg3, arg4, arg5); \
         }
 
 #ifdef __cplusplus

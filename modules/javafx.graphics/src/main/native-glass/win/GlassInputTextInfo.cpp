@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,7 +47,7 @@ const DWORD GlassInputTextInfo::GCS_INDEX[5]= {
 };
 
 GlassInputTextInfo::GlassInputTextInfo(ViewContainer * const vc) :
-    m_flags(0), m_cursorPosW(0), m_jtext(NULL), m_pResultTextInfo(NULL), \
+    m_flags(0), m_cursorPosW(0), m_lpMergedW(NULL), m_cMergedW(0), m_pResultTextInfo(NULL), \
     m_cStrW(0), m_cClauseW(0), m_cAttrW(0), \
     m_lpStrW(NULL), m_lpClauseW(NULL), m_lpAttrW(NULL)
 { m_viewContainer = vc; }
@@ -126,24 +126,51 @@ GlassInputTextInfo::GetContextData(HIMC hIMC, const LPARAM flags) {
                                                 NULL, 0);
     }
 
-    JNIEnv *env = GetEnv();
-    if (m_cStrW > 0) {
-        m_jtext = MakeJavaString(env, m_lpStrW, m_cStrW);
-    }
-
     // Merge the string if necessary
     if (m_pResultTextInfo != NULL) {
-        jstring jresultText = m_pResultTextInfo->GetText();
-        if (m_jtext != NULL && jresultText != NULL) {
-            m_jtext = ConcatJStrings(env, jresultText, m_jtext);
-        }
-        else if (m_jtext == NULL && jresultText != NULL) {
-            /* No composing text, assign the committed text to m_jtext */
-            m_jtext = (jstring)env->NewLocalRef(jresultText);
+        /* Result first, then composition, as the former ConcatJStrings put them. new (std::nothrow),
+         * so a failed join leaves m_lpMergedW NULL and GetTextW() answers NULL - what ConcatJStrings
+         * answered when its upcall failed - instead of throwing on a path that has no throw today.
+         * One owner per buffer: the result text stays owned by m_pResultTextInfo and is only read
+         * here. */
+        int cResultW = 0;
+        const wchar_t* lpResultW = m_pResultTextInfo->GetTextW(&cResultW);
+        if (m_cStrW > 0 && m_lpStrW != NULL && lpResultW != NULL && cResultW > 0) {
+            m_lpMergedW = new (std::nothrow) wchar_t[cResultW + m_cStrW];
+            if (m_lpMergedW != NULL) {
+                memcpy(m_lpMergedW, lpResultW, cResultW * sizeof(wchar_t));
+                memcpy(m_lpMergedW + cResultW, m_lpStrW, m_cStrW * sizeof(wchar_t));
+                m_cMergedW = cResultW + m_cStrW;
+            }
         }
     }
 
     return 0;
+}
+
+/*
+ * The former GetText()'s three cases over the wide buffers: the join when both strings existed (NULL
+ * if the join failed, as ConcatJStrings then returned NULL), else this object's string, else the
+ * result string borrowed from m_pResultTextInfo (the former jstring alias case), else nothing.
+ */
+const wchar_t* GlassInputTextInfo::GetTextW(int* outLen) const {
+    int cResultW = 0;
+    const wchar_t* lpResultW = m_pResultTextInfo != NULL ? m_pResultTextInfo->GetTextW(&cResultW) : NULL;
+    const wchar_t* lpOwnW = (m_cStrW > 0 && m_lpStrW != NULL) ? m_lpStrW : NULL;
+    if (lpOwnW != NULL && lpResultW != NULL) {
+        *outLen = m_cMergedW;
+        return m_lpMergedW;
+    }
+    if (lpOwnW != NULL) {
+        *outLen = m_cStrW;
+        return lpOwnW;
+    }
+    if (lpResultW != NULL) {
+        *outLen = cResultW;
+        return lpResultW;
+    }
+    *outLen = 0;
+    return NULL;
 }
 
 /*
@@ -152,15 +179,10 @@ GlassInputTextInfo::GetContextData(HIMC hIMC, const LPARAM flags) {
  */
 GlassInputTextInfo::~GlassInputTextInfo() {
 
-    if (m_jtext) {
-        JNIEnv *env = GetEnv();
-        env->DeleteLocalRef(m_jtext);
-        m_jtext = NULL;
-    }
-
     delete [] m_lpStrW;
     delete [] m_lpClauseW;
     delete [] m_lpAttrW;
+    delete [] m_lpMergedW;
 
     if (m_pResultTextInfo) {
         delete m_pResultTextInfo;
@@ -168,17 +190,6 @@ GlassInputTextInfo::~GlassInputTextInfo() {
     }
 }
 
-
-jstring GlassInputTextInfo::MakeJavaString(JNIEnv* env, LPWSTR lpStrW, int cStrW) {
-
-    if (env == NULL || lpStrW == NULL || cStrW == 0) {
-        return NULL;
-    } else {
-        jstring jStr = env->NewString(reinterpret_cast<jchar*>(lpStrW), cStrW);
-        if (CheckAndClearException(env)) return NULL;
-        return jStr;
-    }
-}
 
 //
 //  Convert Clause Information for DBCS string to that for Unicode string
@@ -203,8 +214,6 @@ int GlassInputTextInfo::GetClauseInfo(int*& lpBndClauseW) {
         delete [] bndClauseW;
         throw;
     }
-
-    JNIEnv *env = GetEnv();
 
     for ( int cls = 0; cls < m_cClauseW; cls++ ) {
         bndClauseW[cls] = m_lpClauseW[cls];

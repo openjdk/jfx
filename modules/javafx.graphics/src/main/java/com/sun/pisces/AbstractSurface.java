@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,10 +26,11 @@
 package com.sun.pisces;
 
 import com.sun.prism.impl.Disposer;
+import java.lang.foreign.MemorySegment;
 
 public abstract class AbstractSurface implements Surface {
 
-    private long nativePtr = 0L;
+    private MemorySegment nativePtr = MemorySegment.NULL;
     private int width;
     private int height;
 
@@ -48,6 +49,26 @@ public abstract class AbstractSurface implements Surface {
         this.height = height;
     }
 
+    /**
+     * Creates the native surface descriptor. The subclass constructor calls this once, after it has
+     * validated its pixel storage, and then {@link #addDisposerRecord()}.
+     */
+    final void createNativeSurface(int dataType) {
+        this.nativePtr = PiscesNative.surfaceCreate(dataType, width, height);
+    }
+
+    /** The native surface descriptor {@link PiscesRenderer} binds a renderer to. */
+    final MemorySegment nativeSurface() {
+        return nativePtr;
+    }
+
+    /**
+     * The pixel storage of this surface: {@code width * height} premultiplied ARGB ints, row-major,
+     * stride {@code width}, offset 0. The C side never retains it; it is passed to every call that
+     * reads or writes pixels. {@link JavaSurface} is the only subclass and returns its {@code int[]}.
+     */
+    abstract int[] pixels();
+
     protected void addDisposerRecord() {
         Disposer.addRecord(this, new AbstractSurfaceDisposerRecord(nativePtr));
     }
@@ -55,18 +76,14 @@ public abstract class AbstractSurface implements Surface {
     @Override
     public final void getRGB(int[] argb, int offset, int scanLength, int x, int y, int width, int height) {
         this.rgbCheck(argb.length, offset, scanLength, x, y, width, height);
-        this.getRGBImpl(argb, offset, scanLength, x, y, width, height);
+        PiscesNative.surfaceGetRGB(nativePtr, pixels(), argb, offset, scanLength, x, y, width, height);
     }
-
-    private native void getRGBImpl(int[] argb, int offset, int scanLength, int x, int y, int width, int height);
 
     @Override
     public final void setRGB(int[] argb, int offset, int scanLength, int x, int y, int width, int height) {
         this.rgbCheck(argb.length, offset, scanLength, x, y, width, height);
-        this.setRGBImpl(argb, offset, scanLength, x, y, width, height);
+        PiscesNative.surfaceSetRGB(nativePtr, pixels(), argb, offset, scanLength, x, y, width, height);
     }
-
-    private native void setRGBImpl(int[] argb, int offset, int scanLength, int x, int y, int width, int height);
 
     private void rgbCheck(int arr_length, int offset, int scanLength, int x, int y, int width, int height) {
         if (x < 0 || x >= this.width) {
@@ -105,20 +122,18 @@ public abstract class AbstractSurface implements Surface {
         }
     }
 
-    private static native void disposeNative(long nativeHandle);
-
     private static class AbstractSurfaceDisposerRecord implements Disposer.Record {
-        private long nativeHandle;
+        private MemorySegment nativeHandle;
 
-        AbstractSurfaceDisposerRecord(long nh) {
+        AbstractSurfaceDisposerRecord(MemorySegment nh) {
             nativeHandle = nh;
         }
 
         @Override
         public void dispose() {
-            if (nativeHandle != 0L) {
-                disposeNative(nativeHandle);
-                nativeHandle = 0L;
+            if (nativeHandle != null) {
+                PiscesNative.surfaceDispose(nativeHandle);
+                nativeHandle = null;
             }
         }
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,9 @@ package com.sun.glass.ui.win;
 
 import static javafx.scene.AccessibleAttribute.*;
 import java.text.BreakIterator;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 import com.sun.javafx.util.Utils;
 import javafx.geometry.Bounds;
@@ -41,10 +44,27 @@ import javafx.scene.text.FontWeight;
  */
 class WinTextRangeProvider {
 
-    private native static void _initIDs();
+    /*
+     * Where _initIDs stood: the 18 jmethodIDs it cached are the slots of GwinTextRangeCallbacks, and the
+     * install writes both accessibility tables, so whichever of this class and WinAccessible initializes
+     * first the library has both before the first provider exists (commit 033187ad90,
+     * GlassTextRangeProvider.cpp).
+     */
     static {
-        _initIDs();
+        WinGlassNative.installAccessibilityCallbacks();
     }
+
+    /**
+     * Every live range, by the id the callback table carries - the {@code NewGlobalRef} of
+     * {@code GlassTextRangeProvider}'s constructor. Load-bearing, not an optimisation: {@code Clone},
+     * {@code RangeFromPoint}, {@code FindText}, {@code FindAttribute} and {@code RangeFromChild} hand out
+     * ranges that nothing in Java retains, and this entry is the only thing that keeps such a peer
+     * reachable while its COM caller owns the one reference. Dropped only by {@link #dispatchDisposed}.
+     */
+    private static final Map<Long, WinTextRangeProvider> RANGES = new ConcurrentHashMap<>();
+
+    /** Ids from 1: 0 is the library's "no Java peer", which the sibling-range guards test. */
+    private static final AtomicLong NEXT_RANGE_ID = new AtomicLong(1L);
 
     /* TextPatternRangeEndpoint */
     private static final int TextPatternRangeEndpoint_Start    = 0;
@@ -72,15 +92,25 @@ class WinTextRangeProvider {
     private int start, end;
     private WinAccessible accessible;
     private long peer;
-    /* Creates a GlassTextRangeProvider linked to the caller (GlobalRef) */
-    private native long _createTextRangeProvider(long accessible);
 
-    /* Releases the GlassTextRangeProvider and deletes the GlobalRef */
-    private native void _destroyTextRangeProvider(long textRangeProvider);
+    /** The id {@link #RANGES} holds this range under; 0 when it was never registered. */
+    private long rangeId;
 
+    /*
+     * The entry is published before gwin_a11y_text_range_create, so that a callback arriving inside the
+     * creating downcall finds its peer. A create that fails answers 0 - which this class does not check
+     * and never did - and takes the entry back out, because no GlassTextRangeProvider exists to ever
+     * fire range_disposed for it.
+     */
     WinTextRangeProvider(WinAccessible accessible) {
         this.accessible = accessible;
-        peer = _createTextRangeProvider(accessible.getNativeAccessible());
+        this.rangeId = NEXT_RANGE_ID.getAndIncrement();
+        RANGES.put(this.rangeId, this);
+        peer = WinGlassNative.createTextRange(accessible.getNativeAccessible(), this.rangeId);
+        if (peer == 0L) {
+            RANGES.remove(this.rangeId);
+            this.rangeId = 0L;
+        }
         id = idCount++;
     }
 
@@ -88,8 +118,14 @@ class WinTextRangeProvider {
         return peer;
     }
 
+    /*
+     * Release, not delete, and the registry entry stays until the library fires range_disposed. There is
+     * no guard on a zero peer, here or in the library: a range that failed to be created crashes at this
+     * call, exactly as it did through _destroyTextRangeProvider. Carried as it is; fixing it is a
+     * separate change with its own test.
+     */
     void dispose() {
-        _destroyTextRangeProvider(peer);
+        WinGlassNative.destroyTextRange(peer);
         peer = 0L;
     }
 
@@ -642,4 +678,151 @@ class WinTextRangeProvider {
         return new long[0];
     }
 
+
+    /*
+     * The dispatch half of the 19 slots of GwinTextRangeCallbacks: registry lookup, then the private
+     * ITextRangeProvider method. An id the registry does not know answers the slot default silently -
+     * WinView's rule for a stale peer - which cannot happen while the COM object is alive, because the
+     * entry outlives it by construction. The facade's stub does the marshalling and catches everything.
+     */
+
+    /** The id this range is registered under, 0 if it never was; for the tests that drive a slot. */
+    long rangeId() {
+        return rangeId;
+    }
+
+    /** How many ranges the registry holds: the FFM counterpart of the JNI's live global refs. */
+    static int rangeRegistrySize() {
+        return RANGES.size();
+    }
+
+    /**
+     * {@code range_disposed}: the last COM reference on the {@code GlassTextRangeProvider} of
+     * {@code rangeId} is gone. Where {@code DeleteGlobalRef} stood in {@code ~GlassTextRangeProvider},
+     * and the only place an entry may be dropped; it can arrive on the COM/RPC thread that released the
+     * reference.
+     * <p>
+     * <b>Constraint.</b> That thread is attached to the JVM by the upcall stub as a daemon thread with
+     * a {@code null} context class loader, so this body must touch the registry and nothing else: no
+     * scene graph, no {@code Toolkit}, no class loading.
+     */
+    static void dispatchDisposed(long rangeId) {
+        RANGES.remove(rangeId);
+    }
+
+    /*
+     * The three slots that carry a sibling range's id. The library keeps the guard it had - a NULL range,
+     * or one whose stored id is 0, answers FALSE resp. nothing without dialling the slot - so a slot that
+     * does arrive carries a non-zero id whose COM object is alive, and therefore whose entry is here.
+     * An id that is nevertheless unknown takes the stale-peer path rather than the NullPointerException
+     * the JNI would have raised, which no caller can reach.
+     */
+
+    static boolean dispatchCompare(long rangeId, long otherRangeId) {
+        WinTextRangeProvider range = RANGES.get(rangeId);
+        // Compare(null) is false, which is the answer the library's own NULL guard gives.
+        return range != null && range.Compare(RANGES.get(otherRangeId));
+    }
+
+    static int dispatchCompareEndpoints(long rangeId, int endpoint, long otherRangeId, int targetEndpoint) {
+        WinTextRangeProvider range = RANGES.get(rangeId);
+        WinTextRangeProvider target = RANGES.get(otherRangeId);
+        if (range == null || target == null) {
+            return 0;
+        }
+        return range.CompareEndpoints(endpoint, target, targetEndpoint);
+    }
+
+    static void dispatchMoveEndpointByRange(long rangeId, int endpoint, long otherRangeId, int targetEndpoint) {
+        WinTextRangeProvider range = RANGES.get(rangeId);
+        WinTextRangeProvider target = RANGES.get(otherRangeId);
+        if (range != null && target != null) {
+            range.MoveEndpointByRange(endpoint, target, targetEndpoint);
+        }
+    }
+
+    static long dispatchClone(long rangeId) {
+        WinTextRangeProvider range = RANGES.get(rangeId);
+        return range != null ? range.Clone() : 0L;
+    }
+
+    static void dispatchExpandToEnclosingUnit(long rangeId, int unit) {
+        WinTextRangeProvider range = RANGES.get(rangeId);
+        if (range != null) {
+            range.ExpandToEnclosingUnit(unit);
+        }
+    }
+
+    static long dispatchFindAttribute(long rangeId, int attributeId, WinVariant value, boolean backward) {
+        WinTextRangeProvider range = RANGES.get(rangeId);
+        return range != null ? range.FindAttribute(attributeId, value, backward) : 0L;
+    }
+
+    static long dispatchFindText(long rangeId, String text, boolean backward, boolean ignoreCase) {
+        WinTextRangeProvider range = RANGES.get(rangeId);
+        return range != null ? range.FindText(text, backward, ignoreCase) : 0L;
+    }
+
+    static WinVariant dispatchGetAttributeValue(long rangeId, int attributeId) {
+        WinTextRangeProvider range = RANGES.get(rangeId);
+        return range != null ? range.GetAttributeValue(attributeId) : null;
+    }
+
+    static double[] dispatchGetBoundingRectangles(long rangeId) {
+        WinTextRangeProvider range = RANGES.get(rangeId);
+        return range != null ? range.GetBoundingRectangles() : null;
+    }
+
+    static long dispatchGetEnclosingElement(long rangeId) {
+        WinTextRangeProvider range = RANGES.get(rangeId);
+        return range != null ? range.GetEnclosingElement() : 0L;
+    }
+
+    static String dispatchGetText(long rangeId, int maxLength) {
+        WinTextRangeProvider range = RANGES.get(rangeId);
+        return range != null ? range.GetText(maxLength) : null;
+    }
+
+    static int dispatchMove(long rangeId, int unit, int count) {
+        WinTextRangeProvider range = RANGES.get(rangeId);
+        return range != null ? range.Move(unit, count) : 0;
+    }
+
+    static int dispatchMoveEndpointByUnit(long rangeId, int endpoint, int unit, int count) {
+        WinTextRangeProvider range = RANGES.get(rangeId);
+        return range != null ? range.MoveEndpointByUnit(endpoint, unit, count) : 0;
+    }
+
+    static void dispatchSelect(long rangeId) {
+        WinTextRangeProvider range = RANGES.get(rangeId);
+        if (range != null) {
+            range.Select();
+        }
+    }
+
+    static void dispatchAddToSelection(long rangeId) {
+        WinTextRangeProvider range = RANGES.get(rangeId);
+        if (range != null) {
+            range.AddToSelection();
+        }
+    }
+
+    static void dispatchRemoveFromSelection(long rangeId) {
+        WinTextRangeProvider range = RANGES.get(rangeId);
+        if (range != null) {
+            range.RemoveFromSelection();
+        }
+    }
+
+    static void dispatchScrollIntoView(long rangeId, boolean alignToTop) {
+        WinTextRangeProvider range = RANGES.get(rangeId);
+        if (range != null) {
+            range.ScrollIntoView(alignToTop);
+        }
+    }
+
+    static long[] dispatchGetChildren(long rangeId) {
+        WinTextRangeProvider range = RANGES.get(rangeId);
+        return range != null ? range.GetChildren() : null;
+    }
 }

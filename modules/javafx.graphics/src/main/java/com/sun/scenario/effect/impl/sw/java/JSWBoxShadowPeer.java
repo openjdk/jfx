@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -138,7 +138,7 @@ public class JSWBoxShadowPeer extends JSWEffectPeer<BoxRenderState> {
 
         Rectangle resBounds =
             new Rectangle(srcr.x - growx/2, srcr.y - growy/2, curw, curh);
-        return new ImageData(getFilterContext(), cur, resBounds);
+        return new ImageData(getFilterContext(), cur, resBounds, inputs[0].getTransform());
     }
 
     protected void filterHorizontalBlack(int dstPixels[], int dstw, int dsth, int dstscan,

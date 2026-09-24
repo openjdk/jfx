@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,6 @@
 
 package com.sun.prism.es2;
 
-import com.sun.javafx.PlatformUtil;
 import com.sun.prism.Image;
 import com.sun.prism.Texture;
 import com.sun.prism.MediaFrame;
@@ -355,16 +354,13 @@ class ES2Texture<T extends ES2TextureData> extends BaseTexture<ES2TextureResourc
                 // call ResourceFactory.isFormatSupported() to check availability.
                 pixelFormat = GLContext.GL_BGRA;
                 if (!isGL2) {
-                    // BGRA supported on iOS
-                    if (!PlatformUtil.isIOS()) {
-                        // for OpenGLES, BGRA can be supported by extension - if
-                        // we have it, use it
-                        if (ES2Pipeline.glFactory.isGLExtensionSupported("GL_EXT_texture_format_BGRA8888"))
-                        {
-                            internalFormat = pixelFormat = GLContext.GL_BGRA;
-                        } else {
-                            pixelFormat = GLContext.GL_RGBA;
-                        }
+                    // for OpenGLES, BGRA can be supported by extension - if
+                    // we have it, use it
+                    if (ES2Pipeline.glFactory.isGLExtensionSupported("GL_EXT_texture_format_BGRA8888"))
+                    {
+                        internalFormat = pixelFormat = GLContext.GL_BGRA;
+                    } else {
+                        pixelFormat = GLContext.GL_RGBA;
                     }
                     pixelType = GLContext.GL_UNSIGNED_BYTE;
                 } else {
@@ -416,7 +412,7 @@ class ES2Texture<T extends ES2TextureData> extends BaseTexture<ES2TextureResourc
                 throw new InternalError("Image format not supported: " + format);
         }
 
-        if (!isGL2 && (internalFormat != pixelFormat) && !PlatformUtil.isIOS()) {
+        if (!isGL2 && (internalFormat != pixelFormat)) {
             throw new InternalError(
                     "On ES 2.0 device, internalFormat must match pixelFormat");
         }

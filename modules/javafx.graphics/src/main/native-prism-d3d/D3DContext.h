@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -141,16 +141,16 @@ public:
     D3DPOOL getResourcePool() { return defaulResourcePool; }
 
     HRESULT SetRenderTarget(IDirect3DSurface9 *pSurface, IDirect3DSurface9 **ppTargetDepthSurface, BOOL depthBuffer, BOOL msaa);
-    HRESULT SetCameraPosition(jdouble camPosX, jdouble camPosY, jdouble camPosZ);
+    HRESULT SetCameraPosition(double camPosX, double camPosY, double camPosZ);
     HRESULT SetProjViewMatrix(BOOL isOrtho,
-                              jdouble m00, jdouble m01, jdouble m02, jdouble m03,
-                              jdouble m10, jdouble m11, jdouble m12, jdouble m13,
-                              jdouble m20, jdouble m21, jdouble m22, jdouble m23,
-                              jdouble m30, jdouble m31, jdouble m32, jdouble m33);
-    HRESULT SetTransform(jdouble m00, jdouble m01, jdouble m02, jdouble m03,
-                         jdouble m10, jdouble m11, jdouble m12, jdouble m13,
-                         jdouble m20, jdouble m21, jdouble m22, jdouble m23,
-                         jdouble m30, jdouble m31, jdouble m32, jdouble m33);
+                              double m00, double m01, double m02, double m03,
+                              double m10, double m11, double m12, double m13,
+                              double m20, double m21, double m22, double m23,
+                              double m30, double m31, double m32, double m33);
+    HRESULT SetTransform(double m00, double m01, double m02, double m03,
+                         double m10, double m11, double m12, double m13,
+                         double m20, double m21, double m22, double m23,
+                         double m30, double m31, double m32, double m33);
     HRESULT ResetTransform();
 
     // clears the zbuffer, target or stencil depending on the passed flag,
@@ -185,10 +185,10 @@ public:
 
     void setWorldTransformIndentity();
 
-    void setWorldTransform(jdouble m00, jdouble m01, jdouble m02, jdouble m03,
-            jdouble m10, jdouble m11, jdouble m12, jdouble m13,
-            jdouble m20, jdouble m21, jdouble m22, jdouble m23,
-            jdouble m30, jdouble m31, jdouble m32, jdouble m33);
+    void setWorldTransform(double m00, double m01, double m02, double m03,
+            double m10, double m11, double m12, double m13,
+            double m20, double m21, double m22, double m23,
+            double m30, double m31, double m32, double m33);
 
     /**
      * Flushes the vertex queue and does end scene if

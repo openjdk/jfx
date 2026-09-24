@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,12 +25,11 @@
 
 package com.sun.prism.es2;
 
-import java.lang.annotation.Native;
 import com.sun.glass.ui.monocle.AcceleratedScreen;
 
 class MonocleGLContext extends GLContext {
 
-    @Native private AcceleratedScreen accScreen;
+    private AcceleratedScreen accScreen;
 
     MonocleGLContext(long nativeCtxInfo) {
         this.nativeCtxInfo = nativeCtxInfo;

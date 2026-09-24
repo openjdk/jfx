@@ -39,23 +39,151 @@
 #include "GlassClipboard.h"
 #include "GlassDnD.h"
 #include "Pixels.h"
+#include "GlassStringBlock.h"
 
-#include "com_sun_glass_ui_win_WinSystemClipboard.h"
-#include "com_sun_glass_ui_win_WinDndClipboard.h"
+#include "com_sun_glass_ui_Clipboard.h"
 
 
-// Helper LEAVE_MAIN_THREAD for GlassClipboard
-#define LEAVE_MAIN_THREAD_WITH_p  \
+// Helper LEAVE_MAIN_THREAD for the gwin_clipboard_* / gwin_dnd_* exports: the opaque
+// handle h instead of the peer's field. Inside the action `p` is the IDataObject*.
+#define LEAVE_MAIN_THREAD_WITH_handle(h)  \
     IDataObject * p;  \
     LEAVE_MAIN_THREAD;  \
-    ARG(p) = getPtr(env, obj);
+    ARG(p) = reinterpret_cast<IDataObject *>(h);
 
-jfieldID fidPtr = 0;
-static jfieldID fidName = 0;
-static jmethodID midFosSerialize = 0;
-jmethodID midContentChanged = 0;
-jmethodID midActionPerformed = 0;
 #define GALLOCFLG (GMEM_DDESHARE | GMEM_MOVEABLE | GMEM_ZEROINIT)
+
+/*
+ * ---- The callback tables of glass_win_api.h's clipboard section ----
+ *
+ * Installed by gwin_clipboard_set_callbacks / gwin_dnd_set_callbacks. A slot Java leaves NULL is
+ * replaced by the matching no-op below, so the upcall sites in this file, GlassDnD.cpp and
+ * GlassApplication.cpp dial slots without testing them; what those sites test is
+ * GlassClipboardCallbacks() / GlassDndCallbacks() returning NULL, which means "nothing installed,
+ * deliver nothing".
+ */
+namespace {
+
+int32_t NoopFosSerialize(int64_t, const uint16_t*, int64_t, uint8_t** out_data, int32_t* out_len)
+{
+    if (out_data != NULL) {
+        *out_data = NULL;
+    }
+    if (out_len != NULL) {
+        *out_len = 0;
+    }
+    return GWIN_OK;
+}
+int32_t NoopActionPerformed(int64_t, int32_t) { return GWIN_OK; }
+void NoopDragActionPerformed(int64_t, int32_t) {}
+void NoopContentChanged(int64_t) {}
+void NoopDisposePeer(int64_t) {}
+void NoopSetDataObject(int64_t, void*) {}
+void NoopDataObjectDisposed(int64_t) {}
+
+int32_t NoopDragNotify(int64_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t*) { return GWIN_OK; }
+int32_t NoopDragLeave(int64_t) { return GWIN_OK; }
+int32_t NoopDndGetDataObject(void** out_data_object)
+{
+    if (out_data_object != NULL) {
+        *out_data_object = NULL;
+    }
+    return GWIN_OK;
+}
+int32_t NoopDndSetDataObject(void*) { return GWIN_OK; }
+int32_t NoopDndSetInt(int32_t) { return GWIN_OK; }
+int32_t NoopDndGetDragButton(int32_t* out_button)
+{
+    if (out_button != NULL) {
+        *out_button = 0;
+    }
+    return GWIN_OK;
+}
+
+const GwinClipboardCallbacks NOOP_CLIPBOARD_CALLBACKS = {
+    NoopFosSerialize, NoopActionPerformed, NoopDragActionPerformed, NoopContentChanged, NoopDisposePeer,
+    NoopSetDataObject, NoopDataObjectDisposed
+};
+
+const GwinDndCallbacks NOOP_DND_CALLBACKS = {
+    NoopDragNotify, NoopDragNotify, NoopDragNotify, NoopDragLeave, NoopDndGetDataObject,
+    NoopDndSetDataObject, NoopDndSetInt, NoopDndSetInt, NoopDndGetDragButton
+};
+
+GwinClipboardCallbacks g_clipboardCallbacks = NOOP_CLIPBOARD_CALLBACKS;
+bool g_clipboardCallbacksInstalled = false;
+GwinDndCallbacks g_dndCallbacks = NOOP_DND_CALLBACKS;
+bool g_dndCallbacksInstalled = false;
+
+} // namespace
+
+const GwinClipboardCallbacks* GlassClipboardCallbacks()
+{
+    return g_clipboardCallbacksInstalled ? &g_clipboardCallbacks : NULL;
+}
+
+const GwinDndCallbacks* GlassDndCallbacks()
+{
+    return g_dndCallbacksInstalled ? &g_dndCallbacks : NULL;
+}
+
+/* By value - this library never retains the caller's struct - and a NULL slot keeps its no-op.
+ * Installed once, before any clipboard transfer can exist; not safe against a concurrent install - the flag is a
+ * plain bool and the table a plain struct assignment, with no release store between them. */
+void SetGlassClipboardCallbacks(const GwinClipboardCallbacks* cb)
+{
+    GwinClipboardCallbacks t = NOOP_CLIPBOARD_CALLBACKS;
+    if (cb != NULL) {
+        if (cb->fos_serialize) t.fos_serialize = cb->fos_serialize;
+        if (cb->action_performed) t.action_performed = cb->action_performed;
+        if (cb->drag_action_performed) t.drag_action_performed = cb->drag_action_performed;
+        if (cb->content_changed) t.content_changed = cb->content_changed;
+        if (cb->dispose_peer) t.dispose_peer = cb->dispose_peer;
+        if (cb->set_data_object) t.set_data_object = cb->set_data_object;
+        if (cb->data_object_disposed) t.data_object_disposed = cb->data_object_disposed;
+    }
+    g_clipboardCallbacksInstalled = false;
+    g_clipboardCallbacks = t;
+    g_clipboardCallbacksInstalled = cb != NULL;
+}
+
+void SetGlassDndCallbacks(const GwinDndCallbacks* cb)
+{
+    GwinDndCallbacks t = NOOP_DND_CALLBACKS;
+    if (cb != NULL) {
+        if (cb->drag_enter) t.drag_enter = cb->drag_enter;
+        if (cb->drag_over) t.drag_over = cb->drag_over;
+        if (cb->drag_drop) t.drag_drop = cb->drag_drop;
+        if (cb->drag_leave) t.drag_leave = cb->drag_leave;
+        if (cb->dnd_get_data_object) t.dnd_get_data_object = cb->dnd_get_data_object;
+        if (cb->dnd_set_data_object) t.dnd_set_data_object = cb->dnd_set_data_object;
+        if (cb->dnd_set_source_supported_actions) {
+            t.dnd_set_source_supported_actions = cb->dnd_set_source_supported_actions;
+        }
+        if (cb->dnd_set_drag_button) t.dnd_set_drag_button = cb->dnd_set_drag_button;
+        if (cb->dnd_get_drag_button) t.dnd_get_drag_button = cb->dnd_get_drag_button;
+    }
+    g_dndCallbacksInstalled = false;
+    g_dndCallbacks = t;
+    g_dndCallbacksInstalled = cb != NULL;
+}
+
+/*
+ * A byte block this library owns: one Java handed over through GwinClipboardCallbacks.fos_serialize
+ * (owned from the moment the slot returned) or one PopMemoryBytes / PopImageBytes built for
+ * gwin_clipboard_pop_bytes. Released with gwin_free on every path out of the owning scope - OLE_HRT
+ * throws in debug
+ * builds, and the destructor still runs.
+ */
+struct GwinOwnedBytes {
+    uint8_t* data;
+    int32_t len;
+    GwinOwnedBytes() : data(NULL), len(0) {}
+    ~GwinOwnedBytes() { gwin_free(data); }
+private:
+    GwinOwnedBytes(const GwinOwnedBytes&);
+    GwinOwnedBytes& operator = (const GwinOwnedBytes&);
+};
 
 
 
@@ -227,10 +355,10 @@ int create_mime_stuff()
 
 static const int _init_mime_stuff = create_mime_stuff();
 
-static const jint ACTIONS[] = {
-    com_sun_glass_ui_win_WinSystemClipboard_ACTION_COPY,
-    com_sun_glass_ui_win_WinSystemClipboard_ACTION_MOVE,
-    com_sun_glass_ui_win_WinSystemClipboard_ACTION_REFERENCE
+static const int32_t ACTIONS[] = {
+    com_sun_glass_ui_Clipboard_ACTION_COPY,
+    com_sun_glass_ui_Clipboard_ACTION_MOVE,
+    com_sun_glass_ui_Clipboard_ACTION_REFERENCE
 };
 
 static const DROPEFFECT DFS[] = {
@@ -239,7 +367,7 @@ static const DROPEFFECT DFS[] = {
     DROPEFFECT_LINK
 };
 
-DROPEFFECT getDROPEFFECT(jint actions)
+DROPEFFECT getDROPEFFECT(int32_t actions)
 {
     DROPEFFECT ret = DROPEFFECT_NONE;
     for (size_t i = 0; i < sizeof(ACTIONS)/sizeof(*ACTIONS); ++i) {
@@ -250,9 +378,9 @@ DROPEFFECT getDROPEFFECT(jint actions)
     return ret;
 }
 
-jint getACTION(DROPEFFECT df)
+int32_t getACTION(DROPEFFECT df)
 {
-    jint  ret = com_sun_glass_ui_win_WinSystemClipboard_ACTION_NONE;
+    int32_t ret = com_sun_glass_ui_Clipboard_ACTION_NONE;
     for (size_t i = 0; i < sizeof(DFS)/sizeof(*DFS); ++i) {
         if (df & DFS[i]) {
             ret |= ACTIONS[i];
@@ -277,7 +405,7 @@ public:
         Dispose();
     }
 
-    HRESULT Allocate(jsize size) {
+    HRESULT Allocate(int32_t size) {
         Dispose();
 
         data.tymed = TYMED_HGLOBAL;
@@ -286,16 +414,16 @@ public:
             return E_OUTOFMEMORY;
 
         initialized = true;
-        pdata = reinterpret_cast<jbyte *>(::GlobalLock(data.hGlobal));
+        pdata = reinterpret_cast<int8_t *>(::GlobalLock(data.hGlobal));
         if (NULL != pdata) {
-            cdata = jsize(::GlobalSize(data.hGlobal));
+            cdata = int32_t(::GlobalSize(data.hGlobal));
         }
         return S_OK;
     }
 
     HRESULT AllocateFromString(const _bstr_t &content) {
         OLE_DECL
-        jsize size = content.length()*sizeof(wchar_t);
+        int32_t size = content.length()*sizeof(wchar_t);
         OLE_HR = Allocate(size);
         if (SUCCEEDED(OLE_HR)) {
             memcpy(pdata, (const wchar_t *)content, size);
@@ -320,7 +448,7 @@ public:
     HRESULT Load(
         IN IDataObject *p,
         IN CLIPFORMAT cf,
-        IN jlong lindex = -1
+        IN int64_t lindex = -1
     ) {
         Dispose();
         FORMATETC fmt = {
@@ -336,18 +464,18 @@ public:
             initialized = true;
             //ordinal treatment with direct conversion
             if (TYMED_HGLOBAL == data.tymed && NULL != data.hGlobal) {
-                pdata = reinterpret_cast<jbyte *>(::GlobalLock(data.hGlobal));
+                pdata = reinterpret_cast<int8_t *>(::GlobalLock(data.hGlobal));
                 if (NULL != pdata) {
-                    cdata = jsize(::GlobalSize(data.hGlobal));
+                    cdata = int32_t(::GlobalSize(data.hGlobal));
                 }
             }
         }
         OLE_RETURN_HR
     }
 
-    inline bool isInternalAddress(const void *p, jsize size) const {
+    inline bool isInternalAddress(const void *p, int32_t size) const {
         return p >= pdata
-            && ((jbyte *)p + size) <= (pdata + cdata);
+            && ((int8_t *)p + size) <= (pdata + cdata);
     }
 
     inline bool isEmpty() const {
@@ -367,7 +495,7 @@ public:
         ZeroMemory(&data, sizeof(data));
     }
 
-    inline jbyte *getMem() {
+    inline int8_t *getMem() {
         return pdata;
     }
 
@@ -378,34 +506,40 @@ public:
             : _bstr_t(::SysAllocStringLen(reinterpret_cast<const wchar_t *>(pdata), cdata/sizeof(wchar_t)));
     }
 
-    inline jsize size() const {
+    inline int32_t size() const {
         return cdata;
     }
 
 private:
-    jbyte    *pdata;
-    jsize     cdata;
+    int8_t   *pdata;
+    int32_t   cdata;
     bool      initialized;
     STGMEDIUM data;
 };
 
-HRESULT PopMemory(
-    IN JNIEnv *env,
+// The JNI-free core of PopMemory: *pret is a malloc'd block of *plen bytes the caller frees
+// with gwin_free, or NULL with *plen 0 wherever the JNI produced a null byte[] - an OLE failure, an
+// empty medium, a payload cut to nothing (and, new, an exhausted heap).
+HRESULT PopMemoryBytes(
     IN CLIPFORMAT cf,
-    IN jlong lindex,
+    IN int64_t lindex,
     IN IDataObject *p,
-    IN OUT jbyteArray *pret)
+    OUT uint8_t **pret,
+    OUT int32_t *plen)
 {
     OLE_DECL
+
+    *pret = NULL;
+    *plen = 0;
 
     BinaryChunk me;
     OLE_HR = me.Load(p, cf, lindex);
     if (SUCCEEDED(OLE_HR) && !me.isEmpty()) {
-        jsize offset = 0L;
-        jlong cdata  = (jlong)me.size();
+        int32_t offset = 0L;
+        int64_t cdata  = (int64_t)me.size();
         if (CF_HDROP == cf) {
             offset = sizeof(DROPFILES);
-            cdata -= (jlong)offset;
+            cdata -= (int64_t)offset;
             DROPFILES *dropfiles = reinterpret_cast<DROPFILES *>(me.getMem());
             if (!dropfiles->fWide || cdata < 0) {
                 //ASCII file names aren't supported
@@ -414,7 +548,7 @@ HRESULT PopMemory(
             }
         } else if (CF_UNICODETEXT == cf){
             for (int i = 0; i < cdata - 1; i += 2) {
-                jbyte *pos = me.getMem() + i;
+                int8_t *pos = me.getMem() + i;
                 if (*(pos) == 0 && *(pos + 1) == 0) {
                     cdata = i;
                     break;
@@ -422,13 +556,12 @@ HRESULT PopMemory(
             }
         }
         if (0 != cdata) {
-            *pret = env->NewByteArray((jsize)cdata);
+            *pret = reinterpret_cast<uint8_t *>(malloc((size_t)cdata));
             if (NULL != *pret) {
-                env->SetByteArrayRegion(*pret, 0, (jsize)cdata, me.getMem() + offset);
+                memcpy(*pret, me.getMem() + offset, (size_t)cdata);
+                *plen = (int32_t)cdata;
             }
         }
-    } else {
-        *pret = NULL;
     }
 
     OLE_RETURN_HR
@@ -440,13 +573,19 @@ HRESULT PopMemory(
     (((DWORD)(x) >> 8) & 0xff00) | \
     ((DWORD)(x)  >> 24))
 
-HRESULT PopImage(
-    IN JNIEnv *env,
+// The JNI-free core of PopImage: *pret is a malloc'd block - 4-byte big-endian width and
+// height, then the 32-bit DIB rows - the caller frees with gwin_free, or NULL with *plen 0 where the
+// JNI produced a null byte[].
+HRESULT PopImageBytes(
     IN IDataObject *p,
-    IN OUT jbyteArray *pret)
+    OUT uint8_t **pret,
+    OUT int32_t *plen)
 {
     //image extractor
     STRACE(_T("image extractor"));
+
+    *pret = NULL;
+    *plen = 0;
 
     OLE_TRY
     IStoragePtr spStorage;
@@ -485,7 +624,7 @@ HRESULT PopImage(
             size.cx = MulDiv(size.cx, cxPerInch, HIMETRIC_INCH);
             size.cy = MulDiv(size.cy, cyPerInch, HIMETRIC_INCH);
 
-            jbyte *pPoints = NULL;
+            int8_t *pPoints = NULL;
             Bitmap bm(size.cx, size.cy, (void **)&pPoints, hMemoryDC);
             HBITMAP hBM = bm;
             if (!hBM) {
@@ -510,14 +649,15 @@ HRESULT PopImage(
                     if (FAILED(OLE_HR)) {
                         STRACE(_T("view->Draw Error:%08x"), OLE_HR);
                     } else {
-                        jsize cdata = jsize(size.cx) * jsize(size.cy) * 4 + 8;
-                        *pret = env->NewByteArray(cdata);
+                        int32_t cdata = int32_t(size.cx) * int32_t(size.cy) * 4 + 8;
+                        *pret = reinterpret_cast<uint8_t *>(malloc((size_t)cdata));
                         if (NULL != *pret) {
                             DWORD w = BSWAP_32(size.cx);
                             DWORD h = BSWAP_32(size.cy);
-                            env->SetByteArrayRegion(*pret, 0, 4, (jbyte *)&w);
-                            env->SetByteArrayRegion(*pret, 4, 4, (jbyte *)&h);
-                            env->SetByteArrayRegion(*pret, 8, cdata - 8, pPoints);
+                            memcpy(*pret, &w, 4);
+                            memcpy(*pret + 4, &h, 4);
+                            memcpy(*pret + 8, pPoints, (size_t)cdata - 8);
+                            *plen = cdata;
                         }
                     }
                     SelectBitmap(hMemoryDC, hOldBM);
@@ -531,26 +671,24 @@ HRESULT PopImage(
     OLE_RETURN_HR
 }
 
-HRESULT PushImage(
-    IN JNIEnv *env,
-    IN jbyteArray data,
+// The JNI-free core of PushImage: data is cdata bytes - 4-byte big-endian width and height,
+// then width * height BGRA pixels - and psm receives the DIB built from them.
+HRESULT PushImageBytes(
+    IN const int8_t *data,
+    IN int32_t cdata,
     IN OUT STGMEDIUM *psm)
 {
     OLE_TRY
-    jint cdata = env->GetArrayLength(data);
     if (cdata < 8) {
         OLE_HRT(E_INVALIDARG)
         OLE_RETURN_HR
     }
 
-    jint w, h;
-    env->GetByteArrayRegion(data, 0, 4, (jbyte *)&w);
-    env->GetByteArrayRegion(data, 4, 4, (jbyte *)&h);
+    int32_t w, h;
+    memcpy(&w, data, 4);
+    memcpy(&h, data + 4, 4);
     w = BSWAP_32(w);
     h = BSWAP_32(h);
-
-    OLE_HRT(checkJavaException(env))
-    OLE_RETURN_HR_IF_FAILED
 
     if (w <= 0 || h <= 0 || w > (INT_MAX / 4) / h) {
         OLE_HRT(E_INVALIDARG)
@@ -563,13 +701,11 @@ HRESULT PushImage(
         OLE_HRT(E_INVALIDARG)
         OLE_RETURN_HR
     }
-    jbyte *pBytes;
+    int8_t *pBytes;
     Bitmap bitmap(w, h, (void **)&pBytes);
     OLE_CHECK_NOTNULL((HBITMAP)bitmap)
     OLE_RETURN_HR_IF_FAILED
-    env->GetByteArrayRegion(data, 8, numPixels*4, pBytes);
-    OLE_HRT(checkJavaException(env))
-    OLE_RETURN_HR_IF_FAILED
+    memcpy(pBytes, data + 8, size_t(numPixels) * 4);
 
     psm->hGlobal = bitmap.GetGlobalDIB();
     psm->tymed = TYMED_HGLOBAL;
@@ -581,19 +717,26 @@ HRESULT PushImage(
 class ClipboardData : public IUnknownImpl<IDataObject>
 {
 public:
-    ClipboardData(JNIEnv *env, jobject clipboard, jstring name)
-    : m_name(env, name),
-      m_jclipboard(env->NewGlobalRef(clipboard))
+    /*
+     * Bound to the peer's clipboard_id - what every slot of GwinClipboardCallbacks receives (the
+     * JNI flavour over a global ref is gone). The name is not carried across the
+     * ABI; it fed only the two traces.
+     */
+    explicit ClipboardData(int64_t clipboardId)
+    : m_name(L""),
+      m_clipboardId(clipboardId)
     {
         STRACE(_T("{Clipboard %s"), (LPCWSTR)m_name);
     }
 
     virtual ~ClipboardData()
     {
-        if (m_jclipboard) {
-            JNIEnv* env = GetEnv();
-            env->DeleteGlobalRef(m_jclipboard);
-            m_jclipboard = NULL;
+        {
+            //data_object_disposed stands where the JNI flavour's DeleteGlobalRef stood
+            const GwinClipboardCallbacks* cb = GlassClipboardCallbacks();
+            if (cb != NULL) {
+                cb->data_object_disposed(m_clipboardId);
+            }
         }
         for (FMC2DATA::iterator i = m_fmc2data.begin(); m_fmc2data.end() != i; ++i) {
             ReleaseStgMedium(&i->second);
@@ -601,15 +744,18 @@ public:
         STRACE(_T("}Clipboard %s"), (LPCWSTR)m_name);
     }
 
-    HRESULT pushCommit(JNIEnv *env, jobjectArray keys, jint supportedActions) {
-        jint ckeys = env->GetArrayLength(keys);
-
+    /*
+     * JNI-free: mimes is a string block (glass_win_api.h) of ckeys mime names in the
+     * order Java's Set.toArray() gave them - the exports receive it from Java (the former Java_*
+     * push bodies built it from their jobjectArray).
+     */
+    HRESULT pushCommit(const uint16_t *mimes, int32_t ckeys, int32_t supportedActions) {
         bool hasUrl = false;
         bool hasFileContent = false;
         bool hasIEShortcutName = false;
         static const STGMEDIUM empty_data = {0};
-        for (jsize i = 0; i < ckeys; ++i) {
-            JString mime(env, (jstring)env->GetObjectArrayElement(keys, i));
+        const wchar_t *mime = reinterpret_cast<const wchar_t *>(mimes);
+        for (int32_t i = 0; i < ckeys; ++i, mime = GwinNextString(mime)) {
             if (wcscmp(MS_FILE_CONTENT, mime) == 0) {
                 //File content transfer.
                 //Need to be rewritten.
@@ -631,7 +777,7 @@ public:
                 -1L,
                 TYMED_HGLOBAL};
             m_fmc2data[fmt] = empty_data;
-            m_fmc2mime[fmt] = (LPCWSTR)mime;
+            m_fmc2mime[fmt] = mime;
         }
 
         //helpful extension for transferred data
@@ -661,7 +807,7 @@ public:
             m_fmc2mime[fmtFileContent] = GLASS_IE_URL_SHORTCUT_CONTENT;
         }
 
-        if (com_sun_glass_ui_win_WinSystemClipboard_ACTION_ANY != supportedActions) {
+        if (com_sun_glass_ui_Clipboard_ACTION_ANY != supportedActions) {
             BinaryChunk me;
             OLE_DECL
             OLE_HR = me.Allocate(sizeof(DROPEFFECT));
@@ -707,6 +853,90 @@ public:
         return S_OK;
     }
 
+    /*
+     * The JNI-free tail of GetData's Java-data branch: data / cdata are the bytes Java
+     * serialised for `mime`, psm receives the HGLOBAL medium built from them - the DIB for CF_DIB,
+     * the FILEGROUPDESCRIPTORW for the IE-shortcut name, the DROPFILES-prefixed list for CF_HDROP,
+     * a plain copy for everything else. GetData's table branch calls it.
+     */
+    HRESULT RenderBytes(CLIPFORMAT cf, const _bstr_t &mime, const int8_t *data, int32_t cdata, STGMEDIUM *psm)
+    {
+        OLE_TRY
+        if (CF_JAVA_BITMAP == cf) {
+            OLE_HRT(PushImageBytes(data, cdata, psm))
+        } else {
+            BinaryChunk me;
+            if (_bstr_t(GLASS_IE_URL_SHORTCUT_FILENAME) == mime) {
+                OLE_HRT(me.Allocate(sizeof(FILEGROUPDESCRIPTORW)))
+                FILEGROUPDESCRIPTORW *fgd = reinterpret_cast<FILEGROUPDESCRIPTORW *>(me.getMem());
+                //FILEGROUPDESCRIPTORW reserve exactly one file entry
+                ZeroMemory(fgd, sizeof(FILEGROUPDESCRIPTORW));
+                fgd->cItems = 1;
+                fgd->fgd->dwFlags = FD_UNICODE | FD_FILESIZE
+                    | FD_CREATETIME | FD_ACCESSTIME | FD_WRITESTIME;
+
+                size_t len = cdata/sizeof(wchar_t) + 1;
+                MemHolder<wchar_t> shortcutName(len);
+                wchar_t *name = shortcutName.get();
+                memcpy(name, data, cdata);
+
+                //file name validation
+                name[len-1] = 0;
+                for (wchar_t *cur = name; *cur; ++cur)
+                    if (wcschr(L"|\\?*<\"\':>+[]/", *cur) != NULL)
+                        name = cur + 1;
+                //[name] points to the last valid for NTSF/VFAT subsequence of chars or it is empty
+                //http://en.wikipedia.org/wiki/Filename
+                if (*name == 0) {
+                    OLE_HRT(E_INVALIDARG)
+                }
+                if (wcslen(name) > (MAX_PATH - 5)) {
+                    name[MAX_PATH - 5] = 0;
+                }
+                wchar_t *name_in = fgd->fgd->cFileName;
+                wcscpy_s(name_in, MAX_PATH, name);
+
+                //check [.url] extension
+                wchar_t *ext_in = name_in + wcslen(name_in) - 4;
+                static wchar_t *urlExt = L".url";
+                if (ext_in < name_in || _wcsnicmp(urlExt, ext_in, 4) != 0)
+                    wcscat_s(name_in, MAX_PATH, urlExt);
+
+                //get file size
+                BinaryChunk fileContent;
+                //for local IDataObject:
+                // [MS_FILE_CONTENT-mime]->[CF-word]->[GLASS_IE_URL_SHORTCUT_CONTENT-mime]
+                //[lindex] parameter need to be zero (the first and the only array item)
+                //see also [pushCommit] implementation
+                OLE_HRT(fileContent.Load(this, getClipboardFormat(MS_FILE_CONTENT), 0i64))
+                fgd->fgd->nFileSizeLow = fileContent.size();
+
+                //set file times
+                FILETIME ft;
+                SYSTEMTIME st;
+                GetSystemTime(&st);// Gets the current system time
+                SystemTimeToFileTime(&st, &ft);
+                fgd->fgd->ftCreationTime =
+                    fgd->fgd->ftLastAccessTime =
+                        fgd->fgd->ftLastWriteTime = ft;
+            } else if (CF_HDROP == cf) {
+                OLE_HRT(me.Allocate(sizeof(DROPFILES) + cdata))
+                DROPFILES *dropfiles = reinterpret_cast<DROPFILES *>(me.getMem());
+                ZeroMemory(dropfiles, sizeof(DROPFILES));
+                dropfiles->pFiles = sizeof(DROPFILES);
+                dropfiles->fWide = TRUE;
+                memcpy(me.getMem() + dropfiles->pFiles, data, cdata);
+            } else {
+                OLE_HRT(me.Allocate(cdata))
+                memcpy(me.getMem(), data, cdata);
+            }
+            //cache the mime-value
+            *psm = *me.Detach();
+        }//not an image
+        OLE_CATCH
+        OLE_RETURN_HR
+    }
+
     //IDataObject interface
     STDMETHOD(GetData)(FORMATETC *pformatetcIn, STGMEDIUM *pmedium)
     {
@@ -736,87 +966,25 @@ public:
                 OLE_HRT(me.AllocateFromString(bsContentHeader + urlUnicodeString.getString()))
                 *psm = *me.Detach();
             } else {
-                //callback java
-                JNIEnv *env = GetEnv();
-                JLocalRef<jbyteArray> data(env, (jbyteArray)env->CallObjectMethod(
-                    m_jclipboard, midFosSerialize,
-                    jstring(JLString(env, CreateJString(env, (LPCWSTR)mime))),
-                    jlong(pformatetcIn->lindex)));
-                OLE_HRT(checkJavaException(env))
-                OLE_CHECK_NOTNULL(data)
+                //callback java through the table. A null serialisation returns E_POINTER instead
+                //of being dereferenced (what the debug build's OLE_CHECK_NOTNULL always did).
+                const GwinClipboardCallbacks* cb = GlassClipboardCallbacks();
+                if (cb != NULL) {
+                    GwinOwnedBytes data;
+                    OLE_HRT(GwinStatusToHR(cb->fos_serialize(m_clipboardId,
+                        reinterpret_cast<const uint16_t *>((LPCWSTR)mime),
+                        (int64_t)pformatetcIn->lindex, &data.data, &data.len)))
+                    OLE_RETURN_HR_IF_FAILED
+                    OLE_CHECK_NOTNULL(data.data)
+                    OLE_RETURN_HR_IF_FAILED
 
-                if (CF_JAVA_BITMAP == pformatetcIn->cfFormat) {
-                    OLE_HRT(PushImage(env, data, psm))
+                    OLE_HRT(RenderBytes(pformatetcIn->cfFormat, mime,
+                        reinterpret_cast<const int8_t *>(data.data), (int32_t)data.len, psm))
                 } else {
-                    jsize cdata = env->GetArrayLength(data);
-                    BinaryChunk me;
-                    if (_bstr_t(GLASS_IE_URL_SHORTCUT_FILENAME) == mime) {
-                        OLE_HRT(me.Allocate(sizeof(FILEGROUPDESCRIPTORW)))
-                        FILEGROUPDESCRIPTORW *fgd = reinterpret_cast<FILEGROUPDESCRIPTORW *>(me.getMem());
-                        //FILEGROUPDESCRIPTORW reserve exactly one file entry
-                        ZeroMemory(fgd, sizeof(FILEGROUPDESCRIPTORW));
-                        fgd->cItems = 1;
-                        fgd->fgd->dwFlags = FD_UNICODE | FD_FILESIZE
-                            | FD_CREATETIME | FD_ACCESSTIME | FD_WRITESTIME;
-
-                        size_t len = cdata/sizeof(wchar_t) + 1;
-                        MemHolder<wchar_t> shortcutName(len);
-                        wchar_t *name = shortcutName.get();
-                        env->GetByteArrayRegion(data, 0, cdata, reinterpret_cast<jbyte *>(name));
-
-                        //file name validation
-                        name[len-1] = 0;
-                        for (wchar_t *cur = name; *cur; ++cur)
-                            if (wcschr(L"|\\?*<\"\':>+[]/", *cur) != NULL)
-                                name = cur + 1;
-                        //[name] points to the last valid for NTSF/VFAT subsequence of chars or it is empty
-                        //http://en.wikipedia.org/wiki/Filename
-                        if (*name == 0) {
-                            OLE_HRT(E_INVALIDARG)
-                        }
-                        if (wcslen(name) > (MAX_PATH - 5)) {
-                            name[MAX_PATH - 5] = 0;
-                        }
-                        wchar_t *name_in = fgd->fgd->cFileName;
-                        wcscpy_s(name_in, MAX_PATH, name);
-
-                        //check [.url] extension
-                        wchar_t *ext_in = name_in + wcslen(name_in) - 4;
-                        static wchar_t *urlExt = L".url";
-                        if (ext_in < name_in || _wcsnicmp(urlExt, ext_in, 4) != 0)
-                            wcscat_s(name_in, MAX_PATH, urlExt);
-
-                        //get file size
-                        BinaryChunk fileContent;
-                        //for local IDataObject:
-                        // [MS_FILE_CONTENT-mime]->[CF-word]->[GLASS_IE_URL_SHORTCUT_CONTENT-mime]
-                        //[lindex] parameter need to be zero (the first and the only array item)
-                        //see also [pushCommit] implementation
-                        OLE_HRT(fileContent.Load(this, getClipboardFormat(MS_FILE_CONTENT), 0i64))
-                        fgd->fgd->nFileSizeLow = fileContent.size();
-
-                        //set file times
-                        FILETIME ft;
-                        SYSTEMTIME st;
-                        GetSystemTime(&st);// Gets the current system time
-                        SystemTimeToFileTime(&st, &ft);
-                        fgd->fgd->ftCreationTime =
-                            fgd->fgd->ftLastAccessTime =
-                                fgd->fgd->ftLastWriteTime = ft;
-                    } else if (CF_HDROP == pformatetcIn->cfFormat) {
-                        OLE_HRT(me.Allocate(sizeof(DROPFILES) + cdata))
-                        DROPFILES *dropfiles = reinterpret_cast<DROPFILES *>(me.getMem());
-                        ZeroMemory(dropfiles, sizeof(DROPFILES));
-                        dropfiles->pFiles = sizeof(DROPFILES);
-                        dropfiles->fWide = TRUE;
-                        env->GetByteArrayRegion(data, 0, cdata, me.getMem() + dropfiles->pFiles);
-                    } else {
-                        OLE_HRT(me.Allocate(cdata))
-                        env->GetByteArrayRegion(data, 0, cdata, me.getMem());
-                    }
-                    //cache the mime-value
-                    *psm = *me.Detach();
-                }//not an image
+                    //no table: nothing can serialise
+                    OLE_HRT(E_POINTER)
+                    OLE_RETURN_HR
+                }
             }//Java data
         }
         *pmedium = *psm;
@@ -922,8 +1090,10 @@ public:
             OLE_CHECK_NOTNULL(pmedium->hGlobal)
             DROPEFFECT *pDF = reinterpret_cast<DROPEFFECT *>(::GlobalLock(pmedium->hGlobal));
             if (NULL != pDF && ::GlobalSize(pmedium->hGlobal) >= sizeof(DROPEFFECT)) {
-                GetEnv()->CallVoidMethod(m_jclipboard, midActionPerformed, getACTION(*pDF));
-                OLE_HRT(checkJavaException(GetEnv()));
+                const GwinClipboardCallbacks* cb = GlassClipboardCallbacks();
+                if (cb != NULL) {
+                    OLE_HRT(GwinStatusToHR(cb->action_performed(m_clipboardId, (int32_t) getACTION(*pDF))));
+                }
             }
             GlobalUnlock(pmedium->hGlobal);
         }
@@ -977,8 +1147,8 @@ public:
 
 protected:
     IDataAdviseHolderPtr m_spDataAdviseHolder;
-    JString m_name;
-    jobject m_jclipboard;
+    _bstr_t m_name;
+    int64_t m_clipboardId;   // IDENTITY in glass_win_api.h
     FMC2MIME m_fmc2mime;
     FMC2DATA m_fmc2data;
 
@@ -1042,67 +1212,8 @@ protected:
     };
 };
 
-extern "C" {
-
-/*
-* Class:     com_sun_glass_ui_win_WinSystemClipboard
-* Method:    initIDs
-* Signature: ()V
-*/
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinSystemClipboard_initIDs
-    (JNIEnv *env, jclass cls)
-{
-    fidPtr = env->GetFieldID(cls, "ptr", "J");
-    if (env->ExceptionCheck()) return;
-    fidName = env->GetFieldID(cls, "name", "Ljava/lang/String;");
-    if (env->ExceptionCheck()) return;
-    midFosSerialize = env->GetMethodID(cls, "fosSerialize", "(Ljava/lang/String;J)[B");
-    if (env->ExceptionCheck()) return;
-    midContentChanged = env->GetMethodID(cls, "contentChanged", "()V");
-    if (env->ExceptionCheck()) return;
-    midActionPerformed = env->GetMethodID(cls, "actionPerformed", "(I)V");
-    env->ExceptionCheck();
-}
-
-/*
-* Class:     com_sun_glass_ui_win_WinSystemClipboard
-* Method:    isOwner
-* Signature: ()Z
-*/
-JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinSystemClipboard_isOwner
-    (JNIEnv *env, jobject obj)
-{
-    ENTER_MAIN_THREAD_AND_RETURN(jboolean)
-    {
-        if (NULL == p) {
-            return false;
-        }
-        return S_OK == ::OleIsCurrentClipboard(p);
-    }
-    LEAVE_MAIN_THREAD_WITH_p;
-
-    return PERFORM_AND_RETURN();
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinSystemClipboard
- * Method:    create
- * Signature: ()V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinSystemClipboard_create
-  (JNIEnv *env, jobject obj)
-{
-    ENTER_MAIN_THREAD()
-    {
-        GlassApplication::GetInstance()->RegisterClipboardViewer(obj);
-    }
-    DECL_jobject(obj);
-    LEAVE_MAIN_THREAD;
-
-    ARG(obj) = obj;
-    PERFORM();
-}
-
+// Drains this thread's message queue while OleFlushClipboard cannot open the clipboard
+// (gwin_clipboard_dispose).
 void OLE_CoPump()
 {
     MSG msg;
@@ -1110,419 +1221,6 @@ void OLE_CoPump()
         ::TranslateMessage(&msg);
         ::DispatchMessage(&msg);
     }
-}
-
-/*
-* Class:     com_sun_glass_ui_win_WinSystemClipboard
-* Method:    dispose
-* Signature: ()V
-*/
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinSystemClipboard_dispose
-    (JNIEnv *env, jobject obj)
-{
-    ENTER_MAIN_THREAD()
-    {
-        GlassApplication::GetInstance()->UnregisterClipboardViewer();
-        if (NULL != p) {
-            OLE_TRY
-            OLE_HRT( ::OleIsCurrentClipboard(p) )
-            if (S_OK == OLE_HR) {
-                for (int i = 0; i < 1000; ++i) {
-                    OLE_HR = ::OleFlushClipboard();
-                    if (CLIPBRD_E_CANT_OPEN == OLE_HR) {
-                        OLE_CoPump();
-                        continue;
-                    }
-                    break;
-                }
-            }
-            OLE_CATCH
-            p->Release();
-            STRACE(_T("System Clipboard Closed"));
-        }
-    }
-    LEAVE_MAIN_THREAD_WITH_p;
-    PERFORM();
-}
-
-
-/*
- * Class:     com_sun_glass_ui_win_WinSystemClipboard
- * Method:    push
- * Signature: ([Ljava/lang/Object;)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinSystemClipboard_push
-  (JNIEnv *env, jobject obj, jobjectArray keys, jint supportedActions)
-{
-    ENTER_MAIN_THREAD()
-    {
-        OLE_TRY
-            if (NULL != p) {
-                //We need to create new object here due to [POSTPONED RELEASE] algorithm
-                //in data provider.
-                p->Release();
-            }
-            JNIEnv* env = GetEnv();
-            ClipboardData *pcd = new ClipboardData(
-                env,
-                obj,
-                JLString(env, (jstring)env->GetObjectField(obj, fidName)));
-            setPtr(env, obj, pcd);
-            OLE_HRT( pcd->pushCommit(env, keys, supportedActions) )
-            OLE_HRT( ::OleSetClipboard(pcd) )
-        OLE_CATCH
-    }
-    DECL_jobject(obj);
-    DECL_JREF(jobjectArray, keys);
-    jint supportedActions;
-    LEAVE_MAIN_THREAD_WITH_p;
-
-    ARG(obj) = obj;
-    ARG(keys) = keys;
-    ARG(supportedActions) = supportedActions;
-    PERFORM();
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinSystemClipboard
- * Method:    pop
- * Signature: ()Z
- */
-JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinSystemClipboard_pop
-  (JNIEnv *env, jobject obj)
-{
-    ENTER_MAIN_THREAD_AND_RETURN(jboolean)
-    {
-        if (p) {
-            p->Release();
-        }
-        p = SUCCEEDED( ::OleGetClipboard(&p) ) ? p : NULL;
-        JNIEnv* env = GetEnv();
-        setPtr(env, obj, p);
-        return NULL != p;
-    }
-    DECL_jobject(obj);
-    LEAVE_MAIN_THREAD_WITH_p;
-    ARG(obj) = obj;
-    return PERFORM_AND_RETURN();
-}
-
-/*
-* Class:     com_sun_glass_ui_win_WinSystemClipboard
-* Method:    popBytes
-* Signature: (Ljava/lang/String;J)[B
-*/
-JNIEXPORT jbyteArray JNICALL Java_com_sun_glass_ui_win_WinSystemClipboard_popBytes
-    (JNIEnv *env, jobject obj, jstring jmime, jlong lindex)
-{
-    ENTER_MAIN_THREAD_AND_RETURN(jbyteArray)
-    {
-        //So we are here if we are not the owners of the clipboard
-        jbyteArray ret = NULL;
-        if (NULL != p) {
-            OLE_DECL
-            JNIEnv* env = GetEnv();
-            JString mime(env, jmime);
-            if (0 == wcscmp(mime, GLASS_IMAGE)) {
-                //custom conversion for image
-                OLE_HR = ::OleQueryCreateFromData(p);
-                // http://msdn.microsoft.com/en-us/library/windows/desktop/ms683739%28v=vs.85%29.aspx
-                // "If OleQueryCreateFromData finds one of the other formats (CF_EMBEDDEDOBJECT,
-                // CF_EMBEDSOURCE, or cfFileName), !*even in combination with the static formats*!,
-                // it returns S_OK, indicating that you should call the OleCreateFromData
-                // function to create the embedded object."
-
-                // We do not like CF_EMBEDXXXX, but we want CF_METAFILEPICT, CF_DIB, CF_BITMAP.
-                // Make a try!
-                if (OLE_S_STATIC == OLE_HR || S_OK == OLE_HR) {
-                    //We don't like to report error. Maybe only CF_EMBEDXXXX types are present.
-                    OLE_HR = PopImage(env, p, &ret);
-                }
-            } else {
-                //We don't like to report error. Fail is ordinal here.
-                OLE_HR = PopMemory(
-                    env,
-                    getClipboardFormat(mime),
-                    lindex,
-                    p,
-                    &ret);
-            }
-        }
-        return ret;
-    }
-    DECL_JREF(jstring, jmime);
-    jlong lindex;
-    LEAVE_MAIN_THREAD_WITH_p;
-
-    ARG(jmime) = jmime;
-    ARG(lindex) = lindex;
-    return PERFORM_AND_RETURN();
-}
-
-/*
-* Class:     com_sun_glass_ui_win_WinSystemClipboard
-* Method:    mimesFromSystem
-* Signature: ()Ljava/util/Set;
-*/
-JNIEXPORT jobjectArray JNICALL Java_com_sun_glass_ui_win_WinSystemClipboard_popMimesFromSystem
-    (JNIEnv *env, jobject obj)
-{
-    ENTER_MAIN_THREAD_AND_RETURN(jobjectArray)
-    {
-        //So we are here if we are not the owners of the clipboard
-        jobjectArray ret = NULL;
-        if (NULL != p) {
-            OLE_TRY
-            IEnumFORMATETCPtr pos;
-            OLE_HRT(p->EnumFormatEtc(DATADIR_GET, &pos))
-            FORMATETC fmc;
-            HASH_STR_SET mimes;
-            while (S_OK == pos->Next(1, &fmc, NULL)) {
-                if (TYMED_HGLOBAL & fmc.tymed) {
-                    _bstr_t mime = getMime(fmc.cfFormat);
-                    if (mime.length()) {
-                        if (_bstr_t(GLASS_URI_LIST_LOCALE) == mime) {
-                            //we can convert it to the URL list
-                            mimes.insert(GLASS_URI_LIST);
-                        } else if (_bstr_t(GLASS_TEXT_PLAIN_LOCALE) == mime){
-                            //we can convert it to the text
-                            mimes.insert(GLASS_TEXT_PLAIN);
-                        } else {
-                            mimes.insert(mime);
-                        }
-                    }
-                    if (CF_HDROP == fmc.cfFormat) {
-                        //we can convert it to the URL list
-                        mimes.insert(GLASS_URI_LIST);
-                    }
-                }
-            }
-            if (OLE_S_STATIC==::OleQueryCreateFromData(p)) {
-                //we can convert it to the image
-                mimes.insert(GLASS_IMAGE);
-            }
-
-            if (mimes.end() != mimes.find(MS_FILE_DESCRIPTOR_UNICODE)
-               || mimes.end() != mimes.find(MS_FILE_DESCRIPTOR))
-            {//MS stuff formats post processing.
-                static const CLIPFORMAT stuffFormas[] = {
-                    getClipboardFormat(MS_FILE_DESCRIPTOR_UNICODE),
-                    getClipboardFormat(MS_FILE_DESCRIPTOR)
-                };
-                bool bContinue = true;
-
-                for (int i = 0; i < 2 && bContinue; ++i) {
-                    //FILEGROUPDESCRIPTORW for MS_FILE_DESCRIPTOR_UNICODE
-                    //FILEGROUPDESCRIPTORA for MS_FILE_DESCRIPTOR
-                    jsize headerSize = (0 == i)
-                        ? sizeof(FILEGROUPDESCRIPTORW)
-                        : sizeof(FILEGROUPDESCRIPTORA);
-
-                    jsize itemSize = (0 == i)
-                        ? sizeof(FILEDESCRIPTORW)
-                        : sizeof(FILEDESCRIPTORA);
-
-                    BinaryChunk me;
-                    OLE_HR = me.Load(p, stuffFormas[i]);
-                    if (SUCCEEDED(OLE_HR) && me.size() >= headerSize) {
-                        //LPFILEGROUPDESCRIPTORW for MS_FILE_DESCRIPTOR_UNICODE
-                        //LPFILEGROUPDESCRIPTORA for MS_FILE_DESCRIPTOR
-                        LPFILEGROUPDESCRIPTORW pdata = reinterpret_cast<LPFILEGROUPDESCRIPTORW>(me.getMem());
-                        jlong bufferSize = me.size() - sizeof(UINT);
-                        if ((pdata->cItems > 0) &&
-                            (bufferSize == (jlong)pdata->cItems * itemSize))
-                        {
-                            mimes.erase(MS_FILE_CONTENT);
-                            mimes.erase(MS_FILE_DESCRIPTOR_UNICODE);
-                            mimes.erase(MS_FILE_DESCRIPTOR);
-                            for (UINT k = 0; k < pdata->cItems; ++k) {
-                                WCHAR buffer[64];
-                                _bstr_t bsId;
-
-                                _itow_s(k, buffer, 64, 10);
-                                bsId += _bstr_t(L";index=") + buffer;
-
-                                //binary part is the same for ASCII and Unicode versions
-                                const FILEDESCRIPTORW &fd = (0==i)
-                                    ? pdata->fgd[k]
-                                    : reinterpret_cast<const FILEDESCRIPTORW &>(reinterpret_cast<LPFILEGROUPDESCRIPTORA>(pdata)->fgd[k]);
-
-                                if (!me.isInternalAddress(&fd, itemSize)) {
-                                    OLE_HRT(E_INVALIDARG)
-                                }
-
-                                if (fd.dwFlags & FD_FILESIZE) {
-                                    CY t;
-                                    t.Lo = fd.nFileSizeLow;
-                                    t.Hi = fd.nFileSizeHigh;
-                                    _i64tow_s(t.int64, buffer, 64, 10);
-                                    bsId += _bstr_t(L";size=") + buffer;
-                                }
-
-                                if (fd.dwFlags & FD_CLSID) {
-                                    LPOLESTR pCOMid;
-                                    OLE_HRT(::StringFromIID(fd.clsid, &pCOMid))
-                                    bsId += _bstr_t(L";clsid=") + pCOMid;
-                                    ::CoTaskMemFree(pCOMid);
-                                }
-
-                                //it is safe to have the name at the end
-                                bsId += L";name=\"";
-                                bsId += (0==i)
-                                    ? _bstr_t(pdata->fgd[k].cFileName)
-                                    : _bstr_t(reinterpret_cast<LPFILEGROUPDESCRIPTORA>(pdata)->fgd[k].cFileName);
-                                bsId += "\"";
-
-                                //RFC 1521 extension for [message/external-body] mime
-                                static const _bstr_t bsAcessType(L";access-type=clipboard");
-                                mimes.insert(MS_FILE_CONTENT + bsAcessType + bsId);
-                            }
-                            //stop on the first success
-                            bContinue = false;
-                        }
-                    }
-                }
-            }
-
-            jsize cmimes = jsize(mimes.size());
-            if (cmimes) {
-                JNIEnv * env = GetEnv();
-                ret = env->NewObjectArray(
-                    cmimes,
-                    JLClass(env, env->FindClass("java/lang/String")),
-                    NULL);
-                if (ret) {
-                    jsize index = 0;
-                    for (HASH_STR_SET::const_iterator i = mimes.begin(); mimes.end() != i; ++i, ++index) {
-                        env->SetObjectArrayElement(ret, index,
-                            jstring(JLString(env,
-                                CreateJString(env,(LPCWSTR)*i)
-                            ))
-                        );
-                    }
-                }
-            }
-            OLE_CATCH
-        }
-        return ret;
-    }
-    LEAVE_MAIN_THREAD_WITH_p;
-
-    return PERFORM_AND_RETURN();
-}
-
-//The basic procedure for a delete-on-paste operation is as follows:
-//1. The source marks the screen display of the selected data.
-//2. The source creates a data object. It indicates a cut operation by adding the
-//   CFSTR_PREFERREDDROPEFFECT format with a data value of DROPEFFECT_MOVE.
-//3. The source places the data object on the Clipboard using OleSetClipboard.
-//4. The target retrieves the data object from the Clipboard using OleGetClipboard.
-//5. The target extracts the CFSTR_PREFERREDDROPEFFECT data. If it is set to only
-//   DROPEFFECT_MOVE, the target can either do an optimized move or simply copy the data.
-//6. If the target does not do an optimized move, it calls the IDataObject::SetData
-//   method with the CFSTR_PERFORMEDDROPEFFECT format set to DROPEFFECT_MOVE.
-//7. When the paste is complete, the target calls the IDataObject::SetData method
-//   with the CFSTR_PASTESUCCEEDED format set to DROPEFFECT_MOVE.
-//8. When the source's IDataObject::SetData method is called with
-//   the CFSTR_PASTESUCCEEDED format set to DROPEFFECT_MOVE, it must check to see
-//   if it also received the CFSTR_PERFORMEDDROPEFFECT format set to DROPEFFECT_MOVE.
-//   [!IF BOTH FORMATS ARE SENT BY THE TARGET!], the source will have to delete the data.
-//
-//If only the CFSTR_PASTESUCCEEDED format is received, the source can simply remove the data
-//from its display. If the transfer fails, the source updates the display to its original
-//appearance.
-//(c) http://msdn.microsoft.com/en-us/library/bb776904%28VS.85%29.aspx
-
-/*
- * Class:     com_sun_glass_ui_win_WinSystemClipboard
- * Method:    pushTargetActionToSystem
- * Signature: (I)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinSystemClipboard_pushTargetActionToSystem
-  (JNIEnv *env, jobject obj, jint actionDone)
-{
-    ENTER_MAIN_THREAD()
-    {
-        //please, read: http://msdn.microsoft.com/en-us/library/bb776904%28VS.85%29.aspx
-        if (NULL != p) {
-            //Make it in one step!
-            static const CLIPFORMAT stuffFormas[] = {
-                getClipboardFormat(PASTE_SUCCEEDED),
-                getClipboardFormat(PERFORMED_DROP_EFFECT_MIME)
-            };
-            OLE_TRY
-            for (int i = 0; i < 2; ++i) {
-                FORMATETC fmt = {
-                    stuffFormas[i],
-                    NULL,
-                    DVASPECT_CONTENT,
-                    -1L,
-                    TYMED_HGLOBAL};
-
-                BinaryChunk me;
-                OLE_HRT(me.Allocate(sizeof(DROPEFFECT)))
-                *reinterpret_cast<DROPEFFECT *>(me.getMem()) = getDROPEFFECT(actionDone);
-                OLE_HRT(p->SetData(&fmt, me.Detach(), TRUE))
-            }
-            OLE_CATCH
-        }
-    }
-    jint actionDone;
-    LEAVE_MAIN_THREAD_WITH_p;
-
-    ARG(actionDone) = actionDone;
-    PERFORM();
-}
-
-/*
- * Class:     com_sun_glass_ui_win_WinSystemClipboard
- * Method:    popSupportedActionFromSystem
- * Signature: ()I
- */
-JNIEXPORT jint JNICALL Java_com_sun_glass_ui_win_WinSystemClipboard_popSupportedSourceActions
-  (JNIEnv *env, jobject obj)
-{
-    ENTER_MAIN_THREAD_AND_RETURN(jint)
-    {
-        //please, read: http://msdn.microsoft.com/en-us/library/bb776904%28VS.85%29.aspx
-        //So we are here if we are not the owners of the clipboard
-        jint ret = com_sun_glass_ui_win_WinSystemClipboard_ACTION_NONE;
-        if (NULL != p) {
-            OLE_DECL
-            BinaryChunk me;
-            OLE_HR = me.Load(p, getClipboardFormat(PREFERRED_DROP_EFFECT_MIME));
-            ret = (FAILED(OLE_HR) || me.size() < sizeof(DROPEFFECT))
-                ? com_sun_glass_ui_win_WinSystemClipboard_ACTION_ANY
-                : getACTION(*reinterpret_cast<DROPEFFECT *>(me.getMem()));
-        }
-        return ret;
-    }
-    LEAVE_MAIN_THREAD_WITH_p;
-    return PERFORM_AND_RETURN();
-}
-
-//////////////////////////////////////////////////////////////////////////
-//WinDnDClipboard
-//////////////////////////////////////////////////////////////////////////
-
-
-/*
- * Class:     com_sun_glass_ui_win_WinDnDClipboard
- * Method:    dispose
- * Signature: ()V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinDnDClipboard_dispose
-  (JNIEnv *env, jobject obj)
-{
-    ENTER_MAIN_THREAD()
-    {
-        if (NULL != p) {
-            p->Release();
-            STRACE(_T("Dnd Clipboard Closed"));
-        }
-    }
-    LEAVE_MAIN_THREAD_WITH_p;
-    PERFORM();
 }
 
 HRESULT setDragImage(IDataObject *p)
@@ -1536,12 +1234,12 @@ HRESULT setDragImage(IDataObject *p)
     BinaryChunk me;
     static const CLIPFORMAT cfDImage = getClipboardFormat(GLASS_IMAGE_DRAG);
     if (SUCCEEDED(me.Load(p, cfDImage))) {
-        static const jsize header_size = sizeof(jint)*2/sizeof(jbyte);
+        static const int32_t header_size = sizeof(int32_t)*2/sizeof(int8_t);
         if (me.size() < header_size)
             return E_INVALIDARG;
 
-        w = reinterpret_cast<jint *>(me.getMem())[0];
-        h = reinterpret_cast<jint *>(me.getMem())[1];
+        w = reinterpret_cast<int32_t *>(me.getMem())[0];
+        h = reinterpret_cast<int32_t *>(me.getMem())[1];
         w = BSWAP_32(w);
         h = BSWAP_32(h);
 
@@ -1549,12 +1247,12 @@ HRESULT setDragImage(IDataObject *p)
             return E_INVALIDARG;
         }
 
-        jsize bmpSize = w*h*4;
+        int32_t bmpSize = w*h*4;
         if (bmpSize > INT_MAX - header_size) {
             return E_INVALIDARG;
         }
 
-        if (me.size() < jsize(header_size + bmpSize))
+        if (me.size() < int32_t(header_size + bmpSize))
             return E_INVALIDARG;
 
         bm.Attach(CreateBitmap(w, h, 1, 32, me.getMem() + header_size));
@@ -1573,27 +1271,27 @@ HRESULT setDragImage(IDataObject *p)
             return E_INVALIDARG;
         }
 
-        jsize bmpSize = w*h*4;
+        int32_t bmpSize = w*h*4;
         if (lpbi->bmiHeader.biSize > (DWORD)(INT_MAX - bmpSize)) {
             return E_INVALIDARG;
         }
 
-        if (me.size() < jsize(bmpSize + lpbi->bmiHeader.biSize))
+        if (me.size() < int32_t(bmpSize + lpbi->bmiHeader.biSize))
             return E_INVALIDARG;
 
         //reverse rows order
-        MemHolder<jbyte> rows(bmpSize);
-        jbyte *d = rows;
-        jbyte *de = d + bmpSize;
-        jsize lineSize = w*4;
-        jbyte *s = me.getMem() + lpbi->bmiHeader.biSize + bmpSize - lineSize;
+        MemHolder<int8_t> rows(bmpSize);
+        int8_t *d = rows;
+        int8_t *de = d + bmpSize;
+        int32_t lineSize = w*4;
+        int8_t *s = me.getMem() + lpbi->bmiHeader.biSize + bmpSize - lineSize;
         while (d < de) {
             memcpy(d, s, lineSize);
             d += lineSize;
             s -= lineSize;
         }
 
-        bm.Attach(CreateBitmap(w, h, 1, 32, (jbyte *)rows));
+        bm.Attach(CreateBitmap(w, h, 1, 32, (int8_t *)rows));
     }
 
 
@@ -1603,11 +1301,11 @@ HRESULT setDragImage(IDataObject *p)
 
         static const CLIPFORMAT cfDImageOffset = getClipboardFormat(GLASS_IMAGE_DRAG_OFFSET);
         if (SUCCEEDED(me.Load(p, cfDImageOffset))) {
-            static const jsize header_size = sizeof(jint)*2/sizeof(jbyte);
+            static const int32_t header_size = sizeof(int32_t)*2/sizeof(int8_t);
             if (me.size() < header_size)
                 return E_INVALIDARG;
-            offsetX = reinterpret_cast<jint *>(me.getMem())[0];
-            offsetY = reinterpret_cast<jint *>(me.getMem())[1];
+            offsetX = reinterpret_cast<int32_t *>(me.getMem())[0];
+            offsetY = reinterpret_cast<int32_t *>(me.getMem())[1];
             offsetX = BSWAP_32(offsetX);
             offsetY = BSWAP_32(offsetY);
         }
@@ -1636,61 +1334,509 @@ HRESULT setDragImage(IDataObject *p)
 }
 
 /*
- * Class:     com_sun_glass_ui_win_WinDnDClipboard
- * Method:    push
- * Signature: ([Ljava/lang/Object;I)V
+ * ---- The exports of glass_win_api.h's clipboard section ----
+ *
+ * The former JNI bodies moved onto the opaque handle and the peer's id, marshalled with the same
+ * ENTER_MAIN_THREAD / LEAVE_MAIN_THREAD macros, wrapped try { } catch (...) as the header promises,
+ * and with the no-toolkit return pre-set to the defined value the header documents (ARG(_retValue)
+ * before PERFORM). The JNI entry points that used to forward here are gone.
  */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinDnDClipboard_push
-  (JNIEnv *env, jobject obj, jobjectArray keys, jint supportedActions)
+
+// gwin_clipboard_push's action body: the former Java_..._push body over the id and the block.
+static HRESULT ClipboardPush(IDataObject *p, int64_t clipboardId, const uint16_t *mimes, int32_t mimeCount,
+                             int32_t supportedActions)
 {
-    ENTER_MAIN_THREAD()
-    {
-        DWORD performedDropEffect = DROPEFFECT_MOVE;
-        JNIEnv * env = GetEnv();
-        OLE_TRY
+    OLE_TRY
         if (NULL != p) {
             //We need to create new object here due to [POSTPONED RELEASE] algorithm
             //in data provider.
             p->Release();
-            STRACE(_T("Alarm Dnd Clipboard Release"));
         }
-        ClipboardData *pcd = new ClipboardData(
-            env,
-            obj,
-            JLString(env, (jstring)env->GetObjectField(obj, fidName)));
-        setPtr(env, obj, pcd);
-        //from now 'pcd' would be destroyed on dispose
+        ClipboardData *pcd = new (std::nothrow) ClipboardData(clipboardId);
+        OLE_CHECK_NOTNULL(pcd)
+        OLE_RETURN_HR_IF_FAILED
+        //the JNI's setPtr instant: published before anything can fail or upcall (set_data_object)
+        {
+            const GwinClipboardCallbacks* cb = GlassClipboardCallbacks();
+            if (cb != NULL) {
+                cb->set_data_object(clipboardId, pcd);
+            }
+        }
+        OLE_HRT( pcd->pushCommit(mimes, mimeCount, supportedActions) )
+        OLE_HRT( ::OleSetClipboard(pcd) )
+    OLE_CATCH
+    OLE_RETURN_HR
+}
 
-        OLE_HRT( pcd->pushCommit(env, keys, supportedActions) )
-
-        //here is the drag image setup
-        //we are not interested in return value
-        //pictured drag is not a primary functionality
-        setDragImage(pcd);
-
-
-        STRACE(_T("{DoDragDrop %08x"), getDROPEFFECT(supportedActions));
-        OLE_HRT( ::DoDragDrop(
-            pcd,
-            IDropSourcePtr(new GlassDropSource(obj), false),
-            getDROPEFFECT(supportedActions),
-            &performedDropEffect) )
-        OLE_CATCH
-        env->CallVoidMethod(obj, midActionPerformed,
-            getACTION(SUCCEEDED(OLE_HR) ? performedDropEffect : DROPEFFECT_NONE));
-        CheckAndClearException(env);
-        GlassDropSource::SetDragButton(0);
-        STRACE(_T("}DoDragDrop effect:%08x result:%08x"), performedDropEffect, OLE_HR);
+// gwin_dnd_push's action body: the former Java_..._WinDnDClipboard_push body over the id and the block.
+static HRESULT DndPush(IDataObject *p, int64_t clipboardId, const uint16_t *mimes, int32_t mimeCount,
+                       int32_t supportedActions)
+{
+    DWORD performedDropEffect = DROPEFFECT_MOVE;
+    const GwinClipboardCallbacks* cb = GlassClipboardCallbacks();
+    OLE_TRY
+    if (NULL != p) {
+        //We need to create new object here due to [POSTPONED RELEASE] algorithm
+        //in data provider.
+        p->Release();
+        STRACE(_T("Alarm Dnd Clipboard Release"));
     }
-    DECL_jobject(obj);
-    DECL_JREF(jobjectArray, keys);
-    jint supportedActions;
-    LEAVE_MAIN_THREAD_WITH_p;
+    ClipboardData *pcd = new (std::nothrow) ClipboardData(clipboardId);
+    OLE_CHECK_NOTNULL(pcd)
+    OLE_RETURN_HR_IF_FAILED
+    //the JNI's setPtr instant: a self-drag's drag_enter must find THIS object (set_data_object)
+    if (cb != NULL) {
+        cb->set_data_object(clipboardId, pcd);
+    }
+    //from now 'pcd' would be destroyed on dispose
 
-    ARG(obj) = obj;
-    ARG(keys) = keys;
-    ARG(supportedActions) = supportedActions;
-    PERFORM();
+    OLE_HRT( pcd->pushCommit(mimes, mimeCount, supportedActions) )
+
+    //here is the drag image setup
+    //we are not interested in return value
+    //pictured drag is not a primary functionality
+    setDragImage(pcd);
+
+    STRACE(_T("{DoDragDrop %08x"), getDROPEFFECT(supportedActions));
+    IDropSourcePtr spSource(new (std::nothrow) GlassDropSource(), false);
+    OLE_CHECK_NOTNULLSP(spSource)
+    OLE_RETURN_HR_IF_FAILED
+    OLE_HRT( ::DoDragDrop(
+        pcd,
+        spSource,
+        getDROPEFFECT(supportedActions),
+        &performedDropEffect) )
+    OLE_CATCH
+    if (cb != NULL) {
+        cb->drag_action_performed(clipboardId,
+            (int32_t) getACTION(SUCCEEDED(OLE_HR) ? performedDropEffect : DROPEFFECT_NONE));
+    }
+    GlassDropSource::SetDragButton(0);
+    STRACE(_T("}DoDragDrop effect:%08x result:%08x"), performedDropEffect, OLE_HR);
+    OLE_RETURN_HR
 }
 
+int32_t gwin_clipboard_register_viewer(int64_t clipboard_id)
+{
+    try {
+        ENTER_MAIN_THREAD_AND_RETURN(int32_t)
+        {
+            GlassApplication::GetInstance()->RegisterClipboardViewerId(clipboardId);
+            return GWIN_OK;
+        }
+        int64_t clipboardId;
+        LEAVE_MAIN_THREAD;
+
+        ARG(clipboardId) = clipboard_id;
+        ARG(_retValue) = GWIN_ERR_NO_TOOLKIT;
+        return PERFORM_AND_RETURN();
+    } catch (...) {
+        return GWIN_ERR_OLE;
+    }
 }
+
+void gwin_clipboard_dispose(gwin_clipboard_t clip)
+{
+    try {
+        ENTER_MAIN_THREAD()
+        {
+            GlassApplication::GetInstance()->UnregisterClipboardViewer();
+            if (NULL != p) {
+                OLE_TRY
+                OLE_HRT( ::OleIsCurrentClipboard(p) )
+                if (S_OK == OLE_HR) {
+                    for (int i = 0; i < 1000; ++i) {
+                        OLE_HR = ::OleFlushClipboard();
+                        if (CLIPBRD_E_CANT_OPEN == OLE_HR) {
+                            OLE_CoPump();
+                            continue;
+                        }
+                        break;
+                    }
+                }
+                OLE_CATCH
+                p->Release();
+                STRACE(_T("System Clipboard Closed"));
+            }
+        }
+        LEAVE_MAIN_THREAD_WITH_handle(clip);
+        PERFORM();
+    } catch (...) {
+    }
+}
+
+int32_t gwin_clipboard_push(gwin_clipboard_t old, int64_t clipboard_id, const uint16_t* mimes,
+                            int32_t mime_count, int32_t supported_actions)
+{
+    if (mimes == NULL || mime_count < 0) {
+        return GWIN_ERR_INVALID_ARG;
+    }
+    try {
+        ENTER_MAIN_THREAD_AND_RETURN(int32_t)
+        {
+            return SUCCEEDED(ClipboardPush(p, clipboardId, mimes, mimeCount, supportedActions))
+                ? GWIN_OK : GWIN_ERR_OLE;
+        }
+        int64_t clipboardId;
+        const uint16_t *mimes;
+        int32_t mimeCount;
+        int32_t supportedActions;
+        LEAVE_MAIN_THREAD_WITH_handle(old);
+
+        ARG(clipboardId) = clipboard_id;
+        ARG(mimes) = mimes;
+        ARG(mimeCount) = mime_count;
+        ARG(supportedActions) = supported_actions;
+        ARG(_retValue) = GWIN_ERR_NO_TOOLKIT;
+        return PERFORM_AND_RETURN();
+    } catch (...) {
+        return GWIN_ERR_OLE;
+    }
+}
+
+gwin_clipboard_t gwin_clipboard_pop(gwin_clipboard_t old)
+{
+    try {
+        ENTER_MAIN_THREAD_AND_RETURN(IDataObject *)
+        {
+            if (p) {
+                p->Release();
+            }
+            p = SUCCEEDED( ::OleGetClipboard(&p) ) ? p : NULL;
+            return p;
+        }
+        LEAVE_MAIN_THREAD_WITH_handle(old);
+
+        ARG(_retValue) = NULL;
+        return PERFORM_AND_RETURN();
+    } catch (...) {
+        return NULL;
+    }
+}
+
+int32_t gwin_clipboard_pop_bytes(gwin_clipboard_t clip, const uint16_t* mime, int64_t lindex,
+                                 uint8_t** out_data, int32_t* out_len)
+{
+    if (out_data == NULL || out_len == NULL) {
+        return GWIN_ERR_INVALID_ARG;
+    }
+    *out_data = NULL;
+    *out_len = 0;
+    if (mime == NULL) {
+        return GWIN_ERR_INVALID_ARG;
+    }
+    try {
+        ENTER_MAIN_THREAD_AND_RETURN(int32_t)
+        {
+            //So we are here if we are not the owners of the clipboard
+            if (NULL != p) {
+                OLE_DECL
+                if (0 == wcscmp(mime, GLASS_IMAGE)) {
+                    //custom conversion for image
+                    OLE_HR = ::OleQueryCreateFromData(p);
+                    // http://msdn.microsoft.com/en-us/library/windows/desktop/ms683739%28v=vs.85%29.aspx
+                    // "If OleQueryCreateFromData finds one of the other formats (CF_EMBEDDEDOBJECT,
+                    // CF_EMBEDSOURCE, or cfFileName), !*even in combination with the static formats*!,
+                    // it returns S_OK, indicating that you should call the OleCreateFromData
+                    // function to create the embedded object."
+
+                    // We do not like CF_EMBEDXXXX, but we want CF_METAFILEPICT, CF_DIB, CF_BITMAP.
+                    // Make a try!
+                    if (OLE_S_STATIC == OLE_HR || S_OK == OLE_HR) {
+                        //We don't like to report error. Maybe only CF_EMBEDXXXX types are present.
+                        OLE_HR = PopImageBytes(p, outData, outLen);
+                    }
+                } else {
+                    //We don't like to report error. Fail is ordinal here.
+                    OLE_HR = PopMemoryBytes(
+                        getClipboardFormat(mime),
+                        lindex,
+                        p,
+                        outData,
+                        outLen);
+                }
+            }
+            return GWIN_OK;
+        }
+        const wchar_t *mime;
+        int64_t lindex;
+        uint8_t **outData;
+        int32_t *outLen;
+        LEAVE_MAIN_THREAD_WITH_handle(clip);
+
+        ARG(mime) = reinterpret_cast<const wchar_t *>(mime);
+        ARG(lindex) = lindex;
+        ARG(outData) = out_data;
+        ARG(outLen) = out_len;
+        ARG(_retValue) = GWIN_ERR_NO_TOOLKIT;
+        return PERFORM_AND_RETURN();
+    } catch (...) {
+        return GWIN_ERR_OLE;
+    }
+}
+
+int32_t gwin_clipboard_pop_mimes(gwin_clipboard_t clip, uint16_t** out_mimes, int32_t* out_count)
+{
+    if (out_mimes == NULL || out_count == NULL) {
+        return GWIN_ERR_INVALID_ARG;
+    }
+    *out_mimes = NULL;
+    *out_count = 0;
+    try {
+        ENTER_MAIN_THREAD_AND_RETURN(int32_t)
+        {
+            //So we are here if we are not the owners of the clipboard
+            if (NULL != p) {
+                OLE_TRY
+                IEnumFORMATETCPtr pos;
+                OLE_HRT(p->EnumFormatEtc(DATADIR_GET, &pos))
+                FORMATETC fmc;
+                HASH_STR_SET mimes;
+                while (S_OK == pos->Next(1, &fmc, NULL)) {
+                    if (TYMED_HGLOBAL & fmc.tymed) {
+                        _bstr_t mime = getMime(fmc.cfFormat);
+                        if (mime.length()) {
+                            if (_bstr_t(GLASS_URI_LIST_LOCALE) == mime) {
+                                //we can convert it to the URL list
+                                mimes.insert(GLASS_URI_LIST);
+                            } else if (_bstr_t(GLASS_TEXT_PLAIN_LOCALE) == mime){
+                                //we can convert it to the text
+                                mimes.insert(GLASS_TEXT_PLAIN);
+                            } else {
+                                mimes.insert(mime);
+                            }
+                        }
+                        if (CF_HDROP == fmc.cfFormat) {
+                            //we can convert it to the URL list
+                            mimes.insert(GLASS_URI_LIST);
+                        }
+                    }
+                }
+                if (OLE_S_STATIC==::OleQueryCreateFromData(p)) {
+                    //we can convert it to the image
+                    mimes.insert(GLASS_IMAGE);
+                }
+
+                if (mimes.end() != mimes.find(MS_FILE_DESCRIPTOR_UNICODE)
+                   || mimes.end() != mimes.find(MS_FILE_DESCRIPTOR))
+                {//MS stuff formats post processing.
+                    static const CLIPFORMAT stuffFormas[] = {
+                        getClipboardFormat(MS_FILE_DESCRIPTOR_UNICODE),
+                        getClipboardFormat(MS_FILE_DESCRIPTOR)
+                    };
+                    bool bContinue = true;
+
+                    for (int i = 0; i < 2 && bContinue; ++i) {
+                        //FILEGROUPDESCRIPTORW for MS_FILE_DESCRIPTOR_UNICODE
+                        //FILEGROUPDESCRIPTORA for MS_FILE_DESCRIPTOR
+                        int32_t headerSize = (0 == i)
+                            ? sizeof(FILEGROUPDESCRIPTORW)
+                            : sizeof(FILEGROUPDESCRIPTORA);
+
+                        int32_t itemSize = (0 == i)
+                            ? sizeof(FILEDESCRIPTORW)
+                            : sizeof(FILEDESCRIPTORA);
+
+                        BinaryChunk me;
+                        OLE_HR = me.Load(p, stuffFormas[i]);
+                        if (SUCCEEDED(OLE_HR) && me.size() >= headerSize) {
+                            //LPFILEGROUPDESCRIPTORW for MS_FILE_DESCRIPTOR_UNICODE
+                            //LPFILEGROUPDESCRIPTORA for MS_FILE_DESCRIPTOR
+                            LPFILEGROUPDESCRIPTORW pdata = reinterpret_cast<LPFILEGROUPDESCRIPTORW>(me.getMem());
+                            int64_t bufferSize = me.size() - sizeof(UINT);
+                            if ((pdata->cItems > 0) &&
+                                (bufferSize == (int64_t)pdata->cItems * itemSize))
+                            {
+                                mimes.erase(MS_FILE_CONTENT);
+                                mimes.erase(MS_FILE_DESCRIPTOR_UNICODE);
+                                mimes.erase(MS_FILE_DESCRIPTOR);
+                                for (UINT k = 0; k < pdata->cItems; ++k) {
+                                    WCHAR buffer[64];
+                                    _bstr_t bsId;
+
+                                    _itow_s(k, buffer, 64, 10);
+                                    bsId += _bstr_t(L";index=") + buffer;
+
+                                    //binary part is the same for ASCII and Unicode versions
+                                    const FILEDESCRIPTORW &fd = (0==i)
+                                        ? pdata->fgd[k]
+                                        : reinterpret_cast<const FILEDESCRIPTORW &>(reinterpret_cast<LPFILEGROUPDESCRIPTORA>(pdata)->fgd[k]);
+
+                                    if (!me.isInternalAddress(&fd, itemSize)) {
+                                        OLE_HRT(E_INVALIDARG)
+                                    }
+
+                                    if (fd.dwFlags & FD_FILESIZE) {
+                                        CY t;
+                                        t.Lo = fd.nFileSizeLow;
+                                        t.Hi = fd.nFileSizeHigh;
+                                        _i64tow_s(t.int64, buffer, 64, 10);
+                                        bsId += _bstr_t(L";size=") + buffer;
+                                    }
+
+                                    if (fd.dwFlags & FD_CLSID) {
+                                        LPOLESTR pCOMid;
+                                        OLE_HRT(::StringFromIID(fd.clsid, &pCOMid))
+                                        bsId += _bstr_t(L";clsid=") + pCOMid;
+                                        ::CoTaskMemFree(pCOMid);
+                                    }
+
+                                    //it is safe to have the name at the end
+                                    bsId += L";name=\"";
+                                    bsId += (0==i)
+                                        ? _bstr_t(pdata->fgd[k].cFileName)
+                                        : _bstr_t(reinterpret_cast<LPFILEGROUPDESCRIPTORA>(pdata)->fgd[k].cFileName);
+                                    bsId += "\"";
+
+                                    //RFC 1521 extension for [message/external-body] mime
+                                    static const _bstr_t bsAcessType(L";access-type=clipboard");
+                                    mimes.insert(MS_FILE_CONTENT + bsAcessType + bsId);
+                                }
+                                //stop on the first success
+                                bContinue = false;
+                            }
+                        }
+                    }
+                }
+
+                int32_t cmimes = int32_t(mimes.size());
+                if (cmimes) {
+                    //the set as a string block, in the set's (unspecified) order
+                    std::vector<std::wstring> list;
+                    list.reserve(cmimes);
+                    for (HASH_STR_SET::const_iterator i = mimes.begin(); mimes.end() != i; ++i) {
+                        const wchar_t *s = static_cast<const wchar_t *>(*i);
+                        list.push_back(std::wstring(s != NULL ? s : L""));
+                    }
+                    *outMimes = GwinMakeStringBlock(list);
+                    if (NULL != *outMimes) {
+                        *outCount = cmimes;
+                    }
+                }
+                OLE_CATCH
+            }
+            return GWIN_OK;
+        }
+        uint16_t **outMimes;
+        int32_t *outCount;
+        LEAVE_MAIN_THREAD_WITH_handle(clip);
+
+        ARG(outMimes) = out_mimes;
+        ARG(outCount) = out_count;
+        ARG(_retValue) = GWIN_ERR_NO_TOOLKIT;
+        return PERFORM_AND_RETURN();
+    } catch (...) {
+        return GWIN_ERR_OLE;
+    }
+}
+
+void gwin_clipboard_push_target_action(gwin_clipboard_t clip, int32_t action_done)
+{
+    try {
+        ENTER_MAIN_THREAD()
+        {
+            //please, read: http://msdn.microsoft.com/en-us/library/bb776904%28VS.85%29.aspx
+            if (NULL != p) {
+                //Make it in one step!
+                static const CLIPFORMAT stuffFormas[] = {
+                    getClipboardFormat(PASTE_SUCCEEDED),
+                    getClipboardFormat(PERFORMED_DROP_EFFECT_MIME)
+                };
+                OLE_TRY
+                for (int i = 0; i < 2; ++i) {
+                    FORMATETC fmt = {
+                        stuffFormas[i],
+                        NULL,
+                        DVASPECT_CONTENT,
+                        -1L,
+                        TYMED_HGLOBAL};
+
+                    BinaryChunk me;
+                    OLE_HRT(me.Allocate(sizeof(DROPEFFECT)))
+                    *reinterpret_cast<DROPEFFECT *>(me.getMem()) = getDROPEFFECT(actionDone);
+                    OLE_HRT(p->SetData(&fmt, me.Detach(), TRUE))
+                }
+                OLE_CATCH
+            }
+        }
+        int32_t actionDone;
+        LEAVE_MAIN_THREAD_WITH_handle(clip);
+
+        ARG(actionDone) = action_done;
+        PERFORM();
+    } catch (...) {
+    }
+}
+
+int32_t gwin_clipboard_pop_supported_actions(gwin_clipboard_t clip)
+{
+    try {
+        ENTER_MAIN_THREAD_AND_RETURN(int32_t)
+        {
+            //please, read: http://msdn.microsoft.com/en-us/library/bb776904%28VS.85%29.aspx
+            //So we are here if we are not the owners of the clipboard
+            int32_t ret = com_sun_glass_ui_Clipboard_ACTION_NONE;
+            if (NULL != p) {
+                OLE_DECL
+                BinaryChunk me;
+                OLE_HR = me.Load(p, getClipboardFormat(PREFERRED_DROP_EFFECT_MIME));
+                ret = (FAILED(OLE_HR) || me.size() < sizeof(DROPEFFECT))
+                    ? com_sun_glass_ui_Clipboard_ACTION_ANY
+                    : getACTION(*reinterpret_cast<DROPEFFECT *>(me.getMem()));
+            }
+            return ret;
+        }
+        LEAVE_MAIN_THREAD_WITH_handle(clip);
+
+        ARG(_retValue) = com_sun_glass_ui_Clipboard_ACTION_NONE;
+        return PERFORM_AND_RETURN();
+    } catch (...) {
+        return com_sun_glass_ui_Clipboard_ACTION_NONE;
+    }
+}
+
+int32_t gwin_dnd_push(gwin_clipboard_t old, int64_t clipboard_id, const uint16_t* mimes,
+                      int32_t mime_count, int32_t supported_actions)
+{
+    if (mimes == NULL || mime_count < 0) {
+        return GWIN_ERR_INVALID_ARG;
+    }
+    try {
+        ENTER_MAIN_THREAD_AND_RETURN(int32_t)
+        {
+            return SUCCEEDED(DndPush(p, clipboardId, mimes, mimeCount, supportedActions))
+                ? GWIN_OK : GWIN_ERR_OLE;
+        }
+        int64_t clipboardId;
+        const uint16_t *mimes;
+        int32_t mimeCount;
+        int32_t supportedActions;
+        LEAVE_MAIN_THREAD_WITH_handle(old);
+
+        ARG(clipboardId) = clipboard_id;
+        ARG(mimes) = mimes;
+        ARG(mimeCount) = mime_count;
+        ARG(supportedActions) = supported_actions;
+        ARG(_retValue) = GWIN_ERR_NO_TOOLKIT;
+        return PERFORM_AND_RETURN();
+    } catch (...) {
+        return GWIN_ERR_OLE;
+    }
+}
+
+void gwin_dnd_dispose(gwin_clipboard_t clip)
+{
+    try {
+        ENTER_MAIN_THREAD()
+        {
+            if (NULL != p) {
+                p->Release();
+                STRACE(_T("Dnd Clipboard Closed"));
+            }
+        }
+        LEAVE_MAIN_THREAD_WITH_handle(clip);
+        PERFORM();
+    } catch (...) {
+    }
+}
+

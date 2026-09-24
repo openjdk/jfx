@@ -43,8 +43,6 @@ import javafx.stage.Window;
 import java.math.BigDecimal;
 import java.util.List;
 import com.sun.javafx.PlatformUtil;
-import com.sun.glass.utils.NativeLibLoader;
-import com.sun.prism.impl.PrismSettings;
 
 /**
  * Some basic utilities which need to be in java (for shifting operations or
@@ -985,18 +983,6 @@ public class Utils {
         }
 
         return new String(dst, 0, dstIndex);
-    }
-
-    public static synchronized void loadNativeSwingLibrary() {
-        String libName = "prism_common";
-
-        if (PrismSettings.verbose) {
-            System.out.println("Loading Prism common native library ...");
-        }
-        NativeLibLoader.loadLibrary(libName);
-        if (PrismSettings.verbose) {
-            System.out.println("\tsucceeded.");
-        }
     }
 
     /**

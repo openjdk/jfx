@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,6 @@
 
 package com.sun.javafx.embed.swing.newimpl;
 
-import com.sun.glass.ui.Application;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.embed.swing.DisposerRecord;
 import com.sun.javafx.embed.swing.FXDnD;
@@ -33,8 +32,6 @@ import com.sun.javafx.embed.swing.SwingCursors;
 import com.sun.javafx.embed.swing.SwingNodeHelper;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.stage.WindowHelper;
-import com.sun.javafx.tk.Toolkit;
-import com.sun.javafx.util.Utils;
 import java.awt.AWTEvent;
 import java.awt.Component;
 import java.awt.Cursor;
@@ -66,7 +63,6 @@ public class SwingNodeInteropN {
      * Must be called on EDT only.
      */
     private static OptionalMethod<LightweightFrameWrapper> jlfNotifyDisplayChanged;
-    private static Class lwFrameWrapperClass = null;
 
     static {
         jlfNotifyDisplayChanged = new OptionalMethod<>(LightweightFrameWrapper.class,
@@ -75,12 +71,6 @@ public class SwingNodeInteropN {
             jlfNotifyDisplayChanged = new OptionalMethod<>(
                   LightweightFrameWrapper.class,"notifyDisplayChanged", Integer.TYPE);
         }
-
-        try {
-            lwFrameWrapperClass = Class.forName("jdk.swing.interop.LightweightFrameWrapper");
-        } catch (Throwable t) {}
-
-        Utils.loadNativeSwingLibrary();
     }
 
     public LightweightFrameWrapper createLightweightFrame() {
@@ -121,11 +111,6 @@ public class SwingNodeInteropN {
     public AWTEvent createUngrabEvent(Object frame) {
         LightweightFrameWrapper lwFrame = (LightweightFrameWrapper)frame;
         return lwFrame.createUngrabEvent(lwFrame);
-    }
-
-    public void overrideNativeWindowHandle(Object frame, long handle, Runnable closeWindow) {
-        LightweightFrameWrapper lwFrame = (LightweightFrameWrapper)frame;
-        Application.overrideNativeWindowHandle(lwFrameWrapperClass, lwFrame, handle, closeWindow);
     }
 
     public void notifyDisplayChanged(Object frame, double scaleX, double scaleY) {
@@ -234,24 +219,13 @@ public class SwingNodeInteropN {
 
     private static class SwingNodeDisposer implements DisposerRecord {
         LightweightFrameWrapper lwFrame;
-        Runnable tkShutdownHook;
 
         SwingNodeDisposer(LightweightFrameWrapper ref, SwingNodeInteropN swNodeIOP) {
             this.lwFrame = ref;
-
-            // Reset and notify FX stage handle to JLightweightFrame
-            // so that CPlatformWindow doesn't try to create AWT child window
-            // once FX is shutdown
-            final Runnable shutdownHook = () -> {
-                swNodeIOP.overrideNativeWindowHandle(lwFrame, 0L, null);
-            };
-            Toolkit.getToolkit().addShutdownHook(shutdownHook);
-            tkShutdownHook = shutdownHook;
         }
 
         @Override
         public void dispose() {
-            Toolkit.getToolkit().removeShutdownHook(tkShutdownHook);
             if (lwFrame != null) {
                 lwFrame.dispose();
                 lwFrame = null;

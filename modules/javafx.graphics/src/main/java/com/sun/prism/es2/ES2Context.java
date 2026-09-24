@@ -36,7 +36,6 @@ import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGDefaultCamera;
 import com.sun.prism.CompositeMode;
 import com.sun.prism.Graphics;
-import com.sun.prism.Material;
 import com.sun.prism.RTTexture;
 import com.sun.prism.RenderTarget;
 import com.sun.prism.Texture;
@@ -407,59 +406,6 @@ class ES2Context extends BaseShaderContext {
                 vertexBufferLength, indexBuffer, indexBufferLength);
     }
 
-    long createES2PhongMaterial() {
-        return glContext.createES2PhongMaterial();
-    }
-
-    // TODO: 3D - Should this be called dispose?
-    void releaseES2PhongMaterial(long nativeHandle) {
-        glContext.releaseES2PhongMaterial(nativeHandle);
-    }
-
-    void setSolidColor(long nativeHandle, float r, float g, float b, float a) {
-        glContext.setSolidColor(nativeHandle, r, g, b, a);
-    }
-
-    void setMap(long nativeHandle, int mapType, int texID) {
-        glContext.setMap(nativeHandle, mapType, texID);
-    }
-
-    long createES2MeshView(ES2Mesh mesh) {
-        return glContext.createES2MeshView(mesh.getNativeHandle());
-    }
-
-    // TODO: 3D - Should this be called dispose?
-    void releaseES2MeshView(long nativeHandle) {
-        glContext.releaseES2MeshView(nativeHandle);
-    }
-
-    void setCullingMode(long nativeHandle, int cullingMode) {
-        // NOTE: Native code has set clockwise order as front-facing
-        glContext.setCullingMode(nativeHandle, cullingMode);
-    }
-
-    void setMaterial(long nativeHandle, Material material) {
-        ES2PhongMaterial es2Material = (ES2PhongMaterial)material;
-
-        glContext.setMaterial(nativeHandle,
-                (es2Material).getNativeHandle());
-    }
-
-    void setWireframe(long nativeHandle, boolean wireframe) {
-       glContext.setWireframe(nativeHandle, wireframe);
-    }
-
-    void setAmbientLight(long nativeHandle, float r, float g, float b) {
-        glContext.setAmbientLight(nativeHandle, r, g, b);
-    }
-
-    void setLight(long nativeHandle, int index, float x, float y, float z, float r, float g, float b, float w,
-            float ca, float la, float qa, float isAttenuated, float maxRange, float dirX, float dirY, float dirZ,
-            float innerAngle, float outerAngle, float falloff) {
-        glContext.setLight(nativeHandle, index, x, y, z, r, g, b, w, ca, la, qa, isAttenuated,
-                maxRange, dirX, dirY, dirZ, innerAngle, outerAngle, falloff);
-    }
-
     @Override
     public void blit(RTTexture srcRTT, RTTexture dstRTT,
                      int srcX0, int srcY0, int srcX1, int srcY1,
@@ -473,7 +419,7 @@ class ES2Context extends BaseShaderContext {
                           dstX0, dstY0, dstX1, dstY1);
     }
 
-    void renderMeshView(long nativeHandle, Graphics g, ES2MeshView meshView) {
+    void renderMeshView(Graphics g, ES2MeshView meshView) {
 
         ES2Shader shader = getPhongShader(meshView);
         setShaderProgram(shader.getProgramObject());
@@ -510,7 +456,12 @@ class ES2Context extends BaseShaderContext {
 
         ES2PhongShader.setShaderParamaters(shader, meshView, this);
 
-        glContext.renderMeshView(nativeHandle);
+        // Folds nRenderMeshView: es2_mesh_render draws the mesh with the cull / fill
+        // state ES2MeshView now carries (the material and light struct fields the old
+        // MeshViewInfo held were never read). ES2MeshView.render() has already ensured
+        // the material is non-null, reproducing nRenderMeshView's NULL-material gate.
+        glContext.meshRender(meshView.getMesh().getNativeHandle(),
+                meshView.getCullEnable(), meshView.getCullModeGL(), meshView.getFillModeGL());
     }
 
     @Override

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,8 +38,25 @@ final class GtkCursor extends Cursor {
         super(x, y, pixels);
     }
 
+    /**
+     * A {@code GdkCursor} from a pixbuf, through {@link GtkGlassNative}, which binds the GDK calls
+     * {@code GlassCursor.cpp} wrapped up to commit {@code 033187ad90}.
+     */
     @Override
-    protected native long _createCursor(int x, int y, Pixels pixels);
+    protected long _createCursor(int x, int y, Pixels pixels) {
+        return GtkGlassNative.cursorCreate(x, y, pixels);
+    }
 
-    native static Size _getBestSize(int width, int height);
+    static Size _getBestSize(int width, int height) {
+        return GtkGlassNative.cursorBestSize(width, height);
+    }
+
+    /**
+     * The {@code GdkCursor *} of a custom cursor - {@code Cursor.ptr}, which {@code GtkWindow._setCustomCursor} read
+     * with {@code GetLongField} at commit {@code 033187ad90} - for {@code GtkWindow}, which is not a {@code Cursor}
+     * subclass and cannot read the protected accessor itself.
+     */
+    long nativeCursor() {
+        return getNativeCursor();
+    }
 }

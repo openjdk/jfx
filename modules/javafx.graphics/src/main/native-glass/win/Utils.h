@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,17 +47,6 @@
 #define ASSERT(condition)
 #endif
 
-#ifdef _WIN64
-#define jlong_to_ptr(a) ((void*)(a))
-#define ptr_to_jlong(a) ((jlong)(a))
-#else
-#define jlong_to_ptr(a) ((void*)(int)(a))
-#define ptr_to_jlong(a) ((jlong)(int)(a))
-#endif
-
-#define jbool_to_bool(a) (((a) == JNI_TRUE) ? TRUE : FALSE)
-#define bool_to_jbool(a) ((a) ? JNI_TRUE : JNI_FALSE)
-
 #define IS_WINVER_ATLEAST(maj, min) \
                           (LOBYTE(LOWORD(::GetVersion())) >  (maj) || \
                            LOBYTE(LOWORD(::GetVersion())) == (maj) && \
@@ -74,49 +63,15 @@
 #endif
 
 ///////////////////////////////////////////////////////////
-// Java helper routines
+// Keyboard and mouse-button modifier state
 ///////////////////////////////////////////////////////////
 
-JavaVM* GetJVM();
-JNIEnv* GetEnv();
+// The com.sun.glass.events.KeyEvent MODIFIER_* bits held down right now (GetKeyState), for the event
+// callbacks of ViewContainer.cpp and GlassWindow.cpp. The JNI helpers that used to share this banner
+// (GetEnv / CheckAndClearException / InitExceptionReporting) served UI Automation only and went with
+// GlassAccessibleJni.h when the accessibility JNI was deleted.
 
-// Returns JNI_TRUE if there are exceptions
-jboolean CheckAndClearException(JNIEnv *env);
-
-jint GetModifiers();
-
-class JString {
-public:
-    JString(JNIEnv *env, jstring jString) {
-        init(env, jString, true);
-    }
-    JString(JNIEnv *env, jstring jString, bool autoDelete) {
-        init(env, jString, autoDelete);
-    }
-
-    ~JString() {
-        if (m_wszStr && m_autoDelete) {
-            delete[] m_wszStr;
-        }
-    }
-
-    operator wchar_t*() { return m_wszStr; }
-
-    int length() { return m_len; }
-
-private:
-    void init(JNIEnv *env, jstring jString, bool autoDelete) {
-        m_len = env->GetStringLength(jString);
-        m_wszStr = new wchar_t[m_len + 1];
-        env->GetStringRegion(jString, 0, m_len, (jchar *)m_wszStr);
-        m_wszStr[m_len] = L'\0';
-        m_autoDelete = autoDelete;
-    }
-
-    wchar_t *m_wszStr;
-    int m_len;
-    bool m_autoDelete;
-};
+int32_t GetModifiers();
 
 // DNT == double null terminated
 class DNTString {
@@ -276,109 +231,6 @@ private:
     UINT m_count; // the count of the substrings
 };
 
-inline jstring CreateJString(JNIEnv *env, const wchar_t *wszStr) {
-    if (wszStr == NULL)
-        return NULL;
-    jstring jStr = env->NewString((const jchar *)wszStr, jsize(wcslen(wszStr)));
-    if (CheckAndClearException(env)) return NULL;
-    return jStr;
-}
-
-inline jstring CreateJString(JNIEnv *env, const char *szStr) {
-    if (szStr == NULL)
-        return NULL;
-    jstring jStr = env->NewStringUTF(szStr);
-    if (CheckAndClearException(env)) return NULL;
-    return jStr;
-}
-
-inline jstring ConcatJStrings(JNIEnv *env, jstring str1, jstring str2) {
-    if (str1 == NULL || str2 == NULL)
-        return NULL;
-    jclass cls = env->FindClass("java/lang/String");
-    if (CheckAndClearException(env)) {
-        return NULL;
-    }
-    jmethodID mid = env->GetMethodID(cls, "concat", "(Ljava/lang/String;)Ljava/lang/String;");
-    if (CheckAndClearException(env)) return NULL;
-    jstring ret = (jstring)env->CallObjectMethod(str1, mid, str2);
-    CheckAndClearException(env);
-
-    return ret;
-}
-
-template <class T>
-class JLocalRef {
-    JNIEnv* m_env;
-    T m_localJRef;
-
-public:
-    JLocalRef(JNIEnv* env, T localJRef = NULL)
-        : m_env(env),
-        m_localJRef(localJRef)
-    {}
-    T Detach() {
-        T ret = m_localJRef;
-        m_localJRef = NULL;
-        return ret;
-    }
-    void Attach(T newValue) {
-        if (m_localJRef) {
-            m_env->DeleteLocalRef((jobject)m_localJRef);
-        }
-        m_localJRef = newValue;
-    }
-
-    operator T() const { return m_localJRef; }
-    operator bool() const { return NULL!=m_localJRef; }
-    bool operator !() const { return NULL==m_localJRef; }
-
-    ~JLocalRef() {
-        if (m_localJRef) {
-            m_env->DeleteLocalRef((jobject)m_localJRef);
-        }
-    }
-};
-
-template <class T>
-class JGlobalRef {
-    T m_globalJRef;
-
-public:
-    JGlobalRef() : m_globalJRef(NULL) {}
-
-    JGlobalRef(T o) : m_globalJRef(NULL) // make sure it's NULL initially
-    {
-        Attach(GetEnv(), o);
-    }
-
-    void Attach(JNIEnv* env, T localJRef){
-        if (m_globalJRef) {
-            env->DeleteGlobalRef((jobject)m_globalJRef);
-        }
-        m_globalJRef = (T)(localJRef
-            ? env->NewGlobalRef((jobject)localJRef)
-            : NULL);
-    }
-
-    JGlobalRef<T>& operator = (T localRef)
-    {
-        Attach(GetEnv(), localRef);
-        return *this;
-    }
-
-    operator T() const { return m_globalJRef; }
-    operator bool() const { return NULL!=m_globalJRef; }
-    bool operator !() const { return NULL==m_globalJRef; }
-
-    ~JGlobalRef() {
-        if (m_globalJRef) {
-            GetEnv()->DeleteGlobalRef((jobject)m_globalJRef);
-        }
-    }
-};
-
-
 template <class T>
 class MemHolder
 {
@@ -410,172 +262,6 @@ public:
 private:
     T *m_pMem;
 };
-
-typedef JLocalRef<jobject> JLObject;
-typedef JLocalRef<jstring> JLString;
-typedef JLocalRef<jclass>  JLClass;
-typedef JLocalRef<jobjectArray>  JLObjectArray;
-
-template <class T>
-class JArray {
-    public:
-        JArray() : data(NULL) {}
-        ~JArray()
-        {
-            if (data) {
-                GetEnv()->ReleasePrimitiveArrayCritical(array, data, JNI_ABORT);
-            }
-        }
-
-        void Attach(JNIEnv *env, jarray a)
-        {
-            array.Attach(env, a);
-        }
-
-        T* GetPtr()
-        {
-            if (!data && array) {
-                data = (T*)GetEnv()->GetPrimitiveArrayCritical(array, NULL);
-            }
-            return data;
-        }
-
-        operator bool() { return array; }
-    private:
-        JGlobalRef<jarray> array;
-        T * data;
-};
-
-template <class T>
-class JBufferArray {
-    public:
-        JBufferArray() : data(NULL), offset(0) {}
-
-        void Attach(JNIEnv *env, jobject buf, jarray arr, jint offs)
-        {
-            if (!arr) {
-                data = (T*)env->GetDirectBufferAddress(buf);
-            } else {
-                if (offs < 0 || offs > env->GetArrayLength(arr)) {
-                    fprintf(stderr, "Failed to attach bytes array\n");
-                    return;
-                }
-                array.Attach(env, arr);
-                offset = offs;
-            }
-        }
-
-        T* GetPtr()
-        {
-            if (!data && array) {
-                data = array.GetPtr();
-                data += offset;
-            }
-            return data;
-        }
-
-        operator bool() { return data || array; }
-
-    private:
-        T* data;
-        JArray<T> array;
-        jint offset;
-};
-
-typedef struct _tagJavaIDs {
-    struct {
-        jmethodID notifyFocus;
-        jmethodID notifyFocusDisabled;
-        jmethodID notifyFocusUngrab;
-        jmethodID notifyDestroy;
-        jmethodID notifyDelegatePtr;
-    } Window;
-    struct {
-        jmethodID nonClientHitTest;
-    } WinWindow;
-    struct {
-        jmethodID notifyResize;
-        jmethodID notifyRepaint;
-        jmethodID notifyKey;
-        jmethodID notifyMouse;
-        jmethodID notifyMenu;
-        jmethodID notifyScroll;
-        jmethodID notifyInputMethod;
-        jmethodID notifyInputMethodCandidatePosRequest;
-
-        jmethodID notifyDragEnter;
-        jmethodID notifyDragOver;
-        jmethodID notifyDragLeave;
-        jmethodID notifyDragDrop;
-
-        jmethodID notifyView;
-
-        jmethodID getWidth;
-        jmethodID getHeight;
-        jmethodID getAccessible;
-
-        jfieldID  ptr;
-    } View;
-    struct {
-        jmethodID init;
-    } Size;
-    struct {
-        jmethodID attachData;
-    } Pixels;
-    struct {
-        jmethodID getType;
-        jmethodID getNativeCursor;
-    } Cursor;
-    struct {
-        struct {
-            jmethodID getDescription;
-            jmethodID extensionsToArray;
-        } ExtensionFilter;
-        jmethodID createFileChooserResult;
-    } CommonDialogs;
-    struct {
-        jmethodID run;
-    } Runnable;
-    struct {
-        jmethodID add;
-    } List;
-    struct {
-        jmethodID gesturePerformedMID;
-        jmethodID inertiaGestureFinishedMID;
-        jmethodID notifyBeginTouchEventMID;
-        jmethodID notifyNextTouchEventMID;
-        jmethodID notifyEndTouchEventMID;
-    } Gestures;
-    struct {
-        jmethodID init;
-        jmethodID notifySettingsChanged;
-    } Screen;
-    struct {
-        jmethodID reportExceptionMID;
-        jmethodID notifyPreferencesChangedMID;
-    } Application;
-    struct {
-        jmethodID rgb;
-    } Color;
-    struct {
-        jfieldID trueID;
-        jfieldID falseID;
-    } Boolean;
-    struct {
-        jmethodID equals;
-    } Object;
-    struct {
-        jmethodID unmodifiableMap;
-    } Collections;
-    struct {
-        jmethodID put;
-    } Map;
-    struct {
-        jmethodID init;
-    } HashMap;
-} JavaIDs;
-
-extern JavaIDs javaIDs;
 
 
 #endif //_GLASS_UTILS_

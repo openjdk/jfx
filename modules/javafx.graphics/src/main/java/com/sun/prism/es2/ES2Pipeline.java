@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,6 @@
 package com.sun.prism.es2;
 
 import com.sun.glass.ui.Screen;
-import com.sun.glass.utils.NativeLibLoader;
 import com.sun.prism.GraphicsPipeline;
 import com.sun.prism.ResourceFactory;
 import com.sun.prism.impl.PrismSettings;
@@ -46,17 +45,16 @@ public class ES2Pipeline extends GraphicsPipeline {
     private static boolean isEglfb = false;
 
     static {
-        String libName = "prism_es2";
-
         String eglType = PlatformUtil.getEmbeddedType();
         if ("monocle".equals(eglType)) {
             isEglfb = true;
-            libName = "prism_es2_monocle";
         }
         if (PrismSettings.verbose) {
-            System.out.println("Loading ES2 native library ... " + libName);
+            System.out.println("Loading ES2 native library ... " + ES2Native.LIBRARY_NAME);
         }
-        NativeLibLoader.loadLibrary(libName);
+        // ES2Native loaded and bound the library of this platform in its initializer; this raises what
+        // that recorded, where the JNI-era loadLibrary threw.
+        ES2Native.loadLibrary();
         if (PrismSettings.verbose) {
             System.out.println("\tsucceeded.");
         }
@@ -83,9 +81,8 @@ public class ES2Pipeline extends GraphicsPipeline {
             factories = new ES2ResourceFactory[glFactory.getAdapterCount()];
             msaa = glFactory.isGLExtensionSupported("GL_ARB_multisample");
             npotSupported = glFactory.isNPOTSupported();
-            // 3D requires platform that has non-power of two (NPOT) support, but
-            // also works on iOS with OpenGL ES 2.0 or greater
-            supports3D = npotSupported || PlatformUtil.isIOS();
+            // 3D requires platform that has non-power of two (NPOT) support
+            supports3D = npotSupported;
         } else {
             theInstance = null;
             msaa = false;

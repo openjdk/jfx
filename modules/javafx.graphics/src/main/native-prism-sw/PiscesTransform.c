@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -67,49 +67,4 @@ pisces_transform_invert(Transform6* transform) {
     transform->m11 = (jint)(fa11*65536.0f);
     transform->m02 = (jint)(fa02*65536.0f);
     transform->m12 = (jint)(fa12*65536.0f);
-}
-
-/**
- * Multiplicates transformation matrixes *transformD and *transformS. Result is
- * stored in *transformD. Matrix *transformD is multiplied by matrix *transformS
- * from right (*transformD = *transformD.*transformS).
- */
-void
-pisces_transform_multiply(Transform6* transformD,
-                          const Transform6* transformS) {
-    jlong _m00 = ((jlong)transformD->m00*transformS->m00 +
-                  (jlong)transformD->m01*transformS->m10) >> 16;
-    jlong _m01 = ((jlong)transformD->m00*transformS->m01 +
-                  (jlong)transformD->m01*transformS->m11) >> 16;
-    jlong _m10 = ((jlong)transformD->m10*transformS->m00 +
-                  (jlong)transformD->m11*transformS->m10) >> 16;
-    jlong _m11 = ((jlong)transformD->m10*transformS->m01 +
-                  (jlong)transformD->m11*transformS->m11) >> 16;
-    jlong _m02 = (((jlong)transformD->m02 << 16) +
-                  (jlong)transformD->m00*transformS->m02 +
-                  (jlong)transformD->m01*transformS->m12) >> 16;
-    jlong _m12 = (((jlong)transformD->m12 << 16) +
-                  (jlong)transformD->m10*transformS->m02 +
-                  (jlong)transformD->m11*transformS->m12) >> 16;
-
-    transformD->m00 = (jint)_m00;
-    transformD->m01 = (jint)_m01;
-    transformD->m02 = (jint)_m02;
-    transformD->m10 = (jint)_m10;
-    transformD->m11 = (jint)_m11;
-    transformD->m12 = (jint)_m12;
-}
-
-jboolean pisces_transform_equals(const Transform6* tr1, const Transform6* tr2) {
-    if(tr1 == tr2) {
-        return XNI_TRUE;
-    } else if (tr1 != NULL && tr2 != NULL) {
-        return (tr1->m00 == tr2->m00 &&
-                tr1->m01 == tr2->m01 &&
-                tr1->m02 == tr2->m02 &&
-                tr1->m10 == tr2->m10 &&
-                tr1->m11 == tr2->m11 &&
-                tr1->m12 == tr2->m12);
-    }
-    return XNI_FALSE;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,13 +29,6 @@ import com.sun.prism.es2.GLPixelFormat.Attributes;
 import java.util.HashMap;
 
 class X11GLFactory extends GLFactory {
-
-    private static native long nInitialize(int[] attrArr);
-    private static native int nGetAdapterOrdinal(long nativeScreen);
-    private static native int nGetAdapterCount();
-    private static native int nGetDefaultScreen(long nativeCtxInfo);
-    private static native long nGetDisplay(long nativeCtxInfo);
-    private static native long nGetVisualID(long nativeCtxInfo);
 
     // Entries must be in lowercase and null string is a wild card
     // Limit es2 pipe qualification check to supported drivers and GPUs
@@ -144,31 +137,37 @@ class X11GLFactory extends GLFactory {
         attrArr[GLPixelFormat.Attributes.ONSCREEN] = attrs.isOnScreen() ? 1 : 0;
 
         // return the context info object create on the default screen
-        nativeCtxInfo = nInitialize(attrArr);
+        nativeCtxInfo = ES2Native.factoryInitialize(attrArr);
 
         if (nativeCtxInfo == 0) {
             // current pipe doesn't support this pixelFormat request
             return false;
         } else {
-            gl2 = true;
+            gl2 = DESKTOP_GL2;
             return true;
         }
     }
 
     @Override
     int getAdapterCount() {
-        return nGetAdapterCount();
+        // Single / homogeneous GPU assumption; the native nGetAdapterCount always
+        // returned 1 (JDK-8091992). Absorbed as a constant (exact parity).
+        return 1;
     }
 
     @Override
     int getAdapterOrdinal(long nativeScreen) {
-        return nGetAdapterOrdinal(nativeScreen);
+        // The native nGetAdapterOrdinal always returned 0 (JDK-8091992).
+        return 0;
     }
 
     @Override
     void updateDeviceDetails(HashMap deviceDetails) {
-        deviceDetails.put("XVisualID", Long.valueOf(nGetVisualID(nativeCtxInfo)));
-        deviceDetails.put("XDisplay", Long.valueOf(nGetDisplay(nativeCtxInfo)));
-        deviceDetails.put("XScreenID", Integer.valueOf(nGetDefaultScreen(nativeCtxInfo)));
+        // Folds nGetDefaultScreen / nGetDisplay / nGetVisualID into one call:
+        // es2_factory_get_x11_info fills { default screen, Display*, X visual ID }.
+        long[] x11Info = ES2Native.factoryGetX11Info(nativeCtxInfo);
+        deviceDetails.put("XVisualID", Long.valueOf(x11Info[2]));
+        deviceDetails.put("XDisplay", Long.valueOf(x11Info[1]));
+        deviceDetails.put("XScreenID", Integer.valueOf((int) x11Info[0]));
     }
 }

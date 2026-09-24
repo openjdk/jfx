@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,8 +30,14 @@ class IDWriteTextAnalyzer extends IUnknown {
         super(ptr);
     }
 
+    /**
+     * The two arguments are two interfaces of the same object and they are <b>not</b> the same
+     * pointer: the source subinterface starts eight bytes into it. The JNI native took the class
+     * pointer for both and let the C++ base conversion add the eight; here each interface is asked
+     * for its own pointer.
+     */
     int AnalyzeScript(JFXTextAnalysisSink source, int start, int length, JFXTextAnalysisSink sink) {
-        return OS.AnalyzeScript(ptr, source.ptr, start, length, sink.ptr);
+        return DWNative.analyzeScript(ptr, source.sourcePointer(), start, length, sink.sinkPointer());
     }
 
     int GetGlyphs(char[] textString,
@@ -52,7 +58,7 @@ class IDWriteTextAnalyzer extends IUnknown {
                   short[] glyphIndices,
                   /*DWRITE_SHAPING_GLYPH_PROPERTIES*/ short[] glyphProps,
                   int[] actualGlyphCount) {
-        return OS.GetGlyphs(ptr, textString, textStart, textLength, fontFace.ptr,
+        return DWNative.getGlyphs(ptr, textString, textStart, textLength, fontFace.ptr,
                             isSideways, isRightToLeft,
                             scriptAnalysis,
                             (localeName != null ? (localeName+'\0').toCharArray() : (char[])null),
@@ -81,7 +87,7 @@ class IDWriteTextAnalyzer extends IUnknown {
                            int featureRanges,
                            float[] glyphAdvances,
                            /*DWRITE_GLYPH_OFFSET 2X */ float[] glyphOffsets) {
-        return OS.GetGlyphPlacements(ptr, textString, clusterMap, textProps,
+        return DWNative.getGlyphPlacements(ptr, textString, clusterMap, textProps,
                                      textStart, textLength,
                                      glyphIndices, glyphProps, glyphCount,
                                      fontFace.ptr, fontEmSize, isSideways, isRightToLeft,

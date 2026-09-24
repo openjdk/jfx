@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,6 +42,10 @@ import com.sun.prism.Texture;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.prism.impl.ps.BaseShaderContext;
 import com.sun.prism.ps.Shader;
+import java.lang.foreign.Arena;
+import java.lang.foreign.MemorySegment;
+import static java.lang.foreign.ValueLayout.JAVA_DOUBLE;
+import static java.lang.foreign.ValueLayout.JAVA_FLOAT;
 
 class D3DContext extends BaseShaderContext {
 
@@ -87,7 +91,20 @@ class D3DContext extends BaseShaderContext {
     private State state;
     private boolean isLost = false;
 
-    private final long pContext;
+    /** The native {@code D3DContext*}; the C++ owns it. */
+    private final MemorySegment pContext;
+
+    /*
+     * Off-heap scratch for the calls that take a pointer: the 4x4 matrices and the light parameters the
+     * JNI methods took as scalars, and the out-structs. Confined to the render thread, the only thread
+     * that touches this context, and closed in dispose(). Nothing on the C side retains a pointer to it.
+     */
+    private final Arena scratchArena = Arena.ofConfined();
+    private final MemorySegment matrixScratch = scratchArena.allocate(D3DNative.MATRIX_LAYOUT);
+    private final MemorySegment lightScratch = scratchArena.allocate(D3DNative.LIGHT_LAYOUT);
+    private final MemorySegment frameStatsScratch = scratchArena.allocate(D3DNative.FRAME_STATS_LAYOUT);
+    private final MemorySegment textureInfoScratch = scratchArena.allocate(D3DNative.TEXTURE_INFO_LAYOUT);
+    private final MemorySegment sizeScratch = scratchArena.allocate(D3DNative.SIZE_LAYOUT);
 
     private Vec3d cameraPos = new Vec3d();
     private GeneralTransform3D projViewTx = new GeneralTransform3D();
@@ -97,7 +114,7 @@ class D3DContext extends BaseShaderContext {
 
     public static final int NUM_QUADS = PrismSettings.superShader ? 4096 : 256;
 
-    D3DContext(long pContext, Screen screen, D3DResourceFactory factory) {
+    D3DContext(MemorySegment pContext, Screen screen, D3DResourceFactory factory) {
         super(screen, factory, NUM_QUADS);
         this.pContext = pContext;
         this.factory = factory;
@@ -111,12 +128,40 @@ class D3DContext extends BaseShaderContext {
     protected void initState() {
         init();
         state = new State();
-        validate(nSetBlendEnabled(pContext, D3DCOMPMODE_SRCOVER));
-        validate(nSetDeviceParametersFor2D(pContext));
+        validate(D3DNative.contextSetBlendMode(pContext, D3DCOMPMODE_SRCOVER));
+        validate(D3DNative.contextSetDeviceParameters2D(pContext));
     }
 
-    long getContextHandle() {
+    MemorySegment getContextHandle() {
         return pContext;
+    }
+
+    /**
+     * The {@code D3dTextureInfo} out-struct the resource factory hands to the create calls. Valid only
+     * until the next create call on this context.
+     */
+    MemorySegment textureInfoScratch() {
+        return textureInfoScratch;
+    }
+
+    /**
+     * The physical width of a resource, or -1 for a {@code NULL} handle - the answer
+     * {@code nGetTextureWidth} gave. The NULL case never reaches the native side.
+     */
+    int getResourceWidth(MemorySegment resource) {
+        return readResourceSize(resource) ? D3DNative.sizeWidth(sizeScratch) : -1;
+    }
+
+    /** The physical height of a resource, or -1 for a {@code NULL} handle; see {@link #getResourceWidth}. */
+    int getResourceHeight(MemorySegment resource) {
+        return readResourceSize(resource) ? D3DNative.sizeHeight(sizeScratch) : -1;
+    }
+
+    private boolean readResourceSize(MemorySegment resource) {
+        if (resource.address() == 0L) {
+            return false;
+        }
+        return D3DNative.resourceGetSize(resource, sizeScratch) == 0;
     }
 
     /**
@@ -155,7 +200,7 @@ class D3DContext extends BaseShaderContext {
             return false;
         }
 
-        int hr = D3DResourceFactory.nTestCooperativeLevel(pContext);
+        int hr = D3DNative.contextTestCooperativeLevel(pContext);
 
         if (PrismSettings.verbose && FAILED(hr)) {
             System.err.print("D3DContext::testLostStateAndReset : ");
@@ -194,7 +239,7 @@ class D3DContext extends BaseShaderContext {
             disposeLCDBuffer();
             factory.notifyReset();
 
-            hr = D3DResourceFactory.nResetDevice(pContext);
+            hr = D3DNative.contextResetDevice(pContext);
 
             if (hr == D3D_OK) {
                 isLost = false;
@@ -235,6 +280,9 @@ class D3DContext extends BaseShaderContext {
         state = null;
 
         super.dispose();
+        if (scratchArena.scope().isAlive()) {
+            scratchArena.close();
+        }
     }
 
     /**
@@ -251,13 +299,45 @@ class D3DContext extends BaseShaderContext {
         return projViewTx;
     }
 
+    /**
+     * Writes the 16 values of {@code tx} into the matrix scratch in {@code get(0..15)} order - the
+     * order the JNI methods took them as scalars.
+     */
+    private MemorySegment fillMatrix(GeneralTransform3D tx) {
+        for (int i = 0; i < 16; i++) {
+            matrixScratch.setAtIndex(JAVA_DOUBLE, i, tx.get(i));
+        }
+        return matrixScratch;
+    }
+
+    /** Writes the affine {@code xform} into the matrix scratch with the last row {@code 0, 0, 0, 1}. */
+    private MemorySegment fillMatrix(BaseTransform xform) {
+        matrixScratch.setAtIndex(JAVA_DOUBLE, 0, xform.getMxx());
+        matrixScratch.setAtIndex(JAVA_DOUBLE, 1, xform.getMxy());
+        matrixScratch.setAtIndex(JAVA_DOUBLE, 2, xform.getMxz());
+        matrixScratch.setAtIndex(JAVA_DOUBLE, 3, xform.getMxt());
+        matrixScratch.setAtIndex(JAVA_DOUBLE, 4, xform.getMyx());
+        matrixScratch.setAtIndex(JAVA_DOUBLE, 5, xform.getMyy());
+        matrixScratch.setAtIndex(JAVA_DOUBLE, 6, xform.getMyz());
+        matrixScratch.setAtIndex(JAVA_DOUBLE, 7, xform.getMyt());
+        matrixScratch.setAtIndex(JAVA_DOUBLE, 8, xform.getMzx());
+        matrixScratch.setAtIndex(JAVA_DOUBLE, 9, xform.getMzy());
+        matrixScratch.setAtIndex(JAVA_DOUBLE, 10, xform.getMzz());
+        matrixScratch.setAtIndex(JAVA_DOUBLE, 11, xform.getMzt());
+        matrixScratch.setAtIndex(JAVA_DOUBLE, 12, 0.0);
+        matrixScratch.setAtIndex(JAVA_DOUBLE, 13, 0.0);
+        matrixScratch.setAtIndex(JAVA_DOUBLE, 14, 0.0);
+        matrixScratch.setAtIndex(JAVA_DOUBLE, 15, 1.0);
+        return matrixScratch;
+    }
+
     @Override
     protected State updateRenderTarget(RenderTarget target, NGCamera camera,
                                        boolean depthTest)  {
         if (checkDisposed()) return null;
 
-        long resourceHandle = ((D3DRenderTarget)target).getResourceHandle();
-        int res = nSetRenderTarget(pContext, resourceHandle, depthTest, target.isMSAA());
+        MemorySegment resourceHandle = ((D3DRenderTarget)target).getResourceHandle();
+        int res = D3DNative.contextSetRenderTarget(pContext, resourceHandle, depthTest, target.isMSAA());
         validate(res);
         // resetLastClip should be called only if render target was changed
         // return value is S_FALSE (success with negative result)
@@ -285,11 +365,7 @@ class D3DContext extends BaseShaderContext {
         }
 
         // Set projection view matrix
-        res = nSetProjViewMatrix(pContext, depthTest,
-            projViewTx.get(0),  projViewTx.get(1),  projViewTx.get(2),  projViewTx.get(3),
-            projViewTx.get(4),  projViewTx.get(5),  projViewTx.get(6),  projViewTx.get(7),
-            projViewTx.get(8),  projViewTx.get(9),  projViewTx.get(10), projViewTx.get(11),
-            projViewTx.get(12), projViewTx.get(13), projViewTx.get(14), projViewTx.get(15));
+        res = D3DNative.contextSetProjViewMatrix(pContext, depthTest, fillMatrix(projViewTx));
         validate(res);
 
         cameraPos = camera.getPositionInWorld(cameraPos);
@@ -300,7 +376,7 @@ class D3DContext extends BaseShaderContext {
 
     @Override
     protected void updateTexture(int texUnit, Texture tex) {
-        long texHandle;
+        MemorySegment texHandle;
         boolean linear;
         int wrapMode;
         if (tex != null) {
@@ -327,11 +403,11 @@ class D3DContext extends BaseShaderContext {
                     throw new InternalError("Unrecognized wrap mode: "+tex.getWrapMode());
             }
         } else {
-            texHandle = 0L;
+            texHandle = MemorySegment.NULL;
             linear = false;
             wrapMode = D3DTADDRESS_CLAMP;
         }
-        validate(nSetTexture(pContext, texHandle, texUnit, linear, wrapMode));
+        validate(D3DNative.contextSetTexture(pContext, texHandle, texUnit, linear, wrapMode));
     }
 
     @Override
@@ -343,20 +419,12 @@ class D3DContext extends BaseShaderContext {
         final GeneralTransform3D perspectiveTransform = getPerspectiveTransformNoClone();
         int res;
         if (xform.isIdentity() && perspectiveTransform.isIdentity()) {
-            res = nResetTransform(pContext);
+            res = D3DNative.contextResetTransform(pContext);
         } else if (perspectiveTransform.isIdentity()) {
-            res = nSetTransform(pContext,
-                xform.getMxx(), xform.getMxy(), xform.getMxz(), xform.getMxt(),
-                xform.getMyx(), xform.getMyy(), xform.getMyz(), xform.getMyt(),
-                xform.getMzx(), xform.getMzy(), xform.getMzz(), xform.getMzt(),
-                0.0, 0.0, 0.0, 1.0);
+            res = D3DNative.contextSetTransform(pContext, fillMatrix(xform));
         } else {
             scratchTx.setIdentity().mul(xform).mul(perspectiveTransform);
-            res = nSetTransform(pContext,
-                scratchTx.get(0), scratchTx.get(1), scratchTx.get(2), scratchTx.get(3),
-                scratchTx.get(4), scratchTx.get(5), scratchTx.get(6), scratchTx.get(7),
-                scratchTx.get(8), scratchTx.get(9), scratchTx.get(10), scratchTx.get(11),
-                scratchTx.get(12), scratchTx.get(13), scratchTx.get(14), scratchTx.get(15));
+            res = D3DNative.contextSetTransform(pContext, fillMatrix(scratchTx));
         }
         validate(res);
     }
@@ -364,13 +432,9 @@ class D3DContext extends BaseShaderContext {
     @Override
     protected void updateWorldTransform(BaseTransform xform) {
         if ((xform == null) || xform.isIdentity()) {
-            nSetWorldTransformToIdentity(pContext);
+            D3DNative.contextSetWorldTransform(pContext, MemorySegment.NULL);
         } else {
-            nSetWorldTransform(pContext,
-                    xform.getMxx(), xform.getMxy(), xform.getMxz(), xform.getMxt(),
-                    xform.getMyx(), xform.getMyy(), xform.getMyz(), xform.getMyt(),
-                    xform.getMzx(), xform.getMzy(), xform.getMzz(), xform.getMzt(),
-                    0.0, 0.0, 0.0, 1.0);
+            D3DNative.contextSetWorldTransform(pContext, fillMatrix(xform));
         }
     }
 
@@ -378,13 +442,13 @@ class D3DContext extends BaseShaderContext {
     protected void updateClipRect(Rectangle clipRect) {
         int res;
         if (clipRect == null || clipRect.isEmpty()) {
-            res = nResetClipRect(pContext);
+            res = D3DNative.contextResetClipRect(pContext);
         } else {
             int x1 = clipRect.x;
             int y1 = clipRect.y;
             int x2 = x1 + clipRect.width;
             int y2 = y1 + clipRect.height;
-            res = nSetClipRect(pContext, x1, y1, x2, y2);
+            res = D3DNative.contextSetClipRect(pContext, x1, y1, x2, y2);
         }
         validate(res);
     }
@@ -411,92 +475,15 @@ class D3DContext extends BaseShaderContext {
             default:
                 throw new InternalError("Unrecognized composite mode: "+mode);
         }
-        validate(nSetBlendEnabled(pContext, d3dmode));
+        validate(D3DNative.contextSetBlendMode(pContext, d3dmode));
     }
 
     D3DFrameStats getFrameStats(boolean reset, D3DFrameStats result) {
         if (result == null) {
             result = new D3DFrameStats();
         }
-        return nGetFrameStats(pContext, result, reset) ? result : null;
+        return D3DNative.contextGetFrameStats(pContext, frameStatsScratch, reset, result) ? result : null;
     }
-
-    /*
-     * @param depthBuffer if true will create and attach a depthBuffer,
-     * if needed, of the same format as the render target. The depth test state
-     * is handled elsewhere.
-     */
-    private static native int nSetRenderTarget(long pContext, long pDest, boolean depthBuffer, boolean msaa);
-    private static native int nSetTexture(long pContext, long pTex, int texUnit,
-        boolean linear, int wrapMode);
-    private static native int nResetTransform(long pContext);
-    private static native int nSetTransform(long pContext,
-        double m00, double m01, double m02, double m03,
-        double m10, double m11, double m12, double m13,
-        double m20, double m21, double m22, double m23,
-        double m30, double m31, double m32, double m33);
-    private static native void nSetWorldTransformToIdentity(long pContext);
-    private static native void nSetWorldTransform(long pContext,
-            double m00, double m01, double m02, double m03,
-            double m10, double m11, double m12, double m13,
-            double m20, double m21, double m22, double m23,
-            double m30, double m31, double m32, double m33);
-    private static native int nSetCameraPosition(long pContext, double x, double y, double z);
-    private static native int nSetProjViewMatrix(long pContext, boolean isOrtho,
-        double m00, double m01, double m02, double m03,
-        double m10, double m11, double m12, double m13,
-        double m20, double m21, double m22, double m23,
-        double m30, double m31, double m32, double m33);
-    private static native int nResetClipRect(long pContext);
-    private static native int nSetClipRect(long pContext,
-        int x1, int y1, int x2, int y2);
-    private static native int nSetBlendEnabled(long pContext, int mode);
-    private static native int nSetDeviceParametersFor2D(long pContext);
-    private static native int nSetDeviceParametersFor3D(long pContext);
-
-    private static native long nCreateD3DMesh(long pContext);
-    private static native void nReleaseD3DMesh(long pContext, long nativeHandle);
-    private static native boolean nBuildNativeGeometryShort(long pContext, long nativeHandle,
-            float[] vertexBuffer, int vertexBufferLength, short[] indexBuffer, int indexBufferLength);
-    private static native boolean nBuildNativeGeometryInt(long pContext, long nativeHandle,
-            float[] vertexBuffer, int vertexBufferLength, int[] indexBuffer, int indexBufferLength);
-    private static native long nCreateD3DPhongMaterial(long pContext);
-    private static native void nReleaseD3DPhongMaterial(long pContext, long nativeHandle);
-    private static native void nSetDiffuseColor(long pContext, long nativePhongMaterial,
-            float r, float g, float b, float a);
-    private static native void nSetSpecularColor(long pContext, long nativePhongMaterial,
-            boolean set, float r, float g, float b, float a);
-    private static native void nSetMap(long pContext, long nativePhongMaterial,
-            int mapType, long texID);
-    private static native long nCreateD3DMeshView(long pContext, long nativeMesh);
-    private static native void nReleaseD3DMeshView(long pContext, long nativeHandle);
-    private static native void nSetCullingMode(long pContext, long nativeMeshView,
-            int cullingMode);
-    private static native void nSetMaterial(long pContext, long nativeMeshView,
-            long nativePhongMaterialInfo);
-    private static native void nSetWireframe(long pContext, long nativeMeshView,
-            boolean wireframe);
-    private static native void nSetAmbientLight(long pContext, long nativeMeshView,
-            float r, float g, float b);
-    private static native void nSetLight(long pContext, long nativeMeshView,
-            int index, float x, float y, float z, float r, float g, float b, float w, float ca, float la, float qa,
-            float isAttenuated, float maxRange, float dirX, float dirY, float dirZ, float innerAngle, float outerAngle,
-            float falloff);
-    private static native void nRenderMeshView(long pContext, long nativeMeshView);
-    private static native int nDrawIndexedQuads(long pContext,
-            float coords[], byte colors[], int numVertices);
-
-
-    /*
-     * @param nSrcRTT must be valid native resource
-     * @param nDstRTT can be NULL if a valide render target is set
-     */
-    private static native void nBlit(long pContext, long nSrcRTT, long nDstRTT,
-            int srcX0, int srcY0, int srcX1, int srcY1,
-            int dstX0, int dstY0, int dstX1, int dstY1);
-
-    private static native boolean nGetFrameStats(long pContext,
-            D3DFrameStats returnValue, boolean bReset);
 
     public static String hResultToString(long hResult) {
         switch ((int)hResult) {
@@ -521,70 +508,74 @@ class D3DContext extends BaseShaderContext {
     public void setDeviceParametersFor2D() {
         if (checkDisposed()) return;
 
-        nSetDeviceParametersFor2D(pContext);
+        D3DNative.contextSetDeviceParameters2D(pContext);
     }
 
     @Override
     protected void setDeviceParametersFor3D() {
         if (checkDisposed()) return;
 
-        nSetDeviceParametersFor3D(pContext);
+        D3DNative.contextSetDeviceParameters3D(pContext);
     }
 
-    long createD3DMesh() {
-        if (checkDisposed()) return 0;
+    /** The native {@code D3DMesh*}, or {@link MemorySegment#NULL} when disposed or when creation failed. */
+    MemorySegment createD3DMesh() {
+        if (checkDisposed()) return MemorySegment.NULL;
 
-        return nCreateD3DMesh(pContext);
+        return D3DNative.meshCreate(pContext);
     }
 
     // TODO: 3D - Should this be called dispose?
-    void releaseD3DMesh(long nativeHandle) {
-        nReleaseD3DMesh(pContext, nativeHandle);
+    void releaseD3DMesh(MemorySegment nativeHandle) {
+        D3DNative.meshRelease(nativeHandle);
     }
 
-    boolean buildNativeGeometry(long nativeHandle, float[] vertexBuffer, int vertexBufferLength,
+    boolean buildNativeGeometry(MemorySegment nativeHandle, float[] vertexBuffer, int vertexBufferLength,
             short[] indexBuffer, int indexBufferLength) {
-        return nBuildNativeGeometryShort(pContext, nativeHandle, vertexBuffer,
+        return D3DNative.meshBuildGeometry(nativeHandle, vertexBuffer,
                 vertexBufferLength, indexBuffer, indexBufferLength);
     }
 
-    boolean buildNativeGeometry(long nativeHandle, float[] vertexBuffer, int vertexBufferLength,
+    boolean buildNativeGeometry(MemorySegment nativeHandle, float[] vertexBuffer, int vertexBufferLength,
             int[] indexBuffer, int indexBufferLength) {
-        return nBuildNativeGeometryInt(pContext, nativeHandle, vertexBuffer,
+        return D3DNative.meshBuildGeometry(nativeHandle, vertexBuffer,
                 vertexBufferLength, indexBuffer, indexBufferLength);
     }
 
-    long createD3DPhongMaterial() {
-        return nCreateD3DPhongMaterial(pContext);
+    /** The native {@code D3DPhongMaterial*}, or {@link MemorySegment#NULL} when creation failed. */
+    MemorySegment createD3DPhongMaterial() {
+        return D3DNative.materialCreate(pContext);
     }
 
     // TODO: 3D - Should this be called dispose?
-    void releaseD3DPhongMaterial(long nativeHandle) {
-        nReleaseD3DPhongMaterial(pContext, nativeHandle);
+    void releaseD3DPhongMaterial(MemorySegment nativeHandle) {
+        D3DNative.materialRelease(nativeHandle);
     }
 
-    void setDiffuseColor(long nativePhongMaterial, float r, float g, float b, float a) {
-        nSetDiffuseColor(pContext, nativePhongMaterial, r, g, b, a);
+    void setDiffuseColor(MemorySegment nativePhongMaterial, float r, float g, float b, float a) {
+        D3DNative.materialSetDiffuseColor(nativePhongMaterial, r, g, b, a);
     }
 
-    void setSpecularColor(long nativePhongMaterial, boolean set, float r, float g, float b, float a) {
-        nSetSpecularColor(pContext, nativePhongMaterial, set, r, g, b, a);
+    void setSpecularColor(MemorySegment nativePhongMaterial, boolean set, float r, float g, float b, float a) {
+        D3DNative.materialSetSpecularColor(nativePhongMaterial, set, r, g, b, a);
     }
 
-    void setMap(long nativePhongMaterial, int mapType, long nativeTexture) {
-        nSetMap(pContext, nativePhongMaterial, mapType, nativeTexture);
+    /** @param nativeTexture the {@code D3DResource*} of the map's texture, or {@link MemorySegment#NULL} */
+    void setMap(MemorySegment nativePhongMaterial, int mapType, MemorySegment nativeTexture) {
+        D3DNative.materialSetMap(nativePhongMaterial, mapType, nativeTexture);
     }
 
-    long createD3DMeshView(long nativeMesh) {
-        return nCreateD3DMeshView(pContext, nativeMesh);
+    /** The native {@code D3DMeshView*}, or {@link MemorySegment#NULL} when creation failed. */
+    MemorySegment createD3DMeshView(MemorySegment nativeMesh) {
+        return D3DNative.meshviewCreate(pContext, nativeMesh);
     }
 
     // TODO: 3D - Should this be called dispose?
-    void releaseD3DMeshView(long nativeMeshView) {
-        nReleaseD3DMeshView(pContext, nativeMeshView);
+    void releaseD3DMeshView(MemorySegment nativeMeshView) {
+        D3DNative.meshviewRelease(nativeMeshView);
     }
 
-    void setCullingMode(long nativeMeshView, int cullMode) {
+    void setCullingMode(MemorySegment nativeMeshView, int cullMode) {
         int cm;
         if (cullMode == MeshView.CULL_NONE) {
             cm = CULL_NONE;
@@ -595,35 +586,53 @@ class D3DContext extends BaseShaderContext {
         } else {
             throw new IllegalArgumentException("illegal value for CullMode: " + cullMode);
         }
-        nSetCullingMode(pContext, nativeMeshView, cm);
+        D3DNative.meshviewSetCullingMode(nativeMeshView, cm);
     }
 
-    void setMaterial(long nativeMeshView, long nativePhongMaterial) {
-        nSetMaterial(pContext, nativeMeshView, nativePhongMaterial);
+    void setMaterial(MemorySegment nativeMeshView, MemorySegment nativePhongMaterial) {
+        D3DNative.meshviewSetMaterial(nativeMeshView, nativePhongMaterial);
     }
 
-    void setWireframe(long nativeMeshView, boolean wireframe) {
-         nSetWireframe(pContext, nativeMeshView, wireframe);
+    void setWireframe(MemorySegment nativeMeshView, boolean wireframe) {
+         D3DNative.meshviewSetWireframe(nativeMeshView, wireframe);
     }
 
-    void setAmbientLight(long nativeMeshView, float r, float g, float b) {
-        nSetAmbientLight(pContext, nativeMeshView, r, g, b);
+    void setAmbientLight(MemorySegment nativeMeshView, float r, float g, float b) {
+        D3DNative.meshviewSetAmbientLight(nativeMeshView, r, g, b);
     }
 
-    void setLight(long nativeMeshView, int index, float x, float y, float z, float r, float g, float b, float w,
-            float ca, float la, float qa, float isAttenuated, float maxRange, float dirX, float dirY, float dirZ,
-            float innerAngle, float outerAngle, float falloff) {
-        nSetLight(pContext, nativeMeshView, index, x, y, z, r, g, b, w,  ca, la, qa, isAttenuated, maxRange,
-                dirX, dirY, dirZ, innerAngle, outerAngle, falloff);
+    void setLight(MemorySegment nativeMeshView, int index, float x, float y, float z, float r, float g, float b,
+            float w, float ca, float la, float qa, float isAttenuated, float maxRange, float dirX, float dirY,
+            float dirZ, float innerAngle, float outerAngle, float falloff) {
+        // the 18 parameters in the order the former nSetLight took them
+        lightScratch.setAtIndex(JAVA_FLOAT, 0, x);
+        lightScratch.setAtIndex(JAVA_FLOAT, 1, y);
+        lightScratch.setAtIndex(JAVA_FLOAT, 2, z);
+        lightScratch.setAtIndex(JAVA_FLOAT, 3, r);
+        lightScratch.setAtIndex(JAVA_FLOAT, 4, g);
+        lightScratch.setAtIndex(JAVA_FLOAT, 5, b);
+        lightScratch.setAtIndex(JAVA_FLOAT, 6, w);
+        lightScratch.setAtIndex(JAVA_FLOAT, 7, ca);
+        lightScratch.setAtIndex(JAVA_FLOAT, 8, la);
+        lightScratch.setAtIndex(JAVA_FLOAT, 9, qa);
+        lightScratch.setAtIndex(JAVA_FLOAT, 10, isAttenuated);
+        lightScratch.setAtIndex(JAVA_FLOAT, 11, maxRange);
+        lightScratch.setAtIndex(JAVA_FLOAT, 12, dirX);
+        lightScratch.setAtIndex(JAVA_FLOAT, 13, dirY);
+        lightScratch.setAtIndex(JAVA_FLOAT, 14, dirZ);
+        lightScratch.setAtIndex(JAVA_FLOAT, 15, innerAngle);
+        lightScratch.setAtIndex(JAVA_FLOAT, 16, outerAngle);
+        lightScratch.setAtIndex(JAVA_FLOAT, 17, falloff);
+        D3DNative.meshviewSetLight(nativeMeshView, index, lightScratch);
     }
 
     @Override
     protected void renderQuads(float coordArray[], byte colorArray[], int numVertices) {
-        int res = nDrawIndexedQuads(pContext, coordArray, colorArray, numVertices);
+        int res = D3DNative.contextDrawIndexedQuads(pContext, coordArray, colorArray, numVertices);
         D3DContext.validate(res);
     }
 
-    void renderMeshView(long nativeMeshView, Graphics g) {
+    void renderMeshView(MemorySegment nativeMeshView, Graphics g) {
 
         // Support retina display by scaling the projViewTx and pass it to the shader.
         scratchTx = scratchTx.set(projViewTx);
@@ -634,14 +643,10 @@ class D3DContext extends BaseShaderContext {
         }
 
         // Set projection view matrix
-        int res = nSetProjViewMatrix(pContext, g.isDepthTest(),
-                scratchTx.get(0), scratchTx.get(1), scratchTx.get(2), scratchTx.get(3),
-                scratchTx.get(4), scratchTx.get(5), scratchTx.get(6), scratchTx.get(7),
-                scratchTx.get(8), scratchTx.get(9), scratchTx.get(10), scratchTx.get(11),
-                scratchTx.get(12), scratchTx.get(13), scratchTx.get(14), scratchTx.get(15));
+        int res = D3DNative.contextSetProjViewMatrix(pContext, g.isDepthTest(), fillMatrix(scratchTx));
         validate(res);
 
-        res = nSetCameraPosition(pContext, cameraPos.x, cameraPos.y, cameraPos.z);
+        res = D3DNative.contextSetCameraPosition(pContext, cameraPos.x, cameraPos.y, cameraPos.z);
         validate(res);
 
         // Undo the SwapChain scaling done in createGraphics() because 3D needs
@@ -656,17 +661,18 @@ class D3DContext extends BaseShaderContext {
             updateWorldTransform(xform);
         }
 
-        nRenderMeshView(pContext, nativeMeshView);
+        D3DNative.meshviewRender(nativeMeshView);
     }
 
     @Override
     public void blit(RTTexture srcRTT, RTTexture dstRTT,
                      int srcX0, int srcY0, int srcX1, int srcY1,
                      int dstX0, int dstY0, int dstX1, int dstY1) {
-        long dstNativeHandle = dstRTT == null ? 0L : ((D3DTexture)dstRTT).getNativeSourceHandle();
-        long srcNativeHandle = ((D3DTexture)srcRTT).getNativeSourceHandle();
-        nBlit(pContext, srcNativeHandle, dstNativeHandle,
-                          srcX0, srcY0, srcX1, srcY1,
-                          dstX0, dstY0, dstX1, dstY1);
+        MemorySegment dstNativeHandle = dstRTT == null ? MemorySegment.NULL
+                : ((D3DTexture)dstRTT).getNativeSourceHandle();
+        MemorySegment srcNativeHandle = ((D3DTexture)srcRTT).getNativeSourceHandle();
+        D3DNative.contextBlit(pContext, srcNativeHandle, dstNativeHandle,
+                              srcX0, srcY0, srcX1, srcY1,
+                              dstX0, dstY0, dstX1, dstY1);
     }
 }

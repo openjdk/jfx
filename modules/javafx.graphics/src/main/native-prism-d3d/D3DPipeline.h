@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,18 +39,6 @@
 
 #include "Trace.h"
 
-
-#ifndef jlong_to_ptr
-    #ifdef _WIN64
-    #define jlong_to_ptr(a) ((void*)(a))
-    #define ptr_to_jlong(a) ((jlong)(a))
-    #else
-    /* Double casting to avoid warning messages looking for casting of */
-    /* smaller sizes into pointers */
-    #define jlong_to_ptr(a) ((void*)(int)(a))
-    #define ptr_to_jlong(a) ((jlong)(int)(a))
-    #endif
-#endif
 
 // some helper macros
 #define SAFE_RELEASE(RES) \
@@ -133,7 +121,7 @@ inline void logD3DSurfaceDesc(D3DSURFACE_DESC const & dsk) {
 inline void logSurfaceDesk(IDirect3DSurface9 *surf) {
     D3DSURFACE_DESC  dsk;
     return (S_OK == surf->GetDesc( &dsk )) ?
-        logD3DSurfaceDesc(dsk) : TraceImpl(NWT_TRACE_INFO, JNI_FALSE, "Error reading surface desk\n");
+        logD3DSurfaceDesc(dsk) : TraceImpl(NWT_TRACE_INFO, 0, "Error reading surface desk\n");
 }
 
 inline void logDeviceTargets(IDirect3DDevice9Ex *pd3dDevice) {
@@ -142,13 +130,13 @@ inline void logDeviceTargets(IDirect3DDevice9Ex *pd3dDevice) {
     HRESULT hr2 = pd3dDevice->GetDepthStencilSurface(&pZB);
 
     if (pSurf) {
-        TraceImpl(NWT_TRACE_INFO, JNI_FALSE, "RT: ");
+        TraceImpl(NWT_TRACE_INFO, 0, "RT: ");
         logSurfaceDesk(pSurf);
         int nCnt = pSurf->Release();
     }
 
     if (pZB) {
-        TraceImpl(NWT_TRACE_INFO, JNI_FALSE, "Z: ");
+        TraceImpl(NWT_TRACE_INFO, 0, "Z: ");
         logSurfaceDesk(pZB);
         int nCnt = pZB->Release();
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,7 +28,11 @@
 #include <Commdlg.h>
 #include <Shlobj.h>
 
+#include <string>
+#include <vector>
+
 #include "CommonDialogs_Standard.h"
+#include "GlassStringBlock.h"
 
 #include "com_sun_glass_ui_CommonDialogs_Type.h"
 
@@ -36,99 +40,54 @@
  * GetOpenFileName/GetSaveFileName implementation
  *************************************************/
 
-extern void ConvertFilter(jobject jFilter,  DNTString &filters);
+/*
+ * JNI-free: the ExtensionFilter getters and the String[] building moved to Java, the
+ * caller of gwin_dialog_file (ABI 4, the only path); the DNTString filter and result handling is
+ * unchanged.
+ */
 
-void ConvertFilters(jobjectArray jFilters, DNTString &filters)
+// The former ConvertFilter / ConvertFilters over the flattened GwinFileFilter: the description, its
+// NUL, the ';'-joined extensions (joined by the caller now), its NUL - then the closing NUL.
+static void ConvertFilters(const GwinFileFilter* filters, int32_t filterCount, DNTString &filtersOut)
 {
-    JNIEnv *env = GetEnv();
+    for (int32_t i = 0; i < filterCount; i++) {
+        const wchar_t* desc = reinterpret_cast<const wchar_t*>(filters[i].description);
+        const wchar_t* extensions = reinterpret_cast<const wchar_t*>(filters[i].extensions);
 
-    jsize size = env->GetArrayLength(jFilters);
-    for (int i = 0; i < size; i++) {
-        jobject jFilter = env->GetObjectArrayElement(jFilters, i);
-        ConvertFilter(jFilter, filters);
+        filtersOut.append(desc, wcslen(desc), true);
+        filtersOut.append(_T("\0"), 1, true);
+
+        filtersOut.append(extensions, wcslen(extensions), true);
+        filtersOut.append(_T("\0"), 1, true);
     }
-    filters.append(_T("\0"), 1, true);
+    filtersOut.append(_T("\0"), 1, true);
 }
 
-void ConvertFilter(jobject jFilter, DNTString &filters)
+// The former ConvertFiles: the OFN buffer as full paths.
+static void ConvertFiles(DNTString &files, std::vector<std::wstring> &out)
 {
-    JNIEnv* env = GetEnv();
-
-    jstring jDesc = (jstring)env->CallObjectMethod(jFilter, javaIDs.CommonDialogs.ExtensionFilter.getDescription);
-    CheckAndClearException(env);
-
-    JString desc(env, jDesc);
-    filters.append(desc, wcslen(desc), true);
-    filters.append(_T("\0"), 1, true);
-
-    jobjectArray jExtensions = (jobjectArray)env->CallObjectMethod(jFilter,
-                                    javaIDs.CommonDialogs.ExtensionFilter.extensionsToArray);
-    CheckAndClearException(env);
-
-    jsize size = env->GetArrayLength(jExtensions);
-
-    BOOL isHeading = TRUE; // extension without semicolon
-
-    for (int i = 0; i < size; i++) {
-        if (!isHeading) {
-            filters.append(_T(";"), 1, true);
-        }
-        isHeading = FALSE;
-
-        jstring jExtension = (jstring)env->GetObjectArrayElement(jExtensions, i);
-        JString extension(env, jExtension);
-
-        filters.append(extension, wcslen(extension), true);
-    }
-
-    filters.append(_T("\0"), 1, true);
-}
-
-jobjectArray ConvertFiles(DNTString &files)
-{
-    jobjectArray ret = NULL;
-    JNIEnv *env = GetEnv();
-    jclass jc = env->FindClass("java/lang/String");
-    if (CheckAndClearException(env)) return NULL;
-    JLClass cls(env, jc);
-
     UINT count = files.count();
 
     if (count == 0)      // the user cancels the file chooser
     {
-        ret = env->NewObjectArray(0, cls, NULL);
-        if (CheckAndClearException(env)) return NULL;
+        // nothing
     }
     else if (count == 1) // the user selects one file
     {
-        ret = env->NewObjectArray(1, cls, NULL);
-        if (CheckAndClearException(env)) return NULL;
         // there's no null delimiter b/w dir and file in this case
-        JLString name(env, CreateJString(env, files));
-
-        env->SetObjectArrayElement(ret, 0, name);
-        CheckAndClearException(env);
+        out.push_back(std::wstring((LPCWSTR)(LPWSTR) files));
     }
     else if (count > 1)  // the user selects multiple files
     {
         // ignore one item as it's for folder
-        ret = env->NewObjectArray(count-1, cls, NULL);
-        if (CheckAndClearException(env)) return NULL;
-
-        JLString dir(env, CreateJString(env, files.substring(0)));
-        JLString backslash(env, CreateJString(env, _T("\\")));
-        JLString dirWithBackslash(env, ConcatJStrings(env, dir, backslash));
+        std::wstring dirWithBackslash(files.substring(0));
+        dirWithBackslash += _T("\\");
 
         for (UINT i = 1; i < count; i++)
         {
-            JLString shortname(env, CreateJString(env, files.substring(i)));
-            JLString name(env, ConcatJStrings(env, dirWithBackslash, shortname));
-
-            env->SetObjectArrayElement(ret, i-1, name);
-            CheckAndClearException(env);
+            out.push_back(dirWithBackslash + files.substring(i));
         }
     }
-    return ret;
 }
 
 /*
@@ -173,14 +132,16 @@ UINT_PTR CALLBACK DialogHook(HWND hwnd, UINT uMsg, WPARAM wParam,
     return (0);
 }
 
-jobject StandardFileChooser_Show(HWND owner, LPCTSTR folder, LPCTSTR filename, LPCTSTR title, jint type,
-                                      jboolean multipleMode, jobjectArray jFilters, jint defaultFilterIndex)
+int32_t StandardFileChooser_Show(HWND owner, LPCWSTR folder, LPCWSTR filename, LPCWSTR title, int32_t type,
+                                 int32_t multipleMode, const GwinFileFilter* filters, int32_t filterCount,
+                                 int32_t defaultFilterIndex,
+                                 uint16_t** outFiles, int32_t* outCount, int32_t* outFilterIndex)
 {
     DNTString files(MAX_PATH);
-    DNTString filters(MAX_PATH);
+    DNTString filterString(MAX_PATH);
 
-    if (jFilters != NULL) {
-        ConvertFilters(jFilters, filters);
+    if (filters != NULL) {
+        ConvertFilters(filters, filterCount, filterString);
     }
 
     if (type == com_sun_glass_ui_CommonDialogs_Type_SAVE && filename && *filename) {
@@ -192,7 +153,7 @@ jobject StandardFileChooser_Show(HWND owner, LPCTSTR folder, LPCTSTR filename, L
     OPENFILENAME ofn = {0};
     ofn.lStructSize       = sizeof(OPENFILENAME);
     ofn.hwndOwner         = owner;
-    ofn.lpstrFilter       = filters;
+    ofn.lpstrFilter       = filterString;
     ofn.nFilterIndex      = defaultFilterIndex + 1; // nFilterIndex is 1-based
     ofn.lpstrFile         = files;
     ofn.nMaxFile          = MAX_PATH;
@@ -219,27 +180,28 @@ jobject StandardFileChooser_Show(HWND owner, LPCTSTR folder, LPCTSTR filename, L
             break;
     }
 
-    JNIEnv *env = GetEnv();
-    jobjectArray retValue;
+    std::vector<std::wstring> paths;
+    DWORD dialogError = 0;
 
     if (!ret) {
-        jclass jc = env->FindClass("java/lang/String");
-        if (CheckAndClearException(env)) return NULL;
-        JLClass cls(env, jc);
-        retValue = env->NewObjectArray(0, cls, NULL);
-        if (CheckAndClearException(env)) return NULL;
+        // cancel or failure: the JNI returned an empty array for both
+        dialogError = ::CommDlgExtendedError();
     } else {
         files.calculateLength();  // the result is stored in the files variable
-        retValue = ConvertFiles(files);
+        ConvertFiles(files, paths);
     }
 
-    jclass jc = env->FindClass("com/sun/glass/ui/CommonDialogs");
-    JLClass cls(env, jc);
-    if (CheckAndClearException(env)) return NULL;
-    jobject jobj = env->CallStaticObjectMethod(cls, javaIDs.CommonDialogs.createFileChooserResult,
-            retValue, jFilters, (jint)(ofn.nFilterIndex - 1));
-    if (CheckAndClearException(env)) return NULL;
-    return jobj;
+    *outFilterIndex = (int32_t)(ofn.nFilterIndex - 1);
+    *outFiles = GwinMakeStringBlock(paths);
+    *outCount = (*outFiles != NULL) ? (int32_t) paths.size() : 0;
+
+    if (*outFiles == NULL) {
+        return GWIN_DIALOG_FAILED;
+    }
+    if (!ret) {
+        return dialogError == 0 ? GWIN_DIALOG_CANCELLED : GWIN_DIALOG_FAILED;
+    }
+    return GWIN_DIALOG_OK;
 }
 
 /***********************************
@@ -353,10 +315,9 @@ STDAPI SHGetTargetFolderPath(LPCITEMIDLIST pidlFolder, LPWSTR pszPath)
     return *pszPath ? S_OK : E_FAIL;
 }
 
-jstring StandardFolderChooser_Show(HWND owner, LPCTSTR folder, LPCTSTR title)
+int32_t StandardFolderChooser_Show(HWND owner, LPCWSTR folder, LPCWSTR title, uint16_t** outPath)
 {
     OLEHolder _ole_;
-    JNIEnv *env = GetEnv();
 
     BROWSEINFO bi = {0};
     bi.hwndOwner = owner;
@@ -367,12 +328,15 @@ jstring StandardFolderChooser_Show(HWND owner, LPCTSTR folder, LPCTSTR title)
 
     LPITEMIDLIST p = ::SHBrowseForFolder(&bi);
     if (!p) {
-        return NULL;
+        *outPath = NULL;
+        return GWIN_DIALOG_CANCELLED;
     }
 
     wchar_t selectedFolder[MAX_PATH] = _T("");
     if (SHGetTargetFolderPath(p, selectedFolder) != S_OK) {
-        return NULL;
+        *outPath = NULL;
+        return GWIN_DIALOG_FAILED;
     }
-    return CreateJString(env, selectedFolder);
+    *outPath = GwinMakeString(selectedFolder);
+    return *outPath != NULL ? GWIN_DIALOG_OK : GWIN_DIALOG_FAILED;
 }

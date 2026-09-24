@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,10 +26,10 @@
 /* C routines encapsulating small amounts of Objective C code to allow
    nsContext creation and manipulation to occur from Java
 */
-#import <jni.h>
+#include "prism_es2_api.h"
 
 // NS ..
-void* createPixelFormat(jint* ivalues);
+void* createPixelFormat(const Es2PixelFormatAttrs* attrs);
 void deletePixelFormat(void* pixelFormat);
 
 // NS ..
@@ -41,10 +41,10 @@ void* createContext(void* shareContext,
                     void* pixelFormat,
                     int* viewNotReady);
 void *getCGLContext(void* nsContext);
-jboolean  makeCurrentContext(void* nsContext);
-jboolean  clearCurrentContext(void *nsContext);
-jboolean  deleteContext(void* nsContext);
-jboolean  flushBuffer(void* nsContext);
+int makeCurrentContext(void* nsContext);
+int clearCurrentContext(void *nsContext);
+int deleteContext(void* nsContext);
+int flushBuffer(void* nsContext);
 void* createDummyWindow();
 
 void setSwapInterval(void* nsContext, int interval);

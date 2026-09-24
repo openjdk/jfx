@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,10 +24,13 @@
  */
 package com.sun.glass.ui.monocle;
 
-import com.sun.glass.utils.NativeLibLoader;
+import java.lang.foreign.Arena;
+import java.lang.foreign.MemorySegment;
 import java.nio.ByteOrder;
 import java.nio.IntBuffer;
 import java.text.MessageFormat;
+
+import static java.lang.foreign.ValueLayout.JAVA_INT;
 
 /**
  * A Java-language interface to the device API of the Electrophoretic Display
@@ -35,6 +38,9 @@ import java.text.MessageFormat;
  * instance is obtained by calling the {@link EPDSystem#getEPDSystem} method.
  * This class also extends {@link LinuxSystem.FbVarScreenInfo} to provide all of
  * the fields in {@code fb_var_screeninfo}, defined in <i>linux/fb.h</i>.
+ * The {@code ioctl} call and the {@code FbVarScreenInfo} accessors are Java over
+ * the LinuxSystem layout, where EPDSystem.c of commit 21d5a654f6 implemented
+ * them through JNI.
  */
 class EPDSystem {
 
@@ -320,13 +326,16 @@ class EPDSystem {
     }
 
     /**
-     * Loads the native libraries required to make system calls using this
-     * {@code EPDSystem} instance. This method must be called before any other
-     * instance methods of {@code EPDSystem}. If this method is called multiple
-     * times, it has no effect after the first call.
+     * Binds the libc functions behind the system calls of this {@code EPDSystem}
+     * instance, which are those of {@link LinuxSystem}. This method must be called
+     * before any other instance methods of {@code EPDSystem}. If this method is
+     * called multiple times, it has no effect after the first call.
+     *
+     * @throws UnsatisfiedLinkError if libc cannot be bound, as on a platform that
+     * is not LP64
      */
     void loadLibrary() {
-        NativeLibLoader.loadLibrary("glass_monocle_epd");
+        system.loadLibrary();
     }
 
     /**
@@ -342,7 +351,12 @@ class EPDSystem {
      * @return 0 if successful; otherwise -1 with {@code errno} set
      * appropriately
      */
-    native int ioctl(long fd, int request, int value);
+    int ioctl(long fd, int request, int value) {
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment integer = arena.allocateFrom(JAVA_INT, value);
+            return system.ioctl(fd, request, integer.address());
+        }
+    }
 
     /**
      * A structure for passing the pointer to an integer in an IOCTL call.
@@ -630,91 +644,177 @@ class EPDSystem {
      */
     static class FbVarScreenInfo extends LinuxSystem.FbVarScreenInfo {
 
-        native int getGrayscale(long p);
+        int getGrayscale(long p) {
+            return get(GRAYSCALE, p);
+        }
 
-        native int getRedOffset(long p);
+        int getRedOffset(long p) {
+            return get(RED_OFFSET, p);
+        }
 
-        native int getRedLength(long p);
+        int getRedLength(long p) {
+            return get(RED_LENGTH, p);
+        }
 
-        native int getRedMsbRight(long p);
+        int getRedMsbRight(long p) {
+            return get(RED_MSB_RIGHT, p);
+        }
 
-        native int getGreenOffset(long p);
+        int getGreenOffset(long p) {
+            return get(GREEN_OFFSET, p);
+        }
 
-        native int getGreenLength(long p);
+        int getGreenLength(long p) {
+            return get(GREEN_LENGTH, p);
+        }
 
-        native int getGreenMsbRight(long p);
+        int getGreenMsbRight(long p) {
+            return get(GREEN_MSB_RIGHT, p);
+        }
 
-        native int getBlueOffset(long p);
+        int getBlueOffset(long p) {
+            return get(BLUE_OFFSET, p);
+        }
 
-        native int getBlueLength(long p);
+        int getBlueLength(long p) {
+            return get(BLUE_LENGTH, p);
+        }
 
-        native int getBlueMsbRight(long p);
+        int getBlueMsbRight(long p) {
+            return get(BLUE_MSB_RIGHT, p);
+        }
 
-        native int getTranspOffset(long p);
+        int getTranspOffset(long p) {
+            return get(TRANSP_OFFSET, p);
+        }
 
-        native int getTranspLength(long p);
+        int getTranspLength(long p) {
+            return get(TRANSP_LENGTH, p);
+        }
 
-        native int getTranspMsbRight(long p);
+        int getTranspMsbRight(long p) {
+            return get(TRANSP_MSB_RIGHT, p);
+        }
 
-        native int getNonstd(long p);
+        int getNonstd(long p) {
+            return get(NONSTD, p);
+        }
 
-        native int getActivate(long p);
+        int getActivate(long p) {
+            return get(ACTIVATE, p);
+        }
 
-        native int getHeight(long p);
+        int getHeight(long p) {
+            return get(HEIGHT, p);
+        }
 
-        native int getWidth(long p);
+        int getWidth(long p) {
+            return get(WIDTH, p);
+        }
 
-        native int getAccelFlags(long p);
+        int getAccelFlags(long p) {
+            return get(ACCEL_FLAGS, p);
+        }
 
-        native int getPixclock(long p);
+        int getPixclock(long p) {
+            return get(PIXCLOCK, p);
+        }
 
-        native int getLeftMargin(long p);
+        int getLeftMargin(long p) {
+            return get(LEFT_MARGIN, p);
+        }
 
-        native int getRightMargin(long p);
+        int getRightMargin(long p) {
+            return get(RIGHT_MARGIN, p);
+        }
 
-        native int getUpperMargin(long p);
+        int getUpperMargin(long p) {
+            return get(UPPER_MARGIN, p);
+        }
 
-        native int getLowerMargin(long p);
+        int getLowerMargin(long p) {
+            return get(LOWER_MARGIN, p);
+        }
 
-        native int getHsyncLen(long p);
+        int getHsyncLen(long p) {
+            return get(HSYNC_LEN, p);
+        }
 
-        native int getVsyncLen(long p);
+        int getVsyncLen(long p) {
+            return get(VSYNC_LEN, p);
+        }
 
-        native int getSync(long p);
+        int getSync(long p) {
+            return get(SYNC, p);
+        }
 
-        native int getVmode(long p);
+        int getVmode(long p) {
+            return get(VMODE, p);
+        }
 
-        native int getRotate(long p);
+        int getRotate(long p) {
+            return get(ROTATE, p);
+        }
 
-        native void setGrayscale(long p, int grayscale);
+        void setGrayscale(long p, int grayscale) {
+            set(GRAYSCALE, p, grayscale);
+        }
 
-        native void setNonstd(long p, int nonstd);
+        void setNonstd(long p, int nonstd) {
+            set(NONSTD, p, nonstd);
+        }
 
-        native void setHeight(long p, int height);
+        void setHeight(long p, int height) {
+            set(HEIGHT, p, height);
+        }
 
-        native void setWidth(long p, int width);
+        void setWidth(long p, int width) {
+            set(WIDTH, p, width);
+        }
 
-        native void setAccelFlags(long p, int accelFlags);
+        void setAccelFlags(long p, int accelFlags) {
+            set(ACCEL_FLAGS, p, accelFlags);
+        }
 
-        native void setPixclock(long p, int pixclock);
+        void setPixclock(long p, int pixclock) {
+            set(PIXCLOCK, p, pixclock);
+        }
 
-        native void setLeftMargin(long p, int leftMargin);
+        void setLeftMargin(long p, int leftMargin) {
+            set(LEFT_MARGIN, p, leftMargin);
+        }
 
-        native void setRightMargin(long p, int rightMargin);
+        void setRightMargin(long p, int rightMargin) {
+            set(RIGHT_MARGIN, p, rightMargin);
+        }
 
-        native void setUpperMargin(long p, int upperMargin);
+        void setUpperMargin(long p, int upperMargin) {
+            set(UPPER_MARGIN, p, upperMargin);
+        }
 
-        native void setLowerMargin(long p, int lowerMargin);
+        void setLowerMargin(long p, int lowerMargin) {
+            set(LOWER_MARGIN, p, lowerMargin);
+        }
 
-        native void setHsyncLen(long p, int hsyncLen);
+        void setHsyncLen(long p, int hsyncLen) {
+            set(HSYNC_LEN, p, hsyncLen);
+        }
 
-        native void setVsyncLen(long p, int vsyncLen);
+        void setVsyncLen(long p, int vsyncLen) {
+            set(VSYNC_LEN, p, vsyncLen);
+        }
 
-        native void setSync(long p, int sync);
+        void setSync(long p, int sync) {
+            set(SYNC, p, sync);
+        }
 
-        native void setVmode(long p, int vmode);
+        void setVmode(long p, int vmode) {
+            set(VMODE, p, vmode);
+        }
 
-        native void setRotate(long p, int rotate);
+        void setRotate(long p, int rotate) {
+            set(ROTATE, p, rotate);
+        }
     }
 
     @Override

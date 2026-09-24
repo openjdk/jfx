@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,11 @@ package com.sun.glass.ui.gtk;
 
 import com.sun.glass.ui.Timer;
 
+/**
+ * The GTK pulse timer: a GLib timeout source on the default main context, started and stopped through
+ * {@link GtkGlassNative}, which binds {@code gdk_threads_add_timeout_full} directly where
+ * {@code GlassTimer.cpp} wrapped it in JNI up to commit {@code 033187ad90}.
+ */
 final class GtkTimer extends Timer{
 
     public GtkTimer(Runnable runnable) {
@@ -37,10 +42,14 @@ final class GtkTimer extends Timer{
     }
 
     @Override
-    protected native long _start(Runnable runnable, int period);
+    protected long _start(Runnable runnable, int period) {
+        return GtkGlassNative.timerStart(runnable, period);
+    }
 
     @Override
-    protected native void _stop(long timer);
+    protected void _stop(long timer) {
+        GtkGlassNative.timerStop(timer);
+    }
 
     @Override protected void _pause(long timer) {}
     @Override protected void _resume(long timer) {}

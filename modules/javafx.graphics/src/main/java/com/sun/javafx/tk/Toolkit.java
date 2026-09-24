@@ -183,12 +183,13 @@ public abstract class Toolkit {
             return DEFAULT_TOOLKIT;
         } else if (PlatformUtil.isLinux()) {
             return DEFAULT_TOOLKIT;
-        } else if (PlatformUtil.isIOS()) {
-            return DEFAULT_TOOLKIT;
-        } else if (PlatformUtil.isAndroid()) {
-           return DEFAULT_TOOLKIT;
         }
 
+        // The Android and iOS ports were removed from javafx.graphics. Name Android explicitly:
+        // os.name reads "Linux" there, which would blame a supported platform.
+        if (PlatformUtil.isAndroid()) {
+            throw new UnsupportedOperationException("Android is not supported");
+        }
         throw new UnsupportedOperationException(System.getProperty("os.name") + " is not supported");
     }
 

@@ -25,8 +25,6 @@
 #ifndef GLASS_GENERAL_H
 #define        GLASS_GENERAL_H
 
-#include <jni.h>
-
 #include <stdint.h>
 #include <X11/Xlib.h>
 #include <gdk/gdk.h>
@@ -34,6 +32,15 @@
 #include <gtk/gtk.h>
 
 #include "wrapped.h"
+#include "glass_gtk_api.h"
+
+// The callback tables Java installed with ggtk_*_set_callbacks (glass_gtk_api.cpp). A call site that
+// replaced a JNI upcall dials its slot when the slot is non-NULL and makes no call otherwise (see
+// glass_gtk_api.h, NULL SLOTS).
+extern GgtkAppCallbacks glass_app_cb;
+extern GgtkWindowCallbacks glass_window_cb;
+extern GgtkViewCallbacks glass_view_cb;
+extern GgtkDndCallbacks glass_dnd_cb;
 
 #define GLASS_GTK3
 
@@ -44,49 +51,11 @@
 #define GDK_FILTERED_EVENTS_MASK static_cast<GdkEventMask>(GDK_ALL_EVENTS_MASK \
                 & ~GDK_TOUCH_MASK)
 
-#define JLONG_TO_PTR(value) ((void*)(intptr_t)(value))
-#define PTR_TO_JLONG(value) ((jlong)(intptr_t)(value))
-
 #define FILE_PREFIX "file://"
 #define URI_LIST_COMMENT_PREFIX "#"
 #define URI_LIST_LINE_BREAK "\r\n"
 
-extern JNIEnv* mainEnv; // Use only with main loop thread!!!
-extern JavaVM* javaVM;
-
 #define GLASS_GDK_KEY_CONSTANT(key) (GDK_KEY_ ## key)
-
-#include <exception>
-
-struct jni_exception: public std::exception {
-    jni_exception(jthrowable _th): throwable(_th), message() {
-            jclass jc = mainEnv->FindClass("java/lang/Throwable");
-            if (mainEnv->ExceptionOccurred()) {
-                mainEnv->ExceptionDescribe();
-                mainEnv->ExceptionClear();
-            }
-            jmethodID jmid = mainEnv->GetMethodID(jc, "getMessage", "()Ljava/lang/String;");
-            if (mainEnv->ExceptionOccurred()) {
-                mainEnv->ExceptionDescribe();
-                mainEnv->ExceptionClear();
-            }
-            jmessage = (jstring)mainEnv->CallObjectMethod(throwable, jmid);
-            message = jmessage == NULL ? "" : mainEnv->GetStringUTFChars(jmessage, NULL);
-    }
-    const char *what() const throw()
-    {
-        return message;
-    }
-    ~jni_exception() throw(){
-        if (jmessage && message) {
-            mainEnv->ReleaseStringUTFChars(jmessage, message);
-        }
-    }
-private:
-    jthrowable throwable;
-    const char *message;
-    jstring jmessage;
-};
 
 #define SAFE_FREE(PTR)  \
     if ((PTR) != NULL) {  \
@@ -94,210 +63,28 @@ private:
         (PTR) = NULL;     \
     }
 
-#define EXCEPTION_OCCURED(env) (check_and_clear_exception(env))
-
-#define CHECK_JNI_EXCEPTION(env) \
-        if (env->ExceptionCheck()) {\
-            check_and_clear_exception(env);\
-            return;\
-        }
-
-#define CHECK_JNI_EXCEPTION_RET(env, ret) \
-        if (env->ExceptionCheck()) {\
-            check_and_clear_exception(env);\
-            return ret;\
-        }
-
-#define JNI_EXCEPTION_TO_CPP(env) \
-        if (env->ExceptionCheck()) {\
-            check_and_clear_exception(env);\
-            throw jni_exception(env->ExceptionOccurred());\
-        }
-
-#define HANDLE_MEM_ALLOC_ERROR(env, nativePtr, message) \
-        ((nativePtr == NULL) && glass_throw_oom(env, message))
-
-    gpointer glass_try_malloc0_n(gsize m, gsize n);
-
-    gpointer glass_try_malloc_n(gsize m, gsize n);
-
-    typedef struct {
-        jobject runnable;
-        int flag;
-    } RunnableContext;
-
     extern char const * const GDK_WINDOW_DATA_CONTEXT;
 
     GdkCursor* get_native_cursor(int type);
 
-    // JNI global references
-    extern jclass jStringCls; // java.lang.String
-
-    extern jclass jByteBufferCls; //java.nio.ByteBuffer
-    extern jmethodID jByteBufferArray; //java.nio.ByteBuffer#array()[B
-    extern jmethodID jByteBufferWrap; //java.nio.ByteBuffer#wrap([B)Ljava/nio/ByteBuffer;
-
-    extern jclass jRunnableCls; // java.lang.Runnable
-    extern jmethodID jRunnableRun; // java.lang.Runnable#run ()V
-
-    extern jclass jArrayListCls; // java.util.ArrayList
-    extern jmethodID jArrayListInit; // java.util.ArrayList#<init> ()V
-    extern jmethodID jArrayListAdd; // java.util.ArrayList#add (Ljava/lang/Object;)Z
-    extern jmethodID jArrayListGetIdx; //java.util.ArryList#get (I)Ljava/lang/Object;
-
-    extern jmethodID jPixelsAttachData; // com.sun.class.ui.Pixels#attachData (J)V
-    extern jclass jGtkPixelsCls; // com.sun.class.ui.gtk.GtkPixels
-    extern jmethodID jGtkPixelsInit; // com.sun.class.ui.gtk.GtkPixels#<init> (IILjava/nio/ByteBuffer;)V
-
-    extern jclass jScreenCls;   // com.sun.glass.ui.Screen
-    extern jmethodID jScreenInit; // com.sun.glass.ui.Screen#<init> ()V
-    extern jmethodID jScreenNotifySettingsChanged; // com.sun.glass.ui.Screen#notifySettingsChanged ()V
-    extern jmethodID jScreenGetScreenForLocation; //com.sun.glass.ui.Screen#getScreenForLocation(JJ)Lcom.sun.glass.ui.Screen;
-    extern jmethodID jScreenGetNativeScreen; //com.sun.glass.ui.Screen#getNativeScreen()J
-
-    extern jmethodID jViewNotifyResize; // com.sun.glass.ui.View#notifyResize (II)V
-    extern jmethodID jViewNotifyMouse; // com.sun.glass.ui.View#notifyMouse (IIIIIIIZZ)V
-    extern jmethodID jViewNotifyRepaint; // com.sun.glass.ui.View#notifyRepaint (IIII)V
-    extern jmethodID jViewNotifyKey; // com.sun.glass.ui.View#notifyKey (II[CI)V
-    extern jmethodID jViewNotifyView; //com.sun.glass.ui.View#notifyView (I)V
-    extern jmethodID jViewNotifyDragEnter; //com.sun.glass.ui.View#notifyDragEnter (IIIII)I
-    extern jmethodID jViewNotifyDragOver; //com.sun.glass.ui.View#notifyDragOver (IIIII)I
-    extern jmethodID jViewNotifyDragDrop; //com.sun.glass.ui.View#notifyDragDrop (IIIII)I
-    extern jmethodID jViewNotifyDragLeave; //com.sun.glass.ui.View#notifyDragLeave ()V
-    extern jmethodID jViewNotifyScroll; //com.sun.glass.ui.View#notifyScroll (IIIIDDIIIIIDD)V
-    extern jmethodID jViewNotifyInputMethodLinux; //com.sun.glass.ui.View#notifyInputMethodLinux (Ljava/lang/String;IIB)V
-    extern jmethodID jViewNotifyInputMethodCandidateRelativePosRequest; //com.sun.glass.ui.gtk.GtkView#notifyInputMethodCandidateRelativePosRequest (I)[D
-
-    extern jmethodID jViewNotifyMenu; //com.sun.glass.ui.View#notifyMenu (IIIIZ)V
-    extern jfieldID  jViewPtr; //com.sun.glass.ui.View.ptr
-
-    extern jmethodID jWindowNotifyResize; // com.sun.glass.ui.Window#notifyResize (III)V
-    extern jmethodID jWindowNotifyMove; // com.sun.glass.ui.Window#notifyMove (II)V
-    extern jmethodID jWindowNotifyDestroy; // com.sun.glass.ui.Window#notifyDestroy ()V
-    extern jmethodID jWindowNotifyClose; // com.sun.glass.ui.Window#notifyClose ()V
-    extern jmethodID jWindowNotifyFocus; // com.sun.glass.ui.Window#notifyFocus (I)V
-    extern jmethodID jWindowNotifyFocusDisabled; // com.sun.glass.ui.Window#notifyFocusDisabled ()V
-    extern jmethodID jWindowNotifyFocusUngrab; // com.sun.glass.ui.Window#notifyFocusUngrab ()V
-    extern jmethodID jWindowNotifyMoveToAnotherScreen; // com.sun.glass.ui.Window#notifyMoveToAnotherScreen (Lcom/sun/glass/ui/Screen;)V
-    extern jmethodID jWindowNotifyDelegatePtr; //com.sun.glass.ui.Window#notifyDelegatePtr (J)V
-    extern jmethodID jWindowNotifyLevelChanged; //com.sun.glass.ui.Window#notifyLevelChanged (I)V
-
-    extern jmethodID jWindowIsEnabled; // com.sun.glass.ui.Window#isEnabled ()Z
-    extern jfieldID jWindowPtr; // com.sun.glass.ui.Window#ptr
-    extern jfieldID jCursorPtr; // com.sun.glass.ui.Cursor#ptr
-
-    extern jmethodID jGtkWindowNotifyStateChanged; // com.sun.glass.ui.gtk.GtkWindow#notifyStateChanged (I)V
-    extern jmethodID jGtkWindowNonClientHitTest; //com.sun.glass.ui.gtk.GtkWindow#nonClientHitTest (II)I
-
-    extern jmethodID jClipboardContentChanged; // com.sun.glass.ui.Clipboard#contentChanged ()V
-
-    extern jmethodID jSizeInit; // com.sun.class.ui.Size#<init> ()V
-
-    extern jclass jMapCls; // java.util.Map
-    extern jmethodID jMapGet; // java.util.Map#get(Ljava/lang/Object;)Ljava/lang/Object;
-    extern jmethodID jMapPut; // java.util.Map#put(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
-    extern jmethodID jMapKeySet; // java.util.Map#keySet()Ljava/util/Set;
-    extern jmethodID jMapContainsKey; // java.util.Map#containsKey(Ljava/lang/Object;)Z
-
-    extern jclass jHashMapCls; // java.util.HashMap
-    extern jmethodID jHashMapInit; // java.util.HashMap#<init> ()V
-
-    extern jclass jHashSetCls; // java.util.HashSet
-    extern jmethodID jHashSetInit; // java.util.HashSet#<init> ()V
-
-    extern jmethodID jSetAdd; //java.util.Set#add (Ljava/lang/Object;)Z
-    extern jmethodID jSetSize; //java.util.Set#size ()I
-    extern jmethodID jSetToArray; //java.util.Set#toArray ([Ljava/lang/Object;)[Ljava/lang/Object;
-
-    extern jmethodID jIterableIterator; // java.lang.Iterable#iterator()Ljava/util/Iterator;
-    extern jmethodID jIteratorHasNext; // java.util.Iterator#hasNext()Z;
-    extern jmethodID jIteratorNext; // java.util.Iterator#next()Ljava/lang/Object;
-
-    extern jclass jApplicationCls; //com.sun.glass.ui.gtk.GtkApplication
-    extern jfieldID jApplicationDisplay; //com.sun.glass.ui.gtk.GtkApplication#display
-    extern jfieldID jApplicationScreen; //com.sun.glass.ui.gtk.GtkApplication#screen
-    extern jfieldID jApplicationVisualID; //com.sun.glass.ui.gtk.GtkApplication#visualID
-    extern jmethodID jApplicationReportException; // reportException(Ljava/lang/Throwable;)V
-    extern jmethodID jApplicationGetApplication; // GetApplication()()Lcom/sun/glass/ui/Application;
-    extern jmethodID jApplicationGetName; // getName()Ljava/lang/String;
-    extern jmethodID jApplicationNotifyPreferencesChanged; // notifyPreferencesChanged(Ljava/util/Map;)V
-
-    extern jclass jObjectCls; // java.lang.Object
-    extern jmethodID jObjectEquals; // java.lang.Object#equals(Ljava/lang/Object;)Z
-
-    extern jclass jBooleanCls; // java.lang.Boolean
-    extern jfieldID jBooleanTRUE; // java.lang.Boolean#TRUE
-    extern jfieldID jBooleanFALSE; // java.lang.Boolean#FALSE
-
-    extern jclass jCollectionsCls; // java.util.Collections;
-    extern jmethodID jCollectionsUnmodifiableMap; // java.util.Collections#unmodifiableMap(Ljava/util/Map;)Ljava/util/Map;
-
-    extern jclass jColorCls; // javafx.scene.paint.Color
-    extern jmethodID jColorRgb; // javafx.scene.paint.Color#rgb(IIID)Ljavafx/scene/paint/Color;
-
-#ifdef VERBOSE
-#define LOG0(msg) {printf(msg);fflush(stdout);}
-#define LOG1(msg, param) {printf(msg, param);fflush(stdout);}
-#define LOG2(msg, param1, param2) {printf(msg, param1, param2);fflush(stdout);}
-#define LOG3(msg, param1, param2, param3) {printf(msg, param1, param2, param3);fflush(stdout);}
-#define LOG4(msg, param1, param2, param3, param4) {printf(msg, param1, param2, param3, param4);fflush(stdout);}
-#define LOG5(msg, param1, param2, param3, param4, param5) {printf(msg, param1, param2, param3, param4, param5);fflush(stdout);}
-
-#define LOG_STRING_ARRAY(env, array) dump_jstring_array(env, array);
-
-#define ERROR0(msg) {fprintf(stderr, msg);fflush(stderr);}
-#define ERROR1(msg, param) {fprintf(stderr, msg, param);fflush(stderr);}
-#define ERROR2(msg, param1, param2) {fprintf(stderr, msg, param1, param2);fflush(stderr);}
-#define ERROR3(msg, param1, param2, param3) {fprintf(stderr, msg, param1, param2, param3);fflush(stderr);}
-#define ERROR4(msg, param1, param2, param3, param4) {fprintf(stderr, msg, param1, param2, param3, param4);fflush(stderr);}
-#else
-#define LOG0(msg)
-#define LOG1(msg, param)
-#define LOG2(msg, param1, param2)
-#define LOG3(msg, param1, param2, param3)
-#define LOG4(msg, param1, param2, param3, param4)
-#define LOG5(msg, param1, param2, param3, param4, param5)
-
-#define LOG_STRING_ARRAY(env, array)
-
-#define ERROR0(msg)
-#define ERROR1(msg, param)
-#define ERROR2(msg, param1, param2)
-#define ERROR3(msg, param1, param2, param3)
-#define ERROR4(msg, param1, param2, param3, param4)
-#endif
-
-#define LOG_EXCEPTION(env) check_and_clear_exception(env);
-
     gchar* get_application_name();
-    void glass_throw_exception(JNIEnv * env,
-            const char * exceptionClass,
-            const char * exceptionMessage);
-    int glass_throw_oom(JNIEnv * env, const char * exceptionMessage);
-    void dump_jstring_array(JNIEnv*, jobjectArray);
 
     guint8* convert_BGRA_to_RGBA(const int* pixels, int stride, int height);
 
-    gboolean check_and_clear_exception(JNIEnv *env);
-
-    jboolean is_display_valid();
+    uint8_t is_display_valid();
 
     gsize get_files_count(gchar **uris);
-
-    jobject uris_to_java(JNIEnv *env, gchar **uris, gboolean files);
 
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-extern jboolean gtk_verbose;
+// -Djdk.gtk.verbose, as the jboolean of commit 033187ad90: 0 or 1, and 1 byte wide in wrapped.c too.
+extern uint8_t gtk_verbose;
 
 void
 glass_widget_set_visual (GtkWidget *widget, GdkVisual *visual);
-
-gint
-glass_gdk_visual_get_depth (GdkVisual * visual);
 
 GdkScreen *
 glass_gdk_window_get_screen(GdkWindow * gdkWindow);
@@ -334,11 +121,6 @@ void
 glass_gtk_configure_transparency_and_realize(GtkWidget *window,
                                                   gboolean transparent);
 
-const guchar *
-glass_gtk_selection_data_get_data_with_length(
-        GtkSelectionData * selectionData,
-        gint * length);
-
 void
 glass_gtk_window_configure_from_visual(GtkWidget *widget, GdkVisual *visual);
 
@@ -346,18 +128,10 @@ void
 glass_gdk_window_get_size(GdkWindow *window, gint *w, gint *h);
 
 void
-glass_gdk_display_get_pointer(GdkDisplay* display, gint* x, gint *y);
-
-void
 glass_gdk_x11_display_set_window_scale(GdkDisplay *display, gint scale);
 
 gboolean
 glass_configure_window_transparency(GtkWidget *window, gboolean transparent);
-
-GdkPixbuf *
-glass_pixbuf_from_window(GdkWindow *window,
-    gint srcx, gint srcy,
-    gint width, gint height);
 
 void
 glass_window_apply_shape_mask(GdkWindow *window,
@@ -373,9 +147,6 @@ guint
 glass_settings_get_guint_opt (const gchar *schema_name,
                     const gchar *key_name,
                     int defval);
-
-
-gchar* jstring_to_utf8(JNIEnv *env, jstring jstr);
 
 #ifdef __cplusplus
 }

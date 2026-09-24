@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,8 +30,18 @@ class ID2D1Factory extends IUnknown {
         super(ptr);
     }
 
+    /**
+     * {@code d2d1.dll!D2D1CreateFactory(factoryType, IID_ID2D1Factory, &options, &factory)}.
+     * {@code d2d1.dll} is loaded on the first call, on the calling thread, exactly where the C
+     * loaded it.
+     */
+    static ID2D1Factory create(int factoryType) {
+        long ptr = DWNative.d2d1CreateFactory(factoryType);
+        return ptr != 0 ? new ID2D1Factory(ptr) : null;
+    }
+
     ID2D1RenderTarget CreateWicBitmapRenderTarget(IWICBitmap target, D2D1_RENDER_TARGET_PROPERTIES renderTargetProperties) {
-        long result = OS.CreateWicBitmapRenderTarget(ptr, target.ptr, renderTargetProperties);
+        long result = DWNative.createWicBitmapRenderTarget(ptr, target.ptr, renderTargetProperties);
         return result != 0 ? new ID2D1RenderTarget(result) : null;
     }
 }

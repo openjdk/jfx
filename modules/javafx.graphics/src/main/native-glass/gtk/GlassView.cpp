@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,7 +22,6 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-#include <com_sun_glass_ui_gtk_GtkView.h>
 #include <com_sun_glass_events_ViewEvent.h>
 
 #include <cstdlib>
@@ -33,181 +32,122 @@
 #include "glass_view.h"
 #include "glass_window.h"
 
-#define JLONG_TO_GLASSVIEW(value) ((GlassView *) JLONG_TO_PTR(value))
+#define GGTK_GLASSVIEW(view) ((GlassView *) (view))
+
+// The C of _setParent before its upcall: re-parents the view and answers the ViewEvent to notify
+static int32_t view_set_parent(GlassView* view, WindowContext* parent)
+{
+    bool is_removing = view->current_window && !parent;
+
+    view->current_window = parent;
+
+    return is_removing ? com_sun_glass_events_ViewEvent_REMOVE : com_sun_glass_events_ViewEvent_ADD;
+}
+
+// The C of _enterFullscreen before its upcall: whether the view had a window to put in full screen
+static bool view_enter_fullscreen(GlassView* view)
+{
+    if (view->current_window) {
+        view->current_window->enter_fullscreen();
+        return true;
+    }
+    return false;
+}
+
+// The C of _exitFullscreen before its upcall: whether the view had a window to take out of full screen
+static bool view_exit_fullscreen(GlassView* view)
+{
+    if (view->current_window) {
+        if (view->embedded_window) {
+            view->embedded_window->exit_fullscreen();
+        } else {
+            view->current_window->exit_fullscreen();
+        }
+        return true;
+    }
+    return false;
+}
+
+/*
+ * Each ggtk_view_* function below is the body of a Java_com_sun_glass_ui_gtk_GtkView_* function of commit
+ * 033187ad90 (named at its prototype in glass_gtk_api.h, with its contract), which GtkView now calls through
+ * GtkGlassNative. _setParent, _enterFullscreen and _exitFullscreen called Java with the View they were called on
+ * as the receiver; their functions dial GgtkViewCallbacks.notify_view with the view's own id instead, and make
+ * no call when that slot is NULL. _getNativeView (it answered 0) and _scheduleRepaint (it did nothing) have no
+ * function here: GtkView does the same in Java.
+ */
 
 extern "C" {
 
-/*
- * Class:     com_sun_glass_ui_gtk_GtkView
- * Method:    _enableInputMethodEvents
- * Signature: (JZ)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkView_enableInputMethodEventsImpl
-  (JNIEnv * env, jobject obj, jlong ptr, jboolean enable)
+void ggtk_view_enable_input_method_events(ggtk_view_t view, int32_t enable)
 {
-    (void)env;
-    (void)obj;
-
-    GlassView* view = JLONG_TO_GLASSVIEW(ptr);
-    if (view->current_window) {
+    GlassView* glass_view = GGTK_GLASSVIEW(view);
+    if (glass_view->current_window) {
         if (enable) {
-            view->current_window->enableOrResetIME();
+            glass_view->current_window->enableOrResetIME();
         } else {
-            view->current_window->disableIME();
+            glass_view->current_window->disableIME();
         }
     }
 }
 
-/*
- * Class:     com_sun_glass_ui_gtk_GtkView
- * Method:    _create
- * Signature: (Ljava/util/Map;)J
- */
-JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_gtk_GtkView__1create
-  (JNIEnv * env, jobject obj, jobject caps)
+ggtk_view_t ggtk_view_create(int64_t view_id)
 {
-    (void)env;
-    (void)obj;
-    (void)caps;
-
     GlassView *view = new GlassView();
-    return PTR_TO_JLONG(view);
+    view->id = view_id;
+    return view;
 }
 
-/*
- * Class:     com_sun_glass_ui_gtk_GtkView
- * Method:    _getNativeView
- * Signature: (J)J
- */
-JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_gtk_GtkView__1getNativeView
-  (JNIEnv * env, jobject obj, jlong ptr)
+int32_t ggtk_view_get_x(ggtk_view_t view)
 {
-    (void)env;
-    (void)obj;
-    (void)ptr;
-
-    return 0;
-}
-
-/*
- * Class:     com_sun_glass_ui_gtk_GtkView
- * Method:    _getX
- * Signature: (J)I
- */
-JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkView__1getX
-  (JNIEnv * env, jobject obj, jlong ptr)
-{
-    (void)env;
-    (void)obj;
-
-    GlassView* view = JLONG_TO_GLASSVIEW(ptr);
-    if (view && view->current_window) {
-        return view->current_window->get_geometry().view_x;
+    GlassView* glass_view = GGTK_GLASSVIEW(view);
+    if (glass_view && glass_view->current_window) {
+        return glass_view->current_window->get_geometry().view_x;
     }
     return 0;
 }
 
-/*
- * Class:     com_sun_glass_ui_gtk_GtkView
- * Method:    _getY
- * Signature: (J)I
- */
-JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkView__1getY
-  (JNIEnv * env, jobject obj, jlong ptr)
+int32_t ggtk_view_get_y(ggtk_view_t view)
 {
-    (void)env;
-    (void)obj;
-
-    GlassView* view = JLONG_TO_GLASSVIEW(ptr);
-    if (view && view->current_window) {
-        return view->current_window->get_geometry().view_y;
+    GlassView* glass_view = GGTK_GLASSVIEW(view);
+    if (glass_view && glass_view->current_window) {
+        return glass_view->current_window->get_geometry().view_y;
     }
     return 0;
 }
 
-/*
- * Class:     com_sun_glass_ui_gtk_GtkView
- * Method:    _setParent
- * Signature: (JJ)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkView__1setParent
-  (JNIEnv * env, jobject obj, jlong ptr, jlong parent)
+void ggtk_view_set_parent(ggtk_view_t view, ggtk_window_t parent)
 {
-    GlassView* view = JLONG_TO_GLASSVIEW(ptr);
-    bool is_removing = view->current_window && !parent;
+    GlassView* glass_view = GGTK_GLASSVIEW(view);
+    int32_t type = view_set_parent(glass_view, (WindowContext*) parent);
 
-    view->current_window = (WindowContext*)JLONG_TO_PTR(parent);
-
-    if (is_removing) {
-        env->CallVoidMethod(obj, jViewNotifyView, com_sun_glass_events_ViewEvent_REMOVE);
-    } else {
-        env->CallVoidMethod(obj, jViewNotifyView, com_sun_glass_events_ViewEvent_ADD);
-    }
-    CHECK_JNI_EXCEPTION(env);
-}
-
-/*
- * Class:     com_sun_glass_ui_gtk_GtkView
- * Method:    _close
- * Signature: (J)Z
- */
-JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkView__1close
-  (JNIEnv * env, jobject obj, jlong ptr)
-{
-    (void)env;
-    (void)obj;
-
-    delete JLONG_TO_GLASSVIEW(ptr);
-    return JNI_TRUE;
-}
-
-/*
- * Class:     com_sun_glass_ui_gtk_GtkView
- * Method:    _scheduleRepaint
- * Signature: (J)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkView__1scheduleRepaint
-  (JNIEnv * env, jobject obj, jlong ptr)
-{
-    // Seems to be unused
-    (void)env;
-    (void)obj;
-    (void)ptr;
-}
-
-/*
- * Class:     com_sun_glass_ui_gtk_GtkView
- * Method:    _uploadPixelsDirect
- * Signature: (JLjava/nio/Buffer;II)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkView__1uploadPixelsDirect
-(JNIEnv *env, jobject jView, jlong ptr, jobject buffer, jint width, jint height)
-{
-    (void)jView;
-
-    if (!ptr) return;
-    if (!buffer) return;
-
-    GlassView* view = JLONG_TO_GLASSVIEW(ptr);
-    if (view->current_window) {
-        void *data = env->GetDirectBufferAddress(buffer);
-
-        view->current_window->paint(data, width, height);
+    if (glass_view_cb.notify_view) {
+        // CHECK_JNI_EXCEPTION site at the end of the function: nothing follows, the status is ignored
+        glass_view_cb.notify_view(glass_view->id, type);
     }
 }
 
-/*
- * Class:     com_sun_glass_ui_gtk_GtkView
- * Method:    _uploadPixelsIntArray
- * Signature:  (J[IIII)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkView__1uploadPixelsIntArray
-  (JNIEnv * env, jobject obj, jlong ptr, jintArray array, jint offset, jint width, jint height)
+int32_t ggtk_view_close(ggtk_view_t view)
 {
-    (void)obj;
+    delete GGTK_GLASSVIEW(view);
+    return 1;
+}
 
-    if (!ptr) return;
-    if (!array) return;
+void ggtk_view_upload_pixels_direct(ggtk_view_t view, void* data, int32_t width, int32_t height)
+{
+    if (!view) return;
+
+    GlassView* glass_view = GGTK_GLASSVIEW(view);
+    if (glass_view->current_window) {
+        glass_view->current_window->paint(data, width, height);
+    }
+}
+
+void ggtk_view_upload_pixels_int(ggtk_view_t view, const int32_t* pixels, int32_t pixels_len, int32_t offset,
+                                 int32_t width, int32_t height)
+{
+    if (!view) return;
+    if (!pixels) return;
     if (offset < 0) return;
     if (width <= 0 || height <= 0) return;
 
@@ -216,34 +156,24 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkView__1uploadPixelsIntArray
         return;
     }
 
-    if ((width * height + offset) > env->GetArrayLength(array))
+    if ((width * height + offset) > pixels_len)
     {
         return;
     }
 
-    GlassView* view = JLONG_TO_GLASSVIEW(ptr);
-    if (view->current_window) {
-        int *data = NULL;
-        data = (int*)env->GetPrimitiveArrayCritical(array, 0);
+    GlassView* glass_view = GGTK_GLASSVIEW(view);
+    if (glass_view->current_window) {
+        int *data = (int*) pixels;
 
-        view->current_window->paint(data + offset, width, height);
-
-        env->ReleasePrimitiveArrayCritical(array, data, JNI_ABORT);
+        glass_view->current_window->paint(data + offset, width, height);
     }
 }
 
-/*
- * Class:     com_sun_glass_ui_gtk_GtkView
- * Method:    _uploadPixelsByteArray
- * Signature:  (J[BIII)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkView__1uploadPixelsByteArray
-  (JNIEnv * env, jobject obj, jlong ptr, jbyteArray array, jint offset, jint width, jint height)
+void ggtk_view_upload_pixels_byte(ggtk_view_t view, const uint8_t* pixels, int32_t pixels_len, int32_t offset,
+                                  int32_t width, int32_t height)
 {
-    (void)obj;
-
-    if (!ptr) return;
-    if (!array) return;
+    if (!view) return;
+    if (!pixels) return;
     if (offset < 0) return;
     if (width <= 0 || height <= 0) return;
 
@@ -252,65 +182,47 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkView__1uploadPixelsByteArray
         return;
     }
 
-    if ((4 * width * height + offset) > env->GetArrayLength(array))
+    if ((4 * width * height + offset) > pixels_len)
     {
         return;
     }
 
-    GlassView* view = JLONG_TO_GLASSVIEW(ptr);
-    if (view->current_window) {
-        unsigned char *data = NULL;
+    GlassView* glass_view = GGTK_GLASSVIEW(view);
+    if (glass_view->current_window) {
+        unsigned char *data = (unsigned char*) pixels;
 
-        data = (unsigned char*)env->GetPrimitiveArrayCritical(array, 0);
-
-        view->current_window->paint(data + offset, width, height);
-
-        env->ReleasePrimitiveArrayCritical(array, data, JNI_ABORT);
+        glass_view->current_window->paint(data + offset, width, height);
     }
 }
 
-/*
- * Class:     com_sun_glass_ui_gtk_GtkView
- * Method:    _enterFullscreen
- * Signature: (JZZZ)Z
- */
-JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkView__1enterFullscreen
-  (JNIEnv * env, jobject obj, jlong ptr, jboolean animate, jboolean keepRation, jboolean hideCursor)
+int32_t ggtk_view_enter_fullscreen(ggtk_view_t view, int32_t animate, int32_t keep_ratio, int32_t hide_cursor)
 {
     (void)animate;
-    (void)keepRation;
-    (void)hideCursor;
+    (void)keep_ratio;
+    (void)hide_cursor;
 
-    GlassView* view = JLONG_TO_GLASSVIEW(ptr);
-    if (view->current_window) {
-        view->current_window->enter_fullscreen();
-        env->CallVoidMethod(obj, jViewNotifyView, com_sun_glass_events_ViewEvent_FULLSCREEN_ENTER);
-        CHECK_JNI_EXCEPTION_RET(env, JNI_FALSE)
-    }
-    return JNI_TRUE;
-}
-
-/*
- * Class:     com_sun_glass_ui_gtk_GtkView
- * Method:    _exitFullscreen
- * Signature: (JZ)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkView__1exitFullscreen
-  (JNIEnv * env, jobject obj, jlong ptr, jboolean animate)
-{
-    (void)animate;
-
-    GlassView* view = JLONG_TO_GLASSVIEW(ptr);
-    if (view->current_window) {
-        if (view->embedded_window) {
-            view->embedded_window->exit_fullscreen();
-        } else {
-            view->current_window->exit_fullscreen();
+    GlassView* glass_view = GGTK_GLASSVIEW(view);
+    if (view_enter_fullscreen(glass_view)) {
+        if (glass_view_cb.notify_view) {
+            if (glass_view_cb.notify_view(glass_view->id, com_sun_glass_events_ViewEvent_FULLSCREEN_ENTER)) {
+                return 0;
+            }
         }
-        env->CallVoidMethod(obj, jViewNotifyView, com_sun_glass_events_ViewEvent_FULLSCREEN_EXIT);
-        CHECK_JNI_EXCEPTION(env)
     }
+    return 1;
+}
 
+void ggtk_view_exit_fullscreen(ggtk_view_t view, int32_t animate)
+{
+    (void)animate;
+
+    GlassView* glass_view = GGTK_GLASSVIEW(view);
+    if (view_exit_fullscreen(glass_view)) {
+        if (glass_view_cb.notify_view) {
+            // CHECK_JNI_EXCEPTION site at the end of the function: nothing follows, the status is ignored
+            glass_view_cb.notify_view(glass_view->id, com_sun_glass_events_ViewEvent_FULLSCREEN_EXIT);
+        }
+    }
 }
 
 } // extern "C"

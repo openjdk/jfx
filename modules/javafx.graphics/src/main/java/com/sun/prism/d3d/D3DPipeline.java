@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,11 +26,11 @@
 package com.sun.prism.d3d;
 
 import com.sun.glass.ui.Screen;
-import com.sun.glass.utils.NativeLibLoader;
 import com.sun.prism.GraphicsPipeline;
 import com.sun.prism.ResourceFactory;
 import com.sun.prism.impl.PrismSettings;
 
+import java.lang.foreign.MemorySegment;
 import java.util.List;
 
 public final class D3DPipeline extends GraphicsPipeline {
@@ -46,11 +46,13 @@ public final class D3DPipeline extends GraphicsPipeline {
         if (PrismSettings.verbose) {
             System.out.println("Loading D3D native library ...");
         }
-        NativeLibLoader.loadLibrary("prism_d3d");
+        // D3DNative loads prism_d3d and binds the d3d_* ABI; a failure surfaces here as the
+        // UnsatisfiedLinkError this initializer used to get from NativeLibLoader.
+        D3DNative.loadLibrary();
         if (PrismSettings.verbose) {
             System.out.println("\tsucceeded.");
         }
-        d3dEnabled = nInit(PrismSettings.class, true);
+        d3dEnabled = D3DNative.pipelineInit(initFlags());
 
         if (PrismSettings.verbose) {
             System.out.println("Direct3D initialization " + (d3dEnabled ? "succeeded" : "failed"));
@@ -59,7 +61,7 @@ public final class D3DPipeline extends GraphicsPipeline {
         boolean printD3DError = PrismSettings.verbose || !PrismSettings.disableBadDriverWarning;
         if (!d3dEnabled && printD3DError) {
             if (PrismSettings.verbose) {
-                System.out.println(nGetErrorMessage());
+                System.out.println(D3DNative.pipelineGetErrorMessage());
             }
             printDriverWarnings();
         }
@@ -69,8 +71,13 @@ public final class D3DPipeline extends GraphicsPipeline {
         if (d3dEnabled) {
             d3dInitialized = true;
             theInstance = new D3DPipeline();
-            factories = new D3DResourceFactory[nGetAdapterCount()];
+            factories = new D3DResourceFactory[D3DNative.pipelineGetAdapterCount()];
         }
+    }
+
+    /** The {@code PrismSettings} the native pipeline used to read for itself, as {@code D3dInitFlags}. */
+    private static int initFlags() {
+        return D3DNative.initFlags(PrismSettings.forceGPU, PrismSettings.isVsyncEnabled, PrismSettings.verbose);
     }
 
     public static D3DPipeline getInstance() {
@@ -91,11 +98,11 @@ public final class D3DPipeline extends GraphicsPipeline {
     }
 
     private static void printDriverWarning(int adapter) {
-        printDriverWarning(nGetDriverInformation(adapter, new D3DDriverInformation()));
+        printDriverWarning(D3DNative.pipelineGetDriverInformation(adapter));
     }
 
     private static void printDriverInformation(int adapter) {
-        D3DDriverInformation di = nGetDriverInformation(adapter, new D3DDriverInformation());
+        D3DDriverInformation di = D3DNative.pipelineGetDriverInformation(adapter);
         if (di != null) {
             System.out.println("OS Information:");
             System.out.println("\t" + di.getOsVersion() + " build " + di.osBuildNumber);
@@ -119,7 +126,7 @@ public final class D3DPipeline extends GraphicsPipeline {
     private static void printDriverWarnings() {
         // enumerate all adapters and print driver warnings
         for (int adapter = 0;; ++adapter) {
-            D3DDriverInformation di = nGetDriverInformation(adapter, new D3DDriverInformation());
+            D3DDriverInformation di = D3DNative.pipelineGetDriverInformation(adapter);
             if (di != null) {
                 printDriverWarning(di);
             } else {
@@ -135,21 +142,6 @@ public final class D3DPipeline extends GraphicsPipeline {
     public boolean init() {
         return d3dEnabled;
     }
-
-    private static native boolean nInit(Class psClass, boolean load);
-    private static native String nGetErrorMessage();
-    private static native void nDispose(boolean unload);
-
-    private static native int nGetAdapterOrdinal(long hMonitor);
-    private static native int nGetAdapterCount();
-
-    /*
-     * This method fill object with data and return an argument
-     */
-    private static native D3DDriverInformation nGetDriverInformation(
-            int adapterOrdinal, D3DDriverInformation object);
-
-    private static native int nGetMaxSampleSupport(int adapterOrdinal);
 
     // Called by dispose and reinitialize methods to reset the pipeline
     // and free all resources
@@ -172,7 +164,7 @@ public final class D3DPipeline extends GraphicsPipeline {
         factories = null;
         _default = null;
         d3dInitialized = false;
-        nDispose(unload);
+        D3DNative.pipelineDispose();
     }
 
     // Reinitialize pipeline
@@ -184,14 +176,14 @@ public final class D3DPipeline extends GraphicsPipeline {
         // Device was removed, reset and reinitialize
         reset(false);
 
-        boolean success = nInit(PrismSettings.class, false);
+        boolean success = D3DNative.pipelineInit(initFlags());
         if (!success) {
-            nDispose(false);
+            D3DNative.pipelineDispose();
             return;
         }
 
         d3dInitialized = true;
-        factories = new D3DResourceFactory[nGetAdapterCount()];
+        factories = new D3DResourceFactory[D3DNative.pipelineGetAdapterCount()];
 
         // Reassign the adapter ordinal of all the screens because the configuration has been changed
         // and the old adapter ordinal may be outdated.
@@ -206,8 +198,8 @@ public final class D3DPipeline extends GraphicsPipeline {
     }
 
     private static D3DResourceFactory createResourceFactory(int adapterOrdinal, Screen screen) {
-        long pContext = D3DResourceFactory.nGetContext(adapterOrdinal);
-        return pContext != 0 ? new D3DResourceFactory(pContext, screen) : null;
+        MemorySegment pContext = D3DNative.contextGet(adapterOrdinal);
+        return pContext.address() != 0L ? new D3DResourceFactory(pContext, screen) : null;
     }
 
     private static D3DResourceFactory getD3DResourceFactory(int adapterOrdinal, Screen screen) {
@@ -233,7 +225,7 @@ public final class D3DPipeline extends GraphicsPipeline {
 
     @Override
     public int getAdapterOrdinal(Screen screen) {
-        return nGetAdapterOrdinal(screen.getNativeScreen());
+        return D3DNative.pipelineGetAdapterOrdinal(screen.getNativeScreen());
     }
 
     private static D3DResourceFactory findDefaultResourceFactory(List<Screen> screens) {
@@ -248,7 +240,7 @@ public final class D3DPipeline extends GraphicsPipeline {
             }
         }
 
-        for (int adapter = 0, n = nGetAdapterCount(); adapter != n; ++adapter) {
+        for (int adapter = 0, n = D3DNative.pipelineGetAdapterCount(); adapter != n; ++adapter) {
             D3DResourceFactory rf =
                     getD3DResourceFactory(adapter, getScreenForAdapter(screens, adapter));
 
@@ -299,7 +291,7 @@ public final class D3DPipeline extends GraphicsPipeline {
     public boolean isMSAASupported() {
         if (maxSamples < 0) {
             //TODO: 3D - consider different adapters
-            maxSamples = nGetMaxSampleSupport(0);
+            maxSamples = D3DNative.pipelineGetMaxSampleSupport(0);
         }
         return maxSamples > 0;
     }

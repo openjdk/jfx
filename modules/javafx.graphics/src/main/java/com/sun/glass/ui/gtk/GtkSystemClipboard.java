@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,11 @@ import com.sun.glass.ui.Clipboard;
 import com.sun.glass.ui.SystemClipboard;
 import java.util.HashMap;
 
+/**
+ * The GTK clipboard peer. Every method below was a {@code native} of
+ * {@code GlassSystemClipboard.cpp} at commit {@code 033187ad90}; the GTK calls they made are now in
+ * {@code GtkGlassNative}, which names each of them.
+ */
 final class GtkSystemClipboard extends SystemClipboard {
 
     public GtkSystemClipboard() {
@@ -41,26 +46,57 @@ final class GtkSystemClipboard extends SystemClipboard {
         dispose();
     }
 
-    private native void init();
+    /** {@code Java_com_sun_glass_ui_gtk_GtkSystemClipboard_init}. */
+    void init() {
+        GtkGlassNative.clipboardInit(this);
+    }
 
-    private native void dispose();
+    /** {@code Java_com_sun_glass_ui_gtk_GtkSystemClipboard_dispose}. */
+    void dispose() {
+        GtkGlassNative.clipboardDispose();
+    }
 
+    /** {@code Java_com_sun_glass_ui_gtk_GtkSystemClipboard_isOwner}: a flag the owner-change handler keeps. */
     @Override
-    protected native boolean isOwner();
+    protected boolean isOwner() {
+        return GtkGlassNative.clipboardIsOwner();
+    }
 
+    /**
+     * {@code Java_com_sun_glass_ui_gtk_GtkSystemClipboard_pushToSystem}, which ignored
+     * {@code supportedActions}.
+     */
     @Override
-    protected native void pushToSystem(HashMap<String, Object> cacheData, int supportedActions);
+    protected void pushToSystem(HashMap<String, Object> cacheData, int supportedActions) {
+        GtkGlassNative.clipboardPush(cacheData);
+    }
 
+    /**
+     * {@code Java_com_sun_glass_ui_gtk_GtkSystemClipboard_pushTargetActionToSystem} did nothing: the target
+     * action is a drag-and-drop notion, not a clipboard one.
+     */
     @Override
-    protected native void pushTargetActionToSystem(int actionDone);
+    protected void pushTargetActionToSystem(int actionDone) {
+    }
 
+    /** {@code Java_com_sun_glass_ui_gtk_GtkSystemClipboard_popFromSystem}. */
     @Override
-    protected native Object popFromSystem(String mimeType);
+    protected Object popFromSystem(String mimeType) {
+        return GtkGlassNative.clipboardPop(mimeType);
+    }
 
+    /**
+     * {@code Java_com_sun_glass_ui_gtk_GtkSystemClipboard_supportedSourceActionsFromSystem} answered 0: the
+     * source actions are a drag-and-drop notion, not a clipboard one.
+     */
     @Override
-    protected native int supportedSourceActionsFromSystem();
+    protected int supportedSourceActionsFromSystem() {
+        return 0;
+    }
 
+    /** {@code Java_com_sun_glass_ui_gtk_GtkSystemClipboard_mimesFromSystem}. */
     @Override
-    protected native String[] mimesFromSystem();
-
+    protected String[] mimesFromSystem() {
+        return GtkGlassNative.clipboardMimes();
+    }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,13 +33,13 @@ class IUnknown {
     }
 
     int AddRef() {
-        return OS.AddRef(ptr);
+        return DWNative.addRef(ptr);
     }
 
     int Release() {
         int result = 0;
         if (ptr != 0) {
-            result = OS.Release(ptr);
+            result = DWNative.release(ptr);
             ptr = 0;
         }
         return result;

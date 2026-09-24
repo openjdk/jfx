@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,7 @@ import com.sun.prism.MediaFrame;
 import com.sun.prism.PixelFormat;
 import com.sun.prism.Texture;
 import com.sun.prism.impl.BaseTexture;
+import java.lang.foreign.MemorySegment;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
@@ -39,7 +40,7 @@ class D3DTexture extends BaseTexture<D3DTextureResource>
 {
 
     D3DTexture(D3DContext context, PixelFormat format, WrapMode wrapMode,
-               long pResource,
+               MemorySegment pResource,
                int physicalWidth, int physicalHeight,
                int contentWidth, int contentHeight, boolean isRTT)
     {
@@ -48,7 +49,7 @@ class D3DTexture extends BaseTexture<D3DTextureResource>
     }
 
     D3DTexture(D3DContext context, PixelFormat format, WrapMode wrapMode,
-               long pResource,
+               MemorySegment pResource,
                int physicalWidth, int physicalHeight,
                int contentX, int contentY, int contentWidth, int contentHeight,
                boolean isRTT, int samples, boolean useMipmap)
@@ -72,12 +73,9 @@ class D3DTexture extends BaseTexture<D3DTextureResource>
         return new D3DTexture(this, newMode);
     }
 
-    public long getNativeSourceHandle() {
+    /** The {@code D3DResource*} of this texture; {@link MemorySegment#NULL} once disposed. */
+    public MemorySegment getNativeSourceHandle() {
         return resource.getResource().getResource();
-    }
-
-    public long getNativeTextureObject() {
-        return D3DResourceFactory.nGetNativeTextureObject(getNativeSourceHandle());
     }
 
     @Override
@@ -113,14 +111,14 @@ class D3DTexture extends BaseTexture<D3DTextureResource>
 
         // always do plane 0 since it's used for packed formats
         if (targetFormat.getDataType() == PixelFormat.DataType.INT) {
-            result = D3DResourceFactory.nUpdateTextureI(
+            result = D3DNative.textureUpdate(
                     ctx.getContextHandle(),
                     getNativeSourceHandle(),
                     pixels.asIntBuffer(), null,
                     0, 0, 0, 0, frame.getEncodedWidth(), frame.getEncodedHeight(),
                     frame.strideForPlane(0));
         } else {
-            result = D3DResourceFactory.nUpdateTextureB(
+            result = D3DNative.textureUpdate(
                     ctx.getContextHandle(),
                     getNativeSourceHandle(),
                     pixels, null,
@@ -220,26 +218,26 @@ class D3DTexture extends BaseTexture<D3DTextureResource>
         if (format.getDataType() == PixelFormat.DataType.INT) {
             IntBuffer buf = (IntBuffer)pixels;
             int[] arr = buf.hasArray() ? buf.array() : null;
-            res = D3DResourceFactory.nUpdateTextureI(ctx.getContextHandle(),
-                                                     getNativeSourceHandle(),
-                                                     buf, arr, dstx, dsty,
-                                                     srcx, srcy, srcw, srch, srcscan);
+            res = D3DNative.textureUpdate(ctx.getContextHandle(),
+                                          getNativeSourceHandle(),
+                                          buf, arr, dstx, dsty,
+                                          srcx, srcy, srcw, srch, srcscan);
         } else if (format.getDataType() == PixelFormat.DataType.FLOAT) {
             FloatBuffer buf = (FloatBuffer)pixels;
             float[] arr = buf.hasArray() ? buf.array() : null;
-            res = D3DResourceFactory.nUpdateTextureF(ctx.getContextHandle(),
-                                                     getNativeSourceHandle(),
-                                                     buf, arr, dstx, dsty,
-                                                     srcx, srcy, srcw, srch, srcscan);
+            res = D3DNative.textureUpdate(ctx.getContextHandle(),
+                                          getNativeSourceHandle(),
+                                          buf, arr, dstx, dsty,
+                                          srcx, srcy, srcw, srch, srcscan);
         } else {
             ByteBuffer buf = (ByteBuffer)pixels;
             buf.rewind();
             byte[] arr = buf.hasArray() ? buf.array() : null;
-            res = D3DResourceFactory.nUpdateTextureB(ctx.getContextHandle(),
-                                                     getNativeSourceHandle(),
-                                                     buf, arr, format.ordinal(),
-                                                     dstx, dsty,
-                                                     srcx, srcy, srcw, srch, srcscan);
+            res = D3DNative.textureUpdate(ctx.getContextHandle(),
+                                          getNativeSourceHandle(),
+                                          buf, arr, format.ordinal(),
+                                          dstx, dsty,
+                                          srcx, srcy, srcw, srch, srcscan);
         }
         D3DContext.validate(res);
     }

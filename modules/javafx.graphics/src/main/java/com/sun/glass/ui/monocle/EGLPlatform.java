@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,6 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package com.sun.glass.ui.monocle;
 
 import java.util.ArrayList;
@@ -32,18 +33,16 @@ public class EGLPlatform extends LinuxPlatform {
     private List<NativeScreen> screens;
 
     /**
-     * Create an <code>EGLPlatform</code>. If a library with specific native code is needed for this platform,
-     * it will be downloaded now. The system property <code>monocle.egl.lib</code> can be used to define the
-     * name of the library that should be loaded.
+     * Create an <code>EGLPlatform</code>. The library with the platform-specific code, named by the system
+     * property <code>monocle.egl.lib</code>, is loaded and its functions are bound now, by
+     * {@link EglVendorNative}, where EGLPlatform of commit 21d5a654f6 opened it and left the binding to the
+     * JNI forwarders of eglBridge.c.
+     *
+     * @throws UnsatisfiedLinkError if the library cannot be loaded or does not export every function of
+     *         monocle_egl_ext.h
      */
     public EGLPlatform() {
-        String lib = System.getProperty("monocle.egl.lib");
-        if (lib != null) {
-            long handle = LinuxSystem.getLinuxSystem().dlopen(lib, LinuxSystem.RTLD_LAZY | LinuxSystem.RTLD_GLOBAL);
-            if (handle == 0) {
-                throw new UnsatisfiedLinkError("EGLPlatform failed to load the requested library " + lib);
-            }
-        }
+        EglVendorNative.loadLibrary();
     }
 
     @Override
@@ -64,7 +63,7 @@ public class EGLPlatform extends LinuxPlatform {
     @Override
     protected synchronized List<NativeScreen> createScreens() {
         if (screens == null) {
-            int numScreens = nGetNumberOfScreens();
+            int numScreens = EglVendorNative.doGetNumberOfScreens();
             screens = new ArrayList<>(numScreens);
             for (int i = 0; i < numScreens; i++) {
                 screens.add(new EGLScreen(i));
@@ -81,7 +80,5 @@ public class EGLPlatform extends LinuxPlatform {
         return accScreen;
 
     }
-
-    private native int nGetNumberOfScreens();
 
 }

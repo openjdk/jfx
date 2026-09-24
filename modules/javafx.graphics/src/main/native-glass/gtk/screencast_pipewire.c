@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,16 +28,10 @@
 #endif
 
 #include <dlfcn.h>
+#include <string.h>
 #include <X11/Xlib.h>
 #include "screencast_pipewire.h"
 #include "glass_key.h"
-
-#define JNU_CHECK_EXCEPTION_RETURN(env, y)      \
-    do {                                        \
-        if ((*env)->ExceptionCheck(env)) {      \
-            return (y);                         \
-        }                                       \
-    } while (0)
 
 struct pw_buffer *(*fp_pw_stream_dequeue_buffer)(struct pw_stream *stream);
 const char * (*fp_pw_stream_state_as_string)(enum pw_stream_state state);
@@ -97,13 +91,7 @@ struct pw_properties * (*fp_pw_properties_new)(const char *key, ...);
 
 #include <stdio.h>
 
-extern JNIEnv* mainEnv;
-
 int DEBUG_SCREENCAST_ENABLED = FALSE;
-
-#define EXCEPTION_CHECK_DESCRIBE() if ((*env)->ExceptionCheck(env)) { \
-                                      (*env)->ExceptionDescribe(env); \
-                                   }
 
 static gboolean hasPipewireFailed = FALSE;
 static gboolean sessionClosed = TRUE;
@@ -112,9 +100,6 @@ static GString *activeSessionToken;
 struct ScreenSpace screenSpace = {0};
 static struct PwLoopData pw = {0};
 gboolean isRemoteDesktop = FALSE;
-
-jclass tokenStorageClass = NULL;
-jmethodID storeTokenMethodID = NULL;
 
 inline void debug_screencast(
         const char *__restrict fmt,
@@ -791,74 +776,38 @@ static gboolean loadSymbols() {
 
 void storeRestoreToken(const gchar* oldToken, const gchar* newToken) {
 
-    JNIEnv* env = mainEnv;
-
     DEBUG_SCREENCAST("saving token, old: |%s| > new: |%s|\n", oldToken, newToken);
-    if (env) {
-        jstring jOldToken = NULL;
-        if (oldToken) {
-            jOldToken = (*env)->NewStringUTF(env, oldToken);
-            EXCEPTION_CHECK_DESCRIBE();
-            if (!jOldToken) {
-                return;
-            }
-        }
-        jstring jNewToken = (*env)->NewStringUTF(env, newToken);
-        EXCEPTION_CHECK_DESCRIBE();
-        if (!jNewToken) {
-            (*env)->DeleteLocalRef(env, jOldToken);
-            return;
-        }
 
-        jintArray allowedBounds = NULL;
+    // TokenStorage.storeTokenFromNative through the installed table. The JNI of commit 033187ad90 called it
+    // only for a session with at least one screen, so the slot is dialled only then. A slot that was never
+    // installed makes no call at all (screencast_api.h NULL SLOT), which is what a JNIEnv this thread could
+    // not supply did there. The status is ignored, as the exception ExceptionDescribe printed and cleared
+    // was ignored (screencast_api.h EXCEPTIONS).
+    if (sc_token_cb.store_token != NULL) {
         if (screenSpace.screenCount > 0) {
-            allowedBounds = (*env)->NewIntArray(env, screenSpace.screenCount*4);
-            EXCEPTION_CHECK_DESCRIBE();
-            if (!allowedBounds) {
-                return;
-            }
-            jint* elements = (*env)->GetIntArrayElements(env, allowedBounds, NULL);
-            EXCEPTION_CHECK_DESCRIBE();
-            if (!elements) {
-                return;
-            }
+            int32_t bounds[screenSpace.screenCount * 4];
 
             for (int i = 0; i < screenSpace.screenCount; ++i) {
-                GdkRectangle bounds = screenSpace.screens[i].bounds;
-                elements[4 * i] = bounds.x;
-                elements[4 * i + 1] = bounds.y;
-                elements[4 * i + 2] = bounds.width;
-                elements[4 * i + 3] = bounds.height;
+                GdkRectangle rect = screenSpace.screens[i].bounds;
+                bounds[4 * i] = rect.x;
+                bounds[4 * i + 1] = rect.y;
+                bounds[4 * i + 2] = rect.width;
+                bounds[4 * i + 3] = rect.height;
             }
 
-            (*env)->ReleaseIntArrayElements(env, allowedBounds, elements, 0);
-
-            (*env)->CallStaticVoidMethod(env, tokenStorageClass,
-                                         storeTokenMethodID,
-                                         jOldToken, jNewToken,
-                                         allowedBounds);
-            EXCEPTION_CHECK_DESCRIBE();
+            sc_token_cb.store_token(oldToken, newToken, bounds, screenSpace.screenCount * 4);
         }
-        (*env)->DeleteLocalRef(env, jOldToken);
-        (*env)->DeleteLocalRef(env, jNewToken);
-    } else {
-        DEBUG_SCREENCAST("!!! Could not get env\n", NULL);
     }
 }
 
-/*
- * Class:     com_sun_glass_ui_gtk_screencast_ScreencastHelper
- * Method:    loadPipewire
- * Signature: (IZ)Z
- */
-JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_screencast_ScreencastHelper_loadPipewire(
-        JNIEnv *env, jclass cls, jint method, jboolean screencastDebug
-) {
-    DEBUG_SCREENCAST_ENABLED = screencastDebug;
+// screencast_api.h sc_load_pipewire: the first half of ScreencastHelper.loadPipewire, up to the FindClass
+// of commit 033187ad90.
+int32_t sc_load_pipewire(int32_t method, int32_t debug) {
+    DEBUG_SCREENCAST_ENABLED = debug;
 
     if (method != XDG_METHOD_SCREENCAST
         && method != XDG_METHOD_REMOTE_DESKTOP) {
-        return JNI_FALSE;
+        return FALSE;
     }
 
     isRemoteDesktop = method == XDG_METHOD_REMOTE_DESKTOP;
@@ -866,32 +815,15 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_screencast_ScreencastHelper
     DEBUG_SCREENCAST("method %d\n", method)
 
     if (!loadSymbols()) {
-        return JNI_FALSE;
+        return FALSE;
     }
 
-    tokenStorageClass = (*env)->FindClass(env, "com/sun/glass/ui/gtk/screencast/TokenStorage");
-    if (!tokenStorageClass) {
-        return JNI_FALSE;
-    }
+    return TRUE;
+}
 
-    tokenStorageClass = (*env)->NewGlobalRef(env, tokenStorageClass);
-
-    if (tokenStorageClass) {
-        storeTokenMethodID = (*env)->GetStaticMethodID(
-                env,
-                tokenStorageClass,
-                "storeTokenFromNative",
-                "(Ljava/lang/String;Ljava/lang/String;[I)V"
-                );
-        if (!storeTokenMethodID) {
-            return JNI_FALSE;
-        }
-    } else {
-        DEBUG_SCREENCAST("!!! @@@ tokenStorageClass %p\n",
-                         tokenStorageClass);
-        return JNI_FALSE;
-    }
-
+// screencast_api.h sc_init_xdg_desktop_portal: the second half of ScreencastHelper.loadPipewire, from the
+// active session token of commit 033187ad90 on.
+int32_t sc_init_xdg_desktop_portal(void) {
     activeSessionToken = g_string_new("");
 
     gboolean usable = initXdgDesktopPortal();
@@ -899,36 +831,45 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_screencast_ScreencastHelper
     return usable;
 }
 
-static void releaseToken(JNIEnv *env, jstring jtoken, const gchar *token) {
-    if (token) {
-        (*env)->ReleaseStringUTFChars(env, jtoken, token);
-    }
-}
-
-static void arrayToRectangles(JNIEnv *env,
-                             jintArray boundsArray,
-                             jint boundsLen,
+// The bounds buffer of screencast_api.h as GdkRectangles: the arrayToRectangles of commit 033187ad90
+// without its JNI array. A NULL buffer writes nothing, as a null array wrote nothing.
+static void boundsToRectangles(const int32_t *bounds,
+                             int32_t boundsLen,
                              GdkRectangle *out
 ) {
-    if (!boundsArray) {
-        return;
-    }
-
-    jint * body = (*env)->GetIntArrayElements(env, boundsArray, 0);
-    EXCEPTION_CHECK_DESCRIBE();
-    if (!body) {
+    if (!bounds) {
         return;
     }
 
     for (int i = 0; i < boundsLen; i += 4) {
         GdkRectangle screenBounds = {
-                body[i], body[i + 1],
-                body[i + 2], body[i + 3]
+                bounds[i], bounds[i + 1],
+                bounds[i + 2], bounds[i + 3]
         };
         out[i / 4] = screenBounds;
     }
+}
 
-    (*env)->ReleaseIntArrayElements(env, boundsArray, body, 0);
+// One region of the pixel copy of screencast_api.h sc_get_rgb_pixels, with the range check
+// SetIntArrayRegion made against the length of the Java array at commit 033187ad90: a region that does
+// not fit is not copied and is recorded in outRejectedRegion, the regions that fit still are.
+static void copyPixelRegion(int32_t *pixels,
+                            int32_t pixelsLen,
+                            int32_t start,
+                            int32_t len,
+                            const int32_t *src,
+                            int32_t *outRejectedRegion
+) {
+    if (len < 0 || start < 0 || start > pixelsLen - len) {
+        if (outRejectedRegion) {
+            outRejectedRegion[0] += 1;
+            outRejectedRegion[1] = start;
+            outRejectedRegion[2] = len;
+        }
+        return;
+    }
+
+    memcpy(pixels + start, src, (size_t) len * sizeof(int32_t));
 }
 
 static int makeScreencast(
@@ -958,37 +899,27 @@ static int makeScreencast(
     return RESULT_OK;
 }
 
-/*
- * Class:     com_sun_glass_ui_gtk_screencast_ScreencastHelper
- * Method:    closeSession
- * Signature: ()V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_screencast_ScreencastHelper_closeSession(JNIEnv *env, jclass cls) {
+// screencast_api.h sc_close_session: ScreencastHelper.closeSession.
+void sc_close_session(void) {
     DEBUG_SCREENCAST("closing screencast session\n\n", NULL);
     doCleanup();
 }
 
-/*
- * Class:     com_sun_glass_ui_gtk_screencast_ScreencastHelper
- * Method:    getRGBPixelsImpl
- * Signature: (IIII[I[ILjava/lang/String;)I
- */
-JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_screencast_ScreencastHelper_getRGBPixelsImpl(
-        JNIEnv *env,
-        jclass cls,
-        jint jx,
-        jint jy,
-        jint jwidth,
-        jint jheight,
-        jintArray pixelArray,
-        jintArray affectedScreensBoundsArray,
-        jstring jtoken
+// screencast_api.h sc_get_rgb_pixels: ScreencastHelper.getRGBPixelsImpl. The `bounds` of the loop below
+// is `screenBounds` here, the parameter of that name being the screen-bounds buffer.
+int32_t sc_get_rgb_pixels(int32_t x, int32_t y, int32_t width, int32_t height,
+                          int32_t *pixels, int32_t pixelsLen,
+                          const int32_t *bounds, int32_t boundsLen,
+                          const char *token, int32_t *outRejectedRegion
 ) {
-    jsize boundsLen = 0;
+    if (outRejectedRegion) {
+        outRejectedRegion[0] = 0;
+        outRejectedRegion[1] = 0;
+        outRejectedRegion[2] = 0;
+    }
+
     gint affectedBoundsLength = 0;
-    if (affectedScreensBoundsArray) {
-        boundsLen = (*env)->GetArrayLength(env, affectedScreensBoundsArray);
-        EXCEPTION_CHECK_DESCRIBE();
+    if (bounds) {
         if (boundsLen % 4 != 0) {
             DEBUG_SCREENCAST("incorrect array length\n", NULL);
             return RESULT_ERROR;
@@ -997,21 +928,15 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_screencast_ScreencastHelper_get
     }
 
     GdkRectangle affectedScreenBounds[affectedBoundsLength];
-    arrayToRectangles(env,
-                     affectedScreensBoundsArray,
+    boundsToRectangles(bounds,
                      boundsLen,
                      (GdkRectangle *) &affectedScreenBounds);
 
-    GdkRectangle requestedArea = { jx, jy, jwidth, jheight};
-
-    const gchar *token = jtoken
-                         ? (*env)->GetStringUTFChars(env, jtoken, NULL)
-                         : NULL;
-    JNU_CHECK_EXCEPTION_RETURN(env, RESULT_ERROR);
+    GdkRectangle requestedArea = { x, y, width, height};
 
     DEBUG_SCREENCAST(
             "taking screenshot at \n\tx: %5i y %5i w %5i h %5i\n\twith token |%s|\n",
-            jx, jy, jwidth, jheight, token
+            x, y, width, height, token
     );
 
     int attemptResult = makeScreencast(
@@ -1019,7 +944,6 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_screencast_ScreencastHelper_get
 
     if (attemptResult) {
         if (attemptResult == RESULT_DENIED) {
-            releaseToken(env, jtoken, token);
             return attemptResult;
         }
         DEBUG_SCREENCAST("Screencast attempt failed with %i, re-trying...\n",
@@ -1027,7 +951,6 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_screencast_ScreencastHelper_get
         attemptResult = makeScreencast(
             token, &requestedArea, affectedScreenBounds, affectedBoundsLength);
         if (attemptResult) {
-            releaseToken(env, jtoken, token);
             return attemptResult;
         }
     }
@@ -1038,7 +961,7 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_screencast_ScreencastHelper_get
         struct ScreenProps * screenProps = &screenSpace.screens[i];
 
         if (screenProps->shouldCapture) {
-            GdkRectangle bounds = screenProps->bounds;
+            GdkRectangle screenBounds = screenProps->bounds;
             GdkRectangle captureArea  = screenProps->captureArea;
             DEBUG_SCREEN_PREFIX(screenProps,
                                 "@@@ copying screen data %i, captureData %p\n"
@@ -1050,8 +973,8 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_screencast_ScreencastHelper_get
                                 requestedArea.width, requestedArea.height,
                                 "requested area",
 
-                                bounds.x, bounds.y,
-                                bounds.width, bounds.height,
+                                screenBounds.x, screenBounds.y,
+                                screenBounds.width, screenBounds.height,
                                 "screen bound",
 
                                 captureArea.x, captureArea.y,
@@ -1060,24 +983,25 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_screencast_ScreencastHelper_get
             );
 
             if (screenProps->captureDataPixbuf) {
-                for (int y = 0; y < captureArea.height; y++) {
-                    jsize preY = (requestedArea.y > screenProps->bounds.y)
+                for (int row = 0; row < captureArea.height; row++) {
+                    int32_t preY = (requestedArea.y > screenProps->bounds.y)
                             ? 0
                             : screenProps->bounds.y - requestedArea.y;
-                    jsize preX = (requestedArea.x > screenProps->bounds.x)
+                    int32_t preX = (requestedArea.x > screenProps->bounds.x)
                             ? 0
                             : screenProps->bounds.x - requestedArea.x;
-                    jsize start = jwidth * (preY + y) + preX;
+                    int32_t start = width * (preY + row) + preX;
 
-                    jsize len = captureArea.width;
+                    int32_t len = captureArea.width;
 
-                    (*env)->SetIntArrayRegion(
-                            env, pixelArray,
+                    copyPixelRegion(
+                            pixels, pixelsLen,
                             start, len,
-                            ((jint *) gdk_pixbuf_get_pixels(
+                            ((int32_t *) gdk_pixbuf_get_pixels(
                                     screenProps->captureDataPixbuf
                             ))
-                            + (captureArea.width * y)
+                            + (captureArea.width * row),
+                            outRejectedRegion
                     );
                 }
             }
@@ -1096,97 +1020,55 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_screencast_ScreencastHelper_get
         }
     }
 
-    releaseToken(env, jtoken, token);
     return 0;
 }
 
-/*
- * Class:     com_sun_glass_ui_gtk_screencast_ScreencastHelper
- * Method:    remoteDesktopMouseMove
- * Signature: (IILjava/lang/String;)I
- */
-JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_screencast_ScreencastHelper_remoteDesktopMouseMoveImpl
-        (JNIEnv *env, jclass cls, jint jx, jint jy, jstring jtoken) {
+// screencast_api.h sc_remote_desktop_mouse_move: ScreencastHelper.remoteDesktopMouseMoveImpl.
+int32_t sc_remote_desktop_mouse_move(int32_t x, int32_t y, const char *token) {
 
-
-    const gchar *token = jtoken
-                         ? (*env)->GetStringUTFChars(env, jtoken, NULL)
-                         : NULL;
-    JNU_CHECK_EXCEPTION_RETURN(env, RESULT_ERROR);
-
-    DEBUG_SCREENCAST("moving mouse to\n\t%d %d\n\twith token |%s|\n", jx, jy, token);
+    DEBUG_SCREENCAST("moving mouse to\n\t%d %d\n\twith token |%s|\n", x, y, token);
 
     gboolean result = initPortal(token, NULL, 0);
-    DEBUG_SCREENCAST("init result %b, moving to %d %d\n", result, jx, jy)
+    DEBUG_SCREENCAST("init result %b, moving to %d %d\n", result, x, y)
 
     if (result) {
-        if (!remoteDesktopMouseMove(jx, jy)) {
-            releaseToken(env, jtoken, token);
+        if (!remoteDesktopMouseMove(x, y)) {
             return RESULT_DENIED;
         }
     }
 
-    releaseToken(env, jtoken, token);
-
     return result ? RESULT_OK : pw.pwFd;
 }
 
-/*
- * Class:     com_sun_glass_ui_gtk_screencast_ScreencastHelper
- * Method:    remoteDesktopMouseButtonImpl
- * Signature: (ZILjava/lang/String;)I
- */
-JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_screencast_ScreencastHelper_remoteDesktopMouseButtonImpl
-        (JNIEnv *env, jclass cls, jboolean isPress, jint buttons, jstring jtoken) {
-
-    const gchar *token = jtoken
-                         ? (*env)->GetStringUTFChars(env, jtoken, NULL)
-                         : NULL;
-    JNU_CHECK_EXCEPTION_RETURN(env, RESULT_ERROR);
+// screencast_api.h sc_remote_desktop_mouse_button: ScreencastHelper.remoteDesktopMouseButtonImpl.
+int32_t sc_remote_desktop_mouse_button(int32_t isPress, int32_t buttons, const char *token) {
 
     gboolean result = initPortal(token, NULL, 0);
     DEBUG_SCREENCAST("init result %b, mouse pressing %d, buttons %d\n", result, isPress, buttons)
 
     if (result) {
         if (!remoteDesktopMouse(isPress, buttons)) {
-            releaseToken(env, jtoken, token);
             return RESULT_DENIED;
         }
     }
 
-    releaseToken(env, jtoken, token);
-
     return result ? RESULT_OK : pw.pwFd;
 }
 
-/*
- * Class:     com_sun_glass_ui_gtk_screencast_ScreencastHelper
- * Method:    remoteDesktopMouseWheelImpl
- * Signature: (ILjava/lang/String;)I
- */
-JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_screencast_ScreencastHelper_remoteDesktopMouseWheelImpl
-        (JNIEnv *env, jclass cls, jint jWheelAmt, jstring jtoken) {
-
-    const gchar *token = jtoken
-                         ? (*env)->GetStringUTFChars(env, jtoken, NULL)
-                         : NULL;
-    JNU_CHECK_EXCEPTION_RETURN(env, RESULT_ERROR);
+// screencast_api.h sc_remote_desktop_mouse_wheel: ScreencastHelper.remoteDesktopMouseWheelImpl.
+int32_t sc_remote_desktop_mouse_wheel(int32_t wheelAmt, const char *token) {
 
     gboolean result = initPortal(token, NULL, 0);
-    DEBUG_SCREENCAST("init result %b, mouse wheel %d\n", result, jWheelAmt)
+    DEBUG_SCREENCAST("init result %b, mouse wheel %d\n", result, wheelAmt)
 
     if (result) {
-        if (!remoteDesktopMouseWheel(jWheelAmt)) {
-            releaseToken(env, jtoken, token);
+        if (!remoteDesktopMouseWheel(wheelAmt)) {
             return RESULT_DENIED;
         }
     }
 
-    releaseToken(env, jtoken, token);
-
     return result ? RESULT_OK : pw.pwFd;
 }
-
 
 static int getLettersScancode(gint gdk_keyval) {
     int keycode = find_gdk_keycode_for_keyval(gdk_keyval);
@@ -1208,7 +1090,7 @@ static int getLettersScancode(gint gdk_keyval) {
     return find_scancode_for_gdk_keyval(ks);
 }
 
-static int keyButton(jint jkey, gboolean *isKeyval) {
+static int keyButton(int32_t jkey, gboolean *isKeyval) {
     int keyval = find_gdk_keyval_for_glass_keycode(jkey);
     keyval = gdk_keyval_to_lower(keyval);
 
@@ -1228,27 +1110,19 @@ static int keyButton(jint jkey, gboolean *isKeyval) {
     return keyval;
 }
 
-/*
- * Class:     com_sun_glass_ui_gtk_screencast_ScreencastHelper
- * Method:    remoteDesktopKeyImpl
- * Signature: (ZILjava/lang/String;)I
- */
-JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_screencast_ScreencastHelper_remoteDesktopKeyImpl
-        (JNIEnv *env, jclass cls, jboolean isPress, jint jkey, jstring jtoken) {
+// screencast_api.h sc_remote_desktop_key: ScreencastHelper.remoteDesktopKeyImpl. The ExceptionCheck of the
+// key test at commit 033187ad90 is gone with the JNIEnv: a JNI native is entered with no pending exception,
+// so it could only ever answer false.
+int32_t sc_remote_desktop_key(int32_t isPress, int32_t jkey, const char *token) {
 
     gboolean isKeyval = TRUE;
     int key = keyButton(jkey, &isKeyval);
 
-    if (key < 0 || (*env)->ExceptionCheck(env)) {
+    if (key < 0) {
         DEBUG_SCREENCAST("failed to find a key: jkey %d -> %d isPress %b\n",
                          jkey, key, isPress)
         return RESULT_ERROR;
     }
-
-    const gchar *token = jtoken
-                         ? (*env)->GetStringUTFChars(env, jtoken, NULL)
-                         : NULL;
-    JNU_CHECK_EXCEPTION_RETURN(env, RESULT_ERROR);
 
     gboolean result = initPortal(token, NULL, 0);
     DEBUG_SCREENCAST("init result %b, jkey %d -> %d isKeyval %d isPress %b\n",
@@ -1256,12 +1130,9 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_screencast_ScreencastHelper_rem
 
     if (result) {
         if (!remoteDesktopKey(isPress, isKeyval, key)) {
-            releaseToken(env, jtoken, token);
             return RESULT_DENIED;
         }
     }
-
-    releaseToken(env, jtoken, token);
 
     return result ? RESULT_OK : pw.pwFd;
 }

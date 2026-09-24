@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,9 +26,19 @@
 #ifndef _COMMONDIALOGS_COM_INCLUDED_
 #define _COMMONDIALOGS_COM_INCLUDED_
 
-jobject COMFileChooser_Show(HWND owner, LPCTSTR folder, LPCTSTR filename, LPCTSTR title, jint type,
-                                 jboolean multipleMode, jobjectArray jFilters, jint defaultFilterIndex);
+#include "glass_win_api.h"
 
-jstring COMFolderChooser_Show(HWND owner, LPCTSTR folder, LPCTSTR title);
+/*
+ * The Vista IFileDialog path, JNI-free: filters as GwinFileFilter[] (NULL skips the filter
+ * setup, an empty non-NULL array does not), results as a gwin string block the caller frees - see
+ * gwin_dialog_file / gwin_dialog_folder in glass_win_api.h for every out-parameter rule. The exports in
+ * CommonDialogs.cpp are the only callers.
+ */
+int32_t COMFileChooser_Show(HWND owner, LPCWSTR folder, LPCWSTR filename, LPCWSTR title, int32_t type,
+                            int32_t multipleMode, const GwinFileFilter* filters, int32_t filterCount,
+                            int32_t defaultFilterIndex,
+                            uint16_t** outFiles, int32_t* outCount, int32_t* outFilterIndex);
+
+int32_t COMFolderChooser_Show(HWND owner, LPCWSTR folder, LPCWSTR title, uint16_t** outPath);
 
 #endif // _COMMONDIALOGS_COM_INCLUDED_

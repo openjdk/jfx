@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,7 +30,6 @@
 #include "D3DPipelineManager.h"
 #include "PassThroughVS.h"
 
-#include "com_sun_prism_d3d_D3DContext.h"
 #include "D3DLight.h"
 #include "D3DMesh.h"
 #include "D3DMeshView.h"
@@ -171,389 +170,6 @@ int D3DContext::release() {
     return 0;
 }
 
-/*
- * Class:     com_sun_prism_d3d_D3DContext
- * Method:    nCreateD3DMesh
- * Signature: (J)J
- */
-JNIEXPORT jlong JNICALL Java_com_sun_prism_d3d_D3DContext_nCreateD3DMesh
-  (JNIEnv *env, jclass, jlong ctx)
-{
-    TraceLn(NWT_TRACE_INFO, "D3DContext_nCreateD3DMesh");
-    D3DContext *pCtx = (D3DContext*) jlong_to_ptr(ctx);
-    RETURN_STATUS_IF_NULL(pCtx, 0L);
-
-    D3DMesh *mesh = new D3DMesh(pCtx);
-    return ptr_to_jlong(mesh);
-}
-
-/*
- * Class:     com_sun_prism_d3d_D3DContext
- * Method:    nReleaseD3DMesh
- * Signature: (JJ)V
- */
-JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DContext_nReleaseD3DMesh
-  (JNIEnv *env, jclass, jlong ctx, jlong nativeMesh)
-{
-    TraceLn(NWT_TRACE_INFO, "D3DContext_nReleaseD3DMesh");
-    D3DMesh *mesh = (D3DMesh *) jlong_to_ptr(nativeMesh);
-    if (mesh) {
-        delete mesh;
-    }
-}
-
-/*
- * Class:     com_sun_prism_d3d_D3DContext
- * Method:    nBuildNativeGeometryShort
- * Signature: (JJ[FI[SI)Z
- */
-JNIEXPORT jboolean JNICALL Java_com_sun_prism_d3d_D3DContext_nBuildNativeGeometryShort
-  (JNIEnv *env, jclass, jlong ctx, jlong nativeMesh, jfloatArray vb, jint vbSize, jshortArray ib, jint ibSize)
-{
-    TraceLn(NWT_TRACE_INFO, "D3DContext_nBuildNativeGeometryShort");
-    D3DMesh *mesh = (D3DMesh *) jlong_to_ptr(nativeMesh);
-    RETURN_STATUS_IF_NULL(mesh, JNI_FALSE);
-
-    if (vbSize < 0 || ibSize < 0) {
-        return JNI_FALSE;
-    }
-
-    UINT uvbSize = (UINT) vbSize;
-    UINT uibSize = (UINT) ibSize;
-    UINT vertexBufferSize = env->GetArrayLength(vb);
-    UINT indexBufferSize = env->GetArrayLength(ib);
-
-    if (uvbSize > vertexBufferSize || uibSize > indexBufferSize) {
-        return JNI_FALSE;
-    }
-
-    float *vertexBuffer = (float *) (env->GetPrimitiveArrayCritical(vb, NULL));
-    if (vertexBuffer == NULL) {
-        return JNI_FALSE;
-    }
-
-    USHORT *indexBuffer = (USHORT *) (env->GetPrimitiveArrayCritical(ib, NULL));
-    if (indexBuffer == NULL) {
-        env->ReleasePrimitiveArrayCritical(vb, vertexBuffer, 0);
-        return JNI_FALSE;
-    }
-
-    boolean result = mesh->buildBuffers(vertexBuffer, uvbSize, indexBuffer, uibSize);
-    env->ReleasePrimitiveArrayCritical(ib, indexBuffer, 0);
-    env->ReleasePrimitiveArrayCritical(vb, vertexBuffer, 0);
-
-    return result;
-}
-
-/*
- * Class:     com_sun_prism_d3d_D3DContext
- * Method:    nBuildNativeGeometryInt
- * Signature: (JJ[FI[II)Z
- */
-JNIEXPORT jboolean JNICALL Java_com_sun_prism_d3d_D3DContext_nBuildNativeGeometryInt
-  (JNIEnv *env, jclass, jlong ctx, jlong nativeMesh, jfloatArray vb, jint vbSize, jintArray ib, jint ibSize)
-{
-    TraceLn(NWT_TRACE_INFO, "D3DContext_nBuildNativeGeometryInt");
-    D3DMesh *mesh = (D3DMesh *) jlong_to_ptr(nativeMesh);
-    RETURN_STATUS_IF_NULL(mesh, JNI_FALSE);
-
-    if (vbSize < 0 || ibSize < 0) {
-        return JNI_FALSE;
-    }
-
-    UINT uvbSize = (UINT) vbSize;
-    UINT uibSize = (UINT) ibSize;
-    UINT vertexBufferSize = env->GetArrayLength(vb);
-    UINT indexBufferSize = env->GetArrayLength(ib);
-    if (uvbSize > vertexBufferSize || uibSize > indexBufferSize) {
-        return JNI_FALSE;
-    }
-
-    float *vertexBuffer = (float *) (env->GetPrimitiveArrayCritical(vb, NULL));
-    if (vertexBuffer == NULL) {
-        return JNI_FALSE;
-    }
-
-    UINT *indexBuffer = (UINT *) (env->GetPrimitiveArrayCritical(ib, NULL));
-    if (indexBuffer == NULL) {
-        env->ReleasePrimitiveArrayCritical(vb, vertexBuffer, 0);
-        return JNI_FALSE;
-    }
-
-    boolean result = mesh->buildBuffers(vertexBuffer, uvbSize, indexBuffer, uibSize);
-    env->ReleasePrimitiveArrayCritical(ib, indexBuffer, 0);
-    env->ReleasePrimitiveArrayCritical(vb, vertexBuffer, 0);
-
-    return result;
-}
-
-/*
- * Class:     com_sun_prism_d3d_D3DContext
- * Method:    nCreateD3DPhongMaterial
- * Signature: (J)J
- */
-JNIEXPORT jlong JNICALL Java_com_sun_prism_d3d_D3DContext_nCreateD3DPhongMaterial
-  (JNIEnv *env, jclass, jlong ctx)
-{
-    TraceLn(NWT_TRACE_INFO, "D3DContext_nCreateD3DPhongMaterial");
-    D3DContext *pCtx = (D3DContext*) jlong_to_ptr(ctx);
-    RETURN_STATUS_IF_NULL(pCtx, 0L);
-
-    D3DPhongMaterial *phongMaterial = new D3DPhongMaterial(pCtx);
-    return ptr_to_jlong(phongMaterial);
-}
-
-/*
- * Class:     com_sun_prism_d3d_D3DContext
- * Method:    nReleaseD3DPhongMaterial
- * Signature: (JJ)V
- */
-JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DContext_nReleaseD3DPhongMaterial
-  (JNIEnv *env, jclass, jlong ctx, jlong nativePhongMaterial)
-{
-    TraceLn(NWT_TRACE_INFO, "D3DContext_nReleaseD3DPhongMaterial");
-    D3DPhongMaterial *phongMaterial = (D3DPhongMaterial *) jlong_to_ptr(nativePhongMaterial);
-    if (phongMaterial) {
-        delete phongMaterial;
-    }
-}
-
-/*
- * Class:     com_sun_prism_d3d_D3DContext
- * Method:    nSetDiffuseColor
- * Signature: (JJFFFF)V
- */
-JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DContext_nSetDiffuseColor
-  (JNIEnv *env, jclass, jlong ctx, jlong nativePhongMaterial,
-        jfloat r, jfloat g, jfloat b, jfloat a)
-{
-    TraceLn(NWT_TRACE_INFO, "D3DContext_nSetDiffuseColor");
-    D3DPhongMaterial *phongMaterial = (D3DPhongMaterial *) jlong_to_ptr(nativePhongMaterial);
-    RETURN_IF_NULL(phongMaterial);
-
-    phongMaterial->setDiffuseColor(r, g, b, a);
-}
-
-/*
- * Class:     com_sun_prism_d3d_D3DContext
- * Method:    nSetSpecularColor
- * Signature: (JJZFFFF)V
- */
-JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DContext_nSetSpecularColor
-  (JNIEnv *env, jclass, jlong ctx, jlong nativePhongMaterial,
-        jboolean set, jfloat r, jfloat g, jfloat b, jfloat a)
-{
-    TraceLn(NWT_TRACE_INFO, "D3DContext_nSetSpecularColor");
-    D3DPhongMaterial *phongMaterial = (D3DPhongMaterial *) jlong_to_ptr(nativePhongMaterial);
-    RETURN_IF_NULL(phongMaterial);
-
-    phongMaterial->setSpecularColor(set ? true : false, r, g, b, a);
-}
-/*
- * Class:     com_sun_prism_d3d_D3DContext
- * Method:    nSetMap
- * Signature: (JJIJ)V
- */
-JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DContext_nSetMap
-  (JNIEnv *env, jclass, jlong ctx, jlong nativePhongMaterial,
-        jint mapType, jlong nativeTexture)
-{
-    TraceLn(NWT_TRACE_INFO, "D3DContext_nSetMap");
-    D3DPhongMaterial *phongMaterial = (D3DPhongMaterial *) jlong_to_ptr(nativePhongMaterial);
-    IDirect3DBaseTexture9 *texMap = (IDirect3DBaseTexture9 *)  jlong_to_ptr(nativeTexture);
-    RETURN_IF_NULL(phongMaterial);
-
-    phongMaterial->setMap(mapType, texMap);
-}
-
-/*
- * Class:     com_sun_prism_d3d_D3DContext
- * Method:    nCreateD3DMeshView
- * Signature: (JJ)J
- */
-JNIEXPORT jlong JNICALL Java_com_sun_prism_d3d_D3DContext_nCreateD3DMeshView
-  (JNIEnv *env, jclass, jlong ctx, jlong nativeMesh)
-{
-    TraceLn(NWT_TRACE_INFO, "D3DContext_nCreateD3DMeshView");
-    D3DContext *pCtx = (D3DContext*) jlong_to_ptr(ctx);
-    RETURN_STATUS_IF_NULL(pCtx, 0L);
-
-    D3DMesh *mesh = (D3DMesh *) jlong_to_ptr(nativeMesh);
-    RETURN_STATUS_IF_NULL(mesh, 0L);
-
-    D3DMeshView *meshView = new D3DMeshView(pCtx, mesh);
-    return ptr_to_jlong(meshView);
-}
-
-/*
- * Class:     com_sun_prism_d3d_D3DContext
- * Method:    nReleaseD3DMeshView
- * Signature: (JJ)V
- */
-JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DContext_nReleaseD3DMeshView
-  (JNIEnv *env, jclass, jlong ctx, jlong nativeMeshView)
-{
-    TraceLn(NWT_TRACE_INFO, "D3DContext_nReleaseD3DMeshView");
-    D3DMeshView *meshView = (D3DMeshView *) jlong_to_ptr(nativeMeshView);
-    if (meshView) {
-        delete meshView;
-    }
-}
-
-/*
- * Class:     com_sun_prism_d3d_D3DContext
- * Method:    nSetCullingMode
- * Signature: (JJI)V
- */
-JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DContext_nSetCullingMode
-  (JNIEnv *env, jclass, jlong ctx, jlong nativeMeshView, jint cullMode)
-{
-    TraceLn(NWT_TRACE_INFO, "D3DContext_nSetCullingMode");
-    D3DMeshView *meshView = (D3DMeshView *) jlong_to_ptr(nativeMeshView);
-    RETURN_IF_NULL(meshView);
-
-    switch (cullMode) {
-        case com_sun_prism_d3d_D3DContext_CULL_BACK:
-            cullMode = D3DCULL_CW;
-            break;
-        case com_sun_prism_d3d_D3DContext_CULL_FRONT:
-            cullMode = D3DCULL_CCW;
-            break;
-        case com_sun_prism_d3d_D3DContext_CULL_NONE:
-            cullMode = D3DCULL_NONE;
-            break;
-    }
-    meshView->setCullingMode(cullMode);
-}
-
-/*
- * Class:     com_sun_prism_d3d_D3DContext
- * Method:    nBlit
- * Signature: (JJJIIIIIIII)V
- */
-JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DContext_nBlit
-  (JNIEnv *env, jclass, jlong ctx, jlong nSrcRTT, jlong nDstRTT,
-            jint srcX0, jint srcY0, jint srcX1, jint srcY1,
-            jint dstX0, jint dstY0, jint dstX1, jint dstY1)
-{
-    TraceLn(NWT_TRACE_INFO, "D3DContext_nBlit");
-    D3DContext *pCtx = (D3DContext*) jlong_to_ptr(ctx);
-    RETURN_IF_NULL(pCtx);
-
-    D3DResource *srcRes = (D3DResource*) jlong_to_ptr(nSrcRTT);
-    if (srcRes == NULL) {
-        TraceLn(NWT_TRACE_INFO, "   error srcRes is NULL");
-        return;
-    }
-
-    IDirect3DSurface9 *pSrcSurface = srcRes->GetSurface();
-    if (pSrcSurface == NULL) {
-        TraceLn(NWT_TRACE_INFO, "   error pSrcSurface is NULL");
-        return;
-    }
-
-    D3DResource *dstRes = (D3DResource*) jlong_to_ptr(nDstRTT);
-    IDirect3DSurface9 *pDstSurface = (dstRes == NULL) ? NULL : dstRes->GetSurface();
-
-    pCtx->stretchRect(pSrcSurface, srcX0, srcY0, srcX1, srcY1,
-                      pDstSurface, dstX0, dstY0, dstX1, dstY1);
-}
-
-/*
- * Class:     com_sun_prism_d3d_D3DContext
- * Method:    nSetMaterial
- * Signature: (JJJ)V
- */
-JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DContext_nSetMaterial
-  (JNIEnv *env, jclass, jlong ctx, jlong nativeMeshView, jlong nativePhongMaterial)
-{
-    TraceLn(NWT_TRACE_INFO, "D3DContext_nSetMaterial");
-    D3DMeshView *meshView = (D3DMeshView *) jlong_to_ptr(nativeMeshView);
-    RETURN_IF_NULL(meshView);
-
-    D3DPhongMaterial *phongMaterial = (D3DPhongMaterial *) jlong_to_ptr(nativePhongMaterial);
-    meshView->setMaterial(phongMaterial);
-}
-
-/*
- * Class:     com_sun_prism_d3d_D3DContext
- * Method:    nSetWireframe
- * Signature: (JJZ)V
- */
-JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DContext_nSetWireframe
-  (JNIEnv *env, jclass, jlong ctx, jlong nativeMeshView, jboolean wireframe)
-{
-    TraceLn(NWT_TRACE_INFO, "D3DContext_nSetWireframe");
-    D3DMeshView *meshView = (D3DMeshView *) jlong_to_ptr(nativeMeshView);
-    RETURN_IF_NULL(meshView);
-
-    meshView->setWireframe(wireframe ? true : false);
-}
-
-/*
- * Class:     com_sun_prism_d3d_D3DContext
- * Method:    nSetAmbientLight
- * Signature: (JJFFF)V
- */
-JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DContext_nSetAmbientLight
-  (JNIEnv *env, jclass, jlong ctx, jlong nativeMeshView,
-        jfloat r, jfloat g, jfloat b)
-{
-    TraceLn(NWT_TRACE_INFO, "D3DContext_nSetAmbientLight");
-    D3DMeshView *meshView = (D3DMeshView *) jlong_to_ptr(nativeMeshView);
-    RETURN_IF_NULL(meshView);
-
-    meshView->setAmbientLight(r, g, b);
-}
-
-/*
- * Class:     com_sun_prism_d3d_D3DContext
- * Method:    nSetLight
- * Signature: (JJIFFFFFFFFFFFFFFFFFF)V
- */
-JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DContext_nSetLight
-  (JNIEnv *env, jclass, jlong ctx, jlong nativeMeshView, jint index,
-        jfloat x, jfloat y, jfloat z, jfloat r, jfloat g, jfloat b, jfloat w,
-        jfloat ca, jfloat la, jfloat qa, jfloat isAttenuated, jfloat range,
-        jfloat dirX, jfloat dirY, jfloat dirZ, jfloat innerAngle, jfloat outerAngle, jfloat falloff)
-{
-    TraceLn(NWT_TRACE_INFO, "D3DContext_nSetLight");
-    D3DMeshView *meshView = (D3DMeshView *) jlong_to_ptr(nativeMeshView);
-    RETURN_IF_NULL(meshView);
-    meshView->setLight(index, x, y, z, r, g, b, w, ca, la, qa, isAttenuated, range, dirX, dirY, dirZ,
-            innerAngle, outerAngle, falloff);
-}
-
-/*
- * Class:     com_sun_prism_d3d_D3DContext
- * Method:    nRenderMeshView
- * Signature: (JJ)V
- */
-JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DContext_nRenderMeshView
-  (JNIEnv *env, jclass, jlong ctx, jlong nativeMeshView)
-{
-    TraceLn(NWT_TRACE_INFO, "D3DContext_nRenderMeshView");
-    D3DMeshView *meshView = (D3DMeshView *) jlong_to_ptr(nativeMeshView);
-    RETURN_IF_NULL(meshView);
-
-    meshView->render();
-}
-
-/*
- * Class:     com_sun_prism_d3d_D3DContext
- * Method:    nSetDeviceParametersFor2D
- */
-
-JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DContext_nSetDeviceParametersFor2D
-  (JNIEnv *, jclass, jlong ctx)
-{
-    TraceLn(NWT_TRACE_INFO, "D3DContext_nSetDeviceParametersFor2D");
-    D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);
-    RETURN_STATUS_IF_NULL(pCtx, S_FALSE);
-
-    return pCtx->setDeviceParametersFor2D();
-}
-
 HRESULT D3DContext::setDeviceParametersFor2D() {
 
     RETURN_STATUS_IF_NULL(pd3dDevice, S_FALSE);
@@ -575,21 +191,6 @@ HRESULT D3DContext::setDeviceParametersFor2D() {
         SUCCEEDED(res = pd3dDevice->SetRenderState(D3DRS_LIGHTING, FALSE));
     }
     return res;
-}
-
-/*
- * Class:     com_sun_prism_d3d_D3DContext
- * Method:    nSetDeviceParametersFor3D
- */
-
-JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DContext_nSetDeviceParametersFor3D
-  (JNIEnv *, jclass, jlong ctx)
-{
-    TraceLn(NWT_TRACE_INFO, "D3DContext_nSet3DVShaderAndVertexBuffer");
-    D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);
-    RETURN_STATUS_IF_NULL(pCtx, S_FALSE);
-
-    return pCtx->setDeviceParametersFor3D();
 }
 
 HRESULT D3DContext::setDeviceParametersFor3D() {
@@ -995,7 +596,7 @@ D3DContext::SetRenderTarget(IDirect3DSurface9 *pSurface,
 }
 
 HRESULT
-D3DContext::SetCameraPosition(jdouble camPosX, jdouble camPosY, jdouble camPosZ)
+D3DContext::SetCameraPosition(double camPosX, double camPosY, double camPosZ)
 {
     float cPos[4];
     HRESULT res = S_OK;
@@ -1017,10 +618,10 @@ D3DContext::SetCameraPosition(jdouble camPosX, jdouble camPosY, jdouble camPosZ)
 
 HRESULT
 D3DContext::SetProjViewMatrix(BOOL depthTest,
-                              jdouble m00, jdouble m01, jdouble m02, jdouble m03,
-                              jdouble m10, jdouble m11, jdouble m12, jdouble m13,
-                              jdouble m20, jdouble m21, jdouble m22, jdouble m23,
-                              jdouble m30, jdouble m31, jdouble m32, jdouble m33)
+                              double m00, double m01, double m02, double m03,
+                              double m10, double m11, double m12, double m13,
+                              double m20, double m21, double m22, double m23,
+                              double m30, double m31, double m32, double m33)
 {
     D3DMATRIX mat;
     HRESULT res = S_OK;
@@ -1093,10 +694,10 @@ D3DContext::setWorldTransformIndentity() {
 }
 
 void
-setWorldTx(D3DMATRIX &mat, jdouble m00, jdouble m01, jdouble m02, jdouble m03,
-            jdouble m10, jdouble m11, jdouble m12, jdouble m13,
-            jdouble m20, jdouble m21, jdouble m22, jdouble m23,
-            jdouble m30, jdouble m31, jdouble m32, jdouble m33) {
+setWorldTx(D3DMATRIX &mat, double m00, double m01, double m02, double m03,
+            double m10, double m11, double m12, double m13,
+            double m20, double m21, double m22, double m23,
+            double m30, double m31, double m32, double m33) {
 
     mat._11 = (float)m00;     // Scale X
     mat._12 = (float)m10;     // Shear Y
@@ -1135,10 +736,10 @@ setWorldTx(D3DMATRIX &mat, jdouble m00, jdouble m01, jdouble m02, jdouble m03,
 }
 
 void
-D3DContext::setWorldTransform(jdouble m00, jdouble m01, jdouble m02, jdouble m03,
-            jdouble m10, jdouble m11, jdouble m12, jdouble m13,
-            jdouble m20, jdouble m21, jdouble m22, jdouble m23,
-            jdouble m30, jdouble m31, jdouble m32, jdouble m33) {
+D3DContext::setWorldTransform(double m00, double m01, double m02, double m03,
+            double m10, double m11, double m12, double m13,
+            double m20, double m21, double m22, double m23,
+            double m30, double m31, double m32, double m33) {
 
 //    std::cerr << "D3DContext::setWorldTransform" << std::endl;
     TraceLn(NWT_TRACE_INFO, "D3DContext::setWorldTransform");
@@ -1164,10 +765,10 @@ D3DContext::ResetTransform()
 }
 
 HRESULT
-D3DContext::SetTransform(jdouble m00, jdouble m01, jdouble m02, jdouble m03,
-                         jdouble m10, jdouble m11, jdouble m12, jdouble m13,
-                         jdouble m20, jdouble m21, jdouble m22, jdouble m23,
-                         jdouble m30, jdouble m31, jdouble m32, jdouble m33)
+D3DContext::SetTransform(double m00, double m01, double m02, double m03,
+                         double m10, double m11, double m12, double m13,
+                         double m20, double m21, double m22, double m23,
+                         double m30, double m31, double m32, double m33)
 
 {
 

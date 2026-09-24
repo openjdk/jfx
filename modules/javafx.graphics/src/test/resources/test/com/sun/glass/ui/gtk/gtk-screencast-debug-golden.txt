@@ -1,0 +1,19 @@
+# The stdout of a JVM whose ScreencastHelper initializes with the screen capture method and
+# -Djavafx.robot.screenshotDebug=true on a machine with no PipeWire library: the debug lines of
+# screencast_pipewire.c, whose text is the text of commit 033187ad90.
+# Captured while ScreencastHelper still declared its work as native methods (the capture is
+# refused otherwise) and Java_com_sun_glass_ui_gtk_screencast_ScreencastHelper_loadPipewire was
+# a wrapper around the sc_load_pipewire of screencast_api.h - not on commit 033187ad90 itself.
+# DEBUG_SCREENCAST prints __func__, so a debug statement that moved into an sc_* function is
+# prefixed with that function here, where at commit 033187ad90 it was prefixed with
+# the Java_* one. What follows the prefix is the C's own text and is compared.
+# The <line> stands for the __LINE__ the debug macro prints: it moves when C is
+# deleted around the function and is not compared.
+# Capture: -Djfx.gtk.screencast.capture=true on such a build (refused elsewhere);
+# overwrite: add -Djfx.gtk.screencast.regenerate=true.
+capture.debugTextOfCommit=033187ad90
+capture.debugFunctionNames=sc_*
+capture.screencast=native
+--- stdout
+JFX: sc_load_pipewire:<line> method 0
+JFX: loadSymbols:<line> could not load pipewire library

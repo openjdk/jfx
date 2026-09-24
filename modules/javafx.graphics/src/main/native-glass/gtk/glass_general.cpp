@@ -24,387 +24,23 @@
  */
 #include "glass_general.h"
 
-#include <jni.h>
 #include <gtk/gtk.h>
 
 char const * const GDK_WINDOW_DATA_CONTEXT = "glass_window_context";
 
-jclass jStringCls;
-jclass jByteBufferCls;
-jmethodID jByteBufferArray;
-jmethodID jByteBufferWrap;
+// The JNI_OnLoad / JNI_OnLoad_glassgtk3 of commit 033187ad90 cached jclass / jmethodID / jfieldID globals for
+// the JNI natives of GtkWindow, GtkView, GtkDnDClipboard and GtkApplication and for the JNI upcalls of the
+// window, view, drag-and-drop, screen and application C - all replaced by the ggtk_* functions and callback
+// tables of glass_gtk_api.h - and the JavaVM, which screencast_pipewire.c storeRestoreToken asked for a JNIEnv
+// and which the store_token slot of screencast_api.h replaced. Nothing reads either any more, so the library
+// has no JNI entry point left.
 
-jclass jRunnableCls;
-jmethodID jRunnableRun;
+static uint8_t displayValid = 0;
 
-jclass jArrayListCls;
-jmethodID jArrayListInit;
-jmethodID jArrayListAdd;
-jmethodID jArrayListGetIdx;
-
-jmethodID jPixelsAttachData;
-
-jclass jGtkPixelsCls;
-jmethodID jGtkPixelsInit;
-
-jclass jScreenCls;
-jmethodID jScreenInit;
-jmethodID jScreenNotifySettingsChanged;
-
-jmethodID jViewNotifyResize;
-jmethodID jViewNotifyMouse;
-jmethodID jViewNotifyRepaint;
-jmethodID jViewNotifyKey;
-jmethodID jViewNotifyView;
-jmethodID jViewNotifyDragEnter;
-jmethodID jViewNotifyDragOver;
-jmethodID jViewNotifyDragDrop;
-jmethodID jViewNotifyDragLeave;
-jmethodID jViewNotifyScroll;
-jmethodID jViewNotifyInputMethodLinux;
-jmethodID jViewNotifyInputMethodCandidateRelativePosRequest;
-jmethodID jViewNotifyMenu;
-jfieldID  jViewPtr;
-
-jmethodID jWindowNotifyResize;
-jmethodID jWindowNotifyMove;
-jmethodID jWindowNotifyDestroy;
-jmethodID jWindowNotifyClose;
-jmethodID jWindowNotifyFocus;
-jmethodID jWindowNotifyFocusDisabled;
-jmethodID jWindowNotifyFocusUngrab;
-jmethodID jWindowNotifyMoveToAnotherScreen;
-jmethodID jWindowNotifyLevelChanged;
-jmethodID jWindowIsEnabled;
-jmethodID jWindowNotifyDelegatePtr;
-jfieldID jWindowPtr;
-jfieldID jCursorPtr;
-
-jmethodID jGtkWindowNotifyStateChanged;
-jmethodID jGtkWindowNonClientHitTest;
-
-jmethodID jClipboardContentChanged;
-
-jmethodID jSizeInit;
-
-jclass jMapCls;
-jmethodID jMapGet;
-jmethodID jMapPut;
-jmethodID jMapKeySet;
-jmethodID jMapContainsKey;
-
-jclass jHashMapCls;
-jmethodID jHashMapInit;
-
-jclass jHashSetCls;
-jmethodID jHashSetInit;
-
-jmethodID jSetAdd;
-jmethodID jSetSize;
-jmethodID jSetToArray;
-
-jmethodID jIterableIterator;
-jmethodID jIteratorHasNext;
-jmethodID jIteratorNext;
-
-jclass jApplicationCls;
-jfieldID jApplicationDisplay;
-jfieldID jApplicationScreen;
-jfieldID jApplicationVisualID;
-jmethodID jApplicationReportException;
-jmethodID jApplicationGetApplication;
-jmethodID jApplicationGetName;
-jmethodID jApplicationNotifyPreferencesChanged;
-
-jclass jObjectCls;
-jmethodID jObjectEquals;
-
-jclass jBooleanCls;
-jfieldID jBooleanTRUE;
-jfieldID jBooleanFALSE;
-
-jclass jCollectionsCls;
-jmethodID jCollectionsUnmodifiableMap;
-
-jclass jColorCls;
-jmethodID jColorRgb;
-
-static jboolean displayValid = JNI_FALSE;
-
-jboolean
+uint8_t
 is_display_valid() {
     return displayValid;
 }
-
-JavaVM* javaVM;
-
-#ifdef STATIC_BUILD
-extern "C" {
-#endif
-JNIEXPORT jint JNICALL
-#ifdef STATIC_BUILD
-JNI_OnLoad_glassgtk3(JavaVM *jvm, void *reserved)
-#else
-JNI_OnLoad(JavaVM *jvm, void *reserved)
-#endif
-{
-    (void)reserved;
-
-    JNIEnv *env;
-    jclass clazz;
-    Display* display;
-
-    javaVM = jvm;
-    if (jvm->GetEnv((void **)&env, JNI_VERSION_1_6)) {
-         return JNI_ERR; /* JNI version not supported */
-    }
-
-    clazz = env->FindClass("java/lang/String");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jStringCls = (jclass) env->NewGlobalRef(clazz);
-
-    clazz = env->FindClass("java/nio/ByteBuffer");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jByteBufferCls = (jclass) env->NewGlobalRef(clazz);
-    jByteBufferArray = env->GetMethodID(jByteBufferCls, "array", "()[B");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jByteBufferWrap = env->GetStaticMethodID(jByteBufferCls, "wrap", "([B)Ljava/nio/ByteBuffer;");
-    if (env->ExceptionCheck()) return JNI_ERR;
-
-    clazz = env->FindClass("java/lang/Runnable");
-    if (env->ExceptionCheck()) return JNI_ERR;
-
-    jRunnableRun = env->GetMethodID(clazz, "run", "()V");
-    if (env->ExceptionCheck()) return JNI_ERR;
-
-    clazz = env->FindClass("java/util/ArrayList");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jArrayListCls = (jclass) env->NewGlobalRef(clazz);
-    jArrayListInit = env->GetMethodID(jArrayListCls, "<init>", "()V");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jArrayListAdd = env->GetMethodID(jArrayListCls, "add", "(Ljava/lang/Object;)Z");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jArrayListGetIdx = env->GetMethodID(jArrayListCls, "get", "(I)Ljava/lang/Object;");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    clazz = env->FindClass("com/sun/glass/ui/Pixels");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jPixelsAttachData = env->GetMethodID(clazz, "attachData", "(J)V");
-    if (env->ExceptionCheck()) return JNI_ERR;
-
-    clazz = env->FindClass("com/sun/glass/ui/gtk/GtkPixels");
-    if (env->ExceptionCheck()) return JNI_ERR;
-
-    jGtkPixelsCls = (jclass) env->NewGlobalRef(clazz);
-    jGtkPixelsInit = env->GetMethodID(jGtkPixelsCls, "<init>", "(IILjava/nio/ByteBuffer;)V");
-    if (env->ExceptionCheck()) return JNI_ERR;
-
-    clazz = env->FindClass("com/sun/glass/ui/Screen");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jScreenCls = (jclass) env->NewGlobalRef(clazz);
-    jScreenInit = env->GetMethodID(jScreenCls, "<init>", "(JIIIIIIIIIIIIIIIFFFF)V");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jScreenNotifySettingsChanged = env->GetStaticMethodID(jScreenCls, "notifySettingsChanged", "()V");
-    if (env->ExceptionCheck()) return JNI_ERR;
-
-    clazz = env->FindClass("com/sun/glass/ui/View");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jViewNotifyResize = env->GetMethodID(clazz, "notifyResize", "(II)V");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jViewNotifyMouse = env->GetMethodID(clazz, "notifyMouse", "(IIIIIIIZZ)V");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jViewNotifyRepaint = env->GetMethodID(clazz, "notifyRepaint", "(IIII)V");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jViewNotifyKey = env->GetMethodID(clazz, "notifyKey", "(II[CI)V");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jViewNotifyView = env->GetMethodID(clazz, "notifyView", "(I)V");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jViewNotifyDragEnter = env->GetMethodID(clazz, "notifyDragEnter", "(IIIII)I");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jViewNotifyDragOver = env->GetMethodID(clazz, "notifyDragOver", "(IIIII)I");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jViewNotifyDragDrop = env->GetMethodID(clazz, "notifyDragDrop", "(IIIII)I");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jViewNotifyDragLeave = env->GetMethodID(clazz, "notifyDragLeave", "()V");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jViewNotifyScroll = env->GetMethodID(clazz, "notifyScroll", "(IIIIDDIIIIIDD)V");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jViewNotifyMenu = env->GetMethodID(clazz, "notifyMenu", "(IIIIZ)V");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jViewPtr = env->GetFieldID(clazz, "ptr", "J");
-    if (env->ExceptionCheck()) return JNI_ERR;
-
-    clazz = env->FindClass("com/sun/glass/ui/gtk/GtkView");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jViewNotifyInputMethodLinux = env->GetMethodID(clazz, "notifyInputMethodLinux", "(Ljava/lang/String;IIB)V");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jViewNotifyInputMethodCandidateRelativePosRequest
-        = env->GetMethodID(clazz, "notifyInputMethodCandidateRelativePosRequest", "(I)[D");
-    if (env->ExceptionCheck()) return JNI_ERR;
-
-    clazz = env->FindClass("com/sun/glass/ui/Window");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jWindowNotifyResize = env->GetMethodID(clazz, "notifyResize", "(III)V");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jWindowNotifyMove = env->GetMethodID(clazz, "notifyMove", "(II)V");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jWindowNotifyDestroy = env->GetMethodID(clazz, "notifyDestroy", "()V");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jWindowNotifyClose = env->GetMethodID(clazz, "notifyClose", "()V");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jWindowNotifyFocus = env->GetMethodID(clazz, "notifyFocus", "(I)V");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jWindowNotifyFocusDisabled = env->GetMethodID(clazz, "notifyFocusDisabled", "()V");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jWindowNotifyFocusUngrab = env->GetMethodID(clazz, "notifyFocusUngrab", "()V");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jWindowNotifyMoveToAnotherScreen = env->GetMethodID(clazz, "notifyMoveToAnotherScreen", "(Lcom/sun/glass/ui/Screen;)V");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jWindowNotifyLevelChanged = env->GetMethodID(clazz, "notifyLevelChanged", "(I)V");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jWindowIsEnabled = env->GetMethodID(clazz, "isEnabled", "()Z");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jWindowNotifyDelegatePtr = env->GetMethodID(clazz, "notifyDelegatePtr", "(J)V");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jWindowPtr = env->GetFieldID(clazz, "ptr", "J");
-    if (env->ExceptionCheck()) return JNI_ERR;
-
-    clazz = env->FindClass("com/sun/glass/ui/gtk/GtkWindow");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jGtkWindowNotifyStateChanged = env->GetMethodID(clazz, "notifyStateChanged", "(I)V");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jGtkWindowNonClientHitTest = env->GetMethodID(clazz, "nonClientHitTest", "(II)I");
-    if (env->ExceptionCheck()) return JNI_ERR;
-
-    clazz = env->FindClass("com/sun/glass/ui/Clipboard");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jClipboardContentChanged = env->GetMethodID(clazz, "contentChanged", "()V");
-    if (env->ExceptionCheck()) return JNI_ERR;
-
-    clazz = env->FindClass("com/sun/glass/ui/Cursor");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jCursorPtr = env->GetFieldID(clazz, "ptr", "J");
-    if (env->ExceptionCheck()) return JNI_ERR;
-
-    clazz = env->FindClass("com/sun/glass/ui/Size");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jSizeInit = env->GetMethodID(clazz, "<init>", "(II)V");
-    if (env->ExceptionCheck()) return JNI_ERR;
-
-    clazz = env->FindClass("java/util/Map");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jMapCls = (jclass)env->NewGlobalRef(clazz);
-    jMapGet = env->GetMethodID(clazz, "get", "(Ljava/lang/Object;)Ljava/lang/Object;");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jMapPut = env->GetMethodID(clazz, "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jMapKeySet = env->GetMethodID(clazz, "keySet", "()Ljava/util/Set;");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jMapContainsKey = env->GetMethodID(clazz, "containsKey", "(Ljava/lang/Object;)Z");
-    if (env->ExceptionCheck()) return JNI_ERR;
-
-    clazz = env->FindClass("java/util/HashMap");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jHashMapCls = (jclass) env->NewGlobalRef(clazz);
-    jHashMapInit = env->GetMethodID(jHashMapCls, "<init>", "()V");
-    if (env->ExceptionCheck()) return JNI_ERR;
-
-    clazz = env->FindClass("java/util/HashSet");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jHashSetCls = (jclass) env->NewGlobalRef(clazz);
-    jHashSetInit = env->GetMethodID(jHashSetCls, "<init>", "()V");
-    if (env->ExceptionCheck()) return JNI_ERR;
-
-    clazz = env->FindClass("java/util/Set");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jSetAdd = env->GetMethodID(clazz, "add", "(Ljava/lang/Object;)Z");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jSetSize = env->GetMethodID(clazz, "size", "()I");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jSetToArray = env->GetMethodID(clazz, "toArray", "([Ljava/lang/Object;)[Ljava/lang/Object;");
-    if (env->ExceptionCheck()) return JNI_ERR;
-
-    clazz = env->FindClass("java/lang/Iterable");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jIterableIterator = env->GetMethodID(clazz, "iterator", "()Ljava/util/Iterator;");
-    if (env->ExceptionCheck()) return JNI_ERR;
-
-    clazz = env->FindClass("java/util/Iterator");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jIteratorHasNext = env->GetMethodID(clazz, "hasNext", "()Z");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jIteratorNext = env->GetMethodID(clazz, "next", "()Ljava/lang/Object;");
-    if (env->ExceptionCheck()) return JNI_ERR;
-
-    clazz = env->FindClass("com/sun/glass/ui/gtk/GtkApplication");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jApplicationCls = (jclass) env->NewGlobalRef(clazz);
-    jApplicationDisplay = env->GetStaticFieldID(jApplicationCls, "display", "J");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jApplicationScreen = env->GetStaticFieldID(jApplicationCls, "screen", "I");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jApplicationVisualID = env->GetStaticFieldID(jApplicationCls, "visualID", "J");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jApplicationReportException = env->GetStaticMethodID(
-        jApplicationCls, "reportException", "(Ljava/lang/Throwable;)V");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jApplicationGetApplication = env->GetStaticMethodID(
-        jApplicationCls, "GetApplication", "()Lcom/sun/glass/ui/Application;");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jApplicationGetName = env->GetMethodID(jApplicationCls, "getName", "()Ljava/lang/String;");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jApplicationNotifyPreferencesChanged = env->GetMethodID(jApplicationCls, "notifyPreferencesChanged", "(Ljava/util/Map;)V");
-    if (env->ExceptionCheck()) return JNI_ERR;
-
-    clazz = env->FindClass("java/lang/Object");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jObjectCls = (jclass)env->NewGlobalRef(clazz);
-    jObjectEquals = env->GetMethodID(jObjectCls, "equals", "(Ljava/lang/Object;)Z");
-    if (env->ExceptionCheck()) return JNI_ERR;
-
-    clazz = env->FindClass("java/lang/Boolean");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jBooleanCls = (jclass)env->NewGlobalRef(clazz);
-    jBooleanTRUE = env->GetStaticFieldID(jBooleanCls, "TRUE", "Ljava/lang/Boolean;");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jBooleanFALSE = env->GetStaticFieldID(jBooleanCls, "FALSE", "Ljava/lang/Boolean;");
-    if (env->ExceptionCheck()) return JNI_ERR;
-
-    clazz = env->FindClass("java/util/Collections");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jCollectionsCls = (jclass)env->NewGlobalRef(clazz);
-    jCollectionsUnmodifiableMap = env->GetStaticMethodID(jCollectionsCls, "unmodifiableMap", "(Ljava/util/Map;)Ljava/util/Map;");
-    if (env->ExceptionCheck()) return JNI_ERR;
-
-    clazz = env->FindClass("javafx/scene/paint/Color");
-    if (env->ExceptionCheck()) return JNI_ERR;
-    jColorCls = (jclass)env->NewGlobalRef(clazz);
-    jColorRgb = env->GetStaticMethodID(jColorCls, "rgb", "(IIID)Ljavafx/scene/paint/Color;");
-    if (env->ExceptionCheck()) return JNI_ERR;
-
-    return JNI_VERSION_1_6;
-}
-
-#ifdef STATIC_BUILD
-}
-#endif
-
-void
-glass_throw_exception(JNIEnv * env,
-                      const char * exceptionClass,
-                      const char * exceptionMessage) {
-    jclass throwableClass = env->FindClass(exceptionClass);
-    if (check_and_clear_exception(env)) return;
-    env->ThrowNew(throwableClass, exceptionMessage);
-    check_and_clear_exception(env);
-}
-
-int
-glass_throw_oom(JNIEnv * env, const char * message) {
-    glass_throw_exception(env, "java/lang/OutOfMemoryError", message);
-    // must return a non-zero value, see HANDLE_MEM_ALLOC_ERROR
-    return 1;
-}
-
 
 guint8* convert_BGRA_to_RGBA(const int* pixels, int stride, int height) {
   if (stride <= 0 || height <= 0 || (height > INT_MAX / stride)) {
@@ -430,71 +66,20 @@ guint8* convert_BGRA_to_RGBA(const int* pixels, int stride, int height) {
 }
 
 
-void dump_jstring_array(JNIEnv* env, jobjectArray arr) {
-    if (arr == NULL) {
-        LOG0("dump: Array is null\n")
-        return;
-    }
-    jsize len = env->GetArrayLength(arr);
-    LOG1("dump: length = %d\n", len)
-    int i = 0;
-    jboolean isCopy;
-    for(i = 0; i < len; i++) {
-        jstring jstr = (jstring) env->GetObjectArrayElement(arr, i);
-        check_and_clear_exception(env);
-        const char* str = env->GetStringUTFChars(jstr, &isCopy);
-        LOG2("dump: s[%d]: %s\n", i, str)
-    }
-}
-
-gboolean check_and_clear_exception(JNIEnv *env) {
-    jthrowable t = env->ExceptionOccurred();
-    if (t) {
-        env->ExceptionClear();
-        env->CallStaticVoidMethod(jApplicationCls, jApplicationReportException, t);
-        //Clear in case our reporting upcall failed too!
-        env->ExceptionClear();
-        return TRUE;
-    }
-    return FALSE;
-}
-
 // The returned string should be freed with g_free().
 gchar* get_application_name() {
     gchar* ret = NULL;
 
-    jobject japp = mainEnv->CallStaticObjectMethod(jApplicationCls, jApplicationGetApplication);
-    CHECK_JNI_EXCEPTION_RET(mainEnv, NULL);
-    jstring jname = (jstring) mainEnv->CallObjectMethod(japp, jApplicationGetName);
-    CHECK_JNI_EXCEPTION_RET(mainEnv, NULL);
-    if (const gchar *name = mainEnv->GetStringUTFChars(jname, NULL)) {
-        ret = g_strdup(name);
-        mainEnv->ReleaseStringUTFChars(jname, name);
+    if (glass_app_cb.get_application_name) {
+        // The slot answers the g_malloc'd modified UTF-8 copy the JNI made with g_strdup; on a throw (both
+        // JNI calls were CHECK_JNI_EXCEPTION_RET(NULL) sites) it writes nothing and the answer is NULL.
+        char* name = NULL;
+        if (glass_app_cb.get_application_name(&name)) {
+            return NULL;
+        }
+        return name;
     }
-    return ret;
-}
-
-gpointer glass_try_malloc_n(gsize m, gsize n,
-        gboolean zer0 /* initialized to 0 if true*/) {
-    if (n > 0 && m > G_MAXSIZE / n) {
-        return NULL;
-    }
-    return (zer0)
-            ? g_try_malloc0(m * n)
-            : g_try_malloc(m * n);
-}
-
-/*
- * Since we support glib 2.18 we can't use g_try_malloc_n and g_try_malloc0_n
- * which was introduced in 2.24.
- * glass_try_malloc_n and glass_try_malloc0_n is replacement for those functions
- */
-gpointer glass_try_malloc0_n(gsize m, gsize n) {
-    return glass_try_malloc_n(m, n, TRUE);
-}
-
-gpointer glass_try_malloc_n(gsize m, gsize n) {
-    return glass_try_malloc_n(m, n, FALSE);
+    return ret; // no slot, no call: no name
 }
 
 gsize get_files_count(gchar **uris) {
@@ -513,57 +98,6 @@ gsize get_files_count(gchar **uris) {
     return files_cnt;
 }
 
-// Note: passed uris will be freed by this function
-jobject uris_to_java(JNIEnv *env, gchar **uris, gboolean files) {
-    if (uris == NULL) {
-        return NULL;
-    }
-
-    jobject result = NULL;
-
-    guint size = g_strv_length(uris);
-    guint files_cnt = get_files_count(uris);
-
-    if (files) {
-        if (files_cnt) {
-            result = env->NewObjectArray(files_cnt, jStringCls, NULL);
-            check_and_clear_exception(env);
-
-            for (gsize i = 0; i < size; ++i) {
-                if (g_str_has_prefix(uris[i], FILE_PREFIX)) {
-                    gchar* path = g_filename_from_uri(uris[i], NULL, NULL);
-                    jstring str = env->NewStringUTF(path);
-                    check_and_clear_exception(env);
-                    env->SetObjectArrayElement((jobjectArray) result, i, str);
-                    check_and_clear_exception(env);
-                    g_free(path);
-                }
-            }
-        }
-    } else if (size - files_cnt) {
-        GString* str = g_string_new(NULL); //http://www.ietf.org/rfc/rfc2483.txt
-
-        for (guint i = 0; i < size; ++i) {
-            if (!g_str_has_prefix(uris[i], FILE_PREFIX)
-                    && !g_str_has_prefix(uris[i], URI_LIST_COMMENT_PREFIX)) {
-                g_string_append(str, uris[i]);
-                g_string_append(str, URI_LIST_LINE_BREAK);
-            }
-        }
-
-        if (str->len > 2) {
-            g_string_erase(str, str->len - 2, 2);
-        }
-
-        result = env->NewStringUTF(str->str);
-        check_and_clear_exception(env);
-
-        g_string_free(str, TRUE);
-    }
-    g_strfreev(uris);
-    return result;
-}
-
 //***************************************************************************
 
 typedef struct _DeviceGrabContext {
@@ -574,12 +108,6 @@ typedef struct _DeviceGrabContext {
 gboolean disableGrab = FALSE;
 static gboolean configure_transparent_window(GtkWidget *window);
 static void configure_opaque_window(GtkWidget *window);
-
-gint glass_gdk_visual_get_depth (GdkVisual * visual)
-{
-    // gdk_visual_get_depth is GTK 2.2 +
-    return gdk_visual_get_depth(visual);
-}
 
 GdkScreen * glass_gdk_window_get_screen(GdkWindow * gdkWindow)
 {
@@ -708,29 +236,6 @@ glass_gdk_window_get_size(GdkWindow *window, gint *w, gint *h) {
     *h = gdk_window_get_height(window);
 }
 
-void
-glass_gdk_display_get_pointer(GdkDisplay* display, gint* x, gint *y) {
-#ifdef GLASS_GTK3
-        gdk_device_get_position(
-            gdk_device_manager_get_client_pointer(
-                gdk_display_get_device_manager(display)), NULL , x, y);
-#else
-        gdk_display_get_pointer(display, NULL, x, y, NULL);
-#endif
-}
-
-
-const guchar*
-glass_gtk_selection_data_get_data_with_length(
-        GtkSelectionData * selectionData,
-        gint * length) {
-    if (selectionData == NULL) {
-        return NULL;
-    }
-
-    *length = gtk_selection_data_get_length(selectionData);
-    return gtk_selection_data_get_data(selectionData);
-}
 
 static void
 configure_opaque_window(GtkWidget *window) {
@@ -760,26 +265,6 @@ glass_configure_window_transparency(GtkWidget *window, gboolean transparent) {
 
     configure_opaque_window(window);
     return FALSE;
-}
-
-GdkPixbuf *
-glass_pixbuf_from_window(GdkWindow *window,
-    gint srcx, gint srcy,
-    gint width, gint height)
-{
-    GdkPixbuf * ret = NULL;
-
-#ifdef GLASS_GTK3
-        ret = gdk_pixbuf_get_from_window (window, srcx, srcy, width, height);
-#else
-        ret = gdk_pixbuf_get_from_drawable (NULL,
-            window,
-            NULL,
-            srcx, srcy,
-            0, 0,
-            width, height);
-#endif
-    return ret;
 }
 
 void
@@ -888,31 +373,4 @@ guint glass_settings_get_guint_opt (const gchar *schema_name,
     wrapped_g_settings_schema_unref(the_schema);
 
     return g_settings_get_uint(gset, key_name);
-}
-
-/*
- * Convert from jstring to standard UTF-8 using GLib
- * utility method g_utf16_to_utf8.
- *
- * GetStringUTFChars returns a modified UTF-8 string
- * that encodes supplementary characters differently
- * from standard UTF-8, so emojis may not be handled
- * as expected by GTK or other Linux desktop
- * components that expect standard UTF-8.
- */
- gchar* jstring_to_utf8(JNIEnv *env, jstring jstr) {
-    if (jstr == nullptr) {
-        return nullptr;
-    }
-
-    const jchar *jchars = env->GetStringChars(jstr, nullptr);
-    if (jchars == nullptr) {
-        return nullptr;
-    }
-
-    jsize len = env->GetStringLength(jstr);
-    gchar *result = g_utf16_to_utf8(jchars, len, nullptr, nullptr, nullptr);
-    env->ReleaseStringChars(jstr, jchars);
-
-    return result;
 }

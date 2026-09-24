@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,8 +30,7 @@
 #ifndef _SCREENCAST_PIPEWIRE_H
 #define _SCREENCAST_PIPEWIRE_H
 
-#include <jni.h>
-
+#include "screencast_api.h"
 #include "screencast_portal.h"
 
 #include <pipewire/stream.h>
@@ -39,6 +38,10 @@
 
 #include <spa/param/video/format-utils.h>
 #include <spa/debug/types.h>
+
+// The table sc_set_token_callbacks installed, defined in screencast_api.c. storeRestoreToken dials its
+// slot when it is not NULL; see NULL SLOT in screencast_api.h.
+extern ScTokenCallbacks sc_token_cb;
 
 void storeRestoreToken(const gchar* oldToken, const gchar* newToken);
 

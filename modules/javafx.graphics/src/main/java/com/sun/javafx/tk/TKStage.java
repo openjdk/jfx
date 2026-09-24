@@ -136,9 +136,6 @@ public interface TKStage {
     public void toFront();
     public void close();
 
-    public default void postponeClose() {}
-    public default void closePostponed() {}
-
     public void requestFocus(FocusCause cause);
 
     /**

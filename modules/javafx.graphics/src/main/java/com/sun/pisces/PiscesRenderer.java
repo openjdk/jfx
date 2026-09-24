@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 package com.sun.pisces;
 
 import com.sun.prism.impl.Disposer;
+import java.lang.foreign.MemorySegment;
 
 /**
  * PiscesRenderer class is basic public API accessing Pisces library capabilities.
@@ -77,8 +78,15 @@ public final class PiscesRenderer {
     public static final int ARC_CHORD = 1;
     public static final int ARC_PIE = 2;
 
-    private long nativePtr = 0L;
-    private AbstractSurface surface;
+    private final MemorySegment nativePtr;
+    private final AbstractSurface surface;
+
+    /**
+     * Scratch for the {@code PswTransform6} of the current call, filled by {@link Transform6#fill}. A
+     * renderer is used by one thread at a time, and the C side copies or finishes with the transform
+     * before returning, so one array per renderer suffices.
+     */
+    private final int[] transformScratch = new int[PiscesNative.TRANSFORM6_INTS];
 
     /**
      * Creates a renderer that will write into a given surface.
@@ -87,11 +95,14 @@ public final class PiscesRenderer {
      */
     public PiscesRenderer(AbstractSurface surface) {
         this.surface = surface;
-        initialize();
+        this.nativePtr = PiscesNative.rendererCreate(surface.nativeSurface());
         Disposer.addRecord(this, new PiscesRendererDisposerRecord(nativePtr));
     }
 
-    private native void initialize();
+    private int[] transform(Transform6 t) {
+        t.fill(transformScratch);
+        return transformScratch;
+    }
 
     /**
      * Sets the current paint color.
@@ -106,10 +117,8 @@ public final class PiscesRenderer {
         checkColorRange(green, "GREEN");
         checkColorRange(blue, "BLUE");
         checkColorRange(alpha, "ALPHA");
-        this.setColorImpl(red, green, blue, alpha);
+        PiscesNative.rendererSetColor(nativePtr, red, green, blue, alpha);
     }
-
-    private native void setColorImpl(int red, int green, int blue, int alpha);
 
     private void checkColorRange(int v, String componentName) {
         if (v < 0 || v > 255) {
@@ -143,15 +152,17 @@ public final class PiscesRenderer {
         {
             throw new IllegalArgumentException("Invalid value for Composite-Rule");
         }
-        this.setCompositeRuleImpl(compositeRule);
+        PiscesNative.rendererSetCompositeRule(nativePtr, compositeRule);
     }
 
-    private native void setCompositeRuleImpl(int compositeRule);
-
-    private native void setLinearGradientImpl(int x0, int y0, int x1, int y1,
-                                              int[] colors,
-                                              int cycleMethod,
-                                              Transform6 gradientTransform);
+    private void setLinearGradientImpl(int x0, int y0, int x1, int y1,
+                                       int[] colors,
+                                       int cycleMethod,
+                                       Transform6 gradientTransform)
+    {
+        PiscesNative.rendererSetLinearGradient(nativePtr, x0, y0, x1, y1, colors, cycleMethod,
+                                               transform(gradientTransform));
+    }
 
     /**
      * This method sets linear color-gradient data to be used as paint data in following rendering operation.
@@ -225,11 +236,15 @@ public final class PiscesRenderer {
       setLinearGradient(x0, y0, x1, y1, fractions, rgba, cycleMethod, ident);
     }
 
-    private native void setRadialGradientImpl(int cx, int cy, int fx, int fy,
-                                              int radius,
-                                              int[] colors,
-                                              int cycleMethod,
-                                              Transform6 gradientTransform);
+    private void setRadialGradientImpl(int cx, int cy, int fx, int fy,
+                                       int radius,
+                                       int[] colors,
+                                       int cycleMethod,
+                                       Transform6 gradientTransform)
+    {
+        PiscesNative.rendererSetRadialGradient(nativePtr, cx, cy, fx, fy, radius, colors, cycleMethod,
+                                               transform(gradientTransform));
+    }
 
     /**
      * This method sets radial gradient paint data to be used in subsequent rendering. Radial gradient data generated will be used to fill the touched pixels of the path we draw.
@@ -287,11 +302,9 @@ public final class PiscesRenderer {
         Transform6 textureTransform, boolean repeat, boolean linearFiltering, boolean hasAlpha)
     {
         this.inputImageCheck(width, height, 0, stride, data.length);
-        this.setTextureImpl(imageType, data, width, height, stride, textureTransform, repeat, linearFiltering, hasAlpha);
+        PiscesNative.rendererSetTexture(nativePtr, imageType, data, width, height, stride,
+                                        transform(textureTransform), repeat, linearFiltering, hasAlpha);
     }
-
-    private native void setTextureImpl(int imageType, int data[], int width, int height, int stride,
-        Transform6 textureTransform, boolean repeat, boolean linearFiltering, boolean hasAlpha);
 
     /**
      * Sets a clip rectangle for all primitives.  Each primitive will be
@@ -303,17 +316,15 @@ public final class PiscesRenderer {
         final int y1 = Math.max(minY, 0);
         final int x2 = Math.min(minX + width, surface.getWidth());
         final int y2 = Math.min(minY + height, surface.getHeight());
-        this.setClipImpl(x1, y1, x2 - x1, y2 - y1);
+        PiscesNative.rendererSetClip(nativePtr, x1, y1, x2 - x1, y2 - y1);
     }
-
-    private native void setClipImpl(int minX, int minY, int width, int height);
 
     /**
      * Resets the clip rectangle.  Each primitive will be clipped only
      * to the destination image bounds.
      */
     public void resetClip() {
-        this.setClipImpl(0, 0, surface.getWidth(), surface.getHeight());
+        PiscesNative.rendererSetClip(nativePtr, 0, 0, surface.getWidth(), surface.getHeight());
     }
 
     /**
@@ -324,10 +335,8 @@ public final class PiscesRenderer {
         final int y1 = Math.max(y, 0);
         final int x2 = Math.min(x + w, surface.getWidth());
         final int y2 = Math.min(y + h, surface.getHeight());
-        this.clearRectImpl(x1, y1, x2 - x1, y2 - y1);
+        PiscesNative.rendererClearRect(nativePtr, surface.pixels(), x1, y1, x2 - x1, y2 - y1);
     }
-
-    private native void clearRectImpl(int x, int y, int w, int h);
 
     public void fillRect(int x, int y, int w, int h) {
         final int x1 = Math.max(x, 0);
@@ -337,11 +346,9 @@ public final class PiscesRenderer {
         final int w2 = x2 - x1;
         final int h2 = y2 - y1;
         if (w2 > 0 && h2 > 0) {
-            this.fillRectImpl(x1, y1, w2, h2);
+            PiscesNative.rendererFillRect(nativePtr, surface.pixels(), x1, y1, w2, h2);
         }
     }
-
-    private native void fillRectImpl(int x, int y, int w, int h);
 
     public void emitAndClearAlphaRow(byte[] alphaMap, int[] alphaDeltas, int pix_y, int pix_x_from, int pix_x_to,
         int rowNum)
@@ -349,36 +356,34 @@ public final class PiscesRenderer {
         this.emitAndClearAlphaRow(alphaMap, alphaDeltas, pix_y, pix_x_from, pix_x_to, 0, rowNum);
     }
 
+    /**
+     * Composites one row of Marlin coverage. {@code alphaDeltas} is consumed and zeroed in place by the
+     * C side; the caller (SWContext) relies on that, so it has to be the live array.
+     */
     public void emitAndClearAlphaRow(byte[] alphaMap, int[] alphaDeltas, int pix_y, int pix_x_from, int pix_x_to,
         int pix_x_off, int rowNum)
     {
         if (pix_x_off < 0 || (pix_x_off + (pix_x_to - pix_x_from)) > alphaDeltas.length) {
             throw new IllegalArgumentException("rendering range exceeds length of data");
         }
-        this.emitAndClearAlphaRowImpl(alphaMap, alphaDeltas, pix_y, pix_x_from, pix_x_to, pix_x_off, rowNum);
+        PiscesNative.rendererEmitAndClearAlphaRow(nativePtr, surface.pixels(), alphaMap, alphaDeltas,
+                                                  pix_y, pix_x_from, pix_x_to, pix_x_off, rowNum);
     }
-
-    private native void emitAndClearAlphaRowImpl(byte[] alphaMap, int[] alphaDeltas, int pix_y, int pix_x_from, int pix_x_to,
-        int pix_x_off, int rowNum);
 
     public void fillAlphaMask(byte[] mask, int x, int y, int width, int height, int offset, int stride) {
         if (mask == null) {
             throw new NullPointerException("Mask is NULL");
         }
         this.inputImageCheck(width, height, offset, stride, mask.length);
-        this.fillAlphaMaskImpl(mask, x, y, width, height, offset, stride);
+        PiscesNative.rendererFillAlphaMask(nativePtr, surface.pixels(), mask, x, y, width, height, offset, stride);
     }
-
-    private native void fillAlphaMaskImpl(byte[] mask, int x, int y, int width, int height, int offset, int stride);
 
     public void setLCDGammaCorrection(float gamma) {
         if (gamma <= 0) {
             throw new IllegalArgumentException("Gamma must be greater than zero");
         }
-        this.setLCDGammaCorrectionImpl(gamma);
+        PiscesNative.lcdGammaSet(gamma);
     }
-
-    private native void setLCDGammaCorrectionImpl(float gamma);
 
     public void fillLCDAlphaMask(byte[] mask, int x, int y, int width, int height, int offset, int stride)
     {
@@ -386,10 +391,9 @@ public final class PiscesRenderer {
             throw new NullPointerException("Mask is NULL");
         }
         this.inputImageCheck(width, height, offset, stride, mask.length);
-        this.fillLCDAlphaMaskImpl(mask, x, y, width, height, offset, stride);
+        PiscesNative.rendererFillLCDAlphaMask(nativePtr, surface.pixels(), mask, x, y, width, height, offset,
+                                              stride);
     }
-
-    private native void fillLCDAlphaMaskImpl(byte[] mask, int x, int y, int width, int height, int offset, int stride);
 
     public void drawImage(int imageType, int imageMode, int data[],  int width, int height, int offset, int stride,
         Transform6 textureTransform, boolean repeat, boolean linearFiltering,
@@ -399,20 +403,13 @@ public final class PiscesRenderer {
         boolean hasAlpha)
     {
         this.inputImageCheck(width, height, offset, stride, data.length);
-        this.drawImageImpl(imageType, imageMode, data, width, height, offset, stride,
-            textureTransform, repeat, linearFiltering,
+        PiscesNative.rendererDrawImage(nativePtr, surface.pixels(), imageType, imageMode, data, width, height,
+            offset, stride, transform(textureTransform), repeat, linearFiltering,
             bboxX, bboxY, bboxW, bboxH,
             lEdge, rEdge, tEdge, bEdge,
             txMin, tyMin, txMax, tyMax,
             hasAlpha);
     }
-
-    private native void drawImageImpl(int imageType, int imageMode, int data[], int width, int height, int offset, int stride,
-        Transform6 textureTransform, boolean repeat, boolean linearFiltering,
-        int bboxX, int bboxY, int bboxW, int bboxH,
-        int lEdge, int rEdge, int tEdge, int bEdge,
-        int txMin, int tyMin, int txMax, int tyMax,
-        boolean hasAlpha);
 
     private void inputImageCheck(int width, int height, int offset, int stride, int data_length) {
         if (width < 0) {
@@ -439,20 +436,18 @@ public final class PiscesRenderer {
         }
     }
 
-    private static native void disposeNative(long nativeHandle);
-
     private static class PiscesRendererDisposerRecord implements Disposer.Record {
-        private long nativeHandle;
+        private MemorySegment nativeHandle;
 
-        PiscesRendererDisposerRecord(long nh) {
+        PiscesRendererDisposerRecord(MemorySegment nh) {
             nativeHandle = nh;
         }
 
         @Override
         public void dispose() {
-            if (nativeHandle != 0L) {
-                disposeNative(nativeHandle);
-                nativeHandle = 0L;
+            if (nativeHandle != null) {
+                PiscesNative.rendererDispose(nativeHandle);
+                nativeHandle = null;
             }
         }
     }

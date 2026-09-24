@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,23 +25,21 @@
 
 package com.sun.prism.es2;
 
+import com.sun.glass.ui.monocle.AcceleratedScreen;
 import com.sun.glass.ui.monocle.GLException;
 import com.sun.glass.ui.monocle.NativePlatformFactory;
 import com.sun.prism.es2.GLPixelFormat.Attributes;
-import java.util.HashMap;
-import com.sun.glass.ui.monocle.AcceleratedScreen;
 import com.sun.prism.impl.PrismSettings;
+import java.util.HashMap;
 
+/**
+ * The GLFactory of the Monocle platforms. The GLES context is created and made current by Java, in
+ * {@link AcceleratedScreen}, and {@code prism_es2_monocle} adopts it through {@link ES2Native#contextAdopt}
+ * with {@link AcceleratedScreen#lookupGLProc} resolving the entry points, where MonocleGLFactory.c of commit
+ * 21d5a654f6 populated the context through JNI with the same {@code dlsym} calls. The adapter count and
+ * ordinal are the constants that C returned; {@code gl2} is false, as its never-written field was.
+ */
 class MonocleGLFactory extends GLFactory {
-
-    private static native long nInitialize(int[] attrArr);
-    private static native long nPopulateNativeCtxInfo(long libraryHandle);
-    private static native int nGetAdapterOrdinal(long nativeScreen);
-    private static native int nGetAdapterCount();
-    private static native int nGetDefaultScreen(long nativeCtxInfo);
-    private static native long nGetDisplay(long nativeCtxInfo);
-    private static native long nGetVisualID(long nativeCtxInfo);
-    private static native boolean nGetIsGL2(long nativeCtxInfo);
 
     // Entries must be in lowercase and null string is a wild card
     // For Linux Beta release we will limit es2 pipe qualification check to NVidia GPUs only
@@ -92,7 +90,7 @@ class MonocleGLFactory extends GLFactory {
     @Override
     boolean initialize(Class psClass, Attributes attrs) {
 
-        // holds the list of attributes to be translated for native call
+        // the pixel format attributes, in the order the accelerated screen reads them
         int attrArr[] = new int[GLPixelFormat.Attributes.NUM_ITEMS];
 
         attrArr[GLPixelFormat.Attributes.RED_SIZE] = attrs.getRedSize();
@@ -108,7 +106,7 @@ class MonocleGLFactory extends GLFactory {
 
                     attrArr);
 
-            // If the native platform can't provide hardware accelerated rendering,
+            // If the NativePlatform cannot provide hardware accelerated rendering,
             // accScreen can be null
             if (accScreen == null) {
                 return false;
@@ -116,7 +114,7 @@ class MonocleGLFactory extends GLFactory {
 
             accScreen.enableRendering(true);
 
-            nativeCtxInfo = nPopulateNativeCtxInfo(accScreen.getGLHandle());
+            nativeCtxInfo = ES2Native.contextAdopt(accScreen.getGLHandle(), AcceleratedScreen::lookupGLProc);
 
             accScreen.enableRendering(false);
 
@@ -124,7 +122,8 @@ class MonocleGLFactory extends GLFactory {
                 // current pipe doesn't support this pixelFormat request
                 return false;
             } else {
-                gl2 = nGetIsGL2(nativeCtxInfo);
+                // The GLES 2 profile: the C's ContextInfo.gl2 was zeroed and never written.
+                gl2 = false;
                 return true;
             }
         } catch (GLException e) {
@@ -140,14 +139,16 @@ class MonocleGLFactory extends GLFactory {
         }
     }
 
+    /** One adapter, as {@code nGetAdapterCount} of the C answered. */
     @Override
     int getAdapterCount() {
-        return nGetAdapterCount();
+        return 1;
     }
 
+    /** Ordinal 0, as {@code nGetAdapterOrdinal} of the C answered for every screen. */
     @Override
     int getAdapterOrdinal(long nativeScreen) {
-        return nGetAdapterOrdinal(nativeScreen);
+        return 0;
     }
 
     @Override

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,6 +42,16 @@ public:
     virtual ~GlassDropTarget();
 
 protected:
+    /*
+     * Which View.notifyDrag* a DragEnter / DragOver / Drop delivers: selects the GwinDndCallbacks
+     * slot (glass_win_api.h).
+     */
+    enum DragCallback {
+        DRAG_ENTER,
+        DRAG_OVER,
+        DRAG_DROP
+    };
+
     STDMETHOD(DragEnter)(
         /* [unique][in] */ IDataObject *pDataObj,
         /* [in] */ DWORD grfKeyState,
@@ -65,7 +75,7 @@ protected:
         IDataObject *pDataObj);
 
     HRESULT  CallbackToJava(
-        /* [in] */ jmethodID method,
+        /* [in] */ DragCallback which,
         /* [in] */ DWORD grfKeyState,
         /* [in] */ POINTL pt,
         /* [out][in] */ DWORD *pdwEffect);
@@ -74,16 +84,20 @@ protected:
     IDropTargetHelperPtr m_spDropTargetHelper;
 
 private:
-    static HRESULT SetSourceSupportedActions(jint actions);
+    static HRESULT SetSourceSupportedActions(int32_t actions);
     HWND m_hwnd;
 };
 
 class GlassDropSource : public IUnknownImpl<IDropSource>
 {
 public:
-    GlassDropSource(jobject jDnDClipboard);
+    /*
+     * The drag button comes from GwinDndCallbacks.dnd_get_drag_button; with no table installed the
+     * source starts without a button, so the drag ends at the first QueryContinueDrag.
+     */
+    GlassDropSource();
     virtual ~GlassDropSource();
-    static HRESULT SetDragButton(jint button);
+    static HRESULT SetDragButton(int32_t button);
 
 protected:
     STDMETHOD(QueryContinueDrag)(
@@ -97,4 +111,3 @@ protected:
 };
 
 #endif //GLASSDND_H
-

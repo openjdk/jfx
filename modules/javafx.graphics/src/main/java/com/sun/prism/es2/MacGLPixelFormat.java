@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,8 +28,6 @@ package com.sun.prism.es2;
 
 class MacGLPixelFormat extends GLPixelFormat {
 
-    private static native long nCreatePixelFormat(long nativeScreen, int[] attrArr);
-
     MacGLPixelFormat(long nativeScreen, Attributes attrs) {
         super(nativeScreen, attrs);
 
@@ -43,7 +41,7 @@ class MacGLPixelFormat extends GLPixelFormat {
         attrArr[GLPixelFormat.Attributes.DEPTH_SIZE] = attrs.getDepthSize();
         attrArr[GLPixelFormat.Attributes.DOUBLEBUFFER] = attrs.isDoubleBuffer() ? 1 : 0;
         attrArr[GLPixelFormat.Attributes.ONSCREEN] = attrs.isOnScreen() ? 1 : 0;
-        long nativePF = nCreatePixelFormat(nativeScreen, attrArr);
+        long nativePF = ES2Native.pixelFormatCreate(nativeScreen, attrArr);
         setNativePFInfo(nativePF);
 
     }

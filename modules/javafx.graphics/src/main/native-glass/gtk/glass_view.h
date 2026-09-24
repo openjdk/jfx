@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,15 +25,18 @@
 #ifndef GLASS_VIEW_H
 #define GLASS_VIEW_H
 
+#include <stdint.h>
+
 #include "DeletedMemDebug.h"
 
 class WindowContext;
 
 struct GlassView : public DeletedMemDebug<0xCC> {
-    GlassView() : current_window(), embedded_window() {}
+    GlassView() : current_window(), embedded_window(), id() {}
 
     WindowContext* current_window;
     WindowContext* embedded_window; // not null while in Full Screen
+    int64_t id; // Java's view id (ggtk_view_create), what the GgtkViewCallbacks slots receive
 };
 
 #endif        /* GLASS_VIEW_H */

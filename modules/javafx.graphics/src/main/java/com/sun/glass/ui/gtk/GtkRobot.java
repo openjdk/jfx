@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,6 +34,10 @@ import com.sun.glass.ui.Application;
 import com.sun.glass.ui.GlassRobot;
 import com.sun.glass.ui.Screen;
 
+/**
+ * The GTK robot. Its XTest, GDK and XKB calls are bound directly by {@link GtkGlassNative}, where
+ * {@code GlassRobot.cpp} wrapped them in JNI up to commit {@code 033187ad90}.
+ */
 final class GtkRobot extends GlassRobot {
 
     @Override
@@ -56,7 +60,9 @@ final class GtkRobot extends GlassRobot {
         }
     }
 
-    protected native void _keyPress(int code);
+    protected void _keyPress(int code) {
+        GtkGlassNative.robotKeyPress(code);
+    }
 
     @Override
     public void keyRelease(KeyCode code) {
@@ -68,9 +74,13 @@ final class GtkRobot extends GlassRobot {
         }
     }
 
-    protected native void _keyRelease(int code);
+    protected void _keyRelease(int code) {
+        GtkGlassNative.robotKeyRelease(code);
+    }
 
-    public native void _mouseMove(int x, int y);
+    public void _mouseMove(int x, int y) {
+        GtkGlassNative.robotMouseMove(x, y);
+    }
 
     @Override
     public void mouseMove(double x, double y) {
@@ -93,7 +103,9 @@ final class GtkRobot extends GlassRobot {
         }
     }
 
-    protected native void _mousePress(int button);
+    protected void _mousePress(int button) {
+        GtkGlassNative.robotMousePress(button);
+    }
 
     @Override
     public void mouseRelease(MouseButton... buttons) {
@@ -105,7 +117,9 @@ final class GtkRobot extends GlassRobot {
         }
     }
 
-    protected native void _mouseRelease(int buttons);
+    protected void _mouseRelease(int buttons) {
+        GtkGlassNative.robotMouseRelease(buttons);
+    }
 
     @Override
     public void mouseWheel(int wheelAmt) {
@@ -117,7 +131,9 @@ final class GtkRobot extends GlassRobot {
         }
     }
 
-    protected native void _mouseWheel(int wheelAmt);
+    protected void _mouseWheel(int wheelAmt) {
+        GtkGlassNative.robotMouseWheel(wheelAmt);
+    }
 
     @Override
     public double getMouseX() {
@@ -125,7 +141,9 @@ final class GtkRobot extends GlassRobot {
         return _getMouseX();
     }
 
-    protected native int _getMouseX();
+    protected int _getMouseX() {
+        return GtkGlassNative.robotGetMouseX();
+    }
 
     @Override
     public double getMouseY() {
@@ -133,7 +151,9 @@ final class GtkRobot extends GlassRobot {
         return _getMouseY();
     }
 
-    protected native int _getMouseY();
+    protected int _getMouseY() {
+        return GtkGlassNative.robotGetMouseY();
+    }
 
     @Override
     public Color getPixelColor(double x, double y) {
@@ -151,7 +171,9 @@ final class GtkRobot extends GlassRobot {
         return GlassRobot.convertFromIntArgb(result[0]);
     }
 
-    protected native void _getScreenCapture(int x, int y, int width, int height, int[] data);
+    protected void _getScreenCapture(int x, int y, int width, int height, int[] data) {
+        GtkGlassNative.robotGetScreenCapture(x, y, width, height, data);
+    }
 
     @Override
     public void getScreenCapture(int x, int y, int width, int height, int[] data, boolean scaleToFit) {

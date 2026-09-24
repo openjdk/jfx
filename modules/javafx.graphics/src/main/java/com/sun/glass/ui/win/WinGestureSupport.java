@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,9 +30,19 @@ import com.sun.glass.ui.View;
 
 final class WinGestureSupport {
 
-    private native static void _initIDs();
-    static {
-        _initIDs();
+    /**
+     * Runs this class's static initializer, which builds the {@link GestureSupport} and
+     * {@link TouchInputSupport} below and nothing else. {@code WinApplication.runLoop} calls it on the
+     * toolkit thread before the launchable runs, because the initializer must run there -
+     * {@code TouchInputSupport}'s constructor calls {@code Application.checkEventThread()} - and must
+     * have run before the first {@code WM_TOUCH}: under JNI, {@code GlassApplication::ClassForName}
+     * initialised this class eagerly inside {@code GlassWindow::Create}, and once the
+     * {@code GwinGestureCallbacks} table is what delivers touch and gesture events, nothing in C does
+     * that any more. Without this call the first touch event would initialise the class inside an
+     * upcall, and a failure in the initializer would surface there as "touch does nothing" instead of
+     * at startup.
+     */
+    static void ensureInitialized() {
     }
 
     // The multiplier used to convert scroll units to pixels

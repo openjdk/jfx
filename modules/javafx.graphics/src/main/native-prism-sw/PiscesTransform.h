@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -60,12 +60,5 @@ void pisces_transform_assign(Transform6* transformD,
 
 /* See implementation or documentation on comments. */
 void pisces_transform_invert(Transform6* transform);
-
-/* See implementation or documentation on comments. */
-void pisces_transform_multiply(Transform6* transformD,
-                               const Transform6* transformS);
-
-/** Returns XNI_TRUE if tr1 and tr2 define same transformation matrix */
-jboolean pisces_transform_equals(const Transform6* tr1, const Transform6* tr2);
 
 #endif

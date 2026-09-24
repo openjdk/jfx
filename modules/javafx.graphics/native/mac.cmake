@@ -106,7 +106,7 @@ set(JFX_CC_OPTIONS
     "$<$<NOT:$<CONFIG:Debug>>:-O3;-DNDEBUG>")
 
 # Gradle dynamicLinkFlags (CMake adds -dynamiclib itself); used by glass, iio,
-# prismES2, prismMTL and font. decora, prism and prismSW linked with
+# prismES2, prismMTL and font. prism and prismSW linked with
 # dynamicLinkFlagsAlt (no frameworks, no -lobjc), i.e. an empty LINK_LIBS.
 set(JFX_FRAMEWORK_LINK_LIBS
     "-framework AppKit"
@@ -168,14 +168,6 @@ add_jfx_library(glass
     LINK_LIBS ${JFX_FRAMEWORK_LINK_LIBS})
 
 # ---------------------------------------------------------------------------
-# libprism_common.dylib (Gradle: -O3 -DINLINE=inline in every configuration)
-# ---------------------------------------------------------------------------
-add_jfx_library(prism
-    OUTPUT_NAME prism_common
-    SOURCE_DIRS "${GRAPHICS_SRC}/native-prism"
-    COMPILE_OPTIONS -O3 -DINLINE=inline)
-
-# ---------------------------------------------------------------------------
 # libprism_sw.dylib
 # ---------------------------------------------------------------------------
 add_jfx_library(prismSW
@@ -225,16 +217,6 @@ add_jfx_library(iio
     SOURCE_DIRS "${GRAPHICS_SRC}/native-iio" "${GRAPHICS_SRC}/native-iio/libjpeg"
     COMPILE_OPTIONS ${JFX_CC_OPTIONS}
     LINK_LIBS ${JFX_FRAMEWORK_LINK_LIBS})
-
-# ---------------------------------------------------------------------------
-# libdecora_sse.dylib (generated JSL .cc files + native-decora; despite the
-# name the sources are scalar C++ without SSE intrinsics, so this also builds
-# on aarch64, matching the Gradle build)
-# ---------------------------------------------------------------------------
-add_jfx_library(decora
-    OUTPUT_NAME decora_sse
-    SOURCE_DIRS "${GENSRC_DIR}/jsl-decora" "${GRAPHICS_SRC}/native-decora"
-    COMPILE_OPTIONS -O1 -ffast-math)
 
 # ---------------------------------------------------------------------------
 # Metal shader library bundled into javafx-graphics.jar as

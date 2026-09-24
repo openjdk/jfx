@@ -1,0 +1,15 @@
+# The stdout of the query for the glass GTK library: gtk-loader-verbose
+# Everything GtkApplication's constructor printed with -Djdk.gtk.verbose=true, captured from the
+# JNI build of commit 033187ad90, where the query was
+# Java_com_sun_glass_ui_gtk_GtkApplication__1queryLibrary of launcher.c in libglass.so. The last
+# line is GtkApplication's own; the others are the launcher's printf calls, in its order.
+# Capture: -Djfx.gtk.loader.capture=true on that build (refused elsewhere);
+# overwrite: add -Djfx.gtk.loader.regenerate=true.
+machine.gtk=3.24.52
+capture.commit=033187ad90
+capture.queryLibrary=native
+--- stdout
+checking GTK version 3
+trying GTK library libgtk-3.so.0
+using GTK library version 3 set libgtk-3.so.0
+Glass GTK library to load is glassgtk3

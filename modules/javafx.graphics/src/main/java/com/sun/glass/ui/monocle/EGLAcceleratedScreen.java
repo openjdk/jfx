@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,6 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package com.sun.glass.ui.monocle;
 
 /**
@@ -29,9 +30,14 @@ package com.sun.glass.ui.monocle;
  * component, using EGL. This class is not directly using EGL commands,
  * as the order and meaning of parameters might vary between implementations.
  * Also, implementation-specific logic may be applied before, in between, or
- * after the EGL commands.
+ * after the EGL commands. The commands go to the vendor library through
+ * {@link EglVendorNative}, in the order and with the arguments that eglBridge.c
+ * of commit 21d5a654f6 forwarded.
  */
 public class EGLAcceleratedScreen extends AcceleratedScreen {
+
+    /** The card the display handle is asked for when {@code -Degl.displayid} is not set. */
+    static final String DEFAULT_DISPLAY_ID = "/dev/dri/card1";
 
     private long eglWindowHandle = -1;
 
@@ -44,30 +50,30 @@ public class EGLAcceleratedScreen extends AcceleratedScreen {
      */
     EGLAcceleratedScreen(int[] attributes) {
         eglWindowHandle = platformGetNativeWindow();
-        eglDisplay = nGetEglDisplayHandle();
-        nEglInitialize(eglDisplay);
-        nEglBindApi(EGL.EGL_OPENGL_ES_API);
-        long eglConfig = nEglChooseConfig(eglDisplay, attributes);
+        eglDisplay = EglVendorNative.getEglDisplayHandle();
+        EglVendorNative.doEglInitialize(eglDisplay);
+        EglVendorNative.doEglBindApi(EGL.EGL_OPENGL_ES_API);
+        long eglConfig = EglVendorNative.doEglChooseConfig(eglDisplay, attributes);
         if (eglConfig == -1) {
             throw new IllegalArgumentException("Could not create an EGLChooseConfig");
         }
-        eglSurface = nEglCreateWindowSurface(eglDisplay, eglConfig, eglWindowHandle);
-        eglContext = nEglCreateContext(eglDisplay, eglConfig);
+        eglSurface = EglVendorNative.doEglCreateWindowSurface(eglDisplay, eglConfig, eglWindowHandle);
+        eglContext = EglVendorNative.doEglCreateContext(eglDisplay, eglConfig);
     }
 
     @Override
     protected long platformGetNativeWindow() {
-        String displayID = System.getProperty("egl.displayid", "/dev/dri/card1" );
-        return nPlatformGetNativeWindow(displayID);
+        String displayID = System.getProperty("egl.displayid", DEFAULT_DISPLAY_ID);
+        return EglVendorNative.getNativeWindowHandle(displayID);
     }
 
     @Override
     public void enableRendering(boolean flag) {
         if (flag) {
-            nEglMakeCurrent(eglDisplay, eglSurface, eglSurface,
+            EglVendorNative.doEglMakeCurrent(eglDisplay, eglSurface, eglSurface,
                                        eglContext);
         } else {
-            nEglMakeCurrent(eglDisplay, 0, 0, eglContext);
+            EglVendorNative.doEglMakeCurrent(eglDisplay, 0, 0, eglContext);
         }
     }
 
@@ -75,18 +81,8 @@ public class EGLAcceleratedScreen extends AcceleratedScreen {
     public boolean swapBuffers() {
         boolean result = false;
         synchronized (NativeScreen.framebufferSwapLock) {
-            result = nEglSwapBuffers(eglDisplay, eglSurface);
+            result = EglVendorNative.doEglSwapBuffers(eglDisplay, eglSurface);
         }
         return result;
     }
-
-    private native long nPlatformGetNativeWindow(String displayID);
-    private native long nGetEglDisplayHandle();
-    private native boolean nEglInitialize(long handle);
-    private native boolean nEglBindApi(int v);
-    private native long nEglChooseConfig(long eglDisplay, int[] attribs);
-    private native boolean nEglMakeCurrent(long eglDisplay, long eglDrawSurface, long eglReadSurface, long eglContext);
-    private native long nEglCreateWindowSurface(long eglDisplay, long eglConfig, long nativeWindow);
-    private native long nEglCreateContext(long eglDisplay, long eglConfig);
-    private native boolean nEglSwapBuffers(long eglDisplay, long eglSurface);
 }

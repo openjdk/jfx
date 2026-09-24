@@ -1154,4 +1154,26 @@ public abstract class View {
         }
         return 0L;
     }
+
+    /**
+     * {@link #getAccessible()} for a platform peer that lives in another package. The Windows peer
+     * answers {@code WM_GETOBJECT} from Java now, where its JNI caller used to reach the
+     * package-private method through {@code GetMethodID}, which bypasses access control; a subclass
+     * in {@code com.sun.glass.ui.win} cannot. Same thread, same checks, same value - nothing else
+     * changes, and the mac peer keeps calling {@code getAccessible()} from C.
+     */
+    protected final long getAccessibleForNative() {
+        return getAccessible();
+    }
+
+    /**
+     * The value {@code _create} returned, unchecked: 0 once {@link #close} has run, no thread check,
+     * no closed check. For the platform window peer, which passes it to its own native side exactly
+     * as {@code GlassWindow.cpp}'s {@code _setView} read this field through {@code GetLongField}; not
+     * {@link #getNativeView}, which on Windows answers the host HWND instead and checks both. The
+     * same name {@link Window#getRawHandle} uses for the same thing.
+     */
+    protected final long getRawHandle() {
+        return this.ptr;
+    }
 }

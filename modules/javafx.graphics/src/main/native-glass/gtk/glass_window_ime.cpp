@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,6 +30,8 @@
 #include "glass_general.h"
 #include "glass_key.h"
 
+#include <cstring>
+
 static void on_preedit_start(GtkIMContext *im_context, gpointer user_data) {
     WindowContext *ctx = (WindowContext *) user_data;
     ctx->setOnPreEdit(true);
@@ -45,15 +47,14 @@ static void on_preedit_changed(GtkIMContext *im_context, gpointer user_data) {
     ctx->updateCaretPos();
     ctx->setOnPreEdit(true);
 
-    jstring jstr = mainEnv->NewStringUTF(preedit_text);
-    EXCEPTION_OCCURED(mainEnv);
-
-    jsize slen = mainEnv->GetStringLength(jstr);
+    // preedit_text itself is handed to the slot (the bytes the JNI of commit 033187ad90 passed to NewStringUTF
+    // here), so it is freed only after that call.
+    auto notify_preedit = glass_view_cb.notify_input_method_preedit;
 
     PangoAttrIterator *iter = pango_attr_list_get_iterator(attrList);
     PangoAttribute *pangoAttr;
 
-    jbyte attr = com_sun_glass_ui_View_IME_ATTR_INPUT;
+    int8_t attr = com_sun_glass_ui_View_IME_ATTR_INPUT;
     do {
         if (pangoAttr = pango_attr_iterator_get(iter, PANGO_ATTR_BACKGROUND)) {
              attr = com_sun_glass_ui_View_IME_ATTR_TARGET_NOTCONVERTED;
@@ -67,15 +68,14 @@ static void on_preedit_changed(GtkIMContext *im_context, gpointer user_data) {
 
     pango_attr_list_unref(attrList);
     pango_attr_iterator_destroy(iter);
-    g_free(preedit_text);
 
-    mainEnv->CallVoidMethod(ctx->get_jview(),
-            jViewNotifyInputMethodLinux,
-            jstr,
-            0,
-            cursor_pos,
-            attr);
-    LOG_EXCEPTION(mainEnv)
+    if (notify_preedit) {
+        // LOG_EXCEPTION site: the status is ignored. jview is not checked here: without a view the id is 0
+        // (see glass_gtk_api.h, IDENTITY).
+        notify_preedit(ctx->get_view_id(), preedit_text,
+                (preedit_text != NULL) ? (int32_t) strlen(preedit_text) : 0, cursor_pos, attr);
+    }
+    g_free(preedit_text);
 }
 
 static void on_preedit_end(GtkIMContext *im_context, gpointer user_data) {
@@ -99,17 +99,12 @@ static gboolean on_retrieve_surrounding(GtkIMContext* self, gpointer user_data) 
 
 void WindowContextBase::commitIME(gchar *str) {
     if (im_ctx.in_preedit_window || !im_ctx.on_key_event) {
-        jstring jstr = mainEnv->NewStringUTF(str);
-        EXCEPTION_OCCURED(mainEnv);
-        jsize slen = mainEnv->GetStringLength(jstr);
-
-        mainEnv->CallVoidMethod(jview,
-                jViewNotifyInputMethodLinux,
-                jstr,
-                slen,
-                slen,
-                0);
-        LOG_EXCEPTION(mainEnv)
+        if (glass_view_cb.notify_input_method_commit) {
+            // LOG_EXCEPTION site: the status is ignored. Java derives both lengths from the decoded string,
+            // as GetStringLength did. jview is not checked here: without a view view_id is 0.
+            glass_view_cb.notify_input_method_commit(view_id, str,
+                    (str != NULL) ? (int32_t) strlen(str) : 0);
+        }
     } else {
         im_ctx.send_keypress = true;
     }
@@ -150,23 +145,23 @@ void WindowContextBase::setOnPreEdit(bool preedit) {
 }
 
 void WindowContextBase::updateCaretPos() {
-    double *nativePos;
+    if (glass_view_cb.notify_input_method_candidate_pos_request) {
+        // Not checked in the JNI, whose GetDoubleArrayElements then crashed on a throw or a null array: the
+        // status is ignored and without a position the cursor location is not set. jview is not checked
+        // here: without a view view_id is 0 (see glass_gtk_api.h, IDENTITY).
+        double xy[2] = { 0, 0 };
+        int32_t valid = 0;
+        glass_view_cb.notify_input_method_candidate_pos_request(view_id, 0, xy, &valid);
 
-    jdoubleArray pos = (jdoubleArray)mainEnv->CallObjectMethod(get_jview(),
-                                      jViewNotifyInputMethodCandidateRelativePosRequest,
-                                      0);
+        GdkRectangle rect;
+        if (valid) {
+            rect.x = (int) xy[0];
+            rect.y = (int) xy[1];
+            rect.width = 0;
+            rect.height = 0;
 
-    nativePos = mainEnv->GetDoubleArrayElements(pos, NULL);
-
-    GdkRectangle rect;
-    if (nativePos) {
-        rect.x = (int) nativePos[0];
-        rect.y = (int) nativePos[1];
-        rect.width = 0;
-        rect.height = 0;
-
-        mainEnv->ReleaseDoubleArrayElements(pos, nativePos, 0);
-        gtk_im_context_set_cursor_location(im_ctx.ctx, &rect);
+            gtk_im_context_set_cursor_location(im_ctx.ctx, &rect);
+        }
     }
 }
 

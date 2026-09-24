@@ -1,0 +1,854 @@
+# GTK glass boundary trace golden: gtk-event-trace
+# Every call the GTK glass event code (glass_window.cpp, glass_window_ime.cpp, glass_dnd.cpp,
+# GlassView.cpp, glass_screen.cpp, glass_general.cpp) made across the C -> Java boundary for the
+# scripted scenario, captured from the JNI build of commit 033187ad90 and normalised
+# by the RULES of the test class. For an X server without a window manager; machine-specific:
+# compared only where every machine.* key matches, elsewhere skipped, or failed under
+# -Djfx.parity.require=true.
+# Capture: -Djfx.gtk.trace.capture=true on the JNI build (refused elsewhere);
+# overwrite: add -Djfx.gtk.trace.regenerate=true.
+# Lines: wN.<call> = a GtkTraceWindow override (the C's call into the window, its arguments);
+# wN.handler = Window.EventHandler; vN.<event> = View.EventHandler; screen./app. = the toolkit's
+# handlers; reported = Application.reportException; == step; # value read back by the scenario.
+machine.compositing=supports=1 composited=0
+machine.depth=24
+machine.env.GDK_BACKEND=unset
+machine.env.GDK_DPI_SCALE=unset
+machine.env.GDK_SCALE=unset
+machine.env.GTK_IM_MODULE=unset
+machine.env.XMODIFIERS=unset
+machine.gtk=3.24.52
+machine.libgdk3=47bb58ca25405353b0546b932ddc5a92e74ee006a1904e4d0eca3df162ddd562
+machine.libgtk3=8dc29a8cc4eabd2f08316dbb74bb585a2738aba4e4895450487d736792eda425
+machine.monitors=1
+machine.resolution=96.0
+machine.scale=1.0x1.0
+machine.screen=1920x1080
+machine.windowManager=unknown
+machine.xkb=evdev|pc105|us
+machine.xserver=The X.Org Foundation 12101022
+capture.java=OpenJDK 64-Bit Server VM 25.0.4
+capture.jniEntryPoints=6/6
+--- trace
+== create w1 (TITLED) with v1
+v1.view ADD
+v1.view MOVE at 0,0
+== w1 bounds 100,100 300x200
+w1.notifyResize 511 300 200
+w1.handler RESIZE
+v1.view RESIZE 300x200
+w1.notifyMove 100 100
+w1.handler MOVE
+v1.view MOVE at 0,0
+== w1 show
+w1.isEnabled=true
+w1.notifyFocus 542
+w1.handler FOCUS_GAINED
+v1.view MOVE at 0,0
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.notifyResize 511 300 200
+w1.handler RESIZE
+w1.notifyMove 100 100
+w1.handler MOVE
+v1.view MOVE at 0,0
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+# w1 WM_CLASS java|java
+v1.view REPAINT
+== w1 requestFocus
+w1.isEnabled=true
+w1.notifyFocus 542
+== create w2 (UNTITLED) with v2 at 600,100 300x200 and show
+v2.view ADD
+v2.view MOVE at 0,0
+w2.notifyResize 511 300 200
+w2.handler RESIZE
+v2.view RESIZE 300x200
+w2.notifyMove 600 100
+w2.handler MOVE
+v2.view MOVE at 0,0
+w2.isEnabled=true
+w2.notifyFocus 542
+w2.handler FOCUS_GAINED
+v2.view MOVE at 0,0
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.notifyResize 511 300 200
+w2.handler RESIZE
+w2.notifyMove 600 100
+w2.handler MOVE
+v2.view MOVE at 0,0
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+v2.view REPAINT
+== w2 requestFocus
+w1.notifyFocus 541
+w1.handler FOCUS_LOST
+w2.isEnabled=true
+w2.notifyFocus 542
+== w1 requestFocus again
+w1.notifyResize 511 300 200
+w1.handler RESIZE
+w1.notifyMove 100 100
+w1.handler MOVE
+v1.view MOVE at 0,0
+w2.notifyFocus 541
+w2.handler FOCUS_LOST
+w1.isEnabled=true
+w1.notifyFocus 542
+w1.handler FOCUS_GAINED
+v1.view REPAINT
+== w1 move to 150,130
+w1.notifyResize 511 300 200
+w1.handler RESIZE
+w1.notifyMove 150 130
+w1.handler MOVE
+v1.view MOVE at 0,0
+w1.notifyResize 511 300 200
+w1.handler RESIZE
+w1.notifyMove 150 130
+w1.handler MOVE
+v1.view MOVE at 0,0
+== w1 resize to 320x220
+w1.notifyResize 511 320 220
+w1.handler RESIZE
+v1.view RESIZE 320x220
+w1.notifyResize 511 320 220
+w1.handler RESIZE
+w1.notifyMove 150 130
+w1.handler MOVE
+v1.view MOVE at 0,0
+v1.view REPAINT
+== w1 content size 300x200
+w1.notifyResize 511 300 200
+w1.handler RESIZE
+v1.view RESIZE 300x200
+w1.notifyResize 511 300 200
+w1.handler RESIZE
+w1.notifyMove 150 130
+w1.handler MOVE
+v1.view MOVE at 0,0
+v1.view REPAINT
+== w1 bounds with gravity
+w1.notifyResize 511 310 210
+w1.handler RESIZE
+v1.view RESIZE 310x210
+w1.notifyMove 160 140
+w1.handler MOVE
+v1.view MOVE at 0,0
+w1.notifyResize 511 300 200
+w1.handler RESIZE
+v1.view RESIZE 300x200
+w1.notifyMove 160 140
+w1.handler MOVE
+v1.view MOVE at 0,0
+w1.notifyResize 511 310 210
+w1.handler RESIZE
+v1.view RESIZE 310x210
+w1.notifyMove 160 140
+w1.handler MOVE
+v1.view MOVE at 0,0
+v1.view REPAINT
+== v1 repaint request
+== pointer into v1, moves inside
+w1.isEnabled=true
+v1.mouse ENTER BUTTON_NONE 20,30 180,170 mods=0x0 popup=false synth=false
+w1.isEnabled=true
+v1.mouse MOVE BUTTON_NONE 40,50 200,190 mods=0x0 popup=false synth=false
+w1.isEnabled=true
+v1.mouse MOVE BUTTON_NONE 41,50 201,190 mods=0x0 popup=false synth=false
+== pointer from v1 into v2 and back
+w1.isEnabled=true
+v1.mouse EXIT BUTTON_NONE 450,-30 610,110 mods=0x0 popup=false synth=false
+w2.isEnabled=true
+v2.mouse ENTER BUTTON_NONE 10,10 610,110 mods=0x0 popup=false synth=false
+w2.isEnabled=true
+v2.mouse MOVE BUTTON_NONE 10,10 610,110 mods=0x0 popup=false synth=false
+w2.isEnabled=true
+v2.mouse EXIT BUTTON_NONE -400,90 200,190 mods=0x0 popup=false synth=false
+w1.isEnabled=true
+v1.mouse ENTER BUTTON_NONE 40,50 200,190 mods=0x0 popup=false synth=false
+w1.isEnabled=true
+v1.mouse MOVE BUTTON_NONE 40,50 200,190 mods=0x0 popup=false synth=false
+== buttons
+w1.isEnabled=true
+v1.mouse DOWN BUTTON_LEFT 40,50 200,190 mods=0x20 popup=false synth=false
+w1.isEnabled=true
+w1.isEnabled=true
+v1.mouse UP BUTTON_LEFT 40,50 200,190 mods=0x0 popup=false synth=false
+w1.isEnabled=true
+v1.mouse DOWN BUTTON_OTHER 40,50 200,190 mods=0x80 popup=false synth=false
+w1.isEnabled=true
+w1.isEnabled=true
+v1.mouse UP BUTTON_OTHER 40,50 200,190 mods=0x0 popup=false synth=false
+w1.isEnabled=true
+v1.mouse DOWN BUTTON_BACK 40,50 200,190 mods=0x100 popup=false synth=false
+w1.isEnabled=true
+w1.isEnabled=true
+v1.mouse UP BUTTON_BACK 40,50 200,190 mods=0x0 popup=false synth=false
+w1.isEnabled=true
+v1.mouse DOWN BUTTON_FORWARD 40,50 200,190 mods=0x200 popup=false synth=false
+w1.isEnabled=true
+w1.isEnabled=true
+v1.mouse UP BUTTON_FORWARD 40,50 200,190 mods=0x0 popup=false synth=false
+== right button: menu
+w1.isEnabled=true
+v1.mouse DOWN BUTTON_RIGHT 40,50 200,190 mods=0x40 popup=true synth=false
+v1.menu 40,50 200,190 keyboard=false
+w1.isEnabled=true
+w1.isEnabled=true
+v1.mouse UP BUTTON_RIGHT 40,50 200,190 mods=0x0 popup=false synth=false
+== double click
+w1.isEnabled=true
+v1.mouse DOWN BUTTON_LEFT 40,50 200,190 mods=0x20 popup=false synth=false
+w1.isEnabled=true
+v1.mouse UP BUTTON_LEFT 40,50 200,190 mods=0x0 popup=false synth=false
+w1.isEnabled=true
+v1.mouse DOWN BUTTON_LEFT 40,50 200,190 mods=0x20 popup=false synth=false
+w1.isEnabled=true
+w1.isEnabled=true
+v1.mouse UP BUTTON_LEFT 40,50 200,190 mods=0x0 popup=false synth=false
+w1.isEnabled=true
+w1.isEnabled=true
+== control click
+w1.isEnabled=true
+v1.key PRESS 0x11 chars=[] mods=0x4
+w1.isEnabled=true
+w1.isEnabled=true
+v1.mouse DOWN BUTTON_LEFT 40,50 200,190 mods=0x24 popup=false synth=false
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+v1.mouse UP BUTTON_LEFT 40,50 200,190 mods=0x4 popup=false synth=false
+w1.isEnabled=true
+v1.key RELEASE 0x11 chars=[] mods=0x0
+== drag inside v1, out of w1, release outside
+w1.isEnabled=true
+v1.mouse DOWN BUTTON_LEFT 40,50 200,190 mods=0x20 popup=false synth=false
+w1.isEnabled=true
+w1.isEnabled=true
+v1.mouse DRAG BUTTON_LEFT 60,60 220,200 mods=0x20 popup=false synth=false
+v1.dragStart BUTTON_LEFT 60,60 220,200
+w1.isEnabled=true
+v1.mouse DRAG BUTTON_LEFT 80,70 240,210 mods=0x20 popup=false synth=false
+w1.isEnabled=true
+v1.mouse DRAG BUTTON_LEFT 490,10 650,150 mods=0x20 popup=false synth=false
+w1.isEnabled=true
+v1.mouse UP BUTTON_LEFT 490,10 650,150 mods=0x0 popup=false synth=false
+w2.isEnabled=true
+w1.isEnabled=true
+v1.mouse EXIT BUTTON_NONE 490,10 650,150 mods=0x0 popup=false synth=false
+w2.isEnabled=true
+v2.mouse ENTER BUTTON_NONE 50,50 650,150 mods=0x0 popup=false synth=false
+w2.isEnabled=true
+w2.isEnabled=true
+v2.mouse EXIT BUTTON_NONE -400,90 200,190 mods=0x0 popup=false synth=false
+w1.isEnabled=true
+v1.mouse ENTER BUTTON_NONE 40,50 200,190 mods=0x0 popup=false synth=false
+w1.isEnabled=true
+v1.mouse MOVE BUTTON_NONE 40,50 200,190 mods=0x0 popup=false synth=false
+== wheel: vertical
+w1.isEnabled=true
+v1.scroll 40,50 200,190 d=0.0,-1.0 mods=0x0 lines=0 chars=0 default=0,0 mult=40.0,40.0
+w1.isEnabled=true
+w1.isEnabled=true
+v1.scroll 40,50 200,190 d=0.0,1.0 mods=0x0 lines=0 chars=0 default=0,0 mult=40.0,40.0
+w1.isEnabled=true
+== wheel: horizontal (X11 buttons 6 and 7)
+w1.isEnabled=true
+v1.scroll 40,50 200,190 d=1.0,0.0 mods=0x0 lines=0 chars=0 default=0,0 mult=40.0,40.0
+w1.isEnabled=true
+w1.isEnabled=true
+v1.scroll 40,50 200,190 d=-1.0,0.0 mods=0x0 lines=0 chars=0 default=0,0 mult=40.0,40.0
+w1.isEnabled=true
+== wheel: vertical with shift (the C swaps the axes)
+w1.isEnabled=true
+v1.key PRESS 0x10 chars=[] mods=0x1
+w1.isEnabled=true
+w1.isEnabled=true
+v1.scroll 40,50 200,190 d=-1.0,0.0 mods=0x1 lines=0 chars=0 default=0,0 mult=40.0,40.0
+w1.isEnabled=true
+w1.isEnabled=true
+v1.key RELEASE 0x10 chars=[] mods=0x0
+== keys: a, shift+a, ctrl+a, alt+a
+w1.isEnabled=true
+v1.key PRESS 0x41 chars=[61] mods=0x0
+v1.key TYPED 0x0 chars=[61] mods=0x0
+w1.isEnabled=true
+w1.isEnabled=true
+v1.key RELEASE 0x41 chars=[61] mods=0x0
+w1.isEnabled=true
+v1.key PRESS 0x10 chars=[] mods=0x1
+w1.isEnabled=true
+w1.isEnabled=true
+v1.key PRESS 0x41 chars=[41] mods=0x1
+v1.key TYPED 0x0 chars=[41] mods=0x1
+w1.isEnabled=true
+w1.isEnabled=true
+v1.key RELEASE 0x41 chars=[41] mods=0x1
+w1.isEnabled=true
+v1.key RELEASE 0x10 chars=[] mods=0x0
+w1.isEnabled=true
+v1.key PRESS 0x11 chars=[] mods=0x4
+w1.isEnabled=true
+w1.isEnabled=true
+v1.key PRESS 0x41 chars=[1] mods=0x4
+v1.key TYPED 0x0 chars=[1] mods=0x4
+w1.isEnabled=true
+w1.isEnabled=true
+v1.key RELEASE 0x41 chars=[1] mods=0x4
+w1.isEnabled=true
+v1.key RELEASE 0x11 chars=[] mods=0x0
+w1.isEnabled=true
+v1.key PRESS 0x12 chars=[] mods=0x8
+w1.isEnabled=true
+w1.isEnabled=true
+v1.key PRESS 0x41 chars=[61] mods=0x8
+v1.key TYPED 0x0 chars=[61] mods=0x8
+w1.isEnabled=true
+w1.isEnabled=true
+v1.key RELEASE 0x41 chars=[61] mods=0x8
+w1.isEnabled=true
+v1.key RELEASE 0x12 chars=[] mods=0x0
+== keys: typed text 'Hi 7!'
+w1.isEnabled=true
+v1.key PRESS 0x10 chars=[] mods=0x1
+w1.isEnabled=true
+w1.isEnabled=true
+v1.key PRESS 0x48 chars=[48] mods=0x1
+v1.key TYPED 0x0 chars=[48] mods=0x1
+w1.isEnabled=true
+w1.isEnabled=true
+v1.key RELEASE 0x48 chars=[48] mods=0x1
+w1.isEnabled=true
+v1.key RELEASE 0x10 chars=[] mods=0x0
+w1.isEnabled=true
+v1.key PRESS 0x49 chars=[69] mods=0x0
+v1.key TYPED 0x0 chars=[69] mods=0x0
+w1.isEnabled=true
+w1.isEnabled=true
+v1.key RELEASE 0x49 chars=[69] mods=0x0
+w1.isEnabled=true
+v1.key PRESS 0x20 chars=[20] mods=0x0
+v1.key TYPED 0x0 chars=[20] mods=0x0
+w1.isEnabled=true
+w1.isEnabled=true
+v1.key RELEASE 0x20 chars=[20] mods=0x0
+w1.isEnabled=true
+v1.key PRESS 0x37 chars=[37] mods=0x0
+v1.key TYPED 0x0 chars=[37] mods=0x0
+w1.isEnabled=true
+w1.isEnabled=true
+v1.key RELEASE 0x37 chars=[37] mods=0x0
+w1.isEnabled=true
+v1.key PRESS 0x10 chars=[] mods=0x1
+w1.isEnabled=true
+w1.isEnabled=true
+v1.key PRESS 0x31 chars=[21] mods=0x1
+v1.key TYPED 0x0 chars=[21] mods=0x1
+w1.isEnabled=true
+w1.isEnabled=true
+v1.key RELEASE 0x31 chars=[21] mods=0x1
+w1.isEnabled=true
+v1.key RELEASE 0x10 chars=[] mods=0x0
+== keys: F1, arrows, enter, escape, backspace, tab, delete, home
+w1.isEnabled=true
+v1.key PRESS 0x70 chars=[] mods=0x0
+w1.isEnabled=true
+w1.isEnabled=true
+v1.key RELEASE 0x70 chars=[] mods=0x0
+w1.isEnabled=true
+v1.key PRESS 0x25 chars=[] mods=0x0
+w1.isEnabled=true
+w1.isEnabled=true
+v1.key RELEASE 0x25 chars=[] mods=0x0
+w1.isEnabled=true
+v1.key PRESS 0x26 chars=[] mods=0x0
+w1.isEnabled=true
+w1.isEnabled=true
+v1.key RELEASE 0x26 chars=[] mods=0x0
+w1.isEnabled=true
+v1.key PRESS 0xa chars=[d] mods=0x0
+v1.key TYPED 0x0 chars=[d] mods=0x0
+w1.isEnabled=true
+w1.isEnabled=true
+v1.key RELEASE 0xa chars=[d] mods=0x0
+w1.isEnabled=true
+v1.key PRESS 0x1b chars=[1b] mods=0x0
+v1.key TYPED 0x0 chars=[1b] mods=0x0
+w1.isEnabled=true
+w1.isEnabled=true
+v1.key RELEASE 0x1b chars=[1b] mods=0x0
+w1.isEnabled=true
+v1.key PRESS 0x8 chars=[8] mods=0x0
+v1.key TYPED 0x0 chars=[8] mods=0x0
+w1.isEnabled=true
+w1.isEnabled=true
+v1.key RELEASE 0x8 chars=[8] mods=0x0
+w1.isEnabled=true
+v1.key PRESS 0x9 chars=[9] mods=0x0
+v1.key TYPED 0x0 chars=[9] mods=0x0
+w1.isEnabled=true
+w1.isEnabled=true
+v1.key RELEASE 0x9 chars=[9] mods=0x0
+w1.isEnabled=true
+v1.key PRESS 0x7f chars=[7f] mods=0x0
+v1.key TYPED 0x0 chars=[7f] mods=0x0
+w1.isEnabled=true
+w1.isEnabled=true
+v1.key RELEASE 0x7f chars=[7f] mods=0x0
+w1.isEnabled=true
+v1.key PRESS 0x24 chars=[] mods=0x0
+w1.isEnabled=true
+w1.isEnabled=true
+v1.key RELEASE 0x24 chars=[] mods=0x0
+== keys: menu key (keysym Menu)
+# Menu keycode 135
+w1.isEnabled=true
+v1.key PRESS 0x20d chars=[] mods=0x0
+w1.isEnabled=true
+w1.isEnabled=true
+v1.key RELEASE 0x20d chars=[] mods=0x0
+== keys: b held down for 3 s, one X11 autorepeat (delay 100 ms, interval 60 s)
+w1.isEnabled=true
+v1.key PRESS 0x42 chars=[62] mods=0x0
+v1.key TYPED 0x0 chars=[62] mods=0x0
+w1.isEnabled=true
+w1.isEnabled=true
+v1.key PRESS 0x42 chars=[62] mods=0x0
+v1.key TYPED 0x0 chars=[62] mods=0x0
+w1.isEnabled=true
+w1.isEnabled=true
+v1.key RELEASE 0x42 chars=[62] mods=0x0
+== input method: enable, Ctrl+Shift+U e 9 space commits U+00E9, then a plain key
+w1.isEnabled=true
+v1.key PRESS 0x11 chars=[] mods=0x4
+w1.isEnabled=true
+w1.isEnabled=true
+v1.key PRESS 0x10 chars=[] mods=0x5
+w1.isEnabled=true
+w1.isEnabled=true
+v1.imCandidatePos 0
+v1.im text="u" clause=[0,1] attrBounds=[0,1] attrs=[2] commit=0 cursor=1
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+v1.imCandidatePos 0
+v1.im text="ue" clause=[0,2] attrBounds=[0,2] attrs=[2] commit=0 cursor=2
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+v1.imCandidatePos 0
+v1.im text="ue9" clause=[0,3] attrBounds=[0,3] attrs=[2] commit=0 cursor=3
+w1.isEnabled=true
+w1.isEnabled=true
+w1.isEnabled=true
+v1.imCandidatePos 0
+v1.im text="" clause=[0,0] attrBounds=[0,0] attrs=[0] commit=0 cursor=0
+v1.im text="\u00e9" clause=null attrBounds=null attrs=null commit=1 cursor=1
+w1.isEnabled=true
+w1.isEnabled=true
+v1.key RELEASE 0x20 chars=[20] mods=0x0
+w1.isEnabled=true
+v1.key PRESS 0x43 chars=[63] mods=0x0
+v1.key TYPED 0x0 chars=[63] mods=0x0
+w1.isEnabled=true
+w1.isEnabled=true
+v1.key RELEASE 0x43 chars=[63] mods=0x0
+== input method: disable
+== w1 view swap: v1 -> v1b
+v1.view REMOVE
+v1.view MOVE
+v1.mouse EXIT BUTTON_NONE 0,0 0,0 mods=0x0 popup=false synth=false
+v1b.view ADD
+v1b.view MOVE at 0,0
+v1b.view RESIZE 310x210
+== X11 focus to w2, then w1 disabled: a click, the X11 focus and a close request
+w1.notifyFocus 541
+w1.handler FOCUS_LOST
+w2.isEnabled=true
+w2.notifyFocus 542
+w2.handler FOCUS_GAINED
+w1.isEnabled=false
+w1.isEnabled=false
+w1.isEnabled=false
+w1.isEnabled=false
+w1.isEnabled=false
+w1.isEnabled=false
+w2.notifyFocus 541
+w2.handler FOCUS_LOST
+w1.isEnabled=false
+w1.notifyFocusDisabled
+w1.handler FOCUS_DISABLED
+w1.isEnabled=false
+w1.isEnabled=false
+w1.isEnabled=true
+w1.isEnabled=true
+== w2 close request
+w2.isEnabled=true
+w2.isEnabled=true
+w2.notifyClose
+w2.handler CLOSE
+w2.isEnabled=true
+== w2 X11 focus, grab, a click outside every window ends the grab, ungrab
+w1.notifyFocus 541
+w2.isEnabled=true
+w2.notifyFocus 542
+w2.handler FOCUS_GAINED
+# w2 grabFocus true
+w1.isEnabled=true
+v1b.mouse EXIT BUTTON_NONE 30,30 190,170 mods=0x0 popup=false synth=false
+w2.isEnabled=true
+v2.mouse ENTER BUTTON_NONE -410,70 190,170 mods=0x0 popup=false synth=false
+w1.isEnabled=true
+w2.isEnabled=true
+v2.mouse MOVE BUTTON_NONE 900,800 1500,900 mods=0x0 popup=false synth=false
+w2.isEnabled=true
+w2.notifyFocusUngrab
+w2.handler FOCUS_UNGRAB
+w2.isEnabled=true
+w2.isEnabled=true
+v2.mouse EXIT BUTTON_NONE 900,800 1500,900 mods=0x20 popup=false synth=false
+w2.notifyFocusUngrab
+w2.handler FOCUS_UNGRAB
+== w2 toFront, toBack
+w2.notifyResize 511 300 200
+w2.handler RESIZE
+w2.notifyMove 600 100
+w2.handler MOVE
+v2.view MOVE at 0,0
+w2.notifyResize 511 300 200
+w2.handler RESIZE
+w2.notifyMove 600 100
+w2.handler MOVE
+v2.view MOVE at 0,0
+== w2 level FLOATING, then above removed by the window manager
+# w2 _NET_WM_STATE none
+# w2 _NET_WM_STATE none
+# w2 _NET_WM_STATE none
+# w2 _NET_WM_STATE none
+== w2 iconify and deiconify
+w2.notifyStateChanged 531
+w2.notifyResize 531 300 200
+w2.handler MINIMIZE
+w2.notifyStateChanged 531
+w2.notifyResize 531 300 200
+w2.handler MINIMIZE
+w2.notifyResize 511 300 200
+w2.handler RESIZE
+w2.notifyMove 600 100
+w2.handler MOVE
+v2.view MOVE at 0,0
+v2.view REPAINT
+== w2 maximize and restore
+w2.notifyStateChanged 532
+w2.notifyResize 532 300 200
+w2.handler MAXIMIZE
+w2.handler RESIZE
+w2.isEnabled=true
+w2.notifyStateChanged 532
+w2.notifyResize 532 300 200
+w2.handler MAXIMIZE
+w2.handler RESIZE
+== v2 fullscreen enter and exit
+v2.view FULLSCREEN_ENTER
+v2.view MOVE at 0,0
+v2.view FULLSCREEN_EXIT
+v2.view MOVE at 0,0
+== w2 icon
+w2.isEnabled=true
+w2.isEnabled=true
+# w2 _NET_WM_ICON items=6 w=2 h=2 sha256=a9dd8cb86678cc19259741bb90be3fe24b5c710648d2dcd6ed0fb645ad0ffe8f
+== w2 alpha
+w2.isEnabled=true
+v2.view REPAINT
+== w2 background
+v2.view REPAINT
+== w2 title
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+== w2 minimum and maximum size
+== w2 not resizable, resizable
+v2.view MOVE at 0,0
+v2.view MOVE at 0,0
+== screen settings: _NET_WORKAREA set and removed
+screen.handleSettingsChanged
+w1.handler screenChanged 1920x1080@0,0 platform 1920x1080@0,0 visible 1920x1080@0,0 scale 1.0,1.0 output 1.0,1.0 res 96,95 depth 24 native 0 -> 1920x1080@0,0 platform 1920x1080@0,0 visible 1800x1000@0,0 scale 1.0,1.0 output 1.0,1.0 res 96,95 depth 24 native 0
+w2.handler screenChanged 1920x1080@0,0 platform 1920x1080@0,0 visible 1920x1080@0,0 scale 1.0,1.0 output 1.0,1.0 res 96,95 depth 24 native 0 -> 1920x1080@0,0 platform 1920x1080@0,0 visible 1800x1000@0,0 scale 1.0,1.0 output 1.0,1.0 res 96,95 depth 24 native 0
+screen.handleSettingsChanged
+w1.handler screenChanged 1920x1080@0,0 platform 1920x1080@0,0 visible 1800x1000@0,0 scale 1.0,1.0 output 1.0,1.0 res 96,95 depth 24 native 0 -> 1920x1080@0,0 platform 1920x1080@0,0 visible 1920x1080@0,0 scale 1.0,1.0 output 1.0,1.0 res 96,95 depth 24 native 0
+w2.handler screenChanged 1920x1080@0,0 platform 1920x1080@0,0 visible 1800x1000@0,0 scale 1.0,1.0 output 1.0,1.0 res 96,95 depth 24 native 0 -> 1920x1080@0,0 platform 1920x1080@0,0 visible 1920x1080@0,0 scale 1.0,1.0 output 1.0,1.0 res 96,95 depth 24 native 0
+== second screen
+# skipped: the display has 1 monitor
+== w2 hide with the pointer inside, show again
+w2.isEnabled=true
+v2.mouse ENTER BUTTON_NONE 30,30 630,130 mods=0x0 popup=false synth=false
+w2.isEnabled=true
+v2.mouse MOVE BUTTON_NONE 30,30 630,130 mods=0x0 popup=false synth=false
+v2.mouse EXIT BUTTON_NONE 0,0 0,0 mods=0x0 popup=false synth=false
+w2.isEnabled=true
+w2.isEnabled=true
+w2.notifyFocus 541
+w2.handler FOCUS_LOST
+w2.isEnabled=true
+w2.isEnabled=true
+w2.notifyFocus 542
+w2.handler FOCUS_GAINED
+v2.view MOVE at 0,0
+w2.isEnabled=true
+w2.isEnabled=true
+w2.notifyResize 511 300 200
+w2.handler RESIZE
+w2.notifyMove 600 100
+w2.handler MOVE
+v2.view MOVE at 0,0
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.isEnabled=true
+w2.notifyFocus 542
+w2.isEnabled=true
+v2.mouse ENTER BUTTON_NONE 30,30 630,130 mods=0x0 popup=false synth=false
+v2.view REPAINT
+== create w3 owned by w1 (UTILITY, no view) and show
+w3.notifyResize 511 200 100
+w3.handler RESIZE
+w3.notifyMove 200 500
+w3.handler MOVE
+w3.isEnabled=true
+w3.notifyFocus 542
+w3.handler FOCUS_GAINED
+w3.isEnabled=true
+w3.isEnabled=true
+w3.isEnabled=true
+w3.isEnabled=true
+w3.isEnabled=true
+w3.isEnabled=true
+w3.isEnabled=true
+w3.isEnabled=true
+w3.isEnabled=true
+w3.isEnabled=true
+w3.isEnabled=true
+w3.isEnabled=true
+w3.isEnabled=true
+w3.isEnabled=true
+w3.isEnabled=true
+w3.isEnabled=true
+w3.isEnabled=true
+w3.isEnabled=true
+w3.isEnabled=true
+w3.isEnabled=true
+w3.notifyResize 511 200 100
+w3.handler RESIZE
+w3.notifyMove 200 500
+w3.handler MOVE
+w3.isEnabled=true
+w3.isEnabled=true
+w3.isEnabled=true
+w3.isEnabled=true
+== close w1: its view leaves, w3 is destroyed with it
+w2.notifyFocus 541
+w2.handler FOCUS_LOST
+w2.isEnabled=true
+v2.mouse EXIT BUTTON_NONE -410,70 190,170 mods=0x0 popup=false synth=false
+w1.isEnabled=true
+w1.notifyFocus 542
+w1.handler FOCUS_GAINED
+w1.isEnabled=true
+v1b.mouse ENTER BUTTON_NONE 30,30 190,170 mods=0x0 popup=false synth=false
+w1.isEnabled=true
+v1b.mouse MOVE BUTTON_NONE 30,30 190,170 mods=0x0 popup=false synth=false
+v1b.mouse EXIT BUTTON_NONE 0,0 0,0 mods=0x0 popup=false synth=false
+v1b.view REMOVE
+v1b.view MOVE
+w3.notifyDestroy
+w3.handler DESTROY
+w1.notifyDestroy
+w1.handler DESTROY
+== create w4 (EXTENDED, resizable) with v4 at 500,400 300x200 and show
+v4.view ADD
+v4.view MOVE at 0,0
+w4.notifyResize 511 300 200
+w4.handler RESIZE
+v4.view RESIZE 300x200
+w4.notifyMove 500 400
+w4.handler MOVE
+v4.view MOVE at 0,0
+v4.view MOVE at 0,0
+w4.isEnabled=true
+w4.notifyFocus 542
+w4.handler FOCUS_GAINED
+v4.view MOVE at 0,0
+w4.isEnabled=true
+w4.isEnabled=true
+w4.isEnabled=true
+w4.isEnabled=true
+w4.isEnabled=true
+w4.isEnabled=true
+w4.isEnabled=true
+w4.isEnabled=true
+w4.isEnabled=true
+w4.isEnabled=true
+w4.isEnabled=true
+w4.isEnabled=true
+w4.isEnabled=true
+w4.isEnabled=true
+w4.isEnabled=true
+w4.isEnabled=true
+w4.isEnabled=true
+w4.isEnabled=true
+w4.isEnabled=true
+w4.isEnabled=true
+w4.notifyResize 511 300 200
+w4.handler RESIZE
+w4.notifyMove 500 400
+w4.handler MOVE
+v4.view MOVE at 0,0
+w4.isEnabled=true
+w4.isEnabled=true
+w4.isEnabled=true
+w4.isEnabled=true
+v4.view REPAINT
+== w4 pointer: client area, east border, back to the client area, out of the window
+w4.isEnabled=true
+w4.notifyFocus 542
+w4.isEnabled=true
+w4.isEnabled=true
+v4.mouse ENTER BUTTON_NONE 100,100 600,500 mods=0x0 popup=false synth=false
+v4.mouse MOVE BUTTON_NONE 100,100 600,500 mods=0x0 popup=false synth=false
+w4.isEnabled=true
+v4.pickHeaderArea 298.0,100.0 -> null
+v4.mouse EXIT BUTTON_NONE 298,100 798,500 mods=0x0 popup=false synth=false
+w4.isEnabled=true
+v4.mouse ENTER BUTTON_NONE 100,100 600,500 mods=0x0 popup=false synth=false
+v4.mouse MOVE BUTTON_NONE 100,100 600,500 mods=0x0 popup=false synth=false
+w4.isEnabled=true
+v4.pickHeaderArea 100.0,2.0 -> DRAGBAR
+v4.mouse EXIT BUTTON_NONE 100,2 600,402 mods=0x0 popup=false synth=false
+w4.isEnabled=true
+v4.mouse ENTER BUTTON_NONE 100,100 600,500 mods=0x0 popup=false synth=false
+v4.mouse MOVE BUTTON_NONE 100,100 600,500 mods=0x0 popup=false synth=false
+w4.notifyFocus 541
+w4.handler FOCUS_LOST
+w4.isEnabled=true
+v4.mouse EXIT BUTTON_NONE -50,100 450,500 mods=0x0 popup=false synth=false
+== w4 press and release on the east border (resize drag)
+w4.isEnabled=true
+w4.notifyFocus 542
+w4.handler FOCUS_GAINED
+w4.isEnabled=true
+w4.isEnabled=true
+v4.pickHeaderArea 298.0,100.0 -> null
+w4.isEnabled=true
+v4.pickHeaderArea 298.0,100.0 -> null
+w4.notifyFocusUngrab
+w4.handler FOCUS_UNGRAB
+w4.isEnabled=true
+w4.notifyFocus 541
+w4.handler FOCUS_LOST
+w4.isEnabled=true
+w4.notifyFocus 542
+w4.handler FOCUS_GAINED
+w4.isEnabled=true
+w4.isEnabled=true
+== w4 press and release in the drag area (move drag)
+w4.isEnabled=true
+v4.mouse ENTER BUTTON_NONE 50,15 550,415 mods=0x0 popup=false synth=false
+v4.mouse MOVE BUTTON_NONE 50,15 550,415 mods=0x0 popup=false synth=false
+w4.isEnabled=true
+w4.isEnabled=true
+v4.pickHeaderArea 50.0,15.0 -> DRAGBAR
+w4.notifyFocusUngrab
+w4.handler FOCUS_UNGRAB
+w4.isEnabled=true
+w4.notifyFocus 541
+w4.handler FOCUS_LOST
+w4.isEnabled=true
+w4.notifyFocus 542
+w4.handler FOCUS_GAINED
+w4.isEnabled=true
+w4.isEnabled=true
+v4.mouse EXIT BUTTON_NONE 50,15 550,415 mods=0x0 popup=false synth=false
+== w4 press and release in the client area
+w4.isEnabled=true
+v4.mouse ENTER BUTTON_NONE 100,100 600,500 mods=0x0 popup=false synth=false
+v4.mouse MOVE BUTTON_NONE 100,100 600,500 mods=0x0 popup=false synth=false
+w4.isEnabled=true
+w4.isEnabled=true
+v4.pickHeaderArea 100.0,100.0 -> null
+v4.mouse DOWN BUTTON_LEFT 100,100 600,500 mods=0x20 popup=false synth=false
+w4.isEnabled=true
+w4.isEnabled=true
+v4.mouse UP BUTTON_LEFT 100,100 600,500 mods=0x0 popup=false synth=false
+== w4 double click in the drag area, both presses answered as client area (maximize toggle)
+w4.isEnabled=true
+v4.mouse MOVE BUTTON_NONE 50,15 550,415 mods=0x0 popup=false synth=false
+w4.isEnabled=true
+v4.pickHeaderArea 50.0,15.0 -> null
+v4.mouse DOWN BUTTON_LEFT 50,15 550,415 mods=0x20 popup=false synth=false
+w4.isEnabled=true
+v4.mouse UP BUTTON_LEFT 50,15 550,415 mods=0x0 popup=false synth=false
+w4.isEnabled=true
+v4.pickHeaderArea 50.0,15.0 -> null
+v4.mouse DOWN BUTTON_LEFT 50,15 550,415 mods=0x20 popup=false synth=false
+w4.isEnabled=true
+v4.pickHeaderArea 50.0,15.0 -> DRAGBAR
+w4.isEnabled=true
+v4.mouse UP BUTTON_LEFT 50,15 550,415 mods=0x0 popup=false synth=false
+w4.isEnabled=true
+w4.isEnabled=true
+w4.isEnabled=true
+== close w4
+v4.mouse EXIT BUTTON_NONE 0,0 0,0 mods=0x0 popup=false synth=false
+v4.view REMOVE
+v4.view MOVE
+w4.notifyDestroy
+w4.handler DESTROY
+== close w2
+v2.mouse EXIT BUTTON_NONE 0,0 0,0 mods=0x0 popup=false synth=false
+v2.view REMOVE
+v2.view MOVE
+w2.notifyDestroy
+w2.handler DESTROY

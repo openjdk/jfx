@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,8 +26,8 @@
 #ifndef _KEY_TABLE_
 #define _KEY_TABLE_
 
-jint WindowsKeyToJavaKey(UINT wKey);
-void JavaKeyToWindowsKey(jint jkey, UINT &vkey, UINT &modifiers);
+int32_t WindowsKeyToJavaKey(UINT wKey);
+void JavaKeyToWindowsKey(int32_t jkey, UINT &vkey, UINT &modifiers);
 BOOL IsExtendedKey(UINT vkey);
-jint OEMCharToJavaKey(UINT ch, bool deadKey);
+int32_t OEMCharToJavaKey(UINT ch, bool deadKey);
 #endif // _KEY_TABLE_

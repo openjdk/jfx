@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,12 +31,12 @@ class IDWriteFontFamily extends IDWriteFontList {
     }
 
     IDWriteLocalizedStrings GetFamilyNames() {
-        long result = OS.GetFamilyNames(ptr);
+        long result = DWNative.getFamilyNames(ptr);
         return result != 0 ? new IDWriteLocalizedStrings(result) : null;
     }
 
     IDWriteFont GetFirstMatchingFont(int weight, int stretch, int style) {
-        long result = OS.GetFirstMatchingFont(ptr, weight, stretch, style);
+        long result = DWNative.getFirstMatchingFont(ptr, weight, stretch, style);
         return result != 0 ? new IDWriteFont(result) : null;
     }
 }

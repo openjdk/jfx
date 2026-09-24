@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,7 +40,6 @@ class RendererFactory {
 
     private static String rootPkg = Renderer.rootPkg;
     private static boolean tryRSL = true;
-    private static boolean trySIMD = false;
     // by default we only enable jogl hw acceleration on MacOS
     private static boolean tryJOGL = PlatformUtil.isMac();
     private static boolean tryPrism = true;
@@ -49,9 +48,6 @@ class RendererFactory {
         try {
             if ("false".equals(System.getProperty("decora.rsl"))) {
                 tryRSL = false;
-            }
-            if ("false".equals(System.getProperty("decora.simd"))) {
-                trySIMD = false;
             }
             String tryJOGLProp = System.getProperty("decora.jogl");
             if (tryJOGLProp != null) {
@@ -124,22 +120,6 @@ class RendererFactory {
         return null;
     }
 
-    private static Renderer getSSERenderer() {
-        if (trySIMD) {
-            try {
-                Class klass = Class.forName(rootPkg + ".impl.j2d.J2DSWRenderer");
-                Method m = klass.getMethod("getSSEInstance", (Class[])null);
-                Renderer sseRenderer = (Renderer)m.invoke(null, (Object[])null);
-                if (sseRenderer != null) {
-                    return sseRenderer;
-                }
-            } catch (Throwable e) {e.printStackTrace();}
-            // don't bother trying to find SSE renderer again
-            trySIMD = false;
-        }
-        return null;
-    }
-
     private static Renderer getJavaRenderer() {
         try {
             Class klass = Class.forName(rootPkg + ".impl.prism.sw.PSWRenderer");
@@ -170,11 +150,7 @@ class RendererFactory {
     }
 
     static Renderer getSoftwareRenderer() {
-        Renderer r = getSSERenderer();
-        if (r == null) {
-            r = getJavaRenderer();
-        }
-        return r;
+        return getJavaRenderer();
     }
 
     static Renderer createRenderer(final FilterContext fctx) {
@@ -199,10 +175,6 @@ class RendererFactory {
         if (r == null && tryJOGL) {
             // next try the JOGL renderer
             r = createJOGLRenderer(fctx);
-        }
-        if (r == null && trySIMD) {
-            // next try the SSE renderer
-            r = getSSERenderer();
         }
         if (r == null) {
             // otherwise, fall back on the Java/CPU renderer

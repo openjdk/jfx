@@ -101,7 +101,9 @@ set(JFX_RC_COMMON_DEFINITIONS
 #     SOURCE_DIRS <dirs...>          # globbed non-recursively, like Gradle listFiles()
 #     EXTRA_SOURCES <files...>
 #     COMPILE_OPTIONS <opts...>
-#     NO_UNICODE                     # drop /DUNICODE /D_UNICODE (javafx_font)
+#     NO_UNICODE                     # drop /DUNICODE /D_UNICODE (no target uses it now)
+#     JNI                            # the JDK headers + HEADERS_DIR (javac -h) on the include path:
+#                                    # only the targets that still contain JNI code
 #     LINK_LIBS <libs...>
 #     LINK_OPTIONS <opts...>
 #     RC_SOURCE <file>               # defaults to version.rc
@@ -109,7 +111,7 @@ set(JFX_RC_COMMON_DEFINITIONS
 # )
 # ---------------------------------------------------------------------------
 function(add_jfx_library name)
-    cmake_parse_arguments(JFX "NO_UNICODE" "OUTPUT_NAME;RC_SOURCE"
+    cmake_parse_arguments(JFX "NO_UNICODE;JNI" "OUTPUT_NAME;RC_SOURCE"
         "SOURCE_DIRS;EXTRA_SOURCES;COMPILE_OPTIONS;LINK_LIBS;LINK_OPTIONS;RC_INCLUDE_DIRS" ${ARGN})
 
     set(sources)
@@ -149,10 +151,14 @@ function(add_jfx_library name)
     endif()
     target_compile_options(${name} PRIVATE ${JFX_COMPILE_OPTIONS})
 
-    target_include_directories(${name} PRIVATE
-        "${JDK_HOME}/include" "${JDK_HOME}/include/win32"
-        "${HEADERS_DIR}"
-        ${JFX_SOURCE_DIRS})
+    # JNI targets see jni.h / jni_md.h and the generated com_sun_*.h; the others compile with no
+    # JDK header at all, which is what proves them JNI-free.
+    if(JFX_JNI)
+        target_include_directories(${name} PRIVATE
+            "${JDK_HOME}/include" "${JDK_HOME}/include/win32"
+            "${HEADERS_DIR}")
+    endif()
+    target_include_directories(${name} PRIVATE ${JFX_SOURCE_DIRS})
 
     target_link_libraries(${name} PRIVATE ${JFX_LINK_LIBS})
     target_link_options(${name} PRIVATE
@@ -165,21 +171,15 @@ endfunction()
 # ---------------------------------------------------------------------------
 add_jfx_library(glass
     OUTPUT_NAME glass
+    JNI
     SOURCE_DIRS "${GRAPHICS_SRC}/native-glass/win"
     RC_SOURCE "${GRAPHICS_SRC}/native-glass/win/GlassResources.rc"
     RC_INCLUDE_DIRS "${GRAPHICS_SRC}/resources"
-    LINK_LIBS delayimp.lib gdi32.lib urlmon.lib Comdlg32.lib winmm.lib imm32.lib
-        shell32.lib Uiautomationcore.lib dwmapi.lib shlwapi.lib version.lib
-    LINK_OPTIONS /DELAYLOAD:user32.dll /DELAYLOAD:urlmon.dll /DELAYLOAD:winmm.dll
+    LINK_LIBS delayimp.lib gdi32.lib urlmon.lib Comdlg32.lib imm32.lib
+        shell32.lib Uiautomationcore.lib dwmapi.lib version.lib
+    LINK_OPTIONS /DELAYLOAD:user32.dll /DELAYLOAD:urlmon.dll
         /DELAYLOAD:shell32.dll /DELAYLOAD:Uiautomationcore.dll /DELAYLOAD:dwmapi.dll
-        /DELAYLOAD:shlwapi.dll /DELAYLOAD:version.dll)
-
-# ---------------------------------------------------------------------------
-# prism_common.dll
-# ---------------------------------------------------------------------------
-add_jfx_library(prism
-    OUTPUT_NAME prism_common
-    SOURCE_DIRS "${GRAPHICS_SRC}/native-prism")
+        /DELAYLOAD:version.dll)
 
 # ---------------------------------------------------------------------------
 # prism_sw.dll
@@ -255,30 +255,11 @@ if(INCLUDE_ES2)
 endif()
 
 # ---------------------------------------------------------------------------
-# javafx_font.dll (no /DUNICODE /D_UNICODE)
-# ---------------------------------------------------------------------------
-add_jfx_library(font
-    OUTPUT_NAME javafx_font
-    SOURCE_DIRS "${GRAPHICS_SRC}/native-font"
-    NO_UNICODE
-    COMPILE_OPTIONS /DJFXFONT_PLUS /D_WIN32_WINNT=0x0601
-    LINK_LIBS advapi32.lib gdi32.lib user32.lib dwrite.lib d2d1.lib
-        windowscodecs.lib ole32.lib)
-
-# ---------------------------------------------------------------------------
 # javafx_iio.dll
 # ---------------------------------------------------------------------------
 add_jfx_library(iio
     OUTPUT_NAME javafx_iio
     SOURCE_DIRS "${GRAPHICS_SRC}/native-iio" "${GRAPHICS_SRC}/native-iio/libjpeg")
-
-# ---------------------------------------------------------------------------
-# decora_sse.dll (generated JSL .cc files + native-decora)
-# ---------------------------------------------------------------------------
-add_jfx_library(decora
-    OUTPUT_NAME decora_sse
-    SOURCE_DIRS "${GENSRC_DIR}/jsl-decora" "${GRAPHICS_SRC}/native-decora"
-    COMPILE_OPTIONS /fp:fast)
 
 # ---------------------------------------------------------------------------
 # Pixel shader .obj resources bundled into javafx-graphics.jar

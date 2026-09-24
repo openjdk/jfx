@@ -85,8 +85,11 @@ jobs:
           # library itself is loaded with dlopen at runtime by plugins/av/videodecoder.c
           # and is deliberately never linked, so a system without it degrades instead
           # of failing to load.
+          # libxtst6 is a run-time requirement, not a build one: no native library links
+          # libXtst, but com.sun.glass.ui.gtk.GtkGlassNative opens libXtst.so.6, and
+          # GtkGlassNativeHeadlessTest initializes that class without a display.
           sudo apt-get -y install libgl1-mesa-dev libx11-dev libxxf86vm-dev libxt-dev \
-            pkg-config libgtk-3-dev libxtst-dev libfreetype-dev libpango1.0-dev libasound2-dev \
+            pkg-config libgtk-3-dev libxtst6 libfreetype-dev libpango1.0-dev libasound2-dev \
             libavcodec-dev libavformat-dev libswscale-dev
 
       - name: Provide a null ALSA device
@@ -184,8 +187,11 @@ jobs:
           # library itself is loaded with dlopen at runtime by plugins/av/videodecoder.c
           # and is deliberately never linked, so a system without it degrades instead
           # of failing to load.
+          # libxtst6 is a run-time requirement, not a build one: no native library links
+          # libXtst, but com.sun.glass.ui.gtk.GtkGlassNative opens libXtst.so.6, and
+          # GtkGlassNativeHeadlessTest initializes that class without a display.
           sudo apt-get -y install libgl1-mesa-dev libx11-dev libxxf86vm-dev libxt-dev \
-            pkg-config libgtk-3-dev libxtst-dev libfreetype-dev libpango1.0-dev libasound2-dev \
+            pkg-config libgtk-3-dev libxtst6 libfreetype-dev libpango1.0-dev libasound2-dev \
             libavcodec-dev libavformat-dev libswscale-dev
 
       - name: Provide a null ALSA device

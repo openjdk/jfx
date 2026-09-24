@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,10 +36,10 @@ class IDWriteFontFace extends IUnknown {
      * as opposite of taking in an array and returing an array.
      * - performance and simplicity based on JavaFX needs */
     DWRITE_GLYPH_METRICS GetDesignGlyphMetrics(short glyphIndex, boolean isSideways) {
-        return OS.GetDesignGlyphMetrics(ptr, glyphIndex, isSideways);
+        return DWNative.getDesignGlyphMetrics(ptr, glyphIndex, isSideways);
     }
 
     Path2D GetGlyphRunOutline(float emSize, short glyphIndex, boolean isSideways) {
-        return OS.GetGlyphRunOutline(ptr, emSize, glyphIndex, isSideways);
+        return DWNative.getGlyphRunOutline(ptr, emSize, glyphIndex, isSideways);
     }
 }

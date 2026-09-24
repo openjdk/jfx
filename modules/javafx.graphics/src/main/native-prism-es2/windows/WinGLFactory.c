@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,7 +23,6 @@
  * questions.
  */
 
-#include <jni.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <stdio.h>
@@ -31,24 +30,9 @@
 #include <math.h>
 
 #include "../PrismES2Defs.h"
-#include "com_sun_prism_es2_WinGLFactory.h"
+#include "../prism_es2_api.h"
 
-#ifdef STATIC_BUILD
-JNIEXPORT jint JNICALL JNI_OnLoad_prism_es2(JavaVM *vm, void * reserved) {
-#ifdef JNI_VERSION_1_8
-    //min. returned JNI_VERSION required by JDK8 for builtin libraries
-    JNIEnv *env;
-    if ((*vm)->GetEnv(vm, (void **)&env, JNI_VERSION_1_8) != JNI_OK) {
-        return JNI_VERSION_1_4;
-    }
-    return JNI_VERSION_1_8;
-#else
-    return JNI_VERSION_1_4;
-#endif // JNI_VERSION_1_8
-}
-#endif // STATIC_BUILD
-
-PIXELFORMATDESCRIPTOR getPFD(jint* attrArr) {
+PIXELFORMATDESCRIPTOR getPFD(const Es2PixelFormatAttrs *attrs) {
 
     static PIXELFORMATDESCRIPTOR pfd = {
         sizeof (PIXELFORMATDESCRIPTOR),
@@ -70,19 +54,19 @@ PIXELFORMATDESCRIPTOR getPFD(jint* attrArr) {
         0 /* no damage mask */
     };
 
-    if (attrArr[ONSCREEN] != 0) {
+    if (attrs->on_screen != 0) {
         pfd.dwFlags |= PFD_DRAW_TO_WINDOW;
     }
-    if (attrArr[DOUBLEBUFFER] != 0) {
+    if (attrs->double_buffer != 0) {
         pfd.dwFlags |= PFD_DOUBLEBUFFER;
     }
-    pfd.cDepthBits = (BYTE) attrArr[DEPTH_SIZE];
-    pfd.cColorBits = (BYTE) (attrArr[RED_SIZE] + attrArr[GREEN_SIZE]
-            + attrArr[BLUE_SIZE] + attrArr[ALPHA_SIZE]);
-    pfd.cRedBits = (BYTE) attrArr[RED_SIZE];
-    pfd.cGreenBits = (BYTE) attrArr[GREEN_SIZE];
-    pfd.cBlueBits = (BYTE) attrArr[BLUE_SIZE];
-    pfd.cAlphaBits = (BYTE) attrArr[ALPHA_SIZE];
+    pfd.cDepthBits = (BYTE) attrs->depth_size;
+    pfd.cColorBits = (BYTE) (attrs->red_size + attrs->green_size
+            + attrs->blue_size + attrs->alpha_size);
+    pfd.cRedBits = (BYTE) attrs->red_size;
+    pfd.cGreenBits = (BYTE) attrs->green_size;
+    pfd.cBlueBits = (BYTE) attrs->blue_size;
+    pfd.cAlphaBits = (BYTE) attrs->alpha_size;
 
     return pfd;
 }
@@ -164,208 +148,3 @@ void printAndReleaseResources(HWND hwnd, HGLRC hglrc, HDC hdc,
     }
 }
 
-/*
- * Class:     com_sun_prism_es2_WinGLFactory
- * Method:    nInitialize
- * Signature: ([I[J)J
- */
-JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_WinGLFactory_nInitialize
-(JNIEnv *env, jclass class, jintArray attrArr) {
-    static LPCTSTR szAppName = L"Choose Pixel Format";
-    HWND hwnd = NULL;
-    HGLRC hglrc = NULL;
-    HDC hdc = NULL;
-    int pixelFormat;
-    PIXELFORMATDESCRIPTOR pfd;
-    jint *attrs;
-
-    ContextInfo *ctxInfo = NULL;
-    const char *glVersion;
-    const char *glVendor;
-    const char *glRenderer;
-    char *tmpVersionStr;
-    int versionNumbers[2];
-    const char *glExtensions;
-    const char *wglExtensions;
-    PFNWGLGETEXTENSIONSSTRINGARBPROC wglGetExtensionsStringARB = NULL;
-
-    if (attrArr == NULL) {
-        return 0;
-    }
-    attrs = (*env)->GetIntArrayElements(env, attrArr, NULL);
-    pfd = getPFD(attrs);
-    (*env)->ReleaseIntArrayElements(env, attrArr, attrs, JNI_ABORT);
-
-    /*
-     * Select a specified pixel format and bound current context to
-     * it so that we can get the wglChoosePixelFormatARB entry point.
-     * Otherwise wglxxx entry point will always return null.
-     * That's why we need to create a dummy window also.
-     */
-    hwnd = createDummyWindow(szAppName);
-
-    if (!hwnd) {
-        return 0;
-    }
-
-    hdc = GetDC(hwnd);
-    if (hdc == NULL) {
-        printAndReleaseResources(hwnd, hglrc, hdc, szAppName,
-                "Failed in GetDC");
-        return 0;
-    }
-
-    pixelFormat = ChoosePixelFormat(hdc, &pfd);
-    if (pixelFormat < 1) {
-        printAndReleaseResources(hwnd, hglrc, hdc, szAppName,
-                "Failed in ChoosePixelFormat");
-        return 0;
-    }
-
-    if (!SetPixelFormat(hdc, pixelFormat, NULL)) {
-        printAndReleaseResources(hwnd, hglrc, hdc, szAppName,
-                "Failed in SetPixelFormat");
-        return 0;
-    }
-
-    hglrc = wglCreateContext(hdc);
-    if (hglrc == NULL) {
-        printAndReleaseResources(hwnd, hglrc, hdc, szAppName,
-                "Failed in wglCreateContext");
-        return 0;
-    }
-
-    if (!wglMakeCurrent(hdc, hglrc)) {
-        printAndReleaseResources(hwnd, hglrc, hdc, szAppName,
-                "Failed in wglMakeCurrent");
-        return 0;
-    }
-
-    /* Get the OpenGL version */
-    glVersion = (const char *) glGetString(GL_VERSION);
-    if (glVersion == NULL) {
-        printAndReleaseResources(hwnd, hglrc, hdc, szAppName,
-                "glVersion == null");
-        return 0;
-    }
-
-    /* find out the version, major and minor version number */
-    tmpVersionStr = _strdup(glVersion);
-    extractVersionInfo(tmpVersionStr, versionNumbers);
-    free(tmpVersionStr);
-
-    /*
-        fprintf(stderr, "GL_VERSION string = %s\n", glVersion);
-        fprintf(stderr, "GL_VERSION (major.minor) = %d.%d\n",
-                versionNumbers[0], versionNumbers[1]);
-     */
-
-    /*
-     * Targeted Cards: Intel HD Graphics, Intel HD Graphics 2000/3000,
-     * Radeon HD 2350, GeForce FX (with newer drivers), GeForce 7 series or higher
-     *
-     * Check for OpenGL 2.1 or later.
-     */
-    if ((versionNumbers[0] < 2) || ((versionNumbers[0] == 2) && (versionNumbers[1] < 1))) {
-        fprintf(stderr, "GL_VERSION (major.minor) = %d.%d",
-                versionNumbers[0], versionNumbers[1]);
-        printAndReleaseResources(hwnd, hglrc, hdc, szAppName, NULL);
-        return 0;
-    }
-
-    /* Get the OpenGL vendor and renderer */
-    glVendor = (const char *) glGetString(GL_VENDOR);
-    if (glVendor == NULL) {
-        glVendor = "<UNKNOWN>";
-    }
-    glRenderer = (const char *) glGetString(GL_RENDERER);
-    if (glRenderer == NULL) {
-        glRenderer = "<UNKNOWN>";
-    }
-
-    glExtensions = (const char *) glGetString(GL_EXTENSIONS);
-    if (glExtensions == NULL) {
-        printAndReleaseResources(hwnd, hglrc, hdc, szAppName,
-                "glExtensions == null");
-        return 0;
-    }
-
-    // We use GL_ARB_pixel_buffer_object as an guide to
-    // determine PS 3.0 capable.
-    if (!isExtensionSupported(glExtensions, "GL_ARB_pixel_buffer_object")) {
-        printAndReleaseResources(hwnd, hglrc, hdc, szAppName,
-                "GL profile isn't PS 3.0 capable");
-        return 0;
-    }
-
-    wglGetExtensionsStringARB = (PFNWGLGETEXTENSIONSSTRINGARBPROC)
-            wglGetProcAddress("wglGetExtensionsStringARB");
-    if (wglGetExtensionsStringARB == NULL) {
-        printAndReleaseResources(hwnd, hglrc, hdc, szAppName,
-                "wglGetExtensionsStringARB is not supported!");
-        return 0;
-    }
-    wglExtensions = (char *) wglGetExtensionsStringARB(hdc);
-    if (wglExtensions == NULL) {
-        printAndReleaseResources(hwnd, hglrc, hdc, szAppName,
-                "wglExtensions == null");
-        return 0;
-    }
-
-    /* Note: We are only storing the string information of a driver.
-     Assuming a system with a single or homogeneous GPUs. For the case
-     of heterogeneous GPUs system the string information will need to move to
-     GLContext class. */
-    /* allocate the structure */
-    ctxInfo = (ContextInfo *) malloc(sizeof (ContextInfo));
-    if (ctxInfo == NULL) {
-        fprintf(stderr, "nInitialize: Failed in malloc\n");
-        return 0;
-    }
-
-    /* initialize the structure */
-    initializeCtxInfo(ctxInfo);
-    ctxInfo->versionStr = _strdup(glVersion);
-    ctxInfo->vendorStr = _strdup(glVendor);
-    ctxInfo->rendererStr = _strdup(glRenderer);
-    ctxInfo->glExtensionStr = _strdup(glExtensions);
-    ctxInfo->wglExtensionStr = _strdup(wglExtensions);
-    ctxInfo->versionNumbers[0] = versionNumbers[0];
-    ctxInfo->versionNumbers[1] = versionNumbers[1];
-    ctxInfo->gl2 = JNI_TRUE;
-
-    printAndReleaseResources(hwnd, hglrc, hdc, szAppName, NULL);
-    return ptr_to_jlong(ctxInfo);
-}
-
-/*
- * Class:     com_sun_prism_es2_WinGLFactory
- * Method:    nGetAdapterOrdinal
- * Signature: (J)I
- */
-JNIEXPORT jint JNICALL Java_com_sun_prism_es2_WinGLFactory_nGetAdapterOrdinal
-(JNIEnv *env, jclass class, jlong hMonitor) {
-    //TODO: Needs implementation to handle multi-monitors (JDK-8091992)
-    return 0;
-}
-
-/*
- * Class:     com_sun_prism_es2_WinGLFactory
- * Method:    nGetAdapterCount
- * Signature: ()I
- */
-JNIEXPORT jint JNICALL Java_com_sun_prism_es2_WinGLFactory_nGetAdapterCount
-(JNIEnv *env, jclass class) {
-    //TODO: Needs implementation to handle multi-monitors (JDK-8091992)
-    return 1;
-}
-
-/*
- * Class:     com_sun_prism_es2_WinGLFactory
- * Method:    nGetIsGL2
- * Signature: (J)Z
- */
-JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_WinGLFactory_nGetIsGL2
-(JNIEnv *env, jclass class, jlong nativeCtxInfo) {
-    return ((ContextInfo *)jlong_to_ptr(nativeCtxInfo))->gl2;
-}
