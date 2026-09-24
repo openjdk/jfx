@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -57,10 +57,6 @@
 #define ENABLE_LOWLEVELPERF                 0
 #define ENABLE_INSTRUMENTS                  0
 #define ENABLE_PROGRESS_BUFFER              1
-
-#define ENABLE_BREAK_MY_DATA                0
-#define BREAK_MY_DATA_SKIP                  250000
-#define BREAK_MY_DATA_PROBABILITY           0.0001
 
 // Enable detection of memory leaks using Visual Studio
 // This option will only work in Debug mode
