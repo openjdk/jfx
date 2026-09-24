@@ -246,9 +246,8 @@ public class ContextMenu extends PopupControl {
      */
     public void show(Node anchor, Side side, double dx, double dy) {
         Toolkit.getToolkit().checkFxUserThread();
-        if (anchor == null) return;
+        if (anchor == null || anchor.getScene() == null) return;
         if (getItems().size() == 0) return;
-        if (anchor.getScene() == null) return;
 
         getScene().setNodeOrientation(anchor.getEffectiveNodeOrientation());
         if (getScene().getStylesheets().isEmpty()) {
