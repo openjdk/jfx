@@ -6,26 +6,26 @@ This directory contains the manual tests and a JavaFX application that can be us
 
 ## Build
 
-The tool uses `ant` to build a non-modular JAR.  You'll need to specify the path to JavaFX SDK
-using absolute path:
-```
-ant -Djavafx.home=<JAVAFX>
-```
-
-The build is wired into the main gradle build:
+To build the manual tests, run the main gradle build:
 
 ```console
-gradle manualApps
+gradle manualTests
 ```
 
 
 ## Run
 
-To launch, specify the path to the JavaFX SDK lib/ folder on the command line, example:
+To launch the test runner UI, specify the path to the JavaFX SDK lib/ folder on the command line, example:
 
 ```console
-cd tests/manual2
-java -p "../../build/sdk/lib" --enable-native-access=javafx.graphics --add-modules ALL-MODULE-PATH -jar dist/ManualTests.jar
+cd tests/manualTests
+java -p "../../build/sdk/lib" --enable-native-access=javafx.graphics --add-modules ALL-MODULE-PATH -jar build/libs/manualTests.jar
+```
+
+An individual test can be run using the following command:
+
+```console
+java -p "../../build/sdk/lib" --enable-native-access=javafx.graphics --add-modules ALL-MODULE-PATH -cp build/libs/manualTests.jar com.oracle.test.manual.text.EmojiTest
 ```
 
 
