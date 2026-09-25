@@ -28,7 +28,7 @@ import javafx.event.Event;
 import javafx.event.EventType;
 
 /**
- * This interface enables wider control in specifying conditional matching logic when adding skin/behavior handlers.
+ * This interface provides finer control over specifying conditional matching logic when adding skin/behavior handlers.
  *
  * @param <T> the type of the event
  * @since 28

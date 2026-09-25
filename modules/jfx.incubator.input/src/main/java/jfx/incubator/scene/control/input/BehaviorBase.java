@@ -34,7 +34,7 @@ import javafx.scene.input.KeyCode;
 import com.sun.javafx.PlatformUtil;
 
 /**
- * This class provides convenient base class for custom Controls with the stateful behaviors.
+ * This class provides a convenient base class for custom Controls with the stateful behaviors.
  * <p>
  * A concrete behavior implementation should do the following:
  * <ol>

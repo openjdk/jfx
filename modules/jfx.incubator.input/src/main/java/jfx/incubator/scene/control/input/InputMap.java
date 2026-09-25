@@ -394,7 +394,7 @@ public final class InputMap {
      * @since 28
      */
     // TODO
-    // to avoid potential mususe, it might be better to hide this method inside of
+    // to avoid potential misuse, it might be better to hide this method inside of
     // Control.setSkin(), though this will require introducing Skin.getSkinInputMap()
     public void setSkinInputMap(SkinInputMap m) {
         if (skinInputMap != null) {

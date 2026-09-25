@@ -41,12 +41,12 @@ import com.sun.jfx.incubator.scene.control.input.KeyEventMapper;
 import com.sun.jfx.incubator.scene.control.input.PHList;
 
 /**
- * The Input Map for use by the Skin.
+ * An Input Map for use by a Skin.
  * <p>
  * Skins whose behavior encapsulates state information must use a {@code Stateful} variant obtained with
  * the {@link #create()} factory method.
  * <p>
- * Skins whose behavior requires no state, or when the state is fully encapsulated by the Control itself,
+ * Skins whose behavior requires no state or whose state is fully encapsulated by the Control,
  * could use the {@code Stateless} variant obtained with the {@link #createStateless()} method.
  *
  * @since 28
@@ -55,7 +55,7 @@ public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInp
     /// ```
     /// KeyBinding -> FunctionTag
     /// FunctionTag -> Runnable or FunctionHandler
-    /// EventType -> PHList</pre>
+    /// EventType -> PHList
     /// ```
     final HashMap<Object, Object> map = new HashMap<>();
     final KeyEventMapper kmapper = new KeyEventMapper();
