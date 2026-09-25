@@ -11,7 +11,7 @@ Updating libxml in OpenJFX:
 4. Configure libxml.
         > cd modules/javafx.web/src/main/native/Source/ThirdParty/libxml/src
         > cmake -S . -B win32-build -DBUILD_SHARED_LIBS=OFF -DLIBXML2_WITH_CATALOG=OFF -DLIBXML2_WITH_DEBUG=OFF -DLIBXML2_WITH_HTTP=OFF -DLIBXML2_WITH_ICONV=OFF -DLIBXML2_WITH_ISO8859X=OFF -DLIBXML2_WITH_LEGACY=OFF -DLIBXML2_WITH_MODULES=OFF -DLIBXML2_WITH_REGEXPS=OFF -DLIBXML2_WITH_RELAXNG=OFF -DLIBXML2_WITH_SCHEMAS=OFF -DLIBXML2_WITH_SCHEMATRON=OFF -DLIBXML2_WITH_VALID=OFF -DLIBXML2_WITH_XINCLUDE=OFF -DLIBXML2_WITH_XPTR=OFF -DLIBXML2_WITH_ZLIB=OFF -DLIBXML2_WITH_PROGRAMS=OFF -DLIBXML2_WITH_TESTS=OFF -DLIBXML2_WITH_C14N=OFF
-        - Above command generates a header file `libxml\src\include\libxml\xmlversion.h` and may update the `src/config.h` file. (on all platforms)
+        - Above command generates a header file `libxml\src\win32-build\libxml\xmlversion.h` and may update the `src/config.h` file. (on all platforms)
 
 4.1 Copy `libxml\src\win32-build\libxml\xmlversion.h` to `libxml\win32\include\libxml\xmlversion.h'. xmlversion.h file defines several macros to control libxml features. We do not require all of the features to be enabled. Compare the generated `libxml\src\win32-build\libxml\xmlversion.h` with existing `libxml\win32\include\libxml\xmlversion.h' and retain macro definitions from the later.
 
