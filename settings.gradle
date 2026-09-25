@@ -39,9 +39,8 @@ include "base",
         "jsobject",
         "web",
         "media",
-        "systemTests"
-
-include 'manualApps'
+        "systemTests",
+        "manualTests"
 
 project(":base").projectDir = file("modules/javafx.base")
 project(":graphics").projectDir = file("modules/javafx.graphics")
@@ -59,7 +58,7 @@ project(":fxml").projectDir = file("modules/javafx.fxml")
 project(":jsobject").projectDir = file("modules/jdk.jsobject")
 project(":web").projectDir = file("modules/javafx.web")
 project(":media").projectDir = file("modules/javafx.media")
-project(":manualApps").projectDir = file("tests/manual2")
+project(":manualTests").projectDir = file("tests/manualTests")
 project(":systemTests").projectDir = file("tests/system")
 
 def closedDir = file("../rt-closed")

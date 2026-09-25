@@ -2053,7 +2053,7 @@ allprojects {
        return
     }
     // Lets handle ant builds differently, since the ant importer collides with the 'apply plugin:java'
-    if (project.path.startsWith(":apps") || project.path.startsWith(":manualApps")) {
+    if (project.path.startsWith(":apps")) {
         return
     }
 
@@ -4380,6 +4380,9 @@ void setupLintOptions(Task compile, String lintOpts, String extraLintOpts) {
 }
 
 allprojects {
+    if (project.path.startsWith(":manualTests")) {
+        return
+    }
     // The following block is a workaround for the fact that presently Gradle
     // can't set the -XDignore.symbol.file flag, because it appears that the
     // javac API is lacking support for it. So what we'll do is find any Compile
@@ -4809,14 +4812,9 @@ task apps() {
     dependsOn(copyAppsArtifacts)
 }
 
-task manualappsjar() {
-    dependsOn(sdk)
-    // Note: the jar dependencies get added elsewhere see project(":manualApps")
-}
 
-task manualApps {
-    dependsOn(sdk)
-    dependsOn(manualappsjar)
+task manualTests {
+    dependsOn(":manualTests:build")
 }
 
 task findbugs() {
@@ -4860,7 +4858,7 @@ task zips() {
 }
 
 task all() {
-    dependsOn(sdk, shims, publicExports, manualApps, apps, perf, zips)
+    dependsOn(sdk, shims, publicExports, manualTests, apps, perf, zips)
 }
 
 
@@ -4976,39 +4974,6 @@ project(":apps") {
             }
         }
         rootProject.clean.dependsOn(appsClean)
-    }
-}
-
-project(":manualApps") {
-    // This build is Ant based, we will exec ant from gradle.
-
-    compileTargets { t ->
-        List<String> params = []
-        params << "-DtargetBld=$t.name"
-        params << "-Dcompile.patch=@${rootProject.buildDir}/${COMPILEARGSFILE}"
-        params << "-Drun.patch=@${rootProject.buildDir}/${RUNARGSFILE}"
-
-        def manualAppsJar = project.task("manualAppsJar${t.capital}") {
-            dependsOn(sdk)
-
-            doLast() {
-                ant(t.name,
-                    projectDir.path,
-                    "build-all",
-                    params);
-            }
-        }
-        rootProject.manualappsjar.dependsOn(manualAppsJar)
-
-        def manualAppsClean = project.task("clean${t.capital}") {
-            doLast() {
-                ant(t.name,
-                    projectDir.path,
-                    "clean",
-                    params);
-            }
-        }
-        rootProject.clean.dependsOn(manualAppsClean)
     }
 }
 

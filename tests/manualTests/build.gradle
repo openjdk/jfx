@@ -1,0 +1,26 @@
+plugins {
+    id("application")
+}
+
+def jarsPath = rootProject.layout.buildDirectory.dir("sdk/lib").get()
+
+dependencies {
+    implementation files(
+            jarsPath.file("javafx.base.jar"),
+            jarsPath.file("javafx.graphics.jar"),
+            jarsPath.file("javafx.controls.jar"),
+            jarsPath.file("javafx.swing.jar")
+    ).builtBy(":sdk")
+}
+
+java {
+    toolchain.languageVersion.set(JavaLanguageVersion.of(25))
+}
+
+application {
+    mainClass = "com.oracle.test.manual.util.TestRunnerApp"
+    applicationDefaultJvmArgs = [
+        "--module-path", jarsPath.getAsFile().absolutePath,
+        "--add-modules", "javafx.controls,javafx.swing"
+    ]
+}
