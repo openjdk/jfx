@@ -99,7 +99,7 @@ public abstract class ManualTestWindow extends Application {
     /**
      * This method creates the {@code Node} containing elements under test,
      * to be shown below the instructions and above the "Pass"/"Fail" buttons.
-     * @return the node
+     * @return the node or null
      */
     protected abstract Node createContent();
 
@@ -173,7 +173,6 @@ public abstract class ManualTestWindow extends Application {
         stage.setOnHiding((ev) -> {
             exit(exitCode);
         });
-        Node content = createContent();
 
         BlurType blurType = BlurType.GAUSSIAN;
         Color color = Color.gray(0, 0.5);
@@ -183,8 +182,11 @@ public abstract class ManualTestWindow extends Application {
         double offsetY = 1;
         DropShadow shadow = new DropShadow(blurType, color, radius, spread, offsetX, offsetY);
 
+        Node content = createContent();
         BorderPane cp = new BorderPane(content);
-        cp.setMargin(content, new Insets(10));
+        if (content != null) {
+            cp.setMargin(content, new Insets(10));
+        }
         cp.setBackground(Background.fill(Color.gray(1)));
         cp.setEffect(shadow);
 

@@ -1,1 +1,2 @@
 com.oracle.test.manual.text.EmojiTest
+com.oracle.test.manual.stage.StartIconified
