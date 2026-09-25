@@ -51,6 +51,10 @@ import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
+/**
+ * Loads the test plan from {@code test-plan.txt} file and allows to run individual manual tests.
+ * Alternatively, the path to the test plan can be supplied as the first command line argument.
+ */
 public class TestRunnerApp extends Application {
 
     /** Default test plain in the project root directory */

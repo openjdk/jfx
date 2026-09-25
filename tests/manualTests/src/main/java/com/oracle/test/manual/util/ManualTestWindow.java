@@ -24,10 +24,18 @@
  */
 package com.oracle.test.manual.util;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Set;
 import java.util.function.Predicate;
+import javax.imageio.ImageIO;
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.embed.swing.SwingFXUtils;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -41,6 +49,8 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.TextArea;
 import javafx.scene.effect.BlurType;
 import javafx.scene.effect.DropShadow;
+import javafx.scene.image.Image;
+import javafx.scene.image.WritableImage;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.layout.Background;
@@ -52,10 +62,13 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
+import javafx.stage.Window;
 
 /**
  * Provides the base class for manual tests which displays the test instructions,
  * the UI under test, and the Pass/Fail buttons.
+ * <p>
+ * When the user presses the Fail button, a screenshot is saved in the screenshots/ directory.
  * <p>
  * Example:
  * <pre>{@code public class ManualTestExample extends ManualTestWindow {
@@ -101,8 +114,12 @@ public abstract class ManualTestWindow extends Application {
      * Construct the test window with the specified title and instructions.
      * @param title the title
      * @param instructions the instructions
+     * @throws IllegalArgumentException if title contains filesystem path delimiter symbols
      */
     public ManualTestWindow(String title, String instructions) {
+        if (title.contains("/") || title.contains("\\") || title.contains(":")) {
+            throw new IllegalArgumentException("title must not contain path delimiters");
+        }
         this.title = title;
         this.instructions = instructions;
     }
@@ -179,15 +196,14 @@ public abstract class ManualTestWindow extends Application {
         setIcon(failButton, "✘", Color.RED);
         failButton.setMinWidth(100);
         failButton.setOnAction((ev) -> {
-            exit(TestRunner.FAILED);
-            throw new AssertionError("Failed Manual Test: " + stage.getTitle());
+            failed();
         });
 
         Button passButton = new Button("Pass");
         setIcon(passButton, "✔", Color.GREEN);
         passButton.setMinWidth(100);
         passButton.setOnAction((ev) -> {
-            exit(TestRunner.PASSED);
+            passed();
         });
 
         HBox buttons = new HBox(
@@ -209,11 +225,24 @@ public abstract class ManualTestWindow extends Application {
         return vb;
     }
 
+    private void passed() {
+        exit(TestRunner.PASSED);
+    }
+
+    private void failed() {
+        screenshot();
+        exit(TestRunner.FAILED);
+    }
+
     private void exit(int code) {
         exitCode = code;
         Platform.exit();
         String s = TestRunnerApp.getExitCodeString(code);
-        IO.println(title + ": " + s);
+        if (code == TestRunner.FAILED) {
+            new AssertionError("Failed Manual Test: " + title).printStackTrace();
+        } else {
+            IO.println(s + " " + title);
+        }
         System.exit(code);
     }
 
@@ -270,5 +299,44 @@ public abstract class ManualTestWindow extends Application {
         Text t = new Text(text);
         t.setFill(c);
         b.setGraphic(t);
+    }
+
+    private void screenshot() {
+        String ts = DateTimeFormatter.ofPattern("_yyyy-mmdd-HHmmSS").format(LocalDateTime.now());
+        for (Window w : Window.getWindows()) {
+            if (w.isShowing()) {
+                Scene s = w.getScene();
+                if (s != null) {
+                    try {
+                        WritableImage im = s.snapshot(null);
+                        byte[] b = writePngImage(im);
+
+                        Path path = Path.of("./screenshots", title + "_" + ts + ".png");
+                        Files.createDirectories(path.getParent());
+                        Files.write(path, b);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
+    }
+
+    private static byte[] writePngImage(Image im) throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream(65536);
+        try {
+            // using disk cache slows things down
+            boolean old = ImageIO.getUseCache();
+            ImageIO.setUseCache(false);
+            try {
+                var bi = SwingFXUtils.fromFXImage(im, null);
+                ImageIO.write(bi, "PNG", out);
+            } finally {
+                ImageIO.setUseCache(old);
+            }
+        } finally {
+            out.close();
+        }
+        return out.toByteArray();
     }
 }

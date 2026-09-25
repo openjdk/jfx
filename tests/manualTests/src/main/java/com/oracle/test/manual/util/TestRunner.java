@@ -54,7 +54,7 @@ public class TestRunner {
     public static void execute(String className, Client client) {
         // locations
         File processDir = new File(".");
-        String classPath = "build/classes";
+        String classPath = "build/classes/java/main";
 
         String[] cmd = {
             javaExecutablePath,
@@ -65,7 +65,7 @@ public class TestRunner {
             "-Dstdout.encoding=UTF-8",
             "-Dstderr.encoding=UTF-8",
             "-p", "../../build/sdk/lib",
-            "--add-modules=javafx.base,javafx.graphics,javafx.controls,javafx.fxml",
+            "--add-modules=javafx.base,javafx.graphics,javafx.controls,javafx.fxml,javafx.swing",
             "-cp", classPath,
             className
         };
