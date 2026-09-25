@@ -57,6 +57,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import test.com.sun.javafx.test.ParityGate;
 import test.com.sun.scenario.effect.DecoraBackend.Result;
+import test.com.sun.scenario.effect.DecoraCorpus.Cause;
 import test.com.sun.scenario.effect.DecoraCorpus.GoldenRow;
 import test.com.sun.scenario.effect.DecoraCorpus.NativePlatform;
 import test.com.sun.scenario.effect.DecoraGoldens.Entry;
@@ -83,12 +84,12 @@ import static test.com.sun.scenario.effect.DecoraCorpus.pattern;
  * the result bounds and transform equal the golden's; the native frame is decoded (P), reconstructed from the
  * capture's Java frame (S, only while the Java frame still hashes to the capture's) or taken to be the Java frame
  * (H, only while it hashes to the native one) and has to hash to the recorded native SHA-256; every pixel further
- * from native than the row's Windows bound has to be explained by the row's cause, and no more pixels than at the
- * capture; the Java render may not drift further from native than at the capture; and a clipped render has to
- * reproduce its own unclipped render as well as the native peer did. An S or H row whose Java frame moved cannot be
- * judged against native any more: it is unjudgeable, classified as "JDK math changed" when the {@code Math}-derived
- * kernel inputs (the Gaussian weights or the displacement float map) hash differently from the capture, else as
- * "Java peer output moved".
+ * from native than the row's Windows bound has to be explained by the row's cause, unless that cause is fixed, and
+ * no more pixels than at the capture; the Java render may not drift further from native than at the capture; and a
+ * clipped render has to reproduce its own unclipped render as well as the native peer did. An S or H row whose Java
+ * frame moved cannot be judged against native any more: it is unjudgeable, classified as "JDK math changed" when the
+ * {@code Math}-derived kernel inputs (the Gaussian weights or the displacement float map) hash differently from the
+ * capture, else as "Java peer output moved".
  * <p>
  * How hard a moved Java frame fails depends on {@code os.arch}. On {@code amd64} and {@code x86_64} the Java output
  * was proven identical on Windows with JDK 26 and on Linux with JDK 25, so there drift and an unjudgeable row are
@@ -465,27 +466,75 @@ public class DecoraJavaGoldenTest {
     }
 
     /**
-     * The full-contrast cause explains only pixels whose source zeroes the max channel, and never more of them
-     * than at the capture.
+     * The full-contrast cause is fixed. At both sizes its predicate names exactly the pixels the capture explained,
+     * the Java peer now equals the native golden on every one of them, and the rows compare without explaining a
+     * pixel.
      */
-    @Test
-    void causePredicateIsNarrow() {
-        GoldenRow contrast = row("ColorAdjust/full-contrast (JSL 0/0) | hue=1 sat=1 bri=1 con=1 | 64x48");
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("fullContrastSizes")
+    void fixedCauseMatchesNativeOnItsPixels(String size) {
+        GoldenRow contrast = row("ColorAdjust/full-contrast (JSL 0/0) | hue=1 sat=1 bri=1 con=1 | " + size);
         Entry e = entry(contrast, Tier.P, 1);
         assertEquals("F1", e.cause());
+        assertTrue(contrast.cause().fixed(), "cause " + contrast.causeId() + " is not marked fixed");
         int[] javaFrame = DecoraGoldens.frame(contrast.render(DecoraBackend.java()));
         int[] nativeFrame = DecoraGoldens.decodeFull(DecoraGoldens.record(e, frames), e.width(), e.height());
+        List<Integer> named = causePixels(contrast);
+        assertEquals(e.explained(), named.size(), "pixels the cause names against pixels it explained at capture");
+        List<String> differing = new ArrayList<>();
+        for (int i : named) {
+            if (nativeFrame[i] != javaFrame[i]) {
+                differing.add(String.format(Locale.ROOT, "(%d,%d) golden=%08x java=%08x", i % e.width(),
+                        i / e.width(), nativeFrame[i], javaFrame[i]));
+            }
+        }
+        assertTrue(differing.isEmpty(), () -> "Java differs from the golden on the pixels of fixed cause F1: "
+                + differing);
         Judgement intact = comparePixels(contrast, e, nativeFrame, javaFrame, e.explained());
         assertTrue(intact.passed(), intact::describe);
-        assertEquals(e.explained(), intact.explained);
-        int i = firstEqualPixel(nativeFrame, javaFrame, contrast, true);
+        assertEquals(0, intact.explained);
+    }
+
+    static Stream<String> fullContrastSizes() {
+        return Stream.of("64x48", "257x129");
+    }
+
+    /**
+     * A golden pixel moved on a pixel the fixed full-contrast cause names is reported against the bound, as is one
+     * moved outside it. The same cause unfixed would have explained that pixel, and never more of them than at the
+     * capture.
+     */
+    @Test
+    void fixedCauseExplainsNoPixel() {
+        GoldenRow contrast = row("ColorAdjust/full-contrast (JSL 0/0) | hue=1 sat=1 bri=1 con=1 | 64x48");
+        Entry e = entry(contrast, Tier.P, 1);
+        int[] javaFrame = DecoraGoldens.frame(contrast.render(DecoraBackend.java()));
+        int[] nativeFrame = DecoraGoldens.decodeFull(DecoraGoldens.record(e, frames), e.width(), e.height());
+        int named = causePixels(contrast).get(0);
         int[] corrupted = nativeFrame.clone();
-        corrupted[i] = changeBlue(corrupted[i], 2);
+        corrupted[named] = changeBlue(corrupted[named], 2);
+        Judgement fixed = comparePixels(contrast, e, corrupted, javaFrame, e.explained());
+        assertTrue(fixed.has(Kind.BOUND_EXCEEDED), fixed::describe);
+        assertTrue(fixed.message(Kind.BOUND_EXCEEDED).contains(at(named, e)), fixed::describe);
+        assertEquals(0, fixed.explained);
+
+        int outside = firstEqualPixel(nativeFrame, javaFrame, contrast, true);
+        corrupted = nativeFrame.clone();
+        corrupted[outside] = changeBlue(corrupted[outside], 2);
         Judgement unexplained = comparePixels(contrast, e, corrupted, javaFrame, e.explained());
-        String at = "(" + (i % e.width()) + "," + (i / e.width()) + ")";
         assertTrue(unexplained.has(Kind.BOUND_EXCEEDED), unexplained::describe);
-        assertTrue(unexplained.message(Kind.BOUND_EXCEEDED).contains(at), unexplained::describe);
-        Judgement tooMany = comparePixels(contrast, e, nativeFrame, javaFrame, e.explained() - 1);
+        assertTrue(unexplained.message(Kind.BOUND_EXCEEDED).contains(at(outside, e)), unexplained::describe);
+
+        Cause cause = contrast.cause();
+        GoldenRow unfixed = new GoldenRow(contrast.effect(), contrast.params(), contrast.width(), contrast.height(),
+                contrast.bound(), new Cause(cause.id(), cause.appliesToSourcePixel(), false), contrast.run(),
+                contrast.unclipped(), contrast.edgeRows());
+        corrupted = nativeFrame.clone();
+        corrupted[named] = changeBlue(corrupted[named], 2);
+        Judgement explained = comparePixels(unfixed, e, corrupted, javaFrame, e.explained());
+        assertTrue(explained.passed(), explained::describe);
+        assertEquals(1, explained.explained);
+        Judgement tooMany = comparePixels(unfixed, e, corrupted, javaFrame, e.explained() - 1);
         assertTrue(tooMany.has(Kind.EXPLAINED_EXCEEDS_CAPTURE), tooMany::describe);
         assertTrue(tooMany.message(Kind.EXPLAINED_EXCEEDS_CAPTURE).contains("explained count exceeds capture"),
                 tooMany::describe);
@@ -623,8 +672,8 @@ public class DecoraJavaGoldenTest {
 
     /**
      * The bound over every pixel (a pixel further from native than the golden bound has to be explained by the row's
-     * cause, and at most {@code explainedLimit} differing pixels may be explained) and the drift (neither the largest
-     * delta nor the number of differing pixels may exceed the capture's).
+     * cause unless it is fixed, and at most {@code explainedLimit} differing pixels may be explained) and the drift
+     * (neither the largest delta nor the number of differing pixels may exceed the capture's).
      */
     static void comparePixels(GoldenRow row, Entry e, int[] nativeFrame, int[] javaFrame, long explainedLimit,
                               boolean driftIsFailure, Judgement j) {
@@ -647,7 +696,7 @@ public class DecoraJavaGoldenTest {
             int delta = channelDelta(nativeFrame[i], javaFrame[i]);
             differing++;
             maxDelta = Math.max(maxDelta, delta);
-            if (row.cause() != null && row.cause().explainsSourcePixel().test(source[i])) {
+            if (row.cause() != null && row.cause().explainsSourcePixel(source[i])) {
                 explained++;
             } else if (delta > e.bound()) {
                 unexplained++;
@@ -665,7 +714,8 @@ public class DecoraJavaGoldenTest {
         if (unexplained > 0) {
             j.fail(Kind.BOUND_EXCEEDED, "bound exceeded at " + String.join(", ", listed)
                     + (unexplained > listed.size() ? ", ..." : "") + " (" + unexplained + " pixels above bound "
-                    + e.bound() + " not explained by cause " + e.cause() + ")");
+                    + e.bound() + " not explained by cause " + e.cause()
+                    + (row.cause() != null && row.cause().fixed() ? " (fixed)" : "") + ")");
         }
         if (explained > explainedLimit) {
             j.fail(Kind.EXPLAINED_EXCEEDS_CAPTURE, "explained count exceeds capture: " + explained + " pixels"
@@ -758,16 +808,32 @@ public class DecoraJavaGoldenTest {
         return e;
     }
 
-    /** The first pixel where both frames agree; with {@code unexplained}, one whose source the cause cannot explain. */
-    private static int firstEqualPixel(int[] nativeFrame, int[] javaFrame, GoldenRow row, boolean unexplained) {
+    /** The first pixel where both frames agree; with {@code outsideCause}, one whose source the cause does not name. */
+    private static int firstEqualPixel(int[] nativeFrame, int[] javaFrame, GoldenRow row, boolean outsideCause) {
         int[] source = pattern(row.width(), row.height(), PRIMARY_SEED);
         for (int i = 0; i < nativeFrame.length; i++) {
             if (nativeFrame[i] == javaFrame[i]
-                    && (!unexplained || !row.cause().explainsSourcePixel().test(source[i]))) {
+                    && (!outsideCause || !row.cause().appliesToSourcePixel().test(source[i]))) {
                 return i;
             }
         }
         throw new AssertionError("no pixel where Java equals the golden in " + row.key());
+    }
+
+    /** The indices of the pixels whose primary source the row's cause names, in ascending order. */
+    private static List<Integer> causePixels(GoldenRow row) {
+        int[] source = pattern(row.width(), row.height(), PRIMARY_SEED);
+        List<Integer> named = new ArrayList<>();
+        for (int i = 0; i < source.length; i++) {
+            if (row.cause().appliesToSourcePixel().test(source[i])) {
+                named.add(i);
+            }
+        }
+        return named;
+    }
+
+    private static String at(int index, Entry e) {
+        return "(" + (index % e.width()) + "," + (index / e.width()) + ")";
     }
 
     /** The pixel with its blue channel moved by {@code steps}, up unless that leaves the 8-bit range. */

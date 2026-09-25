@@ -61,10 +61,11 @@ import static org.junit.jupiter.api.Assertions.fail;
  * (10.817%; Windows 10.820%), {@code InvertMask} (7.004%), {@code DisplacementMap} (5.566%; Windows 0.006%),
  * {@code PerspectiveTransform} (5.000%; Windows 1.595%) and {@code PhongLighting} {@code POINT} (2.539%; Windows
  * 1.009%); and up to 95 (64x48) and 114 (257x129) for full contrast, on the pixels whose largest channel it zeroes
- * (finding 1; Windows 144 and 232). The {@code linux} bounds in {@link DecoraCorpus.Bound} are the ones that
- * measurement was checked against, not tightened to what it found, so some are looser than measured, such as 3 for the
- * clipped Gaussian shadows, which were exact. The library is gone and the golden holds no Linux or macOS frames, so
- * what Linux and macOS rendered before the deletion can no longer be re-proved; macOS was never measured.
+ * (finding 1; Windows 144 and 232), measured before the {@code ColorAdjust.jsl} fix that sends those pixels to the
+ * grey branch. The {@code linux} bounds in {@link DecoraCorpus.Bound} are the ones that measurement was checked
+ * against, not tightened to what it found, so some are looser than measured, such as 3 for the clipped Gaussian
+ * shadows, which were exact. The library is gone and the golden holds no Linux or macOS frames, so what Linux and
+ * macOS rendered before the deletion can no longer be re-proved; macOS was never measured.
  * <p>
  * The golden is two resources next to this class. {@value #INDEX_RESOURCE} is ASCII with LF line ends: {@code #}
  * header lines (format, provenance, input hashes, the md5 and size of the frames file, row and tier counts, and last

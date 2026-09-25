@@ -100,14 +100,22 @@ final class DecoraCorpus {
     /** The separator between the parts of a golden row key; no effect name or parameter text contains it. */
     static final String KEY_SEPARATOR = " | ";
 
-    /** Finding 1: full positive contrast drives the largest channel to 0 and {@code rgb_to_hsb} divides by it. */
-    static final Cause FULL_CONTRAST_DIVISION_BY_ZERO = new Cause("F1", DecoraCorpus::fullContrastZeroesTheMaxChannel);
+    /**
+     * Finding 1, fixed: full positive contrast drives the largest channel to exactly 0 and {@code rgb_to_hsb} in
+     * {@code ColorAdjust.jsl} divided by it, so the Java peer rendered two channels of those pixels black where the
+     * native library, which the golden recorded, rendered them white. {@code rgb_to_hsb} now takes its grey branch
+     * when {@code cmax} is 0, the Java peer renders those pixels white, equal to the golden, and the cause explains
+     * none of them.
+     */
+    static final Cause FULL_CONTRAST_DIVISION_BY_ZERO =
+            new Cause("F1", DecoraCorpus::fullContrastZeroesTheMaxChannel, true);
 
     /**
-     * The golden rows a planned change to the JSL shaders is expected to move: the {@code ColorAdjust} rows with
-     * full contrast, whose differences finding 1 explains, and the {@code ColorAdjust} row whose Java render holds
-     * NaN pixels from the same division. The golden stores their complete native frames at every size, so they stay
-     * judgeable after the Java output of such a change moves.
+     * The golden rows the fix of finding 1 in {@code ColorAdjust.jsl} was expected to move: the {@code ColorAdjust}
+     * rows with full contrast, whose Java frames it moved onto the native ones on the pixels finding 1 names, and
+     * the {@code ColorAdjust} row suspected of NaN pixels from the same division, whose Java frame it left as it
+     * was at the capture. The golden stores their complete native frames at every size, so they stay judgeable
+     * after their Java output moves.
      */
     static final Set<String> FULL_FRAME_ROWS = Set.of(
             key("ColorAdjust/full-contrast (JSL 0/0)", "hue=1 sat=1 bri=1 con=1", 64, 48),
@@ -210,9 +218,16 @@ final class DecoraCorpus {
     /**
      * A diagnosed reason why the Java peers may differ from the native ones beyond a row's bound. {@code id} is what
      * the golden records; the predicate is asked about the primary source pixel at the position of a differing
-     * result pixel, so a cause applies only to rows whose result has the bounds of their source.
+     * result pixel, so a cause applies only to rows whose result has the bounds of their source. A {@code fixed}
+     * cause was corrected in the peers: its predicate still names the pixels it was about, but it explains none of
+     * them, so on its rows those pixels are held to the row's bound like every other pixel.
      */
-    record Cause(String id, IntPredicate explainsSourcePixel) {
+    record Cause(String id, IntPredicate appliesToSourcePixel, boolean fixed) {
+
+        /** Whether a differing result pixel over {@code sourceArgb} is explained: never, once the cause is fixed. */
+        boolean explainsSourcePixel(int sourceArgb) {
+            return !fixed && appliesToSourcePixel.test(sourceArgb);
+        }
     }
 
     /**
@@ -507,7 +522,8 @@ final class DecoraCorpus {
     /**
      * The Java peer's arithmetic for {@code contrast = 1} ({@code c * 3 + 1 = 4}) up to {@code rgb_to_hsb}:
      * does the largest un-premultiplied, contrast-adjusted channel land on exactly {@code 0.0} while the
-     * channels are not all equal, so that {@code s = (cmax - cmin) / cmax} divides by zero?
+     * channels are not all equal, so that {@code s = (cmax - cmin) / cmax} would divide by zero? These are the
+     * pixels {@code rgb_to_hsb} now sends to its grey branch.
      */
     static boolean fullContrastZeroesTheMaxChannel(int argb) {
         float a = (argb >>> 24) / 255f;

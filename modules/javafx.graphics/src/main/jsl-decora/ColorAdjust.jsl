@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -57,8 +57,9 @@ float3 rgb_to_hsb(float3 v)
     float cmin = min(v.r, v.g);
     cmin = min(cmin, v.b);
 
-    // hue/saturation
-    if (cmax > cmin) {
+    // hue/saturation; a positive contrast can leave cmax at exactly 0.0 with
+    // cmin below it; take the grey branch then instead of dividing by cmax
+    if (cmax > cmin && cmax != 0.0) {
         float3 c = (cmax - v) / (cmax - cmin);
         if (v.r == cmax) {
             h = c.b - c.g;
