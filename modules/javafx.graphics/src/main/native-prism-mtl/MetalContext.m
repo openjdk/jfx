@@ -41,6 +41,12 @@
 #import "com_sun_prism_mtl_MTLContext.h"
 #import "com_sun_prism_mtl_MTLPipeline.h"
 
+#ifdef STATIC_BUILD
+JNIEXPORT jint JNICALL JNI_OnLoad_prism_mtl(JavaVM *vm, void *reserved) {
+    return JNI_VERSION_1_8;
+}
+#endif // STATIC_BUILD
+
 @implementation MetalContext
 
 - (id) createContext:(dispatch_data_t)shaderLibData
