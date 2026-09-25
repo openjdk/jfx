@@ -2052,8 +2052,8 @@ allprojects {
     if (project == rootProject) {
        return
     }
-    // Lets handle ant builds differently, since the ant importer collides with the 'apply plugin:java'
-    if (project.path.startsWith(":apps")) {
+    // Opt out project that are built externally since this configuration collides with 'apply plugin:java'
+    if (project.path.startsWith(":apps") || project.path.startsWith(":manualTests")) {
         return
     }
 
