@@ -55,10 +55,10 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * scaffolding in the way.
  * <p>
  * The recording table fills the seven core slots and nothing else, which is why the placeholder
- * cases below use {@code chrome.reserved}: seven of the sixteen groups are still
+ * cases below use {@code chrome.reserved}: seven of the fifteen groups are still
  * {@code struct &#123; void (*reserved)(void); &#125;} in C, so a slot inside one of them is the
- * one thing that is guaranteed to stay NULL. The nine groups that carry real slots are driven,
- * through the production table, by {@link WebKitUpcallGroupTest}.
+ * one thing that is guaranteed to stay NULL. The other eight groups carry real slots; the seven
+ * besides {@code core} are driven, through the production table, by {@link WebKitUpcallGroupTest}.
  */
 @Tag("ffm")
 public class WebKitHostTableTest {

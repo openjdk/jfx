@@ -299,9 +299,8 @@ MediaPlayerPrivate::MediaPlayerPrivate(MediaPlayer &player)
 MediaPlayerPrivate::~MediaPlayerPrivate()
 {
     /*
-     * WC_GETJAVAENV_CHKRET gated this dispose upcall once the JVM began tearing down; the
-     * host table stays installed, so the explicit gate is the substitution. See THE
-     * SHUTDOWN GATE in wtf/java/WKJRuntime.h.
+     * WC_GETJAVAENV_CHKRET skipped this dispose upcall on a thread with no JNIEnv; the port
+     * gates it on the shutdown flag instead. See THE SHUTDOWN GATE in wtf/java/WKJRuntime.h.
      */
     WKJ_RETURN_IF_SHUTTING_DOWN();
 
@@ -445,10 +444,14 @@ MediaTime MediaPlayerPrivate::currentTime() const
         return m_seekTime;
     }
 
-    // In case of an "Unsupported protocol Data" error in JavaMediaPlayer the native
-    // MediaElement is collected by JavaScriptCore, so currentTime can be reached from the GC
-    // thread. The JNI version returned zero when there was no environment there; the host
-    // table test is the equivalent, and it also covers a NULL slot.
+    // The JNI version returned zero here when GetJavaEnv answered null, that is on a thread
+    // not attached to the JVM. That test arrived with the WebKit 617.1 update (commit
+    // ba79e08154), whose HTMLMediaElement::virtualHasPendingActivity reached
+    // currentMediaTime() from GC marker threads through hasLiveSource() and ended(). This
+    // WebKit only reads members there, and every caller is on the main thread (see
+    // WKJHostMedia). The table test below does not reproduce the thread test: it covers
+    // wkj_init not having run and a NULL slot, and a caller on another thread would now make
+    // the upcall.
     const WKJHostMedia* cb = wkjMedia();
     if (!cb || !cb->get_current_time || !m_jPlayer)
         return MediaTime::zeroTime();

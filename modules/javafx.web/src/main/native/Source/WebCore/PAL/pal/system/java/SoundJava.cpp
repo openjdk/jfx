@@ -40,8 +40,9 @@ void systemBeep()
      * WTF::GetJavaEnv() gave back null - i.e. when the calling thread was not attached to the
      * JVM. An FFM upcall stub attaches on its own, so that early return has no counterpart
      * and the call would now go through where it used to be dropped. The shutdown test below
-     * is the part of that gate worth keeping: it is what stopped the library calling into a
-     * Java side that is tearing down. See THE SHUTDOWN GATE in wtf/java/WKJRuntime.h.
+     * is not part of that gate, which never looked at the shutdown flag; the port gates every
+     * former WC_GETJAVAENV_CHKRET site on the flag instead. See THE SHUTDOWN GATE in
+     * wtf/java/WKJRuntime.h.
      */
     WKJ_RETURN_IF_SHUTTING_DOWN();
 
@@ -51,10 +52,9 @@ void systemBeep()
 
     /*
      * This used to be FindClass("java/awt/Toolkit"), getDefaultToolkit(), beep() - three JNI
-     * calls to reach one method on a class from java.desktop, a module javafx.web does not
-     * require. When the class was absent FindClass returned null, the ASSERT was compiled out
-     * of a release build and the two calls that followed did nothing. The slot keeps that
-     * shape: whether the Java side can beep at all is now a question the Java side answers.
+     * calls to reach one method on a class from java.desktop, which javafx.web requires, so
+     * the lookup succeeded and the JNI build beeped. The Java side now makes the same call
+     * from the slot, and the check below clears a failure as CheckAndClearException did.
      */
     cb->system_beep();
     WTF::wkjCheckAndClearException();

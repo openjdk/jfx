@@ -61,6 +61,9 @@
  *        WKJ_STR_OVERFLOW nothing was written; *result_length is the capacity required,
  *                         so the facade grows once and calls again
  *
+ *    Calling again runs the whole function again, which is only safe when it has no side
+ *    effect; the DOM rows that break this are listed in contract 13.
+ *
  *    The earlier "per-thread arena valid until the next wkj_* call" rule was withdrawn:
  *    it was a global invariant over a reentrant call graph (a Java upcall can make further
  *    downcalls while an outer C frame still holds a returned pointer), and the exception
@@ -244,36 +247,47 @@ WKJ_EXPORT WKJExceptionSlot* wkj_exception_slot(void);
  *   **Every id obtained from retain or retain_weak is released exactly once, by whoever
  *   obtained it. An id that came from somewhere else is not released.**
  *
- * That leaves the registry free to implement retain either way, and both work:
+ * What the Java registry (WebKitNative, a WKJLongMap of reference-counted entries) does
+ * on top of that rule is a hybrid, and a C++ author needs to know it:
  *
- *   - fresh id per call (the JNI model: NewGlobalRef returned a new reference and
- *     DeleteGlobalRef deleted that one), or
- *   - interning by object identity with a reference count, so that retain returns the same
- *     id and release decrements.
+ *   - It does not intern by object identity. Registering an object on the Java side mints
+ *     a fresh id at count 1 every time, so one object can have several ids.
+ *   - retain on a strong id returns the SAME id with its count raised by one.
+ *   - retain on a weak id mints a new strong id for the object, or returns 0 once the
+ *     object has been collected.
+ *   - retain_weak on a strong or a weak id mints a new weak id for the object. It returns
+ *     0, and mints nothing, for 0, for an unknown id and for an id whose object has been
+ *     collected.
+ *   - release drops one count and removes the entry when the count reaches zero. Ids are
+ *     never reused.
  *
- * Interning is the friendlier model and is what the Java side is expected to do, because it
- * makes id equality mean object equality. But it is a promise the Java registry makes, not
- * one this header can enforce, so the library never assumes it:
+ * Two consequences follow:
  *
- *   - The library does not treat two ids as naming different objects, nor two ids as naming
- *     the same one. Where it must know, it calls equals or hash_code.
- *   - The library does not assume it holds the only id for an object.
- *   - Interning without a reference count is a bug: one owner releasing would invalidate an
- *     id another owner still holds.
+ *   - A copied WKJHandle that holds a strong id shares its owner's id. Under JNI a copy
+ *     was an independent NewGlobalRef that only its own DeleteGlobalRef could drop; here a
+ *     stray extra release does not fail, it consumes a reference another holder still
+ *     counts on, and the id dies early under a holder that did nothing wrong. Every
+ *     release must pair with the retain or adoption that produced it. Copying a handle
+ *     that holds a weak id calls retain, so the copy gets a new strong id, or 0 once the
+ *     object has been collected.
+ *   - Equal ids name the same object, but the same object can have unequal ids. So the
+ *     library must not treat two ids as naming different objects; where it must know, it
+ *     calls equals or hash_code.
  *
- * For what it is worth, the question is currently unobservable in C++: a sweep of all 101
- * files that name a JLObject/JGObject-family type found comparisons of a handle with a
- * *handle* in none of them - every use of the comparison operators is a null test through
- * operator!. Nothing in the tree today can tell the two models apart.
+ * Before the port, a sweep of all 101 files that named a JLObject/JGObject-family type found
+ * no comparison of one handle with another: every use of the comparison operators was a
+ * null test through operator!, so no call site depended on id equality.
  *
  * Every slot may be NULL; the library checks before calling and falls back to the default
  * documented on the slot.
  */
 typedef struct WKJHostCore {
     /*
-     * Mints a new strong id for the object `ref` names, or 0 for 0 and for an id whose
-     * object is gone. A strong id keeps the object reachable. Replaces NewGlobalRef and
-     * NewLocalRef, which become one operation once native code holds ids.
+     * Adds a strong reference to the object `ref` names and returns the id the caller now
+     * owns: `ref` itself with its count raised when `ref` is strong, a new strong id when
+     * `ref` is weak. Returns 0 for 0, for an unknown id and for an id whose object is gone.
+     * A strong id keeps the object reachable. Replaces NewGlobalRef and NewLocalRef, which
+     * become one operation once native code holds ids.
      * Default when NULL: return 0.
      */
     wkj_ref (*retain)(wkj_ref ref);
@@ -292,9 +306,11 @@ typedef struct WKJHostCore {
     wkj_ref (*retain_weak)(wkj_ref ref);
 
     /*
-     * Drops the id `ref`, strong or weak; other ids for the same object are unaffected.
-     * release(0) is a no-op. Replaces DeleteGlobalRef, DeleteWeakGlobalRef and
-     * DeleteLocalRef. Default when NULL: no-op.
+     * Drops one reference to the id `ref`, strong or weak, and removes the id when its
+     * count reaches zero. Other ids for the same object are unaffected, but every holder
+     * of this same id shares its count (see OWNERSHIP above). release(0) is a no-op.
+     * Replaces DeleteGlobalRef, DeleteWeakGlobalRef and DeleteLocalRef.
+     * Default when NULL: no-op.
      */
     void (*release)(wkj_ref ref);
 
@@ -325,6 +341,10 @@ typedef struct WKJHostCore {
      * dozen of which branch on the result while the rest only clear. Java has already
      * caught and logged the Throwable, because contract 4 forbids letting one escape an
      * upcall, so this is the ExceptionDescribe/ExceptionClear pair minus the describing.
+     * Only the WKJHost groups and the DOM event listeners record a failure here. The
+     * WebKitLegacy client tables and the DumpRenderTree table clear the state instead, and
+     * the LiveConnect table leaves it as it was, because none of their callers asks
+     * (contract 4).
      * Unrelated to WKJExceptionSlot, which carries exceptions in the other direction.
      * Returns 1 if an upcall failed, 0 otherwise. Default when NULL: 0.
      */

@@ -463,6 +463,44 @@ public final class WkjStubShim {
     }
 
     /**
+     * Returns how many times {@code wkj_live_connect_init} has been called. The stub keeps this, and
+     * the arguments of the last call, outside the call ring, because {@code LiveConnectNative}
+     * makes the call from its class initializer, whichever test happens to touch it first.
+     *
+     * @return the call count
+     */
+    public static int liveConnectInitCalls() {
+        return callInt("wkjstub_live_connect_init_calls");
+    }
+
+    /**
+     * Returns the table pointer the last {@code wkj_live_connect_init} call passed.
+     *
+     * @return the address, zero if the call passed {@code NULL} or was never made
+     */
+    public static long liveConnectInitHost() {
+        return callLong("wkjstub_live_connect_init_host");
+    }
+
+    /**
+     * Returns the {@code host_size} argument of the last {@code wkj_live_connect_init} call.
+     *
+     * @return the size in bytes
+     */
+    public static int liveConnectInitHostSize() {
+        return callInt("wkjstub_live_connect_init_host_size");
+    }
+
+    /**
+     * Returns the {@code abi_version} argument of the last {@code wkj_live_connect_init} call.
+     *
+     * @return the version
+     */
+    public static int liveConnectInitAbiVersion() {
+        return callInt("wkjstub_live_connect_init_abi_version");
+    }
+
+    /**
      * Returns the number of callback slots the C header declares.
      *
      * @return the slot count
@@ -559,6 +597,61 @@ public final class WkjStubShim {
      */
     public static long lastFireResult() {
         return LAST_FIRE.get()[0];
+    }
+
+    // --------------------------------------------------------- callback tables
+
+    /**
+     * Returns the number of function pointer slots the C headers declare over every callback table:
+     * {@code WKJHost}, flattened as {@link #hostSlotName} flattens it, and each table installed on
+     * its own, such as {@code WKJPopupCallbacks} or {@code WKJLiveConnectHost}.
+     *
+     * @return the slot count
+     */
+    public static int callbackSlotCount() {
+        return callInt("wkjstub_callback_slot_count");
+    }
+
+    /**
+     * Returns the C struct a callback slot belongs to.
+     *
+     * @param index the slot index
+     * @return the struct name, for example {@code WKJChromeCallbacks}
+     */
+    public static String callbackSlotTable(int index) {
+        return outString("wkjstub_callback_slot_table_name", index);
+    }
+
+    /**
+     * Returns the member a callback slot is, a dotted path for a slot inside a nested group.
+     *
+     * @param index the slot index
+     * @return the member name
+     */
+    public static String callbackSlotName(int index) {
+        return outString("wkjstub_callback_slot_name", index);
+    }
+
+    /**
+     * Returns the byte offset of a callback slot from the start of its table, as the C compiler
+     * computed it.
+     *
+     * @param index the slot index
+     * @return the offset
+     */
+    public static long callbackSlotOffset(int index) {
+        return callLongInt("wkjstub_callback_slot_offset", index);
+    }
+
+    /**
+     * Returns the signature of a callback slot's C prototype: the return kind followed by one kind
+     * per parameter.
+     *
+     * @param index the slot index
+     * @return the signature string
+     */
+    public static String callbackSlotSignature(int index) {
+        return outString("wkjstub_callback_slot_signature", index);
     }
 
     // --------------------------------------------------------- ABI description

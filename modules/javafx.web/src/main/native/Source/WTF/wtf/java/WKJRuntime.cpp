@@ -74,9 +74,12 @@ namespace {
 
 /*
  * Java owns the original table for the life of the process. Native callers use a copy whose
- * four handle callbacks pass through the shutdown gate below. This keeps wkj_host immutable
- * after publication while restoring the JNI rule that reference operations stop once Java is
- * tearing down.
+ * four handle callbacks (retain, retain_weak, release and is_live) pass through the shutdown
+ * gate below, which also keeps wkj_host immutable after publication. Once the flag is set the
+ * gate stops them on every thread. That is stricter than JNI: the JavaRef.h guards these
+ * replace asked only jvm->GetEnv, so an attached thread, the FX thread among them, kept
+ * retaining and releasing until the JVM halted. See THE SHUTDOWN GATE in WKJRuntime.h and
+ * FFM-ABI-CONTRACT.md section 13.3.
  */
 const WKJHost* s_javaHost = nullptr;
 WKJHost s_guardedHost { };
@@ -177,8 +180,13 @@ int32_t wkj_init(const WKJHost* host, int32_t host_size, uint32_t abi_version)
 
 /*
  * MainThread.twkSetShutdown(boolean); was Java_com_sun_webkit_MainThread_twkSetShutdown.
- * Block handle callbacks first so a later static destructor cannot enter a JVM that is already
- * at its shutdown safepoint. The legacy flag continues to gate the other migrated JNI sites.
+ * From the moment the shutdown hooks WebPage installs call this, the four guarded handle
+ * callbacks above and every gated site (WKJ_RETURN_IF_SHUTTING_DOWN, MainThreadJava.cpp,
+ * ThreadTimers.cpp) stop calling Java. Runtime.halt runs no shutdown hook, so exit-time
+ * destructors are NOT covered: they can run on the HotSpot VM thread with the flag still
+ * clear, and an upcall from that thread is a fatal error. A static whose destruction can
+ * reach a host-table slot must therefore be a NeverDestroyed or LazyNeverDestroyed; see
+ * "Exit-time destructors" in WebKitLegacy/java/api/README.md.
  */
 void wkj_set_shutdown(int32_t shutting_down)
 {

@@ -62,7 +62,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * matters.
  * <p>
  * Four things are compared, in increasing order of what they would let through:
- * {@code sizeof(WKJHost)}; the size and offset of each of the nine filled groups, so that a group
+ * {@code sizeof(WKJHost)}; the size and offset of each of the eight filled groups, so that a group
  * which grew and one which shrank cannot cancel out; the offset of every one of the 168 callback
  * slots; and the {@link java.lang.foreign.FunctionDescriptor} each filled slot was bound with,
  * against the C prototype the header declares.
@@ -70,7 +70,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * It has caught two already. The first hand written {@code WKJExceptionSlot} layout computed 528
  * bytes against the C struct's 524, because it carried a trailing four byte padding that three
  * {@code int32_t} followed by {@code uint16_t[256]} do not need; and {@code WKJHost} was modelled as
- * thirteen pointer sized groups totalling 160 bytes while C declared sixteen groups totalling 1352,
+ * thirteen pointer sized groups totalling 160 bytes while C declared fifteen groups totalling 1352,
  * which {@code wkj_init} rejected outright.
  */
 @Tag("ffm")
@@ -80,24 +80,24 @@ public class WebKitLayoutTest {
     private static final long EXCEPTION_SLOT_SIZE = 524L;
 
     /**
-     * {@code sizeof(WKJHost)}: an {@code int32_t}, four bytes of padding, and sixteen groups - seven
-     * one-pointer placeholders and nine real tables.
+     * {@code sizeof(WKJHost)}: an {@code int32_t}, four bytes of padding, and fifteen groups - seven
+     * one-pointer placeholders and eight real tables.
      */
     private static final long HOST_SIZE = 1352L;
 
     /** {@code sizeof(WKJHostCore)}: seven function pointers. */
     private static final long HOST_CORE_SIZE = 56L;
 
-    /** The number of callback slots {@code WKJHost} carries, flattened over its sixteen groups. */
+    /** The number of callback slots {@code WKJHost} carries, flattened over its fifteen groups. */
     private static final int HOST_SLOT_COUNT = 168;
 
     /**
-     * The slots production deliberately leaves NULL: the seven {@code *.reserved} placeholders,
-     * {@code pal.system_beep} and {@code theme.plugin_widget_paint}. They are named and justified in
+     * The slots production deliberately leaves NULL: the seven {@code *.reserved} placeholders and
+     * {@code theme.plugin_widget_paint}. They are named and justified in
      * {@code WebKitHostInstallTest}; here only the count matters, because a slot with no stub has no
      * descriptor to compare.
      */
-    private static final int DELIBERATELY_NULL_SLOTS = 9;
+    private static final int DELIBERATELY_NULL_SLOTS = 8;
 
     /**
      * One filled group of {@code WKJHost}: its member name, the C struct behind it, and the size and
@@ -107,7 +107,7 @@ public class WebKitLayoutTest {
     }
 
     /**
-     * The nine groups that carry real slots, so that a group which gains or loses one fails here
+     * The eight groups that carry real slots, so that a group which gains or loses one fails here
      * naming the group rather than only as a difference in {@code sizeof(WKJHost)} - which two
      * groups changing by equal and opposite amounts would not move at all. The numbers were measured
      * by compiling the current headers.

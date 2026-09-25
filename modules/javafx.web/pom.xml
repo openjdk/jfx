@@ -37,12 +37,19 @@
     <name>javafx-web</name>
     <description>JavaFX web module (javafx.web)</description>
 
-    <!-- The WebKit native library (jfxwebkit) is only built with COMPILE_WEBKIT=true
-         in the Gradle build (perl + cmake + ninja + clang toolchain) and is not
-         ported to Maven; a prebuilt jfxwebkit library from an OpenJFX SDK can be
-         used at runtime instead. Web tests need that native library, so they are
-         compiled but skipped unless -Djfx.web.skipTests=false is passed and the
-         library is available on java.library.path. -->
+    <!-- The WebKit native library (jfxwebkit) is not built by this module. It is
+         built out of tree by .github/workflows/build-webkit.yml, and the Release zip
+         for a platform is extracted into caches/sdk next to the repository, which
+         jfx.native.librarypath in the root pom puts on java.library.path. The library
+         is ABI-guarded: WebKitNative rejects one that does not export wkj_abi_version
+         or reports a version other than WKJ_ABI_VERSION, so the JNI jfxwebkit of an
+         official OpenJFX SDK cannot be used, and WebKitLibraryAbiTest reports that
+         mismatch in one sentence.
+         -Djfx.web.skipTests=false runs the module's tests against that library (they
+         are compiled but skipped by default); -Djfx.web.skipFfmTests=false builds the
+         wkjstub test library and runs the FFM binding tests against it instead; and the
+         javafx.web.nativeLibrary system property names the library WebKitNative loads in
+         place of jfxwebkit, which is how the FFM execution selects wkjstub. -->
 
     <properties>
         <!-- The FFM binding tests are a separate surefire execution: they run

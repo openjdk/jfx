@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
+#include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/java/WKJHandle.h>
 
 namespace WebCore {
@@ -49,8 +49,15 @@ namespace WebCore {
  *            deref(), so it cannot stand in for m_ref: before the first operator int32_t()
  *            there is no refMap entry at all, and nothing else would keep the Java object
  *            alive. The two are not interchangeable and neither can be dropped.
+ *
+ * The reference count is atomic. The thread that draws with the object takes references -
+ * the WebKit main thread, or a Web Worker thread for the images behind createImageBitmap -
+ * and so does every command buffer that names it (ByteBuffer::m_refList). wkj_rq_release can
+ * drop a buffer's references on the event thread while a worker still holds its own, so the
+ * destructor runs on whichever thread drops the last one. Its upcalls, graphics.ref_deref and
+ * core.release, are documented as safe on any thread.
  */
-class RQRef : public RefCounted<RQRef> {
+class RQRef : public ThreadSafeRefCounted<RQRef> {
 public:
     /* Adds a reference to `obj`; the caller keeps its own, as the global reference did. */
     inline static RefPtr<RQRef> create(wkj_ref obj)
@@ -78,6 +85,17 @@ private:
         , m_refID(-1)
     {}
 
+    /*
+     * Threads: m_ref is set by the constructor and released by the destructor, and is only
+     * read in between. After the constructor's -1, m_refID is written only by
+     * operator int32_t, on the thread that draws with the object: with a resolved id at most
+     * once, and, while ref_get_id answers -1, with that -1 on every call, so a -1 answer is
+     * rewritten only by that same drawing thread. Two threads never resolve it at once: an
+     * object reaches a second drawing thread only by being handed over, as an ImageBitmap's
+     * image is by a transfer with postMessage, and the hand-over orders the two threads'
+     * calls. The destructor reads m_refID after the atomic count has ordered it after the
+     * last write.
+     */
     WKJHandle m_ref;
     int32_t m_refID;
 };

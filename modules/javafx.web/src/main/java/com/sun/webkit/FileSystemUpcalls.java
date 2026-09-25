@@ -151,7 +151,7 @@ final class FileSystemUpcalls {
             return WebKitNative.emitString(joined, out, capacity, length);
         } catch (Throwable t) {
             WebKitNative.upcallFailed("filesystem.path_by_appending_component", t);
-            WebKitNative.writeInt(length, 0);
+            WebKitNative.writeIntContained(length, 0);
             return WKJStringCodec.NULL;
         }
     }
@@ -226,7 +226,7 @@ final class FileSystemUpcalls {
                     out, capacity, length);
         } catch (Throwable t) {
             WebKitNative.upcallFailed("filesystem.path_get_file_name", t);
-            WebKitNative.writeInt(length, 0);
+            WebKitNative.writeIntContained(length, 0);
             return WKJStringCodec.NULL;
         }
     }

@@ -35,7 +35,6 @@ import java.lang.foreign.MemorySegment;
 import java.lang.foreign.StructLayout;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -70,6 +69,13 @@ import static java.lang.foreign.ValueLayout.JAVA_LONG;
  * {@code unbox} deliberately do <em>not</em>, because the direct {@code Field.get*} and
  * {@code intValue()} calls of the JNI code did not either. Adding the check here would be a
  * behaviour change rather than a hardening, and it belongs to whoever revisits the security model.
+ * <p>
+ * <b>Failures.</b> Every target catches {@code Throwable}, because one escaping an upcall stub
+ * terminates the JVM, and returns the default the C header documents for a NULL slot. It reports
+ * the failure through {@link WebKitNative#logContainedFailure(String, Throwable)}, which logs it and
+ * leaves the per-thread flag of {@code check_and_clear_exception} alone: no caller of this table
+ * asks for that flag, so a failure recorded there would be reported to the next unrelated caller
+ * that does ask, in a later script.
  * <p>
  * <b>Threading.</b> The JavaFX application thread, which owns the JavaScript context, throughout.
  * <p>
@@ -280,7 +286,7 @@ final class LiveConnectNative {
             Object target = WebKitNative.lookup(obj);
             return target == null ? 0L : WebKitNative.register(target.getClass());
         } catch (Throwable t) {
-            WebKitNative.upcallFailed("liveconnect.object_get_class", t);
+            WebKitNative.logContainedFailure("liveconnect.object_get_class", t);
             return 0L;
         }
     }
@@ -307,7 +313,7 @@ final class LiveConnectNative {
         try {
             return WebKitNative.lookup(cls) instanceof Class<?> target && target.isArray() ? 1 : 0;
         } catch (Throwable t) {
-            WebKitNative.upcallFailed("liveconnect.class_is_array", t);
+            WebKitNative.logContainedFailure("liveconnect.class_is_array", t);
             return 0;
         }
     }
@@ -321,7 +327,7 @@ final class LiveConnectNative {
         try {
             return WebKitNative.register(new Object());
         } catch (Throwable t) {
-            WebKitNative.upcallFailed("liveconnect.create_dummy_object", t);
+            WebKitNative.logContainedFailure("liveconnect.create_dummy_object", t);
             return 0L;
         }
     }
@@ -334,9 +340,11 @@ final class LiveConnectNative {
      *
      * The search is over obj.getClass().getMethods(), which is the same set JavaClass enumerates and
      * the only set reachable here, and it matches the name plus the descriptor rebuilt from the
-     * parameter types AND the return type. Matching the return type is not optional: a covariant
-     * override gives a class two methods with one name and one parameter list, and picking the
-     * bridge method rather than the real one changes what invoke() returns.
+     * parameter types AND the return type. LiveConnectLookup.resolveMethod does it once per class
+     * and descriptor, where the JNI code's GetMethodID never listed the class at all, and it has the
+     * answer for a class whose getMethods() throws because a signature names a missing class.
+     * That case is not a failed upcall, because GetMethodID never failed on it, so it is answered
+     * and not logged.
      *
      * The descriptor has to stay in the ABI rather than being replaced by the Method the C++ already
      * had, because Utilities.fwkInvokeWithContext decides whether the call is permitted from
@@ -351,26 +359,12 @@ final class LiveConnectNative {
             if (target == null || methodName == null || descriptor == null) {
                 return 0L;
             }
-            for (Method method : target.getClass().getMethods()) {
-                if (method.getName().equals(methodName) && descriptor.equals(descriptorOf(method))) {
-                    return WebKitNative.register(method);
-                }
-            }
-            return 0L;
+            return WebKitNative.register(
+                    LiveConnectLookup.resolveMethod(target.getClass(), methodName, descriptor));
         } catch (Throwable t) {
-            WebKitNative.upcallFailed("liveconnect.resolve_method", t);
+            WebKitNative.logContainedFailure("liveconnect.resolve_method", t);
             return 0L;
         }
-    }
-
-    /*
-     * The JNI method descriptor of a Method, for example "(I)Ljava/lang/String;". MethodType builds
-     * it from the same reflective types the C++ built its own from, so the two agree by
-     * construction rather than by a hand written table of primitive letters.
-     */
-    private static String descriptorOf(Method method) {
-        return MethodType.methodType(method.getReturnType(), method.getParameterTypes())
-                .descriptorString();
     }
 
     /*
@@ -381,9 +375,9 @@ final class LiveConnectNative {
      * Java must not let the Throwable escape, and does not: it is caught and reported through
      * out_exception, which is the same swallowing the JNI code did with ExceptionOccurred +
      * ExceptionClear. The caller then wraps the Throwable in a JavaInstance and throws it into
-     * JavaScript, which is unchanged. Deliberately NOT routed through upcallFailed: a Java method
-     * that throws is a normal LiveConnect outcome, not a failed callback, and reporting it as one
-     * would make the next core.check_and_clear_exception lie.
+     * JavaScript, which is unchanged. Deliberately NOT logged as a contained failure: a Java method
+     * that throws is a normal LiveConnect outcome, not a failed callback, and the script that
+     * called it sees the exception.
      */
     private static long invoke(long method, long instance, MemorySegment args, int argc, long acc,
                                MemorySegment outException) {
@@ -406,7 +400,7 @@ final class LiveConnectNative {
             }
             return WebKitNative.register(result);
         } catch (Throwable t) {
-            WebKitNative.upcallFailed("liveconnect.invoke", t);
+            WebKitNative.logContainedFailure("liveconnect.invoke", t);
             return 0L;
         }
     }
@@ -447,7 +441,7 @@ final class LiveConnectNative {
                     ? target.getParameterCount()
                     : 0;
         } catch (Throwable t) {
-            WebKitNative.upcallFailed("liveconnect.method_get_parameter_count", t);
+            WebKitNative.logContainedFailure("liveconnect.method_get_parameter_count", t);
             return 0;
         }
     }
@@ -480,7 +474,7 @@ final class LiveConnectNative {
                     ? target.getModifiers()
                     : 0;
         } catch (Throwable t) {
-            WebKitNative.upcallFailed("liveconnect.method_get_modifiers", t);
+            WebKitNative.logContainedFailure("liveconnect.method_get_modifiers", t);
             return 0;
         }
     }
@@ -517,6 +511,22 @@ final class LiveConnectNative {
      * The typed read of one field of one instance: field.get(instance) for the two reference types
      * and the matching Field.getBoolean / getByte / ... for the primitives. On failure `out` is left
      * WKJ_JT_INVALID, which is what the zeroed jvalue meant. Default when NULL: 0.
+     *
+     * A Throwable from Field.get* or Field.set* here, or from Array.get* or Array.set* below, is
+     * logged and contained like any other failure of this table, and the script carries on.
+     * Assigning a final field does that, and so does storing an element of the wrong type. The JNI
+     * build behaved differently, and FFM-ABI-CONTRACT.md section 13.3 records the difference. It
+     * made these calls through callJNIMethod and the Get/Set<Type>ArrayRegion family and never
+     * cleared what they threw, so the exception stayed pending while the script ran on; later JNI
+     * calls still ran. The next LiveConnect method invocation picked it up as its own exception and
+     * threw it into the script. Failing that, the first WTF::CheckAndClearException to run cleared
+     * it, and one that branched on the answer, such as ImageBufferJavaBackend::create for a canvas
+     * the script went on to create, took its failure path. Failing both, it was thrown out of the
+     * Java method that had entered WebKit, such as WebEngine.executeScript or JSObject.eval.
+     * Reproducing that means tracking one pending exception across every upcall and downcall of the
+     * library, not just this table, so the port does not attempt it. Nor does it set the flag
+     * check_and_clear_exception reports, which would outlive the script and fail a canvas in the
+     * next one instead (see the class comment).
      */
     private static int fieldGet(long field, long instance, int type, MemorySegment out) {
         // Assigned inside the try: sizedValue is a restricted resize and nothing that can throw
@@ -546,7 +556,8 @@ final class LiveConnectNative {
             }
             return 1;
         } catch (Throwable t) {
-            WebKitNative.upcallFailed("liveconnect.field_get", t);
+            // Contained, not left pending as JNI left it: see the note above fieldGet.
+            WebKitNative.logContainedFailure("liveconnect.field_get", t);
             setInvalid(value);
             return 0;
         }
@@ -582,7 +593,8 @@ final class LiveConnectNative {
             }
             return 1;
         } catch (Throwable t) {
-            WebKitNative.upcallFailed("liveconnect.field_set", t);
+            // Contained, not left pending as JNI left it: see the note above fieldGet.
+            WebKitNative.logContainedFailure("liveconnect.field_set", t);
             return 0;
         }
     }
@@ -598,7 +610,7 @@ final class LiveConnectNative {
             Object target = WebKitNative.lookup(array);
             return target != null && target.getClass().isArray() ? Array.getLength(target) : 0;
         } catch (Throwable t) {
-            WebKitNative.upcallFailed("liveconnect.array_length", t);
+            WebKitNative.logContainedFailure("liveconnect.array_length", t);
             return 0;
         }
     }
@@ -636,7 +648,8 @@ final class LiveConnectNative {
             }
             return 1;
         } catch (Throwable t) {
-            WebKitNative.upcallFailed("liveconnect.array_get", t);
+            // Contained, not left pending as JNI left it: see the note above fieldGet.
+            WebKitNative.logContainedFailure("liveconnect.array_get", t);
             setInvalid(value);
             return 0;
         }
@@ -672,7 +685,8 @@ final class LiveConnectNative {
             }
             return 1;
         } catch (Throwable t) {
-            WebKitNative.upcallFailed("liveconnect.array_set", t);
+            // Contained, not left pending as JNI left it: see the note above fieldGet.
+            WebKitNative.logContainedFailure("liveconnect.array_set", t);
             return 0;
         }
     }
@@ -702,7 +716,7 @@ final class LiveConnectNative {
             };
             return WebKitNative.register(boxed);
         } catch (Throwable t) {
-            WebKitNative.upcallFailed("liveconnect.box", t);
+            WebKitNative.logContainedFailure("liveconnect.box", t);
             return 0L;
         }
     }
@@ -711,6 +725,19 @@ final class LiveConnectNative {
      * booleanValue() / byteValue() / ... on a boxed value, chosen by `type`. The JNI code reached
      * these through callJNIMethod<T>(obj, "intValue", "()I") and friends, so they bypassed the
      * Utilities allow list, and so does this. Default when NULL: 0.
+     *
+     * Every caller hands this slot a box of the matching kind except one. JavaInstance::numberValue
+     * asks for WKJ_JT_DOUBLE on an exposed object of any class other than Character and Boolean,
+     * which is how +obj and obj * 2 reach Java. The JNI code answered that with
+     * callJNIMethod<jdouble>(obj, "doubleValue", "()D"), which works on any object that has the
+     * method, a java.lang.Number or not: every JavaFX ObservableNumberValue, for one. So an object
+     * that is not a Number goes through LiveConnectLookup.doubleValueAccessor, and only one without
+     * a reachable doubleValue() stays WKJ_JT_INVALID, which the C++ reads as 0 as it always did.
+     * WKJ_JT_FLOAT has no such caller: only dispatchJavaCall asks for it, with the Float a method
+     * returning float produced.
+     *
+     * A Throwable from doubleValue() itself is contained like any other failure of this table,
+     * where JNI left it pending; the note above fieldGet has the consequences.
      */
     private static int unbox(long boxed, int type, MemorySegment out) {
         // Assigned inside the try, for the reason given in fieldGet.
@@ -747,12 +774,26 @@ final class LiveConnectNative {
                     }
                     writeLong(value, type, n.longValue());
                 }
-                case JT_FLOAT, JT_DOUBLE -> {
+                case JT_FLOAT -> {
                     if (!(target instanceof Number n)) {
                         setInvalid(value);
                         return 0;
                     }
-                    writeDouble(value, type, type == JT_FLOAT ? n.floatValue() : n.doubleValue());
+                    writeDouble(value, type, n.floatValue());
+                }
+                case JT_DOUBLE -> {
+                    if (target instanceof Number n) {
+                        writeDouble(value, type, n.doubleValue());
+                    } else {
+                        MethodHandle doubleValue = target == null
+                                ? null
+                                : LiveConnectLookup.doubleValueAccessor(target.getClass());
+                        if (doubleValue == null) {
+                            setInvalid(value);
+                            return 0;
+                        }
+                        writeDouble(value, type, (double) doubleValue.invokeExact(target));
+                    }
                 }
                 default -> {
                     setInvalid(value);
@@ -761,7 +802,7 @@ final class LiveConnectNative {
             }
             return 1;
         } catch (Throwable t) {
-            WebKitNative.upcallFailed("liveconnect.unbox", t);
+            WebKitNative.logContainedFailure("liveconnect.unbox", t);
             setInvalid(value);
             return 0;
         }
@@ -776,7 +817,7 @@ final class LiveConnectNative {
         try {
             return WebKitNative.register(WebKitNative.readString(chars, length));
         } catch (Throwable t) {
-            WebKitNative.upcallFailed("liveconnect.box_string", t);
+            WebKitNative.logContainedFailure("liveconnect.box_string", t);
             return 0L;
         }
     }
@@ -849,7 +890,7 @@ final class LiveConnectNative {
             }
             return WKJStringCodec.OK;
         } catch (Throwable t) {
-            WebKitNative.upcallFailed("liveconnect.describe_object", t);
+            WebKitNative.logContainedFailure("liveconnect.describe_object", t);
             if (value.address() != 0L) {
                 value.set(JAVA_INT, JSObjectNative.OFFSET_KIND, JSObjectNative.KIND_NULL);
             }
@@ -886,7 +927,7 @@ final class LiveConnectNative {
         try {
             return WebKitNative.register(JSObject.UNDEFINED);
         } catch (Throwable t) {
-            WebKitNative.upcallFailed("liveconnect.undefined_object", t);
+            WebKitNative.logContainedFailure("liveconnect.undefined_object", t);
             return 0L;
         }
     }
@@ -900,7 +941,7 @@ final class LiveConnectNative {
         try {
             return WebKitNative.register(new JSObject(peer, peerType));
         } catch (Throwable t) {
-            WebKitNative.upcallFailed("liveconnect.jsobject_create", t);
+            WebKitNative.logContainedFailure("liveconnect.jsobject_create", t);
             return 0L;
         }
     }
@@ -916,7 +957,7 @@ final class LiveConnectNative {
         try {
             return WebKitNative.register(NodeImpl.create(nodePeer));
         } catch (Throwable t) {
-            WebKitNative.upcallFailed("liveconnect.node_get_cached_impl", t);
+            WebKitNative.logContainedFailure("liveconnect.node_get_cached_impl", t);
             return 0L;
         }
     }
@@ -965,8 +1006,8 @@ final class LiveConnectNative {
     }
 
     private static int failedString(String slot, Throwable t, MemorySegment length) {
-        WebKitNative.upcallFailed(slot, t);
-        WebKitNative.writeInt(length, 0);
+        WebKitNative.logContainedFailure(slot, t);
+        WebKitNative.writeIntContained(length, 0);
         return WKJStringCodec.NULL;
     }
 }

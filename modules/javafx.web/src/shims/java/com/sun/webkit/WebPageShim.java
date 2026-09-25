@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -92,5 +92,16 @@ public class WebPageShim {
                     false, false, false, false,
                     deltaX, deltaY);
         page.dispatchMouseWheelEvent(mouseWheelEvent);
+    }
+
+    /**
+     * Runs a full, synchronous JavaScriptCore collection on the calling thread, which must be the FX
+     * thread. Production runs the same collection from the {@code Disposer} after every JVM
+     * collection, at a moment nothing can observe; a test that needs the JavaScript wrappers of
+     * Java objects finalized, and the registry ids they hold released, at a known point calls this
+     * instead.
+     */
+    public static void collectJavaScriptGarbage() {
+        WebPageNative.doJSCGarbageCollection();
     }
 }

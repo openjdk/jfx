@@ -93,14 +93,36 @@ automatically on the next test run.
 
 ## Officially released libraries
 
-You can download an officially released `jfxwebkit` from
-[MavenCentral](https://search.maven.org/search?q=g:org.openjfx%20AND%20a:javafx)
-(artifact `javafx-web` with your platform classifier) and extract the shared
-library into the folder above. Do **not** do the same with `javafx-media`:
-every released `jfxmedia` is JNI-era, so it leaves the media stack reporting
-itself unavailable as described above.
+Use the Release zip that `.github/workflows/build-webkit.yml` published for
+your platform, extracted into `caches/sdk` next to the repository as described
+above, or run that workflow on this revision to build one and extract its
+artifact the same way. The workflow's windows-x64 job has not published a zip
+yet: the fix to that job is unproven until the workflow next runs, so on
+Windows running it is the way to get a library today. An officially released
+`jfxwebkit` (the `javafx-web` artifact on Maven Central, or the one in an
+OpenJFX SDK) does **not** work: it is a JNI build that exports `Java_*` entry
+points and none of the `wkj_*` symbols this fork binds, so `WebKitNative`
+rejects it with an `UnsatisfiedLinkError` saying it
+does not export `wkj_abi_version`. Do **not** take `jfxmedia` from a released
+`javafx-media` either: every released `jfxmedia` is JNI-era, so it leaves the
+media stack reporting itself unavailable as described above.
 
-Note that these libraries may not be compatible with the source tree you are working with. Always use the [latest version](https://search.maven.org/search?q=g:org.openjfx%20AND%20a:javafx); this may improve your chances of compatibility.
+## ABI guard and FFM binding tests
+
+`javafx.web` calls `jfxwebkit` through the plain C `wkj_*` ABI, versioned by
+`WKJ_ABI_VERSION` (`webkit_java_api.h` and `WebKitNative`, both 1 today).
+`WebKitNative` loads the library once, refuses it unless `wkj_abi_version()`
+returns that version, and only then installs its callback table with
+`wkj_init`. `WebKitLibraryAbiTest` runs with `-Djfx.web.skipTests=false` and
+fails in one sentence when the library on `java.library.path` is not
+ABI-compatible. The FFM binding tests need no WebKit build at all:
+`-Djfx.web.skipFfmTests=false` builds `wkjstub`, a recording stub generated at
+build time from the `webkit_java_api*.h` headers
+(`modules/javafx.web/src/test/native/wkjstub`, which needs CMake and a C
+toolchain), and runs the `ffm`-tagged tests against it; CI does this on every
+platform. They select the stub through `-Djavafx.web.nativeLibrary=wkjstub`,
+the system property that makes `WebKitNative` load a library other than
+`jfxwebkit`.
 
 
 ## Skip Web tests

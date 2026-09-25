@@ -135,7 +135,7 @@ final class EventListenerNative {
     }
 
     private static void installCallbacks() {
-        MemorySegment callbacks = WebKitNative.upcallTable(
+        MemorySegment callbacks = WebKitNative.upcallTable(WKJLayouts.EVENT_LISTENER_CALLBACKS,
                 stub("handleEvent", FunctionDescriptor.ofVoid(JAVA_LONG, JAVA_LONG)),
                 stub("dispose", FunctionDescriptor.ofVoid(JAVA_LONG)));
         if (callbacks.byteSize() != (long) CALLBACK_SLOTS * ADDRESS.byteSize()) {
@@ -149,14 +149,7 @@ final class EventListenerNative {
     }
 
     private static MemorySegment stub(String name, FunctionDescriptor descriptor) {
-        MethodHandle target;
-        try {
-            target = MethodHandles.lookup().findStatic(EventListenerNative.class, name,
-                    descriptor.toMethodType());
-        } catch (ReflectiveOperationException e) {
-            throw new AssertionError("no upcall target " + name + descriptor.toMethodType(), e);
-        }
-        return WebKitNative.upcallStub(target, descriptor);
+        return WebKitNative.upcallStub(MethodHandles.lookup(), name, descriptor);
     }
 
     /**

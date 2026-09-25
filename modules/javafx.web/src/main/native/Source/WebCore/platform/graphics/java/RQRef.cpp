@@ -36,8 +36,8 @@ namespace WebCore {
 RQRef::~RQRef()
 {
     if (-1 != m_refID) {
-        // This destructor can run after the VM has detached. Preserve the JNI null-environment
-        // check explicitly now that the host table is process-wide.
+        // JNI skipped this on a thread with no JNIEnv; the port gates it on the shutdown flag
+        // instead. See THE SHUTDOWN GATE in wtf/java/WKJRuntime.h.
         WKJ_RETURN_IF_SHUTTING_DOWN();
 
         const WKJHostGraphics* cb = wkjGraphics();

@@ -24,58 +24,115 @@ perl buildtools/ffm-web/verify-no-jni.pl [--verbose]
 | A JNI code generator that could re-emit it all | 2 | **0** |
 | **Total** | **8762** | **0** |
 
-**javafx.web is free of JNI**, and the module builds: `mvn -pl modules/javafx.web install` is BUILD
-SUCCESS and `mvn -pl modules/javafx.web test` gives **137 tests, 0 failures, 0 errors, 0 skipped**
-against the real `wkjstub` library. Regenerate the scoreboard rather than trusting this table.
+**javafx.web is free of JNI.** It has 0 `native` declarations, and the `jfxwebkit.dll` in
+`../caches/sdk/bin` exports 1963 `wkj_*` symbols, 0 `Java_*` and no `JNI_OnLoad`; those 1963 names
+are exactly the set the Java facades bind (1796 `wkj_dom_*`, 167 others). Section 3 has the
+current test results, against that library and against `wkjstub`. Regenerate the scoreboard rather
+than trusting this table.
 
-**Whole areas now completely JNI-free:** the DOM bindings (1831 C++ entry points, 1896 of 1899 Java
+**No area is left on JNI.** That includes the DOM bindings (1831 C++ entry points and all 1899 Java
 declarations), `WebCore/platform/java`, `platform/graphics/java`, `platform/network/java`,
-`bridge/jni` (LiveConnect), `WebKitLegacy/java/WebCoreSupport`, and all of `Tools/`
-(DumpRenderTree, the first slice to reach zero on every check).
+`bridge/jni` (LiveConnect), `WebKitLegacy/java/WebCoreSupport`, the `JavaEnv`/`JavaRef`
+abstraction, which is deleted, and all of `Tools/` (DumpRenderTree, the first area to reach zero
+on every check). What is left is housekeeping, not JNI; section 20 lists it.
 
-**What is left** is nine files: `WTF/wtf/java/{JavaEnv.cpp, MainThreadJava.cpp, JavaEnv.h,
-JavaRef.h}` — the JNI abstraction itself, Phase B's core — plus
-`WebCore/bindings/java/{JavaEventListener.cpp, JavaDOMUtils.cpp, JavaDOMUtils.h,
-EventListenerManager.h}` and the unassigned `PAL/pal/crypto/java/CryptoDigestJava.cpp`. The three
-remaining DOM Java declarations are `EventListenerImpl`'s, which include the module's only
-*instance* native and are blocked on that same `bindings/java` slice.
-
-The export-map count fell from 3467 to 69 in two steps: 3158 stale `Java_com_sun_webkit_dom_*`
-entries purged once the DOM layer was migrated, then the core slice removing its own as it removed
-each function.
+The export-map count fell from 3467 to 0: 3158 stale `Java_com_sun_webkit_dom_*` entries were
+purged once the DOM layer was migrated, and the rest went with the functions they named. Both maps
+now export the ABI by glob, `wkj_*` in `mapfile-vers` and `_wkj_*` in `mapfile-macosx`.
 
 ## 2. What is verified, and by what
 
 | Artefact | Verification |
 |---|---|
-| `WebKitNative.java` — linker, codec, registry, exception slot, ABI guard | **Compiles** under the module's `-Werror`. The ABI guard was exercised against the real prebuilt `jfxwebkit.dll`: it resolves `Java_com_sun_webkit_WebPage_twkGetDocument` and correctly reports `wkj_abi_version` absent |
+| `WebKitNative.java`: linker, codec, registry, exception slot, ABI guard | **Compiles** under the module's `-Werror`. The ABI guard was first exercised against a JNI-era prebuilt `jfxwebkit.dll`, where it reports `wkj_abi_version` absent. The `jfxwebkit.dll` in `../caches/sdk/bin` exports `wkj_abi_version`, the guard accepts it, and the module suite runs against it (section 3) |
 | 102 generated `<Type>Native.java` DOM facades | **Compile** under `-Werror`; `mvn -pl modules/javafx.web install` is BUILD SUCCESS |
 | Descriptor correctness across the DOM | 116 `checkException()` calls generated across 29 facades, reconciling **exactly** with the 116 built throwing functions in the spec (124 total less the 8 in non-compiled sources) |
 | `webkit_java_api.h` + `webkit_java_api_dom.h` (1796 declarations) | **Compile** standalone as C and as C++ at `/W4 /WX` with MSVC 14.44 |
 | `WKJHandle.h` | Compiles standalone as C++20 |
-| Struct layouts | `sizeof(WKJHost)=160`, `sizeof(WKJHostCore)=56`, `sizeof(WKJExceptionSlot)=524` (`message_length@8`, `message@12`) — identical between the C and C++ compilations on Windows x64 |
+| Struct layouts | `sizeof(WKJHost)=1352` on 64-bit targets (160 while its groups were one-pointer placeholders), `sizeof(WKJHostCore)=56`, `sizeof(WKJExceptionSlot)=524` (`message_length@8`, `message@12`). `WebKitLayoutTest` checks the Java layouts against the C compiler's `sizeof` and `offsetof`, through `wkjstub` |
 | Clear-on-entry | All **1831** transformed DOM bodies carry `WKJCallScope wkjScope;`, so a missed check on the Java side cannot leak an exception into a later unrelated call |
 | The DOM C++ transformation | 108/108 files, 1831 functions, **zero residual JNI tokens** in code; the script refuses to emit anything it does not recognise |
 | Test baseline before any change | 473 tests, 1 pre-existing failure (`LoadTest.loadJarFile`), 113 skipped |
 
-## 3. What is NOT verified, and cannot be here
+## 3. The real library: built out of tree, guarded by its ABI version
 
-**This repository does not build WebKit.** `mvn -pl modules/javafx.web` compiles Java only; there is
-no `COMPILE_WEBKIT` path in any pom or CMake file reachable from the Maven build. Therefore:
+**This repository's Maven build still does not compile WebKit.** `mvn -pl modules/javafx.web`
+compiles Java, plus the `wkjstub` test library when the FFM binding tests are enabled. `jfxwebkit`
+itself is built out of tree by `.github/workflows/build-webkit.yml`, which drives the WebKit CMake
+tree on all five platforms, fails a job whose library exports no `wkj_*` symbol, and publishes one
+Release zip per platform for extraction into `../caches/sdk`. Its windows-x64 job has not produced
+a Release zip yet, and the fix to that job is unproven until the workflow next runs; where no zip
+has been published for a platform, run that workflow on this revision and extract the artifact it
+builds. Against the tree ported in commit 939aa61ead a completeness audit of the port found:
 
-* None of the ~49,400 lines of migrated C++ has been compiled by anything. The headers were
-  compiled standalone; the translation units were not, and cannot be.
-* The prebuilt `jfxwebkit.dll` in `../caches/sdk/bin` exports 1956 `Java_com_sun_*` symbols and
-  **zero** `wkj_*`. The 473 module tests therefore cannot pass until `jfxwebkit` is rebuilt from
-  these sources with the WebKit CMake/ninja/clang toolchain.
-* Cross-platform: everything compiled here was MSVC x64. The `__attribute__((visibility("default")))`
-  branch of `WKJ_EXPORT`, `thread_local` behaviour under GCC and clang, and the ELF/Mach-O export
-  globs (`wkj_*;` and `_wkj_*`) are unverified. An older `ld64` can fail an `-exported_symbols_list`
-  containing an unmatched pattern.
+* **0 Java `native` declarations**, in `src/main/java` and in the 102 generated DOM facades, and no
+  `_initIDs`. `WebKitNative` is the module's only load of the library, and every `wkj_*` symbol is
+  bound through it.
+* The `jfxwebkit.dll` in `../caches/sdk/bin` exports **1963 `wkj_*` symbols, 0 `Java_*` and no
+  `JNI_OnLoad`**, and those 1963 names are exactly the set the Java facades bind (1796
+  `wkj_dom_*`, 167 others): nothing bound is missing from the library and nothing it exports is
+  unbound.
+* `WKJ_ABI_VERSION` is 1 in both `webkit_java_api.h` and `WebKitNative`. `WebKitNative` rejects a
+  library that does not export `wkj_abi_version` or reports another version, which is what an
+  official OpenJFX `jfxwebkit` (JNI, no `wkj_*`) runs into, and `WebKitLibraryAbiTest` reports the
+  mismatch in one sentence under `-Djfx.web.skipTests=false`.
+* Against that library `mvn -pl modules/javafx.web test -Djfx.web.skipTests=false` gives **489
+  tests, 0 failures**, with 113 upstream skips, and `-Djfx.web.skipFfmTests=false` gives **194
+  tests, 0 failures** against `wkjstub`. CI runs the FFM binding tests on all five platforms.
+  Among the module tests, `WebKitRegistryLeakTest` checks that page lifecycles against the real
+  library return the `wkj_ref` registry to its baseline (FFM-ABI-CONTRACT.md section 3), and that
+  `ImageBitmap`s closed on a Web Worker give their ids back there (section 13.3).
+  `WebWorkerUpcallTest` checks that `Path2D.addPath` and a `FontFace` built from an
+  `ArrayBuffer`, both of which crashed the JNI build in a worker, complete there (section 13.3).
 
-The honest summary is that the Java half of this migration is verified by a compiler and the C++
-half is verified by review. That asymmetry is the central risk of the exercise and is not something
-the work can resolve from inside this repository.
+What this file cannot vouch for: the module run above is Windows x64. For the Linux and macOS
+libraries the workflow's export check is what confirms the `wkj_*` symbols are exported; no module
+test run against those libraries is recorded here.
+
+**Native changes not yet in that library.** The `jfxwebkit.dll` in `../caches/sdk/bin` was built
+from the C++ of commit 26ce75d02f. Four code changes made since are unbuilt until the next
+`build-webkit.yml` run, so the module run above does not exercise them:
+
+* `javaUndefinedObject()` in `Source/WebCore/bridge/jni/JNIUtility.cpp` and `scratchContext()` in
+  `Source/WebCore/platform/graphics/java/PathJava.cpp` keep their statics in `NeverDestroyed`, so
+  no exit-time destructor reaches a host-table slot on the VM thread ("Exit-time destructors" in
+  `Source/WebKitLegacy/java/api/README.md`).
+* The `ImageDecoderJava` constructor, in
+  `Source/WebCore/platform/graphics/java/ImageDecoderJava.cpp`, makes no Java decoder on a Web
+  Worker thread, so `createImageBitmap` from a `Blob` rejects in a worker as it did under JNI
+  (FFM-ABI-CONTRACT.md section 13.3). The cached library still decodes there, so a module test
+  that asserts the rejection would fail against it; it is listed below. The constructor and
+  destructor, copied verbatim into a harness with the WTF thread queries stubbed, compile with
+  MSVC at `/W4 /WX` and pass their thread cases; only the WebCore build can confirm the real
+  includes and `Thread::isJSThread()` on `WebCore: Worker`.
+* `Source/WebCore/platform/graphics/java/RenderingQueue.cpp` locks its `a2bb` table with a
+  static `WTF::Lock` and runs no upcall under it, and `ByteBuffer` (`RenderingQueue.h`) and
+  `RQRef` (`RQRef.h`) derive from `ThreadSafeRefCounted`. Together they stop a worker's
+  `createImageBitmap` resize or crop and an `ImageBitmap` structured clone from racing
+  `wkj_rq_release` on the event thread (FFM-ABI-CONTRACT.md section 13.3). This is
+  proxy-verified only: GCC against this tree's WTF headers, a multi-threaded stress run under
+  ThreadSanitizer, AddressSanitizer and UBSan, and an MSVC stub-WTF harness.
+
+Every other native change since that commit is a comment. None changes a struct or a signature
+in the api headers, and `WKJ_ABI_VERSION` stays 1.
+
+**Tests to add once jfxwebkit is rebuilt.** Each depends on a change above that the library in
+`../caches/sdk/bin` lacks:
+
+* A child JVM that caches the `JSObject.UNDEFINED` id (script passes `undefined` to an `Object`
+  parameter of a Java object bound into the page) and runs a canvas `isPointInStroke`, which
+  builds the `PathJava` scratch context, then calls `Runtime.getRuntime().halt(0)`, with
+  `-XX:ErrorFile` pointing into a temporary directory. It asserts the exit status and that no
+  `hs_err` file was written: an exit-time destructor that reaches a host-table slot on the VM
+  thread is a fatal "wrong thread state for upcall" ("Exit-time destructors" in
+  `Source/WebKitLegacy/java/api/README.md`).
+* `createImageBitmap` from a `Blob` in a Web Worker rejects with `InvalidStateError`, as under
+  JNI (the `ImageDecoderJava` constructor above).
+* Several Web Workers running `createImageBitmap` from `ImageData` with `resizeWidth` and
+  `resizeHeight`, a resize of a bitmap transferred from the main thread, and structured clones
+  of the bitmaps they hold (`postMessage` without a transfer list), while the main thread draws
+  to its own canvas. It asserts that every promise settles and the JVM survives, and it is the
+  stress case for the `a2bb` lock above.
 
 ## 4. Defects found and fixed during the work
 
@@ -271,14 +328,17 @@ compiles standalone and double-included as C11 and C++20 at `/W4 /WX`.
 * **`create_window` returns the page handle, not a registry id** — `ChromeClientJava::createWindow`
   needs the `WebCore::Page`, which an id cannot give it. Returning `int64_t` is what actually
   removes `pageFromJObject` and the `WebPage.getPage` upcall.
-* **`WKJBackForwardCallbacks` has no `item_destroyed` slot**, and `bflGet` / `bflItemGetChildren`
-  stay on JNI: `HistoryItem::m_hostObject` is a `JGObject` in the *upstream* `history/HistoryItem.h`.
+* **`WKJBackForwardCallbacks` had no `item_destroyed` slot** when this section was written, and
+  `bflGet` / `bflItemGetChildren` stayed on JNI, because `HistoryItem::m_hostObject` was a
+  `JGObject` in the *upstream* `history/HistoryItem.h`. Both have moved since: `m_hostObject` is a
+  `WKJHandle`, the table has `create_entry` and `item_destroyed`, and the two functions are
+  `wkj_bfl_item_at` and `wkj_bfl_item_children`. 12.2 records how the second one changed.
 * Mouse and wheel events keep flat parameters rather than the audit's struct pointer, for the same
   reason §12 rejected `WKJStr`.
 * The audit's "export count drops by exactly 4" was **3**: `mapfile-vers` 1857→1854 and
   `mapfile-macosx` 1612→1609. `twkProcessTouchEvent` was in neither map, nor in the shipped DLL.
 
-### 12.2 Two more behaviour notes
+### 12.2 Behaviour notes
 
 * **A new latent defect found while converting.** `FrameLoaderClientJava` passed a
   `ResourceLoaderIdentifier` — a class with no implicit integer conversion — straight into
@@ -290,8 +350,21 @@ compiles standalone and double-included as C11 and C++20 at `/W4 /WX`.
   last-client destroy. `LeakTest` and `EventListenerLeakTest` may *improve*, which is still a change.
 * `wkj_frame_children` fixes two latent defects by construction (the null array for a
   non-`LocalFrame`, and the trailing zero frame ids). Called out rather than hidden.
+* **`wkj_bfl_item_children` hands back cached child entries, deliberately.** A child whose
+  `HistoryItem::m_hostObject` already holds an entry gets that entry; one is created only for a
+  child that has none. The JNI `bflItemGetChildren` created a new `BackForwardList.Entry` for every
+  child on every call and made it the item's host object, so the Entry from an earlier call never
+  received `notifyItemDestroyed` and kept a pointer to its item after the item was freed: a
+  use-after-free on its next getter call. Restoring that behaviour would restore the bug, so the
+  change stays. `Entry.getChildren()` now returns the same objects each time. Public
+  `javafx.scene.web.WebHistory` does not expose children; `com.sun.webkit.BackForwardList` and
+  DumpRenderTree do. Also recorded at `wkj_bfl_item_children` in `webkit_java_api_page.h` and in
+  `FFM-ABI-CONTRACT.md` section 13.3.
 
-### 12.3 Still on JNI in this slice, each with what unblocks it
+### 12.3 Left on JNI when this section was written, each with what unblocked it
+
+This is the state when the WebKitLegacy core work ended. Every item below has since moved to the
+`wkj_*` ABI or been deleted; section 20 has the current state.
 
 `twkCreatePage` (PageSupplementJava) · `twkProcessKeyEvent` (`PlatformKeyboardEvent.h`'s `jstring`
 constructor) · `twkUpdateContent`, `twkPostPaint`, `twkPrint`, `WebPage::paint` (graphics/java) ·
@@ -514,65 +587,104 @@ check I ran was narrower than the claim I made from it, and the right check was 
 
 ## 20. Where the module stands
 
-**Zero real JNI entry points remain in any C or C++ file.** The handful of `JNIEXPORT` matches left
-are prose in comments describing what each `wkj_*` function replaced, plus a string literal inside
-the abandoned `CodeGeneratorJava.pm` template.
+**No JNI is left on either side.** `perl buildtools/ffm-web/verify-no-jni.pl` reports 0 on all
+eleven checks. The `JNIEXPORT` and `JNIEnv` matches left in C and C++ are prose in comments that
+say what each `wkj_*` function replaced, plus string literals in the `CodeGeneratorJava.pm`
+template, which no build step invokes.
 
-Every C/C++ area is JNI-free: the DOM bindings, `WebCore/platform/java`, `platform/graphics/java`,
-`platform/network/java`, `bindings/java`, `bridge/jni`, `WebKitLegacy/java/WebCoreSupport`,
-`WTF/wtf/java`, and all of `Tools/`.
+* **0 Java `native` declarations**, `EventListenerImpl` and `WebPage` included, and none in the
+  generated DOM facades.
+* **0 JNI export-map lines.** `Source/WebCore/mapfile-vers` exports `wkj_*` by glob and
+  `mapfile-macosx` exports `_wkj_*`; on Windows `WKJ_EXPORT` is the only export mechanism.
+  `wkj_main_thread_dispatch_functions` and `wkj_set_shutdown` replaced the last two live
+  `Java_com_sun_webkit_MainThread_*` entries.
+* **0 build-file entries that need the JDK**: no `find_package(JNI)`, `JAVA_INCLUDE_PATH` or
+  `JAVA_JVM_LIBRARY` in `Source/cmake/OptionsJava.cmake` or any `PlatformJava.cmake`, and no
+  `javac -h` in the module pom or the root pom.
+* **1963 `wkj_*` symbols**, bound by Java and exported by the library, with no difference between
+  the two sets (section 3).
 
-What is left is bookkeeping and the Java side:
-
-* **~56 Java `native` declarations** in `src/main/java`, plus the 3 in `EventListenerImpl.java` and
-  2 in `WebPage.java` that the last two C++ slices just unblocked. Only the Java agent may touch
-  these.
-* **69 export-map lines**, of which all but two are stale. The two live ones are
-  `Java_com_sun_webkit_MainThread_twkScheduleDispatchFunctions` and `_twkSetShutdown`, which the
-  Phase B slice is converting now; the rest come out with them.
-* **7 build-file entries** — `find_package(JNI REQUIRED)` in `Source/cmake/OptionsJava.cmake` and
-  the `JAVA_INCLUDE_PATH{,2}` / `${JAVA_JVM_LIBRARY}` lines in the JavaScriptCore, WebCore and WTF
-  `PlatformJava.cmake` files. These come out **last**, because WTF's is applied `PUBLIC` and
-  propagates to PAL, JSC, WebCore and WebKitLegacy — pulling it early silently blanks the include
-  path rather than erroring.
+What is left is housekeeping, not JNI: five uncompiled, JNI-free C++ files
+(`JavaDOMSelection.cpp`, `JavaWheelEvent.cpp`, `BufferImageSkiaJava.cpp`,
+`PlatformContextSkiaJava.cpp`, `FrameJava.cpp`) and `CodeGeneratorJava.pm` are still on disk,
+though no source list compiles them and none of their symbols is in the library. The dead
+`src/android` and `src/ios` trees, which no pom compiled, have been deleted.
 
 ## 21. Done — and what is deliberately not done
 
-The verifier reports **0 across all eleven checks**, `mvn -pl modules/javafx.web install` is BUILD
-SUCCESS, and the 137 FFM binding tests pass against the real `wkjstub` library. Every `native`
-method, every `JNIEXPORT`, every `jni.h`, every JNI upcall, the whole `JavaEnv`/`JavaRef`
-abstraction, both linker export maps and every JDK build dependency are gone.
+The verifier reports **0 across all eleven checks**, and section 3 has the current test results:
+the module suite against the `jfxwebkit` in `../caches/sdk`, and the FFM binding tests against
+`wkjstub`. Every `native` method, every `JNIEXPORT`, every `jni.h`, every JNI upcall, the whole
+`JavaEnv`/`JavaRef` abstraction, every JNI entry in both linker export maps and every JDK build
+dependency are gone.
 
 ### 21.1 The one thing this repository cannot do
 
-**`jfxwebkit` must be rebuilt before any of this runs.** `modules/javafx.web` compiles Java only;
-no pom or CMake file reachable from the Maven build compiles WebKit. So:
+**The Maven build does not compile WebKit.** `modules/javafx.web` compiles Java, plus `wkjstub`
+when the FFM binding tests run; no pom or CMake file reachable from the Maven build compiles
+`jfxwebkit`. It is built out of tree by `.github/workflows/build-webkit.yml`, for Linux, macOS and
+Windows, and reaches the library path as a prebuilt binary (section 3). So:
 
-* The ~49,400 lines of migrated C++ have been **reviewed, not compiled**. Only the ABI headers were
-  put through a compiler — all nine of them together, as C11 and C++20 at `/W4 /WX`, each
-  double-included, with real function pointers assigned into every distinctive slot shape.
-* The prebuilt `jfxwebkit.dll` still on `java.library.path` exports 1956 `Java_com_sun_*` symbols
-  and zero `wkj_*`. The 473 module tests therefore cannot pass until the library is rebuilt from
-  these sources with the WebKit CMake/ninja/clang toolchain. `WebKitLibraryAbiTest` is a deliberate
-  non-skippable sentinel so that a green build cannot hide a stale library.
+* The migrated C++ is compiled only by that workflow or another out-of-tree WebKit build. Of the
+  native sources, the Maven build compiles only the ABI headers, which `wkjstub` includes.
+* The `jfxwebkit.dll` in `../caches/sdk/bin` exports **1963 `wkj_*` symbols, 0 `Java_*` and no
+  `JNI_OnLoad`**, and those 1963 names are exactly the set the Java facades bind. A C++ change made
+  after that library was built is not in it until `jfxwebkit` is rebuilt. `WebKitLibraryAbiTest`
+  is a deliberate non-skippable sentinel, so that a green build cannot hide a library that lacks
+  the `wkj_*` ABI or reports another ABI version.
 * The default `jfx.web.skipTests=true` excludes both the web module suite and the WebKit-dependent
-  system Robot tests. Setting it to `false` requires that ABI-compatible rebuilt `jfxwebkit`.
-* Everything compiled here was **MSVC x64**. GCC 14 and Xcode 15 have seen none of it, nor has the
-  `__attribute__((visibility("default")))` branch of `WKJ_EXPORT`, nor the ELF/Mach-O export globs.
+  system Robot tests. Setting it to `false` requires that ABI-compatible `jfxwebkit`.
+* The module test run recorded in section 3 is Windows x64. For the Linux and macOS libraries only
+  the workflow's export check is recorded, and it fails a library only when it exports no `wkj_*`
+  symbol at all.
 
 ### 21.2 Before this is trusted
 
-1. Build `jfxwebkit` from these sources on all three platforms; confirm with `dumpbin /EXPORTS`,
-   `nm -D --defined-only` and `nm -gU` that the `wkj_*` symbols are exported — the globs `wkj_*;`
-   and `_wkj_*` are the only thing standing between the ABI and a silent link-time hole.
-2. `mvn -pl modules/javafx.web test -Djfx.web.skipTests=false` against that library, and
+1. **Done on Windows x64; partly done on Linux and macOS.** Build `jfxwebkit` from these sources
+   on all three platforms and confirm with `dumpbin /EXPORTS`, `nm -D --defined-only` and
+   `nm -gU` that the `wkj_*` symbols are exported: the globs `wkj_*;` and `_wkj_*` are the only
+   thing standing between the ABI and a silent link-time hole. Section 3 records the Windows
+   check: the library in `../caches/sdk/bin` exports exactly the 1963 names Java binds. For Linux
+   and macOS, `build-webkit.yml` runs `nm` on each library but fails it only when it exports no
+   `wkj_*` symbol at all. Left: comparing the Linux and macOS export sets with the bound set, and
+   building the native changes section 3 lists as unbuilt, on every platform.
+2. **Done on Windows x64 for the module suite; the rest is left.**
+   `mvn -pl modules/javafx.web test -Djfx.web.skipTests=false` against that library is recorded
+   in section 3 for Windows x64. Left: the same run on Linux and macOS, and
    `mvn -pl tests/system test -DFULL_TEST=true -DUSE_ROBOT=true -Djfx.web.skipTests=false -Dsurefire.includes='test/robot/javafx/web/**/*.java'`
-   with a display. Those robot tests cover the pointer, editor and chrome upcall paths.
-3. A DumpRenderTree `LayoutTests` run, diffed against the expected results.
-4. Fix the `WKJ_EXPORT` export/import split before any second library calls a `wkj_*` function —
-   it is unconditionally `dllexport`, so the first such call from `DumpRenderTreeJava` will fail to
-   link on Windows.
-5. Bump `WKJ_ABI_VERSION` once, at the first release.
+   with a display, which no record here covers. Those robot tests cover the pointer, editor and
+   chrome upcall paths.
+3. **Not done.** A DumpRenderTree `LayoutTests` run, diffed against the expected results.
+4. **Open.** Fix the `WKJ_EXPORT` export/import split before any second library calls a `wkj_*`
+   function: it is unconditionally `dllexport`, so the first such call from `DumpRenderTreeJava`
+   will fail to link on Windows. No second library makes such a call today.
+5. **Open until the first release.** Bump `WKJ_ABI_VERSION` once, at the first release.
+6. **Closed in source, unbuilt.** The Web Worker hazard in `RenderingQueue` that
+   FFM-ABI-CONTRACT.md section 13.3 records: `a2bb` is locked and `ByteBuffer`/`RQRef` are
+   `ThreadSafeRefCounted`. Dispatch `build-webkit.yml`, then run a worker
+   `createImageBitmap(ImageData)` resize, transfer-and-resize and structured-clone test against
+   the rebuilt `jfxwebkit` (section 3, "Tests to add once jfxwebkit is rebuilt").
+7. **Recorded, not changed.** The audit behind item 6 checked the other shared state that the
+   worker-reachable slots touch and left four things as they are:
+   * `scratchContext()` in `PathJava.cpp` is one process-wide `GraphicsContext` with its own
+     `RenderingQueue`. Only `strokeContains` and `strokeBoundingRect` with a stroke applier use
+     it, which takes a 2D context, and `ENABLE_OFFSCREEN_CANVAS` and
+     `ENABLE_OFFSCREEN_CANVAS_IN_WORKERS` are off (`Source/cmake/WebKitFeatures.cmake`, not
+     overridden in `OptionsJava.cmake`), so no worker reaches it. Enabling OffscreenCanvas in
+     workers would make it a race and needs a scratch context per thread.
+   * `FontCache::lastResortFallbackFont` in `FontCacheJava.cpp` keeps a function-local
+     `static AtomString`. Only text layout uses it: the same OffscreenCanvas condition, and the
+     JNI build had it too.
+   * `ImageDecoderCounter::created` and `deleted` in `ImageDecoderJava.cpp` are plain `int`
+     statics, compiled only without `NDEBUG`. The constructor counts before its worker test, so
+     in a debug build a worker's `createImageBitmap` from a `Blob` counts on the worker while
+     the main thread counts its own decoders, and a decoder can be destroyed on an
+     `ImageDecoder` WorkQueue thread (FFM-ABI-CONTRACT.md section 13.3). That is a data race on
+     the two counters behind the exit-time leak line, as in the JNI build that commit 939aa61ead
+     replaced.
+   * `RTImage.pixelBuffer` (Java): a worker writes pixels through `image_get_pixel_buffer` while
+     the render thread may still read the buffer for an earlier `drawPixelBuffer`, exactly as a
+     main-thread canvas does.
 
 ### 21.3 What was removed, not merely rewritten
 
@@ -586,45 +698,46 @@ The C++ that remains is the same engine glue it always was, minus the JVM: it no
 JNI header, names a JNI type, caches a method id, or knows that Java exists beyond a table of
 function pointers and an integer handle.
 
-## 22. Two functional gaps the zero score does not cover
+## 22. The two host-table gaps, now closed
 
-The verifier answers one question — is there any JNI left? — and the answer is no. It does **not**
-say the module would work against a rebuilt `jfxwebkit`, and right now it would not. Two host tables
-are declared in C and installed by nothing, so the C++ side has no route back into Java for them.
-Neither is a `native` declaration, so neither showed up in any check.
+An earlier revision of this file recorded two functional gaps that the zero score did not cover:
+Java modelled `WKJHost` with 13 groups against 15 in C, and `wkj_live_connect_init` was unbound.
+Both are closed in the tree ported in commit 939aa61ead, and the library loads and initializes.
 
-### 22.1 `WKJHost` is 15 groups in C and 13 in Java
+### 22.1 `WKJHost` is 15 groups in C and in Java
 
-`webkit_java_api.h` declares fifteen groups; `WebKitNative.HOST_LAYOUT` models thirteen. Java is
-missing `wtf` and `pal` entirely, and still models `graphics`, `network`, `media`, `filesystem` and
-`theme` as one-pointer placeholders where C now has real tables. So `sizeof(WKJHost)` disagrees and
-**`wkj_init` would answer `WKJ_INIT_ERR_HOST_SIZE` against a real library** — the ABI guard doing
-exactly its job, but failing the whole module at startup.
+`webkit_java_api.h` declares `WKJHost` as an `int32_t` and fifteen groups: `core`, seven
+one-pointer placeholders (`webpage`, `frameloader`, `chrome`, `editor`, `contextmenu`, `inspector`,
+`drag`) and seven real tables (`graphics` 69 slots, `network` 11, `media` 16, `filesystem` 10,
+`theme` 43, `wtf` 1, `pal` 4). `WKJLayouts.HOST` declares the same fifteen groups in the same
+order, with the four bytes of padding after `size` made explicit, so both sides agree on 1352
+bytes on 64-bit targets and `wkj_init` returns `WKJ_INIT_OK`. The seven placeholders stay NULL,
+and Java fills every slot of `core` and the seven real tables except one, deliberately and
+null-checked in C: `theme.plugin_widget_paint` (`ThemeUpcalls`).
+`wtf.main_thread_schedule_dispatch` is filled by `WtfUpcalls`, so `WTF::callOnMainThread` work
+reaches Java again. `pal.system_beep` is filled by `PalUpcalls` with
+`java.awt.Toolkit.getDefaultToolkit().beep()`, the call the JNI `PAL::systemBeep` made: `javafx.web`
+requires `java.desktop`, so that call did beep, and leaving the slot NULL would have silenced it.
 
-The concrete consequence, beyond the size check: `WKJHostWTF.main_thread_schedule_dispatch` is
-unfilled, so `WTF::callOnMainThread` work never reaches `MainThread.fwkScheduleDispatchFunctions`.
-The downcall half of that round trip is bound; the upcall half is not.
+### 22.2 `wkj_live_connect_init` is bound
 
-This was left deliberately and correctly. `WebKitLayoutTest` asserts `HOST_LAYOUT` against the
-**checked-in `wkjstub`**, which was generated when `WKJHost` had 13 groups. Changing the Java layout
-alone turns 137 green tests red without fixing anything; the stub has to be regenerated from the
-current headers in the same change.
+`dom/LiveConnectNative.java` binds `wkj_live_connect_init` and the three `wkj_bridge_sizeof_*`
+self-checks, and installs a `WKJLiveConnectHost` table whose 26 slots match the C declaration name
+for name. `JavaClassJSC`, `JavaFieldJSC`, `JavaMethodJSC` and `JavaArrayJSC` therefore have their
+route back into Java for a Java object exposed to page script; `WebKitLiveConnectTest` covers the
+binding. Against the real library, `LiveConnectParityTest` checks what page script sees where
+the JNI build set the behaviour: numeric and string conversion of exposed objects, and the
+contained field and array failures that FFM-ABI-CONTRACT.md section 13.3 records.
 
-### 22.2 `wkj_live_connect_init` is unbound
+### 22.3 How the stub keeps up
 
-Along with the three `wkj_bridge_sizeof_*` self-check exports. Without the `WKJLiveConnectHost`
-table (26 slots) the reflective half of the bridge — `JavaClassJSC`, `JavaFieldJSC`,
-`JavaMethodJSC`, `JavaArrayJSC` — has no path back into Java, so **exposing a Java object to page
-script would not work**, even though `JSObject` itself is now fully bound. The symbol test reports
-these four as a note rather than a failure.
-
-### 22.3 What closing them takes
-
-One coordinated change, not two independent ones: regenerate `wkjstub` from the current nine ABI
-headers, extend `HOST_LAYOUT` to all fifteen groups with their real shapes, fill `wtf` and `pal`,
-replace the five placeholder groups, bind `wkj_live_connect_init` and install `WKJLiveConnectHost`.
-The layout test then asserts the new shape against the new stub, and `wkj_init` stops rejecting.
-
-Until that lands, the accurate statement is: **the module contains no JNI and compiles, and its
-binding layer is tested, but it is not yet wired end to end.** That distinction is the whole reason
-this file separates "verified" from "written".
+The checked-in `wkjstub` that section 22.1 used to blame is gone.
+`src/test/native/wkjstub/CMakeLists.txt` generates the stub at build time with `gen-wkjstub.pl`,
+from the current `webkit_java_api*.h` headers and `buildtools/ffm-web/dom-abi.tsv`. So
+`WebKitLayoutTest` (C `sizeof` and `offsetof` against `WKJLayouts`) and `WebKitAbiDescriptorTest`
+always compare Java with the headers as they are, and a header change that Java does not follow
+fails the FFM binding tests. `WebKitCallbackTableTest` does the same for the upcall side: the
+generator flattens every callback table, `WKJHost` and the thirteen tables installed on their own
+alike, and the test reads each slot of the tables production built and compares the stub in it
+with the slot's C prototype, by shape and by the name of its target. Against the real library,
+the ABI version check and the host-size check in `wkj_init` do the same job at load time.

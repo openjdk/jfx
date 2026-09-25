@@ -28,7 +28,6 @@ package com.sun.webkit;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.scene.paint.Color;
-import com.sun.glass.utils.NativeLibLoader;
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.logging.PlatformLogger.Level;
 import com.sun.javafx.tk.Toolkit;
@@ -129,8 +128,11 @@ public final class WebPage {
     private int updateContentCycleID;
 
     static {
-        NativeLibLoader.loadLibrary("jfxwebkit");
-        log.finer("jfxwebkit loaded");
+        // Load the library, check its wkj_* ABI version and install the host table before anything
+        // below runs, as the JNI bindings loaded jfxwebkit first thing here. WebKitNative is the one
+        // place that loads it, so the javafx.web.nativeLibrary override and the ABI guard hold here too.
+        WebKitNative.ensureLoaded();
+        log.finer(WebKitNative.libraryName() + " loaded");
 
         if (CookieHandler.getDefault() == null) {
             boolean setDefault = Boolean.valueOf(System.getProperty(

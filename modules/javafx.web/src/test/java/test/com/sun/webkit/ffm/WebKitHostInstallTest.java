@@ -49,8 +49,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * page, chrome and frame loader tables carry arrived with a {@code wkj_ref} of 0, because
  * {@code WKJHostCore::retain} is documented to return 0 when the slot is NULL.
  * <p>
- * It is also where the {@code WKJHost} table is checked for completeness: 159 of its 168 callback
- * slots must carry a stub, and the nine that must not are named and justified in
+ * It is also where the {@code WKJHost} table is checked for completeness: 160 of its 168 callback
+ * slots must carry a stub, and the eight that must not are named and justified in
  * {@link #DELIBERATELY_NULL_SLOTS}. That check matters because a NULL slot is not an error to the
  * library - it falls back to the documented default and carries on - so an unfilled slot is a
  * feature that silently does nothing rather than a crash.
@@ -79,10 +79,6 @@ public class WebKitHostInstallTest {
      *     {@code contextmenu}, {@code inspector} and {@code drag}. Each is
      *     {@code struct { void (*reserved)(void); }} in C because an empty struct is not valid
      *     there, and there is no Java method for a member that names nothing.
-     * <li>{@code pal.system_beep} reached {@code java.awt.Toolkit} through {@code FindClass}, which
-     *     in a module that does not require {@code java.desktop} returned null, so the call did
-     *     nothing. The documented default for a NULL slot is "no-op", so leaving it NULL preserves
-     *     the behaviour exactly; filling it is a behaviour change and its own commit.
      * <li>{@code theme.plugin_widget_paint} is handed a {@code WebCore::PlatformContextJava*} where
      *     {@code WCPluginWidget.paint} demands a {@code WCGraphicsContext}. The C header records
      *     that as a preserved bug and declares the parameter as the {@code int64_t} it really is;
@@ -92,7 +88,7 @@ public class WebKitHostInstallTest {
     private static final Set<String> DELIBERATELY_NULL_SLOTS = Set.of(
             "webpage.reserved", "frameloader.reserved", "chrome.reserved", "editor.reserved",
             "contextmenu.reserved", "inspector.reserved", "drag.reserved",
-            "pal.system_beep", "theme.plugin_widget_paint");
+            "theme.plugin_widget_paint");
 
     /** An object whose {@code hashCode} throws, to drive containment through a real target. */
     private static final class Hostile {
@@ -152,7 +148,7 @@ public class WebKitHostInstallTest {
     }
 
     /**
-     * Every callback slot the C header declares carries a stub, except the nine named in
+     * Every callback slot the C header declares carries a stub, except the eight named in
      * {@link #DELIBERATELY_NULL_SLOTS}. Reading it that way round is the point: the C side tolerates
      * a NULL slot, so an unfilled one is silent at runtime, and this is the only place that says so.
      */
@@ -180,7 +176,7 @@ public class WebKitHostInstallTest {
     }
 
     /**
-     * The nine NULL slots are the ones this test class documents and no others, so that removing a
+     * The eight NULL slots are the ones this test class documents and no others, so that removing a
      * name from that list without filling the slot fails rather than quietly widening the exemption.
      */
     @Test
@@ -189,6 +185,24 @@ public class WebKitHostInstallTest {
             assertNotEquals(-1, WkjStubShim.findHostSlot(name),
                     "the C header no longer declares " + name + ", so it must leave this list");
         }
+    }
+
+    /**
+     * {@code pal.system_beep} carries a stub, bound as the {@code void(void)} the C header declares.
+     * In the JNI build that commit 939aa61ead replaced, {@code PAL::systemBeep} called
+     * {@code java.awt.Toolkit.getDefaultToolkit().beep()}, and the library treats a NULL slot as a
+     * no-op, so leaving it NULL would silence every beep WebKit asks for. The slot is not fired
+     * here, because firing it would beep.
+     */
+    @Test
+    public void theSystemBeepSlotIsFilled() {
+        int slot = WkjStubShim.findHostSlot("pal.system_beep");
+        assertNotEquals(-1, slot, "the C header no longer declares pal.system_beep");
+        assertNotEquals(0L, WkjStubShim.hostSlotPointer(slot),
+                "pal.system_beep is NULL, so PAL::systemBeep does nothing");
+        assertEquals("v", WkjStubShim.hostSlotSignature(slot), "the C prototype is void(void)");
+        assertEquals("v", WebKitNativeShim.hostSlotSignatures().get("pal.system_beep"),
+                "Java bound pal.system_beep with a descriptor other than void(void)");
     }
 
     /**

@@ -70,8 +70,8 @@ PopupMenuJava::~PopupMenuJava()
     if (!m_popup)
         return;
 
-    /* WC_GETJAVAENV_CHKRET gated this destroy upcall during teardown; see THE SHUTDOWN
-       GATE in wtf/java/WKJRuntime.h. */
+    /* WC_GETJAVAENV_CHKRET skipped this destroy upcall on a thread with no JNIEnv; the port
+       gates it on the shutdown flag instead. See THE SHUTDOWN GATE in wtf/java/WKJRuntime.h. */
     WKJ_RETURN_IF_SHUTTING_DOWN();
 
     if (s_wkjPopupCallbacks && s_wkjPopupCallbacks->destroy)

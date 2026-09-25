@@ -1585,19 +1585,13 @@ final class WebPageNative {
     }
 
     /*
-     * Derives the upcall target's Java signature from the descriptor rather than restating it, so a
-     * descriptor that does not match the method it names fails here, at class initialization, with
-     * the method name in the message - instead of corrupting the stack at the first callback.
+     * The stub for the one target two tables share. WebKitNative.upcallStub derives the target's
+     * Java signature from the descriptor rather than restating it, so a descriptor that does not
+     * match the method it names fails at class initialization, with the method name in the message,
+     * instead of corrupting the stack at the first callback.
      */
     private static MemorySegment stub(String name, FunctionDescriptor descriptor) {
-        MethodHandle target;
-        try {
-            target = MethodHandles.lookup().findStatic(WebPageNative.class, name,
-                    descriptor.toMethodType());
-        } catch (ReflectiveOperationException e) {
-            throw new AssertionError("no upcall target " + name + descriptor.toMethodType(), e);
-        }
-        return WebKitNative.upcallStub(target, descriptor);
+        return WebKitNative.upcallStub(MethodHandles.lookup(), name, descriptor);
     }
 
     // ------------------------------------------------------------------ upcall targets: chrome
@@ -2268,13 +2262,15 @@ final class WebPageNative {
      * returning the documented default is what preserves behaviour.
      */
     /*
-     * One place, so that check_and_clear_exception cannot miss a failure. WebKitNative records the
-     * per-thread flag that WKJHostCore::check_and_clear_exception reports and logs the throwable;
-     * about a dozen C++ sites branch on that answer, and they have to see a page callback's failure
-     * exactly as they would see a core one.
+     * One place for every page callback's failure. Every caller of these tables is a WebKitLegacy
+     * client class, none of them asks check_and_clear_exception, and the JNI code they replace
+     * cleared the exception straight after each call. So the throwable is logged and nothing is left
+     * pending, which WebKitNative.clientCallbackFailed explains in full. Two JNI call sites did not
+     * clear: ChromeClientJava::screenToRootView and rootViewToScreen went on to read the point a
+     * failed screenToWindow or windowToScreen had not returned. Their slots are cleared here as well.
      */
     private static void failed(String slot, Throwable t) {
-        WebKitNative.upcallFailed("page callback " + slot, t);
+        WebKitNative.clientCallbackFailed("page callback", slot, t);
     }
 
     /*

@@ -59,9 +59,8 @@ SocketStreamHandleImpl::SocketStreamHandleImpl(const URL& url, Page* page,
 
 SocketStreamHandleImpl::~SocketStreamHandleImpl()
 {
-    // The JNI version's null-environment check returned early here during teardown. The
-    // host table stays installed for the life of the process, so the explicit gate is the
-    // substitution. See THE SHUTDOWN GATE in wtf/java/WKJRuntime.h.
+    // JNI skipped this on a thread with no JNIEnv; the port gates it on the shutdown flag
+    // instead. See THE SHUTDOWN GATE in wtf/java/WKJRuntime.h.
     WKJ_RETURN_IF_SHUTTING_DOWN();
 
     const WKJHostNetwork* cb = wkjNetwork();

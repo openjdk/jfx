@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -112,24 +112,8 @@ public abstract class Utilities {
                                                Object dummyAcc) // UNUSED
             throws Throwable {
 
-        final Class<?> clazz = method.getDeclaringClass();
-        if (clazz.equals(java.lang.Class.class)) {
-            // check list of allowed Class methods
-            if (!CLASS_METHODS_ALLOW_LIST.contains(method.getName())) {
-                throw new UnsupportedOperationException("invocation not supported");
-            }
-        } else {
-            // check list of rejected class names
-            final String className = clazz.getName();
-            if (CLASSES_REJECT_LIST.contains(className)) {
-                throw new UnsupportedOperationException("invocation not supported");
-            }
-            // check list of rejected packages
-            PACKAGES_REJECT_LIST.forEach(packageName -> {
-                if (className.startsWith(packageName + ".")) {
-                    throw new UnsupportedOperationException("invocation not supported");
-                }
-            });
+        if (!isInvocationPermitted(method.getDeclaringClass(), method.getName())) {
+            throw new UnsupportedOperationException("invocation not supported");
         }
 
         try {
@@ -138,5 +122,38 @@ public abstract class Utilities {
             Throwable cause = ex.getCause();
             throw cause != null ? cause : ex;
         }
+    }
+
+    /**
+     * The allow list of {@link #fwkInvokeWithContext} on its own: whether page script may invoke a
+     * method of this name that this class declares. {@code fwkInvokeWithContext} asks it about
+     * {@code method.getDeclaringClass()} and rejects the call when the answer is {@code false}.
+     * <p>
+     * {@code com.sun.webkit.dom.LiveConnectLookup} asks it as well, before it lets the
+     * {@code java.lang.Object} declaration of a method stand in for an override it cannot obtain a
+     * {@code Method} for, so that the stand-in is never permitted where the override would not have
+     * been.
+     *
+     * @param declaringClass the class that declares the method
+     * @param methodName the name of the method
+     * @return {@code true} when the allow list permits the invocation
+     */
+    public static boolean isInvocationPermitted(Class<?> declaringClass, String methodName) {
+        if (declaringClass.equals(java.lang.Class.class)) {
+            // check list of allowed Class methods
+            return CLASS_METHODS_ALLOW_LIST.contains(methodName);
+        }
+        // check list of rejected class names
+        final String className = declaringClass.getName();
+        if (CLASSES_REJECT_LIST.contains(className)) {
+            return false;
+        }
+        // check list of rejected packages
+        for (String packageName : PACKAGES_REJECT_LIST) {
+            if (className.startsWith(packageName + ".")) {
+                return false;
+            }
+        }
+        return true;
     }
 }

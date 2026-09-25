@@ -49,10 +49,10 @@ void MainThreadSharedTimer::setFireInterval(Seconds timeout)
     }
 
     /*
-     * WC_GETJAVAENV_CHKRET returned early here when the environment was gone, which during
-     * teardown it was. The host table stays installed for the life of the process, so the
-     * explicit gate is the substitution; the null-slot test below only covers a table that
-     * was never installed. See THE SHUTDOWN GATE in wtf/java/WKJRuntime.h.
+     * WC_GETJAVAENV_CHKRET skipped this on a thread with no JNIEnv, which the main thread
+     * never was; the port gates it on the shutdown flag instead, so once the flag is set the
+     * timer is no longer re-armed. The null-slot test below only covers a table that was
+     * never installed. See THE SHUTDOWN GATE in wtf/java/WKJRuntime.h.
      */
     WKJ_RETURN_IF_SHUTTING_DOWN();
 

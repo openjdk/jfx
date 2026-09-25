@@ -395,6 +395,11 @@ typedef struct WKJJSValue {
  * Every slot may be NULL, and every default is the behaviour the JNI code produced when its
  * own lookup failed, which was always "log it and carry on with nothing".
  *
+ * A slot whose Java side fails returns the same default; a Throwable from the method that
+ * invoke calls is not such a failure and comes back through out_exception. Java logs the
+ * failure and leaves the flag core.check_and_clear_exception reports as it was, because
+ * no caller in this directory asks for it (FFM-ABI-CONTRACT.md sections 4 and 13.3).
+ *
  * Every slot runs on the thread that called into the library, with the JSC lock held. None
  * may block, and none may re-enter WebKit except through this ABI.
  */
@@ -444,13 +449,27 @@ typedef struct WKJLiveConnectHost {
      * back, and it also asks for well-known ones such as toString by hand.
      *
      * WHY THE DESCRIPTOR IS STILL HERE, rather than the Method the C++ already had: the
-     * search has to reach the same Method object JNI would have, because
+     * answer has to be the Method JNI would have produced, because
      * com.sun.webkit.Utilities.fwkInvokeWithContext decides whether the call is permitted
-     * from method.getDeclaringClass(). Search obj.getClass().getMethods() - the same set
-     * JavaClass enumerates, and the only set reachable here - and match the name plus the
-     * descriptor rebuilt from the parameter types and the return type. Matching the return
-     * type as well as the parameters is not optional: a covariant override gives a class two
-     * methods with one name and one parameter list.
+     * from method.getDeclaringClass(). Java searches obj.getClass().getMethods() - the same
+     * set JavaClass enumerates - and matches the name plus the descriptor rebuilt from the
+     * parameter types and the return type. Matching the return type as well as the
+     * parameters is not optional: a covariant override gives a class two methods with one
+     * name and one parameter list. The answer is cached per runtime class, name and
+     * descriptor, so a class is searched once rather than on every call from script.
+     *
+     * getMethods() throws a LinkageError when any public signature of the class names a
+     * class that is missing at run time; GetMethodID, which never listed the class, did not
+     * fail there. Java then resolves the one method through a public lookup (findVirtual),
+     * which names the class that declares it, and answers that class's own Method. When the
+     * declaring class is itself the one that cannot be listed, Java cannot produce its
+     * Method, and for toString, hashCode or equals java.lang.Object's declaration stands in:
+     * invoked on the object, it dispatches to the override. The stand-in is answered only
+     * when the Utilities allow list admits the declaring class and that class is public in a
+     * package exported to everyone, so it is never permitted where the override would not
+     * have been. Otherwise, and for any class a public lookup cannot see, the answer is 0
+     * where JNI had one; FFM-ABI-CONTRACT.md section 13.3 records that narrowing. A class
+     * that cannot be listed is not a failed upcall, and nothing is logged for it.
      *
      * Default when NULL: 0, which every caller treats as the failed lookup it always was.
      */
@@ -575,6 +594,18 @@ typedef struct WKJLiveConnectHost {
      * booleanValue() / byteValue() / charValue() / shortValue() / intValue() / longValue() /
      * floatValue() / doubleValue() on a boxed value, chosen by `type`. Returns 1 on success
      * and 0 on failure; on failure `out` is WKJ_JT_INVALID.
+     *
+     * One caller hands this slot something other than a box. JavaInstance::numberValue asks
+     * for WKJ_JT_DOUBLE on an exposed object of any class but Character and Boolean, which
+     * is how +obj and obj * 2 reach Java. For an object that is not a java.lang.Number, Java
+     * calls its instance double doubleValue(), as callJNIMethod<jdouble>(obj,
+     * "doubleValue", "()D") did, so a JavaFX DoubleProperty converts to its value. An object
+     * with no such method that Java can reach is WKJ_JT_INVALID, which the C++ reads as 0.
+     * JNI ignored access checks and module encapsulation and Java does not, so a non-public
+     * doubleValue() in a package that is not open to javafx.web is not reached. Nor is one
+     * that only a class whose own methods cannot be listed declares, since Java cannot list
+     * that class to find it. FFM-ABI-CONTRACT.md section 13.3 records both, and the rare
+     * case in which such a class makes a different doubleValue() run.
      *
      * The JNI code reached these through callJNIMethod<T>(obj, "intValue", "()I") and
      * friends, so they too bypass the Utilities allow list, and so does this.

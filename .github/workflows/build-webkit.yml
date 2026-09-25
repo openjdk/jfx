@@ -266,16 +266,26 @@ jobs:
 
           # Export the vcvars64 environment so that rc.exe, link.exe, dumpbin.exe
           # and the Windows SDK are available to every later step.
+          $vcEnv = @{}
           cmd /c "call `"$vsPath\VC\Auxiliary\Build\vcvars64.bat`" > nul && set" |
             ForEach-Object {
               if ($_ -match '^([A-Za-z_][A-Za-z0-9_()]*)=(.*)$') {
                 $name = $Matches[1]
                 $value = $Matches[2]
                 if ($name -notmatch '^(GITHUB_|RUNNER_|ACTIONS_)') {
+                  $vcEnv[$name] = $value
                   "$name=$value" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
                 }
               }
             }
+          foreach ($name in 'VCToolsInstallDir', 'WindowsSdkVerBinPath') {
+            if (-not $vcEnv[$name]) { throw "vcvars64.bat did not set $name" }
+          }
+          $msvcBin = Join-Path $vcEnv['VCToolsInstallDir'] 'bin\HostX64\x64'
+          $sdkBin = Join-Path $vcEnv['WindowsSdkVerBinPath'] 'x64'
+          foreach ($tool in "$msvcBin\link.exe", "$sdkBin\rc.exe", "$sdkBin\mt.exe") {
+            if (-not (Test-Path $tool)) { throw "$tool was not found" }
+          }
 
           # WebKit has dropped MSVC support; the Java port compiles with
           # clang-cl and links with the MSVC linker.
@@ -299,20 +309,47 @@ jobs:
           New-Item -ItemType Directory -Force -Path "C:\w" | Out-Null
           "RT_BUILD_ROOT=C:/w" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-          # webkitdirs.pm only recognises Windows when $^O is "MSWin32" or
-          # "cygwin". Git Bash ships a Perl that reports "msys", which would
-          # silently send build-webkit down the Unix code paths, so put native
-          # Strawberry Perl first on PATH. Only perl\bin is added; Strawberry's
-          # c\bin would shadow the MSVC toolchain with MinGW.
+          # build-webkit takes its native Windows code paths only when Perl
+          # reports $^O = "MSWin32" (webkitdirs.pm isWindows). Git's Perl
+          # reports "msys" or "cygwin" (perl 5.42 on this runner image says
+          # "cygwin") and would drag cygpath and /bin/sh quoting into a build
+          # that otherwise runs native CMake, Ninja and clang-cl. Strawberry
+          # Perl is native and ships with the runner image. Only perl\bin is
+          # used; Strawberry's c\bin would shadow the MSVC toolchain with MinGW.
+          #
+          # PATH order cannot be fixed through GITHUB_PATH: the bash steps run
+          # under Git's bin\bash.exe launcher, which prepends its own
+          # /mingw64/bin:/usr/bin ahead of everything GITHUB_PATH added, so in
+          # those steps "perl" is always Git's Perl and "link.exe" is Git's
+          # coreutils link, not the MSVC linker. The bash steps therefore get
+          # explicit interpreter and linker paths plus WEBKIT_TOOL_PATH, which
+          # they put back in front of PATH themselves.
           $strawberry = "C:\Strawberry\perl\bin"
           if (-not (Test-Path "$strawberry\perl.exe")) {
             throw "Strawberry Perl was not found at $strawberry"
           }
-          $strawberry | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          $toolPath = @($msvcBin, $sdkBin, (Split-Path -Parent $clang), $strawberry) -join ';'
+          "WEBKIT_PERL=$strawberry\perl.exe".Replace('\', '/') | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "WEBKIT_LINKER=$msvcBin\link.exe".Replace('\', '/') | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "WEBKIT_TOOL_PATH=$toolPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+          # CMAKE_MT for "Build jfxwebkit"; the SDK mt.exe was checked above.
+          "WEBKIT_MT=$sdkBin\mt.exe".Replace('\', '/') | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Check the toolchain
         run: |
           set -eux
+          # On Windows, Git's bin\bash.exe launcher puts /mingw64/bin:/usr/bin
+          # in front of PATH, ahead of everything GITHUB_PATH added, so Git's
+          # coreutils link.exe and Git's Perl would shadow the MSVC linker and
+          # Strawberry Perl for this step and for every child process of the
+          # build (perl -> cmake -> ninja -> clang-cl/link.exe). Put the
+          # toolchain back in front; WEBKIT_TOOL_PATH is unset elsewhere.
+          if [ -n "${WEBKIT_TOOL_PATH:-}" ]; then
+            export PATH="$(cygpath -u -p "${WEBKIT_TOOL_PATH}"):${PATH}"
+          fi
+          perl="${WEBKIT_PERL:-perl}"
+
           cmake --version
           ninja --version
           ruby --version
@@ -320,21 +357,39 @@ jobs:
           gperf --version
 
           # build-webkit branches on $^O, so make sure the Perl that will run it
-          # identifies the platform correctly (see webkitdirs.pm isAnyWindows).
-          perl -e 'print "perl $] on $^O\n"'
+          # identifies the platform correctly (see webkitdirs.pm isWindows).
+          "$perl" -e 'print "perl $] on $^O\n"'
           if [ "${{ matrix.os }}" = "windows" ]; then
-            perl -e 'exit($^O eq "MSWin32" ? 0 : 1)' || {
-              echo "::error::build-webkit needs a native Windows Perl (\$^O = MSWin32)"
+            "$perl" -e 'exit($^O eq "MSWin32" ? 0 : 1)' || {
+              echo "::error::${perl} reports \$^O = $("$perl" -e 'print $^O'); build-webkit needs a native Windows Perl (MSWin32), not Git's MSYS/Cygwin Perl"
               exit 1
             }
-          fi
+            # CMAKE_LINKER is a full path in the Ninja link rules, but anything
+            # the build starts by bare name must still find the MSVC linker
+            # first, not Git's coreutils link.
+            case "$(command -v link.exe)" in
+              "$(cygpath -u "${WEBKIT_LINKER%/*}")"/*) ;;
+              *)
+                echo "::error::link.exe resolves to $(command -v link.exe), not to ${WEBKIT_LINKER}"
+                exit 1
+                ;;
+            esac
 
-          # The ICU data archive is unpacked with the JDK's jar tool
-          # (Source/ThirdParty/icu/CMakeLists.txt), so a JDK must be present.
-          if command -v jar > /dev/null 2>&1; then
-            jar --version
+            # The ICU data archive is unpacked with the JDK's jar tool
+            # (Source/ThirdParty/icu/CMakeLists.txt, find_package(Java)), so a
+            # JDK must be present. The runner's default JAVA_HOME is JDK 8,
+            # whose jar has no --version, so check that jar exists and report
+            # the JDK through java instead.
+            jar_tool="$(command -v jar || printf '%s' "${JAVA_HOME}/bin/jar")"
+            test -x "$jar_tool"
+            "$(dirname "$jar_tool")/java" -version
           else
-            "${JAVA_HOME}/bin/jar" --version
+            # The same JDK check on Linux and macOS, where jar has --version.
+            if command -v jar > /dev/null 2>&1; then
+              jar --version
+            else
+              "${JAVA_HOME}/bin/jar" --version
+            fi
           fi
 
       - name: Restore the ccache directory
@@ -401,8 +456,14 @@ jobs:
       - name: Build jfxwebkit
         run: |
           set -eux
+          # Same PATH repair as in "Check the toolchain": the toolchain has to be
+          # ahead of Git's /mingw64/bin:/usr/bin for the build's child processes.
+          if [ -n "${WEBKIT_TOOL_PATH:-}" ]; then
+            export PATH="$(cygpath -u -p "${WEBKIT_TOOL_PATH}"):${PATH}"
+          fi
+          perl="${WEBKIT_PERL:-perl}"
 
-          perl "${WEBKIT_SRCDIR}/Tools/Scripts/set-webkit-configuration" "${CONFIGURATION_FLAG}"
+          "$perl" "${WEBKIT_SRCDIR}/Tools/Scripts/set-webkit-configuration" "${CONFIGURATION_FLAG}"
 
           cmake_args="-DENABLE_TOOLS=${ENABLE_TOOLS}"
           cmake_args="${cmake_args} -DWEBVIEW_BROWSER_VERSION=${WEBVIEW_BROWSER_VERSION}"
@@ -412,7 +473,24 @@ jobs:
             windows)
               cmake_args="${cmake_args} -DCMAKE_C_COMPILER=clang-cl.exe"
               cmake_args="${cmake_args} -DCMAKE_CXX_COMPILER=clang-cl.exe"
-              cmake_args="${cmake_args} -DCMAKE_LINKER=link.exe"
+              # CMake would pick lld-link for clang-cl (CMakeFindBinUtils.cmake);
+              # the Java port links with the MSVC linker. The full path keeps
+              # Ninja from resolving a bare link.exe through PATH. The path has
+              # spaces, so it is quoted: webkitdirs.pm runs system("cmake @args")
+              # as one string, a native Windows Perl rebuilds that string into
+              # the cmake command line, and cmake strips the quotes, as it does
+              # for webkitdirs' own -DPORT="Java". Keep single spaces and no %
+              # in cmake_args: Perl collapses runs of spaces even inside the
+              # quotes, and a % would send the whole line through cmd.exe.
+              cmake_args="${cmake_args} -DCMAKE_LINKER=\"${WEBKIT_LINKER}\""
+              # For clang-cl, CMakeFindBinUtils.cmake looks for llvm-mt before
+              # mt, and the incremental links of a Debug build run CMAKE_MT
+              # (cmake -E vs_link_dll). Pass the Windows SDK mt.exe, quoted like
+              # CMAKE_LINKER: its path has spaces and (x86).
+              cmake_args="${cmake_args} -DCMAKE_MT=\"${WEBKIT_MT}\""
+              # Source/cmake/WebKitCommon.cmake find_package(Perl) would
+              # otherwise take the first perl on CMake's PATH for the generators.
+              cmake_args="${cmake_args} -DPERL_EXECUTABLE=${WEBKIT_PERL}"
               cmake_args="${cmake_args} -DRT_BUILD_ROOT=${RT_BUILD_ROOT}"
               cmake_args="${cmake_args} -DWEBKIT_OUTPUTDIR=${WEBKIT_OUTPUTDIR}"
               ;;
@@ -421,7 +499,7 @@ jobs:
               ;;
           esac
 
-          perl "${WEBKIT_SRCDIR}/Tools/Scripts/build-webkit" \
+          "$perl" "${WEBKIT_SRCDIR}/Tools/Scripts/build-webkit" \
             --java \
             --icu-unicode \
             --64-bit \

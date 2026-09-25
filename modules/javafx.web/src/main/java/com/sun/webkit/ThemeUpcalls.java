@@ -598,7 +598,7 @@ final class ThemeUpcalls {
                     out, capacity, length);
         } catch (Throwable t) {
             WebKitNative.upcallFailed("theme.get_localized_property", t);
-            WebKitNative.writeInt(length, 0);
+            WebKitNative.writeIntContained(length, 0);
             return WKJStringCodec.NULL;
         }
     }
@@ -624,7 +624,7 @@ final class ThemeUpcalls {
             // the same "no result" the JNI code produced when the call threw and it cleared the
             // exception.
             WebKitNative.upcallFailed("theme.idn_to_ascii", t);
-            WebKitNative.writeInt(length, 0);
+            WebKitNative.writeIntContained(length, 0);
             return WKJStringCodec.NULL;
         }
     }
@@ -643,7 +643,7 @@ final class ThemeUpcalls {
             return WebKitNative.emitString(WCPasteboard.getPlainText(), out, capacity, length);
         } catch (Throwable t) {
             WebKitNative.upcallFailed("theme.pasteboard_get_plain_text", t);
-            WebKitNative.writeInt(length, 0);
+            WebKitNative.writeIntContained(length, 0);
             return WKJStringCodec.NULL;
         }
     }
@@ -654,7 +654,7 @@ final class ThemeUpcalls {
             return WebKitNative.emitString(WCPasteboard.getHtml(), out, capacity, length);
         } catch (Throwable t) {
             WebKitNative.upcallFailed("theme.pasteboard_get_html", t);
-            WebKitNative.writeInt(length, 0);
+            WebKitNative.writeIntContained(length, 0);
             return WKJStringCodec.NULL;
         }
     }

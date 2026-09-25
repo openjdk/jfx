@@ -32,16 +32,19 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * The sentinel. It has one job: when the {@code javafx.web} test suite is run for real with
  * {@code -Djfx.web.skipTests=false}, say in one sentence whether the {@code jfxwebkit} on the
- * library path implements the {@code wkj_*} ABI this module is now written against.
+ * library path implements the {@code wkj_*} ABI this module is written against.
  * <p>
  * It is deliberately not tagged {@code ffm}, so it runs in the ordinary module execution against the
- * ordinary library rather than against {@code wkjstub}. Until {@code jfxwebkit} is rebuilt from the
- * migrated sources this test <b>fails</b>, once, with the reason and the fix - which is the point.
- * The alternative, a green build that verified nothing, is the outcome the fork's testing rules
- * forbid.
+ * ordinary library rather than against {@code wkjstub}. When that library exports no
+ * {@code wkj_abi_version}, as a JNI-era {@code jfxwebkit} from an OpenJFX SDK does not, or reports
+ * a version other than {@code WKJ_ABI_VERSION}, this test <b>fails</b>, once, with the reason and
+ * the fix. The alternative, a green build that verified nothing, is the outcome the fork's testing
+ * rules forbid.
  * <p>
- * <b>This class is deleted in the same commit that lands a rebuilt {@code jfxwebkit}</b>, and that
- * commit must show the module's own tests passing again. See {@code FFM-TEST-PLAN.md} section 5 and
+ * <b>This guard is permanent.</b> {@code jfxwebkit} is built out of tree, by
+ * {@code .github/workflows/build-webkit.yml}, and reaches the library path as a prebuilt binary, so
+ * no commit to this module can vouch for the library a given checkout runs against; this test is
+ * what checks it, on every run. See {@code FFM-TEST-PLAN.md} section 5 and
  * {@code FFM-ABI-CONTRACT.md} section 8.
  */
 public class WebKitLibraryAbiTest {
@@ -54,13 +57,14 @@ public class WebKitLibraryAbiTest {
     public void theLoadedLibraryImplementsTheWkjAbi() {
         assertTrue(WebKitNativeShim.abiAvailable(),
                 () -> "The " + WebKitNativeShim.libraryName() + " library on java.library.path does"
-                        + " not implement the wkj_* ABI that javafx.web now binds."
+                        + " not implement the wkj_* ABI that javafx.web binds."
                         + System.lineSeparator() + "  " + WebKitNativeShim.abiUnavailableReason()
                         + System.lineSeparator()
-                        + "  The prebuilt library exports Java_com_sun_* JNI entry points instead."
-                        + " Rebuild jfxwebkit from the migrated sources in"
-                        + " modules/javafx.web/src/main/native with the WebKit CMake and ninja"
-                        + " toolchain; see WEBKIT-MEDIA-STUBS.md and FFM-ABI-CONTRACT.md section 8."
+                        + "  Extract the jfxwebkit Release zip that .github/workflows/build-webkit.yml"
+                        + " published for this platform into caches/sdk next to the repository, or run"
+                        + " that workflow on this revision to build one; see WEBKIT-MEDIA-STUBS.md."
+                        + " A jfxwebkit from an OpenJFX SDK or Maven Central is a JNI build that"
+                        + " exports Java_* entry points and no wkj_* symbols, so it never passes."
                         + System.lineSeparator()
                         + "  Until then the module's own tests cannot be evaluated, and this is the"
                         + " only test that says so.");

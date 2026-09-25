@@ -31,6 +31,7 @@
 #include "WKJPlatformJava.h"
 
 #include <wtf/HashMap.h>
+#include <wtf/Lock.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/java/WKJRuntime.h>
 #include "WKJDOMUtils.h"
@@ -43,7 +44,20 @@ namespace WebCore {
 
 typedef HashMap<char*, RefPtr<ByteBuffer> > Addr2ByteBuffer;
 
-static Addr2ByteBuffer& getAddr2ByteBuffer()
+/*
+ * a2bb holds every command buffer handed to a Java WCRenderQueue and not yet released, keyed
+ * by the buffer address that flushBuffer then passes to rq_add_buffer (through
+ * ByteBuffer::addToRenderQueue), and its reference keeps the buffer alive while Java reads it.
+ * flushBuffer adds on the thread that owns the RenderingQueue: the WebKit main thread, or a
+ * Web Worker thread (see flushBuffer). wkj_rq_release removes on the event thread, which is
+ * the main thread. addr2ByteBufferLock guards every access to the table and nothing else. No
+ * upcall runs while it is held: a value leaves the table by move and is dropped after the
+ * lock is released, because the last reference to a ByteBuffer runs its destructor, which
+ * releases Java objects through upcalls.
+ */
+static Lock addr2ByteBufferLock;
+
+static Addr2ByteBuffer& getAddr2ByteBuffer() WTF_REQUIRES_LOCK(addr2ByteBufferLock)
 {
     static NeverDestroyed<Addr2ByteBuffer> container;
     return container.get();
@@ -96,8 +110,8 @@ void RenderingQueue::flush() {
 }
 
 void RenderingQueue::disposeGraphics() {
-    // The method is called from the dtor which potentially can be called after VM detach.
-    // Preserve the JNI null-environment check explicitly now that the host table is process-wide.
+    // Called from the destructor. JNI skipped this on a thread with no JNIEnv; the port gates
+    // it on the shutdown flag instead. See THE SHUTDOWN GATE in wtf/java/WKJRuntime.h.
     WKJ_RETURN_IF_SHUTTING_DOWN();
 
     const WKJHostGraphics* cb = wkjGraphics();
@@ -109,15 +123,33 @@ void RenderingQueue::disposeGraphics() {
 }
 
 /*
- * The method is called on Event thread (so, it's not concurrent with JS and the release of resources).
+ * Called on the event thread, which is the WebKit main thread, so there it is not concurrent
+ * with JavaScript or with the release of resources in wkj_rq_release.
+ *
+ * A Web Worker thread gets here too, through createImageBitmap and the structured clone of an
+ * ImageBitmap it holds. In the JNI build that commit 939aa61ead replaced, that thread had no
+ * JNIEnv past WorkerThread::createGlobalScope and crashed on the fwkAddBuffer call that follows
+ * a2bb.set; an upcall stub attaches the thread by itself, so the call now completes. For a
+ * worker's buffer, wkj_rq_release on the event thread can take it out of a2bb as soon as Java
+ * has it, before m_buffer lets go of it here, so either thread may drop the last reference.
+ * That is why a2bb is locked and why ByteBuffer and RQRef count references atomically.
  */
 RenderingQueue& RenderingQueue::flushBuffer() {
     if (isEmpty()) {
         return *this;
     }
 
-    Addr2ByteBuffer &a2bb = getAddr2ByteBuffer();
-    a2bb.set(m_buffer->bufferAddress(), m_buffer);
+    // a2bb.set(address, m_buffer), with a replaced value dropped outside the lock. There is
+    // none in practice: an address stays in a2bb only while its buffer is alive.
+    RefPtr<ByteBuffer> replaced;
+    {
+        Locker locker { addr2ByteBufferLock };
+        auto result = getAddr2ByteBuffer().add(m_buffer->bufferAddress(), m_buffer);
+        if (!result.isNewEntry)
+            replaced = std::exchange(result.iterator->value, m_buffer);
+    }
+    replaced = nullptr;
+
     m_buffer->addToRenderQueue(getWCRenderingQueue());
 
     m_buffer = nullptr;
@@ -142,11 +174,23 @@ WKJ_EXPORT void wkj_rq_release(const int64_t* buffer_addrs, int32_t count)
     if (!buffer_addrs)
         return;
 
-    Addr2ByteBuffer& a2bb = getAddr2ByteBuffer();
-    for (int32_t i = 0; i < count; ++i) {
-        char* key = static_cast<char*>(wkj_to_ptr(buffer_addrs[i]));
-        if (key != 0) {
-            a2bb.remove(key);
+    /*
+     * The buffers leave a2bb under its lock and are dropped after it, in the order given,
+     * when "released" goes out of scope. A buffer that a Web Worker thread is still flushing
+     * keeps a reference there, and the worker then drops the last one instead.
+     */
+    Vector<RefPtr<ByteBuffer>> released;
+    if (count > 0)
+        released.reserveInitialCapacity(static_cast<size_t>(count));
+    {
+        Locker locker { addr2ByteBufferLock };
+        Addr2ByteBuffer& a2bb = getAddr2ByteBuffer();
+        for (int32_t i = 0; i < count; ++i) {
+            char* key = static_cast<char*>(wkj_to_ptr(buffer_addrs[i]));
+            if (key != 0) {
+                if (RefPtr<ByteBuffer> buffer = a2bb.take(key))
+                    released.append(WTF::move(buffer));
+            }
         }
     }
 }

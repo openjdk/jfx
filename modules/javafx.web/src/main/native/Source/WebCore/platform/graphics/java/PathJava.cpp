@@ -36,6 +36,7 @@
 #include "PathStream.h"
 #include "WKJPlatformJava.h"
 
+#include <wtf/NeverDestroyed.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -90,8 +91,17 @@ static GraphicsContext& scratchContext()
         PixelFormat::BGRA8,
         UseLosslessCompression::No
     };
-    static auto img = ImageBuffer::create(FloatSize(1.f, 1.f), RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), format);
-    static GraphicsContext &context = img->context();
+    /*
+     * Never destroyed, so that nothing runs for it at process exit. Its destructor would
+     * dispose the Java render queue and release the buffer's Java objects through upcalls
+     * from an exit-time destructor, which runs on HotSpot's VM thread, where no upcall stub
+     * may be entered; after Runtime.halt nothing has set the shutdown flag that would stop
+     * them. Before commit 939aa61ead the JNI destructors did nothing on that thread because
+     * GetEnv returned null.
+     */
+    static NeverDestroyed<RefPtr<ImageBuffer>> img = ImageBuffer::create(FloatSize(1.f, 1.f),
+        RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), format);
+    static GraphicsContext &context = img.get()->context();
     return context;
 }
 

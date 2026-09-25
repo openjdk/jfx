@@ -244,7 +244,7 @@ public final class NetworkUpcalls {
             return WebKitNative.emitString(cookies, out, capacity, length);
         } catch (Throwable t) {
             WebKitNative.upcallFailed("network.cookie_jar_get", t);
-            WebKitNative.writeInt(length, 0);
+            WebKitNative.writeIntContained(length, 0);
             return WKJStringCodec.NULL;
         }
     }

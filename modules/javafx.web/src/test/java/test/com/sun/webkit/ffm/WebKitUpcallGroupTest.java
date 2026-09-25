@@ -372,8 +372,10 @@ public class WebKitUpcallGroupTest {
     }
 
     /**
-     * The ten {@code image_decoder_} slots, which are the only ones in the group also reached from
-     * decoder threads. They are the group's third shape: a byte array in, two {@code int[2]} out
+     * {@code get_image_decoder} and the nine {@code image_decoder_} slots. The nine, with
+     * {@code image_frame_get_size}, are the ones in the group also reached from decoder WorkQueue
+     * threads; {@code get_image_decoder} stays on the main thread, which made the decoder those
+     * threads use. They are the group's third shape: a byte array in, two {@code int[2]} out
      * parameters and a caller-provided string buffer, all against one target ref.
      */
     @Test

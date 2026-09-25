@@ -27,6 +27,7 @@ package com.sun.webkit.security;
 
 import com.sun.webkit.WKJStringCodec;
 import com.sun.webkit.WebKitNative;
+import java.awt.Toolkit;
 import java.lang.foreign.FunctionDescriptor;
 import java.lang.foreign.MemorySegment;
 import java.lang.invoke.MethodHandles;
@@ -37,23 +38,24 @@ import static java.lang.foreign.ValueLayout.JAVA_LONG;
 /**
  * The {@code WKJHostPAL} group: the three {@link WCMessageDigest} upcalls of
  * {@code pal/crypto/java/CryptoDigestJava.cpp}, which are what {@code PAL::CryptoDigest} - and
- * therefore WebCrypto and Subresource Integrity - is built on.
+ * therefore WebCrypto and Subresource Integrity - is built on, and the system beep of
+ * {@code pal/system/java/SoundJava.cpp}.
  * <p>
  * It lives in this package rather than beside the other groups because
  * {@link WCMessageDigest#getInstance} is {@code protected static}: an upcall target has to be
  * reachable by ordinary Java rules now that there is no JNI to ignore them.
  * <p>
- * <b>{@code system_beep} is deliberately left NULL.</b> {@code PAL::systemBeep} reached
- * {@code java.awt.Toolkit.getDefaultToolkit().beep()} by name through {@code FindClass}, which in
- * {@code javafx.web} - a module that does not require {@code java.desktop} - returned null, so the
- * call did nothing and the {@code ASSERT} was compiled out of a release build. The C header
- * documents the default for a NULL slot as "no-op", which is exactly that behaviour, so leaving the
- * slot NULL preserves it precisely. Filling it means deciding what a beep should do in a JavaFX
- * process, which the header itself calls a behaviour question belonging in its own change.
+ * <b>{@code system_beep}</b> is {@code java.awt.Toolkit.getDefaultToolkit().beep()}, the call
+ * {@code PAL::systemBeep} made by name in the JNI build that commit 939aa61ead replaced. That call
+ * did reach AWT: {@code javafx.web} requires {@code java.desktop}, and {@code FindClass} found
+ * {@code java.awt.Toolkit} through the boot loader. The port installs no
+ * {@code SystemSoundDelegate}, so every {@code SystemSoundManager::systemBeep} ends here, for
+ * example Copy or Cut with nothing selected. The first beep initializes the AWT toolkit, as the JNI
+ * call did.
  * <p>
  * <b>Threading.</b> Any. WebCrypto digests are computed on the main thread and on worker threads,
  * so each target must be safe wherever it is called; they hold no state of their own and forward to
- * an object the caller already owns.
+ * an object the caller already owns. The beep comes from editing commands on the main thread.
  * <p>
  * This class contains no restricted {@code java.lang.foreign} operation.
  */
@@ -75,7 +77,8 @@ public final class PalUpcalls {
         WebKitNative.installHostSlot(host, "pal.crypto_digest_compute_hash", MethodHandles.lookup(),
                 "cryptoDigestComputeHash",
                 FunctionDescriptor.of(JAVA_INT, JAVA_LONG, ADDRESS, JAVA_INT, ADDRESS));
-        // pal.system_beep stays NULL; see the class comment.
+        WebKitNative.installHostSlot(host, "pal.system_beep", MethodHandles.lookup(), "systemBeep",
+                FunctionDescriptor.ofVoid());
     }
 
     /*
@@ -126,8 +129,22 @@ public final class PalUpcalls {
             return WebKitNative.emitBytes(hash, out, capacity, length);
         } catch (Throwable t) {
             WebKitNative.upcallFailed("pal.crypto_digest_compute_hash", t);
-            WebKitNative.writeInt(length, 0);
+            WebKitNative.writeIntContained(length, 0);
             return WKJStringCodec.NULL;
+        }
+    }
+
+    /*
+     * java.awt.Toolkit.getDefaultToolkit().beep(). The JNI code cleared and ignored an exception
+     * from either call, and SoundJava.cpp still clears the failure flag straight after this slot, so
+     * a toolkit that cannot be loaded, which getDefaultToolkit reports as an AWTError, is logged and
+     * nothing else changes. Default when NULL: no-op.
+     */
+    private static void systemBeep() {
+        try {
+            Toolkit.getDefaultToolkit().beep();
+        } catch (Throwable t) {
+            WebKitNative.upcallFailed("pal.system_beep", t);
         }
     }
 }

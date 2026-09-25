@@ -129,7 +129,7 @@ public final class MediaUpcalls {
             return WebKitNative.emitString(join(types), out, capacity, length);
         } catch (Throwable t) {
             WebKitNative.upcallFailed("media.get_supported_types", t);
-            WebKitNative.writeInt(length, 0);
+            WebKitNative.writeIntContained(length, 0);
             return WKJStringCodec.NULL;
         }
     }

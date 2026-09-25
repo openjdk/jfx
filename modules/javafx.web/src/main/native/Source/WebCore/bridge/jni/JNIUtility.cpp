@@ -29,6 +29,7 @@
 #if ENABLE(JAVA_BRIDGE)
 
 #include <cstring>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/Vector.h>
 
 namespace JSC {
@@ -352,8 +353,16 @@ WKJHandle javaUndefinedObject()
      * resolved on first use and never released. The same shape, with an id: one reference
      * held for the life of the process, and a fresh reference handed to each caller so that
      * "the receiver owns what it is given" holds here too.
+     *
+     * NeverDestroyed keeps "never released" true at process exit as well. A plain static
+     * WKJHandle would release its id from an exit-time destructor, which runs on the thread
+     * that exits the process, HotSpot's VM thread, where no upcall stub may be entered. The
+     * shutdown flag that stops the release there is set only by the Java shutdown hooks, and
+     * Runtime.halt runs none of them. Before commit 939aa61ead the cache was a static
+     * JGObject, whose destructor did nothing on that thread because GetEnv returned null.
      */
-    static WKJHandle undefined;
+    static NeverDestroyed<WKJHandle> cache;
+    WKJHandle& undefined = cache;
     if (!undefined && host() && host()->undefined_object)
         undefined = WKJHandle(host()->undefined_object());
     return WKJHandle::retained(undefined.get());

@@ -43,19 +43,48 @@
  * ------------------------------------------------------------------------------------------
  * THE SHUTDOWN GATE - read this before deleting anything below
  * ------------------------------------------------------------------------------------------
- * WTF::AttachThreadToJavaEnv (JavaEnv.h:83-114) checked g_ShuttingDown FIRST and, when it was
- * set, left m_env null instead of attaching. WC_GETJAVAENV_CHKRET then turned that null
- * environment into an early return at ten call sites across nine files. The flag is set from
- * Java, by MainThread.twkSetShutdown, at the point where the Java side starts tearing down.
+ * In the JNI build that commit 939aa61ead replaced, Java set the g_ShuttingDown flag, through
+ * MainThread.twkSetShutdown, when its side started tearing down, and exactly two places read
+ * it:
  *
- * So the null environment was not only an error path: it was a functioning gate that stopped
- * timers, socket callbacks, frame-loader notifications and popup menus from calling into a
- * Java side that was going away. FFM has no environment and therefore nothing that can be
- * null, so an upcall made where one of those ten early returns used to fire WILL now happen.
- * That is a behaviour change, and the only defence is an explicit test.
+ *   - WTF::AttachThreadToJavaEnv (JavaEnv.h), which then left m_env null on every thread,
+ *     attached or not. Only one caller branched on that environment,
+ *     scheduleDispatchFunctionsOnMainThread in MainThreadJava.cpp, so that call stopped on
+ *     every thread.
+ *   - ThreadTimers.cpp, which stopped installing the shared timer.
  *
- * wkjIsShuttingDown() and WKJ_RETURN_IF_SHUTTING_DOWN are that test, shaped like the macro
- * they replace so that each site is a substitution rather than a deletion:
+ * Nothing else looked at the flag. WC_GETJAVAENV_CHKRET, the three hand-written JNIEnv
+ * tests (`if (!env)` and return in ImageDecoderJava.cpp and RenderingQueue.cpp, `if (env)`
+ * around the deref call in RQRef.cpp), and the copy and clear guards of JavaRef.h around
+ * NewGlobalRef and DeleteGlobalRef all asked jvm->GetEnv, which answers only whether the
+ * CALLING THREAD is attached. They skipped their work on a thread with no JNIEnv and never
+ * on an attached one. The FX thread, which is WebKit's main thread, is always attached, so
+ * on it every one of them kept working until the JVM halted. A Web Worker thread after
+ * WorkerThread::createGlobalScope is not attached, so there they skipped their work from
+ * the start. The FFM build does that work there, except that the ImageDecoderJava
+ * constructor keeps the JNI result with a thread test of its own (FFM-ABI-CONTRACT.md
+ * section 13.3).
+ *
+ * FFM has no environment and no attach, so "is this thread attached" cannot be asked, and an
+ * upcall stub attaches a thread by itself. The port therefore gates on the flag, and more
+ * widely than JNI did. Once wkj_set_shutdown has set it, on EVERY thread, the FX thread
+ * included:
+ *
+ *   - the retain, retain_weak, release and is_live slots of the published wkj_host
+ *     (WKJRuntime.cpp) return 0 or do nothing, so a WKJHandle copy holds 0, a weak id reports
+ *     its object gone, and nothing is released;
+ *   - every WKJ_RETURN_IF_SHUTTING_DOWN site returns early. Among them are the ten former
+ *     WC_GETJAVAENV_CHKRET sites and the three hand-written tests above. Most are destructors
+ *     and dispose paths; two are MainThreadSharedTimer::setFireInterval and stop, so the
+ *     shared timer is neither re-armed nor stopped;
+ *   - MainThreadJava.cpp and ThreadTimers.cpp test the flag directly, as JNI did.
+ *
+ * The first two points are stricter than JNI on every attached thread. That deviation is
+ * recorded in FFM-ABI-CONTRACT.md section 13.3; it lasts from the shutdown hooks WebPage
+ * installs to the end of the process.
+ *
+ * wkjIsShuttingDown() and WKJ_RETURN_IF_SHUTTING_DOWN are the flag test, the macro shaped
+ * like the one it replaces so that each site is a substitution rather than a deletion:
  *
  *     -    WC_GETJAVAENV_CHKRET(env, false);
  *     +    WKJ_RETURN_IF_SHUTTING_DOWN(false);
@@ -235,7 +264,8 @@ private:
  *
  * WKJ_STR_NULL comes back as the null String, so the caller decides whether null collapses to
  * empty - which is what the JNI code did per site rather than uniformly. On WKJ_STR_OVERFLOW
- * the buffer is grown once to the reported size and the call repeated.
+ * the buffer is grown once to the reported size and the call repeated. The repeat runs the
+ * Java slot again, so `fetch` must be safe to call twice (FFM-ABI-CONTRACT.md section 13).
  */
 template<typename Fetch>
 inline WTF::String wkjFetchString(const Fetch& fetch)

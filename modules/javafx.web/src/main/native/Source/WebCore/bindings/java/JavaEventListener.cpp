@@ -107,9 +107,8 @@ void JavaEventListener::handleEvent(ScriptExecutionContext& context, Event& even
 JavaEventListener::~JavaEventListener()
 {
     /*
-     * WC_GETJAVAENV_CHKRET(env) returned early here once the JVM began tearing down. The
-     * callback table stays installed for the life of the process, so the explicit gate is
-     * what reproduces that early return. See THE SHUTDOWN GATE in wtf/java/WKJRuntime.h.
+     * WC_GETJAVAENV_CHKRET(env) skipped this on a thread with no JNIEnv; the port gates it on
+     * the shutdown flag instead. See THE SHUTDOWN GATE in wtf/java/WKJRuntime.h.
      */
     WKJ_RETURN_IF_SHUTTING_DOWN();
 

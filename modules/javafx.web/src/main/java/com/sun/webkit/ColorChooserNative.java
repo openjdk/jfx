@@ -100,7 +100,7 @@ final class ColorChooserNative {
             log.fine("jfxwebkit exports no colour chooser callbacks; input type=color is disabled");
             return;
         }
-        MemorySegment callbacks = WebKitNative.upcallTable(
+        MemorySegment callbacks = WebKitNative.upcallTable(WKJLayouts.COLOR_CHOOSER_CALLBACKS,
                 stub("createAndShow", FunctionDescriptor.of(JAVA_LONG, JAVA_LONG, JAVA_INT, JAVA_INT,
                         JAVA_INT, JAVA_LONG)),
                 stub("show", FunctionDescriptor.ofVoid(JAVA_LONG, JAVA_INT, JAVA_INT, JAVA_INT)),
@@ -116,14 +116,7 @@ final class ColorChooserNative {
     }
 
     private static MemorySegment stub(String name, FunctionDescriptor descriptor) {
-        MethodHandle target;
-        try {
-            target = MethodHandles.lookup().findStatic(ColorChooserNative.class, name,
-                    descriptor.toMethodType());
-        } catch (ReflectiveOperationException e) {
-            throw new AssertionError("no upcall target " + name + descriptor.toMethodType(), e);
-        }
-        return WebKitNative.upcallStub(target, descriptor);
+        return WebKitNative.upcallStub(MethodHandles.lookup(), name, descriptor);
     }
 
     /**
@@ -186,10 +179,11 @@ final class ColorChooserNative {
     /*
      * An upcall target may not let a Throwable escape: an exception crossing the boundary terminates
      * the JVM. ColorChooserJava cleared and ignored every pending Java exception, so logging and
-     * returning the documented default is what preserves behaviour.
+     * returning the documented default is what preserves behaviour. It never asks
+     * check_and_clear_exception now, so nothing is left pending for an unrelated caller either;
+     * see WebPageNative.failed.
      */
-    /* See WebPageNative.failed: one place, so that check_and_clear_exception cannot miss one. */
     private static void failed(String slot, Throwable t) {
-        WebKitNative.upcallFailed("colour chooser callback " + slot, t);
+        WebKitNative.clientCallbackFailed("colour chooser callback", slot, t);
     }
 }

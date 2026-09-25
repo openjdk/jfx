@@ -21,7 +21,7 @@ the WebKit CMake/ninja toolchain, so nothing below is checked by `mvn install`.
 | `webkit_java_api_bridge.h` | hand | the LiveConnect ABI: nine `wkj_js_*` entry points, `wkj_frame_execute_script`, and `WKJLiveConnectHost` (26 slots). Includes `webkit_java_api.h` normally - its table is installed separately by `wkj_live_connect_init`, so it is not a member of `WKJHost` |
 | `wkj_constants.h` | generated | the 315 constants shared with Java, from the Java sources via `buildtools/ffm-web/gen-wkj-constants.pl`. Replaces the 23 `com_sun_webkit_*.h` headers `javac -h` used to emit |
 | `../../../WTF/wtf/java/WKJHandle.h` | hand | `WKJHandle`, the RAII owner of a `wkj_ref`, replacing `JLocalRef` / `JGlobalRef` |
-| `../../../WTF/wtf/java/WKJRuntime.{h,cpp}` | hand | the successor to the deleted `wtf/java/JavaEnv.{h,cpp}`: the `wkj_host` global, `wkj_init`, `wkj_abi_version`, the `g_ShuttingDown` flag with `wkjIsShuttingDown()` / `WKJ_RETURN_IF_SHUTTING_DOWN`, `wkjCheckAndClearException()`, and the UTF-16 string bridge (`wkjMakeString`, `WKJStringArg`, `wkjFetchString`) that `wtf/java/StringJava.cpp` used to be |
+| `../../../WTF/wtf/java/WKJRuntime.{h,cpp}` | hand | the successor to the deleted `wtf/java/JavaEnv.{h,cpp}`: the `wkj_host` global, `wkj_init`, `wkj_abi_version`, the private atomic shutdown flag `s_shuttingDown` (successor to `JavaEnv`'s `g_ShuttingDown`), set by `wkj_set_shutdown` and read through `wkjIsShuttingDown()` / `WKJ_RETURN_IF_SHUTTING_DOWN`, `wkjCheckAndClearException()`, and the UTF-16 string bridge (`wkjMakeString`, `WKJStringArg`, `wkjFetchString`) that `wtf/java/StringJava.cpp` used to be |
 | `../../../WebCore/bindings/java/WKJDOMUtils.{h,cpp}` | hand | the helpers the generated DOM sources call: `WKJString`, `WKJReturnString`, `WKJReturnPeer`, `raiseOnDOMError`, `raiseTypeErrorException`, `raiseNotSupportedErrorException`, plus the definition of `wkj_exception_slot` |
 
 ## Rules
@@ -85,13 +85,6 @@ list(APPEND WebKitLegacy_INCLUDE_DIRECTORIES "${WEBKITLEGACY_DIR}/java/api")
 bindings/java/WKJDOMUtils.cpp
 ```
 
-Still to do, when JavaScriptCore stops using JNI (phase D, LiveConnect):
-
-```cmake
-# Source/JavaScriptCore/PlatformJava.cmake
-list(APPEND JavaScriptCore_INCLUDE_DIRECTORIES "${WEBKITLEGACY_DIR}/java/api")
-```
-
 Note the layering: `WKJHandle.h` lives in WTF and includes a header under `WebKitLegacy`.
 That inversion is nominal - the header declares types and function pointers and pulls in no
 code, so there is no link dependency - but it is the reason the include directory has to be
@@ -131,11 +124,8 @@ the DOM bindings remain its only writer.
 struct is not valid C. `core`, `graphics`, `network`, `media`, `filesystem`, `theme`, `wtf`
 and `pal` are real.
 
-**`WKJHost` gained two members after the Java-side layout was first written**: `wtf` and
-`pal`, appended after `theme`. Whoever owns the Java `WKJHost` layout has to re-derive it -
-`wkj_init` will otherwise reject the table with `WKJ_INIT_ERR_HOST_SIZE`, which is loud, but
-only at startup. `WKJ_ABI_VERSION` is still 1: every slice so far has left it alone because
-nothing has shipped, and it should be bumped exactly once, by whoever cuts the first release.
+`WKJ_ABI_VERSION` is still 1: nothing has shipped, so no change has bumped it, and it should
+be bumped exactly once, by whoever cuts the first release.
 
 ## Verifying a rebuilt library
 
@@ -203,7 +193,8 @@ two macros apart settles it:
 * `AttachThreadToJavaEnv` (`JavaEnv.h:87-99`) is the one that tested `g_ShuttingDown`, and it
   left `m_env` null when it was set.
 
-There were seven `AttachThread*` sites, and six of them - `WorkQueueGeneric.cpp` (x2),
+There were seven `AttachThread*` sites, and six of them - `WorkQueueGeneric.cpp` (x2; that is
+Windows and Linux, since macOS builds `WorkQueueCocoa.cpp`, which never attached),
 `AsyncFileStream.cpp`, `WorkerThread.cpp`, `StorageThread.cpp` and
 `MainThreadJava.cpp::initializeMainThreadPlatform` - simply declared the RAII object and then
 ran their body regardless; a null env meant "did not attach", not "do not proceed". Exactly
@@ -216,20 +207,75 @@ Source/WTF/wtf/java/MainThreadJava.cpp   scheduleDispatchFunctionsOnMainThread()
     if (env) { ... }          <-- the whole shutdown gate of the library
 ```
 
-That one is preserved explicitly, as `if (wkjIsShuttingDown()) return;`. `g_ShuttingDown`
-itself survives unchanged, in `wtf/java/WKJRuntime.cpp`, set by the exported
+That one is preserved explicitly, as `if (wkjIsShuttingDown()) return;`. The flag itself
+survives as a private atomic in `wtf/java/WKJRuntime.cpp`, set by the exported
 `wkj_set_shutdown` and read through `WTF::wkjIsShuttingDown()`; `ThreadTimers.cpp` still reads
-it the same way it always did.
+it where it always did.
 
 What the ten `WC_GETJAVAENV_CHKRET` sites lose is different and worth stating in its own
 terms: an FFM upcall stub attaches the calling thread itself, so **an upcall made from a
 WebKit-spawned thread that was never attached now happens where it used to be silently
 dropped**. For the sites the ABI headers already document as main-thread-only that is no
-change at all, because the main thread is always attached. The ones to look at are the
-callbacks that can run off the main thread - `MediaPlayerPrivateJava`, `BitmapImageJava` and
-`SocketStreamHandleImplJava`. `WKJ_RETURN_IF_SHUTTING_DOWN` in `wtf/java/WKJRuntime.h` is
-shaped like the macro it replaces so that any of them can take the shutdown half of the gate
-back with a one-line substitution.
+change at all, because the main thread is always attached, and none of the ten runs off the
+main thread in this WebKit: `MediaPlayer` and `SocketStreamHandle` are destroyed on the main
+thread, worker WebSockets go through `WorkerThreadableWebSocketChannel`, and the compiled
+`USE(IMAGEIO)` branch of `BitmapImage::createFromName` makes no host call.
+`WKJ_RETURN_IF_SHUTTING_DOWN` in `wtf/java/WKJRuntime.h` is shaped like the macro it replaces
+so that any of them can take the shutdown half of the gate back with a one-line substitution.
+
+The real change is on threads JNI never attached: a `WebCore: Worker` thread once
+`WorkerThread::createGlobalScope` has returned (the JNI attach was scoped to that function)
+and, on macOS, the `WorkQueueCocoa` threads (read from the source, not measured). There the
+JNI build either skipped the call or crashed. It skipped it at the JNIEnv tests of
+`ImageDecoderJava`, `RenderingQueue` and `RQRef` and at the copy and clear guards of
+`JavaRef.h`, now `WKJRetain` and `WKJRelease`. It dereferenced a null `JNIEnv` and brought the
+JVM down in `PathJava`, `ImageBufferJavaBackend` and `FontCustomPlatformData`. The FFM build
+makes those upcalls, so `Path2D`, `FontFace` and `createImageBitmap` from `ImageData` work in a
+worker, and an `ImageBitmap` transferred to a worker and closed there releases its Java render
+objects. The `ImageDecoderJava` constructor keeps the JNI result with a thread test of its own,
+so `createImageBitmap` from a `Blob` still rejects in a worker. The buffer map of
+`RenderingQueue`, which a worker reaches through `createImageBitmap` and the structured clone of
+an `ImageBitmap`, is locked, and `ByteBuffer` and `RQRef` count references atomically (see
+`RenderingQueue::flushBuffer`). The Threading note in `webkit_java_api_platform.h` lists the
+slots observed on a worker in thread-recording runs against the real library, and
+`FFM-ABI-CONTRACT.md` section 13.3 records the differences.
+
+#### What the port built is stricter than the JNI gate
+
+The port made that substitution at all ten sites, and at the three hand-written JNIEnv tests:
+`if (!env)` and return in `ImageDecoderJava.cpp` and `RenderingQueue.cpp`, and `if (env)`
+around the deref call in `RQRef.cpp`. It also put the four handle slots of the published
+`wkj_host` (`retain`, `retain_weak`, `release` and `is_live`, see `wtf/java/WKJRuntime.cpp`)
+behind the flag. The JNI checks these replace, including the copy and clear guards of
+`JavaRef.h`, asked only whether the calling thread was attached. The replacements
+test the flag, so once `wkj_set_shutdown` has run they apply **on every thread**, the main thread
+included: the sites return early, `retain` and `retain_weak` return 0, `release` does nothing
+and `is_live` answers 0. Under JNI the always-attached main thread kept all of that working until
+the JVM halted, so "no change at all" above holds for the attach half only. From the shutdown
+hooks `WebPage` installs to the end of the process, `WKJHandle` copies on the main thread hold 0,
+weak LiveConnect ids report their objects gone, the shared timer is neither re-armed nor stopped,
+and destructor-time upcalls such as the event listener's `dispose` and `RQRef`'s `ref_deref` are
+skipped. This is recorded as a deviation in `FFM-ABI-CONTRACT.md` section 13.3 and in THE
+SHUTDOWN GATE in `wtf/java/WKJRuntime.h`.
+
+#### Exit-time destructors
+
+The attachment test did a second job that is easy to miss. Static destructors run on whichever
+thread exits the process, and when the JVM ends it (`System.exit`, `Runtime.halt`) that is
+HotSpot's VM thread, where `GetEnv` returns null, so every JNI release or call reached from an
+exit-time destructor did nothing. Entering an FFM upcall stub on that thread is a fatal error
+instead ("wrong thread state for upcall", plus an `hs_err` file). The shutdown flag stops the
+releases only once `WebPage`'s shutdown hooks have run, and `Runtime.halt` runs none.
+
+So no object with static storage duration may own a `WKJHandle`, or anything else whose
+destructor can reach a host-table slot, unless it is a `NeverDestroyed` or
+`LazyNeverDestroyed`. A sweep of what `jfxwebkit` and `DumpRenderTreeJava` compile found two
+such objects, and both are now `NeverDestroyed`: the `JSObject.UNDEFINED` id cache in
+`javaUndefinedObject()` (`Source/WebCore/bridge/jni/JNIUtility.cpp`) and the scratch
+`ImageBuffer` of `scratchContext()` (`Source/WebCore/platform/graphics/java/PathJava.cpp`),
+whose destruction disposes a Java render queue and releases its Java objects. Neither is
+released at exit, which is what the JNI code amounted to. The other statics found have no
+upcall on their destruction path.
 
 ### 2. Leaked local references were free; leaked ids are not
 
@@ -248,23 +294,31 @@ a double release across the 399 sites that name one of those types.
 ### 3. What the Java registry must promise
 
 The ABI asks for one thing only: **every id obtained from `retain` or `retain_weak` is
-released exactly once**. Two implementations satisfy it.
+released exactly once**. The registry `WebKitNative` implements is neither of the two pure
+models, fresh id per retain or interning by object identity, but a hybrid of them, kept in a
+`WKJLongMap` of reference-counted entries rather than a `ConcurrentHashMap`:
 
-* **Fresh id per retain** — the JNI model. Simple: a `ConcurrentHashMap<Long, Object>` plus
-  a counter, `release` removes. `a == b` is then false for two ids naming one object, which
-  is exactly what `JLocalRef::operator==` did with two `NewLocalRef` results.
-* **Interned by object identity, with a reference count** — `retain` returns the same id and
-  increments; `release` decrements and removes at zero. This is the friendlier model and the
-  recommended one, because it makes id equality mean object equality, so any future
-  comparison site works without a `core.equals` call.
+* Registering an object on the Java side mints a **fresh id at count 1 every time**. There is
+  no interning by identity, so one object can have several ids.
+* `retain` on a strong id returns the **same id** with its count raised by one.
+* `retain` on a weak id mints a new strong id, or returns 0 once the object has been
+  collected. `retain_weak` on a strong or weak id mints a new weak id; for 0, an unknown id or
+  an id whose object has been collected it mints nothing and returns 0.
+* `release` drops one count and removes the entry at zero. Ids are never reused.
 
-Interning **without** a reference count is a bug: one owner's `release` would invalidate an
-id another owner still holds. Note also that `retain_weak` exists because
-`bridge/jni/JobjectWrapper.cpp:45` takes `NewWeakGlobalRef` by default; weak ids must not
-keep the object reachable, and `core.is_live` is how C asks whether one is still valid.
+What a C++ author has to take from that: a copy of a `WKJHandle` that holds a strong id shares
+its owner's id, where a `JGlobalRef` copy was an independent `NewGlobalRef`. A stray extra
+`release` therefore does not fail; it consumes a reference another holder still counts on, and
+the id dies early under a holder that did nothing wrong. A copy of a handle that holds a weak id
+goes through `retain`, so it gets a new strong id, or 0 once the object has been collected. And
+equal ids name the same object, but one object can have unequal ids, so identity questions go to
+`core.equals`. Note also that `retain_weak` exists because `bridge/jni/JobjectWrapper.cpp:45`
+takes `NewWeakGlobalRef` by default; weak ids must not keep the object reachable, and
+`core.is_live` is how C asks whether one is still valid.
 
-For the record, the choice is currently unobservable from C++: a sweep of all 101 files that
-name a `JLObject`/`JGObject`-family type found **no comparison of one handle with another** —
-every use of the comparison operators on those types is a null test through `operator!`.
+For the record, id equality was unobservable from C++ before the port: a sweep of all 101 files
+that named a `JLObject`/`JGObject`-family type found **no comparison of one handle with
+another**; every use of the comparison operators on those types was a null test through
+`operator!`.
 `core.hash_code` and `core.equals` are provisioned for the LiveConnect phase, not required by
 anything today.

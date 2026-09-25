@@ -41,13 +41,13 @@
  * A NOTE ON system_beep, WHICH IS AN AWT DEPENDENCY
  * ------------------------------------------------------------------------------------------
  * PAL::systemBeep() reached java.awt.Toolkit - i.e. the java.desktop module - from inside
- * javafx.web, by name, through FindClass. That is a real dependency on a module javafx.web
- * does not require, and it fails silently today: FindClass returns null, the ASSERT is
- * compiled out of a release build, and the call does nothing. This ABI does not change that
- * either way. It is recorded here because a slot named system_beep makes the dependency
- * visible for the first time, and because whoever implements the Java side has to decide
- * what it should do - which is a behaviour question, not a migration one, and belongs in its
- * own change.
+ * javafx.web, by name, through FindClass, and called getDefaultToolkit().beep(). javafx.web
+ * requires java.desktop, in module-info.java before and after the port, and FindClass found
+ * the class through the boot loader, so the JNI build did beep. The port installs no
+ * SystemSoundDelegate, so every SystemSoundManager::systemBeep() reaches this function, for
+ * example Copy or Cut with nothing selected. The Java side, com.sun.webkit.security.PalUpcalls,
+ * fills system_beep with the same call, and the first beep initializes the AWT toolkit exactly
+ * as the JNI call did. The slot keeps the AWT dependency visible in the ABI.
  *
  * ------------------------------------------------------------------------------------------
  * INTEGRATION - the edit this header requires in webkit_java_api.h
@@ -135,9 +135,9 @@ typedef struct WKJHostPAL {
     /* --- PAL::systemBeep (static; no target ref) ---------------------------------------- */
 
     /*
-     * Sounds the system beep. See the AWT note at the top of this header: the JNI
-     * implementation called java.awt.Toolkit.getDefaultToolkit().beep() and did nothing at
-     * all if that class could not be found, which in javafx.web is the usual case.
+     * Sounds the system beep: java.awt.Toolkit.getDefaultToolkit().beep(), which is what the
+     * JNI implementation called. See the AWT note at the top of this header. The caller clears
+     * the failure flag straight after, as the JNI code cleared the exception.
      * Default when NULL: no-op.
      */
     void (*system_beep)(void);

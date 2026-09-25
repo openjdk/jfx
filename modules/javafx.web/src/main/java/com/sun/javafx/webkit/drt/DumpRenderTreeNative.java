@@ -771,11 +771,13 @@ final class DumpRenderTreeNative {
 
     /*
      * An upcall target may not let a Throwable escape: an exception crossing the boundary terminates
-     * the JVM. Every JNI upcall site in this harness cleared a pending Java exception and ignored
-     * it, so logging and returning the documented default is what preserves behaviour.
+     * the JVM. The JNI upcall sites of this harness cleared a pending Java exception and ignored it,
+     * all but the drag mode getter, so logging and returning the documented default is what
+     * preserves behaviour. The harness C++ never asks check_and_clear_exception now, so nothing is
+     * left pending for an unrelated caller either, the drag mode getter included; see
+     * WebPageNative.failed.
      */
-    /* See WebPageNative.failed: one place, so that check_and_clear_exception cannot miss one. */
     private static void failed(String slot, Throwable t) {
-        WebKitNative.upcallFailed("DumpRenderTree callback " + slot, t);
+        WebKitNative.clientCallbackFailed("DumpRenderTree callback", slot, t);
     }
 }

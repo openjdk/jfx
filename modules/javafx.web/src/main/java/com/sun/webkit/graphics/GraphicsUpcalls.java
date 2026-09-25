@@ -57,11 +57,21 @@ import static java.lang.foreign.ValueLayout.JAVA_LONG;
  * crash rather than changing a result, because the JNI version dereferenced the returned array
  * without testing it.
  * <p>
- * <b>Threading.</b> The ten {@code image_decoder_} slots and {@code ref_deref} are reached from
- * threads other than the main one: {@code BitmapImage} drives {@code ImageDecoderJava} from a
- * {@code WorkQueue}, and {@code ~RQRef} runs wherever the last reference dies. Their stubs come
- * from the one process-wide upcall arena, which is what makes that safe; it was already true of the
- * JNI version, which held a global ref.
+ * <b>Threading.</b> Several slots are reached from threads other than the main one, so every
+ * target here is written to be callable from any thread, and every stub comes from the one
+ * process-wide upcall arena. The nine {@code image_decoder_} slots and {@code image_frame_get_size}
+ * run on decoder {@code WorkQueue} threads, because {@code BitmapImage} drives
+ * {@code ImageDecoderJava} from one with a decoder made on the main thread; on Windows and Linux
+ * the JNI version already did, since {@code WorkQueueGeneric} attached each job.
+ * {@code get_image_decoder} stays on the main thread: only {@code BitmapImageSource} creates a
+ * decoder, {@code ImageFrameWorkQueue} reuses it, and on a Web Worker thread
+ * {@code ImageDecoderJava} asks for no Java decoder. {@code ref_deref} runs wherever
+ * {@code ~RQRef} drops the last reference. A Web Worker thread reaches the path, shared
+ * buffer, custom font, render-queue, {@code RTImage} pixel buffer and {@code Ref} slots behind
+ * {@code Path2D}, {@code FontFace} and {@code ImageBitmap}; the JNI build had detached that thread
+ * once {@code WorkerThread::createGlobalScope} returned, so it skipped those calls or crashed on a
+ * null {@code JNIEnv}. The Threading note of {@code webkit_java_api_platform.h} lists the slots, and
+ * FFM-ABI-CONTRACT.md section 13.3 records the difference.
  * <p>
  * This class contains no restricted {@code java.lang.foreign} operation.
  */
@@ -444,8 +454,9 @@ public final class GraphicsUpcalls {
     }
 
     /*
-     * Ref.deref(). Called from ~RQRef, which can run on any thread - the JNI version guarded on
-     * GetJavaEnv() returning null after a VM detach and skipped the call. There is no equivalent
+     * Ref.deref(). Called from ~RQRef, which can run on any thread - the JNI version skipped the
+     * call when GetJavaEnv() answered null, which it did on any thread not attached to the JVM,
+     * a Web Worker thread after WorkerThread::createGlobalScope among them. There is no equivalent
      * condition here, and Ref.deref is synchronized. Default when NULL: no-op.
      */
     private static void refDeref(long ref) {
@@ -486,8 +497,9 @@ public final class GraphicsUpcalls {
      * fwkAddBuffer(ByteBuffer). The address is command buffer memory owned by the C++
      * WebCore::ByteBuffer; Java wraps it without copying, exactly as NewDirectByteBuffer did. The
      * returned id names that Java buffer object and is held by WebCore::ByteBuffer::m_nio_holder
-     * until wkj_rq_release destroys it, so the buffer cannot be collected while the queue still
-     * refers to it. Default when NULL: 0.
+     * until the C++ buffer is destroyed, normally by wkj_rq_release, or by the Web Worker thread
+     * that flushed it if that thread still held it then, so the Java buffer cannot be collected
+     * while the queue still refers to it. Default when NULL: 0.
      */
     private static long rqAddBuffer(long rq, MemorySegment address, int length) {
         try {
@@ -1083,7 +1095,7 @@ public final class GraphicsUpcalls {
             return WebKitNative.emitBytes(data, out, capacity, length);
         } catch (Throwable t) {
             WebKitNative.upcallFailed("graphics.image_to_data", t);
-            WebKitNative.writeInt(length, 0);
+            WebKitNative.writeIntContained(length, 0);
             return WKJStringCodec.NULL;
         }
     }
@@ -1114,7 +1126,7 @@ public final class GraphicsUpcalls {
             return pixels;
         } catch (Throwable t) {
             WebKitNative.upcallFailed("graphics.image_get_pixel_buffer", t);
-            WebKitNative.writeLong(outCapacity, 0L);
+            WebKitNative.writeLongContained(outCapacity, 0L);
             return MemorySegment.NULL;
         }
     }
@@ -1247,7 +1259,7 @@ public final class GraphicsUpcalls {
                     out, capacity, length);
         } catch (Throwable t) {
             WebKitNative.upcallFailed("graphics.image_decoder_get_filename_extension", t);
-            WebKitNative.writeInt(length, 0);
+            WebKitNative.writeIntContained(length, 0);
             return WKJStringCodec.NULL;
         }
     }

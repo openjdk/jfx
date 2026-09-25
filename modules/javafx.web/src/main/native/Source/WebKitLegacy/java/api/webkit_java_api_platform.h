@@ -91,11 +91,30 @@
  *                 wkj_host->core.check_and_clear_exception() in the same place, and where the
  *                 JNI code only cleared, the library only clears. That swallowing is
  *                 deliberate and must not be "fixed" here.
- * Threading       everything in this header is reached from the WebKit main thread, with two
- *                 exceptions called out on the slots themselves: graphics.ref_deref (RQRef's
- *                 destructor, which the JNI code already guarded for a detached thread) and
- *                 the WCImageDecoder slots (BitmapImage decoding also runs on WorkQueue
- *                 threads). Every upcall stub therefore lives in one Arena.ofShared().
+ * Threading       everything in this header is reached from the WebKit main thread, with the
+ *                 exceptions below. Two are called out on the slots themselves:
+ *                 graphics.ref_deref (RQRef's destructor, which the JNI code skipped on any
+ *                 thread with no JNIEnv) and the nine image_decoder_ slots together with
+ *                 image_frame_get_size (not get_image_decoder): BitmapImage decoding also
+ *                 runs on WorkQueue threads, with a decoder made on the main thread, so
+ *                 get_image_decoder stays there. The third is a Web Worker thread. These are
+ *                 the slots observed on a worker in thread-recording runs against the real
+ *                 library, behind Path2D, FontFace.load() and ImageBitmap:
+ *                 create_path, copy_path and the path_* slots; create_shared_buffer and
+ *                 create_font_custom_platform_data; create_rt_image,
+ *                 create_buffered_context_rq, rq_add_buffer, image_get_pixel_buffer,
+ *                 image_draw_pixel_buffer and rq_dispose_graphics; ref_get_id, ref_ref and
+ *                 ref_deref. In the JNI build that commit 939aa61ead replaced, WorkerThread
+ *                 attached that thread only inside createGlobalScope, so on it these calls
+ *                 were skipped where the code tested for a null JNIEnv and crashed the JVM
+ *                 where it did not. An upcall stub attaches the thread by itself, so they now
+ *                 run; core.release (webkit_java_api.h) is reached there too, through
+ *                 WKJRelease. An ImageBitmap transferred to a worker and closed there is
+ *                 disposed and released on the worker, where the JNI build leaked its Java
+ *                 render objects (FFM-ABI-CONTRACT.md section 13.3). The WCImageDecoder
+ *                 slots are not reached from a Worker thread: ImageDecoderJava creates no
+ *                 decoder there, matching the JNI build. Every upcall stub therefore lives in
+ *                 one Arena.ofShared().
  *
  * JAVA-SIDE CONSTRAINT, stated here so the binding author cannot miss it:
  * wkj_socket_did_receive_data and wkj_url_loader_did_receive_data MUST NOT be bound with
@@ -224,10 +243,11 @@ typedef struct WKJHostGraphics {
     void (*ref_ref)(wkj_ref ref);
 
     /*
-     * Ref.deref(). Called from ~RQRef, which can run on ANY thread - the JNI version guarded
-     * on GetJavaEnv() returning null after a VM detach and skipped the call. There is no
-     * equivalent condition here, so the slot is simply called; the Java side must be safe on
-     * any thread. Default when NULL: no-op.
+     * Ref.deref(). Called from ~RQRef, which can run on ANY thread - the JNI version skipped
+     * the call when GetJavaEnv() answered null, which it did on any thread not attached to
+     * the JVM, a Web Worker thread after WorkerThread::createGlobalScope among them. There is
+     * no equivalent condition here, so the slot is simply called; the Java side must be safe
+     * on any thread. Default when NULL: no-op.
      */
     void (*ref_deref)(wkj_ref ref);
 
@@ -243,8 +263,10 @@ typedef struct WKJHostGraphics {
      * fwkAddBuffer(ByteBuffer). "address" points at "length" bytes of command-buffer memory
      * owned by the C++ WebCore::ByteBuffer; Java wraps it without copying, exactly as
      * NewDirectByteBuffer did. The returned id names that Java buffer object and is held by
-     * WebCore::ByteBuffer::m_nio_holder until the buffer is destroyed by wkj_rq_release, so
-     * the Java object cannot be collected while the queue still refers to it.
+     * WebCore::ByteBuffer::m_nio_holder until the buffer is destroyed - normally by
+     * wkj_rq_release, or by the Web Worker thread that flushed it if that thread still held it
+     * then (see wkj_rq_release) - so the Java object cannot be collected while the queue still
+     * refers to it.
      * Default when NULL: 0.
      */
     wkj_ref (*rq_add_buffer)(wkj_ref rq, void* address, int32_t length);
@@ -400,10 +422,16 @@ typedef struct WKJHostGraphics {
 
     /* --- com.sun.webkit.graphics.WCImageDecoder ---------------------------------------- */
     /*
-     * These ten are the only slots in this table also reached from decoder threads
-     * (BitmapImage drives ImageDecoderJava from WorkQueue as well as from the main thread),
-     * so their upcall stubs must come from a shared arena and their Java targets must be
-     * thread-safe. That was already true of the JNI version, which used a global ref.
+     * These nine, together with image_frame_get_size, are also reached from decoder WorkQueue
+     * threads (BitmapImage drives ImageDecoderJava from WorkQueue as well as from the main
+     * thread), so their upcall stubs must come from a shared arena and their Java targets must
+     * be thread-safe. get_image_decoder is not: only BitmapImageSource::decoder(data) creates
+     * a decoder, on the main thread or on a Web Worker thread (where ImageDecoderJava makes no
+     * Java decoder), and ImageFrameWorkQueue::start, which runs on the main thread, reuses the
+     * one it made. The WorkQueue case was already true of the JNI version on Windows and
+     * Linux, where WorkQueueGeneric attached each job and the decoder was a global ref;
+     * WorkQueueCocoa on macOS never attached (FFM-ABI-CONTRACT.md section 13.3). A Web Worker
+     * thread does not reach them; see Threading at the top.
      */
 
     /* destroy(). Called from ~ImageDecoderJava. Default when NULL: no-op. */
@@ -626,6 +654,12 @@ WKJ_EXPORT void wkj_shared_buffer_builder_append(int64_t builder,
  * Must be called on the event thread, for the reason the JNI version documented: destroying a
  * ByteBuffer dereferences the RQRefs it holds, and JavaScript may be touching the same
  * resources. That constraint is unchanged.
+ *
+ * A Web Worker thread can be adding to the same address table meanwhile, through
+ * RenderingQueue::flushBuffer (createImageBitmap, and the structured clone of an ImageBitmap).
+ * The table is locked, the ByteBuffer and RQRef reference counts are atomic, and a buffer is
+ * destroyed only after the lock is released - here, or on the worker if the worker still
+ * held it.
  */
 WKJ_EXPORT void wkj_rq_release(const int64_t* buffer_addrs, int32_t count);
 

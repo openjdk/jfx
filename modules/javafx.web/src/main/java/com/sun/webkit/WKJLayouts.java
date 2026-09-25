@@ -222,7 +222,7 @@ public final class WKJLayouts {
 
     /**
      * {@code WKJHost}: an {@code int32_t}, four bytes of padding the C compiler inserts before the
-     * first pointer aligned group, and the sixteen groups above. The padding is declared rather
+     * first pointer aligned group, and the fifteen groups above. The padding is declared rather
      * than left implicit because {@link MemoryLayout#structLayout} inserts none, and without it
      * this layout is 1348 bytes against the C struct's 1352 - which {@code wkj_init} rejects with
      * {@code WKJ_INIT_ERR_HOST_SIZE}.

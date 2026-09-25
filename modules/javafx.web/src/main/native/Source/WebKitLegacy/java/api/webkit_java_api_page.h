@@ -398,7 +398,11 @@ typedef struct WKJPageNotifyCallbacks {
  * com.sun.webkit.BackForwardList$Entry that mirrors a HistoryItem, and the library parks
  * the id it returns in HistoryItem::m_hostObject for the life of the item, so the entry
  * is created once and handed back on every later lookup. item_destroyed is called from
- * the HistoryItem destructor with that same id, which is the last use of it.
+ * the HistoryItem destructor with that same id, and the id is borrowed: Java must not
+ * release it. The library owns it through the WKJHandle in m_hostObject, which releases
+ * it after the destructor body has returned. The id create_entry returns is strong, so a
+ * copied HistoryItem, which copies that handle, holds the same id, retained once more; a
+ * release by Java would take the reference the copy still holds.
  */
 typedef struct WKJBackForwardCallbacks {
     void (*list_changed)(wkj_ref back_forward_list);
@@ -406,7 +410,7 @@ typedef struct WKJBackForwardCallbacks {
     /* -> BackForwardList.Entry(long item, long page). Returns the new id, or 0. */
     wkj_ref (*create_entry)(int64_t item, int64_t page);
 
-    /* -> BackForwardList.Entry.notifyItemDestroyed(). */
+    /* -> BackForwardList.Entry.notifyItemDestroyed(). `entry` is borrowed, as above. */
     void (*item_destroyed)(wkj_ref entry);
 } WKJBackForwardCallbacks;
 
@@ -919,6 +923,16 @@ WKJ_EXPORT wkj_ref wkj_bfl_item_at(int64_t page, int32_t index);
  * Was bflItemGetChildren: writes up to out_cap child entry ids into out and returns how
  * many there are; call it with out == NULL and out_cap == 0 to get the count first. The
  * ids are borrowed, as for wkj_bfl_item_at.
+ *
+ * A child that already has an entry in HistoryItem::m_hostObject gets that entry back, and
+ * an entry is created only for a child that has none, on either call. This deliberately
+ * differs from the JNI bflItemGetChildren that commit 939aa61ead replaced. That version
+ * created a new BackForwardList.Entry for every child on every call and made it the item's
+ * host object, so the Entry an earlier call returned was never sent notifyItemDestroyed,
+ * kept its item pointer after the HistoryItem was freed, and read freed memory on its next
+ * getter call. Because the Entry constructor itself calls getChildren(), each call also
+ * rebuilt the whole subtree. Here repeated calls return the same Entry objects, and the
+ * Entry a caller holds is the one notified when its item is destroyed.
  */
 WKJ_EXPORT int32_t wkj_bfl_item_children(int64_t item, int64_t page, wkj_ref* out,
                                          int32_t out_cap);

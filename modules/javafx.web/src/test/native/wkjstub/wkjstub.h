@@ -151,12 +151,28 @@ typedef struct WKJStubHostSlot {
     const char* signature;   /* return kind followed by one kind per parameter */
 } WKJStubHostSlot;
 
-extern const WKJStubSymbol   wkjstub_symbol_table[];
-extern const int32_t         wkjstub_symbol_table_size;
-extern const WKJStubStruct   wkjstub_struct_table[];
-extern const int32_t         wkjstub_struct_table_size;
-extern const WKJStubHostSlot wkjstub_host_slot_table[];
-extern const int32_t         wkjstub_host_slot_table_size;
+/*
+ * One function pointer slot of a callback table, meaning a struct that holds
+ * function pointers and is not itself a member of another struct. WKJHost is one,
+ * with the rows of wkjstub_host_slot_table; the others are installed on their own:
+ * WKJLiveConnectHost and the page, popup, colour chooser, back-forward, event
+ * listener and network tables.
+ */
+typedef struct WKJStubCallbackSlot {
+    const char* table;       /* the C struct, e.g. "WKJPopupCallbacks" */
+    const char* name;        /* the member; a dotted path inside a nested group */
+    int32_t     offset;      /* byte offset from the start of the table */
+    const char* signature;   /* return kind followed by one kind per parameter */
+} WKJStubCallbackSlot;
+
+extern const WKJStubSymbol       wkjstub_symbol_table[];
+extern const int32_t             wkjstub_symbol_table_size;
+extern const WKJStubStruct       wkjstub_struct_table[];
+extern const int32_t             wkjstub_struct_table_size;
+extern const WKJStubHostSlot     wkjstub_host_slot_table[];
+extern const int32_t             wkjstub_host_slot_table_size;
+extern const WKJStubCallbackSlot wkjstub_callback_slot_table[];
+extern const int32_t             wkjstub_callback_slot_table_size;
 
 /* The installed host table, or NULL. Owned by the runtime. */
 const void* wkjstub_host_bytes(void);

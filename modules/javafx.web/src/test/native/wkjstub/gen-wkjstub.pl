@@ -58,7 +58,10 @@
 #                             plus wkjstub_sizeof_X / wkjstub_offsetof_X_y;
 #   * wkjstub_host_slot_table and wkjstub_fire_host_slot - the flattened WKJHost
 #     upcall table and a typed dispatcher, so a Java test can fire any host
-#     callback by name.
+#     callback by name;
+#   * wkjstub_callback_slot_table - every slot of every callback table, WKJHost and
+#     the tables installed on their own alike, with its offset and the signature of
+#     its C prototype, so a Java test can compare each installed upcall stub with it.
 #
 # The generator is deliberately strict: an unrecognised C type is a fatal
 # error rather than a guess, because a wrong guess would produce a stub that
@@ -75,7 +78,7 @@ my $header;
 my $spec;
 my $dom_include = 'webkit_java_api_dom.h';
 my $out;
-my @skip = qw(wkj_init wkj_abi_version wkj_exception_slot);
+my @skip = qw(wkj_init wkj_abi_version wkj_exception_slot wkj_live_connect_init);
 
 while (@ARGV) {
     my $arg = shift @ARGV;
@@ -445,29 +448,59 @@ for my $s (@structs) {
     $members_of{$s} = [ struct_members($s) ];
 }
 
-# ----------------------------------------------------- flatten the host table
+# ------------------------------------------------ flatten the callback tables
 
-my @host_slots;
-sub flatten_host {
-    my ($struct, $prefix, $offset_expr) = @_;
+# The struct type of a nested struct member, without qualifiers.
+sub nested_type {
+    my ($m) = @_;
+    my $t = $m->{type};
+    $t =~ s/\bconst\b//g;
+    $t =~ s/\s+//g;
+    return $t;
+}
+
+# Appends one row per function pointer reachable from $struct to @$out, descending
+# into nested structs: the dotted path, the offset expression from the start of the
+# outermost struct, and the signature derived from the C prototype.
+sub flatten_callbacks {
+    my ($struct, $prefix, $offset_expr, $out) = @_;
     for my $m (@{ $members_of{$struct} }) {
         my $path = ($prefix eq '') ? $m->{name} : "$prefix.$m->{name}";
         my $off = ($offset_expr eq '') ? "offsetof($struct, $m->{name})"
                                        : "$offset_expr + offsetof($struct, $m->{name})";
         if ($m->{callback}) {
             my $sig = $m->{ret_kind} . join('', map { $_->{kind} } @{ $m->{args} });
-            push @host_slots, { name => $path, offset => $off, signature => $sig,
-                                ret_kind => $m->{ret_kind}, ret => $m->{ret},
-                                args => $m->{args} };
+            push @$out, { name => $path, offset => $off, signature => $sig,
+                          ret_kind => $m->{ret_kind}, ret => $m->{ret}, args => $m->{args} };
         } elsif ($m->{kind} eq 'S') {
-            my $t = $m->{type};
-            $t =~ s/\bconst\b//g;
-            $t =~ s/\s+//g;
-            flatten_host($t, $path, $off);
+            flatten_callbacks(nested_type($m), $path, $off, $out);
         }
     }
 }
-flatten_host('WKJHost', '', '') if exists $struct_body{'WKJHost'};
+
+my @host_slots;
+flatten_callbacks('WKJHost', '', '', \@host_slots) if exists $struct_body{'WKJHost'};
+
+# Every callback table, not only WKJHost: a struct that holds a function pointer,
+# directly or through a nested group, and is not itself a member of another struct.
+# WKJLiveConnectHost and the page, popup, colour chooser, back-forward, event listener
+# and network tables are installed on their own, each by a positional or a named Java
+# builder, so each gets rows of its own, with offsets from its own start. The WKJHost
+# groups are nested, so they appear once, under WKJHost, with the same dotted paths as
+# wkjstub_host_slot_table.
+my %nested;
+for my $s (@structs) {
+    for my $m (@{ $members_of{$s} }) {
+        $nested{ nested_type($m) } = 1 if $m->{kind} eq 'S';
+    }
+}
+my @callback_slots;
+for my $s (@structs) {
+    next if $nested{$s};
+    my @slots;
+    flatten_callbacks($s, '', '', \@slots);
+    push @callback_slots, map { +{ %$_, table => $s } } @slots;
+}
 
 # ------------------------------------------------------------------- emitting
 
@@ -742,6 +775,16 @@ emit("    { NULL, 0, NULL }\n") unless @host_slots;
 emit("};\n");
 emit("const int32_t wkjstub_host_slot_table_size = " . scalar(@host_slots) . ";\n\n");
 
+# ---- every callback table, WKJHost included
+
+emit("const WKJStubCallbackSlot wkjstub_callback_slot_table[] = {\n");
+for my $s (@callback_slots) {
+    emit("    { \"$s->{table}\", \"$s->{name}\", (int32_t) ($s->{offset}), \"$s->{signature}\" },\n");
+}
+emit("    { NULL, NULL, 0, NULL }\n") unless @callback_slots;
+emit("};\n");
+emit("const int32_t wkjstub_callback_slot_table_size = " . scalar(@callback_slots) . ";\n\n");
+
 emit(<<'FIRE');
 int32_t wkjstub_fire_host_slot(int32_t slot, const int64_t* argv, int32_t argc, int64_t* out_ret)
 {
@@ -834,6 +877,7 @@ close $ofh;
 
 printf STDERR "gen-wkjstub: %s (%d core) + %s (%d DOM) -> %s\n",
     $header, $core_count, (defined $spec) ? $spec : '(no spec)', $dom_count, $out;
-printf STDERR "gen-wkjstub: %d exported symbols, %d generated stubs, %d structs, %d host slots\n",
-    scalar(@functions), $generated, scalar(@structs), scalar(@host_slots);
+printf STDERR "gen-wkjstub: %d exported symbols, %d generated stubs, %d structs, %d host slots,"
+    . " %d callback slots\n",
+    scalar(@functions), $generated, scalar(@structs), scalar(@host_slots), scalar(@callback_slots);
 exit 0;

@@ -99,11 +99,36 @@ from `JavaDOMUtils.h`.
 
 Native code never holds a Java reference. Instead:
 
-* Java keeps a registry `ConcurrentHashMap<Long, Object>` with Java-assigned ids.
+* Java keeps the registry in `WebKitNative`: a `WKJLongMap<Entry>`, a concurrent map keyed by
+  primitive `long` so that a lookup does not box, from Java-assigned ids to entries. Ids are
+  monotonic and never reused. Each entry holds its object strongly or weakly and carries a
+  reference count.
 * C sees `typedef uint64_t wkj_ref;` (0 = null).
-* `WKJHost` provides `retain(wkj_ref)` and `release(wkj_ref)`; a small RAII wrapper `WKJHandle`
-  in C++ reproduces the `JLocalRef` / `JGlobalRef` copy, move and assign semantics on top of it.
-* Registry entries are removed on dispose; a leak test asserts the map empties.
+* `WKJHost` provides `retain(wkj_ref)` and `release(wkj_ref)`, plus `retain_weak` and `is_live`
+  for weak ids; a small RAII wrapper `WKJHandle` in C++ keeps the `JLocalRef` / `JGlobalRef` copy,
+  move and assign shape on top of them.
+* The registry does **not** intern by object identity. Registering an object mints a fresh id at
+  count 1 on every call, so one object can have several ids. `retain` on a strong id returns the
+  **same** id with its count raised by one; `retain` on a weak id mints a new strong id, or
+  returns 0 once the object has been collected; `retain_weak` on a strong or weak id mints a new
+  weak id, and returns 0 without minting for 0, an unknown id or an id whose object has been
+  collected; and `release` drops one count and removes the entry at zero. §13.1 row 5 records
+  how this was settled.
+* Two consequences for C++ authors. A copy of a `WKJHandle` that holds a strong id shares its
+  owner's id, where a JNI `NewGlobalRef` copy was an independent reference, so a stray extra
+  `release` does not fail: it consumes a reference another holder still counts on. A copy of a
+  handle that holds a weak id goes through `retain` and gets a new strong id, or 0 once the
+  object has been collected. And equal ids name the same object, but one object can have unequal
+  ids, so ask `core.equals` when identity matters.
+* Registry entries are removed when the page that took them is disposed, and
+  `test.javafx.scene.web.WebKitRegistryLeakTest` asserts it against the real library (a module
+  test, so it runs with `-Djfx.web.skipTests=false`). Each cycle uses DOM wrappers, Java event
+  listeners, the back-forward list and a Java object bound into page script, then navigates away
+  and disposes the page. After a burn-in the registry must return to its baseline within two ids
+  over six cycles, and a second interval that leaks one id per cycle proves the same measurement
+  catches the smallest leak. The map does not empty: ids the library keeps for the life of the
+  process, such as its cached `JSObject.UNDEFINED`, are taken during the burn-in and counted in
+  the baseline. `WebKitRegistryTest` checks the registry's own counting against wkjstub.
 
 ## 4. Upcalls: one process-wide host table
 
@@ -125,6 +150,16 @@ Java installs the table from **one** `Arena.ofShared()` created once per process
 table outlives everything and is created exactly once). Per-object stubs are not used.
 Every upcall target catches `Throwable`, logs through `PlatformLogger` and returns a default - an
 escaping exception would terminate the JVM.
+A failed target also sets a per-thread flag, which `core.check_and_clear_exception` reports and
+clears in place of `WTF::CheckAndClearException(env)`. The page, popup menu, back/forward and colour
+chooser tables and the DumpRenderTree table are the exception: their targets log the failure and
+clear the flag instead (`WebKitNative.clientCallbackFailed`), because their only callers are the
+WebKitLegacy client classes and the harness, which never ask, and the JNI code cleared the pending
+exception straight after almost every one of those calls. A flag left set there would be reported
+to the next unrelated caller that does ask, such as `ImageBufferJavaBackend::create`. The
+`WKJLiveConnectHost` targets (`webkit_java_api_bridge.h`) log the failure and leave the flag as it
+was (`WebKitNative.logContainedFailure`): no caller in `Source/WebCore/bridge` asks either, so a
+flag set there could only mislead a later, unrelated caller (§13.3).
 
 Threading is unchanged: whatever marshalled to the FX or WebKit thread before still does, in the
 same place.
@@ -180,6 +215,12 @@ Consequently:
   reviewed and mechanically generated rather than compiler-verified;
 * the 473 module tests cannot pass until `jfxwebkit` is rebuilt from the migrated sources with the
   WebKit CMake and ninja toolchain.
+
+That was the state when this contract was written. `jfxwebkit` is now built from the migrated
+sources out of tree, by `.github/workflows/build-webkit.yml`, and the `jfxwebkit.dll` in
+`../caches/sdk/bin` exports 1963 `wkj_*` symbols, 0 `Java_*` and no `JNI_OnLoad`, exactly the set
+the Java facades bind; the module suite runs against it (`FFM-STATUS.md` section 3). The opening
+sentence still holds: the Maven build compiles Java and `wkjstub`, never WebKit.
 
 To keep the binding layer genuinely verified rather than merely written, the migration ships a
 generated **`wkjstub`** test library implementing the whole `wkj_*` ABI with recording stubs,
@@ -308,10 +349,10 @@ a working library, nothing more.
 
 ### 10.4 Out of scope
 
-`modules/javafx.web/src/android/**` and `src/ios/**` declare their own `native` methods and load
-their own libraries, but the Maven build compiles only `src/main/java` plus `target/gensrc/java`.
-They are not built here and are left untouched; note them in the final report rather than editing
-them.
+`modules/javafx.web/src/android/**` and `src/ios/**` declared their own `native` methods and
+loaded their own `webview` library, but the Maven build compiles only `src/main/java` plus
+`target/gensrc/java`, so they were never built here. Both trees have since been deleted, as
+javafx.graphics dropped its iOS and Android code in PR #12 (commit 26ce75d02f).
 
 ## 11. Corrections from the DOM audit and the generator experiment
 
@@ -464,6 +505,31 @@ question to get wrong and nothing to leak or dangle. On `WKJ_STR_OVERFLOW` the f
 and retries. Null is still distinguished from empty - `WKJ_STR_NULL` versus `WKJ_STR_OK` with
 length 0 - which is the outbound distinction §11.1 says is load-bearing.
 
+**The retry runs the whole function again.** `WKJReturnString` (`WKJDOMUtils.cpp`) writes nothing
+and keeps nothing on overflow, so the second call recomputes the value. That is harmless for a
+getter, and the generated DOM facades (`dom-java-to-ffm.pl`) retry every string-returning row the
+same way. Of the 356 built rows that return a string, 13 are not named `get`/`is`/`has`, and two of
+those have a side effect, which the retry repeats:
+
+* `CSSStyleDeclaration.removeProperty`: when the removed value is longer than the 256-unit first
+  buffer, the first call removes the property and reports overflow, and the second finds nothing
+  to remove and returns null. The JNI build made one call and returned the removed value.
+* `DOMWindow.prompt`: when the answer is longer than 256 units, the retry opens a second modal
+  dialog. If the second answer also overflows the grown buffer, `DOMStringCodec.decode` throws
+  `IllegalStateException`. The JNI build showed one dialog.
+
+This is a known, unfixed deviation from the JNI build (§13.3); `dom-abi.tsv` has no column that
+marks a row as unsafe to repeat. Its reach is small. Both methods are public only on
+`CSSStyleDeclarationImpl` and `DOMWindowImpl` in `com.sun.webkit.dom`, which `javafx.web` does not
+export. No exported interface hands out a `CSSStyleDeclarationImpl`: only impl-only methods such
+as `ElementImpl.getStyle` do. `DocumentView.getDefaultView` does return the `DOMWindowImpl`, but
+as an `AbstractView`, which has no `prompt`. A script's `window.prompt` never reaches the DOM
+facade: it goes through the chrome `prompt` slot, which serves its own retry from the answer it
+already has (`webkit_java_api_page.h`). The upcall-side retry in `wkjFetchString`
+(`wtf/java/WKJRuntime.h`) also repeats its Java slot, but every caller reads state or computes a
+value (clipboard, cookies, localized strings, media types, file paths, IDN conversion), so the
+repeat is safe; a value that grows between the two reads comes back null.
+
 The same reasoning removes the arena from the exception slot: `WKJExceptionSlot` carries its message
 in a fixed inline `uint16_t message[256]` with an explicit length, truncating beyond that. Every
 current DOM exception message is a short canned string from `DOMException::description`, so nothing
@@ -504,3 +570,160 @@ complete removal of JNI from the module, not only the deletion of C++. The revie
 ordering - get a reproducible WebKit build first, prove the pipeline on one small slice, then do
 LiveConnect - is the right ordering for a project that can build WebKit. This one cannot, which is
 stated plainly in §8 and remains the central risk of the whole exercise.
+
+### 13.3 Known behaviour differences from the JNI build
+
+The port is meant to be behaviour-neutral. The differences below are known, and each says whether
+it is deliberate or still open. "The JNI build" is the tree that commit 939aa61ead replaced.
+
+* **`wkj_bfl_item_children` reuses child entries (deliberate).** A child whose
+  `HistoryItem::m_hostObject` already holds an entry gets that entry back, and an entry is created
+  only for a child that has none. The JNI `bflItemGetChildren` created a new
+  `BackForwardList.Entry` for every child on every call and made it the host object, so an Entry
+  from an earlier call was never sent `notifyItemDestroyed` and read its freed `HistoryItem` on its
+  next getter call. Restoring parity would restore that use-after-free. The difference shows
+  through `com.sun.webkit.BackForwardList` and DumpRenderTree, not through
+  `javafx.scene.web.WebHistory`, which does not expose children. See `wkj_bfl_item_children` in
+  `webkit_java_api_page.h` and `FFM-STATUS.md` section 12.2.
+* **The shutdown gate applies on every thread (recorded, not changed).** Once
+  `wkj_set_shutdown(1)` has run, the `retain`, `retain_weak`, `release` and `is_live` slots of the
+  published `wkj_host` return 0 or do nothing, and every `WKJ_RETURN_IF_SHUTTING_DOWN` site returns
+  early, on every thread. The JNI checks those sites and `JavaRef.h` replaced asked only whether
+  the calling thread had a `JNIEnv`, so the FX thread, which is always attached, kept all of them
+  working after the flag was set. The difference lasts from the shutdown hooks `WebPage` installs
+  to the end of the process. See THE SHUTDOWN GATE in `wtf/java/WKJRuntime.h`.
+* **Web Worker threads make upcalls the JNI build skipped or crashed on (deliberate).** The JNI
+  build attached a `WebCore: Worker` thread only inside `WorkerThread::createGlobalScope`, so once
+  the worker ran script `GetJavaEnv` answered null on it. Code that tested for that skipped its
+  call there, and code that did not dereferenced a null `JNIEnv` and brought the JVM down: a
+  `Path2D` operation that needs the platform path, such as `addPath` (`PathJava`; a bare
+  `new Path2D('M0 0 L10 10 Z')`, `rect` and copying one into `new Path2D(p)` keep a `PathStream`
+  and did not crash), `FontFace.load()` and a `FontFace` built from an `ArrayBuffer`
+  (`FontCustomPlatformData`), and `createImageBitmap` from `ImageData` (`ImageBufferJavaBackend`)
+  in a worker all ended the process. An FFM upcall stub attaches the thread by itself, so those
+  calls now run. Their Java targets are synchronized or hand their work to the render thread, and
+  the Threading note of `webkit_java_api_platform.h` lists the slots observed on a worker in
+  thread-recording runs against the real library. `WebWorkerUpcallTest` pins two of the cases:
+  `addPath` and a `FontFace` built from an `ArrayBuffer` complete on a worker, and the JVM
+  survives. One result is kept as it was: the `ImageDecoderJava` constructor makes no Java
+  decoder on a thread other than the main one that has entered the JavaScript VM, which in this
+  port is a worker, so `createImageBitmap` from a `Blob` still rejects there with
+  `InvalidStateError`, as the JNI constructor's `if (!env) return;` made it. Decoder WorkQueue
+  threads create no decoder: they use the decoder that `BitmapImageSource` made on the main
+  thread.
+
+  A worker also reaches `RenderingQueue::flushBuffer`, through `createImageBitmap` from
+  `ImageData` with a resize or crop, a resize of a bitmap transferred from the main thread, and a
+  structured clone of a bitmap it holds, while the event thread removes entries from the same
+  `a2bb` map in `wkj_rq_release` and adds its own for main-thread canvases. That hazard is closed
+  by making the shared state thread-safe rather than refusing the paths. A static `WTF::Lock`
+  guards every access to `a2bb`; entries leave it by move and are destroyed only after the lock
+  is released, so no upcall runs under it. `ByteBuffer` and `RQRef` derive from
+  `ThreadSafeRefCounted`, so the last reference may be dropped on either thread, and their
+  destructors' upcalls (`core.release`, `graphics.ref_deref`) are safe on any thread. Refusing
+  the paths by failing `ImageBufferJavaBackend::create` on a worker was ruled out: it would not
+  reject the promise but abort at the `RELEASE_ASSERT` of `ImageBitmap::createBlankImageBuffer`,
+  and it would not cover the clone. The fix is in the source but unbuilt until the next
+  `build-webkit.yml` dispatch produces a `jfxwebkit` from it; the `jfxwebkit` in
+  `../caches/sdk/bin` that the module tests run against predates it. Until then the evidence is:
+  `RenderingQueue.cpp` and `RQRef.cpp` compiled against this tree's real WTF headers with GCC
+  (C++23, debug and release); a multi-threaded stress run of the unmodified files on the real WTF
+  `HashMap`, `Lock` (its contended path replaced by a spin) and `ThreadSafeRefCounted` that is
+  clean under ThreadSanitizer, AddressSanitizer and UBSan, while the pre-change code fails it; and
+  an MSVC run of a stub-WTF harness. Neither clang-cl, which builds the Windows library, nor Apple
+  clang has compiled it. The comments on `RenderingQueue::flushBuffer` and `wkj_rq_release`
+  describe the locking. The other shared state the worker-reachable slots touch was audited at
+  the same time; what that audit left unchanged, including state a worker could reach only if
+  OffscreenCanvas were enabled in workers, is in `FFM-STATUS.md` section 21.2, item 7.
+* **An `ImageBitmap` closed on a worker releases its Java render objects (deliberate).** A bitmap
+  transferred to a worker and closed or collected there is disposed on that thread:
+  `rq_dispose_graphics` and `core.release` run on `WebCore: Worker`, and nothing is left after a
+  collection, as for a bitmap closed on the main thread. The JNI build returned early from
+  `RenderingQueue::disposeGraphics` and skipped `DeleteGlobalRef` on that unattached thread, so
+  the `RTImage` and `WCRenderQueueImpl` global references leaked and kept the
+  `WCBufferedContext`, its `ContextState` and the image's texture reachable: thirty bitmaps left
+  thirty of each. The Java side is safe there: `Ref.deref` and `WCGraphicsManager.deref` are
+  synchronized, `WCRenderQueueImpl.disposeGraphics` only posts to the render thread, and a
+  registry release takes the entry's monitor.
+  `WebKitRegistryLeakTest.imageBitmapsClosedOnAWorkerGiveTheirIdsBack` pins it: thirty bitmaps
+  held on a worker take sixty ids, and closing them there gives all sixty back.
+* **WorkQueue jobs that JNI never attached (recorded, not changed; read from the source, not
+  measured).** On macOS the build uses `WorkQueueCocoa.cpp` (`USE_COCOA_EVENT_LOOP` in
+  `OptionsJava.cmake`), whose libdispatch threads the JNI build never attached, where
+  `WorkQueueGeneric.cpp` on Windows and Linux attached each job. So on macOS
+  `ImageDecoderJava::createFrameImageAtIndex` returned no frame on the decoder queue,
+  `BitmapImageSource` reported the decode as failed, and `img.decode()` on a loaded image
+  would have rejected; the FFM upcall attaches the thread, so those frames now decode. On every
+  platform, a decoder whose last reference is held by the `ImageFrameWorkQueue` closure (an idle
+  animated-image queue after `destroyDecodedData(true)`, or a static image's short window after
+  `stop()`) is now destroyed on the `ImageDecoder` queue thread, where the JNI destructor found no
+  `JNIEnv` once `WorkQueueGeneric` had detached and leaked the `WCImageDecoderImpl`. That destroy
+  is not guaranteed to finish cleanly off the FX thread: if the decoder's loader has started,
+  `WCImageDecoderImpl.destroy` reaches `Service.cancel`, which throws `IllegalStateException`
+  there, and `image_decoder_destroy` contains and logs it. The id is released either way. One run
+  of an `await img.decode()` page and an animated GIF on a macOS build would settle whether the
+  JNI-era failure was ever visible.
+* **The DOM string retry repeats side effects (open).** `CSSStyleDeclaration.removeProperty` and
+  `DOMWindow.prompt` run twice when their result overflows the first buffer. §13 has the effects
+  and why they are hard to reach.
+* **LiveConnect field and array failures are contained, not thrown (deliberate).** Page script
+  that assigns a final field of an exposed Java object, or stores an element of the wrong type in a
+  Java array, makes `Field.set*` or `Array.set` throw. The `field_get`, `field_set`, `array_get`
+  and `array_set` slots of `WKJLiveConnectHost` log that at SEVERE and return (§4), and the script
+  carries on; so does a `doubleValue()` that throws inside `unbox`. The JNI build never cleared
+  these exceptions. One stayed pending while the script ran on, later JNI calls in the same script
+  still ran, and it then surfaced in the first of three ways. The next LiveConnect method
+  invocation reported it as its own exception and threw it into the script, because
+  `dispatchJNICall` took whatever `ExceptionOccurred` returned. Failing that, the first
+  `WTF::CheckAndClearException` to run printed and cleared it, and a check that branched on the
+  answer, such as `ImageBufferJavaBackend::create` for a canvas the script went on to create, took
+  its failure path; that is no longer reproduced. Failing both, it was thrown out of the Java
+  method that had entered WebKit, such as `WebEngine.executeScript` or `JSObject.eval`, checked
+  exceptions such as `IllegalAccessException` included. Doing the same would take one
+  pending-exception state kept across every upcall and downcall of the library: rethrown when each
+  downcall that stands for a JNI native method returns, saved and restored around every upcall,
+  and cleared wherever the JNI code cleared. Some of those clearing points no longer call into Java
+  at all; the `CheckAndClearException` calls in the JNI-era `strVect2JArray` (`StringJava.cpp`)
+  are an example. That is a model of the whole bridge rather than a LiveConnect change, so it is
+  not attempted. Nor do these slots set the flag `core.check_and_clear_exception` reports, which
+  would outlive the script and fail the first canvas of the next one. The exception type can
+  differ as well: `Array.set` reports a wrong element type as `IllegalArgumentException`, where
+  `SetObjectArrayElement` raised `ArrayStoreException`.
+  `LiveConnectParityTest.fieldAndArrayFailuresAreLoggedAndContained` and
+  `aThrowingDoubleValueIsContainedAndLeavesNothingForTheNextScript` pin the current behaviour, and
+  the comment above `LiveConnectNative.fieldGet` repeats this.
+* **Two LiveConnect lookups reach less than `GetMethodID` did (narrowing, recorded).** Both are in
+  `com.sun.webkit.dom.LiveConnectLookup`. Neither reaches a method the JNI build, which ignored
+  access, could not have called, although for one rare class shape below `doubleValue()` calls a
+  different one.
+  * `+obj`, `obj * 2` and every other numeric conversion of an exposed object that is not a
+    `java.lang.Number` call its `double doubleValue()`, as `callJNIMethod<jdouble>` did, so a
+    JavaFX `DoubleProperty` converts to its value. JNI ignored access checks and module
+    encapsulation and reflection does not, so a non-public `doubleValue()` in a package that is
+    not open to `javafx.web` converts to 0 where JNI returned the value. Every package on the class
+    path is open, so only named modules are affected by that. The search also passes over a class
+    whose own methods cannot be listed, because one of them names a class missing at run time,
+    where `GetMethodID` resolved the one method in it, and that can happen on the class path too.
+    A public or package-private `doubleValue()` such a class declares still runs, through a
+    declaration it overrides further up or in an interface, but only when there is one that
+    reflection may call; otherwise the object converts to 0 where JNI returned the value. A private
+    or static `doubleValue()` in such a class is not seen. JNI called the private one, and failed
+    and converted to 0 on the static one, while the search goes on up and may call a private
+    declaration, or a package-private one in another package, that JNI did not call for that
+    object. `WebKitLiveConnectTest.aDoubleValueInAClassWhoseMethodsCannotBeListedRunsOnlyThroughOneAbove`
+    pins the public cases.
+  * The `toString()` behind `'' + obj` and `String(obj)` is still found when the class's
+    `getMethods()` throws, typically because a public signature names a class that is missing at
+    run time: a public lookup resolves the one method, as `GetMethodID` did. When the class that
+    declares the override is itself the one that cannot be listed, Java cannot produce a `Method`
+    for it, and `java.lang.Object`'s declaration stands in. It is used only after the allow list of
+    `Utilities.fwkInvokeWithContext`, a public class in a package exported to everyone and a public
+    method have all been checked on the class that declares the override, so the stand-in is never
+    permitted where the override would not have been. An object whose class a public lookup cannot
+    see, or whose `toString()` is declared in such a class, converts to the empty string, where the
+    JNI build either answered or threw into the script.
+  * Both lookups keep their answer for the life of the runtime class, and that includes no answer
+    and an answer the `LinkageError` fallback found. `GetMethodID` resolved again on every call.
+    Its answer never depended on anything that changes later, but the lookups' answers can: a
+    class loader that later supplies the missing type, or a package opened to `javafx.web` after
+    the first conversion, would let a fresh search answer where the cached answer does not.

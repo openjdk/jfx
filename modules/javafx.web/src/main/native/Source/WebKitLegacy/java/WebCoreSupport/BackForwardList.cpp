@@ -127,8 +127,8 @@ void notifyBackForwardListChanged(wkj_ref host)
  */
 void notifyHistoryItemDestroyed(wkj_ref host)
 {
-    /* WC_GETJAVAENV_CHKRET gated this notification during teardown; see THE SHUTDOWN GATE
-       in wtf/java/WKJRuntime.h. */
+    /* WC_GETJAVAENV_CHKRET skipped this notification on a thread with no JNIEnv; the port
+       gates it on the shutdown flag instead. See THE SHUTDOWN GATE in wtf/java/WKJRuntime.h. */
     WKJ_RETURN_IF_SHUTTING_DOWN();
 
     if (host && s_wkjBackForwardCallbacks && s_wkjBackForwardCallbacks->item_destroyed)

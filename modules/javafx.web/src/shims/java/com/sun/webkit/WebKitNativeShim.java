@@ -56,6 +56,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import static java.lang.foreign.ValueLayout.ADDRESS;
@@ -446,6 +447,71 @@ public final class WebKitNativeShim {
         WebKitNative.hostSlotDescriptors().forEach(
                 (slot, descriptor) -> signatures.put(slot, signatureOf(descriptor)));
         return signatures;
+    }
+
+    /**
+     * What production installed in one slot of a callback table: the method the upcall stub calls
+     * and the shape the stub was created with, in the kind notation of {@link #hostSlotSignatures}.
+     *
+     * @param target the method, as {@code SimpleClassName.method}
+     * @param signature the return kind followed by one kind per parameter
+     */
+    public record InstalledSlot(String target, String signature) {
+    }
+
+    /**
+     * Initializes every facade that builds a callback table of its own, so that each table exists
+     * before a test reads it. {@code WebKitNative} builds {@code WKJHost} in its own initializer,
+     * {@code WebPageNative} the page and network tables and, through {@code ColorChooserNative},
+     * the colour chooser's; the rest are built by the classes named here.
+     */
+    public static void buildCallbackTables() {
+        for (String facade : List.of("com.sun.webkit.WebPageNative", "com.sun.webkit.PopupMenuNative",
+                "com.sun.webkit.BackForwardListNative", "com.sun.webkit.ColorChooserNative",
+                "com.sun.webkit.dom.EventListenerNative", "com.sun.webkit.dom.LiveConnectNative")) {
+            try {
+                Class.forName(facade, true, WebKitNativeShim.class.getClassLoader());
+            } catch (ClassNotFoundException e) {
+                throw new AssertionError("the facade " + facade + " is gone; update this list", e);
+            }
+        }
+    }
+
+    /**
+     * Returns the C structs production has allocated a callback table for.
+     *
+     * @return the struct names
+     */
+    public static Set<String> callbackTableNames() {
+        return Set.copyOf(WebKitNative.callbackTables().keySet());
+    }
+
+    /**
+     * Reads one slot of a callback table production built, at a byte offset the C compiler
+     * computed, and names the upcall stub found there.
+     *
+     * @param table the C struct the table stands for
+     * @param offset the byte offset of the slot
+     * @return what the slot holds, or {@code null} when it is {@code NULL}
+     * @throws IllegalArgumentException if production allocated no table for {@code table}
+     * @throws IllegalStateException if the slot holds a pointer that is no upcall stub production
+     *         created, which is what a positional table one slot longer than its struct would show
+     */
+    public static InstalledSlot installedSlot(String table, long offset) {
+        MemorySegment segment = WebKitNative.callbackTables().get(table);
+        if (segment == null) {
+            throw new IllegalArgumentException("javafx.web allocated no " + table + " table");
+        }
+        long stub = segment.get(ADDRESS, offset).address();
+        if (stub == 0L) {
+            return null;
+        }
+        WebKitNative.UpcallTarget target = WebKitNative.upcallTarget(stub);
+        if (target == null) {
+            throw new IllegalStateException(table + " holds 0x" + Long.toHexString(stub) + " at offset "
+                    + offset + ", which is no upcall stub javafx.web created");
+        }
+        return new InstalledSlot(target.method(), signatureOf(target.descriptor()));
     }
 
     /*

@@ -43,18 +43,20 @@ import static java.lang.foreign.ValueLayout.JAVA_LONG;
  * {@code Entry} already holds as {@code pitem}; the list itself is addressed by the page handle, as
  * it was under JNI.
  * <p>
- * It also installs {@code WKJBackForwardCallbacks}, whose single slot is
- * {@code BackForwardList.notifyChanged()}. That table is process wide rather than per page: the
- * back/forward list is created by page creation, before the page exists, so it cannot be reached
- * through {@code wkj_page_set_callbacks}, and the slot is called with the id
+ * It also installs {@code WKJBackForwardCallbacks}: {@code list_changed}, which is
+ * {@code BackForwardList.notifyChanged()}, and {@code create_entry} and {@code item_destroyed}, which
+ * build the {@code BackForwardList.Entry} that mirrors a {@code HistoryItem} and tell it when the item
+ * has gone. That table is process wide rather than per page: the back/forward list is created by
+ * page creation, before the page exists, so it cannot be reached through
+ * {@code wkj_page_set_callbacks}, and {@code list_changed} is called with the id
  * {@code wkj_bfl_set_host} was given rather than with the page.
  * <p>
- * Two entry points are deliberately absent, because they build {@code BackForwardList$Entry} objects
- * and cache them in {@code HistoryItem::m_hostObject}, a {@code JGObject} in an upstream WebKit
- * header: {@code bflGet} and {@code bflItemGetChildren} keep their JNI form. {@code bflItemGetIcon}
- * is absent for a different reason - the native-necessity triage marked it for deletion rather than
- * migration, its C body being entirely commented out, and {@code BackForwardList.Entry.getIcon} now
- * answers null in Java, which is what the native call did for every item.
+ * The id of an entry is owned by the library. It is parked in {@code HistoryItem::m_hostObject}, a
+ * {@code WKJHandle}, whose destructor releases it; {@link #itemAt} and {@link #itemChildren} borrow
+ * it and {@link #itemDestroyed} does not release it. {@code bflItemGetIcon} has no binding: the
+ * native-necessity triage marked it for deletion rather than migration, its C body being entirely
+ * commented out, and {@code BackForwardList.Entry.getIcon} now answers null in Java, which is what
+ * the native call did for every item.
  *
  * @see com.sun.webkit.WebKitNative
  */
@@ -119,9 +121,8 @@ final class BackForwardListNative {
     private static final int CALLBACK_SLOTS =
             WKJLayouts.slotCount(WKJLayouts.BACK_FORWARD_CALLBACKS);
 
-    static {
-        installCallbacks();
-    }
+    /** The {@code WKJBackForwardCallbacks} table the library keeps for as long as it is loaded. */
+    private static final MemorySegment CALLBACKS = installCallbacks();
 
     private BackForwardListNative() {
     }
@@ -150,9 +151,9 @@ final class BackForwardListNative {
     }
 
     /**
-     * The entry at {@code index}, or {@code null} when there is none. The id is borrowed - the
-     * library keeps the entry alive in {@code HistoryItem::m_hostObject} and gives it up through
-     * {@code item_destroyed} - so it is looked up and not released.
+     * The entry at {@code index}, or {@code null} when there is none. The id is borrowed: the
+     * library keeps the entry alive in {@code HistoryItem::m_hostObject} and releases it when the
+     * item is destroyed, so it is looked up and not released here.
      *
      * @param page the page handle
      * @param index the index into the list
@@ -283,8 +284,18 @@ final class BackForwardListNative {
         }
     }
 
-    private static void installCallbacks() {
-        MemorySegment callbacks = WebKitNative.upcallTable(
+    /**
+     * The {@code WKJBackForwardCallbacks} table that was installed when this class was initialized,
+     * so that a binding test can call its slots the way the library does.
+     *
+     * @return the table, in the process-wide upcall arena
+     */
+    static MemorySegment callbacks() {
+        return CALLBACKS;
+    }
+
+    private static MemorySegment installCallbacks() {
+        MemorySegment callbacks = WebKitNative.upcallTable(WKJLayouts.BACK_FORWARD_CALLBACKS,
                 stub("listChanged", FunctionDescriptor.ofVoid(JAVA_LONG)),
                 stub("createEntry", FunctionDescriptor.of(JAVA_LONG, JAVA_LONG, JAVA_LONG)),
                 stub("itemDestroyed", FunctionDescriptor.ofVoid(JAVA_LONG)));
@@ -296,17 +307,11 @@ final class BackForwardListNative {
         } catch (Throwable t) {
             throw new AssertionError(t);
         }
+        return callbacks;
     }
 
     private static MemorySegment stub(String name, FunctionDescriptor descriptor) {
-        MethodHandle target;
-        try {
-            target = MethodHandles.lookup().findStatic(BackForwardListNative.class, name,
-                    descriptor.toMethodType());
-        } catch (ReflectiveOperationException e) {
-            throw new AssertionError("no upcall target " + name + descriptor.toMethodType(), e);
-        }
-        return WebKitNative.upcallStub(target, descriptor);
+        return WebKitNative.upcallStub(MethodHandles.lookup(), name, descriptor);
     }
 
     /**
@@ -330,8 +335,8 @@ final class BackForwardListNative {
     /**
      * Builds the {@code BackForwardList.Entry} that mirrors one {@code HistoryItem} and returns the
      * id the library parks in {@code HistoryItem::m_hostObject} for the life of the item. The
-     * library owns that reference and gives it back through {@link #itemDestroyed}, which is why
-     * nothing here releases it.
+     * library owns that reference: the {@code WKJHandle} there adopts it and releases it when the
+     * item is destroyed, after {@link #itemDestroyed} has run. Nothing in Java releases it.
      *
      * @param item the {@code HistoryItem} handle
      * @param page the page handle
@@ -348,8 +353,14 @@ final class BackForwardListNative {
 
     /**
      * {@code BackForwardList.Entry.notifyItemDestroyed()}, called from the {@code HistoryItem}
-     * destructor with the id {@link #createEntry} returned. That is the library's last use of the
-     * id, so the reference it has held since creation is released here.
+     * destructor with the id {@link #createEntry} returned. The id is borrowed and is not released
+     * here. {@code HistoryItem::m_hostObject} is the one owner, and its {@code WKJHandle} releases
+     * the id once the destructor body has returned. A copied {@code HistoryItem} copies that handle,
+     * and because the id {@link #createEntry} returns is strong, the copy retains the same id with
+     * its count raised, so a release here would take the reference the copy still holds. This
+     * matches {@code PopupMenuNative.destroy} and {@code ColorChooserNative.hide}, and the JNI build
+     * that commit 939aa61ead replaced, whose {@code notifyHistoryItemDestroyed} deleted no
+     * reference.
      *
      * @param ref the registry id of the entry
      */
@@ -360,14 +371,16 @@ final class BackForwardListNative {
             }
         } catch (Throwable t) {
             failed("item_destroyed", t);
-        } finally {
-            WebKitNative.release(ref);
         }
     }
 
-    /* See WebPageNative.failed: one place, so that check_and_clear_exception cannot miss one. */
+    /*
+     * See WebPageNative.failed. BackForwardList.cpp and the HistoryItem destructor, the only callers
+     * of this table, never ask check_and_clear_exception, and the JNI form cleared the exception
+     * after every call.
+     */
     private static void failed(String slot, Throwable t) {
-        WebKitNative.upcallFailed("back/forward callback " + slot, t);
+        WebKitNative.clientCallbackFailed("back/forward callback", slot, t);
     }
 
     private static int intCall(MethodHandle handle, long peer) {

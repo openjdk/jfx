@@ -28,6 +28,7 @@
 #include <wtf/Vector.h>
 #include <wtf/RefCounted.h>
 #include <wtf/HashSet.h>
+#include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/java/WKJHandle.h>
 
 #include "RQRef.h"
@@ -36,7 +37,19 @@ namespace WebCore {
 
 class RQRef;
 
-class ByteBuffer : public RefCounted<ByteBuffer> {
+/*
+ * One command buffer of a RenderingQueue.
+ *
+ * The thread that owns the queue fills it: the WebKit main thread, or a Web Worker thread for
+ * the ImageBuffer behind createImageBitmap. RenderingQueue::flushBuffer then enters it in the
+ * address table of RenderingQueue.cpp and hands it to Java, and wkj_rq_release takes it out
+ * of the table again on the event thread once Java has decoded it. On a worker the owner's
+ * reference and the table's can go at the same time, so the count is atomic, and the
+ * destructor runs on whichever thread drops the last one. Nothing in it depends on which: it
+ * frees memory, and its upcalls - core.release for m_nio_holder and, through ~RQRef,
+ * graphics.ref_deref - are documented as safe on any thread (WKJHandle.h, the ref_deref slot).
+ */
+class ByteBuffer : public ThreadSafeRefCounted<ByteBuffer> {
 public:
     static RefPtr<ByteBuffer> create(int capacity) {
         return adoptRef(new ByteBuffer(capacity));
@@ -49,9 +62,9 @@ public:
      * that has no counterpart in the C ABI and so moves to the Java side of the callback.
      *
      * The id that comes back is the Java ByteBuffer object. It is held here, in m_nio_holder,
-     * for exactly as long as this C++ ByteBuffer lives - that is, until wkj_rq_release drops
-     * the last reference to it - so the Java object cannot be collected while the queue still
-     * refers to the memory. That is the lifetime the global reference gave it.
+     * for exactly as long as this C++ ByteBuffer lives - that is, until the last reference to
+     * it goes, normally in wkj_rq_release - so the Java object cannot be collected while the
+     * queue still refers to the memory. That is the lifetime the global reference gave it.
      */
     void addToRenderQueue(wkj_ref renderQueue);
 
@@ -91,6 +104,13 @@ private:
         m_position(0)
     {}
 
+    /*
+     * Threads: the owning thread writes m_buffer's contents, m_position and m_refList while it
+     * fills the buffer, and m_nio_holder in addToRenderQueue while flushBuffer still holds its
+     * reference; nothing writes any of them after that. The Java render thread reads the
+     * contents through the wrapped address. The destructor, on the thread that drops the last
+     * reference, is ordered after the owner's writes by the atomic count.
+     */
     char* m_buffer;
     int m_capacity;
     int m_position;

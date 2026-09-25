@@ -80,18 +80,29 @@
  *     then retain the id it had just released.
  *
  * Ids are handles, not objects. The one rule the ABI imposes is that every id obtained from
- * retain or retain_weak is released exactly once; whether the registry mints a fresh id per
- * retain (the JNI model) or interns by object identity with a reference count is its own
- * choice, and this class is correct under both. See WKJHostCore in webkit_java_api.h. One
- * consequence to keep in mind while rewriting: `a == b` compares ids, so it only answers
- * "same object" if the registry interns. Use host->core.equals where the question is really
- * about the objects. No comparison of two handles exists in the tree today - every use of
- * the comparison operators on a JLObject/JGObject-family value is a null test - so nothing
- * currently depends on the answer.
+ * retain or retain_weak is released exactly once. The Java registry does not intern by
+ * object identity, and retain on a strong id returns that SAME id with its count raised
+ * (see WKJHostCore in webkit_java_api.h for the whole model). Two consequences to keep in
+ * mind while rewriting:
  *
- * Threading: retain and release run on whatever thread holds the handle, exactly as
- * NewGlobalRef and DeleteGlobalRef did. The Java implementations of both must therefore be
- * safe on any thread; the registry is a ConcurrentHashMap.
+ *   - A copy of a handle that holds a strong id shares its owner's id. JGlobalRef's copy
+ *     was an independent NewGlobalRef; a WKJHandle copy of a strong id is one more count
+ *     on the same id, so a stray extra WKJRelease of that id does not fail, it consumes
+ *     the reference another handle still counts on. A copy of a handle that holds a weak
+ *     id goes through WKJRetain like any other, so it gets a new strong id for the object,
+ *     or 0 once the object has been collected, and does not share the weak id.
+ *   - `a == b` compares ids. Equal ids name the same object, but one object can have
+ *     unequal ids, so use host->core.equals where the question is really about the
+ *     objects. Before the port no comparison of two handles existed: every use of the
+ *     comparison operators on a JLObject/JGObject-family value was a null test.
+ *
+ * Threading: retain and release run on whatever thread holds the handle, as NewGlobalRef
+ * and DeleteGlobalRef did on an attached thread. On a thread with no JNIEnv, a Web Worker
+ * thread after WorkerThread::createGlobalScope among them, the JavaRef.h copy and clear
+ * guards skipped the call, so a reference dropped there leaked; the FFM build makes the
+ * call (FFM-ABI-CONTRACT.md section 13.3). The Java implementations of both must therefore
+ * be safe on any thread; the registry is a WKJLongMap, read without a lock, and each
+ * entry's count changes under that entry's own monitor (WebKitNative.java).
  */
 
 #pragma once
@@ -99,9 +110,11 @@
 #include <webkit_java_api.h>
 
 /*
- * Mints a new strong id for the object `ref` names, or 0 for a null ref, an uninstalled
- * host or a NULL slot. This is JLocalRef::copy / JGlobalRef::copy, whose guard was
- * `(env && ref)`.
+ * Adds a strong reference and returns the id the caller now owns: `ref` itself with its
+ * count raised when `ref` is strong, a new strong id when it is weak. 0 for a null or
+ * unknown ref, an uninstalled host, a NULL slot, an object that is gone, and once the
+ * shutdown gate has closed (THE SHUTDOWN GATE in WKJRuntime.h). This is JLocalRef::copy /
+ * JGlobalRef::copy, whose guard was `(env && ref)`.
  */
 inline wkj_ref WKJRetain(wkj_ref ref)
 {
@@ -111,8 +124,11 @@ inline wkj_ref WKJRetain(wkj_ref ref)
 }
 
 /*
- * Mints a new weak id, which does not keep the object reachable. Only LiveConnect needs
- * this (JobjectWrapper takes NewWeakGlobalRef by default); everything else wants WKJRetain.
+ * Mints a new weak id for the object `ref` names, whether `ref` is strong or weak. A weak
+ * id does not keep the object reachable. 0 in the same cases as WKJRetain: nothing is
+ * minted for a null or unknown ref or for an object that has been collected. Only
+ * LiveConnect needs this (JobjectWrapper takes NewWeakGlobalRef by default); everything
+ * else wants WKJRetain.
  */
 inline wkj_ref WKJRetainWeak(wkj_ref ref)
 {
@@ -149,7 +165,7 @@ public:
     {
     }
 
-    /* Mints a new strong id for the same object and adopts it (JLocalRef's bycopy = true). */
+    /* Retains `ref` as WKJRetain does and adopts the result (JLocalRef's bycopy = true). */
     static WKJHandle retained(wkj_ref ref)
     {
         return WKJHandle(WKJRetain(ref));

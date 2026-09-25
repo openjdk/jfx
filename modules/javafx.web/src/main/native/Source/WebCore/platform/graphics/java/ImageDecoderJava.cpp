@@ -32,6 +32,8 @@
 #include "Logging.h"
 #include "WKJPlatformJava.h"
 
+#include <wtf/MainThread.h>
+#include <wtf/Threading.h>
 #include <wtf/java/WKJRuntime.h>
 
 namespace WebCore {
@@ -61,6 +63,26 @@ ImageDecoderJava::ImageDecoderJava()
     ++ImageDecoderCounter::created;
 #endif
 
+    /*
+     * No Java decoder on a Web Worker thread, as in the JNI build that commit 939aa61ead
+     * replaced. There, WorkerThread::createGlobalScope attached its thread to the JVM only for
+     * its own duration, so once the worker ran script GetJavaEnv answered null here and this
+     * constructor returned without a decoder. Every other member then found no decoder, the
+     * data never counted as complete, and createImageBitmap(Blob) in a worker rejected with
+     * InvalidStateError ("Cannot decode the data in the argument to createImageBitmap").
+     *
+     * An upcall stub attaches any thread by itself, so there is no null environment left to
+     * ask and the thread is identified instead: a thread other than the main one that has
+     * entered the JavaScript VM (Thread::isJSThread, set on first entry). In this port that
+     * is a Worker thread. Only BitmapImageSource::decoder(data) constructs a decoder, on the
+     * main thread or on a Worker thread, so this test only ever returns early on a Worker.
+     * The WorkQueue threads of ImageFrameWorkQueue construct none: ImageFrameWorkQueue::start
+     * asserts isMainThread and hands them the decoder that already exists, and they never
+     * enter the VM.
+     */
+    if (!isMainThread() && Thread::currentSingleton().isJSThread())
+        return;
+
     const WKJHostGraphics* cb = wkjGraphics();
     if (!cb || !cb->get_image_decoder) {
         return;
@@ -76,8 +98,9 @@ ImageDecoderJava::~ImageDecoderJava()
 #ifndef NDEBUG
     ++ImageDecoderCounter::deleted;
 #endif
-    // Static BitmapImage objects can be deallocated after the VM has gone. Preserve the JNI
-    // null-environment check explicitly now that the host table is process-wide.
+    // JNI skipped this on a thread with no JNIEnv; the port gates it on the shutdown flag
+    // instead. See THE SHUTDOWN GATE in wtf/java/WKJRuntime.h. A decoder built on a Worker
+    // thread has no Java peer (see the constructor), so it stops at the test below.
     WKJ_RETURN_IF_SHUTTING_DOWN();
 
     const WKJHostGraphics* cb = wkjGraphics();

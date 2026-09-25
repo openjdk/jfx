@@ -30,12 +30,14 @@
  * arena, the programmed-return table and the installed host table,
  * and exports the wkjstub_* query ABI that tests drive it through. The stub
  * bodies for the wkj_* ABI itself are generated into wkjstub_generated.c;
- * the three functions that need real behaviour (wkj_init, wkj_abi_version,
- * wkj_exception_slot) are implemented here and skipped by the generator.
+ * the functions that need real behaviour (wkj_init, wkj_abi_version,
+ * wkj_exception_slot) or have to keep their arguments (wkj_live_connect_init)
+ * are implemented here and skipped by the generator.
  */
 
 #include "wkjstub.h"
 #include "webkit_java_api.h"
+#include "webkit_java_api_bridge.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -556,6 +558,90 @@ WKJ_EXPORT int32_t wkj_init(const WKJHost* host, int32_t host_size, uint32_t abi
     return result;
 }
 
+/*
+ * The one plain-C export of the real library that javafx.web binds besides the
+ * wkj_* ABI: WebPageNative calls it to run a JavaScriptCore collection
+ * (WebKitLegacy/java/WebCoreSupport/WebPage.cpp). No ABI header declares it, so
+ * gen-wkjstub.pl cannot generate it. It is defined here so that WebPageNative,
+ * and with it the page and network callback tables its initializer builds, can
+ * be loaded against the stub.
+ */
+WKJSTUB_EXPORT void WebPage_doJSCGarbageCollection(void)
+{
+    wkjstub_record("WebPage_doJSCGarbageCollection", NULL, 0);
+}
+
+/*
+ * wkj_live_connect_init behaves as its generated stub would: it records the call
+ * and returns the programmed value, WKJ_INIT_OK when nothing was programmed. It
+ * is written by hand only so that its arguments are also kept outside the call
+ * ring. LiveConnectNative makes this call once, from its class initializer, and
+ * whichever test class happens to initialize LiveConnectNative first, any number
+ * of ring resets may follow before a test asks what the call carried.
+ */
+static int64_t  g_live_connect_host;
+static int32_t  g_live_connect_host_size;
+static uint32_t g_live_connect_abi_version;
+static int32_t  g_live_connect_init_calls;
+
+WKJ_EXPORT int32_t wkj_live_connect_init(const WKJLiveConnectHost* host, int32_t host_size,
+                                         uint32_t abi_version)
+{
+    WKJStubArg args[3];
+    int64_t value = 0;
+
+    wkjstub_arg_pointer(&args[0], (const void*) host);
+    wkjstub_arg_scalar(&args[1], WKJSTUB_KIND_INT, (int64_t) host_size);
+    wkjstub_arg_scalar(&args[2], WKJSTUB_KIND_INT, (int64_t) abi_version);
+    wkjstub_record("wkj_live_connect_init", args, 3);
+
+    WKJSTUB_LOCK();
+    g_live_connect_host = (int64_t) (intptr_t) host;
+    g_live_connect_host_size = host_size;
+    g_live_connect_abi_version = abi_version;
+    g_live_connect_init_calls++;
+    WKJSTUB_UNLOCK();
+
+    wkjstub_programmed_i64("wkj_live_connect_init", &value);
+    return (int32_t) value;
+}
+
+WKJSTUB_EXPORT int32_t wkjstub_live_connect_init_calls(void)
+{
+    int32_t calls;
+    WKJSTUB_LOCK();
+    calls = g_live_connect_init_calls;
+    WKJSTUB_UNLOCK();
+    return calls;
+}
+
+WKJSTUB_EXPORT int64_t wkjstub_live_connect_init_host(void)
+{
+    int64_t host;
+    WKJSTUB_LOCK();
+    host = g_live_connect_host;
+    WKJSTUB_UNLOCK();
+    return host;
+}
+
+WKJSTUB_EXPORT int32_t wkjstub_live_connect_init_host_size(void)
+{
+    int32_t size;
+    WKJSTUB_LOCK();
+    size = g_live_connect_host_size;
+    WKJSTUB_UNLOCK();
+    return size;
+}
+
+WKJSTUB_EXPORT uint32_t wkjstub_live_connect_init_abi_version(void)
+{
+    uint32_t version;
+    WKJSTUB_LOCK();
+    version = g_live_connect_abi_version;
+    WKJSTUB_UNLOCK();
+    return version;
+}
+
 /* ----------------------------------------------------- wkjstub_* query ABI */
 
 WKJSTUB_EXPORT uint32_t wkjstub_stub_version(void)
@@ -1049,6 +1135,43 @@ WKJSTUB_EXPORT int32_t wkjstub_find_host_slot(const uint16_t* name, int32_t name
         }
     }
     return -1;
+}
+
+WKJSTUB_EXPORT int32_t wkjstub_callback_slot_count(void)
+{
+    return wkjstub_callback_slot_table_size;
+}
+
+WKJSTUB_EXPORT const uint16_t* wkjstub_callback_slot_table_name(int32_t index, int32_t* out_length)
+{
+    if (index < 0 || index >= wkjstub_callback_slot_table_size) {
+        return query_string(NULL, out_length);
+    }
+    return query_string(wkjstub_callback_slot_table[index].table, out_length);
+}
+
+WKJSTUB_EXPORT const uint16_t* wkjstub_callback_slot_name(int32_t index, int32_t* out_length)
+{
+    if (index < 0 || index >= wkjstub_callback_slot_table_size) {
+        return query_string(NULL, out_length);
+    }
+    return query_string(wkjstub_callback_slot_table[index].name, out_length);
+}
+
+WKJSTUB_EXPORT int64_t wkjstub_callback_slot_offset(int32_t index)
+{
+    if (index < 0 || index >= wkjstub_callback_slot_table_size) {
+        return -1;
+    }
+    return wkjstub_callback_slot_table[index].offset;
+}
+
+WKJSTUB_EXPORT const uint16_t* wkjstub_callback_slot_signature(int32_t index, int32_t* out_length)
+{
+    if (index < 0 || index >= wkjstub_callback_slot_table_size) {
+        return query_string(NULL, out_length);
+    }
+    return query_string(wkjstub_callback_slot_table[index].signature, out_length);
 }
 
 /*

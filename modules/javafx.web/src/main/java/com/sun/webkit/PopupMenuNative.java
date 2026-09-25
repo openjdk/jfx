@@ -100,7 +100,7 @@ final class PopupMenuNative {
     }
 
     private static void installCallbacks() {
-        MemorySegment callbacks = WebKitNative.upcallTable(
+        MemorySegment callbacks = WebKitNative.upcallTable(WKJLayouts.POPUP_CALLBACKS,
                 stub("create", FunctionDescriptor.of(JAVA_LONG, JAVA_LONG)),
                 stub("appendItem", FunctionDescriptor.ofVoid(JAVA_LONG, ADDRESS, JAVA_INT,
                         JAVA_INT, JAVA_INT, JAVA_INT, JAVA_INT, JAVA_INT, JAVA_LONG)),
@@ -120,14 +120,7 @@ final class PopupMenuNative {
     }
 
     private static MemorySegment stub(String name, FunctionDescriptor descriptor) {
-        MethodHandle target;
-        try {
-            target = MethodHandles.lookup().findStatic(PopupMenuNative.class, name,
-                    descriptor.toMethodType());
-        } catch (ReflectiveOperationException e) {
-            throw new AssertionError("no upcall target " + name + descriptor.toMethodType(), e);
-        }
-        return WebKitNative.upcallStub(target, descriptor);
+        return WebKitNative.upcallStub(MethodHandles.lookup(), name, descriptor);
     }
 
     /**
@@ -211,8 +204,11 @@ final class PopupMenuNative {
         }
     }
 
-    /* See WebPageNative.failed: one place, so that check_and_clear_exception cannot miss one. */
+    /*
+     * See WebPageNative.failed. PopupMenuJava, the only caller of this table, never asks
+     * check_and_clear_exception, and the JNI form cleared the exception after every call.
+     */
     private static void failed(String slot, Throwable t) {
-        WebKitNative.upcallFailed("popup menu callback " + slot, t);
+        WebKitNative.clientCallbackFailed("popup menu callback", slot, t);
     }
 }

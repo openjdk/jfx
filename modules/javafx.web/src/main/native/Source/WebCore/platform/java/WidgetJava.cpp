@@ -79,9 +79,11 @@ Widget::Widget(PlatformWidget widget)
 Widget::~Widget()
 {
     /*
-     * The null-table test replaces the null-environment test: the JNI destructor skipped the
-     * call when the VM had gone, and detaching the host table is how the Java side reaches
-     * the same state now. The widget is cleared either way, exactly as before.
+     * The JNI destructor skipped WCWidget.fwkDestroy when GetJavaEnv answered null, that is on a
+     * thread not attached to the JVM (not when the VM had gone). wkj_host is never cleared
+     * once published, so the table test below only covers wkj_init not having run. A Widget
+     * is created and destroyed on the main thread, which is always attached, so no reachable
+     * call changes. The widget is cleared either way, exactly as before.
      */
     const WKJHostTheme* cb = wkjTheme();
     if (m_widget && cb) {

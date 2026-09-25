@@ -47,6 +47,7 @@ import java.lang.invoke.MethodType;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -136,8 +137,8 @@ public final class WebKitNative {
     private static final int WKJ_INIT_ERR_ALREADY_INITED = -4;
 
     /**
-     * {@code WKJHost}: an {@code int32_t}, four bytes of padding and sixteen groups, of which seven
-     * are still one-pointer placeholders and nine carry real slots. Its shape, and the shape of
+     * {@code WKJHost}: an {@code int32_t}, four bytes of padding and fifteen groups, of which seven
+     * are still one-pointer placeholders and eight carry real slots. Its shape, and the shape of
      * every group in it, is declared once in {@link WKJLayouts}.
      */
     private static final MemoryLayout HOST_LAYOUT = WKJLayouts.HOST;
@@ -148,12 +149,13 @@ public final class WebKitNative {
     private static final Linker LINKER = Linker.nativeLinker();
 
     /**
-     * Whether {@link #BOUND_SYMBOLS} and {@link #HOST_SLOT_DESCRIPTORS} record anything. Only the
-     * binding tests read those collections, and unguarded they would grow one interned name per
-     * bound symbol and one descriptor per host slot for the life of a production process. The flag
-     * is read once, here, because the first symbols are bound inside this class's own initializer:
-     * setting the property any later than JVM startup is too late, which is why the
-     * {@code ffm-binding-test} surefire execution passes it on its {@code argLine}.
+     * Whether {@link #BOUND_SYMBOLS}, {@link #HOST_SLOT_DESCRIPTORS}, {@link #UPCALL_TARGETS} and
+     * {@link #CALLBACK_TABLES} record anything. Only the binding tests read those collections, and
+     * unguarded they would grow one interned name per bound symbol and one entry per callback slot
+     * for the life of a production process. The flag is read once, here, because the first symbols
+     * are bound inside this class's own initializer: setting the property any later than JVM
+     * startup is too late, which is why the {@code ffm-binding-test} surefire execution passes it
+     * on its {@code argLine}.
      */
     private static final boolean RECORD_BINDINGS =
             Boolean.getBoolean("com.sun.webkit.recordBindings");
@@ -166,11 +168,25 @@ public final class WebKitNative {
 
     /**
      * The descriptor each filled {@code WKJHost} slot was bound with, in installation order. It
-     * exists so that the layout test can compare all 159 of them against the C prototypes the
-     * library reports, which is the only check that catches a descriptor naming the right slot with
-     * the wrong shape. Empty unless {@link #RECORD_BINDINGS} is set.
+     * exists so that the layout test can compare all 160 of them against the C prototypes the
+     * library reports by slot name, which catches a descriptor naming the right slot with the wrong
+     * shape. Empty unless {@link #RECORD_BINDINGS} is set.
      */
     private static final Map<String, FunctionDescriptor> HOST_SLOT_DESCRIPTORS =
+            Collections.synchronizedMap(new LinkedHashMap<>());
+
+    /**
+     * What each upcall stub created by {@link #upcallStub(MethodHandles.Lookup, String,
+     * FunctionDescriptor)} calls, keyed by the stub's address, and every callback table allocated
+     * here, keyed by the C struct it stands for. Together they let the binding tests read any slot
+     * of any table back and compare the stub in it with the C prototype of that slot, which catches
+     * a stub of the wrong shape and, in a table filled by position, a stub in its neighbour's slot.
+     * Empty unless {@link #RECORD_BINDINGS} is set.
+     */
+    private static final Map<Long, UpcallTarget> UPCALL_TARGETS =
+            Collections.synchronizedMap(new HashMap<>());
+
+    private static final Map<String, MemorySegment> CALLBACK_TABLES =
             Collections.synchronizedMap(new LinkedHashMap<>());
 
     /*
@@ -242,19 +258,19 @@ public final class WebKitNative {
             ThreadLocal.withInitial(WebKitNative::fetchExceptionSlot);
 
     static {
-        // Load the library exactly the way com.sun.webkit.WebPage loads it, through the same loader:
-        // NativeLibLoader is synchronized and remembers the libraries it has loaded, so whichever of the
-        // two classes is initialized first performs the load and the other one is a no-op. WebPage keeps
-        // its own load call and the WebCore initialization that follows it, so the ordering it relies on
-        // is unchanged.
+        // This is the module's only load of the wkj_* library, so the javafx.web.nativeLibrary
+        // override and the ABI version check below apply to every path into it. WebPage's static
+        // initializer, where the JNI bindings loaded jfxwebkit by name, calls ensureLoaded() as its
+        // first statement instead: the library is still loaded before WebPage sets up the cookie
+        // handler and starts WebCore, and it is now version checked and initialized by then as well.
         //
         // The host table is installed here, at the end of this static initializer, and nowhere else.
         // That is the earliest point at which it can be installed and it is early enough, because
         // every downcall handle in this module is created by WebKitNative.downcall: touching any
         // facade at all runs this initializer to completion first, so no wkj_* function can be
         // called, and therefore no callback can be fired, before wkj_init has returned. In
-        // particular WebPage's own static block reaches wkj_set_startup_options through
-        // WebPageNative, whose class initializer calls downcall, so the table is in place before
+        // particular WebPage's own static block runs this initializer through ensureLoaded before
+        // it reaches wkj_set_startup_options through WebPageNative, so the table is in place before
         // WebCore starts up; and wkj_page_create, which installs a page's callback tables as the
         // tail of page creation, is later still. Installing from WebPage instead would leave every
         // other facade - the DOM, the back-forward list, the network stack - able to call in first.
@@ -308,6 +324,19 @@ public final class WebKitNative {
                                         Linker.Option... options) {
         requireLibrary();
         return bind(LOOKUP, name, descriptor, options);
+    }
+
+    /**
+     * Makes sure the library is loaded, its ABI version checked and its host table installed by
+     * {@code wkj_init}, which is what this class's initializer does, and rethrows the failure any of
+     * that ended in. It is for a class that needs the library in place before it binds anything, which
+     * is {@link WebPage}'s static initializer: loading through here rather than by name keeps the
+     * {@code javafx.web.nativeLibrary} override and the ABI guard in force on that path too.
+     *
+     * @throws Error the cached load, ABI version or {@code wkj_init} failure, if there was one
+     */
+    static void ensureLoaded() {
+        requireLibrary();
     }
 
     /**
@@ -494,8 +523,9 @@ public final class WebKitNative {
      * {@code NewWeakGlobalRef} by default - {@code useGlobalRef} defaults to false - and the
      * LiveConnect code around it is written to tolerate collection. Modelling every id as strong
      * would pin every Java object a page script has ever touched, which is a behaviour change and
-     * not a cleanup. A new id is always minted, because the caller may be asking for a weak view of
-     * a strong id.
+     * not a cleanup. A new id is minted whenever the object is still there, because the caller may
+     * be asking for a weak view of a strong id; for id zero, an unknown id and a weak id whose
+     * object has been collected nothing is minted and zero is returned.
      *
      * @param id the registry id, may be zero
      * @return a weak id the caller owns and must release exactly once, or zero
@@ -610,6 +640,24 @@ public final class WebKitNative {
     }
 
     /**
+     * Creates the upcall stub for a static method of the caller's own class, which is how every
+     * callback table in this module is filled. The Java signature is derived from
+     * {@code descriptor} rather than restated, so a descriptor that does not match the method it
+     * names fails here, at class initialization, with the method in the message - instead of
+     * corrupting the stack at the first callback.
+     *
+     * @param lookup the caller's own {@link MethodHandles#lookup}, which is what gives the private
+     *               access an upcall target needs
+     * @param method the name of the static method in {@code lookup.lookupClass()}
+     * @param descriptor the descriptor matching the C function pointer type
+     * @return the stub, valid for the lifetime of the process
+     */
+    public static MemorySegment upcallStub(MethodHandles.Lookup lookup, String method,
+                                           FunctionDescriptor descriptor) {
+        return stub(method, lookup, method, descriptor);
+    }
+
+    /**
      * Allocates a table of function pointers in the process-wide upcall arena. A C callback table is
      * a struct whose every member is a function pointer, so it has the layout of an {@code ADDRESS}
      * sequence on every ABI this module supports; the caller writes the slots in the declaration
@@ -619,16 +667,62 @@ public final class WebKitNative {
      * is loaded, which is the one case the migration playbook allows a shared, never closed arena
      * for.
      *
+     * @param layout the C struct the table stands for, from {@link WKJLayouts}; the table is filled
+     *               by position, so the caller checks the slot count against it, and the binding
+     *               tests find the table by its name
      * @param slots the stubs, in the declaration order of the C struct; a slot may be
      *              {@link MemorySegment#NULL}
      * @return the table
      */
-    public static MemorySegment upcallTable(MemorySegment... slots) {
+    public static MemorySegment upcallTable(StructLayout layout, MemorySegment... slots) {
         MemorySegment table = UPCALL_ARENA.allocate(ADDRESS, slots.length);
         for (int i = 0; i < slots.length; i++) {
             table.setAtIndex(ADDRESS, i, slots[i]);
         }
+        recordTable(layout, table);
         return table;
+    }
+
+    private static void recordTable(MemoryLayout layout, MemorySegment table) {
+        if (RECORD_BINDINGS) {
+            layout.name().ifPresent(name -> CALLBACK_TABLES.put(name, table));
+        }
+    }
+
+    /**
+     * Returns every callback table allocated so far, keyed by the name of the C struct it stands
+     * for, so that the binding tests can read each slot back.
+     *
+     * @return the tables, in allocation order
+     * @throws IllegalStateException if binding recording is off
+     */
+    static Map<String, MemorySegment> callbackTables() {
+        requireRecordedBindings();
+        synchronized (CALLBACK_TABLES) {
+            return new LinkedHashMap<>(CALLBACK_TABLES);
+        }
+    }
+
+    /**
+     * Returns what an upcall stub created here calls, so that the binding tests can name the stub
+     * they find in a slot.
+     *
+     * @param stub the address read out of a callback table
+     * @return the target, or {@code null} if no stub was created here at that address
+     * @throws IllegalStateException if binding recording is off
+     */
+    static UpcallTarget upcallTarget(long stub) {
+        requireRecordedBindings();
+        return UPCALL_TARGETS.get(stub);
+    }
+
+    /**
+     * The method an upcall stub calls and the descriptor it was created with.
+     *
+     * @param method the target, as {@code SimpleClassName.method}
+     * @param descriptor the descriptor the stub was created with
+     */
+    record UpcallTarget(String method, FunctionDescriptor descriptor) {
     }
 
     // ------------------------------------------------------- upcall parameter marshalling
@@ -913,6 +1007,39 @@ public final class WebKitNative {
     }
 
     /**
+     * {@link #writeInt} for the {@code catch} block of an upcall target, which has to hand the caller
+     * its documented default and must not throw while it does. The write resizes the pointer, and
+     * that allocates, so on a failure path already handling an {@link OutOfMemoryError} it can fail
+     * in turn. That second failure is dropped: out of the upcall stub it would terminate the JVM.
+     * Whenever the write can be made at all, it is made exactly as {@link #writeInt} makes it.
+     *
+     * @param out the pointer, may be {@link MemorySegment#NULL}
+     * @param value the value
+     */
+    public static void writeIntContained(MemorySegment out, int value) {
+        try {
+            writeInt(out, value);
+        } catch (Throwable ignored) {
+            // The upcall's own failure is already being reported, and this one has nowhere to go.
+        }
+    }
+
+    /**
+     * {@link #writeLong} for the {@code catch} block of an upcall target, for the reason
+     * {@link #writeIntContained} gives.
+     *
+     * @param out the pointer, may be {@link MemorySegment#NULL}
+     * @param value the value
+     */
+    public static void writeLongContained(MemorySegment out, long value) {
+        try {
+            writeLong(out, value);
+        } catch (Throwable ignored) {
+            // The upcall's own failure is already being reported, and this one has nowhere to go.
+        }
+    }
+
+    /**
      * Writes one {@code float} out parameter.
      *
      * @param out the pointer, may be {@link MemorySegment#NULL}
@@ -1175,7 +1302,7 @@ public final class WebKitNative {
      * other field this initializer has yet to assign.
      */
     private static MemorySegment buildHostTable() {
-        MemorySegment host = UPCALL_ARENA.allocate(HOST_LAYOUT);
+        MemorySegment host = allocateTable(HOST_LAYOUT);
         host.set(JAVA_INT, OFFSET_HOST_SIZE, hostByteSize());
         installSlot(host, "core.retain", "coreRetain",
                 FunctionDescriptor.of(JAVA_LONG, JAVA_LONG));
@@ -1258,7 +1385,9 @@ public final class WebKitNative {
      * @return the table, valid for the lifetime of the process
      */
     public static MemorySegment allocateTable(MemoryLayout layout) {
-        return UPCALL_ARENA.allocate(layout);
+        MemorySegment table = UPCALL_ARENA.allocate(layout);
+        recordTable(layout, table);
+        return table;
     }
 
     /**
@@ -1305,7 +1434,12 @@ public final class WebKitNative {
             throw new AssertionError("no upcall target for " + slot + ": "
                     + lookup.lookupClass().getName() + "." + method + descriptor.toMethodType(), e);
         }
-        return upcallStub(target, descriptor);
+        MemorySegment stub = upcallStub(target, descriptor);
+        if (RECORD_BINDINGS) {
+            UPCALL_TARGETS.put(stub.address(),
+                    new UpcallTarget(lookup.lookupClass().getSimpleName() + "." + method, descriptor));
+        }
+        return stub;
     }
 
     /*
@@ -1416,11 +1550,13 @@ public final class WebKitNative {
     }
 
     /**
-     * Records that an upcall on this thread ended in a {@link Throwable} and logs it. Every upcall
-     * target in this module funnels its {@code catch} through here, so that
-     * {@code WKJHostCore::check_and_clear_exception} - the replacement for
+     * Records that an upcall on this thread ended in a {@link Throwable} and logs it. The targets of
+     * the {@code WKJHost} groups and of the DOM event listeners funnel their {@code catch} through
+     * here, so that {@code WKJHostCore::check_and_clear_exception} - the replacement for
      * {@code WTF::CheckAndClearException(env)}, whose result about a dozen C++ sites branch on - has
-     * one place to observe and cannot miss a client callback's failure.
+     * one place to observe. The callback tables of the WebKitLegacy client classes and of
+     * DumpRenderTree go through {@link #clientCallbackFailed} instead, and the LiveConnect table
+     * through {@link #logContainedFailure(String, Throwable)}, because none of their callers asks.
      * <p>
      * The flag is set before anything else runs, so that a logger which is itself broken still
      * leaves the failure visible to C.
@@ -1435,6 +1571,37 @@ public final class WebKitNative {
             // Nothing useful is left to do here; the log below is still worth attempting.
         }
         logContainedFailure(slot, t);
+    }
+
+    /**
+     * Logs a {@link Throwable} that a client callback target contained, with the message
+     * {@link #upcallFailed} would give it, and leaves no failure pending on this thread.
+     * <p>
+     * It serves the tables whose C++ callers are the WebKitLegacy client classes - the page
+     * callbacks and the network table beside them, the popup menu, the back/forward list and the
+     * colour chooser - and the DumpRenderTree harness. None of those callers asks
+     * {@code check_and_clear_exception}. The JNI code they replace called
+     * {@code WTF::CheckAndClearException(env)} straight after almost every call and ignored the
+     * answer; the few sites that did not are named beside the helpers that call this. That cleared
+     * any exception still pending from an earlier call as well. A flag set here would
+     * instead stay set until some unrelated caller asked, and the few callers that branch on the
+     * answer, {@code ImageBufferJavaBackend::create} among them, would then report their own
+     * successful upcall as a failure. So the flag is cleared, not merely left alone.
+     * <p>
+     * The client and the slot are joined inside the logger's containment rather than by the caller,
+     * so that a failure path already handling an {@link OutOfMemoryError} does not allocate outside
+     * it.
+     *
+     * @param client the table the callback belongs to, for the log, such as {@code page callback}
+     * @param slot the name of the callback that failed, for the log
+     * @param t the throwable that was contained
+     */
+    public static void clientCallbackFailed(String client, String slot, Throwable t) {
+        try {
+            logContainedFailure(client, slot, t);
+        } finally {
+            clearUpcallFailure();
+        }
     }
 
     /**
@@ -1457,11 +1624,46 @@ public final class WebKitNative {
         return failed ? 1 : 0;
     }
 
-    private static void logContainedFailure(String slot, Throwable t) {
+    /**
+     * Logs a {@link Throwable} that an upcall target contained, with the message
+     * {@link #upcallFailed} would give it, and does nothing else: the flag
+     * {@code WKJHostCore::check_and_clear_exception} reports is neither set nor cleared.
+     * <p>
+     * It serves the {@code WKJLiveConnectHost} targets. None of their callers in
+     * {@code Source/WebCore/bridge} asks {@code check_and_clear_exception}, so a flag set there
+     * would stay set until the next caller on this thread that does ask, however much later and
+     * however unrelated: {@code ImageBufferJavaBackend::create} would then fail the first canvas of
+     * a later script. The JNI code left such an exception pending instead, and
+     * {@code FFM-ABI-CONTRACT.md} section 13.3 describes what that did and why the port does not
+     * reproduce it. The flag is the nearest thing to that pending exception, but it outlives the
+     * downcall that entered the script, which the exception did not. Clearing the flag would be no
+     * closer: the JNI code cleared nothing at these sites, and a clear here would wipe a failure
+     * that some other upcall had recorded for its own caller. So this does neither.
+     *
+     * @param slot the name of the callback that failed, for the log
+     * @param t the throwable that was contained
+     */
+    public static void logContainedFailure(String slot, Throwable t) {
         try {
             LOGGER.severe("javafx.web upcall " + slot + " failed and was contained", t);
         } catch (Throwable ignored) {
             // Even the logger must not be allowed to take the process down.
+        }
+    }
+
+    private static void logContainedFailure(String client, String slot, Throwable t) {
+        try {
+            LOGGER.severe("javafx.web upcall " + client + " " + slot + " failed and was contained", t);
+        } catch (Throwable ignored) {
+            // Even the logger must not be allowed to take the process down.
+        }
+    }
+
+    private static void clearUpcallFailure() {
+        try {
+            UPCALL_FAILED.get()[0] = false;
+        } catch (Throwable ignored) {
+            // A thread whose flag cannot be reached has no failure recorded to clear.
         }
     }
 

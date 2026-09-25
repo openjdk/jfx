@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,8 +40,12 @@ final class TextCodec {
         "ISO-10646-UCS-2", "UTF-16");
 
     /**
-     * This could throw a runtime exception (see the documentation for the
-     * Charset.forName.)  JNI code should handle the exception.
+     * {@link Charset#forName(String)} throws an unchecked exception for an
+     * illegal or unsupported encoding name, and this constructor lets it
+     * propagate. No native caller is left to handle it: the TextCodecJava.cpp
+     * that constructed this class was never compiled into jfxwebkit, which
+     * decodes text with WebKit's own codecs (TextCodecICU and the others PAL
+     * registers), and it was deleted in commit 939aa61ead.
      */
     private TextCodec(String encoding) {
         charset = Charset.forName(encoding);

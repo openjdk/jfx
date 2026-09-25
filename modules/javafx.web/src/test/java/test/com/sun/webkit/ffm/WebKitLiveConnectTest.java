@@ -30,12 +30,14 @@ import com.sun.webkit.WkjStubShim;
 import com.sun.webkit.dom.LiveConnectShim;
 import java.lang.foreign.Arena;
 import java.lang.foreign.MemorySegment;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import test.com.sun.webkit.MissingTypeClassLoader;
 import static java.lang.foreign.ValueLayout.ADDRESS;
 import static java.lang.foreign.ValueLayout.JAVA_CHAR;
 import static java.lang.foreign.ValueLayout.JAVA_DOUBLE;
@@ -45,6 +47,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -72,6 +75,7 @@ public class WebKitLiveConnectTest {
     private static final int INIT_OK = 0;
 
     /** {@code WKJ_JT_*}, from {@code webkit_java_api_bridge.h}. */
+    private static final int JT_INVALID = 0;
     private static final int JT_OBJECT = 2;
     private static final int JT_INT = 7;
     private static final int JT_DOUBLE = 10;
@@ -134,15 +138,20 @@ public class WebKitLiveConnectTest {
                         + " against its host_size argument");
     }
 
+    /**
+     * What the class initializer passed, read from the stub's record of the call rather than from
+     * the call ring: another test class may initialize {@code LiveConnectNative} first, and the
+     * ring is reset by other suites long before this one runs.
+     */
     @Test
     public void theInitCallCarriedTheSizeAndTheAbiVersion() {
         LiveConnectShim.initResult();
-        int call = WkjStubShim.findCall("wkj_live_connect_init", 0);
-        assumeTrue(call >= 0, "the call ring no longer holds the wkj_live_connect_init call");
-        assertEquals(HOST_SIZE, WkjStubShim.callArgBits(call, 1),
+        assertEquals(1, WkjStubShim.liveConnectInitCalls(),
+                "LiveConnectNative installs its table once, from its class initializer");
+        assertEquals(HOST_SIZE, WkjStubShim.liveConnectInitHostSize(),
                 "the host_size argument must be sizeof(WKJLiveConnectHost)");
-        assertEquals(WebKitNativeShim.abiVersionExpected(), WkjStubShim.callArgBits(call, 2));
-        assertNotEquals(0L, WkjStubShim.callArgBits(call, 0), "the table pointer was NULL");
+        assertEquals(WebKitNativeShim.abiVersionExpected(), WkjStubShim.liveConnectInitAbiVersion());
+        assertNotEquals(0L, WkjStubShim.liveConnectInitHost(), "the table pointer was NULL");
     }
 
     /**
@@ -258,6 +267,101 @@ public class WebKitLiveConnectTest {
             assertNotEquals(narrow, bridge, "the two must not resolve to one Method");
         } finally {
             WebKitNativeShim.unregister(target);
+        }
+    }
+
+    /**
+     * A class is searched once per name and descriptor rather than on every call from script: the
+     * answer is the same {@code Method} object every time. The cache is keyed by the whole
+     * descriptor, so the two methods of a covariant override stay apart in it.
+     */
+    @Test
+    public void aResolvedMethodIsReusedRatherThanSearchedAgain() {
+        long target = WebKitNativeShim.register(new NarrowFactory());
+        try (Arena arena = Arena.ofConfined()) {
+            long narrow = resolve(arena, target, "make", "()Ljava/lang/String;");
+            long bridge = resolve(arena, target, "make", "()Ljava/lang/Object;");
+            long narrowAgain = resolve(arena, target, "make", "()Ljava/lang/String;");
+            assertSame(WebKitNativeShim.lookup(narrow), WebKitNativeShim.lookup(narrowAgain),
+                    "the second resolution searched the class again");
+            assertNotSame(WebKitNativeShim.lookup(narrow), WebKitNativeShim.lookup(bridge));
+            assertEquals(Object.class, ((Method) WebKitNativeShim.lookup(bridge)).getReturnType());
+            WebKitNativeShim.unregister(narrow);
+            WebKitNativeShim.unregister(bridge);
+            WebKitNativeShim.unregister(narrowAgain);
+        } finally {
+            WebKitNativeShim.unregister(target);
+        }
+    }
+
+    /**
+     * A class whose {@code getMethods()} throws, because a public method of it names a class that
+     * is missing at run time. {@code GetMethodID} still found {@code toString()}, which backs every
+     * string conversion of the object, and so does {@code resolve_method}. That lookup never failed
+     * under JNI, so it is not reported as a failed upcall either.
+     */
+    @Test
+    public void toStringResolvesOnAClassWhoseMethodsCannotBeListed() throws Exception {
+        MissingTypeClassLoader loader = new MissingTypeClassLoader();
+        long overriding = WebKitNativeShim.register(loader.newInstance("lcprobe.SlotOpt", "SlotOpt!"));
+        long inheriting = WebKitNativeShim.register(loader.newInstance("lcprobe.SlotPlain", null));
+        WebKitNativeShim.checkAndClearUpcallFailure();
+        try (Arena arena = Arena.ofConfined()) {
+            long method = resolve(arena, overriding, "toString", "()Ljava/lang/String;");
+            assertNotEquals(0L, method, "toString() was not found");
+            MemorySegment exception = arena.allocate(JAVA_LONG);
+            long result = call("invoke", "lllpilp", method, overriding, 0L, 0L, 0L,
+                    exception.address());
+            assertEquals(0L, exception.get(JAVA_LONG, 0L), "nothing was thrown");
+            assertEquals("SlotOpt!", WebKitNativeShim.lookup(result));
+
+            long inherited = resolve(arena, inheriting, "toString", "()Ljava/lang/String;");
+            assertEquals(Object.class.getMethod("toString"), WebKitNativeShim.lookup(inherited),
+                    "an inherited toString() is Object's own, as ToReflectedMethod produced it");
+
+            assertEquals(0L, resolve(arena, overriding, "use", "(L"
+                    + MissingTypeClassLoader.MISSING_TYPE.replace('.', '/') + ";)V"),
+                    "a method whose own signature names the missing class has no answer");
+            assertEquals(0, WebKitNativeShim.checkAndClearUpcallFailure(),
+                    "a class whose methods cannot be listed is not a failed upcall");
+            WebKitNativeShim.unregister(method);
+            WebKitNativeShim.unregister(result);
+            WebKitNativeShim.unregister(inherited);
+        } finally {
+            WebKitNativeShim.unregister(overriding);
+            WebKitNativeShim.unregister(inheriting);
+        }
+    }
+
+    /**
+     * For such a class the declaring class of the answer is {@code java.lang.Object}, not the class
+     * that overrides {@code toString()}, and {@code Utilities.fwkInvokeWithContext} judges a call by
+     * the declaring class. So that stand-in is refused wherever the override would have been: for a
+     * class the allow list rejects (every class in {@code sun.misc}), for a class that is not
+     * public, and for a public class that inherits the override from one that is not. The JNI code
+     * resolved all three, and invoking them then failed.
+     */
+    @Test
+    public void theObjectStandInIsRefusedWhereTheOverrideWouldHaveBeen() {
+        MissingTypeClassLoader loader = new MissingTypeClassLoader();
+        long rejected = WebKitNativeShim.register(loader.newInstance("sun.misc.LcProbe", "no"));
+        long hidden = WebKitNativeShim.register(
+                loader.newPackagePrivateInstance("lcprobe.Hidden", "no"));
+        long inheriting = WebKitNativeShim.register(loader.newSubclassOfPackagePrivateInstance(
+                "lcprobe.PublicChild", "lcprobe.HiddenBase", "no"));
+        WebKitNativeShim.checkAndClearUpcallFailure();
+        try (Arena arena = Arena.ofConfined()) {
+            assertEquals(0L, resolve(arena, rejected, "toString", "()Ljava/lang/String;"),
+                    "the allow list rejects the class that declares the override");
+            assertEquals(0L, resolve(arena, hidden, "toString", "()Ljava/lang/String;"),
+                    "the class that declares the override is not public");
+            assertEquals(0L, resolve(arena, inheriting, "toString", "()Ljava/lang/String;"),
+                    "the superclass that declares the override is not public");
+            assertEquals(0, WebKitNativeShim.checkAndClearUpcallFailure());
+        } finally {
+            WebKitNativeShim.unregister(rejected);
+            WebKitNativeShim.unregister(hidden);
+            WebKitNativeShim.unregister(inheriting);
         }
     }
 
@@ -378,6 +482,65 @@ public class WebKitLiveConnectTest {
         }
     }
 
+    // --------------------------------------------------------------------------- failures
+
+    /**
+     * A field or array access that throws, and a {@code doubleValue()} that throws inside
+     * {@code unbox}, answer the slot's default and are logged, and leave nothing for
+     * {@code check_and_clear_exception} to report. No caller of this table asks for that flag, so
+     * a failure recorded in it would be reported to the next unrelated caller that does ask, in a
+     * later script.
+     */
+    @Test
+    public void aSlotThatThrowsLeavesNoFailurePending() throws Exception {
+        long target = WebKitNativeShim.register(new Greeter());
+        long field = WebKitNativeShim.register(Greeter.class.getField("name"));
+        long array = WebKitNativeShim.register(new String[1]);
+        long faulty = WebKitNativeShim.register(new FaultyMeter());
+        long number = WebKitNativeShim.register(Integer.valueOf(1));
+        WebKitNativeShim.checkAndClearUpcallFailure();
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment value = arena.allocate(javaValueSize);
+            assertEquals(0L, call("field_get", "illip", field, target, JT_INT, value.address()),
+                    "getInt on a String field throws");
+            assertEquals(JT_INVALID, value.get(JAVA_INT, offsetType));
+            assertNoFailurePending("field_get");
+
+            value.set(JAVA_INT, offsetType, JT_INT);
+            value.set(JAVA_INT, offsetI, 1);
+            assertEquals(0L, call("field_set", "illip", field, target, JT_INT, value.address()),
+                    "setInt on a String field throws");
+            assertNoFailurePending("field_set");
+
+            assertEquals(0L, call("array_get", "iliip", array, 0, JT_INT, value.address()),
+                    "getInt on a String[] throws");
+            assertEquals(JT_INVALID, value.get(JAVA_INT, offsetType));
+            assertNoFailurePending("array_get");
+
+            value.set(JAVA_INT, offsetType, JT_OBJECT);
+            value.set(JAVA_LONG, offsetL, number);
+            assertEquals(0L, call("array_set", "iliip", array, 0, JT_OBJECT, value.address()),
+                    "storing an Integer in a String[] throws");
+            assertNoFailurePending("array_set");
+
+            assertEquals(0L, call("unbox", "ilip", faulty, JT_DOUBLE, value.address()),
+                    "the object's doubleValue() throws");
+            assertEquals(JT_INVALID, value.get(JAVA_INT, offsetType));
+            assertNoFailurePending("unbox");
+        } finally {
+            WebKitNativeShim.unregister(target);
+            WebKitNativeShim.unregister(field);
+            WebKitNativeShim.unregister(array);
+            WebKitNativeShim.unregister(faulty);
+            WebKitNativeShim.unregister(number);
+        }
+    }
+
+    private static void assertNoFailurePending(String slot) {
+        assertEquals(0, WebKitNativeShim.checkAndClearUpcallFailure(),
+                slot + " left the flag check_and_clear_exception reports set");
+    }
+
     // -------------------------------------------------------------- boxing and strings
 
     @Test
@@ -405,6 +568,68 @@ public class WebKitLiveConnectTest {
 
             WebKitNativeShim.unregister(boxed);
             WebKitNativeShim.unregister(boxedDouble);
+        }
+    }
+
+    /**
+     * {@code WKJ_JT_DOUBLE} on an object that is not a {@link Number}, which is what
+     * {@code JavaInstance::numberValue} asks for when script writes {@code +obj}: the object's own
+     * {@code doubleValue()}, as {@code callJNIMethod<jdouble>(obj, "doubleValue", "()D")} computed it,
+     * whether the class declares it or a default method supplies it. An object without one stays
+     * invalid, as it did when {@code GetMethodID} failed on it, and neither case is a failed upcall.
+     */
+    @Test
+    public void anObjectThatIsNotANumberUnboxesThroughItsDoubleValue() {
+        long meter = WebKitNativeShim.register(new Meter());
+        long gauge = WebKitNativeShim.register(new Gauge());
+        long plain = WebKitNativeShim.register(new Object());
+        WebKitNativeShim.checkAndClearUpcallFailure();
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment out = arena.allocate(javaValueSize);
+            assertEquals(1L, call("unbox", "ilip", meter, JT_DOUBLE, out.address()));
+            assertEquals(JT_DOUBLE, out.get(JAVA_INT, offsetType));
+            assertEquals(12.5, out.get(JAVA_DOUBLE, offsetD));
+
+            assertEquals(1L, call("unbox", "ilip", gauge, JT_DOUBLE, out.address()));
+            assertEquals(2.25, out.get(JAVA_DOUBLE, offsetD));
+
+            assertEquals(0L, call("unbox", "ilip", plain, JT_DOUBLE, out.address()));
+            assertEquals(JT_INVALID, out.get(JAVA_INT, offsetType));
+            assertEquals(0, WebKitNativeShim.checkAndClearUpcallFailure());
+        } finally {
+            WebKitNativeShim.unregister(meter);
+            WebKitNativeShim.unregister(gauge);
+            WebKitNativeShim.unregister(plain);
+        }
+    }
+
+    /**
+     * The {@code doubleValue()} search passes over a class whose own methods cannot be listed,
+     * where {@code GetMethodID} resolved the one method in it. A public override such a class
+     * declares still runs, through the declaration it overrides in a class that can be listed, as
+     * it did under JNI. With nothing above it to dispatch from there is no answer, where JNI
+     * returned the value; FFM-ABI-CONTRACT.md section 13.3 records that narrowing.
+     */
+    @Test
+    public void aDoubleValueInAClassWhoseMethodsCannotBeListedRunsOnlyThroughOneAbove() {
+        MissingTypeClassLoader loader = new MissingTypeClassLoader();
+        long overriding = WebKitNativeShim.register(loader.newDoubleValueInstance("lcprobe.DvOver", 7.5, 1.5));
+        long alone = WebKitNativeShim.register(loader.newDoubleValueInstance("lcprobe.DvAlone", 7.5, null));
+        WebKitNativeShim.checkAndClearUpcallFailure();
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment out = arena.allocate(javaValueSize);
+            assertEquals(1L, call("unbox", "ilip", overriding, JT_DOUBLE, out.address()),
+                    "the override is reached through the superclass's declaration");
+            assertEquals(7.5, out.get(JAVA_DOUBLE, offsetD), "the override ran, not the superclass's");
+
+            assertEquals(0L, call("unbox", "ilip", alone, JT_DOUBLE, out.address()),
+                    "a doubleValue() only an unlistable class declares is not found");
+            assertEquals(JT_INVALID, out.get(JAVA_INT, offsetType));
+            assertEquals(0, WebKitNativeShim.checkAndClearUpcallFailure(),
+                    "a class whose methods cannot be listed is not a failed upcall");
+        } finally {
+            WebKitNativeShim.unregister(overriding);
+            WebKitNativeShim.unregister(alone);
         }
     }
 
@@ -610,6 +835,34 @@ public class WebKitLiveConnectTest {
         @Override
         public String make() {
             return "narrow";
+        }
+    }
+
+    /** A number-like class that is not a {@link Number}. */
+    public static class Meter {
+
+        public double doubleValue() {
+            return 12.5;
+        }
+    }
+
+    /** An interface that supplies {@code doubleValue()} as a default method. */
+    public interface Measured {
+
+        default double doubleValue() {
+            return 2.25;
+        }
+    }
+
+    /** A class whose {@code doubleValue()} comes only from {@link Measured}. */
+    public static class Gauge implements Measured {
+    }
+
+    /** A number-like class whose {@code doubleValue()} fails. */
+    public static class FaultyMeter {
+
+        public double doubleValue() {
+            throw new IllegalStateException("doubleValue fails on purpose");
         }
     }
 }
