@@ -25,10 +25,14 @@
  */
 
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.scene.Scene;
 import javafx.geometry.Insets;
+import javafx.scene.control.Button;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 
 /***
@@ -50,7 +54,13 @@ public class StartIconified extends Application {
                 """);
         instructionText.setWrappingWidth(560);
 
-        StackPane instructionRoot = new StackPane(instructionText);
+        StackPane instructionPane = new StackPane(instructionText);
+
+        HBox passFailButtons = createPassFailButtons();
+
+        BorderPane instructionRoot = new BorderPane();
+        instructionRoot.setCenter(instructionPane);
+        instructionRoot.setBottom(passFailButtons);
         instructionRoot.setPadding(new Insets(15));
 
         Stage instructionStage = new Stage();
@@ -70,6 +80,22 @@ public class StartIconified extends Application {
         Scene scene = new Scene(new StackPane(text));
         primaryStage.setScene(scene);
         primaryStage.show();
+    }
+
+    private HBox createPassFailButtons() {
+        var passButton = new Button("Pass");
+        passButton.setOnAction(e -> {
+            System.out.println("TEST PASSED");
+            Platform.exit();
+        });
+        var failButton = new Button("Fail");
+        failButton.setOnAction(e -> {
+            System.out.println("TEST FAILED");
+            Platform.exit();
+            throw new AssertionError("Test failed");
+        });
+        var hbox = new HBox(10, passButton, failButton);
+        return hbox;
     }
 
     public static void main(String[] args) {

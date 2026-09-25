@@ -34,7 +34,9 @@ import javafx.print.PrinterJob;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.Separator;
 import javafx.scene.control.TextArea;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 import javafx.scene.transform.Transform;
@@ -88,7 +90,7 @@ public class PrintTest extends Application {
 
     private Scene createScene() {
 
-        root = new VBox();
+        root = new VBox(10);
         scene = new Scene(root);
 
         String msg = instructions;
@@ -108,12 +110,16 @@ public class PrintTest extends Application {
         print.setOnAction(e -> runTest());
         root.getChildren().add(print);
 
+        Separator separator = new Separator();
+        HBox passFailButtons = createPassFailButtons();
+        root.getChildren().addAll(separator, passFailButtons);
+
         return scene;
     }
 
 
     public void runTest() {
-        new Thread(() -> {
+        Thread printThread = new Thread(() -> {
             System.out.println("START OF PRINT JOB");
             PrinterJob job = PrinterJob.createPrinterJob(printerBox.getValue());
             job.getJobSettings().setPageRanges(new PageRange(startPage, endPage));
@@ -132,8 +138,11 @@ public class PrintTest extends Application {
             job.endJob();
             passed = true;
             System.out.println("END OF PRINT JOB");
-        }).start();
-        new Thread(() -> {
+        });
+        printThread.setDaemon(true);
+        printThread.start();
+
+        Thread pollThread = new Thread(() -> {
             while (!passed) {
                 try {
                     Thread.sleep(500);
@@ -141,12 +150,30 @@ public class PrintTest extends Application {
                 }
             }
             Platform.runLater(() -> finish());
-        }).start();
+        });
+        pollThread.setDaemon(true);
+        pollThread.start();
     }
 
     private void finish() {
         Text t = new Text();
         t.setText("PASSED!");
         root.getChildren().add(t);
+    }
+
+    private HBox createPassFailButtons() {
+        var passButton = new Button("Pass");
+        passButton.setOnAction(e -> {
+            System.out.println("TEST PASSED");
+            Platform.exit();
+        });
+        var failButton = new Button("Fail");
+        failButton.setOnAction(e -> {
+            System.out.println("TEST FAILED");
+            Platform.exit();
+            throw new AssertionError("Test failed");
+        });
+        var hbox = new HBox(10, passButton, failButton);
+        return hbox;
     }
 }

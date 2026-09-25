@@ -44,6 +44,7 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
@@ -171,7 +172,10 @@ public class ClipboardExtImageTest extends Application {
         pane.setFitToHeight(true);
         pane.setFitToWidth(true);
 
-        VBox box = new VBox(warn, instructions, testStatusHeader, testStatus, testButton, openTmpButton, pane);
+        HBox passFailButtons = createPassFailButtons();
+
+        VBox box = new VBox(warn, instructions, testStatusHeader, testStatus, testButton,
+                openTmpButton, pane, passFailButtons);
         box.setAlignment(Pos.TOP_LEFT);
         box.setSpacing(5.0);
         box.setFillWidth(true);
@@ -194,6 +198,22 @@ public class ClipboardExtImageTest extends Application {
         } catch (Exception e) {
             System.err.println("Exception caught: " + e.getMessage());
         }
+    }
+
+    private HBox createPassFailButtons() {
+        var passButton = new Button("Pass");
+        passButton.setOnAction(e -> {
+            System.out.println("TEST PASSED");
+            Platform.exit();
+        });
+        var failButton = new Button("Fail");
+        failButton.setOnAction(e -> {
+            System.out.println("TEST FAILED");
+            Platform.exit();
+            throw new AssertionError("Test failed");
+        });
+        var hbox = new HBox(10, passButton, failButton);
+        return hbox;
     }
 
     public static void main(String[] args) {

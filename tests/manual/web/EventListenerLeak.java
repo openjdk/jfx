@@ -33,11 +33,13 @@ import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.concurrent.Worker;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
@@ -280,10 +282,35 @@ public class EventListenerLeak extends Application {
         // Add status line
         Label activeListenerLabel = new Label();
         activeListenerLabel.textProperty().bind(activeListenerCount.asString("Active Listener Count: %d"));
-        root.setBottom(activeListenerLabel);
+
+        // Add pass fail buttons
+        HBox passFailButtons = createPassFailButtons();
+        passFailButtons.setMaxWidth(HBox.USE_PREF_SIZE);
+
+        StackPane statusButtonBox = new StackPane(activeListenerLabel, passFailButtons);
+        StackPane.setAlignment(activeListenerLabel, Pos.CENTER_LEFT);
+        StackPane.setAlignment(passFailButtons, Pos.CENTER);
+
+        root.setBottom(statusButtonBox);
 
         stage.setScene(scene);
         stage.show();
+    }
+
+    private HBox createPassFailButtons() {
+        var passButton = new Button("Pass");
+        passButton.setOnAction(e -> {
+            System.out.println("TEST PASSED");
+            Platform.exit();
+        });
+        var failButton = new Button("Fail");
+        failButton.setOnAction(e -> {
+            System.out.println("TEST FAILED");
+            Platform.exit();
+            throw new AssertionError("Test failed");
+        });
+        var hbox = new HBox(10, passButton, failButton);
+        return hbox;
     }
 
     public static void main(String[] args) {
