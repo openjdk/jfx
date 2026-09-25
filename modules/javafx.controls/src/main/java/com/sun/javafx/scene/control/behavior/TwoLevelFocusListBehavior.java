@@ -186,7 +186,7 @@ public class TwoLevelFocusListBehavior extends TwoLevelFocusBehavior {
             setExternalFocus(false);
         }
         else {
-            boolean b = true;
+            boolean externalFocus = true;
             if (tlNode != null) {
                 /*
                 ** if the ListView is actually the popup for a combobox then
@@ -195,13 +195,13 @@ public class TwoLevelFocusListBehavior extends TwoLevelFocusBehavior {
                 Parent p = tlNode.getParent();
                 if (p != null) {
                     List<String> styleClass = NodeHelper.getStyleClassOrNull(p);
-                    if (styleClass != null && styleClass.size() == 1 && styleClass.contains(Properties.COMBO_BOX_STYLE_CLASS)) {
-                        b = false;
+                    if (styleClass != null && styleClass.contains(Properties.COMBO_BOX_STYLE_CLASS)) {
+                        externalFocus = false;
                     }
                 }
             }
 
-            setExternalFocus(b);
+            setExternalFocus(externalFocus);
         }
     };
 
