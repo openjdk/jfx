@@ -24,6 +24,7 @@
  */
 
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.scene.Group;
 import javafx.scene.Scene;
@@ -32,6 +33,7 @@ import javafx.scene.control.Label;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.TransferMode;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
@@ -76,7 +78,11 @@ public class DndTest extends Application {
             target.setFill(Color.BLACK);
         });
 
-        VBox root = new VBox(10, instructions, group, reset);
+        HBox passFailButtons = createPassFailButtons();
+
+        HBox buttonBox = new HBox(25, reset, passFailButtons);
+
+        VBox root = new VBox(10, instructions, group, buttonBox);
         root.setPadding(new Insets(10));
 
         Scene scene = new Scene(root, 700, 300);
@@ -141,6 +147,22 @@ public class DndTest extends Application {
 
         stage.setScene(scene);
         stage.show();
+    }
+
+    private HBox createPassFailButtons() {
+        var passButton = new Button("Pass");
+        passButton.setOnAction(e -> {
+            System.out.println("TEST PASSED");
+            Platform.exit();
+        });
+        var failButton = new Button("Fail");
+        failButton.setOnAction(e -> {
+            System.out.println("TEST FAILED");
+            Platform.exit();
+            throw new AssertionError("Test failed");
+        });
+        var hbox = new HBox(10, passButton, failButton);
+        return hbox;
     }
 
     public static void main(String[] args) {

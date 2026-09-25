@@ -22,11 +22,13 @@
  */
 
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.geometry.Pos;
 import javafx.print.PrinterJob;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.Separator;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
@@ -95,15 +97,37 @@ public class PrintDialogModalityTest extends Application {
             hbox1.setAlignment(Pos.CENTER);
             hbox2.setAlignment(Pos.CENTER);
             vbox = new VBox(3, info, hbox1, hbox2);
+
+            Separator separator = new Separator();
+            HBox passFailButtons = createPassFailButtons();
+            passFailButtons.setAlignment(Pos.CENTER);
+            vbox.getChildren().addAll(separator, passFailButtons);
         } else {
             Text noprinters = new Text("No printers found!");
             noprinters.setFill(Color.RED);
             vbox = new VBox(2, info, noprinters);
         }
+
         vbox.setAlignment(Pos.TOP_CENTER);
         Scene scene = new Scene(vbox, 500, 450);
         primaryStage.setScene(scene);
         primaryStage.show();
+    }
+
+    private HBox createPassFailButtons() {
+        var passButton = new Button("Pass");
+        passButton.setOnAction(e -> {
+            System.out.println("TEST PASSED");
+            Platform.exit();
+        });
+        var failButton = new Button("Fail");
+        failButton.setOnAction(e -> {
+            System.out.println("TEST FAILED");
+            Platform.exit();
+            throw new AssertionError("Test failed");
+        });
+        var hbox = new HBox(10, passButton, failButton);
+        return hbox;
     }
 
     public static void main(String[] args) {
