@@ -322,10 +322,10 @@ public class TableRow<T> extends IndexedCell<T> {
 
         boolean rowMatch = editCell == null ? false : editCell.getRow() == getIndex();
 
-        if (! isEditing() && rowMatch) {
+        if (!isEditing() && rowMatch) {
             startEdit();
-        } else if (isEditing() && ! rowMatch) {
-            cancelEdit();
+        } else if (isEditing() && !rowMatch) {
+            stopEdit();
         }
     }
 

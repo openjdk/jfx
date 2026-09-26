@@ -208,4 +208,14 @@ public class TextFieldTreeTableCell<S,T> extends TreeTableCell<S,T> {
         super.updateItem(item, empty);
         CellUtils.updateItem(this, getConverter(), null, null, textField);
     }
+
+    /** {@inheritDoc} */
+    @Override
+    public void stopEdit() {
+        if (!isEditing()) {
+            return;
+        }
+
+        CellUtils.stopEdit(this, getConverter(), textField.getText());
+    }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2026 Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,7 +31,6 @@ import javafx.scene.control.Control;
 import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TablePositionBase;
 import javafx.scene.control.TableSelectionModel;
-import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 
 import java.util.List;
@@ -77,14 +76,13 @@ public abstract class TableRowBehaviorBase<T extends Cell> extends CellBehaviorB
      *                                                                         *
      **************************************************************************/
 
-    @Override protected void doSelect(final double x, final double y, final MouseButton button,
-                   final int clickCount, final boolean shiftDown, final boolean shortcutDown) {
+    @Override protected void doSelect(MouseEvent e) {
         final Control table = getCellContainer();
         if (table == null) return;
 
         // if the user has clicked on the disclosure node, we do nothing other
         // than expand/collapse the tree item (if applicable). We do not do editing!
-        if (handleDisclosureNode(x,y)) {
+        if (handleDisclosureNode(e.getX(), e.getY())) {
             return;
         }
 
@@ -93,30 +91,30 @@ public abstract class TableRowBehaviorBase<T extends Cell> extends CellBehaviorB
 
         final int index = getIndex();
         final boolean isAlreadySelected = sm.isSelected(index);
-        if (clickCount == 1) {
+        if (e.getClickCount() == 1) {
             // we only care about clicks to the right of the right-most column
-            if (! isClickPositionValid(x, y)) return;
+            if (! isClickPositionValid(e.getX(), e.getY())) return;
 
             // In the case of clicking to the right of the rightmost
             // TreeTableCell, we should still support selection, so that
             // is what we are doing here.
-            if (isAlreadySelected && shortcutDown) {
+            if (isAlreadySelected && e.isShortcutDown()) {
                 sm.clearSelection(index);
             } else {
-                if (shortcutDown) {
+                if (e.isShortcutDown()) {
                     sm.select(getIndex());
-                } else if (shiftDown) {
+                } else if (e.isShiftDown()) {
                     // we add all rows between the current focus and
                     // this row (inclusive) to the current selection.
                     TablePositionBase<?> anchor = getAnchor(table, getFocusedCell());
                     final int anchorRow = anchor.getRow();
                     selectRows(anchorRow, index);
                 } else {
-                    simpleSelect(button, clickCount, shortcutDown);
+                    simpleSelect(e);
                 }
             }
         } else {
-            simpleSelect(button, clickCount, shortcutDown);
+            simpleSelect(e);
         }
     }
 
