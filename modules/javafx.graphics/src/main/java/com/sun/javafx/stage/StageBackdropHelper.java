@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,18 +23,40 @@
  * questions.
  */
 
-#import <Cocoa/Cocoa.h>
-#import <jni.h>
+package com.sun.javafx.stage;
 
-@interface GlassHostView : NSView
-{
-@private
-    NSView *jfxView;
-    NSView *backdropView;
+import com.sun.javafx.util.Utils;
+import javafx.collections.ObservableMap;
+import javafx.stage.StageBackdrop;
+
+/**
+ * Used to access internal stage backdrop methods.
+ */
+public class StageBackdropHelper {
+    private static final StageBackdropHelper theInstance;
+    private static StageBackdropAccessor stageBackdropAccessor;
+
+    static {
+        theInstance = new StageBackdropHelper();
+        Utils.forceInit(StageBackdrop.class);
+    }
+
+    protected StageBackdropHelper() {
+    }
+
+    public static ObservableMap<String, Object> getOptions(StageBackdrop backdrop) {
+        return stageBackdropAccessor.getOptions(backdrop);
+    }
+
+    public static void setStageBackdropAccessor(final StageBackdropAccessor newAccessor) {
+        if (stageBackdropAccessor != null) {
+            throw new IllegalStateException();
+        }
+
+        stageBackdropAccessor = newAccessor;
+    }
+
+    public interface StageBackdropAccessor {
+        ObservableMap<String, Object> getOptions(StageBackdrop backdrop);
+    }
 }
--(void)setJFXView:(NSView*)view;
--(void)setBackdrop:(NSVisualEffectMaterial)material;
--(void)setGlassBackdrop:(BOOL)clear;
--(void)setTintColor:(NSColor*)t;
--(void)setCornerRadius:(double)r;
-@end

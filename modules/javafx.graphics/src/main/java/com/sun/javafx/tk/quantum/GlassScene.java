@@ -25,6 +25,7 @@
 
 package com.sun.javafx.tk.quantum;
 
+import javafx.application.ColorScheme;
 import javafx.application.Platform;
 import javafx.scene.input.InputMethodRequests;
 import javafx.stage.StageStyle;
@@ -309,28 +310,55 @@ abstract class GlassScene implements TKScene {
 
     protected Color getClearColor() {
         WindowStage windowStage = stage instanceof WindowStage ? (WindowStage)stage : null;
-        if (windowStage != null && windowStage.getPlatformWindow() != null &&
-                windowStage.getPlatformWindow().isTransparentWindow()) {
+        var platformWindow = (windowStage != null ? windowStage.getPlatformWindow() : null);
+        if (platformWindow != null && platformWindow.isTransparentWindow()) {
             return (Color.TRANSPARENT);
         } else {
             if (fillPaint == null) {
                 return Color.WHITE;
-            } else if (fillPaint.isOpaque() ||
-                    (windowStage != null && windowStage.getPlatformWindow() != null &&
-                    windowStage.getPlatformWindow().isUnifiedWindow())) {
-                //For bare windows the transparent fill is allowed
+            } else if (fillPaint.isOpaque()) {
+                // Solid color fills are handled during clearing
                 if (fillPaint.getType() == Paint.Type.COLOR) {
                     return (Color)fillPaint;
                 } else if (depthBuffer) {
                     // Must set clearColor in order for the depthBuffer to be cleared
                     return Color.TRANSPARENT;
                 } else {
+                    // Fill is opaque so we don't need to clear
                     return null;
+                }
+            } else if (platformWindow != null && windowStage.allowsTransparentFill()) {
+                if (windowStage.emulateBackdrop()) {
+                    return getBackdropFillColor();
+                } else {
+                    return Color.TRANSPARENT;
                 }
             } else {
                 return Color.WHITE;
             }
         }
+    }
+
+    private Color getBackdropFillColor() {
+        // The background color of a platform-provided backdrop changes based
+        // on the window's color scheme and we want to emulate that here. The
+        // background color provided in the platform preferences is only
+        // valid if the window's color scheme matches the platform's.
+        // Otherwise we guess at an appropriate color.
+        WindowStage windowStage = (WindowStage) stage;
+        var prefs = Platform.getPreferences();
+        var globalDark = prefs.getColorScheme() == ColorScheme.DARK;
+        var localDark = windowStage.getDarkFrame();
+        var background = prefs.getBackgroundColor();
+        if (globalDark != localDark) {
+            if (localDark) {
+                background = javafx.scene.paint.Color.BLACK;
+            } else {
+                background = javafx.scene.paint.Color.WHITE;
+            }
+        }
+        return new Color((float) background.getRed(), (float) background.getGreen(),
+                (float) background.getBlue(), (float) background.getOpacity());
     }
 
     final Paint getCurrentPaint() {

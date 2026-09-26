@@ -944,10 +944,10 @@ jlong _1createWindow(JNIEnv *env, jobject jWindow, jlong jOwnerPtr, jlong jScree
 /*
  * Class:     com_sun_glass_ui_ios_IosWindow
  * Method:    _createWindow
- * Signature: (JJZI)J
+ * Signature: (JJZII)J
  */
 JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_ios_IosWindow__1createWindow
-(JNIEnv *env, jobject jwindow, jlong jownerPtr, jlong jscreenPtr, jint jstyleMask)
+(JNIEnv *env, jobject jwindow, jlong jownerPtr, jlong jscreenPtr, jint jstyleMask, jint backdropID)
 {
     jlong value;
 
