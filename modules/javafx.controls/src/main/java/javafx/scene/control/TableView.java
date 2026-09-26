@@ -74,6 +74,7 @@ import javafx.css.Styleable;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableProperty;
 import javafx.css.converter.SizeConverter;
+import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.scene.AccessibleAttribute;
@@ -435,6 +436,68 @@ public class TableView<S> extends Control {
      * Static properties and methods                                           *
      *                                                                         *
      **************************************************************************/
+
+    /**
+     * An EventType that indicates some edit event has occurred.
+     * It is the parent type of all other edit events:
+     * {@link #editStartEvent},
+     * {@link #editCommitEvent} and
+     * {@link #editCancelEvent}.
+     *
+     * @param <S> The type of the TreeItem instances used in this TableView
+     * @return An EventType that indicates some edit event has occurred
+     */
+    @SuppressWarnings("unchecked")
+    public static <S> EventType<TableView.EditEvent<S>> editAnyEvent() {
+        return (EventType<TableView.EditEvent<S>>) EDIT_ANY_EVENT;
+    }
+    private static final EventType<?> EDIT_ANY_EVENT =
+            new EventType<>(Event.ANY, "TABLE_VIEW_EDIT");
+
+    /**
+     * An EventType used to indicate that an edit event has started within the
+     * TableView upon which the event was fired.
+     *
+     * @param <S> The type of the Item instances used in this TableView
+     * @return An EventType used to indicate that an edit event has started
+     */
+    @SuppressWarnings("unchecked")
+    public static <S> EventType<TableView.EditEvent<S>> editStartEvent() {
+        return (EventType<TableView.EditEvent<S>>) EDIT_START_EVENT;
+    }
+    private static final EventType<?> EDIT_START_EVENT =
+            new EventType<>(editAnyEvent(), "EDIT_START");
+
+    /**
+     * An EventType used to indicate that an edit event has just been canceled
+     * within the TableView upon which the event was fired.
+     *
+     * @param <S> The type of the Item instances used in this TableView
+     * @return An EventType used to indicate that an edit event has just been
+     *      canceled
+     */
+    @SuppressWarnings("unchecked")
+    public static <S> EventType<TableView.EditEvent<S>> editCancelEvent() {
+        return (EventType<TableView.EditEvent<S>>) EDIT_CANCEL_EVENT;
+    }
+    private static final EventType<?> EDIT_CANCEL_EVENT =
+            new EventType<>(editAnyEvent(), "EDIT_CANCEL");
+
+    /**
+     * An EventType that is used to indicate that an edit in a TableView has been
+     * committed. This means that user has made changes to the data of an
+     * Item, and that the UI should be updated.
+     *
+     * @param <S> The type of the Item instances used in this TableView
+     * @return An EventType that is used to indicate that an edit in a TableView
+     *      has been committed
+     */
+    @SuppressWarnings("unchecked")
+    public static <S> EventType<TableView.EditEvent<S>> editCommitEvent() {
+        return (EventType<TableView.EditEvent<S>>) EDIT_COMMIT_EVENT;
+    }
+    private static final EventType<?> EDIT_COMMIT_EVENT =
+            new EventType<>(editAnyEvent(), "EDIT_COMMIT");
 
     // strings used to communicate via the TableView properties map between
     // the control and the skin. Because they are private here, the strings
@@ -2030,6 +2093,77 @@ public class TableView<S> extends Control {
         }
     }
 
+    /**
+     * An {@link Event} subclass used specifically in TableView for representing
+     * edit-related events. It provides API to easily access input provided by the end user.
+     *
+     * @param <S> The type of the input, which is the same type as the TableView itself.
+     */
+    public static class EditEvent<S> extends Event {
+        private static final long serialVersionUID = -4437033058917528975L;
+
+        /**
+         * Common supertype for all edit event types.
+         */
+        public static final EventType<?> ANY = EDIT_ANY_EVENT;
+
+        /**
+         * The {@link TableView} this event is sent to.
+         */
+        private final TableView<S> source;
+        /**
+         * The old value.
+         */
+        private final S oldValue;
+        /**
+         * The new value. This is NOT the value to necessary go back into the items list.
+         */
+        private final S newValue;
+
+        /**
+         * Creates a new EditEvent instance to represent an edit event.
+         * This event is used for
+         * {@link #editStartEvent()},
+         * {@link #editCommitEvent()} and
+         * {@link #editCancelEvent()} types.
+         * @param source the source
+         * @param eventType the eventType
+         * @param oldValue the oldValue
+         * @param newValue the newValue
+         */
+        public EditEvent(TableView<S> source,
+                         EventType<? extends TableView.EditEvent<S>> eventType,
+                         S oldValue, S newValue) {
+            super(source, Event.NULL_SOURCE_TARGET, eventType);
+            this.source = source;
+            this.oldValue = oldValue;
+            this.newValue = newValue;
+        }
+
+        /**
+         * Returns the TableView upon which the edit took place.
+         * @return the TableView upon which the edit took place
+         */
+        @Override public TableView<S> getSource() {
+            return source;
+        }
+
+        /**
+         * Returns the new value input into the item by the end user.
+         * @return the new value input into the item by the end user
+         */
+        public S getNewValue() {
+            return newValue;
+        }
+
+        /**
+         * Returns the old value that existed in the item prior to the current edit event.
+         * @return the old value that existed in the item prior to the current edit event
+         */
+        public S getOldValue() {
+            return oldValue;
+        }
+    }
 
 
     /* *************************************************************************

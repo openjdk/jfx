@@ -2247,6 +2247,7 @@ public class ListViewTest {
         }
     }
 
+    @SuppressWarnings("removal")
     @Test public void testListEditStartOnCellStandalone_JDK8187432() {
         ListView<String> control = new ListView<>(FXCollections
                 .observableArrayList("Item1", "Item2", "Item3", "Item4"));
