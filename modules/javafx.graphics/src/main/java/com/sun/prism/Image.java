@@ -698,21 +698,32 @@ public class Image implements PlatformImage {
     public static class Serial {
         private int id;
         private Rectangle dirtyRegion;
-
-        Serial() {
-            id = 0;
-            dirtyRegion = null;
-        }
+        private boolean readSinceWrite;
 
         public synchronized Pair<Integer, Rectangle> getIdRect() {
             // Called on quantumRenderer-0
-            return new Pair(id, (dirtyRegion == null)? null : new Rectangle(dirtyRegion));
+            readSinceWrite = true;
+
+            return new Pair<>(id, (dirtyRegion == null)? null : new Rectangle(dirtyRegion));
         }
 
         public synchronized void update(Rectangle rect) {
             // Called on FX Application thread
-            id++;
-            dirtyRegion = rect;
+            if (readSinceWrite) {  // start a new burst if read
+                id++;
+                readSinceWrite = false;
+                dirtyRegion = rect == null ? null : new Rectangle(rect);
+            }
+            else if (dirtyRegion == null) {  // first write of a new burst
+                id++;
+                dirtyRegion = rect == null ? null : new Rectangle(rect);
+            }
+            else if (rect == null) {  // full invalidation
+                dirtyRegion = null;
+            }
+            else {  // burst was not read yet, coalesce region
+                dirtyRegion.add(rect);
+            }
         }
     }
 

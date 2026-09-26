@@ -29,6 +29,7 @@ import com.sun.javafx.font.FontStrike;
 import com.sun.javafx.font.Glyph;
 import com.sun.javafx.font.Metrics;
 import com.sun.javafx.geom.Point2D;
+import com.sun.javafx.geom.RoundRectangle2D;
 import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.text.GlyphList;
@@ -72,12 +73,12 @@ public record StubFontStrike(FontResource fontResource, float size, BaseTransfor
 
     @Override
     public Glyph getGlyph(char symbol) {
-        return null;
+        return getGlyph(fontResource.getGlyphMapper().getGlyphCode(symbol));
     }
 
     @Override
     public Glyph getGlyph(int glyphCode) {
-        return null;
+        return new StubGlyph(glyphCode, size, fontResource.isItalic());
     }
 
     @Override
@@ -97,6 +98,11 @@ public record StubFontStrike(FontResource fontResource, float size, BaseTransfor
 
     @Override
     public Shape getOutline(GlyphList gl, BaseTransform transform) {
-        return null;
+        float height = StubFontMetrics.BASELINE * size;
+
+        return new RoundRectangle2D(
+            (float) transform.getMxt(), (float) (transform.getMyt() - height),
+            gl.getWidth(), height, 0, 0
+        );
     }
 }

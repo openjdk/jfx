@@ -41,6 +41,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
 public class StubFontResource implements FontResource {
     private final Font font;
     private Boolean bold;
+    private Boolean italic;
     private static final CharToGlyphMapper glyphMapper = initCharToGlyphMapper();
 
     public StubFontResource(Font font) {
@@ -104,7 +105,13 @@ public class StubFontResource implements FontResource {
 
     @Override
     public boolean isItalic() {
-        return false;
+        if (italic == null) {
+            String name = font.getStyle();
+
+            italic = name != null && name.toLowerCase(Locale.ROOT).contains("italic");
+        }
+
+        return italic;
     }
 
     // returns glyph width
