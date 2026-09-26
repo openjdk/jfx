@@ -36,9 +36,6 @@ import java.awt.dnd.DropTargetDropEvent;
 import java.awt.dnd.DropTargetListener;
 
 import javafx.application.Application;
-import javafx.application.Platform;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.embed.swing.SwingNode;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -76,9 +73,9 @@ public class DragDropFromSwingComponentInSwingNodeTest extends Application {
         stage.setTitle("Swing in JavaFX");
         Button passButton = new Button("Pass");
         Button failButton = new Button("Fail");
-        passButton.setOnAction(e -> this.quit());
+        passButton.setOnAction(e -> stage.close());
         failButton.setOnAction(e -> {
-            this.quit();
+            stage.close();
             throw new AssertionError("Drag / drop from a Swing component in a SwingNode not working");
         });
 
@@ -92,16 +89,7 @@ public class DragDropFromSwingComponentInSwingNodeTest extends Application {
                 new HBox(10, passButton, failButton), pane);
 
         stage.setScene(new Scene(rootNode, 600, 250));
-        stage.onCloseRequestProperty().addListener(new InvalidationListener(){
-            @Override public void invalidated(Observable observable) {
-                System.exit(0);
-            }
-        });
         stage.show();
-    }
-
-    private void quit() {
-        Platform.exit();
     }
 
     private void createSwingContent(final SwingNode swingNode) {

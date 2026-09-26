@@ -24,15 +24,18 @@
  */
 
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.embed.swing.SwingFXUtils;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.TransferMode;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
@@ -67,8 +70,11 @@ public class DndTestDragViewRawImage extends Application {
         label.setWrapText(true);
         label.setMaxWidth(440);
 
-        VBox vBox = new VBox(label, imageView);
-        vBox.setSpacing(5.0);
+        HBox passFailButtons = createPassFailButtons();
+        passFailButtons.setAlignment(Pos.CENTER);
+
+        VBox vBox = new VBox(label, imageView, passFailButtons);
+        vBox.setSpacing(20.0);
         vBox.setAlignment(Pos.CENTER);
         stage.setScene(new Scene(vBox, 480, 480));
         stage.setTitle("Drag View Image Colors");
@@ -89,5 +95,21 @@ public class DndTestDragViewRawImage extends Application {
             }
         }
         return SwingFXUtils.toFXImage(image, null);
+    }
+
+    private HBox createPassFailButtons() {
+        var passButton = new Button("Pass");
+        passButton.setOnAction(e -> {
+            System.out.println("TEST PASSED");
+            Platform.exit();
+        });
+        var failButton = new Button("Fail");
+        failButton.setOnAction(e -> {
+            System.out.println("TEST FAILED");
+            Platform.exit();
+            throw new AssertionError("Test failed");
+        });
+        var hbox = new HBox(10, passButton, failButton);
+        return hbox;
     }
 }
