@@ -45,7 +45,6 @@ import javafx.util.Subscription;
  * recomputed and valid again.
  *
  * @implNote
- * <p>
  * The implementations in the JavaFX library provide the following guarantees for
  * their {@link InvalidationListener}s:
  * <ul>
@@ -53,18 +52,13 @@ import javafx.util.Subscription;
  *     <li>A listener that is added while a notification is in progress is not
  *         notified as part of that notification.
  *     <li>A listener that is removed while a notification is in progress is not
- *         notified as part of that notification if it has not been notified yet, and
- *         is not renotified if it has already been notified.
- *     <li>Nested notifications are depth-first, and only renotify the listeners
- *         that have already been notified.
+ *         notified as part of that notification if it has not yet been notified.
  * </ul>
  * The collection implementations in the JavaFX library, such as
  * {@link javafx.collections.ObservableList}, {@link javafx.collections.ObservableMap},
  * and {@link javafx.collections.ObservableSet}, and the collection property
  * classes and collection binding classes, do not provide all of the guarantees
- * above: for these, a listener that is removed while a notification is in
- * progress may still be notified, and a nested notification notifies all
- * listeners rather than only those that have already been notified.
+ * above; see their documentation for details.
  *
  * @see javafx.beans.value.ObservableValue
  * @see javafx.collections.ObservableList

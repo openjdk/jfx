@@ -82,11 +82,11 @@ import javafx.util.Subscription;
  * @implNote
  * <ol>
  *     <li>All bindings and properties in the JavaFX library support lazy evaluation.
- *     <li>Properties in the JavaFX library invalidate when the value they hold
+ *     <li>Properties in the JavaFX library become invalid when the value they hold
  *         changes. Object properties compare the new value by reference, so they also
- *         invalidate when the new value is equal to the previous value but not the
- *         same reference; primitive and {@code String} properties compare by value.
- *         Bindings invalidate when one of their dependencies is invalidated.
+ *         become invalid when the new value {@link Object#equals(Object) equals} the previous value
+ *         but is not the same reference; primitive and {@code String} properties compare by
+ *         value. Bindings become invalid when one of their dependencies becomes invalid.
  * </ol>
  * <p>
  * For change listeners, the implementations in the JavaFX library provide the
@@ -97,24 +97,22 @@ import javafx.util.Subscription;
  *     <li>A {@code ChangeListener} is notified only when the new value is not equal
  *         to the value it last observed ({@code Object#equals(Object)}), so the
  *         {@code oldValue} and {@code newValue} it receives are never equal. The
- *         {@code newValue} is the current value of the {@code ObservableValue}; for
- *         any notification after the first one delivered to a listener, the
- *         {@code oldValue} is equal to the value that was reported as {@code newValue}
- *         in the previous notification delivered to that listener.
- *     <li>If a change listener modifies the value in its callback, the change
- *         listeners that have not been notified yet observe the modified value; an
+ *         {@code newValue} is the {@link ObservableValue#getValue() current value} of
+ *         the {@code ObservableValue}; for any notification after the first one delivered
+ *         to a listener, the {@code oldValue} is equal to the value that was reported as
+ *         {@code newValue} in the previous notification delivered to that listener.
+ *     <li>If a change listener modifies the observable's value in its callback, the change
+ *         listeners that have not yet been notified observe the modified value; an
  *         earlier listener can therefore veto a change before later listeners see it.
- *         A veto may also restore the value to the value that was current before the
- *         change, in which case the change listeners that have not been notified yet
- *         are not notified at all.
+ *         A veto may also restore the value that was current before the change, in which
+ *         case the remaining change listeners are not notified at all.
  * </ul>
- * The collection property classes and collection binding classes in the JavaFX
- * library do not provide all of the guarantees above. For these, a
- * {@code ChangeListener} is also notified when the contents of the collection
- * change, with the same reference reported as both {@code oldValue} and
- * {@code newValue}; the reported {@code oldValue} may not be correct when a
- * nested change occurs, and the guarantees for how nested changes are delivered
- * and the ability of an earlier listener to veto a change are not provided.
+ * The collection property classes and collection binding classes provide a reduced set
+ * of these guarantees; see {@link ObservableListValue}, {@link ObservableMapValue}, and
+ * {@link ObservableSetValue}.
+ * <p>
+ * The JavaBean adapter properties also provide a reduced set of these guarantees; see
+ * {@link javafx.beans.property.adapter.JavaBeanProperty}.
  *
  * @see ObservableBooleanValue
  * @see ObservableDoubleValue

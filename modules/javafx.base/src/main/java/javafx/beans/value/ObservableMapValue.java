@@ -29,13 +29,6 @@ import javafx.collections.ObservableMap;
 
 /**
  * An observable reference to an {@link javafx.collections.ObservableMap}.
- * <p>
- * The {@link ChangeListener} support of this interface differs from that of an
- * {@link ObservableValue}. A {@code ChangeListener} registered on an
- * {@code ObservableMapValue} is notified when the contents of the map change as
- * well as when the map reference is replaced. When the contents change, the same
- * map reference is reported as both {@code oldValue} and {@code newValue}, even
- * though the value did not change.
  *
  * @implNote
  * The implementations of this interface in the JavaFX library do not provide all
