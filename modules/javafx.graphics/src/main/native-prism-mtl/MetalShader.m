@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -147,13 +147,13 @@ NSString* jStringToNSString(JNIEnv *env, jstring string)
 {
     NSMutableDictionary *psDict;
     if (isMSAA) {
-        if ([context isDepthEnabled]) {
+        if ([context encoderHasDepthAttachment]) {
             psDict = pipeStateMSAADepthDict;
         } else {
             psDict = pipeStateMSAANoDepthDict;
         }
     } else {
-        if ([context isDepthEnabled]) {
+        if ([context encoderHasDepthAttachment]) {
             psDict = pipeStateNonMSAADepthDict;
         } else {
             psDict = pipeStateNonMSAANoDepthDict;
