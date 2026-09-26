@@ -78,10 +78,11 @@ public class StagePage extends TestPaneBase {
     public StagePage() {
         super("WindowPage");
 
-        button = new ToggleButton("Show Stage");
+        button = new ToggleButton();
         button.setOnAction((ev) -> {
             toggleStage();
         });
+        updateButtonText();
 
         status = new Label();
         status.setFont(Font.font("Monospace"));
@@ -234,6 +235,7 @@ public class StagePage extends TestPaneBase {
             button.setSelected(false);
             clearStatus();
         }
+        updateButtonText();
     }
 
     private void clearStatus() {
@@ -265,5 +267,9 @@ public class StagePage extends TestPaneBase {
 
     private static String f(double v) {
         return Formats.formatDouble(v);
+    }
+
+    private void updateButtonText() {
+        button.setText(stage == null ? "Show Stage" : "Hide Stage");
     }
 }
