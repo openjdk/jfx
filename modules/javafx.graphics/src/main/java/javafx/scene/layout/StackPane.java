@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,11 +35,9 @@ import javafx.css.StyleableProperty;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
-import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.css.converter.EnumConverter;
 import javafx.css.Styleable;
-import javafx.geometry.HPos;
 import javafx.util.Callback;
 
 /**
@@ -137,8 +135,11 @@ import javafx.util.Callback;
 
 public class StackPane extends Pane {
 
-    private boolean biasDirty = true;
-    private Orientation bias;
+    private static final Callback<Layoutable, Insets> MARGIN_LOOKUP = child -> getMargin((Node) child);
+    private static final Callback<Layoutable, Pos> ALIGNMENT_LOOKUP = child -> StackPane.getAlignment((Node) child);
+
+    private final StackPaneLayout stackPaneLayout = new StackPaneLayout(MARGIN_LOOKUP, ALIGNMENT_LOOKUP);
+    private boolean layoutSynced;
 
     /* ******************************************************************
      *  BEGIN static methods
@@ -186,8 +187,6 @@ public class StackPane extends Pane {
     public static Insets getMargin(Node child) {
         return (Insets)getConstraint(child, MARGIN_CONSTRAINT);
     }
-
-    private static final Callback<Node, Insets> marginAccessor = n -> getMargin(n);
 
     /**
      * Removes all stackpane constraints from the child node.
@@ -265,88 +264,60 @@ public class StackPane extends Pane {
      * have a content bias.
      */
     @Override public Orientation getContentBias() {
-        if (biasDirty) {
-            bias = null;
-            final List<Node> children = getManagedChildren();
-            for (Node child : children) {
-                Orientation contentBias = child.getContentBias();
-                if (contentBias != null) {
-                    bias = contentBias;
-                    if (contentBias == Orientation.HORIZONTAL) {
-                        break;
-                    }
-                }
-            }
-            biasDirty = false;
-        }
-        return bias;
+        syncLayout();
+
+        return stackPaneLayout.getContentBias();
     }
 
     @Override protected double computeMinWidth(double height) {
-        List<Node>managed = getManagedChildren();
-        return getInsets().getLeft() +
-               computeMaxMinAreaWidth(managed, marginAccessor, height, true) +
-               getInsets().getRight();
+        syncLayout();
+
+        return stackPaneLayout.minWidth(height);
     }
 
     @Override protected double computeMinHeight(double width) {
-        List<Node>managed = getManagedChildren();
-        return getInsets().getTop() +
-               computeMaxMinAreaHeight(managed, marginAccessor, width, true, getAlignmentInternal().getVpos()) +
-               getInsets().getBottom();
+        syncLayout();
+
+        return stackPaneLayout.minHeight(width);
     }
 
     @Override protected double computePrefWidth(double height) {
-        List<Node>managed = getManagedChildren();
-        Insets padding = getInsets();
-        return padding.getLeft() +
-               computeMaxPrefAreaWidth(managed, marginAccessor,
-                                       (height == -1) ? -1 : (height - padding.getTop() - padding.getBottom()), true) +
-               padding.getRight();
+        syncLayout();
+
+        return stackPaneLayout.prefWidth(height);
     }
 
     @Override protected double computePrefHeight(double width) {
-        List<Node>managed = getManagedChildren();
-        Insets padding = getInsets();
-        return padding.getTop() +
-               computeMaxPrefAreaHeight(managed, marginAccessor,
-                                        (width == -1) ? -1 : (width - padding.getLeft() - padding.getRight()), true,
-                                        getAlignmentInternal().getVpos()) +
-               padding.getBottom();
+        syncLayout();
+
+        return stackPaneLayout.prefHeight(width);
     }
 
-
     @Override public void requestLayout() {
-        biasDirty = true;
-        bias = null;
+        stackPaneLayout.invalidate();
+        layoutSynced = false;
         super.requestLayout();
     }
 
-    @Override protected void layoutChildren() {
-        List<Node> managed = getManagedChildren();
-        Pos align = getAlignmentInternal();
-        HPos alignHpos = align.getHpos();
-        VPos alignVpos = align.getVpos();
-        final double width = getWidth();
-        double height = getHeight();
-        double top = getInsets().getTop();
-        double right = getInsets().getRight();
-        double left = getInsets().getLeft();
-        double bottom = getInsets().getBottom();
-        double contentWidth = width - left - right;
-        double contentHeight = height - top - bottom;
-        double baselineOffset = alignVpos == VPos.BASELINE ?
-                getAreaBaselineOffset(managed, marginAccessor, i -> width, contentHeight, true)
-                                    : 0;
-        for (int i = 0, size = managed.size(); i < size; i++) {
-            Node child = managed.get(i);
-            Pos childAlignment = StackPane.getAlignment(child);
-            layoutInArea(child, left, top,
-                           contentWidth, contentHeight,
-                           baselineOffset, getMargin(child),
-                           childAlignment != null? childAlignment.getHpos() : alignHpos,
-                           childAlignment != null? childAlignment.getVpos() : alignVpos);
+    private void syncLayout() {
+        if (layoutSynced) {
+            return;
         }
+
+        stackPaneLayout.setChildren(getManagedChildren());
+        stackPaneLayout.setAlignment(getAlignmentInternal());
+        stackPaneLayout.setInsets(getInsets());
+        stackPaneLayout.setSnapToPixel(isSnapToPixel());
+        stackPaneLayout.setRenderScaleContext(renderScaleContext());
+
+        layoutSynced = true;
+    }
+
+    @Override
+    protected void layoutChildren() {
+        syncLayout();
+
+        stackPaneLayout.resizeRelocate(0, 0, getWidth(), getHeight());
     }
 
     /* *************************************************************************

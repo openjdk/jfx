@@ -72,9 +72,11 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.ParentHelper;
+import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.scene.layout.RegionHelper;
 import com.sun.javafx.scene.layout.ScaledMath;
+import com.sun.javafx.scene.layout.Snapper;
 import com.sun.javafx.scene.shape.ShapeHelper;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGRegion;
@@ -323,6 +325,31 @@ public class Region extends Parent {
     }
 
     /**
+     * Returns the {@link RenderScaleContext} for this region's current
+     * scene/window, or {@link RenderScaleContext#DEFAULT} if unattached.
+     *
+     * @return the {@link RenderScaleContext}, never {@code null}
+     */
+    RenderScaleContext renderScaleContext() {
+        Scene scene = getScene();
+
+        return scene == null ? RenderScaleContext.DEFAULT : SceneHelper.getRenderScaleContext(scene);
+    }
+
+    /*
+     * Returns the {@link Snapper} matching this region's {@link #isSnapToPixel()} state.
+     */
+    private Snapper snapper() {
+        if (!isSnapToPixel()) {
+            return Snapper.NO_SNAPPING;
+        }
+
+        Scene scene = getScene();
+
+        return scene == null ? Snapper.IDENTITY : SceneHelper.getSnapper(scene);
+    }
+
+    /**
      * If snapToPixel is true, then the value is rounded using Math.round. Otherwise,
      * the value is simply returned. This method will surely be JIT'd under normal
      * circumstances, however on an interpreter it would be better to inline this
@@ -439,35 +466,16 @@ public class Region extends Parent {
         return snapToPixel ? ScaledMath.round(value, snapScale) : value;
     }
 
-    double getAreaBaselineOffset(List<Node> children, Callback<Node, Insets> margins,
+    double getAreaBaselineOffset(List<Node> children, Callback<Layoutable, Insets> margins,
                                         Function<Integer, Double> positionToWidth,
                                         double areaHeight, boolean fillHeight) {
-        return getAreaBaselineOffset(children, margins, positionToWidth, areaHeight, fillHeight, isSnapToPixel());
+        return LayoutUtils.getAreaBaselineOffset(snapper(), children, margins, positionToWidth, areaHeight, fillHeight);
     }
 
-    static double getAreaBaselineOffset(List<Node> children, Callback<Node, Insets> margins,
-            Function<Integer, Double> positionToWidth,
-            double areaHeight, boolean fillHeight, boolean snapToPixel) {
-        return getAreaBaselineOffset(children, margins, positionToWidth, areaHeight, fillHeight,
-                getMinBaselineComplement(children), snapToPixel);
-    }
-
-    double getAreaBaselineOffset(List<Node> children, Callback<Node, Insets> margins,
+    double getAreaBaselineOffset(List<Node> children, Callback<Layoutable, Insets> margins,
                                  Function<Integer, Double> positionToWidth,
                                  double areaHeight, final boolean fillHeight, double minComplement) {
-        return getAreaBaselineOffset(children, margins, positionToWidth, areaHeight, fillHeight, minComplement, isSnapToPixel());
-    }
-
-    static double getAreaBaselineOffset(List<Node> children, Callback<Node, Insets> margins,
-            Function<Integer, Double> positionToWidth,
-            double areaHeight, final boolean fillHeight, double minComplement, boolean snapToPixel) {
-        return getAreaBaselineOffset(children, margins, positionToWidth, areaHeight, t -> fillHeight, minComplement, snapToPixel);
-    }
-
-    double getAreaBaselineOffset(List<Node> children, Callback<Node, Insets> margins,
-                                 Function<Integer, Double> positionToWidth,
-                                 double areaHeight, Function<Integer, Boolean> fillHeight, double minComplement) {
-        return getAreaBaselineOffset(children, margins, positionToWidth, areaHeight, fillHeight, minComplement, isSnapToPixel());
+        return getAreaBaselineOffset(children, margins, positionToWidth, areaHeight, _ -> fillHeight, minComplement);
     }
 
     /**
@@ -480,38 +488,10 @@ public class Region extends Parent {
      * @param fillHeight callback to specify children that has fillHeight constraint
      * @param minComplement minimum complement
      */
-    static double getAreaBaselineOffset(List<Node> children, Callback<Node, Insets> margins,
+    double getAreaBaselineOffset(List<Node> children, Callback<Layoutable, Insets> margins,
             Function<Integer, Double> positionToWidth,
-            double areaHeight, Function<Integer, Boolean> fillHeight, double minComplement, boolean snapToPixel) {
-        double b = 0;
-        double snapScaleV = 0.0;
-        for (int i = 0;i < children.size(); ++i) {
-            Node n = children.get(i);
-            // Note: all children should be coming from the same parent so they should all have the same snapScale
-            if (snapToPixel && i == 0) snapScaleV = getSnapScaleY(n.getParent());
-            Insets margin = margins.call(n);
-            double top = margin != null ? snapSpace(margin.getTop(), snapToPixel, snapScaleV) : 0;
-            double bottom = (margin != null ? snapSpace(margin.getBottom(), snapToPixel, snapScaleV) : 0);
-            final double bo = n.getBaselineOffset();
-            if (bo == BASELINE_OFFSET_SAME_AS_HEIGHT) {
-                double alt = -1;
-                if (n.getContentBias() == Orientation.HORIZONTAL) {
-                    alt = positionToWidth.apply(i);
-                }
-                if (fillHeight.apply(i)) {
-                    // If the children fills it's height, than it's "preferred" height is the area without the complement and insets
-                    b = Math.max(b, top + boundedSize(n.minHeight(alt), areaHeight - minComplement - top - bottom,
-                            n.maxHeight(alt)));
-                } else {
-                    // Otherwise, we must use the area without complement and insets as a maximum for the Node
-                    b = Math.max(b, top + boundedSize(n.minHeight(alt), n.prefHeight(alt),
-                            Math.min(n.maxHeight(alt), areaHeight - minComplement - top - bottom)));
-                }
-            } else {
-                b = Math.max(b, top + bo);
-            }
-        }
-        return b;
+            double areaHeight, Function<Integer, Boolean> fillHeight, double minComplement) {
+        return LayoutUtils.getAreaBaselineOffset(snapper(), children, margins, positionToWidth, areaHeight, fillHeight, minComplement);
     }
 
     /**
@@ -520,7 +500,7 @@ public class Region extends Parent {
      * @return
      */
     static double getMinBaselineComplement(List<Node> children) {
-        return getBaselineComplement(children, true, false);
+        return LayoutUtils.getMinBaselineComplement(children);
     }
 
     /**
@@ -529,7 +509,7 @@ public class Region extends Parent {
      * @return
      */
     static double getPrefBaselineComplement(List<Node> children) {
-        return getBaselineComplement(children, false, false);
+        return LayoutUtils.getPrefBaselineComplement(children);
     }
 
     /**
@@ -538,23 +518,7 @@ public class Region extends Parent {
      * @return
      */
     static double getMaxBaselineComplement(List<Node> children) {
-        return getBaselineComplement(children, false, true);
-    }
-
-    private static double getBaselineComplement(List<Node> children, boolean min, boolean max) {
-        double bc = 0;
-        for (Node n : children) {
-            final double bo = n.getBaselineOffset();
-            if (bo == BASELINE_OFFSET_SAME_AS_HEIGHT) {
-                continue;
-            }
-            if (n.isResizable()) {
-                bc = Math.max(bc, (min ? n.minHeight(-1) : max ? n.maxHeight(-1) : n.prefHeight(-1)) - bo);
-            } else {
-                bc = Math.max(bc, n.getLayoutBounds().getHeight() - bo);
-            }
-        }
-        return bc;
+        return LayoutUtils.getMaxBaselineComplement(children);
     }
 
 
@@ -655,7 +619,7 @@ public class Region extends Parent {
     /**
      * I'm using a super-lazy property pattern here, so as to only create the
      * property object when needed for listeners or when being set from CSS,
-     * but also making sure that we only call requestParentLayout in the case
+     * but also making sure that we only call requestLayout in the case
      * that the snapToPixel value has actually changed, whether set via the setter
      * or set via the property object.
      */
@@ -666,7 +630,7 @@ public class Region extends Parent {
             if (_snapToPixel != value) {
                 _snapToPixel = value;
                 updateSnappedInsets();
-                requestParentLayout();
+                requestLayout();
             }
         } else {
             snapToPixel.set(value);
@@ -688,7 +652,7 @@ public class Region extends Parent {
                     if (_snapToPixel != value) {
                         _snapToPixel = value;
                         updateSnappedInsets();
-                        requestParentLayout();
+                        requestLayout();
                     }
                 }
             };
@@ -1980,29 +1944,8 @@ public class Region extends Parent {
      * @param fillHeight whether the child may fill the available height instead of being limited to its preferred height
      * @return the minimum horizontal space required to lay out the child
      */
-    double computeChildMinAreaWidth(Node child, double baselineComplement, Insets margin,
-                                    double availableHeight, boolean fillHeight) {
-        boolean snap = isSnapToPixel();
-        double scaleX = getSnapScaleX();
-        double scaleY = getSnapScaleY();
-        double snappedLeft = margin != null ? snapSpace(margin.getLeft(), snap, scaleX) : 0;
-        double snappedRight = margin != null ? snapSpace(margin.getRight(), snap, scaleX) : 0;
-        double alt = -1;
-
-        if (availableHeight != -1 && child.isResizable() && child.getContentBias() == Orientation.VERTICAL) {
-            double snappedContentHeight = computeContentHeight(margin, availableHeight, snap, scaleY);
-            double baseline = child.getBaselineOffset();
-            if (baseline == BASELINE_OFFSET_SAME_AS_HEIGHT && baselineComplement != -1) {
-                // The outer height is a size allocation, while the complement is space.
-                double snappedComplement = snapSpace(baselineComplement, snap, scaleY);
-                snappedContentHeight = snapAligned(snappedContentHeight - snappedComplement, snap, scaleY);
-            }
-
-            alt = computeBoundedHeight(child, fillHeight, snappedContentHeight, snap, scaleY);
-        }
-
-        double snappedChildWidth = snapSize(child.minWidth(alt), snap, scaleX);
-        return snapAligned(snappedLeft + snappedChildWidth + snappedRight, snap, scaleX);
+    double computeChildMinAreaWidth(Node child, double baselineComplement, Insets margin, double availableHeight, boolean fillHeight) {
+        return LayoutUtils.computeChildMinAreaWidth(snapper(), child, baselineComplement, margin, availableHeight, fillHeight);
     }
 
     /**
@@ -2034,38 +1977,8 @@ public class Region extends Parent {
      * @param fillWidth whether the child may fill the available width instead of being limited to its preferred width
      * @return the minimum vertical space required to lay out the child
      */
-    double computeChildMinAreaHeight(Node child, double minBaselineComplement, Insets margin,
-                                     double availableWidth, boolean fillWidth) {
-        boolean snap = isSnapToPixel();
-        double scaleX = getSnapScaleX();
-        double scaleY = getSnapScaleY();
-        double snappedTop = margin != null ? snapSpace(margin.getTop(), snap, scaleY) : 0;
-        double snappedBottom = margin != null ? snapSpace(margin.getBottom(), snap, scaleY) : 0;
-        double alt = -1;
-
-        if (availableWidth != -1 && child.isResizable() && child.getContentBias() == Orientation.HORIZONTAL) {
-            double snappedContentWidth = computeContentWidth(margin, availableWidth, snap, scaleX);
-            alt = computeBoundedWidth(child, fillWidth, snappedContentWidth, snap, scaleX);
-        }
-
-        if (minBaselineComplement != -1) {
-            double baseline = child.getBaselineOffset();
-
-            // The baseline complement is the extent below the common baseline. It is deliberately kept raw because
-            // it is an intermediate part of the complete baseline-aligned area; snapping it separately could lose
-            // precision or over-allocate. Combine it with the extent above the baseline and snap the resulting
-            // content size instead.
-            if (baseline == BASELINE_OFFSET_SAME_AS_HEIGHT) {
-                double snappedChildMinHeight = snapSize(child.minHeight(alt), snap, scaleY);
-                double snappedAbove = snapAligned(snappedTop + snappedBottom + snappedChildMinHeight, snap, scaleY);
-                return snapSize(snappedAbove + minBaselineComplement, snap, scaleY);
-            } else {
-                return snapSize(baseline + minBaselineComplement, snap, scaleY);
-            }
-        } else {
-            double snappedChildHeight = snapSize(child.minHeight(alt), snap, scaleY);
-            return snapAligned(snappedTop + snappedBottom + snappedChildHeight, snap, scaleY);
-        }
+    double computeChildMinAreaHeight(Node child, double minBaselineComplement, Insets margin, double availableWidth, boolean fillWidth) {
+        return LayoutUtils.computeChildMinAreaHeight(snapper(), child, minBaselineComplement, margin, availableWidth, fillWidth);
     }
 
     /**
@@ -2097,30 +2010,8 @@ public class Region extends Parent {
      * @param fillHeight whether the child may fill the available height instead of being limited to its preferred height
      * @return the preferred horizontal space to lay out the child
      */
-    double computeChildPrefAreaWidth(Node child, double baselineComplement, Insets margin,
-                                     double availableHeight, boolean fillHeight) {
-        boolean snap = isSnapToPixel();
-        double scaleX = getSnapScaleX();
-        double scaleY = getSnapScaleY();
-        double snappedLeft = margin != null ? snapSpace(margin.getLeft(), snap, scaleX) : 0;
-        double snappedRight = margin != null ? snapSpace(margin.getRight(), snap, scaleX) : 0;
-        double alt = -1;
-
-        if (availableHeight != -1 && child.isResizable() && child.getContentBias() == Orientation.VERTICAL) { // width depends on height
-            double snappedContentHeight = computeContentHeight(margin, availableHeight, snap, scaleY);
-            double baseline = child.getBaselineOffset();
-            if (baseline == BASELINE_OFFSET_SAME_AS_HEIGHT && baselineComplement != -1) {
-                // The outer height is a size allocation, while the complement is space.
-                double snappedComplement = snapSpace(baselineComplement, snap, scaleY);
-                snappedContentHeight = snapAligned(snappedContentHeight - snappedComplement, snap, scaleY);
-            }
-
-            alt = computeBoundedHeight(child, fillHeight, snappedContentHeight, snap, scaleY);
-        }
-
-        double rawChildPrefWidth = boundedSize(child.minWidth(alt), child.prefWidth(alt), child.maxWidth(alt));
-        double snappedChildPrefWidth = snapSize(rawChildPrefWidth, snap, scaleX);
-        return snapAligned(snappedLeft + snappedRight + snappedChildPrefWidth, snap, scaleX);
+    double computeChildPrefAreaWidth(Node child, double baselineComplement, Insets margin, double availableHeight, boolean fillHeight) {
+        return LayoutUtils.computeChildPrefAreaWidth(snapper(), child, baselineComplement, margin, availableHeight, fillHeight);
     }
 
     /**
@@ -2152,41 +2043,8 @@ public class Region extends Parent {
      * @param fillWidth whether the child may fill the available width instead of being limited to its preferred width
      * @return the preferred vertical space to lay out the child
      */
-    double computeChildPrefAreaHeight(Node child, double prefBaselineComplement, Insets margin,
-                                      double availableWidth, boolean fillWidth) {
-        boolean snap = isSnapToPixel();
-        double scaleX = getSnapScaleX();
-        double scaleY = getSnapScaleY();
-        double snappedTop = margin != null ? snapSpace(margin.getTop(), snap, scaleY) : 0;
-        double snappedBottom = margin != null ? snapSpace(margin.getBottom(), snap, scaleY) : 0;
-        double alt = -1;
-
-        if (availableWidth != -1 && child.isResizable() && child.getContentBias() == Orientation.HORIZONTAL) { // height depends on width
-            double contentWidth = computeContentWidth(margin, availableWidth, snap, scaleX);
-            alt = computeBoundedWidth(child, fillWidth, contentWidth, snap, scaleX);
-        }
-
-        if (prefBaselineComplement != -1) {
-            double rawBaseline = child.getBaselineOffset();
-
-            // The baseline complement is the extent below the common baseline. It is deliberately kept raw because
-            // it is an intermediate part of the complete baseline-aligned area; snapping it separately could lose
-            // precision or over-allocate. Combine it with the extent above the baseline and snap the resulting
-            // content size instead.
-            if (rawBaseline == BASELINE_OFFSET_SAME_AS_HEIGHT) {
-                double rawChildPrefHeight = boundedSize(child.minHeight(alt), child.prefHeight(alt), child.maxHeight(alt));
-                double snappedChildPrefHeight = snapSize(rawChildPrefHeight, snap, scaleY);
-                double snappedHeightAboveBaseline = snapAligned(snappedTop + snappedBottom + snappedChildPrefHeight, snap, scaleY);
-                return snapSize(snappedHeightAboveBaseline + prefBaselineComplement, snap, scaleY);
-            } else {
-                double snappedMargins = snapAligned(snappedTop + snappedBottom, snap, scaleY);
-                return snapSize(snappedMargins + rawBaseline + prefBaselineComplement, snap, scaleY);
-            }
-        } else {
-            double rawChildPrefHeight = boundedSize(child.minHeight(alt), child.prefHeight(alt), child.maxHeight(alt));
-            double snappedChildPrefHeight = snapSize(rawChildPrefHeight, snap, scaleY);
-            return snapAligned(snappedTop + snappedBottom + snappedChildPrefHeight, snap, scaleY);
-        }
+    double computeChildPrefAreaHeight(Node child, double prefBaselineComplement, Insets margin, double availableWidth, boolean fillWidth) {
+        return LayoutUtils.computeChildPrefAreaHeight(snapper(), child, prefBaselineComplement, margin, availableWidth, fillWidth);
     }
 
     /**
@@ -2206,34 +2064,8 @@ public class Region extends Parent {
      * @param fillHeight whether the child may fill the available height instead of being limited to its preferred height
      * @return the maximum horizontal space to lay out the child, or {@code Double.MAX_VALUE} if it has no finite maximum width
      */
-    double computeChildMaxAreaWidth(Node child, double baselineComplement, Insets margin,
-                                    double availableHeight, boolean fillHeight) {
-        boolean snap = isSnapToPixel();
-        double scaleX = getSnapScaleX();
-        double scaleY = getSnapScaleY();
-        double snappedLeft = margin != null ? snapSpace(margin.getLeft(), snap, scaleX) : 0;
-        double snappedRight = margin != null ? snapSpace(margin.getRight(), snap, scaleX) : 0;
-        double alt = -1;
-
-        if (availableHeight != -1 && child.isResizable() && child.getContentBias() == Orientation.VERTICAL) { // width depends on height
-            double snappedContentHeight = computeContentHeight(margin, availableHeight, snap, scaleY);
-            double rawBaseline = child.getBaselineOffset();
-            if (rawBaseline == BASELINE_OFFSET_SAME_AS_HEIGHT && baselineComplement != -1) {
-                // The outer height is a size allocation, while the complement is space.
-                double snappedComplement = snapSpace(baselineComplement, snap, scaleY);
-                snappedContentHeight = snapAligned(snappedContentHeight - snappedComplement, snap, scaleY);
-            }
-
-            alt = computeBoundedHeight(child, fillHeight, snappedContentHeight, snap, scaleY);
-        }
-
-        double max = child.maxWidth(alt);
-        if (max == Double.MAX_VALUE) {
-            return max;
-        }
-
-        double snappedChildWidth = snapSize(boundedSize(child.minWidth(alt), max, Double.MAX_VALUE), snap, scaleX);
-        return snapAligned(snappedLeft + snappedChildWidth + snappedRight, snap, scaleX);
+    double computeChildMaxAreaWidth(Node child, double baselineComplement, Insets margin, double availableHeight, boolean fillHeight) {
+        return LayoutUtils.computeChildMaxAreaWidth(snapper(), child, baselineComplement, margin, availableHeight, fillHeight);
     }
 
     /**
@@ -2253,46 +2085,8 @@ public class Region extends Parent {
      * @param fillWidth whether the child may fill the available width instead of being limited to its preferred width
      * @return the maximum vertical space to lay out the child, or {@code Double.MAX_VALUE} if it has no finite maximum height
      */
-    double computeChildMaxAreaHeight(Node child, double maxBaselineComplement, Insets margin,
-                                     double availableWidth, boolean fillWidth) {
-        boolean snap = isSnapToPixel();
-        double scaleX = getSnapScaleX();
-        double scaleY = getSnapScaleY();
-        double snappedTop = margin != null ? snapSpace(margin.getTop(), snap, scaleY) : 0;
-        double snappedBottom = margin != null ? snapSpace(margin.getBottom(), snap, scaleY) : 0;
-        double alt = -1;
-
-        if (availableWidth != -1 && child.isResizable() && child.getContentBias() == Orientation.HORIZONTAL) { // height depends on width
-            double snappedContentWidth = computeContentWidth(margin, availableWidth, snap, scaleX);
-            alt = computeBoundedWidth(child, fillWidth, snappedContentWidth, snap, scaleX);
-        }
-
-        double max = child.maxHeight(alt);
-        if (max == Double.MAX_VALUE) {
-            return max;
-        }
-
-        if (maxBaselineComplement != -1) {
-            double rawBaseline = child.getBaselineOffset();
-
-            // The baseline complement is the extent below the common baseline. It is deliberately kept raw because
-            // it is an intermediate part of the complete baseline-aligned area; snapping it separately could lose
-            // precision or over-allocate. Combine it with the extent above the baseline and snap the resulting
-            // content size instead.
-            if (rawBaseline == BASELINE_OFFSET_SAME_AS_HEIGHT) {
-                double rawChildMaxHeight = boundedSize(child.minHeight(alt), max, Double.MAX_VALUE);
-                double snappedChildMaxHeight = snapSize(rawChildMaxHeight, snap, scaleY);
-                double snappedHeightAboveBaseline = snapAligned(snappedTop + snappedBottom + snappedChildMaxHeight, snap, scaleY);
-                return snapSize(snappedHeightAboveBaseline + maxBaselineComplement, snap, scaleY);
-            } else {
-                double snappedMargins = snapAligned(snappedTop + snappedBottom, snap, scaleY);
-                return snapSize(snappedMargins + rawBaseline + maxBaselineComplement, snap, scaleY);
-            }
-        } else {
-            // if min > max, min wins, so still need to call boundedSize()
-            double snappedChildHeight = snapSize(boundedSize(child.minHeight(alt), max, Double.MAX_VALUE), snap, scaleY);
-            return snapAligned(snappedTop + snappedBottom + snappedChildHeight, snap, scaleY);
-        }
+    double computeChildMaxAreaHeight(Node child, double maxBaselineComplement, Insets margin, double availableWidth, boolean fillWidth) {
+        return LayoutUtils.computeChildMaxAreaHeight(snapper(), child, maxBaselineComplement, margin, availableWidth, fillWidth);
     }
 
     /*
@@ -2318,122 +2112,66 @@ public class Region extends Parent {
      * (not NaN) and never negative.
      */
 
-    /*
-     * Given a content width, limits it by the child's constraints. The fill boolean
-     * controls whether the content width or the child's preferred width is used to compute
-     * the bounded width.
-     */
-    private double computeBoundedWidth(Node child, boolean fill, double contentWidth,
-                                       boolean snapToPixel, double snapScale) {
-        double min = child.minWidth(-1);
-        double max = child.maxWidth(-1);
-
-        if (fill) {
-            return snapSize(boundedSize(min, contentWidth, max), snapToPixel, snapScale);
-        }
-
-        return snapSize(boundedSize(min, child.prefWidth(-1), Math.min(max, contentWidth)), snapToPixel, snapScale);
-    }
-
-    /*
-     * Given a content height, limits it by the child's constraints. The fill boolean
-     * controls whether the content height or the child's preferred height is used to compute
-     * the bounded height.
-     */
-    private double computeBoundedHeight(Node child, boolean fill, double contentHeight,
-                                        boolean snapToPixel, double snapScale) {
-        double min = child.minHeight(-1);
-        double max = child.maxHeight(-1);
-
-        if (fill) {
-            return snapSize(boundedSize(min, contentHeight, max), snapToPixel, snapScale);
-        }
-
-        return snapSize(boundedSize(min, child.prefHeight(-1), Math.min(max, contentHeight)), snapToPixel, snapScale);
-    }
-
-    /*
-     * Removes the given margin (if any) from a width which still includes margins
-     * to create a content width.
-     */
-    private double computeContentWidth(Insets margin, double width, boolean snapToPixel, double snapScale) {
-        double left = margin != null ? snapSpace(margin.getLeft(), snapToPixel, snapScale) : 0;
-        double right = margin != null ? snapSpace(margin.getRight(), snapToPixel, snapScale) : 0;
-        double snappedWidth = snapSize(width, snapToPixel, snapScale);
-        return snapAligned(snappedWidth - left - right, snapToPixel, snapScale);
-    }
-
-    /*
-     * Removes the given margin (if any) from a height which still includes margins
-     * to create a content height.
-     */
-    private double computeContentHeight(Insets margin, double height, boolean snapToPixel, double snapScale) {
-        double top = margin != null ? snapSpace(margin.getTop(), snapToPixel, snapScale) : 0;
-        double bottom = margin != null ? snapSpace(margin.getBottom(), snapToPixel, snapScale) : 0;
-        double snappedHeight = snapSize(height, snapToPixel, snapScale);
-        return snapAligned(snappedHeight - top - bottom, snapToPixel, snapScale);
-    }
-
     /* Max of children's minimum area widths */
 
-    double computeMaxMinAreaWidth(List<Node> children, Callback<Node, Insets> margins) {
+    double computeMaxMinAreaWidth(List<Node> children, Callback<Layoutable, Insets> margins) {
         return getMaxAreaWidth(children, margins, new double[] { -1 }, false, true);
     }
 
-    double computeMaxMinAreaWidth(List<Node> children, Callback<Node, Insets> margins, double height,
+    double computeMaxMinAreaWidth(List<Node> children, Callback<Layoutable, Insets> margins, double height,
             boolean fillHeight) {
-        return getMaxAreaWidth(children, margins, new double[] { height }, fillHeight, true);
+        return LayoutUtils.computeMaxMinAreaWidth(snapper(), children, margins, height, fillHeight);
     }
 
-    double computeMaxMinAreaWidth(List<Node> children, Callback<Node, Insets> childMargins,
+    double computeMaxMinAreaWidth(List<Node> children, Callback<Layoutable, Insets> childMargins,
             double[] childHeights, boolean fillHeight) {
         return getMaxAreaWidth(children, childMargins, childHeights, fillHeight, true);
     }
 
     /* Max of children's minimum area heights */
 
-    double computeMaxMinAreaHeight(List<Node> children, Callback<Node, Insets> margins, VPos valignment) {
+    double computeMaxMinAreaHeight(List<Node> children, Callback<Layoutable, Insets> margins, VPos valignment) {
         return getMaxAreaHeight(children, margins, null, false, true, valignment);
     }
 
-    double computeMaxMinAreaHeight(List<Node> children, Callback<Node, Insets> margins, double width,
+    double computeMaxMinAreaHeight(List<Node> children, Callback<Layoutable, Insets> margins, double width,
             boolean fillWidth, VPos valignment) {
-        return getMaxAreaHeight(children, margins, new double[] { width }, fillWidth, true, valignment);
+        return LayoutUtils.computeMaxMinAreaHeight(snapper(), children, margins, width, fillWidth, valignment);
     }
 
-    double computeMaxMinAreaHeight(List<Node> children, Callback<Node, Insets> childMargins,
+    double computeMaxMinAreaHeight(List<Node> children, Callback<Layoutable, Insets> childMargins,
             double[] childWidths, boolean fillWidth, VPos valignment) {
         return getMaxAreaHeight(children, childMargins, childWidths, fillWidth, true, valignment);
     }
 
     /* Max of children's pref area widths */
 
-    double computeMaxPrefAreaWidth(List<Node> children, Callback<Node, Insets> margins) {
+    double computeMaxPrefAreaWidth(List<Node> children, Callback<Layoutable, Insets> margins) {
         return getMaxAreaWidth(children, margins, new double[] { -1 }, false, false);
     }
 
-    double computeMaxPrefAreaWidth(List<Node> children, Callback<Node, Insets> margins, double height,
+    double computeMaxPrefAreaWidth(List<Node> children, Callback<Layoutable, Insets> margins, double height,
             boolean fillHeight) {
-        return getMaxAreaWidth(children, margins, new double[] { height }, fillHeight, false);
+        return LayoutUtils.computeMaxPrefAreaWidth(snapper(), children, margins, height, fillHeight);
     }
 
-    double computeMaxPrefAreaWidth(List<Node> children, Callback<Node, Insets> childMargins,
+    double computeMaxPrefAreaWidth(List<Node> children, Callback<Layoutable, Insets> childMargins,
             double[] childHeights, boolean fillHeight) {
         return getMaxAreaWidth(children, childMargins, childHeights, fillHeight, false);
     }
 
     /* Max of children's pref area heights */
 
-    double computeMaxPrefAreaHeight(List<Node> children, Callback<Node, Insets> margins, VPos valignment) {
+    double computeMaxPrefAreaHeight(List<Node> children, Callback<Layoutable, Insets> margins, VPos valignment) {
         return getMaxAreaHeight(children, margins, null, false, false, valignment);
     }
 
-    double computeMaxPrefAreaHeight(List<Node> children, Callback<Node, Insets> margins, double width,
+    double computeMaxPrefAreaHeight(List<Node> children, Callback<Layoutable, Insets> margins, double width,
             boolean fillWidth, VPos valignment) {
-        return getMaxAreaHeight(children, margins, new double[] { width }, fillWidth, false, valignment);
+        return LayoutUtils.computeMaxPrefAreaHeight(snapper(), children, margins, width, fillWidth, valignment);
     }
 
-    double computeMaxPrefAreaHeight(List<Node> children, Callback<Node, Insets> childMargins,
+    double computeMaxPrefAreaHeight(List<Node> children, Callback<Layoutable, Insets> childMargins,
             double[] childWidths, boolean fillWidth, VPos valignment) {
         return getMaxAreaHeight(children, childMargins, childWidths, fillWidth, false, valignment);
     }
@@ -2503,61 +2241,16 @@ public class Region extends Parent {
 
     /* utility method for computing the max of children's min or pref heights, taking into account baseline alignment */
     private double getMaxAreaHeight(
-        List<Node> children, Callback<Node, Insets> childMargins, double[] childWidths,
+        List<Node> children, Callback<Layoutable, Insets> childMargins, double[] childWidths,
         boolean fillWidth, boolean minimum, VPos valignment
     ) {
-        final double singleChildWidth = childWidths == null ? -1 : childWidths.length == 1 ? childWidths[0] : Double.NaN;
-        if (valignment == VPos.BASELINE) {
-            double maxAbove = 0;
-            double maxBelow = 0;
-            for (int i = 0, maxPos = children.size(); i < maxPos; i++) {
-                final Node child = children.get(i);
-                final double childWidth = Double.isNaN(singleChildWidth) ? childWidths[i] : singleChildWidth;
-                Insets margin = childMargins.call(child);
-                final double top = margin != null? snapSpaceY(margin.getTop()) : 0;
-                final double bottom = margin != null? snapSpaceY(margin.getBottom()) : 0;
-                final double baseline = child.getBaselineOffset();
-
-                final double childHeight = minimum? snapSizeY(child.minHeight(childWidth)) : snapSizeY(child.prefHeight(childWidth));
-                if (baseline == BASELINE_OFFSET_SAME_AS_HEIGHT) {
-                    maxAbove = Math.max(maxAbove, childHeight + top);
-                } else {
-                    maxAbove = Math.max(maxAbove, baseline + top);
-                    maxBelow = Math.max(maxBelow,
-                            snapSpaceY(minimum?snapSizeY(child.minHeight(childWidth)) : snapSizeY(child.prefHeight(childWidth))) -
-                            baseline + bottom);
-                }
-            }
-            return maxAbove + maxBelow; //remind(aim): ceil this value?
-        } else {
-            double max = 0;
-            for (int i = 0, maxPos = children.size(); i < maxPos; i++) {
-                final Node child = children.get(i);
-                Insets margin = childMargins.call(child);
-                final double childWidth = Double.isNaN(singleChildWidth) ? childWidths[i] : singleChildWidth;
-                max = Math.max(max, minimum?
-                    computeChildMinAreaHeight(child, -1, margin, childWidth, fillWidth) :
-                        computeChildPrefAreaHeight(child, -1, margin, childWidth, fillWidth));
-            }
-            return max;
-        }
+        return LayoutUtils.getMaxAreaHeight(snapper(), children, childMargins, childWidths, fillWidth, minimum, valignment);
     }
 
     /* utility method for computing the max of children's min or pref width, horizontal alignment is ignored for now */
     private double getMaxAreaWidth(List<Node> children,
-            Callback<Node, Insets> childMargins, double[] childHeights, boolean fillHeight, boolean minimum) {
-        final double singleChildHeight = childHeights == null ? -1 : childHeights.length == 1 ? childHeights[0] : Double.NaN;
-
-        double max = 0;
-        for (int i = 0, maxPos = children.size(); i < maxPos; i++) {
-            final Node child = children.get(i);
-            final Insets margin = childMargins.call(child);
-            final double childHeight = Double.isNaN(singleChildHeight) ? childHeights[i] : singleChildHeight;
-            max = Math.max(max, minimum?
-                computeChildMinAreaWidth(child, -1, margin, childHeight, fillHeight) :
-                    computeChildPrefAreaWidth(child, -1, margin, childHeight, fillHeight));
-        }
-        return max;
+            Callback<Layoutable, Insets> childMargins, double[] childHeights, boolean fillHeight, boolean minimum) {
+        return LayoutUtils.getMaxAreaWidth(snapper(), children, childMargins, childHeights, fillHeight, minimum);
     }
 
     /**
@@ -2740,8 +2433,7 @@ public class Region extends Parent {
                                double areaBaselineOffset,
                                Insets margin,
                                HPos halignment, VPos valignment) {
-        layoutInArea(child, areaX, areaY, areaWidth, areaHeight,
-                areaBaselineOffset, margin, true, true, halignment, valignment);
+        LayoutUtils.layoutInArea(snapper(), child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset, margin, halignment, valignment);
     }
 
     /**
@@ -2799,7 +2491,7 @@ public class Region extends Parent {
                                double areaBaselineOffset,
                                Insets margin, boolean fillWidth, boolean fillHeight,
                                HPos halignment, VPos valignment) {
-        layoutInArea(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset, margin, fillWidth, fillHeight, halignment, valignment, isSnapToPixel());
+        LayoutUtils.layoutInArea(snapper(), child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset, margin, fillWidth, fillHeight, halignment, valignment);
     }
 
     /**
