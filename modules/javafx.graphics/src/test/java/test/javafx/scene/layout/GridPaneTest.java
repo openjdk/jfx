@@ -3248,4 +3248,87 @@ public class GridPaneTest {
         assertEquals(100, fixedArea.getWidth());
         fixedArea.assertSize();
     }
+
+    @Test
+    public void testPercentageGrowthReservesVgaps() {
+        gridpane.setVgap(10);
+        RowConstraints half1 = new RowConstraints();
+        half1.setPercentHeight(50);
+        RowConstraints half2 = new RowConstraints();
+        half2.setPercentHeight(50);
+        gridpane.getRowConstraints().addAll(half1, new RowConstraints(), half2);
+        MockResizable top = new MockResizable(10, 10);
+        MockResizable bottom = new MockResizable(10, 10);
+        gridpane.add(top, 0, 0);
+        gridpane.add(bottom, 0, 2);
+
+        gridpane.resize(100, 200);
+        gridpane.layout();
+
+        // row 1 is empty, so only one vgap is rendered and the percent rows must share the rest
+        assertEquals(95, top.getHeight(), 1e-100);
+        assertEquals(105, bottom.getLayoutY(), 1e-100);
+        assertEquals(95, bottom.getHeight(), 1e-100);
+    }
+
+    @Test
+    public void testPercentageGrowthReservesHgaps() {
+        gridpane.setHgap(10);
+        ColumnConstraints half1 = new ColumnConstraints();
+        half1.setPercentWidth(50);
+        ColumnConstraints half2 = new ColumnConstraints();
+        half2.setPercentWidth(50);
+        gridpane.getColumnConstraints().addAll(half1, new ColumnConstraints(), half2);
+        MockResizable left = new MockResizable(10, 10);
+        MockResizable right = new MockResizable(10, 10);
+        gridpane.add(left, 0, 0);
+        gridpane.add(right, 2, 0);
+
+        gridpane.resize(200, 100);
+        gridpane.layout();
+
+        assertEquals(95, left.getWidth(), 1e-100);
+        assertEquals(105, right.getLayoutX(), 1e-100);
+        assertEquals(95, right.getWidth(), 1e-100);
+    }
+
+    @Test
+    public void testCheckShrinkingRowsAccountsVgap() {
+        gridpane.setVgap(10);
+        MockResizable spanning = new MockResizable(100, 100, 100, 100, 5000, 5000);
+        MockResizable row0 = new MockResizable(0, 0, 100, 200, 5000, 5000);
+        MockResizable row1 = new MockResizable(0, 0, 100, 200, 5000, 5000);
+        gridpane.add(spanning, 0, 0, 1, 2);
+        gridpane.add(row0, 1, 0);
+        gridpane.add(row1, 1, 1);
+
+        assertEquals(100, gridpane.minHeight(-1), 1e-100);
+
+        gridpane.resize(200, 100);
+        gridpane.layout();
+
+        assertEquals(100, spanning.getHeight(), 1e-100);
+        assertEquals(45, row0.getHeight(), 1e-100);
+        assertEquals(45, row1.getHeight(), 1e-100);
+    }
+
+    @Test
+    public void testCheckShrinkingColumnsAccountsHgap() {
+        gridpane.setHgap(10);
+        MockResizable spanning = new MockResizable(100, 100, 100, 100, 5000, 5000);
+        MockResizable col0 = new MockResizable(0, 0, 200, 100, 5000, 5000);
+        MockResizable col1 = new MockResizable(0, 0, 200, 100, 5000, 5000);
+        gridpane.add(spanning, 0, 0, 2, 1);
+        gridpane.add(col0, 0, 1);
+        gridpane.add(col1, 1, 1);
+
+        assertEquals(100, gridpane.minWidth(-1), 1e-100);
+
+        gridpane.resize(100, 200);
+        gridpane.layout();
+
+        assertEquals(100, spanning.getWidth(), 1e-100);
+        assertEquals(45, col0.getWidth(), 1e-100);
+        assertEquals(45, col1.getWidth(), 1e-100);
+    }
 }
