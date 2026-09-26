@@ -41,6 +41,12 @@ import javafx.collections.transformation.SortedList;
  * such as {@link FXCollections#observableArrayList() observableArrayList}, or with a
  * {@link javafx.beans.property.SimpleListProperty SimpleListProperty}.
  *
+ * @implNote
+ * The implementations of this interface in the JavaFX library do not provide all of the
+ * guarantees described by {@link Observable} for their invalidation listeners: a listener
+ * that is removed while a notification is in progress may still be notified, and a nested
+ * notification notifies all listeners rather than only those that have already been notified.
+ *
  * @see ListChangeListener
  * @see ListChangeListener.Change
  * @param <E> the list element type

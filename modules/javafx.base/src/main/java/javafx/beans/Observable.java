@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,6 +43,22 @@ import javafx.util.Subscription;
  * this library mark themselves as invalid when the first invalidation event
  * occurs. They do not generate anymore invalidation events until their value is
  * recomputed and valid again.
+ *
+ * @implNote
+ * The implementations in the JavaFX library provide the following guarantees for
+ * their {@link InvalidationListener}s:
+ * <ul>
+ *     <li>Listeners are notified in the order in which they were registered.
+ *     <li>A listener that is added while a notification is in progress is not
+ *         notified as part of that notification.
+ *     <li>A listener that is removed while a notification is in progress is not
+ *         notified as part of that notification if it has not yet been notified.
+ * </ul>
+ * The collection implementations in the JavaFX library, such as
+ * {@link javafx.collections.ObservableList}, {@link javafx.collections.ObservableMap},
+ * and {@link javafx.collections.ObservableSet}, and the collection property
+ * classes and collection binding classes, do not provide all of the guarantees
+ * above; see their documentation for details.
  *
  * @see javafx.beans.value.ObservableValue
  * @see javafx.collections.ObservableList

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,12 @@ import javafx.collections.ObservableMap;
 
 /**
  * An observable reference to an {@link javafx.collections.ObservableMap}.
+ *
+ * @implNote
+ * The implementations of this interface in the JavaFX library do not provide all
+ * of the guarantees described by {@link ObservableValue} for change listeners: the
+ * reported {@code oldValue} may not be correct when a nested change occurs, and the
+ * ability of an earlier listener to veto a change is not provided.
  *
  * @see javafx.collections.ObservableMap
  * @see ObservableObjectValue

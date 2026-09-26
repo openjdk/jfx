@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,7 @@
 
 package javafx.beans.property.adapter;
 
-import com.sun.javafx.binding.ExpressionHelper;
+import com.sun.javafx.binding.OldValueCachingListenerManager;
 import com.sun.javafx.property.MethodHelper;
 import com.sun.javafx.property.adapter.Disposer;
 import com.sun.javafx.property.adapter.PropertyDescriptor;
@@ -88,11 +88,34 @@ import java.lang.reflect.UndeclaredThrowableException;
  */
 public final class JavaBeanObjectProperty<T> extends ObjectProperty<T> implements JavaBeanProperty<T> {
 
+    private static final OldValueCachingListenerManager<Object, JavaBeanObjectProperty<?>> LISTENER_MANAGER = new OldValueCachingListenerManager<>() {
+        @Override
+        protected Object getData(JavaBeanObjectProperty<?> instance) {
+            return instance.listenerData;
+        }
+
+        @Override
+        protected void setData(JavaBeanObjectProperty<?> instance, Object data) {
+            instance.listenerData = data;
+        }
+
+        @Override
+        protected boolean isNotifying(JavaBeanObjectProperty<?> instance) {
+            return instance.notifying;
+        }
+
+        @Override
+        protected void setNotifying(JavaBeanObjectProperty<?> instance, boolean value) {
+            instance.notifying = value;
+        }
+    };
+
     private final PropertyDescriptor<T> descriptor;
     private final PropertyDescriptor<T>.Listener listener;
 
     private ObservableValue<? extends T> observable = null;
-    private ExpressionHelper<T> helper = null;
+    private Object listenerData;
+    private boolean notifying;
 
     JavaBeanObjectProperty(PropertyDescriptor<T> descriptor, Object bean) {
         this.descriptor = descriptor;
@@ -133,7 +156,7 @@ public final class JavaBeanObjectProperty<T> extends ObjectProperty<T> implement
         }
         try {
             MethodHelper.invoke(descriptor.getSetter(), getBean(), new Object[] {value});
-            ExpressionHelper.fireValueChangedEvent(helper);
+            fireValueChangedEvent();
         } catch (IllegalAccessException e) {
             throw new UndeclaredThrowableException(e);
         } catch (InvocationTargetException e) {
@@ -197,17 +220,19 @@ public final class JavaBeanObjectProperty<T> extends ObjectProperty<T> implement
     /**
      * {@inheritDoc}
      */
+    @SuppressWarnings("unchecked")
     @Override
     public void addListener(ChangeListener<? super T> listener) {
-        helper = ExpressionHelper.addListener(helper, this, listener);
+        LISTENER_MANAGER.addListener(this, (ChangeListener<Object>) listener);
     }
 
     /**
      * {@inheritDoc}
      */
+    @SuppressWarnings("unchecked")
     @Override
     public void removeListener(ChangeListener<? super T> listener) {
-        helper = ExpressionHelper.removeListener(helper, listener);
+        LISTENER_MANAGER.removeListener(this, (ChangeListener<Object>) listener);
     }
 
     /**
@@ -215,7 +240,7 @@ public final class JavaBeanObjectProperty<T> extends ObjectProperty<T> implement
      */
     @Override
     public void addListener(InvalidationListener listener) {
-        helper = ExpressionHelper.addListener(helper, this, listener);
+        LISTENER_MANAGER.addListener(this, listener);
     }
 
     /**
@@ -223,7 +248,7 @@ public final class JavaBeanObjectProperty<T> extends ObjectProperty<T> implement
      */
     @Override
     public void removeListener(InvalidationListener listener) {
-        helper = ExpressionHelper.removeListener(helper, listener);
+        LISTENER_MANAGER.removeListener(this, listener);
     }
 
     /**
@@ -231,7 +256,7 @@ public final class JavaBeanObjectProperty<T> extends ObjectProperty<T> implement
      */
     @Override
     public void fireValueChangedEvent() {
-        ExpressionHelper.fireValueChangedEvent(helper);
+        LISTENER_MANAGER.fireValueChanged(this, listenerData);
     }
 
     /**
