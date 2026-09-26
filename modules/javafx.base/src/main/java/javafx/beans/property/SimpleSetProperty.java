@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,11 +38,14 @@ import javafx.collections.ObservableSet;
  */
 public class SimpleSetProperty<E> extends SetPropertyBase<E> {
 
+    /** Sentinel value that indicates that a property was not declared in another class. */
+    private static final Class<?> NO_DECLARING_CLASS = SimpleSetProperty.class;
     private static final Object DEFAULT_BEAN = null;
     private static final String DEFAULT_NAME = "";
 
     private final Object bean;
     private final String name;
+    private Class<?> declaringClass;
 
     /**
      * {@inheritDoc}
@@ -61,29 +64,42 @@ public class SimpleSetProperty<E> extends SetPropertyBase<E> {
     }
 
     /**
-     * The constructor of {@code SimpleSetProperty}
+     * {@inheritDoc}
+     *
+     * @since 28
+     */
+    @Override
+    public Class<?> getDeclaringClass() {
+        if (declaringClass != null) {
+            return declaringClass != NO_DECLARING_CLASS ? declaringClass : null;
+        }
+
+        Class<?> declaringClass = super.getDeclaringClass();
+        this.declaringClass = declaringClass != null ? declaringClass : NO_DECLARING_CLASS;
+        return declaringClass;
+    }
+
+    /**
+     * The constructor of {@code SimpleSetProperty}.
      */
     public SimpleSetProperty() {
         this(DEFAULT_BEAN, DEFAULT_NAME);
     }
 
     /**
-     * The constructor of {@code SimpleSetProperty}
+     * The constructor of {@code SimpleSetProperty}.
      *
-     * @param initialValue
-     *            the initial value of the wrapped value
+     * @param initialValue the initial value
      */
     public SimpleSetProperty(ObservableSet<E> initialValue) {
         this(DEFAULT_BEAN, DEFAULT_NAME, initialValue);
     }
 
     /**
-     * The constructor of {@code SimpleSetProperty}
+     * The constructor of {@code SimpleSetProperty}.
      *
-     * @param bean
-     *            the bean of this {@code SetProperty}
-     * @param name
-     *            the name of this {@code SetProperty}
+     * @param bean the bean of this property
+     * @param name the name of this property
      */
     public SimpleSetProperty(Object bean, String name) {
         this.bean = bean;
@@ -91,14 +107,11 @@ public class SimpleSetProperty<E> extends SetPropertyBase<E> {
     }
 
     /**
-     * The constructor of {@code SimpleSetProperty}
+     * The constructor of {@code SimpleSetProperty}.
      *
-     * @param bean
-     *            the bean of this {@code SetProperty}
-     * @param name
-     *            the name of this {@code SetProperty}
-     * @param initialValue
-     *            the initial value of the wrapped value
+     * @param bean the bean of this property
+     * @param name the name of this property
+     * @param initialValue the initial value
      */
     public SimpleSetProperty(Object bean, String name, ObservableSet<E> initialValue) {
         super(initialValue);
@@ -106,4 +119,30 @@ public class SimpleSetProperty<E> extends SetPropertyBase<E> {
         this.name = (name == null) ? DEFAULT_NAME : name;
     }
 
+    /**
+     * The constructor of {@code SimpleSetProperty}.
+     *
+     * @param bean the bean of this property
+     * @param declaringClass the class in which this property is declared
+     * @param name the name of this property
+     * @since 28
+     */
+    public SimpleSetProperty(Object bean, Class<?> declaringClass, String name) {
+        this(bean, name);
+        this.declaringClass = declaringClass != null ? declaringClass : NO_DECLARING_CLASS;
+    }
+
+    /**
+     * The constructor of {@code SimpleSetProperty}.
+     *
+     * @param bean the bean of this property
+     * @param declaringClass the class in which this property is declared
+     * @param name the name of this property
+     * @param initialValue the initial value
+     * @since 28
+     */
+    public SimpleSetProperty(Object bean, Class<?> declaringClass, String name, ObservableSet<E> initialValue) {
+        this(bean, name, initialValue);
+        this.declaringClass = declaringClass != null ? declaringClass : NO_DECLARING_CLASS;
+    }
 }
