@@ -177,47 +177,16 @@ public abstract class ListenerListBase {
     private int nulledListenerCount;
 
     /**
-     * Creates a new instance with two listeners.
-     *
-     * @param listener1 a listener, cannot be {@code null}
-     * @param listener2 a listener, cannot be {@code null}
-     * @throws NullPointerException when any parameter is {@code null}
+     * Indicates whether the list was modified in any way while locked (a listener added or removed).
+     * Unlike comparing the sizes, this is also true when an addition was removed again before the
+     * list was unlocked, so that the owner can still perform its end-of-notification cleanup.
      */
-    public ListenerListBase(Object listener1, Object listener2) {
-        Objects.requireNonNull(listener1);
-        Objects.requireNonNull(listener2);
-
-        if (listener1 instanceof InvalidationListener il) {
-            INVALIDATION_LISTENERS.add(this, il);
-        }
-        else {
-            CHANGE_LISTENERS.add(this, listener1);
-        }
-
-        if (listener2 instanceof InvalidationListener il) {
-            INVALIDATION_LISTENERS.add(this, il);
-        }
-        else {
-            CHANGE_LISTENERS.add(this, listener2);
-        }
-    }
+    private boolean modifiedWhileLocked;
 
     /**
-     * Creates a new instance with one listener.
-     *
-     * @param listener a listener, cannot be {@code null}
-     * @throws NullPointerException when any parameter is {@code null}
+     * Indicates whether a listener was added while the list was locked.
      */
-    public ListenerListBase(Object listener) {
-        Objects.requireNonNull(listener);
-
-        if (listener instanceof InvalidationListener il) {
-            INVALIDATION_LISTENERS.add(this, il);
-        }
-        else {
-            CHANGE_LISTENERS.add(this, listener);
-        }
-    }
+    private boolean listenerAddedWhileLocked;
 
     /**
      * Returns the total number of listeners in this list. This accurately
@@ -301,6 +270,11 @@ public abstract class ListenerListBase {
         else {
             INVALIDATION_LISTENERS.add(this, (InvalidationListener) listener);
         }
+
+        if (isLocked()) {
+            modifiedWhileLocked = true;
+            listenerAddedWhileLocked = true;
+        }
     }
 
     /**
@@ -314,10 +288,11 @@ public abstract class ListenerListBase {
     public final void remove(Object listener) {
         Objects.requireNonNull(listener);
 
+        boolean locked = isLocked();
         int index = listener instanceof InvalidationListener il ? INVALIDATION_LISTENERS.indexOf(this, il) : -1;
 
         if (index >= 0) {
-            if (isLocked()) {
+            if (locked) {
                 INVALIDATION_LISTENERS.set(this, index, null);
 
                 nulledListenerCount++;
@@ -330,7 +305,7 @@ public abstract class ListenerListBase {
             index = CHANGE_LISTENERS.indexOf(this, listener);
 
             if (index >= 0) {
-                if (!isLocked() || index >= lockedSize - invalidationListenersCount) {
+                if (!locked || index >= lockedSize - invalidationListenersCount) {
                     CHANGE_LISTENERS.remove(this, index);  // not locked, or was added during lock, so can just remove directly
                 }
                 else {
@@ -339,6 +314,10 @@ public abstract class ListenerListBase {
                     nulledListenerCount++;
                 }
             }
+        }
+
+        if (locked) {
+            modifiedWhileLocked = true;
         }
     }
 
@@ -358,7 +337,7 @@ public abstract class ListenerListBase {
         if (!containsNulls && invalidationListenersCount + changeListenersCount <= lockedSize) {
             lockedSize = -1;
 
-            return false;
+            return takeModifiedWhileLocked();
         }
 
         for (int i = lockedSize - invalidationListenersCount; i < changeListenersCount; i++) {
@@ -405,7 +384,32 @@ public abstract class ListenerListBase {
 
         lockedSize = -1;
 
+        modifiedWhileLocked = false;
+
         return true;
+    }
+
+    private boolean takeModifiedWhileLocked() {
+        boolean modified = modifiedWhileLocked;
+
+        modifiedWhileLocked = false;
+
+        return modified;
+    }
+
+    /**
+     * Returns whether a listener was added to this list while it was locked, and resets this
+     * value. This is used to determine whether the managed observable needs to be validated
+     * again once the notification that was in progress has concluded.
+     *
+     * @return {@code true} if a listener was added while the list was locked, otherwise {@code false}
+     */
+    public final boolean takeListenerAddedWhileLocked() {
+        boolean added = listenerAddedWhileLocked;
+
+        listenerAddedWhileLocked = false;
+
+        return added;
     }
 
     /**
@@ -415,6 +419,8 @@ public abstract class ListenerListBase {
         assertNotLocked();
 
         this.lockedSize = invalidationListenersCount + changeListenersCount;
+        this.modifiedWhileLocked = false;
+        this.listenerAddedWhileLocked = false;
     }
 
     /**

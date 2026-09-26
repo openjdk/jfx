@@ -26,7 +26,11 @@
 package test.com.sun.javafx.binding;
 
 import com.sun.javafx.binding.ListenerManagerBase;
+import com.sun.javafx.binding.OldValueCachingListenerList;
 import com.sun.javafx.binding.OldValueCachingListenerManager;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class OldValueCachingListenerManagerTest extends AbstractListenerManagerTest {
     private final OldValueCachingListenerManager<String, SimpleObservableValue<String>> helper = new OldValueCachingListenerManager<>() {
@@ -63,5 +67,20 @@ public class OldValueCachingListenerManagerTest extends AbstractListenerManagerT
     @Override
     protected ListenerManagerBase<String, SimpleObservableValue<String>> getListenerManager() {
         return helper;
+    }
+
+    @Override
+    protected void assertCacheConsistentWithShape(Object data) {
+        if (data instanceof OldValueCachingListenerList<?> list) {
+            if (list.hasChangeListeners()) {
+                assertEquals(ov.getValue(), list.getLatestValue(), "the cached latest value should match the current value");
+            }
+            else {
+                assertNull(list.getLatestValue(), "no change listeners should mean no cached latest value");
+            }
+        }
+        else if (data instanceof OldValueCachingListenerManager.ChangeListenerWrapper<?> wrapper) {
+            assertEquals(ov.getValue(), wrapper.getLatestValue(), "the cached latest value should match the current value");
+        }
     }
 }

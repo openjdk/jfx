@@ -71,10 +71,19 @@ public non-sealed abstract class ListenerManager<T, I extends ObservableValue<? 
     private void addAnyListener(I instance, Object listener) {
         Objects.requireNonNull(listener);
 
-        instance.getValue();  // always trigger validation when adding a listener (required by tests for all types of listeners)
+        /*
+         * Only trigger validation when adding a listener if no notification is in
+         * progress. If validation is deferred, it will be performed when the notification
+         * concludes. This ensures that a value that may still be changing (due to nested
+         * changes) is only made valid when it is no longer in flux.
+         */
+
+        if (!isNotifying(instance)) {
+            instance.getValue();  // makes the observable valid
+        }
 
         switch (getData(instance)) {
-            case null -> setData(instance, listener);
+            case null -> setData(instance, isNotifying(instance) ? createLockedListenerList(listener) : listener);
             case ListenerList<?> list -> list.add(listener);
             case Object data -> setData(instance, createListenerList(instance, data, listener));
         }
@@ -110,14 +119,31 @@ public non-sealed abstract class ListenerManager<T, I extends ObservableValue<? 
      * changed the value back to the original value).
      */
     private ListenerList<?> createListenerList(I instance, Object existingListener, Object newListener) {
-        if (!isNotifying(instance)) {
-            return new ListenerList<>(existingListener, newListener);
+        ListenerList<?> list = new ListenerList<>();
+
+        list.add(existingListener);
+
+        if (isNotifying(instance)) {
+            list.lock();  // will be detected in fireValueChanged and unlocked there
         }
 
-        ListenerList<?> list = new ListenerList<>(existingListener);
-
-        list.lock();  // will be detected in fireValueChanged and unlocked there
         list.add(newListener);
+
+        return list;
+    }
+
+    /*
+     * Creates a locked listener list for just a single listener; this is edge case occurs when
+     * there is only a single listener being notified, and that listener removes itself and adds
+     * itself or another listener; to prevent that new listener from being notified as part of
+     * the nested notification a lock must be present which is tracked as a locked listener list with
+     * a single entry.
+     */
+    private static ListenerList<?> createLockedListenerList(Object listener) {
+        ListenerList<?> list = new ListenerList<>();
+
+        list.lock();
+        list.add(listener);
 
         return list;
     }
@@ -155,6 +181,9 @@ public non-sealed abstract class ListenerManager<T, I extends ObservableValue<? 
     }
 
     private void unlockIfDataStorageTypeBecameList(I instance) {
+        if (isNotifying(instance)) {
+            return;  // not top level, so leave list locked
+        }
 
         /*
          * If during notification, the managed data field changed from a single listener to a list, then this
@@ -163,19 +192,31 @@ public non-sealed abstract class ListenerManager<T, I extends ObservableValue<? 
          */
 
         if (getData(instance) instanceof ListenerList<?> list && list.unlock()) {
+            if (list.takeListenerAddedWhileLocked()) {
+                instance.getValue();  // performs the deferred validation (see add listener)
+            }
+
             updateAfterRemoval(instance, list);
         }
     }
 
     private void callMultipleListeners(I instance, ListenerList<T> list, T oldValue) {
-        boolean modified = list.notifyListeners(instance, oldValue);
+        boolean modifiedAndUnlocked = list.notifyListeners(instance, oldValue);
 
-        if (modified) {  // if modified, compact the data field if possible
+        if (modifiedAndUnlocked) {  // if modified, compact the data field if possible
+            if (list.takeListenerAddedWhileLocked()) {
+                instance.getValue();  // see unlockIfDataStorageTypeBecameList
+            }
+
             updateAfterRemoval(instance, list);
         }
     }
 
     private void updateAfterRemoval(I instance, ListenerList<?> list) {
+        if (list.isLocked()) {
+            return;  // while locked, sizes reflect the locked-time shape; defer consolidation until unlock
+        }
+
         int invalidationListenersSize = list.invalidationListenersSize();
         int changeListenersSize = list.changeListenersSize();
 

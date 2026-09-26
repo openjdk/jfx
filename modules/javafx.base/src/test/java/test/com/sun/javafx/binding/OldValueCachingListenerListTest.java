@@ -33,7 +33,12 @@ public class OldValueCachingListenerListTest extends ListenerListTestBase<OldVal
 
     @Override
     protected OldValueCachingListenerList<?> create(Object listener1, Object listener2) {
-        return new OldValueCachingListenerList<>(listener1, listener2);
+        OldValueCachingListenerList<?> list = new OldValueCachingListenerList<>();
+
+        list.add(listener1);
+        list.add(listener2);
+
+        return list;
     }
 
     @Override

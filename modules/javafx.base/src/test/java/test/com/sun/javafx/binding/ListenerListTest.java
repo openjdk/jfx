@@ -33,7 +33,12 @@ public class ListenerListTest extends ListenerListTestBase<ListenerList<Object>>
 
     @Override
     protected ListenerList<Object> create(Object listener1, Object listener2) {
-        return new ListenerList<>(listener1, listener2);
+        ListenerList<Object> list = new ListenerList<>();
+
+        list.add(listener1);
+        list.add(listener2);
+
+        return list;
     }
 
     @Override

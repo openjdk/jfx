@@ -56,7 +56,8 @@ public class ListenerListBaseTest {
 
     private static class AccessibleListenerListBase extends ListenerListBase {
         AccessibleListenerListBase(Object listener1, Object listener2) {
-            super(listener1, listener2);
+            add(listener1);
+            add(listener2);
         }
 
         public void accessibleLock() {
@@ -118,7 +119,10 @@ public class ListenerListBaseTest {
 
     @Test
     void shouldAllowRemovingAllListeners() {
-        ListenerList<?> list = new ListenerList<>(cl1, il1);
+        ListenerList<?> list = new ListenerList<>();
+
+        list.add(cl1);
+        list.add(il1);
 
         assertEquals(1, list.invalidationListenersSize());
         assertEquals(1, list.changeListenersSize());
@@ -224,7 +228,10 @@ public class ListenerListBaseTest {
 
     @Test
     void hasChangeListenersShouldReturnCorrectState() {
-        ListenerList<?> list = new ListenerList<>(cl1, il1);
+        ListenerList<?> list = new ListenerList<>();
+
+        list.add(cl1);
+        list.add(il1);
 
         assertTrue(list.hasChangeListeners());
 
@@ -232,7 +239,10 @@ public class ListenerListBaseTest {
 
         assertFalse(list.hasChangeListeners());
 
-        ListenerList<?> list2 = new ListenerList<>(il1, il2);
+        ListenerList<?> list2 = new ListenerList<>();
+
+        list2.add(il1);
+        list2.add(il2);
 
         assertFalse(list2.hasChangeListeners());
     }

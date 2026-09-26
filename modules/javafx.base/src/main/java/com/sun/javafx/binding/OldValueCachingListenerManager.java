@@ -60,10 +60,19 @@ public non-sealed abstract class OldValueCachingListenerManager<T, I extends Obs
     protected final void addInvalidationListener(I instance, InvalidationListener listener) {
         Objects.requireNonNull(listener);
 
-        instance.getValue();  // always trigger validation when adding an invalidation listener (required by tests)
+        /*
+         * Only trigger validation when adding a listener if no notification is in
+         * progress. If validation is deferred, it will be performed when the notification
+         * concludes. This ensures that a value that may still be changing (due to nested
+         * changes) is only made valid when it is no longer in flux.
+         */
+
+        if (!isNotifying(instance)) {
+            instance.getValue();
+        }
 
         switch (getData(instance)) {
-            case null -> setData(instance, listener);
+            case null -> setData(instance, isNotifying(instance) ? createLockedListenerList(listener) : listener);
             case OldValueCachingListenerList<?> list -> list.add(listener);
             case ChangeListenerWrapper<?> wrapper -> {
                 OldValueCachingListenerList<Object> list = createListenerList(instance, wrapper.listener, listener);
@@ -80,12 +89,20 @@ public non-sealed abstract class OldValueCachingListenerManager<T, I extends Obs
         Objects.requireNonNull(listener);
 
         switch (getData(instance)) {
-            case null -> setData(instance, new ChangeListenerWrapper<>(listener, instance.getValue()));
+            case null -> {
+                if (isNotifying(instance)) {
+                    // the latest value is captured at the end of the notification (see unlockIfDataStorageTypeBecameList):
+                    setData(instance, createLockedListenerList(listener));
+                }
+                else {
+                    setData(instance, new ChangeListenerWrapper<>(listener, instance.getValue()));
+                }
+            }
             case OldValueCachingListenerList<?> genericList -> {
                 @SuppressWarnings("unchecked")
                 OldValueCachingListenerList<T> list = (OldValueCachingListenerList<T>) genericList;
 
-                if (!list.hasChangeListeners()) {
+                if (!isNotifying(instance) && !list.hasChangeListeners()) {
                     list.putLatestValue(instance.getValue());
                 }
 
@@ -101,7 +118,9 @@ public non-sealed abstract class OldValueCachingListenerManager<T, I extends Obs
             case Object data -> {
                 OldValueCachingListenerList<T> list = createListenerList(instance, data, listener);
 
-                list.putLatestValue(instance.getValue());
+                if (!isNotifying(instance)) {
+                    list.putLatestValue(instance.getValue());
+                }
 
                 setData(instance, list);
             }
@@ -168,16 +187,33 @@ public non-sealed abstract class OldValueCachingListenerManager<T, I extends Obs
      * changed the value back to the original value).
      */
     private <U> OldValueCachingListenerList<U> createListenerList(I instance, Object existingListener, Object newListener) {
+        OldValueCachingListenerList<U> list = new OldValueCachingListenerList<>();
+
+        list.add(existingListener);
+
         if (isNotifying(instance)) {
-            OldValueCachingListenerList<U> list = new OldValueCachingListenerList<>(existingListener);
-
-            list.lock();
-            list.add(newListener);
-
-            return list;
+            list.lock();  // will be detected in fireValueChanged and unlocked there
         }
 
-        return new OldValueCachingListenerList<>(existingListener, newListener);
+        list.add(newListener);
+
+        return list;
+    }
+
+    /*
+     * Creates a locked listener list for just a single listener; this is edge case occurs when
+     * there is only a single listener being notified, and that listener removes itself and adds
+     * itself or another listener; to prevent that new listener from being notified as part of
+     * the nested notification a lock must be present which is tracked as a locked listener list with
+     * a single entry.
+     */
+    private static <U> OldValueCachingListenerList<U> createLockedListenerList(Object listener) {
+        OldValueCachingListenerList<U> list = new OldValueCachingListenerList<>();
+
+        list.lock();
+        list.add(listener);
+
+        return list;
     }
 
     /**
@@ -209,6 +245,9 @@ public non-sealed abstract class OldValueCachingListenerManager<T, I extends Obs
     }
 
     private void unlockIfDataStorageTypeBecameList(I instance) {
+        if (isNotifying(instance)) {
+            return;  // not top level, so leave list locked
+        }
 
         /*
          * If during notification, the managed data field changed from a single listener to a list, then this
@@ -220,16 +259,20 @@ public non-sealed abstract class OldValueCachingListenerManager<T, I extends Obs
             @SuppressWarnings("unchecked")
             OldValueCachingListenerList<T> typedList = (OldValueCachingListenerList<T>) list;
 
-            if (typedList.hasChangeListeners()) {
+            if (typedList.takeListenerAddedWhileLocked()) {
+                T value = instance.getValue();  // performs the deferred validation (see add listener)
 
-                /*
-                 * The list was locked for its entire existence so far, so its change listener loop may
-                 * never have run (for example when an invalidation listener was the one that triggered
-                 * the nested change); ensure the cached latest value reflects reality before it is relied
-                 * upon again, otherwise a subsequent change may incorrectly be seen as a no-op:
-                 */
+                if (typedList.hasChangeListeners()) {
 
-                typedList.putLatestValue(instance.getValue());
+                    /*
+                     * The list was locked for its entire existence so far, so its change listener loop may
+                     * never have run (for example when an invalidation listener was the one that triggered
+                     * the nested change); ensure the cached latest value reflects reality before it is relied
+                     * upon again, otherwise a subsequent change may incorrectly be seen as a no-op:
+                     */
+
+                    typedList.putLatestValue(value);
+                }
             }
 
             updateAfterRemoval(instance, typedList);
@@ -237,9 +280,13 @@ public non-sealed abstract class OldValueCachingListenerManager<T, I extends Obs
     }
 
     private void callMultipleListeners(I instance, OldValueCachingListenerList<T> list) {
-        boolean modified = list.notifyListeners(instance);
+        boolean modifiedAndUnlocked = list.notifyListeners(instance);
 
-        if (modified) {  // if modified, compact the data field if possible
+        if (modifiedAndUnlocked) {  // if modified, compact the data field if possible
+            if (list.takeListenerAddedWhileLocked()) {
+                instance.getValue();  // see unlockIfDataStorageTypeBecameList
+            }
+
             updateAfterRemoval(instance, list);
         }
     }
@@ -256,7 +303,7 @@ public non-sealed abstract class OldValueCachingListenerManager<T, I extends Obs
         }
     }
 
-    private static class ChangeListenerWrapper<T> implements ChangeListener<T> {
+    public static class ChangeListenerWrapper<T> implements ChangeListener<T> {
 
         private final ChangeListener<T> listener;
 
@@ -267,7 +314,7 @@ public non-sealed abstract class OldValueCachingListenerManager<T, I extends Obs
             this.latestValue = latestValue;
         }
 
-        T getLatestValue() {
+        public T getLatestValue() {
             return latestValue;
         }
 
@@ -282,6 +329,10 @@ public non-sealed abstract class OldValueCachingListenerManager<T, I extends Obs
     }
 
     private void updateAfterRemoval(I instance, OldValueCachingListenerList<T> list) {
+        if (list.isLocked()) {
+            return;  // while locked, sizes reflect the locked-time shape; defer consolidation until unlock
+        }
+
         int invalidationListenersSize = list.invalidationListenersSize();
         int changeListenersSize = list.changeListenersSize();
 

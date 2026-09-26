@@ -43,6 +43,7 @@ import java.util.stream.Stream;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.binding.Bindings;
+import javafx.beans.binding.IntegerBinding;
 import javafx.beans.property.Property;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
@@ -54,6 +55,8 @@ import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -558,13 +561,18 @@ public class ObservableValueTest {
     }
 
     /*
-     * Tests if the embedded ObservableValue sends sensible invalidation events when a nested change
-     * occurs when there is initially one invalidation listener that adds a second invalidation
-     * listener before making the change.
+     * Adding a listener during a notification must not validate the observable (validation is
+     * deferred until the notification ends). The notifying invalidation listener does not read the
+     * value, so a nested change it makes must not be delivered to the listeners that were already
+     * notified. The added listener must still be notified on the next top level change.
+     * The deferred validation also leaves the observable valid once the notification concludes, so
+     * that next change is delivered without the caller having to read the value first; if validation
+     * happened eagerly instead, the nested change would re-invalidate the observable (after it was
+     * briefly made valid by the add) and the next change would be lost until something read it.
      */
     @ParameterizedTest
     @MethodSource("inputs")
-    <T> void shouldSendCorrectNestedInvalidationsWithOneInvalidationListenerThatAddsAnInvalidationListener(Action<T> action, T value1, T value2, Consumer<T> valueSetter) {
+    <T> void shouldNotNotifyNestedChangeToInvalidationListenerWhenAnInvalidationListenerIsAdded(Action<T> action, T value1, T value2, Consumer<T> valueSetter) {
         AtomicInteger initialListenerCallCount = new AtomicInteger();
         AtomicInteger newListenerCallCount = new AtomicInteger();
         AtomicBoolean triggered = new AtomicBoolean();
@@ -580,14 +588,38 @@ public class ObservableValueTest {
             initialListenerCallCount.incrementAndGet();
 
             if (triggered.compareAndSet(false, true)) {
+
+                /*
+                 * Adding a listener (of any type) normally also makes the observable valid, as a user
+                 * expects it to be called on the next change (regardless if it was valid or not when
+                 * the listener was added). However, if a listener is added during the notification,
+                 * validation is deferred until the notification ends. This is fine as for the listener
+                 * added below it does not break the users expectation that it will be called on
+                 * the next change.
+                 */
+
                 action.addListener(_ -> newListenerCallCount.incrementAndGet());
+
+                /*
+                 * If we had validated eagerly, the line below would have triggered another
+                 * invalidation (notifying the initial listener again) which is unnecessary
+                 * as nothing should have made the observable valid and it was already notified
+                 * as part of the top level notification loop that the value has become invalid.
+                 */
+
                 valueSetter.accept(value1);
             }
         });
 
         valueSetter.accept(value2);
 
-        assertEquals(2, initialListenerCallCount.get());  // once for value1 -> value2, and once (nested) for value2 -> value1
+        /*
+         * Called only once for value1 -> value2; the nested change is not delivered because an
+         * invalidation listener does not read the value, and it should not become valid (yet) when
+         * a notification is in progress.
+         */
+
+        assertEquals(1, initialListenerCallCount.get());
         assertEquals(0, newListenerCallCount.get());
 
         /*
@@ -595,21 +627,23 @@ public class ObservableValueTest {
          * during the earlier nested notification, as that notification has since concluded:
          */
 
-        action.getValue();  // make property valid again so invalidation listener can fire again
-
         valueSetter.accept(value2);
 
-        assertEquals(3, initialListenerCallCount.get());
+        assertEquals(2, initialListenerCallCount.get());
         assertEquals(1, newListenerCallCount.get());
     }
 
     /*
-     * Tests if the embedded ObservableValue sends sensible events when a nested change occurs when
-     * there is initially one invalidation listener that adds a change listener before making the change.
+     * Same as above, but with a change listener added by the notifying invalidation listener. Adding a
+     * listener during a notification defers validation, and the notifying invalidation listener does
+     * not read the value, so the nested change is not delivered to the listeners that were already
+     * notified. The deferred validation also leaves the observable valid once the notification
+     * concludes, so the next top level change is delivered without the caller having to read the value
+     * first (even though what was added is a change listener).
      */
     @ParameterizedTest
     @MethodSource("inputs")
-    <T> void shouldSendCorrectNestedEventsWithOneInvalidationListenerThatAddsAChangeListener(Action<T> action, T value1, T value2, Consumer<T> valueSetter) {
+    <T> void shouldNotNotifyNestedChangeToInvalidationListenerWhenAChangeListenerIsAdded(Action<T> action, T value1, T value2, Consumer<T> valueSetter) {
         AtomicInteger initialListenerCallCount = new AtomicInteger();
         AtomicInteger newListenerCallCount = new AtomicInteger();
         AtomicBoolean triggered = new AtomicBoolean();
@@ -625,14 +659,38 @@ public class ObservableValueTest {
             initialListenerCallCount.incrementAndGet();
 
             if (triggered.compareAndSet(false, true)) {
+
+                /*
+                 * Adding a listener (of any type) normally also makes the observable valid, as a user
+                 * expects it to be called on the next change (regardless if it was valid or not when
+                 * the listener was added). However, if a listener is added during the notification,
+                 * validation is deferred until the notification ends. This is fine as for the listener
+                 * added below it does not break the users expectation that it will be called on
+                 * the next change.
+                 */
+
                 action.addListener((_, _, _) -> newListenerCallCount.incrementAndGet());
+
+                /*
+                 * If we had validated eagerly, the line below would have triggered another
+                 * invalidation (notifying the initial listener again) which is unnecessary
+                 * as nothing should have made the observable valid and it was already notified
+                 * as part of the top level notification loop that the value has become invalid.
+                 */
+
                 valueSetter.accept(value1);
             }
         });
 
         valueSetter.accept(value2);
 
-        assertEquals(2, initialListenerCallCount.get());  // once for value1 -> value2, and once (nested) for value2 -> value1
+        /*
+         * Called only once for value1 -> value2; the nested change is not delivered because an
+         * invalidation listener does not read the value, and it should not become valid (yet) when
+         * a notification is in progress.
+         */
+
+        assertEquals(1, initialListenerCallCount.get());
         assertEquals(0, newListenerCallCount.get());
 
         /*
@@ -640,11 +698,9 @@ public class ObservableValueTest {
          * the earlier nested notification, as that notification has since concluded:
          */
 
-        action.getValue();  // make property valid again so invalidation listener can fire again
-
         valueSetter.accept(value2);
 
-        assertEquals(3, initialListenerCallCount.get());
+        assertEquals(2, initialListenerCallCount.get());
         assertEquals(1, newListenerCallCount.get());
     }
 
@@ -893,9 +949,183 @@ public class ObservableValueTest {
         assertConsistentChangeSequence(changes, value1, value2, Set.of(value1, value2));
     }
 
+    /*
+     * When the only change listener replaces itself (removes itself and adds a new change listener)
+     * and then makes a nested change, the newly added listener must not be notified for that nested
+     * change. A listener added during a notification is only notified once that notification has
+     * concluded, so the nested change (which is part of it) must not reach it. A subsequent top level
+     * change must notify it.
+     */
+    @ParameterizedTest
+    @MethodSource("inputs")
+    <T> void shouldNotNotifyChangeListenerAddedByReplacedChangeListenerDuringNestedChange(Action<T> action, T value1, T value2, Consumer<T> valueSetter) {
+        List<Change> newListenerChanges = new ArrayList<>();
+
+        /*
+         * Create one change listener, which removes itself, adds a new change listener, and modifies
+         * the value back to value1:
+         */
+
+        action.addListener(new ChangeListener<>() {
+            @Override
+            public void changed(ObservableValue<? extends T> obs, T old, T current) {
+                action.removeListener(this);
+                action.addListener((_, oldValue, newValue) -> newListenerChanges.add(new Change("L2", oldValue, newValue)));
+                valueSetter.accept(value1);
+            }
+        });
+
+        valueSetter.accept(value2);
+
+        assertEquals(List.of(), newListenerChanges);  // the new listener must not be notified for the nested change
+
+        action.getValue();  // make the observable valid again (required for lazy bindings) so the next change can fire
+
+        /*
+         * A further, unrelated top level change must notify the change listener that was added during
+         * the earlier nested notification, as that notification has since concluded. It must report
+         * the old value the observable settled at, not the value it held when the listener was added:
+         */
+
+        valueSetter.accept(value2);
+
+        assertEquals(List.of(new Change("L2", value1, value2)), newListenerChanges);
+    }
+
+    /*
+     * Same scenario as above, but with the add and remove in the opposite order: a change listener
+     * that adds a new listener before removing itself must still have the new listener notified on a
+     * subsequent top level change (it must not be lost along with the listener that added it).
+     */
+    @ParameterizedTest
+    @MethodSource("inputs")
+    <T> void shouldKeepNotifyingChangeListenerAddedByReplacedChangeListener(Action<T> action, T value1, T value2, Consumer<T> valueSetter) {
+        AtomicInteger newListenerCallCount = new AtomicInteger();
+
+        /*
+         * Create one change listener, which adds a new change listener, removes itself, and modifies
+         * the value back to value1:
+         */
+
+        action.addListener(new ChangeListener<>() {
+            @Override
+            public void changed(ObservableValue<? extends T> obs, T old, T current) {
+                action.addListener((_, _, _) -> newListenerCallCount.incrementAndGet());
+                action.removeListener(this);
+                valueSetter.accept(value1);
+            }
+        });
+
+        valueSetter.accept(value2);
+
+        /*
+         * A further, unrelated top level change must notify the change listener that was added during
+         * the earlier nested notification, as that notification has since concluded:
+         */
+
+        valueSetter.accept(value2);
+
+        assertEquals(1, newListenerCallCount.get());
+    }
+
+    /*
+     * A listener that makes two nested changes must observe them as a chained sequence: each reported
+     * old value equals the previous reported new value, and no value is skipped or repeated.
+     */
+    @Test
+    void shouldSendCorrectEventsWithTwoNestedChangesFromOneChangeListener() {
+        SimpleIntegerProperty property = new SimpleIntegerProperty(0);
+        List<Change> firstListenerChanges = new ArrayList<>();
+        List<Change> secondListenerChanges = new ArrayList<>();
+
+        property.addListener((_, old, current) -> {
+            firstListenerChanges.add(new Change("L1", old, current));
+
+            if (current.intValue() == 1) {
+                property.set(2);
+                property.set(3);
+            }
+        });
+        property.addListener((_, old, current) -> secondListenerChanges.add(new Change("L2", old, current)));
+
+        property.set(1);
+        property.set(4);
+
+        assertConsistentChangeSequence(firstListenerChanges, 0, 4, Set.of(0, 1, 2, 3, 4));
+        assertConsistentChangeSequence(secondListenerChanges, 0, 4, Set.of(0, 1, 2, 3, 4));
+    }
+
+    /*
+     * Adding the first change listener from an invalidation listener that vetoes the change must not
+     * leave the vetoed value cached: the change listener must not be notified, and a subsequent top
+     * level change must report the correct old value.
+     */
+    @Test
+    void shouldNotCacheWrongValueWhenAddingChangeListenerFromInvalidationListenerThatVetoes() {
+        SimpleIntegerProperty property = new SimpleIntegerProperty(0);
+        AtomicInteger changeListenerCallCount = new AtomicInteger();
+        AtomicBoolean triggered = new AtomicBoolean();
+
+        property.addListener((InvalidationListener) _ -> {
+            if (triggered.compareAndSet(false, true)) {
+                property.addListener((_, _, _) -> changeListenerCallCount.incrementAndGet());
+                property.set(0);  // veto the change
+            }
+        });
+        property.addListener((InvalidationListener) _ -> {});
+
+        property.set(1);
+
+        assertEquals(0, changeListenerCallCount.get());  // the change was vetoed, so the change listener must not be notified
+
+        property.get();  // make property valid again
+
+        property.set(1);
+
+        assertEquals(1, changeListenerCallCount.get());
+    }
+
+    /*
+     * A binding whose onInvalidating method changes a dependency re-entrantly must still report a
+     * consistent change sequence.
+     */
+    @Test
+    @Disabled("fix deferred")
+    void shouldSendCorrectEventsWhenOnInvalidatingChangesTheValue() {
+        SimpleIntegerProperty dependency = new SimpleIntegerProperty(0);
+        List<Change> changes = new ArrayList<>();
+
+        class TestBinding extends IntegerBinding {
+            TestBinding() {
+                bind(dependency);
+            }
+
+            @Override
+            protected int computeValue() {
+                return dependency.get();
+            }
+
+            @Override
+            protected void onInvalidating() {
+                if (get() == 1) {
+                    dependency.set(2);
+                }
+            }
+        }
+
+        TestBinding binding = new TestBinding();
+
+        binding.addListener((_, old, current) -> changes.add(new Change("L", old, current)));
+
+        dependency.set(1);
+
+        assertConsistentChangeSequence(changes, 0, 2, Set.of(0, 1, 2));
+    }
+
     private static void assertCalls(Consumer<Integer> step, AtomicInteger calls, int... expectedCalls) {
         for (int i = 0; i < expectedCalls.length; i++) {
             step.accept(i);
+
             assertEquals(expectedCalls[i], calls.getAndSet(0));
         }
     }

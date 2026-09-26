@@ -42,27 +42,6 @@ public class OldValueCachingListenerList<T> extends ListenerList<T> {
     private T latestValue;
 
     /**
-     * Creates a new instance with two listeners.
-     *
-     * @param listener1 a listener, cannot be {@code null}
-     * @param listener2 a listener, cannot be {@code null}
-     * @throws NullPointerException when any parameter is {@code null}
-     */
-    public OldValueCachingListenerList(Object listener1, Object listener2) {
-        super(listener1, listener2);
-    }
-
-    /**
-     * Creates a new instance with one listener.
-     *
-     * @param listener a listener, cannot be {@code null}
-     * @throws NullPointerException when any parameter is {@code null}
-     */
-    public OldValueCachingListenerList(Object listener) {
-        super(listener);
-    }
-
-    /**
      * Returns the latest value stored.
      *
      * @return the latest value stored, can be {@code null}

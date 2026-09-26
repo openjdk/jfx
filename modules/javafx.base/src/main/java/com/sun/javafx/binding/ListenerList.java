@@ -40,63 +40,12 @@ import javafx.beans.value.ObservableValue;
 public class ListenerList<T> extends ListenerListBase {
 
     /**
-     * Indicates a nested notification was aborted early because the new value
-     * was modified during the loop to equal the old value. This means that not
-     * all intended listeners (up to the maximum set by the higher level loop)
-     * were called and so there may be confusion as to the current value is now
-     * for some listeners.
-     *
-     * An abort may indicate a problem with multiple listeners changing values
-     * that are not converging to a mutually agreed value.
-     */
-    private static final int NESTED_NOTIFICATION_ABORTED = -2;
-
-    /**
-     * Indicates a nested notification completed normally. After a nested
-     * notification (aborted or not), the current value is re-read so listeners
-     * not notified yet at the current level receive the newly updated current
-     * value.
-     */
-    private static final int NESTED_NOTIFICATION_COMPLETED = -1;
-
-    /**
      * This field is only used during notifications, and only relevant
-     * when nested notifications occur. It is used for communicating
-     * information between the different nesting levels. To deeper
-     * nesting levels it contains the number of listeners that have
-     * been notified in higher level loops, while deeper nesting levels
-     * communicate to higher level loops whether a nested notification
-     * actually occurred if it completed normally or was aborted early.<p>
-     *
-     * When its value is zero or positive, it indicates the number of
-     * listeners notified in a higher level loop (minus one), while the constants
-     * {@link #NESTED_NOTIFICATION_ABORTED} and {@link #NESTED_NOTIFICATION_COMPLETED}
-     * indicate to a higher level loop that a nested notification occurred,
-     * requiring, for example, a refresh of the current value and a new equals
-     * check.
+     * when nested notifications occur. It is used to communicate to
+     * a deeper nesting level the index of the listener that is currently
+     * being notified in higher level loops.
      */
     private int progress;
-
-    /**
-     * Creates a new instance with two listeners.
-     *
-     * @param listener1 a listener, cannot be {@code null}
-     * @param listener2 a listener, cannot be {@code null}
-     * @throws NullPointerException when any parameter is {@code null}
-     */
-    public ListenerList(Object listener1, Object listener2) {
-        super(listener1, listener2);
-    }
-
-    /**
-     * Creates a new instance with one listener.
-     *
-     * @param listener a listener, cannot be {@code null}
-     * @throws NullPointerException when any parameter is {@code null}
-     */
-    public ListenerList(Object listener) {
-        super(listener);
-    }
 
     /**
      * Notifies all listeners using the given observable value as source.
@@ -106,10 +55,13 @@ public class ListenerList<T> extends ListenerListBase {
      * @return {@code true} if the listener list is not locked, and it was modified during
      *     notification otherwise {@code false}
      */
-    public boolean notifyListeners(ObservableValue<? extends T> observableValue, T oldValue) {
+    public final boolean notifyListeners(ObservableValue<? extends T> observableValue, T oldValue) {
         boolean wasLocked = isLocked();
+        boolean hadNoChangeListeners = false;
 
         if (!wasLocked) {
+            hadNoChangeListeners = !hasChangeListeners();
+
             lock();
         }
 
@@ -128,6 +80,18 @@ public class ListenerList<T> extends ListenerListBase {
         finally {
             if (!wasLocked) {
                 modifiedWhileLocked = unlock();
+
+                /*
+                 * If this notification added the first change listener(s) where none
+                 * existed before, then the cached latest value was captured during
+                 * notification when the first change listener was added. This cached value
+                 * however could have changed if an invalidation listener modified it
+                 * and so we must capture it once more here:
+                 */
+
+                if (hadNoChangeListeners && hasChangeListeners()) {
+                    valueObtained(observableValue.getValue());
+                }
             }
         }
 
@@ -169,33 +133,28 @@ public class ListenerList<T> extends ListenerListBase {
          */
 
         T newValue = null;
-
-        progress = NESTED_NOTIFICATION_COMPLETED;  // reset progress to ensure latest value is queried at least once
+        T triggeringValue = null;
 
         for (int i = 0; i < maxChanges; i++) {
             ChangeListener<T> listener = getChangeListener(i);
 
-            /*
-             * Obtain the new value if this is the first loop, or a nested notification occurred (as
-             * the value must have changed then). Even if all change listeners have been removed during
-             * notification, the property must become valid before the notification completes.
-             */
+            newValue = observableValue.getValue();
 
-            if (progress < 0) {
-                newValue = observableValue.getValue();
+            valueObtained(newValue);
 
-                valueObtained(newValue);
-
-                if (Objects.equals(newValue, oldValue)) {
-                    progress = NESTED_NOTIFICATION_ABORTED;  // Indicate an early exit before notifying all listeners intended at this level
-
-                    return;
+            if (Objects.equals(newValue, oldValue)) {
+                if (wasLocked) {  // veto-ing at top level is not non-convergence, so only log when nested
+                    logNonConvergence(observableValue, initialProgress, invalidationListenersSize, oldValue, triggeringValue);
                 }
+
+                return;
             }
 
+            triggeringValue = newValue;
+
             /*
-             * Skip if this listener was removed during a notification; this must be after the progress check above
-             * to ensure the property always become valid, regardless of whether any change listeners are actually notified.
+             * Skip if this listener was removed during a notification; to ensure the property always becomes valid this
+             * must be after we called ObservableValue#getValue, regardless of whether any change listeners are actually notified.
              */
 
             if (listener == null) {
@@ -205,36 +164,23 @@ public class ListenerList<T> extends ListenerListBase {
             // communicate to a lower level loop (if triggered) how many listeners were notified so far:
             progress = i + invalidationListenersSize;
 
-            // call change listener (and perhaps a nested notification updating progress field):
+            // call change listener:
             callChangeListener(observableValue, listener, oldValue, newValue);
-
-            if (progress == NESTED_NOTIFICATION_ABORTED) {
-
-                /*
-                 * Non-convergence detected: The listener that was just notified of value X
-                 * triggered a change to Y. The nested notification loop informing earlier
-                 * listeners of Y was aborted because another listener changed the value
-                 * back to X.
-                 *
-                 * Since listeners are only called when the old value is the last provided new
-                 * value, and not when old == new, the listener that forced Y may incorrectly
-                 * assume the value is still Y, leading to potential inconsistencies.
-                 * Repeated changes between X and Y would normally cause a StackOverflowError.
-                 * This conflicting listener behavior will be reported to the user:
-                 */
-
-                Logging.getLogger().warning(
-                    """
-                    %s was modified during the invocation of multiple listeners, and the values set do not seem to be converging; \
-                    the listener %s was notified of change %s -> %s, then modified the value, and was then reset by another listener; \
-                    to avoid this warning ensure listeners are not making conflicting updates, or avoid changing the value in listeners
-                    """.formatted(observableValue, listener, oldValue, newValue)
-                );
-            }
         }
+    }
 
-        // communicate to a higher level loop that a nested notification completed (if there is a higher loop):
-        progress = NESTED_NOTIFICATION_COMPLETED;
+    private void logNonConvergence(ObservableValue<? extends T> observableValue, int listenerIndex, int invalidationListenersSize, T oldValue, T newValue) {
+        Object listener = listenerIndex < invalidationListenersSize
+            ? getInvalidationListener(listenerIndex)
+            : getChangeListener(listenerIndex - invalidationListenersSize);
+
+        Logging.getLogger().warning(
+            """
+            %s was modified during the invocation of multiple listeners, and the values set do not seem to be converging; \
+            the listener %s changed the value from %s to %s, which was then reset to %s by another listener; \
+            to avoid this warning ensure listeners are not making conflicting updates, or avoid changing the value in listeners
+            """.formatted(observableValue, listener, oldValue, newValue, oldValue)
+        );
     }
 
     /**
