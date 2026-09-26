@@ -45,6 +45,9 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.layout.VBox;
 
 public class PrintOrientTest extends Application {
 
@@ -64,6 +67,7 @@ public class PrintOrientTest extends Application {
         stage.setX((bds.getWidth() - WIDTH) / 2);
         stage.setY((bds.getHeight() - HEIGHT) / 2);
         stage.setScene(createScene(stage));
+        stage.sizeToScene();
         stage.show();
     }
 
@@ -87,35 +91,26 @@ public class PrintOrientTest extends Application {
     private Text createInfo(String msg) {
         Text t = new Text(msg);
         t.setWrappingWidth(WIDTH-50);
-        t.setLayoutX(20);
-        t.setLayoutY(20);
         return t;
     }
 
     private Scene createScene(final Stage stage) {
-
-        Group g = new Group();
-        final Scene scene = new Scene(new Group());
-        scene.setFill(Color.WHITE);
-
-        String msg = instructions;
-        if (Printer.getDefaultPrinter() == null) {
-          msg = noprinter;
-        }
+        String msg = Printer.getDefaultPrinter() == null ? noprinter : instructions;
         Text info = createInfo(msg);
-        ((Group)scene.getRoot()).getChildren().add(info);
 
         Button print = new Button("Print");
-        print.setLayoutX(80);
-        print.setLayoutY(300);
         print.setOnAction(e -> {
             createJob(PORTRAIT);
             createJob(REVERSE_PORTRAIT);
             createJob(LANDSCAPE);
             createJob(REVERSE_LANDSCAPE);
         });
-        ((Group)scene.getRoot()).getChildren().add(print);
-        return scene;
+
+        VBox root = new VBox(15, info, print);
+        root.setPadding(new Insets(20));
+        root.setAlignment(Pos.TOP_CENTER);
+
+        return new Scene(root, WIDTH, -1, Color.WHITE);
     }
 
     public void createJob(PageOrientation orient) {

@@ -35,8 +35,18 @@ import javafx.stage.Stage;
 
 public class WindowResizableTest extends Application {
 
+    private static boolean isMac() {
+        return System.getProperty("os.name").contains("Mac");
+    }
+
     @Override
     public void start(Stage primaryStage) throws Exception {
+        if (!isMac()) {
+            System.out.println("This test refers to a macOS-only issue and won't work on other platforms. Exiting.");
+            Platform.exit();
+            return;
+        }
+
         Button passButton = new Button("Pass");
         Button failButton = new Button("Fail");
         passButton.setOnAction(e -> this.quit());
