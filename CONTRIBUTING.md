@@ -257,5 +257,19 @@ bash ./gradlew -PFULL_TEST=true -PUSE_ROBOT=true all test
 
 If you don't build WebKit (using the `-PCOMPILE_WEBKIT=true` option), you are likely to get test failures when running the web tests. See the [Web Testing](WEBKIT-MEDIA-STUBS.md) page for information on how to address this.
 
+#### Build and publish to your local Maven repository
+
+With Gradle, you can build and publish the OpenJFX artifacts to your local Maven repository (`/.m2`) with:
+
+```sh
+bash ./gradlew -PMAVEN_PUBLISH=true -PMAVEN_VERSION=<version> publishToMavenLocal
+```
+
+Make sure to set a version in `-PMAVEN_VERSION` (e.g. `999`).
+
+The version number can be changed in your existing applications to locally test the previously build and published OpenJFX artifacts.
+
+---
+
 Even more documentation on OpenJFX projects and its build system can be found on the
 [OpenJFX Wiki](https://wiki.openjdk.org/display/OpenJFX/).
