@@ -2511,6 +2511,37 @@ public class GridPaneTest {
         assertEquals(400, child1_1.getLayoutBounds().getHeight(), 1e-100);
     }
 
+    @Test
+    public void testShrinkingRowsUsesWidths() {
+        MockBiased biased = new MockBiased(Orientation.HORIZONTAL, 100, 100);
+        MockResizable below = new MockResizable(0, 0, 50, 100, 5000, 5000);
+        gridpane.add(biased, 0, 0);
+        gridpane.add(below, 0, 1);
+
+        gridpane.resize(50, 250);
+        gridpane.layout();
+
+        // at width 50 the biased child needs (and reports as min) 200 height, so row 0 must not shrink
+        assertEquals(200, biased.getHeight(), 1e-100);
+        assertEquals(200, below.getLayoutY(), 1e-100);
+        assertEquals(50, below.getHeight(), 1e-100);
+    }
+
+    @Test
+    public void testShrinkingColumnsUsesHeights() {
+        MockBiased biased = new MockBiased(Orientation.VERTICAL, 100, 100);
+        MockResizable right = new MockResizable(0, 0, 100, 50, 5000, 5000);
+        gridpane.add(biased, 0, 0);
+        gridpane.add(right, 1, 0);
+
+        gridpane.resize(250, 50);
+        gridpane.layout();
+
+        assertEquals(200, biased.getWidth(), 1e-100);
+        assertEquals(200, right.getLayoutX(), 1e-100);
+        assertEquals(50, right.getWidth(), 1e-100);
+    }
+
     @Test public void test_RT18518_sizeIsNotUpdatedAfterRemovingChild() {
         MockResizable child0_0 = new MockResizable(100,200);
         GridPane.setConstraints(child0_0, 0, 0);
