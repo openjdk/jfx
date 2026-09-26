@@ -109,7 +109,7 @@ static void *_GlassTimerTask(void *data)
     return NULL;
 }
 
-JavaVMAttachArgs attachArgs = {JNI_VERSION_1_2, "PulseTimer-CVDisplayLink thread", NULL};
+JavaVMAttachArgs attachArgs = {JNI_VERSION_1_8, "PulseTimer-CVDisplayLink thread", NULL};
 
 CVReturn CVOutputCallback(CVDisplayLinkRef displayLink,
                           const CVTimeStamp *inNow, const CVTimeStamp *inOutputTime,
@@ -468,4 +468,3 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacTimer__1initIDs
         }
     }
 }
-

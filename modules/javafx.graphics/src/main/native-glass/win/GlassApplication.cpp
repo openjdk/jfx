@@ -323,7 +323,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinApplication_initIDs
 #ifdef STATIC_BUILD
     HINSTANCE hInstExe = ::GetModuleHandle(NULL);
     GlassApplication::SetHInstance((HINSTANCE)hInstExe);
-#endif
+#endif // STATIC_BUILD
 
     GlassApplication::overrideUIScale = overrideUIScale;
 
@@ -559,4 +559,3 @@ JNIEXPORT jstring JNICALL Java_com_sun_glass_ui_win_WinApplication__1getDefaultB
 }
 
 } // extern "C"
-
