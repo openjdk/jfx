@@ -83,7 +83,7 @@ static NSArray<NSString*> *runLoopModes = nil;
 static NSString* awtEmbeddedEvent = @"AWTEmbeddedEvent";
 
 #ifdef STATIC_BUILD
-jint JNICALL JNI_OnLoad_glass(JavaVM *vm, void *reserved)
+JNIEXPORT jint JNICALL JNI_OnLoad_glass(JavaVM *vm, void *reserved)
 #else
 jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 #endif // STATIC_BUILD
