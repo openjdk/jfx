@@ -107,7 +107,7 @@ public class JFXPanelOrientationTest extends Application {
 
         frame.setContentPane(p);
         frame.setSize(400, 200);
-        frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+        frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
         frame.setTitle("FX TextArea embedded in JFXPanel");
         frame.setVisible(true);
     }

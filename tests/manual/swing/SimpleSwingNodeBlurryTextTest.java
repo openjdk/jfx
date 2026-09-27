@@ -70,8 +70,16 @@ public class SimpleSwingNodeBlurryTextTest extends Application {
         Button failButton = new Button("Fail");
         passButton.setOnAction(e -> stage.close());
         failButton.setOnAction(e -> {
+            String message = String.format(
+                    "SwingNode text is blurry "
+                            + "(output scale: %.2f x %.2f, render scale: %.2f x %.2f)",
+                    stage.getOutputScaleX(),
+                    stage.getOutputScaleY(),
+                    stage.getRenderScaleX(),
+                    stage.getRenderScaleY());
+
             stage.close();
-            throw new AssertionError("SwingNode text rendering is blurry in HIDPI scale");
+            throw new AssertionError(message);
         });
 
         BorderPane pane = new BorderPane();

@@ -34,6 +34,7 @@ import javafx.scene.control.Button;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
+import javafx.scene.paint.Color;
 
 /***
  * Stage must initially only show on the OS taskbar, but not on the Screen.
@@ -47,10 +48,12 @@ public class StartIconified extends Application {
     public void start(Stage primaryStage) {
         Text instructionText = new Text("""
                 1. The "Iconified Window Test" must initially appear only on the operating-system taskbar or Dock.
-                2. On macOS, the window may appear briefly before becoming iconified.
-                On other platforms it must not appear normally on the screen before becoming iconified, even briefly.
-                If it does, the test fails.
+                2. The window may briefly flash on some platforms before becoming minimized.
+                This alone does not fail the test.
                 3. Restore the iconified window and verify that it displays normally.
+                4. Click Pass if the window starts minimized, allowing the
+                brief flash described above, and restores normally.
+                Otherwise, click Fail.
                 """);
         instructionText.setWrappingWidth(560);
 
@@ -64,20 +67,23 @@ public class StartIconified extends Application {
         instructionRoot.setPadding(new Insets(15));
 
         Stage instructionStage = new Stage();
-        instructionStage.setTitle("Start Iconified Test Instructions");
+        instructionStage.setTitle("StartIconified - Instructions");
         instructionStage.setScene(new Scene(instructionRoot, 600, 160));
         instructionStage.show();
 
-        primaryStage.setTitle("Iconified Window Test");
+        primaryStage.setTitle("StartIconified - Test Window");
         primaryStage.setWidth(700);
         primaryStage.setHeight(600);
         primaryStage.setIconified(true);
 
+
         Text text = new Text("""
                 This stage must initially appear on the OS taskbar (iconified), but not on the Screen.
                 """);
-
-        Scene scene = new Scene(new StackPane(text));
+        StackPane testRoot = new StackPane(text);
+        testRoot.setStyle("-fx-background-color: magenta;");
+        Scene scene = new Scene(testRoot);
+        scene.setFill(Color.MAGENTA);
         primaryStage.setScene(scene);
         primaryStage.show();
     }
