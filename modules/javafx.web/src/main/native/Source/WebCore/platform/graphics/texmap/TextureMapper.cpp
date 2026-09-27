@@ -244,7 +244,11 @@ void TextureMapper::releaseUnusedTexturesNow()
 
 ClipStack& TextureMapper::clipStack()
 {
+#if PLATFORM(JAVA)
+    return m_clipStack;
+#else
     return data().currentSurface ? data().currentSurface->clipStack() : m_clipStack;
+#endif
 }
 
 void TextureMapper::beginPainting(FlipY flipY, BitmapTexture* surface)
@@ -1388,6 +1392,10 @@ void TextureMapper::bindDefaultSurface()
 
 void TextureMapper::bindSurface(BitmapTexture *surface)
 {
+#if PLATFORM(JAVA)
+    UNUSED_PARAM(surface);
+    return;
+#else
     if (!surface) {
         bindDefaultSurface();
         return;
@@ -1396,11 +1404,16 @@ void TextureMapper::bindSurface(BitmapTexture *surface)
     surface->bindAsSurface();
     data().currentSurface = surface;
     updateProjectionMatrix();
+#endif
 }
 
 BitmapTexture* TextureMapper::currentSurface()
 {
+#if PLATFORM(JAVA)
+    return nullptr;
+#else
     return data().currentSurface.get();
+#endif
 }
 
 bool TextureMapper::beginScissorClip(const TransformationMatrix& modelViewMatrix, const FloatRect& targetRect)
@@ -1506,6 +1519,9 @@ void TextureMapper::beginClip(const TransformationMatrix& modelViewMatrix, const
     // Increase stencilIndex and apply stencil testing.
     clipStack().setStencilIndex(stencilIndex * 2);
     clipStack().applyIfNeeded();
+#else
+    clipStack().push();
+    clipStack().intersect(enclosingIntRect(modelViewMatrix.mapRect(targetRect.rect())));
 #endif
 }
 
@@ -1569,6 +1585,9 @@ void TextureMapper::beginClip(const TransformationMatrix& modelViewMatrix, const
     // Increase stencilIndex and apply stencil testing.
     clipStack().setStencilIndex(stencilIndex * 2);
     clipStack().applyIfNeeded();
+#else
+    clipStack().push();
+    clipStack().intersect(modelViewMatrix.mapQuad(clipPath.bounds()).enclosingBoundingBox());
 #endif
 }
 
@@ -1581,7 +1600,9 @@ void TextureMapper::beginClipWithoutApplying(const TransformationMatrix& modelVi
 void TextureMapper::endClip()
 {
     clipStack().pop();
+#if !PLATFORM(JAVA)
     clipStack().applyIfNeeded();
+#endif
 }
 
 void TextureMapper::endClipWithoutApplying()
@@ -1596,19 +1617,32 @@ IntRect TextureMapper::clipBounds()
 
 IntSize TextureMapper::maxTextureSize() const
 {
+#if PLATFORM(JAVA)
+    return IntSize(maximumAllowedImageBufferDimension, maximumAllowedImageBufferDimension);
+#else
     return IntSize(data().maxTextureSize(), data().maxTextureSize());
+#endif
 }
 
 void TextureMapper::setDepthRange(double zNear, double zFar)
 {
+#if PLATFORM(JAVA)
+    UNUSED_PARAM(zNear);
+    UNUSED_PARAM(zFar);
+#else
     data().zNear = zNear;
     data().zFar = zFar;
     updateProjectionMatrix();
+#endif
 }
 
 std::pair<double, double> TextureMapper::depthRange() const
 {
+#if PLATFORM(JAVA)
+    return { 0, 0 };
+#else
     return { data().zNear, data().zFar };
+#endif
 }
 
 void TextureMapper::updateProjectionMatrix()
@@ -1639,12 +1673,21 @@ void TextureMapper::drawTextureExternalOES(GLuint texture, OptionSet<TextureMapp
 
 Ref<TextureMapperGPUBuffer> TextureMapper::acquireBufferFromPool(size_t size, TextureMapperGPUBuffer::Type type)
 {
+#if PLATFORM(JAVA)
+    // The Java port does not have a GL buffer upload path. Callers still use
+    // the CPU-side clip vertices, while the zero buffer ID is never consumed
+    // by the Java clipping implementation.
+    UNUSED_PARAM(size);
+    static auto buffer = TextureMapperGPUBuffer::create(0, type, TextureMapperGPUBuffer::Usage::Dynamic);
+    return buffer;
+#else
     size_t ceil = roundUpToPowerOfTwo(size);
     size_t floor = ceil >> 1; // half of ceil
     size_t mid = floor + (floor >> 1); // (1.5 times floor)
     size_t requestSize = (size <= mid) ? mid : ceil;
 
     return data().getBufferFromPool(requestSize, type);
+#endif
 }
 
 } // namespace WebCore

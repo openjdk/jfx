@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,32 +25,30 @@
 
 package test.javafx.util.converter;
 
-import javafx.util.converter.ByteStringConverter;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/**
- */
+import javafx.util.converter.ByteStringConverter;
+
 public class ByteStringConverterTest {
-    private ByteStringConverter converter;
 
-    private final byte byteValue_10 = 10;
+    private static final byte BYTE_VALUE_10 = 10;
 
-    @BeforeEach public void setup() {
-        converter = new ByteStringConverter();
+    private static final ByteStringConverter CONVERTER = new ByteStringConverter();
+
+    @Test
+    void fromString_testValidStringInput() {
+        assertEquals(BYTE_VALUE_10, CONVERTER.fromString("10"));
     }
 
-    @Test public void fromString_testValidStringInput() {
-        assertEquals((Object)byteValue_10, converter.fromString("10"));
+    @Test
+    void fromString_testValidStringInputWithWhiteSpace() {
+        assertEquals(BYTE_VALUE_10, CONVERTER.fromString("     10     "));
     }
 
-    @Test public void fromString_testValidStringInputWithWhiteSpace() {
-        assertEquals((Object)byteValue_10, converter.fromString("     10     "));
-    }
-
-    @Test public void toString_testStringInput() {
-        assertEquals("10", converter.toString(byteValue_10));
+    @Test
+    void toString_testStringInput() {
+        assertEquals("10", CONVERTER.toString(BYTE_VALUE_10));
     }
 }

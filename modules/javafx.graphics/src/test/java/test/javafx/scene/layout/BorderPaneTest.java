@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1065,4 +1065,32 @@ public class BorderPaneTest {
         assertEquals(30, center.getHeight(), 1e-100);
     }
 
+    @Test
+    public void testSnappedPrimarySizeForBiasedEdgeChildren() {
+        var top = new MockBiased(Orientation.HORIZONTAL, 100, 200);
+        var bottom = new MockBiased(Orientation.HORIZONTAL, 100, 200);
+        var horizontalPane = new BorderPane();
+        horizontalPane.setTop(top);
+        horizontalPane.setBottom(bottom);
+        horizontalPane.resize(99.2, 1000);
+        horizontalPane.layout();
+
+        assertEquals(100, top.getWidth());
+        assertEquals(200, top.getHeight());
+        assertEquals(100, bottom.getWidth());
+        assertEquals(200, bottom.getHeight());
+
+        var left = new MockBiased(Orientation.VERTICAL, 200, 100);
+        var right = new MockBiased(Orientation.VERTICAL, 200, 100);
+        var verticalPane = new BorderPane();
+        verticalPane.setLeft(left);
+        verticalPane.setRight(right);
+        verticalPane.resize(1000, 99.2);
+        verticalPane.layout();
+
+        assertEquals(200, left.getWidth());
+        assertEquals(100, left.getHeight());
+        assertEquals(200, right.getWidth());
+        assertEquals(100, right.getHeight());
+    }
 }

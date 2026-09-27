@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -353,9 +353,9 @@ public class ScrollPane extends Control {
         return vmax;
     }
     /**
-     * If true and if the contained node is a Resizable, then the node will be
+     * If true and if the contained node is {@linkplain Node#isResizable resizable}, then the node will be
      * kept resized to match the width of the ScrollPane's viewport. If the
-     * contained node is not a Resizable, this value is ignored.
+     * contained node is not resizable, this value is ignored.
      */
     private BooleanProperty fitToWidth;
     public final void setFitToWidth(boolean value) {
@@ -390,9 +390,9 @@ public class ScrollPane extends Control {
         return fitToWidth;
     }
     /**
-     * If true and if the contained node is a Resizable, then the node will be
+     * If true and if the contained node is {@linkplain Node#isResizable resizable}, then the node will be
      * kept resized to match the height of the ScrollPane's viewport. If the
-     * contained node is not a Resizable, this value is ignored.
+     * contained node is not resizable, this value is ignored.
      */
     private BooleanProperty fitToHeight;
     public final void setFitToHeight(boolean value) {

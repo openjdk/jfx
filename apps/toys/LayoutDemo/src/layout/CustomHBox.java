@@ -82,7 +82,7 @@ public class CustomHBox extends HBox {
         // height could be -1
         double[][] temp = getTempArray(managed.size());
         final double insideHeight = height == -1? -1 : height -
-                                     snapSpace(getInsets().getTop()) - snapSpace(getInsets().getBottom());
+                                     snapSpaceY(getInsets().getTop()) - snapSpaceY(getInsets().getBottom());
         final boolean shouldFillHeight = true;
         for (int i = 0, size = managed.size(); i < size; i++) {
             Node child = managed.get(i);
@@ -107,12 +107,12 @@ public class CustomHBox extends HBox {
 
     private double adjustAreaWidths(List<Node>managed, double areaWidths[][], double width, double height) {
         Insets insets = getInsets();
-        double top = snapSpace(insets.getTop());
-        double bottom = snapSpace(insets.getBottom());
+        double top = snapSpaceY(insets.getTop());
+        double bottom = snapSpaceY(insets.getBottom());
 
-        double contentWidth = sum(areaWidths[0], managed.size()) + (managed.size()-1)*snapSpace(getSpacing());
+        double contentWidth = sum(areaWidths[0], managed.size()) + (managed.size()-1)*snapSpaceX(getSpacing());
         double extraWidth = width -
-                snapSpace(insets.getLeft()) - snapSpace(insets.getRight()) - contentWidth;
+                snapSpaceX(insets.getLeft()) - snapSpaceX(insets.getRight()) - contentWidth;
 
 //        if (extraWidth != 0) {
 //            final double refHeight = shouldFillHeight() && height != -1? height - top - bottom : -1;
@@ -132,11 +132,11 @@ public class CustomHBox extends HBox {
         VPos alignVpos = align.getVpos();
         double width = getWidth();
         double height = getHeight();
-        double top = snapSpace(insets.getTop());
-        double left = snapSpace(insets.getLeft());
-        double bottom = snapSpace(insets.getBottom());
-        double right = snapSpace(insets.getRight());
-        double space = snapSpace(getSpacing());
+        double top = snapSpaceY(insets.getTop());
+        double left = snapSpaceX(insets.getLeft());
+        double bottom = snapSpaceY(insets.getBottom());
+        double right = snapSpaceX(insets.getRight());
+        double space = snapSpaceX(getSpacing());
         boolean shouldFillHeight = true;
 
         final double[][] actualAreaWidths = getAreaWidths(managed, height, false);

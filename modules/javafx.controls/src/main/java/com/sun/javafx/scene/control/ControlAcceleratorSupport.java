@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -255,8 +255,7 @@ public class ControlAcceleratorSupport {
         TabPane tabPane = anchor.getTabPane();
         if (tabPane == null) return;
 
-        Scene scene = tabPane.getScene();
-        removeAcceleratorsFromScene(items, scene);
+        removeAcceleratorsFromScene(items, tabPane);
     }
 
     public static void removeAcceleratorsFromScene(ObservableList<? extends MenuItem> items, TableColumnBase<?,?> anchor) {
@@ -266,8 +265,7 @@ public class ControlAcceleratorSupport {
         Control control = controlProperty.get();
         if (control == null) return;
 
-        Scene scene = control.getScene();
-        removeAcceleratorsFromScene(items, scene);
+        removeAcceleratorsFromScene(items, control);
     }
 
     public static void removeAcceleratorsFromScene(ObservableList<? extends MenuItem> items, Node anchor) {
@@ -393,7 +391,5 @@ public class ControlAcceleratorSupport {
             IdentityWrapperListChangeListener that = (IdentityWrapperListChangeListener) o;
             return innerList == that.innerList;
         }
-    };
+    }
 }
-
-

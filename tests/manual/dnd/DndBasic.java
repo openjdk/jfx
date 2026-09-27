@@ -81,13 +81,46 @@ public class DndBasic extends Application {
         HBox columns = new HBox(sources, targets);
         columns.setSpacing(10);
 
-        Label instructions = new Label("Drag from a source to a destination (the desktop can be either)");
+        Label instructions = new Label(instructionsText());
+        instructions.setWrapText(true);
+        instructions.setMaxWidth(620);
+
         VBox withInstructions = new VBox(instructions, columns);
         withInstructions.setSpacing(20);
         withInstructions.setPadding(new Insets(10, 10, 10, 10));
         Scene s = new Scene(withInstructions);
         primaryStage.setScene(s);
         primaryStage.show();
+    }
+
+    private String instructionsText() {
+        String os = System.getProperty("os.name", "");
+        String modifiers;
+
+        if (os.startsWith("Mac")) {
+            modifiers =
+                    "macOS: Use no modifier for COPY, 'Command' for MOVE, " +
+                            "and 'Control' for LINK.";
+        } else {
+            modifiers =
+                    "Windows/Linux: Use 'Ctrl' for COPY, 'Shift' for MOVE, " +
+                            "and 'Ctrl+Shift' for LINK.";
+        }
+
+        return """
+               Drag from a green Source to a blue Destination. The desktop applications may
+               also be used as either the drag source or the drop destination.
+               The names inside each Source and Destination box show its supported actions.
+               An action is compatible when it appears in both boxes.
+
+               %s
+
+               For each Source/Destination pair being tested, first drag without holding any modifier keys.
+               Then repeat with each modifier combination listed above, holding the keys until the drop completes.
+               A successful drop must show 'accepted MODE' in the Source and
+               'Dropped here, proposed MODE' in the Destination, where MODE is
+               supported by both boxes. An unsupported combination must be rejected.
+               """.formatted(modifiers);
     }
 
     private Text modesToText(String l, TransferMode[] modes) {

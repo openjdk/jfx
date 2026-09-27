@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,34 +23,21 @@
  * questions.
  */
 
-package javafx.util.converter;
+#import "AccessibleBase.h"
+#import <AppKit/NSAccessibility.h>
 
-import java.time.format.DateTimeFormatter;
-import java.time.format.FormatStyle;
-import java.util.Locale;
+@interface JFXListAccessibility : AccessibleBase {
+};
 
-public class LocalDateStringConverterShim {
-
-    public static DateTimeFormatter getldtConverterFormatter(LocalDateStringConverter c) {
-        return c.ldtConverter.formatter;
-    }
-    //-----------------------------------------------------
-
-    //---------
-    public static Locale getldtConverterLocale(LocalDateStringConverter c) {
-        return c.ldtConverter.locale;
-    }
-
-    public static DateTimeFormatter getldtConverterParser(LocalDateStringConverter c) {
-        return c.ldtConverter.parser;
-    }
-
-    public static FormatStyle getldtConverterTimeStyle(LocalDateStringConverter c) {
-        return c.ldtConverter.timeStyle;
-    }
-
-    public static FormatStyle getldtConverterDateStyle(LocalDateStringConverter c) {
-        return c.ldtConverter.dateStyle;
-    }
-
-}
+- (NSAccessibilityRole)accessibilityRole;
+- (NSString *)accessibilityLabel;
+- (BOOL)isAccessibilityEnabled;
+- (NSArray *)accessibilityChildren;
+- (id)accessibilityParent;
+- (NSRect)accessibilityFrame;
+- (NSInteger)accessibilityColumnCount;
+- (NSInteger)accessibilityRowCount;
+- (NSArray *)accessibilityRows;
+- (NSArray *)accessibilitySelectedRows;
+- (void)setAccessibilitySelectedRows:(NSArray *)selectedRows;
+@end

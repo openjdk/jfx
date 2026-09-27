@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,31 +23,28 @@
  * questions.
  */
 
-package javafx.util.converter;
+#ifndef __MF_UTILS_H__
+#define __MF_UTILS_H__
 
-import java.time.format.DateTimeFormatter;
-import java.time.format.FormatStyle;
-import java.util.Locale;
+#include <windows.h>
 
-public class LocalTimeStringConverterShim {
+#include <gst/gst.h>
 
-    public static Locale getldtConverterLocale(LocalTimeStringConverter c) {
-        return c.ldtConverter.locale;
-    }
-
-    public static FormatStyle getldtConverterDateStyle(LocalTimeStringConverter c) {
-        return c.ldtConverter.dateStyle;
-    }
-
-    public static FormatStyle getldtConverterTimeStyle(LocalTimeStringConverter c) {
-        return c.ldtConverter.timeStyle;
-    }
-
-    public static DateTimeFormatter getldtConverterParser(LocalTimeStringConverter c) {
-        return c.ldtConverter.parser;
-    }
-
-    public static DateTimeFormatter getldtConverterFormatter(LocalTimeStringConverter c) {
-        return c.ldtConverter.formatter;
+template <class T> inline void SafeRelease(T **ppT)
+{
+    if (ppT != NULL && *ppT != NULL)
+    {
+        (*ppT)->Release();
+        *ppT = NULL;
     }
 }
+
+static inline GstClockTime hns_to_gst_time(LONGLONG hns)
+{
+    if (hns < 0 || (guint64)hns > G_MAXUINT64 / 100)
+        return GST_CLOCK_TIME_NONE;
+
+    return (GstClockTime)((guint64)hns * 100);
+}
+
+#endif // __MF_UTILS_H__
