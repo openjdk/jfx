@@ -4412,7 +4412,7 @@ allprojects {
         compile.options.debug = true // we always generate debugging info in the class files
         compile.options.debugOptions.debugLevel = IS_DEBUG_JAVA ? "source,lines,vars" : "source,lines"
 
-        // forces forking of the damon and build JVMs (even when it's the same JDK), no-op if the JVMs are different
+        // forces forking of the daemon and build JVMs (even when it's the same JDK), no-op if the JVMs are different
         compile.options.fork = true
 
         compile.options.compilerArgs += ["-encoding", "UTF-8"]
