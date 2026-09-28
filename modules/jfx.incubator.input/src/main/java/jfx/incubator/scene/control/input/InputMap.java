@@ -78,11 +78,11 @@ import com.sun.jfx.incubator.scene.control.input.PHList;
 public final class InputMap {
     private static final Object NULL = new Object();
     private final Control control;
-    /**
-     * <pre> KeyBinding -> FunctionTag or Runnable
-     * FunctionTag -> Runnable
-     * EventType -> PHList</pre>
-     */
+    /// ```
+    /// KeyBinding -> FunctionTag or Runnable
+    /// FunctionTag -> Runnable
+    /// EventType -> PHList
+    /// ```
     private final HashMap<Object, Object> map = new HashMap<>();
     private SkinInputMap skinInputMap;
     private final KeyEventMapper kmapper = new KeyEventMapper();
@@ -367,8 +367,13 @@ public final class InputMap {
      * @param tag the function tag
      */
     public void removeKeyBindingsFor(FunctionTag tag) {
+        boolean replaceWithNoop = false;
         if (skinInputMap != null) {
-            skinInputMap.unbind(tag);
+            if (skinInputMap.isStateless()) {
+                replaceWithNoop = true;
+            } else {
+                skinInputMap.unbind(tag);
+            }
         }
         Iterator<Map.Entry<Object, Object>> it = map.entrySet().iterator();
         while (it.hasNext()) {
@@ -376,7 +381,11 @@ public final class InputMap {
             if (tag == en.getValue()) {
                 // the entry must be KeyBinding -> FunctionTag
                 if (en.getKey() instanceof KeyBinding) {
-                    it.remove();
+                    if (replaceWithNoop) {
+                        en.setValue(NULL);
+                    } else {
+                        it.remove();
+                    }
                 }
             }
         }

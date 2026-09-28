@@ -46,7 +46,7 @@ import com.sun.javafx.PlatformUtil;
  *      {@link #registerKey(KeyCode, FunctionTag)},
  *      and
  *      {@code addHandler()} methods.
- * <li> in the corresponding skin's {code Skin.install()}, set the skin input map to the control's input map.
+ * <li> in the corresponding skin's {@code Skin.install()}, set the skin input map to the control's input map.
  * </ol>
  * Example (in the actual skin class):
  * <pre>{@code
@@ -76,8 +76,6 @@ public abstract class BehaviorBase<C extends Control> {
      * In this method, which is called by {@link #getSkinInputMap()} once,
      * the skin input map is populated by the implementation
      * by registering key mappings and event handlers.
-     * <p>
-     * If a subclass overrides this method, it is important to call the superclass implementation.
      */
     protected abstract void populateSkinInputMap();
 

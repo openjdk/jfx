@@ -63,7 +63,7 @@ public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInp
     /**
      * Creates a skin input map.
      */
-    public SkinInputMap() {
+    SkinInputMap() {
     }
 
     /**
@@ -118,7 +118,7 @@ public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInp
      * @param tag the function tag
      */
     public final void registerKey(KeyBinding k, FunctionTag tag) {
-        Objects.nonNull(k);
+        Objects.requireNonNull(k);
         map.put(k, tag);
         kmapper.addType(k);
     }
@@ -132,6 +132,12 @@ public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInp
     public final void registerKey(KeyCode code, FunctionTag tag) {
         registerKey(KeyBinding.of(code), tag);
     }
+
+    /**
+     * Indicates whether this skin input map is stateless.
+     * @return true if stateless
+     */
+    abstract boolean isStateless();
 
     Object resolve(KeyBinding k) {
         return map.get(k);
@@ -173,12 +179,13 @@ public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInp
      * This convenience method registers a copy of the behavior-specific mappings from one key binding to another.
      * The method does nothing if no behavior specific mapping can be found.
      * @param existing the existing key binding
-     * @param newk the new key binding
+     * @param newBinding the new key binding
      */
-    public final void duplicateMapping(KeyBinding existing, KeyBinding newk) {
+    public final void duplicateMapping(KeyBinding existing, KeyBinding newBinding) {
         Object x = map.get(existing);
         if (x != null) {
-            map.put(newk, x);
+            map.put(newBinding, x);
+            kmapper.addType(newBinding);
         }
     }
 
@@ -293,6 +300,11 @@ public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInp
             registerFunction(tag, func);
             registerKey(KeyBinding.of(code), tag);
         }
+
+        @Override
+        boolean isStateless() {
+            return false;
+        }
     }
 
     /**
@@ -378,6 +390,11 @@ public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInp
         public final void register(FunctionTag tag, KeyCode code, FHandler<C> func) {
             registerFunction(tag, func);
             registerKey(KeyBinding.of(code), tag);
+        }
+
+        @Override
+        boolean isStateless() {
+            return true;
         }
     }
 }
