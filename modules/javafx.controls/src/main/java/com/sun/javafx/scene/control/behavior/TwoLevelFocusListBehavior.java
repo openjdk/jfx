@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,6 +39,8 @@ import javafx.event.Event;
 import javafx.event.EventDispatcher;
 import javafx.event.EventHandler;
 import javafx.scene.input.MouseEvent;
+
+import java.util.List;
 
 public class TwoLevelFocusListBehavior extends TwoLevelFocusBehavior {
 
@@ -184,7 +186,7 @@ public class TwoLevelFocusListBehavior extends TwoLevelFocusBehavior {
             setExternalFocus(false);
         }
         else {
-            boolean b = true;
+            boolean externalFocus = true;
             if (tlNode != null) {
                 /*
                 ** if the ListView is actually the popup for a combobox then
@@ -192,13 +194,14 @@ public class TwoLevelFocusListBehavior extends TwoLevelFocusBehavior {
                 */
                 Parent p = tlNode.getParent();
                 if (p != null) {
-                    if (Properties.COMBO_BOX_STYLE_CLASS.equals(p.getStyleClass().toString())) {
-                        b = false;
+                    List<String> styleClass = NodeHelper.getStyleClassOrNull(p);
+                    if (styleClass != null && styleClass.contains(Properties.COMBO_BOX_STYLE_CLASS)) {
+                        externalFocus = false;
                     }
                 }
             }
 
-            setExternalFocus(b);
+            setExternalFocus(externalFocus);
         }
     };
 
