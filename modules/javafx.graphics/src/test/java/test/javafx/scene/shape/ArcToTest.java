@@ -84,8 +84,6 @@ public class ArcToTest {
         TestUtils.testBooleanPropertyGetterSetter(new ArcTo(), "sweepFlag");
     }
 
-    //TODO test addTo
-
     @Test
     public void testDoublePropertySynced_X() throws Exception {
         checkSyncedProperty("x", Coords.X, 200.0);
