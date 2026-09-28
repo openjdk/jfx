@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,43 +23,28 @@
  * questions.
  */
 
-#ifndef _PRODUCT_FLAGS_H_
-#define _PRODUCT_FLAGS_H_
+#ifndef __MF_UTILS_H__
+#define __MF_UTILS_H__
 
-#if defined(__APPLE__) || defined(__APPLE_CC__)
-#ifndef TARGET_OS_MAC
-#define TARGET_OS_MAC   1
-#endif
-#if defined(__arm64__)
-#ifndef TARGET_OS_MAC_ARM64
-#define TARGET_OS_MAC_ARM64   1
-#endif
-#endif // __arm64__
-#elif defined(LINUX)
-#ifndef TARGET_OS_LINUX
-#define TARGET_OS_LINUX 1
-#endif
-#endif
+#include <windows.h>
 
-// Whether to print debugging messages, etc.
-#define JFXMEDIA_DEBUG                      0
+#include <gst/gst.h>
 
-#define JFXMEDIA_ENABLE_GST_TRACE           0
+template <class T> inline void SafeRelease(T **ppT)
+{
+    if (ppT != NULL && *ppT != NULL)
+    {
+        (*ppT)->Release();
+        *ppT = NULL;
+    }
+}
 
-#define PLAYBACK_DEMO                       1
+static inline GstClockTime hns_to_gst_time(LONGLONG hns)
+{
+    if (hns < 0 || (guint64)hns > G_MAXUINT64 / 100)
+        return GST_CLOCK_TIME_NONE;
 
-#define ENABLE_APP_SINK                     1
+    return (GstClockTime)((guint64)hns * 100);
+}
 
-#define ENABLE_PLATFORM_GSTREAMER           1
-#define ENABLE_PLATFORM_PACKETVIDEO         0
-
-#define ENABLE_LOGGING                      1
-#define ENABLE_LOWLEVELPERF                 0
-#define ENABLE_INSTRUMENTS                  0
-#define ENABLE_PROGRESS_BUFFER              1
-
-// Enable detection of memory leaks using Visual Studio
-// This option will only work in Debug mode
-#define ENABLE_VISUAL_STUDIO_MEMORY_LEAKS_DETECTION 0
-
-#endif // _PRODUCT_FLAGS_H_
+#endif // __MF_UTILS_H__

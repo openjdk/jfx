@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,6 +44,7 @@ public:
     CPipelineOptions(int pipelineType = kSingleSourcePipeline)
     :   m_PipelineType(pipelineType),
         m_bBufferingEnabled(false),
+        m_bParserPullModeOnly(false),
         m_StreamMimeType(-1),
         m_AudioStreamMimeType(-1),
         m_bHLSModeEnabled(false),
@@ -56,7 +57,11 @@ public:
     inline int  GetPipelineType() { return m_PipelineType; }
 
     inline void SetBufferingEnabled(bool enabled) { m_bBufferingEnabled = enabled; }
-    inline bool GetBufferingEnabled() { return m_bBufferingEnabled; }
+    // Forced pull mode will use buffer, so always return true for pull mode only
+    inline bool GetBufferingEnabled() { return m_bBufferingEnabled || m_bParserPullModeOnly; }
+
+    inline void SetParserPullModeOnly(bool enabled) { m_bParserPullModeOnly = enabled; }
+    inline bool GetParserPullModeOnly() { return m_bParserPullModeOnly; }
 
     inline void SetContentType(string contentType) { m_ContentType = contentType; }
     inline const string GetContentType() { return m_ContentType; }
@@ -80,10 +85,10 @@ public:
     // of IDs except they shoule be unique.
     inline bool ForceDefaultTrackID() { return (m_PipelineType == kAudioSourcePipeline); }
 
-    inline CPipelineOptions* SetStreamParser(string streamParser) { m_StreamParser = streamParser; return this;}
-    inline CPipelineOptions* SetAudioStreamParser(string ausioStreamParser) { m_AudioStreamParser = ausioStreamParser; return this;}
-    inline CPipelineOptions* SetVideoDecoder(string videoDecoder) { m_VideoDecoder = videoDecoder; return this;}
-    inline CPipelineOptions* SetAudioDecoder(string audioDecoder) { m_AudioDecoder = audioDecoder; return this;}
+    inline CPipelineOptions* SetStreamParser(string streamParser) { m_StreamParser = streamParser; return this; }
+    inline CPipelineOptions* SetAudioStreamParser(string audioStreamParser) { m_AudioStreamParser = audioStreamParser; return this; }
+    inline CPipelineOptions* SetVideoDecoder(string videoDecoder) { m_VideoDecoder = videoDecoder; return this; }
+    inline CPipelineOptions* SetAudioDecoder(string audioDecoder) { m_AudioDecoder = audioDecoder; return this; }
 
     inline const char* GetStreamParser() { return GetCharFromString(&m_StreamParser); }
     inline const char* GetAudioStreamParser() { return GetCharFromString(&m_AudioStreamParser); }
@@ -100,6 +105,10 @@ public:
 private:
     int         m_PipelineType;
     bool        m_bBufferingEnabled;
+    // If true parser only supports pull mode. We can detect dynamically to
+    // query parser properties, but we know in advanced this information anyway,
+    // so we will set it manually.
+    bool        m_bParserPullModeOnly;
     // ContentType based on content type of main URL.
     string      m_ContentType;
     // Main stream mime type, might be different than ContentType for HLS.
