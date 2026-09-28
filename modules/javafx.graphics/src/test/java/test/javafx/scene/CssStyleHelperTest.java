@@ -1248,7 +1248,7 @@ public class CssStyleHelperTest {
         assertEquals(List.of(1.0, 2.0, 1.5, 1.0), trace);
     }
 
-    private static String toDataURL(String stylesheet) {
+    public static String toDataURL(String stylesheet) {
         return "data:text/plain;base64," + Base64.getEncoder().encodeToString(stylesheet.getBytes(StandardCharsets.UTF_8));
     }
 
