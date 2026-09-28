@@ -14,7 +14,7 @@ dependencies {
 }
 
 java {
-    toolchain.languageVersion.set(JavaLanguageVersion.of(JAVA_TARGET_VERSION))
+    toolchain.languageVersion.set(JavaLanguageVersion.of(jfxBuildJdkVersion.substring(0, 2)))
 }
 
 application {
