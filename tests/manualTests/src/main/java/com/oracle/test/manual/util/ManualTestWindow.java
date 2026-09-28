@@ -238,13 +238,13 @@ public abstract class ManualTestWindow extends Application {
 
     private void exit(int code) {
         exitCode = code;
-        Platform.exit();
         String s = TestRunnerApp.getExitCodeString(code);
         if (code == TestRunner.FAILED) {
             new AssertionError("Failed Manual Test: " + title).printStackTrace();
         } else {
             IO.println(s + " " + title);
         }
+        Platform.exit();
         System.exit(code);
     }
 
