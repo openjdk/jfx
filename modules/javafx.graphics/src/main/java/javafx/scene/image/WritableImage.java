@@ -29,14 +29,15 @@ import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.tk.ImageLoader;
 import com.sun.javafx.tk.PlatformImage;
 import com.sun.javafx.tk.Toolkit;
-import javafx.beans.NamedArg;
-import javafx.beans.property.ReadOnlyObjectProperty;
-import javafx.scene.paint.Color;
 
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.util.Objects;
+
+import javafx.beans.NamedArg;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.scene.paint.Color;
 
 /**
  * The {@code WritableImage} class represents a custom graphical image
@@ -60,6 +61,7 @@ public class WritableImage extends Image {
     }
 
     private ImageLoader tkImageLoader;
+    private DrawingContext drawingContext;
 
     /**
      * Constructs an empty image of the specified dimensions.
@@ -155,6 +157,34 @@ public class WritableImage extends Image {
     {
         super(width, height);
         getPixelWriter().setPixels(0, 0, width, height, reader, x, y);
+    }
+
+    /**
+     * Returns the {@link DrawingContext} associated with this image.
+     * <p>
+     * The pixel storage of this image must be in {@link PixelFormat.Type#INT_ARGB_PRE INT_ARGB_PRE} format,
+     * which is the case for images created with the {@code (width, height)} constructor. An image
+     * created from a {@link PixelBuffer} must use a pixel format of that type.
+     *
+     * @return the {@link DrawingContext} associated with this image, never {@code null}
+     * @throws IllegalStateException if the pixel storage of this image is not in {@code INT_ARGB_PRE}
+     *     format (for example, when created from a {@code BYTE_BGRA_PRE} {@code PixelBuffer})
+     */
+    public final DrawingContext getDrawingContext() {
+        if (drawingContext == null) {
+            drawingContext = Toolkit.getToolkit().createDrawingContext(getWritablePlatformImage(), this::notifyDrawingContextDirty);
+        }
+
+        return drawingContext;
+    }
+
+    private void notifyDrawingContextDirty(Rectangle rect) {
+        if (pixelBuffer != null) {
+            pixelBuffer.bufferDirty(rect);
+        }
+        else {
+            bufferDirty(rect);
+        }
     }
 
     @Override

@@ -66,7 +66,6 @@ typedef struct _Surface {
     jint width;
     jint height;
 
-    jint offset;
     jint scanlineStride;
     jint pixelStride;
 

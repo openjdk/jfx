@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,51 +25,68 @@
 
 package com.sun.pisces;
 
-public final class JavaSurface extends AbstractSurface {
+import java.nio.IntBuffer;
 
-    private final int[] dataInt;  // referenced by name in JNI
-    private final int dataOffset;  // referenced by name in JNI
+/**
+ * A software surface that renders into a direct {@link IntBuffer}.
+ * <p>
+ * The pixel data is always read and written starting at element zero of the
+ * provided buffer, and the buffer must therefore provide storage for at least
+ * {@code width * height} elements.
+ */
+public final class DirectBufferSurface extends AbstractSurface {
+
+    private final IntBuffer dataBuffer;  // referenced by name in JNI
 
     /**
-     * Constructs a new surface over the given array. If the buffer is too small or
-     * the selected range would exceed the buffer's capacity, an {@link IllegalArgumentException} is thrown.
+     * Constructs a new surface over the given direct buffer. If the buffer is too small for
+     * the given width and height an {@link IllegalArgumentException} is thrown.
      *
      * @param buffer a buffer to back the surface with, cannot be {@code null}
      * @param dataType the pixel format to use, must be {@code RendererBase.TYPE_INT_ARGB_PRE}
      * @param width the width, cannot be negative
      * @param height the height, cannot be negative
-     * @param offset the offset into the buffer, cannot be negative
      * @throws NullPointerException if {@code buffer} is {@code null}
-     * @throws IllegalArgumentException if {@code dataType} is unsupported, {@code offset} is negative
-     *     or if the selected range exceeds the available range
+     * @throws IllegalArgumentException if {@code dataType} is unsupported, {@code buffer} is not a direct
+     *     writable buffer, or {@code buffer} is too small for the given {@code width} and {@code height}
      */
-    public JavaSurface(int[] buffer, int dataType, int width, int height, int offset) {
+    public DirectBufferSurface(IntBuffer buffer, int dataType, int width, int height) {
         super(width, height);
 
         if (dataType != RendererBase.TYPE_INT_ARGB_PRE) {
             throw new IllegalArgumentException("dataType is unsupported: " + dataType);
         }
 
-        if (offset < 0) {
-            throw new IllegalArgumentException("offset cannot be negative: " + offset);
+        if (!buffer.isDirect()) {  // implicit null check for buffer
+            throw new IllegalArgumentException("buffer must be a direct buffer");
         }
 
-        long end = offset + (long) width * height;
-
-        if (end > buffer.length) {  // implicit null check for buffer
-            throw new IllegalArgumentException("selected range exceeds allowed range: [" + offset + ", " + end + ") exceeds [0, " + buffer.length + ")");
+        if (buffer.isReadOnly()) {
+            throw new IllegalArgumentException("buffer must not be read-only");
         }
 
-        this.dataInt = buffer;
-        this.dataOffset = offset;
+        if ((long) width * height > buffer.capacity()) {
+            throw new IllegalArgumentException("width x height exceeds buffer capacity: " + width + "x" + height + " > " + buffer.capacity());
+        }
+
+        this.dataBuffer = buffer;
 
         initialize(dataType, width, height);
         // The native method initialize() creates the native object of
-        // struct JavaSurface and saves it's reference in the super class
+        // struct DirectBufferSurface and saves it's reference in the super class
         // member AbstractSurface.nativePtr. This reference is needed for
         // creating disposer record hence the below call to addDisposerRecord()
         // is needed here and cannot be made in super class constructor.
         addDisposerRecord();
+    }
+
+    /**
+     * Returns the buffer that stores the pixel data of this surface.
+     *
+     * @return the direct buffer backing this surface, never {@code null}
+     */
+    public IntBuffer getDataBuffer() {
+        return this.dataBuffer;
     }
 
     private native void initialize(int dataType, int width, int height);

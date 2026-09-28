@@ -70,6 +70,10 @@ final class SWGraphics implements ReadbackGraphics {
         new BasicStroke(1.0f, BasicStroke.CAP_SQUARE, BasicStroke.JOIN_MITER, 10.0f);
     private static final Paint DEFAULT_PAINT = Color.WHITE;
 
+    private enum PaintBoundsState {
+        OFF, EMPTY, DIRTY
+    }
+
     private final PiscesRenderer pr;
     private final SWContext context;
     private final SWRTTexture target;
@@ -82,6 +86,12 @@ final class SWGraphics implements ReadbackGraphics {
     private Rectangle clip;
     private final Rectangle finalClip = new Rectangle();
     private RectBounds nodeBounds;
+
+    private int paintBoundsMinX = Integer.MAX_VALUE;
+    private int paintBoundsMinY = Integer.MAX_VALUE;
+    private int paintBoundsMaxX = Integer.MIN_VALUE;
+    private int paintBoundsMaxY = Integer.MIN_VALUE;
+    private PaintBoundsState paintBoundsState = PaintBoundsState.OFF;
 
     private int clipRectIndex;
 
@@ -410,7 +420,44 @@ final class SWGraphics implements ReadbackGraphics {
         }
         this.swPaint.setColor(color, 1f);
         pr.clearRect(0, 0, target.getPhysicalWidth(), target.getPhysicalHeight());
+        addPaintBounds(0, 0, target.getPhysicalWidth(), target.getPhysicalHeight());
         getRenderTarget().setOpaque(color.isOpaque());
+    }
+
+    /**
+     * Resets the accumulated bounds of the pixels that subsequent drawing
+     * operations touch and enables their tracking.
+     * <p>
+     * Tracking is disabled until this method is called, so that callers that
+     * do not use the paint bounds pay no cost for accumulating them.
+     */
+    public void resetPaintBounds() {
+        paintBoundsState = PaintBoundsState.EMPTY;
+    }
+
+    /**
+     * Returns the device pixel bounds accumulated since the last
+     * {@code resetPaintBounds()} call, or {@code null} if nothing has been
+     * painted since then.  Consuming the bounds stops their tracking; call
+     * {@code resetPaintBounds()} again to start tracking a new batch.
+     *
+     * @return a {@link Rectangle} or {@code null} if nothing was painted since the last call to {@code resetPaintBounds()}
+     */
+    public Rectangle takePaintBounds() {
+        PaintBoundsState state = paintBoundsState;
+
+        paintBoundsState = PaintBoundsState.OFF;
+
+        if (state != PaintBoundsState.DIRTY) {
+            return null;
+        }
+
+        return new Rectangle(
+            paintBoundsMinX,
+            paintBoundsMinY,
+            paintBoundsMaxX - paintBoundsMinX,
+            paintBoundsMaxY - paintBoundsMinY
+        );
     }
 
     /**
@@ -466,6 +513,8 @@ final class SWGraphics implements ReadbackGraphics {
             final Point2D p2 = new Point2D(x + width, y + height);
             tx.transform(p1, p1);
             tx.transform(p2, p2);
+
+            addPaintBounds(p1.x, p1.y, p2.x, p2.y);
 
             if (this.paint.getType() == Paint.Type.IMAGE_PATTERN) {
                 // we can call pr.drawImage(...) directly
@@ -563,7 +612,8 @@ final class SWGraphics implements ReadbackGraphics {
             System.out.println("Clip: " + finalClip);
             System.out.println("Composite rule: " + compositeMode);
         }
-        context.renderShape(this.pr, shape, st, tr, this.finalClip, isAntialiasedShape());
+
+        addPaintBounds(context.renderShape(this.pr, shape, st, tr, this.finalClip, isAntialiasedShape(), isPaintBoundsTracking()));
     }
 
     private void paintRoundRect(float x, float y, float width, float height, float arcw, float arch, BasicStroke st) {
@@ -705,6 +755,9 @@ final class SWGraphics implements ReadbackGraphics {
             if (pixelData != null) {
                 final int intPosX = g.getOriginX() + (int)pt.x;
                 final int intPosY = g.getOriginY() + (int)pt.y;
+
+                addPaintBounds(intPosX, intPosY, intPosX + g.getWidth(), intPosY + g.getHeight());
+
                 if (g.isLCDGlyph()) {
                     this.pr.fillLCDAlphaMask(pixelData, intPosX, intPosY,
                             g.getWidth(), g.getHeight(),
@@ -782,6 +835,8 @@ final class SWGraphics implements ReadbackGraphics {
                 Math.max(dx1, dx2), Math.max(dy1, dy2));
         final RectBounds dstBBox = new RectBounds();
         tx.transform(srcBBox, dstBBox);
+
+        addPaintBounds(dstBBox.getMinX(), dstBBox.getMinY(), dstBBox.getMaxX(), dstBBox.getMaxY());
 
         final Transform6 piscesTx = swPaint.computeDrawTexturePaintTransform(this.tx,
                 dx1, dy1, dx2, dy2, sx1, sy1, sx2, sy2);
@@ -1040,5 +1095,61 @@ final class SWGraphics implements ReadbackGraphics {
         g.drawTexture(srcTex,
                       dstX0, dstY0, dstX1, dstY1,
                       srcX0, srcY0, srcX1, srcY1);
+    }
+
+    private boolean isPaintBoundsTracking() {
+        return paintBoundsState != PaintBoundsState.OFF;
+    }
+
+    private void addPaintBounds(Rectangle r) {
+        if (r != null) {
+            addPaintBounds(r.x, r.y, r.x + r.width, r.y + r.height);
+        }
+    }
+
+    private void addPaintBounds(float x1, float y1, float x2, float y2) {
+        if (paintBoundsState == PaintBoundsState.OFF) {
+            return;
+        }
+
+        addPaintBounds(
+            (int)Math.floor(Math.min(x1, x2)),
+            (int)Math.floor(Math.min(y1, y2)),
+            (int)Math.ceil(Math.max(x1, x2)),
+            (int)Math.ceil(Math.max(y1, y2))
+        );
+    }
+
+    /*
+     * Adds the given rect to the paint bounds (intersecting it with the clip
+     * first).
+     */
+    private void addPaintBounds(int x1, int y1, int x2, int y2) {
+        if (paintBoundsState == PaintBoundsState.OFF) {
+            return;
+        }
+
+        int minX = Math.max(x1, finalClip.x);
+        int minY = Math.max(y1, finalClip.y);
+        int maxX = Math.min(x2, finalClip.x + finalClip.width);
+        int maxY = Math.min(y2, finalClip.y + finalClip.height);
+
+        if (minX >= maxX || minY >= maxY) {
+            return;
+        }
+
+        if (paintBoundsState == PaintBoundsState.EMPTY) {
+            paintBoundsMinX = minX;
+            paintBoundsMinY = minY;
+            paintBoundsMaxX = maxX;
+            paintBoundsMaxY = maxY;
+            paintBoundsState = PaintBoundsState.DIRTY;
+        }
+        else {
+            paintBoundsMinX = Math.min(paintBoundsMinX, minX);
+            paintBoundsMinY = Math.min(paintBoundsMinY, minY);
+            paintBoundsMaxX = Math.max(paintBoundsMaxX, maxX);
+            paintBoundsMaxY = Math.max(paintBoundsMaxY, maxY);
+        }
     }
 }
