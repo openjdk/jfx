@@ -27,7 +27,6 @@
 
 package jfx.incubator.scene.control.richtext;
 
-import java.util.Objects;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import com.sun.jfx.incubator.scene.control.richtext.MarkerHelper;
@@ -55,7 +54,6 @@ public final class Marker implements Comparable<Marker> {
     private final ReadOnlyObjectWrapper<TextPos> pos;
 
     private Marker(TextPos pos) {
-        Objects.requireNonNull(pos);
         this.pos = new ReadOnlyObjectWrapper<>(pos);
     }
 
