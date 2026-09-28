@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,8 +29,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * Logs information on a per-pulse basis. When doing performance analysis, a very
@@ -83,8 +84,11 @@ class PrintLogger extends Logger {
 
     /**
      * References to PulseData for the FX thread (fxData) and the Render thread (renderData).
+     * The rendering of a pulse can start before the rendering of the previous pulse has
+     * ended, so renderData holds all pulses being rendered, in the order of renderStart.
      */
-    private volatile PulseData fxData, renderData;
+    private volatile PulseData fxData;
+    private final Queue<PulseData> renderData = new ConcurrentLinkedQueue<>();
 
     /**
      * Keeps track of the start of the previous pulse, such that we can print out
@@ -117,11 +121,6 @@ class PrintLogger extends Logger {
     private PulseData tail;
 
     /**
-     * A synchronization object for printing arbitrage.
-     */
-    private AtomicInteger active;
-
-    /**
      * PulseData object states
      */
     private static final int AVAILABLE = 0;
@@ -135,7 +134,6 @@ class PrintLogger extends Logger {
         head = new PulseData();
         tail = new PulseData();
         head.next = tail;
-        active = new AtomicInteger(0);
     }
 
     public static Logger createInstance() {
@@ -149,7 +147,7 @@ class PrintLogger extends Logger {
     /**
      * Allocate and initialize a PulseData object
      */
-    private PulseData allocate(int n) {
+    private synchronized PulseData allocate(int n) {
         PulseData res;
         if (head != tail && head.state == AVAILABLE) {
             res = head;
@@ -177,11 +175,7 @@ class PrintLogger extends Logger {
         }
         if (fxData != null) {
             // Inter pulse data
-            fxData.state = COMPLETE;
-            if (active.incrementAndGet() == 1) {
-                fxData.printAndReset();
-                active.decrementAndGet();
-            }
+            complete(fxData);
         }
         fxData = allocate(pulseCount++);
         if (lastPulseStartTime > 0) {
@@ -203,8 +197,7 @@ class PrintLogger extends Logger {
     public void renderStart() {
         newPhase(null); // finish the current phase on the FX thread
         fxData.pushedRender = true;
-        renderData = fxData;
-        active.incrementAndGet();
+        renderData.add(fxData);
     }
 
     /**
@@ -217,11 +210,7 @@ class PrintLogger extends Logger {
     @Override
     public void pulseEnd() {
         if (fxData != null && !fxData.pushedRender) {
-            fxData.state = COMPLETE;
-            if (active.incrementAndGet() == 1) {
-                fxData.printAndReset();
-                active.decrementAndGet();
-            }
+            complete(fxData);
         }
         fxData = null;
     }
@@ -234,15 +223,23 @@ class PrintLogger extends Logger {
     @Override
     public void renderEnd() {
         newPhase(null); // finish the current phase on the render thread
-        renderData.state = COMPLETE;
-        for (;;) {
-            renderData.printAndReset();
-            if (active.decrementAndGet() == 0) {
-                break;
-            }
-            renderData = renderData.next;
+        PulseData pulseData = renderData.poll();
+        if (pulseData != null) {
+            complete(pulseData);
         }
-        renderData = null;
+    }
+
+    /**
+     * Marks the given PulseData as complete and prints all complete PulseData
+     * in the order in which they were allocated, up to the first incomplete one.
+     */
+    private synchronized void complete(PulseData pulseData) {
+        pulseData.state = COMPLETE;
+        for (PulseData data = head; data != null && data.state != INCOMPLETE; data = data.next) {
+            if (data.state == COMPLETE) {
+                data.printAndReset();
+            }
+        }
     }
 
     /**
@@ -259,7 +256,7 @@ class PrintLogger extends Logger {
             pulseData = fxData;
         }
         else {
-            pulseData = renderData;
+            pulseData = renderData.peek();
         }
         if (pulseData == null) {
             return;
@@ -286,7 +283,7 @@ class PrintLogger extends Logger {
             pulseData = fxData;
         }
         else {
-            pulseData = renderData;
+            pulseData = renderData.peek();
         }
         if (pulseData == null) {
             return;
@@ -306,7 +303,7 @@ class PrintLogger extends Logger {
 
         ThreadLocalData curPhase = phaseData.get();
         if (curPhase.phaseName != null) {
-            PulseData pulseData = Thread.currentThread() == fxThread ? fxData : renderData;
+            PulseData pulseData = Thread.currentThread() == fxThread ? fxData : renderData.peek();
             if (pulseData != null) {
                 pulseData.message
                     .append("T")
