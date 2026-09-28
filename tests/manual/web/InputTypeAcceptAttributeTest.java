@@ -70,12 +70,14 @@ public class InputTypeAcceptAttributeTest extends Application {
 
         Button passButton = new Button("Pass");
         passButton.setOnAction(e -> {
+            System.out.println("TEST PASSED");
             cleanup();
             Platform.exit();
         });
 
         Button failButton = new Button("Fail");
         failButton.setOnAction(e -> {
+            System.out.println("TEST FAILED");
             cleanup();
             Platform.exit();
             throw new AssertionError("Displayed wrong type file.");

@@ -73,8 +73,12 @@ public class DragDropFromSwingComponentInSwingNodeTest extends Application {
         stage.setTitle("Swing in JavaFX");
         Button passButton = new Button("Pass");
         Button failButton = new Button("Fail");
-        passButton.setOnAction(e -> stage.close());
+        passButton.setOnAction(e -> {
+            System.out.println("TEST PASSED");
+            stage.close();
+        });
         failButton.setOnAction(e -> {
+            System.out.println("TEST FAILED");
             stage.close();
             throw new AssertionError("Drag / drop from a Swing component in a SwingNode not working");
         });

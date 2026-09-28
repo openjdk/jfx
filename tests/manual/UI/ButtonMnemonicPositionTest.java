@@ -63,10 +63,12 @@ public class ButtonMnemonicPositionTest extends Application {
         Button fail = new Button("Test Failed");
 
         pass.setOnAction((e)->{
+            System.out.println("TEST PASSED");
             Platform.exit();
         });
 
         fail.setOnAction((e)->{
+            System.out.println("TEST FAILED");
             Platform.exit();
             throw new AssertionError("Mnemonic mark (line) is " +
                     "not drawn as expected.");

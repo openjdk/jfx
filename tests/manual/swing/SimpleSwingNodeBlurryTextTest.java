@@ -68,8 +68,12 @@ public class SimpleSwingNodeBlurryTextTest extends Application {
     public void start(Stage stage) throws Exception {
         Button passButton = new Button("Pass");
         Button failButton = new Button("Fail");
-        passButton.setOnAction(e -> stage.close());
+        passButton.setOnAction(e -> {
+            System.out.println("TEST PASSED");
+            stage.close();
+        });
         failButton.setOnAction(e -> {
+            System.out.println("TEST FAILED");
             String message = String.format(
                     "SwingNode text is blurry "
                             + "(output scale: %.2f x %.2f, render scale: %.2f x %.2f)",

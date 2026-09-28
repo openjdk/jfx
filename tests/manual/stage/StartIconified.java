@@ -51,8 +51,8 @@ public class StartIconified extends Application {
                 2. The window may briefly flash on some platforms before becoming minimized.
                 This alone does not fail the test.
                 3. Restore the iconified window and verify that it displays normally.
-                4. Click Pass if the window starts minimized, allowing the
-                brief flash described above, and restores normally.
+                4. Click Pass if the window starts minimized (possibly with a brief flash as described above)
+                and restores normally.
                 Otherwise, click Fail.
                 """);
         instructionText.setWrappingWidth(560);
@@ -68,7 +68,7 @@ public class StartIconified extends Application {
 
         Stage instructionStage = new Stage();
         instructionStage.setTitle("StartIconified - Instructions");
-        instructionStage.setScene(new Scene(instructionRoot, 600, 160));
+        instructionStage.setScene(new Scene(instructionRoot, 600, 200));
         instructionStage.show();
 
         primaryStage.setTitle("StartIconified - Test Window");
@@ -81,9 +81,9 @@ public class StartIconified extends Application {
                 This stage must initially appear on the OS taskbar (iconified), but not on the Screen.
                 """);
         StackPane testRoot = new StackPane(text);
-        testRoot.setStyle("-fx-background-color: magenta;");
+        testRoot.setStyle("-fx-background-color: #FFEFFF;");
         Scene scene = new Scene(testRoot);
-        scene.setFill(Color.MAGENTA);
+        scene.setFill(Color.web("#FFEFFF"));
         primaryStage.setScene(scene);
         primaryStage.show();
     }

@@ -53,10 +53,14 @@ public class JavaSwingNodeCleanupBug extends Application {
     public void start(Stage stage) throws Exception {
         Button passButton = new Button("Pass");
         Button failButton = new Button("Fail");
-        passButton.setOnAction(e -> this.quit());
-        failButton.setOnAction(e -> {
+        passButton.setOnAction(e -> {
+            System.out.println("TEST PASSED");
             this.quit();
-            System.out.println("Test failed as cleaning up SwingNode caused NPE");
+        });
+        failButton.setOnAction(e -> {
+            System.out.println("TEST FAILED");
+            this.quit();
+            throw new AssertionError("Test failed due to a NullPointerException");
         });
 
         BorderPane pane = new BorderPane();

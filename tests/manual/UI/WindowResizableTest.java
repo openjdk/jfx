@@ -49,8 +49,12 @@ public class WindowResizableTest extends Application {
 
         Button passButton = new Button("Pass");
         Button failButton = new Button("Fail");
-        passButton.setOnAction(e -> this.quit());
+        passButton.setOnAction(e -> {
+            System.out.println("TEST PASSED");
+            this.quit();
+        });
         failButton.setOnAction(e -> {
+            System.out.println("TEST FAILED");
             this.quit();
             throw new AssertionError("The window is no longer resizable");
         });

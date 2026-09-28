@@ -37,9 +37,9 @@ import javafx.stage.Stage;
 
 public class HostServicesShowDocumentTest extends Application {
 
-    private final String testHtmlUri = getClass().getResource("test.html").toExternalForm();
-    private final String testTxtUri  = getClass().getResource("test.txt").toExternalForm();
-    private final String testCsvUri  = getClass().getResource("test.csv").toExternalForm();
+    private static final String testHtmlUri = new File("test.html").toURI().toString();
+    private static final String testTxtUri  = new File("test.txt").toURI().toString();
+    private static final String testCsvUri  = new File("test.csv").toURI().toString();
 
     @Override
     public void start(Stage primaryStage) throws Exception {
@@ -69,11 +69,13 @@ public class HostServicesShowDocumentTest extends Application {
 
         Button passButton = new Button("Pass");
         passButton.setOnAction(e -> {
+            System.out.println("TEST PASSED");
             Platform.exit();
         });
 
         Button failButton = new Button("Fail");
         failButton.setOnAction(e -> {
+            System.out.println("TEST FAILED");
             Platform.exit();
             throw new AssertionError("Documents could not be shown.");
         });
