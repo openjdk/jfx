@@ -50,6 +50,7 @@ if not "%VSCOMNTOOLS%"=="" (
 ) else (
     set "VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
     if exist "!VSWHERE!" (
+        REM -version 15.0 means "15.0 or later" (VS2017+)
         for /f "usebackq tokens=*" %%i in (`"!VSWHERE!" -latest -all -prerelease ^
             -products Microsoft.VisualStudio.Product.Community Microsoft.VisualStudio.Product.Professional Microsoft.VisualStudio.Product.Enterprise Microsoft.VisualStudio.Product.BuildTools ^
             -version 15.0 ^
