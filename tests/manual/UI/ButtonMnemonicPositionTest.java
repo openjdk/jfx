@@ -35,8 +35,17 @@ import javafx.stage.Stage;
 
 public class ButtonMnemonicPositionTest extends Application {
 
+    private static boolean isWindows() {
+        return System.getProperty("os.name").contains("Windows");
+    }
+
     @Override
     public void start(Stage primaryStage) throws Exception {
+        if (!isWindows()) {
+            System.out.println("This test is supported only on Windows. Exiting.");
+            Platform.exit();
+            return;
+        }
 
         String str =
             "This test is to check mnemonic position is correctly shown " +

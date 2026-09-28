@@ -68,9 +68,9 @@ public class SimpleSwingNodeBlurryTextTest extends Application {
     public void start(Stage stage) throws Exception {
         Button passButton = new Button("Pass");
         Button failButton = new Button("Fail");
-        passButton.setOnAction(e -> this.quit());
+        passButton.setOnAction(e -> stage.close());
         failButton.setOnAction(e -> {
-            this.quit();
+            stage.close();
             throw new AssertionError("SwingNode text rendering is blurry in HIDPI scale");
         });
 
@@ -98,10 +98,6 @@ public class SimpleSwingNodeBlurryTextTest extends Application {
         stage.setScene(scene);
         stage.show();
         EventQueue.invokeLater(SimpleSwingNodeBlurryTextTest::initSwing);
-    }
-
-    private void quit() {
-        Platform.exit();
     }
 
     private static void initSwing() {
