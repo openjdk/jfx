@@ -360,6 +360,23 @@ public class CssTriggerStatesTest {
         assertEquals(Color.GREEN, getBackgroundColor(leaf));
     }
 
+    @Test
+    void testInheritSkipsUnstyledAncestorWithTriggerStates() {
+        root.getStylesheets().add(toDataURL("""
+                .a { -fx-background-color: blue; }
+                .c { -fx-background-color: inherit; }
+                .b:ps1 .c { -fx-opacity: 0.5; }
+                """));
+
+        Pane leafLeaf = createPaneWithStyle("c");
+        Pane leaf = createPaneWithStyle("b", leafLeaf);
+        Pane parent = createPaneWithStyle("a", leaf);
+        root.getChildren().add(parent);
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals(Color.BLUE, getBackgroundColor(leafLeaf));
+    }
+
     private String toDataURL(String stylesheet) {
         return "data:text/plain;base64," + Base64.getEncoder().encodeToString(stylesheet.getBytes(StandardCharsets.UTF_8));
     }
