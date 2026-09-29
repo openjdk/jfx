@@ -53,7 +53,7 @@ import com.sun.javafx.PlatformUtil;
  *     @Override
  *     public void install() {
  *         super.install();
- *         getSkinnable().getInputMap().setSkinInputMap(behavior.getSkinInputMap());
+ *         getSkinnable().getInputMap().setSkinInputMap_INCUBATOR(behavior.getSkinInputMap());
  *   }
  * }</pre>
  *

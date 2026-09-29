@@ -392,20 +392,19 @@ public final class InputMap {
     }
 
     /**
-     * Sets the skin input map, adding necessary event handlers to the control instance when required.
-     * This method must be called by the skin only from its
-     * {@link javafx.scene.control.Skin#install() Skin.install()}
-     * method.
-     * <p>
+     * Sets the skin input map, adding the necessary event handlers to the control.
      * This method removes all the mappings added by the previous skin input map, if any.
+     * <p>
+     * NOTE: this method is made public temporarily, to be removed when the {@code InputMap} becomes
+     * property of the {@code Control}, the {@code Skin} gets a new {@code Skin.getSkinInputMap()} method.
+     * Once that happens, the skin input map will be attached automatically inside
+     * {@link javafx.scene.control.Skin#install()}.
      *
      * @param m the skin input map
      * @since 28
      */
-    // TODO
-    // to avoid potential misuse, it might be better to hide this method inside of
-    // Control.setSkin(), though this will require introducing Skin.getSkinInputMap()
-    public void setSkinInputMap(SkinInputMap m) {
+    @Deprecated(forRemoval = true)
+    public void setSkinInputMap_INCUBATOR(SkinInputMap m) {
         if (skinInputMap != null) {
             // uninstall all handlers with SKIN_* priority
             Iterator<Map.Entry<Object, Object>> it = map.entrySet().iterator();
