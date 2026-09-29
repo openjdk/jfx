@@ -49,6 +49,7 @@
 #include "ThreadableBlobRegistry.h"
 #include "ThreadableLoader.h"
 #include <JavaScriptCore/ArrayBuffer.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/RefPtr.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/Vector.h>
@@ -58,7 +59,14 @@
 
 namespace WebCore {
 
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(FileReaderLoader);
+
 const int defaultBufferLength = 32768;
+
+Ref<FileReaderLoader> FileReaderLoader::create(ReadType readType, FileReaderLoaderClient* client)
+{
+    return adoptRef(*new FileReaderLoader(readType, client));
+}
 
 FileReaderLoader::FileReaderLoader(ReadType readType, FileReaderLoaderClient* client)
     : m_readType(readType)
@@ -112,12 +120,12 @@ void FileReaderLoader::start(ScriptExecutionContext* scriptExecutionContext, con
     options.contentSecurityPolicyEnforcement = ContentSecurityPolicyEnforcement::DoNotEnforce;
 
     if (m_client) {
-        auto loader = ThreadableLoader::create(*scriptExecutionContext, *this, WTFMove(request), options);
+        auto loader = ThreadableLoader::create(*scriptExecutionContext, *this, WTF::move(request), options);
         if (!loader)
             return;
         std::exchange(m_loader, loader);
     } else
-        ThreadableLoader::loadResourceSynchronously(*scriptExecutionContext, WTFMove(request), *this, options);
+        ThreadableLoader::loadResourceSynchronously(*scriptExecutionContext, WTF::move(request), *this, options);
 }
 
 void FileReaderLoader::cancel()
@@ -188,8 +196,8 @@ void FileReaderLoader::didReceiveResponse(ScriptExecutionContextIdentifier, std:
     if (!processResponse(response))
         return;
 
-    if (m_client)
-        m_client->didStartLoading();
+    if (RefPtr client = m_client.get())
+        client->didStartLoading();
 }
 
 void FileReaderLoader::didReceiveData(const SharedBuffer& buffer)
@@ -201,8 +209,8 @@ void FileReaderLoader::didReceiveData(const SharedBuffer& buffer)
         return;
 
     if (m_readType == ReadType::ReadAsBinaryChunks) {
-        if (m_client)
-            m_client->didReceiveBinaryChunk(buffer);
+        if (RefPtr client = m_client.get())
+            client->didReceiveBinaryChunk(buffer);
         return;
     }
 
@@ -245,8 +253,8 @@ void FileReaderLoader::didReceiveData(const SharedBuffer& buffer)
 
     m_isRawDataConverted = false;
 
-    if (m_client)
-        m_client->didReceiveData();
+    if (RefPtr client = m_client.get())
+        client->didReceiveData();
 }
 
 void FileReaderLoader::didFinishLoading(ScriptExecutionContextIdentifier, std::optional<ResourceLoaderIdentifier>, const NetworkLoadMetrics&)
@@ -256,8 +264,8 @@ void FileReaderLoader::didFinishLoading(ScriptExecutionContextIdentifier, std::o
         m_totalBytes = m_bytesLoaded;
     }
     cleanup();
-    if (m_client)
-        m_client->didFinishLoading();
+    if (RefPtr client = m_client.get())
+        client->didFinishLoading();
 }
 
 void FileReaderLoader::didFail(std::optional<ScriptExecutionContextIdentifier>, const ResourceError& error)
@@ -273,8 +281,8 @@ void FileReaderLoader::failed(ExceptionCode errorCode)
 {
     m_errorCode = errorCode;
     cleanup();
-    if (m_client)
-        m_client->didFail(errorCode);
+    if (RefPtr client = m_client.get())
+        client->didFail(errorCode);
 }
 
 ExceptionCode FileReaderLoader::toErrorCode(BlobResourceHandle::Error error)
@@ -330,7 +338,7 @@ String FileReaderLoader::stringResult()
         // No conversion is needed.
         break;
     case ReadAsBinaryString:
-        m_stringResult = protectedRawData()->span().first(m_bytesLoaded);
+        m_stringResult = byteCast<Latin1Character>(protectedRawData()->span().first(m_bytesLoaded));
         break;
     case ReadAsText:
         convertToText();

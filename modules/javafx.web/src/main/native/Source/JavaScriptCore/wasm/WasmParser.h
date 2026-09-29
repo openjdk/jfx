@@ -75,38 +75,35 @@ protected:
 
     explicit ParserBase(std::span<const uint8_t>);
 
-    bool WARN_UNUSED_RETURN consumeCharacter(char);
-    bool WARN_UNUSED_RETURN consumeString(const char*);
-    bool WARN_UNUSED_RETURN consumeUTF8String(Name&, size_t);
+    [[nodiscard]] bool consumeCharacter(char);
+    [[nodiscard]] bool consumeString(const char*);
+    [[nodiscard]] bool consumeUTF8String(Name&, size_t);
 
-    bool WARN_UNUSED_RETURN parseVarUInt1(uint8_t&);
-    bool WARN_UNUSED_RETURN parseInt7(int8_t&);
-    bool WARN_UNUSED_RETURN peekInt7(int8_t&);
-    bool WARN_UNUSED_RETURN parseUInt7(uint8_t&);
-    bool WARN_UNUSED_RETURN peekUInt8(uint8_t&);
-    bool WARN_UNUSED_RETURN parseUInt8(uint8_t&);
-    bool WARN_UNUSED_RETURN parseUInt32(uint32_t&);
-    bool WARN_UNUSED_RETURN parseUInt64(uint64_t&);
-    bool WARN_UNUSED_RETURN parseImmByteArray16(v128_t&);
-    PartialResult WARN_UNUSED_RETURN parseImmLaneIdx(uint8_t laneCount, uint8_t&);
-    bool WARN_UNUSED_RETURN parseVarUInt32(uint32_t&);
-    bool WARN_UNUSED_RETURN peekVarUInt32(uint32_t&);
-    bool WARN_UNUSED_RETURN parseVarUInt64(uint64_t&);
+    [[nodiscard]] bool parseVarUInt1(uint8_t&);
+    [[nodiscard]] bool parseInt7(int8_t&);
+    [[nodiscard]] bool peekInt7(int8_t&);
+    [[nodiscard]] bool parseUInt7(uint8_t&);
+    [[nodiscard]] bool peekUInt8(uint8_t&);
+    [[nodiscard]] bool parseUInt8(uint8_t&);
+    [[nodiscard]] bool parseUInt32(uint32_t&);
+    [[nodiscard]] bool parseUInt64(uint64_t&);
+    [[nodiscard]] bool parseImmByteArray16(v128_t&);
+    [[nodiscard]] bool parseVarUInt32(uint32_t&);
+    [[nodiscard]] bool peekVarUInt32(uint32_t&);
+    [[nodiscard]] bool parseVarUInt64(uint64_t&);
 
-    bool WARN_UNUSED_RETURN parseVarInt32(int32_t&);
-    bool WARN_UNUSED_RETURN parseVarInt64(int64_t&);
+    [[nodiscard]] bool parseVarInt32(int32_t&);
+    [[nodiscard]] bool parseVarInt64(int64_t&);
 
-    PartialResult WARN_UNUSED_RETURN parseBlockSignature(const ModuleInformation&, BlockSignature&);
-    PartialResult WARN_UNUSED_RETURN parseReftypeSignature(const ModuleInformation&, BlockSignature&);
-    bool WARN_UNUSED_RETURN parseValueType(const ModuleInformation&, Type&);
-    bool WARN_UNUSED_RETURN parseRefType(const ModuleInformation&, Type&);
-    bool WARN_UNUSED_RETURN parseExternalKind(ExternalKind&);
-    bool WARN_UNUSED_RETURN parseHeapType(const ModuleInformation&, int32_t&);
+    [[nodiscard]] bool parseValueType(const ModuleInformation&, Type&);
+    [[nodiscard]] bool parseRefType(const ModuleInformation&, Type&);
+    [[nodiscard]] bool parseExternalKind(ExternalKind&);
+    [[nodiscard]] bool parseHeapType(const ModuleInformation&, int32_t&);
 
     size_t m_offset = 0;
 
     template <typename ...Args>
-    NEVER_INLINE UnexpectedResult WARN_UNUSED_RETURN fail(Args... args) const
+    [[nodiscard]] NEVER_INLINE UnexpectedResult fail(Args... args) const
     {
         using namespace FailureHelper; // See ADL comment in namespace above.
         return UnexpectedResult(makeString("WebAssembly.Module doesn't parse at byte "_s, m_offset, ": "_s, makeString(args)...));
@@ -116,10 +113,15 @@ protected:
         return fail(__VA_ARGS__);                \
     } while (0)
 
+#define WASM_ALLOCATOR_FAIL_IF(condition, ...) do { \
+    if (condition) [[unlikely]]                     \
+        return fail(__VA_ARGS__);                \
+    } while (0)
+
 #define WASM_FAIL_IF_HELPER_FAILS(helper) do {                      \
         auto helperResult = helper;                                 \
         if (!helperResult) [[unlikely]]                             \
-            return makeUnexpected(WTFMove(helperResult.error()));   \
+            return makeUnexpected(WTF::move(helperResult.error()));   \
     } while (0)
 
 private:
@@ -179,12 +181,10 @@ ALWAYS_INLINE bool ParserBase::consumeUTF8String(Name& result, size_t stringLeng
         return true;
     if (m_source.size() < stringLength || m_offset > m_source.size() - stringLength)
         return false;
-    if (stringLength > maxStringSize)
-        return false;
     if (!result.tryReserveCapacity(stringLength))
         return false;
 
-    auto string = spanReinterpretCast<const char8_t>(m_source.subspan(m_offset, stringLength));
+    auto string = byteCast<char8_t>(m_source.subspan(m_offset, stringLength));
     if (auto checkResult = WTF::Unicode::checkUTF8(string); checkResult.characters.size() != string.size())
             return false;
 
@@ -248,14 +248,6 @@ ALWAYS_INLINE bool ParserBase::parseImmByteArray16(v128_t& result)
     return true;
 }
 
-ALWAYS_INLINE typename ParserBase::PartialResult ParserBase::parseImmLaneIdx(uint8_t laneCount, uint8_t& result)
-{
-    RELEASE_ASSERT(laneCount == 2 || laneCount == 4 || laneCount == 8 || laneCount == 16 || laneCount == 32);
-    WASM_PARSER_FAIL_IF(!parseUInt8(result), "Could not parse the lane index immediate byte."_s);
-    WASM_PARSER_FAIL_IF(result >= laneCount, "Lane index immediate is too large, saw "_s, laneCount, ", expected an ImmLaneIdx"_s, laneCount);
-    return { };
-}
-
 ALWAYS_INLINE bool ParserBase::peekUInt8(uint8_t& result)
 {
     if (m_offset >= m_source.size())
@@ -307,45 +299,6 @@ ALWAYS_INLINE bool ParserBase::parseVarUInt1(uint8_t& result)
         return false;
     result = static_cast<uint8_t>(temp);
     return true;
-}
-
-ALWAYS_INLINE typename ParserBase::PartialResult ParserBase::parseBlockSignature(const ModuleInformation& info, BlockSignature& result)
-{
-    int8_t kindByte;
-    if (peekInt7(kindByte) && isValidTypeKind(kindByte)) {
-        TypeKind typeKind = static_cast<TypeKind>(kindByte);
-
-        if ((isValidHeapTypeKind(kindByte) || typeKind == TypeKind::Ref || typeKind == TypeKind::RefNull))
-                return parseReftypeSignature(info, result);
-
-        Type type = { typeKind, TypeDefinition::invalidIndex };
-        WASM_PARSER_FAIL_IF(!(isValueType(type) || type.isVoid()), "result type of block: "_s, makeString(type.kind), " is not a value type or Void"_s);
-        result = { m_typeInformation.thunkFor(type), nullptr };
-        m_offset++;
-        return { };
-    }
-
-    int64_t index;
-    WASM_PARSER_FAIL_IF(!parseVarInt64(index), "Block-like instruction doesn't return value type but can't decode type section index"_s);
-    WASM_PARSER_FAIL_IF(index < 0, "Block-like instruction signature index is negative"_s);
-    WASM_PARSER_FAIL_IF(static_cast<size_t>(index) >= info.typeCount(), "Block-like instruction signature index is out of bounds. Index: "_s, index, " type index space: "_s, info.typeCount());
-
-    const auto& signature = info.typeSignatures[index].get().expand();
-    WASM_PARSER_FAIL_IF(!signature.is<FunctionSignature>(), "Block-like instruction signature index does not refer to a function type definition"_s);
-
-    result = { signature.as<FunctionSignature>(), nullptr };
-    return { };
-}
-
-inline typename ParserBase::PartialResult ParserBase::parseReftypeSignature(const ModuleInformation& info, BlockSignature& result)
-{
-    Type resultType;
-    WASM_PARSER_FAIL_IF(!parseValueType(info, resultType), "result type of block is not a valid ref type"_s);
-    Vector<Type, 16> returnTypes { resultType };
-    auto typeDefinition = TypeInformation::typeDefinitionForFunction(returnTypes, { });
-    result = { &TypeInformation::getFunctionSignature(typeDefinition->index()), typeDefinition };
-
-    return { };
 }
 
 ALWAYS_INLINE bool ParserBase::parseHeapType(const ModuleInformation& info, int32_t& result)

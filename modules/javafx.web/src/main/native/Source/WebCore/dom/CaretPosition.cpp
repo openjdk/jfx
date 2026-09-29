@@ -28,15 +28,16 @@
 
 #include "DOMRect.h"
 #include "Range.h"
+#include "ScriptWrappableInlines.h"
 #include "SimpleRange.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(CaretPosition);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CaretPosition);
 
 CaretPosition::CaretPosition(RefPtr<Node>&& offsetNode, unsigned offset)
-    : m_offsetNode(WTFMove(offsetNode))
+    : m_offsetNode(WTF::move(offsetNode))
     , m_offset(offset)
 {
 }
@@ -48,5 +49,7 @@ RefPtr<DOMRect> CaretPosition::getClientRect()
 
     return Range::boundingClientRect(SimpleRange { BoundaryPoint { *m_offsetNode, m_offset }, BoundaryPoint { *m_offsetNode, m_offset } });
 }
+
+CaretPosition::~CaretPosition() = default;
 
 } // namespace WebCore

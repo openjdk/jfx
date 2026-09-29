@@ -27,6 +27,7 @@
 
 #include "CSSParserIdioms.h"
 #include "CSSParserTokenRange.h"
+#include "CSSPropertyParserConsumer+Primitives.h"
 #include "CSSTokenizer.h"
 #include <wtf/SortedArrayMap.h>
 #include <wtf/text/ParsingUtilities.h>
@@ -136,9 +137,52 @@ std::optional<CSSCustomPropertySyntax> CSSCustomPropertySyntax::parse(StringView
     });
 }
 
+std::optional<CSSCustomPropertySyntax> CSSCustomPropertySyntax::consumeType(CSSParserTokenRange& range)
+{
+    // https://drafts.csswg.org/css-mixins/#typedef-css-type
+    // <css-type> = <syntax-component> | <type()>
+
+    if (range.peek().type() == FunctionToken) {
+        // <type()> = type( <syntax> )
+        if (!equalLettersIgnoringASCIICase(range.peek().value(), "type"_s))
+            return { };
+
+        auto typeRange = CSSPropertyParserHelpers::consumeFunction(range);
+        auto type = CSSCustomPropertySyntax::parse(typeRange.serialize());
+        if (!type || type->containsUnknownType())
+            return { };
+        return type;
+    }
+
+    auto typeRangeStart = range;
+    while (!range.atEnd()) {
+        auto peekType = range.peek().type();
+        if (peekType == ColonToken || peekType == CommaToken || CSSTokenizer::isWhitespace(peekType))
+            break;
+        range.consume();
+    }
+    range.consumeWhitespace();
+
+    auto typeRange = typeRangeStart.rangeUntil(range);
+    auto type = CSSCustomPropertySyntax::parse(typeRange.serialize());
+    if (!type || type->definition.size() != 1 || type->containsUnknownType())
+        return { };
+
+    return type;
+}
+
+bool CSSCustomPropertySyntax::containsUnknownType() const
+{
+    for (auto& component : definition) {
+        if (component.type == Type::Unknown)
+            return true;
+    }
+    return false;
+}
+
 auto CSSCustomPropertySyntax::typeForTypeName(StringView dataTypeName) -> Type
 {
-    static constexpr std::pair<ComparableASCIILiteral, Type> mappings[] = {
+    static constexpr SortedArrayMap typeMap { std::to_array<std::pair<ComparableASCIILiteral, Type>>({
         { "angle"_s, Type::Angle },
         { "color"_s, Type::Color },
         { "custom-ident"_s, Type::CustomIdent },
@@ -154,9 +198,7 @@ auto CSSCustomPropertySyntax::typeForTypeName(StringView dataTypeName) -> Type
         { "transform-function"_s, Type::TransformFunction },
         { "transform-list"_s, Type::TransformList },
         { "url"_s, Type::URL },
-    };
-
-    static constexpr SortedArrayMap typeMap { mappings };
+    }) };
     return typeMap.get(dataTypeName, Type::Unknown);
 }
 

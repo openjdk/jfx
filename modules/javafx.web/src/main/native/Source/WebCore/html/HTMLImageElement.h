@@ -23,13 +23,14 @@
 
 #pragma once
 
-#include "ActiveDOMObject.h"
-#include "AttachmentAssociatedElement.h"
-#include "DecodingOptions.h"
-#include "FormAssociatedElement.h"
-#include "GraphicsTypes.h"
-#include "HTMLElement.h"
-#include "MediaQuery.h"
+#include <WebCore/ActiveDOMObject.h>
+#include <WebCore/AttachmentAssociatedElement.h>
+#include <WebCore/DecodingOptions.h>
+#include <WebCore/FormAssociatedElement.h>
+#include <WebCore/GraphicsTypes.h>
+#include <WebCore/HTMLElement.h>
+#include <WebCore/MediaQuery.h>
+#include <wtf/Platform.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -56,7 +57,7 @@ class HTMLImageElement
 #endif
     , public FormAssociatedElement
     , public ActiveDOMObject {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLImageElement);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLImageElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLImageElement);
 public:
     static Ref<HTMLImageElement> create(Document&);
@@ -68,6 +69,7 @@ public:
     // ActiveDOMObject.
     void ref() const final { HTMLElement::ref(); }
     void deref() const final { HTMLElement::deref(); }
+    USING_CAN_MAKE_WEAKPTR(HTMLElement);
 
     void formOwnerRemovedFromTree(const Node& formRoot);
 
@@ -149,6 +151,8 @@ public:
     bool isDroppedImagePlaceholder() const { return m_isDroppedImagePlaceholder; }
     void setIsDroppedImagePlaceholder() { m_isDroppedImagePlaceholder = true; }
 
+    void setIsUserAgentShadowRootResource();
+
     void evaluateDynamicMediaQueryDependencies();
 
     String referrerPolicyForBindings() const;
@@ -199,7 +203,7 @@ private:
 
     bool isURLAttribute(const Attribute&) const override;
     bool attributeContainsURL(const Attribute&) const override;
-    String completeURLsInAttributeValue(const URL& base, const Attribute&, ResolveURLs = ResolveURLs::Yes) const override;
+    String completeURLsInAttributeValue(const URL& base, const Attribute&, ResolveURLs = ResolveURLs::YesExcludingURLsForPrivacy) const override;
     Attribute replaceURLsInAttributeValue(const Attribute&, const CSS::SerializationContext&) const override;
 
     bool isDraggableIgnoringAttributes() const final { return true; }
@@ -242,7 +246,7 @@ private:
     void setSourceElement(HTMLSourceElement*);
 
     IntersectionObserverData& ensureIntersectionObserverData() final;
-    IntersectionObserverData* intersectionObserverDataIfExists() final;
+    IntersectionObserverData* intersectionObserverDataIfExists() const final;
 
     const std::unique_ptr<HTMLImageLoader> m_imageLoader;
     std::unique_ptr<IntersectionObserverData> m_intersectionObserverData;

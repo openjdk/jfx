@@ -25,6 +25,10 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
+#include "BPlatform.h"
+
 #if !BUSE(TZONE)
 
 #include "IsoHeapImpl.h"
@@ -332,3 +336,5 @@ void* IsoHeapImpl<Config>::allocateFromShared(const LockHolder&, bool abortOnFai
 
 #endif
 #endif // !BUSE(TZONE)
+
+#endif // __cplusplus

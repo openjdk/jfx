@@ -300,8 +300,8 @@ void StorageTracker::setOriginDetails(const String& originIdentifier, const Stri
     };
 
     // FIXME: This weird ping-ponging was done to fix a deadlock. We should figure out a cleaner way to avoid it instead.
-    ensureOnMainThread([this, function = WTFMove(function)]() mutable {
-        m_thread->dispatch(WTFMove(function));
+    ensureOnMainThread([this, function = WTF::move(function)]() mutable {
+        m_thread->dispatch(WTF::move(function));
     });
 }
 
@@ -490,7 +490,7 @@ void StorageTracker::deleteOrigin(const SecurityOriginData& origin)
         m_originSet.remove(originId);
     }
 
-    m_thread->dispatch([this, originId = WTFMove(originId).isolatedCopy()] {
+    m_thread->dispatch([this, originId = WTF::move(originId).isolatedCopy()] {
         syncDeleteOrigin(originId);
     });
 }

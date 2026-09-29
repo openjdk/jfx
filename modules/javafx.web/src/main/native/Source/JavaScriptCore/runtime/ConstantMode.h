@@ -29,11 +29,11 @@
 
 namespace JSC {
 
-enum ConstantMode { IsConstant, IsVariable };
+enum class ConstantMode { IsConstant, IsVariable };
 
 inline ConstantMode modeForIsConstant(bool isConstant)
 {
-    return isConstant ? IsConstant : IsVariable;
+    return isConstant ? ConstantMode::IsConstant : ConstantMode::IsVariable;
 }
 
 } // namespace JSC

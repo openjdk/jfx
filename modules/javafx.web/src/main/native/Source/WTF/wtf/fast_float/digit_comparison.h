@@ -10,16 +10,15 @@
 #include "bigint.h"
 #include "ascii_number.h"
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace fast_float {
 
 // 1e0 to 1e19
-constexpr static uint64_t powers_of_ten_uint64[] = {
+static constexpr auto powers_of_ten_uint64 = std::to_array<uint64_t>({
     1UL, 10UL, 100UL, 1000UL, 10000UL, 100000UL, 1000000UL, 10000000UL, 100000000UL,
     1000000000UL, 10000000000UL, 100000000000UL, 1000000000000UL, 10000000000000UL,
     100000000000000UL, 1000000000000000UL, 10000000000000000UL, 100000000000000000UL,
-    1000000000000000000UL, 10000000000000000000UL};
+    1000000000000000000UL, 10000000000000000000UL
+});
 
 // calculate the exponent, in scientific notation, of the number.
 // this algorithm is not even close to optimized, but it has no practical
@@ -156,22 +155,22 @@ void round_down(adjusted_mantissa& am, int32_t shift) noexcept {
   }
   am.power2 += shift;
 }
+
 template <typename UC>
 fastfloat_really_inline FASTFLOAT_CONSTEXPR20
-void skip_zeros(UC const * & first, UC const * last) noexcept {
+void skip_zeros(std::span<UC const>& span) noexcept {
   uint64_t val;
-  while (!cpp20_and_in_constexpr() && std::distance(first, last) >= int_cmp_len<UC>()) {
-    ::memcpy(&val, first, sizeof(uint64_t));
+  while (!cpp20_and_in_constexpr() && span.size() >= int_cmp_len<UC>()) {
+    memcpySpan(asMutableByteSpan(val), asByteSpan(span).first(sizeof(uint64_t)));
     if (val != int_cmp_zeros<UC>()) {
       break;
     }
-    first += int_cmp_len<UC>();
+    skip(span, int_cmp_len<UC>());
   }
-  while (first != last) {
-    if (*first != UC('0')) {
+  while (!span.empty()) {
+    if (span[0] != UC('0'))
       break;
-    }
-    first++;
+        skip(span, 1);
   }
 }
 
@@ -179,45 +178,37 @@ void skip_zeros(UC const * & first, UC const * last) noexcept {
 // all characters must be valid digits.
 template <typename UC>
 fastfloat_really_inline FASTFLOAT_CONSTEXPR20
-bool is_truncated(UC const * first, UC const * last) noexcept {
+bool is_truncated(std::span<UC const> span) noexcept {
   // do 8-bit optimizations, can just compare to 8 literal 0s.
   uint64_t val;
-  while (!cpp20_and_in_constexpr() && std::distance(first, last) >= int_cmp_len<UC>()) {
-    ::memcpy(&val, first, sizeof(uint64_t));
-    if (val != int_cmp_zeros<UC>()) {
+  while (!cpp20_and_in_constexpr() && span.size() >= int_cmp_len<UC>()) {
+    memcpySpan(asMutableByteSpan(val), asByteSpan(span).first(sizeof(uint64_t)));
+    if (val != int_cmp_zeros<UC>())
       return true;
+    skip(span, int_cmp_len<UC>());
     }
-    first += int_cmp_len<UC>();
-  }
-  while (first != last) {
-    if (*first != UC('0')) {
+  while (!span.empty()) {
+    if (span[0] != UC('0'))
       return true;
-    }
-    ++first;
+    skip(span, 1);
   }
   return false;
 }
-template <typename UC>
-fastfloat_really_inline FASTFLOAT_CONSTEXPR20
-bool is_truncated(span<const UC> s) noexcept {
-  return is_truncated(s.ptr, s.ptr + s.len());
-}
-
 
 template <typename UC>
 fastfloat_really_inline FASTFLOAT_CONSTEXPR20
-void parse_eight_digits(const UC*& p, limb& value, size_t& counter, size_t& count) noexcept {
-  value = value * 100000000 + parse_eight_digits_unrolled(p);
-  p += 8;
+void parse_eight_digits(std::span<const UC>& p, limb& value, size_t& counter, size_t& count) noexcept {
+  value = value * 100000000 + parse_eight_digits_unrolled(p.data());
+  skip(p, 8);
   counter += 8;
   count += 8;
 }
 
 template <typename UC>
 fastfloat_really_inline FASTFLOAT_CONSTEXPR14
-void parse_one_digit(UC const *& p, limb& value, size_t& counter, size_t& count) noexcept {
-  value = value * 10 + limb(*p - UC('0'));
-  p++;
+void parse_one_digit(std::span<UC const>& p, limb& value, size_t& counter, size_t& count) noexcept {
+  value = value * 10 + limb(p[0] - UC('0'));
+  skip(p, 1);
   counter++;
   count++;
 }
@@ -253,27 +244,22 @@ void parse_mantissa(bigint& result, parsed_number_string_t<UC>& num, size_t max_
 #endif
 
   // process all integer digits.
-  UC const * p = num.integer.ptr;
-  UC const * pend = p + num.integer.len();
-  skip_zeros(p, pend);
+  std::span<UC const> p = num.integer;
+  skip_zeros(p);
   // process all digits, in increments of step per loop
-  while (p != pend) {
-    while ((std::distance(p, pend) >= 8) && (step - counter >= 8) && (max_digits - digits >= 8)) {
+  while (!p.empty()) {
+    while ((p.size() >= 8) && (step - counter >= 8) && (max_digits - digits >= 8))
       parse_eight_digits(p, value, counter, digits);
-    }
-    while (counter < step && p != pend && digits < max_digits) {
+    while (counter < step && !p.empty() && digits < max_digits)
       parse_one_digit(p, value, counter, digits);
-    }
     if (digits == max_digits) {
       // add the temporary value, then check if we've truncated any digits
       add_native(result, limb(powers_of_ten_uint64[counter]), value);
-      bool truncated = is_truncated(p, pend);
-      if (num.fraction.ptr != nullptr) {
+      bool truncated = is_truncated(p);
+      if (num.fraction.data())
         truncated |= is_truncated(num.fraction);
-      }
-      if (truncated) {
+      if (truncated)
         round_up_bigint(result, digits);
-      }
       return;
     } else {
       add_native(result, limb(powers_of_ten_uint64[counter]), value);
@@ -283,27 +269,22 @@ void parse_mantissa(bigint& result, parsed_number_string_t<UC>& num, size_t max_
   }
 
   // add our fraction digits, if they're available.
-  if (num.fraction.ptr != nullptr) {
-    p = num.fraction.ptr;
-    pend = p + num.fraction.len();
-    if (digits == 0) {
-      skip_zeros(p, pend);
-    }
+  if (num.fraction.data()) {
+    p = num.fraction;
+    if (!digits)
+      skip_zeros(p);
     // process all digits, in increments of step per loop
-    while (p != pend) {
-      while ((std::distance(p, pend) >= 8) && (step - counter >= 8) && (max_digits - digits >= 8)) {
+    while (!p.empty()) {
+      while ((p.size() >= 8) && (step - counter >= 8) && (max_digits - digits >= 8))
         parse_eight_digits(p, value, counter, digits);
-      }
-      while (counter < step && p != pend && digits < max_digits) {
+      while (counter < step && !p.empty() && digits < max_digits)
         parse_one_digit(p, value, counter, digits);
-      }
       if (digits == max_digits) {
         // add the temporary value, then check if we've truncated any digits
         add_native(result, limb(powers_of_ten_uint64[counter]), value);
-        bool truncated = is_truncated(p, pend);
-        if (truncated) {
+        bool truncated = is_truncated(p);
+        if (truncated)
           round_up_bigint(result, digits);
-        }
         return;
       } else {
         add_native(result, limb(powers_of_ten_uint64[counter]), value);
@@ -424,7 +405,5 @@ adjusted_mantissa digit_comp(parsed_number_string_t<UC>& num, adjusted_mantissa 
 }
 
 } // namespace fast_float
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif

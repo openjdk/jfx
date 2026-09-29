@@ -146,7 +146,7 @@ void testPatchpointWithStackArgumentResult()
         [&] (CCallHelpers& jit, const StackmapGenerationParams& params) {
             AllowMacroScratchRegisterUsage allowScratch(jit);
             CHECK_EQ(params.size(), 3u);
-            CHECK_EQ(params[0], ValueRep::stack(-static_cast<intptr_t>(proc.frameSize())));
+            CHECK_EQ(params[0], ValueRep::stack(-static_cast<int32_t>(proc.frameSize())));
             CHECK(params[1].isGPR());
             CHECK(params[2].isGPR());
             jit.add32(params[1].gpr(), params[2].gpr(), jit.scratchRegister());

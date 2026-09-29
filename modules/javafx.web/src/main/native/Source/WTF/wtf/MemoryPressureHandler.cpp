@@ -31,9 +31,14 @@
 #include <functional>
 #include <ranges>
 #include <wtf/Logging.h>
+#include <wtf/MathExtras.h>
 #include <wtf/MemoryFootprint.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/RAMSize.h>
+
+#if PLATFORM(COCOA)
+#include <wtf/darwin/DispatchExtras.h>
+#endif
 
 namespace WTF {
 
@@ -49,16 +54,11 @@ static const double s_strictThresholdFraction = 0.5;
 static const std::optional<double> s_killThresholdFraction;
 static const Seconds s_pollInterval = 30_s;
 
-static std::atomic<bool> s_hasCreatedMemoryPressureHandler;
+static std::atomic<bool> s_hasCreatedMemoryPressureHandler { true };
 
 MemoryPressureHandler& MemoryPressureHandler::singleton()
 {
-    static LazyNeverDestroyed<MemoryPressureHandler> memoryPressureHandler;
-    static std::once_flag onceKey;
-    std::call_once(onceKey, [&] {
-        memoryPressureHandler.construct();
-        s_hasCreatedMemoryPressureHandler.store(true);
-    });
+    static NeverDestroyed<MemoryPressureHandler> memoryPressureHandler;
     return memoryPressureHandler;
 }
 
@@ -113,7 +113,7 @@ static size_t thresholdForMemoryKillOfActiveProcess(unsigned tabCount)
     return baseThreshold + tabCount * GB;
 #else
     UNUSED_PARAM(tabCount);
-    return std::min(3 * GB, static_cast<size_t>(ramSize() * 0.9));
+    return std::min(3 * GB, static_cast<size_t>(truncateDoubleToUint64(ramSize() * 0.9)));
 #endif
 }
 
@@ -124,7 +124,7 @@ static size_t thresholdForMemoryKillOfInactiveProcess(unsigned tabCount)
 #else
     size_t baseThreshold = tabCount > 1 ? 3 * GB : 2 * GB;
 #endif
-    return std::min(baseThreshold, static_cast<size_t>(ramSize() * 0.9));
+    return std::min(baseThreshold, static_cast<size_t>(truncateDoubleToUint64(ramSize() * 0.9)));
 }
 
 void MemoryPressureHandler::setPageCount(unsigned pageCount)
@@ -217,8 +217,8 @@ void MemoryPressureHandler::setMemoryFootprintNotificationThresholds(Vector<uint
         return;
 
     std::ranges::sort(thresholds, std::greater<>());
-    m_memoryFootprintNotificationThresholds = WTFMove(thresholds);
-    m_memoryFootprintNotificationHandler = WTFMove(handler);
+    m_memoryFootprintNotificationThresholds = WTF::move(thresholds);
+    m_memoryFootprintNotificationHandler = WTF::move(handler);
 }
 
 
@@ -263,7 +263,7 @@ void MemoryPressureHandler::setProcessState(WebsamProcessState state)
 
 ASCIILiteral MemoryPressureHandler::processStateDescription()
 {
-    if (auto handler = memoryPressureHandlerIfExists()) {
+    if (RefPtr handler = memoryPressureHandlerIfExists()) {
         switch (handler->processState()) {
         case WebsamProcessState::Active:
             return "active"_s;

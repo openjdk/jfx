@@ -22,26 +22,26 @@
 
 #pragma once
 
-#include "ArrayConventions.h"
-#include "ArrayStorage.h"
-#include "Butterfly.h"
-#include "CPU.h"
-#include "CagedBarrierPtr.h"
-#include "CallFrame.h"
-#include "ClassInfo.h"
-#include "CustomGetterSetter.h"
-#include "DOMAttributeGetterSetter.h"
-#include "DeletePropertySlot.h"
-#include "Heap.h"
-#include "IndexingHeaderInlines.h"
-#include "JSCast.h"
-#include "MathCommon.h"
-#include "PropertySlot.h"
-#include "PropertyStorage.h"
-#include "PutDirectIndexMode.h"
-#include "PutPropertySlot.h"
-#include "Structure.h"
-#include "StructureTransitionTable.h"
+#include <JavaScriptCore/ArrayConventions.h>
+#include <JavaScriptCore/ArrayStorage.h>
+#include <JavaScriptCore/Butterfly.h>
+#include <JavaScriptCore/CPU.h>
+#include <JavaScriptCore/CagedBarrierPtr.h>
+#include <JavaScriptCore/CallFrame.h>
+#include <JavaScriptCore/ClassInfo.h>
+#include <JavaScriptCore/CustomGetterSetter.h>
+#include <JavaScriptCore/DOMAttributeGetterSetter.h>
+#include <JavaScriptCore/DeletePropertySlot.h>
+#include <JavaScriptCore/Heap.h>
+#include <JavaScriptCore/IndexingHeaderInlines.h>
+#include <JavaScriptCore/JSCast.h>
+#include <JavaScriptCore/MathCommon.h>
+#include <JavaScriptCore/PropertySlot.h>
+#include <JavaScriptCore/PropertyStorage.h>
+#include <JavaScriptCore/PutDirectIndexMode.h>
+#include <JavaScriptCore/PutPropertySlot.h>
+#include <JavaScriptCore/Structure.h>
+#include <JavaScriptCore/StructureTransitionTable.h>
 #include <wtf/StdLibExtras.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
@@ -51,12 +51,7 @@ namespace DOMJIT {
 class Signature;
 }
 
-inline JSCell* getJSFunction(JSValue value)
-{
-    if (value.isCell() && (value.asCell()->type() == JSFunctionType))
-        return value.asCell();
-    return nullptr;
-}
+inline JSCell* getJSFunction(JSValue); // Defined in JSObjectInlines.h
 
 class ArrayProfile;
 class Exception;
@@ -68,7 +63,7 @@ class LLIntOffsetsExtractor;
 class MarkedBlock;
 class ObjectInitializationScope;
 class PropertyDescriptor;
-class PropertyNameArray;
+class PropertyNameArrayBuilder;
 class Structure;
 class ThrowScope;
 class VM;
@@ -249,7 +244,7 @@ public:
     // otherwise, it creates a property with the provided attributes. Semantically, this is performing defineOwnProperty.
     bool putDirectIndex(JSGlobalObject* globalObject, unsigned propertyName, JSValue value, unsigned attributes, PutDirectIndexMode mode)
     {
-        ASSERT(!value.isCustomGetterSetter());
+        ASSERT(!value.isCustomGetterSetterSlow());
         auto canSetIndexQuicklyForPutDirect = [&] () -> bool {
             switch (indexingMode()) {
             case ALL_BLANK_INDEXING_TYPES:
@@ -627,12 +622,12 @@ public:
     static bool defaultHasInstance(JSGlobalObject*, JSValue, JSValue prototypeProperty);
 
     static constexpr unsigned maximumPrototypeChainDepth = 40000;
-    JS_EXPORT_PRIVATE void getPropertyNames(JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
-    JS_EXPORT_PRIVATE static void getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
-    JS_EXPORT_PRIVATE static void getOwnSpecialPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
-    JS_EXPORT_PRIVATE void getOwnIndexedPropertyNames(JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
-    JS_EXPORT_PRIVATE void getOwnNonIndexPropertyNames(JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
-    void getNonReifiedStaticPropertyNames(VM&, PropertyNameArray&, DontEnumPropertiesMode);
+    JS_EXPORT_PRIVATE void getPropertyNames(JSGlobalObject*, PropertyNameArrayBuilder&, DontEnumPropertiesMode);
+    JS_EXPORT_PRIVATE static void getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArrayBuilder&, DontEnumPropertiesMode);
+    JS_EXPORT_PRIVATE static void getOwnSpecialPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArrayBuilder&, DontEnumPropertiesMode);
+    JS_EXPORT_PRIVATE void getOwnIndexedPropertyNames(JSGlobalObject*, PropertyNameArrayBuilder&, DontEnumPropertiesMode);
+    JS_EXPORT_PRIVATE void getOwnNonIndexPropertyNames(JSGlobalObject*, PropertyNameArrayBuilder&, DontEnumPropertiesMode);
+    void getNonReifiedStaticPropertyNames(VM&, PropertyNameArrayBuilder&, DontEnumPropertiesMode);
 
     JS_EXPORT_PRIVATE uint32_t getEnumerableLength();
 
@@ -1033,7 +1028,7 @@ protected:
 
     // Call this if you want setIndexQuickly to succeed and you're sure that
     // the array is contiguous.
-    bool WARN_UNUSED_RETURN ensureLength(VM& vm, unsigned length)
+    [[nodiscard]] bool ensureLength(VM& vm, unsigned length)
     {
         RELEASE_ASSERT(length <= MAX_STORAGE_VECTOR_LENGTH);
         ASSERT(hasContiguous(indexingType()) || hasInt32(indexingType()) || hasDouble(indexingType()) || hasUndecided(indexingType()));
@@ -1156,7 +1151,7 @@ public:
 
     static inline constexpr TypeInfo typeInfo() { return TypeInfo(FinalObjectType, StructureFlags); }
     static constexpr IndexingType defaultIndexingType = NonArray;
-    static constexpr int32_t defaultTypeInfoBlob()
+    static constexpr uint32_t defaultTypeInfoBlob()
     {
         return TypeInfoBlob::typeInfoBlob(defaultIndexingType, typeInfo().type(), typeInfo().inlineTypeFlags());
     }
@@ -1447,23 +1442,23 @@ ALWAYS_INLINE bool JSObject::getPropertySlot(JSGlobalObject* globalObject, Prope
 
 inline bool JSObject::putDirect(VM& vm, PropertyName propertyName, JSValue value, unsigned attributes)
 {
-    ASSERT(!value.isGetterSetter() && !(attributes & PropertyAttribute::Accessor));
-    ASSERT(!value.isCustomGetterSetter() && !(attributes & PropertyAttribute::CustomAccessorOrValue));
+    ASSERT(!value.isGetterSetterSlow() && !(attributes & PropertyAttribute::Accessor));
+    ASSERT(!value.isCustomGetterSetterSlow() && !(attributes & PropertyAttribute::CustomAccessorOrValue));
     PutPropertySlot slot(this);
     return putDirectInternal<PutModeDefineOwnProperty>(vm, propertyName, value, attributes, slot).isNull();
 }
 
 inline bool JSObject::putDirect(VM& vm, PropertyName propertyName, JSValue value, unsigned attributes, PutPropertySlot& slot)
 {
-    ASSERT(!value.isGetterSetter());
-    ASSERT(!value.isCustomGetterSetter());
+    ASSERT(!value.isGetterSetterSlow());
+    ASSERT(!value.isCustomGetterSetterSlow());
     return putDirectInternal<PutModeDefineOwnProperty>(vm, propertyName, value, attributes, slot).isNull();
 }
 
 inline bool JSObject::putDirect(VM& vm, PropertyName propertyName, JSValue value, PutPropertySlot& slot)
 {
-    ASSERT(!value.isGetterSetter());
-    ASSERT(!value.isCustomGetterSetter());
+    ASSERT(!value.isGetterSetterSlow());
+    ASSERT(!value.isCustomGetterSetterSlow());
     return putDirectInternal<PutModeDefineOwnProperty>(vm, propertyName, value, 0, slot).isNull();
 }
 

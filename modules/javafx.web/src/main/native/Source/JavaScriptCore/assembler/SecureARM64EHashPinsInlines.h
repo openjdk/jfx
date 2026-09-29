@@ -25,7 +25,11 @@
 
 #pragma once
 
-#include "SecureARM64EHashPins.h"
+#include <JavaScriptCore/ExecutableAllocator.h>
+#include <JavaScriptCore/JSCConfig.h>
+#include <JavaScriptCore/SecureARM64EHashPins.h>
+#include <wtf/Compiler.h>
+#include <wtf/Platform.h>
 
 #if CPU(ARM64E) && ENABLE(JIT)
 
@@ -34,7 +38,7 @@ namespace JSC {
 ALWAYS_INLINE uint64_t SecureARM64EHashPins::keyForCurrentThread()
 {
     uint64_t result;
-    asm (
+    __asm__(
         "mrs %x[result], TPIDRRO_EL0"
         : [result] "=r" (result)
         :

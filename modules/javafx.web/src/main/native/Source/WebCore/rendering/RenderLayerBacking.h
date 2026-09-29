@@ -25,24 +25,31 @@
 
 #pragma once
 
-#include "FloatPoint.h"
-#include "FloatPoint3D.h"
-#include "GraphicsLayer.h"
-#include "GraphicsLayerClient.h"
-#include "RenderLayer.h"
-#include "RenderLayerCompositor.h"
-#include "ScrollingCoordinator.h"
+#include <WebCore/FloatPoint.h>
+#include <WebCore/FloatPoint3D.h>
+#include <WebCore/GraphicsLayerClient.h>
+#include <WebCore/GraphicsLayerEnums.h>
+#include <WebCore/RenderLayer.h>
+#include <WebCore/RenderLayerCompositor.h>
+#include <WebCore/ScrollingCoordinator.h>
+#include <wtf/Platform.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakListHashSet.h>
 
 namespace WebCore {
 
 class BlendingKeyframes;
+class GraphicsLayer;
+class GraphicsLayerAnimation;
 class PaintedContentsInfo;
 class RegionContext;
 class RenderLayerCompositor;
 class TiledBacking;
 class TransformationMatrix;
+
+#if ENABLE(THREADED_ANIMATIONS)
+class AcceleratedTimeline;
+#endif
 
 enum CompositingLayerType {
     NormalCompositingLayer, // non-tiled layer with backing store
@@ -50,6 +57,10 @@ enum CompositingLayerType {
     MediaCompositingLayer, // layer that contains an image, video, WebGL or plugin
     ContainerCompositingLayer // layer with no backing store
 };
+
+namespace DisplayList {
+enum class AsTextFlag : uint8_t;
+}
 
 // RenderLayerBacking controls the compositing behavior for a single RenderLayer.
 // It holds the various GraphicsLayers, and makes decisions about intra-layer rendering
@@ -70,8 +81,8 @@ public:
     RenderLayer& owningLayer() const { return m_owningLayer; }
 
     // Included layers are non-z-order descendant layers that are painted into this backing.
-    const SingleThreadWeakListHashSet<RenderLayer>& backingSharingLayers() const { return m_backingSharingLayers; }
-    void setBackingSharingLayers(SingleThreadWeakListHashSet<RenderLayer>&&);
+    const InlineWeakKeyListHashSet<RenderLayer>& backingSharingLayers() const { return m_backingSharingLayers; }
+    void setBackingSharingLayers(InlineWeakKeyListHashSet<RenderLayer>&&);
 
     bool hasBackingSharingLayers() const { return !m_backingSharingLayers.isEmptyIgnoringNullReferences(); }
 
@@ -169,23 +180,23 @@ public:
 
     void setRequiresOwnBackingStore(bool);
 
-    void setContentsNeedDisplay(GraphicsLayer::ShouldClipToLayer = GraphicsLayer::ClipToLayer);
+    void setContentsNeedDisplay(GraphicsLayerShouldClipToLayer = GraphicsLayerShouldClipToLayer::Clip);
     // r is in the coordinate space of the layer's render object
-    void setContentsNeedDisplayInRect(const LayoutRect&, GraphicsLayer::ShouldClipToLayer = GraphicsLayer::ClipToLayer);
+    void setContentsNeedDisplayInRect(const LayoutRect&, GraphicsLayerShouldClipToLayer = GraphicsLayerShouldClipToLayer::Clip);
 
     // Notification from the renderer that its content changed.
-    void contentChanged(ContentChangeType);
+    void contentChanged(ContentChangeType, const std::optional<FloatRect>&);
 
     // Interface to start, finish, suspend and resume animations
-    bool startAnimation(double timeOffset, const Animation&, const BlendingKeyframes&);
+    bool startAnimation(double timeOffset, const GraphicsLayerAnimation&, const BlendingKeyframes&);
     void animationPaused(double timeOffset, const String& name);
     void animationFinished(const String& name);
     void transformRelatedPropertyDidChange();
     void suspendAnimations(MonotonicTime = MonotonicTime());
     void resumeAnimations();
 
-#if ENABLE(THREADED_ANIMATION_RESOLUTION)
-    bool updateAcceleratedEffectsAndBaseValues();
+#if ENABLE(THREADED_ANIMATIONS)
+    void updateAcceleratedEffectsAndBaseValues(HashSet<Ref<AcceleratedTimeline>>&);
 #endif
 
     WEBCORE_EXPORT LayoutRect compositedBounds() const;
@@ -229,7 +240,7 @@ public:
     void notifyFlushRequired(const GraphicsLayer*) override;
     void notifySubsequentFlushRequired(const GraphicsLayer*) override;
 
-    void paintContents(const GraphicsLayer*, GraphicsContext&, const FloatRect& clip, OptionSet<GraphicsLayerPaintBehavior>) override;
+    void paintContents(const GraphicsLayer&, GraphicsContext&, const FloatRect& clip, OptionSet<GraphicsLayerPaintBehavior>) override;
 
     float deviceScaleFactor() const override;
     float contentsScaleMultiplierForNewTiles(const GraphicsLayer*) const override;
@@ -320,7 +331,7 @@ private:
 
     LayoutRect compositedBoundsIncludingMargin() const;
 
-    Ref<GraphicsLayer> createGraphicsLayer(const String&, GraphicsLayer::Type = GraphicsLayer::Type::Normal);
+    Ref<GraphicsLayer> createGraphicsLayer(const String&, GraphicsLayerType = GraphicsLayerType::Normal);
 
     RenderLayerModelObject& renderer() const { return m_owningLayer.renderer(); }
     RenderBox* renderBox() const { return m_owningLayer.renderBox(); }
@@ -331,6 +342,8 @@ private:
     bool updateAncestorClipping(bool needsAncestorClip, const RenderLayer* compositingAncestor);
     bool updateDescendantClippingLayer(bool needsDescendantClip);
     bool updateOverflowControlsLayers(bool needsHorizontalScrollbarLayer, bool needsVerticalScrollbarLayer, bool needsScrollCornerLayer);
+    void clearAncestorClippingStack();
+    void clearOverflowControlsLayers();
     bool updateForegroundLayer(bool needsForegroundLayer);
     bool updateBackgroundLayer(bool needsBackgroundLayer);
     bool updateMaskingLayer(bool hasMask, bool hasClipPath);
@@ -435,7 +448,7 @@ private:
     RenderLayer& m_owningLayer;
 
     // A list other layers that paint into this backing store, later than m_owningLayer in paint order.
-    SingleThreadWeakListHashSet<RenderLayer> m_backingSharingLayers;
+    InlineWeakKeyListHashSet<RenderLayer> m_backingSharingLayers;
 
     std::unique_ptr<LayerAncestorClippingStack> m_ancestorClippingStack; // Only used if we are clipped by an ancestor which is not a stacking context.
     std::unique_ptr<LayerAncestorClippingStack> m_overflowControlsHostLayerAncestorClippingStack; // Used when we have an overflow controls host layer which was reparented, and needs clipping by ancestors.

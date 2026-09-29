@@ -28,8 +28,10 @@
 #include "CSSPropertyParserConsumer+Color.h"
 #include "Color.h"
 #include "Document.h"
-#include "DocumentInlines.h"
+#include "DocumentQuirks.h"
+#include "DocumentView.h"
 #include "ElementInlines.h"
+#include "FrameDestructionObserverInlines.h"
 #include "HTMLHeadElement.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
@@ -47,7 +49,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLMetaElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLMetaElement);
 
 using namespace HTMLNames;
 
@@ -113,7 +115,7 @@ void HTMLMetaElement::attributeChanged(const QualifiedName& name, const AtomStri
         process(oldValue);
         if (isInDocumentTree()) {
         if (equalLettersIgnoringASCIICase(oldValue, "theme-color"_s) && !equalLettersIgnoringASCIICase(newValue, "theme-color"_s))
-            document().metaElementThemeColorChanged(*this);
+                protectedDocument()->metaElementThemeColorChanged(*this);
     }
         break;
     case AttributeNames::contentAttr:
@@ -150,10 +152,10 @@ void HTMLMetaElement::removedFromAncestor(RemovalType removalType, ContainerNode
     HTMLElement::removedFromAncestor(removalType, oldParentOfRemovedTree);
 
     if (removalType.disconnectedFromDocument && equalLettersIgnoringASCIICase(name(), "theme-color"_s))
-        oldParentOfRemovedTree.document().metaElementThemeColorChanged(*this);
+        oldParentOfRemovedTree.protectedDocument()->metaElementThemeColorChanged(*this);
 #if ENABLE(DARK_MODE_CSS)
     else if (removalType.disconnectedFromDocument && isNameColorScheme(name()))
-        oldParentOfRemovedTree.document().metaElementColorSchemeChanged();
+        oldParentOfRemovedTree.protectedDocument()->metaElementColorSchemeChanged();
 #endif
 }
 
@@ -164,9 +166,10 @@ void HTMLMetaElement::process(const AtomString& oldValue)
         return;
 
     const AtomString& nameValue = attributeWithoutSynchronization(nameAttr);
+    Ref document = this->document();
 #if ENABLE(DARK_MODE_CSS)
     if (isNameColorScheme(nameValue) || (!oldValue.isNull() && isNameColorScheme(oldValue)))
-        document().metaElementColorSchemeChanged();
+        document->metaElementColorSchemeChanged();
 #else
     UNUSED_PARAM(oldValue);
 #endif
@@ -182,27 +185,27 @@ void HTMLMetaElement::process(const AtomString& oldValue)
     // tree (changing a meta tag while it's not in the tree shouldn't have any effect
     // on the document)
     if (!httpEquivValue.isNull())
-        document().processMetaHttpEquiv(httpEquivValue, contentValue, isDescendantOf(document().head()));
+        document->processMetaHttpEquiv(httpEquivValue, contentValue, isDescendantOf(document->protectedHead().get()));
 
     if (nameValue.isNull())
         return;
 
     if (equalLettersIgnoringASCIICase(nameValue, "viewport"_s))
-        document().processViewport(contentValue, ViewportArguments::Type::ViewportMeta);
-    else if (document().settings().disabledAdaptationsMetaTagEnabled() && equalLettersIgnoringASCIICase(nameValue, "disabled-adaptations"_s))
-        document().processDisabledAdaptations(contentValue);
+        document->processViewport(contentValue, ViewportArguments::Type::ViewportMeta);
+    else if (document->settings().disabledAdaptationsMetaTagEnabled() && equalLettersIgnoringASCIICase(nameValue, "disabled-adaptations"_s))
+        document->processDisabledAdaptations(contentValue);
     else if (equalLettersIgnoringASCIICase(nameValue, "theme-color"_s))
-        document().metaElementThemeColorChanged(*this);
+        document->metaElementThemeColorChanged(*this);
 #if PLATFORM(IOS_FAMILY)
     else if (equalLettersIgnoringASCIICase(nameValue, "format-detection"_s))
-        document().processFormatDetection(contentValue);
+        document->processFormatDetection(contentValue);
     else if (equalLettersIgnoringASCIICase(nameValue, "apple-mobile-web-app-orientations"_s))
-        document().processWebAppOrientations();
+        document->processWebAppOrientations();
 #endif
     else if (equalLettersIgnoringASCIICase(nameValue, "referrer"_s))
-        document().processReferrerPolicy(contentValue, ReferrerPolicySource::MetaTag);
+        document->processReferrerPolicy(contentValue, ReferrerPolicySource::MetaTag);
     else if (equalLettersIgnoringASCIICase(nameValue, "confluence-request-time"_s))
-        document().quirks().setNeedsToCopyUserSelectNoneQuirk();
+        document->quirks().setNeedsToCopyUserSelectNoneQuirk();
 }
 
 const AtomString& HTMLMetaElement::content() const

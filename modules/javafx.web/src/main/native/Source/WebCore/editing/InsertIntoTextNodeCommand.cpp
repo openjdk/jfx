@@ -31,6 +31,7 @@
 #include "Editor.h"
 #include "EditorClient.h"
 #include "LocalFrame.h"
+#include "NodeDocument.h"
 #include "RenderText.h"
 #include "Settings.h"
 #include "Text.h"
@@ -43,7 +44,7 @@ namespace WebCore {
 
 InsertIntoTextNodeCommand::InsertIntoTextNodeCommand(Ref<Text>&& node, unsigned offset, const String& text, AllowPasswordEcho allowPasswordEcho, EditAction editingAction)
     : SimpleEditCommand(node->document(), editingAction)
-    , m_node(WTFMove(node))
+    , m_node(WTF::move(node))
     , m_offset(offset)
     , m_text(text)
     , m_allowPasswordEcho(allowPasswordEcho)

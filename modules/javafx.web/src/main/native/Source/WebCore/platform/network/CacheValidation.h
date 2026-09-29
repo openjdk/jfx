@@ -36,6 +36,7 @@ class HTTPHeaderMap;
 class NetworkStorageSession;
 class ResourceRequest;
 class ResourceResponse;
+struct ResourceLoaderOptions;
 
 struct RedirectChainCacheStatus {
     enum class Status : uint8_t {
@@ -54,7 +55,7 @@ struct RedirectChainCacheStatus {
 WEBCORE_EXPORT Seconds computeCurrentAge(const ResourceResponse&, WallTime responseTimestamp);
 WEBCORE_EXPORT Seconds computeFreshnessLifetimeForHTTPFamily(const ResourceResponse&, WallTime responseTimestamp);
 WEBCORE_EXPORT void updateResponseHeadersAfterRevalidation(ResourceResponse&, const ResourceResponse& validatingResponse);
-WEBCORE_EXPORT void updateRedirectChainStatus(RedirectChainCacheStatus&, const ResourceResponse&);
+WEBCORE_EXPORT void updateRedirectChainStatus(RedirectChainCacheStatus&, const ResourceResponse&, const ResourceLoaderOptions&);
 
 enum ReuseExpiredRedirectionOrNot { DoNotReuseExpiredRedirection, ReuseExpiredRedirection };
 WEBCORE_EXPORT bool redirectChainAllowsReuse(RedirectChainCacheStatus, ReuseExpiredRedirectionOrNot);

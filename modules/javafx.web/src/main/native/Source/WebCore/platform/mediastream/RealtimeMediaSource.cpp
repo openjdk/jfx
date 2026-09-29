@@ -105,7 +105,7 @@ RealtimeMediaSourceObserver::~RealtimeMediaSourceObserver() = default;
 
 RealtimeMediaSource::RealtimeMediaSource(const CaptureDevice& device, MediaDeviceHashSalts&& hashSalts, std::optional<PageIdentifier> pageIdentifier)
     : m_pageIdentifier(pageIdentifier)
-    , m_idHashSalts(WTFMove(hashSalts))
+    , m_idHashSalts(WTF::move(hashSalts))
     , m_type(toSourceType(device.type()))
     , m_name({ device.label() })
     , m_device(device)
@@ -256,7 +256,7 @@ void RealtimeMediaSource::notifySettingsDidChangeObservers(OptionSet<RealtimeMed
 
     ALWAYS_LOG_IF(m_logger, LOGIDENTIFIER, flags);
 
-    scheduleDeferredTask([this] {
+    scheduleDeferredTask([this, protectedThis = Ref { *this }] {
         m_pendingSettingsDidChangeNotification = false;
         forEachObserver([](auto& observer) {
             observer.sourceSettingsChanged();
@@ -343,7 +343,7 @@ void RealtimeMediaSource::videoFrameAvailable(VideoFrame& videoFrame, VideoFrame
     bool shouldSwapAdaptorSize = false;
     Ref currentVideoFrame = [&] -> Ref<VideoFrame> {
 #if PLATFORM(COCOA)
-        if (!m_shouldApplyRotation || videoFrame.hasNoTransformation())
+        if (!m_isApplyingRotation || videoFrame.hasNoTransformation())
             return videoFrame;
 
         if (!m_rotationSession)
@@ -471,7 +471,7 @@ void RealtimeMediaSource::registerOwnerCallback(OwnerCallback&& callback)
 {
     ASSERT(isMainThread());
     ASSERT(!m_registerOwnerCallback);
-    m_registerOwnerCallback = WTFMove(callback);
+    m_registerOwnerCallback = WTF::move(callback);
 }
 
 void RealtimeMediaSource::captureFailed()
@@ -918,7 +918,7 @@ void RealtimeMediaSource::applyConstraint(MediaConstraintType constraintType, co
             return false;
         };
 
-        auto modeString = downcast<StringConstraint>(constraint).find(WTFMove(filter));
+        auto modeString = downcast<StringConstraint>(constraint).find(WTF::move(filter));
         if (!modeString.isEmpty())
             setFacingMode(RealtimeMediaSourceSettings::videoFacingModeEnum(modeString));
         break;
@@ -1351,7 +1351,7 @@ void RealtimeMediaSource::setIntrinsicSize(const IntSize& intrinsicSize, bool no
 
     m_intrinsicSize = intrinsicSize;
     if (notifyObservers) {
-        scheduleDeferredTask([this] {
+        scheduleDeferredTask([this, protectedThis = Ref { *this }] {
             notifySettingsDidChangeObservers({ RealtimeMediaSourceSettings::Flag::Width, RealtimeMediaSourceSettings::Flag::Height });
         });
     }
@@ -1473,7 +1473,7 @@ void RealtimeMediaSource::setEchoCancellation(bool echoCancellation)
 void RealtimeMediaSource::scheduleDeferredTask(Function<void()>&& function)
 {
     ASSERT(function);
-    callOnMainThread([protectedThis = Ref { *this }, function = WTFMove(function)] {
+    callOnMainThread([protectedThis = Ref { *this }, function = WTF::move(function)] {
         function();
     });
 }
@@ -1501,7 +1501,7 @@ void RealtimeMediaSource::setType(Type type)
 
     m_type = type;
 
-    scheduleDeferredTask([this] {
+    scheduleDeferredTask([this, protectedThis = Ref { *this }] {
         forEachObserver([](auto& observer) {
             observer.sourceSettingsChanged();
         });
@@ -1537,16 +1537,18 @@ void RealtimeMediaSource::configurationChanged()
     });
 }
 
-bool RealtimeMediaSource::setShouldApplyRotation()
+void RealtimeMediaSource::setShouldApplyRotation()
 {
     ASSERT(isMainThread());
 
 #if PLATFORM(COCOA)
-    m_shouldApplyRotation = true;
-    return true;
-#else
-    return false;
+    m_isApplyingRotation = true;
 #endif
+}
+
+bool RealtimeMediaSource::isApplyingRotation() const
+{
+    return m_isApplyingRotation;
 }
 
 #if !RELEASE_LOG_DISABLED

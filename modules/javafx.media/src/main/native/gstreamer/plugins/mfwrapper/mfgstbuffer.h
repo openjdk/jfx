@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,6 +43,7 @@ class CMFGSTBuffer : public IMFMediaBuffer
 {
 public:
     CMFGSTBuffer(DWORD cbMaxLength);
+    CMFGSTBuffer(HRESULT &hr, GstBuffer *pGstBuffer);
     ~CMFGSTBuffer();
 
     // IMFMediaBuffer
@@ -64,6 +65,7 @@ public:
             long lSize, sCallbackData *pCallbackData));
 
 private:
+    void Init();
     HRESULT AllocateOrGetBuffer(BYTE **ppbBuffer);
 
     ULONG m_ulRefCount;

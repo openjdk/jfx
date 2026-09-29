@@ -48,8 +48,8 @@
 #include "RenderFlexibleBox.h"
 #include "RenderObjectInlines.h"
 #include "RenderSlider.h"
-#include "RenderStyleInlines.h"
-#include "RenderStyleSetters.h"
+#include "RenderStyle+GettersInlines.h"
+#include "RenderStyle+SettersInlines.h"
 #include "RenderTheme.h"
 #include "ResolvedStyle.h"
 #include "ScriptDisallowedScope.h"
@@ -69,8 +69,8 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SliderThumbElement);
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SliderContainerElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SliderThumbElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SliderContainerElement);
 
 inline static Decimal sliderPosition(HTMLInputElement& element)
 {
@@ -85,19 +85,16 @@ inline static bool hasVerticalAppearance(HTMLInputElement& input)
     return !input.renderer()->isHorizontalWritingMode() || input.renderer()->style().usedAppearance() == StyleAppearance::SliderVertical;
 }
 
-
-
-
 // --------------------------------
 
 // FIXME: Find a way to cascade appearance and adjust heights, and get rid of this class.
 // http://webkit.org/b/62535
 class RenderSliderContainer final : public RenderFlexibleBox {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderSliderContainer);
+    WTF_MAKE_TZONE_ALLOCATED(RenderSliderContainer);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSliderContainer);
 public:
     RenderSliderContainer(SliderContainerElement& element, RenderStyle&& style)
-        : RenderFlexibleBox(Type::SliderContainer, element, WTFMove(style))
+        : RenderFlexibleBox(Type::SliderContainer, element, WTF::move(style))
     {
     }
 
@@ -109,7 +106,7 @@ private:
     bool isFlexibleBoxImpl() const override { return true; }
 };
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderSliderContainer);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderSliderContainer);
 
 RenderBox::LogicalExtentComputedValues RenderSliderContainer::computeLogicalHeight(LayoutUnit logicalHeight, LayoutUnit logicalTop) const
 {
@@ -216,7 +213,6 @@ void SliderThumbElement::setPositionFromValue()
         renderer->setNeedsLayout();
 }
 
-
 bool SliderThumbElement::isDisabledFormControl() const
 {
     RefPtr input = hostInput();
@@ -275,7 +271,6 @@ void SliderThumbElement::setPositionFromPoint(const LayoutPoint& absolutePoint)
         position -= !isInlineFlipped ? thumbRenderer->marginLeft() : thumbRenderer->marginRight();
     }
 
-    inputRenderer = nullptr;
     thumbRenderer = nullptr;
     trackRenderer = nullptr;
 
@@ -302,8 +297,17 @@ void SliderThumbElement::setPositionFromPoint(const LayoutPoint& absolutePoint)
 
     // FIXME: This is no longer being set from renderer. Consider updating the method name.
     input->setValueFromRenderer(valueString);
-    if (CheckedPtr renderer = this->renderer())
+    if (CheckedPtr renderer = this->renderer()) {
+        // FIXME: The position of repaint rects is incorrect for non-horizontal
+        // block flipped writing modes during layout. Repaint beforehand to
+        // avoid this. The root cause is suspected to be related to
+        // https://webkit.org/b/70762
+        auto writingMode = renderer->writingMode();
+        if (writingMode.isBlockFlipped() && !writingMode.isHorizontal())
+            inputRenderer->repaint();
+
         renderer->setNeedsLayout();
+    }
 }
 
 void SliderThumbElement::startDragging()
@@ -357,7 +361,7 @@ void SliderThumbElement::defaultEventHandler(Event& event)
         return;
     } else if (eventType == eventNames().mousemoveEvent) {
         if (m_inDragMode)
-            setPositionFromPoint(mouseEvent->absoluteLocation());
+            setPositionFromPoint(LayoutPoint(mouseEvent->absoluteLocation()));
         return;
     }
 
@@ -389,7 +393,7 @@ void SliderThumbElement::willDetachRenderers()
             frame->eventHandler().setCapturingMouseEventsElement(nullptr);
     }
 #if ENABLE(IOS_TOUCH_EVENTS)
-    unregisterForTouchEvents();
+    unregisterForTouchEvents(EventHandlerRemovalReason::RendererDetached);
 #endif
 }
 
@@ -411,13 +415,14 @@ void SliderThumbElement::clearExclusiveTouchIdentifier()
     m_exclusiveTouchIdentifier = NoIdentifier;
 }
 
+// FIXME: Share these functions with CheckboxInputType somehow?
 static Touch* findTouchWithIdentifier(TouchList& list, unsigned identifier)
 {
     unsigned length = list.length();
     for (unsigned i = 0; i < length; ++i) {
-        RefPtr<Touch> touch = list.item(i);
+        auto* touch = list.item(i);
         if (touch->identifier() == identifier)
-            return touch.get();
+            return touch;
     }
     return nullptr;
 }
@@ -455,7 +460,7 @@ void SliderThumbElement::handleTouchMove(TouchEvent& touchEvent)
     if (!targetTouches)
         return;
 
-    RefPtr<Touch> touch = findTouchWithIdentifier(*targetTouches, identifier);
+    RefPtr touch = findTouchWithIdentifier(*targetTouches, identifier);
     if (!touch)
         return;
 
@@ -475,7 +480,7 @@ void SliderThumbElement::handleTouchEndAndCancel(TouchEvent& touchEvent)
         return;
     // If our exclusive touch still exists, it was not the touch
     // that ended, so we should not stop dragging.
-    RefPtr<Touch> exclusiveTouch = findTouchWithIdentifier(*targetTouches, identifier);
+    RefPtr exclusiveTouch = findTouchWithIdentifier(*targetTouches, identifier);
     if (exclusiveTouch)
         return;
 
@@ -488,7 +493,7 @@ void SliderThumbElement::handleTouchEndAndCancel(TouchEvent& touchEvent)
 
 void SliderThumbElement::didAttachRenderers()
 {
-    if (shouldAcceptTouchEvents())
+    if (!isDisabledFormControl())
         registerForTouchEvents();
 }
 
@@ -522,23 +527,18 @@ void SliderThumbElement::handleTouchEvent(TouchEvent& touchEvent)
     HTMLDivElement::defaultEventHandler(touchEvent);
 }
 
-bool SliderThumbElement::shouldAcceptTouchEvents()
-{
-    return renderer() && !isDisabledFormControl();
-}
-
 void SliderThumbElement::registerForTouchEvents()
 {
     if (m_isRegisteredAsTouchEventListener)
         return;
 
-    ASSERT(shouldAcceptTouchEvents());
+    ASSERT(!isDisabledFormControl());
 
     document().addTouchEventHandler(*this);
     m_isRegisteredAsTouchEventListener = true;
 }
 
-void SliderThumbElement::unregisterForTouchEvents()
+void SliderThumbElement::unregisterForTouchEvents(EventHandlerRemovalReason reason)
 {
     if (!m_isRegisteredAsTouchEventListener)
         return;
@@ -546,7 +546,7 @@ void SliderThumbElement::unregisterForTouchEvents()
     clearExclusiveTouchIdentifier();
     stopDragging();
 
-    document().removeTouchEventHandler(*this);
+    document().removeTouchEventHandler(*this, EventHandlerRemoval::One, reason);
     m_isRegisteredAsTouchEventListener = false;
 }
 
@@ -558,7 +558,7 @@ void SliderThumbElement::hostDisabledStateChanged()
         stopDragging();
 
 #if ENABLE(IOS_TOUCH_EVENTS)
-    if (shouldAcceptTouchEvents())
+    if (!isDisabledFormControl())
         registerForTouchEvents();
     else
         unregisterForTouchEvents();
@@ -588,8 +588,8 @@ std::optional<Style::UnadjustedStyle> SliderThumbElement::resolveCustomStyle(con
     default:
         break;
     }
-    return elementStyle;
 
+    return elementStyle;
 }
 
 Ref<Element> SliderThumbElement::cloneElementWithoutAttributesAndChildren(Document& document, CustomElementRegistry*) const
@@ -614,13 +614,7 @@ Ref<SliderContainerElement> SliderContainerElement::create(Document& document)
 
 RenderPtr<RenderElement> SliderContainerElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
-    return createRenderer<RenderSliderContainer>(*this, WTFMove(style));
+    return createRenderer<RenderSliderContainer>(*this, WTF::move(style));
 }
 
-
-
-
-
 }
-
-

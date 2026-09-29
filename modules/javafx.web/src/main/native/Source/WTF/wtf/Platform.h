@@ -70,7 +70,15 @@
 /* ==== Platform additions: additions to Platform.h from outside the main repository ==== */
 
 #if USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/AdditionalPlatform.h>)
+/* FIXME: Properly support using WKA in modules. */
+#if defined(__clang__) && defined(__has_feature) && __has_feature(modules)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnon-modular-include-in-module"
+#endif
 #include <WebKitAdditions/AdditionalPlatform.h>
+#if defined(__clang__) && defined(__has_feature) && __has_feature(modules)
+#pragma clang diagnostic pop
+#endif
 #endif
 
 /* IWYU pragma: end_exports */
@@ -82,9 +90,12 @@
    belong as part of Platform.h at all. */
 
 
-#if PLATFORM(GTK)
+#if USE(GLIB)
 #define GLIB_VERSION_MIN_REQUIRED GLIB_VERSION_2_56
 #define GLIB_VERSION_MAX_ALLOWED GLIB_VERSION_2_70
+#endif
+
+#if PLATFORM(GTK)
 #if USE(GTK4)
 #define GDK_VERSION_MIN_REQUIRED GDK_VERSION_4_0
 #else
@@ -92,17 +103,8 @@
 #endif
 #endif
 
-#if PLATFORM(WPE)
-#define GLIB_VERSION_MIN_REQUIRED GLIB_VERSION_2_56
-#define GLIB_VERSION_MAX_ALLOWED GLIB_VERSION_2_70
-#endif
-
 #if USE(SOUP)
-#if USE(SOUP2)
-#define SOUP_VERSION_MIN_REQUIRED SOUP_VERSION_2_54
-#else
 #define SOUP_VERSION_MIN_REQUIRED SOUP_VERSION_3_0
-#endif
 #endif
 
 #if PLATFORM(COCOA)
@@ -163,4 +165,11 @@
 /* FIXME: This is used to "turn on a specific feature of WebKit", so should be converted to an ENABLE macro. */
 #if PLATFORM(COCOA) || PLATFORM(GTK) || PLATFORM(WPE)
 #define USE_ACCESSIBILITY_CONTEXT_MENUS 1
+#endif
+
+#if OS(WINDOWS)
+// https://github.com/MicrosoftDocs/cpp-docs/blob/main/docs/cpp/empty-bases.md
+#define WTF_EMPTY_BASE_CLASS __declspec(empty_bases)
+#else
+#define WTF_EMPTY_BASE_CLASS
 #endif

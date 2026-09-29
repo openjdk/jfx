@@ -31,10 +31,10 @@ namespace JSC {
 
 class DateCache;
 
-enum DateTimeFormat {
-    DateTimeFormatDate = 1,
-    DateTimeFormatTime = 2,
-    DateTimeFormatDateAndTime = DateTimeFormatDate | DateTimeFormatTime
+enum class DateTimeFormat {
+    Date = 1,
+    Time = 2,
+    DateAndTime = Date | Time
 };
 
 JS_EXPORT_PRIVATE WTF::String formatDateTime(const GregorianDateTime&, DateTimeFormat, bool asUTCVariant, DateCache&);

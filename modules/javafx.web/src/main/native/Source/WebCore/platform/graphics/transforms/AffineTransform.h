@@ -27,13 +27,14 @@
 
 #pragma once
 
-#include "CompositeOperation.h"
-#include "FloatConversion.h"
-#include "FloatPoint.h"
-#include "FloatSize.h"
+#include <WebCore/CompositeOperation.h>
+#include <WebCore/FloatConversion.h>
+#include <WebCore/FloatPoint.h>
+#include <WebCore/FloatSize.h>
 #include <array>
 #include <optional>
 #include <span>
+#include <wtf/Compiler.h>
 #include <wtf/Forward.h>
 #include <wtf/TZoneMalloc.h>
 
@@ -248,7 +249,7 @@ constexpr AffineTransform::AffineTransform(std::span<const double, 6> transform)
 {
 }
 
-constexpr std::span<const double, 6> AffineTransform::span() const
+constexpr std::span<const double, 6> AffineTransform::span() const LIFETIME_BOUND
 {
     return m_transform;
 }

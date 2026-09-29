@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "AppHighlight.h"
-#include "AppHighlightRangeData.h"
-#include "EventTarget.h"
+#include <WebCore/AppHighlight.h>
+#include <WebCore/AppHighlightRangeData.h>
+#include <WebCore/EventTarget.h>
 #include <wtf/Forward.h>
 #include <wtf/MonotonicTime.h>
 #include <wtf/OptionSet.h>

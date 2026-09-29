@@ -68,16 +68,16 @@ function disposeAsync()
 {
     'use strict';
 
-    var promiseCapability = @newPromiseCapability(@Promise);
+    var promise = @newPromise();
 
     if (!@isAsyncDisposableStack(this)) {
-        @rejectPromiseWithFirstResolvingFunctionCallCheck(promiseCapability.promise, @makeTypeError("AsyncDisposableStack.prototype.disposeAsync requires that |this| be a AsyncDisposableStack object"));
-        return promiseCapability.promise;
+        @rejectPromiseWithFirstResolvingFunctionCallCheck(promise, @makeTypeError("AsyncDisposableStack.prototype.disposeAsync requires that |this| be a AsyncDisposableStack object"));
+        return promise;
     }
 
     if (@getAsyncDisposableStackInternalField(this, @asyncDisposableStackFieldState) === @AsyncDisposableStackStateDisposed) {
-        @resolvePromiseWithFirstResolvingFunctionCallCheck(promiseCapability.promise, @undefined);
-        return promiseCapability.promise;
+        @resolvePromiseWithFirstResolvingFunctionCallCheck(promise, @undefined);
+        return promise;
     }
 
     @putAsyncDisposableStackInternalField(this, @asyncDisposableStackFieldState, @AsyncDisposableStackStateDisposed);
@@ -103,15 +103,15 @@ function disposeAsync()
         if (i) {
             var resource = stack[--i];
             try {
-                @Promise.@resolve(resource.method.@call(resource.value)).@then(loop, handleError);
+                @promiseResolve(@Promise, resource.method.@call(resource.value)).@then(loop, handleError);
             } catch (error) {
                 handleError(error);
             }
         } else {
             if (thrown)
-                @rejectPromiseWithFirstResolvingFunctionCallCheck(promiseCapability.promise, suppressed);
+                @rejectPromiseWithFirstResolvingFunctionCallCheck(promise, suppressed);
             else
-               @resolvePromiseWithFirstResolvingFunctionCallCheck(promiseCapability.promise, @undefined);
+               @resolvePromiseWithFirstResolvingFunctionCallCheck(promise, @undefined);
         }
     };
 
@@ -119,7 +119,7 @@ function disposeAsync()
 
     @putAsyncDisposableStackInternalField(this, @asyncDisposableStackFieldCapability, []);
 
-    return promiseCapability.promise;
+    return promise;
 }
 
 // https://tc39.es/proposal-explicit-resource-management/#sec-asyncdisposablestack.prototype.move

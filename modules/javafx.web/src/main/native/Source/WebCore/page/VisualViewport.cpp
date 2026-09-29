@@ -29,20 +29,19 @@
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "ContextDestructionObserver.h"
-#include "Document.h"
+#include "DocumentPage.h"
+#include "DocumentView.h"
 #include "Event.h"
 #include "EventNames.h"
 #include "EventTargetInterfaces.h"
-#include "FrameInlines.h"
 #include "LocalDOMWindow.h"
 #include "LocalFrameInlines.h"
 #include "LocalFrameView.h"
-#include "Page.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(VisualViewport);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(VisualViewport);
 
 VisualViewport::VisualViewport(LocalDOMWindow& window)
     : LocalDOMWindowProperty(&window)
@@ -62,7 +61,7 @@ ScriptExecutionContext* VisualViewport::scriptExecutionContext() const
 
 bool VisualViewport::addEventListener(const AtomString& eventType, Ref<EventListener>&& listener, const AddEventListenerOptions& options)
 {
-    if (!EventTarget::addEventListener(eventType, WTFMove(listener), options))
+    if (!EventTarget::addEventListener(eventType, WTF::move(listener), options))
         return false;
 
     if (RefPtr frame = this->frame())

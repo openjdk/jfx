@@ -35,6 +35,7 @@
 #include "CSSGridLineValue.h"
 #include "CSSPrimitiveValue.h"
 #include "StyleBuilderChecking.h"
+#include "StylePrimitiveKeyword+Logging.h"
 #include "StylePrimitiveNumericTypes+Logging.h"
 #include <wtf/text/TextStream.h>
 
@@ -49,23 +50,28 @@ static int clampGridIntegerPosition(int integerPosition)
     return clampTo(integerPosition, GridPosition::min(), GridPosition::max());
 }
 
+void add(Hasher& hasher, const GridPosition& gridPosition)
+{
+    addArgs(hasher, gridPosition.m_type, gridPosition.m_integerPosition, gridPosition.m_namedGridLine);
+}
+
 GridPosition::GridPosition(GridPosition::Explicit&& explicitPosition)
     : m_type { GridPositionType::Explicit }
     , m_integerPosition { clampGridIntegerPosition(explicitPosition.position.value) }
-    , m_namedGridLine { WTFMove(explicitPosition.name) }
+    , m_namedGridLine { WTF::move(explicitPosition.name) }
 {
 }
 
 GridPosition::GridPosition(GridPosition::Span&& spanPosition)
     : m_type { GridPositionType::Span }
     , m_integerPosition { clampGridIntegerPosition(spanPosition.position.value) }
-    , m_namedGridLine { WTFMove(spanPosition.name) }
+    , m_namedGridLine { WTF::move(spanPosition.name) }
 {
 }
 
 GridPosition::GridPosition(CustomIdentifier&& namedGridAreaPosition)
     : m_type { GridPositionType::NamedGridArea }
-    , m_namedGridLine { WTFMove(namedGridAreaPosition.value) }
+    , m_namedGridLine { WTF::move(namedGridAreaPosition.value) }
 {
 }
 
@@ -129,9 +135,9 @@ auto CSSValueConversion<GridPosition>::operator()(BuilderState& state, const CSS
     auto gridLineName = uncheckedGridLineName && uncheckedGridLineName->isCustomIdent() ? AtomString { uncheckedGridLineName->stringValue() } : nullAtom();
 
     if (isValueID(uncheckedSpanValue, CSSValueSpan))
-        return GridPosition::Span { { gridLineNumber > 0 ? gridLineNumber : 1 }, CustomIdentifier { WTFMove(gridLineName) } };
+        return GridPosition::Span { { gridLineNumber > 0 ? gridLineNumber : 1 }, CustomIdentifier { WTF::move(gridLineName) } };
 
-    return GridPosition::Explicit { { gridLineNumber }, CustomIdentifier { WTFMove(gridLineName) } };
+    return GridPosition::Explicit { { gridLineNumber }, CustomIdentifier { WTF::move(gridLineName) } };
 }
 
 // MARK: - Logging

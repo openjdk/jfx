@@ -26,12 +26,19 @@
 #include "config.h"
 #include "SharedWorkerThread.h"
 
+#include "IDBConnectionProxy.h"
 #include "Logging.h"
 #include "ServiceWorker.h"
 #include "SharedWorkerGlobalScope.h"
+#include "SocketProvider.h"
 #include "WorkerObjectProxy.h"
 
 namespace WebCore {
+
+Ref<SharedWorkerThread> SharedWorkerThread::create(SharedWorkerIdentifier identifier, const WorkerParameters& parameters, const ScriptBuffer& sourceCode, WorkerLoaderProxy& loaderProxy, WorkerDebuggerProxy& debuggerProxy, WorkerObjectProxy& objectProxy, WorkerBadgeProxy& badgeProxy, WorkerThreadStartMode startMode, const SecurityOrigin& topOrigin, IDBClient::IDBConnectionProxy* connectionProxy, SocketProvider* socketProvider, JSC::RuntimeFlags runtimeFlags)
+{
+    return adoptRef(*new SharedWorkerThread(identifier, parameters, sourceCode, loaderProxy, debuggerProxy, objectProxy, badgeProxy, startMode, topOrigin, connectionProxy, socketProvider, runtimeFlags));
+}
 
 SharedWorkerThread::SharedWorkerThread(SharedWorkerIdentifier identifier, const WorkerParameters& parameters, const ScriptBuffer& sourceCode, WorkerLoaderProxy& loaderProxy, WorkerDebuggerProxy& debuggerProxy, WorkerObjectProxy& objectProxy, WorkerBadgeProxy& badgeProxy, WorkerThreadStartMode startMode, const SecurityOrigin& topOrigin, IDBClient::IDBConnectionProxy* connectionProxy, SocketProvider* socketProvider, JSC::RuntimeFlags runtimeFlags)
     : WorkerThread(parameters, sourceCode, loaderProxy, debuggerProxy, objectProxy, badgeProxy, startMode, topOrigin, connectionProxy, socketProvider, runtimeFlags)
@@ -44,7 +51,7 @@ SharedWorkerThread::SharedWorkerThread(SharedWorkerIdentifier identifier, const 
 Ref<WorkerGlobalScope> SharedWorkerThread::createWorkerGlobalScope(const WorkerParameters& parameters, Ref<SecurityOrigin>&& origin, Ref<SecurityOrigin>&& topOrigin)
 {
     RELEASE_LOG(SharedWorker, "%p - SharedWorkerThread::createWorkerGlobalScope: m_identifier=%" PRIu64, this, m_identifier.toUInt64());
-    auto scope = SharedWorkerGlobalScope::create(std::exchange(m_name, { }), parameters, WTFMove(origin), *this, WTFMove(topOrigin), idbConnectionProxy(), socketProvider(), WTFMove(m_workerClient));
+    auto scope = SharedWorkerGlobalScope::create(std::exchange(m_name, { }), parameters, WTF::move(origin), *this, WTF::move(topOrigin), idbConnectionProxy(), socketProvider(), WTF::move(m_workerClient));
     if (parameters.serviceWorkerData)
         scope->setActiveServiceWorker(ServiceWorker::getOrCreate(scope.get(), ServiceWorkerData { *parameters.serviceWorkerData }));
     scope->updateServiceWorkerClientData();

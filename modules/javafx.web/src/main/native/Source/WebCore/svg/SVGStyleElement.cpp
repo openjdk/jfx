@@ -35,7 +35,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGStyleElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SVGStyleElement);
 
 inline SVGStyleElement::SVGStyleElement(const QualifiedName& tagName, Document& document, bool createdByParser)
     : SVGElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
@@ -64,28 +64,6 @@ void SVGStyleElement::setDisabled(bool setDisabled)
 {
     if (RefPtr styleSheet = sheet())
         styleSheet->setDisabled(setDisabled);
-}
-
-const AtomString& SVGStyleElement::type() const
-{
-    auto& typeValue = getAttribute(SVGNames::typeAttr);
-    return typeValue.isNull() ? cssContentTypeAtom() : typeValue;
-}
-
-void SVGStyleElement::setType(const AtomString& type)
-{
-    setAttribute(SVGNames::typeAttr, type);
-}
-
-const AtomString& SVGStyleElement::media() const
-{
-    auto& value = attributeWithoutSynchronization(SVGNames::mediaAttr);
-    return value.isNull() ? allAtom() : value;
-}
-
-void SVGStyleElement::setMedia(const AtomString& media)
-{
-    setAttributeWithoutSynchronization(SVGNames::mediaAttr, media);
 }
 
 String SVGStyleElement::title() const

@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "JSInternalFieldObjectImpl.h"
+#include <JavaScriptCore/JSInternalFieldObjectImpl.h>
 
 namespace JSC {
 
@@ -116,7 +116,7 @@ private:
     static bool preventExtensions(JSObject*, JSGlobalObject*);
     static bool isExtensible(JSObject*, JSGlobalObject*);
     static bool defineOwnProperty(JSObject*, JSGlobalObject*, PropertyName, const PropertyDescriptor&, bool shouldThrow);
-    static void getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
+    static void getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArrayBuilder&, DontEnumPropertiesMode);
     static bool setPrototype(JSObject*, JSGlobalObject*, JSValue prototype, bool shouldThrowIfCantSet);
     static JSValue getPrototype(JSObject*, JSGlobalObject*);
 
@@ -131,8 +131,8 @@ private:
     bool performPreventExtensions(JSGlobalObject*);
     bool performIsExtensible(JSGlobalObject*);
     bool performDefineOwnProperty(JSGlobalObject*, PropertyName, const PropertyDescriptor&, bool shouldThrow);
-    void performGetOwnPropertyNames(JSGlobalObject*, PropertyNameArray&);
-    void performGetOwnEnumerablePropertyNames(JSGlobalObject*, PropertyNameArray&);
+    void performGetOwnPropertyNames(JSGlobalObject*, PropertyNameArrayBuilder&);
+    void performGetOwnEnumerablePropertyNames(JSGlobalObject*, PropertyNameArrayBuilder&);
     bool performSetPrototype(JSGlobalObject*, JSValue prototype, bool shouldThrowIfCantSet);
 
     bool m_isCallable : 1 { false };

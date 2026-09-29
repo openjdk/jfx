@@ -31,12 +31,13 @@
 #if ENABLE(MATHML)
 
 #include "MathMLNames.h"
+#include "MathVariant.h"
 #include "StyledElement.h"
 
 namespace WebCore {
 
 class MathMLElement : public StyledElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(MathMLElement);
+    WTF_MAKE_TZONE_ALLOCATED(MathMLElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(MathMLElement);
 public:
     static Ref<MathMLElement> create(const QualifiedName& tagName, Document&);
@@ -60,31 +61,6 @@ public:
     };
 
     enum class BooleanValue { True, False, Default };
-
-    // These are the mathvariant values from the MathML recommendation.
-    // The special value none means that no explicit mathvariant value has been specified.
-    // Note that the numeral values are important for the computation performed in the mathVariant function of RenderMathMLToken, do not change them!
-    enum class MathVariant {
-        None = 0,
-        Normal = 1,
-        Bold = 2,
-        Italic = 3,
-        BoldItalic = 4,
-        Script = 5,
-        BoldScript = 6,
-        Fraktur = 7,
-        DoubleStruck = 8,
-        BoldFraktur = 9,
-        SansSerif = 10,
-        BoldSansSerif = 11,
-        SansSerifItalic = 12,
-        SansSerifBoldItalic = 13,
-        Monospace = 14,
-        Initial = 15,
-        Tailed = 16,
-        Looped = 17,
-        Stretched = 18
-    };
 
     virtual std::optional<MathVariant> specifiedMathVariant() { return std::nullopt; }
 
@@ -112,7 +88,8 @@ private:
 
 inline bool Node::hasTagName(const MathMLQualifiedName& name) const
 {
-    return isMathMLElement() && downcast<MathMLElement>(*this).hasTagName(name);
+    auto* element = dynamicDowncast<MathMLElement>(*this);
+    return element && element->hasTagName(name);
 }
 
 } // namespace WebCore

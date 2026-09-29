@@ -29,6 +29,7 @@
 #include "CookieChangeListener.h"
 #include "CookieJar.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
 #include <wtf/TZoneMalloc.h>
@@ -44,7 +45,7 @@ class DeferredPromise;
 class ScriptExecutionContext;
 
 class CookieStore final : public RefCounted<CookieStore>, public EventTarget, public ActiveDOMObject, public CookieChangeListener {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CookieStore);
+    WTF_MAKE_TZONE_ALLOCATED(CookieStore);
 public:
     void ref() const final { RefCounted::ref(); }
     void deref() const final { RefCounted::deref(); }
@@ -68,6 +69,9 @@ public:
 
 private:
     explicit CookieStore(ScriptExecutionContext*);
+
+    enum class GetType : bool { Get, GetAll };
+    void getShared(GetType, CookieStoreGetOptions&&, Ref<DeferredPromise>&&);
 
     // CookieChangeListener
     void cookiesAdded(const String& host, const Vector<Cookie>&) final;
@@ -96,4 +100,6 @@ private:
     HashMap<uint64_t, Ref<DeferredPromise>> m_promises;
 };
 
-}
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(CookieStore)

@@ -27,27 +27,27 @@
 
 #if ENABLE(VIDEO)
 
-#include "ContainerNodeInlines.h"
-#include "HTMLMediaElement.h"
-#include "RenderImage.h"
+#include <WebCore/RenderImage.h>
 
 namespace WebCore {
 
+class HTMLMediaElement;
+
 class RenderMedia : public RenderImage {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderMedia);
+    WTF_MAKE_TZONE_ALLOCATED(RenderMedia);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderMedia);
 public:
     RenderMedia(Type, HTMLMediaElement&, RenderStyle&&);
     virtual ~RenderMedia();
 
-    HTMLMediaElement& mediaElement() const { return downcast<HTMLMediaElement>(nodeForNonAnonymous()); }
-    Ref<HTMLMediaElement> protectedMediaElement() const { return mediaElement(); }
+    inline HTMLMediaElement& mediaElement() const; // Defined in RenderMediaInlines.h
+    inline Ref<HTMLMediaElement> protectedMediaElement() const; // Defined in RenderMediaInlines.h
 
     bool shouldDisplayBrokenImageIcon() const final { return false; }
 
 protected:
     void layout() override;
-    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
+    void styleDidChange(Style::Difference, const RenderStyle* oldStyle) override;
 
     void visibleInViewportStateChanged() override { }
 
@@ -60,11 +60,6 @@ private:
     bool isImage() const final { return false; }
     void paintReplaced(PaintInfo&, const LayoutPoint&) override;
 };
-
-inline RenderMedia* HTMLMediaElement::renderer() const
-{
-    return downcast<RenderMedia>(HTMLElement::renderer());
-}
 
 } // namespace WebCore
 

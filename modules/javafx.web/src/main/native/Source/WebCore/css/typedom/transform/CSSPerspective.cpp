@@ -42,7 +42,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(CSSPerspective);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CSSPerspective);
 
 static ExceptionOr<CSSPerspectiveValue> checkLength(CSSPerspectiveValue length)
 {
@@ -51,21 +51,21 @@ static ExceptionOr<CSSPerspectiveValue> checkLength(CSSPerspectiveValue length)
         RELEASE_ASSERT(value);
         if (!equalLettersIgnoringASCIICase(value->value(), "none"_s))
             return Exception { ExceptionCode::TypeError };
-        return { WTFMove(value) };
+        return { WTF::move(value) };
     };
-    return WTF::switchOn(WTFMove(length),
+    return WTF::switchOn(WTF::move(length),
         [] (RefPtr<CSSNumericValue> value) -> ExceptionOr<CSSPerspectiveValue> {
             if (value && !value->type().matches<CSSNumericBaseType::Length>())
                 return Exception { ExceptionCode::TypeError };
-            return { WTFMove(value) };
+            return { WTF::move(value) };
         }, [&] (String value) {
-            return checkKeywordValue(CSSKeywordValue::rectifyKeywordish(WTFMove(value)));
+            return checkKeywordValue(CSSKeywordValue::rectifyKeywordish(WTF::move(value)));
         }, checkKeywordValue);
 }
 
 ExceptionOr<Ref<CSSPerspective>> CSSPerspective::create(CSSPerspectiveValue length)
 {
-    auto checkedLength = checkLength(WTFMove(length));
+    auto checkedLength = checkLength(WTF::move(length));
     if (checkedLength.hasException())
         return checkedLength.releaseException();
     return adoptRef(*new CSSPerspective(checkedLength.releaseReturnValue()));
@@ -86,11 +86,11 @@ ExceptionOr<Ref<CSSPerspective>> CSSPerspective::create(Ref<const CSSFunctionVal
     auto keywordOrNumeric = CSSStyleValueFactory::reifyValue(document, *cssFunctionValue->item(0), std::nullopt);
     if (keywordOrNumeric.hasException())
         return keywordOrNumeric.releaseException();
-    auto& keywordOrNumericValue = keywordOrNumeric.returnValue().get();
-    return [&]() -> ExceptionOr<Ref<CSSPerspective>> {
-        if (auto* keywordValue = dynamicDowncast<CSSKeywordValue>(keywordOrNumericValue))
+    Ref keywordOrNumericValue = keywordOrNumeric.returnValue();
+    return [&] -> ExceptionOr<Ref<CSSPerspective>> {
+        if (RefPtr keywordValue = dynamicDowncast<CSSKeywordValue>(keywordOrNumericValue))
             return CSSPerspective::create(keywordValue);
-        if (auto* numericValue = dynamicDowncast<CSSNumericValue>(keywordOrNumericValue))
+        if (RefPtr numericValue = dynamicDowncast<CSSNumericValue>(keywordOrNumericValue))
             return CSSPerspective::create(numericValue);
         return Exception { ExceptionCode::TypeError, "Expected a CSSNumericValue."_s };
     }();
@@ -98,7 +98,7 @@ ExceptionOr<Ref<CSSPerspective>> CSSPerspective::create(Ref<const CSSFunctionVal
 
 CSSPerspective::CSSPerspective(CSSPerspectiveValue length)
     : CSSTransformComponent(Is2D::No)
-    , m_length(WTFMove(length))
+    , m_length(WTF::move(length))
 {
 }
 
@@ -106,7 +106,7 @@ CSSPerspective::~CSSPerspective() = default;
 
 ExceptionOr<void> CSSPerspective::setLength(CSSPerspectiveValue length)
 {
-    auto checkedLength = checkLength(WTFMove(length));
+    auto checkedLength = checkLength(WTF::move(length));
     if (checkedLength.hasException())
         return checkedLength.releaseException();
     m_length = checkedLength.releaseReturnValue();
@@ -157,7 +157,7 @@ ExceptionOr<Ref<DOMMatrix>> CSSPerspective::toMatrix()
     TransformationMatrix matrix { };
     matrix.applyPerspective(valuePx->value());
 
-    return { DOMMatrix::create(WTFMove(matrix), DOMMatrixReadOnly::Is2D::No) };
+    return { DOMMatrix::create(WTF::move(matrix), DOMMatrixReadOnly::Is2D::No) };
 }
 
 RefPtr<CSSValue> CSSPerspective::toCSSValue() const

@@ -36,7 +36,7 @@ class Document;
 template<typename> class ExceptionOr;
 
 class CSSSkew : public CSSTransformComponent {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CSSSkew);
+    WTF_MAKE_TZONE_ALLOCATED(CSSSkew);
 public:
     static ExceptionOr<Ref<CSSSkew>> create(Ref<CSSNumericValue>, Ref<CSSNumericValue>);
     static ExceptionOr<Ref<CSSSkew>> create(Ref<const CSSFunctionValue>, Document&);
@@ -51,7 +51,7 @@ public:
     ExceptionOr<Ref<DOMMatrix>> toMatrix() final;
     void setIs2D(bool) final { };
 
-    CSSTransformType getType() const final { return CSSTransformType::Skew; }
+    CSSTransformType transformType() const final { return CSSTransformType::Skew; }
 
     RefPtr<CSSValue> toCSSValue() const final;
 
@@ -65,5 +65,5 @@ private:
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CSSSkew)
-    static bool isType(const WebCore::CSSTransformComponent& transform) { return transform.getType() == WebCore::CSSTransformType::Skew; }
+    static bool isType(const WebCore::CSSTransformComponent& transform) { return transform.transformType() == WebCore::CSSTransformType::Skew; }
 SPECIALIZE_TYPE_TRAITS_END()

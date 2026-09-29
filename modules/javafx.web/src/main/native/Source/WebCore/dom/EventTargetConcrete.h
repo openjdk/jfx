@@ -35,18 +35,20 @@
 namespace WebCore {
 
 class EventTargetConcrete final : public RefCounted<EventTargetConcrete>, public EventTarget, private ContextDestructionObserver {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(EventTargetConcrete);
+    WTF_MAKE_TZONE_ALLOCATED(EventTargetConcrete);
 public:
     static Ref<EventTargetConcrete> create(ScriptExecutionContext&);
 
-    using RefCounted::ref;
-    using RefCounted::deref;
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
 
 private:
     explicit EventTargetConcrete(ScriptExecutionContext&);
 
     enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::EventTarget; }
-    ScriptExecutionContext* scriptExecutionContext() const final { return ContextDestructionObserver::scriptExecutionContext(); }
+    ScriptExecutionContext* scriptExecutionContext() const final;
 
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }

@@ -31,6 +31,11 @@
 #include "ContentSecurityPolicy.h"
 #include "FetchRequest.h"
 #include "JSBackgroundFetchRegistration.h"
+#include "JSDOMConvertInterface.h"
+#include "JSDOMConvertNullable.h"
+#include "JSDOMConvertSequences.h"
+#include "JSDOMConvertStrings.h"
+#include "JSDOMPromiseDeferred.h"
 #include "SWClientConnection.h"
 #include "ServiceWorkerProvider.h"
 #include "ServiceWorkerRegistration.h"
@@ -48,7 +53,7 @@ BackgroundFetchManager::~BackgroundFetchManager()
 
 static ExceptionOr<Vector<Ref<FetchRequest>>> buildBackgroundFetchRequests(ScriptExecutionContext& context, BackgroundFetchManager::Requests&& backgroundFetchRequests)
 {
-    return switchOn(WTFMove(backgroundFetchRequests), [&context] (RefPtr<FetchRequest>&& request) -> ExceptionOr<Vector<Ref<FetchRequest>>> {
+    return switchOn(WTF::move(backgroundFetchRequests), [&context] (RefPtr<FetchRequest>&& request) -> ExceptionOr<Vector<Ref<FetchRequest>>> {
         auto result = FetchRequest::create(context, request.releaseNonNull(), { });
         if (result.hasException())
             return result.releaseException();
@@ -56,7 +61,7 @@ static ExceptionOr<Vector<Ref<FetchRequest>>> buildBackgroundFetchRequests(Scrip
             return Exception { ExceptionCode::TypeError, "Request has no-cors mode"_s };
         return Vector<Ref<FetchRequest>> { result.releaseReturnValue() };
     }, [&context] (String&& url) -> ExceptionOr<Vector<Ref<FetchRequest>>> {
-        auto result = FetchRequest::create(context, WTFMove(url), { });
+        auto result = FetchRequest::create(context, WTF::move(url), { });
         if (result.hasException())
             return result.releaseException();
         return Vector<Ref<FetchRequest>> { result.releaseReturnValue() };
@@ -65,7 +70,7 @@ static ExceptionOr<Vector<Ref<FetchRequest>>> buildBackgroundFetchRequests(Scrip
         Vector<Ref<FetchRequest>> requests;
         requests.reserveInitialCapacity(requestInfos.size());
         for (auto& requestInfo : requestInfos) {
-            auto result = FetchRequest::create(context, WTFMove(requestInfo), { });
+            auto result = FetchRequest::create(context, WTF::move(requestInfo), { });
             if (result.hasException())
                 return result.releaseException();
             if (result.returnValue()->mode() == FetchOptions::Mode::NoCors)
@@ -85,7 +90,7 @@ Ref<BackgroundFetchRegistration> BackgroundFetchManager::backgroundFetchRegistra
 {
     auto identifier = data.identifier;
     auto result = m_backgroundFetchRegistrations.ensure(identifier, [&] {
-        return BackgroundFetchRegistration::create(context, WTFMove(data));
+        return BackgroundFetchRegistration::create(context, WTF::move(data));
     });
 
     auto registration = result.iterator->value;
@@ -96,7 +101,7 @@ Ref<BackgroundFetchRegistration> BackgroundFetchManager::backgroundFetchRegistra
 
 void BackgroundFetchManager::fetch(ScriptExecutionContext& context, const String& fetchIdentifier, Requests&& backgroundFetchRequests, BackgroundFetchOptions&& options, DOMPromiseDeferred<IDLInterface<BackgroundFetchRegistration>>&& promise)
 {
-    auto generatedRequests = buildBackgroundFetchRequests(context, WTFMove(backgroundFetchRequests));
+    auto generatedRequests = buildBackgroundFetchRequests(context, WTF::move(backgroundFetchRequests));
     if (generatedRequests.hasException()) {
         promise.reject(generatedRequests.releaseException());
         return;
@@ -113,12 +118,12 @@ void BackgroundFetchManager::fetch(ScriptExecutionContext& context, const String
             if (CheckedPtr policy = context.contentSecurityPolicy())
                 responseHeaders = policy->responseHeaders();
         }
-        return { fetchRequest->resourceRequest(), fetchRequest->fetchOptions(), fetchRequest->headers().guard(), fetchRequest->headers().internalHeaders(), fetchRequest->internalRequestReferrer(), WTFMove(responseHeaders) };
+        return { fetchRequest->resourceRequest(), fetchRequest->fetchOptions(), fetchRequest->headers().guard(), fetchRequest->headers().internalHeaders(), fetchRequest->internalRequestReferrer(), WTF::move(responseHeaders) };
     });
-    SWClientConnection::fromScriptExecutionContext(context)->startBackgroundFetch(m_identifier, fetchIdentifier, WTFMove(requests), WTFMove(options), [weakThis = WeakPtr { *this }, weakContext = WeakPtr { context }, promise = WTFMove(promise)](ExceptionOr<std::optional<BackgroundFetchInformation>>&& result) mutable {
+    SWClientConnection::fromScriptExecutionContext(context)->startBackgroundFetch(m_identifier, fetchIdentifier, WTF::move(requests), WTF::move(options), [weakThis = WeakPtr { *this }, weakContext = WeakPtr { context }, promise = WTF::move(promise)](ExceptionOr<std::optional<BackgroundFetchInformation>>&& result) mutable {
         if (!weakContext)
             return;
-        weakContext->postTask([weakThis = WTFMove(weakThis), promise = WTFMove(promise), result = WTFMove(result)](auto& context) mutable {
+        weakContext->postTask([weakThis = WTF::move(weakThis), promise = WTF::move(promise), result = WTF::move(result)](auto& context) mutable {
             if (!weakThis)
                 return;
 
@@ -145,10 +150,10 @@ void BackgroundFetchManager::get(ScriptExecutionContext& context, const String& 
         return;
     }
 
-    SWClientConnection::fromScriptExecutionContext(context)->backgroundFetchInformation(m_identifier, fetchIdentifier, [weakThis = WeakPtr { *this }, weakContext = WeakPtr { context }, promise = WTFMove(promise)](auto&& result) mutable {
+    SWClientConnection::fromScriptExecutionContext(context)->backgroundFetchInformation(m_identifier, fetchIdentifier, [weakThis = WeakPtr { *this }, weakContext = WeakPtr { context }, promise = WTF::move(promise)](auto&& result) mutable {
         if (!weakContext)
             return;
-        weakContext->postTask([weakThis = WTFMove(weakThis), promise = WTFMove(promise), result = WTFMove(result)](auto& context) mutable {
+        weakContext->postTask([weakThis = WTF::move(weakThis), promise = WTF::move(promise), result = WTF::move(result)](auto& context) mutable {
             if (!weakThis)
                 return;
 
@@ -168,8 +173,8 @@ void BackgroundFetchManager::get(ScriptExecutionContext& context, const String& 
 
 void BackgroundFetchManager::getIds(ScriptExecutionContext& context, DOMPromiseDeferred<IDLSequence<IDLDOMString>>&& promise)
 {
-    SWClientConnection::fromScriptExecutionContext(context)->backgroundFetchIdentifiers(m_identifier, [promise = WTFMove(promise)](Vector<String>&& result) mutable {
-        promise.resolve(WTFMove(result));
+    SWClientConnection::fromScriptExecutionContext(context)->backgroundFetchIdentifiers(m_identifier, [promise = WTF::move(promise)](Vector<String>&& result) mutable {
+        promise.resolve(WTF::move(result));
     });
 }
 

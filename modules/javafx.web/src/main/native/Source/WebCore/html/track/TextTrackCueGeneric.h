@@ -27,14 +27,15 @@
 
 #if ENABLE(VIDEO)
 
-#include "Color.h"
-#include "VTTCue.h"
+#include <WebCore/Color.h>
+#include <WebCore/EventTargetInterfaces.h>
+#include <WebCore/VTTCue.h>
 
 namespace WebCore {
 
 // A "generic" cue is a non-WebVTT cue, so it is not positioned/sized with the WebVTT logic.
 class TextTrackCueGeneric final : public VTTCue {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(TextTrackCueGeneric, WEBCORE_EXPORT);
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(TextTrackCueGeneric, WEBCORE_EXPORT);
 public:
     WEBCORE_EXPORT static Ref<TextTrackCueGeneric> create(ScriptExecutionContext&, const MediaTime& start, const MediaTime& end, const String& content);
 
@@ -89,10 +90,11 @@ namespace WTF {
 
 template<> struct LogArgument<WebCore::TextTrackCueGeneric> : LogArgument<WebCore::TextTrackCue> { };
 
-}
+} // namespace WTF
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::TextTrackCueGeneric)
 static bool isType(const WebCore::TextTrackCue& cue) { return cue.cueType() == WebCore::TextTrackCue::ConvertedToWebVTT; }
+static bool isType(const WebCore::EventTarget& context) { return context.eventTargetInterface() == WebCore::EventTargetInterfaceType::TextTrackCue; }
 SPECIALIZE_TYPE_TRAITS_END()
 
 #endif

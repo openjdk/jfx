@@ -20,8 +20,8 @@
 
 #pragma once
 
-#include "InternalFunction.h"
-#include "ProxyObject.h"
+#include <JavaScriptCore/InternalFunction.h>
+#include <JavaScriptCore/ProxyObject.h>
 
 namespace JSC {
 
@@ -56,6 +56,7 @@ STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(ArrayConstructor, InternalFunction);
 
 JSArray* constructArrayWithSizeQuirk(JSGlobalObject*, ArrayAllocationProfile*, JSValue length, JSValue prototype = JSValue());
 
+JSC_DECLARE_HOST_FUNCTION(arrayConstructorPrivateFromFastWithoutMapFn);
 JSC_DECLARE_HOST_FUNCTION(arrayConstructorPrivateFuncIsArraySlow);
 bool isArraySlow(JSGlobalObject*, ProxyObject* argument);
 

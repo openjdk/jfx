@@ -26,8 +26,8 @@
 
 #pragma once
 
-#include "JSCJSValue.h"
-#include "Weak.h"
+#include <JavaScriptCore/JSCJSValue.h>
+#include <JavaScriptCore/Weak.h>
 
 namespace JSC {
 

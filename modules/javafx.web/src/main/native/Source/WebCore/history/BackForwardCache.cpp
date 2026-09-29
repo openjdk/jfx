@@ -26,7 +26,6 @@
 #include "config.h"
 #include "BackForwardCache.h"
 
-#include "ApplicationCacheHost.h"
 #include "BackForwardController.h"
 #include "CachedPage.h"
 #include "DeviceMotionController.h"
@@ -35,8 +34,10 @@
 #include "DiagnosticLoggingKeys.h"
 #include "DiagnosticLoggingResultType.h"
 #include "Document.h"
-#include "DocumentInlines.h"
 #include "DocumentLoader.h"
+#include "DocumentQuirks.h"
+#include "DocumentSecurityOrigin.h"
+#include "DocumentView.h"
 #include "FocusController.h"
 #include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
@@ -44,11 +45,11 @@
 #include "HistoryController.h"
 #include "LocalDOMWindow.h"
 #include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "LocalFrameLoaderClient.h"
 #include "LocalFrameView.h"
 #include "Logging.h"
 #include "Page.h"
-#include "Quirks.h"
 #include "ScriptDisallowedScope.h"
 #include "SecurityOriginHash.h"
 #include "Settings.h"
@@ -78,7 +79,7 @@ static inline void logBackForwardCacheFailureDiagnosticMessage(Page* page, const
     if (!page)
         return;
 
-    logBackForwardCacheFailureDiagnosticMessage(page->diagnosticLoggingClient(), reason);
+    logBackForwardCacheFailureDiagnosticMessage(page->checkedDiagnosticLoggingClient(), reason);
 }
 
 static bool canCacheFrame(LocalFrame& frame, DiagnosticLoggingClient& diagnosticLoggingClient, unsigned indentLevel)
@@ -124,7 +125,8 @@ static bool canCacheFrame(LocalFrame& frame, DiagnosticLoggingClient& diagnostic
     }
 
     URL currentURL = documentLoader->url();
-    URL newURL = frameLoader->provisionalDocumentLoader() ? frameLoader->provisionalDocumentLoader()->url() : URL();
+    RefPtr provisionalDocumentLoader = frameLoader->provisionalDocumentLoader();
+    URL newURL = provisionalDocumentLoader ? provisionalDocumentLoader->url() : URL();
     if (!newURL.isEmpty())
         PCLOG(" Determining if frame can be cached navigating from ("_s, currentURL.string(), ") to ("_s, newURL.string(), "):"_s);
     else
@@ -175,13 +177,6 @@ static bool canCacheFrame(LocalFrame& frame, DiagnosticLoggingClient& diagnostic
         isCacheable = false;
     }
 
-    // FIXME: We should investigating caching frames that have an associated
-    // application cache. <rdar://problem/5917899> tracks that work.
-    if (!documentLoader->applicationCacheHost().canCacheInBackForwardCache()) {
-        PCLOG("   -The DocumentLoader uses an application cache"_s);
-        logBackForwardCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::applicationCacheKey());
-        isCacheable = false;
-    }
     if (!frameLoader->client().canCachePage()) {
         PCLOG("   -The client says this frame cannot be cached"_s);
         logBackForwardCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::deniedByClientKey());
@@ -253,9 +248,15 @@ static bool canCachePage(Page& page)
         logBackForwardCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::redirectKey());
         isCacheable = false;
         break;
-    case FrameLoadType::Replace:
+    case FrameLoadType::MultipartReplace:
         // No point writing to the cache on a replace, since we will just write over it again when we leave that page.
-        PCLOG("   -Load type is: Replace"_s);
+        PCLOG("   -Load type is: MultipartReplace"_s);
+        logBackForwardCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::replaceKey());
+        isCacheable = false;
+        break;
+    case FrameLoadType::NavigationAPIReplace:
+        // No point writing to the cache on a replace, since we will just write over it again when we leave that page.
+        PCLOG("   -Load type is: NavigationAPIReplace"_s);
         logBackForwardCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::replaceKey());
         isCacheable = false;
         break;
@@ -323,8 +324,10 @@ void BackForwardCache::dump() const
 {
     WTFLogAlways("Back/Forward Cache:");
     for (auto& item : m_cachedPageMap) {
-        if (auto* cachedPage = std::get_if<UniqueRef<CachedPage>>(&item.value))
-            WTFLogAlways("  Page %p, document %p %s", &(*cachedPage)->page(), (*cachedPage)->document(), (*cachedPage)->document() ? (*cachedPage)->document()->url().string().utf8().data() : "");
+        if (auto* cachedPage = std::get_if<UniqueRef<CachedPage>>(&item.value)) {
+            RefPtr document = (*cachedPage)->document();
+            WTFLogAlways("  Page %p, document %p %s", (*cachedPage)->protectedPage().ptr(), document.get(), document ? document->url().string().utf8().data() : "");
+        }
     }
 }
 
@@ -376,7 +379,7 @@ void BackForwardCache::markPagesForDeviceOrPageScaleChanged(Page& page)
             ASSERT(!m_items.contains(item.key));
             continue;
         }
-        if (&page.mainFrame() == &(*cachedPage)->cachedMainFrame()->view()->frame())
+        if (&page.mainFrame() == &(*cachedPage)->cachedMainFrame()->protectedView()->frame())
             (*cachedPage)->markForDeviceOrPageScaleChanged();
     }
 }
@@ -389,7 +392,7 @@ void BackForwardCache::markPagesForContentsSizeChanged(Page& page)
             ASSERT(!m_items.contains(item.key));
             continue;
         }
-        if (&page.mainFrame() == &(*cachedPage)->cachedMainFrame()->view()->frame())
+        if (&page.mainFrame() == &(*cachedPage)->cachedMainFrame()->protectedView()->frame())
             (*cachedPage)->markForContentsSizeChanged();
     }
 }
@@ -507,7 +510,7 @@ bool BackForwardCache::addIfCacheable(HistoryItem& item, Page* page)
         // Make sure we don't fire any JS events in this scope.
         ScriptDisallowedScope::InMainThread scriptDisallowedScope;
 
-        m_cachedPageMap.set(item.itemID(), makeUniqueRefFromNonNullUniquePtr(WTFMove(cachedPage)));
+        m_cachedPageMap.set(item.itemID(), makeUniqueRefFromNonNullUniquePtr(WTF::move(cachedPage)));
         m_items.add(item.itemID());
         item.notifyChanged();
     }

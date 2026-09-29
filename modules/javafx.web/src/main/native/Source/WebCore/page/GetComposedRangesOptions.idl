@@ -23,7 +23,9 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-dictionary GetComposedRangesOptions {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary GetComposedRangesOptions {
     sequence<ShadowRoot> shadowRoots = [];
 };
 

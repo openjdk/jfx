@@ -58,7 +58,7 @@ bool RenderingUpdateScheduler::scheduleAnimation()
 
 void RenderingUpdateScheduler::adjustRenderingUpdateFrequency()
 {
-    auto renderingUpdateFramesPerSecond = m_page.preferredRenderingUpdateFramesPerSecond();
+    auto renderingUpdateFramesPerSecond = m_page->preferredRenderingUpdateFramesPerSecond();
     if (renderingUpdateFramesPerSecond) {
         setPreferredFramesPerSecond(renderingUpdateFramesPerSecond.value());
         m_useTimer = false;
@@ -73,13 +73,13 @@ void RenderingUpdateScheduler::adjustRenderingUpdateFrequency()
 
 void RenderingUpdateScheduler::scheduleRenderingUpdate()
 {
-    LOG_WITH_STREAM(EventLoop, stream << "RenderingUpdateScheduler for page " << &m_page << " scheduleTimedRenderingUpdate() - already scheduled " << isScheduled() << " page visible " << m_page.isVisible());
+    LOG_WITH_STREAM(EventLoop, stream << "RenderingUpdateScheduler for page " << m_page.ptr() << " scheduleTimedRenderingUpdate() - already scheduled " << isScheduled() << " page visible " << m_page->isVisible());
 
     if (isScheduled())
         return;
 
     // Optimize the case when an invisible page wants just to schedule layer flush.
-    if (!m_page.isVisible()) {
+    if (!m_page->isVisible()) {
         triggerRenderingUpdate();
         return;
     }
@@ -87,11 +87,11 @@ void RenderingUpdateScheduler::scheduleRenderingUpdate()
     tracePoint(ScheduleRenderingUpdate);
 
     if (!scheduleAnimation()) {
-        LOG_WITH_STREAM(DisplayLink, stream << "RenderingUpdateScheduler::scheduleRenderingUpdate for interval " << m_page.preferredRenderingUpdateInterval() << " falling back to timer");
-        startTimer(m_page.preferredRenderingUpdateInterval());
+        LOG_WITH_STREAM(DisplayLink, stream << "RenderingUpdateScheduler::scheduleRenderingUpdate for interval " << m_page->preferredRenderingUpdateInterval() << " falling back to timer");
+        startTimer(m_page->preferredRenderingUpdateInterval());
     }
 
-    m_page.didScheduleRenderingUpdate();
+    m_page->didScheduleRenderingUpdate();
 }
 
 bool RenderingUpdateScheduler::isScheduled() const
@@ -101,7 +101,7 @@ bool RenderingUpdateScheduler::isScheduled() const
 
 void RenderingUpdateScheduler::startTimer(Seconds delay)
 {
-    LOG_WITH_STREAM(EventLoop, stream << "RenderingUpdateScheduler for page " << &m_page << " startTimer(" << delay << ")");
+    LOG_WITH_STREAM(EventLoop, stream << "RenderingUpdateScheduler for page " << m_page.ptr() << " startTimer(" << delay << ")");
 
     ASSERT(!m_refreshTimer);
     m_refreshTimer = makeUnique<Timer>(*this, &RenderingUpdateScheduler::displayRefreshFired);
@@ -115,7 +115,7 @@ void RenderingUpdateScheduler::clearScheduled()
 
 DisplayRefreshMonitorFactory* RenderingUpdateScheduler::displayRefreshMonitorFactory() const
 {
-    return m_page.chrome().client().displayRefreshMonitorFactory();
+    return m_page->chrome().client().displayRefreshMonitorFactory();
 }
 
 void RenderingUpdateScheduler::windowScreenDidChange(PlatformDisplayID displayID)
@@ -126,13 +126,13 @@ void RenderingUpdateScheduler::windowScreenDidChange(PlatformDisplayID displayID
 
 void RenderingUpdateScheduler::displayRefreshFired()
 {
-    LOG_WITH_STREAM(EventLoop, stream << "RenderingUpdateScheduler for page " << &m_page << " displayRefreshFired()");
+    LOG_WITH_STREAM(EventLoop, stream << "RenderingUpdateScheduler for page " << m_page.ptr() << " displayRefreshFired()");
 
     tracePoint(TriggerRenderingUpdate);
 
     clearScheduled();
 
-    if (m_page.chrome().client().shouldTriggerRenderingUpdate(m_rescheduledRenderingUpdateCount)) {
+    if (m_page->chrome().client().shouldTriggerRenderingUpdate(m_rescheduledRenderingUpdateCount)) {
         triggerRenderingUpdate();
         m_rescheduledRenderingUpdateCount = 0;
     } else {
@@ -143,7 +143,7 @@ void RenderingUpdateScheduler::displayRefreshFired()
 
 void RenderingUpdateScheduler::triggerRenderingUpdate()
 {
-    m_page.chrome().client().triggerRenderingUpdate();
+    m_page->chrome().client().triggerRenderingUpdate();
 }
 
-}
+} // namespace WebCore

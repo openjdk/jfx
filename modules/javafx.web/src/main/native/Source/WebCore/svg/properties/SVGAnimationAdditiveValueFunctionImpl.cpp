@@ -26,31 +26,14 @@
 #include "config.h"
 #include "SVGAnimationAdditiveValueFunctionImpl.h"
 
-#include "CSSPropertyParserConsumer+Color.h"
-#include "ContainerNodeInlines.h"
-#include "RenderElement.h"
-#include "SVGElement.h"
 #include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebCore {
 
-Color SVGAnimationColorFunction::colorFromString(SVGElement& targetElement, const String& string)
+std::optional<float> SVGAnimationColorFunction::calculateDistance(SVGElement& targetElement, const String& from, const String& to) const
 {
-    static MainThreadNeverDestroyed<const AtomString> currentColor("currentColor"_s);
-
-    if (string != currentColor.get())
-        return SVGPropertyTraits<Color>::fromString(string);
-
-    if (auto* renderer = targetElement.renderer())
-        return renderer->style().visitedDependentColor(CSSPropertyColor);
-
-    return { };
-}
-
-std::optional<float> SVGAnimationColorFunction::calculateDistance(SVGElement&, const String& from, const String& to) const
-{
-    auto simpleFrom = CSSPropertyParserHelpers::deprecatedParseColorRawWithoutContext(from.trim(deprecatedIsSpaceOrNewline)).toColorTypeLossy<SRGBA<uint8_t>>().resolved();
-    auto simpleTo = CSSPropertyParserHelpers::deprecatedParseColorRawWithoutContext(to.trim(deprecatedIsSpaceOrNewline)).toColorTypeLossy<SRGBA<uint8_t>>().resolved();
+    auto simpleFrom = SVGPropertyTraits<Color>::fromString(targetElement, from).toColorTypeLossy<SRGBA<uint8_t>>().resolved();
+    auto simpleTo = SVGPropertyTraits<Color>::fromString(targetElement, to).toColorTypeLossy<SRGBA<uint8_t>>().resolved();
 
     float red = simpleFrom.red - simpleTo.red;
     float green = simpleFrom.green - simpleTo.green;

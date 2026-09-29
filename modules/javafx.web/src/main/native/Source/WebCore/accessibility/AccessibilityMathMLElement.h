@@ -39,7 +39,6 @@
 namespace WebCore {
 
 class AccessibilityMathMLElement : public AccessibilityRenderObject {
-
 public:
     static Ref<AccessibilityMathMLElement> create(AXID, RenderObject&, AXObjectCache&, bool isAnonymousOperator);
     virtual ~AccessibilityMathMLElement();

@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "AbstractRange.h"
-#include "SimpleRange.h"
+#include <WebCore/AbstractRange.h>
+#include <WebCore/SimpleRange.h>
 
 namespace JSC {
 
@@ -39,7 +39,7 @@ namespace WebCore {
 template<typename> class ExceptionOr;
 
 class StaticRange final : public AbstractRange, public SimpleRange {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(StaticRange);
+    WTF_MAKE_TZONE_ALLOCATED(StaticRange);
 public:
     struct Init {
         RefPtr<Node> startContainer;
@@ -64,12 +64,12 @@ public:
     void visitNodesConcurrently(JSC::AbstractSlotVisitor&) const;
 
 private:
-    StaticRange(SimpleRange&&);
+    explicit StaticRange(SimpleRange&&);
 
     bool isLiveRange() const final { return false; }
 };
 
-}
+} // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::StaticRange)
     static bool isType(const WebCore::AbstractRange& range) { return !range.isLiveRange(); }

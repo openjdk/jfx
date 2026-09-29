@@ -40,7 +40,7 @@ class CSSRayValue final : public CSSValue {
 public:
     static Ref<CSSRayValue> create(CSS::RayFunction ray, CSSBoxType coordinateBox = CSSBoxType::BoxMissing)
     {
-        return adoptRef(*new CSSRayValue(WTFMove(ray), coordinateBox));
+        return adoptRef(*new CSSRayValue(WTF::move(ray), coordinateBox));
     }
 
 
@@ -54,7 +54,7 @@ public:
 private:
     CSSRayValue(CSS::RayFunction ray, CSSBoxType coordinateBox)
         : CSSValue(ClassType::Ray)
-        , m_ray(WTFMove(ray))
+        , m_ray(WTF::move(ray))
         , m_coordinateBox(coordinateBox)
     {
     }

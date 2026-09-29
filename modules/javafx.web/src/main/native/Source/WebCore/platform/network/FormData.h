@@ -19,13 +19,15 @@
 
 #pragma once
 
-#include "BlobData.h"
+#include <WebCore/BlobData.h>
+#include <optional>
 #include <wtf/ArgumentCoder.h>
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/URL.h>
 #include <wtf/Vector.h>
+#include <wtf/WallTime.h>
 #include <wtf/text/WTFString.h>
 
 namespace PAL {
@@ -46,9 +48,9 @@ struct FormDataElement {
 
     FormDataElement() = default;
     explicit FormDataElement(Data&& data)
-        : data(WTFMove(data)) { }
+        : data(WTF::move(data)) { }
     explicit FormDataElement(Vector<uint8_t>&& array)
-        : data(WTFMove(array)) { }
+        : data(WTF::move(array)) { }
     FormDataElement(const String& filename, int64_t fileStart, int64_t fileLength, std::optional<WallTime> expectedFileModificationTime)
         : data(EncodedFileData { filename, fileStart, fileLength, expectedFileModificationTime }) { }
     explicit FormDataElement(const URL& blobURL)
@@ -114,7 +116,7 @@ private:
 };
 
 class FormData final : public RefCounted<FormData> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(FormData, WEBCORE_EXPORT);
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(FormData, WEBCORE_EXPORT);
 public:
     enum class EncodingType : uint8_t {
         FormURLEncoded, // for application/x-www-form-urlencoded
@@ -182,7 +184,7 @@ public:
     WEBCORE_EXPORT URL asBlobURL() const;
 
 private:
-    friend struct IPC::ArgumentCoder<FormData, void>;
+    friend struct IPC::ArgumentCoder<FormData>;
     FormData() = default;
     FormData(const FormData&);
 

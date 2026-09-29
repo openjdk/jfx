@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "FilterEffect.h"
-#include "FilterImageVector.h"
-#include "ImageBufferAllocator.h"
+#include <WebCore/FilterEffect.h>
+#include <WebCore/FilterImageVector.h>
+#include <WebCore/ImageBufferAllocator.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/TZoneMalloc.h>

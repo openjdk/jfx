@@ -84,7 +84,7 @@ public:
 
     SVGTransformValue(SVGTransformType type, Ref<SVGMatrix>&& matrix, float angle, const FloatPoint& rotationCenter)
         : m_type(type)
-        , m_matrix(WTFMove(matrix))
+        , m_matrix(WTF::move(matrix))
         , m_angle(angle)
         , m_rotationCenter(rotationCenter)
     {

@@ -27,6 +27,7 @@
 [
     Conditional=WEB_CODECS,
     JSGenerateToJSObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary WebCodecsAudioDecoderSupport {
   boolean supported;
   WebCodecsAudioDecoderConfig config;

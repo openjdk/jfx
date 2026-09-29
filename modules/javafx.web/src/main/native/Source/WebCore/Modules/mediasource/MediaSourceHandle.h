@@ -41,7 +41,7 @@ class MediaSourcePrivateClient;
 
 class MediaSourceHandle
     : public RefCounted<MediaSourceHandle> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(MediaSourceHandle);
+    WTF_MAKE_TZONE_ALLOCATED(MediaSourceHandle);
 public:
     static Ref<MediaSourceHandle> create(Ref<MediaSourceHandle>&&);
     Ref<MediaSourceHandle> detach();
@@ -76,7 +76,7 @@ private:
 
     const bool m_detachable;
     bool m_detached { false };
-    Ref<SharedPrivate> m_private;
+    const Ref<SharedPrivate> m_private;
 };
 
 using DetachedMediaSourceHandle = MediaSourceHandle;

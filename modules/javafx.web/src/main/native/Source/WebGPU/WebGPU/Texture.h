@@ -25,7 +25,9 @@
 
 #pragma once
 
+#import "BindableResource.h"
 #import <Metal/Metal.h>
+#import <WebGPU/WGPUTextureImpl.h>
 #import <wtf/FastMalloc.h>
 #import <wtf/HashMap.h>
 #import <wtf/HashSet.h>
@@ -37,9 +39,6 @@
 #import <wtf/WeakHashSet.h>
 #import <wtf/WeakPtr.h>
 
-struct WGPUTextureImpl {
-};
-
 namespace WebGPU {
 
 class CommandEncoder;
@@ -47,12 +46,12 @@ class Device;
 class TextureView;
 
 // https://gpuweb.github.io/gpuweb/#gputexture
-class Texture : public RefCountedAndCanMakeWeakPtr<Texture>, public WGPUTextureImpl {
+class Texture : public RefCountedAndCanMakeWeakPtr<Texture>, public WGPUTextureImpl, public TrackedResource {
     WTF_MAKE_TZONE_ALLOCATED(Texture);
 public:
     static Ref<Texture> create(id<MTLTexture> texture, const WGPUTextureDescriptor& descriptor, Vector<WGPUTextureFormat>&& viewFormats, Device& device)
     {
-        return adoptRef(*new Texture(texture, descriptor, WTFMove(viewFormats), device));
+        return adoptRef(*new Texture(texture, descriptor, WTF::move(viewFormats), device));
     }
     static Ref<Texture> createInvalid(Device& device)
     {
@@ -121,11 +120,13 @@ public:
 
     Device& device() const { return m_device; }
 
+    bool previouslyCleared() const;
+    void setPreviouslyCleared();
     bool previouslyCleared(uint32_t mipLevel, uint32_t slice) const;
     void setPreviouslyCleared(uint32_t mipLevel, uint32_t slice, bool = true);
     bool isDestroyed() const { return m_destroyed; }
 
-    static bool hasStorageBindingCapability(WGPUTextureFormat, const Device&, WGPUStorageTextureAccess = WGPUStorageTextureAccess_Undefined);
+    static bool hasStorageBindingCapability(WGPUTextureFormat, const Device&, std::optional<WGPUStorageTextureAccess> = std::nullopt);
     static bool supportsMultisampling(WGPUTextureFormat, const Device&);
     static bool supportsResolve(WGPUTextureFormat, const Device&);
     static bool supportsBlending(WGPUTextureFormat, const Device&);
@@ -139,13 +140,24 @@ public:
     void updateCompletionEvent(const std::pair<id<MTLSharedEvent>, uint64_t>&);
     id<MTLSharedEvent> sharedEvent() const;
     uint64_t sharedEventSignalValue() const;
+    void setRasterizationRateMaps(std::pair<id<MTLRasterizationRateMap>, id<MTLRasterizationRateMap>>&& rateMaps) { m_leftRightRasterizationMaps = WTF::move(rateMaps); }
+    id<MTLRasterizationRateMap> rasterizationMapForSlice(uint32_t slice) const { return slice ? m_leftRightRasterizationMaps.second : m_leftRightRasterizationMaps.first; }
+    uint32_t arrayLayerCount() const;
+    WGPUTextureAspect aspect() const { return WGPUTextureAspect_All; }
+    uint32_t baseArrayLayer() const { return 0; }
+    uint32_t baseMipLevel() const { return 0; }
+    uint32_t parentRelativeSlice() const { return 0; }
+    bool is2DTexture() const { return dimension() == WGPUTextureDimension_2D; }
+    bool is2DArrayTexture() const { return is2DTexture() && arrayLayerCount() > 1; }
+    bool is3DTexture() const { return dimension() == WGPUTextureDimension_3D; }
+    id<MTLTexture> parentTexture() const { return texture(); }
+    const Texture& apiParentTexture() const { return *this; }
 
 private:
     Texture(id<MTLTexture>, const WGPUTextureDescriptor&, Vector<WGPUTextureFormat>&& viewFormats, Device&);
     Texture(Device&);
 
     std::optional<WGPUTextureViewDescriptor> resolveTextureViewDescriptorDefaults(const WGPUTextureViewDescriptor&) const;
-    uint32_t arrayLayerCount() const;
     NSString* errorValidatingTextureViewCreation(const WGPUTextureViewDescriptor&) const;
 
     id<MTLTexture> m_texture { nil };
@@ -168,11 +180,11 @@ private:
     Vector<WeakPtr<TextureView>> m_textureViews;
     bool m_destroyed { false };
     bool m_canvasBacking { false };
-    mutable Vector<uint64_t> m_commandEncoders;
     id<MTLSharedEvent> m_sharedEvent { nil };
+    std::pair<id<MTLRasterizationRateMap>, id<MTLRasterizationRateMap>> m_leftRightRasterizationMaps;
+
     uint64_t m_sharedEventSignalValue { 0 };
-// FIXME: remove @safe once rdar://151039766 lands
-} __attribute__((swift_attr("@safe"))) SWIFT_SHARED_REFERENCE(refTexture, derefTexture);
+} SWIFT_SHARED_REFERENCE(refTexture, derefTexture);
 
 } // namespace WebGPU
 

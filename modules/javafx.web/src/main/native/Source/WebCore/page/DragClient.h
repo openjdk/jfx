@@ -25,16 +25,20 @@
 
 #pragma once
 
-#include "DragActions.h"
-#include "DragData.h"
-#include "DragItem.h"
-#include "FloatPoint.h"
-#include "IntPoint.h"
+#include <WebCore/DragActions.h>
+#include <WebCore/DragData.h>
+#include <WebCore/DragItem.h>
+#include <WebCore/FloatPoint.h>
+#include <WebCore/IntPoint.h>
+#include <wtf/Platform.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 struct NodeIdentifierType;
 using NodeIdentifier = ObjectIdentifier<NodeIdentifierType>;
+
+struct FrameIdentifierType;
+using FrameIdentifier = ObjectIdentifier<FrameIdentifierType>;
 
 class DataTransfer;
 class Element;

@@ -28,8 +28,8 @@
 
 #if ENABLE(PICTURE_IN_PICTURE_API)
 
-#include "PictureInPictureObserver.h"
-#include "Supplementable.h"
+#include <WebCore/PictureInPictureObserver.h>
+#include <WebCore/Supplementable.h>
 #include <wtf/LoggerHelper.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakRef.h>
@@ -47,10 +47,11 @@ class HTMLVideoElementPictureInPicture
     , private LoggerHelper
 #endif
 {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLVideoElementPictureInPicture);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLVideoElementPictureInPicture);
 public:
     HTMLVideoElementPictureInPicture(HTMLVideoElement&);
-    static HTMLVideoElementPictureInPicture* from(HTMLVideoElement&);
+    static HTMLVideoElementPictureInPicture& from(HTMLVideoElement&);
+    static Ref<HTMLVideoElementPictureInPicture> protectedFrom(HTMLVideoElement&);
     static void providePictureInPictureTo(HTMLVideoElement&);
     virtual ~HTMLVideoElementPictureInPicture();
 
@@ -73,8 +74,13 @@ public:
     WTFLogChannel& logChannel() const final;
 #endif
 
+    // PictureInPictureObserver.
+    void ref() const final;
+    void deref() const final;
+
 private:
     static ASCIILiteral supplementName() { return "HTMLVideoElementPictureInPicture"_s; }
+    bool isHTMLVideoElementPictureInPicture() const final { return true; }
 
     bool m_autoPictureInPicture { false };
     bool m_disablePictureInPicture { false };
@@ -91,5 +97,9 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::HTMLVideoElementPictureInPicture)
+    static bool isType(const WebCore::SupplementBase& supplement) { return supplement.isHTMLVideoElementPictureInPicture(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(PICTURE_IN_PICTURE_API)

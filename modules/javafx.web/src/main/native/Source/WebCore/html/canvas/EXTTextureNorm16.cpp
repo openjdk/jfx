@@ -32,19 +32,19 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(EXTTextureNorm16);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(EXTTextureNorm16);
 
 EXTTextureNorm16::EXTTextureNorm16(WebGLRenderingContextBase& context)
     : WebGLExtension(context, WebGLExtensionName::EXTTextureNorm16)
 {
-    context.protectedGraphicsContextGL()->ensureExtensionEnabled("GL_EXT_texture_norm16"_s);
+    context.graphicsContextGL()->enableExtension(GCGLExtension::EXT_texture_norm16);
 }
 
 EXTTextureNorm16::~EXTTextureNorm16() = default;
 
 bool EXTTextureNorm16::supported(GraphicsContextGL& context)
 {
-    return context.supportsExtension("GL_EXT_texture_norm16"_s);
+    return context.supportsExtension(GCGLExtension::EXT_texture_norm16);
 }
 
 } // namespace WebCore

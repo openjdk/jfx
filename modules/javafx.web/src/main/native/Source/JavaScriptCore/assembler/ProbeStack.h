@@ -25,8 +25,9 @@
 
 #pragma once
 
-#include "CPU.h"
+#include <JavaScriptCore/CPU.h>
 #include <wtf/HashMap.h>
+#include <wtf/Platform.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/Threading.h>
@@ -72,7 +73,7 @@ public:
     template<typename T>
     void set(void* logicalAddress, T value)
     {
-        if (sizeof(T) <= s_chunkSize)
+        if constexpr (sizeof(T) <= s_chunkSize)
             m_dirtyBits |= dirtyBitFor(logicalAddress);
         else {
             size_t numberOfChunks = roundUpToMultipleOf<sizeof(T)>(s_chunkSize) / s_chunkSize;
@@ -141,10 +142,7 @@ private:
     static_assert(s_pageSize > s_chunkSize, "bad pageSize or chunkSize");
     static_assert(s_chunkSize == (1 << s_chunkSizeShift), "bad chunkSizeShift");
 
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    typedef typename std::aligned_storage<s_pageSize, std::alignment_of<uintptr_t>::value>::type Buffer;
-    ALLOW_DEPRECATED_DECLARATIONS_END
-    Buffer m_buffer;
+    alignas(uintptr_t) std::byte m_buffer[s_pageSize];
 };
 
 class Stack {

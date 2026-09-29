@@ -25,14 +25,15 @@
 
 #pragma once
 
-#include "CryptoAlgorithmIdentifier.h"
-#include "CryptoKey.h"
-#include "CryptoKeyFormat.h"
-#include "CryptoKeyPair.h"
-#include "CryptoKeyUsage.h"
-#include "JsonWebKey.h"
+#include <WebCore/CryptoAlgorithmIdentifier.h>
+#include <WebCore/CryptoKey.h>
+#include <WebCore/CryptoKeyFormat.h>
+#include <WebCore/CryptoKeyPair.h>
+#include <WebCore/CryptoKeyUsage.h>
+#include <WebCore/JsonWebKey.h>
 #include <pal/crypto/CryptoDigest.h>
 #include <wtf/Function.h>
+#include <wtf/Platform.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/Vector.h>
 #include <wtf/WorkQueue.h>
@@ -68,7 +69,7 @@ public:
     virtual void encrypt(const CryptoAlgorithmParameters&, Ref<CryptoKey>&&, Vector<uint8_t>&&, VectorCallback&&, ExceptionCallback&&, ScriptExecutionContext&, WorkQueue&);
     virtual void decrypt(const CryptoAlgorithmParameters&, Ref<CryptoKey>&&, Vector<uint8_t>&&, VectorCallback&&, ExceptionCallback&&, ScriptExecutionContext&, WorkQueue&);
     virtual void sign(const CryptoAlgorithmParameters&, Ref<CryptoKey>&&, Vector<uint8_t>&&, VectorCallback&&, ExceptionCallback&&, ScriptExecutionContext&, WorkQueue&);
-    virtual void verify(const CryptoAlgorithmParameters&, Ref<CryptoKey>&&, Vector<uint8_t>&& signature, Vector<uint8_t>&&, BoolCallback&&, ExceptionCallback&&, ScriptExecutionContext&, WorkQueue&);
+    virtual void doVerify(const CryptoAlgorithmParameters&, Ref<CryptoKey>&&, Vector<uint8_t>&& signature, Vector<uint8_t>&&, BoolCallback&&, ExceptionCallback&&, ScriptExecutionContext&, WorkQueue&);
     virtual void digest(Vector<uint8_t>&&, VectorCallback&&, ExceptionCallback&&, ScriptExecutionContext&, WorkQueue&);
     virtual void generateKey(const CryptoAlgorithmParameters&, bool extractable, CryptoKeyUsageBitmap, KeyOrKeyPairCallback&&, ExceptionCallback&&, ScriptExecutionContext&);
     virtual void deriveBits(const CryptoAlgorithmParameters&, Ref<CryptoKey>&&, std::optional<size_t> length, VectorCallback&&, ExceptionCallback&&, ScriptExecutionContext&, WorkQueue&);

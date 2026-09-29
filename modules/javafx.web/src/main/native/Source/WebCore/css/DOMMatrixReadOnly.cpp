@@ -34,9 +34,9 @@
 #include "DOMPoint.h"
 #include "MutableStyleProperties.h"
 #include "ScriptExecutionContext.h"
+#include "ScriptWrappableInlines.h"
 #include "StyleProperties.h"
-#include "TransformOperations.h"
-#include "TransformOperationsBuilder.h"
+#include "StyleTransform.h"
 #include <JavaScriptCore/GenericTypedArrayViewInlines.h>
 #include <JavaScriptCore/HeapInlines.h>
 #include <JavaScriptCore/JSGenericTypedArrayViewInlines.h>
@@ -46,7 +46,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(DOMMatrixReadOnly);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DOMMatrixReadOnly);
 
 // https://drafts.fxtf.org/geometry/#dom-dommatrixreadonly-dommatrixreadonly
 ExceptionOr<Ref<DOMMatrixReadOnly>> DOMMatrixReadOnly::create(ScriptExecutionContext& scriptExecutionContext, std::optional<Variant<String, Vector<double>>>&& init)
@@ -92,7 +92,7 @@ DOMMatrixReadOnly::DOMMatrixReadOnly(const TransformationMatrix& matrix, Is2D is
 }
 
 DOMMatrixReadOnly::DOMMatrixReadOnly(TransformationMatrix&& matrix, Is2D is2D)
-    : m_matrix(WTFMove(matrix))
+    : m_matrix(WTF::move(matrix))
     , m_is2D(is2D == Is2D::Yes)
 {
     ASSERT(!m_is2D || m_matrix.isAffine());
@@ -183,7 +183,7 @@ ExceptionOr<void> DOMMatrixReadOnly::validateAndFixup(DOMMatrixInit& init)
 
 ExceptionOr<Ref<DOMMatrixReadOnly>> DOMMatrixReadOnly::fromMatrix(DOMMatrixInit&& init)
 {
-    return fromMatrixHelper<DOMMatrixReadOnly>(WTFMove(init));
+    return fromMatrixHelper<DOMMatrixReadOnly>(WTF::move(init));
 }
 
 ExceptionOr<Ref<DOMMatrixReadOnly>> DOMMatrixReadOnly::fromFloat32Array(Ref<Float32Array>&& array32)
@@ -230,19 +230,22 @@ ExceptionOr<DOMMatrixReadOnly::AbstractMatrix> DOMMatrixReadOnly::parseStringInt
     if (string.isEmpty())
         return AbstractMatrix { };
 
-    auto operations = CSSPropertyParserHelpers::parseTransformRaw(string, CSSParserContext(HTMLStandardMode));
-    if (!operations)
+    auto transform = CSSPropertyParserHelpers::parseTransformRaw(string, CSSParserContext(HTMLStandardMode));
+    if (!transform)
         return Exception { ExceptionCode::SyntaxError };
 
     // Check for an empty transform operations list, in which case we can use the default identity matrix.
-    if (operations->isEmpty())
+    if (transform->isNone())
         return AbstractMatrix { };
 
-    AbstractMatrix matrix;
-    for (auto& operation : *operations) {
-        if (operation->apply(matrix.matrix, { 0, 0 }))
+    auto [isWidthDependent, isHeightDependent] = transform->computeSizeDependencies();
+    if (isWidthDependent || isHeightDependent)
             return Exception { ExceptionCode::SyntaxError };
-        if (operation->is3DOperation())
+
+    AbstractMatrix matrix;
+    for (auto& function : *transform) {
+        function->apply(matrix.matrix, { 0, 0 });
+        if (function->is3DOperation())
             matrix.is2D = false;
     }
 
@@ -286,7 +289,7 @@ Ref<DOMMatrix> DOMMatrixReadOnly::flipY()
 ExceptionOr<Ref<DOMMatrix>> DOMMatrixReadOnly::multiply(DOMMatrixInit&& other) const
 {
     auto matrix = cloneAsDOMMatrix();
-    return matrix->multiplySelf(WTFMove(other));
+    return matrix->multiplySelf(WTF::move(other));
 }
 
 Ref<DOMMatrix> DOMMatrixReadOnly::scale(double scaleX, std::optional<double> scaleY, double scaleZ, double originX, double originY, double originZ)
@@ -413,5 +416,7 @@ ExceptionOr<String> DOMMatrixReadOnly::toString() const
 
     return makeString("matrix3d("_s, m_matrix.m11(), ", "_s, m_matrix.m12(), ", "_s, m_matrix.m13(), ", "_s, m_matrix.m14(), ", "_s, m_matrix.m21(), ", "_s, m_matrix.m22(), ", "_s, m_matrix.m23(), ", "_s, m_matrix.m24(), ", "_s, m_matrix.m31(), ", "_s, m_matrix.m32(), ", "_s, m_matrix.m33(), ", "_s, m_matrix.m34(), ", "_s, m_matrix.m41(), ", "_s, m_matrix.m42(), ", "_s, m_matrix.m43(), ", "_s, m_matrix.m44(), ')');
 }
+
+DOMMatrixReadOnly::~DOMMatrixReadOnly() = default;
 
 } // namespace WebCore

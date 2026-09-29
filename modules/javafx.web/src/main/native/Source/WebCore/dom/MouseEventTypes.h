@@ -42,18 +42,34 @@ enum class SyntheticClickType : uint8_t { NoTap, OneFingerTap, TwoFingerTap };
 // changed since the last event, as specified in the DOM API for Pointer Events.
 // https://w3c.github.io/uievents/#dom-mouseevent-button
 // https://w3c.github.io/pointerevents/#the-button-property
-enum class MouseButton : int8_t { None = -2, PointerHasNotChanged, Left, Middle, Right, Other };
+enum class MouseButton : int8_t { None = -2, PointerHasNotChanged, Left, Middle, Right, Back, Forward, Other };
 #if PLATFORM(JAVA)
     enum MouseButtonMask : uint8_t { NoButtonMask = 0, LeftButtonMask, RightButtonMask, MiddleButtonMask = 4 };
 #endif
 
 inline MouseButton buttonFromShort(int16_t buttonValue)
 {
-    static constexpr std::array knownMouseButtonCases { MouseButton::None, MouseButton::PointerHasNotChanged, MouseButton::Left, MouseButton::Middle, MouseButton::Right };
+    static constexpr std::array knownMouseButtonCases { MouseButton::None, MouseButton::PointerHasNotChanged, MouseButton::Left, MouseButton::Middle, MouseButton::Right, MouseButton::Back, MouseButton::Forward };
     bool isKnownButton = std::ranges::any_of(knownMouseButtonCases, [buttonValue](MouseButton button) {
         return buttonValue == enumToUnderlyingType(button);
     });
     return isKnownButton ? static_cast<MouseButton>(buttonValue) : MouseButton::Other;
+}
+
+inline unsigned nsEventButtonNumberFromWebCoreMouseButton(MouseButton button)
+{
+    switch (button) {
+    case MouseButton::Right:
+        return 1;
+    case MouseButton::Middle:
+        return 2;
+    case MouseButton::Back:
+        return 3;
+    case MouseButton::Forward:
+        return 4;
+    default:
+        return 0;
+    }
 }
 
 } // namespace WebCore

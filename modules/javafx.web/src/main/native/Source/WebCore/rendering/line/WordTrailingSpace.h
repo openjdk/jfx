@@ -28,6 +28,7 @@
 #include "RenderBlock.h"
 #include "RenderStyle.h"
 #include <optional>
+#include <wtf/CheckedRef.h>
 #include <wtf/HashSet.h>
 
 namespace WebCore {
@@ -36,7 +37,7 @@ struct WordTrailingSpace {
     WordTrailingSpace(const RenderStyle& style, bool measuringWithTrailingWhitespaceEnabled = true)
         : m_style(style)
     {
-        if (!measuringWithTrailingWhitespaceEnabled || !m_style.fontCascade().enableKerning())
+        if (!measuringWithTrailingWhitespaceEnabled || !m_style->fontCascade().enableKerning())
             m_state = WordTrailingSpaceState::Initialized;
     }
 
@@ -45,7 +46,7 @@ struct WordTrailingSpace {
         if (m_state == WordTrailingSpaceState::Initialized)
             return m_width;
 
-        auto& font = m_style.fontCascade();
+        auto& font = m_style->fontCascade();
         m_width = font.width(RenderBlock::constructTextRun(span(space), m_style), &fallbackFonts) + font.wordSpacing();
         m_state = WordTrailingSpaceState::Initialized;
         return m_width;
@@ -53,7 +54,7 @@ struct WordTrailingSpace {
 
 private:
     enum class WordTrailingSpaceState { Uninitialized, Initialized };
-    const RenderStyle& m_style;
+    const CheckedRef<const RenderStyle> m_style;
     WordTrailingSpaceState m_state { WordTrailingSpaceState::Uninitialized };
     std::optional<float> m_width;
 };

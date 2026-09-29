@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "JSObject.h"
+#include <JavaScriptCore/JSObject.h>
 #include <wtf/CompactPointerTuple.h>
 #include <wtf/HashMap.h>
 
@@ -275,6 +275,8 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         return !m_header.pointer() && m_header.type() == Absence;
     }
 
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
+
     // Two conditions are compatible if they are identical or if they speak of different uids. If
     // false is returned, you have to decide how to resolve the conflict - for example if there is
     // a Presence and an Equivalence then in some cases you'll want the more general of the two
@@ -385,24 +387,11 @@ private:
     } u;
 };
 
-struct PropertyConditionHash {
-    static unsigned hash(const PropertyCondition& key) { return key.hash(); }
-    static bool equal(
-        const PropertyCondition& a, const PropertyCondition& b)
-    {
-        return a == b;
-    }
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
-};
-
 } // namespace JSC
 
 namespace WTF {
 
 void printInternal(PrintStream&, JSC::PropertyCondition::Kind);
-
-template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::PropertyCondition> : JSC::PropertyConditionHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::PropertyCondition> : SimpleClassHashTraits<JSC::PropertyCondition> { };

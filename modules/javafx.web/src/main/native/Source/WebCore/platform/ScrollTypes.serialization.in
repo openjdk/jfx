@@ -38,6 +38,7 @@ enum class WebCore::ScrollbarWidth : uint8_t {
     Thin,
     None,
 };
+
 enum class WebCore::RubberBandingBehavior : uint8_t {
     Always,
     Never,

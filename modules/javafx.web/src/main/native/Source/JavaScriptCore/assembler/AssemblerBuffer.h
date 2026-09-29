@@ -29,10 +29,10 @@
 
 #if ENABLE(ASSEMBLER)
 
-#include "ExecutableAllocator.h"
-#include "JITCompilationEffort.h"
-#include "SecureARM64EHashPinsInlines.h"
-#include "stdint.h"
+#include <JavaScriptCore/ExecutableAllocator.h>
+#include <JavaScriptCore/JITCompilationEffort.h>
+#include <JavaScriptCore/SecureARM64EHashPinsInlines.h>
+#include <stdint.h>
 #include <string.h>
 #include <wtf/Assertions.h>
 #include <wtf/FastMalloc.h>
@@ -42,6 +42,8 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/ThreadSpecific.h>
 #include <wtf/UnalignedAccess.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
     enum class AssemblerDataType : uint8_t { Code, Hashes };
@@ -209,7 +211,8 @@ namespace JSC {
 
         void grow(unsigned extraCapacity = 0)
         {
-            m_capacity = m_capacity + m_capacity / 2 + extraCapacity;
+            auto capacity = Checked<unsigned>(m_capacity) + m_capacity / 2 + extraCapacity;
+            m_capacity = capacity.value();
             if (isInlineBuffer()) {
                 m_buffer = static_cast<char*>(AssemblerDataMalloc::malloc(m_capacity));
                 memcpy(m_buffer, m_inlineBuffer, InlineCapacity);
@@ -323,7 +326,6 @@ namespace JSC {
     public:
         AssemblerBuffer()
             : m_storage()
-            , m_index(0)
 #if ENABLE(JIT_SIGN_ASSEMBLER_BUFFER)
             , m_hash()
             , m_hashes()
@@ -343,7 +345,7 @@ namespace JSC {
 
         bool isAvailable(unsigned space)
         {
-            return m_index + space <= m_storage.capacity();
+            return static_cast<uint64_t>(m_index) + space <= m_storage.capacity();
         }
 
         void ensureSpace(unsigned space)
@@ -393,13 +395,13 @@ namespace JSC {
 
         AssemblerData&& releaseAssemblerData()
         {
-            return WTFMove(m_storage);
+            return WTF::move(m_storage);
         }
 
 #if ENABLE(JIT_SIGN_ASSEMBLER_BUFFER)
         AssemblerHashes&& releaseAssemblerHashes()
         {
-            return WTFMove(m_hashes);
+            return WTF::move(m_hashes);
         }
 #endif
 
@@ -442,7 +444,7 @@ namespace JSC {
             void putIntegralUnchecked(IntegralType value)
             {
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-                ASSERT(m_index + sizeof(IntegralType) <= m_buffer.m_storage.capacity());
+                ASSERT(static_cast<uint64_t>(m_index) + sizeof(IntegralType) <= m_buffer.m_storage.capacity());
                 WTF::unalignedStore<IntegralType>(m_storageBuffer + m_index, value);
                 m_index += sizeof(IntegralType);
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
@@ -469,8 +471,8 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         template<typename IntegralType>
         void putIntegral(IntegralType value)
         {
-            unsigned nextIndex = m_index + sizeof(IntegralType);
-            if (nextIndex > m_storage.capacity()) [[unlikely]]
+            auto nextIndex = Checked<unsigned>(m_index) + sizeof(IntegralType);
+            if (nextIndex.value() > m_storage.capacity()) [[unlikely]]
                 outOfLineGrow();
             putIntegralUnchecked<IntegralType>(value);
         }
@@ -515,7 +517,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         friend LinkBuffer;
 
         AssemblerData m_storage;
-        unsigned m_index;
+        unsigned m_index { 0 };
 #if ENABLE(JIT_SIGN_ASSEMBLER_BUFFER)
         ARM64EHash<ShouldSign::Yes> m_hash;
         AssemblerHashes m_hashes;
@@ -523,5 +525,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     };
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(ASSEMBLER)

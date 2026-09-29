@@ -25,16 +25,17 @@
 
 #pragma once
 
-#include "CollectionTraversal.h"
-#include "HTMLCollection.h"
-#include "HTMLElement.h"
+#include <WebCore/CollectionTraversal.h>
+#include <WebCore/Document.h>
+#include <WebCore/HTMLCollection.h>
+#include <WebCore/HTMLElement.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 template <typename HTMLCollectionClass, CollectionTraversalType traversalType>
 class CachedHTMLCollection : public HTMLCollection {
-    WTF_MAKE_TZONE_OR_ISO_NON_HEAP_ALLOCATABLE(CachedHTMLCollection);
+    WTF_MAKE_TZONE_NON_HEAP_ALLOCATABLE(CachedHTMLCollection);
 public:
     CachedHTMLCollection(ContainerNode& base, CollectionType);
 

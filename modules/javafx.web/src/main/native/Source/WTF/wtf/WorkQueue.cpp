@@ -57,14 +57,14 @@ Ref<ConcurrentWorkQueue> ConcurrentWorkQueue::create(ASCIILiteral name, QOS qos)
 
 void ConcurrentWorkQueue::dispatch(Function<void()>&& function)
 {
-    WorkQueueBase::dispatch(WTFMove(function));
+    WorkQueueBase::dispatch(WTF::move(function));
 }
 
 #if !OS(DARWIN)
 void WorkQueueBase::dispatchSync(Function<void()>&& function)
 {
     BinarySemaphore semaphore;
-    dispatch([&semaphore, function = WTFMove(function)]() mutable {
+    dispatch([&semaphore, function = WTF::move(function)]() mutable {
         function();
         semaphore.signal();
     });
@@ -73,7 +73,7 @@ void WorkQueueBase::dispatchSync(Function<void()>&& function)
 
 void WorkQueueBase::dispatchWithQOS(Function<void()>&& function, QOS)
 {
-    dispatch(WTFMove(function));
+    dispatch(WTF::move(function));
 }
 
 void ConcurrentWorkQueue::apply(size_t iterations, WTF::Function<void(size_t index)>&& function)
@@ -134,11 +134,7 @@ void ConcurrentWorkQueue::apply(size_t iterations, WTF::Function<void(size_t ind
         Vector<Ref<Thread>> m_workers;
     };
 
-    static LazyNeverDestroyed<ThreadPool> threadPool;
-    static std::once_flag onceFlag;
-    std::call_once(onceFlag, [] {
-        threadPool.construct();
-    });
+    static NeverDestroyed<ThreadPool> threadPool;
 
     // Cap the worker count to the number of iterations (excluding this thread)
     const size_t workerCount = std::min(iterations - 1, threadPool->workerCount());
@@ -149,7 +145,7 @@ void ConcurrentWorkQueue::apply(size_t iterations, WTF::Function<void(size_t ind
     Condition condition;
     Lock lock;
 
-    Function<void ()> applier = [&, function = WTFMove(function)] {
+    Function<void ()> applier = [&, function = WTF::move(function)] {
         size_t index;
 
         // Call the function for as long as there are iterations left.
@@ -174,12 +170,10 @@ void ConcurrentWorkQueue::apply(size_t iterations, WTF::Function<void(size_t ind
 
 WorkQueue& WorkQueue::mainSingleton()
 {
-    static NeverDestroyed<RefPtr<WorkQueue>> mainWorkQueue;
-    static std::once_flag onceKey;
-    std::call_once(onceKey, [&] {
+    static NeverDestroyed<RefPtr<WorkQueue>> mainWorkQueue = [] {
         WTF::initialize();
-        mainWorkQueue.get() = adoptRef(*new WorkQueue(CreateMain));
-    });
+        return adoptRef(*new WorkQueue(CreateMain));
+    }();
     return *mainWorkQueue.get();
 }
 
@@ -195,7 +189,7 @@ WorkQueue::WorkQueue(ASCIILiteral name, QOS qos)
 
 void WorkQueue::dispatch(Function<void()>&& function)
 {
-    WorkQueueBase::dispatch(WTFMove(function));
+    WorkQueueBase::dispatch(WTF::move(function));
 }
 
 bool WorkQueue::isCurrent() const

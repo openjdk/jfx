@@ -23,7 +23,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-dictionary WorkerOptions {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary WorkerOptions {
     WorkerType type = "classic";
     FetchRequestCredentials credentials = "same-origin"; // credentials is only used if type is "module"
     DOMString name = "";

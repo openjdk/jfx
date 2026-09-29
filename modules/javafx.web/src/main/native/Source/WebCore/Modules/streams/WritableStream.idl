@@ -32,7 +32,6 @@
     Exposed=*,
     PrivateIdentifier,
     PublicIdentifier,
-    CustomToJSObject,
     SkipVTableValidation
 ] interface WritableStream {
     [CallWith=CurrentGlobalObject] constructor(optional object underlyingSink, optional object strategy);

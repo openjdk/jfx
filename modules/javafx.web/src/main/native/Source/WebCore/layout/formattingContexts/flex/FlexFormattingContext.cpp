@@ -33,8 +33,8 @@
 #include "LayoutChildIterator.h"
 #include "LayoutContext.h"
 #include "LayoutState.h"
-#include "LengthFunctions.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
+#include "StylePrimitiveNumericTypes+Evaluation.h"
 #include <ranges>
 #include <wtf/FixedVector.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -42,7 +42,7 @@
 namespace WebCore {
 namespace Layout {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(FlexFormattingContext);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FlexFormattingContext);
 
 FlexFormattingContext::FlexFormattingContext(const ElementBox& flexBox, LayoutState& globalLayoutState)
     : m_flexBox(flexBox)
@@ -89,11 +89,12 @@ FlexLayout::LogicalFlexItems FlexFormattingContext::convertFlexItemsToLogicalSpa
             auto mainAxis = LogicalFlexItem::MainAxisGeometry { };
             auto crossAxis = LogicalFlexItem::CrossAxisGeometry { };
 
-            auto propertyValueForLength = [&](auto& propertyValue, auto availableSize) -> std::optional<LayoutUnit> {
+            auto propertyValueForLength = [&](const auto& propertyValue, auto availableSize) -> std::optional<LayoutUnit> {
                 if (auto fixedPropertyValue = propertyValue.tryFixed())
-                    return LayoutUnit { fixedPropertyValue->value };
+                    return Style::evaluate<LayoutUnit>(*fixedPropertyValue, style->usedZoomForLength());
+
                 if (propertyValue.isSpecified() && availableSize)
-                    return Style::evaluate(propertyValue, *availableSize);
+                    return Style::evaluate<LayoutUnit>(propertyValue, *availableSize, style->usedZoomForLength());
                 return { };
             };
 
@@ -180,7 +181,7 @@ FlexLayout::LogicalFlexItems FlexFormattingContext::convertFlexItemsToLogicalSpa
             };
             setCrossAxisValues();
 
-            auto flexItemOrder = style->order();
+            auto flexItemOrder = style->order().value;
             flexItemsNeedReordering = flexItemsNeedReordering || flexItemOrder != previousLogicalOrder.value_or(0);
             previousLogicalOrder = flexItemOrder;
 

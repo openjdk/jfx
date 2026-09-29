@@ -33,7 +33,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RTCDTMFToneChangeEvent);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RTCDTMFToneChangeEvent);
 
 Ref<RTCDTMFToneChangeEvent> RTCDTMFToneChangeEvent::create(const String& tone)
 {

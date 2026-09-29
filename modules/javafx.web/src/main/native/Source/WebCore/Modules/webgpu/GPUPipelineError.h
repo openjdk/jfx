@@ -37,7 +37,7 @@ class GPUPipelineError final : public DOMException {
 public:
     static Ref<GPUPipelineError> create(String&& message, GPUPipelineErrorInit options)
     {
-        return adoptRef(*new GPUPipelineError(WTFMove(message), options));
+        return adoptRef(*new GPUPipelineError(WTF::move(message), options));
     }
 
     GPUPipelineErrorReason reason() const { return m_reason.reason; }
@@ -51,3 +51,6 @@ private:
 
 } // namespace WebCore
 
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::GPUPipelineError)
+    static bool isType(const WebCore::DOMException& exception) { return exception.type() == WebCore::DOMException::Type::GPUPipelineError; }
+SPECIALIZE_TYPE_TRAITS_END()

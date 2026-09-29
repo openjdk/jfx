@@ -25,13 +25,13 @@
 
 #pragma once
 
-#include "ClientOrigin.h"
-#include "SharedWorkerIdentifier.h"
-#include "WorkerBadgeProxy.h"
-#include "WorkerDebuggerProxy.h"
-#include "WorkerLoaderProxy.h"
-#include "WorkerObjectProxy.h"
-#include "WorkerOptions.h"
+#include <WebCore/ClientOrigin.h>
+#include <WebCore/SharedWorkerIdentifier.h>
+#include <WebCore/WorkerBadgeProxy.h>
+#include <WebCore/WorkerDebuggerProxy.h>
+#include <WebCore/WorkerLoaderProxy.h>
+#include <WebCore/WorkerObjectProxy.h>
+#include <WebCore/WorkerOptions.h>
 #include <wtf/CheckedPtr.h>
 #include <wtf/ThreadSafeWeakPtr.h>
 
@@ -61,10 +61,11 @@ public:
     bool isTerminatingOrTerminated() const { return m_isTerminatingOrTerminated; }
     void setAsTerminatingOrTerminated() { m_isTerminatingOrTerminated = true; }
 
-    uint32_t checkedPtrCount() const { return CanMakeThreadSafeCheckedPtr<SharedWorkerThreadProxy>::checkedPtrCount(); }
-    uint32_t checkedPtrCountWithoutThreadCheck() const { return CanMakeThreadSafeCheckedPtr<SharedWorkerThreadProxy>::checkedPtrCountWithoutThreadCheck(); }
-    void incrementCheckedPtrCount() const { CanMakeThreadSafeCheckedPtr<SharedWorkerThreadProxy>::incrementCheckedPtrCount(); }
-    void decrementCheckedPtrCount() const { CanMakeThreadSafeCheckedPtr<SharedWorkerThreadProxy>::decrementCheckedPtrCount(); }
+    uint32_t checkedPtrCount() const final { return CanMakeThreadSafeCheckedPtr<SharedWorkerThreadProxy>::checkedPtrCount(); }
+    uint32_t checkedPtrCountWithoutThreadCheck() const final { return CanMakeThreadSafeCheckedPtr<SharedWorkerThreadProxy>::checkedPtrCountWithoutThreadCheck(); }
+    void incrementCheckedPtrCount() const final { CanMakeThreadSafeCheckedPtr<SharedWorkerThreadProxy>::incrementCheckedPtrCount(); }
+    void decrementCheckedPtrCount() const final { CanMakeThreadSafeCheckedPtr<SharedWorkerThreadProxy>::decrementCheckedPtrCount(); }
+    void setDidBeginCheckedPtrDeletion() final { CanMakeThreadSafeCheckedPtr<SharedWorkerThreadProxy>::setDidBeginCheckedPtrDeletion(); }
 
 private:
     WEBCORE_EXPORT SharedWorkerThreadProxy(Ref<Page>&&, SharedWorkerIdentifier, const ClientOrigin&, WorkerFetchResult&&, WorkerOptions&&, WorkerInitializationData&&, CacheStorageProvider&);

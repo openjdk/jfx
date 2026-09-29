@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <cstddef>
 #include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/Logger.h>
 
@@ -55,6 +56,7 @@ public:
 #define ALWAYS_LOG_WITH_THIS(thisPtr, ...)     Ref { (thisPtr)->logger() }->logAlwaysVerbose((thisPtr)->logChannel(), __FILE__, __func__, __LINE__, __VA_ARGS__)
 #define ERROR_LOG_WITH_THIS(thisPtr, ...)      Ref { (thisPtr)->logger() }->errorVerbose((thisPtr)->logChannel(), __FILE__, __func__, __LINE__, __VA_ARGS__)
 #define INFO_LOG_WITH_THIS(thisPtr, ...)       Ref { (thisPtr)->logger() }->infoVerbose((thisPtr)->logChannel(), __FILE__, __func__, __LINE__, __VA_ARGS__)
+#define DEBUG_LOG_WITH_THIS(thisPtr, ...)      Ref { (thisPtr)->logger() }->debugVerbose((thisPtr)->logChannel(), __FILE__, __func__, __LINE__, __VA_ARGS__)
 #else
 #define ALWAYS_LOG(...)     Ref { logger() }->logAlways(logChannel(), __VA_ARGS__)
 #define ERROR_LOG(...)      Ref { logger() }->error(logChannel(), __VA_ARGS__)
@@ -65,6 +67,7 @@ public:
 #define ALWAYS_LOG_WITH_THIS(thisPtr, ...)     Ref { (thisPtr)->logger() }->logAlways((thisPtr)->logChannel(), __VA_ARGS__)
 #define ERROR_LOG_WITH_THIS(thisPtr, ...)      Ref { (thisPtr)->logger() }->error((thisPtr)->logChannel(), __VA_ARGS__)
 #define INFO_LOG_WITH_THIS(thisPtr, ...)       Ref { (thisPtr)->logger() }->info((thisPtr)->logChannel(), __VA_ARGS__)
+#define DEBUG_LOG_WITH_THIS(thisPtr, ...)      Ref { (thisPtr)->logger() }->debug((thisPtr)->logChannel(), __VA_ARGS__)
 #endif
 
 #define WILL_LOG(_level_)   Ref { logger() }->willLog(logChannel(), _level_)
@@ -85,6 +88,7 @@ public:
 #define ALWAYS_LOG_WITH_THIS_IF_POSSIBLE(thisPtr, ...)  if (RefPtr logger = thisPtr->loggerPtr()) ALWAYS_LOG_WITH_THIS(thisPtr, __VA_ARGS__)
 #define ERROR_LOG_WITH_THIS_IF_POSSIBLE(thisPtr, ...)   if (RefPtr logger = thisPtr->loggerPtr()) ERROR_LOG_WITH_THIS(thisPtr, __VA_ARGS__)
 #define INFO_LOG_WITH_THIS_IF_POSSIBLE(thisPtr, ...)    if (RefPtr logger = thisPtr->loggerPtr()) INFO_LOG_WITH_THIS(thisPtr, __VA_ARGS__)
+#define DEBUG_LOG_WITH_THIS_IF_POSSIBLE(thisPtr, ...)    if (RefPtr logger = thisPtr->loggerPtr()) DEBUG_LOG_WITH_THIS(thisPtr, __VA_ARGS__)
 
 #if defined(__OBJC__)
 #define OBJC_LOGIDENTIFIER WTF::Logger::LogSiteIdentifier(__PRETTY_FUNCTION__, self.logIdentifier)
@@ -123,10 +127,12 @@ public:
 #define ALWAYS_LOG_WITH_THIS(thisPtr, channelName, ...)   do { UNUSED_PARAM(thisPtr); UNUSED_PARAM(channelName); } while (0)
 #define ERROR_LOG_WITH_THIS(thisPtr, channelName, ...)    do { UNUSED_PARAM(thisPtr); UNUSED_PARAM(channelName); } while (0)
 #define INFO_LOG_WITH_THIS(thisPtr, channelName, ...)     do { UNUSED_PARAM(thisPtr); UNUSED_PARAM(channelName); } while (0)
+#define DEBUG_LOG_WITH_THIS(thisPtr, channelName, ...)    do { UNUSED_PARAM(thisPtr); UNUSED_PARAM(channelName); } while (0)
 
 #define ALWAYS_LOG_WITH_THIS_IF_POSSIBLE(thisPtr, channelName, ...)  do { UNUSED_PARAM(thisPtr); UNUSED_PARAM(channelName); } while (0)
 #define ERROR_LOG_WITH_THIS_IF_POSSIBLE(thisPtr, channelName, ...)   do { UNUSED_PARAM(thisPtr); UNUSED_PARAM(channelName); } while (0)
 #define INFO_LOG_WITH_THIS_IF_POSSIBLE(thisPtr, channelName, ...)    do { UNUSED_PARAM(thisPtr); UNUSED_PARAM(channelName); } while (0)
+#define DEBUG_LOG_WITH_THIS_IF_POSSIBLE(thisPtr, channelName, ...)   do { UNUSED_PARAM(thisPtr); UNUSED_PARAM(channelName); } while (0)
 
 #define ALWAYS_LOG_IF(condition, ...)     ((void)0)
 #define ERROR_LOG_IF(condition, ...)      ((void)0)

@@ -25,6 +25,8 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
 #include "BAssert.h"
 #include "Range.h"
 
@@ -192,3 +194,5 @@ inline std::pair<LargeRange, LargeRange> LargeRange::split(size_t leftSize) cons
 } // namespace bmalloc
 
 #endif
+
+#endif // __cplusplus

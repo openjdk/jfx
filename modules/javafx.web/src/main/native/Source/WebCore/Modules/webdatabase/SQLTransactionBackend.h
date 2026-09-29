@@ -31,6 +31,7 @@
 #include "SQLTransactionStateMachine.h"
 #include <memory>
 #include <wtf/Forward.h>
+#include <wtf/ThreadSafeWeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -71,7 +72,9 @@ private:
 
     NO_RETURN_DUE_TO_ASSERT void unreachableState();
 
-    SQLTransaction& m_frontend;
+    Ref<SQLTransaction> frontend() { return m_frontend.get().releaseNonNull(); }
+
+    ThreadSafeWeakPtr<SQLTransaction> m_frontend;
 };
 
 } // namespace WebCore

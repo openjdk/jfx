@@ -25,11 +25,11 @@
 
 #pragma once
 
-#include "ArrayProfile.h"
+#include <JavaScriptCore/ArrayProfile.h>
 #include "BytecodeStructs.h"
-#include "Instruction.h"
+#include <JavaScriptCore/Instruction.h>
 #include "InterpreterInlines.h"
-#include "Opcode.h"
+#include <JavaScriptCore/Opcode.h>
 
 namespace JSC {
 
@@ -38,7 +38,8 @@ enum OpcodeShape {
     OpCallShape,
 };
 
-template<OpcodeShape shape, typename = std::enable_if_t<shape != AnyOpcodeShape>>
+template<OpcodeShape shape>
+    requires (shape != AnyOpcodeShape)
 inline bool isOpcodeShape(OpcodeID opcodeID)
 {
     if (shape == OpCallShape) {
@@ -56,7 +57,8 @@ inline bool isOpcodeShape(OpcodeID opcodeID)
     RELEASE_ASSERT_NOT_REACHED();
 }
 
-template<OpcodeShape shape, typename = std::enable_if_t<shape != AnyOpcodeShape>>
+template<OpcodeShape shape>
+    requires (shape != AnyOpcodeShape)
 inline bool isOpcodeShape(const JSInstruction* instruction)
 {
     return isOpcodeShape<shape>(instruction->opcodeID());

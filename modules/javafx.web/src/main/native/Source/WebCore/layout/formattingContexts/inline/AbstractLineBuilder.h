@@ -25,12 +25,12 @@
 
 #pragma once
 
-#include "FormattingConstraints.h"
-#include "InlineContentBreaker.h"
-#include "InlineLayoutState.h"
-#include "InlineLine.h"
-#include "InlineLineTypes.h"
-#include "LineLayoutResult.h"
+#include <WebCore/FormattingConstraints.h>
+#include <WebCore/InlineContentBreaker.h>
+#include <WebCore/InlineLayoutState.h>
+#include <WebCore/InlineLine.h>
+#include <WebCore/InlineLineTypes.h>
+#include <WebCore/LineLayoutResult.h>
 
 namespace WebCore {
 namespace Layout {
@@ -42,7 +42,7 @@ struct LineInput {
 
 class AbstractLineBuilder {
 public:
-    virtual LineLayoutResult layoutInlineContent(const LineInput&, const std::optional<PreviousLine>&) = 0;
+    virtual LineLayoutResult layoutInlineContent(const LineInput&, const std::optional<PreviousLine>&, bool isFirstFormattedLineCandidate) = 0;
     virtual ~AbstractLineBuilder() { };
 
     void setIntrinsicWidthMode(IntrinsicWidthMode);
@@ -52,12 +52,12 @@ protected:
 
     void reset();
 
-    std::optional<InlineLayoutUnit> eligibleOverflowWidthAsLeading(const InlineContentBreaker::ContinuousContent::RunList&, const InlineContentBreaker::Result&, bool) const;
+    std::optional<InlineLayoutUnit> overflowWidthAsLeadingForNextLine(const InlineContentBreaker::ContinuousContent::RunList&, const InlineContentBreaker::Result&) const;
 
     std::optional<IntrinsicWidthMode> intrinsicWidthMode() const { return m_intrinsicWidthMode; }
     bool isInIntrinsicWidthMode() const { return !!intrinsicWidthMode(); }
 
-    bool isFirstFormattedLine() const { return !m_previousLine.has_value(); }
+    bool isFirstFormattedLineCandidate() const { return m_isFirstFormattedLineCandidate; }
 
     InlineContentBreaker& inlineContentBreaker() { return m_inlineContentBreaker; }
 
@@ -67,6 +67,7 @@ protected:
     const InlineLayoutState& layoutState() const;
     InlineLayoutState& layoutState();
     const BlockLayoutState& blockLayoutState() const { return layoutState().parentBlockLayoutState(); }
+    BlockLayoutState& blockLayoutState() { return layoutState().parentBlockLayoutState(); }
     const ElementBox& root() const { return m_rootBox; }
     const RenderStyle& rootStyle() const;
 
@@ -77,6 +78,7 @@ protected:
     Vector<const InlineItem*, 32> m_wrapOpportunityList;
     std::optional<InlineTextItem> m_partialLeadingTextItem;
     std::optional<PreviousLine> m_previousLine { };
+    bool m_isFirstFormattedLineCandidate { false };
 
 private:
     InlineFormattingContext& m_inlineFormattingContext;

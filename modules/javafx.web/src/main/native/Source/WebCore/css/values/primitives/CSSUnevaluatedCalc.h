@@ -24,8 +24,8 @@
 
 #pragma once
 
-#include "CSSPrimitiveNumericConcepts.h"
-#include "CSSValueTypes.h"
+#include <WebCore/CSSPrimitiveNumericConcepts.h>
+#include <WebCore/CSSValueTypes.h>
 #include <optional>
 #include <wtf/Forward.h>
 #include <wtf/IterationStatus.h>
@@ -35,33 +35,34 @@
 namespace WebCore {
 
 class CSSCalcSymbolTable;
-class CSSCalcValue;
 class CSSToLengthConversionData;
 struct ComputedStyleDependencies;
 struct NoConversionDataRequiredToken;
-
-namespace Calculation {
-enum class Category : uint8_t;
-}
 
 namespace Style {
 class BuilderState;
 }
 
+namespace CSSCalc {
+class Value;
+}
+
 namespace CSS {
+
+enum class Category : uint8_t;
 
 // Type-erased helpers to allow for shared code.
 
-void unevaluatedCalcRef(CSSCalcValue*);
-void unevaluatedCalcDeref(CSSCalcValue*);
+void unevaluatedCalcRef(CSSCalc::Value*);
+void unevaluatedCalcDeref(CSSCalc::Value*);
 
-// `UnevaluatedCalc` annotates a `CSSCalcValue` with the raw value type that it
+// `UnevaluatedCalc` annotates a `CSSCalc::Value` with the raw value type that it
 // will be evaluated to, allowing the processing of calc in generic code.
 
 // Non-generic base type to allow code sharing and out-of-line definitions.
 struct UnevaluatedCalcBase {
-    UnevaluatedCalcBase(CSSCalcValue&);
-    UnevaluatedCalcBase(Ref<CSSCalcValue>&&);
+    UnevaluatedCalcBase(CSSCalc::Value&);
+    UnevaluatedCalcBase(Ref<CSSCalc::Value>&&);
 
     UnevaluatedCalcBase(const UnevaluatedCalcBase&);
     UnevaluatedCalcBase(UnevaluatedCalcBase&&);
@@ -69,28 +70,27 @@ struct UnevaluatedCalcBase {
     UnevaluatedCalcBase& operator=(UnevaluatedCalcBase&&);
     ~UnevaluatedCalcBase();
 
-    Ref<CSSCalcValue> protectedCalc() const;
-    CSSCalcValue& leakRef() WARN_UNUSED_RETURN;
+    Ref<CSSCalc::Value> protectedCalc() const;
+    [[nodiscard]] CSSCalc::Value& leakRef();
 
     bool requiresConversionData() const;
 
     void serializationForCSS(StringBuilder&, const CSS::SerializationContext&) const;
     void collectComputedStyleDependencies(ComputedStyleDependencies&) const;
-    IterationStatus visitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>&) const;
 
     UnevaluatedCalcBase simplifyBase(const CSSToLengthConversionData&, const CSSCalcSymbolTable&) const;
 
-    double evaluate(Calculation::Category, const Style::BuilderState&) const;
-    double evaluate(Calculation::Category, const Style::BuilderState&, const CSSCalcSymbolTable&) const;
-    double evaluate(Calculation::Category, const CSSToLengthConversionData&) const;
-    double evaluate(Calculation::Category, const CSSToLengthConversionData&, const CSSCalcSymbolTable&) const;
-    double evaluate(Calculation::Category, NoConversionDataRequiredToken) const;
-    double evaluate(Calculation::Category, NoConversionDataRequiredToken, const CSSCalcSymbolTable&) const;
+    double evaluate(CSS::Category, const Style::BuilderState&) const;
+    double evaluate(CSS::Category, const Style::BuilderState&, const CSSCalcSymbolTable&) const;
+    double evaluate(CSS::Category, const CSSToLengthConversionData&) const;
+    double evaluate(CSS::Category, const CSSToLengthConversionData&, const CSSCalcSymbolTable&) const;
+    double evaluate(CSS::Category, NoConversionDataRequiredToken) const;
+    double evaluate(CSS::Category, NoConversionDataRequiredToken, const CSSCalcSymbolTable&) const;
 
     bool equal(const UnevaluatedCalcBase&) const;
 
 private:
-    Ref<CSSCalcValue> calc;
+    Ref<CSSCalc::Value> calc;
 };
 
 template<NumericRaw RawType> struct UnevaluatedCalc : UnevaluatedCalcBase {
@@ -198,9 +198,9 @@ template<Calc T> struct ComputedStyleDependenciesCollector<T> {
 // MARK: - CSSValue Visitation
 
 template<Calc T> struct CSSValueChildrenVisitor<T> {
-    inline IterationStatus operator()(NOESCAPE const Function<IterationStatus(CSSValue&)>& func, const T& value)
+    inline IterationStatus operator()(NOESCAPE const Function<IterationStatus(CSSValue&)>&, const T&)
     {
-        return value.visitChildren(func);
+        return IterationStatus::Continue;
     }
 };
 

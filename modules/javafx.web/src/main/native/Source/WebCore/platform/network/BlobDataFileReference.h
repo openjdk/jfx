@@ -26,6 +26,7 @@
 #ifndef BlobDataFileReference_h
 #define BlobDataFileReference_h
 
+#include <optional>
 #include <wtf/Markable.h>
 #include <wtf/RefCounted.h>
 #include <wtf/WallTime.h>
@@ -33,7 +34,7 @@
 
 namespace WebCore {
 
-class WEBCORE_EXPORT BlobDataFileReference : public RefCounted<BlobDataFileReference> {
+class WEBCORE_EXPORT BlobDataFileReference : public ThreadSafeRefCounted<BlobDataFileReference, WTF::DestructionThread::Main> {
 public:
     static Ref<BlobDataFileReference> create(const String& path, const String& replacementPath = { })
     {

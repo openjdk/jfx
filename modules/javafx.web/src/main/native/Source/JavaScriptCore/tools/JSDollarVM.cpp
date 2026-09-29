@@ -26,6 +26,7 @@
 #include "config.h"
 #include "JSDollarVM.h"
 
+#include "AccessCase.h"
 #include "ArrayPrototype.h"
 #include "BuiltinNames.h"
 #include "CachedCall.h"
@@ -40,6 +41,8 @@
 #include "FrameTracers.h"
 #include "FunctionCodeBlock.h"
 #include "GetterSetter.h"
+#include "HeapProfiler.h"
+#include "HeapSnapshotBuilder.h"
 #include "InterpreterInlines.h"
 #include "JITSizeStatistics.h"
 #include "JSArray.h"
@@ -50,14 +53,17 @@
 #include "JSString.h"
 #include "LinkBuffer.h"
 #include "NativeCallee.h"
+#include "ObjectPropertyCondition.h"
 #include "OperationResult.h"
 #include "Options.h"
 #include "Parser.h"
 #include "ProbeContext.h"
+#include "Scribble.h"
 #include "ShadowChicken.h"
 #include "Snippet.h"
 #include "SnippetParams.h"
 #include "Strong.h"
+#include "StructureStubClearingWatchpoint.h"
 #include "TypeProfiler.h"
 #include "TypeProfilerLog.h"
 #include "VMEntryScopeInlines.h"
@@ -116,6 +122,8 @@ public:
     { }
 
     void updateVMStackLimits() { return m_vm.updateStackLimits(); };
+
+    static void setOwnerIsDead(GCAwareJITStubRoutine& stub) { stub.m_ownerIsDead = true; }
 
     VM& m_vm;
 };
@@ -1676,7 +1684,7 @@ public:
     Message(ArrayBufferContents&&, int32_t);
     ~Message();
 
-    ArrayBufferContents&& releaseContents() { return WTFMove(m_contents); }
+    ArrayBufferContents&& releaseContents() { return WTF::move(m_contents); }
     int32_t index() const { return m_index; }
 
 private:
@@ -2166,6 +2174,7 @@ static JSC_DECLARE_HOST_FUNCTION(functionDumpCallFrame);
 static JSC_DECLARE_HOST_FUNCTION(functionDumpStack);
 static JSC_DECLARE_HOST_FUNCTION(functionDumpRegisters);
 static JSC_DECLARE_HOST_FUNCTION(functionDumpCell);
+static JSC_DECLARE_HOST_FUNCTION(functionDumpHeapSnapshot);
 static JSC_DECLARE_HOST_FUNCTION(functionIndexingMode);
 static JSC_DECLARE_HOST_FUNCTION(functionInlineCapacity);
 static JSC_DECLARE_HOST_FUNCTION(functionClearLinkBufferStats);
@@ -2224,6 +2233,8 @@ static JSC_DECLARE_HOST_FUNCTION(functionGlobalObjectForObject);
 static JSC_DECLARE_HOST_FUNCTION(functionGetGetterSetter);
 static JSC_DECLARE_HOST_FUNCTION(functionLoadGetterFromGetterSetter);
 static JSC_DECLARE_HOST_FUNCTION(functionCreateCustomTestGetterSetter);
+static JSC_DECLARE_HOST_FUNCTION(functionCreateCustomTestGetterSetterWithSharedStructure);
+static JSC_DECLARE_HOST_FUNCTION(functionInstallStructureStubClearingWatchpointWithDeadOwner);
 static JSC_DECLARE_HOST_FUNCTION(functionDeltaBetweenButterflies);
 static JSC_DECLARE_HOST_FUNCTION(functionCurrentCPUTime);
 static JSC_DECLARE_HOST_FUNCTION(functionTotalGCTime);
@@ -2374,15 +2385,15 @@ JSC_DEFINE_HOST_FUNCTION(functionOMGTrue, (JSGlobalObject* globalObject, CallFra
         if (visitor->codeType() != StackVisitor::Frame::Wasm
             || !visitor->callee().isNativeCallee()) {
             allFramesAreValid = false;
-            return Wasm::CompilationMode::LLIntMode;
+            return Wasm::CompilationMode::IPIntMode;
         }
-        return static_cast<Wasm::Callee*>(visitor->callee().asNativeCallee())->compilationMode();
+        return uncheckedDowncast<Wasm::Callee>(visitor->callee().asNativeCallee())->compilationMode();
     };
 
     auto expectWasmToJS = [&](StackVisitor& visitor) {
         if (visitor->codeType() != StackVisitor::Frame::Wasm
             || !visitor->callee().isNativeCallee()
-            || !isAnyWasmToJS(static_cast<Wasm::Callee*>(visitor->callee().asNativeCallee())->compilationMode())) {
+            || !isAnyWasmToJS(uncheckedDowncast<Wasm::Callee>(visitor->callee().asNativeCallee())->compilationMode())) {
             allFramesAreValid = false;
             return;
         }
@@ -2881,6 +2892,29 @@ JSC_DEFINE_HOST_FUNCTION(functionDumpCell, (JSGlobalObject*, CallFrame* callFram
     return encodedJSUndefined();
 }
 
+// Dumps a json of the current JS GC heap.
+// Usage: $vm.dumpHeapSnapshot()
+JSC_DEFINE_HOST_FUNCTION(functionDumpHeapSnapshot, (JSGlobalObject* globalObject, CallFrame*))
+{
+    VM& vm = globalObject->vm();
+    DollarVMAssertScope assertScope;
+
+    sanitizeStackForVM(vm);
+
+    {
+        DeferGCForAWhile deferGC(vm); // Prevent concurrent GC from interfering with the full GC that the snapshot does.
+
+        HeapSnapshotBuilder snapshotBuilder(vm.ensureHeapProfiler(), HeapSnapshotBuilder::SnapshotType::GCDebuggingSnapshot);
+        snapshotBuilder.buildSnapshot();
+        PrintStream& out = WTF::dataFile();
+        snapshotBuilder.dumpToStream(out);
+        out.println();
+        out.flush();
+    }
+
+    return encodedJSUndefined();
+}
+
 // Gets the dataLog dump of the indexingMode of the passed value.
 // Usage: $vm.print("indexingMode = " + $vm.indexingMode(jsValue))
 JSC_DEFINE_HOST_FUNCTION(functionIndexingMode, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -3275,8 +3309,7 @@ JSC_DEFINE_HOST_FUNCTION(functionCreateWasmStreamingCompilerForCompile, (JSGloba
     args.append(compiler);
     ASSERT(!args.hasOverflowed());
     call(globalObject, callback, jsUndefined(), args, "You shouldn't see this..."_s);
-    if (scope.exception()) [[unlikely]]
-        scope.clearException();
+    TRY_CLEAR_EXCEPTION(scope, { });
     compiler->streamingCompiler().finalize(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
     return JSValue::encode(compiler->promise());
@@ -3306,8 +3339,7 @@ JSC_DEFINE_HOST_FUNCTION(functionCreateWasmStreamingCompilerForInstantiate, (JSG
     args.append(compiler);
     ASSERT(!args.hasOverflowed());
     call(globalObject, callback, jsUndefined(), args, "You shouldn't see this..."_s);
-    if (scope.exception()) [[unlikely]]
-        scope.clearException();
+    TRY_CLEAR_EXCEPTION(scope, { });
     compiler->streamingCompiler().finalize(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
     return JSValue::encode(compiler->promise());
@@ -3403,8 +3435,16 @@ JSC_DEFINE_HOST_FUNCTION(functionCreateBuiltin, (JSGlobalObject* globalObject, C
     auto functionText = asString(callFrame->argument(0))->value(globalObject);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
-    SourceCode source = makeSource(WTFMove(functionText), { }, SourceTaintedOrigin::Untainted);
-    JSFunction* func = JSFunction::create(vm, globalObject, createBuiltinExecutable(vm, source, Identifier::fromString(vm, "foo"_s), ImplementationVisibility::Public, ConstructorKind::None, ConstructAbility::CannotConstruct, InlineAttribute::None)->link(vm, nullptr, source), globalObject);
+    ImplementationVisibility visibility = ImplementationVisibility::Public;
+    if (callFrame->argumentCount() >= 2 && callFrame->argument(1).isString()) {
+        String visibilityString = asString(callFrame->argument(1))->value(globalObject);
+        RETURN_IF_EXCEPTION(scope, encodedJSValue());
+        if (visibilityString == "private"_s)
+            visibility = ImplementationVisibility::Private;
+    }
+
+    SourceCode source = makeSource(WTF::move(functionText), { }, SourceTaintedOrigin::Untainted);
+    JSFunction* func = JSFunction::create(vm, globalObject, createBuiltinExecutable(vm, source, Identifier::fromString(vm, "foo"_s), visibility, ConstructorKind::None, ConstructAbility::CannotConstruct, InlineAttribute::None)->link(vm, nullptr, source), globalObject);
 
     return JSValue::encode(func);
 }
@@ -3791,6 +3831,81 @@ JSC_DEFINE_HOST_FUNCTION(functionCreateCustomTestGetterSetter, (JSGlobalObject* 
     return JSValue::encode(JSTestCustomGetterSetter::create(vm, globalObject, JSTestCustomGetterSetter::createStructure(vm, globalObject)));
 }
 
+JSC_DEFINE_HOST_FUNCTION(functionCreateCustomTestGetterSetterWithSharedStructure, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    DollarVMAssertScope assertScope;
+    VM& vm = globalObject->vm();
+    auto* dollarVM = jsDynamicCast<JSDollarVM*>(callFrame->thisValue());
+    RELEASE_ASSERT(dollarVM);
+    return JSValue::encode(JSTestCustomGetterSetter::create(vm, globalObject, dollarVM->testCustomGetterSetterStructure()));
+}
+
+// Usage: $vm.installStructureStubClearingWatchpointWithDeadOwner(proto, "propertyName") Creates a
+//
+// PolymorphicAccessJITStubRoutine with an AdaptiveValueStructureStubClearingWatchpoint installed on
+// proto's Structure for the given Equivalence property condition, then simulates the dead-owner
+// state.
+JSC_DEFINE_HOST_FUNCTION(functionInstallStructureStubClearingWatchpointWithDeadOwner, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+#if ENABLE(JIT)
+    DollarVMAssertScope assertScope;
+    VM& vm = globalObject->vm();
+
+    JSObject* proto = jsDynamicCast<JSObject*>(callFrame->argument(0));
+    RELEASE_ASSERT(proto);
+    JSString* propNameStr = jsDynamicCast<JSString*>(callFrame->argument(1));
+    RELEASE_ASSERT(propNameStr);
+    auto scope = DECLARE_THROW_SCOPE(vm);
+    auto propertyName = propNameStr->toIdentifier(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    Structure* structure = proto->structure();
+    PropertyOffset offset = structure->get(vm, propertyName);
+    RELEASE_ASSERT(isValidOffset(offset));
+    JSValue value = proto->getDirect(offset);
+    RELEASE_ASSERT(value.isCell() && value.asCell()->type() == CustomGetterSetterType);
+
+    // Create Equivalence ObjectPropertyCondition: "property on proto equals value".
+    ObjectPropertyCondition condition = ObjectPropertyCondition::equivalence(
+        vm, proto, proto, propertyName.impl(), value);
+    RELEASE_ASSERT(condition);
+    RELEASE_ASSERT(condition.kind() == PropertyCondition::Equivalence);
+
+    // Create a PolymorphicAccessJITStubRoutine.
+    // Use isCodeImmutable=true so JITStubRoutineSet::add doesn't read the (empty) code address.
+    MacroAssemblerCodeRef<JITStubRoutinePtrTag> emptyCode;
+    auto stub = adoptRef(*new PolymorphicAccessJITStubRoutine(
+        JITStubRoutine::Type::PolymorphicAccessJITStubRoutineType, emptyCode, vm,
+        FixedVector<Ref<AccessCase>> { }, FixedVector<StructureID> { }, proto, true));
+    stub->makeGCAware(vm);
+
+    // Install the AdaptiveValueStructureStubClearingWatchpoint on proto's Structure.
+    // Must start watching property replacements first (as the IC does).
+    structure->startWatchingPropertyForReplacements(vm, offset);
+    auto& watchpointVariant = *stub->watchpoints().add(
+        WTF::InPlaceType<AdaptiveValueStructureStubClearingWatchpoint>,
+        stub.ptr(), condition, stub->watchpointSet());
+    auto& adaptiveWp = std::get<AdaptiveValueStructureStubClearingWatchpoint>(watchpointVariant);
+    adaptiveWp.install(vm);
+
+    // Store the stub on $vm and set the owner as dead, simulating the window
+    // between GC marking-end and CodeBlock sweep.
+    JSDollarVMHelper::setOwnerIsDead(stub.get());
+    auto* dollarVM = jsDynamicCast<JSDollarVM*>(callFrame->thisValue());
+    RELEASE_ASSERT(dollarVM);
+    dollarVM->m_testStubRoutine = WTF::move(stub);
+
+    // Scribble proto's cell header to simulate a swept dead cell.
+    scribble(proto, sizeof(JSCell));
+
+    return JSValue::encode(jsUndefined());
+#else
+    UNUSED_PARAM(globalObject);
+    UNUSED_PARAM(callFrame);
+    return JSValue::encode(jsUndefined());
+#endif
+}
+
 JSC_DEFINE_HOST_FUNCTION(functionDeltaBetweenButterflies, (JSGlobalObject*, CallFrame* callFrame))
 {
     DollarVMAssertScope assertScope;
@@ -3840,7 +3955,7 @@ JSC_DEFINE_HOST_FUNCTION(functionMake16BitStringIfPossible, (JSGlobalObject* glo
     String string = callFrame->argument(0).toWTFString(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
     string.convertTo16Bit();
-        return JSValue::encode(jsString(vm, WTFMove(string)));
+    return JSValue::encode(jsString(vm, WTF::move(string)));
 }
 
 JSC_DEFINE_HOST_FUNCTION(functionGetStructureTransitionList, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -3915,7 +4030,7 @@ JSC_DEFINE_HOST_FUNCTION(functionRejectPromiseAsHandled, (JSGlobalObject* global
     DollarVMAssertScope assertScope;
     JSPromise* promise = jsCast<JSPromise*>(callFrame->uncheckedArgument(0));
     JSValue reason = callFrame->uncheckedArgument(1);
-    promise->rejectAsHandled(globalObject, reason);
+    promise->rejectAsHandled(globalObject->vm(), globalObject, reason);
     return JSValue::encode(jsUndefined());
 }
 
@@ -4113,7 +4228,7 @@ JSC_DEFINE_HOST_FUNCTION(functionEvaluateWithScopeExtension, (JSGlobalObject* gl
     String program = asString(scriptValue)->value(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
 
-    SourceCode source = makeSource(WTFMove(program), callFrame->callerSourceOrigin(vm), SourceTaintedOrigin::Untainted);
+    SourceCode source = makeSource(WTF::move(program), callFrame->callerSourceOrigin(vm), SourceTaintedOrigin::Untainted);
     JSObject* scopeExtension = callFrame->argument(1).getObject();
 
     NakedPtr<Exception> exception;
@@ -4375,6 +4490,8 @@ void JSDollarVM::finishCreation(VM& vm)
 
     addFunction(vm, "dumpCell"_s, functionDumpCell, 1);
 
+    addFunction(vm, "dumpHeapSnapshot"_s, functionDumpHeapSnapshot, 0);
+
     addFunction(vm, "indexingMode"_s, functionIndexingMode, 1);
     addFunction(vm, "inlineCapacity"_s, functionInlineCapacity, 1);
     addFunction(vm, "clearLinkBufferStats"_s, functionClearLinkBufferStats, 0);
@@ -4449,6 +4566,8 @@ void JSDollarVM::finishCreation(VM& vm)
     addFunction(vm, "getGetterSetter"_s, functionGetGetterSetter, 2);
     addFunction(vm, "loadGetterFromGetterSetter"_s, functionLoadGetterFromGetterSetter, 1);
     addFunction(vm, "createCustomTestGetterSetter"_s, functionCreateCustomTestGetterSetter, 1);
+    addFunction(vm, "createCustomTestGetterSetterWithSharedStructure"_s, functionCreateCustomTestGetterSetterWithSharedStructure, 0);
+    addFunction(vm, "installStructureStubClearingWatchpointWithDeadOwner"_s, functionInstallStructureStubClearingWatchpointWithDeadOwner, 2);
 
     addFunction(vm, "deltaBetweenButterflies"_s, functionDeltaBetweenButterflies, 2);
 
@@ -4517,6 +4636,7 @@ void JSDollarVM::finishCreation(VM& vm)
     addFunction(vm, "weakCreate"_s, functionWeakCreate, 0);
 
     m_objectDoingSideEffectPutWithoutCorrectSlotStatusStructureID.set(vm, this, ObjectDoingSideEffectPutWithoutCorrectSlotStatus::createStructure(vm, globalObject, jsNull()));
+    m_testCustomGetterSetterStructureID.set(vm, this, JSTestCustomGetterSetter::createStructure(vm, globalObject));
 }
 
 void JSDollarVM::addFunction(VM& vm, JSGlobalObject* globalObject, ASCIILiteral name, NativeFunction function, unsigned arguments)
@@ -4533,7 +4653,7 @@ void JSDollarVM::addConstructibleFunction(VM& vm, JSGlobalObject* globalObject, 
     putDirect(vm, identifier, JSFunction::create(vm, globalObject, arguments, identifier.string(), function, ImplementationVisibility::Public, NoIntrinsic, function), jsDollarVMPropertyAttributes);
 }
 
-void JSDollarVM::getOwnPropertyNames(JSObject* object, JSGlobalObject* globalObject, PropertyNameArray& propertyNames, DontEnumPropertiesMode)
+void JSDollarVM::getOwnPropertyNames(JSObject* object, JSGlobalObject* globalObject, PropertyNameArrayBuilder& propertyNames, DontEnumPropertiesMode)
 {
     Base::getOwnPropertyNames(object, globalObject, propertyNames, DontEnumPropertiesMode::Exclude);
 }
@@ -4544,6 +4664,7 @@ void JSDollarVM::visitChildrenImpl(JSCell* cell, Visitor& visitor)
     JSDollarVM* thisObject = jsCast<JSDollarVM*>(cell);
     Base::visitChildren(thisObject, visitor);
     visitor.append(thisObject->m_objectDoingSideEffectPutWithoutCorrectSlotStatusStructureID);
+    visitor.append(thisObject->m_testCustomGetterSetterStructureID);
 }
 
 DEFINE_VISIT_CHILDREN(JSDollarVM);

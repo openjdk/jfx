@@ -24,6 +24,7 @@
 #include "ContentSecurityPolicy.h"
 #include "DocumentInlines.h"
 #include "Element.h"
+#include "FrameDestructionObserverInlines.h"
 #include "JSDOMWindow.h"
 #include "JSDOMWindowBase.h"
 #include "JSHTMLElement.h"
@@ -31,20 +32,18 @@
 #include "QualifiedName.h"
 #include "SVGElement.h"
 #include "ScriptController.h"
+#include "Settings.h"
 #include <JavaScriptCore/CatchScope.h>
 #include <JavaScriptCore/FunctionConstructor.h>
 #include <JavaScriptCore/IdentifierInlines.h>
 #include <JavaScriptCore/SourceProvider.h>
 #include <wtf/NeverDestroyed.h>
-#include <wtf/RefCountedLeakCounter.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/MakeString.h>
 
 namespace WebCore {
 using namespace JSC;
-
-DEFINE_DEBUG_ONLY_GLOBAL(WTF::RefCountedLeakCounter, eventListenerCounter, ("JSLazyEventListener"));
 
 struct JSLazyEventListener::CreationArguments {
     const QualifiedName& attributeName;
@@ -78,12 +77,9 @@ JSLazyEventListener::JSLazyEventListener(CreationArguments&& arguments, const UR
     , m_code(arguments.attributeValue)
     , m_sourceURL(sourceURL)
     , m_sourcePosition(convertZeroToOne(sourcePosition))
-    , m_originalNode(WTFMove(arguments.node))
+    , m_originalNode(WTF::move(arguments.node))
     , m_sourceTaintedOrigin(JSC::computeNewSourceTaintedOriginFromStack(arguments.document.vm(), arguments.document.vm().topCallFrame))
 {
-#ifndef NDEBUG
-    eventListenerCounter.increment();
-#endif
 }
 
 #if ASSERT_ENABLED
@@ -110,9 +106,6 @@ void JSLazyEventListener::checkValidityForEventTarget(EventTarget& eventTarget)
 
 JSLazyEventListener::~JSLazyEventListener()
 {
-#ifndef NDEBUG
-    eventListenerCounter.decrement();
-#endif
 }
 
 JSObject* JSLazyEventListener::initializeJSFunction(ScriptExecutionContext& executionContext) const
@@ -168,7 +161,7 @@ JSObject* JSLazyEventListener::initializeJSFunction(ScriptExecutionContext& exec
     int overrideLineNumber = m_sourcePosition.m_line.oneBasedInt();
 
     JSObject* jsFunction = constructFunctionSkippingEvalEnabledCheck(
-        lexicalGlobalObject, WTFMove(code), lexicallyScopedFeatures, Identifier::fromString(vm, m_functionName),
+        lexicalGlobalObject, WTF::move(code), lexicallyScopedFeatures, Identifier::fromString(vm, m_functionName),
         SourceOrigin { m_sourceURL, CachedScriptFetcher::create(document->charset()) },
         m_sourceURL.string(), m_sourceTaintedOrigin, m_sourcePosition, overrideLineNumber, functionConstructorParametersEndPosition);
     if (scope.exception()) [[unlikely]] {
@@ -211,7 +204,7 @@ RefPtr<JSLazyEventListener> JSLazyEventListener::create(CreationArguments&& argu
     }
 
     JSLockHolder locker(arguments.document.vm());
-    return adoptRef(*new JSLazyEventListener(WTFMove(arguments), sourceURL, position));
+    return adoptRef(*new JSLazyEventListener(WTF::move(arguments), sourceURL, position));
 }
 
 RefPtr<JSLazyEventListener> JSLazyEventListener::create(Element& element, const QualifiedName& attributeName, const AtomString& attributeValue)
@@ -229,9 +222,9 @@ RefPtr<JSLazyEventListener> JSLazyEventListener::create(Document& document, cons
 RefPtr<JSLazyEventListener> JSLazyEventListener::create(LocalDOMWindow& window, const QualifiedName& attributeName, const AtomString& attributeValue)
 {
     ASSERT(window.document());
-    auto& document = *window.document();
-    ASSERT(document.frame());
-    return create({ attributeName, attributeValue, document, nullptr, toJSDOMWindow(document.frame(), mainThreadNormalWorldSingleton()), document.isSVGDocument() });
+    CheckedRef document = *window.document();
+    ASSERT(document->frame());
+    return create({ attributeName, attributeValue, document, nullptr, toJSDOMWindow(document->frame(), mainThreadNormalWorldSingleton()), document->isSVGDocument() });
 }
 
 } // namespace WebCore

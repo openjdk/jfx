@@ -34,19 +34,20 @@
 
 #include "DOMWrapperWorld.h"
 #include "Document.h"
+#include "FrameConsoleClient.h"
 #include "InspectorPageAgent.h"
 #include "InstrumentingAgents.h"
 #include "JSDOMWindowCustom.h"
 #include "JSExecState.h"
 #include "LocalFrame.h"
 #include "Page.h"
-#include "PageConsoleClient.h"
 #include "ScriptController.h"
 #include "SecurityOrigin.h"
 #include "UserGestureEmulationScope.h"
 #include <JavaScriptCore/InjectedScript.h>
 #include <JavaScriptCore/InjectedScriptManager.h>
 #include <JavaScriptCore/InspectorProtocolObjects.h>
+#include <wtf/CheckedPtr.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -68,7 +69,8 @@ PageRuntimeAgent::~PageRuntimeAgent() = default;
 
 Inspector::Protocol::ErrorStringOr<void> PageRuntimeAgent::enable()
 {
-    if (m_instrumentingAgents.enabledPageRuntimeAgent() == this)
+    Ref agents = m_instrumentingAgents.get();
+    if (agents->enabledPageRuntimeAgent() == this)
         return { };
 
     auto result = InspectorRuntimeAgent::enable();
@@ -79,14 +81,14 @@ Inspector::Protocol::ErrorStringOr<void> PageRuntimeAgent::enable()
     // can force creation of script state which could result in duplicate notifications.
     reportExecutionContextCreation();
 
-    m_instrumentingAgents.setEnabledPageRuntimeAgent(this);
+    agents->setEnabledPageRuntimeAgent(this);
 
     return result;
 }
 
 Inspector::Protocol::ErrorStringOr<void> PageRuntimeAgent::disable()
 {
-    m_instrumentingAgents.setEnabledPageRuntimeAgent(nullptr);
+    Ref { m_instrumentingAgents.get() }->setEnabledPageRuntimeAgent(nullptr);
 
     return InspectorRuntimeAgent::disable();
 }
@@ -99,7 +101,7 @@ void PageRuntimeAgent::frameNavigated(LocalFrame& frame)
 
 void PageRuntimeAgent::didClearWindowObjectInWorld(LocalFrame& frame, DOMWrapperWorld& world)
 {
-    auto* pageAgent = m_instrumentingAgents.enabledPageAgent();
+    CheckedPtr pageAgent = Ref { m_instrumentingAgents.get() }->enabledPageAgent();
     if (!pageAgent)
         return;
 
@@ -127,17 +129,17 @@ InjectedScript PageRuntimeAgent::injectedScriptForEval(Inspector::Protocol::Erro
 
 void PageRuntimeAgent::muteConsole()
 {
-    PageConsoleClient::mute();
+    FrameConsoleClient::mute();
 }
 
 void PageRuntimeAgent::unmuteConsole()
 {
-    PageConsoleClient::unmute();
+    FrameConsoleClient::unmute();
 }
 
 void PageRuntimeAgent::reportExecutionContextCreation()
 {
-    auto* pageAgent = m_instrumentingAgents.enabledPageAgent();
+    CheckedPtr pageAgent = Ref { m_instrumentingAgents.get() }->enabledPageAgent();
     if (!pageAgent)
         return;
 
@@ -199,12 +201,12 @@ Inspector::Protocol::ErrorStringOr<std::tuple<Ref<Inspector::Protocol::Runtime::
 {
     Inspector::Protocol::ErrorString errorString;
 
-    auto injectedScript = injectedScriptForEval(errorString, WTFMove(executionContextId));
+    auto injectedScript = injectedScriptForEval(errorString, WTF::move(executionContextId));
     if (injectedScript.hasNoValue())
         return makeUnexpected(errorString);
 
     UserGestureEmulationScope userGestureScope(m_inspectedPage, emulateUserGesture.value_or(false), dynamicDowncast<Document>(executionContext(injectedScript.globalObject())));
-    return InspectorRuntimeAgent::evaluate(injectedScript, expression, objectGroup, WTFMove(includeCommandLineAPI), WTFMove(doNotPauseOnExceptionsAndMuteConsole), WTFMove(returnByValue), WTFMove(generatePreview), WTFMove(saveResult), WTFMove(emulateUserGesture));
+    return InspectorRuntimeAgent::evaluate(injectedScript, expression, objectGroup, WTF::move(includeCommandLineAPI), WTF::move(doNotPauseOnExceptionsAndMuteConsole), WTF::move(returnByValue), WTF::move(generatePreview), WTF::move(saveResult), WTF::move(emulateUserGesture));
 }
 
 void PageRuntimeAgent::callFunctionOn(const Inspector::Protocol::Runtime::RemoteObjectId& objectId, const String& expression, RefPtr<JSON::Array>&& optionalArguments, std::optional<bool>&& doNotPauseOnExceptionsAndMuteConsole, std::optional<bool>&& returnByValue, std::optional<bool>&& generatePreview, std::optional<bool>&& emulateUserGesture, std::optional<bool>&& awaitPromise, Ref<CallFunctionOnCallback>&& callback)
@@ -216,7 +218,7 @@ void PageRuntimeAgent::callFunctionOn(const Inspector::Protocol::Runtime::Remote
     }
 
     UserGestureEmulationScope userGestureScope(m_inspectedPage, emulateUserGesture.value_or(false), dynamicDowncast<Document>(executionContext(injectedScript.globalObject())));
-    return InspectorRuntimeAgent::callFunctionOn(objectId, expression, WTFMove(optionalArguments), WTFMove(doNotPauseOnExceptionsAndMuteConsole), WTFMove(returnByValue), WTFMove(generatePreview), WTFMove(emulateUserGesture), WTFMove(awaitPromise), WTFMove(callback));
+    return InspectorRuntimeAgent::callFunctionOn(objectId, expression, WTF::move(optionalArguments), WTF::move(doNotPauseOnExceptionsAndMuteConsole), WTF::move(returnByValue), WTF::move(generatePreview), WTF::move(emulateUserGesture), WTF::move(awaitPromise), WTF::move(callback));
 }
 
 } // namespace WebCore

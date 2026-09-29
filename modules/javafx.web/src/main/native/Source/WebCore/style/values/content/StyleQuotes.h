@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "StyleValueTypes.h"
+#include <WebCore/StyleValueTypes.h>
 
 namespace WebCore {
 namespace Style {
@@ -43,7 +43,7 @@ struct Quotes {
     }
 
     Quotes(Data&& data)
-        : m_value { WTFMove(data) }
+        : m_value { WTF::move(data) }
     {
     }
 

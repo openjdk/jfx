@@ -27,13 +27,14 @@
 
 #pragma once
 
-#include "PathElement.h"
-#include "PathImpl.h"
-#include "PathSegment.h"
-#include "PlatformPath.h"
-#include "WindRule.h"
+#include <WebCore/PathElement.h>
+#include <WebCore/PathImpl.h>
+#include <WebCore/PathSegment.h>
+#include <WebCore/PlatformPath.h>
+#include <WebCore/WindRule.h>
 #include <wtf/DataRef.h>
 #include <wtf/TZoneMalloc.h>
+#include <wtf/Variant.h>
 
 namespace WebCore {
 
@@ -48,7 +49,7 @@ public:
     Path(PathSegment&&);
     WEBCORE_EXPORT Path(Vector<PathSegment>&&);
     explicit Path(const Vector<FloatPoint>& points);
-    Path(Ref<PathImpl>&&);
+    WEBCORE_EXPORT Path(Ref<PathImpl>&&);
 
     Path(const Path&) = default;
     Path(Path&&) = default;
@@ -76,21 +77,23 @@ public:
     WEBCORE_EXPORT void addPath(const Path&, const AffineTransform&);
 
     void applySegments(const PathSegmentApplier&) const;
-
          WEBCORE_EXPORT void applyElements(const PathElementApplier&) const;
      void clear();
 
     void translate(const FloatSize& delta);
-
     void transform(const AffineTransform&);
 
     static constexpr float circleControlPoint() { return PathImpl::circleControlPoint(); }
+
     WEBCORE_EXPORT std::optional<PathSegment> singleSegment() const;
     std::optional<PathDataLine> singleDataLine() const;
 
     bool isEmpty() const;
     bool definitelySingleLine() const;
     WEBCORE_EXPORT PlatformPathPtr platformPath() const;
+#if USE(CG)
+    WEBCORE_EXPORT RetainPtr<CGPathRef> protectedPlatformPath() const;
+#endif
 
     const PathSegment* singleSegmentIfExists() const { return asSingle(); }
     WEBCORE_EXPORT const Vector<PathSegment>* segmentsIfExists() const;
@@ -121,8 +124,10 @@ private:
     PathSegment* asSingle() { return std::get_if<PathSegment>(&m_data); }
     const PathSegment* asSingle() const { return std::get_if<PathSegment>(&m_data); }
 
-    RefPtr<PathImpl> asImpl();
-    RefPtr<const PathImpl> asImpl() const;
+    PathImpl* asImpl();
+    const PathImpl* asImpl() const;
+    RefPtr<PathImpl> asProtectedImpl();
+    RefPtr<const PathImpl> asProtectedImpl() const;
 
     std::optional<FloatPoint> initialMoveToPoint() const;
 
@@ -132,7 +137,7 @@ private:
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const Path&);
 
 inline Path::Path(PathSegment&& segment)
-    : m_data(WTFMove(segment))
+    : m_data(WTF::move(segment))
 {
 }
 
@@ -246,7 +251,7 @@ inline FloatPoint Path::currentPoint() const
         FloatPoint lastMoveToPoint;
         return segment->calculateEndPoint({ }, lastMoveToPoint);
     }
-    return asImpl()->currentPoint();
+    return asProtectedImpl()->currentPoint();
 }
 
 inline std::optional<FloatPoint> Path::initialMoveToPoint() const

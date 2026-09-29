@@ -27,7 +27,7 @@
 
 #if ENABLE(AUTOCAPITALIZE)
 
-#include "AutocapitalizeTypes.h"
+#include <WebCore/AutocapitalizeTypes.h>
 #include <wtf/text/AtomString.h>
 
 namespace WebCore {

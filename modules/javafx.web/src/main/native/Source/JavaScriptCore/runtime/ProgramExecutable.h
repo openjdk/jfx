@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "GlobalExecutable.h"
+#include <JavaScriptCore/GlobalExecutable.h>
 
 namespace JSC {
 

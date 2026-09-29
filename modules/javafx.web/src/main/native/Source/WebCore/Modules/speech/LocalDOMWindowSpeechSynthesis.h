@@ -48,11 +48,16 @@ public:
 
 private:
     SpeechSynthesis* speechSynthesis();
-    static ASCIILiteral supplementName();
+    static ASCIILiteral supplementName() { return "LocalDOMWindowSpeechSynthesis"_s; }
+    bool isLocalDOMWindowSpeechSynthesis() const final { return true; }
 
     RefPtr<SpeechSynthesis> m_speechSynthesis;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::LocalDOMWindowSpeechSynthesis)
+    static bool isType(const WebCore::SupplementBase& supplement) { return supplement.isLocalDOMWindowSpeechSynthesis(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(SPEECH_SYNTHESIS)

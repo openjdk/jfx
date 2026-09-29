@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "InspectorAgentBase.h"
-#include "InspectorBackendDispatchers.h"
-#include "InspectorFrontendChannel.h"
-#include "InspectorFrontendDispatchers.h"
+#include <JavaScriptCore/InspectorAgentBase.h>
+#include <JavaScriptCore/InspectorBackendDispatchers.h>
+#include <JavaScriptCore/InspectorFrontendChannel.h>
+#include <JavaScriptCore/InspectorFrontendDispatchers.h>
 #include <wtf/CheckedPtr.h>
 #include <wtf/Forward.h>
 #include <wtf/TZoneMalloc.h>
@@ -68,7 +68,7 @@ private:
     void connectToTargets();
     void disconnectFromTargets();
 
-    Inspector::FrontendRouter& m_router;
+    const CheckedRef<Inspector::FrontendRouter> m_router;
     const UniqueRef<TargetFrontendDispatcher> m_frontendDispatcher;
     const Ref<TargetBackendDispatcher> m_backendDispatcher;
     UncheckedKeyHashMap<String, InspectorTarget*> m_targets;

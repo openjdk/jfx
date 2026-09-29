@@ -27,7 +27,8 @@
 
 [
     JSGenerateToJSObject,
-    JSGenerateToNativeObject
+    JSGenerateToNativeObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary URLPatternInit {
     USVString protocol;
     USVString username;

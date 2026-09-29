@@ -58,15 +58,14 @@ void SharedWorkerObjectConnection::fetchScriptInClient(URL&& url, WebCore::Share
         return completionHandler(workerFetchError(ResourceError { ResourceError::Type::Cancellation }), { });
 
     auto loaderIdentifier = ++loaderIdentifierSeed;
-    auto loader = makeUniqueRef<SharedWorkerScriptLoader>(WTFMove(url), *workerObject, WTFMove(workerOptions));
-    auto loaderPtr = loader.ptr();
-    m_loaders.add(loaderIdentifier, WTFMove(loader));
+    Ref loader = SharedWorkerScriptLoader::create(WTF::move(url), *workerObject, WTF::move(workerOptions));
+    m_loaders.add(loaderIdentifier, loader.copyRef());
 
-    loaderPtr->load([this, loaderIdentifier, completionHandler = WTFMove(completionHandler)](WorkerFetchResult&& fetchResult, WorkerInitializationData&& initializationData) mutable {
+    loader->load([this, loaderIdentifier, completionHandler = WTF::move(completionHandler)](WorkerFetchResult&& fetchResult, WorkerInitializationData&& initializationData) mutable {
         CONNECTION_RELEASE_LOG("fetchScriptInClient: finished script load, success=%d", fetchResult.error.isNull());
-        auto loader = m_loaders.take(loaderIdentifier);
+        RefPtr loader = m_loaders.take(loaderIdentifier);
         ASSERT(loader);
-        completionHandler(WTFMove(fetchResult), WTFMove(initializationData));
+        completionHandler(WTF::move(fetchResult), WTF::move(initializationData));
     });
 }
 
@@ -91,7 +90,7 @@ void SharedWorkerObjectConnection::postErrorToWorkerObject(SharedWorkerObjectIde
         return;
 
     auto event = isErrorEvent ? Ref<Event> { ErrorEvent::create(errorMessage, sourceURL, lineNumber, columnNumber, { }) } : Event::create(eventNames().errorEvent, Event::CanBubble::No, Event::IsCancelable::No);
-    ActiveDOMObject::queueTaskToDispatchEvent(*workerObject, TaskSource::DOMManipulation, WTFMove(event));
+    ActiveDOMObject::queueTaskToDispatchEvent(*workerObject, TaskSource::DOMManipulation, WTF::move(event));
 }
 
 #if ENABLE(CONTENT_EXTENSIONS)

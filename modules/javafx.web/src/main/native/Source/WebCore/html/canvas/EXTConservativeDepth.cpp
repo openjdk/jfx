@@ -32,19 +32,19 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(EXTConservativeDepth);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(EXTConservativeDepth);
 
 EXTConservativeDepth::EXTConservativeDepth(WebGLRenderingContextBase& context)
     : WebGLExtension(context, WebGLExtensionName::EXTConservativeDepth)
 {
-    context.protectedGraphicsContextGL()->ensureExtensionEnabled("GL_EXT_conservative_depth"_s);
+    context.graphicsContextGL()->enableExtension(GCGLExtension::EXT_conservative_depth);
 }
 
 EXTConservativeDepth::~EXTConservativeDepth() = default;
 
 bool EXTConservativeDepth::supported(GraphicsContextGL& context)
 {
-    return context.supportsExtension("GL_EXT_conservative_depth"_s);
+    return context.supportsExtension(GCGLExtension::EXT_conservative_depth);
 }
 
 } // namespace WebCore

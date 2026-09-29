@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "RegistrableDomain.h"
+#include <WebCore/RegistrableDomain.h>
 #include <wtf/CrossThreadCopier.h>
 #include <wtf/HashMap.h>
 #include <wtf/Vector.h>
@@ -40,9 +40,9 @@ struct OrganizationStorageAccessPromptQuirk {
     bool isHashTableDeletedValue() const { return organizationName.isHashTableDeletedValue(); }
 
     OrganizationStorageAccessPromptQuirk(String&& organizationName, HashMap<RegistrableDomain, Vector<RegistrableDomain>>&& quirkDomains, Vector<URL>&& triggerPages)
-        : organizationName { WTFMove(organizationName) }
-        , quirkDomains { WTFMove(quirkDomains) }
-        , triggerPages { WTFMove(triggerPages) }
+        : organizationName { WTF::move(organizationName) }
+        , quirkDomains { WTF::move(quirkDomains) }
+        , triggerPages { WTF::move(triggerPages) }
         { }
 
     OrganizationStorageAccessPromptQuirk(WTF::HashTableDeletedValueType)
@@ -62,14 +62,14 @@ struct OrganizationStorageAccessPromptQuirk {
     OrganizationStorageAccessPromptQuirk isolatedCopy() &&
     {
         return {
-            crossThreadCopy(WTFMove(organizationName)),
-            crossThreadCopy(WTFMove(quirkDomains)),
-            crossThreadCopy(WTFMove(triggerPages))
+            crossThreadCopy(WTF::move(organizationName)),
+            crossThreadCopy(WTF::move(quirkDomains)),
+            crossThreadCopy(WTF::move(triggerPages))
         };
     }
 };
 
-static bool operator==(const OrganizationStorageAccessPromptQuirk& a, const OrganizationStorageAccessPromptQuirk& b)
+inline bool operator==(const OrganizationStorageAccessPromptQuirk& a, const OrganizationStorageAccessPromptQuirk& b)
 {
     return a.organizationName == b.organizationName;
 }
@@ -85,17 +85,10 @@ struct OrganizationStorageAccessPromptQuirkHashTraits : SimpleClassHashTraits<Or
     static bool isEmptyValue(const OrganizationStorageAccessPromptQuirk& quirk) { return quirk.organizationName.isNull(); }
 };
 
-struct OrganizationStorageAccessPromptQuirkHash {
-    static unsigned hash(const OrganizationStorageAccessPromptQuirk& quirk) { return computeHash(quirk); }
-    static bool equal(const OrganizationStorageAccessPromptQuirk& a, const OrganizationStorageAccessPromptQuirk& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = false;
-};
-
 } // namespace WebCore
 
 namespace WTF {
 
 template<> struct HashTraits<WebCore::OrganizationStorageAccessPromptQuirk> : WebCore::OrganizationStorageAccessPromptQuirkHashTraits { };
-template<> struct DefaultHash<WebCore::OrganizationStorageAccessPromptQuirk> : WebCore::OrganizationStorageAccessPromptQuirkHash { };
 
 } // namespace WTF

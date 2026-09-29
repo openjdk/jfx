@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "ScriptExecutionContextIdentifier.h"
-#include "WebTransportSession.h"
-#include "WebTransportSessionClient.h"
+#include <WebCore/ScriptExecutionContextIdentifier.h>
+#include <WebCore/WebTransportSession.h>
+#include <WebCore/WebTransportSessionClient.h>
 
 namespace WebCore {
 
@@ -35,30 +35,42 @@ class WebTransport;
 
 class WorkerWebTransportSession : public WebTransportSession, public WebTransportSessionClient {
 public:
-    static Ref<WorkerWebTransportSession> create(ScriptExecutionContextIdentifier, WebTransportSessionClient&);
+    WEBCORE_EXPORT static Ref<WorkerWebTransportSession> create(ScriptExecutionContextIdentifier, WebTransportSessionClient&);
     ~WorkerWebTransportSession();
 
-    void ref() const { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr::ref(); }
-    void deref() const { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr::deref(); }
+    WTF_ABSTRACT_THREAD_SAFE_REF_COUNTED_AND_CAN_MAKE_WEAK_PTR_IMPL;
 
-    void attachSession(Ref<WebTransportSession>&&);
+    WEBCORE_EXPORT void attachSession(Ref<WebTransportSession>&&);
 
 private:
     WorkerWebTransportSession(ScriptExecutionContextIdentifier, WebTransportSessionClient&);
 
     void receiveDatagram(std::span<const uint8_t>, bool, std::optional<Exception>&&) final;
     void receiveIncomingUnidirectionalStream(WebTransportStreamIdentifier) final;
-    void receiveBidirectionalStream(WebTransportBidirectionalStreamConstructionParameters&&) final;
+    void receiveBidirectionalStream(WebTransportStreamIdentifier) final;
     void streamReceiveBytes(WebTransportStreamIdentifier, std::span<const uint8_t>, bool, std::optional<Exception>&&) final;
-    void networkProcessCrashed() final;
+    void streamReceiveError(WebTransportStreamIdentifier, uint64_t) final;
+    void streamSendError(WebTransportStreamIdentifier, uint64_t) final;
+    void didFail(std::optional<uint32_t>&&, String&&) final;
+    void didDrain() final;
 
-    Ref<WebTransportSendPromise> sendDatagram(std::span<const uint8_t>) final;
-    Ref<WritableStreamPromise> createOutgoingUnidirectionalStream() final;
-    Ref<BidirectionalStreamPromise> createBidirectionalStream() final;
+    Ref<WebTransportSendPromise> sendDatagram(std::optional<WebTransportSendGroupIdentifier>, std::span<const uint8_t>) final;
+    Ref<WebTransportStreamPromise> createOutgoingUnidirectionalStream() final;
+    Ref<WebTransportStreamPromise> createBidirectionalStream() final;
+    Ref<WebTransportSendPromise> streamSendBytes(WebTransportStreamIdentifier, std::span<const uint8_t>, bool withFin) final;
+    Ref<WebTransportConnectionStatsPromise> getStats() final;
+    Ref<WebTransportSendStreamStatsPromise> getSendStreamStats(WebTransportStreamIdentifier) final;
+    Ref<WebTransportReceiveStreamStatsPromise> getReceiveStreamStats(WebTransportStreamIdentifier) final;
+    Ref<WebTransportSendStreamStatsPromise> getSendGroupStats(WebTransportSendGroupIdentifier) final;
+
     void cancelReceiveStream(WebTransportStreamIdentifier, std::optional<WebTransportStreamErrorCode>) final;
     void cancelSendStream(WebTransportStreamIdentifier, std::optional<WebTransportStreamErrorCode>) final;
     void destroyStream(WebTransportStreamIdentifier, std::optional<WebTransportStreamErrorCode>) final;
     void terminate(WebTransportSessionErrorCode, CString&&) final;
+    void datagramIncomingMaxAgeUpdated(std::optional<double>) final;
+    void datagramOutgoingMaxAgeUpdated(std::optional<double>) final;
+    void datagramIncomingHighWaterMarkUpdated(double) final;
+    void datagramOutgoingHighWaterMarkUpdated(double) final;
 
     const ScriptExecutionContextIdentifier m_contextID;
     ThreadSafeWeakPtr<WebTransportSessionClient> m_client;

@@ -26,7 +26,7 @@
 
 #if ENABLE(WEB_RTC)
 
-#include "RTCRtpScriptTransformer.h"
+#include <WebCore/RTCRtpScriptTransformer.h>
 #include <span>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/Vector.h>
@@ -76,17 +76,19 @@ public:
     virtual void setOptions(const RTCEncodedAudioFrameMetadata&) = 0;
     virtual void setOptions(const RTCEncodedVideoFrameMetadata&) = 0;
 
-    void setTransformer(RTCRtpScriptTransformer&);
-    bool isFromTransformer(RTCRtpScriptTransformer& transformer) const { return &transformer == m_transformer.get(); }
+    void setTransformer(WeakPtr<RTCRtpScriptTransformer>);
+    bool isFromTransformer(RTCRtpScriptTransformer* transformer) const { return transformer == m_transformer.get(); }
+
+    virtual bool isLibWebRTCRtpTransformableFrame() const { return false; }
 
 private:
     WeakPtr<RTCRtpScriptTransformer> m_transformer;
 };
 
-inline void RTCRtpTransformableFrame::setTransformer(RTCRtpScriptTransformer& transformer)
+inline void RTCRtpTransformableFrame::setTransformer(WeakPtr<RTCRtpScriptTransformer> transformer)
 {
     ASSERT(!m_transformer);
-    m_transformer = transformer;
+    m_transformer = WTF::move(transformer);
 };
 
 } // namespace WebCore

@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "DeprecatedCSSOMPrimitiveValue.h"
-#include "Rect.h"
+#include <WebCore/DeprecatedCSSOMPrimitiveValue.h>
+#include <WebCore/Rect.h>
 
 namespace WebCore {
 
@@ -37,10 +37,10 @@ public:
         return adoptRef(*new DeprecatedCSSOMRect(rect, owner));
     }
 
-    DeprecatedCSSOMPrimitiveValue* top() const { return m_top.ptr(); }
-    DeprecatedCSSOMPrimitiveValue* right() const { return m_right.ptr(); }
-    DeprecatedCSSOMPrimitiveValue* bottom() const { return m_bottom.ptr(); }
-    DeprecatedCSSOMPrimitiveValue* left() const { return m_left.ptr(); }
+    DeprecatedCSSOMPrimitiveValue& top() const { return m_top; }
+    DeprecatedCSSOMPrimitiveValue& right() const { return m_right; }
+    DeprecatedCSSOMPrimitiveValue& bottom() const { return m_bottom; }
+    DeprecatedCSSOMPrimitiveValue& left() const { return m_left; }
 
 private:
     DeprecatedCSSOMRect(const Rect& rect, CSSStyleDeclaration& owner)

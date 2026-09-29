@@ -120,9 +120,9 @@ public:
     bool isConstDef(unsigned absoluteIndex) const
     {
         if constexpr (bank == GP)
-            return m_gpConstDefs.quickGet(absoluteIndex);
+            return m_gpConstDefs.get(absoluteIndex);
         else
-        return m_fpConstDefs.quickGet(absoluteIndex);
+            return m_fpConstDefs.get(absoluteIndex);
     }
 
     template<Bank bank>

@@ -29,9 +29,9 @@
 
 #pragma once
 
-#include "FloatPolygon.h"
-#include "LayoutShape.h"
-#include "ShapeInterval.h"
+#include <WebCore/FloatPolygon.h>
+#include <WebCore/LayoutShape.h>
+#include <WebCore/ShapeInterval.h>
 
 namespace WebCore {
 
@@ -60,7 +60,7 @@ class PolygonLayoutShape : public LayoutShape {
     WTF_MAKE_NONCOPYABLE(PolygonLayoutShape);
 public:
     PolygonLayoutShape(Vector<FloatPoint>&& vertices, float boxLogicalWidth)
-        : m_polygon(WTFMove(vertices))
+        : m_polygon(WTF::move(vertices))
         , m_boxLogicalWidth(boxLogicalWidth)
     {
     }

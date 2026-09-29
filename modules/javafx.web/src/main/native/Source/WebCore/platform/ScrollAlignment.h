@@ -51,7 +51,7 @@ namespace WebCore {
 
 struct ScrollAlignment {
 
-    enum class Behavior {
+    enum class Behavior : uint8_t {
         NoScroll,
         AlignCenter,
         AlignTop,
@@ -67,6 +67,7 @@ struct ScrollAlignment {
     void disableLegacyHorizontalVisibilityThreshold() { m_enableLegacyHorizontalVisibilityThreshold = false; }
     bool legacyHorizontalVisibilityThresholdEnabled() const { return m_enableLegacyHorizontalVisibilityThreshold; }
 
+    static const ScrollAlignment noScroll;
     static const ScrollAlignment alignCenterIfNotVisible;
     static const ScrollAlignment alignToEdgeIfNotVisible;
     WEBCORE_EXPORT static const ScrollAlignment alignCenterIfNeeded;

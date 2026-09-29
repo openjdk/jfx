@@ -98,7 +98,7 @@ JSC_DEFINE_CUSTOM_GETTER(symbolProtoGetterDescription, (JSGlobalObject* globalOb
     scope.release();
     Integrity::auditStructureID(symbol->structureID());
     auto description = symbol->description();
-    return JSValue::encode(description.isNull() ? jsUndefined() : jsString(vm, WTFMove(description)));
+    return JSValue::encode(description.isNull() ? jsUndefined() : jsString(vm, WTF::move(description)));
 }
 
 JSC_DEFINE_HOST_FUNCTION(symbolProtoFuncToString, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -110,7 +110,13 @@ JSC_DEFINE_HOST_FUNCTION(symbolProtoFuncToString, (JSGlobalObject* globalObject,
     if (!symbol)
         return throwVMTypeError(globalObject, scope, SymbolToStringTypeError);
     Integrity::auditStructureID(symbol->structureID());
-    RELEASE_AND_RETURN(scope, JSValue::encode(jsNontrivialString(vm, symbol->descriptiveString())));
+    auto description = symbol->tryGetDescriptiveString();
+    if (!description) [[unlikely]] {
+        ASSERT(description.error() == ErrorTypeWithExtension::OutOfMemoryError);
+        throwOutOfMemoryError(globalObject, scope);
+        return { };
+    }
+    RELEASE_AND_RETURN(scope, JSValue::encode(jsNontrivialString(vm, description.value())));
 }
 
 JSC_DEFINE_HOST_FUNCTION(symbolProtoFuncValueOf, (JSGlobalObject* globalObject, CallFrame* callFrame))

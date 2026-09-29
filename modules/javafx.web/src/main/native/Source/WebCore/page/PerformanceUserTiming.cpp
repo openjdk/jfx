@@ -31,6 +31,7 @@
 #include "FrameDestructionObserverInlines.h"
 #include "InspectorInstrumentation.h"
 #include "MessagePort.h"
+#include "Performance.h"
 #include "PerformanceMarkOptions.h"
 #include "PerformanceMeasureOptions.h"
 #include "PerformanceTiming.h"
@@ -47,7 +48,7 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(PerformanceUserTiming);
 
 using NavigationTimingFunction = unsigned long long (PerformanceTiming::*)() const;
 
-static constexpr std::pair<ComparableASCIILiteral, NavigationTimingFunction> restrictedMarkMappings[] = {
+static constexpr SortedArrayMap restrictedMarkFunctions { std::to_array<std::pair<ComparableASCIILiteral, NavigationTimingFunction>>({
     { "connectEnd"_s, &PerformanceTiming::connectEnd },
     { "connectStart"_s, &PerformanceTiming::connectStart },
     { "domComplete"_s, &PerformanceTiming::domComplete },
@@ -69,8 +70,7 @@ static constexpr std::pair<ComparableASCIILiteral, NavigationTimingFunction> res
     { "secureConnectionStart"_s, &PerformanceTiming::secureConnectionStart },
     { "unloadEventEnd"_s, &PerformanceTiming::unloadEventEnd },
     { "unloadEventStart"_s, &PerformanceTiming::unloadEventStart },
-};
-static constexpr SortedArrayMap restrictedMarkFunctions { restrictedMarkMappings };
+}) };
 
 bool PerformanceUserTiming::isRestrictedMarkName(const String& markName)
 {
@@ -106,7 +106,7 @@ ExceptionOr<Ref<PerformanceMark>> PerformanceUserTiming::mark(JSC::JSGlobalObjec
 
     InspectorInstrumentation::performanceMark(context.get(), markName, timestamp);
 
-    auto mark = PerformanceMark::create(globalObject, context, markName, WTFMove(markOptions));
+    auto mark = PerformanceMark::create(globalObject, context, markName, WTF::move(markOptions));
     if (mark.hasException())
         return mark.releaseException();
 
@@ -136,11 +136,10 @@ ExceptionOr<double> PerformanceUserTiming::convertMarkToTimestamp(const String& 
             if (*function == &PerformanceTiming::navigationStart)
                 return 0.0;
 
-            // PerformanceTiming should always be non-null for the Document ScriptExecutionContext.
-            ASSERT(m_performance->timing());
-            auto timing = m_performance->timing();
+            // PerformanceTiming is only available for the Document ScriptExecutionContext.
+            Ref timing = m_performance->timing();
             auto startTime = timing->navigationStart();
-            auto endTime = ((*timing).*(*function))();
+            auto endTime = ((timing.get()).*(*function))();
             if (!endTime)
                 return Exception { ExceptionCode::InvalidAccessError };
             return endTime - startTime;

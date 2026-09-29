@@ -71,9 +71,6 @@
 
 namespace WTF {
 
-Lock Thread::s_allThreadsLock;
-
-
 // During suspend, suspend or resume should not be executed from the other threads.
 // We use global lock instead of per thread lock.
 // Consider the following case, there are threads A and B.
@@ -159,8 +156,8 @@ struct Thread::NewThreadContext : public ThreadSafeRefCounted<NewThreadContext> 
 public:
     NewThreadContext(ASCIILiteral name, Function<void()>&& entryPoint, Ref<Thread>&& thread)
         : name(name)
-        , entryPoint(WTFMove(entryPoint))
-        , thread(WTFMove(thread))
+        , entryPoint(WTF::move(entryPoint))
+        , thread(WTF::move(thread))
     {
     }
 
@@ -176,19 +173,10 @@ public:
 #endif
 };
 
-HashSet<Thread*>& Thread::allThreads()
+ThreadSafeWeakHashSet<Thread>& Thread::allThreads()
 {
-    static LazyNeverDestroyed<HashSet<Thread*>> allThreads;
-    static std::once_flag onceKey;
-    std::call_once(onceKey, [&] {
-        allThreads.construct();
-    });
+    static NeverDestroyed<ThreadSafeWeakHashSet<Thread>> allThreads;
     return allThreads;
-}
-
-Lock& Thread::allThreadsLock()
-{
-    return s_allThreadsLock;
 }
 
 const char* Thread::normalizeThreadName(const char* threadName)
@@ -224,15 +212,16 @@ void Thread::initializeInThread()
         m_stack = StackBounds::currentThreadStackBounds();
     m_savedLastStackTop = stack().origin();
 
+#if !HAVE(STACK_BOUNDS_FOR_NEW_THREAD)
+    if (!isMainThread())
+        allThreads().add(*this); // Must have stack bounds before adding to allThreads()
+#endif
+
     m_currentAtomStringTable = &m_defaultAtomStringTable;
 #if USE(WEB_THREAD)
     // On iOS, one AtomStringTable is shared between the main UI thread and the WebThread.
     if (isWebThread() || isUIThread()) {
-        static LazyNeverDestroyed<AtomStringTable> sharedStringTable;
-        static std::once_flag onceKey;
-        std::call_once(onceKey, [&] {
-            sharedStringTable.construct();
-        });
+        static NeverDestroyed<AtomStringTable> sharedStringTable;
         m_currentAtomStringTable = &sharedStringTable.get();
     }
 #endif
@@ -247,18 +236,21 @@ void Thread::entryPoint(NewThreadContext* newThreadContext)
     Function<void()> function;
     {
         // Ref is already incremented by Thread::create.
-        Ref<NewThreadContext> context = adoptRef(*newThreadContext);
+        Ref context = adoptRef(*newThreadContext);
         // Block until our creating thread has completed any extra setup work, including establishing ThreadIdentifier.
         MutexLocker locker(context->mutex);
-        ASSERT(context->stage == NewThreadContext::Stage::EstablishedHandle);
+
+#if !HAVE(STACK_BOUNDS_FOR_NEW_THREAD)
+        RELEASE_ASSERT(context->stage == NewThreadContext::Stage::EstablishedHandle);
+#endif
 
         Thread::initializeCurrentThreadInternal(context->name);
-        function = WTFMove(context->entryPoint);
+        function = WTF::move(context->entryPoint);
 
-        Ref thread = WTFMove(context->thread);
+        Ref thread = WTF::move(context->thread);
         thread->initializeInThread();
 
-        Thread::initializeTLS(WTFMove(thread));
+        Thread::initializeTLS(WTF::move(thread));
 
 #if !HAVE(STACK_BOUNDS_FOR_NEW_THREAD)
         // Ack completion of initialization to the creating thread.
@@ -274,44 +266,32 @@ void Thread::entryPoint(NewThreadContext* newThreadContext)
 Ref<Thread> Thread::create(ASCIILiteral name, Function<void()>&& entryPoint, ThreadType threadType, QOS qos, SchedulingPolicy schedulingPolicy)
 {
     WTF::initialize();
-    Ref<Thread> thread = adoptRef(*new Thread());
-    Ref<NewThreadContext> context = adoptRef(*new NewThreadContext { name, WTFMove(entryPoint), thread.copyRef() });
-    // Increment the context ref on behalf of the created thread. We do not just use a unique_ptr and leak it to the created thread because both the creator and created thread has a need to keep the context alive:
-    // 1. the created thread needs to keep it alive because Thread::create() can exit before the created thread has a chance to use the context.
-    // 2. the creator thread (if HAVE(STACK_BOUNDS_FOR_NEW_THREAD) is false) needs to keep it alive because the created thread may exit before the creator has a chance to wake up from waiting for the completion of the created thread's initialization. This waiting uses a condition variable in the context.
-    // Hence, a joint ownership model is needed if HAVE(STACK_BOUNDS_FOR_NEW_THREAD) is false. To simplify the code, we just go with joint ownership by both the creator and created threads,
-    // and make the context ThreadSafeRefCounted.
-    context->ref();
+
+    Ref thread = adoptRef(*new Thread(schedulingPolicy));
+
+    Ref context = adoptRef(*new NewThreadContext { name, WTF::move(entryPoint), thread.get() });
     {
         MutexLocker locker(context->mutex);
-        bool success = thread->establishHandle(context.ptr(), stackSize(threadType), qos, schedulingPolicy);
+        context->ref(); // Adopted by Thread::entryPoint
+        bool success = thread->establishHandle(context.get(), stackSize(threadType), qos, schedulingPolicy);
         RELEASE_ASSERT(success);
-        context->stage = NewThreadContext::Stage::EstablishedHandle;
 
 #if HAVE(STACK_BOUNDS_FOR_NEW_THREAD)
         thread->m_stack = StackBounds::newThreadStackBounds(thread->m_handle);
+        thread->m_savedLastStackTop = thread->stack().origin();
+        allThreads().add(thread.get()); // Must have stack bounds before adding to allThreads()
 #else
         // In platforms which do not support StackBounds::newThreadStackBounds(), we do not have a way to get stack
         // bounds outside the target thread itself. Thus, we need to initialize thread information in the target thread
         // and wait for completion of initialization in the caller side.
+        context->stage = NewThreadContext::Stage::EstablishedHandle;
         while (context->stage != NewThreadContext::Stage::Initialized)
             context->condition.wait(context->mutex);
+
+        // Thread::entryPoint initializes thread->m_stack and thread->m_savedLastStackTop and adds to allThreads().
 #endif
     }
 
-    // We must register threads here since threads registered in allThreads are expected to have complete thread data which can be initialized in launched thread side.
-    // However, it is also possible that the launched thread has finished its execution before it is registered in allThreads here! In this case, the thread has already
-    // called Thread::didExit to unregister itself from allThreads. Registering such a thread will register a stale thread pointer to allThreads, which will not be removed
-    // even after Thread is destroyed. Register a thread only when it has not unregistered itself from allThreads yet.
-    {
-        Locker locker { allThreadsLock() };
-        if (!thread->m_didUnregisterFromAllThreads)
-            allThreads().add(thread.ptr());
-    }
-
-    ASSERT(!thread->stack().isEmpty());
-
-    thread->m_isRealtime = schedulingPolicy == SchedulingPolicy::Realtime;
     return thread;
 }
 
@@ -331,23 +311,14 @@ static bool shouldRemoveThreadFromThreadGroup()
 
 void Thread::didExit()
 {
-    {
-        Locker locker { allThreadsLock() };
-        allThreads().remove(this);
-        m_didUnregisterFromAllThreads = true;
-    }
+    allThreads().remove(*this);
 
     if (shouldRemoveThreadFromThreadGroup()) {
         {
-            Vector<std::shared_ptr<ThreadGroup>> threadGroups;
+            Vector<Ref<ThreadGroup>> threadGroups;
             {
                 Locker locker { m_mutex };
-                for (auto& threadGroupPointerPair : m_threadGroupMap) {
-                    // If ThreadGroup is just being destroyed,
-                    // we do not need to perform unregistering.
-                    if (auto retained = threadGroupPointerPair.value.lock())
-                        threadGroups.append(WTFMove(retained));
-                }
+                threadGroups = m_threadGroups.values();
                 m_isShuttingDown = true;
             }
             for (auto& threadGroup : threadGroups) {
@@ -371,25 +342,16 @@ ThreadGroupAddResult Thread::addToThreadGroup(const AbstractLocker& threadGroupL
     if (m_isShuttingDown)
         return ThreadGroupAddResult::NotAdded;
     if (threadGroup.m_threads.add(*this).isNewEntry) {
-        m_threadGroupMap.add(&threadGroup, threadGroup.weakFromThis());
+        m_threadGroups.add(threadGroup);
         return ThreadGroupAddResult::NewlyAdded;
     }
     return ThreadGroupAddResult::AlreadyAdded;
 }
 
-void Thread::removeFromThreadGroup(const AbstractLocker& threadGroupLocker, ThreadGroup& threadGroup)
-{
-    UNUSED_PARAM(threadGroupLocker);
-    Locker locker { m_mutex };
-    if (m_isShuttingDown)
-        return;
-    m_threadGroupMap.remove(&threadGroup);
-}
-
 unsigned Thread::numberOfThreadGroups()
 {
     Locker locker { m_mutex };
-    return m_threadGroupMap.size();
+    return m_threadGroups.values().size();
 }
 
 bool Thread::exchangeIsCompilationThread(bool newValue)

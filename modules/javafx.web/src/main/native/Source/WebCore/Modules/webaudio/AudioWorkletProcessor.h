@@ -56,7 +56,7 @@ class WebCoreOpaqueRoot;
 template<typename> class ExceptionOr;
 
 class AudioWorkletProcessor : public ScriptWrappable, public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<AudioWorkletProcessor> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(AudioWorkletProcessor);
+    WTF_MAKE_TZONE_ALLOCATED(AudioWorkletProcessor);
 public:
     static ExceptionOr<Ref<AudioWorkletProcessor>> create(ScriptExecutionContext&);
     ~AudioWorkletProcessor();

@@ -33,14 +33,14 @@
 
 #if ENABLE(MEDIA_SOURCE)
 
-#include "InbandTextTrackPrivate.h"
-#include "MediaDescription.h"
-#include "MediaPlayer.h"
-#include "MediaSample.h"
-#include "PlatformTimeRanges.h"
-#include "SampleMap.h"
-#include "SourceBufferPrivateClient.h"
-#include "TimeRanges.h"
+#include <WebCore/InbandTextTrackPrivate.h>
+#include <WebCore/MediaDescription.h>
+#include <WebCore/MediaPlayer.h>
+#include <WebCore/MediaSample.h>
+#include <WebCore/PlatformTimeRanges.h>
+#include <WebCore/SampleMap.h>
+#include <WebCore/SourceBufferPrivateClient.h>
+#include <WebCore/TimeRanges.h>
 #include <optional>
 #include <wtf/Deque.h>
 #include <wtf/Forward.h>
@@ -59,6 +59,7 @@ namespace WebCore {
 class MediaSourcePrivate;
 class SharedBuffer;
 class TrackBuffer;
+class TrackInfo;
 class TimeRanges;
 
 #if ENABLE(ENCRYPTED_MEDIA)
@@ -74,7 +75,7 @@ enum class SourceBufferAppendMode : uint8_t {
 };
 
 class SourceBufferPrivate
-    : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<SourceBufferPrivate, WTF::DestructionThread::Main>
+    : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<SourceBufferPrivate>
 #if !RELEASE_LOG_DISABLED
     , public LoggerHelper
 #endif
@@ -97,25 +98,27 @@ public:
     virtual bool canSwitchToType(const ContentType&) { return false; }
 
     WEBCORE_EXPORT virtual void setMediaSourceEnded(bool);
-    virtual void setMode(SourceBufferAppendMode mode) { m_appendMode = mode; }
+    WEBCORE_EXPORT virtual void setMode(SourceBufferAppendMode);
     WEBCORE_EXPORT virtual void reenqueueMediaIfNeeded(const MediaTime& currentMediaTime);
     WEBCORE_EXPORT virtual void addTrackBuffer(TrackID, RefPtr<MediaDescription>&&);
     WEBCORE_EXPORT virtual void resetTrackBuffers();
     WEBCORE_EXPORT virtual void clearTrackBuffers(bool shouldReportToClient = false);
     WEBCORE_EXPORT virtual void setAllTrackBuffersNeedRandomAccess();
-    virtual void setGroupStartTimestamp(const MediaTime& mediaTime) { m_groupStartTimestamp = mediaTime; }
-    virtual void setGroupStartTimestampToEndTimestamp() { m_groupStartTimestamp = m_groupEndTimestamp; }
-    virtual void setShouldGenerateTimestamps(bool flag) { m_shouldGenerateTimestamps = flag; }
+    virtual void setGroupStartTimestamp(const MediaTime&);
+    virtual void setGroupStartTimestampToEndTimestamp();
+    virtual void setShouldGenerateTimestamps(bool);
     WEBCORE_EXPORT virtual Ref<MediaPromise> removeCodedFrames(const MediaTime& start, const MediaTime& end, const MediaTime& currentMediaTime);
     WEBCORE_EXPORT virtual bool evictCodedFrames(uint64_t newDataSize, const MediaTime& currentTime);
     WEBCORE_EXPORT virtual void asyncEvictCodedFrames(uint64_t newDataSize, const MediaTime& currentTime);
     WEBCORE_EXPORT virtual size_t platformEvictionThreshold() const;
-    WEBCORE_EXPORT virtual uint64_t totalTrackBufferSizeInBytes() const;
+    WEBCORE_EXPORT uint64_t contentSize() const;
     WEBCORE_EXPORT virtual void resetTimestampOffsetInTrackBuffers();
-    virtual void startChangingType() { m_pendingInitializationSegmentForChangeType = true; }
-    virtual void setTimestampOffset(const MediaTime& timestampOffset) { m_timestampOffset = timestampOffset; }
-    virtual void setAppendWindowStart(const MediaTime& appendWindowStart) { m_appendWindowStart = appendWindowStart;}
-    virtual void setAppendWindowEnd(const MediaTime& appendWindowEnd) { m_appendWindowEnd = appendWindowEnd; }
+    virtual void startChangingType();
+    WEBCORE_EXPORT virtual void setTimestampOffset(const MediaTime&);
+    WEBCORE_EXPORT MediaTime timestampOffset() const;
+    virtual void setAppendWindowStart(const MediaTime&);
+    virtual void setAppendWindowEnd(const MediaTime&);
+    std::pair<MediaTime, MediaTime> appendWindow() const;
 
     using ComputeSeekPromise = MediaTimePromise;
     WEBCORE_EXPORT virtual Ref<ComputeSeekPromise> computeSeekTime(const SeekTarget&);
@@ -124,19 +127,15 @@ public:
 
     WEBCORE_EXPORT void setClient(SourceBufferPrivateClient&);
 
-    void setMediaSourceDuration(const MediaTime& duration) { m_mediaSourceDuration = duration; }
+    void setMediaSourceDuration(const MediaTime&);
 
-    WEBCORE_EXPORT virtual bool isBufferFullFor(uint64_t requiredSize) const;
-    WEBCORE_EXPORT virtual bool canAppend(uint64_t requiredSize) const;
-    SourceBufferEvictionData evictionData() const { return m_evictionData; }
+    WEBCORE_EXPORT bool isBufferFullFor(uint64_t requiredSize) const;
+    WEBCORE_EXPORT bool canAppend(uint64_t requiredSize) const;
+    WEBCORE_EXPORT SourceBufferEvictionData evictionData() const;
     WEBCORE_EXPORT Vector<PlatformTimeRanges> trackBuffersRanges() const;
 
     // Methods used by MediaSourcePrivate
-    bool hasAudio() const { return m_hasAudio; }
-    bool hasVideo() const { return m_hasVideo; }
-    bool hasReceivedFirstInitializationSegment() const { return m_receivedFirstInitializationSegment; }
-
-    virtual MediaTime timestampOffset() const { return m_timestampOffset; }
+    bool hasReceivedFirstInitializationSegment() const;
 
     virtual size_t platformMaximumBufferSize() const { return 0; }
     virtual Ref<GenericPromise> setMaximumBufferSize(size_t);
@@ -148,7 +147,7 @@ public:
     virtual void detach() { }
     WEBCORE_EXPORT virtual void attach();
 
-    // Internals Utility methods
+    // Test Utility methods
     using SamplesPromise = NativePromise<Vector<String>, PlatformMediaError>;
     WEBCORE_EXPORT virtual Ref<SamplesPromise> bufferedSamplesForTrackId(TrackID);
     WEBCORE_EXPORT virtual Ref<SamplesPromise> enqueuedSamplesForTrackID(TrackID);
@@ -160,21 +159,17 @@ public:
     virtual uint64_t sourceBufferLogIdentifier() = 0;
 #endif
 
-#if ENABLE(LEGACY_ENCRYPTED_MEDIA)
-    virtual void setCDMSession(LegacyCDMSession*) { }
-#endif
 #if ENABLE(ENCRYPTED_MEDIA)
-    virtual void setCDMInstance(CDMInstance*) { }
     virtual bool waitingForKey() const { return false; }
-    virtual void attemptToDecrypt() { }
 #endif
 
 protected:
-    WEBCORE_EXPORT explicit SourceBufferPrivate(MediaSourcePrivate&, GuaranteedSerialFunctionDispatcher&);
+    WEBCORE_EXPORT explicit SourceBufferPrivate(MediaSourcePrivate&, WorkQueue&);
     MediaTime currentTime() const;
     MediaTime mediaSourceDuration() const;
 
     WEBCORE_EXPORT void ensureOnDispatcher(Function<void()>&&) const;
+    WEBCORE_EXPORT void ensureOnDispatcherSync(NOESCAPE Function<void()>&&);
 
     using InitializationSegment = SourceBufferPrivateClient::InitializationSegment;
     WEBCORE_EXPORT void didReceiveInitializationSegment(InitializationSegment&&);
@@ -184,7 +179,6 @@ protected:
     virtual Ref<MediaPromise> appendInternal(Ref<SharedBuffer>&&) = 0;
     virtual void resetParserStateInternal() = 0;
     virtual MediaTime timeFudgeFactor() const { return PlatformTimeRanges::timeFudgeFactor(); }
-    virtual bool isActive() const { return m_isActive; }
     virtual bool isSeeking() const { return false; }
     virtual void flush(TrackID) { }
     virtual void enqueueSample(Ref<MediaSample>&&, TrackID) { }
@@ -216,9 +210,17 @@ protected:
     WEBCORE_EXPORT RefPtr<SourceBufferPrivateClient> client() const;
 
     ThreadSafeWeakPtr<MediaSourcePrivate> m_mediaSource { nullptr };
-    const Ref<GuaranteedSerialFunctionDispatcher> m_dispatcher; // SerialFunctionDispatcher the SourceBufferPrivate/MediaSourcePrivate
+    const Ref<WorkQueue> m_dispatcher; // SerialFunctionDispatcher the SourceBufferPrivate/MediaSourcePrivate
 
-    SourceBufferEvictionData m_evictionData;
+    SourceBufferEvictionData m_evictionData WTF_GUARDED_BY_LOCK(m_lock);
+
+    mutable Lock m_lock;
+    MediaTime m_timestampOffset WTF_GUARDED_BY_LOCK(m_lock);
+    std::atomic<size_t> m_maximumBufferSize { 0 };
+
+#if ASSERT_ENABLED
+    bool isOnCreationThread() const;
+#endif
 
 private:
     MediaTime minimumBufferedTime() const;
@@ -232,9 +234,11 @@ private:
     void setBufferedDirty(bool);
     void trySignalAllSamplesInTrackEnqueued(TrackBuffer&, TrackID);
     MediaTime findPreviousSyncSamplePresentationTime(const MediaTime&);
+    bool evictCodedFramesInternal(uint64_t newDataSize, const MediaTime& currentTime);
     void removeCodedFramesInternal(const MediaTime& start, const MediaTime& end, const MediaTime& currentMediaTime);
     bool evictFrames(uint64_t newDataSize, const MediaTime& currentTime);
     bool hasTooManySamples() const;
+    uint64_t totalTrackBufferSizeInBytes() const;
     void iterateTrackBuffers(NOESCAPE const Function<void(TrackBuffer&)>&);
     void iterateTrackBuffers(NOESCAPE const Function<void(const TrackBuffer&)>&) const;
 
@@ -242,21 +246,23 @@ private:
     Ref<OperationPromise> protectedCurrentSourceBufferOperation() const;
     Ref<MediaPromise> protectedCurrentAppendProcessing() const;
 
-    bool m_hasAudio { false };
-    bool m_hasVideo { false };
-    bool m_isActive { false };
+    void ensureWeakOnDispatcher(Function<void(SourceBufferPrivate&)>&&);
+
+    bool m_hasAudio WTF_GUARDED_BY_CAPABILITY(m_dispatcher.get()) { false };
+    bool m_hasVideo WTF_GUARDED_BY_CAPABILITY(m_dispatcher.get()) { false };
+    bool m_isActive WTF_GUARDED_BY_CAPABILITY(m_dispatcher.get()) { false };
 
     ThreadSafeWeakPtr<SourceBufferPrivateClient> m_client;
 
-    StdUnorderedMap<TrackID, UniqueRef<TrackBuffer>> m_trackBufferMap;
-    SourceBufferAppendMode m_appendMode { SourceBufferAppendMode::Segments };
+    StdUnorderedMap<TrackID, UniqueRef<TrackBuffer>> m_trackBufferMap WTF_GUARDED_BY_CAPABILITY(m_dispatcher.get());
+    SourceBufferAppendMode m_appendMode  WTF_GUARDED_BY_CAPABILITY(m_dispatcher.get()) { SourceBufferAppendMode::Segments };
 
-    Ref<OperationPromise> m_currentSourceBufferOperation { OperationPromise::createAndResolve() };
+    Ref<OperationPromise> m_currentSourceBufferOperation { OperationPromise::createAndResolve() }; // Accessed on SourceBuffer's thread.
 
-    bool m_shouldGenerateTimestamps { false };
-    bool m_receivedFirstInitializationSegment { false };
-    bool m_pendingInitializationSegmentForChangeType { false };
-    size_t m_abortCount { 0 };
+    bool m_shouldGenerateTimestamps WTF_GUARDED_BY_CAPABILITY(m_dispatcher.get()) { false };
+    bool m_receivedFirstInitializationSegment WTF_GUARDED_BY_CAPABILITY(m_dispatcher.get()) { false };
+    bool m_pendingInitializationSegmentForChangeType WTF_GUARDED_BY_CAPABILITY(m_dispatcher.get()) { false };
+    std::atomic<size_t> m_abortCount { 0 };
 
     void processPendingMediaSamples();
     bool processMediaSample(SourceBufferPrivateClient&, Ref<MediaSample>&&);
@@ -268,20 +274,23 @@ private:
     void computeEvictionData(ComputeEvictionDataRule = ComputeEvictionDataRule::Default);
 
     using SamplesVector = Vector<Ref<MediaSample>>;
-    SamplesVector m_pendingSamples;
-    Ref<MediaPromise> m_currentAppendProcessing { MediaPromise::createAndResolve() };
+    SamplesVector m_pendingSamples WTF_GUARDED_BY_CAPABILITY(m_dispatcher.get());
+    Ref<MediaPromise> m_currentAppendProcessing WTF_GUARDED_BY_CAPABILITY(m_dispatcher.get()) { MediaPromise::createAndResolve() };
 
-    MediaTime m_timestampOffset;
-    MediaTime m_appendWindowStart { MediaTime::zeroTime() };
-    MediaTime m_appendWindowEnd { MediaTime::positiveInfiniteTime() };
-    MediaTime m_highestPresentationTimestamp;
-    MediaTime m_mediaSourceDuration { MediaTime::invalidTime() };
+    MediaTime m_appendWindowStart WTF_GUARDED_BY_LOCK(m_lock) { MediaTime::zeroTime() };
+    MediaTime m_appendWindowEnd WTF_GUARDED_BY_LOCK(m_lock) { MediaTime::positiveInfiniteTime() };
+    MediaTime m_highestPresentationTimestamp WTF_GUARDED_BY_CAPABILITY(m_dispatcher.get());
+    MediaTime m_mediaSourceDuration WTF_GUARDED_BY_LOCK(m_lock) { MediaTime::invalidTime() };
 
-    MediaTime m_groupStartTimestamp { MediaTime::invalidTime() };
-    MediaTime m_groupEndTimestamp { MediaTime::zeroTime() };
+    MediaTime m_groupStartTimestamp WTF_GUARDED_BY_CAPABILITY(m_dispatcher.get()) { MediaTime::invalidTime() };
+    MediaTime m_groupEndTimestamp WTF_GUARDED_BY_CAPABILITY(m_dispatcher.get()) { MediaTime::zeroTime() };
 
-    bool m_isMediaSourceEnded { false };
-    std::optional<InitializationSegment> m_lastInitializationSegment;
+    bool m_isMediaSourceEnded WTF_GUARDED_BY_CAPABILITY(m_dispatcher.get()) { false };
+    std::optional<InitializationSegment> m_lastInitializationSegment WTF_GUARDED_BY_CAPABILITY(m_dispatcher.get());
+
+#if ASSERT_ENABLED
+    const uint32_t m_creationThreadId { 0 };
+#endif
 };
 
 } // namespace WebCore

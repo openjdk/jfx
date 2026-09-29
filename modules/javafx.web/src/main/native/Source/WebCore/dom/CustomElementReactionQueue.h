@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "CustomElementFormValue.h"
-#include "Element.h"
-#include "GCReachableRef.h"
-#include "QualifiedName.h"
+#include <WebCore/CustomElementFormValue.h>
+#include <WebCore/Element.h>
+#include <WebCore/GCReachableRef.h>
+#include <WebCore/QualifiedName.h>
 #include <wtf/CheckedRef.h>
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>

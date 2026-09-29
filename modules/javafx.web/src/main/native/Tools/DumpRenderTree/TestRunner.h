@@ -38,6 +38,11 @@
 #include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
 
+#if PLATFORM(COCOA)
+#include <pal/spi/cocoa/NetworkSPI.h>
+#include <wtf/darwin/NetworkOSObject.h>
+#endif // PLATFORM(COCOA)
+
 extern FILE* testResult;
 
 class TestRunner : public WTR::UIScriptContextDelegate, public RefCounted<TestRunner> {
@@ -59,11 +64,11 @@ public:
 
     void addDisallowedURL(JSStringRef url);
     const std::set<std::string>& allowedHosts() const { return m_allowedHosts; }
-    void setAllowedHosts(std::set<std::string> hosts) { m_allowedHosts = WTFMove(hosts); }
+    void setAllowedHosts(std::set<std::string> hosts) { m_allowedHosts = WTF::move(hosts); }
     bool allowAnyHTTPSCertificateForAllowedHosts() const { return m_allowAnyHTTPSCertificateForAllowedHosts; }
     void setAllowAnyHTTPSCertificateForAllowedHosts(bool allow) { m_allowAnyHTTPSCertificateForAllowedHosts = allow; }
     const std::set<std::string>& localhostAliases() const { return m_localhostAliases; }
-    void setLocalhostAliases(std::set<std::string> hosts) { m_localhostAliases = WTFMove(hosts); }
+    void setLocalhostAliases(std::set<std::string> hosts) { m_localhostAliases = WTF::move(hosts); }
     void addURLToRedirect(std::string origin, std::string destination);
     const char* redirectionDestinationForURL(const char*);
     void setPortsForUpgradingInsecureScheme(uint16_t insecurePort, uint16_t securePort) { m_portsForUpgradingInsecureScheme = { insecurePort, securePort }; }
@@ -397,6 +402,12 @@ public:
     void setPageScaleFactor(double scaleFactor, long x, long y);
     static JSValueRef alwaysResolvePromise(JSContextRef);
 
+    void setHasMouseDeviceForTesting(bool);
+
+#if ENABLE(DNS_SERVER_FOR_TESTING)
+    void initializeDNS();
+#endif
+
 private:
     TestRunner(const std::string& testURL, const std::string& expectedPixelHash);
 
@@ -491,12 +502,15 @@ private:
         String scriptString;
     };
 
-    std::unique_ptr<WTR::UIScriptContext> m_UIScriptContext;
-
+    RefPtr<WTR::UIScriptContext> m_UIScriptContext;
 
     std::vector<std::string> m_openPanelFiles;
 #if PLATFORM(IOS_FAMILY)
     std::vector<uint8_t> m_openPanelFilesMediaIcon;
+#endif
+
+#if PLATFORM(COCOA)
+    OSObjectPtr<nw_resolver_config_t> m_resolverConfig;
 #endif
 
     static JSRetainPtr<JSClassRef> createJSClass();

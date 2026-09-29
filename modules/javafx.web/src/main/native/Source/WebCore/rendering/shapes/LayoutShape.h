@@ -29,10 +29,10 @@
 
 #pragma once
 
-#include "LayoutRect.h"
-#include "Path.h"
-#include "StyleBasicShape.h"
-#include "WritingMode.h"
+#include <WebCore/LayoutRect.h>
+#include <WebCore/Path.h>
+#include <WebCore/StyleShapeForward.h>
+#include <WebCore/WritingMode.h>
 #include <wtf/RefCounted.h>
 
 namespace WebCore {

@@ -32,6 +32,7 @@
 #include "EventTargetInterfaces.h"
 #include "FetchRequestCredentials.h"
 #include "MessagePort.h"
+#include "WorkerGlobalScopeProxy.h"
 #include "WorkerOptions.h"
 #include "WorkerScriptLoaderClient.h"
 #include "WorkerType.h"
@@ -52,14 +53,13 @@ class RTCRtpScriptTransform;
 class RTCRtpScriptTransformer;
 class ScriptExecutionContext;
 class TrustedScriptURL;
-class WorkerGlobalScopeProxy;
 class WorkerScriptLoader;
 
 struct StructuredSerializeOptions;
 struct WorkerOptions;
 
 class Worker final : public AbstractWorker, public ActiveDOMObject, private WorkerScriptLoaderClient {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(Worker);
+    WTF_MAKE_TZONE_ALLOCATED(Worker);
 public:
     void ref() const final { RefCounted::ref(); }
     void deref() const final { RefCounted::deref(); }
@@ -77,7 +77,8 @@ public:
     String identifier() const { return m_identifier; }
     const String& name() const { return m_options.name; }
 
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
+    ScriptExecutionContext* scriptExecutionContext() const final;
+    using ActiveDOMObject::protectedScriptExecutionContext;
 
     void dispatchEvent(Event&) final;
     void reportError(const String&);
@@ -124,3 +125,5 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(Worker)

@@ -41,7 +41,7 @@ class RenderPassEncoderImpl final : public RenderPassEncoder {
 public:
     static Ref<RenderPassEncoderImpl> create(WebGPUPtr<WGPURenderPassEncoder>&& renderPassEncoder, ConvertToBackingContext& convertToBackingContext)
     {
-        return adoptRef(*new RenderPassEncoderImpl(WTFMove(renderPassEncoder), convertToBackingContext));
+        return adoptRef(*new RenderPassEncoderImpl(WTF::move(renderPassEncoder), convertToBackingContext));
     }
 
     virtual ~RenderPassEncoderImpl();
@@ -57,6 +57,7 @@ private:
     RenderPassEncoderImpl& operator=(RenderPassEncoderImpl&&) = delete;
 
     WGPURenderPassEncoder backing() const { return m_backing.get(); }
+    bool isRenderPassEncoderImpl() const final { return true; }
 
     void setPipeline(const RenderPipeline&) final;
 
@@ -108,5 +109,9 @@ private:
 };
 
 } // namespace WebCore::WebGPU
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WebGPU::RenderPassEncoderImpl)
+    static bool isType(const WebCore::WebGPU::RenderPassEncoder& encoder) { return encoder.isRenderPassEncoderImpl(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // HAVE(WEBGPU_IMPLEMENTATION)

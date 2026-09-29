@@ -36,29 +36,31 @@
 #include "SVGElementInlines.h"
 #include "SVGNames.h"
 #include "SVGParsingError.h"
+#include "Settings.h"
 #include "XLinkNames.h"
 #include <wtf/NeverDestroyed.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGImageElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SVGImageElement);
 
 inline SVGImageElement::SVGImageElement(const QualifiedName& tagName, Document& document)
     : SVGGraphicsElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this), TypeFlag::HasDidMoveToNewDocument)
     , SVGURIReference(this)
-    , m_imageLoader(*this)
+    , m_imageLoader(makeUniqueRefWithoutRefCountedCheck<SVGImageLoader>(*this))
 {
     ASSERT(hasTagName(SVGNames::imageTag));
 
-    static std::once_flag onceFlag;
-    std::call_once(onceFlag, [] {
+    static bool didRegistration = false;
+    if (!didRegistration) [[unlikely]] {
+        didRegistration = true;
         PropertyRegistry::registerProperty<SVGNames::xAttr, &SVGImageElement::m_x>();
         PropertyRegistry::registerProperty<SVGNames::yAttr, &SVGImageElement::m_y>();
         PropertyRegistry::registerProperty<SVGNames::widthAttr, &SVGImageElement::m_width>();
         PropertyRegistry::registerProperty<SVGNames::heightAttr, &SVGImageElement::m_height>();
         PropertyRegistry::registerProperty<SVGNames::preserveAspectRatioAttr, &SVGImageElement::m_preserveAspectRatio>();
-    });
+    }
 }
 
 Ref<SVGImageElement> SVGImageElement::create(const QualifiedName& tagName, Document& document)
@@ -68,7 +70,7 @@ Ref<SVGImageElement> SVGImageElement::create(const QualifiedName& tagName, Docum
 
 CachedImage* SVGImageElement::cachedImage() const
 {
-    return m_imageLoader.image();
+    return m_imageLoader->image();
 }
 
 bool SVGImageElement::renderingTaintsOrigin() const
@@ -111,7 +113,7 @@ void SVGImageElement::attributeChanged(const QualifiedName& name, const AtomStri
         break;
     case AttributeNames::crossoriginAttr:
         if (parseCORSSettingsAttribute(oldValue) != parseCORSSettingsAttribute(newValue))
-            m_imageLoader.updateFromElementIgnoringPreviousError(RelevantMutation::Yes);
+            m_imageLoader->updateFromElementIgnoringPreviousError(RelevantMutation::Yes);
         break;
     default:
         break;
@@ -148,7 +150,7 @@ void SVGImageElement::svgAttributeChanged(const QualifiedName& attrName)
     }
 
     if (SVGURIReference::isKnownAttribute(attrName)) {
-        m_imageLoader.updateFromElementIgnoringPreviousError();
+        m_imageLoader->updateFromElementIgnoringPreviousError();
         invalidateResourceImageBuffersIfNeeded();
         return;
     }
@@ -159,13 +161,13 @@ void SVGImageElement::svgAttributeChanged(const QualifiedName& attrName)
 RenderPtr<RenderElement> SVGImageElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
     if (document().settings().layerBasedSVGEngineEnabled())
-    return createRenderer<RenderSVGImage>(*this, WTFMove(style));
-    return createRenderer<LegacyRenderSVGImage>(*this, WTFMove(style));
+        return createRenderer<RenderSVGImage>(*this, WTF::move(style));
+    return createRenderer<LegacyRenderSVGImage>(*this, WTF::move(style));
 }
 
 bool SVGImageElement::haveLoadedRequiredResources()
 {
-    return !m_imageLoader.hasPendingActivity();
+    return !m_imageLoader->hasPendingActivity();
 }
 
 void SVGImageElement::didAttachRenderers()
@@ -173,12 +175,12 @@ void SVGImageElement::didAttachRenderers()
     SVGGraphicsElement::didAttachRenderers();
 
     if (CheckedPtr image = dynamicDowncast<RenderSVGImage>(renderer()); image && !image->imageResource().cachedImage()) {
-        image->imageResource().setCachedImage(m_imageLoader.protectedImage());
+        image->imageResource().setCachedImage(m_imageLoader->protectedImage());
             return;
     }
 
     if (CheckedPtr image = dynamicDowncast<LegacyRenderSVGImage>(renderer()); image && !image->imageResource().cachedImage()) {
-        image->imageResource().setCachedImage(m_imageLoader.protectedImage());
+        image->imageResource().setCachedImage(m_imageLoader->protectedImage());
         return;
     }
 }
@@ -190,7 +192,7 @@ Node::InsertedIntoAncestorResult SVGImageElement::insertedIntoAncestor(Insertion
         return InsertedIntoAncestorResult::Done;
     // Update image loader, as soon as we're living in the tree.
     // We can only resolve base URIs properly, after that!
-    m_imageLoader.updateFromElement();
+    m_imageLoader->updateFromElement();
     return result;
 }
 
@@ -218,13 +220,13 @@ void SVGImageElement::addSubresourceAttributeURLs(ListHashSet<URL>& urls) const
 
 void SVGImageElement::didMoveToNewDocument(Document& oldDocument, Document& newDocument)
 {
-    m_imageLoader.elementDidMoveToNewDocument(oldDocument);
+    m_imageLoader->elementDidMoveToNewDocument(oldDocument);
     SVGGraphicsElement::didMoveToNewDocument(oldDocument, newDocument);
 }
 
 void SVGImageElement::decode(Ref<DeferredPromise>&& promise)
 {
-    return m_imageLoader.decode(WTFMove(promise));
+    return m_imageLoader->decode(WTF::move(promise));
 }
 
 }

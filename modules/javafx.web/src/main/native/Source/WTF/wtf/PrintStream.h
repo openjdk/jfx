@@ -34,6 +34,7 @@
 #include <wtf/Forward.h>
 #include <wtf/FastMalloc.h>
 #include <wtf/FixedWidthDouble.h>
+#include <wtf/MemoryDump.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/RawHex.h>
 #include <wtf/RawPointer.h>
@@ -115,19 +116,17 @@ WTF_EXPORT_PRIVATE void printInternal(PrintStream&, const CString&);
 WTF_EXPORT_PRIVATE void printInternal(PrintStream&, const String&);
 WTF_EXPORT_PRIVATE void printInternal(PrintStream&, const AtomString&);
 WTF_EXPORT_PRIVATE void printInternal(PrintStream&, const StringImpl*);
-inline void printInternal(PrintStream& out, const AtomStringImpl* value) { printInternal(out, std::bit_cast<const StringImpl*>(value)); }
-inline void printInternal(PrintStream& out, const UniquedStringImpl* value) { printInternal(out, std::bit_cast<const StringImpl*>(value)); }
-inline void printInternal(PrintStream& out, const UniquedStringImpl& value) { printInternal(out, &value); }
+WTF_EXPORT_PRIVATE void printInternal(PrintStream&, std::span<const char8_t>);
 inline void printInternal(PrintStream& out, char* value) { printInternal(out, static_cast<const char*>(value)); }
 inline void printInternal(PrintStream& out, CString& value) { printInternal(out, static_cast<const CString&>(value)); }
 inline void printInternal(PrintStream& out, String& value) { printInternal(out, static_cast<const String&>(value)); }
 inline void printInternal(PrintStream& out, StringImpl* value) { printInternal(out, static_cast<const StringImpl*>(value)); }
-inline void printInternal(PrintStream& out, AtomStringImpl* value) { printInternal(out, static_cast<const AtomStringImpl*>(value)); }
-inline void printInternal(PrintStream& out, UniquedStringImpl* value) { printInternal(out, static_cast<const UniquedStringImpl*>(value)); }
-inline void printInternal(PrintStream& out, UniquedStringImpl& value) { printInternal(out, &value); }
+
 WTF_EXPORT_PRIVATE void printInternal(PrintStream&, bool);
-WTF_EXPORT_PRIVATE void printInternal(PrintStream&, signed char); // NOTE: this prints as a number, not as a character; use CharacterDump if you want the character
-WTF_EXPORT_PRIVATE void printInternal(PrintStream&, unsigned char); // NOTE: see above.
+// These three overloads rely on the fact that in C++ `char`, `signed char` (e.g. int8_t) and `unsigned char` (e.g. uint8_t) are different types. So character literals will end up here rather than in one of the below overloads.
+WTF_EXPORT_PRIVATE void printInternal(PrintStream&, char);
+WTF_EXPORT_PRIVATE void printInternal(PrintStream&, signed char);
+WTF_EXPORT_PRIVATE void printInternal(PrintStream&, unsigned char);
 WTF_EXPORT_PRIVATE void printInternal(PrintStream&, char16_t);
 WTF_EXPORT_PRIVATE void printInternal(PrintStream&, char32_t);
 WTF_EXPORT_PRIVATE void printInternal(PrintStream&, short);
@@ -142,6 +141,7 @@ WTF_EXPORT_PRIVATE void printInternal(PrintStream&, float);
 WTF_EXPORT_PRIVATE void printInternal(PrintStream&, double);
 WTF_EXPORT_PRIVATE void printInternal(PrintStream&, RawHex);
 WTF_EXPORT_PRIVATE void printInternal(PrintStream&, RawPointer);
+WTF_EXPORT_PRIVATE void printInternal(PrintStream&, MemoryDump);
 WTF_EXPORT_PRIVATE void printInternal(PrintStream&, FixedWidthDouble);
 
 template<typename... Values>
@@ -170,7 +170,7 @@ template<typename Enum>
 requires (std::is_enum_v<std::decay_t<Enum>>)
 void printInternal(PrintStream& out, Enum e)
 {
-    out.print(StringView(enumName(e)));
+    out.print(enumName(e));
 }
 
 template<typename Enum>
@@ -182,7 +182,7 @@ public:
 
     void dump(PrintStream& out) const
     {
-        out.print(StringView(enumTypeName<Enum>()), "::", m_e);
+        out.print(enumTypeName<Enum>(), "::", m_e);
     }
 private:
     Enum m_e;
@@ -201,7 +201,7 @@ public:
     void dump(PrintStream& out) const
     {
         if (auto str = enumName(m_e); !str.empty())
-            out.print(StringView(str));
+            out.print(str);
         else
             out.print(m_default);
     }

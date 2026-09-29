@@ -19,12 +19,12 @@
 
 #pragma once
 
-#include "DOMWrapperWorld.h"
-#include "EventListener.h"
-#include "EventNames.h"
-#include "HTMLElement.h"
-#include "LocalDOMWindow.h"
-#include "NodeInlines.h"
+#include <WebCore/DOMWrapperWorld.h>
+#include <WebCore/EventListener.h>
+#include <WebCore/EventNames.h>
+#include <WebCore/HTMLElement.h>
+#include <WebCore/LocalDOMWindow.h>
+#include <WebCore/NodeDocument.h>
 #include "WebCoreJSClientData.h"
 #include <JavaScriptCore/StrongInlines.h>
 #include <JavaScriptCore/Weak.h>
@@ -41,6 +41,9 @@ public:
     WEBCORE_EXPORT static Ref<JSEventListener> create(JSC::JSObject& listener, JSC::JSObject& wrapper, bool isAttribute, DOMWrapperWorld&);
 
     virtual ~JSEventListener();
+
+    void ref() const final { EventListener::ref(); }
+    void deref() const final { EventListener::deref(); }
 
     bool operator==(const EventListener&) const final;
 

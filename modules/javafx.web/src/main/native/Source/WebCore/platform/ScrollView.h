@@ -26,13 +26,15 @@
 
 #pragma once
 
-#include "FloatRect.h"
-#include "IntRect.h"
-#include "Scrollbar.h"
-#include "ScrollableArea.h"
-#include "ScrollTypes.h"
-#include "Widget.h"
+#include <WebCore/DoublePoint.h>
+#include <WebCore/FloatRect.h>
+#include <WebCore/IntRect.h>
+#include <WebCore/ScrollTypes.h>
+#include <WebCore/ScrollableArea.h>
+#include <WebCore/Scrollbar.h>
+#include <WebCore/Widget.h>
 #include <wtf/HashSet.h>
+#include <wtf/Platform.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 
@@ -82,6 +84,7 @@ public:
     uint32_t checkedPtrCountWithoutThreadCheck() const final { return CanMakeCheckedPtr::checkedPtrCountWithoutThreadCheck(); }
     void incrementCheckedPtrCount() const final { CanMakeCheckedPtr::incrementCheckedPtrCount(); }
     void decrementCheckedPtrCount() const final { CanMakeCheckedPtr::decrementCheckedPtrCount(); }
+    void setDidBeginCheckedPtrDeletion() final { CanMakeCheckedPtr::setDidBeginCheckedPtrDeletion(); }
 
     USING_CAN_MAKE_WEAKPTR(Widget);
 
@@ -137,7 +140,6 @@ public:
     void setScrollingModesLock(bool lock = true) { m_horizontalScrollbarLock = m_verticalScrollbarLock = lock; }
 
     WEBCORE_EXPORT virtual void setCanHaveScrollbars(bool);
-
 
     void setScrollbarOverlayStyle(ScrollbarOverlayStyle) final;
 
@@ -306,10 +308,12 @@ public:
     WEBCORE_EXPORT void setScrollbarsSuppressed(bool suppressed, bool repaintOnUnsuppress = false);
     bool scrollbarsSuppressed() const { return m_scrollbarsSuppressed; }
 
+    WEBCORE_EXPORT DoublePoint rootViewToContents(const DoublePoint&) const;
     WEBCORE_EXPORT FloatPoint rootViewToContents(const FloatPoint&) const;
     WEBCORE_EXPORT IntPoint rootViewToContents(const IntPoint&) const;
     WEBCORE_EXPORT IntPoint contentsToRootView(const IntPoint&) const;
     WEBCORE_EXPORT FloatPoint contentsToRootView(const FloatPoint&) const;
+    WEBCORE_EXPORT DoublePoint contentsToRootView(const DoublePoint&) const;
     WEBCORE_EXPORT IntRect rootViewToContents(const IntRect&) const;
     WEBCORE_EXPORT IntRect contentsToRootView(const IntRect&) const;
     WEBCORE_EXPORT FloatRect rootViewToContents(const FloatRect&) const;
@@ -322,6 +326,9 @@ public:
 
     FloatPoint viewToContents(const FloatPoint&) const;
     FloatPoint contentsToView(const FloatPoint&) const;
+
+    DoublePoint viewToContents(const DoublePoint&) const;
+    DoublePoint contentsToView(const DoublePoint&) const;
 
     IntRect viewToContents(IntRect) const;
     IntRect contentsToView(IntRect) const;
@@ -338,7 +345,8 @@ public:
     // the entire widget hierarchy. It is up to the platform to decide what the precise definition
     // of containing window is. (For example on Mac it is the containing NSWindow.)
     WEBCORE_EXPORT IntPoint windowToContents(IntPoint) const;
-    FloatPoint windowToContents(FloatPoint) const;
+    WEBCORE_EXPORT FloatPoint windowToContents(FloatPoint) const;
+    WEBCORE_EXPORT DoublePoint windowToContents(DoublePoint) const;
     WEBCORE_EXPORT IntRect windowToContents(const IntRect&) const;
     FloatRect windowToContents(const FloatRect&) const;
 
@@ -369,9 +377,11 @@ public:
 
     IntPoint convertChildToSelf(const Widget*, IntPoint) const;
     FloatPoint convertChildToSelf(const Widget*, FloatPoint) const;
+    DoublePoint convertChildToSelf(const Widget*, DoublePoint) const;
 
     IntPoint convertSelfToChild(const Widget*, IntPoint) const;
     FloatPoint convertSelfToChild(const Widget*, FloatPoint) const;
+    DoublePoint convertSelfToChild(const Widget*, DoublePoint) const;
 
     // Widget override. Handles painting of the contents of the view as well as the scrollbars.
     WEBCORE_EXPORT void paint(GraphicsContext&, const IntRect&, Widget::SecurityOriginPaintPolicy = SecurityOriginPaintPolicy::AnyOrigin, RegionContext* = nullptr) final;
@@ -459,9 +469,11 @@ protected:
 #if PLATFORM(COCOA)
 public:
     WEBCORE_EXPORT NSView* documentView() const;
+    WEBCORE_EXPORT RetainPtr<NSView> protectedDocumentView() const;
 
 private:
     PlatformScrollView* scrollView() const;
+    RetainPtr<PlatformScrollView> protectedScrollView() const;
 #endif
 
 private:

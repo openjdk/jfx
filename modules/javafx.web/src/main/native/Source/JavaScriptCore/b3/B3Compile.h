@@ -25,10 +25,12 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(B3_JIT)
 
-#include "B3Common.h"
-#include "JITCompilation.h"
+#include <JavaScriptCore/B3Common.h>
+#include <JavaScriptCore/JITCompilation.h>
 
 namespace JSC {
 

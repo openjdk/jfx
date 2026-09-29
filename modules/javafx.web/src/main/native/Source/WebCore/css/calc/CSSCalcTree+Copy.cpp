@@ -109,7 +109,7 @@ Child copy(const IndirectNode<AnchorSize>& anchorSize)
         .fallback = copy(anchorSize->fallback)
     };
 
-    return makeChild(WTFMove(copyAnchorSize), anchorSize.type);
+    return makeChild(WTF::move(copyAnchorSize), anchorSize.type);
 }
 
 // MARK: Exposed functions

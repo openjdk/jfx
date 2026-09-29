@@ -33,7 +33,8 @@
 namespace WebCore {
 
 class ConstantSourceNode final : public AudioScheduledSourceNode {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(ConstantSourceNode);
+    WTF_MAKE_TZONE_ALLOCATED(ConstantSourceNode);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ConstantSourceNode);
 public:
     static ExceptionOr<Ref<ConstantSourceNode>> create(BaseAudioContext&, const ConstantSourceOptions& = { });
 
@@ -59,3 +60,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ConstantSourceNode)
+    static bool isType(const WebCore::AudioNode& node) { return node.nodeType() == WebCore::AudioNode::NodeTypeConstant; }
+SPECIALIZE_TYPE_TRAITS_END()

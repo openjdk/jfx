@@ -34,19 +34,19 @@
 namespace WebCore {
 
 GPUCommandEncoder::GPUCommandEncoder(Ref<WebGPU::CommandEncoder>&& backing, WebGPU::Device& device)
-    : m_backing(WTFMove(backing))
+    : m_backing(WTF::move(backing))
     , m_device(&device)
 {
 }
 
 String GPUCommandEncoder::label() const
 {
-    return m_backing->label();
+    return m_overrideLabel ? *m_overrideLabel : m_backing->label();
 }
 
 void GPUCommandEncoder::setLabel(String&& label)
 {
-    protectedBacking()->setLabel(WTFMove(label));
+    protectedBacking()->setLabel(WTF::move(label));
 }
 
 ExceptionOr<Ref<GPURenderPassEncoder>> GPUCommandEncoder::beginRenderPass(const GPURenderPassDescriptor& renderPassDescriptor)
@@ -120,7 +120,7 @@ void GPUCommandEncoder::clearBuffer(
 
 void GPUCommandEncoder::pushDebugGroup(String&& groupLabel)
 {
-    protectedBacking()->pushDebugGroup(WTFMove(groupLabel));
+    protectedBacking()->pushDebugGroup(WTF::move(groupLabel));
 }
 
 void GPUCommandEncoder::popDebugGroup()
@@ -130,7 +130,7 @@ void GPUCommandEncoder::popDebugGroup()
 
 void GPUCommandEncoder::insertDebugMarker(String&& markerLabel)
 {
-    protectedBacking()->insertDebugMarker(WTFMove(markerLabel));
+    protectedBacking()->insertDebugMarker(WTF::move(markerLabel));
 }
 
 void GPUCommandEncoder::writeTimestamp(const GPUQuerySet& querySet, GPUSize32 queryIndex)
@@ -161,7 +161,12 @@ ExceptionOr<Ref<GPUCommandBuffer>> GPUCommandEncoder::finish(const std::optional
     RefPtr buffer = protectedBacking()->finish(convertToBacking(commandBufferDescriptor));
     if (!buffer)
         return Exception { ExceptionCode::InvalidStateError, "GPUCommandEncoder.finish: Unable to finish."_s };
-    return GPUCommandBuffer::create(buffer.releaseNonNull(), *this);
+    auto result = GPUCommandBuffer::create(buffer.releaseNonNull(), *this);
+    if (RefPtr device = m_device.get()) {
+        m_overrideLabel = label();
+        m_backing = device->invalidCommandEncoder();
+    }
+    return result;
 }
 
 void GPUCommandEncoder::setBacking(WebGPU::CommandEncoder& newBacking)

@@ -875,7 +875,7 @@ static RefPtr<CSSFunctionValue> parseSimpleTransformValue(StringParsingBuffer<Ch
         buffer.advanceBy(argumentStart);
         if (!parseTransformTranslateArguments(buffer, expectedArgumentCount, transformType, arguments))
             return nullptr;
-        return CSSFunctionValue::create(transformType, WTFMove(arguments));
+        return CSSFunctionValue::create(transformType, WTF::move(arguments));
     }
 
     bool isMatrix3d = toASCIILower(buffer[0]) == 'm'
@@ -893,7 +893,7 @@ static RefPtr<CSSFunctionValue> parseSimpleTransformValue(StringParsingBuffer<Ch
         CSSValueListBuilder arguments;
         if (!parseTransformNumberArguments(buffer, 16, arguments))
             return nullptr;
-        return CSSFunctionValue::create(CSSValueMatrix3d, WTFMove(arguments));
+        return CSSFunctionValue::create(CSSValueMatrix3d, WTF::move(arguments));
     }
 
     bool isScale3d = toASCIILower(buffer[0]) == 's'
@@ -910,7 +910,7 @@ static RefPtr<CSSFunctionValue> parseSimpleTransformValue(StringParsingBuffer<Ch
         CSSValueListBuilder arguments;
         if (!parseTransformNumberArguments(buffer, 3, arguments))
             return nullptr;
-        return CSSFunctionValue::create(CSSValueScale3d, WTFMove(arguments));
+        return CSSFunctionValue::create(CSSValueScale3d, WTF::move(arguments));
     }
 
     bool isRotate = toASCIILower(buffer[0]) == 'r'
@@ -959,7 +959,7 @@ static RefPtr<CSSValue> parseSimpleTransformList(std::span<const CharacterType> 
     }
     if (builder.isEmpty())
         return nullptr;
-    return CSSTransformListValue::create(WTFMove(builder));
+    return CSSTransformListValue::create(WTF::move(builder));
 }
 
 static RefPtr<CSSValue> parseSimpleTransform(StringView string)
@@ -1059,8 +1059,12 @@ RefPtr<CSSValue> CSSParserFastPaths::maybeParseValue(CSSPropertyID property, Str
         break;
     }
 
-    if (CSSProperty::isColorProperty(property))
-        return parseColor(string, state.context);
+    if (CSSProperty::isColorProperty(property)) {
+        auto context = state.context;
+        if (!CSSProperty::acceptsQuirkyColor(property))
+            context.mode = HTMLStandardMode;
+        return parseColor(string, context);
+    }
 
     if (auto valueRange = lengthValueRangeForPropertiesSupportingSimpleLengths(property)) {
         if (auto result = parseSimpleLengthValue(string, state.context.mode, *valueRange))

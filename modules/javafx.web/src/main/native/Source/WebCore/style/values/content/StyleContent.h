@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "RenderStyleConstants.h"
-#include "StyleCounterStyle.h"
-#include "StyleImageWrapper.h"
-#include "StyleValueTypes.h"
+#include <WebCore/RenderStyleConstants.h>
+#include <WebCore/StyleCounterStyle.h>
+#include <WebCore/StyleImageWrapper.h>
+#include <WebCore/StyleValueTypes.h>
 
 namespace WebCore {
 namespace Style {
@@ -99,7 +99,7 @@ struct Content {
     }
 
     Content(Data&& data)
-        : m_value { WTFMove(data) }
+        : m_value { WTF::move(data) }
     {
     }
 

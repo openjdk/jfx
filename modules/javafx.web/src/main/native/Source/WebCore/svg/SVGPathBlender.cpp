@@ -130,14 +130,14 @@ template<typename Function> static std::optional<ResultPair<Function>> pullFromS
         auto parsedFrom = std::invoke(function, fromSource, currentPoint);
         if (!parsedFrom)
             return std::nullopt;
-        fromResult = WTFMove(*parsedFrom);
+        fromResult = WTF::move(*parsedFrom);
     }
 
     auto parsedTo = std::invoke(std::forward<Function>(function), toSource, currentPoint);
     if (!parsedTo)
         return std::nullopt;
 
-    return ResultPair<Function> { WTFMove(fromResult), WTFMove(*parsedTo) };
+    return ResultPair<Function> { WTF::move(fromResult), WTF::move(*parsedTo) };
 }
 
 bool SVGPathBlender::blendMoveToSegment(float progress)

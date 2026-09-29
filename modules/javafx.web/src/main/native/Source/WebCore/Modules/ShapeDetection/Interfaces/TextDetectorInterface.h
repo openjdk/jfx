@@ -31,7 +31,7 @@
 #include <wtf/Vector.h>
 
 namespace WebCore {
-class ImageBuffer;
+class NativeImage;
 }
 
 namespace WebCore::ShapeDetection {
@@ -42,7 +42,7 @@ class TextDetector : public RefCounted<TextDetector> {
 public:
     virtual ~TextDetector() = default;
 
-    virtual void detect(Ref<ImageBuffer>&&, CompletionHandler<void(Vector<DetectedText>&&)>&&) = 0;
+    virtual void detect(const NativeImage&, CompletionHandler<void(Vector<DetectedText>&&)>&&) = 0;
 
 protected:
     TextDetector() = default;

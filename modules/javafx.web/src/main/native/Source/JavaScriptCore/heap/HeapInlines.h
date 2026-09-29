@@ -25,12 +25,12 @@
 
 #pragma once
 
-#include "GCDeferralContext.h"
-#include "Heap.h"
-#include "HeapCellInlines.h"
-#include "IndexingHeader.h"
-#include "JSCast.h"
-#include "Structure.h"
+#include <JavaScriptCore/GCDeferralContext.h>
+#include <JavaScriptCore/Heap.h>
+#include <JavaScriptCore/HeapCellInlines.h>
+#include <JavaScriptCore/IndexingHeader.h>
+#include <JavaScriptCore/JSCast.h>
+#include <JavaScriptCore/Structure.h>
 #include <type_traits>
 #include <wtf/Assertions.h>
 #include <wtf/MainThread.h>
@@ -158,14 +158,14 @@ template<typename Functor> inline void Heap::forEachProtectedCell(const Functor&
 template <typename T>
 inline void Heap::releaseSoon(RetainPtr<T>&& object)
 {
-    m_delayedReleaseObjects.append(WTFMove(object));
+    m_delayedReleaseObjects.append(WTF::move(object));
 }
 #endif
 
 #ifdef JSC_GLIB_API_ENABLED
 inline void Heap::releaseSoon(std::unique_ptr<JSCGLibWrapperObject>&& object)
 {
-    m_delayedReleaseObjects.append(WTFMove(object));
+    m_delayedReleaseObjects.append(WTF::move(object));
 }
 #endif
 

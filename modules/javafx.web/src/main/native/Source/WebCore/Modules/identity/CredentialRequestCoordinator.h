@@ -27,10 +27,10 @@
 
 #if ENABLE(WEB_AUTHN)
 
-#include "ActiveDOMObject.h"
-#include "DigitalCredentialsProtocols.h"
-#include "JSDOMPromiseDeferred.h"
-#include "UnvalidatedDigitalCredentialRequest.h"
+#include <WebCore/ActiveDOMObject.h>
+#include <WebCore/DigitalCredentialsProtocols.h>
+#include <WebCore/JSDOMPromiseDeferred.h>
+#include <WebCore/UnvalidatedDigitalCredentialRequest.h>
 #include <optional>
 #include <wtf/CanMakeWeakPtr.h>
 #include <wtf/Noncopyable.h>
@@ -50,13 +50,13 @@ struct ExceptionData;
 
 using CredentialPromise = DOMPromiseDeferred<IDLNullable<IDLInterface<BasicCredential>>>;
 
-class CredentialRequestCoordinator final : public RefCounted<CredentialRequestCoordinator>, public CanMakeWeakPtr<CredentialRequestCoordinator>, public ActiveDOMObject {
+class CredentialRequestCoordinator final : public RefCounted<CredentialRequestCoordinator>, public ActiveDOMObject {
     WTF_MAKE_TZONE_ALLOCATED_EXPORT(CredentialRequestCoordinator, WEBCORE_EXPORT);
     WTF_MAKE_NONCOPYABLE(CredentialRequestCoordinator);
 
 public:
     static Ref<CredentialRequestCoordinator> create(Ref<CredentialRequestCoordinatorClient>&&, Page&);
-    WEBCORE_EXPORT void presentPicker(const Document&, CredentialPromise&&, Vector<UnvalidatedDigitalCredentialRequest>&&, RefPtr<AbortSignal>);
+    WEBCORE_EXPORT void prepareCredentialRequest(const Document&, CredentialPromise&&, Vector<UnvalidatedDigitalCredentialRequest>&&, RefPtr<AbortSignal>);
     WEBCORE_EXPORT void abortPicker(ExceptionOr<JSC::JSValue>&&);
     ~CredentialRequestCoordinator();
 
@@ -66,6 +66,8 @@ public:
     void contextDestroyed() final;
 
 private:
+    void dismissPickerAndSettle(ExceptionOr<RefPtr<BasicCredential>>&&);
+
     static constexpr bool canPresentDigitalCredentialsUI()
     {
 #if HAVE(DIGITAL_CREDENTIALS_UI)
@@ -79,9 +81,10 @@ private:
         explicit PickerStateGuard(CredentialRequestCoordinator&);
         PickerStateGuard(const PickerStateGuard&) = delete;
         PickerStateGuard& operator=(const PickerStateGuard&) = delete;
+        void deactivate() { m_active = false; }
 
-        PickerStateGuard(PickerStateGuard&&) noexcept;
-        PickerStateGuard& operator=(PickerStateGuard&&) noexcept;
+        PickerStateGuard(PickerStateGuard&&) noexcept = delete;
+        PickerStateGuard& operator=(PickerStateGuard&&) noexcept = delete;
 
         ~PickerStateGuard();
 
@@ -103,9 +106,8 @@ private:
     void setCurrentPromise(CredentialPromise&&);
     CredentialPromise* currentPromise();
 
-    ExceptionOr<JSC::JSObject*> parseDigitalCredentialsResponseData(Document&, const String&) const;
+    ExceptionOr<JSC::JSObject*> parseDigitalCredentialsResponseData(const String&) const;
     void handleDigitalCredentialsPickerResult(Expected<DigitalCredentialsResponseData, ExceptionData>&& responseOrException, RefPtr<AbortSignal>);
-    void finalizeDigitalCredential(const DigitalCredentialsResponseData&);
 
     explicit CredentialRequestCoordinator(Ref<CredentialRequestCoordinatorClient>&&, Page&);
     const Ref<CredentialRequestCoordinatorClient> m_client;

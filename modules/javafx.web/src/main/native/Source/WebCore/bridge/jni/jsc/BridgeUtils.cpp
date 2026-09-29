@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,6 +40,7 @@
 #include "JSDOMGlobalObject.h"
 #include "JSExecState.h"
 #include "JSNode.h"
+#include "NodeDocument.h"
 #include "ScriptController.h"
 #include "runtime_array.h"
 #include "runtime_object.h"
@@ -165,8 +166,8 @@ JSValueRef Java_Object_to_JSValue(
                     normalWorld(lexicalGlobalObject->vm()));
                 return toRef(lexicalGlobalObject,
                     (peer_type == com_sun_webkit_dom_JSObject_JS_DOM_WINDOW_OBJECT)
-                        ? WebCore::toJS(lexicalGlobalObject, globalObject, static_cast<DOMWindow*>(jlong_to_ptr(peer)))
-                        : WebCore::toJS(lexicalGlobalObject, globalObject, static_cast<Node*>(jlong_to_ptr(peer))));
+                        ? WebCore::toJS(lexicalGlobalObject, globalObject, *static_cast<DOMWindow*>(jlong_to_ptr(peer)))
+                        : WebCore::toJS(lexicalGlobalObject, globalObject, *static_cast<Node*>(jlong_to_ptr(peer))));
             }
         }
     }
@@ -306,8 +307,8 @@ RefPtr<JSC::Bindings::RootObject> checkJSPeer(
 
                 object = const_cast<JSObjectRef>(toRef(JSGlobalObject,
                     (peer_type == com_sun_webkit_dom_JSObject_JS_DOM_WINDOW_OBJECT)
-                    ? WebCore::toJS(JSGlobalObject, static_cast<WebCore::JSDOMGlobalObject *>(rootObject->globalObject()), static_cast<WebCore::DOMWindow*>(jlong_to_ptr(peer)))
-                    : WebCore::toJS(JSGlobalObject, static_cast<WebCore::JSDOMGlobalObject *>(rootObject->globalObject()), static_cast<WebCore::Node*>(jlong_to_ptr(peer)))));
+                    ? WebCore::toJS(JSGlobalObject, static_cast<WebCore::JSDOMGlobalObject *>(rootObject->globalObject()), *static_cast<WebCore::DOMWindow*>(jlong_to_ptr(peer)))
+                    : WebCore::toJS(JSGlobalObject, static_cast<WebCore::JSDOMGlobalObject *>(rootObject->globalObject()), *static_cast<WebCore::Node*>(jlong_to_ptr(peer)))));
 
             }
         }

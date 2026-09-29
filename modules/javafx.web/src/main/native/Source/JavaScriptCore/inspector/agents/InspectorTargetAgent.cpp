@@ -67,7 +67,7 @@ Protocol::ErrorStringOr<void> InspectorTargetAgent::setPauseOnStart(bool pauseOn
 
 Protocol::ErrorStringOr<void> InspectorTargetAgent::resume(const String& targetId)
 {
-    auto* target = m_targets.get(targetId);
+    CheckedPtr target = m_targets.get(targetId);
     if (!target)
         return makeUnexpected("Missing target for given targetId"_s);
 
@@ -81,7 +81,7 @@ Protocol::ErrorStringOr<void> InspectorTargetAgent::resume(const String& targetI
 
 Protocol::ErrorStringOr<void> InspectorTargetAgent::sendMessageToTarget(const String& targetId, const String& message)
 {
-    InspectorTarget* target = m_targets.get(targetId);
+    CheckedPtr target = m_targets.get(targetId);
     if (!target)
         return makeUnexpected("Missing target for given targetId"_s);
 
@@ -102,6 +102,8 @@ static Protocol::Target::TargetInfo::Type targetTypeToProtocolType(InspectorTarg
     switch (type) {
     case InspectorTargetType::Page:
         return Protocol::Target::TargetInfo::Type::Page;
+    case InspectorTargetType::Frame:
+        return Protocol::Target::TargetInfo::Type::Frame;
     case InspectorTargetType::DedicatedWorker:
         return Protocol::Target::TargetInfo::Type::Worker;
     case InspectorTargetType::ServiceWorker:
@@ -155,8 +157,7 @@ void InspectorTargetAgent::didCommitProvisionalTarget(const String& oldTargetID,
     if (!m_isConnected)
         return;
 
-    auto* target = m_targets.get(committedTargetID);
-    if (!target)
+    if (!m_targets.contains(committedTargetID))
         return;
 
     m_frontendDispatcher->didCommitProvisionalTarget(oldTargetID, committedTargetID);
@@ -164,12 +165,12 @@ void InspectorTargetAgent::didCommitProvisionalTarget(const String& oldTargetID,
 
 FrontendChannel::ConnectionType InspectorTargetAgent::connectionType() const
 {
-    return m_router.hasLocalFrontend() ? Inspector::FrontendChannel::ConnectionType::Local : Inspector::FrontendChannel::ConnectionType::Remote;
+    return m_router->hasLocalFrontend() ? Inspector::FrontendChannel::ConnectionType::Local : Inspector::FrontendChannel::ConnectionType::Remote;
 }
 
 void InspectorTargetAgent::connectToTargets()
 {
-    for (InspectorTarget* target : m_targets.values()) {
+    for (CheckedPtr target : m_targets.values()) {
         target->connect(connectionType());
         m_frontendDispatcher->targetCreated(buildTargetInfoObject(*target));
     }
@@ -177,7 +178,7 @@ void InspectorTargetAgent::connectToTargets()
 
 void InspectorTargetAgent::disconnectFromTargets()
 {
-    for (InspectorTarget* target : m_targets.values())
+    for (CheckedPtr target : m_targets.values())
         target->disconnect();
 }
 

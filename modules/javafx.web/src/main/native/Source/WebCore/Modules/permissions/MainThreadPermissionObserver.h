@@ -38,13 +38,24 @@
 namespace WebCore {
 
 class Page;
+class RegistrableDomain;
 
-class MainThreadPermissionObserver final : public PermissionObserver {
+class MainThreadPermissionObserver final : public PermissionObserver, public CanMakeCheckedPtr<MainThreadPermissionObserver> {
     WTF_MAKE_NONCOPYABLE(MainThreadPermissionObserver);
     WTF_MAKE_TZONE_ALLOCATED(MainThreadPermissionObserver);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(MainThreadPermissionObserver);
 public:
     MainThreadPermissionObserver(ThreadSafeWeakPtr<PermissionStatus>&&, ScriptExecutionContextIdentifier, PermissionState, PermissionDescriptor, PermissionQuerySource, WeakPtr<Page>&&, ClientOrigin&&);
     ~MainThreadPermissionObserver();
+
+    void addChangeListener(const RegistrableDomain& topFrameDomain, const RegistrableDomain& subFrameDomain) final;
+    void removeChangeListener(const RegistrableDomain& topFrameDomain, const RegistrableDomain& subFrameDomain) final;
+
+    uint32_t checkedPtrCount() const final { return CanMakeCheckedPtr::checkedPtrCount(); }
+    uint32_t checkedPtrCountWithoutThreadCheck() const final { return CanMakeCheckedPtr::checkedPtrCountWithoutThreadCheck(); }
+    void incrementCheckedPtrCount() const final { CanMakeCheckedPtr::incrementCheckedPtrCount(); }
+    void decrementCheckedPtrCount() const final { CanMakeCheckedPtr::decrementCheckedPtrCount(); }
+    void setDidBeginCheckedPtrDeletion() final { CanMakeCheckedPtr::setDidBeginCheckedPtrDeletion(); }
 
 private:
     // PermissionObserver

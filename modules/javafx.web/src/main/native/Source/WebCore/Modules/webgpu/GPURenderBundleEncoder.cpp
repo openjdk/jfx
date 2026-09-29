@@ -40,7 +40,7 @@ String GPURenderBundleEncoder::label() const
 
 void GPURenderBundleEncoder::setLabel(String&& label)
 {
-    m_backing->setLabel(WTFMove(label));
+    m_backing->setLabel(WTF::move(label));
 }
 
 void GPURenderBundleEncoder::setPipeline(const GPURenderPipeline& renderPipeline)
@@ -87,7 +87,7 @@ void GPURenderBundleEncoder::drawIndexedIndirect(const GPUBuffer& indirectBuffer
 void GPURenderBundleEncoder::setBindGroup(GPUIndex32 index, const GPUBindGroup* bindGroup,
     std::optional<Vector<GPUBufferDynamicOffset>>&& dynamicOffsets)
 {
-    m_backing->setBindGroup(index, bindGroup ? &bindGroup->backing() : nullptr, WTFMove(dynamicOffsets));
+    m_backing->setBindGroup(index, bindGroup ? &bindGroup->backing() : nullptr, WTF::move(dynamicOffsets));
 }
 
 ExceptionOr<void> GPURenderBundleEncoder::setBindGroup(GPUIndex32 index, const GPUBindGroup* bindGroup,
@@ -105,7 +105,7 @@ ExceptionOr<void> GPURenderBundleEncoder::setBindGroup(GPUIndex32 index, const G
 
 void GPURenderBundleEncoder::pushDebugGroup(String&& groupLabel)
 {
-    m_backing->pushDebugGroup(WTFMove(groupLabel));
+    m_backing->pushDebugGroup(WTF::move(groupLabel));
 }
 
 void GPURenderBundleEncoder::popDebugGroup()
@@ -115,7 +115,7 @@ void GPURenderBundleEncoder::popDebugGroup()
 
 void GPURenderBundleEncoder::insertDebugMarker(String&& markerLabel)
 {
-    m_backing->insertDebugMarker(WTFMove(markerLabel));
+    m_backing->insertDebugMarker(WTF::move(markerLabel));
 }
 
 static WebGPU::RenderBundleDescriptor convertToBacking(const std::optional<GPURenderBundleDescriptor>& renderBundleDescriptor)

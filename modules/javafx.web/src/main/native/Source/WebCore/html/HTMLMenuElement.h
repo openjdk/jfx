@@ -22,12 +22,12 @@
 
 #pragma once
 
-#include "HTMLElement.h"
+#include <WebCore/HTMLElement.h>
 
 namespace WebCore {
 
 class HTMLMenuElement final : public HTMLElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLMenuElement);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLMenuElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLMenuElement);
 public:
     static Ref<HTMLMenuElement> create(const QualifiedName&, Document&);

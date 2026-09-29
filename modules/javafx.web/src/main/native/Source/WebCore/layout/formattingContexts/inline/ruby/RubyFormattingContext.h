@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "InlineContentBreaker.h"
-#include "InlineDisplayContent.h"
-#include "InlineLevelBox.h"
+#include <WebCore/InlineContentBreaker.h>
+#include <WebCore/InlineDisplayContent.h>
+#include <WebCore/InlineLevelBox.h>
 #include <wtf/Range.h>
 
 namespace WebCore {

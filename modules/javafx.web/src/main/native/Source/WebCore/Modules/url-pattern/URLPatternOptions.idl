@@ -25,6 +25,8 @@
 
 // https://urlpattern.spec.whatwg.org/#dictdef-urlpatternoptions
 
-dictionary URLPatternOptions {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary URLPatternOptions {
     boolean ignoreCase = false;
 };

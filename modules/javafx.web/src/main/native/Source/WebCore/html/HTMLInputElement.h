@@ -24,7 +24,7 @@
 
 #pragma once
 
-#include "HTMLTextFormControlElement.h"
+#include <WebCore/HTMLTextFormControlElement.h>
 #include <memory>
 #include <wtf/ValueOrReference.h>
 
@@ -61,9 +61,11 @@ struct InputElementClickState {
 enum class WasSetByJavaScript : bool { No, Yes };
 
 class HTMLInputElement final : public HTMLTextFormControlElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLInputElement);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLInputElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLInputElement);
 public:
+    USING_CAN_MAKE_WEAKPTR(HTMLElement);
+
     static Ref<HTMLInputElement> create(const QualifiedName&, Document&, HTMLFormElement*, bool createdByParser);
     virtual ~HTMLInputElement();
 
@@ -75,7 +77,7 @@ public:
     WEBCORE_EXPORT FileList* files();
     WEBCORE_EXPORT void setFiles(RefPtr<FileList>&&, WasSetByJavaScript = WasSetByJavaScript::No);
     FileList* filesForBindings() { return files(); }
-    void setFilesForBindings(RefPtr<FileList>&& fileList) { return setFiles(WTFMove(fileList), WasSetByJavaScript::Yes); }
+    void setFilesForBindings(RefPtr<FileList>&& fileList) { return setFiles(WTF::move(fileList), WasSetByJavaScript::Yes); }
     WEBCORE_EXPORT unsigned height() const;
     bool indeterminate() const { return m_isIndeterminate; }
     WEBCORE_EXPORT void setIndeterminate(bool);
@@ -304,6 +306,8 @@ public:
     bool isTextFormControlMouseFocusable() const;
     bool valueAttributeWasUpdatedAfterParsing() const { return m_valueAttributeWasUpdatedAfterParsing; }
 
+    bool hasCustomFocusLogic() const final;
+
     void cacheSelectionInResponseToSetValue(int caretOffset) { cacheSelection(caretOffset, caretOffset, SelectionHasNoDirection); }
 
     WEBCORE_EXPORT Color valueAsColor() const; // Returns transparent color if not type=color.
@@ -358,6 +362,10 @@ public:
 
     void initializeInputTypeAfterParsingOrCloning();
 
+#if ENABLE(TOUCH_EVENTS)
+    void updateTouchEventHandler();
+#endif
+
 private:
     enum class CreationType : uint8_t { Normal, ByParser, ByCloning };
     HTMLInputElement(const QualifiedName&, Document&, HTMLFormElement*, CreationType);
@@ -377,7 +385,6 @@ private:
     void didMoveToNewDocument(Document& oldDocument, Document& newDocument) final;
 
     int defaultTabIndex() const final;
-    bool hasCustomFocusLogic() const final;
     bool isKeyboardFocusable(const FocusEventData&) const final;
     bool isMouseFocusable() const final;
     bool isEnumeratable() const final;
@@ -449,10 +456,6 @@ private:
 
     void updateType(const AtomString& typeAttributeValue);
     void runPostTypeUpdateTasks();
-
-#if ENABLE(TOUCH_EVENTS)
-    void updateTouchEventHandler();
-#endif
 
     void subtreeHasChanged() final;
     void disabledStateChanged() final;

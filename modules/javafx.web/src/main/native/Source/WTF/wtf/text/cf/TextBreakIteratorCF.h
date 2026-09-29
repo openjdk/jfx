@@ -20,8 +20,11 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
 #include <wtf/text/cf/TextBreakIteratorCFCharacterCluster.h>
 #include <wtf/text/cf/TextBreakIteratorCFStringTokenizer.h>
+
+#if PLATFORM(COCOA)
 
 namespace WTF {
 
@@ -104,3 +107,5 @@ private:
 };
 
 } // namespace WTF
+
+#endif // PLATFORM(COCOA)

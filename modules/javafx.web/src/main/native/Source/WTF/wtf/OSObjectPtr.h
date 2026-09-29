@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,42 +26,46 @@
 #pragma once
 
 #include <os/object.h>
+#include <wtf/Forward.h>
+#include <wtf/HashFunctions.h>
+#include <wtf/HashTraits.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TypeTraits.h>
 
 // Because ARC enablement is a compile-time choice, and we compile this header
 // both ways, we need a separate copy of our code when ARC is enabled.
 #if __has_feature(objc_arc)
 #define adoptOSObject adoptOSObjectArc
-#define retainOSObject retainOSObjectArc
-#define releaseOSObject releaseOSObjectArc
-#define OSObjectPtr OSObjectPtrArc
 #endif
 
 namespace WTF {
 
-template<typename> class OSObjectPtr;
-template<typename T> OSObjectPtr<T> adoptOSObject(T) WARN_UNUSED_RETURN;
-
-template<typename T> static inline void retainOSObject(T ptr)
-{
+template<typename T, typename arcEnabled = ARCEnabled> struct DefaultOSObjectRetainTraits {
+    static ALWAYS_INLINE void retain(T ptr)
+    {
 #if __has_feature(objc_arc)
     UNUSED_PARAM(ptr);
 #else
     os_retain(ptr);
 #endif
-}
-
-template<typename T> static inline void releaseOSObject(T ptr)
-{
+    }
+    static ALWAYS_INLINE void release(T ptr)
+    {
 #if __has_feature(objc_arc)
     UNUSED_PARAM(ptr);
 #else
     os_release(ptr);
 #endif
-}
+    }
+};
 
-template<typename T> class OSObjectPtr {
+template<typename T, typename RetainTraits = DefaultOSObjectRetainTraits<T, ARCEnabled>> [[nodiscard]] OSObjectPtr<T, RetainTraits> adoptOSObject(T);
+
+template<typename T, typename RetainTraits> class OSObjectPtr {
 public:
+    using ValueType = std::remove_pointer_t<T>;
+    using PtrType = ValueType*;
+
     OSObjectPtr()
         : m_ptr(nullptr)
     {
@@ -70,10 +74,14 @@ public:
     ~OSObjectPtr()
     {
         if (m_ptr)
-            releaseOSObject(m_ptr);
+            RetainTraits::release(m_ptr);
     }
 
-    T get() const { return m_ptr; }
+    // Hash table deleted values, which are only constructed and never copied or destroyed.
+    constexpr OSObjectPtr(HashTableDeletedValueType) : m_ptr(hashTableDeletedValue()) { }
+    constexpr bool isHashTableDeletedValue() const { return m_ptr == hashTableDeletedValue(); }
+
+    T get() const LIFETIME_BOUND { return m_ptr; }
 
     explicit operator bool() const { return m_ptr; }
     bool operator!() const { return !m_ptr; }
@@ -82,20 +90,20 @@ public:
         : m_ptr(other.m_ptr)
     {
         if (m_ptr)
-            retainOSObject(m_ptr);
+            RetainTraits::retain(m_ptr);
     }
 
     OSObjectPtr(OSObjectPtr&& other)
-        : m_ptr(WTFMove(other.m_ptr))
+        : m_ptr(WTF::move(other.m_ptr))
     {
         other.m_ptr = nullptr;
     }
 
     OSObjectPtr(T ptr)
-        : m_ptr(WTFMove(ptr))
+        : m_ptr(WTF::move(ptr))
     {
         if (m_ptr)
-            retainOSObject(m_ptr);
+            RetainTraits::retain(m_ptr);
     }
 
     OSObjectPtr& operator=(const OSObjectPtr& other)
@@ -107,7 +115,7 @@ public:
 
     OSObjectPtr& operator=(OSObjectPtr&& other)
     {
-        OSObjectPtr ptr = WTFMove(other);
+        OSObjectPtr ptr = WTF::move(other);
         swap(ptr);
         return *this;
     }
@@ -115,14 +123,14 @@ public:
     OSObjectPtr& operator=(std::nullptr_t)
     {
         if (m_ptr)
-            releaseOSObject(m_ptr);
+            RetainTraits::release(m_ptr);
         m_ptr = nullptr;
         return *this;
     }
 
     OSObjectPtr& operator=(T other)
     {
-        OSObjectPtr ptr = WTFMove(other);
+        OSObjectPtr ptr = WTF::move(other);
         swap(ptr);
         return *this;
     }
@@ -132,34 +140,49 @@ public:
         std::swap(m_ptr, other.m_ptr);
     }
 
-    T leakRef() WARN_UNUSED_RETURN
+    [[nodiscard]] T leakRef()
     {
         return std::exchange(m_ptr, nullptr);
     }
 
-    friend OSObjectPtr adoptOSObject<T>(T) WARN_UNUSED_RETURN;
+    friend OSObjectPtr adoptOSObject<T, RetainTraits>(T);
 
 private:
     struct AdoptOSObject { };
     OSObjectPtr(AdoptOSObject, T ptr)
-        : m_ptr(WTFMove(ptr))
+        : m_ptr(WTF::move(ptr))
     {
     }
+
+    static constexpr T hashTableDeletedValue() { return reinterpret_cast<T>(-1); }
 
     T m_ptr;
 };
 
-template<typename T> inline OSObjectPtr<T> adoptOSObject(T ptr)
+template<typename T, typename U, typename V> constexpr bool operator==(const OSObjectPtr<T, V>& a, const OSObjectPtr<U, V>& b)
 {
-    return OSObjectPtr<T> { typename OSObjectPtr<T>::AdoptOSObject { }, WTFMove(ptr) };
+    return a.get() == b.get();
 }
 
-template<typename T, typename U>
-ALWAYS_INLINE void lazyInitialize(const OSObjectPtr<T>& ptr, OSObjectPtr<U>&& obj)
+template<typename T, typename RetainTraits> inline OSObjectPtr<T, RetainTraits> adoptOSObject(T ptr)
+{
+    return OSObjectPtr<T, RetainTraits> { typename OSObjectPtr<T, RetainTraits>::AdoptOSObject { }, WTF::move(ptr) };
+}
+
+template<typename T, typename U, typename RetainTraits>
+ALWAYS_INLINE void lazyInitialize(const OSObjectPtr<T, RetainTraits>& ptr, OSObjectPtr<U, RetainTraits>&& obj)
 {
     RELEASE_ASSERT(!ptr);
-    const_cast<OSObjectPtr<T>&>(ptr) = std::move(obj);
+    const_cast<OSObjectPtr<T, RetainTraits>&>(ptr) = std::move(obj); // NOLINT
 }
+
+template<typename T, typename RetainTraits> struct IsSmartPtr<OSObjectPtr<T, RetainTraits>> {
+    static constexpr bool value = true;
+    static constexpr bool isNullable = true;
+};
+
+template<typename T, typename RetainTraits> struct HashTraits<OSObjectPtr<T, RetainTraits>> : SimpleClassHashTraits<OSObjectPtr<T, RetainTraits>> { };
+template<typename T, typename RetainTraits> struct DefaultHash<OSObjectPtr<T, RetainTraits>> : PtrHash<OSObjectPtr<T, RetainTraits>> { };
 
 } // namespace WTF
 

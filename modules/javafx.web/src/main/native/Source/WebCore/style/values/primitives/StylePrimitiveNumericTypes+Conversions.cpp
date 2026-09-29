@@ -25,7 +25,8 @@
 #include "config.h"
 #include "StylePrimitiveNumericTypes+Conversions.h"
 
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
+#include "Settings.h"
 #include "StyleLengthResolution.h"
 
 namespace WebCore {
@@ -63,6 +64,16 @@ float canonicalizeAndClampLength(double value, CSS::LengthUnit unit, const CSSTo
 float adjustForZoom(float value, const RenderStyle& style)
 {
     return adjustFloatForAbsoluteZoom(value, style);
+}
+
+bool evaluationTimeZoomEnabled(const RenderStyle& style)
+{
+    return style.evaluationTimeZoomEnabled();
+}
+
+bool evaluationTimeZoomEnabled(const BuilderState& state)
+{
+    return state.document().settings().evaluationTimeZoomEnabled();
 }
 
 } // namespace Style

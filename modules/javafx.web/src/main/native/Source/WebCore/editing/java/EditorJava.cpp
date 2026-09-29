@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,6 +30,7 @@
 #include "DataObjectJava.h"
 #include "DocumentFragment.h"
 #include "Frame.h"
+#include "FrameDestructionObserverInlines.h"
 #include "HTMLEmbedElement.h"
 #include "HTMLImageElement.h"
 #include "HTMLInputElement.h"
@@ -75,7 +76,11 @@ void Editor::writeImageToPasteboard(Pasteboard& pasteboard, Element& element, co
 
 void Editor::writeSelectionToPasteboard(Pasteboard& pasteboard)
 {
-    pasteboard.writeSelection(*selectedRange(), canSmartCopyOrDelete(), *m_document->frame(), DefaultSelectedTextType);
+    auto range = selectedRange();
+    if (!range)
+        return;
+
+    pasteboard.writeSelection(*range, canSmartCopyOrDelete(), *m_document->frame(), DefaultSelectedTextType);
 }
 
 void Editor::platformCopyFont()

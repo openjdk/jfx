@@ -26,7 +26,9 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-dictionary ScrollToOptions : ScrollOptions {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary ScrollToOptions : ScrollOptions {
     unrestricted double left;
     unrestricted double top;
 };

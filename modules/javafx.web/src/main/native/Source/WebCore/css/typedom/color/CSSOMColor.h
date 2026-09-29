@@ -29,20 +29,26 @@
 
 namespace WebCore {
 
-class CSSOMColor : public CSSOMColorValue {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CSSOMColor);
+class CSSOMColor final : public CSSOMColorValue {
+    WTF_MAKE_TZONE_ALLOCATED(CSSOMColor);
 public:
     template<typename... Args> static Ref<CSSOMColor> create(Args&&... args) { return adoptRef(*new CSSOMColor(std::forward<Args>(args)...)); }
 
-    void setColorSpace(CSSKeywordish);
+    void setColorSpace(std::optional<CSSKeywordish>);
 
     const CSSNumberish& alpha() const { return m_alpha; }
-    void setAlpha(CSSNumberish alpha) { m_alpha = WTFMove(alpha); }
+    void setAlpha(CSSNumberish alpha) { m_alpha = WTF::move(alpha); }
 
 private:
     CSSOMColor(CSSKeywordish, Vector<CSSColorPercent>, CSSNumberish);
+
+    CSSStyleValueType styleValueType() const final { return CSSStyleValueType::CSSColorCSSOMColor; }
 
     CSSNumberish m_alpha;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CSSOMColor)
+    static bool isType(const WebCore::CSSStyleValue& value) { return value.styleValueType() == WebCore::CSSStyleValueType::CSSColorCSSOMColor; }
+SPECIALIZE_TYPE_TRAITS_END()

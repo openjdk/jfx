@@ -41,19 +41,19 @@ Ref<CSSCursorImageValue> CSSCursorImageValue::create(Ref<CSSValue>&& value, RefP
 {
     auto* imageValue = dynamicDowncast<CSSImageValue>(value.get());
     auto originalURL = imageValue ? imageValue->url() : CSS::URL::none();
-    return adoptRef(*new CSSCursorImageValue(WTFMove(value), WTFMove(hotSpot), WTFMove(originalURL)));
+    return adoptRef(*new CSSCursorImageValue(WTF::move(value), WTF::move(hotSpot), WTF::move(originalURL)));
 }
 
 Ref<CSSCursorImageValue> CSSCursorImageValue::create(Ref<CSSValue>&& imageValue, RefPtr<CSSValue>&& hotSpot, CSS::URL&& originalURL)
 {
-    return adoptRef(*new CSSCursorImageValue(WTFMove(imageValue), WTFMove(hotSpot), WTFMove(originalURL)));
+    return adoptRef(*new CSSCursorImageValue(WTF::move(imageValue), WTF::move(hotSpot), WTF::move(originalURL)));
 }
 
 CSSCursorImageValue::CSSCursorImageValue(Ref<CSSValue>&& imageValue, RefPtr<CSSValue>&& hotSpot, CSS::URL&& originalURL)
     : CSSValue(ClassType::CursorImage)
-    , m_originalURL(WTFMove(originalURL))
-    , m_imageValue(WTFMove(imageValue))
-    , m_hotSpot(WTFMove(hotSpot))
+    , m_originalURL(WTF::move(originalURL))
+    , m_imageValue(WTF::move(imageValue))
+    , m_hotSpot(WTF::move(hotSpot))
 {
 }
 

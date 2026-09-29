@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "CellContainerInlines.h"
-#include "MarkedBlock.h"
+#include <JavaScriptCore/CellContainerInlines.h>
+#include <JavaScriptCore/MarkedBlock.h>
 
 namespace JSC {
 

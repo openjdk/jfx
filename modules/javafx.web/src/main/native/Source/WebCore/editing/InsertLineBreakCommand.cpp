@@ -28,6 +28,7 @@
 
 #include "Document.h"
 #include "EditingInlines.h"
+#include "EditingStyle.h"
 #include "FrameSelection.h"
 #include "HTMLBRElement.h"
 #include "HTMLHRElement.h"
@@ -35,7 +36,8 @@
 #include "HTMLTableElement.h"
 #include "LocalFrame.h"
 #include "RenderElement.h"
-#include "RenderStyleInlines.h"
+#include "RenderObjectStyle.h"
+#include "RenderStyle+GettersInlines.h"
 #include "RenderText.h"
 #include "Text.h"
 #include "VisibleUnits.h"
@@ -45,7 +47,7 @@ namespace WebCore {
 using namespace HTMLNames;
 
 InsertLineBreakCommand::InsertLineBreakCommand(Ref<Document>&& document)
-    : CompositeEditCommand(WTFMove(document))
+    : CompositeEditCommand(WTF::move(document))
 {
 }
 

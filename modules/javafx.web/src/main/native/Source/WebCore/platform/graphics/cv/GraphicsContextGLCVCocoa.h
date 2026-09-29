@@ -27,9 +27,9 @@
 
 #if ENABLE(WEBGL) && ENABLE(VIDEO) && USE(AVFOUNDATION)
 
-#include "GraphicsContextGLCV.h"
-#include "GraphicsContextGLCocoa.h"
-#include "ImageOrientation.h"
+#include <WebCore/GraphicsContextGLCV.h>
+#include <WebCore/GraphicsContextGLCocoa.h>
+#include <WebCore/ImageOrientation.h>
 #include <memory>
 #include <wtf/CheckedRef.h>
 #include <wtf/TZoneMalloc.h>

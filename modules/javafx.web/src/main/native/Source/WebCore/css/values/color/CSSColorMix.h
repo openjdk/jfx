@@ -59,6 +59,8 @@ struct ColorMix {
     bool operator==(const ColorMix&) const = default;
 };
 
+static constexpr auto defaultInterpolationMethodForColorMix = ColorInterpolationMethod { ColorInterpolationMethod::OKLab { }, AlphaPremultiplication::Premultiplied };
+
 WebCore::Color createColor(const ColorMix&, PlatformColorResolutionState&);
 bool containsCurrentColor(const ColorMix&);
 bool containsColorSchemeDependentColor(const ColorMix&);

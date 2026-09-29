@@ -53,6 +53,8 @@
     undefined close();
 };
 
-dictionary EventSourceInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary EventSourceInit {
     boolean withCredentials = false;
 };

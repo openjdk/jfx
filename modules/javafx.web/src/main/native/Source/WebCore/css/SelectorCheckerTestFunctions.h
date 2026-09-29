@@ -26,16 +26,20 @@
 
 #pragma once
 
+#include "DocumentPage.h"
 #include "FocusController.h"
+#include "FrameDestructionObserverInlines.h"
 #include "FrameSelection.h"
+#include "HTMLDetailsElement.h"
 #include "HTMLDialogElement.h"
 #include "HTMLFrameElement.h"
 #include "HTMLIFrameElement.h"
 #include "HTMLImageElement.h"
 #include "HTMLInputElement.h"
 #include "HTMLOptionElement.h"
+#include "HTMLSelectElement.h"
 #include "InspectorInstrumentation.h"
-#include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "Page.h"
 #include "SelectorChecker.h"
 #include "Settings.h"
@@ -50,6 +54,10 @@
 #if ENABLE(FULLSCREEN_API)
 #include "DocumentFullscreen.h"
 #include "DocumentOrShadowRootFullscreen.h"
+#endif
+
+#if ENABLE(MODEL_ELEMENT_IMMERSIVE)
+#include "DocumentImmersive.h"
 #endif
 
 #if ENABLE(VIDEO)
@@ -450,6 +458,16 @@ ALWAYS_INLINE bool matchesPictureInPicturePseudoClass(const Element& element)
 
 #endif
 
+#if ENABLE(MODEL_ELEMENT_IMMERSIVE)
+
+ALWAYS_INLINE bool matchesImmersivePseudoClass(const Element& element)
+{
+    auto* modelElement = dynamicDowncast<HTMLModelElement>(element);
+    return modelElement && modelElement->immersive();
+}
+
+#endif
+
 #if ENABLE(VIDEO)
 
 ALWAYS_INLINE bool matchesFutureCuePseudoClass(const Element& element)
@@ -571,6 +589,20 @@ ALWAYS_INLINE bool matchesModalPseudoClass(const Element& element)
 ALWAYS_INLINE bool matchesPopoverOpenPseudoClass(const Element& element)
 {
     return element.isPopoverShowing();
+}
+
+ALWAYS_INLINE bool matchesOpenPseudoClass(const Element& element)
+{
+    if (auto* dialog = dynamicDowncast<HTMLDialogElement>(element))
+        return dialog->isOpen();
+    if (auto* details = dynamicDowncast<HTMLDetailsElement>(element))
+        return details->isOpen();
+    if (auto* select = dynamicDowncast<HTMLSelectElement>(element))
+        return select->isOpen();
+    if (auto* input = dynamicDowncast<HTMLInputElement>(element))
+        return input->isPresentingAttachedView();
+
+    return false;
 }
 
 ALWAYS_INLINE bool matchesUserInvalidPseudoClass(const Element& element)

@@ -25,14 +25,15 @@
 
 #pragma once
 
-#include "FloatSize.h"
-#include "ImageOrientation.h"
-#include "IntSize.h"
-#include "Path.h"
-#include "TextFlags.h"
-#include "TextIndicator.h"
+#include <WebCore/FloatSize.h>
+#include <WebCore/ImageOrientation.h>
+#include <WebCore/IntSize.h>
+#include <WebCore/Path.h>
+#include <WebCore/TextFlags.h>
+#include <WebCore/TextIndicator.h>
 #include <wtf/Forward.h>
 
+#include <wtf/Platform.h>
 #if PLATFORM(IOS_FAMILY)
 #include <wtf/RetainPtr.h>
 typedef struct CGImage *CGImageRef;
@@ -114,8 +115,8 @@ public:
     WEBCORE_EXPORT ~DragImage();
 
     DragImage(RefPtr<TextIndicator> textIndicator, std::optional<Path>&& visiblePath)
-        : m_textIndicator(WTFMove(textIndicator))
-        , m_visiblePath(WTFMove(visiblePath))
+        : m_textIndicator(WTF::move(textIndicator))
+        , m_visiblePath(WTF::move(visiblePath))
     { }
 
     WEBCORE_EXPORT DragImage& operator=(DragImage&&);

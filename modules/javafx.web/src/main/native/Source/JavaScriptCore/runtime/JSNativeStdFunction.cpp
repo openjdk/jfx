@@ -37,7 +37,7 @@ static JSC_DECLARE_HOST_FUNCTION(runStdFunction);
 
 JSNativeStdFunction::JSNativeStdFunction(VM& vm, NativeExecutable* executable, JSGlobalObject* globalObject, Structure* structure, NativeStdFunction&& function)
     : Base(vm, executable, globalObject, structure)
-    , m_function(WTFMove(function))
+    , m_function(WTF::move(function))
 {
 }
 
@@ -68,7 +68,7 @@ JSNativeStdFunction* JSNativeStdFunction::create(VM& vm, JSGlobalObject* globalO
 {
     NativeExecutable* executable = vm.getHostFunction(runStdFunction, ImplementationVisibility::Private, intrinsic, nativeConstructor, nullptr, name);
     Structure* structure = globalObject->nativeStdFunctionStructure();
-    JSNativeStdFunction* function = new (NotNull, allocateCell<JSNativeStdFunction>(vm)) JSNativeStdFunction(vm, executable, globalObject, structure, WTFMove(nativeStdFunction));
+    JSNativeStdFunction* function = new (NotNull, allocateCell<JSNativeStdFunction>(vm)) JSNativeStdFunction(vm, executable, globalObject, structure, WTF::move(nativeStdFunction));
     function->finishCreation(vm, executable, length, name);
     return function;
 }

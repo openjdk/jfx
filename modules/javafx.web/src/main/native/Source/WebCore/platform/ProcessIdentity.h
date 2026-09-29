@@ -61,7 +61,7 @@ public:
 
 private:
 #if HAVE(TASK_IDENTITY_TOKEN)
-    friend struct IPC::ArgumentCoder<ProcessIdentity, void>;
+    friend struct IPC::ArgumentCoder<ProcessIdentity>;
     WEBCORE_EXPORT ProcessIdentity(MachSendRight&& taskIdToken);
     MachSendRight m_taskIdToken;
 #endif

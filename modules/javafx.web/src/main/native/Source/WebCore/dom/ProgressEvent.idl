@@ -33,7 +33,9 @@
     readonly attribute double total;
 };
 
-dictionary ProgressEventInit : EventInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary ProgressEventInit : EventInit {
     boolean lengthComputable = false;
     double loaded = 0;
     double total = 0;

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2025 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +30,7 @@
 #include "FloatPoint3D.h"
 #include "Logging.h"
 #include "Model.h"
+#include "ModelPlayerGraphicsLayerConfiguration.h"
 #include "ModelPlayerTransformState.h"
 #include "TransformationMatrix.h"
 #include <wtf/CompletionHandler.h>
@@ -37,15 +39,13 @@ namespace WebCore {
 
 Ref<PlaceholderModelPlayer> PlaceholderModelPlayer::create(bool suspended, const ModelPlayerAnimationState& animationState, std::unique_ptr<ModelPlayerTransformState>&& transformState)
 {
-    return adoptRef(*new PlaceholderModelPlayer(suspended, animationState, WTFMove(transformState)));
+    return adoptRef(*new PlaceholderModelPlayer(suspended, animationState, WTF::move(transformState)));
 }
 
 PlaceholderModelPlayer::PlaceholderModelPlayer(bool suspended, const ModelPlayerAnimationState& animationState, std::unique_ptr<ModelPlayerTransformState>&& transformState)
     : m_animationState(animationState)
-    , m_transformState(WTFMove(transformState))
-#if ENABLE(MODEL_PROCESS)
+    , m_transformState(WTF::move(transformState))
     , m_id(ModelPlayerIdentifier::generate())
-#endif
 {
     ASSERT(m_transformState);
 
@@ -89,6 +89,8 @@ void PlaceholderModelPlayer::reload(Model&, LayoutSize, ModelPlayerAnimationStat
     RELEASE_ASSERT_NOT_REACHED();
 }
 
+#if ENABLE(MODEL_ELEMENT_BOUNDING_BOX)
+
 std::optional<WebCore::FloatPoint3D> PlaceholderModelPlayer::boundingBoxCenter() const
 {
     return m_transformState->boundingBoxCenter();
@@ -99,6 +101,10 @@ std::optional<WebCore::FloatPoint3D> PlaceholderModelPlayer::boundingBoxExtents(
     return m_transformState->boundingBoxExtents();
 }
 
+#endif
+
+#if ENABLE(MODEL_ELEMENT_ENTITY_TRANSFORM)
+
 std::optional<WebCore::TransformationMatrix> PlaceholderModelPlayer::entityTransform() const
 {
     return m_transformState->entityTransform();
@@ -107,7 +113,7 @@ std::optional<WebCore::TransformationMatrix> PlaceholderModelPlayer::entityTrans
 /// This comes from JS side, so we need to tell Model Process about it. Not to be confused with didUpdateEntityTransform().
 void PlaceholderModelPlayer::setEntityTransform(WebCore::TransformationMatrix transform)
 {
-#if ENABLE(MODEL_PROCESS)
+#if ENABLE(MODEL_ELEMENT_STAGE_MODE)
     ASSERT(m_transformState->stageMode() == StageModeOperation::None);
 #endif
     m_transformState->setEntityTransform(transform);
@@ -118,7 +124,10 @@ bool PlaceholderModelPlayer::supportsTransform(WebCore::TransformationMatrix tra
     return m_transformState->isEntityTransformSupported(transform);
 }
 
-#if ENABLE(MODEL_PROCESS)
+#endif
+
+#if ENABLE(MODEL_ELEMENT_ANIMATIONS_CONTROL)
+
 void PlaceholderModelPlayer::setAutoplay(bool autoplay)
 {
     m_animationState.setAutoplay(autoplay);
@@ -174,26 +183,30 @@ void PlaceholderModelPlayer::setCurrentTime(Seconds currentTime, CompletionHandl
     completionHandler();
 }
 
+#endif
+
+#if ENABLE(MODEL_ELEMENT_PORTAL)
+
 void PlaceholderModelPlayer::setHasPortal(bool hasPortal)
 {
     m_transformState->setHasPortal(hasPortal);
 }
 
+#endif
+
+#if ENABLE(MODEL_ELEMENT_STAGE_MODE)
+
 void PlaceholderModelPlayer::setStageMode(WebCore::StageModeOperation stageModeOperation)
 {
     m_transformState->setStageMode(stageModeOperation);
 }
+
 #endif
 
 // Empty implementation
-PlatformLayer* PlaceholderModelPlayer::layer()
-{
-    return nullptr;
-}
 
-std::optional<LayerHostingContextIdentifier> PlaceholderModelPlayer::layerHostingContextIdentifier()
+void PlaceholderModelPlayer::configureGraphicsLayer(GraphicsLayer&, ModelPlayerGraphicsLayerConfiguration&&)
 {
-    return std::nullopt;
 }
 
 void PlaceholderModelPlayer::sizeDidChange(LayoutSize)
@@ -264,11 +277,29 @@ void PlaceholderModelPlayer::setIsMuted(bool, CompletionHandler<void(bool succes
 {
 }
 
-#if PLATFORM(COCOA)
-Vector<RetainPtr<id>> PlaceholderModelPlayer::accessibilityChildren()
+#if ENABLE(MODEL_ELEMENT_ACCESSIBILITY)
+
+ModelPlayerAccessibilityChildren PlaceholderModelPlayer::accessibilityChildren()
 {
     return { };
 }
+
 #endif
 
+#if ENABLE(MODEL_ELEMENT_IMMERSIVE)
+
+void PlaceholderModelPlayer::ensureImmersivePresentation(CompletionHandler<void(std::optional<LayerHostingContextIdentifier>)>&& completion)
+{
+    ASSERT_NOT_REACHED("PlaceholderModelPlayer cannot provide a layer context identifier");
+    completion(std::nullopt);
 }
+
+void PlaceholderModelPlayer::exitImmersivePresentation(CompletionHandler<void()>&& completion)
+{
+    m_transformState->invalidateTransform();
+    completion();
+}
+
+#endif
+
+} // namespace WebCore

@@ -34,7 +34,7 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(MediaPlayerPrivateHolePunch);
 
 static const FloatSize s_holePunchDefaultFrameSize(1280, 720);
 
-MediaPlayerPrivateHolePunch::MediaPlayerPrivateHolePunch(MediaPlayer* player)
+MediaPlayerPrivateHolePunch::MediaPlayerPrivateHolePunch(MediaPlayer& player)
     : m_player(player)
     , m_readyTimer(RunLoop::mainSingleton(), "MediaPlayerPrivateHolePunch::ReadyTimer"_s, this, &MediaPlayerPrivateHolePunch::notifyReadyState)
     , m_networkState(MediaPlayer::NetworkState::Empty)
@@ -114,10 +114,12 @@ MediaPlayer::SupportsType MediaPlayerPrivateHolePunch::supportsType(const MediaE
 }
 
 class MediaPlayerFactoryHolePunch final : public MediaPlayerFactory {
+    WTF_MAKE_TZONE_ALLOCATED(MediaPlayerFactoryHolePunch);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(MediaPlayerFactoryHolePunch);
 private:
     MediaPlayerEnums::MediaEngineIdentifier identifier() const final { return MediaPlayerEnums::MediaEngineIdentifier::HolePunch; };
 
-    Ref<MediaPlayerPrivateInterface> createMediaEnginePlayer(MediaPlayer* player) const final
+    Ref<MediaPlayerPrivateInterface> createMediaEnginePlayer(MediaPlayer& player) const final
     {
         return adoptRef(*new MediaPlayerPrivateHolePunch(player));
     }

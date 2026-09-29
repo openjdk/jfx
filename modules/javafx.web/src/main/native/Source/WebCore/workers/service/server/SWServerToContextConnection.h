@@ -25,16 +25,16 @@
 
 #pragma once
 
-#include "BackgroundFetchFailureReason.h"
-#include "ExceptionData.h"
-#include "NotificationEventType.h"
-#include "PageIdentifier.h"
-#include "ScriptExecutionContextIdentifier.h"
-#include "ServiceWorkerClientQueryOptions.h"
-#include "ServiceWorkerContextData.h"
-#include "ServiceWorkerIdentifier.h"
-#include "ServiceWorkerTypes.h"
-#include "Site.h"
+#include <WebCore/BackgroundFetchFailureReason.h>
+#include <WebCore/ExceptionData.h>
+#include <WebCore/NotificationEventType.h>
+#include <WebCore/PageIdentifier.h>
+#include <WebCore/ScriptExecutionContextIdentifier.h>
+#include <WebCore/ServiceWorkerClientQueryOptions.h>
+#include <WebCore/ServiceWorkerContextData.h>
+#include <WebCore/ServiceWorkerIdentifier.h>
+#include <WebCore/ServiceWorkerTypes.h>
+#include <WebCore/Site.h>
 #include <wtf/CheckedPtr.h>
 #include <wtf/Identified.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>

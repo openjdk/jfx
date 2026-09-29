@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "WebGPUXREye.h"
-#include "WebGPUXRProjectionLayer.h"
-#include "WebGPUXRSubImage.h"
+#include <WebCore/WebGPUXREye.h>
+#include <WebCore/WebGPUXRProjectionLayer.h>
+#include <WebCore/WebGPUXRSubImage.h>
 
 #include <wtf/Ref.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
@@ -52,6 +52,8 @@ public:
     virtual RefPtr<XRSubImage> getSubImage(XRProjectionLayer&, WebCore::WebXRFrame&, std::optional<XREye>/* = "none"*/) = 0;
     virtual RefPtr<XRSubImage> getViewSubImage(XRProjectionLayer&) = 0;
     virtual TextureFormat getPreferredColorFormat() = 0;
+    virtual bool isRemoteXRBindingProxy() const { return false; }
+    virtual bool isXRBindingImpl() const { return false; }
 
 protected:
     XRBinding() = default;

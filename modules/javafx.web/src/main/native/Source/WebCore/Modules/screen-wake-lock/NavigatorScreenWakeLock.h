@@ -48,10 +48,15 @@ public:
 private:
     WakeLock& wakeLock();
 
-    static ASCIILiteral supplementName();
+    static ASCIILiteral supplementName() { return "NavigatorScreenWakeLock"_s; }
+    bool isNavigatorScreenWakeLock() const final { return true; }
 
     const RefPtr<WakeLock> m_wakeLock;
     const CheckedRef<Navigator> m_navigator;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::NavigatorScreenWakeLock)
+    static bool isType(const WebCore::SupplementBase& supplement) { return supplement.isNavigatorScreenWakeLock(); }
+SPECIALIZE_TYPE_TRAITS_END()

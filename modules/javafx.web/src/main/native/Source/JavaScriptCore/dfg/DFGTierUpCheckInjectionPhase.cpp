@@ -122,7 +122,7 @@ public:
                         if (it != naturalLoopToLoopHint.end())
                             descriptor.osrEntryCandidates.append(it->value);
                     }
-                    tierUpHierarchy.add(bytecodeIndex, WTFMove(descriptor));
+                    tierUpHierarchy.add(bytecodeIndex, WTF::move(descriptor));
                 }
                 break;
             }
@@ -147,7 +147,7 @@ public:
             }
 
             if (!tierUpCandidates.isEmpty())
-                m_graph.m_plan.tierUpInLoopHierarchy().ensure(entry.key, [&] { return FixedVector<BytecodeIndex>(WTFMove(tierUpCandidates)); });
+                m_graph.m_plan.tierUpInLoopHierarchy().ensure(entry.key, [&] { return FixedVector<BytecodeIndex>(WTF::move(tierUpCandidates)); });
         }
         m_graph.m_plan.setWillTryToTierUp(true);
         return true;

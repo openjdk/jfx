@@ -26,6 +26,7 @@
 #include "config.h"
 #include "InternalObserverInspect.h"
 
+#include "ContextDestructionObserverInlines.h"
 #include "InternalObserver.h"
 #include "JSSubscriptionObserverCallback.h"
 #include "Observable.h"
@@ -42,7 +43,7 @@ class InternalObserverInspect final : public InternalObserver {
 public:
     static Ref<InternalObserverInspect> create(ScriptExecutionContext& context, Ref<Subscriber>&& subscriber, ObservableInspector&& inspector)
     {
-        Ref internalObserver = adoptRef(*new InternalObserverInspect(context, WTFMove(subscriber), WTFMove(inspector)));
+        Ref internalObserver = adoptRef(*new InternalObserverInspect(context, WTF::move(subscriber), WTF::move(inspector)));
         internalObserver->suspendIfNeeded();
         return internalObserver;
     }
@@ -51,7 +52,7 @@ public:
     public:
         static Ref<SubscriberCallbackInspect> create(ScriptExecutionContext& context, Ref<Observable>&& source, ObservableInspector&& inspector)
         {
-            return adoptRef(*new SubscriberCallbackInspect(context, WTFMove(source), WTFMove(inspector)));
+            return adoptRef(*new SubscriberCallbackInspect(context, WTF::move(source), WTF::move(inspector)));
         }
 
         CallbackResult<void> invoke(Subscriber& subscriber) final
@@ -83,7 +84,7 @@ public:
             }
 
             Ref inspect = InternalObserverInspect::create(*context, subscriber, ObservableInspector { m_inspector });
-            Ref { m_sourceObservable }->subscribeInternal(*context, WTFMove(inspect), SubscribeOptions { &subscriber.signal() });
+            Ref { m_sourceObservable }->subscribeInternal(*context, WTF::move(inspect), SubscribeOptions { &subscriber.signal() });
 
             return { };
         }
@@ -98,8 +99,8 @@ public:
 
         SubscriberCallbackInspect(ScriptExecutionContext& context, Ref<Observable>&& source, ObservableInspector&& inspector)
             : SubscriberCallback(&context)
-            , m_sourceObservable(WTFMove(source))
-            , m_inspector(WTFMove(inspector))
+            , m_sourceObservable(WTF::move(source))
+            , m_inspector(WTF::move(inspector))
         { }
 
         const Ref<Observable> m_sourceObservable;
@@ -211,12 +212,12 @@ private:
 
     InternalObserverInspect(ScriptExecutionContext& context, Ref<Subscriber>&& subscriber, ObservableInspector&& inspector)
         : InternalObserver(context)
-        , m_subscriber(WTFMove(subscriber))
-        , m_inspector(WTFMove(inspector))
+        , m_subscriber(WTF::move(subscriber))
+        , m_inspector(WTF::move(inspector))
     {
         if (RefPtr abort = m_inspector.abort) {
             Ref signal = protectedSubscriber()->signal();
-            m_abortAlgorithmHandler = signal->addAlgorithm([abort = WTFMove(abort)](JSC::JSValue reason) {
+            m_abortAlgorithmHandler = signal->addAlgorithm([abort = WTF::move(abort)](JSC::JSValue reason) {
                 abort->invoke(reason);
             });
         }
@@ -229,12 +230,12 @@ private:
 
 Ref<SubscriberCallback> createSubscriberCallbackInspect(ScriptExecutionContext& context, Ref<Observable>&& observable, RefPtr<JSSubscriptionObserverCallback>&& next)
 {
-    return InternalObserverInspect::SubscriberCallbackInspect::create(context, WTFMove(observable), ObservableInspector { .next = WTFMove(next) });
+    return InternalObserverInspect::SubscriberCallbackInspect::create(context, WTF::move(observable), ObservableInspector { .next = WTF::move(next) });
 }
 
 Ref<SubscriberCallback> createSubscriberCallbackInspect(ScriptExecutionContext& context, Ref<Observable>&& observable, ObservableInspector&& inspector)
 {
-    return InternalObserverInspect::SubscriberCallbackInspect::create(context, WTFMove(observable), WTFMove(inspector));
+    return InternalObserverInspect::SubscriberCallbackInspect::create(context, WTF::move(observable), WTF::move(inspector));
 }
 
 } // namespace WebCore

@@ -39,6 +39,7 @@ namespace WebCore {
 class TextureMapperGCGLPlatformLayer;
 
 class GraphicsContextGLTextureMapperANGLE : public GLContextWrapper, public GraphicsContextGLANGLE {
+    WTF_MAKE_TZONE_ALLOCATED(GraphicsContextGLTextureMapperANGLE);
 public:
     WEBCORE_EXPORT static RefPtr<GraphicsContextGLTextureMapperANGLE> create(WebCore::GraphicsContextGLAttributes&&);
     virtual ~GraphicsContextGLTextureMapperANGLE();
@@ -65,6 +66,8 @@ public:
     bool addFoveation(IntSize, IntSize, IntSize, std::span<const GCGLfloat>, std::span<const GCGLfloat>, std::span<const GCGLfloat>) final;
     void enableFoveation(GCGLuint) final;
     void disableFoveation() final;
+
+    bool enableRequiredWebXRExtensions() override;
 #endif
 
 protected:

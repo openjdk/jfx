@@ -25,11 +25,13 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(DFG_JIT)
 
-#include "ArrayProfile.h"
 #include "DFGRegisteredStructure.h"
-#include "StructureSet.h"
+#include <JavaScriptCore/ArrayProfile.h>
+#include <JavaScriptCore/StructureSet.h>
 #include <wtf/TinyPtrSet.h>
 
 namespace JSC {

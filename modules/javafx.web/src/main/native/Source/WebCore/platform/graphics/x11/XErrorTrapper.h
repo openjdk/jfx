@@ -27,6 +27,9 @@
 
 #if PLATFORM(X11)
 #include <X11/Xlib.h>
+#ifdef Success
+#undef Success
+#endif
 #include <wtf/Vector.h>
 
 namespace WebCore {

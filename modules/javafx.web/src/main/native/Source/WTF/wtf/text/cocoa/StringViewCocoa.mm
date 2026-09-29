@@ -34,7 +34,7 @@ RetainPtr<NSString> StringView::createNSString() const
 {
     if (is8Bit()) {
         auto characters = span8();
-        return adoptNS([[NSString alloc] initWithBytes:const_cast<LChar*>(characters.data()) length:characters.size() encoding:NSISOLatin1StringEncoding]);
+        return adoptNS([[NSString alloc] initWithBytes:const_cast<Latin1Character*>(characters.data()) length:characters.size() encoding:NSISOLatin1StringEncoding]);
     }
     auto characters = span16();
     return adoptNS([[NSString alloc] initWithCharacters:reinterpret_cast<unichar*>(const_cast<char16_t*>(characters.data())) length:characters.size()]);
@@ -44,7 +44,7 @@ RetainPtr<NSString> StringView::createNSStringWithoutCopying() const
 {
     if (is8Bit()) {
         auto characters = span8();
-        return adoptNS([[NSString alloc] initWithBytesNoCopy:const_cast<LChar*>(characters.data()) length:characters.size() encoding:NSISOLatin1StringEncoding freeWhenDone:NO]);
+        return adoptNS([[NSString alloc] initWithBytesNoCopy:const_cast<Latin1Character*>(characters.data()) length:characters.size() encoding:NSISOLatin1StringEncoding freeWhenDone:NO]);
     }
     auto characters = span16();
     return adoptNS([[NSString alloc] initWithCharactersNoCopy:reinterpret_cast<unichar*>(const_cast<char16_t*>(characters.data())) length:characters.size() freeWhenDone:NO]);

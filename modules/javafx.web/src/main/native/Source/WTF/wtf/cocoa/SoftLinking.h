@@ -27,6 +27,7 @@
 #import <dlfcn.h>
 #import <objc/runtime.h>
 #import <wtf/Assertions.h>
+#import <wtf/Platform.h>
 
 #ifndef NS_RETURNS_RETAINED
 #if __has_feature(attribute_ns_returns_retained)
@@ -224,7 +225,7 @@ static void* lib##Library() \
 #define SOFT_LINK_CLASS(framework, className) \
     @class className; \
     static Class init##className(); \
-    static Class (*get##className##Class)() = init##className; \
+    static Class (*get##className##ClassSingleton)() = init##className; \
     struct Class##className##Wrapper { SUPPRESS_UNCOUNTED_MEMBER Class classObject; }; \
     static Class##className##Wrapper class##className; \
     \
@@ -239,21 +240,22 @@ static void* lib##Library() \
         _STORE_IN_GETCLASS_SECTION static char const auditedClassName[] = #className; \
         class##className.classObject = objc_getClass(auditedClassName); \
         RELEASE_ASSERT(class##className.classObject); \
-        get##className##Class = className##Function; \
+        get##className##ClassSingleton = className##Function; \
         return class##className.classObject; \
     } \
     _Pragma("clang diagnostic push") \
     _Pragma("clang diagnostic ignored \"-Wunused-function\"") \
     static className *alloc##className##Instance() NS_RETURNS_RETAINED \
     { \
-        return [get##className##Class() alloc]; \
+        /* FIXME: This is a static analysis false positive (rdar://160259918). */ \
+        SUPPRESS_UNRETAINED_ARG return [get##className##ClassSingleton() alloc]; \
     } \
     _Pragma("clang diagnostic pop")
 
 #define SOFT_LINK_CLASS_OPTIONAL(framework, className) \
     @class className; \
     static Class init##className(); \
-    static Class (*get##className##Class)() = init##className; \
+    static Class (*get##className##ClassSingleton)() = init##className; \
     struct class##className##Wrapper { SUPPRESS_UNCOUNTED_MEMBER Class classObject; }; \
     static class##className##Wrapper class##className; \
     \
@@ -267,14 +269,15 @@ static void* lib##Library() \
         framework##Library(); \
         _STORE_IN_GETCLASS_SECTION static char const auditedClassName[] = #className; \
         class##className.classObject = objc_getClass(auditedClassName); \
-        get##className##Class = className##Function; \
+        get##className##ClassSingleton = className##Function; \
         return class##className.classObject; \
     } \
     _Pragma("clang diagnostic push") \
     _Pragma("clang diagnostic ignored \"-Wunused-function\"") \
     static className *alloc##className##Instance() NS_RETURNS_RETAINED \
     { \
-        return [get##className##Class() alloc]; \
+        /* FIXME: This is a static analysis false positive (rdar://160259918). */ \
+        SUPPRESS_UNRETAINED_ARG return [get##className##ClassSingleton() alloc]; \
     } \
     _Pragma("clang diagnostic pop")
 
@@ -295,7 +298,7 @@ static void* lib##Library() \
         RELEASE_ASSERT_WITH_MESSAGE(pointer, "%s", dlerror()); \
         pointer##name = static_cast<type>(*pointer); \
         get##name = name##Function; \
-        return pointer##name; \
+        SUPPRESS_UNRETAINED_ARG return pointer##name; \
     }
 
 #define SOFT_LINK_POINTER_OPTIONAL(framework, name, type) \
@@ -320,7 +323,7 @@ static void* lib##Library() \
 
 #define SOFT_LINK_CONSTANT(framework, name, type) \
     static type init##name(); \
-    static type (*get##name)() = init##name; \
+    static type (*get##name##Singleton)() = init##name; \
     struct Constant##name##Wrapper { SUPPRESS_UNRETAINED_LOCAL type constant; }; \
     static Constant##name##Wrapper constant##name; \
     \
@@ -335,13 +338,13 @@ static void* lib##Library() \
         void* constant = dlsym(framework##Library(), auditedName); \
         RELEASE_ASSERT_WITH_MESSAGE(constant, "%s", dlerror()); \
         constant##name.constant = *static_cast<type const *>(constant); \
-        get##name = name##Function; \
+        get##name##Singleton = name##Function; \
         return constant##name.constant; \
     }
 
 #define SOFT_LINK_CONSTANT_MAY_FAIL(framework, name, type) \
     static bool init##name(); \
-    static type (*get##name)() = 0; \
+    static type (*get##name##Singleton)() = 0; \
     struct Constant##name##Wrapper { SUPPRESS_UNRETAINED_LOCAL type constant; }; \
     static Constant##name##Wrapper constant##name; \
     \
@@ -358,13 +361,13 @@ static void* lib##Library() \
     \
     static bool init##name() \
     { \
-        ASSERT(!get##name); \
+        ASSERT(!get##name##Singleton); \
         _STORE_IN_DLSYM_SECTION static char const auditedName[] = #name; \
         void* constant = dlsym(framework##Library(), auditedName); \
         if (!constant) \
             return false; \
         constant##name.constant = *static_cast<type const *>(constant); \
-        get##name = name##Function; \
+        get##name##Singleton = name##Function; \
         return true; \
     }
 
@@ -454,26 +457,26 @@ static void* lib##Library() \
 #define SOFT_LINK_CLASS_FOR_HEADER(functionNamespace, className) \
     @class className; \
     namespace functionNamespace { \
-    extern Class (*get##className##Class)(); \
+    extern Class (*get##className##ClassSingleton)(); \
     className *alloc##className##Instance() NS_RETURNS_RETAINED; \
     inline className *alloc##className##Instance() NS_RETURNS_RETAINED \
     { \
-        return [get##className##Class() alloc]; \
+        return [get##className##ClassSingleton() alloc]; \
     } \
     }
 
 #define SOFT_LINK_CLASS_FOR_HEADER_WITH_AVAILABILITY(functionNamespace, className, availability) \
     @class className; \
     namespace functionNamespace { \
-    extern Class (*get##className##Class)(); \
-    className *alloc##className##Instance() availability; \
+    extern Class (*get##className##ClassSingleton)(); \
+    NS_RETURNS_RETAINED className *alloc##className##Instance() availability; \
     }
 
 #define SOFT_LINK_CLASS_FOR_SOURCE_INTERNAL(functionNamespace, framework, className, export, isOptional, availability) \
     @class className; \
     namespace functionNamespace { \
     static Class init##className(); \
-    export Class (*get##className##Class)() = init##className; \
+    export Class (*get##className##ClassSingleton)() = init##className; \
     SUPPRESS_UNRETAINED_LOCAL static Class class##className; \
     \
     static Class className##Function() \
@@ -490,7 +493,7 @@ static void* lib##Library() \
             class##className = objc_getClass(auditedClassName); \
             if (!isOptional) \
                 RELEASE_ASSERT(class##className); \
-            get##className##Class = className##Function; \
+            get##className##ClassSingleton = className##Function; \
         }); \
         return class##className; \
     } \
@@ -519,7 +522,7 @@ static void* lib##Library() \
     NS_RETURNS_RETAINED className *alloc##className##Instance() availability; \
     NS_RETURNS_RETAINED className *alloc##className##Instance() availability \
     { \
-        return [get##className##Class() alloc]; \
+        return [get##className##ClassSingleton() alloc]; \
     } \
 
 #define SOFT_LINK_CLASS_FOR_SOURCE_OPTIONAL_WITH_EXPORT_AND_AVAILABILITY(functionNamespace, framework, className, export, availability) \
@@ -527,13 +530,13 @@ static void* lib##Library() \
 
 #define SOFT_LINK_CONSTANT_FOR_HEADER(functionNamespace, framework, variableName, variableType) \
     namespace functionNamespace { \
-    variableType get_##framework##_##variableName(); \
+    variableType get_##framework##_##variableName##Singleton(); \
     }
 
 #define SOFT_LINK_CONSTANT_FOR_SOURCE_WITH_EXPORT(functionNamespace, framework, variableName, variableType, export) \
     namespace functionNamespace { \
-    export variableType get_##framework##_##variableName(); \
-    variableType get_##framework##_##variableName() \
+    export variableType get_##framework##_##variableName##Singleton(); \
+    variableType get_##framework##_##variableName##Singleton() \
     { \
         SUPPRESS_UNRETAINED_LOCAL static variableType constant##framework##variableName; \
         static dispatch_once_t once; \
@@ -554,12 +557,13 @@ static void* lib##Library() \
     namespace functionNamespace { \
     bool canLoad_##framework##_##variableName(); \
     bool init_##framework##_##variableName(); \
-    variableType get_##framework##_##variableName(); \
+    variableType get_##framework##_##variableName##Singleton(); \
     }
 
 #define SOFT_LINK_CONSTANT_MAY_FAIL_FOR_SOURCE_WITH_EXPORT(functionNamespace, framework, variableName, variableType, export) \
     namespace functionNamespace { \
-    static variableType constant##framework##variableName; \
+    struct Constant##framework##variableName##Wrapper { SUPPRESS_UNRETAINED_LOCAL variableType constant; }; \
+    static Constant##framework##variableName##Wrapper constant##framework##variableName; \
     bool init_##framework##_##variableName(); \
     bool init_##framework##_##variableName() \
     { \
@@ -567,7 +571,7 @@ static void* lib##Library() \
         void* constant = dlsym(framework##Library(), auditedName); \
         if (!constant) \
             return false; \
-        constant##framework##variableName = *static_cast<variableType const *>(constant); \
+        constant##framework##variableName.constant = *static_cast<variableType const *>(constant); \
         return true; \
     } \
     export bool canLoad_##framework##_##variableName(); \
@@ -576,10 +580,10 @@ static void* lib##Library() \
         static bool loaded = init_##framework##_##variableName(); \
         return loaded; \
     } \
-    export variableType get_##framework##_##variableName(); \
-    variableType get_##framework##_##variableName() \
+    export variableType get_##framework##_##variableName##Singleton(); \
+    variableType get_##framework##_##variableName##Singleton() \
     { \
-        return constant##framework##variableName; \
+        return constant##framework##variableName.constant; \
     } \
     }
 
@@ -626,7 +630,7 @@ static void* lib##Library() \
 #define SOFT_LINK_FUNCTION_FOR_SOURCE(functionNamespace, framework, functionName, resultType, parameterDeclarations, parameterNames) \
     SOFT_LINK_FUNCTION_FOR_SOURCE_WITH_EXPORT(functionNamespace, framework, functionName, resultType, parameterDeclarations, parameterNames, )
 
-#define SOFT_LINK_FUNCTION_MAY_FAIL_FOR_HEADER(functionNamespace, framework, functionName, resultType, parameterDeclarations, parameterNames) \
+#define SOFT_LINK_FUNCTION_MAY_FAIL_FOR_HEADER_INTERNAL(functionNamespace, framework, functionName, resultType, parameterDeclarations, parameterNames, functionAttributes) \
     WTF_EXTERN_C_BEGIN \
     resultType functionName parameterDeclarations; \
     WTF_EXTERN_C_END \
@@ -634,8 +638,14 @@ static void* lib##Library() \
     extern resultType (*softLink##framework##functionName) parameterDeclarations; \
     bool canLoad_##framework##_##functionName(); \
     bool init_##framework##_##functionName(); \
-    resultType softLink_##framework##_##functionName parameterDeclarations; \
+    functionAttributes resultType softLink_##framework##_##functionName parameterDeclarations; \
     }
+
+#define SOFT_LINK_FUNCTION_MAY_FAIL_FOR_HEADER(functionNamespace, framework, functionName, resultType, parameterDeclarations, parameterNames) \
+    SOFT_LINK_FUNCTION_MAY_FAIL_FOR_HEADER_INTERNAL(functionNamespace, framework, functionName, resultType, parameterDeclarations, parameterNames, )
+
+#define SOFT_LINK_FUNCTION_MAY_FAIL_FOR_HEADER_WITH_NS_RETURNS_RETAINED(functionNamespace, framework, functionName, resultType, parameterDeclarations, parameterNames) \
+    SOFT_LINK_FUNCTION_MAY_FAIL_FOR_HEADER_INTERNAL(functionNamespace, framework, functionName, resultType, parameterDeclarations, parameterNames, NS_RETURNS_RETAINED)
 
 #define SOFT_LINK_FUNCTION_MAY_FAIL_FOR_SOURCE_WITH_EXPORT(functionNamespace, framework, functionName, resultType, parameterDeclarations, parameterNames, export) \
     WTF_EXTERN_C_BEGIN \
@@ -679,11 +689,11 @@ static void* lib##Library() \
     namespace functionNamespace { \
     static variableType init##framework##variableName(); \
     variableType (*get_##framework##_##variableName)() = init##framework##variableName; \
-    static variableType pointer##framework##variableName; \
+    SUPPRESS_UNRETAINED_LOCAL static variableType pointer##framework##variableName; \
     \
     static variableType pointer##framework##variableName##Function() \
     { \
-        return pointer##framework##variableName; \
+        SUPPRESS_UNRETAINED_ARG return pointer##framework##variableName; \
     } \
     \
     static variableType init##framework##variableName() \
@@ -693,10 +703,10 @@ static void* lib##Library() \
             _STORE_IN_DLSYM_SECTION static char const auditedName[] = #variableName; \
             void** pointer = static_cast<void**>(dlsym(framework##Library(), auditedName)); \
             RELEASE_ASSERT_WITH_MESSAGE(pointer, "%s", dlerror()); \
-            pointer##framework##variableName = static_cast<variableType>(*pointer); \
+            SUPPRESS_UNRETAINED_LOCAL pointer##framework##variableName = static_cast<variableType>(*pointer); \
             get_##framework##_##variableName = pointer##framework##variableName##Function; \
         }); \
-        return pointer##framework##variableName; \
+        SUPPRESS_UNRETAINED_ARG return pointer##framework##variableName; \
     } \
     }
 

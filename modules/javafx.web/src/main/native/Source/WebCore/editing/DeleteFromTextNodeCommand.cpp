@@ -29,13 +29,14 @@
 #include "CompositeEditCommand.h"
 #include "Document.h"
 #include "Editing.h"
+#include "NodeDocument.h"
 #include "Text.h"
 
 namespace WebCore {
 
 DeleteFromTextNodeCommand::DeleteFromTextNodeCommand(Ref<Text>&& node, unsigned offset, unsigned count, EditAction editingAction)
     : SimpleEditCommand(node->document(), editingAction)
-    , m_node(WTFMove(node))
+    , m_node(WTF::move(node))
     , m_offset(offset)
     , m_count(count)
 {

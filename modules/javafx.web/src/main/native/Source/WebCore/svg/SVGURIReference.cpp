@@ -27,6 +27,7 @@
 #include "SVGElement.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGUseElement.h"
+#include "StyleSVGMarkerResource.h"
 #include "XLinkNames.h"
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/URL.h>
@@ -38,11 +39,12 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(SVGURIReference);
 SVGURIReference::SVGURIReference(SVGElement* contextElement)
     : m_href(SVGAnimatedString::create(contextElement, IsHrefProperty::Yes))
 {
-    static std::once_flag onceFlag;
-    std::call_once(onceFlag, [] {
+    static bool didRegistration = false;
+    if (!didRegistration) [[unlikely]] {
+        didRegistration = true;
         PropertyRegistry::registerProperty<SVGNames::hrefAttr, &SVGURIReference::m_href>();
         PropertyRegistry::registerProperty<XLinkNames::hrefAttr, &SVGURIReference::m_href>();
-    });
+    }
 }
 
 bool SVGURIReference::isKnownAttribute(const QualifiedName& attributeName)
@@ -87,6 +89,13 @@ AtomString SVGURIReference::fragmentIdentifierFromIRIString(const Style::URL& ur
     return fragmentIdentifierFromIRIString(url.resolved.string(), document);
 }
 
+AtomString SVGURIReference::fragmentIdentifierFromIRIString(const Style::SVGMarkerResource& markerResource, const Document& document)
+{
+    if (auto url = markerResource.tryURL())
+        return fragmentIdentifierFromIRIString(*url, document);
+    return emptyAtom();
+}
+
 auto SVGURIReference::targetElementFromIRIString(const String& iri, const TreeScope& treeScope, RefPtr<Document> externalDocument) -> TargetElementResult
 {
     // If there's no fragment identifier contained within the IRI string, we can't lookup an element.
@@ -104,29 +113,29 @@ auto SVGURIReference::targetElementFromIRIString(const String& iri, const TreeSc
     if (externalDocument) {
         // Enforce that the referenced url matches the url of the document that we've loaded for it!
         ASSERT(equalIgnoringFragmentIdentifier(url, externalDocument->url()));
-        return { externalDocument->getElementById(id), WTFMove(id) };
+        return { externalDocument->getElementById(id), WTF::move(id) };
     }
 
     if (url.protocolIsData()) {
         // FIXME: We need to load the data url in a Document to be able to get the target element.
         if (!equalIgnoringFragmentIdentifier(url, document->url()))
-            return { nullptr, WTFMove(id) };
+            return { nullptr, WTF::move(id) };
     }
 
     // Exit early if the referenced url is external, and we have no externalDocument given.
     if (isExternalURIReference(iri, document))
-        return { nullptr, WTFMove(id) };
+        return { nullptr, WTF::move(id) };
 
     RefPtr shadowHost = treeScope.rootNode().shadowHost();
     if (is<SVGUseElement>(shadowHost))
-        return { shadowHost->treeScope().getElementById(id), WTFMove(id) };
+        return { shadowHost->treeScope().getElementById(id), WTF::move(id) };
 
-    return { treeScope.getElementById(id), WTFMove(id) };
+    return { treeScope.getElementById(id), WTF::move(id) };
 }
 
 auto SVGURIReference::targetElementFromIRIString(const Style::URL& iri, const TreeScope& treeScope, RefPtr<Document> externalDocument) -> TargetElementResult
 {
-    return targetElementFromIRIString(iri.resolved.string(), treeScope, WTFMove(externalDocument));
+    return targetElementFromIRIString(iri.resolved.string(), treeScope, WTF::move(externalDocument));
 }
 
 bool SVGURIReference::haveLoadedRequiredResources() const

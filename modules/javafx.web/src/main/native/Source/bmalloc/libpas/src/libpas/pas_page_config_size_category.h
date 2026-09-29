@@ -58,3 +58,4 @@ static inline const char* pas_page_config_size_category_get_string(pas_page_conf
 PAS_END_EXTERN_C;
 
 #endif /* PAS_PAGE_CONFIG_SIZE_CATEGORY_H */
+

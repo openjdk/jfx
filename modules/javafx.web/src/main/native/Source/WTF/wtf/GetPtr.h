@@ -39,6 +39,15 @@ inline constexpr bool IsSmartPtrV = IsSmartPtr<T>::value;
 template<typename T>
 inline constexpr bool IsSmartPtrNullableV = IsSmartPtr<T>::isNullable;
 
+template<typename T>
+concept SmartPtr = IsSmartPtrV<T>;
+
+template<typename T>
+concept NullableSmartPtr = SmartPtr<T> && IsSmartPtrNullableV<T>;
+
+template<typename T>
+concept NonNullableSmartPtr = SmartPtr<T> && !IsSmartPtrNullableV<T>;
+
 template <typename T, bool isSmartPtr>
 struct GetPtrHelperBase;
 

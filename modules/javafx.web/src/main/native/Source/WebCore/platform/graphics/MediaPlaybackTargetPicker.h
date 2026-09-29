@@ -28,7 +28,7 @@
 
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
 
-#include "CocoaView.h"
+#include <WebCore/CocoaView.h>
 #include <wtf/CheckedPtr.h>
 #include <wtf/Ref.h>
 #include <wtf/RunLoop.h>

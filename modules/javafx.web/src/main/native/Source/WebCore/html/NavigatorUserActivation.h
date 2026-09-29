@@ -45,9 +45,14 @@ public:
 
 private:
     static NavigatorUserActivation* from(Navigator&);
-    static ASCIILiteral supplementName();
+    static ASCIILiteral supplementName() { return "NavigatorUserActivation"_s; }
+    bool isNavigatorUserActivation() const final { return true; }
 
     const Ref<UserActivation> m_userActivation;
 };
 
-}
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::NavigatorUserActivation)
+    static bool isType(const WebCore::SupplementBase& supplement) { return supplement.isNavigatorUserActivation(); }
+SPECIALIZE_TYPE_TRAITS_END()

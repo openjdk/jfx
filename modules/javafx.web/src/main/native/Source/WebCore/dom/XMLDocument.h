@@ -25,12 +25,13 @@
 
 #pragma once
 
-#include "Document.h"
+#include <WebCore/DocumentSettingsValues.h>
+#include <WebCore/DocumentView.h>
 
 namespace WebCore {
 
 class XMLDocument : public Document {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(XMLDocument);
+    WTF_MAKE_TZONE_ALLOCATED(XMLDocument);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(XMLDocument);
 public:
     static Ref<XMLDocument> create(LocalFrame* frame, const Settings& settings, const URL& url)

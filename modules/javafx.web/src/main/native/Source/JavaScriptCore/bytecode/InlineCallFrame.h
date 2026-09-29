@@ -25,11 +25,11 @@
 
 #pragma once
 
-#include "CodeBlock.h"
-#include "CodeBlockHash.h"
-#include "CodeOrigin.h"
-#include "ValueRecovery.h"
-#include "WriteBarrier.h"
+#include <JavaScriptCore/CodeBlock.h>
+#include <JavaScriptCore/CodeBlockHash.h>
+#include <JavaScriptCore/CodeOrigin.h>
+#include <JavaScriptCore/ValueRecovery.h>
+#include <JavaScriptCore/WriteBarrier.h>
 #include <wtf/PrintStream.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/Vector.h>

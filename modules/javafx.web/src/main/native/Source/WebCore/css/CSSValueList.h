@@ -20,8 +20,9 @@
 
 #pragma once
 
-#include "CSSValue.h"
+#include <WebCore/CSSValue.h>
 #include <array>
+#include <ranges>
 #include <unicode/umachine.h>
 #include <wtf/MallocSpan.h>
 
@@ -42,17 +43,23 @@ public:
         using pointer = const CSSValue*;
         using reference = const CSSValue&;
 
-        const CSSValue& operator*() const { return vector[index]; }
+        const CSSValue& operator*() const { return (*vector)[index]; }
         iterator& operator++() { ++index; return *this; }
+        iterator operator++(int)
+        {
+            auto result = *this;
+            ++*this;
+            return result;
+        }
         constexpr bool operator==(const iterator& other) const { return index == other.index; }
 
-        const CSSValueContainingVector& vector;
+        const CSSValueContainingVector* vector { nullptr };
         unsigned index { 0 };
     };
     using const_iterator = iterator;
 
-    iterator begin() const LIFETIME_BOUND { return { *this, 0 }; }
-    iterator end() const LIFETIME_BOUND { return { *this, size() }; }
+    iterator begin() const LIFETIME_BOUND { return { this, 0 }; }
+    iterator end() const LIFETIME_BOUND { return { this, size() }; }
 
     bool hasValue(CSSValue&) const;
     bool hasValue(CSSValueID) const;
@@ -96,6 +103,7 @@ private:
     std::array<const CSSValue*, 4> m_inlineStorage;
     MallocSpan<const CSSValue*> m_additionalStorage;
 };
+static_assert(std::ranges::range<CSSValueContainingVector>);
 
 class CSSValueList final : public CSSValueContainingVector {
 public:
@@ -131,11 +139,11 @@ private:
 
 inline CSSValueContainingVector::~CSSValueContainingVector()
 {
-    for (auto& value : *this)
+    for (SUPPRESS_UNCOUNTED_LOCAL auto& value : *this)
         value.deref();
 }
 
-inline const CSSValue& CSSValueContainingVector::operator[](unsigned index) const
+inline const CSSValue& CSSValueContainingVector::operator[](unsigned index) const LIFETIME_BOUND
 {
     unsigned maxInlineSize = m_inlineStorage.size();
     if (index < maxInlineSize) {

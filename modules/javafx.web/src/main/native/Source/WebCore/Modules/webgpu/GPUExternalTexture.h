@@ -37,7 +37,7 @@ class GPUExternalTexture : public RefCountedAndCanMakeWeakPtr<GPUExternalTexture
 public:
     static Ref<GPUExternalTexture> create(Ref<WebGPU::ExternalTexture>&& backing)
     {
-        return adoptRef(*new GPUExternalTexture(WTFMove(backing)));
+        return adoptRef(*new GPUExternalTexture(WTF::move(backing)));
     }
 
     String label() const;
@@ -50,7 +50,7 @@ public:
 
 private:
     GPUExternalTexture(Ref<WebGPU::ExternalTexture>&& backing)
-        : m_backing(WTFMove(backing))
+        : m_backing(WTF::move(backing))
     {
     }
 

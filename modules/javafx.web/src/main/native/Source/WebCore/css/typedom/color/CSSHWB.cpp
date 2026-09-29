@@ -32,11 +32,11 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(CSSHWB);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CSSHWB);
 
 ExceptionOr<Ref<CSSHWB>> CSSHWB::create(Ref<CSSNumericValue>&& hue, CSSNumberish&& whiteness, CSSNumberish&& blackness, CSSNumberish&& alpha)
 {
-    auto rectifiedHue = rectifyCSSColorAngle(RefPtr { WTFMove(hue) });
+    auto rectifiedHue = rectifyCSSColorAngle(RefPtr { WTF::move(hue) });
     if (rectifiedHue.hasException())
         return rectifiedHue.releaseException();
     auto rectifiedWhiteness = rectifyCSSColorPercent(toCSSColorPercent(whiteness));
@@ -55,10 +55,10 @@ ExceptionOr<Ref<CSSHWB>> CSSHWB::create(Ref<CSSNumericValue>&& hue, CSSNumberish
 }
 
 CSSHWB::CSSHWB(Ref<CSSNumericValue>&& hue, Ref<CSSNumericValue>&& whiteness, Ref<CSSNumericValue>&& blackness, Ref<CSSNumericValue>&& alpha)
-    : m_hue(WTFMove(hue))
-    , m_whiteness(WTFMove(whiteness))
-    , m_blackness(WTFMove(blackness))
-    , m_alpha(WTFMove(alpha))
+    : m_hue(WTF::move(hue))
+    , m_whiteness(WTF::move(whiteness))
+    , m_blackness(WTF::move(blackness))
+    , m_alpha(WTF::move(alpha))
 {
 }
 
@@ -69,7 +69,7 @@ CSSNumericValue& CSSHWB::h() const
 
 ExceptionOr<void> CSSHWB::setH(Ref<CSSNumericValue>&& hue)
 {
-    auto rectifiedHue = rectifyCSSColorAngle(RefPtr { WTFMove(hue) });
+    auto rectifiedHue = rectifyCSSColorAngle(RefPtr { WTF::move(hue) });
     if (rectifiedHue.hasException())
         return rectifiedHue.releaseException();
     m_hue = std::get<RefPtr<CSSNumericValue>>(rectifiedHue.releaseReturnValue()).releaseNonNull();

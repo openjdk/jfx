@@ -28,7 +28,8 @@
 
 #include "Chrome.h"
 #include "ChromeClient.h"
-#include "DocumentInlines.h"
+#include "DocumentPage.h"
+#include "DocumentSecurityOrigin.h"
 #include "JSDOMPromiseDeferred.h"
 #include "Navigator.h"
 #include "Page.h"
@@ -42,28 +43,23 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(NavigatorLoginStatus);
 
 NavigatorLoginStatus* NavigatorLoginStatus::from(Navigator& navigator)
 {
-    auto* supplement = static_cast<NavigatorLoginStatus*>(Supplement<Navigator>::from(&navigator, supplementName()));
+    auto* supplement = downcast<NavigatorLoginStatus>(Supplement<Navigator>::from(&navigator, supplementName()));
     if (!supplement) {
         auto newSupplement = makeUnique<NavigatorLoginStatus>(navigator);
         supplement = newSupplement.get();
-        provideTo(&navigator, supplementName(), WTFMove(newSupplement));
+        provideTo(&navigator, supplementName(), WTF::move(newSupplement));
     }
     return supplement;
 }
 
-ASCIILiteral NavigatorLoginStatus::supplementName()
-{
-    return "NavigatorLoginStatus"_s;
-}
-
 void NavigatorLoginStatus::setStatus(Navigator& navigator, IsLoggedIn isLoggedIn, Ref<DeferredPromise>&& promise)
 {
-    NavigatorLoginStatus::from(navigator)->setStatus(isLoggedIn, WTFMove(promise));
+    NavigatorLoginStatus::from(navigator)->setStatus(isLoggedIn, WTF::move(promise));
 }
 
 void NavigatorLoginStatus::isLoggedIn(Navigator& navigator, Ref<DeferredPromise>&& promise)
 {
-    NavigatorLoginStatus::from(navigator)->isLoggedIn(WTFMove(promise));
+    NavigatorLoginStatus::from(navigator)->isLoggedIn(WTF::move(promise));
 }
 
 bool NavigatorLoginStatus::hasSameOrigin() const
@@ -95,7 +91,7 @@ void NavigatorLoginStatus::setStatus(IsLoggedIn isLoggedIn, Ref<DeferredPromise>
         promise->reject();
         return;
     }
-    page->chrome().client().setLoginStatus(RegistrableDomain::uncheckedCreateFromHost(document->securityOrigin().host()), isLoggedIn, [promise = WTFMove(promise)] {
+    page->chrome().client().setLoginStatus(RegistrableDomain::uncheckedCreateFromHost(document->protectedSecurityOrigin()->host()), isLoggedIn, [promise = WTF::move(promise)] {
         promise->resolve();
     });
 }
@@ -113,7 +109,7 @@ void NavigatorLoginStatus::isLoggedIn(Ref<DeferredPromise>&& promise)
         promise->reject();
         return;
     }
-    page->chrome().client().isLoggedIn(RegistrableDomain::uncheckedCreateFromHost(document->securityOrigin().host()), [promise = WTFMove(promise)] (bool isLoggedIn) {
+    page->chrome().client().isLoggedIn(RegistrableDomain::uncheckedCreateFromHost(document->protectedSecurityOrigin()->host()), [promise = WTF::move(promise)] (bool isLoggedIn) {
         promise->resolve<IDLBoolean>(isLoggedIn);
     });
 }

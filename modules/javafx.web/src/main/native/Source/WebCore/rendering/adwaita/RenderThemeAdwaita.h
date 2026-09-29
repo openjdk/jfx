@@ -37,9 +37,9 @@ class RenderThemeAdwaita : public RenderTheme {
 public:
     virtual ~RenderThemeAdwaita();
 
-    bool canCreateControlPartForRenderer(const RenderObject&) const final;
-    bool canCreateControlPartForBorderOnly(const RenderObject&) const final;
-    bool canCreateControlPartForDecorations(const RenderObject&) const final;
+    bool canCreateControlPartForRenderer(const RenderElement&) const final;
+    bool canCreateControlPartForBorderOnly(const RenderElement&) const final;
+    bool canCreateControlPartForDecorations(const RenderElement&) const final;
 
     bool isControlStyled(const RenderStyle&) const final;
 
@@ -53,6 +53,7 @@ private:
 #endif
 
 #if ENABLE(VIDEO)
+    RefPtr<FragmentedSharedBuffer> mediaControlsImageDataForIconNameAndType(const String&, const String&) override;
     String mediaControlsBase64StringForIconNameAndType(const String&, const String&) final;
     String mediaControlsFormattedStringForDuration(double) final;
 
@@ -60,7 +61,7 @@ private:
 #endif // ENABLE(VIDEO)
 
     bool supportsHover() const final { return true; }
-    bool supportsFocusRing(const RenderObject&, const RenderStyle&) const final;
+    bool supportsFocusRing(const RenderElement&, const RenderStyle&) const final;
     bool supportsSelectionForegroundColors(OptionSet<StyleColorOptions>) const final { return false; }
     bool supportsListBoxSelectionForegroundColors(OptionSet<StyleColorOptions>) const final { return true; }
     bool shouldHaveCapsLockIndicator(const HTMLInputElement&) const final;

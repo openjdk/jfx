@@ -68,7 +68,8 @@ ScrollAnimator::~ScrollAnimator()
 
 bool ScrollAnimator::singleAxisScroll(ScrollEventAxis axis, float scrollDelta, OptionSet<ScrollBehavior> behavior)
 {
-    m_scrollableArea.scrollbarsController().setScrollbarAnimationsUnsuspendedByUserInteraction(true);
+    CheckedRef scrollableArea = m_scrollableArea.get();
+    scrollableArea->scrollbarsController().setScrollbarAnimationsUnsuspendedByUserInteraction(true);
 
     auto delta = setValueForAxis(FloatSize { }, axis, scrollDelta);
 
@@ -81,20 +82,20 @@ bool ScrollAnimator::singleAxisScroll(ScrollEventAxis axis, float scrollDelta, O
         delta = newOffset - currentOffset;
     } else {
         auto newPosition = m_currentPosition + delta;
-        newPosition = newPosition.constrainedBetween(scrollableArea().minimumScrollPosition(), scrollableArea().maximumScrollPosition());
+        newPosition = newPosition.constrainedBetween(scrollableArea->minimumScrollPosition(), scrollableArea->maximumScrollPosition());
         if (newPosition == m_currentPosition)
             return false;
 
         delta = newPosition - m_currentPosition;
     }
 
-    if (m_scrollableArea.scrollAnimatorEnabled() && !behavior.contains(ScrollBehavior::NeverAnimate)) {
+    if (scrollableArea->scrollAnimatorEnabled() && !behavior.contains(ScrollBehavior::NeverAnimate)) {
         if (m_scrollController.retargetAnimatedScrollBy(delta))
             return true;
 
         auto options = ScrollPositionChangeOptions::createProgrammatic();
         options.originalScrollDelta = delta;
-        m_scrollableArea.scrollToPositionWithAnimation(m_currentPosition + delta, options);
+        scrollableArea->scrollToPositionWithAnimation(m_currentPosition + delta, options);
         return true;
     }
 
@@ -103,26 +104,28 @@ bool ScrollAnimator::singleAxisScroll(ScrollEventAxis axis, float scrollDelta, O
 
 bool ScrollAnimator::scrollToPositionWithoutAnimation(const FloatPoint& position, ScrollClamping clamping)
 {
+    CheckedRef scrollableArea = m_scrollableArea.get();
     FloatPoint currentPosition = this->currentPosition();
-    auto adjustedPosition = clamping == ScrollClamping::Clamped ? position.constrainedBetween(scrollableArea().minimumScrollPosition(), scrollableArea().maximumScrollPosition()) : position;
+    auto adjustedPosition = clamping == ScrollClamping::Clamped ? position.constrainedBetween(scrollableArea->minimumScrollPosition(), scrollableArea->maximumScrollPosition()) : position;
 
     // FIXME: In some cases on iOS the ScrollableArea position is out of sync with the ScrollAnimator position.
     // When these cases are fixed, this extra check against the ScrollableArea position can be removed.
-    if (adjustedPosition == currentPosition && adjustedPosition == scrollableArea().scrollPosition() && !scrollableArea().scrollOriginChanged())
+    if (adjustedPosition == currentPosition && adjustedPosition == scrollableArea->scrollPosition() && !scrollableArea->scrollOriginChanged())
         return false;
 
     m_scrollController.stopAnimatedScroll();
 
     setCurrentPosition(adjustedPosition, NotifyScrollableArea::Yes);
-    scrollableArea().scrollDidEnd();
+    scrollableArea->scrollDidEnd();
     return true;
 }
 
 bool ScrollAnimator::scrollToPositionWithAnimation(const FloatPoint& position, ScrollClamping clamping)
 {
-    auto adjustedPosition = clamping == ScrollClamping::Clamped ? position.constrainedBetween(scrollableArea().minimumScrollPosition(), scrollableArea().maximumScrollPosition()) : position;
+    CheckedRef scrollableArea = m_scrollableArea.get();
+    auto adjustedPosition = clamping == ScrollClamping::Clamped ? position.constrainedBetween(scrollableArea->minimumScrollPosition(), scrollableArea->maximumScrollPosition()) : position;
     bool positionChanged = adjustedPosition != currentPosition();
-    if (!positionChanged && !scrollableArea().scrollOriginChanged())
+    if (!positionChanged && !scrollableArea->scrollOriginChanged())
         return false;
 
     return m_scrollController.startAnimatedScrollToDestination(offsetFromPosition(m_currentPosition), offsetFromPosition(adjustedPosition));
@@ -136,12 +139,12 @@ void ScrollAnimator::retargetRunningAnimation(const FloatPoint& newPosition)
 
 FloatPoint ScrollAnimator::offsetFromPosition(const FloatPoint& position) const
 {
-    return ScrollableArea::scrollOffsetFromPosition(position, toFloatSize(m_scrollableArea.scrollOrigin()));
+    return ScrollableArea::scrollOffsetFromPosition(position, toFloatSize(m_scrollableArea->scrollOrigin()));
 }
 
 FloatPoint ScrollAnimator::positionFromOffset(const FloatPoint& offset) const
 {
-    return ScrollableArea::scrollPositionFromOffset(offset, toFloatSize(m_scrollableArea.scrollOrigin()));
+    return ScrollableArea::scrollPositionFromOffset(offset, toFloatSize(m_scrollableArea->scrollOrigin()));
 }
 
 bool ScrollAnimator::activeScrollSnapIndexDidChange() const
@@ -173,7 +176,7 @@ bool ScrollAnimator::handleWheelEvent(const PlatformWheelEvent& wheelEvent)
     if (processWheelEventForScrollSnap(wheelEvent))
         return false;
 
-    if (m_scrollableArea.hasSteppedScrolling())
+    if (checkedScrollableArea()->hasSteppedScrolling())
         return handleSteppedScrolling(wheelEvent);
 
     return m_scrollController.handleWheelEvent(wheelEvent);
@@ -182,8 +185,16 @@ bool ScrollAnimator::handleWheelEvent(const PlatformWheelEvent& wheelEvent)
 // "Stepped scrolling" is only used by RenderListBox. It's special in that it has no rubberbanding, and scroll deltas respect Scrollbar::pixelStep().
 bool ScrollAnimator::handleSteppedScrolling(const PlatformWheelEvent& wheelEvent)
 {
-    auto* horizontalScrollbar = m_scrollableArea.horizontalScrollbar();
-    auto* verticalScrollbar = m_scrollableArea.verticalScrollbar();
+    CheckedRef scrollableArea = m_scrollableArea.get();
+#if ENABLE(KINETIC_SCROLLING)
+    if ((wheelEvent.phase() == PlatformWheelEventPhase::Ended && wheelEvent.momentumPhase() == PlatformWheelEventPhase::None) || wheelEvent.momentumPhase() == PlatformWheelEventPhase::Ended) {
+        scrollableArea->scrollDidEnd();
+        return true;
+    }
+#endif
+
+    RefPtr horizontalScrollbar = scrollableArea->horizontalScrollbar();
+    RefPtr verticalScrollbar = scrollableArea->verticalScrollbar();
 
     // Accept the event if we have a scrollbar in that direction and can still
     // scroll any further.
@@ -192,8 +203,8 @@ bool ScrollAnimator::handleSteppedScrolling(const PlatformWheelEvent& wheelEvent
 
     bool handled = false;
 
-    IntSize maxForwardScrollDelta = m_scrollableArea.maximumScrollPosition() - m_scrollableArea.scrollPosition();
-    IntSize maxBackwardScrollDelta = m_scrollableArea.scrollPosition() - m_scrollableArea.minimumScrollPosition();
+    IntSize maxForwardScrollDelta = scrollableArea->maximumScrollPosition() - scrollableArea->scrollPosition();
+    IntSize maxBackwardScrollDelta = scrollableArea->scrollPosition() - scrollableArea->minimumScrollPosition();
     if ((deltaX < 0 && maxForwardScrollDelta.width() > 0)
         || (deltaX > 0 && maxBackwardScrollDelta.width() > 0)
         || (deltaY < 0 && maxForwardScrollDelta.height() > 0)
@@ -205,16 +216,16 @@ bool ScrollAnimator::handleSteppedScrolling(const PlatformWheelEvent& wheelEvent
             behavior.add(ScrollBehavior::NeverAnimate);
 
         if (deltaY) {
-            if (wheelEvent.granularity() == ScrollByPageWheelEvent)
-                deltaY = std::copysign(Scrollbar::pageStepDelta(m_scrollableArea.visibleHeight()), deltaY);
+            if (wheelEvent.granularity() == PlatformWheelEventGranularity::ScrollByPageWheelEvent)
+                deltaY = std::copysign(Scrollbar::pageStepDelta(scrollableArea->visibleHeight()), deltaY);
 
             auto scrollDelta = verticalScrollbar->pixelStep() * -deltaY; // Wheel deltas are reversed from scrolling direction.
             singleAxisScroll(ScrollEventAxis::Vertical, scrollDelta, behavior);
         }
 
         if (deltaX) {
-            if (wheelEvent.granularity() == ScrollByPageWheelEvent)
-                deltaX = std::copysign(Scrollbar::pageStepDelta(m_scrollableArea.visibleWidth()), deltaX);
+            if (wheelEvent.granularity() == PlatformWheelEventGranularity::ScrollByPageWheelEvent)
+                deltaX = std::copysign(Scrollbar::pageStepDelta(scrollableArea->visibleWidth()), deltaX);
 
             auto scrollDelta = horizontalScrollbar->pixelStep() * -deltaX; // Wheel deltas are reversed from scrolling direction.
             singleAxisScroll(ScrollEventAxis::Horizontal, scrollDelta, behavior);
@@ -251,7 +262,7 @@ void ScrollAnimator::setCurrentPosition(const FloatPoint& position, NotifyScroll
     if (notify == NotifyScrollableArea::Yes)
         notifyPositionChanged(delta);
     else
-        notifyScrollAnchoringControllerOfScroll(m_scrollableArea);
+        notifyScrollAnchoringControllerOfScroll(checkedScrollableArea());
 
     updateActiveScrollSnapIndexForOffset();
 }
@@ -263,8 +274,9 @@ void ScrollAnimator::updateActiveScrollSnapIndexForOffset()
 
 void ScrollAnimator::notifyPositionChanged(const FloatSize& delta)
 {
-    m_scrollableArea.scrollbarsController().notifyContentAreaScrolled(delta);
-    m_scrollableArea.setScrollPositionFromAnimation(roundedIntPoint(m_currentPosition));
+    CheckedRef scrollableArea = m_scrollableArea.get();
+    scrollableArea->scrollbarsController().notifyContentAreaScrolled(delta);
+    scrollableArea->setScrollPositionFromAnimation(roundedIntPoint(m_currentPosition));
     m_scrollController.scrollPositionChanged();
 }
 
@@ -280,98 +292,102 @@ const LayoutScrollSnapOffsetsInfo* ScrollAnimator::snapOffsetsInfo() const
 
 FloatPoint ScrollAnimator::scrollOffset() const
 {
-    return m_scrollableArea.scrollOffsetFromPosition(roundedIntPoint(currentPosition()));
+    return checkedScrollableArea()->scrollOffsetFromPosition(roundedIntPoint(currentPosition()));
 }
 
 bool ScrollAnimator::allowsHorizontalScrolling() const
 {
-    return m_scrollableArea.allowsHorizontalScrolling();
+    return checkedScrollableArea()->allowsHorizontalScrolling();
 }
 
 bool ScrollAnimator::allowsVerticalScrolling() const
 {
-    return m_scrollableArea.allowsVerticalScrolling();
+    return checkedScrollableArea()->allowsVerticalScrolling();
 }
 
 void ScrollAnimator::willStartAnimatedScroll()
 {
-    m_scrollableArea.setScrollAnimationStatus(ScrollAnimationStatus::Animating);
+    m_scrollableArea->setScrollAnimationStatus(ScrollAnimationStatus::Animating);
 }
 
 void ScrollAnimator::didStopAnimatedScroll()
 {
-    m_scrollableArea.setScrollAnimationStatus(ScrollAnimationStatus::NotAnimating);
-    m_scrollableArea.animatedScrollDidEnd();
-    m_scrollableArea.scrollDidEnd();
+    CheckedRef scrollableArea = m_scrollableArea.get();
+    scrollableArea->setScrollAnimationStatus(ScrollAnimationStatus::NotAnimating);
+    scrollableArea->animatedScrollDidEnd();
+    scrollableArea->scrollDidEnd();
 }
 
 #if HAVE(RUBBER_BANDING)
 IntSize ScrollAnimator::stretchAmount() const
 {
-    return m_scrollableArea.overhangAmount();
+    return checkedScrollableArea()->overhangAmount();
 }
 
 RectEdges<bool> ScrollAnimator::edgePinnedState() const
 {
-    return m_scrollableArea.edgePinnedState();
+    return checkedScrollableArea()->edgePinnedState();
 }
 
 bool ScrollAnimator::isPinnedOnSide(BoxSide side) const
 {
-    return m_scrollableArea.isPinnedOnSide(side);
+    return checkedScrollableArea()->isPinnedOnSide(side);
 }
 
 #endif
 
 void ScrollAnimator::adjustScrollPositionToBoundsIfNecessary()
 {
-    auto previousClamping = m_scrollableArea.scrollClamping();
-    m_scrollableArea.setScrollClamping(ScrollClamping::Clamped);
+    CheckedRef scrollableArea = m_scrollableArea.get();
+    auto previousClamping = scrollableArea->scrollClamping();
+    scrollableArea->setScrollClamping(ScrollClamping::Clamped);
 
-    auto currentScrollPosition = m_scrollableArea.scrollPosition();
-    auto constrainedPosition = m_scrollableArea.constrainedScrollPosition(currentScrollPosition);
+    auto currentScrollPosition = scrollableArea->scrollPosition();
+    auto constrainedPosition = scrollableArea->constrainedScrollPosition(currentScrollPosition);
     immediateScrollBy(constrainedPosition - currentScrollPosition);
 
-    m_scrollableArea.setScrollClamping(previousClamping);
+    scrollableArea->setScrollClamping(previousClamping);
 }
 
 FloatPoint ScrollAnimator::adjustScrollPositionIfNecessary(const FloatPoint& position) const
 {
-    if (m_scrollableArea.scrollClamping() == ScrollClamping::Unclamped)
+    CheckedRef scrollableArea = m_scrollableArea.get();
+    if (scrollableArea->scrollClamping() == ScrollClamping::Unclamped)
         return position;
 
-    return m_scrollableArea.constrainedScrollPosition(ScrollPosition(position));
+    return scrollableArea->constrainedScrollPosition(ScrollPosition(position));
 }
 
 void ScrollAnimator::immediateScrollBy(const FloatSize& delta, ScrollClamping clamping)
 {
-    auto previousClamping = m_scrollableArea.scrollClamping();
-    m_scrollableArea.setScrollClamping(clamping);
+    auto previousClamping = m_scrollableArea->scrollClamping();
+    m_scrollableArea->setScrollClamping(clamping);
 
     auto currentPosition = this->currentPosition();
     auto newPosition = adjustScrollPositionIfNecessary(currentPosition + delta);
     if (newPosition != currentPosition)
         setCurrentPosition(newPosition, NotifyScrollableArea::Yes);
 
-    m_scrollableArea.setScrollClamping(previousClamping);
+    m_scrollableArea->setScrollClamping(previousClamping);
 }
 
 ScrollExtents ScrollAnimator::scrollExtents() const
 {
+    CheckedRef scrollableArea = m_scrollableArea.get();
     return {
-        m_scrollableArea.totalContentsSize(),
-        m_scrollableArea.visibleSize()
+        scrollableArea->totalContentsSize(),
+        scrollableArea->visibleSize()
     };
 }
 
 float ScrollAnimator::pageScaleFactor() const
 {
-    return m_scrollableArea.pageScaleFactor();
+    return checkedScrollableArea()->pageScaleFactor();
 }
 
 std::unique_ptr<ScrollingEffectsControllerTimer> ScrollAnimator::createTimer(Function<void()>&& function)
 {
-    return makeUnique<ScrollingEffectsControllerTimer>(RunLoop::currentSingleton(), [function = WTFMove(function), weakScrollableArea = WeakPtr { m_scrollableArea }] {
+    return makeUnique<ScrollingEffectsControllerTimer>(RunLoop::currentSingleton(), [function = WTF::move(function), weakScrollableArea = WeakPtr { m_scrollableArea.get() }] {
         if (!weakScrollableArea)
             return;
         function();
@@ -382,7 +398,7 @@ void ScrollAnimator::startAnimationCallback(ScrollingEffectsController&)
 {
     if (!m_scrollAnimationScheduled) {
         m_scrollAnimationScheduled = true;
-        m_scrollableArea.didStartScrollAnimation();
+        checkedScrollableArea()->didStartScrollAnimation();
     }
 }
 
@@ -393,31 +409,27 @@ void ScrollAnimator::stopAnimationCallback(ScrollingEffectsController&)
 
 void ScrollAnimator::deferWheelEventTestCompletionForReason(ScrollingNodeID identifier, WheelEventTestMonitor::DeferReason reason) const
 {
-    if (!m_wheelEventTestMonitor)
-        return;
-
-    m_wheelEventTestMonitor->deferForReason(identifier, reason);
+    if (RefPtr monitor = m_wheelEventTestMonitor)
+        monitor->deferForReason(identifier, reason);
 }
 
 void ScrollAnimator::removeWheelEventTestCompletionDeferralForReason(ScrollingNodeID identifier, WheelEventTestMonitor::DeferReason reason) const
 {
-    if (!m_wheelEventTestMonitor)
-        return;
-
-    m_wheelEventTestMonitor->removeDeferralForReason(identifier, reason);
+    if (RefPtr monitor = m_wheelEventTestMonitor)
+        monitor->removeDeferralForReason(identifier, reason);
 }
 
 #if USE(COORDINATED_GRAPHICS)
 bool ScrollAnimator::scrollAnimationEnabled() const
 {
-    return m_scrollableArea.scrollAnimatorEnabled();
+    return checkedScrollableArea()->scrollAnimatorEnabled();
 }
 #endif
 
 void ScrollAnimator::cancelAnimations()
 {
     m_scrollController.stopAnimatedScroll();
-    m_scrollableArea.scrollbarsController().cancelAnimations();
+    checkedScrollableArea()->scrollbarsController().cancelAnimations();
 }
 
 void ScrollAnimator::contentsSizeChanged()
@@ -444,7 +456,7 @@ float ScrollAnimator::scrollOffsetAdjustedForSnapping(ScrollEventAxis axis, cons
     std::optional<float> originalOffset;
     float velocityInScrollAxis = 0.;
     if (method == ScrollSnapPointSelectionMethod::Directional) {
-        FloatSize scrollOrigin = toFloatSize(m_scrollableArea.scrollOrigin());
+        FloatSize scrollOrigin = toFloatSize(m_scrollableArea->scrollOrigin());
         auto currentOffset = ScrollableArea::scrollOffsetFromPosition(this->currentPosition(), scrollOrigin);
         auto velocity = newOffset - currentOffset;
         originalOffset = axis == ScrollEventAxis::Horizontal ? currentOffset.x() : currentOffset.y();
@@ -463,7 +475,7 @@ ScrollAnimationStatus ScrollAnimator::serviceScrollAnimation(MonotonicTime time)
 
 ScrollingNodeID ScrollAnimator::scrollingNodeIDForTesting() const
 {
-    return m_scrollableArea.scrollingNodeIDForTesting();
+    return checkedScrollableArea()->scrollingNodeIDForTesting();
 }
 
 

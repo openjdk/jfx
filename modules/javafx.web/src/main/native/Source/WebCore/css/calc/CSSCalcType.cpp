@@ -25,8 +25,8 @@
 #include "config.h"
 #include "CSSCalcType.h"
 
+#include "CSSPrimitiveNumericCategory.h"
 #include "CSSUnits.h"
-#include "CalculationCategory.h"
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/text/TextStream.h>
 
@@ -313,23 +313,23 @@ Type Type::determineType(CSSUnitType unitType)
     return { };
 }
 
-Type::PercentHintValue Type::determinePercentHint(Calculation::Category category)
+Type::PercentHintValue Type::determinePercentHint(CSS::Category category)
 {
     switch (category) {
-    case Calculation::Category::Integer:
-    case Calculation::Category::Number:
-    case Calculation::Category::Percentage:
-    case Calculation::Category::Length:
-    case Calculation::Category::Angle:
-    case Calculation::Category::Time:
-    case Calculation::Category::Frequency:
-    case Calculation::Category::Resolution:
-    case Calculation::Category::Flex:
+    case CSS::Category::Integer:
+    case CSS::Category::Number:
+    case CSS::Category::Percentage:
+    case CSS::Category::Length:
+    case CSS::Category::Angle:
+    case CSS::Category::Time:
+    case CSS::Category::Frequency:
+    case CSS::Category::Resolution:
+    case CSS::Category::Flex:
         return { };
 
-    case Calculation::Category::LengthPercentage:
+    case CSS::Category::LengthPercentage:
         return PercentHint::Length;
-    case Calculation::Category::AnglePercentage:
+    case CSS::Category::AnglePercentage:
         return PercentHint::Angle;
     }
 
@@ -337,29 +337,29 @@ Type::PercentHintValue Type::determinePercentHint(Calculation::Category category
     return { };
 }
 
-bool Type::matches(Calculation::Category category) const
+bool Type::matches(CSS::Category category) const
 {
     switch (category) {
-    case Calculation::Category::Integer:
-    case Calculation::Category::Number:
+    case CSS::Category::Integer:
+    case CSS::Category::Number:
         return matchesAny<Match::Number>();
-    case Calculation::Category::Percentage:
+    case CSS::Category::Percentage:
         return matchesAny<Match::Percent>();
-    case Calculation::Category::Length:
+    case CSS::Category::Length:
         return matchesAny<Match::Length>();
-    case Calculation::Category::Angle:
+    case CSS::Category::Angle:
         return matchesAny<Match::Angle>();
-    case Calculation::Category::Time:
+    case CSS::Category::Time:
         return matchesAny<Match::Time>();
-    case Calculation::Category::Frequency:
+    case CSS::Category::Frequency:
         return matchesAny<Match::Frequency>();
-    case Calculation::Category::Resolution:
+    case CSS::Category::Resolution:
         return matchesAny<Match::Resolution>();
-    case Calculation::Category::Flex:
+    case CSS::Category::Flex:
         return matchesAny<Match::Flex>();
-    case Calculation::Category::LengthPercentage:
+    case CSS::Category::LengthPercentage:
         return matchesAny<Match::Length, Match::Percent>({ .allowsPercentHint = true });
-    case Calculation::Category::AnglePercentage:
+    case CSS::Category::AnglePercentage:
         return matchesAny<Match::Angle, Match::Percent>({ .allowsPercentHint = true });
     }
 
@@ -367,7 +367,7 @@ bool Type::matches(Calculation::Category category) const
     return false;
 }
 
-std::optional<Calculation::Category> Type::calculationCategory() const
+std::optional<CSS::Category> Type::calculationCategory() const
 {
     std::optional<BaseType> matchingUnit;
     for (auto unit : Type::allBaseTypes()) {
@@ -387,36 +387,36 @@ std::optional<Calculation::Category> Type::calculationCategory() const
     }
 
     if (!matchingUnit)
-        return Calculation::Category::Number;
+        return CSS::Category::Number;
 
     switch (*matchingUnit) {
     case BaseType::Length:
         if (percentHint)
-            return Calculation::Category::LengthPercentage;
-        return Calculation::Category::Length;
+            return CSS::Category::LengthPercentage;
+        return CSS::Category::Length;
     case BaseType::Angle:
         if (percentHint)
-            return Calculation::Category::AnglePercentage;
-        return Calculation::Category::Angle;
+            return CSS::Category::AnglePercentage;
+        return CSS::Category::Angle;
     case BaseType::Time:
         ASSERT(!percentHint);
-        return Calculation::Category::Time;
+        return CSS::Category::Time;
     case BaseType::Frequency:
         ASSERT(!percentHint);
-        return Calculation::Category::Frequency;
+        return CSS::Category::Frequency;
     case BaseType::Resolution:
         ASSERT(!percentHint);
-        return Calculation::Category::Resolution;
+        return CSS::Category::Resolution;
     case BaseType::Flex:
         ASSERT(!percentHint);
-        return Calculation::Category::Flex;
+        return CSS::Category::Flex;
     case BaseType::Percent:
         ASSERT(!percentHint);
-        return Calculation::Category::Percentage;
+        return CSS::Category::Percentage;
     }
 
     ASSERT_NOT_REACHED();
-    return Calculation::Category::Number;
+    return CSS::Category::Number;
 }
 
 static ASCIILiteral literal(BaseType baseType)

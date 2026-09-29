@@ -46,7 +46,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLTrackElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLTrackElement);
 
 using namespace HTMLNames;
 
@@ -180,11 +180,6 @@ void HTMLTrackElement::scheduleLoad()
 
         SetForScope loadPending { track.m_loadPending, true, false };
 
-        if (!track.hasAttributeWithoutSynchronization(srcAttr)) {
-            track.track().removeAllCues();
-            return;
-        }
-
         // 6. Set the text track readiness state to loading.
         track.setReadyState(HTMLTrackElement::LOADING);
 
@@ -207,7 +202,7 @@ void HTMLTrackElement::scheduleLoad()
 
 void HTMLTrackElement::scheduleTask(Function<void(HTMLTrackElement&)>&& task)
 {
-    queueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [task = WTFMove(task)](auto& track) mutable {
+    queueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [task = WTF::move(task)](auto& track) mutable {
         task(track);
     });
 }

@@ -1,5 +1,5 @@
 # emoji-sequences.txt
-# Date: 2025-04-23, 17:41:13 GMT
+# Date: 2025-07-25, 17:54:32 GMT
 # © 2025 Unicode®, Inc.
 # Unicode and the Unicode Logo are registered trademarks of Unicode, Inc. in the U.S. and other countries.
 # For terms of use and license, see https://www.unicode.org/terms_of_use.html
@@ -325,7 +325,6 @@
 1FAD7..1FAD9  ; Basic_Emoji                  ; pouring liquid..jar                                            # E14.0  [3] (🫗..🫙)
 1FADA..1FADB  ; Basic_Emoji                  ; ginger root..pea pod                                           # E15.0  [2] (🫚..🫛)
 1FADC         ; Basic_Emoji                  ; root vegetable                                                 # E16.0  [1] (🫜)
-1FADD         ; Basic_Emoji                  ; apple core                                                     # E17.0  [1] (🫝)
 1FADF         ; Basic_Emoji                  ; splatter                                                       # E16.0  [1] (🫟)
 1FAE0..1FAE7  ; Basic_Emoji                  ; melting face..bubbles                                          # E14.0  [8] (🫠..🫧)
 1FAE8         ; Basic_Emoji                  ; shaking face                                                   # E15.0  [1] (🫨)
@@ -542,7 +541,7 @@
 1F6F0 FE0F    ; Basic_Emoji                  ; satellite                                                      # E0.7   [1] (🛰️)
 1F6F3 FE0F    ; Basic_Emoji                  ; passenger ship                                                 # E0.7   [1] (🛳️)
 
-# Total elements: 1401
+# Total elements: 1400
 
 # ================================================
 

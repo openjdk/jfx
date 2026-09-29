@@ -74,9 +74,11 @@ void generateToAir(Procedure& procedure)
         dataLog(tierName, "Initial B3:\n");
         dataLog(procedure);
     }
-
     // We don't require the incoming IR to have predecessors computed.
     procedure.resetReachability();
+
+    if (Options::dumpIonGraph()) [[unlikely]]
+        procedure.appendIonGraphPass("InitialCFG"_s);
 
     if (shouldValidateIR())
         validate(procedure);

@@ -57,6 +57,16 @@ static unsigned getUniqueIdentifier()
 
 // --------
 
+UniqueRef<PageGroup> PageGroup::create(const String& name)
+{
+    return UniqueRef<PageGroup>(*new PageGroup(name));
+}
+
+UniqueRef<PageGroup> PageGroup::create(Page& page)
+{
+    return UniqueRef<PageGroup>(*new PageGroup(page));
+}
+
 PageGroup::PageGroup(const String& name)
     : m_name(name)
     , m_identifier(getUniqueIdentifier())
@@ -71,25 +81,21 @@ PageGroup::PageGroup(Page& page)
 
 PageGroup::~PageGroup() = default;
 
-using PageGroupMap = HashMap<String, PageGroup*>;
-static PageGroupMap* pageGroups = nullptr;
+using PageGroupMap = HashMap<String, UniqueRef<PageGroup>>;
+
+static PageGroupMap& pageGroups()
+{
+    static NeverDestroyed<PageGroupMap> pageGroupsMap;
+    return pageGroupsMap;
+}
 
 PageGroup* PageGroup::pageGroup(const String& groupName)
 {
     ASSERT(!groupName.isEmpty());
 
-    if (!pageGroups)
-        pageGroups = new PageGroupMap;
-
-    PageGroupMap::AddResult result = pageGroups->add(groupName, nullptr);
-
-    if (result.isNewEntry) {
-        ASSERT(!result.iterator->value);
-        result.iterator->value = new PageGroup(groupName);
-    }
-
-    ASSERT(result.iterator->value);
-    return result.iterator->value;
+    return pageGroups().ensure(groupName, [&] {
+        return PageGroup::create(groupName);
+    }).iterator->value.ptr();
 }
 
 void PageGroup::addPage(Page& page)
@@ -107,8 +113,9 @@ void PageGroup::removePage(Page& page)
 #if ENABLE(VIDEO)
 void PageGroup::captionPreferencesChanged()
 {
-    for (auto& page : m_pages)
+    m_pages.forEach([](auto& page) {
         page.captionPreferencesChanged();
+    });
     BackForwardCache::singleton().markPagesForCaptionPreferencesChanged();
 }
 
@@ -116,13 +123,13 @@ CaptionUserPreferences& PageGroup::ensureCaptionPreferences()
 {
     if (!m_captionPreferences) {
 #if HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)
-        m_captionPreferences = CaptionUserPreferencesMediaAF::create(*this);
+        lazyInitialize(m_captionPreferences, CaptionUserPreferencesMediaAF::create(*this));
 #else
-        m_captionPreferences = CaptionUserPreferences::create(*this);
+        lazyInitialize(m_captionPreferences, CaptionUserPreferences::create(*this));
 #endif
     }
 
-    return *m_captionPreferences.get();
+    return *m_captionPreferences;
 }
 
 Ref<CaptionUserPreferences> PageGroup::ensureProtectedCaptionPreferences()

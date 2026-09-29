@@ -71,7 +71,7 @@ private:
 
         explicit LayerNode(Layer&& layer)
         {
-            layers.append(WTFMove(layer));
+            layers.append(WTF::move(layer));
         }
 
         const Layer& firstLayer() const  { return layers[0]; }

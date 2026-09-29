@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "ProtectionSpace.h"
+#include <WebCore/ProtectionSpace.h>
 #include <wtf/HashTraits.h>
 #include <wtf/Hasher.h>
 

@@ -25,13 +25,13 @@
 
 #pragma once
 
-#include "IDBBackingStore.h"
-#include "IDBDatabaseIdentifier.h"
-#include "IDBIndexIdentifier.h"
-#include "IDBObjectStoreIdentifier.h"
-#include "IDBResourceIdentifier.h"
-#include "IndexKey.h"
-#include "MemoryBackingStoreTransaction.h"
+#include <WebCore/IDBBackingStore.h>
+#include <WebCore/IDBDatabaseIdentifier.h>
+#include <WebCore/IDBIndexIdentifier.h>
+#include <WebCore/IDBObjectStoreIdentifier.h>
+#include <WebCore/IDBResourceIdentifier.h>
+#include <WebCore/IndexKey.h>
+#include <WebCore/MemoryBackingStoreTransaction.h>
 #include <wtf/HashMap.h>
 #include <wtf/TZoneMalloc.h>
 
@@ -106,8 +106,8 @@ private:
     std::unique_ptr<IDBDatabaseInfo> m_databaseInfo;
 
     HashMap<IDBResourceIdentifier, Ref<MemoryBackingStoreTransaction>> m_transactions;
-    HashMap<IDBObjectStoreIdentifier, RefPtr<MemoryObjectStore>> m_objectStoresByIdentifier;
-    HashMap<String, RefPtr<MemoryObjectStore>> m_objectStoresByName;
+    HashMap<IDBObjectStoreIdentifier, Ref<MemoryObjectStore>> m_objectStoresByIdentifier;
+    HashMap<String, Ref<MemoryObjectStore>> m_objectStoresByName;
 };
 
 } // namespace IDBServer

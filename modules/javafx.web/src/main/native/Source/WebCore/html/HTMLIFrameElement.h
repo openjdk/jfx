@@ -23,9 +23,9 @@
 
 #pragma once
 
-#include "HTMLFrameElementBase.h"
-#include "PermissionsPolicy.h"
-#include "SubstituteData.h"
+#include <WebCore/HTMLFrameElementBase.h>
+#include <WebCore/PermissionsPolicy.h>
+#include <WebCore/SubstituteData.h>
 
 namespace WebCore {
 
@@ -35,7 +35,7 @@ class RenderIFrame;
 class TrustedHTML;
 
 class HTMLIFrameElement final : public HTMLFrameElementBase {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLIFrameElement);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLIFrameElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLIFrameElement);
 public:
     static Ref<HTMLIFrameElement> create(const QualifiedName&, Document&);
@@ -63,7 +63,7 @@ public:
 
 #if ENABLE(CONTENT_EXTENSIONS)
     const URL& initiatorSourceURL() const { return m_initiatorSourceURL; }
-    void setInitiatorSourceURL(URL&& url) { m_initiatorSourceURL = WTFMove(url); }
+    void setInitiatorSourceURL(URL&& url) { m_initiatorSourceURL = WTF::move(url); }
 #endif
 
 private:

@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "ECMAMode.h"
+#include <JavaScriptCore/ECMAMode.h>
 #include <wtf/text/UniquedStringImpl.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN

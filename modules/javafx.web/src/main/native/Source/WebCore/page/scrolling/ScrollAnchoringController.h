@@ -25,21 +25,12 @@
 
 #pragma once
 
-#include "Document.h"
-#include "Element.h"
-#include "FloatPoint.h"
-#include "ScrollTypes.h"
+#include <WebCore/Document.h>
+#include <WebCore/Element.h>
+#include <WebCore/FloatPoint.h>
+#include <WebCore/ScrollTypes.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
-
-namespace WebCore {
-class ScrollAnchoringController;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::ScrollAnchoringController> : std::true_type { };
-}
 
 namespace WebCore {
 
@@ -51,7 +42,7 @@ enum class CandidateExaminationResult {
     Exclude, Select, Descend, Skip
 };
 
-class ScrollAnchoringController final : public CanMakeWeakPtr<ScrollAnchoringController> {
+class ScrollAnchoringController {
     WTF_MAKE_TZONE_ALLOCATED(ScrollAnchoringController);
 public:
     explicit ScrollAnchoringController(ScrollableArea&);

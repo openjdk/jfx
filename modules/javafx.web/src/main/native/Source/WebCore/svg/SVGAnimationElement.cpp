@@ -50,7 +50,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGAnimationElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SVGAnimationElement);
 
 SVGAnimationElement::SVGAnimationElement(const QualifiedName& tagName, Document& document)
     : SVGSMILElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
@@ -79,7 +79,7 @@ static Vector<float> parseKeyTimes(StringView value, bool verifyOrder)
     }
 
     if (verifyOrder && !result.isEmpty() && !result.last()) {
-        ASSERT(!std::accumulate(result.begin(), result.end(), 0));
+        ASSERT(!std::accumulate(result.begin(), result.end(), 0.0f));
         return { };
     }
 
@@ -189,7 +189,7 @@ void SVGAnimationElement::attributeChanged(const QualifiedName& name, const Atom
         break;
     case AttributeNames::keySplinesAttr:
         if (auto keySplines = parseKeySplines(newValue))
-            m_keySplines = WTFMove(*keySplines);
+            m_keySplines = WTF::move(*keySplines);
         else {
             m_keySplines.clear();
             reportAttributeParsingError(parseError, name, newValue);
@@ -378,7 +378,7 @@ void SVGAnimationElement::calculateKeyTimesForCalcModePaced()
         keyTimesForPaced[n] = keyTimesForPaced[n - 1] + keyTimesForPaced[n] / totalDistance;
     keyTimesForPaced[keyTimesForPaced.size() - 1] = 1;
 
-    m_keyTimesForPaced = WTFMove(keyTimesForPaced);
+    m_keyTimesForPaced = WTF::move(keyTimesForPaced);
 }
 
 static inline double solveEpsilon(double duration) { return 1 / (200 * duration); }

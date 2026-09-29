@@ -69,7 +69,7 @@ static Vector<uint8_t> getRSAKeyParameter(gcry_sexp_t keySexp, ASCIILiteral name
     if (!data)
         return { };
 
-    return WTFMove(data.value());
+    return WTF::move(data.value());
 }
 
 RefPtr<CryptoKeyRSA> CryptoKeyRSA::create(CryptoAlgorithmIdentifier identifier, CryptoAlgorithmIdentifier hash, bool hasHash, const CryptoKeyRSAComponents& keyData, bool extractable, CryptoKeyUsageBitmap usages)
@@ -150,7 +150,7 @@ RefPtr<CryptoKeyRSA> CryptoKeyRSA::create(CryptoAlgorithmIdentifier identifier, 
 
 CryptoKeyRSA::CryptoKeyRSA(CryptoAlgorithmIdentifier identifier, CryptoAlgorithmIdentifier hash, bool hasHash, CryptoKeyType type, PlatformRSAKeyContainer&& platformKey, bool extractable, CryptoKeyUsageBitmap usage)
     : CryptoKey(identifier, type, extractable, usage)
-    , m_platformKey(WTFMove(platformKey))
+    , m_platformKey(WTF::move(platformKey))
     , m_restrictedToSpecificHash(hasHash)
     , m_hash(hash)
 {
@@ -228,11 +228,11 @@ void CryptoKeyRSA::generatePair(CryptoAlgorithmIdentifier algorithm, CryptoAlgor
     }
 
     context->postTask(
-        [algorithm, hash, hasHash, extractable, usage, publicKeySexp = PlatformRSAKeyContainer(publicKeySexp.release()), privateKeySexp = PlatformRSAKeyContainer(privateKeySexp.release()), callback = WTFMove(callback)](auto&) mutable {
-            auto publicKey = CryptoKeyRSA::create(algorithm, hash, hasHash, CryptoKeyType::Public, WTFMove(publicKeySexp), true, usage);
-            auto privateKey = CryptoKeyRSA::create(algorithm, hash, hasHash, CryptoKeyType::Private, WTFMove(privateKeySexp), extractable, usage);
+        [algorithm, hash, hasHash, extractable, usage, publicKeySexp = PlatformRSAKeyContainer(publicKeySexp.release()), privateKeySexp = PlatformRSAKeyContainer(privateKeySexp.release()), callback = WTF::move(callback)](auto&) mutable {
+            auto publicKey = CryptoKeyRSA::create(algorithm, hash, hasHash, CryptoKeyType::Public, WTF::move(publicKeySexp), true, usage);
+            auto privateKey = CryptoKeyRSA::create(algorithm, hash, hasHash, CryptoKeyType::Private, WTF::move(privateKeySexp), extractable, usage);
 
-            callback(CryptoKeyPair { WTFMove(publicKey), WTFMove(privateKey) });
+            callback(CryptoKeyPair { WTF::move(publicKey), WTF::move(privateKey) });
         });
 }
 
@@ -474,7 +474,7 @@ ExceptionOr<Vector<uint8_t>> CryptoKeyRSA::exportSpki() const
     if (!result)
         return Exception { ExceptionCode::OperationError };
 
-    return WTFMove(result.value());
+    return WTF::move(result.value());
 }
 
 ExceptionOr<Vector<uint8_t>> CryptoKeyRSA::exportPkcs8() const
@@ -613,7 +613,7 @@ ExceptionOr<Vector<uint8_t>> CryptoKeyRSA::exportPkcs8() const
     if (!result)
         return Exception { ExceptionCode::OperationError };
 
-    return WTFMove(result.value());
+    return WTF::move(result.value());
 }
 
 auto CryptoKeyRSA::algorithm() const -> KeyAlgorithm
@@ -661,11 +661,11 @@ std::unique_ptr<CryptoKeyRSAComponents> CryptoKeyRSA::exportData() const
 
         CryptoKeyRSAComponents::PrimeInfo firstPrimeInfo;
         if (auto data = mpiData(pMPI))
-            firstPrimeInfo.primeFactor = WTFMove(data.value());
+            firstPrimeInfo.primeFactor = WTF::move(data.value());
 
         CryptoKeyRSAComponents::PrimeInfo secondPrimeInfo;
         if (auto data = mpiData(qMPI))
-            secondPrimeInfo.primeFactor = WTFMove(data.value());
+            secondPrimeInfo.primeFactor = WTF::move(data.value());
 
         // dp -- d mod (p - 1)
         {
@@ -675,7 +675,7 @@ std::unique_ptr<CryptoKeyRSAComponents> CryptoKeyRSA::exportData() const
             gcry_mpi_mod(dpMPI, dMPI, pm1MPI);
 
             if (auto data = mpiData(dpMPI))
-                firstPrimeInfo.factorCRTExponent = WTFMove(data.value());
+                firstPrimeInfo.factorCRTExponent = WTF::move(data.value());
         }
 
         // dq -- d mod (q - 1)
@@ -686,7 +686,7 @@ std::unique_ptr<CryptoKeyRSAComponents> CryptoKeyRSA::exportData() const
             gcry_mpi_mod(dqMPI, dMPI, qm1MPI);
 
             if (auto data = mpiData(dqMPI))
-                secondPrimeInfo.factorCRTExponent = WTFMove(data.value());
+                secondPrimeInfo.factorCRTExponent = WTF::move(data.value());
         }
 
         // qi -- q^(-1) mod p
@@ -695,16 +695,16 @@ std::unique_ptr<CryptoKeyRSAComponents> CryptoKeyRSA::exportData() const
             gcry_mpi_invm(qiMPI, qMPI, pMPI);
 
             if (auto data = mpiData(qiMPI))
-                secondPrimeInfo.factorCRTCoefficient = WTFMove(data.value());
+                secondPrimeInfo.factorCRTCoefficient = WTF::move(data.value());
         }
 
         Vector<uint8_t> privateExponent;
         if (auto data = mpiData(dMPI))
-            privateExponent = WTFMove(data.value());
+            privateExponent = WTF::move(data.value());
 
         return CryptoKeyRSAComponents::createPrivateWithAdditionalData(
-            getRSAKeyParameter(m_platformKey.get(), "n"_s), getRSAKeyParameter(m_platformKey.get(), "e"_s), WTFMove(privateExponent),
-            WTFMove(firstPrimeInfo), WTFMove(secondPrimeInfo), Vector<CryptoKeyRSAComponents::PrimeInfo> { });
+            getRSAKeyParameter(m_platformKey.get(), "n"_s), getRSAKeyParameter(m_platformKey.get(), "e"_s), WTF::move(privateExponent),
+            WTF::move(firstPrimeInfo), WTF::move(secondPrimeInfo), Vector<CryptoKeyRSAComponents::PrimeInfo> { });
     }
     default:
         ASSERT_NOT_REACHED();

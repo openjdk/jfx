@@ -23,7 +23,9 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-dictionary ImportNodeOptions {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary ImportNodeOptions {
     boolean selfOnly = false;
     CustomElementRegistry customElementRegistry;
 };

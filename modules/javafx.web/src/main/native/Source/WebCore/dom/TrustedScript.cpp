@@ -26,11 +26,12 @@
 #include "config.h"
 #include "TrustedScript.h"
 
+#include "ScriptWrappableInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(TrustedScript);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TrustedScript);
 
 Ref<TrustedScript> TrustedScript::create(const String& data)
 {
@@ -41,5 +42,7 @@ TrustedScript::TrustedScript(const String& data)
     : m_data(data)
 {
 }
+
+TrustedScript::~TrustedScript() = default;
 
 } // namespace WebCore

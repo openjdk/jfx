@@ -3,7 +3,7 @@
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2005 Allan Sandfeld Jensen (kde@carewolf.com)
  *           (C) 2005, 2006 Samuel Weinig (sam.weinig@gmail.com)
- * Copyright (C) 2005-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2010-2018 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -48,6 +48,7 @@
 #include "RenderBoxInlines.h"
 #include "RenderBoxModelObjectInlines.h"
 #include "RenderElementInlines.h"
+#include "RenderElementStyleInlines.h"
 #include "RenderFlexibleBox.h"
 #include "RenderFragmentContainer.h"
 #include "RenderInline.h"
@@ -82,7 +83,7 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderBoxModelObject);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderBoxModelObject);
 
 // The HashMap for storing continuation pointers.
 // An inline can be split with blocks occuring in between the inline content.
@@ -137,7 +138,7 @@ static FirstLetterRemainingTextMap& firstLetterRemainingTextMap()
     return map;
 }
 
-void RenderBoxModelObject::styleWillChange(StyleDifference diff, const RenderStyle& newStyle)
+void RenderBoxModelObject::styleWillChange(Style::Difference diff, const RenderStyle& newStyle)
 {
     const RenderStyle* oldStyle = hasInitializedStyle() ? &style() : nullptr;
 
@@ -168,12 +169,12 @@ void RenderBoxModelObject::setSelectionState(HighlightState state)
         containingBlock->setSelectionState(state);
 }
 
-void RenderBoxModelObject::contentChanged(ContentChangeType changeType)
+void RenderBoxModelObject::contentChanged(ContentChangeType changeType, const std::optional<FloatRect>& dirtyRect)
 {
     if (!hasLayer())
         return;
 
-    layer()->contentChanged(changeType);
+    layer()->contentChanged(changeType, dirtyRect);
 }
 
 bool RenderBoxModelObject::hasAcceleratedCompositing() const
@@ -182,13 +183,13 @@ bool RenderBoxModelObject::hasAcceleratedCompositing() const
 }
 
 RenderBoxModelObject::RenderBoxModelObject(Type type, Element& element, RenderStyle&& style, OptionSet<TypeFlag> baseTypeFlags, TypeSpecificFlags typeSpecificFlags)
-    : RenderLayerModelObject(type, element, WTFMove(style), baseTypeFlags | TypeFlag::IsBoxModelObject, typeSpecificFlags)
+    : RenderLayerModelObject(type, element, WTF::move(style), baseTypeFlags | TypeFlag::IsBoxModelObject, typeSpecificFlags)
 {
     ASSERT(isRenderBoxModelObject());
 }
 
 RenderBoxModelObject::RenderBoxModelObject(Type type, Document& document, RenderStyle&& style, OptionSet<TypeFlag> baseTypeFlags, TypeSpecificFlags typeSpecificFlags)
-    : RenderLayerModelObject(type, document, WTFMove(style), baseTypeFlags | TypeFlag::IsBoxModelObject, typeSpecificFlags)
+    : RenderLayerModelObject(type, document, WTF::move(style), baseTypeFlags | TypeFlag::IsBoxModelObject, typeSpecificFlags)
 {
     ASSERT(isRenderBoxModelObject());
 }
@@ -380,7 +381,7 @@ LayoutSize RenderBoxModelObject::relativePositionOffset() const
     auto topFixed = top.tryFixed();
     auto leftFixed = left.tryFixed();
     if (topFixed && leftFixed && bottom.isAuto() && right.isAuto() && containingBlock->writingMode().isAnyLeftToRight()) {
-        offset.expand(leftFixed->value, topFixed->value);
+        offset.expand(leftFixed->resolveZoom(style.usedZoomForLength()), topFixed->resolveZoom(style.usedZoomForLength()));
         return offset;
     }
 
@@ -403,11 +404,11 @@ LayoutSize RenderBoxModelObject::relativePositionOffset() const
         };
         if (!left.isAuto()) {
             if (!right.isAuto() && !containingBlock->writingMode().isAnyLeftToRight())
-                offset.setWidth(-Style::evaluate(right, !right.isFixed() ? availableWidth() : 0_lu));
+                offset.setWidth(-Style::evaluate<LayoutUnit>(right, !right.isFixed() ? availableWidth() : 0_lu, style.usedZoomForLength()));
             else
-                offset.expand(Style::evaluate(left, !left.isFixed() ? availableWidth() : 0_lu), 0_lu);
+                offset.expand(Style::evaluate<LayoutUnit>(left, !left.isFixed() ? availableWidth() : 0_lu, style.usedZoomForLength()), 0_lu);
         } else if (!right.isAuto())
-            offset.expand(-Style::evaluate(right, !right.isFixed() ? availableWidth() : 0_lu), 0_lu);
+            offset.expand(-Style::evaluate<LayoutUnit>(right, !right.isFixed() ? availableWidth() : 0_lu, style.usedZoomForLength()), 0_lu);
     }
 
     // If the containing block of a relatively positioned element does not
@@ -438,10 +439,10 @@ LayoutSize RenderBoxModelObject::relativePositionOffset() const
         // FIXME: The computation of the available height is repeated later for "bottom".
         // We could refactor this and move it to some common code for both ifs, however moving it outside of the ifs
         // is not possible as it'd cause performance regressions.
-        offset.expand(0_lu, Style::evaluate(top, !top.isFixed() ? availableHeight() : 0_lu));
+        offset.expand(0_lu, Style::evaluate<LayoutUnit>(top, !top.isFixed() ? availableHeight() : 0_lu, style.usedZoomForLength()));
     } else if (!bottom.isAuto() && (!bottom.isPercentOrCalculated() || containingBlockHasDefiniteHeight)) {
         // FIXME: Check comment above for "top", it applies here too.
-        offset.expand(0_lu, -Style::evaluate(bottom, !bottom.isFixed() ? availableHeight() : 0_lu));
+        offset.expand(0_lu, -Style::evaluate<LayoutUnit>(bottom, !bottom.isFixed() ? availableHeight() : 0_lu, style.usedZoomForLength()));
     }
     return offset;
 }
@@ -547,13 +548,15 @@ void RenderBoxModelObject::computeStickyPositionConstraints(StickyPositionViewpo
 
     LayoutUnit maxWidth = containingBlock->contentBoxLogicalWidth();
 
+    const auto& zoomFactor = style().usedZoomForLength();
+
     // Sticky positioned element ignore any override logical width on the containing block (as they don't call
     // containingBlockLogicalWidthForContent). It's unclear whether this is totally fine.
     LayoutBoxExtent minMargin(
-        Style::evaluateMinimum(style().marginTop(), maxWidth),
-        Style::evaluateMinimum(style().marginRight(), maxWidth),
-        Style::evaluateMinimum(style().marginBottom(), maxWidth),
-        Style::evaluateMinimum(style().marginLeft(), maxWidth)
+        Style::evaluateMinimum<LayoutUnit>(style().marginTop(), maxWidth, zoomFactor),
+        Style::evaluateMinimum<LayoutUnit>(style().marginRight(), maxWidth, zoomFactor),
+        Style::evaluateMinimum<LayoutUnit>(style().marginBottom(), maxWidth, zoomFactor),
+        Style::evaluateMinimum<LayoutUnit>(style().marginLeft(), maxWidth, zoomFactor)
     );
 
     // Compute the container-relative area within which the sticky element is allowed to move.
@@ -603,23 +606,45 @@ void RenderBoxModelObject::computeStickyPositionConstraints(StickyPositionViewpo
     constraints.setStickyBoxRect(stickyBoxRelativeToScrollingAncestor);
 
     if (!style().left().isAuto()) {
-        constraints.setLeftOffset(Style::evaluate(style().left(), constrainingRect.width()));
+        constraints.setLeftOffset(Style::evaluate<float>(style().left(), constrainingRect.width(), style().usedZoomForLength()));
         constraints.addAnchorEdge(ViewportConstraints::AnchorEdgeLeft);
     }
 
     if (!style().right().isAuto()) {
-        constraints.setRightOffset(Style::evaluate(style().right(), constrainingRect.width()));
+        constraints.setRightOffset(Style::evaluate<float>(style().right(), constrainingRect.width(), style().usedZoomForLength()));
         constraints.addAnchorEdge(ViewportConstraints::AnchorEdgeRight);
     }
 
     if (!style().top().isAuto()) {
-        constraints.setTopOffset(Style::evaluate(style().top(), constrainingRect.height()));
+        constraints.setTopOffset(Style::evaluate<float>(style().top(), constrainingRect.height(), style().usedZoomForLength()));
         constraints.addAnchorEdge(ViewportConstraints::AnchorEdgeTop);
     }
 
     if (!style().bottom().isAuto()) {
-        constraints.setBottomOffset(Style::evaluate(style().bottom(), constrainingRect.height()));
+        constraints.setBottomOffset(Style::evaluate<float>(style().bottom(), constrainingRect.height(), style().usedZoomForLength()));
         constraints.addAnchorEdge(ViewportConstraints::AnchorEdgeBottom);
+    }
+
+    if (constraints.hasAnchorEdge(ViewportConstraints::AnchorEdgeRight) && constraints.hasAnchorEdge(ViewportConstraints::AnchorEdgeLeft)) {
+        float availableSpace = constrainingRect.width() - constraints.leftOffset() - constraints.rightOffset();
+        if (constraints.stickyBoxRect().width() > availableSpace) {
+            float delta = constraints.stickyBoxRect().width() - availableSpace;
+            if (writingMode().isAnyLeftToRight())
+                constraints.setRightOffset(constraints.rightOffset() - delta);
+            else
+                constraints.setLeftOffset(constraints.leftOffset() - delta);
+        }
+    }
+
+    if (constraints.hasAnchorEdge(ViewportConstraints::AnchorEdgeBottom) && constraints.hasAnchorEdge(ViewportConstraints::AnchorEdgeTop)) {
+        float availableSpace = constrainingRect.height() - constraints.topOffset() - constraints.bottomOffset();
+        if (constraints.stickyBoxRect().height() > availableSpace) {
+            float delta = constraints.stickyBoxRect().height() - availableSpace;
+            if (writingMode().isAnyTopToBottom())
+                constraints.setBottomOffset(constraints.bottomOffset() - delta);
+            else
+                constraints.setTopOffset(constraints.topOffset() - delta);
+        }
     }
 }
 
@@ -767,15 +792,12 @@ LayoutSize RenderBoxModelObject::calculateImageIntrinsicDimensions(StyleImage* i
     if (!image->imageHasNaturalDimensions())
         return LayoutSize(positioningAreaSize.width(), positioningAreaSize.height());
 
-    Length intrinsicWidth;
-    Length intrinsicHeight;
+    float intrinsicWidth = 0;
+    float intrinsicHeight = 0;
     FloatSize intrinsicRatio;
     image->computeIntrinsicDimensions(this, intrinsicWidth, intrinsicHeight, intrinsicRatio);
 
-    ASSERT(!intrinsicWidth.isPercentOrCalculated());
-    ASSERT(!intrinsicHeight.isPercentOrCalculated());
-
-    LayoutSize resolvedSize(intrinsicWidth.value(), intrinsicHeight.value());
+    LayoutSize resolvedSize(intrinsicWidth, intrinsicHeight);
     LayoutSize minimumSize(resolvedSize.width() > 0 ? 1 : 0, resolvedSize.height() > 0 ? 1 : 0);
 
     if (scaleByUsedZoom == ScaleByUsedZoom::Yes)
@@ -839,7 +861,7 @@ bool RenderBoxModelObject::borderObscuresBackground() const
         return false;
 
     // Bail if we have any border-image for now. We could look at the image alpha to improve this.
-    if (style().borderImage().image())
+    if (!style().borderImageSource().isNone())
         return false;
 
     auto edges = borderEdges(style(), document().deviceScaleFactor());
@@ -944,7 +966,7 @@ RenderTextFragment* RenderBoxModelObject::firstLetterRemainingText() const
 {
     if (!isFirstLetter())
         return nullptr;
-    return firstLetterRemainingTextMap().get(*this).get();
+    return firstLetterRemainingTextMap().get(*this);
 }
 
 void RenderBoxModelObject::setFirstLetterRemainingText(RenderTextFragment& remainingText)
@@ -995,7 +1017,7 @@ void RenderBoxModelObject::collectAbsoluteQuadsForContinuation(Vector<FloatQuad>
     }
 }
 
-void RenderBoxModelObject::applyTransform(TransformationMatrix&, const RenderStyle&, const FloatRect&, OptionSet<RenderStyle::TransformOperationOption>) const
+void RenderBoxModelObject::applyTransform(TransformationMatrix&, const RenderStyle&, const FloatRect&, OptionSet<Style::TransformResolverOption>) const
 {
     // applyTransform() is only used through RenderLayer*, which only invokes this for RenderBox derived renderers, thus not for
     // RenderInline/RenderLineBreak - the other two renderers that inherit from RenderBoxModelObject.

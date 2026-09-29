@@ -21,16 +21,17 @@
 
 #pragma once
 
-#include "FloatRect.h"
-#include "FontMetrics.h"
-#include "FontPlatformData.h"
-#include "GlyphBuffer.h"
-#include "GlyphMetricsMap.h"
-#include "GlyphPage.h"
-#include "RenderingResourceIdentifier.h"
-#include "TrustedFonts.h"
+#include <WebCore/FloatRect.h>
+#include <WebCore/FontMetrics.h>
+#include <WebCore/FontPlatformData.h>
+#include <WebCore/GlyphBuffer.h>
+#include <WebCore/GlyphMetricsMap.h>
+#include <WebCore/GlyphPage.h>
+#include <WebCore/RenderingResourceIdentifier.h>
+#include <WebCore/TrustedFonts.h>
 #include <wtf/BitVector.h>
 #include <wtf/Hasher.h>
+#include <wtf/Platform.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/StringHash.h>
 
@@ -41,7 +42,7 @@
 #endif
 
 #if ENABLE(MATHML)
-#include "OpenTypeMathData.h"
+#include <WebCore/OpenTypeMathData.h>
 #endif
 
 #if ENABLE(OPENTYPE_VERTICAL)
@@ -84,6 +85,8 @@ enum class FontVisibility : bool { Visible, Invisible };
 enum class FontIsOrientationFallback : bool { No, Yes };
 
 #if USE(CORE_TEXT)
+using IPCFontData = Variant<WebCore::InstalledFont, WebCore::CustomFontCreationData>;
+
 bool fontHasEitherTable(CTFontRef, unsigned tableTag1, unsigned tableTag2);
 bool supportsOpenTypeFeature(CTFontRef, CFStringRef featureTag);
 #endif
@@ -177,7 +180,7 @@ public:
     void setAvgCharWidth(float avgCharWidth) { m_avgCharWidth = avgCharWidth; }
 
     FloatRect boundsForGlyph(Glyph) const;
-#if USE(CORE_TEXT)
+#if USE(CORE_TEXT) || USE(SKIA)
     static constexpr size_t inlineGlyphRunCapacity = 128;
     Vector<FloatRect, inlineGlyphRunCapacity> boundsForGlyphs(std::span<const Glyph>) const;
 #endif
@@ -234,7 +237,8 @@ public:
     bool shouldNotBeUsedForArabic() const { return m_shouldNotBeUsedForArabic; };
 #endif
 #if USE(CORE_TEXT)
-    CTFontRef getCTFont() const { return m_platformData.ctFont(); }
+    CTFontRef ctFont() const { return m_platformData.ctFont(); }
+    RetainPtr<CTFontRef> protectedCTFont() const { return ctFont(); }
     RetainPtr<CFDictionaryRef> getCFStringAttributes(bool enableKerning, FontOrientation, const AtomString& locale) const;
     bool supportsSmallCaps() const;
     bool supportsAllSmallCaps() const;
@@ -258,7 +262,11 @@ public:
     std::optional<BitVector> findOTSVGGlyphs(std::span<const GlyphBufferGlyph>) const;
 
     bool hasAnyComplexColorFormatGlyphs(std::span<const GlyphBufferGlyph>) const;
-
+#if USE(CORE_TEXT)
+    WEBCORE_EXPORT static std::optional<Ref<Font>> fromIPCData(IPCFontData&&);
+    WEBCORE_EXPORT IPCFontData toSerializableFont() const;
+    WEBCORE_EXPORT std::optional<InstalledFont> toSerializableInstalledFont() const;
+#endif
 #if PLATFORM(WIN)
     SCRIPT_CACHE* scriptCache() const { return &m_scriptCache; }
 #endif
@@ -292,7 +300,7 @@ private:
     DerivedFonts& ensureDerivedFontData() const;
 
     FloatRect platformBoundsForGlyph(Glyph) const;
-#if USE(CORE_TEXT)
+#if USE(CORE_TEXT) || USE(SKIA)
     Vector<FloatRect, inlineGlyphRunCapacity> platformBoundsForGlyphs(const Vector<Glyph, inlineGlyphRunCapacity>&) const;
 #endif
     float platformWidthForGlyph(Glyph) const;
@@ -449,7 +457,7 @@ ALWAYS_INLINE FloatRect Font::boundsForGlyph(Glyph glyph) const
     return bounds;
 }
 
-#if USE(CORE_TEXT)
+#if USE(CORE_TEXT) || USE(SKIA)
 ALWAYS_INLINE Vector<FloatRect, Font::inlineGlyphRunCapacity> Font::boundsForGlyphs(std::span<const Glyph> glyphs) const
 {
     const auto glyphCount = glyphs.size();

@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "IDBIndexIdentifier.h"
-#include "IDBKeyRangeData.h"
-#include "IDBObjectStoreIdentifier.h"
-#include "IDBResourceIdentifier.h"
+#include <WebCore/IDBIndexIdentifier.h>
+#include <WebCore/IDBKeyRangeData.h>
+#include <WebCore/IDBObjectStoreIdentifier.h>
+#include <WebCore/IDBResourceIdentifier.h>
 #include <wtf/ArgumentCoder.h>
 
 namespace WebCore {
@@ -74,7 +74,7 @@ public:
 #endif
 
 private:
-    friend struct IPC::ArgumentCoder<IDBCursorInfo, void>;
+    friend struct IPC::ArgumentCoder<IDBCursorInfo>;
     WEBCORE_EXPORT IDBCursorInfo(const IDBResourceIdentifier&, const IDBResourceIdentifier&, IDBObjectStoreIdentifier, Variant<IDBObjectStoreIdentifier, IDBIndexIdentifier>, const IDBKeyRangeData&, IndexedDB::CursorSource, IndexedDB::CursorDirection, IndexedDB::CursorType);
     IDBCursorInfo(IDBTransaction&, IDBObjectStoreIdentifier, const IDBKeyRangeData&, IndexedDB::CursorDirection, IndexedDB::CursorType);
     IDBCursorInfo(IDBTransaction&, IDBObjectStoreIdentifier, IDBIndexIdentifier, const IDBKeyRangeData&, IndexedDB::CursorDirection, IndexedDB::CursorType);

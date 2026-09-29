@@ -25,8 +25,9 @@
 
 #pragma once
 
-#include "PublicSuffixStore.h"
-#include "SecurityOriginData.h"
+#include <WebCore/BlobURL.h>
+#include <WebCore/PublicSuffixStore.h>
+#include <WebCore/SecurityOriginData.h>
 #include <wtf/HashTraits.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/URL.h>
@@ -42,7 +43,7 @@ public:
     RegistrableDomain() = default;
 
     explicit RegistrableDomain(const URL& url)
-        : RegistrableDomain(registrableDomainFromHost(url.host().toString()))
+        : RegistrableDomain(registrableDomainFromHost(url))
     {
     }
 
@@ -53,7 +54,7 @@ public:
 
     static RegistrableDomain fromRawString(String&& origin)
     {
-        return RegistrableDomain(WTFMove(origin));
+        return RegistrableDomain(WTF::move(origin));
     }
 
     bool isEmpty() const { return m_registrableDomain.isEmpty() || m_registrableDomain == "nullOrigin"_s; }
@@ -73,7 +74,7 @@ public:
     }
 
     RegistrableDomain isolatedCopy() const & { return RegistrableDomain { m_registrableDomain.isolatedCopy() }; }
-    RegistrableDomain isolatedCopy() && { return RegistrableDomain { WTFMove(m_registrableDomain).isolatedCopy() }; }
+    RegistrableDomain isolatedCopy() && { return RegistrableDomain { WTF::move(m_registrableDomain).isolatedCopy() }; }
 
     RegistrableDomain(WTF::HashTableDeletedValueType)
         : m_registrableDomain(WTF::HashTableDeletedValue) { }
@@ -96,12 +97,12 @@ public:
         auto registrableDomain = PublicSuffixStore::singleton().topPrivatelyControlledDomain(host);
         if (registrableDomain.isEmpty())
             return uncheckedCreateFromRegistrableDomainString(host);
-        return RegistrableDomain { WTFMove(registrableDomain) };
+        return RegistrableDomain { WTF::move(registrableDomain) };
     }
 
 private:
     explicit RegistrableDomain(String&& domain)
-        : m_registrableDomain { domain.isEmpty() ? "nullOrigin"_s : WTFMove(domain) }
+        : m_registrableDomain { domain.isEmpty() ? "nullOrigin"_s : WTF::move(domain) }
     {
     }
 
@@ -114,6 +115,14 @@ private:
         if (host.length() == m_registrableDomain.length())
             return true;
         return host[host.length() - m_registrableDomain.length() - 1] == '.';
+    }
+
+    static inline String registrableDomainFromHost(const URL& url)
+    {
+        if (url.protocolIsBlob())
+            return registrableDomainFromHost(BlobURL::getOriginURL(url).host().toString());
+
+        return registrableDomainFromHost(url.host().toString());
     }
 
     static inline String registrableDomainFromHost(const String& host)
@@ -140,10 +149,10 @@ namespace WTF {
 template<> struct DefaultHash<WebCore::RegistrableDomain> : WebCore::RegistrableDomain::RegistrableDomainHash { };
 template<> struct HashTraits<WebCore::RegistrableDomain> : SimpleClassHashTraits<WebCore::RegistrableDomain> { };
 
-template<> class StringTypeAdapter<WebCore::RegistrableDomain, void> : public StringTypeAdapter<String, void> {
+template<> class StringTypeAdapter<WebCore::RegistrableDomain> : public StringTypeAdapter<String> {
 public:
     StringTypeAdapter(const WebCore::RegistrableDomain& domain)
-        : StringTypeAdapter<String, void>(domain.string())
+        : StringTypeAdapter<String>(domain.string())
     { }
 };
 

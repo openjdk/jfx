@@ -28,6 +28,7 @@
 #include "RemoveFormatCommand.h"
 
 #include "ApplyStyleCommand.h"
+#include "EditingStyle.h"
 #include "Element.h"
 #include "FrameSelection.h"
 #include "HTMLNames.h"
@@ -42,7 +43,7 @@ namespace WebCore {
 using namespace HTMLNames;
 
 RemoveFormatCommand::RemoveFormatCommand(Ref<Document>&& document)
-    : CompositeEditCommand(WTFMove(document))
+    : CompositeEditCommand(WTF::move(document))
 {
 }
 

@@ -26,6 +26,7 @@
 #include "config.h"
 #include "DebuggerParseData.h"
 
+#include "JSCJSValueInlines.h"
 #include "Parser.h"
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
@@ -51,7 +52,7 @@ void DebuggerPausePositions::forEachBreakpointLocation(int startLine, int startC
                 uniquePositions.appendIfNotContains(*resolvedPosition);
         }
     }
-    std::sort(uniquePositions.begin(), uniquePositions.end(), [] (const auto& a, const auto& b) {
+    std::ranges::sort(uniquePositions, [](const auto& a, const auto& b) {
         if (a.line == b.line)
             return a.column() < b.column();
         return a.line < b.line;
@@ -145,7 +146,7 @@ std::optional<JSTextPosition> DebuggerPausePositions::breakpointLocationForLineC
 
 void DebuggerPausePositions::sort()
 {
-    std::sort(m_positions.begin(), m_positions.end(), [] (const DebuggerPausePosition& a, const DebuggerPausePosition& b) {
+    std::ranges::sort(m_positions, [](const auto& a, const auto& b) {
         if (a.position.offset == b.position.offset)
             return a.type < b.type;
         return a.position.offset < b.position.offset;

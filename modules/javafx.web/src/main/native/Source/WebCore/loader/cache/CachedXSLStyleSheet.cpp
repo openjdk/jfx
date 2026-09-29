@@ -37,7 +37,7 @@ namespace WebCore {
 #if ENABLE(XSLT)
 
 CachedXSLStyleSheet::CachedXSLStyleSheet(CachedResourceRequest&& request, PAL::SessionID sessionID, const CookieJar* cookieJar)
-    : CachedResource(WTFMove(request), Type::XSLStyleSheet, sessionID, cookieJar)
+    : CachedResource(WTF::move(request), Type::XSLStyleSheet, sessionID, cookieJar)
     , m_decoder(TextResourceDecoder::create("text/xsl"_s))
 {
 }
@@ -72,7 +72,7 @@ void CachedXSLStyleSheet::finishLoading(const FragmentedSharedBuffer* data, cons
         Ref contiguousData = data->makeContiguous();
         setEncodedSize(data->size());
         m_sheet = protectedDecoder()->decodeAndFlush(contiguousData->span());
-        m_data = WTFMove(contiguousData);
+        m_data = WTF::move(contiguousData);
     } else {
         m_data = nullptr;
         setEncodedSize(0);
@@ -87,8 +87,8 @@ void CachedXSLStyleSheet::checkNotify(const NetworkLoadMetrics&, LoadWillContinu
         return;
 
     CachedResourceClientWalker<CachedStyleSheetClient> walker(*this);
-    while (CachedStyleSheetClient* c = walker.next())
-        c->setXSLStyleSheet(m_resourceRequest.url().string(), response().url(), m_sheet);
+    while (RefPtr client = walker.next())
+        client->setXSLStyleSheet(m_resourceRequest.url().string(), response().url(), m_sheet);
 }
 
 #endif

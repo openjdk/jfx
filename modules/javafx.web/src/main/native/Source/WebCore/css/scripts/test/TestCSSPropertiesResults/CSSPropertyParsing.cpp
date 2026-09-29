@@ -14,16 +14,6 @@ namespace WebCore {
 
 using namespace CSSPropertyParserHelpers;
 
-static bool isKeywordValidForTestAutoFunctions(CSSValueID keyword)
-{
-    switch (keyword) {
-    case CSSValueID::CSSValueAuto:
-        return true;
-    default:
-        return false;
-    }
-}
-
 static bool isKeywordValidForTestKeyword(CSSValueID keyword)
 {
     switch (keyword) {
@@ -94,6 +84,28 @@ static bool isKeywordValidForTestMatchOneWithReferenceWithSettingsFlag(CSSValueI
     }
 }
 
+static bool isKeywordValidForTestRenderStyleStorageOneLevelEnum(CSSValueID keyword)
+{
+    switch (keyword) {
+    case CSSValueID::CSSValueBar:
+    case CSSValueID::CSSValueFoo:
+        return true;
+    default:
+        return false;
+    }
+}
+
+static bool isKeywordValidForTestRenderStyleStorageTwoLevelEnum(CSSValueID keyword)
+{
+    switch (keyword) {
+    case CSSValueID::CSSValueBar:
+    case CSSValueID::CSSValueFoo:
+        return true;
+    default:
+        return false;
+    }
+}
+
 static bool isKeywordValidForTestUrlWithModifiers(CSSValueID keyword)
 {
     switch (keyword) {
@@ -144,13 +156,30 @@ static bool isKeywordValidForTestUsingSharedRuleWithOverrideFunction(CSSValueID 
     }
 }
 
-static RefPtr<CSSValue> consumeTestAutoFunctions(CSSParserTokenRange& range, CSS::PropertyParserState& state)
+static RefPtr<CSSValue> consumeBackgroundCoordinatedValueListPropertyTestDiscrete(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
-    // auto
-    if (auto result = consumeIdent(range, isKeywordValidForTestAutoFunctions))
-        return result;
+    // <number>#
+    auto consumeUnboundedRepetition = [](CSSParserTokenRange& range, CSS::PropertyParserState& state) -> RefPtr<CSSValue> {
+        auto consumeRepeatedTerm = [](CSSParserTokenRange& range, CSS::PropertyParserState& state) -> RefPtr<CSSValue> {
     // <number>
     return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, state);
+        };
+        return consumeListSeparatedBy<',', ListBounds::minimumOf(1), ListOptimization::SingleValue, CSSValueList>(range, consumeRepeatedTerm, state);
+    };
+    return consumeUnboundedRepetition(range, state);
+}
+
+static RefPtr<CSSValue> consumeBackgroundCoordinatedValueListPropertyTestTwo(CSSParserTokenRange& range, CSS::PropertyParserState& state)
+{
+    // <number>#
+    auto consumeUnboundedRepetition = [](CSSParserTokenRange& range, CSS::PropertyParserState& state) -> RefPtr<CSSValue> {
+        auto consumeRepeatedTerm = [](CSSParserTokenRange& range, CSS::PropertyParserState& state) -> RefPtr<CSSValue> {
+            // <number>
+            return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, state);
+        };
+        return consumeListSeparatedBy<',', ListBounds::minimumOf(1), ListOptimization::SingleValue, CSSValueList>(range, consumeRepeatedTerm, state);
+    };
+    return consumeUnboundedRepetition(range, state);
 }
 
 static RefPtr<CSSValue> consumeTestBoundedRepetitionWithCommas(CSSParserTokenRange& range, CSS::PropertyParserState& state)
@@ -388,7 +417,7 @@ static RefPtr<CSSValue> consumeTestFunctionBoundedParameters(CSSParserTokenRange
         if (!args.atEnd())
             return { };
         range = rangeCopy;
-        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTFMove(*result));
+        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTF::move(*result));
     };
     return consumeFooFunction(range, state);
 }
@@ -418,7 +447,7 @@ static RefPtr<CSSValue> consumeTestFunctionFixedParameters(CSSParserTokenRange& 
         if (!args.atEnd())
             return { };
         range = rangeCopy;
-        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTFMove(*result));
+        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTF::move(*result));
     };
     return consumeFooFunction(range, state);
 }
@@ -431,7 +460,7 @@ static RefPtr<CSSValue> consumeTestFunctionNoParameters(CSSParserTokenRange& ran
             // [  ]
             auto consumeMatchAllOrdered = [](CSSParserTokenRange& range) -> std::optional<CSSValueListBuilder> {
                 CSSValueListBuilder list;
-                return { WTFMove(list) };
+                return { WTF::move(list) };
             };
             return consumeMatchAllOrdered(args);
         };
@@ -445,7 +474,7 @@ static RefPtr<CSSValue> consumeTestFunctionNoParameters(CSSParserTokenRange& ran
         if (!args.atEnd())
             return { };
         range = rangeCopy;
-        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTFMove(*result));
+        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTF::move(*result));
     };
     return consumeFooFunction(range);
 }
@@ -493,7 +522,7 @@ static RefPtr<CSSValue> consumeTestFunctionParametersMatchAllAnyOrder(CSSParserT
                     list.append(value1.releaseNonNull());
                 else
                     return { };
-                return { WTFMove(list) };
+                return { WTF::move(list) };
             };
             return consumeMatchAllAnyOrder(args, state);
         };
@@ -507,7 +536,7 @@ static RefPtr<CSSValue> consumeTestFunctionParametersMatchAllAnyOrder(CSSParserT
         if (!args.atEnd())
             return { };
         range = rangeCopy;
-        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTFMove(*result));
+        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTF::move(*result));
     };
     return consumeFooFunction(range, state);
 }
@@ -553,7 +582,7 @@ static RefPtr<CSSValue> consumeTestFunctionParametersMatchAllAnyOrderWithOptiona
                     return { };
                 if (value1) // <string>?
                     list.append(value1.releaseNonNull());
-                return { WTFMove(list) };
+                return { WTF::move(list) };
             };
             return consumeMatchAllAnyOrder(args, state);
         };
@@ -567,7 +596,7 @@ static RefPtr<CSSValue> consumeTestFunctionParametersMatchAllAnyOrderWithOptiona
         if (!args.atEnd())
             return { };
         range = rangeCopy;
-        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTFMove(*result));
+        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTF::move(*result));
     };
     return consumeFooFunction(range, state);
 }
@@ -600,7 +629,7 @@ static RefPtr<CSSValue> consumeTestFunctionParametersMatchAllOrdered(CSSParserTo
                     list.append(value1.releaseNonNull());
                 else
                     return { };
-                return { WTFMove(list) };
+                return { WTF::move(list) };
             };
             return consumeMatchAllOrdered(args, state);
         };
@@ -614,7 +643,7 @@ static RefPtr<CSSValue> consumeTestFunctionParametersMatchAllOrdered(CSSParserTo
         if (!args.atEnd())
             return { };
         range = rangeCopy;
-        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTFMove(*result));
+        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTF::move(*result));
     };
     return consumeFooFunction(range, state);
 }
@@ -645,7 +674,7 @@ static RefPtr<CSSValue> consumeTestFunctionParametersMatchAllOrderedWithOptional
                 auto value1 = consumeTerm1(range);
                 if (value1)
                     list.append(value1.releaseNonNull());
-                return { WTFMove(list) };
+                return { WTF::move(list) };
             };
             return consumeMatchAllOrdered(args, state);
         };
@@ -659,7 +688,7 @@ static RefPtr<CSSValue> consumeTestFunctionParametersMatchAllOrderedWithOptional
         if (!args.atEnd())
             return { };
         range = rangeCopy;
-        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTFMove(*result));
+        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTF::move(*result));
     };
     return consumeFooFunction(range, state);
 }
@@ -705,7 +734,7 @@ static RefPtr<CSSValue> consumeTestFunctionParametersMatchOneOrMoreAnyOrder(CSSP
                     list.append(value1.releaseNonNull());
                 if (list.isEmpty())
                     return { };
-                return { WTFMove(list) };
+                return { WTF::move(list) };
             };
             return consumeMatchOneOrMoreAnyOrder(args, state);
         };
@@ -719,7 +748,7 @@ static RefPtr<CSSValue> consumeTestFunctionParametersMatchOneOrMoreAnyOrder(CSSP
         if (!args.atEnd())
             return { };
         range = rangeCopy;
-        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTFMove(*result));
+        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTF::move(*result));
     };
     return consumeFooFunction(range, state);
 }
@@ -748,7 +777,7 @@ static RefPtr<CSSValue> consumeTestFunctionSingleParameter(CSSParserTokenRange& 
         if (!args.atEnd())
             return { };
         range = rangeCopy;
-        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTFMove(*result));
+        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTF::move(*result));
     };
     return consumeFooFunction(range, state);
 }
@@ -789,7 +818,7 @@ static RefPtr<CSSValue> consumeTestFunctionSingleParameterMatchOne(CSSParserToke
         if (!args.atEnd())
             return { };
         range = rangeCopy;
-        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTFMove(*result));
+        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTF::move(*result));
     };
     return consumeFooFunction(range, state);
 }
@@ -818,7 +847,7 @@ static RefPtr<CSSValue> consumeTestFunctionSingleParameterOptional(CSSParserToke
         if (!args.atEnd())
             return { };
         range = rangeCopy;
-        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTFMove(*result));
+        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTF::move(*result));
     };
     return consumeFooFunction(range, state);
 }
@@ -848,7 +877,7 @@ static RefPtr<CSSValue> consumeTestFunctionUnboundedParametersNoMin(CSSParserTok
         if (!args.atEnd())
             return { };
         range = rangeCopy;
-        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTFMove(*result));
+        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTF::move(*result));
     };
     return consumeFooFunction(range, state);
 }
@@ -878,7 +907,7 @@ static RefPtr<CSSValue> consumeTestFunctionUnboundedParametersWithMinimum(CSSPar
         if (!args.atEnd())
             return { };
         range = rangeCopy;
-        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTFMove(*result));
+        return CSSFunctionValue::create(CSSValueID::CSSValueFoo, WTF::move(*result));
     };
     return consumeFooFunction(range, state);
 }
@@ -1057,7 +1086,7 @@ static RefPtr<CSSValue> consumeTestMatchAllAnyOrderWithOptional(CSSParserTokenRa
             list.append(value2.releaseNonNull());
         else
             return { };
-        return CSSValueList::createSpaceSeparated(WTFMove(list));
+        return CSSValueList::createSpaceSeparated(WTF::move(list));
     };
     return consumeMatchAllAnyOrder(range, state);
 }
@@ -1114,10 +1143,10 @@ static RefPtr<CSSValue> consumeTestMatchAllAnyOrderWithOptionalAndCustomType(CSS
         if (value2) // <length>?
             list.append(value2.releaseNonNull());
         if (list.size() == 1)
-            return WTFMove(list[0]); // single item optimization
+            return WTF::move(list[0]); // single item optimization
         if (list.size() == 2)
-            return CSSCustomType::create(WTFMove(list[0]), WTFMove(list[1]));
-        return CSSCustomType::create(WTFMove(list[0]), WTFMove(list[1]), WTFMove(list[2]));
+            return CSSCustomType::create(WTF::move(list[0]), WTF::move(list[1]));
+        return CSSCustomType::create(WTF::move(list[0]), WTF::move(list[1]), WTF::move(list[2]));
     };
     return consumeMatchAllAnyOrder(range, state);
 }
@@ -1176,8 +1205,8 @@ static RefPtr<CSSValue> consumeTestMatchAllAnyOrderWithOptionalAndMultipleRequir
         if (value2) // <length>?
             list.append(value2.releaseNonNull());
         if (list.size() == 2)
-            return CSSCustomType::create(WTFMove(list[0]), WTFMove(list[1]));
-        return CSSCustomType::create(WTFMove(list[0]), WTFMove(list[1]), WTFMove(list[2]));
+            return CSSCustomType::create(WTF::move(list[0]), WTF::move(list[1]));
+        return CSSCustomType::create(WTF::move(list[0]), WTF::move(list[1]), WTF::move(list[2]));
     };
     return consumeMatchAllAnyOrder(range, state);
 }
@@ -1236,8 +1265,8 @@ static RefPtr<CSSValue> consumeTestMatchAllAnyOrderWithOptionalAndMultipleRequir
         if (value2) // <length>?
             list.append(value2.releaseNonNull());
         if (list.size() == 2)
-            return CSSCustomType::create(WTFMove(list[0]), WTFMove(list[1]));
-        return CSSCustomType::create(WTFMove(list[0]), WTFMove(list[1]), WTFMove(list[2]));
+            return CSSCustomType::create(WTF::move(list[0]), WTF::move(list[1]));
+        return CSSCustomType::create(WTF::move(list[0]), WTF::move(list[1]), WTF::move(list[2]));
     };
     return consumeMatchAllAnyOrder(range, state);
 }
@@ -1302,8 +1331,8 @@ static RefPtr<CSSValue> consumeTestMatchAllAnyOrderWithOptionalAndMultipleRequir
         if (!consumedValue1) // <custom-ident>
             return { };
         if (list.size() == 2)
-            return CSSCustomType::create(WTFMove(list[0]), WTFMove(list[1]));
-        return CSSCustomType::create(WTFMove(list[0]), WTFMove(list[1]), WTFMove(list[2]));
+            return CSSCustomType::create(WTF::move(list[0]), WTF::move(list[1]));
+        return CSSCustomType::create(WTF::move(list[0]), WTF::move(list[1]), WTF::move(list[2]));
     };
     return consumeMatchAllAnyOrder(range, state);
 }
@@ -1368,8 +1397,8 @@ static RefPtr<CSSValue> consumeTestMatchAllAnyOrderWithOptionalAndMultipleRequir
         if (!consumedValue1) // <custom-ident>
             return { };
         if (list.size() == 2)
-            return CSSCustomType::create(WTFMove(list[0]), WTFMove(list[1]));
-        return CSSCustomType::create(WTFMove(list[0]), WTFMove(list[1]), WTFMove(list[2]));
+            return CSSCustomType::create(WTF::move(list[0]), WTF::move(list[1]));
+        return CSSCustomType::create(WTF::move(list[0]), WTF::move(list[1]), WTF::move(list[2]));
     };
     return consumeMatchAllAnyOrder(range, state);
 }
@@ -1432,10 +1461,10 @@ static RefPtr<CSSValue> consumeTestMatchAllAnyOrderWithOptionalAndPreserveOrderA
         if (!consumedValue0) // <number>
             return { };
         if (list.size() == 1)
-            return WTFMove(list[0]); // single item optimization
+            return WTF::move(list[0]); // single item optimization
         if (list.size() == 2)
-            return CSSCustomType::create(WTFMove(list[0]), WTFMove(list[1]));
-        return CSSCustomType::create(WTFMove(list[0]), WTFMove(list[1]), WTFMove(list[2]));
+            return CSSCustomType::create(WTF::move(list[0]), WTF::move(list[1]));
+        return CSSCustomType::create(WTF::move(list[0]), WTF::move(list[1]), WTF::move(list[2]));
     };
     return consumeMatchAllAnyOrder(range, state);
 }
@@ -1491,7 +1520,7 @@ static RefPtr<CSSValue> consumeTestMatchAllAnyOrderWithOptionalNoSingleItemOpt(C
             list.append(value1.releaseNonNull());
         if (value2) // <length>?
             list.append(value2.releaseNonNull());
-        return CSSValueList::createSpaceSeparated(WTFMove(list));
+        return CSSValueList::createSpaceSeparated(WTF::move(list));
     };
     return consumeMatchAllAnyOrder(range, state);
 }
@@ -1548,8 +1577,8 @@ static RefPtr<CSSValue> consumeTestMatchAllAnyOrderWithOptionalSingleItemOpt(CSS
         if (value2) // <length>?
             list.append(value2.releaseNonNull());
         if (list.size() == 1)
-            return WTFMove(list[0]); // single item optimization
-        return CSSValueList::createSpaceSeparated(WTFMove(list));
+            return WTF::move(list[0]); // single item optimization
+        return CSSValueList::createSpaceSeparated(WTF::move(list));
     };
     return consumeMatchAllAnyOrder(range, state);
 }
@@ -1612,8 +1641,8 @@ static RefPtr<CSSValue> consumeTestMatchAllAnyOrderWithOptionalWithPreserveOrder
         if (!consumedValue0) // <number>
             return { };
         if (list.size() == 1)
-            return WTFMove(list[0]); // single item optimization
-        return CSSValueList::createSpaceSeparated(WTFMove(list));
+            return WTF::move(list[0]); // single item optimization
+        return CSSValueList::createSpaceSeparated(WTF::move(list));
     };
     return consumeMatchAllAnyOrder(range, state);
 }
@@ -1675,7 +1704,7 @@ static RefPtr<CSSValue> consumeTestMatchAllAnyOrderWithOptionalWithPreserveOrder
         }
         if (!consumedValue0) // <number>
             return { };
-        return CSSValueList::createSpaceSeparated(WTFMove(list));
+        return CSSValueList::createSpaceSeparated(WTF::move(list));
     };
     return consumeMatchAllAnyOrder(range, state);
 }
@@ -1741,7 +1770,7 @@ static RefPtr<CSSValue> consumeTestMatchAllAnyOrderWithPreserveOrder(CSSParserTo
             return { };
         if (!consumedValue2) // <length>
             return { };
-        return CSSValueList::createSpaceSeparated(WTFMove(list));
+        return CSSValueList::createSpaceSeparated(WTF::move(list));
     };
     return consumeMatchAllAnyOrder(range, state);
 }
@@ -1807,7 +1836,7 @@ static RefPtr<CSSValue> consumeTestMatchAllAnyOrderWithPreserveOrderAndCustomTyp
             return { };
         if (!consumedValue2) // <length>
             return { };
-        return CSSCustomType::create(WTFMove(list[0]), WTFMove(list[1]), WTFMove(list[2]));
+        return CSSCustomType::create(WTF::move(list[0]), WTF::move(list[1]), WTF::move(list[2]));
     };
     return consumeMatchAllAnyOrder(range, state);
 }
@@ -1873,7 +1902,7 @@ static RefPtr<CSSValue> consumeTestMatchAllAnyOrderWithPreserveOrderNoSingleItem
             return { };
         if (!consumedValue2) // <length>
             return { };
-        return CSSValueList::createSpaceSeparated(WTFMove(list));
+        return CSSValueList::createSpaceSeparated(WTF::move(list));
     };
     return consumeMatchAllAnyOrder(range, state);
 }
@@ -1977,7 +2006,7 @@ static RefPtr<CSSValue> consumeTestMatchAllOrderedWithOptional(CSSParserTokenRan
             list.append(value2.releaseNonNull());
         else
             return { };
-        return CSSValueList::createSpaceSeparated(WTFMove(list));
+        return CSSValueList::createSpaceSeparated(WTF::move(list));
     };
     return consumeMatchAllOrdered(range, state);
 }
@@ -2014,10 +2043,10 @@ static RefPtr<CSSValue> consumeTestMatchAllOrderedWithOptionalAndCustomType(CSSP
         if (value2)
             list.append(value2.releaseNonNull());
         if (list.size() == 1)
-            return WTFMove(list[0]); // single item optimization
+            return WTF::move(list[0]); // single item optimization
         if (list.size() == 2)
-            return CSSCustomType::create(WTFMove(list[0]), WTFMove(list[1]));
-        return CSSCustomType::create(WTFMove(list[0]), WTFMove(list[1]), WTFMove(list[2]));
+            return CSSCustomType::create(WTF::move(list[0]), WTF::move(list[1]));
+        return CSSCustomType::create(WTF::move(list[0]), WTF::move(list[1]), WTF::move(list[2]));
     };
     return consumeMatchAllOrdered(range, state);
 }
@@ -2054,10 +2083,10 @@ static RefPtr<CSSValue> consumeTestMatchAllOrderedWithOptionalAndCustomTypeAndNo
         if (value2)
             list.append(value2.releaseNonNull());
         if (list.size() == 1)
-            return CSSCustomType::create(WTFMove(list[0]));
+            return CSSCustomType::create(WTF::move(list[0]));
         if (list.size() == 2)
-            return CSSCustomType::create(WTFMove(list[0]), WTFMove(list[1]));
-        return CSSCustomType::create(WTFMove(list[0]), WTFMove(list[1]), WTFMove(list[2]));
+            return CSSCustomType::create(WTF::move(list[0]), WTF::move(list[1]));
+        return CSSCustomType::create(WTF::move(list[0]), WTF::move(list[1]), WTF::move(list[2]));
     };
     return consumeMatchAllOrdered(range, state);
 }
@@ -2095,7 +2124,7 @@ static RefPtr<CSSValue> consumeTestMatchAllOrderedWithOptionalAndMultipleRequire
         auto value2 = consumeTerm2(range, state);
         if (value2)
             list.append(value2.releaseNonNull());
-        return CSSValueList::createSpaceSeparated(WTFMove(list));
+        return CSSValueList::createSpaceSeparated(WTF::move(list));
     };
     return consumeMatchAllOrdered(range, state);
 }
@@ -2134,8 +2163,8 @@ static RefPtr<CSSValue> consumeTestMatchAllOrderedWithOptionalAndMultipleRequire
         if (value2)
             list.append(value2.releaseNonNull());
         if (list.size() == 2)
-            return CSSCustomType::create(WTFMove(list[0]), WTFMove(list[1]));
-        return CSSCustomType::create(WTFMove(list[0]), WTFMove(list[1]), WTFMove(list[2]));
+            return CSSCustomType::create(WTF::move(list[0]), WTF::move(list[1]));
+        return CSSCustomType::create(WTF::move(list[0]), WTF::move(list[1]), WTF::move(list[2]));
     };
     return consumeMatchAllOrdered(range, state);
 }
@@ -2171,7 +2200,7 @@ static RefPtr<CSSValue> consumeTestMatchAllOrderedWithOptionalNoSingleItemOpt(CS
         auto value2 = consumeTerm2(range, state);
         if (value2)
             list.append(value2.releaseNonNull());
-        return CSSValueList::createSpaceSeparated(WTFMove(list));
+        return CSSValueList::createSpaceSeparated(WTF::move(list));
     };
     return consumeMatchAllOrdered(range, state);
 }
@@ -2208,8 +2237,8 @@ static RefPtr<CSSValue> consumeTestMatchAllOrderedWithOptionalSingleItemOpt(CSSP
         if (value2)
             list.append(value2.releaseNonNull());
         if (list.size() == 1)
-            return WTFMove(list[0]); // single item optimization
-        return CSSValueList::createSpaceSeparated(WTFMove(list));
+            return WTF::move(list[0]); // single item optimization
+        return CSSValueList::createSpaceSeparated(WTF::move(list));
     };
     return consumeMatchAllOrdered(range, state);
 }
@@ -2278,8 +2307,8 @@ static RefPtr<CSSValue> consumeTestMatchOneOrMoreAnyOrder(CSSParserTokenRange& r
         if (list.isEmpty())
             return { };
         if (list.size() == 1)
-            return WTFMove(list[0]); // single item optimization
-        return CSSValueList::createSpaceSeparated(WTFMove(list));
+            return WTF::move(list[0]); // single item optimization
+        return CSSValueList::createSpaceSeparated(WTF::move(list));
     };
     return consumeMatchOneOrMoreAnyOrder(range, state);
 }
@@ -2335,7 +2364,7 @@ static RefPtr<CSSValue> consumeTestMatchOneOrMoreAnyOrderNoSingleItemOpt(CSSPars
             list.append(value2.releaseNonNull());
         if (list.isEmpty())
             return { };
-        return CSSValueList::createSpaceSeparated(WTFMove(list));
+        return CSSValueList::createSpaceSeparated(WTF::move(list));
     };
     return consumeMatchOneOrMoreAnyOrder(range, state);
 }
@@ -2392,10 +2421,10 @@ static RefPtr<CSSValue> consumeTestMatchOneOrMoreAnyOrderWithCustomType(CSSParse
         if (list.isEmpty())
             return { };
         if (list.size() == 1)
-            return WTFMove(list[0]); // single item optimization
+            return WTF::move(list[0]); // single item optimization
         if (list.size() == 2)
-            return CSSCustomType::create(WTFMove(list[0]), WTFMove(list[1]));
-        return CSSCustomType::create(WTFMove(list[0]), WTFMove(list[1]), WTFMove(list[2]));
+            return CSSCustomType::create(WTF::move(list[0]), WTF::move(list[1]));
+        return CSSCustomType::create(WTF::move(list[0]), WTF::move(list[1]), WTF::move(list[2]));
     };
     return consumeMatchOneOrMoreAnyOrder(range, state);
 }
@@ -2452,10 +2481,10 @@ static RefPtr<CSSValue> consumeTestMatchOneOrMoreAnyOrderWithCustomTypeNoSingleI
         if (list.isEmpty())
             return { };
         if (list.size() == 1)
-            return CSSCustomType::create(WTFMove(list[0]));
+            return CSSCustomType::create(WTF::move(list[0]));
         if (list.size() == 2)
-            return CSSCustomType::create(WTFMove(list[0]), WTFMove(list[1]));
-        return CSSCustomType::create(WTFMove(list[0]), WTFMove(list[1]), WTFMove(list[2]));
+            return CSSCustomType::create(WTF::move(list[0]), WTF::move(list[1]));
+        return CSSCustomType::create(WTF::move(list[0]), WTF::move(list[1]), WTF::move(list[2]));
     };
     return consumeMatchOneOrMoreAnyOrder(range, state);
 }
@@ -2518,8 +2547,8 @@ static RefPtr<CSSValue> consumeTestMatchOneOrMoreAnyOrderWithPreserveOrder(CSSPa
         if (list.isEmpty())
             return { };
         if (list.size() == 1)
-            return WTFMove(list[0]); // single item optimization
-        return CSSValueList::createSpaceSeparated(WTFMove(list));
+            return WTF::move(list[0]); // single item optimization
+        return CSSValueList::createSpaceSeparated(WTF::move(list));
     };
     return consumeMatchOneOrMoreAnyOrder(range, state);
 }
@@ -2582,10 +2611,10 @@ static RefPtr<CSSValue> consumeTestMatchOneOrMoreAnyOrderWithPreserveOrderAndCus
         if (list.isEmpty())
             return { };
         if (list.size() == 1)
-            return WTFMove(list[0]); // single item optimization
+            return WTF::move(list[0]); // single item optimization
         if (list.size() == 2)
-            return CSSCustomType::create(WTFMove(list[0]), WTFMove(list[1]));
-        return CSSCustomType::create(WTFMove(list[0]), WTFMove(list[1]), WTFMove(list[2]));
+            return CSSCustomType::create(WTF::move(list[0]), WTF::move(list[1]));
+        return CSSCustomType::create(WTF::move(list[0]), WTF::move(list[1]), WTF::move(list[2]));
     };
     return consumeMatchOneOrMoreAnyOrder(range, state);
 }
@@ -2648,10 +2677,10 @@ static RefPtr<CSSValue> consumeTestMatchOneOrMoreAnyOrderWithPreserveOrderAndCus
         if (list.isEmpty())
             return { };
         if (list.size() == 1)
-            return CSSCustomType::create(WTFMove(list[0]));
+            return CSSCustomType::create(WTF::move(list[0]));
         if (list.size() == 2)
-            return CSSCustomType::create(WTFMove(list[0]), WTFMove(list[1]));
-        return CSSCustomType::create(WTFMove(list[0]), WTFMove(list[1]), WTFMove(list[2]));
+            return CSSCustomType::create(WTF::move(list[0]), WTF::move(list[1]));
+        return CSSCustomType::create(WTF::move(list[0]), WTF::move(list[1]), WTF::move(list[2]));
     };
     return consumeMatchOneOrMoreAnyOrder(range, state);
 }
@@ -2713,7 +2742,7 @@ static RefPtr<CSSValue> consumeTestMatchOneOrMoreAnyOrderWithPreserveOrderNoSing
         }
         if (list.isEmpty())
             return { };
-        return CSSValueList::createSpaceSeparated(WTFMove(list));
+        return CSSValueList::createSpaceSeparated(WTF::move(list));
     };
     return consumeMatchOneOrMoreAnyOrder(range, state);
 }
@@ -2963,8 +2992,8 @@ static RefPtr<CSSValue> consumeTestMatchOneWithSettingsFlag(CSSParserTokenRange&
         if (list.isEmpty())
             return { };
         if (list.size() == 1)
-            return WTFMove(list[0]); // single item optimization
-        return CSSValueList::createSpaceSeparated(WTFMove(list));
+            return WTF::move(list[0]); // single item optimization
+        return CSSValueList::createSpaceSeparated(WTF::move(list));
     };
     return consumeMatchOneOrMoreAnyOrder(range, state);
 }
@@ -2982,6 +3011,120 @@ static RefPtr<CSSValue> consumeTestNumericValueRange(CSSParserTokenRange& range,
         return result;
     // <percentage [1,100]>
     return CSSPrimitiveValueResolver<CSS::Percentage<CSS::Range{1, 100}>>::consumeAndResolve(range, state);
+}
+
+static RefPtr<CSSValue> consumeTestRenderStyleStorageOneLevelRaw(CSSParserTokenRange& range)
+{
+    // [ foo || bar ]
+    auto consumeMatchOneOrMoreAnyOrder = [](CSSParserTokenRange& range) -> RefPtr<CSSValue> {
+        RefPtr<CSSValue> value0; // foo
+        auto tryConsumeTerm0 = [&value0](CSSParserTokenRange& range) -> bool {
+            auto consumeTerm0 = [](CSSParserTokenRange& range) -> RefPtr<CSSValue> {
+                // foo
+                switch (auto keyword = range.peek().id(); keyword) {
+                case CSSValueID::CSSValueFoo:
+                    range.consumeIncludingWhitespace();
+                    return CSSPrimitiveValue::create(keyword);
+                default:
+                    return nullptr;
+                }
+            };
+            if (value0)
+                return false;
+            value0 = consumeTerm0(range);
+            return !!value0;
+        };
+        RefPtr<CSSValue> value1; // bar
+        auto tryConsumeTerm1 = [&value1](CSSParserTokenRange& range) -> bool {
+            auto consumeTerm1 = [](CSSParserTokenRange& range) -> RefPtr<CSSValue> {
+                // bar
+                switch (auto keyword = range.peek().id(); keyword) {
+                case CSSValueID::CSSValueBar:
+                    range.consumeIncludingWhitespace();
+                    return CSSPrimitiveValue::create(keyword);
+                default:
+                    return nullptr;
+                }
+            };
+            if (value1)
+                return false;
+            value1 = consumeTerm1(range);
+            return !!value1;
+        };
+        for (size_t i = 0; i < 2 && !range.atEnd(); ++i) {
+            if (tryConsumeTerm0(range) || tryConsumeTerm1(range))
+                continue;
+            break;
+        }
+        CSSValueListBuilder list;
+        if (value0) // foo
+            list.append(value0.releaseNonNull());
+        if (value1) // bar
+            list.append(value1.releaseNonNull());
+        if (list.isEmpty())
+            return { };
+        if (list.size() == 1)
+            return WTF::move(list[0]); // single item optimization
+        return CSSValueList::createSpaceSeparated(WTF::move(list));
+    };
+    return consumeMatchOneOrMoreAnyOrder(range);
+}
+
+static RefPtr<CSSValue> consumeTestRenderStyleStorageTwoLevelRaw(CSSParserTokenRange& range)
+{
+    // [ foo || bar ]
+    auto consumeMatchOneOrMoreAnyOrder = [](CSSParserTokenRange& range) -> RefPtr<CSSValue> {
+        RefPtr<CSSValue> value0; // foo
+        auto tryConsumeTerm0 = [&value0](CSSParserTokenRange& range) -> bool {
+            auto consumeTerm0 = [](CSSParserTokenRange& range) -> RefPtr<CSSValue> {
+                // foo
+                switch (auto keyword = range.peek().id(); keyword) {
+                case CSSValueID::CSSValueFoo:
+                    range.consumeIncludingWhitespace();
+                    return CSSPrimitiveValue::create(keyword);
+                default:
+                    return nullptr;
+                }
+            };
+            if (value0)
+                return false;
+            value0 = consumeTerm0(range);
+            return !!value0;
+        };
+        RefPtr<CSSValue> value1; // bar
+        auto tryConsumeTerm1 = [&value1](CSSParserTokenRange& range) -> bool {
+            auto consumeTerm1 = [](CSSParserTokenRange& range) -> RefPtr<CSSValue> {
+                // bar
+                switch (auto keyword = range.peek().id(); keyword) {
+                case CSSValueID::CSSValueBar:
+                    range.consumeIncludingWhitespace();
+                    return CSSPrimitiveValue::create(keyword);
+                default:
+                    return nullptr;
+                }
+            };
+            if (value1)
+                return false;
+            value1 = consumeTerm1(range);
+            return !!value1;
+        };
+        for (size_t i = 0; i < 2 && !range.atEnd(); ++i) {
+            if (tryConsumeTerm0(range) || tryConsumeTerm1(range))
+                continue;
+            break;
+        }
+        CSSValueListBuilder list;
+        if (value0) // foo
+            list.append(value0.releaseNonNull());
+        if (value1) // bar
+            list.append(value1.releaseNonNull());
+        if (list.isEmpty())
+            return { };
+        if (list.size() == 1)
+            return WTF::move(list[0]); // single item optimization
+        return CSSValueList::createSpaceSeparated(WTF::move(list));
+    };
+    return consumeMatchOneOrMoreAnyOrder(range);
 }
 
 static RefPtr<CSSValue> consumeTestUnboundedRepetitionWithCommasWithMin(CSSParserTokenRange& range, CSS::PropertyParserState& state)
@@ -3159,22 +3302,30 @@ RefPtr<CSSValue> CSSPropertyParsing::parseStylePropertyLonghand(CSSParserTokenRa
     switch (id) {
     case CSSPropertyID::CSSPropertyTestTopPriority:
     case CSSPropertyID::CSSPropertyTestHighPriority:
+    case CSSPropertyID::CSSPropertyTestMediumPriority:
     case CSSPropertyID::CSSPropertyTestAnimationWrapper:
     case CSSPropertyID::CSSPropertyTestAnimationWrapperAccelerationAlways:
     case CSSPropertyID::CSSPropertyTestAnimationWrapperAccelerationThreadedOnly:
     case CSSPropertyID::CSSPropertyTestCustomExtractor:
-    case CSSPropertyID::CSSPropertyTestExtractorConverter:
     case CSSPropertyID::CSSPropertyTestProperty:
+    case CSSPropertyID::CSSPropertyTestRenderStyleHasExplicitlySetPolicyAllAuthorOrigin:
+    case CSSPropertyID::CSSPropertyTestRenderStyleHasExplicitlySetPolicyAllBorderRadius:
+    case CSSPropertyID::CSSPropertyTestRenderStyleHasExplicitlySetPolicyValueOnly:
+    case CSSPropertyID::CSSPropertyTestRenderStyleStorageOneLevelReference:
+    case CSSPropertyID::CSSPropertyTestRenderStyleStorageOneLevelValue:
+    case CSSPropertyID::CSSPropertyTestRenderStyleStorageTwoLevelReference:
+    case CSSPropertyID::CSSPropertyTestRenderStyleStorageTwoLevelValue:
     case CSSPropertyID::CSSPropertyTestSettingsOne:
-    case CSSPropertyID::CSSPropertyTestSharedBuilderExtractorConverter:
     case CSSPropertyID::CSSPropertyTestSinkPriority:
     case CSSPropertyID::CSSPropertyTestLogicalPropertyGroupPhysicalHorizontal:
     case CSSPropertyID::CSSPropertyTestLogicalPropertyGroupPhysicalVertical:
     case CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalBlock:
     case CSSPropertyID::CSSPropertyTestLogicalPropertyGroupLogicalInline:
         return CSSPrimitiveValueResolver<CSS::Number<>>::consumeAndResolve(range, state);
-    case CSSPropertyID::CSSPropertyTestAutoFunctions:
-        return consumeTestAutoFunctions(range, state);
+    case CSSPropertyID::CSSPropertyBackgroundCoordinatedValueListPropertyTestDiscrete:
+        return consumeBackgroundCoordinatedValueListPropertyTestDiscrete(range, state);
+    case CSSPropertyID::CSSPropertyBackgroundCoordinatedValueListPropertyTestTwo:
+        return consumeBackgroundCoordinatedValueListPropertyTestTwo(range, state);
     case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithCommas:
         return consumeTestBoundedRepetitionWithCommas(range, state);
     case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithCommasFixed:
@@ -3200,7 +3351,6 @@ RefPtr<CSSValue> CSSPropertyParsing::parseStylePropertyLonghand(CSSParserTokenRa
     case CSSPropertyID::CSSPropertyTestBoundedRepetitionWithSpacesWithTypeWithDefaultPreviousTwo:
         return consumeTestBoundedRepetitionWithSpacesWithTypeWithDefaultPreviousTwo(range, state);
     case CSSPropertyID::CSSPropertyTestColor:
-    case CSSPropertyID::CSSPropertyTestColorPropertyWithNoVisitedLinkSupport:
     case CSSPropertyID::CSSPropertyTestColorPropertyWithVisitedLinkSupport:
         return consumeColor(range, state, { .allowedColorTypes = { CSS::ColorType::Absolute, CSS::ColorType::Current, CSS::ColorType::System } });
     case CSSPropertyID::CSSPropertyTestColorAllowsTypesAbsolute:
@@ -3319,6 +3469,14 @@ RefPtr<CSSValue> CSSPropertyParsing::parseStylePropertyLonghand(CSSParserTokenRa
         return consumeTestMatchOneWithSettingsFlag(range, state);
     case CSSPropertyID::CSSPropertyTestNumericValueRange:
         return consumeTestNumericValueRange(range, state);
+    case CSSPropertyID::CSSPropertyTestRenderStyleStorageOneLevelEnum:
+        return consumeIdent(range, isKeywordValidForTestRenderStyleStorageOneLevelEnum);
+    case CSSPropertyID::CSSPropertyTestRenderStyleStorageOneLevelRaw:
+        return consumeTestRenderStyleStorageOneLevelRaw(range);
+    case CSSPropertyID::CSSPropertyTestRenderStyleStorageTwoLevelEnum:
+        return consumeIdent(range, isKeywordValidForTestRenderStyleStorageTwoLevelEnum);
+    case CSSPropertyID::CSSPropertyTestRenderStyleStorageTwoLevelRaw:
+        return consumeTestRenderStyleStorageTwoLevelRaw(range);
     case CSSPropertyID::CSSPropertyTestUnboundedRepetitionWithCommasWithMin:
         return consumeTestUnboundedRepetitionWithCommasWithMin(range, state);
     case CSSPropertyID::CSSPropertyTestUnboundedRepetitionWithCommasWithMinNoSingleItemOpt:
@@ -3373,8 +3531,6 @@ bool CSSPropertyParsing::parseStylePropertyShorthand(CSSParserTokenRange& range,
 bool CSSPropertyParsing::isKeywordValidForStyleProperty(CSSPropertyID id, CSSValueID keyword, CSS::PropertyParserState& state)
 {
     switch (id) {
-    case CSSPropertyID::CSSPropertyTestAutoFunctions:
-        return isKeywordValidForTestAutoFunctions(keyword);
     case CSSPropertyID::CSSPropertyTestKeyword:
         return isKeywordValidForTestKeyword(keyword);
     case CSSPropertyID::CSSPropertyTestKeywordWithAliasedTo:
@@ -3387,6 +3543,10 @@ bool CSSPropertyParsing::isKeywordValidForStyleProperty(CSSPropertyID id, CSSVal
         return isKeywordValidForTestMatchOneWithMultipleKeywords(keyword);
     case CSSPropertyID::CSSPropertyTestMatchOneWithReferenceWithSettingsFlag:
         return isKeywordValidForTestMatchOneWithReferenceWithSettingsFlag(keyword);
+    case CSSPropertyID::CSSPropertyTestRenderStyleStorageOneLevelEnum:
+        return isKeywordValidForTestRenderStyleStorageOneLevelEnum(keyword);
+    case CSSPropertyID::CSSPropertyTestRenderStyleStorageTwoLevelEnum:
+        return isKeywordValidForTestRenderStyleStorageTwoLevelEnum(keyword);
     case CSSPropertyID::CSSPropertyTestUrlWithModifiers:
         return isKeywordValidForTestUrlWithModifiers(keyword);
     case CSSPropertyID::CSSPropertyTestUrlWithNoModifiers:
@@ -3405,13 +3565,14 @@ bool CSSPropertyParsing::isKeywordValidForStyleProperty(CSSPropertyID id, CSSVal
 bool CSSPropertyParsing::isKeywordFastPathEligibleStyleProperty(CSSPropertyID id)
 {
     switch (id) {
-    case CSSPropertyID::CSSPropertyTestAutoFunctions:
     case CSSPropertyID::CSSPropertyTestKeyword:
     case CSSPropertyID::CSSPropertyTestKeywordWithAliasedTo:
     case CSSPropertyID::CSSPropertyTestMatchOneWithGroupWithSettingsFlag:
     case CSSPropertyID::CSSPropertyTestMatchOneWithKeywordWithSettingsFlag:
     case CSSPropertyID::CSSPropertyTestMatchOneWithMultipleKeywords:
     case CSSPropertyID::CSSPropertyTestMatchOneWithReferenceWithSettingsFlag:
+    case CSSPropertyID::CSSPropertyTestRenderStyleStorageOneLevelEnum:
+    case CSSPropertyID::CSSPropertyTestRenderStyleStorageTwoLevelEnum:
     case CSSPropertyID::CSSPropertyTestUrlWithModifiers:
     case CSSPropertyID::CSSPropertyTestUrlWithNoModifiers:
     case CSSPropertyID::CSSPropertyTestUsingSharedRule:

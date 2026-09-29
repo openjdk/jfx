@@ -22,10 +22,10 @@
 
 #pragma once
 
-#include "DestinationColorSpace.h"
-#include "FilterEffectApplier.h"
-#include "FilterFunction.h"
-#include "FilterImageVector.h"
+#include <WebCore/DestinationColorSpace.h>
+#include <WebCore/FilterEffectApplier.h>
+#include <WebCore/FilterFunction.h>
+#include <WebCore/FilterImageVector.h>
 #include <wtf/CheckedPtr.h>
 
 namespace WTF {

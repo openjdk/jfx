@@ -35,7 +35,8 @@ class Exception;
 struct AudioIOPosition;
 
 class AudioDestinationNode : public AudioNode {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(AudioDestinationNode);
+    WTF_MAKE_TZONE_ALLOCATED(AudioDestinationNode);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(AudioDestinationNode);
 public:
     ~AudioDestinationNode();
 
@@ -78,3 +79,5 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_AUDIONODE(AudioDestinationNode, NodeTypeDestination);

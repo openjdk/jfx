@@ -25,7 +25,8 @@
 
 #pragma once
 
-#include "Allocator.h"
+#include <JavaScriptCore/Allocator.h>
+#include <wtf/Assertions.h>
 
 namespace JSC {
 

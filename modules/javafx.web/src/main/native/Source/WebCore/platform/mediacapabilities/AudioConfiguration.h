@@ -47,7 +47,7 @@ inline AudioConfiguration AudioConfiguration::isolatedCopy() const &
 
 inline AudioConfiguration AudioConfiguration::isolatedCopy() &&
 {
-    return { WTFMove(contentType).isolatedCopy(), WTFMove(channels).isolatedCopy(), bitrate, samplerate, spatialRendering };
+    return { WTF::move(contentType).isolatedCopy(), WTF::move(channels).isolatedCopy(), bitrate, samplerate, spatialRendering };
 }
 
 } // namespace WebCore

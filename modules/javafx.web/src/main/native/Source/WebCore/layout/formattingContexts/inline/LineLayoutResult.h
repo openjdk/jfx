@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "InlineLine.h"
-#include "InlineLineTypes.h"
-#include "LayoutUnits.h"
-#include "PlacedFloats.h"
+#include <WebCore/InlineLine.h>
+#include <WebCore/InlineLineTypes.h>
+#include <WebCore/LayoutUnits.h>
+#include <WebCore/PlacedFloats.h>
 
 namespace WebCore {
 namespace Layout {
@@ -38,7 +38,7 @@ struct LineLayoutResult {
     using SuspendedFloatList = Vector<const Box*>;
 
     InlineItemRange inlineItemRange;
-    Line::RunList inlineContent;
+    Line::RunList runs;
 
     struct FloatContent {
         PlacedFloatList placedFloats;
@@ -58,7 +58,8 @@ struct LineLayoutResult {
     struct LineGeometry {
         InlineLayoutPoint logicalTopLeft;
         InlineLayoutUnit logicalWidth { 0.f };
-        InlineLayoutUnit initialLogicalLeftIncludingIntrusiveFloats { 0.f };
+        InlineLayoutUnit initialLogicalLeft { 0.f };
+        InlineLayoutUnit intrusiveFloatsOffset { 0.f }; // Inherited floats from parent formatting context offseting line box.
         std::optional<InlineLayoutUnit> initialLetterClearGap { };
     };
     LineGeometry lineGeometry { };
@@ -77,12 +78,7 @@ struct LineLayoutResult {
     Directionality directionality { };
 
     struct IsFirstLast {
-        enum class FirstFormattedLine : uint8_t {
-            No,
-            WithinIFC,
-            WithinBFC
-        };
-        FirstFormattedLine isFirstFormattedLine { FirstFormattedLine::WithinIFC };
+        IsFirstFormattedLine isFirstFormattedLine { IsFirstFormattedLine::Yes };
         bool isLastLineWithInlineContent { true };
     };
     IsFirstLast isFirstLast { };
@@ -94,7 +90,25 @@ struct LineLayoutResult {
     Ruby ruby { };
 
     // Misc
-    bool endsWithHyphen { false };
+    enum InlineContentEnding : uint8_t { Generic, Hyphen, LineBreak };
+    std::optional<InlineContentEnding> inlineContentEnding { }; // No value means line does not have any inline content (either float, out-of-flow or block inside inline)
+
+    enum class InflowContentType : uint8_t { Inline, Block };
+    std::optional<InflowContentType> inflowContentType() const
+    {
+        if (inlineContentEnding.has_value())
+            return InflowContentType::Inline;
+        if (!runs.isEmpty() && runs.last().isBlock())
+            return InflowContentType::Block;
+        return { };
+    }
+    bool hasContentfulInFlowContent() const { return inflowContentType().has_value(); }
+    bool hasContentfulInlineContent() const { return hasContentfulInFlowContent() && *inflowContentType() == InflowContentType::Inline; }
+    bool isBlockContent() const { return hasContentfulInFlowContent() && *inflowContentType() == InflowContentType::Block; }
+
+    bool endsWithHyphen() const { return inlineContentEnding && *inlineContentEnding == InlineContentEnding::Hyphen; }
+    bool endsWithLineBreak() const { return inlineContentEnding && *inlineContentEnding == InlineContentEnding::LineBreak; }
+
     size_t nonSpanningInlineLevelBoxCount { 0 };
     InlineLayoutUnit trimmedTrailingWhitespaceWidth { 0.f }; // only used for line-break: after-white-space currently
     InlineLayoutUnit firstLineStartTrim { 0.f }; // This is how much text-box-trim: start adjusts the first line box. We only need it to adjust the initial letter float position (which will not be needed once we drop the float behavior)

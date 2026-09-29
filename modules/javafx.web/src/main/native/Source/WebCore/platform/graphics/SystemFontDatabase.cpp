@@ -32,6 +32,13 @@ namespace WebCore {
 SystemFontDatabase::SystemFontDatabase() = default;
 
 #if PLATFORM(JAVA)
+
+SystemFontDatabase& SystemFontDatabase::singleton()
+{
+    static NeverDestroyed<SystemFontDatabase> database;
+    return database.get();
+}
+
 void SystemFontDatabase::platformInvalidate()
 {
  // not implemented

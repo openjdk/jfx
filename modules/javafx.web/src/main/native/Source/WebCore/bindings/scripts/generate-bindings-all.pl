@@ -79,7 +79,6 @@ open($fh, '<', $ppIDLFilesList) or die "Cannot open $ppIDLFilesList";
 @ppIDLFiles = map { CygwinPathIfNeeded(s/\r?\n?$//r) } <$fh>;
 close($fh) or die;
 
-
 my %oldSupplements;
 my %newSupplements;
 if ($supplementalDependencyFile) {

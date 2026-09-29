@@ -67,7 +67,7 @@ protected:
     void reset();
     bool parseAttribute(const QualifiedName&, const AtomString&);
     std::optional<FloatRect> parseViewBox(StringView);
-    std::optional<FloatRect> parseViewBox(StringParsingBuffer<LChar>&, bool validate = true);
+    std::optional<FloatRect> parseViewBox(StringParsingBuffer<Latin1Character>&, bool validate = true);
     std::optional<FloatRect> parseViewBox(StringParsingBuffer<char16_t>&, bool validate = true);
 
 private:

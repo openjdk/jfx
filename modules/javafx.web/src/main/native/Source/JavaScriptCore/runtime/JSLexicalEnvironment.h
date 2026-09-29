@@ -28,9 +28,9 @@
 
 #pragma once
 
-#include "CodeBlock.h"
-#include "JSSymbolTableObject.h"
-#include "SymbolTable.h"
+#include <JavaScriptCore/CodeBlock.h>
+#include <JavaScriptCore/JSSymbolTableObject.h>
+#include <JavaScriptCore/SymbolTable.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
@@ -46,7 +46,7 @@ public:
     static CompleteSubspace* subspaceFor(VM& vm)
     {
         static_assert(CellType::needsDestruction == DoesNotNeedDestruction);
-        return &vm.variableSizedCellSpace();
+        return &vm.heap.cellSpace;
     }
 
     using Base = JSSymbolTableObject;
@@ -108,7 +108,7 @@ public:
     }
 
     static bool getOwnPropertySlot(JSObject*, JSGlobalObject*, PropertyName, PropertySlot&);
-    static void getOwnSpecialPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
+    static void getOwnSpecialPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArrayBuilder&, DontEnumPropertiesMode);
 
     static bool put(JSCell*, JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);
 

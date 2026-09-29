@@ -68,10 +68,10 @@ public:
     }
 
     // Used by the DOM.
-    const RefPtr<PropertyType>& animVal() const { return const_cast<SVGAnimatedValueProperty*>(this)->ensureAnimVal(); }
+    const PropertyType& animVal() const { return const_cast<SVGAnimatedValueProperty*>(this)->ensureAnimVal(); }
 
     // Called by SVGAnimatedPropertyAnimator to pass the animVal to the SVGAnimationFunction::progress.
-    RefPtr<PropertyType>& animVal() { return ensureAnimVal(); }
+    PropertyType& animVal() { return ensureAnimVal(); }
 
     // Used when committing a change from the SVGAnimatedProperty to the attribute.
     String baseValAsString() const override { return m_baseVal->valueAsString(); }
@@ -144,11 +144,11 @@ protected:
     {
     }
 
-    RefPtr<PropertyType>& ensureAnimVal()
+    PropertyType& ensureAnimVal()
     {
         if (!m_animVal)
             m_animVal = PropertyType::create(this, SVGPropertyAccess::ReadOnly, m_baseVal->value());
-        return m_animVal;
+        return *m_animVal;
     }
 
     // Called when m_baseVal changes.

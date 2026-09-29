@@ -29,6 +29,7 @@
 
 #if ENABLE(MATHML)
 
+#include "FontCascadeInlines.h"
 #include "MathMLElement.h"
 #include "MathMLOperatorDictionary.h"
 #include "MathMLUnderOverElement.h"
@@ -40,10 +41,10 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderMathMLUnderOver);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderMathMLUnderOver);
 
 RenderMathMLUnderOver::RenderMathMLUnderOver(MathMLUnderOverElement& element, RenderStyle&& style)
-    : RenderMathMLScripts(Type::MathMLUnderOver, element, WTFMove(style))
+    : RenderMathMLScripts(Type::MathMLUnderOver, element, WTF::move(style))
 {
     ASSERT(isRenderMathMLUnderOver());
 }
@@ -383,10 +384,6 @@ void RenderMathMLUnderOver::layoutBlock(RelayoutChildren relayoutChildren, Layou
     adjustLayoutForBorderAndPadding();
 
     layoutOutOfFlowBoxes(relayoutChildren);
-
-    updateScrollInfoAfterLayout();
-
-    clearNeedsLayout();
 }
 
 }

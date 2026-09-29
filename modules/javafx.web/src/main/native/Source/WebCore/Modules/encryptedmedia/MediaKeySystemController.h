@@ -26,8 +26,8 @@
 
 #if ENABLE(ENCRYPTED_MEDIA)
 
-#include "MediaKeySystemClient.h"
-#include "Supplementable.h"
+#include <WebCore/MediaKeySystemClient.h>
+#include <WebCore/Supplementable.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/TZoneMalloc.h>
 
@@ -39,7 +39,7 @@ class MediaKeySystemController : public Supplement<Page> {
     WTF_MAKE_TZONE_ALLOCATED(MediaKeySystemController);
     WTF_MAKE_NONCOPYABLE(MediaKeySystemController);
 public:
-    explicit MediaKeySystemController(MediaKeySystemClient&);
+    explicit MediaKeySystemController(Ref<MediaKeySystemClient>&&);
     ~MediaKeySystemController();
 
     void requestMediaKeySystem(MediaKeySystemRequest&);
@@ -47,25 +47,29 @@ public:
 
     void logRequestMediaKeySystemDenial(Document&);
 
-    WEBCORE_EXPORT static ASCIILiteral supplementName();
+    static ASCIILiteral supplementName() { return "MediaKeySystemController"_s; }
     static MediaKeySystemController* from(Page*);
 
 private:
-    WeakPtr<MediaKeySystemClient> m_client;
+    bool isMediaKeySystemController() const final { return true; }
+
+    const Ref<MediaKeySystemClient> m_client;
 };
 
 inline void MediaKeySystemController::requestMediaKeySystem(MediaKeySystemRequest& request)
 {
-    if (m_client)
         m_client->requestMediaKeySystem(request);
 }
 
 inline void MediaKeySystemController::cancelMediaKeySystemRequest(MediaKeySystemRequest& request)
 {
-    if (m_client)
         m_client->cancelMediaKeySystemRequest(request);
 }
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::MediaKeySystemController)
+    static bool isType(const WebCore::SupplementBase& supplement) { return supplement.isMediaKeySystemController(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(ENCRYPTED_MEDIA)

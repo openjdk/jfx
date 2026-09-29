@@ -32,6 +32,7 @@
 #include "ImageBitmap.h"
 #include "PaintRenderingContext2D.h"
 #include "ScriptExecutionContext.h"
+#include "ScriptWrappableInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -52,9 +53,6 @@ CustomPaintCanvas::CustomPaintCanvas(ScriptExecutionContext& context, unsigned w
 CustomPaintCanvas::~CustomPaintCanvas()
 {
     notifyObserversCanvasDestroyed();
-
-    m_context = nullptr; // Ensure this goes away before the ImageBuffer.
-    setImageBuffer(nullptr);
 }
 
 RefPtr<PaintRenderingContext2D> CustomPaintCanvas::getContext()
@@ -85,7 +83,7 @@ Image* CustomPaintCanvas::copiedImage() const
     if (!width() || !height())
         return nullptr;
     m_copiedImage = nullptr;
-    auto buffer = ImageBuffer::create(size(), RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), ImageBufferPixelFormat::BGRA8);
+    auto buffer = ImageBuffer::create(size(), RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8);
     if (buffer) {
         if (m_context)
             m_context->replayDisplayList(buffer->context());

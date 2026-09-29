@@ -48,6 +48,7 @@ PAS_BEGIN_EXTERN_C;
 
 /* The implementations are provided by bmalloc. */
 BEXPORT extern bool pas_system_heap_is_enabled(pas_heap_config_kind);
+BEXPORT extern bool pas_system_heap_should_supplant_bmalloc(pas_heap_config_kind);
 BEXPORT extern void* pas_system_heap_malloc(size_t);
 BEXPORT extern void* pas_system_heap_memalign(size_t alignment, size_t);
 BEXPORT extern void* pas_system_heap_realloc(void* ptr, size_t);
@@ -59,6 +60,12 @@ BEXPORT extern void pas_system_heap_free(void* ptr);
 #else /* PAS_BMALLOC -> so !PAS_BMALLOC */
 
 static inline bool pas_system_heap_is_enabled(pas_heap_config_kind kind)
+{
+    PAS_UNUSED_PARAM(kind);
+    return false;
+}
+
+static inline bool pas_system_heap_should_supplant_bmalloc(pas_heap_config_kind kind)
 {
     PAS_UNUSED_PARAM(kind);
     return false;

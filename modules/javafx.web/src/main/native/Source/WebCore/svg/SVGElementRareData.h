@@ -57,7 +57,7 @@ public:
     const WeakHashSet<SVGElement, WeakPtrImplWithEventTargetData>& referencingElements() const { return m_referencingElements; }
     WeakHashSet<SVGElement, WeakPtrImplWithEventTargetData> takeReferencingElements() { return std::exchange(m_referencingElements, { }); }
     SVGElement* referenceTarget() const { return m_referenceTarget.get(); }
-    void setReferenceTarget(WeakPtr<SVGElement, WeakPtrImplWithEventTargetData>&& element) { m_referenceTarget = WTFMove(element); }
+    void setReferenceTarget(WeakPtr<SVGElement, WeakPtrImplWithEventTargetData>&& element) { m_referenceTarget = WTF::move(element); }
 
     void addReferencingCSSClient(SVGResourceElementClient& client) { m_referencingCSSClients.add(client); }
     void removeReferencingCSSClient(SVGResourceElementClient& client) { m_referencingCSSClients.remove(client); }

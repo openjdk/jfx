@@ -22,14 +22,14 @@
 
 #pragma once
 
-#include "Color.h"
-#include "HTMLElement.h"
-#include "MediaQuery.h"
+#include <WebCore/Color.h>
+#include <WebCore/HTMLElement.h>
+#include <WebCore/MediaQuery.h>
 
 namespace WebCore {
 
 class HTMLMetaElement final : public HTMLElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLMetaElement);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLMetaElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLMetaElement);
 public:
     static Ref<HTMLMetaElement> create(Document&);

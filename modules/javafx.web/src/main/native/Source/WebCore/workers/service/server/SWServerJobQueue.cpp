@@ -107,7 +107,7 @@ void SWServerJobQueue::scriptFetchFinished(const ServiceWorkerJobDataIdentifier&
 
         auto scriptURLs = newestWorker->importedScriptURLs();
         if (!scriptURLs.isEmpty()) {
-            m_workerFetchResult = WTFMove(result);
+            m_workerFetchResult = WTF::move(result);
             protectedServer()->refreshImportedScripts(job, *registration, scriptURLs, requestingProcessIdentifier);
             return;
         }
@@ -346,7 +346,7 @@ void SWServerJobQueue::runRegisterJob(const ServiceWorkerJobData& job)
         RELEASE_LOG(ServiceWorker, "%p - SWServerJobQueue::runRegisterJob: Found registration %" PRIu64 " for job %s but it needs updating", this, registration->identifier().toUInt64(), job.identifier().loggingString().utf8().data());
     } else {
         Ref newRegistration = SWServerRegistration::create(server.get(), m_registrationKey, job.registrationOptions->updateViaCache, job.scopeURL, job.scriptURL, job.serviceWorkerPageIdentifier(), NavigationPreloadState::defaultValue());
-        server->addRegistration(WTFMove(newRegistration));
+        server->addRegistration(WTF::move(newRegistration));
 
         RELEASE_LOG(ServiceWorker, "%p - SWServerJobQueue::runRegisterJob: No existing registration for job %s, constructing a new one.", this, job.identifier().loggingString().utf8().data());
     }

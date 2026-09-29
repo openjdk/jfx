@@ -24,11 +24,11 @@
 
 #pragma once
 
-#include "CSSProperty.h"
-#include "CSSPropertyNames.h"
-#include "CSSStyleDeclaration.h"
-#include "StyleRuleType.h"
-#include "StyledElement.h"
+#include <WebCore/CSSProperty.h>
+#include <WebCore/CSSPropertyNames.h>
+#include <WebCore/CSSStyleDeclaration.h>
+#include <WebCore/StyleRuleType.h>
+#include <WebCore/StyledElement.h>
 #include <wtf/HashMap.h>
 #include <wtf/OptionalOrReference.h>
 #include <wtf/RefCounted.h>
@@ -41,7 +41,7 @@ class StyleSheetContents;
 struct CSSParserContext;
 
 class CSSStyleProperties : public CSSStyleDeclaration {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CSSStyleProperties);
+    WTF_MAKE_TZONE_ALLOCATED(CSSStyleProperties);
 public:
     StyleDeclarationType styleDeclarationType() const final { return StyleDeclarationType::Style; }
 
@@ -78,7 +78,7 @@ public:
 };
 
 class PropertySetCSSStyleProperties : public CSSStyleProperties {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(PropertySetCSSStyleProperties);
+    WTF_MAKE_TZONE_ALLOCATED(PropertySetCSSStyleProperties);
 public:
     explicit PropertySetCSSStyleProperties(MutableStyleProperties& propertySet)
         : m_propertySet(&propertySet)
@@ -101,7 +101,7 @@ protected:
 private:
     CSSRule* parentRule() const override { return nullptr; }
     // FIXME: To implement.
-    CSSRule* cssRules() const override { return nullptr; }
+    CSSRuleList* cssRules() const override { return nullptr; }
     unsigned length() const final;
     String item(unsigned index) const final;
     RefPtr<DeprecatedCSSOMValue> getPropertyCSSValue(const String& propertyName) final;
@@ -121,12 +121,12 @@ private:
 
     RefPtr<DeprecatedCSSOMValue> wrapForDeprecatedCSSOM(CSSValue*);
 
-    virtual bool willMutate() WARN_UNUSED_RETURN { return true; }
+    [[nodiscard]] virtual bool willMutate() { return true; }
     virtual void didMutate(MutationType) { }
 };
 
 class StyleRuleCSSStyleProperties final : public PropertySetCSSStyleProperties, public RefCounted<StyleRuleCSSStyleProperties> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(StyleRuleCSSStyleProperties);
+    WTF_MAKE_TZONE_ALLOCATED(StyleRuleCSSStyleProperties);
 public:
     void ref() const final { RefCounted::ref(); }
     void deref() const final { RefCounted::deref(); }
@@ -146,18 +146,18 @@ private:
 
     CSSStyleSheet* parentStyleSheet() const final;
 
-    CSSRule* parentRule() const final { return m_parentRule; }
+    CSSRule* parentRule() const final;
 
-    bool willMutate() final WARN_UNUSED_RETURN;
+    [[nodiscard]] bool willMutate() final;
     void didMutate(MutationType) final;
     OptionalOrReference<CSSParserContext> cssParserContext() const final;
 
     StyleRuleType m_parentRuleType;
-    CSSRule* m_parentRule;
+    WeakPtr<CSSRule> m_parentRule;
 };
 
 class InlineCSSStyleProperties final : public PropertySetCSSStyleProperties {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(InlineCSSStyleProperties);
+    WTF_MAKE_TZONE_ALLOCATED(InlineCSSStyleProperties);
 public:
     InlineCSSStyleProperties(MutableStyleProperties& propertySet, StyledElement& parentElement)
         : PropertySetCSSStyleProperties(propertySet)
@@ -169,7 +169,7 @@ private:
     CSSStyleSheet* parentStyleSheet() const final;
     StyledElement* parentElement() const final { return m_parentElement.get(); }
 
-    bool willMutate() final WARN_UNUSED_RETURN;
+    [[nodiscard]] bool willMutate() final;
     void didMutate(MutationType) final;
     OptionalOrReference<CSSParserContext> cssParserContext() const final;
 

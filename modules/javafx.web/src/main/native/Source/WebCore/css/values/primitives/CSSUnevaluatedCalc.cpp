@@ -36,23 +36,23 @@
 namespace WebCore {
 namespace CSS {
 
-void unevaluatedCalcRef(CSSCalcValue* calc)
+void unevaluatedCalcRef(CSSCalc::Value* calc)
 {
     calc->ref();
 }
 
-void unevaluatedCalcDeref(CSSCalcValue* calc)
+void unevaluatedCalcDeref(CSSCalc::Value* calc)
 {
     calc->deref();
 }
 
-UnevaluatedCalcBase::UnevaluatedCalcBase(CSSCalcValue& value)
+UnevaluatedCalcBase::UnevaluatedCalcBase(CSSCalc::Value& value)
     : calc { value }
 {
 }
 
-UnevaluatedCalcBase::UnevaluatedCalcBase(Ref<CSSCalcValue>&& value)
-    : calc { WTFMove(value) }
+UnevaluatedCalcBase::UnevaluatedCalcBase(Ref<CSSCalc::Value>&& value)
+    : calc { WTF::move(value) }
 {
 }
 
@@ -63,12 +63,12 @@ UnevaluatedCalcBase& UnevaluatedCalcBase::operator=(UnevaluatedCalcBase&&) = def
 
 UnevaluatedCalcBase::~UnevaluatedCalcBase() = default;
 
-Ref<CSSCalcValue> UnevaluatedCalcBase::protectedCalc() const
+Ref<CSSCalc::Value> UnevaluatedCalcBase::protectedCalc() const
 {
     return calc;
 }
 
-CSSCalcValue& UnevaluatedCalcBase::leakRef()
+CSSCalc::Value& UnevaluatedCalcBase::leakRef()
 {
     return calc.leakRef();
 }
@@ -85,7 +85,7 @@ bool UnevaluatedCalcBase::requiresConversionData() const
 
 void UnevaluatedCalcBase::serializationForCSS(StringBuilder& builder, const CSS::SerializationContext& context) const
 {
-    builder.append(protectedCalc()->customCSSText(context));
+    builder.append(protectedCalc()->cssText(context));
 }
 
 void UnevaluatedCalcBase::collectComputedStyleDependencies(ComputedStyleDependencies& dependencies) const
@@ -93,43 +93,38 @@ void UnevaluatedCalcBase::collectComputedStyleDependencies(ComputedStyleDependen
     protectedCalc()->collectComputedStyleDependencies(dependencies);
 }
 
-IterationStatus UnevaluatedCalcBase::visitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const
-{
-    return func(calc);
-}
-
 UnevaluatedCalcBase UnevaluatedCalcBase::simplifyBase(const CSSToLengthConversionData& conversionData, const CSSCalcSymbolTable& symbolTable) const
 {
     return UnevaluatedCalcBase { protectedCalc()->copySimplified(conversionData, symbolTable) };
 }
 
-double UnevaluatedCalcBase::evaluate(Calculation::Category category, const Style::BuilderState& state) const
+double UnevaluatedCalcBase::evaluate(CSS::Category category, const Style::BuilderState& state) const
 {
     return evaluate(category, state.cssToLengthConversionData(), { });
 }
 
-double UnevaluatedCalcBase::evaluate(Calculation::Category category, const Style::BuilderState& state, const CSSCalcSymbolTable& symbolTable) const
+double UnevaluatedCalcBase::evaluate(CSS::Category category, const Style::BuilderState& state, const CSSCalcSymbolTable& symbolTable) const
 {
     return evaluate(category, state.cssToLengthConversionData(), symbolTable);
 }
 
-double UnevaluatedCalcBase::evaluate(Calculation::Category category, const CSSToLengthConversionData& conversionData) const
+double UnevaluatedCalcBase::evaluate(CSS::Category category, const CSSToLengthConversionData& conversionData) const
 {
     return evaluate(category, conversionData, { });
 }
 
-double UnevaluatedCalcBase::evaluate(Calculation::Category category, const CSSToLengthConversionData& conversionData, const CSSCalcSymbolTable& symbolTable) const
+double UnevaluatedCalcBase::evaluate(CSS::Category category, const CSSToLengthConversionData& conversionData, const CSSCalcSymbolTable& symbolTable) const
 {
     ASSERT_UNUSED(category, protectedCalc()->category() == category);
     return protectedCalc()->doubleValue(conversionData, symbolTable);
 }
 
-double UnevaluatedCalcBase::evaluate(Calculation::Category category, NoConversionDataRequiredToken token) const
+double UnevaluatedCalcBase::evaluate(CSS::Category category, NoConversionDataRequiredToken token) const
 {
     return evaluate(category, token, { });
 }
 
-double UnevaluatedCalcBase::evaluate(Calculation::Category category, NoConversionDataRequiredToken token, const CSSCalcSymbolTable& symbolTable) const
+double UnevaluatedCalcBase::evaluate(CSS::Category category, NoConversionDataRequiredToken token, const CSSCalcSymbolTable& symbolTable) const
 {
     ASSERT_UNUSED(category, protectedCalc()->category() == category);
     return protectedCalc()->doubleValue(token, symbolTable);

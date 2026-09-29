@@ -34,8 +34,6 @@ public:
     {
     }
 
-    ~SVGVisitedElementTracking() = default;
-
     bool isEmpty() const { return m_visitedElements.isEmptyIgnoringNullReferences(); }
     bool isVisiting(const SVGElement& element) { return m_visitedElements.contains(element); }
 

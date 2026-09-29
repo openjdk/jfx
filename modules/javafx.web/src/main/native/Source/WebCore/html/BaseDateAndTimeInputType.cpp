@@ -36,9 +36,12 @@
 #include "BaseClickableWithKeyInputType.h"
 #include "Chrome.h"
 #include "ContainerNodeInlines.h"
+#include "CSSSelector.h"
 #include "DateComponents.h"
 #include "DateTimeChooserParameters.h"
 #include "Decimal.h"
+#include "DocumentPage.h"
+#include "DocumentView.h"
 #include "FocusController.h"
 #include "HTMLDataListElement.h"
 #include "HTMLDivElement.h"
@@ -48,8 +51,8 @@
 #include "KeyboardEvent.h"
 #include "LocalFrameView.h"
 #include "NodeName.h"
-#include "Page.h"
 #include "PlatformLocale.h"
+#include "PseudoClassChangeInvalidation.h"
 #include "RenderElement.h"
 #include "ScriptDisallowedScope.h"
 #include "Settings.h"
@@ -268,16 +271,6 @@ ValueOrReference<String> BaseDateAndTimeInputType::sanitizeValue(const String& p
     return proposedValue;
 }
 
-bool BaseDateAndTimeInputType::supportsReadOnly() const
-{
-    return true;
-}
-
-bool BaseDateAndTimeInputType::shouldRespectListAttribute()
-{
-    return false;
-}
-
 bool BaseDateAndTimeInputType::valueMissing(const String& value) const
 {
     ASSERT(element());
@@ -324,15 +317,34 @@ void BaseDateAndTimeInputType::setValue(const String& value, bool valueChanged, 
         updateInnerTextValue();
 }
 
-void BaseDateAndTimeInputType::handleDOMActivateEvent(Event&)
+void BaseDateAndTimeInputType::handleDOMActivateEvent(Event& event)
 {
     ASSERT(element());
     if (!element()->renderer() || !protectedElement()->isMutable() || !UserGestureIndicator::processingUserGesture())
         return;
 
+    m_pickerWasActivatedByKeyboard = is<KeyboardEvent>(event);
+
     if (m_dateTimeChooser)
         return;
 
+    showPicker();
+}
+
+void BaseDateAndTimeInputType::handleAccessibilityActivation()
+{
+    RefPtr element = this->element();
+    if (!element || !element->renderer() || !element->isMutable())
+        return;
+
+    // Consider accessibility activations to be keyboard activations for the purpose of
+    // moving focus into the picker when it's displayed.
+    m_pickerWasActivatedByKeyboard = true;
+
+    if (m_dateTimeChooser)
+        return;
+
+    m_didTransferFocusToPicker = true;
     showPicker();
 }
 
@@ -341,17 +353,23 @@ void BaseDateAndTimeInputType::showPicker()
     if (!element()->renderer())
         return;
 
-    if (!element()->document().page())
+    Ref document = element()->document();
+    if (!document->page())
         return;
 
     DateTimeChooserParameters parameters;
     if (!setupDateTimeChooserParameters(parameters))
         return;
 
+
+#if PLATFORM(IOS_FAMILY)
+    if (CheckedPtr cache = document->existingAXObjectCache())
+        cache->setWillPresentDatePopover(true);
+#endif
+
     if (auto* chrome = this->chrome()) {
         m_dateTimeChooser = chrome->createDateTimeChooser(*this);
-        if (RefPtr dateTimeChooser = m_dateTimeChooser)
-            dateTimeChooser->showChooser(parameters);
+        showDateTimeChooser(parameters);
     }
 }
 
@@ -401,7 +419,7 @@ void BaseDateAndTimeInputType::updateInnerTextValue()
             // Need to put something to keep text baseline.
             displayValue = " "_s;
         }
-        firstChildElement->setInnerText(WTFMove(displayValue));
+        firstChildElement->setInnerText(WTF::move(displayValue));
         return;
     }
 
@@ -469,9 +487,22 @@ void BaseDateAndTimeInputType::detach()
     closeDateTimeChooser();
 }
 
-bool BaseDateAndTimeInputType::isPresentingAttachedView() const
+void BaseDateAndTimeInputType::setPopupIsVisible(bool visible)
 {
-    return !!m_dateTimeChooser;
+    if (m_popupIsVisible == visible || !element())
+        return;
+    Style::PseudoClassChangeInvalidation styleInvalidation(*protectedElement(), CSSSelector::PseudoClass::Open, visible);
+    m_popupIsVisible = visible;
+}
+
+void BaseDateAndTimeInputType::showDateTimeChooser(const DateTimeChooserParameters& parameters)
+{
+    RefPtr dateTimeChooser = m_dateTimeChooser;
+    if (!dateTimeChooser)
+        return;
+
+    setPopupIsVisible(true);
+    dateTimeChooser->showChooser(parameters);
 }
 
 auto BaseDateAndTimeInputType::handleKeydownEvent(KeyboardEvent& event) -> ShouldCallBaseEventHandler
@@ -564,8 +595,23 @@ void BaseDateAndTimeInputType::didChangeValueFromControl()
     if (!setupDateTimeChooserParameters(parameters))
         return;
 
-    if (RefPtr dateTimeChooser = m_dateTimeChooser)
-        dateTimeChooser->showChooser(parameters);
+    showDateTimeChooser(parameters);
+}
+
+void BaseDateAndTimeInputType::didReceiveSpaceKeyFromControl()
+{
+    // One of our subfields received a space key event, so let's move focus into the picker.
+    m_pickerWasActivatedByKeyboard = true;
+    m_didTransferFocusToPicker = true;
+
+    if (!m_dateTimeChooser) {
+        showPicker();
+        return;
+    }
+
+    DateTimeChooserParameters parameters;
+    if (setupDateTimeChooserParameters(parameters))
+        showDateTimeChooser(parameters);
 }
 
 bool BaseDateAndTimeInputType::isEditControlOwnerDisabled() const
@@ -592,11 +638,18 @@ void BaseDateAndTimeInputType::didChooseValue(StringView value)
     protectedElement()->setValue(value.toString(), DispatchInputAndChangeEvent);
 }
 
+void BaseDateAndTimeInputType::didEndChooser()
+{
+    m_dateTimeChooser = nullptr;
+    setPopupIsVisible(false);
+}
+
 bool BaseDateAndTimeInputType::setupDateTimeChooserParameters(DateTimeChooserParameters& parameters)
 {
-    ASSERT(element());
+    RefPtr element = this->element();
+    if (!element)
+        return false;
 
-    Ref element = *this->element();
     Ref document = element->document();
 
     if (!document->view())
@@ -635,6 +688,7 @@ bool BaseDateAndTimeInputType::setupDateTimeChooserParameters(DateTimeChooserPar
     auto date = valueOrDefault(parseToDateComponents(element->value().get()));
     parameters.hasSecondField = shouldHaveSecondField(date);
     parameters.hasMillisecondField = shouldHaveMillisecondField(date);
+    parameters.wasActivatedByKeyboard = m_pickerWasActivatedByKeyboard;
 
     if (auto dataList = element->dataList()) {
         for (Ref option : dataList->suggestions()) {
@@ -655,6 +709,10 @@ void BaseDateAndTimeInputType::closeDateTimeChooser()
 {
     if (RefPtr dateTimeChooser = m_dateTimeChooser)
         dateTimeChooser->endChooser();
+    setPopupIsVisible(false);
+
+    m_didTransferFocusToPicker = false;
+    m_pickerWasActivatedByKeyboard = false;
 }
 
 } // namespace WebCore

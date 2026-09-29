@@ -10,7 +10,7 @@ API/JSTypedArray.cpp
 API/JSWrapperMap.mm
 API/tests/CompareAndSwapTest.cpp
 API/tests/testapi.cpp
-assembler/LinkBuffer.cpp
+[ Mac ] assembler/LinkBuffer.cpp
 b3/B3PatchpointSpecial.cpp
 b3/B3Procedure.cpp
 b3/air/AirAllocateRegistersAndStackAndGenerateCode.cpp
@@ -36,7 +36,6 @@ bytecode/SetPrivateBrandStatus.cpp
 bytecode/SharedJITStubSet.h
 bytecode/StructureStubInfo.cpp
 bytecode/UnlinkedFunctionExecutable.cpp
-bytecode/Watchpoint.h
 bytecompiler/BytecodeGenerator.cpp
 bytecompiler/BytecodeGenerator.h
 bytecompiler/NodesCodegen.cpp
@@ -63,7 +62,6 @@ ftl/FTLCompile.cpp
 ftl/FTLFail.cpp
 ftl/FTLJITFinalizer.cpp
 ftl/FTLLazySlowPath.cpp
-ftl/FTLLink.cpp
 ftl/FTLLowerDFGToB3.cpp
 ftl/FTLSlowPathCall.cpp
 ftl/FTLState.cpp
@@ -74,10 +72,7 @@ heap/JITStubRoutineSet.cpp
 heap/MarkingConstraintSolver.cpp
 heap/ParallelSourceAdapter.h
 heap/SubspaceInlines.h
-heap/VerifierSlotVisitor.cpp
 inspector/ConsoleMessage.cpp
-inspector/InspectorFrontendDispatchers.cpp
-inspector/InspectorProtocolObjects.h
 inspector/JSGlobalObjectInspectorController.cpp
 inspector/JSInjectedScriptHost.cpp
 inspector/JSJavaScriptCallFrame.cpp
@@ -88,13 +83,11 @@ inspector/agents/InspectorConsoleAgent.cpp
 inspector/agents/InspectorDebuggerAgent.cpp
 inspector/agents/InspectorHeapAgent.cpp
 inspector/agents/InspectorScriptProfilerAgent.cpp
-inspector/agents/InspectorTargetAgent.cpp
 inspector/agents/JSGlobalObjectRuntimeAgent.cpp
-inspector/remote/cocoa/RemoteInspectorCocoa.mm
 jit/BaselineJITPlan.cpp
 jit/ExecutableAllocator.cpp
 jit/GCAwareJITStubRoutine.cpp
-jit/GdbJIT.cpp
+[ iOS ] jit/GdbJIT.cpp
 jit/ICStats.cpp
 jit/ICStats.h
 jit/JIT.cpp
@@ -114,8 +107,6 @@ parser/UnlinkedSourceCode.cpp
 parser/UnlinkedSourceCode.h
 profiler/ProfilerDatabase.cpp
 profiler/ProfilerEvent.cpp
-runtime/ArrayBuffer.cpp
-runtime/ArrayBuffer.h
 runtime/ArrayBufferView.cpp
 runtime/ArrayBufferView.h
 runtime/AtomicsObject.cpp
@@ -167,15 +158,12 @@ wasm/WasmBBQJIT64.cpp
 wasm/WasmBBQPlan.cpp
 wasm/WasmCallee.cpp
 wasm/WasmCalleeGroup.cpp
-wasm/WasmConstExprGenerator.cpp
 wasm/WasmEntryPlan.cpp
 wasm/WasmFormat.h
 wasm/WasmFunctionParser.h
 wasm/WasmIPIntGenerator.cpp
 wasm/WasmIPIntPlan.cpp
 wasm/WasmIPIntSlowPaths.cpp
-wasm/WasmLLIntGenerator.cpp
-wasm/WasmLLIntPlan.cpp
 wasm/WasmMemory.cpp
 wasm/WasmMemory.h
 wasm/WasmOMGIRGenerator.cpp
@@ -185,24 +173,19 @@ wasm/WasmOperations.cpp
 wasm/WasmOperationsInlines.h
 wasm/WasmPlan.cpp
 wasm/WasmSectionParser.cpp
-wasm/WasmSlowPaths.cpp
 wasm/WasmStreamingCompiler.cpp
 wasm/WasmStreamingParser.cpp
-wasm/WasmTag.h
 wasm/WasmTypeDefinition.cpp
 wasm/WasmTypeDefinition.h
 wasm/WasmTypeDefinitionInlines.h
 wasm/WasmWorklist.cpp
+[ iOS ] wasm/debugger/WasmModuleDebugInfo.cpp
 wasm/js/JSWebAssembly.cpp
-wasm/js/JSWebAssemblyArray.h
-wasm/js/JSWebAssemblyException.cpp
 wasm/js/JSWebAssemblyHelpers.h
 wasm/js/JSWebAssemblyInstance.cpp
 wasm/js/JSWebAssemblyInstance.h
 wasm/js/JSWebAssemblyMemory.cpp
 wasm/js/JSWebAssemblyMemory.h
-wasm/js/JSWebAssemblyStruct.cpp
-wasm/js/JSWebAssemblyStruct.h
 wasm/js/WasmToJS.cpp
 wasm/js/WebAssemblyFunction.h
 wasm/js/WebAssemblyInstanceConstructor.cpp

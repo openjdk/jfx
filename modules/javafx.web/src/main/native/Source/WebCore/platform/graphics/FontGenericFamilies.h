@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "WebKitFontFamilyNames.h"
+#include <WebCore/WebKitFontFamilyNames.h>
 #include <unicode/uscript.h>
 #include <wtf/HashMap.h>
 #include <wtf/TZoneMalloc.h>
@@ -60,6 +60,7 @@ public:
     const String& cursiveFontFamily(UScriptCode = USCRIPT_COMMON) const;
     const String& fantasyFontFamily(UScriptCode = USCRIPT_COMMON) const;
     const String& pictographFontFamily(UScriptCode = USCRIPT_COMMON) const;
+    const String& mathFontFamily(UScriptCode = USCRIPT_COMMON) const;
 
     const String* fontFamily(WebKitFontFamilyNames::FamilyNamesIndex, UScriptCode = USCRIPT_COMMON) const;
 
@@ -70,6 +71,7 @@ public:
     bool setCursiveFontFamily(const String&, UScriptCode);
     bool setFantasyFontFamily(const String&, UScriptCode);
     bool setPictographFontFamily(const String&, UScriptCode);
+    bool setMathFontFamily(const String&, UScriptCode);
 
 private:
     ScriptFontFamilyMap m_standardFontFamilyMap;
@@ -79,6 +81,7 @@ private:
     ScriptFontFamilyMap m_cursiveFontFamilyMap;
     ScriptFontFamilyMap m_fantasyFontFamilyMap;
     ScriptFontFamilyMap m_pictographFontFamilyMap;
+    ScriptFontFamilyMap m_mathFontFamilyMap;
 };
 
 }

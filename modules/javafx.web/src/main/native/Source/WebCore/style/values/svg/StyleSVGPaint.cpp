@@ -27,152 +27,104 @@
 
 #include "AnimationUtilities.h"
 #include "CSSURLValue.h"
-#include "ColorBlending.h"
-#include "RenderStyle.h"
+#include "RenderStyle+SettersInlines.h"
 #include "StyleBuilderChecking.h"
-#include "StyleColor.h"
 #include "StyleForVisitedLink.h"
-#include <wtf/text/TextStream.h>
 
 namespace WebCore {
 namespace Style {
 
+bool containsCurrentColor(const Style::SVGPaint& paint)
+{
+    if (auto color = paint.tryAnyColor())
+        return color->containsCurrentColor();
+    return false;
+}
+
+// MARK: - Conversion
+
 auto CSSValueConversion<SVGPaint>::operator()(BuilderState& state, const CSSValue& value, ForVisitedLink forVisitedLink) -> SVGPaint
 {
-    // <paint> = none | <color> | <url> [none | <color>]?
-
     if (RefPtr list = dynamicDowncast<CSSValueList>(value)) {
         RefPtr firstValue = list->item(0);
         RefPtr urlValue = requiredDowncast<CSSURLValue>(state, *firstValue);
-        if (!urlValue) {
-            return {
-                .type = SVGPaintType::None,
-                .url = URL::none(),
-                .color = Color::currentColor()
-            };
-        }
+        if (!urlValue)
+            return CSS::Keyword::None { };
 
         auto url = toStyle(urlValue->url(), state);
 
-        if (list->size() == 1) {
-            return {
-                .type = SVGPaintType::URI,
-                .url = WTFMove(url),
-            };
-        }
+        if (list->size() == 1)
+            return url;
 
         RefPtr secondItem = list->item(1);
         if (RefPtr primitiveValue = dynamicDowncast<const CSSPrimitiveValue>(secondItem)) {
             switch (primitiveValue->valueID()) {
             case CSSValueNone:
-                return {
-                    .type = SVGPaintType::URINone,
-                    .url = WTFMove(url),
-                };
-            case CSSValueCurrentcolor: {
+                return SVGPaint::URLNone { url, CSS::Keyword::None { } };
+
+            case CSSValueCurrentcolor:
                 state.style().setDisallowsFastPathInheritance();
-                return {
-                    .type = SVGPaintType::URICurrentColor,
-                    .url = WTFMove(url),
-                    .color = Color::currentColor(),
-                };
-            }
+                return SVGPaint::URLColor { url, Color::currentColor() };
+
             default:
                 break;
             }
         }
 
-        return {
-            .type = SVGPaintType::URIRGBColor,
-            .url = WTFMove(url),
-            .color = toStyleFromCSSValue<Color>(state, *list->protectedItem(1), forVisitedLink)
-        };
+        return SVGPaint::URLColor { url, toStyleFromCSSValue<Color>(state, *list->protectedItem(1), forVisitedLink) };
     }
 
-
-    if (RefPtr urlValue = dynamicDowncast<CSSURLValue>(value)) {
-        return {
-            .type = SVGPaintType::URI,
-            .url = toStyle(urlValue->url(), state),
-        };
-    }
+    if (RefPtr urlValue = dynamicDowncast<CSSURLValue>(value))
+        return toStyle(urlValue->url(), state);
 
     if (RefPtr primitiveValue = dynamicDowncast<CSSPrimitiveValue>(value)) {
         switch (primitiveValue->valueID()) {
         case CSSValueNone:
-            return {
-                .type = SVGPaintType::None,
-            };
-        case CSSValueCurrentcolor: {
+            return CSS::Keyword::None { };
+
+        case CSSValueCurrentcolor:
             state.style().setDisallowsFastPathInheritance();
-            return {
-                .type = SVGPaintType::CurrentColor,
-                .color = Color::currentColor(),
-            };
-        }
+            return Color { Color::currentColor() };
+
         default:
             break;
         }
     }
 
-    return {
-        .type = SVGPaintType::RGBColor,
-        .color = toStyleFromCSSValue<Color>(state, value, forVisitedLink)
-    };
+    return toStyleFromCSSValue<Color>(state, value, forVisitedLink);
 }
 
 // MARK: - Blending
 
 auto Blending<SVGPaint>::equals(const SVGPaint& a, const SVGPaint& b, const RenderStyle& aStyle, const RenderStyle& bStyle) -> bool
 {
-    if (a.type != b.type)
+    if (!a.hasSameType(b))
         return false;
 
     // We only support animations between SVGPaints that are pure Color values.
     // For everything else we must return true for this method, otherwise
     // we will try to animate between values forever.
-    if (a.type == SVGPaintType::RGBColor)
-        return equalsForBlending(a.color, b.color, aStyle, bStyle);
+
+    if (a.isColor())
+        return equalsForBlending(a.colorDisregardingType(), b.colorDisregardingType(), aStyle, bStyle);
 
     return true;
 }
 
 auto Blending<SVGPaint>::canBlend(const SVGPaint& a, const SVGPaint& b) -> bool
 {
-    auto isValidPaintType = [](SVGPaintType paintType) {
-        return paintType == SVGPaintType::RGBColor || paintType == SVGPaintType::CurrentColor;
-    };
-
-    if (!isValidPaintType(a.type) || !isValidPaintType(b.type))
+    if (!a.isColor() || !b.isColor())
         return false;
-    if (a.color.isCurrentColor() && b.color.isCurrentColor())
-        return false;
-    return true;
+    return Style::canBlend(a.colorDisregardingType(), b.colorDisregardingType());
 }
 
 auto Blending<SVGPaint>::blend(const SVGPaint& a, const SVGPaint& b, const RenderStyle& aStyle, const RenderStyle& bStyle, const BlendingContext& context) -> SVGPaint
 {
-    return SVGPaint {
-        .type = a.type,
-        .url = URL::none(),
-        .color = WebCore::blend(aStyle.colorResolvingCurrentColor(a.color), bStyle.colorResolvingCurrentColor(b.color), context)
-    };
-}
-
-// MARK: - Logging
-
-TextStream& operator<<(TextStream& ts, SVGPaintType paintType)
-{
-    switch (paintType) {
-    case SVGPaintType::RGBColor: ts << "rgb-color"_s; break;
-    case SVGPaintType::None: ts << "none"_s; break;
-    case SVGPaintType::CurrentColor: ts << "current-color"_s; break;
-    case SVGPaintType::URINone: ts << "uri-none"_s; break;
-    case SVGPaintType::URICurrentColor: ts << "uri-current-color"_s; break;
-    case SVGPaintType::URIRGBColor: ts << "uri-rgb-color"_s; break;
-    case SVGPaintType::URI: ts << "uri"_s; break;
+    if (context.isDiscrete) {
+        ASSERT(!context.progress || context.progress == 1);
+        return context.progress ? b : a;
     }
-    return ts;
+    return Style::blend(a.colorDisregardingType(), b.colorDisregardingType(), aStyle, bStyle, context);
 }
 
 } // namespace Style

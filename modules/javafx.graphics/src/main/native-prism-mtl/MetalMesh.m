@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -60,9 +60,8 @@ typedef struct
         numVertices = vbCount;
     }
 
-    NSUInteger currentIndex = [context getCurrentBufferIndex];
-    if (vertexBuffer[currentIndex] != nil) {
-        memcpy(vertexBuffer[currentIndex].contents, vb, size);
+    if (vertexBuffer != nil) {
+        memcpy(vertexBuffer.contents, vb, size);
     }
 
     size = ibSize * sizeof (unsigned short);
@@ -72,8 +71,8 @@ typedef struct
         numIndices = ibSize;
     }
 
-    if (indexBuffer[currentIndex] != nil) {
-        memcpy(indexBuffer[currentIndex].contents, ib, size);
+    if (indexBuffer != nil) {
+        memcpy(indexBuffer.contents, ib, size);
     }
     indexType = MTLIndexTypeUInt16;
     return true;
@@ -94,9 +93,8 @@ typedef struct
         numVertices = vbCount;
     }
 
-    NSUInteger currentIndex = [context getCurrentBufferIndex];
-    if (vertexBuffer[currentIndex] != nil) {
-        memcpy(vertexBuffer[currentIndex].contents, vb, size);
+    if (vertexBuffer != nil) {
+        memcpy(vertexBuffer.contents, vb, size);
     }
 
     size = ibSize * sizeof (unsigned int);
@@ -106,8 +104,8 @@ typedef struct
         numIndices = ibSize;
     }
 
-    if (indexBuffer[currentIndex] != nil) {
-        memcpy(indexBuffer[currentIndex].contents, ib, size);
+    if (indexBuffer != nil) {
+        memcpy(indexBuffer.contents, ib, size);
     }
 
     indexType = MTLIndexTypeUInt32;
@@ -124,45 +122,39 @@ typedef struct
 - (void) createVertexBuffer:(unsigned int)size;
 {
     id<MTLDevice> device = [context getDevice];
-    for (int i = 0; i < BUFFER_SIZE; i++) {
-        vertexBuffer[i] = [device newBufferWithLength:size
-            options:MTLResourceStorageModeShared];
-    }
+    vertexBuffer = [device newBufferWithLength:size
+        options:MTLResourceStorageModeShared];
 }
 
 - (void) releaseVertexBuffer
 {
-    for (int i = 0; i < BUFFER_SIZE; i++) {
-        vertexBuffer[i] = nil;
-    }
+    [vertexBuffer release];
+    vertexBuffer = nil;
     numVertices = 0;
 }
 
 - (void) createIndexBuffer:(unsigned int)size;
 {
     id<MTLDevice> device = [context getDevice];
-    for (int i = 0; i < BUFFER_SIZE; i++) {
-        indexBuffer[i] = [device newBufferWithLength:size
-            options:MTLResourceStorageModeShared];
-    }
+    indexBuffer = [device newBufferWithLength:size
+        options:MTLResourceStorageModeShared];
 }
 
 - (void) releaseIndexBuffer
 {
-    for (int i = 0; i < BUFFER_SIZE; i++) {
-        indexBuffer[i] = nil;
-    }
+    [indexBuffer release];
+    indexBuffer = nil;
     numIndices = 0;
 }
 
 - (id<MTLBuffer>) getVertexBuffer
 {
-    return vertexBuffer[[context getCurrentBufferIndex]];
+    return vertexBuffer;
 }
 
 - (id<MTLBuffer>) getIndexBuffer
 {
-    return indexBuffer[[context getCurrentBufferIndex]];
+    return indexBuffer;
 }
 
 - (NSUInteger) getNumVertices

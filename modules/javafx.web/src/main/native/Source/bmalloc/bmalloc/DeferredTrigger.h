@@ -25,6 +25,10 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
+#include "BPlatform.h"
+
 #if !BUSE(TZONE)
 
 #include "IsoPageTrigger.h"
@@ -40,8 +44,6 @@ template<typename Config> class IsoPage;
 template<IsoPageTrigger trigger>
 class DeferredTrigger {
 public:
-    DeferredTrigger() { }
-
     template<typename Config>
     void didBecome(const LockHolder&, IsoPage<Config>&);
 
@@ -56,3 +58,5 @@ private:
 
 #endif
 #endif // !BUSE(TZONE)
+
+#endif // __cplusplus

@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "Frame.h"
-#include "LayerHostingContextIdentifier.h"
+#include <WebCore/Frame.h>
+#include <WebCore/LayerHostingContextIdentifier.h>
 #include <wtf/RefPtr.h>
 #include <wtf/TypeCasts.h>
 #include <wtf/UniqueRef.h>
@@ -42,6 +42,8 @@ class WeakPtrImplWithEventTargetData;
 enum class AdvancedPrivacyProtections : uint16_t;
 enum class AutoplayPolicy : uint8_t;
 enum class RenderAsTextFlag : uint16_t;
+
+struct AccessibilityRemoteToken;
 
 class RemoteFrame final : public Frame {
 public:
@@ -62,16 +64,16 @@ public:
     Markable<LayerHostingContextIdentifier> layerHostingContextIdentifier() const { return m_layerHostingContextIdentifier; }
 
     String renderTreeAsText(size_t baseIndent, OptionSet<RenderAsTextFlag>);
-    void bindRemoteAccessibilityFrames(int processIdentifier, Vector<uint8_t>&&, CompletionHandler<void(Vector<uint8_t>, int)>&&);
+    void bindRemoteAccessibilityFrames(int processIdentifier, AccessibilityRemoteToken, CompletionHandler<void(AccessibilityRemoteToken, int)>&&);
     void updateRemoteFrameAccessibilityOffset(IntPoint);
     void unbindRemoteAccessibilityFrames(int);
 
-    void setCustomUserAgent(String&& customUserAgent) { m_customUserAgent = WTFMove(customUserAgent); }
+    void setCustomUserAgent(String&& customUserAgent) { m_customUserAgent = WTF::move(customUserAgent); }
     String customUserAgent() const final;
-    void setCustomUserAgentAsSiteSpecificQuirks(String&& customUserAgentAsSiteSpecificQuirks) { m_customUserAgentAsSiteSpecificQuirks = WTFMove(customUserAgentAsSiteSpecificQuirks); }
+    void setCustomUserAgentAsSiteSpecificQuirks(String&& customUserAgentAsSiteSpecificQuirks) { m_customUserAgentAsSiteSpecificQuirks = WTF::move(customUserAgentAsSiteSpecificQuirks); }
     String customUserAgentAsSiteSpecificQuirks() const final;
 
-    void setCustomNavigatorPlatform(String&& customNavigatorPlatform) { m_customNavigatorPlatform = WTFMove(customNavigatorPlatform); }
+    void setCustomNavigatorPlatform(String&& customNavigatorPlatform) { m_customNavigatorPlatform = WTF::move(customNavigatorPlatform); }
     String customNavigatorPlatform() const final;
 
     void setAdvancedPrivacyProtections(OptionSet<AdvancedPrivacyProtections> advancedPrivacyProtections) { m_advancedPrivacyProtections = advancedPrivacyProtections; }
@@ -81,6 +83,8 @@ public:
     AutoplayPolicy autoplayPolicy() const final;
 
     void updateScrollingMode() final;
+    void reportMixedContentViolation(bool blocked, const URL& target) const final;
+    const SecurityOrigin& frameDocumentSecurityOriginOrOpaque() const;
 
 private:
     WEBCORE_EXPORT explicit RemoteFrame(Page&, ClientCreator&&, FrameIdentifier, HTMLFrameOwnerElement*, Frame* parent, Markable<LayerHostingContextIdentifier>, Frame* opener, Ref<FrameTreeSyncData>&&, AddToFrameTree = AddToFrameTree::Yes);
@@ -88,10 +92,12 @@ private:
     void frameDetached() final;
     bool preventsParentFromBeingComplete() const final;
     void changeLocation(FrameLoadRequest&&) final;
+    void loadFrameRequest(FrameLoadRequest&&, Event*) final;
     void didFinishLoadInAnotherProcess() final;
     bool isRootFrame() const final { return false; }
     void documentURLForConsoleLog(CompletionHandler<void(const URL&)>&&) final;
-    RefPtr<SecurityOrigin> frameDocumentSecurityOrigin() const final;
+    SecurityOrigin* frameDocumentSecurityOrigin() const final;
+    String frameURLProtocol() const final;
 
     FrameView* virtualView() const final;
     void disconnectView() final;

@@ -233,7 +233,7 @@ void HTMLScriptRunner::requestDeferredScript(ScriptElement& scriptElement)
 {
     auto pendingScript = requestPendingScript(scriptElement);
     ASSERT(pendingScript->needsLoading());
-    m_scriptsToExecuteAfterParsing.append(WTFMove(pendingScript));
+    m_scriptsToExecuteAfterParsing.append(WTF::move(pendingScript));
 }
 
 // This method is meant to match the HTML5 definition of "running a script"

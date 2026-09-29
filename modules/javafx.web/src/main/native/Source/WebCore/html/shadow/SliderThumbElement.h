@@ -41,7 +41,7 @@ class HTMLInputElement;
 class TouchEvent;
 
 class SliderThumbElement final : public HTMLDivElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SliderThumbElement);
+    WTF_MAKE_TZONE_ALLOCATED(SliderThumbElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SliderThumbElement);
 public:
     static Ref<SliderThumbElement> create(Document&);
@@ -88,9 +88,8 @@ private:
     void handleTouchMove(TouchEvent&);
     void handleTouchEndAndCancel(TouchEvent&);
 
-    bool shouldAcceptTouchEvents();
     void registerForTouchEvents();
-    void unregisterForTouchEvents();
+    void unregisterForTouchEvents(EventHandlerRemovalReason = EventHandlerRemovalReason::Other);
 #endif
 
     bool m_inDragMode { false };
@@ -103,10 +102,11 @@ private:
     bool m_isRegisteredAsTouchEventListener { false };
 #endif
 };
+
 // --------------------------------
 
 class SliderContainerElement final : public HTMLDivElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SliderContainerElement);
+    WTF_MAKE_TZONE_ALLOCATED(SliderContainerElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SliderContainerElement);
 public:
     static Ref<SliderContainerElement> create(Document&);

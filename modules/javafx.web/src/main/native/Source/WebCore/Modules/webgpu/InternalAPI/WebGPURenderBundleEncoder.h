@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "WebGPUIndexFormat.h"
-#include "WebGPUIntegralTypes.h"
-#include "WebGPURenderBundleDescriptor.h"
+#include <WebCore/WebGPUIndexFormat.h>
+#include <WebCore/WebGPUIntegralTypes.h>
+#include <WebCore/WebGPURenderBundleDescriptor.h>
 #include <cstdint>
 #include <optional>
 #include <wtf/Ref.h>
@@ -51,7 +51,7 @@ public:
 
     void setLabel(String&& label)
     {
-        m_label = WTFMove(label);
+        m_label = WTF::move(label);
         setLabelInternal(m_label);
     }
 
@@ -83,6 +83,8 @@ public:
     virtual void insertDebugMarker(String&& markerLabel) = 0;
 
     virtual RefPtr<RenderBundle> finish(const RenderBundleDescriptor&) = 0;
+    virtual bool isRemoteRenderBundleEncoderProxy() const { return false; }
+    virtual bool isRenderBundleEncoderImpl() const { return false; }
 
 protected:
     RenderBundleEncoder() = default;

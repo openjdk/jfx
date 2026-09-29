@@ -30,7 +30,9 @@ interface ToggleEvent : Event {
     readonly attribute DOMString newState;
 };
 
-dictionary ToggleEventInit : EventInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary ToggleEventInit : EventInit {
     DOMString oldState = "";
     DOMString newState = "";
 };

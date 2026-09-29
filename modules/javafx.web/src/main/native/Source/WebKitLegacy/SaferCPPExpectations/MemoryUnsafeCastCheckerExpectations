@@ -1,5 +1,7 @@
 Storage/WebStorageNamespaceProvider.cpp
 WebCoreSupport/WebResourceLoadScheduler.cpp
+[ iOS ] ios/WebCoreSupport/WebFixedPositionContent.mm
+[ iOS ] mac/DOM/DOM.mm
 mac/DOM/DOMAttr.mm
 mac/DOM/DOMCDATASection.mm
 mac/DOM/DOMCSSImportRule.mm
@@ -69,36 +71,35 @@ mac/DOM/DOMHTMLTextAreaElement.mm
 mac/DOM/DOMHTMLTitleElement.mm
 mac/DOM/DOMHTMLUListElement.mm
 mac/DOM/DOMHTMLVideoElement.mm
-mac/DOM/DOMInternal.mm
 mac/DOM/DOMKeyboardEvent.mm
 mac/DOM/DOMMouseEvent.mm
 mac/DOM/DOMMutationEvent.mm
 mac/DOM/DOMNode.mm
 mac/DOM/DOMObject.mm
-mac/DOM/DOMOverflowEvent.mm
 mac/DOM/DOMProcessingInstruction.mm
 mac/DOM/DOMProgressEvent.mm
 mac/DOM/DOMText.mm
 mac/DOM/DOMTextEvent.mm
 mac/DOM/DOMUIEvent.mm
+[ iOS ] mac/DOM/DOMUIKitExtensions.mm
 mac/DOM/DOMUtility.mm
 mac/DOM/DOMWheelEvent.mm
 mac/DOM/ObjCEventListener.h
 mac/DOM/WebDOMOperations.mm
 mac/Misc/WebNSViewExtras.m
 mac/WebCoreSupport/WebChromeClient.mm
-mac/WebCoreSupport/WebContextMenuClient.mm
-mac/WebCoreSupport/WebDragClient.mm
+[ Mac ] mac/WebCoreSupport/WebContextMenuClient.mm
+[ Mac ] mac/WebCoreSupport/WebDragClient.mm
 mac/WebCoreSupport/WebEditorClient.mm
 mac/WebCoreSupport/WebFrameLoaderClient.mm
 mac/WebCoreSupport/WebSecurityOrigin.mm
-mac/WebView/WebDataSource.mm
-mac/WebView/WebDynamicScrollBarsView.mm
+[ iOS ] mac/WebInspector/WebNodeHighlight.mm
+[ Mac ] mac/WebView/WebDynamicScrollBarsView.mm
 mac/WebView/WebFrame.mm
 mac/WebView/WebFrameView.mm
 mac/WebView/WebHTMLRepresentation.mm
 mac/WebView/WebHTMLView.mm
-mac/WebView/WebPDFRepresentation.mm
+[ Mac ] mac/WebView/WebPDFRepresentation.mm
 mac/WebView/WebScriptDebugger.mm
-mac/WebView/WebVideoFullscreenController.mm
+[ Mac ] mac/WebView/WebVideoFullscreenController.mm
 mac/WebView/WebView.mm

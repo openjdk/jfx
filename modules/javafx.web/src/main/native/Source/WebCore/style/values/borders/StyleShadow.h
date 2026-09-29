@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,9 +25,9 @@
 
 #pragma once
 
-#include "FloatRect.h"
-#include "LayoutRect.h"
-#include "WritingMode.h"
+#include <WebCore/FloatRect.h>
+#include <WebCore/LayoutRect.h>
+#include <WebCore/WritingMode.h>
 #include <wtf/FixedVector.h>
 
 namespace WebCore {
@@ -34,30 +35,30 @@ namespace Style {
 
 enum class ShadowStyle : bool { Normal, Inset };
 
-template<typename T> concept Shadow = requires(const T& shadow) {
+template<typename T> concept Shadow = requires(const T& shadow, const Style::ZoomFactor& zoomFactor) {
     { shadowStyle(shadow) } -> std::same_as<ShadowStyle>;
     { isInset(shadow) } -> std::same_as<bool>;
-    { paintingSpread(shadow) } -> std::same_as<LayoutUnit>;
+    { paintingSpread(shadow, zoomFactor) } -> std::same_as<LayoutUnit>;
 };
 
 template<typename ShadowType> using ShadowList = CommaSeparatedFixedVector<ShadowType>;
 template<typename ShadowType> struct Shadows : ListOrNone<ShadowList<ShadowType>> { using ListOrNone<ShadowList<ShadowType>>::ListOrNone; };
 
-LayoutUnit paintingExtent(Shadow auto const& shadow)
+LayoutUnit paintingExtent(Shadow auto const& shadow, const Style::ZoomFactor& zoomFactor)
 {
     // Blurring uses a Gaussian function whose std. deviation is m_radius/2, and which in theory
     // extends to infinity. In 8-bit contexts, however, rounding causes the effect to become
     // undetectable at around 1.4x the radius.
     constexpr const float radiusExtentMultiplier = 1.4;
-    return LayoutUnit { ceilf(shadow.blur.value * radiusExtentMultiplier) };
+    return LayoutUnit { ceilf(shadow.blur.resolveZoom(zoomFactor) * radiusExtentMultiplier) };
 }
 
-LayoutUnit paintingExtentAndSpread(Shadow auto const& shadow)
+LayoutUnit paintingExtentAndSpread(Shadow auto const& shadow, const Style::ZoomFactor& zoomFactor)
 {
-    return paintingExtent(shadow) + paintingSpread(shadow);
+    return paintingExtent(shadow, zoomFactor) + paintingSpread(shadow, zoomFactor);
 }
 
-template<Shadow ShadowType> auto shadowOutsetExtent(const Shadows<ShadowType>& shadows) -> LayoutBoxExtent
+template<Shadow ShadowType> auto shadowOutsetExtent(const Shadows<ShadowType>& shadows, const Style::ZoomFactor& zoomFactor) -> LayoutBoxExtent
 {
     LayoutUnit top;
     LayoutUnit right;
@@ -68,18 +69,18 @@ template<Shadow ShadowType> auto shadowOutsetExtent(const Shadows<ShadowType>& s
         if (isInset(shadow))
             continue;
 
-        auto extentAndSpread = paintingExtentAndSpread(shadow);
+        auto extentAndSpread = paintingExtentAndSpread(shadow, zoomFactor);
 
-        left = std::min<LayoutUnit>(left, LayoutUnit(shadow.location.x().value) - extentAndSpread);
-        right = std::max<LayoutUnit>(right, LayoutUnit(shadow.location.x().value) + extentAndSpread);
-        top = std::min<LayoutUnit>(top, LayoutUnit(shadow.location.y().value) - extentAndSpread);
-        bottom = std::max<LayoutUnit>(bottom, LayoutUnit(shadow.location.y().value) + extentAndSpread);
+        left = std::min<LayoutUnit>(left, LayoutUnit(shadow.location.x().resolveZoom(zoomFactor)) - extentAndSpread);
+        right = std::max<LayoutUnit>(right, LayoutUnit(shadow.location.x().resolveZoom(zoomFactor)) + extentAndSpread);
+        top = std::min<LayoutUnit>(top, LayoutUnit(shadow.location.y().resolveZoom(zoomFactor)) - extentAndSpread);
+        bottom = std::max<LayoutUnit>(bottom, LayoutUnit(shadow.location.y().resolveZoom(zoomFactor)) + extentAndSpread);
     }
 
     return { top, right, bottom, left };
 }
 
-template<Shadow ShadowType> auto shadowInsetExtent(const Shadows<ShadowType>& shadows) -> LayoutBoxExtent
+template<Shadow ShadowType> auto shadowInsetExtent(const Shadows<ShadowType>& shadows, const Style::ZoomFactor& zoomFactor) -> LayoutBoxExtent
 {
     LayoutUnit top;
     LayoutUnit right;
@@ -90,18 +91,18 @@ template<Shadow ShadowType> auto shadowInsetExtent(const Shadows<ShadowType>& sh
         if (!isInset(shadow))
             continue;
 
-        auto extentAndSpread = paintingExtentAndSpread(shadow);
+        auto extentAndSpread = paintingExtentAndSpread(shadow, zoomFactor);
 
-        top = std::max<LayoutUnit>(top, LayoutUnit(shadow.location.y().value) + extentAndSpread);
-        right = std::min<LayoutUnit>(right, LayoutUnit(shadow.location.x().value) - extentAndSpread);
-        bottom = std::min<LayoutUnit>(bottom, LayoutUnit(shadow.location.y().value) - extentAndSpread);
-        left = std::max<LayoutUnit>(left, LayoutUnit(shadow.location.x().value) + extentAndSpread);
+        top = std::max<LayoutUnit>(top, LayoutUnit(shadow.location.y().resolveZoom(zoomFactor)) + extentAndSpread);
+        right = std::min<LayoutUnit>(right, LayoutUnit(shadow.location.x().resolveZoom(zoomFactor)) - extentAndSpread);
+        bottom = std::min<LayoutUnit>(bottom, LayoutUnit(shadow.location.y().resolveZoom(zoomFactor)) - extentAndSpread);
+        left = std::max<LayoutUnit>(left, LayoutUnit(shadow.location.x().resolveZoom(zoomFactor)) + extentAndSpread);
     }
 
     return { top, right, bottom, left };
 }
 
-template<Shadow ShadowType> auto shadowHorizontalExtent(const Shadows<ShadowType>& shadows) -> std::pair<LayoutUnit, LayoutUnit>
+template<Shadow ShadowType> auto shadowHorizontalExtent(const Shadows<ShadowType>& shadows, const Style::ZoomFactor& zoomFactor) -> std::pair<LayoutUnit, LayoutUnit>
 {
     LayoutUnit left = 0;
     LayoutUnit right = 0;
@@ -110,16 +111,16 @@ template<Shadow ShadowType> auto shadowHorizontalExtent(const Shadows<ShadowType
         if (isInset(shadow))
             continue;
 
-        auto extentAndSpread = paintingExtentAndSpread(shadow);
+        auto extentAndSpread = paintingExtentAndSpread(shadow, zoomFactor);
 
-        left = std::min<LayoutUnit>(left, LayoutUnit(shadow.location.x().value) - extentAndSpread);
-        right = std::max<LayoutUnit>(right, LayoutUnit(shadow.location.x().value) + extentAndSpread);
+        left = std::min<LayoutUnit>(left, LayoutUnit(shadow.location.x().resolveZoom(zoomFactor)) - extentAndSpread);
+        right = std::max<LayoutUnit>(right, LayoutUnit(shadow.location.x().resolveZoom(zoomFactor)) + extentAndSpread);
     }
 
     return { left, right };
 }
 
-template<Shadow ShadowType> auto shadowVerticalExtent(const Shadows<ShadowType>& shadows) -> std::pair<LayoutUnit, LayoutUnit>
+template<Shadow ShadowType> auto shadowVerticalExtent(const Shadows<ShadowType>& shadows, const Style::ZoomFactor& zoomFactor) -> std::pair<LayoutUnit, LayoutUnit>
 {
     LayoutUnit top = 0;
     LayoutUnit bottom = 0;
@@ -128,38 +129,38 @@ template<Shadow ShadowType> auto shadowVerticalExtent(const Shadows<ShadowType>&
         if (isInset(shadow))
             continue;
 
-        auto extentAndSpread = paintingExtentAndSpread(shadow);
+        auto extentAndSpread = paintingExtentAndSpread(shadow, zoomFactor);
 
         // FIXME: Why does this do a static cast to `int` but all of the other "extent" functions in this file do not?
-        top = std::min<LayoutUnit>(top, LayoutUnit(static_cast<int>(shadow.location.y().value)) - extentAndSpread);
-        bottom = std::max<LayoutUnit>(bottom, LayoutUnit(static_cast<int>(shadow.location.y().value)) + extentAndSpread);
+        top = std::min<LayoutUnit>(top, LayoutUnit(static_cast<int>(shadow.location.y().resolveZoom(zoomFactor))) - extentAndSpread);
+        bottom = std::max<LayoutUnit>(bottom, LayoutUnit(static_cast<int>(shadow.location.y().resolveZoom(zoomFactor))) + extentAndSpread);
     }
 
     return { top, bottom };
 }
 
-template<Shadow ShadowType> auto shadowBlockDirectionExtent(const Shadows<ShadowType>& shadows, WritingMode writingMode) -> std::pair<LayoutUnit, LayoutUnit>
+template<Shadow ShadowType> auto shadowBlockDirectionExtent(const Shadows<ShadowType>& shadows, WritingMode writingMode, const Style::ZoomFactor& zoomFactor) -> std::pair<LayoutUnit, LayoutUnit>
 {
-    return writingMode.isHorizontal() ? shadowVerticalExtent(shadows) : shadowHorizontalExtent(shadows);
+    return writingMode.isHorizontal() ? shadowVerticalExtent(shadows, zoomFactor) : shadowHorizontalExtent(shadows, zoomFactor);
 }
 
-template<Shadow ShadowType> auto shadowInlineDirectionExtent(const Shadows<ShadowType>& shadows, WritingMode writingMode) -> std::pair<LayoutUnit, LayoutUnit>
+template<Shadow ShadowType> auto shadowInlineDirectionExtent(const Shadows<ShadowType>& shadows, WritingMode writingMode, const Style::ZoomFactor& zoomFactor) -> std::pair<LayoutUnit, LayoutUnit>
 {
-    return writingMode.isHorizontal() ? shadowHorizontalExtent(shadows) : shadowVerticalExtent(shadows);
+    return writingMode.isHorizontal() ? shadowHorizontalExtent(shadows, zoomFactor) : shadowVerticalExtent(shadows, zoomFactor);
 }
 
-template<Shadow ShadowType> void adjustRectForShadow(LayoutRect& rect, const Shadows<ShadowType>& shadows)
+template<Shadow ShadowType> void adjustRectForShadow(LayoutRect& rect, const Shadows<ShadowType>& shadows, const Style::ZoomFactor& zoomFactor)
 {
-    auto shadowExtent = shadowOutsetExtent(shadows);
+    auto shadowExtent = shadowOutsetExtent(shadows, zoomFactor);
 
     rect.move(shadowExtent.left(), shadowExtent.top());
     rect.setWidth(rect.width() - shadowExtent.left() + shadowExtent.right());
     rect.setHeight(rect.height() - shadowExtent.top() + shadowExtent.bottom());
 }
 
-template<Shadow ShadowType> void adjustRectForShadow(FloatRect& rect, const Shadows<ShadowType>& shadows)
+template<Shadow ShadowType> void adjustRectForShadow(FloatRect& rect, const Shadows<ShadowType>& shadows, const Style::ZoomFactor& zoomFactor)
 {
-    auto shadowExtent = shadowOutsetExtent(shadows);
+    auto shadowExtent = shadowOutsetExtent(shadows, zoomFactor);
 
     rect.move(shadowExtent.left(), shadowExtent.top());
     rect.setWidth(rect.width() - shadowExtent.left() + shadowExtent.right());

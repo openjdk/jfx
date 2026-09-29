@@ -26,20 +26,15 @@
 #pragma once
 
 #include <optional>
+#include <wtf/AbstractCanMakeCheckedPtr.h>
 
 namespace WebCore {
 
-class WorkerBadgeProxy {
+class WorkerBadgeProxy : public AbstractCanMakeCheckedPtr {
 public:
     virtual ~WorkerBadgeProxy() = default;
 
     virtual void setAppBadge(std::optional<uint64_t>) = 0;
-
-    // CanMakeCheckedPtr.
-    virtual uint32_t checkedPtrCount() const = 0;
-    virtual uint32_t checkedPtrCountWithoutThreadCheck() const = 0;
-    virtual void incrementCheckedPtrCount() const = 0;
-    virtual void decrementCheckedPtrCount() const = 0;
 };
 
 } // namespace WebCore

@@ -25,9 +25,11 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(DFG_JIT)
 
-#include "Structure.h"
+#include <JavaScriptCore/Structure.h>
 
 namespace JSC { namespace DFG {
 

@@ -29,9 +29,9 @@
 
 #pragma once
 
-#include "Font.h"
-#include "Glyph.h"
-#include "TextFlags.h"
+#include <WebCore/Font.h>
+#include <WebCore/Glyph.h>
+#include <WebCore/TextFlags.h>
 #include <unicode/utypes.h>
 #include <wtf/BitSet.h>
 #include <wtf/CheckedPtr.h>

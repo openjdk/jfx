@@ -25,6 +25,8 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
 #include "BPlatform.h"
 
 namespace bmalloc {
@@ -54,3 +56,5 @@ bool shouldProcessUnconditionallyUseBmalloc();
 #endif
 
 }
+
+#endif // __cplusplus

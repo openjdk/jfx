@@ -21,18 +21,18 @@
 
 #pragma once
 
-#include "FontCascade.h"
-#include "RenderObjectInlines.h"
-#include "RenderText.h"
-#include "SVGTextLayoutAttributes.h"
-#include "Text.h"
+#include <WebCore/FontCascade.h>
+#include <WebCore/RenderObjectNode.h>
+#include <WebCore/RenderText.h>
+#include <WebCore/SVGTextLayoutAttributes.h>
+#include <WebCore/Text.h>
 
 namespace WebCore {
 
 class SVGInlineTextBox;
 
 class RenderSVGInlineText final : public RenderText {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderSVGInlineText);
+    WTF_MAKE_TZONE_ALLOCATED(RenderSVGInlineText);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSVGInlineText);
 public:
     RenderSVGInlineText(Text&, const String&);
@@ -69,11 +69,11 @@ private:
     ASCIILiteral renderName() const override { return "RenderSVGInlineText"_s; }
 
     String originalText() const override;
-    void styleDidChange(StyleDifference, const RenderStyle*) override;
+    void styleDidChange(Style::Difference, const RenderStyle*) override;
 
     FloatRect objectBoundingBox() const override { return floatLinesBoundingBox(); }
 
-    VisiblePosition positionForPoint(const LayoutPoint&, HitTestSource, const RenderFragmentContainer*) override;
+    PositionWithAffinity positionForPoint(const LayoutPoint&, HitTestSource, const RenderFragmentContainer*) override;
     IntRect linesBoundingBox() const override;
 
     void setTextInternal(const String&, bool force) final;

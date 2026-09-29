@@ -31,7 +31,7 @@
 #include "HTMLBRElement.h"
 #include "HTMLNames.h"
 #include "RenderElement.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include "Text.h"
 #include "VisibleUnits.h"
 
@@ -40,14 +40,14 @@ namespace WebCore {
 using namespace HTMLNames;
 
 ApplyBlockElementCommand::ApplyBlockElementCommand(Ref<Document>&& document, const QualifiedName& tagName, const AtomString& inlineStyle)
-    : CompositeEditCommand(WTFMove(document))
+    : CompositeEditCommand(WTF::move(document))
     , m_tagName(tagName)
     , m_inlineStyle(inlineStyle)
 {
 }
 
 ApplyBlockElementCommand::ApplyBlockElementCommand(Ref<Document>&& document, const QualifiedName& tagName)
-    : CompositeEditCommand(WTFMove(document))
+    : CompositeEditCommand(WTF::move(document))
     , m_tagName(tagName)
 {
 }
@@ -122,7 +122,7 @@ void ApplyBlockElementCommand::formatSelection(const VisiblePosition& startOfSel
         auto blockquote = createBlockElement();
         insertNodeAt(blockquote.copyRef(), start);
         auto placeholder = HTMLBRElement::create(document());
-        appendNode(placeholder.copyRef(), WTFMove(blockquote));
+        appendNode(placeholder.copyRef(), WTF::move(blockquote));
         setEndingSelection(VisibleSelection(positionBeforeNode(placeholder.ptr()), Affinity::Downstream, endingSelection().directionality()));
         return;
     }

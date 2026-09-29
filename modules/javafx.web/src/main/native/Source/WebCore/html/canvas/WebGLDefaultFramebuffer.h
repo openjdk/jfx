@@ -38,7 +38,6 @@ class WebGLDefaultFramebuffer {
     WTF_MAKE_NONCOPYABLE(WebGLDefaultFramebuffer);
 public:
     static std::unique_ptr<WebGLDefaultFramebuffer> create(WebGLRenderingContextBase&, IntSize);
-    ~WebGLDefaultFramebuffer() = default;
 
     PlatformGLObject object() const { return 0; }
     bool hasStencil() const { return m_hasStencil; }

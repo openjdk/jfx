@@ -26,13 +26,25 @@
 #include "StyleOffsetAnchor.h"
 
 #include "CSSPositionValue.h"
-#include "RenderStyleInlines.h"
 #include "StyleBuilderChecking.h"
+#include "StyleComputedStyle+InitialInlines.h"
+#include "StyleLengthWrapper+Blending.h"
 #include "StylePrimitiveNumericTypes+Blending.h"
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
 namespace Style {
+
+#if ENABLE(THREADED_ANIMATIONS)
+
+auto OffsetAnchor::convert(const AcceleratedEffectOffsetAnchor& value) -> Variant<CSS::Keyword::Auto, Position>
+{
+    if (!value.value)
+        return CSS::Keyword::Auto { };
+    return Position { *value.value };
+}
+
+#endif
 
 // MARK: - Conversion
 
@@ -43,7 +55,7 @@ auto CSSValueConversion<OffsetAnchor>::operator()(BuilderState& state, const CSS
 
     RefPtr positionValue = requiredDowncast<CSSPositionValue>(state, value);
     if (!positionValue)
-        return RenderStyle::initialOffsetAnchor();
+        return Style::ComputedStyle::initialOffsetAnchor();
     return OffsetAnchor { toStyle(positionValue->position(), state) };
 }
 
@@ -51,13 +63,13 @@ auto CSSValueConversion<OffsetAnchor>::operator()(BuilderState& state, const CSS
 
 auto Blending<OffsetAnchor>::canBlend(const OffsetAnchor& a, const OffsetAnchor& b) -> bool
 {
-    return WTF::holdsAlternative<Position>(a) && WTF::holdsAlternative<Position>(b);
+    return a.isPosition() && b.isPosition();
 }
 
 auto Blending<OffsetAnchor>::requiresInterpolationForAccumulativeIteration(const OffsetAnchor& a, const OffsetAnchor& b) -> bool
 {
     ASSERT(canBlend(a, b));
-    return Style::requiresInterpolationForAccumulativeIteration(Position { a.value }, Position { b.value });
+    return Style::requiresInterpolationForAccumulativeIteration(*a.tryPosition(), *b.tryPosition());
 }
 
 auto Blending<OffsetAnchor>::blend(const OffsetAnchor& a, const OffsetAnchor& b, const BlendingContext& context) -> OffsetAnchor
@@ -68,15 +80,26 @@ auto Blending<OffsetAnchor>::blend(const OffsetAnchor& a, const OffsetAnchor& b,
     }
 
     ASSERT(canBlend(a, b));
-    return OffsetAnchor { Style::blend(Position { a.value }, Position { b.value }, context) };
+    return OffsetAnchor { Style::blend(*a.tryPosition(), *b.tryPosition(), context) };
 }
 
-// MARK: - Platform
+// MARK: - Evaluation
 
-auto ToPlatform<OffsetAnchor>::operator()(const OffsetAnchor& value) -> WebCore::LengthPoint
+#if ENABLE(THREADED_ANIMATIONS)
+
+auto Evaluation<OffsetAnchor, AcceleratedEffectOffsetAnchor>::operator()(const OffsetAnchor& value, FloatSize referenceBox, ZoomNeeded token) -> AcceleratedEffectOffsetAnchor
 {
-    return value.value;
+    return WTF::switchOn(value,
+        [&](const Position& position) -> AcceleratedEffectOffsetAnchor {
+            return { .value = evaluate<FloatPoint>(position, referenceBox, token) };
+        },
+        [](const CSS::Keyword::Auto&) -> AcceleratedEffectOffsetAnchor {
+            return { .value = std::nullopt };
+        }
+    );
 }
+
+#endif
 
 } // namespace Style
 } // namespace WebCore

@@ -84,7 +84,7 @@ CSSCounterStyleDescriptors::Symbol symbolFromCSSValue(RefPtr<CSSValue> value)
 
 static CSSCounterStyleDescriptors::Name nameFromCSSValue(Ref<CSSValue> value)
 {
-    RefPtr primitiveValue = dynamicDowncast<CSSPrimitiveValue>(WTFMove(value));
+    RefPtr primitiveValue = dynamicDowncast<CSSPrimitiveValue>(WTF::move(value));
     if (!primitiveValue)
         return { };
 
@@ -121,7 +121,7 @@ static CSSCounterStyleDescriptors::Pad padFromStyleProperties(const StylePropert
 
 CSSCounterStyleDescriptors::Pad padFromCSSValue(Ref<CSSValue> value)
 {
-    auto list = downcast<CSSValueList>(WTFMove(value));
+    auto list = downcast<CSSValueList>(WTF::move(value));
     ASSERT(list->size() == 2);
     auto length = downcast<CSSPrimitiveValue>(list.get()[0]).resolveAsIntegerDeprecated();
     ASSERT(length >= 0);
@@ -177,7 +177,7 @@ static CSSCounterStyleDescriptors::Name fallbackNameFromStyleProperties(const St
 
 CSSCounterStyleDescriptors::Name fallbackNameFromCSSValue(Ref<CSSValue> value)
 {
-    return makeAtomString(nameFromCSSValue(WTFMove(value)));
+    return makeAtomString(nameFromCSSValue(WTF::move(value)));
 }
 
 static CSSCounterStyleDescriptors::Symbol prefixFromStyleProperties(const StyleProperties& properties)
@@ -185,7 +185,7 @@ static CSSCounterStyleDescriptors::Symbol prefixFromStyleProperties(const StyleP
     auto prefix = properties.getPropertyCSSValue(CSSPropertyPrefix);
     if (!prefix)
         return { };
-    return symbolFromCSSValue(WTFMove(prefix));
+    return symbolFromCSSValue(WTF::move(prefix));
 }
 
 static CSSCounterStyleDescriptors::Symbol suffixFromStyleProperties(const StyleProperties& properties)
@@ -195,7 +195,7 @@ static CSSCounterStyleDescriptors::Symbol suffixFromStyleProperties(const StyleP
     // ("." full stop followed by a space)
     if (!suffix)
         return { false, ". "_s };
-    return symbolFromCSSValue(WTFMove(suffix));
+    return symbolFromCSSValue(WTF::move(suffix));
 }
 
 static CSSCounterStyleDescriptors::SystemData extractSystemDataFromStyleProperties(const StyleProperties& properties, CSSCounterStyleDescriptors::System system)
@@ -205,7 +205,7 @@ static CSSCounterStyleDescriptors::SystemData extractSystemDataFromStyleProperti
     if (!systemValue)
         return { "decimal"_s, 1 };
 
-    return extractSystemDataFromCSSValue(WTFMove(systemValue), system);
+    return extractSystemDataFromCSSValue(WTF::move(systemValue), system);
 }
 
 CSSCounterStyleDescriptors::SystemData extractSystemDataFromCSSValue(RefPtr<CSSValue> systemValue, CSSCounterStyleDescriptors::System system)
@@ -318,7 +318,7 @@ void CSSCounterStyleDescriptors::setName(CSSCounterStyleDescriptors::Name name)
 {
     if (name.isNull() || m_name == name)
         return;
-    m_name = WTFMove(name);
+    m_name = WTF::move(name);
 }
 
 void CSSCounterStyleDescriptors::setSystemData(CSSCounterStyleDescriptors::SystemData systemData)
@@ -333,7 +333,7 @@ void CSSCounterStyleDescriptors::setNegative(CSSCounterStyleDescriptors::Negativ
 {
     if (m_negativeSymbols == negative)
         return;
-    m_negativeSymbols = WTFMove(negative);
+    m_negativeSymbols = WTF::move(negative);
     m_explicitlySetDescriptors.set(ExplicitlySetDescriptors::Negative, true);
 }
 
@@ -341,7 +341,7 @@ void CSSCounterStyleDescriptors::setPrefix(CSSCounterStyleDescriptors::Symbol pr
 {
     if (m_prefix == prefix)
         return;
-    m_prefix = WTFMove(prefix);
+    m_prefix = WTF::move(prefix);
     m_explicitlySetDescriptors.set(ExplicitlySetDescriptors::Prefix, true);
 }
 
@@ -349,7 +349,7 @@ void CSSCounterStyleDescriptors::setSuffix(CSSCounterStyleDescriptors::Symbol su
 {
     if (m_suffix == suffix)
         return;
-    m_suffix = WTFMove(suffix);
+    m_suffix = WTF::move(suffix);
     m_explicitlySetDescriptors.set(ExplicitlySetDescriptors::Suffix, true);
 }
 
@@ -357,7 +357,7 @@ void CSSCounterStyleDescriptors::setRanges(CSSCounterStyleDescriptors::Ranges ra
 {
     if (m_ranges == ranges)
         return;
-    m_ranges = WTFMove(ranges);
+    m_ranges = WTF::move(ranges);
     m_explicitlySetDescriptors.set(ExplicitlySetDescriptors::Range, true);
 }
 
@@ -365,7 +365,7 @@ void CSSCounterStyleDescriptors::setPad(CSSCounterStyleDescriptors::Pad pad)
 {
     if (m_pad == pad)
         return;
-    m_pad = WTFMove(pad);
+    m_pad = WTF::move(pad);
     m_explicitlySetDescriptors.set(ExplicitlySetDescriptors::Pad, true);
 }
 
@@ -373,7 +373,7 @@ void CSSCounterStyleDescriptors::setFallbackName(CSSCounterStyleDescriptors::Nam
 {
     if (m_fallbackName == name)
         return;
-    m_fallbackName = WTFMove(name);
+    m_fallbackName = WTF::move(name);
     m_explicitlySetDescriptors.set(ExplicitlySetDescriptors::Fallback, true);
 }
 
@@ -381,7 +381,7 @@ void CSSCounterStyleDescriptors::setSymbols(Vector<CSSCounterStyleDescriptors::S
 {
     if (m_symbols == symbols || !areSymbolsValidForSystem(m_system, symbols, m_additiveSymbols))
         return;
-    m_symbols = WTFMove(symbols);
+    m_symbols = WTF::move(symbols);
     m_explicitlySetDescriptors.set(ExplicitlySetDescriptors::Symbols, true);
 }
 
@@ -389,7 +389,7 @@ void CSSCounterStyleDescriptors::setAdditiveSymbols(CSSCounterStyleDescriptors::
 {
     if (m_additiveSymbols == additiveSymbols || !areSymbolsValidForSystem(m_system, m_symbols, additiveSymbols))
         return;
-    m_additiveSymbols = WTFMove(additiveSymbols);
+    m_additiveSymbols = WTF::move(additiveSymbols);
     m_explicitlySetDescriptors.set(ExplicitlySetDescriptors::AdditiveSymbols, true);
 }
 

@@ -27,8 +27,8 @@
 #include "config.h"
 #include "HTMLDocumentParser.h"
 
-#include "ContextDestructionObserverInlines.h"
 #include "CustomElementReactionQueue.h"
+#include "CustomElementRegistry.h"
 #include "DocumentFragment.h"
 #include "DocumentLoader.h"
 #include "EventLoop.h"
@@ -42,11 +42,18 @@
 #include "JSCustomElementInterface.h"
 #include "LinkLoader.h"
 #include "LocalFrame.h"
+#include "Microtasks.h"
 #include "NavigationScheduler.h"
+#include "NodeDocument.h"
 #include "ScriptElement.h"
+#include "TaskSource.h"
 #include "ThrowOnDynamicMarkupInsertionCountIncrementer.h"
-
+#include <JavaScriptCore/JSGlobalObject.h>
 #include <wtf/SystemTracing.h>
+
+#if PLATFORM(COCOA)
+#include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
+#endif
 
 namespace WebCore {
 
@@ -66,7 +73,7 @@ HTMLDocumentParser::HTMLDocumentParser(HTMLDocument& document, OptionSet<ParserC
     , m_scriptRunner(makeUnique<HTMLScriptRunner>(document, static_cast<HTMLScriptRunnerHost&>(*this)))
     , m_treeBuilder(makeUniqueRef<HTMLTreeBuilder>(*this, document, parserContentPolicy(), m_options))
     , m_parserScheduler(HTMLParserScheduler::create(*this))
-    , m_preloader(makeUnique<HTMLResourcePreloader>(document))
+    , m_preloader(HTMLResourcePreloader::create(document))
     , m_shouldEmitTracePoints(isMainDocumentLoadingFromHTTP(document))
 {
 }
@@ -242,7 +249,7 @@ void HTMLDocumentParser::runScriptsForPausedTreeBuilder()
             Ref elementInterface = constructionData->elementInterface.get();
             auto newElement = elementInterface->constructElementWithFallback(*document, constructionData->registry, constructionData->name,
                 m_scriptRunner && !m_scriptRunner->isExecutingScript() ? ParserConstructElementWithEmptyStack::Yes : ParserConstructElementWithEmptyStack::No);
-            m_treeBuilder->didCreateCustomOrFallbackElement(WTFMove(newElement), *constructionData);
+            m_treeBuilder->didCreateCustomOrFallbackElement(WTF::move(newElement), *constructionData);
         }
         return;
     }
@@ -365,7 +372,7 @@ void HTMLDocumentParser::constructTreeFromHTMLToken(HTMLTokenizer::TokenPtr& raw
         rawToken.clear();
     }
 
-    m_treeBuilder->constructTree(WTFMove(token));
+    m_treeBuilder->constructTree(WTF::move(token));
 }
 
 bool HTMLDocumentParser::hasInsertionPoint()
@@ -387,7 +394,7 @@ void HTMLDocumentParser::insert(SegmentedString&& source)
     Ref<HTMLDocumentParser> protectedThis(*this);
 
     source.setExcludeLineNumbers();
-    m_input.insertAtCurrentInsertionPoint(WTFMove(source));
+    m_input.insertAtCurrentInsertionPoint(source);
     pumpTokenizerIfPossible(SynchronousMode::ForceSynchronous);
 
     if (isWaitingForScripts() && !isDetached()) {
@@ -405,12 +412,12 @@ void HTMLDocumentParser::insert(SegmentedString&& source)
 
 void HTMLDocumentParser::append(RefPtr<StringImpl>&& inputSource)
 {
-    append(WTFMove(inputSource), SynchronousMode::AllowYield);
+    append(WTF::move(inputSource), SynchronousMode::AllowYield);
 }
 
 void HTMLDocumentParser::appendSynchronously(RefPtr<StringImpl>&& inputSource)
 {
-    append(WTFMove(inputSource), SynchronousMode::ForceSynchronous);
+    append(WTF::move(inputSource), SynchronousMode::ForceSynchronous);
 }
 
 void HTMLDocumentParser::append(RefPtr<StringImpl>&& inputSource, SynchronousMode synchronousMode)
@@ -422,7 +429,7 @@ void HTMLDocumentParser::append(RefPtr<StringImpl>&& inputSource, SynchronousMod
     // but we need to ensure it isn't deleted yet.
     Ref<HTMLDocumentParser> protectedThis(*this);
 
-    String source { WTFMove(inputSource) };
+    String source { WTF::move(inputSource) };
 
     if (m_preloadScanner) {
         if (m_input.current().isEmpty() && !isWaitingForScripts()) {
@@ -580,6 +587,17 @@ void HTMLDocumentParser::appendCurrentInputStreamToPreloadScannerAndScan()
     m_preloadScanner->scan(*m_preloader, *protectedDocument());
 }
 
+static ALWAYS_INLINE bool canChangeModuleScriptsExecutionTiming()
+{
+#if PLATFORM(COCOA)
+    // https://bugs.webkit.org/show_bug.cgi?id=300905
+    static const bool caChangeTiming = linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::ExecutionTimingChangeOfModuleScripts);
+    return caChangeTiming;
+#else
+    return true;
+#endif
+}
+
 void HTMLDocumentParser::notifyFinished(PendingScript& pendingScript)
 {
     // pumpTokenizer can cause this parser to be detached from the Document,
@@ -593,6 +611,19 @@ void HTMLDocumentParser::notifyFinished(PendingScript& pendingScript)
     ASSERT(m_scriptRunner);
     ASSERT(!isExecutingScript());
     if (isStopping()) {
+        if (canChangeModuleScriptsExecutionTiming()) [[likely]] {
+            // If we're currently in a microtask checkpoint, schedule end() as a regular task.
+            // This ensures it runs after ALL microtasks (including any created during execution) complete.
+            RefPtr document = this->document();
+            if (document->eventLoop().microtaskQueue().isPerformingCheckpoint()) {
+                document->eventLoop().queueTask(TaskSource::InternalAsyncTask, [protectedThis = Ref { *this }] {
+                    if (protectedThis->isStopped())
+                        return;
+                    protectedThis->attemptToRunDeferredScriptsAndEnd();
+                });
+                return;
+            }
+        }
         attemptToRunDeferredScriptsAndEnd();
         return;
     }

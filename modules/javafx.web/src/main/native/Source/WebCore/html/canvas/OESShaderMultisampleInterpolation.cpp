@@ -32,19 +32,19 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(OESShaderMultisampleInterpolation);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(OESShaderMultisampleInterpolation);
 
 OESShaderMultisampleInterpolation::OESShaderMultisampleInterpolation(WebGLRenderingContextBase& context)
     : WebGLExtension(context, WebGLExtensionName::OESShaderMultisampleInterpolation)
 {
-    context.protectedGraphicsContextGL()->ensureExtensionEnabled("GL_OES_shader_multisample_interpolation"_s);
+    context.graphicsContextGL()->enableExtension(GCGLExtension::OES_shader_multisample_interpolation);
 }
 
 OESShaderMultisampleInterpolation::~OESShaderMultisampleInterpolation() = default;
 
 bool OESShaderMultisampleInterpolation::supported(GraphicsContextGL& context)
 {
-    return context.supportsExtension("GL_OES_shader_multisample_interpolation"_s);
+    return context.supportsExtension(GCGLExtension::OES_shader_multisample_interpolation);
 }
 
 } // namespace WebCore

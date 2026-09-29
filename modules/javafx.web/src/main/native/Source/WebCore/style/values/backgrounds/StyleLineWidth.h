@@ -25,11 +25,14 @@
 
 #pragma once
 
-#include "StylePrimitiveNumeric.h"
+#include <WebCore/LayoutUnit.h>
+#include <WebCore/StylePrimitiveNumeric.h>
+#include <cmath>
 
 namespace WebCore {
 
 using FloatBoxExtent = RectEdges<float>;
+using LayoutBoxExtent = RectEdges<LayoutUnit>;
 
 namespace Style {
 
@@ -43,14 +46,13 @@ struct LineWidth {
     constexpr LineWidth(Length length) : value { length } { }
     constexpr LineWidth(CSS::ValueLiteral<CSS::LengthUnit::Px> literal) : value { literal } { }
 
-    constexpr LineWidth(CSS::Keyword::Thin) : value { 1 } { }
-    constexpr LineWidth(CSS::Keyword::Medium) : value { 3 } { }
-    constexpr LineWidth(CSS::Keyword::Thick) : value { 5 } { }
+    static Length snapLengthAsBorderWidth(float, float deviceScaleFactor);
+    static Length snapLengthAsBorderWidth(Length, float deviceScaleFactor);
 
     constexpr bool isZero() const { return value.isZero(); }
     constexpr bool isPositive() const { return value.isPositive(); }
 
-    constexpr explicit operator bool() const { return !!value.value; }
+    constexpr explicit operator bool() const { return !isZero(); }
 
     constexpr bool operator==(const LineWidth&) const = default;
     constexpr auto operator<=>(const LineWidth&) const = default;
@@ -63,10 +65,27 @@ using LineWidthBox = MinimallySerializingSpaceSeparatedRectEdges<Style::LineWidt
 
 template<> struct CSSValueConversion<LineWidth> { auto operator()(BuilderState&, const CSSValue&) -> LineWidth; };
 
+// MARK: - Blending
+
+template<> struct Blending<LineWidth> {
+    auto blend(const LineWidth&, const LineWidth&, const RenderStyle&, const RenderStyle&, const Interpolation::Context&) -> LineWidth;
+};
+
 // MARK: - Evaluate
 
-template<> struct Evaluation<LineWidth> { constexpr auto operator()(const LineWidth& value) -> float { return value.value.value; } };
-template<> struct Evaluation<LineWidthBox> { FloatBoxExtent operator()(const LineWidthBox&); };
+template<typename Result> struct Evaluation<LineWidth, Result> {
+    constexpr auto operator()(const LineWidth& value, ZoomNeeded zoom) -> Result
+    {
+        return Result(value.value.resolveZoom(zoom));
+    }
+};
+
+template<> struct Evaluation<LineWidthBox, FloatBoxExtent> {
+    auto operator()(const LineWidthBox&, ZoomNeeded) -> FloatBoxExtent;
+};
+template<> struct Evaluation<LineWidthBox, LayoutBoxExtent> {
+    auto operator()(const LineWidthBox&, ZoomNeeded) -> LayoutBoxExtent;
+};
 
 } // namespace Style
 } // namespace WebCore

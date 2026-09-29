@@ -30,9 +30,7 @@
 #include "CSSCustomPropertyValue.h"
 #include "CSSParserTokenRange.h"
 #include "CSSVariableData.h"
-#include "Document.h"
-#include "DocumentInlines.h"
-#include "Page.h"
+#include "DocumentPage.h"
 #include "StyleCustomProperty.h"
 #include <wtf/NeverDestroyed.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -95,7 +93,7 @@ void ConstantPropertyMap::setValueForProperty(ConstantProperty property, Ref<CSS
         buildValues();
 
     auto& name = nameForProperty(property);
-    m_values->set(name, Style::CustomProperty::createForVariableData(name, WTFMove(data)));
+    m_values->set(name, Style::CustomProperty::createForVariableData(name, WTF::move(data)));
 }
 
 void ConstantPropertyMap::buildValues()

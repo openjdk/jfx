@@ -27,10 +27,10 @@
 
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
 
-#include "ActiveDOMObject.h"
-#include "EventTarget.h"
-#include "EventTargetInterfaces.h"
-#include "WebCoreOpaqueRoot.h"
+#include <WebCore/ActiveDOMObject.h>
+#include <WebCore/EventTarget.h>
+#include <WebCore/EventTargetInterfaces.h>
+#include <WebCore/WebCoreOpaqueRoot.h>
 #include <wtf/HashMap.h>
 #include <wtf/LoggerHelper.h>
 #include <wtf/Ref.h>
@@ -49,13 +49,15 @@ class RemotePlayback final
     , public ActiveDOMObject
     , public EventTarget
 {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RemotePlayback);
+    WTF_MAKE_TZONE_ALLOCATED(RemotePlayback);
 public:
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
-
     static Ref<RemotePlayback> create(HTMLMediaElement&);
     ~RemotePlayback();
+
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
 
     void watchAvailability(Ref<RemotePlaybackAvailabilityCallback>&&, Ref<DeferredPromise>&&);
     void cancelWatchAvailability(std::optional<int32_t> id, Ref<DeferredPromise>&&);
@@ -88,7 +90,7 @@ private:
 
     // EventTarget.
     enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::RemotePlayback; }
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
+    ScriptExecutionContext* scriptExecutionContext() const final;
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
@@ -119,6 +121,9 @@ private:
     bool m_available { false };
 };
 
-}
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(RemotePlayback)
 
 #endif // ENABLE(WIRELESS_PLAYBACK_TARGET)
+

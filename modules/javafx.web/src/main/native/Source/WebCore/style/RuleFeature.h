@@ -24,6 +24,7 @@
 #include "CSSSelectorList.h"
 #include "CommonAtomStrings.h"
 #include <wtf/Forward.h>
+#include <wtf/GenericHashKey.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/text/AtomString.h>
@@ -38,29 +39,35 @@ namespace Style {
 
 class RuleData;
 
-// FIXME: Has* values should be separated so we could describe both the :has() argument and its position in the selector.
+// MatchElement characterizes which elements a change in an element matched by a simple selector (as a part of a complex selector) may affect.
+// Style::Invalidator uses these classifications to traverse a minimal number of elements after a DOM mutation.
+// In the examples below the '.changed' simple selector will be classified with the given enum value.
+// FIXME: Has* values should be separated so we could better describe both the :has() argument and its position in the selector.
 enum class MatchElement : uint8_t {
-    Subject,
-    Parent,
-    Ancestor,
-    DirectSibling,
-    IndirectSibling,
-    AnySibling,
-    ParentSibling,
-    AncestorSibling,
-    ParentAnySibling,
-    AncestorAnySibling,
-    HasChild,
-    HasDescendant,
-    HasSibling,
-    HasSiblingDescendant,
-    HasAnySibling,
-    HasChildParent,
-    HasChildAncestor,
-    HasNonSubject, // FIXME: This is a catch-all for the rest of cases where :has() is in a non-subject position.
-    HasScopeBreaking, // FIXME: This is a catch-all for cases where :has() contains a scope breaking sub-selector like, like :has(:is(.x .y)).
-    Host,
-    HostChild
+    Subject, // .changed
+    Parent, // .changed > .subject
+    Ancestor, // .changed .subject
+    DirectSibling, // .changed + .subject
+    IndirectSibling, // .changed ~ .subject
+    AnySibling, // :nth-last-child(even of .changed)
+    ParentSibling, // .changed ~ .a > .subject
+    AncestorSibling, // .changed ~ .a .subject
+    ParentAnySibling, // :nth-last-child(even of .changed) > .subject
+    AncestorAnySibling, // :nth-last-child(even of .changed) .subject
+    HasChild, // :has(> .changed)
+    HasDescendant, // :has(.changed)
+    HasSibling, // :has(~ .changed)
+    HasSiblingDescendant, // :has(~ .a .changed)
+    HasAnySibling, // :has(~ :is(.changed ~ .x))
+    HasChildParent, // :has(> .changed) > .subject
+    HasChildAncestor, // :has(> .changed) .subject
+    HasDescendantParent, // :has(.changed) > .subject
+    // FIXME: This is a catch-all for the rest of cases where :has() is in a non-subject position.
+    HasNonSubject, // :has(.changed) .subject
+    // FIXME: This is a catch-all for cases where :has() contains a scope breaking sub-selector.
+    HasScopeBreaking, // :has(:is(.changed .a))
+    Host, // :host(.changed) .subject
+    HostChild // ::slotted(.changed)
 };
 constexpr unsigned matchElementCount = static_cast<unsigned>(MatchElement::HostChild) + 1;
 
@@ -76,6 +83,8 @@ struct RuleAndSelector {
     RefPtr<const StyleRule> styleRule;
     uint16_t selectorIndex; // Keep in sync with RuleData's selectorIndex size.
     uint16_t selectorListIndex; // Keep in sync with RuleData's selectorListIndex size.
+
+    const CSSSelector& selector() const;
 };
 
 struct RuleFeature : public RuleAndSelector {
@@ -97,11 +106,25 @@ using PseudoClassInvalidationKey = std::tuple<unsigned, uint8_t, AtomString>;
 
 using RuleFeatureVector = Vector<RuleFeature>;
 
+struct SelectorDeduplicationKey {
+    SelectorDeduplicationKey(const CSSSelector&);
+
+    const CSSSelector* selector;
+    unsigned cachedHash;
+
+    unsigned hash() const { return cachedHash; }
+    bool operator==(const SelectorDeduplicationKey&) const;
+};
+
 struct RuleFeatureSet {
     void add(const RuleFeatureSet&);
     void clear();
     void shrinkToFit();
-    void collectFeatures(const RuleData&, const Vector<Ref<const StyleRuleScope>>& scopeRules = { });
+
+    struct CollectionContext {
+        HashSet<GenericHashKey<SelectorDeduplicationKey>> selectorDeduplicationSet;
+    };
+    void collectFeatures(CollectionContext&, const RuleData&, const Vector<Ref<const StyleRuleScope>>& scopeRules = { });
     void registerContentAttribute(const AtomString&);
 
     bool usesHasPseudoClass() const;
@@ -144,13 +167,16 @@ private:
         Vector<HasInvalidationFeature> hasPseudoClasses;
     };
     DoesBreakScope recursivelyCollectFeaturesFromSelector(SelectorFeatures&, const CSSSelector&, MatchElement = MatchElement::Subject, IsNegation = IsNegation::No, CanBreakScope = CanBreakScope::No);
+    void collectPseudoElementFeatures(const RuleData&);
 };
 
 bool isHasPseudoClassMatchElement(MatchElement);
 MatchElement computeHasPseudoClassMatchElement(const CSSSelector&);
 
-enum class InvalidationKeyType : uint8_t { Universal = 1, Class, Id, Tag };
+enum class InvalidationKeyType : uint8_t { Universal = 1, Class, Id, Attribute, Tag };
 PseudoClassInvalidationKey makePseudoClassInvalidationKey(CSSSelector::PseudoClass, InvalidationKeyType, const AtomString& = starAtom());
+
+bool unlikelyToHaveSelectorForAttribute(const AtomString&);
 
 inline bool isUniversalInvalidation(const PseudoClassInvalidationKey& key)
 {

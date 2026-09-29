@@ -26,15 +26,16 @@
 
 #pragma once
 
-#include "BackForwardFrameItemIdentifier.h"
-#include "BackForwardItemIdentifier.h"
-#include "FloatRect.h"
-#include "FrameIdentifier.h"
-#include "FrameLoaderTypes.h"
-#include "IntPoint.h"
-#include "IntRect.h"
-#include "PolicyContainer.h"
+#include <WebCore/BackForwardFrameItemIdentifier.h>
+#include <WebCore/BackForwardItemIdentifier.h>
+#include <WebCore/FloatRect.h>
+#include <WebCore/FrameIdentifier.h>
+#include <WebCore/FrameLoaderTypes.h>
+#include <WebCore/IntPoint.h>
+#include <WebCore/IntRect.h>
+#include <WebCore/PolicyContainer.h>
 #include <memory>
+#include <wtf/Platform.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/UUID.h>
@@ -46,12 +47,11 @@
 #endif
 
 #if PLATFORM(IOS_FAMILY)
-#include "ViewportArguments.h"
+#include <WebCore/ViewportArguments.h>
 #endif
 
 #if PLATFORM(COCOA)
 #import <wtf/RetainPtr.h>
-typedef struct objc_object* id;
 #endif
 
 namespace WebCore {
@@ -239,8 +239,6 @@ private:
     HistoryItem(const HistoryItem&);
 
     static int64_t generateSequenceNumber();
-
-    bool hasSameDocumentTree(HistoryItem& otherItem) const;
 
     String m_urlString;
     String m_originalURLString;

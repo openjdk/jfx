@@ -27,7 +27,7 @@
 #include "EventDispatcher.h"
 
 #include "CompositionEvent.h"
-#include "DocumentInlines.h"
+#include "DocumentView.h"
 #include "EventContext.h"
 #include "EventNames.h"
 #include "EventPath.h"
@@ -40,8 +40,10 @@
 #include "LocalFrameView.h"
 #include "Logging.h"
 #include "MouseEvent.h"
+#include "NodeDocument.h"
 #include "ScopedEventQueue.h"
 #include "ScriptDisallowedScope.h"
+#include "Settings.h"
 #include "ShadowRoot.h"
 #include "TextEvent.h"
 #include "TouchEvent.h"
@@ -179,12 +181,12 @@ void EventDispatcher::dispatchEvent(Node& node, Event& event)
     bool shouldDispatchEventToScripts = hasRelevantEventListener(document, event);
 
     RefPtr window = document->window();
-    std::optional<LocalDOMWindow::PerformanceEventTimingCandidate> pendingEventTiming;
+    std::optional<PerformanceEventTimingCandidate> pendingEventTiming;
     if (typeInfo.isInCategory(EventCategory::EventTimingEligible) && window && document->settings().eventTimingEnabled() && event.isTrusted())
-        pendingEventTiming = window->initializeEventTimingEntry(event, typeInfo);
+        pendingEventTiming = window->initializeEventTimingEntry(event, typeInfo.type());
     auto finalizeEntry(WTF::makeScopeExit([&, event = Ref(event)] {
         if (pendingEventTiming)
-            window->finalizeEventTimingEntry(*pendingEventTiming, event);
+            window->finalizeEventTimingEntry(*pendingEventTiming, event, typeInfo.type());
     }));
 
     bool targetOrRelatedTargetIsInShadowTree = node.isInShadowTree() || isInShadowTree(event.relatedTarget());
@@ -256,7 +258,7 @@ void EventDispatcher::dispatchEvent(Node& node, Event& event)
         RefPtr finalTarget = event.target();
         event.setTarget(RefPtr { EventPath::eventTargetRespectingTargetRules(node) });
         callDefaultEventHandlersInBubblingOrder(event, eventPath);
-        event.setTarget(WTFMove(finalTarget));
+        event.setTarget(WTF::move(finalTarget));
     }
 
     if (shouldClearTargetsAfterDispatch)

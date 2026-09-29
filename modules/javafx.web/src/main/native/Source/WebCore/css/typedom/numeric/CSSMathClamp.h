@@ -30,7 +30,7 @@
 namespace WebCore {
 
 class CSSMathClamp final : public CSSMathValue {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CSSMathClamp);
+    WTF_MAKE_TZONE_ALLOCATED(CSSMathClamp);
 public:
     static ExceptionOr<Ref<CSSMathClamp>> create(CSSNumberish&&, CSSNumberish&&, CSSNumberish&&);
     const CSSNumericValue& lower() const { return m_lower.get(); }
@@ -41,7 +41,7 @@ public:
 
 private:
     CSSMathOperator getOperator() const final { return CSSMathOperator::Clamp; }
-    CSSStyleValueType getType() const final { return CSSStyleValueType::CSSMathClamp; }
+    CSSStyleValueType styleValueType() const final { return CSSStyleValueType::CSSMathClamp; }
     void serialize(StringBuilder&, OptionSet<SerializationArguments>) const final;
     std::optional<SumValue> toSumValue() const final;
     bool equals(const CSSNumericValue&) const final;
@@ -56,7 +56,7 @@ private:
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CSSMathClamp)
-static bool isType(const WebCore::CSSStyleValue& styleValue) { return styleValue.getType() == WebCore::CSSStyleValueType::CSSMathClamp; }
-static bool isType(const WebCore::CSSNumericValue& numericValue) { return numericValue.getType() == WebCore::CSSStyleValueType::CSSMathClamp; }
-static bool isType(const WebCore::CSSMathValue& mathValue) { return mathValue.getType() == WebCore::CSSStyleValueType::CSSMathClamp; }
+static bool isType(const WebCore::CSSStyleValue& styleValue) { return styleValue.styleValueType() == WebCore::CSSStyleValueType::CSSMathClamp; }
+static bool isType(const WebCore::CSSNumericValue& numericValue) { return numericValue.styleValueType() == WebCore::CSSStyleValueType::CSSMathClamp; }
+static bool isType(const WebCore::CSSMathValue& mathValue) { return mathValue.styleValueType() == WebCore::CSSStyleValueType::CSSMathClamp; }
 SPECIALIZE_TYPE_TRAITS_END()

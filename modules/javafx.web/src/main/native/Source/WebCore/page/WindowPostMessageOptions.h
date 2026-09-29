@@ -25,15 +25,15 @@
 
 #pragma once
 
-#include "StructuredSerializeOptions.h"
+#include <WebCore/StructuredSerializeOptions.h>
 
 namespace WebCore {
 
 struct WindowPostMessageOptions : public StructuredSerializeOptions {
     WindowPostMessageOptions() = default;
     WindowPostMessageOptions(String&& targetOrigin, Vector<JSC::Strong<JSC::JSObject>>&& transfer)
-        : StructuredSerializeOptions(WTFMove(transfer))
-        , targetOrigin(WTFMove(targetOrigin))
+        : StructuredSerializeOptions(WTF::move(transfer))
+        , targetOrigin(WTF::move(targetOrigin))
     { }
 
     String targetOrigin { "/"_s };

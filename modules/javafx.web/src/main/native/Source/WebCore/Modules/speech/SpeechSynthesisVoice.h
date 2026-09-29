@@ -27,7 +27,7 @@
 
 #if ENABLE(SPEECH_SYNTHESIS)
 
-#include "PlatformSpeechSynthesisVoice.h"
+#include <WebCore/PlatformSpeechSynthesisVoice.h>
 #include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
 

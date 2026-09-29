@@ -27,7 +27,9 @@
 
 typedef sequence<CookieListItem> CookieList;
 
-dictionary ExtendableCookieChangeEventInit : ExtendableEventInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary ExtendableCookieChangeEventInit : ExtendableEventInit {
     CookieList changed;
     CookieList deleted;
 };

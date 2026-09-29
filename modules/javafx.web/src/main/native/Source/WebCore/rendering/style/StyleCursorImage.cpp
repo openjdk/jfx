@@ -51,7 +51,7 @@ Ref<StyleCursorImage> StyleCursorImage::create(const Ref<StyleImage>& image, std
 
 Ref<StyleCursorImage> StyleCursorImage::create(Ref<StyleImage>&& image, std::optional<IntPoint> hotSpot, Style::URL&& originalURL)
 {
-    return adoptRef(*new StyleCursorImage(WTFMove(image), hotSpot, WTFMove(originalURL)));
+    return adoptRef(*new StyleCursorImage(WTF::move(image), hotSpot, WTF::move(originalURL)));
 }
 
 StyleCursorImage::StyleCursorImage(const Ref<StyleImage>& image, std::optional<IntPoint> hotSpot, const Style::URL& originalURL)
@@ -64,16 +64,16 @@ StyleCursorImage::StyleCursorImage(const Ref<StyleImage>& image, std::optional<I
 
 StyleCursorImage::StyleCursorImage(Ref<StyleImage>&& image, std::optional<IntPoint> hotSpot, Style::URL&& originalURL)
     : StyleMultiImage { Type::CursorImage }
-    , m_image { WTFMove(image) }
+    , m_image { WTF::move(image) }
     , m_hotSpot { hotSpot }
-    , m_originalURL { WTFMove(originalURL) }
+    , m_originalURL { WTF::move(originalURL) }
 {
 }
 
 StyleCursorImage::~StyleCursorImage()
 {
-    for (auto& element : m_cursorElements)
-        element.removeClient(*this);
+    for (Ref element : m_cursorElements)
+        element->removeClient(*this);
 }
 
 bool StyleCursorImage::operator==(const StyleImage& other) const
@@ -98,7 +98,7 @@ Ref<CSSValue> StyleCursorImage::computedStyleValue(const RenderStyle& style) con
     if (m_hotSpot)
         hotSpot = CSSValuePair::createNoncoalescing(CSSPrimitiveValue::create(m_hotSpot->x()), CSSPrimitiveValue::create(m_hotSpot->y()));
 
-    return CSSCursorImageValue::create(m_image->computedStyleValue(style), WTFMove(hotSpot), Style::toCSS(m_originalURL, style));
+    return CSSCursorImageValue::create(m_image->computedStyleValue(style), WTF::move(hotSpot), Style::toCSS(m_originalURL, style));
 }
 
 ImageWithScale StyleCursorImage::selectBestFitImage(const Document& document)
@@ -113,7 +113,7 @@ ImageWithScale StyleCursorImage::selectBestFitImage(const Document& document)
 
             if (existingImageURL != updatedImageURL) {
                 auto styleURL = Style::URL { .resolved = updatedImageURL, .modifiers = { } };
-                m_image = StyleCachedImage::create(styleURL, CSSImageValue::create(WTFMove(updatedImageURL)));
+                m_image = StyleCachedImage::create(styleURL, CSSImageValue::create(WTF::move(updatedImageURL)));
         }
     }
     }
@@ -159,7 +159,7 @@ void StyleCursorImage::setContainerContextForRenderer(const RenderElement& rende
 {
     if (!hasCachedImage())
         return;
-    cachedImage()->setContainerContextForClient(renderer, LayoutSize(containerSize), containerZoom, m_originalURL.resolved);
+    cachedImage()->setContainerContextForClient(renderer.cachedImageClient(), LayoutSize(containerSize), containerZoom, m_originalURL.resolved);
 }
 
 bool StyleCursorImage::usesDataProtocol() const

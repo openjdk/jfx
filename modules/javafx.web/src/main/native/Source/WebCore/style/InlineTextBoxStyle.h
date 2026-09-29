@@ -64,5 +64,6 @@ bool isAlignedForUnder(const RenderStyle& decoratingBoxStyle);
 
 float underlineOffsetForTextBoxPainting(const InlineIterator::InlineBox&, const RenderStyle&);
 float overlineOffsetForTextBoxPainting(const InlineIterator::InlineBox&, const RenderStyle&);
+float textBoxEdgeAdjustmentForUnderline(const RenderStyle&);
 
 } // namespace WebCore

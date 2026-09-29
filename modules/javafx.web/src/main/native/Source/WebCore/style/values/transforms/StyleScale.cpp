@@ -27,14 +27,18 @@
 
 #include "StyleBuilderChecking.h"
 #include "StylePrimitiveNumericTypes+Blending.h"
+#include "StylePrimitiveNumericTypes+CSSValueConversion.h"
+#include "StylePrimitiveNumericTypes+CSSValueCreation.h"
 
 namespace WebCore {
 namespace Style {
 
-bool Scale::apply(TransformationMatrix& transform, const FloatSize& size) const
+using namespace CSS::Literals;
+
+void Scale::apply(TransformationMatrix& transform, const FloatSize& size) const
 {
-    RefPtr protectedValue = value;
-    return protectedValue && protectedValue->apply(transform, size);
+    if (RefPtr protectedValue = value)
+        protectedValue->apply(transform, size);
 }
 
 // MARK: - Conversion
@@ -43,10 +47,6 @@ auto CSSValueConversion<Scale>::operator()(BuilderState& state, const CSSValue& 
 {
     // https://drafts.csswg.org/css-transforms-2/#propdef-scale
     // none | [ <number> | <percentage> ]{1,3}
-
-    auto conversionData = state.useSVGZoomRulesForLength()
-        ? state.cssToLengthConversionData().copyWithAdjustedZoom(1.0f)
-        : state.cssToLengthConversionData();
 
     if (RefPtr primitiveValue = dynamicDowncast<CSSPrimitiveValue>(value)) {
         ASSERT_UNUSED(primitiveValue, primitiveValue->valueID() == CSSValueNone);
@@ -57,11 +57,11 @@ auto CSSValueConversion<Scale>::operator()(BuilderState& state, const CSSValue& 
     if (!list)
         return CSS::Keyword::None { };
 
-    auto sx = list->item(0).valueDividingBy100IfPercentage<double>(conversionData);
-    auto sy = list->size() > 1 ? list->item(1).valueDividingBy100IfPercentage<double>(conversionData) : sx;
-    auto sz = list->size() > 2 ? list->item(2).valueDividingBy100IfPercentage<double>(conversionData) : 1;
+    auto sx = toStyleFromCSSValue<NumberOrPercentageResolvedToNumber<>>(state, list->item(0));
+    auto sy = list->size() > 1 ? toStyleFromCSSValue<NumberOrPercentageResolvedToNumber<>>(state, list->item(1)) : sx;
+    auto sz = list->size() > 2 ? toStyleFromCSSValue<NumberOrPercentageResolvedToNumber<>>(state, list->item(2)) : NumberOrPercentageResolvedToNumber<> { 1_css_number };
 
-    return Scale { ScaleTransformOperation::create(sx, sy, sz, TransformOperation::Type::Scale) };
+    return ScaleTransformFunction::create(sx, sy, sz, TransformFunctionType::Scale);
 }
 
 // MARK: - Blending
@@ -75,37 +75,39 @@ auto Blending<Scale>::blend(const Scale& from, const Scale& to, const BlendingCo
         return CSS::Keyword::None { };
 
     auto identity = [&](const auto& other) {
-        return ScaleTransformOperation::create(1, 1, 1, other.type());
+        return ScaleTransformFunction::create(1_css_number, 1_css_number, 1_css_number, other.type());
     };
 
-    auto fromOperation = fromScale ? Ref(*fromScale) : identity(*toScale);
-    auto toOperation = toScale ? Ref(*toScale) : identity(*fromScale);
+    auto fromFunction = fromScale ? Ref(*fromScale) : identity(*toScale);
+    auto toFunction = toScale ? Ref(*toScale) : identity(*fromScale);
 
     // Ensure the two transforms have the same type.
-    if (!fromOperation->isSameType(toOperation)) {
-        RefPtr<ScaleTransformOperation> normalizedFrom;
-        RefPtr<ScaleTransformOperation> normalizedTo;
-        if (fromOperation->is3DOperation() || toOperation->is3DOperation()) {
-            normalizedFrom = ScaleTransformOperation::create(fromOperation->x(), fromOperation->y(), fromOperation->z(), TransformOperation::Type::Scale3D);
-            normalizedTo = ScaleTransformOperation::create(toOperation->x(), toOperation->y(), toOperation->z(), TransformOperation::Type::Scale3D);
+    if (!fromFunction->isSameType(toFunction)) {
+        RefPtr<const ScaleTransformFunction> normalizedFrom;
+        RefPtr<const ScaleTransformFunction> normalizedTo;
+        if (fromFunction->is3DOperation() || toFunction->is3DOperation()) {
+            normalizedFrom = ScaleTransformFunction::create(fromFunction->x(), fromFunction->y(), fromFunction->z(), TransformFunctionType::Scale3D);
+            normalizedTo = ScaleTransformFunction::create(toFunction->x(), toFunction->y(), toFunction->z(), TransformFunctionType::Scale3D);
         } else {
-            normalizedFrom = ScaleTransformOperation::create(fromOperation->x(), fromOperation->y(), TransformOperation::Type::Scale);
-            normalizedTo = ScaleTransformOperation::create(toOperation->x(), toOperation->y(), TransformOperation::Type::Scale);
+            normalizedFrom = ScaleTransformFunction::create(fromFunction->x(), fromFunction->y(), TransformFunctionType::Scale);
+            normalizedTo = ScaleTransformFunction::create(toFunction->x(), toFunction->y(), TransformFunctionType::Scale);
         }
         return blend(Scale { normalizedFrom.releaseNonNull() }, Scale { normalizedTo.releaseNonNull() }, context);
     }
 
-    if (auto blendedOperation = toOperation->blend(fromOperation.ptr(), context); RefPtr scale = dynamicDowncast<ScaleTransformOperation>(blendedOperation))
-        return Scale { ScaleTransformOperation::create(scale->x(), scale->y(), scale->z(), scale->type()) };
+    if (auto blendedFunction = toFunction->blend(fromFunction.ptr(), context); RefPtr scale = dynamicDowncast<ScaleTransformFunction>(blendedFunction))
+        return ScaleTransformFunction::create(scale->x(), scale->y(), scale->z(), scale->type());
 
     return CSS::Keyword::None { };
 }
 
 // MARK: - Platform
 
-auto ToPlatform<Scale>::operator()(const Scale& value) -> RefPtr<Scale::Platform>
+auto ToPlatform<Scale>::operator()(const Scale& value, const FloatSize& size) -> RefPtr<TransformOperation>
 {
-    return value.value;
+    if (RefPtr function = value.value)
+        return function->toPlatform(size);
+    return nullptr;
 }
 
 } // namespace Style

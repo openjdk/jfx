@@ -31,6 +31,8 @@
     readonly attribute boolean persisted;
 };
 
-dictionary PageTransitionEventInit : EventInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary PageTransitionEventInit : EventInit {
     boolean persisted = false;
 };

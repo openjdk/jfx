@@ -31,7 +31,7 @@
 #include "config.h"
 #include "BlobURL.h"
 
-#include "DocumentInlines.h"
+#include "DocumentSecurityOrigin.h"
 #include "SecurityOrigin.h"
 #include "ThreadableBlobRegistry.h"
 #include <wtf/URL.h>

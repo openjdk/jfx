@@ -27,12 +27,12 @@
 
 #if ENABLE(ASYNC_SCROLLING)
 
-#include "BoxExtents.h"
-#include "EventTrackingRegions.h"
-#include "ScrollTypes.h"
-#include "ScrollbarThemeComposite.h"
-#include "ScrollingCoordinator.h"
-#include "ScrollingStateScrollingNode.h"
+#include <WebCore/BoxExtents.h>
+#include <WebCore/EventTrackingRegions.h>
+#include <WebCore/ScrollTypes.h>
+#include <WebCore/ScrollbarThemeComposite.h>
+#include <WebCore/ScrollingCoordinator.h>
+#include <WebCore/ScrollingStateScrollingNode.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -59,6 +59,9 @@ public:
 
     FloatRect layoutViewport() const { return m_layoutViewport; };
     WEBCORE_EXPORT void setLayoutViewport(const FloatRect&);
+
+    FloatSize sizeForVisibleContent() const { return m_sizeForVisibleContent; }
+    WEBCORE_EXPORT void setSizeForVisibleContent(const FloatSize&);
 
     FloatPoint minLayoutViewportOrigin() const { return m_minLayoutViewportOrigin; }
     WEBCORE_EXPORT void setMinLayoutViewportOrigin(const FloatPoint&);
@@ -152,6 +155,7 @@ private:
         MouseLocationState&&,
         ScrollbarHoverState&&,
         ScrollbarEnabledState&&,
+        std::optional<ScrollbarColor>&&,
         UserInterfaceLayoutDirection,
         ScrollbarWidth,
         bool useDarkAppearanceForScrollbars,
@@ -171,6 +175,7 @@ private:
         bool wheelEventGesturesBecomeNonBlocking,
         bool scrollingPerformanceTestingEnabled,
         FloatRect layoutViewport,
+        FloatSize sizeForVisibleContent,
         FloatPoint minLayoutViewportOrigin,
         FloatPoint maxLayoutViewportOrigin,
         std::optional<FloatSize> overrideVisualViewportSize,
@@ -192,6 +197,7 @@ private:
     EventTrackingRegions m_eventTrackingRegions;
 
     FloatRect m_layoutViewport;
+    FloatSize m_sizeForVisibleContent;
     FloatPoint m_minLayoutViewportOrigin;
     FloatPoint m_maxLayoutViewportOrigin;
     std::optional<FloatSize> m_overrideVisualViewportSize;

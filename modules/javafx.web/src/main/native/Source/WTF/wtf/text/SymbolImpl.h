@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include <wtf/CheckedPtr.h>
+#include <wtf/text/SymbolRegistry.h>
 #include <wtf/text/UniquedStringImpl.h>
 
 namespace WTF {
@@ -74,7 +76,7 @@ protected:
 
     friend class StringImpl;
 
-    inline SymbolImpl(std::span<const LChar>, Ref<StringImpl>&&, Flags = s_flagDefault);
+    inline SymbolImpl(std::span<const Latin1Character>, Ref<StringImpl>&&, Flags = s_flagDefault);
     inline SymbolImpl(std::span<const char16_t>, Ref<StringImpl>&&, Flags = s_flagDefault);
     inline SymbolImpl(Flags = s_flagDefault);
 
@@ -86,7 +88,7 @@ protected:
 };
 static_assert(sizeof(SymbolImpl) == sizeof(SymbolImpl::StaticSymbolImpl));
 
-inline SymbolImpl::SymbolImpl(std::span<const LChar> characters, Ref<StringImpl>&& base, Flags flags)
+inline SymbolImpl::SymbolImpl(std::span<const Latin1Character> characters, Ref<StringImpl>&& base, Flags flags)
     : UniquedStringImpl(CreateSymbol, characters)
         , m_owner(&base.leakRef())
         , m_hashForSymbolShiftedWithFlagCount(nextHashForSymbol())
@@ -134,13 +136,13 @@ public:
     WTF_EXPORT_PRIVATE static Ref<PrivateSymbolImpl> create(StringImpl& rep);
 
 private:
-    PrivateSymbolImpl(std::span<const LChar> characters, Ref<StringImpl>&& base)
-        : SymbolImpl(characters, WTFMove(base), s_flagIsPrivate)
+    PrivateSymbolImpl(std::span<const Latin1Character> characters, Ref<StringImpl>&& base)
+        : SymbolImpl(characters, WTF::move(base), s_flagIsPrivate)
     {
     }
 
     PrivateSymbolImpl(std::span<const char16_t> characters, Ref<StringImpl>&& base)
-        : SymbolImpl(characters, WTFMove(base), s_flagIsPrivate)
+        : SymbolImpl(characters, WTF::move(base), s_flagIsPrivate)
     {
     }
 };
@@ -151,25 +153,25 @@ private:
     friend class SymbolImpl;
     friend class SymbolRegistry;
 
-    SymbolRegistry* symbolRegistry() const { return m_symbolRegistry; }
+    SymbolRegistry* symbolRegistry() const { return m_symbolRegistry.get(); }
     void clearSymbolRegistry() { m_symbolRegistry = nullptr; }
 
     static Ref<RegisteredSymbolImpl> create(StringImpl& rep, SymbolRegistry&);
     static Ref<RegisteredSymbolImpl> createPrivate(StringImpl& rep, SymbolRegistry&);
 
-    RegisteredSymbolImpl(std::span<const LChar> characters, Ref<StringImpl>&& base, SymbolRegistry& registry, Flags flags = s_flagIsRegistered)
-        : SymbolImpl(characters, WTFMove(base), flags)
+    RegisteredSymbolImpl(std::span<const Latin1Character> characters, Ref<StringImpl>&& base, SymbolRegistry& registry, Flags flags = s_flagIsRegistered)
+        : SymbolImpl(characters, WTF::move(base), flags)
         , m_symbolRegistry(&registry)
     {
     }
 
     RegisteredSymbolImpl(std::span<const char16_t> characters, Ref<StringImpl>&& base, SymbolRegistry& registry, Flags flags = s_flagIsRegistered)
-        : SymbolImpl(characters, WTFMove(base), flags)
+        : SymbolImpl(characters, WTF::move(base), flags)
         , m_symbolRegistry(&registry)
     {
     }
 
-    SymbolRegistry* m_symbolRegistry;
+    CheckedPtr<SymbolRegistry> m_symbolRegistry;
 };
 
 inline unsigned StringImpl::symbolAwareHash() const
@@ -217,6 +219,10 @@ ValueCheck<const SymbolImpl*> {
 #endif // ASSERT_ENABLED
 
 } // namespace WTF
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WTF::SymbolImpl)
+    static bool isType(const WTF::StringImpl& impl) { return impl.isSymbol(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 using WTF::SymbolImpl;
 using WTF::PrivateSymbolImpl;

@@ -25,10 +25,12 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(REMOTE_INSPECTOR)
 
-#include "RemoteConnectionToTarget.h"
-#include "RemoteControllableTarget.h"
+#include <JavaScriptCore/RemoteConnectionToTarget.h>
+#include <JavaScriptCore/RemoteControllableTarget.h>
 
 #include <utility>
 #include <wtf/Forward.h>
@@ -38,7 +40,7 @@
 #include <wtf/text/WTFString.h>
 
 #if PLATFORM(COCOA)
-#include "RemoteInspectorXPCConnection.h"
+#include <JavaScriptCore/RemoteInspectorXPCConnection.h>
 #include <wtf/HashSet.h>
 #include <wtf/RetainPtr.h>
 
@@ -132,7 +134,7 @@ public:
     JS_EXPORT_PRIVATE static RemoteInspector& singleton();
     friend class LazyNeverDestroyed<RemoteInspector>;
 
-    virtual ~RemoteInspector();
+    ~RemoteInspector();
 
     void registerTarget(RemoteControllableTarget*);
     void unregisterTarget(RemoteControllableTarget*);
@@ -301,7 +303,7 @@ private:
     std::optional<RemoteInspector::Client::Capabilities> m_clientCapabilities;
 
 #if PLATFORM(COCOA)
-    dispatch_queue_t m_xpcQueue;
+    OSObjectPtr<dispatch_queue_t> m_xpcQueue;
 #endif
     TargetID m_nextAvailableTargetIdentifier { 1 };
     int m_notifyToken { 0 };

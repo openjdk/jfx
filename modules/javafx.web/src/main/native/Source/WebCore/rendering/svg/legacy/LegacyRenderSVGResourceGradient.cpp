@@ -27,17 +27,16 @@
 #include "GradientAttributes.h"
 #include "GraphicsContext.h"
 #include "RenderSVGText.h"
-#include "RenderStyleInlines.h"
-#include "SVGRenderStyle.h"
+#include "RenderStyle+GettersInlines.h"
 #include "SVGRenderingContext.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(LegacyRenderSVGResourceGradient);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(LegacyRenderSVGResourceGradient);
 
 LegacyRenderSVGResourceGradient::LegacyRenderSVGResourceGradient(Type type, SVGGradientElement& node, RenderStyle&& style)
-    : LegacyRenderSVGResourceContainer(type, node, WTFMove(style))
+    : LegacyRenderSVGResourceContainer(type, node, WTF::move(style))
 {
 }
 
@@ -132,17 +131,16 @@ static inline void applyGradientResource(RenderElement& renderer, const RenderSt
     if (resourceMode.contains(RenderSVGResourceMode::ApplyToText))
         context.setTextDrawingMode(resourceMode.contains(RenderSVGResourceMode::ApplyToFill) ? TextDrawingMode::Fill : TextDrawingMode::Stroke);
 
-    auto& svgStyle = style.svgStyle();
     auto userspaceTransform = gradientData.userspaceTransform;
 
     if (resourceMode.contains(RenderSVGResourceMode::ApplyToFill)) {
-        context.setAlpha(svgStyle.fillOpacity().value.value);
+        context.setAlpha(style.fillOpacity().value.value);
         context.setFillGradient(*gradientData.gradient, userspaceTransform);
-        context.setFillRule(svgStyle.fillRule());
+        context.setFillRule(style.fillRule());
     } else if (resourceMode.contains(RenderSVGResourceMode::ApplyToStroke)) {
-        if (svgStyle.vectorEffect() == VectorEffect::NonScalingStroke)
+        if (style.vectorEffect() == VectorEffect::NonScalingStroke)
             userspaceTransform = LegacyRenderSVGResourceContainer::transformOnNonScalingStroke(&renderer, gradientData.userspaceTransform);
-        context.setAlpha(svgStyle.strokeOpacity().value.value);
+        context.setAlpha(style.strokeOpacity().value.value);
         context.setStrokeGradient(*gradientData.gradient, userspaceTransform);
         SVGRenderSupport::applyStrokeStyleToContext(context, style, renderer);
     }
@@ -194,16 +192,14 @@ static inline std::tuple<FloatRect, FloatSize> calculateGradientGeometry(RenderE
     auto* textRootBlock = RenderSVGText::locateRenderSVGTextAncestor(renderer);
     ASSERT(textRootBlock);
 
-    // FIXME: This needs to be bounding box and should not use repaint rect.
-    // https://bugs.webkit.org/show_bug.cgi?id=278551
-    FloatRect repaintRect = textRootBlock->repaintRectInLocalCoordinates(RepaintRectCalculation::Accurate);
+    FloatRect decoratedBounds = textRootBlock->decoratedBoundingBox();
 
     AffineTransform absoluteTransform = SVGRenderingContext::calculateTransformationToOutermostCoordinateSystem(*textRootBlock);
 
     // Ignore 2D rotation, as it doesn't affect the size of the target.
     FloatSize scale(absoluteTransform.xScale(), absoluteTransform.yScale());
 
-    return { repaintRect, scale };
+    return { decoratedBounds, scale };
 }
 
 static inline AffineTransform calculateGradientUserspaceTransform(RenderElement& renderer, SVGUnitTypes::SVGUnitType gradientUnits, const AffineTransform& gradientTransform)
@@ -262,7 +258,7 @@ void TextGradientClipper::postApplyResource(RenderElement& renderer, GraphicsCon
 
     SVGRenderingContext::clipToImageBuffer(*context, targetRect, scale, m_imageBuffer, false);
 
-                context->setFillGradient(WTFMove(gradient), userspaceTransform);
+    context->setFillGradient(WTF::move(gradient), userspaceTransform);
                 context->fillRect(targetRect);
 
                 m_imageBuffer = nullptr;
@@ -300,7 +296,7 @@ void TextGradientCompositor::postApplyResource(RenderElement& renderer, Graphics
     Ref gradient = *gradientData.gradient;
     auto userspaceTransform = calculateGradientUserspaceTransform(renderer, gradientUnits, gradientTransform);
 
-    context->setFillGradient(WTFMove(gradient), userspaceTransform);
+    context->setFillGradient(WTF::move(gradient), userspaceTransform);
     context->fillRect(targetRect);
 
     context->endTransparencyLayer();
@@ -357,10 +353,13 @@ void LegacyRenderSVGResourceGradient::postApplyResource(RenderElement& renderer,
 
 GradientColorStops LegacyRenderSVGResourceGradient::stopsByApplyingColorFilter(const GradientColorStops& stops, const RenderStyle& style)
 {
-    if (!style.hasAppleColorFilter())
+    if (style.appleColorFilter().isNone())
         return stops;
 
-    return stops.mapColors([&] (auto& color) { return style.colorByApplyingColorFilter(color); });
+    Style::ColorResolver colorResolver { style };
+    return stops.mapColors([&](auto& color) {
+        return colorResolver.colorApplyingColorFilter(color);
+    });
 }
 
 GradientSpreadMethod LegacyRenderSVGResourceGradient::platformSpreadMethodFromSVGType(SVGSpreadMethodType method)

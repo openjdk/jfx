@@ -27,12 +27,14 @@
 #include "AccessibilityRegionContext.h"
 
 #include "AXObjectCache.h"
-#include "DocumentInlines.h"
+#include "DocumentView.h"
+#include "FrameInlines.h"
 #include "RenderBox.h"
 #include "RenderBoxModelObject.h"
 #include "RenderInline.h"
 #include "RenderLineBreak.h"
-#include "RenderStyleInlines.h"
+#include "RenderObjectDocument.h"
+#include "RenderStyle+GettersInlines.h"
 #include "RenderText.h"
 #include "RenderView.h"
 #include <wtf/TZoneMallocInlines.h>
@@ -61,17 +63,17 @@ AccessibilityRegionContext::~AccessibilityRegionContext()
 
 void AccessibilityRegionContext::takeBounds(const RenderInline& renderInline, LayoutRect&& paintRect)
 {
-    takeBoundsInternal(renderInline, enclosingIntRect(mapRect(WTFMove(paintRect))));
+    takeBoundsInternal(renderInline, enclosingIntRect(mapRect(WTF::move(paintRect))));
 }
 
 void AccessibilityRegionContext::takeBounds(const RenderBox& renderBox, LayoutPoint paintOffset)
 {
     if (CheckedPtr renderView = dynamicDowncast<RenderView>(renderBox); renderView) [[unlikely]] {
-        takeBounds(*renderView, WTFMove(paintOffset));
+        takeBounds(*renderView, WTF::move(paintOffset));
         return;
     }
     auto mappedPaintRect = enclosingIntRect(mapRect(LayoutRect(paintOffset, renderBox.size())));
-    takeBoundsInternal(renderBox, WTFMove(mappedPaintRect));
+    takeBoundsInternal(renderBox, WTF::move(mappedPaintRect));
 }
 
 void AccessibilityRegionContext::takeBounds(const RenderView& renderView, LayoutPoint&& paintOffset)
@@ -80,13 +82,13 @@ void AccessibilityRegionContext::takeBounds(const RenderView& renderView, Layout
     // expects the size to be that of the full document (not the size of the current viewport).
     auto documentRect = renderView.documentRect();
     documentRect.moveBy(roundedIntPoint(paintOffset));
-    takeBoundsInternal(renderView, WTFMove(documentRect));
+    takeBoundsInternal(renderView, WTF::move(documentRect));
 }
 
 void AccessibilityRegionContext::takeBounds(const RenderBox& renderBox, FloatRect paintRect)
 {
     auto mappedPaintRect = enclosingIntRect(mapRect(paintRect));
-    takeBoundsInternal(renderBox, WTFMove(mappedPaintRect));
+    takeBoundsInternal(renderBox, WTF::move(mappedPaintRect));
 }
 
 void AccessibilityRegionContext::takeBounds(const RenderLineBreak* renderLineBreak, const LayoutPoint& paintOffset)
@@ -102,8 +104,14 @@ void AccessibilityRegionContext::takeBounds(const RenderLineBreak* renderLineBre
         mappedPaintRect.setWidth(2);
     if (!mappedPaintRect.height())
         mappedPaintRect.setHeight(2);
-    takeBoundsInternal(*renderLineBreak, WTFMove(mappedPaintRect));
+    takeBoundsInternal(*renderLineBreak, WTF::move(mappedPaintRect));
 }
+
+void AccessibilityRegionContext::takeBounds(const RenderInline* renderInline, LayoutRect&& paintRect)
+{
+    if (renderInline)
+        takeBounds(*renderInline, WTF::move(paintRect));
+};
 
 void AccessibilityRegionContext::takeBoundsInternal(const RenderBoxModelObject& renderObject, IntRect&& paintRect)
 {
@@ -111,7 +119,7 @@ void AccessibilityRegionContext::takeBoundsInternal(const RenderBoxModelObject& 
         paintRect = view->contentsToRootView(paintRect);
 
     if (auto* cache = renderObject.document().axObjectCache())
-        cache->onPaint(renderObject, WTFMove(paintRect));
+        cache->onPaint(renderObject, WTF::move(paintRect));
 }
 
 // Note that this function takes the bounds of a textbox that is associated with a RenderText, and not the RenderText itself.
@@ -119,7 +127,7 @@ void AccessibilityRegionContext::takeBoundsInternal(const RenderBoxModelObject& 
 // the text on a single line. This method takes the paint rect of a single textbox and unites it with the other textbox rects painted for |renderText|.
 void AccessibilityRegionContext::takeBounds(const RenderText& renderText, FloatRect paintRect, size_t lineIndex)
 {
-    auto mappedPaintRect = enclosingIntRect(mapRect(WTFMove(paintRect)));
+    auto mappedPaintRect = enclosingIntRect(mapRect(WTF::move(paintRect)));
     if (RefPtr view = renderText.document().view())
         mappedPaintRect = view->contentsToRootView(mappedPaintRect);
 
@@ -155,7 +163,7 @@ void AccessibilityRegionContext::onPaint(const ScrollView& scrollView)
     }
 
     if (auto* cache = frameView->axObjectCache())
-        cache->onPaint(*frameView, WTFMove(relativeFrame));
+        cache->onPaint(*frameView, WTF::move(relativeFrame));
 }
 
 } // namespace WebCore

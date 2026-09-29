@@ -35,7 +35,7 @@
 #include "InputTypeNames.h"
 #include "MouseEvent.h"
 #include "RenderBoxInlines.h"
-#include "RenderElementInlines.h"
+#include "RenderElementStyleInlines.h"
 #include "RenderImage.h"
 #include <wtf/NeverDestroyed.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -111,7 +111,7 @@ RenderPtr<RenderElement> ImageInputType::createInputRenderer(RenderStyle&& style
 {
     ASSERT(element());
     // FIXME: https://github.com/llvm/llvm-project/pull/142471 Moving style is not unsafe.
-    SUPPRESS_UNCOUNTED_ARG return createRenderer<RenderImage>(RenderObject::Type::Image, *protectedElement(), WTFMove(style));
+    SUPPRESS_UNCOUNTED_ARG return createRenderer<RenderImage>(RenderObject::Type::Image, *protectedElement(), WTF::move(style));
 }
 
 void ImageInputType::attributeChanged(const QualifiedName& name)
@@ -185,7 +185,7 @@ unsigned ImageInputType::height() const
         return optionalHeight.value();
 
     // If the image is available, use its height.
-    CheckedPtr imageLoader = element->imageLoader();
+    RefPtr imageLoader = element->imageLoader();
     if (imageLoader && imageLoader->image())
         return imageLoader->image()->imageSizeForRenderer(renderer.get(), 1).height().toUnsigned();
 
@@ -208,7 +208,7 @@ unsigned ImageInputType::width() const
         return optionalWidth.value();
 
     // If the image is available, use its width.
-    CheckedPtr imageLoader = element->imageLoader();
+    RefPtr imageLoader = element->imageLoader();
     if (imageLoader && imageLoader->image())
         return imageLoader->image()->imageSizeForRenderer(renderer.get(), 1).width().toUnsigned();
 

@@ -23,13 +23,13 @@
 
 #pragma once
 
-#include "HTMLFormControlElement.h"
+#include <WebCore/HTMLFormControlElement.h>
 #include <wtf/WeakHashSet.h>
 
 namespace WebCore {
 
 class HTMLFieldSetElement final : public HTMLFormControlElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLFieldSetElement);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLFieldSetElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLFieldSetElement);
 public:
     static Ref<HTMLFieldSetElement> create(const QualifiedName&, Document&, HTMLFormElement*);

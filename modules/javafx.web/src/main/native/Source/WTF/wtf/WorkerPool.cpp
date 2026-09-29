@@ -26,23 +26,37 @@
 #include "config.h"
 #include <wtf/WorkerPool.h>
 
+#include <wtf/TZoneMallocInlines.h>
+
 namespace WTF {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WorkerPool);
+
 class WorkerPool::Worker final : public AutomaticThread {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(Worker);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(Worker);
 public:
     friend class WorkerPool;
 
     Worker(const AbstractLocker& locker, WorkerPool& pool, Box<Lock> lock, Ref<AutomaticThreadCondition>&& condition, Seconds timeout)
-        : AutomaticThread(locker, lock, WTFMove(condition), timeout)
+        : AutomaticThread(locker, lock, WTF::move(condition), timeout)
         , m_pool(pool)
     {
     }
 
+    void finalize()
+    {
+        join();
+        m_pool = nullptr;
+    }
+
+    // Called with the lock held.
     PollResult poll(const AbstractLocker&) final
     {
-        if (m_pool.m_tasks.isEmpty())
+        ASSERT(m_pool);
+        if (m_pool->m_tasks.isEmpty())
             return PollResult::Wait;
-        m_task = m_pool.m_tasks.takeFirst();
+        m_task = m_pool->m_tasks.takeFirst();
         if (!m_task)
             return PollResult::Stop;
         return PollResult::Work;
@@ -57,27 +71,33 @@ public:
 
     void threadDidStart() final
     {
-        Locker locker { *m_pool.m_lock };
-        m_pool.m_numberOfActiveWorkers++;
+        ASSERT(m_pool);
+        Locker locker { *m_pool->m_lock };
+        m_pool->m_numberOfActiveWorkers++;
     }
 
+    // Called with the lock held.
     void threadIsStopping(const AbstractLocker&) final
     {
-        m_pool.m_numberOfActiveWorkers--;
+        ASSERT(m_pool);
+        m_pool->m_numberOfActiveWorkers--;
     }
 
+    // Called with the lock held.
     bool shouldSleep(const AbstractLocker& locker) final
     {
-        return m_pool.shouldSleep(locker);
+        ASSERT(m_pool);
+        return Ref { *m_pool }->shouldSleep(locker);
     }
 
     ASCIILiteral name() const final
     {
-        return m_pool.name();
+        ASSERT(m_pool);
+        return m_pool->name();
     }
 
 private:
-    WorkerPool& m_pool;
+    CheckedPtr<WorkerPool> m_pool;
     Function<void()> m_task;
 };
 
@@ -101,7 +121,7 @@ WorkerPool::~WorkerPool()
         m_condition->notifyAll(locker);
     }
     for (auto& worker : m_workers)
-        worker->join();
+        worker->finalize();
     ASSERT(!m_numberOfActiveWorkers);
 }
 
@@ -121,7 +141,7 @@ bool WorkerPool::shouldSleep(const AbstractLocker&)
 void WorkerPool::postTask(Function<void()>&& task)
 {
     Locker locker { *m_lock };
-    m_tasks.append(WTFMove(task));
+    m_tasks.append(WTF::move(task));
     m_condition->notifyOne(locker);
 }
 

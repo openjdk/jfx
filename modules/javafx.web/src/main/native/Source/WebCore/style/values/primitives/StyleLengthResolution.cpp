@@ -39,11 +39,26 @@
 #include "RenderBox.h"
 #include "RenderBoxInlines.h"
 #include "RenderStyle.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include "RenderView.h"
+#include "StylePrimitiveNumericTypes+Conversions.h"
+#include "StylePrimitiveNumericTypes+Evaluation.h"
 
 namespace WebCore {
 namespace Style {
+
+static double adjustValueForPageZoom(double dimension, const CSSToLengthConversionData& conversionData)
+{
+    if (conversionData.rangeZoomOption() != CSS::RangeZoomOptions::Unzoomed)
+        return dimension;
+
+    auto* style = conversionData.style();
+    auto* renderView = conversionData.renderView();
+    if (!renderView || !style || !evaluationTimeZoomEnabled(*style))
+        return dimension;
+
+    return dimension / renderView->zoomFactor();
+}
 
 static double lengthOfViewportPhysicalAxisForLogicalAxis(LogicalBoxAxis logicalAxis, const FloatSize& size, const RenderStyle* style)
 {
@@ -69,7 +84,7 @@ static double lengthOfViewportPhysicalAxisForLogicalAxis(LogicalBoxAxis logicalA
     return lengthOfViewportPhysicalAxisForLogicalAxis(logicalAxis, size, rootElement->renderStyle());
 }
 
-double computeUnzoomedNonCalcLengthDouble(double value, CSS::LengthUnit lengthUnit, CSSPropertyID propertyToCompute, const FontCascade* fontCascadeForUnit, const RenderView* renderView)
+double computeUnzoomedNonCalcLengthDouble(double value, CSS::LengthUnit lengthUnit, CSSPropertyID propertyToCompute, const FontCascade* fontCascadeForUnit, CSS::RangeZoomOptions rangeZoomOption, const RenderView* renderView)
 {
     using enum CSS::LengthUnit;
 
@@ -96,7 +111,7 @@ double computeUnzoomedNonCalcLengthDouble(double value, CSS::LengthUnit lengthUn
     case Rem: {
         ASSERT(fontCascadeForUnit);
         auto& fontDescription = fontCascadeForUnit->fontDescription();
-        return ((propertyToCompute == CSSPropertyFontSize) ? fontDescription.specifiedSize() : fontDescription.computedSize()) * value;
+        return ((propertyToCompute == CSSPropertyFontSize) ? fontDescription.specifiedSize() :  fontDescription.computedSizeForRangeZoomOption(rangeZoomOption)) * value;
     }
     case Ex:
     case Rex: {
@@ -105,7 +120,7 @@ double computeUnzoomedNonCalcLengthDouble(double value, CSS::LengthUnit lengthUn
         if (fontMetrics.xHeight())
             return fontMetrics.xHeight().value() * value;
         auto& fontDescription = fontCascadeForUnit->fontDescription();
-        return ((propertyToCompute == CSSPropertyFontSize) ? fontDescription.specifiedSize() : fontDescription.computedSize()) / 2.0 * value;
+        return ((propertyToCompute == CSSPropertyFontSize) ? fontDescription.specifiedSize() : fontDescription.computedSizeForRangeZoomOption(rangeZoomOption)) / 2.0 * value;
     }
     case Cap:
     case Rcap: {
@@ -190,6 +205,34 @@ double computeUnzoomedNonCalcLengthDouble(double value, CSS::LengthUnit lengthUn
     RELEASE_ASSERT_NOT_REACHED();
 }
 
+static double adjustZoomStateForFontRelativeUnitsIfNeeded(double value, const CSSToLengthConversionData& conversionData)
+{
+    // Apply text zoom for font-relative units when evaluationTimeZoomEnabled with unzoomed range option.
+    // computedSizeForRangeZoomOption returns unzoomed font size when rangeZoomOption is Unzoomed,
+    // so we need to multiply by text zoom to get the correct final value.
+    // We explicitly use zoomWithTextZoomFactor() here instead of conversionData.zoom() because
+    // zoomWithTextZoomFactor() is guaranteed to return only the text zoom factor (not page zoom or other zoom types)
+    // when evaluationTimeZoomEnabled is true. This ensures font-relative units scale correctly with text zoom
+    // while remaining independent of other zoom mechanisms.
+    if (conversionData.evaluationTimeZoomEnabled() && conversionData.rangeZoomOption() == CSS::RangeZoomOptions::Unzoomed) {
+        if (CheckedPtr builderState = conversionData.styleBuilderState()) {
+            auto textZoom = builderState->zoomWithTextZoomFactor();
+            return value * textZoom;
+        }
+    }
+    return value;
+}
+
+double computeCanonicalNonCalcLengthDouble(double value, CSS::LengthUnit lengthUnit, const CSSToLengthConversionData& conversionData)
+{
+    // We are only interested in canonicalizing to `px`, not adjusting for zoom, which will be handled later. When computing font-size, zoom is not applied in the same way, so must be special cased here.
+    auto computedValue = computeNonCalcLengthDouble(value, lengthUnit, conversionData);
+    if (conversionData.computingFontSize() || (conversionData.evaluationTimeZoomEnabled() && conversionData.rangeZoomOption() == CSS::RangeZoomOptions::Unzoomed))
+        return computedValue;
+
+    return computedValue / conversionData.style()->usedZoom();
+}
+
 double computeNonCalcLengthDouble(double value, CSS::LengthUnit lengthUnit, const CSSToLengthConversionData& conversionData)
 {
     using enum CSS::LengthUnit;
@@ -203,7 +246,7 @@ double computeNonCalcLengthDouble(double value, CSS::LengthUnit lengthUnit, cons
         if (!element)
             return { };
 
-        auto mode = conversionData.style()->pseudoElementType() == PseudoId::None
+        auto mode = !conversionData.style()->pseudoElementType()
             ? Style::ContainerQueryEvaluator::SelectionMode::Element
             : Style::ContainerQueryEvaluator::SelectionMode::PseudoElement;
 
@@ -212,7 +255,12 @@ double computeNonCalcLengthDouble(double value, CSS::LengthUnit lengthUnit, cons
             auto* containerRenderer = dynamicDowncast<RenderBox>(element->renderer());
             if (containerRenderer && containerRenderer->hasEligibleContainmentForSizeQuery()) {
                 auto widthOrHeight = physicalAxis == CQ::Axis::Width ? containerRenderer->contentBoxWidth() : containerRenderer->contentBoxHeight();
-                return widthOrHeight * value / 100;
+                auto adjustedWidthOrHeight = widthOrHeight.toDouble();
+
+                if (!conversionData.computingFontSize())
+                    adjustedWidthOrHeight = adjustValueForPageZoom(adjustedWidthOrHeight, conversionData);
+
+                return adjustedWidthOrHeight * value / 100;
             }
             // For pseudo-elements the element itself can be the container. Avoid looping forever.
             mode = Style::ContainerQueryEvaluator::SelectionMode::Element;
@@ -253,13 +301,19 @@ double computeNonCalcLengthDouble(double value, CSS::LengthUnit lengthUnit, cons
         // FIXME: We have a bug right now where the zoom will be applied twice to EX units.
         // We really need to compute EX using fontMetrics for the original specifiedSize and not use
         // our actual constructed rendering font.
-        value = computeUnzoomedNonCalcLengthDouble(value, lengthUnit, conversionData.propertyToCompute(), &conversionData.fontCascadeForFontUnits());
+        value = computeUnzoomedNonCalcLengthDouble(value, lengthUnit, conversionData.propertyToCompute(), &conversionData.fontCascadeForFontUnits(), conversionData.rangeZoomOption());
+        value = adjustZoomStateForFontRelativeUnitsIfNeeded(value, conversionData);
         break;
 
     case Lh:
         if (conversionData.computingLineHeight() || conversionData.computingFontSize()) {
             // Try to get the parent's computed line-height, or fall back to the initial line-height of this element's font spacing.
             value *= conversionData.parentStyle() ? conversionData.parentStyle()->computedLineHeight() : conversionData.fontCascadeForFontUnits().metricsOfPrimaryFont().intLineSpacing();
+        } else if (auto fixedLineHeight = conversionData.style()->lineHeight().tryFixed()) {
+            // We can't use computedLineHeightForFontUnits if the line height is fixed since
+            // that will apply the usedZoomFactor. We probably should refactor it so that
+            // does not happen and we don't have to special case this scenario.
+            value *= Style::evaluate<LayoutUnit>(*fixedLineHeight, Style::ZoomFactor { conversionData.zoom() }).toFloat();
         } else
             value *= conversionData.computedLineHeightForFontUnits();
         break;
@@ -271,7 +325,8 @@ double computeNonCalcLengthDouble(double value, CSS::LengthUnit lengthUnit, cons
     case Rem:
     case Rex:
     case Ric:
-        value = computeUnzoomedNonCalcLengthDouble(value, lengthUnit, conversionData.propertyToCompute(), conversionData.rootStyle() ? &conversionData.rootStyle()->fontCascade() : &conversionData.fontCascadeForFontUnits());
+        value = computeUnzoomedNonCalcLengthDouble(value, lengthUnit, conversionData.propertyToCompute(), conversionData.rootStyle() ? &conversionData.rootStyle()->fontCascade() : &conversionData.fontCascadeForFontUnits(), conversionData.rangeZoomOption());
+        value = adjustZoomStateForFontRelativeUnitsIfNeeded(value, conversionData);
         break;
 
     case Rlh:
@@ -286,76 +341,76 @@ double computeNonCalcLengthDouble(double value, CSS::LengthUnit lengthUnit, cons
     // MARK: "viewport-percentage" resolution
 
     case Vh:
-        return value * conversionData.defaultViewportFactor().height();
+        return value * adjustValueForPageZoom(conversionData.defaultViewportFactor().height(), conversionData);
 
     case Vw:
-        return value * conversionData.defaultViewportFactor().width();
+        return value * adjustValueForPageZoom(conversionData.defaultViewportFactor().width(), conversionData);
 
     case Vmax:
-        return value * conversionData.defaultViewportFactor().maxDimension();
+        return value * adjustValueForPageZoom(conversionData.defaultViewportFactor().maxDimension(), conversionData);
 
     case Vmin:
-        return value * conversionData.defaultViewportFactor().minDimension();
+        return value * adjustValueForPageZoom(conversionData.defaultViewportFactor().minDimension(), conversionData);
 
     case Vb:
-        return value * lengthOfViewportPhysicalAxisForLogicalAxis(LogicalBoxAxis::Block, conversionData.defaultViewportFactor(), conversionData.style());
+        return value * adjustValueForPageZoom(lengthOfViewportPhysicalAxisForLogicalAxis(LogicalBoxAxis::Block, conversionData.defaultViewportFactor(), conversionData.style()), conversionData);
 
     case Vi:
-        return value * lengthOfViewportPhysicalAxisForLogicalAxis(LogicalBoxAxis::Inline, conversionData.defaultViewportFactor(), conversionData.style());
+        return value * adjustValueForPageZoom(lengthOfViewportPhysicalAxisForLogicalAxis(LogicalBoxAxis::Inline, conversionData.defaultViewportFactor(), conversionData.style()), conversionData);
 
     case Svh:
-        return value * conversionData.smallViewportFactor().height();
+        return value * adjustValueForPageZoom(conversionData.smallViewportFactor().height(), conversionData);
 
     case Svw:
-        return value * conversionData.smallViewportFactor().width();
+        return value * adjustValueForPageZoom(conversionData.smallViewportFactor().width(), conversionData);
 
     case Svmax:
-        return value * conversionData.smallViewportFactor().maxDimension();
+        return value * adjustValueForPageZoom(conversionData.smallViewportFactor().maxDimension(), conversionData);
 
     case Svmin:
-        return value * conversionData.smallViewportFactor().minDimension();
+        return value * adjustValueForPageZoom(conversionData.smallViewportFactor().minDimension(), conversionData);
 
     case Svb:
-        return value * lengthOfViewportPhysicalAxisForLogicalAxis(LogicalBoxAxis::Block, conversionData.smallViewportFactor(), conversionData.style());
+        return value * adjustValueForPageZoom(lengthOfViewportPhysicalAxisForLogicalAxis(LogicalBoxAxis::Block, conversionData.smallViewportFactor(), conversionData.style()), conversionData);
 
     case Svi:
-        return value * lengthOfViewportPhysicalAxisForLogicalAxis(LogicalBoxAxis::Inline, conversionData.smallViewportFactor(), conversionData.style());
+        return value * adjustValueForPageZoom(lengthOfViewportPhysicalAxisForLogicalAxis(LogicalBoxAxis::Inline, conversionData.smallViewportFactor(), conversionData.style()), conversionData);
 
     case Lvh:
-        return value * conversionData.largeViewportFactor().height();
+        return value * adjustValueForPageZoom(conversionData.largeViewportFactor().height(), conversionData);
 
     case Lvw:
-        return value * conversionData.largeViewportFactor().width();
+        return value * adjustValueForPageZoom(conversionData.largeViewportFactor().width(), conversionData);
 
     case Lvmax:
-        return value * conversionData.largeViewportFactor().maxDimension();
+        return value * adjustValueForPageZoom(conversionData.largeViewportFactor().maxDimension(), conversionData);
 
     case Lvmin:
-        return value * conversionData.largeViewportFactor().minDimension();
+        return value * adjustValueForPageZoom(conversionData.largeViewportFactor().minDimension(), conversionData);
 
     case Lvb:
-        return value * lengthOfViewportPhysicalAxisForLogicalAxis(LogicalBoxAxis::Block, conversionData.largeViewportFactor(), conversionData.style());
+        return value * adjustValueForPageZoom(lengthOfViewportPhysicalAxisForLogicalAxis(LogicalBoxAxis::Block, conversionData.largeViewportFactor(), conversionData.style()), conversionData);
 
     case Lvi:
-        return value * lengthOfViewportPhysicalAxisForLogicalAxis(LogicalBoxAxis::Inline, conversionData.largeViewportFactor(), conversionData.style());
+        return value * adjustValueForPageZoom(lengthOfViewportPhysicalAxisForLogicalAxis(LogicalBoxAxis::Inline, conversionData.largeViewportFactor(), conversionData.style()), conversionData);
 
     case Dvh:
-        return value * conversionData.dynamicViewportFactor().height();
+        return value * adjustValueForPageZoom(conversionData.dynamicViewportFactor().height(), conversionData);
 
     case Dvw:
-        return value * conversionData.dynamicViewportFactor().width();
+        return value * adjustValueForPageZoom(conversionData.dynamicViewportFactor().width(), conversionData);
 
     case Dvmax:
-        return value * conversionData.dynamicViewportFactor().maxDimension();
+        return value * adjustValueForPageZoom(conversionData.dynamicViewportFactor().maxDimension(), conversionData);
 
     case Dvmin:
-        return value * conversionData.dynamicViewportFactor().minDimension();
+        return value * adjustValueForPageZoom(conversionData.dynamicViewportFactor().minDimension(), conversionData);
 
     case Dvb:
-        return value * lengthOfViewportPhysicalAxisForLogicalAxis(LogicalBoxAxis::Block, conversionData.dynamicViewportFactor(), conversionData.style());
+        return value * adjustValueForPageZoom(lengthOfViewportPhysicalAxisForLogicalAxis(LogicalBoxAxis::Block, conversionData.dynamicViewportFactor(), conversionData.style()), conversionData);
 
     case Dvi:
-        return value * lengthOfViewportPhysicalAxisForLogicalAxis(LogicalBoxAxis::Inline, conversionData.dynamicViewportFactor(), conversionData.style());
+        return value * adjustValueForPageZoom(lengthOfViewportPhysicalAxisForLogicalAxis(LogicalBoxAxis::Inline, conversionData.dynamicViewportFactor(), conversionData.style()), conversionData);
 
     // MARK: "container-percentage" resolution
 

@@ -25,16 +25,16 @@
 
 #pragma once
 
-#include "CrossOriginEmbedderPolicy.h"
-#include "ReportBody.h"
-#include "ViolationReportType.h"
+#include <WebCore/CrossOriginEmbedderPolicy.h>
+#include <WebCore/ReportBody.h>
+#include <WebCore/ViolationReportType.h>
 #include <wtf/ArgumentCoder.h>
 #include <wtf/URL.h>
 
 namespace WebCore {
 
 class COEPInheritenceViolationReportBody : public ReportBody {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(COEPInheritenceViolationReportBody);
+    WTF_MAKE_TZONE_ALLOCATED(COEPInheritenceViolationReportBody);
 public:
     WEBCORE_EXPORT static Ref<COEPInheritenceViolationReportBody> create(COEPDisposition, const URL& blockedURL, const String& type);
 
@@ -43,7 +43,7 @@ public:
     const String& blockedURL() const { return m_blockedURL.string(); }
 
 private:
-    friend struct IPC::ArgumentCoder<COEPInheritenceViolationReportBody, void>;
+    friend struct IPC::ArgumentCoder<COEPInheritenceViolationReportBody>;
     COEPInheritenceViolationReportBody(COEPDisposition, const URL& blockedURL, const String& type);
 
     ViolationReportType reportBodyType() const final { return ViolationReportType::COEPInheritenceViolation; }

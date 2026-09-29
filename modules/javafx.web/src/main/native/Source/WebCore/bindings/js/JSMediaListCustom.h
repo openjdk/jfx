@@ -25,19 +25,19 @@
 
 #pragma once
 
-#include "CSSRule.h"
-#include "CSSStyleSheet.h"
-#include "JSStyleSheetCustom.h"
-#include "MediaList.h"
-#include "WebCoreOpaqueRootInlines.h"
+#include <WebCore/CSSRule.h>
+#include <WebCore/CSSStyleSheet.h>
+#include <WebCore/JSStyleSheetCustom.h>
+#include <WebCore/MediaList.h>
+#include <WebCore/WebCoreOpaqueRootInlines.h>
 
 namespace WebCore {
 
 inline WebCoreOpaqueRoot root(MediaList* mediaList)
 {
-    if (CSSRule* parentRule = mediaList->parentRule())
+    if (SUPPRESS_UNCOUNTED_LOCAL CSSRule* parentRule = mediaList->parentRule())
         return root(parentRule);
-    if (CSSStyleSheet* parentStyleSheet = mediaList->parentStyleSheet())
+    if (SUPPRESS_UNCOUNTED_LOCAL CSSStyleSheet* parentStyleSheet = mediaList->parentStyleSheet())
         return root(parentStyleSheet);
     return WebCoreOpaqueRoot { mediaList };
 }

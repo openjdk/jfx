@@ -63,7 +63,7 @@ private:
     GridArea gridAreaForDefiniteGridAxisItem(const RenderBox&) const;
 
     void placeMasonryItems(const GridTrackSizingAlgorithm&, GridMasonryLayout::MasonryLayoutPhase);
-    void setItemGridAxisContainingBlockToGridArea(const GridTrackSizingAlgorithm&, RenderBox&);
+    void setItemContainingBlockToGridArea(const GridTrackSizingAlgorithm&, RenderBox&);
     void insertIntoGridAndLayoutItem(const GridTrackSizingAlgorithm&, RenderBox&, const GridArea&, GridMasonryLayout::MasonryLayoutPhase);
     LayoutUnit calculateMasonryIntrinsicLogicalWidth(RenderBox&, GridMasonryLayout::MasonryLayoutPhase);
 
@@ -71,12 +71,12 @@ private:
     LayoutUnit masonryAxisMarginBoxForItem(const RenderBox& gridItem);
     void updateRunningPositions(const RenderBox& gridItem, const GridArea&);
     void updateItemOffset(const RenderBox& gridItem, LayoutUnit offset);
+    LayoutUnit maxRunningPositionForSpan(unsigned startLine, unsigned spanLength) const;
     inline Style::GridTrackSizingDirection gridAxisDirection() const;
 
     bool hasDefiniteGridAxisPosition(const RenderBox& gridItem, Style::GridTrackSizingDirection masonryDirection) const;
     GridArea masonryGridAreaFromGridAxisSpan(const GridSpan&) const;
     GridSpan gridAxisSpanFromArea(const GridArea&) const;
-    bool hasEnoughSpaceAtPosition(unsigned startingPosition, unsigned spanLength) const;
 
     unsigned m_gridAxisTracksCount;
 

@@ -30,6 +30,7 @@
 #include "CompilationResult.h"
 #include "WasmCallee.h"
 #include "WasmEntryPlan.h"
+#include "WasmModule.h"
 #include "WasmModuleInformation.h"
 #include "tools/FunctionAllowlist.h"
 #include <wtf/Bag.h>
@@ -45,16 +46,17 @@ class CallLinkInfo;
 namespace Wasm {
 
 class BBQCallee;
+class IPIntCallee;
 class CalleeGroup;
-class JSEntrypointCallee;
+class JSToWasmCallee;
 
 class BBQPlan final : public Plan {
 public:
     using Base = Plan;
 
-    static Ref<BBQPlan> create(VM& vm, Ref<ModuleInformation>&& info, FunctionCodeIndex functionIndex, std::optional<bool> hasExceptionHandlers, Ref<CalleeGroup>&& calleeGroup, CompletionTask&& completionTask)
+    static Ref<BBQPlan> create(VM& vm, Ref<ModuleInformation>&& info, FunctionCodeIndex functionIndex, Ref<IPIntCallee>&& profiledCallee, Ref<Module>&& module, Ref<CalleeGroup>&& calleeGroup, CompletionTask&& completionTask)
     {
-        return adoptRef(*new BBQPlan(vm, WTFMove(info), functionIndex, hasExceptionHandlers, WTFMove(calleeGroup), WTFMove(completionTask)));
+        return adoptRef(*new BBQPlan(vm, WTF::move(info), functionIndex, WTF::move(profiledCallee), WTF::move(module), WTF::move(calleeGroup), WTF::move(completionTask)));
     }
 
     bool hasWork() const final { return !m_completed; }
@@ -65,9 +67,9 @@ public:
 
 
 private:
-    BBQPlan(VM&, Ref<ModuleInformation>&&, FunctionCodeIndex functionIndex, std::optional<bool> hasExceptionHandlers, Ref<CalleeGroup>&&, CompletionTask&&);
+    BBQPlan(VM&, Ref<ModuleInformation>&&, FunctionCodeIndex functionIndex, Ref<IPIntCallee>&&, Ref<Module>&&, Ref<CalleeGroup>&&, CompletionTask&&);
 
-    bool dumpDisassembly(CompilationContext&, LinkBuffer&, FunctionCodeIndex functionIndex, const TypeDefinition&, FunctionSpaceIndex functionIndexSpace);
+    bool dumpDisassembly(CompilationContext&, LinkBuffer&, const TypeDefinition&, FunctionSpaceIndex functionIndexSpace);
 
     std::unique_ptr<InternalFunction> compileFunction(FunctionCodeIndex functionIndex, BBQCallee&, CompilationContext&, Vector<UnlinkedWasmToWasmCall>&);
     bool isComplete() const final { return m_completed; }
@@ -77,10 +79,13 @@ private:
         runCompletionTasks();
     }
 
+    void fail(String&& errorMessage, CompilationError);
+
+    const Ref<IPIntCallee> m_profiledCallee;
+    const Ref<Module> m_module;
     const Ref<CalleeGroup> m_calleeGroup;
     FunctionCodeIndex m_functionIndex;
     bool m_completed { false };
-    std::optional<bool> m_hasExceptionHandlers;
 };
 
 

@@ -41,17 +41,16 @@
 #include "ContextMenuItem.h"
 #include "ContextMenuProvider.h"
 #include "DOMWrapperWorld.h"
-#include "Document.h"
+#include "DocumentPage.h"
+#include "DocumentView.h"
 #include "Editor.h"
 #include "Event.h"
 #include "File.h"
 #include "FloatRect.h"
 #include "FocusController.h"
-#include "FrameInlines.h"
 #include "FrameDestructionObserverInlines.h"
 #include "HTMLIFrameElement.h"
 #include "HitTestResult.h"
-#include "InspectorController.h"
 #include "InspectorDebuggableType.h"
 #include "JSDOMConvertInterface.h"
 #include "JSDOMExceptionHandling.h"
@@ -62,10 +61,11 @@
 #include "LocalFrameInlines.h"
 #include "LocalFrameView.h"
 #include "MouseEvent.h"
-#include "Node.h"
+#include "NodeDocument.h"
 #include "NodeInlines.h"
 #include "OffscreenCanvasRenderingContext2D.h"
 #include "Page.h"
+#include "PageInspectorController.h"
 #include "PagePasteboardContext.h"
 #include "Pasteboard.h"
 #include "Path2D.h"
@@ -136,7 +136,7 @@ private:
 
             ScriptFunctionCall function(m_globalObject, m_frontendApiObject.get(), "contextMenuItemSelected"_s, WebCore::functionCallHandlerFromAnyThread);
             function.appendArgument(itemNumber);
-            function.call();
+            std::ignore = function.call();
         }
     }
 
@@ -144,14 +144,14 @@ private:
     {
         if (m_frontendHost) {
             ScriptFunctionCall function(m_globalObject, m_frontendApiObject.get(), "contextMenuCleared"_s, WebCore::functionCallHandlerFromAnyThread);
-            function.call();
+            std::ignore = function.call();
 
             m_frontendHost->m_menuProvider = nullptr;
         }
         m_items.clear();
     }
 
-    InspectorFrontendHost* m_frontendHost;
+    WeakPtr<InspectorFrontendHost> m_frontendHost;
     JSC::JSGlobalObject* m_globalObject;
     JSC::Strong<JSC::JSObject> m_frontendApiObject;
     Vector<ContextMenuItem> m_items;
@@ -176,8 +176,8 @@ void InspectorFrontendHost::disconnectClient()
 {
     m_client = nullptr;
 #if ENABLE(CONTEXT_MENUS)
-    if (m_menuProvider)
-        m_menuProvider->disconnect();
+    if (RefPtr menuProvider = m_menuProvider.get())
+        menuProvider->disconnect();
 #endif
     m_frontendPage = nullptr;
 }
@@ -276,20 +276,13 @@ void InspectorFrontendHost::inspectedURLChanged(const String& newURL)
 
 void InspectorFrontendHost::setZoomFactor(float zoom)
 {
-    if (m_frontendPage) {
-        if (RefPtr localMainFrame = m_frontendPage->localMainFrame())
-            localMainFrame->setPageAndTextZoomFactors(zoom, 1);
-    }
+    if (m_client)
+        m_client->setPageAndTextZoomFactors(zoom, 1);
 }
 
 float InspectorFrontendHost::zoomFactor()
 {
-    if (m_frontendPage) {
-        if (RefPtr localMainFrame = m_frontendPage->localMainFrame())
-            return localMainFrame->pageZoomFactor();
-    }
-
-    return 1.0;
+    return m_client ? m_client->pageZoomFactor() : 1.0;
 }
 
 void InspectorFrontendHost::setForcedAppearance(String appearance)
@@ -382,6 +375,8 @@ static String debuggableTypeToString(DebuggableType debuggableType)
         return "service-worker"_s;
     case DebuggableType::WebPage:
         return "web-page"_s;
+    case DebuggableType::WasmDebugger:
+        return "wasm-debugger"_s;
     }
 
     ASSERT_NOT_REACHED();
@@ -440,7 +435,7 @@ String InspectorFrontendHost::platformVersionName() const
 void InspectorFrontendHost::copyText(const String& text)
 {
     auto pageID = m_frontendPage ? m_frontendPage->mainFrame().pageID() : std::nullopt;
-    Pasteboard::createForCopyAndPaste(PagePasteboardContext::create(WTFMove(pageID)))->writePlainText(text, Pasteboard::CannotSmartReplace);
+    Pasteboard::createForCopyAndPaste(PagePasteboardContext::create(WTF::move(pageID)))->writePlainText(text, Pasteboard::CannotSmartReplace);
 }
 
 void InspectorFrontendHost::killText(const String& text, bool shouldPrependToKillRing, bool shouldStartNewSequence)
@@ -486,7 +481,7 @@ bool InspectorFrontendHost::canSave(SaveMode saveMode)
 void InspectorFrontendHost::save(Vector<SaveData>&& saveDatas, bool forceSaveAs)
 {
     if (m_client)
-        m_client->save(WTFMove(saveDatas), forceSaveAs);
+        m_client->save(WTF::move(saveDatas), forceSaveAs);
 }
 
 bool InspectorFrontendHost::canLoad()
@@ -503,7 +498,7 @@ void InspectorFrontendHost::load(const String& path, Ref<DeferredPromise>&& prom
         return;
     }
 
-    m_client->load(path, [promise = WTFMove(promise)](const String& content) {
+    m_client->load(path, [promise = WTF::move(promise)](const String& content) {
         if (!content)
             promise->reject(ExceptionCode::NotFoundError);
         else
@@ -525,7 +520,7 @@ void InspectorFrontendHost::pickColorFromScreen(Ref<DeferredPromise>&& promise)
         return;
     }
 
-    m_client->pickColorFromScreen([promise = WTFMove(promise)](const std::optional<WebCore::Color>& color) {
+    m_client->pickColorFromScreen([promise = WTF::move(promise)](const std::optional<WebCore::Color>& color) {
         if (!color) {
             promise->resolve();
             return;
@@ -563,7 +558,7 @@ static void populateContextMenu(Vector<InspectorFrontendHost::ContextMenuItem>&&
 
         if (item.type == "subMenu"_s && item.subItems) {
             ContextMenu subMenu;
-            populateContextMenu(WTFMove(*item.subItems), subMenu);
+            populateContextMenu(WTF::move(*item.subItems), subMenu);
 
             menu.appendItem({ ContextMenuItemType::Submenu, ContextMenuItemTagNoAction, item.label, &subMenu });
             continue;
@@ -598,10 +593,10 @@ void InspectorFrontendHost::showContextMenu(Event& event, Vector<ContextMenuItem
     auto* frontendAPIObject = asObject(value);
 
     ContextMenu menu;
-    populateContextMenu(WTFMove(items), menu);
+    populateContextMenu(WTF::move(items), menu);
 
-    auto menuProvider = FrontendMenuProvider::create(this, &globalObject, frontendAPIObject, menu.items());
-    m_menuProvider = menuProvider.ptr();
+    Ref menuProvider = FrontendMenuProvider::create(this, &globalObject, frontendAPIObject, menu.items());
+    m_menuProvider = menuProvider;
     m_frontendPage->contextMenuController().showContextMenu(event, menuProvider);
 #else
     UNUSED_PARAM(event);
@@ -617,7 +612,7 @@ void InspectorFrontendHost::dispatchEventAsContextMenuEvent(Event& event)
 
     auto& mouseEvent = downcast<MouseEvent>(event);
     LocalFrame& frame = *downcast<Node>(mouseEvent.target())->document().frame();
-    LayoutPoint location = mouseEvent.absoluteLocation();
+    auto location = LayoutPoint(mouseEvent.absoluteLocation());
     if (RefPtr<LocalFrameView> view = frame.view()) {
         FloatBoxExtent insets = view->obscuredContentInsets();
         location.move(insets.left(), insets.top());
@@ -658,7 +653,7 @@ bool InspectorFrontendHost::isBeingInspected()
     if (!m_frontendPage)
         return false;
 
-    InspectorController& inspectorController = m_frontendPage->inspectorController();
+    PageInspectorController& inspectorController = m_frontendPage->inspectorController();
     return inspectorController.hasLocalFrontend() || inspectorController.hasRemoteFrontend();
 }
 
@@ -770,8 +765,8 @@ void InspectorFrontendHost::logDiagnosticEvent(const String& eventName, const St
 
     DiagnosticLoggingClient::ValueDictionary dictionary;
     for (auto& [key, value] : *payloadObject) {
-        if (auto valuePayload = valuePayloadFromJSONValue(WTFMove(value)))
-            dictionary.set(key, WTFMove(valuePayload.value()));
+        if (auto valuePayload = valuePayloadFromJSONValue(WTF::move(value)))
+            dictionary.set(key, WTF::move(valuePayload.value()));
     }
 
     m_client->logDiagnosticEvent(makeString("WebInspector."_s, eventName), dictionary);
@@ -843,7 +838,7 @@ ExceptionOr<JSC::JSValue> InspectorFrontendHost::evaluateScriptInExtensionTab(HT
     if (!result)
         return Exception { ExceptionCode::InvalidStateError, result.error().message };
 
-    return WTFMove(result.value());
+    return WTF::move(result.value());
 }
 
 #endif // ENABLE(INSPECTOR_EXTENSIONS)

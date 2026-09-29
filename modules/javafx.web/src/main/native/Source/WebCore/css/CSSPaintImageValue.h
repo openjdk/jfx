@@ -42,7 +42,7 @@ class CSSPaintImageValue final : public CSSValue {
 public:
     static Ref<CSSPaintImageValue> create(String name, Ref<CSSVariableData> arguments)
     {
-        return adoptRef(*new CSSPaintImageValue(WTFMove(name), WTFMove(arguments)));
+        return adoptRef(*new CSSPaintImageValue(WTF::move(name), WTF::move(arguments)));
     }
     ~CSSPaintImageValue();
 

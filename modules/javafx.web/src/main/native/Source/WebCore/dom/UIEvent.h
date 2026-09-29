@@ -24,9 +24,10 @@
 
 #pragma once
 
-#include "Event.h"
-#include "UIEventInit.h"
-#include "WindowProxy.h"
+#include <WebCore/Event.h>
+#include <WebCore/EventTimingInteractionID.h>
+#include <WebCore/UIEventInit.h>
+#include <WebCore/WindowProxy.h>
 
 namespace WebCore {
 
@@ -34,11 +35,11 @@ namespace WebCore {
 typedef WindowProxy AbstractView;
 
 class UIEvent : public Event {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(UIEvent);
+    WTF_MAKE_TZONE_ALLOCATED(UIEvent);
 public:
     static Ref<UIEvent> create(const AtomString& type, CanBubble canBubble, IsCancelable isCancelable, IsComposed isComposed, RefPtr<WindowProxy>&& view, int detail)
     {
-        return adoptRef(*new UIEvent(EventInterfaceType::UIEvent, type, canBubble, isCancelable, isComposed, WTFMove(view), detail));
+        return adoptRef(*new UIEvent(EventInterfaceType::UIEvent, type, canBubble, isCancelable, isComposed, WTF::move(view), detail));
     }
     static Ref<UIEvent> createForBindings()
     {
@@ -54,12 +55,18 @@ public:
 
     WindowProxy* view() const { return m_view.get(); }
     int detail() const { return m_detail; }
+    EventTimingInteractionID interactionID() const { return m_interactionID; }
+    void setInteractionID(EventTimingInteractionID interactionID) { m_interactionID = interactionID; }
 
     virtual int layerX();
     virtual int layerY();
 
-    virtual int pageX() const;
-    virtual int pageY() const;
+    virtual double screenX() const;
+    virtual double screenY() const;
+    virtual double pageX() const;
+    virtual double pageY() const;
+    virtual double clientX() const;
+    virtual double clientY() const;
 
     virtual unsigned which() const;
 
@@ -71,12 +78,13 @@ protected:
     UIEvent(enum EventInterfaceType, const AtomString&, const UIEventInit&, IsTrusted = IsTrusted::No);
 
 private:
-    bool isUIEvent() const final;
+    bool isUIEvent() const final { return true; }
 
     RefPtr<WindowProxy> m_view;
     int m_detail;
+    EventTimingInteractionID m_interactionID;
 };
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_EVENT(UIEvent)
+SPECIALIZE_TYPE_TRAITS_EVENT_POLYMORPHIC(UIEvent)

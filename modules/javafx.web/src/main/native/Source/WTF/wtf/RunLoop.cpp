@@ -67,11 +67,7 @@ void RunLoop::initializeMain()
 
 auto RunLoop::runLoopHolder() -> ThreadSpecific<Holder>&
 {
-    static LazyNeverDestroyed<ThreadSpecific<Holder>> runLoopHolder;
-    static std::once_flag onceKey;
-    std::call_once(onceKey, [&] {
-        runLoopHolder.construct();
-    });
+    static NeverDestroyed<ThreadSpecific<Holder>> runLoopHolder;
     return runLoopHolder;
 }
 
@@ -116,9 +112,10 @@ Ref<RunLoop> RunLoop::create(ASCIILiteral threadName, ThreadType threadType, Thr
     RefPtr<RunLoop> runLoop;
     BinarySemaphore semaphore;
     Thread::create(threadName, [&] SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE {
-        runLoop = &RunLoop::currentSingleton();
+        auto& current = RunLoop::currentSingleton();
+        runLoop = &current;
         semaphore.signal();
-        runLoop->run();
+        current.run();
     }, threadType, qos)->detach();
     semaphore.wait();
     return runLoop.releaseNonNull();
@@ -179,7 +176,7 @@ void RunLoop::dispatch(Function<void()>&& function)
     {
         Locker locker { m_nextIterationLock };
         needsWakeup = m_nextIteration.isEmpty();
-        m_nextIteration.append(WTFMove(function));
+        m_nextIteration.append(WTF::move(function));
     }
 
 #if PLATFORM(JAVA)
@@ -199,8 +196,8 @@ Ref<RunLoop::DispatchTimer> RunLoop::dispatchAfter(Seconds delay, Function<void(
 {
     RELEASE_ASSERT(function);
     Ref<DispatchTimer> timer = adoptRef(*new DispatchTimer(*this));
-    timer->setFunction([timer = timer.copyRef(), function = WTFMove(function)]() mutable {
-        Ref<DispatchTimer> protectedTimer { WTFMove(timer) };
+    timer->setFunction([timer = timer.copyRef(), function = WTF::move(function)]() mutable {
+        Ref<DispatchTimer> protectedTimer { WTF::move(timer) };
         function();
         protectedTimer->stop();
     });

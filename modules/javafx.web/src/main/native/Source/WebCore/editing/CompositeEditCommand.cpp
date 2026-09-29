@@ -36,13 +36,16 @@
 #include "DeleteFromTextNodeCommand.h"
 #include "DeleteSelectionCommand.h"
 #include "DocumentFragment.h"
-#include "DocumentInlines.h"
 #include "DocumentMarkerController.h"
+#include "DocumentMarkers.h"
+#include "DocumentView.h"
 #include "Editing.h"
+#include "EditingInlines.h"
 #include "Editor.h"
 #include "EditorInsertAction.h"
 #include "ElementTraversal.h"
 #include "Event.h"
+#include "FrameDestructionObserverInlines.h"
 #include "HTMLBRElement.h"
 #include "HTMLDivElement.h"
 #include "HTMLLIElement.h"
@@ -57,12 +60,14 @@
 #include "InsertTextCommand.h"
 #include "LocalFrame.h"
 #include "MergeIdenticalElementsCommand.h"
+#include "NodeDocument.h"
 #include "NodeTraversal.h"
 #include "PositionInlines.h"
 #include "RemoveNodeCommand.h"
 #include "RemoveNodePreservingChildrenCommand.h"
 #include "RenderBlockFlow.h"
-#include "RenderStyleInlines.h"
+#include "RenderObjectStyle.h"
+#include "RenderStyle+GettersInlines.h"
 #include "RenderText.h"
 #include "RenderedDocumentMarker.h"
 #include "ReplaceNodeWithSpanCommand.h"
@@ -140,7 +145,7 @@ static String stringForVisiblePositionIndexRange(const VisiblePositionIndexRange
         return String();
     VisiblePosition start = visiblePositionForIndex(range.startIndex.value, range.startIndex.scope.get());
     VisiblePosition end = visiblePositionForIndex(range.endIndex.value, range.endIndex.scope.get());
-    return AccessibilityObject::stringForVisiblePositionRange({ WTFMove(start), WTFMove(end) });
+    return AccessibilityObject::stringForVisiblePositionRange({ WTF::move(start), WTF::move(end) });
 }
 
 String AccessibilityUndoReplacedText::textDeletedByUnapply()
@@ -297,10 +302,8 @@ void EditCommandComposition::reapply()
     if (!m_document->editor().willReapplyEditing(*this))
         return;
 
-    for (size_t i = 0; i < m_commands.size(); ++i) {
-        RefPtr command = m_commands[i].get();
+    for (Ref command : m_commands)
         command->doReapply();
-    }
 
     m_document->editor().reappliedEditing(*this);
 
@@ -310,7 +313,7 @@ void EditCommandComposition::reapply()
     RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(m_document->selection().isNone() || m_document->selection().isConnectedToDocument());
 }
 
-void EditCommandComposition::append(SimpleEditCommand* command)
+void EditCommandComposition::append(SimpleEditCommand& command)
 {
     m_commands.append(command);
 }
@@ -337,10 +340,8 @@ void EditCommandComposition::setRangeDeletedByUnapply(const VisiblePositionIndex
 #ifndef NDEBUG
 void EditCommandComposition::getNodesInCommand(NodeSet& nodes)
 {
-    for (size_t i = 0; i < m_commands.size(); ++i) {
-        RefPtr command = m_commands[i].get();
+    for (Ref command : m_commands)
         command->getNodesInCommand(nodes);
-    }
 }
 #endif
 
@@ -350,7 +351,7 @@ String EditCommandComposition::label() const
 }
 
 CompositeEditCommand::CompositeEditCommand(Ref<Document>&& document, EditAction editingAction)
-    : EditCommand(WTFMove(document), editingAction)
+    : EditCommand(WTF::move(document), editingAction)
 {
 }
 
@@ -425,17 +426,17 @@ void CompositeEditCommand::didApplyCommand()
     document().editor().appliedEditing(*this);
 }
 
-Vector<RefPtr<StaticRange>> CompositeEditCommand::targetRanges() const
+Vector<Ref<StaticRange>> CompositeEditCommand::targetRanges() const
 {
     ASSERT(!isEditingTextAreaOrTextInput());
     auto firstRange = document().selection().selection().firstRange();
     if (!firstRange)
         return { };
 
-    return { 1, StaticRange::create(WTFMove(*firstRange)) };
+    return { 1, StaticRange::create(WTF::move(*firstRange)) };
 }
 
-Vector<RefPtr<StaticRange>> CompositeEditCommand::targetRangesForBindings() const
+Vector<Ref<StaticRange>> CompositeEditCommand::targetRangesForBindings() const
 {
     if (isEditingTextAreaOrTextInput())
         return { };
@@ -451,19 +452,19 @@ RefPtr<DataTransfer> CompositeEditCommand::inputEventDataTransfer() const
 EditCommandComposition* CompositeEditCommand::composition() const
 {
     for (RefPtr command = this; command; command = command->parent()) {
-        if (auto composition = command->m_composition) {
+        if (auto* composition = command->m_composition.get()) {
             ASSERT(!command->parent());
-            return composition.get();
+            return composition;
         }
     }
     return nullptr;
 }
 
-EditCommandComposition& CompositeEditCommand::ensureComposition()
+Ref<EditCommandComposition> CompositeEditCommand::ensureComposition()
 {
-    RefPtr command { this };
+    Ref command { *this };
     while (RefPtr parent = command->parent())
-        command = WTFMove(parent);
+        command = parent.releaseNonNull();
     if (!command->m_composition)
         command->m_composition = EditCommandComposition::create(document(), startingSelection(), endingSelection(), editingAction());
     return *command->m_composition;
@@ -507,9 +508,9 @@ void CompositeEditCommand::applyCommandToComposite(Ref<EditCommand>&& command)
     command->doApply();
     if (auto* simpleCommand = dynamicDowncast<SimpleEditCommand>(command.get())) {
         command->setParent(nullptr);
-        ensureComposition().append(simpleCommand);
+        ensureComposition()->append(*simpleCommand);
     }
-    m_commands.append(WTFMove(command));
+    m_commands.append(WTF::move(command));
 }
 
 void CompositeEditCommand::applyCommandToComposite(Ref<CompositeEditCommand>&& command, const VisibleSelection& selection)
@@ -520,7 +521,7 @@ void CompositeEditCommand::applyCommandToComposite(Ref<CompositeEditCommand>&& c
         command->setEndingSelection(selection);
     }
     command->doApply();
-    m_commands.append(WTFMove(command));
+    m_commands.append(WTF::move(command));
 }
 
 void CompositeEditCommand::applyStyle(const EditingStyle* style, EditAction editingAction)
@@ -535,12 +536,12 @@ void CompositeEditCommand::applyStyle(const EditingStyle* style, const Position&
 
 void CompositeEditCommand::applyStyledElement(Ref<Element>&& element)
 {
-    applyCommandToComposite(ApplyStyleCommand::create(WTFMove(element), false));
+    applyCommandToComposite(ApplyStyleCommand::create(WTF::move(element), false));
 }
 
 void CompositeEditCommand::removeStyledElement(Ref<Element>&& element)
 {
-    applyCommandToComposite(ApplyStyleCommand::create(WTFMove(element), true));
+    applyCommandToComposite(ApplyStyleCommand::create(WTF::move(element), true));
 }
 
 void CompositeEditCommand::insertParagraphSeparator(bool useDefaultParagraphElement, bool pasteBlockqutoeIntoUnquotedArea)
@@ -576,7 +577,7 @@ bool CompositeEditCommand::insertNodeBefore(Ref<Node>&& insertChild, Node& refCh
     RefPtr parent { refChild.parentNode() };
     if (!parent || (!parent->hasEditableStyle() && parent->renderer()))
         return false;
-    applyCommandToComposite(InsertNodeBeforeCommand::create(WTFMove(insertChild), refChild, shouldAssumeContentIsAlwaysEditable, editingAction()));
+    applyCommandToComposite(InsertNodeBeforeCommand::create(WTF::move(insertChild), refChild, shouldAssumeContentIsAlwaysEditable, editingAction()));
     return true;
 }
 
@@ -588,10 +589,10 @@ void CompositeEditCommand::insertNodeAfter(Ref<Node>&& insertChild, Node& refChi
 
     ASSERT(!parent->isShadowRoot());
     if (parent->lastChild() == &refChild)
-        appendNode(WTFMove(insertChild), *parent);
+        appendNode(WTF::move(insertChild), *parent);
     else {
         ASSERT(refChild.nextSibling());
-        insertNodeBefore(WTFMove(insertChild), *refChild.nextSibling());
+        insertNodeBefore(WTF::move(insertChild), *refChild.nextSibling());
     }
 }
 
@@ -609,25 +610,25 @@ void CompositeEditCommand::insertNodeAt(Ref<Node>&& insertChild, const Position&
         for (int i = 0; child && i < offset; i++)
             child = child->nextSibling();
         if (child)
-            insertNodeBefore(WTFMove(insertChild), *child);
+            insertNodeBefore(WTF::move(insertChild), *child);
         else
-            appendNode(WTFMove(insertChild), downcast<ContainerNode>(*refChild));
+            appendNode(WTF::move(insertChild), downcast<ContainerNode>(*refChild));
     } else if (caretMinOffset(*refChild) >= offset)
-        insertNodeBefore(WTFMove(insertChild), *refChild);
+        insertNodeBefore(WTF::move(insertChild), *refChild);
     else if (RefPtr text = dynamicDowncast<Text>(*refChild); text && caretMaxOffset(*refChild) > offset) {
         splitTextNode(*text, offset);
 
         // Mutation events (bug 22634) from the text node insertion may have removed the refChild
         if (!refChild->isConnected())
             return;
-        insertNodeBefore(WTFMove(insertChild), *refChild);
+        insertNodeBefore(WTF::move(insertChild), *refChild);
     } else
-        insertNodeAfter(WTFMove(insertChild), *refChild);
+        insertNodeAfter(WTF::move(insertChild), *refChild);
 }
 
 void CompositeEditCommand::appendNode(Ref<Node>&& node, Ref<ContainerNode>&& parent)
 {
-    applyCommandToComposite(AppendNodeCommand::create(WTFMove(parent), WTFMove(node), editingAction()));
+    applyCommandToComposite(AppendNodeCommand::create(WTF::move(parent), WTF::move(node), editingAction()));
 }
 
 void CompositeEditCommand::removeChildrenInRange(Node& node, unsigned from, unsigned to)
@@ -670,7 +671,7 @@ void CompositeEditCommand::moveRemainingSiblingsToNewParent(Node* node, Node* pa
 
     for (auto& nodeToRemove : nodesToRemove) {
         removeNode(nodeToRemove);
-        appendNode(WTFMove(nodeToRemove), newParent);
+        appendNode(WTF::move(nodeToRemove), newParent);
     }
 }
 
@@ -857,7 +858,7 @@ Position CompositeEditCommand::positionOutsideTabSpan(const Position& position)
 void CompositeEditCommand::insertNodeAtTabSpanPosition(Ref<Node>&& node, const Position& pos)
 {
     // insert node before, after, or at split of tab span
-    insertNodeAt(WTFMove(node), positionOutsideTabSpan(pos));
+    insertNodeAt(WTF::move(node), positionOutsideTabSpan(pos));
 }
 
 static EditAction deleteSelectionEditingActionForEditingAction(EditAction editingAction)
@@ -1147,7 +1148,7 @@ RefPtr<Element> CompositeEditCommand::appendBlockPlaceholder(Ref<Element>&& cont
         return nullptr;
 
     auto placeholder = createBlockPlaceholderElement(document);
-    appendNode(placeholder.copyRef(), WTFMove(container));
+    appendNode(placeholder.copyRef(), WTF::move(container));
     return placeholder;
 }
 
@@ -1321,7 +1322,7 @@ void CompositeEditCommand::cloneParagraphUnderNewElement(const Position& start, 
             auto item = std::exchange(ancestors[i - 1], nullptr);
             auto child = item->cloneNode(isRenderedTable(item.get()));
             appendNode(child.copyRef(), downcast<Element>(*lastNode));
-            lastNode = WTFMove(child);
+            lastNode = WTF::move(child);
         }
     }
 
@@ -1350,7 +1351,7 @@ void CompositeEditCommand::cloneParagraphUnderNewElement(const Position& start, 
 
             auto clonedNode = node->cloneNode(true);
             insertNodeAfter(clonedNode.copyRef(), *lastNode);
-            lastNode = WTFMove(clonedNode);
+            lastNode = WTF::move(clonedNode);
             if (node == end.deprecatedNode() || end.protectedDeprecatedNode()->isDescendantOf(*node))
                 break;
         }
@@ -1567,7 +1568,7 @@ void CompositeEditCommand::moveParagraphs(const VisiblePosition& startOfParagrap
     OptionSet<ReplaceSelectionCommand::CommandOption> options { ReplaceSelectionCommand::SelectReplacement, ReplaceSelectionCommand::MovingParagraph };
     if (!preserveStyle)
         options.add(ReplaceSelectionCommand::MatchStyle);
-    applyCommandToComposite(ReplaceSelectionCommand::create(document.copyRef(), WTFMove(fragment), options));
+    applyCommandToComposite(ReplaceSelectionCommand::create(document.copyRef(), WTF::move(fragment), options));
 
     document->editor().markMisspellingsAndBadGrammar(endingSelection());
 

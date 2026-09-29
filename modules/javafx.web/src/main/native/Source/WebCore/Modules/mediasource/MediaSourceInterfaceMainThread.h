@@ -35,7 +35,7 @@ class MediaSource;
 
 class MediaSourceInterfaceMainThread : public MediaSourceInterfaceProxy {
 public:
-    static Ref<MediaSourceInterfaceMainThread> create(Ref<MediaSource>&& mediaSource) { return adoptRef(*new MediaSourceInterfaceMainThread(WTFMove(mediaSource))); }
+    static Ref<MediaSourceInterfaceMainThread> create(Ref<MediaSource>&& mediaSource) { return adoptRef(*new MediaSourceInterfaceMainThread(WTF::move(mediaSource))); }
 
 private:
     RefPtr<MediaSourcePrivateClient> client() const final;

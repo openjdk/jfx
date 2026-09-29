@@ -27,9 +27,12 @@
 #include <wtf/AutomaticThread.h>
 
 #include <wtf/DataLog.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/Threading.h>
 
 namespace WTF {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(AutomaticThread);
 
 static constexpr bool verbose = false;
 
@@ -44,14 +47,14 @@ AutomaticThreadCondition::~AutomaticThreadCondition() = default;
 
 void AutomaticThreadCondition::notifyOne(const AbstractLocker& locker)
 {
-    for (AutomaticThread* thread : m_threads) {
+    for (auto& thread : m_threads) {
         if (thread->isWaiting(locker)) {
             thread->notify(locker);
             return;
         }
     }
 
-    for (AutomaticThread* thread : m_threads) {
+    for (auto& thread : m_threads) {
         if (!thread->hasUnderlyingThread(locker)) {
             thread->start(locker);
             return;
@@ -65,7 +68,7 @@ void AutomaticThreadCondition::notifyAll(const AbstractLocker& locker)
 {
     m_condition.notifyAll();
 
-    for (AutomaticThread* thread : m_threads) {
+    for (auto& thread : m_threads) {
         if (thread->isWaiting(locker))
             thread->notify(locker);
         else if (!thread->hasUnderlyingThread(locker))
@@ -91,23 +94,23 @@ void AutomaticThreadCondition::add(const AbstractLocker&, AutomaticThread* threa
 
 void AutomaticThreadCondition::remove(const AbstractLocker&, AutomaticThread* thread)
 {
-    m_threads.removeFirst(thread);
+    m_threads.removeFirstMatching([&](auto& t) { return t.get() == thread; });
     ASSERT(!m_threads.contains(thread));
 }
 
 bool AutomaticThreadCondition::contains(const AbstractLocker&, AutomaticThread* thread)
 {
-    return m_threads.contains(thread);
+    return m_threads.containsIf([&](auto& t) { return t.get() == thread; });
 }
 
 AutomaticThread::AutomaticThread(const AbstractLocker& locker, Box<Lock> lock, Ref<AutomaticThreadCondition>&& condition, Seconds timeout)
-    : AutomaticThread(locker, lock, WTFMove(condition), ThreadType::Unknown, timeout)
+    : AutomaticThread(locker, lock, WTF::move(condition), ThreadType::Unknown, timeout)
 {
 }
 
 AutomaticThread::AutomaticThread(const AbstractLocker& locker, Box<Lock> lock, Ref<AutomaticThreadCondition>&& condition, ThreadType type, Seconds timeout)
     : m_lock(lock)
-    , m_condition(WTFMove(condition))
+    , m_condition(WTF::move(condition))
     , m_timeout(timeout)
     , m_threadType(type)
 {

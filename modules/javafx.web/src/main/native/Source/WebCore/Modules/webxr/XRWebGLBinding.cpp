@@ -29,17 +29,48 @@
 #if ENABLE(WEBXR_LAYERS)
 
 #include "ExceptionOr.h"
+#include "WebGL2RenderingContext.h"
+#include "WebGLRenderingContext.h"
+#include "WebGLRenderingContextBase.h"
+#include "WebXRSession.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(XRWebGLBinding);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(XRWebGLBinding);
 
-ExceptionOr<Ref<XRWebGLBinding>> XRWebGLBinding::create(Ref<WebXRSession>&&, WebXRWebGLRenderingContext&&)
+ExceptionOr<Ref<XRWebGLBinding>> XRWebGLBinding::create(Ref<WebXRSession>&& session, WebXRWebGLRenderingContext&& context)
 {
-    RELEASE_ASSERT_NOT_REACHED();
+    if (session->ended())
+        return Exception { ExceptionCode::InvalidStateError, "Cannot create an XRWebGLBinding with an XRSession that has ended."_s };
+
+    return WTF::switchOn(context,
+        [&](const RefPtr<WebGLRenderingContextBase>& baseContext) -> ExceptionOr<Ref<XRWebGLBinding>> {
+            if (!baseContext || baseContext->isContextLost())
+                return Exception { ExceptionCode::InvalidStateError, "Cannot create an XRWebGLBinding with a lost WebGL context."_s };
+
+            if (!isImmersive(session->mode()))
+                return Exception { ExceptionCode::InvalidStateError, "Cannot create an XRWebGLBinding for non immersive sessions."_s };
+
+            if (!baseContext->isXRCompatible())
+                return Exception { ExceptionCode::InvalidStateError, "Cannot create an XRWebGLBinding with a non XR compatible WebGL context."_s };
+
+            return adoptRef(*new XRWebGLBinding(WTF::move(session), WTF::move(context)));
+        },
+        [](std::monostate) {
+            ASSERT_NOT_REACHED();
+            return Exception { ExceptionCode::InvalidStateError };
+        }
+    );
+}
+
+XRWebGLBinding::XRWebGLBinding(Ref<WebXRSession>&& session, WebXRWebGLRenderingContext&& context)
+    : m_session(WTF::move(session))
+    , m_context(WTF::move(context))
+{
 }
 
 } // namespace WebCore
 
 #endif // ENABLE(WEBXR_LAYERS)
+

@@ -29,20 +29,20 @@
 
 #if ENABLE(MEDIA_STREAM)
 
-#include "ActiveDOMObject.h"
-#include "Blob.h"
-#include "EventTarget.h"
-#include "EventTargetInterfaces.h"
-#include "IDLTypes.h"
-#include "JSDOMPromiseDeferred.h"
-#include "MediaProducer.h"
-#include "MediaStreamTrackDataHolder.h"
-#include "MediaStreamTrackPrivate.h"
-#include "MediaTrackCapabilities.h"
-#include "MediaTrackConstraints.h"
-#include "PhotoCapabilities.h"
-#include "PhotoSettings.h"
-#include "PlatformMediaSession.h"
+#include <WebCore/ActiveDOMObject.h>
+#include <WebCore/Blob.h>
+#include <WebCore/EventTarget.h>
+#include <WebCore/EventTargetInterfaces.h>
+#include <WebCore/IDLTypes.h>
+#include <WebCore/JSDOMPromiseDeferred.h>
+#include <WebCore/MediaProducer.h>
+#include <WebCore/MediaStreamTrackDataHolder.h>
+#include <WebCore/MediaStreamTrackPrivate.h>
+#include <WebCore/MediaTrackCapabilities.h>
+#include <WebCore/MediaTrackConstraints.h>
+#include <WebCore/PhotoCapabilities.h>
+#include <WebCore/PhotoSettings.h>
+#include <WebCore/PlatformMediaSession.h>
 #include <wtf/LoggerHelper.h>
 
 namespace WebCore {
@@ -63,11 +63,8 @@ class MediaStreamTrack
     , private LoggerHelper
 #endif
 {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(MediaStreamTrack);
+    WTF_MAKE_TZONE_ALLOCATED(MediaStreamTrack);
 public:
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
-
     class Observer {
     public:
         virtual ~Observer() = default;
@@ -78,6 +75,11 @@ public:
     static Ref<MediaStreamTrack> create(ScriptExecutionContext&, Ref<MediaStreamTrackPrivate>&&, RegisterCaptureTrackToOwner = RegisterCaptureTrackToOwner::Yes);
     static Ref<MediaStreamTrack> create(ScriptExecutionContext&, UniqueRef<MediaStreamTrackDataHolder>&&);
     virtual ~MediaStreamTrack();
+
+    // ContextDestructionObserver, AudioCaptureSource.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
 
     static MediaProducerMediaStateFlags captureState(const RealtimeMediaSource&);
 
@@ -145,11 +147,12 @@ public:
     Ref<PhotoSettingsPromise> getPhotoSettings();
 
     const MediaTrackConstraints& getConstraints() const { return m_constraints; }
-    void setConstraints(MediaTrackConstraints&& constraints) { m_constraints = WTFMove(constraints); }
+    void setConstraints(MediaTrackConstraints&& constraints) { m_constraints = WTF::move(constraints); }
 
     void applyConstraints(const std::optional<MediaTrackConstraints>&, DOMPromiseDeferred<void>&&);
 
     RealtimeMediaSource& source() const { return m_private->source(); }
+    Ref<RealtimeMediaSource> protectedSource() const { return source(); }
     RealtimeMediaSource& sourceForProcessor() const { return m_private->sourceForProcessor(); }
     MediaStreamTrackPrivate& privateTrack() { return m_private.get(); }
     const MediaStreamTrackPrivate& privateTrack() const { return m_private.get(); }
@@ -163,7 +166,7 @@ public:
     void addObserver(Observer&);
     void removeObserver(Observer&);
 
-    void setIdForTesting(String&& id) { m_private->setIdForTesting(WTFMove(id)); }
+    void setIdForTesting(String&& id) { m_private->setIdForTesting(WTF::move(id)); }
 
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return m_private->logger(); }
@@ -191,6 +194,7 @@ protected:
     MediaStreamTrack(ScriptExecutionContext&, Ref<MediaStreamTrackPrivate>&&);
 
     ScriptExecutionContext* scriptExecutionContext() const final;
+    using ActiveDOMObject::protectedScriptExecutionContext;
 
 private:
     explicit MediaStreamTrack(MediaStreamTrack&);
@@ -246,5 +250,7 @@ private:
 typedef Vector<Ref<MediaStreamTrack>> MediaStreamTrackVector;
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(MediaStreamTrack)
 
 #endif // ENABLE(MEDIA_STREAM)

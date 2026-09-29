@@ -21,14 +21,14 @@
 
 #pragma once
 
-#include "Breakpoint.h"
-#include "CallData.h"
-#include "DebuggerCallFrame.h"
-#include "DebuggerParseData.h"
-#include "DebuggerPrimitives.h"
-#include "JSCJSValue.h"
-#include "JSRunLoopTimer.h"
-#include "Weak.h"
+#include <JavaScriptCore/Breakpoint.h>
+#include <JavaScriptCore/CallData.h>
+#include <JavaScriptCore/DebuggerCallFrame.h>
+#include <JavaScriptCore/DebuggerParseData.h>
+#include <JavaScriptCore/DebuggerPrimitives.h>
+#include <JavaScriptCore/JSCJSValue.h>
+#include <JavaScriptCore/JSRunLoopTimer.h>
+#include <JavaScriptCore/Weak.h>
 #include <wtf/DoublyLinkedList.h>
 #include <wtf/Forward.h>
 #include <wtf/ListHashSet.h>
@@ -79,7 +79,7 @@ public:
     bool evaluateBreakpointCondition(Breakpoint&, JSGlobalObject*);
     void evaluateBreakpointActions(Breakpoint&, JSGlobalObject*);
 
-    void setPauseOnDebuggerStatementsBreakpoint(RefPtr<Breakpoint>&& breakpoint) { m_pauseOnDebuggerStatementsBreakpoint = WTFMove(breakpoint); }
+    void setPauseOnDebuggerStatementsBreakpoint(RefPtr<Breakpoint>&& breakpoint) { m_pauseOnDebuggerStatementsBreakpoint = WTF::move(breakpoint); }
 
     class TemporarilyDisableExceptionBreakpoints {
     public:
@@ -94,8 +94,8 @@ public:
         RefPtr<Breakpoint> m_pauseOnAllExceptionsBreakpoint;
         RefPtr<Breakpoint> m_pauseOnUncaughtExceptionsBreakpoint;
     };
-    void setPauseOnAllExceptionsBreakpoint(RefPtr<Breakpoint>&& breakpoint) { m_pauseOnAllExceptionsBreakpoint = WTFMove(breakpoint); }
-    void setPauseOnUncaughtExceptionsBreakpoint(RefPtr<Breakpoint>&& breakpoint) { m_pauseOnUncaughtExceptionsBreakpoint = WTFMove(breakpoint); }
+    void setPauseOnAllExceptionsBreakpoint(RefPtr<Breakpoint>&& breakpoint) { m_pauseOnAllExceptionsBreakpoint = WTF::move(breakpoint); }
+    void setPauseOnUncaughtExceptionsBreakpoint(RefPtr<Breakpoint>&& breakpoint) { m_pauseOnUncaughtExceptionsBreakpoint = WTF::move(breakpoint); }
 
     enum ReasonForPause {
         NotPaused,
@@ -232,8 +232,8 @@ public:
     void setProfilingClient(ProfilingClient*);
     bool hasProfilingClient() const { return m_profilingClient != nullptr; }
     bool isAlreadyProfiling() const { return m_profilingClient && m_profilingClient->isAlreadyProfiling(); }
-    Seconds willEvaluateScript();
-    void didEvaluateScript(Seconds startTime, ProfilingReason);
+    JS_EXPORT_PRIVATE Seconds willEvaluateScript();
+    JS_EXPORT_PRIVATE void didEvaluateScript(Seconds startTime, ProfilingReason);
 
 protected:
     JS_EXPORT_PRIVATE JSC::DebuggerCallFrame& currentDebuggerCallFrame();

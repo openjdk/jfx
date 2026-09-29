@@ -40,7 +40,7 @@ LayoutRepainter::LayoutRepainter(RenderElement& renderer, std::optional<CheckFor
     if (!m_checkForRepaint)
         return;
 
-    m_repaintContainer = m_renderer->containerForRepaint().renderer.get();
+    m_repaintContainer = m_renderer->containerForRepaint().renderer.unsafeGet();
     m_oldRects = m_renderer->rectsForRepaintingAfterLayout(m_repaintContainer, m_repaintOutlineBounds);
 }
 

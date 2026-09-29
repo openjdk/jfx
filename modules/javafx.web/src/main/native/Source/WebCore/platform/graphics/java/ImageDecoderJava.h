@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,13 +30,14 @@
 #include "IntSize.h"
 #include "SharedBuffer.h"
 #include "RQRef.h"
+#include <wtf/TZoneMalloc.h>
 
 #include <jni.h>
 
 namespace WebCore {
 
 class ImageDecoderJava : public ImageDecoder {
-    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(ImageDecoderJava);
+    WTF_MAKE_TZONE_ALLOCATED(ImageDecoderJava);
 public:
     ImageDecoderJava();
     ~ImageDecoderJava();

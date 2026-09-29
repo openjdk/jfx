@@ -30,7 +30,8 @@
 
 #pragma once
 
-#include "ScriptExecutionContext.h"
+#include <WebCore/ScriptExecutionContext.h>
+#include <wtf/AbstractCanMakeCheckedPtr.h>
 
 namespace WebCore {
 
@@ -40,7 +41,7 @@ struct ReportingClient;
 
 // A proxy to talk to the loader context. Normally, the document on the main thread
 // provides loading services for the subordinate workers.
-class WorkerLoaderProxy {
+class WorkerLoaderProxy : public AbstractCanMakeCheckedPtr {
 public:
     virtual ~WorkerLoaderProxy() = default;
 
@@ -56,12 +57,6 @@ public:
 
     // Posts a task to the thread which runs the loading code (normally, the main thread).
     virtual void postTaskToLoader(ScriptExecutionContext::Task&&) = 0;
-
-    // CanMakeCheckedPtr.
-    virtual uint32_t checkedPtrCount() const = 0;
-    virtual uint32_t checkedPtrCountWithoutThreadCheck() const = 0;
-    virtual void incrementCheckedPtrCount() const = 0;
-    virtual void decrementCheckedPtrCount() const = 0;
 };
 
 } // namespace WebCore

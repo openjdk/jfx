@@ -29,6 +29,7 @@
 #include "BlockFormattingGeometry.h"
 #include "BlockFormattingState.h"
 #include "BlockMarginCollapse.h"
+#include "LayoutBoxInlines.h"
 #include "LayoutBoxGeometry.h"
 #include "LayoutChildIterator.h"
 #include "LayoutContext.h"
@@ -43,7 +44,7 @@
 namespace WebCore {
 namespace Layout {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(TableWrapperBlockFormattingContext);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TableWrapperBlockFormattingContext);
 
 TableWrapperBlockFormattingContext::TableWrapperBlockFormattingContext(const ElementBox& formattingContextRoot, BlockFormattingState& formattingState)
     : BlockFormattingContext(formattingContextRoot, formattingState)

@@ -63,13 +63,13 @@ ExceptionOr<Ref<TransformStream>> TransformStream::create(JSC::JSGlobalObject& g
         return result.releaseException();
 
     auto transformResult = result.releaseReturnValue();
-    return adoptRef(*new TransformStream(transformResult.transform, WTFMove(transformResult.readable), WTFMove(transformResult.writable)));
+    return adoptRef(*new TransformStream(transformResult.transform, WTF::move(transformResult.readable), WTF::move(transformResult.writable)));
 }
 
 TransformStream::TransformStream(JSC::JSValue internalTransformStream, Ref<ReadableStream>&& readable, Ref<WritableStream>&& writable)
     : m_internalTransformStream(internalTransformStream)
-    , m_readable(WTFMove(readable))
-    , m_writable(WTFMove(writable))
+    , m_readable(WTF::move(readable))
+    , m_writable(WTF::move(writable))
 {
 }
 
@@ -117,9 +117,15 @@ ExceptionOr<CreateInternalTransformStreamResult> createInternalTransformStream(J
         return Exception { ExceptionCode::ExistingExceptionError };
 
     auto results = resultsConversionResult.releaseReturnValue();
-    ASSERT(results.size() == 3);
+    if (results.size() != 3) [[unlikely]]
+        return Exception { ExceptionCode::TypeError, "Internal TransformStream creation returned an unexpected number of values"_s };
 
-    return CreateInternalTransformStreamResult { results[0].get(), JSC::jsDynamicCast<JSReadableStream*>(results[1].get())->wrapped(), JSC::jsDynamicCast<JSWritableStream*>(results[2].get())->wrapped() };
+    auto* readable = JSC::jsDynamicCast<JSReadableStream*>(results[1].get());
+    auto* writable = JSC::jsDynamicCast<JSWritableStream*>(results[2].get());
+    if (!readable || !writable) [[unlikely]]
+        return Exception { ExceptionCode::TypeError, "Internal TransformStream creation returned values of unexpected types"_s };
+
+    return CreateInternalTransformStreamResult { results[0].get(), readable->wrapped(), writable->wrapped() };
 }
 
 template<typename Visitor>

@@ -26,6 +26,8 @@
 #include "config.h"
 #include "AXRemoteFrame.h"
 
+#include "AccessibilityObjectInlines.h"
+
 namespace WebCore {
 
 AXRemoteFrame::AXRemoteFrame(AXID axID, AXObjectCache& cache)

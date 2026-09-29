@@ -85,23 +85,23 @@ auto CSSValueConversion<BorderRadiusValue>::operator()(BuilderState& state, cons
 
 // MARK: - Evaluation
 
-auto Evaluation<BorderRadius>::operator()(const BorderRadius& value, FloatSize referenceSize) -> FloatRoundedRect::Radii
+auto Evaluation<BorderRadius, CornerRadii>::operator()(const BorderRadius& value, FloatSize referenceSize, ZoomNeeded token) -> CornerRadii
 {
     return {
-        evaluate(value.topLeft(), referenceSize),
-        evaluate(value.topRight(), referenceSize),
-        evaluate(value.bottomLeft(), referenceSize),
-        evaluate(value.bottomRight(), referenceSize),
+        evaluate<FloatSize>(value.topLeft(), referenceSize, token),
+        evaluate<FloatSize>(value.topRight(), referenceSize, token),
+        evaluate<FloatSize>(value.bottomLeft(), referenceSize, token),
+        evaluate<FloatSize>(value.bottomRight(), referenceSize, token),
     };
 }
 
-auto Evaluation<BorderRadius>::operator()(const BorderRadius& value, LayoutSize referenceSize) -> LayoutRoundedRect::Radii
+auto Evaluation<BorderRadius, LayoutRoundedRect::Radii>::operator()(const BorderRadius& value, LayoutSize referenceSize, ZoomNeeded token) -> LayoutRoundedRect::Radii
 {
     return {
-        evaluate(value.topLeft(), referenceSize),
-        evaluate(value.topRight(), referenceSize),
-        evaluate(value.bottomLeft(), referenceSize),
-        evaluate(value.bottomRight(), referenceSize),
+        evaluate<LayoutSize>(value.topLeft(), referenceSize, token),
+        evaluate<LayoutSize>(value.topRight(), referenceSize, token),
+        evaluate<LayoutSize>(value.bottomLeft(), referenceSize, token),
+        evaluate<LayoutSize>(value.bottomRight(), referenceSize, token),
     };
 }
 

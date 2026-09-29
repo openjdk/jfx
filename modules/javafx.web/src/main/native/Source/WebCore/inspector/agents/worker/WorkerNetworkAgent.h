@@ -40,7 +40,7 @@ public:
 private:
     Inspector::Protocol::Network::LoaderId loaderIdentifier(DocumentLoader*);
     Inspector::Protocol::Network::FrameId frameIdentifier(DocumentLoader*);
-    Vector<WebSocket*> activeWebSockets() WTF_REQUIRES_LOCK(WebSocket::allActiveWebSocketsLock());
+    Vector<Ref<WebSocket>> activeWebSockets() WTF_REQUIRES_LOCK(WebSocket::allActiveWebSocketsLock());
     void setResourceCachingDisabledInternal(bool);
 #if ENABLE(INSPECTOR_NETWORK_THROTTLING)
     bool setEmulatedConditionsInternal(std::optional<int>&& bytesPerSecondLimit);

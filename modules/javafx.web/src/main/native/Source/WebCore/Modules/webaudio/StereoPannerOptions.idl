@@ -25,6 +25,7 @@
 
 [
     Conditional=WEB_AUDIO,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary StereoPannerOptions : AudioNodeOptions {
     float pan = 0;
 };

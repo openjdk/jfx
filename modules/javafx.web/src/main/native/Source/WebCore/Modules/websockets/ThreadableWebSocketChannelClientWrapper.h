@@ -30,10 +30,10 @@
 
 #pragma once
 
-#include "ScriptExecutionContext.h"
-#include "ThreadableWebSocketChannel.h"
-#include "WebSocketChannelClient.h"
-#include "WorkerThreadableWebSocketChannel.h"
+#include <WebCore/ScriptExecutionContext.h>
+#include <WebCore/ThreadableWebSocketChannel.h>
+#include <WebCore/WebSocketChannelClient.h>
+#include <WebCore/WorkerThreadableWebSocketChannel.h>
 #include <memory>
 #include <wtf/Forward.h>
 #include <wtf/ThreadSafeWeakPtr.h>

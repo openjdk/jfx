@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2011 Adobe Systems Incorporated. All rights reserved.
- * Copyright (C) 2020 Google  Inc. All rights reserved.
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2020 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,7 +45,7 @@
 #include "RenderIterator.h"
 #include "RenderLayer.h"
 #include "RenderObjectInlines.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include "RenderView.h"
 #include "StyleResolver.h"
 #include <wtf/HexNumber.h>
@@ -52,16 +53,16 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderFragmentContainer);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderFragmentContainer);
 
 RenderFragmentContainer::RenderFragmentContainer(Type type, Element& element, RenderStyle&& style, RenderFragmentedFlow* fragmentedFlow)
-    : RenderBlockFlow(type, element, WTFMove(style), BlockFlowFlag::IsFragmentContainer)
+    : RenderBlockFlow(type, element, WTF::move(style), BlockFlowFlag::IsFragmentContainer)
     , m_fragmentedFlow(fragmentedFlow)
 {
 }
 
 RenderFragmentContainer::RenderFragmentContainer(Type type, Document& document, RenderStyle&& style, RenderFragmentedFlow* fragmentedFlow)
-    : RenderBlockFlow(type, document, WTFMove(style), BlockFlowFlag::IsFragmentContainer)
+    : RenderBlockFlow(type, document, WTF::move(style), BlockFlowFlag::IsFragmentContainer)
     , m_fragmentedFlow(fragmentedFlow)
 {
 }
@@ -108,7 +109,7 @@ LayoutPoint RenderFragmentContainer::mapFragmentPointIntoFragmentedFlowCoordinat
     return isHorizontalWritingMode() ? pointInThread : pointInThread.transposedPoint();
 }
 
-VisiblePosition RenderFragmentContainer::positionForPoint(const LayoutPoint& point, HitTestSource source, const RenderFragmentContainer* fragment)
+PositionWithAffinity RenderFragmentContainer::positionForPoint(const LayoutPoint& point, HitTestSource source, const RenderFragmentContainer* fragment)
 {
     if (!isValid() || !m_fragmentedFlow->firstChild()) // checking for empty fragment blocks.
         return RenderBlock::positionForPoint(point, source, fragment);
@@ -156,26 +157,27 @@ LayoutPoint RenderFragmentContainer::fragmentedFlowPortionLocation() const
 LayoutRect RenderFragmentContainer::overflowRectForFragmentedFlowPortion(const LayoutRect& fragmentedFlowPortionRect, bool isFirstPortion, bool isLastPortion) const
 {
     ASSERT(isValid());
-    if (shouldClipFragmentedFlowContent())
-        return fragmentedFlowPortionRect;
 
-    LayoutRect fragmentedFlowOverflow = visualOverflowRectForBox(*m_fragmentedFlow);
-    LayoutRect clipRect;
+    auto renderableInfiniteRect = [] {
+        // Return a infinite-like rect whose values are such that, when converted to float pixel values, they can reasonably represent device pixels.
+        return LayoutRect(LayoutUnit::nearlyMin() / 32, LayoutUnit::nearlyMin() / 32, LayoutUnit::nearlyMax() / 16, LayoutUnit::nearlyMax() / 16);
+    }();
+
+    // Only clip along the block direction axis.
+    LayoutRect clipRect(renderableInfiniteRect);
+
     if (m_fragmentedFlow->isHorizontalWritingMode()) {
-        LayoutUnit minY = isFirstPortion ? fragmentedFlowOverflow.y() : fragmentedFlowPortionRect.y();
-        LayoutUnit maxY = isLastPortion ? std::max(fragmentedFlowPortionRect.maxY(), fragmentedFlowOverflow.maxY()) : fragmentedFlowPortionRect.maxY();
-        bool clipX = effectiveOverflowX() != Overflow::Visible;
-        LayoutUnit minX = clipX ? fragmentedFlowPortionRect.x() : std::min(fragmentedFlowPortionRect.x(), fragmentedFlowOverflow.x());
-        LayoutUnit maxX = clipX ? fragmentedFlowPortionRect.maxX() : std::max(fragmentedFlowPortionRect.maxX(), fragmentedFlowOverflow.maxX());
-        clipRect = LayoutRect(minX, minY, maxX - minX, maxY - minY);
-    } else {
-        LayoutUnit minX = isFirstPortion ? fragmentedFlowOverflow.x() : fragmentedFlowPortionRect.x();
-        LayoutUnit maxX = isLastPortion ? std::max(fragmentedFlowPortionRect.maxX(), fragmentedFlowOverflow.maxX()) : fragmentedFlowPortionRect.maxX();
-        bool clipY = effectiveOverflowY() != Overflow::Visible;
-        LayoutUnit minY = clipY ? fragmentedFlowPortionRect.y() : std::min(fragmentedFlowPortionRect.y(), fragmentedFlowOverflow.y());
-        LayoutUnit maxY = clipY ? fragmentedFlowPortionRect.maxY() : std::max(fragmentedFlowPortionRect.y(), fragmentedFlowOverflow.maxY());
-        clipRect = LayoutRect(minX, minY, maxX - minX, maxY - minY);
+        if (!isFirstPortion)
+            clipRect.shiftYEdgeTo(fragmentedFlowPortionRect.y());
+        if (!isLastPortion)
+            clipRect.shiftMaxYEdgeTo(fragmentedFlowPortionRect.maxY());
+        return clipRect;
     }
+
+    if (!isFirstPortion)
+        clipRect.shiftXEdgeTo(fragmentedFlowPortionRect.x());
+    if (!isLastPortion)
+        clipRect.shiftMaxXEdgeTo(fragmentedFlowPortionRect.maxX());
     return clipRect;
 }
 
@@ -203,7 +205,7 @@ bool RenderFragmentContainer::shouldClipFragmentedFlowContent() const
     return hasNonVisibleOverflow();
 }
 
-void RenderFragmentContainer::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
+void RenderFragmentContainer::styleDidChange(Style::Difference diff, const RenderStyle* oldStyle)
 {
     RenderBlockFlow::styleDidChange(diff, oldStyle);
 
@@ -398,7 +400,7 @@ void RenderFragmentContainer::computePreferredLogicalWidths()
     m_minPreferredLogicalWidth = m_maxPreferredLogicalWidth = 0;
 
     auto& styleToUse = style();
-    if (auto fixedLogicalWidth = styleToUse.logicalWidth().tryFixed(); fixedLogicalWidth && fixedLogicalWidth->value > 0)
+    if (auto fixedLogicalWidth = styleToUse.logicalWidth().tryFixed(); fixedLogicalWidth && fixedLogicalWidth->isPositive())
         m_minPreferredLogicalWidth = m_maxPreferredLogicalWidth = adjustContentBoxLogicalWidthForBoxSizing(*fixedLogicalWidth);
     else
         computeIntrinsicLogicalWidths(m_minPreferredLogicalWidth, m_maxPreferredLogicalWidth);
@@ -443,7 +445,7 @@ RenderOverflow* RenderFragmentContainer::overflowForBox(const RenderBox& box) co
         return { };
 
     if (CheckedPtr overflow = boxInfo->overflow())
-        return overflow.get();
+        return overflow.unsafeGet();
 
     boxInfo->createOverflow(computedLayoutOverflowRectForBox(box), computedVisualOverflowRectForBox(box));
     return boxInfo->overflow();

@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "VirtualRegister.h"
+#include <JavaScriptCore/VirtualRegister.h>
 #include <wtf/PrintStream.h>
 
 namespace JSC {

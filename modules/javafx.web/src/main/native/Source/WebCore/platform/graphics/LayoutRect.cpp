@@ -110,7 +110,7 @@ void LayoutRect::uniteEvenIfEmpty(const LayoutRect& other)
     auto maxX = std::max(this->maxX(), other.maxX());
     auto maxY = std::max(this->maxY(), other.maxY());
 
-    setLocationAndSizeFromEdges(minX, minY, maxX, maxY);
+    shiftEdgesTo(minX, minY, maxX, maxY);
 }
 
 bool LayoutRect::checkedUnite(const LayoutRect& other)

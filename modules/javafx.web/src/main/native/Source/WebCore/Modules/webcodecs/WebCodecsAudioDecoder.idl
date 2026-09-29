@@ -50,6 +50,7 @@
 
 [
     Conditional=WEB_CODECS,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary WebCodecsAudioDecoderInit {
     required WebCodecsAudioDataOutputCallback output;
     required WebCodecsErrorCallback error;

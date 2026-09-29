@@ -28,7 +28,8 @@
 #if ENABLE(WEBXR_LAYERS)
 
 #include "XRSubImage.h"
-
+#include <wtf/Ref.h>
+#include <wtf/RefPtr.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
@@ -37,8 +38,10 @@ class WebGLTexture;
 
 // https://immersive-web.github.io/layers/#xrwebglsubimagetype
 class XRWebGLSubImage : public XRSubImage {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(XRWebGLSubImage);
+    WTF_MAKE_TZONE_ALLOCATED(XRWebGLSubImage);
 public:
+    virtual ~XRWebGLSubImage();
+
     const WebXRViewport& viewport() const final { RELEASE_ASSERT_NOT_REACHED(); }
     Ref<WebGLTexture> colorTexture() const { RELEASE_ASSERT_NOT_REACHED(); }
     RefPtr<WebGLTexture> depthStencilTexture() const { RELEASE_ASSERT_NOT_REACHED(); }
@@ -51,8 +54,15 @@ public:
     std::optional<uint32_t> depthStencilTextureHeight() const { RELEASE_ASSERT_NOT_REACHED(); }
     std::optional<uint32_t> motionVectorTextureWidth() const { RELEASE_ASSERT_NOT_REACHED(); }
     std::optional<uint32_t> motionVectorTextureHeight() const { RELEASE_ASSERT_NOT_REACHED(); }
+
+private:
+    bool isXRWebGLSubImage() const final { return true; }
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::XRWebGLSubImage)
+    static bool isType(const WebCore::XRSubImage& image) { return image.isXRWebGLSubImage(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(WEBXR_LAYERS)

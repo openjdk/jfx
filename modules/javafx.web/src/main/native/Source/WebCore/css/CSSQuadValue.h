@@ -71,7 +71,7 @@ inline Ref<CSSQuadValue> CSSQuadValue::create(Ref<CSSValue> a, Ref<CSSValue> b, 
 
 inline Ref<CSSQuadValue> CSSQuadValue::create(Ref<CSSValue> a, Ref<CSSValue> b, Ref<CSSValue> c, Ref<CSSValue> d)
 {
-    return CSSQuadValue::create(Quad { WTFMove(a), WTFMove(b), WTFMove(c), WTFMove(d) });
+    return CSSQuadValue::create(Quad { WTF::move(a), WTF::move(b), WTF::move(c), WTF::move(d) });
 }
 
 } // namespace WebCore

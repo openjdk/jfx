@@ -87,7 +87,7 @@ JSC_DEFINE_HOST_FUNCTION(constructSet, (JSGlobalObject* globalObject, CallFrame*
         adderFunction = set->JSObject::get(globalObject, vm.propertyNames->add);
         RETURN_IF_EXCEPTION(scope, { });
 
-        adderFunctionCallData = JSC::getCallData(adderFunction);
+        adderFunctionCallData = JSC::getCallDataInline(adderFunction);
         if (adderFunctionCallData.type == CallData::Type::None) [[unlikely]]
             return throwVMTypeError(globalObject, scope, "'add' property of a Set should be callable."_s);
     }
@@ -151,16 +151,6 @@ JSC_DEFINE_HOST_FUNCTION(setPrivateFuncSetIterationEntryKey, (JSGlobalObject* gl
 
     JSSet::Storage& storage = *jsCast<JSSet::Storage*>(cell);
     return JSValue::encode(JSSet::Helper::getIterationEntryKey(storage));
-}
-
-JSC_DEFINE_HOST_FUNCTION(setPrivateFuncClone, (JSGlobalObject* globalObject, CallFrame* callFrame))
-{
-    VM& vm = globalObject->vm();
-    auto scope = DECLARE_THROW_SCOPE(vm);
-
-    ASSERT(jsDynamicCast<JSSet*>(callFrame->argument(0)));
-    JSSet* set = jsCast<JSSet*>(callFrame->uncheckedArgument(0));
-    RELEASE_AND_RETURN(scope, JSValue::encode(set->clone(globalObject, vm, globalObject->setStructure())));
 }
 
 }

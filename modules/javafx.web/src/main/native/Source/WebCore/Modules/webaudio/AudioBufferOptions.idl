@@ -25,6 +25,7 @@
 
 [
     Conditional=WEB_AUDIO,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary AudioBufferOptions {
     unsigned long numberOfChannels = 1;
     required unsigned long length;

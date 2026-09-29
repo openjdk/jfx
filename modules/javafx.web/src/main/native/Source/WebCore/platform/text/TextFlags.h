@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "FontTaggedSettings.h"
+#include <WebCore/FontTaggedSettings.h>
 #include <optional>
 #include <vector>
 #include <wtf/Hasher.h>
@@ -40,15 +40,17 @@ namespace WebCore {
 class FontFeatureValues;
 
 enum class TextRenderingMode : uint8_t {
-    AutoTextRendering,
+    Auto,
     OptimizeSpeed,
     OptimizeLegibility,
     GeometricPrecision
 };
 
+WTF::TextStream& operator<<(WTF::TextStream&, TextRenderingMode);
+
 enum class FontSmoothingMode : uint8_t {
-    AutoSmoothing,
-    NoSmoothing,
+    Auto,
+    None,
     Antialiased,
     SubpixelAntialiased
 };
@@ -125,6 +127,8 @@ enum class FontSynthesisLonghandValue : bool {
     Auto
 };
 
+WTF::TextStream& operator<<(WTF::TextStream&, FontSynthesisLonghandValue);
+
 enum class FontVariantLigatures : uint8_t { Normal, Yes, No };
 enum class FontVariantPosition : uint8_t { Normal, Subscript, Superscript };
 
@@ -164,8 +168,6 @@ enum class FontVariantNumericOrdinal : bool { Normal, Yes };
 enum class FontVariantNumericSlashedZero : bool { Normal, Yes };
 
 struct FontVariantAlternatesValues {
-    friend bool operator==(const FontVariantAlternatesValues&, const FontVariantAlternatesValues&) = default;
-
     String stylistic;
     Vector<String> styleset;
     Vector<String> characterVariant;
@@ -175,6 +177,8 @@ struct FontVariantAlternatesValues {
     bool historicalForms = false;
 
     friend void add(Hasher&, const FontVariantAlternatesValues&);
+
+    bool operator==(const FontVariantAlternatesValues&) const = default;
 
 private:
     friend struct MarkableTraits<FontVariantAlternatesValues>;
@@ -277,63 +281,9 @@ enum class FontVariantEmoji : uint8_t {
     Unicode,
 };
 
+WTF::TextStream& operator<<(WTF::TextStream&, FontVariantEmoji);
+
 struct FontVariantSettings {
-    FontVariantSettings()
-        : commonLigatures(FontVariantLigatures::Normal)
-        , discretionaryLigatures(FontVariantLigatures::Normal)
-        , historicalLigatures(FontVariantLigatures::Normal)
-        , contextualAlternates(FontVariantLigatures::Normal)
-        , position(FontVariantPosition::Normal)
-        , caps(FontVariantCaps::Normal)
-        , numericFigure(FontVariantNumericFigure::Normal)
-        , numericSpacing(FontVariantNumericSpacing::Normal)
-        , numericFraction(FontVariantNumericFraction::Normal)
-        , numericOrdinal(FontVariantNumericOrdinal::Normal)
-        , numericSlashedZero(FontVariantNumericSlashedZero::Normal)
-        , alternates(FontVariantAlternates::Normal())
-        , eastAsianVariant(FontVariantEastAsianVariant::Normal)
-        , eastAsianWidth(FontVariantEastAsianWidth::Normal)
-        , eastAsianRuby(FontVariantEastAsianRuby::Normal)
-        , emoji(FontVariantEmoji::Normal)
-    {
-    }
-
-    FontVariantSettings(
-        FontVariantLigatures commonLigatures,
-        FontVariantLigatures discretionaryLigatures,
-        FontVariantLigatures historicalLigatures,
-        FontVariantLigatures contextualAlternates,
-        FontVariantPosition position,
-        FontVariantCaps caps,
-        FontVariantNumericFigure numericFigure,
-        FontVariantNumericSpacing numericSpacing,
-        FontVariantNumericFraction numericFraction,
-        FontVariantNumericOrdinal numericOrdinal,
-        FontVariantNumericSlashedZero numericSlashedZero,
-        FontVariantAlternates alternates,
-        FontVariantEastAsianVariant eastAsianVariant,
-        FontVariantEastAsianWidth eastAsianWidth,
-        FontVariantEastAsianRuby eastAsianRuby,
-        FontVariantEmoji emoji)
-            : commonLigatures(commonLigatures)
-            , discretionaryLigatures(discretionaryLigatures)
-            , historicalLigatures(historicalLigatures)
-            , contextualAlternates(contextualAlternates)
-            , position(position)
-            , caps(caps)
-            , numericFigure(numericFigure)
-            , numericSpacing(numericSpacing)
-            , numericFraction(numericFraction)
-            , numericOrdinal(numericOrdinal)
-            , numericSlashedZero(numericSlashedZero)
-            , alternates(alternates)
-            , eastAsianVariant(eastAsianVariant)
-            , eastAsianWidth(eastAsianWidth)
-            , eastAsianRuby(eastAsianRuby)
-            , emoji(emoji)
-    {
-    }
-
     bool isAllNormal() const
     {
         return commonLigatures == FontVariantLigatures::Normal
@@ -354,83 +304,52 @@ struct FontVariantSettings {
             && emoji == FontVariantEmoji::Normal;
     }
 
-    friend bool operator==(const FontVariantSettings&, const FontVariantSettings&) = default;
+    bool operator==(const FontVariantSettings&) const = default;
 
-    FontVariantLigatures commonLigatures;
-    FontVariantLigatures discretionaryLigatures;
-    FontVariantLigatures historicalLigatures;
-    FontVariantLigatures contextualAlternates;
-    FontVariantPosition position;
-    FontVariantCaps caps;
-    FontVariantNumericFigure numericFigure;
-    FontVariantNumericSpacing numericSpacing;
-    FontVariantNumericFraction numericFraction;
-    FontVariantNumericOrdinal numericOrdinal;
-    FontVariantNumericSlashedZero numericSlashedZero;
-    FontVariantAlternates alternates;
-    FontVariantEastAsianVariant eastAsianVariant;
-    FontVariantEastAsianWidth eastAsianWidth;
-    FontVariantEastAsianRuby eastAsianRuby;
-    FontVariantEmoji emoji;
+    FontVariantLigatures commonLigatures { FontVariantLigatures::Normal };
+    FontVariantLigatures discretionaryLigatures { FontVariantLigatures::Normal };
+    FontVariantLigatures historicalLigatures { FontVariantLigatures::Normal };
+    FontVariantLigatures contextualAlternates { FontVariantLigatures::Normal };
+    FontVariantPosition position { FontVariantPosition::Normal };
+    FontVariantCaps caps { FontVariantCaps::Normal };
+    FontVariantNumericFigure numericFigure { FontVariantNumericFigure::Normal };
+    FontVariantNumericSpacing numericSpacing { FontVariantNumericSpacing::Normal };
+    FontVariantNumericFraction numericFraction { FontVariantNumericFraction::Normal };
+    FontVariantNumericOrdinal numericOrdinal { FontVariantNumericOrdinal::Normal };
+    FontVariantNumericSlashedZero numericSlashedZero { FontVariantNumericSlashedZero::Normal };
+    FontVariantAlternates alternates { FontVariantAlternates::Normal() };
+    FontVariantEastAsianVariant eastAsianVariant { FontVariantEastAsianVariant::Normal };
+    FontVariantEastAsianWidth eastAsianWidth { FontVariantEastAsianWidth::Normal };
+    FontVariantEastAsianRuby eastAsianRuby { FontVariantEastAsianRuby::Normal };
+    FontVariantEmoji emoji { FontVariantEmoji::Normal };
 };
 
 struct FontVariantLigaturesValues {
-    FontVariantLigaturesValues(
-        FontVariantLigatures commonLigatures,
-        FontVariantLigatures discretionaryLigatures,
-        FontVariantLigatures historicalLigatures,
-        FontVariantLigatures contextualAlternates)
-            : commonLigatures(commonLigatures)
-            , discretionaryLigatures(discretionaryLigatures)
-            , historicalLigatures(historicalLigatures)
-            , contextualAlternates(contextualAlternates)
-    {
-    }
+    FontVariantLigatures common { FontVariantLigatures::Normal };
+    FontVariantLigatures discretionary { FontVariantLigatures::Normal };
+    FontVariantLigatures historical { FontVariantLigatures::Normal };
+    FontVariantLigatures contextual { FontVariantLigatures::Normal };
 
-    FontVariantLigatures commonLigatures;
-    FontVariantLigatures discretionaryLigatures;
-    FontVariantLigatures historicalLigatures;
-    FontVariantLigatures contextualAlternates;
+    constexpr bool operator==(const FontVariantLigaturesValues&) const = default;
 };
 
 struct FontVariantNumericValues {
-    FontVariantNumericValues(
-        FontVariantNumericFigure figure,
-        FontVariantNumericSpacing spacing,
-        FontVariantNumericFraction fraction,
-        FontVariantNumericOrdinal ordinal,
-        FontVariantNumericSlashedZero slashedZero)
-            : figure(figure)
-            , spacing(spacing)
-            , fraction(fraction)
-            , ordinal(ordinal)
-            , slashedZero(slashedZero)
-    {
-    }
+    FontVariantNumericFigure figure { FontVariantNumericFigure::Normal };
+    FontVariantNumericSpacing spacing { FontVariantNumericSpacing::Normal };
+    FontVariantNumericFraction fraction { FontVariantNumericFraction::Normal };
+    FontVariantNumericOrdinal ordinal { FontVariantNumericOrdinal::Normal };
+    FontVariantNumericSlashedZero slashedZero { FontVariantNumericSlashedZero::Normal };
 
-    FontVariantNumericFigure figure;
-    FontVariantNumericSpacing spacing;
-    FontVariantNumericFraction fraction;
-    FontVariantNumericOrdinal ordinal;
-    FontVariantNumericSlashedZero slashedZero;
+    constexpr bool operator==(const FontVariantNumericValues&) const = default;
 };
 
 struct FontVariantEastAsianValues {
-    FontVariantEastAsianValues(
-        FontVariantEastAsianVariant variant,
-        FontVariantEastAsianWidth width,
-        FontVariantEastAsianRuby ruby)
-            : variant(variant)
-            , width(width)
-            , ruby(ruby)
-    {
-    }
+    FontVariantEastAsianVariant variant { FontVariantEastAsianVariant::Normal };
+    FontVariantEastAsianWidth width { FontVariantEastAsianWidth::Normal };
+    FontVariantEastAsianRuby ruby { FontVariantEastAsianRuby::Normal };
 
-    FontVariantEastAsianVariant variant;
-    FontVariantEastAsianWidth width;
-    FontVariantEastAsianRuby ruby;
+    constexpr bool operator==(const FontVariantEastAsianValues&) const = default;
 };
-
 
 enum class FontWidthVariant : uint8_t {
     RegularWidth,
@@ -444,11 +363,6 @@ const unsigned FontWidthVariantWidth = 2;
 
 static_assert(!(static_cast<unsigned>(FontWidthVariant::LastFontWidthVariant) >> FontWidthVariantWidth), "FontWidthVariantWidth is correct");
 
-enum class FontSmallCaps : bool {
-    Off,
-    On
-};
-
 enum class Kerning : uint8_t {
     Auto,
     Normal,
@@ -458,8 +372,8 @@ enum class Kerning : uint8_t {
 WTF::TextStream& operator<<(WTF::TextStream&, Kerning);
 
 enum class FontOpticalSizing : bool {
-    Enabled,
-    Disabled
+    None,
+    Auto
 };
 
 WTF::TextStream& operator<<(WTF::TextStream&, FontOpticalSizing);

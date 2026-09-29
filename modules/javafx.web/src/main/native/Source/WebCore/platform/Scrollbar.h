@@ -25,9 +25,10 @@
 
 #pragma once
 
-#include "ScrollTypes.h"
-#include "Timer.h"
-#include "Widget.h"
+#include <WebCore/ScrollTypes.h>
+#include <WebCore/Timer.h>
+#include <WebCore/Widget.h>
+#include <wtf/Platform.h>
 
 namespace WebCore {
 
@@ -49,7 +50,7 @@ public:
 
     WEBCORE_EXPORT void setFrameRect(const IntRect&) final;
 
-    static int pixelsPerLineStep() { return 40; }
+    static constexpr int pixelsPerLineStep() { return 40; }
     WEBCORE_EXPORT static int pixelsPerLineStep(int viewWidthOrHeight);
     WEBCORE_EXPORT static void setShouldUseFixedPixelsPerLineStepForTesting(bool);
     static float minFractionToStepWhenPaging() { return 0.8; }
@@ -58,7 +59,8 @@ public:
     static int pageStep(int viewWidthOrHeight) { return pageStep(viewWidthOrHeight, viewWidthOrHeight); }
     static float pageStepDelta(int widthOrHeight) { return std::max(std::max(static_cast<float>(widthOrHeight) * Scrollbar::minFractionToStepWhenPaging(), static_cast<float>(widthOrHeight) - Scrollbar::maxOverlapBetweenPages()), 1.0f); }
 
-    ScrollableArea& scrollableArea() const { return m_scrollableArea; }
+    inline ScrollableArea& scrollableArea() const; // Defined in ScrollbarInlines.h.
+    inline CheckedRef<ScrollableArea> checkedScrollableArea() const; // Defined in ScrollbarInlines.h.
 
     bool isCustomScrollbar() const { return m_isCustomScrollbar; }
     WEBCORE_EXPORT bool isMockScrollbar() const;
@@ -161,7 +163,7 @@ protected:
     ScrollDirection pressedPartScrollDirection();
     ScrollGranularity pressedPartScrollGranularity();
 
-    ScrollableArea& m_scrollableArea;
+    WeakRef<ScrollableArea> m_scrollableArea;
     ScrollbarOrientation m_orientation;
     ScrollbarWidth m_widthStyle;
     ScrollbarTheme& m_theme;

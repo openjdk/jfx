@@ -28,15 +28,18 @@
 #pragma once
 
 #include "InspectorTimelineAgent.h"
+#include <wtf/CheckedRef.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
 class Page;
 class RunLoopObserver;
 
-class PageTimelineAgent final : public InspectorTimelineAgent {
+class PageTimelineAgent final : public InspectorTimelineAgent, public CanMakeWeakPtr<PageTimelineAgent>, public CanMakeCheckedPtr<PageTimelineAgent> {
     WTF_MAKE_NONCOPYABLE(PageTimelineAgent);
     WTF_MAKE_TZONE_ALLOCATED(PageTimelineAgent);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(PageTimelineAgent);
 public:
     PageTimelineAgent(PageAgentContext&);
     ~PageTimelineAgent();
@@ -83,7 +86,7 @@ private:
     std::unique_ptr<WebCore::RunLoopObserver> m_frameStopObserver;
     int m_runLoopNestingLevel { 0 };
 #elif USE(GLIB_EVENT_LOOP)
-    std::unique_ptr<RunLoop::Observer> m_runLoopObserver;
+    RefPtr<RunLoop::EventObserver> m_runLoopObserver;
 #endif
     bool m_startedComposite { false };
     bool m_isCapturingScreenshot { false };

@@ -41,7 +41,7 @@ class ReplaceNodeWithSpanCommand : public SimpleEditCommand {
 public:
     static Ref<ReplaceNodeWithSpanCommand> create(Ref<HTMLElement>&& element)
     {
-        return adoptRef(*new ReplaceNodeWithSpanCommand(WTFMove(element)));
+        return adoptRef(*new ReplaceNodeWithSpanCommand(WTF::move(element)));
     }
 
     HTMLElement* spanElement() { return m_spanElement.get(); }

@@ -21,6 +21,7 @@
 #pragma once
 
 #include <wtf/Lock.h>
+#include <wtf/ThreadSanitizerSupport.h>
 #include <wtf/Threading.h>
 
 namespace WTF {

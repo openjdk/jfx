@@ -26,7 +26,9 @@
 #include "config.h"
 #include "TrustedTypePolicy.h"
 
+#include "ExceptionCode.h"
 #include "ExceptionOr.h"
+#include "ScriptWrappableInlines.h"
 #include "TrustedHTML.h"
 #include "TrustedScript.h"
 #include "TrustedScriptURL.h"
@@ -38,7 +40,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(TrustedTypePolicy);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TrustedTypePolicy);
 
 Ref<TrustedTypePolicy> TrustedTypePolicy::create(const String& name, const TrustedTypePolicyOptions& options)
 {
@@ -52,32 +54,44 @@ TrustedTypePolicy::TrustedTypePolicy(const String& name, const TrustedTypePolicy
 
 ExceptionOr<Ref<TrustedHTML>> TrustedTypePolicy::createHTML(const String& input, FixedVector<JSC::Strong<JSC::Unknown>>&& arguments)
 {
-    auto policyValue = getPolicyValue(TrustedType::TrustedHTML, input, WTFMove(arguments));
+    auto policyValue = getPolicyValue(TrustedType::TrustedHTML, input, WTF::move(arguments));
 
     if (policyValue.hasException())
         return policyValue.releaseException();
 
-    return TrustedHTML::create(policyValue.releaseReturnValue());
+    auto dataString = policyValue.releaseReturnValue();
+    if (dataString.isNull())
+        dataString = emptyString();
+
+    return TrustedHTML::create(dataString);
 }
 
 ExceptionOr<Ref<TrustedScript>> TrustedTypePolicy::createScript(const String& input, FixedVector<JSC::Strong<JSC::Unknown>>&& arguments)
 {
-    auto policyValue = getPolicyValue(TrustedType::TrustedScript, input, WTFMove(arguments));
+    auto policyValue = getPolicyValue(TrustedType::TrustedScript, input, WTF::move(arguments));
 
     if (policyValue.hasException())
         return policyValue.releaseException();
 
-    return TrustedScript::create(policyValue.releaseReturnValue());
+    auto dataString = policyValue.releaseReturnValue();
+    if (dataString.isNull())
+        dataString = emptyString();
+
+    return TrustedScript::create(dataString);
 }
 
 ExceptionOr<Ref<TrustedScriptURL>> TrustedTypePolicy::createScriptURL(const String& input, FixedVector<JSC::Strong<JSC::Unknown>>&& arguments)
 {
-    auto policyValue = getPolicyValue(TrustedType::TrustedScriptURL, input, WTFMove(arguments));
+    auto policyValue = getPolicyValue(TrustedType::TrustedScriptURL, input, WTF::move(arguments));
 
     if (policyValue.hasException())
         return policyValue.releaseException();
 
-    return TrustedScriptURL::create(policyValue.releaseReturnValue());
+    auto dataString = policyValue.releaseReturnValue();
+    if (dataString.isNull())
+        dataString = emptyString();
+
+    return TrustedScriptURL::create(dataString);
 }
 
 // https://w3c.github.io/trusted-types/dist/spec/#get-trusted-type-policy-value-algorithm
@@ -91,7 +105,7 @@ ExceptionOr<String> TrustedTypePolicy::getPolicyValue(TrustedType trustedTypeNam
             protectedCreateHTML = m_options.createHTML;
         }
         if (protectedCreateHTML && protectedCreateHTML->hasCallback())
-            policyValue = protectedCreateHTML->invokeRethrowingException(input, WTFMove(arguments));
+            policyValue = protectedCreateHTML->invokeRethrowingException(input, WTF::move(arguments));
     } else if (trustedTypeName == TrustedType::TrustedScript) {
         RefPtr<CreateScriptCallback> protectedCreateScript;
         {
@@ -99,7 +113,7 @@ ExceptionOr<String> TrustedTypePolicy::getPolicyValue(TrustedType trustedTypeNam
             protectedCreateScript = m_options.createScript;
         }
         if (protectedCreateScript && protectedCreateScript->hasCallback())
-            policyValue = protectedCreateScript->invokeRethrowingException(input, WTFMove(arguments));
+            policyValue = protectedCreateScript->invokeRethrowingException(input, WTF::move(arguments));
     } else if (trustedTypeName == TrustedType::TrustedScriptURL) {
         RefPtr<CreateScriptURLCallback> protectedCreateScriptURL;
         {
@@ -107,7 +121,7 @@ ExceptionOr<String> TrustedTypePolicy::getPolicyValue(TrustedType trustedTypeNam
             protectedCreateScriptURL = m_options.createScriptURL;
         }
         if (protectedCreateScriptURL && protectedCreateScriptURL->hasCallback())
-            policyValue = protectedCreateScriptURL->invokeRethrowingException(input, WTFMove(arguments));
+            policyValue = protectedCreateScriptURL->invokeRethrowingException(input, WTF::move(arguments));
     } else {
         ASSERT_NOT_REACHED();
         return Exception { ExceptionCode::TypeError };
@@ -133,5 +147,7 @@ WebCoreOpaqueRoot root(TrustedTypePolicy* policy)
 {
     return WebCoreOpaqueRoot { policy };
 }
+
+TrustedTypePolicy::~TrustedTypePolicy() = default;
 
 } // namespace WebCore

@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "ExecutableAllocator.h"
-#include "MacroAssemblerCodeRef.h"
-#include "StructureID.h"
+#include <JavaScriptCore/ExecutableAllocator.h>
+#include <JavaScriptCore/MacroAssemblerCodeRef.h>
+#include <JavaScriptCore/StructureID.h>
 
 namespace JSC {
 

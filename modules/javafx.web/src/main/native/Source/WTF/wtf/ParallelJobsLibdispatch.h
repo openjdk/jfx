@@ -27,9 +27,12 @@
 
 #pragma once
 
+#include <wtf/FastMalloc.h>
+#include <wtf/Platform.h>
+
 #if ENABLE(THREADING_LIBDISPATCH)
 
-#include <dispatch/dispatch.h>
+#include <wtf/darwin/DispatchExtras.h>
 
 namespace WTF {
 
@@ -52,13 +55,10 @@ public:
         return m_numberOfJobs;
     }
 
-    void execute(unsigned char* parameters)
+    void execute(std::span<uint8_t> parameters)
     {
-        static dispatch_queue_t globalQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-        dispatch_apply(m_numberOfJobs, globalQueue, ^(size_t i) { (*m_threadFunction)(parameters + (m_sizeOfParameter * i)); });
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+        static dispatch_queue_t globalQueue = globalDispatchQueueSingleton(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
+        dispatch_apply(m_numberOfJobs, globalQueue, ^(size_t i) { (*m_threadFunction)(parameters.subspan(m_sizeOfParameter * i, m_sizeOfParameter).data()); });
     }
 
 private:

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -252,9 +252,10 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * (for horizontal) operation on each cell, the first cell aligns with the
      * node.
      * The following relation should always be true:
-     * 0 <= absoluteOffset <= (estimatedSize - viewportLength)
-     * Based on this relation, the position p is defined as
-     * 0 <= absoluteOffset/(estimatedSize - viewportLength) <= 1
+     * 0 <= absoluteOffset <= max(0, estimatedSize - viewportLength)
+     * When estimatedSize > viewportLength, the position p is defined as
+     * p = absoluteOffset / (estimatedSize - viewportLength), with 0 <= p <= 1.
+     * Otherwise, both absoluteOffset and p are zero.
      * As a consequence, whenever p, estimatedSize, or viewportLength
      * changes, the absoluteOffset needs to change as well.
      * The method <code>adjustAbsoluteOffset()</code> can be used to calculate the
@@ -1061,6 +1062,9 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      */
     void adjustPosition() {
         if (viewportLength >= estimatedSize) {
+            // The position may already be zero, so its invalidated() method
+            // may not be called to reset the offset.
+            absoluteOffset = 0;
             setPosition(0.);
         } else {
             setPosition(absoluteOffset / (estimatedSize - viewportLength));

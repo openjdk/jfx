@@ -41,7 +41,7 @@ class SVGViewElement;
 class SVGViewSpec;
 
 class SVGSVGElement final : public SVGGraphicsElement, public SVGFitToViewBox, public SVGZoomAndPan {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGSVGElement);
+    WTF_MAKE_TZONE_ALLOCATED(SVGSVGElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGSVGElement);
 public: // DOM
     float currentScale() const;
@@ -69,7 +69,7 @@ public: // DOM
     static Ref<SVGTransform> createSVGTransform();
     static Ref<SVGTransform> createSVGTransformFromMatrix(DOMMatrix2DInit&&);
 
-    Element* getElementById(const AtomString&);
+    RefPtr<Element> getElementById(const AtomString&);
 
     void pauseAnimations();
     void unpauseAnimations();
@@ -102,8 +102,10 @@ public:
 
     bool hasIntrinsicWidth() const;
     bool hasIntrinsicHeight() const;
-    Length intrinsicWidth() const;
-    Length intrinsicHeight() const;
+    float intrinsicWidth() const;
+    float intrinsicHeight() const;
+
+    bool hasIntrinsicDimensions() const;
 
     FloatSize currentViewportSizeExcludingZoom() const;
     FloatRect currentViewBoxRect() const;

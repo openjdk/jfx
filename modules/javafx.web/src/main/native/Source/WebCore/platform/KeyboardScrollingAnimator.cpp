@@ -53,7 +53,7 @@ const std::optional<KeyboardScrollingKey> keyboardScrollingKeyForKeyboardEvent(c
     if (!(platformEvent->type() == PlatformEvent::Type::RawKeyDown || platformEvent->type() == PlatformEvent::Type::Char))
         return { };
 
-    static constexpr std::pair<PackedASCIILiteral<uint64_t>, KeyboardScrollingKey> mappings[] = {
+    static constexpr SortedArrayMap map { std::to_array<std::pair<PackedASCIILiteral<uint64_t>, KeyboardScrollingKey>>({
         { "Down"_s, KeyboardScrollingKey::DownArrow },
         { "End"_s, KeyboardScrollingKey::End },
         { "Home"_s, KeyboardScrollingKey::Home },
@@ -62,8 +62,7 @@ const std::optional<KeyboardScrollingKey> keyboardScrollingKeyForKeyboardEvent(c
         { "PageUp"_s, KeyboardScrollingKey::PageUp },
         { "Right"_s, KeyboardScrollingKey::RightArrow },
         { "Up"_s, KeyboardScrollingKey::UpArrow },
-    };
-    static constexpr SortedArrayMap map { mappings };
+    }) };
 
     auto identifier = platformEvent->keyIdentifier();
     if (auto* result = map.tryGet(identifier))
@@ -147,7 +146,8 @@ const std::optional<ScrollGranularity> scrollGranularityForKeyboardEvent(const K
 
 float KeyboardScrollingAnimator::scrollDistance(ScrollDirection direction, ScrollGranularity granularity) const
 {
-    auto scrollbar = m_scrollableArea.scrollbarForDirection(direction);
+    CheckedRef scrollableArea = m_scrollableArea.get();
+    auto scrollbar = scrollableArea->scrollbarForDirection(direction);
     if (!scrollbar)
         return false;
 
@@ -169,7 +169,7 @@ float KeyboardScrollingAnimator::scrollDistance(ScrollDirection direction, Scrol
 
     auto axis = axisFromDirection(direction);
     if (granularity == ScrollGranularity::Page && axis == ScrollEventAxis::Vertical)
-        step = m_scrollableArea.adjustVerticalPageScrollStepForFixedContent(step);
+        step = scrollableArea->adjustVerticalPageScrollStepForFixedContent(step);
 
     return step;
 }
@@ -178,9 +178,10 @@ RectEdges<bool> KeyboardScrollingAnimator::scrollingDirections() const
 {
     RectEdges<bool> edges;
 
-    edges.setTop(m_scrollableArea.allowsVerticalScrolling());
+    CheckedRef scrollableArea = m_scrollableArea.get();
+    edges.setTop(scrollableArea->allowsVerticalScrolling());
     edges.setBottom(edges.top());
-    edges.setLeft(m_scrollableArea.allowsHorizontalScrolling());
+    edges.setLeft(scrollableArea->allowsHorizontalScrolling());
     edges.setRight(edges.left());
 
     return edges;
@@ -210,9 +211,10 @@ bool KeyboardScrollingAnimator::beginKeyboardScrollGesture(ScrollDirection direc
     if (!scroll)
         return false;
 
-    if (m_scrollableArea.isUserScrollInProgress()) {
+    CheckedRef scrollableArea = m_scrollableArea.get();
+    if (scrollableArea->isUserScrollInProgress()) {
         m_scrollTriggeringKeyIsPressed = false;
-        m_scrollableArea.endKeyboardScroll(true);
+        scrollableArea->endKeyboardScroll(true);
         return true;
     }
 
@@ -223,15 +225,15 @@ bool KeyboardScrollingAnimator::beginKeyboardScrollGesture(ScrollDirection direc
         return false;
 
     if (granularity == ScrollGranularity::Document || (!isKeyRepeat && granularity == ScrollGranularity::Page)) {
-        m_scrollableArea.endKeyboardScroll(false);
-        auto newPosition = IntPoint(m_scrollableArea.scrollAnimator().currentPosition() + scroll->offset);
-        m_scrollableArea.scrollAnimator().scrollToPositionWithAnimation(newPosition);
+        scrollableArea->endKeyboardScroll(false);
+        auto newPosition = IntPoint(scrollableArea->scrollAnimator().currentPosition() + scroll->offset);
+        scrollableArea->scrollAnimator().scrollToPositionWithAnimation(newPosition);
         return true;
     }
 
     m_scrollTriggeringKeyIsPressed = true;
 
-    m_scrollableArea.beginKeyboardScroll(*scroll);
+    scrollableArea->beginKeyboardScroll(*scroll);
 
     return true;
 }
@@ -243,13 +245,18 @@ void KeyboardScrollingAnimator::handleKeyUpEvent()
 
     m_scrollTriggeringKeyIsPressed = false;
 
-    m_scrollableArea.endKeyboardScroll(false);
+    checkedScrollableArea()->endKeyboardScroll(false);
 }
 
 void KeyboardScrollingAnimator::stopScrollingImmediately()
 {
     m_scrollTriggeringKeyIsPressed = false;
-    m_scrollableArea.endKeyboardScroll(true);
+    checkedScrollableArea()->endKeyboardScroll(true);
+}
+
+CheckedRef<ScrollableArea> KeyboardScrollingAnimator::checkedScrollableArea() const
+{
+    return m_scrollableArea.get();
 }
 
 } // namespace WebCore

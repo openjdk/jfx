@@ -27,12 +27,15 @@
 #include "WebKitNamespace.h"
 
 #include "Element.h"
+#include "ExceptionOr.h"
 #include "FrameLoader.h"
 #include "LocalFrame.h"
 #include "LocalFrameLoaderClient.h"
 #include "Logging.h"
-#include "WebKitNodeInfo.h"
+#include "WebKitBufferNamespace.h"
+#include "WebKitJSHandle.h"
 #include "WebKitSerializedNode.h"
+#include <JavaScriptCore/JSCellInlines.h>
 
 #define WEBKIT_NAMESPACE_RELEASE_LOG_ERROR(channel, fmt, ...) RELEASE_LOG_ERROR(channel, "%p - WebKitNamespace::" fmt, this, ##__VA_ARGS__)
 
@@ -46,6 +49,7 @@ namespace WebCore {
 WebKitNamespace::WebKitNamespace(LocalDOMWindow& window, UserContentProvider& userContentProvider)
     : LocalDOMWindowProperty(&window)
     , m_messageHandlerNamespace(UserMessageHandlersNamespace::create(*window.protectedFrame(), userContentProvider))
+    , m_buffers(WebKitBufferNamespace::create(*window.protectedFrame(), userContentProvider))
 {
     ASSERT(window.frame());
 }
@@ -64,16 +68,23 @@ UserMessageHandlersNamespace* WebKitNamespace::messageHandlers()
     }
 #endif
 
-    return &m_messageHandlerNamespace.get();
+    return m_messageHandlerNamespace.ptr();
 }
 
-Ref<WebKitNodeInfo> WebKitNamespace::createNodeInfo(Node& node)
+WebKitBufferNamespace& WebKitNamespace::buffers()
 {
-    return WebKitNodeInfo::create(node);
+    return m_buffers;
 }
 
-Ref<WebKitSerializedNode> WebKitNamespace::serializeNode(Node& node, SerializedNodeInit&& init)
+Ref<WebKitJSHandle> WebKitNamespace::createJSHandle(JSC::Strong<JSC::JSObject> object)
 {
+    return WebKitJSHandle::create(object.get());
+}
+
+ExceptionOr<Ref<WebKitSerializedNode>> WebKitNamespace::serializeNode(Node& node, SerializedNodeInit&& init)
+{
+    if (node.isShadowRoot()) [[unlikely]]
+        return Exception { ExceptionCode::NotSupportedError };
     return WebKitSerializedNode::create(node, init.deep);
 }
 

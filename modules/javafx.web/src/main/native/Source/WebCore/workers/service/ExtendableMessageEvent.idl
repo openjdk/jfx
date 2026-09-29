@@ -26,8 +26,7 @@
 [
     EnabledBySetting=ServiceWorkersEnabled,
     Exposed=ServiceWorker,
-    JSCustomMarkFunction,
-    JSGenerateToJSObject,
+    JSCustomMarkFunction
 ] interface ExtendableMessageEvent : ExtendableEvent {
     [Custom] constructor([AtomString] DOMString type, optional ExtendableMessageEventInit eventInitDict);
 
@@ -38,7 +37,9 @@
     [CustomGetter] readonly attribute FrozenArray<MessagePort> ports;
 };
 
-dictionary ExtendableMessageEventInit : ExtendableEventInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary ExtendableMessageEventInit : ExtendableEventInit {
     any data = null;
     USVString origin = "";
     DOMString lastEventId = "";

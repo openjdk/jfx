@@ -25,16 +25,16 @@
 
 #pragma once
 
-#include "IDBBackingStore.h"
-#include "IDBDatabaseIdentifier.h"
-#include "IDBDatabaseInfo.h"
-#include "IDBDatabaseNameAndVersion.h"
-#include "IDBIndexIdentifier.h"
-#include "IDBObjectStoreIdentifier.h"
-#include "IDBResourceIdentifier.h"
-#include "SQLiteIDBTransaction.h"
-#include "SQLiteStatementAutoResetScope.h"
 #include <JavaScriptCore/Strong.h>
+#include <WebCore/IDBBackingStore.h>
+#include <WebCore/IDBDatabaseIdentifier.h>
+#include <WebCore/IDBDatabaseInfo.h>
+#include <WebCore/IDBDatabaseNameAndVersion.h>
+#include <WebCore/IDBIndexIdentifier.h>
+#include <WebCore/IDBObjectStoreIdentifier.h>
+#include <WebCore/IDBResourceIdentifier.h>
+#include <WebCore/SQLiteIDBTransaction.h>
+#include <WebCore/SQLiteStatementAutoResetScope.h>
 #include <pal/SessionID.h>
 #include <wtf/HashMap.h>
 #include <wtf/TZoneMalloc.h>
@@ -118,7 +118,7 @@ private:
     IDBError ensureValidBlobTables();
     std::optional<IsSchemaUpgraded> ensureValidObjectStoreInfoTable();
     std::unique_ptr<IDBDatabaseInfo> createAndPopulateInitialDatabaseInfo();
-    std::unique_ptr<IDBDatabaseInfo> extractExistingDatabaseInfo();
+    Expected<std::unique_ptr<IDBDatabaseInfo>, IDBError> extractExistingDatabaseInfo();
 
     IDBError deleteRecord(SQLiteIDBTransaction&, IDBObjectStoreIdentifier, const IDBKeyData&);
     IDBError uncheckedGetKeyGeneratorValue(IDBObjectStoreIdentifier, uint64_t& outValue);
@@ -213,7 +213,7 @@ private:
     std::unique_ptr<SQLiteDatabase> m_sqliteDB;
 
     HashMap<IDBResourceIdentifier, std::unique_ptr<SQLiteIDBTransaction>> m_transactions;
-    HashMap<IDBResourceIdentifier, SQLiteIDBCursor*> m_cursors;
+    HashMap<IDBResourceIdentifier, CheckedPtr<SQLiteIDBCursor>> m_cursors;
 
     String m_databaseDirectory;
 };

@@ -33,7 +33,7 @@ namespace WebCore {
 
 CSSNamedImageValue::CSSNamedImageValue(String&& name)
     : CSSValue { ClassType::NamedImage }
-    , m_name { WTFMove(name) }
+    , m_name { WTF::move(name) }
 {
 }
 

@@ -28,6 +28,10 @@
 #include "GraphicsContext.h"
 #include <wtf/text/TextStream.h>
 
+#if USE(CORE_IMAGE)
+#include "FEDropShadowCoreImageApplier.h"
+#endif
+
 #if USE(SKIA)
 #include "FEDropShadowSkiaApplier.h"
 #endif
@@ -137,17 +141,17 @@ IntOutsets FEDropShadow::calculateOutsets(const FloatSize& offset, const FloatSi
     return { top, right, bottom, left };
 }
 
-OptionSet<FilterRenderingMode> FEDropShadow::supportedFilterRenderingModes() const
+OptionSet<FilterRenderingMode> FEDropShadow::supportedFilterRenderingModes(OptionSet<FilterRenderingMode> preferredFilterRenderingModes) const
 {
     OptionSet<FilterRenderingMode> modes = FilterRenderingMode::Software;
-#if USE(SKIA)
+#if (USE(CORE_IMAGE)) || (USE(SKIA))
     modes.add(FilterRenderingMode::Accelerated);
 #endif
-#if USE(CG)
+#if USE(CG) && HAVE(FIX_FOR_RADAR_163968203)
     if (m_stdX == m_stdY)
         modes.add(FilterRenderingMode::GraphicsContext);
 #endif
-    return modes;
+    return modes & preferredFilterRenderingModes;
 }
 
 std::optional<GraphicsStyle> FEDropShadow::createGraphicsStyle(GraphicsContext& context, const Filter& filter) const
@@ -162,7 +166,9 @@ std::optional<GraphicsStyle> FEDropShadow::createGraphicsStyle(GraphicsContext& 
 
 std::unique_ptr<FilterEffectApplier> FEDropShadow::createAcceleratedApplier() const
 {
-#if USE(SKIA)
+#if USE(CORE_IMAGE)
+    return FilterEffectApplier::create<FEDropShadowCoreImageApplier>(*this);
+#elif USE(SKIA)
     return FilterEffectApplier::create<FEDropShadowSkiaApplier>(*this);
 #else
     return nullptr;

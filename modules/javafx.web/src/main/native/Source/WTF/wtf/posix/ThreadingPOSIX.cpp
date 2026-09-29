@@ -303,7 +303,7 @@ static int schedPolicy(Thread::QOS qos, Thread::SchedulingPolicy schedulingPolic
 }
 #endif
 
-bool Thread::establishHandle(NewThreadContext* context, std::optional<size_t> stackSize, QOS qos, SchedulingPolicy schedulingPolicy)
+bool Thread::establishHandle(NewThreadContext& context, std::optional<size_t> stackSize, QOS qos, SchedulingPolicy schedulingPolicy)
 {
     pthread_t threadHandle;
     pthread_attr_t attr;
@@ -316,10 +316,10 @@ bool Thread::establishHandle(NewThreadContext* context, std::optional<size_t> st
 #endif
     if (stackSize)
         pthread_attr_setstacksize(&attr, stackSize.value());
-    int error = pthread_create(&threadHandle, &attr, wtfThreadEntryPoint, context);
+    int error = pthread_create(&threadHandle, &attr, wtfThreadEntryPoint, &context);
     pthread_attr_destroy(&attr);
     if (error) {
-        LOG_ERROR("Failed to create pthread at entry point %p with context %p", wtfThreadEntryPoint, context);
+        LOG_ERROR("Failed to create pthread at entry point %p with context %p", wtfThreadEntryPoint, &context);
         return false;
     }
 
@@ -437,12 +437,12 @@ Thread& Thread::initializeCurrentTLS()
 {
     // Not a WTF-created thread, Thread is not established yet.
     WTF::initialize();
-    Ref<Thread> thread = adoptRef(*new Thread());
+    Ref thread = adoptRef(*new Thread(SchedulingPolicy::Other));
     thread->establishPlatformSpecificHandle(pthread_self());
     thread->initializeInThread();
     initializeCurrentThreadEvenIfNonWTFCreated();
 
-    return initializeTLS(WTFMove(thread));
+    return initializeTLS(WTF::move(thread));
 }
 
 bool Thread::signal(int signalNumber)

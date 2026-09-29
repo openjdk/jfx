@@ -25,12 +25,12 @@
 
 #pragma once
 
-#include "CopyImageOptions.h"
-#include "DestinationColorSpace.h"
-#include "ImageTypes.h"
-#include "IntRect.h"
-#include "PlatformImage.h"
-#include "SharedMemory.h"
+#include <WebCore/CopyImageOptions.h>
+#include <WebCore/DestinationColorSpace.h>
+#include <WebCore/ImageTypes.h>
+#include <WebCore/IntRect.h>
+#include <WebCore/PlatformImage.h>
+#include <WebCore/SharedMemory.h>
 #include <wtf/ArgumentCoder.h>
 #include <wtf/DebugHeap.h>
 #include <wtf/ExportMacros.h>
@@ -46,6 +46,13 @@ namespace WebCore {
 class GraphicsContext;
 class Image;
 class NativeImage;
+
+#if OS(DARWIN)
+inline constexpr auto defaultCopyOnWrite = SharedMemory::CopyOnWrite::Yes;
+#else
+// FIXME: https://bugs.webkit.org/show_bug.cgi?id=305633
+inline constexpr auto defaultCopyOnWrite = SharedMemory::CopyOnWrite::No;
+#endif
 
 class ShareableBitmapConfiguration {
 public:
@@ -64,6 +71,7 @@ public:
     IntSize size() const { return m_size; }
     const DestinationColorSpace& colorSpace() const { return m_colorSpace ? *m_colorSpace : DestinationColorSpace::SRGB(); }
     PlatformColorSpaceValue platformColorSpace() const { return colorSpace().platformColorSpace(); }
+    PlatformColorSpace protectedPlatformColorSpace() const { return platformColorSpace(); }
     Headroom headroom() const { return m_headroom; }
     bool isOpaque() const { return m_isOpaque; }
 
@@ -83,7 +91,7 @@ public:
     WEBCORE_EXPORT static CheckedUint32 calculateSizeInBytes(const IntSize&, const DestinationColorSpace&);
 
 private:
-    friend struct IPC::ArgumentCoder<ShareableBitmapConfiguration, void>;
+    friend struct IPC::ArgumentCoder<ShareableBitmapConfiguration>;
 
     static std::optional<DestinationColorSpace> validateColorSpace(std::optional<DestinationColorSpace>);
     static CheckedUint32 calculateBitsPerComponent(const DestinationColorSpace&);
@@ -124,7 +132,7 @@ public:
     WEBCORE_EXPORT void setOwnershipOfMemory(const ProcessIdentity&, MemoryLedger) const;
 
 private:
-    friend struct IPC::ArgumentCoder<ShareableBitmapHandle, void>;
+    friend struct IPC::ArgumentCoder<ShareableBitmapHandle>;
     friend class ShareableBitmap;
 
     SharedMemory::Handle m_handle;
@@ -150,7 +158,7 @@ public:
     WEBCORE_EXPORT static RefPtr<ShareableBitmap> createFromImageDraw(NativeImage&, const DestinationColorSpace&, const IntSize& destinationSize, const IntSize& sourceSize);
 
     // Create a shareable bitmap from a handle.
-    WEBCORE_EXPORT static RefPtr<ShareableBitmap> create(Handle&&, SharedMemory::Protection = SharedMemory::Protection::ReadWrite);
+    WEBCORE_EXPORT static RefPtr<ShareableBitmap> create(Handle&&, SharedMemory::Protection = SharedMemory::Protection::ReadWrite, SharedMemory::CopyOnWrite = defaultCopyOnWrite);
 
     // Create a shareable bitmap from a ReadOnly handle.
     WEBCORE_EXPORT static std::optional<Ref<ShareableBitmap>> createReadOnly(std::optional<Handle>&&);
@@ -182,31 +190,19 @@ public:
     // This is only safe to use when we know that the contents of the shareable bitmap won't change.
     WEBCORE_EXPORT RefPtr<Image> createImage();
 
-#if USE(CG)
-    // This creates a copied CGImageRef (most likely a copy-on-write) of the shareable bitmap.
-    WEBCORE_EXPORT RetainPtr<CGImageRef> makeCGImageCopy();
-
-    // This creates a CGImageRef that directly references the shared bitmap data.
-    // This is only safe to use when we know that the contents of the shareable bitmap won't change.
-    WEBCORE_EXPORT RetainPtr<CGImageRef> makeCGImage(ShouldInterpolate = ShouldInterpolate::No);
-
     WEBCORE_EXPORT PlatformImagePtr createPlatformImage(BackingStoreCopy = CopyBackingStore, ShouldInterpolate = ShouldInterpolate::No);
-#elif USE(CAIRO)
+
+#if USE(CAIRO)
     // This creates a BitmapImage that directly references the shared bitmap data.
     // This is only safe to use when we know that the contents of the shareable bitmap won't change.
     WEBCORE_EXPORT RefPtr<cairo_surface_t> createPersistentCairoSurface();
     WEBCORE_EXPORT RefPtr<cairo_surface_t> createCairoSurface();
-
-    PlatformImagePtr createPlatformImage(BackingStoreCopy = CopyBackingStore, ShouldInterpolate = ShouldInterpolate::No) { return createCairoSurface(); }
-#elif USE(SKIA)
-    WEBCORE_EXPORT PlatformImagePtr createPlatformImage(BackingStoreCopy = CopyBackingStore, ShouldInterpolate = ShouldInterpolate::No);
 #endif
 
 private:
     ShareableBitmap(ShareableBitmapConfiguration, Ref<SharedMemory>&&);
 
 #if USE(CG)
-    RetainPtr<CGImageRef> createCGImage(CGDataProviderRef, ShouldInterpolate) const;
     static void releaseBitmapContextData(void* typelessBitmap, void* typelessData);
 #endif
 

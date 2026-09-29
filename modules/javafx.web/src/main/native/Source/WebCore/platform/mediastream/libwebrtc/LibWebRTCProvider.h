@@ -27,14 +27,17 @@
 
 #if USE(LIBWEBRTC)
 
-#include "LibWebRTCMacros.h"
-#include "LibWebRTCRefWrappers.h"
-#include "ScriptExecutionContextIdentifier.h"
-#include "WebRTCProvider.h"
+#include <WebCore/LibWebRTCMacros.h>
+#include <WebCore/LibWebRTCRefWrappers.h>
+#include <WebCore/ScriptExecutionContextIdentifier.h>
+#include <WebCore/WebRTCProvider.h>
 #include <wtf/Compiler.h>
 #include <wtf/TZoneMalloc.h>
 
 WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
+
+// FIXME: Modularize WebRTC
+IGNORE_CLANG_WARNINGS_BEGIN("non-modular-include-in-module")
 
 // See Bug 274508: Disable thread-safety-reference-return warnings in libwebrtc
 IGNORE_CLANG_WARNINGS_BEGIN("thread-safety-reference-return")
@@ -45,6 +48,8 @@ IGNORE_CLANG_WARNINGS_END
 #include <webrtc/api/scoped_refptr.h>
 #include <webrtc/api/video_codecs/video_decoder_factory.h>
 #include <webrtc/api/video_codecs/video_encoder_factory.h>
+
+IGNORE_CLANG_WARNINGS_END
 
 WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 
@@ -84,6 +89,8 @@ public:
 
     webrtc::PeerConnectionFactoryInterface* factory();
     LibWebRTCAudioModule* audioModule();
+
+    void setUseL4S(bool);
 
     // FIXME: Make these methods not static.
     static void callOnWebRTCNetworkThread(Function<void()>&&);
@@ -136,6 +143,8 @@ protected:
     bool m_useNetworkThreadWithSocketServer { true };
 
 private:
+    bool isWebCoreLibWebRTCProvider() const final { return true; }
+
     void initializeAudioDecodingCapabilities() final;
     void initializeVideoDecodingCapabilities() final;
     void initializeAudioEncodingCapabilities() final;
@@ -146,6 +155,7 @@ private:
     std::optional<MediaCapabilitiesDecodingInfo> videoDecodingCapabilitiesOverride(const VideoConfiguration&) final;
     std::optional<MediaCapabilitiesEncodingInfo> videoEncodingCapabilitiesOverride(const VideoConfiguration&) final;
 
+    bool m_useL4S { false };
     std::optional<bool> m_supportsVP9VTBForTesting { false };
     bool m_disableNonLocalhostConnections { false };
     bool m_enableEnumeratingAllNetworkInterfaces { false };
@@ -162,5 +172,9 @@ inline LibWebRTCAudioModule* LibWebRTCProvider::audioModule()
 }
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::LibWebRTCProvider) \
+static bool isType(const WebCore::WebRTCProvider& provider) { return provider.isWebCoreLibWebRTCProvider(); } \
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // USE(LIBWEBRTC)

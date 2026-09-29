@@ -42,7 +42,7 @@ class XRInputSourceEvent;
 class WebXRSession;
 
 class WebXRInputSourceArray final : public ScriptWrappable {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WebXRInputSourceArray);
+    WTF_MAKE_TZONE_ALLOCATED(WebXRInputSourceArray);
 public:
     explicit WebXRInputSourceArray(WebXRSession&);
 
@@ -56,6 +56,7 @@ public:
     unsigned length() const;
     bool isSupportedPropertyIndex(unsigned index) const { return index < length(); }
     WebXRInputSource* item(unsigned) const;
+    RefPtr<WebXRInputSource> itemByHandle(PlatformXR::InputSourceHandle) const;
 
     void clear();
     void update(double timestamp, const InputSourceList&);

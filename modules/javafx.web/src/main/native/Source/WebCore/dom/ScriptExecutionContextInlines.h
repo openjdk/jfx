@@ -25,10 +25,9 @@
 
 #pragma once
 
-#include "DOMTimer.h"
-#include "EventLoop.h"
-#include "ScriptExecutionContext.h"
-#include "ServiceWorkerIdentifier.h"
+#include <WebCore/DOMTimer.h>
+#include <WebCore/EventLoop.h>
+#include <WebCore/ScriptExecutionContext.h>
 #include <wtf/CheckedRef.h>
 #include <wtf/CrossThreadTask.h>
 #include <wtf/NativePromise.h>
@@ -37,7 +36,7 @@ namespace WebCore {
 
 inline bool ScriptExecutionContext::addTimeout(int timeoutId, DOMTimer& timer)
 {
-    return m_timeouts.add(timeoutId, &timer).isNewEntry;
+    return m_timeouts.add(timeoutId, timer).isNewEntry;
 }
 
 inline RefPtr<DOMTimer> ScriptExecutionContext::takeTimeout(int timeoutId)
@@ -48,11 +47,6 @@ inline RefPtr<DOMTimer> ScriptExecutionContext::takeTimeout(int timeoutId)
 inline DOMTimer* ScriptExecutionContext::findTimeout(int timeoutId)
 {
     return m_timeouts.get(timeoutId);
-}
-
-inline ServiceWorker* ScriptExecutionContext::serviceWorker(ServiceWorkerIdentifier identifier)
-{
-    return m_serviceWorkers.get(identifier);
 }
 
 inline CheckedRef<EventLoopTaskGroup> ScriptExecutionContext::checkedEventLoop()
@@ -71,15 +65,15 @@ inline void ScriptExecutionContext::postCrossThreadTask(Arguments&&... arguments
 template<typename Promise, typename TaskType>
 void ScriptExecutionContext::enqueueTaskWhenSettled(Ref<Promise>&& promise, TaskSource taskSource, TaskType&& task)
 {
-    auto request = makeUnique<NativePromiseRequest>();
-    WeakPtr weakRequest { *request };
-    auto command = promise->whenSettled(nativePromiseDispatcher(), [weakThis = WeakPtr { *this }, taskSource, task = WTFMove(task), request = WTFMove(request)] (auto&& result) mutable {
+    auto request = NativePromiseRequest::create();
+    WeakPtr weakRequest { request.get() };
+    auto command = promise->whenSettled(protectedNativePromiseDispatcher(), [weakThis = WeakPtr { *this }, taskSource, task = WTF::move(task), request = WTF::move(request)] (auto&& result) mutable {
         request->complete();
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis)
             return;
-        protectedThis->eventLoop().queueTask(taskSource, [task = WTFMove(task), result = WTFMove(result)] () mutable {
-            task(WTFMove(result));
+        protectedThis->eventLoop().queueTask(taskSource, [task = WTF::move(task), result = WTF::move(result)] () mutable {
+            task(WTF::move(result));
         });
     });
     if (weakRequest) {
@@ -91,12 +85,12 @@ void ScriptExecutionContext::enqueueTaskWhenSettled(Ref<Promise>&& promise, Task
 template<typename Promise, typename TaskType, typename Finalizer>
 void ScriptExecutionContext::enqueueTaskWhenSettled(Ref<Promise>&& promise, TaskSource taskSource, TaskType&& task, Finalizer&& finalizer)
 {
-    enqueueTaskWhenSettled(WTFMove(promise), taskSource, CompletionHandlerWithFinalizer<void(typename Promise::Result&&)>(WTFMove(task), WTFMove(finalizer)));
+    enqueueTaskWhenSettled(WTF::move(promise), taskSource, CompletionHandlerWithFinalizer<void(typename Promise::Result&&)>(WTF::move(task), WTF::move(finalizer)));
 }
 
 inline ScriptExecutionContext::AddConsoleMessageTask::AddConsoleMessageTask(std::unique_ptr<Inspector::ConsoleMessage>&& consoleMessage)
     : Task([&consoleMessage](ScriptExecutionContext& context) {
-        context.addConsoleMessage(WTFMove(consoleMessage));
+        context.addConsoleMessage(WTF::move(consoleMessage));
     })
 {
 }

@@ -38,7 +38,7 @@ class GPUDeviceLostInfo : public RefCounted<GPUDeviceLostInfo> {
 public:
     static Ref<GPUDeviceLostInfo> create(Ref<WebGPU::DeviceLostInfo>&& backing)
     {
-        return adoptRef(*new GPUDeviceLostInfo(WTFMove(backing)));
+        return adoptRef(*new GPUDeviceLostInfo(WTF::move(backing)));
     }
 
     GPUDeviceLostReason reason() const;
@@ -49,7 +49,7 @@ public:
 
 private:
     GPUDeviceLostInfo(Ref<WebGPU::DeviceLostInfo>&& backing)
-        : m_backing(WTFMove(backing))
+        : m_backing(WTF::move(backing))
     {
     }
 

@@ -139,6 +139,18 @@ public:
 
                 for (unsigned nodeIndex = 0; nodeIndex < block->size(); ++nodeIndex) {
                     Node* node = block->at(nodeIndex);
+
+                    validateNode(node, calculator);
+                    calculator.executeNode(node);
+                }
+            }
+        }
+
+        return true;
+    }
+
+    void validateNode(Node* node, LocalOSRAvailabilityCalculator& calculator)
+    {
                     if (node->origin.exitOK) {
                         // If we're allowed to exit here, the heap must be in a state
                         // where exiting wouldn't crash. These particular fields are
@@ -189,12 +201,47 @@ public:
                         }
                     }
 
-                    calculator.executeNode(block->at(nodeIndex));
+        switch (node->op()) {
+        case PhantomCreateRest:
+        case PhantomDirectArguments:
+        case PhantomClonedArguments: {
+            InlineCallFrame* inlineCallFrame = node->origin.semantic.inlineCallFrame();
+            if (!inlineCallFrame) {
+                // We don't need to record anything about how the arguments are to be recovered. It's just a
+                // given that we can read them from the stack.
+                break;
                 }
+
+            unsigned numberOfArgumentsToSkip = 0;
+            if (node->op() == PhantomCreateRest)
+                numberOfArgumentsToSkip = node->numberOfArgumentsToSkip();
+
+            if (inlineCallFrame->isVarargs()) {
+                // Record how to read each argument and the argument count.
+                Availability argumentCount =
+                    calculator.m_availability.m_locals.operand(VirtualRegister(inlineCallFrame->stackOffset + CallFrameSlot::argumentCountIncludingThis));
+
+                RELEASE_ASSERT(!argumentCount.isDead());
             }
+
+            if (inlineCallFrame->isClosureCall) {
+                Availability callee = calculator.m_availability.m_locals.operand(
+                    VirtualRegister(inlineCallFrame->stackOffset + CallFrameSlot::callee));
+
+                RELEASE_ASSERT(!callee.isDead());
         }
 
-        return true;
+            for (unsigned i = numberOfArgumentsToSkip; i < static_cast<unsigned>(inlineCallFrame->argumentCountIncludingThis - 1); ++i) {
+                Availability argument = calculator.m_availability.m_locals.operand(
+                    VirtualRegister(inlineCallFrame->stackOffset + CallFrame::argumentOffset(i)));
+
+                RELEASE_ASSERT(!argument.isDead());
+            }
+            break;
+        }
+        default:
+            break;
+        }
     }
 
     HeadFunctor& availabilityAtHead;
@@ -339,7 +386,6 @@ void LocalOSRAvailabilityCalculator::executeNode(Node* node)
             Availability argumentCount =
                 m_availability.m_locals.operand(VirtualRegister(inlineCallFrame->stackOffset + CallFrameSlot::argumentCountIncludingThis));
 
-            ASSERT(!argumentCount.isDead());
             m_availability.m_heap.set(PromotedHeapLocation(ArgumentCountPLoc, node), argumentCount);
         }
 
@@ -347,7 +393,6 @@ void LocalOSRAvailabilityCalculator::executeNode(Node* node)
             Availability callee = m_availability.m_locals.operand(
                 VirtualRegister(inlineCallFrame->stackOffset + CallFrameSlot::callee));
 
-            ASSERT(!callee.isDead());
             m_availability.m_heap.set(PromotedHeapLocation(ArgumentsCalleePLoc, node), callee);
         }
 
@@ -355,7 +400,6 @@ void LocalOSRAvailabilityCalculator::executeNode(Node* node)
             Availability argument = m_availability.m_locals.operand(
                 VirtualRegister(inlineCallFrame->stackOffset + CallFrame::argumentOffset(i)));
 
-            ASSERT(!argument.isDead());
             m_availability.m_heap.set(PromotedHeapLocation(ArgumentPLoc, node, i), argument);
         }
         break;

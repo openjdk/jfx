@@ -25,13 +25,13 @@
 
 #pragma once
 
-#include "AccessibilityRegionContext.h"
-#include "AffineTransform.h"
-#include "EventRegion.h"
-#include "GraphicsContext.h"
-#include "IntRect.h"
-#include "LayoutRect.h"
-#include "PaintPhase.h"
+#include <WebCore/AccessibilityRegionContext.h>
+#include <WebCore/AffineTransform.h>
+#include <WebCore/EventRegion.h>
+#include <WebCore/GraphicsContext.h>
+#include <WebCore/IntRect.h>
+#include <WebCore/LayoutRect.h>
+#include <WebCore/PaintPhase.h>
 #include <limits>
 #include <wtf/HashMap.h>
 #include <wtf/OptionSet.h>

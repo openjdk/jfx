@@ -24,8 +24,8 @@
 
 #pragma once
 
-#include "StyleImage.h"
-#include "StyleValueTypes.h"
+#include <WebCore/StyleImage.h>
+#include <WebCore/StyleValueTypes.h>
 
 namespace WebCore {
 namespace Style {
@@ -47,6 +47,12 @@ template<> struct CSSValueCreation<ImageWrapper> { Ref<CSSValue> operator()(CSSV
 // MARK: - Serialization
 
 template<> struct Serialize<ImageWrapper> { void operator()(StringBuilder&, const CSS::SerializationContext&, const RenderStyle&, const ImageWrapper&); };
+
+// MARK: - Blending
+
+template<> struct Blending<ImageWrapper> {
+    auto blend(const ImageWrapper&, const ImageWrapper&, const BlendingContext&) -> ImageWrapper;
+};
 
 // MARK: - Logging
 

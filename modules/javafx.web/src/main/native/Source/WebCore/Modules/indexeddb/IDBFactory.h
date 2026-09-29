@@ -51,7 +51,7 @@ class IDBConnectionProxy;
 }
 
 class IDBFactory : public ThreadSafeRefCounted<IDBFactory> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(IDBFactory);
+    WTF_MAKE_TZONE_ALLOCATED(IDBFactory);
 public:
     static Ref<IDBFactory> create(IDBClient::IDBConnectionProxy&);
     ~IDBFactory();

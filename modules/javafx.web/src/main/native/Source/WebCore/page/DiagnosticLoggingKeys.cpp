@@ -26,8 +26,6 @@
 #include "config.h"
 #include "DiagnosticLoggingKeys.h"
 
-#include "HTMLMediaElement.h"
-
 namespace WebCore {
 
 String DiagnosticLoggingKeys::mediaLoadedKey()
@@ -338,11 +336,6 @@ String DiagnosticLoggingKeys::cpuUsageKey()
 String DiagnosticLoggingKeys::createSharedBufferFailedKey()
 {
     return "createSharedBufferFailed"_s;
-}
-
-String DiagnosticLoggingKeys::applicationCacheKey()
-{
-    return "applicationCache"_s;
 }
 
 #if ENABLE(APPLICATION_MANIFEST)

@@ -26,6 +26,7 @@
 #include "config.h"
 #include "InternalObserverMap.h"
 
+#include "ContextDestructionObserverInlines.h"
 #include "InternalObserver.h"
 #include "MapperCallback.h"
 #include "Observable.h"

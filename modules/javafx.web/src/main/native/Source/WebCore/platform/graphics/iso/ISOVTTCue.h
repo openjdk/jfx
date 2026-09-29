@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "ISOBox.h"
+#include <WebCore/ISOBox.h>
 #include <wtf/MediaTime.h>
 #include <wtf/text/WTFString.h>
 
@@ -42,7 +42,7 @@ namespace WebCore {
 class ISOWebVTTCue final : public ISOBox {
 public:
     ISOWebVTTCue(const MediaTime& presentationTime, const MediaTime& duration);
-    WEBCORE_EXPORT ISOWebVTTCue(MediaTime&& presentationTime, MediaTime&& duration, AtomString&& cueID, String&& cueText, String&& settings = { }, String&& sourceID = { }, String&& originalStartTime = { });
+    WEBCORE_EXPORT ISOWebVTTCue(const MediaTime& presentationTime, const MediaTime& duration, String&& cueID, String&& cueText, String&& settings = { }, String&& sourceID = { }, String&& originalStartTime = { });
     ISOWebVTTCue(const ISOWebVTTCue&) = default;
     WEBCORE_EXPORT ISOWebVTTCue();
     WEBCORE_EXPORT ISOWebVTTCue(ISOWebVTTCue&&);
@@ -57,7 +57,7 @@ public:
     const MediaTime& duration() const { return m_duration; }
 
     const String& sourceID() const { return m_sourceID; }
-    const AtomString& id() const { return m_identifier; }
+    const String& id() const { return m_identifier; }
     const String& originalStartTime() const { return m_originalStartTime; }
     const String& settings() const { return m_settings; }
     const String& cueText() const { return m_cueText; }
@@ -66,12 +66,15 @@ public:
 
     WEBCORE_EXPORT bool parse(JSC::DataView&, unsigned& offset) override;
 
+    ISOWebVTTCue isolatedCopy() const &;
+    ISOWebVTTCue isolatedCopy() &&;
+
 private:
     MediaTime m_presentationTime;
     MediaTime m_duration;
 
     String m_sourceID;
-    AtomString m_identifier;
+    String m_identifier;
     String m_originalStartTime;
     String m_settings;
     String m_cueText;

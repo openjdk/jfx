@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "SWServer.h"
-#include "ServiceWorkerJobData.h"
-#include "Timer.h"
-#include "WorkerFetchResult.h"
+#include <WebCore/SWServer.h>
+#include <WebCore/ServiceWorkerJobData.h>
+#include <WebCore/Timer.h>
+#include <WebCore/WorkerFetchResult.h>
 #include <wtf/CheckedPtr.h>
 #include <wtf/Deque.h>
 #include <wtf/TZoneMalloc.h>
@@ -49,7 +49,7 @@ public:
 
     const ServiceWorkerJobData& firstJob() const { return m_jobQueue.first(); }
     const ServiceWorkerJobData& lastJob() const { return m_jobQueue.last(); }
-    void enqueueJob(ServiceWorkerJobData&& jobData) { m_jobQueue.append(WTFMove(jobData)); }
+    void enqueueJob(ServiceWorkerJobData&& jobData) { m_jobQueue.append(WTF::move(jobData)); }
     size_t size() const { return m_jobQueue.size(); }
 
     void runNextJob();

@@ -120,7 +120,7 @@ public:
 
 #if ENABLE(DAMAGE_TRACKING)
     void setDamagePropagationEnabled(bool enabled) { m_damagePropagationEnabled = enabled; }
-    void setDamageInGlobalCoordinateSpace(std::shared_ptr<Damage> damage) { m_damageInGlobalCoordinateSpace = WTFMove(damage); }
+    void setDamageInGlobalCoordinateSpace(std::shared_ptr<Damage> damage) { m_damageInGlobalCoordinateSpace = WTF::move(damage); }
     void setDamage(Damage&&);
     void collectDamage(TextureMapper&, Damage&);
 #endif

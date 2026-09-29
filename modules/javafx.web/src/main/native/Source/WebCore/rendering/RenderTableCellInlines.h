@@ -20,8 +20,7 @@
 
 #pragma once
 
-#include "RenderObjectInlines.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include "RenderTableCell.h"
 #include "StyleContentAlignmentData.h"
 
@@ -51,34 +50,24 @@ inline const BorderValue& RenderTableCell::borderAdjoiningTableStart() const
     return style().borderStart(tableWritingMode());
 }
 
-inline LayoutUnit RenderTableCell::logicalHeightForRowSizing() const
+inline std::pair<Style::PreferredSize, Style::ZoomFactor> RenderTableCell::styleOrColLogicalWidth() const
 {
-    // FIXME: This function does too much work, and is very hot during table layout!
-    LayoutUnit adjustedLogicalHeight = logicalHeight() - (intrinsicPaddingBefore() + intrinsicPaddingAfter());
-    if (!style().logicalHeight().isSpecified())
-        return adjustedLogicalHeight;
-    LayoutUnit styleLogicalHeight = Style::evaluate(style().logicalHeight(), 0_lu);
-    // In strict mode, box-sizing: content-box do the right thing and actually add in the border and padding.
-    // Call computedCSSPadding* directly to avoid including implicitPadding.
-    if (!document().inQuirksMode() && style().boxSizing() != BoxSizing::BorderBox)
-        styleLogicalHeight += computedCSSPaddingBefore() + computedCSSPaddingAfter() + borderBefore() + borderAfter();
-    return std::max(styleLogicalHeight, adjustedLogicalHeight);
-}
-
-inline Style::PreferredSize RenderTableCell::styleOrColLogicalWidth() const
-{
-    auto& styleWidth = style().logicalWidth();
+    auto& style = this->style();
+    auto& styleWidth = style.logicalWidth();
     if (!styleWidth.isAuto())
-        return styleWidth;
-    if (RenderTableCol* firstColumn = table()->colElement(col()))
-        return logicalWidthFromColumns(firstColumn, styleWidth);
-    return styleWidth;
+        return { styleWidth, style.usedZoomForLength() };
+    if (RenderTableCol* firstColumn = table()->colElement(col())) {
+        // logicalWidthFromColumns will return a zoomed size so we return a zoom
+        // factor of 1.0 to avoid double zooming.
+        return { logicalWidthFromColumns(firstColumn, styleWidth), Style::ZoomFactor { 1.0f } };
+    }
+    return { styleWidth, style.usedZoomForLength() };
 }
 
 inline bool RenderTableCell::isBaselineAligned() const
 {
     if (auto alignContent = style().alignContent(); !alignContent.isNormal())
-        return alignContent.position() == ContentPosition::Baseline;
+        return alignContent.isFirstBaseline();
 
     auto& verticalAlign = style().verticalAlign();
     return WTF::holdsAlternative<CSS::Keyword::Baseline>(verticalAlign)
@@ -87,6 +76,15 @@ inline bool RenderTableCell::isBaselineAligned() const
         || WTF::holdsAlternative<CSS::Keyword::Super>(verticalAlign)
         || WTF::holdsAlternative<CSS::Keyword::Sub>(verticalAlign)
         || WTF::holdsAlternative<Style::VerticalAlign::Length>(verticalAlign);
+}
+
+inline bool RenderTableCell::isOrthogonal() const
+{
+    if (auto* row = this->row())
+        return writingMode().isOrthogonal(row->writingMode());
+
+    ASSERT_NOT_REACHED();
+    return false;
 }
 
 } // namespace WebCore

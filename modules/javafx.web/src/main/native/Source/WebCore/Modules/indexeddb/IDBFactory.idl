@@ -38,6 +38,7 @@
 
 [
     JSGenerateToJSObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary IDBDatabaseInfo {
     DOMString name;
     unsigned long long version;

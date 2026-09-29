@@ -149,7 +149,7 @@ void GenerateAndAllocateRegisters::insertBlocksForFlushAfterTerminalPatchpoints(
     blockInsertionSet.execute();
 }
 
-static ALWAYS_INLINE Air::Arg callFrameAddr(Air::Opcode opcode, CCallHelpers& jit, intptr_t offsetFromFP, intptr_t frameSize, Width width)
+static ALWAYS_INLINE Air::Arg callFrameAddr(Air::Opcode opcode, CCallHelpers& jit, int32_t offsetFromFP, int32_t frameSize, Width width)
 {
     if (isX86()) {
         ASSERT(Arg::addr(Air::Tmp(GPRInfo::callFrameRegister), offsetFromFP).isValidForm(opcode, width));
@@ -194,7 +194,7 @@ ALWAYS_INLINE void GenerateAndAllocateRegisters::release(Tmp tmp, Reg reg)
 ALWAYS_INLINE void GenerateAndAllocateRegisters::flush(Tmp tmp, Reg reg)
 {
     ASSERT(tmp);
-    intptr_t offset = m_map[tmp].spillSlot->offsetFromFP();
+    int32_t offset = safeCast<int32_t>(m_map[tmp].spillSlot->offsetFromFP());
     JIT_COMMENT(*m_jit, "Flush(", tmp, ", ", reg, ", offset=", offset, ")");
     if (tmp.isGP()) {
         auto dest = callFrameAddr(Air::Move, *m_jit, offset, m_code.frameSize(), registerWidth());
@@ -243,23 +243,24 @@ ALWAYS_INLINE void GenerateAndAllocateRegisters::alloc(Tmp tmp, Reg reg, Arg::Ro
 
     if (Arg::isAnyUse(role)) {
         JIT_COMMENT(*m_jit, "Alloc(", tmp, ", ", reg, ", role=", role, ")");
-        intptr_t offset = m_map[tmp].spillSlot->offsetFromFP();
+        int32_t offset = safeCast<int32_t>(m_map[tmp].spillSlot->offsetFromFP());
+        int32_t frameSize = safeCast<int32_t>(m_code.frameSize());
         if (tmp.bank() == GP) {
-            auto src = callFrameAddr(Air::Move, *m_jit, offset, m_code.frameSize(), registerWidth());
+            auto src = callFrameAddr(Air::Move, *m_jit, offset, frameSize, registerWidth());
             if (src.isAddr())
                 m_jit->loadRegWord(src.asAddress(), reg.gpr());
             else
                 m_jit->loadRegWord(src.asBaseIndex(), reg.gpr());
         } else if (B3::conservativeRegisterBytes(B3::FP) == sizeof(double) || !m_code.usesSIMD()) {
             ASSERT(m_map[tmp].spillSlot->byteSize() == bytesForWidth(Width64));
-            auto src = callFrameAddr(Air::MoveDouble, *m_jit, offset, m_code.frameSize(), Width64);
+            auto src = callFrameAddr(Air::MoveDouble, *m_jit, offset, frameSize, Width64);
             if (src.isAddr())
                 m_jit->loadDouble(src.asAddress(), reg.fpr());
             else
                 m_jit->loadDouble(src.asBaseIndex(), reg.fpr());
         } else {
             ASSERT(m_map[tmp].spillSlot->byteSize() == bytesForWidth(Width128));
-            auto src = callFrameAddr(Air::MoveVector, *m_jit, offset, m_code.frameSize(), Width128);
+            auto src = callFrameAddr(Air::MoveVector, *m_jit, offset, frameSize, Width128);
             if (src.isAddr())
                 m_jit->loadVector(src.asAddress(), reg.fpr());
             else
@@ -583,6 +584,16 @@ void GenerateAndAllocateRegisters::generate(CCallHelpers& jit)
     };
 
     Disassembler* disassembler = m_code.disassembler();
+    PCToOriginMap& pcToOriginMap = m_code.proc().pcToOriginMap();
+    auto addItem = [&](Inst& inst) {
+        if (!m_code.shouldPreserveB3Origins())
+            return;
+        if (inst.origin)
+            pcToOriginMap.appendItem(m_jit->labelIgnoringWatchpoints(), inst.origin->origin());
+        else
+            pcToOriginMap.appendItem(m_jit->labelIgnoringWatchpoints(), Origin());
+    };
+
 
     m_globalInstIndex = 1;
 
@@ -631,7 +642,7 @@ void GenerateAndAllocateRegisters::generate(CCallHelpers& jit)
             ScalarRegisterSet availableRegisters;
             for (Reg reg : m_registers[bank])
                 availableRegisters.add(reg, IgnoreVectors);
-            m_availableRegs[bank] = WTFMove(availableRegisters);
+            m_availableRegs[bank] = WTF::move(availableRegisters);
         });
 
         IndexMap<Reg, Tmp>& currentAllocation = currentAllocationMap[block];
@@ -775,7 +786,7 @@ void GenerateAndAllocateRegisters::generate(CCallHelpers& jit)
                 if (!entry.reg) {
                     // We're a cold use, and our current location is already on the stack. Just use that.
                     ASSERT(entry.spillSlot->byteSize() <= bytesForWidth(Width64) || m_code.usesSIMD());
-                    arg = Arg::addr(Tmp(GPRInfo::callFrameRegister), entry.spillSlot->offsetFromFP());
+                    arg = Arg::addr(Tmp(GPRInfo::callFrameRegister), safeCast<int32_t>(entry.spillSlot->offsetFromFP()));
                 }
             });
 
@@ -870,7 +881,7 @@ void GenerateAndAllocateRegisters::generate(CCallHelpers& jit)
                             if (Reg reg = entry.reg)
                                 spill(tmp, reg);
 
-                            arg = Arg::addr(Tmp(GPRInfo::callFrameRegister), entry.spillSlot->offsetFromFP());
+                            arg = Arg::addr(Tmp(GPRInfo::callFrameRegister), safeCast<int32_t>(entry.spillSlot->offsetFromFP()));
                         }
                     });
                     int pinnedRegisterUses = 0;
@@ -911,8 +922,11 @@ void GenerateAndAllocateRegisters::generate(CCallHelpers& jit)
 
             if (!inst.isTerminal()) {
                 CCallHelpers::Jump jump;
-                if (needsToGenerate)
+                if (needsToGenerate) {
+                    // Register allocation is done, emit PC label to origin map before emitting bytes.
+                    addItem(inst);
                     jump = inst.generate(*m_jit, context);
+                }
                 ASSERT_UNUSED(jump, !jump.isSet());
 
                 handleClobber();
@@ -955,10 +969,12 @@ void GenerateAndAllocateRegisters::generate(CCallHelpers& jit)
 
                     // We currently don't represent the full epilogue in Air, so we need to
                     // have this override.
+                    addItem(inst);
                     m_code.emitEpilogue(*m_jit);
                 }
 
                 if (needsToGenerate) {
+                    addItem(inst);
                     CCallHelpers::Jump jump = inst.generate(*m_jit, context);
 
                     // The jump won't be set for patchpoints. It won't be set for Oops because then it won't have
@@ -1022,17 +1038,21 @@ void GenerateAndAllocateRegisters::generate(CCallHelpers& jit)
     Vector<CCallHelpers::Label> entrypointLabels(m_code.numEntrypoints());
     for (unsigned i = m_code.numEntrypoints(); i--;)
         entrypointLabels[i] = *context.blockLabels[m_code.entrypoint(i).block()];
-    m_code.setEntrypointLabels(WTFMove(entrypointLabels));
+    m_code.setEntrypointLabels(WTF::move(entrypointLabels));
 
+    pcToOriginMap.appendItem(m_jit->labelIgnoringWatchpoints(), Origin());
     if (disassembler)
         disassembler->startLatePath(*m_jit);
 
-    // FIXME: Make late paths have Origins: https://bugs.webkit.org/show_bug.cgi?id=153689
-    for (auto& latePath : context.latePaths)
+    for (auto& [origin, latePath] : context.latePaths) {
+        if (m_code.shouldPreserveB3Origins())
+            pcToOriginMap.appendItem(m_jit->labelIgnoringWatchpoints(), origin);
         latePath->run(*m_jit, context);
+    }
 
     if (disassembler)
         disassembler->endLatePath(*m_jit);
+    pcToOriginMap.appendItem(m_jit->labelIgnoringWatchpoints(), Origin());
 }
 
 } } } // namespace JSC::B3::Air

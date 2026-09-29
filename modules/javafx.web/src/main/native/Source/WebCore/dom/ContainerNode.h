@@ -23,7 +23,7 @@
 
 #pragma once
 
-#include "Node.h"
+#include <WebCore/Node.h>
 
 namespace WebCore {
 
@@ -35,7 +35,7 @@ struct SerializedNode;
 enum class CollectionType : uint8_t;
 
 class ContainerNode : public Node {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(ContainerNode);
+    WTF_MAKE_TZONE_ALLOCATED(ContainerNode);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ContainerNode);
 public:
     virtual ~ContainerNode();
@@ -80,6 +80,7 @@ public:
     void takeAllChildrenFrom(ContainerNode*);
 
     void cloneChildNodes(Document&, CustomElementRegistry*, ContainerNode& clone, size_t currentDepth = 0) const;
+    void cloneSubtreeForFastParser(Document&, CustomElementRegistry*, ContainerNode& clone, size_t currentDepth = 0) const;
     Vector<SerializedNode> serializeChildNodes(size_t currentDepth = 0) const;
 
     enum class CanDelayNodeDeletion : uint8_t { No, Yes, Unknown };
@@ -95,6 +96,7 @@ public:
         SUPPRESS_UNCOUNTED_MEMBER Element* nextSiblingElement;
         ChildChange::Source source;
         AffectsElements affectsElements;
+        IsMutationBySetInnerHTML isMutationBySetInnerHTML { IsMutationBySetInnerHTML::No };
 
         bool isInsertion() const
         {

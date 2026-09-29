@@ -63,8 +63,8 @@ void XMLTreeViewer::transformDocumentToTreeView()
     frame->checkedScript()->evaluateIgnoringException(ScriptSourceCode(AtomString("prepareWebKitXMLViewer('This XML file does not appear to have any style information associated with it. The document tree is shown below.');"_s), JSC::SourceTaintedOrigin::Untainted));
 
     String cssString = StringImpl::createWithoutCopying(XMLViewer_css);
-    Ref text = document->createTextNode(WTFMove(cssString));
-    document->getElementById(String("xml-viewer-style"_s))->appendChild(WTFMove(text));
+    Ref text = document->createTextNode(WTF::move(cssString));
+    document->getElementById(String("xml-viewer-style"_s))->appendChild(WTF::move(text));
 }
 
 } // namespace WebCore

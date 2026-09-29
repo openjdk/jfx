@@ -23,7 +23,8 @@
  */
 
 [
-    Conditional=WEB_RTC
+    Conditional=WEB_RTC,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary RTCLocalSessionDescriptionInit {
     RTCSdpType type;
     DOMString sdp = "";

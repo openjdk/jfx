@@ -26,7 +26,8 @@
 typedef (double or CSSNumericValue) CSSNumberish;
 
 [
-    JSGenerateToJSObject
+    JSGenerateToJSObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary ComputedEffectTiming : EffectTiming {
     CSSNumberish         endTime;
     CSSNumberish         activeDuration;

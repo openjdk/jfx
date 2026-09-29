@@ -31,7 +31,8 @@
 [
     JSGenerateToJSObject,
     JSGenerateToNativeObject,
-    ImplementedAs=URLPatternComponentResult
+    ImplementedAs=URLPatternComponentResult,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary URLPatternComponentResult {
     USVString input;
     record<USVString, (undefined or USVString)> groups;
@@ -39,7 +40,8 @@
 
 [
     JSGenerateToJSObject,
-    JSGenerateToNativeObject
+    JSGenerateToNativeObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary URLPatternResult {
     sequence<URLPatternInput> inputs;
 

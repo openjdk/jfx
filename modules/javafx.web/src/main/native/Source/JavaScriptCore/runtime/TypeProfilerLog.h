@@ -28,8 +28,8 @@
 
 #pragma once
 
-#include "JSCJSValue.h"
-#include "Structure.h"
+#include <JavaScriptCore/JSCJSValue.h>
+#include <JavaScriptCore/Structure.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace JSC {

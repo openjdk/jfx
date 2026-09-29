@@ -25,7 +25,8 @@
 [
     Conditional=WEB_RTC,
     EnabledBySetting=PeerConnectionEnabled,
-    JSGenerateToJSObject
+    JSGenerateToJSObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary RTCRtpHeaderExtensionCapability {
     DOMString uri;
 };
@@ -33,7 +34,8 @@
 [
     Conditional=WEB_RTC,
     EnabledBySetting=PeerConnectionEnabled,
-    JSGenerateToJSObject
+    JSGenerateToJSObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary RTCRtpCapabilities {
     required sequence<RTCRtpCodecCapability> codecs;
     required sequence<RTCRtpHeaderExtensionCapability> headerExtensions;

@@ -25,6 +25,7 @@
 #include "CSSCalcValue.h"
 #include "CSSMarkup.h"
 #include "CSSParserIdioms.h"
+#include "CSSPrimitiveNumericCategory.h"
 #include "CSSPrimitiveNumericTypes+ComputedStyleDependencies.h"
 #include "CSSPrimitiveNumericTypes+Serialization.h"
 #include "CSSPrimitiveValueMappings.h"
@@ -33,16 +34,14 @@
 #include "CSSToLengthConversionData.h"
 #include "CSSValueKeywords.h"
 #include "CSSValuePool.h"
-#include "CalculationCategory.h"
-#include "CalculationValue.h"
 #include "ComputedStyleDependencies.h"
 #include "ContainerQueryEvaluator.h"
 #include "FontCascade.h"
-#include "Length.h"
 #include "NodeRenderStyle.h"
 #include "RenderBoxInlines.h"
 #include "RenderStyle.h"
 #include "RenderView.h"
+#include "StyleCalculationValue.h"
 #include "StyleLengthResolution.h"
 #include <wtf/Hasher.h>
 #include <wtf/NeverDestroyed.h>
@@ -304,7 +303,7 @@ CSSPrimitiveValue::CSSPrimitiveValue(StaticCSSValueTag, ImplicitInitialValueTag)
     m_isImplicitInitialValue = true;
 }
 
-CSSPrimitiveValue::CSSPrimitiveValue(Ref<CSSCalcValue> value)
+CSSPrimitiveValue::CSSPrimitiveValue(Ref<CSSCalc::Value> value)
     : CSSValue(ClassType::Primitive)
 {
     setPrimitiveUnitType(CSSUnitType::CSS_CALC);
@@ -464,86 +463,27 @@ Ref<CSSPrimitiveValue> CSSPrimitiveValue::create(double value, CSSUnitType type)
 
 Ref<CSSPrimitiveValue> CSSPrimitiveValue::create(String value)
 {
-    return adoptRef(*new CSSPrimitiveValue(WTFMove(value), CSSUnitType::CSS_STRING));
+    return adoptRef(*new CSSPrimitiveValue(WTF::move(value), CSSUnitType::CSS_STRING));
 }
 
-Ref<CSSPrimitiveValue> CSSPrimitiveValue::create(const Length& length)
+Ref<CSSPrimitiveValue> CSSPrimitiveValue::create(Ref<CSSCalc::Value> value)
 {
-    switch (length.type()) {
-    case LengthType::Auto:
-        return create(CSSValueAuto);
-    case LengthType::Content:
-        return create(CSSValueContent);
-    case LengthType::FillAvailable:
-        return create(CSSValueWebkitFillAvailable);
-    case LengthType::FitContent:
-        return create(CSSValueFitContent);
-    case LengthType::Fixed:
-        return create(length.value(), CSSUnitType::CSS_PX);
-    case LengthType::Intrinsic:
-        return create(CSSValueIntrinsic);
-    case LengthType::MinIntrinsic:
-        return create(CSSValueMinIntrinsic);
-    case LengthType::MinContent:
-        return create(CSSValueMinContent);
-    case LengthType::MaxContent:
-        return create(CSSValueMaxContent);
-    case LengthType::Normal:
-        return create(CSSValueNormal);
-    case LengthType::Percent:
-        ASSERT(std::isfinite(length.percent()));
-        return create(length.percent(), CSSUnitType::CSS_PERCENTAGE);
-    case LengthType::Calculated:
-    case LengthType::Relative:
-    case LengthType::Undefined:
-        break;
-    }
-    RELEASE_ASSERT_NOT_REACHED();
-}
-
-Ref<CSSPrimitiveValue> CSSPrimitiveValue::create(const Length& length, const RenderStyle& style)
-{
-    switch (length.type()) {
-    case LengthType::Auto:
-    case LengthType::Content:
-    case LengthType::FillAvailable:
-    case LengthType::FitContent:
-    case LengthType::Intrinsic:
-    case LengthType::MinIntrinsic:
-    case LengthType::MinContent:
-    case LengthType::MaxContent:
-    case LengthType::Normal:
-    case LengthType::Percent:
-        return create(length);
-    case LengthType::Fixed:
-        return create(adjustFloatForAbsoluteZoom(length.value(), style), CSSUnitType::CSS_PX);
-    case LengthType::Calculated:
-        return create(CSSCalcValue::create(length.protectedCalculationValue(), style));
-    case LengthType::Relative:
-    case LengthType::Undefined:
-        break;
-    }
-    RELEASE_ASSERT_NOT_REACHED();
-}
-
-Ref<CSSPrimitiveValue> CSSPrimitiveValue::create(Ref<CSSCalcValue> value)
-{
-    return adoptRef(*new CSSPrimitiveValue(WTFMove(value)));
+    return adoptRef(*new CSSPrimitiveValue(WTF::move(value)));
 }
 
 Ref<CSSPrimitiveValue> CSSPrimitiveValue::create(Ref<CSSAttrValue> value)
 {
-    return adoptRef(*new CSSPrimitiveValue(WTFMove(value)));
+    return adoptRef(*new CSSPrimitiveValue(WTF::move(value)));
 }
 
 Ref<CSSPrimitiveValue> CSSPrimitiveValue::createCustomIdent(String value)
 {
-    return adoptRef(*new CSSPrimitiveValue(WTFMove(value), CSSUnitType::CustomIdent));
+    return adoptRef(*new CSSPrimitiveValue(WTF::move(value), CSSUnitType::CustomIdent));
 }
 
 Ref<CSSPrimitiveValue> CSSPrimitiveValue::createFontFamily(String value)
 {
-    return adoptRef(*new CSSPrimitiveValue(WTFMove(value), CSSUnitType::CSS_FONT_FAMILY));
+    return adoptRef(*new CSSPrimitiveValue(WTF::move(value), CSSUnitType::CSS_FONT_FAMILY));
 }
 
 Ref<CSSPrimitiveValue> CSSPrimitiveValue::createInteger(double value)
@@ -576,11 +516,6 @@ template<> float CSSPrimitiveValue::resolveAsLength(const CSSToLengthConversionD
 template<> double CSSPrimitiveValue::resolveAsLength(const CSSToLengthConversionData& conversionData) const
 {
     return resolveAsLengthDouble(conversionData);
-}
-
-template<> Length CSSPrimitiveValue::resolveAsLength(const CSSToLengthConversionData& conversionData) const
-{
-    return Length(clampTo<float>(resolveAsLength(conversionData), minValueForCssLength, maxValueForCssLength), LengthType::Fixed);
 }
 
 template<> short CSSPrimitiveValue::resolveAsLength(const CSSToLengthConversionData& conversionData) const
@@ -1337,15 +1272,6 @@ void CSSPrimitiveValue::collectComputedStyleDependencies(ComputedStyleDependenci
 
     if (auto lengthUnit = CSS::toLengthUnit(primitiveUnitType()))
         CSS::collectComputedStyleDependencies(dependencies, *lengthUnit);
-}
-
-IterationStatus CSSPrimitiveValue::customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const
-{
-    if (RefPtr calc = cssCalcValue()) {
-        if (func(const_cast<CSSCalcValue&>(*calc)) == IterationStatus::Done)
-            return IterationStatus::Done;
-    }
-    return IterationStatus::Continue;
 }
 
 } // namespace WebCore

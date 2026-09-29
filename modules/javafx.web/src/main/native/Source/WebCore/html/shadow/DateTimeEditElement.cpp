@@ -35,10 +35,11 @@
 #include "DateTimeFormat.h"
 #include "DateTimeSymbolicFieldElement.h"
 #include "Document.h"
-#include "Event.h"
 #include "EventTargetInlines.h"
 #include "ExceptionOr.h"
 #include "HTMLNames.h"
+#include "KeyboardEvent.h"
+#include "NodeDocument.h"
 #include "NodeInlines.h"
 #include "PlatformLocale.h"
 #include "RenderElement.h"
@@ -52,7 +53,7 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(DateTimeEditElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DateTimeEditElement);
 
 class DateTimeEditBuilder final : private DateTimeFormat::TokenHandler {
     WTF_MAKE_NONCOPYABLE(DateTimeEditBuilder);
@@ -232,6 +233,22 @@ size_t DateTimeEditElement::fieldIndexOf(const DateTimeFieldElement& fieldToFind
     });
 }
 
+void DateTimeEditElement::defaultEventHandler(Event& event)
+{
+    if (RefPtr keyboardEvent = dynamicDowncast<KeyboardEvent>(event)) {
+        RefPtr editControlOwner = m_editControlOwner.get();
+        if (editControlOwner && keyboardEvent->keyIdentifier() == "U+0020"_s) {
+            // Forward space keypresses to the owner to activate the date picker.
+            editControlOwner->didReceiveSpaceKeyFromControl();
+            // We want to mark the event as handled to avoid scrolling the page.
+            event.setDefaultHandled();
+            return;
+        }
+    }
+
+    HTMLDivElement::defaultEventHandler(event);
+}
+
 DateTimeFieldElement* DateTimeEditElement::focusedFieldElement() const
 {
     RefPtr focusedElement = document().focusedElement();
@@ -298,7 +315,8 @@ void DateTimeEditElement::layout(const LayoutParameters& layoutParameters)
 
 void DateTimeEditElement::didBlurFromField(Event& event)
 {
-    if (!m_editControlOwner)
+    RefPtr editControlOwner = m_editControlOwner.get();
+    if (!editControlOwner)
         return;
 
     if (RefPtr newFocusedElement = event.relatedTarget()) {
@@ -310,13 +328,13 @@ void DateTimeEditElement::didBlurFromField(Event& event)
             return;
     }
 
-    m_editControlOwner->didBlurFromControl();
+    editControlOwner->didBlurFromControl();
 }
 
 void DateTimeEditElement::fieldValueChanged()
 {
-    if (m_editControlOwner)
-        m_editControlOwner->didChangeValueFromControl();
+    if (RefPtr editControlOwner = m_editControlOwner.get())
+        editControlOwner->didChangeValueFromControl();
 }
 
 bool DateTimeEditElement::focusOnNextFocusableField(size_t startIndex)
@@ -366,12 +384,16 @@ bool DateTimeEditElement::focusOnPreviousField(const DateTimeFieldElement& field
 
 bool DateTimeEditElement::isFieldOwnerDisabled() const
 {
-    return m_editControlOwner && m_editControlOwner->isEditControlOwnerDisabled();
+    if (RefPtr editControlOwner = m_editControlOwner.get())
+        return editControlOwner->isEditControlOwnerDisabled();
+    return false;
 }
 
 bool DateTimeEditElement::isFieldOwnerReadOnly() const
 {
-    return m_editControlOwner && m_editControlOwner->isEditControlOwnerReadOnly();
+    if (RefPtr editControlOwner = m_editControlOwner.get())
+        return editControlOwner->isEditControlOwnerReadOnly();
+    return false;
 }
 
 bool DateTimeEditElement::isFieldOwnerHorizontal() const
@@ -381,9 +403,24 @@ bool DateTimeEditElement::isFieldOwnerHorizontal() const
     return true;
 }
 
+bool DateTimeEditElement::didFieldOwnerTransferFocusToPicker()
+{
+    if (RefPtr editControlOwner = m_editControlOwner.get())
+        return editControlOwner->didEditControlOwnerTransferFocusToPicker();
+    return false;
+}
+
+void DateTimeEditElement::didSuppressBlurDueToPickerFocusTransfer()
+{
+    if (RefPtr editControlOwner = m_editControlOwner.get())
+        editControlOwner->didSuppressBlurDueToPickerFocusTransfer();
+}
+
 AtomString DateTimeEditElement::localeIdentifier() const
 {
-    return m_editControlOwner ? m_editControlOwner->localeIdentifier() : nullAtom();
+    if (RefPtr editControlOwner = m_editControlOwner.get())
+        return editControlOwner->localeIdentifier();
+    return nullAtom();
 }
 
 const GregorianDateTime& DateTimeEditElement::placeholderDate() const
@@ -412,12 +449,16 @@ void DateTimeEditElement::setEmptyValue(const LayoutParameters& layoutParameters
 
 String DateTimeEditElement::value() const
 {
-    return m_editControlOwner ? m_editControlOwner->formatDateTimeFieldsState(valueAsDateTimeFieldsState()) : emptyString();
+    if (RefPtr editControlOwner = m_editControlOwner.get())
+        return editControlOwner->formatDateTimeFieldsState(valueAsDateTimeFieldsState());
+    return emptyString();
 }
 
 String DateTimeEditElement::placeholderValue() const
 {
-    return m_editControlOwner ? m_editControlOwner->formatDateTimeFieldsState(valueAsDateTimeFieldsState(DateTimePlaceholderIfNoValue::Yes)) : emptyString();
+    if (RefPtr editControlOwner = m_editControlOwner.get())
+        return editControlOwner->formatDateTimeFieldsState(valueAsDateTimeFieldsState(DateTimePlaceholderIfNoValue::Yes));
+    return emptyString();
 }
 
 DateTimeFieldsState DateTimeEditElement::valueAsDateTimeFieldsState(DateTimePlaceholderIfNoValue placeholderIfNoValue) const

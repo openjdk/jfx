@@ -25,6 +25,7 @@
 
 #pragma once
 
+#import <Metal/Metal.h>
 #import <wtf/FastMalloc.h>
 #import <wtf/Ref.h>
 #import <wtf/RefCountedAndCanMakeWeakPtr.h>
@@ -47,7 +48,7 @@ class CommandBuffer : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<Com
 public:
     static Ref<CommandBuffer> create(id<MTLCommandBuffer> commandBuffer, Device& device, id<MTLSharedEvent> sharedEvent, uint64_t sharedEventSignalValue, Vector<Function<bool(CommandBuffer&, CommandEncoder&)>>&& onCommitHandlers, CommandEncoder& commandEncoder)
     {
-        return adoptRef(*new CommandBuffer(commandBuffer, device, sharedEvent, sharedEventSignalValue, WTFMove(onCommitHandlers), commandEncoder));
+        return adoptRef(*new CommandBuffer(commandBuffer, device, sharedEvent, sharedEventSignalValue, WTF::move(onCommitHandlers), commandEncoder));
     }
     static Ref<CommandBuffer> createInvalid(Device& device)
     {
@@ -92,8 +93,7 @@ private:
     // FIXME: we should not need this semaphore - https://bugs.webkit.org/show_bug.cgi?id=272353
     BinarySemaphore m_commandBufferComplete;
     RefPtr<CommandEncoder> m_commandEncoder;
-// FIXME: remove @safe once rdar://151039766 lands
-} __attribute__((swift_attr("@safe"))) SWIFT_SHARED_REFERENCE(refCommandBuffer, derefCommandBuffer);
+} SWIFT_SHARED_REFERENCE(refCommandBuffer, derefCommandBuffer);
 
 } // namespace WebGPU
 

@@ -78,7 +78,7 @@ static FactoryVector& installedFactories()
 
 void ImageDecoder::installFactory(ImageDecoder::ImageDecoderFactory&& factory)
 {
-    installedFactories().append(WTFMove(factory));
+    installedFactories().append(WTF::move(factory));
 }
 
 void ImageDecoder::resetFactories()

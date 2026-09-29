@@ -158,6 +158,8 @@ public:
         return *this;
     }
 
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
+
 protected:
     FunctionPtr(AlreadyTaggedValueTag, void* ptr)
         : m_ptr(std::bit_cast<Ptr>(ptr))

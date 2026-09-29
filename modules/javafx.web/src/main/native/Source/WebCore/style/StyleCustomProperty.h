@@ -24,14 +24,14 @@
 
 #pragma once
 
-#include "CSSValue.h"
-#include "CSSValueAggregates.h"
-#include "CSSVariableData.h"
-#include "Length.h"
-#include "StyleColor.h"
-#include "StyleImage.h"
-#include "StyleURL.h"
-#include "TransformOperation.h"
+#include <WebCore/CSSValue.h>
+#include <WebCore/CSSValueAggregates.h>
+#include <WebCore/CSSVariableData.h>
+#include <WebCore/StyleColor.h>
+#include <WebCore/StyleImageWrapper.h>
+#include <WebCore/StylePrimitiveNumeric.h>
+#include <WebCore/StyleTransformFunction.h>
+#include <WebCore/StyleURL.h>
 #include <wtf/RefCounted.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/Variant.h>
@@ -45,31 +45,25 @@ class CSSValuePool;
 namespace Style {
 
 class CustomProperty final : public RefCounted<CustomProperty> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CustomProperty);
+    WTF_MAKE_TZONE_ALLOCATED(CustomProperty);
 public:
     // https://drafts.csswg.org/css-variables-2/#guaranteed-invalid
     struct GuaranteedInvalid { };
 
-    struct Numeric {
-        double value;
-        CSSUnitType unitType;
-        bool operator==(const Numeric&) const = default;
-    };
-
-    struct Transform {
-        Ref<TransformOperation> operation;
-        bool operator==(const Transform& other) const { return arePointingToEqualData(operation, other.operation); }
-    };
-
     using Value = Variant<
-        WebCore::Length,
-        Numeric,
-        RefPtr<StyleImage>,
+        LengthPercentage<>,
+        Length<>,
+        Number<>,
+        Percentage<>,
+        Angle<>,
+        Time<>,
+        Resolution<>,
+        ImageWrapper,
         Color,
         URL,
         CustomIdentifier,
         String,
-        Transform
+        TransformFunction
     >;
 
     struct ValueList {
@@ -111,7 +105,7 @@ public:
 private:
     CustomProperty(const AtomString& name, Kind&& value)
         : m_name(name)
-        , m_value(WTFMove(value))
+        , m_value(WTF::move(value))
     {
     }
 
@@ -130,17 +124,17 @@ inline Ref<const CustomProperty> CustomProperty::createForGuaranteedInvalid(cons
 
 inline Ref<const CustomProperty> CustomProperty::createForVariableData(const AtomString& name, Ref<CSSVariableData>&& value)
 {
-    return adoptRef(*new CustomProperty(name, Kind { WTF::InPlaceType<Ref<CSSVariableData>>, WTFMove(value) }));
+    return adoptRef(*new CustomProperty(name, Kind { WTF::InPlaceType<Ref<CSSVariableData>>, WTF::move(value) }));
 }
 
 inline Ref<const CustomProperty> CustomProperty::createForValue(const AtomString& name, Value&& value)
 {
-    return adoptRef(*new CustomProperty(name, Kind { WTFMove(value) }));
+    return adoptRef(*new CustomProperty(name, Kind { WTF::move(value) }));
 }
 
 inline Ref<const CustomProperty> CustomProperty::createForValueList(const AtomString& name, ValueList&& valueList)
 {
-    return adoptRef(*new CustomProperty(name, Kind { WTFMove(valueList) }));
+    return adoptRef(*new CustomProperty(name, Kind { WTF::move(valueList) }));
 }
 
 inline bool CustomProperty::isGuaranteedInvalid() const

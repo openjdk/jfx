@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "FloatRect.h"
-#include "ScrollTypes.h"
+#include <WebCore/FloatRect.h>
+#include <WebCore/ScrollTypes.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
@@ -96,10 +96,10 @@ protected:
     { }
 
     ViewportConstraints(FloatSize&& alignmentOffset, AnchorEdges&& anchorEdges, FloatRect&& viewportRectAtLastLayout, FloatPoint&& layerPositionAtLastLayout)
-        : m_alignmentOffset(WTFMove(alignmentOffset))
-        , m_anchorEdges(WTFMove(anchorEdges))
-        , m_viewportRectAtLastLayout(WTFMove(viewportRectAtLastLayout))
-        , m_layerPositionAtLastLayout(WTFMove(layerPositionAtLastLayout))
+        : m_alignmentOffset(WTF::move(alignmentOffset))
+        , m_anchorEdges(WTF::move(anchorEdges))
+        , m_viewportRectAtLastLayout(WTF::move(viewportRectAtLastLayout))
+        , m_layerPositionAtLastLayout(WTF::move(layerPositionAtLastLayout))
     { }
 
     FloatSize m_alignmentOffset;
@@ -115,7 +115,7 @@ public:
     { }
 
     FixedPositionViewportConstraints(FloatSize&& alignmentOffset, AnchorEdges&& anchorEdges, FloatRect&& viewportRectAtLastLayout, FloatPoint&& layerPositionAtLastLayout)
-        : ViewportConstraints { WTFMove(alignmentOffset), WTFMove(anchorEdges), WTFMove(viewportRectAtLastLayout), WTFMove(layerPositionAtLastLayout) }
+        : ViewportConstraints { WTF::move(alignmentOffset), WTF::move(anchorEdges), WTF::move(viewportRectAtLastLayout), WTF::move(layerPositionAtLastLayout) }
     {
     }
 
@@ -133,16 +133,16 @@ public:
     { }
 
     StickyPositionViewportConstraints(FloatSize&& alignmentOffset, AnchorEdges&& anchorEdges, float leftOffset, float rightOffset, float topOffset, float bottomOffset, FloatRect&& constrainingRectAtLastLayout, FloatRect&& containingBlockRect, FloatRect&& stickyBoxRect, FloatSize&& stickyOffsetAtLastLayout, FloatSize&& anchorLayerOffsetAtLastLayout, FloatRect&& viewportRectAtLastLayout, FloatPoint&& layerPositionAtLastLayout)
-        : ViewportConstraints { WTFMove(alignmentOffset), WTFMove(anchorEdges), WTFMove(viewportRectAtLastLayout), WTFMove(layerPositionAtLastLayout) }
+        : ViewportConstraints { WTF::move(alignmentOffset), WTF::move(anchorEdges), WTF::move(viewportRectAtLastLayout), WTF::move(layerPositionAtLastLayout) }
         , m_leftOffset(leftOffset)
         , m_rightOffset(rightOffset)
         , m_topOffset(topOffset)
         , m_bottomOffset(bottomOffset)
-        , m_constrainingRectAtLastLayout(WTFMove(constrainingRectAtLastLayout))
-        , m_containingBlockRect(WTFMove(containingBlockRect))
-        , m_stickyBoxRect(WTFMove(stickyBoxRect))
-        , m_stickyOffsetAtLastLayout(WTFMove(stickyOffsetAtLastLayout))
-        , m_anchorLayerOffsetAtLastLayout(WTFMove(anchorLayerOffsetAtLastLayout))
+        , m_constrainingRectAtLastLayout(WTF::move(constrainingRectAtLastLayout))
+        , m_containingBlockRect(WTF::move(containingBlockRect))
+        , m_stickyBoxRect(WTF::move(stickyBoxRect))
+        , m_stickyOffsetAtLastLayout(WTF::move(stickyOffsetAtLastLayout))
+        , m_anchorLayerOffsetAtLastLayout(WTF::move(anchorLayerOffsetAtLastLayout))
     { }
 
     FloatSize computeStickyOffset(const FloatRect& constrainingRect) const;

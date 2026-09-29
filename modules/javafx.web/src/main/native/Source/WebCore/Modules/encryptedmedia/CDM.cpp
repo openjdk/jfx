@@ -31,8 +31,7 @@
 #include "CDMFactory.h"
 #include "CDMPrivate.h"
 #include "ContextDestructionObserverInlines.h"
-#include "DocumentInlines.h"
-#include "FrameInlines.h"
+#include "DocumentPage.h"
 #include "InitDataRegistry.h"
 #include "MediaKeysRequirement.h"
 #include "MediaPlayer.h"
@@ -53,8 +52,8 @@ namespace WebCore {
 
 bool CDM::supportsKeySystem(const String& keySystem)
 {
-    for (auto* factory : CDMFactory::registeredFactories()) {
-        if (factory->supportsKeySystem(keySystem))
+    for (auto& weakFactory : CDMFactory::registeredFactories()) {
+        if (Ref { weakFactory.get() }->supportsKeySystem(keySystem))
             return true;
     }
     return false;
@@ -75,9 +74,10 @@ CDM::CDM(Document& document, const String& keySystem, const String& mediaKeysHas
     , m_mediaKeysHashSalt { mediaKeysHashSalt }
 {
     ASSERT(supportsKeySystem(keySystem));
-    for (auto* factory : CDMFactory::registeredFactories()) {
+    for (auto& weakFactory : CDMFactory::registeredFactories()) {
+        Ref factory = weakFactory.get();
         if (factory->supportsKeySystem(keySystem)) {
-            m_private = factory->createCDM(keySystem, m_mediaKeysHashSalt, *this);
+            lazyInitialize(m_private, factory->createCDM(keySystem, m_mediaKeysHashSalt, *this));
 #if !RELEASE_LOG_DISABLED
             m_private->setLogIdentifier(m_logIdentifier);
 #endif
@@ -105,7 +105,7 @@ void CDM::getSupportedConfiguration(MediaKeySystemConfiguration&& candidateConfi
     bool isEphemeral = !page || page->sessionID().isEphemeral();
     if (isEphemeral || document->canAccessResource(ScriptExecutionContext::ResourceType::LocalStorage) == ScriptExecutionContext::HasResourceAccess::No)
         access = CDMPrivate::LocalStorageAccess::NotAllowed;
-    m_private->getSupportedConfiguration(WTFMove(candidateConfiguration), access, WTFMove(callback));
+    m_private->getSupportedConfiguration(WTF::move(candidateConfiguration), access, WTF::move(callback));
 }
 
 void CDM::loadAndInitialize()
@@ -141,7 +141,7 @@ bool CDM::supportsInitDataType(const AtomString& initDataType) const
 
 RefPtr<SharedBuffer> CDM::sanitizeInitData(const AtomString& initDataType, const SharedBuffer& initData)
 {
-    return InitDataRegistry::shared().sanitizeInitData(initDataType, initData);
+    return InitDataRegistry::singleton().sanitizeInitData(initDataType, initData);
 }
 
 bool CDM::supportsInitData(const AtomString& initDataType, const SharedBuffer& initData)

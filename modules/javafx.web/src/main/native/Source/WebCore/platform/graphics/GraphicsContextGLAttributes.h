@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
 #if ENABLE(WEBGL)
 #include <optional>
 
@@ -56,6 +57,7 @@ struct GraphicsContextGLAttributes {
     bool preserveDrawingBuffer { false };
     GraphicsContextGLPowerPreference powerPreference { GraphicsContextGLPowerPreference::Default };
     bool isWebGL2 { false };
+    bool supportWebGLDraftExtensions { false };
 #if PLATFORM(MAC)
     PlatformGPUID windowGPUID { 0 };
 #endif

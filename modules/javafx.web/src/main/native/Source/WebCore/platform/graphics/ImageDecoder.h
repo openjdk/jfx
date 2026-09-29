@@ -25,12 +25,12 @@
 
 #pragma once
 
-#include "DecodingOptions.h"
-#include "ImageOrientation.h"
-#include "ImageTypes.h"
-#include "IntPoint.h"
-#include "IntSize.h"
-#include "PlatformImage.h"
+#include <WebCore/DecodingOptions.h>
+#include <WebCore/ImageOrientation.h>
+#include <WebCore/ImageTypes.h>
+#include <WebCore/IntPoint.h>
+#include <WebCore/IntSize.h>
+#include <WebCore/PlatformImage.h>
 #include <wtf/Seconds.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeWeakPtr.h>
@@ -98,6 +98,10 @@ public:
 
 #if ENABLE(SPATIAL_IMAGE_DETECTION)
     virtual bool isSpatial() const { return false; }
+#endif
+
+#if ENABLE(SPATIAL_IMAGE_CONTROLS)
+    virtual bool isMaybePanoramic() const { return false; }
 #endif
 
     virtual IntSize frameSizeAtIndex(size_t, SubsamplingLevel = SubsamplingLevel::Default) const = 0;

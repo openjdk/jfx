@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(WEBASSEMBLY_OMGJIT) || ENABLE(WEBASSEMBLY_BBQJIT)
 
 #include "B3Common.h"
@@ -62,7 +64,7 @@ class OptimizingJITCallee;
 class TierUpCount;
 
 struct CompilationContext {
-    std::unique_ptr<CCallHelpers> jsEntrypointJIT;
+    std::unique_ptr<CCallHelpers> jsToWasmJIT;
     std::unique_ptr<CCallHelpers> wasmEntrypointJIT;
     std::unique_ptr<OpaqueByproducts> wasmEntrypointByproducts;
     std::unique_ptr<B3::Procedure> procedure;
@@ -70,7 +72,7 @@ struct CompilationContext {
     Box<PCToCodeOriginMap> pcToCodeOriginMap;
     Box<PCToCodeOriginMapBuilder> pcToCodeOriginMapBuilder;
     Vector<CCallHelpers::Label> catchEntrypoints;
-    SegmentedVector<OMGOrigin> origins;
+    SegmentedVector<WasmOrigin> origins;
 };
 
 } // namespace Wasm

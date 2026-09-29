@@ -32,6 +32,7 @@
 #include "SVGElementTypeHelpers.h"
 #include "SVGPathData.h"
 #include "SVGPathElement.h"
+#include "StyleLengthWrapper+Blending.h"
 #include "StylePrimitiveNumericTypes+Blending.h"
 #include "StylePrimitiveNumericTypes+Conversions.h"
 
@@ -46,14 +47,14 @@ Ref<ReferencePathOperation> ReferencePathOperation::create(const Style::URL& url
 
 Ref<ReferencePathOperation> ReferencePathOperation::create(std::optional<Path>&& path)
 {
-    return adoptRef(*new ReferencePathOperation(WTFMove(path)));
+    return adoptRef(*new ReferencePathOperation(WTF::move(path)));
 }
 
 Ref<PathOperation> ReferencePathOperation::clone() const
 {
     if (auto path = this->path()) {
         auto pathCopy = *path;
-        return adoptRef(*new ReferencePathOperation(WTFMove(pathCopy)));
+        return adoptRef(*new ReferencePathOperation(WTF::move(pathCopy)));
     }
     return adoptRef(*new ReferencePathOperation(std::nullopt));
 }
@@ -69,7 +70,7 @@ ReferencePathOperation::ReferencePathOperation(const Style::URL& url, const Atom
 
 ReferencePathOperation::ReferencePathOperation(std::optional<Path>&& path)
     : PathOperation(Type::Reference)
-    , m_path(WTFMove(path))
+    , m_path(WTF::move(path))
 {
 }
 
@@ -77,7 +78,7 @@ ReferencePathOperation::ReferencePathOperation(std::optional<Path>&& path)
 
 Ref<ShapePathOperation> ShapePathOperation::create(Style::BasicShape shape, CSSBoxType referenceBox)
 {
-    return adoptRef(*new ShapePathOperation(WTFMove(shape), referenceBox));
+    return adoptRef(*new ShapePathOperation(WTF::move(shape), referenceBox));
 }
 
 Ref<PathOperation> ShapePathOperation::clone() const
@@ -123,7 +124,7 @@ std::optional<Path> BoxPathOperation::getPath(const TransformOperationData& data
 
 Ref<RayPathOperation> RayPathOperation::create(Style::RayFunction&& ray, CSSBoxType referenceBox)
 {
-    return adoptRef(*new RayPathOperation(WTFMove(ray), referenceBox));
+    return adoptRef(*new RayPathOperation(WTF::move(ray), referenceBox));
 }
 
 Ref<RayPathOperation> RayPathOperation::create(const Style::RayFunction& ray, CSSBoxType referenceBox)

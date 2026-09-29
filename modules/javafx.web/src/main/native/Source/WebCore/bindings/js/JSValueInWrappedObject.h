@@ -24,11 +24,11 @@
 
 #pragma once
 
-#include "DOMWrapperWorld.h"
-#include "JSDOMWrapper.h"
 #include <JavaScriptCore/JSCJSValueInlines.h>
 #include <JavaScriptCore/SlotVisitor.h>
 #include <JavaScriptCore/WeakInlines.h>
+#include <WebCore/DOMWrapperWorld.h>
+#include <WebCore/JSDOMWrapper.h>
 
 namespace WebCore {
 
@@ -98,7 +98,7 @@ inline void JSValueInWrappedObject::setWeakly(JSC::JSValue value)
     m_nonCell = { };
     JSC::Weak weak { value.asCell() };
     WTF::storeStoreFence();
-    m_cell = WTFMove(weak);
+    m_cell = WTF::move(weak);
 }
 
 inline void JSValueInWrappedObject::set(JSC::VM& vm, const JSC::JSCell* owner, JSC::JSValue value)

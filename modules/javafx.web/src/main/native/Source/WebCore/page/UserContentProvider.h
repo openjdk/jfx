@@ -26,24 +26,16 @@
 #pragma once
 
 #include <functional>
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 #include <wtf/Function.h>
 #include <wtf/RefCounted.h>
 #include <wtf/WeakHashSet.h>
 #include <wtf/WeakPtr.h>
 
 #if ENABLE(CONTENT_EXTENSIONS)
-#include "ContentExtensionsBackend.h"
-#include "ContentRuleListResults.h"
+#include <WebCore/ContentExtensionsBackend.h>
+#include <WebCore/ContentRuleListResults.h>
 #endif
-
-namespace WebCore {
-class UserContentProviderInvalidationClient;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::UserContentProviderInvalidationClient> : std::true_type { };
-}
 
 namespace WebCore {
 
@@ -54,8 +46,9 @@ class UserContentProvider;
 class UserMessageHandlerDescriptor;
 class UserScript;
 class UserStyleSheet;
+class WebKitBuffer;
 
-class UserContentProviderInvalidationClient : public CanMakeWeakPtr<UserContentProviderInvalidationClient> {
+class UserContentProviderInvalidationClient : public AbstractRefCountedAndCanMakeWeakPtr<UserContentProviderInvalidationClient> {
 public:
     virtual ~UserContentProviderInvalidationClient()
     {
@@ -74,8 +67,10 @@ public:
 #if ENABLE(USER_MESSAGE_HANDLERS)
     virtual void forEachUserMessageHandler(NOESCAPE const Function<void(const UserMessageHandlerDescriptor&)>&) const = 0;
 #endif
+    virtual bool hasBuffersForWorld(const DOMWrapperWorld&) const = 0;
+    virtual WebKitBuffer* buffer(const DOMWrapperWorld&, const String&) const = 0;
 #if ENABLE(CONTENT_EXTENSIONS)
-    virtual ContentExtensions::ContentExtensionsBackend& userContentExtensionBackend() = 0;
+    virtual const ContentExtensions::ContentExtensionsBackend& userContentExtensionBackend() const = 0;
 #endif
 
     void registerForUserMessageHandlerInvalidation(UserContentProviderInvalidationClient&);
@@ -85,7 +80,7 @@ public:
     void removePage(Page&);
 
 #if ENABLE(CONTENT_EXTENSIONS)
-    ContentRuleListResults processContentRuleListsForLoad(Page&, const URL&, OptionSet<ContentExtensions::ResourceType>, DocumentLoader& initiatingDocumentLoader, const URL& redirectFrom = { });
+    ContentRuleListResults processContentRuleListsForLoad(Page&, const URL&, OptionSet<ContentExtensions::ResourceType>, DocumentLoader& initiatingDocumentLoader, const URL& redirectFrom = { }) const;
 #endif
 
 protected:

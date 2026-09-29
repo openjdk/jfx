@@ -26,14 +26,15 @@
 
 #pragma once
 
-#include "Page.h"
-#include "WorkerOrWorkletGlobalScope.h"
 #include <JavaScriptCore/InspectorAgentBase.h>
+#include <WebCore/InstrumentingAgents.h>
+#include <WebCore/LocalFrame.h>
+#include <WebCore/Page.h>
+#include <WebCore/WorkerOrWorkletGlobalScope.h>
+#include <wtf/WeakRef.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
-
-class InstrumentingAgents;
 
 // FIXME: move this to Inspector namespace when remaining agents move.
 struct WebAgentContext : public Inspector::AgentContext {
@@ -43,7 +44,7 @@ struct WebAgentContext : public Inspector::AgentContext {
     {
     }
 
-    InstrumentingAgents& instrumentingAgents;
+    WeakRef<InstrumentingAgents> instrumentingAgents;
 };
 
 struct PageAgentContext : public WebAgentContext {
@@ -54,6 +55,16 @@ struct PageAgentContext : public WebAgentContext {
     }
 
     WeakRef<Page> inspectedPage;
+};
+
+struct FrameAgentContext : public WebAgentContext {
+    FrameAgentContext(WebAgentContext& context, LocalFrame& inspectedFrame)
+        : WebAgentContext(context)
+        , inspectedFrame(inspectedFrame)
+    {
+    }
+
+    WeakRef<LocalFrame> inspectedFrame;
 };
 
 struct WorkerAgentContext : public WebAgentContext {
@@ -75,8 +86,12 @@ protected:
     {
     }
 
-    InstrumentingAgents& m_instrumentingAgents;
-    Inspector::InspectorEnvironment& m_environment;
+    CheckedRef<Inspector::InspectorEnvironment> checkedEnvironment() { return m_environment.get(); }
+
+    WeakRef<InstrumentingAgents> m_instrumentingAgents;
+
+private:
+    WeakRef<Inspector::InspectorEnvironment> m_environment;
 };
 
 } // namespace WebCore

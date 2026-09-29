@@ -30,8 +30,6 @@
 #include "pas_utility_heap.h"
 
 #include "pas_allocation_callbacks.h"
-#include "pas_deallocate.h"
-#include "pas_get_allocation_size.h"
 #include "pas_local_allocator_inlines.h"
 #include "pas_utility_heap_config.h"
 

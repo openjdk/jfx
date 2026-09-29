@@ -24,7 +24,10 @@
 */
 
 typedef (RouterSourceDict or RouterSourceEnum) RouterSource;
-dictionary RouterRule {
+
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary RouterRule {
     required RouterCondition condition;
     required RouterSource source;
 };

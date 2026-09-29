@@ -30,6 +30,7 @@
 
 #include "DOMRectReadOnly.h"
 #include "ExceptionOr.h"
+#include "ScriptWrappableInlines.h"
 #include "VideoColorSpace.h"
 
 namespace WebCore {
@@ -228,7 +229,7 @@ ExceptionOr<CombinedPlaneLayout> computeLayoutAndAllocationSize(const DOMRectIni
         computedLayouts.append(computedLayout);
     }
 
-    return CombinedPlaneLayout { minAllocationSize, WTFMove(computedLayouts) };
+    return CombinedPlaneLayout { minAllocationSize, WTF::move(computedLayouts) };
 }
 
 // https://w3c.github.io/webcodecs/#videoframe-parse-videoframecopytooptions

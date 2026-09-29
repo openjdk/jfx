@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "FloatSize.h"
-#include "Image.h"
+#include <WebCore/FloatSize.h>
+#include <WebCore/Image.h>
 
 namespace WebCore {
 
@@ -36,7 +36,7 @@ public:
     bool usesContainerSize() const override { return true; }
     bool hasRelativeWidth() const override { return true; }
     bool hasRelativeHeight() const override { return true; }
-    void computeIntrinsicDimensions(Length& intrinsicWidth, Length& intrinsicHeight, FloatSize& intrinsicRatio) override;
+    void computeIntrinsicDimensions(float& intrinsicWidth, float& intrinsicHeight, FloatSize& intrinsicRatio) override;
 
     FloatSize size(ImageOrientation = ImageOrientation::Orientation::FromImage) const override { return m_size; }
 
@@ -46,6 +46,7 @@ protected:
 
     // FIXME: Implement this to be less conservative.
     bool currentFrameKnownToBeOpaque() const override { return false; }
+    bool currentFrameIsComplete() const override { return true; }
 
     GeneratedImage() = default;
 

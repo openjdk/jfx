@@ -47,7 +47,7 @@ auto CSSValueConversion<Cursor>::operator()(BuilderState& state, const CSSValue&
     if (!list)
         return CSS::Keyword::Auto { };
 
-    auto images = CursorImageList { CursorImageList::Container::createWithSizeFromGenerator(list->size() - 1, [&](auto index) {
+    auto images = CursorImageList::createWithSizeFromGenerator(list->size() - 1, [&](auto index) {
         Ref item = list->item(index);
         RefPtr image = requiredDowncast<CSSCursorImageValue>(state, item);
         if (!image)
@@ -63,9 +63,9 @@ auto CSSValueConversion<Cursor>::operator()(BuilderState& state, const CSSValue&
         // FIXME: Would it be better to extend the concept of "no hot spot" deeper, into CursorImage and beyond, rather than using -1/-1 for it?
         auto hotSpot = styleImage->hotSpot().value_or(IntPoint { -1, -1 });
         return CursorImage { styleImage.releaseNonNull(), hotSpot };
-    }) };
+    });
 
-    return { WTFMove(images), fromCSSValue<CursorType>(list->item(list->size() - 1)) };
+    return { WTF::move(images), fromCSSValue<CursorType>(list->item(list->size() - 1)) };
 }
 
 Ref<CSSValue> CSSValueCreation<CursorImage>::operator()(CSSValuePool&, const RenderStyle& style, const CursorImage& value)

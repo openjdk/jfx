@@ -26,6 +26,7 @@
 [
     Conditional=WEBXR_LAYERS,
     EnabledBySetting=WebXRLayersAPIEnabled,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary XRLayerEventInit : EventInit {
     required WebXRLayer layer;
 };
@@ -36,7 +37,7 @@
     ExportMacro=WEBCORE_EXPORT,
     SecureContext,
     Exposed=Window,
-] interface XRLayerEvent {
+] interface XRLayerEvent : Event {
     constructor([AtomString] DOMString type, XRLayerEventInit eventInitDict);
     [SameObject] readonly attribute WebXRLayer layer;
 };

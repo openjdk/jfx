@@ -26,7 +26,7 @@
 #pragma once
 
 #include "FormattingContext.h"
-#include "LayoutState.h"
+#include <WebCore/LayoutState.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
@@ -37,7 +37,7 @@ enum class StyleDiff;
 
 class FormattingState {
     WTF_MAKE_NONCOPYABLE(FormattingState);
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(FormattingState);
+    WTF_MAKE_TZONE_ALLOCATED(FormattingState);
 public:
     void setIntrinsicWidthConstraintsForBox(const Box&, IntrinsicWidthConstraints);
     std::optional<IntrinsicWidthConstraints> intrinsicWidthConstraintsForBox(const Box&) const;

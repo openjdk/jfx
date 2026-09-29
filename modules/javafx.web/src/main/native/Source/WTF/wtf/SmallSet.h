@@ -77,7 +77,7 @@ public:
     SmallSet& operator=(SmallSet&& other)
     {
         this->~SmallSet();
-        new (this) SmallSet(WTFMove(other));
+        new (this) SmallSet(WTF::move(other));
         return *this;
     }
 
@@ -121,7 +121,7 @@ public:
         bool isNewEntry;
     };
 
-    inline AddResult add(T value)
+    inline AddResult add(T value) LIFETIME_BOUND
     {
         ASSERT(isValidEntry(value));
 

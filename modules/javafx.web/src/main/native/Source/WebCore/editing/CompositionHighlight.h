@@ -25,7 +25,8 @@
 
 #pragma once
 
-#include "Color.h"
+#include <WebCore/Color.h>
+#include <wtf/Platform.h>
 
 namespace WebCore {
 
@@ -49,6 +50,13 @@ struct CompositionHighlight {
     unsigned endOffset { 0 };
     std::optional<Color> backgroundColor;
     std::optional<Color> foregroundColor;
+
+    friend std::strong_ordering operator<=>(const CompositionHighlight& a, const CompositionHighlight& b)
+    {
+        return std::make_pair(a.startOffset, a.endOffset) <=> std::make_pair(b.startOffset, b.endOffset);
+    }
+
+    friend bool operator==(const CompositionHighlight&, const CompositionHighlight&) = default;
 };
 
 } // namespace WebCore

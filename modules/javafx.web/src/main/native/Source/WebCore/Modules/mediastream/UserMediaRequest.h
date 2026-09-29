@@ -34,15 +34,15 @@
 
 #if ENABLE(MEDIA_STREAM)
 
-#include "ActiveDOMObject.h"
-#include "CaptureDevice.h"
-#include "IDLTypes.h"
-#include "MediaAccessDenialReason.h"
-#include "MediaConstraints.h"
-#include "MediaStreamPrivate.h"
-#include "MediaStreamTrack.h"
-#include "MediaStreamRequest.h"
-#include "UserMediaRequestIdentifier.h"
+#include <WebCore/ActiveDOMObject.h>
+#include <WebCore/CaptureDevice.h>
+#include <WebCore/IDLTypes.h>
+#include <WebCore/MediaAccessDenialReason.h>
+#include <WebCore/MediaConstraints.h>
+#include <WebCore/MediaStreamPrivate.h>
+#include <WebCore/MediaStreamRequest.h>
+#include <WebCore/MediaStreamTrack.h>
+#include <WebCore/UserMediaRequestIdentifier.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Identified.h>
 #include <wtf/ObjectIdentifier.h>

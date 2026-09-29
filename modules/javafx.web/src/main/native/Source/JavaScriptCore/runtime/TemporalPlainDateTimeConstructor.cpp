@@ -99,7 +99,7 @@ JSC_DEFINE_HOST_FUNCTION(constructTemporalPlainDateTime, (JSGlobalObject* global
             return throwVMRangeError(globalObject, scope, "Temporal.PlainDateTime properties must be finite"_s);
     }
 
-    RELEASE_AND_RETURN(scope, JSValue::encode(TemporalPlainDateTime::tryCreateIfValid(globalObject, structure, WTFMove(duration))));
+    RELEASE_AND_RETURN(scope, JSValue::encode(TemporalPlainDateTime::tryCreateIfValid(globalObject, structure, WTF::move(duration))));
 }
 
 JSC_DEFINE_HOST_FUNCTION(callTemporalPlainDateTime, (JSGlobalObject* globalObject, CallFrame*))
@@ -119,15 +119,17 @@ JSC_DEFINE_HOST_FUNCTION(temporalPlainDateTimeConstructorFuncFrom, (JSGlobalObje
     JSObject* options = intlGetOptionsObject(globalObject, callFrame->argument(1));
     RETURN_IF_EXCEPTION(scope, { });
 
-    TemporalOverflow overflow = toTemporalOverflow(globalObject, options);
-    RETURN_IF_EXCEPTION(scope, { });
-
     JSValue itemValue = callFrame->argument(0);
 
-    if (itemValue.inherits<TemporalPlainDateTime>())
-        RELEASE_AND_RETURN(scope, JSValue::encode(TemporalPlainDateTime::create(vm, globalObject->plainDateTimeStructure(), jsCast<TemporalPlainDateTime*>(itemValue)->plainDate(), jsCast<TemporalPlainDateTime*>(itemValue)->plainTime())));
+    if (itemValue.inherits<TemporalPlainDateTime>()) {
+        // Validate overflow
+        toTemporalOverflow(globalObject, options);
+        RETURN_IF_EXCEPTION(scope, { });
 
-    RELEASE_AND_RETURN(scope, JSValue::encode(TemporalPlainDateTime::from(globalObject, itemValue, overflow)));
+        RELEASE_AND_RETURN(scope, JSValue::encode(TemporalPlainDateTime::create(vm, globalObject->plainDateTimeStructure(), jsCast<TemporalPlainDateTime*>(itemValue)->plainDate(), jsCast<TemporalPlainDateTime*>(itemValue)->plainTime())));
+    }
+
+    RELEASE_AND_RETURN(scope, JSValue::encode(TemporalPlainDateTime::from(globalObject, itemValue, options)));
 }
 
 // https://tc39.es/proposal-temporal/#sec-temporal.plaindatetime.compare
@@ -136,10 +138,10 @@ JSC_DEFINE_HOST_FUNCTION(temporalPlainDateTimeConstructorFuncCompare, (JSGlobalO
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto* one = TemporalPlainDateTime::from(globalObject, callFrame->argument(0), std::nullopt);
+    auto* one = TemporalPlainDateTime::from(globalObject, callFrame->argument(0), nullptr);
     RETURN_IF_EXCEPTION(scope, { });
 
-    auto* two = TemporalPlainDateTime::from(globalObject, callFrame->argument(1), std::nullopt);
+    auto* two = TemporalPlainDateTime::from(globalObject, callFrame->argument(1), nullptr);
     RETURN_IF_EXCEPTION(scope, { });
 
     return JSValue::encode(jsNumber(TemporalPlainDateTime::compare(one, two)));

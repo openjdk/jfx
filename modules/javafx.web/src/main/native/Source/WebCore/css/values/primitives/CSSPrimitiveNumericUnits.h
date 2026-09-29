@@ -24,10 +24,10 @@
 
 #pragma once
 
-#include "CSSPrimitiveNumericConcepts.h"
-#include "CSSPrimitiveNumericRange.h"
-#include "CSSUnits.h"
-#include "CalculationCategory.h"
+#include <WebCore/CSSPrimitiveNumericCategory.h>
+#include <WebCore/CSSPrimitiveNumericConcepts.h>
+#include <WebCore/CSSPrimitiveNumericRange.h>
+#include <WebCore/CSSUnits.h>
 #include <wtf/Brigand.h>
 #include <wtf/EnumTraits.h>
 #include <wtf/MathExtras.h>
@@ -272,7 +272,7 @@ constexpr ASCIILiteral unitString(IntegerUnit)
 template<> struct UnitTraits<IntegerUnit> {
     static constexpr auto count = 1;
     static constexpr auto canonical = IntegerUnit::Integer;
-    static constexpr auto category = Calculation::Category::Integer;
+    static constexpr auto category = CSS::Category::Integer;
     static consteval bool isValidRangeForCategory(Range) { return true; }
 
     static constexpr std::optional<IntegerUnit> validate(CSSUnitType cssUnit) { return toIntegerUnit(cssUnit); }
@@ -312,7 +312,7 @@ constexpr ASCIILiteral unitString(NumberUnit)
 template<> struct UnitTraits<NumberUnit> {
     static constexpr auto count = 1;
     static constexpr auto canonical = NumberUnit::Number;
-    static constexpr auto category = Calculation::Category::Number;
+    static constexpr auto category = CSS::Category::Number;
     static consteval bool isValidRangeForCategory(Range) { return true; }
 
     static constexpr std::optional<NumberUnit> validate(CSSUnitType cssUnit) { return toNumberUnit(cssUnit); }
@@ -352,7 +352,7 @@ constexpr ASCIILiteral unitString(PercentageUnit)
 template<> struct UnitTraits<PercentageUnit> {
     static constexpr auto count = 1;
     static constexpr auto canonical = PercentageUnit::Percentage;
-    static constexpr auto category = Calculation::Category::Percentage;
+    static constexpr auto category = CSS::Category::Percentage;
     static consteval bool isValidRangeForCategory(Range) { return true; }
 
     static constexpr std::optional<PercentageUnit> validate(CSSUnitType cssUnit) { return toPercentageUnit(cssUnit); }
@@ -469,7 +469,7 @@ ASCIILiteral unitString(AngleUnit);
 template<> struct UnitTraits<AngleUnit> {
     static constexpr auto count = 4;
     static constexpr auto canonical = AngleUnit::Deg;
-    static constexpr auto category = Calculation::Category::Angle;
+    static constexpr auto category = CSS::Category::Angle;
     static consteval bool isValidRangeForCategory(Range) { return true; }
 
     static constexpr std::optional<AngleUnit> validate(CSSUnitType cssUnit) { return toAngleUnit(cssUnit); }
@@ -826,7 +826,7 @@ ASCIILiteral unitString(LengthUnit);
 template<> struct UnitTraits<LengthUnit> {
     static constexpr auto count = 50;
     static constexpr auto canonical = LengthUnit::Px;
-    static constexpr auto category = Calculation::Category::Length;
+    static constexpr auto category = CSS::Category::Length;
     static consteval bool isValidRangeForCategory(Range) { return true; }
 
     static constexpr std::optional<LengthUnit> validate(CSSUnitType cssUnit) { return toLengthUnit(cssUnit); }
@@ -952,7 +952,7 @@ ASCIILiteral unitString(TimeUnit);
 template<> struct UnitTraits<TimeUnit> {
     static constexpr auto count = 2;
     static constexpr auto canonical = TimeUnit::S;
-    static constexpr auto category = Calculation::Category::Time;
+    static constexpr auto category = CSS::Category::Time;
     static consteval bool isValidRangeForCategory(Range) { return true; }
 
     static constexpr std::optional<TimeUnit> validate(CSSUnitType cssUnit) { return toTimeUnit(cssUnit); }
@@ -1030,7 +1030,7 @@ ASCIILiteral unitString(FrequencyUnit);
 template<> struct UnitTraits<FrequencyUnit> {
     static constexpr auto count = 2;
     static constexpr auto canonical = FrequencyUnit::Hz;
-    static constexpr auto category = Calculation::Category::Frequency;
+    static constexpr auto category = CSS::Category::Frequency;
     static consteval bool isValidRangeForCategory(Range) { return true; }
 
     static constexpr std::optional<FrequencyUnit> validate(CSSUnitType cssUnit) { return toFrequencyUnit(cssUnit); }
@@ -1148,7 +1148,7 @@ ASCIILiteral unitString(ResolutionUnit);
 template<> struct UnitTraits<ResolutionUnit> {
     static constexpr auto count = 4;
     static constexpr auto canonical = ResolutionUnit::Dppx;
-    static constexpr auto category = Calculation::Category::Resolution;
+    static constexpr auto category = CSS::Category::Resolution;
     static consteval bool isValidRangeForCategory(Range range) { return range.min >= 0; }
 
     static constexpr std::optional<ResolutionUnit> validate(CSSUnitType cssUnit) { return toResolutionUnit(cssUnit); }
@@ -1192,7 +1192,7 @@ constexpr ASCIILiteral unitString(FlexUnit)
 template<> struct UnitTraits<FlexUnit> {
     static constexpr auto count = 1;
     static constexpr auto canonical = FlexUnit::Fr;
-    static constexpr auto category = Calculation::Category::Flex;
+    static constexpr auto category = CSS::Category::Flex;
     static consteval bool isValidRangeForCategory(Range) { return true; }
 
     static constexpr std::optional<FlexUnit> validate(CSSUnitType cssUnit) { return toFlexUnit(cssUnit); }
@@ -1264,7 +1264,7 @@ constexpr bool conversionToCanonicalUnitRequiresConversionData(AnglePercentageUn
 template<> struct UnitTraits<AnglePercentageUnit> {
     static constexpr auto count = UnitTraits<AngleUnit>::count + UnitTraits<PercentageUnit>::count;
     static constexpr auto canonical = AnglePercentageUnit::Deg;
-    static constexpr auto category = Calculation::Category::AnglePercentage;
+    static constexpr auto category = CSS::Category::AnglePercentage;
     static consteval bool isValidRangeForCategory(Range) { return true; }
     using Composite = brigand::set<AngleUnit, PercentageUnit>;
 
@@ -1565,7 +1565,7 @@ constexpr bool conversionToCanonicalUnitRequiresConversionData(LengthPercentageU
 template<> struct UnitTraits<LengthPercentageUnit> {
     static constexpr auto count = UnitTraits<LengthUnit>::count + UnitTraits<PercentageUnit>::count;
     static constexpr auto canonical = LengthPercentageUnit::Px;
-    static constexpr auto category = Calculation::Category::LengthPercentage;
+    static constexpr auto category = CSS::Category::LengthPercentage;
     static consteval bool isValidRangeForCategory(Range) { return true; }
     using Composite = brigand::set<LengthUnit, PercentageUnit>;
 

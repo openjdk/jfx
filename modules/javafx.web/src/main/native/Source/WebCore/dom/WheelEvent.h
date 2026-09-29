@@ -24,13 +24,14 @@
 
 #pragma once
 
-#include "MouseEvent.h"
-#include "PlatformWheelEvent.h"
+#include <WebCore/MouseEvent.h>
+#include <WebCore/PlatformWheelEvent.h>
+#include <wtf/Platform.h>
 
 namespace WebCore {
 
 class WheelEvent final : public MouseEvent {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WheelEvent);
+    WTF_MAKE_TZONE_ALLOCATED(WheelEvent);
 public:
     static constexpr int TickMultiplier = 120;
 
@@ -75,8 +76,6 @@ private:
     WheelEvent();
     WheelEvent(const AtomString&, const Init&);
     WheelEvent(const PlatformWheelEvent&, RefPtr<WindowProxy>&&, IsCancelable);
-
-    bool isWheelEvent() const final;
 
     IntPoint m_wheelDelta;
     double m_deltaX { 0 };

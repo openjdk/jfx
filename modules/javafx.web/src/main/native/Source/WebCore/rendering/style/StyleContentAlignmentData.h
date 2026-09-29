@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "RenderStyleConstants.h"
-#include "WritingMode.h"
+#include <WebCore/RenderStyleConstants.h>
+#include <WebCore/WritingMode.h>
 
 namespace WTF {
 class TextStream;
@@ -40,7 +40,7 @@ public:
 
     // Style data for Content-Distribution properties: align-content, justify-content.
     // <content-distribution> || [ <overflow-position>? && <content-position> ]
-    constexpr StyleContentAlignmentData(ContentPosition position, ContentDistribution distribution, OverflowAlignment overflow = OverflowAlignment::Default)
+    constexpr StyleContentAlignmentData(ContentPosition position, ContentDistribution distribution = ContentDistribution::Default, OverflowAlignment overflow = OverflowAlignment::Default)
         : m_position(enumToUnderlyingType(position))
         , m_distribution(enumToUnderlyingType(distribution))
         , m_overflow(enumToUnderlyingType(overflow))

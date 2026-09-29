@@ -27,16 +27,28 @@
 
 #include "CSSPrimitiveValueMappings.h"
 #include "StyleBuilderChecking.h"
-#include "StyleBuilderConverter.h"
+#include "StyleLengthWrapper+Blending.h"
+#include "StyleLengthWrapper+CSSValueConversion.h"
 #include "StylePrimitiveNumericTypes+Blending.h"
+#include "StylePrimitiveNumericTypes+CSSValueConversion.h"
+#include "StylePrimitiveNumericTypes+CSSValueCreation.h"
 
 namespace WebCore {
 namespace Style {
 
-bool Translate::apply(TransformationMatrix& transform, const FloatSize& size) const
+using namespace CSS::Literals;
+
+TransformFunctionSizeDependencies Translate::computeSizeDependencies() const
 {
-    RefPtr protectedValue = value;
-    return protectedValue && protectedValue->apply(transform, size);
+    if (RefPtr protectedValue = value)
+        return protectedValue->computeSizeDependencies();
+    return { };
+}
+
+void Translate::apply(TransformationMatrix& transform, const FloatSize& size) const
+{
+    if (RefPtr protectedValue = value)
+        protectedValue->apply(transform, size);
 }
 
 // MARK: - Conversion
@@ -55,12 +67,12 @@ auto CSSValueConversion<Translate>::operator()(BuilderState& state, const CSSVal
     if (!list)
         return CSS::Keyword::None { };
 
-    auto type = list->size() > 2 ? TransformOperation::Type::Translate3D : TransformOperation::Type::Translate;
-    auto tx = BuilderConverter::convertLength(state, list->item(0));
-    auto ty = list->size() > 1 ? BuilderConverter::convertLength(state, list->item(1)) : WebCore::Length(0, LengthType::Fixed);
-    auto tz = list->size() > 2 ? BuilderConverter::convertLength(state, list->item(2)) : WebCore::Length(0, LengthType::Fixed);
+    auto type = list->size() > 2 ? TransformFunctionType::Translate3D : TransformFunctionType::Translate;
+    auto tx = toStyleFromCSSValue<TranslateTransformFunction::LengthPercentage>(state, list->item(0));
+    auto ty = list->size() > 1 ? toStyleFromCSSValue<TranslateTransformFunction::LengthPercentage>(state, list->item(1)) : TranslateTransformFunction::LengthPercentage { 0_css_px };
+    auto tz = list->size() > 2 ? toStyleFromCSSValue<TranslateTransformFunction::Length>(state, list->item(2)) : TranslateTransformFunction::Length { 0_css_px };
 
-    return Translate { TranslateTransformOperation::create(WTFMove(tx), WTFMove(ty), WTFMove(tz), type) };
+    return TranslateTransformFunction::create(WTF::move(tx), WTF::move(ty), WTF::move(tz), type);
 }
 
 // MARK: - Blending
@@ -74,37 +86,39 @@ auto Blending<Translate>::blend(const Translate& from, const Translate& to, cons
         return CSS::Keyword::None { };
 
     auto identity = [&](const auto& other) {
-        return TranslateTransformOperation::create(WebCore::Length(0, LengthType::Fixed), WebCore::Length(0, LengthType::Fixed), WebCore::Length(0, LengthType::Fixed), other.type());
+        return TranslateTransformFunction::create(0_css_px, 0_css_px, 0_css_px, other.type());
     };
 
-    auto fromOperation = fromTranslate ? Ref(*fromTranslate) : identity(*toTranslate);
-    auto toOperation = toTranslate ? Ref(*toTranslate) : identity(*fromTranslate);
+    auto fromFunction = fromTranslate ? Ref(*fromTranslate) : identity(*toTranslate);
+    auto toFunction = toTranslate ? Ref(*toTranslate) : identity(*fromTranslate);
 
     // Ensure the two transforms have the same type.
-    if (!fromOperation->isSameType(toOperation)) {
-        RefPtr<TranslateTransformOperation> normalizedFrom;
-        RefPtr<TranslateTransformOperation> normalizedTo;
-        if (fromOperation->is3DOperation() || toOperation->is3DOperation()) {
-            normalizedFrom = TranslateTransformOperation::create(fromOperation->x(), fromOperation->y(), fromOperation->z(), TransformOperation::Type::Translate3D);
-            normalizedTo = TranslateTransformOperation::create(toOperation->x(), toOperation->y(), toOperation->z(), TransformOperation::Type::Translate3D);
+    if (!fromFunction->isSameType(toFunction)) {
+        RefPtr<const TranslateTransformFunction> normalizedFrom;
+        RefPtr<const TranslateTransformFunction> normalizedTo;
+        if (fromFunction->is3DOperation() || toFunction->is3DOperation()) {
+            normalizedFrom = TranslateTransformFunction::create(fromFunction->x(), fromFunction->y(), fromFunction->z(), TransformFunctionType::Translate3D);
+            normalizedTo = TranslateTransformFunction::create(toFunction->x(), toFunction->y(), toFunction->z(), TransformFunctionType::Translate3D);
         } else {
-            normalizedFrom = TranslateTransformOperation::create(fromOperation->x(), fromOperation->y(), TransformOperation::Type::Translate);
-            normalizedTo = TranslateTransformOperation::create(toOperation->x(), toOperation->y(), TransformOperation::Type::Translate);
+            normalizedFrom = TranslateTransformFunction::create(fromFunction->x(), fromFunction->y(), TransformFunctionType::Translate);
+            normalizedTo = TranslateTransformFunction::create(toFunction->x(), toFunction->y(), TransformFunctionType::Translate);
         }
         return blend(Translate { normalizedFrom.releaseNonNull() }, Translate { normalizedTo.releaseNonNull() }, context);
     }
 
-    if (auto blendedOperation = toOperation->blend(fromOperation.ptr(), context); RefPtr translate = dynamicDowncast<TranslateTransformOperation>(blendedOperation))
-        return Translate { TranslateTransformOperation::create(translate->x(), translate->y(), translate->z(), translate->type()) };
+    if (auto blendedFunction = toFunction->blend(fromFunction.ptr(), context); RefPtr translate = dynamicDowncast<TranslateTransformFunction>(blendedFunction))
+        return TranslateTransformFunction::create(translate->x(), translate->y(), translate->z(), translate->type());
 
     return CSS::Keyword::None { };
 }
 
 // MARK: - Platform
 
-auto ToPlatform<Translate>::operator()(const Translate& value) -> RefPtr<Translate::Platform>
+auto ToPlatform<Translate>::operator()(const Translate& value, const FloatSize& size) -> RefPtr<TransformOperation>
 {
-    return value.value;
+    if (RefPtr function = value.value)
+        return function->toPlatform(size);
+    return nullptr;
 }
 
 } // namespace Style

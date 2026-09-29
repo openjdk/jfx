@@ -25,15 +25,14 @@
 #include "ContainerNodeInlines.h"
 #include "FEFlood.h"
 #include "RenderElement.h"
-#include "RenderStyle.h"
+#include "RenderStyle+GettersInlines.h"
 #include "SVGNames.h"
 #include "SVGPropertyOwnerRegistry.h"
-#include "SVGRenderStyle.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGFEFloodElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SVGFEFloodElement);
 
 inline SVGFEFloodElement::SVGFEFloodElement(const QualifiedName& tagName, Document& document)
     : SVGFilterPrimitiveStandardAttributes(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
@@ -54,9 +53,9 @@ bool SVGFEFloodElement::setFilterEffectAttribute(FilterEffect& effect, const Qua
 
     auto& feFlood = downcast<FEFlood>(effect);
     if (attrName == SVGNames::flood_colorAttr)
-        return feFlood.setFloodColor(style.colorResolvingCurrentColor(style.svgStyle().floodColor()));
+        return feFlood.setFloodColor(style.floodColorResolvingCurrentColor());
     if (attrName == SVGNames::flood_opacityAttr)
-        return feFlood.setFloodOpacity(style.svgStyle().floodOpacity().value.value);
+        return feFlood.setFloodOpacity(style.floodOpacity().value.value);
 
     ASSERT_NOT_REACHED();
     return false;
@@ -68,13 +67,8 @@ RefPtr<FilterEffect> SVGFEFloodElement::createFilterEffect(const FilterEffectVec
     if (!renderer)
         return nullptr;
 
-    auto& style = renderer->style();
-    auto& svgStyle = style.svgStyle();
-
-    auto color = style.colorWithColorFilter(svgStyle.floodColor());
-    float opacity = svgStyle.floodOpacity().value.value;
-
-    return FEFlood::create(color, opacity);
+    CheckedRef style = renderer->style();
+    return FEFlood::create(style->floodColorResolvingCurrentColorApplyingColorFilter(), style->floodOpacity().value.value);
 }
 
 } // namespace WebCore

@@ -166,23 +166,26 @@ static const char* temporaryFileDirectory()
 #endif
 }
 
-std::pair<String, FileHandle> openTemporaryFile(StringView prefix, StringView suffix)
+std::pair<String, FileHandle> openTemporaryFile(StringView prefix, StringView suffix, const String& temporaryDirectory)
 {
     // Suffix is not supported because that's incompatible with mkostemp, mkostemps would be needed for that.
     // This is OK for now since the code using it is built on macOS only.
     ASSERT_UNUSED(suffix, suffix.isEmpty());
 
-    const char* directory = temporaryFileDirectory();
+    const auto temporaryDirectoryUtf8 = temporaryDirectory.utf8();
+    IGNORE_CLANG_WARNINGS_BEGIN("unsafe-buffer-usage-in-libc-call")
+    const char* directory = !temporaryDirectory.isEmpty() ? temporaryDirectoryUtf8.data() : temporaryFileDirectory();
     CString prefixUTF8 = prefix.utf8();
     size_t length = strlen(directory) + 1 + prefixUTF8.length() + 1 + 6 + 1;
     auto buffer = MallocSpan<char>::malloc(length);
     snprintf(buffer.mutableSpan().data(), length, "%s/%s-XXXXXX", directory, prefixUTF8.data());
+    IGNORE_CLANG_WARNINGS_END
 
     auto handle = FileHandle::adopt(mkostemp(buffer.mutableSpan().data(), O_CLOEXEC));
     if (!handle)
         return { String(), FileHandle() };
 
-    return { String::fromUTF8(buffer.span().data()), WTFMove(handle) };
+    return { String::fromUTF8(buffer.span().data()), WTF::move(handle) };
 }
 #endif // !PLATFORM(COCOA)
 

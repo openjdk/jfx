@@ -81,9 +81,9 @@ ObjectPrototype* ObjectPrototype::create(VM& vm, JSGlobalObject* globalObject, S
 #if PLATFORM(IOS) || PLATFORM(VISION)
 bool isPokerBros()
 {
-    auto bundleID = CFBundleGetIdentifier(CFBundleGetMainBundle());
+    RetainPtr bundleID = CFBundleGetIdentifier(CFBundleGetMainBundle());
     return bundleID
-        && CFEqual(bundleID, CFSTR("com.kpgame.PokerBros"))
+        && CFEqual(bundleID.get(), CFSTR("com.kpgame.PokerBros"))
         && !linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::NoPokerBrosBuiltInTagQuirk);
 }
 #endif
@@ -332,7 +332,7 @@ JSC_DEFINE_HOST_FUNCTION(objectProtoFuncToLocaleString, (JSGlobalObject* globalO
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
     // If IsCallable(toString) is false, throw a TypeError exception.
-    auto callData = JSC::getCallData(toString);
+    auto callData = JSC::getCallDataInline(toString);
     if (callData.type == CallData::Type::None)
         return throwVMTypeError(globalObject, scope);
 

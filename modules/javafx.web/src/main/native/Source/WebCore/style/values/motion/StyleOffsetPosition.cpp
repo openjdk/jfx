@@ -26,14 +26,35 @@
 #include "StyleOffsetPosition.h"
 
 #include "CSSPositionValue.h"
-#include "RenderStyleInlines.h"
 #include "StyleBuilderChecking.h"
+#include "StyleComputedStyle+InitialInlines.h"
+#include "StyleLengthWrapper+Blending.h"
+#include "StylePrimitiveKeyword+Logging.h"
 #include "StylePrimitiveNumericTypes+Blending.h"
+#include "StylePrimitiveNumericTypes+Logging.h"
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
 namespace Style {
 
+#if ENABLE(THREADED_ANIMATIONS)
+
+auto OffsetPosition::convert(const AcceleratedEffectOffsetPosition& value) -> Variant<CSS::Keyword::Auto, CSS::Keyword::Normal, Position>
+{
+    return WTF::switchOn(value.value,
+        [](const AcceleratedEffectOffsetPosition::Normal&) -> Variant<CSS::Keyword::Auto, CSS::Keyword::Normal, Position> {
+            return CSS::Keyword::Normal { };
+        },
+        [](const AcceleratedEffectOffsetPosition::Auto&) -> Variant<CSS::Keyword::Auto, CSS::Keyword::Normal, Position> {
+            return CSS::Keyword::Auto { };
+        },
+        [](const FloatPoint& position) -> Variant<CSS::Keyword::Auto, CSS::Keyword::Normal, Position> {
+            return Position { position };
+        }
+    );
+}
+
+#endif
 // MARK: - Conversion
 
 auto CSSValueConversion<OffsetPosition>::operator()(BuilderState& state, const CSSValue& value) -> OffsetPosition
@@ -45,7 +66,7 @@ auto CSSValueConversion<OffsetPosition>::operator()(BuilderState& state, const C
 
     RefPtr positionValue = requiredDowncast<CSSPositionValue>(state, value);
     if (!positionValue)
-        return RenderStyle::initialOffsetPosition();
+        return Style::ComputedStyle::initialOffsetPosition();
     return OffsetPosition { toStyle(positionValue->position(), state) };
 }
 
@@ -53,13 +74,13 @@ auto CSSValueConversion<OffsetPosition>::operator()(BuilderState& state, const C
 
 auto Blending<OffsetPosition>::canBlend(const OffsetPosition& a, const OffsetPosition& b) -> bool
 {
-    return WTF::holdsAlternative<Position>(a) && WTF::holdsAlternative<Position>(b);
+    return a.isPosition() && b.isPosition();
 }
 
 auto Blending<OffsetPosition>::requiresInterpolationForAccumulativeIteration(const OffsetPosition& a, const OffsetPosition& b) -> bool
 {
     ASSERT(canBlend(a, b));
-    return Style::requiresInterpolationForAccumulativeIteration(Position { a.value }, Position { b.value });
+    return Style::requiresInterpolationForAccumulativeIteration(*a.tryPosition(), *b.tryPosition());
 }
 
 auto Blending<OffsetPosition>::blend(const OffsetPosition& a, const OffsetPosition& b, const BlendingContext& context) -> OffsetPosition
@@ -70,15 +91,29 @@ auto Blending<OffsetPosition>::blend(const OffsetPosition& a, const OffsetPositi
     }
 
     ASSERT(canBlend(a, b));
-    return OffsetPosition { Style::blend(Position { a.value }, Position { b.value }, context) };
+    return OffsetPosition { Style::blend(*a.tryPosition(), *b.tryPosition(), context) };
 }
 
-// MARK: - Platform
+// MARK: - Evaluation
 
-auto ToPlatform<OffsetPosition>::operator()(const OffsetPosition& value) -> WebCore::LengthPoint
+#if ENABLE(THREADED_ANIMATIONS)
+
+auto Evaluation<OffsetPosition, AcceleratedEffectOffsetPosition>::operator()(const OffsetPosition& value, FloatSize referenceBox, ZoomNeeded token) -> AcceleratedEffectOffsetPosition
 {
-    return value.value;
+    return WTF::switchOn(value,
+        [&](const Style::Position& position) -> AcceleratedEffectOffsetPosition {
+            return { .value = Style::evaluate<FloatPoint>(position, referenceBox, token) };
+        },
+        [](const CSS::Keyword::Normal&) -> AcceleratedEffectOffsetPosition {
+            return { .value = AcceleratedEffectOffsetPosition::Normal { } };
+        },
+        [](const CSS::Keyword::Auto&) -> AcceleratedEffectOffsetPosition {
+            return { .value = AcceleratedEffectOffsetPosition::Auto { } };
+        }
+    );
 }
+
+#endif
 
 } // namespace Style
 } // namespace WebCore

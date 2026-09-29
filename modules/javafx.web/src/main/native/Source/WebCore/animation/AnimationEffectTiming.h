@@ -25,12 +25,12 @@
 
 #pragma once
 
-#include "AnimationEffectPhase.h"
-#include "BasicEffectTiming.h"
-#include "FillMode.h"
-#include "PlaybackDirection.h"
-#include "TimingFunction.h"
-#include "WebAnimationTypes.h"
+#include <WebCore/AnimationEffectPhase.h>
+#include <WebCore/BasicEffectTiming.h>
+#include <WebCore/FillMode.h>
+#include <WebCore/PlaybackDirection.h>
+#include <WebCore/TimingFunction.h>
+#include <WebCore/WebAnimationTypes.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Seconds.h>
 
@@ -52,21 +52,22 @@ struct AnimationEffectTiming {
     PlaybackDirection direction { PlaybackDirection::Normal };
     double iterationStart { 0 };
     double iterations { 1 };
-    Seconds specifiedStartDelay { 0_s };
-    Seconds specifiedEndDelay { 0_s };
-    std::optional<Seconds> specifiedIterationDuration;
     WebAnimationTime startDelay { 0_s };
     WebAnimationTime endDelay { 0_s };
     WebAnimationTime iterationDuration { 0_s };
     WebAnimationTime intrinsicIterationDuration { 0_s };
     WebAnimationTime activeDuration { 0_s };
     WebAnimationTime endTime { 0_s };
+    Seconds specifiedStartDelay { 0_s };
+    Seconds specifiedEndDelay { 0_s };
+    std::optional<Seconds> specifiedIterationDuration;
 
     struct ResolutionData {
         std::optional<WebAnimationTime> timelineTime;
         std::optional<WebAnimationTime> timelineDuration;
         std::optional<WebAnimationTime> startTime;
         std::optional<WebAnimationTime> localTime;
+        EndpointInclusiveActiveInterval endpointInclusiveActiveInterval { EndpointInclusiveActiveInterval::No };
         double playbackRate { 0 };
     };
 

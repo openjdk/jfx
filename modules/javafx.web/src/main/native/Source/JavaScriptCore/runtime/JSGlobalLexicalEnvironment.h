@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "JSSegmentedVariableObject.h"
+#include <JavaScriptCore/JSSegmentedVariableObject.h>
 
 namespace JSC {
 

@@ -99,7 +99,7 @@ private:
             CharactersSpan()
                 : currentCharacter8()
             { }
-            std::span<const LChar> currentCharacter8;
+            std::span<const Latin1Character> currentCharacter8;
             std::span<const char16_t> currentCharacter16;
         } s;
         bool is8Bit { true };
@@ -163,7 +163,7 @@ inline SegmentedString::Substring::Substring(StringView passedStringView)
 }
 
 inline SegmentedString::Substring::Substring(String&& passedString)
-    : underlyingString(WTFMove(passedString))
+    : underlyingString(WTF::move(passedString))
     , originalLength(underlyingString.length())
 {
     if (!underlyingString.isEmpty()) {
@@ -183,7 +183,7 @@ inline unsigned SegmentedString::Substring::numberOfCharactersConsumed() const
 ALWAYS_INLINE char16_t SegmentedString::Substring::currentCharacter() const
 {
     ASSERT(length());
-    return is8Bit ? s.currentCharacter8.front() : s.currentCharacter16.front();
+    return is8Bit ? char16_t { s.currentCharacter8.front() } : s.currentCharacter16.front();
 }
 
 ALWAYS_INLINE char16_t SegmentedString::Substring::currentCharacterPreIncrement()
@@ -207,7 +207,7 @@ inline SegmentedString::SegmentedString(StringView stringView)
 }
 
 inline SegmentedString::SegmentedString(String&& string)
-    : m_currentSubstring(WTFMove(string))
+    : m_currentSubstring(WTF::move(string))
 {
     if (m_currentSubstring.length()) {
         m_currentCharacter = m_currentSubstring.currentCharacter();

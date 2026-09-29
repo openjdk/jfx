@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2007 Alp Toker <alp@atoker.com>
- * Copyright (C) 2007-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -21,20 +21,22 @@
 #include "config.h"
 #include "PrintContext.h"
 
+#include "AXIsolatedTree.h"
+#include "AXObjectCacheInlines.h"
 #include "CommonAtomStrings.h"
 #include "ContainerNodeInlines.h"
+#include "DocumentView.h"
 #include "ElementTraversal.h"
 #include "FrameDestructionObserverInlines.h"
 #include "GraphicsContext.h"
-#include "LengthBox.h"
 #include "LocalFrame.h"
 #include "LocalFrameInlines.h"
 #include "LocalFrameView.h"
 #include "Logging.h"
-#include "RenderStyleInlines.h"
+#include "NodeDocument.h"
+#include "RenderStyle+GettersInlines.h"
 #include "RenderView.h"
 #include "Settings.h"
-#include "StyleInheritedData.h"
 #include "StyleResolver.h"
 #include "StyleScope.h"
 #include <wtf/TZoneMallocInlines.h>
@@ -43,6 +45,11 @@
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(PrintContext);
+
+Ref<PrintContext> PrintContext::create(LocalFrame* frame)
+{
+    return adoptRef(*new PrintContext(frame));
+}
 
 PrintContext::PrintContext(LocalFrame* frame)
     : FrameDestructionObserver(frame)
@@ -106,12 +113,13 @@ FloatBoxExtent PrintContext::computedPageMargin(FloatBoxExtent printMargin)
     auto marginRight = style->marginRight().tryFixed();
     auto marginBottom = style->marginBottom().tryFixed();
     auto marginLeft = style->marginLeft().tryFixed();
+    const auto& zoomFactor = style->usedZoomForLength();
 
     return {
-        marginTop ? marginTop->value * pixelToPointScaleFactor : printMargin.top(),
-        marginRight ? marginRight->value * pixelToPointScaleFactor : printMargin.right(),
-        marginBottom ? marginBottom->value * pixelToPointScaleFactor : printMargin.bottom(),
-        marginLeft ? marginLeft->value * pixelToPointScaleFactor : printMargin.left(),
+        marginTop ? marginTop->resolveZoom(zoomFactor) * pixelToPointScaleFactor : printMargin.top(),
+        marginRight ? marginRight->resolveZoom(zoomFactor) * pixelToPointScaleFactor : printMargin.right(),
+        marginBottom ? marginBottom->resolveZoom(zoomFactor) * pixelToPointScaleFactor : printMargin.bottom(),
+        marginLeft ? marginLeft->resolveZoom(zoomFactor) * pixelToPointScaleFactor : printMargin.left(),
     };
 }
 
@@ -321,17 +329,17 @@ int PrintContext::pageNumberForElement(Element* element, const FloatSize& pageSi
 
     auto* frame = element->document().frame();
     FloatRect pageRect(FloatPoint(0, 0), pageSizeInPixels);
-    PrintContext printContext(frame);
-    printContext.begin(pageRect.width(), pageRect.height());
+    Ref printContext = PrintContext::create(frame);
+    printContext->begin(pageRect.width(), pageRect.height());
     FloatSize scaledPageSize = pageSizeInPixels;
     scaledPageSize.scale(frame->view()->contentsSize().width() / pageRect.width());
-    printContext.computePageRectsWithPageSize(scaledPageSize, false);
+    printContext->computePageRectsWithPageSize(scaledPageSize, false);
 
     int top = roundToInt(box->offsetTop());
     int left = roundToInt(box->offsetLeft());
     size_t pageNumber = 0;
-    for (; pageNumber < printContext.pageCount(); pageNumber++) {
-        const IntRect& page = printContext.pageRect(pageNumber);
+    for (; pageNumber < printContext->pageCount(); pageNumber++) {
+        const IntRect& page = printContext->pageRect(pageNumber);
         if (page.x() <= left && left < page.maxX() && page.y() <= top && top < page.maxY())
             return pageNumber;
     }
@@ -380,25 +388,53 @@ String PrintContext::pageProperty(LocalFrame* frame, const String& propertyName,
     Ref protectedFrame { *frame };
 
     RefPtr document = frame->document();
-    PrintContext printContext(frame);
-    printContext.begin(800); // Any width is OK here.
+    Ref printContext = PrintContext::create(frame);
+    printContext->begin(800); // Any width is OK here.
     document->updateLayout();
     auto style = document->styleScope().resolver().styleForPage(pageNumber);
 
     // Implement formatters for properties we care about.
     if (propertyName == "margin-left"_s) {
         if (auto marginLeft = style->marginLeft().tryFixed())
-            return String::number(marginLeft->value);
+            return makeString(marginLeft->resolveZoom(style->usedZoomForLength()));
             return autoAtom();
     }
-    if (propertyName == "line-height"_s)
-        return String::number(style->lineHeight().value());
+    if (propertyName == "line-height"_s) {
+        return WTF::switchOn(style->lineHeight(),
+            [&](const CSS::Keyword::Normal&) -> String {
+                return "0"_s;
+            },
+            [&](const Style::LineHeight::Fixed& fixed) -> String {
+                return makeString(fixed.resolveZoom(style->usedZoomForLength()));
+            },
+            [&](const Style::LineHeight::Percentage& percentage) -> String {
+                return makeString(percentage.value);
+            },
+            [&](const Style::LineHeight::Calc&) -> String {
+                return "0"_s;
+            }
+        );
+    }
     if (propertyName == "font-size"_s)
-        return String::number(style->fontDescription().computedSize());
+        return makeString(style->fontDescription().computedSize());
     if (propertyName == "font-family"_s)
         return style->fontDescription().firstFamily();
-    if (propertyName == "size"_s)
-        return makeString(style->pageSize().width.value(), ' ', style->pageSize().height.value());
+    if (propertyName == "size"_s) {
+        return WTF::switchOn(style->pageSize(),
+            [&](const CSS::Keyword::Auto&) -> String {
+                return "auto"_s;
+            },
+            [&](const CSS::Keyword::Landscape&) -> String {
+                return "landscape"_s;
+            },
+            [&](const CSS::Keyword::Portrait&) -> String {
+                return "portrait"_s;
+            },
+            [&](const Style::PageSize::Lengths& lengths) {
+                return makeString(lengths.width().resolveZoom(Style::ZoomNeeded { }), ' ', lengths.height().resolveZoom(Style::ZoomNeeded { }));
+            }
+        );
+    }
 
     return makeString("pageProperty() unimplemented for: "_s, propertyName);
 }
@@ -436,23 +472,23 @@ int PrintContext::numberOfPages(LocalFrame& frame, const FloatSize& pageSizeInPi
 {
     Ref protectedFrame { frame };
 
-    PrintContext printContext(&frame);
-    if (!printContext.beginAndComputePageRectsWithPageSize(frame, pageSizeInPixels))
+    Ref printContext = PrintContext::create(&frame);
+    if (!printContext->beginAndComputePageRectsWithPageSize(frame, pageSizeInPixels))
         return -1;
 
-    return printContext.pageCount();
+    return printContext->pageCount();
 }
 
 void PrintContext::spoolAllPagesWithBoundaries(LocalFrame& frame, GraphicsContext& graphicsContext, const FloatSize& pageSizeInPixels)
 {
     Ref protectedFrame { frame };
 
-    PrintContext printContext(&frame);
-    if (!printContext.beginAndComputePageRectsWithPageSize(frame, pageSizeInPixels))
+    Ref printContext = PrintContext::create(&frame);
+    if (!printContext->beginAndComputePageRectsWithPageSize(frame, pageSizeInPixels))
         return;
 
     const float pageWidth = pageSizeInPixels.width();
-    const Vector<IntRect>& pageRects = printContext.pageRects();
+    const Vector<IntRect>& pageRects = printContext->pageRects();
     int totalHeight = pageRects.size() * (pageSizeInPixels.height() + 1) - 1;
 
     // Fill the whole background by white.
@@ -479,7 +515,7 @@ void PrintContext::spoolAllPagesWithBoundaries(LocalFrame& frame, GraphicsContex
 
         graphicsContext.save();
         graphicsContext.translate(0, currentHeight);
-        printContext.spoolPage(graphicsContext, pageIndex, pageWidth);
+        printContext->spoolPage(graphicsContext, pageIndex, pageWidth);
         graphicsContext.restore();
 
         currentHeight += pageSizeInPixels.height() + 1;

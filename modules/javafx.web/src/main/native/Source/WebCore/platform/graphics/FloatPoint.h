@@ -26,10 +26,12 @@
 
 #pragma once
 
-#include "FloatSize.h"
-#include "IntPoint.h"
+#include <WebCore/DoublePoint.h>
+#include <WebCore/FloatSize.h>
+#include <WebCore/IntPoint.h>
 #include <wtf/Hasher.h>
 #include <wtf/MathExtras.h>
+#include <wtf/Platform.h>
 #include <wtf/TZoneMalloc.h>
 
 #if USE(CG)
@@ -58,6 +60,8 @@ public:
     constexpr FloatPoint(float x, float y) : m_x(x), m_y(y) { }
     WEBCORE_EXPORT FloatPoint(const IntPoint&);
     explicit FloatPoint(const FloatSize& size) : m_x(size.width()), m_y(size.height()) { }
+    explicit FloatPoint(const DoublePoint& point)
+        : m_x(static_cast<float>(point.x())), m_y(static_cast<float>(point.y())) { }
 
     static constexpr FloatPoint zero() { return FloatPoint(); }
     constexpr bool isZero() const { return !m_x && !m_y; }
@@ -168,6 +172,11 @@ public:
         return { m_y, m_x };
     }
 
+    FloatPoint scaledBy(float scale) const
+    {
+        return FloatPoint(m_x * scale, m_y * scale);
+    }
+
 #if USE(CG)
     WEBCORE_EXPORT FloatPoint(const CGPoint&);
     WEBCORE_EXPORT operator CGPoint() const;
@@ -185,6 +194,8 @@ public:
 
     WEBCORE_EXPORT String toJSONString() const;
     WEBCORE_EXPORT Ref<JSON::Object> toJSONObject() const;
+
+    operator DoublePoint() const { return { m_x, m_y }; }
 
     friend bool operator==(const FloatPoint&, const FloatPoint&) = default;
 
@@ -255,22 +266,29 @@ inline void FloatPoint::rotate(double angleInRadians, const FloatPoint& aboutPoi
 
 inline IntSize flooredIntSize(const FloatPoint& p)
 {
-    return IntSize(clampToInteger(floorf(p.x())), clampToInteger(floorf(p.y())));
+    return IntSize(clampTo<int>(floorf(p.x())), clampTo<int>(floorf(p.y())));
 }
+
+#if USE(CG)
+inline IntPoint roundedIntPoint(const CGPoint& p)
+{
+    return IntPoint(clampTo<int>(roundf(p.x)), clampTo<int>(roundf(p.y)));
+}
+#endif
 
 inline IntPoint roundedIntPoint(const FloatPoint& p)
 {
-    return IntPoint(clampToInteger(roundf(p.x())), clampToInteger(roundf(p.y())));
+    return IntPoint(clampTo<int>(roundf(p.x())), clampTo<int>(roundf(p.y())));
 }
 
 inline IntPoint flooredIntPoint(const FloatPoint& p)
 {
-    return IntPoint(clampToInteger(floorf(p.x())), clampToInteger(floorf(p.y())));
+    return IntPoint(clampTo<int>(floorf(p.x())), clampTo<int>(floorf(p.y())));
 }
 
 inline IntPoint ceiledIntPoint(const FloatPoint& p)
 {
-    return IntPoint(clampToInteger(ceilf(p.x())), clampToInteger(ceilf(p.y())));
+    return IntPoint(clampTo<int>(ceilf(p.x())), clampTo<int>(ceilf(p.y())));
 }
 
 inline FloatPoint floorPointToDevicePixels(const FloatPoint& p, float deviceScaleFactor)
@@ -293,9 +311,9 @@ inline FloatPoint toFloatPoint(const FloatSize& a)
     return FloatPoint(a.width(), a.height());
 }
 
-inline bool areEssentiallyEqual(const FloatPoint& a, const FloatPoint& b, float epsilon = std::numeric_limits<float>::epsilon())
+inline bool areEssentiallyEqual(const FloatPoint& a, const FloatPoint& b)
 {
-    return WTF::areEssentiallyEqual(a.x(), b.x(), epsilon) && WTF::areEssentiallyEqual(a.y(), b.y(), epsilon);
+    return WTF::areEssentiallyEqual(a.x(), b.x()) && WTF::areEssentiallyEqual(a.y(), b.y());
 }
 
 inline void add(Hasher& hasher, const FloatPoint& point)

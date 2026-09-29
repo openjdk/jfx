@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "CSSPropertyNames.h"
-#include "CSSValue.h"
-#include "ScriptWrappable.h"
+#include <WebCore/CSSPropertyNames.h>
+#include <WebCore/CSSValue.h>
+#include <WebCore/ScriptWrappable.h>
 #include <wtf/OptionSet.h>
 #include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
@@ -49,6 +49,14 @@ enum class CSSStyleValueType : uint8_t {
     CSSMathNegate,
     CSSMathProduct,
     CSSMathSum,
+    CSSColorCSSOMColor,
+    CSSColorHSL,
+    CSSColorHWB,
+    CSSColorLab,
+    CSSColorLCH,
+    CSSColorOKLCH,
+    CSSColorOKLab,
+    CSSColorRGB,
     CSSUnitValue,
     CSSUnparsedValue,
     CSSKeywordValue
@@ -71,6 +79,14 @@ inline bool isCSSNumericValue(CSSStyleValueType type)
     case CSSStyleValueType::CSSTransformValue:
     case CSSStyleValueType::CSSUnparsedValue:
     case CSSStyleValueType::CSSKeywordValue:
+    case CSSStyleValueType::CSSColorCSSOMColor:
+    case CSSStyleValueType::CSSColorHSL:
+    case CSSStyleValueType::CSSColorHWB:
+    case CSSStyleValueType::CSSColorLab:
+    case CSSStyleValueType::CSSColorLCH:
+    case CSSStyleValueType::CSSColorOKLab:
+    case CSSStyleValueType::CSSColorOKLCH:
+    case CSSStyleValueType::CSSColorRGB:
         break;
     }
     return false;
@@ -93,6 +109,44 @@ inline bool isCSSMathValue(CSSStyleValueType type)
     case CSSStyleValueType::CSSTransformValue:
     case CSSStyleValueType::CSSUnparsedValue:
     case CSSStyleValueType::CSSKeywordValue:
+    case CSSStyleValueType::CSSColorCSSOMColor:
+    case CSSStyleValueType::CSSColorHSL:
+    case CSSStyleValueType::CSSColorHWB:
+    case CSSStyleValueType::CSSColorLab:
+    case CSSStyleValueType::CSSColorLCH:
+    case CSSStyleValueType::CSSColorOKLab:
+    case CSSStyleValueType::CSSColorOKLCH:
+    case CSSStyleValueType::CSSColorRGB:
+        break;
+    }
+    return false;
+}
+
+inline bool isCSSColorValue(CSSStyleValueType type)
+{
+    switch (type) {
+    case CSSStyleValueType::CSSColorCSSOMColor:
+    case CSSStyleValueType::CSSColorHSL:
+    case CSSStyleValueType::CSSColorHWB:
+    case CSSStyleValueType::CSSColorLab:
+    case CSSStyleValueType::CSSColorLCH:
+    case CSSStyleValueType::CSSColorOKLab:
+    case CSSStyleValueType::CSSColorOKLCH:
+    case CSSStyleValueType::CSSColorRGB:
+        return true;
+    case CSSStyleValueType::CSSMathClamp:
+    case CSSStyleValueType::CSSMathInvert:
+    case CSSStyleValueType::CSSMathMin:
+    case CSSStyleValueType::CSSMathMax:
+    case CSSStyleValueType::CSSMathNegate:
+    case CSSStyleValueType::CSSMathProduct:
+    case CSSStyleValueType::CSSMathSum:
+    case CSSStyleValueType::CSSUnitValue:
+    case CSSStyleValueType::CSSStyleValue:
+    case CSSStyleValueType::CSSStyleImageValue:
+    case CSSStyleValueType::CSSTransformValue:
+    case CSSStyleValueType::CSSUnparsedValue:
+    case CSSStyleValueType::CSSKeywordValue:
         break;
     }
     return false;
@@ -104,17 +158,17 @@ enum class SerializationArguments : uint8_t {
 };
 
 class CSSStyleValue : public RefCounted<CSSStyleValue>, public ScriptWrappable {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CSSStyleValue);
+    WTF_MAKE_TZONE_ALLOCATED(CSSStyleValue);
 public:
     String toString() const;
     virtual void serialize(StringBuilder&, OptionSet<SerializationArguments> = { }) const;
 
 IGNORE_GCC_WARNINGS_BEGIN("mismatched-new-delete")
     // https://webkit.org/b/241516
-    virtual ~CSSStyleValue() = default;
+    virtual ~CSSStyleValue();
 IGNORE_GCC_WARNINGS_END
 
-    virtual CSSStyleValueType getType() const { return CSSStyleValueType::CSSStyleValue; }
+    virtual CSSStyleValueType styleValueType() const { return CSSStyleValueType::CSSStyleValue; }
 
     static ExceptionOr<Ref<CSSStyleValue>> parse(Document&, const AtomString&, const String&);
     static ExceptionOr<Vector<Ref<CSSStyleValue>>> parseAll(Document&, const AtomString&, const String&);

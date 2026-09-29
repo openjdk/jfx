@@ -31,7 +31,6 @@
 namespace WebCore {
 
 class Exception;
-class ReadableStreamSink;
 template<typename> class ExceptionOr;
 
 class InternalReadableStream final : public DOMGuarded<JSC::JSObject> {
@@ -45,13 +44,13 @@ public:
     bool isLocked() const;
     WEBCORE_EXPORT bool isDisturbed() const;
     void cancel(Exception&&);
-    void pipeTo(ReadableStreamSink&);
     ExceptionOr<std::pair<Ref<InternalReadableStream>, Ref<InternalReadableStream>>> tee(bool shouldClone);
 
-    JSC::JSValue cancelForBindings(JSC::JSGlobalObject& globalObject, JSC::JSValue value) { return cancel(globalObject, value, Use::Bindings); }
-    JSC::JSValue getReader(JSC::JSGlobalObject&, JSC::JSValue);
-    JSC::JSValue pipeTo(JSC::JSGlobalObject&, JSC::JSValue, JSC::JSValue);
-    JSC::JSValue pipeThrough(JSC::JSGlobalObject&, JSC::JSValue, JSC::JSValue);
+    JSC::JSValue cancel(JSC::JSGlobalObject&, JSC::JSValue);
+
+    enum class State : uint8_t { Readable, Closed, Errored };
+    State state() const;
+    JSC::JSValue storedError(JSDOMGlobalObject&) const;
 
 private:
     InternalReadableStream(JSDOMGlobalObject& globalObject, JSC::JSObject& jsObject)
@@ -59,8 +58,6 @@ private:
     {
     }
 
-    enum class Use { Bindings, Private };
-    JSC::JSValue cancel(JSC::JSGlobalObject&, JSC::JSValue, Use);
     JSC::JSValue tee(JSC::JSGlobalObject&, bool shouldClone);
 };
 

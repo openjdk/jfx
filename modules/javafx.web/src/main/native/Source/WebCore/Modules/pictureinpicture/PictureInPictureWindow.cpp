@@ -29,13 +29,14 @@
 
 #if ENABLE(PICTURE_IN_PICTURE_API)
 
+#include "ContextDestructionObserverInlines.h"
 #include "Event.h"
 #include "EventNames.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(PictureInPictureWindow);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PictureInPictureWindow);
 
 Ref<PictureInPictureWindow> PictureInPictureWindow::create(Document& document)
 {
@@ -50,6 +51,11 @@ PictureInPictureWindow::PictureInPictureWindow(Document& document)
 }
 
 PictureInPictureWindow::~PictureInPictureWindow() = default;
+
+ScriptExecutionContext* PictureInPictureWindow::scriptExecutionContext() const
+{
+    return ActiveDOMObject::scriptExecutionContext();
+}
 
 void PictureInPictureWindow::setSize(const IntSize& size)
 {

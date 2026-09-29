@@ -82,8 +82,17 @@ public:
     std::optional<SimpleRange> activeSessionRange() const;
     void intelligenceTextAnimationsDidComplete();
 
-private:
-    struct CompositionState : CanMakeCheckedPtr<CompositionState> {
+
+    struct State : CanMakeCheckedPtr<State> {
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(State);
+        WTF_STRUCT_OVERRIDE_DELETE_FOR_CHECKED_PTR(State);
+
+        virtual ~State() { }
+        virtual bool isCompositionState() const { return false; };
+        virtual bool isProofreadingState() const { return false; };
+    };
+
+    struct CompositionState : State {
         WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(CompositionState);
         WTF_STRUCT_OVERRIDE_DELETE_FOR_CHECKED_PTR(CompositionState);
 
@@ -92,11 +101,9 @@ private:
             AnimationInProgress = 1 << 1,
         };
 
-        CompositionState(const Vector<Ref<WritingToolsCompositionCommand>>& unappliedCommands, const Vector<Ref<WritingToolsCompositionCommand>>& reappliedCommands, const WritingTools::Session& session)
-            : unappliedCommands(unappliedCommands)
-            , reappliedCommands(reappliedCommands)
-            , session(session)
+        static UniqueRef<CompositionState> create(const Vector<Ref<WritingToolsCompositionCommand>>& unappliedCommands, const Vector<Ref<WritingToolsCompositionCommand>>& reappliedCommands, const WritingTools::Session& session)
         {
+            return UniqueRef { *new CompositionState(unappliedCommands, reappliedCommands, session) };
         }
 
         // These two vectors should never have the same command in both of them.
@@ -108,12 +115,32 @@ private:
         bool shouldCommitAfterReplacement { false };
         std::optional<CharacterRange> replacedRange;
         std::optional<CharacterRange> pendingReplacedRange;
+
+    private:
+        CompositionState(const Vector<Ref<WritingToolsCompositionCommand>>& unappliedCommands, const Vector<Ref<WritingToolsCompositionCommand>>& reappliedCommands, const WritingTools::Session& session)
+            : unappliedCommands(unappliedCommands)
+            , reappliedCommands(reappliedCommands)
+            , session(session)
+        {
+        }
+
+        virtual bool isCompositionState() const { return true; };
     };
 
-    struct ProofreadingState : CanMakeCheckedPtr<ProofreadingState> {
+    struct ProofreadingState : State {
         WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(ProofreadingState);
         WTF_STRUCT_OVERRIDE_DELETE_FOR_CHECKED_PTR(ProofreadingState);
 
+        static UniqueRef<ProofreadingState> create(const Ref<Range>& contextRange, const WritingTools::Session& session, int replacementLocationOffset)
+        {
+            return UniqueRef { *new ProofreadingState(contextRange, session, replacementLocationOffset) };
+        }
+
+        Ref<Range> contextRange;
+        WritingTools::Session session;
+        int replacementLocationOffset { 0 };
+
+    private:
         ProofreadingState(const Ref<Range>& contextRange, const WritingTools::Session& session, int replacementLocationOffset)
             : contextRange(contextRange)
             , session(session)
@@ -121,11 +148,10 @@ private:
         {
         }
 
-        Ref<Range> contextRange;
-        WritingTools::Session session;
-        int replacementLocationOffset { 0 };
+        virtual bool isProofreadingState() const { return true; };
     };
 
+private:
     template<WritingTools::Session::Type Type>
     struct StateFromSessionType { };
 
@@ -196,10 +222,17 @@ private:
     RefPtr<Document> document() const;
 
     WeakPtr<Page> m_page;
-
-    Variant<std::monostate, ProofreadingState, CompositionState> m_state;
+    std::unique_ptr<State> m_state;
 };
 
 } // namespace WebKit
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WritingToolsController::CompositionState)
+    static bool isType(const WebCore::WritingToolsController::State& state) { return state.isCompositionState(); }
+SPECIALIZE_TYPE_TRAITS_END()
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WritingToolsController::ProofreadingState)
+    static bool isType(const WebCore::WritingToolsController::State& state) { return state.isProofreadingState(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif

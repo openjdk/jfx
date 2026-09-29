@@ -36,10 +36,10 @@
 
 namespace WebCore {
 
-CSSFilterImageValue::CSSFilterImageValue(Ref<CSSValue>&& imageValueOrNone, CSS::FilterProperty&& filter)
+CSSFilterImageValue::CSSFilterImageValue(Ref<CSSValue>&& imageValueOrNone, CSS::Filter&& filter)
     : CSSValue { ClassType::FilterImage }
-    , m_imageValueOrNone { WTFMove(imageValueOrNone) }
-    , m_filter { WTFMove(filter) }
+    , m_imageValueOrNone { WTF::move(imageValueOrNone) }
+    , m_filter { WTF::move(filter) }
 {
 }
 
@@ -71,7 +71,10 @@ IterationStatus CSSFilterImageValue::customVisitChildren(NOESCAPE const Function
 
 RefPtr<StyleImage> CSSFilterImageValue::createStyleImage(const Style::BuilderState& state) const
 {
-    return StyleFilterImage::create(state.createStyleImage(m_imageValueOrNone), state.createFilterOperations(m_filter));
+    return StyleFilterImage::create(
+        state.createStyleImage(m_imageValueOrNone),
+        Style::toStyle(m_filter, state)
+    );
 }
 
 } // namespace WebCore

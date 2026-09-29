@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
- * Copyright (C) 2003-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -29,13 +29,15 @@
 #include "ElementInlines.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
+#include "HTMLSelectElement.h"
 #include "MutableStyleProperties.h"
 #include "NodeName.h"
+#include "Settings.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLHRElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLHRElement);
 
 using namespace HTMLNames;
 
@@ -53,6 +55,37 @@ Ref<HTMLHRElement> HTMLHRElement::create(Document& document)
 Ref<HTMLHRElement> HTMLHRElement::create(const QualifiedName& tagName, Document& document)
 {
     return adoptRef(*new HTMLHRElement(tagName, document));
+}
+
+auto HTMLHRElement::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree) -> InsertedIntoAncestorResult
+{
+    auto result = HTMLElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
+
+    if (!document().settings().htmlEnhancedSelectParsingEnabled() || m_ownerSelect)
+        return result;
+
+    if (RefPtr select = HTMLSelectElement::findOwnerSelect(protectedParentNode().get(), HTMLSelectElement::ExcludeOptGroup::Yes)) {
+        m_ownerSelect = select.get();
+        select->setRecalcListItems();
+    }
+
+    return result;
+}
+
+void HTMLHRElement::removedFromAncestor(RemovalType removalType, ContainerNode& oldParentOfRemovedTree)
+{
+    HTMLElement::removedFromAncestor(removalType, oldParentOfRemovedTree);
+
+    if (!document().settings().htmlEnhancedSelectParsingEnabled() || !m_ownerSelect)
+        return;
+
+    if (RefPtr select = HTMLSelectElement::findOwnerSelect(protectedParentNode().get(), HTMLSelectElement::ExcludeOptGroup::Yes)) {
+        ASSERT_UNUSED(select, select == m_ownerSelect.get());
+        return;
+    }
+
+    if (RefPtr select = std::exchange(m_ownerSelect, nullptr).get())
+        select->setRecalcListItems();
 }
 
 bool HTMLHRElement::hasPresentationalHintsForAttribute(const QualifiedName& name) const
@@ -97,7 +130,7 @@ void HTMLHRElement::collectPresentationalHintsForAttribute(const QualifiedName& 
             addPropertyToPresentationalHintStyle(style, CSSPropertyBorderStyle, CSSValueSolid);
             auto darkGrayValue = CSSValuePool::singleton().createColorValue(Color::darkGray);
             style.setProperty(CSSPropertyBorderColor, darkGrayValue);
-            style.setProperty(CSSPropertyBackgroundColor, WTFMove(darkGrayValue));
+            style.setProperty(CSSPropertyBackgroundColor, WTF::move(darkGrayValue));
         }
         break;
     case AttributeNames::sizeAttr:

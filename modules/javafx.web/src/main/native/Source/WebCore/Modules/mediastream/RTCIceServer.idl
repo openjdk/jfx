@@ -29,7 +29,8 @@
     Conditional=WEB_RTC,
     EnabledBySetting=PeerConnectionEnabled,
     JSGenerateToJSObject,
-    JSGenerateToNativeObject
+    JSGenerateToNativeObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary RTCIceServer {
     required (DOMString or sequence<DOMString>) urls;
     DOMString username;

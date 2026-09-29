@@ -41,7 +41,9 @@
     [ResultField=records] sequence<MutationRecord> takeRecords();
 };
 
-dictionary MutationObserverInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary MutationObserverInit {
     boolean childList = false;
     boolean attributes;
     boolean characterData;

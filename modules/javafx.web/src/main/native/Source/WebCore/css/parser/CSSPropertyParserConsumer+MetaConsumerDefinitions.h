@@ -53,10 +53,6 @@ public:
     static constexpr bool check() { return exists<T>(0); }
 };
 
-// Used to check that a specialization of ConsumerDefinition exists.
-
-
-
 // FIXME: Bailing on infinity during validation does not seem to match the intent of the spec,
 // though due to the use of "implementation-defined" it may still be conforming. The spec states:
 //
@@ -127,13 +123,13 @@ template<typename Raw> bool isValidCanonicalValue(Raw raw)
 // Shared clamping utility.
 template<typename Raw> Raw performParseTimeClamp(Raw raw)
 {
-    static_assert(raw.range.options != CSS::RangeOptions::Default);
+    static_assert(raw.range.clampOptions != CSS::RangeClampOptions::Default);
 
-    if constexpr (raw.range.options == CSS::RangeOptions::ClampLower)
+    if constexpr (raw.range.clampOptions == CSS::RangeClampOptions::ClampLower)
         return { std::max<typename Raw::ResolvedValueType>(raw.value, raw.range.min) };
-    else if constexpr (raw.range.options == CSS::RangeOptions::ClampUpper)
+    else if constexpr (raw.range.clampOptions == CSS::RangeClampOptions::ClampUpper)
         return { std::min<typename Raw::ResolvedValueType>(raw.value, raw.range.max) };
-    else if constexpr (raw.range.options == CSS::RangeOptions::ClampBoth)
+    else if constexpr (raw.range.clampOptions == CSS::RangeClampOptions::ClampBoth)
         return { std::clamp<typename Raw::ResolvedValueType>(raw.value, raw.range.min, raw.range.max) };
 }
 
@@ -153,7 +149,7 @@ template<typename Primitive, typename Validator> struct DimensionConsumer {
 
         auto rawValue = typename Primitive::Raw { *validatedUnit, token.numericValue() };
 
-        if constexpr (rawValue.range.options != CSS::RangeOptions::Default)
+        if constexpr (rawValue.range.clampOptions != CSS::RangeClampOptions::Default)
             rawValue = performParseTimeClamp(rawValue);
 
         if (!Validator::isValid(rawValue, options))
@@ -174,7 +170,7 @@ template<typename Primitive, typename Validator> struct PercentageConsumer {
 
         auto rawValue = typename Primitive::Raw { CSS::PercentageUnit::Percentage, range.peek().numericValue() };
 
-        if constexpr (rawValue.range.options != CSS::RangeOptions::Default)
+        if constexpr (rawValue.range.clampOptions != CSS::RangeClampOptions::Default)
             rawValue = performParseTimeClamp(rawValue);
 
         if (!Validator::isValid(rawValue, options))
@@ -195,7 +191,7 @@ template<typename Primitive, typename Validator> struct NumberConsumer {
 
         auto rawValue = typename Primitive::Raw { CSS::NumberUnit::Number, range.peek().numericValue() };
 
-        if constexpr (rawValue.range.options != CSS::RangeOptions::Default)
+        if constexpr (rawValue.range.clampOptions != CSS::RangeClampOptions::Default)
             rawValue = performParseTimeClamp(rawValue);
 
         if (!Validator::isValid(rawValue, options))
@@ -220,7 +216,7 @@ template<typename Primitive, typename Validator, auto unit> struct NumberConsume
 
         auto rawValue = typename Primitive::Raw { unit, numericValue };
 
-        if constexpr (rawValue.range.options != CSS::RangeOptions::Default)
+        if constexpr (rawValue.range.clampOptions != CSS::RangeClampOptions::Default)
             rawValue = performParseTimeClamp(rawValue);
 
         if (!Validator::isValid(rawValue, options))
@@ -240,7 +236,7 @@ template<typename Primitive> struct FunctionConsumerForCalcValues {
         ASSERT(range.peek().type() == FunctionToken);
 
         auto rangeCopy = range;
-        if (RefPtr value = CSSCalcValue::parse(rangeCopy, state, Primitive::category, Primitive::range, WTFMove(symbolsAllowed), options)) {
+        if (RefPtr value = CSSCalc::Value::parse(rangeCopy, state, Primitive::category, Primitive::range, WTF::move(symbolsAllowed), options)) {
             range = rangeCopy;
             return {{ value.releaseNonNull() }};
         }

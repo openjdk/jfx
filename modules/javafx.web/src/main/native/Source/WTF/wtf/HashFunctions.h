@@ -24,15 +24,9 @@
 #include <tuple>
 #include <wtf/GetPtr.h>
 #include <wtf/RefPtr.h>
+#include <wtf/StdLibExtras.h>
 
 namespace WTF {
-
-    template<size_t size> struct IntTypes;
-    template<> struct IntTypes<1> { typedef int8_t SignedType; typedef uint8_t UnsignedType; };
-    template<> struct IntTypes<2> { typedef int16_t SignedType; typedef uint16_t UnsignedType; };
-    template<> struct IntTypes<4> { typedef int32_t SignedType; typedef uint32_t UnsignedType; };
-    template<> struct IntTypes<8> { typedef int64_t SignedType; typedef uint64_t UnsignedType; };
-
     // integer hash function
 
     // Thomas Wang's 32 Bit Mix Function: http://www.cris.com/~Ttwang/tech/inthash.htm
@@ -100,13 +94,13 @@ namespace WTF {
     }
 
     template<typename T> struct IntHash {
-        static unsigned hash(T key) { return intHash(static_cast<typename IntTypes<sizeof(T)>::UnsignedType>(key)); }
+        static unsigned hash(T key) { return intHash(static_cast<typename SizedUnsignedTrait<sizeof(T)>::Type>(key)); }
         static bool equal(T a, T b) { return a == b; }
         static constexpr bool safeToCompareToEmptyOrDeleted = true;
     };
 
     template<typename T> struct FloatHash {
-        typedef typename IntTypes<sizeof(T)>::UnsignedType Bits;
+        typedef typename SizedUnsignedTrait<sizeof(T)>::Type Bits;
         static unsigned hash(T key)
         {
             return intHash(std::bit_cast<Bits>(key));
@@ -141,10 +135,10 @@ namespace WTF {
         static bool equal(std::add_const_t<UnderlyingType>* a, std::add_const_t<UnderlyingType>* b) { return a == b; }
         static constexpr bool safeToCompareToEmptyOrDeleted = true;
 
-        static unsigned hash(const T& key) { return hash(getPtr(key)); }
-        static bool equal(const T& a, const T& b) { return getPtr(a) == getPtr(b); }
-        static bool equal(std::add_const_t<UnderlyingType>* a, const T& b) { return a == getPtr(b); }
-        static bool equal(const T& a, std::add_const_t<UnderlyingType>* b) { return getPtr(a) == b; }
+        static unsigned hash(const T& key) requires(!std::is_convertible_v<const T&, std::add_const_t<UnderlyingType>*>) { return hash(getPtr(key)); }
+        static bool equal(const T& a, const T& b) requires(!std::is_convertible_v<const T&, std::add_const_t<UnderlyingType>*>) { return getPtr(a) == getPtr(b); }
+        static bool equal(std::add_const_t<UnderlyingType>* a, const T& b) requires(!std::is_convertible_v<const T&, std::add_const_t<UnderlyingType>*>) { return a == getPtr(b); }
+        static bool equal(const T& a, std::add_const_t<UnderlyingType>* b) requires(!std::is_convertible_v<const T&, std::add_const_t<UnderlyingType>*>) { return getPtr(a) == b; }
     };
 
     template<typename T> struct PtrHash : PtrHashBase<T, IsSmartPtr<T>::value> {
@@ -179,28 +173,32 @@ namespace WTF {
     template<typename... Types>
     struct TupleHash {
         template<size_t I = 0>
-        static typename std::enable_if<I < sizeof...(Types) - 1, unsigned>::type hash(const std::tuple<Types...>& t)
+            requires (I < sizeof...(Types) - 1)
+        static unsigned hash(const std::tuple<Types...>& t)
         {
             using IthTupleElementType = typename std::tuple_element<I, typename std::tuple<Types...>>::type;
             return pairIntHash(DefaultHash<IthTupleElementType>::hash(std::get<I>(t)), hash<I + 1>(t));
         }
 
         template<size_t I = 0>
-        static typename std::enable_if<I == sizeof...(Types) - 1, unsigned>::type hash(const std::tuple<Types...>& t)
+            requires (I == sizeof...(Types) - 1)
+        static unsigned hash(const std::tuple<Types...>& t)
         {
             using IthTupleElementType = typename std::tuple_element<I, typename std::tuple<Types...>>::type;
             return DefaultHash<IthTupleElementType>::hash(std::get<I>(t));
         }
 
         template<size_t I = 0>
-        static typename std::enable_if<I < sizeof...(Types) - 1, bool>::type equal(const std::tuple<Types...>& a, const std::tuple<Types...>& b)
+            requires (I < sizeof...(Types) - 1)
+        static bool equal(const std::tuple<Types...>& a, const std::tuple<Types...>& b)
         {
             using IthTupleElementType = typename std::tuple_element<I, typename std::tuple<Types...>>::type;
             return DefaultHash<IthTupleElementType>::equal(std::get<I>(a), std::get<I>(b)) && equal<I + 1>(a, b);
         }
 
         template<size_t I = 0>
-        static typename std::enable_if<I == sizeof...(Types) - 1, bool>::type equal(const std::tuple<Types...>& a, const std::tuple<Types...>& b)
+            requires (I == sizeof...(Types) - 1)
+        static bool equal(const std::tuple<Types...>& a, const std::tuple<Types...>& b)
         {
             using IthTupleElementType = typename std::tuple_element<I, typename std::tuple<Types...>>::type;
             return DefaultHash<IthTupleElementType>::equal(std::get<I>(a), std::get<I>(b));
@@ -264,6 +262,26 @@ namespace WTF {
 
     template<typename T, typename U> struct DefaultHash<std::pair<T, U>> : PairHash<T, U> { };
     template<typename... Types> struct DefaultHash<std::tuple<Types...>> : TupleHash<Types...> { };
+
+    template<typename T> constexpr bool isSafeToCompareToHashTableEmptyOrDeletedValue() {
+        if constexpr (requires { T::safeToCompareToHashTableEmptyOrDeletedValue; }) {
+            static_assert(std::same_as<decltype(T::safeToCompareToHashTableEmptyOrDeletedValue), const bool>);
+            return T::safeToCompareToHashTableEmptyOrDeletedValue;
+        } else
+            return false;
+    }
+
+    // Default hash for any type with a hash() member function and an equality operator.
+    template<typename T> concept HashableWithMemberFunction = requires(const T& t) {
+        requires std::equality_comparable<T>;
+        { t.hash() } -> std::same_as<unsigned>;
+    };
+    template<HashableWithMemberFunction T> struct MemberBasedHash {
+        static unsigned hash(const T& key) { return key.hash(); }
+        static bool equal(const T& a, const T& b) { return a == b; }
+        static constexpr bool safeToCompareToEmptyOrDeleted = isSafeToCompareToHashTableEmptyOrDeletedValue<T>();
+    };
+    template<HashableWithMemberFunction T> struct DefaultHash<T> : MemberBasedHash<T> { };
 
 } // namespace WTF
 

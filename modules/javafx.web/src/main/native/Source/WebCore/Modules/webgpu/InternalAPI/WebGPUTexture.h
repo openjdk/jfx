@@ -44,7 +44,7 @@ public:
 
     void setLabel(String&& label)
     {
-        m_label = WTFMove(label);
+        m_label = WTF::move(label);
         setLabelInternal(m_label);
     }
 
@@ -52,6 +52,9 @@ public:
 
     virtual void destroy() = 0;
     virtual void undestroy() = 0;
+
+    virtual bool isRemoteTextureProxy() const { return false; }
+    virtual bool isTextureImpl() const { return false; }
 
 protected:
     Texture() = default;

@@ -27,7 +27,7 @@
 
 #if ENABLE(NOTIFICATIONS)
 
-#include "Page.h"
+#include <WebCore/Page.h>
 #include <wtf/Forward.h>
 #include <wtf/TZoneMalloc.h>
 
@@ -41,16 +41,22 @@ public:
     explicit NotificationController(NotificationClient*);
     ~NotificationController();
 
-    WEBCORE_EXPORT static ASCIILiteral supplementName();
-    static NotificationController* from(Page* page) { return static_cast<NotificationController*>(Supplement<Page>::from(page, supplementName())); }
+    static ASCIILiteral supplementName() { return "NotificationController"_s; }
+    static NotificationController* from(Page* page) { return downcast<NotificationController>(Supplement<Page>::from(page, supplementName())); }
     WEBCORE_EXPORT static NotificationClient* clientFrom(Page&);
 
     NotificationClient& client() { return m_client; }
 
 private:
+    bool isNotificationController() const final { return true; }
+
     NotificationClient& m_client;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::NotificationController)
+    static bool isType(const WebCore::SupplementBase& supplement) { return supplement.isNotificationController(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(NOTIFICATIONS)

@@ -41,7 +41,7 @@ struct DOMPointInit;
 template<typename> class ExceptionOr;
 
 class WebXRRigidTransform : public RefCountedAndCanMakeWeakPtr<WebXRRigidTransform> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(WebXRRigidTransform, WEBCORE_EXPORT);
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(WebXRRigidTransform, WEBCORE_EXPORT);
 public:
     static Ref<WebXRRigidTransform> create();
     static Ref<WebXRRigidTransform> create(const TransformationMatrix&);

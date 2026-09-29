@@ -63,9 +63,10 @@ void DatabaseThread::start()
     if (m_thread)
         return;
 
-    m_thread = Thread::create("WebCore: Database"_s, [this] {
-        databaseThread();
-    });
+    lazyInitialize(m_thread, Thread::create("WebCore: Database"_s, [weakThis = ThreadSafeWeakPtr { *this }] {
+        if (RefPtr protectedThis = weakThis.get())
+            protectedThis->databaseThread();
+    }));
 }
 
 void DatabaseThread::requestTermination(DatabaseTaskSynchronizer* cleanupSync)
@@ -153,20 +154,20 @@ void DatabaseThread::recordDatabaseClosed(Database& database)
 void DatabaseThread::scheduleTask(std::unique_ptr<DatabaseTask>&& task)
 {
     ASSERT(!task->hasSynchronizer() || task->hasCheckedForTermination());
-    m_queue.append(WTFMove(task));
+    m_queue.append(WTF::move(task));
 }
 
 void DatabaseThread::scheduleImmediateTask(std::unique_ptr<DatabaseTask>&& task)
 {
     ASSERT(!task->hasSynchronizer() || task->hasCheckedForTermination());
-    m_queue.prepend(WTFMove(task));
+    m_queue.prepend(WTF::move(task));
 }
 
 void DatabaseThread::unscheduleDatabaseTasks(Database& database)
 {
     // The thread loop is running, sp some tasks for this database may still be executed. This is unavoidable.
-    m_queue.removeIf([&database] (const DatabaseTask& task) {
-        return &task.database() == &database;
+    m_queue.removeIf([&database](const DatabaseTask& task) {
+        return task.database().ptr() == &database;
     });
 }
 

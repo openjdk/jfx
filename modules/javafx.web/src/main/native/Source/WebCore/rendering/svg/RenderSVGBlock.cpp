@@ -24,21 +24,22 @@
 
 #include "LegacyRenderSVGResource.h"
 #include "RenderBoxModelObjectInlines.h"
+#include "RenderElementInlines.h"
 #include "RenderObjectInlines.h"
 #include "RenderSVGBlockInlines.h"
 #include "RenderView.h"
 #include "SVGGraphicsElement.h"
 #include "SVGRenderSupport.h"
 #include "SVGResourcesCache.h"
-#include "StyleInheritedData.h"
+#include "Settings.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderSVGBlock);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderSVGBlock);
 
 RenderSVGBlock::RenderSVGBlock(Type type, SVGGraphicsElement& element, RenderStyle&& style)
-    : RenderBlockFlow(type, element, WTFMove(style), BlockFlowFlag::IsSVGBlock)
+    : RenderBlockFlow(type, element, WTF::move(style), BlockFlowFlag::IsSVGBlock)
 {
 }
 
@@ -100,14 +101,14 @@ void RenderSVGBlock::willBeDestroyed()
     RenderBlockFlow::willBeDestroyed();
 }
 
-void RenderSVGBlock::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
+void RenderSVGBlock::styleDidChange(Style::Difference diff, const RenderStyle* oldStyle)
 {
     if (document().settings().layerBasedSVGEngineEnabled()) {
         RenderBlockFlow::styleDidChange(diff, oldStyle);
         return;
     }
 
-    if (diff == StyleDifference::Layout)
+    if (diff == Style::DifferenceResult::Layout)
         invalidateCachedBoundaries();
     RenderBlockFlow::styleDidChange(diff, oldStyle);
     SVGResourcesCache::clientStyleChanged(*this, diff, oldStyle, style());
@@ -123,9 +124,9 @@ FloatRect RenderSVGBlock::referenceBoxRect(CSSBoxType boxType) const
     return RenderBlockFlow::referenceBoxRect(boxType);
 }
 
-void RenderSVGBlock::computeOverflow(LayoutUnit oldClientAfterEdge, bool recomputeFloats)
+void RenderSVGBlock::computeOverflow(LayoutRect contentArea, OptionSet<ComputeOverflowOptions> options)
 {
-    RenderBlockFlow::computeOverflow(oldClientAfterEdge, recomputeFloats);
+    RenderBlockFlow::computeOverflow(contentArea, options);
 
     if (document().settings().layerBasedSVGEngineEnabled())
         return;
@@ -135,7 +136,7 @@ void RenderSVGBlock::computeOverflow(LayoutUnit oldClientAfterEdge, bool recompu
         return;
 
     auto borderRect = borderBoxRect();
-    Style::adjustRectForShadow(borderRect, textShadow);
+    Style::adjustRectForShadow(borderRect, textShadow, style().usedZoomForLength());
     addVisualOverflow(snappedIntRect(borderRect));
 }
 

@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "ActiveDOMObject.h"
-#include "BufferSource.h"
-#include "FileSystemSyncAccessHandleIdentifier.h"
-#include "IDLTypes.h"
+#include <WebCore/ActiveDOMObject.h>
+#include <WebCore/BufferSource.h>
+#include <WebCore/FileSystemSyncAccessHandleIdentifier.h>
+#include <WebCore/IDLTypes.h>
 #include <wtf/Deque.h>
 #include <wtf/FileHandle.h>
 #include <wtf/FileSystem.h>
@@ -41,7 +41,7 @@ class FileSystemFileHandle;
 template<typename> class DOMPromiseDeferred;
 template<typename> class ExceptionOr;
 
-class FileSystemSyncAccessHandle : public RefCountedAndCanMakeWeakPtr<FileSystemSyncAccessHandle>, public ActiveDOMObject {
+class FileSystemSyncAccessHandle : public RefCounted<FileSystemSyncAccessHandle>, public ActiveDOMObject {
 public:
     void ref() const final { RefCounted::ref(); }
     void deref() const final { RefCounted::deref(); }

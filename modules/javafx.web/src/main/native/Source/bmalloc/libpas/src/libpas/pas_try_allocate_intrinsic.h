@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 Apple Inc. All rights reserved.
+ * Copyright (c) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,8 @@
 #include "pas_heap.h"
 #include "pas_intrinsic_heap_support.h"
 #include "pas_try_allocate_common.h"
+
+#if LIBPAS_ENABLED
 
 PAS_BEGIN_EXTERN_C;
 
@@ -110,7 +112,7 @@ pas_try_allocate_intrinsic_impl_casual_case(
     if (!pas_is_power_of_2(alignment))
         return pas_allocation_result_create_failure();
 
-    if (PAS_UNLIKELY(pas_system_heap_is_enabled(config.kind)))
+    if (PAS_UNLIKELY(pas_system_heap_should_supplant_bmalloc(config.kind)))
         return pas_system_heap_allocate(size, alignment, allocation_mode);
 
     if (verbose)
@@ -332,5 +334,5 @@ typedef pas_allocation_result (*pas_try_allocate_intrinsic_for_realloc)(size_t s
 
 PAS_END_EXTERN_C;
 
+#endif /* LIBPAS_ENABLED */
 #endif /* PAS_TRY_ALLOCATE_INTRINSIC_H */
-

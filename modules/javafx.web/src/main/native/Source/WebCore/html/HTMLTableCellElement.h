@@ -25,12 +25,12 @@
 
 #pragma once
 
-#include "HTMLTablePartElement.h"
+#include <WebCore/HTMLTablePartElement.h>
 
 namespace WebCore {
 
 class HTMLTableCellElement final : public HTMLTablePartElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLTableCellElement);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLTableCellElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLTableCellElement);
 public:
     // These limits are defined in the HTML specification:

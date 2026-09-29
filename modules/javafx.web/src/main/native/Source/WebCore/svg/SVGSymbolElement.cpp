@@ -23,14 +23,16 @@
 #include "SVGSymbolElement.h"
 
 #include "LegacyRenderSVGHiddenContainer.h"
+#include "NodeDocument.h"
 #include "RenderSVGHiddenContainer.h"
 #include "SVGFitToViewBox.h"
 #include "SVGNames.h"
+#include "Settings.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGSymbolElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SVGSymbolElement);
 
 inline SVGSymbolElement::SVGSymbolElement(const QualifiedName& tagName, Document& document)
     : SVGGraphicsElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
@@ -58,8 +60,8 @@ bool SVGSymbolElement::selfHasRelativeLengths() const
 RenderPtr<RenderElement> SVGSymbolElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
     if (document().settings().layerBasedSVGEngineEnabled())
-        return createRenderer<RenderSVGHiddenContainer>(RenderObject::Type::SVGHiddenContainer, *this, WTFMove(style));
-    return createRenderer<LegacyRenderSVGHiddenContainer>(RenderObject::Type::LegacySVGHiddenContainer, *this, WTFMove(style));
+        return createRenderer<RenderSVGHiddenContainer>(RenderObject::Type::SVGHiddenContainer, *this, WTF::move(style));
+    return createRenderer<LegacyRenderSVGHiddenContainer>(RenderObject::Type::LegacySVGHiddenContainer, *this, WTF::move(style));
 }
 
 }

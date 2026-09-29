@@ -30,15 +30,11 @@
 
 #include "pas_probabilistic_guard_malloc_allocator.h"
 
-#include "iso_heap_config.h"
 #include "pas_heap.h"
-#include "pas_large_heap.h"
 #include "pas_large_utility_free_heap.h"
-#include "pas_ptr_hash_map.h"
+#include "pas_mte.h"
 #include "pas_random.h"
 #include "pas_utility_heap.h"
-#include "pas_utility_heap_support.h"
-#include "pas_utils.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -74,7 +70,7 @@ bool pas_probabilistic_guard_malloc_is_initialized = false;
  * Flag to indicate if PGM has enabled at all for this process,
  * even if it been subsequently disabled, or no guarded allocations have been made
 */
-static bool pas_probabilistic_guard_malloc_has_been_used = false;
+bool pas_probabilistic_guard_malloc_has_been_used = false;
 
 /*
  * the hash map is used to keep track of all pgm allocations
@@ -216,13 +212,14 @@ pas_allocation_result pas_probabilistic_guard_malloc_allocate(pas_large_heap* la
 #endif
 
     PAS_PROFILE(PGM_ALLOCATE, heap_config, key);
+    PAS_MTE_HANDLE(PGM_ALLOCATE, heap_config, key);
 
     /* create struct to hold hash map value */
     pas_pgm_storage* value = pas_utility_heap_try_allocate(sizeof(pas_pgm_storage), "pas_pgm_hash_map_VALUE");
     PAS_ASSERT(value);
 
     value->alloc_backtrace              = pas_utility_heap_allocate(sizeof(pas_backtrace_metadata), "pas_alloc_backtrace_metadata");
-    value->alloc_backtrace->frame_size  = backtrace(value->alloc_backtrace->backtrace_buffer, PGM_BACKTRACE_MAX_FRAMES);
+    value->alloc_backtrace->frame_size  = backtrace(value->alloc_backtrace->backtrace_buffer, PAS_PGM_BACKTRACE_MAX_FRAMES);
     value->dealloc_backtrace            = NULL;
     value->mem_to_waste              = mem_to_waste;
     value->size_of_data_pages          = mem_to_alloc - (lower_guard_size + upper_guard_size);
@@ -265,6 +262,7 @@ void pas_probabilistic_guard_malloc_deallocate(void* mem)
 
     uintptr_t key = (uintptr_t)mem;
     PAS_PROFILE(PGM_DEALLOCATE, key);
+    PAS_MTE_HANDLE(PGM_DEALLOCATE, key);
 
     pas_ptr_hash_map_entry* entry = pas_ptr_hash_map_find(&pas_pgm_hash_map, (void*)key);
     if (!entry || !entry->value)
@@ -299,7 +297,7 @@ void pas_probabilistic_guard_malloc_deallocate(void* mem)
 
     /* grab some memory for dealloc backtrace and capture deallocation backtrace */
     value->dealloc_backtrace = pas_utility_heap_allocate(sizeof(pas_backtrace_metadata), "pas_dealloc_backtrace_metadata");
-    value->dealloc_backtrace->frame_size = backtrace(value->dealloc_backtrace->backtrace_buffer, PGM_BACKTRACE_MAX_FRAMES);
+    value->dealloc_backtrace->frame_size = backtrace(value->dealloc_backtrace->backtrace_buffer, PAS_PGM_BACKTRACE_MAX_FRAMES);
 
     /*
      * ensure physical addresses are released
@@ -333,7 +331,6 @@ void pas_probabilistic_guard_malloc_deallocate(void* mem)
         pas_probabilistic_guard_malloc_debug_info((void*)key, value, "Deallocating Memory");
 
     pas_probabilistic_guard_malloc_can_use = true;
-    pas_probabilistic_guard_malloc_has_been_used = true;
 }
 
 bool pas_probabilistic_guard_malloc_check_exists(uintptr_t mem)
@@ -391,14 +388,6 @@ pas_ptr_hash_map_entry* pas_probabilistic_guard_malloc_get_metadata_array(void)
     return pgm_metadata_vector;
 }
 
-/*
- * Function to be called to check if PGM has been enabled on this process at any point,
- * regardless of if it has since been disabled, or if any guarded allocations were made.
-*/
-bool pas_probabilistic_guard_malloc_enabled_on_process(void)
-{
-    return pas_probabilistic_guard_malloc_has_been_used;
-}
 
 /*
  * During heap creation we want to check whether we should enable PGM.
@@ -425,6 +414,7 @@ void pas_probabilistic_guard_malloc_initialize_pgm(void)
     if (!pas_probabilistic_guard_malloc_is_initialized) {
         pas_probabilistic_guard_malloc_is_initialized = true;
             pas_probabilistic_guard_malloc_can_use = false;
+        pas_probabilistic_guard_malloc_has_been_used = true;
         }
 }
 

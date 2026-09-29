@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "Opcode.h"
-#include "ValueProfile.h"
+#include <JavaScriptCore/Opcode.h>
+#include <JavaScriptCore/ValueProfile.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 

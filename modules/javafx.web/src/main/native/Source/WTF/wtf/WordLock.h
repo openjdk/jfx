@@ -29,6 +29,8 @@
 #include <wtf/Compiler.h>
 #include <wtf/Locker.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/ThreadSafetyAnalysis.h>
+#include <wtf/ThreadSanitizerSupport.h>
 
 namespace TestWebKitAPI {
 struct LockInspector;
@@ -45,24 +47,27 @@ namespace WTF {
 // PrintStream uses this so that ParkingLot and Lock can use PrintStream. This means that if you
 // try to use dataLog to debug this code, you will have a bad time.
 
-class WordLock final {
+class WTF_CAPABILITY_LOCK WordLock final {
     WTF_MAKE_NONCOPYABLE(WordLock);
     WTF_DEPRECATED_MAKE_FAST_ALLOCATED(WordLock);
 public:
     constexpr WordLock() = default;
 
-    void lock()
+    void lock() WTF_ACQUIRES_LOCK()
     {
         if (m_word.compareExchangeWeak(0, isLockedBit, std::memory_order_acquire)) [[likely]] {
             // WordLock acquired!
+            TSAN_ANNOTATE_HAPPENS_AFTER(this);
             return;
         }
 
         lockSlow();
+        TSAN_ANNOTATE_HAPPENS_AFTER(this);
     }
 
-    void unlock()
+    void unlock() WTF_RELEASES_LOCK()
     {
+        TSAN_ANNOTATE_HAPPENS_BEFORE(this);
         if (m_word.compareExchangeWeak(isLockedBit, 0, std::memory_order_release)) [[likely]] {
             // WordLock released, and nobody was waiting!
             return;

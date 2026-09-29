@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "ActiveDOMCallback.h"
-#include "CallbackResult.h"
+#include <WebCore/ActiveDOMCallback.h>
+#include <WebCore/CallbackResult.h>
 #include <wtf/RefCounted.h>
 
 namespace WebCore {
@@ -36,6 +36,10 @@ class GeolocationPositionError;
 class PositionErrorCallback : public RefCounted<PositionErrorCallback>, public ActiveDOMCallback {
 public:
     using ActiveDOMCallback::ActiveDOMCallback;
+
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     virtual CallbackResult<void> invoke(GeolocationPositionError&) = 0;
     virtual CallbackResult<void> invokeRethrowingException(GeolocationPositionError&) = 0;

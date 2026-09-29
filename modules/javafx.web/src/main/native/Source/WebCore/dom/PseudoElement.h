@@ -26,22 +26,22 @@
 
 #pragma once
 
-#include "Element.h"
+#include <WebCore/Element.h>
 #include <wtf/Forward.h>
 
 namespace WebCore {
 
 class PseudoElement final : public Element {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(PseudoElement);
+    WTF_MAKE_TZONE_ALLOCATED(PseudoElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(PseudoElement);
 public:
-    static Ref<PseudoElement> create(Element& host, PseudoId);
+    static Ref<PseudoElement> create(Element& host, PseudoElementType);
     virtual ~PseudoElement();
 
     Element* hostElement() const { return m_hostElement.get(); }
     void clearHostElement();
 
-    PseudoId pseudoId() const { return m_pseudoId; }
+    PseudoElementType pseudoElementType() const { return m_pseudoElementType; }
 
     bool rendererIsNeeded(const RenderStyle&) override;
 
@@ -49,10 +49,10 @@ public:
     bool canContainRangeEndPoint() const override { return false; }
 
 private:
-    PseudoElement(Element&, PseudoId);
+    PseudoElement(Element&, PseudoElementType);
 
     WeakPtr<Element, WeakPtrImplWithEventTargetData> m_hostElement;
-    PseudoId m_pseudoId;
+    PseudoElementType m_pseudoElementType;
 };
 
 const QualifiedName& pseudoElementTagName();

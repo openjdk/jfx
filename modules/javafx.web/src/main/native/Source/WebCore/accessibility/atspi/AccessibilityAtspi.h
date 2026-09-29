@@ -20,6 +20,7 @@
 #pragma once
 
 #if USE(ATSPI)
+#include <wtf/CanMakeWeakPtr.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/FastMalloc.h>
 #include <wtf/HashMap.h>
@@ -41,7 +42,7 @@ class AccessibilityRootAtspi;
 enum class AccessibilityRole : uint8_t;
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(AccessibilityAtspi);
-class AccessibilityAtspi {
+class AccessibilityAtspi : public CanMakeWeakPtr<AccessibilityAtspi> {
     WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(AccessibilityAtspi, AccessibilityAtspi);
     WTF_MAKE_NONCOPYABLE(AccessibilityAtspi);
     friend NeverDestroyed<AccessibilityAtspi>;
@@ -53,6 +54,7 @@ public:
     void deref() const { }
 
     void connect(const String&, const String&);
+    WEBCORE_EXPORT void disconnect();
 
     const char* uniqueName() const;
     GVariant* nullReference() const;
@@ -135,6 +137,7 @@ private:
 
     String m_busName;
     bool m_isConnecting { false };
+    unsigned m_nameOwnerId { 0 };
     GRefPtr<GDBusConnection> m_connection;
     GRefPtr<GDBusProxy> m_registry;
     Vector<PendingRootRegistration> m_pendingRootRegistrations;

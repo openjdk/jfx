@@ -21,10 +21,11 @@
 
 #pragma once
 
-#include "HitTestRequest.h"
-#include "RenderBoxModelObject.h"
-#include "RenderText.h"
-#include "TextFlags.h"
+#include <WebCore/HitTestRequest.h>
+#include <WebCore/RenderBoxModelObject.h>
+#include <WebCore/RenderStyle+GettersInlines.h>
+#include <WebCore/RenderText.h>
+#include <WebCore/TextFlags.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/TypeCasts.h>
 #include <wtf/WeakPtr.h>
@@ -38,7 +39,7 @@ class LegacyRootInlineBox;
 // LegacyInlineBox represents a rectangle that occurs on a line. It corresponds to
 // some RenderObject (i.e., it represents a portion of that RenderObject).
 class LegacyInlineBox {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(LegacyInlineBox);
+    WTF_MAKE_TZONE_ALLOCATED(LegacyInlineBox);
 public:
     virtual ~LegacyInlineBox();
 

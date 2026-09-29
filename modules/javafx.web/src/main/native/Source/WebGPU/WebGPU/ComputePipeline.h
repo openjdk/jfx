@@ -52,7 +52,7 @@ class ComputePipeline : public RefCountedAndCanMakeWeakPtr<ComputePipeline>, pub
 public:
     static Ref<ComputePipeline> create(id<MTLComputePipelineState> computePipelineState, Ref<PipelineLayout>&& pipelineLayout, MTLSize threadsPerThreadgroup, BufferBindingSizesForPipeline&& minimumBufferSizes, uint64_t uniqueId, Device& device)
     {
-        return adoptRef(*new ComputePipeline(computePipelineState, WTFMove(pipelineLayout), threadsPerThreadgroup, WTFMove(minimumBufferSizes), uniqueId, device));
+        return adoptRef(*new ComputePipeline(computePipelineState, WTF::move(pipelineLayout), threadsPerThreadgroup, WTF::move(minimumBufferSizes), uniqueId, device));
     }
     static Ref<ComputePipeline> createInvalid(Device& device)
     {

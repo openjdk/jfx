@@ -18,8 +18,6 @@
 #include <arm_neon.h>
 #endif
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace fast_float {
 
 template <typename UC>
@@ -37,6 +35,8 @@ template <typename UC>
 fastfloat_really_inline constexpr bool is_integer(UC c) noexcept {
   return !(c > UC('9') || c < UC('0'));
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 // Read 8 UC into a u64. Truncates UC if not char.
 template <typename UC>
@@ -58,6 +58,8 @@ uint64_t read8_to_u64(const UC *chars) {
 #endif
   return val;
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #ifdef FASTFLOAT_SSE2
 
@@ -111,6 +113,8 @@ uint64_t simd_read8_to_u64(UC const*) {
 }
 
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 fastfloat_really_inline FASTFLOAT_CONSTEXPR20
 void write_u64(uint8_t *chars, uint64_t val) {
   if (cpp20_and_in_constexpr()) {
@@ -127,6 +131,8 @@ void write_u64(uint8_t *chars, uint64_t val) {
 #endif
   ::memcpy(chars, &val, sizeof(uint64_t));
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 // credit  @aqrit
 fastfloat_really_inline FASTFLOAT_CONSTEXPR14
@@ -214,6 +220,8 @@ bool simd_parse_if_eight_digits_unrolled(UC const*, uint64_t&) {
 }
 
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 template <typename UC, FASTFLOAT_ENABLE_IF(!std::is_same<UC, char>::value)>
 fastfloat_really_inline FASTFLOAT_CONSTEXPR20
 void loop_parse_if_eight_digits(const UC*& p, const UC* const pend, uint64_t& i) {
@@ -234,6 +242,8 @@ void loop_parse_if_eight_digits(const char*& p, const char* const pend, uint64_t
   }
 }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+
 template <typename UC>
 struct parsed_number_string_t {
   int64_t exponent{0};
@@ -243,12 +253,14 @@ struct parsed_number_string_t {
   bool valid{false};
   bool too_many_digits{false};
   // contains the range of the significant digits
-  span<const UC> integer{};  // non-nullable
-  span<const UC> fraction{}; // nullable
+  std::span<const UC> integer{};  // non-nullable
+  std::span<const UC> fraction{}; // nullable
 };
 
-using byte_span = span<const char>;
+using byte_span = std::span<const char>;
 using parsed_number_string = parsed_number_string_t<char>;
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 // Assuming that you use no more than 19 digits, this will
 // parse an ASCII string.
@@ -288,7 +300,7 @@ parsed_number_string_t<UC> parse_number_string(UC const *p, UC const * pend, par
   }
   UC const * const end_of_integer_part = p;
   int64_t digit_count = int64_t(end_of_integer_part - start_digits);
-  answer.integer = span<const UC>(start_digits, size_t(digit_count));
+  answer.integer = std::span<const UC>(start_digits, size_t(digit_count));
   int64_t exponent = 0;
   if ((p != pend) && (*p == decimal_point)) {
     ++p;
@@ -303,7 +315,7 @@ parsed_number_string_t<UC> parse_number_string(UC const *p, UC const * pend, par
       i = i * 10 + digit; // in rare cases, this will overflow, but that's ok
     }
     exponent = before - p;
-    answer.fraction = span<const UC>(before, size_t(p - before));
+    answer.fraction = std::span<const UC>(before, size_t(p - before));
     digit_count -= exponent;
   }
   // we must have encountered at least one integer!
@@ -368,8 +380,8 @@ parsed_number_string_t<UC> parse_number_string(UC const *p, UC const * pend, par
       // We don't need to check if is_integer, since we use the
       // pre-tokenized spans from above.
       i = 0;
-      p = answer.integer.ptr;
-      UC const* int_end = p + answer.integer.len();
+      p = answer.integer.data();
+      UC const* int_end = p + answer.integer.size();
       const uint64_t minimal_nineteen_digit_integer{ 1000000000000000000 };
       while ((i < minimal_nineteen_digit_integer) && (p != int_end)) {
         i = i * 10 + uint64_t(*p - UC('0'));
@@ -379,13 +391,13 @@ parsed_number_string_t<UC> parse_number_string(UC const *p, UC const * pend, par
         exponent = end_of_integer_part - p + exp_number;
       }
       else { // We have a value with a fractional component.
-          p = answer.fraction.ptr;
-        UC const* frac_end = p + answer.fraction.len();
+        p = answer.fraction.data();
+        UC const* frac_end = p + answer.fraction.size();
         while ((i < minimal_nineteen_digit_integer) && (p != frac_end)) {
           i = i * 10 + uint64_t(*p - UC('0'));
             ++p;
           }
-          exponent = answer.fraction.ptr - p + exp_number;
+        exponent = answer.fraction.data() - p + exp_number;
       }
       // We have now corrected both exponent and i, to a truncated value
     }
@@ -395,8 +407,8 @@ parsed_number_string_t<UC> parse_number_string(UC const *p, UC const * pend, par
   return answer;
 }
 
-} // namespace fast_float
-
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+
+} // namespace fast_float
 
 #endif

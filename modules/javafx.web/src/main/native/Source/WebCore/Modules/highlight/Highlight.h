@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "Position.h"
-#include "Range.h"
-#include "StaticRange.h"
+#include <WebCore/Position.h>
+#include <WebCore/Range.h>
+#include <WebCore/StaticRange.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
 
 namespace WebCore {
@@ -38,18 +38,18 @@ class HighlightRange : public RefCountedAndCanMakeWeakPtr<HighlightRange> {
 public:
     static Ref<HighlightRange> create(Ref<AbstractRange>&& range)
     {
-        return adoptRef(*new HighlightRange(WTFMove(range)));
+        return adoptRef(*new HighlightRange(WTF::move(range)));
     }
 
     AbstractRange& range() const { return m_range.get(); }
     const Position& startPosition() const { return m_startPosition; }
-    void setStartPosition(Position&& startPosition) { m_startPosition = WTFMove(startPosition); }
+    void setStartPosition(Position&& startPosition) { m_startPosition = WTF::move(startPosition); }
     const Position& endPosition() const { return m_endPosition; }
-    void setEndPosition(Position&& endPosition) { m_endPosition = WTFMove(endPosition); }
+    void setEndPosition(Position&& endPosition) { m_endPosition = WTF::move(endPosition); }
 
 private:
     explicit HighlightRange(Ref<AbstractRange>&& range)
-        : m_range(WTFMove(range))
+        : m_range(WTF::move(range))
     {
         if (RefPtr liveRange = dynamicDowncast<Range>(m_range))
             liveRange->didAssociateWithHighlight();

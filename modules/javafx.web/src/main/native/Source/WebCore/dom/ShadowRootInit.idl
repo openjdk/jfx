@@ -25,12 +25,14 @@
 
 // https://dom.spec.whatwg.org/#dictdef-shadowrootinit
 
-dictionary ShadowRootInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary ShadowRootInit {
     required ShadowRootMode mode;
     boolean delegatesFocus = false;
     boolean clonable = false;
     boolean serializable = false;
     SlotAssignmentMode slotAssignment = "named";
-    [EnabledBySetting=ScopedCustomElementRegistryEnabled] CustomElementRegistry? customElementRegistry = null;
+    [EnabledBySetting=ScopedCustomElementRegistryEnabled] CustomElementRegistry? customElementRegistry;
     [EnabledBySetting=ShadowRootReferenceTargetEnabled] DOMString referenceTarget;
 };

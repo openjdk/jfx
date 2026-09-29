@@ -130,7 +130,7 @@ void NameManglerVisitor::visit(AST::Structure& structure)
         fieldMap.add(member.name(), mangledName);
         m_shaderModule.replace(&member.name(), AST::Identifier::makeWithSpan(member.name().span(), mangledName.toString()));
     }
-    auto result = m_structFieldMapping.add(&structure, WTFMove(fieldMap));
+    auto result = m_structFieldMapping.add(&structure, WTF::move(fieldMap));
     ASSERT_UNUSED(result, result.isNewEntry);
 }
 

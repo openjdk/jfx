@@ -64,7 +64,7 @@ public:
     const CallGraph& callGraph() const { return *m_callGraph; }
     void setCallGraph(CallGraph&& callGraph)
     {
-        m_callGraph = WTFMove(callGraph);
+        m_callGraph = WTF::move(callGraph);
     }
 
     bool usesExternalTextures() const { return m_usesExternalTextures; }
@@ -157,7 +157,7 @@ public:
         RELEASE_ASSERT(current->kind() == replacement.kind());
         std::swap(*current, replacement);
         m_replacements.append([current, replacement = std::forward<T>(replacement)]() mutable {
-            std::exchange(*current, WTFMove(replacement));
+            std::exchange(*current, WTF::move(replacement));
         });
     }
 
@@ -165,8 +165,8 @@ public:
     std::enable_if_t<std::is_fundamental_v<T> || std::is_enum_v<T>, void> replace(T* current, T&& replacement)
     {
         std::swap(*current, replacement);
-        m_replacements.append([current, replacement = WTFMove(replacement)]() mutable {
-            std::exchange(*current, WTFMove(replacement));
+        m_replacements.append([current, replacement = WTF::move(replacement)]() mutable {
+            std::exchange(*current, WTF::move(replacement));
         });
     }
 
@@ -175,11 +175,11 @@ public:
     {
         m_replacements.append([&current, currentCopy = current]() mutable {
             std::bit_cast<AST::IdentityExpression*>(&current)->~IdentityExpression();
-            new (&current) CurrentType(WTFMove(currentCopy));
+            new (std::bit_cast<void*>(&current)) CurrentType(WTF::move(currentCopy));
         });
 
         current.~CurrentType();
-        new (&current) AST::IdentityExpression(replacement.span(), replacement);
+        new (std::bit_cast<void*>(&current)) AST::IdentityExpression(replacement.span(), replacement);
     }
 
     template<typename CurrentType, typename ReplacementType>
@@ -187,7 +187,7 @@ public:
     {
         m_replacements.append([&current, currentCopy = current]() mutable {
             std::bit_cast<ReplacementType*>(&current)->~ReplacementType();
-            new (std::bit_cast<void*>(&current)) CurrentType(WTFMove(currentCopy));
+            new (std::bit_cast<void*>(&current)) CurrentType(WTF::move(currentCopy));
         });
 
         current.~CurrentType();
@@ -200,7 +200,7 @@ public:
         auto& vector = const_cast<Vector<T, size>&>(constVector);
         auto last = vector.takeLast();
         m_replacements.append([&vector, last]() mutable {
-            vector.append(WTFMove(last));
+            vector.append(WTF::move(last));
         });
         return last;
     }
@@ -250,7 +250,7 @@ public:
     void clear(const Vector<T, size>& constVector)
     {
         auto& vector = const_cast<Vector<T, size>&>(constVector);
-        m_replacements.append([&vector, contents = WTFMove(vector)]() mutable {
+        m_replacements.append([&vector, contents = WTF::move(vector)]() mutable {
             vector = contents;
         });
         vector.clear();
@@ -286,13 +286,13 @@ public:
     void addOverrideValidation(AST::Expression& expression, Validator&& validator)
     {
         auto result = m_overrideValidations.add(&expression, Vector<Function<std::optional<String>(const ConstantValue&)>> { });
-        result.iterator->value.append(WTFMove(validator));
+        result.iterator->value.append(WTF::move(validator));
     }
 
     template<typename Validator>
     void addOverrideValidation(Validator&& validator)
     {
-        m_finalOverrideValidations.append(WTFMove(validator));
+        m_finalOverrideValidations.append(WTF::move(validator));
     }
 
     std::optional<Error> validateOverrides(const HashMap<String, ConstantValue>&);

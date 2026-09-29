@@ -25,10 +25,11 @@
 
 #pragma once
 
-#include "FrameRateAligner.h"
-#include "ReducedResolutionSeconds.h"
-#include "Timer.h"
-#include "WebAnimationTypes.h"
+#include <WebCore/FrameRateAligner.h>
+#include <WebCore/GraphicsLayer.h>
+#include <WebCore/ReducedResolutionSeconds.h>
+#include <WebCore/Timer.h>
+#include <WebCore/WebAnimationTypes.h>
 #include <wtf/CancellableTask.h>
 #include <wtf/CheckedRef.h>
 #include <wtf/Markable.h>
@@ -43,7 +44,9 @@ class ScrollTimeline;
 class WeakPtrImplWithEventTargetData;
 class WebAnimation;
 
-#if ENABLE(THREADED_ANIMATION_RESOLUTION)
+struct Styleable;
+
+#if ENABLE(THREADED_ANIMATIONS)
 class AcceleratedEffectStackUpdater;
 #endif
 
@@ -59,7 +62,7 @@ public:
     void removeTimeline(AnimationTimeline&);
     void detachFromDocument();
     void updateAnimationsAndSendEvents(ReducedResolutionSeconds);
-    void updateStaleScrollTimelines();
+    void runPostRenderingUpdateTasks();
     void addPendingAnimation(WebAnimation&);
 
     std::optional<Seconds> currentTime(UseCachedCurrentTime = UseCachedCurrentTime::Yes);
@@ -70,10 +73,12 @@ public:
     WEBCORE_EXPORT void resumeAnimations();
     bool animationsAreSuspended() const { return m_isSuspended; }
 
-#if ENABLE(THREADED_ANIMATION_RESOLUTION)
+#if ENABLE(THREADED_ANIMATIONS)
     AcceleratedEffectStackUpdater* existingAcceleratedEffectStackUpdater() const { return m_acceleratedEffectStackUpdater.get(); }
-    AcceleratedEffectStackUpdater& acceleratedEffectStackUpdater();
+    void scheduleAcceleratedEffectStackUpdateForTarget(const Styleable&);
 #endif
+
+    WEBCORE_EXPORT Vector<GraphicsLayer::AcceleratedAnimationForTesting> acceleratedAnimationsForElement(const Element&) const;
 
 private:
 
@@ -85,7 +90,7 @@ private:
 
     Ref<Document> protectedDocument() const { return m_document.get(); }
 
-#if ENABLE(THREADED_ANIMATION_RESOLUTION)
+#if ENABLE(THREADED_ANIMATIONS)
     std::unique_ptr<AcceleratedEffectStackUpdater> m_acceleratedEffectStackUpdater;
 #endif
 

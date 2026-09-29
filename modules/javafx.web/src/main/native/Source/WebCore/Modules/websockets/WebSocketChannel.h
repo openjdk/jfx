@@ -69,6 +69,10 @@ public:
     static Ref<WebSocketChannel> create(Document& document, WebSocketChannelClient& client, SocketProvider& provider) { return adoptRef(*new WebSocketChannel(document, client, provider)); }
     virtual ~WebSocketChannel();
 
+    // FileReaderLoaderClient, ThreadableWebSocketChannel.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
     void send(std::span<const uint8_t> data);
 
     // ThreadableWebSocketChannel functions.
@@ -105,16 +109,10 @@ public:
     ResourceRequest clientHandshakeRequest(const CookieGetter&) const final;
     const ResourceResponse& serverHandshakeResponse() const final;
 
-    using RefCounted<WebSocketChannel>::ref;
-    using RefCounted<WebSocketChannel>::deref;
-
     Document* document();
 
 private:
     WEBCORE_EXPORT WebSocketChannel(Document&, WebSocketChannelClient&, SocketProvider&);
-
-    void refThreadableWebSocketChannel() override { ref(); }
-    void derefThreadableWebSocketChannel() override { deref(); }
 
     bool appendToBuffer(std::span<const uint8_t>);
     void skipBuffer(size_t len);
@@ -179,6 +177,7 @@ private:
     };
 
     RefPtr<WebSocketChannelClient> protectedClient() const;
+
     WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
     ThreadSafeWeakPtr<WebSocketChannelClient> m_client;
     std::unique_ptr<WebSocketHandshake> m_handshake;
@@ -208,7 +207,7 @@ private:
     OutgoingFrameQueueStatus m_outgoingFrameQueueStatus { OutgoingFrameQueueOpen };
 
     // FIXME: Load two or more Blobs simultaneously for better performance.
-    std::unique_ptr<FileReaderLoader> m_blobLoader;
+    RefPtr<FileReaderLoader> m_blobLoader;
     BlobLoaderStatus m_blobLoaderStatus { BlobLoaderNotStarted };
 
     WebSocketDeflateFramer m_deflateFramer;

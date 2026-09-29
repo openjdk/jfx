@@ -170,6 +170,7 @@ public:
     operator Register*() { return std::bit_cast<Register*>(m_value); }
     operator VM*() { return std::bit_cast<VM*>(m_value); }
     operator CallLinkInfo*() { return std::bit_cast<CallLinkInfo*>(m_value); }
+    operator void*() { return reinterpret_cast<void*>(m_value); }
 
     template<typename T, typename = std::enable_if_t<sizeof(T) == sizeof(uintptr_t)>>
     ALWAYS_INLINE void operator=(T value) { m_value = std::bit_cast<uintptr_t>(value); }
@@ -359,7 +360,7 @@ JSValue CLoop::execute(OpcodeID entryOpcodeID, void* executableAddress, VM* vm, 
         void* m_originalStackPointer;
     };
 
-    CLoopStack& cloopStack = vm->interpreter.cloopStack();
+    CLoopStack& cloopStack = vm->cloopStack();
     StackPointerScope stackPointerScope(cloopStack);
 
     lr = getOpcode(llint_return_to_host);
@@ -519,7 +520,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 // the jsc_llint_begin and jsc_llint_end labels help lldb_webkit.py find the
 // start and end of the llint instruction range quickly.
 
-#define OFFLINE_ASM_BEGIN   asm ( \
+#define OFFLINE_ASM_BEGIN   __asm__( \
     OFFLINE_ASM_GLOBAL_LABEL_IMPL(jsc_llint_begin, OFFLINE_ASM_NO_ALT_ENTRY_DIRECTIVE, OFFLINE_ASM_ALIGN4B, HIDE_SYMBOL) \
     OFFLINE_ASM_BEGIN_SPACER
 
@@ -650,7 +651,7 @@ DEBUGGER_ANNOTATION_MARKER(before_llint_asm)
 // See GdbJIT.cpp for a detailed explanation of how these DWARF directives work.
 #if !OS(DARWIN) && COMPILER(CLANG)
 #if CPU(ARM64)
-asm (
+__asm__(
     ".cfi_startproc\n"
     ".cfi_def_cfa fp, 16\n"
     ".cfi_offset lr, -8\n"
@@ -666,7 +667,7 @@ asm (
     OFFLINE_ASM_BEGIN_SPACER
 );
 #elif CPU(ARM_THUMB2)
-asm (
+__asm__(
     ".cfi_startproc\n"
     OFFLINE_ASM_BEGIN_SPACER
     ".cfi_def_cfa r7, 8\n"
@@ -688,7 +689,7 @@ asm (
 // See GdbJIT.cpp for a detailed explanation.
 #if !OS(DARWIN) && COMPILER(CLANG)
 #if CPU(ARM64) || CPU(ARM_THUMB2)
-asm (
+__asm__(
     ".cfi_endproc\n"
 );
 #endif

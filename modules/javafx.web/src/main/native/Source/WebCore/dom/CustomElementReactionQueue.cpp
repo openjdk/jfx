@@ -256,7 +256,7 @@ void CustomElementReactionQueue::enqueueFormStateRestoreCallbackIfNeeded(Element
     if (!queue.m_interface->hasFormStateRestoreCallback())
         return;
     ASSERT(queue.isFormAssociated());
-    queue.m_items.append({ Item::Type::FormStateRestore, WTFMove(state) });
+    queue.m_items.append({ Item::Type::FormStateRestore, WTF::move(state) });
     enqueueElementOnAppropriateElementQueue(element);
 }
 
@@ -389,7 +389,7 @@ void CustomElementReactionQueue::enqueueElementOnAppropriateElementQueue(Element
     ASSERT(element.reactionQueue());
     element.setIsInCustomElementReactionQueue();
     if (!CustomElementReactionStack::s_currentProcessingStack) {
-        element.protectedDocument()->windowEventLoop().backupElementQueue().add(element);
+        element.protectedDocument()->protectedWindowEventLoop()->backupElementQueue().add(element);
         return;
     }
 

@@ -109,7 +109,7 @@ void MessagePortChannel::disentanglePort(const MessagePortIdentifier& port)
 
     // This set of steps is to guarantee that the lock is unlocked before the
     // last ref to this object is released.
-    auto protectedThis = WTFMove(m_entangledToProcessProtectors[i]);
+    auto protectedThis = WTF::move(m_entangledToProcessProtectors[i]);
 }
 
 void MessagePortChannel::closePort(const MessagePortIdentifier& port)
@@ -138,7 +138,7 @@ bool MessagePortChannel::postMessageToRemote(MessageWithMessagePorts&& message, 
     if (m_isClosed[i])
         return false;
 
-    m_pendingMessages[i].append(WTFMove(message));
+    m_pendingMessages[i].append(WTF::move(message));
     LOG(MessagePorts, "MessagePortChannel %s (%p) now has %zu messages pending on port %s", logString().utf8().data(), this, m_pendingMessages[i].size(), remoteTarget.logString().utf8().data());
 
     if (m_pendingMessages[i].size() == 1) {
@@ -174,7 +174,7 @@ void MessagePortChannel::takeAllMessagesForPort(const MessagePortIdentifier& por
     LOG(MessagePorts, "There are %zu messages to take for port %s. Taking them now, messages in flight is now %" PRIu64, result.size(), port.logString().utf8().data(), m_messageBatchesInFlight);
 
     auto size = result.size();
-    callback(WTFMove(result), [size, port, protectedThis = WTFMove(m_pendingMessageProtectors[i])] {
+    callback(WTF::move(result), [size, port, protectedThis = WTF::move(m_pendingMessageProtectors[i])] {
         UNUSED_PARAM(port);
 #if LOG_DISABLED
         UNUSED_PARAM(size);

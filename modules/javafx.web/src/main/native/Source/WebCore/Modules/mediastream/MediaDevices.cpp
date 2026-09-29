@@ -37,7 +37,9 @@
 #include "AudioMediaStreamTrackRenderer.h"
 #include "AudioSession.h"
 #include "CaptureDeviceWithCapabilities.h"
-#include "DocumentInlines.h"
+#include "ContextDestructionObserverInlines.h"
+#include "DocumentPage.h"
+#include "DocumentQuirks.h"
 #include "Event.h"
 #include "EventNames.h"
 #include "EventTargetInlines.h"
@@ -50,7 +52,6 @@
 #include "Logging.h"
 #include "MediaTrackSupportedConstraints.h"
 #include "PermissionsPolicy.h"
-#include "Quirks.h"
 #include "RealtimeMediaSourceSettings.h"
 #include "Settings.h"
 #include "UserGestureIndicator.h"
@@ -62,7 +63,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(MediaDevices);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MediaDevices);
 
 inline MediaDevices::MediaDevices(Document& document)
     : ActiveDOMObject(document)
@@ -175,7 +176,7 @@ void MediaDevices::getUserMedia(StreamConstraints&& constraints, Promise&& promi
     if (audioConstraints.isValid) {
         if (audioConstraints.hasDisallowedRequiredConstraintForDeviceSelection(MediaConstraints::DeviceType::Microphone)) {
             // Asynchronous rejection.
-            callOnMainThread([promise = WTFMove(promise)] () mutable {
+            callOnMainThread([promise = WTF::move(promise)] () mutable {
                 promise.reject(Exception { ExceptionCode::TypeError, "A required constraint."_s });
 
             });
@@ -187,7 +188,7 @@ void MediaDevices::getUserMedia(StreamConstraints&& constraints, Promise&& promi
     if (videoConstraints.isValid) {
         if (videoConstraints.hasDisallowedRequiredConstraintForDeviceSelection(MediaConstraints::DeviceType::Camera)) {
             // Asynchronous rejection.
-            callOnMainThread([promise = WTFMove(promise)] () mutable {
+            callOnMainThread([promise = WTF::move(promise)] () mutable {
                 promise.reject(Exception { ExceptionCode::TypeError, "A required constraint."_s });
 
             });
@@ -197,7 +198,7 @@ void MediaDevices::getUserMedia(StreamConstraints&& constraints, Promise&& promi
         videoConstraints.setDefaultVideoConstraints();
     }
 
-    auto request = UserMediaRequest::create(*document, { MediaStreamRequest::Type::UserMedia, WTFMove(audioConstraints), WTFMove(videoConstraints), isUserGesturePriviledged, *document->pageID() }, WTFMove(constraints.audio), WTFMove(constraints.video), WTFMove(promise));
+    auto request = UserMediaRequest::create(*document, { MediaStreamRequest::Type::UserMedia, WTF::move(audioConstraints), WTF::move(videoConstraints), isUserGesturePriviledged, *document->pageID() }, WTF::move(constraints.audio), WTF::move(constraints.video), WTF::move(promise));
 
     if (!document->settings().getUserMediaRequiresFocus()) {
         request->start();
@@ -205,7 +206,7 @@ void MediaDevices::getUserMedia(StreamConstraints&& constraints, Promise&& promi
     }
 
     // FIXME: We use hidden while the spec is using focus, let's revisit when when spec is made clearer.
-    document->whenVisible([request = WTFMove(request)] {
+    document->whenVisible([request = WTF::move(request)] {
         if (request->isContextStopped())
             return;
         request->start();
@@ -310,7 +311,7 @@ void MediaDevices::getDisplayMedia(DisplayMediaStreamConstraints&& constraints, 
         return;
     }
 
-    auto request = UserMediaRequest::create(*document, { MediaStreamRequest::Type::DisplayMedia, { }, WTFMove(videoConstraints), isUserGesturePriviledged, *document->pageID() }, WTFMove(constraints.audio), WTFMove(constraints.video), WTFMove(promise));
+    auto request = UserMediaRequest::create(*document, { MediaStreamRequest::Type::DisplayMedia, { }, WTF::move(videoConstraints), isUserGesturePriviledged, *document->pageID() }, WTF::move(constraints.audio), WTF::move(constraints.video), WTF::move(promise));
     request->start();
 }
 
@@ -404,7 +405,7 @@ void MediaDevices::exposeDevices(Vector<CaptureDeviceWithCapabilities>&& newDevi
                 }
 
             m_audioOutputDeviceIdToPersistentId.add(deviceId, newDevice.persistentId());
-                devices.append(RefPtr { MediaDeviceInfo::create(newDevice.label(), WTFMove(deviceId), WTFMove(groupId), MediaDeviceInfo::Kind::Audiooutput) });
+                devices.append(RefPtr { MediaDeviceInfo::create(newDevice.label(), WTF::move(deviceId), WTF::move(groupId), MediaDeviceInfo::Kind::Audiooutput) });
             }
         } else {
             if (newDevice.type() == CaptureDevice::DeviceType::Camera && !newDevice.label().isEmpty())
@@ -417,10 +418,10 @@ void MediaDevices::exposeDevices(Vector<CaptureDeviceWithCapabilities>&& newDevi
                 if (newDeviceWithCapabilities.device.label().isEmpty())
                     newDeviceWithCapabilities.device.setLabel("default"_s);
             }
-            devices.append(RefPtr<InputDeviceInfo> { InputDeviceInfo::create(WTFMove(newDeviceWithCapabilities), WTFMove(deviceId), WTFMove(groupId)) });
+            devices.append(RefPtr<InputDeviceInfo> { InputDeviceInfo::create(WTF::move(newDeviceWithCapabilities), WTF::move(deviceId), WTF::move(groupId)) });
     }
     }
-    promise.resolve(WTFMove(devices));
+    promise.resolve(WTF::move(devices));
 }
 
 void MediaDevices::enumerateDevices(EnumerateDevicesPromise&& promise)
@@ -441,7 +442,7 @@ void MediaDevices::enumerateDevices(EnumerateDevicesPromise&& promise)
         return;
     }
 
-    controller->enumerateMediaDevices(*document, [weakThis = WeakPtr { *this }, promise = WTFMove(promise), userGestureToken = UserGestureIndicator::currentUserGesture()](Vector<CaptureDeviceWithCapabilities>&& newDevices, MediaDeviceHashSalts&& deviceIDHashSalts) mutable {
+    controller->enumerateMediaDevices(*document, [weakThis = WeakPtr { *this }, promise = WTF::move(promise), userGestureToken = UserGestureIndicator::currentUserGesture()](Vector<CaptureDeviceWithCapabilities>&& newDevices, MediaDeviceHashSalts&& deviceIDHashSalts) mutable {
         RefPtr protectedThis = weakThis.get();
         if (!protectedThis)
             return;
@@ -450,7 +451,7 @@ void MediaDevices::enumerateDevices(EnumerateDevicesPromise&& promise)
         if (userGestureToken)
             gestureIndicator.emplace(userGestureToken, UserGestureToken::GestureScope::MediaOnly, UserGestureToken::ShouldPropagateToMicroTask::Yes);
 
-        protectedThis->exposeDevices(WTFMove(newDevices), WTFMove(deviceIDHashSalts), WTFMove(promise));
+        protectedThis->exposeDevices(WTF::move(newDevices), WTF::move(deviceIDHashSalts), WTF::move(promise));
     });
 }
 
@@ -509,7 +510,7 @@ bool MediaDevices::addEventListener(const AtomString& eventType, Ref<EventListen
     if (eventType == eventNames().devicechangeEvent)
         listenForDeviceChanges();
 
-    return EventTarget::addEventListener(eventType, WTFMove(listener), options);
+    return EventTarget::addEventListener(eventType, WTF::move(listener), options);
 }
 
 void MediaDevices::willStartMediaCapture(bool microphone, bool camera)

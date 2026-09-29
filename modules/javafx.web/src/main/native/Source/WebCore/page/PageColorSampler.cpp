@@ -30,7 +30,7 @@
 #include "ColorSerialization.h"
 #include "ContentfulPaintChecker.h"
 #include "Document.h"
-#include "DocumentInlines.h"
+#include "DocumentView.h"
 #include "Element.h"
 #include "FixedContainerEdges.h"
 #include "FrameSnapshotting.h"
@@ -52,9 +52,9 @@
 #include "RegistrableDomain.h"
 #include "RenderImage.h"
 #include "RenderObjectInlines.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include "Settings.h"
-#include "Styleable.h"
+#include "StylableInlines.h"
 #include "WebAnimation.h"
 #include <ranges>
 #include <wtf/HashCountedSet.h>
@@ -125,7 +125,7 @@ static std::optional<Lab<float>> sampleColor(Document& document, IntPoint&& loca
     auto colorSpace = DestinationColorSpace::SRGB();
 
     ASSERT(document.view());
-    auto snapshot = snapshotFrameRect(document.view()->protectedFrame(), IntRect(location, IntSize(1, 1)), { { SnapshotFlags::ExcludeSelectionHighlighting, SnapshotFlags::PaintEverythingExcludingSelection }, ImageBufferPixelFormat::BGRA8, colorSpace });
+    auto snapshot = snapshotFrameRect(document.view()->protectedFrame(), IntRect(location, IntSize(1, 1)), { { SnapshotFlags::ExcludeSelectionHighlighting, SnapshotFlags::PaintEverythingExcludingSelection }, PixelFormat::BGRA8, colorSpace });
     if (!snapshot)
         return std::nullopt;
 
@@ -313,7 +313,7 @@ Variant<PredominantColorType, Color> PageColorSampler::predominantColor(Page& pa
     };
 
     auto colorSpace = DestinationColorSpace::SRGB();
-    auto snapshot = snapshotFrameRect(*frame, snappedIntRect(absoluteRect), { snapshotFlags, ImageBufferPixelFormat::BGRA8, colorSpace });
+    auto snapshot = snapshotFrameRect(*frame, snappedIntRect(absoluteRect), { snapshotFlags, PixelFormat::BGRA8, colorSpace });
     if (!snapshot)
         return PredominantColorType::None;
 
@@ -353,7 +353,7 @@ Variant<PredominantColorType, Color> PageColorSampler::predominantColor(Page& pa
             if (isNearlyTransparent(color))
                 return PredominantColorType::None;
 
-            return { WTFMove(color) };
+            return { WTF::move(color) };
     }
     }
 
@@ -385,7 +385,7 @@ Variant<PredominantColorType, Color> PageColorSampler::predominantColor(Page& pa
             if (isNearlyTransparent(*mostFrequentColor))
                 return PredominantColorType::None;
 
-            return { WTFMove(*mostFrequentColor) };
+            return { WTF::move(*mostFrequentColor) };
     }
     }
 

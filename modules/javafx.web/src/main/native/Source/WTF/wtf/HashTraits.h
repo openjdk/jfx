@@ -46,7 +46,7 @@ template<typename T> struct GenericHashTraitsBase<false, T> {
     static constexpr bool hasIsEmptyValueFunction = false;
 
     // Used by WeakPtr to indicate that the value may become deleted without being explicitly removed.
-    static constexpr bool hasIsReleasedWeakValueFunction = false;
+    static constexpr bool hasIsWeakNullValueFunction = false;
 
     // The starting table size. Can be overridden when we know beforehand that
     // a hash table will have at least N entries.
@@ -225,7 +225,7 @@ template<typename P, typename Q, typename R> struct HashTraits<RefPtr<P, Q, R>> 
     static bool isEmptyValue(const RefPtr<P, Q, R>& value) { return !value; }
 
     using PeekType = P*;
-    static PeekType peek(const RefPtr<P, Q, R>& value) { return value.get(); }
+    static PeekType peek(const RefPtr<P, Q, R>& value) { return value; }
     static PeekType peek(P* value) { return value; }
 
     static void customDeleteBucket(RefPtr<P, Q, R>& value)
@@ -233,7 +233,7 @@ template<typename P, typename Q, typename R> struct HashTraits<RefPtr<P, Q, R>> 
         // See unique_ptr's customDeleteBucket() for an explanation.
         bool isDeletedValue = SimpleClassHashTraits<RefPtr<P, Q, R>>::isDeletedValue(value);
         ASSERT_UNUSED(isDeletedValue, !isDeletedValue);
-        auto valueToBeDestroyed = WTFMove(value);
+        auto valueToBeDestroyed = WTF::move(value);
         SimpleClassHashTraits<RefPtr<P, Q, R>>::constructDeletedValue(value);
     }
 };
@@ -256,7 +256,7 @@ template<typename P> struct RefHashTraits : SimpleClassHashTraits<Ref<P>> {
     static PeekType peek(P* value) { return value; }
 
     using TakeType = RefPtr<P>;
-    static TakeType take(Ref<P>&& value) { return isEmptyValue(value) ? nullptr : RefPtr<P>(WTFMove(value)); }
+    static TakeType take(Ref<P>&& value) { return isEmptyValue(value) ? nullptr : RefPtr<P>(WTF::move(value)); }
 };
 
 template<typename P> struct HashTraits<Ref<P>> : RefHashTraits<P> { };
@@ -307,16 +307,16 @@ template<typename Traits, typename T> inline bool isHashTraitsEmptyValue(const T
     return HashTraitsEmptyValueChecker<Traits, Traits::hasIsEmptyValueFunction>::isEmptyValue(value);
 }
 
-template<typename Traits, bool hasIsReleasedWeakValueFunction> struct HashTraitsReleasedWeakValueChecker;
-template<typename Traits> struct HashTraitsReleasedWeakValueChecker<Traits, true> {
-    template<typename T> static bool isReleasedWeakValue(const T& value) { return Traits::isReleasedWeakValue(value); }
+template<typename Traits, bool hasIsWeakNullValueFunction> struct HashTraitsWeakNullValueChecker;
+template<typename Traits> struct HashTraitsWeakNullValueChecker<Traits, true> {
+    template<typename T> static bool isWeakNullValue(const T& value) { return Traits::isWeakNullValue(value); }
 };
-template<typename Traits> struct HashTraitsReleasedWeakValueChecker<Traits, false> {
-    template<typename T> static bool isReleasedWeakValue(const T&) { return false; }
+template<typename Traits> struct HashTraitsWeakNullValueChecker<Traits, false> {
+    template<typename T> static bool isWeakNullValue(const T&) { return false; }
 };
-template<typename Traits, typename T> inline bool isHashTraitsReleasedWeakValue(const T& value)
+template<typename Traits, typename T> inline bool isHashTraitsWeakNullValue(const T& value)
 {
-    return HashTraitsReleasedWeakValueChecker<Traits, Traits::hasIsReleasedWeakValueFunction>::isReleasedWeakValue(value);
+    return HashTraitsWeakNullValueChecker<Traits, Traits::hasIsWeakNullValueFunction>::isWeakNullValue(value);
 }
 
 template<typename Traits, typename T>

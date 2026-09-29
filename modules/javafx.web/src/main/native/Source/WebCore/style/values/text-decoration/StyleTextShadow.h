@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2024-2025 Samuel Weinig <sam@webkit.org>
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,18 +25,18 @@
 
 #pragma once
 
-#include "CSSTextShadow.h"
-#include "StyleColor.h"
-#include "StylePrimitiveNumericTypes.h"
-#include "StyleShadow.h"
+#include <WebCore/CSSTextShadow.h>
+#include <WebCore/StyleColor.h>
+#include <WebCore/StylePrimitiveNumericTypes.h>
+#include <WebCore/StyleShadow.h>
 
 namespace WebCore {
 namespace Style {
 
 struct TextShadow {
     Color color;
-    SpaceSeparatedPoint<Length<>> location;
-    Length<CSS::Nonnegative> blur;
+    SpaceSeparatedPoint<Length<CSS::AllUnzoomed>> location;
+    Length<CSS::NonnegativeUnzoomed> blur;
 
     bool operator==(const TextShadow&) const = default;
 };
@@ -76,6 +77,12 @@ template<> struct Blending<TextShadow> {
     auto blend(const TextShadow&, const TextShadow&, const RenderStyle&, const RenderStyle&, const BlendingContext&) -> TextShadow;
 };
 
+template<> struct Blending<TextShadows> {
+    auto canBlend(const TextShadows&, const TextShadows&, CompositeOperation) -> bool;
+    constexpr auto requiresInterpolationForAccumulativeIteration(const TextShadows&, const TextShadows&) -> bool { return true; }
+    auto blend(const TextShadows&, const TextShadows&, const RenderStyle&, const RenderStyle&, const BlendingContext&) -> TextShadows;
+};
+
 // MARK: - Shadow-specific Interfaces
 
 constexpr ShadowStyle shadowStyle(const TextShadow&)
@@ -88,7 +95,7 @@ constexpr bool isInset(const TextShadow&)
     return false;
 }
 
-constexpr LayoutUnit paintingSpread(const TextShadow&)
+constexpr LayoutUnit paintingSpread(const TextShadow&, const Style::ZoomFactor&)
 {
     return LayoutUnit();
 }

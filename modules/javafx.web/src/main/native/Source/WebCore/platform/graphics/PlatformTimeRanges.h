@@ -28,6 +28,7 @@
 #include <algorithm>
 #include <wtf/ArgumentCoder.h>
 #include <wtf/MediaTime.h>
+#include <wtf/Platform.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 
@@ -75,9 +76,11 @@ public:
     void clear();
 
     bool contain(const MediaTime&) const;
+    bool containWithEpsilon(const MediaTime&, const MediaTime& epsilon) const;
+    bool containWithEpsilon(const PlatformTimeRanges&, const MediaTime& epsilon) const;
 
     size_t find(const MediaTime&) const;
-    size_t findWithEpsilon(const MediaTime&, const MediaTime& epsilon);
+    size_t findWithEpsilon(const MediaTime&, const MediaTime& epsilon) const;
 
     MediaTime nearest(const MediaTime&) const;
 
@@ -132,7 +135,7 @@ public:
     friend bool operator==(const PlatformTimeRanges&, const PlatformTimeRanges&) = default;
 
 private:
-    friend struct IPC::ArgumentCoder<PlatformTimeRanges, void>;
+    friend struct IPC::ArgumentCoder<PlatformTimeRanges>;
 
     PlatformTimeRanges(Vector<Range>&&);
     PlatformTimeRanges& operator-=(const Range&);

@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "ContentsFormat.h"
-#include "LayerTreeAsTextOptions.h"
-#include "TiledBacking.h"
-#include "TransformationMatrix.h"
+#include <WebCore/ContentsFormat.h>
+#include <WebCore/LayerTreeAsTextOptions.h>
+#include <WebCore/TiledBacking.h>
+#include <WebCore/TransformationMatrix.h>
 #include <wtf/Forward.h>
 #include <wtf/OptionSet.h>
 
@@ -95,7 +95,7 @@ public:
     // Notification that this layer requires a flush on the next display refresh.
     virtual void notifySubsequentFlushRequired(const GraphicsLayer*) { }
 
-    virtual void paintContents(const GraphicsLayer*, GraphicsContext&, const FloatRect& /* inClip */, OptionSet<GraphicsLayerPaintBehavior>) { }
+    virtual void paintContents(const GraphicsLayer&, GraphicsContext&, const FloatRect& /* inClip */, OptionSet<GraphicsLayerPaintBehavior>) { }
     virtual void didChangePlatformLayerForLayer(const GraphicsLayer*) { }
 
     // Provides current transform (taking transform-origin and animations into account). Input matrix has been
@@ -114,7 +114,7 @@ public:
 
     virtual FloatSize enclosingFrameViewVisibleSize() const { return { }; }
 
-    virtual std::optional<float> customContentsScale(const GraphicsLayer*) const { return { }; }
+    virtual std::optional<float> customContentsScale(const GraphicsLayer&) const { return { }; }
 
     virtual float contentsScaleMultiplierForNewTiles(const GraphicsLayer*) const { return 1; }
     virtual bool paintsOpaquelyAtNonIntegralScales(const GraphicsLayer*) const { return false; }
@@ -145,7 +145,7 @@ public:
     virtual bool layerAllowsDynamicContentScaling(const GraphicsLayer*) const { return true; }
 #endif
 
-    virtual bool layerNeedsPlatformContext(const GraphicsLayer*) const { return false; }
+    virtual bool layerNeedsPlatformContext(const GraphicsLayer&) const { return false; }
 
     virtual bool backdropRootIsOpaque(const GraphicsLayer*) const { return false; }
 

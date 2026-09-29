@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,7 +44,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_SharedBuffer_twkCreate
   (JNIEnv*, jclass)
 {
    auto buffer = SharedBuffer::create();
-   return ptr_to_jlong(new SharedBufferBuilder(WTFMove(buffer)));
+   return ptr_to_jlong(new SharedBufferBuilder(WTF::move(buffer)));
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_SharedBuffer_twkSize

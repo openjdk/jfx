@@ -30,10 +30,9 @@
 
 #include "Gradient.h"
 #include "LegacyRenderSVGShapeInlines.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGPathElement.h"
-#include "SVGRenderStyle.h"
 #include "SVGResources.h"
 #include "SVGResourcesCache.h"
 #include "SVGSubpathData.h"
@@ -41,10 +40,10 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(LegacyRenderSVGPath);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(LegacyRenderSVGPath);
 
 LegacyRenderSVGPath::LegacyRenderSVGPath(SVGGraphicsElement& element, RenderStyle&& style)
-    : LegacyRenderSVGShape(Type::LegacySVGPath, element, WTFMove(style))
+    : LegacyRenderSVGShape(Type::LegacySVGPath, element, WTF::move(style))
 {
     ASSERT(isLegacyRenderSVGPath());
 }
@@ -92,7 +91,7 @@ FloatRect LegacyRenderSVGPath::adjustStrokeBoundingBoxForMarkersAndZeroLengthLin
             strokeBoundingBox.unite(markerRect);
     }
 
-    if (style().svgStyle().hasStroke()) {
+    if (style().hasStroke()) {
         // FIXME: zero-length subpaths do not respect vector-effect = non-scaling-stroke.
         for (auto& zeroLengthLinecapLocation : m_zeroLengthLinecapLocations) {
             auto subpathRect = zeroLengthSubpathRect(zeroLengthLinecapLocation, strokeWidth);
@@ -106,9 +105,9 @@ FloatRect LegacyRenderSVGPath::adjustStrokeBoundingBoxForMarkersAndZeroLengthLin
 
 static void useStrokeStyleToFill(GraphicsContext& context)
 {
-    if (auto gradient = context.strokeGradient())
+    if (RefPtr gradient = context.strokeGradient())
         context.setFillGradient(*gradient, context.strokeGradientSpaceTransform());
-    else if (Pattern* pattern = context.strokePattern())
+    else if (RefPtr pattern = context.strokePattern())
         context.setFillPattern(*pattern);
     else
         context.setFillColor(context.strokeColor());
@@ -116,7 +115,7 @@ static void useStrokeStyleToFill(GraphicsContext& context)
 
 void LegacyRenderSVGPath::strokeShape(GraphicsContext& context) const
 {
-    if (!style().hasVisibleStroke())
+    if (!style().hasStroke() || !style().strokeWidth().isPossiblyPositive())
         return;
 
     // This happens only if the layout was never been called for this element.
@@ -133,7 +132,7 @@ bool LegacyRenderSVGPath::shapeDependentStrokeContains(const FloatPoint& point, 
         return true;
 
     for (size_t i = 0; i < m_zeroLengthLinecapLocations.size(); ++i) {
-        ASSERT(style().svgStyle().hasStroke());
+        ASSERT(style().hasStroke());
         float strokeWidth = this->strokeWidth();
         if (style().capStyle() == LineCap::Square) {
             if (zeroLengthSubpathRect(m_zeroLengthLinecapLocations[i], strokeWidth).contains(point))
@@ -152,7 +151,7 @@ bool LegacyRenderSVGPath::shouldStrokeZeroLengthSubpath() const
 {
     // Spec(11.4): Any zero length subpath shall not be stroked if the "stroke-linecap" property has a value of butt
     // but shall be stroked if the "stroke-linecap" property has a value of round or square
-    return style().svgStyle().hasStroke() && style().capStyle() != LineCap::Butt;
+    return style().hasStroke() && style().capStyle() != LineCap::Butt;
 }
 
 Path* LegacyRenderSVGPath::zeroLengthLinecapPath(const FloatPoint& linecapPosition) const
@@ -223,7 +222,7 @@ static inline LegacyRenderSVGResourceMarker* markerForType(SVGMarkerType type, L
 
 bool LegacyRenderSVGPath::shouldGenerateMarkerPositions() const
 {
-    if (!style().svgStyle().hasMarkers())
+    if (!style().hasMarkers())
         return false;
 
     if (!graphicsElement().supportsMarkers())
@@ -251,11 +250,16 @@ void LegacyRenderSVGPath::drawMarkers(PaintInfo& paintInfo)
     if (!markerStart && !markerMid && !markerEnd)
         return;
 
-    float strokeWidth = this->strokeWidth();
+    float strokeWidth = this->strokeWidthForMarkerUnits();
     unsigned size = m_markerPositions.size();
     for (unsigned i = 0; i < size; ++i) {
-        if (auto* marker = markerForType(m_markerPositions[i].type, markerStart, markerMid, markerEnd))
+        if (auto* marker = markerForType(m_markerPositions[i].type, markerStart, markerMid, markerEnd)) {
+            auto& context = paintInfo.context();
+            GraphicsContextStateSaver stateSaver(context);
+
+            context.setLineDash(DashArray(), 0);
             marker->draw(paintInfo, marker->markerTransformation(m_markerPositions[i].origin, m_markerPositions[i].angle, strokeWidth));
+    }
     }
 }
 
@@ -303,7 +307,7 @@ bool LegacyRenderSVGPath::isRenderingDisabled() const
     return !hasPath() || path().isEmpty();
 }
 
-void LegacyRenderSVGPath::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
+void LegacyRenderSVGPath::styleDidChange(Style::Difference diff, const RenderStyle* oldStyle)
 {
     if (RefPtr pathElement = dynamicDowncast<SVGPathElement>(graphicsElement())) {
         if (!oldStyle || style().d() != oldStyle->d())

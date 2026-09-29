@@ -88,7 +88,8 @@
 
 [
     JSGenerateToJSObject,
-    JSGenerateToNativeObject
+    JSGenerateToNativeObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary TypeConversionsOtherDictionary {
     long longValue = 0;
     DOMString stringValue = "";
@@ -96,7 +97,8 @@
 
 [
     JSGenerateToJSObject,
-    JSGenerateToNativeObject
+    JSGenerateToNativeObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary TypeConversionsDictionary {
     long longValue = 0;
     DOMString stringValue = "";

@@ -25,3 +25,4 @@
 ] partial interface Navigator {
     readonly attribute Geolocation geolocation;
 };
+

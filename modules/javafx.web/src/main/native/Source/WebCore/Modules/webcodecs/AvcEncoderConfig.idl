@@ -33,7 +33,8 @@
 [
     Conditional=WEB_CODECS,
     JSGenerateToJSObject,
-    JSGenerateToNativeObject
+    JSGenerateToNativeObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary AvcEncoderConfig {
     AvcBitstreamFormat format = "avc";
 };

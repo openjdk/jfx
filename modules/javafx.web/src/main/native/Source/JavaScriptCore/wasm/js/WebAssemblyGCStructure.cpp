@@ -35,56 +35,21 @@
 
 namespace JSC {
 
-static inline Wasm::TypeHash typeHash(const Wasm::TypeDefinition& typeDef)
-{
-    return Wasm::TypeHash { const_cast<Wasm::TypeDefinition&>(typeDef) };
-}
-
-WebAssemblyGCStructureTypeDependencies::WebAssemblyGCStructureTypeDependencies(Ref<const Wasm::TypeDefinition>&& unexpandedType)
-{
-    WorkList work;
-    work.append(unexpandedType->expand());
-    while (!work.isEmpty())
-        process(work.takeLast(), work);
-    m_typeDefinitions.add(typeHash(unexpandedType));
-}
-
-void WebAssemblyGCStructureTypeDependencies::process(const Wasm::TypeDefinition& typeDef, WorkList& work)
-{
-    if (m_typeDefinitions.contains(typeHash(typeDef)))
-        return;
-    m_typeDefinitions.add(typeHash(typeDef));
-    if (typeDef.is<Wasm::StructType>()) {
-        const auto* structType = typeDef.as<Wasm::StructType>();
-        for (unsigned i = 0; i < structType->fieldCount(); ++i)
-            process(structType->field(i), work);
-    } else if (typeDef.is<Wasm::ArrayType>())
-        process(typeDef.as<Wasm::ArrayType>()->elementType(), work);
-}
-
-void WebAssemblyGCStructureTypeDependencies::process(Wasm::FieldType fieldType, WorkList& work)
-{
-    if (fieldType.type.is<Wasm::Type>()) {
-        Wasm::Type type = fieldType.type.as<Wasm::Type>();
-        if (isRefWithTypeIndex(type)) {
-            const auto& typeDef = Wasm::TypeInformation::get(type.index);
-            work.append(typeDef);
-        }
-    }
-}
-
 WebAssemblyGCStructure::WebAssemblyGCStructure(VM& vm, JSGlobalObject* globalObject, const TypeInfo& typeInfo, const ClassInfo* classInfo, Ref<const Wasm::TypeDefinition>&& unexpandedType, Ref<const Wasm::TypeDefinition>&& type, Ref<const Wasm::RTT>&& rtt)
     : Structure(vm, StructureVariant::WebAssemblyGC, globalObject, typeInfo, classInfo)
-    , m_rtt(WTFMove(rtt))
-    , m_type(WTFMove(type))
-    , m_typeDependencies(WebAssemblyGCStructureTypeDependencies { WTFMove(unexpandedType) })
+    , m_rtt(WTF::move(rtt))
+    , m_type(WTF::move(type))
+    , m_typeDependencies(unexpandedType)
 {
+    for (unsigned i = 0; i < std::min((m_rtt->displaySizeExcludingThis() + 1), inlinedTypeDisplaySize); ++i)
+        m_inlinedTypeDisplay[i] = m_rtt->displayEntry(i);
 }
 
 WebAssemblyGCStructure::WebAssemblyGCStructure(VM& vm, WebAssemblyGCStructure* previous)
     : Structure(vm, StructureVariant::WebAssemblyGC, previous)
     , m_rtt(previous->m_rtt)
     , m_type(previous->m_type)
+    , m_inlinedTypeDisplay(previous->m_inlinedTypeDisplay)
     , m_typeDependencies(previous->m_typeDependencies)
 {
 }
@@ -93,7 +58,7 @@ WebAssemblyGCStructure::WebAssemblyGCStructure(VM& vm, WebAssemblyGCStructure* p
 WebAssemblyGCStructure* WebAssemblyGCStructure::create(VM& vm, JSGlobalObject* globalObject, const TypeInfo& typeInfo, const ClassInfo* classInfo, Ref<const Wasm::TypeDefinition>&& unexpandedType, Ref<const Wasm::TypeDefinition>&& type, Ref<const Wasm::RTT>&& rtt)
 {
     ASSERT(vm.structureStructure);
-    WebAssemblyGCStructure* newStructure = new (NotNull, allocateCell<WebAssemblyGCStructure>(vm)) WebAssemblyGCStructure(vm, globalObject, typeInfo, classInfo, WTFMove(unexpandedType), WTFMove(type), WTFMove(rtt));
+    WebAssemblyGCStructure* newStructure = new (NotNull, allocateCell<WebAssemblyGCStructure>(vm)) WebAssemblyGCStructure(vm, globalObject, typeInfo, classInfo, WTF::move(unexpandedType), WTF::move(type), WTF::move(rtt));
     newStructure->finishCreation(vm);
     ASSERT(newStructure->type() == StructureType);
     return newStructure;

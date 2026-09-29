@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -100,7 +100,7 @@ RefPtr<FontCustomPlatformData> createFontCustomPlatformData(SharedBuffer& buffer
             (jobject) sharedBuffer));
     WTF::CheckAndClearException(env);
     FontPlatformData::CreationData creationData = { buffer, WTF::String::fromUTF8("") };
-    return data ? adoptRef(new FontCustomPlatformData(data, WTFMove(creationData))) : nullptr;
+    return data ? adoptRef(new FontCustomPlatformData(data, WTF::move(creationData))) : nullptr;
 }
 
 bool FontCustomPlatformData::supportsFormat(const String& format)

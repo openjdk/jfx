@@ -28,7 +28,7 @@
 #include "AXObjectCache.h"
 #include "BidiResolver.h"
 #include "BreakingContext.h"
-#include "DocumentInlines.h"
+#include "DocumentView.h"
 #include "FloatingObjects.h"
 #include "InlineIteratorBoxInlines.h"
 #include "InlineIteratorTextBox.h"
@@ -377,7 +377,7 @@ static inline void constructBidiRunsForSegment(InlineBidiResolver& topResolver, 
 
     while (!topResolver.isolatedRuns().isEmpty()) {
         // It does not matter which order we resolve the runs as long as we resolve them all.
-        auto isolatedRun = WTFMove(topResolver.isolatedRuns().last());
+        auto isolatedRun = WTF::move(topResolver.isolatedRuns().last());
         topResolver.isolatedRuns().removeLast();
 
         RenderObject& startObject = isolatedRun.object;
@@ -421,10 +421,10 @@ static inline void constructBidiRunsForSegment(InlineBidiResolver& topResolver, 
         // If we encountered any nested isolate runs, just move them
         // to the top resolver's list for later processing.
         while (!isolatedResolver.isolatedRuns().isEmpty()) {
-            auto runWithContext = WTFMove(isolatedResolver.isolatedRuns().last());
+            auto runWithContext = WTF::move(isolatedResolver.isolatedRuns().last());
             isolatedResolver.isolatedRuns().removeLast();
             topResolver.setWhitespaceCollapsingTransitionForIsolatedRun(runWithContext.runToReplace, isolatedResolver.whitespaceCollapsingTransitionForIsolatedRun(runWithContext.runToReplace));
-            topResolver.isolatedRuns().append(WTFMove(runWithContext));
+            topResolver.isolatedRuns().append(WTF::move(runWithContext));
         }
     }
 }

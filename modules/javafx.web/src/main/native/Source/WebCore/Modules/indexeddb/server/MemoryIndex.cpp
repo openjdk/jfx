@@ -75,16 +75,15 @@ void MemoryIndex::cursorDidBecomeDirty(MemoryIndexCursor& cursor)
 
 void MemoryIndex::objectStoreCleared()
 {
-    if (m_records) {
-        for (auto& key : m_records->allKeys()) {
+    if (CheckedPtr records = m_records.get()) {
+        for (auto& key : records->allKeys()) {
             if (m_transactionModifiedRecords.contains(key))
                 continue;
-            if (auto valueKeys = m_records->valueKeys(key))
-                m_transactionModifiedRecords.add(key, WTFMove(*valueKeys));
+            if (auto valueKeys = records->valueKeys(key))
+                m_transactionModifiedRecords.add(key, WTF::move(*valueKeys));
         }
-
-        m_records = nullptr;
     }
+    m_records = nullptr;
 
     notifyCursorsOfAllRecordsChanged();
 }
@@ -111,42 +110,50 @@ IDBGetResult MemoryIndex::getResultForKeyRange(IndexedDB::IndexRecordType type, 
 {
     LOG(IndexedDB, "MemoryIndex::getResultForKeyRange - %s", range.loggingString().utf8().data());
 
-    if (!m_records)
+    CheckedPtr records = m_records.get();
+    if (!records)
         return { };
 
     IDBKeyData keyToLookFor;
     if (range.isExactlyOneKey())
         keyToLookFor = range.lowerKey;
     else
-        keyToLookFor = m_records->lowestKeyWithRecordInRange(range);
+        keyToLookFor = records->lowestKeyWithRecordInRange(range);
 
     if (keyToLookFor.isNull())
         return { };
 
-    const IDBKeyData* keyValue = m_records->lowestValueForKey(keyToLookFor);
+    const IDBKeyData* keyValue = records->lowestValueForKey(keyToLookFor);
 
     if (!keyValue)
         return { };
 
+    if (type == IndexedDB::IndexRecordType::Key)
+        return IDBGetResult(*keyValue);
+
     RefPtr objectStore = m_objectStore.get();
-    return type == IndexedDB::IndexRecordType::Key ? IDBGetResult(*keyValue) : IDBGetResult(*keyValue, objectStore->valueForKeyRange(*keyValue), objectStore->info().keyPath());
+    if (!objectStore)
+        return { };
+
+    return IDBGetResult(*keyValue, objectStore->valueForKeyRange(*keyValue), objectStore->info().keyPath());
 }
 
 uint64_t MemoryIndex::countForKeyRange(const IDBKeyRangeData& inRange)
 {
     LOG(IndexedDB, "MemoryIndex::countForKeyRange");
 
-    if (!m_records)
+    CheckedPtr records = m_records.get();
+    if (!records)
         return 0;
 
     uint64_t count = 0;
     IDBKeyRangeData range = inRange;
     while (true) {
-        auto key = m_records->lowestKeyWithRecordInRange(range);
+        auto key = records->lowestKeyWithRecordInRange(range);
         if (key.isNull())
             break;
 
-        count += m_records->countForKey(key);
+        count += records->countForKey(key);
 
         range.lowerKey = key;
         range.lowerOpen = true;
@@ -160,9 +167,15 @@ void MemoryIndex::getAllRecords(const IDBKeyRangeData& keyRangeData, std::option
     LOG(IndexedDB, "MemoryIndex::getAllRecords");
 
     RefPtr objectStore = m_objectStore.get();
+    if (!objectStore) {
+        result = { };
+        return;
+    }
+
     result = { type, objectStore->info().keyPath() };
 
-    if (!m_records)
+    CheckedPtr records = m_records.get();
+    if (!records)
         return;
 
     uint32_t targetCount;
@@ -174,14 +187,14 @@ void MemoryIndex::getAllRecords(const IDBKeyRangeData& keyRangeData, std::option
     IDBKeyRangeData range = keyRangeData;
     uint32_t currentCount = 0;
     while (currentCount < targetCount) {
-        auto key = m_records->lowestKeyWithRecordInRange(range);
+        auto key = records->lowestKeyWithRecordInRange(range);
         if (key.isNull())
             return;
 
         range.lowerKey = key;
         range.lowerOpen = true;
 
-        auto allValues = m_records->allValuesForKey(key, targetCount - currentCount);
+        auto allValues = records->allValuesForKey(key, targetCount - currentCount);
         for (auto& keyValue : allValues) {
             result.addKey(IDBKeyData(keyValue));
             if (type == IndexedDB::GetAllType::Values)
@@ -211,8 +224,9 @@ IDBError MemoryIndex::putIndexKey(const IDBKeyData& valueKey, const IndexKey& in
     Vector<IDBKeyData> keys = indexKey.multiEntry();
 
     if (m_info.unique()) {
+        CheckedRef records = *m_records;
         for (auto& key : keys) {
-            if (m_records->contains(key))
+            if (records->contains(key))
                 return IDBError(ExceptionCode::ConstraintError);
         }
     }
@@ -250,20 +264,21 @@ void MemoryIndex::removeEntriesWithValueKey(const IDBKeyData& valueKey)
 {
     LOG(IndexedDB, "MemoryIndex::removeEntriesWithValueKey");
 
-    if (!m_records)
+    CheckedPtr records = m_records.get();
+    if (!records)
         return;
 
     RELEASE_ASSERT(m_writeTransaction);
     if (!m_writeTransaction->isAborting()) {
-        for (auto& indexKey : m_records->findKeysWithValueKey(valueKey)) {
+        for (auto& indexKey : records->findKeysWithValueKey(valueKey)) {
             if (m_transactionModifiedRecords.contains(indexKey))
                 continue;
-            if (auto valueKeys = m_records->valueKeys(indexKey))
-                m_transactionModifiedRecords.add(indexKey, WTFMove(*valueKeys));
+            if (auto valueKeys = records->valueKeys(indexKey))
+                m_transactionModifiedRecords.add(indexKey, WTF::move(*valueKeys));
         }
     }
 
-    m_records->removeEntriesWithValueKey(*this, valueKey);
+    records->removeEntriesWithValueKey(*this, valueKey);
 }
 
 MemoryIndexCursor* MemoryIndex::maybeOpenCursor(const IDBCursorInfo& info, MemoryBackingStoreTransaction& transaction)
@@ -292,34 +307,36 @@ IDBError MemoryIndex::addIndexRecord(const IDBKeyData& indexKey, const IDBKeyDat
     if (!m_records)
         m_records = makeUnique<IndexValueStore>(m_info.unique());
 
+    CheckedRef records = *m_records;
     if (!m_writeTransaction->isAborting() && !m_transactionModifiedRecords.contains(indexKey)) {
-        if (!m_records->contains(indexKey))
+        if (!records->contains(indexKey))
             m_transactionModifiedRecords.add(indexKey, Vector<IDBKeyData> { });
-        else if (auto valueKeys = m_records->valueKeys(indexKey))
-            m_transactionModifiedRecords.add(indexKey, WTFMove(*valueKeys));
+        else if (auto valueKeys = records->valueKeys(indexKey))
+            m_transactionModifiedRecords.add(indexKey, WTF::move(*valueKeys));
     }
 
-    return m_records->addRecord(indexKey, valueKey);
+    return records->addRecord(indexKey, valueKey);
 }
 
 void MemoryIndex::removeIndexRecord(const IDBKeyData& indexKey, const IDBKeyData& valueKey)
 {
-    if (!m_records)
+    CheckedPtr records = m_records.get();
+    if (!records)
         return;
 
     RELEASE_ASSERT(m_writeTransaction);
     if (!m_writeTransaction->isAborting() && !m_transactionModifiedRecords.contains(indexKey)) {
-        if (auto valueKeys = m_records->valueKeys(indexKey))
-            m_transactionModifiedRecords.add(indexKey, WTFMove(*valueKeys));
+        if (auto valueKeys = records->valueKeys(indexKey))
+            m_transactionModifiedRecords.add(indexKey, WTF::move(*valueKeys));
     }
 
-    return m_records->removeRecord(indexKey, valueKey);
+    return records->removeRecord(indexKey, valueKey);
 }
 
 void MemoryIndex::removeIndexRecord(const IDBKeyData& indexKey)
 {
-    if (m_records)
-        m_records->removeRecord(indexKey);
+    if (CheckedPtr records = m_records.get())
+        records->removeRecord(indexKey);
 }
 
 void MemoryIndex::writeTransactionStarted(MemoryBackingStoreTransaction& transaction)
@@ -342,6 +359,8 @@ void MemoryIndex::transactionAborted(MemoryBackingStoreTransaction& transaction)
     if (m_writeTransaction != &transaction)
         return;
 
+    notifyCursorsOfAllRecordsChanged();
+
     auto transactionModifiedRecords = std::exchange(m_transactionModifiedRecords, { });
     for (auto& [key, valueKeys] : transactionModifiedRecords) {
         removeIndexRecord(key);
@@ -352,7 +371,6 @@ void MemoryIndex::transactionAborted(MemoryBackingStoreTransaction& transaction)
 
 void MemoryIndex::transactionFinished(MemoryBackingStoreTransaction& transaction)
 {
-
     m_cursors.removeIf([&](auto& pair) {
         return pair.value->transaction() == &transaction;
     });

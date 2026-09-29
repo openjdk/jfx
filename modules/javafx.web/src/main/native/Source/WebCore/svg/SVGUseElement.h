@@ -1,7 +1,8 @@
 /*
  * Copyright (C) 2004, 2005, 2006, 2007, 2008 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2006, 2007 Rob Buis <buis@kde.org>
- * Copyright (C) 2015-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
+ * Copyright (C) 2015 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -32,17 +33,23 @@ namespace WebCore {
 class CachedSVGDocument;
 
 class SVGUseElement final : public SVGGraphicsElement, public SVGURIReference, private CachedSVGDocumentClient {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGUseElement);
+    WTF_MAKE_TZONE_ALLOCATED(SVGUseElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGUseElement);
 public:
     static Ref<SVGUseElement> create(const QualifiedName&, Document&);
     virtual ~SVGUseElement();
+
+    // CachedResourceClient.
+    void ref() const final { SVGGraphicsElement::ref(); }
+    void deref() const final { SVGGraphicsElement::deref(); }
 
     void invalidateShadowTree();
     void updateUserAgentShadowTree() final;
 
     RefPtr<SVGElement> clipChild() const;
     RenderElement* rendererClipChild() const;
+
+    SVGGraphicsElement* visibleTargetGraphicsElement() const;
 
     const SVGLengthValue& x() const { return m_x->currentValue(); }
     const SVGLengthValue& y() const { return m_y->currentValue(); }
@@ -74,6 +81,8 @@ private:
 
     Document* externalDocument() const;
     void updateExternalDocument();
+
+    FloatRect getBBox(StyleUpdateStrategy = AllowStyleUpdate) override;
 
     RefPtr<SVGElement> findTarget(AtomString* targetID = nullptr) const;
 

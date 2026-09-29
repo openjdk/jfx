@@ -35,16 +35,16 @@ FormAssociatedElement::FormAssociatedElement(HTMLFormElement* form)
 {
 }
 
-HTMLFormElement* FormAssociatedElement::formForBindings() const
+RefPtr<HTMLFormElement> FormAssociatedElement::formForBindings() const
 {
     // FIXME: The downcast should be unnecessary, but the WPT was written before https://github.com/WICG/webcomponents/issues/1072 was resolved. Update once the WPT has been updated.
-    return dynamicDowncast<HTMLFormElement>(asHTMLElement().retargetReferenceTargetForBindings(form())).get();
+    return dynamicDowncast<HTMLFormElement>(asHTMLElement().retargetReferenceTargetForBindings(form()));
 }
 
 void FormAssociatedElement::setFormInternal(RefPtr<HTMLFormElement>&& newForm)
 {
     ASSERT(m_form.get() != newForm);
-    m_form = WTFMove(newForm);
+    m_form = WTF::move(newForm);
 }
 
 void FormAssociatedElement::elementInsertedIntoAncestor(Element& element, Node::InsertionType)

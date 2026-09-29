@@ -26,9 +26,12 @@
 #include "config.h"
 #include "AccessibilityMenuListPopup.h"
 
-#include "AXObjectCache.h"
+#include "AXNotifications.h"
+#include "AXObjectCacheInlines.h"
 #include "AccessibilityMenuList.h"
 #include "AccessibilityMenuListOption.h"
+#include "AccessibilityObjectInlines.h"
+#include "FrameDestructionObserverInlines.h"
 #include "HTMLNames.h"
 #include "HTMLOptionElement.h"
 #include "HTMLSelectElement.h"
@@ -74,7 +77,11 @@ AccessibilityMenuListOption* AccessibilityMenuListPopup::menuListOptionAccessibi
     if (!element || !element->inRenderedDocument())
         return nullptr;
 
-    return dynamicDowncast<AccessibilityMenuListOption>(document()->axObjectCache()->getOrCreate(*element));
+    CheckedPtr cache = document()->axObjectCache();
+    if (!cache)
+        return nullptr;
+
+    return dynamicDowncast<AccessibilityMenuListOption>(cache->getOrCreate(*element));
 }
 
 bool AccessibilityMenuListPopup::press()

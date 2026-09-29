@@ -40,8 +40,8 @@ struct CGAffineTransform;
 namespace WebCore {
 
 class MediaSamplesBlock;
-struct AudioInfo;
-struct VideoInfo;
+class AudioInfo;
+class VideoInfo;
 
 class MediaRecorderPrivateWriterListener : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<MediaRecorderPrivateWriterListener> {
 public:
@@ -68,14 +68,14 @@ public:
     virtual bool allTracksAdded() = 0;
     enum class Result : uint8_t { Success, Failure, NotReady };
     using WriterPromise = NativePromise<void, Result>;
-    WEBCORE_EXPORT virtual Ref<WriterPromise> writeFrames(Deque<UniqueRef<MediaSamplesBlock>>&&, const MediaTime&);
-    WEBCORE_EXPORT virtual Ref<GenericPromise> close();
+    WEBCORE_EXPORT Ref<WriterPromise> writeFrames(Deque<UniqueRef<MediaSamplesBlock>>&&, const MediaTime&);
+    WEBCORE_EXPORT Ref<GenericPromise> close();
     virtual bool shouldApplyVideoRotation() const { return false; }
 
 private:
     virtual Result writeFrame(const MediaSamplesBlock&) = 0;
     virtual void forceNewSegment(const MediaTime&) = 0;
-    virtual Ref<GenericPromise> close(const MediaTime&) = 0;
+    virtual Ref<GenericPromise> close(Deque<UniqueRef<MediaSamplesBlock>>&&, const MediaTime&) = 0;
     Deque<UniqueRef<MediaSamplesBlock>> m_pendingFrames;
     MediaTime m_lastEndTime { MediaTime::invalidTime() };
 };

@@ -34,11 +34,11 @@
 
 #if ENABLE(VIDEO)
 
-#include "BufferedLineReader.h"
-#include "DocumentFragment.h"
-#include "HTMLNames.h"
-#include "TextResourceDecoder.h"
-#include "VTTRegion.h"
+#include <WebCore/BufferedLineReader.h>
+#include <WebCore/DocumentFragment.h>
+#include <WebCore/HTMLNames.h>
+#include <WebCore/TextResourceDecoder.h>
+#include <WebCore/VTTRegion.h>
 #include <memory>
 #include <wtf/MediaTime.h>
 #include <wtf/TZoneMalloc.h>
@@ -65,9 +65,7 @@ public:
 class WebVTTCueData final : public RefCounted<WebVTTCueData> {
     WTF_MAKE_TZONE_ALLOCATED_EXPORT(WebVTTCueData, WEBCORE_EXPORT);
 public:
-
     static Ref<WebVTTCueData> create() { return adoptRef(*new WebVTTCueData()); }
-    ~WebVTTCueData() = default;
 
     MediaTime startTime() const { return m_startTime; }
     void setStartTime(const MediaTime& startTime) { m_startTime = startTime; }
@@ -75,8 +73,8 @@ public:
     MediaTime endTime() const { return m_endTime; }
     void setEndTime(const MediaTime& endTime) { m_endTime = endTime; }
 
-    AtomString id() const { return m_id; }
-    void setId(const AtomString& id) { m_id = id; }
+    String id() const { return m_id; }
+    void setId(const String& id) { m_id = id; }
 
     String content() const { return m_content; }
     void setContent(const String& content) { m_content = content; }
@@ -93,7 +91,7 @@ private:
     MediaTime m_startTime;
     MediaTime m_endTime;
     MediaTime m_originalStartTime;
-    AtomString m_id;
+    String m_id;
     String m_content;
     String m_settings;
 };
@@ -176,7 +174,7 @@ private:
 
     BufferedLineReader m_lineReader;
     const Ref<TextResourceDecoder> m_decoder;
-    AtomString m_currentId;
+    String m_currentId;
     MediaTime m_currentStartTime;
     MediaTime m_currentEndTime;
     StringBuilder m_currentContent;

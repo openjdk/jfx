@@ -253,7 +253,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     if (buffer.isEmpty())
         return nullptr;
 
-    return buffer.takeAsContiguous();
+    return buffer.takeBufferAsContiguous();
 }
 #endif
 
@@ -323,7 +323,7 @@ public:
 
     void skipBytes(long numBytes)
     {
-        WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+        WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // non-Apple ports
         decoder_source_mgr* src = (decoder_source_mgr*)m_info.src;
         long bytesToSkip = std::min(numBytes, (long)src->pub.bytes_in_buffer);
         src->pub.bytes_in_buffer -= (size_t)bytesToSkip;
@@ -597,9 +597,8 @@ bool JPEGImageDecoder::setFailed()
 template <J_COLOR_SPACE colorSpace>
 void setPixel(ScalableImageDecoderFrame& buffer, std::span<uint32_t> currentAddress, JSAMPARRAY samples, int column)
 {
-    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // non-Apple ports
     JSAMPLE* jsample = *samples + column * (colorSpace == JCS_RGB ? 3 : 4);
-    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     switch (colorSpace) {
     case JCS_RGB:
@@ -619,6 +618,7 @@ void setPixel(ScalableImageDecoderFrame& buffer, std::span<uint32_t> currentAddr
         buffer.backingStore()->setPixel(currentAddress[0], jsample[0] * k / 255, jsample[1] * k / 255, jsample[2] * k / 255, 0xFF);
         break;
     }
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 }
 
 template <J_COLOR_SPACE colorSpace>

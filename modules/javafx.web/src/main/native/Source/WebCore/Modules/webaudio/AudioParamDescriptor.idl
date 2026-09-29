@@ -26,7 +26,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 [
-    Conditional=WEB_AUDIO
+    Conditional=WEB_AUDIO,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary AudioParamDescriptor {
     required DOMString name;
     float defaultValue = 0;

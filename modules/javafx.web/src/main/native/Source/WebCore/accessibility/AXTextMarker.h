@@ -24,8 +24,13 @@
 
 #pragma once
 
-#include "AccessibilityObject.h"
+#include <WebCore/AXCoreObject.h>
+#include <WebCore/AccessibilityObject.h>
+#include <WebCore/Position.h>
+#include <WebCore/VisiblePosition.h>
+#include <wtf/Platform.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/text/WTFString.h>
 
 #define TEXT_MARKER_ASSERT(assertion) do { \
     std::string debugString = "Text marker origin: " + originToString(origin()).utf8().toStdString(); \
@@ -89,6 +94,8 @@ enum class TextMarkerOrigin : uint16_t {
     StartTextMarkerForBounds,
     EndTextMarkerForBounds
 };
+
+static_assert(TextMarkerOrigin::Unknown == static_cast<TextMarkerOrigin>(0)); // Needed for AXObjectCache.h default parameters
 
 inline String originToString(TextMarkerOrigin origin)
 {
@@ -224,7 +231,7 @@ public:
         : m_data(data)
     { }
     AXTextMarker(TextMarkerData&& data)
-        : m_data(WTFMove(data))
+        : m_data(WTF::move(data))
     { }
 #if PLATFORM(COCOA)
     AXTextMarker(PlatformTextMarkerData);
@@ -410,7 +417,7 @@ public:
     bool isCollapsed() const { return m_start.isEqual(m_end); }
     bool isConfinedTo(std::optional<AXID>) const;
     bool isConfined() const;
-    String toString(IncludeListMarkerText = IncludeListMarkerText::Yes) const;
+    String toString(IncludeListMarkerText = IncludeListMarkerText::Yes, IncludeImageAltText = IncludeImageAltText::No) const;
 
 #if ENABLE(AX_THREAD_TEXT_APIS)
     // Returns the bounds (frame) of the text in this range relative to the viewport.

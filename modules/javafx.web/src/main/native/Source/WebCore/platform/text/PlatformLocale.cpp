@@ -372,4 +372,24 @@ const String& Locale::localizedDecimalSeparator()
     return m_decimalSymbols[DecimalSeparatorIndex];
 }
 
+String Locale::localizeNumberCharacters(const String& input)
+{
+    initializeLocaleData();
+    if (!m_hasLocaleData || input.isEmpty())
+        return input;
+
+    StringBuilder builder;
+    builder.reserveCapacity(input.length());
+    for (unsigned i = 0; i < input.length(); ++i) {
+        auto character = input[i];
+        if (character >= '0' && character <= '9')
+            builder.append(m_decimalSymbols[character - '0']);
+        else if (character == '.')
+            builder.append(m_decimalSymbols[DecimalSeparatorIndex]);
+        else
+            builder.append(character);
+    }
+    return builder.toString();
+}
+
 }

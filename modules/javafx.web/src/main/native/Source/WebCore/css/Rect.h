@@ -20,7 +20,7 @@
 
 #pragma once
 
-#include "RectBase.h"
+#include <WebCore/RectBase.h>
 #include <wtf/text/MakeString.h>
 
 namespace WebCore {
@@ -28,7 +28,7 @@ namespace WebCore {
 class Rect final : public RectBase {
 public:
     Rect(Ref<CSSValue> top, Ref<CSSValue> right, Ref<CSSValue> bottom, Ref<CSSValue> left)
-        : RectBase(WTFMove(top), WTFMove(right), WTFMove(bottom), WTFMove(left))
+        : RectBase(WTF::move(top), WTF::move(right), WTF::move(bottom), WTF::move(left))
     { }
 
     String cssText(const CSS::SerializationContext& context) const

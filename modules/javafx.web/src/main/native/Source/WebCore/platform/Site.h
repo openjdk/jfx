@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "RegistrableDomain.h"
+#include <WebCore/RegistrableDomain.h>
 #include <wtf/HashTraits.h>
 
 namespace WebCore {
@@ -54,12 +54,6 @@ public:
 
     bool operator==(const Site&) const = default;
 
-    struct Hash {
-        static unsigned hash(const Site& site) { return site.hash(); }
-        static bool equal(const Site& a, const Site& b) { return a == b; }
-        static const bool safeToCompareToEmptyOrDeleted = false;
-    };
-
 private:
     String m_protocol;
     RegistrableDomain m_domain;
@@ -70,7 +64,6 @@ WEBCORE_EXPORT TextStream& operator<<(TextStream&, const Site&);
 } // namespace WebCore
 
 namespace WTF {
-template<> struct DefaultHash<WebCore::Site> : WebCore::Site::Hash { };
 template<> struct HashTraits<WebCore::Site> : SimpleClassHashTraits<WebCore::Site> {
     static WebCore::Site emptyValue() { return { WTF::HashTableEmptyValue }; }
 };

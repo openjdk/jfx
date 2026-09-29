@@ -37,8 +37,6 @@
 
 namespace WebCore {
 
-static constexpr size_t maxRouteConditionCount = 256;
-
 HashMap<ServiceWorkerIdentifier, WeakRef<SWServerWorker>>& SWServerWorker::allWorkers()
 {
     static NeverDestroyed<HashMap<ServiceWorkerIdentifier, WeakRef<SWServerWorker>>> workers;
@@ -60,9 +58,9 @@ SWServerWorker::SWServerWorker(SWServer& server, SWServerRegistration& registrat
     , m_certificateInfo(certificateInfo)
     , m_contentSecurityPolicy(contentSecurityPolicy)
     , m_crossOriginEmbedderPolicy(crossOriginEmbedderPolicy)
-    , m_referrerPolicy(WTFMove(referrerPolicy))
+    , m_referrerPolicy(WTF::move(referrerPolicy))
     , m_topSite(m_registrationKey.topOrigin())
-    , m_scriptResourceMap(WTFMove(scriptResourceMap))
+    , m_scriptResourceMap(WTF::move(scriptResourceMap))
     , m_terminationTimer(*this, &SWServerWorker::terminationTimerFired)
     , m_terminationIfPossibleTimer(*this, &SWServerWorker::terminationIfPossibleTimerFired)
     , m_lastNavigationWasAppInitiated(server.clientIsAppInitiatedForRegistrableDomain(m_topSite.domain()))
@@ -93,9 +91,10 @@ RefPtr<SWServer> SWServerWorker::protectedServer() const
 
 ServiceWorkerContextData SWServerWorker::contextData() const
 {
-    ASSERT(m_registration);
+    RefPtr registration = m_registration.get();
+    ASSERT(registration);
 
-    return { std::nullopt, m_registration->data(), m_data.identifier, m_script, m_certificateInfo, m_contentSecurityPolicy, m_crossOriginEmbedderPolicy, m_referrerPolicy, m_data.scriptURL, m_data.type, false, m_lastNavigationWasAppInitiated, m_scriptResourceMap, m_registration->serviceWorkerPageIdentifier(), m_registration->navigationPreloadState() };
+    return { std::nullopt, registration->data(), m_data.identifier, m_script, m_certificateInfo, m_contentSecurityPolicy, m_crossOriginEmbedderPolicy, m_referrerPolicy, m_data.scriptURL, m_data.type, false, m_lastNavigationWasAppInitiated, m_scriptResourceMap, registration->serviceWorkerPageIdentifier(), registration->navigationPreloadState(), WTF::map(m_routes, [](auto& route) { return route.copy(); }) };
 }
 
 void SWServerWorker::updateAppInitiatedValue(LastNavigationWasAppInitiated lastNavigationWasAppInitiated)
@@ -116,10 +115,10 @@ void SWServerWorker::terminate(CompletionHandler<void()>&& callback)
 
     switch (m_state) {
     case State::Running:
-        startTermination(WTFMove(callback));
+        startTermination(WTF::move(callback));
         return;
     case State::Terminating:
-        m_terminationCallbacks.append(WTFMove(callback));
+        m_terminationCallbacks.append(WTF::move(callback));
         return;
     case State::NotRunning:
         return callback();
@@ -129,7 +128,7 @@ void SWServerWorker::terminate(CompletionHandler<void()>&& callback)
 void SWServerWorker::whenTerminated(CompletionHandler<void()>&& callback)
 {
     ASSERT(isRunning() || isTerminating());
-    m_terminationCallbacks.append(WTFMove(callback));
+    m_terminationCallbacks.append(WTF::move(callback));
 }
 
 void SWServerWorker::startTermination(CompletionHandler<void()>&& callback)
@@ -146,7 +145,7 @@ void SWServerWorker::startTermination(CompletionHandler<void()>&& callback)
 
     setState(State::Terminating);
 
-    m_terminationCallbacks.append(WTFMove(callback));
+    m_terminationCallbacks.append(WTF::move(callback));
 
     constexpr Seconds terminationDelayForTesting = 1_s;
     RefPtr<SWServer> server = m_server.get();
@@ -165,7 +164,7 @@ void SWServerWorker::terminationCompleted()
 
 void SWServerWorker::callTerminationCallbacks()
 {
-    auto callbacks = WTFMove(m_terminationCallbacks);
+    auto callbacks = WTF::move(m_terminationCallbacks);
     for (auto& callback : callbacks)
         callback();
 }
@@ -263,7 +262,7 @@ void SWServerWorker::matchAll(const ServiceWorkerClientQueryOptions& options, Se
     ASSERT(m_server);
     if (!m_server)
         return callback({ });
-    return protectedServer()->matchAll(*this, options, WTFMove(callback));
+    return protectedServer()->matchAll(*this, options, WTF::move(callback));
 }
 
 String SWServerWorker::userAgent() const
@@ -276,7 +275,7 @@ String SWServerWorker::userAgent() const
 
 void SWServerWorker::setScriptResource(URL&& url, ServiceWorkerContextData::ImportedScript&& script)
 {
-    m_scriptResourceMap.set(WTFMove(url), WTFMove(script));
+    m_scriptResourceMap.set(WTF::move(url), WTF::move(script));
 }
 
 void SWServerWorker::didSaveScriptsToDisk(ScriptBuffer&& mainScript, MemoryCompactRobinHoodHashMap<URL, ScriptBuffer>&& importedScripts)
@@ -287,14 +286,14 @@ void SWServerWorker::didSaveScriptsToDisk(ScriptBuffer&& mainScript, MemoryCompa
 
     // The scripts were saved to disk, replace our scripts with the mmap'd version to save dirty memory.
     ASSERT(mainScript == m_script); // Do a memcmp to make sure the scripts are identical.
-    m_script = WTFMove(mainScript);
+    m_script = WTF::move(mainScript);
     for (auto& pair : importedScripts) {
         auto it = m_scriptResourceMap.find(pair.key);
         ASSERT(it != m_scriptResourceMap.end());
         if (it == m_scriptResourceMap.end())
             continue;
         ASSERT(it->value.script == pair.value); // Do a memcmp to make sure the scripts are identical.
-        it->value.script = WTFMove(pair.value);
+        it->value.script = WTF::move(pair.value);
     }
 }
 
@@ -303,8 +302,8 @@ void SWServerWorker::skipWaiting()
     m_isSkipWaitingFlagSet = true;
 
     ASSERT(m_registration || isTerminating());
-    if (m_registration)
-        m_registration->tryActivate();
+    if (RefPtr registration = m_registration.get())
+        registration->tryActivate();
 }
 
 void SWServerWorker::setHasPendingEvents(bool hasPendingEvents)
@@ -335,7 +334,7 @@ bool SWServerWorker::isIdle(Seconds idleTime) const
 void SWServerWorker::whenActivated(CompletionHandler<void(bool)>&& handler)
 {
     if (state() == ServiceWorkerState::Activating) {
-        m_whenActivatedHandlers.append(WTFMove(handler));
+        m_whenActivatedHandlers.append(WTF::move(handler));
         return;
     }
     ASSERT(state() == ServiceWorkerState::Activated);
@@ -349,11 +348,20 @@ void SWServerWorker::setState(ServiceWorkerState state)
 
     m_data.state = state;
 
+    HashSet<SWServerConnectionIdentifier> connectionIdentifiers;
+
     ASSERT(m_registration || state == ServiceWorkerState::Redundant);
     if (RefPtr registration = m_registration.get()) {
         registration->forEachConnection([&](auto& connection) {
-            connection.updateWorkerStateInClient(this->identifier(), state);
+            connectionIdentifiers.add(connection.identifier());
         });
+    }
+    for (auto connectionIdentifierWithServiceWorker : m_connectionsWithServiceWorker.values())
+        connectionIdentifiers.add(connectionIdentifierWithServiceWorker);
+
+    for (auto connectionIdentifier : connectionIdentifiers) {
+        if (RefPtr connection = protectedServer()->connection(connectionIdentifier))
+            connection->updateWorkerStateInClient(this->identifier(), state);
     }
 
     if (state == ServiceWorkerState::Activated || state == ServiceWorkerState::Redundant)
@@ -362,7 +370,7 @@ void SWServerWorker::setState(ServiceWorkerState state)
 
 void SWServerWorker::callWhenActivatedHandler(bool success)
 {
-    auto whenActivatedHandlers = WTFMove(m_whenActivatedHandlers);
+    auto whenActivatedHandlers = WTF::move(m_whenActivatedHandlers);
     for (auto& handler : whenActivatedHandlers)
         handler(success);
 }
@@ -478,6 +486,35 @@ bool SWServerWorker::matchingImportedScripts(const Vector<std::pair<URL, ScriptB
     return true;
 }
 
+void SWServerWorker::registerServiceWorkerConnection(SWServerConnectionIdentifier connectionIdentifier)
+{
+    m_connectionsWithServiceWorker.add(connectionIdentifier);
+}
+
+void SWServerWorker::unregisterServiceWorkerConnection(SWServerConnectionIdentifier connectionIdentifier)
+{
+    m_connectionsWithServiceWorker.remove(connectionIdentifier);
+}
+
+// https://w3c.github.io/ServiceWorker/#check-router-registration-limit-algorithm
+static bool checkRouterRegistrationLimit(const Vector<ServiceWorkerRoute>& currentRoutes, const Vector<ServiceWorkerRoute>& newRoutes)
+{
+    size_t result = 1024;
+    for (auto& route : currentRoutes) {
+        auto countResult = countRouterInnerConditions(route.condition, result, 10);
+        if (!countResult)
+            return false;
+        result = *countResult;
+    }
+    for (auto& route : newRoutes) {
+        auto countResult = countRouterInnerConditions(route.condition, result, 10);
+        if (!countResult)
+            return false;
+        result = *countResult;
+    }
+    return true;
+}
+
 std::optional<ExceptionData> SWServerWorker::addRoutes(Vector<ServiceWorkerRoute>&& routes)
 {
     for (auto& route : routes) {
@@ -485,16 +522,10 @@ std::optional<ExceptionData> SWServerWorker::addRoutes(Vector<ServiceWorkerRoute
             return exception;
     }
 
-    size_t routesConditionCount = 0;
-    for (auto& route : routes)
-        routesConditionCount += computeServiceWorkerRouteConditionCount(route);
-    for (auto& route : m_routes)
-        routesConditionCount += computeServiceWorkerRouteConditionCount(route);
+    if (!checkRouterRegistrationLimit(m_routes, routes))
+        return ExceptionData { ExceptionCode::TypeError, "Router registration limit is hit"_s };
 
-    if (routesConditionCount > maxRouteConditionCount)
-        return ExceptionData { ExceptionCode::TypeError, "Too many routes are registered"_s };
-
-    m_routes.appendVector(WTFMove(routes));
+    m_routes.appendVector(WTF::move(routes));
 
     return { };
 }
@@ -502,14 +533,12 @@ std::optional<ExceptionData> SWServerWorker::addRoutes(Vector<ServiceWorkerRoute
 // https://w3c.github.io/ServiceWorker/#get-router-source
 RouterSource SWServerWorker::getRouterSource(const FetchOptions& options, const ResourceRequest& request) const
 {
-    if (m_shouldSkipHandleFetch)
-        return RouterSourceEnum::Network;
-
     for (auto& route : m_routes) {
         if (matchRouterCondition(route.condition, options, request, isRunning()))
             return route.source;
     }
-    return RouterSourceEnum::FetchEvent;
+
+    return m_shouldSkipHandleFetch ? RouterSourceEnum::Network : RouterSourceEnum::FetchEvent;
 }
 
 } // namespace WebCore

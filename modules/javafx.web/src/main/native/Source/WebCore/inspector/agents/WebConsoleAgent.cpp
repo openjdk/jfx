@@ -70,7 +70,7 @@ void WebConsoleAgent::frameWindowDiscarded(LocalDOMWindow& window)
                 message->clear();
         }
     }
-    static_cast<WebInjectedScriptManager&>(m_injectedScriptManager).discardInjectedScriptsFor(window);
+    Ref { static_cast<WebInjectedScriptManager&>(m_injectedScriptManager) }->discardInjectedScriptsFor(window);
 }
 
 void WebConsoleAgent::didReceiveResponse(ResourceLoaderIdentifier requestIdentifier, const ResourceResponse& response)
@@ -97,7 +97,7 @@ void WebConsoleAgent::didFailLoading(ResourceLoaderIdentifier requestIdentifier,
     else
         level = MessageLevel::Info;
 
-    addMessageToConsole(makeUnique<ConsoleMessage>(MessageSource::Network, MessageType::Log, level, WTFMove(message), error.failingURL().string(), 0, 0, nullptr, requestIdentifier.toUInt64()));
+    addMessageToConsole(makeUnique<ConsoleMessage>(MessageSource::Network, MessageType::Log, level, WTF::move(message), error.failingURL().string(), 0, 0, nullptr, requestIdentifier.toUInt64()));
 }
 
 } // namespace WebCore

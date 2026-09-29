@@ -23,14 +23,14 @@
 
 #pragma once
 
-#include "CachedHTMLCollection.h"
-#include "HTMLOptionElement.h"
-#include "HTMLSelectElement.h"
+#include <WebCore/CachedHTMLCollection.h>
+#include <WebCore/HTMLOptionElement.h>
+#include <WebCore/HTMLSelectElement.h>
 
 namespace WebCore {
 
 class HTMLOptionsCollection final : public CachedHTMLCollection<HTMLOptionsCollection, CollectionTypeTraits<CollectionType::SelectOptions>::traversalType> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(HTMLOptionsCollection, WEBCORE_EXPORT);
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(HTMLOptionsCollection, WEBCORE_EXPORT);
 public:
     using Base = CachedHTMLCollection<HTMLOptionsCollection, CollectionTypeTraits<CollectionType::SelectOptions>::traversalType>;
 

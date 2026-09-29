@@ -25,11 +25,11 @@
 
 #pragma once
 
-#include "LegacyInlineTextBox.h"
-#include "LegacyRootInlineBox.h"
-#include "RenderSVGInlineText.h"
-#include "SVGInlineTextBox.h"
-#include "TextBoxSelectableRange.h"
+#include <WebCore/LegacyInlineTextBox.h>
+#include <WebCore/LegacyRootInlineBox.h>
+#include <WebCore/RenderSVGInlineText.h>
+#include <WebCore/SVGInlineTextBox.h>
+#include <WebCore/TextBoxSelectableRange.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -46,6 +46,8 @@ public:
     bool isText() const { return m_inlineBox->isInlineTextBox(); }
     bool isInlineBox() const { return m_inlineBox->isInlineFlowBox(); }
     bool isRootInlineBox() const { return m_inlineBox->isRootInlineBox(); }
+    bool isBlockLevelBox() const { return false; }
+    bool isAtomicInlineBox() const { return renderer().isBlockLevelReplacedOrAtomicInline(); }
 
     FloatRect visualRectIgnoringBlockDirection() const { return m_inlineBox->frameRect(); }
 
@@ -169,6 +171,30 @@ public:
             parent = parent->parent();
 
         m_inlineBox = parent ? parent->nextOnLine() : nullptr;
+    }
+
+    void traversePreviousBoxOnLine()
+    {
+        if (auto* flowBox = dynamicDowncast<LegacyInlineFlowBox>(m_inlineBox); flowBox && flowBox->lastChild()) {
+            m_inlineBox = flowBox->lastChild();
+            return;
+        }
+
+        traversePreviousBoxOnLineSkippingChildren();
+    }
+
+    void traversePreviousBoxOnLineSkippingChildren()
+    {
+        if (m_inlineBox->previousOnLine()) {
+            m_inlineBox = m_inlineBox->previousOnLine();
+            return;
+        }
+
+        auto* parent = m_inlineBox->parent();
+        while (parent && !parent->previousOnLine())
+            parent = parent->parent();
+
+        m_inlineBox = parent ? parent->previousOnLine() : nullptr;
     }
 
     const Vector<SVGTextFragment>& svgTextFragments() const

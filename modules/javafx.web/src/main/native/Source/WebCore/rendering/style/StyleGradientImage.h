@@ -38,7 +38,7 @@ class StyleGradientImage final : public StyleGeneratedImage {
 public:
     static Ref<StyleGradientImage> create(Style::Gradient gradient)
     {
-        return adoptRef(*new StyleGradientImage(WTFMove(gradient)));
+        return adoptRef(*new StyleGradientImage(WTF::move(gradient)));
     }
     virtual ~StyleGradientImage();
 
@@ -53,7 +53,7 @@ private:
     Ref<CSSValue> computedStyleValue(const RenderStyle&) const final;
     bool isPending() const final;
     void load(CachedResourceLoader&, const ResourceLoaderOptions&) final;
-    RefPtr<Image> image(const RenderElement*, const FloatSize&, bool isForFirstLine) const final;
+    RefPtr<Image> image(const RenderElement*, const FloatSize&, const GraphicsContext& destinationContext, bool isForFirstLine) const final;
     bool knownToBeOpaque(const RenderElement&) const final;
     FloatSize fixedSize(const RenderElement&) const final;
     void didAddClient(RenderElement&) final { }

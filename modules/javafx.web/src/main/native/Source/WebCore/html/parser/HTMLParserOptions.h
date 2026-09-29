@@ -37,6 +37,7 @@ public:
     // See https://html.spec.whatwg.org/#scripting-flag for more information.
     bool scriptingFlag;
     bool usePreHTML5ParserQuirks;
+    bool enhancedSelect;
     unsigned maximumDOMTreeDepth;
 };
 

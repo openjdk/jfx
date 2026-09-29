@@ -34,7 +34,8 @@
     Conditional=WEB_RTC,
     EnabledBySetting=PeerConnectionEnabled,
     JSGenerateToJSObject,
-    JSGenerateToNativeObject
+    JSGenerateToNativeObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary RTCIceCandidateInit {
     DOMString candidate = "";
     DOMString? sdpMid = null;

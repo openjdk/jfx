@@ -56,6 +56,7 @@ public:
     void setDeviceId(const String& deviceId) { m_deviceId = deviceId; }
 
     void consumeAudio(AudioBus&, size_t numberOfFrames);
+    void setNumberOfChannels(unsigned);
 
 private:
     explicit MediaStreamAudioSource(float sampleRate);

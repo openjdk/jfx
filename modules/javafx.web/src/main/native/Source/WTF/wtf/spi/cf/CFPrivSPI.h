@@ -25,9 +25,12 @@
 
 #pragma once
 
+#include <wtf/Compiler.h>
+
 DECLARE_SYSTEM_HEADER
 
 #include <CoreFoundation/CoreFoundation.h>
+#include <wtf/Platform.h>
 
 #if USE(APPLE_INTERNAL_SDK)
 
@@ -35,8 +38,8 @@ DECLARE_SYSTEM_HEADER
 
 #endif
 
-extern "C" {
+WTF_EXTERN_C_BEGIN
 
 CF_EXPORT const char *_CFProcessPath(void);
 
-}
+WTF_EXTERN_C_END

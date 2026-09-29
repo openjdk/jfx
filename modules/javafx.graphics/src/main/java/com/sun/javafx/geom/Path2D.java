@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1185,7 +1185,7 @@ import java.util.Arrays;
                     // u and v are unit vectors.  We now need to express how
                     // much we want to shorten this last arc segment in terms
                     // of 0.0=>1.0 meaning 0=>90 degrees.
-                    quadlen = (float) (Math.acos(dot) / (Math.PI / 2.0));
+                    quadlen = (float) (Math.acos(Math.min(dot, 1.0)) / (Math.PI / 2.0));
                     done = true;
                 }
                 // Remember that we were once within 180 degrees so we

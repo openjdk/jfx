@@ -39,6 +39,7 @@
 #include "RenderObjectInlines.h"
 #include "RenderView.h"
 #include "TypedElementDescendantIteratorInlines.h"
+#include <wtf/SetForScope.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
 
@@ -233,7 +234,7 @@ CandidateExaminationResult ScrollAnchoringController::examineAnchorCandidate(Ele
     }
 
     auto isExcludedSubtree = [this](RenderElement* renderer, bool intersects) {
-        return renderer->style().overflowAnchor() == OverflowAnchor::None || renderer->isStickilyPositioned() || renderer->isFixedPositioned() || renderer->isPseudoElement() || renderer->isAnonymousBlock() || (renderer->isAbsolutelyPositioned() && absolutePositionedElementOutsideScroller(*renderer, m_owningScrollableArea)) || (!intersects && renderer->style().containsPaint());
+        return renderer->style().overflowAnchor() == OverflowAnchor::None || renderer->isStickilyPositioned() || renderer->isFixedPositioned() || renderer->isPseudoElement() || renderer->isAnonymousBlock() || (renderer->isAbsolutelyPositioned() && absolutePositionedElementOutsideScroller(*renderer, m_owningScrollableArea)) || (!intersects && renderer->style().usedContain().contains(Style::ContainValue::Paint));
     };
 
     if (auto renderer = element.renderer()) {

@@ -69,12 +69,12 @@ WebCore::Color createColor(const ColorMix& unresolved, PlatformColorResolutionSt
         ColorMixResolver {
             unresolved.colorInterpolationMethod,
             ColorMixResolver::Component {
-                WTFMove(component1Color),
-                WTFMove(percentage1),
+                WTF::move(component1Color),
+                WTF::move(percentage1),
             },
             ColorMixResolver::Component {
-                WTFMove(component2Color),
-                WTFMove(percentage2),
+                WTF::move(component2Color),
+                WTF::move(percentage2),
             }
         }
     );
@@ -152,9 +152,13 @@ static void serializationForColorMixPercentage2(StringBuilder& builder, const CS
 
 void Serialize<ColorMix>::operator()(StringBuilder& builder, const SerializationContext& context, const ColorMix& value)
 {
-    builder.append("color-mix(in "_s);
+
+    builder.append("color-mix("_s);
+    if (value.colorInterpolationMethod != CSS::defaultInterpolationMethodForColorMix) {
+        builder.append("in "_s);
     WebCore::serializationForCSS(builder, value.colorInterpolationMethod);
     builder.append(", "_s);
+    }
     serializationForCSS(builder, context, value.mixComponents1.color);
     ColorMixSerializationDetails::serializationForColorMixPercentage1(builder, context, value);
     builder.append(", "_s);

@@ -59,7 +59,7 @@ namespace JSC {
       Extension: [   11111b | 1b |    offset:26                                ]
       AbsInstPC: [   11111b | 0b |     value:26                                ]
       MultiWide: [   11110b | 1b |     111b | numFields:5 | fields[6]:18       ] [ value:32 ] ...
-        DuoWide: [   11110b | 1b | field2:3 | value2:10 | field1:3 | value1:10 ]
+        DuoWide: [   11110b | 1b | field1:3 | value1:10 | field2:3 | value2:10 ]
      SingleWide: [   11110b | 0b |  field:3 | value:23                         ]
    ExtensionEnd: [   11110b | 0b |     111b |     0:23                         ]
           Basic: [ instPC:5 |   divot:7 | start:6 |  end:6 | line:3 | column:5 ]
@@ -141,7 +141,7 @@ namespace JSC {
        over to the extension island. For all encodings, this is just a single word. The only
        exception is the MultiWide encoding, which are followed by N value words. Because the
        decoder expects these words to be contiguous, we move all the value words over too. The
-       slots of the original value words will not be replaced by no-ops (SingleWide with 0).
+       slots of the original value words will now be replaced by no-ops (SingleWide with 0).
 
     AbsInstPC and Chapters
     ======================
@@ -287,9 +287,9 @@ struct ExpressionInfo::Diff {
 // The type for divot, line, and column is intentionally int, not unsigned. These are
 // diff values which can be negative. These asserts are just here to draw attention to
 // this comment in case anyone naively changes their type.
-static_assert(std::is_same_v<decltype(ExpressionInfo::Diff::divot), int>);
-static_assert(std::is_same_v<decltype(ExpressionInfo::Diff::line), int>);
-static_assert(std::is_same_v<decltype(ExpressionInfo::Diff::column), int>);
+static_assert(std::same_as<decltype(ExpressionInfo::Diff::divot), int>);
+static_assert(std::same_as<decltype(ExpressionInfo::Diff::line), int>);
+static_assert(std::same_as<decltype(ExpressionInfo::Diff::column), int>);
 
 bool ExpressionInfo::EncodedInfo::isAbsInstPC() const
 {
@@ -385,11 +385,9 @@ auto ExpressionInfo::Encoder::encodeBasic(const Diff& diff) -> EncodedInfo
     return { word };
 }
 
-void ExpressionInfo::Encoder::adjustInstPC(EncodedInfo* info, unsigned instPCDelta)
+void ExpressionInfo::Encoder::adjustInstPC(unsigned infoIndex, unsigned instPCDelta)
 {
-    unsigned infoIndex = info - &m_expressionInfoEncodedInfo[0];
-    auto* firstInfo = info;
-    unsigned firstValue = firstInfo->value;
+    unsigned firstValue = m_expressionInfoEncodedInfo[infoIndex].value;
 
     unsigned headerBits = firstValue >> headerShift;
     bool isMulti = (firstValue >> multiBitShift) & 1;
@@ -403,7 +401,7 @@ void ExpressionInfo::Encoder::adjustInstPC(EncodedInfo* info, unsigned instPCDel
         unsigned instPC = cast<unsigned, specialValueBits>(firstValue);
         unsigned updatedInstPC = instPC + instPCDelta;
         if (fits<unsigned, specialValueBits>(updatedInstPC)) {
-            *firstInfo = encodeAbsInstPC(updatedInstPC);
+            m_expressionInfoEncodedInfo[infoIndex] = encodeAbsInstPC(updatedInstPC);
             return;
         }
         goto emitExtension;
@@ -417,7 +415,7 @@ void ExpressionInfo::Encoder::adjustInstPC(EncodedInfo* info, unsigned instPCDel
             unsigned candidateInstPC = cast<unsigned, singleValueBits>(firstValue);
             unsigned updatedInstPC = candidateInstPC + instPCDelta;
             if (fieldID == FieldID::InstPC && fits<unsigned, singleValueBits>(updatedInstPC)) {
-                *firstInfo = encodeSingle(FieldID::InstPC, updatedInstPC);
+                m_expressionInfoEncodedInfo[infoIndex] = encodeSingle(FieldID::InstPC, updatedInstPC);
                 return;
             }
             goto emitExtension;
@@ -433,7 +431,7 @@ void ExpressionInfo::Encoder::adjustInstPC(EncodedInfo* info, unsigned instPCDel
             if (fieldID == FieldID::InstPC && fits<unsigned, duoValueBits>(updatedInstPC)) {
                 FieldID fieldID2 = static_cast<FieldID>((firstValue >> duoSecondFieldIDShift) & fieldIDMask);
                 unsigned value2 = cast<unsigned, duoValueBits>(firstValue >> duoSecondValueShift);
-                *firstInfo = encodeDuo(FieldID::InstPC, updatedInstPC, fieldID2, value2);
+                m_expressionInfoEncodedInfo[infoIndex] = encodeDuo(FieldID::InstPC, updatedInstPC, fieldID2, value2);
                 return;
             }
             goto emitExtension;
@@ -453,15 +451,20 @@ void ExpressionInfo::Encoder::adjustInstPC(EncodedInfo* info, unsigned instPCDel
         // being contiguous.
         unsigned numberOfFields = (firstValue >> multiSizeShift) & multiSizeMask;
 
+        unsigned locationOfExtensionIsland = m_expressionInfoEncodedInfo.size();
         m_expressionInfoEncodedInfo.append({ firstValue }); // MultiWide header.
         for (unsigned i = 1; i < numberOfFields; ++i) {
-            m_expressionInfoEncodedInfo.append(firstInfo[i]);
-            firstInfo[i] = encodeSingle(FieldID::InstPC, 0); // Replace with a no-op.
+            auto fieldValue = m_expressionInfoEncodedInfo[infoIndex + i];
+            m_expressionInfoEncodedInfo.append(fieldValue);
+            m_expressionInfoEncodedInfo[infoIndex + i] = encodeSingle(FieldID::InstPC, 0); // Replace with a no-op.
         }
         // Save the last field in firstValue, and let the extension emitter below append it.
-        firstValue = firstInfo[numberOfFields].value;
-        firstInfo[numberOfFields] = encodeSingle(FieldID::InstPC, 0); // Replace with a no-op.
-        goto emitExtension;
+        firstValue = m_expressionInfoEncodedInfo[infoIndex + numberOfFields].value;
+        m_expressionInfoEncodedInfo[infoIndex + numberOfFields] = encodeSingle(FieldID::InstPC, 0); // Replace with a no-op.
+
+        unsigned extensionOffset = locationOfExtensionIsland - infoIndex;
+        m_expressionInfoEncodedInfo[infoIndex] = encodeExtension(extensionOffset);
+        goto emitExtensionIsland;
     }
 
     // Handle Basic.
@@ -471,16 +474,18 @@ void ExpressionInfo::Encoder::adjustInstPC(EncodedInfo* info, unsigned instPCDel
         if (updatedInstPC < maxInstPCValue) {
             unsigned replacement = firstValue & ((1u << instPCShift) - 1);
             replacement |= updatedInstPC << instPCShift;
-            *firstInfo = { replacement };
+            m_expressionInfoEncodedInfo[infoIndex] = { replacement };
             return;
         }
     }
     isBasic = true;
 
 emitExtension:
+    {
     unsigned extensionOffset = m_expressionInfoEncodedInfo.size() - infoIndex;
     m_expressionInfoEncodedInfo[infoIndex] = encodeExtension(extensionOffset);
-
+    }
+emitExtensionIsland:
     // Because the Basic word is used as a terminator for the current Entry,
     // if the firstValue is a Basic word, it needs to come last. Otherwise, we should
     // just emit firstValue first. AbsInstPC and MultiWide relies on this for correctness.
@@ -492,7 +497,7 @@ emitExtension:
     else {
         // The wides array is really only to enable us to use encodeMultiHeader. Hence,
         // we don't really need to store instPCDelta as the value here. It can be any value
-        // since it's not ued. However, to avoid confusion, we'll just populate it consistently.
+        // since it's not used. However, to avoid confusion, we'll just populate it consistently.
         Wide wides[1] = { { instPCDelta, FieldID::InstPC } };
         m_expressionInfoEncodedInfo.append(encodeMultiHeader(1, wides));
         m_expressionInfoEncodedInfo.append({ instPCDelta });
@@ -681,7 +686,7 @@ std::unique_ptr<ExpressionInfo> ExpressionInfo::Encoder::createExpressionInfo()
     size_t numberOfEncodedInfo = m_expressionInfoEncodedInfo.size() - m_numberOfEncodedInfoExtensions;
     size_t totalSize = ExpressionInfo::totalSizeInBytes(numberOfChapters, numberOfEncodedInfo, m_numberOfEncodedInfoExtensions);
     void* allocation = FastMalloc::malloc(totalSize);
-    return std::unique_ptr<ExpressionInfo>(new (allocation) ExpressionInfo(WTFMove(m_expressionInfoChapters), WTFMove(m_expressionInfoEncodedInfo), m_numberOfEncodedInfoExtensions));
+    return std::unique_ptr<ExpressionInfo>(new (allocation) ExpressionInfo(WTF::move(m_expressionInfoChapters), WTF::move(m_expressionInfoEncodedInfo), m_numberOfEncodedInfoExtensions));
 }
 
 ExpressionInfo::Decoder::Decoder(const ExpressionInfo& expressionInfo)
@@ -1034,7 +1039,7 @@ void ExpressionInfo::dumpEncodedInfo(ExpressionInfo::EncodedInfo* start, Express
                 out.print(" DUO ", fieldID1, " ");
                 print<duoValueBits>(out, fieldID1, value >> duoFirstValueShift);
                 out.print(" ", fieldID2, " ");
-                print<duoValueBits>(out, fieldID2, value >> duoFirstValueShift);
+                print<duoValueBits>(out, fieldID2, value >> duoSecondValueShift);
                 out.println();
 
             } else {

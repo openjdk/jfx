@@ -68,6 +68,8 @@ enum class PhaseMode {
     Global
 };
 
+// FIXME(rdar://177100632): Document barrier placement invariants expected of nodes for this phase
+// and improve barrier-related phases overall.
 template<PhaseMode mode>
 class StoreBarrierInsertionPhase : public Phase {
 public:
@@ -243,7 +245,7 @@ private:
             switch (m_node->op()) {
             case PutByValDirect:
             case PutByVal:
-            case PutByValAlias: {
+            case PutByValDirectResolved: {
                 switch (m_node->arrayMode().modeForPut().type()) {
                 case Array::Generic:
                 case Array::Float16Array:
@@ -349,9 +351,20 @@ private:
                 break;
             }
 
-            case MultiPutByOffset:
+            case MultiPutByOffset: {
+                // This node may cause a transition before performing a store if it reallocates
+                // storage. This is different from the usual assumption in this phase a node's fast
+                // path either does GC or performs a store, but not both within the same node (a
+                // slow path call to an operation always performs its own barrier). In this special
+                // case, bump the epoch before considering the barrier.
+                if (m_node->multiPutByOffsetData().reallocatesStorage())
+                    m_currentEpoch.bump();
+                considerBarrier(m_node->child1());
+                break;
+            }
+
             case MultiDeleteByOffset: {
-                // These nodes may cause transition too.
+                // This node may cause a transition but does not GC.
                 considerBarrier(m_node->child1());
                 break;
             }
@@ -490,7 +503,6 @@ private:
                 clobberize(m_graph, m_node, readFunc, writeFunc, NoOpClobberize());
 
                 if (wroteHeapOrStack) {
-
                     auto escapeToTheStack = [&] (Node* node) {
                         if (node->epoch() == m_currentEpoch) {
                             RELEASE_ASSERT(!!preciseStackWrite);

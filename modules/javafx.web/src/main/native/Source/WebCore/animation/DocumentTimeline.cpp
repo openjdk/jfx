@@ -30,28 +30,27 @@
 #include "AnimationTimelinesController.h"
 #include "CSSProperty.h"
 #include "CSSTransition.h"
-#include "ContainerNodeInlines.h"
 #include "CustomAnimationOptions.h"
 #include "CustomEffect.h"
 #include "CustomEffectCallback.h"
 #include "Document.h"
 #include "EventNames.h"
-#include "GraphicsLayer.h"
 #include "KeyframeEffect.h"
 #include "KeyframeEffectStack.h"
 #include "Logging.h"
 #include "Node.h"
 #include "Page.h"
-#include "RenderBoxModelObject.h"
 #include "RenderElement.h"
-#include "RenderLayer.h"
-#include "RenderLayerBacking.h"
 #include "RenderObjectInlines.h"
+#include "Settings.h"
 #include "StyleOriginatedAnimation.h"
 #include "WebAnimationTypes.h"
+#include <ranges>
 
-#if ENABLE(THREADED_ANIMATION_RESOLUTION)
+#if ENABLE(THREADED_ANIMATIONS)
 #include "AcceleratedEffectStackUpdater.h"
+#include "LocalDOMWindow.h"
+#include "Performance.h"
 #endif
 
 namespace WebCore {
@@ -71,10 +70,12 @@ DocumentTimeline::DocumentTimeline(Document& document, Seconds originTime)
     , m_document(document)
     , m_originTime(originTime)
 {
-    document.ensureTimelinesController().addTimeline(*this);
+    document.ensureCheckedTimelinesController()->addTimeline(*this);
 }
 
 DocumentTimeline::~DocumentTimeline() = default;
+
+Document* DocumentTimeline::document() const { return m_document.get(); }
 
 AnimationTimelinesController* DocumentTimeline::controller() const
 {
@@ -129,7 +130,7 @@ unsigned DocumentTimeline::numberOfActiveAnimationsForTesting() const
 
 std::optional<WebAnimationTime> DocumentTimeline::currentTime(UseCachedCurrentTime useCachedCurrentTime)
 {
-    if (auto* controller = this->controller()) {
+    if (CheckedPtr controller = this->controller()) {
         if (auto currentTime = controller->currentTime(useCachedCurrentTime))
             return *currentTime - m_originTime;
         return std::nullopt;
@@ -175,6 +176,14 @@ void DocumentTimeline::clearTickScheduleTimer()
 
 bool DocumentTimeline::shouldRunUpdateAnimationsAndSendEventsIgnoringSuspensionState() const
 {
+#if ENABLE(THREADED_ANIMATIONS)
+    if (CheckedPtr controller = this->controller()) {
+        if (auto* acceleratedEffectStackUpdater = controller->existingAcceleratedEffectStackUpdater()) {
+            if (acceleratedEffectStackUpdater->hasTargetsPendingUpdate())
+                return true;
+        }
+    }
+#endif
     return !m_animations.isEmpty() || !m_pendingAnimationEvents.isEmpty() || !m_acceleratedAnimationsPendingRunningStateChange.isEmpty();
 }
 
@@ -230,16 +239,16 @@ bool DocumentTimeline::animationCanBeRemoved(WebAnimation& animation)
         return false;
 
     // - has an associated animation effect whose target element is a descendant of doc, and
-    RefPtr keyframeEffect = dynamicDowncast<KeyframeEffect>(animation.effect());
+    RefPtr keyframeEffect = animation.keyframeEffect();
     if (!keyframeEffect)
         return false;
 
     auto target = keyframeEffect->targetStyleable();
-    if (!target || !target->element.isDescendantOf(*m_document))
+    if (!target || !target->protectedElement()->isDescendantOf(Ref { *m_document }))
         return false;
 
 IGNORE_GCC_WARNINGS_BEGIN("dangling-reference")
-    auto& style = [&]() -> const RenderStyle& {
+    CheckedRef style = [&]() -> const RenderStyle& {
         if (auto* renderer = target->renderer())
             return renderer->style();
         return RenderStyle::defaultStyleSingleton();
@@ -248,7 +257,7 @@ IGNORE_GCC_WARNINGS_END
 
     auto resolvedProperty = [&] (AnimatableCSSProperty property) -> AnimatableCSSProperty {
         if (std::holds_alternative<CSSPropertyID>(property))
-            return CSSProperty::resolveDirectionAwareProperty(std::get<CSSPropertyID>(property), style.writingMode());
+            return CSSProperty::resolveDirectionAwareProperty(std::get<CSSPropertyID>(property), style->writingMode());
         return property;
     };
 
@@ -265,12 +274,12 @@ IGNORE_GCC_WARNINGS_END
         return { };
     }();
 
-    for (auto& animationWithHigherCompositeOrder : makeReversedRange(protectedAnimations)) {
+    for (auto& animationWithHigherCompositeOrder : protectedAnimations | std::views::reverse) {
         if (&animation == animationWithHigherCompositeOrder)
             break;
 
         if (animationWithHigherCompositeOrder && animationWithHigherCompositeOrder->isReplaceable()) {
-            if (RefPtr keyframeEffectWithHigherCompositeOrder = dynamicDowncast<KeyframeEffect>(animationWithHigherCompositeOrder->effect())) {
+            if (RefPtr keyframeEffectWithHigherCompositeOrder = animationWithHigherCompositeOrder->keyframeEffect()) {
                 for (auto property : keyframeEffectWithHigherCompositeOrder->animatedProperties()) {
                     if (propertiesToMatch.remove(resolvedProperty(property)) && propertiesToMatch.isEmpty())
                         break;
@@ -330,11 +339,11 @@ void DocumentTimeline::removeReplacedAnimations()
 void DocumentTimeline::transitionDidComplete(Ref<CSSTransition>&& transition)
 {
     removeAnimation(transition.get());
-    if (RefPtr keyframeEffect = dynamicDowncast<KeyframeEffect>(transition->effect())) {
+    if (RefPtr keyframeEffect = transition->keyframeEffect()) {
         if (auto styleable = keyframeEffect->targetStyleable()) {
             auto property = transition->property();
             if (styleable->hasRunningTransitionForProperty(property))
-                styleable->ensureCompletedTransitionsByProperty().set(property, WTFMove(transition));
+                styleable->ensureCompletedTransitionsByProperty().set(property, WTF::move(transition));
         }
     }
 }
@@ -355,7 +364,7 @@ void DocumentTimeline::scheduleNextTick()
 
     auto timeUntilNextTickForAnimationsWithFrameRate = [&](std::optional<FramesPerSecond> frameRate) -> std::optional<Seconds> {
         if (frameRate) {
-            if (auto* controller = this->controller())
+            if (CheckedPtr controller = this->controller())
                 return controller->timeUntilNextTickForAnimationsWithFrameRate(*frameRate);
         }
         return std::nullopt;
@@ -400,6 +409,16 @@ void DocumentTimeline::scheduleNextTick()
     }
 }
 
+#if ENABLE(THREADED_ANIMATIONS)
+void DocumentTimeline::scheduleAcceleratedEffectStackUpdate()
+{
+    if (shouldRunUpdateAnimationsAndSendEventsIgnoringSuspensionState())
+        scheduleAnimationResolution();
+    else
+        clearTickScheduleTimer();
+}
+#endif
+
 void DocumentTimeline::animationAcceleratedRunningStateDidChange(WebAnimation& animation)
 {
     m_acceleratedAnimationsPendingRunningStateChange.add(&animation);
@@ -412,24 +431,13 @@ void DocumentTimeline::animationAcceleratedRunningStateDidChange(WebAnimation& a
 
 void DocumentTimeline::applyPendingAcceleratedAnimations()
 {
-#if ENABLE(THREADED_ANIMATION_RESOLUTION)
-    if (m_document && m_document->settings().threadedAnimationResolutionEnabled()) {
-    m_acceleratedAnimationsPendingRunningStateChange.clear();
-        if (CheckedPtr timelinesController = m_document->timelinesController()) {
-            if (auto* acceleratedEffectStackUpdater = timelinesController->existingAcceleratedEffectStackUpdater())
-                acceleratedEffectStackUpdater->updateEffectStacks();
-        }
-        return;
-    }
-#endif
-
     auto acceleratedAnimationsPendingRunningStateChange = std::exchange(m_acceleratedAnimationsPendingRunningStateChange, { });
 
     HashSet<KeyframeEffectStack*> keyframeEffectStacksToUpdate;
 
     bool hasForcedLayout = false;
     for (auto& animation : acceleratedAnimationsPendingRunningStateChange) {
-        if (RefPtr keyframeEffect = dynamicDowncast<KeyframeEffect>(animation->effect())) {
+        if (RefPtr keyframeEffect = animation->keyframeEffect()) {
         if (!hasForcedLayout)
                 hasForcedLayout |= keyframeEffect->forceLayoutIfNeeded();
 
@@ -473,18 +481,6 @@ AnimationEvents DocumentTimeline::prepareForPendingAnimationEventsDispatch()
     return std::exchange(m_pendingAnimationEvents, { });
 }
 
-Vector<std::pair<String, double>> DocumentTimeline::acceleratedAnimationsForElement(Element& element) const
-{
-    ASSERT(m_document);
-    auto* renderer = element.renderer();
-    if (renderer && renderer->isComposited()) {
-        auto* compositedRenderer = downcast<RenderBoxModelObject>(renderer);
-        if (RefPtr graphicsLayer = compositedRenderer->layer()->backing()->graphicsLayer())
-            return graphicsLayer->acceleratedAnimationsForTesting(m_document->settings());
-    }
-    return { };
-}
-
 unsigned DocumentTimeline::numberOfAnimationTimelineInvalidationsForTesting() const
 {
     return m_numberOfAnimationTimelineInvalidationsForTesting;
@@ -492,7 +488,8 @@ unsigned DocumentTimeline::numberOfAnimationTimelineInvalidationsForTesting() co
 
 ExceptionOr<Ref<WebAnimation>> DocumentTimeline::animate(Ref<CustomEffectCallback>&& callback, std::optional<Variant<double, CustomAnimationOptions>>&& options)
 {
-    if (!m_document)
+    RefPtr document = m_document.get();
+    if (!document)
         return Exception { ExceptionCode::InvalidStateError };
 
     String id = emptyString();
@@ -507,18 +504,18 @@ ExceptionOr<Ref<WebAnimation>> DocumentTimeline::animate(Ref<CustomEffectCallbac
             auto customEffectOptions = std::get<CustomAnimationOptions>(*options);
             id = customEffectOptions.id;
             frameRate = customEffectOptions.frameRate;
-            customEffectOptionsVariant = WTFMove(customEffectOptions);
+            customEffectOptionsVariant = WTF::move(customEffectOptions);
         }
         customEffectOptions = customEffectOptionsVariant;
     }
 
-    auto customEffectResult = CustomEffect::create(*m_document, WTFMove(callback), WTFMove(customEffectOptions));
+    auto customEffectResult = CustomEffect::create(*document, WTF::move(callback), WTF::move(customEffectOptions));
     if (customEffectResult.hasException())
         return customEffectResult.releaseException();
 
-    auto animation = WebAnimation::create(*document(), &customEffectResult.returnValue().get());
-    animation->setId(WTFMove(id));
-    animation->setBindingsFrameRate(WTFMove(frameRate));
+    auto animation = WebAnimation::create(*document, &customEffectResult.returnValue().get());
+    animation->setId(WTF::move(id));
+    animation->setBindingsFrameRate(WTF::move(frameRate));
 
     auto animationPlayResult = animation->play();
     if (animationPlayResult.hasException())
@@ -539,5 +536,21 @@ Seconds DocumentTimeline::convertTimelineTimeToOriginRelativeTime(Seconds timeli
     // https://drafts.csswg.org/web-animations-1/#ref-for-timeline-time-to-origin-relative-time
     return timelineTime + m_originTime;
 }
+
+#if ENABLE(THREADED_ANIMATIONS)
+Ref<AcceleratedTimeline> DocumentTimeline::createAcceleratedRepresentation() const
+{
+    // The origin time of a document timeline is relative to the time origin
+    // of the document's associated performance object. We must convert this
+    // origin time back to the time scale used in the remote layer tree.
+    ASSERT(m_document);
+    ASSERT(m_document->window());
+    ASSERT(m_document->settings().threadedTimeBasedAnimationsEnabled());
+    Ref window = *Ref { *m_document }->window();
+    auto monotonicOriginTime = MonotonicTime::fromRawSeconds(m_originTime.seconds());
+    auto convertedOriginTime = m_originTime - window->performance().relativeTimeFromTimeOriginInReducedResolutionSeconds(monotonicOriginTime);
+    return AcceleratedTimeline::create(m_acceleratedTimelineIdentifier, convertedOriginTime);
+}
+#endif
 
 } // namespace WebCore

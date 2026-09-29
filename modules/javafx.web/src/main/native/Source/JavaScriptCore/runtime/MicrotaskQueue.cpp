@@ -27,8 +27,10 @@
 #include "MicrotaskQueue.h"
 
 #include "Debugger.h"
+#include "DeferTermination.h"
 #include "JSCJSValueInlines.h"
 #include "JSGlobalObject.h"
+#include "JSMicrotask.h"
 #include "JSObject.h"
 #include "SlotVisitorInlines.h"
 #include <wtf/SetForScope.h>
@@ -39,11 +41,46 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 namespace JSC {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(MicrotaskQueue);
+WTF_MAKE_COMPACT_TZONE_ALLOCATED_IMPL(MicrotaskDispatcher);
+WTF_MAKE_COMPACT_TZONE_ALLOCATED_IMPL(DebuggableMicrotaskDispatcher);
 
 bool QueuedTask::isRunnable() const
 {
-    if (RefPtr dispatcher = m_dispatcher)
+    if (RefPtr dispatcher = m_dispatcher.pointer())
         return dispatcher->isRunnable();
+    return true;
+}
+
+QueuedTaskResult DebuggableMicrotaskDispatcher::run(QueuedTask& task)
+{
+    auto* globalObject = task.globalObject();
+    VM& vm = globalObject->vm();
+    auto catchScope = DECLARE_CATCH_SCOPE(vm);
+    auto identifier = task.identifier();
+
+    if (auto* debugger = globalObject->debugger(); debugger && identifier) [[unlikely]] {
+        DeferTerminationForAWhile deferTerminationForAWhile(vm);
+        debugger->willRunMicrotask(globalObject, identifier.value());
+        if (!catchScope.clearExceptionExceptTermination()) [[unlikely]]
+            return QueuedTask::Result::Executed;
+    }
+
+    runInternalMicrotask(globalObject, task.job(), task.payload(), task.arguments());
+    if (!catchScope.clearExceptionExceptTermination()) [[unlikely]]
+        return QueuedTask::Result::Executed;
+
+    if (auto* debugger = globalObject->debugger(); debugger && identifier) [[unlikely]] {
+        DeferTerminationForAWhile deferTerminationForAWhile(vm);
+        debugger->didRunMicrotask(globalObject, identifier.value());
+        if (!catchScope.clearExceptionExceptTermination()) [[unlikely]]
+            return QueuedTask::Result::Executed;
+    }
+
+    return QueuedTask::Result::Executed;
+}
+
+bool DebuggableMicrotaskDispatcher::isRunnable() const
+{
     return true;
 }
 
@@ -69,11 +106,11 @@ DEFINE_VISIT_AGGREGATE(MicrotaskQueue);
 void MicrotaskQueue::enqueue(QueuedTask&& task)
 {
     auto* globalObject = task.globalObject();
-    auto microtaskIdentifier = task.identifier();
-    m_queue.enqueue(WTFMove(task));
+    auto identifier = task.identifier();
+    m_queue.enqueue(WTF::move(task));
     if (globalObject) {
-        if (auto* debugger = globalObject->debugger(); debugger) [[unlikely]]
-            debugger->didQueueMicrotask(globalObject, microtaskIdentifier);
+        if (auto* debugger = globalObject->debugger(); debugger && identifier) [[unlikely]]
+            debugger->didQueueMicrotask(globalObject, identifier.value());
     }
 }
 
@@ -100,7 +137,6 @@ void MarkedMicrotaskDeque::visitAggregateImpl(Visitor& visitor)
     for (auto iterator = m_queue.begin() + m_markedBefore, end = m_queue.end(); iterator != end; ++iterator) {
         auto& task = *iterator;
         visitor.appendUnbarriered(task.m_globalObject);
-        visitor.appendUnbarriered(task.m_job);
         visitor.appendUnbarriered(task.m_arguments, QueuedTask::maxArguments);
     }
     m_markedBefore = m_queue.size();

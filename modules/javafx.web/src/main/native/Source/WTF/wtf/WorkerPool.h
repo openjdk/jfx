@@ -26,15 +26,19 @@
 #pragma once
 
 #include <wtf/AutomaticThread.h>
+#include <wtf/CheckedRef.h>
 #include <wtf/Deque.h>
 #include <wtf/Function.h>
 #include <wtf/NumberOfCores.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
 namespace WTF {
 
-class WorkerPool : public ThreadSafeRefCounted<WorkerPool> {
+class WorkerPool final : public ThreadSafeRefCounted<WorkerPool>, public CanMakeThreadSafeCheckedPtr<WorkerPool> {
+    WTF_MAKE_TZONE_ALLOCATED(WorkerPool);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(WorkerPool);
 public:
     WTF_EXPORT_PRIVATE void postTask(Function<void()>&&);
 

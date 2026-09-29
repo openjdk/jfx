@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "CSSNumericBaseType.h"
+#include <WebCore/CSSNumericBaseType.h>
 #include <optional>
 #include <wtf/Markable.h>
 

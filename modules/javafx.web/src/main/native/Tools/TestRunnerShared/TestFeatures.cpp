@@ -111,18 +111,10 @@ static std::optional<double> overrideDeviceScaleFactorForTest(const std::string&
 
 static bool shouldDumpJSConsoleLogInStdErr(const std::string& pathOrURL)
 {
-    if (auto url = URL { { }, String::fromUTF8(pathOrURL.c_str()) }; isWebPlatformTestURL(url)) {
-        auto path = url.path();
-        return path.startsWith("/beacon"_s)
-            || path.startsWith("/cors"_s)
-            || path.startsWith("/fetch"_s)
-            || path.startsWith("/service-workers"_s)
-            || path.startsWith("/streams/writable-streams"_s)
-            || path.startsWith("/streams/piping"_s)
-            || path.startsWith("/xhr"_s)
-            || path.startsWith("/webrtc"_s)
-            || path.startsWith("/websockets"_s);
-    }
+    // Disable console logging for WPT tests as it frequently causes flakiness.
+    if (auto url = URL { { }, String::fromUTF8(pathOrURL.c_str()) }; isWebPlatformTestURL(url))
+        return true;
+
     return false;
 }
 
@@ -141,6 +133,17 @@ static bool shouldSetDefaultPortsForWPT(const std::string& pathOrURL)
 static bool shouldEnableLockdownMode(const std::string& pathOrURL)
 {
     return pathContains(pathOrURL, "lockdown-mode/");
+}
+
+static bool shouldEnableEnhancedSecurity(const std::string& pathOrURL)
+{
+    return pathContains(pathOrURL, "enhanced-security/");
+}
+
+static bool shouldUseBackForwardCache(const std::string& pathOrURL)
+{
+    return pathContains(pathOrURL, "navigation-api/")
+        || pathContains(pathOrURL, "websockets/back-forward-cache");
 }
 
 TestFeatures hardcodedFeaturesBasedOnPathForTest(const TestCommand& command)
@@ -168,6 +171,10 @@ TestFeatures hardcodedFeaturesBasedOnPathForTest(const TestCommand& command)
     }
     if (shouldEnableLockdownMode(command.pathOrURL))
         features.boolWebPreferenceFeatures.insert({ "LockdownModeEnabled", true });
+    if (shouldEnableEnhancedSecurity(command.pathOrURL))
+        features.boolTestRunnerFeatures.insert({ "enhancedSecurityEnabled", true });
+    if (shouldUseBackForwardCache(command.pathOrURL))
+        features.boolWebPreferenceFeatures.insert({ "UsesBackForwardCache", true });
 
     return features;
 }

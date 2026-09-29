@@ -27,7 +27,6 @@
 #include "DOMCSSPaintWorklet.h"
 
 #include "DOMCSSNamespace.h"
-#include "DocumentInlines.h"
 #include "JSDOMPromiseDeferred.h"
 #include "PaintWorkletGlobalScope.h"
 #include "WorkletGlobalScopeProxy.h"
@@ -43,18 +42,13 @@ PaintWorklet& DOMCSSPaintWorklet::ensurePaintWorklet(Document& document)
 
 DOMCSSPaintWorklet* DOMCSSPaintWorklet::from(DOMCSSNamespace& css)
 {
-    auto* supplement = static_cast<DOMCSSPaintWorklet*>(Supplement<DOMCSSNamespace>::from(&css, supplementName()));
+    auto* supplement = downcast<DOMCSSPaintWorklet>(Supplement<DOMCSSNamespace>::from(&css, supplementName()));
     if (!supplement) {
         auto newSupplement = makeUnique<DOMCSSPaintWorklet>(css);
         supplement = newSupplement.get();
-        provideTo(&css, supplementName(), WTFMove(newSupplement));
+        provideTo(&css, supplementName(), WTF::move(newSupplement));
     }
     return supplement;
-}
-
-ASCIILiteral DOMCSSPaintWorklet::supplementName()
-{
-    return "DOMCSSPaintWorklet"_s;
 }
 
 // FIXME: Get rid of this override and rely on the standard-compliant Worklet::addModule() instead.

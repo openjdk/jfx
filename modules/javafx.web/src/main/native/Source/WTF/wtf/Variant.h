@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if PLATFORM(COCOA) || PLATFORM(GTK) || PLATFORM(WPE)
-
 // MPark.Variant
 //
 // Copyright Michael Park, 2015-2017
@@ -402,6 +400,7 @@ namespace mpark {
 #ifndef MPARK_LIB_HPP
 #define MPARK_LIB_HPP
 
+#include <array>
 #include <memory>
 #include <functional>
 #include <type_traits>
@@ -2910,6 +2909,7 @@ template<class T, class... Types> constexpr add_pointer_t<const T> get_if(const 
 
 namespace WTF {
 template<typename... Ts> using Variant = mpark::variant<Ts...>;
+template<size_t I, class T> using variant_alternative_t = typename mpark::variant_alternative<I, T>::type;
 template<typename T> constexpr mpark::in_place_type_t<T> InPlaceType { };
 template<typename T> using InPlaceTypeT = mpark::in_place_type_t<T>;
 template<size_t I> constexpr mpark::in_place_index_t<I> InPlaceIndex { };
@@ -2937,33 +2937,5 @@ template<typename Visitor, typename... Variants> constexpr auto visit(Visitor&& 
 #if defined(_GLIBCXX_RELEASE) && (_GLIBCXX_RELEASE < 13)
 #include <variant>
 #endif
-
-#else // PLATFORM(COCOA) || PLATFORM(GTK) || PLATFORM(WPE)
-
-#include <utility>
-#include <variant>
-namespace WTF {
-template<typename... Ts> using Variant = std::variant<Ts...>;
-template<typename T> constexpr std::in_place_type_t<T> InPlaceType { };
-template<typename T> using InPlaceTypeT = std::in_place_type_t<T>;
-template<size_t I> constexpr std::in_place_index_t<I> InPlaceIndex { };
-template<size_t I> using InPlaceIndexT = std::in_place_index_t<I>;
-template <size_t I, class T> struct VariantAlternative;
-template<size_t I, typename... Types> struct VariantAlternative<I, Variant<Types...>> : std::variant_alternative<I, Variant<Types...>> { };
-template<size_t I, typename T> using VariantAlternativeT = typename VariantAlternative<I, T>::type;
-template<typename T> struct VariantSize;
-template<typename... Types> struct VariantSize<Variant<Types...>> : std::integral_constant<std::size_t, sizeof...(Types)> { };
-template<typename T> struct VariantSize<const T> : VariantSize<T> { };
-template<typename T> constexpr size_t VariantSizeV = VariantSize<T>::value;
-
-template<typename Visitor, typename... Variants> constexpr auto visit(Visitor&& v, Variants&&... values)
-    -> decltype(std::visit<Visitor, Variants...>(std::forward<Visitor>(v), std::forward<Variants>(values)...))
-{
-    return std::visit<Visitor, Variants...>(std::forward<Visitor>(v), std::forward<Variants>(values)...);
-}
-
-}
-
-#endif // PLATFORM(COCOA)
 
 using WTF::Variant;

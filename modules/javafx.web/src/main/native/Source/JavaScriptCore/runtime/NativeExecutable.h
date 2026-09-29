@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "ExecutableBase.h"
-#include "ImplementationVisibility.h"
+#include <JavaScriptCore/ExecutableBase.h>
+#include <JavaScriptCore/ImplementationVisibility.h>
 
 namespace JSC {
 

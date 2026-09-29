@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "BuiltinUtils.h"
-#include "BytecodeIntrinsicRegistry.h"
-#include "CommonIdentifiers.h"
-#include "JSCBuiltins.h"
+#include <JavaScriptCore/BuiltinUtils.h>
+#include <JavaScriptCore/BytecodeIntrinsicRegistry.h>
+#include <JavaScriptCore/CommonIdentifiers.h>
+#include <JavaScriptCore/JSCBuiltins.h>
 #include <wtf/RobinHoodHashMap.h>
 #include <wtf/RobinHoodHashSet.h>
 #include <wtf/TZoneMalloc.h>
@@ -57,7 +57,6 @@ namespace JSC {
     macro(iteratedObject) \
     macro(iteratedString) \
     macro(promise) \
-    macro(promiseOrCapability) \
     macro(Object) \
     macro(Number) \
     macro(Array) \
@@ -76,19 +75,32 @@ namespace JSC {
     macro(BuiltinLog) \
     macro(BuiltinDescribe) \
     macro(homeObject) \
-    macro(enqueueJob) \
-    macro(hostPromiseRejectionTracker) \
-    macro(onFulfilled) \
-    macro(onRejected) \
+    macro(resolvePromise) \
+    macro(rejectPromise) \
+    macro(fulfillPromise) \
+    macro(resolvePromiseWithFirstResolvingFunctionCallCheck) \
+    macro(rejectPromiseWithFirstResolvingFunctionCallCheck) \
+    macro(fulfillPromiseWithFirstResolvingFunctionCallCheck) \
+    macro(resolveWithInternalMicrotaskForAsyncAwait) \
+    macro(asyncGeneratorQueueEnqueue) \
+    macro(asyncGeneratorQueueDequeueResolve) \
+    macro(asyncGeneratorQueueDequeueReject) \
+    macro(driveAsyncFunction) \
+    macro(newHandledRejectedPromise) \
+    macro(promiseEmptyOnFulfilled) \
+    macro(promiseEmptyOnRejected) \
+    macro(promiseResolve) \
+    macro(promiseReject) \
+    macro(performPromiseThen) \
     macro(push) \
     macro(repeatCharacter) \
     macro(starDefault) \
     macro(starNamespace) \
+    macro(then) \
     macro(keys) \
     macro(values) \
     macro(set) \
     macro(clear) \
-    macro(context) \
     macro(defer) \
     macro(delete) \
     macro(size) \
@@ -133,13 +145,9 @@ namespace JSC {
     macro(instanceOf) \
     macro(isArraySlow) \
     macro(sameValue) \
-    macro(appendMemcpy) \
     macro(regExpCreate) \
     macro(isRegExp) \
     macro(isFinite) \
-    macro(replaceUsingRegExp) \
-    macro(replaceUsingStringSearch) \
-    macro(replaceAllUsingStringSearch) \
     macro(makeTypeError) \
     macro(AggregateError) \
     macro(mapStorage) \
@@ -156,7 +164,6 @@ namespace JSC {
     macro(setIterationEntryKey) \
     macro(setIteratorNext) \
     macro(setIteratorKey) \
-    macro(setClone) \
     macro(setPrototypeDirect) \
     macro(setPrototypeDirectOrThrow) \
     macro(regExpBuiltinExec) \
@@ -183,6 +190,7 @@ namespace JSC {
     macro(handlePositiveProxySetTrapResult) \
     macro(handleProxyGetTrapResult) \
     macro(importModule) \
+    macro(moduleFetchFailureKind) \
     macro(copyDataProperties) \
     macro(cloneObject) \
     macro(meta) \
@@ -194,13 +202,11 @@ namespace JSC {
     macro(hasOwnPropertyFunction) \
     macro(createPrivateSymbol) \
     macro(entries) \
-    macro(outOfLineReactionCounts) \
     macro(emptyPropertyNameEnumerator) \
     macro(sentinelString) \
     macro(createRemoteFunction) \
     macro(isRemoteFunction) \
-    macro(arrayFromFastFillWithUndefined) \
-    macro(arrayFromFastFillWithEmpty) \
+    macro(arrayFromFastWithoutMapFn) \
     macro(jsonParse) \
     macro(jsonStringify) \
     macro(String) \
@@ -251,12 +257,12 @@ public:
 
     PrivateSymbolImpl* lookUpPrivateName(const Identifier&) const;
     PrivateSymbolImpl* lookUpPrivateName(const String&) const;
-    PrivateSymbolImpl* lookUpPrivateName(std::span<const LChar>) const;
+    PrivateSymbolImpl* lookUpPrivateName(std::span<const Latin1Character>) const;
     PrivateSymbolImpl* lookUpPrivateName(std::span<const char16_t>) const;
 
     SymbolImpl* lookUpWellKnownSymbol(const Identifier&) const;
     SymbolImpl* lookUpWellKnownSymbol(const String&) const;
-    SymbolImpl* lookUpWellKnownSymbol(std::span<const LChar>) const;
+    SymbolImpl* lookUpWellKnownSymbol(std::span<const Latin1Character>) const;
     SymbolImpl* lookUpWellKnownSymbol(std::span<const char16_t>) const;
 
     void appendExternalName(const Identifier& publicName, const Identifier& privateName);

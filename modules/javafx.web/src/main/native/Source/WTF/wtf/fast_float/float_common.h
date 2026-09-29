@@ -5,12 +5,11 @@
 #include <cstdint>
 #include <cassert>
 #include <cstring>
+#include <span>
 #include <type_traits>
 #include <system_error>
 
 #include "constexpr_feature_detect.h"
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace fast_float {
 
@@ -196,24 +195,6 @@ fastfloat_strncasecmp(UC const * input1, UC const * input2, size_t length) {
 #error "FLT_EVAL_METHOD should be defined, please include cfloat."
 #endif
 
-// a pointer and a length to a contiguous block of memory
-template <typename T>
-struct span {
-  const T* ptr;
-  size_t length;
-  constexpr span(const T* _ptr, size_t _length) : ptr(_ptr), length(_length) {}
-  constexpr span() : ptr(nullptr), length(0) {}
-
-  constexpr size_t len() const noexcept {
-    return length;
-  }
-
-  FASTFLOAT_CONSTEXPR14 const T& operator[](size_t index) const noexcept {
-    FASTFLOAT_DEBUG_ASSERT(index < length);
-    return ptr[index];
-  }
-};
-
 struct value128 {
   uint64_t low;
   uint64_t high;
@@ -356,13 +337,14 @@ template <typename T> struct binary_format : binary_format_lookup_tables<T> {
 
 template <typename U>
 struct binary_format_lookup_tables<double, U> {
-  static constexpr double powers_of_ten[] = {
+  static constexpr std::array<double, 23> powers_of_ten {
       1e0,  1e1,  1e2,  1e3,  1e4,  1e5,  1e6,  1e7,  1e8,  1e9,  1e10, 1e11,
-      1e12, 1e13, 1e14, 1e15, 1e16, 1e17, 1e18, 1e19, 1e20, 1e21, 1e22};
+      1e12, 1e13, 1e14, 1e15, 1e16, 1e17, 1e18, 1e19, 1e20, 1e21, 1e22
+  };
 
   // Largest integer value v so that (5**index * v) <= 1<<53.
   // 0x10000000000000 == 1 << 53
-  static constexpr uint64_t max_mantissa[] = {
+  static constexpr std::array<uint64_t, 24> max_mantissa {
       0x10000000000000,
       0x10000000000000 / 5,
       0x10000000000000 / (5 * 5),
@@ -386,23 +368,25 @@ struct binary_format_lookup_tables<double, U> {
       0x10000000000000 / (constant_55555 * constant_55555 * constant_55555 * constant_55555 * 5),
       0x10000000000000 / (constant_55555 * constant_55555 * constant_55555 * constant_55555 * 5 * 5),
       0x10000000000000 / (constant_55555 * constant_55555 * constant_55555 * constant_55555 * 5 * 5 * 5),
-      0x10000000000000 / (constant_55555 * constant_55555 * constant_55555 * constant_55555 * 5 * 5 * 5 * 5)};
+      0x10000000000000 / (constant_55555 * constant_55555 * constant_55555 * constant_55555 * 5 * 5 * 5 * 5)
+  };
 };
 
 template <typename U>
-constexpr double binary_format_lookup_tables<double, U>::powers_of_ten[];
+constexpr std::array<double, 23> binary_format_lookup_tables<double, U>::powers_of_ten;
 
 template <typename U>
-constexpr uint64_t binary_format_lookup_tables<double, U>::max_mantissa[];
+constexpr std::array<uint64_t, 24> binary_format_lookup_tables<double, U>::max_mantissa;
 
 template <typename U>
 struct binary_format_lookup_tables<float, U> {
-  static constexpr float powers_of_ten[] = {1e0f, 1e1f, 1e2f, 1e3f, 1e4f, 1e5f,
-                                     1e6f, 1e7f, 1e8f, 1e9f, 1e10f};
+  static constexpr std::array<float, 11> powers_of_ten {
+      1e0f, 1e1f, 1e2f, 1e3f, 1e4f, 1e5f, 1e6f, 1e7f, 1e8f, 1e9f, 1e10f
+  };
 
   // Largest integer value v so that (5**index * v) <= 1<<24.
   // 0x1000000 == 1<<24
-  static constexpr uint64_t max_mantissa[] = {
+  static constexpr std::array<uint64_t, 12> max_mantissa {
         0x1000000,
         0x1000000 / 5,
         0x1000000 / (5 * 5),
@@ -418,10 +402,10 @@ struct binary_format_lookup_tables<float, U> {
 };
 
 template <typename U>
-constexpr float binary_format_lookup_tables<float, U>::powers_of_ten[];
+constexpr std::array<float, 11> binary_format_lookup_tables<float, U>::powers_of_ten;
 
 template <typename U>
-constexpr uint64_t binary_format_lookup_tables<float, U>::max_mantissa[];
+constexpr std::array<uint64_t, 12> binary_format_lookup_tables<float, U>::max_mantissa;
 
 template <> inline constexpr int binary_format<double>::min_exponent_fast_path() {
 #if (FLT_EVAL_METHOD != 1) && (FLT_EVAL_METHOD != 0)
@@ -588,7 +572,7 @@ void to_float(bool negative, adjusted_mantissa am, T &value) {
 #ifdef FASTFLOAT_SKIP_WHITE_SPACE // disabled by default
 template <typename = void>
 struct space_lut {
-  static constexpr bool value[] = {
+  static constexpr auto value = std::to_array<bool>({
     0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -599,7 +583,8 @@ struct space_lut {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+  });
 };
 
 template <typename T>
@@ -615,7 +600,7 @@ static constexpr uint64_t int_cmp_zeros()
     return (sizeof(UC) == 1) ? 0x3030303030303030 : (sizeof(UC) == 2) ? (uint64_t(UC('0')) << 48 | uint64_t(UC('0')) << 32 | uint64_t(UC('0')) << 16 | UC('0')) : (uint64_t(UC('0')) << 32 | UC('0'));
 }
 template<typename UC>
-static constexpr int int_cmp_len()
+static constexpr size_t int_cmp_len()
 {
     return sizeof(uint64_t) / sizeof(UC);
 }
@@ -670,7 +655,5 @@ constexpr char32_t const * str_const_inf<char32_t>()
     return U"infinity";
 }
 } // namespace fast_float
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif

@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "StylePrimitiveNumeric.h"
+#include <WebCore/StylePrimitiveNumeric.h>
 
 namespace WebCore {
 namespace Style {
@@ -33,7 +33,7 @@ namespace Style {
 // <`-webkit-text-stroke-width`> = <length [0,∞]> | thin | medium | thick
 // NOTE: There is no standard associated with this property.
 struct WebkitTextStrokeWidth {
-    using Length = Style::Length<CSS::Nonnegative>;
+    using Length = Style::Length<CSS::NonnegativeUnzoomed>;
 
     Length value;
 
@@ -53,7 +53,12 @@ template<> struct CSSValueConversion<WebkitTextStrokeWidth> { auto operator()(Bu
 
 // MARK: - Evaluate
 
-template<> struct Evaluation<WebkitTextStrokeWidth> { constexpr auto operator()(const WebkitTextStrokeWidth& value) -> float { return value.value.value; } };
+template<> struct Evaluation<WebkitTextStrokeWidth, float> {
+    constexpr auto operator()(const WebkitTextStrokeWidth& value, ZoomFactor zoom) -> float
+    {
+        return value.value.resolveZoom(zoom);
+    }
+};
 
 } // namespace Style
 } // namespace WebCore

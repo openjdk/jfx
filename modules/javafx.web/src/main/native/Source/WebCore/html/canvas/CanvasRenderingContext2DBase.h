@@ -48,6 +48,7 @@
 #include "ImageSmoothingQuality.h"
 #include "Path.h"
 #include "PlatformLayer.h"
+#include "StyleFilter.h"
 #include "Timer.h"
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
@@ -72,7 +73,6 @@ class WebCodecsVideoFrame;
 
 struct DOMMatrix2DInit;
 
-
 using CanvasImageSource = Variant<RefPtr<HTMLImageElement>
     , RefPtr<SVGImageElement>
     , RefPtr<HTMLCanvasElement>
@@ -90,7 +90,7 @@ using CanvasImageSource = Variant<RefPtr<HTMLImageElement>
     >;
 
 class CanvasRenderingContext2DBase : public CanvasRenderingContext, public CanvasPath {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CanvasRenderingContext2DBase);
+    WTF_MAKE_TZONE_ALLOCATED(CanvasRenderingContext2DBase);
     friend class CanvasFilterContextSwitcher;
     friend class CanvasLayerContextSwitcher;
 protected:
@@ -214,9 +214,13 @@ public:
 
     using StyleVariant = Variant<String, RefPtr<CanvasGradient>, RefPtr<CanvasPattern>>;
     StyleVariant strokeStyle() const;
-    void setStrokeStyle(StyleVariant&&);
+    void setStrokeStyle(String&&);
+    void setStrokeStyle(RefPtr<CanvasGradient>&&);
+    void setStrokeStyle(RefPtr<CanvasPattern>&&);
     StyleVariant fillStyle() const;
-    void setFillStyle(StyleVariant&&);
+    void setFillStyle(String&&);
+    void setFillStyle(RefPtr<CanvasGradient>&&);
+    void setFillStyle(RefPtr<CanvasPattern>&&);
 
     ExceptionOr<Ref<CanvasGradient>> createLinearGradient(float x0, float y0, float x1, float y1);
     ExceptionOr<Ref<CanvasGradient>> createRadialGradient(float x0, float y0, float r0, float x1, float y1, float r1);
@@ -272,10 +276,10 @@ public:
         const FontCascade& fontCascade() const { return m_font; }
 
         float letterSpacing() const { return m_font.letterSpacing(); }
-        void setLetterSpacing(const Length& letterSpacing) { m_font.setLetterSpacing(letterSpacing); }
+        void setLetterSpacing(float letterSpacing) { m_font.setLetterSpacing(letterSpacing); }
 
         float wordSpacing() const { return m_font.wordSpacing(); }
-        void setWordSpacing(const Length& wordSpacing) { m_font.setWordSpacing(wordSpacing); }
+        void setWordSpacing(float wordSpacing) { m_font.setWordSpacing(wordSpacing); }
 
     private:
         void update(FontSelector&);
@@ -312,7 +316,7 @@ public:
         Direction direction;
 
         String filterString;
-        FilterOperations filterOperations;
+        Style::Filter filter;
 
         String letterSpacing;
         String wordSpacing;
@@ -340,12 +344,9 @@ protected:
     void realizeSaves();
     State& modifiableState() { ASSERT(!m_unrealizedSaveCount || m_stateStack.size() >= MaxSaveCount); return m_stateStack.last(); }
 
-    // These methods are de-virtualized for performance reasons.
     GraphicsContext* drawingContext() const;
     GraphicsContext* effectiveDrawingContext() const;
-
-    virtual GraphicsContext* existingDrawingContext() const;
-    virtual AffineTransform baseTransform() const;
+    AffineTransform baseTransform() const;
 
     enum class DidDrawOption {
         ApplyTransform = 1 << 0,
@@ -378,7 +379,7 @@ protected:
     void didDraw(bool entireCanvas, const FloatRect&, OptionSet<DidDrawOption> options = defaultDidDrawOptions());
     template<typename RectProvider> void didDraw(bool entireCanvas, NOESCAPE const RectProvider&, OptionSet<DidDrawOption> options = defaultDidDrawOptions());
 
-    virtual std::optional<FilterOperations> setFilterStringWithoutUpdatingStyle(const String&) { return std::nullopt; }
+    virtual std::optional<Style::Filter> setFilterStringWithoutUpdatingStyle(const String&) { return std::nullopt; }
 
     virtual RefPtr<Filter> createFilter(const FloatRect&) const { return nullptr; }
     virtual IntOutsets calculateFilterOutsets(const FloatRect&) const { return { }; }
@@ -394,6 +395,14 @@ protected:
     bool usesCSSCompatibilityParseMode() const { return m_usesCSSCompatibilityParseMode; }
 
     void updateStateTransform(const AffineTransform&);
+
+    RefPtr<ImageBuffer> allocateImageBuffer() const;
+    bool hasCreatedImageBuffer() const { return m_hasCreatedImageBuffer; }
+    RefPtr<ImageBuffer> buffer() const;
+    RefPtr<ImageBuffer> makeRenderingResultsAvailable(ShouldApplyPostProcessingToDirtyRect = ShouldApplyPostProcessingToDirtyRect::Yes);
+    RefPtr<ImageBuffer> createImageForNoiseInjection() const;
+    void didUpdateCanvasSizeProperties(bool) override;
+
 private:
     struct CachedContentsTransparent {
     };
@@ -418,11 +427,10 @@ private:
     bool isEntireBackingStoreDirty() const;
     FloatRect backingStoreBounds() const { return FloatRect { { }, FloatSize { canvasBase().size() } }; }
 
-    ImageBufferPixelFormat pixelFormat() const final;
+    PixelFormat pixelFormat() const final;
     DestinationColorSpace colorSpace() const final;
     bool willReadFrequently() const final;
 
-    void unwindStateStack();
     void realizeSavesLoop();
     void setStrokeColorImpl(Color&& color, String&& unparsedColor = { });
     void setFillColorImpl(Color&& color, String&& unparsedColor = { });
@@ -476,6 +484,7 @@ private:
 
     template<class T> void fullCanvasCompositedDrawImage(T&, const FloatRect&, const FloatRect&, CompositeOperator);
 
+    RefPtr<ImageBuffer> surfaceBufferToImageBuffer(SurfaceBuffer) final;
     bool isSurfaceBufferTransparentBlack(SurfaceBuffer) const override;
 #if USE(SKIA)
     RefPtr<GraphicsLayerContentsDisplayDelegate> layerContentsDisplayDelegate() override;
@@ -494,13 +503,15 @@ private:
     void evictCachedImageData();
 
     static constexpr unsigned MaxSaveCount = 1024 * 16;
-    Vector<State, 1> m_stateStack;
+    mutable RefPtr<ImageBuffer> m_buffer;
+    Vector<State, 1> m_stateStack; // References go m_stateStack -> targetSwitcher -> m_buffer, so destroy state stack first.
     FloatRect m_dirtyRect;
     unsigned m_unrealizedSaveCount { 0 };
     bool m_usesCSSCompatibilityParseMode;
     mutable Variant<CachedContentsTransparent, CachedContentsUnknown, CachedContentsImageData> m_cachedContents;
     CanvasRenderingContext2DSettings m_settings;
     bool m_hasDeferredOperations { false };
+    mutable bool m_hasCreatedImageBuffer { false };
 };
 
 } // namespace WebCore

@@ -25,6 +25,7 @@
 
 #include "config.h"
 #include "CertificateInfo.h"
+#include "SecurityOrigin.h"
 
 #include <wtf/CrossThreadCopier.h>
 
@@ -32,7 +33,7 @@ namespace WebCore {
 
 CertificateInfo::CertificateInfo(int verificationError, CertificateChain&& certificateChain)
     : m_verificationError(verificationError)
-    , m_certificateChain(WTFMove(certificateChain))
+    , m_certificateChain(WTF::move(certificateChain))
 {
 }
 

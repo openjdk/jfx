@@ -24,10 +24,10 @@
 
 #pragma once
 
-#include "CSSGridTemplateAreas.h"
-#include "StyleGridNamedAreaMap.h"
-#include "StyleGridNamedLinesMap.h"
-#include "StyleGridTrackSizingDirection.h"
+#include <WebCore/CSSGridTemplateAreas.h>
+#include <WebCore/StyleGridNamedAreaMap.h>
+#include <WebCore/StyleGridNamedLinesMap.h>
+#include <WebCore/StyleGridTrackSizingDirection.h>
 
 namespace WebCore {
 namespace Style {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,7 @@
 
 #include <WebCore/DragClient.h>
 #include <WebCore/PlatformJavaClasses.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -37,7 +38,7 @@ class Image;
 class HTMLImageElement;
 
 class DragClientJava final : public DragClient {
-    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(DragClientJava);
+    WTF_MAKE_TZONE_ALLOCATED(DragClientJava);
 public:
     DragClientJava(const JLObject &webPage);
     ~DragClientJava() override;

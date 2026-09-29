@@ -80,12 +80,12 @@ static CompilationResult compileImpl(
     if (vm.typeProfiler())
         vm.typeProfilerLog()->processLogEntries(vm, "Preparing for DFG compilation."_s);
 
-    Ref<Plan> plan = adoptRef(*new Plan(codeBlock, profiledDFGCodeBlock, mode, osrEntryBytecodeIndex, WTFMove(mustHandleValues)));
+    Ref<Plan> plan = adoptRef(*new Plan(codeBlock, profiledDFGCodeBlock, mode, osrEntryBytecodeIndex, WTF::move(mustHandleValues)));
 
-    plan->setCallback(WTFMove(callback));
+    plan->setCallback(WTF::move(callback));
     JITWorklist& worklist = JITWorklist::ensureGlobalWorklist();
     dataLogLnIf(Options::useConcurrentJIT() && logCompilationChanges(mode), "Deferring DFG compilation of ", *codeBlock, " with queue length ", worklist.queueLength(), ".\n");
-    return worklist.enqueue(WTFMove(plan));
+    return worklist.enqueue(WTF::move(plan));
 }
 #else // ENABLE(DFG_JIT)
 static CompilationResult compileImpl(
@@ -101,7 +101,7 @@ CompilationResult compile(
     BytecodeIndex osrEntryBytecodeIndex, Operands<std::optional<JSValue>>&& mustHandleValues,
     Ref<DeferredCompilationCallback>&& callback)
 {
-    return compileImpl(vm, codeBlock, profiledDFGCodeBlock, mode, osrEntryBytecodeIndex, WTFMove(mustHandleValues), callback.copyRef());
+    return compileImpl(vm, codeBlock, profiledDFGCodeBlock, mode, osrEntryBytecodeIndex, WTF::move(mustHandleValues), callback.copyRef());
 }
 
 } } // namespace JSC::DFG

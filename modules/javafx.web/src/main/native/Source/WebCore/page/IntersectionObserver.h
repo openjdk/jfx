@@ -29,7 +29,7 @@
 #include "FloatRect.h"
 #include "GCReachableRef.h"
 #include "IntersectionObserverCallback.h"
-#include "LengthBox.h"
+#include "IntersectionObserverMarginBox.h"
 #include "ReducedResolutionSeconds.h"
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/WeakPtr.h>
@@ -46,6 +46,7 @@ namespace WebCore {
 class ContainerNode;
 class Document;
 class Element;
+class FrameView;
 class IntersectionObserverEntry;
 
 struct IntersectionObserverRegistration {
@@ -68,7 +69,7 @@ struct IntersectionObserverData {
 enum class IncludeObscuredInsets : bool { No, Yes };
 
 class IntersectionObserver : public RefCountedAndCanMakeWeakPtr<IntersectionObserver> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(IntersectionObserver);
+    WTF_MAKE_TZONE_ALLOCATED(IntersectionObserver);
 public:
     struct Init {
         std::optional<Variant<RefPtr<Element>, RefPtr<Document>>> root;
@@ -86,8 +87,8 @@ public:
     ContainerNode* root() const { return m_root.get(); }
     String rootMargin() const;
     String scrollMargin() const;
-    const LengthBox& rootMarginBox() const { return m_rootMargin; }
-    const LengthBox& scrollMarginBox() const { return m_scrollMargin; }
+    const IntersectionObserverMarginBox& rootMarginBox() const { return m_rootMargin; }
+    const IntersectionObserverMarginBox& scrollMarginBox() const { return m_scrollMargin; }
     const Vector<double>& thresholds() const { return m_thresholds; }
     const Vector<WeakPtr<Element, WeakPtrImplWithEventTargetData>>& observationTargets() const { return m_observationTargets; }
     bool hasObservationTargets() const { return m_observationTargets.size(); }
@@ -107,7 +108,7 @@ public:
     void rootDestroyed();
 
     enum class NeedNotify : bool { No, Yes };
-    NeedNotify updateObservations(Document&);
+    NeedNotify updateObservations(const Frame&);
 
     std::optional<ReducedResolutionSeconds> nowTimestamp() const;
 
@@ -118,7 +119,7 @@ public:
     bool isReachableFromOpaqueRoots(JSC::AbstractSlotVisitor&) const;
 
 private:
-    IntersectionObserver(Document&, Ref<IntersectionObserverCallback>&&, ContainerNode* root, LengthBox&& parsedRootMargin, LengthBox&& parsedScrollMargin, Vector<double>&& thresholds, IncludeObscuredInsets);
+    IntersectionObserver(Document&, Ref<IntersectionObserverCallback>&&, ContainerNode* root, IntersectionObserverMarginBox&& parsedRootMargin, IntersectionObserverMarginBox&& parsedScrollMargin, Vector<double>&& thresholds, IncludeObscuredInsets);
 
     bool removeTargetRegistration(Element&);
     void removeAllTargets();
@@ -136,12 +137,12 @@ private:
     };
 
     enum class ApplyRootMargin : bool { No, Yes };
-    IntersectionObservationState computeIntersectionState(const IntersectionObserverRegistration&, LocalFrameView&, Element& target, ApplyRootMargin) const;
+    IntersectionObservationState computeIntersectionState(const IntersectionObserverRegistration&, FrameView&, Element& target, ApplyRootMargin) const;
 
     WeakPtr<Document, WeakPtrImplWithEventTargetData> m_implicitRootDocument;
     WeakPtr<ContainerNode, WeakPtrImplWithEventTargetData> m_root;
-    LengthBox m_rootMargin;
-    LengthBox m_scrollMargin;
+    IntersectionObserverMarginBox m_rootMargin;
+    IntersectionObserverMarginBox m_scrollMargin;
     Vector<double> m_thresholds;
     RefPtr<IntersectionObserverCallback> m_callback;
     Vector<WeakPtr<Element, WeakPtrImplWithEventTargetData>> m_observationTargets;
@@ -150,6 +151,5 @@ private:
     Vector<GCReachableRef<Element>> m_targetsWaitingForFirstObservation;
     IncludeObscuredInsets m_includeObscuredInsets { IncludeObscuredInsets::No };
 };
-
 
 } // namespace WebCore

@@ -25,13 +25,13 @@
 
 #pragma once
 
-#include "CSSStyleSheet.h"
-#include "Element.h"
-#include "FloatSize.h"
-#include "HTMLInterchange.h"
-#include "MarkupExclusionRule.h"
-#include "ParserContentPolicy.h"
-#include "ShadowRoot.h"
+#include <WebCore/CSSStyleSheet.h>
+#include <WebCore/Element.h>
+#include <WebCore/FloatSize.h>
+#include <WebCore/HTMLInterchange.h>
+#include <WebCore/MarkupExclusionRule.h>
+#include <WebCore/ParserContentPolicy.h>
+#include <WebCore/ShadowRoot.h>
 #include <wtf/Forward.h>
 #include <wtf/Function.h>
 #include <wtf/HashMap.h>
@@ -59,9 +59,9 @@ template<typename> class ExceptionOr;
 void replaceSubresourceURLs(Ref<DocumentFragment>&&, HashMap<AtomString, AtomString>&&);
 void removeSubresourceURLAttributes(Ref<DocumentFragment>&&, Function<bool(const URL&)> shouldRemoveURL);
 
-Ref<Page> createPageForSanitizingWebContent();
+Ref<Page> createPageForSanitizingWebContent(Document* destinationDocument);
 enum class MSOListQuirks : bool { CheckIfNeeded, Disabled };
-String sanitizeMarkup(const String&, MSOListQuirks = MSOListQuirks::Disabled, std::optional<Function<void(DocumentFragment&)>> fragmentSanitizer = std::nullopt);
+String sanitizeMarkup(const String&, Document* destinationDocument, MSOListQuirks = MSOListQuirks::Disabled, std::optional<Function<void(DocumentFragment&)>> fragmentSanitizer = std::nullopt);
 String sanitizedMarkupForFragmentInDocument(Ref<DocumentFragment>&&, Document&, MSOListQuirks, const String& originalMarkup);
 
 class UserSelectNoneStateCache {
@@ -99,14 +99,14 @@ enum class SerializeComposedTree : bool { No, Yes };
 enum class IgnoreUserSelectNone : bool { No, Yes };
 enum class PreserveBaseElement : bool { No, Yes };
 enum class PreserveDirectionForInlineText : bool { No, Yes };
-WEBCORE_EXPORT String serializePreservingVisualAppearance(const SimpleRange&, Vector<Ref<Node>>* = nullptr, AnnotateForInterchange = AnnotateForInterchange::No, ConvertBlocksToInlines = ConvertBlocksToInlines::No, ResolveURLs = ResolveURLs::No);
-String serializePreservingVisualAppearance(const VisibleSelection&, ResolveURLs = ResolveURLs::No, SerializeComposedTree = SerializeComposedTree::No,
+WEBCORE_EXPORT String serializePreservingVisualAppearance(const SimpleRange&, Vector<Ref<Node>>* = nullptr, AnnotateForInterchange = AnnotateForInterchange::No, ConvertBlocksToInlines = ConvertBlocksToInlines::No, ResolveURLs = ResolveURLs::NoExcludingURLsForPrivacy);
+String serializePreservingVisualAppearance(const VisibleSelection&, ResolveURLs = ResolveURLs::NoExcludingURLsForPrivacy, SerializeComposedTree = SerializeComposedTree::No,
     IgnoreUserSelectNone = IgnoreUserSelectNone::Yes, PreserveBaseElement = PreserveBaseElement::No, PreserveDirectionForInlineText = PreserveDirectionForInlineText::No, Vector<Ref<Node>>* = nullptr);
 
 enum class SerializedNodes : uint8_t { SubtreeIncludingNode, SubtreesOfChildren };
-enum class SerializationSyntax : uint8_t { HTML, XML, HTMLLegacyAttributeValue };
+enum class SerializationSyntax : bool { HTML, XML };
 enum class SerializeShadowRoots : uint8_t { Explicit, Serializable, AllForInterchange };
-WEBCORE_EXPORT String serializeFragment(const Node&, SerializedNodes, Vector<Ref<Node>>* = nullptr, ResolveURLs = ResolveURLs::No, std::optional<SerializationSyntax> = std::nullopt, SerializeShadowRoots = SerializeShadowRoots::Explicit, Vector<Ref<ShadowRoot>>&& explicitShadowRoots = { }, const Vector<MarkupExclusionRule>& exclusionRules = { });
+WEBCORE_EXPORT String serializeFragment(const Node&, SerializedNodes, Vector<Ref<Node>>* = nullptr, ResolveURLs = ResolveURLs::NoExcludingURLsForPrivacy, std::optional<SerializationSyntax> = std::nullopt, SerializeShadowRoots = SerializeShadowRoots::Explicit, Vector<Ref<ShadowRoot>>&& explicitShadowRoots = { }, const Vector<MarkupExclusionRule>& exclusionRules = { });
 WEBCORE_EXPORT String serializeFragmentWithURLReplacement(const Node&, SerializedNodes, Vector<Ref<Node>>*, ResolveURLs, std::optional<SerializationSyntax>, HashMap<String, String>&& replacementURLStrings, HashMap<Ref<CSSStyleSheet>, String>&& replacementURLStringsForCSSStyleSheet, SerializeShadowRoots = SerializeShadowRoots::Explicit, Vector<Ref<ShadowRoot>>&& explicitShadowRoots = { }, const Vector<MarkupExclusionRule>& exclusionRules = { });
 
 String urlToMarkup(const URL&, const String& title);

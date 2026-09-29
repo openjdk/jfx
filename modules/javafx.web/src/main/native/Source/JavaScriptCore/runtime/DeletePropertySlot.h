@@ -25,42 +25,42 @@
 
 #pragma once
 
-#include "PropertyOffset.h"
-#include "PropertySlot.h"
+#include <JavaScriptCore/PropertyOffset.h>
+#include <JavaScriptCore/PropertySlot.h>
 
 namespace JSC {
 
 class DeletePropertySlot {
 public:
-    enum Type : uint8_t { Uncacheable, DeleteHit, ConfigurableDeleteMiss, Nonconfigurable };
+    enum class Type : uint8_t { Uncacheable, DeleteHit, ConfigurableDeleteMiss, Nonconfigurable };
 
     DeletePropertySlot()
         : m_offset(invalidOffset)
         , m_cacheability(CachingAllowed)
-        , m_type(Uncacheable)
+        , m_type(Type::Uncacheable)
     {
     }
 
     void setConfigurableMiss()
     {
-        m_type = ConfigurableDeleteMiss;
+        m_type = Type::ConfigurableDeleteMiss;
     }
 
     void setNonconfigurable()
     {
-        m_type = Nonconfigurable;
+        m_type = Type::Nonconfigurable;
     }
 
     void setHit(PropertyOffset offset)
     {
-        m_type = DeleteHit;
+        m_type = Type::DeleteHit;
         m_offset = offset;
     }
 
-    bool isCacheableDelete() const { return isCacheable() && m_type != Uncacheable; }
-    bool isDeleteHit() const { return m_type == DeleteHit; }
-    bool isConfigurableDeleteMiss() const { return m_type == ConfigurableDeleteMiss; }
-    bool isNonconfigurable() const { return m_type == Nonconfigurable; }
+    bool isCacheableDelete() const { return isCacheable() && m_type != Type::Uncacheable; }
+    bool isDeleteHit() const { return m_type == Type::DeleteHit; }
+    bool isConfigurableDeleteMiss() const { return m_type == Type::ConfigurableDeleteMiss; }
+    bool isNonconfigurable() const { return m_type == Type::Nonconfigurable; }
 
     PropertyOffset cachedOffset() const
     {

@@ -28,7 +28,7 @@
 
 namespace WebCore {
 
-namespace Calculation {
+namespace CSS {
 enum class Category : uint8_t;
 }
 

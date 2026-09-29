@@ -28,7 +28,7 @@
 namespace WebCore {
 
 class SVGStyleElement final : public SVGElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGStyleElement);
+    WTF_MAKE_TZONE_ALLOCATED(SVGStyleElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGStyleElement);
 public:
     static Ref<SVGStyleElement> create(const QualifiedName&, Document&, bool createdByParser);
@@ -38,12 +38,6 @@ public:
 
     bool disabled() const;
     void setDisabled(bool);
-
-    const AtomString& type() const;
-    void setType(const AtomString&);
-
-    const AtomString& media() const;
-    void setMedia(const AtomString&);
 
 private:
     SVGStyleElement(const QualifiedName&, Document&, bool createdByParser);
@@ -58,7 +52,7 @@ private:
 
     void finishParsingChildren() final;
 
-    virtual bool isLoading() const { return m_styleSheetOwner.isLoading(); }
+    bool isLoading() const { return m_styleSheetOwner.isLoading(); }
     bool sheetLoaded() final { return m_styleSheetOwner.sheetLoaded(*this); }
     void startLoadingDynamicSheet() final { m_styleSheetOwner.startLoadingDynamicSheet(*this); }
     Timer* loadEventTimer() final { return &m_loadEventTimer; }

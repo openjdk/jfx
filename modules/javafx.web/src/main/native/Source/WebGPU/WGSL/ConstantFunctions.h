@@ -48,7 +48,7 @@ using ConstantFunction = ConstantResult(*)(const Type*, const FixedVector<Consta
     auto __tmp = constant##__fnName(__VA_ARGS__); \
     if (!__tmp) \
         return makeUnexpected(__tmp.error()); \
-    auto __variable = WTFMove(*__tmp)
+    auto __variable = WTF::move(*__tmp)
 
 #define CALL(__variable, __fnName, ...) \
     CALL_(WTF_LAZY_JOIN(tmp, __COUNTER__), __variable, __fnName, __VA_ARGS__)
@@ -58,7 +58,7 @@ using ConstantFunction = ConstantResult(*)(const Type*, const FixedVector<Consta
         auto __tmp = constant##__fnName(__VA_ARGS__); \
         if (!__tmp) \
             return makeUnexpected(__tmp.error()); \
-        __target = WTFMove(*__tmp); \
+        __target = WTF::move(*__tmp); \
     } while (0)
 
 #define CALL_MOVE(__target, __fnName, ...) \
@@ -114,7 +114,7 @@ static ConstantValue zeroValue(const Type* type)
             HashMap<String, ConstantValue> constantFields;
             for (auto& [key, type] : structType.fields)
                 constantFields.set(key, zeroValue(type));
-            return ConstantStruct { WTFMove(constantFields) };
+            return ConstantStruct { WTF::move(constantFields) };
         },
         [&](const Types::PrimitiveStruct&) -> ConstantValue {
             // Primitive structs can't be zero initialized
@@ -370,7 +370,7 @@ static ConstantResult scalarOrVector(const Functor& functor, Arguments&&... unpa
         ConstantResult tmp = std::apply(functor, scalars);
         if (!tmp)
             return makeUnexpected(tmp.error());
-        result.elements[i] = WTFMove(*tmp);
+        result.elements[i] = WTF::move(*tmp);
     }
     return { { result } };
 }

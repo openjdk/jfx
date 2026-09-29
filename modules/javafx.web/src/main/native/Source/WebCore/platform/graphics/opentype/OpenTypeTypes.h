@@ -26,10 +26,10 @@
 #define OpenTypeTypes_h
 
 #if ENABLE(OPENTYPE_MATH)
-#include "Glyph.h"
+#include <WebCore/Glyph.h>
 #endif
 
-#include "SharedBuffer.h"
+#include <WebCore/SharedBuffer.h>
 #include <wtf/StdLibExtras.h>
 
 namespace WebCore {
@@ -96,7 +96,7 @@ protected:
         if (position < bufferSpan.data())
             return false;
         size_t offset = static_cast<const uint8_t*>(position) - bufferSpan.data();
-        return offset <= buffer.size(); // "<=" because end is included as valid
+        return offset <= buffer.size(); // "<=" because end is included as valid.
     }
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN

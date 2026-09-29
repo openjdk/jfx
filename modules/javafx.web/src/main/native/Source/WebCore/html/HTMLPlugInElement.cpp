@@ -26,34 +26,74 @@
 
 #include "BridgeJSC.h"
 #include "CSSPropertyNames.h"
+#include "Chrome.h"
+#include "ChromeClient.h"
+#include "CommonVM.h"
 #include "ContainerNodeInlines.h"
-#include "Document.h"
+#include "ContentSecurityPolicy.h"
+#include "DocumentEventLoop.h"
+#include "DocumentLoader.h"
+#include "DocumentPage.h"
+#include "DocumentSecurityOrigin.h"
+#include "DocumentView.h"
+#include "ElementInlines.h"
 #include "Event.h"
 #include "EventHandler.h"
+#include "EventLoop.h"
+#include "EventNames.h"
+#include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
 #include "FrameTree.h"
+#include "GCReachableRef.h"
+#include "HTMLImageLoader.h"
 #include "HTMLNames.h"
 #include "HitTestResult.h"
+#include "JSDOMConvertBoolean.h"
+#include "JSDOMConvertInterface.h"
+#include "JSDOMConvertStrings.h"
+#include "JSShadowRoot.h"
+#include "LegacySchemeRegistry.h"
 #include "LocalFrame.h"
+#include "LocalFrameLoaderClient.h"
+#include "LocalizedStrings.h"
 #include "Logging.h"
 #include "MIMETypeRegistry.h"
+#include "MouseEvent.h"
 #include "NodeName.h"
 #include "Page.h"
+#include "PlatformMouseEvent.h"
 #include "PluginData.h"
 #include "PluginReplacement.h"
 #include "PluginViewBase.h"
+#include "RemoteFrame.h"
 #include "RenderEmbeddedObject.h"
+#include "RenderImage.h"
 #include "RenderLayer.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
+#include "RenderTreeBuilder.h"
+#include "RenderTreeUpdater.h"
 #include "RenderView.h"
 #include "RenderWidget.h"
 #include "ScriptController.h"
+#include "ScriptDisallowedScope.h"
+#include "SecurityOrigin.h"
 #include "Settings.h"
 #include "ShadowRoot.h"
+#include "StyleTreeResolver.h"
 #include "SubframeLoader.h"
+#include "TypedElementDescendantIteratorInlines.h"
+#include "UserGestureIndicator.h"
 #include "VoidCallback.h"
 #include "Widget.h"
+#include <JavaScriptCore/CatchScope.h>
+#include <JavaScriptCore/JSGlobalObjectInlines.h>
 #include <wtf/TZoneMallocInlines.h>
+
+#if ENABLE(CONTENT_EXTENSIONS)
+#include "ContentExtensionsBackend.h"
+#include "ResourceLoadInfo.h"
+#include "UserContentProvider.h"
+#endif
 
 #if PLATFORM(COCOA)
 #include "YouTubePluginReplacement.h"
@@ -61,12 +101,18 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLPlugInElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLPlugInElement);
 
 using namespace HTMLNames;
 
+constexpr auto HTMLPlugInElement::pluginElementTypeFlags() -> OptionSet<TypeFlag>
+{
+    using enum TypeFlag;
+    return { HasCustomStyleResolveCallbacks, HasDidMoveToNewDocument };
+}
+
 HTMLPlugInElement::HTMLPlugInElement(const QualifiedName& tagName, Document& document, OptionSet<TypeFlag> typeFlags)
-    : HTMLFrameOwnerElement(tagName, document, typeFlags | TypeFlag::HasCustomStyleResolveCallbacks)
+    : HTMLFrameOwnerElement(tagName, document, typeFlags | pluginElementTypeFlags())
     , m_swapRendererTimer(*this, &HTMLPlugInElement::swapRendererTimerFired)
 {
 }
@@ -75,18 +121,23 @@ HTMLPlugInElement::~HTMLPlugInElement()
 {
     ASSERT(!m_instance); // cleared in detach()
     ASSERT(!m_pendingPDFTestCallback);
+
+    if (m_needsDocumentActivationCallbacks)
+        protectedDocument()->unregisterForDocumentSuspensionCallbacks(*this);
 }
 
 bool HTMLPlugInElement::willRespondToMouseClickEventsWithEditability(Editability) const
 {
     if (isDisabledFormControl())
         return false;
-    auto renderer = this->renderer();
-    return renderer && renderer->isRenderWidget();
+    return is<RenderWidget>(renderer());
 }
 
 void HTMLPlugInElement::willDetachRenderers()
 {
+    if (RefPtr widget = pluginWidget(PluginLoadingPolicy::DoNotLoad))
+        widget->willDetachRenderer();
+
     m_instance = nullptr;
 
     if (m_isCapturingMouseEvents) {
@@ -112,28 +163,29 @@ JSC::Bindings::Instance* HTMLPlugInElement::bindingsInstance()
 
     if (!m_instance) {
         if (RefPtr widget = pluginWidget())
-            m_instance = frame->script().createScriptInstanceForWidget(widget.get());
+            m_instance = frame->checkedScript()->createScriptInstanceForWidget(widget.get());
     }
     return m_instance.get();
 }
 
 PluginViewBase* HTMLPlugInElement::pluginWidget(PluginLoadingPolicy loadPolicy) const
 {
-    RenderWidget* renderWidget = loadPolicy == PluginLoadingPolicy::Load ? renderWidgetLoadingPlugin() : this->renderWidget();
+    CheckedPtr renderWidget = loadPolicy == PluginLoadingPolicy::Load ? renderWidgetLoadingPlugin() : CheckedPtr { this->renderWidget() };
     if (!renderWidget)
         return nullptr;
 
     return dynamicDowncast<PluginViewBase>(renderWidget->widget());
 }
 
-RenderWidget* HTMLPlugInElement::renderWidgetLoadingPlugin() const
+CheckedPtr<RenderWidget> HTMLPlugInElement::renderWidgetLoadingPlugin() const
 {
-    RefPtr view = document().view();
+    Ref document = this->document();
+    RefPtr view = document->view();
     if (!view || (!view->inUpdateEmbeddedObjects() && !view->layoutContext().isInLayout() && !view->isPainting())) {
         // Needs to load the plugin immediatedly because this function is called
         // when JavaScript code accesses the plugin.
         // FIXME: <rdar://16893708> Check if dispatching events here is safe.
-        document().updateLayout({ LayoutOptions::IgnorePendingStylesheets, LayoutOptions::RunPostLayoutTasksSynchronously });
+        document->updateLayout({ LayoutOptions::IgnorePendingStylesheets, LayoutOptions::RunPostLayoutTasksSynchronously });
     }
     return renderWidget(); // This will return nullptr if the renderer is not a RenderWidget.
 }
@@ -202,15 +254,19 @@ void HTMLPlugInElement::defaultEventHandler(Event& event)
 
     // FIXME: Mouse down and scroll events are passed down to plug-in via custom code in EventHandler; these code paths should be united.
 
-    auto* renderer = dynamicDowncast<RenderWidget>(this->renderer());
+    {
+        CheckedPtr renderer = dynamicDowncast<RenderWidget>(this->renderer());
     if (!renderer)
         return;
 
     if (CheckedPtr renderEmbedded = dynamicDowncast<RenderEmbeddedObject>(*renderer); renderEmbedded && renderEmbedded->isPluginUnavailable())
         renderEmbedded->handleUnavailablePluginIndicatorEvent(&event);
 
-    if (RefPtr widget = renderer->widget())
+        if (RefPtr widget = renderer->widget()) {
+            renderer = nullptr;
         widget->handleEvent(event);
+        }
+    }
         if (event.defaultHandled())
             return;
 
@@ -237,20 +293,43 @@ bool HTMLPlugInElement::supportsFocus() const
     if (useFallbackContent())
         return false;
 
-    auto* renderer = dynamicDowncast<RenderEmbeddedObject>(this->renderer());
+    CheckedPtr renderer = dynamicDowncast<RenderEmbeddedObject>(this->renderer());
     return renderer && !renderer->isPluginUnavailable();
 }
 
-RenderPtr<RenderElement> HTMLPlugInElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition& insertionPosition)
+RenderPtr<RenderElement> HTMLPlugInElement::createPluginRenderer(RenderStyle&& style, const RenderTreePosition& insertionPosition)
 {
     if (m_pluginReplacement && m_pluginReplacement->willCreateRenderer()) {
-        RenderPtr<RenderElement> renderer = m_pluginReplacement->createElementRenderer(*this, WTFMove(style), insertionPosition);
+        RenderPtr<RenderElement> renderer = m_pluginReplacement->createElementRenderer(*this, WTF::move(style), insertionPosition);
         if (renderer)
             renderer->markIsYouTubeReplacement();
         return renderer;
     }
 
-    return createRenderer<RenderEmbeddedObject>(*this, WTFMove(style));
+    return createRenderer<RenderEmbeddedObject>(*this, WTF::move(style));
+}
+
+RenderPtr<RenderElement> HTMLPlugInElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition& insertionPosition)
+{
+    ASSERT(document().backForwardCacheState() == Document::NotInBackForwardCache);
+
+    if (displayState() >= DisplayState::PreparingPluginReplacement)
+        return createPluginRenderer(WTF::move(style), insertionPosition);
+
+    // Once a plug-in element creates its renderer, it needs to be told when the document goes
+    // inactive or reactivates so it can clear the renderer before going into the back/forward cache.
+    if (!m_needsDocumentActivationCallbacks) {
+        m_needsDocumentActivationCallbacks = true;
+        protectedDocument()->registerForDocumentSuspensionCallbacks(*this);
+    }
+
+    if (useFallbackContent())
+        return RenderElement::createFor(*this, WTF::move(style));
+
+    if (isImageType())
+        return createRenderer<RenderImage>(RenderObject::Type::Image, *this, WTF::move(style));
+
+    return createPluginRenderer(WTF::move(style), insertionPosition);
 }
 
 bool HTMLPlugInElement::isReplaced(const RenderStyle*) const
@@ -260,7 +339,7 @@ bool HTMLPlugInElement::isReplaced(const RenderStyle*) const
 
 void HTMLPlugInElement::swapRendererTimerFired()
 {
-    ASSERT(displayState() == PreparingPluginReplacement);
+    ASSERT(displayState() == DisplayState::PreparingPluginReplacement);
     if (userAgentShadowRoot())
         return;
 
@@ -277,18 +356,18 @@ void HTMLPlugInElement::setDisplayState(DisplayState state)
     m_displayState = state;
 
     m_swapRendererTimer.stop();
-    if (displayState() == PreparingPluginReplacement)
+    if (displayState() == DisplayState::PreparingPluginReplacement)
         m_swapRendererTimer.startOneShot(0_s);
 }
 
 void HTMLPlugInElement::didAddUserAgentShadowRoot(ShadowRoot& root)
 {
-    if (!m_pluginReplacement || !document().page() || displayState() != PreparingPluginReplacement)
+    if (!m_pluginReplacement || !document().page() || displayState() != DisplayState::PreparingPluginReplacement)
         return;
 
     m_pluginReplacement->installReplacement(root);
 
-    setDisplayState(DisplayingPluginReplacement);
+    setDisplayState(DisplayState::DisplayingPluginReplacement);
     invalidateStyleAndRenderersForSubtree();
 }
 
@@ -361,21 +440,43 @@ static ReplacementPlugin* pluginReplacementForType(const URL& url, const String&
 
 bool HTMLPlugInElement::requestObject(const String& relativeURL, const String& mimeType, const Vector<AtomString>& paramNames, const Vector<AtomString>& paramValues)
 {
+    ASSERT(document().frame());
+
+    if (relativeURL.isEmpty() && mimeType.isEmpty())
+        return false;
+
+    if (!canLoadPlugInContent(relativeURL, mimeType)) {
+        CheckedRef { *renderEmbeddedObject() }->setPluginUnavailabilityReason(PluginUnavailabilityReason::PluginBlockedByContentSecurityPolicy);
+        return false;
+    }
+
     if (m_pluginReplacement)
         return true;
 
+    Ref document = this->document();
     URL completedURL;
     if (!relativeURL.isEmpty())
-        completedURL = document().completeURL(relativeURL);
+        completedURL = document->completeURL(relativeURL);
 
-    ReplacementPlugin* replacement = pluginReplacementForType(completedURL, mimeType);
-    if (!replacement)
-        return false;
-
+    if (ReplacementPlugin* replacement = pluginReplacementForType(completedURL, mimeType)) {
     LOG(Plugins, "%p - Found plug-in replacement for %s.", this, completedURL.string().utf8().data());
 
-    m_pluginReplacement = replacement->create(*this, paramNames, paramValues);
-    setDisplayState(PreparingPluginReplacement);
+        lazyInitialize(m_pluginReplacement, replacement->create(*this, paramNames, paramValues));
+        setDisplayState(DisplayState::PreparingPluginReplacement);
+        return true;
+    }
+
+    if (ScriptDisallowedScope::InMainThread::isScriptAllowed())
+        return document->frame()->loader().subframeLoader().requestObject(*this, relativeURL, getNameAttribute(), mimeType, paramNames, paramValues);
+
+    document->checkedEventLoop()->queueTask(TaskSource::Networking, [this, protectedThis = Ref { *this }, relativeURL, nameAttribute = getNameAttribute(), mimeType, paramNames, paramValues, document]() mutable {
+        if (!this->isConnected() || &this->document() != document.ptr())
+            return;
+        RefPtr frame = this->document().frame();
+        if (!frame)
+            return;
+        frame->loader().subframeLoader().requestObject(*this, relativeURL, nameAttribute, mimeType, paramNames, paramValues);
+    });
     return true;
 }
 
@@ -388,14 +489,242 @@ bool HTMLPlugInElement::canLoadScriptURL(const URL&) const
 void HTMLPlugInElement::pluginDestroyedWithPendingPDFTestCallback(RefPtr<VoidCallback>&& callback)
 {
     ASSERT(!m_pendingPDFTestCallback);
-    m_pendingPDFTestCallback = WTFMove(callback);
+    m_pendingPDFTestCallback = WTF::move(callback);
 }
 
 RefPtr<VoidCallback> HTMLPlugInElement::takePendingPDFTestCallback()
 {
     if (!m_pendingPDFTestCallback)
         return nullptr;
-    return WTFMove(m_pendingPDFTestCallback);
+    return WTF::move(m_pendingPDFTestCallback);
+}
+
+void HTMLPlugInElement::updateImageLoaderWithNewURLSoon()
+{
+    if (m_needsImageReload)
+        return;
+
+    m_needsImageReload = true;
+    if (inRenderedDocument())
+        scheduleUpdateForAfterStyleResolution();
+    invalidateStyle();
+}
+
+void HTMLPlugInElement::scheduleUpdateForAfterStyleResolution()
+{
+    if (m_hasUpdateScheduledForAfterStyleResolution)
+        return;
+
+    Ref document = this->document();
+    document->incrementLoadEventDelayCount();
+
+    m_hasUpdateScheduledForAfterStyleResolution = true;
+
+    document->checkedEventLoop()->queueTask(TaskSource::DOMManipulation, [element = GCReachableRef { *this }] {
+        element->updateAfterStyleResolution();
+    });
+}
+
+bool HTMLPlugInElement::shouldBypassCSPForPDFPlugin(const String& contentType) const
+{
+#if ENABLE(PDF_PLUGIN)
+    return document().frame()->loader().client().shouldUsePDFPlugin(contentType, document().url().path());
+#else
+    UNUSED_PARAM(contentType);
+    return false;
+#endif
+}
+
+RenderEmbeddedObject* HTMLPlugInElement::renderEmbeddedObject() const
+{
+    // HTMLObjectElement and HTMLEmbedElement may return arbitrary renderers when using fallback content.
+    return dynamicDowncast<RenderEmbeddedObject>(renderer());
+}
+
+bool HTMLPlugInElement::canLoadURL(const String& relativeURL) const
+{
+    return canLoadURL(protectedDocument()->completeURL(relativeURL));
+}
+
+bool HTMLPlugInElement::canLoadURL(const URL& completeURL) const
+{
+    if (completeURL.protocolIsJavaScript()) {
+        if (is<RemoteFrame>(contentFrame()))
+            return false;
+        RefPtr contentDocument = this->contentDocument();
+        if (contentDocument && !protectedDocument()->protectedSecurityOrigin()->isSameOriginDomain(contentDocument->protectedSecurityOrigin().get()))
+            return false;
+    }
+
+#if ENABLE(CONTENT_EXTENSIONS)
+    if (completeURL.isValid()) {
+        RefPtr page = document().page();
+        RefPtr frame = document().frame();
+        RefPtr documentLoader = frame ? frame->loader().documentLoader() : nullptr;
+        RefPtr userContentProvider = frame ? frame->userContentProvider() : nullptr;
+        if (page && documentLoader && userContentProvider) {
+            auto results = userContentProvider->processContentRuleListsForLoad(*page, completeURL, ContentExtensions::ResourceType::Other, *documentLoader);
+            if (results.shouldBlock())
+                return false;
+        }
+    }
+#endif
+
+    return !isProhibitedSelfReference(completeURL);
+}
+
+// We don't use m_url, or m_serviceType as they may not be the final values
+// that <object> uses depending on <param> values.
+bool HTMLPlugInElement::wouldLoadAsPlugIn(const String& relativeURL, const String& serviceType)
+{
+    Ref document = this->document();
+    ASSERT(document->frame());
+    URL completedURL;
+    if (!relativeURL.isEmpty())
+        completedURL = document->completeURL(relativeURL);
+    return document->frame()->loader().client().objectContentType(completedURL, serviceType) == ObjectContentType::PlugIn;
+}
+
+bool HTMLPlugInElement::isImageType()
+{
+    if (m_serviceType.isEmpty() && protocolIs(m_url, "data"_s))
+        m_serviceType = mimeTypeFromDataURL(m_url);
+
+    Ref document = this->document();
+    if (RefPtr frame = document->frame())
+        return frame->loader().client().objectContentType(document->completeURL(m_url), m_serviceType) == ObjectContentType::Image;
+
+    return Image::supportsType(m_serviceType);
+}
+
+void HTMLPlugInElement::updateAfterStyleResolution()
+{
+    m_hasUpdateScheduledForAfterStyleResolution = false;
+
+    // Do this after style resolution, since the image or widget load might complete synchronously
+    // and cause us to re-enter otherwise. Also, we can't really answer the question "do I have a renderer"
+    // accurately until after style resolution.
+
+    if (renderer() && !useFallbackContent()) {
+        if (isImageType()) {
+            if (!m_imageLoader)
+                lazyInitialize(m_imageLoader, makeUniqueWithoutRefCountedCheck<HTMLImageLoader>(*this));
+            if (m_needsImageReload)
+                m_imageLoader->updateFromElementIgnoringPreviousError();
+            else
+                m_imageLoader->updateFromElement();
+        } else {
+            if (needsWidgetUpdate() && renderEmbeddedObject() && !renderEmbeddedObject()->isPluginUnavailable())
+                updateWidget(CreatePlugins::No);
+        }
+    }
+
+    // Either we reloaded the image just now, or we had some reason not to.
+    // Either way, clear the flag now, since we don't need to remember to try again.
+    m_needsImageReload = false;
+
+    protectedDocument()->decrementLoadEventDelayCount();
+}
+
+void HTMLPlugInElement::didMoveToNewDocument(Document& oldDocument, Document& newDocument)
+{
+    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(&document() == &newDocument);
+    if (m_needsDocumentActivationCallbacks) {
+        oldDocument.unregisterForDocumentSuspensionCallbacks(*this);
+        newDocument.registerForDocumentSuspensionCallbacks(*this);
+    }
+
+    if (m_imageLoader)
+        m_imageLoader->elementDidMoveToNewDocument(oldDocument);
+
+    if (m_hasUpdateScheduledForAfterStyleResolution) {
+        oldDocument.decrementLoadEventDelayCount();
+        newDocument.incrementLoadEventDelayCount();
+    }
+
+    HTMLFrameOwnerElement::didMoveToNewDocument(oldDocument, newDocument);
+}
+
+bool HTMLPlugInElement::childShouldCreateRenderer(const Node& child) const
+{
+    return HTMLFrameOwnerElement::childShouldCreateRenderer(child);
+}
+
+void HTMLPlugInElement::willRecalcStyle(OptionSet<Style::Change> change)
+{
+    // Make sure style recalcs scheduled by a child shadow tree don't trigger reconstruction and cause flicker.
+    if (!change && styleValidity() == Style::Validity::Valid)
+        return;
+
+    // FIXME: There shoudn't be need to force render tree reconstruction here.
+    // It is only done because loading and load event dispatching is tied to render tree construction.
+    if (!useFallbackContent() && needsWidgetUpdate() && renderer() && !isImageType())
+        invalidateStyleAndRenderersForSubtree();
+}
+
+void HTMLPlugInElement::didRecalcStyle(OptionSet<Style::Change> styleChange)
+{
+    scheduleUpdateForAfterStyleResolution();
+
+    HTMLFrameOwnerElement::didRecalcStyle(styleChange);
+}
+
+void HTMLPlugInElement::didAttachRenderers()
+{
+    m_needsWidgetUpdate = true;
+    scheduleUpdateForAfterStyleResolution();
+
+    // Update the RenderImageResource of the associated RenderImage.
+    if (m_imageLoader) {
+        if (CheckedPtr renderImage = dynamicDowncast<RenderImage>(renderer())) {
+            CheckedRef renderImageResource = renderImage->imageResource();
+            if (!renderImageResource->cachedImage())
+                renderImageResource->setCachedImage(m_imageLoader->protectedImage());
+        }
+    }
+
+    HTMLFrameOwnerElement::didAttachRenderers();
+}
+
+void HTMLPlugInElement::prepareForDocumentSuspension()
+{
+    if (renderer())
+        RenderTreeUpdater::tearDownRenderers(*this);
+
+    HTMLFrameOwnerElement::prepareForDocumentSuspension();
+}
+
+void HTMLPlugInElement::resumeFromDocumentSuspension()
+{
+    scheduleUpdateForAfterStyleResolution();
+    invalidateStyleAndRenderersForSubtree();
+
+    HTMLFrameOwnerElement::resumeFromDocumentSuspension();
+}
+
+bool HTMLPlugInElement::canLoadPlugInContent(const String& relativeURL, const String& mimeType) const
+{
+    // Elements in user agent show tree should load whatever the embedding document policy is.
+    if (isInUserAgentShadowTree())
+        return true;
+
+    Ref document = this->document();
+    URL completedURL;
+    if (!relativeURL.isEmpty())
+        completedURL = document->completeURL(relativeURL);
+
+    ASSERT(document->contentSecurityPolicy());
+    CheckedRef contentSecurityPolicy = *document->contentSecurityPolicy();
+
+    contentSecurityPolicy->upgradeInsecureRequestIfNeeded(completedURL, ContentSecurityPolicy::InsecureRequestType::Load);
+
+    if (!shouldBypassCSPForPDFPlugin(mimeType) && !contentSecurityPolicy->allowObjectFromSource(completedURL))
+        return false;
+
+    RefPtr ownerElement = document->ownerElement();
+    auto& declaredMIMEType = document->isPluginDocument() && ownerElement ?
+        ownerElement->attributeWithoutSynchronization(HTMLNames::typeAttr) : attributeWithoutSynchronization(HTMLNames::typeAttr);
+    return contentSecurityPolicy->allowPluginType(mimeType, declaredMIMEType, completedURL);
 }
 
 }

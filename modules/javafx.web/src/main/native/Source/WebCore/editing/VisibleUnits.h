@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "EditingBoundary.h"
-#include "VisibleSelection.h"
+#include <WebCore/EditingBoundary.h>
+#include <WebCore/VisibleSelection.h>
 
 namespace WebCore {
 

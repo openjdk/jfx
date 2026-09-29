@@ -26,11 +26,12 @@
 #include "config.h"
 #include "TrustedHTML.h"
 
+#include "ScriptWrappableInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(TrustedHTML);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TrustedHTML);
 
 Ref<TrustedHTML> TrustedHTML::create(const String& data)
 {
@@ -41,5 +42,7 @@ TrustedHTML::TrustedHTML(const String& data)
     : m_data(data)
 {
 }
+
+TrustedHTML::~TrustedHTML() = default;
 
 } // namespace WebCore

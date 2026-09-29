@@ -25,11 +25,13 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(JIT)
 
-#include "CallMode.h"
-#include "CodeSpecializationKind.h"
-#include "JSCPtrTag.h"
+#include <JavaScriptCore/CallMode.h>
+#include <JavaScriptCore/CodeSpecializationKind.h>
+#include <JavaScriptCore/JSCPtrTag.h>
 
 namespace JSC {
 

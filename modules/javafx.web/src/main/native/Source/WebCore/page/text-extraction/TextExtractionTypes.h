@@ -25,14 +25,88 @@
 
 #pragma once
 
-#include "CharacterRange.h"
-#include "FloatRect.h"
-#include "FloatSize.h"
+#include <JavaScriptCore/RegularExpression.h>
+#include <WebCore/CharacterRange.h>
+#include <WebCore/FloatRect.h>
+#include <WebCore/FloatSize.h>
+#include <WebCore/NodeIdentifier.h>
+#include <WebCore/WebKitJSHandle.h>
 #include <wtf/Forward.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/URL.h>
+#include <wtf/UniqueRef.h>
+
+#if ENABLE(DATA_DETECTION)
+#include <WebCore/DataDetectorType.h>
+#endif
 
 namespace WebCore {
+
+struct FrameIdentifierType;
+using FrameIdentifier = ObjectIdentifier<FrameIdentifierType>;
+
 namespace TextExtraction {
+
+enum class Action : uint8_t {
+    Click,
+    SelectText,
+    SelectMenuItem,
+    TextInput,
+    KeyPress,
+    HighlightText,
+    ScrollBy,
+};
+
+struct Interaction {
+    Action action { Action::Click };
+    String text;
+    std::optional<FloatPoint> locationInRootView;
+    std::optional<NodeIdentifier> nodeIdentifier;
+    FloatSize scrollDelta;
+    bool replaceAll { false };
+    bool scrollToVisible { false };
+};
+
+struct ExtractedText {
+    String text;
+    std::optional<NodeIdentifier> nodeIdentifier;
+};
+
+struct InteractionDescription {
+    String description;
+    Vector<String> stringsToValidate;
+};
+
+enum class EventListenerCategory : uint8_t {
+    Click       = 1 << 0,
+    Hover       = 1 << 1,
+    Touch       = 1 << 2,
+    Wheel       = 1 << 3,
+    Keyboard    = 1 << 4,
+};
+
+enum class NodeIdentifierInclusion : uint8_t {
+    None,
+    EditableOnly,
+    Interactive,
+    AllContainers,
+};
+
+struct Request {
+    HashMap<String, HashMap<JSHandleIdentifier, String>> clientNodeAttributes;
+    std::optional<FloatRect> collectionRectInRootView;
+    std::optional<JSHandleIdentifier> targetNodeHandleIdentifier;
+    Vector<JSHandleIdentifier> handleIdentifiersOfNodesToSkip;
+    bool mergeParagraphs { false };
+    bool skipNearlyTransparentContent { false };
+    NodeIdentifierInclusion nodeIdentifierInclusion { NodeIdentifierInclusion::None };
+    bool includeEventListeners { false };
+    bool includeAccessibilityAttributes { false };
+    bool includeTextInAutoFilledControls { false };
+#if ENABLE(DATA_DETECTION)
+    OptionSet<DataDetectorType> dataDetectorTypes;
+#endif
+};
 
 struct Editable {
     String label;
@@ -53,8 +127,49 @@ struct ScrollableItemData {
 };
 
 struct ImageItemData {
-    String name;
+    URL completedSource;
+    String shortenedName;
     String altText;
+};
+
+struct LinkItemData {
+    String target;
+    URL completedURL;
+    String shortenedURLString;
+};
+
+struct IFrameData {
+    String origin;
+    FrameIdentifier identifier;
+};
+
+struct ContentEditableData {
+    bool isPlainTextOnly { false };
+    bool isFocused { false };
+};
+
+struct FormData {
+    String autocomplete;
+    String name;
+};
+
+struct TextFormControlData {
+    Editable editable;
+    String controlType;
+    String autocomplete;
+    String pattern;
+    String name;
+    std::optional<int> minLength;
+    std::optional<int> maxLength;
+    bool isRequired { false };
+    bool isReadonly { false };
+    bool isDisabled { false };
+    bool isChecked { false };
+};
+
+struct SelectData {
+    Vector<String> selectedValues;
+    bool isMultiple { false };
 };
 
 enum class ContainerType : uint8_t {
@@ -67,14 +182,63 @@ enum class ContainerType : uint8_t {
     Section,
     Nav,
     Button,
+    Canvas,
+    Subscript,
+    Superscript,
+    Strikethrough,
+    Generic,
 };
 
-using ItemData = Variant<ContainerType, TextItemData, ScrollableItemData, ImageItemData>;
+using ItemData = Variant<ContainerType, TextItemData, ScrollableItemData, ImageItemData, SelectData, ContentEditableData, TextFormControlData, FormData, LinkItemData, IFrameData>;
 
 struct Item {
+    WTF_MAKE_STRUCT_TZONE_ALLOCATED_EXPORT(Item, WEBCORE_EXPORT);
+
     ItemData data;
     FloatRect rectInRootView;
     Vector<Item> children;
+    String nodeName;
+    std::optional<NodeIdentifier> nodeIdentifier;
+    std::optional<FrameIdentifier> frameIdentifier;
+    OptionSet<EventListenerCategory> eventListeners;
+    HashMap<String, String> ariaAttributes;
+    String accessibilityRole;
+    String title;
+    HashMap<String, String> clientAttributes;
+    unsigned enclosingBlockNumber { 0 };
+
+    template<typename T> bool hasData() const
+    {
+        return std::holds_alternative<T>(data);
+    }
+
+    template<typename T> std::optional<T> dataAs() const
+    {
+        if (hasData<T>())
+            return std::get<T>(data);
+        return std::nullopt;
+    }
+};
+
+struct PageItems {
+    Item mainFrameItem;
+    HashMap<FrameIdentifier, UniqueRef<Item>> subFrameItems;
+};
+
+WEBCORE_EXPORT Item collatePageItems(PageItems&&);
+
+struct FilterRuleData {
+    String name;
+    String urlPatternString;
+    String scriptSource;
+};
+
+enum class FilterRulePattern : uint8_t { Global };
+
+struct FilterRule {
+    String name;
+    Variant<FilterRulePattern, JSC::Yarr::RegularExpression> urlPattern;
+    String scriptSource;
 };
 
 } // namespace TextExtraction

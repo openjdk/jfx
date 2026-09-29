@@ -43,5 +43,24 @@ unsigned Cookie::hash() const
 }
 #endif
 
+namespace CookieUtil {
+
+String defaultPathForURL(const URL& url)
+{
+    // Algorithm to generate the default path is outlined in https://tools.ietf.org/html/rfc6265#section-5.1.4
+
+    String path = url.path().toString();
+    if (path.isEmpty() || !path.startsWith('/'))
+        return "/"_s;
+
+    auto lastSlashPosition = path.reverseFind('/');
+    if (!lastSlashPosition)
+        return "/"_s;
+
+    return path.left(lastSlashPosition);
+}
+
+} // namespace CookieUtil
+
 } // namespace WebCore
 

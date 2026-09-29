@@ -14,14 +14,6 @@
 }
 
 .media-controls.mac.inline.audio .volume-slider-container {
-    transform: var(--volume-slider-transform) translateY(-8px);
-}
-
-.media-controls.mac.inline .volume-slider-container > .background-tint {
-    top: 0;
-    left: var(--inline-controls-inside-margin);
-    right: 0;
-    bottom: 0;
     width: auto;
 }
 

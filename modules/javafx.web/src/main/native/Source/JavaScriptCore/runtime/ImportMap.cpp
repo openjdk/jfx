@@ -65,8 +65,7 @@ ImportMap::ImportMap(SpecifierMap&& imports, ScopesMap&& scopesMap, IntegrityMap
     // is code unit less than a’s key.</spec>
     ASSERT(m_scopesVector.isEmpty());
     m_scopesVector = copyToVector(m_scopesMap.keys());
-    std::sort(m_scopesVector.begin(), m_scopesVector.end(),
-        [](const URL& a, const URL& b) {
+    std::ranges::sort(m_scopesVector, [](const auto& a, const auto& b) {
             return codePointCompareLessThan(b.string(), a.string());
         });
 }
@@ -143,7 +142,7 @@ URL ImportMap::resolve(const String& specifier, const URL& baseURL)
             if (!result)
                 return { };
             if (!result.value().isNull())
-                resolvedURL = WTFMove(result.value());
+                resolvedURL = WTF::move(result.value());
         }
     }
 
@@ -152,9 +151,9 @@ URL ImportMap::resolve(const String& specifier, const URL& baseURL)
     auto result = resolveImportMatch(normalizedSpecifier, asURL, m_imports);
     if (!result)
         return { };
-        resolvedURL = WTFMove(result.value());
+        resolvedURL = WTF::move(result.value());
         if (resolvedURL.isNull() && asURL.isValid())
-            resolvedURL = WTFMove(asURL);
+            resolvedURL = WTF::move(asURL);
     }
     if (!resolvedURL.isNull())
         addModuleToResolvedModuleSet(baseURL.string(), normalizedSpecifier);
@@ -197,7 +196,7 @@ static ImportMap::SpecifierMap sortAndNormalizeSpecifierMap(Ref<JSON::Object> im
                 normalized.add(normalizedSpecifierKey, URL { });
                 continue;
             }
-            normalized.add(normalizedSpecifierKey, WTFMove(addressURL));
+            normalized.add(normalizedSpecifierKey, WTF::move(addressURL));
         } else {
             reporter.reportWarning("value in specifier map needs to be a string"_s);
             normalized.add(normalizedSpecifierKey, URL { });
@@ -256,7 +255,7 @@ std::optional<Ref<ImportMap>> ImportMap::parseImportMapString(const SourceCode& 
                 continue;
             }
 
-            scopesMap.set(WTFMove(scopePrefixURL), sortAndNormalizeSpecifierMap(potentialSpecifierMap.releaseNonNull(), baseURL, reporter));
+            scopesMap.set(WTF::move(scopePrefixURL), sortAndNormalizeSpecifierMap(potentialSpecifierMap.releaseNonNull(), baseURL, reporter));
         }
     }
 
@@ -294,7 +293,7 @@ std::optional<Ref<ImportMap>> ImportMap::parseImportMapString(const SourceCode& 
     if (!errorMessage.isEmpty())
         reporter.reportError(errorMessage.toString());
 
-    return adoptRef(*new ImportMap(WTFMove(normalizedImports), WTFMove(scopesMap), WTFMove(integrity)));
+    return adoptRef(*new ImportMap(WTF::move(normalizedImports), WTF::move(scopesMap), WTF::move(integrity)));
 }
 
 String ImportMap::integrityForURL(const URL& url) const
@@ -317,7 +316,7 @@ void ImportMap::mergeExistingAndNewImportMaps(Ref<ImportMap>&& newImportMap, con
 
     // 3. For each scopePrefix → scopeImports of newImportMapScopes:
     for (auto& scope : newImportMapScopes) {
-        auto scopeImports = WTFMove(scope.value);
+        auto scopeImports = WTF::move(scope.value);
         // 3.1. For each pair of global's resolved module set:
         //
         // 3.1.1. If pair's referring script does not start with scopePrefix,
@@ -361,7 +360,7 @@ void ImportMap::mergeExistingAndNewImportMaps(Ref<ImportMap>&& newImportMap, con
         } else {
             // 3.3 Otherwise, set oldImportMap's scopes[scopePrefix] to
             // scopeImports.
-            m_scopesMap.set(scope.key, WTFMove(scopeImports));
+            m_scopesMap.set(scope.key, WTF::move(scopeImports));
             m_scopesVector.append(scope.key);
         }
     }

@@ -37,20 +37,26 @@ import javafx.scene.layout.VBox;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
 import javafx.stage.Stage;
+import javafx.scene.layout.Region;
 
 public class GifImageTestApp extends Application {
 
     @Override
     public void start(Stage primaryStage) throws Exception {
 
-        VBox instructions =  new VBox(
-                new Label(" This test is for manual gif image rendering test , please follow below steps"),
-                new Label(" "),
-                new Label(" STEPS:"),
-                new Label("  1. Click on RunTest button"),
-                new Label(" "),
-                new Label("  2. Expected behaviour: gif animation should happen showing red and black animation"));
+        VBox instructions = new VBox(
+                new Label("""
+                        This test verifies animated GIF rendering, please follow below steps.
 
+                        STEPS:
+                        1. Click the RunTest button.
+                        2. Observe the red-and-black GIF for at least 10 seconds.
+                        3. Press Pass if the GIF animates continuously and the application remains responsive.
+                        4. Press Fail if the GIF does not animate, stops prematurely, displays corrupted frames,
+                           or causes the application to become unresponsive.
+                        """));
+
+        instructions.setMinHeight(Region.USE_PREF_SIZE);
         Button loadButton = new Button("RunTest");
 
         Button passButton = new Button("Pass");

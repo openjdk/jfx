@@ -49,23 +49,27 @@ public:
     template<typename... Arguments>
     static CagedUniquePtr create(size_t length, Arguments&&... arguments)
     {
-        T* result = static_cast<T*>(Gigacage::malloc(kind, sizeof(T) * length));
+        std::span<T> result = unsafeMakeSpan(
+            static_cast<T*>(
+                Gigacage::malloc(
+                    kind, checkedProduct<size_t>(sizeof(T), length))), length);
         while (length--)
-            new (result + length) T(arguments...);
-        return CagedUniquePtr(result);
+            new (&result[length]) T(arguments...);
+        return CagedUniquePtr(result.data());
     }
 
     template<typename... Arguments>
     static CagedUniquePtr tryCreate(size_t length, Arguments&&... arguments)
     {
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-        T* result = static_cast<T*>(Gigacage::tryMalloc(kind, sizeof(T) * length));
-        if (!result)
+        std::span<T> result = unsafeMakeSpan(
+            static_cast<T*>(
+                Gigacage::tryMalloc(
+                    kind, checkedProduct<size_t>(sizeof(T), length))), length);
+        if (!result.data())
             return { };
         while (length--)
-            new (result + length) T(arguments...);
-        return CagedUniquePtr(result);
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+            new (&result[length]) T(arguments...);
+        return CagedUniquePtr(result.data());
     }
 
     CagedUniquePtr& operator=(CagedUniquePtr&& ptr)

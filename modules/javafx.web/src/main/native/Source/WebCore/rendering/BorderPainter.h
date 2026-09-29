@@ -23,6 +23,7 @@
 
 #pragma once
 
+#include "BorderData.h"
 #include "GraphicsTypes.h"
 #include "RenderBoxModelObject.h"
 #include "RenderElement.h"
@@ -36,19 +37,34 @@ public:
     BorderPainter(const RenderElement&, const PaintInfo&);
 
     void paintBorder(const LayoutRect&, const RenderStyle&, BleedAvoidance = BleedAvoidance::None, RectEdges<bool> closedEdges = { true }) const;
-    void paintOutline(const LayoutRect&) const;
-    void paintOutline(const LayoutPoint& paintOffset, const Vector<LayoutRect>& lineRects) const;
 
-    bool paintNinePieceImage(const LayoutRect&, const RenderStyle&, const NinePieceImage&, CompositeOperator = CompositeOperator::SourceOver) const;
+    bool paintNinePieceImage(const LayoutRect&, const RenderStyle&, const Style::BorderImage&, CompositeOperator = CompositeOperator::SourceOver) const;
+    bool paintNinePieceImage(const LayoutRect&, const RenderStyle&, const Style::MaskBorder&, CompositeOperator = CompositeOperator::SourceOver) const;
+
     static void drawLineForBoxSide(GraphicsContext&, const Document&, const FloatRect&, BoxSide, Color, BorderStyle, float adjacentWidth1, float adjacentWidth2, bool antialias = false);
 
     static std::optional<Path> pathForBorderArea(const LayoutRect&, const RenderStyle&, float deviceScaleFactor, RectEdges<bool> closedEdges = { true });
 
     static bool shouldAntialiasLines(GraphicsContext&);
+    static bool decorationHasAllSolidEdges(const RectEdges<BorderEdge>&);
 
 private:
-    struct Sides;
+    friend class OutlinePainter;
+
+    struct Sides {
+        std::optional<BorderData::Radii> radii { }; // FIXME: Do we need this separately from the shape?
+        const BorderEdges& edges;
+        bool haveAllSolidEdges { true };
+        bool outerEdgeIsRectangular { true };
+        bool innerEdgeIsRectangular { true };
+        BleedAvoidance bleedAvoidance { BleedAvoidance::None };
+        RectEdges<bool> closedEdges = { true };
+        bool appliedClipAlready { false };
+    };
     void paintSides(const BorderShape&, const Sides&) const;
+
+    template<typename T>
+    bool paintNinePieceImageImpl(const LayoutRect&, const RenderStyle&, const T&, CompositeOperator = CompositeOperator::SourceOver) const;
 
     void paintTranslucentBorderSides(const BorderShape&, const Sides&, BoxSideSet edgesToDraw, bool antialias) const;
     void paintBorderSides(const BorderShape&, const Sides&, BoxSideSet edgesToDraw, bool antialias, const Color* overrideColor = nullptr) const;

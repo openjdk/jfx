@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include <wtf/URL.h>
-#include "UserContentTypes.h"
-#include "UserScriptTypes.h"
+#include <WebCore/UserContentTypes.h>
+#include <WebCore/UserScriptTypes.h>
 #include <wtf/TZoneMalloc.h>
+#include <wtf/URL.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -36,12 +36,6 @@ namespace WebCore {
 class UserScript {
     WTF_MAKE_TZONE_ALLOCATED_EXPORT(UserScript, WEBCORE_EXPORT);
 public:
-    ~UserScript() = default;
-    UserScript(const UserScript&) = default;
-    UserScript(UserScript&&) = default;
-    UserScript& operator=(const UserScript&) = default;
-    UserScript& operator=(UserScript&&) = default;
-
     WEBCORE_EXPORT UserScript(String&& source, URL&& = { }, Vector<String>&& allowlist = { }, Vector<String>&& blocklist = { }, UserScriptInjectionTime = UserScriptInjectionTime::DocumentStart, UserContentInjectedFrames = UserContentInjectedFrames::InjectInAllFrames, UserContentMatchParentFrame = UserContentMatchParentFrame::Never);
 
     const String& source() const { return m_source; }
@@ -51,6 +45,7 @@ public:
     UserScriptInjectionTime injectionTime() const { return m_injectionTime; }
     UserContentInjectedFrames injectedFrames() const { return m_injectedFrames; }
     UserContentMatchParentFrame matchParentFrame() const { return m_matchParentFrame; }
+    String debugDescription() const;
 
 private:
     String m_source;

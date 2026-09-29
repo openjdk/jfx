@@ -95,6 +95,7 @@ public:
         MasqueradesAsUndefinedWatchpointSet,
         ArrayBufferDetachWatchpointSet,
         ArrayIteratorProtocolWatchpointSet,
+        SetIteratorProtocolWatchpointSet,
         NumberToStringWatchpointSet,
         StructureCacheClearedWatchpointSet,
         StringToStringWatchpointSet,
@@ -102,10 +103,12 @@ public:
         StringSymbolReplaceWatchpointSet,
         StringSymbolToPrimitiveWatchpointSet,
         RegExpPrimordialPropertiesWatchpointSet,
+        PromiseThenWatchpointSet,
         ArraySpeciesWatchpointSet,
         ArrayPrototypeChainIsSaneWatchpointSet,
         StringPrototypeChainIsSaneWatchpointSet,
         ObjectPrototypeChainIsSaneWatchpointSet,
+        PromiseSpeciesWatchpointSet,
     };
 
     using Value = JITConstant<Type>;
@@ -139,7 +142,7 @@ public:
     LinkerIR& operator=(LinkerIR&&) = default;
 
     LinkerIR(Vector<Value>&& constants)
-        : m_constants(WTFMove(constants))
+        : m_constants(WTF::move(constants))
     {
     }
 
@@ -163,7 +166,7 @@ public:
 
     void setExitCode(unsigned exitIndex, MacroAssemblerCodeRef<OSRExitPtrTag> code)
     {
-        m_exits[exitIndex] = WTFMove(code);
+        m_exits[exitIndex] = WTF::move(code);
     }
     const MacroAssemblerCodeRef<OSRExitPtrTag>& exitCode(unsigned exitIndex) const { return m_exits[exitIndex]; }
 
@@ -299,7 +302,7 @@ public:
     LinkerIR m_linkerIR;
 
 #if ENABLE(FTL_JIT)
-    // For osrEntryPoint that are in inner loop, this maps their bytecode to the bytecode
+    // For osrEntrypoint that are in inner loop, this maps their bytecode to the bytecode
     // of the outerloop entry points in order (from innermost to outermost).
     //
     // The key may not always be a target for OSR Entry but the list in the value is guaranteed
@@ -328,7 +331,7 @@ public:
 
 inline std::unique_ptr<JITData> JITData::tryCreate(VM& vm, CodeBlock* codeBlock, const JITCode& jitCode, ExitVector&& exits)
 {
-    auto result = std::unique_ptr<JITData> { createImpl(jitCode.m_unlinkedStubInfos.size(), jitCode.m_linkerIR.size(), jitCode, WTFMove(exits)) };
+    auto result = std::unique_ptr<JITData> { createImpl(jitCode.m_unlinkedStubInfos.size(), jitCode.m_linkerIR.size(), jitCode, WTF::move(exits)) };
     if (result->tryInitialize(vm, codeBlock, jitCode))
         return result;
     return nullptr;

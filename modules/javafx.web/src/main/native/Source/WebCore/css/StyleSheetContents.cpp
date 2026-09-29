@@ -27,21 +27,21 @@
 #include "CachePolicy.h"
 #include "CachedCSSStyleSheet.h"
 #include "CommonAtomStrings.h"
-#include "DocumentInlines.h"
-#include "FrameInlines.h"
+#include "DocumentPage.h"
+#include "FrameConsoleClient.h"
+#include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
 #include "LocalFrame.h"
 #include "MediaList.h"
-#include "Node.h"
+#include "NodeDocument.h"
 #include "OriginAccessPatterns.h"
-#include "Page.h"
-#include "PageConsoleClient.h"
 #include "ResourceLoadInfo.h"
 #include "RuleSet.h"
 #include "SecurityOrigin.h"
 #include "StyleProperties.h"
 #include "StyleRule.h"
 #include "StyleRuleImport.h"
+#include "UserContentProvider.h"
 #include <wtf/Deque.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/Ref.h>
@@ -66,7 +66,7 @@ unsigned StyleSheetContents::estimatedSizeInBytes() const
     size += ruleCount() * StyleRule::averageSizeInBytes();
 
     for (unsigned i = 0; i < m_importRules.size(); ++i) {
-        if (StyleSheetContents* sheet = m_importRules[i]->styleSheet())
+        if (RefPtr sheet = m_importRules[i]->styleSheet())
             size += sheet->estimatedSizeInBytes();
     }
     return size;
@@ -184,22 +184,19 @@ void StyleSheetContents::parserAppendRule(Ref<StyleRuleBase>&& rule)
     }
 
     // NOTE: The selector list has to fit into RuleData. <http://webkit.org/b/118369>
-    auto ruleHasTooManySelectors = [](StyleRule& rule) {
-        return rule.selectorList().componentCount() > Style::RuleData::maximumSelectorComponentCount;
-    };
-
-    if (auto* styleRule = dynamicDowncast<StyleRuleWithNesting>(rule.get()); styleRule && ruleHasTooManySelectors(*styleRule)) {
         // We don't support nested rules with too many selectors
+    if (auto* styleRuleWithNesting = dynamicDowncast<StyleRuleWithNesting>(rule.get())) {
+        if (styleRuleWithNesting->originalSelectorList().componentCount() > Style::RuleData::maximumSelectorComponentCount)
         return;
     }
 
-    if (auto* styleRule = dynamicDowncast<StyleRule>(rule.get()); styleRule && ruleHasTooManySelectors(*styleRule)) {
+    if (auto* styleRule = dynamicDowncast<StyleRule>(rule.get()); styleRule && styleRule->selectorList().componentCount() > Style::RuleData::maximumSelectorComponentCount) {
     // If we're adding a rule with a huge number of selectors, split it up into multiple rules
         m_childRules.appendVector(styleRule->splitIntoMultipleRulesWithMaximumSelectorComponentCount(Style::RuleData::maximumSelectorComponentCount));
         return;
     }
 
-    m_childRules.append(WTFMove(rule));
+    m_childRules.append(WTF::move(rule));
 }
 
 StyleRuleBase* StyleSheetContents::ruleAt(unsigned index) const
@@ -336,11 +333,16 @@ bool StyleSheetContents::wrapperInsertRule(Ref<StyleRuleBase>&& rule, unsigned i
     childVectorIndex -= m_namespaceRules.size();
 
     // If the number of selectors would overflow RuleData, we drop the operation.
-    auto* styleRule = dynamicDowncast<StyleRule>(rule.get());
-    if (styleRule && styleRule->selectorList().componentCount() > Style::RuleData::maximumSelectorComponentCount)
+    if (auto* styleRuleWithNesting = dynamicDowncast<StyleRuleWithNesting>(rule.get())) {
+        if (styleRuleWithNesting->originalSelectorList().componentCount() > Style::RuleData::maximumSelectorComponentCount)
+            return false;
+    }
+    if (auto* styleRule = dynamicDowncast<StyleRule>(rule.get())) {
+        if (styleRule->selectorList().componentCount() > Style::RuleData::maximumSelectorComponentCount)
         return false;
+    }
 
-    m_childRules.insert(childVectorIndex, WTFMove(rule));
+    m_childRules.insert(childVectorIndex, WTF::move(rule));
     return true;
 }
 
@@ -412,14 +414,14 @@ bool StyleSheetContents::parseAuthorStyleSheet(const CachedCSSStyleSheet* cached
     }
     if (!hasValidMIMEType) {
         ASSERT(sheetText.isNull());
-        if (auto* document = singleOwnerDocument()) {
-            if (auto* page = document->page()) {
+        if (RefPtr document = singleOwnerDocument()) {
+            if (RefPtr frame = document->frame()) {
                 if (isStrictParserMode(m_parserContext.mode))
-                    page->console().addMessage(MessageSource::Security, MessageLevel::Error, makeString("Did not parse stylesheet at '"_s, cachedStyleSheet->url().stringCenterEllipsizedToLength(), "' because non CSS MIME types are not allowed in strict mode."_s));
+                    frame->console().addMessage(MessageSource::Security, MessageLevel::Error, makeString("Did not parse stylesheet at '"_s, cachedStyleSheet->url().stringCenterEllipsizedToLength(), "' because non CSS MIME types are not allowed in strict mode."_s));
                 else if (!cachedStyleSheet->mimeTypeAllowedByNosniff())
-                    page->console().addMessage(MessageSource::Security, MessageLevel::Error, makeString("Did not parse stylesheet at '"_s, cachedStyleSheet->url().stringCenterEllipsizedToLength(), "' because non CSS MIME types are not allowed when 'X-Content-Type-Options: nosniff' is given."_s));
+                    frame->console().addMessage(MessageSource::Security, MessageLevel::Error, makeString("Did not parse stylesheet at '"_s, cachedStyleSheet->url().stringCenterEllipsizedToLength(), "' because non CSS MIME types are not allowed when 'X-Content-Type-Options: nosniff' is given."_s));
                 else
-                    page->console().addMessage(MessageSource::Security, MessageLevel::Error, makeString("Did not parse stylesheet at '"_s, cachedStyleSheet->url().stringCenterEllipsizedToLength(), "' because non CSS MIME types are not allowed for cross-origin stylesheets."_s));
+                    frame->console().addMessage(MessageSource::Security, MessageLevel::Error, makeString("Did not parse stylesheet at '"_s, cachedStyleSheet->url().stringCenterEllipsizedToLength(), "' because non CSS MIME types are not allowed for cross-origin stylesheets."_s));
             }
         }
         return false;
@@ -450,7 +452,7 @@ void StyleSheetContents::checkLoaded()
         return;
 
     Ref<StyleSheetContents> protectedThis(*this);
-    StyleSheetContents* parentSheet = parentStyleSheet();
+    RefPtr parentSheet = parentStyleSheet();
     if (parentSheet) {
         parentSheet->checkLoaded();
         m_loadCompleted = true;
@@ -475,7 +477,7 @@ void StyleSheetContents::notifyLoadedSheet(const CachedCSSStyleSheet* sheet)
 
 void StyleSheetContents::startLoadingDynamicSheet()
 {
-    if (Node* owner = singleOwnerNode())
+    if (RefPtr owner = singleOwnerNode())
         owner->startLoadingDynamicSheet();
 }
 
@@ -489,7 +491,9 @@ StyleSheetContents* StyleSheetContents::rootStyleSheet() const
 
 Node* StyleSheetContents::singleOwnerNode() const
 {
-    StyleSheetContents* root = rootStyleSheet();
+    RefPtr root = rootStyleSheet();
+    if (!root)
+        return nullptr;
     if (root->m_clients.isEmpty())
         return nullptr;
     ASSERT(root->m_clients.size() == 1);
@@ -498,7 +502,7 @@ Node* StyleSheetContents::singleOwnerNode() const
 
 Document* StyleSheetContents::singleOwnerDocument() const
 {
-    Node* ownerNode = singleOwnerNode();
+    RefPtr ownerNode = singleOwnerNode();
     return ownerNode ? &ownerNode->document() : nullptr;
 }
 
@@ -507,11 +511,11 @@ static bool traverseRulesInVector(const Vector<Ref<StyleRuleBase>>& rules, NOESC
     for (auto& rule : rules) {
         if (handler(rule))
             return true;
-        if (auto styleRuleWithNesting = dynamicDowncast<StyleRuleWithNesting>(rule.ptr())) {
+        if (RefPtr styleRuleWithNesting = dynamicDowncast<StyleRuleWithNesting>(rule.ptr())) {
             if (traverseRulesInVector(styleRuleWithNesting->nestedRules(), handler))
                 return true;
         }
-        auto* groupRule = dynamicDowncast<StyleRuleGroup>(rule.get());
+        RefPtr groupRule = dynamicDowncast<StyleRuleGroup>(rule.get());
         if (!groupRule)
             continue;
         if (traverseRulesInVector(groupRule->childRules(), handler))
@@ -585,6 +589,8 @@ bool StyleSheetContents::traverseSubresources(NOESCAPE const Function<bool(const
         case StyleRuleType::StartingStyle:
         case StyleRuleType::ViewTransition:
         case StyleRuleType::PositionTry:
+        case StyleRuleType::Function:
+        case StyleRuleType::FunctionDeclarations:
             return false;
         };
         ASSERT_NOT_REACHED();
@@ -594,7 +600,9 @@ bool StyleSheetContents::traverseSubresources(NOESCAPE const Function<bool(const
 
 bool StyleSheetContents::subresourcesAllowReuse(CachePolicy cachePolicy, FrameLoader& loader) const
 {
-    bool hasFailedOrExpiredResources = traverseSubresources([cachePolicy, &loader](const CachedResource& resource) {
+    RefPtr userContentProvider = loader.frame().userContentProvider();
+
+    bool hasFailedOrExpiredResources = traverseSubresources([cachePolicy, userContentProvider, &loader](const CachedResource& resource) {
         if (resource.loadFailedOrCanceled())
             return true;
         // We can't revalidate subresources individually so don't use reuse the parsed sheet if they need revalidation.
@@ -603,11 +611,11 @@ bool StyleSheetContents::subresourcesAllowReuse(CachePolicy cachePolicy, FrameLo
 
 #if ENABLE(CONTENT_EXTENSIONS)
         // If a cached subresource is blocked or made HTTPS by a content blocker, we cannot reuse the cached stylesheet.
-        auto* page = loader.frame().page();
+        RefPtr page = loader.frame().page();
         auto* documentLoader = loader.documentLoader();
         if (page && documentLoader) {
             const auto& request = resource.resourceRequest();
-            auto results = page->protectedUserContentProvider()->processContentRuleListsForLoad(*page, request.url(), ContentExtensions::toResourceType(resource.type(), resource.resourceRequest().requester(), loader.frame().isMainFrame()), *documentLoader);
+            auto results = userContentProvider->processContentRuleListsForLoad(*page, request.url(), ContentExtensions::toResourceType(resource.type(), resource.resourceRequest().requester(), loader.frame().isMainFrame()), *documentLoader);
             if (results.shouldBlock() || results.summary.madeHTTPS)
                 return true;
         }
@@ -660,6 +668,8 @@ bool StyleSheetContents::mayDependOnBaseURL() const
         case StyleRuleType::StartingStyle:
         case StyleRuleType::ViewTransition:
         case StyleRuleType::PositionTry:
+        case StyleRuleType::Function:
+        case StyleRuleType::FunctionDeclarations:
             return false;
         };
         ASSERT_NOT_REACHED();

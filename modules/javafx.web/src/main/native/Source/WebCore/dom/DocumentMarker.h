@@ -20,10 +20,11 @@
 
 #pragma once
 
-#include "DictationContext.h"
-#include "SimpleRange.h"
+#include <WebCore/DictationContext.h>
+#include <WebCore/SimpleRange.h>
 #include <wtf/Forward.h>
 #include <wtf/OptionSet.h>
+#include <wtf/Platform.h>
 #include <wtf/UUID.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/MakeString.h>
@@ -216,7 +217,7 @@ constexpr auto DocumentMarker::allMarkers() -> OptionSet<DocumentMarkerType>
 inline DocumentMarker::DocumentMarker(DocumentMarkerType type, OffsetRange range, Data&& data)
     : m_type(type)
     , m_range(range)
-    , m_data(WTFMove(data))
+    , m_data(WTF::move(data))
 {
 }
 

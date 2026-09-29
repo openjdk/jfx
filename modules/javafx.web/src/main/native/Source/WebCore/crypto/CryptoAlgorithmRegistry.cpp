@@ -34,11 +34,7 @@ namespace WebCore {
 
 CryptoAlgorithmRegistry& CryptoAlgorithmRegistry::singleton()
 {
-    static LazyNeverDestroyed<CryptoAlgorithmRegistry> registry;
-    static std::once_flag onceKey;
-    std::call_once(onceKey, [&] {
-        registry.construct();
-    });
+    static NeverDestroyed<CryptoAlgorithmRegistry> registry;
     return registry;
 }
 

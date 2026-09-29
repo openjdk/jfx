@@ -30,7 +30,7 @@
 
 #pragma once
 
-#include "Element.h"
+#include <WebCore/Element.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/TZoneMalloc.h>

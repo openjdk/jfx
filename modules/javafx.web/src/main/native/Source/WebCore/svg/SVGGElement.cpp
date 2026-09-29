@@ -25,16 +25,19 @@
 #include "LegacyRenderSVGHiddenContainer.h"
 #include "LegacyRenderSVGResource.h"
 #include "LegacyRenderSVGTransformableContainer.h"
+#include "NodeDocument.h"
 #include "RenderSVGHiddenContainer.h"
 #include "RenderSVGTransformableContainer.h"
+#include "RenderStyle+GettersInlines.h"
 #include "SVGNames.h"
 #include "SVGPropertyOwnerRegistry.h"
+#include "Settings.h"
 #include <wtf/NeverDestroyed.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGGElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SVGGElement);
 
 SVGGElement::SVGGElement(const QualifiedName& tagName, Document& document)
     : SVGGraphicsElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
@@ -57,8 +60,8 @@ RenderPtr<RenderElement> SVGGElement::createElementRenderer(RenderStyle&& style,
     // FIXME: [LBSE] Support hidden containers
     if (document().settings().layerBasedSVGEngineEnabled()) {
         if (style.display() == DisplayType::None)
-            return createRenderer<RenderSVGHiddenContainer>(RenderObject::Type::SVGHiddenContainer, *this, WTFMove(style));
-        return createRenderer<RenderSVGTransformableContainer>(*this, WTFMove(style));
+            return createRenderer<RenderSVGHiddenContainer>(RenderObject::Type::SVGHiddenContainer, *this, WTF::move(style));
+        return createRenderer<RenderSVGTransformableContainer>(*this, WTF::move(style));
     }
 
     // SVG 1.1 testsuite explicitly uses constructs like <g display="none"><linearGradient>
@@ -66,8 +69,8 @@ RenderPtr<RenderElement> SVGGElement::createElementRenderer(RenderStyle&& style,
     // subtree may be hidden - we only want the resource renderers to exist so they can be
     // referenced from somewhere else.
     if (style.display() == DisplayType::None)
-        return createRenderer<LegacyRenderSVGHiddenContainer>(RenderObject::Type::LegacySVGHiddenContainer, *this, WTFMove(style));
-    return createRenderer<LegacyRenderSVGTransformableContainer>(*this, WTFMove(style));
+        return createRenderer<LegacyRenderSVGHiddenContainer>(RenderObject::Type::LegacySVGHiddenContainer, *this, WTF::move(style));
+    return createRenderer<LegacyRenderSVGTransformableContainer>(*this, WTF::move(style));
 }
 
 bool SVGGElement::rendererIsNeeded(const RenderStyle&)

@@ -76,6 +76,10 @@ public:
     bool isSpatial() const;
 #endif
 
+#if ENABLE(SPATIAL_IMAGE_CONTROLS)
+    bool isMaybePanoramic() const;
+#endif
+
     void dump(TextStream&) const;
 
 private:

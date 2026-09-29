@@ -38,9 +38,11 @@ namespace WebCore {
 class Document;
 
 class History final : public ScriptWrappable, public RefCounted<History>, public LocalDOMWindowProperty {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(History);
+    WTF_MAKE_TZONE_ALLOCATED(History);
 public:
     static Ref<History> create(LocalDOMWindow& window) { return adoptRef(*new History(window)); }
+
+    ~History();
 
     ExceptionOr<unsigned> length() const;
 
@@ -97,12 +99,12 @@ private:
 
 inline ExceptionOr<void> History::pushState(RefPtr<SerializedScriptValue>&& data, const String&, const String& urlString)
 {
-    return stateObjectAdded(WTFMove(data), urlString, NavigationHistoryBehavior::Push);
+    return stateObjectAdded(WTF::move(data), urlString, NavigationHistoryBehavior::Push);
 }
 
 inline ExceptionOr<void> History::replaceState(RefPtr<SerializedScriptValue>&& data, const String&, const String& urlString)
 {
-    return stateObjectAdded(WTFMove(data), urlString, NavigationHistoryBehavior::Replace);
+    return stateObjectAdded(WTF::move(data), urlString, NavigationHistoryBehavior::Replace);
 }
 
 } // namespace WebCore

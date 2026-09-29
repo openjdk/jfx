@@ -25,9 +25,11 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(FTL_JIT)
 
-#include "DataFormat.h"
+#include <JavaScriptCore/DataFormat.h>
 #include <wtf/PrintStream.h>
 
 namespace JSC { namespace FTL {

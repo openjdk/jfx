@@ -44,7 +44,7 @@ public:
     void ref() const final { RefCounted::ref(); }
     void deref() const final { RefCounted::deref(); }
 
-    MediaPlayerPrivateHolePunch(MediaPlayer*);
+    MediaPlayerPrivateHolePunch(MediaPlayer&);
     ~MediaPlayerPrivateHolePunch();
 
     constexpr MediaPlayerType mediaPlayerType() const final { return MediaPlayerType::HolePunch; }

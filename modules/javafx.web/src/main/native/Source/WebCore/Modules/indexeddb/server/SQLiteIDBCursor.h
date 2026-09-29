@@ -49,15 +49,13 @@ namespace IDBServer {
 
 class SQLiteIDBTransaction;
 
-class SQLiteIDBCursor {
+class SQLiteIDBCursor final : public CanMakeThreadSafeCheckedPtr<SQLiteIDBCursor> {
     WTF_MAKE_TZONE_ALLOCATED(SQLiteIDBCursor);
     WTF_MAKE_NONCOPYABLE(SQLiteIDBCursor);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SQLiteIDBCursor);
 public:
     static std::unique_ptr<SQLiteIDBCursor> maybeCreate(SQLiteIDBTransaction&, const IDBCursorInfo&);
     static std::unique_ptr<SQLiteIDBCursor> maybeCreateBackingStoreCursor(SQLiteIDBTransaction&, IDBObjectStoreIdentifier, std::optional<IDBIndexIdentifier>, const IDBKeyRangeData&);
-
-    SQLiteIDBCursor(SQLiteIDBTransaction&, const IDBCursorInfo&);
-    SQLiteIDBCursor(SQLiteIDBTransaction&, IDBObjectStoreIdentifier, std::optional<IDBIndexIdentifier>, const IDBKeyRangeData&);
 
     ~SQLiteIDBCursor();
 
@@ -85,6 +83,11 @@ public:
     void currentData(IDBGetResult&, const std::optional<IDBKeyPath>&, ShouldIncludePrefetchedRecords = ShouldIncludePrefetchedRecords::No);
 
 private:
+    SQLiteIDBCursor(SQLiteIDBTransaction&, const IDBCursorInfo&);
+    SQLiteIDBCursor(SQLiteIDBTransaction&, IDBObjectStoreIdentifier, std::optional<IDBIndexIdentifier>, const IDBKeyRangeData&);
+
+    template<typename T, class... Args> friend WTF::UniqueRef<T> WTF::makeUniqueRefWithoutFastMallocCheck(Args&&...);
+
     bool establishStatement();
     bool createSQLiteStatement(StringView sql);
     bool bindArguments();

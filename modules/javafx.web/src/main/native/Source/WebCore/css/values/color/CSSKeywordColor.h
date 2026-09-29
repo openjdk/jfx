@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "CSSValueTypes.h"
+#include <WebCore/CSSValueTypes.h>
 #include <wtf/Forward.h>
 
 namespace WebCore {

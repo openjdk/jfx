@@ -47,7 +47,7 @@ std::optional<AtomString> Coder<AtomString>::decodeForPersistence(Decoder& decod
     if (!string)
         return std::nullopt;
 
-    return { AtomString { WTFMove(*string) } };
+    return { AtomString { WTF::move(*string) } };
 }
 
 void Coder<CString>::encodeForPersistence(Encoder& encoder, const CString& string)
@@ -100,7 +100,7 @@ void Coder<String>::encodeForPersistence(Encoder& encoder, const String& string)
     encoder << string.length() << is8Bit;
 
     if (is8Bit)
-        encoder.encodeFixedLengthData(string.span8());
+        encoder.encodeFixedLengthData(asBytes(string.span8()));
     else
         encoder.encodeFixedLengthData(asBytes(string.span16()));
 }
@@ -138,7 +138,7 @@ std::optional<String> Coder<String>::decodeForPersistence(Decoder& decoder)
         return std::nullopt;
 
     if (*is8Bit)
-        return decodeStringText<LChar>(decoder, *length);
+        return decodeStringText<Latin1Character>(decoder, *length);
     return decodeStringText<char16_t>(decoder, *length);
 }
 
@@ -153,7 +153,7 @@ std::optional<URL> Coder<URL>::decodeForPersistence(Decoder& decoder)
     decoder >> string;
     if (!string)
         return std::nullopt;
-    return URL(WTFMove(*string));
+    return URL(WTF::move(*string));
 }
 
 void Coder<SHA1::Digest>::encodeForPersistence(Encoder& encoder, const SHA1::Digest& digest)

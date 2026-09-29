@@ -29,19 +29,22 @@
 #include "Exception.h"
 #include "ScriptExecutionContextInlines.h"
 #include "WebTransport.h"
+#include "WebTransportDatagramsWritable.h"
+#include "WebTransportSendGroup.h"
 #include "WebTransportSession.h"
 #include <wtf/CompletionHandler.h>
 
 namespace WebCore {
 
-DatagramSink::DatagramSink() = default;
+DatagramSink::DatagramSink(WebTransportSession* session)
+    : m_session(session) { }
 
 DatagramSink::~DatagramSink() = default;
 
-void DatagramSink::attachTo(WebTransport& transport)
+void DatagramSink::attachTo(WebTransportDatagramsWritable& datagrams)
 {
-    ASSERT(!m_transport.get());
-    m_transport = transport;
+    ASSERT(!m_datagrams);
+    m_datagrams = datagrams;
 }
 
 void DatagramSink::write(ScriptExecutionContext& context, JSC::JSValue value, DOMPromiseDeferred<void>&& promise)
@@ -59,20 +62,20 @@ void DatagramSink::write(ScriptExecutionContext& context, JSC::JSValue value, DO
     if (bufferSource.hasException(scope)) [[unlikely]]
         return promise.settle(Exception { ExceptionCode::ExistingExceptionError });
 
-    RefPtr transport = m_transport.get();
-    if (!transport)
-        return promise.settle(Exception { ExceptionCode::InvalidStateError });
-
-    RefPtr session = transport->session();
+    RefPtr session = m_session.get();
     if (!session)
         return promise.settle(Exception { ExceptionCode::InvalidStateError });
 
+    RefPtr datagrams = m_datagrams.get();
+    RefPtr sendGroup = datagrams ? datagrams->sendGroup() : nullptr;
+    auto identifier = sendGroup ? std::optional(sendGroup->identifier()) : std::nullopt;
+
     WTF::switchOn(bufferSource.releaseReturnValue(), [&](auto&& arrayBufferOrView) {
-        context.enqueueTaskWhenSettled(session->sendDatagram(arrayBufferOrView->span()), WebCore::TaskSource::Networking, [promise = WTFMove(promise)] (auto&& exception) mutable {
+        context.enqueueTaskWhenSettled(session->sendDatagram(identifier, arrayBufferOrView->span()), WebCore::TaskSource::Networking, [promise = WTF::move(promise)] (auto&& exception) mutable {
             if (!exception)
                 promise.settle(Exception { ExceptionCode::NetworkError });
             else if (*exception)
-                promise.settle(WTFMove(**exception));
+                promise.settle(WTF::move(**exception));
             else
                 promise.resolve();
         });

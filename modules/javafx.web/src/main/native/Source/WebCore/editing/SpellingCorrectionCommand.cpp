@@ -48,11 +48,11 @@ class SpellingCorrectionRecordUndoCommand : public SimpleEditCommand {
 public:
     static Ref<SpellingCorrectionRecordUndoCommand> create(Ref<Document>&& document, const String& corrected, const String& correction)
     {
-        return adoptRef(*new SpellingCorrectionRecordUndoCommand(WTFMove(document), corrected, correction));
+        return adoptRef(*new SpellingCorrectionRecordUndoCommand(WTF::move(document), corrected, correction));
     }
 private:
     SpellingCorrectionRecordUndoCommand(Ref<Document>&& document, const String& corrected, const String& correction)
-        : SimpleEditCommand(WTFMove(document))
+        : SimpleEditCommand(WTF::move(document))
         , m_corrected(corrected)
         , m_correction(correction)
         , m_hasBeenUndone(false)
@@ -118,7 +118,7 @@ void SpellingCorrectionCommand::doApply()
     applyCommandToComposite(SpellingCorrectionRecordUndoCommand::create(document.copyRef(), m_corrected, m_correction));
 #endif
 
-    applyCommandToComposite(ReplaceSelectionCommand::create(WTFMove(document), protectedCorrectionFragment(), ReplaceSelectionCommand::MatchStyle, EditAction::Paste));
+    applyCommandToComposite(ReplaceSelectionCommand::create(WTF::move(document), protectedCorrectionFragment(), ReplaceSelectionCommand::MatchStyle, EditAction::Paste));
 }
 
 String SpellingCorrectionCommand::inputEventData() const
@@ -129,7 +129,7 @@ String SpellingCorrectionCommand::inputEventData() const
     return CompositeEditCommand::inputEventData();
 }
 
-Vector<RefPtr<StaticRange>> SpellingCorrectionCommand::targetRanges() const
+Vector<Ref<StaticRange>> SpellingCorrectionCommand::targetRanges() const
 {
     return { 1, StaticRange::create(m_rangeToBeCorrected) };
 }

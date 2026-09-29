@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "GeneratedImage.h"
+#include <WebCore/GeneratedImage.h>
 
 namespace WebCore {
 

@@ -28,12 +28,17 @@ class LayoutTraits
 
     constructor(mode)
     {
-        this.mode = mode
+        this._mode = mode
+    }
+    
+    get mode()
+    {
+        return this._mode;
     }
 
     get isFullscreen()
     {
-        return this.mode == LayoutTraits.Mode.Fullscreen;
+        return this._mode == LayoutTraits.Mode.Fullscreen || this._mode == LayoutTraits.Mode.NarrowViewer;
     }
 
     mediaControlsClass()
@@ -106,7 +111,8 @@ class LayoutTraits
 
 LayoutTraits.Mode = {
     Inline     : 0,
-    Fullscreen : 1
+    Fullscreen : 1,
+    NarrowViewer : 2
 };
 
 // LayoutTraits subclasses should "register" themselves by adding themselves to this map.

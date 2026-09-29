@@ -32,6 +32,10 @@
 #include "RTCRtpSenderBackend.h"
 #include "RealtimeOutgoingAudioSource.h"
 #include "RealtimeOutgoingVideoSource.h"
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
+#include <webrtc/api/rtp_sender_interface.h>
+#include <webrtc/api/scoped_refptr.h>
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
@@ -52,7 +56,7 @@ public:
     void ref() const final { RefCountedAndCanMakeWeakPtr::ref(); }
     void deref() const final { RefCountedAndCanMakeWeakPtr::deref(); }
 
-    void setRTCSender(RefPtr<webrtc::RtpSenderInterface>&& rtcSender) { m_rtcSender = WTFMove(rtcSender); }
+    void setRTCSender(RefPtr<webrtc::RtpSenderInterface>&& rtcSender) { m_rtcSender = WTF::move(rtcSender); }
     webrtc::RtpSenderInterface* rtcSender() { return m_rtcSender.get(); }
     RefPtr<webrtc::RtpSenderInterface> protectedRTCSender() { return m_rtcSender; }
 
@@ -64,6 +68,8 @@ public:
 private:
     LibWebRTCRtpSenderBackend(LibWebRTCPeerConnectionBackend&, RefPtr<webrtc::RtpSenderInterface>&&, Source&&);
     LibWebRTCRtpSenderBackend(LibWebRTCPeerConnectionBackend&, RefPtr<webrtc::RtpSenderInterface>&&);
+
+    bool isLibWebRTCRtpSenderBackend() const final { return true; }
 
     bool replaceTrack(RTCRtpSender&, MediaStreamTrack*) final;
     RTCRtpSendParameters getParameters() const final;
@@ -87,5 +93,9 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::LibWebRTCRtpSenderBackend)
+    static bool isType(const WebCore::RTCRtpSenderBackend& backend) { return backend.isLibWebRTCRtpSenderBackend(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(WEB_RTC) && USE(LIBWEBRTC)

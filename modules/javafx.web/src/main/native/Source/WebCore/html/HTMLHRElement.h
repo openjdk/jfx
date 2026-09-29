@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
- * Copyright (C) 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -22,12 +22,12 @@
 
 #pragma once
 
-#include "HTMLElement.h"
+#include <WebCore/HTMLElement.h>
 
 namespace WebCore {
 
 class HTMLHRElement final : public HTMLElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLHRElement);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLHRElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLHRElement);
 public:
     static Ref<HTMLHRElement> create(Document&);
@@ -36,9 +36,14 @@ public:
 private:
     HTMLHRElement(const QualifiedName&, Document&);
 
+    InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) final;
+    void removedFromAncestor(RemovalType, ContainerNode& oldParentOfRemovedTree) final;
+
     bool hasPresentationalHintsForAttribute(const QualifiedName&) const final;
     void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
     bool canContainRangeEndPoint() const final;
+
+    WeakPtr<HTMLSelectElement, WeakPtrImplWithEventTargetData> m_ownerSelect;
 };
 
 } // namespace WebCore

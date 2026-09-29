@@ -25,9 +25,8 @@
 
 #pragma once
 
-#include "JSArrayBufferView.h"
-#include "ThrowScope.h"
-#include "ToNativeFromValue.h"
+#include <JavaScriptCore/JSArrayBufferView.h>
+#include <JavaScriptCore/ThrowScope.h>
 #include <wtf/CheckedArithmetic.h>
 
 namespace JSC {
@@ -109,7 +108,7 @@ public:
     std::span<const typename Adaptor::Type> typedSpan() const { return unsafeMakeSpan(typedVector(), length()); }
     std::span<typename Adaptor::Type> typedSpan() { return unsafeMakeSpan(typedVector(), length()); }
 
-    inline bool inBounds(size_t) const;
+    inline bool inBounds(uint64_t) const;
 
     // These methods are meant to match indexed access methods that JSObject
     // supports - hence the slight redundancy.
@@ -178,7 +177,7 @@ protected:
     static bool putByIndex(JSCell*, JSGlobalObject*, unsigned propertyName, JSValue, bool shouldThrow);
     static bool deletePropertyByIndex(JSCell*, JSGlobalObject*, unsigned propertyName);
 
-    static void getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
+    static void getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArrayBuilder&, DontEnumPropertiesMode);
 
     static size_t estimatedSize(JSCell*, VM&);
 

@@ -44,7 +44,12 @@ public:
 
 private:
     static DOMCSSRegisterCustomProperty* from(DOMCSSNamespace&);
-    static ASCIILiteral supplementName();
+    static ASCIILiteral supplementName() { return "DOMCSSRegisterCustomProperty"_s; }
+    bool isDOMCSSRegisterCustomProperty() const final { return true; }
 };
 
-}
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::DOMCSSRegisterCustomProperty)
+    static bool isType(const WebCore::SupplementBase& supplement) { return supplement.isDOMCSSRegisterCustomProperty(); }
+SPECIALIZE_TYPE_TRAITS_END()

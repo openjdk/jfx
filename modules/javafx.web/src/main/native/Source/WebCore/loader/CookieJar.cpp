@@ -29,8 +29,8 @@
 #include "Cookie.h"
 #include "CookieRequestHeaderFieldProxy.h"
 #include "CookieStoreGetOptions.h"
-#include "DocumentInlines.h"
 #include "DocumentLoader.h"
+#include "DocumentPage.h"
 #include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
 #include "HTTPCookieAcceptPolicy.h"
@@ -56,12 +56,12 @@ static ShouldRelaxThirdPartyCookieBlocking shouldRelaxThirdPartyCookieBlocking(c
 
 Ref<CookieJar> CookieJar::create(Ref<StorageSessionProvider>&& storageSessionProvider)
 {
-    return adoptRef(*new CookieJar(WTFMove(storageSessionProvider)));
+    return adoptRef(*new CookieJar(WTF::move(storageSessionProvider)));
 }
 
-IncludeSecureCookies CookieJar::shouldIncludeSecureCookies(const Document& document, const URL& url)
+IncludeSecureCookies CookieJar::shouldIncludeSecureCookies(const URL& url)
 {
-    return (url.protocolIs("https"_s) && !document.foundMixedContent().contains(SecurityContext::MixedContentType::Active)) ? IncludeSecureCookies::Yes : IncludeSecureCookies::No;
+    return url.protocolIs("https"_s) ? IncludeSecureCookies::Yes : IncludeSecureCookies::No;
 }
 
 SameSiteInfo CookieJar::sameSiteInfo(const Document& document, IsForDOMCookieAccess isAccessForDOM)
@@ -78,7 +78,7 @@ SameSiteInfo CookieJar::sameSiteInfo(const Document& document, IsForDOMCookieAcc
 }
 
 CookieJar::CookieJar(Ref<StorageSessionProvider>&& storageSessionProvider)
-    : m_storageSessionProvider(WTFMove(storageSessionProvider))
+    : m_storageSessionProvider(WTF::move(storageSessionProvider))
 {
 }
 
@@ -88,7 +88,7 @@ String CookieJar::cookies(Document& document, const URL& url) const
 {
     TraceScope scope(FetchCookiesStart, FetchCookiesEnd);
 
-    auto includeSecureCookies = shouldIncludeSecureCookies(document, url);
+    auto includeSecureCookies = shouldIncludeSecureCookies(url);
 
     auto pageID = document.pageID();
     std::optional<FrameIdentifier> frameID;
@@ -97,7 +97,7 @@ String CookieJar::cookies(Document& document, const URL& url) const
 
     std::pair<String, bool> result;
     if (CheckedPtr session = m_storageSessionProvider->storageSession())
-        result = session->cookiesForDOM(document.firstPartyForCookies(), sameSiteInfo(document, IsForDOMCookieAccess::Yes), url, frameID, pageID, includeSecureCookies, ApplyTrackingPrevention::Yes, shouldRelaxThirdPartyCookieBlocking(document));
+        result = session->cookiesForDOM(document.firstPartyForCookies(), sameSiteInfo(document, IsForDOMCookieAccess::Yes), url, frameID, pageID, includeSecureCookies, ApplyTrackingPrevention::Yes, shouldRelaxThirdPartyCookieBlocking(document), IsKnownCrossSiteTracker::No);
     else
         ASSERT_NOT_REACHED();
 
@@ -116,7 +116,7 @@ CookieRequestHeaderFieldProxy CookieJar::cookieRequestHeaderFieldProxy(const Doc
     if (auto* frame = document.frame())
         frameID = frame->frameID();
 
-    return { document.firstPartyForCookies(), sameSiteInfo(document), url, frameID, pageID, shouldIncludeSecureCookies(document, url) };
+    return { document.firstPartyForCookies(), sameSiteInfo(document), url, frameID, pageID, shouldIncludeSecureCookies(url) };
 }
 
 void CookieJar::setCookies(Document& document, const URL& url, const String& cookieString)
@@ -127,7 +127,7 @@ void CookieJar::setCookies(Document& document, const URL& url, const String& coo
         frameID = frame->frameID();
 
     if (CheckedPtr session = m_storageSessionProvider->storageSession())
-        session->setCookiesFromDOM(document.firstPartyForCookies(), sameSiteInfo(document, IsForDOMCookieAccess::Yes), url, frameID, pageID, ApplyTrackingPrevention::Yes, RequiresScriptTrackingPrivacy::No, cookieString, shouldRelaxThirdPartyCookieBlocking(document));
+        session->setCookiesFromDOM(document.firstPartyForCookies(), sameSiteInfo(document, IsForDOMCookieAccess::Yes), url, frameID, pageID, ApplyTrackingPrevention::Yes, RequiresScriptTrackingPrivacy::No, cookieString, shouldRelaxThirdPartyCookieBlocking(document), IsKnownCrossSiteTracker::No);
     else
         ASSERT_NOT_REACHED();
 }
@@ -144,7 +144,7 @@ bool CookieJar::cookiesEnabled(Document& document)
         frameID = frame->frameID();
 
     if (CheckedPtr session = m_storageSessionProvider->storageSession())
-        return session->cookiesEnabled(document.firstPartyForCookies(), cookieURL, frameID, pageID, shouldRelaxThirdPartyCookieBlocking(document));
+        return session->cookiesEnabled(document.firstPartyForCookies(), cookieURL, frameID, pageID, shouldRelaxThirdPartyCookieBlocking(document), IsKnownCrossSiteTracker::No);
 
     ASSERT_NOT_REACHED();
     return false;
@@ -158,7 +158,7 @@ void CookieJar::remoteCookiesEnabled(const Document&, CompletionHandler<void(boo
 std::pair<String, SecureCookiesAccessed> CookieJar::cookieRequestHeaderFieldValue(const URL& firstParty, const SameSiteInfo& sameSiteInfo, const URL& url, std::optional<FrameIdentifier> frameID, std::optional<PageIdentifier> pageID, IncludeSecureCookies includeSecureCookies) const
 {
     if (CheckedPtr session = m_storageSessionProvider->storageSession()) {
-        std::pair<String, bool> result = session->cookieRequestHeaderFieldValue(firstParty, sameSiteInfo, url, frameID, pageID, includeSecureCookies, ApplyTrackingPrevention::Yes, ShouldRelaxThirdPartyCookieBlocking::No);
+        std::pair<String, bool> result = session->cookieRequestHeaderFieldValue(firstParty, sameSiteInfo, url, frameID, pageID, includeSecureCookies, ApplyTrackingPrevention::Yes, ShouldRelaxThirdPartyCookieBlocking::No, IsKnownCrossSiteTracker::No);
         return { result.first, result.second ? SecureCookiesAccessed::Yes : SecureCookiesAccessed::No };
     }
 
@@ -173,7 +173,7 @@ String CookieJar::cookieRequestHeaderFieldValue(Document& document, const URL& u
     if (auto* frame = document.frame())
         frameID = frame->frameID();
 
-    auto result = cookieRequestHeaderFieldValue(document.firstPartyForCookies(), sameSiteInfo(document), url, frameID, pageID, shouldIncludeSecureCookies(document, url));
+    auto result = cookieRequestHeaderFieldValue(document.firstPartyForCookies(), sameSiteInfo(document), url, frameID, pageID, shouldIncludeSecureCookies(url));
     if (result.second == SecureCookiesAccessed::Yes)
         document.setSecureCookiesAccessed();
     return result.first;
@@ -204,7 +204,7 @@ void CookieJar::setRawCookie(const Document&, const Cookie& cookie, ShouldPartit
 void CookieJar::deleteCookie(const Document& document, const URL& url, const String& cookieName, CompletionHandler<void()>&& completionHandler)
 {
     if (CheckedPtr session = m_storageSessionProvider->storageSession())
-        session->deleteCookie(document.firstPartyForCookies(), url, cookieName, WTFMove(completionHandler));
+        session->deleteCookie(document.firstPartyForCookies(), url, cookieName, WTF::move(completionHandler));
     else {
         ASSERT_NOT_REACHED();
         completionHandler();

@@ -52,7 +52,7 @@ public:
     void detachFromReceiver(RTCRtpReceiver&);
     void detachFromSender(RTCRtpSender&);
 
-    RefPtr<RTCRtpTransformBackend> takeBackend() { return WTFMove(m_backend); }
+    RefPtr<RTCRtpTransformBackend> takeBackend() { return WTF::move(m_backend); }
     Internal internalTransform() { return m_transform; }
 
     friend bool operator==(const RTCRtpTransform&, const RTCRtpTransform&);

@@ -69,14 +69,10 @@ void FragmentedSharedBuffer::hintMemoryNotNeededSoon() const
     }
 }
 
-void FragmentedSharedBuffer::append(CFDataRef data)
+void SharedBufferBuilder::append(CFDataRef data)
 {
-    if (data) {
-        ASSERT(!m_contiguous || !segmentsCount());
-        m_segments.append({m_size, DataSegment::create(data)});
-        m_size += CFDataGetLength(data);
-    }
-    ASSERT(internallyConsistent());
+    if (data)
+        appendDataSegment(DataSegment::create(data));
 }
 
 }

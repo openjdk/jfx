@@ -27,11 +27,11 @@
 
 #if ENABLE(MEDIA_SOURCE)
 
-#include "AudioTrackPrivate.h"
-#include "InbandTextTrackPrivate.h"
-#include "MediaDescription.h"
-#include "PlatformMediaError.h"
-#include "VideoTrackPrivate.h"
+#include <WebCore/AudioTrackPrivate.h>
+#include <WebCore/InbandTextTrackPrivate.h>
+#include <WebCore/MediaDescription.h>
+#include <WebCore/PlatformMediaError.h>
+#include <WebCore/VideoTrackPrivate.h>
 #include <wtf/MediaTime.h>
 #include <wtf/Ref.h>
 #include <wtf/Vector.h>
@@ -103,7 +103,6 @@ public:
     virtual Ref<MediaPromise> sourceBufferPrivateDurationChanged(const MediaTime&) = 0;
     virtual void sourceBufferPrivateHighestPresentationTimestampChanged(const MediaTime&) = 0;
     virtual void sourceBufferPrivateDidDropSample() = 0;
-    virtual void sourceBufferPrivateDidReceiveRenderingError(int64_t errorCode) = 0;
     virtual void sourceBufferPrivateEvictionDataChanged(const SourceBufferEvictionData&) { }
     virtual Ref<MediaPromise> sourceBufferPrivateDidAttach(InitializationSegment&&) = 0;
 };

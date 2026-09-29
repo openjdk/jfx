@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "ContainerNode.h"
-#include "TreeScopeOrderedMap.h"
+#include <WebCore/ContainerNode.h>
+#include <WebCore/TreeScopeOrderedMap.h>
 #include <wtf/Lock.h>
 #include <wtf/Locker.h>
 

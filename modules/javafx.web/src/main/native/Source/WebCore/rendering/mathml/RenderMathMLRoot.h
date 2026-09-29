@@ -39,13 +39,14 @@ enum class RootType { SquareRoot, RootWithIndex };
 
 // Render base^(1/index), or sqrt(base) using radical notation.
 class RenderMathMLRoot final : public RenderMathMLRow {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderMathMLRoot);
+    WTF_MAKE_TZONE_ALLOCATED(RenderMathMLRoot);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderMathMLRoot);
 public:
     RenderMathMLRoot(MathMLRootElement&, RenderStyle&&);
     virtual ~RenderMathMLRoot();
 
     void updateStyle();
+    void resetRadicalOperator() { m_radicalOperator.reset(checkedStyle()); }
 
 private:
     bool isValid() const;
@@ -55,7 +56,7 @@ private:
     MathMLRootElement& element() const;
     RootType rootType() const;
 
-    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) final;
+    void styleDidChange(Style::Difference, const RenderStyle* oldStyle) final;
 
     void computePreferredLogicalWidths() final;
     void layoutBlock(RelayoutChildren, LayoutUnit pageLogicalHeight = 0_lu) final;

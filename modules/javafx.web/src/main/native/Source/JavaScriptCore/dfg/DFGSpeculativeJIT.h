@@ -71,10 +71,9 @@ enum GeneratedOperandType { GeneratedOperandTypeUnknown, GeneratedOperandInteger
 // a speculative check has failed. This allows the SpeculativeJIT
 // to propagate type information (including information that has
 // only speculatively been asserted) through the dataflow.
-DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(SpeculativeJIT);
 class SpeculativeJIT : public JITCompiler {
     using Base = JITCompiler;
-    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(SpeculativeJIT, SpeculativeJIT);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(SpeculativeJIT);
     friend struct OSRExit;
 private:
     typedef JITCompiler::TrustedImm32 TrustedImm32;
@@ -1085,18 +1084,18 @@ public:
 
         if (exceptionReg != InvalidGPRReg) {
             RegisterSetBuilder spilledRegs = spilledRegsForSilentSpillPlans(plans);
-            if constexpr (std::is_same_v<GPRReg, ResultRegType> || std::is_same_v<JSValueRegs, ResultRegType>) {
+            if constexpr (std::same_as<GPRReg, ResultRegType> || std::same_as<JSValueRegs, ResultRegType>) {
                 spilledRegs.add(GPRInfo::returnValueGPR, IgnoreVectors);
                 spilledRegs.add(result, IgnoreVectors);
             }
+
             if constexpr (sizeof...(OtherSpilledRegTypes) > 0) {
                 constexpr auto addRegIfNeeded = [](auto& spilledRegs, auto& reg) ALWAYS_INLINE_LAMBDA {
-                    static_assert(std::is_same_v<GPRReg, std::decay_t<decltype(reg)>> || std::is_same_v<JSValueRegs, std::decay_t<decltype(reg)>>);
+                    static_assert(std::same_as<GPRReg, std::decay_t<decltype(reg)>> || std::same_as<JSValueRegs, std::decay_t<decltype(reg)>>);
                     spilledRegs.add(reg, IgnoreVectors);
                 };
                 (addRegIfNeeded(spilledRegs, otherSpilledRegs), ...);
             }
-
 
             if (spilledRegs.buildAndValidate().contains(exceptionReg, IgnoreVectors)) {
                 // It would be nice if we could do m_gprs.tryAllocate() but we're possibly on a slow path and register allocation state is
@@ -1493,8 +1492,6 @@ public:
     void compileMapIteratorNext(Node*);
     void compileMapIteratorKey(Node*);
     void compileMapIteratorValue(Node*);
-    template<typename Operation>
-    ALWAYS_INLINE void compileMapStorageImpl(Node*, Operation, Operation);
     void compileMapStorage(Node*);
     void compileMapStorageOrSentinel(Node*);
     void compileMapIterationNext(Node*);
@@ -1800,6 +1797,12 @@ public:
     void compileNumberIsSafeInteger(Node*);
     void compileToIntegerOrInfinity(Node*);
     void compileToLength(Node*);
+    void compileResolvePromiseFirstResolving(Node*);
+    void compileRejectPromiseFirstResolving(Node*);
+    void compileFulfillPromiseFirstResolving(Node*);
+    void compilePromiseResolve(Node*);
+    void compilePromiseReject(Node*);
+    void compilePromiseThen(Node*);
 
     template<typename JSClass, typename Operation>
     void compileCreateInternalFieldObject(Node*, Operation);
@@ -1937,8 +1940,8 @@ public:
     void speculateDateObject(Edge);
     void speculateDateObject(Edge, GPRReg cell);
     void speculateMapObject(Edge);
-    void speculateImmutableButterfly(Edge, GPRReg);
-    void speculateImmutableButterfly(Edge);
+    void speculateCellButterfly(Edge, GPRReg);
+    void speculateCellButterfly(Edge);
     void speculateMapObject(Edge, GPRReg cell);
     void speculateSetObject(Edge);
     void speculateSetObject(Edge, GPRReg cell);
@@ -2294,7 +2297,7 @@ public:
         m_edge = edge;
         ASSERT(m_gprOrInvalid == InvalidGPRReg);
         ASSERT(m_jit);
-        ASSERT(edge.useKind() == UntypedUse || edge.useKind() == KnownCellUse);
+        ASSERT(edge.useKind() == KnownStorageUse);
         if (jit->isFilled(node()))
             gpr();
     }

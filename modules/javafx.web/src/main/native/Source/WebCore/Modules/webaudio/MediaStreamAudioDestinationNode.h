@@ -37,7 +37,8 @@ class BaseAudioContext;
 class MediaStreamAudioSource;
 
 class MediaStreamAudioDestinationNode final : public AudioBasicInspectorNode {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(MediaStreamAudioDestinationNode);
+    WTF_MAKE_TZONE_ALLOCATED(MediaStreamAudioDestinationNode);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(MediaStreamAudioDestinationNode);
 public:
     static ExceptionOr<Ref<MediaStreamAudioDestinationNode>> create(BaseAudioContext&, const AudioNodeOptions& = { });
 
@@ -54,6 +55,7 @@ private:
     double tailTime() const final { return 0; }
     double latencyTime() const final { return 0; }
     bool requiresTailProcessing() const final { return false; }
+    void checkNumberOfChannelsForInput(AudioNodeInput*) override;
 
     // As an audio source, we will never propagate silence.
     bool propagatesSilence() const final { return false; }
@@ -63,5 +65,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_AUDIONODE(MediaStreamAudioDestinationNode, NodeTypeMediaStreamAudioDestination);
 
 #endif // ENABLE(WEB_AUDIO) && ENABLE(MEDIA_STREAM)

@@ -27,7 +27,7 @@
 
 #if ENABLE(VIDEO)
 
-#include "PlatformTrackConfiguration.h"
+#include <WebCore/PlatformTrackConfiguration.h>
 
 namespace WebCore {
 
@@ -35,6 +35,7 @@ struct PlatformAudioTrackConfiguration : PlatformTrackConfiguration {
     uint32_t sampleRate { 0 };
     uint32_t numberOfChannels { 0 };
     uint64_t bitrate { 0 };
+    bool isProtected { false };
 
     friend bool operator==(const PlatformAudioTrackConfiguration&, const PlatformAudioTrackConfiguration&) = default;
 };

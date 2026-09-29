@@ -58,7 +58,7 @@ void JITCode::initializeB3Code(CodeRef<JSEntryPtrTag> b3Code)
 
 void JITCode::initializeB3Byproducts(std::unique_ptr<OpaqueByproducts> byproducts)
 {
-    m_b3Byproducts = WTFMove(byproducts);
+    m_b3Byproducts = WTF::move(byproducts);
 }
 
 void JITCode::initializeAddressForCall(CodePtr<JSEntryPtrTag> address)

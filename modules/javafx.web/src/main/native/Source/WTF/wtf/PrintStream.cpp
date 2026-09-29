@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,13 +26,18 @@
 #include "config.h"
 #include <wtf/PrintStream.h>
 
+#include <inttypes.h>
 #include <wtf/text/AtomString.h>
 #include <wtf/text/CString.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/WTFString.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WTF {
+
+static constexpr size_t stringLengthThresholdToTriggerTruncation = 5000000;
+static constexpr size_t stringLengthToTruncateToForPrinting = 1000;
 
 PrintStream::PrintStream() = default;
 PrintStream::~PrintStream() = default; // Force the vtable to be in this module
@@ -99,6 +104,12 @@ void printInternal(PrintStream& out, StringView string)
 
 void printInternal(PrintStream& out, const CString& string)
 {
+    if (string.length() > stringLengthThresholdToTriggerTruncation) [[unlikely]] {
+        size_t lengthNotPrinted = string.length() - stringLengthToTruncateToForPrinting;
+        auto subString = makeString(string.span().first(stringLengthToTruncateToForPrinting), "...["_s, lengthNotPrinted, " characters not shown]"_s);
+        printInternal(out, subString.utf8().data());
+        return;
+    }
     printInternal(out, string.data());
 }
 
@@ -121,6 +132,11 @@ void printInternal(PrintStream& out, const StringImpl* string)
     printExpectedCStringHelper(out, "StringImpl*", string->tryGetUTF8());
 }
 
+void printInternal(PrintStream& stream, std::span<const char8_t> codeUnits)
+{
+    printInternal(stream, byteCast<char>(codeUnits));
+}
+
 void printInternal(PrintStream& out, bool value)
 {
     out.print(boolForPrinting(value));
@@ -134,6 +150,11 @@ void printInternal(PrintStream& out, int value)
 void printInternal(PrintStream& out, unsigned value)
 {
     out.printf("%u", value);
+}
+
+void printInternal(PrintStream& out, char value)
+{
+    out.printf("%c", value);
 }
 
 void printInternal(PrintStream& out, signed char value)
@@ -219,6 +240,52 @@ void printInternal(PrintStream& out, RawPointer value)
 #else
     out.printf("%p", value.value());
 #endif
+}
+
+void printInternal(PrintStream& out, MemoryDump value)
+{
+    auto span = value.span();
+    auto sizeLimit = value.sizeLimit();
+
+    out.printf("\n");
+    if (span.data() == nullptr) [[unlikely]] {
+        out.printf("%08" PRIxPTR ": (not dumping %zu bytes)", reinterpret_cast<uintptr_t>(span.data()), span.size());
+        return;
+    }
+    if (span.empty()) [[unlikely]] {
+        out.printf("%08" PRIxPTR ": (span is empty)", reinterpret_cast<uintptr_t>(span.data()));
+        return;
+    }
+
+    for (size_t i = 0; i < span.size(); i += 16) {
+        if (i >= sizeLimit) {
+            size_t remainder = span.size() - i;
+            out.printf("... (remaining %zu bytes not dumped)\n", remainder);
+            break;
+        }
+
+        // Print address
+        out.printf("%08" PRIxPTR ": ", reinterpret_cast<uintptr_t>(span.data() + i));
+
+        // Print hex bytes
+        for (size_t byteIndex = 0; byteIndex < 16; ++byteIndex) {
+            if (i + byteIndex < span.size())
+                out.printf("%02x ", static_cast<uint8_t>(span[i + byteIndex]));
+            else
+                out.printf("   ");
+        }
+
+        // Print ASCII interpretation
+        out.printf(" ");
+        for (size_t byteIndex = 0; byteIndex < 16 && i + byteIndex < span.size(); ++byteIndex) {
+            std::byte byte = span[i + byteIndex];
+            uint8_t byteValue = static_cast<uint8_t>(byte);
+            char ch = (byteValue >= 32 && byteValue <= 126) ? static_cast<char>(byteValue) : '.';
+            out.printf("%c", ch);
+        }
+        if (i + 16 < span.size())
+            out.printf("\n");
+    }
 }
 
 void printInternal(PrintStream& out, FixedWidthDouble value)

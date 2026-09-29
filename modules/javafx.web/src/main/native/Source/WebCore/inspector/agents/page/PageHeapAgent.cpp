@@ -50,21 +50,21 @@ Inspector::Protocol::ErrorStringOr<void> PageHeapAgent::enable()
 {
     auto result = WebHeapAgent::enable();
 
-    m_instrumentingAgents.setEnabledPageHeapAgent(this);
+    Ref { m_instrumentingAgents.get() }->setEnabledPageHeapAgent(this);
 
     return result;
 }
 
 Inspector::Protocol::ErrorStringOr<void> PageHeapAgent::disable()
 {
-    m_instrumentingAgents.setEnabledPageHeapAgent(nullptr);
+    Ref { m_instrumentingAgents.get() }->setEnabledPageHeapAgent(nullptr);
 
     return WebHeapAgent::disable();
 }
 
-String PageHeapAgent::heapSnapshotBuilderOverrideClassName(JSC::HeapSnapshotBuilder& builder, JSC::JSCell* cell, const String& currentClassName)
+String PageHeapAgent::heapSnapshotBuilderOverrideClassName(const JSC::HeapSnapshotBuilder& builder, JSC::JSCell* cell, const String& currentClassName)
 {
-    if (currentClassName == "HTMLElement") {
+    if (currentClassName == "HTMLElement"_s) {
         if (auto* jsElement = jsDynamicCast<JSElement*>(cell)) {
             Ref element = jsElement->wrapped();
             if (element->isDefinedCustomElement()) {
@@ -86,7 +86,7 @@ String PageHeapAgent::heapSnapshotBuilderOverrideClassName(JSC::HeapSnapshotBuil
     return JSC::HeapSnapshotBuilder::Client::heapSnapshotBuilderOverrideClassName(builder, cell, currentClassName);
 }
 
-bool PageHeapAgent::heapSnapshotBuilderIsElement(JSC::HeapSnapshotBuilder&, JSC::JSCell* cell)
+bool PageHeapAgent::heapSnapshotBuilderIsElement(const JSC::HeapSnapshotBuilder&, JSC::JSCell* cell)
 {
     return jsDynamicCast<JSNode*>(cell);
 }

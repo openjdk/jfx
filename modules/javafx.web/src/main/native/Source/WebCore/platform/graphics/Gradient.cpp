@@ -28,31 +28,35 @@
 #include "Gradient.h"
 
 #include "FloatRect.h"
+#include "NativeImage.h"
 #include <wtf/HashFunctions.h>
 #include <wtf/Hasher.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
-Ref<Gradient> Gradient::create(Data&& data, ColorInterpolationMethod colorInterpolationMethod, GradientSpreadMethod spreadMethod, GradientColorStops&& stops, std::optional<RenderingResourceIdentifier> renderingResourceIdentifier)
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Gradient);
+
+Ref<Gradient> Gradient::create(Data&& data, ColorInterpolationMethod colorInterpolationMethod, GradientSpreadMethod spreadMethod, GradientColorStops&& stops, bool isTransient)
 {
-    return adoptRef(*new Gradient(WTFMove(data), colorInterpolationMethod, spreadMethod, WTFMove(stops), renderingResourceIdentifier));
+    return adoptRef(*new Gradient(WTF::move(data), colorInterpolationMethod, spreadMethod, WTF::move(stops), isTransient));
 }
 
-Gradient::Gradient(Data&& data, ColorInterpolationMethod colorInterpolationMethod, GradientSpreadMethod spreadMethod, GradientColorStops&& stops, std::optional<RenderingResourceIdentifier> renderingResourceIdentifier)
-    : RenderingResource(renderingResourceIdentifier)
-    , m_data { WTFMove(data) }
+Gradient::Gradient(Data&& data, ColorInterpolationMethod colorInterpolationMethod, GradientSpreadMethod spreadMethod, GradientColorStops&& stops, bool isTransient)
+    : m_data { WTF::move(data) }
     , m_colorInterpolationMethod { colorInterpolationMethod }
     , m_spreadMethod { spreadMethod }
-    , m_stops { WTFMove(stops) }
+    , m_stops { WTF::move(stops) }
+    , m_isTransient { isTransient }
 {
 }
 
 Gradient::~Gradient()
 {
-    for (auto& observer : m_observers)
-        observer.willDestroyGradient(renderingResourceIdentifier());
+    for (CheckedRef observer : m_observers)
+        observer->willDestroyGradient(*this);
 }
 
 void Gradient::adjustParametersForTiledDrawing(FloatSize& size, FloatRect& srcRect, const FloatSize& spacing)
@@ -102,7 +106,7 @@ bool Gradient::isZeroSize() const
 
 void Gradient::addColorStop(GradientColorStop&& stop)
 {
-    m_stops.addColorStop(WTFMove(stop));
+    m_stops.addColorStop(WTF::move(stop));
     m_cachedHash = 0;
     stopsChanged();
 }

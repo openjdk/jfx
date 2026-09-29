@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "PermissionsPolicy.h"
+#include <WebCore/PermissionsPolicy.h>
 
 namespace WebCore {
 
@@ -34,9 +34,9 @@ struct OwnerPermissionsPolicyData {
 
     using PolicyDirective = PermissionsPolicy::PolicyDirective;
     OwnerPermissionsPolicyData(SecurityOriginData&& documentOrigin, PermissionsPolicy&& documentPolicy, PolicyDirective&& containerPolicy)
-        : documentOrigin(WTFMove(documentOrigin))
-        , documentPolicy(WTFMove(documentPolicy))
-        , containerPolicy(WTFMove(containerPolicy))
+        : documentOrigin(WTF::move(documentOrigin))
+        , documentPolicy(WTF::move(documentPolicy))
+        , containerPolicy(WTF::move(containerPolicy))
     {
     }
 

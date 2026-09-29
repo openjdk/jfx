@@ -26,8 +26,8 @@
 #include "LineInfo.h"
 #include "RenderBoxInlines.h"
 #include "RenderBoxModelObjectInlines.h"
-#include "RenderLayer.h"
 #include "RenderObjectInlines.h"
+#include "RenderLayer.h"
 
 namespace WebCore {
 

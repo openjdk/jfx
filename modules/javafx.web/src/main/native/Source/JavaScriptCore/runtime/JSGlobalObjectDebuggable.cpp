@@ -66,7 +66,7 @@ void JSGlobalObjectDebuggable::connect(FrontendChannel& frontendChannel, bool au
         return;
 
     JSLockHolder locker(&m_globalObject->vm());
-    m_globalObject->inspectorController().connectFrontend(frontendChannel, automaticInspection, immediatelyPause);
+    m_globalObject->checkedInspectorController()->connectFrontend(frontendChannel, automaticInspection, immediatelyPause);
 }
 
 void JSGlobalObjectDebuggable::disconnect(FrontendChannel& frontendChannel)
@@ -76,7 +76,7 @@ void JSGlobalObjectDebuggable::disconnect(FrontendChannel& frontendChannel)
 
     JSLockHolder locker(&m_globalObject->vm());
 
-    m_globalObject->inspectorController().disconnectFrontend(frontendChannel);
+    m_globalObject->checkedInspectorController()->disconnectFrontend(frontendChannel);
 }
 
 void JSGlobalObjectDebuggable::dispatchMessageFromRemote(String&& message)
@@ -86,7 +86,7 @@ void JSGlobalObjectDebuggable::dispatchMessageFromRemote(String&& message)
 
     JSLockHolder locker(&m_globalObject->vm());
 
-    m_globalObject->inspectorController().dispatchMessageFromFrontend(WTFMove(message));
+    m_globalObject->checkedInspectorController()->dispatchMessageFromFrontend(WTF::move(message));
 }
 
 void JSGlobalObjectDebuggable::pauseWaitingForAutomaticInspection()

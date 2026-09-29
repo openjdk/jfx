@@ -139,14 +139,14 @@ protected:
 #if ENABLE(WEBASSEMBLY)
                 // At this point, Wasm::Callee would be dying (ref count is 0), but its fields are still live.
                 // And we can safely copy Wasm::IndexOrName even when any lock is held by suspended threads.
-                    auto* wasmCallee = static_cast<Wasm::Callee*>(nativeCallee);
+                    auto* wasmCallee = uncheckedDowncast<Wasm::Callee>(nativeCallee);
                 stackTrace[m_depth].wasmCompilationMode = wasmCallee->compilationMode();
                     stackTrace[m_depth].wasmIndexOrName = wasmCallee->indexOrName();
                     stackTrace[m_depth].callSiteIndex = m_callFrame->unsafeCallSiteIndex();
-#if ENABLE(JIT)
+#if ENABLE(WEBASSEMBLY_OMGJIT)
                     // FIXME: We should be able to add all stack traces including inlined ones in SamplingProfiler.
                     if (wasmCallee->compilationMode() == Wasm::CompilationMode::OMGMode) {
-                        auto* omgCallee = static_cast<const Wasm::OptimizingJITCallee*>(wasmCallee);
+                        auto* omgCallee = uncheckedDowncast<const Wasm::OptimizingJITCallee>(wasmCallee);
                         bool isInlined = false;
                         auto origin = omgCallee->getOrigin(stackTrace[m_depth].callSiteIndex.bits(), 0, isInlined);
                         if (isInlined)
@@ -319,7 +319,7 @@ SamplingProfiler::SamplingProfiler(VM& vm, Ref<Stopwatch>&& stopwatch)
     , m_isShutDown(false)
     , m_vm(vm)
     , m_weakRandom()
-    , m_stopwatch(WTFMove(stopwatch))
+    , m_stopwatch(WTF::move(stopwatch))
     , m_timingInterval(Seconds::fromMicroseconds(Options::sampleInterval()))
 {
     if (sReportStats) {
@@ -462,7 +462,7 @@ void SamplingProfiler::takeSample(Seconds& stackTraceProcessingTime)
                     stackTrace.append(UnprocessedStackFrame { machinePC });
                 stackTrace.appendRange(m_currentFrames.begin(), m_currentFrames.begin() + walkSize);
 
-                m_unprocessedStackTraces.append(UnprocessedStackTrace { timestamp, nowTime, machinePC, topFrameIsLLInt, llintPC, regExp, WTFMove(stackTrace) });
+                m_unprocessedStackTraces.append(UnprocessedStackTrace { timestamp, nowTime, machinePC, topFrameIsLLInt, llintPC, regExp, WTF::move(stackTrace) });
 
                 if (didRunOutOfVectorSpace)
                     m_currentFrames.grow(m_currentFrames.size() * 1.25);
@@ -973,7 +973,7 @@ Vector<SamplingProfiler::StackTrace> SamplingProfiler::releaseStackTraces()
         processUnverifiedStackTraces();
     }
 
-    Vector<StackTrace> result(WTFMove(m_stackTraces));
+    Vector<StackTrace> result(WTF::move(m_stackTraces));
     clearData();
     return result;
 }
@@ -1023,7 +1023,6 @@ struct Tiers {
     static constexpr ASCIILiteral ftl { "FTL"_s };
     static constexpr ASCIILiteral builtin { "js builtin"_s };
     static constexpr ASCIILiteral ipint { "IPInt"_s };
-    static constexpr ASCIILiteral wasmllint { "WasmLLInt"_s };
     static constexpr ASCIILiteral bbq { "BBQ"_s };
     static constexpr ASCIILiteral omg { "OMG"_s };
     static constexpr ASCIILiteral wasm { "Wasm"_s };
@@ -1056,13 +1055,12 @@ static String tierName(SamplingProfiler::StackFrame& frame)
     case SamplingProfiler::FrameType::Wasm:
         if (frame.wasmCompilationMode) {
             switch (frame.wasmCompilationMode.value()) {
-            case Wasm::CompilationMode::LLIntMode:
-                return Tiers::wasmllint;
             case Wasm::CompilationMode::IPIntMode:
                 return Tiers::ipint;
-            case Wasm::CompilationMode::JSToWasmEntrypointMode:
+            case Wasm::CompilationMode::JSToWasmMode:
             case Wasm::CompilationMode::JSToWasmICMode:
             case Wasm::CompilationMode::WasmToJSMode:
+            case Wasm::CompilationMode::WasmBuiltinMode:
                 // Just say "Wasm" for now.
                 break;
             case Wasm::CompilationMode::BBQMode:
@@ -1123,7 +1121,7 @@ Ref<JSON::Value> SamplingProfiler::stackTracesAsJSON()
             inliner->setDouble("line"_s, machineLocation->first.lineColumn.line);
             inliner->setDouble("column"_s, machineLocation->first.lineColumn.column);
             inliner->setString("category"_s, tierName(stackFrame));
-            result->setValue("inliner"_s, WTFMove(inliner));
+            result->setValue("inliner"_s, WTF::move(inliner));
         }
         return result;
     };
@@ -1135,7 +1133,7 @@ Ref<JSON::Value> SamplingProfiler::stackTracesAsJSON()
             auto frames = JSON::Array::create();
             for (StackFrame& stackFrame : stackTrace.frames)
                 frames->pushValue(stackFrameAsJSON(stackFrame));
-            result->setValue("frames"_s, WTFMove(frames));
+            result->setValue("frames"_s, WTF::move(frames));
     }
         return result;
     };
@@ -1157,12 +1155,12 @@ Ref<JSON::Value> SamplingProfiler::stackTracesAsJSON()
     auto traces = JSON::Array::create();
     for (StackTrace& stackTrace : m_stackTraces)
         traces->pushValue(stackTraceAsJSON(stackTrace));
-    result->setValue("traces"_s, WTFMove(traces));
+    result->setValue("traces"_s, WTF::move(traces));
 
     auto sourcesArray = JSON::Array::create();
     for (auto& [ sourceID, sourceProvider ] : sources)
         sourcesArray->pushValue(sourceAsJSON(sourceProvider.get()));
-    result->setValue("sources"_s, WTFMove(sourcesArray));
+    result->setValue("sources"_s, WTF::move(sourcesArray));
 
     clearData();
 
@@ -1295,7 +1293,6 @@ void SamplingProfiler::reportTopBytecodes(PrintStream& out)
         func(Tiers::ftl);
         func(Tiers::builtin);
         func(Tiers::ipint);
-        func(Tiers::wasmllint);
         func(Tiers::bbq);
         func(Tiers::omg);
         func(Tiers::wasm);

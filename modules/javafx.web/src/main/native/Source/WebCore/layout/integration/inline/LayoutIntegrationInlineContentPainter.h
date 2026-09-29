@@ -26,8 +26,8 @@
 #pragma once
 
 #include "LayoutIntegrationBoxTreeUpdater.h"
-#include "LayoutPoint.h"
-#include "LayoutRect.h"
+#include <WebCore/LayoutPoint.h>
+#include <WebCore/LayoutRect.h>
 #include <wtf/WeakListHashSet.h>
 
 namespace WebCore {
@@ -75,7 +75,7 @@ private:
 class LayerPaintScope {
 public:
     LayerPaintScope(const RenderInline* inlineBoxWithLayer);
-    bool includes(const InlineDisplay::Box&);
+    bool testIsIncludesAndUpdate(const InlineDisplay::Box&);
 
 private:
     const Layout::ElementBox* const m_inlineBoxWithLayer;

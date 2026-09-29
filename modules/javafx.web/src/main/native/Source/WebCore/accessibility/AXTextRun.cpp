@@ -25,13 +25,17 @@
 
 #include "config.h"
 #include "AXTextRun.h"
+
 #include "Logging.h"
 
 #if ENABLE(AX_THREAD_TEXT_APIS)
 
+#include <algorithm>
 #include <wtf/text/MakeString.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(AXTextRuns);
 
 String AXTextRuns::debugDescription() const
 {
@@ -87,7 +91,7 @@ unsigned AXTextRuns::domOffset(unsigned renderedTextOffset) const
     for (size_t i = 0; i < size(); i++) {
         const auto& domOffsets = at(i).domOffsets();
         for (const auto& domOffsetPair : domOffsets) {
-            ASSERT(domOffsetPair[0] >= previousEndDomOffset);
+            AX_ASSERT(domOffsetPair[0] >= previousEndDomOffset);
             if (domOffsetPair[0] < previousEndDomOffset)
                 return renderedTextOffset;
             // domOffsetPair[0] represents the start DOM offset of this run. Subtracting it
@@ -115,7 +119,7 @@ unsigned AXTextRuns::domOffset(unsigned renderedTextOffset) const
     }
     // We were provided with a rendered-text offset that didn't actually fit into our
     // runs. This should never happen.
-    ASSERT_NOT_REACHED();
+    AX_ASSERT_NOT_REACHED();
     return renderedTextOffset;
 }
 
@@ -135,7 +139,9 @@ FloatRect AXTextRuns::localRect(unsigned start, unsigned end, FontOrientation or
         float totalAdvance = 0;
         unsigned startIndexInRun = startIndex - offsetOfFirstCharacterInRun;
         unsigned endIndexInRun = endIndex - offsetOfFirstCharacterInRun;
-        ASSERT(startIndexInRun <= endIndexInRun);
+        AX_ASSERT(startIndexInRun <= endIndexInRun);
+        AX_ASSERT(endIndexInRun <= characterAdvances.size());
+        endIndexInRun = std::min(endIndexInRun, static_cast<unsigned>(characterAdvances.size()));
         for (size_t i = startIndexInRun; i < endIndexInRun; i++)
             totalAdvance += (float)characterAdvances[i];
         return totalAdvance;
@@ -156,7 +162,7 @@ FloatRect AXTextRuns::localRect(unsigned start, unsigned end, FontOrientation or
             unsigned measuredWidthInDirection = 0;
             if (i == runIndexOfSmallerOffset) {
                 unsigned offsetOfFirstCharacterInRun = !i ? 0 : runLengthSumTo(i - 1);
-                ASSERT(smallerOffset >= offsetOfFirstCharacterInRun);
+                AX_ASSERT(smallerOffset >= offsetOfFirstCharacterInRun);
                 if (smallerOffset < offsetOfFirstCharacterInRun)
                     smallerOffset = offsetOfFirstCharacterInRun;
                 // Measure the characters in this run (accomplished by smallerOffset - offsetOfFirstCharacterInRun)
@@ -193,7 +199,7 @@ FloatRect AXTextRuns::localRect(unsigned start, unsigned end, FontOrientation or
             } else if (i == runIndexOfLargerOffset) {
                 // We're measuring the end of the range, so measure from the first character in the run up to largerOffset.
                 unsigned offsetOfFirstCharacterInRun = !i ? 0 : runLengthSumTo(i - 1);
-                ASSERT(largerOffset >= offsetOfFirstCharacterInRun);
+                AX_ASSERT(largerOffset >= offsetOfFirstCharacterInRun);
                 if (largerOffset < offsetOfFirstCharacterInRun)
                     largerOffset = offsetOfFirstCharacterInRun;
 

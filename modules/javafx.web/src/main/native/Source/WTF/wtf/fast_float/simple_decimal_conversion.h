@@ -32,7 +32,7 @@ inline void trim(decimal &h) {
 
 inline uint32_t number_of_digits_decimal_left_shift(const decimal &h, uint32_t shift) {
   shift &= 63;
-  constexpr uint16_t number_of_digits_decimal_left_shift_table[65] = {
+  constexpr auto number_of_digits_decimal_left_shift_table = std::to_array<uint16_t>({
     0x0000, 0x0800, 0x0801, 0x0803, 0x1006, 0x1009, 0x100D, 0x1812, 0x1817,
     0x181D, 0x2024, 0x202B, 0x2033, 0x203C, 0x2846, 0x2850, 0x285B, 0x3067,
     0x3073, 0x3080, 0x388E, 0x389C, 0x38AB, 0x38BB, 0x40CC, 0x40DD, 0x40EF,
@@ -41,14 +41,13 @@ inline uint32_t number_of_digits_decimal_left_shift(const decimal &h, uint32_t s
     0x72C9, 0x72E9, 0x7B0A, 0x7B2B, 0x7B4D, 0x8370, 0x8393, 0x83B7, 0x83DC,
     0x8C02, 0x8C28, 0x8C4F, 0x9477, 0x949F, 0x94C8, 0x9CF2, 0x051C, 0x051C,
     0x051C, 0x051C,
-  };
+  });
   uint32_t x_a = number_of_digits_decimal_left_shift_table[shift];
   uint32_t x_b = number_of_digits_decimal_left_shift_table[shift + 1];
   uint32_t num_new_digits = x_a >> 11;
   uint32_t pow5_a = 0x7FF & x_a;
   uint32_t pow5_b = 0x7FF & x_b;
-  constexpr uint8_t
-    number_of_digits_decimal_left_shift_table_powers_of_5[0x051C] = {
+  constexpr auto number_of_digits_decimal_left_shift_table_powers_of_5 = std::to_array<uint8_t>({
         5, 2, 5, 1, 2, 5, 6, 2, 5, 3, 1, 2, 5, 1, 5, 6, 2, 5, 7, 8, 1, 2, 5, 3,
         9, 0, 6, 2, 5, 1, 9, 5, 3, 1, 2, 5, 9, 7, 6, 5, 6, 2, 5, 4, 8, 8, 2, 8,
         1, 2, 5, 2, 4, 4, 1, 4, 0, 6, 2, 5, 1, 2, 2, 0, 7, 0, 3, 1, 2, 5, 6, 1,
@@ -104,7 +103,7 @@ inline uint32_t number_of_digits_decimal_left_shift(const decimal &h, uint32_t s
         4, 4, 8, 1, 3, 9, 1, 9, 0, 6, 7, 3, 8, 2, 8, 1, 2, 5, 8, 6, 7, 3, 6, 1,
         7, 3, 7, 9, 8, 8, 4, 0, 3, 5, 4, 7, 2, 0, 5, 9, 6, 2, 2, 4, 0, 6, 9, 5,
         9, 5, 3, 3, 6, 9, 1, 4, 0, 6, 2, 5,
-  };
+  });
   const uint8_t *pow5 =
       &number_of_digits_decimal_left_shift_table_powers_of_5[pow5_a];
   uint32_t i = 0;
@@ -273,10 +272,10 @@ adjusted_mantissa compute_float(decimal &d) {
   }
   constexpr uint32_t max_shift = 60;
   constexpr uint32_t num_powers = 19;
-  constexpr uint8_t decimal_powers[19] = {
+  constexpr auto decimal_powers = std::to_array<uint8_t>({
       0,  3,  6,  9,  13, 16, 19, 23, 26, 29, //
       33, 36, 39, 43, 46, 49, 53, 56, 59,     //
-  };
+  });
   int32_t exp2 = 0;
   while (d.decimal_point > 0) {
     uint32_t n = uint32_t(d.decimal_point);

@@ -26,12 +26,14 @@
 #include "CSSPositionTryDescriptors.h"
 
 #include "CSSPositionTryRule.h"
+#include "CSSStyleSheet.h"
 #include "ExceptionOr.h"
+#include "StyleScope.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(CSSPositionTryDescriptors);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CSSPositionTryDescriptors);
 
 CSSPositionTryDescriptors::CSSPositionTryDescriptors(MutableStyleProperties& propertySet, CSSPositionTryRule& parentRule)
     : PropertySetCSSDescriptors(propertySet, parentRule)
@@ -474,6 +476,32 @@ String CSSPositionTryDescriptors::positionArea() const
 ExceptionOr<void> CSSPositionTryDescriptors::setPositionArea(const String& value)
 {
     return setPropertyInternal(CSSPropertyPositionArea, value, IsImportant::No);
+}
+
+ExceptionOr<void> CSSPositionTryDescriptors::setPropertyInternal(CSSPropertyID propertyID, const String& value, IsImportant isImportant)
+{
+    auto result = PropertySetCSSDescriptors::setPropertyInternal(propertyID, value, isImportant);
+
+    auto invalidateAllRememberedLastSuccessfulPositionOptions = [&] () {
+        RefPtr strongParentRule = m_parentRule.get();
+        ASSERT(strongParentRule);
+        if (!strongParentRule)
+            return;
+
+        RefPtr parentStyleSheet = strongParentRule->parentStyleSheet();
+        ASSERT(parentStyleSheet);
+        if (!parentStyleSheet)
+            return;
+
+        if (CheckedPtr parentStyleSheetScope = parentStyleSheet->styleScope()) {
+            // FIXME: only invalidate elements that use this position-try rule in position-try-fallbacks
+            parentStyleSheetScope->setLastSuccessfulPositionOptionIndexMap({ });
+        }
+    };
+
+    invalidateAllRememberedLastSuccessfulPositionOptions();
+
+    return result;
 }
 
 } // namespace WebCore

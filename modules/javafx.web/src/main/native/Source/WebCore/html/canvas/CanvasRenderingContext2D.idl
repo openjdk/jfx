@@ -32,9 +32,10 @@ enum RenderingMode {
 
 [
     CustomIsReachable,
-    JSGenerateToJSObject,
     JSCustomMarkFunction,
     CallTracer=InspectorCanvasCallTracer,
+    ReportExtraMemoryCost,
+    ReportExternalMemoryCost,
     Exposed=Window
 ] interface CanvasRenderingContext2D {
     // back-reference to the canvas

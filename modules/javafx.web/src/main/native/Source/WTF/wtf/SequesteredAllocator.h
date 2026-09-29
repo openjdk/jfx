@@ -144,7 +144,7 @@ private:
                 }
                 m_allocHead = 0;
                 m_allocBound = 0;
-                return WTFMove(m_granules);
+                return WTF::move(m_granules);
             }
 
             GranuleList tail { m_granules.splitAt(1) };

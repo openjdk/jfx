@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "FloatRect.h"
-#include "FloatRoundedRect.h"
-#include "PathElement.h"
-#include "RotationDirection.h"
+#include <WebCore/FloatRect.h>
+#include <WebCore/FloatRoundedRect.h>
+#include <WebCore/PathElement.h>
+#include <WebCore/RotationDirection.h>
 
 namespace WTF {
 class TextStream;

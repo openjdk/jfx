@@ -29,43 +29,43 @@
 
 #pragma once
 
-#include "ArrayProfile.h"
-#include "BytecodeConventions.h"
-#include "CallLinkInfo.h"
-#include "CodeBlockHash.h"
-#include "CodeOrigin.h"
-#include "CodeType.h"
-#include "CompilationResult.h"
-#include "ConcurrentJSLock.h"
-#include "DFGCodeOriginPool.h"
-#include "DFGCommon.h"
-#include "DirectEvalCodeCache.h"
-#include "EvalExecutable.h"
-#include "ExecutionCounter.h"
-#include "ExpressionInfo.h"
-#include "FunctionExecutable.h"
-#include "HandlerInfo.h"
-#include "ICStatusMap.h"
-#include "Instruction.h"
-#include "InstructionStream.h"
-#include "JITCode.h"
-#include "JITCodeMap.h"
-#include "JITMathICForwards.h"
-#include "JSCast.h"
-#include "JumpTable.h"
-#include "LazyValueProfile.h"
-#include "MetadataTable.h"
-#include "ModuleProgramExecutable.h"
-#include "ObjectAllocationProfile.h"
-#include "Options.h"
-#include "Printer.h"
-#include "ProfilerJettisonReason.h"
-#include "ProgramExecutable.h"
-#include "PutPropertySlot.h"
-#include "RegisterAtOffsetList.h"
-#include "ValueProfile.h"
-#include "VirtualRegister.h"
-#include "Watchpoint.h"
+#include <JavaScriptCore/ArrayProfile.h>
+#include <JavaScriptCore/BytecodeConventions.h>
+#include <JavaScriptCore/CallLinkInfo.h>
+#include <JavaScriptCore/CodeBlockHash.h>
+#include <JavaScriptCore/CodeOrigin.h>
+#include <JavaScriptCore/CodeType.h>
+#include <JavaScriptCore/CompilationResult.h>
+#include <JavaScriptCore/ConcurrentJSLock.h>
+#include <JavaScriptCore/DFGCodeOriginPool.h>
+#include <JavaScriptCore/DFGCommon.h>
+#include <JavaScriptCore/DirectEvalCodeCache.h>
+#include <JavaScriptCore/EvalExecutable.h>
+#include <JavaScriptCore/ExecutionCounter.h>
+#include <JavaScriptCore/ExpressionInfo.h>
+#include <JavaScriptCore/FunctionExecutable.h>
+#include <JavaScriptCore/HandlerInfo.h>
+#include <JavaScriptCore/ICStatusMap.h>
+#include <JavaScriptCore/Instruction.h>
+#include <JavaScriptCore/InstructionStream.h>
+#include <JavaScriptCore/JITCode.h>
+#include <JavaScriptCore/JITCodeMap.h>
+#include <JavaScriptCore/JITMathICForwards.h>
+#include <JavaScriptCore/JSCast.h>
+#include <JavaScriptCore/JumpTable.h>
+#include <JavaScriptCore/LazyValueProfile.h>
+#include <JavaScriptCore/MetadataTable.h>
+#include <JavaScriptCore/ModuleProgramExecutable.h>
+#include <JavaScriptCore/ObjectAllocationProfile.h>
+#include <JavaScriptCore/Options.h>
+#include <JavaScriptCore/Printer.h>
+#include <JavaScriptCore/ProfilerJettisonReason.h>
+#include <JavaScriptCore/ProgramExecutable.h>
+#include <JavaScriptCore/PutPropertySlot.h>
+#include <JavaScriptCore/RegisterAtOffsetList.h>
+#include <JavaScriptCore/ValueProfile.h>
+#include <JavaScriptCore/VirtualRegister.h>
+#include <JavaScriptCore/Watchpoint.h>
 #include <wtf/ApproximateTime.h>
 #include <wtf/FastMalloc.h>
 #include <wtf/FixedVector.h>
@@ -373,7 +373,7 @@ public:
 
         ConcurrentJSLocker locker(m_lock);
         WTF::storeStoreFence(); // This is probably not needed because the lock will also do something similar, but it's good to be paranoid.
-        m_jitCode = WTFMove(code);
+        m_jitCode = WTF::move(code);
     }
 
     RefPtr<JSC::JITCode> jitCode() { return m_jitCode; }
@@ -961,7 +961,7 @@ private:
         if (!m_rareData) {
             auto rareData = makeUnique<RareData>();
             WTF::storeStoreFence();
-            m_rareData = WTFMove(rareData);
+            m_rareData = WTF::move(rareData);
         }
     }
 
@@ -1059,14 +1059,14 @@ template <typename ExecutableType>
 void ScriptExecutable::prepareForExecution(VM& vm, JSFunction* function, JSScope* scope, CodeSpecializationKind kind, CodeBlock*& resultCodeBlock)
 {
     if (hasJITCodeFor(kind)) {
-        if constexpr (std::is_same<ExecutableType, EvalExecutable>::value)
+        if constexpr (std::same_as<ExecutableType, EvalExecutable>)
             resultCodeBlock = jsCast<CodeBlock*>(jsCast<ExecutableType*>(this)->codeBlock());
-        else if constexpr (std::is_same<ExecutableType, ProgramExecutable>::value)
+        else if constexpr (std::same_as<ExecutableType, ProgramExecutable>)
             resultCodeBlock = jsCast<CodeBlock*>(jsCast<ExecutableType*>(this)->codeBlock());
-        else if constexpr (std::is_same<ExecutableType, ModuleProgramExecutable>::value)
+        else if constexpr (std::same_as<ExecutableType, ModuleProgramExecutable>)
             resultCodeBlock = jsCast<CodeBlock*>(jsCast<ExecutableType*>(this)->codeBlock());
         else {
-            static_assert(std::is_same<ExecutableType, FunctionExecutable>::value);
+            static_assert(std::same_as<ExecutableType, FunctionExecutable>);
             resultCodeBlock = jsCast<CodeBlock*>(jsCast<ExecutableType*>(this)->codeBlockFor(kind));
         }
         return;

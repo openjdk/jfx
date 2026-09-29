@@ -71,6 +71,9 @@ void prepareForGeneration(Code& code)
     // We don't expect the incoming code to have predecessors computed.
     code.resetReachability();
 
+    if (Options::dumpIonGraph()) [[unlikely]]
+        code.appendIonGraphPass("InitialCFG"_s);
+
     if (shouldValidateIR())
         validate(code);
 
@@ -289,20 +292,19 @@ static void generateWithAlreadyAllocatedRegisters(Code& code, CCallHelpers& jit)
             && block->successorBlock(0) == code.findNextBlock(block))
             continue;
 
-        addItem(block->last());
-
         if (isReturn(block->last().kind.opcode)) {
             // We currently don't represent the full prologue/epilogue in Air, so we need to
             // have this override.
+            addItem(block->last());
             auto start = jit.labelIgnoringWatchpoints();
             code.emitEpilogue(jit);
-            addItem(block->last());
             auto end = jit.labelIgnoringWatchpoints();
             if (disassembler)
                 disassembler->addInst(&block->last(), start, end);
             continue;
         }
 
+        addItem(block->last());
         auto start = jit.labelIgnoringWatchpoints();
         CCallHelpers::Jump jump = block->last().generate(jit, context);
         auto end = jit.labelIgnoringWatchpoints();
@@ -326,7 +328,6 @@ static void generateWithAlreadyAllocatedRegisters(Code& code, CCallHelpers& jit)
                 break;
             }
         }
-        addItem(block->last());
     }
 
     context.currentBlock = nullptr;
@@ -335,15 +336,18 @@ static void generateWithAlreadyAllocatedRegisters(Code& code, CCallHelpers& jit)
     Vector<CCallHelpers::Label> entrypointLabels(code.numEntrypoints());
     for (unsigned i = code.numEntrypoints(); i--;)
         entrypointLabels[i] = *context.blockLabels[code.entrypoint(i).block()];
-    code.setEntrypointLabels(WTFMove(entrypointLabels));
+    code.setEntrypointLabels(WTF::move(entrypointLabels));
 
     pcToOriginMap.appendItem(jit.label(), Origin());
     // FIXME: Make late paths have Origins: https://bugs.webkit.org/show_bug.cgi?id=153689
     if (disassembler)
         disassembler->startLatePath(jit);
 
-    for (auto& latePath : context.latePaths)
+    for (auto& [origin, latePath] : context.latePaths) {
+        if (code.shouldPreserveB3Origins())
+            pcToOriginMap.appendItem(jit.labelIgnoringWatchpoints(), origin);
         latePath->run(jit, context);
+    }
 
     if (disassembler)
         disassembler->endLatePath(jit);

@@ -30,7 +30,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ToggleEvent);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ToggleEvent);
 
 ToggleEvent::ToggleEvent()
     : Event(EventInterfaceType::ToggleEvent)

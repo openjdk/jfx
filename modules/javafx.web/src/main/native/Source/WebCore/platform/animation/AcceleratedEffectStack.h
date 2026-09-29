@@ -25,24 +25,24 @@
 
 #pragma once
 
-#if ENABLE(THREADED_ANIMATION_RESOLUTION)
+#if ENABLE(THREADED_ANIMATIONS)
 
-#include "AcceleratedEffect.h"
-#include "AcceleratedEffectValues.h"
+#include <WebCore/AcceleratedEffect.h>
+#include <WebCore/AcceleratedEffectValues.h>
 
 namespace WebCore {
 
 using AcceleratedEffects = Vector<Ref<AcceleratedEffect>>;
 
 class WEBCORE_EXPORT AcceleratedEffectStack : public RefCounted<AcceleratedEffectStack> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(AcceleratedEffectStack, WEBCORE_EXPORT);
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(AcceleratedEffectStack, WEBCORE_EXPORT);
 public:
     static Ref<AcceleratedEffectStack> create();
 
     bool hasEffects() const;
     const AcceleratedEffects& primaryLayerEffects() const { return m_primaryLayerEffects; }
     const AcceleratedEffects& backdropLayerEffects() const { return m_backdropLayerEffects; }
-    virtual void setEffects(AcceleratedEffects&&);
+    void setEffects(AcceleratedEffects&&);
 
     const AcceleratedEffectValues& baseValues() { return m_baseValues; }
     void setBaseValues(AcceleratedEffectValues&&);
@@ -50,7 +50,7 @@ public:
     virtual ~AcceleratedEffectStack() = default;
 
 protected:
-    WEBCORE_EXPORT explicit AcceleratedEffectStack();
+    explicit AcceleratedEffectStack();
 
     AcceleratedEffectValues m_baseValues;
     AcceleratedEffects m_primaryLayerEffects;
@@ -59,4 +59,4 @@ protected:
 
 } // namespace WebCore
 
-#endif // ENABLE(THREADED_ANIMATION_RESOLUTION)
+#endif // ENABLE(THREADED_ANIMATIONS)

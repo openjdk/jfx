@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "FilterEffect.h"
+#include <WebCore/FilterEffect.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -72,6 +72,8 @@ private:
 
     bool resultIsValidPremultiplied() const override { return m_type != CompositeOperationType::FECOMPOSITE_OPERATOR_ARITHMETIC; }
 
+    OptionSet<FilterRenderingMode> supportedFilterRenderingModes(OptionSet<FilterRenderingMode>) const override;
+    std::unique_ptr<FilterEffectApplier> createAcceleratedApplier() const override;
     std::unique_ptr<FilterEffectApplier> createSoftwareApplier() const override;
 
     WTF::TextStream& externalRepresentation(WTF::TextStream&, FilterRepresentation) const override;

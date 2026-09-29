@@ -43,6 +43,7 @@
 #include <wtf/BitVector.h>
 #include <wtf/GenericHashKey.h>
 #include <wtf/HashMap.h>
+#include <wtf/JSONValues.h>
 #include <wtf/StackCheck.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/Vector.h>
@@ -314,13 +315,16 @@ public:
     enum PhiNodeDumpMode { DumpLivePhisOnly, DumpAllPhis };
     void dumpBlockHeader(PrintStream&, const char* prefix, BasicBlock*, PhiNodeDumpMode, DumpContext*);
     void dump(PrintStream&, Edge);
-    void dump(PrintStream&, const char* prefix, Node*, DumpContext* = nullptr);
+    void dump(PrintStream&, const char* prefix, Node*, DumpContext* = nullptr, bool inIonGraph = false);
     static int amountOfNodeWhiteSpace(Node*);
     static void printNodeWhiteSpace(PrintStream&, Node*);
 
     // Dump the code origin of the given node as a diff from the code origin of the
     // preceding node. Returns true if anything was printed.
     bool dumpCodeOrigin(PrintStream&, const char* prefix, Node*& previousNode, Node* currentNode, DumpContext*);
+
+    void dumpAndReleaseIonGraph();
+    void appendIonGraphPass(const String& passName);
 
     AddSpeculationMode addSpeculationMode(Node* add, bool leftShouldSpeculateInt32, bool rightShouldSpeculateInt32, PredictionPass pass)
     {
@@ -490,7 +494,7 @@ public:
 
     bool canOptimizeStringObjectAccess(const CodeOrigin&);
 
-    bool getRegExpPrototypeProperty(JSObject* regExpPrototype, Structure* regExpPrototypeStructure, UniquedStringImpl* uid, JSValue& returnJSValue);
+    bool getPrototypeProperty(JSObject* prototype, Structure* prototypeStructure, UniquedStringImpl* uid, JSValue& returnJSValue);
 
     bool roundShouldSpeculateInt32(Node* arithRound, PredictionPass pass)
     {
@@ -567,7 +571,7 @@ public:
     void appendBlock(std::unique_ptr<BasicBlock>&& basicBlock)
     {
         basicBlock->index = m_blocks.size();
-        m_blocks.append(WTFMove(basicBlock));
+        m_blocks.append(WTF::move(basicBlock));
     }
 
     void killBlock(BlockIndex blockIndex)
@@ -898,6 +902,13 @@ public:
         return isWatchingGlobalObjectWatchpoint(globalObject, set, LinkerIR::Type::ArrayIteratorProtocolWatchpointSet);
     }
 
+    bool isWatchingSetIteratorProtocolWatchpoint(Node* node)
+    {
+        JSGlobalObject* globalObject = globalObjectFor(node->origin.semantic);
+        InlineWatchpointSet& set = globalObject->setIteratorProtocolWatchpointSet();
+        return isWatchingGlobalObjectWatchpoint(globalObject, set, LinkerIR::Type::SetIteratorProtocolWatchpointSet);
+    }
+
     bool isWatchingNumberToStringWatchpoint(Node* node)
     {
         JSGlobalObject* globalObject = globalObjectFor(node->origin.semantic);
@@ -947,6 +958,13 @@ public:
         return isWatchingGlobalObjectWatchpoint(globalObject, set, LinkerIR::Type::RegExpPrimordialPropertiesWatchpointSet);
     }
 
+    bool isWatchingPromiseThenWatchpoint(Node* node)
+    {
+        JSGlobalObject* globalObject = globalObjectFor(node->origin.semantic);
+        InlineWatchpointSet& set = globalObject->promiseThenWatchpointSet();
+        return isWatchingGlobalObjectWatchpoint(globalObject, set, LinkerIR::Type::PromiseThenWatchpointSet);
+    }
+
     bool isWatchingArraySpeciesWatchpoint(Node* node)
     {
         JSGlobalObject* globalObject = globalObjectFor(node->origin.semantic);
@@ -973,6 +991,13 @@ public:
         JSGlobalObject* globalObject = globalObjectFor(node->origin.semantic);
         InlineWatchpointSet& set = globalObject->objectPrototypeChainIsSaneWatchpointSet();
         return isWatchingGlobalObjectWatchpoint(globalObject, set, LinkerIR::Type::ObjectPrototypeChainIsSaneWatchpointSet);
+    }
+
+    bool isWatchingPromiseSpeciesWatchpoint(Node* node)
+    {
+        JSGlobalObject* globalObject = globalObjectFor(node->origin.semantic);
+        InlineWatchpointSet& set = globalObject->promiseSpeciesWatchpointSet();
+        return isWatchingGlobalObjectWatchpoint(globalObject, set, LinkerIR::Type::PromiseSpeciesWatchpointSet);
     }
 
     Profiler::Compilation* compilation() { return m_plan.compilation(); }
@@ -1146,6 +1171,8 @@ public:
     JSValue tryGetConstantGetter(Node* getterSetter);
     JSValue tryGetConstantSetter(Node* getterSetter);
 
+    ObjectPropertyConditionSet tryEnsureAbsence(JSGlobalObject*, const StructureSet&, CacheableIdentifier);
+
     bool canDoFastSpread(Node*, const AbstractValue&);
 
     void registerFrozenValues();
@@ -1220,7 +1247,7 @@ public:
 
     void appendCatchEntrypoint(BytecodeIndex bytecodeIndex, CodePtr<ExceptionHandlerPtrTag> machineCode, Vector<FlushFormat>&& argumentFormats)
     {
-        m_catchEntrypoints.append(CatchEntrypointData { machineCode, FixedVector<FlushFormat>(WTFMove(argumentFormats)), bytecodeIndex });
+        m_catchEntrypoints.append(CatchEntrypointData { machineCode, FixedVector<FlushFormat>(WTF::move(argumentFormats)), bytecodeIndex });
     }
 
     void freeDFGIRAfterLowering();
@@ -1231,6 +1258,8 @@ public:
     const ConcatKeyAtomStringCache* tryAddConcatKeyAtomStringCache(const String&, const String&, ConcatKeyAtomStringCache::Mode);
 
     bool afterFixup() { return m_planStage >= PlanStage::AfterFixup; }
+
+    RefPtr<JSON::Array> ionGraphPasses() const { return m_ionGraphPasses; }
 
     StackCheck m_stackChecker;
     VM& m_vm;
@@ -1428,6 +1457,8 @@ private:
     B3::SparseCollection<Node> m_nodes;
     SegmentedVector<RegisteredStructureSet, 16> m_structureSets;
     Prefix m_prefix;
+    RefPtr<JSON::Object> m_ionGraphFunction;
+    RefPtr<JSON::Array> m_ionGraphPasses;
 };
 
 } } // namespace JSC::DFG

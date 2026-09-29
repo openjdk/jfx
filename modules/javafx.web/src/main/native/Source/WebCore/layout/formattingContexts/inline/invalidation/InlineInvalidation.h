@@ -26,7 +26,8 @@
 #pragma once
 
 #include "InlineDamage.h"
-#include "InlineDisplayContent.h"
+#include "StyleDifference.h"
+#include <WebCore/InlineDisplayContent.h>
 #include <optional>
 #include <wtf/Forward.h>
 
@@ -46,7 +47,7 @@ public:
     InlineInvalidation(InlineDamage&, const InlineItemList&, const InlineDisplay::Content&);
 
     bool rootStyleWillChange(const ElementBox& formattingContextRoot, const RenderStyle& newStyle);
-    bool styleWillChange(const Box&, const RenderStyle& newStyle, StyleDifference);
+    bool styleWillChange(const Box&, const RenderStyle& newStyle, Style::Difference);
 
     bool textInserted(const InlineTextBox& newOrDamagedInlineTextBox, std::optional<size_t> offset = { });
     bool textWillBeRemoved(const InlineTextBox&, std::optional<size_t> offset = { });

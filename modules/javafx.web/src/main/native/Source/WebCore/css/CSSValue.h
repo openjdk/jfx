@@ -52,6 +52,9 @@ struct SerializationContext;
 }
 
 DECLARE_COMPACT_ALLOCATOR_WITH_HEAP_IDENTIFIER(CSSValue);
+
+// NOTE: This class is non-virtual for memory and performance reasons.
+// Don't go making it virtual again unless you know exactly what you're doing!
 class CSSValue : public NoVirtualDestructorBase {
     WTF_MAKE_NONCOPYABLE(CSSValue);
     WTF_DEPRECATED_MAKE_FAST_COMPACT_ALLOCATED_WITH_HEAP_IDENTIFIER(CSSValue, CSSValue);
@@ -66,20 +69,18 @@ public:
 
     WEBCORE_EXPORT String cssText(const CSS::SerializationContext&) const;
 
-    bool isAppleColorFilterPropertyValue() const { return m_classType == ClassType::AppleColorFilterProperty; }
+    bool isAppleColorFilterValue() const { return m_classType == ClassType::AppleColorFilter; }
     bool isAttrValue() const { return m_classType == ClassType::Attr; }
     bool isBackgroundRepeatValue() const { return m_classType == ClassType::BackgroundRepeat; }
     bool isBasicShape() const { return m_classType == ClassType::BasicShape; }
     bool isBorderImageSliceValue() const { return m_classType == ClassType::BorderImageSlice; }
     bool isBorderImageWidthValue() const { return m_classType == ClassType::BorderImageWidth; }
     bool isBoxShadowPropertyValue() const { return m_classType == ClassType::BoxShadowProperty; }
-    bool isCalcValue() const { return m_classType == ClassType::Calculation; }
     bool isCanvasValue() const { return m_classType == ClassType::Canvas; }
     bool isColor() const { return m_classType == ClassType::Color; }
 #if ENABLE(DARK_MODE_CSS)
     bool isColorScheme() const { return m_classType == ClassType::ColorScheme; }
 #endif
-    bool isContentDistributionValue() const { return m_classType == ClassType::ContentDistribution; }
     bool isCounter() const { return m_classType == ClassType::Counter; }
     bool isCrossfadeValue() const { return m_classType == ClassType::Crossfade; }
     bool isCursorImageValue() const { return m_classType == ClassType::CursorImage; }
@@ -87,7 +88,7 @@ public:
     bool isDynamicRangeLimitValue() const { return m_classType == ClassType::DynamicRangeLimit; }
     bool isEasingFunctionValue() const { return m_classType == ClassType::EasingFunction; }
     bool isFilterImageValue() const { return m_classType == ClassType::FilterImage; }
-    bool isFilterPropertyValue() const { return m_classType == ClassType::FilterProperty; }
+    bool isFilterValue() const { return m_classType == ClassType::Filter; }
     bool isFontFaceSrcLocalValue() const { return m_classType == ClassType::FontFaceSrcLocal; }
     bool isFontFaceSrcResourceValue() const { return m_classType == ClassType::FontFaceSrcResource; }
     bool isFontFeatureValue() const { return m_classType == ClassType::FontFeature; }
@@ -213,24 +214,22 @@ protected:
         Gradient,
 
         // Other non-list classes.
-        AppleColorFilterProperty,
+        AppleColorFilter,
         Attr,
         BackgroundRepeat,
         BasicShape,
         BorderImageSlice,
         BorderImageWidth,
         BoxShadowProperty,
-        Calculation,
         Color,
 #if ENABLE(DARK_MODE_CSS)
         ColorScheme,
 #endif
-        ContentDistribution,
         Counter,
         CustomProperty,
         DynamicRangeLimit,
         EasingFunction,
-        FilterProperty,
+        Filter,
         Font,
         FontFaceSrcLocal,
         FontFaceSrcResource,
@@ -283,9 +282,6 @@ protected:
         m_refCount |= refCountFlagIsStatic;
     }
 
-    // NOTE: This class is non-virtual for memory and performance reasons.
-    // Don't go making it virtual again unless you know exactly what you're doing!
-    ~CSSValue() = default;
     WEBCORE_EXPORT void operator delete(CSSValue*, std::destroying_delete_t);
 
     ValueSeparator separator() const { return static_cast<ValueSeparator>(m_valueSeparator); }

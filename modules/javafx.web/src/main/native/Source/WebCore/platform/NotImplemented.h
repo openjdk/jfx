@@ -27,6 +27,7 @@
 #define NotImplemented_h
 
 #include <wtf/Assertions.h>
+#include <wtf/Platform.h>
 
 #if PLATFORM(GTK) || PLATFORM(JAVA)
     #define suppressNotImplementedWarning() getenv("DISABLE_NI_WARNING")

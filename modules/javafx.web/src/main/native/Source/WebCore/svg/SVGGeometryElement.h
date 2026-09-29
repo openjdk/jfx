@@ -33,7 +33,7 @@ struct DOMPointInit;
 class SVGPoint;
 
 class SVGGeometryElement : public SVGGraphicsElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGGeometryElement);
+    WTF_MAKE_TZONE_ALLOCATED(SVGGeometryElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGGeometryElement);
 public:
     virtual float getTotalLength() const;
@@ -55,6 +55,9 @@ protected:
 
 private:
     bool isSVGGeometryElement() const override { return true; }
+
+    float calculateTotalLength() const;
+    ExceptionOr<Ref<SVGPoint>> calculatePointAtLength(float distance) const;
 
     Ref<SVGAnimatedNumber> m_pathLength { SVGAnimatedNumber::create(this) };
 };

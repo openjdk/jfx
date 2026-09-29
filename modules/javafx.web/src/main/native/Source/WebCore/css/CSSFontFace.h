@@ -65,7 +65,7 @@ class CSSFontFace final : public RefCountedAndCanMakeWeakPtr<CSSFontFace> {
     WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(CSSFontFace, CSSFontFace);
 public:
     static Ref<CSSFontFace> create(CSSFontSelector&, StyleRuleFontFace* cssConnection = nullptr, FontFace* wrapper = nullptr, bool isLocalFallback = false);
-    virtual ~CSSFontFace();
+    ~CSSFontFace();
 
     void setFamily(CSSValue&);
     void setStyle(CSSValue&);
@@ -121,7 +121,7 @@ public:
 
     void opportunisticallyStartFontDataURLLoading(DownloadableBinaryFontTrustedTypes);
 
-    void adoptSource(std::unique_ptr<CSSFontFaceSource>&&);
+    void adoptSource(std::unique_ptr<CSSFontFaceSource>);
     void sourcesPopulated() { m_sourcesPopulated = true; }
     size_t sourceCount() const { return m_sources.size(); }
 

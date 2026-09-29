@@ -33,6 +33,8 @@
 #include "RenderElementInlines.h"
 #include "RenderInline.h"
 #include "RenderLayer.h"
+#include "RenderObjectInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include "RenderTableCell.h"
 #include "RenderTheme.h"
 #include "RenderView.h"
@@ -44,7 +46,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(LegacyInlineFlowBox);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(LegacyInlineFlowBox);
 
 struct SameSizeAsLegacyInlineFlowBox : public LegacyInlineBox {
     uint32_t bitfields : 23;
@@ -113,7 +115,7 @@ void LegacyInlineFlowBox::addToLine(LegacyInlineBox* child)
             bool hasMarkers = false;
             if (auto* textBox = dynamicDowncast<LegacyInlineTextBox>(*child))
                 hasMarkers = textBox->hasMarkers();
-        if (childStyle->letterSpacing() < 0 || childStyle->hasTextShadow() || !childStyle->textEmphasisStyle().isNone() || childStyle->hasPositiveStrokeWidth() || hasMarkers || !childStyle->textUnderlineOffset().isAuto() || !childStyle->textDecorationThickness().isAuto() || !childStyle->textUnderlinePosition().isEmpty())
+        if (childStyle->usedLetterSpacing() < 0 || childStyle->hasTextShadow() || !childStyle->textEmphasisStyle().isNone() || childStyle->hasPositiveStrokeWidth() || hasMarkers || !childStyle->textUnderlineOffset().isAuto() || !childStyle->textDecorationThickness().isAuto() || !childStyle->textUnderlinePosition().isAuto())
                 child->clearKnownToHaveNoOverflow();
     } else if (child->boxModelObject()->hasSelfPaintingLayer())
             child->clearKnownToHaveNoOverflow();
@@ -210,30 +212,22 @@ inline void LegacyInlineFlowBox::addTextBoxVisualOverflow(LegacyInlineTextBox& t
     auto rightGlyphEdge = glyphOverflow ? glyphOverflow->right : 0_lu;
 
     auto viewportSize = textBox.renderer().frame().view() ? textBox.renderer().frame().view()->size() : IntSize();
-    LayoutUnit strokeOverflow(std::ceil(lineStyle.computedStrokeWidth(viewportSize) / 2.0f));
+    LayoutUnit strokeOverflow(std::ceil(lineStyle.usedStrokeWidth(viewportSize) / 2.0f));
     auto topGlyphOverflow = -strokeOverflow - topGlyphEdge;
     auto bottomGlyphOverflow = strokeOverflow + bottomGlyphEdge;
     auto leftGlyphOverflow = -strokeOverflow - leftGlyphEdge;
     auto rightGlyphOverflow = strokeOverflow + rightGlyphEdge;
 
-    if (auto markExistsAndIsAbove = RenderText::emphasisMarkExistsAndIsAbove(textBox.renderer(), lineStyle)) {
-        LayoutUnit emphasisMarkHeight = lineStyle.fontCascade().emphasisMarkHeight(lineStyle.textEmphasisStyle().markString());
-        if (*markExistsAndIsAbove == !writingMode.isBlockFlipped())
-            topGlyphOverflow = std::min(topGlyphOverflow, -emphasisMarkHeight);
-        else
-            bottomGlyphOverflow = std::max(bottomGlyphOverflow, emphasisMarkHeight);
-    }
-
     // If letter-spacing is negative, we should factor that into right layout overflow. (Even in RTL, letter-spacing is
     // applied to the right, so this is not an issue with left overflow.
     rightGlyphOverflow -= std::min(0, (int)lineStyle.fontCascade().letterSpacing());
 
-    auto [textShadowLogicalTop, textShadowLogicalBottom] = Style::shadowBlockDirectionExtent(lineStyle.textShadow(), writingMode);
+    auto [textShadowLogicalTop, textShadowLogicalBottom] = Style::shadowBlockDirectionExtent(lineStyle.textShadow(), writingMode, lineStyle.usedZoomForLength());
 
     auto childOverflowLogicalTop = std::min<LayoutUnit>(textShadowLogicalTop + topGlyphOverflow, topGlyphOverflow);
     auto childOverflowLogicalBottom = std::max<LayoutUnit>(textShadowLogicalBottom + bottomGlyphOverflow, bottomGlyphOverflow);
 
-    auto [textShadowLogicalLeft, textShadowLogicalRight] = Style::shadowInlineDirectionExtent(lineStyle.textShadow(), writingMode);
+    auto [textShadowLogicalLeft, textShadowLogicalRight] = Style::shadowInlineDirectionExtent(lineStyle.textShadow(), writingMode, lineStyle.usedZoomForLength());
 
     auto childOverflowLogicalLeft = std::min<LayoutUnit>(textShadowLogicalLeft + leftGlyphOverflow, leftGlyphOverflow);
     auto childOverflowLogicalRight = std::max<LayoutUnit>(textShadowLogicalRight + rightGlyphOverflow, rightGlyphOverflow);
@@ -283,7 +277,7 @@ void LegacyInlineFlowBox::setVisualOverflow(const LayoutRect& rect, LayoutUnit l
         return;
 
     if (!m_overflow)
-        m_overflow = makeUnique<RenderOverflow>(frameBox, frameBox);
+        m_overflow = makeUnique<RenderOverflow>(frameBox, frameBox, frameBox);
 
     m_overflow->setVisualOverflow(rect);
 }

@@ -20,10 +20,10 @@
 
 #pragma once
 
-#include "CSSStyleProperties.h"
-#include "PseudoElementIdentifier.h"
-#include "RenderStyleConstants.h"
 #include "StyleExtractor.h"
+#include <WebCore/CSSStyleProperties.h>
+#include <WebCore/PseudoElementIdentifier.h>
+#include <WebCore/RenderStyleConstants.h>
 #include <wtf/FixedVector.h>
 #include <wtf/RefPtr.h>
 #include <wtf/TZoneMalloc.h>
@@ -35,7 +35,7 @@ class Element;
 class MutableStyleProperties;
 
 class CSSComputedStyleDeclaration final : public CSSStyleProperties, public RefCounted<CSSComputedStyleDeclaration> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(CSSComputedStyleDeclaration, WEBCORE_EXPORT);
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(CSSComputedStyleDeclaration, WEBCORE_EXPORT);
 public:
     void ref() const final { RefCounted::ref(); }
     void deref() const final { RefCounted::deref(); }
@@ -57,7 +57,7 @@ private:
 
     // CSSOM functions. Don't make these public.
     CSSRule* parentRule() const final;
-    CSSRule* cssRules() const final;
+    CSSRuleList* cssRules() const final;
     unsigned length() const final;
     String item(unsigned index) const final;
     RefPtr<DeprecatedCSSOMValue> getPropertyCSSValue(const String& propertyName) final;

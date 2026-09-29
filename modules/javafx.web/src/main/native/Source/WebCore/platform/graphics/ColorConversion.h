@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "ColorTypes.h"
+#include <WebCore/ColorTypes.h>
 #include <numeric>
 #include <wtf/MathExtras.h>
 
@@ -280,65 +280,6 @@ struct ClipGamutMapping {
     template<typename ColorType> static auto mapToBoundedGamut(const ColorType& color) -> typename ColorType::BoundedCounterpart
     {
         return clipToGamut<typename ColorType::BoundedCounterpart>(color);
-    }
-};
-
-struct CSSGamutMapping {
-    // This implements the CSS gamut mapping algorithm (https://drafts.csswg.org/css-color/#css-gamut-mapping) for RGB
-    // colors that are out of gamut for a particular RGB color space. It implements a relative colorimetric intent mapping
-    // for colors that are outside the destination gamut and leaves colors inside the destination gamut unchanged.
-
-    // A simple optimization over the pseudocode in the specification has been made to avoid unnecessary work in the
-    // main bisection loop by checking the gamut using the extended linear color space of the RGB family regardless of
-    // of whether the final type is gamma encoded or not. This avoids unnecessary gamma encoding for non final loops.
-
-    // FIXME: This is a naive iterative solution that works for any bounded RGB color space. This can be optimized by
-    // using an analytical solution that computes the exact intersection.
-
-    static constexpr float JND = 0.02f;
-
-    template<typename ColorType> static auto mapToBoundedGamut(const ColorType& color) -> typename ColorType::BoundedCounterpart
-    {
-        using BoundedColorType = typename ColorType::BoundedCounterpart;
-        using ExtendedLinearColorType = ExtendedLinearEncoded<typename BoundedColorType::ComponentType, typename BoundedColorType::Descriptor>;
-        using BoundedLinearColorType = BoundedLinearEncoded<typename BoundedColorType::ComponentType, typename BoundedColorType::Descriptor>;
-
-        auto resolvedColor = color.resolved();
-
-        if (auto result = colorIfInGamut<BoundedColorType>(resolvedColor))
-            return *result;
-
-        auto colorInOKLCHColorSpace = convertColor<OKLCHA<float>>(resolvedColor).resolved();
-
-        if (WTF::areEssentiallyEqual(colorInOKLCHColorSpace.lightness, 100.0f) || colorInOKLCHColorSpace.lightness > 100.0f)
-            return { 1.0, 1.0, 1.0, resolvedColor.alpha };
-        else if (WTF::areEssentiallyEqual(colorInOKLCHColorSpace.lightness, 0.0f))
-            return { 0.0f, 0.0f, 0.0f, resolvedColor.alpha };
-
-        float min = 0.0f;
-        float max = colorInOKLCHColorSpace.chroma;
-
-        while (true) {
-            auto chroma = std::midpoint(min, max);
-
-            auto current = colorInOKLCHColorSpace;
-            current.chroma = chroma;
-
-            auto currentInExtendedLinearColorSpace = convertColor<ExtendedLinearColorType>(current).resolved();
-
-            if (inGamut<BoundedLinearColorType>(currentInExtendedLinearColorSpace)) {
-                min = chroma;
-                continue;
-            }
-
-            auto currentClippedToBoundedLinearColorSpace = clipToGamut<BoundedLinearColorType>(currentInExtendedLinearColorSpace);
-
-            auto deltaE = computeDeltaEOK(currentClippedToBoundedLinearColorSpace, current);
-            if (deltaE < JND)
-                return convertColor<BoundedColorType>(currentClippedToBoundedLinearColorSpace);
-
-            max = chroma;
-        }
     }
 };
 

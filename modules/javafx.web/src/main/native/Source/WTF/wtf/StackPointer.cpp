@@ -43,7 +43,7 @@ extern "C" __declspec(naked) void currentStackPointer()
 }
 
 #elif CPU(X86)
-asm (
+__asm__(
     ".text" "\n"
     ".globl " SYMBOL_STRING(currentStackPointer) "\n"
     SYMBOL_STRING(currentStackPointer) ":" "\n"
@@ -55,10 +55,7 @@ asm (
 
 #elif CPU(X86_64) && OS(WINDOWS)
 
-// The Win64 port will use a hack where we define currentStackPointer in
-// LowLevelInterpreter.asm.
-
-asm (
+__asm__(
     ".text" "\n"
     ".globl " SYMBOL_STRING(currentStackPointer) "\n"
     SYMBOL_STRING(currentStackPointer) ":" "\n"
@@ -72,7 +69,7 @@ asm (
 );
 
 #elif CPU(X86_64)
-asm (
+__asm__(
     ".text" "\n"
     ".globl " SYMBOL_STRING(currentStackPointer) "\n"
     SYMBOL_STRING(currentStackPointer) ":" "\n"
@@ -84,7 +81,7 @@ asm (
 );
 
 #elif CPU(ARM64E)
-asm (
+__asm__(
     ".text" "\n"
     ".balign 16" "\n"
     ".globl " SYMBOL_STRING(currentStackPointer) "\n"
@@ -97,7 +94,7 @@ asm (
 );
 
 #elif CPU(ARM64)
-asm (
+__asm__(
     ".text" "\n"
     ".balign 16" "\n"
     ".globl " SYMBOL_STRING(currentStackPointer) "\n"
@@ -109,7 +106,7 @@ asm (
 );
 
 #elif CPU(ARM_THUMB2)
-asm (
+__asm__(
     ".text" "\n"
     ".align 2" "\n"
     ".globl " SYMBOL_STRING(currentStackPointer) "\n"
@@ -123,7 +120,7 @@ asm (
 );
 
 #elif CPU(MIPS)
-asm (
+__asm__(
     ".text" "\n"
     ".globl " SYMBOL_STRING(currentStackPointer) "\n"
     SYMBOL_STRING(currentStackPointer) ":" "\n"
@@ -139,7 +136,7 @@ asm (
 );
 
 #elif CPU(RISCV64)
-asm (
+__asm__(
     ".text" "\n"
     ".globl " SYMBOL_STRING(currentStackPointer) "\n"
     SYMBOL_STRING(currentStackPointer) ":" "\n"
@@ -150,7 +147,7 @@ asm (
 );
 
 #elif CPU(LOONGARCH64)
-asm (
+__asm__(
     ".text" "\n"
     ".globl " SYMBOL_STRING(currentStackPointer) "\n"
     SYMBOL_STRING(currentStackPointer) ":" "\n"

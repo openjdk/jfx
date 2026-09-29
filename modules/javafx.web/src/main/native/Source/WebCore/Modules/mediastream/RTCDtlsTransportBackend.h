@@ -27,16 +27,8 @@
 #if ENABLE(WEB_RTC)
 
 #include "RTCDtlsTransportState.h"
-#include <wtf/WeakPtr.h>
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 
-namespace WebCore {
-class RTCDtlsTransportBackendClient;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::RTCDtlsTransportBackendClient> : std::true_type { };
-}
 namespace JSC {
 class ArrayBuffer;
 }
@@ -45,7 +37,7 @@ namespace WebCore {
 
 class RTCIceTransportBackend;
 
-class RTCDtlsTransportBackendClient : public CanMakeWeakPtr<RTCDtlsTransportBackendClient> {
+class RTCDtlsTransportBackendClient : public AbstractRefCountedAndCanMakeWeakPtr<RTCDtlsTransportBackendClient> {
 public:
     virtual ~RTCDtlsTransportBackendClient() = default;
     virtual void onStateChanged(RTCDtlsTransportState, Vector<Ref<JSC::ArrayBuffer>>&&) = 0;

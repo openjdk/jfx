@@ -20,10 +20,13 @@
 #pragma once
 
 #if USE(TEXTURE_MAPPER)
-#include "Animation.h"
 #include "GraphicsLayer.h"
+#include "GraphicsLayerAnimation.h"
+#include "GraphicsLayerKeyframeValueList.h"
 
 namespace WebCore {
+
+class GraphicsLayerAnimationValue;
 
 class TextureMapperAnimation {
 public:
@@ -37,7 +40,7 @@ public:
     };
 
     TextureMapperAnimation() = default;
-    TextureMapperAnimation(const String&, const KeyframeValueList&, const FloatSize&, const Animation&, MonotonicTime, Seconds, State);
+    TextureMapperAnimation(const String&, const GraphicsLayerKeyframeValueList&, const GraphicsLayerAnimation&, MonotonicTime, Seconds, State);
     ~TextureMapperAnimation() = default;
 
     WEBCORE_EXPORT TextureMapperAnimation(const TextureMapperAnimation&);
@@ -52,21 +55,20 @@ public:
     void resume();
 
     const String& name() const { return m_name; }
-    const KeyframeValueList& keyframes() const { return m_keyframes; }
+    const GraphicsLayerKeyframeValueList& keyframes() const { return m_keyframes; }
     State state() const { return m_state; }
     TimingFunction* timingFunction() const { return m_timingFunction.get(); }
 
 private:
-    void applyInternal(ApplicationResult&, const AnimationValue& from, const AnimationValue& to, float progress);
+    void applyInternal(ApplicationResult&, const GraphicsLayerAnimationValue& from, const GraphicsLayerAnimationValue& to, float progress);
     Seconds computeTotalRunningTime(MonotonicTime);
 
     String m_name;
-    KeyframeValueList m_keyframes { AnimatedProperty::Invalid };
-    FloatSize m_boxSize;
+    GraphicsLayerKeyframeValueList m_keyframes { AnimatedProperty::Invalid };
     RefPtr<TimingFunction> m_timingFunction;
     double m_iterationCount { 0 };
     double m_duration { 0 };
-    Animation::Direction m_direction { Animation::Direction::Normal };
+    GraphicsLayerAnimation::Direction m_direction { GraphicsLayerAnimation::Direction::Normal };
     bool m_fillsForwards { false };
     MonotonicTime m_startTime;
     Seconds m_pauseTime;

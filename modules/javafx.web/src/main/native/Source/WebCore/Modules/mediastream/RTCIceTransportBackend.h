@@ -28,22 +28,13 @@
 
 #include "RTCIceGatheringState.h"
 #include "RTCIceTransportState.h"
-#include <wtf/WeakPtr.h>
-
-namespace WebCore {
-class RTCIceTransportBackendClient;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::RTCIceTransportBackendClient> : std::true_type { };
-}
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 
 namespace WebCore {
 
 class RTCIceCandidate;
 
-class RTCIceTransportBackendClient : public CanMakeWeakPtr<RTCIceTransportBackendClient> {
+class RTCIceTransportBackendClient : public AbstractRefCountedAndCanMakeWeakPtr<RTCIceTransportBackendClient> {
 public:
     virtual ~RTCIceTransportBackendClient() = default;
     virtual void onStateChanged(RTCIceTransportState) = 0;

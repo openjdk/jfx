@@ -32,19 +32,19 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(EXTBlendMinMax);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(EXTBlendMinMax);
 
 EXTBlendMinMax::EXTBlendMinMax(WebGLRenderingContextBase& context)
     : WebGLExtension(context, WebGLExtensionName::EXTBlendMinMax)
 {
-    context.protectedGraphicsContextGL()->ensureExtensionEnabled("GL_EXT_blend_minmax"_s);
+    context.graphicsContextGL()->enableExtension(GCGLExtension::EXT_blend_minmax);
 }
 
 EXTBlendMinMax::~EXTBlendMinMax() = default;
 
 bool EXTBlendMinMax::supported(GraphicsContextGL& context)
 {
-    return context.supportsExtension("GL_EXT_blend_minmax"_s);
+    return context.supportsExtension(GCGLExtension::EXT_blend_minmax);
 }
 
 } // namespace WebCore

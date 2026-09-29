@@ -28,27 +28,29 @@
 
 #if ENABLE(MEDIA_SOURCE)
 
+#include "ContextDestructionObserverInlines.h"
 #include "Event.h"
 #include "EventNames.h"
 #include "ExceptionOr.h"
 #include "MediaSourcePrivate.h"
+#include "ScriptExecutionContext.h"
 #include "Settings.h"
 #include "SourceBufferList.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ManagedMediaSource);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ManagedMediaSource);
 
 Ref<ManagedMediaSource> ManagedMediaSource::create(ScriptExecutionContext& context, MediaSourceInit&& options)
 {
-    auto mediaSource = adoptRef(*new ManagedMediaSource(context, WTFMove(options)));
+    auto mediaSource = adoptRef(*new ManagedMediaSource(context, WTF::move(options)));
     mediaSource->suspendIfNeeded();
     return mediaSource;
 }
 
 ManagedMediaSource::ManagedMediaSource(ScriptExecutionContext& context, MediaSourceInit&& options)
-    : MediaSource(context, WTFMove(options))
+    : MediaSource(context, WTF::move(options))
     , m_streamingTimer(*this, &ManagedMediaSource::streamingTimerFired)
 {
 }
@@ -102,8 +104,9 @@ void ManagedMediaSource::ensurePrefsRead()
 
     if (m_lowThreshold && m_highThreshold)
         return;
-    m_lowThreshold = scriptExecutionContext()->settingsValues().managedMediaSourceLowThreshold;
-    m_highThreshold = scriptExecutionContext()->settingsValues().managedMediaSourceHighThreshold;
+    RefPtr context = scriptExecutionContext();
+    m_lowThreshold = context->settingsValues().managedMediaSourceLowThreshold;
+    m_highThreshold = context->settingsValues().managedMediaSourceHighThreshold;
 }
 
 void ManagedMediaSource::monitorSourceBuffers()
@@ -116,9 +119,9 @@ void ManagedMediaSource::monitorSourceBuffers()
     }
 
     ensurePrefsRead();
+
     auto currentTime = this->currentTime();
     ASSERT(currentTime.isValid());
-
 
     auto limitAhead = [&] (double upper) {
         MediaTime aheadTime = currentTime + MediaTime::createWithDouble(upper);

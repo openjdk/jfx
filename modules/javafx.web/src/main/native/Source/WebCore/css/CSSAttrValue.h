@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "CSSValue.h"
+#include <WebCore/CSSValue.h>
 
 #include <wtf/text/WTFString.h>
 
@@ -44,8 +44,8 @@ public:
 private:
     explicit CSSAttrValue(String&& attributeName, RefPtr<CSSValue>&& fallback)
         : CSSValue(ClassType::Attr)
-        , m_attributeName(WTFMove(attributeName))
-        , m_fallback(WTFMove(fallback))
+        , m_attributeName(WTF::move(attributeName))
+        , m_fallback(WTF::move(fallback))
     {
     }
 

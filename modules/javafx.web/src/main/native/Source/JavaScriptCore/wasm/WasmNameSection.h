@@ -25,7 +25,9 @@
 
 #pragma once
 
-#include "WasmName.h"
+#include <JavaScriptCore/Options.h>
+#include <JavaScriptCore/WasmName.h>
+#include <wtf/Compiler.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/text/CString.h>
 #include <wtf/ThreadSafeRefCounted.h>
@@ -41,6 +43,7 @@ struct NameSection : public ThreadSafeRefCounted<NameSection> {
 public:
     NameSection()
     {
+        if (Options::useEagerWasmModuleHashing())
         setHash(std::nullopt);
     }
 

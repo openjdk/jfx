@@ -23,13 +23,13 @@
 
 #include "CommonVM.h"
 #include "DOMWrapperWorld.h"
-#include "FrameInlines.h"
-#include "GCController.h"
+#include "DocumentPage.h"
+#include "FrameConsoleClient.h"
+#include "GarbageCollectionController.h"
 #include "JSDOMWindowBase.h"
 #include "JSWindowProxy.h"
 #include "LocalFrame.h"
 #include "Page.h"
-#include "PageConsoleClient.h"
 #include "PageGroup.h"
 #include "RemoteFrame.h"
 #include "ScriptController.h"
@@ -51,9 +51,9 @@ static void collectGarbageAfterWindowProxyDestruction()
     if (MemoryPressureHandler::singleton().isUnderMemoryPressure()) {
         // NOTE: We do the collection on next runloop to ensure that there's no pointer
         //       to the window object on the stack.
-        GCController::singleton().garbageCollectOnNextRunLoop();
+        GarbageCollectionController::singleton().garbageCollectOnNextRunLoop();
     } else
-        GCController::singleton().garbageCollectSoon();
+        GarbageCollectionController::singleton().garbageCollectSoon();
 }
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(WindowProxy);
@@ -90,7 +90,7 @@ void WindowProxy::detachFromFrame()
         do {
             auto it = m_jsWindowProxies.begin();
             it->value->window()->setConsoleClient(nullptr);
-            destroyJSWindowProxy(*it->key);
+            destroyJSWindowProxy(it->key);
         } while (!m_jsWindowProxies.isEmpty());
         collectGarbageAfterWindowProxyDestruction();
     }
@@ -120,7 +120,7 @@ JSWindowProxy& WindowProxy::createJSWindowProxy(DOMWrapperWorld& world)
     VM& vm = world.vm();
 
     Strong<JSWindowProxy> jsWindowProxy(vm, &JSWindowProxy::create(vm, *m_frame->protectedWindow().get(), world));
-    m_jsWindowProxies.add(&world, jsWindowProxy);
+    m_jsWindowProxies.add(world, jsWindowProxy);
     world.didCreateWindowProxy(this);
     return *jsWindowProxy.get();
 }
@@ -189,21 +189,21 @@ void WindowProxy::setDOMWindow(DOMWindow* newDOMWindow)
 
         windowProxy->setWindow(*newDOMWindow);
 
-        ScriptController* scriptController = nullptr;
-        RefPtr page = m_frame->page();
-        if (auto* localFrame = dynamicDowncast<LocalFrame>(*m_frame))
-            scriptController = &localFrame->script();
+        if (RefPtr localFrame = dynamicDowncast<LocalFrame>(m_frame.get())) {
+            CheckedRef scriptController = localFrame->script();
 
         // ScriptController's m_cacheableBindingRootObject persists between page navigations
         // so needs to know about the new JSDOMWindow.
-        if (RefPtr cacheableBindingRootObject = scriptController ? scriptController->existingCacheableBindingRootObject() : nullptr)
+            if (RefPtr cacheableBindingRootObject = scriptController->existingCacheableBindingRootObject())
             cacheableBindingRootObject->updateGlobalObject(windowProxy->window());
 
+            windowProxy->window()->setConsoleClient(localFrame->console());
+        }
+
+        RefPtr page = m_frame->page();
         windowProxy->attachDebugger(page ? page->debugger() : nullptr);
-        if (page) {
+        if (page)
             windowProxy->window()->setProfileGroup(page->group().identifier());
-        windowProxy->window()->setConsoleClient(page->console());
-    }
     }
 }
 
@@ -234,6 +234,5 @@ JSWindowProxy* WindowProxy::jsWindowProxy(DOMWrapperWorld& world)
 
     return &createJSWindowProxyWithInitializedScript(world);
 }
-
 
 } // namespace WebCore

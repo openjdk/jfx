@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "SharedWorkerIdentifier.h"
-#include "TransferredMessagePort.h"
+#include <WebCore/SharedWorkerIdentifier.h>
+#include <WebCore/TransferredMessagePort.h>
 #include <wtf/AbstractRefCounted.h>
 #include <wtf/HashMap.h>
 #include <wtf/TZoneMalloc.h>
@@ -34,6 +34,7 @@
 namespace WebCore {
 
 class ScriptExecutionContext;
+class SecurityOriginData;
 class SharedWorkerThreadProxy;
 
 class SharedWorkerContextManager {
@@ -61,7 +62,7 @@ public:
         void setAsClosed() { m_isClosed = true; }
 
         // IPC message handlers.
-        WEBCORE_EXPORT void postConnectEvent(SharedWorkerIdentifier, TransferredMessagePort&&, String&& sourceOrigin, CompletionHandler<void(bool)>&&);
+        WEBCORE_EXPORT void postConnectEvent(SharedWorkerIdentifier, TransferredMessagePort&&, const SecurityOriginData& sourceOrigin, CompletionHandler<void(bool)>&&);
         WEBCORE_EXPORT void terminateSharedWorker(SharedWorkerIdentifier);
         WEBCORE_EXPORT void suspendSharedWorker(SharedWorkerIdentifier);
         WEBCORE_EXPORT void resumeSharedWorker(SharedWorkerIdentifier);
