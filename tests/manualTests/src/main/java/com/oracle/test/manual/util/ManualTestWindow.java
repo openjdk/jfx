@@ -77,9 +77,10 @@ import javafx.stage.Window;
  *            "Manual Test Example",
  *            """
  *            Instructions:
- *            1. you will see a button named "Test"
+ *            1. verify that a button named "Test" is present
  *            2. press the button
- *            3. verify that the button can be pressed""",
+ *            3. verify that the button can be pressed
+ *            """,
  *            400, 250
  *        );
  *     }
