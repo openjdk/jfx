@@ -173,7 +173,7 @@ final class CssStyleHelper {
 
         updateTriggerStates(node, depth, triggerStates);
 
-        final CssStyleHelper helper = new CssStyleHelper(new CacheContainer(node, styleMap, depth));
+        CssStyleHelper helper = new CssStyleHelper(new CacheContainer(node, styleMap, depth));
 
         helper.firstStyleableAncestor = new WeakReference<>(findFirstStyleableAncestor(node));
 
@@ -349,17 +349,14 @@ final class CssStyleHelper {
             //
             Styleable parent = node.getStyleableParent();
             for(int d=1; d<depth; d++) {
-
                 // TODO: won't work for something like .menu-item:hover. Need to separate CssStyleHelper tree from scene-graph tree
-                if ( parent instanceof Node) {
-                    Node parentNode = (Node)parent;
-                    final CssStyleHelper helper = parentNode.styleHelper;
+                if (parent instanceof Node parentNode) {
+                    CssStyleHelper helper = parentNode.styleHelper;
                     if (helper != null) {
                         smapIds[ctr++] = helper.cacheContainer.smapId;
                     }
                 }
                 parent = parent.getStyleableParent();
-
             }
 
             this.styleCacheKey = new StyleCache.Key(smapIds, ctr);

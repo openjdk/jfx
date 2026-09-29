@@ -10214,9 +10214,9 @@ public abstract sealed class Node
      */
     CssStyleHelper styleHelper;
 
-    /**                                                                                                                                                                        10215      CssStyleHelper styleHelper;
-     * The pseudo-classes of this node that a selector matching this node or one of its descendants depends on.                                                                10216
-     * Only a change of one of these pseudo-classes triggers a CSS update of this node and its descendants.                                                                    10217      /**
+    /**
+     * The pseudo-classes of this node that a selector matching this node or one of its descendants depends on.
+     * Only a change of one of these pseudo-classes triggers a CSS update of this node and its descendants.
      */
     PseudoClassState cssTriggerStates;
 
