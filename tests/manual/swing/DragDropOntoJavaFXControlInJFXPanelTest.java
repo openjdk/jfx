@@ -111,8 +111,12 @@ public class DragDropOntoJavaFXControlInJFXPanelTest {
                         TextField textField = new TextField("Drop here");
                         Button passButton = new Button("Pass");
                         Button failButton = new Button("Fail");
-                        passButton.setOnAction(e -> frame.dispose());
+                        passButton.setOnAction(e -> {
+                            System.out.println("TEST PASSED");
+                            frame.dispose();
+                        });
                         failButton.setOnAction(e -> {
+                            System.out.println("TEST FAILED");
                             frame.dispose();
                             throw new AssertionError("Drag / drop onto a JavaFX control in a JFXPanel not working");
                         });
