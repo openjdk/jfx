@@ -805,8 +805,8 @@ public abstract class TextInputControl extends Control {
 
         int pos = wordIterator.preceding(Utils.clamp(0, getCaretPosition(), textLength));
 
-        // Skip the non-word region, then move/select to the beginning of the word.
-        while (pos != BreakIterator.DONE && !isLetterOrDigit(text, pos)) {
+        // Skip the whitespace region, then move/select to the beginning of the word.
+        while (pos != BreakIterator.DONE && isWhitespace(text, pos)) {
             pos = wordIterator.preceding(Utils.clamp(0, pos, textLength));
         }
 
@@ -1749,4 +1749,13 @@ public abstract class TextInputControl extends Control {
         int c = Character.codePointAt(text, ix);
         return Character.isLetterOrDigit(c);
     }
+
+    private static boolean isWhitespace(String text, int ix) {
+        if (ix < 0 || ix >= text.length()) {
+            return false;
+        }
+        int c = Character.codePointAt(text, ix);
+        return Character.isWhitespace(c);
+    }
+
 }
