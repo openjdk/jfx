@@ -108,18 +108,18 @@ public class PopupControlTest {
     }
 
     @Test public void getStyleClassStringable1() {
-        assertEquals("", popup.getStyleClass().toString());
+        assertEquals("[]", popup.getStyleClass().toString());
     }
 
     @Test public void getStyleClassStringable2() {
         popup.getStyleClass().add("Hello");
-        assertEquals("Hello", popup.getStyleClass().toString());
+        assertEquals("[Hello]", popup.getStyleClass().toString());
     }
 
     @Test public void getStyleClassStringable3() {
         popup.getStyleClass().add("Hello");
         popup.getStyleClass().add("Goodbye");
-        assertEquals("Hello Goodbye", popup.getStyleClass().toString());
+        assertEquals("[Hello, Goodbye]", popup.getStyleClass().toString());
     }
 
     // See Node#setStyle

@@ -263,8 +263,8 @@ public abstract class RichParagraph {
          * @return this {@code Builder} instance
          */
         public Builder addWithStyleNames(String text, String ... css) {
-            Objects.nonNull(text);
-            Objects.nonNull(css);
+            Objects.requireNonNull(text);
+            Objects.requireNonNull(css);
             StyleAttributeMap a = StyleAttributeMap.fromStyles(null, css);
             addSegment(text, a);
             return this;
@@ -280,7 +280,7 @@ public abstract class RichParagraph {
          * @return this {@code Builder} instance
          */
         public Builder addWithInlineAndStyleNames(String text, String style, String ... css) {
-            Objects.nonNull(text);
+            Objects.requireNonNull(text);
             StyleAttributeMap a = StyleAttributeMap.fromStyles(style, css);
             addSegment(text, a);
             return this;
@@ -295,7 +295,7 @@ public abstract class RichParagraph {
          * @return this {@code Builder} instance
          */
         public Builder addWithInlineStyle(String text, String style) {
-            Objects.nonNull(text);
+            Objects.requireNonNull(text);
             StyleAttributeMap a = StyleAttributeMap.fromStyles(style);
             addSegment(text, a);
             return this;
@@ -309,8 +309,8 @@ public abstract class RichParagraph {
          * @return this {@code Builder} instance
          */
         public Builder addSegment(String text, StyleAttributeMap attrs) {
-            Objects.nonNull(text);
-            Objects.nonNull(attrs);
+            Objects.requireNonNull(text);
+            Objects.requireNonNull(attrs);
             StyledSegment seg = StyledSegment.of(text, attrs);
             segments().add(seg);
             return this;
@@ -325,7 +325,7 @@ public abstract class RichParagraph {
          * @return this {@code Builder} instance
          */
         public Builder addSegment(String text, int start, int end, StyleAttributeMap attrs) {
-            Objects.nonNull(text);
+            Objects.requireNonNull(text);
             String s = text.substring(start, end);
             addSegment(s, attrs);
             return this;
