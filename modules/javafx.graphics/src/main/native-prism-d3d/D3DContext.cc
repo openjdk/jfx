@@ -35,6 +35,10 @@
 #include "D3DMesh.h"
 #include "D3DMeshView.h"
 #include "D3DPhongMaterial.h"
+
+#define _USE_MATH_DEFINES
+#include <math.h>
+
 using std::cout;
 using std::endl;
 /**
@@ -98,6 +102,7 @@ D3DContext::D3DContext(IDirect3D9Ex *pd3d9, UINT adapter)
 
     bBeginScenePending = FALSE;
     phongShader = NULL;
+    lightsConstantsValid = false;
 
     ZeroMemory(&devCaps, sizeof(D3DCAPS9));
     ZeroMemory(&curParams, sizeof(curParams));
@@ -605,6 +610,7 @@ HRESULT D3DContext::setDeviceParametersFor3D() {
     // Reset 3D states
     state.wireframe = false;
     state.cullMode = D3DCULL_NONE;
+    lightsConstantsValid = false;
     if (res == S_OK) {
         SUCCEEDED(res = pd3dDevice->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE)) &&
         SUCCEEDED(res = pd3dDevice->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID)) &&
@@ -681,6 +687,7 @@ HRESULT D3DContext::InitDevice(IDirect3DDevice9Ex *pd3dDevice)
     pd3dDevice->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID);
     state.wireframe = false;
     state.cullMode = D3DCULL_NONE;
+    lightsConstantsValid = false;
 
     if (pResourceMgr == NULL) {
         pResourceMgr = D3DResourceManager::CreateInstance(this);
@@ -1323,4 +1330,70 @@ IDirect3DTexture9 *D3DContext::getTextureCache(int formatIndex, D3DFORMAT format
     }
     TextureUpdateCache &cache = textureCache[formatIndex];
     return cache.getTexture(format, width, height, pSurface, pd3dDevice);
+}
+
+HRESULT D3DContext::updateLightsConstants(D3DLight (&lights)[MAX_NUM_LIGHTS], float (&ambient)[3]) {
+    RETURN_STATUS_IF_NULL(pd3dDevice, S_FALSE);
+
+    LightsConstants newConsts;
+    for (int i = 0; i < MAX_NUM_LIGHTS; i++) {
+        D3DLight& light = lights[i];
+        int lightStart = i * 4;
+
+        // C++20
+        // ranges::copy(light.position, newConsts.position)
+        std::copy(light.position, light.position + 3, newConsts.position + lightStart);
+        newConsts.position[lightStart + 3] = 0; // pad 4th element
+
+        std::copy(light.direction, light.direction + 3, newConsts.direction + lightStart);
+        newConsts.direction[lightStart  + 3] = 0; // pad 4th element
+
+        std::copy(light.color, light.color + 3, newConsts.color + lightStart);
+        newConsts.color[lightStart + 3] = 1; // pad 4th element
+
+        std::copy(light.attenuation, light.attenuation + 4, newConsts.attenuation + lightStart);
+
+        newConsts.range[lightStart + 0] = light.maxRange;
+        newConsts.range[lightStart + 1] = 0; // pad 2nd-4th elements
+        newConsts.range[lightStart + 2] = 0;
+        newConsts.range[lightStart + 3] = 0;
+
+        if (light.isPointLight() || light.isDirectionalLight()) {
+            newConsts.spotlightFactors[lightStart + 0] = -1; // cos(180)
+            newConsts.spotlightFactors[lightStart + 1] = 2;  // cos(0) - cos(180)
+            newConsts.spotlightFactors[lightStart + 2] = 0;
+            newConsts.spotlightFactors[lightStart + 3] = 0;
+        } else {
+            // preparing for: I = pow((cosAngle - cosOuter) / (cosInner - cosOuter), falloff)
+            float cosInner = cos(light.innerAngle * M_PI / 180);
+            float cosOuter = cos(light.outerAngle * M_PI / 180);
+            newConsts.spotlightFactors[lightStart + 0] = cosOuter;
+            newConsts.spotlightFactors[lightStart + 1] = cosInner - cosOuter;
+            newConsts.spotlightFactors[lightStart + 2] = light.falloff;
+            newConsts.spotlightFactors[lightStart + 3] = 0; // pad 4th element
+        }
+    }
+    std::copy(ambient, ambient + 3, newConsts.ambient);
+    newConsts.ambient[3] = 1; // pad 4th element
+
+    // avoid uploading the constants if they are cached already
+    // C++20: newConstants == lightsConstants
+    if (lightsConstantsValid && memcmp(&newConsts, &lightsConstants, sizeof(LightsConstants)) == 0) {
+        return S_OK;
+    }
+
+    HRESULT res;
+    if (SUCCEEDED(res = pd3dDevice->SetVertexShaderConstantF(VSR_LIGHT_POS, newConsts.position, MAX_NUM_LIGHTS))
+            && SUCCEEDED(res = pd3dDevice->SetVertexShaderConstantF(VSR_LIGHT_DIRS, newConsts.direction, MAX_NUM_LIGHTS))
+            && SUCCEEDED(res = pd3dDevice->SetPixelShaderConstantF(PSR_LIGHT_COLOR, newConsts.color, MAX_NUM_LIGHTS))
+            && SUCCEEDED(res = pd3dDevice->SetPixelShaderConstantF(PSR_LIGHT_ATTENUATION, newConsts.attenuation, MAX_NUM_LIGHTS))
+            && SUCCEEDED(res = pd3dDevice->SetPixelShaderConstantF(PSR_LIGHT_RANGE, newConsts.range, MAX_NUM_LIGHTS))
+            && SUCCEEDED(res = pd3dDevice->SetPixelShaderConstantF(PSR_SPOTLIGHT_FACTORS, newConsts.spotlightFactors, MAX_NUM_LIGHTS))
+            && SUCCEEDED(res = pd3dDevice->SetPixelShaderConstantF(PSR_LIGHT_AMBIENT_COLOR, newConsts.ambient, 1))) {
+        lightsConstants = newConsts;
+        lightsConstantsValid = true;
+    } else {
+        lightsConstantsValid = false;
+    }
+    return res;
 }
