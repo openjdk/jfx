@@ -63,4 +63,8 @@ public class StartIconified extends ManualTestWindow {
         super.prepareStage(stage);
         stage.setIconified(true);
     }
+
+    public static void main(String[] args) {
+        launch(args);
+    }
 }

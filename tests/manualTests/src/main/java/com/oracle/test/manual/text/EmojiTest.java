@@ -71,4 +71,8 @@ public class EmojiTest extends ManualTestWindow {
             textField
         );
     }
+
+    public static void main(String[] args) {
+        launch(args);
+    }
 }
