@@ -1848,10 +1848,9 @@ public class GridPane extends Pane {
 
     private double adjustRowHeights(final CompositeSize heights, double height) {
         assert(height != -1);
-        final double snapvgap = snapSpaceY(getVgap());
         final double top = snapSpaceY(getInsets().getTop());
         final double bottom = snapSpaceY(getInsets().getBottom());
-        final double vgaps = snapvgap * (getNumberOfRows() - 1);
+        final double vgaps = heights.computeGaps(0, heights.getLength());
         final double contentHeight = height - top - bottom;
 
         // if there are percentage rows, give them their percentages first
@@ -2089,10 +2088,9 @@ public class GridPane extends Pane {
 
     private double adjustColumnWidths(final CompositeSize widths, double width) {
         assert(width != -1);
-        final double snaphgap = snapSpaceX(getHgap());
         final double left = snapSpaceX(getInsets().getLeft());
         final double right = snapSpaceX(getInsets().getRight());
-        final double hgaps = snaphgap * (getNumberOfColumns() - 1);
+        final double hgaps = widths.computeGaps(0, widths.getLength());
         final double contentWidth = width - left - right;
 
         // if there are percentage rows, give them their percentages first
@@ -2653,7 +2651,7 @@ public class GridPane extends Pane {
             if (!isPreset(position) && multiSizes != null) {
                 for (Interval i : multiSizes.keySet()) {
                     if (i.contains(position)) {
-                        double segment = multiSizes.get(i) / i.size();
+                        double segment = (multiSizes.get(i) - computeGaps(i.begin, i.end)) / i.size();
                         double propSize = segment;
                         for (int j = i.begin; j < i.end; ++j) {
                             if (j != position) {
@@ -2686,6 +2684,14 @@ public class GridPane extends Pane {
 
         private double computeTotal() {
             return computeTotal(0, singleSizes.length);
+        }
+
+        private double computeGaps(final int from, final int to) {
+            double total = 0;
+            for (int i = from + 1; i < to; ++i) {
+                total += gapBefore[i] ? gap : 0;
+            }
+            return total;
         }
 
         private boolean allPreset(int begin, int end) {
