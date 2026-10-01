@@ -2,7 +2,7 @@
 
 See the main class `LightingApplication` for usage instructions.
 
-The project uses the main Gradle wrapper, so Gradle needs to be invoked from the root dir. For :
+The project uses the main Gradle wrapper, so Gradle needs to be invoked from the root dir. For example:
 * If you're in the project dir, run `..\..\..\gradlew <task>`.
 * If you're in the root dir, run `gradlew -p tests\performance\3DLighting <task>`.
 
