@@ -72,6 +72,13 @@
 
 #INCLUDE_ES2 = true
 
+# Specifies whether the applications in the "apps" directory are built or cleaned.
+# They are built with a separate Ant based build,
+# which is not needed to build or test the JavaFX modules themselves.
+# Uncomment this flag in order to not build and clean the apps.
+
+#INCLUDE_APPS = false
+
 # Specifies whether to build SDK for running the provided test task.
 # By default, it is set to false and the tests are running of the
 # fresh-built SDK. If set to true, this flag disables all non test tasks,
