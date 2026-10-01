@@ -30,16 +30,15 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
-import java.util.Locale;
 import java.util.Properties;
 
 public class PlatformUtil {
 
-    private static final String os = System.getProperty("os.name");
-    private static final boolean embedded;
-    private static final String embeddedType;
-    private static final boolean useEGL;
+    private static final String OS = System.getProperty("os.name");
+    private static final boolean EMBEDDED;
     // a property used to denote a non-default impl for this host
     private static String javafxPlatform;
 
@@ -48,49 +47,42 @@ public class PlatformUtil {
 
         loadProperties();
 
-        embedded = Boolean.getBoolean("com.sun.javafx.isEmbedded");
-        embeddedType = System.getProperty("glass.platform", "").toLowerCase(Locale.ROOT);
-        useEGL = Boolean.getBoolean("use.egl");
+        EMBEDDED = Boolean.getBoolean("com.sun.javafx.isEmbedded");
     }
 
     private static final boolean ANDROID = "android".equals(javafxPlatform) || "Dalvik".equals(System.getProperty("java.vm.name"));
-    private static final boolean WINDOWS = os.startsWith("Windows");
-    private static final boolean MAC = os.startsWith("Mac");
-    private static final boolean LINUX = os.startsWith("Linux") && !ANDROID;
-    private static final boolean SOLARIS = os.startsWith("SunOS");
-    private static final boolean IOS = os.startsWith("iOS");
+    private static final boolean WINDOWS = OS.startsWith("Windows");
+    private static final boolean MAC = OS.startsWith("Mac");
+    private static final boolean LINUX = OS.startsWith("Linux") && !ANDROID;
+    private static final boolean SOLARIS = OS.startsWith("SunOS");
+    private static final boolean IOS = OS.startsWith("iOS");
     private static final boolean STATIC_BUILD = "Substrate VM".equals(System.getProperty("java.vm.name"));
-    private static final boolean HEADLESS = "headless".equals(embeddedType);
 
     /**
      * Returns true if the operating system is a form of Windows.
      */
-    public static boolean isWindows(){
+    public static boolean isWindows() {
         return WINDOWS;
     }
 
     /**
-     * Returns true if the operating system is a form of Mac OS.
+     * Returns true if the operating system is a form of macOS.
      */
-    public static boolean isMac(){
+    public static boolean isMac() {
         return MAC;
     }
 
     /**
      * Returns true if the operating system is a form of Linux.
      */
-    public static boolean isLinux(){
+    public static boolean isLinux() {
         return LINUX;
-    }
-
-    public static boolean useEGL() {
-        return useEGL;
     }
 
     /**
      * Returns true if the operating system is a form of Linux or Solaris
      */
-    public static boolean isUnix(){
+    public static boolean isUnix() {
         return LINUX || SOLARIS;
     }
 
@@ -98,38 +90,27 @@ public class PlatformUtil {
      * Returns true if the platform is embedded.
      */
     public static boolean isEmbedded() {
-        return embedded;
-    }
-
-    /**
-     * Returns a string with the embedded type - ie eglx11, eglfb, dfb or null.
-     */
-    public static String getEmbeddedType() {
-        return embeddedType;
-    }
-
-    /**
-     * Returns true if the Headless glass platform is selected
-     */
-    public static boolean isHeadless(){
-        return HEADLESS;
+        return EMBEDDED;
     }
 
     /**
      * Returns true if the operating system is iOS
      */
-    public static boolean isIOS(){
+    public static boolean isIOS() {
         return IOS;
     }
 
+    /**
+     * Returns true if the operating system is Android.
+     */
     public static boolean isAndroid() {
         return ANDROID;
     }
 
     /**
-     * Returns true if the current runtime is a statically linked image
+     * Returns true if the current runtime is a statically linked image.
      */
-    public static boolean isStaticBuild(){
+    public static boolean isStaticBuild() {
         return STATIC_BUILD;
     }
 
@@ -166,13 +147,14 @@ public class PlatformUtil {
         }
     }
 
-    /** Returns the directory containing the JavaFX runtime, or null
+    /**
+     * Returns the directory containing the JavaFX runtime, or null
      * if the directory cannot be located
      */
     private static File getRTDir() {
         try {
             String theClassFile = "PlatformUtil.class";
-            Class theClass = PlatformUtil.class;
+            Class<?> theClass = PlatformUtil.class;
             URL url = theClass.getResource(theClassFile);
             if (url == null) return null;
             String classUrlString = url.toString();
@@ -186,8 +168,8 @@ public class PlatformUtil {
             // Strip everything after the last "/" or "\" to get rid of the jar filename
             int lastIndexOfSlash = Math.max(
                     s.lastIndexOf('/'), s.lastIndexOf('\\'));
-            return new File(new URL(s.substring(0, lastIndexOfSlash + 1)).getPath());
-        } catch (MalformedURLException e) {
+            return new File(new URI(s.substring(0, lastIndexOfSlash + 1)).toURL().getPath());
+        } catch (MalformedURLException | URISyntaxException e) {
             return null;
         }
     }
