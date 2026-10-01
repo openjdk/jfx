@@ -129,6 +129,15 @@ jobs:
           ant -version
           gcc -v
 
+      - name: Show toolchains
+        working-directory: jfx
+        run: |
+          set -x
+          # export PATH="$JAVA_HOME/bin:$ANT_HOME/bin:$PATH"
+          export PATH="$JAVA_HOME/bin:$PATH"
+          bash gradlew -version
+          bash gradlew javaToolchains
+
       - name: Build JavaFX artifacts
         working-directory: jfx
         run: |
@@ -136,7 +145,7 @@ jobs:
           # export PATH="$JAVA_HOME/bin:$ANT_HOME/bin:$PATH"
           export PATH="$JAVA_HOME/bin:$PATH"
           bash gradlew -version
-          bash gradlew --info all
+          bash gradlew --info --stacktrace all
 
       - name: Run JavaFX headless tests
         working-directory: jfx
@@ -214,6 +223,15 @@ jobs:
           ant -version
           gcc -v
 
+      - name: Show toolchains
+        working-directory: jfx
+        run: |
+          set -x
+          # export PATH="$JAVA_HOME/bin:$ANT_HOME/bin:$PATH"
+          export PATH="$JAVA_HOME/bin:$PATH"
+          bash gradlew -version
+          bash gradlew javaToolchains
+
       - name: Build JavaFX artifacts
         working-directory: jfx
         run: |
@@ -221,7 +239,7 @@ jobs:
           # export PATH="$JAVA_HOME/bin:$ANT_HOME/bin:$PATH"
           export PATH="$JAVA_HOME/bin:$PATH"
           bash gradlew -version
-          bash gradlew --info all
+          bash gradlew --info --stacktrace all
 
       - name: Run JavaFX headless tests
         working-directory: jfx
@@ -300,6 +318,15 @@ jobs:
           sudo xcode-select --switch /Applications/Xcode_16.0.app/Contents/Developer
           xcodebuild -version
 
+      - name: Show toolchains
+        working-directory: jfx
+        run: |
+          set -x
+          # export PATH="$JAVA_HOME/bin:$ANT_HOME/bin:$PATH"
+          export PATH="$JAVA_HOME/bin:$PATH"
+          bash gradlew -version
+          bash gradlew javaToolchains
+
       - name: Build JavaFX artifacts
         working-directory: jfx
         run: |
@@ -307,7 +334,7 @@ jobs:
           #export PATH="$JAVA_HOME/bin:$ANT_HOME/bin:$PATH"
           export PATH="$JAVA_HOME/bin:$PATH"
           bash gradlew -version
-          bash gradlew --info all
+          bash gradlew --info --stacktrace all
 
       - name: Run JavaFX headless tests
         working-directory: jfx
@@ -387,6 +414,15 @@ jobs:
           sudo xcode-select --switch /Applications/Xcode_16.0.app/Contents/Developer
           xcodebuild -version
 
+      - name: Show toolchains
+        working-directory: jfx
+        run: |
+          set -x
+          # export PATH="$JAVA_HOME/bin:$ANT_HOME/bin:$PATH"
+          export PATH="$JAVA_HOME/bin:$PATH"
+          bash gradlew -version
+          bash gradlew javaToolchains
+
       - name: Build JavaFX artifacts
         working-directory: jfx
         run: |
@@ -394,7 +430,7 @@ jobs:
           #export PATH="$JAVA_HOME/bin:$ANT_HOME/bin:$PATH"
           export PATH="$JAVA_HOME/bin:$PATH"
           bash gradlew -version
-          bash gradlew --info all
+          bash gradlew --info --stacktrace all
 
       - name: Run JavaFX headless tests
         working-directory: jfx
@@ -488,6 +524,19 @@ jobs:
           echo "ANT_HOME=$env:ANT_HOME" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           echo "THE_PATH=$env:Path" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
+      - name: Show toolchains
+        working-directory: jfx
+        run: |
+          echo "JAVA_HOME=$env:JAVA_HOME"
+          echo "ANT_HOME=$env:ANT_HOME"
+          $env:Path = "$env:THE_PATH" ;
+          echo "Path=$env:Path"
+          which java
+          java -version
+          .\gradlew.bat -version
+          # Skip "chmod" task for GHA builds. See JDK-8354337 for details.
+          .\gradlew.bat javaToolchains
+
       - name: Build JavaFX artifacts
         working-directory: jfx
         run: |
@@ -499,7 +548,7 @@ jobs:
           java -version
           .\gradlew.bat -version
           # Skip "chmod" task for GHA builds. See JDK-8354337 for details.
-          .\gradlew.bat --info -PCHMOD_ARTIFACTS=false all
+          .\gradlew.bat --info --stacktrace -PCHMOD_ARTIFACTS=false all
 
       - name: Run JavaFX headless tests
         working-directory: jfx
