@@ -27,3 +27,7 @@ application {
         "-Djavafx.animation.fullspeed=true"
     ]
 }
+
+jar {
+    manifest.attributes("Main-Class": "app.LightingApplication")
+}
