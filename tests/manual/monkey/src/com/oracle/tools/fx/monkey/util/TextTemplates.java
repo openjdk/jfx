@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,6 +30,7 @@ import java.util.Random;
  * Text Templates
  */
 public class TextTemplates {
+    public static final String ALL_PLANES = "AÀĀƀɐͰЀԀԱאءܐݐހ߀ࠀࡀࢠअঅਅઅଅஅఅಅഅඅกກༀကႠᄀሀᎠᐁᚁᚠᜀᜠᝀᝠកᠠᤀᥐᦀᨀᬅᮃᯀᰀ᱐Ḁἀ‐⁰₠℀⅐←∀⌀␀①─▀■☀✁⠁、あアㄅㄱ一가ﬀ！�";
     public static final String TWO_EMOJIS = "😊😇";
     public static final String CLUSTERS = "☝🏿☝🏿☝🏿🤦🏼‍♂️";
     public static final String AKKADIAN = "Akkadian:  𒀝𒅗𒁺𒌑";
@@ -37,6 +38,7 @@ public class TextTemplates {
 
     public static Object[] multiLineTextPairs() {
         return new Object[] {
+            "All Plains", ALL_PLANES,
             "Short", "short",
             "Long", "<beg-0123456789012345678901234567890123456789-|-0123456789012345678901234567890123456789-end>",
             "Right-to-Left", RIGHT_TO_LEFT,
