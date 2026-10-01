@@ -76,7 +76,7 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved) {
     LOGV(TAG, "Loading JavaFXDalvik library");
     jvm = vm;
     JNIEnv *env;
-    if ((*vm)->GetEnv(vm, (void **) &env, JNI_VERSION_1_6)) {
+    if ((*vm)->GetEnv(vm, (void **) &env, JNI_VERSION_1_8)) {
         return JNI_ERR; /* JNI version not supported */
     }
 
@@ -95,7 +95,7 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved) {
     jFXDalvikEntity_notifyHideIME = (*env)->GetStaticMethodID(env, jFXDalvikEntityClass, "notify_hideIME", "()V");
     CHECK_EXCEPTION(env);
 
-    return JNI_VERSION_1_6;
+    return JNI_VERSION_1_8;
 }
 
 void JNI_OnUnload(JavaVM *vm, void *reserved) {
