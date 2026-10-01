@@ -2463,6 +2463,31 @@ JNIEXPORT void JNICALL OS_NATIVE(SetTextAntialiasMode)
     ((ID2D1RenderTarget *)arg0)->SetTextAntialiasMode((D2D1_TEXT_ANTIALIAS_MODE)arg1);
 }
 
+JNIEXPORT void JNICALL OS_NATIVE(SetTextRenderingMode)
+    (JNIEnv *env, jclass that, jlong arg0, jlong arg1, jint arg2)
+{
+    ID2D1RenderTarget* target = (ID2D1RenderTarget*)arg0;
+    IDWriteFactory* factory = (IDWriteFactory*)arg1;
+
+    IDWriteRenderingParams* defaultParams = nullptr;
+    HRESULT hr = factory->CreateRenderingParams(&defaultParams);
+    if (SUCCEEDED(hr)) {
+        IDWriteRenderingParams* params = nullptr;
+        hr = factory->CreateCustomRenderingParams(
+                defaultParams->GetGamma(),
+                defaultParams->GetEnhancedContrast(),
+                defaultParams->GetClearTypeLevel(),
+                DWRITE_PIXEL_GEOMETRY_FLAT,
+                DWRITE_RENDERING_MODE_NATURAL_SYMMETRIC,
+                &params);
+        if (SUCCEEDED(hr)) {
+            target->SetTextRenderingParams(params);
+            params->Release();
+        }
+        defaultParams->Release();
+    }
+}
+
 JNIEXPORT void JNICALL OS_NATIVE(SetTransform)
     (JNIEnv *env, jclass that, jlong arg0, jobject arg1)
 {
