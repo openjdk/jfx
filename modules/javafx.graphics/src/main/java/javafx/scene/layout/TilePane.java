@@ -230,7 +230,7 @@ public class TilePane extends Pane {
         return (Insets)getConstraint(node, MARGIN_CONSTRAINT);
     }
 
-    private static final Callback<Node, Insets> marginAccessor = n -> getMargin(n);
+    private static final Callback<Layoutable, Insets> marginAccessor = n -> getMargin((Node)n);
 
     /**
      * Removes all tilepane constraints from the child node.
