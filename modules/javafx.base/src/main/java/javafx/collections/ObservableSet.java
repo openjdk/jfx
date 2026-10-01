@@ -34,6 +34,12 @@ import javafx.beans.Observable;
  * such as {@link FXCollections#observableSet(Object...) observableSet}, or with a
  * {@link javafx.beans.property.SimpleSetProperty SimpleSetProperty}.
  *
+ * @implNote
+ * The implementations of this interface in the JavaFX library do not provide all of the
+ * guarantees described by {@link Observable} for their invalidation listeners: a listener
+ * that is removed while a notification is in progress may still be notified, and a nested
+ * notification notifies all listeners rather than only those that have already been notified.
+ *
  * @see SetChangeListener
  * @see SetChangeListener.Change
  * @param <E> the set element type

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,7 @@
 
 package javafx.beans.property.adapter;
 
-import com.sun.javafx.binding.ExpressionHelper;
+import com.sun.javafx.binding.OldValueCachingListenerManager;
 import com.sun.javafx.property.MethodHelper;
 import com.sun.javafx.property.adapter.Disposer;
 import com.sun.javafx.property.adapter.PropertyDescriptor;
@@ -86,11 +86,34 @@ import java.lang.reflect.UndeclaredThrowableException;
  */
 public final class JavaBeanIntegerProperty extends IntegerProperty implements JavaBeanProperty<Number> {
 
+    private static final OldValueCachingListenerManager<Number, JavaBeanIntegerProperty> LISTENER_MANAGER = new OldValueCachingListenerManager<>() {
+        @Override
+        protected Object getData(JavaBeanIntegerProperty instance) {
+            return instance.listenerData;
+        }
+
+        @Override
+        protected void setData(JavaBeanIntegerProperty instance, Object data) {
+            instance.listenerData = data;
+        }
+
+        @Override
+        protected boolean isNotifying(JavaBeanIntegerProperty instance) {
+            return instance.notifying;
+        }
+
+        @Override
+        protected void setNotifying(JavaBeanIntegerProperty instance, boolean value) {
+            instance.notifying = value;
+        }
+    };
+
     private final PropertyDescriptor<Number> descriptor;
     private final PropertyDescriptor<Number>.Listener listener;
 
     private ObservableValue<? extends Number> observable = null;
-    private ExpressionHelper<Number> helper = null;
+    private Object listenerData;
+    private boolean notifying;
 
     JavaBeanIntegerProperty(PropertyDescriptor<Number> descriptor, Object bean) {
         this.descriptor = descriptor;
@@ -132,7 +155,7 @@ public final class JavaBeanIntegerProperty extends IntegerProperty implements Ja
         }
         try {
             MethodHelper.invoke(descriptor.getSetter(), getBean(), new Object[] {value});
-            ExpressionHelper.fireValueChangedEvent(helper);
+            fireValueChangedEvent();
         } catch (IllegalAccessException e) {
             throw new UndeclaredThrowableException(e);
         } catch (InvocationTargetException e) {
@@ -197,7 +220,7 @@ public final class JavaBeanIntegerProperty extends IntegerProperty implements Ja
      */
     @Override
     public void addListener(ChangeListener<? super Number> listener) {
-        helper = ExpressionHelper.addListener(helper, this, listener);
+        LISTENER_MANAGER.addListener(this, listener);
     }
 
     /**
@@ -205,7 +228,7 @@ public final class JavaBeanIntegerProperty extends IntegerProperty implements Ja
      */
     @Override
     public void removeListener(ChangeListener<? super Number> listener) {
-        helper = ExpressionHelper.removeListener(helper, listener);
+        LISTENER_MANAGER.removeListener(this, listener);
     }
 
     /**
@@ -213,7 +236,7 @@ public final class JavaBeanIntegerProperty extends IntegerProperty implements Ja
      */
     @Override
     public void addListener(InvalidationListener listener) {
-        helper = ExpressionHelper.addListener(helper, this, listener);
+        LISTENER_MANAGER.addListener(this, listener);
     }
 
     /**
@@ -221,7 +244,7 @@ public final class JavaBeanIntegerProperty extends IntegerProperty implements Ja
      */
     @Override
     public void removeListener(InvalidationListener listener) {
-        helper = ExpressionHelper.removeListener(helper, listener);
+        LISTENER_MANAGER.removeListener(this, listener);
     }
 
     /**
@@ -229,7 +252,7 @@ public final class JavaBeanIntegerProperty extends IntegerProperty implements Ja
      */
     @Override
     public void fireValueChangedEvent() {
-        ExpressionHelper.fireValueChangedEvent(helper);
+        LISTENER_MANAGER.fireValueChanged(this, listenerData);
     }
 
     /**
