@@ -49,7 +49,7 @@ public class HostServicesShowDocumentTest extends Application {
             new Label(""),
             new Label(" STEPS:"),
             new Label("  1. Click on all the buttons for the file types."),
-            new Label("  2. Check whether the corresponding document is shown."),
+            new Label("  2. Check whether the corresponding document is shown or downloaded (this may be the case for the .csv file)."),
             new Label("  3. When all three documents are shown press Pass, otherwise press Fail."));
 
         Button showHtmlButton = new Button("HTML");
@@ -69,11 +69,13 @@ public class HostServicesShowDocumentTest extends Application {
 
         Button passButton = new Button("Pass");
         passButton.setOnAction(e -> {
+            System.out.println("TEST PASSED");
             Platform.exit();
         });
 
         Button failButton = new Button("Fail");
         failButton.setOnAction(e -> {
+            System.out.println("TEST FAILED");
             Platform.exit();
             throw new AssertionError("Documents could not be shown.");
         });
@@ -86,6 +88,7 @@ public class HostServicesShowDocumentTest extends Application {
         rootNode.setPadding(new Insets(10));
         Scene scene = new Scene(rootNode, 1000, 450);
         primaryStage.setScene(scene);
+        primaryStage.setTitle("HostServicesShowDocumentTest");
         primaryStage.show();
     }
 

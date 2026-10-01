@@ -74,15 +74,17 @@ import static com.sun.javafx.css.CalculatedValue.*;
 
 /**
  * The StyleHelper is a helper class used for applying CSS information to Nodes.
- *
+ * <p>
+ * Each Node that can is styled will have a StyleHelper. Unstyled Nodes do not.
  * When created, a StyleHelper will always have a correct {@link #firstStyleableAncestor} set.
- * It will be recreated when it changed and is therefore always correct and can be reliably used and trusted later on.
+ * It will be recreated when the scene structure changes and therefore can be reliably used and trusted later on.
  */
 final class CssStyleHelper {
 
     private static final PlatformLogger LOGGER = com.sun.javafx.util.Logging.getCSSLogger();
 
-    private CssStyleHelper() {
+    private CssStyleHelper(CacheContainer cacheContainer) {
+        this.cacheContainer = cacheContainer;
     }
 
     /**
@@ -114,7 +116,7 @@ final class CssStyleHelper {
             }
 
             userSetFont = userSetFont || isUserSetFont(ancestor);
-            if (isStyleableAncestor(ancestor)) {
+            if (ancestor.styleHelper != null) {
                 styleableAncestor = ancestor;
             }
         }
@@ -175,14 +177,13 @@ final class CssStyleHelper {
                 currentHelper.cacheContainer.fontSizeCache.clear();
             }
 
-            if (triggerStates[0] != null) {
-                currentHelper.triggerStates.addAll(triggerStates[0]);
-            }
-
-            updateParentTriggerStates(path, index, triggerStates);
+            updateTriggerStates(path, index, triggerStates);
             node.cssHelperStale = false;
             return false;
         }
+
+        // The trigger states are collected again for the new style map.
+        node.cssTriggerStates = null;
 
         if (styleMap == null || styleMap.isEmpty()) {
 
@@ -213,16 +214,11 @@ final class CssStyleHelper {
 
         }
 
-        final CssStyleHelper helper = new CssStyleHelper();
+        CssStyleHelper helper = new CssStyleHelper(new CacheContainer(node, styleMap, path, index));
         setFirstStyleableAncestor(helper, styleableAncestor);
 
-        if (triggerStates[0] != null) {
-            helper.triggerStates.addAll(triggerStates[0]);
-        }
+        updateTriggerStates(path, index, triggerStates);
 
-        updateParentTriggerStates(path, index, triggerStates);
-
-        helper.cacheContainer = new CacheContainer(node, styleMap, path, index);
         node.styleHelper = helper;
         node.cssHelperStale = false;
 
@@ -234,9 +230,7 @@ final class CssStyleHelper {
         }
 
         boolean propertiesReset = currentHelper.resetToInitialValues(node, styleMap);
-        if (currentHelper.cacheContainer != null) {
-            helper.cacheContainer.cssSetProperties.putAll(currentHelper.cacheContainer.cssSetProperties);
-        }
+        helper.cacheContainer.cssSetProperties.putAll(currentHelper.cacheContainer.cssSetProperties);
 
         return propertiesReset;
     }
@@ -275,12 +269,15 @@ final class CssStyleHelper {
         return path.getLast().getStyleableParent() == null;
     }
 
-    private static void updateParentTriggerStates(List<Styleable> path, int startIndex, PseudoClassState[] triggerStates) {
+    /**
+     * Adds the pseudo-classes found when matching selectors to the trigger states of the node and its parents.
+     */
+    private static void updateTriggerStates(List<Styleable> path, int startIndex, PseudoClassState[] triggerStates) {
         // make sure parent's transition states include the pseudo-classes
         // found when matching selectors
-        for (int triggerIndex = 1; triggerIndex < triggerStates.length; triggerIndex++) {
+        for (int triggerIndex = 0; triggerIndex < triggerStates.length; triggerIndex++) {
             // TODO: this means that a style like .menu-item:hover won't work. Need to separate CssStyleHelper tree from scene-graph tree
-            if (!(path.get(startIndex + triggerIndex) instanceof Node parentNode)) {
+            if (!(path.get(startIndex + triggerIndex) instanceof Node styleableNode)) {
                 continue;
             }
 
@@ -289,19 +286,16 @@ final class CssStyleHelper {
             // if there is nothing in triggerState, then continue since there
             // isn't any pseudo-class state that might trigger a state change
             if (triggerState != null && !triggerState.isEmpty()) {
-                // Create a StyleHelper for the parent, if necessary.
-                if (parentNode.styleHelper == null) {
-                    // The createStyleHelper(..) is not used, because it can return null.
-                    // But we do need a style helper to hold the triggerStates.
-                    parentNode.styleHelper = new CssStyleHelper();
+                if (styleableNode.cssTriggerStates == null) {
+                    styleableNode.cssTriggerStates = new PseudoClassState();
                 }
-                parentNode.styleHelper.triggerStates.addAll(triggerState);
+                styleableNode.cssTriggerStates.addAll(triggerState);
             }
         }
     }
 
     private static boolean isUserSetFont(Node node) {
-        if (node.styleHelper == null || node.styleHelper.cacheContainer == null) {
+        if (node.styleHelper == null) {
             return false;
         }
 
@@ -329,14 +323,6 @@ final class CssStyleHelper {
             return;
         }
         helper.firstStyleableAncestor = new WeakReference<>(ancestor);
-    }
-
-    /**
-     * Whether {@code parentNode} can act as a styleable ancestor, i.e. whether it has a helper that
-     * can actually contribute styles.
-     */
-    private static boolean isStyleableAncestor(Node parentNode) {
-        return parentNode.styleHelper != null && parentNode.styleHelper.cacheContainer != null;
     }
 
     /**
@@ -370,8 +356,7 @@ final class CssStyleHelper {
         }
 
         CssStyleHelper parentHelper = getStyleHelper(styleableAncestor);
-        if (parentHelper != null && parentHelper.cacheContainer != null) {
-
+        if (parentHelper != null) {
             int[] parentIds = parentHelper.cacheContainer.styleCacheKey.getStyleMapIds();
             int[] nodeIds = helper.cacheContainer.styleCacheKey.getStyleMapIds();
 
@@ -403,7 +388,7 @@ final class CssStyleHelper {
      */
     private WeakReference<Node> firstStyleableAncestor = null;
 
-    private CacheContainer cacheContainer;
+    private final CacheContainer cacheContainer;
 
     private final static class CacheContainer {
 
@@ -429,8 +414,8 @@ final class CssStyleHelper {
             for (int pathIndex = startIndex + 1; pathIndex < path.size(); pathIndex++) {
                 // TODO: won't work for something like .menu-item:hover. Need to separate CssStyleHelper tree from scene-graph tree
                 if (path.get(pathIndex) instanceof Node parentNode) {
-                    final CssStyleHelper helper = parentNode.styleHelper;
-                    if (helper != null && helper.cacheContainer != null) {
+                    CssStyleHelper helper = parentNode.styleHelper;
+                    if (helper != null) {
                         smapIds[ctr++] = helper.cacheContainer.smapId;
                     }
                 }
@@ -508,10 +493,6 @@ final class CssStyleHelper {
      * @return whether any property was reset
      */
     private boolean resetToInitialValues(Node node, StyleMap newStyleMap) {
-        if (cacheContainer == null) {
-            return false;
-        }
-
         Map<CssMetaData, CalculatedValue> cssSetProperties = cacheContainer.cssSetProperties;
         if (cssSetProperties.isEmpty()) {
             return false;
@@ -606,36 +587,8 @@ final class CssStyleHelper {
     }
 
     private StyleMap getStyleMap(Styleable styleable) {
-        if (cacheContainer == null || styleable == null) return null;
+        if (styleable == null) return null;
         return cacheContainer.getStyleMap(styleable);
-    }
-
-    /**
-     * A Set of all the pseudo-class states which, if they change, need to
-     * cause the Node to be set to UPDATE its CSS styles on the next pulse.
-     * For example, your stylesheet might have:
-     * <pre><code>
-     * .button { ... }
-     * .button:hover { ... }
-     * .button *.label { text-fill: black }
-     * .button:hover *.label { text-fill: blue }
-     * </code></pre>
-     * In this case, the first 2 rules apply to the Button itself, but the
-     * second two rules apply to the label within a Button. When the hover
-     * changes on the Button, however, we must mark the Button as needing
-     * an UPDATE. StyleHelper though only contains styles for the first two
-     * rules for Button. The pseudoclassStateMask would in this case have
-     * only a single bit set for "hover". In this way the StyleHelper associated
-     * with the Button would know whether a change to "hover" requires the
-     * button and all children to be update. Other pseudo-class state changes
-     * that are not in this hash set are ignored.
-     * *
-     * Called "triggerStates" since they would trigger a CSS update.
-     */
-    private final PseudoClassState triggerStates = new PseudoClassState();
-
-    boolean pseudoClassStateChanged(PseudoClass pseudoClass) {
-        return triggerStates.contains(pseudoClass);
     }
 
     /**
@@ -649,10 +602,6 @@ final class CssStyleHelper {
      */
     // TODO: this should work on Styleable, not Node
     private Set<PseudoClass>[] getTransitionStates(final Node node) {
-
-        // if cacheContainer is null, then CSS just doesn't apply to this node
-        if (cacheContainer == null) return null;
-
         int depth = 0;
         Node parent = node;
         while (parent != null) {
@@ -661,8 +610,8 @@ final class CssStyleHelper {
         }
 
         //
-        // StyleHelper#triggerStates is the set of pseudo-classes that appear
-        // in the style maps of this StyleHelper. Calculated values are
+        // Node#cssTriggerStates is the set of pseudo-classes that appear
+        // in the selectors matching the node or its descendants. Calculated values are
         // cached by pseudo-class state, but only the pseudo-class states
         // that mater are used in the search. So we take the transition states
         // and intersect them with triggerStates to remove the
@@ -684,11 +633,13 @@ final class CssStyleHelper {
         parent = node;
 
         while (parent != null) { // This loop traverses through all ancestors till root
-            if (parent.styleHelper != null) {
+            if (parent.styleHelper != null || parent.cssTriggerStates != null) {
                 PseudoClassState pseudoClassState = new PseudoClassState();
 
-                pseudoClassState.addAll(parent.pseudoClassStates);
-                pseudoClassState.retainAll(parent.styleHelper.triggerStates);
+                if (parent.cssTriggerStates != null) {
+                    pseudoClassState.addAll(parent.pseudoClassStates);
+                    pseudoClassState.retainAll(parent.cssTriggerStates);
+                }
 
                 retainedStates[count++] = ImmutablePseudoClassSetsCache.of(pseudoClassState);
             }
@@ -735,9 +686,6 @@ final class CssStyleHelper {
             //    When resetToInitialValues() is in progress, the StyleManager.styleMapList gets updated, therefore
             //    calls to getStyleMap(node) should be avoided, as it may return an incorrect StyleMap for a given node.
 
-            return;
-        }
-        if (cacheContainer == null) {
             return;
         }
         final StyleMap styleMap = getStyleMap(node);
@@ -871,16 +819,12 @@ final class CssStyleHelper {
      */
     void transitionToState(final Node node) {
 
-        if (cacheContainer == null) {
-            return;
-        }
-
         //
         // If styleMap is null, then StyleManager has blown it away and we need to reapply CSS.
         //
         final StyleMap styleMap = getStyleMap(node);
         if (styleMap == null) {
-            cacheContainer = null;
+            node.styleHelper = null;
             node.reapplyCSS();
             return;
         }
@@ -897,7 +841,7 @@ final class CssStyleHelper {
         if (sharedCache == null) {
             // Shared cache was blown away by StyleManager.
             // Therefore, this CssStyleHelper is no good.
-            cacheContainer = null;
+            node.styleHelper = null;
             node.reapplyCSS();
             return;
 
@@ -1091,10 +1035,7 @@ final class CssStyleHelper {
                 // the value to initial and thereafter skip setting the property
                 cacheEntry.put(property, SKIP);
 
-                CalculatedValue cachedValue = null;
-                if (cacheContainer != null && cacheContainer.cssSetProperties != null) {
-                    cachedValue = cacheContainer.cssSetProperties.get(cssMetaData);
-                }
+                CalculatedValue cachedValue = cacheContainer.cssSetProperties.get(cssMetaData);
                 Object value = (cachedValue != null) ? cachedValue.getValue() : cssMetaData.getInitialValue(node);
                 StyleOrigin origin = (cachedValue != null) ? cachedValue.getOrigin() : null;
                 try {
@@ -1764,21 +1705,12 @@ final class CssStyleHelper {
 
         final CssStyleHelper parentHelper = parent.styleHelper;
 
-        // if there is no parentHelper,
-        // or there is a parentHelper but no cacheContainer,
-        // then look to the next parent
-        if (parentHelper == null || parentHelper.cacheContainer == null) {
-
+        // if there is no parentHelper, then look to the next parent
+        if (parentHelper == null) {
             cachedFont = getCachedFont(parent.getStyleableParent());
-
-        // there is a parent helper and a cacheContainer,
         } else  {
-
             CacheContainer parentCacheContainer = parentHelper.cacheContainer;
-            if ( parentCacheContainer != null
-                    && parentCacheContainer.fontSizeCache != null
-                    && parentCacheContainer.fontSizeCache.isEmpty() == false) {
-
+            if (!parentCacheContainer.fontSizeCache.isEmpty()) {
                 Set<PseudoClass>[] transitionStates = parentHelper.getTransitionStates(parent);
                 StyleCacheEntry.Key parentCacheEntryKey = new StyleCacheEntry.Key(transitionStates, Font.getDefault());
                 cachedFont = parentCacheContainer.fontSizeCache.get(parentCacheEntryKey);

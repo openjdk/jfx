@@ -362,4 +362,12 @@ public class TestRichTextModel {
     public static String header() {
         return VERSION + DOC_PROPS;
     }
+
+    @Test
+    public void requireNonNull() {
+        RichTextModel m = createModel("1\n2\n3");
+        assertThrows(NullPointerException.class, () -> {
+            m.clamp(null);
+        });
+    }
 }
