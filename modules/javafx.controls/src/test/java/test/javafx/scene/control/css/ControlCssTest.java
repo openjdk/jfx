@@ -37,6 +37,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.layout.Pane;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import org.junit.jupiter.api.AfterEach;
@@ -68,10 +69,10 @@ public class ControlCssTest {
 
     @AfterEach
     void tearDown() {
+        errors.clear();
         if (stageLoader != null) {
             stageLoader.dispose();
         }
-        errors.clear();
     }
 
     /**
@@ -102,26 +103,16 @@ public class ControlCssTest {
      */
     @Test
     void testPaneClassLookupResolvesAfterSceneListenerPaneSwap() {
-        String theme = toBase64("""
-                .my-pane {
-                    -color: green;
-                }
-                .my-pane .label {
-                    -fx-text-fill: -color;
-                }
-                """);
-
         TabPane tabPane = new TabPane();
         Label label = new Label("Test");
         tabPane.getTabs().add(new Tab("TestTab", label));
 
-        StackPane myPane = new StackPane();
-        myPane.getStyleClass().add("my-pane");
+        Pane myPane = createPaneWithStyle("my-pane");
 
         AtomicBoolean swapped = new AtomicBoolean(false);
         label.sceneProperty().addListener((_, _, newScene) -> {
             if (newScene != null && !swapped.getAndSet(true)) {
-                StackPane newPaneRoot = new StackPane();
+                Pane newPaneRoot = new Pane();
                 Pane paneRoot = (Pane) myPane.getParent();
 
                 paneRoot.getChildren().remove(myPane);
@@ -139,7 +130,10 @@ public class ControlCssTest {
         btn.setOnAction(_ -> myPane.getChildren().add(tabPane));
 
         Scene scene = new Scene(root);
-        scene.getStylesheets().add(theme);
+        scene.getStylesheets().add(toBase64("""
+                .my-pane { -color: green; }
+                .my-pane .label { -fx-text-fill: -color; }
+                """));
         stageLoader = new StageLoader(scene);
 
         btn.fire();
@@ -153,23 +147,13 @@ public class ControlCssTest {
      */
     @Test
     void testLookupResolvesForSiblingStyledAfterSceneListenerRootSwap() {
-        String theme = toBase64("""
-                .root {
-                    -color: green;
-                }
-                .leaf {
-                    -fx-background-color: -color;
-                }
-                """);
-
         TabPane tabPane = new TabPane();
         Label label = new Label("Test");
         tabPane.getTabs().add(new Tab("TestTab", label));
 
         swapRootWhenAddedToScene(label);
 
-        StackPane leaf = new StackPane();
-        leaf.getStyleClass().add("leaf");
+        Pane leaf = createPaneWithStyle("leaf");
 
         Button btn = new Button("Add Child");
         VBox root = new VBox(btn, leaf);
@@ -177,7 +161,10 @@ public class ControlCssTest {
         btn.setOnAction(_ -> root.getChildren().add(1, tabPane));
 
         Scene scene = new Scene(root);
-        scene.getStylesheets().add(theme);
+        scene.getStylesheets().add(toBase64("""
+                .root { -color: green; }
+                .leaf { -fx-background-color: -color; }
+                """));
         stageLoader = new StageLoader(scene);
 
         btn.fire();
@@ -192,27 +179,17 @@ public class ControlCssTest {
      */
     @Test
     void testRelativeSizesAreNotRecalculatedWhileResettingProperties() {
-        String theme = toBase64("""
-                .container {
-                    -fx-font-size: 40px;
-                }
-                .old {
-                    -fx-font-size: 20px;
-                    -fx-padding: 1em;
-                }
-                .new {
-                    -fx-padding: 2em;
-                }
-                """);
-
         Label label = new Label("Test");
         label.getStyleClass().add("old");
 
-        StackPane container = new StackPane(label);
-        container.getStyleClass().add("container");
+        Pane container = createPaneWithStyle("container", label);
 
         Scene scene = new Scene(container);
-        scene.getStylesheets().add(theme);
+        scene.getStylesheets().add(toBase64("""
+                .container { -fx-font-size: 40px; }
+                .old { -fx-font-size: 20px; -fx-padding: 1em; }
+                .new { -fx-padding: 2em; }
+                """));
         stageLoader = new StageLoader(scene);
 
         assertEquals(new Insets(20), label.getPadding());
@@ -238,6 +215,12 @@ public class ControlCssTest {
                 newRoot.getChildren().setAll(oldRoot);
             }
         });
+    }
+
+    private static Pane createPaneWithStyle(String styleClass, Region... children) {
+        Pane pane = new Pane(children);
+        pane.getStyleClass().add(styleClass);
+        return pane;
     }
 
     private static String toBase64(String css) {

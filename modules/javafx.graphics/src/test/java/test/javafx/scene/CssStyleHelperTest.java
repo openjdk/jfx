@@ -41,6 +41,7 @@ import com.sun.javafx.tk.Toolkit;
 import javafx.application.ColorScheme;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.collections.ObservableList;
 import javafx.css.CssMetaData;
 import javafx.css.CssParser;
 import javafx.css.CssParser.ParseError;
@@ -58,6 +59,7 @@ import javafx.scene.NodeShim;
 import javafx.scene.Scene;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.Pane;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
@@ -71,7 +73,7 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -84,7 +86,9 @@ public class CssStyleHelperTest {
     private Stage stage;
     private StackPane root;
 
-    private static void resetStyleManager() {
+    private ObservableList<CssParser.ParseError> errors;
+
+    private void resetStyleManager() {
         StyleManager sm = StyleManager.getInstance();
         sm.userAgentStylesheetContainers.clear();
         sm.platformUserAgentStylesheetContainers.clear();
@@ -99,14 +103,14 @@ public class CssStyleHelperTest {
         scene = new Scene(root);
         stage = new Stage();
         stage.setScene(scene);
-        resetStyleManager();
 
-        // Apparently, need to access this property first, or nothing will be appended at all.
-        CssParser.errorsProperty().clear();
+        errors = CssParser.errorsProperty();
+        resetStyleManager();
     }
 
-    @AfterAll
-    public static void cleanupOnce() {
+    @AfterEach
+    public void cleanup() {
+        errors.clear();
         resetStyleManager();
     }
 
@@ -993,9 +997,9 @@ public class CssStyleHelperTest {
         root.getChildren().addAll(a);
 
         assertDoesNotThrow(() -> stage.show());  // This should not result in a StackOverflowError
-        assertEquals(1, CssParser.errorsProperty().size());
+        assertEquals(1, errors.size());
 
-        ParseError error = CssParser.errorsProperty().getFirst();
+        ParseError error = errors.getFirst();
 
         assertEquals(PropertySetError.class, error.getClass());
 
@@ -1046,9 +1050,9 @@ public class CssStyleHelperTest {
         root.getChildren().addAll(a);
 
         assertDoesNotThrow(() -> stage.show());  // This should not result in a StackOverflowError
-        assertEquals(1, CssParser.errorsProperty().size());
+        assertEquals(1, errors.size());
 
-        ParseError error = CssParser.errorsProperty().getFirst();
+        ParseError error = errors.getFirst();
 
         assertEquals(PropertySetError.class, error.getClass());
 
@@ -1264,19 +1268,13 @@ public class CssStyleHelperTest {
      */
     @Test
     void testColorLookupClassCastExceptionWhenStylesheetNotOnRoot() {
-        var errors = CssParser.errorsProperty();
-        errors.clear();
-
-        String themeA = toDataURL("""
-                .root { -theme-button: #0000FF; }
-                .leaf { -fx-background-color: -theme-button; }
-                """);
-
         StackPane sub = new StackPane();
-        sub.getStylesheets().add(themeA);
+        sub.getStylesheets().add(toDataURL("""
+                .root { -theme-button: blue; }
+                .leaf { -fx-background-color: -theme-button; }
+                """));
 
-        Pane leaf = new Pane();
-        leaf.getStyleClass().add("leaf");
+        Pane leaf = createPaneWithStyle("leaf");
         sub.getChildren().add(leaf);
 
         StackPane root = new StackPane(sub);
@@ -1295,25 +1293,19 @@ public class CssStyleHelperTest {
      */
     @Test
     void testColorLookupClassCastExceptionAfterNewRootSwap() {
-        var errors = CssParser.errorsProperty();
-        errors.clear();
-
-        String themeA = toDataURL("""
-                .root { -theme-button: #0000FF; }
-                .leaf { -fx-background-color: -theme-button; }
-                """);
-
         StackPane root = new StackPane();
-        root.getStylesheets().add(themeA);
+        root.getStylesheets().add(toDataURL("""
+                .root { -theme-button: blue; }
+                .leaf { -fx-background-color: -theme-button; }
+                """));
 
-        Pane leaf = new Pane();
-        leaf.getStyleClass().add("leaf");
+        Pane leaf = createPaneWithStyle("leaf");
         root.getChildren().add(leaf);
 
         Scene scene = new Scene(root);
         root.applyCss();
 
-        assertEquals(Color.BLUE, leaf.getBackground().getFills().getFirst().getFill());
+        assertEquals(Color.BLUE, getBackgroundColor(leaf));
 
         root = new StackPane(root);
         scene.setRoot(root);
@@ -1328,27 +1320,16 @@ public class CssStyleHelperTest {
      */
     @Test
     void testLookupResolvesAfterRootTransitionToStateRootSwap() {
-        var errors = CssParser.errorsProperty();
-        errors.clear();
-
-        String theme = toDataURL("""
-                .root {
-                    -color-fg: #0000FF;
-                    -fx-background-color: -color-fg;
-                }
-                .leaf {
-                    -fx-background-color: -color-fg;
-                }
-                """);
-
         StackPane oldRoot = new StackPane();
 
-        StackPane leaf = new StackPane();
-        leaf.getStyleClass().add("leaf");
+        Pane leaf = createPaneWithStyle("leaf");
         oldRoot.getChildren().add(leaf);
 
         Scene scene = new Scene(oldRoot);
-        scene.getStylesheets().add(theme);
+        scene.getStylesheets().add(toDataURL("""
+                .root { -color-fg: blue; -fx-background-color: -color-fg; }
+                .leaf { -fx-background-color: -color-fg; }
+                """));
 
         // When CSS applies -fx-background-color to oldRoot, we are in the transitionToState phase (mid-pulse).
         AtomicBoolean swapped = new AtomicBoolean(false);
@@ -1370,31 +1351,18 @@ public class CssStyleHelperTest {
      */
     @Test
     void testLookupResolvesAfterChildTransitionToStateRootSwap() {
-        var errors = CssParser.errorsProperty();
-        errors.clear();
-
-        String theme = toDataURL("""
-                .root {
-                    -color-fg: #0000FF;
-                }
-                .leaf {
-                    -fx-background-color: -color-fg;
-                }
-                .leaf-leaf {
-                    -fx-background-color: -color-fg;
-                }
-                """);
-
         StackPane oldRoot = new StackPane();
 
-        StackPane leafLeaf = new StackPane();
-        leafLeaf.getStyleClass().add("leaf-leaf");
-        StackPane leaf = new StackPane(leafLeaf);
-        leaf.getStyleClass().add("leaf");
+        Pane leafLeaf = createPaneWithStyle("leaf-leaf");
+        Pane leaf = createPaneWithStyle("leaf", leafLeaf);
         oldRoot.getChildren().add(leaf);
 
         Scene scene = new Scene(oldRoot);
-        scene.getStylesheets().add(theme);
+        scene.getStylesheets().add(toDataURL("""
+                .root { -color-fg: blue; }
+                .leaf { -fx-background-color: -color-fg; }
+                .leaf-leaf { -fx-background-color: -color-fg; }
+                """));
 
         // When CSS applies -fx-background-color to leaf, we are in the transitionToState phase (mid-pulse).
         AtomicBoolean swapped = new AtomicBoolean(false);
@@ -1416,26 +1384,19 @@ public class CssStyleHelperTest {
      */
     @Test
     void testLookupResolvesWithPseudoClassAndIntermediatePane() {
-        var errors = CssParser.errorsProperty();
-        errors.clear();
-
-        String theme = toDataURL("""
-                .root { -my-color: #0000FF; }
-                .pseudo:ps1 .leaf { -fx-background-color: -my-color; }
-                """);
-
-        StackPane leaf = new StackPane();
-        leaf.getStyleClass().add("leaf");
+        Pane leaf = createPaneWithStyle("leaf");
         StackPane intermediate = new StackPane(leaf);
 
-        StackPane pseudo = new StackPane(intermediate);
-        pseudo.getStyleClass().add("pseudo");
+        Pane pseudo = createPaneWithStyle("pseudo", intermediate);
         pseudo.pseudoClassStateChanged(PseudoClass.getPseudoClass("ps1"), true);
 
         StackPane root = new StackPane(pseudo);
 
         Scene scene = new Scene(root);
-        scene.getStylesheets().add(theme);
+        scene.getStylesheets().add(toDataURL("""
+                .root { -my-color: blue; }
+                .pseudo:ps1 .leaf { -fx-background-color: -my-color; }
+                """));
 
         scene.getRoot().applyCss();
 
@@ -1448,25 +1409,17 @@ public class CssStyleHelperTest {
      */
     @Test
     void testExistingChildRestyledWhenNewChildRebuildsParentHelperFirst() {
-        String theme = toDataURL("""
-                .container {
-                    -fx-padding: 2;
-                }
-                .x {
-                    -fx-padding: 5;
-                }
-                .x .target {
-                    -fx-background-color: #FF0000;
-                }
-                """);
-        scene.getStylesheets().add(theme);
+        scene.getStylesheets().add(toDataURL("""
+                .container { -fx-padding: 2; }
+                .x { -fx-padding: 5; }
+                .x .target { -fx-background-color: red; }
+                """));
         stage.show();
 
         root.getStyleClass().add("container");
 
         StackPane parent = new StackPane();
-        StackPane target = new StackPane();
-        target.getStyleClass().add("target");
+        Pane target = createPaneWithStyle("target");
         parent.getChildren().add(target);
         root.getChildren().add(parent);
 
@@ -1496,17 +1449,13 @@ public class CssStyleHelperTest {
      */
     @Test
     void testLeafRestyledWhenAncestorInUnstyledChainGainsStyleClass() {
-        String theme = toDataURL("""
-                .marked .leaf {
-                    -fx-background-color: #008000;
-                }
-                """);
-        scene.getStylesheets().add(theme);
+        scene.getStylesheets().add(toDataURL("""
+                .marked .leaf { -fx-background-color: green; }
+                """));
         stage.show();
 
         List<StackPane> chain = buildUnstyledChain(10);
-        StackPane leaf = new StackPane();
-        leaf.getStyleClass().add("leaf");
+        Pane leaf = createPaneWithStyle("leaf");
         chain.getLast().getChildren().add(leaf);
 
         Toolkit.getToolkit().firePulse();
@@ -1527,12 +1476,9 @@ public class CssStyleHelperTest {
      */
     @Test
     void testLeafStyledByAncestorChildSelectorThroughUnstyledChain() {
-        String theme = toDataURL("""
-                .box > * {
-                    -fx-background-color: #0000FF;
-                }
-                """);
-        scene.getStylesheets().add(theme);
+        scene.getStylesheets().add(toDataURL("""
+                .box > * { -fx-background-color: blue; }
+                """));
         stage.show();
 
         List<StackPane> chain = buildUnstyledChain(10);
@@ -1554,12 +1500,9 @@ public class CssStyleHelperTest {
      */
     @Test
     void testOnlyDirectChildrenAreStyled() {
-        String theme = toDataURL("""
-                .box > * {
-                    -fx-background-color: #0000FF;
-                }
-                """);
-        scene.getStylesheets().add(theme);
+        scene.getStylesheets().add(toDataURL("""
+                .box > * { -fx-background-color: blue; }
+                """));
         stage.show();
 
         List<StackPane> chain = buildUnstyledChain(5);
@@ -1580,17 +1523,13 @@ public class CssStyleHelperTest {
      */
     @Test
     void testOnlyDescendantsAreStyled() {
-        String theme = toDataURL("""
-                .marked .leaf {
-                    -fx-background-color: #008000;
-                }
-                """);
-        scene.getStylesheets().add(theme);
+        scene.getStylesheets().add(toDataURL("""
+                .marked .leaf { -fx-background-color: green; }
+                """));
         stage.show();
 
         List<StackPane> chain = buildUnstyledChain(3);
-        StackPane leaf = new StackPane();
-        leaf.getStyleClass().add("leaf");
+        Pane leaf = createPaneWithStyle("leaf");
         chain.getLast().getChildren().add(leaf);
 
         Toolkit.getToolkit().firePulse();
@@ -1611,25 +1550,17 @@ public class CssStyleHelperTest {
      */
     @Test
     void testExistingChildRestyledWhenParentGoesStaleAfterEarlyRebuild() {
-        String theme = toDataURL("""
-                .container {
-                    -fx-padding: 2;
-                }
-                .x {
-                    -fx-padding: 5;
-                }
-                .x .target {
-                    -fx-background-color: #FF0000;
-                }
-                """);
-        scene.getStylesheets().add(theme);
+        scene.getStylesheets().add(toDataURL("""
+                .container { -fx-padding: 2; }
+                .x { -fx-padding: 5; }
+                .x .target { -fx-background-color: red; }
+                """));
         stage.show();
 
         root.getStyleClass().add("container");
 
         StackPane parent = new StackPane();
-        StackPane target = new StackPane();
-        target.getStyleClass().add("target");
+        Pane target = createPaneWithStyle("target");
         parent.getChildren().add(target);
         root.getChildren().add(parent);
 
@@ -1659,12 +1590,8 @@ public class CssStyleHelperTest {
     @Test
     void testAddingChildUnderStaleAncestorsStaysLinear() {
         scene.getStylesheets().add(toDataURL("""
-                .old {
-                   -fx-padding: 1.0;
-                }
-                .new {
-                   -fx-padding: 99.0;
-                }
+                .old { -fx-padding: 1.0; }
+                .new { -fx-padding: 99.0; }
                 """));
 
         AtomicInteger walks = new AtomicInteger();
@@ -1719,12 +1646,8 @@ public class CssStyleHelperTest {
     @Test
     void testStaleAncestorHelperIsInstalledBeforeItsPropertiesAreReset() {
         scene.getStylesheets().add(toDataURL("""
-                .container {
-                   -fx-padding: 3;
-                }
-                .marked {
-                   -fx-background-color: red;
-                }
+                .container { -fx-padding: 3; }
+                .marked { -fx-background-color: red; }
                 """));
         stage.show();
 
@@ -1762,23 +1685,15 @@ public class CssStyleHelperTest {
     @Test
     void testStyleableChainIsRebuiltWhenReparentedWhileAStaleAncestorIsRebuilt() {
         scene.getStylesheets().add(toDataURL("""
-                .marked {
-                   -fx-background-color: red;
-                }
-                .other {
-                   -my-color: green;
-                }
-                .leaf {
-                   -fx-background-color: -my-color;
-                }
+                .marked { -fx-background-color: red; }
+                .other { -my-color: green; }
+                .leaf { -fx-background-color: -my-color; }
                 """));
         stage.show();
 
-        StackPane container = new StackPane();
-        container.getStyleClass().add("marked");
+        Pane container = createPaneWithStyle("marked");
 
-        StackPane other = new StackPane();
-        other.getStyleClass().add("other");
+        Pane other = createPaneWithStyle("other");
 
         StackPane child = new StackPane();
         container.getChildren().add(child);
@@ -1793,8 +1708,7 @@ public class CssStyleHelperTest {
         container.getStyleClass().remove("marked");
         assertEquals(CssFlags.REAPPLY, NodeShim.getCSSFlags(container));
 
-        StackPane leaf = new StackPane();
-        leaf.getStyleClass().add("leaf");
+        Pane leaf = createPaneWithStyle("leaf");
 
         // Resetting the container's background moves the leaf itself away, so the chain collected for it
         // no longer leads to the container.
@@ -1821,26 +1735,15 @@ public class CssStyleHelperTest {
     @Test
     void testStaleAncestorIsRebuiltForItsNewParentWhenReparentedWhileAHigherStaleAncestorIsRebuilt() {
         scene.getStylesheets().add(toDataURL("""
-                .under-root-1 {
-                   -fx-background-color: red;
-                }
-                .under-root-2 {
-                   -my-color: green;
-                }
-                .mid {
-                   -fx-padding: 1;
-                }
-                .restyled {
-                   -fx-padding: 2;
-                }
-                .leaf {
-                   -fx-background-color: -my-color;
-                }
+                .under-root-1 { -fx-background-color: red; }
+                .under-root-2 { -my-color: green; }
+                .mid { -fx-padding: 1; }
+                .restyled { -fx-padding: 2; }
+                .leaf { -fx-background-color: -my-color; }
                 """));
         stage.show();
 
-        StackPane leaf = new StackPane();
-        leaf.getStyleClass().add("leaf");
+        Pane leaf = createPaneWithStyle("leaf");
 
         AtomicBoolean addLeafInMid = new AtomicBoolean();
         AtomicReference<Background> leafBackgroundDuringLayout = new AtomicReference<>();
@@ -1858,11 +1761,8 @@ public class CssStyleHelperTest {
         };
         mid.getStyleClass().add("mid");
 
-        StackPane underRoot = new StackPane(mid);
-        underRoot.getStyleClass().add("under-root-1");
-
-        StackPane underRoot2 = new StackPane();
-        underRoot2.getStyleClass().add("under-root-2");
+        Pane underRoot = createPaneWithStyle("under-root-1", mid);
+        Pane underRoot2 = createPaneWithStyle("under-root-2");
 
         root.getChildren().addAll(underRoot, underRoot2);
 
@@ -1890,8 +1790,14 @@ public class CssStyleHelperTest {
         assertEquals(Color.GREEN, background.getFills().getFirst().getFill());
     }
 
-    private Paint getBackgroundColor(StackPane leaf) {
-        return leaf.getBackground().getFills().getFirst().getFill();
+    private Pane createPaneWithStyle(String styleClass, Region... children) {
+        Pane pane = new Pane(children);
+        pane.getStyleClass().add(styleClass);
+        return pane;
+    }
+
+    private Paint getBackgroundColor(Region region) {
+        return region.getBackground().getFills().getFirst().getFill();
     }
 
     private List<StackPane> buildUnstyledChain(int depth) {
