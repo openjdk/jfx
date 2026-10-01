@@ -503,8 +503,10 @@ public class TreeTableView<S> extends Control {
 
     /**
      * An EventType that indicates some edit event has occurred. It is the parent
-     * type of all other edit events: {@link #editStartEvent},
-     *  {@link #editCommitEvent} and {@link #editCancelEvent}.
+     * type of all other edit events:
+     * {@link #editStartEvent},
+     * {@link #editCommitEvent} and
+     * {@link #editCancelEvent}.
      *
      * @param <S> The type of the TreeItem instances used in this TreeTableView
      * @return An EventType that indicates some edit event has occurred
@@ -2394,13 +2396,22 @@ public class TreeTableView<S> extends Control {
          */
         public static final EventType<?> ANY = EDIT_ANY_EVENT;
 
-        @SuppressWarnings("doclint:missing")
+        /**
+         * The {@link TreeTableView} this event is sent to.
+         */
         private final TreeTableView<S> source;
-        @SuppressWarnings("doclint:missing")
+        /**
+         * The old value.
+         */
         private final S oldValue;
-        @SuppressWarnings("doclint:missing")
+        /**
+         * The new value. This is NOT the value to necessary go back into the tree item.
+         */
         private final S newValue;
-        private transient final TreeItem<S> treeItem;
+        /**
+         * The {@link TreeItem} this event belongs to.
+         */
+        private final TreeItem<S> treeItem;
 
         /**
          * Creates a new EditEvent instance to represent an edit event. This
@@ -2413,7 +2424,7 @@ public class TreeTableView<S> extends Control {
          * @param newValue the newValue
          */
         public EditEvent(TreeTableView<S> source,
-                         EventType<? extends TreeTableView.EditEvent> eventType,
+                         EventType<? extends TreeTableView.EditEvent<S>> eventType,
                          TreeItem<S> treeItem, S oldValue, S newValue) {
             super(source, Event.NULL_SOURCE_TARGET, eventType);
             this.source = source;
