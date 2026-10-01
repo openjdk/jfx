@@ -59,6 +59,7 @@ public class TestRunner {
         String[] cmd = {
             javaExecutablePath,
             "-ea",
+            "-D" + ManualTestWindow.SHOW_ERROR + "=true",
             "-Djavafx.enablePreview=true",
             "--enable-native-access=javafx.graphics",
             "-Dfile.encoding=UTF-8",

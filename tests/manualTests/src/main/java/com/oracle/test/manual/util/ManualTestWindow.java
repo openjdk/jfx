@@ -97,6 +97,9 @@ import javafx.stage.Window;
  * }</pre>
  */
 public abstract class ManualTestWindow extends Application {
+
+    public static final String SHOW_ERROR = "ManualTestWindow.showError";
+
     /**
      * This method creates the {@code Node} containing elements under test,
      * to be shown below the instructions and above the "Pass"/"Fail" buttons.
@@ -240,7 +243,7 @@ public abstract class ManualTestWindow extends Application {
     private void exit(int code) {
         exitCode = code;
         String s = TestRunnerApp.getExitCodeString(code);
-        if (code == TestRunner.FAILED) {
+        if ((code == TestRunner.FAILED) && Boolean.getBoolean(SHOW_ERROR)) {
             new AssertionError("Failed Manual Test: " + title).printStackTrace();
         } else {
             IO.println(s + " " + title);
