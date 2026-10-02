@@ -51,10 +51,6 @@ public class NodeShim {
         return n.cssFlag;
     }
 
-    public static CssStyleHelper getStyleHelper(Node n) {
-        return n.styleHelper;
-    }
-
     public static Transform getCurrentLocalToSceneTransformState(Node n) {
         return n.getCurrentLocalToSceneTransformState();
     }

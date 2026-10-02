@@ -97,7 +97,6 @@ final class CssStyleHelper {
         List<Styleable> path = createStyleableChain(node);
 
         Node styleableAncestor = null;
-        boolean userSetFont = false;
 
         for (int index = path.size() - 1; index > 0; index--) {
             if (!(path.get(index) instanceof Node ancestor)) {
@@ -106,22 +105,21 @@ final class CssStyleHelper {
 
             if (ancestor.cssHelperStale) {
                 ancestor.cssHelperResolvedEarly = true;
-                boolean propertiesReset = updateStyleHelper(ancestor, path, index, styleableAncestor, userSetFont);
+                boolean propertiesReset = updateStyleHelper(ancestor, path, index, styleableAncestor);
 
-                // Listeners running while the old helper reset properties may have changed the hierarchy.
-                // The remaining stale ancestors must not be rebuilt for an outdated path, so start over.
-                if (propertiesReset && !isPathValid(path)) {
+                // Listeners running while the old helper reset properties may have changed the hierarchy
+                // or made an ancestor stale again, so start over.
+                if (propertiesReset) {
                     return createStyleHelper(node);
                 }
             }
 
-            userSetFont = userSetFont || isUserSetFont(ancestor);
             if (ancestor.styleHelper != null) {
                 styleableAncestor = ancestor;
             }
         }
 
-        updateStyleHelper(node, path, 0, styleableAncestor, userSetFont);
+        updateStyleHelper(node, path, 0, styleableAncestor);
         return node.styleHelper;
     }
 
@@ -135,10 +133,8 @@ final class CssStyleHelper {
      * @return whether properties of the old helper were reset,
      * which runs listeners that may have modified the scene graph
      */
-    private static boolean updateStyleHelper(Node node, List<Styleable> path, int index,
-                                             Node styleableAncestor, boolean ancestorUserSetFont) {
+    private static boolean updateStyleHelper(Node node, List<Styleable> path, int index, Node styleableAncestor) {
         final CssStyleHelper currentHelper = node.styleHelper;
-        final boolean userSetFont = currentHelper == null || ancestorUserSetFont || isUserSetFont(node);
 
         if (currentHelper != null) {
             setFirstStyleableAncestor(currentHelper, styleableAncestor);
@@ -173,7 +169,7 @@ final class CssStyleHelper {
             // trigger a REAPPLY. If the REAPPLY comes because of a change in font, then the fontSizeCache
             // needs to be invalidated (cleared) so that new values will be looked up for all transition states.
             //
-            if (userSetFont) {
+            if (isUserSetFont(path, index)) {
                 currentHelper.cacheContainer.fontSizeCache.clear();
             }
 
@@ -186,7 +182,6 @@ final class CssStyleHelper {
         node.cssTriggerStates = null;
 
         if (styleMap == null || styleMap.isEmpty()) {
-
             boolean mightInherit = false;
 
             final List<CssMetaData<? extends Styleable, ?>> props = node.getCssMetaData();
@@ -211,7 +206,6 @@ final class CssStyleHelper {
                 // since the node won't have a style helper after this call
                 return currentHelper != null && currentHelper.resetToInitialValues(node, styleMap);
             }
-
         }
 
         CssStyleHelper helper = new CssStyleHelper(new CacheContainer(node, styleMap, path, index));
@@ -236,9 +230,7 @@ final class CssStyleHelper {
     }
 
     /**
-     * Collects a chain of {@link Styleable} nodes to the root, which we will then use later to process the CSS.
-     * This is needed because when CSS is processed, the chain could change
-     * as a result of listeners that run during CSS resolution.
+     * Collects the chain of {@link Styleable} nodes up to the root, so stale ancestors can be updated top-down.
      *
      * @param styleable the {@link Styleable}
      * @return the {@link Styleable} chain until the root
@@ -251,22 +243,6 @@ final class CssStyleHelper {
         }
 
         return path;
-    }
-
-    /**
-     * Whether the given path is still the styleable hierarchy of the node it was collected for.
-     */
-    private static boolean isPathValid(List<Styleable> path) {
-        for (int index = 0; index < path.size() - 1; index++) {
-            Styleable styleable = path.get(index);
-            Styleable parent = path.get(index + 1);
-            if (styleable.getStyleableParent() != parent) {
-                return false;
-            }
-        }
-
-        // Should be the root.
-        return path.getLast().getStyleableParent() == null;
     }
 
     /**
@@ -294,13 +270,19 @@ final class CssStyleHelper {
         }
     }
 
-    private static boolean isUserSetFont(Node node) {
-        if (node.styleHelper == null) {
-            return false;
+    /**
+     * Whether the font of the node at {@code index} of {@code path} or one of its ancestors was set by the user.
+     */
+    private static boolean isUserSetFont(List<Styleable> path, int index) {
+        for (int pathIndex = index; pathIndex < path.size(); pathIndex++) {
+            if (path.get(pathIndex) instanceof Node node && node.styleHelper != null) {
+                StyleableProperty<Font> fontProperty = node.styleHelper.cacheContainer.getFontProperty(node);
+                if (fontProperty != null && fontProperty.getStyleOrigin() == StyleOrigin.USER) {
+                    return true;
+                }
+            }
         }
-
-        StyleableProperty<Font> fontProperty = node.styleHelper.cacheContainer.getFontProperty(node);
-        return fontProperty != null && fontProperty.getStyleOrigin() == StyleOrigin.USER;
+        return false;
     }
 
     private static CssStyleHelper getStyleHelper(Node n) {
@@ -441,7 +423,6 @@ final class CssStyleHelper {
             this.fontSizeCache = new HashMap<>();
 
             this.cssSetProperties = new HashMap<>();
-
         }
 
         private StyleMap getStyleMap(Styleable styleable) {

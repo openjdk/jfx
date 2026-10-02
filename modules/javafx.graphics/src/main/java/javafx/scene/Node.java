@@ -9947,7 +9947,11 @@ public abstract sealed class Node
         if (scene == null) return;
 
         if (cssFlag == CssFlags.REAPPLY) {
-            cssHelperStale = true;
+            // The pending REAPPLY keeps the helper stale, unless a descendant rebuilt it early.
+            // When the helper is being rebuilt right now, it must not become stale.
+            if (cssHelperResolvedEarly) {
+                cssHelperStale = true;
+            }
             return;
         }
 

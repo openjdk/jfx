@@ -69,7 +69,6 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -1462,8 +1461,6 @@ public class CssStyleHelperTest {
         assertNull(leaf.getBackground(), "nothing matches .leaf yet");
 
         StackPane middle = chain.get(5);
-        assertNull(NodeShim.getStyleHelper(middle), "middle must have no style helper");
-
         middle.getStyleClass().add("marked");
         Toolkit.getToolkit().firePulse();
 
@@ -1641,7 +1638,7 @@ public class CssStyleHelperTest {
 
     /**
      * A stale ancestor's helper must be installed before the old helper resets its properties,
-     * so listeners running during the reset never observe an outdated helper.
+     * so listeners running during the reset never observe an outdated helper and rebuild it again.
      */
     @Test
     void testStaleAncestorHelperIsInstalledBeforeItsPropertiesAreReset() {
@@ -1651,7 +1648,7 @@ public class CssStyleHelperTest {
                 """));
         stage.show();
 
-        StackPane container = new StackPane();
+        MatchCountingPane container = new MatchCountingPane();
         container.getStyleClass().addAll("container", "marked");
 
         StackPane child = new StackPane();
@@ -1661,21 +1658,50 @@ public class CssStyleHelperTest {
         Toolkit.getToolkit().firePulse();
         assertEquals(Color.RED, getBackgroundColor(container));
 
-        Object oldStaleHelper = NodeShim.getStyleHelper(container);
-
         // The added child makes the container a DIRTY_BRANCH, dropping the style class defers the REAPPLY
         // and leaves the container with a stale style helper.
         container.getChildren().add(new StackPane());
         container.getStyleClass().remove("marked");
         assertEquals(CssFlags.REAPPLY, NodeShim.getCSSFlags(container));
 
+        container.backgroundProperty().addListener((_, _, _) -> container.getChildren().add(new StackPane()));
+
         // Rebuilds the container's style helper on demand, which resets its background.
+        container.matches = 0;
         child.getChildren().add(new StackPane());
 
-        Object newHelper = NodeShim.getStyleHelper(container);
-        assertNotSame(oldStaleHelper, newHelper);
-        assertSame(NodeShim.getStyleHelper(container), newHelper);
-        assertNull(container.getBackground(), "not matching .marker anymore");
+        assertNull(container.getBackground(), "not matching .marked anymore");
+        assertEquals(1, container.matches, "container must only be rebuilt once");
+    }
+
+    /**
+     * A reapplyCSS() from a listener running during the node's own style helper rebuild
+     * must not leave the freshly installed helper marked as stale.
+     */
+    @Test
+    void testHelperNotStaleWhenReappliedDuringOwnRebuild() {
+        scene.getStylesheets().add(toDataURL("""
+                .marked { -fx-background-color: red; }
+                """));
+        stage.show();
+
+        MatchCountingPane container = new MatchCountingPane();
+        container.getStyleClass().add("marked");
+        root.getChildren().add(container);
+
+        Toolkit.getToolkit().firePulse();
+        assertEquals(Color.RED, getBackgroundColor(container));
+
+        container.backgroundProperty().addListener((_, _, _) -> container.getStyleClass().add("other"));
+
+        // Rebuilds the container's style helper immediately, which resets its background.
+        container.getStyleClass().remove("marked");
+        assertTrue(container.getStyleClass().contains("other"), "listener must have run during the rebuild");
+
+        container.matches = 0;
+        container.getChildren().add(new StackPane());
+
+        assertEquals(0, container.matches, "adding a child must not rebuild the container");
     }
 
     /**
@@ -1788,6 +1814,19 @@ public class CssStyleHelperTest {
         Background background = leafBackgroundDuringLayout.get();
         assertNotNull(background, "leaf must be styled for its actual ancestors");
         assertEquals(Color.GREEN, background.getFills().getFirst().getFill());
+    }
+
+    /**
+     * Counts how often styles are matched for this pane, which happens whenever its style helper is created.
+     */
+    private static class MatchCountingPane extends StackPane {
+        private int matches;
+
+        @Override
+        public String getTypeSelector() {
+            matches++;
+            return super.getTypeSelector();
+        }
     }
 
     private Pane createPaneWithStyle(String styleClass, Region... children) {
