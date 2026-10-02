@@ -560,4 +560,13 @@ public class TextAreaTest {
         dummyTxtArea.deleteText(0,6);
         assertEquals(dummyTxtArea.getParagraphs().get(0).toString(), "another");
     }
+
+    // test against JDK-8264588
+    @Test
+    public void previousWord() {
+        txtArea.setText("This is Bug #123456");
+        txtArea.positionCaret(16); // in the middle of 123456
+        txtArea.previousWord();
+        assertEquals(12, txtArea.getCaretPosition());
+    }
 }
