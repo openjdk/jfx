@@ -33,6 +33,7 @@ import javafx.event.EventType;
  * @param <T> the type of the event
  * @since 28
  */
+ // TODO is this really necessary?
 public interface EventCriteria<T extends Event> {
     /**
      * Returns the event type for which these criteria are valid.

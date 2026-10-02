@@ -55,7 +55,6 @@ import javafx.scene.shape.PathElement;
 import javafx.scene.shape.Shape;
 import javafx.scene.shape.VLineTo;
 import javafx.scene.text.Font;
-import com.sun.jfx.incubator.scene.control.input.InputMapHelper;
 import com.sun.jfx.incubator.scene.control.richtext.Params;
 import com.sun.jfx.incubator.scene.control.richtext.RichTextAreaBehavior;
 import com.sun.jfx.incubator.scene.control.richtext.RichTextAreaHelper;
@@ -63,6 +62,7 @@ import com.sun.jfx.incubator.scene.control.richtext.RichTextAreaSkinHelper;
 import com.sun.jfx.incubator.scene.control.richtext.VFlow;
 import com.sun.jfx.incubator.scene.control.richtext.util.ListenerHelper;
 import com.sun.jfx.incubator.scene.control.richtext.util.RichUtils;
+import jfx.incubator.scene.control.input.SkinInputMap;
 import jfx.incubator.scene.control.richtext.RichTextArea;
 import jfx.incubator.scene.control.richtext.SelectionSegment;
 import jfx.incubator.scene.control.richtext.StyleHandlerRegistry;
@@ -154,9 +154,6 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
     public void install() {
         RichTextArea rta = getSkinnable();
 
-        // TODO will become unnecessary after JDK-8314968
-        rta.getInputMap().setSkinInputMap_INCUBATOR(behavior.getSkinInputMap());
-
         // IMPORTANT: both setOnInputMethodTextChanged() and setInputMethodRequests() are required for IME to work
         if (rta.getOnInputMethodTextChanged() == null) {
             rta.setOnInputMethodTextChanged(inputMethodTextChangedHandler);
@@ -232,6 +229,15 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
 
             super.dispose();
         }
+    }
+
+    /**
+     * Returns the skin input map.
+     * @return the skin input map, can be null.
+     * @since 28
+     */
+    public SkinInputMap getSkinInputMap() {
+        return behavior.getSkinInputMap();
     }
 
     private void handleInputMethodEvent(InputMethodEvent ev) {

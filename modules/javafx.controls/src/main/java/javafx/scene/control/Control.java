@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,18 +28,23 @@ package javafx.scene.control;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
-import com.sun.javafx.scene.control.ControlAcceleratorSupport;
 import javafx.application.Application;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.StringProperty;
 import javafx.collections.ObservableList;
+import javafx.css.CssMetaData;
 import javafx.css.CssParser;
+import javafx.css.Styleable;
+import javafx.css.StyleableObjectProperty;
+import javafx.css.StyleableProperty;
+import javafx.css.StyleableStringProperty;
+import javafx.css.converter.StringConverter;
 import javafx.event.EventHandler;
 import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
@@ -47,19 +52,13 @@ import javafx.scene.Node;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.layout.Region;
 import com.sun.javafx.application.PlatformImpl;
-import javafx.css.CssMetaData;
 import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.scene.NodeHelper;
-import com.sun.javafx.scene.control.ControlHelper;
-import javafx.css.StyleableObjectProperty;
-import javafx.css.StyleableStringProperty;
-import javafx.css.converter.StringConverter;
-import com.sun.javafx.scene.control.Logging;
-import javafx.css.Styleable;
-import javafx.css.StyleableProperty;
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.logging.PlatformLogger.Level;
-
+import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.control.ControlAcceleratorSupport;
+import com.sun.javafx.scene.control.ControlHelper;
+import com.sun.javafx.scene.control.Logging;
 
 /**
  * Base class for all user interface controls. A "Control" is a node in the
@@ -306,6 +305,9 @@ public abstract class Control extends Region implements Skinnable {
                     getChildren().clear();
                 }
             }
+
+            // set skin input map
+            setSkinInputMap(skin);
 
             // let the new skin modify this control
             if (skin != null) {
@@ -972,5 +974,19 @@ public abstract class Control extends Region implements Skinnable {
             skinBase.executeAccessibleAction(action, parameters);
         }
         super.executeAccessibleAction(action, parameters);
+    }
+
+    /// Connects the skin input map to the control one using reflection,
+    /// it's a temporary measure until InputMap/SkinInputMap become public API in JDK-8314968.
+    private void setSkinInputMap(Skin<?> skin) {
+        try {
+            // use reflection to determine whether jfx.incubator.input module is available
+            Class<?> c = Class.forName("com.sun.jfx.incubator.scene.control.input.InputMapHelper");
+            Method m = c.getDeclaredMethod("setSkinInputMap", Control.class, Skin.class);
+            m.setAccessible(true);
+            m.invoke(null, this, skin);
+        } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+            // ignore all errors
+        }
     }
 }

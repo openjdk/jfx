@@ -34,7 +34,7 @@ import javafx.scene.input.KeyCode;
 import com.sun.javafx.PlatformUtil;
 
 /**
- * This class provides a convenient base class for custom Controls with the stateful behaviors.
+ * This class provides a convenient base class for implementing stateful behaviors for custom {@code Control}s.
  * <p>
  * A concrete behavior implementation should do the following:
  * <ol>
@@ -46,16 +46,8 @@ import com.sun.javafx.PlatformUtil;
  *      {@link #registerKey(KeyCode, FunctionTag)},
  *      and
  *      {@code addHandler()} methods.
- * <li> in the corresponding skin's {@code Skin.install()}, set the skin input map to the control's input map.
+ * <li> implement a `public SkinInputMap getSkinInputMap()` method in the corresponding skin
  * </ol>
- * Example (in the actual skin class):
- * <pre>{@code
- *     @Override
- *     public void install() {
- *         super.install();
- *         getSkinnable().getInputMap().setSkinInputMap_INCUBATOR(behavior.getSkinInputMap());
- *   }
- * }</pre>
  *
  * @param <C> the type of the control
  * @since 28
@@ -100,7 +92,7 @@ public abstract class BehaviorBase<C extends Control> {
     }
 
     /**
-     * Maps a function to the specified function tag.
+     * Maps a function to the specified function tag in the skin input map.
      *
      * @param tag the function tag
      * @param function the function
@@ -110,7 +102,7 @@ public abstract class BehaviorBase<C extends Control> {
     }
 
     /**
-     * Maps a function to the specified function tag.
+     * Maps a function to the specified function tag in the skin input map.
      * <p>
      * The event which triggered execution of the function will be consumed if the function returns {@code true}.
      *
@@ -122,10 +114,10 @@ public abstract class BehaviorBase<C extends Control> {
     }
 
     /**
-     * Maps a key binding to the specified function tag.
-     * This method will not override the user mapping.
+     * Maps a key binding to the specified function tag in the skin input map.
+     * This method will do nothing if the key binding is {@code null}.
      *
-     * @param k the key binding, cannot be null
+     * @param k the key binding
      * @param tag the function tag
      */
     protected final void registerKey(KeyBinding k, FunctionTag tag) {
@@ -133,7 +125,7 @@ public abstract class BehaviorBase<C extends Control> {
     }
 
     /**
-     * Maps a key binding to the specified function tag.
+     * Maps a key binding to the specified function tag in the skin input map.
      * This method will not override a user mapping added by {@link #registerKey(KeyBinding,FunctionTag)}.
      *
      * @param code the key code to construct a {@link KeyBinding}
@@ -144,9 +136,9 @@ public abstract class BehaviorBase<C extends Control> {
     }
 
     /**
-     * This convenience method maps the function tag to the specified function, and at the same time
-     * maps the specified key binding to that function tag.
-     * @param tag the function tag
+     * This convenience method maps the function tag to the specified function in the skin input map,
+     * and at the same time maps the specified key binding to that function tag.
+     * @param tag the function tag, cannot be null
      * @param k the key binding
      * @param func the function
      */
@@ -156,12 +148,12 @@ public abstract class BehaviorBase<C extends Control> {
     }
 
     /**
-     * This convenience method maps the function tag to the specified function, and at the same time
-     * maps the specified key binding to that function tag.
+     * This convenience method maps the function tag to the specified function in the skin input map,
+     * and at the same time maps the specified key binding to that function tag.
      * <p>
      * The event which triggered execution of the function will be consumed if the function returns {@code true}.
      *
-     * @param tag the function tag
+     * @param tag the function tag, cannot be null
      * @param k the key binding
      * @param func the function
      */
@@ -171,9 +163,9 @@ public abstract class BehaviorBase<C extends Control> {
     }
 
     /**
-     * This convenience method maps the function tag to the specified function, and at the same time
-     * maps the specified key binding to that function tag.
-     * @param tag the function tag
+     * This convenience method maps the function tag to the specified function in the skin input map,
+     * and at the same time maps the specified key binding to that function tag.
+     * @param tag the function tag, cannot be null
      * @param code the key code
      * @param func the function
      */
@@ -194,7 +186,7 @@ public abstract class BehaviorBase<C extends Control> {
     }
 
     /**
-     * Adds an event handler for the specified event type, in the context of this Behavior.
+     * Adds an event handler for the specified event type in the skin input map.
      *
      * @param <T> the actual event type
      * @param type the event type
@@ -205,7 +197,7 @@ public abstract class BehaviorBase<C extends Control> {
     }
 
     /**
-     * Adds an event handler for the specific event criteria, in the context of this Behavior.
+     * Adds an event handler for the specific event criteria in the skin input map.
      * This is a more specific version of {@link #addHandler(EventType,EventHandler)} method.
      *
      * @param <T> the actual event type

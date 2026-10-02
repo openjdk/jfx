@@ -25,6 +25,10 @@
 
 package com.sun.jfx.incubator.scene.control.input;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import javafx.scene.control.Control;
+import javafx.scene.control.Skin;
 import com.sun.javafx.util.Utils;
 import jfx.incubator.scene.control.input.FunctionTag;
 import jfx.incubator.scene.control.input.InputMap;
@@ -37,6 +41,7 @@ public class InputMapHelper {
     public interface Accessor {
         public void execute(Object source, InputMap inputMap, FunctionTag tag);
         public void executeDefault(Object source, InputMap inputMap, FunctionTag tag);
+        public void setSkinInputMap(InputMap m, SkinInputMap sm);
     }
 
     static {
@@ -58,5 +63,48 @@ public class InputMapHelper {
 
     public static void executeDefault(Object source, InputMap inputMap, FunctionTag tag) {
         accessor.executeDefault(source, inputMap, tag);
+    }
+
+    /// skin can be null
+    public static void setSkinInputMap(Control c, Skin<?> skin) {
+        if (skin != null) {
+            SkinInputMap sm = getSkinInputMap(skin);
+            if (sm != null) {
+                InputMap m = getInputMap(c);
+                if (m != null) {
+                    accessor.setSkinInputMap(m, sm);
+                }
+            }
+        }
+    }
+
+    // will be replaced by Control.getInputMap() JDK-8314968
+    private static InputMap getInputMap(Control c) {
+        try {
+            Method m = c.getClass().getDeclaredMethod("getInputMap");
+            var x = m.invoke(c);
+            if (x instanceof InputMap im) {
+                return im;
+            }
+        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+            // ignore all errors
+        }
+        return null;
+    }
+
+    // will be replaced by Skin.getSkinInputMap() JDK-8314968
+    private static SkinInputMap getSkinInputMap(Skin<?> skin) {
+        if (skin != null) {
+            try {
+                Method m = skin.getClass().getDeclaredMethod("getSkinInputMap");
+                var x = m.invoke(skin);
+                if (x instanceof SkinInputMap sm) {
+                    return sm;
+                }
+            } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+                // ignore all errors
+            }
+        }
+        return null;
     }
 }
