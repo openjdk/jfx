@@ -2052,9 +2052,8 @@ allprojects {
     if (project == rootProject) {
        return
     }
-    if (project.path.startsWith(":apps")) {
-        // Lets handle the apps tree differently, as it is a collection of ant builds,
-        // and the ant importer collides with the 'apply plugin:java'
+    // Opt out project that are built externally since this configuration collides with 'apply plugin:java'
+    if (project.path.startsWith(":apps") || project.path.startsWith(":manualTests")) {
         return
     }
 
@@ -4382,6 +4381,9 @@ void setupLintOptions(Task compile, String lintOpts, String extraLintOpts) {
 }
 
 allprojects {
+    if (project.path.startsWith(":manualTests")) {
+        return
+    }
     // The following block is a workaround for the fact that presently Gradle
     // can't set the -XDignore.symbol.file flag, because it appears that the
     // javac API is lacking support for it. So what we'll do is find any Compile
@@ -4811,6 +4813,11 @@ task apps() {
     dependsOn(copyAppsArtifacts)
 }
 
+
+task manualTests {
+    dependsOn(":manualTests:build")
+}
+
 task findbugs() {
     dependsOn(sdk)
 
@@ -4852,7 +4859,7 @@ task zips() {
 }
 
 task all() {
-    dependsOn(sdk, shims, publicExports, apps, perf, zips)
+    dependsOn(sdk, shims, publicExports, manualTests, apps, perf, zips)
 }
 
 
