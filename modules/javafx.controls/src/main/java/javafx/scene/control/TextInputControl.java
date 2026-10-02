@@ -1757,5 +1757,4 @@ public abstract class TextInputControl extends Control {
         int c = Character.codePointAt(text, ix);
         return Character.isWhitespace(c);
     }
-
 }

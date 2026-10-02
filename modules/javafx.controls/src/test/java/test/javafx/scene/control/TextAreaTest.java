@@ -562,7 +562,8 @@ public class TextAreaTest {
     }
 
     // test against JDK-8264588
-    @Test public void previousWord() {
+    @Test
+    public void previousWord() {
         txtArea.setText("This is Bug #123456");
         txtArea.positionCaret(16); // in the middle of 123456
         txtArea.previousWord();
