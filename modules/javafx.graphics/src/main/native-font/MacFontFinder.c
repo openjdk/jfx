@@ -222,7 +222,7 @@ Java_com_sun_javafx_font_MacFontFinder_getCascadeList
         CFStringRef file = url ? CFURLCopyFileSystemPath(url, kCFURLPOSIXPathStyle) : NULL;
 
         jstring jFontDisplayName = createJavaString(env, displayName);
-        CFRelease(displayName);
+        if (displayName != NULL) {CFRelease(displayName);}
         jstring jFile = createJavaString(env, file);
         if (file != NULL) CFRelease(file);
 
