@@ -10004,39 +10004,17 @@ public abstract sealed class Node
     // over other CSS states.
     //
     private void recreateStyleHelper() {
-
-        // Hang on to current styleHelper so we can know whether
-        // createStyleHelper returned the same styleHelper
-        final CssStyleHelper oldStyleHelper = styleHelper;
-
-        // If a descendant already rebuilt our helper on demand, createStyleHelper below will find it
-        // reusable and return the same instance - but this node's children have not been visited yet,
-        // so their cached first styleable ancestor may still be stale.
-        final boolean resolvedEarly = cssHelperResolvedEarly;
-
-        cssHelperResolvedEarly = false;
-
         // CSS state is "REAPPLY"
         cssFlag = CssFlags.REAPPLY;
 
-        styleHelper = CssStyleHelper.createStyleHelper(this);
+        final boolean updateChildren = CssStyleHelper.createStyleHelper(this);
 
         // REAPPLY to my children, too.
         if (this instanceof Parent) {
-
             // minor optimization to avoid calling createStyleHelper on children
             // when we know there will not be any change in the style maps.
             final boolean visitChildren =
-                    // If our helper was rebuilt early by a descendant, the other children still need
-                    // to be visited - see above.
-                    resolvedEarly ||
-                    // If we don't have a styleHelper, then we should visit the children of this parent
-                    // since there might be styles that depend on being a child of this parent.
-                    // In other words, we have .a > .b { blah: blort; }, but no styles for ".a" itself.
-                    styleHelper == null ||
-                    // if the styleHelper changed, then we definitely need to visit the children
-                    // since the new styles may have an effect on the children's styles calculated values.
-                    (oldStyleHelper != styleHelper) ||
+                    updateChildren ||
                     // If our parent is null, then we're the root of a scene or sub-scene, most likely,
                     // and we'll visit children because elsewhere the code depends on root.reapplyCSS()
                     // to force css to be reapplied (whether it needs to be or not).
@@ -10047,7 +10025,6 @@ public abstract sealed class Node
                     (getParent().cssFlag != CssFlags.CLEAN);
 
             if (visitChildren) {
-
                 List<Node> children = ((Parent) this).getChildren();
                 for (int n = 0, nMax = children.size(); n < nMax; n++) {
                     Node child = children.get(n);

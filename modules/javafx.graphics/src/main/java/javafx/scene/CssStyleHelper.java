@@ -88,16 +88,27 @@ final class CssStyleHelper {
     }
 
     /**
-     * Creates a new {@link CssStyleHelper} for the {@link Node}, or null if it does not need one
-     * due to no style matching it.
+     * Creates the {@link CssStyleHelper} for the {@link Node} and installs it, or set it to null
+     * if there are no style matching it.
      *
-     * @return the {@link CssStyleHelper} or null
+     * @return whether the children of the node must be updated as well.
+     * This the case for when:
+     * <ul>
+     *     <li>
+     *         the node has no style helper (as styles may depend on being a child of it)
+     *     </li>
+     *     <li>
+     *         its style helper was replaced,
+     *     </li>
+     *     <li>
+     *         was already replaced by a descendant before
+     *     </li>
+     * </ul>
      */
-    static CssStyleHelper createStyleHelper(final Node node) {
+    static boolean createStyleHelper(final Node node) {
         List<Styleable> path = createStyleableChain(node);
 
         Node styleableAncestor = null;
-
         for (int index = path.size() - 1; index > 0; index--) {
             if (!(path.get(index) instanceof Node ancestor)) {
                 continue;
@@ -107,8 +118,6 @@ final class CssStyleHelper {
                 ancestor.cssHelperResolvedEarly = true;
                 boolean propertiesReset = updateStyleHelper(ancestor, path, index, styleableAncestor);
 
-                // Listeners running while the old helper reset properties may have changed the hierarchy
-                // or made an ancestor stale again, so start over.
                 if (propertiesReset) {
                     return createStyleHelper(node);
                 }
@@ -119,19 +128,24 @@ final class CssStyleHelper {
             }
         }
 
+        CssStyleHelper oldHelper = node.styleHelper;
+        boolean resolvedEarly = node.cssHelperResolvedEarly;
+        node.cssHelperResolvedEarly = false;
+
         updateStyleHelper(node, path, 0, styleableAncestor);
-        return node.styleHelper;
+        return resolvedEarly || node.styleHelper == null || node.styleHelper != oldHelper;
     }
 
     /**
-     * Creates the {@link CssStyleHelper} for the node at {@code index} of {@code path} and installs it.
+     * Creates or reuses the {@link CssStyleHelper} for the node at {@code index} of {@code path} and installs it.
+     * Sets null, if there are no styles matching this node.
      * <p>
      * The new helper is installed before the properties of the old helper are reset, since resetting
-     * them runs listeners which must never observe this node with an outdated helper.
+     * runs listeners which must never observe this node with an outdated helper.
      * For the same reason, the node is only marked as no longer stale once the new helper is installed.
      *
      * @return whether properties of the old helper were reset,
-     * which runs listeners that may have modified the scene graph
+     * which runs listeners that may have modified the hierarchy or made an ancestor stale again
      */
     private static boolean updateStyleHelper(Node node, List<Styleable> path, int index, Node styleableAncestor) {
         final CssStyleHelper currentHelper = node.styleHelper;
@@ -154,9 +168,6 @@ final class CssStyleHelper {
         final StyleMap styleMap =
                 StyleManager.getInstance().findMatchingStyles(node, node.getSubScene(), triggerStates);
 
-        //
-        // reuse the existing styleHelper if possible.
-        //
         final Styleable parent = index + 1 < path.size() ? path.get(index + 1) : null;
         if (canReuseStyleHelper(node, currentHelper, styleMap, parent, styleableAncestor)) {
             //
@@ -197,13 +208,11 @@ final class CssStyleHelper {
             }
 
             if (!mightInherit) {
-                // There are no styles in the StyleMap and no styles inherit,
-                // so this node does not need a StyleHelper.
+                // There are no styles in the StyleMap and no styles inherit, so this node does not need a style helper.
                 node.styleHelper = null;
                 node.cssHelperStale = false;
 
-                // If this node had a style helper, then reset properties to their initial value
-                // since the node won't have a style helper after this call
+                // If this node had a style helper, we need to reset properties back to their initial value.
                 return currentHelper != null && currentHelper.resetToInitialValues(node, styleMap);
             }
         }
@@ -217,8 +226,8 @@ final class CssStyleHelper {
         node.cssHelperStale = false;
 
         // If this node had a style helper, we need to reset all properties that will be unset with the
-        // new style map to their initial values. Properties that remain set with the new style map carry
-        // over to the new style helper.
+        // new style map to their initial values.
+        // Properties that remain set with the new style map carry over to the new style helper.
         if (currentHelper == null) {
             return false;
         }
@@ -230,7 +239,7 @@ final class CssStyleHelper {
     }
 
     /**
-     * Collects the chain of {@link Styleable} nodes up to the root, so stale ancestors can be updated top-down.
+     * Collects the chain of {@link Styleable} nodes up to the root.
      *
      * @param styleable the {@link Styleable}
      * @return the {@link Styleable} chain until the root
@@ -249,8 +258,7 @@ final class CssStyleHelper {
      * Adds the pseudo-classes found when matching selectors to the trigger states of the node and its parents.
      */
     private static void updateTriggerStates(List<Styleable> path, int startIndex, PseudoClassState[] triggerStates) {
-        // make sure parent's transition states include the pseudo-classes
-        // found when matching selectors
+        // make sure parent's transition states include the pseudo-classes found when matching selectors
         for (int triggerIndex = 0; triggerIndex < triggerStates.length; triggerIndex++) {
             // TODO: this means that a style like .menu-item:hover won't work. Need to separate CssStyleHelper tree from scene-graph tree
             if (!(path.get(startIndex + triggerIndex) instanceof Node styleableNode)) {
@@ -259,8 +267,6 @@ final class CssStyleHelper {
 
             final PseudoClassState triggerState = triggerStates[triggerIndex];
 
-            // if there is nothing in triggerState, then continue since there
-            // isn't any pseudo-class state that might trigger a state change
             if (triggerState != null && !triggerState.isEmpty()) {
                 if (styleableNode.cssTriggerStates == null) {
                     styleableNode.cssTriggerStates = new PseudoClassState();
@@ -272,6 +278,8 @@ final class CssStyleHelper {
 
     /**
      * Whether the font of the node at {@code index} of {@code path} or one of its ancestors was set by the user.
+     *
+     * @return true, if the user was set by the user, false otherwise
      */
     private static boolean isUserSetFont(List<Styleable> path, int index) {
         for (int pathIndex = index; pathIndex < path.size(); pathIndex++) {
@@ -286,7 +294,7 @@ final class CssStyleHelper {
     }
 
     private static CssStyleHelper getStyleHelper(Node n) {
-        return (n != null)? n.styleHelper : null;
+        return (n != null) ? n.styleHelper : null;
     }
 
     private static Node getFirstStyleableAncestor(Styleable styleable) {
@@ -2144,23 +2152,29 @@ final class CssStyleHelper {
      * @return
      */
     static List<Style> getMatchingStyles(final Styleable styleable, final CssMetaData styleableProperty) {
-
-        if (!(styleable instanceof Node)) return Collections.<Style>emptyList();
+        if (!(styleable instanceof Node)) return Collections.emptyList();
 
         Node node = (Node)styleable;
-        final CssStyleHelper helper = (node.styleHelper != null) ? node.styleHelper : createStyleHelper(node);
+        if (node.styleHelper == null) {
+            createStyleHelper(node);
+        }
+
+        final CssStyleHelper helper = node.styleHelper;
 
         if (helper != null) {
             return helper.getMatchingStyles(node, styleableProperty, false);
         }
         else {
-            return Collections.<Style>emptyList();
+            return Collections.emptyList();
         }
     }
 
     static Map<StyleableProperty<?>, List<Style>> getMatchingStyles(Map<StyleableProperty<?>, List<Style>> map, final Node node) {
+        if (node.styleHelper == null) {
+            createStyleHelper(node);
+        }
 
-        final CssStyleHelper helper = (node.styleHelper != null) ? node.styleHelper : createStyleHelper(node);
+        final CssStyleHelper helper = node.styleHelper;
         if (helper != null) {
             if (map == null) map = new HashMap<>();
             for (CssMetaData metaData : node.getCssMetaData()) {
