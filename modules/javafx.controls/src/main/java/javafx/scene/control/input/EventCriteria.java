@@ -28,22 +28,23 @@ import javafx.event.Event;
 import javafx.event.EventType;
 
 /**
- * This interface enables wider control in specifying conditional matching logic when adding skin/behavior handlers.
+ * This interface provides finer control over specifying conditional matching logic when adding skin/behavior handlers.
  *
  * @param <T> the type of the event
  * @since 999 TODO
  */
+ // TODO is this really necessary?
 public interface EventCriteria<T extends Event> {
     /**
-     * Returns the event type for which this criteria are valid.
+     * Returns the event type for which these criteria are valid.
      * @return the event type
      */
     public EventType<T> getEventType();
 
     /**
-     * Returns true if the specified event matches this criteria.
+     * Returns true if the specified event matches these criteria.
      * @param ev the event
-     * @return true if match occurs
+     * @return true if a match occurs
      */
     public boolean isEventAcceptable(T ev);
 }

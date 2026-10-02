@@ -25,8 +25,11 @@
 
 package com.sun.javafx.scene.control.input;
 
+import javafx.scene.control.Control;
+import javafx.scene.control.Skin;
 import javafx.scene.control.input.FunctionTag;
 import javafx.scene.control.input.InputMap;
+import javafx.scene.control.input.SkinInputMap;
 import com.sun.javafx.util.Utils;
 
 /**
@@ -36,6 +39,7 @@ public class InputMapHelper {
     public interface Accessor {
         public void execute(Object source, InputMap inputMap, FunctionTag tag);
         public void executeDefault(Object source, InputMap inputMap, FunctionTag tag);
+        public void setSkinInputMap(InputMap m, SkinInputMap sm);
     }
 
     static {
@@ -57,5 +61,15 @@ public class InputMapHelper {
 
     public static void executeDefault(Object source, InputMap inputMap, FunctionTag tag) {
         accessor.executeDefault(source, inputMap, tag);
+    }
+
+    /// skin can be null
+    public static void setSkinInputMap(Control c, Skin<?> skin) {
+        if (skin != null) {
+            SkinInputMap sm = skin.getSkinInputMap();
+            if (sm != null) {
+                accessor.setSkinInputMap(c.getInputMap(), sm);
+            }
+        }
     }
 }

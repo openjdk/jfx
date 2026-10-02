@@ -26,8 +26,8 @@ package javafx.scene.control.input;
 
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.BooleanSupplier;
 import javafx.event.Event;
@@ -40,39 +40,44 @@ import com.sun.javafx.scene.control.input.KeyEventMapper;
 import com.sun.javafx.scene.control.input.PHList;
 
 /**
- * The Input Map for use by the Skin.
+ * An Input Map for use by a Skin.
  * <p>
- * Skins whose behavior encapsulates state information must use a Stateful variant obtained with
+ * Skins whose behavior encapsulates state information must use a {@code Stateful} variant obtained with
  * the {@link #create()} factory method.
  * <p>
- * Skins whose behavior requires no state, or when state is fully encapsulated by the Control itself,
- * could use a Stateless variant obtained with the {@link #createStateless()} method.
+ * Skins whose behavior requires no state or whose state is fully encapsulated by the Control,
+ * could use the {@code Stateless} variant obtained with the {@link #createStateless()} method.
  *
  * @since 999 TODO
  */
 public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInputMap.Stateless {
-    /**
-     * <pre> KeyBinding -> FunctionTag
-     * FunctionTag -> Runnable or FunctionHandler
-     * EventType -> PHList</pre>
-     */
+    /// ```
+    /// KeyBinding -> FunctionTag
+    /// FunctionTag -> Runnable or FunctionHandler
+    /// EventType -> PHList
+    /// ```
     final HashMap<Object, Object> map = new HashMap<>();
     final KeyEventMapper kmapper = new KeyEventMapper();
+    private boolean locked;
 
     /**
      * Creates a skin input map.
      */
-    public SkinInputMap() {
+    SkinInputMap() {
     }
 
     /**
      * Adds an event handler for the specified event type, in the context of this skin.
      *
      * @param <T> the actual event type
-     * @param type the event type
-     * @param handler the event handler
+     * @param type the event type, cannot be null
+     * @param handler the event handler, cannot be null
+     * @throws IllegalStateException if called after connecting to the Control
      */
     public final <T extends Event> void addHandler(EventType<T> type, EventHandler<T> handler) {
+        checkLock();
+        Objects.requireNonNull(type);
+        Objects.requireNonNull(handler);
         putHandler(type, EventHandlerPriority.SKIN_HIGH, handler);
     }
 
@@ -81,10 +86,14 @@ public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInp
      * This is a more specific version of {@link #addHandler(EventType,EventHandler)} method.
      *
      * @param <T> the actual event type
-     * @param criteria the matching criteria
-     * @param handler the event handler
+     * @param criteria the matching criteria, cannot be null
+     * @param handler the event handler, cannot be null
+     * @throws IllegalStateException if called after connecting to the Control
      */
     public final <T extends Event> void addHandler(EventCriteria<T> criteria, EventHandler<T> handler) {
+        checkLock();
+        Objects.requireNonNull(criteria);
+        Objects.requireNonNull(handler);
         EventType<T> type = criteria.getEventType();
         putHandler(type, EventHandlerPriority.SKIN_HIGH, new EventHandler<T>() {
             @Override
@@ -112,24 +121,38 @@ public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInp
 
     /**
      * Maps a key binding to the specified function tag.
+     * This method will do nothing if the key binding is {@code null}.
      *
      * @param k the key binding
      * @param tag the function tag
+     * @throws IllegalStateException if called after connecting to the Control
      */
     public final void registerKey(KeyBinding k, FunctionTag tag) {
-        map.put(k, tag);
-        kmapper.addType(k);
+        if (k != null) {
+            checkLock();
+            map.put(k, tag);
+            kmapper.addType(k);
+        }
     }
 
     /**
      * Maps a key binding to the specified function tag.
+     * This method will do nothing if the key code is {@code null}.
      *
      * @param code the key code to construct a {@link KeyBinding}
-     * @param tag the function tag
+     * @param tag the function tag, cannot be null
      */
     public final void registerKey(KeyCode code, FunctionTag tag) {
-        registerKey(KeyBinding.of(code), tag);
+        if (code != null) {
+            registerKey(KeyBinding.of(code), tag);
+        }
     }
+
+    /**
+     * Indicates whether this skin input map is stateless.
+     * @return true if stateless
+     */
+    abstract boolean isStateless();
 
     Object resolve(KeyBinding k) {
         return map.get(k);
@@ -171,12 +194,15 @@ public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInp
      * This convenience method registers a copy of the behavior-specific mappings from one key binding to another.
      * The method does nothing if no behavior specific mapping can be found.
      * @param existing the existing key binding
-     * @param newk the new key binding
+     * @param newBinding the new key binding
+     * @throws IllegalStateException if called after connecting to the Control
      */
-    public final void duplicateMapping(KeyBinding existing, KeyBinding newk) {
+    public final void duplicateMapping(KeyBinding existing, KeyBinding newBinding) {
+        checkLock();
         Object x = map.get(existing);
         if (x != null) {
-            map.put(newk, x);
+            map.put(newBinding, x);
+            kmapper.addType(newBinding);
         }
     }
 
@@ -196,17 +222,6 @@ public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInp
         return false;
     }
 
-    void unbind(FunctionTag tag) {
-        Iterator<Map.Entry<Object, Object>> it = map.entrySet().iterator();
-        while (it.hasNext()) {
-            Map.Entry<Object, Object> en = it.next();
-            if (tag == en.getValue()) {
-                // the entry must be KeyBinding -> FunctionTag
-                it.remove();
-            }
-        }
-    }
-
     void forEach(TriConsumer client) {
         for (Map.Entry<Object, Object> en : map.entrySet()) {
             if (en.getKey() instanceof EventType type) {
@@ -216,6 +231,17 @@ public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInp
                     return true;
                 });
             }
+        }
+    }
+
+    /// Makes the input map immutable
+    void lock() {
+        locked = true;
+    }
+
+    void checkLock() {
+        if (locked) {
+            throw new IllegalStateException("SkinInputMap is immutable once connected to the control.");
         }
     }
 
@@ -249,10 +275,13 @@ public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInp
         /**
          * Maps a function to the specified function tag.
          *
-         * @param tag the function tag
+         * @param tag the function tag, cannot be null
          * @param function the function
+         * @throws IllegalStateException if called after connecting to the Control
          */
         public final void registerFunction(FunctionTag tag, Runnable function) {
+            checkLock();
+            Objects.requireNonNull(tag);
             map.put(tag, function);
         }
 
@@ -261,17 +290,21 @@ public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInp
          * <p>
          * The event which triggered execution of the function will be consumed if the function returns {@code true}.
          *
-         * @param tag the function tag
-         * @param function the function
+         * @param tag the function tag, cannot be null
+         * @param function the function, cannot be null
+         * @throws IllegalStateException if called after connecting to the Control
          */
         public final void registerFunction(FunctionTag tag, BooleanSupplier function) {
+            checkLock();
+            Objects.requireNonNull(tag);
+            Objects.requireNonNull(function);
             map.put(tag, function);
         }
 
         /**
          * This convenience method maps the function tag to the specified function, and at the same time
          * maps the specified key binding to that function tag.
-         * @param tag the function tag
+         * @param tag the function tag, cannot be null
          * @param k the key binding
          * @param func the function
          */
@@ -283,7 +316,7 @@ public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInp
         /**
          * This convenience method maps the function tag to the specified function, and at the same time
          * maps the specified key binding to that function tag.
-         * @param tag the function tag
+         * @param tag the function tag, cannot be null
          * @param code the key code
          * @param func the function
          */
@@ -291,11 +324,16 @@ public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInp
             registerFunction(tag, func);
             registerKey(KeyBinding.of(code), tag);
         }
+
+        @Override
+        boolean isStateless() {
+            return false;
+        }
     }
 
     /**
      * SkinInputMap for skins that either encapsulate the state fully in their Controls,
-     * or don't require a state at all.
+     * or don't require the state at all.
      *
      * @param <C> the type of Control
      */
@@ -317,7 +355,7 @@ public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInp
         }
 
         /**
-         * The function handler that allows to control whether the corresponding event will get consumed.
+         * The function handler that allows to conditionally consume the corresponding event.
          * @param <C> the type of Control
          */
         public interface FHandlerConditional<C> {
@@ -336,10 +374,13 @@ public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInp
         /**
          * Maps a function to the specified function tag.
          *
-         * @param tag the function tag
+         * @param tag the function tag, cannot be null
          * @param function the function
+         * @throws IllegalStateException if called after connecting to the Control
          */
         public final void registerFunction(FunctionTag tag, FHandler<C> function) {
+            checkLock();
+            Objects.requireNonNull(tag);
             map.put(tag, function);
         }
 
@@ -347,17 +388,21 @@ public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInp
          * Maps a function to the specified function tag.
          * This method allows for controlling whether the matching event will be consumed or not.
          *
-         * @param tag the function tag
-         * @param function the function
+         * @param tag the function tag, cannot be null
+         * @param function the function, cannot be null
+         * @throws IllegalStateException if called after connecting to the Control
          */
         public final void registerFunction(FunctionTag tag, FHandlerConditional<C> function) {
+            checkLock();
+            Objects.requireNonNull(tag);
+            Objects.requireNonNull(function);
             map.put(tag, function);
         }
 
         /**
          * This convenience method maps the function tag to the specified function, and at the same time
          * maps the specified key binding to that function tag.
-         * @param tag the function tag
+         * @param tag the function tag, cannot be null
          * @param k the key binding
          * @param func the function
          */
@@ -369,13 +414,18 @@ public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInp
         /**
          * This convenience method maps the function tag to the specified function, and at the same time
          * maps the specified key binding to that function tag.
-         * @param tag the function tag
+         * @param tag the function tag, cannot be null
          * @param code the key code
          * @param func the function
          */
         public final void register(FunctionTag tag, KeyCode code, FHandler<C> func) {
             registerFunction(tag, func);
             registerKey(KeyBinding.of(code), tag);
+        }
+
+        @Override
+        boolean isStateless() {
+            return true;
         }
     }
 }

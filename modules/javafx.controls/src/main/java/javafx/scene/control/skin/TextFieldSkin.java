@@ -47,6 +47,7 @@ import javafx.scene.control.Control;
 import javafx.scene.control.IndexRange;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
+import javafx.scene.control.input.SkinInputMap;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
@@ -395,7 +396,6 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
         behavior = (c instanceof PasswordField f) ?
             new PasswordFieldBehavior(f, this) :
             new TextFieldBehavior(c, this);
-        setSkinInputMap(behavior.getSkinInputMap());
     }
 
     @Override
@@ -409,6 +409,11 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
                 behavior = null;
             }
         }
+    }
+
+    @Override
+    public SkinInputMap getSkinInputMap() {
+        return behavior.getSkinInputMap();
     }
 
     /** {@inheritDoc} */

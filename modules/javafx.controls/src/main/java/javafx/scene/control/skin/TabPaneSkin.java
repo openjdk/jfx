@@ -79,6 +79,7 @@ import javafx.scene.control.TabPane.TabClosingPolicy;
 import javafx.scene.control.TabPane.TabDragPolicy;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.Tooltip;
+import javafx.scene.control.input.SkinInputMap;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.ContextMenuEvent;
@@ -257,13 +258,6 @@ public class TabPaneSkin extends SkinBase<TabPane> {
      **************************************************************************/
 
     @Override
-    public void install() {
-        super.install();
-        // install stateless behavior
-        TabPaneBehavior.install(getSkinnable());
-    }
-
-    @Override
     public void dispose() {
         if (getSkinnable() == null) {
             return;
@@ -285,6 +279,12 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         }
 
         super.dispose();
+    }
+
+    @Override
+    public SkinInputMap getSkinInputMap() {
+        // stateless input map
+        return TabPaneBehavior.INPUT_MAP;
     }
 
     /** {@inheritDoc} */

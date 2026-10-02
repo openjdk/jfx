@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,7 +45,7 @@ import javafx.scene.input.MouseEvent;
 // now we have to manually drag the control instance everywhere.
 // I don't think this is worth it.
 public class TabPaneBehavior {
-    private static final SkinInputMap.Stateless<TabPane> inputMap = createInputMap();
+    public static final SkinInputMap.Stateless<TabPane> INPUT_MAP = createInputMap();
 
     // stateless behavior: one SkinInputMap for all TabPanes
     private TabPaneBehavior() { }
@@ -75,10 +75,6 @@ public class TabPaneBehavior {
         m.addHandler(MouseEvent.MOUSE_PRESSED, TabPaneBehavior::requestFocus);
 
         return m;
-    }
-
-    public static void install(TabPane control) {
-        control.getInputMap().setSkinInputMap(inputMap);
     }
 
     public static void selectTab(TabPane c, Tab tab) {

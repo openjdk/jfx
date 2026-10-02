@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -51,6 +51,7 @@ import javafx.scene.control.Control;
 import javafx.scene.control.IndexRange;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextArea;
+import javafx.scene.control.input.SkinInputMap;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Region;
@@ -799,12 +800,6 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
     }
 
     @Override
-    public void install() {
-        super.install();
-        setSkinInputMap(behavior.getSkinInputMap());
-    }
-
-    @Override
     public void dispose() {
         if (getSkinnable() != null) {
             getSkinnable().removeEventFilter(ScrollEvent.ANY, scrollEventFilter);
@@ -816,6 +811,11 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
 
             super.dispose();
         }
+    }
+
+    @Override
+    public SkinInputMap getSkinInputMap() {
+        return behavior.getSkinInputMap();
     }
 
     /** {@inheritDoc} */

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,6 +48,7 @@ import javafx.scene.control.ColorPicker;
 import javafx.scene.control.Control;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.scene.control.input.SkinInputMap;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
@@ -255,17 +256,16 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
      **************************************************************************/
 
     @Override
-    public void install() {
-        super.install();
-        setSkinInputMap(behavior.getSkinInputMap());
-    }
-
-    @Override
     public void dispose() {
         if (behavior != null) {
             behavior.dispose();
         }
         super.dispose();
+    }
+
+    @Override
+    public SkinInputMap getSkinInputMap() {
+        return behavior.getSkinInputMap();
     }
 
     /** {@inheritDoc} */

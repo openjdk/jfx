@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,6 +36,7 @@ import javafx.scene.Node;
 import javafx.scene.control.Control;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.TextField;
+import javafx.scene.control.input.SkinInputMap;
 import javafx.util.StringConverter;
 import com.sun.javafx.scene.control.DatePickerContent;
 import com.sun.javafx.scene.control.DatePickerHijrahContent;
@@ -159,17 +160,16 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
      **************************************************************************/
 
     @Override
-    public void install() {
-        super.install();
-        setSkinInputMap(behavior.getSkinInputMap());
-    }
-
-    @Override
     public void dispose() {
         if (behavior != null) {
             behavior.dispose();
         }
         super.dispose();
+    }
+
+    @Override
+    public SkinInputMap getSkinInputMap() {
+        return behavior.getSkinInputMap();
     }
 
     /** {@inheritDoc} */

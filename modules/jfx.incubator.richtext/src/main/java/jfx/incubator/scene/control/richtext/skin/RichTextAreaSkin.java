@@ -152,7 +152,6 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
     @Override
     public void install() {
         RichTextArea rta = getSkinnable();
-        rta.getInputMap().setSkinInputMap(behavior.getSkinInputMap());
 
         // IMPORTANT: both setOnInputMethodTextChanged() and setInputMethodRequests() are required for IME to work
         if (rta.getOnInputMethodTextChanged() == null) {

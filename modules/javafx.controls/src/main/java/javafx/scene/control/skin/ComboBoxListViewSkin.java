@@ -49,6 +49,7 @@ import javafx.scene.control.SelectionMode;
 import javafx.scene.control.SelectionModel;
 import javafx.scene.control.SingleSelectionModel;
 import javafx.scene.control.TextField;
+import javafx.scene.control.input.SkinInputMap;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseEvent;
 import javafx.util.Callback;
@@ -238,17 +239,16 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
      **************************************************************************/
 
     @Override
-    public void install() {
-        super.install();
-        setSkinInputMap(behavior.getSkinInputMap());
-    }
-
-    @Override
     public void dispose() {
         if (behavior != null) {
             behavior.dispose();
         }
         super.dispose();
+    }
+
+    @Override
+    public SkinInputMap getSkinInputMap() {
+        return behavior.getSkinInputMap();
     }
 
     /** {@inheritDoc} */

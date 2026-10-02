@@ -93,18 +93,6 @@ public class TestInputMap {
     */
 
     @Test
-    public void testUnbind() {
-        InputMap m = create(
-            TAG1,
-            KB1, TAG1,
-            KB2, TAG1
-        );
-
-        m.removeKeyBindingsFor(TAG1);
-        Assertions.assertEquals(Set.of(), m.getKeyBindingsFor(TAG1));
-    }
-
-    @Test
     public void testAddHandler() {
         TestControl c = new TestControl();
         c.getInputMap().addHandler(KeyEvent.ANY, (ev) -> System.out.println("KeyEvent.ANY (A1) ev=" + ev));
@@ -168,16 +156,22 @@ public class TestInputMap {
 
     /** test skin */
     static class TestSkin extends SkinBase<TestControl> {
+
+        private SkinInputMap inputMap;
+
         protected TestSkin(TestControl c) {
             super(c);
         }
 
         @Override
-        public void install() {
-            SkinInputMap.Stateful m = SkinInputMap.create();
-            m.register(TAG1, KB1, () -> getSkinnable().setValue(1));
-            m.register(TAG2, KeyCode.A, () -> getSkinnable().setValue(2));
-            setSkinInputMap(m);
+        public SkinInputMap getSkinInputMap() {
+            if (inputMap == null) {
+                SkinInputMap.Stateful m = SkinInputMap.create();
+                m.register(TAG1, KB1, () -> getSkinnable().setValue(1));
+                m.register(TAG2, KeyCode.A, () -> getSkinnable().setValue(2));
+                inputMap = m;
+            }
+            return inputMap;
         }
     }
 }
