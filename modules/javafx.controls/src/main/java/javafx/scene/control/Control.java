@@ -315,6 +315,9 @@ public abstract class Control extends Region implements Skinnable {
                 skin.install();
             }
 
+            // set skin input map
+            InputMapHelper.setSkinInputMap(getInputMap(), skin);
+
             // clear out the styleable properties so that the list is rebuilt
             // next time they are requested.
             styleableProperties = null;

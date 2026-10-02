@@ -64,11 +64,11 @@ public class InputMapHelper {
     }
 
     /// skin can be null
-    public static void setSkinInputMap(Control c, Skin<?> skin) {
+    public static void setSkinInputMap(InputMap m, Skin<?> skin) {
         if (skin != null) {
             SkinInputMap sm = skin.getSkinInputMap();
             if (sm != null) {
-                accessor.setSkinInputMap(c.getInputMap(), sm);
+                accessor.setSkinInputMap(m, sm);
             }
         }
     }

@@ -292,8 +292,7 @@ public final class InputMap {
 
     /**
      * Reverts all the key bindings set by the application.
-     * This method restores key bindings set by the skin which were overwritten by the application,
-     * including those removed by {@link #removeKeyBindingsFor(FunctionTag)}.
+     * This method restores key bindings set by the skin which were overwritten by the application.
      */
     public void resetKeyBindings() {
         Iterator<Map.Entry<Object, Object>> it = map.entrySet().iterator();
