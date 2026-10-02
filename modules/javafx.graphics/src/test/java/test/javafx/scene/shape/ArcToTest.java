@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,7 @@ package test.javafx.scene.shape;
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.PathIterator;
 import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.shape.PathElementHelper;
 import com.sun.javafx.sg.prism.NGPath;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
@@ -83,8 +84,6 @@ public class ArcToTest {
         TestUtils.testBooleanPropertyGetterSetter(new ArcTo(), "sweepFlag");
     }
 
-    //TODO test addTo
-
     @Test
     public void testDoublePropertySynced_X() throws Exception {
         checkSyncedProperty("x", Coords.X, 200.0);
@@ -100,6 +99,19 @@ public class ArcToTest {
         String s = new ArcTo().toString();
         assertNotNull(s);
         assertFalse(s.isEmpty());
+    }
+
+    @Test
+    void testSemicircleArcTo() {
+        float x = 3;
+        float y = 19;
+
+        Path2D path = new Path2D();
+        path.moveTo(0, 0);
+        PathElementHelper.addTo(new ArcTo(1, 1, 0, x, y, false, true), path);
+
+        assertEquals(x, path.getCurrentX(), 0.001f);
+        assertEquals(y, path.getCurrentY(), 0.001f);
     }
 
     private void checkSyncedProperty(String propertyName, Coords coord, double expected)

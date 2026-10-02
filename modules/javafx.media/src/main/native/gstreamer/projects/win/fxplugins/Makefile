@@ -27,7 +27,8 @@ SYSTEM_LIBS = glib-lite.lib \
               oleaut32.lib \
               strmiids.lib \
               Mfplat.lib \
-              mfuuid.lib
+              mfuuid.lib \
+              Mfreadwrite.lib
 
 LDFLAGS = -out:$(shell cygpath -ma $(TARGET)) -nologo -incremental:no -libpath:$(shell cygpath -ma $(BUILD_DIR)) -dll $(SYSTEM_LIBS) \
           -nodefaultlib:libcmt -manifest -manifestfile:$(MANIFEST) -manifestuac:"level='asInvoker' uiAccess='false'" -implib:$(IMPLIB) \
@@ -60,6 +61,8 @@ CPP_SOURCES = dshowwrapper/Allocator.cpp \
               dshowwrapper/Sink.cpp \
               dshowwrapper/Src.cpp \
               mfwrapper/mfwrapper.cpp \
+              mfwrapper/mfdemux.cpp \
+              mfwrapper/mfgstbytestream.cpp \
               mfwrapper/mfgstbuffer.cpp
 
 COMPILER_FLAGS = -nologo -W3 -WX- -EHsc -GS -fp:precise \

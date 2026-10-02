@@ -1066,6 +1066,15 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
                  * look for column headers */
                 return getTableHeaderRow();
             }
+            case VISIBLE_ITEM_RANGE: {
+                I firstVisibleCell = flow.getFirstVisibleCellWithinViewport();
+                I lastVisibleCell = flow.getLastVisibleCellWithinViewport();
+                if (firstVisibleCell == null || lastVisibleCell == null) {
+                    return new int[] { 0, 0 };
+                }
+                int firstIndex = firstVisibleCell.getIndex();
+                return new int[] { firstIndex, lastVisibleCell.getIndex() - firstIndex + 1 };
+            }
             case VERTICAL_SCROLLBAR: return flow.getVbar();
             case HORIZONTAL_SCROLLBAR: return flow.getHbar();
             default: return super.queryAccessibleAttribute(attribute, parameters);

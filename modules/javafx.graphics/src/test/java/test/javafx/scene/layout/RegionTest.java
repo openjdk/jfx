@@ -25,6 +25,7 @@
 
 package test.javafx.scene.layout;
 
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
@@ -38,12 +39,14 @@ import javafx.scene.shape.ClosePath;
 import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
+import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.DoubleUnaryOperator;
+import java.util.stream.Stream;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.sg.prism.NGRegion;
@@ -63,6 +66,10 @@ import javafx.scene.layout.RegionShim;
 import test.com.sun.javafx.pgstub.StubToolkit;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -946,6 +953,45 @@ public class RegionTest {
     }
 
     @Test
+    public void testLayoutInAreaBaselineSameAsHeightWithMargins() {
+        Region child = new MockRegion(0, 0, 40, 40, 500, 500);
+        Insets margin = new Insets(0, 0, 20, 0);
+
+        // Establish the fill rectangle without baseline alignment.
+        Region.layoutInArea(child, 0, 0, 100, 100, 0, margin, true, true, HPos.LEFT, VPos.TOP, false);
+        assertEquals(80, child.getHeight());
+        assertEquals(0, child.getLayoutY());
+
+        // The child's baseline is equal to its height, so using its current bottom edge
+        // as the area baseline must preserve the same fill rectangle.
+        double areaBaselineOffset = child.getLayoutY() + child.getHeight();
+        Region.layoutInArea(child, 0, 0, 100, 100, areaBaselineOffset, margin, true, true, HPos.LEFT, VPos.BASELINE, false);
+
+        assertEquals(80, child.getHeight());
+        assertEquals(0, child.getLayoutY());
+    }
+
+    @Test
+    public void testLayoutInAreaForNonResizableBaselineSameAsHeight() {
+        Rectangle child = new Rectangle(30, 40) {
+            @Override public double getBaselineOffset() {
+                return BASELINE_OFFSET_SAME_AS_HEIGHT;
+            }
+        };
+
+        Region.layoutInArea(
+            child, 10, 10, 100, 100, 60,
+            Insets.EMPTY, true, true,
+            HPos.CENTER, VPos.BASELINE, false);
+
+        assertFalse(child.isResizable());
+        assertEquals(30, child.getWidth());
+        assertEquals(40, child.getHeight());
+        assertEquals(45, child.getLayoutX());
+        assertEquals(30, child.getLayoutY());
+    }
+
+    @Test
     public void testComputeChildPrefAreaWidthHonorsMaxWidthOverPref() {
         Pane pane = new Pane(); // Region extension which makes children sequence public
 
@@ -1532,6 +1578,18 @@ public class RegionTest {
     }
 
     @Test
+    public void testChildMaxAreaWidthChecksMaximumAtResolvedHeight() {
+        Pane pane = new Pane();
+        Region child = new RecordingBiasedRegion(
+            Orientation.VERTICAL, 100,
+            height -> height == -1 ? Double.MAX_VALUE : 10);
+
+        pane.getChildren().add(child);
+
+        assertEquals(10, RegionShim.computeChildMaxAreaWidth(pane, child, -1, Insets.EMPTY, 50, true));
+    }
+
+    @Test
     public void testChildMaxAreaHeightExtensively() {
         Pane pane = new Pane();
 
@@ -1633,6 +1691,18 @@ public class RegionTest {
 
         assertEquals(2 + 200, RegionShim.computeChildMaxAreaHeight(pane, c1, -1, new Insets(1), 50000, false), 1e-100);
         assertEquals(2 + 10 + 200, RegionShim.computeChildMaxAreaHeight(pane, c1, 10, new Insets(1), 50000, false), 1e-100);
+    }
+
+    @Test
+    public void testChildMaxAreaHeightChecksMaximumAtResolvedWidth() {
+        Pane pane = new Pane();
+        Region child = new RecordingBiasedRegion(
+            Orientation.HORIZONTAL, 100,
+            width -> width == -1 ? Double.MAX_VALUE : 10);
+
+        pane.getChildren().add(child);
+
+        assertEquals(10, RegionShim.computeChildMaxAreaHeight(pane, child, -1, Insets.EMPTY, 50, true));
     }
 
     @Test
@@ -2202,6 +2272,294 @@ public class RegionTest {
         assertEquals(200, child.getHeight());
         assertEquals(child.minHeight(child.getWidth()), child.getHeight());
         assertEquals(child.maxHeight(child.getWidth()), child.getHeight());
+    }
+
+    @ParameterizedTest
+    @MethodSource("renderScales")
+    public void layoutInAreaNormalizesAvailableSpanAfterSubtractingMargins(double scaleX, double scaleY) {
+        Pane root = new Pane();
+        Stage stage = createAtScale(root, scaleX, scaleY);
+        double areaWidth = 4 / scaleX;
+        double rightMargin = 3 / scaleX;
+        double expectedWidth = 1 / scaleX;
+        double areaHeight = 4 / scaleY;
+        double bottomMargin = 3 / scaleY;
+        double expectedHeight = 1 / scaleY;
+
+        try {
+            Region horizontal = new Region();
+            root.getChildren().setAll(horizontal);
+
+            Region.layoutInArea(
+                horizontal, 0, 0, areaWidth, 8, -1,
+                new Insets(0, rightMargin, 0, 0), true, true,
+                HPos.RIGHT, VPos.TOP, true);
+
+            // 4 pixels minus 3 pixels must be normalized to exactly 1 pixel.
+            assertEquals(expectedWidth, horizontal.getWidth());
+            assertEquals(0, horizontal.getLayoutX());
+
+            Region vertical = new Region();
+            root.getChildren().setAll(vertical);
+
+            Region.layoutInArea(
+                vertical, 0, 0, 8, areaHeight, -1,
+                new Insets(0, 0, bottomMargin, 0), true, true,
+                HPos.LEFT, VPos.BOTTOM, true);
+
+            assertEquals(expectedHeight, vertical.getHeight());
+            assertEquals(0, vertical.getLayoutY());
+        } finally {
+            stage.close();
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("renderScales")
+    public void layoutInAreaUsesNormalizedAvailableSpanForContentBias(double scaleX, double scaleY) {
+        Pane root = new Pane();
+        Stage stage = createAtScale(root, scaleX, scaleY);
+        double areaWidth = 4 / scaleX;
+        double rightMargin = 3 / scaleX;
+        double expectedWidth = 1 / scaleX;
+        double areaHeight = 4 / scaleY;
+        double bottomMargin = 3 / scaleY;
+        double expectedHeight = 1 / scaleY;
+
+        try {
+            var horizontal = new RecordingBiasedRegion(Orientation.HORIZONTAL, 0.1, _ -> 0.1);
+            root.getChildren().setAll(horizontal);
+
+            Region.layoutInArea(
+                horizontal, 0, 0, areaWidth, 8, -1,
+                new Insets(0, rightMargin, 0, 0), true, false,
+                HPos.LEFT, VPos.TOP, true);
+
+            assertEquals(expectedWidth, horizontal.getWidth());
+            assertEquals(expectedHeight, horizontal.getHeight());
+            assertDependentArguments(horizontal, expectedWidth);
+
+            var vertical = new RecordingBiasedRegion(Orientation.VERTICAL, 0.1, _ -> 0.1);
+            root.getChildren().setAll(vertical);
+            Region.layoutInArea(
+                vertical, 0, 0, 8, areaHeight, -1,
+                new Insets(0, 0, bottomMargin, 0), false, true,
+                HPos.LEFT, VPos.TOP, true);
+
+            assertEquals(expectedWidth, vertical.getWidth());
+            assertEquals(expectedHeight, vertical.getHeight());
+            assertDependentArguments(vertical, expectedHeight);
+        } finally {
+            stage.close();
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(doubles = { 1, 1.25, 1.5, 1.75, 2.0, 2.25 })
+    public void layoutInAreaNormalizesHeightRemainingAboveBaselineComplement(double scaleY) {
+        Pane root = new Pane();
+        Region child = new Region();
+        root.getChildren().add(child);
+        Stage stage = createAtScale(root, 1, scaleY);
+        double areaHeight = 4 / scaleY;
+        double areaBaselineOffset = 1 / scaleY;
+
+        try {
+            Region.layoutInArea(
+                child, 0, 0, 8, areaHeight, areaBaselineOffset,
+                Insets.EMPTY, true, true,
+                HPos.LEFT, VPos.BASELINE, true);
+
+            // The baseline complement is 3 pixels, leaving exactly 1 pixel above the baseline
+            // for a node whose baseline is equal to its height.
+            assertEquals(1 / scaleY, child.getHeight());
+            assertEquals(0, child.getLayoutY());
+        } finally {
+            stage.close();
+        }
+    }
+
+    @Test
+    public void layoutInAreaPreservesRawResidualSpanWhenSnappingIsDisabled() {
+        Region child = new Region();
+        double expectedWidth = 3.2 - 2.4;
+        double expectedHeight = 3.2 - 2.4;
+
+        Region.layoutInArea(
+            child, 0, 0, 3.2, 3.2, -1,
+            new Insets(0, 2.4, 2.4, 0), true, true,
+            HPos.LEFT, VPos.TOP, false);
+
+        assertEquals(expectedWidth, child.getWidth());
+        assertEquals(expectedHeight, child.getHeight());
+    }
+
+    @Test
+    public void adjustSizeByZeroMarginDoesNotNormalizeInput() {
+        Pane root = new Pane();
+
+        // Null, Insets.EMPTY, and a distinct zero-valued Insets instance
+        // are semantically equivalent. None of them normalizes the input.
+        assertEquals(3.3, RegionShim.adjustWidthByMargin(root, 3.3, null));
+        assertEquals(3.3, RegionShim.adjustWidthByMargin(root, 3.3, Insets.EMPTY));
+        assertEquals(3.3, RegionShim.adjustWidthByMargin(root, 3.3, new Insets(0)));
+        assertEquals(3.3, RegionShim.adjustHeightByMargin(root, 3.3, null));
+        assertEquals(3.3, RegionShim.adjustHeightByMargin(root, 3.3, Insets.EMPTY));
+        assertEquals(3.3, RegionShim.adjustHeightByMargin(root, 3.3, new Insets(0)));
+    }
+
+    @ParameterizedTest
+    @MethodSource("renderScales")
+    public void adjustSizeByMarginSnapsOnlyMargins(double scaleX, double scaleY) {
+        Pane root = new Pane();
+        Stage stage = createAtScale(root, scaleX, scaleY);
+        double width = 4 / scaleX;
+        double height = 4 / scaleY;
+        double left = 0.875 / scaleX;
+        double right = 1.875 / scaleX;
+        double top = 0.875 / scaleY;
+        double bottom = 1.875 / scaleY;
+        Insets margin = new Insets(top, right, bottom, left);
+
+        try {
+            // The leading margins snap to 1 pixel and the trailing margins snap to 2 pixels.
+            // The arithmetic result is not normalized afterward.
+            assertEquals(width - 1 / scaleX - 2 / scaleX, RegionShim.adjustWidthByMargin(root, width, margin));
+            assertEquals(height - 1 / scaleY - 2 / scaleY, RegionShim.adjustHeightByMargin(root, height, margin));
+        } finally {
+            stage.close();
+        }
+    }
+
+    @Test
+    public void adjustSizeByMarginPreservesRawValuesWhenSnappingIsDisabled() {
+        Pane root = new Pane();
+        root.setSnapToPixel(false);
+        Insets margin = new Insets(0.7, 1.5, 1.5, 0.7);
+
+        assertEquals(3.2 - 0.7 - 1.5, RegionShim.adjustWidthByMargin(root, 3.2, margin));
+        assertEquals(3.2 - 0.7 - 1.5, RegionShim.adjustHeightByMargin(root, 3.2, margin));
+    }
+
+    @ParameterizedTest
+    @MethodSource("renderScales")
+    public void childAreaMeasurementsNormalizeComposedSpans(double scaleX, double scaleY) {
+        Pane root = new Pane();
+        Region child = new Region();
+        child.setMinSize(0.1, 0.1);
+        child.setPrefSize(0.1, 0.1);
+        child.setMaxSize(0.1, 0.1);
+        root.getChildren().add(child);
+        Stage stage = createAtScale(root, scaleX, scaleY);
+
+        // The child receives 1 pixel and the trailing margin receives 2 pixels.
+        // Their composed area is exactly 3 pixels on each axis.
+        Insets margin = new Insets(0, 2 / scaleX, 2 / scaleY, 0);
+        double expectedWidth = 3 / scaleX;
+        double expectedHeight = 3 / scaleY;
+
+        try {
+            assertEquals(expectedWidth, RegionShim.computeChildMinAreaWidth(root, child, margin));
+            assertEquals(expectedWidth, RegionShim.computeChildPrefAreaWidth(root, child, margin));
+            assertEquals(expectedWidth, RegionShim.computeChildMaxAreaWidth(root, child, -1, margin, -1, false));
+
+            assertEquals(expectedHeight, RegionShim.computeChildMinAreaHeight(root, child, margin));
+            assertEquals(expectedHeight, RegionShim.computeChildPrefAreaHeight(root, child, margin));
+            assertEquals(expectedHeight, RegionShim.computeChildMaxAreaHeight(root, child, -1, margin, -1, false));
+        } finally {
+            stage.close();
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("renderScales")
+    public void childAreaMeasurementsPreservePixelAlignedResidualForDependentDimension(double scaleX, double scaleY) {
+        Pane root = new Pane();
+        Stage stage = createAtScale(root, scaleX, scaleY);
+        double availableWidth = 4 / scaleX;
+        double rightMargin = 3 / scaleX;
+        double expectedContentWidth = 1 / scaleX;
+        double availableHeight = 4 / scaleY;
+        double bottomMargin = 3 / scaleY;
+        double expectedContentHeight = 1 / scaleY;
+
+        try {
+            var horizontal = new RecordingBiasedRegion(Orientation.HORIZONTAL, 0.1, _ -> 0.1);
+            root.getChildren().setAll(horizontal);
+
+            assertEquals(expectedContentHeight, RegionShim.computeChildPrefAreaHeight(
+                root, horizontal, -1, new Insets(0, rightMargin, 0, 0), availableWidth, true));
+
+            assertDependentArguments(horizontal, expectedContentWidth);
+
+            var vertical = new RecordingBiasedRegion(Orientation.VERTICAL, 0.1, _ -> 0.1);
+            root.getChildren().setAll(vertical);
+
+            assertEquals(expectedContentWidth, RegionShim.computeChildPrefAreaWidth(
+                root, vertical, -1, new Insets(0, 0, bottomMargin, 0), availableHeight, true));
+
+            assertDependentArguments(vertical, expectedContentHeight);
+        } finally {
+            stage.close();
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("renderScales")
+    public void childAreaWidthMeasurementsSnapBaselineComplementAsSpace(double scaleX, double scaleY) {
+        Pane root = new Pane();
+        Stage stage = createAtScale(root, scaleX, scaleY);
+        double availableHeight = 10.2 / scaleY;
+        double baselineComplement = 0.6 / scaleY;
+        double expectedDependentArgument = 10 / scaleY;
+
+        try {
+            var child = new RecordingBiasedRegion(Orientation.VERTICAL, 100, value -> value);
+            root.getChildren().add(child);
+
+            // The outer height rounds up to 11 pixels, while the 0.6-pixel baseline
+            // complement rounds to 1 pixel of space, leaving a height of 10.
+            double expectedWidth = root.snapSizeX(expectedDependentArgument);
+            assertEquals(expectedWidth, RegionShim.computeChildMinAreaWidth(
+                root, child, baselineComplement, Insets.EMPTY, availableHeight, true));
+            assertEquals(List.of(expectedDependentArgument), child.dependentArguments);
+
+            child.dependentArguments.clear();
+            assertEquals(expectedWidth, RegionShim.computeChildPrefAreaWidth(
+                root, child, baselineComplement, Insets.EMPTY, availableHeight, true));
+            assertEquals(
+                List.of(expectedDependentArgument, expectedDependentArgument, expectedDependentArgument),
+                child.dependentArguments);
+
+            child.dependentArguments.clear();
+            assertEquals(expectedWidth, RegionShim.computeChildMaxAreaWidth(
+                root, child, baselineComplement, Insets.EMPTY, availableHeight, true));
+            assertEquals(List.of(expectedDependentArgument, expectedDependentArgument), child.dependentArguments);
+        } finally {
+            stage.close();
+        }
+    }
+
+    private static Stream<Arguments> renderScales() {
+        return Stream.of(
+            Arguments.of(1.0, 1.0),
+            Arguments.of(1.25, 1.25),
+            Arguments.of(1.5, 1.5),
+            Arguments.of(1.75, 1.75),
+            Arguments.of(2.0, 2.0),
+            Arguments.of(2.25, 2.25),
+            Arguments.of(1.25, 1.5),
+            Arguments.of(1.75, 2.25),
+            Arguments.of(2.25, 1.25)
+        );
+    }
+
+    private static Stage createAtScale(Pane root, double scaleX, double scaleY) {
+        Stage stage = new Stage();
+        stage.renderScaleXProperty().bind(new SimpleDoubleProperty(scaleX));
+        stage.renderScaleYProperty().bind(new SimpleDoubleProperty(scaleY));
+        stage.setScene(new Scene(root));
+        return stage;
     }
 
     private static void assertDependentArguments(RecordingBiasedRegion child, double expected) {
