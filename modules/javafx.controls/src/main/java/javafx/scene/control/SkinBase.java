@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,7 +28,6 @@ package javafx.scene.control;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
-
 import javafx.beans.Observable;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener.Change;
@@ -45,7 +44,6 @@ import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Region;
-
 import com.sun.javafx.scene.control.LambdaMultiplePropertyChangeListenerHandler;
 import com.sun.javafx.scene.control.ListenerHelper;
 
@@ -173,8 +171,6 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
 
         this.control = null;
     }
-
-
 
     /* *************************************************************************
      *                                                                         *
