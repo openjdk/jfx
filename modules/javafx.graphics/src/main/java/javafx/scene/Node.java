@@ -9818,7 +9818,7 @@ public abstract sealed class Node
     CssFlags cssFlag = CssFlags.CLEAN;
 
     /**
-     * A {@code reapplyCSS()} was deferred, so {@link #styleHelper} is out of date.
+     * A {@code reapplyCSS()} was deferred or happened during the rebuild of {@link #styleHelper}, so it outdated.
      * A descendant asking for it during its own {@link CssStyleHelper#createStyleHelper(Node)} must recreate it first.
      */
     boolean cssHelperStale;
@@ -9946,11 +9946,7 @@ public abstract sealed class Node
         if (scene == null) return;
 
         if (cssFlag == CssFlags.REAPPLY) {
-            // The pending REAPPLY keeps the helper stale, unless a descendant rebuilt it early.
-            // When the helper is being rebuilt right now, it must not become stale.
-            if (cssHelperResolvedEarly) {
-                cssHelperStale = true;
-            }
+            cssHelperStale = true;
             return;
         }
 
@@ -10045,6 +10041,12 @@ public abstract sealed class Node
             // since there are no styles to apply or children to update.
             //
             cssFlag = CssFlags.CLEAN;
+            return;
+        }
+
+        // A listener of a child made this node stale while visiting the children, so the visited ones are outdated.
+        if (cssHelperStale || cssHelperResolvedEarly) {
+            recreateStyleHelper();
             return;
         }
 

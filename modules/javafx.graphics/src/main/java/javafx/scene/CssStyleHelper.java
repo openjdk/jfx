@@ -118,6 +118,7 @@ final class CssStyleHelper {
                 ancestor.cssHelperResolvedEarly = true;
                 boolean propertiesReset = updateStyleHelper(ancestor, path, index, styleableAncestor);
 
+                // When properties were reset, we must restart as styles could change once again.
                 if (propertiesReset) {
                     return createStyleHelper(node);
                 }
@@ -133,6 +134,14 @@ final class CssStyleHelper {
         node.cssHelperResolvedEarly = false;
 
         updateStyleHelper(node, path, 0, styleableAncestor);
+
+        // A listener running during the reset made this node stale again, e.g. by changing its style class.
+        // A reset only happens when the helper was replaced, so the children must be updated.
+        if (node.cssHelperStale) {
+            createStyleHelper(node);
+            return true;
+        }
+
         return resolvedEarly || node.styleHelper == null || node.styleHelper != oldHelper;
     }
 
@@ -225,17 +234,15 @@ final class CssStyleHelper {
         node.styleHelper = helper;
         node.cssHelperStale = false;
 
-        // If this node had a style helper, we need to reset all properties that will be unset with the
-        // new style map to their initial values.
-        // Properties that remain set with the new style map carry over to the new style helper.
+        // If this node had a style helper, its css set properties carry over to the new style helper.
+        // Those unset with the new style map are removed and reset to their initial values.
+        // This happens on the new helper, so a rebuild from a listener during the reset copies the remaining ones.
         if (currentHelper == null) {
             return false;
         }
 
-        boolean propertiesReset = currentHelper.resetToInitialValues(node, styleMap);
         helper.cacheContainer.cssSetProperties.putAll(currentHelper.cacheContainer.cssSetProperties);
-
-        return propertiesReset;
+        return helper.resetToInitialValues(node, styleMap);
     }
 
     /**
