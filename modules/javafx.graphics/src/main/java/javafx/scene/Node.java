@@ -1170,10 +1170,16 @@ public abstract sealed class Node
             }
             focusSetDirty(oldScene);
             focusSetDirty(newScene);
+
+            // All children are notified below before this node is, so the style helper is marked stale upfront.
+            cssHelperStale = true;
         }
+
         scenesChanged(newScene, newSubScene, oldScene, oldSubScene);
 
-        if (sceneChanged) reapplyCSS();
+        if (sceneChanged) {
+            reapplyCSS();
+        }
 
         if (sceneChanged && !isDirtyEmpty()) {
             //Note: no need to remove from scene's dirty list
@@ -9812,9 +9818,22 @@ public abstract sealed class Node
     CssFlags cssFlag = CssFlags.CLEAN;
 
     /**
-     * Needed for testing.
+     * A {@code reapplyCSS()} was deferred, so {@link #styleHelper} is out of date.
+     * A descendant asking for it during its own {@link CssStyleHelper#createStyleHelper(Node)} must recreate it first.
      */
-    final CssFlags getCSSFlags() { return cssFlag; }
+    boolean cssHelperStale;
+
+    /**
+     * A descendant recreated this {@link #styleHelper} on demand while the deferred {@code REAPPLY} was still pending.
+     * That REAPPLY must still visit this node's children, even if the helper is reusable.
+     */
+    boolean cssHelperResolvedEarly;
+
+    /**
+     * The CSS properties of this node are currently being reset to their initial values.
+     * The styles must not be used while that is in progress, as they can be oudated.
+     */
+    boolean cssResetInProgress;
 
     /**
      * Called when a CSS pseudo-class change would cause styles to be reapplied.
@@ -9926,18 +9945,27 @@ public abstract sealed class Node
         var scene = getScene();
         if (scene == null) return;
 
-        if (cssFlag == CssFlags.REAPPLY) return;
+        if (cssFlag == CssFlags.REAPPLY) {
+            // The pending REAPPLY keeps the helper stale, unless a descendant rebuilt it early.
+            // When the helper is being rebuilt right now, it must not become stale.
+            if (cssHelperResolvedEarly) {
+                cssHelperStale = true;
+            }
+            return;
+        }
 
         if (cssFlag == CssFlags.DIRTY_BRANCH) {
             // JDK-8193445 - don't reapply CSS from here
             // Defer CSS application to this Node by marking cssFlag as REAPPLY
             cssFlag = CssFlags.REAPPLY;
+            cssHelperStale = true;
             return;
         }
 
         // JDK-8095580 - don't reapply CSS in the middle of an update
         if (cssFlag == CssFlags.UPDATE) {
             cssFlag = CssFlags.REAPPLY;
+            cssHelperStale = true;
             notifyParentsOfInvalidatedCSS();
             return;
         }
@@ -9946,7 +9974,7 @@ public abstract sealed class Node
             SceneHelper.getSceneContext(scene).notifyReapplyCSS();
         }
 
-        reapplyCss();
+        recreateStyleHelper();
 
         //
         // One idiom employed by developers is to, during the layout pass,
@@ -9974,30 +10002,18 @@ public abstract sealed class Node
     // There is no check of the CSS state of a child since reapply takes precedence
     // over other CSS states.
     //
-    private void reapplyCss() {
-
-        // Hang on to current styleHelper so we can know whether
-        // createStyleHelper returned the same styleHelper
-        final CssStyleHelper oldStyleHelper = styleHelper;
-
+    private void recreateStyleHelper() {
         // CSS state is "REAPPLY"
         cssFlag = CssFlags.REAPPLY;
 
-        styleHelper = CssStyleHelper.createStyleHelper(this);
+        final boolean updateChildren = CssStyleHelper.createStyleHelper(this);
 
         // REAPPLY to my children, too.
         if (this instanceof Parent) {
-
             // minor optimization to avoid calling createStyleHelper on children
             // when we know there will not be any change in the style maps.
             final boolean visitChildren =
-                    // If we don't have a styleHelper, then we should visit the children of this parent
-                    // since there might be styles that depend on being a child of this parent.
-                    // In other words, we have .a > .b { blah: blort; }, but no styles for ".a" itself.
-                    styleHelper == null ||
-                    // if the styleHelper changed, then we definitely need to visit the children
-                    // since the new styles may have an effect on the children's styles calculated values.
-                    (oldStyleHelper != styleHelper) ||
+                    updateChildren ||
                     // If our parent is null, then we're the root of a scene or sub-scene, most likely,
                     // and we'll visit children because elsewhere the code depends on root.reapplyCSS()
                     // to force css to be reapplied (whether it needs to be or not).
@@ -10008,11 +10024,10 @@ public abstract sealed class Node
                     (getParent().cssFlag != CssFlags.CLEAN);
 
             if (visitChildren) {
-
                 List<Node> children = ((Parent) this).getChildren();
                 for (int n = 0, nMax = children.size(); n < nMax; n++) {
                     Node child = children.get(n);
-                    child.reapplyCss();
+                    child.recreateStyleHelper();
                 }
             }
 
@@ -10021,7 +10036,7 @@ public abstract sealed class Node
             // SubScene root is a Parent, but reapplyCss is a private method in Node
             final Node subSceneRoot = ((SubScene)this).getRoot();
             if (subSceneRoot != null) {
-                subSceneRoot.reapplyCss();
+                subSceneRoot.recreateStyleHelper();
             }
 
         } else if (styleHelper == null) {
@@ -10034,7 +10049,6 @@ public abstract sealed class Node
         }
 
         cssFlag = CssFlags.UPDATE;
-
     }
 
     void processCSS() {
@@ -10103,8 +10117,8 @@ public abstract sealed class Node
      * @since JavaFX 8.0
      */
     public final void applyCss() {
-
-        if (getScene() == null) {
+        final Scene scene = getScene();
+        if (scene == null) {
             return;
         }
 
@@ -10121,7 +10135,7 @@ public abstract sealed class Node
         //
         Node topMost = this;
 
-        final boolean dirtyRoot = getScene().getRoot().isDirty(com.sun.javafx.scene.DirtyBits.NODE_CSS);
+        final boolean dirtyRoot = scene.getRoot().isDirty(com.sun.javafx.scene.DirtyBits.NODE_CSS);
         if (dirtyRoot) {
 
             Node _parent = getParent();
@@ -10138,13 +10152,12 @@ public abstract sealed class Node
 
             // If we're at the root of the scene-graph, make sure the NODE_CSS
             // dirty bit is cleared (see Scene#doCSSPass())
-            if (topMost == getScene().getRoot()) {
-                getScene().getRoot().clearDirty(DirtyBits.NODE_CSS);
+            if (topMost == scene.getRoot()) {
+                scene.getRoot().clearDirty(DirtyBits.NODE_CSS);
             }
         }
 
         topMost.processCSS();
-
     }
 
     /*
@@ -10169,7 +10182,7 @@ public abstract sealed class Node
                 SceneHelper.getSceneContext(scene).notifyReapplyCSS();
             }
 
-            reapplyCss();
+            recreateStyleHelper();
         }
 
         // Clear the flag first in case the flag is set to something

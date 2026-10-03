@@ -31,12 +31,16 @@ import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.scene.CssFlags;
 import com.sun.javafx.tk.Toolkit;
 import javafx.application.ColorScheme;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.collections.ObservableList;
 import javafx.css.CssMetaData;
 import javafx.css.CssParser;
 import javafx.css.CssParser.ParseError;
@@ -50,9 +54,11 @@ import javafx.css.StyleOrigin;
 import javafx.css.Stylesheet;
 import javafx.css.converter.SizeConverter;
 import javafx.geometry.Insets;
+import javafx.scene.NodeShim;
 import javafx.scene.Scene;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.Pane;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
@@ -61,8 +67,11 @@ import javafx.stage.Stage;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -75,7 +84,9 @@ public class CssStyleHelperTest {
     private Stage stage;
     private StackPane root;
 
-    private static void resetStyleManager() {
+    private ObservableList<CssParser.ParseError> errors;
+
+    private void resetStyleManager() {
         StyleManager sm = StyleManager.getInstance();
         sm.userAgentStylesheetContainers.clear();
         sm.platformUserAgentStylesheetContainers.clear();
@@ -90,14 +101,14 @@ public class CssStyleHelperTest {
         scene = new Scene(root);
         stage = new Stage();
         stage.setScene(scene);
-        resetStyleManager();
 
-        // Apparently, need to access this property first, or nothing will be appended at all.
-        CssParser.errorsProperty().clear();
+        errors = CssParser.errorsProperty();
+        resetStyleManager();
     }
 
-    @AfterAll
-    public static void cleanupOnce() {
+    @AfterEach
+    public void cleanup() {
+        errors.clear();
         resetStyleManager();
     }
 
@@ -984,9 +995,9 @@ public class CssStyleHelperTest {
         root.getChildren().addAll(a);
 
         assertDoesNotThrow(() -> stage.show());  // This should not result in a StackOverflowError
-        assertEquals(1, CssParser.errorsProperty().size());
+        assertEquals(1, errors.size());
 
-        ParseError error = CssParser.errorsProperty().getFirst();
+        ParseError error = errors.getFirst();
 
         assertEquals(PropertySetError.class, error.getClass());
 
@@ -1037,9 +1048,9 @@ public class CssStyleHelperTest {
         root.getChildren().addAll(a);
 
         assertDoesNotThrow(() -> stage.show());  // This should not result in a StackOverflowError
-        assertEquals(1, CssParser.errorsProperty().size());
+        assertEquals(1, errors.size());
 
-        ParseError error = CssParser.errorsProperty().getFirst();
+        ParseError error = errors.getFirst();
 
         assertEquals(PropertySetError.class, error.getClass());
 
@@ -1246,6 +1257,537 @@ public class CssStyleHelperTest {
         toolkit.handleAnimation();
         assertEquals(1,  p.getScaleX());
         assertEquals(List.of(1.0, 2.0, 1.5, 1.0), trace);
+    }
+
+    /**
+     * When we swap the root of a scene in a root node listener, it should still correctly resolve the CSS.
+     * The listener will run when the background color is applied, which happens in the transitionToState phase.
+     *
+     * <pre>{@code
+     * Before:
+     *
+     * StackPane
+     * └── Pane
+     *
+     * After:
+     *
+     * StackPane
+     * └── StackPane
+     *     └── Pane
+     * }</pre>
+     */
+    @Test
+    void testLookupResolvesAfterRootSwap() {
+        Pane leaf = createPaneWithStyle("leaf");
+        StackPane oldRoot = new StackPane(leaf);
+
+        Scene scene = new Scene(oldRoot);
+        scene.getStylesheets().add(toDataURL("""
+                .root { -color-fg: blue; -fx-background-color: -color-fg; }
+                .leaf { -fx-background-color: -color-fg; }
+                """));
+
+        AtomicBoolean swapped = new AtomicBoolean(false);
+        oldRoot.backgroundProperty().addListener((_, _, _) -> {
+            if (!swapped.getAndSet(true)) {
+                StackPane newRoot = new StackPane(oldRoot);
+                scene.setRoot(newRoot);
+            }
+        });
+
+        scene.getRoot().applyCss();
+
+        assertEquals(0, errors.size(), errors::toString);
+        assertEquals(Color.BLUE, getBackgroundColor(leaf));
+    }
+
+    /**
+     * When we swap the root of a scene in a child node listener, it should still correctly resolve the CSS.
+     * The listener will run when the background color is applied, which happens in the transitionToState phase.
+     *
+     * <pre>{@code
+     * Before:
+     *
+     * StackPane
+     * └── Pane
+     *     └── Pane
+     *
+     * After:
+     *
+     * StackPane
+     * └── StackPane
+     *     └── Pane
+     *         └── Pane
+     * }</pre>
+     */
+    @Test
+    void testLookupResolvesAfterChildRootSwap() {
+        Pane leaf = createPaneWithStyle("leaf");
+        Pane parent = createPaneWithStyle("parent", leaf);
+        StackPane oldRoot = new StackPane(parent);
+
+        Scene scene = new Scene(oldRoot);
+        scene.getStylesheets().add(toDataURL("""
+                .root { -color-fg: blue; }
+                .parent { -fx-background-color: -color-fg; }
+                .leaf { -fx-background-color: -color-fg; }
+                """));
+
+        AtomicBoolean swapped = new AtomicBoolean(false);
+        parent.backgroundProperty().addListener((_, _, _) -> {
+            if (!swapped.getAndSet(true)) {
+                StackPane newRoot = new StackPane(oldRoot);
+                scene.setRoot(newRoot);
+            }
+        });
+
+        scene.getRoot().applyCss();
+
+        assertEquals(0, errors.size(), errors::toString);
+        assertEquals(Color.BLUE, getBackgroundColor(parent));
+        assertEquals(Color.BLUE, getBackgroundColor(leaf));
+    }
+
+    /**
+     * The stylesheet uses the '.root' style class, but is not on the root node, so it won't match.
+     * <p>
+     * Will result in the following css error:
+     * {@code Caught 'java.lang.ClassCastException: class java.lang.String cannot be cast to class javafx.scene.paint.Paint
+     * while converting value for '-fx-background-color'}.
+     */
+    @Test
+    void testRootColorLookupFailsWhenStylesheetNotOnRootNode() {
+        Pane leaf = createPaneWithStyle("leaf");
+        StackPane parent = new StackPane(leaf);
+        parent.getStylesheets().add(toDataURL("""
+                .root { -theme-button: blue; }
+                .leaf { -fx-background-color: -theme-button; }
+                """));
+
+        StackPane root = new StackPane(parent);
+        Scene _ = new Scene(root);
+        root.applyCss();
+
+        assertEquals(1, errors.size(), errors::toString);
+        assertNull(leaf.getBackground());
+    }
+
+    /**
+     * The stylesheet was added on the root node, but the root node will be reparented under a new root node.
+     * As a result, the '.root' style class won't match anymore.
+     * <p>
+     * Will result in the following css error:
+     * {@code Caught 'java.lang.ClassCastException: class java.lang.String cannot be cast to class javafx.scene.paint.Paint
+     * while converting value for '-fx-background-color'}.
+     */
+    @Test
+    void testRootColorLookupFailsWhenStylesheetRootIsReparented() {
+        Pane leaf = createPaneWithStyle("leaf");
+        StackPane root = new StackPane(leaf);
+        root.getStylesheets().add(toDataURL("""
+                .root { -theme-button: blue; }
+                .leaf { -fx-background-color: -theme-button; }
+                """));
+
+        Scene scene = new Scene(root);
+        root.applyCss();
+
+        assertEquals(Color.BLUE, getBackgroundColor(leaf));
+
+        root = new StackPane(root);
+        scene.setRoot(root);
+        root.applyCss();
+
+        assertEquals(1, errors.size(), errors::toString);
+        assertNull(leaf.getBackground());
+    }
+
+    /**
+     * A style class added to a parent must restyle that parents existing children,
+     * even when a newly added child causes the parents style helper to be rebuilt first.
+     */
+    @Test
+    void testExistingChildRestyledWhenNewChildRebuildsParentHelperFirst() {
+        scene.getStylesheets().add(toDataURL("""
+                .container { -fx-padding: 2; }
+                .parent { -fx-padding: 5; }
+                .parent .leaf { -fx-background-color: red; }
+                """));
+        stage.show();
+
+        root.getStyleClass().add("container");
+
+        Pane leaf = createPaneWithStyle("leaf");
+        StackPane parent = new StackPane(leaf);
+        root.getChildren().add(parent);
+
+        Toolkit.getToolkit().firePulse();
+        assertNull(leaf.getBackground(), "nothing matches .parent yet");
+
+        parent.getChildren().add(new StackPane());
+        assertEquals(CssFlags.DIRTY_BRANCH, NodeShim.getCSSFlags(parent),
+                "parent must be DIRTY_BRANCH so reapplyCSS() defers");
+
+        // Promote it to REAPPLY.
+        parent.getStyleClass().add("parent");
+        assertEquals(CssFlags.REAPPLY, NodeShim.getCSSFlags(parent));
+
+        // This child walks up to find its first styleable ancestor and rebuilds the parents helper,
+        // now with ".parent" style class.
+        parent.getChildren().add(new StackPane());
+
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals(Color.RED, getBackgroundColor(leaf),
+                "existing child must be restyled after the parent gained a style class");
+    }
+
+    /**
+     * A style class added to an unstyled node in the middle of a chain must restyle descendants
+     * whose styles depend on it.
+     */
+    @Test
+    void testLeafRestyledWhenAncestorInUnstyledChainGainsStyleClass() {
+        scene.getStylesheets().add(toDataURL("""
+                .parent .leaf { -fx-background-color: green; }
+                """));
+        stage.show();
+
+        List<StackPane> chain = buildUnstyledChain(10);
+        Pane leaf = createPaneWithStyle("leaf");
+        chain.getLast().getChildren().add(leaf);
+
+        Toolkit.getToolkit().firePulse();
+        assertNull(leaf.getBackground(), "nothing matches .leaf yet");
+
+        StackPane middleNode = chain.get(5);
+        middleNode.getStyleClass().add("parent");
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals(Color.GREEN, getBackgroundColor(leaf));
+    }
+
+    /**
+     * A style class added to an unstyled node must restyle its children whose styles depend on it.
+     */
+    @Test
+    void testLeafStyledByAncestorChildSelectorThroughUnstyledChain() {
+        scene.getStylesheets().add(toDataURL("""
+                .parent > * { -fx-background-color: blue; }
+                """));
+        stage.show();
+
+        List<StackPane> chain = buildUnstyledChain(10);
+        StackPane parent = chain.getLast();
+        StackPane leaf = new StackPane();
+        parent.getChildren().add(leaf);
+
+        Toolkit.getToolkit().firePulse();
+        assertNull(leaf.getBackground(), "nothing matches the leaf yet");
+
+        parent.getStyleClass().add("parent");
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals(Color.BLUE, getBackgroundColor(leaf));
+    }
+
+    /**
+     * A style class added to a parent must restyle that parents existing children even when the parents
+     * style helper was already rebuilt by a newly added child and the parent went stale again afterward.
+     */
+    @Test
+    void testExistingChildRestyledWhenParentGoesStaleAfterEarlyRebuild() {
+        scene.getStylesheets().add(toDataURL("""
+                .container { -fx-padding: 2; }
+                .parent { -fx-padding: 5; }
+                .parent .leaf { -fx-background-color: red; }
+                """));
+        stage.show();
+
+        root.getStyleClass().add("container");
+
+        Pane leaf = createPaneWithStyle("leaf");
+        StackPane parent = new StackPane(leaf);
+        root.getChildren().add(parent);
+
+        Toolkit.getToolkit().firePulse();
+        assertNull(leaf.getBackground(), "nothing matches .parent");
+
+        parent.getChildren().add(new StackPane());
+        assertEquals(CssFlags.DIRTY_BRANCH, NodeShim.getCSSFlags(parent));
+
+        parent.getStyleClass().add("parent");
+        assertEquals(CssFlags.REAPPLY, NodeShim.getCSSFlags(parent));
+
+        parent.getChildren().add(new StackPane());
+        assertEquals(CssFlags.REAPPLY, NodeShim.getCSSFlags(parent));
+
+        // Marks the parent stale again, but ends up with the very same style map, so the REAPPLY
+        // will reuse the helper and must still visit the children because of the early rebuild.
+        parent.getStyleClass().add("unmatched");
+        parent.getStyleClass().remove("unmatched");
+        assertEquals(CssFlags.REAPPLY, NodeShim.getCSSFlags(parent));
+
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals(Color.RED, getBackgroundColor(leaf));
+    }
+
+    /**
+     * Adding a node below a chain of ancestors that all have a deferred REAPPLY must not walk the
+     * scene graph once per stale ancestor.
+     */
+    @Test
+    void testAddingChildUnderStaleAncestorsStaysLinear() {
+        scene.getStylesheets().add(toDataURL("""
+                .old { -fx-padding: 1; }
+                .new { -fx-padding: 2; }
+                """));
+
+        AtomicInteger walks = new AtomicInteger();
+
+        List<WalkCountingPane> chain = new ArrayList<>();
+        WalkCountingPane top = new WalkCountingPane(walks, "old");
+        chain.add(top);
+
+        WalkCountingPane leaf = top;
+        for (int i = 1; i < 16; i++) {
+            WalkCountingPane pane = new WalkCountingPane(walks, "old");
+            leaf.getChildren().add(pane);
+            chain.add(pane);
+            leaf = pane;
+        }
+
+        scene.setRoot(top);
+        top.applyCss();
+
+        walks.set(0);
+        leaf.getChildren().add(new Pane());
+        int baseline = walks.get();
+
+        // Every pane now has a deferred REAPPLY and therefore a stale style helper.
+        for (WalkCountingPane pane : chain) {
+            pane.getStyleClass().setAll("new");
+        }
+
+        walks.set(0);
+        leaf.getChildren().add(new Pane());
+        int newWalks = walks.get();
+
+        assertTrue(newWalks <= baseline * 4, "Baseline = " + baseline + ", observed = " + newWalks);
+    }
+
+    /**
+     * A stale ancestor helper must be installed before the old helper resets its properties,
+     * so listeners running during the reset never observe an outdated helper and rebuild it again.
+     */
+    @Test
+    void testStaleAncestorHelperIsInstalledBeforeItsPropertiesAreReset() {
+        scene.getStylesheets().add(toDataURL("""
+                .parent { -fx-padding: 3; }
+                .removed { -fx-background-color: red; }
+                """));
+        stage.show();
+
+        StackPane leaf = new StackPane();
+        MatchCountingPane parent = new MatchCountingPane();
+        parent.getStyleClass().addAll("parent", "removed");
+        parent.getChildren().add(leaf);
+        root.getChildren().add(parent);
+
+        Toolkit.getToolkit().firePulse();
+        assertEquals(Color.RED, getBackgroundColor(parent));
+
+        parent.getChildren().add(new StackPane());
+        parent.getStyleClass().remove("removed");
+        assertEquals(CssFlags.REAPPLY, NodeShim.getCSSFlags(parent));
+
+        parent.backgroundProperty().addListener((_, _, _) -> parent.getChildren().add(new StackPane()));
+
+        // Rebuilds the parent's style helper on demand, which resets its background.
+        parent.matches = 0;
+        leaf.getChildren().add(new StackPane());
+
+        assertNull(parent.getBackground());
+        assertEquals(1, parent.matches, "parent must only be rebuilt once");
+    }
+
+    /**
+     * A css reapply from a listener running during the nodes own style helper rebuild must not leave
+     * the freshly installed helper marked as stale.
+     */
+    @Test
+    void testHelperNotStaleWhenReappliedDuringOwnRebuild() {
+        scene.getStylesheets().add(toDataURL("""
+                .removed { -fx-background-color: red; }
+                """));
+        stage.show();
+
+        MatchCountingPane parent = new MatchCountingPane();
+        parent.getStyleClass().add("removed");
+        root.getChildren().add(parent);
+
+        Toolkit.getToolkit().firePulse();
+        assertEquals(Color.RED, getBackgroundColor(parent));
+
+        parent.backgroundProperty().addListener((_, _, _) -> parent.getStyleClass().add("added"));
+
+        // Rebuilds the parents style helper immediately, which resets its background.
+        parent.getStyleClass().remove("removed");
+        assertTrue(parent.getStyleClass().contains("added"));
+        assertNull(parent.getBackground());
+
+        parent.matches = 0;
+        parent.getChildren().add(new StackPane());
+
+        assertEquals(0, parent.matches, "adding a child must not rebuild parent");
+    }
+
+    /**
+     * A listener running while a stale ancestor is rebuilt may reparent the node the chain was collected
+     * for. The chain must then be collected again (restart).
+     */
+    @Test
+    void testStyleableChainIsRebuiltWhenReparentedWhileAStaleAncestorIsRebuilt() {
+        scene.getStylesheets().add(toDataURL("""
+                .removed { -fx-background-color: red; }
+                .parent2 { -my-color: green; }
+                .leaf-leaf { -fx-background-color: -my-color; }
+                """));
+        stage.show();
+
+        StackPane leaf = new StackPane();
+        Pane parent1 = createPaneWithStyle("removed", leaf);
+        Pane parent2 = createPaneWithStyle("parent2");
+        root.getChildren().addAll(parent1, parent2);
+
+        Toolkit.getToolkit().firePulse();
+        assertEquals(Color.RED, getBackgroundColor(parent1));
+
+        parent1.getChildren().add(new StackPane());
+        parent1.getStyleClass().remove("removed");
+        assertEquals(CssFlags.REAPPLY, NodeShim.getCSSFlags(parent1));
+
+        Pane leafLeaf = createPaneWithStyle("leaf-leaf");
+
+        parent1.backgroundProperty().addListener((_, _, _) -> {
+            if (leafLeaf.getParent() == leaf) {
+                leaf.getChildren().remove(leafLeaf);
+                parent2.getChildren().add(leafLeaf);
+            }
+        });
+
+        leaf.getChildren().add(leafLeaf);
+        Toolkit.getToolkit().firePulse();
+
+        assertSame(parent2, leafLeaf.getParent());
+        assertEquals(Color.GREEN, getBackgroundColor(leafLeaf));
+    }
+
+    /**
+     * A stale ancestor that is reparented while a higher stale ancestor is rebuilt
+     * must be rebuilt for its new parent, not for the outdated chain (restart).
+     */
+    @Test
+    void testStaleAncestorIsRebuiltForItsNewParentWhenReparentedWhileAHigherStaleAncestorIsRebuilt() {
+        scene.getStylesheets().add(toDataURL("""
+                .removed { -fx-background-color: red; }
+                .parent2 { -my-color: green; }
+                .leaf { -fx-padding: 1; }
+                .restyled { -fx-padding: 2; }
+                .leaf-leaf { -fx-background-color: -my-color; }
+                """));
+        stage.show();
+
+        Pane leafLeaf = createPaneWithStyle("leaf-leaf");
+        AtomicBoolean addLeafLeaf = new AtomicBoolean();
+        StackPane leaf = new StackPane() {
+            @Override
+            protected void layoutChildren() {
+                super.layoutChildren();
+                if (addLeafLeaf.getAndSet(false)) {
+                    // Performing layout, so the CSS of the leafLeaf is processed immediately.
+                    getChildren().add(leafLeaf);
+                }
+            }
+        };
+        leaf.getStyleClass().add("leaf");
+
+        Pane parent1 = createPaneWithStyle("removed", leaf);
+        Pane parent2 = createPaneWithStyle("parent2");
+        root.getChildren().addAll(parent1, parent2);
+
+        Toolkit.getToolkit().firePulse();
+        assertEquals(Color.RED, getBackgroundColor(parent1));
+
+        parent1.getChildren().add(new StackPane());
+        parent1.getStyleClass().remove("removed");
+        assertEquals(CssFlags.REAPPLY, NodeShim.getCSSFlags(parent1));
+
+        parent1.backgroundProperty().addListener((_, _, _) -> {
+            if (leaf.getParent() == parent1) {
+                parent2.getChildren().add(leaf);
+                leaf.getStyleClass().add("restyled");
+            }
+        });
+
+        addLeafLeaf.set(true);
+        leaf.requestLayout();
+        leaf.layout();
+
+        assertSame(parent2, leaf.getParent());
+        assertNotNull(leafLeaf.getBackground());
+        assertEquals(Color.GREEN, getBackgroundColor(leafLeaf));
+    }
+
+    private static class MatchCountingPane extends StackPane {
+
+        private int matches;
+
+        @Override
+        public String getTypeSelector() {
+            matches++;
+            return super.getTypeSelector();
+        }
+    }
+
+    private static class WalkCountingPane extends Pane {
+
+        private final AtomicInteger walks;
+
+        WalkCountingPane(AtomicInteger walks, String styleClass) {
+            this.walks = walks;
+            getStyleClass().add(styleClass);
+        }
+
+        @Override
+        public Styleable getStyleableParent() {
+            walks.incrementAndGet();
+            return super.getStyleableParent();
+        }
+    }
+
+    private Pane createPaneWithStyle(String styleClass, Region... children) {
+        Pane pane = new Pane(children);
+        pane.getStyleClass().add(styleClass);
+        return pane;
+    }
+
+    private Paint getBackgroundColor(Region region) {
+        return region.getBackground().getFills().getFirst().getFill();
+    }
+
+    private List<StackPane> buildUnstyledChain(int depth) {
+        List<StackPane> chain = new ArrayList<>(depth);
+        Pane current = root;
+        for (int i = 0; i < depth; i++) {
+            StackPane pane = new StackPane();
+            current.getChildren().add(pane);
+            chain.add(pane);
+
+            current = pane;
+        }
+        return chain;
     }
 
     private static String toDataURL(String stylesheet) {
