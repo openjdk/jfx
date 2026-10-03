@@ -18,7 +18,7 @@ If you intend to run the jar using the CLI, create it with this project's `jar` 
 
 Run `app.LightingApplication` with the following VM options (which are pre-configured in `build.gradle`):
 ```properties
--Djava.library.path="\path\to\jfx\modules\javafx.graphics\build\module-lib"
+-Djava.library.path=..\..\..\modules\javafx.graphics\build\module-lib
 --add-modules=javafx.controls,javafx.swing
 -Djavafx.animation.fullspeed=true
 ```
