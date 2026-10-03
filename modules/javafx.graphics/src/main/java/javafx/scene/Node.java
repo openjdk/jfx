@@ -9818,21 +9818,20 @@ public abstract sealed class Node
     CssFlags cssFlag = CssFlags.CLEAN;
 
     /**
-     * A {@code reapplyCSS()} was deferred, so {@link #styleHelper} is out of date. A descendant asking
-     * for it during its own {@link CssStyleHelper#createStyleHelper(Node)} must recreate it first.
+     * A {@code reapplyCSS()} was deferred, so {@link #styleHelper} is out of date.
+     * A descendant asking for it during its own {@link CssStyleHelper#createStyleHelper(Node)} must recreate it first.
      */
     boolean cssHelperStale;
 
     /**
-     * A descendant recreated this {@link #styleHelper} on demand while the deferred {@code REAPPLY} was
-     * still pending. That REAPPLY must still visit this node's children, even if the helper is reusable.
-     * This is independent of {@link #cssHelperStale}: the node can go stale again before the REAPPLY runs.
+     * A descendant recreated this {@link #styleHelper} on demand while the deferred {@code REAPPLY} was still pending.
+     * That REAPPLY must still visit this node's children, even if the helper is reusable.
      */
     boolean cssHelperResolvedEarly;
 
     /**
-     * The CSS properties of this node are currently being reset to their initial values. The style
-     * helper must not be consulted while that is in progress.
+     * The CSS properties of this node are currently being reset to their initial values.
+     * The styles must not be used while that is in progress, as they can be oudated.
      */
     boolean cssResetInProgress;
 
