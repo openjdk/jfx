@@ -801,16 +801,14 @@ final class CssStyleHelper {
     private boolean transitionStateInProgress = false;
 
     /**
-     * Called by the Node whenever it has transitioned from one set of
-     * pseudo-class states to another. This function will then lookup the
-     * new values for each of the styleable variables on the Node, and
-     * then set the new value via {@link StyleableProperty#applyStyle}.
+     * Applies the styles of the node.
+     * Each CSS property is looked up (or taken from the shared style cache) and set via
+     * {@link StyleableProperty#applyStyle}.
+     * Properties previously set by CSS that are no longer styled are reset to their initial value.
+     * Called on every CSS pass of the node.
      */
     void transitionToState(final Node node) {
-
-        //
         // If styleMap is null, then StyleManager has blown it away and we need to reapply CSS.
-        //
         final StyleMap styleMap = getStyleMap(node);
         if (styleMap == null) {
             node.styleHelper = null;
@@ -821,10 +819,7 @@ final class CssStyleHelper {
         // if the style-map is empty, then we are only looking for inherited styles.
         final boolean inheritOnly = styleMap.isEmpty();
 
-        //
-        // Styles that need lookup can be cached provided none of the styles
-        // are from Node.style.
-        //
+        // Styles that need lookup can be cached.
         final StyleCache sharedCache = StyleManager.getInstance().getSharedCache(node, node.getSubScene(), cacheContainer.styleCacheKey);
 
         if (sharedCache == null) {
