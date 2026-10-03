@@ -76,7 +76,25 @@ public class ControlCssTest {
     }
 
     /**
-     * When we swap the root of a scene, it should still correctly resolve the CSS.
+     * When we swap the root of a scene in a listener of a child node, it should still correctly resolve the CSS.
+     * The listener will run when the tab pane creates its skin, which will then add the tab content
+     * with the label to the scene graph.
+     *
+     * <pre>{@code
+     * Before:
+     *
+     * VBox
+     * └── Button
+     *
+     * After:
+     *
+     * StackPane
+     * └── VBox
+     *     ├── Button
+     *     └── TabPane
+     *         └── Tab
+     *             └── Label
+     * }</pre>
      */
     @Test
     void testLookupResolvesAfterSceneListenerRootSwap() {
@@ -99,7 +117,28 @@ public class ControlCssTest {
     }
 
     /**
-     * When we swap a pane with a style class, the CSS for the children based of the pane should correctly resolve.
+     * When we swap a pane and transfer the style classes in a listener of a child node,
+     * the CSS for the children based of the pane should correctly resolve.
+     * The listener will run when the tab pane creates its skin, which will then add the tab content
+     * with the label to the scene graph.
+     *
+     * <pre>{@code
+     * Before:
+     *
+     * VBox
+     * ├── Button
+     * └── Pane
+     *
+     * After:
+     *
+     * VBox
+     * ├── Button
+     * └── Pane
+     *     └── Pane
+     *         └── TabPane
+     *             └── Tab
+     *                 └── Label
+     * }</pre>
      */
     @Test
     void testPaneClassLookupResolvesAfterSceneListenerPaneSwap() {
@@ -107,27 +146,27 @@ public class ControlCssTest {
         Label label = new Label("Test");
         tabPane.getTabs().add(new Tab("TestTab", label));
 
-        Pane myPane = createPaneWithStyle("my-pane");
+        Pane oldPaneRoot = createPaneWithStyle("my-pane");
 
         AtomicBoolean swapped = new AtomicBoolean(false);
         label.sceneProperty().addListener((_, _, newScene) -> {
             if (newScene != null && !swapped.getAndSet(true)) {
                 Pane newPaneRoot = new Pane();
-                Pane paneRoot = (Pane) myPane.getParent();
+                Pane paneRoot = (Pane) oldPaneRoot.getParent();
 
-                paneRoot.getChildren().remove(myPane);
+                paneRoot.getChildren().remove(oldPaneRoot);
                 paneRoot.getChildren().add(newPaneRoot);
 
-                myPane.getStyleClass().remove("my-pane");
+                oldPaneRoot.getStyleClass().remove("my-pane");
                 newPaneRoot.getStyleClass().add("my-pane");
 
-                newPaneRoot.getChildren().setAll(myPane);
+                newPaneRoot.getChildren().setAll(oldPaneRoot);
             }
         });
 
         Button btn = new Button("Add Child");
-        VBox root = new VBox(btn, myPane);
-        btn.setOnAction(_ -> myPane.getChildren().add(tabPane));
+        VBox root = new VBox(btn, oldPaneRoot);
+        btn.setOnAction(_ -> oldPaneRoot.getChildren().add(tabPane));
 
         Scene scene = new Scene(root);
         scene.getStylesheets().add(toBase64("""
@@ -143,7 +182,28 @@ public class ControlCssTest {
     }
 
     /**
-     * A node that is styled after the root was swapped must still resolve the looked-up colors of the new root.
+     * A node that is styled after the root was swapped in a listener of a child node
+     * must still resolve the looked-up colors of the new root.
+     * The listener will run when the tab pane creates its skin, which will then add the tab content
+     * with the label to the scene graph.
+     *
+     * <pre>{@code
+     * Before:
+     *
+     * VBox
+     * ├── Button
+     * └── Pane
+     *
+     * After:
+     *
+     * StackPane
+     * └── VBox
+     *     ├── Button
+     *     ├── TabPane
+     *     │   └── Tab
+     *     │       └── Label
+     *     └── Pane
+     * }</pre>
      */
     @Test
     void testLookupResolvesForSiblingStyledAfterSceneListenerRootSwap() {
@@ -174,8 +234,8 @@ public class ControlCssTest {
     }
 
     /**
-     * While the properties of a replaced style helper are being reset, no font relative property may be
-     * recalculated, because the new styles are not applied yet.
+     * While the properties of a replaced style helper are being reset, no font relative property may be recalculated.
+     * Otherwise, we will get wrong intermediate values in between. A listener should never observe any.
      */
     @Test
     void testRelativeSizesAreNotRecalculatedWhileResettingProperties() {
@@ -198,11 +258,11 @@ public class ControlCssTest {
         label.paddingProperty().addListener((_, _, newValue) -> observed.add(newValue));
 
         // Resets the font, which recalculates the font relative padding.
-        label.getStyleClass().setAll("new");
+        label.getStyleClass().set(1, "new");
         Toolkit.getToolkit().firePulse();
 
-        // A single change: recalculating during the reset would set the padding from the reset font first.
-        assertEquals(List.of(new Insets(80)), observed, "padding must not be calculated with the old font-size");
+        // There should be only a single change.
+        assertEquals(List.of(new Insets(80)), observed);
     }
 
     private static void swapRootWhenAddedToScene(Node node) {
@@ -226,5 +286,4 @@ public class ControlCssTest {
     private static String toBase64(String css) {
         return "data:text/css;base64," + Base64.getEncoder().encodeToString(css.getBytes(StandardCharsets.UTF_8));
     }
-
 }
