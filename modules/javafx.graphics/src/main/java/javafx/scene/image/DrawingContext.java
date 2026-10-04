@@ -1595,7 +1595,8 @@ public interface DrawingContext {
      * @param text the string of text or null.
      * @param x position on the x axis.
      * @param y position on the y axis.
-     * @param maxWidth the maximum width of the string.
+     * @param maxWidth the maximum width of the string; a value of zero or
+     *     less means there is no maximum.
      */
     void fillText(String text, double x, double y, double maxWidth);
 
@@ -1613,7 +1614,8 @@ public interface DrawingContext {
      * @param text the string of text or null.
      * @param x position on the x axis.
      * @param y position on the y axis.
-     * @param maxWidth the maximum width of the string.
+     * @param maxWidth the maximum width of the string; a value of zero or
+     *     less means there is no maximum.
      */
     void strokeText(String text, double x, double y, double maxWidth);
 
