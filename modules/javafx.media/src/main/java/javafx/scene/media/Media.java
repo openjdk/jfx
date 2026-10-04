@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -336,29 +336,34 @@ public final class Media {
     /**
      * Constructs a <code>Media</code> instance.  This is the only way to
      * specify the media source. The source must represent a valid <code>URI</code>
-     * and is immutable. Only HTTP, HTTPS, FILE, and JAR <code>URL</code>s are supported. If the
+     * and is immutable. Only <code>http</code>, <code>https</code>, <code>file</code>, <code>jar</code>,
+     * <code>jrt</code>, and <code>resource</code> <code>URL</code>s are supported. If the
      * provided URL is invalid then an exception will be thrown.  If an
      * asynchronous error occurs, the {@link #errorProperty error} property will be set. Listen
      * to this property to be notified of any such errors.
      *
-     * <p>If the source uses a non-blocking protocol such as FILE, then any
+     * <p>If the source uses a non-blocking protocol such as <code>file</code>, then any
      * problems which can be detected immediately will cause a <code>MediaException</code>
      * to be thrown. Such problems include the media being inaccessible or in an
      * unsupported format. If however a potentially blocking protocol such as
-     * HTTP is used, then the connection will be initialized asynchronously so
+     * <code>http</code> is used, then the connection will be initialized asynchronously so
      * that these sorts of errors will be signaled by setting the {@link #errorProperty error}
      * property.</p>
      *
      * <p>Constraints:
      * <ul>
      * <li>The supplied URI must conform to RFC-2396 as required by
-     * <A href="https://docs.oracle.com/javase/8/docs/api/java/net/URI.html">java.net.URI</A>.</li>
-     * <li>Only HTTP, HTTPS, FILE, and JAR URIs are supported.</li>
+     * {@link java.net.URI}.</li>
+     * <li>Only <code>http</code>, <code>https</code>, <code>file</code>, <code>jar</code>,
+     * <code>jrt</code>, and <code>resource</code> URIs are supported. <code>resource</code> URIs are supported only in
+     * statically linked applications.</li>
      * </ul>
      *
-     * <p>See <A href="https://docs.oracle.com/javase/8/docs/api/java/net/URI.html">java.net.URI</A>
+     * <p>See {@link java.net.URI}
      * for more information about URI formatting in general.
-     * JAR URL syntax is specified in <a href="https://docs.oracle.com/javase/8/docs/api/java/net/JarURLConnection.html">java.net.JarURLConnection</A>.
+     * The <code>jar</code> URL syntax is specified in {@link java.net.JarURLConnection}.
+     * <code>jrt</code> URL syntax is described in <a href="https://openjdk.org/jeps/220">JEP 220: Modular Run-Time Images</a>.
+     * The <code>resource</code> URL syntax is described in <a href="https://www.graalvm.org/latest/reference-manual/native-image/dynamic-features/URLProtocols/">URL Protocols in Native Image</a>.
      *
      * @param source The URI of the source media.
      * @throws NullPointerException if the URI string is <code>null</code>.
