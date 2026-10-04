@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -551,6 +551,16 @@ public final class QuantumToolkit extends Toolkit {
         pulseTimer.resume();
     }
 
+    private void stopTimer() {
+        // Stop the timer in a try/catch so that an IllegalStateException won't
+        // abort toolkit shutdown.
+        try {
+            pulseTimer.stop();
+        } catch (IllegalStateException ex) {
+            ex.printStackTrace();
+        }
+    }
+
     private String pulseString() {
         return ((toolkitRunning.get() ? "T" : "t") +
                 (animationRunning.get() ? "A" : "a") +
@@ -870,7 +880,7 @@ public final class QuantumToolkit extends Toolkit {
         checkFxUserThread();
 
         // Turn off pulses so no extraneous runnables are submitted
-        pulseTimer.stop();
+        stopTimer();
 
         // We need to wait for the last frame to finish so that the renderer
         // is not running while we are shutting down glass.
@@ -893,7 +903,7 @@ public final class QuantumToolkit extends Toolkit {
 
     public void dispose() {
         if (toolkitRunning.compareAndSet(true, false)) {
-            pulseTimer.stop();
+            stopTimer();
             renderer.stopRenderer();
 
             try {

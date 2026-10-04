@@ -692,4 +692,13 @@ public class Path2DTest {
         assertThrows(NullPointerException.class, () -> p.appendSVGPath(BaseTransform.IDENTITY_TRANSFORM, null));
         assertThrows(NullPointerException.class, () -> p.appendSVGPath(null, "l 10 0"));
     }
+
+    @Test
+    void testQuarterCircleArcTo() {
+        Path2D path = new Path2D();
+        path.appendSVGPath("M11.65,6.47A1.69,1.69 0 0,1 13.34,4.78");
+
+        assertEquals(13.34f, path.getCurrentX(), 0.001f);
+        assertEquals(4.78f, path.getCurrentY(), 0.001f);
+    }
 }

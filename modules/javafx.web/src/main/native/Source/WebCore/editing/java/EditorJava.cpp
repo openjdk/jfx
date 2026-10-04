@@ -76,7 +76,11 @@ void Editor::writeImageToPasteboard(Pasteboard& pasteboard, Element& element, co
 
 void Editor::writeSelectionToPasteboard(Pasteboard& pasteboard)
 {
-    pasteboard.writeSelection(*selectedRange(), canSmartCopyOrDelete(), *m_document->frame(), DefaultSelectedTextType);
+    auto range = selectedRange();
+    if (!range)
+        return;
+
+    pasteboard.writeSelection(*range, canSmartCopyOrDelete(), *m_document->frame(), DefaultSelectedTextType);
 }
 
 void Editor::platformCopyFont()
