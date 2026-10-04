@@ -168,6 +168,12 @@ public class WritableImage extends Image {
      * constructor. An image created from a {@link PixelBuffer} must use a pixel format of that
      * type and a buffer of that kind.
      *
+     * @implNote
+     * A snapshot into this image currently replaces its pixel storage, detaching any
+     * {@code DrawingContext} previously obtained from it ({@code Node.snapshot} and
+     * {@code Scene.snapshot}). This is a known limitation and is expected to change so that
+     * snapshots render into the existing storage, leaving the {@code DrawingContext} usable.
+     *
      * @return the {@link DrawingContext} associated with this image, never {@code null}
      * @throws IllegalStateException if the pixel storage of this image is not in {@code INT_ARGB_PRE}
      *     format (for example, when created from a {@code BYTE_BGRA_PRE} {@code PixelBuffer})
