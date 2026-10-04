@@ -80,14 +80,12 @@ import javafx.util.Subscription;
  *            The type of the wrapped value.
  *
  * @implNote
- * <ol>
- *     <li>All bindings and properties in the JavaFX library support lazy evaluation.
- *     <li>Properties in the JavaFX library become invalid when the value they hold
- *         changes. Object properties compare the new value by reference, so they also
- *         become invalid when the new value {@link Object#equals(Object) equals} the previous value
- *         but is not the same reference; primitive and {@code String} properties compare by
- *         value. Bindings become invalid when one of their dependencies becomes invalid.
- * </ol>
+ * Properties in the JavaFX library become invalid when the value they hold
+ * changes. Object properties compare the new value by reference, so they also
+ * become invalid when the new value {@link Object#equals(Object) equals} the
+ * previous value but is not the same reference; primitive and {@code String}
+ * properties compare by value. Bindings become invalid when one of their
+ * dependencies becomes invalid.
  * <p>
  * For change listeners, the implementations in the JavaFX library provide the
  * same guarantees as for invalidation listeners (see {@link Observable}), and in

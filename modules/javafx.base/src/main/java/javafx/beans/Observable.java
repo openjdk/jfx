@@ -35,16 +35,17 @@ import javafx.util.Subscription;
  * <p>
  * An implementation of {@code Observable} may support lazy evaluation,
  * which means that the content is not immediately recomputed after changes, but
- * lazily the next time it is requested. All bindings and properties in
- * this library support lazy evaluation.
+ * lazily the next time it is requested.
  * <p>
  * Implementations of this class should strive to generate as few events as
  * possible to avoid wasting too much time in event handlers.
  *
  * @implNote
- * The implementations in the JavaFX library mark themselves as invalid when the
- * first invalidation event occurs. They do not generate anymore invalidation
- * events until their value is recomputed and valid again.
+ * All bindings and properties in the JavaFX library support lazy evaluation.
+ * <p>
+ * These implementations mark themselves as invalid when the first invalidation
+ * event occurs. They do not generate anymore invalidation events until their
+ * value is recomputed and valid again.
  * <p>
  * These implementations provide the following guarantees for their
  * {@link InvalidationListener}s:
