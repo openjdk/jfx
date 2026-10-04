@@ -223,7 +223,7 @@ import javafx.scene.transform.Affine;
  *         <td class="colLast" style="width:10%; text-align:center">{@link FillRule#NON_ZERO NON_ZERO}</td>
  *         <td class="colLast">
  *             The method used to determine the interior of paths for a path fill or
- *            clip operation.
+ *             clip operation.
  *         </td>
  *     </tr>
  *     <tr><th colspan="3" scope="row"><a id="image-attr">Image Attributes</a></th></tr>
