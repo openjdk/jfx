@@ -235,7 +235,7 @@ public class SWDrawingContext implements DrawingContext {
             return new SWRTTexture(factory, width, height, buffer);
         }
 
-        throw new IllegalStateException("image buffer is neither heap array-backed nor direct");
+        throw new IllegalStateException("image buffer must be a direct IntBuffer or an IntBuffer backed by an accessible array");
     }
 
     private record StateCleaner(SWResourceFactory resourceFactory, SWRTTexture texture) implements Runnable {
@@ -977,13 +977,33 @@ public class SWDrawingContext implements DrawingContext {
             return;
         }
 
-        path.setWindingRule(fillRule == FillRule.EVEN_ODD ? Path2D.WIND_EVEN_ODD : Path2D.WIND_NON_ZERO);
+        /*
+         * The path is created in device space, so draw the inverse-transformed
+         * path under the current transform: the geometry stays put, while the
+         * paint and stroke parameter use the transform:
+         */
 
-        graphics.setTransform(BaseTransform.IDENTITY_TRANSFORM);
-        graphics.setPaint(prismFillPaint);
-        graphics.resetPaintBounds();
-        graphics.fill(path);
-        graphics.setTransform(transform);
+        Path2D shape = pathForRendering();
+
+        /*
+         * The fill rule is only used by this operation; applying it to the
+         * current path must not change the path itself (so isPointInPath stays
+         * unaffected):
+         */
+
+        int windingRule = fillRule == FillRule.EVEN_ODD ? Path2D.WIND_EVEN_ODD : Path2D.WIND_NON_ZERO;
+        int previousWindingRule = shape.getWindingRule();
+
+        try {
+            shape.setWindingRule(windingRule);
+
+            graphics.setPaint(prismFillPaint);
+            graphics.resetPaintBounds();
+            graphics.fill(shape);
+        }
+        finally {
+            shape.setWindingRule(previousWindingRule);
+        }
 
         reportGraphicsPaintBounds();
     }
@@ -997,27 +1017,41 @@ public class SWDrawingContext implements DrawingContext {
         applyStrokeParameters();
 
         /*
-         * The path coordinates were transformed into device space as they
-         * were added, and must be drawn with an identity transform. The stroke
-         * widths and dash lengths must still be adjusted if the scale != 1.0
+         * Draw the inverse-transformed path under the current transform, so the
+         * stroke width, dashes and caps are shaped by the transform.
          */
-
-        double scale = Math.sqrt(transform.getMxx() * transform.getMxx() + transform.getMyx() * transform.getMyx());
-
-        if (scale != 1.0) {
-            graphics.setStroke(buildStroke(scale));
-        }
-
-        graphics.setTransform(BaseTransform.IDENTITY_TRANSFORM);
         graphics.resetPaintBounds();
-        graphics.draw(path);
-        graphics.setTransform(transform);  // restore transform
-
-        if (scale != 1.0) {
-            applyStrokeParameters();  // restore stroke just in case
-        }
+        graphics.draw(pathForRendering());
 
         reportGraphicsPaintBounds();
+    }
+
+    /*
+     * Returns the current path in user space (the inverse of the current
+     * transform applied to the created, device space path), so that drawing it
+     * under the current transform recreates that geometry but allows the
+     * transform to shape stroke attributes and paints. Returns the path itself
+     * when the transform is the identity, or when it cannot be inverted.
+     */
+    private Path2D pathForRendering() {
+        if (transform.isIdentity()) {
+            return path;
+        }
+
+        try {
+            Affine2D inverse = new Affine2D(transform);
+
+            inverse.invert();
+
+            Path2D inversePath = new Path2D();
+
+            inversePath.append(path.getPathIterator(inverse), false);
+
+            return inversePath;
+        }
+        catch (NoninvertibleTransformException e) {
+            return path;
+        }
     }
 
     @Override

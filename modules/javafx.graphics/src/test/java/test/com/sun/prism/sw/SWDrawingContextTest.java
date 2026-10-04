@@ -43,6 +43,10 @@ import javafx.geometry.VPos;
 import javafx.scene.effect.BlendMode;
 import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
+import javafx.scene.paint.CycleMethod;
+import javafx.scene.paint.ImagePattern;
+import javafx.scene.paint.LinearGradient;
+import javafx.scene.paint.Stop;
 import javafx.scene.shape.ArcType;
 import javafx.scene.shape.FillRule;
 import javafx.scene.shape.StrokeLineCap;
@@ -1180,6 +1184,272 @@ public class SWDrawingContextTest {
     }
 
     @Test
+    public void pathStrokeWidthShouldMatchBasicShapeStrokeUnderNonUniformScale() {
+        h.context.setTransform(1, 0, 0, 2, 0, 0);  // non-uniform scale, y scale x2
+        h.context.setStroke(Color.RED);
+        h.context.setLineWidth(3);
+
+        h.context.strokeLine(10, 10, 30, 10);  // basic horizontal line
+
+        // path horizontal line:
+        h.context.beginPath();
+        h.context.moveTo(10, 30);
+        h.context.lineTo(30, 30);
+        h.context.stroke();
+
+        int basicLineStrokeWidth = paintedInColumn(20, 10, 30);
+        int pathLineStrokeWidth = paintedInColumn(20, 50, 64);
+
+        // 3 pixels wide, y scale of 2 -> 6
+        assertEquals(6, basicLineStrokeWidth);
+        assertEquals(6, pathLineStrokeWidth);
+    }
+
+    @Test
+    public void dashesShouldScaleWithTheTransformForPaths() {
+        h.context.setTransform(1, 0, 0, 2, 0, 0);  // non-uniform scale, y scale x2
+        h.context.setStroke(Color.RED);
+        h.context.setLineWidth(1);
+        h.context.setLineDashes(2, 2);
+
+        h.context.strokeLine(10, 5, 10, 30);  // basic vertical line (dashes scale with the y axis)
+
+        // path vertical line:
+        h.context.beginPath();
+        h.context.moveTo(30, 5);
+        h.context.lineTo(30, 30);
+        h.context.stroke();
+
+        int basicDashCount = runsInColumn(10, 0, 64);
+        int pathDashCount = runsInColumn(30, 0, 64);
+
+        /*
+         * The vertical line is 50 pixels long (25 pixels scaled by 2); a 2/2 dash becomes (taking the scale
+         * into account) 4 on and 4 off pixels over 50 pixels; expect 7 dashes (50 / 8 = 6.25 -> rounded up 7)
+         */
+
+        assertEquals(7, basicDashCount);
+        assertEquals(7, pathDashCount);
+    }
+
+    @Test
+    public void isPointInPathShouldInterpretThePointInDeviceSpace() {
+        h.context.setTransform(1, 0, 0, 1, 10, 0);  // translate x by 10
+
+        h.context.beginPath();
+        h.context.rect(0, 0, 10, 10);
+
+        /*
+         * The path is created in device space, while the query point is unaffected
+         * by the current transform (as its primary purpose is mouse hit testing), so
+         * the rectangle occupies x in [10, 20] and y in [0, 10]:
+         */
+
+        assertFalse(h.context.isPointInPath(5, 5));  // left of the transformed path
+        assertTrue(h.context.isPointInPath(15, 5));  // inside the transformed path
+        assertTrue(h.context.isPointInPath(10, 0));  // low corner counts as inside
+        assertFalse(h.context.isPointInPath(20, 10));  // high corner is outside
+        assertFalse(h.context.isPointInPath(9.9999, 5));  // just outside
+        assertTrue(h.context.isPointInPath(19.9999, 9.9999));  // just inside
+    }
+
+    @Test
+    public void absoluteGradientShouldTransformTheSameForPathsAndShapes() {
+        LinearGradient gradient = new LinearGradient(
+            0, 0, 20, 0,
+            false,
+            CycleMethod.NO_CYCLE,
+            new Stop(0, Color.BLACK),
+            new Stop(1, Color.WHITE)
+        );
+
+        h.context.setTransform(1, 0, 0, 1, 0, 0);
+        h.context.setFill(gradient);
+        h.context.clearRect(0, 0, WIDTH, HEIGHT);
+        h.context.fillRect(0, 0, 20, 4);
+
+        int[] untransformedShape = snapshotPixels();
+
+        reset();
+
+        h.context.setTransform(1, 0, 0, 1, 10, 0);  // translate x by 10
+        h.context.setFill(gradient);
+        h.context.fillRect(0, 0, 20, 4);
+
+        int[] transformedShape = snapshotPixels();
+
+        reset();
+
+        h.context.setTransform(1, 0, 0, 1, 10, 0);  // translate x by 10
+        h.context.setFill(gradient);
+        h.context.beginPath();
+        h.context.rect(0, 0, 20, 4);
+        h.context.fill();
+
+        int[] transformedPath = snapshotPixels();
+
+        /*
+         * Check that the untransformed shape doesn't match the transformed shape,
+         * and that both the transformed path and shape are exactly the same:
+         */
+
+        assertFalse(Arrays.equals(transformedShape, untransformedShape));
+        assertArrayEquals(transformedShape, transformedPath);
+    }
+
+    @Test
+    public void imagePatternShouldTransformTheSameForPathsAndShapes() {
+        ImagePattern pattern = new ImagePattern(createPatternImage(), 0, 0, 2, 2, false);
+
+        h.context.setImageSmoothing(false);
+        h.context.setTransform(1, 0, 0, 1, 0, 0);
+        h.context.setFill(pattern);
+        h.context.fillRect(0, 0, 20, 4);
+
+        int[] untransformedShape = snapshotPixels();
+
+        reset();
+
+        h.context.setImageSmoothing(false);
+        h.context.setTransform(1, 0, 0, 1, 10, 0);  // translate x by 10
+        h.context.setFill(pattern);
+        h.context.fillRect(0, 0, 20, 4);
+
+        int[] transformedShape = snapshotPixels();
+
+        reset();
+
+        h.context.setImageSmoothing(false);
+        h.context.setTransform(1, 0, 0, 1, 10, 0);  // translate x by 10
+        h.context.setFill(pattern);
+        h.context.beginPath();
+        h.context.rect(0, 0, 20, 4);
+        h.context.fill();
+
+        int[] transformedPath = snapshotPixels();
+
+        /*
+         * Check that the untransformed shape doesn't match the transformed shape,
+         * and that both the transformed path and shape are exactly the same:
+         */
+
+        assertFalse(Arrays.equals(transformedShape, untransformedShape));
+        assertArrayEquals(transformedShape, transformedPath);
+    }
+
+    @Test
+    public void textShouldScaleWithTheTransform() {
+        h.context.setFill(Color.RED);
+        h.context.setFont(Font.font("System", 20));
+
+        Rectangle plain = textBounds(() -> h.context.fillText("M", 10, 30));
+
+        reset();
+
+        h.context.setFill(Color.RED);
+        h.context.setFont(Font.font("System", 20));
+        h.context.setTransform(2, 0, 0, 2, 0, 0);  // scale x2
+
+        Rectangle scaled = textBounds(() -> h.context.fillText("M", 10, 30));
+
+        // the text must scale and move with the transform:
+        assertEquals(2 * plain.x, scaled.x);
+        assertEquals(2 * plain.y, scaled.y);
+        assertEquals(2 * plain.width, scaled.width);
+        assertEquals(2 * plain.height, scaled.height);
+    }
+
+    @Test
+    public void textShouldScaleWithANonUniformTransform() {
+        h.context.setFill(Color.RED);
+        h.context.setFont(Font.font("System", 20));
+
+        Rectangle plain = textBounds(() -> h.context.fillText("M", 10, 30));
+
+        reset();
+
+        h.context.setFill(Color.RED);
+        h.context.setFont(Font.font("System", 20));
+        h.context.setTransform(1, 0, 0, 2, 0, 0);  // scale y x2
+
+        Rectangle tall = textBounds(() -> h.context.fillText("M", 10, 30));
+
+        assertEquals(plain.x, tall.x);
+        assertEquals(2 * plain.y, tall.y);  // the glyph top scales with the y axis
+        assertEquals(plain.width, tall.width);
+        assertEquals(2 * plain.height, tall.height);
+
+        reset();
+
+        h.context.setFill(Color.RED);
+        h.context.setFont(Font.font("System", 20));
+        h.context.setTransform(2, 0, 0, 1, 0, 0);  // scale x x2
+
+        Rectangle wide = textBounds(() -> h.context.fillText("M", 10, 30));
+
+        assertEquals(2 * plain.x, wide.x);
+        assertEquals(plain.y, wide.y);
+        assertEquals(2 * plain.width, wide.width);
+        assertEquals(plain.height, wide.height);
+    }
+
+    @Test
+    public void textShouldRespectMaxWidth() {
+        h.context.setFill(Color.RED);
+        h.context.setFont(Font.font("System", 20));
+
+        Rectangle natural = textBounds(() -> h.context.fillText("M", 10, 30));
+
+        reset();
+
+        h.context.setFill(Color.RED);
+        h.context.setFont(Font.font("System", 20));
+
+        Rectangle squeezed = textBounds(() -> h.context.fillText("M", 10, 30, 10));
+
+        // squeezed to 10 pixels wide, height unaffected:
+        assertEquals(10, squeezed.width);
+        assertEquals(natural.height, squeezed.height);
+    }
+
+    @Test
+    public void textShouldRespectMaxWidthUnderATransform() {
+        h.context.setFill(Color.RED);
+        h.context.setFont(Font.font("System", 20));
+        h.context.setTransform(2, 0, 0, 2, 0, 0);  // scale x2
+
+        Rectangle squeezed = textBounds(() -> h.context.fillText("M", 10, 30, 10));
+
+        // maxWidth is a user-space length, so it scales with the transform:
+        assertEquals(20, squeezed.width);
+        assertEquals(32, squeezed.height);
+    }
+
+    @Test
+    public void strokedTextShouldScaleWithTheTransform() {
+        h.context.setStroke(Color.RED);
+        h.context.setLineWidth(1);
+        h.context.setFont(Font.font("System", 20));
+
+        Rectangle plain = textBounds(() -> h.context.strokeText("M", 10, 30));
+
+        reset();
+
+        h.context.setStroke(Color.RED);
+        h.context.setLineWidth(1);
+        h.context.setFont(Font.font("System", 20));
+        h.context.setTransform(2, 0, 0, 2, 0, 0);  // scale x2
+
+        Rectangle scaled = textBounds(() -> h.context.strokeText("M", 10, 30));
+
+        // the stroked text must scale and move with the transform (allowing a couple of pixels for anti-aliasing):
+        assertEquals(2 * plain.x, scaled.x, 2);
+        assertEquals(2 * plain.y, scaled.y, 2);
+        assertEquals(2 * plain.width, scaled.width, 2);
+        assertEquals(2 * plain.height, scaled.height, 2);
+    }
+
+    @Test
     public void clipShouldNotMoveWhenTheTransformChangesLater() {
         h.context.setFill(Color.RED);
         h.context.clipRect(10, 10, 10, 10);  // frozen clip in device space
@@ -1281,6 +1551,23 @@ public class SWDrawingContextTest {
         // the inside is inside, from the outside is outside
         assertTrue(h.context.isPointInPath(19.9999, 19.9999));  // just inside the bottom-right corner
         assertFalse(h.context.isPointInPath(20.0001, 20.0001));  // just outside the bottom-right corner
+    }
+
+    @Test
+    public void fillRuleShouldNotAffectIsPointInPath() {
+        h.context.setFill(Color.RED);
+        h.context.beginPath();
+        h.context.rect(10, 10, 20, 20);
+        h.context.rect(20, 20, 20, 20);  // two overlapping squares
+        h.context.setFillRule(FillRule.EVEN_ODD);
+        h.context.fill();
+
+        // the fill honors the even-odd rule: the overlap is a hole
+        assertPixel(15, 15, Color.RED);  // inside one square only
+        assertPixel(25, 25, Color.TRANSPARENT);  // inside both squares: the even-odd hole
+
+        // Mirroring GraphicsContext, fill rule is not an input of isPointInPath, so it returns true for the hole
+        assertTrue(h.context.isPointInPath(25, 25));  // inside both squares: non-zero winding
     }
 
     @Test
@@ -1655,6 +1942,40 @@ public class SWDrawingContextTest {
         }
     }
 
+    private Rectangle textBounds(Runnable draw) {
+        int[] before = snapshotPixels();
+
+        draw.run();
+
+        return boundsOfChangedPixels(before, snapshotPixels());
+    }
+
+    /*
+     * Resets the context attributes that most tests care about back to their
+     * defaults, and clears the image. Note that an applied clip cannot be reset
+     * through the public API; tests that clip must use save()/restore().
+     */
+    private void reset() {
+        h.context.setTransform(1, 0, 0, 1, 0, 0);
+        h.context.setGlobalAlpha(1.0);
+        h.context.setGlobalBlendMode(BlendMode.SRC_OVER);
+        h.context.setFill(Color.BLACK);
+        h.context.setStroke(Color.BLACK);
+        h.context.setLineWidth(1.0);
+        h.context.setLineCap(StrokeLineCap.SQUARE);
+        h.context.setLineJoin(StrokeLineJoin.MITER);
+        h.context.setMiterLimit(10.0);
+        h.context.setLineDashes(new double[0]);
+        h.context.setLineDashOffset(0.0);
+        h.context.setFillRule(FillRule.NON_ZERO);
+        h.context.setFont(Font.getDefault());
+        h.context.setTextAlign(TextAlignment.LEFT);
+        h.context.setTextBaseline(VPos.BASELINE);
+        h.context.setFontSmoothingType(FontSmoothingType.GRAY);
+        h.context.setImageSmoothing(true);
+        h.context.clearRect(0, 0, WIDTH, HEIGHT);
+    }
+
     private static Image createSolidFxImage(int w, int h, int argbpre) {
         int[] pixels = new int[w * h];
 
@@ -1664,6 +1985,20 @@ public class SWDrawingContextTest {
         StubImageLoaderFactory factory = ((StubToolkit) Toolkit.getToolkit()).getImageLoaderFactory();
 
         factory.registerImage(prismImage, new StubPlatformImageInfo(w, h));
+
+        return Toolkit.getImageAccessor().fromPlatformImage(prismImage);
+    }
+
+    private static Image createPatternImage() {
+        int[] pixels = {
+            argb(255, 255, 0, 0), argb(255, 0, 255, 0),
+            argb(255, 0, 0, 255), argb(255, 255, 255, 0)
+        };
+
+        com.sun.prism.Image prismImage = com.sun.prism.Image.fromIntArgbPreData(pixels, 2, 2);
+        StubImageLoaderFactory factory = ((StubToolkit) Toolkit.getToolkit()).getImageLoaderFactory();
+
+        factory.registerImage(prismImage, new StubPlatformImageInfo(2, 2));
 
         return Toolkit.getImageAccessor().fromPlatformImage(prismImage);
     }
@@ -1707,6 +2042,23 @@ public class SWDrawingContextTest {
         }
 
         return count;
+    }
+
+    private int runsInColumn(int x, int y1, int y2) {
+        int runs = 0;
+        boolean painted = false;
+
+        for (int y = y1; y < y2; y++) {
+            boolean nowPainted = h.image.getArgb(x, y) != 0;
+
+            if (nowPainted && !painted) {
+                runs++;
+            }
+
+            painted = nowPainted;
+        }
+
+        return runs;
     }
 
     /*

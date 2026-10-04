@@ -66,7 +66,8 @@ public class StubGlyph implements Glyph {
 
     @Override
     public RectBounds getBBox() {
-        return new RectBounds(0, 0, width, height);
+        // the glyph must sit above the baseline (origin), matching getOriginY()
+        return new RectBounds(0, -height, width, 0);
     }
 
     @Override
@@ -76,7 +77,7 @@ public class StubGlyph implements Glyph {
 
     @Override
     public Shape getShape() {
-        return new RoundRectangle2D(0, 0, width, height, 0, 0);
+        return new RoundRectangle2D(0, -height, width, height, 0, 0);
     }
 
     @Override

@@ -1463,7 +1463,11 @@ public interface DrawingContext {
     void clip();
 
     /**
-     * Returns true if the the given x,y point is inside the path.
+     * Returns true if the point at the given coordinates is inside the current
+     * path.
+     * <p>
+     * The point is interpreted in the coordinate space of the drawing surface
+     * and is not affected by the current transform.
      *
      * @param x the X coordinate to use for the check.
      * @param y the Y coordinate to use for the check.
