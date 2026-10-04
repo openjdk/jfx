@@ -39,14 +39,15 @@ import javafx.util.Subscription;
  * this library support lazy evaluation.
  * <p>
  * Implementations of this class should strive to generate as few events as
- * possible to avoid wasting too much time in event handlers. Implementations in
- * this library mark themselves as invalid when the first invalidation event
- * occurs. They do not generate anymore invalidation events until their value is
- * recomputed and valid again.
+ * possible to avoid wasting too much time in event handlers.
  *
  * @implNote
- * The implementations in the JavaFX library provide the following guarantees for
- * their {@link InvalidationListener}s:
+ * The implementations in the JavaFX library mark themselves as invalid when the
+ * first invalidation event occurs. They do not generate anymore invalidation
+ * events until their value is recomputed and valid again.
+ * <p>
+ * These implementations provide the following guarantees for their
+ * {@link InvalidationListener}s:
  * <ul>
  *     <li>Listeners are notified in the order in which they were registered.
  *     <li>A listener that is added while a notification is in progress is not
