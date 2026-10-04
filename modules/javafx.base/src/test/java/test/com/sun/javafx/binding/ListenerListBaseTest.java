@@ -219,7 +219,7 @@ public class ListenerListBaseTest {
         assertEquals(2, list.totalListeners());
         assertListeners(list, List.of(il1, weakListener));
 
-        for(int i = 0; i < 100; i++) {
+        for (int i = 0; i < 100; i++) {
             list.add(il2);
         }
 
@@ -265,7 +265,7 @@ public class ListenerListBaseTest {
         AccessibleListenerListBase list = new AccessibleListenerListBase(cl1, il1);
         Random rnd = new Random(1);
 
-        for(int i = 0; i < 10000; i++) {
+        for (int i = 0; i < 10000; i++) {
             list.add(rnd.nextBoolean() ? il1 : cl1);
         }
 
@@ -282,7 +282,7 @@ public class ListenerListBaseTest {
         addedListeners.add(list.get(0));
         addedListeners.add(list.get(1));
 
-        for(int i = 2; i < 10000; i++) {
+        for (int i = 2; i < 10000; i++) {
             Object listener = rnd.nextBoolean() ? new WeakInvalidationListener("" + i) : new WeakChangeListener("" + i);
 
             addedListeners.add(listener);
@@ -290,11 +290,11 @@ public class ListenerListBaseTest {
 
             double nextDouble = rnd.nextDouble();
 
-            if(nextDouble < 0.05) {
+            if (nextDouble < 0.05) {
                 list.remove(addedListeners.remove(rnd.nextInt(addedListeners.size())));
             }
-            else if(nextDouble < 0.15) {
-                if(list.get(rnd.nextInt(list.invalidationListenersSize() + list.changeListenersSize())) instanceof SettableWeakListener swl) {
+            else if (nextDouble < 0.15) {
+                if (list.get(rnd.nextInt(list.invalidationListenersSize() + list.changeListenersSize())) instanceof SettableWeakListener swl) {
                     swl.setGarbageCollected(true);
                 }
             }
@@ -312,7 +312,7 @@ public class ListenerListBaseTest {
             )
             .toList();
 
-        for(int i = 0; i < list.invalidationListenersSize() + list.changeListenersSize(); i++) {
+        for (int i = 0; i < list.invalidationListenersSize() + list.changeListenersSize(); i++) {
             Object listener = list.get(i);
 
             assertTrue(separatedListeners.contains(listener));
@@ -333,7 +333,7 @@ public class ListenerListBaseTest {
         addedListeners.add(list.get(1));
 
         // Add some listeners first before the lock:
-        for(int i = 2; i < 1000; i++) {
+        for (int i = 2; i < 1000; i++) {
             Object listener = rnd.nextBoolean() ? new WeakInvalidationListener("" + i) : new WeakChangeListener("" + i);
 
             addedListeners.add(listener);
@@ -342,7 +342,7 @@ public class ListenerListBaseTest {
 
         list.accessibleLock();
 
-        for(int i = 1000; i < 10000; i++) {
+        for (int i = 1000; i < 10000; i++) {
             Object listener = rnd.nextBoolean() ? new WeakInvalidationListener("" + i) : new WeakChangeListener("" + i);
 
             addedListeners.add(listener);
@@ -350,11 +350,11 @@ public class ListenerListBaseTest {
 
             double nextDouble = rnd.nextDouble();
 
-            if(nextDouble < 0.05) {
+            if (nextDouble < 0.05) {
                 list.remove(addedListeners.remove(rnd.nextInt(addedListeners.size())));
             }
-            else if(nextDouble < 0.15) {
-                if(addedListeners.get(rnd.nextInt(addedListeners.size())) instanceof SettableWeakListener swl) {
+            else if (nextDouble < 0.15) {
+                if (addedListeners.get(rnd.nextInt(addedListeners.size())) instanceof SettableWeakListener swl) {
                     swl.setGarbageCollected(true);
                 }
             }
@@ -376,7 +376,7 @@ public class ListenerListBaseTest {
 
         int skips = 0;
 
-        for(int i = 0; i < list.invalidationListenersSize() + list.changeListenersSize(); i++) {
+        for (int i = 0; i < list.invalidationListenersSize() + list.changeListenersSize(); i++) {
             Object listener = list.get(i);
 
             if (listener == null) {
@@ -392,7 +392,7 @@ public class ListenerListBaseTest {
         }
 
         // Add some more listeners after unlock to trigger compaction:
-        for(int i = 10000; i < 20000; i++) {
+        for (int i = 10000; i < 20000; i++) {
             Object listener = rnd.nextBoolean() ? new WeakInvalidationListener("" + i) : new WeakChangeListener("" + i);
 
             addedListeners.add(listener);
@@ -413,7 +413,7 @@ public class ListenerListBaseTest {
         assertListeners(list, separatedListeners);
 
         // remove many listeners to trigger a shrink:
-        for(int i = 0; i < 10000; i++) {
+        for (int i = 0; i < 10000; i++) {
             list.remove(separatedListeners.remove(rnd.nextInt(separatedListeners.size())));
         }
 
@@ -503,11 +503,11 @@ public class ListenerListBaseTest {
     private static void assertListenerSeparation(AccessibleListenerListBase list) {
         boolean foundChange = false;
 
-        for(int i = 0; i < list.invalidationListenersSize() + list.changeListenersSize(); i++) {
-            if(list.get(i) instanceof ChangeListener) {
+        for (int i = 0; i < list.invalidationListenersSize() + list.changeListenersSize(); i++) {
+            if (list.get(i) instanceof ChangeListener) {
                 foundChange = true;
             }
-            else if(foundChange && list.get(i) != null) {
+            else if (foundChange && list.get(i) != null) {
                 fail("Found an invalidation listener at index " + i + " after a change listener was seen");
             }
         }
@@ -519,15 +519,15 @@ public class ListenerListBaseTest {
         int j = 0;
         int x = 0;
 
-        for(int i = 0; i < list.invalidationListenersSize() + list.changeListenersSize(); i++) {
+        for (int i = 0; i < list.invalidationListenersSize() + list.changeListenersSize(); i++) {
             Object listener = list.get(i);
 
-            if(listener == null) {
+            if (listener == null) {
                 x++;
                 continue;
             }
 
-            if(j >= expectedListeners.size()) {
+            if (j >= expectedListeners.size()) {
                 fail("Listener at index " + i + " (with " + x + " nulls skipped) is listener " + (i - x) + ", but only " + expectedListeners.size() + " were expected: " + listener);
             }
 
@@ -535,7 +535,7 @@ public class ListenerListBaseTest {
             j++;
         }
 
-        if(j != expectedListeners.size()) {
+        if (j != expectedListeners.size()) {
             fail("Only " + j + " listeners were found, but " + expectedListeners.size() + " were expected");
         }
     }

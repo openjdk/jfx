@@ -144,8 +144,7 @@ public class ExpressionHelperUtility {
                 field.setAccessible(true);
 
                 return List.of((ChangeListener<T>) field.get(helper));
-            }
-            catch(Exception e) {}
+            } catch (Exception e) {}
 
             return List.of((ChangeListener<T>) helper);
         }
@@ -357,9 +356,7 @@ public class ExpressionHelperUtility {
                     Field field = clazz.getDeclaredField("listenerData");
                     field.setAccessible(true);
                     return field.get(bean);
-                }
-                catch(Exception ex2) {
-                }
+                } catch(Exception ex2) {}
             }
             clazz = clazz.getSuperclass();
         }

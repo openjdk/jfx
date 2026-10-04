@@ -393,4 +393,3 @@ public abstract class ArrayManager<I, E> {
         return (int)(size * 3L / 2 + MINIMUM_SIZE);
     }
 }
-
