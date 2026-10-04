@@ -115,7 +115,7 @@ final class CssStyleHelper {
 
             if (ancestor.cssHelperStale) {
                 ancestor.cssHelperResolvedEarly = true;
-                updateStyleHelper(ancestor, path, index, styleableAncestor);
+                updateStyleHelper(ancestor, styleableAncestor, path, index);
             }
 
             if (ancestor.styleHelper != null) {
@@ -127,7 +127,7 @@ final class CssStyleHelper {
         boolean resolvedEarly = node.cssHelperResolvedEarly;
         node.cssHelperResolvedEarly = false;
 
-        updateStyleHelper(node, path, 0, styleableAncestor);
+        updateStyleHelper(node, styleableAncestor, path, 0);
 
         return resolvedEarly || node.styleHelper == null || node.styleHelper != oldHelper;
     }
@@ -139,7 +139,7 @@ final class CssStyleHelper {
      * No properties are modified here yet.
      * Properties no longer styled are reset when the styles are applied in {@link #transitionToState(Node)}.
      */
-    private static void updateStyleHelper(Node node, List<Styleable> path, int index, Node styleableAncestor) {
+    private static void updateStyleHelper(Node node, Node styleableAncestor, List<Styleable> path, int index) {
         final CssStyleHelper currentHelper = node.styleHelper;
 
         if (currentHelper != null) {
@@ -161,7 +161,7 @@ final class CssStyleHelper {
                 StyleManager.getInstance().findMatchingStyles(node, node.getSubScene(), triggerStates);
 
         final Styleable parent = index + 1 < path.size() ? path.get(index + 1) : null;
-        if (canReuseStyleHelper(node, currentHelper, styleMap, parent, styleableAncestor)) {
+        if (currentHelper != null && canReuseStyleHelper(node, styleMap, parent)) {
             //
             // JDK-8123731
             //
@@ -309,14 +309,13 @@ final class CssStyleHelper {
     /**
      * Whether {@code helper}, the current style helper of {@code node}, can be reused for {@code styleMap}.
      */
-    private static boolean canReuseStyleHelper(Node node, CssStyleHelper helper, StyleMap styleMap,
-                                               Styleable parent, Node styleableAncestor) {
-
-        // Obviously, we cannot reuse the node's style helper if it doesn't have one.
-        // And if the new styleMap is null, then we don't need a styleHelper at all.
-        if (helper == null || styleMap == null) {
+    private static boolean canReuseStyleHelper(Node node, StyleMap styleMap, Styleable parent) {
+        // If the new styleMap is null, then we don't need a styleHelper at all.
+        if (styleMap == null) {
             return false;
         }
+
+        final CssStyleHelper helper = node.styleHelper;
 
         // The helper was only kept to reset the properties set by CSS, which is done.
         if (helper.cacheContainer.resetOnly && helper.cacheContainer.cssSetProperties.isEmpty()) {
@@ -341,13 +340,13 @@ final class CssStyleHelper {
             return true;
         }
 
+        Node styleableAncestor = getFirstStyleableAncestor(node);
         CssStyleHelper parentHelper = getStyleHelper(styleableAncestor);
         if (parentHelper != null) {
             int[] parentIds = parentHelper.cacheContainer.styleCacheKey.getStyleMapIds();
             int[] nodeIds = helper.cacheContainer.styleCacheKey.getStyleMapIds();
 
             if (parentIds.length == nodeIds.length - 1) {
-
                 boolean isSame = true;
 
                 // check that all of the style map ids are the same.
@@ -359,7 +358,6 @@ final class CssStyleHelper {
                 }
 
                 return isSame;
-
             }
         }
 
