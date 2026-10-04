@@ -50,9 +50,11 @@ import javafx.util.Subscription;
  * <ul>
  *     <li>Listeners are notified in the order in which they were registered.
  *     <li>A listener that is added while a notification is in progress is not
- *         notified as part of that notification.
+ *         notified for the remainder of that notification, including any
+ *         notification triggered while it is in progress.
  *     <li>A listener that is removed while a notification is in progress is not
- *         notified as part of that notification if it has not yet been notified.
+ *         notified for the remainder of that notification, including any
+ *         notification triggered while it is in progress.
  * </ul>
  * The collection implementations in the JavaFX library, such as
  * {@link javafx.collections.ObservableList}, {@link javafx.collections.ObservableMap},
