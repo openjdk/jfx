@@ -163,8 +163,10 @@ public class WritableImage extends Image {
      * Returns the {@link DrawingContext} associated with this image.
      * <p>
      * The pixel storage of this image must be in {@link PixelFormat.Type#INT_ARGB_PRE INT_ARGB_PRE} format,
-     * which is the case for images created with the {@code (width, height)} constructor. An image
-     * created from a {@link PixelBuffer} must use a pixel format of that type.
+     * backed by an {@link java.nio.IntBuffer} that is either a direct buffer or backed by an
+     * accessible array, which is the case for images created with the {@code (width, height)}
+     * constructor. An image created from a {@link PixelBuffer} must use a pixel format of that
+     * type and a buffer of that kind.
      *
      * @return the {@link DrawingContext} associated with this image, never {@code null}
      * @throws IllegalStateException if the pixel storage of this image is not in {@code INT_ARGB_PRE}
