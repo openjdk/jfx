@@ -32,7 +32,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 
 import javafx.css.CssMetaData;
@@ -116,12 +115,7 @@ final class CssStyleHelper {
 
             if (ancestor.cssHelperStale) {
                 ancestor.cssHelperResolvedEarly = true;
-                boolean propertiesReset = updateStyleHelper(ancestor, path, index, styleableAncestor);
-
-                // When properties were reset, we must restart as styles could change once again.
-                if (propertiesReset) {
-                    return createStyleHelper(node);
-                }
+                updateStyleHelper(ancestor, path, index, styleableAncestor);
             }
 
             if (ancestor.styleHelper != null) {
@@ -135,13 +129,6 @@ final class CssStyleHelper {
 
         updateStyleHelper(node, path, 0, styleableAncestor);
 
-        // A listener running during the reset made this node stale again, e.g. by changing its style class.
-        // A reset only happens when the helper was replaced, so the children must be updated.
-        if (node.cssHelperStale) {
-            createStyleHelper(node);
-            return true;
-        }
-
         return resolvedEarly || node.styleHelper == null || node.styleHelper != oldHelper;
     }
 
@@ -149,14 +136,10 @@ final class CssStyleHelper {
      * Creates or reuses the {@link CssStyleHelper} for the node at {@code index} of {@code path} and installs it.
      * Sets null, if there are no styles matching this node.
      * <p>
-     * The new helper is installed before the properties of the old helper are reset, since resetting
-     * runs listeners which must never observe this node with an outdated helper.
-     * For the same reason, the node is only marked as no longer stale once the new helper is installed.
-     *
-     * @return whether properties of the old helper were reset,
-     * which runs listeners that may have modified the hierarchy or made an ancestor stale again
+     * No properties are modified here yet.
+     * Properties no longer styled are reset when the styles are applied in {@link #transitionToState(Node)}.
      */
-    private static boolean updateStyleHelper(Node node, List<Styleable> path, int index, Node styleableAncestor) {
+    private static void updateStyleHelper(Node node, List<Styleable> path, int index, Node styleableAncestor) {
         final CssStyleHelper currentHelper = node.styleHelper;
 
         if (currentHelper != null) {
@@ -195,12 +178,13 @@ final class CssStyleHelper {
 
             updateTriggerStates(path, index, triggerStates);
             node.cssHelperStale = false;
-            return false;
+            return;
         }
 
         // The trigger states are collected again for the new style map.
         node.cssTriggerStates = null;
 
+        boolean resetOnly = false;
         if (styleMap == null || styleMap.isEmpty()) {
             boolean mightInherit = false;
 
@@ -216,17 +200,21 @@ final class CssStyleHelper {
                 }
             }
 
+            // There are no styles in the StyleMap and no styles inherit, so this node does not need a style helper,
+            // unless properties set by CSS must still be reset.
             if (!mightInherit) {
-                // There are no styles in the StyleMap and no styles inherit, so this node does not need a style helper.
-                node.styleHelper = null;
-                node.cssHelperStale = false;
+                if (currentHelper == null || currentHelper.cacheContainer.cssSetProperties.isEmpty()) {
+                    node.styleHelper = null;
+                    node.cssHelperStale = false;
+                    return;
+                }
 
-                // If this node had a style helper, we need to reset properties back to their initial value.
-                return currentHelper != null && currentHelper.resetToInitialValues(node, styleMap);
+                resetOnly = true;
             }
         }
 
         CssStyleHelper helper = new CssStyleHelper(new CacheContainer(node, styleMap, path, index));
+        helper.cacheContainer.resetOnly = resetOnly;
         setFirstStyleableAncestor(helper, styleableAncestor);
 
         updateTriggerStates(path, index, triggerStates);
@@ -234,15 +222,11 @@ final class CssStyleHelper {
         node.styleHelper = helper;
         node.cssHelperStale = false;
 
-        // If this node had a style helper, its css set properties carry over to the new style helper.
-        // Those unset with the new style map are removed and reset to their initial values.
-        // This happens on the new helper, so a rebuild from a listener during the reset copies the remaining ones.
-        if (currentHelper == null) {
-            return false;
+        // The css set properties carry over, so those no longer styled are reset when the styles are applied.
+        if (currentHelper != null) {
+            helper.cacheContainer.cssSetProperties.putAll(currentHelper.cacheContainer.cssSetProperties);
+            helper.cacheContainer.resetUnexposedProperties = true;
         }
-
-        helper.cacheContainer.cssSetProperties.putAll(currentHelper.cacheContainer.cssSetProperties);
-        return helper.resetToInitialValues(node, styleMap);
     }
 
     /**
@@ -331,6 +315,11 @@ final class CssStyleHelper {
         // Obviously, we cannot reuse the node's style helper if it doesn't have one.
         // And if the new styleMap is null, then we don't need a styleHelper at all.
         if (helper == null || styleMap == null) {
+            return false;
+        }
+
+        // The helper was only kept to reset the properties set by CSS, which is done.
+        if (helper.cacheContainer.resetOnly && helper.cacheContainer.cssSetProperties.isEmpty()) {
             return false;
         }
 
@@ -479,69 +468,49 @@ final class CssStyleHelper {
         // here so the property can be reset without expanding properties that
         // were not set by css.
         private final Map<CssMetaData, CalculatedValue> cssSetProperties;
+
+        // The cssSetProperties were carried over from a replaced style helper and may contain properties
+        // the node no longer exposes, which must be reset on the next transitionToState().
+        private boolean resetUnexposedProperties;
+
+        // The node has no styles and nothing to inherit, so the style helper is only needed to reset
+        // the properties set by CSS and is not reused once they are reset.
+        private boolean resetOnly;
     }
 
     /**
-     * Resets any properties on the given {@code Node} that were set with the old style map, but will no
-     * longer be set after applying {@code newStyleMap}. Properties that remain set with {@code newStyleMap}
-     * are not reset here, because the next {@link Node#applyCss()} pass will compute and apply their new values.
-     *
-     * @return whether any property was reset
+     * Resets the properties set by CSS whose {@link CssMetaData} the node no longer exposes,
+     * e.g. after its skin was replaced, and which are no longer styled.
      */
-    private boolean resetToInitialValues(Node node, StyleMap newStyleMap) {
-        Map<CssMetaData, CalculatedValue> cssSetProperties = cacheContainer.cssSetProperties;
-        if (cssSetProperties.isEmpty()) {
-            return false;
+    private void resetUnexposedProperties(Node node, List<CssMetaData<? extends Styleable, ?>> styleables,
+                                          StyleMap styleMap) {
+        Map<String, List<CascadingStyle>> cascadingStyles = styleMap.getCascadingStyles();
+        List<Map.Entry<CssMetaData, CalculatedValue>> resetList = null;
+
+        var it = cacheContainer.cssSetProperties.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<CssMetaData, CalculatedValue> entry = it.next();
+            CssMetaData cssMetaData = entry.getKey();
+            if (cssMetaData != TransitionDefinitionCssMetaData.getInstance() && !styleables.contains(cssMetaData)
+                    && !containsProperty(cascadingStyles, cssMetaData)) {
+                if (resetList == null) {
+                    resetList = new ArrayList<>();
+                }
+
+                resetList.add(entry);
+                it.remove();
+            }
         }
 
-        // The flag lives on the node, as this helper may already be replaced by the one we reset for.
-        node.cssResetInProgress = true;
+        if (resetList == null) {
+            return;
+        }
 
-        try {
-            Map<String, List<CascadingStyle>> newCascadingStyles =
-                newStyleMap != null ? newStyleMap.getCascadingStyles() : Map.of();
-
-            List<Entry<CssMetaData, CalculatedValue>> resetList = null;
-            Entry<CssMetaData, CalculatedValue> transitionEntry = null;
-            var it = cssSetProperties.entrySet().iterator();
-            int idx = 0;
-
-            while (it.hasNext()) {
-                Entry<CssMetaData, CalculatedValue> entry = it.next();
-                CssMetaData key = entry.getKey();
-
-                if (!containsProperty(newCascadingStyles, key)) {
-                    if (key != TransitionDefinitionCssMetaData.getInstance()) {
-                        if (resetList == null) {
-                            resetList = new ArrayList<>(cssSetProperties.size() - idx);
-                        }
-
-                        resetList.add(entry);
-                    } else {
-                        transitionEntry = entry;
-                    }
-
-                    it.remove();
-                }
-
-                ++idx;
+        for (Map.Entry<CssMetaData, CalculatedValue> entry : resetList) {
+            CssMetaData cssMetaData = entry.getKey();
+            if (cssMetaData.isSettable(node)) {
+                resetToInitialValue(node, cssMetaData, entry.getValue());
             }
-
-            // The transition property must be reset before all other properties, as its value might
-            // affect the transitions that are applied to other properties.
-            if (transitionEntry != null) {
-                resetToInitialValue(node, transitionEntry.getKey(), transitionEntry.getValue());
-            }
-
-            if (resetList != null) {
-                for (Entry<CssMetaData, CalculatedValue> entry : resetList) {
-                    resetToInitialValue(node, entry.getKey(), entry.getValue());
-                }
-            }
-
-            return transitionEntry != null || resetList != null;
-        } finally {
-            node.cssResetInProgress = false;
         }
     }
 
@@ -668,20 +637,9 @@ final class CssStyleHelper {
     // This method is a reduced version of transitionToState() method, it is added as a fix for JDK-8204568.
     // Any modifications to the method transitionToState() should be applied here if needed.
     void recalculateRelativeSizeProperties(final Node node, Font fontForRelativeSizes) {
-        if (transitionStateInProgress || node.cssResetInProgress) {
-            // It is not required to recalculate the relative sized properties,
-            // 1. [transitionStateInProgress]: if transitionToState() is being executed for the current control then all
-            //    the css properties will get calculated there, OR
-            // 2. [cssResetInProgress]: if resetToInitialValues() is being executed, which sets font to default font.
-            //    The css style set by user if any is applied post this reset which calls
-            //    recalculateRelativeSizeProperties() again.
-            //    JDK-8266966: StyleManager.styleMapList stores the StyleMaps of nodes using an id as key.
-            //    Each node stores this id in CssStyleHelper.CacheContainer.smapId
-            //    CssStyleHelper.getStyleMap(node) gets a StyleMap from StyleManager.styleMapList by using the
-            //    CssStyleHelper.CacheContainer.smapId as key.
-            //    When resetToInitialValues() is in progress, the StyleManager.styleMapList gets updated, therefore
-            //    calls to getStyleMap(node) should be avoided, as it may return an incorrect StyleMap for a given node.
-
+        if (transitionStateInProgress) {
+            // It is not required to recalculate the relative sized properties if transitionToState() is being
+            // executed for the current control, as all the css properties (including resets) will be calculated there.
             return;
         }
         final StyleMap styleMap = getStyleMap(node);
@@ -881,8 +839,14 @@ final class CssStyleHelper {
                     (CssMetaData<Styleable, ?>)(CssMetaData<?, ?>)TransitionDefinitionCssMetaData.getInstance() :
                     (CssMetaData<Styleable, ?>)styleables.get(n);
 
-            // Don't bother looking up styles that don't inherit.
-            if (inheritOnly && cssMetaData.isInherits() == false) {
+            // Don't bother looking up styles that don't inherit, but reset them if they were set by CSS before.
+            if (inheritOnly && !cssMetaData.isInherits()) {
+                if (!cacheContainer.cssSetProperties.isEmpty()) {
+                    CalculatedValue initialValue = cacheContainer.cssSetProperties.remove(cssMetaData);
+                    if (initialValue != null && cssMetaData.isSettable(node)) {
+                        resetToInitialValue(node, cssMetaData, initialValue);
+                    }
+                }
                 continue;
             }
 
@@ -1042,6 +1006,12 @@ final class CssStyleHelper {
             }
 
         }
+
+        if (cacheContainer.resetUnexposedProperties) {
+            cacheContainer.resetUnexposedProperties = false;
+            resetUnexposedProperties(node, styleables, styleMap);
+        }
+
         transitionStateInProgress = false;
     }
 

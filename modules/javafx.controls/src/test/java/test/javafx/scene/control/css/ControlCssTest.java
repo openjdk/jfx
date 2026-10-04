@@ -27,8 +27,8 @@ package test.javafx.scene.control.css;
 
 import com.sun.javafx.tk.Toolkit;
 import javafx.collections.ObservableList;
-import javafx.geometry.Insets;
 import javafx.css.CssParser;
+import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -77,7 +77,7 @@ public class ControlCssTest {
 
     /**
      * When we swap the root of a scene in a listener of a child node, it should still correctly resolve the CSS.
-     * The listener will run when the tab pane creates its skin, which will then add the tab content
+     * The listener will run when the tab pane creates its skin (during css), which will then add the tab content
      * with the label to the scene graph.
      *
      * <pre>{@code
@@ -119,7 +119,7 @@ public class ControlCssTest {
     /**
      * When we swap a pane and transfer the style classes in a listener of a child node,
      * the CSS for the children based of the pane should correctly resolve.
-     * The listener will run when the tab pane creates its skin, which will then add the tab content
+     * The listener will run when the tab pane creates its skin (during css), which will then add the tab content
      * with the label to the scene graph.
      *
      * <pre>{@code
@@ -184,7 +184,7 @@ public class ControlCssTest {
     /**
      * A node that is styled after the root was swapped in a listener of a child node
      * must still resolve the looked-up colors of the new root.
-     * The listener will run when the tab pane creates its skin, which will then add the tab content
+     * The listener will run when the tab pane creates its skin (during css), which will then add the tab content
      * with the label to the scene graph.
      *
      * <pre>{@code

@@ -624,6 +624,7 @@ public abstract sealed class Node
             @Override
             public void scheduleReapplyCSS(Node node) {
                 node.cssFlag = CssFlags.REAPPLY;
+                node.cssHelperStale = true;
                 Toolkit.getToolkit().requestNextPulse();
             }
 
@@ -9830,12 +9831,6 @@ public abstract sealed class Node
     boolean cssHelperResolvedEarly;
 
     /**
-     * The CSS properties of this node are currently being reset to their initial values.
-     * The styles must not be used while that is in progress, as they can be oudated.
-     */
-    boolean cssResetInProgress;
-
-    /**
      * Called when a CSS pseudo-class change would cause styles to be reapplied.
      */
     private void requestCssStateTransition() {
@@ -10041,12 +10036,6 @@ public abstract sealed class Node
             // since there are no styles to apply or children to update.
             //
             cssFlag = CssFlags.CLEAN;
-            return;
-        }
-
-        // A listener of a child made this node stale while visiting the children, so the visited ones are outdated.
-        if (cssHelperStale || cssHelperResolvedEarly) {
-            recreateStyleHelper();
             return;
         }
 

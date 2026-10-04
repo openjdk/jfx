@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -74,7 +74,7 @@ public class Node_transitionEvent_Test {
 
     @Test
     public void testRegularPlayback() {
-        String url = "data:text/css;base64," + Base64.getUrlEncoder().encodeToString("""
+        String url = toDataURL("""
             .testClass {
                 -fx-opacity: 0;
                 transition: -fx-opacity 0.75s 0.25s;
@@ -83,7 +83,7 @@ public class Node_transitionEvent_Test {
             .testClass:hover {
                 -fx-opacity: 1;
             }
-            """.getBytes(StandardCharsets.UTF_8));
+            """);
 
         toolkit.setCurrentTime(0);
         scene.getStylesheets().add(url);
@@ -117,7 +117,7 @@ public class Node_transitionEvent_Test {
 
     @Test
     public void testPlaybackIsElidedWhenDurationIsZero() {
-        String url = "data:text/css;base64," + Base64.getUrlEncoder().encodeToString("""
+        String url = toDataURL("""
             .testClass {
                 -fx-opacity: 0;
                 transition: -fx-opacity 0s;
@@ -126,7 +126,7 @@ public class Node_transitionEvent_Test {
             .testClass:hover {
                 -fx-opacity: 1;
             }
-            """.getBytes(StandardCharsets.UTF_8));
+            """);
 
         toolkit.setCurrentTime(0);
         scene.getStylesheets().add(url);
@@ -146,7 +146,7 @@ public class Node_transitionEvent_Test {
 
     @Test
     public void testInterruptedPlayback() {
-        String url = "data:text/css;base64," + Base64.getUrlEncoder().encodeToString("""
+        String url = toDataURL("""
             .testClass {
                 -fx-opacity: 0;
                 transition: -fx-opacity 0.75s 0.25s;
@@ -155,7 +155,7 @@ public class Node_transitionEvent_Test {
             .testClass:hover {
                 -fx-opacity: 1;
             }
-            """.getBytes(StandardCharsets.UTF_8));
+            """);
 
         toolkit.setCurrentTime(0);
         scene.getStylesheets().add(url);
@@ -184,7 +184,7 @@ public class Node_transitionEvent_Test {
 
     @Test
     public void testInterruptedPlaybackWithNegativeDelay() {
-        String url = "data:text/css;base64," + Base64.getUrlEncoder().encodeToString("""
+        String url = toDataURL("""
             .testClass {
                 -fx-opacity: 0;
                 transition: -fx-opacity 1s -0.25s;
@@ -193,7 +193,7 @@ public class Node_transitionEvent_Test {
             .testClass:hover {
                 -fx-opacity: 1;
             }
-            """.getBytes(StandardCharsets.UTF_8));
+            """);
 
         toolkit.setCurrentTime(0);
         scene.getStylesheets().add(url);
@@ -222,7 +222,7 @@ public class Node_transitionEvent_Test {
 
     @Test
     public void testInterruptedPlaybackDuringDelayPhase() {
-        String url = "data:text/css;base64," + Base64.getUrlEncoder().encodeToString("""
+        String url = toDataURL("""
             .testClass {
                 -fx-opacity: 0;
                 transition: -fx-opacity 1s 0.5s;
@@ -231,7 +231,7 @@ public class Node_transitionEvent_Test {
             .testClass:hover {
                 -fx-opacity: 1;
             }
-            """.getBytes(StandardCharsets.UTF_8));
+            """);
 
         toolkit.setCurrentTime(0);
         scene.getStylesheets().add(url);
@@ -256,4 +256,36 @@ public class Node_transitionEvent_Test {
         assertEquals(Duration.millis(0), trace.get(1).getElapsedTime());
     }
 
+    /**
+     * A property no longer styled must be reset with the transition of the after-change style.
+     */
+    @Test
+    public void testPropertyNoLongerStyledIsResetWithTransitionOfNewStyle() {
+        String url = toDataURL("""
+            .old { -fx-scale-x: 2; }
+            .new { transition: -fx-scale-x 2s linear; }
+            """);
+
+        toolkit.setCurrentTime(0);
+        scene.getStylesheets().add(url);
+        node.getStyleClass().add("old");
+        stage.show();
+        assertEquals(2, node.getScaleX());
+
+        node.getStyleClass().set(0, "new");
+        toolkit.firePulse();
+        assertEquals(2, node.getScaleX());
+
+        toolkit.setCurrentTime(1000);
+        toolkit.handleAnimation();
+        assertEquals(1.5, node.getScaleX());
+
+        toolkit.setCurrentTime(2000);
+        toolkit.handleAnimation();
+        assertEquals(1, node.getScaleX());
+    }
+
+    private static String toDataURL(String stylesheet) {
+        return "data:text/plain;base64," + Base64.getEncoder().encodeToString(stylesheet.getBytes(StandardCharsets.UTF_8));
+    }
 }
