@@ -81,7 +81,7 @@ public class InputMapHelper {
     // will be replaced by Control.getInputMap() JDK-8314968
     private static InputMap getInputMap(Control c) {
         try {
-            Method m = c.getClass().getDeclaredMethod("getInputMap");
+            Method m = c.getClass().getMethod("getInputMap");
             var x = m.invoke(c);
             if (x instanceof InputMap im) {
                 return im;
@@ -96,7 +96,7 @@ public class InputMapHelper {
     private static SkinInputMap getSkinInputMap(Skin<?> skin) {
         if (skin != null) {
             try {
-                Method m = skin.getClass().getDeclaredMethod("getSkinInputMap");
+                Method m = skin.getClass().getMethod("getSkinInputMap");
                 var x = m.invoke(skin);
                 if (x instanceof SkinInputMap sm) {
                     return sm;
