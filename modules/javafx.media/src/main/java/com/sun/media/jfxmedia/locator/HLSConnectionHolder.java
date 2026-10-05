@@ -26,6 +26,7 @@ package com.sun.media.jfxmedia.locator;
 
 import com.sun.media.jfxmedia.MediaError;
 import com.sun.media.jfxmedia.MediaException;
+import com.sun.media.jfxmedia.logging.Logger;
 import com.sun.media.jfxmediaimpl.MediaUtils;
 import com.sun.javafx.PlatformUtil;
 import java.io.BufferedReader;
@@ -85,6 +86,7 @@ final class HLSConnectionHolder extends ConnectionHolder {
     static final int HLS_PROP_LOAD_SEGMENT = 4;
     static final int HLS_PROP_SEGMENT_START_TIME = 5;
     static final int HLS_PROP_HAS_AUDIO_EXT_STREAM = 6;
+    static final int HLS_PROP_GET_IS_READY = 7;
     static final int HLS_VALUE_MIMETYPE_UNKNOWN = -1;
     static final int HLS_VALUE_MIMETYPE_MP2T = 1;
     static final int HLS_VALUE_MIMETYPE_MP3 = 2;
@@ -230,6 +232,18 @@ final class HLSConnectionHolder extends ConnectionHolder {
 
     @Override
     int property(int prop, int value) {
+        // No need to be ready when reporting that this is an HLS connection holder.
+        if (prop == HLS_PROP_GET_HLS_MODE) {
+            return 1;
+        }
+
+        // Report whether playlist initialization succeeded. isReady() blocks until
+        // initialization completes.
+        if (prop == HLS_PROP_GET_IS_READY) {
+            return isReady() ? 1 : 0;
+        }
+
+        // Just in case if caller did not called HLS_PROP_GET_IS_READY.
         if (!isReady()) {
             return -1;
         }
@@ -237,8 +251,6 @@ final class HLSConnectionHolder extends ConnectionHolder {
         switch (prop) {
             case HLS_PROP_GET_DURATION:
                 return duration;
-            case HLS_PROP_GET_HLS_MODE:
-                return 1;
             case HLS_PROP_GET_MIMETYPE:
                 return currentPlaylist.getMimeType();
             case HLS_PROP_LOAD_SEGMENT:
@@ -304,6 +316,22 @@ final class HLSConnectionHolder extends ConnectionHolder {
             currentPlaylist = variantPlaylist.getPlaylist(0);
             isBitrateAdjustable = true;
             hasAudioExtStream = !variantPlaylist.getAudioExtMedia().isEmpty();
+        }
+
+        // An HLS media playlist should not have any unsupported segments
+        // and must contain at least one media segment.
+        if (currentPlaylist == null || currentPlaylist.hasUnsupportedSegmentURI()) {
+            String playlistURI = currentPlaylist == null ? "Unknown" :
+                    currentPlaylist.playlistURI.toString();
+            MediaUtils.error(this, MediaError.ERROR_MEDIA_INVALID.code(),
+                    "HLS media playlist contains an unsupported segment URI: " + playlistURI, null);
+            return false;
+        }
+
+        if (currentPlaylist.isEmpty()) {
+            MediaUtils.error(this, MediaError.ERROR_MEDIA_INVALID.code(),
+                    "HLS media playlist contains no segment URI: " + currentPlaylist.playlistURI.toString(), null);
+            return false;
         }
 
         // Figure out duration. Duration might be slightly different
@@ -534,8 +562,10 @@ final class HLSConnectionHolder extends ConnectionHolder {
             return playlistURI.resolve(segmentURI).toString();
         }
 
-        MediaUtils.error(HLSConnectionHolder.class, MediaError.ERROR_MEDIA_INVALID.code(),
-                "Unsupported segment URI: " + uri, null);
+        if (Logger.canLog(Logger.WARNING)) {
+            Logger.logMsg(Logger.WARNING, HLSConnectionHolder.class.getName(),
+                    "addMediaFile", "Unsupported HLS segment URI: " + uri);
+        }
 
         return null;
     }
@@ -1314,6 +1344,7 @@ final class HLSConnectionHolder extends ConnectionHolder {
         // will align properly.
         private long videoStreamTargetDuration = 0;
         private String audioGroupID = null;
+        private boolean hasUnsupportedSegmentURI = false;
 
         Playlist(URI uri) {
             playlistURI = uri;
@@ -1328,6 +1359,7 @@ final class HLSConnectionHolder extends ConnectionHolder {
                 sequenceNumber = -1;
                 sequenceNumberUpdated = false;
                 forceDiscontinuity = false;
+                hasUnsupportedSegmentURI = false;
             }
 
             update();
@@ -1371,6 +1403,23 @@ final class HLSConnectionHolder extends ConnectionHolder {
             return mediaFileIndex;
         }
 
+        boolean hasUnsupportedSegmentURI() {
+            synchronized (lock) {
+                return hasUnsupportedSegmentURI;
+            }
+        }
+
+        boolean isEmpty() {
+            synchronized (lock) {
+                if (isFragmentedMP4()) {
+                    // For fMP4 we need init segment + 1 data segment
+                    return (mediaFiles.size() <= 1);
+                } else {
+                    return mediaFiles.isEmpty();
+                }
+            }
+        }
+
         boolean isLive() {
             return isLive;
         }
@@ -1412,9 +1461,8 @@ final class HLSConnectionHolder extends ConnectionHolder {
 
                 uri = resolveURI(uri, playlistURI);
                 if (uri == null) {
-                    // Just ignore. resolveURI() will signal MediaPlayer error
-                    // if fail. If it is just one segment we will recover and
-                    // start playback. MediaUtils.error() will not halt player.
+                    // Mark playlist to report error when we done parsing.
+                    hasUnsupportedSegmentURI = true;
                     return;
                 }
 
