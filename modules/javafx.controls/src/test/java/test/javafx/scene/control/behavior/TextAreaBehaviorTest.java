@@ -29,7 +29,9 @@ import javafx.scene.control.TextArea;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 
 /**
  * Tests TextArea behavior by exercising every key binding registered by the skin
@@ -117,5 +119,66 @@ public class TextAreaBehaviorTest extends TextInputControlTestBase<TextArea> {
     @Override
     public final void testWordNonMac() {
         super.testWordNonMac();
+    }
+
+    @Test
+    @Disabled("JDK-8393470")
+    public void testDoubleClick() {
+        execute(
+                setText("Bug #123"),
+                clickCharacter(0, 2, true)
+        );
+        Assertions.assertEquals("Bug", control.getSelectedText());
+
+        execute(
+                clickCharacter(6, 2, true)
+        );
+        Assertions.assertEquals("123", control.getSelectedText());
+
+        execute(
+                clickCharacter(4, 2, true)
+        );
+        Assertions.assertEquals("#", control.getSelectedText());
+
+        execute(
+                clickCharacter(3, 2, true)
+        );
+        Assertions.assertEquals(" ", control.getSelectedText());
+
+        execute(
+                setText("aaa.3x3"),
+                clickCharacter(5, 2, false)
+        );
+        Assertions.assertEquals("3x3", control.getSelectedText());
+
+        execute(
+                setText("aaa bbb"),
+                clickCharacter(4, 2, false)
+        );
+        Assertions.assertEquals("bbb", control.getSelectedText());
+
+        execute(
+                setText("aaa bbb"),
+                clickCharacter(4, 2, true)
+        );
+        Assertions.assertEquals("bbb", control.getSelectedText());
+
+        execute(
+                setText("aaa,,,bbb"),
+                clickCharacter(4, 2, true)
+        );
+        Assertions.assertEquals(",,,", control.getSelectedText());
+
+        execute(
+                setText("aaa    bbb"),
+                clickCharacter(5, 2, true)
+        );
+        Assertions.assertEquals("    ", control.getSelectedText());
+
+        execute(
+                setText("aaa\t\t\tbbb"),
+                clickCharacter(4, 2, true)
+        );
+        Assertions.assertEquals("\t\t\t", control.getSelectedText());
     }
 }

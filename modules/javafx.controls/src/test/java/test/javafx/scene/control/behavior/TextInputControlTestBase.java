@@ -25,12 +25,16 @@
 package test.javafx.scene.control.behavior;
 
 import static javafx.scene.input.KeyCode.*;
+
+import javafx.geometry.Rectangle2D;
 import javafx.scene.control.IndexRange;
 import javafx.scene.control.TextInputControl;
+import javafx.scene.control.skin.TextInputControlSkin;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
+import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 
 /**
  * Base class for testing behaviors based on TextInputControlBehavior.
@@ -463,5 +467,21 @@ public abstract class TextInputControlTestBase<T extends TextInputControl> exten
      */
     protected Runnable checkSelection(int index) {
         return checkSelection(index, index);
+    }
+
+    /**
+     * Returns a Runnable that checks will click a character of the control a specified number of times.
+     * @param index the character index of the character to click on
+     * @param clickCount the number of clicks to be performed
+     * @return the Runnable
+     */
+    protected Runnable clickCharacter(int index, int clickCount, boolean leading) {
+        return () -> {
+            Rectangle2D bounds = ((TextInputControlSkin<?>) control.getSkin()).getCharacterBounds(index);
+            MouseEventFirer mouse = new MouseEventFirer(control);
+            for (int i = 1; i <= clickCount; i++) {
+                mouse.fireMousePressAndRelease(i, (leading ? bounds.getMinX() : bounds.getMaxX()) - control.getLayoutBounds().getWidth() / 2, bounds.getMinY() - control.getLayoutBounds().getHeight() / 2);
+            }
+        };
     }
 }
