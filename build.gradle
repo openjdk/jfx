@@ -4381,9 +4381,6 @@ void setupLintOptions(Task compile, String lintOpts, String extraLintOpts) {
 }
 
 allprojects {
-    if (project.path.startsWith(":manualTests")) {
-        return
-    }
     // The following block is a workaround for the fact that presently Gradle
     // can't set the -XDignore.symbol.file flag, because it appears that the
     // javac API is lacking support for it. So what we'll do is find any Compile
@@ -4418,7 +4415,8 @@ allprojects {
         compile.options.compilerArgs += [ "-Xmaxerrs", "1000" ]
 
         // we use a custom javadoc command
-        project.javadoc.enabled = false
+        //project.javadoc.enabled = false
+        project.tasks.withType(Javadoc).configureEach { enabled = false }
 
         def disableJavacWerror =
                 project.hasProperty('disableJavacWerror') &&

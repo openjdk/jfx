@@ -13,10 +13,6 @@ dependencies {
     ).builtBy(":sdk")
 }
 
-java {
-    toolchain.languageVersion.set(JavaLanguageVersion.of(jfxBuildJdkVersion.substring(0, 2)))
-}
-
 application {
     mainClass = "com.oracle.test.manual.util.TestRunnerApp"
     applicationDefaultJvmArgs = [
