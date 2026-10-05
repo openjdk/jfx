@@ -56,9 +56,9 @@ public class DragDropOntoSwingComponentInSwingNodeTest extends Application
     {
     Button passButton = new Button("Pass");
         Button failButton = new Button("Fail");
-        passButton.setOnAction(e -> this.quit());
+        passButton.setOnAction(e -> primaryStage.close());
         failButton.setOnAction(e -> {
-            this.quit();
+            primaryStage.close();
             throw new AssertionError("Drag / drop onto a Swing component in a SwingNode not working");
         });
 
@@ -80,10 +80,6 @@ public class DragDropOntoSwingComponentInSwingNodeTest extends Application
         primaryStage.setWidth(800);
         primaryStage.setHeight(600);
         primaryStage.show();
-    }
-
-    private void quit() {
-        Platform.exit();
     }
 
     static class Content {

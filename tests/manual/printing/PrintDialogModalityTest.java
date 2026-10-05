@@ -22,11 +22,13 @@
  */
 
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.geometry.Pos;
 import javafx.print.PrinterJob;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.Separator;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
@@ -36,22 +38,30 @@ import javafx.scene.text.Text;
 
 public class PrintDialogModalityTest extends Application {
 
-    static final String infoText =
-     "NOTE: if there are no printers installed this test is not valid " +
-     "since depending on O/S no dialog may be displayed.\n" +
-     "This tests that a print dialog can be made modal w.r.t " +
-     "a parent window. Cycle through in any order the different " +
-     "dialog options via pressing the buttons. For the modal cases " +
-     "when the dialog is displayed, the original window should be " +
-     "unresponsive to input, for example preventing you launching " +
-     "another dialog, and also should stay below the dialog. " +
-     "Depending on platform the dialog may stay above just the "+
-     "parent, or all application or even all desktop windows.\n" +
-     "Non-modal dialogs will generally allow you to click on the "+
-     "main window and raise it above the dialog. However " +
-     "depending on platform, even the non-modal cases may behave " +
-     "as if they are modal. Notably this is the case on MacOS as " +
-     "that is the behaviour enforced by the O/S";
+    static final String infoText = """
+            PRECONDITION: At least one printer must be installed.
+            Without a printer, the operating system might not display the dialogs,
+            and the test is not valid.
+
+            Test each of the four buttons, closing each print or page-setup dialog
+            before continuing to the next one.
+
+            MODAL CASES:
+            While a modal dialog is open, the main test window must not accept input
+            or allow another dialog to be opened. The main window must also remain
+            behind the dialog.
+
+            NON-MODAL CASES:
+            While a non-modal dialog is open, the main test window should normally
+            accept input and be movable in front of the dialog.
+
+            PLATFORM-SPECIFIC BEHAVIOR:
+            A modal dialog may remain above only its parent window, above all windows
+            in the application, or above all desktop windows. All of these behaviors
+            are acceptable.
+            On macOS, the non-modal cases may behave like the modal cases.
+            This is expected operating-system behavior and must not be reported as a failure.
+            """;
 
     @Override
     public void start(Stage primaryStage) {
@@ -87,15 +97,37 @@ public class PrintDialogModalityTest extends Application {
             hbox1.setAlignment(Pos.CENTER);
             hbox2.setAlignment(Pos.CENTER);
             vbox = new VBox(3, info, hbox1, hbox2);
+
+            Separator separator = new Separator();
+            HBox passFailButtons = createPassFailButtons();
+            passFailButtons.setAlignment(Pos.CENTER);
+            vbox.getChildren().addAll(separator, passFailButtons);
         } else {
             Text noprinters = new Text("No printers found!");
             noprinters.setFill(Color.RED);
             vbox = new VBox(2, info, noprinters);
         }
+
         vbox.setAlignment(Pos.TOP_CENTER);
-        Scene scene = new Scene(vbox, 500, 400);
+        Scene scene = new Scene(vbox, 500, 450);
         primaryStage.setScene(scene);
         primaryStage.show();
+    }
+
+    private HBox createPassFailButtons() {
+        var passButton = new Button("Pass");
+        passButton.setOnAction(e -> {
+            System.out.println("TEST PASSED");
+            Platform.exit();
+        });
+        var failButton = new Button("Fail");
+        failButton.setOnAction(e -> {
+            System.out.println("TEST FAILED");
+            Platform.exit();
+            throw new AssertionError("Test failed");
+        });
+        var hbox = new HBox(10, passButton, failButton);
+        return hbox;
     }
 
     public static void main(String[] args) {
