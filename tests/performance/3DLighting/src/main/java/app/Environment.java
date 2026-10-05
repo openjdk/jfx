@@ -55,9 +55,6 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Sphere;
-import javafx.scene.text.Font;
-import javafx.scene.text.Text;
-import javafx.scene.text.TextBoundsType;
 
 /// The 3D environment. Includes the lights and shapes.
 class Environment extends CameraScene3D {
@@ -167,9 +164,7 @@ class Environment extends CameraScene3D {
         formats.getItems().addAll(Format.values());
         formats.setValue(Format.PNG);
 
-        var graphic = new Text("📷");
-        graphic.setBoundsType(TextBoundsType.VISUAL);
-        graphic.setFont(Font.font(32));
+        var graphic = Controls.createGraphic("📷");
 
         var screenshotButton = new Button("", graphic);
         screenshotButton.setPadding(new Insets(2));
