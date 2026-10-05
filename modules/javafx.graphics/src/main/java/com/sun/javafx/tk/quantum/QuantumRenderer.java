@@ -88,6 +88,7 @@ final class QuantumRenderer extends ThreadPoolExecutor  {
                 if (GraphicsPipeline.createPipeline() == null) {
                     String MSG = "Error initializing QuantumRenderer: no suitable pipeline found";
                     System.err.println(MSG);
+                    System.err.println("Run with -Dprism.verbose=true for details");
                     throw new RuntimeException(MSG);
                 } else {
                     Map device = GraphicsPipeline.getPipeline().getDeviceDetails();

@@ -184,14 +184,12 @@ public abstract class GraphicsPipeline {
     public static GraphicsPipeline createPipeline() {
         if (PrismSettings.tryOrder.isEmpty()) {
             // if no pipelines specified just return null
-            if (PrismSettings.verbose) {
-                System.out.println("No Prism pipelines specified");
-            }
+            System.err.println("No prism graphics pipelines specified");
             return null;
         }
 
         if (installedPipeline != null) {
-            throw new IllegalStateException("pipeline already created:"+
+            throw new IllegalStateException("Prism graphics pipeline already created:"+
                                             installedPipeline);
         }
         for (String prefix : PrismSettings.tryOrder) {
@@ -217,7 +215,7 @@ public abstract class GraphicsPipeline {
                 "com.sun.prism."+prefix+"."+prefix.toUpperCase()+"Pipeline";
             try {
                 if (PrismSettings.verbose) {
-                    System.out.println("Prism pipeline name = " + className);
+                    System.out.println("Prism graphics pipeline name = " + className);
                 }
                 Class klass = Class.forName(className);
                 if (PrismSettings.verbose) {
@@ -228,7 +226,7 @@ public abstract class GraphicsPipeline {
                     m.invoke(null, (Object[])null);
                 if (newPipeline != null && newPipeline.init()) {
                     if (PrismSettings.verbose) {
-                        System.out.println("Initialized prism pipeline: " +
+                        System.out.println("Initialized prism graphics pipeline: " +
                                            klass.getName());
                     }
                     installedPipeline = newPipeline;
@@ -248,14 +246,11 @@ public abstract class GraphicsPipeline {
                     }
                 }
             } catch (Throwable t) {
-                if (PrismSettings.verbose) {
-                    System.err.println("GraphicsPipeline.createPipeline " +
-                                       "failed for " + className);
-                    t.printStackTrace();
-                }
+                System.err.println("GraphicsPipeline.createPipeline failed for " + className);
+                t.printStackTrace();
             }
         }
-        StringBuffer sBuf = new StringBuffer("Graphics Device initialization failed for :  ");
+        StringBuffer sBuf = new StringBuffer("Prism graphics pipeline initialization failed for :  ");
         final Iterator<String> orderIterator =
                 PrismSettings.tryOrder.iterator();
         if (orderIterator.hasNext()) {

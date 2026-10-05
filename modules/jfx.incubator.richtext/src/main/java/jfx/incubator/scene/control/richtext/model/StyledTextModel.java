@@ -626,7 +626,7 @@ public abstract class StyledTextModel {
      * @return the text position within the document and paragraph limits
      */
     public final TextPos clamp(TextPos p) {
-        Objects.nonNull(p);
+        Objects.requireNonNull(p);
         int len;
         int ct = size();
         int ix = p.index();

@@ -88,9 +88,6 @@
     <Filter Include="gst-plugins-good\gst\equalizer">
       <UniqueIdentifier>{e01f3cfc-073f-43d4-9039-74c194e074a3}</UniqueIdentifier>
     </Filter>
-    <Filter Include="gst-plugins-good\gst\isomp4">
-      <UniqueIdentifier>{3d024713-6312-4014-a287-bd8ef46b4b53}</UniqueIdentifier>
-    </Filter>
     <Filter Include="gst-plugins-good\gst\spectrum">
       <UniqueIdentifier>{50937d4e-1cf1-4d9b-87a5-97384bdda02f}</UniqueIdentifier>
     </Filter>
@@ -477,21 +474,6 @@
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\equalizer\gstiirequalizernbands.c">
       <Filter>gst-plugins-good\gst\equalizer</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\isomp4-plugin.c">
-      <Filter>gst-plugins-good\gst\isomp4</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtdemux.c">
-      <Filter>gst-plugins-good\gst\isomp4</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtdemux_dump.c">
-      <Filter>gst-plugins-good\gst\isomp4</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtdemux_lang.c">
-      <Filter>gst-plugins-good\gst\isomp4</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtdemux_types.c">
-      <Filter>gst-plugins-good\gst\isomp4</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\spectrum\gstspectrum.c">
       <Filter>gst-plugins-good\gst\spectrum</Filter>
     </ClCompile>
@@ -672,18 +654,6 @@
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\video-tile.c">
       <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\gstisoff.c">
-      <Filter>gst-plugins-good\gst\isomp4</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\properties.c">
-      <Filter>gst-plugins-good\gst\isomp4</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtdemux_tags.c">
-      <Filter>gst-plugins-good\gst\isomp4</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtdemux_tree.c">
-      <Filter>gst-plugins-good\gst\isomp4</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\audio.h">
@@ -823,45 +793,6 @@
     </ClInclude>
     <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\video-tile.h">
       <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\descriptors.h">
-      <Filter>gst-plugins-good\gst\isomp4</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\fourcc.h">
-      <Filter>gst-plugins-good\gst\isomp4</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\gstisoff.h">
-      <Filter>gst-plugins-good\gst\isomp4</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\properties.h">
-      <Filter>gst-plugins-good\gst\isomp4</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtatomparser.h">
-      <Filter>gst-plugins-good\gst\isomp4</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtdemux.h">
-      <Filter>gst-plugins-good\gst\isomp4</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtdemux_debug.h">
-      <Filter>gst-plugins-good\gst\isomp4</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtdemux_dump.h">
-      <Filter>gst-plugins-good\gst\isomp4</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtdemux_lang.h">
-      <Filter>gst-plugins-good\gst\isomp4</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtdemux_tags.h">
-      <Filter>gst-plugins-good\gst\isomp4</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtdemux_tree.h">
-      <Filter>gst-plugins-good\gst\isomp4</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtdemux_types.h">
-      <Filter>gst-plugins-good\gst\isomp4</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\isomp4\qtpalette.h">
-      <Filter>gst-plugins-good\gst\isomp4</Filter>
     </ClInclude>
     <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-good\gst\audioparsers\gstmpegaudioparse.h">
       <Filter>gst-plugins-good\gst\audioparsers</Filter>
