@@ -38,6 +38,7 @@ import javafx.scene.AccessibleAttribute;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.Skin;
 import javafx.scene.control.SkinBase;
+import javafx.scene.control.input.SkinInputMap;
 import javafx.scene.input.DataFormat;
 import javafx.scene.input.InputMethodEvent;
 import javafx.scene.input.InputMethodHighlight;
@@ -228,6 +229,11 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
 
             super.dispose();
         }
+    }
+
+    @Override
+    public SkinInputMap getSkinInputMap() {
+        return behavior.getSkinInputMap();
     }
 
     private void handleInputMethodEvent(InputMethodEvent ev) {
