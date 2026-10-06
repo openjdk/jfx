@@ -563,9 +563,10 @@ public class TextAreaTest {
 
     // test against JDK-8264588
     @Test
-    public void previousWord() {
+    public void testPreviousWordWithHashSign() {
         txtArea.setText("This is Bug #123456");
-        txtArea.positionCaret(16); // in the middle of 123456
+        // in the middle of 123456
+        txtArea.positionCaret(16);
         txtArea.previousWord();
         assertEquals(12, txtArea.getCaretPosition());
     }
