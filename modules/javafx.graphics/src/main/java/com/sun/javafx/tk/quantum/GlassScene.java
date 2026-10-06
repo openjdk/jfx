@@ -328,7 +328,7 @@ abstract class GlassScene implements TKScene {
                     return null;
                 }
             } else if (platformWindow != null && windowStage.allowsTransparentFill()) {
-                if (windowStage.emulateBackdrop()) {
+                if (windowStage.usesEmulatedBackdrop()) {
                     return getBackdropFillColor();
                 } else {
                     return Color.TRANSPARENT;

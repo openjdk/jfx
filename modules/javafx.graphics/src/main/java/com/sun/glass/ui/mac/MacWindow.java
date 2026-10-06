@@ -250,16 +250,17 @@ final class MacWindow extends Window {
         @Native public static final int CLEARGLASS = 48;
     }
 
-    private static Map<String, Integer> backdropStyles = null;
+    private static class Backdrops {
+        static final Map<String, Integer> NAME_TO_ID;
+        static final List<String> NAMES;
 
-    private static void initBackdropStyles() {
-        if (backdropStyles == null) {
-            backdropStyles = new HashMap<>();
+        static {
+            NAME_TO_ID = new HashMap<>();
 
-            backdropStyles.put("macOS.HUD", BackdropID.HUD);
-            backdropStyles.put("macOS.Menu", BackdropID.MENU);
-            backdropStyles.put("macOS.Popover", BackdropID.POPOVER);
-            backdropStyles.put("macOS.Tooltip", BackdropID.TOOLTIP);
+            NAME_TO_ID.put("macOS.HUD", BackdropID.HUD);
+            NAME_TO_ID.put("macOS.Menu", BackdropID.MENU);
+            NAME_TO_ID.put("macOS.Popover", BackdropID.POPOVER);
+            NAME_TO_ID.put("macOS.Tooltip", BackdropID.TOOLTIP);
 
             // Support for NSGlassEffectView must wait for the macOS 26 SDK
             // try {
@@ -267,26 +268,26 @@ final class MacWindow extends Window {
             //     String major = osVers.replaceFirst("(\\d+)\\.\\d+.*", "$1");
             //     int v = Integer.parseInt(major);
             //     if (v >= 26) {
-            //         backdropStyles.put("macOS.ClearGlass", BackdropID.CLEARGLASS);
+            //         NAME_TO_ID.put("macOS.ClearGlass", BackdropID.CLEARGLASS);
             //     }
             // } catch (Exception e) {
             // }
+
+            NAMES = Collections.unmodifiableList(new ArrayList<>(NAME_TO_ID.keySet()));
         }
     }
 
     public static List<String> getPlatformBackdropStyleNames() {
-        initBackdropStyles();
-        return Collections.unmodifiableList(new ArrayList<>(backdropStyles.keySet()));
+        return Backdrops.NAMES;
     }
 
     public static PlatformStageBackdropStyle createPlatformBackdropStyle(String name) {
-        initBackdropStyles();
-        var id = backdropStyles.get(name);
+        var id = Backdrops.NAME_TO_ID.get(name);
         if (id == null) {
             return null;
         }
         var style = new PlatformStageBackdropStyle(name);
-        if (name == "macOS.ClearGlass") {
+        if (name.equals("macOS.ClearGlass")) {
             style.setAvailableOptions(Map.of("TintColor", Color.class, "CornerRadius", Number.class));
         }
 
@@ -300,8 +301,7 @@ final class MacWindow extends Window {
             return BackdropID.SIDEBAR;
         }
 
-        initBackdropStyles();
-        var id = backdropStyles.get(style.getName());
+        var id = Backdrops.NAME_TO_ID.get(style.getName());
         if (id == null) {
             return Window.NO_BACKDROP_ID;
         }
@@ -317,7 +317,7 @@ final class MacWindow extends Window {
 
     @Override
     public void setBackdropOption(String name, Object option) {
-        if (name == "TintColor") {
+        if (name.equals("TintColor")) {
             double red = -1.0;
             double green = -1.0;
             double blue = -1.0;
@@ -329,7 +329,7 @@ final class MacWindow extends Window {
                 opacity = color.getOpacity();
             }
             _setBackdropOption(getRawHandle(), BackdropOptionID.TINT_COLOR, red, green, blue, opacity);
-        } else if (name == "CornerRadius") {
+        } else if (name.equals("CornerRadius")) {
             double radius = 0.0;
             if (option instanceof Number r) {
                 radius = r.doubleValue();

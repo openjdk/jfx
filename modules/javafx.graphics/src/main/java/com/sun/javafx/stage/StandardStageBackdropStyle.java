@@ -31,6 +31,7 @@ import javafx.stage.StageBackdropStyle;
  *
  */
 public enum StandardStageBackdropStyle implements StageBackdropStyle {
+
     WINDOW("Window"),
     PARTIAL("Partial");
 

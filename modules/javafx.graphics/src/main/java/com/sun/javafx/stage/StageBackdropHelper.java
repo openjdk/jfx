@@ -32,16 +32,15 @@ import javafx.stage.StageBackdrop;
 /**
  * Used to access internal stage backdrop methods.
  */
-public class StageBackdropHelper {
-    private static final StageBackdropHelper theInstance;
+public final class StageBackdropHelper {
+
     private static StageBackdropAccessor stageBackdropAccessor;
 
     static {
-        theInstance = new StageBackdropHelper();
         Utils.forceInit(StageBackdrop.class);
     }
 
-    protected StageBackdropHelper() {
+    private StageBackdropHelper() {
     }
 
     public static ObservableMap<String, Object> getOptions(StageBackdrop backdrop) {
@@ -49,10 +48,6 @@ public class StageBackdropHelper {
     }
 
     public static void setStageBackdropAccessor(final StageBackdropAccessor newAccessor) {
-        if (stageBackdropAccessor != null) {
-            throw new IllegalStateException();
-        }
-
         stageBackdropAccessor = newAccessor;
     }
 

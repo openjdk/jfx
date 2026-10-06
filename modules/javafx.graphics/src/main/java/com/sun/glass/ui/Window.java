@@ -804,7 +804,7 @@ public abstract class Window {
         return (this.backdropID >= 0);
     }
 
-    public boolean emulateBackdrop() {
+    public boolean usesEmulatedBackdrop() {
         return false;
     }
 

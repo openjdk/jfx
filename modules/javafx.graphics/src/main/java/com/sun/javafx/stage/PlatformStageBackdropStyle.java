@@ -33,6 +33,7 @@ import java.util.Map;
  * the options available for this backdrop style.
  */
 public final class PlatformStageBackdropStyle implements StageBackdropStyle {
+
     public String name;
     public Map<String, Class<?>> options;
 

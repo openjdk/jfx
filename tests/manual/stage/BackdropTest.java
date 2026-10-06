@@ -57,6 +57,7 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 
 public class BackdropTest extends Application {
+
     public static void main(String[] args) {
         launch(BackdropTest.class, args);
     }
@@ -368,7 +369,9 @@ public class BackdropTest extends Application {
             var backdrop = new StageBackdrop(backdropStyle);
             stage.initBackdrop(backdrop);
             if (backdrop != null) {
+                // Ignored for backdrops other than macOS.ClearGlass
                 backdrop.setOption("TintColor", Color.RED);
+                backdrop.setOption("CornerRadius", 40);
             }
         }
         buildScene(stage, stageStyleChoice, backdropChoice);

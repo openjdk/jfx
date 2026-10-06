@@ -979,8 +979,8 @@ public class WindowStage extends GlassStage {
         return transparent || platformWindow.isUnifiedWindow() || platformWindow.hasBackdrop();
     }
 
-    public boolean emulateBackdrop() {
-        return !transparent && platformWindow.hasBackdrop() && platformWindow.emulateBackdrop();
+    public boolean usesEmulatedBackdrop() {
+        return !transparent && platformWindow.hasBackdrop() && platformWindow.usesEmulatedBackdrop();
     }
 
     public boolean getDarkFrame() {
