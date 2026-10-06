@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Gluon. All rights reserved.
+ * Copyright (c) 2025, 2026, Gluon. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -240,7 +240,92 @@ public class HeadlessApplication extends Application {
 
     @Override
     protected int _getKeyCodeForChar(char c, int hint) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        if (charForNumpadKeyCode(hint) == c) {
+            return hint;
+        }
+        c = Character.toUpperCase(c);
+        c = characterWithoutShift(c);
+        if (c >= 'A' && c <= 'Z') {
+            return (c - 'A') + KeyEvent.VK_A;
+        } else if (c >= '0' && c <= '9') {
+            return (c - '0') + KeyEvent.VK_0;
+        }
+        return switch (c) {
+            case ' ' -> KeyEvent.VK_SPACE;
+            case '`' -> KeyEvent.VK_BACK_QUOTE;
+            case '-' -> KeyEvent.VK_MINUS;
+            case '=' -> KeyEvent.VK_EQUALS;
+            case '[' -> KeyEvent.VK_BRACELEFT;
+            case ']' -> KeyEvent.VK_BRACERIGHT;
+            case '\\' -> KeyEvent.VK_BACK_SLASH;
+            case ';' -> KeyEvent.VK_SEMICOLON;
+            case '\'' -> KeyEvent.VK_QUOTE;
+            case ',' -> KeyEvent.VK_COMMA;
+            case '.' -> KeyEvent.VK_PERIOD;
+            case '/' -> KeyEvent.VK_SLASH;
+            default -> KeyEvent.VK_UNDEFINED;
+        };
+    }
+
+    /**
+     * Returns the character produced by the given numpad key code (US keyboard layout),
+     * or {@code '\0'} if there is no character for the numpad key code.
+     *
+     * @param keyCode the key code
+     * @return the produced character, or {@code '\0'}
+     */
+    private static char charForNumpadKeyCode(int keyCode) {
+        return switch (keyCode) {
+            case KeyEvent.VK_NUMPAD0 -> '0';
+            case KeyEvent.VK_NUMPAD1 -> '1';
+            case KeyEvent.VK_NUMPAD2 -> '2';
+            case KeyEvent.VK_NUMPAD3 -> '3';
+            case KeyEvent.VK_NUMPAD4 -> '4';
+            case KeyEvent.VK_NUMPAD5 -> '5';
+            case KeyEvent.VK_NUMPAD6 -> '6';
+            case KeyEvent.VK_NUMPAD7 -> '7';
+            case KeyEvent.VK_NUMPAD8 -> '8';
+            case KeyEvent.VK_NUMPAD9 -> '9';
+            case KeyEvent.VK_DIVIDE -> '/';
+            case KeyEvent.VK_MULTIPLY -> '*';
+            case KeyEvent.VK_SUBTRACT -> '-';
+            case KeyEvent.VK_ADD -> '+';
+            case KeyEvent.VK_DECIMAL -> '.';
+            default -> '\0';
+        };
+    }
+
+    /**
+     * Removes the shift modification (US keyboard layout), and returns the new character, if needed.
+     *
+     * @param c the character
+     * @return the eventually modified character
+     */
+    private static char characterWithoutShift(char c) {
+        return switch (c) {
+            case '!' -> '1';
+            case '@' -> '2';
+            case '#' -> '3';
+            case '$' -> '4';
+            case '%' -> '5';
+            case '^' -> '6';
+            case '&' -> '7';
+            case '*' -> '8';
+            case '(' -> '9';
+            case ')' -> '0';
+            case '~' -> '`';
+            case '_' -> '-';
+            case '+' -> '=';
+            case '{' -> '[';
+            case '}' -> ']';
+            case '|' -> '\\';
+            case ':' -> ';';
+            case '\"' -> '\'';
+            case '<' -> ',';
+            case '>' -> '.';
+            case '?' -> '/';
+            default -> c;
+        };
     }
 
 }
