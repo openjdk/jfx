@@ -91,7 +91,9 @@ public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInp
      * @throws IllegalStateException if called after connecting to the Control
      */
     public final <T extends Event> void addHandler(EventCriteria<T> criteria, EventHandler<T> handler) {
-        EventType<T> type = criteria.getEventType();
+        checkLock();
+        Objects.requireNonNull(handler);
+        EventType<T> type = criteria.getEventType(); // implicit null check
         putHandler(type, EventHandlerPriority.SKIN_HIGH, new EventHandler<T>() {
             @Override
             public void handle(T ev) {

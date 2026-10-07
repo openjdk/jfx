@@ -65,16 +65,13 @@ public class InputMapHelper {
         accessor.executeDefault(source, inputMap, tag);
     }
 
+    /// Called using reflection from Control:981
     /// skin can be null
     public static void setSkinInputMap(Control c, Skin<?> skin) {
-        if (skin != null) {
+        InputMap m = getInputMap(c);
+        if (m != null) {
             SkinInputMap sm = getSkinInputMap(skin);
-            if (sm != null) {
-                InputMap m = getInputMap(c);
-                if (m != null) {
-                    accessor.setSkinInputMap(m, sm);
-                }
-            }
+            accessor.setSkinInputMap(m, sm);
         }
     }
 

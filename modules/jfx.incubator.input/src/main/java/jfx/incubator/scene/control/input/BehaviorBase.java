@@ -126,7 +126,6 @@ public abstract class BehaviorBase<C extends Control> {
 
     /**
      * Maps a key binding to the specified function tag in the skin input map.
-     * This method will not override a user mapping added by {@link #registerKey(KeyBinding,FunctionTag)}.
      *
      * @param code the key code to construct a {@link KeyBinding}
      * @param tag the function tag

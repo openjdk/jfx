@@ -233,7 +233,7 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
 
     /**
      * Returns the skin input map.
-     * @return the skin input map, can be null.
+     * @return the skin input map
      * @since 28
      */
     public SkinInputMap getSkinInputMap() {
