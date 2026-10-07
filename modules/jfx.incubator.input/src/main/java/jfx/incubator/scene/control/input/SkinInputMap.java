@@ -123,10 +123,11 @@ public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInp
      * This method will do nothing if the key binding is {@code null}.
      *
      * @param k the key binding
-     * @param tag the function tag
+     * @param tag the function tag, cannot be null
      * @throws IllegalStateException if called after connecting to the Control
      */
     public final void registerKey(KeyBinding k, FunctionTag tag) {
+        Objects.requireNonNull(tag);
         if (k != null) {
             checkLock();
             map.put(k, tag);

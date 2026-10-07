@@ -40,7 +40,7 @@ import com.sun.javafx.PlatformUtil;
  * <ol>
  * <li> provide default behavior methods (one for each function tag)
  * <li> implement {@link #populateSkinInputMap()} method which maps the function tags to the behavior methods,
- *      maps the key bindings to the function tags, and add additional event handlers.  To do that, use
+ *      maps the key bindings to the function tags, and adds additional event handlers - using variety of methods like
  *      {@link #registerFunction(FunctionTag, Runnable)},
  *      {@link #registerKey(KeyBinding, FunctionTag)},
  *      {@link #registerKey(KeyCode, FunctionTag)},
