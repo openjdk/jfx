@@ -53,11 +53,13 @@ public class ClipBoardDataTest extends Application {
 
         Button passButton = new Button("Pass");
         passButton.setOnAction(e -> {
+            System.out.println("TEST PASSED");
             Platform.exit();
         });
 
         Button failButton = new Button("Fail");
         failButton.setOnAction(e -> {
+            System.out.println("TEST FAILED");
             Platform.exit();
             throw new AssertionError("on paste the Data Nodes count is wrong.");
         });
