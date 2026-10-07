@@ -38,11 +38,15 @@ public final class GlassPlatform {
     public static final String GTK = "Gtk";
     public static final String IOS = "Ios";
     public static final String HEADLESS = "Headless";
+    private static final String MONOCLE = "Monocle";
 
     private static final String PLATFORM_FACTORY;
+
     private static final boolean USE_EGL;
+    private static final boolean IS_EMBEDDED;
     private static final boolean IS_HEADLESS;
     private static final boolean IS_MONOCLE;
+    private static final boolean IS_SWT;
     private static final boolean IS_ACCESSIBILITY_ENABLED;
 
     static {
@@ -51,10 +55,11 @@ public final class GlassPlatform {
         PLATFORM_FACTORY = "com.sun.glass.ui." + platform.toLowerCase(Locale.ROOT) + "." + platform + "PlatformFactory";
 
         USE_EGL = Boolean.getBoolean("use.egl");
+        IS_EMBEDDED = Boolean.getBoolean("com.sun.javafx.isEmbedded");
 
-        String embeddedType = System.getProperty("glass.platform", "").toLowerCase(Locale.ROOT);
-        IS_HEADLESS = "headless".equals(embeddedType);
-        IS_MONOCLE = "monocle".equals(embeddedType);
+        IS_HEADLESS = HEADLESS.equals(platform);
+        IS_MONOCLE = MONOCLE.equals(platform);
+        IS_SWT = "swt".equals(platform);
 
         String override = System.getProperty("glass.accessible.force");
         if (override != null) {
@@ -93,6 +98,20 @@ public final class GlassPlatform {
     }
 
     /**
+     * Returns true if the platform is embedded.
+     */
+    public static boolean isEmbedded() {
+        return IS_EMBEDDED;
+    }
+
+    /**
+     * Returns true if the platform is SWT.
+     */
+    public static boolean isSWT() {
+        return IS_SWT;
+    }
+
+    /**
      * Returns true if accessibility is enabled for the current platform.
      */
     public static boolean isAccessibilityEnabled() {
@@ -122,6 +141,7 @@ public final class GlassPlatform {
                 case "linux", "gtk" -> GTK;
                 case "ios" -> IOS;
                 case "headless" -> HEADLESS;
+                case "monocle" -> MONOCLE;
                 default -> userPlatform;
             };
         }

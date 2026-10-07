@@ -38,7 +38,6 @@ import java.util.Properties;
 public class PlatformUtil {
 
     private static final String OS = System.getProperty("os.name");
-    private static final boolean EMBEDDED;
     // a property used to denote a non-default impl for this host
     private static String javafxPlatform;
 
@@ -46,8 +45,6 @@ public class PlatformUtil {
         javafxPlatform = System.getProperty("javafx.platform");
 
         loadProperties();
-
-        EMBEDDED = Boolean.getBoolean("com.sun.javafx.isEmbedded");
     }
 
     private static final boolean ANDROID = "android".equals(javafxPlatform) || "Dalvik".equals(System.getProperty("java.vm.name"));
@@ -84,13 +81,6 @@ public class PlatformUtil {
      */
     public static boolean isUnix() {
         return LINUX || SOLARIS;
-    }
-
-    /**
-     * Returns true if the platform is embedded.
-     */
-    public static boolean isEmbedded() {
-        return EMBEDDED;
     }
 
     /**
