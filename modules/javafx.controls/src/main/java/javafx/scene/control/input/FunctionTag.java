@@ -23,10 +23,7 @@
  * questions.
  */
 
-package jfx.incubator.scene.control.input;
-
-import javafx.scene.control.Control;
-import com.sun.javafx.ModuleUtil;
+package javafx.scene.control.input;
 
 /**
  * A function tag is a public identifier of a method that can be mapped to a key binding by the
@@ -45,12 +42,10 @@ import com.sun.javafx.ModuleUtil;
  *         ...
  * </pre>
  *
- * @since 24
+ * @since 999 TODO
  */
 public final class FunctionTag {
     /** Constructs the function tag. */
     public FunctionTag() {
     }
-
-    static { ModuleUtil.incubatorWarning(); }
 }

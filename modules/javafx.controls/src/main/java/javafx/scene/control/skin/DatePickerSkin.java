@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,7 +28,6 @@ package javafx.scene.control.skin;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.chrono.HijrahChronology;
-
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.event.ActionEvent;
@@ -37,8 +36,8 @@ import javafx.scene.Node;
 import javafx.scene.control.Control;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.TextField;
+import javafx.scene.control.input.SkinInputMap;
 import javafx.util.StringConverter;
-
 import com.sun.javafx.scene.control.DatePickerContent;
 import com.sun.javafx.scene.control.DatePickerHijrahContent;
 import com.sun.javafx.scene.control.ListenerHelper;
@@ -62,7 +61,6 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
     private final DatePicker datePicker;
     private TextField displayNode;
     private DatePickerContent datePickerContent;
-
     private final DatePickerBehavior behavior;
 
 
@@ -84,9 +82,7 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
         super(control);
 
         this.datePicker = control;
-
-        // install default input map for the control
-        this.behavior = new DatePickerBehavior(control);
+        behavior = new DatePickerBehavior(control);
 
         ListenerHelper lh = ListenerHelper.get(this);
 
@@ -163,13 +159,17 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
      *                                                                         *
      **************************************************************************/
 
-    /** {@inheritDoc} */
-    @Override public void dispose() {
-        super.dispose();
-
+    @Override
+    public void dispose() {
         if (behavior != null) {
             behavior.dispose();
         }
+        super.dispose();
+    }
+
+    @Override
+    public SkinInputMap getSkinInputMap() {
+        return behavior.getSkinInputMap();
     }
 
     /** {@inheritDoc} */
