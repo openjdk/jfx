@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,7 +23,7 @@
  * questions.
  */
 
-package attenuation;
+package app;
 
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
@@ -33,36 +33,35 @@ import javafx.scene.Group;
 import javafx.scene.PerspectiveCamera;
 import javafx.scene.SceneAntialiasing;
 import javafx.scene.SubScene;
-import javafx.scene.input.MouseButton;
-import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Translate;
 
+/// Camera controls for a 3D environment.
 class CameraScene3D extends Pane {
 
-    public DoubleProperty xPan = new SimpleDoubleProperty();
-    public DoubleProperty yPan = new SimpleDoubleProperty();
-    public DoubleProperty zoom = new SimpleDoubleProperty();
-    public DoubleProperty zAngle = new SimpleDoubleProperty();
-    public DoubleProperty isometricAngle = new SimpleDoubleProperty();
+    private final DoubleProperty xPan = new SimpleDoubleProperty();
+    private final DoubleProperty yPan = new SimpleDoubleProperty();
+    final DoubleProperty zoom = new SimpleDoubleProperty();
+    private final DoubleProperty zAngle = new SimpleDoubleProperty();
+    private final DoubleProperty isometricAngle = new SimpleDoubleProperty();
 
-    public DoubleProperty panSensitivity = new SimpleDoubleProperty(1);
-    public DoubleProperty zoomSensitivity = new SimpleDoubleProperty(1);
-    public DoubleProperty zRotationSensitivity = new SimpleDoubleProperty(1);
-    public DoubleProperty isoRotationSensitivity = new SimpleDoubleProperty(1);
-    public BooleanProperty isZoomTotal = new SimpleBooleanProperty();
+    private final DoubleProperty panSensitivity = new SimpleDoubleProperty(1);
+    private final DoubleProperty zoomSensitivity = new SimpleDoubleProperty(1);
+    private final DoubleProperty zRotationSensitivity = new SimpleDoubleProperty(1);
+    private final DoubleProperty isoRotationSensitivity = new SimpleDoubleProperty(1);
+    private final BooleanProperty isZoomTotal = new SimpleBooleanProperty();
 
     protected PerspectiveCamera camera = new PerspectiveCamera(true);
 
-    public DoubleProperty farClip = new SimpleDoubleProperty(camera.getFarClip());
-    public DoubleProperty nearClip = new SimpleDoubleProperty(camera.getNearClip());
-    public DoubleProperty fieldOfView = new SimpleDoubleProperty(camera.getFieldOfView());
-    public BooleanProperty verticalFOV = new SimpleBooleanProperty(camera.isVerticalFieldOfView());
+    final DoubleProperty farClip = new SimpleDoubleProperty(camera.getFarClip());
+    private final DoubleProperty nearClip = new SimpleDoubleProperty(camera.getNearClip());
+    private final DoubleProperty fieldOfView = new SimpleDoubleProperty(camera.getFieldOfView());
+    private final BooleanProperty verticalFOV = new SimpleBooleanProperty(camera.isVerticalFieldOfView());
 
-    public Group rootGroup = new Group();
+    final Group rootGroup = new Group();
 
-    public CameraScene3D() {
+    CameraScene3D() {
         setupCamera();
         createScenes();
         setUIBindings();
@@ -98,7 +97,7 @@ class CameraScene3D extends Pane {
         aaScene.setCamera(camera);
         aaScene.widthProperty().bind(widthProperty());
         aaScene.heightProperty().bind(heightProperty());
-        aaScene.setOnMouseEntered(e -> aaScene.requestFocus());
+        aaScene.setOnMouseEntered(_ -> aaScene.requestFocus());
         getChildren().setAll(aaScene);
     }
 
@@ -107,16 +106,7 @@ class CameraScene3D extends Pane {
     private final void setUIBindings() {
         setOnRotate(e -> rotate(e.getAngle()));
         setOnZoom(e -> zoom(isZoomTotal.get() ? e.getTotalZoomFactor() : e.getZoomFactor()));
-        setOnScroll(e -> {
-            // touch scroll for moving the board
-            if (e.getEventType() == ScrollEvent.SCROLL_STARTED) {
-                pan(e.getDeltaX(), e.getDeltaY());
-            }
-            // mouse scroll for zoom
-            else {
-                zoom(e.getDeltaY());
-            }
-        });
+        setOnScroll(e -> zoom(e.getDeltaY()));
 
         setOnMousePressed(e -> {
             startX = curX = e.getX();
@@ -130,16 +120,21 @@ class CameraScene3D extends Pane {
             curY = e.getY();
             double deltaX = curX - startX;
             double deltaY = curY - startY;
-            if (e.getButton() == MouseButton.PRIMARY) {
-                pan(deltaX, deltaY);
-            } else if (e.getButton() == MouseButton.SECONDARY) {
-                boolean positiveX = curX > getWidth() / 2;
-                boolean positiveY = curY > getHeight() / 2;
-                deltaX = positiveY ? -deltaX : deltaX;
-                deltaY = positiveX ? deltaY : -deltaY;
-                rotate((deltaX + deltaY)/2);
-            } else if (e.getButton() == MouseButton.MIDDLE) {
-                swivle(deltaY);
+            switch (e.getButton()) {
+                case PRIMARY -> pan(deltaX, deltaY);
+                case SECONDARY -> {
+                    if (e.isShiftDown()) {
+                        swivel(deltaY);
+                    } else {
+                        boolean positiveX = curX > getWidth() / 2;
+                        boolean positiveY = curY > getHeight() / 2;
+                        deltaX = positiveY ? -deltaX : deltaX;
+                        deltaY = positiveX ? deltaY : -deltaY;
+                        rotate((deltaX + deltaY) / 2);
+                    }
+                }
+                case MIDDLE -> swivel(deltaY);
+                case BACK, FORWARD, NONE -> {}
             }
         });
     }
@@ -167,7 +162,7 @@ class CameraScene3D extends Pane {
         zAngle.set(zAngle.get() - amount * zRotationSensitivity.get());
     }
 
-    private void swivle(double amount) {
+    private void swivel(double amount) {
         isometricAngle.set(isometricAngle.get() - amount * isoRotationSensitivity.get());
     }
 }
