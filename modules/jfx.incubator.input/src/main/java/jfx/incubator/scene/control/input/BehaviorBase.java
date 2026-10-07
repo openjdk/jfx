@@ -39,14 +39,14 @@ import com.sun.javafx.PlatformUtil;
  * A concrete behavior implementation should do the following:
  * <ol>
  * <li> provide default behavior methods (one for each function tag)
- * <li> implement {@link #populateSkinInputMap()} method, in which map control's function tags to
- *      the behavior methods, map key bindings to the function tags, add additional event handlers, using
+ * <li> implement {@link #populateSkinInputMap()} method which maps the function tags to the behavior methods,
+ *      maps the key bindings to the function tags, and add additional event handlers.  To do that, use
  *      {@link #registerFunction(FunctionTag, Runnable)},
  *      {@link #registerKey(KeyBinding, FunctionTag)},
  *      {@link #registerKey(KeyCode, FunctionTag)},
  *      and
  *      {@code addHandler()} methods.
- * <li> implement a `public SkinInputMap getSkinInputMap()` method in the corresponding skin
+ * <li> implement a {@code public SkinInputMap getSkinInputMap()} method in the corresponding skin
  * </ol>
  *
  * @param <C> the type of the control

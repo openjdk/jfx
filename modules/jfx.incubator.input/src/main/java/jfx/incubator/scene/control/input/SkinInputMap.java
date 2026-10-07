@@ -142,6 +142,7 @@ public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInp
      * @param tag the function tag, cannot be null
      */
     public final void registerKey(KeyCode code, FunctionTag tag) {
+        Objects.requireNonNull(tag);
         if (code != null) {
             registerKey(KeyBinding.of(code), tag);
         }
@@ -192,12 +193,14 @@ public abstract sealed class SkinInputMap permits SkinInputMap.Stateful, SkinInp
     /**
      * This convenience method registers a copy of the behavior-specific mappings from one key binding to another.
      * The method does nothing if no behavior specific mapping can be found.
-     * @param existing the existing key binding
-     * @param newBinding the new key binding
+     * @param existing the existing key binding, cannot be null
+     * @param newBinding the new key binding, cannot be null
      * @throws IllegalStateException if called after connecting to the Control
      */
     public final void duplicateMapping(KeyBinding existing, KeyBinding newBinding) {
         checkLock();
+        Objects.requireNonNull(existing);
+        Objects.requireNonNull(newBinding);
         Object x = map.get(existing);
         if (x != null) {
             map.put(newBinding, x);
