@@ -118,25 +118,25 @@ public class CustomTilePane extends TilePane {
     }
 
     private int computeColumns(double width, double tilewidth) {
-        return Math.max(1, (int) ((width + snapSpace(getHgap())) / (tilewidth + snapSpace(getHgap()))));
+        return Math.max(1, (int) ((width + snapSpaceX(getHgap())) / (tilewidth + snapSpaceX(getHgap()))));
     }
 
     private int computeRows(double height, double tileheight) {
-        return Math.max(1, (int) ((height + snapSpace(getVgap())) / (tileheight + snapSpace(getVgap()))));
+        return Math.max(1, (int) ((height + snapSpaceY(getVgap())) / (tileheight + snapSpaceY(getVgap()))));
     }
 
     private double computeContentWidth(int columns, double tilewidth) {
         if (columns == 0) {
             return 0;
         }
-        return columns * tilewidth + (columns - 1) * snapSpace(getHgap());
+        return columns * tilewidth + (columns - 1) * snapSpaceX(getHgap());
     }
 
     private double computeContentHeight(int rows, double tileheight) {
         if (rows == 0) {
             return 0;
         }
-        return rows * tileheight + (rows - 1) * snapSpace(getVgap());
+        return rows * tileheight + (rows - 1) * snapSpaceY(getVgap());
     }
 
     static double computeXOffset(double width, double contentWidth, HPos hpos) {
@@ -177,12 +177,12 @@ public class CustomTilePane extends TilePane {
         VPos vpos = getAlignmentInternal().getVpos();
         double width = getWidth();
         double height = getHeight();
-        double top = snapSpace(getInsets().getTop());
-        double left = snapSpace(getInsets().getLeft());
-        double bottom = snapSpace(getInsets().getBottom());
-        double right = snapSpace(getInsets().getRight());
-        double vgap = snapSpace(getVgap());
-        double hgap = snapSpace(getHgap());
+        double top = snapSpaceY(getInsets().getTop());
+        double left = snapSpaceX(getInsets().getLeft());
+        double bottom = snapSpaceY(getInsets().getBottom());
+        double right = snapSpaceX(getInsets().getRight());
+        double vgap = snapSpaceY(getVgap());
+        double hgap = snapSpaceX(getHgap());
         double insideWidth = width - left - right;
         double insideHeight = height - top - bottom;
 
