@@ -36,6 +36,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import javafx.css.PseudoClass;
@@ -68,7 +70,6 @@ import test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
-import test.javafx.scene.CssStyleHelperTest;
 
 public class ContextMenuTest {
 
@@ -728,9 +729,9 @@ public class ContextMenuTest {
     @Test public void testCssProcessedOnlyOnce() {
         String css = """
             .button { -fx-skin: "test.javafx.scene.control.ContextMenuTest$ButtonSkin1"; }
-            .anchor .button { -fx-skin: "st.javafx.scene.control.ContextMenuTest$ButtonSkin2"; }
+            .anchor .button { -fx-skin: "test.javafx.scene.control.ContextMenuTest$ButtonSkin2"; }
             """;
-        anchorBtn.getScene().getStylesheets().add(CssStyleHelperTest.toDataURL(css));
+        anchorBtn.getScene().getStylesheets().add(toDataURL(css));
         anchorBtn.getStyleClass().add("anchor");
         AtomicInteger skinCounter = new AtomicInteger(0);
         Button button = new Button();
@@ -833,7 +834,12 @@ public class ContextMenuTest {
     public static class ButtonSkin1 extends ButtonSkin {
         public ButtonSkin1(Button button) { super(button); }
     }
+
     public static class ButtonSkin2 extends ButtonSkin {
         public ButtonSkin2(Button button) { super(button); }
+    }
+
+    public static String toDataURL(String stylesheet) {
+        return "data:text/plain;base64," + Base64.getEncoder().encodeToString(stylesheet.getBytes(StandardCharsets.UTF_8));
     }
 }
