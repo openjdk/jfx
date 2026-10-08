@@ -63,7 +63,7 @@ public class RtaDndHandler {
         });
 
         editor.getInputMap().addHandler(DragEvent.DRAG_OVER, (ev) -> {
-            if (ev.getDragboard().hasFiles()) {
+            if (editor.isEditable() && ev.getDragboard().hasFiles()) {
                 editor.setDropTarget(ev.getScreenX(), ev.getScreenY());
                 // check for image types using extension maybe?
                 ev.acceptTransferModes(TransferMode.COPY);
@@ -74,7 +74,7 @@ public class RtaDndHandler {
             editor.clearDropTarget();
         });
         editor.getInputMap().addHandler(DragEvent.DRAG_DROPPED, (ev) -> {
-            if (ev.getDragboard().hasFiles()) {
+            if (editor.isEditable() && ev.getDragboard().hasFiles()) {
                 List<File> files = ev.getDragboard().getFiles();
                 TextPos p = editor.getDropTarget();
                 if (p != null) {

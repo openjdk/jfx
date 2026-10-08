@@ -113,6 +113,7 @@ public class ShapePage extends TestPaneBase {
             this::updateShapes,
             gen1,
             gen2,
+            props1.dashArray,
             props1.fill,
             props1.smooth,
             props1.stroke,
@@ -122,6 +123,7 @@ public class ShapePage extends TestPaneBase {
             props1.strokeMiterLimit,
             props1.strokeType,
             props1.strokeWidth,
+            props2.dashArray,
             props2.fill,
             props2.smooth,
             props2.stroke,
@@ -446,6 +448,7 @@ public class ShapePage extends TestPaneBase {
         s.strokeMiterLimitProperty().bind(p.strokeMiterLimit);
         s.strokeTypeProperty().bind(p.strokeType);
         s.strokeWidthProperty().bind(p.strokeWidth);
+        s.getStrokeDashArray().setAll(p.dashArray);
         p.setShape(s);
     }
 
@@ -470,15 +473,6 @@ public class ShapePage extends TestPaneBase {
                 stroke.set(Color.GREEN);
                 fill.set(FX.alpha(Color.GREEN, 0.5));
             }
-
-            dashArray.addListener(new ListChangeListener<>() {
-                @Override
-                public void onChanged(Change<? extends Double> ch) {
-                    if (shape != null) {
-                        shape.getStrokeDashArray().setAll(ch.getList());
-                    }
-                }
-            });
         }
 
         public void setShape(Shape s) {
