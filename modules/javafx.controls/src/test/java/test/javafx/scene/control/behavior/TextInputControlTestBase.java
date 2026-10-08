@@ -479,8 +479,12 @@ public abstract class TextInputControlTestBase<T extends TextInputControl> exten
         return () -> {
             Rectangle2D bounds = ((TextInputControlSkin<?>) control.getSkin()).getCharacterBounds(index);
             MouseEventFirer mouse = new MouseEventFirer(control);
+            double dw = 0.1 * (bounds.getMaxX() - bounds.getMinX());
+            double x = leading ? (bounds.getMinX() + dw) : (bounds.getMaxX() - dw);
+            double dh = 0.1 * (bounds.getMaxY() - bounds.getMinY());
+            double y = leading ? (bounds.getMinY() + dh) : (bounds.getMaxY() - dh);
             for (int i = 1; i <= clickCount; i++) {
-                mouse.fireMousePressAndRelease(i, (leading ? bounds.getMinX() : bounds.getMaxX()) - control.getLayoutBounds().getWidth() / 2, bounds.getMinY() - control.getLayoutBounds().getHeight() / 2);
+                mouse.fireMousePressAndRelease(i, x - control.getLayoutBounds().getWidth() / 2, y - control.getLayoutBounds().getHeight() / 2);
             }
         };
     }

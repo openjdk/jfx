@@ -127,6 +127,11 @@ public class TextAreaBehaviorTest extends TextInputControlTestBase<TextArea> {
     public void testDoubleClickWithSpecialChars() {
         execute(
                 setText("Bug #123"),
+                clickCharacter(0, 2, true)
+        );
+        assertEquals("Bug", control.getSelectedText());
+
+        execute(
                 clickCharacter(6, 2, true)
         );
         assertEquals("#123", control.getSelectedText());
@@ -142,11 +147,6 @@ public class TextAreaBehaviorTest extends TextInputControlTestBase<TextArea> {
     public void testDoubleClickSelectsCharacterClassBlocks() {
         execute(
                 setText("Bug #123"),
-                clickCharacter(0, 2, true)
-        );
-        assertEquals("Bug", control.getSelectedText());
-
-        execute(
                 clickCharacter(6, 2, true)
         );
         assertEquals("123", control.getSelectedText());
