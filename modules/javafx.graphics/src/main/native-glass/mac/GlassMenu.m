@@ -169,7 +169,7 @@ static jfieldID  jPixelsScaleYField = 0;
 {
     if (self->jCallback != NULL)
     {
-        GET_MAIN_JENV;
+        GET_MAIN_JENV_NOWARN;
         if (env != NULL)
         {
             (*env)->CallVoidMethod(env, self->jCallback, jMenuActionMethod, NULL);
@@ -192,7 +192,7 @@ static jfieldID  jPixelsScaleYField = 0;
         return;
     }
 
-    GET_MAIN_JENV;
+    GET_MAIN_JENV_NOWARN;
     if (env != NULL)
     {
         jobject jmenu = (*env)->GetObjectField(env, jDelegate, jDelegateMenuField);
@@ -202,7 +202,7 @@ static jfieldID  jPixelsScaleYField = 0;
 
 - (void)menuDidClose: (NSMenu *)menu
 {
-    GET_MAIN_JENV;
+    GET_MAIN_JENV_NOWARN;
     if (env != NULL)
     {
         jobject jmenu = (*env)->GetObjectField(env, jDelegate, jDelegateMenuField);
@@ -215,7 +215,7 @@ static jfieldID  jPixelsScaleYField = 0;
 - (BOOL)validateMenuItem:(NSMenuItem *)menuItem
 {
     LOG("validateMenuItem: %s action: %p", [[menuItem title] UTF8String], [menuItem action]);
-    GET_MAIN_JENV;
+    GET_MAIN_JENV_NOWARN;
     if (env != NULL)
     {
         GlassMenu *glassTargetItem = (GlassMenu *)[menuItem target];
