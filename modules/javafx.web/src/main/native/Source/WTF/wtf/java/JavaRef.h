@@ -33,7 +33,7 @@ ALWAYS_INLINE JNIEnv* JNICALL JavaScriptCore_GetJavaEnv()
 {
     if (jvm) {
         void* env;
-        jvm->GetEnv(&env, JNI_VERSION_1_8);
+        jvm->GetEnv(&env, JNI_VERSION_1_2);
         return (JNIEnv*)env;
     }
     return 0;
