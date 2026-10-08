@@ -162,6 +162,17 @@ public class SWDrawingContextTest {
     }
 
     @Test
+    public void constructorShouldRejectDirectBufferWithNonNativeByteOrder() {
+        ByteOrder other = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN ? ByteOrder.LITTLE_ENDIAN : ByteOrder.BIG_ENDIAN;
+        IntBuffer buffer = ByteBuffer.allocateDirect(WIDTH * HEIGHT * Integer.BYTES)
+            .order(other)
+            .asIntBuffer();
+        com.sun.prism.Image image = com.sun.prism.Image.fromIntArgbPreData(buffer, WIDTH, HEIGHT);
+
+        assertThrows(IllegalStateException.class, () -> new SWDrawingContext(image, _ -> {}));
+    }
+
+    @Test
     public void constructorShouldRejectTooSmallIntBuffer() {
         IntBuffer small = IntBuffer.allocate(WIDTH * HEIGHT - 1);
         com.sun.prism.Image image = com.sun.prism.Image.fromIntArgbPreData(small, WIDTH, HEIGHT);
@@ -1002,6 +1013,21 @@ public class SWDrawingContextTest {
         h.context.drawImage(inProgress, 5, 5);
 
         // the image has not finished loading, so nothing is drawn
+        assertPixel(10, 10, Color.RED);
+    }
+
+    @Test
+    public void shouldIgnoreFailedImage() {
+        h.context.setFill(Color.RED);
+        h.context.fillRect(0, 0, WIDTH, HEIGHT);
+
+        Image failed = new Image("file:missing.png");  // unregistered, so loading fails
+
+        assertTrue(failed.isError());
+
+        h.context.drawImage(failed, 5, 5);
+
+        // the image failed to load, so nothing is drawn
         assertPixel(10, 10, Color.RED);
     }
 
@@ -1882,6 +1908,20 @@ public class SWDrawingContextTest {
         h.context.strokeText("M", 10, 20);
 
         assertTrue(hasPaintedPixel(8, 5, 40, 40));  // the glyph outline should be painted at the given position
+    }
+
+    @Test
+    public void shouldNotDrawTextWithNonPositiveMaxWidth() {
+        h.context.setFill(Color.BLACK);
+        h.context.setStroke(Color.BLACK);
+        h.context.setFont(Font.font(24));
+
+        h.context.fillText("M", 10, 20, 0);
+        h.context.fillText("M", 10, 20, -10);
+        h.context.strokeText("M", 10, 20, 0);
+        h.context.strokeText("M", 10, 20, -10);
+
+        assertFalse(hasPaintedPixel(0, 0, WIDTH, HEIGHT));
     }
 
     @Test

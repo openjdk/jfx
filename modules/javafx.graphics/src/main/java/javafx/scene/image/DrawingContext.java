@@ -1414,7 +1414,8 @@ public interface DrawingContext {
      * Note that the path segments were transformed as they were originally
      * added to the current path so the current transform will not affect
      * those path segments again, but it may affect other attributes in
-     * affect at the time of the {@code fill()} operation.
+     * effect at the time of the {@code fill()} operation.
+     * If the current transform is non-invertible, the result is unspecified.
      * </p>
      */
     void fill();
@@ -1431,7 +1432,8 @@ public interface DrawingContext {
      * Note that the path segments were transformed as they were originally
      * added to the current path so the current transform will not affect
      * those path segments again, but it may affect other attributes in
-     * affect at the time of the {@code stroke()} operation.
+     * effect at the time of the {@code stroke()} operation.
+     * If the current transform is non-invertible, the result is unspecified.
      * </p>
      */
     void stroke();
@@ -1450,7 +1452,8 @@ public interface DrawingContext {
      * Note that the path segments were transformed as they were originally
      * added to the current path so the current transform will not affect
      * those path segments again, but it may affect other attributes in
-     * affect at the time of the {@code clip()} operation.
+     * effect at the time of the {@code clip()} operation.
+     * If the current transform is non-invertible, the result is unspecified.
      * </p>
      * <p>
      * Implementations that do not support path based clipping will throw
@@ -1600,7 +1603,7 @@ public interface DrawingContext {
      * @param x position on the x axis.
      * @param y position on the y axis.
      * @param maxWidth the maximum width of the string; a value of zero or
-     *     less means there is no maximum.
+     *     less means no text is drawn.
      */
     void fillText(String text, double x, double y, double maxWidth);
 
@@ -1619,7 +1622,7 @@ public interface DrawingContext {
      * @param x position on the x axis.
      * @param y position on the y axis.
      * @param maxWidth the maximum width of the string; a value of zero or
-     *     less means there is no maximum.
+     *     less means no text is drawn.
      */
     void strokeText(String text, double x, double y, double maxWidth);
 

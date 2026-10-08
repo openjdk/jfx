@@ -52,6 +52,7 @@ import com.sun.prism.PixelFormat;
 import com.sun.prism.Texture;
 import com.sun.prism.Texture.Usage;
 
+import java.nio.ByteOrder;
 import java.nio.IntBuffer;
 import java.util.ArrayDeque;
 import java.util.Arrays;
@@ -232,6 +233,10 @@ public class SWDrawingContext implements DrawingContext {
         }
 
         if (buffer.isDirect()) {
+            if (buffer.order() != ByteOrder.nativeOrder()) {
+                throw new IllegalStateException("direct image buffer must use native byte order");
+            }
+
             return new SWRTTexture(factory, width, height, buffer);
         }
 
@@ -977,35 +982,25 @@ public class SWDrawingContext implements DrawingContext {
             return;
         }
 
-        /*
-         * The path is created in device space, so draw the inverse-transformed
-         * path under the current transform: the geometry stays put, while the
-         * paint and stroke parameter use the transform:
-         */
-
-        Path2D shape = pathForRendering();
-
-        /*
-         * The fill rule is only used by this operation; applying it to the
-         * current path must not change the path itself (so isPointInPath stays
-         * unaffected):
-         */
-
-        int windingRule = fillRule == FillRule.EVEN_ODD ? Path2D.WIND_EVEN_ODD : Path2D.WIND_NON_ZERO;
-        int previousWindingRule = shape.getWindingRule();
-
         try {
-            shape.setWindingRule(windingRule);
+            Path2D shape = pathForRendering();
+
+            shape.setWindingRule(fillRule == FillRule.EVEN_ODD ? Path2D.WIND_EVEN_ODD : Path2D.WIND_NON_ZERO);
+
+            /*
+             * Fill the inverse-transformed path under the current transform, so the
+             * paint (such as a gradient or image pattern) is shaped by the transform.
+             */
 
             graphics.setPaint(prismFillPaint);
             graphics.resetPaintBounds();
             graphics.fill(shape);
-        }
-        finally {
-            shape.setWindingRule(previousWindingRule);
-        }
 
-        reportGraphicsPaintBounds();
+            reportGraphicsPaintBounds();
+        }
+        catch (NoninvertibleTransformException e) {
+            // a singular transform cannot be rendered; the result is unspecified
+        }
     }
 
     @Override
@@ -1014,16 +1009,24 @@ public class SWDrawingContext implements DrawingContext {
             return;
         }
 
-        applyStrokeParameters();
+        try {
+            Path2D shape = pathForRendering();
 
-        /*
-         * Draw the inverse-transformed path under the current transform, so the
-         * stroke width, dashes and caps are shaped by the transform.
-         */
-        graphics.resetPaintBounds();
-        graphics.draw(pathForRendering());
+            applyStrokeParameters();
 
-        reportGraphicsPaintBounds();
+            /*
+             * Draw the inverse-transformed path under the current transform, so the
+             * stroke width, dashes and caps are shaped by the transform.
+             */
+
+            graphics.resetPaintBounds();
+            graphics.draw(shape);
+
+            reportGraphicsPaintBounds();
+        }
+        catch (NoninvertibleTransformException e) {
+            // a singular transform cannot be rendered; the result is unspecified
+        }
     }
 
     /*
@@ -1031,27 +1034,20 @@ public class SWDrawingContext implements DrawingContext {
      * transform applied to the created, device space path), so that drawing it
      * under the current transform recreates that geometry but allows the
      * transform to shape stroke attributes and paints. Returns the path itself
-     * when the transform is the identity, or when it cannot be inverted.
+     * when the transform is the identity.
      */
-    private Path2D pathForRendering() {
+    private Path2D pathForRendering() throws NoninvertibleTransformException {
         if (transform.isIdentity()) {
             return path;
         }
 
-        try {
-            Affine2D inverse = new Affine2D(transform);
+        Path2D inversePath = new Path2D();
+        Affine2D inverse = new Affine2D(transform);
 
-            inverse.invert();
+        inverse.invert();
+        inversePath.append(path.getPathIterator(inverse), false);
 
-            Path2D inversePath = new Path2D();
-
-            inversePath.append(path.getPathIterator(inverse), false);
-
-            return inversePath;
-        }
-        catch (NoninvertibleTransformException e) {
-            return path;
-        }
+        return inversePath;
     }
 
     @Override
@@ -1070,6 +1066,8 @@ public class SWDrawingContext implements DrawingContext {
          * edges and corner count as inside, the high ones as outside), rather
          * than treated as inside the way HTML5 does.
          */
+
+        path.setWindingRule(Path2D.WIND_NON_ZERO);  // fix in case it was changed by fill()
 
         return path.contains((float) x, (float) y);
     }
@@ -1124,21 +1122,29 @@ public class SWDrawingContext implements DrawingContext {
 
     @Override
     public void fillText(String text, double x, double y) {
-        drawText(text, x, y, 0, false);
+        drawText(text, x, y, Double.POSITIVE_INFINITY, false);
     }
 
     @Override
     public void fillText(String text, double x, double y, double maxWidth) {
+        if (maxWidth <= 0) {
+            return;
+        }
+
         drawText(text, x, y, maxWidth, false);
     }
 
     @Override
     public void strokeText(String text, double x, double y) {
-        drawText(text, x, y, 0, true);
+        drawText(text, x, y, Double.POSITIVE_INFINITY, true);
     }
 
     @Override
     public void strokeText(String text, double x, double y, double maxWidth) {
+        if (maxWidth <= 0) {
+            return;
+        }
+
         drawText(text, x, y, maxWidth, true);
     }
 
@@ -1235,6 +1241,10 @@ public class SWDrawingContext implements DrawingContext {
         }
 
         Object platformImage = Toolkit.getImageAccessor().getPlatformImage(img);
+
+        if (platformImage == null) {  // ignore failed image (unable to load)
+            return;
+        }
 
         // Ensure it's a Prism image
         if (!(platformImage instanceof com.sun.prism.Image prismImage)) {

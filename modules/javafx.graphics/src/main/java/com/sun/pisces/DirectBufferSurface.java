@@ -25,6 +25,7 @@
 
 package com.sun.pisces;
 
+import java.nio.ByteOrder;
 import java.nio.IntBuffer;
 
 /**
@@ -48,7 +49,8 @@ public final class DirectBufferSurface extends AbstractSurface {
      * @param height the height, cannot be negative
      * @throws NullPointerException if {@code buffer} is {@code null}
      * @throws IllegalArgumentException if {@code dataType} is unsupported, {@code buffer} is not a direct
-     *     writable buffer, or {@code buffer} is too small for the given {@code width} and {@code height}
+     *     writable buffer in native byte order, or {@code buffer} is too small for the given {@code width}
+     *     and {@code height}
      */
     public DirectBufferSurface(IntBuffer buffer, int dataType, int width, int height) {
         super(width, height);
@@ -63,6 +65,10 @@ public final class DirectBufferSurface extends AbstractSurface {
 
         if (buffer.isReadOnly()) {
             throw new IllegalArgumentException("buffer must not be read-only");
+        }
+
+        if (buffer.order() != ByteOrder.nativeOrder()) {
+            throw new IllegalArgumentException("buffer must use native byte order");
         }
 
         if ((long) width * height > buffer.capacity()) {

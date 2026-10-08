@@ -163,8 +163,8 @@ public class WritableImage extends Image {
      * Returns the {@link DrawingContext} associated with this image.
      * <p>
      * The pixel storage of this image must be in {@link PixelFormat.Type#INT_ARGB_PRE INT_ARGB_PRE} format,
-     * backed by an {@link java.nio.IntBuffer} that is either a direct buffer or backed by an
-     * accessible array, which is the case for images created with the {@code (width, height)}
+     * backed by an {@link java.nio.IntBuffer} that is either a direct buffer in native byte order or backed
+     * by an accessible array, which is the case for images created with the {@code (width, height)}
      * constructor. An image created from a {@link PixelBuffer} must use a pixel format of that
      * type and a buffer of that kind.
      *
@@ -175,8 +175,10 @@ public class WritableImage extends Image {
      * snapshots render into the existing storage, leaving the {@code DrawingContext} usable.
      *
      * @return the {@link DrawingContext} associated with this image, never {@code null}
-     * @throws IllegalStateException if the pixel storage of this image is not in {@code INT_ARGB_PRE}
-     *     format (for example, when created from a {@code BYTE_BGRA_PRE} {@code PixelBuffer})
+     * @throws IllegalStateException if this image's pixel storage cannot back a {@code DrawingContext}:
+     *     the pixel format is not {@code INT_ARGB_PRE}, the {@code IntBuffer} is neither a direct buffer
+     *     in native byte order nor backed by an accessible array, or the buffer is read-only
+     * @since 28
      */
     public final DrawingContext getDrawingContext() {
         if (drawingContext == null) {
