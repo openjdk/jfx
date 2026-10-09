@@ -36,7 +36,10 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 import javafx.css.PseudoClass;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -52,6 +55,7 @@ import javafx.scene.control.DialogPane;
 import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.skin.ButtonSkin;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
@@ -722,6 +726,30 @@ public class ContextMenuTest {
         assertEquals(anchorBounds.getMinY(), cmBounds.getMinY(), 0.0);
     }
 
+    @Test public void testCssProcessedOnlyOnce() {
+        String css = """
+            .button { -fx-skin: "test.javafx.scene.control.ContextMenuTest$ButtonSkin1"; }
+            .anchor .button { -fx-skin: "test.javafx.scene.control.ContextMenuTest$ButtonSkin2"; }
+            """;
+        anchorBtn.getScene().getStylesheets().add(toDataURL(css));
+        anchorBtn.getStyleClass().add("anchor");
+        AtomicInteger skinCounter = new AtomicInteger(0);
+        Button button = new Button();
+        button.skinProperty().subscribe((oldSkin, newSkin) -> {
+            skinCounter.incrementAndGet();
+        });
+        menuItem.setGraphic(button);
+        ContextMenu cm = createContextMenu(false);
+        cm.show(anchorBtn, Side.TOP, 0, 0);
+
+        Bounds anchorBounds = anchorBtn.localToScreen(anchorBtn.getLayoutBounds());
+        Node cmNode = cm.getScene().getRoot();
+        Bounds cmBounds = cm.getScene().getRoot().localToScreen(cmNode.getLayoutBounds());
+
+        assertEquals(anchorBounds.getMinX(), cmBounds.getMinX(), 0.0);
+        assertEquals(anchorBounds.getMinY(), cmBounds.getMaxY(), 0.0);
+        assertEquals(1, skinCounter.get());
+    }
 
     @Test public void test_position_withCSS() {
         anchorBtn.getScene().getStylesheets().add(
@@ -801,5 +829,17 @@ public class ContextMenuTest {
         assertEquals(0, padding.getBottom(), 0.0);
         assertEquals(0, padding.getLeft(), 0.0);
         anchorBtn.setGraphic(null);
+    }
+
+    public static class ButtonSkin1 extends ButtonSkin {
+        public ButtonSkin1(Button button) { super(button); }
+    }
+
+    public static class ButtonSkin2 extends ButtonSkin {
+        public ButtonSkin2(Button button) { super(button); }
+    }
+
+    public static String toDataURL(String stylesheet) {
+        return "data:text/plain;base64," + Base64.getEncoder().encodeToString(stylesheet.getBytes(StandardCharsets.UTF_8));
     }
 }

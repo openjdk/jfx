@@ -121,6 +121,16 @@ public abstract class PopupWindow extends Window {
             public void applyStylesheetFromOwner(PopupWindow popupWindow, Window owner) {
                 popupWindow.applyStylesheetFromOwner(owner);
             }
+
+            @Override
+            public ReadOnlyObjectWrapper<Window> ownerWindow(PopupWindow popupWindow) {
+                return popupWindow.ownerWindow;
+            }
+
+            @Override
+            public ReadOnlyObjectWrapper<Node> ownerNode(PopupWindow popupWindow) {
+                return popupWindow.ownerNode;
+            }
         });
     }
 
