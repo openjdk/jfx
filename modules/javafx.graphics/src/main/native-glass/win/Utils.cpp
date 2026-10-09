@@ -43,7 +43,7 @@ JavaVM* GetJVM()
 JNIEnv* GetEnv()
 {
     void* env;
-    jvm->GetEnv(&env, JNI_VERSION_1_2);
+    jvm->GetEnv(&env, JNI_VERSION_1_8);
     return (JNIEnv*)env;
 }
 
@@ -113,11 +113,11 @@ extern "C" {
 JNIEXPORT jint JNICALL JNI_OnLoad_glass(JavaVM *vm, void *reserved)
 #else
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
-#endif
+#endif // STATIC_BUILD
 {
     memset(&javaIDs, 0, sizeof(javaIDs));
     jvm = vm;
-    return JNI_VERSION_1_2;
+    return JNI_VERSION_1_8;
 }
 
 } // extern "C"
