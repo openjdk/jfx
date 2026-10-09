@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,7 +33,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertPseudoClassDoesNotExist;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertPseudoClassExists;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
+import java.util.Comparator;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 import javafx.application.Platform;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -42,6 +45,8 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.css.CssMetaData;
 import javafx.css.StyleableProperty;
+import javafx.geometry.Bounds;
+import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -51,15 +56,24 @@ import javafx.scene.control.SplitPane;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.skin.SplitPaneSkin;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.MethodSource;
+import com.sun.javafx.binding.DoubleConstant;
 import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.pgstub.StubToolkit;
+import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 
 /**
@@ -67,6 +81,10 @@ import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
  * @author srikalyc
  */
 public class SplitPaneTest {
+
+    // Render scales and scene-graph bounds are stored with float precision.
+    private static final double EPSILON = 1e-4;
+
     private SplitPane splitPane;
     private SplitPane.Divider divider1;
     private SplitPane.Divider divider2;
@@ -93,6 +111,7 @@ public class SplitPaneTest {
     @AfterEach
     public void cleanup() {
         if (stageLoader != null) stageLoader.dispose();
+        if (stage.isShowing()) stage.hide();
     }
 
     /*********************************************************************
@@ -1324,6 +1343,269 @@ public class SplitPaneTest {
         assertEquals(196, p0, 1e-100);
     }
 
+    @ParameterizedTest
+    @MethodSource("renderScalesAndOrientations")
+    public void contentDividersAndClipsArePixelAligned(double scaleX, double scaleY, Orientation orientation) {
+        setRenderScales(scaleX, scaleY);
+
+        splitPane.setOrientation(orientation);
+        splitPane.setDividerPositions(0.301, 0.704);
+        splitPane.getItems().addAll(new StackPane(), new StackPane(), new StackPane());
+        splitPane.setPadding(new Insets(0.35, 0.55, 0.45, 0.65));
+
+        root.setPrefSize(211.3, 173.7);
+        root.getChildren().add(splitPane);
+        show();
+
+        root.applyCss();
+        root.autosize();
+
+        List<Region> dividers = getDividerRegions();
+        assertEquals(2, dividers.size());
+
+        for (int i = 0; i < dividers.size(); i++) {
+            // Dividers can have unequal thicknesses and fractional sizes.
+            double dividerPadding = i == 0 ? 0.7 : 1.3;
+            dividers.get(i).setPadding(new Insets(0, dividerPadding, 0, dividerPadding));
+        }
+
+        root.layout();
+
+        List<Region> content = getContentRegions();
+        assertEquals(3, content.size());
+
+        List<Region> arranged = Stream.concat(content.stream(), dividers.stream())
+            .sorted(Comparator.comparingDouble(node -> getMainMin(node.getBoundsInParent(), orientation)))
+            .toList();
+
+        for (Region node : arranged) {
+            assertBoundsPixelAligned(node.getBoundsInParent(), scaleX, scaleY);
+        }
+
+        for (int i = 1; i < arranged.size(); i++) {
+            assertEquals(
+                getMainMax(arranged.get(i - 1).getBoundsInParent(), orientation),
+                getMainMin(arranged.get(i).getBoundsInParent(), orientation),
+                EPSILON,
+                "Adjacent content and divider bounds must share a pixel boundary");
+        }
+
+        double expectedStart = orientation == Orientation.HORIZONTAL
+            ? splitPane.snappedLeftInset()
+            : splitPane.snappedTopInset();
+
+        double expectedEnd = orientation == Orientation.HORIZONTAL
+            ? splitPane.snapPositionX(splitPane.snapSizeX(splitPane.getWidth()) - splitPane.snappedRightInset())
+            : splitPane.snapPositionY(splitPane.snapSizeY(splitPane.getHeight()) - splitPane.snappedBottomInset());
+
+        assertEquals(expectedStart, getMainMin(arranged.getFirst().getBoundsInParent(), orientation), EPSILON);
+        assertEquals(expectedEnd, getMainMax(arranged.getLast().getBoundsInParent(), orientation), EPSILON);
+
+        for (Region contentRegion : content) {
+            Rectangle clip = (Rectangle) contentRegion.getClip();
+            assertEquals(contentRegion.getLayoutBounds().getWidth(), clip.getWidth(), EPSILON);
+            assertEquals(contentRegion.getLayoutBounds().getHeight(), clip.getHeight(), EPSILON);
+            assertPixelAligned(contentRegion.getLayoutX() + clip.getWidth(), scaleX);
+            assertPixelAligned(contentRegion.getLayoutY() + clip.getHeight(), scaleY);
+        }
+
+        double scale = orientation == Orientation.HORIZONTAL ? scaleX : scaleY;
+
+        double minSize = orientation == Orientation.HORIZONTAL
+            ? splitPane.minWidth(-1)
+            : splitPane.minHeight(-1);
+
+        double prefSize = orientation == Orientation.HORIZONTAL
+            ? splitPane.prefWidth(-1)
+            : splitPane.prefHeight(-1);
+
+        assertPixelAligned(minSize, scale);
+        assertPixelAligned(prefSize, scale);
+    }
+
+    @ParameterizedTest
+    @EnumSource(Orientation.class)
+    public void unsnappedPreservesFractionalLayoutDragAndResize(Orientation orientation) {
+        setRenderScales(1.25, 1.5);
+
+        splitPane.setOrientation(orientation);
+        splitPane.setSnapToPixel(false);
+        splitPane.setManaged(false);
+        splitPane.setPadding(Insets.EMPTY);
+        splitPane.setDividerPosition(0, 0.503);
+        splitPane.getItems().addAll(new StackPane(), new StackPane());
+
+        root.setPrefSize(250, 200);
+        root.getChildren().add(splitPane);
+        show();
+
+        root.applyCss();
+        Region divider = getDividerRegions().getFirst();
+        divider.setPadding(new Insets(0, 0.7, 0, 0.7));
+
+        double width = 101.25;
+        double height = 83.75;
+        splitPane.resize(width, height);
+        splitPane.relocate(10, 10);
+        splitPane.layout();
+
+        double mainSize = orientation == Orientation.HORIZONTAL ? width : height;
+        double dividerSize = getMainSize(divider.getBoundsInParent(), orientation);
+        double expectedDividerPosition = mainSize * 0.503 - dividerSize / 2;
+        assertEquals(expectedDividerPosition, getMainMin(divider.getBoundsInParent(), orientation), EPSILON);
+        assertEquals(0.503, splitPane.getDividerPositions()[0], EPSILON);
+        assertAdjacent(getContentRegions(), divider, orientation);
+
+        double dragDelta = 0.37;
+        double dividerPositionBeforeDrag = getMainMin(divider.getBoundsInParent(), orientation);
+        MouseEventFirer firer = new MouseEventFirer(divider);
+        firer.fireMousePressed();
+        firer.fireMouseEvent(
+            MouseEvent.MOUSE_DRAGGED,
+            orientation == Orientation.HORIZONTAL ? dragDelta : 0,
+            orientation == Orientation.VERTICAL ? dragDelta : 0);
+
+        splitPane.layout();
+
+        assertEquals(
+            dividerPositionBeforeDrag + dragDelta,
+            getMainMin(divider.getBoundsInParent(), orientation), EPSILON,
+            "Dragging must not round when snapToPixel is false");
+
+        List<Region> contentBeforeResize = getContentRegions();
+        double firstSize = getMainSize(contentBeforeResize.get(0).getBoundsInParent(), orientation);
+        double secondSize = getMainSize(contentBeforeResize.get(1).getBoundsInParent(), orientation);
+
+        double resizeDelta = 0.75;
+        if (orientation == Orientation.HORIZONTAL) {
+            splitPane.resize(width + resizeDelta, height);
+        } else {
+            splitPane.resize(width, height + resizeDelta);
+        }
+
+        splitPane.layout();
+
+        List<Region> contentAfterResize = getContentRegions();
+
+        assertEquals(
+            firstSize + resizeDelta / 2,
+            getMainSize(contentAfterResize.get(0).getBoundsInParent(), orientation),
+            EPSILON);
+
+        assertEquals(
+            secondSize + resizeDelta / 2,
+            getMainSize(contentAfterResize.get(1).getBoundsInParent(), orientation),
+            EPSILON);
+
+        assertAdjacent(contentAfterResize, divider, orientation);
+    }
+
+    @ParameterizedTest
+    @EnumSource(Orientation.class)
+    public void layoutBelowMinimumSizeFitsSnappedContentArea(Orientation orientation) {
+        setRenderScales(1.25, 1.5);
+
+        splitPane.setOrientation(orientation);
+        splitPane.setManaged(false);
+        splitPane.setPadding(new Insets(0.35, 0.55, 0.45, 0.65));
+        splitPane.setDividerPositions(0.3, 0.7);
+
+        for (int i = 0; i < 3; i++) {
+            Region content = new Region();
+            content.setMinSize(70.2, 60.2);
+            splitPane.getItems().add(content);
+        }
+
+        root.setPrefSize(250, 200);
+        root.getChildren().add(splitPane);
+        show();
+        root.applyCss();
+
+        List<Region> dividers = getDividerRegions();
+        dividers.get(0).setPadding(new Insets(0, 0.7, 0, 0.7));
+        dividers.get(1).setPadding(new Insets(0, 1.3, 0, 1.3));
+
+        splitPane.resize(100.8, 80);
+        splitPane.relocate(10, 10);
+        splitPane.layout();
+
+        List<Region> content = getContentRegions();
+        List<Region> arranged = Stream.concat(content.stream(), dividers.stream())
+            .sorted(Comparator.comparingDouble(node -> getMainMin(node.getBoundsInParent(), orientation)))
+            .toList();
+
+        for (Region node : arranged) {
+            assertBoundsPixelAligned(node.getBoundsInParent(), 1.25, 1.5);
+        }
+
+        for (Region contentRegion : content) {
+            assertTrue(getMainSize(contentRegion.getBoundsInParent(), orientation) > 0);
+        }
+
+        for (int i = 1; i < arranged.size(); i++) {
+            assertEquals(
+                getMainMax(arranged.get(i - 1).getBoundsInParent(), orientation),
+                getMainMin(arranged.get(i).getBoundsInParent(), orientation),
+                EPSILON,
+                "Content and dividers must remain adjacent below the minimum size");
+        }
+
+        double expectedStart = orientation == Orientation.HORIZONTAL
+            ? splitPane.snappedLeftInset()
+            : splitPane.snappedTopInset();
+
+        double expectedEnd = orientation == Orientation.HORIZONTAL
+            ? splitPane.snapPositionX(splitPane.snapSizeX(splitPane.getWidth()) - splitPane.snappedRightInset())
+            : splitPane.snapPositionY(splitPane.snapSizeY(splitPane.getHeight()) - splitPane.snappedBottomInset());
+
+        assertEquals(expectedStart, getMainMin(arranged.getFirst().getBoundsInParent(), orientation), EPSILON);
+        assertEquals(expectedEnd, getMainMax(arranged.getLast().getBoundsInParent(), orientation), EPSILON);
+    }
+
+    @ParameterizedTest
+    @EnumSource(Orientation.class)
+    public void measurementUsesSnappedDependentDimension(Orientation orientation) {
+        setRenderScales(1.25, 1.5);
+
+        Orientation bias = orientation == Orientation.HORIZONTAL ? Orientation.VERTICAL : Orientation.HORIZONTAL;
+        BiasedRegion content = new BiasedRegion(bias);
+
+        if (orientation == Orientation.HORIZONTAL) {
+            content.setMaxHeight(20.25);
+        } else {
+            content.setMaxWidth(20.25);
+        }
+
+        splitPane.setOrientation(orientation);
+        splitPane.getItems().add(content);
+        splitPane.setPadding(Insets.EMPTY);
+
+        root.setPrefSize(200, 160);
+        root.getChildren().add(splitPane);
+        show();
+        root.applyCss();
+
+        content.resetDependentDimension();
+        double measuredSize;
+        double dependentScale;
+
+        if (orientation == Orientation.HORIZONTAL) {
+            measuredSize = splitPane.minWidth(80.25);
+            dependentScale = 1.5;
+        } else {
+            measuredSize = splitPane.minHeight(90.25);
+            dependentScale = 1.25;
+        }
+
+        assertTrue(content.getDependentDimension() >= 0, "Skin must not measure content-biased children with -1");
+        assertPixelAligned(content.getDependentDimension(), dependentScale);
+        double expectedDependentDimension = Math.ceil(20.25 * dependentScale) / dependentScale;
+        assertEquals(
+            expectedDependentDimension, content.getDependentDimension(), EPSILON,
+            "measurement must use the bounded cross-size that layout allocates");
+        assertPixelAligned(measuredSize, orientation == Orientation.HORIZONTAL ? 1.25 : 1.5);
+    }
+
     @Test public void test_rt_36392() {
         AnchorPane item0 = new AnchorPane();
         item0.setId("xxx");
@@ -1366,6 +1648,111 @@ public class SplitPaneTest {
     @Test
     public void testDividerUnderZeroDoesNotHangLayout() {
         testSetDividerPositionDoesNotHangLayout(-1);
+    }
+
+    private static Stream<Arguments> renderScalesAndOrientations() {
+        return Stream.of(
+            Arguments.of(1.25, 1.5, Orientation.HORIZONTAL),
+            Arguments.of(1.25, 1.5, Orientation.VERTICAL),
+            Arguments.of(1.5, 1.25, Orientation.HORIZONTAL),
+            Arguments.of(1.5, 1.25, Orientation.VERTICAL),
+            Arguments.of(2.25, 2.75, Orientation.HORIZONTAL),
+            Arguments.of(2.25, 2.75, Orientation.VERTICAL));
+    }
+
+    private void setRenderScales(double scaleX, double scaleY) {
+        stage.renderScaleXProperty().bind(DoubleConstant.valueOf(scaleX));
+        stage.renderScaleYProperty().bind(DoubleConstant.valueOf(scaleY));
+    }
+
+    private List<Region> getContentRegions() {
+        return splitPane.getChildrenUnmodifiable().stream()
+            .filter(node -> node instanceof Region && node.getClip() instanceof Rectangle)
+            .map(node -> (Region) node)
+            .toList();
+    }
+
+    private List<Region> getDividerRegions() {
+        return splitPane.getChildrenUnmodifiable().stream()
+            .filter(node -> node instanceof Region && node.getStyleClass().contains("split-pane-divider"))
+            .map(node -> (Region) node)
+            .toList();
+    }
+
+    private static void assertAdjacent(List<Region> content, Region divider, Orientation orientation) {
+        List<Region> arranged = Stream.concat(content.stream(), Stream.of(divider))
+            .sorted(Comparator.comparingDouble(node -> getMainMin(node.getBoundsInParent(), orientation)))
+            .toList();
+
+        for (int i = 1; i < arranged.size(); i++) {
+            assertEquals(
+                getMainMax(arranged.get(i - 1).getBoundsInParent(), orientation),
+                getMainMin(arranged.get(i).getBoundsInParent(), orientation),
+                EPSILON);
+        }
+    }
+
+    private static void assertBoundsPixelAligned(Bounds bounds, double scaleX, double scaleY) {
+        assertPixelAligned(bounds.getMinX(), scaleX);
+        assertPixelAligned(bounds.getMaxX(), scaleX);
+        assertPixelAligned(bounds.getMinY(), scaleY);
+        assertPixelAligned(bounds.getMaxY(), scaleY);
+    }
+
+    private static void assertPixelAligned(double value, double scale) {
+        double pixels = value * scale;
+        assertEquals(Math.rint(pixels), pixels, EPSILON,
+            () -> value + " logical units is not aligned at render scale " + scale);
+    }
+
+    private static double getMainMin(Bounds bounds, Orientation orientation) {
+        return orientation == Orientation.HORIZONTAL ? bounds.getMinX() : bounds.getMinY();
+    }
+
+    private static double getMainMax(Bounds bounds, Orientation orientation) {
+        return orientation == Orientation.HORIZONTAL ? bounds.getMaxX() : bounds.getMaxY();
+    }
+
+    private static double getMainSize(Bounds bounds, Orientation orientation) {
+        return orientation == Orientation.HORIZONTAL ? bounds.getWidth() : bounds.getHeight();
+    }
+
+    private static final class BiasedRegion extends Region {
+        private final Orientation bias;
+        private double dependentDimension = -1;
+
+        private BiasedRegion(Orientation bias) {
+            this.bias = bias;
+        }
+
+        @Override
+        public Orientation getContentBias() {
+            return bias;
+        }
+
+        @Override
+        protected double computeMinWidth(double height) {
+            if (bias == Orientation.VERTICAL) {
+                dependentDimension = height;
+            }
+            return 10.25;
+        }
+
+        @Override
+        protected double computeMinHeight(double width) {
+            if (bias == Orientation.HORIZONTAL) {
+                dependentDimension = width;
+            }
+            return 10.25;
+        }
+
+        private void resetDependentDimension() {
+            dependentDimension = -1;
+        }
+
+        private double getDependentDimension() {
+            return dependentDimension;
+        }
     }
 
     private void testSetDividerPositionDoesNotHangLayout(double dividerPosition) {
