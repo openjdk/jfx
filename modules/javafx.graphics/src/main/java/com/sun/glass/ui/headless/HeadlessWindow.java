@@ -62,7 +62,7 @@ public class HeadlessWindow extends Window {
     }
 
     @Override
-    protected long _createWindow(long ownerPtr, long screenPtr, int mask) {
+    protected long _createWindow(long ownerPtr, long screenPtr, int mask, int backdropID) {
         this.ptr = ptrCount.incrementAndGet();
         return ptr;
     }

@@ -29,13 +29,16 @@ import com.sun.glass.ui.*;
 import com.sun.glass.ui.CommonDialogs.ExtensionFilter;
 import com.sun.glass.ui.CommonDialogs.FileChooserResult;
 import com.sun.javafx.application.preferences.PreferenceMapping;
+import com.sun.javafx.stage.PlatformStageBackdropStyle;
 import com.sun.javafx.util.Logging;
 import javafx.scene.paint.Color;
+import javafx.stage.StageBackdropStyle;
 
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -279,8 +282,8 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
 
     // FACTORY METHODS
 
-    @Override public Window createWindow(Window owner, Screen screen, int styleMask) {
-        return new MacWindow(owner, screen, styleMask);
+    @Override public Window createWindow(Window owner, Screen screen, int styleMask, int backdropID) {
+        return new MacWindow(owner, screen, styleMask, backdropID);
     }
 
     @Override public View createView() {
@@ -401,6 +404,11 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
 
     @Override
     protected boolean _supportsExtendedWindows() {
+        return true;
+    }
+
+    @Override
+    protected boolean _supportsWindowBackdrops() {
         return true;
     }
 
@@ -541,5 +549,20 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
     @Override
     protected void _showDocument(String uri) {
         _openURI(uri);
+    }
+
+    @Override
+    public List<String> getPlatformBackdropStyleNames() {
+        return MacWindow.getPlatformBackdropStyleNames();
+    }
+
+    @Override
+    public PlatformStageBackdropStyle createPlatformBackdropStyle(String name) {
+        return MacWindow.createPlatformBackdropStyle(name);
+    }
+
+    @Override
+    public int getBackdropStyleIdentifier(StageBackdropStyle style) {
+        return MacWindow.getBackdropStyleIdentifier(style);
     }
 }

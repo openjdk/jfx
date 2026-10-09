@@ -40,7 +40,7 @@ final class IosWindow extends Window {
     }
 
     // See Window for documentation
-    @Override native protected long _createWindow(long ownerPtr, long screenPtr, int mask);
+    @Override native protected long _createWindow(long ownerPtr, long screenPtr, int mask, int backdropID);
     @Override native protected boolean _close(long ptr);
     @Override native protected boolean _setView(long ptr, View view);
     @Override native protected void _setBounds(long ptr, int x, int y, boolean xSet, boolean ySet, int w, int h, int cw, int ch, float xGravity, float yGravity);

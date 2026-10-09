@@ -51,6 +51,7 @@ import javafx.scene.image.Image;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.HeaderBar;
 
+import com.sun.javafx.PreviewFeature;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.collections.VetoableListDecorator;
 import com.sun.javafx.collections.TrackableObservableList;
@@ -560,6 +561,39 @@ public class Stage extends Window {
      */
     public final Window getOwner() {
         return owner;
+    }
+
+    private StageBackdrop backdrop = null;
+
+    /**
+     * Specifies the backdrop for this stage. This must be done prior to
+     * making the stage visible.
+     *
+     * @param backdrop the backdrop for this stage
+     *
+     * @throws IllegalStateException if this property is set after the stage
+     * has ever been made visible.
+     *
+     * @defaultValue null
+     */
+    @SuppressWarnings("deprecation")
+    public final void initBackdrop(StageBackdrop backdrop) {
+        PreviewFeature.WINDOW_BACKDROP.checkEnabled();
+
+        if (hasBeenVisible) {
+            throw new IllegalStateException("Cannot set backdrop once stage has been set visible");
+        }
+
+        this.backdrop = backdrop;
+    }
+
+    /**
+     * Retrieve the backdrop for this stage.
+     *
+     * @return the backdrop. May be null if no backdrop style has been set.
+     */
+    public final StageBackdrop getBackdrop() {
+        return backdrop;
     }
 
     /**
@@ -1112,10 +1146,11 @@ public class Stage extends Window {
             ColorScheme colorScheme = scene != null
                 ? scene.getPreferences().getColorScheme()
                 : PlatformImpl.getPlatformPreferences().getColorScheme();
-
             StageStyle stageStyle = getStyle();
+            StageBackdropStyle backdropStyle = (backdrop == null ? null : backdrop.getStyle());
             setPeer(toolkit.createTKStage(this, stageStyle, isPrimary(),
-                    getModality(), tkStage, rtl, colorScheme == ColorScheme.DARK));
+                    getModality(), tkStage, rtl, colorScheme == ColorScheme.DARK,
+                    backdropStyle));
             getPeer().setMinimumSize((int) Math.ceil(getMinWidth()),
                     (int) Math.ceil(getMinHeight()));
             getPeer().setMaximumSize((int) Math.floor(getMaxWidth()),

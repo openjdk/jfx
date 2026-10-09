@@ -146,7 +146,7 @@ public final class MonocleApplication extends Application {
     }
 
     @Override
-    public Window createWindow(Window owner, Screen screen, int styleMask) {
+    public Window createWindow(Window owner, Screen screen, int styleMask, int backdropID) {
         return new MonocleWindow(owner, screen, styleMask);
     }
 
