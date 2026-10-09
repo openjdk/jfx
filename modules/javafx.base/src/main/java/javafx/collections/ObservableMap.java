@@ -34,6 +34,11 @@ import javafx.beans.Observable;
  * such as {@link FXCollections#observableHashMap() observableHashMap}, or with a
  * {@link javafx.beans.property.SimpleMapProperty SimpleMapProperty}.
  *
+ * @implNote
+ * The implementations of this interface in the JavaFX library do not provide all of the
+ * guarantees described by {@link Observable} for their invalidation listeners: a listener
+ * that is added or removed while a notification is in progress may still be notified.
+ *
  * @see MapChangeListener
  * @see MapChangeListener.Change
  * @param <K> the map key element type
