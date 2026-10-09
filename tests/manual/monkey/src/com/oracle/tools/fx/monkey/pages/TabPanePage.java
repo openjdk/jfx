@@ -28,13 +28,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.function.Supplier;
+import javafx.beans.Observable;
 import javafx.collections.ObservableList;
+import javafx.collections.transformation.FilteredList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
+import javafx.scene.control.Control;
 import javafx.scene.control.Label;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
@@ -63,6 +66,7 @@ import com.oracle.tools.fx.monkey.util.TestPaneBase;
  */
 public class TabPanePage extends TestPaneBase implements HasSkinnable {
     private final TabPane control;
+    private FilteredList<Tab> filtered;
 
     public TabPanePage() {
         super("TabPanePage");
@@ -75,6 +79,26 @@ public class TabPanePage extends TestPaneBase implements HasSkinnable {
                 return v;
             }
         };
+        control.getTabs().addListener((Observable x) -> {
+            printTabs("tabs:", control.getTabs());
+        });
+        filtered = new FilteredList<>(control.getTabs(), (t) -> {
+            String s = t.getText();
+            char c = s.charAt(s.length() - 1);
+            switch (c) {
+            case '1':
+            case '3':
+            case '5':
+            case '7':
+            case '9':
+                return true;
+            default:
+                return false;
+            }
+        });
+        filtered.addListener((Observable x) -> {
+            printTabs("odd:", filtered);
+        });
 
         // TODO other Tab propertis in the context menu
 
@@ -194,5 +218,24 @@ public class TabPanePage extends TestPaneBase implements HasSkinnable {
     @Override
     public void newSkin() {
         control.setSkin(new TabPaneSkin(control));
+    }
+
+    @Override
+    public Control getSkinnableControl() {
+        return control;
+    }
+
+    private static void printTabs(String prefix, List<Tab> tabs) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(prefix);
+        sb.append(" [");
+        for (int i = 0; i < tabs.size(); i++) {
+            if (i > 0) {
+                sb.append(", ");
+            }
+            sb.append(tabs.get(i).getText());
+        }
+        sb.append("]");
+        IO.println(sb);
     }
 }

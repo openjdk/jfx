@@ -183,13 +183,16 @@ static jfieldID  jPixelsScaleYField = 0;
 {
     if ([GlassWindow _hasGrab]) {
         // If an auto-hide popup window is showing, it has an active grab.
-        // In this case, we close the popup instead of opening the menu:
-        [_menu cancelTrackingWithoutAnimation];
+        // In this case, we close the popup and let the menu open.
+        //
+        // Note: After JDK-8372398, [_menu cancelTrackingWithoutAnimation] was used to cancel the menu tracking loop,
+        // in order to prevent the menu from showing up. However, starting macOS 27 that call leaves AppKit
+        // stuck in the menu tracking loop, and the application stops receiving mouse events (JDK-8393642).
+        // Therefore, the call is removed, keeping _resetGrab, to hide the popup, while the menu opens.
 
         // _resetGrab fires FOCUS_UNGRAB on the popup's owner window, which
         // will trigger doAutoHide() -> hide() on the popup.
         [GlassWindow _resetGrab];
-        return;
     }
 
     GET_MAIN_JENV;
