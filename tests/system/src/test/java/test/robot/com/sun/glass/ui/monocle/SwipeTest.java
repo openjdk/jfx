@@ -39,7 +39,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import com.sun.glass.ui.monocle.TestLogShim;
-import com.sun.javafx.PlatformUtil;
+import com.sun.glass.ui.GlassPlatform;
 import test.com.sun.glass.ui.monocle.TestRunnable;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
@@ -137,7 +137,7 @@ public final class SwipeTest extends ParameterizedTestBase {
         TestApplication.getStage();
         TestRunnable.invokeAndWait(() -> {
             Assumptions.assumeTrue(TestApplication.isMonocle() || TestApplication.isLens());
-            Assumptions.assumeTrue(PlatformUtil.isEmbedded());
+            Assumptions.assumeTrue(GlassPlatform.isEmbedded());
         });
 
         TestApplication.getStage().getScene().addEventHandler(
