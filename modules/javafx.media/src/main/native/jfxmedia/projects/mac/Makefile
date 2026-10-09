@@ -64,10 +64,6 @@ else
     CFLAGS += -O0 -g -Wall
 endif
 
-ifneq ($(ARCH), arm64)
-    CFLAGS += -msse2
-endif
-
 INCLUDES = -I$(JAVA_HOME)/include \
            -I$(JAVA_HOME)/include/darwin \
            -I$(SRCBASE_DIR) \
