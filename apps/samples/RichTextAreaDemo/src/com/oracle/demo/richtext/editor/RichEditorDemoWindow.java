@@ -53,6 +53,7 @@ import jfx.incubator.scene.control.richtext.SelectionSegment;
 import jfx.incubator.scene.control.richtext.TextPos;
 import jfx.incubator.scene.control.richtext.model.FileListFormatHandler;
 import jfx.incubator.scene.control.richtext.model.StyledInput;
+import jfx.incubator.scene.control.richtext.model.StyledTextModel;
 
 /**
  * Rich Editor Demo window.
@@ -97,7 +98,7 @@ public class RichEditorDemoWindow extends Stage {
         editor.addEventFilter(MouseEvent.MOUSE_PRESSED, this::handleMousePressFilter);
 
         editor.getInputMap().addHandler(DragEvent.DRAG_OVER, (ev) -> {
-            if (ev.getDragboard().hasFiles()) {
+            if (isEditable(editor) && ev.getDragboard().hasFiles()) {
                 editor.setDropTarget(ev.getScreenX(), ev.getScreenY());
                 // check for image types using extension maybe?
                 ev.acceptTransferModes(TransferMode.COPY);
@@ -108,7 +109,7 @@ public class RichEditorDemoWindow extends Stage {
             editor.clearDropTarget();
         });
         editor.getInputMap().addHandler(DragEvent.DRAG_DROPPED, (ev) -> {
-            if (ev.getDragboard().hasFiles()) {
+            if (isEditable(editor) && ev.getDragboard().hasFiles()) {
                 List<File> files = ev.getDragboard().getFiles();
                 File f = actions.fileToOpen(files);
                 if (f != null) {
@@ -192,5 +193,17 @@ public class RichEditorDemoWindow extends Stage {
             sb.append(" *");
         }
         return sb.toString();
+    }
+
+    // in the demo, the editor and the model are always editable.
+    // in other applications, this is the code to use.
+    private static boolean isEditable(RichTextArea editor) {
+        if (editor.isEditable()) {
+            StyledTextModel m = editor.getModel();
+            if (m != null) {
+                return m.isWritable();
+            }
+        }
+        return false;
     }
 }
