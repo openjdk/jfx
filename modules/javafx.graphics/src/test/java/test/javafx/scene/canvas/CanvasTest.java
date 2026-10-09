@@ -189,6 +189,21 @@ public class CanvasTest {
     }
 
     @Test
+    public void testClipRectDoesNotResetCurrentPath() {
+        gc.beginPath();
+        gc.moveTo(10, 10);
+        gc.lineTo(50, 10);
+        gc.lineTo(30, 50);
+        gc.closePath();
+
+        assertTrue(gc.isPointInPath(30, 30));  // inside the triangle
+
+        gc.clipRect(0, 0, 20, 20);  // clip rect does not contain (30, 30)
+
+        assertTrue(gc.isPointInPath(30, 30));  // clipRect must not reset the current path
+    }
+
+    @Test
     public void testGCfillDrawPath_basic() throws Exception {
         gc.beginPath();
         gc.moveTo(50, 50);

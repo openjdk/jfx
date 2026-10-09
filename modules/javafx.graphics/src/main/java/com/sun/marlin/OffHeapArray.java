@@ -26,6 +26,9 @@
 package com.sun.marlin;
 
 import static com.sun.marlin.MarlinConst.LOG_OFF_HEAP_MALLOC;
+
+import com.sun.javafx.util.FXCleaner;
+
 import java.lang.foreign.Arena;
 import java.lang.foreign.MemorySegment;
 import java.lang.foreign.ValueLayout;
@@ -79,7 +82,7 @@ final class OffHeapArray {
 
         if (!global) {
             // Register a cleaning function to ensure freeing off-heap memory:
-            MarlinUtils.getCleaner().register(parent, this::free);
+            FXCleaner.register(parent, this::free);
         }
     }
 
