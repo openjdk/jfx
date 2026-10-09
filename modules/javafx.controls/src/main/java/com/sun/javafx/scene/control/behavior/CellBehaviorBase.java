@@ -25,18 +25,15 @@
 
 package com.sun.javafx.scene.control.behavior;
 
+import com.sun.javafx.scene.control.inputmap.InputMap;
 import javafx.scene.control.Cell;
 import javafx.scene.control.Control;
 import javafx.scene.control.FocusModel;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.SelectionMode;
-import com.sun.javafx.scene.control.inputmap.InputMap;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Behaviors for standard cells types. Simply defines methods that subclasses
@@ -173,8 +170,7 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
         } else {
             latePress  = isSelected();
             if (!latePress) {
-                doSelect(e.getX(), e.getY(), e.getButton(), e.getClickCount(),
-                        e.isShiftDown(), e.isShortcutDown());
+                doSelect(e);
             }
         }
     }
@@ -182,8 +178,7 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
     public void mouseReleased(MouseEvent e) {
         if (latePress) {
             latePress = false;
-            doSelect(e.getX(), e.getY(), e.getButton(), e.getClickCount(),
-                    e.isShiftDown(), e.isShortcutDown());
+            doSelect(e);
         }
     }
 
@@ -199,8 +194,7 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
      *                                                                         *
      **************************************************************************/
 
-    protected void doSelect(final double x, final double y, final MouseButton button,
-                            final int clickCount, final boolean shiftDown, final boolean shortcutDown) {
+    protected void doSelect(MouseEvent e) {
         // we update the cell to point to the new tree node
         final T cell = getNode();
 
@@ -208,7 +202,7 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
 
         // If the mouse event is not contained within this TreeCell, then
         // we don't want to react to it.
-        if (cell.isEmpty() || ! cell.contains(x, y)) {
+        if (cell.isEmpty() || ! cell.contains(e.getX(), e.getY())) {
             return;
         }
 
@@ -222,18 +216,18 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
 
         // if the user has clicked on the disclosure node, we do nothing other
         // than expand/collapse the tree item (if applicable). We do not do editing!
-        if (handleDisclosureNode(x,y)) {
+        if (handleDisclosureNode(e.getX(), e.getY())) {
             return;
         }
 
         // we only care about clicks in certain places (depending on the subclass)
-        if (! isClickPositionValid(x, y)) return;
+        if (! isClickPositionValid(e.getX(), e.getY())) return;
 
         // if shift is down, and we don't already have the initial focus index
         // recorded, we record the focus index now so that subsequent shift+clicks
         // result in the correct selection occurring (whilst the focus index moves
         // about).
-        if (shiftDown) {
+        if (e.isShiftDown()) {
             if (! hasNonDefaultAnchor(cellContainer)) {
                 setAnchor(cellContainer, fm.getFocusedIndex(), false);
             }
@@ -241,11 +235,11 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
             removeAnchor(cellContainer);
         }
 
-        if (button == MouseButton.PRIMARY || (button == MouseButton.SECONDARY && !selected)) {
+        if (e.getButton() == MouseButton.PRIMARY || (e.getButton() == MouseButton.SECONDARY && !selected)) {
             if (sm.getSelectionMode() == SelectionMode.SINGLE) {
-                simpleSelect(button, clickCount, shortcutDown);
+                simpleSelect(e);
             } else {
-                if (shortcutDown) {
+                if (e.isShortcutDown()) {
                     if (selected) {
                         // we remove this row from the current selection
                         sm.clearSelection(index);
@@ -254,7 +248,7 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
                         // We add this row to the current selection
                         sm.select(index);
                     }
-                } else if (shiftDown && clickCount == 1) {
+                } else if (e.isShiftDown() && e.getClickCount() == 1) {
                     // we add all rows between the current selection focus and
                     // this row (inclusive) to the current selection.
                     final int focusedIndex = getAnchor(cellContainer, fm.getFocusedIndex());
@@ -263,13 +257,13 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
 
                     fm.focus(index);
                 } else {
-                    simpleSelect(button, clickCount, shortcutDown);
+                    simpleSelect(e);
                 }
             }
         }
     }
 
-    protected void simpleSelect(MouseButton button, int clickCount, boolean shortcutDown) {
+    protected void simpleSelect(MouseEvent e) {
         final int index = getIndex();
         boolean isAlreadySelected;
 
@@ -279,7 +273,7 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
         } else {
             isAlreadySelected = sm.isSelected(index);
 
-            if (isAlreadySelected && shortcutDown) {
+            if (isAlreadySelected && e.isShortcutDown()) {
                 sm.clearSelection(index);
                 getFocusModel().focus(index);
                 isAlreadySelected = false;
@@ -288,21 +282,40 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
             }
         }
 
-        handleClicks(button, clickCount, isAlreadySelected);
+        doHandleClick(e, isAlreadySelected);
     }
 
-    protected void handleClicks(MouseButton button, int clickCount, boolean isAlreadySelected) {
+    protected final void doHandleClick(MouseEvent e, boolean isAlreadySelected) {
+        // If not focused yet, we want to shift focus first to the container.
+        // This allows other cells to commit their value before we handle the click.
+        // Usually cells will request focus again when the editing starts.
+        if (!getCellContainer().isFocused()) {
+            getCellContainer().requestFocus();
+        }
+
+        // Consume the event if we handled it,
+        // so that the event will not bubble up and shift focus back to the container.
+        if (handleClicks(e.getButton(), e.getClickCount(), isAlreadySelected)) {
+            e.consume();
+        }
+    }
+
+    protected boolean handleClicks(MouseButton button, int clickCount, boolean isAlreadySelected) {
         // handle editing, which only occurs with the primary mouse button
         if (button == MouseButton.PRIMARY) {
             if (clickCount == 1 && isAlreadySelected) {
                 edit(getNode());
+                return true;
             } else if (clickCount == 1) {
-                // cancel editing
+                // stop editing
                 edit(null);
+                return true;
             } else if (clickCount == 2 && getNode().isEditable()) {
                 edit(getNode());
+                return true;
             }
         }
+        return false;
     }
 
     void selectRows(int focusedIndex, int index) {
