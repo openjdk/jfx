@@ -69,5 +69,7 @@
             <attribute name="test" value="true"/>
         </attributes>
     </classpathentry>
+    <classpathentry kind="src" path="/incubator.richtext"/>
+    <classpathentry kind="src" path="/incubator.input"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

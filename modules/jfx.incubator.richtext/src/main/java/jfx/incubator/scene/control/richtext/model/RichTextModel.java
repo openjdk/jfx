@@ -74,6 +74,7 @@ public class RichTextModel extends StyledTextModel {
      */
     public RichTextModel() {
         registerDataFormatHandler(RichTextFormatHandler.getInstance(), true, true, 1000);
+        registerDataFormatHandler(ImageFormatHandler.getInstance(), false, true, 500);
         registerDataFormatHandler(RtfFormatHandler.getInstance(), true, true, 300);
         registerDataFormatHandler(HtmlExportFormatHandler.getInstance(), true, false, 200);
         registerDataFormatHandler(FileListFormatHandler.getInstance(), false, true, 100);
@@ -461,7 +462,7 @@ public class RichTextModel extends StyledTextModel {
             for (int i = 0; i < ct; i++) {
                 if (offset == off) {
                     // insert at the beginning
-                    insertSegment2(i, text, attrs);
+                    insertSegment(i, text, attrs);
                     return;
                 } else {
                     RSegment seg = get(i);
@@ -474,12 +475,12 @@ public class RichTextModel extends StyledTextModel {
 
                         String s1 = toSplit.substring(0, ix);
                         set(i++, new RSegment(s1, a));
-                        if (insertSegment2(i, text, attrs)) {
+                        if (!insertSegment(i, text, attrs)) {
                             i++;
                         }
                         if (ix < toSplit.length()) {
                             String s2 = toSplit.substring(ix);
-                            insertSegment2(i, s2, RichUtils.filterOutNodeAttributes(a));
+                            insertSegment(i, s2, RichUtils.filterOutNodeAttributes(a));
                         }
                         return;
                     }
@@ -489,39 +490,39 @@ public class RichTextModel extends StyledTextModel {
             }
 
             // insert at the end
-            insertSegment2(ct, text, attrs);
+            insertSegment(ct, text, attrs);
         }
 
         /**
-         * Inserts a new segment, or merges with adjacent segment if styles are the same.
-         * Returns true if a segment has been added.
+         * Inserts a new segment at the specified index, or appends to the previous
+         * segment when the attributes allow that.
+         *
          * @param ix the segment index
          * @param text the plain text
          * @param a the style attributes
-         * @return true if a segment has been added.
+         * @return true if the text has been merged with the previous segment
          */
-        private boolean insertSegment2(int ix, String text, StyleAttributeMap a) {
+        private boolean insertSegment(int ix, String text, StyleAttributeMap a) {
             if (ix == 0) {
-                // FIX aaaa combine with insertSegment
                 if (ix < size()) {
                     RSegment seg = get(ix);
                     if (seg.getTextLength() == 0) {
                         // replace zero width segment
                         seg.setText(text);
                         seg.setAttrs(a);
-                        return false;
-                    } else if (a.equals(seg.attrs())) {
-                        // combine
+                        return true;
+                    } else if (RichUtils.canMerge(a, seg.attrs())) {
+                        // merge
                         seg.setText(text + seg.text());
-                        return false;
+                        return true;
                     }
                 }
             } else if (ix > 0) {
                 RSegment prev = get(ix - 1);
-                if (!RichUtils.containsInlineNodes(prev.attrs()) && a.equals(prev.attrs())) {
-                    // combine
+                if (RichUtils.canMerge(prev.attrs(), a)) {
+                    // merge
                     prev.append(text);
-                    return false;
+                    return true;
                 }
             }
 
@@ -530,33 +531,6 @@ public class RichTextModel extends StyledTextModel {
                 add(ix, seg);
             } else {
                 add(seg);
-            }
-            return true;
-        }
-
-        /**
-         * inserts a new segment with the specified, deduplicated attributes.
-         * if the new style is the same as the previous segment, merges text with the previous segment instead.
-         * @return true if the new segment has been merged with the previous segment
-         */
-        // TODO should it also merge with the next segment if the styles are the same?
-        // in this case it's better to return an int which is the amount of segments added/removed
-        private boolean insertSegment(int ix, String text, StyleAttributeMap a) {
-            // TODO deal with zero width segment
-            // FIX aaaa combine with insertSegment2
-            if (ix > 0) {
-                RSegment prev = get(ix - 1);
-                if (prev.attrs().equals(a)) {
-                    // merge
-                    prev.append(text);
-                    return true;
-                }
-            }
-            RSegment seg = new RSegment(text, a);
-            if (ix >= size()) {
-                add(seg);
-            } else {
-                add(ix, seg);
             }
             return false;
         }
@@ -646,12 +620,12 @@ public class RichTextModel extends StyledTextModel {
         }
 
         private boolean isMerge(RParagraph p) {
-            if(size() == 0) {
+            if (size() == 0) {
                 return false; // should never happen
-            } else if(p.size() == 0) {
+            } else if (p.size() == 0) {
                 return false; // should never happen
             }
-            return get(size() - 1).getStyleAttributeMap().equals(p.get(0).getStyleAttributeMap());
+            return RichUtils.canMerge(get(size() - 1).getStyleAttributeMap(), p.get(0).getStyleAttributeMap());
         }
 
         private boolean isZeroWidth() {
@@ -853,7 +827,7 @@ public class RichTextModel extends StyledTextModel {
             StyleAttributeMap newAttrs = dedup.apply(merge ? seg.attrs().combine(a) : a);
             if (ix > 0) {
                 RSegment prev = get(ix - 1);
-                if (prev.attrs().equals(newAttrs)) {
+                if (RichUtils.canMerge(prev.attrs(), newAttrs)) {
                     // merge
                     prev.append(seg.text());
                     remove(ix);

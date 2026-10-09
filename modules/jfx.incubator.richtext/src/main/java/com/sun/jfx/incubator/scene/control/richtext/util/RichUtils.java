@@ -434,6 +434,17 @@ public final class RichUtils {
     }
 
     /**
+     * Writes an Image to a byte array in JPG format.
+     *
+     * @param im source image
+     * @return byte array containing JPG image
+     * @throws IOException if an I/O error occurs
+     */
+    public static byte[] writeJPG(Image im) throws IOException {
+        return ImageUtils.writeImage(im, "JPG");
+    }
+
+    /**
      * Writes an Image to a byte array in PNG format.
      *
      * @param im source image
@@ -754,6 +765,13 @@ public final class RichUtils {
             if (a.isInlineNode()) {
                 return true;
             }
+        }
+        return false;
+    }
+
+    public static boolean canMerge(StyleAttributeMap a, StyleAttributeMap b) {
+        if (a.equals(b)) {
+            return !containsInlineNodes(a);
         }
         return false;
     }

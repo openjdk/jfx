@@ -34,6 +34,7 @@ import java.util.function.Consumer;
 import javafx.scene.paint.Color;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import com.sun.jfx.incubator.scene.control.richtext.EmbeddedImageHelper;
 import com.sun.jfx.incubator.scene.control.richtext.Params;
 import com.sun.jfx.incubator.scene.control.richtext.SegmentStyledInput;
 import jfx.incubator.scene.control.richtext.LineEnding;
@@ -369,5 +370,36 @@ public class TestRichTextModel {
         assertThrows(NullPointerException.class, () -> {
             m.clamp(null);
         });
+    }
+
+    @Test
+    public void insertSameImageTwice() {
+        byte[] bytes = RTUtil.redPng32x32();
+        StyleAttributeMap a = StyleAttributeMap.of(StyleAttributeMap.EMBEDDED_IMAGE, EmbeddedImageHelper.create(bytes, 32, 32, 32, 32, true));
+
+        // insert before
+        {
+            RichTextModel m = createModel("");
+            m.replace(null, TextPos.ZERO, TextPos.ZERO, StyledInput.of("1", a));
+            m.replace(null, TextPos.ZERO, TextPos.ZERO, StyledInput.of("2", a));
+
+            RichParagraph p = m.getParagraph(0);
+            assertEquals(2, p.getSegmentCount());
+            assertEquals(a, p.getSegment(0).getStyleAttributeMap(null));
+            assertEquals(a, p.getSegment(1).getStyleAttributeMap(null));
+        }
+
+        // insert after
+        {
+            RichTextModel m = createModel("");
+            m.replace(null, TextPos.ZERO, TextPos.ZERO, StyledInput.of("1", a));
+            TextPos pos = TextPos.ofLeading(0, 1);
+            m.replace(null, pos, pos, StyledInput.of("2", a));
+
+            RichParagraph p = m.getParagraph(0);
+            assertEquals(2, p.getSegmentCount());
+            assertEquals(a, p.getSegment(0).getStyleAttributeMap(null));
+            assertEquals(a, p.getSegment(1).getStyleAttributeMap(null));
+        }
     }
 }
