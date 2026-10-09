@@ -769,6 +769,13 @@ public final class RichUtils {
         return false;
     }
 
+    public static boolean canMerge(StyleAttributeMap a, StyleAttributeMap b) {
+        if (a.equals(b)) {
+            return !containsInlineNodes(a);
+        }
+        return false;
+    }
+
     public static StyleAttributeMap filterUnsupportedAttributes(StyleAttributeMap map, Set<StyleAttribute<?>> supported) {
         if (supported != null) {
             Set<StyleAttribute<?>> as = map.getAttributes();

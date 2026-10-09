@@ -494,7 +494,8 @@ public class RichTextModel extends StyledTextModel {
         }
 
         /**
-         * Inserts a new segment, or merges with adjacent segment if styles are the same.
+         * Inserts a new segment at the specified index, or appends to the previous
+         * segment when the attributes allow that.
          * Returns true if a segment has been added.
          * @param ix the segment index
          * @param text the plain text
@@ -511,7 +512,7 @@ public class RichTextModel extends StyledTextModel {
                         seg.setText(text);
                         seg.setAttrs(a);
                         return false;
-                    } else if (a.equals(seg.attrs())) {
+                    } else if (RichUtils.canMerge(a, seg.attrs())) {
                         // combine
                         seg.setText(text + seg.text());
                         return false;
@@ -519,7 +520,7 @@ public class RichTextModel extends StyledTextModel {
                 }
             } else if (ix > 0) {
                 RSegment prev = get(ix - 1);
-                if (!RichUtils.containsInlineNodes(prev.attrs()) && a.equals(prev.attrs())) {
+                if (RichUtils.canMerge(prev.attrs(), a)) {
                     // combine
                     prev.append(text);
                     return false;
@@ -536,7 +537,7 @@ public class RichTextModel extends StyledTextModel {
         }
 
         /**
-         * inserts a new segment with the specified, deduplicated attributes.
+         * Inserts a new segment with the specified, deduplicated attributes.
          * if the new style is the same as the previous segment, merges text with the previous segment instead.
          * @return true if the new segment has been merged with the previous segment
          */
@@ -547,7 +548,7 @@ public class RichTextModel extends StyledTextModel {
             // FIX aaaa combine with insertSegment2
             if (ix > 0) {
                 RSegment prev = get(ix - 1);
-                if (prev.attrs().equals(a)) {
+                if (RichUtils.canMerge(prev.attrs(), a)) {
                     // merge
                     prev.append(text);
                     return true;
@@ -647,12 +648,12 @@ public class RichTextModel extends StyledTextModel {
         }
 
         private boolean isMerge(RParagraph p) {
-            if(size() == 0) {
+            if (size() == 0) {
                 return false; // should never happen
-            } else if(p.size() == 0) {
+            } else if (p.size() == 0) {
                 return false; // should never happen
             }
-            return get(size() - 1).getStyleAttributeMap().equals(p.get(0).getStyleAttributeMap());
+            return RichUtils.canMerge(get(size() - 1).getStyleAttributeMap(), p.get(0).getStyleAttributeMap());
         }
 
         private boolean isZeroWidth() {
@@ -854,7 +855,7 @@ public class RichTextModel extends StyledTextModel {
             StyleAttributeMap newAttrs = dedup.apply(merge ? seg.attrs().combine(a) : a);
             if (ix > 0) {
                 RSegment prev = get(ix - 1);
-                if (prev.attrs().equals(newAttrs)) {
+                if (RichUtils.canMerge(prev.attrs(), newAttrs)) {
                     // merge
                     prev.append(seg.text());
                     remove(ix);

@@ -23,7 +23,7 @@
  * questions.
  */
 
-package test.jfx.incubator.scene.control.richtext;
+package test.robot.jfx.incubator.richtext;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -57,7 +57,7 @@ import test.com.sun.javafx.images.Images;
 import test.robot.testharness.RobotTestBase;
 import test.util.Util;
 
-// Tests ImageFormatHandler
+/// Tests `ImageFormatHandler`.
 public class TestImageFormatHandler extends RobotTestBase {
 
     private static final byte[] PNG_SIGNATURE = Util.hexToByteArray("89504e47");
