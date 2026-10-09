@@ -44,7 +44,7 @@ NSString *NSStringFromJavaString(JNIEnv *env, jstring js)
 JNIEnv *GetJavaEnvironment(JavaVM *jvm, BOOL *attached)
 {
     JNIEnv *env = NULL;
-    if ((*jvm)->GetEnv(jvm, (void*)&env, JNI_VERSION_1_6) == JNI_OK) {
+    if ((*jvm)->GetEnv(jvm, (void*)&env, JNI_VERSION_1_8) == JNI_OK) {
         *attached = NO;
     } else {
         if ((*jvm)->AttachCurrentThreadAsDaemon(jvm, (void*)&env, NULL) != JNI_OK) {

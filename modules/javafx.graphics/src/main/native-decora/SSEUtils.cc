@@ -30,6 +30,12 @@
 #include <windows.h>
 #endif
 
+#ifdef STATIC_BUILD
+extern "C" JNIEXPORT jint JNICALL JNI_OnLoad_decora_sse(JavaVM *vm, void *reserved) {
+    return JNI_VERSION_1_8;
+}
+#endif // STATIC_BUILD
+
 JNIEXPORT jboolean JNICALL
 Java_com_sun_scenario_effect_impl_sw_sse_SSERendererDelegate_isSupported
     (JNIEnv *env, jclass klass)
