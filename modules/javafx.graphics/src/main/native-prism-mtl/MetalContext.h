@@ -92,7 +92,7 @@ typedef enum VertexInputIndex {
     MTLScissorRect scissorRect;
     bool isScissorEnabled;
     MetalRTTexture* rtt;
-    bool clearDepthTexture;
+    bool encoderHasDepthAttachment;
     float clearColor[4];
     MTLRenderPassDescriptor* rttPassDesc;
 
@@ -173,8 +173,8 @@ typedef enum VertexInputIndex {
 - (void) setCameraPosition:(float)x y:(float)y z:(float)z;
 - (vector_float4) getCameraPosition;
 - (MTLScissorRect) getScissorRect;
-- (bool) clearDepth;
 - (bool) isDepthEnabled;
+- (bool) encoderHasDepthAttachment;
 - (bool) isScissorEnabled;
 - (bool) isCurrentRTT:(MetalRTTexture*)rttPtr;
 - (void) dealloc;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -127,7 +127,7 @@ NSString *GPUTraceFilename = @"file:///tmp/fx_metal.gputrace";
     }
     NSNumber *keySampleCount = [NSNumber numberWithInt:sampleCount];
     id<MTLRenderPipelineState> clearRttPipeState;
-    if ([context clearDepth]) {
+    if ([context encoderHasDepthAttachment]) {
         clearRttPipeState = clearRttPipeStateDepthDict[keySampleCount];
     } else {
         clearRttPipeState = clearRttPipeStateNoDepthDict[keySampleCount];
@@ -138,7 +138,7 @@ NSString *GPUTraceFilename = @"file:///tmp/fx_metal.gputrace";
         pipeDesc.fragmentFunction = [self getFunction:@"clearFF"];
         pipeDesc.colorAttachments[0].pixelFormat = [[context getRTT] getPixelFormat];
         pipeDesc.sampleCount = sampleCount;
-        if ([context clearDepth]) {
+        if ([context encoderHasDepthAttachment]) {
             pipeDesc.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
         } else {
             pipeDesc.depthAttachmentPixelFormat = MTLPixelFormatInvalid;
@@ -149,7 +149,7 @@ NSString *GPUTraceFilename = @"file:///tmp/fx_metal.gputrace";
         [pipeDesc release];
         pipeDesc = nil;
         NSAssert(clearRttPipeState, @"Failed to create clear pipeline state: %@", error);
-        if ([context clearDepth]) {
+        if ([context encoderHasDepthAttachment]) {
             [clearRttPipeStateDepthDict setObject:clearRttPipeState forKey:keySampleCount];
         } else {
             [clearRttPipeStateNoDepthDict setObject:clearRttPipeState forKey:keySampleCount];
@@ -167,7 +167,7 @@ NSString *GPUTraceFilename = @"file:///tmp/fx_metal.gputrace";
     pipeDesc.fragmentFunction = func;
     pipeDesc.colorAttachments[0].pixelFormat = [[context getRTT] getPixelFormat];
 
-    if ([context isDepthEnabled]) {
+    if ([context encoderHasDepthAttachment]) {
         pipeDesc.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
     } else {
         pipeDesc.depthAttachmentPixelFormat = MTLPixelFormatInvalid;
@@ -209,13 +209,13 @@ NSString *GPUTraceFilename = @"file:///tmp/fx_metal.gputrace";
     NSError* error;
     NSMutableDictionary *psDict;
     if ([[context getRTT] isMSAAEnabled]) {
-        if ([context isDepthEnabled]) {
+        if ([context encoderHasDepthAttachment]) {
             psDict = phongPipelineStateMSAADepthDict;
         } else {
             psDict = phongPipelineStateMSAANoDepthDict;
         }
     } else {
-        if ([context isDepthEnabled]) {
+        if ([context encoderHasDepthAttachment]) {
             psDict = phongPipelineStateNonMSAADepthDict;
         } else {
             psDict = phongPipelineStateNonMSAANoDepthDict;
@@ -233,7 +233,7 @@ NSString *GPUTraceFilename = @"file:///tmp/fx_metal.gputrace";
         pipeDesc.vertexFunction = [self getFunction:vertFuncName];
         pipeDesc.fragmentFunction = [self getFunction:fragFuncName];
         pipeDesc.colorAttachments[0].pixelFormat = [[context getRTT] getPixelFormat];
-        if ([context isDepthEnabled]) {
+        if ([context encoderHasDepthAttachment]) {
             pipeDesc.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
         } else {
             pipeDesc.depthAttachmentPixelFormat = MTLPixelFormatInvalid;
