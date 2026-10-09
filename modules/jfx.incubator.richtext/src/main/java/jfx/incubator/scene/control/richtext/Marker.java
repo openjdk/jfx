@@ -33,6 +33,9 @@ import com.sun.jfx.incubator.scene.control.richtext.MarkerHelper;
 
 /**
  * Tracks the text position in a document in the presence of edits.
+ * <p>
+ * The marker position is updated after the model listeners receive their
+ * {@code ContentChange} events.
  *
  * @since 24
  */
