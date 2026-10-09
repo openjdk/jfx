@@ -37,8 +37,7 @@ import javafx.beans.Observable;
  * @implNote
  * The implementations of this interface in the JavaFX library do not provide all of the
  * guarantees described by {@link Observable} for their invalidation listeners: a listener
- * that is removed while a notification is in progress may still be notified, and a nested
- * notification notifies all listeners rather than only those that have already been notified.
+ * that is added or removed while a notification is in progress may still be notified.
  *
  * @see MapChangeListener
  * @see MapChangeListener.Change

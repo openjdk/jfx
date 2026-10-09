@@ -43,9 +43,9 @@ import javafx.util.Subscription;
  * @implNote
  * All bindings and properties in the JavaFX library support lazy evaluation.
  * <p>
- * These implementations mark themselves as invalid when the first invalidation
- * event occurs. They do not generate anymore invalidation events until their
- * value is recomputed and valid again.
+ * The implementations in the JavaFX library mark themselves as invalid when the
+ * first invalidation event occurs. They do not generate any more invalidation
+ * events until their value is recomputed and valid again.
  * <p>
  * These implementations provide the following guarantees for their
  * {@link InvalidationListener}s:
