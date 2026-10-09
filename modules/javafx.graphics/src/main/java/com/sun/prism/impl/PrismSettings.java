@@ -355,7 +355,6 @@ public final class PrismSettings {
 
         // Force non anti-aliasing (not smooth) shape rendering
         forceNonAntialiasedShape = getBoolean(systemProperties, "prism.forceNonAntialiasedShape", false);
-
     }
 
     private static int parseInt(String s, int dflt, int trueDflt,
