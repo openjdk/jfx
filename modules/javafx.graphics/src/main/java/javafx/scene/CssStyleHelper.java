@@ -34,8 +34,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.function.Predicate;
 
-import javafx.beans.value.WritableValue;
 import javafx.css.CssMetaData;
 import javafx.css.CssParser;
 import javafx.css.FontCssMetaData;
@@ -431,49 +431,13 @@ final class CssStyleHelper {
             return Map.of();
         }
 
+        Map<String, List<CascadingStyle>> newCascadingStyles =
+                newStyleMap != null ? newStyleMap.getCascadingStyles() : Map.of();
+
         resetInProgress = true;
 
         try {
-            Map<String, List<CascadingStyle>> newCascadingStyles =
-                newStyleMap != null ? newStyleMap.getCascadingStyles() : Map.of();
-
-            List<Entry<CssMetaData, CalculatedValue>> resetList = null;
-            Entry<CssMetaData, CalculatedValue> transitionEntry = null;
-            var it = cssSetProperties.entrySet().iterator();
-            int idx = 0;
-
-            while (it.hasNext()) {
-                Entry<CssMetaData, CalculatedValue> entry = it.next();
-                CssMetaData key = entry.getKey();
-
-                if (!containsProperty(newCascadingStyles, key)) {
-                    if (key != TransitionDefinitionCssMetaData.getInstance()) {
-                        if (resetList == null) {
-                            resetList = new ArrayList<>(cssSetProperties.size() - idx);
-                        }
-
-                        resetList.add(entry);
-                    } else {
-                        transitionEntry = entry;
-                    }
-
-                    it.remove();
-                }
-
-                ++idx;
-            }
-
-            // The transition property must be reset before all other properties, as its value might
-            // affect the transitions that are applied to other properties.
-            if (transitionEntry != null) {
-                resetToInitialValue(styleable, transitionEntry.getKey(), transitionEntry.getValue());
-            }
-
-            if (resetList != null) {
-                for (Entry<CssMetaData, CalculatedValue> entry : resetList) {
-                    resetToInitialValue(styleable, entry.getKey(), entry.getValue());
-                }
-            }
+            resetProperties(styleable, cssMetaData -> !containsProperty(newCascadingStyles, cssMetaData));
 
             return cssSetProperties;
         } finally {
@@ -806,14 +770,25 @@ final class CssStyleHelper {
             sharedCache.addStyleCacheEntry(cacheEntryKey, cacheEntry);
         }
 
+        // For each property that is settable, we need to do a lookup and transition to that value.
+        transitionStateInProgress = true;
+
+        try {
+            applyStyles(node, styleMap, inheritOnly, transitionStates, cachedFont, cacheEntry);
+        } finally {
+            transitionStateInProgress = false;
+        }
+    }
+
+    /**
+     * Applies the calculated styles of the current state to the properties of the node.
+     */
+    private void applyStyles(Node node, StyleMap styleMap, boolean inheritOnly, Set<PseudoClass>[] transitionStates,
+                             CalculatedValue cachedFont, StyleCacheEntry cacheEntry) {
         final List<CssMetaData<? extends Styleable,  ?>> styleables = node.getCssMetaData();
 
         // Used in the for loop below, and a convenient place to stop when debugging.
         final int max = styleables.size();
-
-        // For each property that is settable, we need to do a lookup and
-        // transition to that value.
-        transitionStateInProgress = true;
 
         for (int n = -1; n < max; n++) {
             // The 'transition' property is a special pseudo-property that is always processed
@@ -823,33 +798,22 @@ final class CssStyleHelper {
                     (CssMetaData<Styleable, ?>)(CssMetaData<?, ?>)TransitionDefinitionCssMetaData.getInstance() :
                     (CssMetaData<Styleable, ?>)styleables.get(n);
 
+            // Reset after the transition property was applied, so the reset uses the transitions of the new style.
+            if (n == 0) {
+                resetUnstyledProperties(node, styleMap, transitionStates, cachedFont, cacheEntry);
+            }
+
             // Don't bother looking up styles that don't inherit.
-            if (inheritOnly && cssMetaData.isInherits() == false) {
+            if (inheritOnly && !cssMetaData.isInherits()) {
                 continue;
             }
 
             final String property = cssMetaData.getProperty();
 
-            CalculatedValue calculatedValue = cacheEntry.get(property);
-
+            CalculatedValue calculatedValue =
+                    getCalculatedValue(node, cssMetaData, styleMap, transitionStates, cachedFont, cacheEntry);
             if (calculatedValue == null) {
-
-                /*
-                 * A cache miss occurred; this means that either we're the first to evaluate
-                 * this property, or that the CssMetaData didn't include this property yet
-                 * (not all styleables have stable CssMetaData, most notably Control).
-                 */
-
-                calculatedValue = lookup(node, cssMetaData, styleMap, transitionStates[0],
-                        node, cachedFont);
-
-                // lookup is not supposed to return null.
-                if (calculatedValue == null) {
-                    assert false : "lookup returned null for " + property;
-                    continue;
-                }
-
-                cacheEntry.put(property, calculatedValue);
+                continue;
             }
 
             /*
@@ -876,7 +840,8 @@ final class CssStyleHelper {
                     // so it can be reset in this state if there is no value for it. Second, it avoids calling
                     // CssMetaData#getStyleableProperty which is rather expensive as it may cause expansion of lazy
                     // properties.
-                    CalculatedValue initialValue = cacheContainer.cssSetProperties.get(cssMetaData);
+                    // Only the transition property is still tracked here, the others were reset before.
+                    CalculatedValue initialValue = cacheContainer.cssSetProperties.remove(cssMetaData);
 
                     /*
                      * If the initial value is not null, then the property was set by CSS
@@ -984,7 +949,99 @@ final class CssStyleHelper {
             }
 
         }
-        transitionStateInProgress = false;
+    }
+
+    /**
+     * Resets any properties on the given {@code Styleable} which are not styled in the current state.
+     * This happens before any new style other than the transition is applied,
+     * so a listener reacting to the reset can not override them.
+     */
+    private void resetUnstyledProperties(Node node, StyleMap styleMap, Set<PseudoClass>[] transitionStates,
+                                         CalculatedValue cachedFont, StyleCacheEntry cacheEntry) {
+        Map<CssMetaData, CalculatedValue> cssSetProperties = cacheContainer.cssSetProperties;
+        if (cssSetProperties.isEmpty()) {
+            return;
+        }
+
+        resetProperties(node, cssMetaData ->
+                getCalculatedValue(node, cssMetaData, styleMap, transitionStates, cachedFont, cacheEntry) == SKIP);
+    }
+
+    /**
+     * Resets the properties set by CSS which are no longer styled, as decided by {@code isUnstyled}.
+     * The transition property is reset first, as its value might affect the transitions
+     * that are applied to other properties.
+     */
+    private void resetProperties(Styleable styleable, Predicate<CssMetaData> isUnstyled) {
+        List<Entry<CssMetaData, CalculatedValue>> resetList = null;
+
+        var it = cacheContainer.cssSetProperties.entrySet().iterator();
+        while (it.hasNext()) {
+            Entry<CssMetaData, CalculatedValue> entry = it.next();
+            if (!isUnstyled.test(entry.getKey())) {
+                continue;
+            }
+
+            if (resetList == null) {
+                resetList = new ArrayList<>();
+            }
+
+            if (entry.getKey() == TransitionDefinitionCssMetaData.getInstance()) {
+                resetList.addFirst(entry);
+            } else {
+                resetList.add(entry);
+            }
+
+            it.remove();
+        }
+
+        if (resetList == null) {
+            return;
+        }
+
+        for (Entry<CssMetaData, CalculatedValue> entry : resetList) {
+            CssMetaData cssMetaData = entry.getKey();
+            try {
+                if (cssMetaData.isSettable(styleable)) {
+                    resetToInitialValue(styleable, cssMetaData, entry.getValue());
+                }
+            } catch (Exception e) {
+                PlatformLogger logger = Logging.getCSSLogger();
+                if (logger.isLoggable(Level.WARNING)) {
+                    logger.warning(String.format("Failed to reset css [%s] on [%s] due to '%s'\n",
+                            cssMetaData.getProperty(), styleable, e.getMessage()));
+                }
+            }
+        }
+    }
+
+    /**
+     * Returns the calculated value of the property from the cache entry, looking it up and caching it if missing.
+     */
+    private CalculatedValue getCalculatedValue(Node node, CssMetaData<Styleable, ?> cssMetaData, StyleMap styleMap,
+                                               Set<PseudoClass>[] transitionStates, CalculatedValue cachedFont,
+                                               StyleCacheEntry cacheEntry) {
+        final String property = cssMetaData.getProperty();
+
+        CalculatedValue calculatedValue = cacheEntry.get(property);
+        if (calculatedValue == null) {
+            /*
+             * A cache miss occurred; this means that either we're the first to evaluate
+             * this property, or that the CssMetaData didn't include this property yet
+             * (not all styleables have stable CssMetaData, most notably Control).
+             */
+            calculatedValue = lookup(node, cssMetaData, styleMap, transitionStates[0], node, cachedFont);
+
+            // lookup is not supposed to return null.
+            if (calculatedValue == null) {
+                assert false : "lookup returned null for " + property;
+                return null;
+            }
+
+            cacheEntry.put(property, calculatedValue);
+        }
+
+        return calculatedValue;
     }
 
     /**
