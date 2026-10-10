@@ -624,6 +624,22 @@ public class TreeTableRowTest {
 //        assertTrue(called[0]);
 //    }
 
+    @Test public void editCellOnEmptyRowDoesNotFireEditStartEvent() {
+        tree.setEditable(true);
+        cell.updateTreeTableView(tree);
+        // an index past the expanded items, so that the row is empty
+        cell.updateIndex(tree.getExpandedItemCount());
+
+        AtomicInteger counter = new AtomicInteger();
+        tree.addEventHandler(TreeTableView.editStartEvent(), event -> counter.incrementAndGet());
+
+        cell.startEdit();
+
+        assertTrue(cell.isEmpty());
+        assertFalse(cell.isEditing());
+        assertEquals(0, counter.get());
+    }
+
     // commitEdit()
     @Test public void commitWhenTreeIsNullIsOK() {
         cell.updateIndex(1);
@@ -1017,5 +1033,44 @@ public class TreeTableRowTest {
         for (TreeTableCell<String, String> cell : cells) {
             assertEquals(1, cell.getIndex());
         }
+    }
+
+    /**
+     * A row with a null item at a valid index is not empty, so it must be cleaned up when its index is moved off-range.
+     */
+    @Test
+    public void testNullItemUpdateIndexNegative() {
+        setupNullValueItem();
+        cell.updateIndex(1);
+        assertInRangeNullItemState(1);
+        cell.updateIndex(-1);
+        assertOffRangeState(-1);
+    }
+
+    @Test
+    public void testNullItemUpdateIndexOffRange() {
+        setupNullValueItem();
+        cell.updateIndex(1);
+        assertInRangeNullItemState(1);
+        int offRange = tree.getExpandedItemCount();
+        cell.updateIndex(offRange);
+        assertOffRangeState(offRange);
+    }
+
+    private void setupNullValueItem() {
+        apples.setValue(null);
+        cell.updateTreeTableView(tree);
+    }
+
+    private void assertInRangeNullItemState(int index) {
+        assertEquals(index, cell.getIndex(), "in range index");
+        assertNull(cell.getItem(), "in range row item must be null");
+        assertFalse(cell.isEmpty(), "in range row with null item must not be empty");
+    }
+
+    private void assertOffRangeState(int index) {
+        assertEquals(index, cell.getIndex(), "off range index");
+        assertNull(cell.getItem(), "off range row item must be null");
+        assertTrue(cell.isEmpty(), "off range row must be empty");
     }
 }
