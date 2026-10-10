@@ -1248,6 +1248,64 @@ public class CssStyleHelperTest {
         assertEquals(List.of(1.0, 2.0, 1.5, 1.0), trace);
     }
 
+    /**
+     * The css reset of translateX sets the opacity in a listener, which comes before translateX in the CSS metadata.
+     * Because the style precedence is: USER < AUTHOR, this change should not have any effect.
+     */
+    @Test
+    void testStyleOverrideByTranslateListenerOnPseudoClassChange() {
+        scene.getStylesheets().add(toDataURL("""
+                .node:hover { -fx-translate-x: 10; }
+                .node { -fx-opacity: 0.5; }
+                """));
+
+        Pane node = new Pane();
+        node.getStyleClass().add("node");
+        root.getChildren().add(node);
+        node.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
+        root.applyCss();
+
+        assertEquals(10, node.getTranslateX());
+        assertEquals(0.5, node.getOpacity());
+
+        node.translateXProperty().addListener((_, _, _) -> node.setOpacity(0.2));
+
+        node.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), false);
+        root.applyCss();
+
+        assertEquals(0, node.getTranslateX());
+        assertEquals(0.5, node.getOpacity());
+    }
+
+    /**
+     * The css reset of opacity sets translateX in a listener, which comes after opacity in the CSS metadata.
+     * Because the style precedence is: USER < AUTHOR, this change should not have any effect.
+     */
+    @Test
+    void testStyleOverrideByOpacityListenerOnPseudoClassChange() {
+        scene.getStylesheets().add(toDataURL("""
+                .node:hover { -fx-opacity: 0.5; }
+                .node { -fx-translate-x: 10; }
+                """));
+
+        Pane node = new Pane();
+        node.getStyleClass().add("node");
+        root.getChildren().add(node);
+        node.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
+        root.applyCss();
+
+        assertEquals(0.5, node.getOpacity());
+        assertEquals(10, node.getTranslateX());
+
+        node.opacityProperty().addListener((_, _, _) -> node.setTranslateX(20));
+
+        node.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), false);
+        root.applyCss();
+
+        assertEquals(1, node.getOpacity());
+        assertEquals(10, node.getTranslateX());
+    }
+
     private static String toDataURL(String stylesheet) {
         return "data:text/plain;base64," + Base64.getEncoder().encodeToString(stylesheet.getBytes(StandardCharsets.UTF_8));
     }
