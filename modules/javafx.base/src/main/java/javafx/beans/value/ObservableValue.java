@@ -63,10 +63,7 @@ import javafx.util.Subscription;
  * can be generated for eager and lazy implementations.
  * <p>
  * Implementations of this class should strive to generate as few events as
- * possible to avoid wasting too much time in event handlers. Implementations in
- * this library mark themselves as invalid when the first invalidation event
- * occurs. They do not generate any more invalidation events until their value is
- * recomputed and valid again.
+ * possible to avoid wasting too much time in event handlers.
  * <p>
  * Two types of listeners can be attached to an {@code ObservableValue}:
  * {@link InvalidationListener} to listen to invalidation events and
