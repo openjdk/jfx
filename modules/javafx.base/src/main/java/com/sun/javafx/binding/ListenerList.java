@@ -147,7 +147,7 @@ public class ListenerList<T> extends ListenerListBase {
                     logNonConvergence(observableValue, initialProgress, invalidationListenersSize, oldValue, triggeringValue);
                 }
 
-                return;
+                break;
             }
 
             triggeringValue = newValue;
@@ -167,6 +167,8 @@ public class ListenerList<T> extends ListenerListBase {
             // call change listener:
             callChangeListener(observableValue, listener, oldValue, newValue);
         }
+
+        progress = initialProgress;  // restore in case the higher level loop triggers a 2nd change in a single listener
     }
 
     private void logNonConvergence(ObservableValue<? extends T> observableValue, int listenerIndex, int invalidationListenersSize, T oldValue, T newValue) {

@@ -1029,6 +1029,52 @@ public class ObservableValueTest {
     }
 
     /*
+     * A listener that makes a 2nd nested change after an earlier nested change it made was reverted by
+     * another listener (which ends that nested notification in non-convergence) must still result in a
+     * consistent sequence ending in the final value for every listener. Leaving the notification
+     * progress at a stale index would re-notify only a subset of the listeners that were already
+     * notified, leaving the others at an intermediate value.
+     */
+    @ParameterizedTest
+    @MethodSource("inputs")
+    <T> void shouldProvideConsistentChangesWhenAListenerChangesAgainAfterANestedChangeWasReverted(Action<T> action, T value1, T value2, Consumer<T> valueSetter) {
+        List<Change> firstListenerChanges = new ArrayList<>();
+        List<Change> secondListenerChanges = new ArrayList<>();
+        List<Change> thirdListenerChanges = new ArrayList<>();
+        AtomicBoolean firstListenerReverted = new AtomicBoolean();
+        AtomicBoolean thirdListenerActed = new AtomicBoolean();
+
+        action.addListener((_, old, current) -> {
+            firstListenerChanges.add(new Change("L1", old, current));
+
+            if (value1.equals(current) && firstListenerReverted.compareAndSet(false, true)) {
+                valueSetter.accept(value2);  // revert the nested change to the value it started with
+            }
+        });
+
+        action.addListener((_, old, current) -> {
+            secondListenerChanges.add(new Change("L2", old, current));
+        });
+
+        action.addListener((_, old, current) -> {
+            thirdListenerChanges.add(new Change("L3", old, current));
+
+            if (value2.equals(current) && thirdListenerActed.compareAndSet(false, true)) {
+                valueSetter.accept(value1);  // nested change; reverted by L1
+                valueSetter.accept(value1);  // 2nd change; must still reach L1 and L2
+            }
+        });
+
+        valueSetter.accept(value2);
+
+        assertEquals(value1, action.getValue());
+
+        assertConsistentChangeSequence(firstListenerChanges, value1, value1, Set.of(value1, value2));
+        assertConsistentChangeSequence(secondListenerChanges, value1, value1, Set.of(value1, value2));
+        assertConsistentChangeSequence(thirdListenerChanges, value1, value1, Set.of(value1, value2));
+    }
+
+    /*
      * A listener that makes two nested changes must observe them as a chained sequence: each reported
      * old value equals the previous reported new value, and no value is skipped or repeated.
      */
