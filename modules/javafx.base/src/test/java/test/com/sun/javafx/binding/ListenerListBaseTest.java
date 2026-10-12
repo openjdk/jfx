@@ -27,6 +27,7 @@ package test.com.sun.javafx.binding;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -487,9 +488,9 @@ public class ListenerListBaseTest {
         assertEquals(2, list.totalListeners());
         assertListeners(list, List.of(il2, cl2));
 
-        assertEquals(null, list.get(0));
+        assertNull(list.get(0));
         assertEquals(il2, list.get(1));
-        assertEquals(null, list.get(2));
+        assertNull(list.get(2));
         assertEquals(cl2, list.get(3));
 
         list.accessibleUnlock();
@@ -593,7 +594,7 @@ public class ListenerListBaseTest {
         }
 
         @Override
-        public void changed(ObservableValue<? extends Object> observable, Object oldValue, Object newValue) {
+        public void changed(ObservableValue<?> observable, Object oldValue, Object newValue) {
         }
 
         @Override

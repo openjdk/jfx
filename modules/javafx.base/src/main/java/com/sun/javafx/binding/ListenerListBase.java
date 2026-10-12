@@ -55,7 +55,7 @@ public abstract class ListenerListBase {
      * method. The compaction is only allowed while its associated {@link ListenerListBase} is unlocked.<p>
      *
      * This handles compacting elements that are {@code null}, as well as elements that implement
-     * {@link WeakListener} that were garbage collected in the mean time.
+     * {@link WeakListener} that were garbage collected in the meantime.
      *
      * @param <T> the element type
      */

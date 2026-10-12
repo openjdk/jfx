@@ -70,6 +70,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * @param <L> the class to test
  */
 public abstract class ListenerListTestBase<L extends ListenerListBase> {
+    private static final Pattern PATTERN = Pattern.compile("(?<listener>.*): changed from (?<old>.*) to (?<new>.*)");
+    private static final Pattern INVALIDATION_PATTERN = Pattern.compile("(?<listener>.*): current value (?<current>.*)");
+
     private final List<String> records = new ArrayList<>();
     private final InvalidationListener il1 = _ -> records.add("IL1: invalidated");
     private final InvalidationListener il2 = _ -> records.add("IL2: invalidated");
@@ -686,14 +689,10 @@ public abstract class ListenerListTestBase<L extends ListenerListBase> {
         }
     }
 
-
     private void assertRecords(String... expected) {
         assertEquals(Arrays.asList(expected), records);
         records.clear();
     }
-
-    private Pattern PATTERN = Pattern.compile("(?<listener>.*): changed from (?<old>.*) to (?<new>.*)");
-    private Pattern INVALIDATION_PATTERN = Pattern.compile("(?<listener>.*): current value (?<current>.*)");
 
     /**
      * This method checks that all changes follow the following rules:

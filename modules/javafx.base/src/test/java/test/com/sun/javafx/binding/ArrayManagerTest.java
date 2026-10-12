@@ -233,9 +233,9 @@ public class ArrayManagerTest {
                 assertTrue(manager.removeIf(ArrayManagerTest.this, s -> s.compareTo("C") > 0));
 
                 assertEquals(3, size);
-                assertEquals(manager.get(ArrayManagerTest.this, 0), "A");
-                assertEquals(manager.get(ArrayManagerTest.this, 1), "B");
-                assertEquals(manager.get(ArrayManagerTest.this, 2), "C");
+                assertEquals("A", manager.get(ArrayManagerTest.this, 0));
+                assertEquals("B", manager.get(ArrayManagerTest.this, 1));
+                assertEquals("C", manager.get(ArrayManagerTest.this, 2));
             }
 
             @Test
@@ -243,9 +243,9 @@ public class ArrayManagerTest {
                 assertTrue(manager.removeIf(ArrayManagerTest.this, s -> s.compareTo("C") < 0));
 
                 assertEquals(3, size);
-                assertEquals(manager.get(ArrayManagerTest.this, 0), "C");
-                assertEquals(manager.get(ArrayManagerTest.this, 1), "D");
-                assertEquals(manager.get(ArrayManagerTest.this, 2), "E");
+                assertEquals("C", manager.get(ArrayManagerTest.this, 0));
+                assertEquals("D", manager.get(ArrayManagerTest.this, 1));
+                assertEquals("E", manager.get(ArrayManagerTest.this, 2));
             }
 
             @Test
@@ -255,7 +255,7 @@ public class ArrayManagerTest {
                 assertTrue(manager.removeIf(ArrayManagerTest.this, s -> s.compareTo("E") < 0));
 
                 assertEquals(1, size);
-                assertEquals(manager.get(ArrayManagerTest.this, 0), "E");
+                assertEquals("E", manager.get(ArrayManagerTest.this, 0));
                 assertEquals(3, array.length);
             }
 

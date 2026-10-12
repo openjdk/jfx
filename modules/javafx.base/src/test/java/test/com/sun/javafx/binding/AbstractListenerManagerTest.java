@@ -132,11 +132,11 @@ public abstract class AbstractListenerManagerTest {
         InvalidationListener listener2 = _ -> notifications.add("2: invalidated");
         ChangeListener<String> listener3 = (_, o, n) -> notifications.add("3: " + o + " -> " + n);
 
-        helper.addListener(ov, (ChangeListener<String>)listener1);
+        helper.addListener(ov, (ChangeListener<String>) listener1);
         helper.addListener(ov, listener2);
         helper.addListener(ov, listener3);
 
-        helper.removeListener(ov, (InvalidationListener)listener1);  // should have no effect
+        helper.removeListener(ov, (InvalidationListener) listener1);  // should have no effect
 
         notifications.clear();
 
@@ -145,7 +145,7 @@ public abstract class AbstractListenerManagerTest {
 
         assertEquals(List.of("2: invalidated", "1: null -> A", "3: null -> A"), notifications);
 
-        helper.removeListener(ov, (ChangeListener<String>)listener1);  // should have effect
+        helper.removeListener(ov, (ChangeListener<String>) listener1);  // should have effect
 
         notifications.clear();
 
@@ -182,7 +182,7 @@ public abstract class AbstractListenerManagerTest {
     void shouldNotUnlockListenerListTwiceWhenAddingChangeListenerFromNestedChangeListener() {
         ChangeListener<String> cl2 = (_, o, n) -> notifications.add("CL2: " + o + " -> " + n);
 
-        helper.addListener(ov, (ChangeListener<String>) (_, o, n) -> {
+        helper.addListener(ov, (_, o, n) -> {
             notifications.add("CL1: " + o + " -> " + n);
 
             if (n.equals("B")) {
@@ -221,7 +221,7 @@ public abstract class AbstractListenerManagerTest {
             @Override
             public void invalidated(Observable observable) {
                 // force the data field to become a list while the notification is in progress:
-                helper.addListener(ov, (ChangeListener<String>) (_, _, _) -> {});
+                helper.addListener(ov, (_, _, _) -> {});
 
                 Object dataWhileLocked = ov.data;
 
@@ -266,11 +266,11 @@ public abstract class AbstractListenerManagerTest {
                         helper.addListener(ov, extra);
                         helper.removeListener(ov, extra);
                     }
-                    case ADD_CL_AND_KEEP -> helper.addListener(ov, (ChangeListener<String>) (_, _, _) -> {});
+                    case ADD_CL_AND_KEEP -> helper.addListener(ov, (_, _, _) -> {});
                     case REMOVE_SELF -> removeListener(self);
                     case REPLACE_SELF_WITH_CL -> {
                         removeListener(self);
-                        helper.addListener(ov, (ChangeListener<String>) (_, _, _) -> {});
+                        helper.addListener(ov, (_, _, _) -> {});
                     }
                     case REMOVE_AND_RE_ADD_SELF -> {
                         removeListener(self);
@@ -278,20 +278,20 @@ public abstract class AbstractListenerManagerTest {
                     }
                     case REPLACE_SELF_WITH_CL_AND_VETO -> {
                         removeListener(self);
-                        helper.addListener(ov, (ChangeListener<String>) (_, _, _) -> {});
+                        helper.addListener(ov, (_, _, _) -> {});
 
                         ov.setValue(null);  // revert to the value the observable held before the change
                         ov.fireValueChanged();
                     }
                     case ADD_CL_THEN_REMOVE_SELF_AND_VETO -> {
-                        helper.addListener(ov, (ChangeListener<String>) (_, _, _) -> {});
+                        helper.addListener(ov, (_, _, _) -> {});
                         removeListener(self);
 
                         ov.setValue(null);
                         ov.fireValueChanged();
                     }
                     case ADD_CL_AND_VETO -> {
-                        helper.addListener(ov, (ChangeListener<String>) (_, _, _) -> {});
+                        helper.addListener(ov, (_, _, _) -> {});
 
                         ov.setValue(null);
                         ov.fireValueChanged();
