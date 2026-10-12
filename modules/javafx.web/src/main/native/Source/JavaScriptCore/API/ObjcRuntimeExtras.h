@@ -34,17 +34,11 @@
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
-template<typename T, typename U>
-inline std::unique_ptr<T, WTF::SystemFree<T>> adoptSystem(U value)
-{
-    return std::unique_ptr<T, WTF::SystemFree<T>>(value);
-}
-
 inline bool protocolImplementsProtocol(Protocol *candidate, Protocol *target)
 {
     auto protocolProtocols = protocol_copyProtocolListSpan(candidate);
-    for (auto* protocolProtocol : protocolProtocols.span()) {
-        if (protocol_isEqual(protocolProtocol, target))
+    for (RetainPtr protocolProtocol : protocolProtocols.span()) {
+        if (protocol_isEqual(protocolProtocol.get(), target))
             return true;
     }
     return false;
@@ -66,22 +60,22 @@ inline void forEachProtocolImplementingProtocol(Class cls, Protocol *target, voi
 
     bool stop = false;
     while (!worklist.isEmpty()) {
-        Protocol *protocol = worklist.last();
+        RetainPtr protocol = worklist.last();
         worklist.removeLast();
 
         // Are we encountering this Protocol for the first time?
-        if (!visited.add((__bridge void*)protocol).isNewEntry)
+        if (!visited.add((__bridge void*)protocol.get()).isNewEntry)
             continue;
 
         // If it implements the protocol, make the callback.
-        if (protocolImplementsProtocol(protocol, target)) {
-            callback(protocol, stop);
+        if (protocolImplementsProtocol(protocol.get(), target)) {
+            callback(protocol.get(), stop);
             if (stop)
                 break;
         }
 
         // Add incorporated protocols to the worklist.
-        worklist.append(protocol_copyProtocolListSpan(protocol).span());
+        worklist.append(protocol_copyProtocolListSpan(protocol.get()).span());
     }
 }
 
@@ -125,7 +119,7 @@ class StringRange {
     WTF_MAKE_NONCOPYABLE(StringRange);
 public:
     StringRange(const char* begin, const char* end)
-        : m_string({ begin, end })
+        : m_string(std::span { begin, end })
     { }
     operator const char*() const LIFETIME_BOUND { return m_string.data(); }
     const char* get() const LIFETIME_BOUND { return m_string.data(); }

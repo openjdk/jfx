@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "JSHeapFinalizerPrivate.h"
+#include <JavaScriptCore/JSHeapFinalizerPrivate.h>
 #include <wtf/PrintStream.h>
 
 namespace JSC {

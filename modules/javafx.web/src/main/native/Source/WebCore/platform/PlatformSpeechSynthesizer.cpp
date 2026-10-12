@@ -33,7 +33,7 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(PlatformSpeechSynthesizer);
 
-const Vector<RefPtr<PlatformSpeechSynthesisVoice>>& PlatformSpeechSynthesizer::voiceList() const
+const Vector<Ref<PlatformSpeechSynthesisVoice>>& PlatformSpeechSynthesizer::voiceList() const
 {
     if (!m_voiceListIsInitialized) {
         ASSERT(m_voiceList.isEmpty());
@@ -52,10 +52,16 @@ void PlatformSpeechSynthesizer::resetVoiceList()
     m_voiceList.clear();
 }
 
+RefPtr<PlatformSpeechSynthesizerClient> PlatformSpeechSynthesizer::client() const
+{
+    return m_speechSynthesizerClient.get();
+}
+
 void PlatformSpeechSynthesizer::voicesDidChange()
 {
     resetVoiceList();
-    m_speechSynthesizerClient.voicesDidChange();
+    if (RefPtr client = m_speechSynthesizerClient.get())
+        client->voicesDidChange();
 }
 
 } // namespace WebCore

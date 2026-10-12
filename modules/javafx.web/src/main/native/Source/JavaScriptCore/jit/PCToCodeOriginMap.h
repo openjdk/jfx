@@ -25,36 +25,32 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(JIT)
 
-#include "CallFrame.h"
-#include "CodeOrigin.h"
-#include "MacroAssembler.h"
-#include "VM.h"
+#include <JavaScriptCore/CallFrame.h>
+#include <JavaScriptCore/CodeOrigin.h>
+#include <JavaScriptCore/MacroAssembler.h>
+#include <JavaScriptCore/VM.h>
+#include <JavaScriptCore/WasmOpcodeOrigin.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/ValidatedReinterpretCast.h>
 #include <wtf/Vector.h>
 
-#if ENABLE(WEBASSEMBLY_OMGJIT)
-#include "WasmOpcodeOrigin.h"
-#endif
-
 namespace JSC {
-
-#if ENABLE(FTL_JIT) || ENABLE(WEBASSEMBLY_OMGJIT)
 namespace B3 {
 class PCToOriginMap;
 }
-#endif
 
-#if ENABLE(WEBASSEMBLY_OMGJIT)
+#if ENABLE(WEBASSEMBLY)
 namespace Wasm {
-class OMGOrigin {
+class WasmOrigin {
     MAKE_VALIDATED_REINTERPRET_CAST
 public:
-    friend bool operator==(const OMGOrigin&, const OMGOrigin&) = default;
+    friend bool operator==(const WasmOrigin&, const WasmOrigin&) = default;
 
-    OMGOrigin(CallSiteIndex callSiteIndex, OpcodeOrigin opcodeOrigin)
+    WasmOrigin(CallSiteIndex callSiteIndex, OpcodeOrigin opcodeOrigin)
         : m_callSiteIndex(callSiteIndex)
         , m_opcodeOrigin(opcodeOrigin)
     { }
@@ -63,10 +59,10 @@ public:
     OpcodeOrigin m_opcodeOrigin { };
 };
 
-MAKE_VALIDATED_REINTERPRET_CAST_IMPL("OMGOrigin", OMGOrigin)
+MAKE_VALIDATED_REINTERPRET_CAST_IMPL("WasmOrigin", WasmOrigin)
 
 } // namespace Wasm
-#endif // ENABLE(WEBASSEMBLY_OMGJIT)
+#endif
 
 class LinkBuffer;
 class PCToCodeOriginMapBuilder;

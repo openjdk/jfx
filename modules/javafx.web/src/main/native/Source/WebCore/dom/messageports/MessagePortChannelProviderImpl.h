@@ -27,15 +27,21 @@
 
 #include "MessagePortChannelProvider.h"
 #include "MessagePortChannelRegistry.h"
+#include <wtf/RefCounted.h>
 
 namespace WebCore {
 
-class MessagePortChannelProviderImpl final : public MessagePortChannelProvider {
+class MessagePortChannelProviderImpl final : public MessagePortChannelProvider, public RefCounted<MessagePortChannelProviderImpl> {
 public:
-    MessagePortChannelProviderImpl();
+    static Ref<MessagePortChannelProviderImpl> create();
     ~MessagePortChannelProviderImpl() final;
 
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
 private:
+    MessagePortChannelProviderImpl();
+
     void createNewMessagePortChannel(const MessagePortIdentifier& local, const MessagePortIdentifier& remote, bool siteIsolationEnabled) final;
     void entangleLocalPortInThisProcessToRemote(const MessagePortIdentifier& local, const MessagePortIdentifier& remote) final;
     void messagePortDisentangled(const MessagePortIdentifier& local) final;

@@ -309,23 +309,23 @@ guint       gst_buffer_get_max_memory      (void);
 /* allocation */
 
 GST_API
-GstBuffer * gst_buffer_new                 (void);
+GstBuffer * gst_buffer_new                 (void) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 GstBuffer * gst_buffer_new_allocate        (GstAllocator * allocator, gsize size,
-                                            GstAllocationParams * params);
+                                            GstAllocationParams * params) G_GNUC_WARN_UNUSED_RESULT;
 GST_API
 GstBuffer * gst_buffer_new_wrapped_full    (GstMemoryFlags flags, gpointer data, gsize maxsize,
                                             gsize offset, gsize size, gpointer user_data,
-                                            GDestroyNotify notify);
+                                            GDestroyNotify notify) G_GNUC_WARN_UNUSED_RESULT;
 GST_API
-GstBuffer * gst_buffer_new_wrapped         (gpointer data, gsize size);
+GstBuffer * gst_buffer_new_wrapped         (gpointer data, gsize size) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstBuffer * gst_buffer_new_wrapped_bytes   (GBytes * bytes);
+GstBuffer * gst_buffer_new_wrapped_bytes   (GBytes * bytes) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstBuffer * gst_buffer_new_memdup           (gconstpointer data, gsize size);
+GstBuffer * gst_buffer_new_memdup           (gconstpointer data, gsize size) G_GNUC_WARN_UNUSED_RESULT;
 
 /* memory blocks */
 
@@ -342,7 +342,7 @@ GST_API
 GstMemory * gst_buffer_peek_memory          (GstBuffer *buffer, guint idx);
 
 GST_API
-GstMemory * gst_buffer_get_memory_range     (GstBuffer *buffer, guint idx, gint length);
+GstMemory * gst_buffer_get_memory_range     (GstBuffer *buffer, guint idx, gint length) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void        gst_buffer_remove_memory_range  (GstBuffer *buffer, guint idx, gint length);
@@ -360,10 +360,10 @@ GST_API
 void        gst_buffer_replace_all_memory   (GstBuffer *buffer, GstMemory *mem);
 
 GST_API
-GstMemory * gst_buffer_get_memory           (GstBuffer *buffer, guint idx);
+GstMemory * gst_buffer_get_memory           (GstBuffer *buffer, guint idx) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstMemory * gst_buffer_get_all_memory       (GstBuffer *buffer);
+GstMemory * gst_buffer_get_all_memory       (GstBuffer *buffer) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void        gst_buffer_remove_memory        (GstBuffer *buffer, guint idx);
@@ -441,7 +441,7 @@ gboolean       gst_buffer_unset_flags      (GstBuffer * buffer, GstBufferFlags f
 static inline GstBuffer *
 gst_buffer_ref (GstBuffer * buf)
 {
-  return (GstBuffer *) gst_mini_object_ref (GST_MINI_OBJECT_CAST (buf));
+  return GST_BUFFER_CAST (gst_mini_object_ref (GST_MINI_OBJECT_CAST (buf)));
 }
 
 static inline void
@@ -457,10 +457,10 @@ gst_clear_buffer (GstBuffer ** buf_ptr)
 }
 
 /* copy buffer */
-static inline GstBuffer *
+G_GNUC_WARN_UNUSED_RESULT static inline GstBuffer *
 gst_buffer_copy (const GstBuffer * buf)
 {
-  return GST_BUFFER (gst_mini_object_copy (GST_MINI_OBJECT_CONST_CAST (buf)));
+  return GST_BUFFER_CAST (gst_mini_object_copy (GST_MINI_OBJECT_CONST_CAST (buf)));
 }
 #else /* GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS */
 GST_API
@@ -473,11 +473,11 @@ GST_API
 void        gst_clear_buffer     (GstBuffer ** buf_ptr);
 
 GST_API
-GstBuffer * gst_buffer_copy      (const GstBuffer * buf);
+GstBuffer * gst_buffer_copy      (const GstBuffer * buf) G_GNUC_WARN_UNUSED_RESULT;
 #endif /* GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS */
 
 GST_API
-GstBuffer * gst_buffer_copy_deep (const GstBuffer * buf);
+GstBuffer * gst_buffer_copy_deep (const GstBuffer * buf) G_GNUC_WARN_UNUSED_RESULT;
 
 /**
  * GstBufferCopyFlags:
@@ -539,68 +539,69 @@ gboolean        gst_buffer_copy_into            (GstBuffer *dest, GstBuffer *src
                                                  GstBufferCopyFlags flags,
                                                  gsize offset, gsize size);
 
-/**
- * gst_buffer_is_writable:
- * @buf: a #GstBuffer
- *
- * Tests if you can safely write to a buffer's metadata or its memory array.
- * It is only safe to change buffer metadata when the current reference is
- * writable, i.e. nobody can see the modifications you will make.
- */
-#define         gst_buffer_is_writable(buf)     gst_mini_object_is_writable (GST_MINI_OBJECT_CAST (buf))
-/**
- * gst_buffer_make_writable:
- * @buf: (transfer full): a #GstBuffer
- *
- * Returns a writable copy of @buf. If the source buffer is
- * already writable, this will simply return the same buffer.
- *
- * Use this function to ensure that a buffer can be safely modified before
- * making changes to it, including changing the metadata such as PTS/DTS.
- *
- * If the reference count of the source buffer @buf is exactly one, the caller
- * is the sole owner and this function will return the buffer object unchanged.
- *
- * If there is more than one reference on the object, a copy will be made using
- * gst_buffer_copy(). The passed-in @buf will be unreffed in that case, and the
- * caller will now own a reference to the new returned buffer object. Note
- * that this just copies the buffer structure itself, the underlying memory is
- * not copied if it can be shared amongst multiple buffers.
- *
- * In short, this function unrefs the buf in the argument and refs the buffer
- * that it returns. Don't access the argument after calling this function unless
- * you have an additional reference to it.
- *
- * Returns: (transfer full) (nullable): a writable buffer (which may or may not be the
- *     same as @buf) or %NULL if copying is required but not possible.
- */
-#define         gst_buffer_make_writable(buf)   GST_BUFFER_CAST (gst_mini_object_make_writable (GST_MINI_OBJECT_CAST (buf)))
-
 #ifndef GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS
+G_GNUC_WARN_UNUSED_RESULT static inline GstBuffer *
+gst_buffer_make_writable (GstBuffer * buf)
+{
+  return GST_BUFFER_CAST (gst_mini_object_make_writable (GST_MINI_OBJECT_CAST (buf)));
+}
+
+static inline gboolean
+gst_buffer_is_writable (const GstBuffer * buf)
+{
+  return gst_mini_object_is_writable (GST_MINI_OBJECT_CONST_CAST (buf));
+}
+
 static inline gboolean
 gst_buffer_replace (GstBuffer **obuf, GstBuffer *nbuf)
 {
   return gst_mini_object_replace ((GstMiniObject **) obuf, (GstMiniObject *) nbuf);
 }
+
+static inline GstBuffer *
+gst_buffer_steal(GstBuffer **old_buffer)
+{
+  return GST_BUFFER_CAST(gst_mini_object_steal((GstMiniObject **)old_buffer));
+}
+
+static inline gboolean
+gst_buffer_take(GstBuffer **old_buffer, GstBuffer *new_buffer)
+{
+  return gst_mini_object_take((GstMiniObject **)old_buffer, (GstMiniObject *)new_buffer);
+}
 #else /* GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS */
 GST_API
 gboolean        gst_buffer_replace              (GstBuffer ** obuf,
                                                  GstBuffer * nbuf);
+
+GST_API
+GstBuffer *gst_buffer_steal (GstBuffer **old_buffer);
+
+GST_API
+gboolean gst_buffer_take (GstBuffer ** old_buffer,
+                          GstBuffer *new_buffer);
+
+GST_API
+GstBuffer * gst_buffer_make_writable            (GstBuffer * buf) G_GNUC_WARN_UNUSED_RESULT;
+
+GST_API
+gboolean gst_buffer_is_writable                 (const GstBuffer * buf);
+
 #endif /* GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS */
 
 /* creating a region */
 
 GST_API
 GstBuffer*      gst_buffer_copy_region          (GstBuffer *parent, GstBufferCopyFlags flags,
-                                                 gsize offset, gsize size);
+                                                 gsize offset, gsize size) G_GNUC_WARN_UNUSED_RESULT;
 
 /* append two buffers */
 
 GST_API
 GstBuffer*      gst_buffer_append_region        (GstBuffer *buf1, GstBuffer *buf2,
-                                                 gssize offset, gssize size);
+                                                 gssize offset, gssize size) G_GNUC_WARN_UNUSED_RESULT;
 GST_API
-GstBuffer*      gst_buffer_append               (GstBuffer *buf1, GstBuffer *buf2);
+GstBuffer*      gst_buffer_append               (GstBuffer *buf1, GstBuffer *buf2) G_GNUC_WARN_UNUSED_RESULT;
 
 /* metadata */
 #include <gst/gstmeta.h>
@@ -608,7 +609,7 @@ GstBuffer*      gst_buffer_append               (GstBuffer *buf1, GstBuffer *buf
 /**
  * GstBufferForeachMetaFunc:
  * @buffer: a #GstBuffer
- * @meta: (out) (nullable): a pointer to a #GstMeta
+ * @meta: (inout) (nullable): a pointer to a #GstMeta
  * @user_data: user data passed to gst_buffer_foreach_meta()
  *
  * A function that will be called from gst_buffer_foreach_meta(). The @meta
@@ -747,6 +748,7 @@ typedef struct _GstReferenceTimestampMeta GstReferenceTimestampMeta;
  * @reference: identifier for the timestamp reference.
  * @timestamp: timestamp
  * @duration: duration, or %GST_CLOCK_TIME_NONE
+ * @info: (nullable): optional additional information about the timestamp
  *
  * #GstReferenceTimestampMeta can be used to attach alternative timestamps and
  * possibly durations to a #GstBuffer. These are generally not according to
@@ -770,6 +772,13 @@ typedef struct _GstReferenceTimestampMeta GstReferenceTimestampMeta;
  * Since 1.24 it can be serialized using gst_meta_serialize() and
  * gst_meta_deserialize().
  *
+ * Since 1.28 additional information about the timestamp can be provided via the
+ * optional @info structure. This should only be used for information about the
+ * timestamp and not for information about the clock source. The latter should
+ * be stored in the @reference instead.
+ *
+ * Interpretation of the fields of @info depends on the @reference.
+ *
  * Since: 1.14
  */
 struct _GstReferenceTimestampMeta
@@ -779,6 +788,15 @@ struct _GstReferenceTimestampMeta
   /*< public >*/
   GstCaps *reference;
   GstClockTime timestamp, duration;
+
+  /**
+   * GstReferenceTimestampMeta.info:
+   *
+   * Additional information about the timestamp.
+   *
+   * Since: 1.28
+   */
+  GstStructure *info;
 };
 
 GST_API
@@ -820,26 +838,15 @@ G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstBufferPool, gst_object_unref)
  * }
  * ```
  *
- * #GstMapInfo cannot be used with g_auto() because it is ambiguous whether it
- * needs to be unmapped using gst_buffer_unmap() or gst_memory_unmap().
- *
  * See also #GstMemoryMapInfo.
  *
  * Since: 1.22
+ *
+ * Deprecated: 1.28: Use #GstMapInfo instead.
  */
-typedef GstMapInfo GstBufferMapInfo;
+typedef GstMapInfo GstBufferMapInfo GST_DEPRECATED_TYPE_FOR(GstMapInfo);
 
-static inline void _gst_buffer_map_info_clear(GstBufferMapInfo *info)
-{
-  /* we need to check for NULL, it is possible that we tried to map a buffer
-   * without memory and we should be able to unmap that fine */
-  if (G_LIKELY (info->memory)) {
-    gst_memory_unmap (info->memory, info);
-    gst_memory_unref (info->memory);
-  }
-}
-
-G_DEFINE_AUTO_CLEANUP_CLEAR_FUNC(GstBufferMapInfo, _gst_buffer_map_info_clear)
+G_DEFINE_AUTO_CLEANUP_CLEAR_FUNC(GstBufferMapInfo, gst_map_info_clear)
 
 G_END_DECLS
 

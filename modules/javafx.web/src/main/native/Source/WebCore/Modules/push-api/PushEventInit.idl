@@ -25,6 +25,8 @@
 
 typedef (BufferSource or USVString) PushMessageDataInit;
 
-dictionary PushEventInit : ExtendableEventInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary PushEventInit : ExtendableEventInit {
     PushMessageDataInit data;
 };

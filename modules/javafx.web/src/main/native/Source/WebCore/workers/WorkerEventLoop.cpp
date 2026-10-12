@@ -81,4 +81,5 @@ const String WorkerEventLoop::taskMode()
 {
     return "workerEventLoopTaskMode"_s;
 }
+
 } // namespace WebCore

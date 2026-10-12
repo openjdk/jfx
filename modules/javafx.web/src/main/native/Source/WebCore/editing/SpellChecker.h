@@ -26,10 +26,10 @@
 
 #pragma once
 
-#include "Element.h"
-#include "SimpleRange.h"
-#include "TextChecking.h"
-#include "Timer.h"
+#include <WebCore/Element.h>
+#include <WebCore/SimpleRange.h>
+#include <WebCore/TextChecking.h>
+#include <WebCore/Timer.h>
 #include <wtf/Deque.h>
 #include <wtf/Markable.h>
 #include <wtf/TZoneMalloc.h>
@@ -52,6 +52,7 @@ public:
     Element* rootEditableElement() const { return m_rootEditableElement.get(); }
 
     void setCheckerAndIdentifier(SpellChecker*, TextCheckingRequestIdentifier);
+    void setExistingResults(const Vector<TextCheckingResult>&);
     void requesterDestroyed();
 
     const TextCheckingRequestData& data() const final;
@@ -67,6 +68,7 @@ private:
     SimpleRange m_automaticReplacementRange;
     SimpleRange m_paragraphRange;
     RefPtr<Element> m_rootEditableElement;
+    Vector<TextCheckingResult> m_existingResults;
     TextCheckingRequestData m_requestData;
 };
 
@@ -85,6 +87,7 @@ public:
     bool isCheckable(const SimpleRange&) const;
 
     void requestCheckingFor(Ref<SpellCheckRequest>&&);
+    void requestExtendedCheckingFor(Ref<SpellCheckRequest>&&, const Vector<TextCheckingResult>&);
 
     std::optional<TextCheckingRequestIdentifier> lastRequestIdentifier() const { return m_lastRequestIdentifier; }
     std::optional<TextCheckingRequestIdentifier> lastProcessedIdentifier() const { return m_lastProcessedIdentifier; }
@@ -95,9 +98,9 @@ private:
     void timerFiredToProcessQueuedRequest();
     void invokeRequest(Ref<SpellCheckRequest>&&);
     void enqueueRequest(Ref<SpellCheckRequest>&&);
-    void didCheckSucceed(TextCheckingRequestIdentifier, const Vector<TextCheckingResult>&);
+    void didCheckSucceed(TextCheckingRequestIdentifier, const Vector<TextCheckingResult>&, const Vector<TextCheckingResult>&, const std::optional<SimpleRange>&);
     void didCheckCancel(TextCheckingRequestIdentifier);
-    void didCheck(TextCheckingRequestIdentifier, const Vector<TextCheckingResult>&);
+    void didCheck(TextCheckingRequestIdentifier, const Vector<TextCheckingResult>&, const Vector<TextCheckingResult>&, const std::optional<SimpleRange>&);
 
     Document& document() const;
     Ref<Document> protectedDocument() const;
@@ -110,6 +113,7 @@ private:
 
     RefPtr<SpellCheckRequest> m_processingRequest;
     Deque<Ref<SpellCheckRequest>> m_requestQueue;
+    bool m_inRecheck { false };
 };
 
 } // namespace WebCore

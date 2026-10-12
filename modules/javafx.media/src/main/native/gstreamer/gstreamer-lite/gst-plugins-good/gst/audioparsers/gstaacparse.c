@@ -269,9 +269,6 @@ gst_aac_parse_set_src_caps (GstAacParse * aacparse, GstCaps * sink_caps)
   if (peercaps)
     gst_caps_unref (peercaps);
 
-  aacparse->last_parsed_channels = 0;
-  aacparse->last_parsed_sample_rate = 0;
-
   GST_DEBUG_OBJECT (aacparse, "setting src caps: %" GST_PTR_FORMAT, src_caps);
 
   res = gst_pad_set_caps (GST_BASE_PARSE (aacparse)->srcpad, src_caps);
@@ -1481,6 +1478,8 @@ gst_aac_parse_handle_frame (GstBaseParse * parse,
   if (G_UNLIKELY (!ret))
     goto exit;
 
+  ret = framesize <= map.size;
+
   if (aacparse->header_type == DSPAAC_HEADER_ADTS) {
     /* see above */
     frame->overhead = 7;
@@ -1495,10 +1494,7 @@ gst_aac_parse_handle_frame (GstBaseParse * parse,
       aacparse->sample_rate = rate;
       aacparse->channels = channels;
 
-      if (!gst_aac_parse_set_src_caps (aacparse, NULL)) {
-        /* If linking fails, we need to return appropriate error */
-        ret = GST_FLOW_NOT_LINKED;
-      }
+      gst_aac_parse_set_src_caps (aacparse, NULL);
 
       gst_base_parse_set_frame_rate (GST_BASE_PARSE (aacparse),
           aacparse->sample_rate, aacparse->frame_samples, 2, 2);
@@ -1535,10 +1531,7 @@ gst_aac_parse_handle_frame (GstBaseParse * parse,
        before knowing about rate/channels. */
     if (setcaps
         || !gst_pad_has_current_caps (GST_BASE_PARSE_SRC_PAD (aacparse))) {
-      if (!gst_aac_parse_set_src_caps (aacparse, NULL)) {
-        /* If linking fails, we need to return appropriate error */
-        ret = GST_FLOW_NOT_LINKED;
-      }
+      gst_aac_parse_set_src_caps (aacparse, NULL);
 
       gst_base_parse_set_frame_rate (GST_BASE_PARSE (aacparse),
           aacparse->sample_rate, aacparse->frame_samples, 2, 2);
@@ -1549,7 +1542,8 @@ gst_aac_parse_handle_frame (GstBaseParse * parse,
       && aacparse->output_header_type == DSPAAC_HEADER_ADTS) {
     if (!gst_aac_parse_prepend_adts_headers (aacparse, frame)) {
       GST_ERROR_OBJECT (aacparse, "Failed to prepend ADTS headers to frame");
-      ret = GST_FLOW_ERROR;
+      gst_buffer_unmap (buffer, &map);
+      return GST_FLOW_ERROR;
     }
   }
 
@@ -1566,7 +1560,7 @@ exit:
       *skipsize = 1;
   }
 
-  if (ret && framesize <= map.size) {
+  if (ret) {
     return gst_base_parse_finish_frame (parse, frame, framesize);
   }
 

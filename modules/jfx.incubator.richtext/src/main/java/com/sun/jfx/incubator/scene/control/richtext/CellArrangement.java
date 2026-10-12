@@ -29,14 +29,10 @@ package com.sun.jfx.incubator.scene.control.richtext;
 
 import java.util.ArrayList;
 import javafx.collections.ObservableList;
-import javafx.geometry.Point2D;
 import javafx.scene.Node;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 import javafx.scene.shape.PathElement;
-import javafx.scene.text.HitInfo;
-import javafx.scene.text.TextFlow;
-import com.sun.jfx.incubator.scene.control.richtext.util.RichUtils;
 import jfx.incubator.scene.control.richtext.TextPos;
 
 /**
@@ -120,7 +116,7 @@ public class CellArrangement {
     }
 
     /** finds text position inside the sliding window, in cell coordinates */
-    public TextPos getTextPos(double cellX, double cellY) {
+    public TextPos findTextPos(double cellX, double cellY) {
         if (lineCount == 0) {
             return TextPos.ZERO;
         }
@@ -130,32 +126,10 @@ public class CellArrangement {
 
         int ix = binarySearch(cellY, topIx, btmIx - 1);
         TextCell cell = getCell(ix);
-        if (cell != null) {
-            Region r = cell.getContent();
-            double y = cellY - cell.getY() - r.snappedTopInset();
-            if (y < 0) {
-                return TextPos.ofLeading(cell.getIndex(), 0);
-            } else if (y < cell.getCellHeight()) {
-                if (r instanceof TextFlow f) {
-                    Point2D p = new Point2D(cellX - r.getLayoutX(), y - r.getLayoutY());
-                    HitInfo h = f.getHitInfo(p);
-                    int ii = h.getInsertionIndex();
-                    int ci = h.getCharIndex();
-                    boolean leading = h.isLeading();
-                    return new TextPos(cell.getIndex(), ii, ci, leading);
-                } else {
-                    return TextPos.ofLeading(cell.getIndex(), 0);
-                }
-            }
-
-            int cix = 0;
-            if (r instanceof TextFlow f) {
-                cix = RichUtils.getTextLength(f);
-            }
-            return TextPos.ofLeading(cell.getIndex(), cix);
+        if (cell == null) {
+            return TextPos.ZERO;
         }
-
-        return TextPos.ZERO;
+        return cell.getTextPos(cellX, cellY);
     }
 
     /** returns the cell contained in this layout, or null */

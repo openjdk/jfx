@@ -29,24 +29,15 @@
 
 #pragma once
 
-#include "FrameLoader.h"
-#include "LocalFrameLoaderClient.h"
-#include "ResourceRequest.h"
+#include <WebCore/FrameLoader.h>
+#include <WebCore/LocalFrameLoaderClient.h>
+#include <WebCore/ResourceRequest.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 #if ENABLE(CONTENT_FILTERING)
-#include "ContentFilterUnblockHandler.h"
+#include <WebCore/ContentFilterUnblockHandler.h>
 #endif
-
-namespace WebCore {
-class PolicyChecker;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::PolicyChecker> : std::true_type { };
-}
 
 namespace WTF {
 template<typename> class CompletionHandler;
@@ -56,7 +47,7 @@ class CompletionHandlerCallingScope;
 namespace WebCore {
 
 class DocumentLoader;
-class FormState;
+class FormSubmission;
 class HitTestResult;
 class LocalFrame;
 class NavigationAction;
@@ -70,20 +61,23 @@ enum class NavigationPolicyDecision : uint8_t {
     LoadWillContinueInAnotherProcess,
 };
 
+enum class NavigationNavigationType : uint8_t;
+
 enum class PolicyDecisionMode { Synchronous, Asynchronous };
 
-class PolicyChecker : public CanMakeWeakPtr<PolicyChecker> {
+class PolicyChecker final : public CanMakeWeakPtr<PolicyChecker>, public CanMakeCheckedPtr<PolicyChecker> {
     WTF_MAKE_NONCOPYABLE(PolicyChecker);
     WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(PolicyChecker, Loader);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(PolicyChecker);
 public:
     explicit PolicyChecker(LocalFrame&);
 
-    using NavigationPolicyDecisionFunction = CompletionHandler<void(ResourceRequest&&, WeakPtr<FormState>&&, NavigationPolicyDecision)>;
-    using NewWindowPolicyDecisionFunction = CompletionHandler<void(ResourceRequest&&, WeakPtr<FormState>&&, const AtomString& frameName, const NavigationAction&, ShouldContinuePolicyCheck)>;
+    using NavigationPolicyDecisionFunction = CompletionHandler<void(ResourceRequest&&, WeakPtr<const FormSubmission>&&, NavigationPolicyDecision)>;
+    using NewWindowPolicyDecisionFunction = CompletionHandler<void(ResourceRequest&&, WeakPtr<const FormSubmission>&&, const AtomString& frameName, const NavigationAction&, ShouldContinuePolicyCheck)>;
 
-    void checkNavigationPolicy(ResourceRequest&&, const ResourceResponse& redirectResponse, DocumentLoader*, RefPtr<FormState>&&, NavigationPolicyDecisionFunction&&, PolicyDecisionMode = PolicyDecisionMode::Asynchronous);
+    void checkNavigationPolicy(ResourceRequest&&, const ResourceResponse& redirectResponse, DocumentLoader*, RefPtr<const FormSubmission>&&, NavigationPolicyDecisionFunction&&, PolicyDecisionMode = PolicyDecisionMode::Asynchronous, std::optional<NavigationNavigationType> = std::nullopt);
     void checkNavigationPolicy(ResourceRequest&&, const ResourceResponse& redirectResponse, NavigationPolicyDecisionFunction&&);
-    void checkNewWindowPolicy(NavigationAction&&, ResourceRequest&&, RefPtr<FormState>&&, const AtomString& frameName, NewWindowPolicyDecisionFunction&&);
+    void checkNewWindowPolicy(NavigationAction&&, ResourceRequest&&, RefPtr<const FormSubmission>&&, const AtomString& frameName, NewWindowPolicyDecisionFunction&&);
 
     void stopCheck();
 
@@ -96,7 +90,7 @@ public:
     bool delegateIsHandlingUnimplementablePolicy() const { return m_delegateIsHandlingUnimplementablePolicy; }
 
 #if ENABLE(CONTENT_FILTERING)
-    void setContentFilterUnblockHandler(ContentFilterUnblockHandler unblockHandler) { m_contentFilterUnblockHandler = WTFMove(unblockHandler); }
+    void setContentFilterUnblockHandler(ContentFilterUnblockHandler&& unblockHandler) { m_contentFilterUnblockHandler = WTF::move(unblockHandler); }
 #endif
 
 private:

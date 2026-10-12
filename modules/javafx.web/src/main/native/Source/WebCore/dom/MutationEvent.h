@@ -23,13 +23,13 @@
 
 #pragma once
 
-#include "Event.h"
-#include "Node.h"
+#include <WebCore/Event.h>
+#include <WebCore/Node.h>
 
 namespace WebCore {
 
 class MutationEvent final : public Event {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(MutationEvent);
+    WTF_MAKE_TZONE_ALLOCATED(MutationEvent);
 public:
     enum {
         MODIFICATION = 1,

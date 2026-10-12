@@ -25,13 +25,13 @@
 
 #pragma once
 
-#include "CachedResourceClient.h"
-#include "CachedResourceHandle.h"
 #include "CachedScript.h"
-#include "Document.h"
-#include "LoadableScript.h"
-#include "LoadableScriptError.h"
-#include "ReferrerPolicy.h"
+#include <WebCore/CachedResourceClient.h>
+#include <WebCore/CachedResourceHandle.h>
+#include <WebCore/Document.h>
+#include <WebCore/LoadableScript.h>
+#include <WebCore/LoadableScriptError.h>
+#include <WebCore/ReferrerPolicy.h>
 #include <wtf/TypeCasts.h>
 
 namespace WebCore {
@@ -45,10 +45,15 @@ class LoadableNonModuleScriptBase : public LoadableScript, protected CachedResou
 public:
     virtual ~LoadableNonModuleScriptBase();
 
+    // CachedResourceClient.
+    void ref() const final { LoadableScript::ref(); }
+    void deref() const final { LoadableScript::deref(); }
+
     bool isLoaded() const final;
     bool hasError() const final;
     std::optional<Error> takeError() final;
     bool wasCanceled() const final;
+    bool isInlineModule() const final { return false; }
 
     Document* document() { return m_weakDocument.get(); }
     CachedScript& cachedScript() { return *m_cachedScript; }

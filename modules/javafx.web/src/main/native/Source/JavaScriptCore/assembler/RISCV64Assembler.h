@@ -134,8 +134,8 @@ using RegisterID = RISCV64Registers::RegisterID;
 using FPRegisterID = RISCV64Registers::FPRegisterID;
 
 template<typename T>
-auto registerValue(T registerID)
-    -> std::enable_if_t<(std::is_same_v<T, RegisterID> || std::is_same_v<T, FPRegisterID>), unsigned>
+    requires (std::same_as<T, RegisterID> || std::same_as<T, FPRegisterID>)
+unsigned registerValue(T registerID)
 {
     return unsigned(registerID) & ((1 << 5) - 1);
 }
@@ -188,8 +188,8 @@ struct ImmediateBase {
     }
 
     template<typename T>
-    static auto isValid(T immValue)
-        -> std::enable_if_t<(std::is_same_v<T, int32_t> || std::is_same_v<T, int64_t>), bool>
+        requires (std::same_as<T, int32_t> || std::same_as<T, int64_t>)
+    static bool isValid(T immValue)
     {
         constexpr unsigned shift = sizeof(T) * 8 - immediateSize;
         return immValue == ((immValue << shift) >> shift);
@@ -313,7 +313,8 @@ struct JImmediate : ImmediateBase<21> {
 };
 
 struct ImmediateDecomposition {
-    template<typename T, typename = std::enable_if_t<(std::is_same_v<T, int32_t> || std::is_same_v<T, int64_t>)>>
+    template<typename T>
+        requires (std::same_as<T, int32_t> || std::same_as<T, int64_t>)
     explicit ImmediateDecomposition(T immediate)
         : upper(UImmediate(0))
         , lower(IImmediate(0))
@@ -1678,7 +1679,7 @@ public:
 
     static void replaceWithNops(void* from, size_t memoryToFillWithNopsInBytes)
     {
-        fillNops<MachineCodeCopyMode::Memcpy>(from, memoryToFillWithNopsInBytes);
+        fillNops(from, memoryToFillWithNopsInBytes);
         cacheFlush(from, memoryToFillWithNopsInBytes);
     }
 
@@ -1703,7 +1704,6 @@ public:
         __builtin___clear_cache(static_cast<char*>(code), reinterpret_cast<char*>(end));
     }
 
-    template<MachineCodeCopyMode copy>
     static void fillNops(void* base, size_t size)
     {
         uint32_t* ptr = static_cast<uint32_t*>(base);
@@ -1712,7 +1712,7 @@ public:
 
         uint32_t nop = RISCV64Instructions::ADDI::construct(RISCV64Registers::zero, RISCV64Registers::zero, IImmediate::v<IImmediate, 0>());
         for (size_t i = 0, n = size / sizeof(uint32_t); i < n; ++i)
-            machineCodeCopy<copy>(&ptr[i], &nop, sizeof(uint32_t));
+            machineCodeCopy<memcpyRepatch>(&ptr[i], &nop, sizeof(uint32_t));
     }
 
     typedef enum {
@@ -1955,8 +1955,8 @@ public:
     {
         using FCVTType = RISCV64Instructions::FCVTBase<ToType, FromType>;
         static_assert(FCVTType::valid);
-        static_assert(std::is_same_v<std::decay_t<RDType>, typename FCVTType::RDType>);
-        static_assert(std::is_same_v<std::decay_t<RS1Type>, typename FCVTType::RS1Type>);
+        static_assert(std::same_as<std::decay_t<RDType>, typename FCVTType::RDType>);
+        static_assert(std::same_as<std::decay_t<RS1Type>, typename FCVTType::RS1Type>);
 
         insn(FCVTType::construct(rd, rs1, RM));
     }
@@ -1972,8 +1972,8 @@ public:
     {
         using FMVType = RISCV64Instructions::FMVBase<ToType, FromType>;
         static_assert(FMVType::valid);
-        static_assert(std::is_same_v<std::decay_t<RDType>, typename FMVType::RDType>);
-        static_assert(std::is_same_v<std::decay_t<RS1Type>, typename FMVType::RS1Type>);
+        static_assert(std::same_as<std::decay_t<RDType>, typename FMVType::RDType>);
+        static_assert(std::same_as<std::decay_t<RS1Type>, typename FMVType::RS1Type>);
 
         insn(FMVType::construct(rd, rs1));
     }
@@ -2128,7 +2128,8 @@ public:
         signExtend<bitSize>(rd, rd);
     }
 
-    template<unsigned bitSize, typename = std::enable_if_t<bitSize == 8 || bitSize == 16 || bitSize == 32 || bitSize == 64>>
+    template<unsigned bitSize>
+        requires (bitSize == 8 || bitSize == 16 || bitSize == 32 || bitSize == 64)
     void signExtend(RegisterID rd, RegisterID rs)
     {
         if constexpr (bitSize == 64)
@@ -2149,7 +2150,8 @@ public:
         zeroExtend<bitSize>(rd, rd);
     }
 
-    template<unsigned bitSize, typename = std::enable_if_t<bitSize == 8 || bitSize == 16 || bitSize == 32 || bitSize == 64>>
+    template<unsigned bitSize>
+        requires (bitSize == 8 || bitSize == 16 || bitSize == 32 || bitSize == 64)
     void zeroExtend(RegisterID rd, RegisterID rs)
     {
         if constexpr (bitSize == 64)

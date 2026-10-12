@@ -28,10 +28,11 @@
 
 #pragma once
 
-#include "CachedResourceLoader.h"
-#include "FrameLoaderTypes.h"
-#include "ResourceLoader.h"
+#include <WebCore/CachedResourceLoader.h>
+#include <WebCore/FrameLoaderTypes.h>
+#include <WebCore/ResourceLoader.h>
 #include <wtf/CompletionHandler.h>
+#include <wtf/Platform.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 

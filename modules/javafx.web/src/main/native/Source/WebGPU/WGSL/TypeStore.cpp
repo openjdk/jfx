@@ -211,7 +211,7 @@ const Type* TypeStore::textureStorageType(TextureStorage::Kind kind, TexelFormat
 
 const Type* TypeStore::functionType(WTF::Vector<const Type*>&& parameters, const Type* result, bool mustUse)
 {
-    return allocateType<Function>(WTFMove(parameters), result, mustUse);
+    return allocateType<Function>(WTF::move(parameters), result, mustUse);
 }
 
 const Type* TypeStore::referenceType(AddressSpace addressSpace, const Type* element, AccessMode accessMode, bool isVectorComponent)
@@ -246,7 +246,7 @@ const Type* TypeStore::atomicType(const Type* type)
 
 const Type* TypeStore::typeConstructorType(ASCIILiteral name, std::function<Result<const Type*>(AST::ElaboratedTypeExpression&)>&& constructor)
 {
-    return allocateType<TypeConstructor>(name, WTFMove(constructor));
+    return allocateType<TypeConstructor>(name, WTF::move(constructor));
 }
 
 const Type* TypeStore::frexpResultType(const Type* fract, const Type* exp)

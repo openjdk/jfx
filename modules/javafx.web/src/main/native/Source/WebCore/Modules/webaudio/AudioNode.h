@@ -28,6 +28,9 @@
 #include "ChannelCountMode.h"
 #include "ChannelInterpretation.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
+#include "ExceptionOr.h"
+#include <wtf/CheckedRef.h>
 #include <wtf/Forward.h>
 #include <wtf/LoggerHelper.h>
 
@@ -52,12 +55,14 @@ enum class NoiseInjectionPolicy : uint8_t;
 
 class AudioNode
     : public EventTarget
+    , public CanMakeThreadSafeCheckedPtr<AudioNode>
 #if !RELEASE_LOG_DISABLED
     , private LoggerHelper
 #endif
 {
     WTF_MAKE_NONCOPYABLE(AudioNode);
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(AudioNode);
+    WTF_MAKE_TZONE_ALLOCATED(AudioNode);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(AudioNode);
 public:
     enum NodeType {
         NodeTypeDestination,
@@ -122,7 +127,9 @@ public:
     unsigned numberOfOutputs() const { return m_outputs.size(); }
 
     AudioNodeInput* input(unsigned);
+    CheckedPtr<AudioNodeInput> checkedInput(unsigned);
     AudioNodeOutput* output(unsigned);
+    CheckedPtr<AudioNodeOutput> checkedOutput(unsigned);
 
     // Called from main thread by corresponding JavaScript methods.
     ExceptionOr<void> connect(AudioNode&, unsigned outputIndex, unsigned inputIndex);
@@ -168,6 +175,8 @@ public:
     // available on the main thread, and the tail processing check can
     // happen on the main thread.
     virtual bool requiresTailProcessing() const = 0;
+
+    virtual bool isAudioScheduledSourceNode() const { return false; }
 
     // propagatesSilence() should return true if the node will generate silent output when given silent input. By default, AudioNode
     // will take tailTime() and latencyTime() into account when determining whether the node will propagate silence.
@@ -248,7 +257,7 @@ private:
 
     WeakOrStrongContext m_context;
 
-    Vector<std::unique_ptr<AudioNodeInput>> m_inputs;
+    Vector<Ref<AudioNodeInput>> m_inputs;
     Vector<std::unique_ptr<AudioNodeOutput>> m_outputs;
 
     double m_lastProcessingTime { -1 };
@@ -290,6 +299,12 @@ template<typename T> struct AudioNodeConnectionRefDerefTraits {
         return ptr;
     }
 
+    static ALWAYS_INLINE T& ref(T& ref)
+    {
+        ref.incrementConnectionCount();
+        return ref;
+    }
+
     static ALWAYS_INLINE void derefIfNotNull(T* ptr)
     {
         if (ptr) [[likely]]
@@ -299,6 +314,9 @@ template<typename T> struct AudioNodeConnectionRefDerefTraits {
 
 template<typename T>
 using AudioConnectionRefPtr = RefPtr<T, RawPtrTraits<T>, AudioNodeConnectionRefDerefTraits<T>>;
+
+template<typename T>
+using AudioConnectionRef = Ref<T, RawPtrTraits<T>, AudioNodeConnectionRefDerefTraits<T>>;
 
 String convertEnumerationToString(AudioNode::NodeType);
 
@@ -311,3 +329,10 @@ template<> struct LogArgument<WebCore::AudioNode::NodeType> {
 };
 
 } // namespace WTF
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(AudioNode)
+
+#define SPECIALIZE_TYPE_TRAITS_AUDIONODE(ToValueTypeName, NodeTypeName) \
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ToValueTypeName) \
+static bool isType(const WebCore::AudioNode& node) { return node.nodeType() == WebCore::AudioNode::NodeTypeName; } \
+SPECIALIZE_TYPE_TRAITS_END()

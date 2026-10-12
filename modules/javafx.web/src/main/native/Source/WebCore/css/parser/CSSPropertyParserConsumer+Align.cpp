@@ -26,7 +26,6 @@
 #include "config.h"
 #include "CSSPropertyParserConsumer+Align.h"
 
-#include "CSSContentDistributionValue.h"
 #include "CSSParserIdioms.h"
 #include "CSSParserTokenRange.h"
 #include "CSSPropertyParserConsumer+Ident.h"
@@ -39,137 +38,160 @@
 namespace WebCore {
 namespace CSSPropertyParserHelpers {
 
-using PositionKeywordPredicate = bool (*)(CSSValueID);
-
-static bool isBaselineKeyword(CSSValueID id)
+static RefPtr<CSSValue> consumeAlignmentBaseline(CSSParserTokenRange& range, CSS::PropertyParserState&)
 {
-    return identMatches<CSSValueFirst, CSSValueLast, CSSValueBaseline>(id);
-}
+    ASSERT(range.peek().id() == CSSValueBaseline);
 
-static bool isNormalOrStretch(CSSValueID id)
-{
-    return identMatches<CSSValueNormal, CSSValueStretch>(id);
-}
+    // FIXME: The spec states that <baseline-position> is defined as `<baseline-position> = [ first | last ]? && baseline`, allowing any ordering, but tests expect `[ first | last ]` to always be precede `baseline`.
 
-static bool isLeftOrRightKeyword(CSSValueID id)
-{
-    return identMatches<CSSValueLeft, CSSValueRight>(id);
-}
-
-static bool isContentDistributionKeyword(CSSValueID id)
-{
-    return identMatches<CSSValueSpaceBetween, CSSValueSpaceAround, CSSValueSpaceEvenly, CSSValueStretch>(id);
-}
-
-static bool isOverflowKeyword(CSSValueID id)
-{
-    return identMatches<CSSValueUnsafe, CSSValueSafe>(id);
-}
-
-static bool isContentPositionKeyword(CSSValueID id)
-{
-    return identMatches<CSSValueStart, CSSValueEnd, CSSValueCenter, CSSValueFlexStart, CSSValueFlexEnd>(id);
-}
-
-static bool isContentPositionOrLeftOrRightKeyword(CSSValueID id)
-{
-    return isContentPositionKeyword(id) || isLeftOrRightKeyword(id);
-}
-
-enum class AdditionalSelfPositionKeywords {
-    LeftRight    = 1 << 0,
-    AnchorCenter = 1 << 1
-};
-
-static bool isSelfPositionKeyword(CSSValueID id, OptionSet<AdditionalSelfPositionKeywords> additionalKeywords)
-{
-    bool matches = identMatches<CSSValueStart, CSSValueEnd, CSSValueCenter, CSSValueSelfStart, CSSValueSelfEnd, CSSValueFlexStart, CSSValueFlexEnd>(id);
-
-    if (additionalKeywords.contains(AdditionalSelfPositionKeywords::LeftRight))
-        matches |= isLeftOrRightKeyword(id);
-
-    if (additionalKeywords.contains(AdditionalSelfPositionKeywords::AnchorCenter))
-        matches |= identMatches<CSSValueAnchorCenter>(id);
-
-    return matches;
-}
-
-static RefPtr<CSSPrimitiveValue> consumeOverflowPositionKeyword(CSSParserTokenRange& range)
-{
-    return isOverflowKeyword(range.peek().id()) ? consumeIdent(range) : nullptr;
-}
-
-static std::optional<CSSValueID> consumeBaselineKeywordRaw(CSSParserTokenRange& range)
-{
-    auto preference = consumeIdentRaw<CSSValueFirst, CSSValueLast>(range);
-    if (!consumeIdent<CSSValueBaseline>(range))
-        return std::nullopt;
-    return preference == CSSValueLast ? CSSValueLastBaseline : CSSValueBaseline;
-}
-
-static RefPtr<CSSValue> consumeBaselineKeyword(CSSParserTokenRange& range)
-{
-    auto keyword = consumeBaselineKeywordRaw(range);
-    if (!keyword)
-        return nullptr;
-    if (*keyword == CSSValueLastBaseline)
-        return CSSValuePair::create(CSSPrimitiveValue::create(CSSValueLast), CSSPrimitiveValue::create(CSSValueBaseline));
+    range.consumeIncludingWhitespace();
     return CSSPrimitiveValue::create(CSSValueBaseline);
 }
 
-static RefPtr<CSSValue> consumeContentDistributionOverflowPosition(CSSParserTokenRange& range, PositionKeywordPredicate isPositionKeyword)
+static RefPtr<CSSValue> consumeAlignmentFirstBaseline(CSSParserTokenRange& range, CSS::PropertyParserState&)
 {
-    ASSERT(isPositionKeyword);
-    auto id = range.peek().id();
-    if (identMatches<CSSValueNormal>(id))
-        return CSSContentDistributionValue::create(CSSValueInvalid, range.consumeIncludingWhitespace().id(), CSSValueInvalid);
-    if (isBaselineKeyword(id)) {
-        auto baseline = consumeBaselineKeywordRaw(range);
-        if (!baseline)
-            return nullptr;
-        return CSSContentDistributionValue::create(CSSValueInvalid, *baseline, CSSValueInvalid);
+    ASSERT(range.peek().id() == CSSValueFirst);
+
+    auto copy = range;
+    copy.consumeIncludingWhitespace();
+    if (copy.peek().id() != CSSValueBaseline)
+        return nullptr;
+
+    range = copy;
+    range.consumeIncludingWhitespace();
+    return CSSPrimitiveValue::create(CSSValueBaseline);
+}
+
+static RefPtr<CSSValue> consumeAlignmentLastBaseline(CSSParserTokenRange& range, CSS::PropertyParserState&)
+{
+    ASSERT(range.peek().id() == CSSValueLast);
+
+    auto copy = range;
+    copy.consumeIncludingWhitespace();
+    if (copy.peek().id() != CSSValueBaseline)
+        return nullptr;
+
+    range = copy;
+    range.consumeIncludingWhitespace();
+    return CSSValuePair::create(
+        CSSPrimitiveValue::create(CSSValueLast),
+        CSSPrimitiveValue::create(CSSValueBaseline)
+    );
+}
+
+template<typename F> static RefPtr<CSSValue> consumeAlignmentOverflowPosition(CSSParserTokenRange& range, CSS::PropertyParserState&, CSSValueID overflowSafety, F&& predicate)
+{
+    ASSERT(range.peek().id() == CSSValueSafe || range.peek().id() == CSSValueUnsafe);
+
+    auto copy = range;
+    copy.consumeIncludingWhitespace();
+    if (auto position = copy.peek().id(); predicate(position)) {
+        range = copy;
+        range.consumeIncludingWhitespace();
+        return CSSValuePair::create(
+            CSSPrimitiveValue::create(overflowSafety),
+            CSSPrimitiveValue::create(position)
+        );
     }
-    if (isContentDistributionKeyword(id))
-        return CSSContentDistributionValue::create(range.consumeIncludingWhitespace().id(), CSSValueInvalid, CSSValueInvalid);
-    auto overflow = isOverflowKeyword(id) ? range.consumeIncludingWhitespace().id() : CSSValueInvalid;
-    if (isPositionKeyword(range.peek().id()))
-        return CSSContentDistributionValue::create(CSSValueInvalid, range.consumeIncludingWhitespace().id(), overflow);
     return nullptr;
 }
 
-static RefPtr<CSSValue> consumeSelfPositionOverflowPosition(CSSParserTokenRange& range, OptionSet<AdditionalSelfPositionKeywords> additionalSelfPositionKeywords)
-{
-    auto id = range.peek().id();
-    if (identMatches<CSSValueAuto>(id) || isNormalOrStretch(id))
-        return consumeIdent(range);
-    if (isBaselineKeyword(id))
-        return consumeBaselineKeyword(range);
-    auto overflowPosition = consumeOverflowPositionKeyword(range);
-    if (!isSelfPositionKeyword(range.peek().id(), additionalSelfPositionKeywords))
-        return nullptr;
-    auto selfPosition = consumeIdent(range);
-    if (overflowPosition)
-        return CSSValuePair::create(overflowPosition.releaseNonNull(), selfPosition.releaseNonNull());
-    return selfPosition;
-}
-
-RefPtr<CSSValue> consumeAlignContent(CSSParserTokenRange& range, CSS::PropertyParserState&)
+RefPtr<CSSValue> consumeAlignContent(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <'align-content'> = normal | <baseline-position> | <content-distribution> | <overflow-position>? <content-position>
     // https://drafts.csswg.org/css-align/#propdef-align-content
 
-    return consumeContentDistributionOverflowPosition(range, isContentPositionKeyword);
+    switch (auto initial = range.peek().id(); initial) {
+    // normal
+    case CSSValueNormal:
+    // <content-distribution>
+    case CSSValueSpaceBetween:
+    case CSSValueSpaceAround:
+    case CSSValueSpaceEvenly:
+    case CSSValueStretch:
+    // <content-position>
+    case CSSValueStart:
+    case CSSValueEnd:
+    case CSSValueCenter:
+    case CSSValueFlexStart:
+    case CSSValueFlexEnd:
+        range.consumeIncludingWhitespace();
+        return CSSPrimitiveValue::create(initial);
+
+    // <baseline-position>
+    case CSSValueFirst:
+        return consumeAlignmentFirstBaseline(range, state);
+    case CSSValueLast:
+        return consumeAlignmentLastBaseline(range, state);
+    case CSSValueBaseline:
+        return consumeAlignmentBaseline(range, state);
+
+    // <overflow-position>? <content-position>
+    case CSSValueUnsafe:
+    case CSSValueSafe:
+        return consumeAlignmentOverflowPosition(range, state, initial, [](auto second) {
+            switch (second) {
+            case CSSValueStart:
+            case CSSValueEnd:
+            case CSSValueCenter:
+            case CSSValueFlexStart:
+            case CSSValueFlexEnd:
+                return true;
+            default:
+                return false;
+            }
+        });
+
+    default:
+        return nullptr;
+    }
 }
 
-RefPtr<CSSValue> consumeJustifyContent(CSSParserTokenRange& range, CSS::PropertyParserState&)
+RefPtr<CSSValue> consumeJustifyContent(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <'justify-content'> = normal | <content-distribution> | <overflow-position>? [ <content-position> | left | right ]
     // https://drafts.csswg.org/css-align/#propdef-justify-content
 
-    // justify-content property does not allow the <baseline-position> values.
-    if (isBaselineKeyword(range.peek().id()))
+    switch (auto initial = range.peek().id(); initial) {
+    // normal
+    case CSSValueNormal:
+    // <content-distribution>
+    case CSSValueSpaceBetween:
+    case CSSValueSpaceAround:
+    case CSSValueSpaceEvenly:
+    case CSSValueStretch:
+    // [ <content-position> | left | right ]
+    case CSSValueStart:
+    case CSSValueEnd:
+    case CSSValueCenter:
+    case CSSValueFlexStart:
+    case CSSValueFlexEnd:
+    case CSSValueLeft:
+    case CSSValueRight:
+        range.consumeIncludingWhitespace();
+        return CSSPrimitiveValue::create(initial);
+
+    // <overflow-position>? [ <content-position> | left | right ]
+    case CSSValueUnsafe:
+    case CSSValueSafe:
+        return consumeAlignmentOverflowPosition(range, state, initial, [](auto second) {
+            switch (second) {
+            case CSSValueStart:
+            case CSSValueEnd:
+            case CSSValueCenter:
+            case CSSValueFlexStart:
+            case CSSValueFlexEnd:
+            case CSSValueLeft:
+            case CSSValueRight:
+                return true;
+            default:
+                return false;
+            }
+        });
+
+    default:
         return nullptr;
-    return consumeContentDistributionOverflowPosition(range, isContentPositionOrLeftOrRightKeyword);
+    }
 }
 
 RefPtr<CSSValue> consumeAlignSelf(CSSParserTokenRange& range, CSS::PropertyParserState& state)
@@ -177,11 +199,64 @@ RefPtr<CSSValue> consumeAlignSelf(CSSParserTokenRange& range, CSS::PropertyParse
     // <'align-self'> = auto | normal | stretch | <baseline-position> | <overflow-position>? <self-position>
     // https://drafts.csswg.org/css-align/#propdef-align-self
 
-    OptionSet<AdditionalSelfPositionKeywords> additionalSelfPositionKeywords;
-    if (state.context.propertySettings.cssAnchorPositioningEnabled)
-        additionalSelfPositionKeywords |= AdditionalSelfPositionKeywords::AnchorCenter;
+    switch (auto initial = range.peek().id(); initial) {
+    // auto
+    case CSSValueAuto:
+    // normal
+    case CSSValueNormal:
+    // stretch
+    case CSSValueStretch:
+        range.consumeIncludingWhitespace();
+        return CSSPrimitiveValue::create(initial);
 
-    return consumeSelfPositionOverflowPosition(range, additionalSelfPositionKeywords);
+    // <self-position>
+    case CSSValueAnchorCenter:
+        if (!state.context.propertySettings.cssAnchorPositioningEnabled)
+            return nullptr;
+        [[fallthrough]];
+    case CSSValueStart:
+    case CSSValueEnd:
+    case CSSValueCenter:
+    case CSSValueSelfStart:
+    case CSSValueSelfEnd:
+    case CSSValueFlexStart:
+    case CSSValueFlexEnd:
+        range.consumeIncludingWhitespace();
+        return CSSPrimitiveValue::create(initial);
+
+    // <baseline-position>
+    case CSSValueFirst:
+        return consumeAlignmentFirstBaseline(range, state);
+    case CSSValueLast:
+        return consumeAlignmentLastBaseline(range, state);
+    case CSSValueBaseline:
+        return consumeAlignmentBaseline(range, state);
+
+    // <overflow-position>? <self-position>
+    case CSSValueUnsafe:
+    case CSSValueSafe:
+        return consumeAlignmentOverflowPosition(range, state, initial, [&](auto second) {
+            switch (second) {
+            case CSSValueAnchorCenter:
+                if (!state.context.propertySettings.cssAnchorPositioningEnabled)
+                    return false;
+                [[fallthrough]];
+            case CSSValueStart:
+            case CSSValueEnd:
+            case CSSValueCenter:
+            case CSSValueSelfStart:
+            case CSSValueSelfEnd:
+            case CSSValueFlexStart:
+            case CSSValueFlexEnd:
+                return true;
+            default:
+                return false;
+            }
+        });
+
+    default:
+        return nullptr;
+    }
 }
 
 RefPtr<CSSValue> consumeJustifySelf(CSSParserTokenRange& range, CSS::PropertyParserState& state)
@@ -189,27 +264,131 @@ RefPtr<CSSValue> consumeJustifySelf(CSSParserTokenRange& range, CSS::PropertyPar
     // <'justify-self'> = auto | normal | stretch | <baseline-position> | <overflow-position>? [ <self-position> | left | right ]
     // https://drafts.csswg.org/css-align/#propdef-justify-self
 
-    OptionSet<AdditionalSelfPositionKeywords> additionalSelfPositionKeywords { AdditionalSelfPositionKeywords::LeftRight };
-    if (state.context.propertySettings.cssAnchorPositioningEnabled)
-        additionalSelfPositionKeywords |= AdditionalSelfPositionKeywords::AnchorCenter;
+    switch (auto initial = range.peek().id(); initial) {
+    // auto
+    case CSSValueAuto:
+    // normal
+    case CSSValueNormal:
+    // stretch
+    case CSSValueStretch:
+        range.consumeIncludingWhitespace();
+        return CSSPrimitiveValue::create(initial);
 
-    return consumeSelfPositionOverflowPosition(range, additionalSelfPositionKeywords);
+    // [ <self-position> | left | right ]
+    case CSSValueAnchorCenter:
+        if (!state.context.propertySettings.cssAnchorPositioningEnabled)
+            return nullptr;
+        [[fallthrough]];
+    case CSSValueStart:
+    case CSSValueEnd:
+    case CSSValueCenter:
+    case CSSValueSelfStart:
+    case CSSValueSelfEnd:
+    case CSSValueFlexStart:
+    case CSSValueFlexEnd:
+    case CSSValueLeft:
+    case CSSValueRight:
+        range.consumeIncludingWhitespace();
+        return CSSPrimitiveValue::create(initial);
+
+    // <baseline-position>
+    case CSSValueFirst:
+        return consumeAlignmentFirstBaseline(range, state);
+    case CSSValueLast:
+        return consumeAlignmentLastBaseline(range, state);
+    case CSSValueBaseline:
+        return consumeAlignmentBaseline(range, state);
+
+    // <overflow-position>? [ <self-position> | left | right ]
+    case CSSValueUnsafe:
+    case CSSValueSafe:
+        return consumeAlignmentOverflowPosition(range, state, initial, [&](auto second) {
+            switch (second) {
+            case CSSValueAnchorCenter:
+                if (!state.context.propertySettings.cssAnchorPositioningEnabled)
+                    return false;
+                [[fallthrough]];
+            case CSSValueStart:
+            case CSSValueEnd:
+            case CSSValueCenter:
+            case CSSValueSelfStart:
+            case CSSValueSelfEnd:
+            case CSSValueFlexStart:
+            case CSSValueFlexEnd:
+            case CSSValueLeft:
+            case CSSValueRight:
+                return true;
+            default:
+                return false;
+            }
+        });
+
+    default:
+        return nullptr;
+    }
 }
 
 RefPtr<CSSValue> consumeAlignItems(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
-    // <'align-items'> = normal | stretch | <baseline-position> | [ <overflow-position>? <self-position> ]
+    // <'align-items'> = normal | stretch | <baseline-position> | <overflow-position>? <self-position>
     // https://drafts.csswg.org/css-align/#propdef-align-items
 
-    // align-items property does not allow the 'auto' value.
-    if (identMatches<CSSValueAuto>(range.peek().id()))
+    switch (auto initial = range.peek().id(); initial) {
+    // normal
+    case CSSValueNormal:
+    // stretch
+    case CSSValueStretch:
+        range.consumeIncludingWhitespace();
+        return CSSPrimitiveValue::create(initial);
+
+    // <self-position>
+    case CSSValueAnchorCenter:
+        if (!state.context.propertySettings.cssAnchorPositioningEnabled)
         return nullptr;
+        [[fallthrough]];
+    case CSSValueStart:
+    case CSSValueEnd:
+    case CSSValueCenter:
+    case CSSValueSelfStart:
+    case CSSValueSelfEnd:
+    case CSSValueFlexStart:
+    case CSSValueFlexEnd:
+        range.consumeIncludingWhitespace();
+        return CSSPrimitiveValue::create(initial);
 
-    OptionSet<AdditionalSelfPositionKeywords> additionalSelfPositionKeywords;
-    if (state.context.propertySettings.cssAnchorPositioningEnabled)
-        additionalSelfPositionKeywords |= AdditionalSelfPositionKeywords::AnchorCenter;
+    // <baseline-position>
+    case CSSValueFirst:
+        return consumeAlignmentFirstBaseline(range, state);
+    case CSSValueLast:
+        return consumeAlignmentLastBaseline(range, state);
+    case CSSValueBaseline:
+        return consumeAlignmentBaseline(range, state);
 
-    return consumeSelfPositionOverflowPosition(range, additionalSelfPositionKeywords);
+    // <overflow-position>? <self-position>
+    case CSSValueUnsafe:
+    case CSSValueSafe:
+        return consumeAlignmentOverflowPosition(range, state, initial, [&](auto second) {
+            switch (second) {
+            case CSSValueAnchorCenter:
+                if (!state.context.propertySettings.cssAnchorPositioningEnabled)
+                    return false;
+                [[fallthrough]];
+            case CSSValueStart:
+            case CSSValueEnd:
+            case CSSValueCenter:
+            case CSSValueSelfStart:
+            case CSSValueSelfEnd:
+            case CSSValueFlexStart:
+            case CSSValueFlexEnd:
+                return true;
+            default:
+                return false;
+            }
+        });
+
+    default:
+        return nullptr;
+    }
 }
 
 RefPtr<CSSValue> consumeJustifyItems(CSSParserTokenRange& range, CSS::PropertyParserState& state)
@@ -217,28 +396,97 @@ RefPtr<CSSValue> consumeJustifyItems(CSSParserTokenRange& range, CSS::PropertyPa
     // <'justify-items'> = normal | stretch | <baseline-position> | <overflow-position>? [ <self-position> | left | right ] | legacy | legacy && [ left | right | center ]
     // https://drafts.csswg.org/css-align/#propdef-justify-items
 
-    // justify-items property does not allow the 'auto' value.
-    if (identMatches<CSSValueAuto>(range.peek().id()))
+    switch (auto initial = range.peek().id(); initial) {
+    // normal
+    case CSSValueNormal:
+    // stretch
+    case CSSValueStretch:
+        range.consumeIncludingWhitespace();
+        return CSSPrimitiveValue::create(initial);
+
+    // [ <self-position> | left | right ] - NOTE: `left`, `right`, and `center` handled further below to account for additional `legacy` keyword.
+    case CSSValueAnchorCenter:
+        if (!state.context.propertySettings.cssAnchorPositioningEnabled)
         return nullptr;
+        [[fallthrough]];
+    case CSSValueStart:
+    case CSSValueEnd:
+    case CSSValueSelfStart:
+    case CSSValueSelfEnd:
+    case CSSValueFlexStart:
+    case CSSValueFlexEnd:
+        range.consumeIncludingWhitespace();
+        return CSSPrimitiveValue::create(initial);
+
+    // <baseline-position>
+    case CSSValueFirst:
+        return consumeAlignmentFirstBaseline(range, state);
+    case CSSValueLast:
+        return consumeAlignmentLastBaseline(range, state);
+    case CSSValueBaseline:
+        return consumeAlignmentBaseline(range, state);
+
+    // <overflow-position>? [ <self-position> | left | right ]
+    case CSSValueUnsafe:
+    case CSSValueSafe:
+        return consumeAlignmentOverflowPosition(range, state, initial, [&](auto second) {
+            switch (second) {
+            case CSSValueAnchorCenter:
+                if (!state.context.propertySettings.cssAnchorPositioningEnabled)
+                    return false;
+                [[fallthrough]];
+            case CSSValueStart:
+            case CSSValueEnd:
+            case CSSValueCenter:
+            case CSSValueSelfStart:
+            case CSSValueSelfEnd:
+            case CSSValueFlexStart:
+            case CSSValueFlexEnd:
+            case CSSValueLeft:
+            case CSSValueRight:
+                return true;
+            default:
+                return false;
+            }
+        });
 
     // legacy | legacy && [ left | right | center ]
-    CSSParserTokenRange rangeCopy = range;
-    auto legacy = consumeIdent<CSSValueLegacy>(rangeCopy);
-    auto positionKeyword = consumeIdent<CSSValueCenter, CSSValueLeft, CSSValueRight>(rangeCopy);
-    if (!legacy)
-        legacy = consumeIdent<CSSValueLegacy>(rangeCopy);
-    if (legacy) {
-        range = rangeCopy;
-        if (positionKeyword)
-            return CSSValuePair::create(legacy.releaseNonNull(), positionKeyword.releaseNonNull());
-        return legacy;
+    case CSSValueLegacy: {
+        range.consumeIncludingWhitespace();
+
+        switch (auto second = range.peek().id(); second) {
+        case CSSValueLeft:
+        case CSSValueRight:
+        case CSSValueCenter:
+            range.consumeIncludingWhitespace();
+            return CSSValuePair::create(
+                CSSPrimitiveValue::create(initial),
+                CSSPrimitiveValue::create(second)
+            );
+        default:
+            return CSSPrimitiveValue::create(initial);
+        }
     }
+    case CSSValueCenter:
+    case CSSValueLeft:
+    case CSSValueRight: {
+        range.consumeIncludingWhitespace();
 
-    OptionSet<AdditionalSelfPositionKeywords> additionalSelfPositionKeywords { AdditionalSelfPositionKeywords::LeftRight };
-    if (state.context.propertySettings.cssAnchorPositioningEnabled)
-        additionalSelfPositionKeywords |= AdditionalSelfPositionKeywords::AnchorCenter;
-
-    return consumeSelfPositionOverflowPosition(range, additionalSelfPositionKeywords);
+        switch (auto second = range.peek().id(); second) {
+        case CSSValueLegacy:
+            range.consumeIncludingWhitespace();
+            // NOTE: Order is flipped to canonicalize to 'legacy *foo*' for serialization.
+            return CSSValuePair::create(
+                CSSPrimitiveValue::create(second),
+                CSSPrimitiveValue::create(initial)
+            );
+        default:
+            return CSSPrimitiveValue::create(initial);
+        }
+    }
+    default:
+        return nullptr;
+    }
 }
 
 } // namespace CSSPropertyParserHelpers

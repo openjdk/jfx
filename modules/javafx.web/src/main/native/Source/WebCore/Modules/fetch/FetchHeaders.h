@@ -28,8 +28,8 @@
 
 #pragma once
 
-#include "FetchHeadersGuard.h"
-#include "HTTPHeaderMap.h"
+#include <WebCore/FetchHeadersGuard.h>
+#include <WebCore/HTTPHeaderMap.h>
 #include <wtf/HashTraits.h>
 #include <wtf/Vector.h>
 
@@ -44,7 +44,7 @@ public:
     using Init = Variant<Vector<Vector<String>>, Vector<KeyValuePair<String, String>>>;
     static ExceptionOr<Ref<FetchHeaders>> create(std::optional<Init>&&);
 
-    static Ref<FetchHeaders> create(Guard guard = Guard::None, HTTPHeaderMap&& headers = { }, Vector<String>&& setCookieValues = { }) { return adoptRef(*new FetchHeaders { guard, WTFMove(headers), WTFMove(setCookieValues) }); }
+    static Ref<FetchHeaders> create(Guard guard = Guard::None, HTTPHeaderMap&& headers = { }, Vector<String>&& setCookieValues = { }) { return adoptRef(*new FetchHeaders { guard, WTF::move(headers), WTF::move(setCookieValues) }); }
     static Ref<FetchHeaders> create(const FetchHeaders& headers) { return adoptRef(*new FetchHeaders { headers }); }
 
     ExceptionOr<void> append(const String& name, const String& value);
@@ -76,7 +76,7 @@ public:
     };
     Iterator createIterator(ScriptExecutionContext*) { return Iterator { *this }; }
 
-    void setInternalHeaders(HTTPHeaderMap&& headers) { m_headers = WTFMove(headers); }
+    void setInternalHeaders(HTTPHeaderMap&& headers) { m_headers = WTF::move(headers); }
     const HTTPHeaderMap& internalHeaders() const { return m_headers; }
 
     void setGuard(Guard);
@@ -94,8 +94,8 @@ private:
 
 inline FetchHeaders::FetchHeaders(Guard guard, HTTPHeaderMap&& headers, Vector<String>&& setCookieValues)
     : m_guard(guard)
-    , m_headers(WTFMove(headers))
-    , m_setCookieValues(WTFMove(setCookieValues))
+    , m_headers(WTF::move(headers))
+    , m_setCookieValues(WTF::move(setCookieValues))
 {
 }
 

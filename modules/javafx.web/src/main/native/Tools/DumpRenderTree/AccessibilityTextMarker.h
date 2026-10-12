@@ -83,19 +83,19 @@ private:
 #endif
 };
 
-AccessibilityTextMarker* toTextMarker(JSObjectRef object);
-AccessibilityTextMarkerRange* toTextMarkerRange(JSObjectRef object);
+AccessibilityTextMarker* toTextMarker(JSObjectRef);
+AccessibilityTextMarkerRange* toTextMarkerRange(JSObjectRef);
 
 #if !PLATFORM(COCOA)
 inline AccessibilityTextMarker::AccessibilityTextMarker(PlatformTextMarker) { }
 inline AccessibilityTextMarker::AccessibilityTextMarker(const AccessibilityTextMarker&) { }
-inline AccessibilityTextMarker::~AccessibilityTextMarker() { }
+inline AccessibilityTextMarker::~AccessibilityTextMarker() = default;
 inline bool AccessibilityTextMarker::isEqual(AccessibilityTextMarker*) { return false; }
 inline PlatformTextMarker AccessibilityTextMarker::platformTextMarker() const { return m_textMarker; }
 
 inline AccessibilityTextMarkerRange::AccessibilityTextMarkerRange(PlatformTextMarkerRange) { }
 inline AccessibilityTextMarkerRange::AccessibilityTextMarkerRange(const AccessibilityTextMarkerRange&) { }
-inline AccessibilityTextMarkerRange::~AccessibilityTextMarkerRange() { }
+inline AccessibilityTextMarkerRange::~AccessibilityTextMarkerRange() = default;
 inline bool AccessibilityTextMarkerRange::isEqual(AccessibilityTextMarkerRange*) { return false; }
 inline PlatformTextMarkerRange AccessibilityTextMarkerRange::platformTextMarkerRange() const { return m_textMarkerRange; }
 #endif

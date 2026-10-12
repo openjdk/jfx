@@ -209,7 +209,8 @@ enum class PtrTagAction {
 
 constexpr PtrTag AnyPtrTag = static_cast<PtrTag>(-1); // Only used for assertion messages.
 
-template<typename T, typename PtrType, typename = std::enable_if_t<std::is_pointer<PtrType>::value && !std::is_same<T, PtrType>::value>>
+template<typename T, typename PtrType>
+    requires (std::is_pointer_v<PtrType> && !std::same_as<T, PtrType>)
 inline constexpr T removeCodePtrTag(PtrType ptr)
 {
 #if CPU(ARM64E)
@@ -219,7 +220,8 @@ inline constexpr T removeCodePtrTag(PtrType ptr)
 #endif
 }
 
-template<typename PtrType, typename = std::enable_if_t<std::is_pointer<PtrType>::value>>
+template<typename PtrType>
+    requires (std::is_pointer_v<PtrType>)
 inline constexpr PtrType removeCodePtrTag(PtrType ptr)
 {
 #if CPU(ARM64E)
@@ -238,13 +240,15 @@ inline PtrType tagCodePtrImpl(PtrType ptr)
     return PtrTagTraits<tag>::tagCodePtr(ptr);
 }
 
-template<typename T, PtrTag tag, typename PtrType, typename = std::enable_if_t<std::is_pointer<PtrType>::value>>
+template<typename T, PtrTag tag, typename PtrType>
+    requires (std::is_pointer_v<PtrType>)
 inline T tagCodePtr(PtrType ptr)
 {
     return std::bit_cast<T>(tagCodePtrImpl<PtrTagAction::DebugAssert, tag>(ptr));
 }
 
-template<PtrTag tag, typename PtrType, typename = std::enable_if_t<std::is_pointer<PtrType>::value>>
+template<PtrTag tag, typename PtrType>
+    requires (std::is_pointer_v<PtrType>)
 inline PtrType tagCodePtr(PtrType ptr) { return tagCodePtrImpl<PtrTagAction::DebugAssert, tag>(ptr); }
 
 template<PtrTagAction tagAction, PtrTag tag, typename PtrType>
@@ -257,13 +261,15 @@ inline PtrType untagCodePtrImpl(PtrType ptr)
     return result;
 }
 
-template<typename T, PtrTag tag, typename PtrType, typename = std::enable_if_t<std::is_pointer<PtrType>::value>>
+template<typename T, PtrTag tag, typename PtrType>
+    requires (std::is_pointer_v<PtrType>)
 inline T untagCodePtr(PtrType ptr)
 {
     return std::bit_cast<T>(untagCodePtrImpl<PtrTagAction::DebugAssert, tag>(ptr));
 }
 
-template<PtrTag tag, typename PtrType, typename = std::enable_if_t<std::is_pointer<PtrType>::value>>
+template<PtrTag tag, typename PtrType>
+    requires (std::is_pointer_v<PtrType>)
 inline PtrType untagCodePtr(PtrType ptr) { return untagCodePtrImpl<PtrTagAction::DebugAssert, tag>(ptr); }
 
 template<PtrTagAction tagAction, PtrTag oldTag, PtrTag newTag, typename PtrType>
@@ -299,13 +305,15 @@ inline PtrType retagCodePtrImpl(PtrType ptr)
     return result;
 }
 
-template<typename T, PtrTag oldTag, PtrTag newTag, typename PtrType, typename = std::enable_if_t<std::is_pointer<PtrType>::value>>
+template<typename T, PtrTag oldTag, PtrTag newTag, typename PtrType>
+    requires (std::is_pointer_v<PtrType>)
 inline T retagCodePtr(PtrType ptr)
 {
     return std::bit_cast<T>(retagCodePtrImpl<PtrTagAction::DebugAssert, oldTag, newTag>(ptr));
 }
 
-template<PtrTag oldTag, PtrTag newTag, typename PtrType, typename = std::enable_if_t<std::is_pointer<PtrType>::value>>
+template<PtrTag oldTag, PtrTag newTag, typename PtrType>
+    requires (std::is_pointer_v<PtrType>)
 inline PtrType retagCodePtr(PtrType ptr) { return retagCodePtrImpl<PtrTagAction::DebugAssert, oldTag, newTag>(ptr); }
 
 template<typename PtrType>
@@ -372,22 +380,26 @@ inline PtrType tagCFunctionPtrImpl(PtrType ptr)
     return retagCodePtrImpl<tagAction, CFunctionPtrTag, tag>(ptr);
 }
 
-template<typename T, PtrTag tag, typename PtrType, typename = std::enable_if_t<std::is_pointer<PtrType>::value>>
+template<typename T, PtrTag tag, typename PtrType>
+    requires (std::is_pointer_v<PtrType>)
 inline T tagCFunctionPtr(PtrType ptr)
 {
     return std::bit_cast<T>(tagCFunctionPtrImpl<PtrTagAction::DebugAssert, tag>(ptr));
 }
 
-template<PtrTag tag, typename PtrType, typename = std::enable_if_t<std::is_pointer<PtrType>::value>>
+template<PtrTag tag, typename PtrType>
+    requires (std::is_pointer_v<PtrType>)
 inline PtrType tagCFunctionPtr(PtrType ptr) { return tagCFunctionPtrImpl<PtrTagAction::DebugAssert, tag>(ptr); }
 
-template<PtrTag newTag, typename FunctionType, class = typename std::enable_if<std::is_pointer<FunctionType>::value && std::is_function<typename std::remove_pointer<FunctionType>::type>::value>::type>
+template<PtrTag newTag, typename FunctionType>
+    requires (std::is_pointer_v<FunctionType> && std::is_function_v<typename std::remove_pointer_t<FunctionType>>)
 inline FunctionType tagCFunction(FunctionType func)
 {
     return tagCFunctionPtrImpl<PtrTagAction::DebugAssert, newTag>(func);
 }
 
-template<typename ReturnType, PtrTag newTag, typename FunctionType, class = typename std::enable_if<std::is_pointer<FunctionType>::value && std::is_function<typename std::remove_pointer<FunctionType>::type>::value>::type>
+template<typename ReturnType, PtrTag newTag, typename FunctionType>
+    requires (std::is_pointer_v<FunctionType> && std::is_function_v<typename std::remove_pointer_t<FunctionType>>)
 inline ReturnType tagCFunction(FunctionType func)
 {
     return std::bit_cast<ReturnType>(tagCFunction<newTag>(func));
@@ -402,19 +414,22 @@ inline PtrType untagCFunctionPtrImpl(PtrType ptr)
     return retagCodePtrImpl<tagAction, tag, CFunctionPtrTag>(ptr);
 }
 
-template<typename T, PtrTag tag, typename PtrType, typename = std::enable_if_t<std::is_pointer<PtrType>::value>>
+template<typename T, PtrTag tag, typename PtrType>
+    requires (std::is_pointer_v<PtrType>)
 inline T untagCFunctionPtr(PtrType ptr)
 {
     return std::bit_cast<T>(untagCFunctionPtrImpl<PtrTagAction::DebugAssert, tag>(ptr));
 }
 
-template<typename T, PtrTag tag, PtrTagAction tagAction, typename PtrType, typename = std::enable_if_t<std::is_pointer<PtrType>::value>>
+template<typename T, PtrTag tag, PtrTagAction tagAction, typename PtrType>
+    requires (std::is_pointer_v<PtrType>)
 inline T untagCFunctionPtr(PtrType ptr)
 {
     return std::bit_cast<T>(untagCFunctionPtrImpl<tagAction, tag>(ptr));
 }
 
-template<PtrTag tag, typename PtrType, typename = std::enable_if_t<std::is_pointer<PtrType>::value>>
+template<PtrTag tag, typename PtrType>
+    requires (std::is_pointer_v<PtrType>)
 inline PtrType untagCFunctionPtr(PtrType ptr) { return untagCFunctionPtrImpl<PtrTagAction::DebugAssert, tag>(ptr); }
 
 #if CPU(ARM64E)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,11 +25,12 @@
 
 #pragma once
 
-#include "Integrity.h"
-#include "JSCJSValue.h"
-#include "StructureID.h"
-#include "VM.h"
-#include "VMInspector.h"
+#include <JavaScriptCore/Integrity.h>
+#include <JavaScriptCore/JSCConfig.h>
+#include <JavaScriptCore/JSCJSValue.h>
+#include <JavaScriptCore/StructureID.h>
+#include <JavaScriptCore/VM.h>
+#include <JavaScriptCore/VMManager.h>
 #include <wtf/Atomics.h>
 #include <wtf/Gigacage.h>
 
@@ -100,8 +101,8 @@ ALWAYS_INLINE void auditCellFully(VM& vm, JSCell* cell)
 ALWAYS_INLINE void auditStructureID(StructureID structureID)
 {
     UNUSED_PARAM(structureID);
-#if CPU(ADDRESS64) && !ENABLE(STRUCTURE_ID_WITH_SHIFT)
-    ASSERT(static_cast<uintptr_t>(structureID.bits()) <= structureHeapAddressSize + StructureID::nukedStructureIDBit);
+#if CPU(ADDRESS64)
+    ASSERT(std::bit_cast<uintptr_t>(structureID.decode()) - startOfStructureHeap() <= g_jscConfig.sizeOfStructureHeap);
 #endif
 #if ENABLE(EXTRA_INTEGRITY_CHECKS) || ASSERT_ENABLED
     Structure* structure = structureID.tryDecode();
@@ -117,7 +118,7 @@ JS_EXPORT_PRIVATE VM* doAuditSlow(VM*);
 
 ALWAYS_INLINE VM* doAudit(VM* vm)
 {
-    if (!VMInspector::isValidVM(vm)) [[unlikely]]
+    if (!VMManager::isValidVM(vm)) [[unlikely]]
         return doAuditSlow(vm);
     return vm;
 }

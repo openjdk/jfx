@@ -52,7 +52,7 @@ public:
 };
 
 class SpinButtonElement final : public HTMLDivElement, public PopupOpeningObserver {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SpinButtonElement);
+    WTF_MAKE_TZONE_ALLOCATED(SpinButtonElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SpinButtonElement);
 public:
     enum UpDownState {
@@ -75,6 +75,10 @@ public:
 
     bool willRespondToMouseMoveEvents() const override;
     bool willRespondToMouseClickEventsWithEditability(Editability) const override;
+
+    // PopupOpeningObserver.
+    void ref() const final { HTMLDivElement::ref(); }
+    void deref() const final { HTMLDivElement::deref(); }
 
 private:
     SpinButtonElement(Document&, SpinButtonOwner&);

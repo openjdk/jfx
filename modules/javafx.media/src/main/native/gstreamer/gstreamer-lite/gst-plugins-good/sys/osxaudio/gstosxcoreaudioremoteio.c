@@ -52,11 +52,13 @@ gst_core_audio_pause_processing_impl (GstCoreAudio * core_audio)
       core_audio->element->io_proc, (gulong) core_audio->device_id);
 
   if (core_audio->io_proc_active) {
-    /* CoreAudio isn't threadsafe enough to do this here;
-     * we must deactivate the render callback elsewhere. See:
+    /* CoreAudio isn't threadsafe enough to remove the render callback in the
+     * render notify callback, so we pause by having the callback drop
+     * samples or feed silence. See:
      * http://lists.apple.com/archives/Coreaudio-api/2006/Mar/msg00010.html
+     * https://gitlab.freedesktop.org/gstreamer/gstreamer/-/issues/4155
      */
-    core_audio->io_proc_needs_deactivation = TRUE;
+    g_atomic_int_set (&core_audio->io_proc_dropping, TRUE);
   }
   return TRUE;
 }

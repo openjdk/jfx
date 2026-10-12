@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -246,7 +246,7 @@ public class ContextMenu extends PopupControl {
      */
     public void show(Node anchor, Side side, double dx, double dy) {
         Toolkit.getToolkit().checkFxUserThread();
-        if (anchor == null) return;
+        if (anchor == null || anchor.getScene() == null) return;
         if (getItems().size() == 0) return;
 
         getScene().setNodeOrientation(anchor.getEffectiveNodeOrientation());

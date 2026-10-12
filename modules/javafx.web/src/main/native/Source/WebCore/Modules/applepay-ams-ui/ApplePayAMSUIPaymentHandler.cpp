@@ -29,7 +29,8 @@
 #if ENABLE(APPLE_PAY_AMS_UI) && ENABLE(PAYMENT_REQUEST)
 
 #include "ApplePayAMSUIRequest.h"
-#include "DocumentInlines.h"
+#include "ContextDestructionObserverInlines.h"
+#include "DocumentPage.h"
 #include "JSApplePayAMSUIRequest.h"
 #include "JSDOMConvert.h"
 #include "Page.h"
@@ -50,7 +51,7 @@ static ExceptionOr<ApplePayAMSUIRequest> convertAndValidateApplePayAMSUIRequest(
     if (!applePayAMSUIRequest.engagementRequest.startsWith('{'))
         return Exception { ExceptionCode::TypeError, "Member ApplePayAMSUIRequest.engagementRequest is required and must be a JSON-serializable object"_s };
 
-    return WTFMove(applePayAMSUIRequest);
+    return WTF::move(applePayAMSUIRequest);
 }
 
 ExceptionOr<void> ApplePayAMSUIPaymentHandler::validateData(Document& document, JSC::JSValue data)

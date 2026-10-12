@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "TaskSource.h"
+#include <WebCore/TaskSource.h>
 #include <optional>
 #include <wtf/ApproximateTime.h>
 #include <wtf/CheckedRef.h>
@@ -39,6 +39,7 @@
 #include <wtf/WeakPtr.h>
 
 namespace JSC {
+class JSGlobalObject;
 class QueuedTask;
 class MicrotaskDispatcher;
 }
@@ -231,7 +232,7 @@ public:
     void didAddTimer(EventLoopTimer&);
     void didRemoveTimer(EventLoopTimer&);
 
-    JSC::MicrotaskDispatcher& jsMicrotaskDispatcher() const { return m_jsMicrotaskDispatcher; }
+    Ref<JSC::MicrotaskDispatcher> jsMicrotaskDispatcher(JSC::QueuedTask&);
 
 private:
     enum class State : uint8_t { Running, Suspended, ReadyToStop, Stopped };

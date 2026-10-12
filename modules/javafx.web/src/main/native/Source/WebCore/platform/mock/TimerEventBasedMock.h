@@ -30,7 +30,7 @@
 
 #include "Timer.h"
 #include <wtf/Ref.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
 
@@ -52,15 +52,15 @@ public:
     }
 
 protected:
-    Vector<RefPtr<TimerEvent> > m_timerEvents;
+    Vector<Ref<TimerEvent>> m_timerEvents;
 };
 
-class TimerEvent : public RefCounted<TimerEvent> {
+class TimerEvent : public RefCountedAndCanMakeWeakPtr<TimerEvent> {
 public:
     TimerEvent(TimerEventBasedMock* mock, Ref<MockNotifier>&& notifier)
         : m_mock(mock)
         , m_timer(*this, &TimerEvent::timerFired)
-        , m_notifier(WTFMove(notifier))
+        , m_notifier(WTF::move(notifier))
     {
         m_timer.startOneShot(500_ms);
     }

@@ -34,19 +34,19 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(WebGLDebugShaders);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebGLDebugShaders);
 
 WebGLDebugShaders::WebGLDebugShaders(WebGLRenderingContextBase& context)
     : WebGLExtension(context, WebGLExtensionName::WebGLDebugShaders)
 {
-    context.protectedGraphicsContextGL()->ensureExtensionEnabled("GL_ANGLE_translated_shader_source"_s);
+    context.graphicsContextGL()->enableExtension(GCGLExtension::ANGLE_translated_shader_source);
 }
 
 WebGLDebugShaders::~WebGLDebugShaders() = default;
 
 bool WebGLDebugShaders::supported(GraphicsContextGL& context)
 {
-    return context.supportsExtension("GL_ANGLE_translated_shader_source"_s);
+    return context.supportsExtension(GCGLExtension::ANGLE_translated_shader_source);
 }
 
 String WebGLDebugShaders::getTranslatedShaderSource(WebGLShader& shader)
@@ -56,7 +56,7 @@ String WebGLDebugShaders::getTranslatedShaderSource(WebGLShader& shader)
     Ref context = this->context();
     if (!context->validateWebGLObject("getTranslatedShaderSource"_s, shader))
         return emptyString();
-    return context->protectedGraphicsContextGL()->getTranslatedShaderSourceANGLE(shader.object());
+    return String::fromUTF8(context->graphicsContextGL()->getTranslatedShaderSourceANGLE(shader.object()).span());
 }
 
 } // namespace WebCore

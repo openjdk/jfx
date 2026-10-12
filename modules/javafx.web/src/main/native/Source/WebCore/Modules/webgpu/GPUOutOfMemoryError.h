@@ -36,12 +36,12 @@ class GPUOutOfMemoryError : public RefCounted<GPUOutOfMemoryError> {
 public:
     static Ref<GPUOutOfMemoryError> create(String&& message)
     {
-        return adoptRef(*new GPUOutOfMemoryError(WTFMove(message)));
+        return adoptRef(*new GPUOutOfMemoryError(WTF::move(message)));
     }
 
     static Ref<GPUOutOfMemoryError> create(Ref<WebGPU::OutOfMemoryError>&& backing)
     {
-        return adoptRef(*new GPUOutOfMemoryError(WTFMove(backing)));
+        return adoptRef(*new GPUOutOfMemoryError(WTF::move(backing)));
     }
 
     const String& message() const { return m_message; }
@@ -51,12 +51,12 @@ public:
 
 private:
     GPUOutOfMemoryError(String&& message)
-        : m_message(WTFMove(message))
+        : m_message(WTF::move(message))
     {
     }
 
     GPUOutOfMemoryError(Ref<WebGPU::OutOfMemoryError>&& backing)
-        : m_backing(WTFMove(backing))
+        : m_backing(WTF::move(backing))
     {
     }
 

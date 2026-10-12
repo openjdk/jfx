@@ -104,7 +104,7 @@ public:
     void fire() override;
 
 private:
-    RTCDataChannelHandlerClient* m_client;
+    WeakPtr<RTCDataChannelHandlerClient> m_client;
     RTCDataChannelState m_state;
 };
 

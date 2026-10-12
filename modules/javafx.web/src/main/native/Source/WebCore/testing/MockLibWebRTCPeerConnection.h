@@ -52,43 +52,6 @@ class MockRtpSender;
 void useMockRTCPeerConnectionFactory(LibWebRTCProvider*, const String&);
 void useRealRTCPeerConnectionFactory(LibWebRTCProvider&);
 
-class MockLibWebRTCSessionDescription: public webrtc::SessionDescriptionInterface {
-public:
-    explicit MockLibWebRTCSessionDescription(std::string&& sdp) : m_sdp(WTFMove(sdp)) { }
-
-private:
-    bool ToString(std::string* out) const final { *out = m_sdp; return true; }
-
-    webrtc::SessionDescription* description() final { return nullptr; }
-    const webrtc::SessionDescription* description() const final { return nullptr; }
-    std::string session_id() const final { return ""; }
-    std::string session_version() const final { return ""; }
-    std::string type() const final { return ""; }
-    bool AddCandidate(const webrtc::IceCandidateInterface*) final { return true; }
-    size_t number_of_mediasections() const final { return 0; }
-    const webrtc::IceCandidateCollection* candidates(size_t) const final { return nullptr; }
-
-    std::string m_sdp;
-};
-
-class MockLibWebRTCIceCandidate : public webrtc::IceCandidateInterface {
-public:
-    explicit MockLibWebRTCIceCandidate(const char* sdp, const char* sdpMid)
-        : m_sdp(sdp)
-        , m_sdpMid(sdpMid) { }
-
-private:
-    std::string sdp_mid() const final { return m_sdpMid; }
-    int sdp_mline_index() const final { return 0; }
-    const webrtc::Candidate& candidate() const final { return m_candidate; }
-    bool ToString(std::string* out) const final { *out = m_sdp; return true; }
-
-protected:
-    const char* m_sdp;
-    const char* m_sdpMid;
-    webrtc::Candidate m_candidate;
-};
-
 class MockLibWebRTCAudioTrack : public webrtc::AudioTrackInterface {
 public:
     explicit MockLibWebRTCAudioTrack(const std::string& id, webrtc::AudioSourceInterface* source)
@@ -144,7 +107,7 @@ private:
 class MockLibWebRTCDataChannel : public webrtc::DataChannelInterface {
 public:
     MockLibWebRTCDataChannel(std::string&& label, bool ordered, bool reliable, int id)
-        : m_label(WTFMove(label))
+        : m_label(WTF::move(label))
         , m_ordered(ordered)
         , m_reliable(reliable)
         , m_id(id) { }
@@ -187,7 +150,7 @@ private:
 class MockRtpSender : public webrtc::RtpSenderInterface {
 public:
     explicit MockRtpSender(webrtc::scoped_refptr<webrtc::MediaStreamTrackInterface>&& track)
-        : m_track(WTFMove(track))
+        : m_track(WTF::move(track))
     {
     }
 
@@ -248,8 +211,8 @@ private:
 class MockRtpTransceiver : public webrtc::RtpTransceiverInterface {
 public:
     MockRtpTransceiver(webrtc::scoped_refptr<webrtc::RtpSenderInterface>&& sender, webrtc::scoped_refptr<webrtc::RtpReceiverInterface>&& receiver)
-        : m_sender(WTFMove(sender))
-        , m_receiver(WTFMove(receiver))
+        : m_sender(WTF::move(sender))
+        , m_receiver(WTF::move(receiver))
     {
     }
 
@@ -308,8 +271,9 @@ private:
     webrtc::scoped_refptr<webrtc::StreamCollectionInterface> remote_streams() override { return nullptr; }
     const webrtc::SessionDescriptionInterface* local_description() const override { return nullptr; }
     const webrtc::SessionDescriptionInterface* remote_description() const override { return nullptr; }
-    bool AddIceCandidate(const webrtc::IceCandidateInterface*) override { return true; }
-    void AddIceCandidate(std::unique_ptr<webrtc::IceCandidateInterface>, std::function<void(webrtc::RTCError)> callback) override { callback({ }); }
+    bool AddIceCandidate(const webrtc::IceCandidate*) override { return true; }
+    void AddIceCandidate(std::unique_ptr<webrtc::IceCandidate>, std::function<void(webrtc::RTCError)> callback) override { callback({ }); }
+    bool RemoveIceCandidate(const webrtc::IceCandidate*) override { return true; }
     SignalingState signaling_state() override;
     IceConnectionState ice_connection_state() override { return kIceConnectionNew; }
     IceGatheringState ice_gathering_state() override { return kIceGatheringNew; }
@@ -328,12 +292,10 @@ private:
     std::optional<bool> can_trickle_ice_candidates() final { return { }; }
     void AddAdaptationResource(webrtc::scoped_refptr<webrtc::Resource>) final { }
     webrtc::Thread* signaling_thread() const final { return nullptr; }
-    webrtc::NetworkControllerInterface* GetNetworkController() final { return nullptr; }
 
 protected:
     void SetRemoteDescription(webrtc::SetSessionDescriptionObserver*, webrtc::SessionDescriptionInterface*) final { ASSERT_NOT_REACHED(); }
     void SetRemoteDescription(std::unique_ptr<webrtc::SessionDescriptionInterface>, webrtc::scoped_refptr<webrtc::SetRemoteDescriptionObserverInterface>) override;
-    bool RemoveIceCandidates(const std::vector<webrtc::Candidate>&) override { return true; }
     webrtc::scoped_refptr<webrtc::DtlsTransportInterface> LookupDtlsTransportByMid(const std::string&) override { return { }; }
     webrtc::scoped_refptr<webrtc::SctpTransportInterface> GetSctpTransport() const override { return { }; }
     webrtc::PeerConnectionInterface::PeerConnectionState peer_connection_state() override { return PeerConnectionState::kNew; }

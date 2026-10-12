@@ -28,6 +28,7 @@
 
 #include "InternalWritableStream.h"
 #include "JSDOMGlobalObject.h"
+#include "JSDOMPromiseDeferred.h"
 #include "JSWritableStream.h"
 #include "JSWritableStreamSink.h"
 
@@ -65,7 +66,7 @@ InternalWritableStream& WritableStream::internalWritableStream()
 
 ExceptionOr<Ref<InternalWritableStream>> WritableStream::createInternalWritableStream(JSDOMGlobalObject& globalObject, Ref<WritableStreamSink>&& sink)
 {
-    return InternalWritableStream::createFromUnderlyingSink(globalObject, toJSNewlyCreated(&globalObject, &globalObject, WTFMove(sink)), JSC::jsUndefined());
+    return InternalWritableStream::createFromUnderlyingSink(globalObject, toJSNewlyCreated(&globalObject, &globalObject, WTF::move(sink)), JSC::jsUndefined());
 }
 
 ExceptionOr<Ref<WritableStream>> WritableStream::create(JSC::JSGlobalObject& globalObject, JSC::JSValue underlyingSink, JSC::JSValue strategy)
@@ -79,16 +80,16 @@ ExceptionOr<Ref<WritableStream>> WritableStream::create(JSC::JSGlobalObject& glo
 
 ExceptionOr<Ref<WritableStream>> WritableStream::create(JSDOMGlobalObject& globalObject, Ref<WritableStreamSink>&& sink)
 {
-    return create(globalObject, toJSNewlyCreated(&globalObject, &globalObject, WTFMove(sink)), JSC::jsUndefined());
+    return create(globalObject, toJSNewlyCreated(&globalObject, &globalObject, WTF::move(sink)), JSC::jsUndefined());
 }
 
 Ref<WritableStream> WritableStream::create(Ref<InternalWritableStream>&& internalWritableStream)
 {
-    return adoptRef(*new WritableStream(WTFMove(internalWritableStream)));
+    return adoptRef(*new WritableStream(WTF::move(internalWritableStream)));
 }
 
 WritableStream::WritableStream(Ref<InternalWritableStream>&& internalWritableStream)
-    : m_internalWritableStream(WTFMove(internalWritableStream))
+    : m_internalWritableStream(WTF::move(internalWritableStream))
 {
 }
 
@@ -99,7 +100,26 @@ void WritableStream::closeIfPossible()
 
 void WritableStream::errorIfPossible(Exception&& e)
 {
-    m_internalWritableStream->errorIfPossible(WTFMove(e));
+    m_internalWritableStream->errorIfPossible(WTF::move(e));
+}
+
+void WritableStream::errorIfPossible(JSC::JSGlobalObject& globalObject, JSC::JSValue reason)
+{
+    m_internalWritableStream->errorIfPossible(globalObject, reason);
+}
+
+WritableStream::State WritableStream::state() const
+{
+    auto* globalObject = m_internalWritableStream->globalObject();
+    if (!globalObject)
+        return State::Errored;
+
+    auto state = m_internalWritableStream->state(*globalObject);
+    if (state == "writable"_s)
+        return State::Writable;
+    if (state == "closed"_s)
+        return State::Closed;
+    return State::Errored;
 }
 
 JSC::JSValue JSWritableStream::abort(JSC::JSGlobalObject& globalObject, JSC::CallFrame& callFrame)

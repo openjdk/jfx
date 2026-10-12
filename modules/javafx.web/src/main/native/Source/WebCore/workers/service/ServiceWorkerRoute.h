@@ -25,12 +25,12 @@
 
 #pragma once
 
-#include "ExceptionData.h"
-#include "FetchRequestDestination.h"
-#include "FetchRequestMode.h"
-#include "RouterSourceDict.h"
-#include "RouterSourceEnum.h"
-#include "RunningStatus.h"
+#include <WebCore/ExceptionData.h>
+#include <WebCore/FetchRequestDestination.h>
+#include <WebCore/FetchRequestMode.h>
+#include <WebCore/RouterSourceDict.h>
+#include <WebCore/RouterSourceEnum.h>
+#include <WebCore/RunningStatus.h>
 #include <optional>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
@@ -42,9 +42,11 @@ struct FetchOptions;
 
 struct ServiceWorkerRoutePattern {
     ServiceWorkerRoutePattern isolatedCopy() &&;
+    ServiceWorkerRoutePattern isolatedCopy() const &;
 
     using Component = String;
 
+    bool shouldIgnoreCase { false };
     Component protocol;
     Component username;
     Component password;
@@ -59,6 +61,7 @@ struct ServiceWorkerRouteCondition {
     WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(ServiceWorkerRouteCondition);
 
     ServiceWorkerRouteCondition isolatedCopy() &&;
+    ServiceWorkerRouteCondition isolatedCopy() const &;
     ServiceWorkerRouteCondition copy() const;
 
     std::optional<ServiceWorkerRoutePattern> urlPattern;
@@ -79,10 +82,16 @@ struct ServiceWorkerRoute {
 
     ServiceWorkerRoute copy() const { return { condition.copy(), source }; }
     ServiceWorkerRoute isolatedCopy() &&;
+    ServiceWorkerRoute isolatedCopy() const &;
 };
 
-size_t computeServiceWorkerRouteConditionCount(const ServiceWorkerRoute&);
+std::optional<size_t> countRouterInnerConditions(const ServiceWorkerRouteCondition&, size_t result, size_t depth);
 std::optional<ExceptionData> validateServiceWorkerRoute(ServiceWorkerRoute&);
+
+#if PLATFORM(COCOA)
+bool isRegexpMatching(const String& pattern, StringView value, bool shouldIgnoreCase);
+#endif
+
 bool matchRouterCondition(const ServiceWorkerRouteCondition&, const FetchOptions&, const ResourceRequest&, bool isServiceWorkerRunning);
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,21 +29,16 @@
 
 #if ENABLE(ASSEMBLER) && CPU(ARM64E)
 
-#include "DisallowMacroScratchRegisterUsage.h"
-#include <wtf/MathExtras.h>
-
 // We need to include this before MacroAssemblerARM64.h because MacroAssemblerARM64
 // will be defined in terms of ARM64EAssembler for ARM64E.
-#include "ARM64EAssembler.h"
-#include "JITOperationValidation.h"
-#include "JSCConfig.h"
-#include "JSCPtrTag.h"
-#include "MacroAssemblerARM64.h"
+#include <JavaScriptCore/ARM64EAssembler.h>
+#include <JavaScriptCore/DisallowMacroScratchRegisterUsage.h>
+#include <JavaScriptCore/JITOperationValidation.h>
+#include <JavaScriptCore/JSCConfig.h>
+#include <JavaScriptCore/JSCPtrTag.h>
+#include <JavaScriptCore/MacroAssemblerARM64.h>
+#include <wtf/MathExtras.h>
 #include <wtf/TZoneMalloc.h>
-
-#if OS(DARWIN)
-#include <mach/vm_param.h>
-#endif
 
 namespace JSC {
 
@@ -52,9 +47,6 @@ using Assembler = TARGET_ASSEMBLER;
 class MacroAssemblerARM64E : public MacroAssemblerARM64 {
     WTF_MAKE_TZONE_NON_HEAP_ALLOCATABLE(MacroAssemblerARM64E);
 public:
-    static constexpr unsigned numberOfPointerBits = sizeof(void*) * CHAR_BIT;
-    static constexpr unsigned maxNumberOfAllowedPACBits = numberOfPointerBits - OS_CONSTANT(EFFECTIVE_ADDRESS_WIDTH);
-    static constexpr uintptr_t nonPACBitsMask = (1ull << (numberOfPointerBits - maxNumberOfAllowedPACBits)) - 1;
 
     ALWAYS_INLINE void tagReturnAddress()
     {
@@ -126,48 +118,6 @@ public:
     ALWAYS_INLINE void removePtrTag(RegisterID target)
     {
         m_assembler.xpaci(target);
-    }
-
-    ALWAYS_INLINE void tagArrayPtr(RegisterID length, RegisterID target)
-    {
-        m_assembler.pacdb(target, length);
-    }
-
-    ALWAYS_INLINE void untagArrayPtr(RegisterID length, RegisterID target, bool validateAuth, RegisterID scratch)
-    {
-        validateAuth = validateAuth && !g_jscConfig.canUseFPAC;
-        if (validateAuth) {
-            ASSERT(scratch != InvalidGPRReg);
-            move(target, scratch);
-        }
-
-        m_assembler.autdb(target, length);
-
-        if (validateAuth) {
-            ASSERT(target != ARM64Registers::sp);
-            ASSERT(scratch != ARM64Registers::sp);
-            removeArrayPtrTag(scratch);
-            auto isValidPtr = branch64(Equal, scratch, target);
-            breakpoint(0xc473);
-            isValidPtr.link(this);
-        }
-    }
-
-    ALWAYS_INLINE void untagArrayPtrLength64(Address length, RegisterID target, bool validateAuth)
-    {
-        validateAuth = validateAuth && !g_jscConfig.canUseFPAC;
-        auto lengthGPR = getCachedDataTempRegisterIDAndInvalidate();
-        load64(length, lengthGPR);
-        auto scratch = validateAuth ? getCachedMemoryTempRegisterIDAndInvalidate() : InvalidGPRReg;
-        untagArrayPtr(lengthGPR, target, validateAuth, scratch);
-    }
-
-    ALWAYS_INLINE void removeArrayPtrTag(RegisterID target)
-    {
-        // If we couldn't fit this into a single instruction, we'd be better
-        // off emitting two shifts to mask off the top bits.
-        ASSERT(LogicalImmediate::create64(nonPACBitsMask).isValid());
-        and64(TrustedImmPtr(nonPACBitsMask), target);
     }
 
     static constexpr RegisterID InvalidGPR  = static_cast<RegisterID>(-1);

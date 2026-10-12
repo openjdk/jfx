@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "GraphicsClient.h"
+#include <WebCore/GraphicsClient.h>
 #include <wtf/FunctionDispatcher.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/UniqueRef.h>

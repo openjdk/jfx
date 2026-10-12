@@ -33,6 +33,7 @@
 #include "SVGPathByteStreamSource.h"
 #include "SVGPathParser.h"
 #include "SVGPathSource.h"
+#include "StyleLengthWrapper+Blending.h"
 #include "StylePathFunction.h"
 #include "StylePrimitiveNumericTypes+Blending.h"
 #include "StylePrimitiveNumericTypes+Evaluation.h"
@@ -51,7 +52,7 @@ template<typename ControlPoint> static ControlPointAnchor evaluateControlPointAn
 
 template<typename ControlPoint> static FloatPoint evaluateControlPointOffset(const ControlPoint& value, const FloatSize& boxSize)
 {
-    return evaluate(value.offset, boxSize);
+    return evaluate<FloatPoint>(value.offset, boxSize, Style::ZoomNeeded { });
 }
 
 template<typename ControlPoint> static FloatPoint resolveControlPoint(CommandAffinity affinity, FloatPoint currentPosition, FloatPoint segmentOffset, const ControlPoint& controlPoint, const FloatSize& boxSize)
@@ -117,32 +118,32 @@ private:
     std::optional<MoveToSegment> parseMoveToSegment(FloatPoint) override
     {
         if (!m_nextIndex)
-            return MoveToSegment { evaluate(m_start, m_boxSize) };
+            return MoveToSegment { evaluate<FloatPoint>(m_start, m_boxSize, Style::ZoomNeeded { }) };
 
         auto& moveCommand = currentValue<MoveCommand>();
 
-        return MoveToSegment { evaluate(moveCommand.toBy, m_boxSize) };
+        return MoveToSegment { evaluate<FloatPoint>(moveCommand.toBy, m_boxSize, Style::ZoomNeeded { }) };
     }
 
     std::optional<LineToSegment> parseLineToSegment(FloatPoint) override
     {
         auto& lineCommand = currentValue<LineCommand>();
 
-        return LineToSegment { evaluate(lineCommand.toBy, m_boxSize) };
+        return LineToSegment { evaluate<FloatPoint>(lineCommand.toBy, m_boxSize, Style::ZoomNeeded { }) };
     }
 
     std::optional<LineToHorizontalSegment> parseLineToHorizontalSegment(FloatPoint) override
     {
         auto& lineCommand = currentValue<HLineCommand>();
 
-        return LineToHorizontalSegment { evaluate(lineCommand.toBy, m_boxSize.width()) };
+        return LineToHorizontalSegment { evaluate<float>(lineCommand.toBy, m_boxSize.width(), Style::ZoomNeeded { }) };
     }
 
     std::optional<LineToVerticalSegment> parseLineToVerticalSegment(FloatPoint) override
     {
         auto& lineCommand = currentValue<VLineCommand>();
 
-        return LineToVerticalSegment { evaluate(lineCommand.toBy, m_boxSize.height()) };
+        return LineToVerticalSegment { evaluate<float>(lineCommand.toBy, m_boxSize.height(), Style::ZoomNeeded { }) };
     }
 
     std::optional<CurveToCubicSegment> parseCurveToCubicSegment(FloatPoint currentPosition) override
@@ -151,7 +152,7 @@ private:
 
         return WTF::switchOn(curveCommand.toBy,
             [&](const auto& value) {
-                auto offset = evaluate(value.offset, m_boxSize);
+                auto offset = evaluate<FloatPoint>(value.offset, m_boxSize, Style::ZoomNeeded { });
                 return CurveToCubicSegment {
                     resolveControlPoint(value.affinity, currentPosition, offset, value.controlPoint1, m_boxSize),
                     resolveControlPoint(value.affinity, currentPosition, offset, value.controlPoint2.value(), m_boxSize),
@@ -167,7 +168,7 @@ private:
 
         return WTF::switchOn(curveCommand.toBy,
             [&](const auto& value) {
-                auto offset = evaluate(value.offset, m_boxSize);
+                auto offset = evaluate<FloatPoint>(value.offset, m_boxSize, Style::ZoomNeeded { });
                 return CurveToQuadraticSegment {
                     resolveControlPoint(value.affinity, currentPosition, offset, value.controlPoint1, m_boxSize),
                     offset
@@ -183,7 +184,7 @@ private:
         return WTF::switchOn(smoothCommand.toBy,
             [&](const auto& value) {
                 ASSERT(value.controlPoint);
-                auto offset = evaluate(value.offset, m_boxSize);
+                auto offset = evaluate<FloatPoint>(value.offset, m_boxSize, Style::ZoomNeeded { });
                 return CurveToCubicSmoothSegment {
                     resolveControlPoint(value.affinity, currentPosition, offset, value.controlPoint.value(), m_boxSize),
                     offset
@@ -199,7 +200,7 @@ private:
         return WTF::switchOn(smoothCommand.toBy,
             [&](const auto& value) {
                 return CurveToQuadraticSmoothSegment {
-                    evaluate(value.offset, m_boxSize)
+                    evaluate<FloatPoint>(value.offset, m_boxSize, Style::ZoomNeeded { })
                 };
             }
         );
@@ -209,14 +210,14 @@ private:
     {
         auto& arcCommand = currentValue<ArcCommand>();
 
-        auto radius = evaluate(arcCommand.size, m_boxSize);
+        auto radius = evaluate<FloatSize>(arcCommand.size, m_boxSize, Style::ZoomNeeded { });
         return ArcToSegment {
             .rx = radius.width(),
             .ry = radius.height(),
             .angle = narrowPrecisionToFloat(arcCommand.rotation.value),
             .largeArc = std::holds_alternative<CSS::Keyword::Large>(arcCommand.arcSize),
             .sweep = std::holds_alternative<CSS::Keyword::Cw>(arcCommand.arcSweep),
-            .targetPoint = evaluate(arcCommand.toBy, m_boxSize)
+            .targetPoint = evaluate<FloatPoint>(arcCommand.toBy, m_boxSize, Style::ZoomNeeded { })
         };
     }
 
@@ -659,7 +660,7 @@ std::optional<Shape> makeShapeFromPath(const Path& path)
     return Shape {
         .fillRule = path.fillRule,
         .startingPoint = converter.initialMove().value_or(Position { LengthPercentage<>::Dimension { 0 }, LengthPercentage<>::Dimension { 0 } }),
-        .commands = { WTFMove(shapeCommands) }
+        .commands = { WTF::move(shapeCommands) }
     };
 }
 

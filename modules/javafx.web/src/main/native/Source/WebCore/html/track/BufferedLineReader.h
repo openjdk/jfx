@@ -30,7 +30,7 @@
 
 #pragma once
 
-#include "SegmentedString.h"
+#include <WebCore/SegmentedString.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -50,7 +50,7 @@ public:
     void append(String&& data)
     {
         ASSERT(!m_endOfStream);
-        m_buffer.append(WTFMove(data));
+        m_buffer.append(WTF::move(data));
     }
 
     void appendEndOfStream() { m_endOfStream = true; }

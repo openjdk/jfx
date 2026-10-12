@@ -31,7 +31,11 @@
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "DocumentLoader.h"
+#include "DocumentPage.h"
+#include "DocumentSettingsValues.h"
+#include "DocumentView.h"
 #include "EventNames.h"
+#include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
 #include "HTMLBodyElement.h"
 #include "HTMLEmbedElement.h"
@@ -57,7 +61,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(MediaDocument);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MediaDocument);
 
 using namespace HTMLNames;
 
@@ -170,7 +174,7 @@ void MediaDocument::replaceMediaElementTimerFired()
     htmlBody->setAttributeWithoutSynchronization(marginheightAttr, "0"_s);
 
     if (RefPtr videoElement = descendantVideoElement(*htmlBody)) {
-        auto embedElement = HTMLEmbedElement::create(*this);
+        Ref embedElement = HTMLEmbedElement::create(*this);
 
         embedElement->setAttributeWithoutSynchronization(widthAttr, "100%"_s);
         embedElement->setAttributeWithoutSynchronization(heightAttr, "100%"_s);
@@ -181,7 +185,7 @@ void MediaDocument::replaceMediaElementTimerFired()
         if (RefPtr loader = this->loader())
             embedElement->setAttributeWithoutSynchronization(typeAttr, AtomString { loader->writer().mimeType() });
 
-        videoElement->parentNode()->replaceChild(embedElement, *videoElement);
+        videoElement->protectedParentNode()->replaceChild(embedElement, *videoElement);
     }
 }
 

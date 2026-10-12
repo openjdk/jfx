@@ -39,7 +39,7 @@ using namespace Inspector;
 WTF_MAKE_TZONE_ALLOCATED_IMPL(WorkerNetworkAgent);
 
 WorkerNetworkAgent::WorkerNetworkAgent(WorkerAgentContext& context)
-    : InspectorNetworkAgent(context, { context.globalScope->settingsValues().inspectorMaximumResourcesContentSize, context.globalScope->settingsValues().inspectorSupportsShowingCertificate })
+    : InspectorNetworkAgent(context, { Ref { context.globalScope.get() }->settingsValues().inspectorMaximumResourcesContentSize, Ref { context.globalScope.get() }->settingsValues().inspectorSupportsShowingCertificate })
     , m_globalScope(context.globalScope)
 {
     ASSERT(context.globalScope->isContextThread());
@@ -57,7 +57,7 @@ Inspector::Protocol::Network::FrameId WorkerNetworkAgent::frameIdentifier(Docume
     return { };
 }
 
-Vector<WebSocket*> WorkerNetworkAgent::activeWebSockets()
+Vector<Ref<WebSocket>> WorkerNetworkAgent::activeWebSockets()
 {
     // FIXME: <https://webkit.org/b/168475> Web Inspector: Correctly display worker's WebSockets
     return { };
@@ -65,7 +65,7 @@ Vector<WebSocket*> WorkerNetworkAgent::activeWebSockets()
 
 void WorkerNetworkAgent::setResourceCachingDisabledInternal(bool disabled)
 {
-    if (auto* workerDebuggerProxy = m_globalScope->workerOrWorkletThread()->workerDebuggerProxy())
+    if (auto* workerDebuggerProxy = Ref { m_globalScope.get() }->workerOrWorkletThread()->workerDebuggerProxy())
         workerDebuggerProxy->setResourceCachingDisabledByWebInspector(disabled);
 }
 
@@ -85,7 +85,7 @@ ScriptExecutionContext* WorkerNetworkAgent::scriptExecutionContext(Inspector::Pr
 
 void WorkerNetworkAgent::addConsoleMessage(std::unique_ptr<Inspector::ConsoleMessage>&& message)
 {
-    m_globalScope->addConsoleMessage(WTFMove(message));
+    Ref { m_globalScope.get() }->addConsoleMessage(WTF::move(message));
 }
 
 } // namespace WebCore

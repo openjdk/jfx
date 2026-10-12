@@ -37,10 +37,12 @@ class Document;
 template<typename> class ExceptionOr;
 
 class CSSMatrixComponent : public CSSTransformComponent {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CSSMatrixComponent);
+    WTF_MAKE_TZONE_ALLOCATED(CSSMatrixComponent);
 public:
-    static Ref<CSSTransformComponent> create(Ref<DOMMatrixReadOnly>&&, CSSMatrixComponentOptions&& = { });
-    static ExceptionOr<Ref<CSSTransformComponent>> create(Ref<const CSSFunctionValue>, Document&);
+    static Ref<CSSMatrixComponent> create(Ref<DOMMatrixReadOnly>&&, CSSMatrixComponentOptions&& = { });
+    static ExceptionOr<Ref<CSSMatrixComponent>> create(Ref<const CSSFunctionValue>, Document&);
+
+    ~CSSMatrixComponent();
 
     DOMMatrix& matrix();
     void setMatrix(Ref<DOMMatrix>&&);
@@ -48,7 +50,7 @@ public:
     void serialize(StringBuilder&) const final;
     ExceptionOr<Ref<DOMMatrix>> toMatrix() final;
 
-    CSSTransformType getType() const final { return CSSTransformType::MatrixComponent; }
+    CSSTransformType transformType() const final { return CSSTransformType::MatrixComponent; }
 
     RefPtr<CSSValue> toCSSValue() const final;
 
@@ -60,5 +62,5 @@ private:
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CSSMatrixComponent)
-    static bool isType(const WebCore::CSSTransformComponent& transform) { return transform.getType() == WebCore::CSSTransformType::MatrixComponent; }
+    static bool isType(const WebCore::CSSTransformComponent& transform) { return transform.transformType() == WebCore::CSSTransformType::MatrixComponent; }
 SPECIALIZE_TYPE_TRAITS_END()

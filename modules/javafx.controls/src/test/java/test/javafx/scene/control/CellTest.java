@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,15 +46,19 @@ import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableCellShim;
 import javafx.scene.control.TreeTableRow;
+import javafx.scene.layout.HBox;
 import javafx.stage.Stage;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils;
+import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 
 /**
  */
 public class CellTest {
+
     private static Stream<Class> parameters() {
         return Stream.of(
                 Cell.class,
@@ -70,6 +74,15 @@ public class CellTest {
     }
 
     private Cell<String> cell;
+
+    private StageLoader stageLoader;
+
+    @AfterEach
+    public void afterEach() {
+        if (stageLoader != null) {
+            stageLoader.dispose();
+        }
+    }
 
     // @BeforeEach
     // junit5 does not support parameterized class-level tests yet
@@ -127,6 +140,22 @@ public class CellTest {
         ControlTestUtils.assertPseudoClassExists(cell, "empty");
         ControlTestUtils.assertPseudoClassDoesNotExist(cell, "filled");
         ControlTestUtils.assertPseudoClassDoesNotExist(cell, "selected");
+        ControlTestUtils.assertPseudoClassDoesNotExist(cell, "focused");
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testFocusedPseudoClassIsSetWhenFocused(Class<?> c) {
+        setup(c);
+
+        Button button = new Button();
+        stageLoader = new StageLoader(new HBox(button, cell));
+
+        ControlTestUtils.assertPseudoClassDoesNotExist(cell, "focused");
+        cell.requestFocus();
+        ControlTestUtils.assertPseudoClassExists(cell, "focused");
+
+        button.requestFocus();
         ControlTestUtils.assertPseudoClassDoesNotExist(cell, "focused");
     }
 

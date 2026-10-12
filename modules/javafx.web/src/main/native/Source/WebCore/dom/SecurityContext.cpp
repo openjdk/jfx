@@ -45,7 +45,7 @@ void SecurityContext::setSecurityOriginPolicy(RefPtr<SecurityOriginPolicy>&& sec
     auto currentOrigin = securityOrigin() ? securityOrigin()->data() : SecurityOriginData { };
     bool haveInitializedSecurityOrigin = std::exchange(m_haveInitializedSecurityOrigin, true);
 
-    m_securityOriginPolicy = WTFMove(securityOriginPolicy);
+    m_securityOriginPolicy = WTF::move(securityOriginPolicy);
     m_hasEmptySecurityOriginPolicy = false;
 
     auto origin = securityOrigin() ? securityOrigin()->data() : SecurityOriginData { };
@@ -82,7 +82,7 @@ SecurityOriginPolicy* SecurityContext::securityOriginPolicy() const
 
 void SecurityContext::setContentSecurityPolicy(std::unique_ptr<ContentSecurityPolicy>&& contentSecurityPolicy)
 {
-    m_contentSecurityPolicy = WTFMove(contentSecurityPolicy);
+    m_contentSecurityPolicy = WTF::move(contentSecurityPolicy);
     m_hasEmptyContentSecurityPolicy = false;
 }
 
@@ -110,7 +110,7 @@ void SecurityContext::enforceSandboxFlags(SandboxFlags flags, SandboxFlagsSource
 
 bool SecurityContext::isSupportedSandboxPolicy(StringView policy)
 {
-    static constexpr ASCIILiteral supportedPolicies[] = {
+    static constexpr std::array supportedPolicies {
         "allow-top-navigation-to-custom-protocols"_s, "allow-forms"_s, "allow-same-origin"_s, "allow-scripts"_s,
         "allow-top-navigation"_s, "allow-pointer-lock"_s, "allow-popups"_s, "allow-popups-to-escape-sandbox"_s,
         "allow-top-navigation-by-user-activation"_s, "allow-modals"_s, "allow-storage-access-by-user-activation"_s,
@@ -208,10 +208,11 @@ PolicyContainer SecurityContext::policyContainer() const
 {
     ASSERT(m_contentSecurityPolicy);
     return {
-        m_contentSecurityPolicy->responseHeaders(),
+        CheckedRef { *m_contentSecurityPolicy }->responseHeaders(),
         crossOriginEmbedderPolicy(),
         crossOriginOpenerPolicy(),
-        referrerPolicy()
+        referrerPolicy(),
+        ipAddressSpace()
     };
 }
 
@@ -224,6 +225,7 @@ void SecurityContext::inheritPolicyContainerFrom(const PolicyContainer& policyCo
     setCrossOriginOpenerPolicy(policyContainer.crossOriginOpenerPolicy);
     setCrossOriginEmbedderPolicy(policyContainer.crossOriginEmbedderPolicy);
     setReferrerPolicy(policyContainer.referrerPolicy);
+    setIPAddressSpace(policyContainer.ipAddressSpace);
 }
 
 CheckedPtr<ContentSecurityPolicy> SecurityContext::checkedContentSecurityPolicy()
@@ -238,7 +240,7 @@ const IntegrityPolicy* SecurityContext::integrityPolicy() const
 
 void SecurityContext::setIntegrityPolicy(std::unique_ptr<IntegrityPolicy>&& policy)
 {
-    m_integrityPolicy = WTFMove(policy);
+    m_integrityPolicy = WTF::move(policy);
 }
 
 const IntegrityPolicy* SecurityContext::integrityPolicyReportOnly() const
@@ -248,7 +250,7 @@ const IntegrityPolicy* SecurityContext::integrityPolicyReportOnly() const
 
 void SecurityContext::setIntegrityPolicyReportOnly(std::unique_ptr<IntegrityPolicy>&& policy)
 {
-    m_integrityPolicyReportOnly = WTFMove(policy);
+    m_integrityPolicyReportOnly = WTF::move(policy);
 }
 
 } // namespace WebCore

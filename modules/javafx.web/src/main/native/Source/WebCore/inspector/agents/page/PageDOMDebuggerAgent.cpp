@@ -27,10 +27,10 @@
 #include "PageDOMDebuggerAgent.h"
 
 #include "Element.h"
-#include "EventTargetInlines.h"
 #include "InspectorDOMAgent.h"
 #include "InstrumentingAgents.h"
 #include "LocalFrame.h"
+#include "Node.h"
 
 namespace WebCore {
 
@@ -45,19 +45,19 @@ PageDOMDebuggerAgent::~PageDOMDebuggerAgent() = default;
 
 bool PageDOMDebuggerAgent::enabled() const
 {
-    return m_instrumentingAgents.enabledPageDOMDebuggerAgent() == this && InspectorDOMDebuggerAgent::enabled();
+    return Ref { m_instrumentingAgents.get() }->enabledPageDOMDebuggerAgent() == this && InspectorDOMDebuggerAgent::enabled();
 }
 
 void PageDOMDebuggerAgent::enable()
 {
-    m_instrumentingAgents.setEnabledPageDOMDebuggerAgent(this);
+    Ref { m_instrumentingAgents.get() }->setEnabledPageDOMDebuggerAgent(this);
 
     InspectorDOMDebuggerAgent::enable();
 }
 
 void PageDOMDebuggerAgent::disable()
 {
-    m_instrumentingAgents.setEnabledPageDOMDebuggerAgent(nullptr);
+    Ref { m_instrumentingAgents.get() }->setEnabledPageDOMDebuggerAgent(nullptr);
 
     m_domSubtreeModifiedBreakpoints.clear();
     m_domAttributeModifiedBreakpoints.clear();
@@ -70,7 +70,7 @@ Inspector::Protocol::ErrorStringOr<void> PageDOMDebuggerAgent::setDOMBreakpoint(
 {
     Inspector::Protocol::ErrorString errorString;
 
-    auto* domAgent = m_instrumentingAgents.persistentDOMAgent();
+    auto* domAgent = Ref { m_instrumentingAgents.get() }->persistentDOMAgent();
     if (!domAgent)
         return makeUnexpected("DOM domain must be enabled"_s);
 
@@ -78,7 +78,7 @@ Inspector::Protocol::ErrorStringOr<void> PageDOMDebuggerAgent::setDOMBreakpoint(
     if (!node)
         return makeUnexpected(errorString);
 
-    auto breakpoint = InspectorDebuggerAgent::debuggerBreakpointFromPayload(errorString, WTFMove(options));
+    auto breakpoint = InspectorDebuggerAgent::debuggerBreakpointFromPayload(errorString, WTF::move(options));
     if (!breakpoint)
         return makeUnexpected(errorString);
 
@@ -107,7 +107,7 @@ Inspector::Protocol::ErrorStringOr<void> PageDOMDebuggerAgent::removeDOMBreakpoi
 {
     Inspector::Protocol::ErrorString errorString;
 
-    auto* domAgent = m_instrumentingAgents.persistentDOMAgent();
+    auto* domAgent = Ref { m_instrumentingAgents.get() }->persistentDOMAgent();
     if (!domAgent)
         return makeUnexpected("DOM domain must be enabled"_s);
 
@@ -201,7 +201,7 @@ void PageDOMDebuggerAgent::willInsertDOMNode(Node& parent)
     pauseData->setBoolean("insertion"_s, true);
     // FIXME: <https://webkit.org/b/213499> Web Inspector: allow DOM nodes to be instrumented at any point, regardless of whether the main document has also been instrumented
     // Include the new child node ID so the frontend can show the node that's about to be inserted.
-    m_debuggerAgent->breakProgram(Inspector::DebuggerFrontendDispatcher::Reason::DOM, WTFMove(pauseData), WTFMove(closestBreakpoint));
+    m_debuggerAgent->breakProgram(Inspector::DebuggerFrontendDispatcher::Reason::DOM, WTF::move(pauseData), WTF::move(closestBreakpoint));
 }
 
 void PageDOMDebuggerAgent::willRemoveDOMNode(Node& node)
@@ -252,13 +252,13 @@ void PageDOMDebuggerAgent::willRemoveDOMNode(Node& node)
     ASSERT(closestBreakpointOwner);
 
     auto pauseData = buildPauseDataForDOMBreakpoint(*closestBreakpointType, *closestBreakpointOwner);
-    if (auto* domAgent = m_instrumentingAgents.persistentDOMAgent()) {
+    if (auto* domAgent = Ref { m_instrumentingAgents.get() }->persistentDOMAgent()) {
         if (&node != closestBreakpointOwner) {
             if (auto targetNodeId = domAgent->pushNodeToFrontend(&node))
                 pauseData->setInteger("targetNodeId"_s, targetNodeId);
         }
     }
-    m_debuggerAgent->breakProgram(Inspector::DebuggerFrontendDispatcher::Reason::DOM, WTFMove(pauseData), WTFMove(closestBreakpoint));
+    m_debuggerAgent->breakProgram(Inspector::DebuggerFrontendDispatcher::Reason::DOM, WTF::move(pauseData), WTF::move(closestBreakpoint));
 }
 
 void PageDOMDebuggerAgent::didRemoveDOMNode(Node& node)
@@ -288,7 +288,7 @@ void PageDOMDebuggerAgent::willModifyDOMAttr(Element& element)
         return;
 
     auto pauseData = buildPauseDataForDOMBreakpoint(Inspector::Protocol::DOMDebugger::DOMBreakpointType::AttributeModified, element);
-    m_debuggerAgent->breakProgram(Inspector::DebuggerFrontendDispatcher::Reason::DOM, WTFMove(pauseData), it->value.copyRef());
+    m_debuggerAgent->breakProgram(Inspector::DebuggerFrontendDispatcher::Reason::DOM, WTF::move(pauseData), it->value.copyRef());
 }
 
 void PageDOMDebuggerAgent::willInvalidateStyleAttr(Element& element)
@@ -301,7 +301,7 @@ void PageDOMDebuggerAgent::willInvalidateStyleAttr(Element& element)
         return;
 
     auto pauseData = buildPauseDataForDOMBreakpoint(Inspector::Protocol::DOMDebugger::DOMBreakpointType::AttributeModified, element);
-    m_debuggerAgent->breakProgram(Inspector::DebuggerFrontendDispatcher::Reason::DOM, WTFMove(pauseData), it->value.copyRef());
+    m_debuggerAgent->breakProgram(Inspector::DebuggerFrontendDispatcher::Reason::DOM, WTF::move(pauseData), it->value.copyRef());
 }
 
 Ref<JSON::Object> PageDOMDebuggerAgent::buildPauseDataForDOMBreakpoint(Inspector::Protocol::DOMDebugger::DOMBreakpointType breakpointType, Node& breakpointOwner)
@@ -311,7 +311,7 @@ Ref<JSON::Object> PageDOMDebuggerAgent::buildPauseDataForDOMBreakpoint(Inspector
 
     auto pauseData = JSON::Object::create();
     pauseData->setString("type"_s, Inspector::Protocol::Helpers::getEnumConstantValue(breakpointType));
-    if (auto* domAgent = m_instrumentingAgents.persistentDOMAgent()) {
+    if (auto* domAgent = Ref { m_instrumentingAgents.get() }->persistentDOMAgent()) {
         if (auto breakpointOwnerNodeId = domAgent->pushNodeToFrontend(&breakpointOwner))
             pauseData->setInteger("nodeId"_s, breakpointOwnerNodeId);
     }

@@ -513,9 +513,9 @@ private:
                     highArgs.append(childParts.second);
 
                     if (rep.isStack())
-                        rep = B3::ValueRep::stack(checkedSum<intptr_t>(rep.offsetFromFP(), static_cast<intptr_t>(bytesForWidth(Width32))));
+                        rep = B3::ValueRep::stack(checkedSum<intptr_t>(rep.offsetFromFP(), static_cast<intptr_t>(bytesForWidth(Width32))).value());
                     else if (rep.isStackArgument())
-                        rep = B3::ValueRep::stackArgument(checkedSum<intptr_t>(rep.offsetFromSP(), static_cast<intptr_t>(bytesForWidth(Width32))));
+                        rep = B3::ValueRep::stackArgument(checkedSum<intptr_t>(rep.offsetFromSP(), static_cast<intptr_t>(bytesForWidth(Width32))).value());
 
                     highReps.append(rep);
                 } else
@@ -538,7 +538,7 @@ private:
                 }
                 for (unsigned i = 0; i < int64Count; ++i)
                     newTupleType.append(Int32);
-                returnType = m_proc.addTuple(WTFMove(newTupleType));
+                returnType = m_proc.addTuple(WTF::move(newTupleType));
             } else if (originalReturnType == Int64)
                 returnType = m_proc.addTuple({ Int32, Int32 });
 
@@ -580,9 +580,9 @@ private:
                     || rep.kind() == ValueRep::SomeLateRegister
                     || rep.isAny());
                 if (rep.isStack())
-                    rep = B3::ValueRep::stack(checkedSum<intptr_t>(rep.offsetFromFP(), static_cast<intptr_t>(bytesForWidth(Width32))));
+                    rep = B3::ValueRep::stack(checkedSum<intptr_t>(rep.offsetFromFP(), static_cast<intptr_t>(bytesForWidth(Width32))).value());
                 else if (rep.isStackArgument())
-                    rep = B3::ValueRep::stackArgument(checkedSum<intptr_t>(rep.offsetFromSP(), static_cast<intptr_t>(bytesForWidth(Width32))));
+                    rep = B3::ValueRep::stackArgument(checkedSum<intptr_t>(rep.offsetFromSP(), static_cast<intptr_t>(bytesForWidth(Width32))).value());
                 patchpoint->resultConstraints.append(rep);
                 setMapping(m_value, valueLo(patchpoint, m_index + 1), valueHi(patchpoint, m_index + 1));
                 valueReplaced();
@@ -1005,6 +1005,8 @@ private:
         case Nop:
         case WasmAddress:
         case WasmBoundsCheck:
+        case MemoryCopy:
+        case MemoryFill:
             return;
         case Set: {
             if (m_value->child(0)->type() != Int64)

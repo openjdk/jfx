@@ -35,7 +35,7 @@ template<typename> class ExceptionOr;
 class CSSUnparsedValue;
 
 class CSSOMVariableReferenceValue : public RefCounted<CSSOMVariableReferenceValue> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CSSOMVariableReferenceValue);
+    WTF_MAKE_TZONE_ALLOCATED(CSSOMVariableReferenceValue);
 public:
     static ExceptionOr<Ref<CSSOMVariableReferenceValue>> create(String&&, RefPtr<CSSUnparsedValue>&& fallback = { });
 
@@ -48,8 +48,8 @@ public:
 
 private:
     CSSOMVariableReferenceValue(String&& variable, RefPtr<CSSUnparsedValue>&& fallback)
-        : m_variable(WTFMove(variable))
-        , m_fallback(WTFMove(fallback)) { }
+        : m_variable(WTF::move(variable))
+        , m_fallback(WTF::move(fallback)) { }
 
     String m_variable;
     RefPtr<CSSUnparsedValue> m_fallback;

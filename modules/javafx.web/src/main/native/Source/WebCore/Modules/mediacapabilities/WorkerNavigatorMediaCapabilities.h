@@ -44,9 +44,14 @@ public:
 
     MediaCapabilities& mediaCapabilities() const;
 private:
-    static ASCIILiteral supplementName();
+    static ASCIILiteral supplementName() { return "WorkerNavigatorMediaCapabilities"_s; }
+    bool isWorkerNavigatorMediaCapabilities() const final { return true; }
 
     const Ref<MediaCapabilities> m_mediaCapabilities;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WorkerNavigatorMediaCapabilities)
+    static bool isType(const WebCore::SupplementBase& supplement) { return supplement.isWorkerNavigatorMediaCapabilities(); }
+SPECIALIZE_TYPE_TRAITS_END()

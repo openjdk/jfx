@@ -34,7 +34,7 @@ namespace IPC {
 class Decoder;
 class Encoder;
 
-template<typename T, typename = void> struct ArgumentCoder;
+template<typename> struct ArgumentCoder;
 
 template<>
 struct ArgumentCoder<bool> {
@@ -56,7 +56,8 @@ struct ArgumentCoder<bool> {
 };
 
 template<typename T>
-struct ArgumentCoder<T, typename std::enable_if_t<std::is_arithmetic_v<T>>> {
+    requires (std::is_arithmetic_v<T>)
+struct ArgumentCoder<T> {
     template<typename Encoder>
     static void encode(Encoder& encoder, T value)
     {
@@ -71,7 +72,8 @@ struct ArgumentCoder<T, typename std::enable_if_t<std::is_arithmetic_v<T>>> {
 };
 
 template<typename T>
-struct ArgumentCoder<T, typename std::enable_if_t<std::is_enum_v<T>>> {
+    requires (std::is_enum_v<T>)
+struct ArgumentCoder<T> {
     template<typename Encoder>
     static void encode(Encoder& encoder, T value)
     {

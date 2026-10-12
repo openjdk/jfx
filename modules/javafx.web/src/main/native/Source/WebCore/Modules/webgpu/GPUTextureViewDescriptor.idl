@@ -27,15 +27,17 @@
 
 // https://bugs.webkit.org/show_bug.cgi?id=232548 This shouldn't need to be here.
 typedef [EnforceRange] unsigned long GPUIntegerCoordinate;
+typedef [EnforceRange] unsigned long GPUTextureUsageFlags;
 
 [
     EnabledBySetting=WebGPUEnabled,
     JSGenerateToJSObject,
     JSGenerateToNativeObject,
-]
-dictionary GPUTextureViewDescriptor : GPUObjectDescriptorBase {
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary GPUTextureViewDescriptor : GPUObjectDescriptorBase {
     GPUTextureFormat format;
     GPUTextureViewDimension dimension;
+    GPUTextureUsageFlags usage = 0;
     GPUTextureAspect aspect = "all";
     GPUIntegerCoordinate baseMipLevel = 0;
     GPUIntegerCoordinate mipLevelCount;

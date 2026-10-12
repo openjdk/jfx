@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "FloatRect.h"
-#include "GraphicsStyle.h"
+#include <WebCore/FloatRect.h>
+#include <WebCore/GraphicsStyle.h>
 
 namespace WebCore {
 

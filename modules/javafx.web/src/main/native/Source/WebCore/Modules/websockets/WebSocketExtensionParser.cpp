@@ -54,7 +54,7 @@ static bool isSeparator(char character)
     return WTF::contains(separatorCharacters, character);
 }
 
-static bool isSpaceOrTab(LChar character)
+static bool isSpaceOrTab(Latin1Character character)
 {
     return character == ' ' || character == '\t';
 }

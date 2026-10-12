@@ -120,6 +120,7 @@ public:
 
     constexpr bool isHashTableDeletedValue() const { return m_data == deletedValue; }
     constexpr bool isHashTableEmptyValue() const { return m_data == emptyValue; }
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
     WTF_EXPORT_PRIVATE String toString() const;
 
     constexpr operator bool() const { return !!m_data; }
@@ -150,19 +151,12 @@ inline void add(Hasher& hasher, UUID uuid)
     add(hasher, uuid.m_data);
 }
 
-struct UUIDHash {
-    static unsigned hash(const UUID& key) { return computeHash(key); }
-    static bool equal(const UUID& a, const UUID& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = true;
-};
-
 template<> struct HashTraits<UUID> : GenericHashTraits<UUID> {
     static UUID emptyValue() { return UUID { HashTableEmptyValue }; }
     static bool isEmptyValue(const UUID& value) { return value.isHashTableEmptyValue(); }
     static void constructDeletedValue(UUID& slot) { slot = UUID { HashTableDeletedValue }; }
     static bool isDeletedValue(const UUID& value) { return value.isHashTableDeletedValue(); }
 };
-template<> struct DefaultHash<UUID> : UUIDHash { };
 
 // Creates a UUID that consists of 32 hexadecimal digits and returns its canonical form.
 // The canonical form is displayed in 5 groups separated by hyphens, in the form 8-4-4-4-12 for a total of 36 characters.

@@ -42,6 +42,7 @@
 #endif
 
 #include <optional>
+#include <simd/simd.h>
 #include <wtf/MachSendRight.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/Vector.h>
@@ -50,11 +51,8 @@
 typedef struct CF_BRIDGED_TYPE(id) __CVBuffer* CVPixelBufferRef;
 #endif
 
+typedef struct WGPUDDMeshImpl* WGPUDDMesh;
 typedef struct WGPUExternalTextureImpl* WGPUExternalTexture;
-
-typedef void (^WGPUWorkItem)(void);
-typedef void (^WGPUScheduleWorkBlock)(WGPUWorkItem workItem);
-typedef void (^WGPUDeviceLostBlockCallback)(WGPUDeviceLostReason reason, char const * message);
 
 typedef enum WGPUBufferBindingTypeExtended {
     WGPUBufferBindingType_Float3x2 = WGPUBufferBindingType_Force32 - 1,
@@ -70,40 +68,20 @@ typedef enum WGPUSTypeExtended {
     WGPUSTypeExtended_Force32 = 0x7FFFFFFF
 } WGPUSTypeExtended;
 
-typedef struct WGPUInstanceCocoaDescriptor {
-    WGPUChainedStruct chain;
-    // The API contract is: callers must call WebGPU's functions in a non-racey way with respect
-    // to each other. This scheduleWorkBlock will execute on a background thread, and it must
-    // schedule the block it's passed to be run in a non-racey way with regards to all the other
-    // WebGPU calls. If calls to scheduleWorkBlock are ordered (e.g. multiple calls on the same
-    // thread), then the work that is scheduled must also be ordered in the same order.
-    // It's fine to pass NULL here, but if you do, you must periodically call
-    // wgpuInstanceProcessEvents() to synchronously run the queued callbacks.
-    __unsafe_unretained WGPUScheduleWorkBlock scheduleWorkBlock;
-    const void* webProcessResourceOwner;
-} WGPUInstanceCocoaDescriptor;
+typedef struct WGPUDDCreateMeshDescriptor {
+    unsigned width;
+    unsigned height;
+    Vector<RetainPtr<IOSurfaceRef>> ioSurfaces;
+    id diffuseTexture;
+    id specularTexture;
+} WGPUDDCreateMeshDescriptor;
 
 const int WGPUTextureSampleType_ExternalTexture = WGPUTextureSampleType_Force32 - 1;
 
-typedef void (^WGPURenderBuffersWereRecreatedBlockCallback)(CFArrayRef ioSurfaces);
-typedef void (^WGPUOnSubmittedWorkScheduledCallback)(WGPUWorkItem);
-typedef void (^WGPUCompositorIntegrationRegisterBlockCallback)(WGPURenderBuffersWereRecreatedBlockCallback renderBuffersWereRecreated, WGPUOnSubmittedWorkScheduledCallback onSubmittedWorkScheduledCallback);
-typedef struct WGPUSurfaceDescriptorCocoaCustomSurface {
-    WGPUChainedStruct chain;
-    WGPUCompositorIntegrationRegisterBlockCallback compositorIntegrationRegister;
-} WGPUSurfaceDescriptorCocoaCustomSurface;
-
 typedef struct WGPUExternalTextureBindingLayout {
-    WGPUChainedStruct const * nextInChain;
 } WGPUExternalTextureBindingLayout;
 
-typedef struct WGPUBindGroupExternalTextureEntry {
-    WGPUChainedStruct chain;
-    WGPUExternalTexture externalTexture;
-} WGPUBindGroupExternalTextureEntry;
-
 typedef struct WGPUExternalTextureDescriptor {
-    WGPUChainedStruct const * nextInChain;
     char const * label; // nullable
     CVPixelBufferRef pixelBuffer;
     WGPUColorSpace colorSpace;
@@ -122,12 +100,24 @@ typedef WGPUTexture (*WGPUProcSwapChainGetCurrentTexture)(WGPUSwapChain swapChai
 
 #if !defined(WGPU_SKIP_DECLARATIONS)
 
+WGPU_EXPORT WGPUDDMesh wgpuDDMeshCreate(WGPUInstance instance, const WGPUDDCreateMeshDescriptor* descriptor);
+WGPU_EXPORT void wgpuDDMeshUpdate(WGPUDDMesh mesh, id);
+WGPU_EXPORT void wgpuDDMeshTextureUpdate(WGPUDDMesh mesh, id);
+WGPU_EXPORT void wgpuDDMeshMaterialUpdate(WGPUDDMesh mesh, id);
+WGPU_EXPORT void wgpuDDMeshRender(WGPUDDMesh mesh);
+WGPU_EXPORT void wgpuDDMeshSetTransform(WGPUDDMesh mesh, const simd_float4x4& transform);
+WGPU_EXPORT void wgpuDDMeshSetCameraDistance(WGPUDDMesh mesh, float distance);
+WGPU_EXPORT void wgpuDDMeshPlay(WGPUDDMesh mesh, bool autoplay);
+
 WGPU_EXPORT void wgpuRenderBundleSetLabel(WGPURenderBundle renderBundle, char const * label);
 
 // FIXME: https://github.com/webgpu-native/webgpu-headers/issues/89 is about moving this from WebGPUExt.h to WebGPU.h
 WGPU_EXPORT WGPUTexture wgpuSwapChainGetCurrentTexture(WGPUSwapChain swapChain, uint32_t frameIndex);
 
 WGPU_EXPORT WGPUExternalTexture wgpuDeviceImportExternalTexture(WGPUDevice device, const WGPUExternalTextureDescriptor* descriptor);
+
+WGPU_EXPORT void wgpuDDMeshReference(WGPUDDMesh mesh);
+WGPU_EXPORT void wgpuDDMeshRelease(WGPUDDMesh mesh);
 
 WGPU_EXPORT void wgpuDeviceSetDeviceLostCallback(WGPUDevice device, WGPUDeviceLostCallback callback, void* userdata);
 WGPU_EXPORT void wgpuDeviceSetDeviceLostCallbackWithBlock(WGPUDevice device, WGPUDeviceLostBlockCallback callback);
@@ -151,7 +141,7 @@ WGPU_EXPORT WGPUTexture wgpuXRSubImageGetDepthStencilTexture(WGPUXRSubImage subI
 
 WGPU_EXPORT WGPUBool wgpuAdapterXRCompatible(WGPUAdapter adapter) WGPU_FUNCTION_ATTRIBUTE;
 
-WGPU_EXPORT void wgpuXRProjectionLayerStartFrame(WGPUXRProjectionLayer layer, size_t frameIndex, WTF::MachSendRight&& colorBuffer, WTF::MachSendRight&& depthBuffer, WTF::MachSendRight&& completionSyncEvent, size_t reusableTextureIndex) WGPU_FUNCTION_ATTRIBUTE;
+WGPU_EXPORT void wgpuXRProjectionLayerStartFrame(WGPUXRProjectionLayer layer, size_t frameIndex, WTF::MachSendRight&& colorBuffer, WTF::MachSendRight&& depthBuffer, WTF::MachSendRight&& completionSyncEvent, size_t reusableTextureIndex, unsigned screenWidth, unsigned screenHeight, Vector<float>&& horizontalSamplesLeft, Vector<float>&& horizontalSamplesRight, Vector<float>&& verticalSamples) WGPU_FUNCTION_ATTRIBUTE;
 
 WGPU_EXPORT RetainPtr<CGImageRef> wgpuSwapChainGetTextureAsNativeImage(WGPUSwapChain swapChain, uint32_t bufferIndex, bool& isIOSurfaceSupportedFormat);
 WGPU_EXPORT WGPUBool wgpuExternalTextureIsValid(WGPUExternalTexture externalTexture) WGPU_FUNCTION_ATTRIBUTE;
@@ -162,17 +152,6 @@ WGPU_EXPORT void wgpuDeviceClearUncapturedErrorCallback(WGPUDevice device) WGPU_
 #endif  // !defined(WGPU_SKIP_DECLARATIONS)
 
 WGPU_EXPORT String wgpuAdapterFeatureName(WGPUFeatureName feature) WGPU_FUNCTION_ATTRIBUTE;
-
-// Current Swift-C++ encapsulation rules prevent Swift from accessing non-public data members,
-// even in extensions. When building WebGPU, use these macros to allow our Swift module to break
-// encapsulation.
-#if defined(__swift__) && __swift__ && \
-    defined(__WEBGPU__) && __WEBGPU__ && \
-    defined(ENABLE_WEBGPU_SWIFT) && ENABLE_WEBGPU_SWIFT
-#define PUBLIC_IN_WEBGPU_SWIFT  : public
-#else
-#define PUBLIC_IN_WEBGPU_SWIFT
-#endif
 
 #endif
 

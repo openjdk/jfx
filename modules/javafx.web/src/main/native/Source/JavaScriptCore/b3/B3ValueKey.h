@@ -64,6 +64,8 @@ public:
 
     ValueKey(Kind, Type, Value* a, Value* b, Value* c);
 
+    ValueKey(Kind, Type, Value*, int32_t value);
+
     ValueKey(Kind kind, Type type, int64_t value)
         : m_kind(kind)
         , m_type(type)
@@ -163,6 +165,8 @@ public:
         return *this == ValueKey(WTF::HashTableDeletedValue);
     }
 
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
+
 private:
     SIMDInfo m_simdInfo { };
     Kind m_kind { };
@@ -192,18 +196,10 @@ private:
     } u;
 };
 
-struct ValueKeyHash {
-    static unsigned hash(const ValueKey& key) { return key.hash(); }
-    static bool equal(const ValueKey& a, const ValueKey& b) { return a == b; }
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
-};
 
 } } // namespace JSC::B3
 
 namespace WTF {
-
-template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::B3::ValueKey> : JSC::B3::ValueKeyHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::B3::ValueKey> : public SimpleClassHashTraits<JSC::B3::ValueKey> {

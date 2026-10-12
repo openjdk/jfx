@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1436,14 +1436,16 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
        }
    }
 
-   ColorGlyphStrike[] sbixStrikes = null;
+   private volatile ColorGlyphStrike[] sbixStrikes;
 
    private boolean isSbixGlyph(int glyphID) {
        if (sbixStrikes == null) {
            synchronized (this) {
-               buildSbixStrikeTables();
                if (sbixStrikes == null) {
-                   sbixStrikes = new ColorGlyphStrike[0];
+                   sbixStrikes = buildSbixStrikeTables();
+                   if (sbixStrikes == null) {
+                       sbixStrikes = new ColorGlyphStrike[0];
+                   }
                }
            }
        }
@@ -1455,31 +1457,30 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
        return false;
    }
 
-   private void buildSbixStrikeTables() {
-
+   private ColorGlyphStrike[] buildSbixStrikeTables() {
        Buffer sbixTable = readTable(sbixTag);
-
        if (sbixTable == null) {
-           return;
+           return null;
        }
+
        int sz = sbixTable.capacity();
        sbixTable.skip(4); // past version and flags
        int numStrikes = sbixTable.getInt() & UINT_MASK;
        if (numStrikes <= 0 || numStrikes >= sz) {
-           return;
+           return null;
        }
        int[] strikeOffsets = new int[numStrikes];
        for (int i=0; i<numStrikes; i++) {
            strikeOffsets[i] = sbixTable.getInt() & UINT_MASK;
            if (strikeOffsets[i] >= sz) {
-               return;
+               return null;
            }
        }
        int numGlyphs = getNumGlyphs();
        ColorGlyphStrike[] strikes = new ColorGlyphStrike[numStrikes];
        for (int i=0; i<numStrikes; i++) {
            if (strikeOffsets[i] + 4 + (4*(numGlyphs+1)) > sz) {
-                return;
+                return null;
            }
            sbixTable.position(strikeOffsets[i]);
 
@@ -1491,7 +1492,6 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
            }
            strikes[i] = new ColorGlyphStrike(ppem, ppi, glyphDataOffsets);
        }
-       sbixStrikes = strikes;
+       return strikes;
    }
-
 }

@@ -29,7 +29,6 @@
 
 #include "BoundaryPointInlines.h"
 #include "Document.h"
-#include "DocumentInlines.h"
 #include "Editing.h"
 #include "HTMLBRElement.h"
 #include "HTMLElement.h"
@@ -43,7 +42,8 @@
 #include "PositionInlines.h"
 #include "Range.h"
 #include "RenderBlockFlow.h"
-#include "RenderStyleInlines.h"
+#include "RenderObjectStyle.h"
+#include "RenderStyle+GettersInlines.h"
 #include "RenderedPosition.h"
 #include "Text.h"
 #include "TextBoundaries.h"
@@ -56,29 +56,29 @@
 
 namespace WebCore {
 
-static Node* previousLeafWithSameEditability(Node* node, EditableType editableType)
+static RefPtr<Node> previousLeafWithSameEditability(Node* node, EditableType editableType)
 {
     bool editable = hasEditableStyle(*node, editableType);
-    node = previousLeafNode(node);
-    while (node) {
-        if (editable == hasEditableStyle(*node, editableType))
-            return node;
-        node = previousLeafNode(node);
+    RefPtr previousNode = previousLeafNode(node);
+    while (previousNode) {
+        if (editable == hasEditableStyle(*previousNode, editableType))
+            return previousNode;
+        previousNode = previousLeafNode(previousNode.get());
     }
     return nullptr;
 }
 
-static Node* nextLeafWithSameEditability(Node* node, EditableType editableType)
+static RefPtr<Node> nextLeafWithSameEditability(Node* node, EditableType editableType)
 {
     if (!node)
         return nullptr;
 
     bool editable = hasEditableStyle(*node, editableType);
-    node = nextLeafNode(node);
-    while (node) {
-        if (editable == hasEditableStyle(*node, editableType))
-            return node;
-        node = nextLeafNode(node);
+    RefPtr nextNode = nextLeafNode(node);
+    while (nextNode) {
+        if (editable == hasEditableStyle(*nextNode, editableType))
+            return nextNode;
+        nextNode = nextLeafNode(nextNode.get());
     }
     return nullptr;
 }
@@ -573,11 +573,11 @@ static VisiblePosition previousBoundary(const VisiblePosition& position, Boundar
     if (!next)
         return it.atEnd() ? makeDeprecatedLegacyPosition(searchRange->start) : position;
 
-    auto& node = (it.atEnd() ? *searchRange : it.range()).start.container.get();
-    auto* textNode = dynamicDowncast<Text>(node);
+    Ref node = (it.atEnd() ? *searchRange : it.range()).start.container;
+    RefPtr textNode = dynamicDowncast<Text>(node);
     if (textNode && !suffixLength && next <= textNode->length()) {
         // The next variable contains a usable index into a text node.
-        return makeDeprecatedLegacyPosition(&node, next);
+        return makeDeprecatedLegacyPosition(node.ptr(), next);
     }
 
     // Use the character iterator to translate the next value into a DOM position.
@@ -1005,7 +1005,9 @@ VisiblePosition previousLinePosition(const VisiblePosition& visiblePosition, Lay
             return positionInParentBeforeNode(node.get());
         // FIXME: The HitTestSource state should be propagated down from calls into JavaScript bindings.
         // For the time being, just err on the side of passing in `Bindings`.
-        return const_cast<RenderObject&>(renderer.get()).positionForPoint(pointInLine, HitTestSource::Script, nullptr);
+        auto* renderBox = dynamicDowncast<RenderBox>(renderer.get());
+        auto localOffset = renderBox ? renderBox->locationOffset() : LayoutSize { };
+        return const_cast<RenderObject&>(renderer.get()).visiblePositionForPoint(pointInLine - localOffset, HitTestSource::Script);
     }
 
     // Could not find a previous line. This means we must already be on the first line.
@@ -1041,7 +1043,7 @@ VisiblePosition nextLinePosition(const VisiblePosition& visiblePosition, LayoutU
     if (!lineBox) {
         // FIXME: We need do the same in previousLinePosition.
         if (RefPtr child = node->traverseToChildAt(p.deprecatedEditingOffset()))
-            node = WTFMove(child);
+            node = WTF::move(child);
         else
             node = node->lastDescendant();
         Position position = nextLineCandidatePosition(node.get(), visiblePosition, editableType);
@@ -1065,7 +1067,9 @@ VisiblePosition nextLinePosition(const VisiblePosition& visiblePosition, LayoutU
             return positionInParentBeforeNode(node.get());
         // FIXME: The HitTestSource state should be propagated down from calls into JavaScript bindings.
         // For the time being, just err on the side of passing in `Bindings`.
-        return const_cast<RenderObject&>(renderer.get()).positionForPoint(pointInLine, HitTestSource::Script, nullptr);
+        auto* renderBox = dynamicDowncast<RenderBox>(renderer.get());
+        auto localOffset = renderBox ? renderBox->locationOffset() : LayoutSize { };
+        return const_cast<RenderObject&>(renderer.get()).visiblePositionForPoint(pointInLine - localOffset, HitTestSource::Script);
     }
 
     // Could not find a next line. This means we must already be on the last line.
@@ -1261,14 +1265,14 @@ VisiblePosition startOfParagraph(const VisiblePosition& c, EditingBoundaryCrossi
     RefPtr node = findStartOfParagraph(startNode.get(), highestRoot.get(), startBlock.get(), offset, type, boundaryCrossingRule);
 
     if (RefPtr textNode = dynamicDowncast<Text>(node))
-        return Position(WTFMove(textNode), offset);
+        return Position(WTF::move(textNode), offset);
 
     if (type == Position::PositionIsOffsetInAnchor) {
         ASSERT(type == Position::PositionIsOffsetInAnchor || !offset);
-        return Position(WTFMove(node), offset, type);
+        return Position(WTF::move(node), offset, type);
     }
 
-    return Position(WTFMove(node), type);
+    return Position(WTF::move(node), type);
 }
 
 VisiblePosition endOfParagraph(const VisiblePosition& c, EditingBoundaryCrossingRule boundaryCrossingRule)
@@ -1291,12 +1295,12 @@ VisiblePosition endOfParagraph(const VisiblePosition& c, EditingBoundaryCrossing
     RefPtr node = findEndOfParagraph(startNode.get(), highestRoot.get(), stayInsideBlock.get(), offset, type, boundaryCrossingRule);
 
     if (RefPtr textNode = dynamicDowncast<Text>(node))
-        return Position(WTFMove(textNode), offset);
+        return Position(WTF::move(textNode), offset);
 
     if (type == Position::PositionIsOffsetInAnchor)
-        return Position(WTFMove(node), offset, type);
+        return Position(WTF::move(node), offset, type);
 
-    return Position(WTFMove(node), type);
+    return Position(WTF::move(node), type);
 }
 
 // FIXME: isStartOfParagraph(startOfNextParagraph(pos)) is not always true
@@ -1699,7 +1703,7 @@ static VisiblePosition nextSentenceBoundaryInDirection(const VisiblePosition& vp
             if (newResult == result)
                 break;
 
-            result = WTFMove(newResult);
+            result = WTF::move(newResult);
     }
     } while (areVisiblePositionsInSameTreeScope(result, vp) && (useDownstream ? (result < vp) : (result > vp)));
 

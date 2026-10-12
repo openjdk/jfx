@@ -23,13 +23,14 @@
 
 #pragma once
 
-#include "Color.h"
-#include "FontCascade.h"
-#include "RenderElement.h"
-#include "RenderTextLineBoxes.h"
-#include "Text.h"
+#include <WebCore/Color.h>
+#include <WebCore/FontCascade.h>
+#include <WebCore/RenderElement.h>
+#include <WebCore/RenderTextLineBoxes.h>
+#include <WebCore/Text.h>
 #include <wtf/Forward.h>
 #include <wtf/Markable.h>
+#include <wtf/Platform.h>
 #include <wtf/text/TextBreakIterator.h>
 
 namespace WebCore {
@@ -48,7 +49,7 @@ class LineLayout;
 }
 
 class RenderText : public RenderObject {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderText);
+    WTF_MAKE_TZONE_ALLOCATED(RenderText);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderText);
 public:
     RenderText(Type, Text&, const String&);
@@ -165,7 +166,7 @@ public:
     bool canUseSimpleFontCodePath() const { return fontCodePath() == FontCascade::CodePath::Simple; }
     bool shouldUseSimpleGlyphOverflowCodePath() const { return fontCodePath() == FontCascade::CodePath::SimpleWithGlyphOverflow; }
 
-    virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle);
+    virtual void styleDidChange(Style::Difference, const RenderStyle* oldStyle);
 
 #if ENABLE(TEXT_AUTOSIZING)
     float candidateComputedTextSize() const { return m_candidateComputedTextSize; }
@@ -183,8 +184,6 @@ public:
 
     template <typename MeasureTextCallback>
     static float measureTextConsideringPossibleTrailingSpace(bool currentCharacterIsSpace, unsigned startIndex, unsigned wordLength, WordTrailingSpace&, SingleThreadWeakHashSet<const Font>& fallbackFonts, MeasureTextCallback&&);
-
-    static std::optional<bool> emphasisMarkExistsAndIsAbove(const RenderText&, const RenderStyle&);
 
     void resetMinMaxWidth();
 
@@ -211,7 +210,7 @@ private:
 
     bool canHaveChildren() const final { return false; }
 
-    VisiblePosition positionForPoint(const LayoutPoint&, HitTestSource, const RenderFragmentContainer*) override;
+    PositionWithAffinity positionForPoint(const LayoutPoint&, HitTestSource, const RenderFragmentContainer*) override;
 
     void setSelectionState(HighlightState) final;
     LayoutRect selectionRectForRepaint(const RenderLayerModelObject* repaintContainer, bool clipToVisibleContent = true) final;

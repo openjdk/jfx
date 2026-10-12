@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "FetchRequestDestination.h"
-#include "FetchRequestMode.h"
-#include "RunningStatus.h"
-#include "URLPattern.h"
+#include <WebCore/FetchRequestDestination.h>
+#include <WebCore/FetchRequestMode.h>
+#include <WebCore/RunningStatus.h>
+#include <WebCore/URLPattern.h>
 #include <wtf/FastMalloc.h>
 #include <wtf/Vector.h>
 
@@ -41,7 +41,7 @@ public:
     RouterNotCondition(RouterCondition&&);
 
     RouterCondition& value() & { return m_value.get(); }
-    RouterCondition&& value() && { return WTFMove(m_value.get()); }
+    RouterCondition&& value() && { return WTF::move(m_value.get()); }
 
 private:
     UniqueRef<RouterCondition> m_value;
@@ -62,7 +62,7 @@ struct RouterCondition {
 };
 
 inline RouterNotCondition::RouterNotCondition(RouterCondition&& value)
-    : m_value(makeUniqueRef<RouterCondition>(WTFMove(value)))
+    : m_value(makeUniqueRef<RouterCondition>(WTF::move(value)))
 {
 }
 

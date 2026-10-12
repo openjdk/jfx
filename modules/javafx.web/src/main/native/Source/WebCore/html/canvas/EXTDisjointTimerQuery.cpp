@@ -41,26 +41,26 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(EXTDisjointTimerQuery);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(EXTDisjointTimerQuery);
 
 EXTDisjointTimerQuery::EXTDisjointTimerQuery(WebGLRenderingContext& context)
     : WebGLExtension(context, WebGLExtensionName::EXTDisjointTimerQuery)
 {
-    context.protectedGraphicsContextGL()->ensureExtensionEnabled("GL_EXT_disjoint_timer_query"_s);
+    context.graphicsContextGL()->enableExtension(GCGLExtension::EXT_disjoint_timer_query);
 }
 
 EXTDisjointTimerQuery::~EXTDisjointTimerQuery() = default;
 
 bool EXTDisjointTimerQuery::supported(GraphicsContextGL& context)
 {
-    return context.supportsExtension("GL_EXT_disjoint_timer_query"_s);
+    return context.supportsExtension(GCGLExtension::EXT_disjoint_timer_query);
 }
 
 RefPtr<WebGLTimerQueryEXT> EXTDisjointTimerQuery::createQueryEXT()
 {
     if (isContextLost())
         return nullptr;
-    return WebGLTimerQueryEXT::create(protectedContext().get());
+    return WebGLTimerQueryEXT::create(context().get());
 }
 
 void EXTDisjointTimerQuery::deleteQueryEXT(WebGLTimerQueryEXT* query)
@@ -85,10 +85,10 @@ void EXTDisjointTimerQuery::deleteQueryEXT(WebGLTimerQueryEXT* query)
     if (query == context->m_activeQuery) {
         context->m_activeQuery = nullptr;
         ASSERT(query->target() == GraphicsContextGL::TIME_ELAPSED_EXT);
-        context->protectedGraphicsContextGL()->endQueryEXT(GraphicsContextGL::TIME_ELAPSED_EXT);
+        context->graphicsContextGL()->endQueryEXT(GraphicsContextGL::TIME_ELAPSED_EXT);
     }
 
-    query->deleteObject(locker, context->protectedGraphicsContextGL().get());
+    query->deleteObject(locker, context->graphicsContextGL().get());
 }
 
 GCGLboolean EXTDisjointTimerQuery::isQueryEXT(WebGLTimerQueryEXT* query)
@@ -98,7 +98,7 @@ GCGLboolean EXTDisjointTimerQuery::isQueryEXT(WebGLTimerQueryEXT* query)
     Ref context = this->context();
     if (!context->validateIsWebGLObject(query))
         return false;
-    return context->protectedGraphicsContextGL()->isQueryEXT(query->object());
+    return context->graphicsContextGL()->isQueryEXT(query->object());
 }
 
 void EXTDisjointTimerQuery::beginQueryEXT(GCGLenum target, WebGLTimerQueryEXT& query)
@@ -133,7 +133,7 @@ void EXTDisjointTimerQuery::beginQueryEXT(GCGLenum target, WebGLTimerQueryEXT& q
 
     context->m_activeQuery = &query;
 
-    context->protectedGraphicsContextGL()->beginQueryEXT(target, query.object());
+    context->graphicsContextGL()->beginQueryEXT(target, query.object());
 }
 
 void EXTDisjointTimerQuery::endQueryEXT(GCGLenum target)
@@ -156,10 +156,10 @@ void EXTDisjointTimerQuery::endQueryEXT(GCGLenum target)
         return;
     }
 
-    context->protectedGraphicsContextGL()->endQueryEXT(target);
+    context->graphicsContextGL()->endQueryEXT(target);
 
     // A query's result must not be made available until control has returned to the user agent's main loop.
-    context->scriptExecutionContext()->eventLoop().queueMicrotask([query = WTFMove(context->m_activeQuery)] {
+    context->protectedScriptExecutionContext()->checkedEventLoop()->queueMicrotask([query = context->m_activeQuery.releaseNonNull()] {
         query->makeResultAvailable();
     });
 }
@@ -187,11 +187,11 @@ void EXTDisjointTimerQuery::queryCounterEXT(WebGLTimerQueryEXT& query, GCGLenum 
 
     query.setTarget(target);
 
-    context->protectedGraphicsContextGL()->queryCounterEXT(query.object(), target);
+    context->graphicsContextGL()->queryCounterEXT(query.object(), target);
 
     // A query's result must not be made available until control has returned to the user agent's main loop.
-    context->scriptExecutionContext()->eventLoop().queueMicrotask([&] {
-        query.makeResultAvailable();
+    context->protectedScriptExecutionContext()->checkedEventLoop()->queueMicrotask([query = Ref { query }] {
+        query->makeResultAvailable();
     });
 }
 
@@ -212,7 +212,7 @@ WebGLAny EXTDisjointTimerQuery::getQueryEXT(GCGLenum target, GCGLenum pname)
             return context->m_activeQuery;
         return nullptr;
     case GraphicsContextGL::QUERY_COUNTER_BITS_EXT:
-        return context->protectedGraphicsContextGL()->getQueryiEXT(target, pname);
+        return context->graphicsContextGL()->getQueryiEXT(target, pname);
     }
     context->synthesizeGLError(GraphicsContextGL::INVALID_ENUM, "getQueryEXT"_s, "invalid parameter name"_s);
     return nullptr;
@@ -241,11 +241,11 @@ WebGLAny EXTDisjointTimerQuery::getQueryObjectEXT(WebGLTimerQueryEXT& query, GCG
     case GraphicsContextGL::QUERY_RESULT_EXT:
         if (!query.isResultAvailable())
             return 0;
-        return static_cast<unsigned long long>(context->protectedGraphicsContextGL()->getQueryObjectui64EXT(query.object(), pname));
+        return static_cast<unsigned long long>(context->graphicsContextGL()->getQueryObjectui64EXT(query.object(), pname));
     case GraphicsContextGL::QUERY_RESULT_AVAILABLE_EXT:
         if (!query.isResultAvailable())
             return false;
-        return static_cast<bool>(context->protectedGraphicsContextGL()->getQueryObjectiEXT(query.object(), pname));
+        return static_cast<bool>(context->graphicsContextGL()->getQueryObjectiEXT(query.object(), pname));
     }
     context->synthesizeGLError(GraphicsContextGL::INVALID_ENUM, "getQueryObjectEXT"_s, "invalid parameter name"_s);
     return nullptr;

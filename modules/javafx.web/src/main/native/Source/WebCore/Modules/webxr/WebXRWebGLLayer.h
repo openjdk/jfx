@@ -33,6 +33,8 @@
 #include "GraphicsTypesGL.h"
 #include "PlatformXR.h"
 #include "WebXRLayer.h"
+#include <JavaScriptCore/ConsoleTypes.h>
+#include <wtf/CheckedRef.h>
 #include <wtf/Ref.h>
 #include <wtf/RefPtr.h>
 #include <wtf/TZoneMalloc.h>
@@ -52,16 +54,16 @@ class WebXRViewport;
 struct XRWebGLLayerInit;
 template<typename> class ExceptionOr;
 
-class WebXRWebGLLayer : public WebXRLayer, private CanvasObserver {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WebXRWebGLLayer);
+class WebXRWebGLLayer : public WebXRLayer, private CanvasObserver, public CanMakeCheckedPtr<WebXRWebGLLayer> {
+    WTF_MAKE_TZONE_ALLOCATED(WebXRWebGLLayer);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(WebXRWebGLLayer);
 public:
-
     using WebXRRenderingContext = Variant<
         RefPtr<WebGLRenderingContext>,
         RefPtr<WebGL2RenderingContext>
     >;
 
-    static ExceptionOr<Ref<WebXRWebGLLayer>> create(Ref<WebXRSession>&&, WebXRRenderingContext&&, const XRWebGLLayerInit&);
+    static ExceptionOr<Ref<WebXRWebGLLayer>> create(WebXRSession&, WebXRRenderingContext&&, const XRWebGLLayerInit&);
     ~WebXRWebGLLayer();
 
     bool antialias() const;
@@ -71,11 +73,14 @@ public:
     unsigned framebufferWidth() const;
     unsigned framebufferHeight() const;
 
+    // CanvasObserver.
+    OVERRIDE_ABSTRACT_CAN_MAKE_CHECKEDPTR(CanMakeCheckedPtr);
+
     ExceptionOr<RefPtr<WebXRViewport>> getViewport(WebXRView&);
 
     static double getNativeFramebufferScaleFactor(const WebXRSession&);
 
-    const WebXRSession* session() { return m_session.get(); }
+    const WebXRSession* session();
 
     bool isCompositionEnabled() const { return m_isCompositionEnabled; }
 
@@ -88,16 +93,21 @@ public:
     PlatformXR::Device::Layer endFrame() final;
 
 private:
-    WebXRWebGLLayer(Ref<WebXRSession>&&, WebXRRenderingContext&&, std::unique_ptr<WebXROpaqueFramebuffer>&&, bool antialias, bool ignoreDepthValues, bool isCompositionEnabled);
+    WebXRWebGLLayer(WebXRSession&, WebXRRenderingContext&&, std::unique_ptr<WebXROpaqueFramebuffer>&&, bool antialias, bool ignoreDepthValues, bool isCompositionEnabled);
 
-    void computeViewports();
+    bool isWebXRWebGLLayer() const final { return true; }
+
+    void updateViewports();
     static IntSize computeNativeWebGLFramebufferResolution();
     static IntSize computeRecommendedWebGLFramebufferResolution();
 
     void canvasChanged(CanvasBase&, const FloatRect&) final { };
     void canvasResized(CanvasBase&) final;
     void canvasDestroyed(CanvasBase&) final { };
-    RefPtr<WebXRSession> m_session;
+
+    void addConsoleMessage(JSC::MessageLevel, String&&) const;
+
+    WeakPtr<WebXRSession> m_session;
     WebXRRenderingContext m_context;
 
     struct ViewportData {
@@ -114,5 +124,9 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WebXRWebGLLayer)
+    static bool isType(const WebCore::WebXRLayer& layer) { return layer.isWebXRWebGLLayer(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(WEBXR)

@@ -29,10 +29,10 @@
 
 #pragma once
 
-#include "FormController.h"
-#include "FormListedElement.h"
-#include "HTMLElement.h"
-#include "ValidationMessage.h"
+#include <WebCore/FormController.h>
+#include <WebCore/FormListedElement.h>
+#include <WebCore/HTMLElement.h>
+#include <WebCore/ValidationMessage.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/TriState.h>
 
@@ -53,7 +53,7 @@ public:
     WEBCORE_EXPORT bool willValidate() const override;
     void updateVisibleValidationMessage(Ref<HTMLElement> validationAnchor);
     void hideVisibleValidationMessage();
-    WEBCORE_EXPORT bool checkValidity(Vector<RefPtr<ValidatedFormListedElement>>* unhandledInvalidControls = nullptr);
+    WEBCORE_EXPORT bool checkValidity(Vector<Ref<ValidatedFormListedElement>>* unhandledInvalidControls = nullptr);
     bool reportValidity();
     RefPtr<HTMLElement> focusableValidationAnchorElement();
     void reportNonFocusableControlError();

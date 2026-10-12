@@ -25,6 +25,7 @@
 
 [
     Conditional=APPLE_PAY,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary ApplePayPaymentAuthorizationResult {
     required unsigned short status;
     sequence<ApplePayError> errors;

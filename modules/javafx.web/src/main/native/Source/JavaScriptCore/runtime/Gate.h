@@ -25,6 +25,10 @@
 
 #pragma once
 
+#include <cstdint>
+#include <wtf/Compiler.h>
+#include <wtf/Platform.h>
+
 namespace JSC {
 
 #if ENABLE(JIT_OPERATION_VALIDATION) || ENABLE(JIT_OPERATION_DISASSEMBLY) || CPU(ARM64E)
@@ -62,9 +66,6 @@ namespace JSC {
 #if ENABLE(WEBASSEMBLY)
 
 #define JSC_WASM_GATE_OPCODES(v) \
-    v(wasm_call, WasmEntryPtrTag) \
-    v(wasm_call_indirect, WasmEntryPtrTag) \
-    v(wasm_call_ref, WasmEntryPtrTag) \
     v(wasm_ipint_call, WasmEntryPtrTag) \
 
 #else

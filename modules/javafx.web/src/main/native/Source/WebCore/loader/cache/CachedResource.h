@@ -22,20 +22,21 @@
 
 #pragma once
 
-#include "CacheValidation.h"
-#include "CachedResourceClient.h"
-#include "FrameLoaderTypes.h"
-#include "LoaderMalloc.h"
-#include "ResourceCryptographicDigest.h"
-#include "ResourceError.h"
-#include "ResourceLoadPriority.h"
-#include "ResourceLoaderIdentifier.h"
-#include "ResourceLoaderOptions.h"
-#include "ResourceRequest.h"
-#include "ResourceResponse.h"
-#include "Timer.h"
+#include <WebCore/CacheValidation.h>
+#include <WebCore/CachedResourceClient.h>
+#include <WebCore/FrameLoaderTypes.h>
+#include <WebCore/LoaderMalloc.h>
+#include <WebCore/ResourceCryptographicDigest.h>
+#include <WebCore/ResourceError.h>
+#include <WebCore/ResourceLoadPriority.h>
+#include <WebCore/ResourceLoaderIdentifier.h>
+#include <WebCore/ResourceLoaderOptions.h>
+#include <WebCore/ResourceRequest.h>
+#include <WebCore/ResourceResponse.h>
+#include <WebCore/Timer.h>
 #include <pal/SessionID.h>
 #include <time.h>
+#include <wtf/CompletionHandler.h>
 #include <wtf/HashCountedSet.h>
 #include <wtf/HashSet.h>
 #include <wtf/TypeCasts.h>
@@ -86,6 +87,7 @@ public:
     enum class Type : uint8_t {
         MainResource,
         ImageResource,
+        JSON,
         CSSStyleSheet,
         Script,
         FontResource,
@@ -196,8 +198,9 @@ public:
     bool isLoaded() const { return !m_loading; } // FIXME. Method name is inaccurate. Loading might not have started yet.
 
     bool isLoading() const { return m_loading; }
-    void setLoading(bool b) { m_loading = b; }
+    void setLoading(bool);
     virtual bool stillNeedsLoad() const { return false; }
+    void whenLoaded(CompletionHandler<void()>&&);
 
     SubresourceLoader* loader() const { return m_loader.get(); }
 
@@ -271,7 +274,7 @@ public:
     bool shouldSendResourceLoadCallbacks() const { return m_options.sendLoadCallbacks == SendCallbackPolicy::SendCallbacks; }
     DataBufferingPolicy dataBufferingPolicy() const { return m_options.dataBufferingPolicy; }
 
-    bool allowsCaching() const { return m_options.cachingPolicy == CachingPolicy::AllowCaching; }
+    bool allowsCaching() const { return m_options.cachingPolicy == CachingPolicy::AllowCaching || m_options.cachingPolicy == CachingPolicy::AllowCachingMainResourcePrefetch; }
     const ResourceLoaderOptions& options() const { return m_options; }
 
     virtual void destroyDecodedData() { }
@@ -316,7 +319,7 @@ public:
 
     std::optional<ResourceLoaderIdentifier> identifierForLoadWithoutResourceLoader() const { return m_identifierForLoadWithoutResourceLoader; }
 
-    void setOriginalRequest(std::unique_ptr<ResourceRequest>&& originalRequest) { m_originalRequest = WTFMove(originalRequest); }
+    void setOriginalRequest(std::unique_ptr<ResourceRequest>&& originalRequest) { m_originalRequest = WTF::move(originalRequest); }
     const std::unique_ptr<ResourceRequest>& originalRequest() const { return m_originalRequest; }
 
 #if USE(QUICK_LOOK)
@@ -449,6 +452,7 @@ private:
     unsigned m_lruIndex { 0 };
 #endif
 
+    Vector<CompletionHandler<void()>> m_loadedCallbacks;
     mutable std::array<std::optional<ResourceCryptographicDigest>, ResourceCryptographicDigest::algorithmCount> m_cryptographicDigests;
 };
 

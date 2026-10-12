@@ -27,8 +27,8 @@
 
 #include "ScrollingCoordinator.h"
 
-#include "Document.h"
 #include "DocumentClasses.h"
+#include "DocumentView.h"
 #include "EventNames.h"
 #include "GraphicsLayer.h"
 #include "LocalFrame.h"
@@ -52,7 +52,7 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(ScrollingCoordinator);
 
-#if PLATFORM(IOS_FAMILY) || !ENABLE(ASYNC_SCROLLING)
+#if PLATFORM(IOS_FAMILY) || !ENABLE(ASYNC_SCROLLING) || USE(COORDINATED_GRAPHICS)
 Ref<ScrollingCoordinator> ScrollingCoordinator::create(Page* page)
 {
     return adoptRef(*new ScrollingCoordinator(page));
@@ -374,10 +374,7 @@ void ScrollingCoordinator::setForceSynchronousScrollLayerPositionUpdates(bool fo
 
 bool ScrollingCoordinator::shouldUpdateScrollLayerPositionSynchronously(const LocalFrameView& frameView) const
 {
-    if (&frameView == m_page->mainFrame().virtualView())
         return !synchronousScrollingReasons(frameView.scrollingNodeID()).isEmpty();
-
-    return true;
 }
 
 ScrollingNodeID ScrollingCoordinator::uniqueScrollingNodeID()
@@ -450,6 +447,11 @@ String ScrollingCoordinator::synchronousScrollingReasonsAsText() const
 FrameIdentifier ScrollingCoordinator::mainFrameIdentifier() const
 {
     return m_page->mainFrame().frameID();
+}
+
+void ScrollingCoordinator::setScrollbarColor(ScrollableArea&, std::optional<ScrollbarColor>)
+{
+
 }
 
 } // namespace WebCore

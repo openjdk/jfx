@@ -33,7 +33,7 @@
 #include "RenderBlockFlow.h"
 #include "RenderBlockInlines.h"
 #include "RenderBoxInlines.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 
 namespace WebCore {
 
@@ -68,10 +68,10 @@ bool LineWidth::fitsOnLineExcludingTrailingCollapsedWhitespace() const
 
 void LineWidth::updateAvailableWidth()
 {
-    LayoutUnit height = m_block.logicalHeight();
-    auto lineHeight = std::max(0_lu, m_block.lineHeight());
-    m_left = m_block.logicalLeftOffsetForLine(height, lineHeight);
-    m_right = m_block.logicalRightOffsetForLine(height, lineHeight);
+    LayoutUnit height = m_block->logicalHeight();
+    auto lineHeight = std::max(0_lu, m_block->lineHeight());
+    m_left = m_block->logicalLeftOffsetForLine(height, lineHeight);
+    m_right = m_block->logicalRightOffsetForLine(height, lineHeight);
 
     computeAvailableWidthFromLeftAndRight();
 }
@@ -92,7 +92,7 @@ void LineWidth::updateLineDimension(LayoutUnit newLineTop, LayoutUnit newLineWid
     if (newLineWidth <= m_availableWidth)
         return;
 
-    m_block.setLogicalHeight(newLineTop);
+    m_block->setLogicalHeight(newLineTop);
     m_availableWidth = newLineWidth;
     m_left = newLineLeft;
     m_right = newLineRight;

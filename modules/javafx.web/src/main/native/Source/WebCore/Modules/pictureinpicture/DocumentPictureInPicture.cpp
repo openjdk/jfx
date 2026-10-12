@@ -37,7 +37,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(DocumentPictureInPicture);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DocumentPictureInPicture);
 
 DocumentPictureInPicture::~DocumentPictureInPicture() = default;
 
@@ -55,16 +55,16 @@ void DocumentPictureInPicture::exitPictureInPicture(Document& document, Ref<Defe
         return;
     }
 
-    HTMLVideoElementPictureInPicture::from(*element)->exitPictureInPicture(WTFMove(promise));
+    HTMLVideoElementPictureInPicture::protectedFrom(*element)->exitPictureInPicture(WTF::move(promise));
 }
 
 DocumentPictureInPicture* DocumentPictureInPicture::from(Document& document)
 {
-    DocumentPictureInPicture* supplement = static_cast<DocumentPictureInPicture*>(Supplement<Document>::from(&document, supplementName()));
+    auto* supplement = downcast<DocumentPictureInPicture>(Supplement<Document>::from(&document, supplementName()));
     if (!supplement) {
         auto newSupplement = makeUnique<DocumentPictureInPicture>();
         supplement = newSupplement.get();
-        provideTo(&document, supplementName(), WTFMove(newSupplement));
+        provideTo(&document, supplementName(), WTF::move(newSupplement));
     }
     return supplement;
 }

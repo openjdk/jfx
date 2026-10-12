@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "Page.h"
-#include "ResourceLoaderIdentifier.h"
-#include "Timer.h"
+#include <WebCore/Page.h>
+#include <WebCore/ResourceLoaderIdentifier.h>
+#include <WebCore/Timer.h>
 #include <wtf/CheckedRef.h>
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>

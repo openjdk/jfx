@@ -27,7 +27,9 @@
 
 typedef double DOMHighResTimeStamp;
 
-dictionary CookieInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary CookieInit {
     required USVString name;
     required USVString value;
     DOMHighResTimeStamp? expires = null;

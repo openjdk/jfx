@@ -39,8 +39,6 @@ class StringDumper final : public Visitor {
 public:
     using Visitor::visit;
 
-    ~StringDumper() = default;
-
     String toString();
 
     // Visitor

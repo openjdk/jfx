@@ -85,6 +85,7 @@ public:
     OrderedTrackIndexSet* autoRepeatEmptyTracks(Style::GridTrackSizingDirection) const;
 
     OrderIterator& orderIterator() { return m_orderIterator; }
+    const OrderIterator& orderIterator() const { return m_orderIterator; }
 
     void setNeedsItemsPlacement(bool);
     bool needsItemsPlacement() const { return m_needsItemsPlacement; };

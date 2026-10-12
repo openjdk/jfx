@@ -40,7 +40,7 @@ enum class UnicodeBidi : uint8_t {
     IsolateOverride,
 };
 
-inline bool isIsolated(const UnicodeBidi& unicodeBidi)
+inline bool isIsolated(UnicodeBidi unicodeBidi)
 {
     return unicodeBidi == UnicodeBidi::Isolate || unicodeBidi == UnicodeBidi::IsolateOverride || unicodeBidi == UnicodeBidi::Plaintext;
 }

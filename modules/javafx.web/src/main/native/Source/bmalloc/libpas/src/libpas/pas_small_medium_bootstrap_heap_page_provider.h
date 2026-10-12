@@ -41,3 +41,4 @@ PAS_API pas_allocation_result pas_small_medium_bootstrap_heap_page_provider(
 PAS_END_EXTERN_C;
 
 #endif /* PAS_SMALL_MEDIUM_BOOTSTRAP_HEAP_PAGE_PROVIDER_H */
+

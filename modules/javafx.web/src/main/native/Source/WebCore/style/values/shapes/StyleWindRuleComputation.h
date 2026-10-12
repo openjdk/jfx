@@ -24,8 +24,8 @@
 
 #pragma once
 
-#include "StyleValueTypes.h"
-#include "WindRule.h"
+#include <WebCore/StyleValueTypes.h>
+#include <WebCore/WindRule.h>
 
 namespace WebCore {
 namespace Style {

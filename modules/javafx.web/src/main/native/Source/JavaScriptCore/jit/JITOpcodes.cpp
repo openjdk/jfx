@@ -886,7 +886,7 @@ void JIT::compileOpStrictEq(const JSInstruction* currentInstruction)
     addSlowCase(branchIfCell(regT2));
 
     done.link(this);
-    if constexpr (std::is_same<Op, OpNstricteq>::value)
+    if constexpr (std::same_as<Op, OpNstricteq>)
         xor64(TrustedImm64(1), regT5);
     boxBoolean(regT5, JSValueRegs { regT5 });
     emitPutVirtualRegister(dst, regT5);
@@ -1045,7 +1045,7 @@ void JIT::compileOpStrictEqJump(const JSInstruction* currentInstruction)
     addSlowCase(branch64(AboveOrEqual, regT3, regT5));
 
     Jump areEqual = branch64(Equal, regT0, regT1);
-    if constexpr (std::is_same<Op, OpJstricteq>::value)
+    if constexpr (std::same_as<Op, OpJstricteq>)
         addJump(areEqual, target);
 
     move(regT0, regT2);
@@ -1054,7 +1054,7 @@ void JIT::compileOpStrictEqJump(const JSInstruction* currentInstruction)
     // FIXME: we could do something more precise: unless there is a BigInt32, we only need to do the slow path if both are strings
     addSlowCase(branchIfCell(regT2));
 
-    if constexpr (std::is_same<Op, OpJnstricteq>::value) {
+    if constexpr (std::same_as<Op, OpJnstricteq>) {
         addJump(jump(), target);
         areEqual.link(this);
     }
@@ -1071,7 +1071,7 @@ void JIT::compileOpStrictEqJump(const JSInstruction* currentInstruction)
     Jump rightOK = branchIfInt32(regT1);
     addSlowCase(branchIfNumber(regT1));
     rightOK.link(this);
-    if constexpr (std::is_same<Op, OpJstricteq>::value)
+    if constexpr (std::same_as<Op, OpJstricteq>)
         addJump(branch64(Equal, regT1, regT0), target);
     else
         addJump(branch64(NotEqual, regT1, regT0), target);

@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "JSScope.h"
+#include <JavaScriptCore/JSScope.h>
 
 namespace JSC {
 

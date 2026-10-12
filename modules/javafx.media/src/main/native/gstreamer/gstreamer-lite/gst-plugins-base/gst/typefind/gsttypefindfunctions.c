@@ -5474,6 +5474,7 @@ sbc_check_header (const guint8 * data, gsize len, guint * rate,
   else if (ch_mode == 3)
     return 4 + (n_subbands * 2) / 2 + (n_subbands + n_blocks * bitpool) / 8;
 
+  g_assert_not_reached ();
   return 0;
 }
 
@@ -6584,7 +6585,7 @@ y4m_typefind (GstTypeFind * tf, gpointer private)
 
   data = gst_type_find_peek (tf, 0, 10);
   if (data != NULL && memcmp (data, "YUV4MPEG2 ", 10) == 0) {
-    gst_type_find_suggest_simple (tf, GST_TYPE_FIND_LIKELY,
+    gst_type_find_suggest_simple (tf, GST_TYPE_FIND_MAXIMUM,
         "application/x-yuv4mpeg", "y4mversion", G_TYPE_INT, 2, NULL);
   }
 }
@@ -6795,18 +6796,18 @@ av1_is_valid_obu_type (guint obu_type)
 }
 
 static gboolean
-av1_leb128 (const guint8 * data, guint32 * retval, gint * read_bytes)
+av1_leb128 (GstByteReader * br, guint32 * retval)
 {
   guint8 leb128_byte = 0;
   guint64 value = 0;
   gint i;
 
   *retval = 0;
-  *read_bytes = 0;
 
   for (i = 0; i < 8; i++) {
-    leb128_byte = data[i];
-    value |= (((gint) leb128_byte & 0x7f) << (i * 7));
+    if (!gst_byte_reader_get_uint8 (br, &leb128_byte))
+      return FALSE;
+    value |= (((guint64) leb128_byte & 0x7f) << (i * 7));
     if (!(leb128_byte & 0x80))
       break;
 
@@ -6814,13 +6815,9 @@ av1_leb128 (const guint8 * data, guint32 * retval, gint * read_bytes)
       return FALSE;
   }
 
-  if (i == 8)
-    return FALSE;
-
   /* check for bitstream conformance see chapter 4.10.5 */
-  if (value < G_MAXUINT32) {
+  if (value <= G_MAXUINT32) {
     *retval = (guint32) value;
-    *read_bytes = i + 1;
     return TRUE;
   }
 
@@ -6828,44 +6825,44 @@ av1_leb128 (const guint8 * data, guint32 * retval, gint * read_bytes)
 }
 
 static gboolean
-av1_is_valid_obu (const guint8 * data, guint * obu_type, gint * read_bytes)
+av1_is_valid_obu (GstByteReader * br, guint * obu_type)
 {
   gboolean obu_forbidden_bit;
   gboolean obu_extension_flag;
   gboolean obu_has_size_field;
   gboolean obu_reserved_1bit;
-  int offset = 1;
+  guint8 b;
 
   *obu_type = 0;
-  *read_bytes = 0;
+
+  if (!gst_byte_reader_get_uint8 (br, &b))
+    return FALSE;
 
   /* Detect OBU header */
-  obu_forbidden_bit = !!(data[0] & 0x80);
+  obu_forbidden_bit = !!(b & 0x80);
   if (obu_forbidden_bit)
     return FALSE;
 
-  *obu_type = (data[0] & 0x78) >> 3;
-  obu_extension_flag = !!(data[0] & 0x4);
-  obu_has_size_field = !!(data[0] & 0x2);
-  obu_reserved_1bit = !!(data[0] & 0x1);
+  *obu_type = (b & 0x78) >> 3;
+  obu_extension_flag = !!(b & 0x4);
+  obu_has_size_field = !!(b & 0x2);
+  obu_reserved_1bit = !!(b & 0x1);
 
   /* if obu_extension_flag is set temporal_id (3 bits)
    * spatial_id (2 bits) and extension_header_reserved_3bits (3 bits)
    * field are coded in the header so OBU size field is
    * 1 byte after */
-  if (obu_extension_flag)
-    offset++;
-
-  *read_bytes += offset;
+  if (obu_extension_flag) {
+    if (!gst_byte_reader_skip (br, 1))
+      return FALSE;
+  }
 
   if (av1_is_valid_obu_type (*obu_type) && !obu_reserved_1bit) {
     if (obu_has_size_field) {
       guint32 obu_size;
-      gint bytes;
 
-      if (!av1_leb128 (data + offset, &obu_size, &bytes))
+      if (!av1_leb128 (br, &obu_size))
         return FALSE;
-      *read_bytes += bytes;
     }
 
     return TRUE;
@@ -6881,42 +6878,39 @@ av1_type_find (GstTypeFind * tf, gpointer unused)
   guint32 frame_unit_size;
   guint32 obu_length;
   const guint8 *data;
+  GstByteReader br;
   guint obu_type;
-  gint read_bytes;
-  gint offset = 0;
 
   data = gst_type_find_peek (tf, 0, 25);
   if (!data)
     return;
 
-  if (av1_is_valid_obu (data, &obu_type, &read_bytes)) {
+  gst_byte_reader_init (&br, data, 25);
+
+  if (av1_is_valid_obu (&br, &obu_type)) {
     gst_type_find_suggest_simple (tf, GST_TYPE_FIND_MINIMUM, "video/x-av1",
         "stream-format", G_TYPE_STRING, "obu-stream",
         "alignment", G_TYPE_STRING, "none", NULL);
     return;
   }
 
-  if (!av1_leb128 (data, &temporal_unit_size, &read_bytes))
+  if (!av1_leb128 (&br, &temporal_unit_size))
     return;
-  offset += read_bytes;
 
-  if (!av1_leb128 (data + offset, &frame_unit_size, &read_bytes))
+  if (!av1_leb128 (&br, &frame_unit_size))
     return;
-  offset += read_bytes;
 
   if (frame_unit_size > temporal_unit_size)
     return;
 
-  if (!av1_leb128 (data + offset, &obu_length, &read_bytes))
+  if (!av1_leb128 (&br, &obu_length))
     return;
-  offset += read_bytes;
 
   if (obu_length > frame_unit_size)
     return;
 
-  if (!av1_is_valid_obu (data + offset, &obu_type, &read_bytes))
+  if (!av1_is_valid_obu (&br, &obu_type))
     return;
-  offset += read_bytes;
 
   /* The first OBU must be a temporal delimiter */
   if (obu_type == 2)
@@ -7131,7 +7125,7 @@ GST_TYPE_FIND_REGISTER_DEFINE (vivo, "video/vivo", GST_RANK_SECONDARY,
 GST_TYPE_FIND_REGISTER_DEFINE (wbmp, "image/vnd.wap.wbmp", GST_RANK_MARGINAL,
     wbmp_typefind, NULL, NULL, NULL, NULL);
 GST_TYPE_FIND_REGISTER_DEFINE (y4m, "application/x-yuv4mpeg",
-    GST_RANK_SECONDARY, y4m_typefind, NULL, NULL, NULL, NULL);
+    GST_RANK_PRIMARY, y4m_typefind, "y4m", NULL, NULL, NULL);
 GST_TYPE_FIND_REGISTER_DEFINE (windows_icon, "image/x-icon", GST_RANK_MARGINAL,
     windows_icon_typefind, NULL, NULL, NULL, NULL);
 #ifdef USE_GIO

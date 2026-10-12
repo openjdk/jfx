@@ -1,5 +1,61 @@
 NEWS file for libxml2
 
+v2.15.4: Sep 01 2026
+
+### Security
+
+- xmlregexp: Prevent out-of-bounds read in NXT macro
+- fix: add missing overflow checks in dict.c, uri.c, and valid.c
+- xmlregexp: Calc string length after null checking
+- xpointer: Check overflow in xmlXPtrEvalXPtrPart
+- xmlIO: Check for int overflow before calling writecallback
+- fix(xinclude): propagate parseFlags in xmlXIncludeProcess and xmlXIncludeProcessTree
+
+### Improvements
+
+- Improve bound checks for xmlcatalog and xmllint arguments (out-of-bound)
+- Fix memory leak in static Windows library (memory-leak)
+- xmlreader: Copy DTD in xmlTextReaderDumpCopy
+- parser: Fix double free in xmlIOParseDTD (double-free)
+- parser: fix division-by-zero when maxAmpl is set to 0
+- parser: Fix memory leak in xmlCtxtSetSaxHandler (memory-leak)
+- catalog: Make sure to reset catalog resolve cache
+- xmlAddChild: unlink node before free for text nodes (memory-leak)
+- Normalize entity values in attr in xmlNodeGetContent
+- Handle whitespace for date/time/duration types
+- catalog: Fix NULL deref for nextCatalog without 'catalog' attribute (null-deref)
+
+### Thanks
+
+Thanks to the following new contributors:
+
+- Brett Kail
+- Ion Nistor
+- Kevin Braun
+- Mohammad Seet
+- rootvector2
+- Ruben Thijssen
+- yirou_yang
+- Zhihan Zheng
+- zhuofeng
+
+### Full list of commits and contributors on this release
+
+13  Daniel Garcia Moreno
+ 8  Mohammad Seet
+ 6  zhuofeng
+ 2  Benjamin Gilbert
+ 1  Brett Kail
+ 1  Hieu Le Minh
+ 1  Ion Nistor
+ 1  Kevin Braun
+ 1  Nick Wellnhofer
+ 1  Ruben Thijssen
+ 1  Zhihan Zheng
+ 1  rootvector2
+ 1  yirou_yang
+
+
 v2.15.3: Apr 15 2026
 
 ### Security

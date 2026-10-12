@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -31,10 +31,10 @@
 
 #pragma once
 
-#include "CSSProperty.h"
-#include "CSSPropertyNames.h"
-#include "CSSValueKeywords.h"
-#include "WritingDirection.h"
+#include <WebCore/CSSProperty.h>
+#include <WebCore/CSSPropertyNames.h>
+#include <WebCore/CSSValueKeywords.h>
+#include <WebCore/WritingDirection.h>
 #include <wtf/RefCounted.h>
 #include <wtf/TriState.h>
 #include <wtf/text/WTFString.h>
@@ -108,7 +108,8 @@ public:
 
     WEBCORE_EXPORT ~EditingStyle();
 
-    MutableStyleProperties* style() { return m_mutableStyle.get(); }
+    MutableStyleProperties* style() const { return m_mutableStyle.get(); }
+    RefPtr<MutableStyleProperties> protectedStyle() const;
     RefPtr<MutableStyleProperties> protectedStyle();
     Ref<MutableStyleProperties> styleWithResolvedTextDecorations() const;
     std::optional<WritingDirection> textDirection() const;
@@ -149,7 +150,7 @@ public:
     void mergeStyleFromRulesForSerialization(StyledElement&, StandardFontFamilySerializationMode);
     void removeStyleFromRulesAndContext(StyledElement&, Node* context);
     void removePropertiesInElementDefaultStyle(Element&);
-    void forceInline();
+    void forceDisplayInline();
     void addDisplayContents();
     bool convertPositionStyle();
     bool isFloating();
@@ -184,6 +185,9 @@ private:
     EditingStyle(CSSPropertyID, CSSValueID);
     void init(Node*, PropertiesToInclude);
     void removeTextFillAndStrokeColorsIfNeeded(const RenderStyle*);
+    Ref<MutableStyleProperties> removeInlineStyleRedundantDueToMatchedRules(StyledElement&);
+    void removeStyleInContextNotOverridenByMatchedRules(StyledElement&, Node*, MutableStyleProperties&);
+    void removeDisplayPropertyFromSpanStyleIfRedundant(StyledElement&, MutableStyleProperties&);
     void setProperty(CSSPropertyID, const String& value, IsImportant = IsImportant::No);
     void extractFontSizeDelta();
     template<typename T> TriState triStateOfStyle(T& styleToCompare, ShouldIgnoreTextOnlyProperties) const;

@@ -40,7 +40,7 @@ class GenericHashKey final {
 
 public:
     constexpr GenericHashKey(Key&& key)
-        : m_value(InPlaceTypeT<Key>(), WTFMove(key))
+        : m_value(InPlaceTypeT<Key>(), WTF::move(key))
     {
     }
 
@@ -69,6 +69,7 @@ public:
 
     constexpr bool isHashTableDeletedValue() const { return std::holds_alternative<DeletedKey>(m_value); }
     constexpr bool isHashTableEmptyValue() const { return std::holds_alternative<EmptyKey>(m_value); }
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = false;
 
     constexpr bool operator==(const GenericHashKey& other) const
     {
@@ -88,12 +89,6 @@ template<typename K, typename H> struct HashTraits<GenericHashKey<K, H>> : Gener
     static bool isEmptyValue(const GenericHashKey<K, H>& value) { return value.isHashTableEmptyValue(); }
     static void constructDeletedValue(GenericHashKey<K, H>& slot) { slot = GenericHashKey<K, H> { HashTableDeletedValue }; }
     static bool isDeletedValue(const GenericHashKey<K, H>& value) { return value.isHashTableDeletedValue(); }
-};
-
-template<typename K, typename H> struct DefaultHash<GenericHashKey<K, H>> {
-    static unsigned hash(const GenericHashKey<K, H>& key) { return key.hash(); }
-    static bool equal(const GenericHashKey<K, H>& a, const GenericHashKey<K, H>& b) { return a == b; }
-    static constexpr bool safeToCompareToEmptyOrDeleted = false;
 };
 
 }

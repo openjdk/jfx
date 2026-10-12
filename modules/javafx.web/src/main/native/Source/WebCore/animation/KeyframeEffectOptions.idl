@@ -25,7 +25,9 @@
 
 typedef USVString CSSOMString;
 
-dictionary KeyframeEffectOptions : EffectTiming {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary KeyframeEffectOptions : EffectTiming {
     IterationCompositeOperation iterationComposite = "replace";
     CompositeOperation composite = "replace";
     CSSOMString? pseudoElement = null;

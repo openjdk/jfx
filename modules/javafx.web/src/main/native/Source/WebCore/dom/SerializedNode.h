@@ -41,6 +41,11 @@ class QualifiedName;
 class JSDOMGlobalObject;
 
 enum class ClonedDocumentType : uint8_t;
+enum class ShadowRootAvailableToElementInternals : bool;
+enum class ShadowRootDelegatesFocus : bool;
+enum class ShadowRootSerializable : bool;
+enum class ShadowRootScopedCustomElementRegistry : bool;
+enum class SlotAssignmentMode : bool;
 
 struct SerializedNode {
     WTF_MAKE_STRUCT_TZONE_ALLOCATED_EXPORT(SerializedNode, WEBCORE_EXPORT);
@@ -72,13 +77,19 @@ struct SerializedNode {
         Variant<String, URL> documentURI;
         String contentType;
     };
-    struct DocumentFragment : public ContainerNode {
-        // FIXME: Implement.
-    };
+    struct DocumentFragment : public ContainerNode { };
     struct DocumentType {
         String name;
         String publicId;
         String systemId;
+    };
+    struct ShadowRoot : public DocumentFragment {
+        bool openMode;
+        SlotAssignmentMode slotAssignmentMode;
+        ShadowRootDelegatesFocus delegatesFocus;
+        ShadowRootSerializable serializable;
+        ShadowRootAvailableToElementInternals availableToElementInternals;
+        ShadowRootScopedCustomElementRegistry hasScopedCustomElementRegistry;
     };
     struct Element : public ContainerNode {
         struct Attribute {
@@ -87,12 +98,10 @@ struct SerializedNode {
         };
         QualifiedName name;
         Vector<Attribute> attributes;
-    };
-    struct ShadowRoot : public DocumentFragment {
-        // FIXME: Implement.
+        std::optional<ShadowRoot> shadowRoot;
     };
     struct HTMLTemplateElement : public Element {
-        // FIXME: Implement serialization of its content.
+        std::optional<DocumentFragment> content;
     };
     struct CharacterData {
         String data;
@@ -107,7 +116,7 @@ struct SerializedNode {
     Variant<Attr, CDATASection, Comment, Document, DocumentFragment, DocumentType, Element, ProcessingInstruction, ShadowRoot, Text, HTMLTemplateElement> data;
 
     WEBCORE_EXPORT static JSC::JSValue deserialize(SerializedNode&&, JSC::JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject*, WebCore::Document&);
-    static RefPtr<WebCore::Node> deserialize(SerializedNode&&, WebCore::Document&);
+    static Ref<WebCore::Node> deserialize(SerializedNode&&, WebCore::Document&);
 };
 
 }

@@ -27,6 +27,7 @@
 #include "SharedWorkerGlobalScope.h"
 
 #include "EventNames.h"
+#include "IDBConnectionProxy.h"
 #include "Logging.h"
 #include "MessageEvent.h"
 #include "SerializedScriptValue.h"
@@ -37,12 +38,19 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SharedWorkerGlobalScope);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SharedWorkerGlobalScope);
 
-#define SCOPE_RELEASE_LOG(fmt, ...) RELEASE_LOG(SharedWorker, "%p - [sharedWorkerIdentifier=%" PRIu64 "] SharedWorkerGlobalScope::" fmt, this, this->thread().identifier().toUInt64(), ##__VA_ARGS__)
+#define SCOPE_RELEASE_LOG(fmt, ...) RELEASE_LOG(SharedWorker, "%p - [sharedWorkerIdentifier=%" PRIu64 "] SharedWorkerGlobalScope::" fmt, this, this->thread()->identifier().toUInt64(), ##__VA_ARGS__)
+
+Ref<SharedWorkerGlobalScope> SharedWorkerGlobalScope::create(const String& name, const WorkerParameters& params, Ref<SecurityOrigin>&& origin, SharedWorkerThread& thread, Ref<SecurityOrigin>&& topOrigin, IDBClient::IDBConnectionProxy* connectionProxy, SocketProvider* socketProvider, std::unique_ptr<WorkerClient>&& workerClient)
+{
+    auto scope = adoptRef(*new SharedWorkerGlobalScope(name, params, WTF::move(origin), thread, WTF::move(topOrigin), connectionProxy, socketProvider, WTF::move(workerClient)));
+    scope->addToContextsMap();
+    return scope;
+}
 
 SharedWorkerGlobalScope::SharedWorkerGlobalScope(const String& name, const WorkerParameters& params, Ref<SecurityOrigin>&& origin, SharedWorkerThread& thread, Ref<SecurityOrigin>&& topOrigin, IDBClient::IDBConnectionProxy* connectionProxy, SocketProvider* socketProvider, std::unique_ptr<WorkerClient>&& workerClient)
-    : WorkerGlobalScope(WorkerThreadType::SharedWorker, params, WTFMove(origin), thread, WTFMove(topOrigin), connectionProxy, socketProvider, WTFMove(workerClient))
+    : WorkerGlobalScope(WorkerThreadType::SharedWorker, params, WTF::move(origin), thread, WTF::move(topOrigin), connectionProxy, socketProvider, WTF::move(workerClient))
     , m_name(name)
 {
     SCOPE_RELEASE_LOG("SharedWorkerGlobalScope:");
@@ -55,22 +63,22 @@ SharedWorkerGlobalScope::~SharedWorkerGlobalScope()
     removeFromContextsMap();
 }
 
-SharedWorkerThread& SharedWorkerGlobalScope::thread()
+Ref<SharedWorkerThread> SharedWorkerGlobalScope::thread()
 {
-    return static_cast<SharedWorkerThread&>(WorkerGlobalScope::thread());
+    return downcast<SharedWorkerThread>(WorkerGlobalScope::thread());
 }
 
 // https://html.spec.whatwg.org/multipage/workers.html#dom-sharedworker step 11.5
-void SharedWorkerGlobalScope::postConnectEvent(TransferredMessagePort&& transferredPort, const String& sourceOrigin)
+void SharedWorkerGlobalScope::postConnectEvent(TransferredMessagePort&& transferredPort, const SecurityOriginData& sourceOriginData)
 {
     SCOPE_RELEASE_LOG("postConnectEvent:");
-    auto ports = MessagePort::entanglePorts(*this, { WTFMove(transferredPort) });
+    auto ports = MessagePort::entanglePorts(*this, { WTF::move(transferredPort) });
     ASSERT(ports.size() == 1);
     RefPtr port = ports[0].ptr();
-    auto event = MessageEvent::create(emptyString(), sourceOrigin, { }, port, WTFMove(ports));
+    auto event = MessageEvent::create(emptyString(), sourceOriginData.securityOrigin(), { }, port, WTF::move(ports));
     event->initEvent(eventNames().connectEvent, false, false);
 
-    dispatchEvent(WTFMove(event));
+    dispatchEvent(WTF::move(event));
 }
 
 #undef SCOPE_RELEASE_LOG

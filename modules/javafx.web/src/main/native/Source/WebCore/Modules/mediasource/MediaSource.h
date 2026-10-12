@@ -34,7 +34,7 @@
 
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
-#include "HTMLMediaElement.h"
+#include "EventTargetInterfaces.h"
 #include "MediaPlayer.h"
 #include "MediaPromiseTypes.h"
 #include "MediaSourceInit.h"
@@ -53,6 +53,7 @@ class AudioTrack;
 class AudioTrackPrivate;
 class ContentType;
 class InbandTextTrackPrivate;
+class HTMLMediaElement;
 class MediaSourceClientImpl;
 class MediaSourceHandle;
 class SourceBuffer;
@@ -67,7 +68,7 @@ template<typename> class ExceptionOr;
 enum class MediaSourceReadyState { Closed, Open, Ended };
 
 class MediaSource
-    : public RefCountedAndCanMakeWeakPtr<MediaSource>
+    : public RefCounted<MediaSource>
     , public ActiveDOMObject
     , public EventTarget
     , public URLRegistrable
@@ -76,18 +77,18 @@ class MediaSource
     , private Logger::Observer
 #endif
 {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(MediaSource);
+    WTF_MAKE_TZONE_ALLOCATED(MediaSource);
 public:
-    void ref() const final { RefCountedAndCanMakeWeakPtr::ref(); }
-    void deref() const final { RefCountedAndCanMakeWeakPtr::deref(); }
-
-    USING_CAN_MAKE_WEAKPTR(CanMakeWeakPtr<MediaSource>);
-
     static void setRegistry(URLRegistry*);
     static MediaSource* lookup(const String& url) { return s_registry ? downcast<MediaSource>(s_registry->lookup(url)) : nullptr; }
 
     static Ref<MediaSource> create(ScriptExecutionContext&, MediaSourceInit&&);
     virtual ~MediaSource();
+
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+    USING_CAN_MAKE_WEAKPTR(ActiveDOMObject);
 
     static bool enabledForContext(ScriptExecutionContext&);
 
@@ -136,6 +137,7 @@ public:
     bool detachable() const { return m_detachable; }
 
     ScriptExecutionContext* scriptExecutionContext() const final;
+    using ActiveDOMObject::protectedScriptExecutionContext;
 
     static const MediaTime& currentTimeFudgeFactor();
     static bool contentTypeShouldGenerateTimestamps(const ContentType&);
@@ -205,13 +207,12 @@ private:
     void removeSourceBufferWithOptionalDestruction(SourceBuffer&, bool withDestruction);
 
     Ref<MediaTimePromise> waitForTarget(const SeekTarget&);
-    Ref<MediaPromise> seekToTime(const MediaTime&);
     using RendererType = MediaSourcePrivateClient::RendererType;
     void failedToCreateRenderer(RendererType);
 
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
-    enum EventTargetInterfaceType eventTargetInterface() const final;
+    enum EventTargetInterfaceType eventTargetInterface() const override;
 
     // URLRegistrable.
     URLRegistry& registry() const final;
@@ -285,6 +286,7 @@ struct LogArgument<WebCore::MediaSource::ReadyState> {
 } // namespace WTF
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::MediaSource)
+    static bool isType(const WebCore::EventTarget& target) { return target.eventTargetInterface() == WebCore::EventTargetInterfaceType::MediaSource; }
     static bool isType(const WebCore::URLRegistrable& registrable) { return registrable.registrableType() == WebCore::URLRegistrable::RegistrableType::MediaSource; }
 SPECIALIZE_TYPE_TRAITS_END()
 

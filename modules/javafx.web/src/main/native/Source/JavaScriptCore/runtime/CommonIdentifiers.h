@@ -20,7 +20,7 @@
 
 #pragma once
 
-#include "Identifier.h"
+#include <JavaScriptCore/Identifier.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/TZoneMalloc.h>
 
@@ -87,6 +87,7 @@
     macro(bytecodes) \
     macro(bytecodesID) \
     macro(calendar) \
+    macro(calendarName) \
     macro(callee) \
     macro(caller) \
     macro(captureStackTrace) \
@@ -252,6 +253,8 @@
     macro(resizable) \
     macro(resize) \
     macro(resolve) \
+    macro(reject) \
+    macro(reason) \
     macro(roundingIncrement) \
     macro(roundingMode) \
     macro(roundingPriority) \
@@ -272,6 +275,7 @@
     macro(sourceURL) \
     macro(stack) \
     macro(stackTraceLimit) \
+    macro(status) \
     macro(sticky) \
     macro(style) \
     macro(subarray) \
@@ -330,6 +334,8 @@
     macro(disposeAsync) \
     macro(keys) \
     macro(flat) \
+    macro(promise) \
+    macro(resumeMode) \
 
 #define JSC_COMMON_IDENTIFIERS_EACH_PRIVATE_FIELD(macro) \
     macro(constructor)
@@ -432,7 +438,6 @@ namespace JSC {
         const Identifier emptyIdentifier;
         const Identifier underscoreProto;
         const Identifier useStrictIdentifier;
-        const Identifier timesIdentifier;
         const Identifier negativeOneIdentifier;
     private:
         std::unique_ptr<BuiltinNames> m_builtinNames;

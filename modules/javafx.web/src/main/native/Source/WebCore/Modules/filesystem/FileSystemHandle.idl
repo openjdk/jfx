@@ -30,7 +30,7 @@ enum FileSystemHandleKind {
 
 [
     ActiveDOMObject,
-    CustomToJSObject,
+    ExportToWrappedFunction,
     Exposed=(Window,Worker),
     EnabledBySetting=FileSystemEnabled,
     SecureContext

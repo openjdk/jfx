@@ -29,8 +29,8 @@
 #ifndef GlyphMetricsMap_h
 #define GlyphMetricsMap_h
 
-#include "Glyph.h"
-#include "Path.h"
+#include <WebCore/Glyph.h>
+#include <WebCore/Path.h>
 #include <array>
 #include <wtf/HashMap.h>
 

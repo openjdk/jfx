@@ -50,8 +50,8 @@ void ThreadedScrollingCoordinator::pageDestroyed()
     AsyncScrollingCoordinator::pageDestroyed();
 
     // Invalidating the scrolling tree will break the reference cycle between the ScrollingCoordinator and ScrollingTree objects.
-    RefPtr scrollingTree = static_pointer_cast<ThreadedScrollingTree>(releaseScrollingTree());
-    ScrollingThread::dispatch([scrollingTree = WTFMove(scrollingTree)] {
+    RefPtr scrollingTree = downcast<ThreadedScrollingTree>(releaseScrollingTree());
+    ScrollingThread::dispatch([scrollingTree = WTF::move(scrollingTree)] {
         scrollingTree->invalidate();
     });
 }
@@ -70,7 +70,7 @@ void ThreadedScrollingCoordinator::commitTreeStateIfNeeded()
 
         auto stateTree = commitTreeStateForRootFrameID(key, LayerRepresentation::PlatformLayerRepresentation);
         stateTree->setRootFrameIdentifier(key);
-    scrollingTree()->commitTreeState(WTFMove(stateTree));
+        scrollingTree()->commitTreeState(WTF::move(stateTree));
     });
 }
 
@@ -88,7 +88,7 @@ WheelEventHandlingResult ThreadedScrollingCoordinator::handleWheelEventForScroll
     auto deferrer = WheelEventTestMonitorCompletionDeferrer { page()->wheelEventTestMonitor().get(), targetNodeID, WheelEventTestMonitor::DeferReason::PostMainThreadWheelEventHandling };
 
     RefPtr<ThreadedScrollingTree> threadedScrollingTree = downcast<ThreadedScrollingTree>(scrollingTree());
-    ScrollingThread::dispatch([threadedScrollingTree, wheelEvent, targetNodeID, gestureState, deferrer = WTFMove(deferrer)] {
+    ScrollingThread::dispatch([threadedScrollingTree, wheelEvent, targetNodeID, gestureState, deferrer = WTF::move(deferrer)] {
         threadedScrollingTree->handleWheelEventAfterMainThread(wheelEvent, targetNodeID, gestureState);
     });
     return WheelEventHandlingResult::handled();

@@ -84,38 +84,38 @@ GST_API
 void                    gst_registry_remove_feature     (GstRegistry * registry, GstPluginFeature * feature);
 
 GST_API
-GList*                  gst_registry_get_plugin_list    (GstRegistry *registry);
+GList*                  gst_registry_get_plugin_list    (GstRegistry *registry) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 GList*                  gst_registry_plugin_filter      (GstRegistry *registry,
                                                          GstPluginFilter filter,
                                                          gboolean first,
-                                                         gpointer user_data);
+                                                         gpointer user_data) G_GNUC_WARN_UNUSED_RESULT;
 GST_API
 GList*                  gst_registry_feature_filter     (GstRegistry *registry,
                                                          GstPluginFeatureFilter filter,
                                                          gboolean first,
-                                                         gpointer user_data);
+                                                         gpointer user_data) G_GNUC_WARN_UNUSED_RESULT;
 GST_API
 GList *                 gst_registry_get_feature_list   (GstRegistry *registry,
-                                                         GType type);
+                                                         GType type) G_GNUC_WARN_UNUSED_RESULT;
 GST_API
-GList *                 gst_registry_get_feature_list_by_plugin (GstRegistry *registry, const gchar *name);
+GList *                 gst_registry_get_feature_list_by_plugin (GstRegistry *registry, const gchar *name) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 guint32                 gst_registry_get_feature_list_cookie (GstRegistry *registry);
 
 GST_API
-GstPlugin*              gst_registry_find_plugin        (GstRegistry *registry, const gchar *name);
+GstPlugin*              gst_registry_find_plugin        (GstRegistry *registry, const gchar *name) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstPluginFeature*       gst_registry_find_feature       (GstRegistry *registry, const gchar *name, GType type);
+GstPluginFeature*       gst_registry_find_feature       (GstRegistry *registry, const gchar *name, GType type) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstPlugin *             gst_registry_lookup             (GstRegistry *registry, const char *filename);
+GstPlugin *             gst_registry_lookup             (GstRegistry *registry, const char *filename) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstPluginFeature *      gst_registry_lookup_feature     (GstRegistry *registry, const char *name);
+GstPluginFeature *      gst_registry_lookup_feature     (GstRegistry *registry, const char *name) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 gboolean                gst_registry_check_feature_version (GstRegistry *registry,

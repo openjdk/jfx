@@ -29,23 +29,16 @@
 #include "LibWebRTCMacros.h"
 #include "LibWebRTCRefWrappers.h"
 #include "RTCDTMFSenderBackend.h"
+#include <wtf/CheckedRef.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
-class LibWebRTCDTMFSenderBackend;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::LibWebRTCDTMFSenderBackend> : std::true_type { };
-}
-
-namespace WebCore {
 
 // Use eager initialization for the WeakPtrFactory since we construct WeakPtrs on another thread.
-class LibWebRTCDTMFSenderBackend final : public RTCDTMFSenderBackend, private webrtc::DtmfSenderObserverInterface, public CanMakeWeakPtr<LibWebRTCDTMFSenderBackend, WeakPtrFactoryInitialization::Eager> {
+class LibWebRTCDTMFSenderBackend final : public RTCDTMFSenderBackend, private webrtc::DtmfSenderObserverInterface, public CanMakeCheckedPtr<LibWebRTCDTMFSenderBackend>, public CanMakeWeakPtr<LibWebRTCDTMFSenderBackend, WeakPtrFactoryInitialization::Eager> {
     WTF_MAKE_TZONE_ALLOCATED(LibWebRTCDTMFSenderBackend);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(LibWebRTCDTMFSenderBackend);
 public:
     explicit LibWebRTCDTMFSenderBackend(Ref<webrtc::DtmfSenderInterface>&&);
     ~LibWebRTCDTMFSenderBackend();

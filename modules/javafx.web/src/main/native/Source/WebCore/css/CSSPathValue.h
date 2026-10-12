@@ -41,7 +41,7 @@ class CSSPathValue final : public CSSValue {
 public:
     static Ref<CSSPathValue> create(CSS::PathFunction path)
     {
-        return adoptRef(*new CSSPathValue(WTFMove(path)));
+        return adoptRef(*new CSSPathValue(WTF::move(path)));
     }
 
     const CSS::PathFunction& path() const { return m_path; }
@@ -54,7 +54,7 @@ public:
 private:
     CSSPathValue(CSS::PathFunction&& path)
         : CSSValue(ClassType::Path)
-        , m_path { WTFMove(path) }
+        , m_path { WTF::move(path) }
     {
     }
 

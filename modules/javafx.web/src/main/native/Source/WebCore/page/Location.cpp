@@ -29,13 +29,16 @@
 #include "config.h"
 #include "Location.h"
 
-#include "DocumentInlines.h"
+#include "DocumentQuirks.h"
+#include "DocumentSecurityOrigin.h"
+#include "ExceptionOr.h"
 #include "FrameLoader.h"
 #include "LocalDOMWindow.h"
 #include "LocalDOMWindowProperty.h"
 #include "LocalFrame.h"
 #include "NavigationScheduler.h"
 #include "Quirks.h"
+#include "ScriptWrappableInlines.h"
 #include "SecurityOrigin.h"
 #include "ServiceWorkerContainer.h"
 #include <wtf/TZoneMallocInlines.h>
@@ -45,10 +48,11 @@
 #include <wtf/URL.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/StringToIntegerConversion.h>
+#include "LocalFrameInlines.h"
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(Location);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Location);
 
 Location::Location(DOMWindow& window)
     : m_window(window)
@@ -163,6 +167,8 @@ ExceptionOr<void> Location::setProtocol(LocalDOMWindow& incumbentWindow, LocalDO
     URL url = localFrame->document()->url();
     if (!url.setProtocol(protocol))
         return Exception { ExceptionCode::SyntaxError };
+    if (!url.protocolIsInHTTPFamily())
+        return { };
     return setLocation(incumbentWindow, firstWindow, url.string());
 }
 
@@ -376,4 +382,7 @@ RefPtr<DOMWindow> Location::protectedWindow()
 {
     return m_window.get();
 }
+
+Location::~Location() = default;
+
 } // namespace WebCore

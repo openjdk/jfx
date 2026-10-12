@@ -39,25 +39,27 @@
 namespace WebCore {
 
 FrameLoadRequest::FrameLoadRequest(Ref<Document>&& requester, SecurityOrigin& requesterSecurityOrigin, ResourceRequest&& resourceRequest, const AtomString& frameName, InitiatedByMainFrame initiatedByMainFrame, const AtomString& downloadAttribute)
-    : m_requester { WTFMove(requester) }
+    : m_requester { WTF::move(requester) }
     , m_requesterSecurityOrigin { requesterSecurityOrigin }
-    , m_resourceRequest { WTFMove(resourceRequest) }
+    , m_resourceRequest { WTF::move(resourceRequest) }
     , m_frameName { frameName }
-    , m_downloadAttribute { downloadAttribute }
-    , m_initiatedByMainFrame { initiatedByMainFrame }
 {
+    setDownloadAttribute(downloadAttribute);
+    setInitiatedByMainFrame(initiatedByMainFrame);
 }
 
 FrameLoadRequest::FrameLoadRequest(LocalFrame& frame, ResourceRequest&& resourceRequest, SubstituteData&& substituteData)
     : m_requester { *frame.document() }
     , m_requesterSecurityOrigin { frame.document()->securityOrigin() }
-    , m_resourceRequest { WTFMove(resourceRequest) }
-    , m_substituteData { WTFMove(substituteData) }
+    , m_resourceRequest { WTF::move(resourceRequest) }
+    , m_substituteData { WTF::move(substituteData) }
 {
 }
 
 FrameLoadRequest::~FrameLoadRequest() = default;
 
+FrameLoadRequest::FrameLoadRequest(const FrameLoadRequest&) = default;
+FrameLoadRequest& FrameLoadRequest::operator=(const FrameLoadRequest&) = default;
 FrameLoadRequest::FrameLoadRequest(FrameLoadRequest&&) = default;
 FrameLoadRequest& FrameLoadRequest::operator=(FrameLoadRequest&&) = default;
 

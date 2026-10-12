@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "IDBKeyData.h"
+#include <WebCore/IDBKeyData.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
@@ -48,7 +48,7 @@ public:
     bool removeKey(const IDBKeyData&);
     bool contains(const IDBKeyData&);
 
-    const IDBKeyData* getLowest() const;
+    const IDBKeyData* getLowest() const LIFETIME_BOUND;
 
     uint64_t getCount() const;
 
@@ -77,13 +77,13 @@ public:
         IDBKeyDataSet::reverse_iterator m_reverseIterator;
     };
 
-    Iterator begin();
-    Iterator reverseBegin(CursorDuplicity);
+    Iterator begin() LIFETIME_BOUND;
+    Iterator reverseBegin(CursorDuplicity) LIFETIME_BOUND;
 
     // Finds the key, or the next higher record after the key.
-    Iterator find(const IDBKeyData&);
+    Iterator find(const IDBKeyData&) LIFETIME_BOUND;
     // Finds the key, or the next lowest record before the key.
-    Iterator reverseFind(const IDBKeyData&, CursorDuplicity);
+    Iterator reverseFind(const IDBKeyData&, CursorDuplicity) LIFETIME_BOUND;
 
     bool unique() const { return m_unique; }
     Vector<IDBKeyData> keys() const;

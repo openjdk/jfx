@@ -28,6 +28,8 @@
 #include "BarcodeFormat.h"
 #include "DOMRectReadOnly.h"
 #include "DetectedBarcodeInterface.h"
+#include "JSDOMConvertInterface.h"
+#include "JSDOMConvertNullable.h"
 #include "Point2D.h"
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>

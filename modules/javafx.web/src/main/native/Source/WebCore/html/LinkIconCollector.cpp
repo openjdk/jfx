@@ -109,7 +109,7 @@ auto LinkIconCollector::iconsOfTypes(OptionSet<LinkIconType> iconTypes) -> Vecto
             });
         }
 
-        icons.append({ url, iconType, linkElement->type(), iconSize, WTFMove(attributes) });
+        icons.append({ url, iconType, linkElement->type(), iconSize, WTF::move(attributes) });
     }
 
     std::ranges::sort(icons, [](auto& a, auto& b) {

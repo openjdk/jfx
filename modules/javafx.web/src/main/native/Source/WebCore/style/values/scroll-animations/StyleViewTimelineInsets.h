@@ -24,14 +24,48 @@
 
 #pragma once
 
-#include "StyleValueTypes.h"
-#include "WebAnimationTypes.h"
+#include <WebCore/StyleLengthWrapper.h>
+#include <WebCore/StyleValueTypes.h>
+#include <WebCore/WebAnimationTypes.h>
 
 namespace WebCore {
+
+class CSSPrimitiveValue;
+class CSSValuePair;
+
 namespace Style {
 
 // <single-view-timeline-inset-item> = [ [ auto | <length-percentage> ]{1,2} ]
-using ViewTimelineInsetItem = WebCore::ViewTimelineInsetItem;
+struct ViewTimelineInsetItem {
+    struct Length : LengthWrapperBase<LengthPercentage<>, CSS::Keyword::Auto> {
+        using Base::Base;
+
+        bool isAuto() const { return holdsAlternative<CSS::Keyword::Auto>(); }
+    };
+
+    MinimallySerializingSpaceSeparatedPair<Length> value;
+
+    ViewTimelineInsetItem(CSS::Keyword::Auto keyword)
+        : value { Length { keyword }, Length { keyword } }
+    {
+    }
+
+    ViewTimelineInsetItem(Length&& length)
+        : value { length, length }
+    {
+    }
+
+    ViewTimelineInsetItem(Length&& first, Length&& second)
+        : value { WTF::move(first), WTF::move(second) }
+    {
+    }
+
+    const Length& start() const { return value.first(); }
+    const Length& end() const { return value.second(); }
+
+    bool operator==(const ViewTimelineInsetItem&) const = default;
+};
+DEFINE_TYPE_WRAPPER_GET(ViewTimelineInsetItem, value);
 
 // <view-timeline-inset-list> = <single-view-timeline-inset-item>#
 using ViewTimelineInsetList = CommaSeparatedFixedVector<ViewTimelineInsetItem>;
@@ -56,16 +90,16 @@ struct ViewTimelineInsets : ListOrDefault<ViewTimelineInsetList, ViewTimelineIns
 
 // MARK: - Conversion
 
-template<> struct CSSValueConversion<ViewTimelineInsetItem> { auto operator()(BuilderState&, const CSSValue&) -> ViewTimelineInsetItem; };
+template<> struct CSSValueConversion<ViewTimelineInsetItem> {
+    auto operator()(BuilderState&, const CSSValue&) -> ViewTimelineInsetItem;
+    auto operator()(BuilderState&, const CSSPrimitiveValue&) -> ViewTimelineInsetItem;
+    auto operator()(BuilderState&, const CSSValuePair&) -> ViewTimelineInsetItem;
+};
 template<> struct CSSValueConversion<ViewTimelineInsets> { auto operator()(BuilderState&, const CSSValue&) -> ViewTimelineInsets; };
-
-template<> struct CSSValueCreation<ViewTimelineInsetItem> { auto operator()(CSSValuePool&, const RenderStyle&, const ViewTimelineInsetItem&) -> Ref<CSSValue>; };
-
-// MARK: - Serialization
-
-template<> struct Serialize<ViewTimelineInsetItem> { void operator()(StringBuilder&, const CSS::SerializationContext&, const RenderStyle&, const ViewTimelineInsetItem&); };
 
 } // namespace Style
 } // namespace WebCore
 
 DEFINE_RANGE_LIKE_CONFORMANCE_FOR_LIST_OR_DEFAULT_DERIVED_TYPE(WebCore::Style::ViewTimelineInsets)
+DEFINE_VARIANT_LIKE_CONFORMANCE(WebCore::Style::ViewTimelineInsetItem::Length)
+DEFINE_TUPLE_LIKE_CONFORMANCE_FOR_TYPE_WRAPPER(WebCore::Style::ViewTimelineInsetItem)

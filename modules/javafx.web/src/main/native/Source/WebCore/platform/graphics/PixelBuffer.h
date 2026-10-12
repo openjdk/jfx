@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "IntSize.h"
-#include "PixelBufferFormat.h"
+#include <WebCore/IntSize.h>
+#include <WebCore/PixelBufferFormat.h>
 #include <optional>
 #include <span>
 #include <wtf/RefCounted.h>
@@ -42,6 +42,10 @@ namespace WebCore {
 class PixelBuffer : public RefCounted<PixelBuffer> {
     WTF_MAKE_NONCOPYABLE(PixelBuffer);
 public:
+    static constexpr uint32_t bytesPerPixelComponent(PixelFormat);
+    static constexpr uint32_t componentsPerPixel(PixelFormat);
+    static constexpr uint32_t bytesPerPixel(PixelFormat);
+
     static CheckedUint32 computePixelCount(const IntSize&);
     static CheckedUint32 computePixelComponentCount(PixelFormat, const IntSize&);
     WEBCORE_EXPORT static CheckedUint32 computeBufferSize(PixelFormat, const IntSize&);
@@ -116,5 +120,25 @@ private:
     IntSize m_size;
     std::span<const uint8_t> m_bytes;
 };
+
+constexpr uint32_t PixelBuffer::bytesPerPixelComponent(PixelFormat pixelFormat)
+{
+#if ENABLE(PIXEL_FORMAT_RGBA16F)
+    return (pixelFormat == PixelFormat::RGBA16F) ? 2 : 1;
+#else
+    UNUSED_PARAM(pixelFormat);
+    return 1;
+#endif
+}
+
+constexpr uint32_t PixelBuffer::componentsPerPixel(PixelFormat)
+{
+    return 4;
+}
+
+constexpr uint32_t PixelBuffer::bytesPerPixel(PixelFormat pixelFormat)
+{
+    return bytesPerPixelComponent(pixelFormat) * componentsPerPixel(pixelFormat);
+}
 
 } // namespace WebCore

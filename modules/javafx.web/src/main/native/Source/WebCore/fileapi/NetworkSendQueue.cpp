@@ -32,11 +32,16 @@
 
 namespace WebCore {
 
+Ref<NetworkSendQueue> NetworkSendQueue::create(ScriptExecutionContext& context, WriteString&& writeString, WriteRawData&& writeRawData, ProcessError&& processError)
+{
+    return adoptRef(*new NetworkSendQueue(context, WTF::move(writeString), WTF::move(writeRawData), WTF::move(processError)));
+}
+
 NetworkSendQueue::NetworkSendQueue(ScriptExecutionContext& context, WriteString&& writeString, WriteRawData&& writeRawData, ProcessError&& processError)
     : ContextDestructionObserver(&context)
-    , m_writeString(WTFMove(writeString))
-    , m_writeRawData(WTFMove(writeRawData))
-    , m_processError(WTFMove(processError))
+    , m_writeString(WTF::move(writeString))
+    , m_writeRawData(WTF::move(writeRawData))
+    , m_processError(WTF::move(processError))
 {
 }
 
@@ -48,7 +53,7 @@ void NetworkSendQueue::enqueue(CString&& utf8)
         m_writeString(utf8);
         return;
     }
-    m_queue.append(WTFMove(utf8));
+    m_queue.append(WTF::move(utf8));
 }
 
 void NetworkSendQueue::enqueue(const JSC::ArrayBuffer& binaryData, unsigned byteOffset, unsigned byteLength)
@@ -73,8 +78,9 @@ void NetworkSendQueue::enqueue(WebCore::Blob& blob)
         enqueue(JSC::ArrayBuffer::create(static_cast<size_t>(0U), 1), 0, 0);
         return;
     }
-    Ref blobLoader = BlobLoader::create([this](BlobLoader&) {
-        processMessages();
+    Ref blobLoader = BlobLoader::create([weakThis = WeakPtr { *this }](BlobLoader&) {
+        if (RefPtr protectedThis = weakThis.get())
+            protectedThis->processMessages();
     });
     m_queue.append(blobLoader.copyRef());
     blobLoader->start(blob, context.get(), FileReaderLoader::ReadAsArrayBuffer);

@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "CatchScope.h"
-#include "StackAlignment.h"
-#include "VM.h"
+#include <JavaScriptCore/CatchScope.h>
+#include <JavaScriptCore/StackAlignment.h>
+#include <JavaScriptCore/VM.h>
 
 namespace JSC {
 
@@ -81,7 +81,7 @@ ALWAYS_INLINE static void assertStackPointerIsAligned()
 #if CPU(X86) && !OS(WINDOWS)
     uintptr_t stackPointer;
 
-    asm("movl %%esp,%0" : "=r"(stackPointer));
+    __asm__("movl %%esp,%0" : "=r"(stackPointer));
     ASSERT(!(stackPointer % stackAlignmentBytes()));
 #endif
 #endif
@@ -106,6 +106,18 @@ public:
         ASSERT(reinterpret_cast<void*>(callFrame) < reinterpret_cast<void*>(vm.topEntryFrame));
         assertStackPointerIsAligned();
         vm.topCallFrame = callFrame;
+    }
+};
+
+class WasmOperationPrologueCallFrameTracer {
+public:
+    ALWAYS_INLINE WasmOperationPrologueCallFrameTracer(VM& vm, CallFrame* callFrame, void* returnPC)
+    {
+        ASSERT(callFrame);
+        ASSERT(reinterpret_cast<void*>(callFrame) < reinterpret_cast<void*>(vm.topEntryFrame));
+        assertStackPointerIsAligned();
+        vm.topCallFrame = callFrame;
+        vm.maybeReturnPC = returnPC;
     }
 };
 

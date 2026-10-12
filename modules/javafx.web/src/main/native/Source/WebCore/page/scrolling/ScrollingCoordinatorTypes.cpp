@@ -57,7 +57,7 @@ void RequestedScrollData::merge(RequestedScrollData&& other)
             break;
         }
     }
-    *this = WTFMove(other);
+    *this = WTF::move(other);
 }
 
 FloatPoint RequestedScrollData::destinationPosition(FloatPoint currentScrollPosition) const

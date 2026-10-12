@@ -69,7 +69,7 @@ def main():
 
 #pragma once
 
-#include "ThreadGlobalData.h"
+#include <WebCore/ThreadGlobalData.h>
 #include <array>
 #include <functional>
 #include <wtf/HashSet.h>
@@ -177,7 +177,7 @@ const EventNames& eventNames();
 
 inline const EventNames& eventNames()
 {
-    return threadGlobalData().eventNames();
+    return threadGlobalDataSingleton().eventNames();
 }
 
 inline EventTypeInfo EventNames::typeInfoForEvent(const AtomString& eventType) const

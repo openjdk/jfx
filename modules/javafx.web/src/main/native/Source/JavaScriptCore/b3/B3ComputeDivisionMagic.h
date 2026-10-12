@@ -75,21 +75,25 @@
 
 #if ENABLE(B3_JIT)
 
+#include <wtf/MathExtras.h>
 #include <wtf/StdLibExtras.h>
 
 namespace JSC { namespace B3 {
 
 template<typename T>
 struct DivisionMagic {
-    T magicMultiplier;
-    unsigned shift;
+    T magicMultiplier { };
+    unsigned shift { };
+    bool add { false };
+    unsigned preShift { };
 };
 
 // This contains code taken from LLVM's APInt::magic(). It's modestly adapted to our style, but
 // not completely, to make it easier to apply their changes in the future.
-template<typename T>
-DivisionMagic<T> computeDivisionMagic(T divisor)
+template<std::signed_integral T>
+DivisionMagic<T> computeSignedDivisionMagic(T divisor)
 {
+    ASSERT(divisor);
     auto d = unsignedCast(divisor);
     unsigned p;
     std::make_unsigned_t<T> ad, anc, delta, q1, r1, q2, r2, t;
@@ -107,9 +111,9 @@ DivisionMagic<T> computeDivisionMagic(T divisor)
     anc = t - 1 - (t % ad);   // absolute value of nc
     p = bitWidth - 1;    // initialize p
     q1 = signedMin / anc;   // initialize q1 = 2p/abs(nc)
-    r1 = signedMin - q1*anc;    // initialize r1 = rem(2p,abs(nc))
+    r1 = signedMin - q1 * anc; // initialize r1 = rem(2p,abs(nc))
     q2 = signedMin / ad;    // initialize q2 = 2p/abs(d)
-    r2 = signedMin - q2*ad;     // initialize r2 = rem(2p,abs(d))
+    r2 = signedMin - q2 * ad; // initialize r2 = rem(2p,abs(d))
     do {
         p = p + 1;
         q1 = q1 << 1;          // update q1 = 2p/abs(nc)
@@ -131,6 +135,100 @@ DivisionMagic<T> computeDivisionMagic(T divisor)
     if (divisor < 0)
         mag.magicMultiplier = -mag.magicMultiplier;   // resulting magic number
     mag.shift = p - bitWidth;          // resulting shift
+    mag.add = false;
+
+    return mag;
+}
+
+// Compute magic numbers for unsigned division based on "Hacker's Delight" by Henry S. Warren, Jr.
+// This is adapted from LLVM's UnsignedDivisionByConstantInfo implementation.
+// LeadingZeros can be used to simplify the calculation if the upper bits of the divided value are known zero.
+template<std::unsigned_integral T>
+DivisionMagic<T> computeUnsignedDivisionMagic(T divisor, unsigned leadingZeros = 0)
+{
+    ASSERT(divisor);
+    ASSERT(divisor != 1);
+    DivisionMagic<T> mag;
+    mag.add = false;
+    mag.preShift = 0;
+    unsigned bitWidth = sizeof(divisor) * 8;
+    T d = static_cast<T>(divisor);
+
+    // If divisor is a power of 2, we can just use a shift
+    if (hasOneBitSet(d)) {
+        mag.magicMultiplier = 0;
+        mag.shift = WTF::fastLog2(static_cast<uint64_t>(d));
+        mag.add = false;
+        mag.preShift = 0;
+        return mag;
+    }
+
+    // The range we care about for the dividend, based on known leading zeros
+    T allOnes = std::numeric_limits<T>::max() >> leadingZeros;
+    T signedMin = static_cast<T>(1) << (bitWidth - 1); // 2^(bitWidth-1)
+    T signedMax = signedMin - 1; // 2^(bitWidth-1) - 1
+
+    // Calculate NC: the largest value such that NC % D == D - 1
+    // NC = allOnes - (allOnes + 1 - D) % D
+    T nc = allOnes - ((allOnes - d + 1) % d);
+
+    unsigned p = bitWidth - 1; // initialize P
+    T q1, r1, q2, r2;
+
+    // initialize Q1 = 2^(bitWidth-1) / NC; R1 = 2^(bitWidth-1) % NC
+    q1 = signedMin / nc;
+    r1 = signedMin % nc;
+
+    // initialize Q2 = signedMax / D; R2 = signedMax % D
+    q2 = signedMax / d;
+    r2 = signedMax % d;
+
+    T delta;
+    do {
+        ++p;
+        if (r1 >= nc - r1) {
+            q1 = (q1 << 1) + 1; // update Q1
+            r1 = (r1 << 1) - nc; // update R1
+        } else {
+            q1 = q1 << 1; // update Q1
+            r1 = r1 << 1; // update R1
+        }
+
+        if (r2 + 1 >= d - r2) {
+            if (q2 >= signedMax)
+                mag.add = true;
+            q2 = (q2 << 1) + 1; // update Q2
+            r2 = ((r2 << 1) + 1) - d; // update R2
+        } else {
+            if (q2 >= signedMin)
+                mag.add = true;
+            q2 = q2 << 1; // update Q2
+            r2 = (r2 << 1) + 1; // update R2
+        }
+
+        delta = d - 1 - r2;
+    } while (p < bitWidth * 2 && (q1 < delta || (q1 == delta && r1 == 0)));
+
+    // Even divisor optimization: If mag.add is set and divisor is even,
+    // we can shift both dividend and divisor right by the number of trailing zeros,
+    // which often results in mag.add becoming false (avoiding the expensive add path).
+    if (mag.add && !(d & 1)) {
+        unsigned preShift = WTF::ctz(d);
+        T shiftedD = d >> preShift;
+        mag = computeUnsignedDivisionMagic(shiftedD, leadingZeros + preShift);
+        ASSERT(!mag.add && !mag.preShift);
+        mag.preShift = preShift;
+        return mag;
+    }
+
+    mag.magicMultiplier = q2 + 1;
+    mag.shift = p - bitWidth;
+
+    // Reduce shift amount for mag.add case
+    if (mag.add) {
+        ASSERT(mag.shift > 0);
+        mag.shift = mag.shift - 1;
+    }
 
     return mag;
 }

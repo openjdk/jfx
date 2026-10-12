@@ -1,50 +1,69 @@
-/*
-* Copyright (C) 2024 Apple Inc. All rights reserved.
-*
-* Redistribution and use in source and binary forms, with or without
-* modification, are permitted provided that the following conditions
-* are met:
-* 1. Redistributions of source code must retain the above copyright
-*    notice, this list of conditions and the following disclaimer.
-* 2. Redistributions in binary form must reproduce the above copyright
-*    notice, this list of conditions and the following disclaimer in the
-*    documentation and/or other materials provided with the distribution.
-*
-* THIS SOFTWARE IS PROVIDED BY APPLE INC. AND ITS CONTRIBUTORS ``AS IS''
-* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
-* THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-* PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL APPLE INC. OR ITS CONTRIBUTORS
-* BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-* CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-* ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
-* THE POSSIBILITY OF SUCH DAMAGE.
-*/
+// Copyright (C) 2024 Apple Inc. All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions
+// are met:
+// 1. Redistributions of source code must retain the above copyright
+//    notice, this list of conditions and the following disclaimer.
+// 2. Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in the
+//    documentation and/or other materials provided with the distribution.
+//
+// THIS SOFTWARE IS PROVIDED BY APPLE INC. AND ITS CONTRIBUTORS ``AS IS''
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+// THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+// PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL APPLE INC. OR ITS CONTRIBUTORS
+// BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+// THE POSSIBILITY OF SUCH DAMAGE.
 
 #if swift(>=5.9)
 
 import CryptoKit
 import Foundation
-import PALSwift
 
+#if swift(>=6.0)
+public import pal.Core.PALSwift
+public import pal.Core.crypto.CryptoDigestHashFunction
+#else
+import pal.Core.PALSwift
+import pal.Core.crypto.CryptoDigestHashFunction
+#endif
+
+// FIXME: PALSwift should have no public symbols.
+// swift-format-ignore: AllPublicDeclarationsHaveDocumentation
 public typealias CryptoOperationReturnValue = Cpp.CryptoOperationReturnValue
+
+// FIXME: PALSwift should have no public symbols.
+// swift-format-ignore: AllPublicDeclarationsHaveDocumentation
 public typealias ErrorCodes = Cpp.ErrorCodes
+
+// FIXME: PALSwift should have no public symbols.
+// swift-format-ignore: AllPublicDeclarationsHaveDocumentation
 public typealias VectorUInt8 = Cpp.VectorUInt8
+
+// FIXME: PALSwift should have no public symbols.
+// swift-format-ignore: AllPublicDeclarationsHaveDocumentation
 public typealias SpanConstUInt8 = Cpp.SpanConstUInt8
 
 private enum LocalErrors: Error {
     case invalidArgument
 }
 
-private class Utils {
-    static let zeroArray = [UInt8](repeating: 0, count: 0)
-}
-
+// FIXME: PALSwift should have no public symbols.
+// swift-format-ignore: AllPublicDeclarationsHaveDocumentation
 public class AesGcm {
+    // FIXME: PALSwift should have no public symbols.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
     public static func encrypt(
-        key: SpanConstUInt8, iv: SpanConstUInt8, ad: SpanConstUInt8, message: SpanConstUInt8,
+        key: SpanConstUInt8,
+        iv: SpanConstUInt8,
+        ad: SpanConstUInt8,
+        message: SpanConstUInt8,
         desiredTagLengthInBytes: Int
     ) -> CryptoOperationReturnValue {
         var returnValue = CryptoOperationReturnValue()
@@ -61,7 +80,8 @@ public class AesGcm {
             var result = sealedBox.ciphertext
             result.append(
                 sealedBox.tag[
-                    sealedBox.tag.startIndex..<(sealedBox.tag.startIndex + desiredTagLengthInBytes)]
+                    sealedBox.tag.startIndex..<(sealedBox.tag.startIndex + desiredTagLengthInBytes)
+                ]
             )
              returnValue.errorCode = .Success
              returnValue.result = result.copyToVectorUInt8()
@@ -73,10 +93,12 @@ public class AesGcm {
     }
 }
 
+// FIXME: PALSwift should have no public symbols.
+// swift-format-ignore: AllPublicDeclarationsHaveDocumentation
 public class AesKw {
-    public static func wrap(keyToWrap: SpanConstUInt8, using: SpanConstUInt8)
-        -> CryptoOperationReturnValue
-    {
+    // FIXME: PALSwift should have no public symbols.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
+    public static func wrap(keyToWrap: SpanConstUInt8, using: SpanConstUInt8) -> CryptoOperationReturnValue {
         var returnValue = CryptoOperationReturnValue()
         do {
             let result = try AES.KeyWrap.wrap(keyToWrap, using: using)
@@ -88,13 +110,13 @@ public class AesKw {
         return returnValue
     }
 
-    public static func unwrap(wrappedKey: SpanConstUInt8, using: SpanConstUInt8)
-        -> CryptoOperationReturnValue
-    {
+    public static func unwrap(wrappedKey: SpanConstUInt8, using: SpanConstUInt8) -> CryptoOperationReturnValue {
         var returnValue = CryptoOperationReturnValue()
         do {
             let result = try AES.KeyWrap.unwrap(
-                wrappedKey, using: using)
+                wrappedKey,
+                using: using
+            )
              returnValue.errorCode = .Success
              returnValue.result = result.copyToVectorUInt8()
         } catch {
@@ -104,86 +126,107 @@ public class AesKw {
     }
 }  // AesKw
 
-public enum HashFunction {
-    case sha1
-    case sha256
-    case sha384
-    case sha512
-}
-
+// FIXME: PALSwift should have no public symbols.
+// swift-format-ignore: AllPublicDeclarationsHaveDocumentation
 public class Digest {
     var ctx: any CryptoKit.HashFunction
 
+    // FIXME: PALSwift should have no public symbols.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
     public required init<T: CryptoKit.HashFunction>(_: T.Type) {
         ctx = T()
     }
 
+    // FIXME: PALSwift should have no public symbols.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
     public static func sha1Init() -> Digest {
-        return Self(Insecure.SHA1.self)
+        Self(Insecure.SHA1.self)
     }
 
+    // FIXME: PALSwift should have no public symbols.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
     public static func sha256Init() -> Digest {
-        return Self(SHA256.self)
+        Self(SHA256.self)
     }
 
+    // FIXME: PALSwift should have no public symbols.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
     public static func sha384Init() -> Digest {
-        return Self(SHA384.self)
+        Self(SHA384.self)
     }
 
+    // FIXME: PALSwift should have no public symbols.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
     public static func sha512Init() -> Digest {
-        return Self(SHA512.self)
+        Self(SHA512.self)
     }
 
+    // FIXME: PALSwift should have no public symbols.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
     public func update(_ data: SpanConstUInt8) {
         ctx.update(data: data)
     }
 
+    // FIXME: PALSwift should have no public symbols.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
     public func finalize() -> VectorUInt8 {
         ctx.finalize().copyToVectorUInt8()
     }
 
+    // FIXME: PALSwift should have no public symbols.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
     public static func sha1(_ data: SpanConstUInt8) -> VectorUInt8 {
-        return digest(data, t: Insecure.SHA1.self)
+        digest(data, t: Insecure.SHA1.self)
     }
+
+    // FIXME: PALSwift should have no public symbols.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
     public static func sha256(_ data: SpanConstUInt8) -> VectorUInt8 {
-        return digest(data, t: SHA256.self)
+        digest(data, t: SHA256.self)
     }
+
+    // FIXME: PALSwift should have no public symbols.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
     public static func sha384(_ data: SpanConstUInt8) -> VectorUInt8 {
-        return digest(data, t: SHA384.self)
+        digest(data, t: SHA384.self)
     }
+
+    // FIXME: PALSwift should have no public symbols.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
     public static func sha512(_ data: SpanConstUInt8) -> VectorUInt8 {
-        return digest(data, t: SHA512.self)
+        digest(data, t: SHA512.self)
     }
-    fileprivate static func digest<T: CryptoKit.HashFunction>(_ data: SpanConstUInt8, _: T.Type)
-        -> T.Digest
-    {
+
+    fileprivate static func digest<T: CryptoKit.HashFunction>(_ data: SpanConstUInt8, _: T.Type) -> T.Digest {
         var hasher = T()
         hasher.update(data: data)
         return hasher.finalize()
     }
 
-    fileprivate static func digest<T: CryptoKit.HashFunction>(_ data: SpanConstUInt8, t: T.Type)
-        -> VectorUInt8
-    {
-        return Self.digest(data, t).copyToVectorUInt8()
+    fileprivate static func digest<T: CryptoKit.HashFunction>(_ data: SpanConstUInt8, t: T.Type) -> VectorUInt8 {
+        Self.digest(data, t).copyToVectorUInt8()
     }
 
-    fileprivate static func digest(_ data: SpanConstUInt8, hashFunction: HashFunction)
-        -> any CryptoKit.Digest
-    {
+    fileprivate static func digest(_ data: SpanConstUInt8, hashFunction: PAL.CryptoDigestHashFunction) -> any CryptoKit.Digest {
         switch hashFunction {
-        case .sha256:
+        case .SHA_256:
             return digest(data, SHA256.self)
-        case .sha384:
+        case .SHA_384:
             return digest(data, SHA384.self)
-        case .sha512:
+        case .SHA_512:
             return digest(data, SHA512.self)
-        case .sha1:
+        case .SHA_1:
             return digest(data, Insecure.SHA1.self)
+        case .DEPRECATED_SHA_224:
+            fatalError("DEPRECATED_SHA_224 is not supported")
+        @unknown default:
+            fatalError("Unknown PAL.CryptoDigestHashFunction enum case value: \(hashFunction.rawValue)")
         }
     }
 }
 
+// FIXME: PALSwift should have no public symbols.
+// swift-format-ignore: AllPublicDeclarationsHaveDocumentation
 public enum ECCurve {
     case p256
     case p384
@@ -201,23 +244,34 @@ enum ECPublicKey {
     case p384(P384.Signing.PublicKey)
     case p521(P521.Signing.PublicKey)
 }
+
 enum ECKeyInternal {
     case privateKey(ECPrivateKey)
     case publicKey(ECPublicKey)
 }
+
+// FIXME: PALSwift should have no public symbols.
+// swift-format-ignore: AllPublicDeclarationsHaveDocumentation
 public enum ECImportReturnCode {
     case defaultValue
     case success
     case importFailed
 }
 
+// FIXME: PALSwift should have no public symbols.
+// swift-format-ignore: AllPublicDeclarationsHaveDocumentation
 public struct ECImportReturnValue {
     public var errorCode: ECImportReturnCode = .defaultValue
     public var key: ECKey? = nil
 }
 
+// FIXME: PALSwift should have no public symbols.
+// swift-format-ignore: AllPublicDeclarationsHaveDocumentation
 public struct ECKey {
     let key: ECKeyInternal
+
+    // FIXME: PALSwift should have no public symbols.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
     public init(curve: ECCurve) {
         switch curve {
         case .p256:
@@ -228,31 +282,39 @@ public struct ECKey {
             key = .privateKey(.p521(P521.Signing.PrivateKey(compactRepresentable: true)))
         }
     }
+
     private init(publicKey: ECPublicKey) {
         key = .publicKey(publicKey)
     }
+
     private init(privateKey: ECPrivateKey) {
         key = .privateKey(privateKey)
     }
+
     private init(internalKey: ECKeyInternal) {
         key = internalKey
     }
+
+    // FIXME: PALSwift should have no public symbols.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
     public func toPub() -> ECKey {
         switch key {
         case .publicKey:
             return self
-        case let .privateKey(v):
+        case .privateKey(let v):
             switch v {
-            case let .p256(u):
+            case .p256(let u):
                 return ECKey(publicKey: .p256(u.publicKey))
-            case let .p384(u):
+            case .p384(let u):
                 return ECKey(publicKey: .p384(u.publicKey))
-            case let .p521(u):
+            case .p521(let u):
                 return ECKey(publicKey: .p521(u.publicKey))
             }
         }
     }
 
+    // FIXME: PALSwift should have no public symbols.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
     public static func importX963Pub(data: SpanConstUInt8, curve: ECCurve) -> ECImportReturnValue {
         var returnValue = ECImportReturnValue()
         do {
@@ -271,6 +333,8 @@ public struct ECKey {
         return returnValue
     }
 
+    // FIXME: PALSwift should have no public symbols.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
     public func exportX963Pub() -> CryptoOperationReturnValue {
         var returnValue = CryptoOperationReturnValue()
         do {
@@ -288,9 +352,10 @@ public struct ECKey {
         }
         return returnValue
     }
-    public static func importCompressedPub(data: SpanConstUInt8, curve: ECCurve)
-        -> ECImportReturnValue
-    {
+
+    // FIXME: PALSwift should have no public symbols.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
+    public static func importCompressedPub(data: SpanConstUInt8, curve: ECCurve) -> ECImportReturnValue {
         var returnValue = ECImportReturnValue()
         do {
             switch curve {
@@ -307,9 +372,10 @@ public struct ECKey {
         }
         return returnValue
     }
-    public static func importX963Private(data: SpanConstUInt8, curve: ECCurve)
-        -> ECImportReturnValue
-    {
+
+    // FIXME: PALSwift should have no public symbols.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
+    public static func importX963Private(data: SpanConstUInt8, curve: ECCurve) -> ECImportReturnValue {
         var returnValue = ECImportReturnValue()
         do {
             switch curve {
@@ -326,6 +392,9 @@ public struct ECKey {
         }
         return returnValue
     }
+
+    // FIXME: PALSwift should have no public symbols.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
     public func exportX963Private() -> CryptoOperationReturnValue {
         var returnValue = CryptoOperationReturnValue()
         do {
@@ -343,9 +412,18 @@ public struct ECKey {
         }
         return returnValue
     }
-    public func sign(message: SpanConstUInt8, hashFunction: HashFunction)
-        -> CryptoOperationReturnValue
-    {
+
+    // FIXME: `hashFunction` should not be a raw value, but compilers < 6.0 do not understand C++ enums as parameters.
+    // FIXME: PALSwift should have no public symbols.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
+    public func sign(
+        message: SpanConstUInt8,
+        hashFunction hashFunctionRawValue: PAL.CryptoDigestHashFunction.RawValue
+    ) -> CryptoOperationReturnValue {
+        // FIXME: This is safe because all callers use the enum type itself, and this is only temporary.
+        // swift-format-ignore: NeverForceUnwrap
+        let hashFunction = PAL.CryptoDigestHashFunction(rawValue: hashFunctionRawValue)!
+
         var returnValue = CryptoOperationReturnValue()
         do {
             switch try getInternalPrivate() {
@@ -369,9 +447,17 @@ public struct ECKey {
         return returnValue
     }
 
+    // FIXME: PALSwift should have no public symbols.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
     public func verify(
-        message: SpanConstUInt8, signature: SpanConstUInt8, hashFunction: HashFunction
+        message: SpanConstUInt8,
+        signature: SpanConstUInt8,
+        hashFunction hashFunctionRawValue: PAL.CryptoDigestHashFunction.RawValue
     ) -> CryptoOperationReturnValue {
+        // FIXME: This is safe because all callers use the enum type itself, and this is only temporary.
+        // swift-format-ignore: NeverForceUnwrap
+        let hashFunction = PAL.CryptoDigestHashFunction(rawValue: hashFunctionRawValue)!
+
         var returnValue = CryptoOperationReturnValue()
         do {
             let internalPublic = try getInternalPublic()
@@ -380,19 +466,22 @@ public struct ECKey {
                  returnValue.errorCode =
                     cryptoKey.isValidSignature(
                         try P256.Signing.ECDSASignature(span: signature),
-                        for: Digest.digest(message, hashFunction: hashFunction))
+                        for: Digest.digest(message, hashFunction: hashFunction)
+                    )
                     ? .Success : .FailedToVerify
             case .p384(let cryptoKey):
                  returnValue.errorCode =
                     cryptoKey.isValidSignature(
                         try P384.Signing.ECDSASignature(span: signature),
-                        for: Digest.digest(message, hashFunction: hashFunction))
+                        for: Digest.digest(message, hashFunction: hashFunction)
+                    )
                     ? .Success : .FailedToVerify
             case .p521(let cryptoKey):
                  returnValue.errorCode =
                     cryptoKey.isValidSignature(
                         try P521.Signing.ECDSASignature(span: signature),
-                        for: Digest.digest(message, hashFunction: hashFunction))
+                        for: Digest.digest(message, hashFunction: hashFunction)
+                    )
                     ? .Success : .FailedToVerify
             }
         } catch {
@@ -400,6 +489,7 @@ public struct ECKey {
         }
         return returnValue
     }
+
     private func getInternalPrivate() throws -> ECPrivateKey {
         switch key {
         case .publicKey:
@@ -408,6 +498,7 @@ public struct ECKey {
             return privateKey
         }
     }
+
     private func getInternalPublic() throws -> ECPublicKey {
         switch key {
         case .privateKey:
@@ -417,6 +508,8 @@ public struct ECKey {
         }
     }
 
+    // FIXME: PALSwift should have no public symbols.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
     public func deriveBits(publicKey: ECKey) -> CryptoOperationReturnValue {
         var returnValue = CryptoOperationReturnValue()
         do {
@@ -425,33 +518,42 @@ public struct ECKey {
             switch internalPrivate {
             case .p256(let signing):
                 let scalar = try P256.KeyAgreement.PrivateKey(
-                    rawRepresentation: signing.rawRepresentation)
-                if case let .p256(publicKey) = internalPub {
+                    rawRepresentation: signing.rawRepresentation
+                )
+                if case .p256(let publicKey) = internalPub {
                     let derived = try scalar.sharedSecretFromKeyAgreement(
                         with: try P256.KeyAgreement.PublicKey(
-                            rawRepresentation: publicKey.rawRepresentation))
+                            rawRepresentation: publicKey.rawRepresentation
+                        )
+                    )
                      returnValue.result = derived.copyToVectorUInt8()
                     break
                 }
                  returnValue.errorCode = .InvalidArgument
             case .p384(let signing):
                 let scalar = try P384.KeyAgreement.PrivateKey(
-                    rawRepresentation: signing.rawRepresentation)
-                if case let .p384(publicKey) = internalPub {
+                    rawRepresentation: signing.rawRepresentation
+                )
+                if case .p384(let publicKey) = internalPub {
                     let derived = try scalar.sharedSecretFromKeyAgreement(
                         with: try P384.KeyAgreement.PublicKey(
-                            rawRepresentation: publicKey.rawRepresentation))
+                            rawRepresentation: publicKey.rawRepresentation
+                        )
+                    )
                      returnValue.result = derived.copyToVectorUInt8()
                     break
                 }
                  returnValue.errorCode = .InvalidArgument
             case .p521(let signing):
                 let scalar = try P521.KeyAgreement.PrivateKey(
-                    rawRepresentation: signing.rawRepresentation)
-                if case let .p521(publicKey) = internalPub {
+                    rawRepresentation: signing.rawRepresentation
+                )
+                if case .p521(let publicKey) = internalPub {
                     let derived = try scalar.sharedSecretFromKeyAgreement(
                         with: try P521.KeyAgreement.PublicKey(
-                            rawRepresentation: publicKey.rawRepresentation))
+                            rawRepresentation: publicKey.rawRepresentation
+                        )
+                    )
                      returnValue.result = derived.copyToVectorUInt8()
                     break
                 }
@@ -465,17 +567,25 @@ public struct ECKey {
     }
 }
 
+// FIXME: PALSwift should have no public symbols.
+// swift-format-ignore: AllPublicDeclarationsHaveDocumentation
 public enum EdSigningAlgorithm {
     case ed25519
     case ed448
 }
 
+// FIXME: PALSwift should have no public symbols.
+// swift-format-ignore: AllPublicDeclarationsHaveDocumentation
 public enum EdKeyAgreementAlgorithm {
     case x25519
     case x448
 }
 
+// FIXME: PALSwift should have no public symbols.
+// swift-format-ignore: AllPublicDeclarationsHaveDocumentation
 public class EdKey {
+    // FIXME: PALSwift should have no public symbols.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
     public static func generatePrivateKey(algo: EdSigningAlgorithm) -> VectorUInt8 {
         switch algo {
         case .ed25519:
@@ -485,8 +595,9 @@ public class EdKey {
         }
     }
 
-    public static func generatePrivateKeyKeyAgreement(algo: EdKeyAgreementAlgorithm) -> VectorUInt8
-    {
+    // FIXME: PALSwift should have no public symbols.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
+    public static func generatePrivateKeyKeyAgreement(algo: EdKeyAgreementAlgorithm) -> VectorUInt8 {
         switch algo {
         case .x25519:
             return Curve25519.KeyAgreement.PrivateKey().rawRepresentation.copyToVectorUInt8()
@@ -495,9 +606,9 @@ public class EdKey {
         }
     }
 
-    public static func privateToPublic(algo: EdSigningAlgorithm, privateKey: SpanConstUInt8)
-        -> CryptoOperationReturnValue
-    {
+    // FIXME: PALSwift should have no public symbols.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
+    public static func privateToPublic(algo: EdSigningAlgorithm, privateKey: SpanConstUInt8) -> CryptoOperationReturnValue {
         var returnValue = CryptoOperationReturnValue()
         do {
             if privateKey.size() != 32 {
@@ -520,8 +631,11 @@ public class EdKey {
         return returnValue
     }
 
+    // FIXME: PALSwift should have no public symbols.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
     public static func privateToPublicKeyAgreement(
-        algo: EdKeyAgreementAlgorithm, privateKey: SpanConstUInt8
+        algo: EdKeyAgreementAlgorithm,
+        privateKey: SpanConstUInt8
     ) -> CryptoOperationReturnValue {
         var returnValue = CryptoOperationReturnValue()
         do {
@@ -544,9 +658,10 @@ public class EdKey {
         }
         return returnValue
     }
-    public static func validateKeyPair(
-        algo: EdSigningAlgorithm, privateKey: SpanConstUInt8, publicKey: SpanConstUInt8
-    ) -> Bool {
+
+    // FIXME: PALSwift should have no public symbols.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
+    public static func validateKeyPair(algo: EdSigningAlgorithm, privateKey: SpanConstUInt8, publicKey: SpanConstUInt8) -> Bool {
         do {
             if privateKey.size() != 32 || publicKey.size() != 32 {
                 throw LocalErrors.invalidArgument
@@ -562,11 +677,14 @@ public class EdKey {
         } catch {
             return false
         }
-
     }
 
+    // FIXME: PALSwift should have no public symbols.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
     public static func validateKeyPairKeyAgreement(
-        algo: EdKeyAgreementAlgorithm, privateKey: SpanConstUInt8, publicKey: SpanConstUInt8
+        algo: EdKeyAgreementAlgorithm,
+        privateKey: SpanConstUInt8,
+        publicKey: SpanConstUInt8
     ) -> Bool {
         do {
             if privateKey.size() != 32 || publicKey.size() != 32 {
@@ -583,12 +701,11 @@ public class EdKey {
         } catch {
             return false
         }
-
     }
 
-    public static func sign(algo: EdSigningAlgorithm, privateKey: SpanConstUInt8, data: SpanConstUInt8)
-        -> CryptoOperationReturnValue
-    {
+    // FIXME: PALSwift should have no public symbols.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
+    public static func sign(algo: EdSigningAlgorithm, privateKey: SpanConstUInt8, data: SpanConstUInt8) -> CryptoOperationReturnValue {
         var returnValue = CryptoOperationReturnValue()
         do {
             switch algo {
@@ -604,8 +721,13 @@ public class EdKey {
         }
         return returnValue
     }
+
+    // FIXME: PALSwift should have no public symbols.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
     public static func verify(
-        algo: EdSigningAlgorithm, publicKey: SpanConstUInt8, signature: SpanConstUInt8,
+        algo: EdSigningAlgorithm,
+        publicKey: SpanConstUInt8,
+        signature: SpanConstUInt8,
         data: SpanConstUInt8
     ) -> CryptoOperationReturnValue {
         var returnValue = CryptoOperationReturnValue()
@@ -625,8 +747,12 @@ public class EdKey {
         return returnValue
     }
 
+    // FIXME: PALSwift should have no public symbols.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
     public static func deriveBits(
-        algo: EdKeyAgreementAlgorithm, privateKey: SpanConstUInt8, publicKey: SpanConstUInt8
+        algo: EdKeyAgreementAlgorithm,
+        privateKey: SpanConstUInt8,
+        publicKey: SpanConstUInt8
     ) -> CryptoOperationReturnValue {
         var returnValue = CryptoOperationReturnValue()
         do {
@@ -642,38 +768,69 @@ public class EdKey {
              returnValue.errorCode = .FailedToDerive
         }
         return returnValue
-
     }
 }
 
+// FIXME: PALSwift should have no public symbols.
+// swift-format-ignore: AllPublicDeclarationsHaveDocumentation
 public class HMAC {
-    public static func sign(key: SpanConstUInt8, data: SpanConstUInt8, hashFunction: HashFunction)
-        -> VectorUInt8
-    {
+    // FIXME: PALSwift should have no public symbols.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
+    public static func sign(
+        key: SpanConstUInt8,
+        data: SpanConstUInt8,
+        hashFunction hashFunctionRawValue: PAL.CryptoDigestHashFunction.RawValue
+    ) -> VectorUInt8 {
+        // FIXME: This is safe because all callers use the enum type itself, and this is only temporary.
+        // swift-format-ignore: NeverForceUnwrap
+        let hashFunction = PAL.CryptoDigestHashFunction(rawValue: hashFunctionRawValue)!
+
         switch hashFunction {
-        case .sha1:
+        case .SHA_1:
             return CryptoKit.HMAC<Insecure.SHA1>.authenticationCode(data: data, key: key)
-        case .sha256:
+        case .SHA_256:
             return CryptoKit.HMAC<SHA256>.authenticationCode(data: data, key: key)
-        case .sha384:
+        case .SHA_384:
             return CryptoKit.HMAC<SHA384>.authenticationCode(data: data, key: key)
-        case .sha512:
+        case .SHA_512:
             return CryptoKit.HMAC<SHA512>.authenticationCode(data: data, key: key)
+        case .DEPRECATED_SHA_224:
+            fatalError("DEPRECATED_SHA_224 is not supported")
+        @unknown default:
+            fatalError("Unknown PAL.CryptoDigestHashFunction enum case value: \(hashFunction.rawValue)")
         }
     }
+
+    // FIXME: PALSwift should have no public symbols.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
     public static func verify(
-        mac: SpanConstUInt8, key: SpanConstUInt8, data: SpanConstUInt8, hashFunction: HashFunction
+        mac: SpanConstUInt8,
+        key: SpanConstUInt8,
+        data: SpanConstUInt8,
+        hashFunction hashFunctionRawValue: PAL.CryptoDigestHashFunction.RawValue
     ) -> Bool {
+        // FIXME: This is safe because all callers use the enum type itself, and this is only temporary.
+        // swift-format-ignore: NeverForceUnwrap
+        let hashFunction = PAL.CryptoDigestHashFunction(rawValue: hashFunctionRawValue)!
+
         switch hashFunction {
-        case .sha1:
-            return CryptoKit.HMAC<Insecure.SHA1>.isValidAuthenticationCode(
-                mac: mac, data: data, key: key)
-        case .sha256:
+        case .SHA_1:
+            return CryptoKit.HMAC<Insecure.SHA1>
+                .isValidAuthenticationCode(
+                    mac: mac,
+                    data: data,
+                    key: key
+                )
+        case .SHA_256:
             return CryptoKit.HMAC<SHA256>.isValidAuthenticationCode(mac: mac, data: data, key: key)
-        case .sha384:
+        case .SHA_384:
             return CryptoKit.HMAC<SHA384>.isValidAuthenticationCode(mac: mac, data: data, key: key)
-        case .sha512:
+        case .SHA_512:
             return CryptoKit.HMAC<SHA512>.isValidAuthenticationCode(mac: mac, data: data, key: key)
+        case .DEPRECATED_SHA_224:
+            fatalError("DEPRECATED_SHA_224 is not supported")
+        @unknown default:
+            fatalError("Unknown PAL.CryptoDigestHashFunction enum case value: \(hashFunction.rawValue)")
         }
     }
 }
@@ -684,11 +841,22 @@ private let hkdfInputSizeLimitSHA256 = 255 * SHA256.byteCount * 8
 private let hkdfInputSizeLimitSHA384 = 255 * SHA384.byteCount * 8
 private let hkdfInputSizeLimitSHA512 = 255 * SHA512.byteCount * 8
 
+// FIXME: PALSwift should have no public symbols.
+// swift-format-ignore: AllPublicDeclarationsHaveDocumentation
 public class HKDF {
+    // FIXME: PALSwift should have no public symbols.
+    // swift-format-ignore: AllPublicDeclarationsHaveDocumentation
     public static func deriveBits(
-        key: SpanConstUInt8, salt: SpanConstUInt8, info: SpanConstUInt8, outputBitCount: Int,
-        hashFunction: HashFunction
+        key: SpanConstUInt8,
+        salt: SpanConstUInt8,
+        info: SpanConstUInt8,
+        outputBitCount: Int,
+        hashFunction hashFunctionRawValue: PAL.CryptoDigestHashFunction.RawValue
     ) -> CryptoOperationReturnValue {
+        // FIXME: This is safe because all callers use the enum type itself, and this is only temporary.
+        // swift-format-ignore: NeverForceUnwrap
+        let hashFunction = PAL.CryptoDigestHashFunction(rawValue: hashFunctionRawValue)!
+
         var returnValue = CryptoOperationReturnValue()
         if outputBitCount <= 0 || outputBitCount % 8 != 0 {
              returnValue.errorCode = .InvalidArgument
@@ -697,48 +865,71 @@ public class HKDF {
              returnValue.errorCode = .Success
         }
         switch hashFunction {
-        case .sha1:
+        case .SHA_1:
             if outputBitCount > hkdfInputSizeLimitSHA1 {
                  returnValue.errorCode = .InvalidArgument
                 break
             }
              returnValue.result =
-                CryptoKit.HKDF<Insecure.SHA1>.deriveKey(
-                    inputKeyMaterial: key, salt: salt, info: info,
-                    outputByteCount: outputBitCount / 8)
+                CryptoKit.HKDF<Insecure.SHA1>
+                .deriveKey(
+                    inputKeyMaterial: key,
+                    salt: salt,
+                    info: info,
+                    outputByteCount: outputBitCount / 8
+                )
 
-        case .sha256:
+        case .SHA_256:
             if outputBitCount > hkdfInputSizeLimitSHA256 {
                  returnValue.errorCode = .InvalidArgument
                 break
             }
              returnValue.result =
-                CryptoKit.HKDF<SHA256>.deriveKey(
-                    inputKeyMaterial: key, salt: salt, info: info,
-                    outputByteCount: outputBitCount / 8)
+                CryptoKit.HKDF<SHA256>
+                .deriveKey(
+                    inputKeyMaterial: key,
+                    salt: salt,
+                    info: info,
+                    outputByteCount: outputBitCount / 8
+                )
 
-        case .sha384:
+        case .SHA_384:
             if outputBitCount > hkdfInputSizeLimitSHA384 {
                  returnValue.errorCode = .InvalidArgument
                 break
             }
              returnValue.result =
-                CryptoKit.HKDF<SHA384>.deriveKey(
-                    inputKeyMaterial: key, salt: salt, info: info,
-                    outputByteCount: outputBitCount / 8)
+                CryptoKit.HKDF<SHA384>
+                .deriveKey(
+                    inputKeyMaterial: key,
+                    salt: salt,
+                    info: info,
+                    outputByteCount: outputBitCount / 8
+                )
 
-        case .sha512:
+        case .SHA_512:
             if outputBitCount > hkdfInputSizeLimitSHA512 {
                  returnValue.errorCode = .InvalidArgument
                 break
             }
              returnValue.result =
-                CryptoKit.HKDF<SHA512>.deriveKey(
-                    inputKeyMaterial: key, salt: salt, info: info,
-                    outputByteCount: outputBitCount / 8)
+                CryptoKit.HKDF<SHA512>
+                .deriveKey(
+                    inputKeyMaterial: key,
+                    salt: salt,
+                    info: info,
+                    outputByteCount: outputBitCount / 8
+                )
 
+        case .DEPRECATED_SHA_224:
+            fatalError("DEPRECATED_SHA_224 is not supported")
+
+        @unknown default:
+            fatalError("Unknown PAL.CryptoDigestHashFunction enum case value: \(hashFunction.rawValue)")
         }
+
         return returnValue
     }
 }
+
 #endif

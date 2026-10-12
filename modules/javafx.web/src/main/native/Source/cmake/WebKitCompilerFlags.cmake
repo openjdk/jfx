@@ -100,7 +100,7 @@ function(WEBKIT_ADD_COMPILER_FLAGS _compiler _kind _subject)
     foreach (_flag IN LISTS ARGN)
         WEBKIT_CHECK_COMPILER_FLAGS(${_compiler} flag_supported "${_flag}")
         if (flag_supported)
-            set_property(${_kind} ${_subject} APPEND PROPERTY COMPILE_OPTIONS "${_flag}")
+            set_property(${_kind} ${_subject} APPEND PROPERTY COMPILE_OPTIONS "$<$<COMPILE_LANGUAGE:C,CXX,OBJC,OBJCXX>:${_flag}>")
         endif ()
     endforeach ()
 endfunction()
@@ -121,8 +121,16 @@ macro(WEBKIT_ADD_TARGET_CXX_FLAGS _target)
     WEBKIT_ADD_COMPILER_FLAGS(CXX TARGET ${_target} ${ARGN})
 endmacro()
 
+# Used by WEBKIT_ADD_TARGET_UNSAFE_BUFFER_WARNINGS(), may be overriden in
+# the per-port Options${PORT}.cmake files.
+set(WEBKIT_UNSAFE_BUFFER_WARNING_FLAGS
+    -Wunsafe-buffer-usage
+    -Wunsafe-buffer-usage-in-libc-call
+)
+option(ENABLE_UNSAFE_BUFFER_USAGE_WARNING "Build with -Wunsafe-buffer-usage" OFF)
 
 option(DEVELOPER_MODE_FATAL_WARNINGS "Build with warnings as errors if DEVELOPER_MODE is also enabled" ON)
+set(DEVELOPER_MODE_CXX_FLAGS)
 if (DEVELOPER_MODE AND DEVELOPER_MODE_FATAL_WARNINGS)
     if (MSVC)
         set(FATAL_WARNINGS_FLAG /WX)
@@ -139,6 +147,10 @@ endif ()
 if (DEVELOPER_MODE OR ARM)
     # This lets us get good backtraces, in particular when using JSC_useGdbJITInfo=1.
     WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-fno-omit-frame-pointer)
+endif ()
+#supress non-portable Microsoft search rules for include path
+if (WIN32 AND PORT STREQUAL "Java")
+    WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-Wno-microsoft-include)
 endif ()
 
 if (COMPILER_IS_GCC_OR_CLANG)
@@ -197,7 +209,8 @@ if (COMPILER_IS_GCC_OR_CLANG)
                                          -Wno-maybe-uninitialized
                                          -Wno-parentheses-equality
                                          -Wno-misleading-indentation
-                                         -Wno-psabi)
+                                         -Wno-psabi
+                                         -Wno-nullability-completeness)
 
     # GCC < 12.0 gives false warnings for mismatched-new-delete <https://webkit.org/b/241516>
     if ((CMAKE_CXX_COMPILER_ID MATCHES "GNU") AND (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "12.0.0"))
@@ -233,7 +246,7 @@ if (COMPILER_IS_GCC_OR_CLANG)
         WEBKIT_PREPEND_GLOBAL_CXX_FLAGS(-Wno-nonnull)
 
         # https://bugs.webkit.org/show_bug.cgi?id=240596
-        WEBKIT_PREPEND_GLOBAL_CXX_FLAGS(-Wno-stringop-overflow)
+        WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-Wno-stringop-overflow)
 
     # This triggers warnings in wtf/Packed.h, a header that is included in many places. It does not
     # respect ignore warning pragmas and we cannot easily suppress it for all affected files.
@@ -264,6 +277,9 @@ if (COMPILER_IS_GCC_OR_CLANG)
 
     WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-Werror=undefined-inline
                                          -Werror=undefined-internal)
+
+    # FIXME: https://bugs.webkit.org/show_bug.cgi?id=299689
+    WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-Wno-character-conversion)
 endif ()
 
 if (COMPILER_IS_GCC_OR_CLANG AND NOT MSVC)
@@ -360,7 +376,6 @@ if (UNIX AND NOT APPLE AND NOT ENABLED_COMPILER_SANITIZERS)
     set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--no-undefined ${CMAKE_SHARED_LINKER_FLAGS}")
 endif ()
 
-
 if (MSVC)
     set(CODE_GENERATOR_PREPROCESSOR "\"${CMAKE_CXX_COMPILER}\" /nologo /EP /TP")
 elseif (COMPILER_IS_QCC)
@@ -368,7 +383,6 @@ elseif (COMPILER_IS_QCC)
 else ()
     set(CODE_GENERATOR_PREPROCESSOR "\"${CMAKE_CXX_COMPILER}\" -E -P -x c++")
 endif ()
-
 
 # Ensure that the default include system directories are added to the list of CMake implicit includes.
 # This workarounds an issue that happens when using GCC 6 and using system includes (-isystem).
@@ -395,7 +409,7 @@ if (COMPILER_IS_GCC_OR_CLANG)
 endif ()
 
 if (COMPILER_IS_GCC_OR_CLANG)
-    set(ATOMIC_TEST_SOURCE "
+    set(ATOMIC_TEST_SOURCE [=[
 #include <atomic>
 #include <optional>
 #include <stdbool.h>
@@ -421,6 +435,13 @@ if (COMPILER_IS_GCC_OR_CLANG)
 
 #define CPU(_FEATURE) (defined CPU_##_FEATURE && CPU_##_FEATURE)
 
+#if COMPILER(CLANG)
+#pragma clang optimize off
+#endif
+
+#if COMPILER(GCC)
+#pragma GCC optimize("O0")
+#endif
 
 #if COMPILER(GCC_COMPATIBLE)
 /* __LP64__ is not defined on 64bit Windows since it uses LLP64. Using __SIZEOF_POINTER__ is simpler. */
@@ -463,8 +484,9 @@ static inline bool compare_and_swap_uint64_weak(uint64_t* ptr, uint64_t old_valu
 #endif
 }
 
+std::atomic<std::optional<double>> d;
+
 int main() {
-    std::atomic<std::optional<double>> d;
     d = 0.0;
     bool y = false;
     bool expected = true;
@@ -482,19 +504,26 @@ int main() {
                   l) ? 0 : 1;
     return static_cast<int>(result + d.load().value());
 }
-    ")
+    ]=])
+    cmake_push_check_state(RESET)
+    set(CMAKE_REQUIRED_FLAGS "--std=c++17")
     check_cxx_source_compiles("${ATOMIC_TEST_SOURCE}" ATOMICS_ARE_BUILTIN)
     if (NOT ATOMICS_ARE_BUILTIN)
         set(CMAKE_REQUIRED_LIBRARIES atomic)
         check_cxx_source_compiles("${ATOMIC_TEST_SOURCE}" ATOMICS_REQUIRE_LIBATOMIC)
-        unset(CMAKE_REQUIRED_LIBRARIES)
+        # If we failed to build the test source with libatomic then something is wrong
+        if (NOT ATOMICS_REQUIRE_LIBATOMIC AND NOT COMPILER_IS_CLANG_CL)
+            message(FATAL_ERROR "Failed to detect support for atomic variables")
+        endif ()
     endif ()
+    cmake_pop_check_state()
 
     # <filesystem> vs <experimental/filesystem>
     set(FILESYSTEM_TEST_SOURCE "
         #include <filesystem>
         int main() { std::filesystem::path p1(\"\"); std::filesystem::status(p1); }
     ")
+    cmake_push_check_state(RESET)
     set(CMAKE_REQUIRED_FLAGS "--std=c++2b")
     check_cxx_source_compiles("${FILESYSTEM_TEST_SOURCE}" STD_FILESYSTEM_IS_AVAILABLE)
     if (NOT STD_FILESYSTEM_IS_AVAILABLE)
@@ -507,9 +536,8 @@ int main() {
         ")
         set(CMAKE_REQUIRED_LIBRARIES stdc++fs)
         check_cxx_source_compiles("${EXPERIMENTAL_FILESYSTEM_TEST_SOURCE}" STD_EXPERIMENTAL_FILESYSTEM_IS_AVAILABLE)
-        unset(CMAKE_REQUIRED_LIBRARIES)
     endif ()
-    unset(CMAKE_REQUIRED_FLAGS)
+    cmake_pop_check_state()
 endif ()
 
 if (NOT WTF_PLATFORM_COCOA)
@@ -523,6 +551,30 @@ int main() {
 }
   ")
   check_cxx_source_compiles("${FLOAT16_TEST_SOURCE}" HAVE_FLOAT16)
+endif ()
+
+if (WTF_CPU_ARM)
+    set(ARM_THUMB2_TEST_SOURCE
+    "
+    #if !defined(thumb2) && !defined(__thumb2__)
+    #error \"Thumb2 instruction set isn't available\"
+    #endif
+    int main() {}
+    ")
+
+    if (COMPILER_IS_GCC_OR_CLANG AND NOT (${CMAKE_SYSTEM_NAME} STREQUAL "Darwin"))
+        set(CLANG_EXTRA_ARM_ARGS " -mthumb")
+    endif ()
+
+    cmake_push_check_state(RESET)
+    set(CMAKE_REQUIRED_FLAGS "${CLANG_EXTRA_ARM_ARGS}")
+    CHECK_CXX_SOURCE_COMPILES("${ARM_THUMB2_TEST_SOURCE}" ARM_THUMB2_DETECTED)
+    cmake_pop_check_state()
+
+    if (ARM_THUMB2_DETECTED AND NOT (${CMAKE_SYSTEM_NAME} STREQUAL "Darwin"))
+        string(APPEND CMAKE_C_FLAGS " ${CLANG_EXTRA_ARM_ARGS}")
+        string(APPEND CMAKE_CXX_FLAGS " ${CLANG_EXTRA_ARM_ARGS}")
+    endif ()
 endif ()
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "GNU" AND WTF_CPU_MIPS)

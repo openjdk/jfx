@@ -33,7 +33,9 @@ enum class DebugOverlayRegions : uint8_t {
     TouchActionRegion = 1 << 2,
     EditableElementRegion = 1 << 3,
     InteractionRegion = 1 << 4,
-    SiteIsolationRegion = 1 << 5,
+    // We must leave 1 << 5 empty due to prior use by SiteIsolation.
+    EnhancedSecurity = 1 << 6,
+    TouchEventRegion = 1 << 7,
 };
 
 }

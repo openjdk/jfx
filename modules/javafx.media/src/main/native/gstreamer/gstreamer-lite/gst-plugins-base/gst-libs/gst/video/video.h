@@ -25,6 +25,7 @@
 #include <gst/video/video-prelude.h>
 
 typedef struct _GstVideoAlignment GstVideoAlignment;
+typedef struct _GstVideoRectangle GstVideoRectangle;
 
 #include <gst/video/video-format.h>
 #include <gst/video/video-color.h>
@@ -62,6 +63,22 @@ struct _GstVideoAlignment
   guint padding_left;
   guint padding_right;
   guint stride_align[GST_VIDEO_MAX_PLANES];
+};
+
+/**
+ * GstVideoRectangle:
+ * @x: X coordinate of rectangle's top-left point
+ * @y: Y coordinate of rectangle's top-left point
+ * @w: width of the rectangle
+ * @h: height of the rectangle
+ *
+ * Helper structure representing a rectangular area.
+ */
+struct _GstVideoRectangle {
+  gint x;
+  gint y;
+  gint w;
+  gint h;
 };
 
 /**
@@ -212,6 +229,7 @@ G_END_DECLS
 #include <gst/video/videooverlay.h>
 #ifndef GSTREAMER_LITE
 #include <gst/video/video-sei.h>
+#include <gst/video/gstvideodmabufpool.h>
 #endif // GSTREAMER_LITE
 
 #endif /* __GST_VIDEO_H__ */

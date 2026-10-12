@@ -41,13 +41,14 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGFELightElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SVGFELightElement);
 
 SVGFELightElement::SVGFELightElement(const QualifiedName& tagName, Document& document)
     : SVGElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
 {
-    static std::once_flag onceFlag;
-    std::call_once(onceFlag, [] {
+    static bool didRegistration = false;
+    if (!didRegistration) [[unlikely]] {
+        didRegistration = true;
         PropertyRegistry::registerProperty<SVGNames::azimuthAttr, &SVGFELightElement::m_azimuth>();
         PropertyRegistry::registerProperty<SVGNames::elevationAttr, &SVGFELightElement::m_elevation>();
         PropertyRegistry::registerProperty<SVGNames::xAttr, &SVGFELightElement::m_x>();
@@ -58,14 +59,14 @@ SVGFELightElement::SVGFELightElement(const QualifiedName& tagName, Document& doc
         PropertyRegistry::registerProperty<SVGNames::pointsAtZAttr, &SVGFELightElement::m_pointsAtZ>();
         PropertyRegistry::registerProperty<SVGNames::specularExponentAttr, &SVGFELightElement::m_specularExponent>();
         PropertyRegistry::registerProperty<SVGNames::limitingConeAngleAttr, &SVGFELightElement::m_limitingConeAngle>();
-    });
+    }
 }
 
 SVGFELightElement* SVGFELightElement::findLightElement(const SVGElement* svgElement)
 {
-    for (auto& child : childrenOfType<SVGElement>(*svgElement)) {
-        if (is<SVGFEDistantLightElement>(child) || is<SVGFEPointLightElement>(child) || is<SVGFESpotLightElement>(child))
-            return static_cast<SVGFELightElement*>(const_cast<SVGElement*>(&child));
+    for (Ref child : childrenOfType<SVGElement>(*svgElement)) {
+        if (auto* element = dynamicDowncast<SVGFELightElement>(child.get()))
+            return const_cast<SVGFELightElement*>(element);
     }
     return nullptr;
 }
@@ -125,10 +126,10 @@ void SVGFELightElement::svgAttributeChanged(const QualifiedName& attrName)
         if (!renderer || !renderer->isRenderOrLegacyRenderSVGResourceFilterPrimitive())
             return;
 
-        if (auto* lightingElement = dynamicDowncast<SVGFEDiffuseLightingElement>(*parent)) {
+        if (CheckedPtr lightingElement = dynamicDowncast<SVGFEDiffuseLightingElement>(*parent)) {
             InstanceInvalidationGuard guard(*this);
             lightingElement->lightElementAttributeChanged(this, attrName);
-        } else if (auto* lightingElement = dynamicDowncast<SVGFESpecularLightingElement>(*parent)) {
+        } else if (CheckedPtr lightingElement = dynamicDowncast<SVGFESpecularLightingElement>(*parent)) {
             InstanceInvalidationGuard guard(*this);
             lightingElement->lightElementAttributeChanged(this, attrName);
         }
@@ -149,4 +150,4 @@ void SVGFELightElement::childrenChanged(const ChildChange& change)
     SVGFilterPrimitiveStandardAttributes::invalidateFilterPrimitiveParent(this);
 }
 
-}
+} // namespace WebCore

@@ -33,6 +33,8 @@
     undefined assign((Element or Text)... nodes);
 };
 
-dictionary AssignedNodesOptions {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary AssignedNodesOptions {
     boolean flatten = false;
 };

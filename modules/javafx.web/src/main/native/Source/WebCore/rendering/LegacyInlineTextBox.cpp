@@ -23,7 +23,7 @@
 #include "config.h"
 #include "LegacyInlineTextBox.h"
 
-#include "BreakLines.h"
+#include "BreakablePositions.h"
 #include "CompositionHighlight.h"
 #include "DashArray.h"
 #include "Document.h"
@@ -47,8 +47,9 @@
 #include "RenderElementInlines.h"
 #include "RenderHighlight.h"
 #include "RenderLineBreak.h"
-#include "RenderStyleInlines.h"
+#include "RenderObjectStyle.h"
 #include "RenderSVGInlineText.h"
+#include "RenderStyle+GettersInlines.h"
 #include "RenderTheme.h"
 #include "RenderView.h"
 #include "RenderedDocumentMarker.h"
@@ -65,7 +66,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(LegacyInlineTextBox);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(LegacyInlineTextBox);
 
 struct SameSizeAsLegacyInlineTextBox : public LegacyInlineBox {
     void* pointers[2];
@@ -248,7 +249,7 @@ TextRun LegacyInlineTextBox::createTextRun() const
 {
     const auto& style = lineStyle();
     TextRun textRun { text(), textPos(), 0, ExpansionBehavior::forbidAll(), direction(), style.rtlOrdering() == Order::Visual, !renderer().canUseSimpleFontCodePath() };
-    textRun.setTabSize(!style.collapseWhiteSpace(), style.tabSize());
+    textRun.setTabSize(!style.collapseWhiteSpace(), Style::toPlatform(style.tabSize()));
     return textRun;
 }
 
@@ -258,7 +259,7 @@ String LegacyInlineTextBox::text() const
 
     // This works because this replacement doesn't affect string indices. We're replacing a single Unicode code unit with another Unicode code unit.
     // How convenient.
-    return RenderBlock::updateSecurityDiscCharacters(lineStyle(), WTFMove(result));
+    return RenderBlock::updateSecurityDiscCharacters(lineStyle(), WTF::move(result));
 }
 
 #if ENABLE(TREE_DEBUGGING)

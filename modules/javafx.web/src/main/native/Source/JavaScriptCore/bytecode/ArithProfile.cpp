@@ -140,7 +140,7 @@ void ArithProfile<BitfieldType>::emitSetBigInt32(CCallHelpers& jit) const
 template<typename BitfieldType>
 void ArithProfile<BitfieldType>::emitUnconditionalSet(CCallHelpers& jit, BitfieldType mask) const
 {
-    static_assert(std::is_same<BitfieldType, uint16_t>::value);
+    static_assert(std::same_as<BitfieldType, uint16_t>);
     jit.or16(CCallHelpers::TrustedImm32(mask), CCallHelpers::AbsoluteAddress(addressOfBits()));
 }
 

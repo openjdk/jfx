@@ -25,11 +25,11 @@
 
 #pragma once
 
-#include "BackgroundFetchRecordIdentifier.h"
-#include "FetchHeadersGuard.h"
-#include "FetchOptions.h"
-#include "HTTPHeaderMap.h"
-#include "ResourceRequest.h"
+#include <WebCore/BackgroundFetchRecordIdentifier.h>
+#include <WebCore/FetchHeadersGuard.h>
+#include <WebCore/FetchOptions.h>
+#include <WebCore/HTTPHeaderMap.h>
+#include <WebCore/ResourceRequest.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -43,7 +43,7 @@ struct BackgroundFetchRecordInformation {
     String referrer;
 
     BackgroundFetchRecordInformation isolatedCopy() const & { return { identifier, internalRequest.isolatedCopy(), options.isolatedCopy(), guard, httpHeaders.isolatedCopy(), referrer.isolatedCopy() }; }
-    BackgroundFetchRecordInformation isolatedCopy() && { return { identifier, WTFMove(internalRequest).isolatedCopy(), WTFMove(options).isolatedCopy(), guard, WTFMove(httpHeaders).isolatedCopy(), WTFMove(referrer).isolatedCopy() }; }
+    BackgroundFetchRecordInformation isolatedCopy() && { return { identifier, WTF::move(internalRequest).isolatedCopy(), WTF::move(options).isolatedCopy(), guard, WTF::move(httpHeaders).isolatedCopy(), WTF::move(referrer).isolatedCopy() }; }
 };
 
 } // namespace WebCore

@@ -26,21 +26,22 @@
 #include "config.h"
 #include "FileSystemEntry.h"
 
+#include "ContextDestructionObserverInlines.h"
 #include "DOMException.h"
 #include "DOMFileSystem.h"
-#include "Document.h"
-#include "DocumentInlines.h"
+#include "DocumentEventLoop.h"
 #include "ErrorCallback.h"
 #include "FileSystemDirectoryEntry.h"
 #include "FileSystemEntryCallback.h"
 #include "ScriptExecutionContext.h"
+#include "ScriptWrappableInlines.h"
 #include "WindowEventLoop.h"
 #include <wtf/FileSystem.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(FileSystemEntry);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FileSystemEntry);
 
 FileSystemEntry::FileSystemEntry(ScriptExecutionContext& context, DOMFileSystem& filesystem, const String& virtualPath)
     : ActiveDOMObject(&context)
@@ -67,12 +68,12 @@ void FileSystemEntry::getParent(ScriptExecutionContext& context, RefPtr<FileSyst
     if (!successCallback && !errorCallback)
         return;
 
-    filesystem().getParent(context, *this, [pendingActivity = makePendingActivity(*this), successCallback = WTFMove(successCallback), errorCallback = WTFMove(errorCallback)]<typename Result> (Result&& result) mutable {
+    filesystem().getParent(context, *this, [pendingActivity = makePendingActivity(*this), successCallback = WTF::move(successCallback), errorCallback = WTF::move(errorCallback)]<typename Result> (Result&& result) mutable {
         RefPtr document = pendingActivity->object().document();
         if (!document)
             return;
 
-        document->checkedEventLoop()->queueTask(TaskSource::Networking, [successCallback = WTFMove(successCallback), errorCallback = WTFMove(errorCallback), result = std::forward<Result>(result), pendingActivity = WTFMove(pendingActivity)] () mutable {
+        document->checkedEventLoop()->queueTask(TaskSource::Networking, [successCallback = WTF::move(successCallback), errorCallback = WTF::move(errorCallback), result = std::forward<Result>(result), pendingActivity = WTF::move(pendingActivity)] () mutable {
             if (result.hasException()) {
                 if (errorCallback)
                     errorCallback->invoke(DOMException::create(result.releaseException()));

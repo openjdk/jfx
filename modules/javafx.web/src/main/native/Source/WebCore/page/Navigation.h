@@ -26,6 +26,7 @@
 #pragma once
 
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "JSDOMPromiseDeferred.h"
 #include "LocalDOMWindowProperty.h"
 #include "NavigateEvent.h"
@@ -33,7 +34,9 @@
 #include "NavigationNavigationType.h"
 #include "NavigationTransition.h"
 #include <JavaScriptCore/JSCJSValue.h>
+#include <wtf/MonotonicTime.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
+#include <wtf/Seconds.h>
 #include <wtf/text/StringHash.h>
 
 namespace WebCore {
@@ -56,7 +59,7 @@ struct NavigationAPIMethodTracker : public RefCounted<NavigationAPIMethodTracker
 
     static Ref<NavigationAPIMethodTracker> create(Ref<DeferredPromise>&& committed, Ref<DeferredPromise>&& finished, JSC::JSValue&& info, RefPtr<SerializedScriptValue>&& serializedState)
     {
-        return adoptRef(*new NavigationAPIMethodTracker(WTFMove(committed), WTFMove(finished), WTFMove(info), WTFMove(serializedState)));
+        return adoptRef(*new NavigationAPIMethodTracker(WTF::move(committed), WTF::move(finished), WTF::move(info), WTF::move(serializedState)));
     }
 
     bool operator==(const NavigationAPIMethodTracker& other) const
@@ -77,8 +80,8 @@ private:
     explicit NavigationAPIMethodTracker(Ref<DeferredPromise>&& committed, Ref<DeferredPromise>&& finished, JSC::JSValue&& info, RefPtr<SerializedScriptValue>&& serializedState)
         : info(info)
         , serializedState(serializedState)
-        , committedPromise(WTFMove(committed))
-        , finishedPromise(WTFMove(finished))
+        , committedPromise(WTF::move(committed))
+        , finishedPromise(WTF::move(finished))
         , identifier(NavigationAPIMethodTrackerIdentifier::generate())
     {
     }
@@ -88,15 +91,20 @@ private:
 
 enum class ShouldCopyStateObjectFromCurrentEntry : bool { No, Yes };
 
+// Controls whether updateForNavigation should fulfill the committed promise immediately.
+// For intercepted traversals, timing depends on handler presence (see spec).
+// https://html.spec.whatwg.org/multipage/nav-history-apis.html#notify-about-the-committed-to-entry
+enum class ShouldNotifyCommitted : bool { No, Yes };
+
 class Navigation final : public RefCounted<Navigation>, public EventTarget, public LocalDOMWindowProperty {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(Navigation);
+    WTF_MAKE_TZONE_ALLOCATED(Navigation);
 public:
     ~Navigation();
 
     static Ref<Navigation> create(LocalDOMWindow& window) { return adoptRef(*new Navigation(window)); }
 
-    using RefCounted<Navigation>::ref;
-    using RefCounted<Navigation>::deref;
+    using RefCounted::ref;
+    using RefCounted::deref;
 
     using HistoryBehavior = NavigationHistoryBehavior;
 
@@ -148,15 +156,14 @@ public:
     bool dispatchPushReplaceReloadNavigateEvent(const URL&, NavigationNavigationType, bool isSameDocument, FormState*, SerializedScriptValue* classicHistoryAPIState = nullptr, Element* sourceElement = nullptr);
     bool dispatchDownloadNavigateEvent(const URL&, const String& downloadFilename, Element* sourceElement = nullptr);
 
-    void updateForNavigation(Ref<HistoryItem>&&, NavigationNavigationType, ShouldCopyStateObjectFromCurrentEntry = ShouldCopyStateObjectFromCurrentEntry::No);
-    void updateForReactivation(Vector<Ref<HistoryItem>>& newHistoryItems, HistoryItem& reactivatedItem);
-    void updateForActivation(HistoryItem* previousItem, std::optional<NavigationNavigationType>);
+    void updateForNavigation(Ref<HistoryItem>&&, NavigationNavigationType, ShouldCopyStateObjectFromCurrentEntry = ShouldCopyStateObjectFromCurrentEntry::No, ShouldNotifyCommitted = ShouldNotifyCommitted::Yes);
+    void updateForReactivation(Vector<Ref<HistoryItem>>&& newHistoryItems, HistoryItem& reactivatedItem, HistoryItem* previousItem);
 
     RefPtr<NavigationActivation> createForPageswapEvent(HistoryItem* newItem, DocumentLoader*, bool fromBackForwardCache);
 
     void abortOngoingNavigationIfNeeded();
 
-    std::optional<Ref<NavigationHistoryEntry>> findEntryByKey(const String& key);
+    NavigationHistoryEntry* findEntryByKey(const String&) const;
     bool suppressNormalScrollRestoration() const { return m_suppressNormalScrollRestorationDuringOngoingNavigation; }
 
     void setFocusChanged(FocusDidChange changed) { m_focusChangedDuringOngoingNavigation = changed; }
@@ -184,10 +191,58 @@ public:
     };
     Ref<AbortHandler> registerAbortHandler();
 
+    // Rate limiter to prevent excessive navigation requests.
+    class RateLimiter {
+        WTF_MAKE_TZONE_ALLOCATED(RateLimiter);
+        WTF_MAKE_NONCOPYABLE(RateLimiter);
+        WTF_MAKE_NONMOVABLE(RateLimiter);
+    public:
+        RateLimiter() = default;
+
+        bool navigationAllowed();
+        bool wasReported() const { return m_limitMessageSent; }
+        void markReported() { m_limitMessageSent = true; }
+
+        // Testing support
+        void setParametersForTesting(unsigned maxNavigations, Seconds duration)
+        {
+            m_maxNavigationsPerWindow = maxNavigations;
+            m_windowDuration = duration;
+            resetForTesting();
+        }
+
+        void resetForTesting()
+        {
+            m_windowStartTime = MonotonicTime::now();
+            m_navigationCount = 0;
+            m_limitMessageSent = false;
+        }
+
+    private:
+        friend class Navigation;
+
+        // Sliding window rate limiter: allows 200 navigations per 10 second window (~20/sec sustained).
+        // Chromium uses 200 navigations per 10 seconds (same ~20/sec rate):
+        // https://source.chromium.org/chromium/chromium/src/+/main:third_party/blink/renderer/core/frame/navigation_rate_limiter.cc
+        // Both prevent IPC flooding and stack overflow from recursive navigation patterns.
+        unsigned m_maxNavigationsPerWindow { 200 };
+        Seconds m_windowDuration { 10_s };
+
+        MonotonicTime m_windowStartTime { MonotonicTime::now() };
+        unsigned m_navigationCount { 0 };
+        bool m_limitMessageSent { false };
+    };
+
+    // Testing support
+    RateLimiter& rateLimiterForTesting() { return m_rateLimiter; }
+
     NavigateEvent* ongoingNavigateEvent() { return m_ongoingNavigateEvent.get(); } // This may get called on the GC thread.
     RefPtr<NavigateEvent> protectedOngoingNavigateEvent() { return m_ongoingNavigateEvent; }
+    bool hasInterceptedOngoingNavigateEvent() const { return m_ongoingNavigateEvent && m_ongoingNavigateEvent->wasIntercepted(); }
 
     void updateNavigationEntry(Ref<HistoryItem>&&, ShouldCopyStateObjectFromCurrentEntry);
+
+    static Vector<Ref<HistoryItem>> filterHistoryItemsForNavigationAPI(Vector<Ref<HistoryItem>>&&, HistoryItem&);
 
 private:
     explicit Navigation(LocalDOMWindow&);
@@ -202,6 +257,8 @@ private:
     ExceptionOr<RefPtr<SerializedScriptValue>> serializeState(JSC::JSValue state);
     DispatchResult innerDispatchNavigateEvent(NavigationNavigationType, Ref<NavigationDestination>&&, const String& downloadRequestFilename, FormState* = nullptr, SerializedScriptValue* classicHistoryAPIState = nullptr, Element* sourceElement = nullptr);
 
+    void setActivation(HistoryItem* previousItem, std::optional<NavigationNavigationType>);
+
     RefPtr<NavigationAPIMethodTracker> maybeSetUpcomingNonTraversalTracker(Ref<DeferredPromise>&& committed, Ref<DeferredPromise>&& finished, JSC::JSValue info, RefPtr<SerializedScriptValue>&&);
     RefPtr<NavigationAPIMethodTracker> addUpcomingTraverseAPIMethodTracker(Ref<DeferredPromise>&& committed, Ref<DeferredPromise>&& finished, const String& key, JSC::JSValue info);
     void cleanupAPIMethodTracker(NavigationAPIMethodTracker*) WTF_EXCLUDES_LOCK(m_apiMethodTrackersLock);
@@ -211,6 +268,12 @@ private:
     void promoteUpcomingAPIMethodTracker(const String& destinationKey) WTF_EXCLUDES_LOCK(m_apiMethodTrackersLock);
     void notifyCommittedToEntry(NavigationAPIMethodTracker*, NavigationHistoryEntry*, NavigationNavigationType);
     Result apiMethodTrackerDerivedResult(const NavigationAPIMethodTracker&);
+
+    size_t entryIndexOfKey(const String&) const;
+    bool hasEntryWithKey(const String&) const;
+
+    void disposeOfForwardEntriesInParents(BackForwardItemIdentifier);
+    void recursivelyDisposeOfForwardEntriesInParents(BackForwardItemIdentifier, LocalFrame* navigatedFrame);
 
     std::optional<size_t> m_currentEntryIndex;
     RefPtr<NavigationTransition> m_transition;
@@ -225,6 +288,9 @@ private:
     RefPtr<NavigationAPIMethodTracker> m_upcomingNonTraverseMethodTracker WTF_GUARDED_BY_LOCK(m_apiMethodTrackersLock);
     HashMap<String, Ref<NavigationAPIMethodTracker>> m_upcomingTraverseMethodTrackers WTF_GUARDED_BY_LOCK(m_apiMethodTrackersLock);
     WeakHashSet<AbortHandler> m_abortHandlers;
+    RateLimiter m_rateLimiter;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(Navigation)

@@ -124,7 +124,7 @@ TemporalInstant* TemporalInstant::tryCreateIfValid(JSGlobalObject* globalObject,
     if (bigIntTooLong || !exactTime.isValid()) {
         String argAsString = bigint->toString(globalObject, 10);
         if (scope.exception()) {
-            scope.clearException();
+            TRY_CLEAR_EXCEPTION(scope, nullptr);
             argAsString = "The given number of"_s;
         }
 
@@ -227,6 +227,7 @@ JSValue TemporalInstant::compare(JSGlobalObject* globalObject, JSValue oneValue,
     return jsNumber(0);
 }
 
+// https://tc39.es/proposal-temporal/#sec-temporal-differencetemporalinstant
 ISO8601::Duration TemporalInstant::difference(JSGlobalObject* globalObject, TemporalInstant* other, JSValue optionsValue) const
 {
     // https://tc39.es/proposal-temporal/#sec-temporal.instant.prototype.since
@@ -234,45 +235,17 @@ ISO8601::Duration TemporalInstant::difference(JSGlobalObject* globalObject, Temp
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSObject* options = intlGetOptionsObject(globalObject, optionsValue);
+    auto [smallestUnit, largestUnit, roundingMode, increment] = extractDifferenceOptions(globalObject, optionsValue, UnitGroup::Time, TemporalUnit::Nanosecond, TemporalUnit::Second);
     RETURN_IF_EXCEPTION(scope, { });
 
-    auto smallest = temporalSmallestUnit(globalObject, options, { TemporalUnit::Year, TemporalUnit::Month, TemporalUnit::Week, TemporalUnit::Day });
+    ISO8601::InternalDuration internalDuration = exactTime().difference(globalObject, other->exactTime(), increment, smallestUnit, roundingMode);
     RETURN_IF_EXCEPTION(scope, { });
-    TemporalUnit smallestUnit = smallest.value_or(TemporalUnit::Nanosecond);
-
-    TemporalUnit defaultLargestUnit = std::min(smallestUnit, TemporalUnit::Second);
-    auto largest = temporalLargestUnit(globalObject, options, { TemporalUnit::Year, TemporalUnit::Month, TemporalUnit::Week, TemporalUnit::Day }, defaultLargestUnit);
-    RETURN_IF_EXCEPTION(scope, { });
-    TemporalUnit largestUnit = largest.value_or(defaultLargestUnit);
-
-    if (smallest && largest && smallest < largest) {
-        throwRangeError(globalObject, scope, "smallestUnit must be smaller than largestUnit"_s);
-        return { };
-    }
-
-    RoundingMode roundingMode = temporalRoundingMode(globalObject, options, RoundingMode::Trunc);
-    RETURN_IF_EXCEPTION(scope, { });
-
-    std::optional<double> maxIncrement = maximumRoundingIncrement(smallestUnit);
-    ASSERT(maxIncrement && *maxIncrement <= 1000); // unbounded increments are impossible with Temporal.Instant
-    unsigned increment = temporalRoundingIncrement(globalObject, options, maxIncrement, false);
-    RETURN_IF_EXCEPTION(scope, { });
-
-    Int128 roundedDiff = exactTime().difference(other->exactTime(), increment, smallestUnit, roundingMode);
-    // NOTE: Duration fields are currently doubles, and the total number of
-    // nanoseconds may not fit in a double. This may need to change if the
-    // internal representation of Duration changes.
-    ASSERT(roundedDiff / 1'000'000'000 < INT64_MAX);
-    double seconds { static_cast<double>(static_cast<int64_t>(roundedDiff / 1'000'000'000)) };
-    double nanosecondsRemainder { static_cast<double>(static_cast<int64_t>(roundedDiff % 1'000'000'000)) };
-    ISO8601::Duration result { 0, 0, 0, 0, 0, 0, seconds, 0, 0, nanosecondsRemainder };
-
-    TemporalDuration::balance(result, largestUnit);
-    return result;
+    return TemporalDuration::temporalDurationFromInternal(internalDuration, largestUnit);
 }
 
-static double maximumIncrement(TemporalUnit smallestUnit)
+// Must return a double because the maximum increment for nanoseconds
+// does not fit in an int32_t
+static constexpr double maximumIncrement(TemporalUnit smallestUnit)
 {
     switch (smallestUnit) {
     case TemporalUnit::Hour: return 24;
@@ -303,36 +276,45 @@ ISO8601::ExactTime TemporalInstant::round(JSGlobalObject* globalObject, JSValue 
         RETURN_IF_EXCEPTION(scope, { });
 
         smallest = temporalUnitType(string);
-        if (!smallest) {
+        if (!smallest) [[unlikely]] {
             throwRangeError(globalObject, scope, "smallestUnit is an invalid Temporal unit"_s);
             return { };
         }
 
-        if (smallest.value() <= TemporalUnit::Day) {
+        if (smallest.value() <= TemporalUnit::Day) [[unlikely]] {
             throwRangeError(globalObject, scope, "smallestUnit is a disallowed unit"_s);
             return { };
         }
     } else {
         options = intlGetOptionsObject(globalObject, optionsValue);
         RETURN_IF_EXCEPTION(scope, { });
+    }
 
-        smallest = temporalSmallestUnit(globalObject, options, { TemporalUnit::Year, TemporalUnit::Month, TemporalUnit::Week, TemporalUnit::Day });
+    double roundingIncrement = temporalRoundingIncrement(globalObject, options);
+    RETURN_IF_EXCEPTION(scope, { });
+    RoundingMode roundingMode = temporalRoundingMode(globalObject, options, RoundingMode::HalfExpand);
         RETURN_IF_EXCEPTION(scope, { });
 
         if (!smallest) {
+        auto smallestUnitMaybeAuto = getTemporalUnitValuedOption(globalObject, options, vm.propertyNames->smallestUnit);
+        ASSERT(std::holds_alternative<std::optional<TemporalUnit>>(smallestUnitMaybeAuto));
+        smallest = std::get<std::optional<TemporalUnit>>(smallestUnitMaybeAuto);
+        RETURN_IF_EXCEPTION(scope, { });
+    }
+
+    if (!smallest) [[unlikely]] {
             throwRangeError(globalObject, scope, "Cannot round without a smallestUnit option"_s);
             return { };
         }
-    }
+
     TemporalUnit smallestUnit = smallest.value();
-
-    RoundingMode roundingMode = temporalRoundingMode(globalObject, options, RoundingMode::HalfExpand);
+    validateTemporalUnitValue(globalObject, smallestUnit, UnitGroup::Time, AllowedUnit::None, "smallestUnit"_s);
     RETURN_IF_EXCEPTION(scope, { });
 
-    double increment = temporalRoundingIncrement(globalObject, options, maximumIncrement(smallestUnit), true);
+    validateTemporalRoundingIncrement(globalObject, roundingIncrement, maximumIncrement(smallestUnit), Inclusivity::Inclusive);
     RETURN_IF_EXCEPTION(scope, { });
 
-    return exactTime().round(increment, smallestUnit, roundingMode);
+    RELEASE_AND_RETURN(scope, exactTime().round(globalObject, roundingIncrement, smallestUnit, roundingMode));
 }
 
 // Temporal.Instant.prototype.toString( [ options ] )
@@ -366,7 +348,8 @@ String TemporalInstant::toString(JSGlobalObject* globalObject, JSValue optionsVa
     if (std::get<0>(data.precision) == Precision::Auto && roundingMode == RoundingMode::Trunc)
         return toString(timeZone);
 
-    ISO8601::ExactTime newExactTime { exactTime().round(data.increment, data.unit, roundingMode) };
+    auto newExactTime = exactTime().round(globalObject, data.increment, data.unit, roundingMode);
+    RETURN_IF_EXCEPTION(scope, { });
 
     // FIXME: Missing, relies on TimeZone:
     // 1. Let roundedInstant be ! CreateTemporalInstant(roundedNs).
@@ -388,7 +371,10 @@ String TemporalInstant::toString(JSGlobalObject* globalObject, JSValue optionsVa
 // https://tc39.es/proposal-temporal/#sec-temporal-temporalinstanttostring
 String TemporalInstant::toString(ISO8601::ExactTime exactTime, JSObject* timeZone, PrecisionData precision)
 {
-    GregorianDateTime gregorianDateTime { static_cast<double>(exactTime.epochMilliseconds()), LocalTimeOffset { } };
+    // We want to round down the epoch milliseconds so that we can add
+    // the microseconds and nanoseconds back in -- hence the call to
+    // floorEpochMilliseconds().
+    GregorianDateTime gregorianDateTime { static_cast<double>(exactTime.floorEpochMilliseconds()), LocalTimeOffset { } };
     StringBuilder builder;
 
     // If the year is outside the bounds of 0 and 9999 inclusive we want to

@@ -28,18 +28,20 @@
 #include "config.h"
 #include "PseudoElement.h"
 
+#include "DocumentPage.h"
 #include "InspectorInstrumentation.h"
 #include "KeyframeEffectStack.h"
 #include "RenderElement.h"
 #include "RenderImage.h"
 #include "RenderQuote.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
+#include "StylableInlines.h"
 #include "StyleResolver.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(PseudoElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PseudoElement);
 
 const QualifiedName& pseudoElementTagName()
 {
@@ -47,13 +49,13 @@ const QualifiedName& pseudoElementTagName()
     return name;
 }
 
-PseudoElement::PseudoElement(Element& host, PseudoId pseudoId)
+PseudoElement::PseudoElement(Element& host, PseudoElementType pseudoElementType)
     : Element(pseudoElementTagName(), host.document(), { TypeFlag::IsPseudoElementOrSpecialInternalNode })
     , m_hostElement(host)
-    , m_pseudoId(pseudoId)
+    , m_pseudoElementType(pseudoElementType)
 {
     setEventTargetFlag(EventTargetFlag::IsConnected);
-    ASSERT(pseudoId == PseudoId::Before || pseudoId == PseudoId::After);
+    ASSERT(pseudoElementType == PseudoElementType::Before || pseudoElementType == PseudoElementType::After);
 }
 
 PseudoElement::~PseudoElement()
@@ -61,9 +63,9 @@ PseudoElement::~PseudoElement()
     ASSERT(!m_hostElement);
 }
 
-Ref<PseudoElement> PseudoElement::create(Element& host, PseudoId pseudoId)
+Ref<PseudoElement> PseudoElement::create(Element& host, PseudoElementType pseudoElementType)
 {
-    Ref pseudoElement = adoptRef(*new PseudoElement(host, pseudoId));
+    Ref pseudoElement = adoptRef(*new PseudoElement(host, pseudoElementType));
 
     InspectorInstrumentation::pseudoElementCreated(host.document().protectedPage().get(), pseudoElement.get());
 
@@ -85,7 +87,7 @@ bool PseudoElement::rendererIsNeeded(const RenderStyle& style)
         return true;
 
     if (RefPtr element = m_hostElement.get()) {
-        if (auto* stack = element->keyframeEffectStack(Style::PseudoElementIdentifier { pseudoId() }))
+        if (auto* stack = element->keyframeEffectStack(Style::PseudoElementIdentifier { pseudoElementType() }))
             return stack->requiresPseudoElement();
     }
     return false;

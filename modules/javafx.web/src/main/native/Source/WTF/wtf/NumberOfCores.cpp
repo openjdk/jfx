@@ -34,6 +34,8 @@
 #include <sys/sysctl.h>
 #elif OS(LINUX) || OS(AIX) || OS(OPENBSD) || OS(NETBSD) || OS(FREEBSD) || OS(HAIKU)
 #include <unistd.h>
+#elif OS(QNX)
+#include <sys/syspage.h>
 #elif OS(WINDOWS)
 #include <windows.h>
 #endif
@@ -70,6 +72,9 @@ int numberOfProcessorCores()
     long sysconfResult = sysconf(_SC_NPROCESSORS_ONLN);
 
     s_numberOfCores = sysconfResult < 0 ? defaultIfUnavailable : static_cast<int>(sysconfResult);
+#elif OS(QNX)
+    int numCpuQNX = _syspage_ptr->num_cpu;
+    s_numberOfCores = numCpuQNX < 0 ? defaultIfUnavailable : numCpuQNX;
 #elif OS(WINDOWS)
     UNUSED_PARAM(defaultIfUnavailable);
     SYSTEM_INFO sysInfo;
@@ -85,16 +90,15 @@ int numberOfProcessorCores()
 #if OS(DARWIN)
 int numberOfPhysicalProcessorCores()
 {
-    const int32_t defaultIfUnavailable = 1;
-
-    static int32_t numCores = 0;
-    static std::once_flag onceKey;
-    std::call_once(onceKey, [&] {
+    static int32_t numCores = [] {
+        constexpr int32_t defaultIfUnavailable = 1;
         size_t valueSize = sizeof(numCores);
+        int32_t numCores = 0;
         int result = sysctlbyname("hw.physicalcpu_max", &numCores, &valueSize, nullptr, 0);
         if (result < 0)
-            numCores = defaultIfUnavailable;
-    });
+            return defaultIfUnavailable;
+        return numCores;
+    }();
 
     return numCores;
 }

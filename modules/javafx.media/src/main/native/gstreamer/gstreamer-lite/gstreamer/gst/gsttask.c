@@ -459,8 +459,8 @@ gst_task_cleanup_all (void)
     }
   }
 
-  /* GstElement owns a GThreadPool */
-  _priv_gst_element_cleanup ();
+  /* Clean up a GThreadPool associated with gst_*_async_call() if any */
+  _priv_gst_thread_pool_cleanup ();
 }
 
 /**

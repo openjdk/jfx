@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -140,6 +140,7 @@ public abstract class RichParagraph {
         return null;
     }
 
+    // see VFlow.createTextCell()
     List<Consumer<TextCell>> getHighlights() {
         return null;
     }
@@ -209,7 +210,7 @@ public abstract class RichParagraph {
         public Builder addWavyUnderline(int start, int length, Color color) {
             int end = start + length;
             highlights().add((cell) -> {
-                cell.addSquiggly(start, end, color);
+                cell.addWavyUnderline(start, end, color);
             });
             return this;
         }
@@ -228,7 +229,7 @@ public abstract class RichParagraph {
         public Builder addWavyUnderline(int start, int length, String ... css) {
             int end = start + length;
             highlights().add((cell) -> {
-                cell.addSquiggly(start, end, css);
+                cell.addWavyUnderline(start, end, css);
             });
             return this;
         }
@@ -262,8 +263,8 @@ public abstract class RichParagraph {
          * @return this {@code Builder} instance
          */
         public Builder addWithStyleNames(String text, String ... css) {
-            Objects.nonNull(text);
-            Objects.nonNull(css);
+            Objects.requireNonNull(text);
+            Objects.requireNonNull(css);
             StyleAttributeMap a = StyleAttributeMap.fromStyles(null, css);
             addSegment(text, a);
             return this;
@@ -279,7 +280,7 @@ public abstract class RichParagraph {
          * @return this {@code Builder} instance
          */
         public Builder addWithInlineAndStyleNames(String text, String style, String ... css) {
-            Objects.nonNull(text);
+            Objects.requireNonNull(text);
             StyleAttributeMap a = StyleAttributeMap.fromStyles(style, css);
             addSegment(text, a);
             return this;
@@ -294,7 +295,7 @@ public abstract class RichParagraph {
          * @return this {@code Builder} instance
          */
         public Builder addWithInlineStyle(String text, String style) {
-            Objects.nonNull(text);
+            Objects.requireNonNull(text);
             StyleAttributeMap a = StyleAttributeMap.fromStyles(style);
             addSegment(text, a);
             return this;
@@ -308,8 +309,8 @@ public abstract class RichParagraph {
          * @return this {@code Builder} instance
          */
         public Builder addSegment(String text, StyleAttributeMap attrs) {
-            Objects.nonNull(text);
-            Objects.nonNull(attrs);
+            Objects.requireNonNull(text);
+            Objects.requireNonNull(attrs);
             StyledSegment seg = StyledSegment.of(text, attrs);
             segments().add(seg);
             return this;
@@ -324,7 +325,7 @@ public abstract class RichParagraph {
          * @return this {@code Builder} instance
          */
         public Builder addSegment(String text, int start, int end, StyleAttributeMap attrs) {
-            Objects.nonNull(text);
+            Objects.requireNonNull(text);
             String s = text.substring(start, end);
             addSegment(s, attrs);
             return this;
@@ -378,7 +379,24 @@ public abstract class RichParagraph {
          * @return this {@code Builder} instance
          */
         public Builder addInlineNode(Supplier<Node> generator) {
-            StyledSegment seg = StyledSegment.ofInlineNode(generator);
+            return addInlineNode(generator, null);
+        }
+
+        /**
+         * Adds an inline node.
+         * <p>
+         * The supplied generator must not cache or keep a reference to the created Node,
+         * but the created Node can keep a reference to the model or some property therein.
+         * <p>
+         * For example, a bidirectional binding between an inline control and some property in the model
+         * would synchronize the model with all the views that use it.
+         * @param generator the generator that provides the actual {@code Node}
+         * @param a the segment styles
+         * @return this {@code Builder} instance
+         * @since 27
+         */
+        public Builder addInlineNode(Supplier<Node> generator, StyleAttributeMap a) {
+            StyledSegment seg = StyledSegment.ofInlineNode(generator, a);
             segments().add(seg);
             return this;
         }

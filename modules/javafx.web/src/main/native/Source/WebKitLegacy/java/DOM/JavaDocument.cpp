@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1251,7 +1251,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentImpl_importNodeImpl(JNIE
    return JavaReturn<Node>(env, WTF::getPtr(
        raiseOnDOMError(env,
            IMPL->importNode(*static_cast<Node*>(jlong_to_ptr(importedNode)),
-                            std::variant<bool, ImportNodeOptions>(static_cast<bool>(deep))))));
+                            Variant<bool, ImportNodeOptions>(static_cast<bool>(deep))))));
 }
 
 

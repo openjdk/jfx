@@ -45,6 +45,8 @@
 #include "pas_utility_heap.h"
 #include "pas_utils.h"
 #include "thingy_heap_config.h"
+#include <cstdlib>
+#include <optional>
 #include <sstream>
 #include <sys/wait.h>
 #include <vector>
@@ -336,6 +338,23 @@ struct Test {
     TestScopeImpl* scope;
 };
 
+struct RunningTest {
+    RunningTest() = default;
+
+    RunningTest(pid_t pid, int readPipe, const Test& test, size_t testIndex)
+        : pid(pid)
+        , readPipe(readPipe)
+        , test(test)
+        , testIndex(testIndex)
+    {
+    }
+
+    pid_t pid { -1 };
+    int readPipe { -1 };
+    Test test;
+    size_t testIndex;
+};
+
 vector<Test> tests;
 TestScopeImpl* topScope;
 
@@ -369,6 +388,7 @@ void addLargeFreeHeapTests();
 void addLargeSharingPoolTests();
 void addLockFreeReadPtrPtrHashtableTests();
 void addLotsOfHeapsAndThreadsTests();
+void addMARTests();
 void addMemalignTests();
 void addMinHeapTests();
 void addPGMTests();
@@ -567,6 +587,90 @@ void verifyExactObjectDistance(const set<void*>& objects,
     }
 }
 
+struct ParsedArguments {
+    string filter;
+    std::optional<int> childProcesses { };
+};
+
+unsigned computeTestConcurrency(std::optional<int> childProcesses);
+
+void printUsage(const char* programName)
+{
+    cerr << "Usage: " << programName << " [options] [filter]" << endl;
+    cerr << endl;
+    cerr << "Options:" << endl;
+    cerr << "  --child-processes N  Maximum number of child processes to fork at once" << endl;
+    cerr << "                       (default: " << computeTestConcurrency(std::nullopt) << ", auto-detected based on CPU count)" << endl;
+    cerr << "  --help               Show this help message" << endl;
+    cerr << endl;
+    cerr << "Arguments:" << endl;
+    cerr << "  filter               Run only tests matching this filter string" << endl;
+    cerr << endl;
+}
+
+ParsedArguments parseArguments(int argc, char** argv)
+{
+    ParsedArguments args;
+
+    for (int i = 1; i < argc; i++) {
+        string arg = argv[i];
+
+        if (arg == "--help" || arg == "-h") {
+            printUsage(argv[0]);
+            exit(0);
+        } else if (arg == "--child-processes") {
+            if (i + 1 >= argc) {
+                cerr << "Error: --child-processes requires a numeric argument" << endl;
+                printUsage(argv[0]);
+                exit(1);
+            }
+            i++;
+            int value = atoi(argv[i]);
+            if (value <= 0) {
+                cerr << "Error: --child-processes must be a positive integer, got: " << argv[i] << endl;
+                exit(1);
+            }
+            args.childProcesses = value;
+        } else if (arg[0] == '-') {
+            cerr << "Error: unknown option: " << arg << endl;
+            printUsage(argv[0]);
+            exit(1);
+        } else {
+            // Positional argument - this is the filter
+            if (!args.filter.empty()) {
+                cerr << "Error: multiple filter arguments specified" << endl;
+                printUsage(argv[0]);
+                exit(1);
+            }
+            args.filter = arg;
+        }
+    }
+
+    return args;
+}
+
+unsigned computeTestConcurrency(std::optional<int> childProcesses)
+{
+    const char* envConcurrency = getenv("PasTestConcurrency");
+    if (envConcurrency) {
+        int concurrency = atoi(envConcurrency);
+        if (concurrency > 0)
+            return static_cast<unsigned>(concurrency);
+    }
+
+    if (childProcesses.value_or(0) > 0)
+        return static_cast<unsigned>(*childProcesses);
+
+    unsigned numCpus = 1;
+
+    long result = sysconf(_SC_NPROCESSORS_ONLN);
+    if (result > 0)
+        numCpus = static_cast<unsigned>(result);
+
+    return numCpus > 1 ? numCpus / 2 : 1;
+}
+
+
 void runOneTest(const Test& test)
 {
     runningOneTest = true;
@@ -576,33 +680,63 @@ void runOneTest(const Test& test)
     CHECK(!"Should not have gotten here.");
 }
 
-void runForkedTest(const Test& test)
+// Start a test without waiting for it to finish;
+// the handle returned can be used to wait for its completion,
+// via waitForAnyProcess.
+RunningTest startForkedTest(const Test& test, size_t testIndex)
 {
     cout << "Running " << test.fullName() << "..." << endl;
 
     testsRan++;
 
-    int pipeResult = pipe(resultPipe);
+    int pipefd[2];
+    int pipeResult = pipe(pipefd);
     PAS_ASSERT(!pipeResult);
 
     int forkResult = fork();
     PAS_ASSERT(forkResult >= 0);
 
     if (!forkResult) {
-        close(resultPipe[0]);
+        // Child process
+        close(pipefd[0]);
         test.run();
-        ssize_t writeResult = write(resultPipe[1], &successByte, 1);
+        ssize_t writeResult = write(pipefd[1], &successByte, 1);
         PAS_ASSERT(writeResult == 1);
         exit(0);
         PAS_ASSERT(!"Should have exited");
     }
 
-    close(resultPipe[1]);
+    // Parent process
+    close(pipefd[1]);
+    return RunningTest(forkResult, pipefd[0], test, testIndex);
+}
 
+size_t waitForAnyProcess(vector<RunningTest>& runningTests)
+{
+    PAS_ASSERT(!runningTests.empty());
+
+    int waitStatus;
+    pid_t completedPid = wait(&waitStatus);
+    PAS_ASSERT(completedPid > 0);
+
+    // Find which test completed
+    size_t completedIndex = SIZE_MAX;
+    RunningTest completedTest;
+    for (size_t i = 0; i < runningTests.size(); i++) {
+        if (runningTests[i].pid == completedPid) {
+            completedIndex = i;
+            completedTest = runningTests[i];
+            break;
+        }
+    }
+
+    PAS_ASSERT(completedIndex != SIZE_MAX);
+
+    // Read result from pipe
     bool didReadAByte = false;
     char resultByte;
     for (;;) {
-        ssize_t readResult = read(resultPipe[0], &resultByte, 1);
+        ssize_t readResult = read(completedTest.readPipe, &resultByte, 1);
 
         if (readResult == 1) {
             didReadAByte = true;
@@ -616,54 +750,59 @@ void runForkedTest(const Test& test)
         PAS_ASSERT(errno == EINTR);
     }
 
-    close(resultPipe[0]);
-
-    int waitStatus;
-    for (;;) {
-        int pid = wait(&waitStatus);
-
-        if (pid >= 0) {
-            if (WIFSTOPPED(waitStatus))
-                continue;
-            break;
-        }
-
-        PAS_ASSERT(errno == EINTR);
-    }
+    close(completedTest.readPipe);
 
     if (WIFEXITED(waitStatus)) {
         if (!WEXITSTATUS(waitStatus) && didReadAByte) {
             if (resultByte == successByte) {
                 cout << "    PASS!" << endl;
                 testsPassed++;
-                return;
-            }
-
+            } else {
             cout << "     FAIL: unexpected result byte: " << static_cast<int>(resultByte) << endl;
-            return;
         }
-
+        } else {
         cout << "    FAIL: unexpected exit with code " << WEXITSTATUS(waitStatus) << endl;
-        return;
     }
-
-    if (WIFSIGNALED(waitStatus)) {
+    } else if (WIFSIGNALED(waitStatus)) {
         cout << "    CRASH: with signal " << WTERMSIG(waitStatus) << endl;
-        return;
-    }
-
+    } else
     cout << "    FAIL: child process terminated with unknown status code " << waitStatus << endl;
+
+    // Remove completed test from running list
+    runningTests.erase(runningTests.begin() + completedIndex);
+
+    return completedTest.testIndex;
 }
 
-void runTests(const vector<Test>& tests)
+void runTests(const vector<Test>& tests, std::optional<int> childProcesses)
 {
     CHECK(tests.size());
 
-    if (tests.size() == 1)
+    if (tests.size() == 1) {
         runOneTest(tests[0]);
+        return;
+    }
 
-    for (const Test& test : tests)
-        runForkedTest(test);
+    vector<RunningTest> runningTests;
+    size_t nextTestIndex = 0;
+    unsigned maxConcurrentTests = computeTestConcurrency(childProcesses);
+
+    // Start initial batch of tests (up to maxConcurrentTests)
+    while (nextTestIndex < tests.size() && runningTests.size() < maxConcurrentTests) {
+        RunningTest runningTest = startForkedTest(tests[nextTestIndex], nextTestIndex);
+        runningTests.push_back(runningTest);
+        nextTestIndex++;
+    }
+
+    while (!runningTests.empty()) {
+        // wait(2) will return exactly once per exited child
+        waitForAnyProcess(runningTests);
+        if (nextTestIndex < tests.size()) {
+            RunningTest runningTest = startForkedTest(tests[nextTestIndex], nextTestIndex);
+            runningTests.push_back(runningTest);
+            nextTestIndex++;
+        }
+    }
 
     PAS_ASSERT(testsPassed <= testsRan);
     cout << endl;
@@ -684,7 +823,7 @@ void runTests(const vector<Test>& tests)
     exit(1);
 }
 
-void runFilteredTests(const string& filter)
+static void runFilteredTests(const string& filter, std::optional<int> childProcesses)
 {
     vector<Test> filteredTests;
 
@@ -698,7 +837,7 @@ void runFilteredTests(const string& filter)
         exit(1);
     }
 
-    runTests(filteredTests);
+    runTests(filteredTests, childProcesses);
 }
 
 #define ADD_SUITE(name) do { \
@@ -740,6 +879,7 @@ int main(int argc, char** argv)
     ADD_SUITE(LargeSharingPool);
     ADD_SUITE(LockFreeReadPtrPtrHashtable);
     ADD_SUITE(LotsOfHeapsAndThreads);
+    ADD_SUITE(MAR);
     ADD_SUITE(Memalign);
     ADD_SUITE(MinHeap);
     ADD_SUITE(PGM);
@@ -750,21 +890,9 @@ int main(int argc, char** argv)
     ADD_SUITE(Utils);
     ADD_SUITE(ViewCache);
 
-    string filter;
+    ParsedArguments args = parseArguments(argc, argv);
 
-    switch (argc) {
-    case 1:
-        break;
-
-    case 2:
-        filter = argv[1];
-        break;
-
-    default:
-        PAS_ASSERT(!"Wrong number of arguments");
-    }
-
-    runFilteredTests(filter);
+    runFilteredTests(args.filter, args.childProcesses);
 
     CHECK(!"Should not have reached here.");
     return 1;

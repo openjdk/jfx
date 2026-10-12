@@ -106,7 +106,7 @@ void RemoteInspectionTarget::pauseWaitingForAutomaticInspection()
 
     m_isPausedWaitingForAutomaticInspection = true;
     while (m_isPausedWaitingForAutomaticInspection) {
-        if (RunLoop::cycle(JSGlobalObjectDebugger::runLoopMode()) == RunLoop::CycleResult::Stop)
+        if (RunLoop::cycle(JSGlobalObjectDebugger::runLoopModeSingleton()) == RunLoop::CycleResult::Stop)
             break;
     }
 }

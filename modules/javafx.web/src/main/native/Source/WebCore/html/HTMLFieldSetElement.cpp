@@ -41,7 +41,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLFieldSetElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLFieldSetElement);
 
 using namespace HTMLNames;
 
@@ -87,11 +87,12 @@ static void updateFromControlElementsAncestorDisabledStateUnder(HTMLElement& sta
     it.dropAssertions();
 
     while (it != range.end()) {
-        if (auto* listedElement = it->asValidatedFormListedElement())
+        Ref element = *it;
+        if (RefPtr listedElement = element->asValidatedFormListedElement())
             listedElement->setDisabledByAncestorFieldset(isDisabled);
 
         // Don't call setDisabledByAncestorFieldset() on form controls inside disabled fieldsets.
-        if (is<HTMLFieldSetElement>(*it) && it->hasAttributeWithoutSynchronization(disabledAttr))
+        if (is<HTMLFieldSetElement>(element) && element->hasAttributeWithoutSynchronization(disabledAttr))
             it.traverseNextSkippingChildren();
         else
             it.traverseNext();
@@ -182,7 +183,7 @@ const AtomString& HTMLFieldSetElement::formControlType() const
 RenderPtr<RenderElement> HTMLFieldSetElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
     // Fieldsets should make a block flow if display: inline or table types are set.
-    return RenderElement::createFor(*this, WTFMove(style), { RenderElement::ConstructBlockLevelRendererFor::Inline, RenderElement::ConstructBlockLevelRendererFor::TableOrTablePart });
+    return RenderElement::createFor(*this, WTF::move(style), { RenderElement::ConstructBlockLevelRendererFor::Inline, RenderElement::ConstructBlockLevelRendererFor::TableOrTablePart });
 }
 
 HTMLLegendElement* HTMLFieldSetElement::legend() const

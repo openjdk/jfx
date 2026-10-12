@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "BackgroundFetch.h"
+#include <WebCore/BackgroundFetch.h>
 #include <span>
 #include <wtf/TZoneMalloc.h>
 

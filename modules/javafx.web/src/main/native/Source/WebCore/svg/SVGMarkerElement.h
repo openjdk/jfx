@@ -29,7 +29,7 @@
 namespace WebCore {
 
 class SVGMarkerElement final : public SVGElement, public SVGFitToViewBox {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGMarkerElement);
+    WTF_MAKE_TZONE_ALLOCATED(SVGMarkerElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGMarkerElement);
 public:
     // Forward declare enumerations in the W3C naming scheme, for IDL generation.
@@ -42,7 +42,8 @@ public:
     enum {
         SVG_MARKER_ORIENT_UNKNOWN = SVGMarkerOrientUnknown,
         SVG_MARKER_ORIENT_AUTO = SVGMarkerOrientAuto,
-        SVG_MARKER_ORIENT_ANGLE = SVGMarkerOrientAngle
+        SVG_MARKER_ORIENT_ANGLE = SVGMarkerOrientAngle,
+        SVG_MARKER_ORIENT_AUTO_START_REVERSE = SVGMarkerOrientAutoStartReverse
     };
 
     static Ref<SVGMarkerElement> create(const QualifiedName&, Document&);
@@ -70,6 +71,7 @@ public:
 
     void setOrientToAuto();
     void setOrientToAngle(const SVGAngle&);
+    void setOrientToAutoStartReverse();
 
 private:
     SVGMarkerElement(const QualifiedName&, Document&);

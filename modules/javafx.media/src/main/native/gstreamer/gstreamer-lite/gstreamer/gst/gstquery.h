@@ -267,43 +267,24 @@ gst_clear_query (GstQuery ** query_ptr)
 }
 
 /* copy query */
-static inline GstQuery *
+G_GNUC_WARN_UNUSED_RESULT static inline GstQuery *
 gst_query_copy (const GstQuery * q)
 {
   return GST_QUERY_CAST (gst_mini_object_copy (GST_MINI_OBJECT_CONST_CAST (q)));
 }
-#else /* GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS */
-GST_API
-GstQuery *  gst_query_ref   (GstQuery * q);
 
-GST_API
-void        gst_query_unref (GstQuery * q);
+static inline gboolean
+gst_query_is_writable (const GstQuery * query)
+{
+  return gst_mini_object_is_writable (GST_MINI_OBJECT_CONST_CAST (query));
+}
 
-GST_API
-void        gst_clear_query (GstQuery ** query_ptr);
+G_GNUC_WARN_UNUSED_RESULT static inline GstQuery *
+gst_query_make_writable (GstQuery * query)
+{
+  return GST_QUERY_CAST (gst_mini_object_make_writable (GST_MINI_OBJECT_CAST (query)));
+}
 
-GST_API
-GstQuery *  gst_query_copy  (const GstQuery * q);
-#endif /* GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS */
-
-/**
- * gst_query_is_writable:
- * @q: a #GstQuery
- *
- * Tests if you can safely write data into a query's structure.
- */
-#define         gst_query_is_writable(q)     gst_mini_object_is_writable (GST_MINI_OBJECT_CAST (q))
-/**
- * gst_query_make_writable:
- * @q: (transfer full): a #GstQuery to make writable
- *
- * Makes a writable query from the given query.
- *
- * Returns: (transfer full): a new writable query (possibly same as @q)
- */
-#define         gst_query_make_writable(q)      GST_QUERY_CAST (gst_mini_object_make_writable (GST_MINI_OBJECT_CAST (q)))
-
-#ifndef GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS
 static inline gboolean
 gst_query_replace (GstQuery **old_query, GstQuery *new_query)
 {
@@ -316,7 +297,30 @@ gst_query_take (GstQuery **old_query, GstQuery *new_query)
   return gst_mini_object_take ((GstMiniObject **) old_query,
       (GstMiniObject *) new_query);
 }
+
+static inline GstQuery *
+gst_query_steal(GstQuery **old_query)
+{
+  return GST_QUERY_CAST(gst_mini_object_steal((GstMiniObject **)old_query));
+}
 #else /* GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS */
+GST_API
+GstQuery *  gst_query_ref   (GstQuery * q);
+
+GST_API
+void        gst_query_unref (GstQuery * q);
+
+GST_API
+void        gst_clear_query (GstQuery ** query_ptr);
+
+GST_API
+GstQuery *  gst_query_copy  (const GstQuery * q) G_GNUC_WARN_UNUSED_RESULT;
+
+GST_API
+GstQuery *  gst_query_make_writable (GstQuery * query) G_GNUC_WARN_UNUSED_RESULT;
+GST_API
+gboolean    gst_query_is_writable   (const GstQuery * query);
+
 GST_API
 gboolean        gst_query_replace               (GstQuery ** old_query,
                                                  GstQuery * new_query);
@@ -324,12 +328,15 @@ gboolean        gst_query_replace               (GstQuery ** old_query,
 GST_API
 gboolean        gst_query_take                  (GstQuery ** old_query,
                                                  GstQuery * new_query);
+
+GST_API
+GstQuery *gst_query_steal (GstQuery **old_query);
 #endif /* GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS */
 
 /* application specific query */
 
 GST_API
-GstQuery *      gst_query_new_custom            (GstQueryType type, GstStructure *structure) G_GNUC_MALLOC;
+GstQuery *      gst_query_new_custom            (GstQueryType type, GstStructure *structure) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 const GstStructure *
@@ -341,7 +348,7 @@ GstStructure *  gst_query_writable_structure    (GstQuery *query);
 /* position query */
 
 GST_API
-GstQuery*       gst_query_new_position          (GstFormat format) G_GNUC_MALLOC;
+GstQuery*       gst_query_new_position          (GstFormat format) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void            gst_query_set_position          (GstQuery *query, GstFormat format, gint64 cur);
@@ -352,7 +359,7 @@ void            gst_query_parse_position        (GstQuery *query, GstFormat *for
 /* duration query */
 
 GST_API
-GstQuery*       gst_query_new_duration          (GstFormat format) G_GNUC_MALLOC;
+GstQuery*       gst_query_new_duration          (GstFormat format) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void            gst_query_set_duration          (GstQuery *query, GstFormat format, gint64 duration);
@@ -363,7 +370,7 @@ void            gst_query_parse_duration        (GstQuery *query, GstFormat *for
 /* latency query */
 
 GST_API
-GstQuery*       gst_query_new_latency           (void) G_GNUC_MALLOC;
+GstQuery*       gst_query_new_latency           (void) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void            gst_query_set_latency           (GstQuery *query, gboolean live, GstClockTime min_latency,
@@ -376,7 +383,7 @@ void            gst_query_parse_latency         (GstQuery *query, gboolean *live
 /* convert query */
 
 GST_API
-GstQuery*       gst_query_new_convert           (GstFormat src_format, gint64 value, GstFormat dest_format) G_GNUC_MALLOC;
+GstQuery*       gst_query_new_convert           (GstFormat src_format, gint64 value, GstFormat dest_format) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void            gst_query_set_convert           (GstQuery *query, GstFormat src_format, gint64 src_value,
@@ -388,7 +395,7 @@ void            gst_query_parse_convert         (GstQuery *query, GstFormat *src
 /* segment query */
 
 GST_API
-GstQuery*       gst_query_new_segment           (GstFormat format) G_GNUC_MALLOC;
+GstQuery*       gst_query_new_segment           (GstFormat format) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void            gst_query_set_segment           (GstQuery *query, gdouble rate, GstFormat format,
@@ -401,7 +408,7 @@ void            gst_query_parse_segment         (GstQuery *query, gdouble *rate,
 /* seeking query */
 
 GST_API
-GstQuery*       gst_query_new_seeking           (GstFormat format) G_GNUC_MALLOC;
+GstQuery*       gst_query_new_seeking           (GstFormat format) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void            gst_query_set_seeking           (GstQuery *query, GstFormat format,
@@ -417,7 +424,7 @@ void            gst_query_parse_seeking         (GstQuery *query, GstFormat *for
 /* formats query */
 
 GST_API
-GstQuery*       gst_query_new_formats           (void) G_GNUC_MALLOC;
+GstQuery*       gst_query_new_formats           (void) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void            gst_query_set_formats           (GstQuery *query, gint n_formats, ...);
@@ -434,7 +441,7 @@ void            gst_query_parse_nth_format      (GstQuery *query, guint nth, Gst
 /* buffering query */
 
 GST_API
-GstQuery*       gst_query_new_buffering           (GstFormat format) G_GNUC_MALLOC;
+GstQuery*       gst_query_new_buffering           (GstFormat format) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void            gst_query_set_buffering_percent   (GstQuery *query, gboolean busy, gint percent);
@@ -477,7 +484,7 @@ gboolean        gst_query_parse_nth_buffering_range (GstQuery *query,
 /* URI query */
 
 GST_API
-GstQuery *      gst_query_new_uri                    (void) G_GNUC_MALLOC;
+GstQuery *      gst_query_new_uri                    (void) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void            gst_query_parse_uri                  (GstQuery *query, gchar **uri);
@@ -500,7 +507,7 @@ void            gst_query_set_uri_redirection_permanent (GstQuery *query, gboole
 /* allocation query */
 
 GST_API
-GstQuery *      gst_query_new_allocation             (GstCaps *caps, gboolean need_pool) G_GNUC_MALLOC;
+GstQuery *      gst_query_new_allocation             (GstCaps *caps, gboolean need_pool) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void            gst_query_parse_allocation           (GstQuery *query, GstCaps **caps, gboolean *need_pool);
@@ -587,7 +594,7 @@ typedef enum {
 } GstSchedulingFlags;
 
 GST_API
-GstQuery *      gst_query_new_scheduling          (void) G_GNUC_MALLOC;
+GstQuery *      gst_query_new_scheduling          (void) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void            gst_query_set_scheduling          (GstQuery *query, GstSchedulingFlags flags,
@@ -616,7 +623,7 @@ gboolean        gst_query_has_scheduling_mode_with_flags (GstQuery * query, GstP
 /* accept-caps query */
 
 GST_API
-GstQuery *      gst_query_new_accept_caps          (GstCaps *caps) G_GNUC_MALLOC;
+GstQuery *      gst_query_new_accept_caps          (GstCaps *caps) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void            gst_query_parse_accept_caps        (GstQuery *query, GstCaps **caps);
@@ -630,7 +637,7 @@ void            gst_query_parse_accept_caps_result (GstQuery *query, gboolean *r
 /* caps query */
 
 GST_API
-GstQuery *      gst_query_new_caps                 (GstCaps *filter) G_GNUC_MALLOC;
+GstQuery *      gst_query_new_caps                 (GstCaps *filter) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void            gst_query_parse_caps               (GstQuery *query, GstCaps **filter);
@@ -644,12 +651,12 @@ void            gst_query_parse_caps_result        (GstQuery *query, GstCaps **c
 /* drain query */
 
 GST_API
-GstQuery *      gst_query_new_drain                (void) G_GNUC_MALLOC;
+GstQuery *      gst_query_new_drain                (void) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 /* context query */
 
 GST_API
-GstQuery *      gst_query_new_context              (const gchar * context_type) G_GNUC_MALLOC;
+GstQuery *      gst_query_new_context              (const gchar * context_type) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 gboolean        gst_query_parse_context_type       (GstQuery * query, const gchar ** context_type);
@@ -663,7 +670,7 @@ void            gst_query_parse_context            (GstQuery *query, GstContext 
 /* bitrate query */
 
 GST_API
-GstQuery *      gst_query_new_bitrate              (void) G_GNUC_MALLOC;
+GstQuery *      gst_query_new_bitrate              (void) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void            gst_query_set_bitrate              (GstQuery * query, guint nominal_bitrate);
@@ -674,7 +681,7 @@ void            gst_query_parse_bitrate            (GstQuery * query, guint * no
 /* selectable query */
 
 GST_API
-GstQuery *      gst_query_new_selectable           (void) G_GNUC_MALLOC;
+GstQuery *      gst_query_new_selectable           (void) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void            gst_query_set_selectable           (GstQuery *query, gboolean selectable);

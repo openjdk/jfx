@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "DeferrableTask.h"
-#include "PlatformMediaSession.h"
+#include <WebCore/DeferrableTask.h>
+#include <WebCore/PlatformMediaSession.h>
 #include <wtf/AbstractRefCounted.h>
 
 namespace WebCore {

@@ -128,7 +128,12 @@ public:
 
 private:
     static CSSNumericFactory* from(DOMCSSNamespace&);
-    static ASCIILiteral supplementName();
+    static ASCIILiteral supplementName() { return "CSSNumericFactory"_s; }
+    bool isCSSNumericFactory() const final { return true; }
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CSSNumericFactory)
+    static bool isType(const WebCore::SupplementBase& supplement) { return supplement.isCSSNumericFactory(); }
+SPECIALIZE_TYPE_TRAITS_END()

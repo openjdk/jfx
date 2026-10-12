@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "GraphicsContext.h"
+#include <WebCore/GraphicsContext.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
@@ -62,7 +62,7 @@ private:
 
     void didUpdateState(GraphicsContextState&) final { }
 
-    void drawNativeImageInternal(NativeImage&, const FloatRect&, const FloatRect&, ImagePaintingOptions) final { }
+    void drawNativeImage(NativeImage&, const FloatRect&, const FloatRect&, ImagePaintingOptions) final { }
 
     void drawSystemImage(SystemImage&, const FloatRect&) final { };
 
@@ -111,7 +111,6 @@ private:
     FloatSize drawText(const FontCascade&, const TextRun&, const FloatPoint&, unsigned = 0, std::optional<unsigned> = std::nullopt) final { return { }; }
 
     void drawGlyphs(const Font&, std::span<const GlyphBufferGlyph>, std::span<const GlyphBufferAdvance>, const FloatPoint&, FontSmoothingMode) final { }
-    void drawDecomposedGlyphs(const Font&, const DecomposedGlyphs&) final { }
     void drawDisplayList(const DisplayList::DisplayList&, ControlFactory&) final { }
 
     void drawEmphasisMarks(const FontCascade&, const TextRun&, const AtomString&, const FloatPoint&, unsigned = 0, std::optional<unsigned> = std::nullopt) final { }
@@ -140,7 +139,7 @@ private:
     void fillRectWithRoundedHole(const FloatRect&, const FloatRoundedRect&, const Color&) final { }
 
 #if ENABLE(VIDEO)
-    void drawVideoFrame(VideoFrame&, const FloatRect&, ImageOrientation, bool) final { }
+    void drawVideoFrame(const VideoFrame&, const FloatRect&, ImageOrientation, bool) final { }
 #endif
 
 private:

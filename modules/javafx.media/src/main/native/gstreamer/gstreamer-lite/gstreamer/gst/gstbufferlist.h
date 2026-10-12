@@ -42,7 +42,7 @@ typedef struct _GstBufferList GstBufferList;
 
 /**
  * GstBufferListFunc:
- * @buffer: (out) (nullable): pointer to the buffer
+ * @buffer: (inout) (nullable): pointer to the buffer
  * @idx: the index of @buffer
  * @user_data: user data passed to gst_buffer_list_foreach()
  *
@@ -84,7 +84,7 @@ gst_clear_buffer_list (GstBufferList ** list_ptr)
 }
 
 /* copy */
-static inline GstBufferList *
+G_GNUC_WARN_UNUSED_RESULT static inline GstBufferList *
 gst_buffer_list_copy (const GstBufferList * list)
 {
   return GST_BUFFER_LIST_CAST (gst_mini_object_copy (GST_MINI_OBJECT_CONST_CAST (list)));
@@ -103,6 +103,24 @@ gst_buffer_list_take (GstBufferList **old_list, GstBufferList *new_list)
   return gst_mini_object_take ((GstMiniObject **) old_list,
       (GstMiniObject *) new_list);
 }
+
+static inline GstBufferList *
+gst_buffer_list_steal(GstBufferList **old_list)
+{
+  return GST_BUFFER_LIST_CAST(gst_mini_object_steal((GstMiniObject **)old_list));
+}
+
+static inline gboolean
+gst_buffer_list_is_writable (const GstBufferList * list)
+{
+  return gst_mini_object_is_writable (GST_MINI_OBJECT_CONST_CAST (list));
+}
+
+G_GNUC_WARN_UNUSED_RESULT static inline GstBufferList *
+gst_buffer_list_make_writable (GstBufferList * list)
+{
+  return GST_BUFFER_LIST_CAST (gst_mini_object_make_writable (GST_MINI_OBJECT_CAST (list)));
+}
 #else  /* GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS */
 GST_API
 GstBufferList * gst_buffer_list_ref     (GstBufferList * list);
@@ -114,7 +132,7 @@ GST_API
 void            gst_clear_buffer_list   (GstBufferList ** list_ptr);
 
 GST_API
-GstBufferList * gst_buffer_list_copy    (const GstBufferList * list);
+GstBufferList * gst_buffer_list_copy    (const GstBufferList * list) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 gboolean        gst_buffer_list_replace (GstBufferList ** old_list,
@@ -123,28 +141,15 @@ gboolean        gst_buffer_list_replace (GstBufferList ** old_list,
 GST_API
 gboolean        gst_buffer_list_take    (GstBufferList ** old_list,
                                          GstBufferList * new_list);
+
+GST_API
+GstBufferList *gst_buffer_list_steal    (GstBufferList **old_list);
+
+GST_API
+GstBufferList * gst_buffer_list_make_writable (GstBufferList * list) G_GNUC_WARN_UNUSED_RESULT;
+GST_API
+gboolean        gst_buffer_list_is_writable   (const GstBufferList * list);
 #endif /* GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS */
-
-/**
- * gst_buffer_list_is_writable:
- * @list: a #GstBufferList
- *
- * Tests if you can safely add buffers and groups into a buffer list.
- */
-#define gst_buffer_list_is_writable(list) gst_mini_object_is_writable (GST_MINI_OBJECT_CAST (list))
-
-/**
- * gst_buffer_list_make_writable:
- * @list: (transfer full): a #GstBufferList
- *
- * Makes a writable buffer list from the given buffer list. If the source buffer
- * list is already writable, this will simply return the same buffer list. A
- * copy will otherwise be made using gst_buffer_list_copy().
- *
- * Returns: (transfer full): a writable list, which may or may not be the
- *     same as @list
- */
-#define gst_buffer_list_make_writable(list) GST_BUFFER_LIST_CAST (gst_mini_object_make_writable (GST_MINI_OBJECT_CAST (list)))
 
 GST_API
 GType                    gst_buffer_list_get_type              (void);
@@ -152,10 +157,10 @@ GType                    gst_buffer_list_get_type              (void);
 /* allocation */
 
 GST_API
-GstBufferList *          gst_buffer_list_new                   (void) G_GNUC_MALLOC;
+GstBufferList *          gst_buffer_list_new                   (void) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstBufferList *          gst_buffer_list_new_sized             (guint size) G_GNUC_MALLOC;
+GstBufferList *          gst_buffer_list_new_sized             (guint size) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 guint                    gst_buffer_list_length                (GstBufferList *list);
@@ -177,7 +182,7 @@ gboolean                 gst_buffer_list_foreach               (GstBufferList *l
                                                                 GstBufferListFunc func,
                 gpointer user_data);
 GST_API
-GstBufferList *          gst_buffer_list_copy_deep             (const GstBufferList * list);
+GstBufferList *          gst_buffer_list_copy_deep             (const GstBufferList * list) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 gsize                    gst_buffer_list_calculate_size        (GstBufferList * list);

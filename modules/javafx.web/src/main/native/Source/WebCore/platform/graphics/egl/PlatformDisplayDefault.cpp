@@ -26,7 +26,7 @@
 #include "config.h"
 #include "PlatformDisplayDefault.h"
 
-#if PLATFORM(GTK)
+#if PLATFORM(GTK) || OS(ANDROID)
 
 #include "GLContext.h"
 #include <epoxy/egl.h>
@@ -45,7 +45,7 @@ std::unique_ptr<PlatformDisplayDefault> PlatformDisplayDefault::create()
 }
 
 PlatformDisplayDefault::PlatformDisplayDefault(Ref<GLDisplay>&& glDisplay)
-    : PlatformDisplay(WTFMove(glDisplay))
+    : PlatformDisplay(WTF::move(glDisplay))
 {
 #if ENABLE(WEBGL)
     m_anglePlatform = 0;
@@ -59,4 +59,4 @@ PlatformDisplayDefault::~PlatformDisplayDefault()
 
 } // namespace WebCore
 
-#endif // PLATFORM(GTK)
+#endif // PLATFORM(GTK) || OS(ANDROID)

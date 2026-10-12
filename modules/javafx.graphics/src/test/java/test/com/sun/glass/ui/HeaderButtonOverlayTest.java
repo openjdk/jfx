@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,7 +35,6 @@ import javafx.geometry.NodeOrientation;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.layout.HeaderButtonType;
-import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
 import org.junit.jupiter.api.Test;
@@ -458,10 +457,11 @@ public class HeaderButtonOverlayTest {
     }
 
     /**
-     * Asserts that the .dark style class is added to all buttons when {@link Scene#getFill()} is dark.
+     * Asserts that the .dark style class is added to all buttons when
+     * {@link HeaderButtonOverlay#buttonDarkStyleProperty()} is set.
      */
     @Test
-    void darkStyleClassIsPresentWhenSceneFillIsDark() {
+    void darkStyleClassIsPresentWhenDarkStylePropertyIsSet() {
         var overlay = new HeaderButtonOverlay(getStylesheet("""
                 .-FX-INTERNAL-header-button-container { -fx-button-placement: right; }
                 .-FX-INTERNAL-header-button { -fx-pref-width: 20; -fx-pref-height: 10; }
@@ -469,10 +469,10 @@ public class HeaderButtonOverlayTest {
 
         var scene = new Scene(overlay);
 
-        scene.setFill(Color.WHITE);
+        overlay.buttonDarkStyleProperty().set(false);
         assertTrue(overlay.getChildrenUnmodifiable().stream().noneMatch(b -> b.getStyleClass().contains("dark")));
 
-        scene.setFill(Color.BLACK);
+        overlay.buttonDarkStyleProperty().set(true);
         assertTrue(overlay.getChildrenUnmodifiable().stream().allMatch(b -> b.getStyleClass().contains("dark")));
     }
 

@@ -32,9 +32,9 @@
 
 #if USE(LIBWEBRTC)
 
-#include "LibWebRTCMacros.h"
-#include "LibWebRTCRefWrappers.h"
-#include "RealtimeMediaSource.h"
+#include <WebCore/LibWebRTCMacros.h>
+#include <WebCore/LibWebRTCRefWrappers.h>
+#include <WebCore/RealtimeMediaSource.h>
 #include <wtf/RetainPtr.h>
 
 namespace WebCore {

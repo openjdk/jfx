@@ -27,9 +27,9 @@
 
 #pragma once
 
-#include "CSSColorScheme.h"
-#include "RenderStyleConstants.h"
-#include "StyleValueTypes.h"
+#include <WebCore/CSSColorScheme.h>
+#include <WebCore/RenderStyleConstants.h>
+#include <WebCore/StyleValueTypes.h>
 #include <wtf/OptionSet.h>
 
 #if ENABLE(DARK_MODE_CSS)
@@ -38,6 +38,9 @@ namespace WebCore {
 namespace Style {
 
 struct ColorScheme {
+    ColorScheme(CSS::Keyword::Normal) : schemes { }, only { std::nullopt } { }
+    ColorScheme(SpaceSeparatedVector<CustomIdentifier>&& schemes, std::optional<CSS::Keyword::Only> only) : schemes { WTF::move(schemes) }, only { only } { }
+
     SpaceSeparatedVector<CustomIdentifier> schemes;
     std::optional<CSS::Keyword::Only> only;
 

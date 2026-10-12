@@ -29,6 +29,7 @@
 
 #include "LibWebRTCProvider.h"
 #include <sstream>
+#include <webrtc/api/webrtc_sdp.h>
 #include <webrtc/pc/media_stream.h>
 #include <wtf/Function.h>
 #include <wtf/MainThread.h>
@@ -72,7 +73,7 @@ void useMockRTCPeerConnectionFactory(LibWebRTCProvider* provider, const String& 
 MockLibWebRTCPeerConnection::~MockLibWebRTCPeerConnection()
 {
     // Free senders and receivers in a different thread like an actual peer connection would probably do.
-    Thread::create("MockLibWebRTCPeerConnection thread"_s, [transceivers = WTFMove(m_transceivers)] { });
+    Thread::create("MockLibWebRTCPeerConnection thread"_s, [transceivers = WTF::move(m_transceivers)] { });
 }
 
 std::vector<webrtc::scoped_refptr<webrtc::RtpTransceiverInterface>> MockLibWebRTCPeerConnection::GetTransceivers() const
@@ -121,20 +122,20 @@ void MockLibWebRTCPeerConnectionForIceCandidates::sendCandidates()
 
     // Let's gather candidates
     LibWebRTCProvider::callOnWebRTCSignalingThread([this]() {
-        MockLibWebRTCIceCandidate candidate("candidate:2013266431 1 udp 2013266432 e7588693-48a3-434d-a5e3-64159095e03b.local 38838 typ host generation 0", "1");
-        m_observer.OnIceCandidate(&candidate);
+        auto candidate = webrtc::IceCandidate::Create("1", 0, "candidate:2013266431 1 udp 2013266432 e7588693-48a3-434d-a5e3-64159095e03b.local 38838 typ host generation 0");
+        m_observer.OnIceCandidate(candidate.get());
     });
 
     LibWebRTCProvider::callOnWebRTCSignalingThread([this]() {
-        MockLibWebRTCIceCandidate candidate("candidate:1019216383 1 tcp 1019216384 d7588693-48a3-434d-a5e3-64159095e03b.local 9 typ host tcptype passive generation 0", "1");
-        m_observer.OnIceCandidate(&candidate);
-        MockLibWebRTCIceCandidate candidateSSLTcp("candidate:1019216384 1 ssltcp 1019216385 c7588693-48a3-434d-a5e3-64159095e03b.local 49888 typ host generation 0", "1");
-        m_observer.OnIceCandidate(&candidateSSLTcp);
+        auto candidate = webrtc::IceCandidate::Create("1", 0, "candidate:1019216383 1 tcp 1019216384 d7588693-48a3-434d-a5e3-64159095e03b.local 9 typ host tcptype passive generation 0");
+        m_observer.OnIceCandidate(candidate.get());
+        auto candidateSSLTcp = webrtc::IceCandidate::Create("1", 0, "candidate:1019216384 1 ssltcp 1019216385 c7588693-48a3-434d-a5e3-64159095e03b.local 49888 typ host generation 0");
+        m_observer.OnIceCandidate(candidateSSLTcp.get());
     });
 
     LibWebRTCProvider::callOnWebRTCSignalingThread([this]() {
-        MockLibWebRTCIceCandidate candidate("candidate:1677722111 1 tcp 1677722112 172.18.0.1 47989 typ srflx raddr 0.0.0.0 rport 0 generation 0", "1");
-        m_observer.OnIceCandidate(&candidate);
+        auto candidate = webrtc::IceCandidate::Create("1", 0, "candidate:1677722111 1 tcp 1677722112 172.18.0.1 47989 typ srflx raddr 0.0.0.0 rport 0 generation 0");
+        m_observer.OnIceCandidate(candidate.get());
     });
 
     LibWebRTCProvider::callOnWebRTCSignalingThread([this]() {
@@ -371,11 +372,11 @@ webrtc::RTCErrorOr<webrtc::scoped_refptr<webrtc::RtpSenderInterface>> MockLibWeb
     if (!streamIds.empty())
         m_streamLabel = streamIds.front();
 
-    webrtc::scoped_refptr<webrtc::RtpSenderInterface> sender = webrtc::make_ref_counted<MockRtpSender>(WTFMove(track));
+    webrtc::scoped_refptr<webrtc::RtpSenderInterface> sender = webrtc::make_ref_counted<MockRtpSender>(WTF::move(track));
     webrtc::scoped_refptr<webrtc::RtpReceiverInterface> receiver = webrtc::make_ref_counted<MockRtpReceiver>();
-    auto transceiver = webrtc::make_ref_counted<MockRtpTransceiver>(WTFMove(sender), WTFMove(receiver));
+    auto transceiver = webrtc::make_ref_counted<MockRtpTransceiver>(WTF::move(sender), WTF::move(receiver));
 
-    m_transceivers.append(WTFMove(transceiver));
+    m_transceivers.append(WTF::move(transceiver));
     return webrtc::scoped_refptr<webrtc::RtpSenderInterface>(m_transceivers.last()->sender());
 }
 
@@ -454,7 +455,8 @@ void MockLibWebRTCPeerConnection::CreateOffer(webrtc::CreateSessionDescriptionOb
                     "a=setup:actpass\r\n";
             }
         }
-        observer->OnSuccess(new MockLibWebRTCSessionDescription(sdp.str()));
+        auto description = webrtc::SdpDeserialize(webrtc::SdpType::kOffer, sdp.str());
+        observer->OnSuccess(description.release());
     });
 }
 
@@ -554,7 +556,8 @@ void MockLibWebRTCPeerConnection::CreateOffer(webrtc::CreateSessionDescriptionOb
                     "a=setup:active\r\n";
             }
         }
-        observer->OnSuccess(new MockLibWebRTCSessionDescription(sdp.str()));
+        auto description = webrtc::SdpDeserialize(webrtc::SdpType::kAnswer, sdp.str());
+        observer->OnSuccess(description.release());
     });
 }
 

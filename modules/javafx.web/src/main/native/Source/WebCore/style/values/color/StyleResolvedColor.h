@@ -26,8 +26,8 @@
 
 #pragma once
 
-#include "CSSResolvedColor.h"
-#include "Color.h"
+#include <WebCore/CSSResolvedColor.h>
+#include <WebCore/Color.h>
 #include <wtf/Forward.h>
 
 namespace WebCore {

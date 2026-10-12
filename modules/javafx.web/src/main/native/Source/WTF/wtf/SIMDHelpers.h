@@ -56,6 +56,7 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 #include <optional>
 #include <wtf/StdLibExtras.h>
 #include <wtf/simde/simde.h>
+#include <wtf/text/Latin1Character.h>
 
 namespace WTF::SIMD {
 
@@ -466,7 +467,7 @@ ALWAYS_INLINE std::optional<uint8_t> findFirstNonZeroIndex(simde_uint64x2_t valu
 #endif
 }
 
-template<LChar character, LChar... characters>
+template<Latin1Character character, Latin1Character... characters>
 ALWAYS_INLINE simde_uint8x16_t equal(simde_uint8x16_t input)
 {
     auto result = simde_vceqq_u8(input, simde_vmovq_n_u8(character));
@@ -590,7 +591,7 @@ template<typename CharacterType, size_t threshold = SIMD::stride<CharacterType>>
 ALWAYS_INLINE const CharacterType* find(std::span<const CharacterType> span, const auto& vectorMatch, const auto& scalarMatch)
 {
     constexpr size_t stride = SIMD::stride<CharacterType>;
-    using UnsignedType = std::make_unsigned_t<CharacterType>;
+    using UnsignedType = SameSizeUnsignedInteger<CharacterType>;
     static_assert(threshold >= stride);
     const auto* cursor = span.data();
     const auto* end = span.data() + span.size();
@@ -647,7 +648,7 @@ ALWAYS_INLINE size_t count(std::span<const CharacterType> span, const auto& vect
 {
     constexpr size_t stride = SIMD::stride<CharacterType>;
     constexpr size_t bulkLoadCount = 4;
-    using UnsignedType = std::make_unsigned_t<CharacterType>;
+    using UnsignedType = SameSizeUnsignedInteger<CharacterType>;
     static_assert(threshold >= stride);
     const auto* cursor = span.data();
     const auto* end = span.data() + span.size();

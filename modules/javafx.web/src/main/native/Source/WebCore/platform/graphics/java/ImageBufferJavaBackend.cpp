@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -85,7 +85,7 @@ std::unique_ptr<ImageBufferJavaBackend> ImageBufferJavaBackend::create(
         backendSize.width(), backendSize.height());
 
     return std::unique_ptr<ImageBufferJavaBackend>(new ImageBufferJavaBackend(
-        parameters, WTFMove(platformImage), WTFMove(context), backendSize));
+        parameters, WTF::move(platformImage), WTF::move(context), backendSize));
 }
 
 /*std::unique_ptr<ImageBufferJavaBackend> ImageBufferJavaBackend::create(
@@ -97,8 +97,8 @@ std::unique_ptr<ImageBufferJavaBackend> ImageBufferJavaBackend::create(
 ImageBufferJavaBackend::ImageBufferJavaBackend(
     const Parameters& parameters, PlatformImagePtr image, std::unique_ptr<GraphicsContext>&& context, IntSize backendSize)
     : ImageBufferBackend(parameters)
-    , m_image(WTFMove(image))
-    , m_context(WTFMove(context))
+    , m_image(WTF::move(image))
+    , m_context(WTF::move(context))
     , m_backendSize(backendSize)
 {
 }

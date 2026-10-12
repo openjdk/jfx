@@ -274,6 +274,7 @@ public:
                     case DoubleRepUse:
                     case BooleanUse:
                     case KnownBooleanUse:
+                    case KnownStorageUse:
                         break;
                     default:
                         VALIDATE((node), !"Bad use kind");
@@ -421,7 +422,7 @@ public:
                     VALIDATE((node), node->vectorLengthHint() >= node->numChildren());
                     break;
                 case NewArrayBuffer:
-                    VALIDATE((node), node->vectorLengthHint() >= node->castOperand<JSImmutableButterfly*>()->length());
+                    VALIDATE((node), node->vectorLengthHint() >= node->castOperand<JSCellButterfly*>()->length());
                     break;
                 case GetByVal:
                     switch (node->arrayMode().type()) {
@@ -929,7 +930,7 @@ private:
                     break;
 
                 case PhantomNewArrayWithButterfly:
-                    // Conceptually it would be valid to sink/eliminate the Array wrapper around a butterfly.
+                    // Conceptually it is valid to sink/eliminate the Array wrapper around a butterfly.
                     // The problem is that our GC doesn't scan auxilary buffers it sees on the stack since
                     // they don't have an indexing header. This means any new objects that are stored into
                     // the butterfly wouldn't be marked. e.g. something like:
@@ -947,9 +948,16 @@ private:
                     //    wouldn't be profitable.
                     // 2) Conservatively scanning any auxilary found on the stack but not visited by an
                     //    object.
-                    VALIDATE((node), node->child2()->op() == PhantomNewButterflyWithSize);
+                    //
+                    //
+                    // This assertion below is what we'd like to ASSERT but it's possible
+                    // (although inefficient) for ObjectAllocationSinking to sink an Array
+                    // but not the Butterfly then never store into said Butterfly.
+                    //
+                    // VALIDATE((node), node->child2()->op() == PhantomNewButterflyWithSize);
+                    //
+                    // Instead we rely on every store node validating that no child is a Phantom.
                     break;
-
 
                 case Check:
                 case CheckVarargs:
@@ -982,7 +990,7 @@ private:
 
                 case PhantomNewArrayBuffer:
                     VALIDATE((node), m_graph.m_form == SSA);
-                    VALIDATE((node), node->vectorLengthHint() >= node->castOperand<JSImmutableButterfly*>()->length());
+                    VALIDATE((node), node->vectorLengthHint() >= node->castOperand<JSCellButterfly*>()->length());
                     break;
 
                 case NewArrayWithSpread: {
@@ -1008,10 +1016,6 @@ private:
 
                 case InitializeEntrypointArguments:
                     VALIDATE((node), node->entrypointIndex() < m_graph.m_numberOfEntrypoints);
-                    break;
-
-                case GetButterfly:
-                    VALIDATE((node), !node->child1()->isPhantomAllocation());
                     break;
 
                 default:

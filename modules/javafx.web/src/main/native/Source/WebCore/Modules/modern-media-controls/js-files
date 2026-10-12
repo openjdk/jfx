@@ -42,6 +42,10 @@ controls/placard.js
 controls/airplay-placard.js
 controls/invalid-placard.js
 controls/pip-placard.js
+controls/vision-layout-traits.js
+controls/vision-media-controls.js
+controls/vision-slider.js
+controls/vision-volume-container.js
 controls/watchos-activity-indicator.js
 controls/watchos-media-controls.js
 controls/watchos-layout-traits.js

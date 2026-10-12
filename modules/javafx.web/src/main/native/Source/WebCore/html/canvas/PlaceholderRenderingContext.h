@@ -62,7 +62,7 @@ private:
 };
 
 class PlaceholderRenderingContext final : public CanvasRenderingContext {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(PlaceholderRenderingContext);
+    WTF_MAKE_TZONE_ALLOCATED(PlaceholderRenderingContext);
 public:
     static std::unique_ptr<PlaceholderRenderingContext> create(HTMLCanvasElement&);
 
@@ -73,13 +73,18 @@ public:
 
     PlaceholderRenderingContextSource& source() const { return m_source; }
 
+    RefPtr<ImageBuffer> surfaceBufferToImageBuffer(SurfaceBuffer) final;
+    bool isSurfaceBufferTransparentBlack(SurfaceBuffer) const final;
+    void didUpdateCanvasSizeProperties(bool) final;
+
 private:
     PlaceholderRenderingContext(HTMLCanvasElement&);
     void setContentsToLayer(GraphicsLayer&) final;
-    ImageBufferPixelFormat pixelFormat() const final;
+    PixelFormat pixelFormat() const final;
     bool isOpaque() const final { return m_opaque; }
 
     const Ref<PlaceholderRenderingContextSource> m_source;
+    RefPtr<ImageBuffer> m_buffer;
     bool m_opaque { false };
 };
 

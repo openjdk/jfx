@@ -60,6 +60,7 @@ public:
 
     explicit operator bool() const { return *this != PrototypeKey(); }
     bool isHashTableDeletedValue() const { return *this == PrototypeKey(WTF::HashTableDeletedValue); }
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
 
     unsigned hash() const
     {
@@ -75,18 +76,9 @@ private:
     const ClassInfo* m_classInfo { nullptr };
 };
 
-struct PrototypeKeyHash {
-    static unsigned hash(const PrototypeKey& key) { return key.hash(); }
-    static bool equal(const PrototypeKey& a, const PrototypeKey& b) { return a == b; }
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
-};
-
 } // namespace JSC
 
 namespace WTF {
-
-template<typename> struct DefaultHash;
-template<> struct DefaultHash<JSC::PrototypeKey> : JSC::PrototypeKeyHash { };
 
 template<typename> struct HashTraits;
 template<> struct HashTraits<JSC::PrototypeKey> : SimpleClassHashTraits<JSC::PrototypeKey> { };

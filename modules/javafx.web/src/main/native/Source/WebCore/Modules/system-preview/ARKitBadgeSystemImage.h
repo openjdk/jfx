@@ -25,11 +25,13 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if USE(SYSTEM_PREVIEW)
 
-#include "Image.h"
-#include "NativeImage.h"
-#include "SystemImage.h"
+#include <WebCore/Image.h>
+#include <WebCore/NativeImage.h>
+#include <WebCore/SystemImage.h>
 #include <optional>
 #include <wtf/ArgumentCoder.h>
 #include <wtf/Forward.h>
@@ -64,7 +66,7 @@ public:
     RenderingResourceIdentifier imageIdentifier() const;
 
 private:
-    friend struct IPC::ArgumentCoder<ARKitBadgeSystemImage, void>;
+    friend struct IPC::ArgumentCoder<ARKitBadgeSystemImage>;
     ARKitBadgeSystemImage(Image& image)
         : SystemImage(SystemImageType::ARKitBadge)
         , m_image(image)

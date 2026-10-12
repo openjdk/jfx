@@ -55,7 +55,7 @@ static ExceptionOr<Vector<String>> convertAndValidate(Document& document, unsign
         result.append(*validatedNetwork);
     }
 
-    return WTFMove(result);
+    return WTF::move(result);
 }
 
 ExceptionOr<ApplePaySessionPaymentRequest> convertAndValidate(Document& document, unsigned version, const ApplePayRequestBase& request, const PaymentCoordinator& paymentCoordinator)
@@ -131,7 +131,11 @@ ExceptionOr<ApplePaySessionPaymentRequest> convertAndValidate(Document& document
     result.setMerchantCategoryCode(request.merchantCategoryCode);
 #endif
 
-    return WTFMove(result);
+#if ENABLE(APPLE_PAY_DELEGATED_REQUEST)
+    result.setIsDelegatedRequest(request.isDelegatedRequest);
+#endif
+
+    return WTF::move(result);
 }
 
 } // namespace WebCore

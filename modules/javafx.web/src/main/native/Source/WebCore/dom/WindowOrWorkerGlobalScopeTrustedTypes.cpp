@@ -52,6 +52,7 @@ public:
 
 private:
     static WTF::ASCIILiteral supplementName() { return "DOMWindowTrustedTypes"_s; }
+    bool isDOMWindowTrustedTypes() const final { return true; }
 
     mutable RefPtr<TrustedTypePolicyFactory> m_trustedTypes;
 };
@@ -65,11 +66,11 @@ DOMWindowTrustedTypes::DOMWindowTrustedTypes(LocalDOMWindow& window)
 
 DOMWindowTrustedTypes* DOMWindowTrustedTypes::from(LocalDOMWindow& window)
 {
-    auto* supplement = static_cast<DOMWindowTrustedTypes*>(Supplement<LocalDOMWindow>::from(&window, supplementName()));
+    auto* supplement = downcast<DOMWindowTrustedTypes>(Supplement<LocalDOMWindow>::from(&window, supplementName()));
     if (!supplement) {
         auto newSupplement = makeUnique<DOMWindowTrustedTypes>(window);
         supplement = newSupplement.get();
-        provideTo(&window, supplementName(), WTFMove(newSupplement));
+        provideTo(&window, supplementName(), WTF::move(newSupplement));
     }
     return supplement;
 }
@@ -77,7 +78,7 @@ DOMWindowTrustedTypes* DOMWindowTrustedTypes::from(LocalDOMWindow& window)
 TrustedTypePolicyFactory* DOMWindowTrustedTypes::trustedTypes() const
 {
     if (!m_trustedTypes)
-        m_trustedTypes = TrustedTypePolicyFactory::create(*window()->document());
+        m_trustedTypes = TrustedTypePolicyFactory::create(*window()->protectedDocument());
     return m_trustedTypes.get();
 }
 
@@ -96,11 +97,11 @@ WorkerGlobalScopeTrustedTypes::WorkerGlobalScopeTrustedTypes(WorkerGlobalScope& 
 
 WorkerGlobalScopeTrustedTypes* WorkerGlobalScopeTrustedTypes::from(WorkerGlobalScope& scope)
 {
-    auto* supplement = static_cast<WorkerGlobalScopeTrustedTypes*>(Supplement<WorkerGlobalScope>::from(&scope, supplementName()));
+    auto* supplement = downcast<WorkerGlobalScopeTrustedTypes>(Supplement<WorkerGlobalScope>::from(&scope, supplementName()));
     if (!supplement) {
         auto newSupplement = makeUnique<WorkerGlobalScopeTrustedTypes>(scope);
         supplement = newSupplement.get();
-        provideTo(&scope, supplementName(), WTFMove(newSupplement));
+        provideTo(&scope, supplementName(), WTF::move(newSupplement));
     }
     return supplement;
 }
@@ -120,14 +121,13 @@ TrustedTypePolicyFactory* WorkerGlobalScopeTrustedTypes::trustedTypes() const
     return m_trustedTypes.get();
 }
 
-ASCIILiteral WindowOrWorkerGlobalScopeTrustedTypes::workerGlobalSupplementName()
-{
-    return "WorkerGlobalScopeTrustedTypes"_s;
-}
-
 TrustedTypePolicyFactory* WindowOrWorkerGlobalScopeTrustedTypes::trustedTypes(WorkerGlobalScope& scope)
 {
     return WorkerGlobalScopeTrustedTypes::from(scope)->trustedTypes();
 }
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::DOMWindowTrustedTypes)
+    static bool isType(const WebCore::SupplementBase& supplement) { return supplement.isDOMWindowTrustedTypes(); }
+SPECIALIZE_TYPE_TRAITS_END()

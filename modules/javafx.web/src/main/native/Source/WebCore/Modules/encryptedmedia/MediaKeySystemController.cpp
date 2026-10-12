@@ -39,30 +39,21 @@ namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(MediaKeySystemController);
 
-ASCIILiteral MediaKeySystemController::supplementName()
-{
-    return "MediaKeySystemController"_s;
-}
-
 MediaKeySystemController* MediaKeySystemController::from(Page* page)
 {
-    return static_cast<MediaKeySystemController*>(Supplement<Page>::from(page, MediaKeySystemController::supplementName()));
+    return downcast<MediaKeySystemController>(Supplement<Page>::from(page, MediaKeySystemController::supplementName()));
 }
 
-MediaKeySystemController::MediaKeySystemController(MediaKeySystemClient& client)
-    : m_client(client)
+MediaKeySystemController::MediaKeySystemController(Ref<MediaKeySystemClient>&& client)
+    : m_client(WTF::move(client))
 {
 }
 
-MediaKeySystemController::~MediaKeySystemController()
-{
-    if (m_client)
-        m_client->pageDestroyed();
-}
+MediaKeySystemController::~MediaKeySystemController() = default;
 
-void provideMediaKeySystemTo(Page& page, MediaKeySystemClient& client)
+void provideMediaKeySystemTo(Page& page, Ref<MediaKeySystemClient>&& client)
 {
-    Supplement<Page>::provideTo(&page, MediaKeySystemController::supplementName(), makeUnique<MediaKeySystemController>(client));
+    Supplement<Page>::provideTo(&page, MediaKeySystemController::supplementName(), makeUnique<MediaKeySystemController>(WTF::move(client)));
 }
 
 void MediaKeySystemController::logRequestMediaKeySystemDenial(Document& document)

@@ -29,13 +29,15 @@ namespace WebCore {
 class RenderTextControlInnerBlock;
 
 class RenderTextControlSingleLine : public RenderTextControl {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderTextControlSingleLine);
+    WTF_MAKE_TZONE_ALLOCATED(RenderTextControlSingleLine);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderTextControlSingleLine);
 public:
     RenderTextControlSingleLine(Type, HTMLInputElement&, RenderStyle&&);
     virtual ~RenderTextControlSingleLine();
 
     RenderTextControlInnerBlock* innerTextRenderer() const;
+
+    bool innerTextElementHasNonVisibleOverflow() const;
 
 protected:
     HTMLElement* containerElement() const;
@@ -62,6 +64,7 @@ private:
     int scrollHeight() const override;
     void setScrollLeft(int, const ScrollPositionChangeOptions&) override;
     void setScrollTop(int, const ScrollPositionChangeOptions&) override;
+    void setScrollPosition(const ScrollPosition&, const ScrollPositionChangeOptions&) override;
     bool scroll(ScrollDirection, ScrollGranularity, unsigned stepCount = 1, Element** stopElement = nullptr, RenderBox* startBox = nullptr, const IntPoint& wheelEventAbsolutePoint = IntPoint()) final;
     bool logicalScroll(ScrollLogicalDirection, ScrollGranularity, unsigned stepCount = 1, Element** stopElement = nullptr) final;
 
@@ -70,7 +73,7 @@ private:
     LayoutUnit preferredContentLogicalWidth(float charWidth) const override;
     LayoutUnit computeControlLogicalHeight(LayoutUnit lineHeight, LayoutUnit nonContentHeight) const override;
 
-    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
+    void styleDidChange(Style::Difference, const RenderStyle* oldStyle) override;
 
     HTMLElement* innerSpinButtonElement() const;
 };
@@ -88,7 +91,7 @@ inline HTMLElement* RenderTextControlSingleLine::innerBlockElement() const
 // ----------------------------
 
 class RenderTextControlInnerBlock final : public RenderBlockFlow {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderTextControlInnerBlock);
+    WTF_MAKE_TZONE_ALLOCATED(RenderTextControlInnerBlock);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderTextControlInnerBlock);
 public:
     RenderTextControlInnerBlock(Element&, RenderStyle&&);

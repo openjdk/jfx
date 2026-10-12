@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "RenderElement.h"
+#include <WebCore/RenderElement.h>
 
 namespace WebCore {
 

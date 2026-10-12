@@ -26,7 +26,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-dictionary MediaEncryptedEventInit : EventInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary MediaEncryptedEventInit : EventInit {
     DOMString initDataType = "";
     ArrayBuffer? initData = null;
 };

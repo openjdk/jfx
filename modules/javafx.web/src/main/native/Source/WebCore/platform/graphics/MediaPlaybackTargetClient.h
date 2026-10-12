@@ -28,7 +28,7 @@
 
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
 
-#include "MediaPlaybackTarget.h"
+#include <WebCore/MediaPlaybackTarget.h>
 #include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 
 namespace WebCore {

@@ -27,7 +27,7 @@
 
 #if USE(LIBWEBRTC)
 
-#include "VideoEncoder.h"
+#include <WebCore/VideoEncoder.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/UniqueRef.h>
 

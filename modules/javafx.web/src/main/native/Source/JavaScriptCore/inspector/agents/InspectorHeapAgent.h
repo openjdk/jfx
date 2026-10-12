@@ -25,11 +25,11 @@
 
 #pragma once
 
-#include "HeapObserver.h"
-#include "HeapSnapshotBuilder.h"
-#include "InspectorAgentBase.h"
-#include "InspectorBackendDispatchers.h"
-#include "InspectorFrontendDispatchers.h"
+#include <JavaScriptCore/HeapObserver.h>
+#include <JavaScriptCore/HeapSnapshotBuilder.h>
+#include <JavaScriptCore/InspectorAgentBase.h>
+#include <JavaScriptCore/InspectorBackendDispatchers.h>
+#include <JavaScriptCore/InspectorFrontendDispatchers.h>
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/Seconds.h>
@@ -46,6 +46,7 @@ class InjectedScriptManager;
 class JS_EXPORT_PRIVATE InspectorHeapAgent : public InspectorAgentBase, public HeapBackendDispatcherHandler, public JSC::HeapObserver, public JSC::HeapSnapshotBuilder::Client {
     WTF_MAKE_NONCOPYABLE(InspectorHeapAgent);
     WTF_MAKE_TZONE_ALLOCATED(InspectorHeapAgent);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(InspectorHeapAgent);
 public:
     InspectorHeapAgent(AgentContext&);
     ~InspectorHeapAgent() override;
@@ -69,12 +70,14 @@ public:
     void didGarbageCollect(JSC::CollectionScope) final;
 
     // JSC::HeapSnapshotBuilder::Client
-    bool heapSnapshotBuilderIgnoreNode(JSC::HeapSnapshotBuilder&, JSC::JSCell*) final;
+    bool heapSnapshotBuilderIgnoreNode(const JSC::HeapSnapshotBuilder&, JSC::JSCell*) final;
 
 protected:
     void clearHeapSnapshots();
 
     virtual void dispatchGarbageCollectedEvent(Protocol::Heap::GarbageCollection::Type, Seconds startTime, Seconds endTime);
+
+    CheckedRef<InspectorEnvironment> checkedEnvironment() { return m_environment.get(); }
 
 private:
     std::optional<JSC::HeapSnapshotNode> nodeForHeapObjectIdentifier(Protocol::ErrorString&, unsigned heapObjectIdentifier);
@@ -82,7 +85,7 @@ private:
     InjectedScriptManager& m_injectedScriptManager;
     const UniqueRef<HeapFrontendDispatcher> m_frontendDispatcher;
     const Ref<HeapBackendDispatcher> m_backendDispatcher;
-    InspectorEnvironment& m_environment;
+    WeakRef<InspectorEnvironment> m_environment;
 
     bool m_enabled { false };
     bool m_tracking { false };

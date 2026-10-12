@@ -28,7 +28,7 @@
 #if ENABLE(MEDIA_STREAM)
 
 #if USE(LIBWEBRTC)
-#include "LibWebRTCAudioModule.h"
+#include <WebCore/LibWebRTCAudioModule.h>
 #endif
 
 #include <wtf/Function.h>
@@ -54,7 +54,7 @@ public:
         RefPtr<LibWebRTCAudioModule> audioModule;
 #endif
 #if !RELEASE_LOG_DISABLED
-        const Logger& logger;
+        Ref<const Logger> logger;
         uint64_t logIdentifier;
 #endif
     };

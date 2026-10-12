@@ -49,7 +49,7 @@ struct SVGPropertyTraits<ChannelSelectorType> {
         return emptyString();
     }
 
-    static ChannelSelectorType fromString(const String& value)
+    static ChannelSelectorType fromString(SVGElement&, const String& value)
     {
         if (value == "R"_s)
             return ChannelSelectorType::CHANNEL_R;
@@ -64,7 +64,7 @@ struct SVGPropertyTraits<ChannelSelectorType> {
 };
 
 class SVGFEDisplacementMapElement final : public SVGFilterPrimitiveStandardAttributes {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGFEDisplacementMapElement);
+    WTF_MAKE_TZONE_ALLOCATED(SVGFEDisplacementMapElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGFEDisplacementMapElement);
 public:
     static Ref<SVGFEDisplacementMapElement> create(const QualifiedName&, Document&);
@@ -93,6 +93,7 @@ private:
 
     bool setFilterEffectAttribute(FilterEffect&, const QualifiedName& attrName) override;
     Vector<AtomString> filterEffectInputsNames() const override { return { AtomString { in1() }, AtomString { in2() } }; }
+    IntOutsets outsets(const FloatRect& targetBoundingBox, SVGUnitTypes::SVGUnitType primitiveUnits) const override;
     RefPtr<FilterEffect> createFilterEffect(const FilterEffectVector&, const GraphicsContext& destinationContext) const override;
 
     Ref<SVGAnimatedString> m_in1 { SVGAnimatedString::create(this) };

@@ -26,26 +26,26 @@
 
 #pragma once
 
-#include "ClipboardAccessPolicy.h"
-#include "ContentType.h"
-#include "EditableLinkBehavior.h"
-#include "EditingBehaviorType.h"
-#include "FontGenericFamilies.h"
-#include "FontLoadTimingOverride.h"
-#include "ForcedAccessibilityValue.h"
-#include "FourCC.h"
-#include "HTMLParserScriptingFlagPolicy.h"
-#include "MediaPlayerEnums.h"
-#include "StorageBlockingPolicy.h"
-#include "StorageMap.h"
-#include "TextDirectionSubmenuInclusionBehavior.h"
-#include "Timer.h"
-#include "TrustedFonts.h"
-#include "UserInterfaceDirectionPolicy.h"
-#include "WritingMode.h"
 #include <JavaScriptCore/RuntimeFlags.h>
+#include <WebCore/ClipboardAccessPolicy.h>
+#include <WebCore/ContentType.h>
+#include <WebCore/EditableLinkBehavior.h>
+#include <WebCore/EditingBehaviorType.h>
+#include <WebCore/FontGenericFamilies.h>
+#include <WebCore/FontLoadTimingOverride.h>
+#include <WebCore/ForcedAccessibilityValue.h>
+#include <WebCore/FourCC.h>
+#include <WebCore/HTMLParserScriptingFlagPolicy.h>
+#include <WebCore/MediaPlayerEnums.h>
+#include <WebCore/StorageBlockingPolicy.h>
+#include <WebCore/StorageMap.h>
+#include <WebCore/TextDirectionSubmenuInclusionBehavior.h>
+#include <WebCore/Timer.h>
+#include <WebCore/TrustedFonts.h>
+#include <WebCore/UserInterfaceDirectionPolicy.h>
+#include <WebCore/WritingMode.h>
 #include <unicode/uscript.h>
-#include <wtf/AbstractRefCounted.h>
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Seconds.h>
 #include <wtf/TZoneMalloc.h>
@@ -53,14 +53,14 @@
 #include <wtf/Vector.h>
 
 #if ENABLE(DATA_DETECTION)
-#include "DataDetectorType.h"
+#include <WebCore/DataDetectorType.h>
 #endif
 
 namespace WebCore {
 
 class Page;
 
-class SettingsBase : public AbstractRefCounted {
+class SettingsBase : public AbstractRefCountedAndCanMakeWeakPtr<SettingsBase> {
     WTF_MAKE_TZONE_ALLOCATED(SettingsBase);
     WTF_MAKE_NONCOPYABLE(SettingsBase);
 public:
@@ -97,6 +97,9 @@ public:
     WEBCORE_EXPORT void setPictographFontFamily(const String&, UScriptCode = USCRIPT_COMMON);
     WEBCORE_EXPORT const String& pictographFontFamily(UScriptCode = USCRIPT_COMMON) const;
 
+    WEBCORE_EXPORT void setMathFontFamily(const String&, UScriptCode = USCRIPT_COMMON);
+    WEBCORE_EXPORT const String& mathFontFamily(UScriptCode = USCRIPT_COMMON) const;
+
     WEBCORE_EXPORT void setMinimumDOMTimerInterval(Seconds); // Initialized to DOMTimer::defaultMinimumInterval().
     Seconds minimumDOMTimerInterval() const { return m_minimumDOMTimerInterval; }
 
@@ -110,23 +113,23 @@ public:
     WEBCORE_EXPORT void setMediaContentTypesRequiringHardwareSupport(const String&);
     const Vector<ContentType>& mediaContentTypesRequiringHardwareSupport() const { return m_mediaContentTypesRequiringHardwareSupport; }
 
-    void setAllowedMediaContainerTypes(std::optional<Vector<String>>&& types) { m_allowedMediaContainerTypes = WTFMove(types); }
+    void setAllowedMediaContainerTypes(std::optional<Vector<String>>&& types) { m_allowedMediaContainerTypes = WTF::move(types); }
     WEBCORE_EXPORT void setAllowedMediaContainerTypes(const String&);
     const std::optional<Vector<String>>& allowedMediaContainerTypes() const { return m_allowedMediaContainerTypes; }
 
-    void setAllowedMediaCodecTypes(std::optional<Vector<String>>&& types) { m_allowedMediaCodecTypes = WTFMove(types); }
+    void setAllowedMediaCodecTypes(std::optional<Vector<String>>&& types) { m_allowedMediaCodecTypes = WTF::move(types); }
     WEBCORE_EXPORT void setAllowedMediaCodecTypes(const String&);
     const std::optional<Vector<String>>& allowedMediaCodecTypes() const { return m_allowedMediaCodecTypes; }
 
-    void setAllowedMediaVideoCodecIDs(std::optional<Vector<FourCC>>&& types) { m_allowedMediaVideoCodecIDs = WTFMove(types); }
+    void setAllowedMediaVideoCodecIDs(std::optional<Vector<FourCC>>&& types) { m_allowedMediaVideoCodecIDs = WTF::move(types); }
     WEBCORE_EXPORT void setAllowedMediaVideoCodecIDs(const String&);
     const std::optional<Vector<FourCC>>& allowedMediaVideoCodecIDs() const { return m_allowedMediaVideoCodecIDs; }
 
-    void setAllowedMediaAudioCodecIDs(std::optional<Vector<FourCC>>&& types) { m_allowedMediaAudioCodecIDs = WTFMove(types); }
+    void setAllowedMediaAudioCodecIDs(std::optional<Vector<FourCC>>&& types) { m_allowedMediaAudioCodecIDs = WTF::move(types); }
     WEBCORE_EXPORT void setAllowedMediaAudioCodecIDs(const String&);
     const std::optional<Vector<FourCC>>& allowedMediaAudioCodecIDs() const { return m_allowedMediaAudioCodecIDs; }
 
-    void setAllowedMediaCaptionFormatTypes(std::optional<Vector<FourCC>>&& types) { m_allowedMediaCaptionFormatTypes = WTFMove(types); }
+    void setAllowedMediaCaptionFormatTypes(std::optional<Vector<FourCC>>&& types) { m_allowedMediaCaptionFormatTypes = WTF::move(types); }
     WEBCORE_EXPORT void setAllowedMediaCaptionFormatTypes(const String&);
     const std::optional<Vector<FourCC>>& allowedMediaCaptionFormatTypes() const { return m_allowedMediaCaptionFormatTypes; }
 
@@ -165,9 +168,6 @@ protected:
     void mockCaptureDevicesEnabledChanged();
 #endif
     void layerBasedSVGEngineEnabledChanged();
-#if USE(MODERN_AVCONTENTKEYSESSION)
-    void shouldUseModernAVContentKeySessionChanged();
-#endif
     void useSystemAppearanceChanged();
     void fontFallbackPrefersPictographsChanged();
     void updateDisplayEDRHeadroom();

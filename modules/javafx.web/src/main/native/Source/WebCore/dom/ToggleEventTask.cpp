@@ -60,4 +60,4 @@ void ToggleEventTask::queue(ToggleState oldState, ToggleState newState)
     });
 }
 
-}
+} // namespace WebCore

@@ -29,9 +29,9 @@
 
 #pragma once
 
-#include "Exception.h"
-#include "InjectedScript.h"
-#include "InspectorEnvironment.h"
+#include <JavaScriptCore/Exception.h>
+#include <JavaScriptCore/InjectedScript.h>
+#include <JavaScriptCore/InspectorEnvironment.h>
 #include <wtf/Expected.h>
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
@@ -59,7 +59,8 @@ public:
     JS_EXPORT_PRIVATE virtual void discardInjectedScripts();
 
     InjectedScriptHost& injectedScriptHost();
-    InspectorEnvironment& inspectorEnvironment() const { return m_environment; }
+    InspectorEnvironment& inspectorEnvironment() const { return *m_environment.get(); }
+    CheckedRef<InspectorEnvironment> checkedInspectorEnvironment() const { return inspectorEnvironment(); }
 
     JS_EXPORT_PRIVATE InjectedScript injectedScriptFor(JSC::JSGlobalObject*);
     JS_EXPORT_PRIVATE InjectedScript injectedScriptForId(int);
@@ -68,6 +69,8 @@ public:
     void releaseObjectGroup(const String& objectGroup);
     void clearEventValue();
     void clearExceptionValue();
+
+    virtual bool isWebInjectedScriptManager() const { return false; }
 
 protected:
     virtual void didCreateInjectedScript(const InjectedScript&);
@@ -78,7 +81,7 @@ protected:
 private:
     Expected<JSC::JSObject*, NakedPtr<JSC::Exception>> createInjectedScript(JSC::JSGlobalObject*, int id);
 
-    InspectorEnvironment& m_environment;
+    WeakPtr<InspectorEnvironment> m_environment;
     const Ref<InjectedScriptHost> m_injectedScriptHost;
     int m_nextInjectedScriptId;
 };

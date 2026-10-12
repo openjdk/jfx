@@ -25,6 +25,10 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
+#include "BPlatform.h"
+
 #if !BUSE(TZONE)
 
 #include "IsoHeap.h"
@@ -64,3 +68,5 @@ uint8_t* indexSlotFor(void* ptr)
 
 #endif
 #endif // !BUSE(TZONE)
+
+#endif // __cplusplus

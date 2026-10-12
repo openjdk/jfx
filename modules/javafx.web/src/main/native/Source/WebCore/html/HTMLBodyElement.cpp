@@ -43,7 +43,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLBodyElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLBodyElement);
 
 using namespace HTMLNames;
 
@@ -88,7 +88,7 @@ void HTMLBodyElement::collectPresentationalHintsForAttribute(const QualifiedName
     case AttributeNames::backgroundAttr: {
         auto url = value.string().trim(isASCIIWhitespace);
         if (!url.isEmpty())
-            style.setProperty(CSSProperty(CSSPropertyBackgroundImage, CSSImageValue::create(document().completeURL(url), localName())));
+            style.setProperty(CSSProperty(CSSPropertyBackgroundImage, CSSImageValue::create(protectedDocument()->completeURL(url), localName())));
         break;
     }
     case AttributeNames::marginwidthAttr:
@@ -127,39 +127,40 @@ const AtomString& HTMLBodyElement::eventNameForWindowEventHandlerAttribute(const
 
 void HTMLBodyElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
+    Ref document = this->document();
     switch (name.nodeName()) {
     case AttributeNames::vlinkAttr:
         if (auto parsedColor = parseLegacyColorValue(newValue))
-                document().setVisitedLinkColor(*parsedColor);
+            document->setVisitedLinkColor(*parsedColor);
             else
-                document().resetVisitedLinkColor();
+            document->resetVisitedLinkColor();
         invalidateStyleForSubtree();
         return;
     case AttributeNames::alinkAttr:
         if (auto parsedColor = parseLegacyColorValue(newValue))
-                document().setActiveLinkColor(*parsedColor);
+            document->setActiveLinkColor(*parsedColor);
             else
-                document().resetActiveLinkColor();
+            document->resetActiveLinkColor();
         invalidateStyleForSubtree();
         return;
     case AttributeNames::linkAttr:
         if (auto parsedColor = parseLegacyColorValue(newValue))
-            document().setLinkColor(*parsedColor);
+            document->setLinkColor(*parsedColor);
         else
-            document().resetLinkColor();
+            document->resetLinkColor();
         invalidateStyleForSubtree();
         return;
     case AttributeNames::onselectionchangeAttr:
     // FIXME: Emit "selectionchange" event at <input> / <textarea> elements and remove this special-case.
     // https://bugs.webkit.org/show_bug.cgi?id=234348
-        document().setAttributeEventListener(eventNames().selectionchangeEvent, name, newValue, mainThreadNormalWorldSingleton());
+        document->setAttributeEventListener(eventNames().selectionchangeEvent, name, newValue, mainThreadNormalWorldSingleton());
         return;
     default:
         break;
     }
 
     if (auto& eventName = eventNameForWindowEventHandlerAttribute(name); !eventName.isNull()) {
-        document().setWindowAttributeEventListener(eventName, name, newValue, mainThreadNormalWorldSingleton());
+        document->setWindowAttributeEventListener(eventName, name, newValue, mainThreadNormalWorldSingleton());
         return;
     }
 
@@ -171,7 +172,7 @@ Node::InsertedIntoAncestorResult HTMLBodyElement::insertedIntoAncestor(Insertion
     HTMLElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
     if (!insertionType.connectedToDocument)
         return InsertedIntoAncestorResult::Done;
-    if (!is<HTMLFrameElementBase>(document().ownerElement()))
+    if (!is<HTMLFrameElementBase>(protectedDocument()->ownerElement()))
         return InsertedIntoAncestorResult::Done;
     return InsertedIntoAncestorResult::NeedsPostInsertionCallback;
 }
@@ -180,10 +181,11 @@ void HTMLBodyElement::didFinishInsertingNode()
 {
     // A DOM mutation could have happened in between the call to insertedIntoAncestor() and the
     // call to didFinishInsertingNode().
-    if (!is<HTMLFrameElementBase>(document().ownerElement()))
+    Ref document = this->document();
+    if (!is<HTMLFrameElementBase>(document->ownerElement()))
         return;
 
-    Ref ownerElement = *document().ownerElement();
+    Ref ownerElement = *document->ownerElement();
 
     // FIXME: It's surprising this is web compatible since it means marginwidth and marginheight attributes
     // appear or get overwritten on body elements of a document embedded through <iframe> or <frame>.
@@ -212,7 +214,7 @@ void HTMLBodyElement::addSubresourceAttributeURLs(ListHashSet<URL>& urls) const
 {
     HTMLElement::addSubresourceAttributeURLs(urls);
 
-    addSubresourceURL(urls, document().completeURL(attributeWithoutSynchronization(backgroundAttr)));
+    addSubresourceURL(urls, protectedDocument()->completeURL(attributeWithoutSynchronization(backgroundAttr)));
 }
 
 } // namespace WebCore

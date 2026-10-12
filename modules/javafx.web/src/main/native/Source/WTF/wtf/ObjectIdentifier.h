@@ -28,7 +28,6 @@
 #include <wtf/Compiler.h>
 #include <wtf/HashTraits.h>
 #include <wtf/UUID.h>
-#include <wtf/text/TextStream.h>
 #include <wtf/text/WTFString.h>
 
 namespace WTF {
@@ -74,6 +73,7 @@ public:
     using RawValue = uint64_t;
 
     bool isHashTableDeletedValue() const { return m_identifier == hashTableDeletedValue(); }
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
 
     RawValue toUInt64() const { return toRawValue(); } // Use `toRawValue` instead.
     RawValue toRawValue() const { return m_identifier; }
@@ -107,6 +107,7 @@ public:
     using RawValue = UUID;
 
     bool isHashTableDeletedValue() const { return m_identifier == hashTableDeletedValue(); }
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
 
     RawValue toRawValue() const { return m_identifier; }
 
@@ -197,24 +198,6 @@ inline void add(Hasher& hasher, const ObjectIdentifierGenericBase<UUID>& identif
     add(hasher, identifier.toRawValue());
 }
 
-template<typename RawValue>
-struct ObjectIdentifierGenericBaseHash {
-};
-
-template<>
-struct ObjectIdentifierGenericBaseHash<uint64_t> {
-    static unsigned hash(const ObjectIdentifierGenericBase<uint64_t>& identifier) { return intHash(identifier.toUInt64()); }
-    static bool equal(const ObjectIdentifierGenericBase<uint64_t>& a, const ObjectIdentifierGenericBase<uint64_t>& b) { return a.toUInt64() == b.toUInt64(); }
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
-};
-
-template<>
-struct ObjectIdentifierGenericBaseHash<UUID> {
-    static unsigned hash(const ObjectIdentifierGenericBase<UUID>& identifier) { return UUIDHash::hash(identifier.toRawValue()); }
-    static bool equal(const ObjectIdentifierGenericBase<UUID>& a, const ObjectIdentifierGenericBase<UUID>& b) { return UUIDHash::equal(a.toRawValue(), b.toRawValue()); }
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
-};
-
 template<typename T, typename U, typename V> struct HashTraits<ObjectIdentifierGeneric<T, U, V>> : SimpleClassHashTraits<ObjectIdentifierGeneric<T, U, V>> {
     using ValueType = ObjectIdentifierGeneric<T, U, V>;
     using PeekType = std::optional<ValueType>;
@@ -237,12 +220,6 @@ template<typename T, typename U, typename V> struct HashTraits<ObjectIdentifierG
         return identifier;
     }
 };
-
-template<typename T, typename U, typename V> struct DefaultHash<ObjectIdentifierGeneric<T, U, V>> : ObjectIdentifierGenericBaseHash<V> { };
-
-WTF_EXPORT_PRIVATE TextStream& operator<<(TextStream&, const ObjectIdentifierGenericBase<uint64_t>&);
-
-WTF_EXPORT_PRIVATE TextStream& operator<<(TextStream&, const ObjectIdentifierGenericBase<UUID>&);
 
 WTF_EXPORT_PRIVATE void printInternal(PrintStream&, const ObjectIdentifierGenericBase<uint64_t>&);
 

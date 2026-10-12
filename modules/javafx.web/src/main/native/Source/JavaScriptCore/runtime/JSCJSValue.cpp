@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2020 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2025 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -27,7 +27,7 @@
 #include "BooleanConstructor.h"
 #include "CustomGetterSetter.h"
 #include "GetterSetter.h"
-#include "JSBigInt.h"
+#include "JSBigIntInlines.h"
 #include "JSCInlines.h"
 #include "NumberObject.h"
 #include "NumberPrototype.h"
@@ -36,6 +36,8 @@
 #include <wtf/text/MakeString.h>
 
 namespace JSC {
+
+constinit const char radixDigits[] = "0123456789abcdefghijklmnopqrstuvwxyz";
 
 double JSValue::toIntegerPreserveNaN(JSGlobalObject* globalObject) const
 {
@@ -309,7 +311,10 @@ void JSValue::dumpInContextAssumingStructure(
             out.print("BigInt[heap-allocated]: addr=", RawPointer(asCell()), ", length=", jsCast<JSBigInt*>(asCell())->length(), ", sign=", jsCast<JSBigInt*>(asCell())->sign());
         else if (structure->classInfoForCells()->isSubClassOf(JSObject::info())) {
             out.print("Object: ", RawPointer(asCell()));
-            out.print(" with butterfly ", RawPointer(asObject(asCell())->butterfly()), "(base=", RawPointer(asObject(asCell())->butterfly()->base(structure)), ")");
+            auto* butterfly = asObject(asCell())->butterfly();
+            out.print(" with butterfly ", RawPointer(butterfly));
+            if (butterfly)
+                out.print("(base=", RawPointer(butterfly->base(structure)), ")");
             out.print(" (Structure ", inContext(*structure, context), ")");
         } else {
             out.print("Cell: ", RawPointer(asCell()));
@@ -442,6 +447,21 @@ WTF::String JSValue::toWTFStringForConsole(JSGlobalObject* globalObject) const
     if (jsDynamicCast<JSBigInt*>(*this))
         return tryMakeString(result.data, 'n');
     return result;
+}
+
+bool JSValue::isGetterSetterSlow() const
+{
+    return isGetterSetter();
+}
+
+bool JSValue::isCustomGetterSetterSlow() const
+{
+    return isCustomGetterSetter();
+}
+
+bool JSValue::isStringSlow() const
+{
+    return isString();
 }
 
 } // namespace JSC

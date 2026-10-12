@@ -203,6 +203,14 @@ static void pack_ ##name (const GstAudioFormatInfo *info,               \
     MAKE_PACK_UNPACK (s20be, 3, 0, 12, READ24_FROM_BE, WRITE24_TO_BE)
 #define PACK_U20BE GST_AUDIO_FORMAT_S32, unpack_u20be, pack_u20be
     MAKE_PACK_UNPACK (u20be, 3, SIGNED, 12, READ24_FROM_BE, WRITE24_TO_BE)
+#define PACK_S20_32LE GST_AUDIO_FORMAT_S32, unpack_s20_32le, pack_s20_32le
+    MAKE_PACK_UNPACK (s20_32le, 3, 0, 12, READ24_FROM_LE, WRITE24_TO_LE)
+#define PACK_U20_32LE GST_AUDIO_FORMAT_S32, unpack_u20_32le, pack_u20_32le
+    MAKE_PACK_UNPACK (u20_32le, 3, SIGNED, 12, READ24_FROM_LE, WRITE24_TO_LE)
+#define PACK_S20_32BE GST_AUDIO_FORMAT_S32, unpack_s20_32be, pack_s20_32be
+    MAKE_PACK_UNPACK (s20_32be, 3, 0, 12, READ24_FROM_BE, WRITE24_TO_BE)
+#define PACK_U20_32BE GST_AUDIO_FORMAT_S32, unpack_u20_32be, pack_u20_32be
+    MAKE_PACK_UNPACK (u20_32be, 3, SIGNED, 12, READ24_FROM_BE, WRITE24_TO_BE)
 #define PACK_S18LE GST_AUDIO_FORMAT_S32, unpack_s18le, pack_s18le
     MAKE_PACK_UNPACK (s18le, 3, 0, 14, READ24_FROM_LE, WRITE24_TO_LE)
 #define PACK_U18LE GST_AUDIO_FORMAT_S32, unpack_u18le, pack_u18le
@@ -238,6 +246,8 @@ static void pack_ ##name (const GstAudioFormatInfo *info,               \
 #define SILENT_U24BE     { 0x80, 0x00, 0x00, 0x80, 0x00, 0x00 }
 #define SILENT_U20LE     { 0x00, 0x00, 0x08, 0x00, 0x00, 0x08 }
 #define SILENT_U20BE     { 0x08, 0x00, 0x00, 0x08, 0x00, 0x00 }
+#define SILENT_U20_32LE  { 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x08, 0x00 }
+#define SILENT_U20_32BE  { 0x00, 0x08, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00 }
 #define SILENT_U18LE     { 0x00, 0x00, 0x02, 0x00, 0x00, 0x02 }
 #define SILENT_U18BE     { 0x02, 0x00, 0x00, 0x02, 0x00, 0x00 }
      static const GstAudioFormatInfo formats[] = {
@@ -348,13 +358,29 @@ static void pack_ ##name (const GstAudioFormatInfo *info,               \
        MAKE_FORMAT (F64LE, "64-bit floating-point audio",
            FLOAT_PACK, G_LITTLE_ENDIAN, 64, 64, SILENT_0, PACK_F64LE),
        MAKE_FORMAT (F64BE, "64-bit floating-point audio",
-           FLOAT, G_BIG_ENDIAN, 64, 64, SILENT_0, PACK_F64BE)
+           FLOAT, G_BIG_ENDIAN, 64, 64, SILENT_0, PACK_F64BE),
 #else
        MAKE_FORMAT (F64LE, "64-bit floating-point audio",
            FLOAT, G_LITTLE_ENDIAN, 64, 64, SILENT_0, PACK_F64LE),
        MAKE_FORMAT (F64BE, "64-bit floating-point audio",
-           FLOAT_PACK, G_BIG_ENDIAN, 64, 64, SILENT_0, PACK_F64BE)
+           FLOAT_PACK, G_BIG_ENDIAN, 64, 64, SILENT_0, PACK_F64BE),
 #endif
+       /* 20 bit in low 3 bytes of 32 bits */
+       MAKE_FORMAT (S20_32LE, "20-bit signed PCM audio", SINT, G_LITTLE_ENDIAN,
+           32,
+           20,
+           SILENT_0, PACK_S20_32LE),
+       MAKE_FORMAT (S20_32BE, "20-bit signed PCM audio", SINT, G_BIG_ENDIAN, 32,
+           20,
+           SILENT_0, PACK_S20_32BE),
+       MAKE_FORMAT (U20_32LE, "20-bit unsigned PCM audio", UINT,
+           G_LITTLE_ENDIAN, 32,
+           20,
+           SILENT_U20_32LE, PACK_U20_32LE),
+       MAKE_FORMAT (U20_32BE, "20-bit unsigned PCM audio", UINT, G_BIG_ENDIAN,
+           32,
+           20,
+           SILENT_U20_32BE, PACK_U20_32BE)
      };
 
 G_DEFINE_POINTER_TYPE (GstAudioFormatInfo, gst_audio_format_info);

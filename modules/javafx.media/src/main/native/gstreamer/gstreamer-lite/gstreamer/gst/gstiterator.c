@@ -123,7 +123,7 @@ gst_iterator_init (GstIterator * it,
  * @size: the size of the iterator structure
  * @type: #GType of children
  * @lock: pointer to a #GMutex.
- * @master_cookie: pointer to a guint32 that is changed when the items in the
+ * @master_cookie: (type gpointer): pointer to a guint32 that is changed when the items in the
  *    iterator changed.
  * @copy: copy function
  * @next: function to get next item
@@ -220,7 +220,7 @@ gst_list_iterator_free (GstListIterator * it)
  * gst_iterator_new_list: (skip)
  * @type: #GType of elements
  * @lock: pointer to a #GMutex protecting the list.
- * @master_cookie: pointer to a guint32 that is incremented when the list
+ * @master_cookie: (type gpointer): pointer to a guint32 that is incremented when the list
  *     is changed.
  * @list: pointer to the list
  * @owner: object owning the list

@@ -24,6 +24,7 @@
  */
 
 // https://w3c.github.io/uievents/#idl-compositionevent
+
 [
     Exposed=Window
 ] interface CompositionEvent : UIEvent {
@@ -42,6 +43,9 @@
 };
 
 // https://w3c.github.io/uievents/#idl-compositioneventinit
-dictionary CompositionEventInit : UIEventInit {
+
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary CompositionEventInit : UIEventInit {
     DOMString data = "";
 };

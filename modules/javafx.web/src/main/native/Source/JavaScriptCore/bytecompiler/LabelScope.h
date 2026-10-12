@@ -44,8 +44,8 @@ public:
         , m_type(type)
         , m_name(name)
         , m_scopeDepth(scopeDepth)
-        , m_breakTarget(WTFMove(breakTarget))
-        , m_continueTarget(WTFMove(continueTarget))
+        , m_breakTarget(WTF::move(breakTarget))
+        , m_continueTarget(WTF::move(continueTarget))
     {
     }
 

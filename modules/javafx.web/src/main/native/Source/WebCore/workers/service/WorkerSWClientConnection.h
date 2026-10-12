@@ -52,6 +52,8 @@ private:
     void whenRegistrationReady(const SecurityOriginData& topOrigin, const URL& clientURL, WhenRegistrationReadyCallback&&) final;
     void addServiceWorkerRegistrationInServer(ServiceWorkerRegistrationIdentifier) final;
     void removeServiceWorkerRegistrationInServer(ServiceWorkerRegistrationIdentifier) final;
+    void registerServiceWorkerInServer(ServiceWorkerIdentifier) final;
+    void unregisterServiceWorkerInServer(ServiceWorkerIdentifier) final;
     void didResolveRegistrationPromise(const ServiceWorkerRegistrationKey&) final;
     void postMessageToServiceWorker(ServiceWorkerIdentifier destination, MessageWithMessagePorts&&, const ServiceWorkerOrClientIdentifier& source) final;
     SWServerConnectionIdentifier serverConnectionIdentifier() const final;

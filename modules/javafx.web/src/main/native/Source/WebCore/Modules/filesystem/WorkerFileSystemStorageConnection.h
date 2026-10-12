@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "FileSystemHandleIdentifier.h"
-#include "FileSystemStorageConnection.h"
-#include "WorkerFileSystemStorageConnectionCallbackIdentifier.h"
+#include <WebCore/FileSystemHandleIdentifier.h>
+#include <WebCore/FileSystemStorageConnection.h>
+#include <WebCore/WorkerFileSystemStorageConnectionCallbackIdentifier.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {

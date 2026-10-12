@@ -52,11 +52,11 @@ NavigatorMediaDevices::~NavigatorMediaDevices() = default;
 
 NavigatorMediaDevices* NavigatorMediaDevices::from(Navigator* navigator)
 {
-    NavigatorMediaDevices* supplement = reinterpret_cast<NavigatorMediaDevices*>(Supplement<Navigator>::from(navigator, supplementName()));
+    auto* supplement = downcast<NavigatorMediaDevices>(Supplement<Navigator>::from(navigator, supplementName()));
     if (!supplement) {
         auto newSupplement = makeUnique<NavigatorMediaDevices>(navigator->window());
         supplement = newSupplement.get();
-        provideTo(navigator, supplementName(), WTFMove(newSupplement));
+        provideTo(navigator, supplementName(), WTF::move(newSupplement));
     }
     return supplement;
 }
@@ -71,11 +71,6 @@ MediaDevices* NavigatorMediaDevices::mediaDevices() const
     if (!m_mediaDevices && frame())
         m_mediaDevices = MediaDevices::create(*frame()->protectedDocument());
     return m_mediaDevices.get();
-}
-
-ASCIILiteral NavigatorMediaDevices::supplementName()
-{
-    return "NavigatorMediaDevices"_s;
 }
 
 } // namespace WebCore

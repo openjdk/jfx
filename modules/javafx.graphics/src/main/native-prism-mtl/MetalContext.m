@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -64,11 +64,11 @@
         commitOnDraw = false;
         currentRenderEncoder = nil;
         meshIndexCount = 0;
+        encoderHasDepthAttachment = false;
         linearSamplerDict = [[NSMutableDictionary alloc] init];
         nonLinearSamplerDict = [[NSMutableDictionary alloc] init];
         compositeMode = com_sun_prism_mtl_MTLContext_MTL_COMPMODE_SRCOVER; //default
 
-        currentBufferIndex = 0;
         commandQueue = [device newCommandQueue];
         commandQueue.label = @"The only MTLCommandQueue";
         pipelineManager = [MetalPipelineManager alloc];
@@ -345,6 +345,14 @@
             // gets used in other class methods.
             // Take up the ownership of this RenderEncoder object using retain.
             currentRenderEncoder = [[cb renderCommandEncoderWithDescriptor:rttPassDesc] retain];
+            if (rttPassDesc.depthAttachment.texture == nil) {
+                encoderHasDepthAttachment = false;
+            } else {
+                encoderHasDepthAttachment = true;
+                if (rttPassDesc.depthAttachment.loadAction == MTLLoadActionClear) {
+                    rttPassDesc.depthAttachment.loadAction = MTLLoadActionLoad;
+                }
+            }
         }
     }
     return currentRenderEncoder;
@@ -357,12 +365,8 @@
         [currentRenderEncoder endEncoding];
         [currentRenderEncoder release];
         currentRenderEncoder = nil;
+        encoderHasDepthAttachment = false;
     }
-}
-
-- (NSUInteger) getCurrentBufferIndex
-{
-    return currentBufferIndex;
 }
 
 - (id<MTLRenderPipelineState>) getPhongPipelineStateWithNumLights:(int)numLights
@@ -408,14 +412,11 @@
 
     MetalShader* shader = [self getCurrentShader];
     [shadersUsedInCB addObject:shader];
-
     [renderEncoder setRenderPipelineState:[shader getPipelineState:[rtt isMSAAEnabled]
                                                      compositeMode:compositeMode]];
-    if (depthEnabled) {
-        id<MTLDepthStencilState> depthStencilState =
-            [[self getPipelineManager] getDepthStencilState];
-        [renderEncoder setDepthStencilState:depthStencilState];
-    }
+    id<MTLDepthStencilState> depthStencilState =
+        [[self getPipelineManager] getDepthStencilState];
+    [renderEncoder setDepthStencilState:depthStencilState];
 
     if ([shader getArgumentBufferLength] != 0) {
         [shader copyArgBufferToRingBuffer];
@@ -478,10 +479,13 @@
     if (depthTest &&
         ([rtt getDepthTexture] != nil)) {
         depthEnabled = true;
+        if (encoderHasDepthAttachment == false) {
+            [self endCurrentRenderEncoder];
+        }
     } else {
         depthEnabled = false;
     }
-    [self updateDepthDetails:depthTest];
+    [self updateDepthDetails:depthEnabled];
 }
 
 - (void) setProjViewMatrix:(float)m00
@@ -523,10 +527,8 @@
             alpha:(float)alpha
        clearDepth:(bool)clearDepth
 {
-    clearDepthTexture = false;
     if (clearDepth &&
         [rtt getDepthTexture] != nil) {
-        clearDepthTexture = true;
         rttPassDesc.depthAttachment.clearDepth = 1.0;
         rttPassDesc.depthAttachment.loadAction = MTLLoadActionClear;
         if ([[self getRTT] isMSAAEnabled]) {
@@ -539,7 +541,8 @@
             rttPassDesc.depthAttachment.resolveTexture = nil;
         }
     } else {
-        rttPassDesc.depthAttachment = nil;
+        rttPassDesc.depthAttachment.texture = nil;
+        rttPassDesc.depthAttachment.resolveTexture = nil;
     }
     clearColor[0] = red;
     clearColor[1] = green;
@@ -549,11 +552,9 @@
     id<MTLRenderCommandEncoder> renderEncoder = [self getCurrentRenderEncoder];
 
     [renderEncoder setRenderPipelineState:[pipelineManager getClearRttPipeState]];
-    if (clearDepthTexture) {
-        id<MTLDepthStencilState> depthStencilState =
-            [[self getPipelineManager] getDepthStencilState];
-        [renderEncoder setDepthStencilState:depthStencilState];
-    }
+    id<MTLDepthStencilState> depthStencilState =
+        [[self getPipelineManager] getDepthStencilState];
+    [renderEncoder setDepthStencilState:depthStencilState];
     [renderEncoder setFrontFacingWinding:MTLWindingClockwise];
     [renderEncoder setCullMode:MTLCullModeNone];
     [renderEncoder setTriangleFillMode:MTLTriangleFillModeFill];
@@ -582,6 +583,8 @@
 
     if (clearDepth && !depthEnabled) {
         [self endCurrentRenderEncoder];
+        rttPassDesc.depthAttachment.texture = nil;
+        rttPassDesc.depthAttachment.resolveTexture = nil;
     }
 }
 
@@ -677,7 +680,8 @@
             rttPassDesc.depthAttachment.resolveTexture = nil;
         }
     } else {
-        rttPassDesc.depthAttachment = nil;
+        rttPassDesc.depthAttachment.texture = nil;
+        rttPassDesc.depthAttachment.resolveTexture = nil;
     }
 }
 
@@ -743,14 +747,14 @@
     return scissorRect;
 }
 
-- (bool) clearDepth
-{
-    return clearDepthTexture;
-}
-
 - (bool) isDepthEnabled
 {
     return depthEnabled;
+}
+
+- (bool) encoderHasDepthAttachment
+{
+    return encoderHasDepthAttachment;
 }
 
 - (bool) isScissorEnabled

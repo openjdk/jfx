@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "Color.h"
-#include "Gradient.h"
-#include "Pattern.h"
-#include "SourceBrushLogicalGradient.h"
+#include <WebCore/Color.h>
+#include <WebCore/Gradient.h>
+#include <WebCore/Pattern.h>
+#include <WebCore/SourceBrushLogicalGradient.h>
 
 namespace WebCore {
 

@@ -163,7 +163,6 @@ private:
     Reflection::EntryPointInformation* m_entryPointInformation { nullptr };
     HashMap<uint32_t, uint32_t, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_generateLayoutGroupMapping;
     PipelineLayout* m_generatedLayout { nullptr };
-    unsigned m_constantId { 0 };
     unsigned m_currentStatementIndex { 0 };
     unsigned m_entryPointID { 0 };
     Vector<Insertion> m_pendingInsertions;
@@ -346,7 +345,7 @@ void RewriteGlobalVariables::visit(AST::Function& function)
         for (const auto& read : m_reads)
             reads.add(read);
     }
-    m_reads = WTFMove(reads);
+    m_reads = WTF::move(reads);
     m_defs.clear();
     m_combinedFunctionVariablesSize = 0;
 
@@ -981,7 +980,7 @@ void RewriteGlobalVariables::insertParameter(const SourceSpan& span, const AST::
     auto& groupAttribute = m_shaderModule.astBuilder().construct<AST::GroupAttribute>(span, groupValue);
     m_shaderModule.append(function.parameters(), m_shaderModule.astBuilder().construct<AST::Parameter>(
         span,
-        WTFMove(name),
+        WTF::move(name),
         *type,
         AST::Attribute::List { groupAttribute },
         parameterRole
@@ -1022,6 +1021,18 @@ std::optional<Error> RewriteGlobalVariables::visitEntryPoint(const CallGraph::En
     }
     case ShaderStage::Vertex:
         m_entryPointInformation->typedEntryPoint = Reflection::Vertex { false };
+        if (entryPoint.function.returnTypeInvariant())
+            m_entryPointInformation->usesInvariant = true;
+        else if (auto* returnType = entryPoint.function.maybeReturnType()) {
+            if (auto* structType = std::get_if<Types::Struct>(returnType->inferredType())) {
+                for (const auto& member : structType->structure.members()) {
+                    if (member.invariant()) {
+                        m_entryPointInformation->usesInvariant = true;
+                        break;
+                    }
+                }
+            }
+        }
         break;
     case ShaderStage::Fragment:
         m_entryPointInformation->typedEntryPoint = Reflection::Fragment { };
@@ -1334,7 +1345,7 @@ auto RewriteGlobalVariables::determineUsedGlobals(const AST::Function& function)
             return makeUnexpected(Error(makeString("entry point '"_s, m_entryPointInformation->originalName, "' uses variables '"_s, bindingResult.iterator->value->declaration->originalName(), "' and '"_s, variable.originalName(), "', both which use the same resource binding: @group("_s, group, ") @binding("_s, binding, ')'), variable.span()));
         }
 
-    m_shaderModule.addOverrideValidation([span = function.span(), variables = WTFMove(workgroupVariables), maximumCombinedWorkgroupVariablesSize] -> std::optional<Error> {
+    m_shaderModule.addOverrideValidation([span = function.span(), variables = WTF::move(workgroupVariables), maximumCombinedWorkgroupVariablesSize] -> std::optional<Error> {
         CheckedUint32 combinedWorkgroupVariablesSize = 0;
         for (const Type* type : variables)
             combinedWorkgroupVariablesSize += type->size();
@@ -1342,7 +1353,7 @@ auto RewriteGlobalVariables::determineUsedGlobals(const AST::Function& function)
             return { Error(makeString("The combined byte size of all variables in the workgroup address space exceeds "_s, String::number(maximumCombinedWorkgroupVariablesSize), " bytes"_s), span) };
         return std::nullopt;
     });
-    m_shaderModule.addOverrideValidation([span = function.span(), variables = WTFMove(privateVariables)] -> std::optional<Error> {
+    m_shaderModule.addOverrideValidation([span = function.span(), variables = WTF::move(privateVariables)] -> std::optional<Error> {
         CheckedUint32 combinedPrivateVariablesSize = 0;
         for (const Type* type : variables)
             combinedPrivateVariablesSize += type->size();
@@ -1577,7 +1588,7 @@ Vector<unsigned> RewriteGlobalVariables::insertStructs(const UsedResources& used
             else
                 ++metalId;
 
-            m_generatedLayout->bindGroupLayouts[group].entries.append(WTFMove(entry));
+            m_generatedLayout->bindGroupLayouts[group].entries.append(WTF::move(entry));
         }
 
         if (entries.isEmpty())
@@ -1621,7 +1632,7 @@ void RewriteGlobalVariables::finalizeArgumentBufferStruct(unsigned group, Vector
     auto& argumentBufferStruct = m_shaderModule.astBuilder().construct<AST::Structure>(
             SourceSpan::empty(),
         argumentBufferStructName(group),
-            WTFMove(structMembers),
+        WTF::move(structMembers),
             AST::Attribute::List { },
             AST::StructureRole::BindGroup
     );
@@ -2269,7 +2280,7 @@ void RewriteGlobalVariables::insertMaterializations(AST::Function& function, con
             auto& access = m_shaderModule.astBuilder().construct<AST::FieldAccessExpression>(
                 SourceSpan::empty(),
                 argument,
-                AST::Identifier::make(WTFMove(fieldName))
+                AST::Identifier::make(WTF::move(fieldName))
             );
             AST::Expression* initializer = &access;
 
@@ -2353,7 +2364,7 @@ void RewriteGlobalVariables::initializeVariables(AST::Function& function, const 
     auto& body = m_shaderModule.astBuilder().construct<AST::CompoundStatement>(
         SourceSpan::empty(),
         AST::Attribute::List { },
-        WTFMove(initializations)
+        WTF::move(initializations)
     );
 
     auto& ifStatement = m_shaderModule.astBuilder().construct<AST::IfStatement>(
@@ -2541,7 +2552,7 @@ void RewriteGlobalVariables::storeInitialValue(AST::Expression& target, AST::Sta
         auto& forBody = m_shaderModule.astBuilder().construct<AST::CompoundStatement>(
             SourceSpan::empty(),
             AST::Attribute::List { },
-            WTFMove(forBodyStatements)
+            WTF::move(forBodyStatements)
         );
 
         auto& forStatement = m_shaderModule.astBuilder().construct<AST::ForStatement>(

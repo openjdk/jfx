@@ -21,10 +21,10 @@
 
 #pragma once
 
-#include "BlockDirectory.h"
-#include "MarkedBlock.h"
-#include "MarkedBlockSet.h"
-#include "PreciseAllocation.h"
+#include <JavaScriptCore/BlockDirectory.h>
+#include <JavaScriptCore/MarkedBlock.h>
+#include <JavaScriptCore/MarkedBlockSet.h>
+#include <JavaScriptCore/PreciseAllocation.h>
 #include <array>
 #include <wtf/Bag.h>
 #include <wtf/HashSet.h>
@@ -133,7 +133,6 @@ public:
 
     void shrink();
     void freeBlock(MarkedBlock::Handle*);
-    void freeOrShrinkBlock(MarkedBlock::Handle*);
 
     void didAddBlock(MarkedBlock::Handle*);
     void didConsumeFreeList(MarkedBlock::Handle*);

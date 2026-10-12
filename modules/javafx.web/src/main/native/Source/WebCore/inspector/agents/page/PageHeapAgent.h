@@ -29,12 +29,14 @@
 #include "InstrumentingAgents.h"
 #include "WebHeapAgent.h"
 #include <wtf/TZoneMalloc.h>
+#include <wtf/WeakRef.h>
 
 namespace WebCore {
 
 class PageHeapAgent final : public WebHeapAgent {
     WTF_MAKE_NONCOPYABLE(PageHeapAgent);
     WTF_MAKE_TZONE_ALLOCATED(PageHeapAgent);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(PageHeapAgent);
 public:
     PageHeapAgent(PageAgentContext&);
     ~PageHeapAgent();
@@ -44,14 +46,14 @@ public:
     Inspector::Protocol::ErrorStringOr<void> disable() override;
 
     // JSC::HeapSnapshotBuilder::Client
-    String heapSnapshotBuilderOverrideClassName(JSC::HeapSnapshotBuilder&, JSC::JSCell*, const String& currentClassName) override;
-    bool heapSnapshotBuilderIsElement(JSC::HeapSnapshotBuilder&, JSC::JSCell*) override;
+    String heapSnapshotBuilderOverrideClassName(const JSC::HeapSnapshotBuilder&, JSC::JSCell*, const String& currentClassName) override;
+    bool heapSnapshotBuilderIsElement(const JSC::HeapSnapshotBuilder&, JSC::JSCell*) override;
 
     // InspectorInstrumentation
     void mainFrameNavigated();
 
 private:
-    InstrumentingAgents& m_instrumentingAgents;
+    WeakRef<InstrumentingAgents> m_instrumentingAgents;
 };
 
 } // namespace WebCore

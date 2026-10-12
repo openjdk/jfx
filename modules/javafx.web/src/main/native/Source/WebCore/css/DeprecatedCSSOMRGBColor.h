@@ -20,8 +20,8 @@
 
 #pragma once
 
-#include "Color.h"
-#include "DeprecatedCSSOMPrimitiveValue.h"
+#include <WebCore/Color.h>
+#include <WebCore/DeprecatedCSSOMPrimitiveValue.h>
 #include <wtf/Ref.h>
 
 namespace WebCore {

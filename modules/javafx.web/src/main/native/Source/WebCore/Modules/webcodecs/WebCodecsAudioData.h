@@ -28,10 +28,10 @@
 
 #if ENABLE(WEB_CODECS)
 
-#include "AudioSampleFormat.h"
-#include "BufferSource.h"
-#include "ContextDestructionObserver.h"
-#include "WebCodecsAudioInternalData.h"
+#include <WebCore/AudioSampleFormat.h>
+#include <WebCore/BufferSource.h>
+#include <WebCore/ContextDestructionObserver.h>
+#include <WebCore/WebCodecsAudioInternalData.h>
 #include <wtf/RefCounted.h>
 
 namespace WebCore {
@@ -55,7 +55,11 @@ public:
 
     static ExceptionOr<Ref<WebCodecsAudioData>> create(ScriptExecutionContext&, Init&&);
     static Ref<WebCodecsAudioData> create(ScriptExecutionContext&, Ref<PlatformRawAudioData>&&);
-    static Ref<WebCodecsAudioData> create(ScriptExecutionContext& context, WebCodecsAudioInternalData&& data) { return adoptRef(*new WebCodecsAudioData(context, WTFMove(data))); }
+    static Ref<WebCodecsAudioData> create(ScriptExecutionContext& context, WebCodecsAudioInternalData&& data) { return adoptRef(*new WebCodecsAudioData(context, WTF::move(data))); }
+
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     std::optional<AudioSampleFormat> format() const;
     float sampleRate() const;
@@ -80,13 +84,16 @@ public:
 
     const WebCodecsAudioInternalData& data() const { return m_data; }
 
-    size_t memoryCost() const { return m_data.memoryCost(); }
+    // memoryCost() may be called from a GC thread by the JS wrapper's visitChildren, so it must
+    // not touch m_data.audioData (which close() may concurrently null on the main thread).
+    size_t memoryCost() const { return m_memoryCost.load(std::memory_order_relaxed); }
 
 private:
     explicit WebCodecsAudioData(ScriptExecutionContext&);
     WebCodecsAudioData(ScriptExecutionContext&, WebCodecsAudioInternalData&&);
 
     WebCodecsAudioInternalData m_data;
+    std::atomic<size_t> m_memoryCost { 0 };
     bool m_isDetached { false };
 };
 

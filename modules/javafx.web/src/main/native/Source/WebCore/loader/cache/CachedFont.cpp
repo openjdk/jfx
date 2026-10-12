@@ -36,6 +36,7 @@
 #include "FontPlatformData.h"
 #include "Logging.h"
 #include "MemoryCache.h"
+#include "Settings.h"
 #include "SharedBuffer.h"
 #include "SubresourceLoader.h"
 #include "TextResourceDecoder.h"
@@ -49,7 +50,7 @@
 namespace WebCore {
 
 CachedFont::CachedFont(CachedResourceRequest&& request, PAL::SessionID sessionID, const CookieJar* cookieJar, Type type)
-    : CachedResource(WTFMove(request), type, sessionID, cookieJar)
+    : CachedResource(WTF::move(request), type, sessionID, cookieJar)
     , m_loadInitiated(false)
     , m_hasCreatedFontDataWrappingResource(false)
 {
@@ -95,7 +96,7 @@ void CachedFont::finishLoading(const FragmentedSharedBuffer* data, const Network
             setErrorAndDeleteData();
             return;
         }
-        m_data = WTFMove(dataContiguous);
+        m_data = WTF::move(dataContiguous);
         setEncodedSize(m_data->size());
     } else {
         m_data = nullptr;
@@ -242,7 +243,7 @@ void CachedFont::checkNotify(const NetworkLoadMetrics&, LoadWillContinueInAnothe
         return;
 
     CachedResourceClientWalker<CachedFontClient> walker(*this);
-    while (CachedFontClient* client = walker.next())
+    while (RefPtr client = walker.next())
         client->fontLoaded(*this);
 }
 

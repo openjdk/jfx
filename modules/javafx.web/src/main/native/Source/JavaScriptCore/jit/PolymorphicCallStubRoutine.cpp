@@ -31,6 +31,7 @@
 #include "CodeBlock.h"
 #include "FullCodeOrigin.h"
 #include "JSCJSValueInlines.h"
+#include "JSFunctionInlines.h"
 #include "LinkBuffer.h"
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN

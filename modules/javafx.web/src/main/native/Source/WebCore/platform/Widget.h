@@ -26,14 +26,16 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
 #if PLATFORM(IOS_FAMILY)
 #ifndef NSView
 #define NSView WAKView
 #endif
 #endif
 
-#include "IntRect.h"
-#include "PlatformScreen.h"
+#include <WebCore/DoublePoint.h>
+#include <WebCore/IntRect.h>
+#include <WebCore/PlatformScreen.h>
 #include <wtf/CheckedRef.h>
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
@@ -96,6 +98,9 @@ public:
     WEBCORE_EXPORT virtual ~Widget();
 
     WEBCORE_EXPORT PlatformWidget platformWidget() const;
+#if PLATFORM(COCOA)
+    WEBCORE_EXPORT RetainPtr<NSView> protectedPlatformWidget() const;
+#endif
     WEBCORE_EXPORT void setPlatformWidget(PlatformWidget);
 
     int x() const { return frameRect().x(); }
@@ -152,11 +157,13 @@ public:
 
     IntPoint convertToRootView(IntPoint) const;
     FloatPoint convertToRootView(FloatPoint) const;
+    DoublePoint convertToRootView(DoublePoint) const;
     WEBCORE_EXPORT IntRect convertToRootView(const IntRect&) const;
     FloatRect convertToRootView(const FloatRect&) const;
 
     IntPoint convertFromRootView(IntPoint) const;
     FloatPoint convertFromRootView(FloatPoint) const;
+    DoublePoint convertFromRootView(DoublePoint) const;
     IntRect convertFromRootView(const IntRect&) const;
     FloatRect convertFromRootView(const FloatRect&) const;
 
@@ -171,6 +178,7 @@ public:
 
     IntPoint convertFromContainingWindow(IntPoint) const;
     FloatPoint convertFromContainingWindow(FloatPoint) const;
+    DoublePoint convertFromContainingWindow(DoublePoint) const;
     IntRect convertFromContainingWindow(const IntRect&) const;
     FloatRect convertFromContainingWindow(const FloatRect&) const;
 
@@ -188,7 +196,7 @@ public:
 #if PLATFORM(COCOA)
     virtual id accessibilityHitTest(const IntPoint&) const { return nil; }
     virtual id accessibilityObject() const { return nil; }
-    NSView* getOuterView() const;
+    RetainPtr<NSView> outerView() const;
 
     void removeFromSuperview();
 #endif
@@ -199,11 +207,13 @@ public:
     // Virtual methods to convert points to/from the containing ScrollView
     WEBCORE_EXPORT virtual IntPoint convertToContainingView(IntPoint) const;
     WEBCORE_EXPORT virtual FloatPoint convertToContainingView(FloatPoint) const;
+    WEBCORE_EXPORT virtual DoublePoint convertToContainingView(DoublePoint) const;
     WEBCORE_EXPORT virtual IntRect convertToContainingView(const IntRect&) const;
     WEBCORE_EXPORT virtual FloatRect convertToContainingView(const FloatRect&) const;
 
     WEBCORE_EXPORT virtual IntPoint convertFromContainingView(IntPoint) const;
     WEBCORE_EXPORT virtual FloatPoint convertFromContainingView(FloatPoint) const;
+    WEBCORE_EXPORT virtual DoublePoint convertFromContainingView(DoublePoint) const;
     WEBCORE_EXPORT virtual IntRect convertFromContainingView(const IntRect&) const;
     WEBCORE_EXPORT virtual FloatRect convertFromContainingView(const FloatRect&) const;
 
@@ -221,6 +231,7 @@ private:
 
     static IntPoint convertFromContainingWindowToRoot(const Widget* rootWidget, IntPoint);
     static FloatPoint convertFromContainingWindowToRoot(const Widget* rootWidget, FloatPoint);
+    static DoublePoint convertFromContainingWindowToRoot(const Widget* rootWidget, DoublePoint);
     static IntRect convertFromContainingWindowToRoot(const Widget* rootWidget, const IntRect&);
     static FloatRect convertFromContainingWindowToRoot(const Widget* rootWidget, const FloatRect&);
 

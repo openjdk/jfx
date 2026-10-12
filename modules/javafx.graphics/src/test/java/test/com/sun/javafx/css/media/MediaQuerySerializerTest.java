@@ -26,7 +26,9 @@
 package test.com.sun.javafx.css.media;
 
 import com.sun.javafx.css.media.MediaQuerySerializer;
+import com.sun.javafx.css.media.MediaFeatures;
 import com.sun.javafx.css.media.SizeQueryType;
+import com.sun.javafx.css.media.TriState;
 import com.sun.javafx.css.media.expression.ConjunctionExpression;
 import com.sun.javafx.css.media.expression.ConstantExpression;
 import com.sun.javafx.css.media.expression.EqualExpression;
@@ -38,6 +40,8 @@ import com.sun.javafx.css.media.expression.LessOrEqualExpression;
 import com.sun.javafx.css.media.expression.NegationExpression;
 import com.sun.javafx.css.media.expression.DisjunctionExpression;
 import com.sun.javafx.css.media.MediaQuery;
+import com.sun.javafx.css.parser.CssLexer;
+import com.sun.javafx.css.parser.Token;
 import javafx.css.Size;
 import javafx.css.SizeUnits;
 import javafx.css.StyleConverter;
@@ -175,6 +179,25 @@ public class MediaQuerySerializerTest {
 
         var actual = deserialize(serialize(expected));
         assertEquals(expected, actual);
+    }
+
+    @Test
+    void serializeConditionalFeatureExpression() throws IOException {
+        var supported = MediaFeatures.discreteQueryExpression(
+            "-fx-supports-conditional-feature", new Token(CssLexer.IDENT, "scene3d"));
+
+        var expected = FunctionExpression.of("-fx-supports-conditional-feature", "scene3d", _ -> null, true);
+        var actual = deserialize(serialize(supported));
+        assertEquals(expected, actual);
+        assertEquals(TriState.TRUE, actual.evaluate());
+
+        var unsupported = MediaFeatures.discreteQueryExpression(
+            "-fx-supports-conditional-feature", new Token(CssLexer.IDENT, "media"));
+
+        expected = FunctionExpression.of("-fx-supports-conditional-feature", "media", _ -> null, true);
+        actual = deserialize(serialize(unsupported));
+        assertEquals(expected, actual);
+        assertEquals(TriState.FALSE, actual.evaluate());
     }
 
     private byte[] serialize(MediaQuery mediaQuery) throws IOException {

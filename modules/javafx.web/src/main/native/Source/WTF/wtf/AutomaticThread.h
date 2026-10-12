@@ -26,8 +26,10 @@
 #pragma once
 
 #include <wtf/Box.h>
+#include <wtf/CheckedPtr.h>
 #include <wtf/Condition.h>
 #include <wtf/Lock.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/Threading.h>
 #include <wtf/Vector.h>
@@ -94,10 +96,12 @@ private:
     bool contains(const AbstractLocker&, AutomaticThread*);
 
     Condition m_condition;
-    Vector<AutomaticThread*> m_threads;
+    Vector<CheckedPtr<AutomaticThread>> m_threads;
 };
 
-class WTF_EXPORT_PRIVATE AutomaticThread : public ThreadSafeRefCounted<AutomaticThread> {
+class WTF_EXPORT_PRIVATE AutomaticThread : public ThreadSafeRefCounted<AutomaticThread>, public CanMakeThreadSafeCheckedPtr<AutomaticThread> {
+    WTF_MAKE_TZONE_ALLOCATED(AutomaticThread);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(AutomaticThread);
 public:
     // Note that if you drop all of your references to an AutomaticThread then as soon as there is a
     // timeout during which it doesn't get woken up, it will simply die on its own. This is a

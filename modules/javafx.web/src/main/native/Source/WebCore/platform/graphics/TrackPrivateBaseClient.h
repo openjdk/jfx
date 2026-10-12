@@ -27,23 +27,14 @@
 
 #if ENABLE(VIDEO)
 
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 #include <wtf/Forward.h>
-#include <wtf/WeakPtr.h>
-
-namespace WebCore {
-class TrackPrivateBaseClient;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::TrackPrivateBaseClient> : std::true_type { };
-}
 
 namespace WebCore {
 
 using TrackID = uint64_t;
 
-class TrackPrivateBaseClient : public CanMakeWeakPtr<TrackPrivateBaseClient> {
+class TrackPrivateBaseClient : public AbstractRefCountedAndCanMakeWeakPtr<TrackPrivateBaseClient> {
 public:
     using Task = Function<void()>;
     using Dispatcher = Function<void(Task&&)>;
@@ -52,8 +43,8 @@ public:
     enum Type { Text, Audio, Video };
     virtual constexpr Type type() const = 0;
     virtual void idChanged(TrackID) = 0;
-    virtual void labelChanged(const AtomString&) = 0;
-    virtual void languageChanged(const AtomString&) = 0;
+    virtual void labelChanged(const String&) = 0;
+    virtual void languageChanged(const String&) = 0;
     virtual void willRemove() = 0;
 };
 

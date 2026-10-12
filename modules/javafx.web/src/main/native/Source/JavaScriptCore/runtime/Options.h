@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,13 +25,14 @@
 
 #pragma once
 
-#include "CPU.h"
-#include "JSCConfig.h"
-#include "JSExportMacros.h"
+#include <JavaScriptCore/CPU.h>
+#include <JavaScriptCore/JSCConfig.h>
+#include <JavaScriptCore/JSExportMacros.h>
 #include <stdint.h>
 #include <wtf/ForbidHeapAllocation.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/PrintStream.h>
+#include <wtf/ScopedLambda.h>
 #include <wtf/StdLibExtras.h>
 
 namespace WTF {
@@ -109,7 +110,13 @@ public:
 #endif
     };
 
-    JS_EXPORT_PRIVATE static void initialize();
+    JS_EXPORT_PRIVATE static void initializeWithOptionsCustomization(const ScopedLambda<void()>& optionsCustomizationCallback);
+
+    ALWAYS_INLINE static void initialize(const Invocable<void()> auto& optionsCustomizationCallback)
+    {
+        SUPPRESS_FORWARD_DECL_ARG initializeWithOptionsCustomization(scopedLambda<void()>(optionsCustomizationCallback));
+    }
+
     static void finalize();
 
     JS_EXPORT_PRIVATE static bool setAllJITCodeValidations(const char* arg);
@@ -167,7 +174,7 @@ private:
     static unsigned computeNumberOfGCMarkers(unsigned maxNumberOfGCMarkers);
     static unsigned computeNumberOfWorkerThreads(int maxNumberOfWorkerThreads, int minimum = 1);
     static int32_t computePriorityDeltaOfWorkerThreads(int32_t twoCorePriorityDelta, int32_t multiCorePriorityDelta);
-    static constexpr bool jitEnabledByDefault() { return is32Bit() || isAddress64Bit(); }
+    static constexpr bool jitEnabledByDefault() { return !useCompressedHeap && (is32Bit() || isAddress64Bit()); }
     static constexpr bool ipintEnabledByDefault() { return isARM64() || isARM64E() || isX86_64(); }
 };
 

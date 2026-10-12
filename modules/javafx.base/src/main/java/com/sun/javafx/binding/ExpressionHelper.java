@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -381,9 +381,13 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
                 if (curChangeSize > 0) {
                     final boolean changed = (currentValue == null)? (oldValue != null) : !currentValue.equals(oldValue);
                     if (changed) {
+                        // Capture currentValue, to pass down the same value to all listeners, given that
+                        // currentValue could be nullified if all the change listeners are removed. If that happens
+                        // during the notification loop, the pending listeners should still receive the correct value.
+                        final T newValue = currentValue;
                         for (int i = 0; i < curChangeSize; i++) {
                             try {
-                                curChangeList[i].changed(observable, oldValue, currentValue);
+                                curChangeList[i].changed(observable, oldValue, newValue);
                             } catch (Exception e) {
                                 Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
                             }

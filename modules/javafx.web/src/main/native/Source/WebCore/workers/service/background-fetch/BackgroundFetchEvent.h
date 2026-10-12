@@ -31,20 +31,24 @@
 namespace WebCore {
 
 class BackgroundFetchEvent : public ExtendableEvent {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(BackgroundFetchEvent);
+    WTF_MAKE_TZONE_ALLOCATED(BackgroundFetchEvent);
 public:
     ~BackgroundFetchEvent();
 
     using Init = BackgroundFetchEventInit;
     static Ref<BackgroundFetchEvent> create(const AtomString&, Init&&, IsTrusted = IsTrusted::No);
 
-    RefPtr<BackgroundFetchRegistration> registration() const;
+    BackgroundFetchRegistration& registration() const;
 
 protected:
-    BackgroundFetchEvent(enum EventInterfaceType, const AtomString&, ExtendableEventInit&&, RefPtr<BackgroundFetchRegistration>&&, IsTrusted);
+    BackgroundFetchEvent(enum EventInterfaceType, const AtomString&, ExtendableEventInit&&, Ref<BackgroundFetchRegistration>&&, IsTrusted);
 
 private:
-    RefPtr<BackgroundFetchRegistration> m_registration;
+    bool isBackgroundFetchEvent() const final { return true; }
+
+    const Ref<BackgroundFetchRegistration> m_registration;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EXTENDABLEEVENT_POLYMORPHIC(BackgroundFetchEvent)

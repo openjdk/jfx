@@ -28,9 +28,9 @@
 
 #if ENABLE(VIDEO)
 
-#include "SerializedPlatformDataCue.h"
-#include "TextTrackCue.h"
 #include <JavaScriptCore/Strong.h>
+#include <WebCore/SerializedPlatformDataCue.h>
+#include <WebCore/TextTrackCue.h>
 #include <wtf/MediaTime.h>
 #include <wtf/TypeCasts.h>
 
@@ -44,7 +44,7 @@ namespace WebCore {
 class ScriptExecutionContext;
 
 class DataCue final : public TextTrackCue {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(DataCue);
+    WTF_MAKE_TZONE_ALLOCATED(DataCue);
 public:
     static Ref<DataCue> create(Document&, double start, double end, ArrayBuffer& data);
     static Ref<DataCue> create(Document&, double start, double end, JSC::JSValue, const String& type);
@@ -57,6 +57,7 @@ public:
     void setData(JSC::ArrayBuffer&);
 
     const SerializedPlatformDataCue* platformValue() const { return m_platformValue.get(); }
+    RefPtr<const SerializedPlatformDataCue> protectedPlatformValue() const { return m_platformValue.get(); }
 
     JSC::JSValue value(JSC::JSGlobalObject&) const;
     void setValue(JSC::JSGlobalObject&, JSC::JSValue);

@@ -28,10 +28,10 @@ namespace WebCore {
 class Quad final : public RectBase {
 public:
     Quad(Ref<CSSValue> value)
-        : RectBase(WTFMove(value))
+        : RectBase(WTF::move(value))
     { }
     Quad(Ref<CSSValue> top, Ref<CSSValue> right, Ref<CSSValue> bottom, Ref<CSSValue> left)
-        : RectBase(WTFMove(top), WTFMove(right), WTFMove(bottom), WTFMove(left))
+        : RectBase(WTF::move(top), WTF::move(right), WTF::move(bottom), WTF::move(left))
     { }
 
     String cssText(const CSS::SerializationContext& context) const
