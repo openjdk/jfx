@@ -978,7 +978,8 @@ final class CssStyleHelper {
         var it = cacheContainer.cssSetProperties.entrySet().iterator();
         while (it.hasNext()) {
             Entry<CssMetaData, CalculatedValue> entry = it.next();
-            if (!isUnstyled.test(entry.getKey())) {
+            CssMetaData cssMetaData = entry.getKey();
+            if (!isUnstyled.test(cssMetaData) || !cssMetaData.isSettable(styleable)) {
                 continue;
             }
 
@@ -986,7 +987,7 @@ final class CssStyleHelper {
                 resetList = new ArrayList<>();
             }
 
-            if (entry.getKey() == TransitionDefinitionCssMetaData.getInstance()) {
+            if (cssMetaData == TransitionDefinitionCssMetaData.getInstance()) {
                 resetList.addFirst(entry);
             } else {
                 resetList.add(entry);
@@ -1002,9 +1003,7 @@ final class CssStyleHelper {
         for (Entry<CssMetaData, CalculatedValue> entry : resetList) {
             CssMetaData cssMetaData = entry.getKey();
             try {
-                if (cssMetaData.isSettable(styleable)) {
-                    resetToInitialValue(styleable, cssMetaData, entry.getValue());
-                }
+                resetToInitialValue(styleable, cssMetaData, entry.getValue());
             } catch (Exception e) {
                 PlatformLogger logger = Logging.getCSSLogger();
                 if (logger.isLoggable(Level.WARNING)) {

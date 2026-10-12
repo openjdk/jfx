@@ -1306,6 +1306,37 @@ public class CssStyleHelperTest {
         assertEquals(10, node.getTranslateX());
     }
 
+    /**
+     * A property which is not settable while its style is removed must still be reset by a later CSS pass.
+     */
+    @Test
+    void testTemporarilyUnsettablePropertyIsResetWhenSettableAgain() {
+        scene.getStylesheets().add(toDataURL("""
+                .node:hover { -fx-value: 10; }
+                .node:pressed { -fx-opacity: 0.5; }
+                """));
+
+        TemporarilyUnsettableControl node = new TemporarilyUnsettableControl();
+        node.getStyleClass().add("node");
+        root.getChildren().add(node);
+        node.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
+        root.applyCss();
+
+        assertEquals(10, node.getValue());
+
+        node.settable = false;
+        node.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), false);
+        root.applyCss();
+
+        assertEquals(10, node.getValue());
+
+        node.settable = true;
+        node.pseudoClassStateChanged(PseudoClass.getPseudoClass("pressed"), true);
+        root.applyCss();
+
+        assertEquals(1, node.getValue());
+    }
+
     private static String toDataURL(String stylesheet) {
         return "data:text/plain;base64," + Base64.getEncoder().encodeToString(stylesheet.getBytes(StandardCharsets.UTF_8));
     }
@@ -1436,6 +1467,50 @@ public class CssStyleHelperTest {
 
         double getBoom() {
             return boom.get();
+        }
+
+        @Override
+        public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
+            return STYLEABLES;
+        }
+    }
+
+    /**
+     * A Pane subclass with one extra styleable property, "-fx-value", which can be made non-settable.
+     */
+    private static final class TemporarilyUnsettableControl extends Pane {
+
+        private static final CssMetaData<TemporarilyUnsettableControl, Number> VALUE =
+            new CssMetaData<>("-fx-value", SizeConverter.getInstance(), 1.0) {
+                @Override
+                public boolean isSettable(TemporarilyUnsettableControl node) {
+                    return node.settable;
+                }
+
+                @Override
+                public StyleableProperty<Number> getStyleableProperty(TemporarilyUnsettableControl node) {
+                    return node.value;
+                }
+            };
+
+        private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
+
+        static {
+            List<CssMetaData<? extends Styleable, ?>> styleables = new ArrayList<>(Pane.getClassCssMetaData());
+            styleables.add(VALUE);
+            STYLEABLES = Collections.unmodifiableList(styleables);
+        }
+
+        private boolean settable = true;
+
+        private final StyleableDoubleProperty value = new StyleableDoubleProperty(1.0) {
+            @Override public Object getBean() { return TemporarilyUnsettableControl.this; }
+            @Override public String getName() { return "value"; }
+            @Override public CssMetaData<TemporarilyUnsettableControl, Number> getCssMetaData() { return VALUE; }
+        };
+
+        double getValue() {
+            return value.get();
         }
 
         @Override
