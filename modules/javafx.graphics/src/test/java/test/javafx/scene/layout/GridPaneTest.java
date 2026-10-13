@@ -25,12 +25,15 @@
 
 package test.javafx.scene.layout;
 
+import java.util.stream.Stream;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
+import javafx.scene.Group;
 import javafx.scene.ParentShim;
+import javafx.scene.Scene;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.GridPaneShim;
@@ -38,9 +41,13 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.RowConstraints;
 import javafx.scene.shape.Rectangle;
+import javafx.stage.Stage;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -3330,5 +3337,59 @@ public class GridPaneTest {
         assertEquals(100, spanning.getWidth(), 1e-100);
         assertEquals(45, col0.getWidth(), 1e-100);
         assertEquals(45, col1.getWidth(), 1e-100);
+    }
+
+
+    private void setRenderScale(double scale) {
+        Stage stage = new Stage();
+        stage.setScene(new Scene(new Group(gridpane)));
+        stage.setRenderScaleX(scale);
+        stage.setRenderScaleY(scale);
+    }
+
+    private static Stream<Arguments> scalesAndGaps() {
+        return Stream.of(1.0, 1.25, 1.5, 1.75, 2.0, 2.25)
+            .flatMap(scale -> Stream.of(0.0, 0.5, 1.0, 3.333, 5.0, 10.0)
+                .map(gap -> Arguments.of(scale, gap)));
+    }
+
+    @ParameterizedTest
+    @MethodSource("scalesAndGaps")
+    public void testShrinkingRowsToMinFitsWithVgap(double scale, double vgap) {
+        gridpane.setVgap(vgap);
+        MockResizable spanning = new MockResizable(100, 100, 100, 100, 5000, 5000);
+        MockResizable row0 = new MockResizable(0, 0, 100, 200, 5000, 5000);
+        MockResizable row1 = new MockResizable(0, 0, 100, 200, 5000, 5000);
+        gridpane.add(spanning, 0, 0, 1, 2);
+        gridpane.add(row0, 1, 0);
+        gridpane.add(row1, 1, 1);
+        setRenderScale(scale);
+
+        gridpane.resize(200, 100);
+        gridpane.layout();
+
+        assertEquals(100, spanning.getHeight(), 1e-10);
+        assertEquals(100, row1.getLayoutY() + row1.getHeight(), 1e-10);
+        assertEquals(gridpane.snapSpaceY(vgap), row1.getLayoutY() - row0.getHeight(), 1e-10);
+    }
+
+    @ParameterizedTest
+    @MethodSource("scalesAndGaps")
+    public void testShrinkingColumnsToMinFitsWithHgap(double scale, double hgap) {
+        gridpane.setHgap(hgap);
+        MockResizable spanning = new MockResizable(100, 100, 100, 100, 5000, 5000);
+        MockResizable col0 = new MockResizable(0, 0, 200, 100, 5000, 5000);
+        MockResizable col1 = new MockResizable(0, 0, 200, 100, 5000, 5000);
+        gridpane.add(spanning, 0, 0, 2, 1);
+        gridpane.add(col0, 0, 1);
+        gridpane.add(col1, 1, 1);
+        setRenderScale(scale);
+
+        gridpane.resize(100, 200);
+        gridpane.layout();
+
+        assertEquals(100, spanning.getWidth(), 1e-10);
+        assertEquals(100, col1.getLayoutX() + col1.getWidth(), 1e-10);
+        assertEquals(gridpane.snapSpaceX(hgap), col1.getLayoutX() - col0.getWidth(), 1e-10);
     }
 }
