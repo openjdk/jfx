@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -949,7 +950,7 @@ final class CssStyleHelper {
     private void resetProperties(Styleable styleable, Predicate<CssMetaData> isUnstyled) {
         List<Entry<CssMetaData, CalculatedValue>> resetList = null;
 
-        var it = cacheContainer.cssSetProperties.entrySet().iterator();
+        Iterator<Entry<CssMetaData, CalculatedValue>> it = cacheContainer.cssSetProperties.entrySet().iterator();
         while (it.hasNext()) {
             Entry<CssMetaData, CalculatedValue> entry = it.next();
             CssMetaData cssMetaData = entry.getKey();
