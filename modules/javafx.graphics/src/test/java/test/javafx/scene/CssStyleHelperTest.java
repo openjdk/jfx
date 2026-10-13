@@ -37,6 +37,7 @@ import com.sun.javafx.tk.Toolkit;
 import javafx.application.ColorScheme;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.collections.ObservableList;
 import javafx.css.CssMetaData;
 import javafx.css.CssParser;
 import javafx.css.CssParser.ParseError;
@@ -62,7 +63,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -74,6 +75,7 @@ public class CssStyleHelperTest {
     private Scene scene;
     private Stage stage;
     private StackPane root;
+    private ObservableList<CssParser.ParseError> errors;
 
     private static void resetStyleManager() {
         StyleManager sm = StyleManager.getInstance();
@@ -92,12 +94,14 @@ public class CssStyleHelperTest {
         stage.setScene(scene);
         resetStyleManager();
 
-        // Apparently, need to access this property first, or nothing will be appended at all.
-        CssParser.errorsProperty().clear();
+        errors = CssParser.errorsProperty();
+        errors.clear();
     }
 
-    @AfterAll
-    public static void cleanupOnce() {
+
+    @AfterEach
+    void tearDown() {
+        errors.clear();
         resetStyleManager();
     }
 
@@ -1335,6 +1339,36 @@ public class CssStyleHelperTest {
         root.applyCss();
 
         assertEquals(1, node.getValue());
+    }
+
+    /**
+     * A failing reset must be reported as error and retried by a later CSS pass.
+     */
+    @Test
+    void testFailedResetIsReportedAndRetried() {
+        scene.getStylesheets().add(toDataURL("""
+                .node:hover { -fx-boom: 10; }
+                """));
+
+        ExceptionalPropertyControl node = new ExceptionalPropertyControl();
+        node.getStyleClass().add("node");
+        root.getChildren().add(node);
+        node.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
+        root.applyCss();
+
+        assertEquals(10, node.getBoom());
+
+        node.explodeOnApply = true;
+        node.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), false);
+        root.applyCss();
+
+        assertEquals(10, node.getBoom());
+        assertEquals(1, errors.size());
+
+        node.explodeOnApply = false;
+        root.applyCss();
+
+        assertEquals(1, node.getBoom());
     }
 
     private static String toDataURL(String stylesheet) {

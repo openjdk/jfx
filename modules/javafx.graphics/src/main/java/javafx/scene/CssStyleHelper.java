@@ -816,44 +816,18 @@ final class CssStyleHelper {
                 continue;
             }
 
-            /*
-             * Skip this property (after caching) if it can't be set (usually because it is bound).
-             * The cached value is still useful for others sharing this entry.
-             */
-
-            if (!cssMetaData.isSettable(node)) continue;
-
-            // StyleableProperty#applyStyle might throw an exception and it is called
-            // from two places in this try block.
             try {
-
                 /*
-                 * JDK-8127435: If there is no style for the property (SKIP), then check if it must be reset
-                 * to its initial value. Otherwise, continue with CSS application.
+                 * Skip this property (after caching) if it can't be set (usually because it is bound).
+                 * The cached value is still useful for others sharing this entry.
                  */
-
-                if (calculatedValue == SKIP) {  // calculatedValue is never null here
-
-                    // cssSetProperties keeps track of the StyleableProperty's that were set by CSS in the previous state.
-                    // If this property is not in cssSetProperties map, then the property was not set in the previous state.
-                    // This accomplishes two things. First, it lets us know if the property was set in the previous state
-                    // so it can be reset in this state if there is no value for it. Second, it avoids calling
-                    // CssMetaData#getStyleableProperty which is rather expensive as it may cause expansion of lazy
-                    // properties.
-                    // Only the transition property is still tracked here, the others were reset before.
-                    CalculatedValue initialValue = cacheContainer.cssSetProperties.remove(cssMetaData);
-
-                    /*
-                     * If the initial value is not null, then the property was set by CSS
-                     * on this node, and so it must be reset:
-                     */
-
-                    if (initialValue != null) {
-                        resetToInitialValue(node, cssMetaData, initialValue);
-                    }
-
+                if (!cssMetaData.isSettable(node)) {
                     continue;
+                }
 
+                // Properties without a style (SKIP) were already reset.
+                if (calculatedValue == SKIP) {
+                    continue;
                 }
 
                 StyleableProperty styleableProperty = cssMetaData.getStyleableProperty(node);
@@ -1005,10 +979,20 @@ final class CssStyleHelper {
             try {
                 resetToInitialValue(styleable, cssMetaData, entry.getValue());
             } catch (Exception e) {
+                // Track the property again, so a later pass can retry the reset.
+                cacheContainer.cssSetProperties.put(cssMetaData, entry.getValue());
+
+                final String msg = String.format("Failed to reset css [%s] on [%s] due to '%s'\n",
+                        cssMetaData.getProperty(), styleable, e.getMessage());
+
+                List<CssParser.ParseError> errors = StyleManager.getErrors();
+                if (errors != null) {
+                    errors.add(new CssParser.ParseError.PropertySetError(cssMetaData, styleable, msg));
+                }
+
                 PlatformLogger logger = Logging.getCSSLogger();
                 if (logger.isLoggable(Level.WARNING)) {
-                    logger.warning(String.format("Failed to reset css [%s] on [%s] due to '%s'\n",
-                            cssMetaData.getProperty(), styleable, e.getMessage()));
+                    logger.warning(msg);
                 }
             }
         }
