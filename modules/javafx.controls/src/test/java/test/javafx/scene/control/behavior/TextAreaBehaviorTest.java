@@ -26,6 +26,7 @@ package test.javafx.scene.control.behavior;
 
 import static javafx.scene.input.KeyCode.ENTER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static com.sun.javafx.PlatformUtil.isWindows;
 
 import javafx.scene.control.TextArea;
 import org.junit.jupiter.api.AfterEach;
@@ -125,12 +126,15 @@ public class TextAreaBehaviorTest extends TextInputControlTestBase<TextArea> {
 
     @Test
     public void testDoubleClickWithSpecialChars() {
-// disabled, fails under Windows due to OS-specific behaviour in mouseDoubleClick
-//        execute(
-//                setText("Bug #123"),
-//                clickCharacter(0, 2, true)
-//        );
-//        assertEquals("Bug", control.getSelectedText());
+        execute(
+                setText("Bug #123"),
+                clickCharacter(0, 2, true)
+        );
+        if (isWindows()) {
+            assertEquals("Bug ", control.getSelectedText());
+        } else {
+            assertEquals("Bug", control.getSelectedText());
+        }
 
         execute(
                 clickCharacter(6, 2, true)
