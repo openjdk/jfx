@@ -3299,47 +3299,6 @@ public class GridPaneTest {
         assertEquals(95, right.getWidth(), 1e-100);
     }
 
-    @Test
-    public void testCheckShrinkingRowsAccountsVgap() {
-        gridpane.setVgap(10);
-        MockResizable spanning = new MockResizable(100, 100, 100, 100, 5000, 5000);
-        MockResizable row0 = new MockResizable(0, 0, 100, 200, 5000, 5000);
-        MockResizable row1 = new MockResizable(0, 0, 100, 200, 5000, 5000);
-        gridpane.add(spanning, 0, 0, 1, 2);
-        gridpane.add(row0, 1, 0);
-        gridpane.add(row1, 1, 1);
-
-        assertEquals(100, gridpane.minHeight(-1), 1e-100);
-
-        gridpane.resize(200, 100);
-        gridpane.layout();
-
-        assertEquals(100, spanning.getHeight(), 1e-100);
-        assertEquals(45, row0.getHeight(), 1e-100);
-        assertEquals(45, row1.getHeight(), 1e-100);
-    }
-
-    @Test
-    public void testCheckShrinkingColumnsAccountsHgap() {
-        gridpane.setHgap(10);
-        MockResizable spanning = new MockResizable(100, 100, 100, 100, 5000, 5000);
-        MockResizable col0 = new MockResizable(0, 0, 200, 100, 5000, 5000);
-        MockResizable col1 = new MockResizable(0, 0, 200, 100, 5000, 5000);
-        gridpane.add(spanning, 0, 0, 2, 1);
-        gridpane.add(col0, 0, 1);
-        gridpane.add(col1, 1, 1);
-
-        assertEquals(100, gridpane.minWidth(-1), 1e-100);
-
-        gridpane.resize(100, 200);
-        gridpane.layout();
-
-        assertEquals(100, spanning.getWidth(), 1e-100);
-        assertEquals(45, col0.getWidth(), 1e-100);
-        assertEquals(45, col1.getWidth(), 1e-100);
-    }
-
-
     private void setRenderScale(double scale) {
         Stage stage = new Stage();
         stage.setScene(new Scene(new Group(gridpane)));
@@ -3355,7 +3314,7 @@ public class GridPaneTest {
 
     @ParameterizedTest
     @MethodSource("scalesAndGaps")
-    public void testShrinkingRowsToMinFitsWithVgap(double scale, double vgap) {
+    public void testCheckShrinkingRowsAccountsVgap(double scale, double vgap) {
         gridpane.setVgap(vgap);
         MockResizable spanning = new MockResizable(100, 100, 100, 100, 5000, 5000);
         MockResizable row0 = new MockResizable(0, 0, 100, 200, 5000, 5000);
@@ -3365,6 +3324,7 @@ public class GridPaneTest {
         gridpane.add(row1, 1, 1);
         setRenderScale(scale);
 
+        assertEquals(100, gridpane.minHeight(-1), 1e-10);
         gridpane.resize(200, 100);
         gridpane.layout();
 
@@ -3375,7 +3335,7 @@ public class GridPaneTest {
 
     @ParameterizedTest
     @MethodSource("scalesAndGaps")
-    public void testShrinkingColumnsToMinFitsWithHgap(double scale, double hgap) {
+    public void testCheckShrinkingColumnsAccountsHgap(double scale, double hgap) {
         gridpane.setHgap(hgap);
         MockResizable spanning = new MockResizable(100, 100, 100, 100, 5000, 5000);
         MockResizable col0 = new MockResizable(0, 0, 200, 100, 5000, 5000);
@@ -3385,6 +3345,7 @@ public class GridPaneTest {
         gridpane.add(col1, 1, 1);
         setRenderScale(scale);
 
+        assertEquals(100, gridpane.minWidth(-1), 1e-10);
         gridpane.resize(100, 200);
         gridpane.layout();
 
