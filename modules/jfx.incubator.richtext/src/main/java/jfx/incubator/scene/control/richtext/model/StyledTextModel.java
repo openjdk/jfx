@@ -450,9 +450,7 @@ public abstract class StyledTextModel {
      */
     public void fireChangeEvent(TextPos start, TextPos end, int charsTop, int linesAdded, int charsBottom) {
         ContentChange ch = ContentChange.ofEdit(start, end, charsTop, linesAdded, charsBottom);
-        for (Listener li : listeners) {
-            li.onContentChange(ch);
-        }
+        fireChangeEvent(ch);
         markers.update(start, end, charsTop, linesAdded, charsBottom);
     }
 
@@ -465,8 +463,16 @@ public abstract class StyledTextModel {
      */
     public void fireStyleChangeEvent(TextPos start, TextPos end) {
         ContentChange ch = ContentChange.ofStyleChange(start, end);
+        fireChangeEvent(ch);
+    }
+
+    private void fireChangeEvent(ContentChange ch) {
         for (Listener li : listeners) {
-            li.onContentChange(ch);
+            try {
+                li.onContentChange(ch);
+            } catch (Exception e) {
+                Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
+            }
         }
     }
 
@@ -609,7 +615,8 @@ public abstract class StyledTextModel {
 
     /**
      * Returns the {@link Marker} at the specified position.
-     * The actual text position tracked by the marker will always be within the document boundaries.
+     * The actual text position tracked by the marker will always be within the document boundaries,
+     * getting updated after the model listeners receive their {@code ContentChange} events.
      *
      * @param pos text position
      * @return Marker instance

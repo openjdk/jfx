@@ -753,10 +753,10 @@ public class RichTextModel extends StyledTextModel {
                         String s1 = seg.text().substring(0, ix);
                         String s2 = seg.text().substring(ix);
                         remove(i);
-                        if (insertSegment(i++, s1, newAttrs)) {
+                        if (insert(i++, s1, newAttrs)) {
                             i--;
                         }
-                        if (insertSegment(i, s2, a)) {
+                        if (insert(i, s2, a)) {
                             i--;
                         }
                     }
@@ -771,10 +771,10 @@ public class RichTextModel extends StyledTextModel {
                         String s1 = seg.text().substring(0, ix);
                         String s2 = seg.text().substring(ix);
                         remove(i);
-                        if (insertSegment(i++, s1, a)) {
+                        if (insert(i++, s1, a)) {
                             i--;
                         }
-                        if (insertSegment(i, s2, newAttrs)) {
+                        if (insert(i, s2, newAttrs)) {
                             i--;
                         }
                     }
@@ -793,13 +793,13 @@ public class RichTextModel extends StyledTextModel {
                         String s2 = text.substring(ix0, ix1);
                         String s3 = text.substring(ix1);
                         remove(i);
-                        if (insertSegment(i++, s1, a)) {
+                        if (insert(i++, s1, a)) {
                             i--;
                         }
-                        if (insertSegment(i++, s2, newAttrs)) {
+                        if (insert(i++, s2, newAttrs)) {
                             i--;
                         }
-                        if (insertSegment(i, s3, a)) {
+                        if (insert(i, s3, a)) {
                             i--;
                         }
                     }
@@ -810,6 +810,30 @@ public class RichTextModel extends StyledTextModel {
 
                 off += len;
             }
+        }
+
+        /**
+         * inserts a new segment with the specified, deduplicated attributes.
+         * if the new style is the same as the previous segment, merges text with the previous segment instead.
+         * @return true if the new segment has been merged with the previous segment
+         */
+        private boolean insert(int ix, String text, StyleAttributeMap a) {
+            // TODO deal with zero width segment
+            if (ix > 0) {
+                RSegment prev = get(ix - 1);
+                if (prev.attrs().equals(a)) {
+                    // merge
+                    prev.append(text);
+                    return true;
+                }
+            }
+            RSegment seg = new RSegment(text, a);
+            if (ix >= size()) {
+                add(seg);
+            } else {
+                add(ix, seg);
+            }
+            return false;
         }
 
         /**
@@ -855,7 +879,6 @@ public class RichTextModel extends StyledTextModel {
          *               9:  ----------------|
          */
         private static int whichCase(int off, int max, int start, int end) {
-            // TODO unit test!
             if (start >= max) {
                 if ((start == max) && (off == max)) {
                     // empty paragraph
