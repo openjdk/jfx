@@ -478,7 +478,7 @@ public class TestRichTextModel {
             case VERSION:
             case PARAGRAPH_ATTRIBUTES:
                 // ignore
-                break;                
+                break;
             case LINE_BREAK:
                 sb.append("-");
                 break;
