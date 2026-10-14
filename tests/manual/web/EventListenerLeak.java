@@ -33,11 +33,13 @@ import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.concurrent.Worker;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
@@ -247,17 +249,21 @@ public class EventListenerLeak extends Application {
         Scene scene = new Scene(root);
 
         VBox instructions = new VBox(
-                new Label(" This test is for EventListener memory leak manual testing "),
-                new Label("Issue: calling eventtarget.removeEventListener doesn't remove the Eventlistener"),
-                new Label(" "),
-                new Label(" STEPS:"),
-                new Label("  1. In one panel, remove the WebView."),
-                new Label("  2.  In the other panel, remove the listeners one at a time, making \n" +
-                        "\t sure that the removed link is not active, and the other links are. \n" +
-                        "\t The count should not change when the first of the three listeners \n" +
-                        "\tis removed (because that listener is still in use),\n" +
-                        "\t but then should decrease when the second and third are removed.\n"),
-                new Label("  3. The count of number of listeners should go to 0 after doing both of the above."));
+                new Label("""
+                         This test is for EventListener memory leak manual testing\s
+                        Issue: calling eventtarget.removeEventListener doesn't remove the Eventlistener
+                        \s
+                         STEPS:
+                          1. In one panel, Check the 'Active Listener Count' in the bottom of the window is 5
+                          2. Remove the WebView (WebView#1). Check 'Active Listener Count' again the count should be 3
+                          3.  In the other panel, remove the listeners one at a time, making\s
+                        \t sure that the removed link is not active by clicking on it, and the other links\s
+                        \t are working (the links are removed starting with 'Link: click me A' and going down).\s
+                        \t The 'Active Listener Count' should not change when the first of the three listeners\s
+                        \t is removed (because that listener is still in use) the count should still show 3,
+                        \t but then should decrease when the second and third are removed.
+                          4. The count of number of listeners should go to 0 after doing both of the above.\
+                        """));
 
 
         root.setTop(instructions);
@@ -276,10 +282,35 @@ public class EventListenerLeak extends Application {
         // Add status line
         Label activeListenerLabel = new Label();
         activeListenerLabel.textProperty().bind(activeListenerCount.asString("Active Listener Count: %d"));
-        root.setBottom(activeListenerLabel);
+
+        // Add pass fail buttons
+        HBox passFailButtons = createPassFailButtons();
+        passFailButtons.setMaxWidth(HBox.USE_PREF_SIZE);
+
+        StackPane statusButtonBox = new StackPane(activeListenerLabel, passFailButtons);
+        StackPane.setAlignment(activeListenerLabel, Pos.CENTER_LEFT);
+        StackPane.setAlignment(passFailButtons, Pos.CENTER);
+
+        root.setBottom(statusButtonBox);
 
         stage.setScene(scene);
         stage.show();
+    }
+
+    private HBox createPassFailButtons() {
+        var passButton = new Button("Pass");
+        passButton.setOnAction(e -> {
+            System.out.println("TEST PASSED");
+            Platform.exit();
+        });
+        var failButton = new Button("Fail");
+        failButton.setOnAction(e -> {
+            System.out.println("TEST FAILED");
+            Platform.exit();
+            throw new AssertionError("Test failed");
+        });
+        var hbox = new HBox(10, passButton, failButton);
+        return hbox;
     }
 
     public static void main(String[] args) {

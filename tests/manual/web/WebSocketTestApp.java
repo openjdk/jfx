@@ -53,11 +53,13 @@ public class WebSocketTestApp extends Application {
 
         Button passButton = new Button("Pass");
         passButton.setOnAction(e -> {
+            System.out.println("TEST PASSED");
             Platform.exit();
         });
 
         Button failButton = new Button("Fail");
         failButton.setOnAction(e -> {
+            System.out.println("TEST FAILED");
             Platform.exit();
             throw new AssertionError("!Unable to receive message data from server, something is wrong");
         });

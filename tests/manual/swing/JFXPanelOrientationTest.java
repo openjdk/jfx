@@ -59,8 +59,12 @@ public class JFXPanelOrientationTest extends Application {
     public void start(Stage stage) {
         Button passButton = new Button("Pass");
         Button failButton = new Button("Fail");
-        passButton.setOnAction(e -> this.quit());
+        passButton.setOnAction(e -> {
+            System.out.println("TEST PASSED");
+            this.quit();
+        });
         failButton.setOnAction(e -> {
+            System.out.println("TEST FAILED");
             this.quit();
             throw new AssertionError("Orientation change is not working");
         });
@@ -107,7 +111,7 @@ public class JFXPanelOrientationTest extends Application {
 
         frame.setContentPane(p);
         frame.setSize(400, 200);
-        frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+        frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
         frame.setTitle("FX TextArea embedded in JFXPanel");
         frame.setVisible(true);
     }
