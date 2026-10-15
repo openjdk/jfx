@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-This build requires javafx.home property, pointing to JavaFX SDK (23+) directory, e.g.:
+This build requires javafx.home property, pointing to JavaFX SDK directory, e.g.:
   ant -Djavafx.home=<DIR>
 unless built as a part of openjfx repository where the default value is sufficient.
 -->
@@ -39,7 +39,7 @@ unless built as a part of openjfx repository where the default value is sufficie
 			includeantruntime="false"
 		>
 			<compilerarg value="-Xlint:none"/>
-			<compilerarg line="--module-path ${javafx.home}/lib --add-modules javafx.base,javafx.graphics,javafx.controls,jfx.incubator.input,jfx.incubator.richtext"/>
+			<compilerarg line="--module-path ${javafx.home}/lib --add-modules javafx.base,javafx.graphics,javafx.controls,jfx.incubator.richtext"/>
 		</javac>
 	</target>
 
@@ -77,28 +77,28 @@ unless built as a part of openjfx repository where the default value is sufficie
 
 	<target name="run-codearea-demo">
 		<exec executable="java">
-			<arg line="--module-path '${javafx.home}/lib' --add-modules 'javafx.base,javafx.graphics,javafx.controls,jfx.incubator.input,jfx.incubator.richtext' -classpath 'dist/${TARGET}.jar' --enable-native-access=javafx.graphics com.oracle.demo.richtext.codearea.CodeAreaDemoApp" />
+			<arg line="--module-path '${javafx.home}/lib' --add-modules 'javafx.base,javafx.graphics,javafx.controls,jfx.incubator.richtext' -classpath 'dist/${TARGET}.jar' --enable-native-access=javafx.graphics com.oracle.demo.richtext.codearea.CodeAreaDemoApp" />
 		</exec>
 	</target>
 
 
 	<target name="run-notebook-demo">
 		<exec executable="java">
-			<arg line="--module-path '${javafx.home}/lib' --add-modules 'javafx.base,javafx.graphics,javafx.controls,jfx.incubator.input,jfx.incubator.richtext' -classpath 'dist/${TARGET}.jar' --enable-native-access=javafx.graphics com.oracle.demo.richtext.notebook.NotebookMockupApp" />
+			<arg line="--module-path '${javafx.home}/lib' --add-modules 'javafx.base,javafx.graphics,javafx.controls,jfx.incubator.richtext' -classpath 'dist/${TARGET}.jar' --enable-native-access=javafx.graphics com.oracle.demo.richtext.notebook.NotebookMockupApp" />
 		</exec>
 	</target>
 
 
 	<target name="run-richeditor-demo">
 		<exec executable="java">
-			<arg line="--module-path ${javafx.home}/lib --add-modules javafx.base,javafx.graphics,javafx.controls,jfx.incubator.input,jfx.incubator.richtext -classpath dist/${TARGET}.jar --enable-native-access=javafx.graphics com.oracle.demo.richtext.editor.RichEditorDemoApp" />
+			<arg line="--module-path ${javafx.home}/lib --add-modules javafx.base,javafx.graphics,javafx.controls,jfx.incubator.richtext -classpath dist/${TARGET}.jar --enable-native-access=javafx.graphics com.oracle.demo.richtext.editor.RichEditorDemoApp" />
 		</exec>
 	</target>
 
 
 	<target name="run-richtextarea-demo">
 		<exec executable="java">
-			<arg line="--module-path ${javafx.home}/lib --add-modules javafx.base,javafx.graphics,javafx.controls,jfx.incubator.input,jfx.incubator.richtext -classpath dist/${TARGET}.jar --enable-native-access=javafx.graphics com.oracle.demo.richtext.rta.RichTextAreaDemoApp" />
+			<arg line="--module-path ${javafx.home}/lib --add-modules javafx.base,javafx.graphics,javafx.controls,jfx.incubator.richtext -classpath dist/${TARGET}.jar --enable-native-access=javafx.graphics com.oracle.demo.richtext.rta.RichTextAreaDemoApp" />
 		</exec>
 	</target>
 

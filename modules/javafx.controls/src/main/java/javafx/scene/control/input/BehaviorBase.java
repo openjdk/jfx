@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.jfx.incubator.scene.control.input;
+package javafx.scene.control.input;
 
 import java.util.function.BooleanSupplier;
 import javafx.event.Event;
@@ -32,13 +32,9 @@ import javafx.scene.TraversalDirection;
 import javafx.scene.control.Control;
 import javafx.scene.input.KeyCode;
 import com.sun.javafx.PlatformUtil;
-import com.sun.jfx.incubator.scene.control.input.SkinInputMap.Stateful;
-import jfx.incubator.scene.control.input.FunctionTag;
-import jfx.incubator.scene.control.input.KeyBinding;
 
 /**
- * This class provides convenient foundation for custom Control developers intended to simplify writing
- * stateful behaviors.
+ * This class provides a convenient base class for implementing stateful behaviors for custom {@code Control}s.
  * <p>
  * A concrete behavior implementation should do the following:
  * <ol>
@@ -49,8 +45,8 @@ import jfx.incubator.scene.control.input.KeyBinding;
  *      {@link #registerKey(KeyBinding, FunctionTag)},
  *      {@link #registerKey(KeyCode, FunctionTag)},
  *      and
- *      {@code addHandler()} methods correspondingly.
- * <li> in the corresponding skin's {code Skin.install()}, set the skin input map to the control's input map.
+ *      {@code addHandler()} methods.
+ * <li> in the corresponding skin's {@code Skin.install()}, set the skin input map to the control's input map.
  * </ol>
  * Example (in the actual skin class):
  * <pre>{@code
@@ -62,6 +58,7 @@ import jfx.incubator.scene.control.input.KeyBinding;
  * }</pre>
  *
  * @param <C> the type of the control
+ * @since 999 TODO
  */
 public abstract class BehaviorBase<C extends Control> {
     private final C control;
@@ -105,7 +102,7 @@ public abstract class BehaviorBase<C extends Control> {
     }
 
     /**
-     * Maps a function to the specified function tag.
+     * Maps a function to the specified function tag in the skin input map.
      *
      * @param tag the function tag
      * @param function the function
@@ -115,7 +112,7 @@ public abstract class BehaviorBase<C extends Control> {
     }
 
     /**
-     * Maps a function to the specified function tag.
+     * Maps a function to the specified function tag in the skin input map.
      * <p>
      * The event which triggered execution of the function will be consumed if the function returns {@code true}.
      *
@@ -127,9 +124,8 @@ public abstract class BehaviorBase<C extends Control> {
     }
 
     /**
-     * Maps a key binding to the specified function tag.
-     * A null key binding will result in no change to this input map.
-     * This method will not override a user mapping.
+     * Maps a key binding to the specified function tag in the skin input map.
+     * This method will do nothing if the key binding is {@code null}.
      *
      * @param k the key binding
      * @param tag the function tag
@@ -139,7 +135,7 @@ public abstract class BehaviorBase<C extends Control> {
     }
 
     /**
-     * Maps a key binding to the specified function tag.
+     * Maps a key binding to the specified function tag in the skin input map.
      * This method will not override a user mapping added by {@link #registerKey(KeyBinding,FunctionTag)}.
      *
      * @param code the key code to construct a {@link KeyBinding}
@@ -150,9 +146,9 @@ public abstract class BehaviorBase<C extends Control> {
     }
 
     /**
-     * This convenience method maps the function tag to the specified function, and at the same time
-     * maps the specified key binding to that function tag.
-     * @param tag the function tag
+     * This convenience method maps the function tag to the specified function in the skin input map,
+     * and at the same time maps the specified key binding to that function tag.
+     * @param tag the function tag, cannot be null
      * @param k the key binding
      * @param func the function
      */
@@ -162,12 +158,12 @@ public abstract class BehaviorBase<C extends Control> {
     }
 
     /**
-     * This convenience method maps the function tag to the specified function, and at the same time
-     * maps the specified key binding to that function tag.
+     * This convenience method maps the function tag to the specified function in the skin input map,
+     * and at the same time maps the specified key binding to that function tag.
      * <p>
      * The event which triggered execution of the function will be consumed if the function returns {@code true}.
      *
-     * @param tag the function tag
+     * @param tag the function tag, cannot be null
      * @param k the key binding
      * @param func the function
      */
@@ -177,9 +173,9 @@ public abstract class BehaviorBase<C extends Control> {
     }
 
     /**
-     * This convenience method maps the function tag to the specified function, and at the same time
-     * maps the specified key binding to that function tag.
-     * @param tag the function tag
+     * This convenience method maps the function tag to the specified function in the skin input map,
+     * and at the same time maps the specified key binding to that function tag.
+     * @param tag the function tag, cannot be null
      * @param code the key code
      * @param func the function
      */
@@ -187,6 +183,7 @@ public abstract class BehaviorBase<C extends Control> {
         getSkinInputMap().registerFunction(tag, func);
         getSkinInputMap().registerKey(KeyBinding.of(code), tag);
     }
+    // do we need protected final void **register**(FunctionTag, KeyCode, BooleanSupplier) ?
 
     /**
      * This convenience method registers a copy of the behavior-specific mappings from one key binding to another.
@@ -199,7 +196,7 @@ public abstract class BehaviorBase<C extends Control> {
     }
 
     /**
-     * Adds an event handler for the specified event type, in the context of this Behavior.
+     * Adds an event handler for the specified event type in the skin input map.
      *
      * @param <T> the actual event type
      * @param type the event type
@@ -210,7 +207,7 @@ public abstract class BehaviorBase<C extends Control> {
     }
 
     /**
-     * Adds an event handler for the specific event criteria, in the context of this Behavior.
+     * Adds an event handler for the specific event criteria in the skin input map.
      * This is a more specific version of {@link #addHandler(EventType,EventHandler)} method.
      *
      * @param <T> the actual event type
@@ -246,62 +243,50 @@ public abstract class BehaviorBase<C extends Control> {
     }
 
     /**
-     * Called by any of the BehaviorBase traverse methods to actually effect a
-     * traversal of the focus. The default behavior of this method is to simply
-     * traverse on the given node, passing the given direction. A
-     * subclass may override this method.
-     *
-     * @param dir The direction to traverse
-     */
-    private void traverse(TraversalDirection dir) {
-        control.requestFocusTraversal(dir);
-    }
-
-    /**
-     * Calls the focus traversal engine and indicates that traversal should
-     * go the next focusTraversable Node above the current one.
+     * Calls {@link Control#requestFocusTraversal(TraversalDirection)}
+     * with direction {@link TraversalDirection#UP}.
      */
     public final void traverseUp() {
-        traverse(TraversalDirection.UP);
+        control.requestFocusTraversal(TraversalDirection.UP);
     }
 
     /**
-     * Calls the focus traversal engine and indicates that traversal should
-     * go the next focusTraversable Node below the current one.
+     * Calls {@link Control#requestFocusTraversal(TraversalDirection)}
+     * with direction {@link TraversalDirection#DOWN}.
      */
     public final void traverseDown() {
-        traverse(TraversalDirection.DOWN);
+        control.requestFocusTraversal(TraversalDirection.DOWN);
     }
 
     /**
-     * Calls the focus traversal engine and indicates that traversal should
-     * go the next focusTraversable Node left of the current one.
+     * Calls {@link Control#requestFocusTraversal(TraversalDirection)}
+     * with direction {@link TraversalDirection#LEFT}.
      */
     public final void traverseLeft() {
-        traverse(TraversalDirection.LEFT);
+        control.requestFocusTraversal(TraversalDirection.LEFT);
     }
 
     /**
-     * Calls the focus traversal engine and indicates that traversal should
-     * go the next focusTraversable Node right of the current one.
+     * Calls {@link Control#requestFocusTraversal(TraversalDirection)}
+     * with direction {@link TraversalDirection#RIGHT}.
      */
     public final void traverseRight() {
-        traverse(TraversalDirection.RIGHT);
+        control.requestFocusTraversal(TraversalDirection.RIGHT);
     }
 
     /**
-     * Calls the focus traversal engine and indicates that traversal should
-     * go the next focusTraversable Node in the focus traversal cycle.
+     * Calls {@link Control#requestFocusTraversal(TraversalDirection)}
+     * with direction {@link TraversalDirection#NEXT}.
      */
     public final void traverseNext() {
-        traverse(TraversalDirection.NEXT);
+        control.requestFocusTraversal(TraversalDirection.NEXT);
     }
 
     /**
-     * Calls the focus traversal engine and indicates that traversal should
-     * go the previous focusTraversable Node in the focus traversal cycle.
+     * Calls {@link Control#requestFocusTraversal(TraversalDirection)}
+     * with direction {@link TraversalDirection#PREVIOUS}.
      */
     public final void traversePrevious() {
-        traverse(TraversalDirection.PREVIOUS);
+        control.requestFocusTraversal(TraversalDirection.PREVIOUS);
     }
 }

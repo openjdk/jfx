@@ -120,7 +120,6 @@ import javafx.scene.control.skin.TreeTableViewSkin;
 import javafx.scene.control.skin.TreeViewSkin;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.control.behavior.ButtonBehavior;
-import com.sun.javafx.scene.control.behavior.ComboBoxListViewBehavior;
 import com.sun.javafx.scene.control.behavior.ToggleButtonBehavior;
 
 /**
@@ -231,22 +230,32 @@ public class ControlSkinFactory {
     static {
         specialBehaviorMap.put(Button.class, (Function<Control, BehaviorBase>) c -> new ButtonBehavior((ButtonBase) c));
         specialBehaviorMap.put(CheckBox.class, (Function<Control, BehaviorBase>) c -> new ButtonBehavior((ButtonBase) c));
-        specialBehaviorMap.put(ComboBox.class, (Function<Control, BehaviorBase>) c -> new ComboBoxListViewBehavior((ComboBox) c));
+        // TODO temporarily, while migration to new behavior is ongoing
+        //specialBehaviorMap.put(ComboBox.class, (Function<Control, BehaviorBase>) c -> new ComboBoxListViewBehavior());
         specialBehaviorMap.put(Hyperlink.class, (Function<Control, BehaviorBase>) c -> new ButtonBehavior((ButtonBase) c));
         specialBehaviorMap.put(RadioButton.class, (Function<Control, BehaviorBase>) c -> new ToggleButtonBehavior((ToggleButton) c));
         specialBehaviorMap.put(ToggleButton.class, (Function<Control, BehaviorBase>) c -> new ToggleButtonBehavior((ToggleButton) c));
     }
 
-    // list of control classes that have no behavior
+    /** list of control classes that have no behavior, or use BehaviorBase2 */
     static List<Class<? extends Control>> withoutBehaviors = List.of(
-            ButtonBar.class,
-            Label.class,
-            MenuBar.class,
-            ProgressBar.class,
-            ProgressIndicator.class,
-            Separator.class,
-            SplitPane.class
-            );
+        ButtonBar.class,
+        Label.class,
+        MenuBar.class,
+        ProgressBar.class,
+        ProgressIndicator.class,
+        Separator.class,
+        SplitPane.class,
+        // stateless behavior
+        TabPane.class,
+        // these use BehaviorBase2
+        ColorPicker.class,
+        ComboBox.class,
+        DatePicker.class,
+        PasswordField.class,
+        TextArea.class,
+        TextField.class
+    );
 
 //---------------- misc
 

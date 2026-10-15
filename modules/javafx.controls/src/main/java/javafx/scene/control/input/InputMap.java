@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package jfx.incubator.scene.control.input;
+package javafx.scene.control.input;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -33,15 +33,14 @@ import java.util.Set;
 import java.util.function.BooleanSupplier;
 import javafx.event.Event;
 import javafx.event.EventHandler;
+import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.scene.control.Control;
 import javafx.scene.input.KeyEvent;
-import com.sun.javafx.ModuleUtil;
-import com.sun.jfx.incubator.scene.control.input.EventHandlerPriority;
-import com.sun.jfx.incubator.scene.control.input.InputMapHelper;
-import com.sun.jfx.incubator.scene.control.input.KeyEventMapper;
-import com.sun.jfx.incubator.scene.control.input.PHList;
-import com.sun.jfx.incubator.scene.control.input.SkinInputMap;
+import com.sun.javafx.scene.control.input.EventHandlerPriority;
+import com.sun.javafx.scene.control.input.InputMapHelper;
+import com.sun.javafx.scene.control.input.KeyEventMapper;
+import com.sun.javafx.scene.control.input.PHList;
 
 /**
  * InputMap is a property of the {@link Control} class which enables customization
@@ -74,23 +73,22 @@ import com.sun.jfx.incubator.scene.control.input.SkinInputMap;
  * <p>
  * This mechanism allows for customizing the key mappings and the underlying functions independently and separately.
  *
- * @since 24
+ * @since 999 TODO
  */
 public final class InputMap {
     private static final Object NULL = new Object();
     private final Control control;
-    /**
-     * <pre> KeyBinding -> FunctionTag or Runnable
-     * FunctionTag -> Runnable
-     * EventType -> PHList</pre>
-     */
+    /// ```
+    /// KeyBinding -> FunctionTag or Runnable
+    /// FunctionTag -> Runnable
+    /// EventType -> PHList
+    /// ```
     private final HashMap<Object, Object> map = new HashMap<>();
     private SkinInputMap skinInputMap;
     private final KeyEventMapper kmapper = new KeyEventMapper();
     private final EventHandler<Event> eventHandler = this::handleEvent;
 
     static {
-        ModuleUtil.incubatorWarning();
         initAccessor();
     }
 
@@ -293,8 +291,8 @@ public final class InputMap {
     }
 
     /**
-     * Reverts all the key bindings set by user.
-     * This method restores key bindings set by the skin which were overwritten by the user.
+     * Reverts all the key bindings set by the application.
+     * This method restores key bindings set by the skin which were overwritten by the application.
      */
     public void resetKeyBindings() {
         Iterator<Map.Entry<Object, Object>> it = map.entrySet().iterator();
@@ -362,38 +360,8 @@ public final class InputMap {
         return bindings;
     }
 
-    /**
-     * Removes all the key bindings mapped to the specified function tag, either by the application or by the skin.
-     * This is an irreversible operation.
-     * @param tag the function tag
-     */
-    public void removeKeyBindingsFor(FunctionTag tag) {
-        if (skinInputMap != null) {
-            skinInputMap.unbind(tag);
-        }
-        Iterator<Map.Entry<Object, Object>> it = map.entrySet().iterator();
-        while (it.hasNext()) {
-            Map.Entry<Object, Object> en = it.next();
-            if (tag == en.getValue()) {
-                // the entry must be KeyBinding -> FunctionTag
-                if (en.getKey() instanceof KeyBinding) {
-                    it.remove();
-                }
-            }
-        }
-    }
-
-    /**
-     * Sets the skin input map, adding necessary event handlers to the control instance when required.
-     * This method must be called by the skin only from its
-     * {@link javafx.scene.control.Skin#install() Skin.install()}
-     * method.
-     * <p>
-     * This method removes all the mappings from the previous skin input map, if any.
-     * @param m the skin input map
-     */
-    // TODO change to public once SkinInputMap is public
-    // or add getSkinInputMap() to Skin.
+    /// Sets the skin input map, adding the necessary event handlers to the control.
+    /// This method removes all the mappings added by the previous skin input map, if any.
     private void setSkinInputMap(SkinInputMap m) {
         if (skinInputMap != null) {
             // uninstall all handlers with SKIN_* priority
@@ -413,6 +381,9 @@ public final class InputMap {
         skinInputMap = m;
 
         if (skinInputMap != null) {
+            // make skin input map immutable
+            skinInputMap.lock();
+
             // install skin handlers with their priority
             skinInputMap.forEach((type, pri, h) -> {
                 extendHandler(type, h, pri);
@@ -445,7 +416,7 @@ public final class InputMap {
                 inputMap.execute(source, tag);
             }
 
-            // TODO will be unnecessary once SkinInputMap is public
+            // TODO will be unnecessary after JDK-8314968
             @Override
             public void setSkinInputMap(InputMap inputMap, SkinInputMap sm) {
                 inputMap.setSkinInputMap(sm);

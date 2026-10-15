@@ -25,7 +25,10 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.scene.control.FormatterAccessor;
+import java.text.BreakIterator;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import javafx.beans.DefaultProperty;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -57,19 +60,15 @@ import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
 import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
+import javafx.scene.control.input.FunctionTag;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.text.Font;
-
-import java.text.BreakIterator;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
-import com.sun.javafx.util.Utils;
+import javafx.util.StringConverter;
 import com.sun.javafx.binding.ExpressionHelper;
 import com.sun.javafx.scene.NodeHelper;
-import javafx.util.StringConverter;
+import com.sun.javafx.scene.control.FormatterAccessor;
+import com.sun.javafx.util.Utils;
 
 /**
  * Abstract base class for text input controls.
@@ -77,6 +76,65 @@ import javafx.util.StringConverter;
  */
 @DefaultProperty("text")
 public abstract class TextInputControl extends Control {
+    /** Denotes the function that copies the content to the clipboard. */
+    public static final FunctionTag COPY = new FunctionTag();
+    /** Denotes the function that cuts the content to the clipboard. */
+    public static final FunctionTag CUT = new FunctionTag();
+    /** Denotes the function that deletes text from the line start. */
+    public static final FunctionTag DELETE_FROM_LINE_START = new FunctionTag();
+    /** Denotes the function that deletes the next character. */
+    public static final FunctionTag DELETE_NEXT_CHAR = new FunctionTag();
+    /** Denotes the function that deletes the next word. */
+    public static final FunctionTag DELETE_NEXT_WORD = new FunctionTag();
+    /** Denotes the function that deletes the previous character. */
+    public static final FunctionTag DELETE_PREVIOUS_CHAR = new FunctionTag();
+    /** Denotes the function that deletes the previous word. */
+    public static final FunctionTag DELETE_PREVIOUS_WORD = new FunctionTag();
+    /** Denotes the function that deselects. */
+    public static final FunctionTag DESELECT = new FunctionTag();
+    /** Denotes the function that moves the caret to the document start. */
+    public static final FunctionTag DOCUMENT_START = new FunctionTag();
+    /** Denotes the function that moves the caret to the document end. */
+    public static final FunctionTag DOCUMENT_END = new FunctionTag();
+    /** Denotes the function that moves the caret one symbol left. */
+    public static final FunctionTag LEFT = new FunctionTag();
+    /** Denotes the function that moves the caret one word left. */
+    public static final FunctionTag LEFT_WORD = new FunctionTag();
+    /** Denotes the function that pastes from the clipboard. */
+    public static final FunctionTag PASTE = new FunctionTag();
+    /** Denotes the function that redoes the last undo. */
+    public static final FunctionTag REDO = new FunctionTag();
+    /** Denotes the function that moves the caret one symbol right. */
+    public static final FunctionTag RIGHT = new FunctionTag();
+    /** Denotes the function that moves the caret one word right. */
+    public static final FunctionTag RIGHT_WORD = new FunctionTag();
+    /** Denotes the function that selects all. */
+    public static final FunctionTag SELECT_ALL = new FunctionTag();
+    /** Denotes the function that selects to after the last char of text. */
+    public static final FunctionTag SELECT_END = new FunctionTag();
+    /** Denotes the function that ?? TODO how is this different from SELECT_END?. */
+    public static final FunctionTag SELECT_END_EXTEND = new FunctionTag();
+    /** Denotes the function that moves the caret and extends selection to before the first char of text. */
+    public static final FunctionTag SELECT_HOME = new FunctionTag();
+    /** Denotes the function that moves the caret and extends selection to before the first char of text. */
+    // TODO how is this different from SELECT_HOME?
+    public static final FunctionTag SELECT_HOME_EXTEND = new FunctionTag();
+    /** Denotes the function that moves the caret and extends selection one character to the left. */
+    public static final FunctionTag SELECT_LEFT = new FunctionTag();
+    /** Denotes the function that moves the caret to the beginning or end of the word to the left. */
+    // TODO explain platform-specific behavior
+    public static final FunctionTag SELECT_LEFT_WORD = new FunctionTag();
+    /** Denotes the function that moves the caret and extends selection one character to the right. */
+    public static final FunctionTag SELECT_RIGHT = new FunctionTag();
+    /** Denotes the function that moves the caret to the beginning or end of the word to the right. */
+    public static final FunctionTag SELECT_RIGHT_WORD = new FunctionTag();
+    /** Denotes the function that moves the focus to the next focusTraversable Node. */
+    public static final FunctionTag TRAVERSE_NEXT = new FunctionTag();
+    /** Denotes the function that moves the focus to the previous focusTraversable Node. */
+    public static final FunctionTag TRAVERSE_PREVIOUS = new FunctionTag();
+    /** Denotes the function that undoes the last change. */
+    public static final FunctionTag UNDO = new FunctionTag();
+
     /**
      * Interface representing a text input's content. Since it is an ObservableStringValue,
      * you can also bind to, or observe the content.
