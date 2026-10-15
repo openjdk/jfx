@@ -10532,6 +10532,8 @@ public abstract sealed class Node
      * @since JavaFX 8u40
      */
     public final void notifyAccessibleAttributeChanged(AccessibleAttribute attributes) {
+        // Notify observers even when no assistive technology is attached.
+        Accessibility.notifyObservers(this, attributes);
         if (accessible == null) {
             Scene scene = getScene();
             if (scene != null) {
