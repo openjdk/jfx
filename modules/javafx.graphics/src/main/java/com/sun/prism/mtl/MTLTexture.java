@@ -122,6 +122,7 @@ class MTLTexture<T extends MTLTextureData> extends BaseTexture<MTLTextureResourc
                                 int srcx, int srcy,
                                 int srcw, int srch,
                                 int srcscan) {
+
         ByteBuffer buf = (ByteBuffer) buffer;
         buf.rewind();
         byte[] arr = buf.hasArray() ? buf.array() : null;
@@ -129,7 +130,7 @@ class MTLTexture<T extends MTLTextureData> extends BaseTexture<MTLTextureResourc
         switch (format) {
             case PixelFormat.BYTE_BGRA_PRE,
                  PixelFormat.BYTE_ALPHA ->
-                nUpdate(getNativeHandle(), buf, arr,
+                nUpdateByte(getNativeHandle(), buf, arr,
                         dstx, dsty, srcx, srcy, srcw, srch, srcscan);
 
             case PixelFormat.BYTE_RGB -> {
@@ -142,22 +143,22 @@ class MTLTexture<T extends MTLTextureData> extends BaseTexture<MTLTextureResourc
                 }
                 byte[] arr32Bit = new byte[srcw * srch * 4];
                 int dstIndex = 0;
-                int index = 0;
+                int srcIndex = 0;
+                byte alpha = (byte)255;
 
-                int rowStride = srcw * 3;
-                int totalBytes = srch * rowStride;
+                for (int y = 0; y < srch; y++) {
+                    srcIndex = (srcy + y) * srcscan + srcx * 3;
 
-                for (int rowIndex = 0; rowIndex < totalBytes; rowIndex += rowStride) {
-                    for (int colIndex = 0; colIndex < rowStride; colIndex += 3) {
-                        index = rowIndex + colIndex;
-                        arr32Bit[dstIndex++] = arr[index + 2];
-                        arr32Bit[dstIndex++] = arr[index + 1];
-                        arr32Bit[dstIndex++] = arr[index];
-                        arr32Bit[dstIndex++] = (byte)255;
+                    for (int x = 0; x < srcw; x++) {
+                        arr32Bit[dstIndex++] = arr[srcIndex + 2]; // B
+                        arr32Bit[dstIndex++] = arr[srcIndex + 1]; // G
+                        arr32Bit[dstIndex++] = arr[srcIndex];     // R
+                        arr32Bit[dstIndex++] = alpha;
+                        srcIndex += 3;
                     }
                 }
-                nUpdate(getNativeHandle(), null, arr32Bit,
-                        dstx, dsty, srcx, srcy, srcw, srch, srcw * 4);
+                nUpdateByte(getNativeHandle(), null, arr32Bit,
+                        dstx, dsty, 0, 0, srcw, srch, srcw * 4);
             }
 
             case PixelFormat.BYTE_GRAY -> {
@@ -173,20 +174,22 @@ class MTLTexture<T extends MTLTextureData> extends BaseTexture<MTLTextureResourc
                 }
                 byte[] arr32Bit = new byte[srcw * srch * 4];
                 int dstIndex = 0;
-                int index = 0;
-                int totalBytes = srch * srcw;
+                int srcIndex = 0;
+                byte alpha = (byte)255;
 
-                for (int rowIndex = 0; rowIndex < totalBytes; rowIndex += srcw) {
-                    for (int colIndex = 0; colIndex < srcw; colIndex++) {
-                        index = rowIndex + colIndex;
-                        arr32Bit[dstIndex++] = arr[index];
-                        arr32Bit[dstIndex++] = arr[index];
-                        arr32Bit[dstIndex++] = arr[index];
-                        arr32Bit[dstIndex++] = (byte) 255;
+                for (int y = 0; y < srch; y++) {
+                    srcIndex = (srcy + y) * srcscan + srcx;
+
+                    for (int x = 0; x < srcw; x++) {
+                        arr32Bit[dstIndex++] = arr[srcIndex];
+                        arr32Bit[dstIndex++] = arr[srcIndex];
+                        arr32Bit[dstIndex++] = arr[srcIndex];
+                        arr32Bit[dstIndex++] = alpha;
+                        srcIndex++;
                     }
                 }
-                nUpdate(getNativeHandle(), null, arr32Bit,
-                        dstx, dsty, srcx, srcy, srcw, srch, srcw * 4);
+                nUpdateByte(getNativeHandle(), null, arr32Bit,
+                        dstx, dsty, 0, 0, srcw, srch, srcw * 4);
             }
 
             case PixelFormat.MULTI_YCbCr_420,
@@ -205,6 +208,9 @@ class MTLTexture<T extends MTLTextureData> extends BaseTexture<MTLTextureResourc
         if (!resource.isValid()) {
             return;
         }
+
+        checkUpdateParams(buffer, format,
+            dstx, dsty, srcx, srcy, srcw, srch, srcscan);
 
         switch (format.getDataType()) {
             case PixelFormat.DataType.INT -> updateTextureInt(buffer, format,
@@ -251,7 +257,7 @@ class MTLTexture<T extends MTLTextureData> extends BaseTexture<MTLTextureResourc
 
     // Native methods
 
-    private static native void nUpdate(long pResource, ByteBuffer buf, byte[] pixels,
+    private static native void nUpdateByte(long pResource, ByteBuffer buf, byte[] pixels,
                                        int dstx, int dsty, int srcx, int srcy,
                                        int w, int h, int stride);
 

@@ -2459,7 +2459,10 @@ public class RichTextArea extends Control {
         });
 
         b.setSegHandler(StyleAttributeMap.FONT_FAMILY, (c, cx, v) -> {
-            cx.addStyle("-fx-font-family:'" + v + "';");
+            v = RichUtils.toCssFont(v);
+            if (v != null) {
+                cx.addStyle("-fx-font-family:'" + v + "';");
+            }
         });
 
         b.setSegHandler(StyleAttributeMap.FONT_SIZE, (c, cx, v) -> {
