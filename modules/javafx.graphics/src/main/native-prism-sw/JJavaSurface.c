@@ -32,7 +32,8 @@
 
 #define SURFACE_NATIVE_PTR 0
 #define SURFACE_DATA_INT 1
-#define SURFACE_LAST SURFACE_DATA_INT
+#define SURFACE_DATA_OFFSET 2
+#define SURFACE_LAST SURFACE_DATA_OFFSET
 
 static jfieldID fieldIds[SURFACE_LAST + 1];
 static jboolean fieldIdsInitialized = JNI_FALSE;
@@ -47,6 +48,7 @@ typedef struct _JavaSurface {
     AbstractSurface super;
     jfieldID javaArrayFieldID;
     jobject dataHandle;
+    jint* arrayData;  // original pointer from GetPrimitiveArrayCritical
 } JavaSurface;
 
 /*
@@ -67,7 +69,6 @@ Java_com_sun_pisces_JavaSurface_initialize
         if (surface != NULL) {
             surface->super.width = width;
             surface->super.height = height;
-            surface->super.offset = 0;
             surface->super.scanlineStride = width;
             surface->super.pixelStride = 1;
             surface->super.imageType = dataType;
@@ -101,6 +102,7 @@ initializeSurfaceFieldIds(JNIEnv* env, jobject objectHandle) {
     static const FieldDesc surfaceFieldDesc[] = {
                 { "nativePtr", "J" },
                 { "dataInt", "[I" },
+                { "dataOffset", "I" },
                 { NULL, NULL }
             };
 
@@ -124,39 +126,49 @@ initializeSurfaceFieldIds(JNIEnv* env, jobject objectHandle) {
 }
 
 static void
-surface_acquire(AbstractSurface* surface, JNIEnv* env, jobject surfaceHandle) {
-    jint width = 0;
-    jint height = 0;
-    jint dataArrayLength = 0;
+surface_acquire(AbstractSurface* abstractSurface, JNIEnv* env, jobject surfaceHandle) {
+    JavaSurface* surface = (JavaSurface*)abstractSurface;
 
-    ((JavaSurface *) surface)->dataHandle = (*env)->GetObjectField(env, surfaceHandle,
-                                ((JavaSurface *) surface)->javaArrayFieldID);
+    surface->dataHandle = (*env)->GetObjectField(env, surfaceHandle, surface->javaArrayFieldID);
 
-    dataArrayLength = (*env)->GetArrayLength(env, ((JavaSurface *) surface)->dataHandle);
+    jint dataArrayLength = (*env)->GetArrayLength(env, surface->dataHandle);
+    jint width = abstractSurface->super.width;
+    jint height = abstractSurface->super.height;
 
-    width = surface->super.width;
-    height = surface->super.height;
-    if (width < 0 || height < 0 || dataArrayLength / width < height) {
+    if (width < 0 || height < 0 || (jlong) width * height > dataArrayLength) {
         // Set data to NULL indicating invalid width and height
-        surface->super.data = NULL;
-        ((JavaSurface *) surface)->dataHandle = NULL;
+        abstractSurface->super.data = NULL;
+        surface->dataHandle = NULL;
         JNI_ThrowNew(env, "java/lang/IllegalArgumentException", "Out of range access of buffer");
         return;
     }
 
-    surface->super.data =
-        (void *)(*env)->GetPrimitiveArrayCritical(env, ((JavaSurface *) surface)->dataHandle, NULL);
-    if (surface->super.data == NULL) {
-        ((JavaSurface *) surface)->dataHandle = NULL;
+    /*
+     * The pixel data of this surface may start at a non-zero offset into the
+     * backing array (for example when the surface wraps a sliced IntBuffer).
+     */
+
+    jint dataOffset = (*env)->GetIntField(env, surfaceHandle, fieldIds[SURFACE_DATA_OFFSET]);
+    jint* arrayData = (jint*)(*env)->GetPrimitiveArrayCritical(env, surface->dataHandle, NULL);
+
+    if (arrayData == NULL) {
+        surface->dataHandle = NULL;
         setMemErrorFlag();
+        return;
     }
+
+    surface->arrayData = arrayData;  // keep original pointer for ReleasePrimitiveArrayCritical
+    abstractSurface->super.data = (void *)(arrayData + dataOffset);
 }
 
 static void
-surface_release(AbstractSurface* surface, JNIEnv* env, jobject surfaceHandle) {
-    if (surface->super.data == NULL) return;
-    (*env)->ReleasePrimitiveArrayCritical(env, ((JavaSurface *) surface)->dataHandle, surface->super.data, 0);
-    ((JavaSurface *) surface)->dataHandle = NULL;
+surface_release(AbstractSurface* abstractSurface, JNIEnv* env, jobject surfaceHandle) {
+    JavaSurface* surface = (JavaSurface*)abstractSurface;
+
+    if (surface->arrayData == NULL) return;
+    (*env)->ReleasePrimitiveArrayCritical(env, surface->dataHandle, surface->arrayData, 0);
+    surface->arrayData = NULL;
+    surface->dataHandle = NULL;
 }
 
 static void

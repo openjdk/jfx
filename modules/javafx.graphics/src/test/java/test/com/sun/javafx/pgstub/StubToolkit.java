@@ -35,11 +35,17 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Future;
+import java.util.function.Consumer;
+
+import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
 
 import com.sun.javafx.util.Utils;
 import javafx.application.ConditionalFeature;
 import javafx.geometry.Dimension2D;
+import javafx.scene.image.DrawingContext;
 import javafx.scene.image.Image;
+import javafx.scene.image.PixelBuffer;
 import javafx.scene.input.DataFormat;
 import javafx.scene.input.DragEvent;
 import javafx.scene.input.Dragboard;
@@ -67,6 +73,7 @@ import com.sun.glass.ui.GlassRobot;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.embed.HostInterface;
 import com.sun.javafx.geom.Path2D;
+import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.menu.MenuBase;
@@ -91,6 +98,7 @@ import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.tk.TKSystemMenu;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.prism.BasicStroke;
+import com.sun.prism.sw.SWDrawingContext;
 import com.sun.scenario.DelayedRunnable;
 import com.sun.scenario.animation.AbstractPrimaryTimer;
 import com.sun.scenario.effect.FilterContext;
@@ -111,6 +119,8 @@ public class StubToolkit extends Toolkit {
 
     private final StubImageLoaderFactory imageLoaderFactory =
             new StubImageLoaderFactory();
+
+    private final Map<Object, StubWritablePlatformImage> pixelBufferImages = new HashMap<>();
 
     private CursorSizeConverter cursorSizeConverter =
             CursorSizeConverter.NO_CURSOR_SUPPORT;
@@ -621,8 +631,53 @@ public class StubToolkit extends Toolkit {
 
     @Override
     public ImageLoader loadPlatformImage(Object platformImage) {
-        return imageLoaderFactory.createImageLoader(platformImage,
-                                                    0, 0, false, false);
+        if (platformImage instanceof PixelBuffer<?> pixelBuffer) {
+            return loadPixelBufferImage(pixelBuffer);
+        }
+
+        return imageLoaderFactory.createImageLoader(platformImage, 0, 0, false, false);
+    }
+
+    /*
+     * Creates a shared writable platform image for a PixelBuffer so that all
+     * WritableImages constructed from it read and write the same pixels.
+     */
+    private ImageLoader loadPixelBufferImage(PixelBuffer<?> pixelBuffer) {
+        StubWritablePlatformImage image = pixelBufferImages.get(pixelBuffer);
+
+        if (image == null) {
+            int w = pixelBuffer.getWidth();
+            int h = pixelBuffer.getHeight();
+
+            image = new StubWritablePlatformImage(w, h);
+
+            if (pixelBuffer.getBuffer() instanceof IntBuffer intBuffer) {
+                intBuffer.rewind();
+                intBuffer.get(image.getDataNoCopy(), 0, w * h);
+            }
+            else if (pixelBuffer.getBuffer() instanceof ByteBuffer byteBuffer) {
+                byteBuffer.rewind();
+
+                int[] data = image.getDataNoCopy();
+
+                for (int i = 0; i < w * h; i++) {
+                    int b = byteBuffer.get() & 0xff;
+                    int g = byteBuffer.get() & 0xff;
+                    int r = byteBuffer.get() & 0xff;
+                    int a = byteBuffer.get() & 0xff;
+
+                    data[i] = (a << 24) | (r << 16) | (g << 8) | b;
+                }
+            }
+            else {
+                throw new UnsupportedOperationException("unsupported pixel buffer: " + pixelBuffer.getBuffer());
+            }
+
+            imageLoaderFactory.registerImage(image, new StubPlatformImageInfo(w, h));
+            pixelBufferImages.put(pixelBuffer, image);
+        }
+
+        return imageLoaderFactory.createImageLoader(image, 0, 0, false, false);
     }
 
     @Override
@@ -630,6 +685,21 @@ public class StubToolkit extends Toolkit {
         PlatformImage image = new StubWritablePlatformImage(w, h);
         imageLoaderFactory.registerImage(image, new StubPlatformImageInfo(w, h));
         return image;
+    }
+
+    @Override
+    public DrawingContext createDrawingContext(PlatformImage image, Consumer<Rectangle> pixelsDirty) {
+        if (image instanceof StubWritablePlatformImage stubImage) {
+            com.sun.prism.Image prismImage = com.sun.prism.Image.fromIntArgbPreData(
+                IntBuffer.wrap(stubImage.getDataNoCopy()),
+                stubImage.getWidth(),
+                stubImage.getHeight()
+            );
+
+            return new SWDrawingContext(prismImage, pixelsDirty);
+        }
+
+        throw new UnsupportedOperationException("drawing context is not supported for: " + image.getClass().getName());
     }
 
     @Override

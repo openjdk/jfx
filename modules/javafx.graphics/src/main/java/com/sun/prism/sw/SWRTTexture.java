@@ -27,6 +27,8 @@ package com.sun.prism.sw;
 
 import com.sun.glass.ui.Screen;
 import com.sun.javafx.geom.Rectangle;
+import com.sun.pisces.AbstractSurface;
+import com.sun.pisces.DirectBufferSurface;
 import com.sun.pisces.JavaSurface;
 import com.sun.pisces.PiscesRenderer;
 import com.sun.pisces.RendererBase;
@@ -40,19 +42,39 @@ import java.nio.IntBuffer;
 
 class SWRTTexture extends SWArgbPreTexture implements RTTexture {
 
-    private PiscesRenderer pr;
-    private JavaSurface surface;
+    private final AbstractSurface surface;
     private final Rectangle dimensions = new Rectangle();
+    private final int dataOffset;
+
+    private PiscesRenderer pr;
     private boolean isOpaque;
 
     SWRTTexture(SWResourceFactory factory, int w, int h) {
-        super(factory, WrapMode.CLAMP_TO_ZERO, w, h);
-        this.allocate();
-        this.surface = new JavaSurface(getDataNoClone(), RendererBase.TYPE_INT_ARGB_PRE, w, h);
+        this(factory, w, h, (int[]) null, 0);
+    }
+
+    SWRTTexture(SWResourceFactory factory, int w, int h, int[] data, int dataOffset) {
+        super(factory, WrapMode.CLAMP_TO_ZERO, w, h, data);
+
+        this.allocate();  // allocates only if provided data was null
+        this.dataOffset = dataOffset;
+        this.surface = new JavaSurface(getDataNoClone(), RendererBase.TYPE_INT_ARGB_PRE, w, h, dataOffset);
         this.dimensions.setBounds(0, 0, w, h);
     }
 
-    JavaSurface getSurface() {
+    /*
+     * Constructs a texture using a direct (off-heap) IntBuffer.
+     */
+    SWRTTexture(SWResourceFactory factory, int w, int h, IntBuffer data) {
+        super(factory, WrapMode.CLAMP_TO_ZERO, w, h, null);
+
+        this.allocated = true;  // provided by the direct buffer, so no internal pixel array needs allocation
+        this.dataOffset = 0;
+        this.surface = new DirectBufferSurface(data, RendererBase.TYPE_INT_ARGB_PRE, w, h);
+        this.dimensions.setBounds(0, 0, w, h);
+    }
+
+    AbstractSurface getSurface() {
         return this.surface;
     }
 
@@ -81,24 +103,51 @@ class SWRTTexture extends SWArgbPreTexture implements RTTexture {
             System.out.println("+ SWRTT.readPixels: this: " + this);
         }
 
-        final int pixbuf[] = getDataNoClone();
+        int[] pixbuf = getDataNoClone();
         pixels.clear();
         // REMIND: This assumes that the caller wants BGRA PRE data...?
-        if (pixels instanceof IntBuffer) {
-            final IntBuffer iPixels = (IntBuffer)pixels;
-            for (int i = 0; i < contentHeight; i++) {
-                iPixels.put(pixbuf, i*physicalWidth, contentWidth);
+
+        if (pixels instanceof IntBuffer iPixels) {
+            if (pixbuf != null) {  // is it a heap buffer?
+                for (int i = 0; i < contentHeight; i++) {
+                    iPixels.put(pixbuf, dataOffset + i * physicalWidth, contentWidth);
+                }
+            } else {
+                IntBuffer src = directSource();  // duplicate to ensure position is undisturbed
+                int[] row = new int[contentWidth];
+
+                for (int i = 0; i < contentHeight; i++) {
+                    src.position(i * physicalWidth);
+                    src.get(row, 0, contentWidth);
+                    iPixels.put(row, 0, contentWidth);
+                }
             }
-        } else if (pixels instanceof ByteBuffer) {
-            final ByteBuffer bPixels = (ByteBuffer)pixels;
-            for (int i = 0; i < contentHeight; i++) {
-                for (int j = 0; j < contentWidth; j++) {
-                    final int argb = pixbuf[i*physicalWidth + j];
-                    final byte a = (byte) (argb >> 24);
-                    final byte r = (byte) (argb >> 16);
-                    final byte g = (byte) (argb >>  8);
-                    final byte b = (byte) (argb      );
-                    bPixels.put(b).put(g).put(r).put(a);
+        } else if (pixels instanceof ByteBuffer bPixels) {
+            if (pixbuf != null) {  // is it a heap buffer?
+                for (int i = 0; i < contentHeight; i++) {
+                    for (int j = 0; j < contentWidth; j++) {
+                        int argb = pixbuf[dataOffset + i * physicalWidth + j];
+                        byte a = (byte) (argb >> 24);
+                        byte r = (byte) (argb >> 16);
+                        byte g = (byte) (argb >> 8);
+                        byte b = (byte) argb;
+
+                        bPixels.put(b).put(g).put(r).put(a);
+                    }
+                }
+            } else {
+                IntBuffer src = directSource();  // duplicate to ensure position is undisturbed
+
+                for (int i = 0; i < contentHeight; i++) {
+                    for (int j = 0; j < contentWidth; j++) {
+                        int argb = src.get(i * physicalWidth + j);
+                        byte a = (byte) (argb >> 24);
+                        byte r = (byte) (argb >> 16);
+                        byte g = (byte) (argb >> 8);
+                        byte b = (byte) argb;
+
+                        bPixels.put(b).put(g).put(r).put(a);
+                    }
                 }
             }
         } else {
@@ -141,5 +190,13 @@ class SWRTTexture extends SWArgbPreTexture implements RTTexture {
     @Override
     public boolean isMSAA() {
         return false;
+    }
+
+    private IntBuffer directSource() {
+        if (surface instanceof DirectBufferSurface directSurface) {
+            return directSurface.getDataBuffer().duplicate();
+        }
+
+        throw new IllegalStateException("texture is not backed by a direct buffer: " + surface);
     }
 }
