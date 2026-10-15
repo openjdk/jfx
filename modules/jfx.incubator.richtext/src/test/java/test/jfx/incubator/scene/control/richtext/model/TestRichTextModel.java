@@ -515,6 +515,7 @@ public class TestRichTextModel {
             marker = m.getMarker(t(0, 1));
             m.replace(null, m.getDocumentEnd(), m.getDocumentEnd(), "23");
         } finally {
+            System.setErr(stderr);
             String s = new String(os.toByteArray(), StandardCharsets.UTF_8);
             assertTrue(s.contains(pattern));
         }
