@@ -48,6 +48,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import javafx.application.ColorScheme;
+import javafx.collections.ObservableList;
 import javafx.css.CssParser;
 import javafx.css.CssParserShim;
 import javafx.css.Declaration;
@@ -79,11 +80,12 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontSmoothingType;
 import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.sun.javafx.css.BinarySerializer;
 import com.sun.javafx.css.RuleHelper;
 import com.sun.javafx.css.SimpleSelector;
-import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.media.MediaFeaturesShim;
 import com.sun.javafx.css.media.TriState;
 import com.sun.javafx.css.media.expression.FunctionExpression;
@@ -96,6 +98,19 @@ public class StylesheetTest {
 
     public StylesheetTest() {
         testURL = getClass().getResource("HonorDeveloperSettingsTest_UA.css").toExternalForm();
+    }
+
+    private ObservableList<CssParser.ParseError> errors;
+
+    @BeforeEach
+    void setUp() {
+        errors = CssParser.errorsProperty();
+        errors.clear();
+    }
+
+    @AfterEach
+    void tearDown() {
+        errors.clear();
     }
 
     /**
@@ -734,9 +749,6 @@ public class StylesheetTest {
 
     @Test
     public void testLoadStylesheetFromDataURIFailsForUnsupportedMimeType() {
-        var errors = StyleManager.errorsProperty();
-        errors.clear();
-
         var rect = new Rectangle();
         var root = new StackPane(rect);
         rect.getStyleClass().add("rect");
@@ -750,9 +762,6 @@ public class StylesheetTest {
 
     @Test
     public void testLoadStylesheetFromDataURIFailsForUnsupportedCharset() {
-        var errors = StyleManager.errorsProperty();
-        errors.clear();
-
         var rect = new Rectangle();
         var root = new StackPane(rect);
         rect.getStyleClass().add("rect");
