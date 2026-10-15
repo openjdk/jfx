@@ -183,7 +183,7 @@ Java_com_sun_prism_d3d_D3DShader_setConstantsF
     RETURN_STATUS_IF_NULL(pd3dDevice, E_FAIL);
 
     // Safeguard for cases where the below constants are written over currently cached ones. This shouldn't happen under
-    // correct behavior. For example, Decora's 2D effects can take an erroneous path that overwrite these constants.  
+    // correct behavior. For example, Decora's 2D effects can take an erroneous path that overwrite these constants.
     pCtx->invalidateLightsConstants();
 
     HRESULT res = pd3dDevice->SetPixelShaderConstantF(reg, (const float *)buf, count);
