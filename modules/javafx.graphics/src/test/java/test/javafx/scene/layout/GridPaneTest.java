@@ -2528,6 +2528,22 @@ public class GridPaneTest {
     }
 
     @Test
+    public void testShrinkingBaselineAlignedRowsUsesWidths() {
+        MockBiased biased = new MockBiased(Orientation.HORIZONTAL, 100, 100);
+        MockResizable below = new MockResizable(0, 0, 50, 100, 5000, 5000);
+        GridPane.setValignment(biased, VPos.BASELINE);
+        gridpane.add(biased, 0, 0);
+        gridpane.add(below, 0, 1);
+
+        gridpane.resize(50, 250);
+        gridpane.layout();
+
+        assertEquals(200, biased.getHeight(), 1e-100);
+        assertEquals(200, below.getLayoutY(), 1e-100);
+        assertEquals(50, below.getHeight(), 1e-100);
+    }
+
+    @Test
     public void testShrinkingColumnsUsesHeights() {
         MockBiased biased = new MockBiased(Orientation.VERTICAL, 100, 100);
         MockResizable right = new MockResizable(0, 0, 100, 50, 5000, 5000);
