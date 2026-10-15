@@ -1846,11 +1846,11 @@ public class GridPane extends Pane {
         }
     }
 
-    private double adjustRowHeights(final CompositeSize heights, double height) {
+    private double adjustRowHeights(CompositeSize heights, double height) {
         return adjustRowHeights(heights, height, null);
     }
 
-    private double adjustRowHeights(final CompositeSize heights, double height, CompositeSize widths) {
+    private double adjustRowHeights(CompositeSize heights, double height, CompositeSize widths) {
         assert(height != -1);
         final double snapvgap = snapSpaceY(getVgap());
         final double top = snapSpaceY(getInsets().getTop());
@@ -2047,7 +2047,7 @@ public class GridPane extends Pane {
         final boolean wasPositive = available >= 0.0;
         boolean isPositive = wasPositive;
 
-        CompositeSize limitSize = shrinking? computeMinHeights(widths) :
+        CompositeSize limitSize = shrinking ? computeMinHeights(widths) :
                             computeMaxHeights();
         while (available != 0 && wasPositive == isPositive && adjusting.size() > 0) {
             if (!handleRemainder) {
@@ -2091,11 +2091,11 @@ public class GridPane extends Pane {
         return available; // might be negative in shrinking case
     }
 
-    private double adjustColumnWidths(final CompositeSize widths, double width) {
+    private double adjustColumnWidths(CompositeSize widths, double width) {
         return adjustColumnWidths(widths, width, null);
     }
 
-    private double adjustColumnWidths(final CompositeSize widths, double width, CompositeSize heights) {
+    private double adjustColumnWidths(CompositeSize widths, double width, CompositeSize heights) {
         assert(width != -1);
         final double snaphgap = snapSpaceX(getHgap());
         final double left = snapSpaceX(getInsets().getLeft());
@@ -2295,7 +2295,7 @@ public class GridPane extends Pane {
         final boolean wasPositive = available >= 0.0;
         boolean isPositive = wasPositive;
 
-        CompositeSize limitSize = shrinking? computeMinWidths(heights) :
+        CompositeSize limitSize = shrinking ? computeMinWidths(heights) :
                             computeMaxWidths();
         while (available != 0 && wasPositive == isPositive && adjusting.size() > 0) {
             if (!handleRemainder) {
