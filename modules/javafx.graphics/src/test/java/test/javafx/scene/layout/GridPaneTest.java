@@ -3353,4 +3353,40 @@ public class GridPaneTest {
         assertEquals(100, col1.getLayoutX() + col1.getWidth(), 1e-10);
         assertEquals(gridpane.snapSpaceX(hgap), col1.getLayoutX() - col0.getWidth(), 1e-10);
     }
+
+    @Test
+    public void testPercentageRowsMinPrefHeightAccountsVgap() {
+        gridpane.setVgap(10);
+        MockResizable child1 = new MockResizable(100, 100, 100, 100, 5000, 5000);
+        MockResizable child2 = new MockResizable(0, 0, 0, 0, 5000, 5000);
+        gridpane.add(child1, 0, 0);
+        gridpane.add(child2, 0, 1);
+
+        RowConstraints row0 = new RowConstraints();
+        RowConstraints row1 = new RowConstraints();
+        row0.setPercentHeight(50);
+        row1.setPercentHeight(50);
+        gridpane.getRowConstraints().addAll(row0, row1);
+
+        assertEquals(210, gridpane.minHeight(-1), 1e-10);
+        assertEquals(210, gridpane.prefHeight(-1), 1e-10);
+    }
+
+    @Test
+    public void testPercentageColumnsMinPrefWidthAccountsHgap() {
+        gridpane.setHgap(10);
+        MockResizable child1 = new MockResizable(100, 100, 100, 100, 5000, 5000);
+        MockResizable child2 = new MockResizable(0, 0, 0, 0, 5000, 5000);
+        gridpane.add(child1, 0, 0);
+        gridpane.add(child2, 1, 0);
+
+        ColumnConstraints column0 = new ColumnConstraints();
+        ColumnConstraints column1 = new ColumnConstraints();
+        column0.setPercentWidth(50);
+        column1.setPercentWidth(50);
+        gridpane.getColumnConstraints().addAll(column0, column1);
+
+        assertEquals(210, gridpane.minWidth(-1), 1e-10);
+        assertEquals(210, gridpane.prefWidth(-1), 1e-10);
+    }
 }
