@@ -25,12 +25,15 @@
 
 package test.javafx.scene.layout;
 
+import java.util.stream.Stream;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
+import javafx.scene.Group;
 import javafx.scene.ParentShim;
+import javafx.scene.Scene;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.GridPaneShim;
@@ -38,9 +41,13 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.RowConstraints;
 import javafx.scene.shape.Rectangle;
+import javafx.stage.Stage;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -3247,5 +3254,177 @@ public class GridPaneTest {
 
         assertEquals(100, fixedArea.getWidth());
         fixedArea.assertSize();
+    }
+
+    @Test
+    public void testPercentageGrowthReservesVgaps() {
+        gridpane.setVgap(10);
+        RowConstraints half1 = new RowConstraints();
+        half1.setPercentHeight(50);
+        RowConstraints half2 = new RowConstraints();
+        half2.setPercentHeight(50);
+        gridpane.getRowConstraints().addAll(half1, new RowConstraints(), half2);
+        MockResizable top = new MockResizable(10, 10);
+        MockResizable bottom = new MockResizable(10, 10);
+        gridpane.add(top, 0, 0);
+        gridpane.add(bottom, 0, 2);
+
+        gridpane.resize(100, 200);
+        gridpane.layout();
+
+        // row 1 is empty, so only one vgap is rendered and the percent rows must share the rest
+        assertEquals(95, top.getHeight(), 1e-100);
+        assertEquals(105, bottom.getLayoutY(), 1e-100);
+        assertEquals(95, bottom.getHeight(), 1e-100);
+    }
+
+    @Test
+    public void testPercentageGrowthReservesHgaps() {
+        gridpane.setHgap(10);
+        ColumnConstraints half1 = new ColumnConstraints();
+        half1.setPercentWidth(50);
+        ColumnConstraints half2 = new ColumnConstraints();
+        half2.setPercentWidth(50);
+        gridpane.getColumnConstraints().addAll(half1, new ColumnConstraints(), half2);
+        MockResizable left = new MockResizable(10, 10);
+        MockResizable right = new MockResizable(10, 10);
+        gridpane.add(left, 0, 0);
+        gridpane.add(right, 2, 0);
+
+        gridpane.resize(200, 100);
+        gridpane.layout();
+
+        assertEquals(95, left.getWidth(), 1e-100);
+        assertEquals(105, right.getLayoutX(), 1e-100);
+        assertEquals(95, right.getWidth(), 1e-100);
+    }
+
+    private void setRenderScale(double scale) {
+        Stage stage = new Stage();
+        stage.setScene(new Scene(new Group(gridpane)));
+        stage.setRenderScaleX(scale);
+        stage.setRenderScaleY(scale);
+    }
+
+    private static Stream<Arguments> scalesAndGaps() {
+        return Stream.of(1.0, 1.25, 1.5, 1.75, 2.0, 2.25)
+            .flatMap(scale -> Stream.of(0.0, 0.5, 1.0, 3.333, 5.0, 10.0)
+                .map(gap -> Arguments.of(scale, gap)));
+    }
+
+    @ParameterizedTest
+    @MethodSource("scalesAndGaps")
+    public void testCheckShrinkingRowsAccountsVgap(double scale, double vgap) {
+        gridpane.setVgap(vgap);
+        MockResizable spanning = new MockResizable(100, 100, 100, 100, 5000, 5000);
+        MockResizable row0 = new MockResizable(0, 0, 100, 200, 5000, 5000);
+        MockResizable row1 = new MockResizable(0, 0, 100, 200, 5000, 5000);
+        gridpane.add(spanning, 0, 0, 1, 2);
+        gridpane.add(row0, 1, 0);
+        gridpane.add(row1, 1, 1);
+        setRenderScale(scale);
+
+        assertEquals(100, gridpane.minHeight(-1), 1e-10);
+        gridpane.resize(200, 100);
+        gridpane.layout();
+
+        assertEquals(100, spanning.getHeight(), 1e-10);
+        assertEquals(100, row1.getLayoutY() + row1.getHeight(), 1e-10);
+        assertEquals(gridpane.snapSpaceY(vgap), row1.getLayoutY() - row0.getHeight(), 1e-10);
+    }
+
+    @ParameterizedTest
+    @MethodSource("scalesAndGaps")
+    public void testCheckShrinkingColumnsAccountsHgap(double scale, double hgap) {
+        gridpane.setHgap(hgap);
+        MockResizable spanning = new MockResizable(100, 100, 100, 100, 5000, 5000);
+        MockResizable col0 = new MockResizable(0, 0, 200, 100, 5000, 5000);
+        MockResizable col1 = new MockResizable(0, 0, 200, 100, 5000, 5000);
+        gridpane.add(spanning, 0, 0, 2, 1);
+        gridpane.add(col0, 0, 1);
+        gridpane.add(col1, 1, 1);
+        setRenderScale(scale);
+
+        assertEquals(100, gridpane.minWidth(-1), 1e-10);
+        gridpane.resize(100, 200);
+        gridpane.layout();
+
+        assertEquals(100, spanning.getWidth(), 1e-10);
+        assertEquals(100, col1.getLayoutX() + col1.getWidth(), 1e-10);
+        assertEquals(gridpane.snapSpaceX(hgap), col1.getLayoutX() - col0.getWidth(), 1e-10);
+    }
+
+    @Test
+    public void testPercentageRowsMinPrefHeightAccountsVgap() {
+        gridpane.setVgap(10);
+        MockResizable child1 = new MockResizable(100, 100, 100, 100, 5000, 5000);
+        MockResizable child2 = new MockResizable(0, 0, 0, 0, 5000, 5000);
+        gridpane.add(child1, 0, 0);
+        gridpane.add(child2, 0, 1);
+
+        RowConstraints row0 = new RowConstraints();
+        RowConstraints row1 = new RowConstraints();
+        row0.setPercentHeight(50);
+        row1.setPercentHeight(50);
+        gridpane.getRowConstraints().addAll(row0, row1);
+
+        assertEquals(210, gridpane.minHeight(-1), 1e-10);
+        assertEquals(210, gridpane.prefHeight(-1), 1e-10);
+    }
+
+    @Test
+    public void testPercentageColumnsMinPrefWidthAccountsHgap() {
+        gridpane.setHgap(10);
+        MockResizable child1 = new MockResizable(100, 100, 100, 100, 5000, 5000);
+        MockResizable child2 = new MockResizable(0, 0, 0, 0, 5000, 5000);
+        gridpane.add(child1, 0, 0);
+        gridpane.add(child2, 1, 0);
+
+        ColumnConstraints column0 = new ColumnConstraints();
+        ColumnConstraints column1 = new ColumnConstraints();
+        column0.setPercentWidth(50);
+        column1.setPercentWidth(50);
+        gridpane.getColumnConstraints().addAll(column0, column1);
+
+        assertEquals(210, gridpane.minWidth(-1), 1e-10);
+        assertEquals(210, gridpane.prefWidth(-1), 1e-10);
+    }
+
+    @Test
+    public void testShrinkingRowsWithoutSnapToPixelAccountsVgap() {
+        gridpane.setSnapToPixel(false);
+        gridpane.setVgap(0.5);
+
+        MockResizable child1 = new MockResizable(0, 0, 100, 100, 5000, 5000);
+        MockResizable child2 = new MockResizable(0, 0, 100, 100, 5000, 5000);
+        gridpane.add(child1, 0, 0);
+        gridpane.add(child2, 0, 1);
+
+        gridpane.resize(100, 100);
+        gridpane.layout();
+
+        assertEquals(49.75, child1.getHeight(), 1e-10);
+        assertEquals(49.75, child2.getHeight(), 1e-10);
+
+        assertEquals(50.25, child2.getLayoutY(), 1e-10);
+    }
+
+    @Test
+    public void testShrinkingColumnsWithoutSnapToPixelAccountsHgap() {
+        gridpane.setSnapToPixel(false);
+        gridpane.setHgap(0.5);
+
+        MockResizable child1 = new MockResizable(0, 0, 100, 100, 5000, 5000);
+        MockResizable child2 = new MockResizable(0, 0, 100, 100, 5000, 5000);
+        gridpane.add(child1, 0, 0);
+        gridpane.add(child2, 1, 0);
+
+        gridpane.resize(100, 100);
+        gridpane.layout();
+
+        assertEquals(49.75, child1.getWidth(), 1e-10);
+        assertEquals(49.75, child2.getWidth(), 1e-10);
+
+        assertEquals(50.25, child2.getLayoutX(), 1e-10);
     }
 }

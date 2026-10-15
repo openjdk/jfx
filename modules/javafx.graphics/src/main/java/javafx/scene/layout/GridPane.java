@@ -33,6 +33,7 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
+import com.sun.javafx.scene.layout.ScaledMath;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
@@ -1848,10 +1849,9 @@ public class GridPane extends Pane {
 
     private double adjustRowHeights(final CompositeSize heights, double height) {
         assert(height != -1);
-        final double snapvgap = snapSpaceY(getVgap());
         final double top = snapSpaceY(getInsets().getTop());
         final double bottom = snapSpaceY(getInsets().getBottom());
-        final double vgaps = snapvgap * (getNumberOfRows() - 1);
+        final double vgaps = heights.computeGaps(0, heights.getLength());
         final double contentHeight = height - top - bottom;
 
         // if there are percentage rows, give them their percentages first
@@ -2043,17 +2043,20 @@ public class GridPane extends Pane {
         final boolean wasPositive = available >= 0.0;
         boolean isPositive = wasPositive;
 
+        final double pixelSize = isSnapToPixel() ? 1 / getSnapScaleY(this) : 1;
         CompositeSize limitSize = shrinking? computeMinHeights(null) :
                             computeMaxHeights();
         while (available != 0 && wasPositive == isPositive && adjusting.size() > 0) {
             if (!handleRemainder) {
-                portion = available > 0 ? Math.floor(available / adjusting.size()) :
-                        Math.ceil(available / adjusting.size()); // negative in shrinking case
+                final double pixels = isSnapToPixel() ? Math.rint(available / pixelSize) : available;
+                portion = !isSnapToPixel() ? available / adjusting.size() :
+                        (available > 0 ? Math.floor(pixels / adjusting.size()) :
+                        Math.ceil(pixels / adjusting.size())) * pixelSize; // negative in shrinking case
             }
             if (portion != 0) {
                 for (Iterator<Integer> i = adjusting.iterator(); i.hasNext();) {
                     final int index = i.next();
-                    double limit = snapSpaceY(limitSize.getProportionalMinOrMaxSize(index, shrinking))
+                    double limit = snapSpaceY(limitSize.getProportionalMinOrMaxSize(index, shrinking, isSnapToPixel() ? pixelSize : 0))
                             - heights.getSize(index); // negative in shrinking case
                     if (shrinking && limit > 0
                             || !shrinking && limit < 0) { // Limit completely if current size
@@ -2061,8 +2064,8 @@ public class GridPane extends Pane {
                         limit = 0;
                     }
                     final double change = Math.abs(limit) <= Math.abs(portion)? limit : portion;
-                    heights.addSize(index, change);
-                    available -= change;
+                    heights.setSize(index, isSnapToPixel() ? ScaledMath.rint(heights.getSize(index) + change, getSnapScaleY(this)) : heights.getSize(index) + change);
+                    available = isSnapToPixel() ? Math.rint((available - change) / pixelSize) * pixelSize : available - change;
                     isPositive = available >= 0.0;
                     if (Math.abs(change) < Math.abs(portion)) {
                         i.remove();
@@ -2073,12 +2076,12 @@ public class GridPane extends Pane {
                 }
              } else {
                 // Handle the remainder
-                portion = (int)(available) % adjusting.size();
+                portion = (int)(isSnapToPixel() ? Math.rint(available / pixelSize) : available) % adjusting.size();
                 if (portion == 0) {
                     break;
                 } else {
                     // We have a remainder evenly distribute it.
-                    portion = shrinking ? -1 : 1;
+                    portion = shrinking ? -pixelSize : pixelSize;
                     handleRemainder = true;
                 }
             }
@@ -2089,10 +2092,9 @@ public class GridPane extends Pane {
 
     private double adjustColumnWidths(final CompositeSize widths, double width) {
         assert(width != -1);
-        final double snaphgap = snapSpaceX(getHgap());
         final double left = snapSpaceX(getInsets().getLeft());
         final double right = snapSpaceX(getInsets().getRight());
-        final double hgaps = snaphgap * (getNumberOfColumns() - 1);
+        final double hgaps = widths.computeGaps(0, widths.getLength());
         final double contentWidth = width - left - right;
 
         // if there are percentage rows, give them their percentages first
@@ -2287,17 +2289,20 @@ public class GridPane extends Pane {
         final boolean wasPositive = available >= 0.0;
         boolean isPositive = wasPositive;
 
+        final double pixelSize = isSnapToPixel() ? 1 / getSnapScaleX(this) : 1;
         CompositeSize limitSize = shrinking? computeMinWidths(null) :
                             computeMaxWidths();
         while (available != 0 && wasPositive == isPositive && adjusting.size() > 0) {
             if (!handleRemainder) {
-                portion = available > 0 ? Math.floor(available / adjusting.size()) :
-                        Math.ceil(available / adjusting.size()); // negative in shrinking case
+                final double pixels = isSnapToPixel() ? Math.rint(available / pixelSize) : available;
+                portion = !isSnapToPixel() ? available / adjusting.size() :
+                        (available > 0 ? Math.floor(pixels / adjusting.size()) :
+                        Math.ceil(pixels / adjusting.size())) * pixelSize; // negative in shrinking case
             }
             if (portion != 0) {
                 for (Iterator<Integer> i = adjusting.iterator(); i.hasNext();) {
                     final int index = i.next();
-                    double limit = snapSpaceX(limitSize.getProportionalMinOrMaxSize(index, shrinking))
+                    double limit = snapSpaceX(limitSize.getProportionalMinOrMaxSize(index, shrinking, isSnapToPixel() ? pixelSize : 0))
                             - widths.getSize(index); // negative in shrinking case
                     if (shrinking && limit > 0
                             || !shrinking && limit < 0) { // Limit completely if current size
@@ -2305,8 +2310,8 @@ public class GridPane extends Pane {
                         limit = 0;
                     }
                     final double change = Math.abs(limit) <= Math.abs(portion)? limit : portion;
-                    widths.addSize(index, change);
-                    available -= change;
+                    widths.setSize(index, isSnapToPixel() ? ScaledMath.rint(widths.getSize(index) + change, getSnapScaleX(this)) : widths.getSize(index) + change);
+                    available = isSnapToPixel() ? Math.rint((available - change) / pixelSize) * pixelSize : available - change;
                     isPositive = available >= 0.0;
                     if (Math.abs(change) < Math.abs(portion)) {
                         i.remove();
@@ -2317,12 +2322,12 @@ public class GridPane extends Pane {
                 }
             } else {
                 // Handle the remainder
-                portion = (int)(available) % adjusting.size();
+                portion = (int)(isSnapToPixel() ? Math.rint(available / pixelSize) : available) % adjusting.size();
                 if (portion == 0) {
                     break;
                 } else {
                     // We have a remainder evenly distribute it.
-                    portion = shrinking ? -1 : 1;
+                    portion = shrinking ? -pixelSize : pixelSize;
                     handleRemainder = true;
                 }
             }
@@ -2648,15 +2653,16 @@ public class GridPane extends Pane {
             }
         }
 
-        private double getProportionalMinOrMaxSize(int position, boolean min) {
+        private double getProportionalMinOrMaxSize(int position, boolean min, double pixelSize) {
             double result = singleSizes[position];
             if (!isPreset(position) && multiSizes != null) {
                 for (Interval i : multiSizes.keySet()) {
                     if (i.contains(position)) {
-                        double segment = multiSizes.get(i) / i.size();
-                        double propSize = segment;
+                        double total = multiSizes.get(i) - computeGaps(i.begin, i.end);
+                        double propSize = segment(total, i, position, pixelSize);
                         for (int j = i.begin; j < i.end; ++j) {
                             if (j != position) {
+                                double segment = segment(total, i, j, pixelSize);
                                 if (min ? singleSizes[j] > segment : singleSizes[j] < segment) {
                                     propSize += segment - singleSizes[j];
                                 }
@@ -2667,6 +2673,18 @@ public class GridPane extends Pane {
                 }
             }
             return result;
+        }
+
+        // For a total length in logical pixels, compute the length of a position in span i for a set device pixel-size. Leftover pixels go to the first elements.
+        // But no element gets more than 1 leftover.
+        private static double segment(double total, Interval i, int position, double pixelSize) {
+            if (pixelSize == 0) {
+                return total / i.size();
+            }
+            double pixels = Math.rint(total / pixelSize);
+            double base = Math.floor(pixels / i.size());
+            double remainder = pixels - base * i.size();
+            return (base + (position - i.begin < remainder ? 1 : 0)) * pixelSize;
         }
 
         private double computeTotal(final int from, final int to) {
@@ -2686,6 +2704,14 @@ public class GridPane extends Pane {
 
         private double computeTotal() {
             return computeTotal(0, singleSizes.length);
+        }
+
+        private double computeGaps(final int from, final int to) {
+            double total = 0;
+            for (int i = from + 1; i < to; ++i) {
+                total += gapBefore[i] ? gap : 0;
+            }
+            return total;
         }
 
         private boolean allPreset(int begin, int end) {
@@ -2715,6 +2741,7 @@ public class GridPane extends Pane {
             }
             if (totalFixedPercent > 0) {
                 double totalNotFixed = 0;
+                final double gaps = computeGaps(0, singleSizes.length);
                 // First, remove the sizes that are fixed to be 0
                 for (int i = 0; i < fixedPercent.length; ++i) {
                     if (fixedPercent[i] == 0) {
@@ -2724,14 +2751,14 @@ public class GridPane extends Pane {
                 for (int i = 0; i < fixedPercent.length; ++i) {
                     if (fixedPercent[i] > 0) {
                         // Grow the total so that every size at it's value corresponds at least to it's fixedPercent of the total
-                        // i.e. total * fixedPercent[i] >= singleSizes[i]
-                        total = Math.max(total, singleSizes[i] * (100 / fixedPercent[i]));
+                        // i.e. (total - gaps) * fixedPercent[i] >= singleSizes[i]
+                        total = Math.max(total, gaps + singleSizes[i] * (100 / fixedPercent[i]));
                     } else if (fixedPercent[i] < 0){
                         totalNotFixed += singleSizes[i];
                     }
                 }
                 if (totalFixedPercent < 100) {
-                    total = Math.max(total, totalNotFixed * 100 / (100 - totalFixedPercent));
+                    total = Math.max(total, gaps + totalNotFixed * 100 / (100 - totalFixedPercent));
                 }
             }
             return total;
