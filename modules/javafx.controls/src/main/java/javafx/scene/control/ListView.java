@@ -1182,14 +1182,24 @@ public class ListView<T> extends Control {
      * @since JavaFX 2.0
      */
     public static class EditEvent<T> extends Event {
-        @SuppressWarnings("doclint:missing")
-        private final T newValue;
-        @SuppressWarnings("doclint:missing")
-        private final int editIndex;
-        @SuppressWarnings("doclint:missing")
-        private final ListView<T> source;
-
         private static final long serialVersionUID = 20130724L;
+
+        /**
+         * The {@link ListView} this event is sent to.
+         */
+        private final ListView<T> source;
+        /**
+         * The old value.
+         */
+        private final T oldValue;
+        /**
+         * The new value. This is NOT the value to necessary go back into the tree item.
+         */
+        private final T newValue;
+        /**
+         * The editing index.
+         */
+        private int editIndex;
 
         /**
          * Common supertype for all edit event types.
@@ -1203,17 +1213,42 @@ public class ListView<T> extends Control {
          * {@link #editCommitEvent()} and {@link #editCancelEvent()} types.
          * @param source the source
          * @param eventType the event type
+         * @param oldValue the old valuece = source;
+            oldValue
          * @param newValue the new value
          * @param editIndex the edit index
          */
+        public EditEvent(ListView<T> source,
+                         EventType<? extends ListView.EditEvent<T>> eventType,
+                         T oldValue,
+                         T newValue,
+                         int editIndex) {
+            super(source, Event.NULL_SOURCE_TARGET, eventType);
+            this.source = source;
+            this.oldValue = oldValue;
+            this.newValue = newValue;
+            this.editIndex = editIndex;
+        }
+
+        /**
+         * Creates a new EditEvent instance to represent an edit event. This
+         * event is used for {@link #editStartEvent()},
+         * {@link #editCommitEvent()} and {@link #editCancelEvent()} types.
+         * @param source the source
+         * @param eventType the event type
+         * @param newValue the new value
+         * @param editIndex the edit index
+         */
+        @Deprecated(forRemoval = true)
         public EditEvent(ListView<T> source,
                          EventType<? extends ListView.EditEvent<T>> eventType,
                          T newValue,
                          int editIndex) {
             super(source, Event.NULL_SOURCE_TARGET, eventType);
             this.source = source;
-            this.editIndex = editIndex;
+            oldValue = null;
             this.newValue = newValue;
+            this.editIndex = editIndex;
         }
 
         /**
@@ -1240,11 +1275,11 @@ public class ListView<T> extends Control {
         }
 
         /**
-         * Returns a string representation of this {@code EditEvent} object.
-         * @return a string representation of this {@code EditEvent} object.
+         * Returns the old value that existed prior to the current edit event.
+         * @return the old value that existed prior to the current edit event
          */
-        @Override public String toString() {
-            return "ListViewEditEvent [ newValue: " + getNewValue() + ", ListView: " + getSource() + " ]";
+        public T getOldValue() {
+            return oldValue;
         }
     }
 
