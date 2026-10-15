@@ -64,9 +64,6 @@ public final class Marker implements Comparable<Marker> {
 
     /**
      * This property tracks the marker's position within the model (value is never null).
-     * <p>
-     * The value of this property gets updated after the model listeners receive their
-     * {@code ContentChange} events.
      * @return the text position property
      */
     public final ReadOnlyObjectProperty<TextPos> textPosProperty() {
