@@ -257,7 +257,7 @@ public:
      * See MeshView::render.
      */
     HRESULT updateLightsConstants(D3DLight (&lights)[MAX_NUM_LIGHTS], float (&ambient)[3]);
-    
+
     /* Accessor for the light's valid state for call sites that might write over these constants */
     void invalidateLightsConstants() {
         lightsConstantsValid = false;
