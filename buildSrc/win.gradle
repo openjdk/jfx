@@ -186,8 +186,15 @@ ext.FXC = cygpath("$winSdkBinDir/fxc.exe")
 // Use fxc from host system if it is not possible to run it from target system
 ext.FXC = !isExecutable(FXC) ? cygpath("$hostWinSdkBinDir/fxc.exe") : FXC
 
+// D3D12 requires shaders compiled via dxc
+// Polling path is the same as for fxc (they both come with Windows DX SDK)
+ext.DXC = cygpath("$winSdkBinDir/dxc.exe");
+// Use dxc from host system if it is not possible to run it from target system
+ext.DXC = !isExecutable(DXC) ? cygpath("$hostWinSdkBinDir/dxc.exe") : DXC
+
 if (!file(RC).exists()) throw new GradleException("FAIL: cannot find RC: " + RC)
 if (!file(FXC).exists()) throw new GradleException("FAIL: cannot find FXC: " + FXC)
+if (!file(DXC).exists()) throw new GradleException("FAIL: cannot find DXC: " + DXC)
 
 def msvcRedstDir
 if (hasProperty('toolchainDir')) {
@@ -379,6 +386,25 @@ WIN.prismD3D.lib = "prism_d3d"
 WIN.prismD3D.rcCompiler = rcCompiler;
 WIN.prismD3D.rcSource = defaultRcSource
 WIN.prismD3D.rcFlags = ["/d", "JFX_FNAME=prism_d3d.dll", "/d", "JFX_INTERNAL_NAME=prismD3D", rcFlags].flatten();
+
+def D3D12Libs = ["d3d12.lib", "dxgi.lib", "dxguid.lib", "uuid.lib"];
+WIN.prismD3D12 = [:]
+WIN.prismD3D12.javahInclude = ["com/sun/prism/d3d12/**/*"]
+WIN.prismD3D12.nativeSource = [
+    file("${project("graphics").projectDir}/src/main/native-prism-d3d12"),
+    file("${project("graphics").projectDir}/src/main/native-prism-d3d12/internal"),
+    file("${project("graphics").projectDir}/src/main/native-prism-d3d12/render-thread"),
+    file("${project("graphics").projectDir}/src/main/native-prism-d3d12/shaders"),
+    file("${project("graphics").projectDir}/src/main/native-prism-d3d12/hlsl6"),
+]
+WIN.prismD3D12.compiler = compiler
+WIN.prismD3D12.ccFlags = [ccFlags, "/std:c++20", "/I${project("graphics").projectDir}/build/gensrc/d3d12-headers"].flatten()
+WIN.prismD3D12.linker = linker
+WIN.prismD3D12.linkFlags = [linkFlags, D3D12Libs].flatten();
+WIN.prismD3D12.lib = "prism_d3d12"
+WIN.prismD3D12.rcCompiler = rcCompiler;
+WIN.prismD3D12.rcSource = defaultRcSource
+WIN.prismD3D12.rcFlags = ["/d", "JFX_FNAME=prism_d3d12.dll", "/d", "JFX_INTERNAL_NAME=prismD3D12", rcFlags].flatten();
 
 WIN.iio = [:]
 WIN.iio.javahInclude = ["com/sun/javafx/iio/**/*"]
