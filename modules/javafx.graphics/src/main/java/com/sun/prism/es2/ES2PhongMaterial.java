@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package com.sun.prism.es2;
 
+import com.sun.glass.ui.GlassPlatform;
 import com.sun.javafx.PlatformUtil;
 import com.sun.prism.Image;
 import com.sun.prism.PhongMaterial;
@@ -100,7 +101,7 @@ class ES2PhongMaterial extends BasePhongMaterial {
                 }
             }
             // Enable mipmap if platform isn't embedded and map is diffuse or self illum
-            boolean useMipmap = (!PlatformUtil.isEmbedded()) && (i == PhongMaterial.DIFFUSE || i == PhongMaterial.SELF_ILLUM);
+            boolean useMipmap = (!GlassPlatform.isEmbedded()) && (i == PhongMaterial.DIFFUSE || i == PhongMaterial.SELF_ILLUM);
             texture = setupTexture(maps[i], useMipmap);
             maps[i].setTexture(texture);
             maps[i].setDirty(false);

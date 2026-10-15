@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package com.sun.scenario.effect.impl.state;
 
+import com.sun.glass.ui.GlassPlatform;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.scenario.effect.Color4f;
@@ -68,7 +69,7 @@ public abstract class LinearConvolveRenderState implements RenderState {
          * Set the maximum linear convolve kernel size used in LinearConvolveRenderState.
          * The default value is set to 64 if platform is an embedded system and 128 otherwise.
          */
-        final int defSize = PlatformUtil.isEmbedded() ? 64 : MAX_COMPILED_KERNEL_SIZE;
+        final int defSize = GlassPlatform.isEmbedded() ? 64 : MAX_COMPILED_KERNEL_SIZE;
         int size = Integer.getInteger("decora.maxLinearConvolveKernelSize", defSize);
         if (size > MAX_COMPILED_KERNEL_SIZE) {
             System.out.println("Clamping maxLinearConvolveKernelSize to "

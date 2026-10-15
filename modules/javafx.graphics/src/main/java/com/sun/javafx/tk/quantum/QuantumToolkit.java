@@ -25,6 +25,7 @@
 
 package com.sun.javafx.tk.quantum;
 
+import com.sun.glass.ui.GlassPlatform;
 import javafx.application.ConditionalFeature;
 import javafx.geometry.Dimension2D;
 import javafx.scene.image.Image;
@@ -159,14 +160,12 @@ public final class QuantumToolkit extends Toolkit {
     private static Integer pulseHZ = Integer.getInteger("javafx.animation.pulse");
 
     static final boolean liveResize = ((Supplier<Boolean>) () -> {
-        boolean isSWT = "swt".equals(System.getProperty("glass.platform"));
-        String result = (PlatformUtil.isMac() || PlatformUtil.isWindows()) && !isSWT ? "true" : "false";
+        String result = (PlatformUtil.isMac() || PlatformUtil.isWindows()) && !GlassPlatform.isSWT() ? "true" : "false";
         return "true".equals(System.getProperty("javafx.live.resize", result));
     }).get();
 
     static final boolean drawInPaint = ((Supplier<Boolean>) () -> {
-        boolean isSWT = "swt".equals(System.getProperty("glass.platform"));
-        String result = PlatformUtil.isMac() && isSWT ? "true" : "false";
+        String result = PlatformUtil.isMac() && GlassPlatform.isSWT() ? "true" : "false";
         return "true".equals(System.getProperty("javafx.draw.in.paint", result));
     }).get();
 

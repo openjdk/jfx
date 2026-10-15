@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package com.sun.prism.es2;
 
+import com.sun.glass.ui.GlassPlatform;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.utils.NativeLibLoader;
 import com.sun.prism.GraphicsPipeline;
@@ -48,8 +49,7 @@ public class ES2Pipeline extends GraphicsPipeline {
     static {
         String libName = "prism_es2";
 
-        String eglType = PlatformUtil.getEmbeddedType();
-        if ("monocle".equals(eglType)) {
+        if (GlassPlatform.isMonocle()) {
             isEglfb = true;
             libName = "prism_es2_monocle";
         }

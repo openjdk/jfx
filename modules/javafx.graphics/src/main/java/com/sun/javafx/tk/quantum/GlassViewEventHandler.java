@@ -34,6 +34,7 @@ import com.sun.glass.events.SwipeGesture;
 import com.sun.glass.ui.Accessible;
 import com.sun.glass.ui.Clipboard;
 import com.sun.glass.ui.ClipboardAssistance;
+import com.sun.glass.ui.GlassPlatform;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
@@ -84,7 +85,7 @@ class GlassViewEventHandler extends View.EventHandler {
         dndHandler = new GlassSceneDnDEventHandler(scene);
 
         gestures = new GestureRecognizers();
-        if (PlatformUtil.isWindows() || PlatformUtil.isIOS() || PlatformUtil.isEmbedded()) {
+        if (PlatformUtil.isWindows() || PlatformUtil.isIOS() || GlassPlatform.isEmbedded()) {
             gestures.add(new SwipeGestureRecognizer(scene));
         }
         if (zoomGestureEnabled) {
