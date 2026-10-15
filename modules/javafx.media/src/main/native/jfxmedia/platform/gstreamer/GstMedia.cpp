@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,7 +41,9 @@
 
 using namespace std;
 
+#define HLS_PROP_GET_HLS_MODE         2
 #define HLS_PROP_HAS_AUDIO_EXT_STREAM 6
+#define HLS_PROP_GET_IS_READY         7
 
 //*************************************************************************************************
 //********** com.sun.media.jfxmediaimpl.Media JNI support functions
@@ -111,8 +113,16 @@ extern "C" {
         }
 
         // Load any additional streams if needed.
+        // Make sure HLS is ready first
+        bool hlsMode = (callbacks->Property(HLS_PROP_GET_HLS_MODE, 0) == 1);
+        if (hlsMode && callbacks->Property(HLS_PROP_GET_IS_READY, 0) != 1) {
+            delete callbacks;
+            delete locator;
+            return ERROR_MEDIA_INVALID;
+        }
+
         // HLS_PROP_HAS_AUDIO_EXT_STREAM
-        int hasAudioStream = callbacks->Property(HLS_PROP_HAS_AUDIO_EXT_STREAM, 0);
+        bool hasAudioStream = (callbacks->Property(HLS_PROP_HAS_AUDIO_EXT_STREAM, 0) == 1);
         if (hasAudioStream)
         {
             CJavaInputStreamCallbacks *audioStreamCallbacks =
@@ -132,6 +142,13 @@ extern "C" {
                 delete audioStreamCallbacks;
                 delete locator;
                 return ERROR_MEDIA_CREATION;
+            }
+
+            if (audioStreamCallbacks->Property(HLS_PROP_GET_IS_READY, 0) != 1) {
+                delete callbacks;
+                delete audioStreamCallbacks;
+                delete locator;
+                return ERROR_MEDIA_INVALID;
             }
 
             locator->SetAudioCallbacks(audioStreamCallbacks);
