@@ -39,7 +39,7 @@ public class TestLogging {
 
             // This is the value that is used in the application
             // other test might set it to true
-            Logging.setKeepException(false);
+            Logging.setKeepLastLogRecord(false);
 
             Logging.getLogger().warning("test", e);
 
