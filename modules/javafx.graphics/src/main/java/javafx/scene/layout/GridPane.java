@@ -2049,7 +2049,8 @@ public class GridPane extends Pane {
         while (available != 0 && wasPositive == isPositive && adjusting.size() > 0) {
             if (!handleRemainder) {
                 final double pixels = isSnapToPixel() ? Math.rint(available / pixelSize) : available;
-                portion = (available > 0 ? Math.floor(pixels / adjusting.size()) :
+                portion = !isSnapToPixel() ? available / adjusting.size() :
+                        (available > 0 ? Math.floor(pixels / adjusting.size()) :
                         Math.ceil(pixels / adjusting.size())) * pixelSize; // negative in shrinking case
             }
             if (portion != 0) {
@@ -2294,7 +2295,8 @@ public class GridPane extends Pane {
         while (available != 0 && wasPositive == isPositive && adjusting.size() > 0) {
             if (!handleRemainder) {
                 final double pixels = isSnapToPixel() ? Math.rint(available / pixelSize) : available;
-                portion = (available > 0 ? Math.floor(pixels / adjusting.size()) :
+                portion = !isSnapToPixel() ? available / adjusting.size() :
+                        (available > 0 ? Math.floor(pixels / adjusting.size()) :
                         Math.ceil(pixels / adjusting.size())) * pixelSize; // negative in shrinking case
             }
             if (portion != 0) {

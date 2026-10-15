@@ -3389,4 +3389,42 @@ public class GridPaneTest {
         assertEquals(210, gridpane.minWidth(-1), 1e-10);
         assertEquals(210, gridpane.prefWidth(-1), 1e-10);
     }
+
+    @Test
+    public void testShrinkingRowsWithoutSnapToPixelAccountsVgap() {
+        gridpane.setSnapToPixel(false);
+        gridpane.setVgap(0.5);
+
+        MockResizable child1 = new MockResizable(0, 0, 100, 100, 5000, 5000);
+        MockResizable child2 = new MockResizable(0, 0, 100, 100, 5000, 5000);
+        gridpane.add(child1, 0, 0);
+        gridpane.add(child2, 0, 1);
+
+        gridpane.resize(100, 100);
+        gridpane.layout();
+
+        assertEquals(49.75, child1.getHeight(), 1e-10);
+        assertEquals(49.75, child2.getHeight(), 1e-10);
+
+        assertEquals(50.25, child2.getLayoutY(), 1e-10);
+    }
+
+    @Test
+    public void testShrinkingColumnsWithoutSnapToPixelAccountsHgap() {
+        gridpane.setSnapToPixel(false);
+        gridpane.setHgap(0.5);
+
+        MockResizable child1 = new MockResizable(0, 0, 100, 100, 5000, 5000);
+        MockResizable child2 = new MockResizable(0, 0, 100, 100, 5000, 5000);
+        gridpane.add(child1, 0, 0);
+        gridpane.add(child2, 1, 0);
+
+        gridpane.resize(100, 100);
+        gridpane.layout();
+
+        assertEquals(49.75, child1.getWidth(), 1e-10);
+        assertEquals(49.75, child2.getWidth(), 1e-10);
+
+        assertEquals(50.25, child2.getLayoutX(), 1e-10);
+    }
 }
