@@ -1884,8 +1884,9 @@ public class GridPane extends Pane {
             if (heightAvailable != 0) {
                 // maybe grow or shrink row heights
                 double remaining = growToMultiSpanPreferredHeights(heights, heightAvailable);
-                remaining = growOrShrinkRowHeights(heights, Priority.ALWAYS, remaining, widths);
-                remaining = growOrShrinkRowHeights(heights, Priority.SOMETIMES, remaining, widths);
+                CompositeSize limitSize = remaining < 0 ? computeMinHeights(widths) : computeMaxHeights();
+                remaining = growOrShrinkRowHeights(heights, Priority.ALWAYS, remaining, limitSize);
+                remaining = growOrShrinkRowHeights(heights, Priority.SOMETIMES, remaining, limitSize);
                 rowTotal += (heightAvailable - remaining);
             }
         }
@@ -2027,7 +2028,7 @@ public class GridPane extends Pane {
         return remaining;
     }
 
-    private double growOrShrinkRowHeights(CompositeSize heights, Priority priority, double extraHeight, CompositeSize widths) {
+    private double growOrShrinkRowHeights(CompositeSize heights, Priority priority, double extraHeight, CompositeSize limitSize) {
         final boolean shrinking = extraHeight < 0;
         List<Integer> adjusting = new ArrayList<>();
 
@@ -2047,8 +2048,6 @@ public class GridPane extends Pane {
         final boolean wasPositive = available >= 0.0;
         boolean isPositive = wasPositive;
 
-        CompositeSize limitSize = shrinking ? computeMinHeights(widths) :
-                            computeMaxHeights();
         while (available != 0 && wasPositive == isPositive && adjusting.size() > 0) {
             if (!handleRemainder) {
                 portion = available > 0 ? Math.floor(available / adjusting.size()) :
@@ -2130,8 +2129,9 @@ public class GridPane extends Pane {
             if (widthAvailable != 0) {
                 // maybe grow or shrink row heights
                 double remaining = growToMultiSpanPreferredWidths(widths, widthAvailable);
-                remaining = growOrShrinkColumnWidths(widths, Priority.ALWAYS, remaining, heights);
-                remaining = growOrShrinkColumnWidths(widths, Priority.SOMETIMES, remaining, heights);
+                CompositeSize limitSize = remaining < 0 ? computeMinWidths(heights) : computeMaxWidths();
+                remaining = growOrShrinkColumnWidths(widths, Priority.ALWAYS, remaining, limitSize);
+                remaining = growOrShrinkColumnWidths(widths, Priority.SOMETIMES, remaining, limitSize);
                 columnTotal += (widthAvailable - remaining);
             }
         }
@@ -2272,7 +2272,7 @@ public class GridPane extends Pane {
         return remaining;
     }
 
-    private double growOrShrinkColumnWidths(CompositeSize widths, Priority priority, double extraWidth, CompositeSize heights) {
+    private double growOrShrinkColumnWidths(CompositeSize widths, Priority priority, double extraWidth, CompositeSize limitSize) {
         if (extraWidth == 0) {
             return 0;
         }
@@ -2295,8 +2295,6 @@ public class GridPane extends Pane {
         final boolean wasPositive = available >= 0.0;
         boolean isPositive = wasPositive;
 
-        CompositeSize limitSize = shrinking ? computeMinWidths(heights) :
-                            computeMaxWidths();
         while (available != 0 && wasPositive == isPositive && adjusting.size() > 0) {
             if (!handleRemainder) {
                 portion = available > 0 ? Math.floor(available / adjusting.size()) :
