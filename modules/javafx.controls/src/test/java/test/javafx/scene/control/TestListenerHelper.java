@@ -401,7 +401,7 @@ public class TestListenerHelper {
                 fail();
             };
             IDisconnectable d = h.addEventHandler(item, MouseEvent.ANY, li);
-            WeakReference<Object> ref = new WeakReference(d);
+            WeakReference<Object> ref = new WeakReference<>(d);
             d.disconnect();
 
             // verify that the handler has been disconnected
@@ -448,7 +448,7 @@ public class TestListenerHelper {
                 fail();
             };
             IDisconnectable d = h.addEventFilter(item, MouseEvent.ANY, li);
-            WeakReference<Object> ref = new WeakReference(d);
+            WeakReference<Object> ref = new WeakReference<>(d);
             d.disconnect();
 
             // verify that the handler has been disconnected
