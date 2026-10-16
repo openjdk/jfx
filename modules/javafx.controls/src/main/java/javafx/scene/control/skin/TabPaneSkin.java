@@ -1968,10 +1968,10 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                 showControlButtons = true;
             } else {
                 setVisible(false);
-                if (popup != null) {
-                    clearPopupMenu();
-                    popup = null;
-                }
+//                if (popup != null) {
+//                    clearPopupMenu();
+//                    popup = null;
+//                }
             }
 
             // This needs to be called when we are in the left tabPosition
@@ -1983,6 +1983,10 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         private void setupPopupMenu() {
             if (popup == null) {
                 popup = new ContextMenu();
+                popup.setOnHidden((_) -> {
+                    clearPopupMenu();
+                    popup = null;
+                });
             }
             clearPopupMenu();
             ToggleGroup group = new ToggleGroup();
