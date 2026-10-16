@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 package test.javafx.scene.control;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 import java.lang.ref.WeakReference;
 import java.util.concurrent.atomic.AtomicInteger;
 import javafx.beans.property.SimpleStringProperty;
@@ -36,6 +37,7 @@ import javafx.collections.ObservableMap;
 import javafx.collections.ObservableSet;
 import javafx.collections.SetChangeListener;
 import javafx.concurrent.Task;
+import javafx.event.EventHandler;
 import javafx.event.EventTarget;
 import javafx.scene.Group;
 import javafx.scene.Scene;
@@ -48,6 +50,7 @@ import javafx.scene.transform.Scale;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.Test;
 import com.sun.javafx.event.EventUtil;
+import com.sun.javafx.scene.control.IDisconnectable;
 import com.sun.javafx.scene.control.ListenerHelper;
 import test.com.sun.javafx.scene.control.infrastructure.MouseEventGenerator;
 import test.util.memory.JMemoryBuddy;
@@ -389,6 +392,29 @@ public class TestListenerHelper {
         }
     }
 
+    @Test
+    public void disconnectEventHandler() {
+        EventTarget[] items = eventHandlerTargets();
+        for (EventTarget item : items) {
+            ListenerHelper h = new ListenerHelper();
+            EventHandler<MouseEvent> li = (ev) -> {
+                fail();
+            };
+            IDisconnectable d = h.addEventHandler(item, MouseEvent.ANY, li);
+            WeakReference<Object> ref = new WeakReference(d);
+            d.disconnect();
+
+            // verify that the handler has been disconnected
+            MouseEvent ev = MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_CLICKED, 0, 0);
+            EventUtil.fireEvent(ev, item);
+
+            // verify that the handler gets collected
+            li = null;
+            d = null;
+            JMemoryBuddy.assertCollectable(ref);
+        }
+    }
+
     // event filters
 
     @Test
@@ -410,6 +436,29 @@ public class TestListenerHelper {
 
             EventUtil.fireEvent(ev, item);
             assertEquals(1, ct.get());
+        }
+    }
+
+    @Test
+    public void disconnectEventFilter() {
+        EventTarget[] items = eventHandlerTargets();
+        for (EventTarget item : items) {
+            ListenerHelper h = new ListenerHelper();
+            EventHandler<MouseEvent> li = (ev) -> {
+                fail();
+            };
+            IDisconnectable d = h.addEventFilter(item, MouseEvent.ANY, li);
+            WeakReference<Object> ref = new WeakReference(d);
+            d.disconnect();
+
+            // verify that the handler has been disconnected
+            MouseEvent ev = MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_CLICKED, 0, 0);
+            EventUtil.fireEvent(ev, item);
+
+            // verify that the handler gets collected
+            li = null;
+            d = null;
+            JMemoryBuddy.assertCollectable(ref);
         }
     }
 
