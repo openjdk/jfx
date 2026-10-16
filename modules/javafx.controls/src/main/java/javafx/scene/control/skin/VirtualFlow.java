@@ -1099,6 +1099,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             releaseCell(accumCell);
 
             resetIndex(cells);
+            resetIndex(pile);
 
             addAllToPile();
             releaseAllPrivateCells();
