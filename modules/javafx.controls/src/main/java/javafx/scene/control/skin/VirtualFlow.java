@@ -2852,6 +2852,9 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             T cell = pile.get(i);
             wasFocusOwner = wasFocusOwner || doesCellContainFocus(cell);
             cell.setVisible(false);
+            if (cell.getIndex() != -1) {
+                cell.updateIndex(-1);
+            }
         }
 
         // Remove all cells that are in the pile and therefore not relevant anymore.
