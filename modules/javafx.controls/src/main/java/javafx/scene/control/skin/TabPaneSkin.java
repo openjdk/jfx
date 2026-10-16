@@ -1968,10 +1968,6 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                 showControlButtons = true;
             } else {
                 setVisible(false);
-//                if (popup != null) {
-//                    clearPopupMenu();
-//                    popup = null;
-//                }
             }
 
             // This needs to be called when we are in the left tabPosition
