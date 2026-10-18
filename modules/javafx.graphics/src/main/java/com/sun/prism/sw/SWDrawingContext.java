@@ -62,6 +62,7 @@ import java.util.function.Consumer;
 
 import javafx.geometry.VPos;
 import javafx.scene.effect.BlendMode;
+import javafx.scene.effect.Effect;
 import javafx.scene.image.DrawingContext;
 import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
@@ -99,6 +100,7 @@ import javafx.scene.transform.Affine;
  * <ul>
  *     <li>Only SRC_OVER blend mode is supported; others will throw an exception.
  *     <li>Arbitrary path clipping is not supported, only {@link #clipRect(double, double, double, double)}.
+ *     <li>Effects are not supported; {@link #setEffect(javafx.scene.effect.Effect) setEffect} will throw an exception.
  * </ul>
  * <p>
  * This class is intended for use in contexts where direct drawing into a Prism image is needed, such as the
@@ -306,6 +308,18 @@ public class SWDrawingContext implements DrawingContext {
 
             graphics.setCompositeMode(cm);
         }
+    }
+
+    @Override
+    public void setEffect(Effect e) {
+        if (e != null) {
+            throw new UnsupportedOperationException("effects are not supported");
+        }
+    }
+
+    @Override
+    public Effect getEffect() {
+        return null;
     }
 
     @Override

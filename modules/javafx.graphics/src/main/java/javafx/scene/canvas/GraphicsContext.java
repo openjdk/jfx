@@ -1891,15 +1891,7 @@ public final class GraphicsContext implements DrawingContext {
         return writer;
     }
 
-    /**
-     * Sets the effect to be applied after the next draw call, or null to
-     * disable effects.
-     * The current effect is a <a href="#comm-attr">common attribute</a>
-     * used for nearly all rendering operations as specified in the
-     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
-     *
-     * @param e the effect to use, or null to disable effects
-     */
+    @Override
     public void setEffect(Effect e) {
         GrowableDataBuffer buf = getBuffer();
         buf.putByte(NGCanvas.EFFECT);
@@ -1927,6 +1919,16 @@ public final class GraphicsContext implements DrawingContext {
      *         or null if there is no current effect
      */
     public Effect getEffect(Effect e) {
+        return getEffect();
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @since 28
+     */
+    @Override
+    public Effect getEffect() {
         return curState.effect == null ? null : EffectHelper.copy(curState.effect);
     }
 

@@ -30,6 +30,7 @@ import test.javafx.scene.NodeTest;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.effect.BlendMode;
+import javafx.scene.effect.DropShadow;
 import test.javafx.scene.image.ImageForTesting;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.ArcType;
@@ -550,6 +551,19 @@ public class CanvasTest {
     @Test
     public void testGCapplyEffect_Null() {
         gc.applyEffect(null);
+    }
+
+    @Test
+    public void testGCGetEffect() {
+        assertNull(gc.getEffect());
+
+        gc.setEffect(new DropShadow());
+
+        assertNotNull(gc.getEffect());
+
+        gc.setEffect(null);
+
+        assertNull(gc.getEffect());
     }
 
     @Test

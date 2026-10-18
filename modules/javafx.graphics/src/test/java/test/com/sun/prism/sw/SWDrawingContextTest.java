@@ -41,6 +41,7 @@ import java.util.List;
 
 import javafx.geometry.VPos;
 import javafx.scene.effect.BlendMode;
+import javafx.scene.effect.DropShadow;
 import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.CycleMethod;
@@ -316,6 +317,17 @@ public class SWDrawingContextTest {
         assertThrows(UnsupportedOperationException.class, () -> h.context.setGlobalBlendMode(BlendMode.MULTIPLY));
 
         assertEquals(BlendMode.SRC_OVER, h.context.getGlobalBlendMode());
+    }
+
+    @Test
+    public void shouldNotSupportEffects() {
+        assertNull(h.context.getEffect());
+
+        h.context.setEffect(null);  // null disables effects and is accepted
+
+        assertThrows(UnsupportedOperationException.class, () -> h.context.setEffect(new DropShadow()));
+
+        assertNull(h.context.getEffect());
     }
 
     @Test

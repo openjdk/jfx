@@ -29,6 +29,7 @@ import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.effect.BlendMode;
+import javafx.scene.effect.Effect;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.ArcType;
@@ -93,6 +94,14 @@ import javafx.scene.transform.Affine;
  *         <td class="colLast">
  *             A 3x2 2D affine transformation matrix that controls how coordinates are
  *             mapped onto the logical pixels of the drawing surface.
+ *         </td>
+ *     </tr>
+ *     <tr class="rowColor">
+ *         <th scope="row" class="colLast" style="width:15%">{@link #setEffect(javafx.scene.effect.Effect) Effect}</th>
+ *         <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
+ *         <td class="colLast" style="width:10%; text-align:center">{@code null}</td>
+ *         <td class="colLast">
+ *             An {@link Effect} applied to the output of each rendering operation.
  *         </td>
  *     </tr>
  *     <tr><th colspan="3" scope="row"><a id="fill-attr">Fill Attributes</a></th></tr>
@@ -319,7 +328,7 @@ import javafx.scene.transform.Affine;
  *     </tr>
  *     <tr>
  *         <th scope="row" colspan="7">
- *             <a id="base-fn-1">[1]</a> Only the Transform and Clip apply to clearRect()<br>
+ *             <a id="base-fn-1">[1]</a> Only the Transform, Clip, and Effect apply to clearRect()<br>
  *             <a id="base-fn-2">[2]</a> Only the Fill Rule applies to fillPolygon()
  *         </th>
  *     </tr>
@@ -903,6 +912,32 @@ public interface DrawingContext {
     void transform(Affine xform);
 
     /**
+     * Sets the effect to be applied after the next draw call, or null to
+     * disable effects.
+     * The current effect is a <a href="#comm-attr">common attribute</a>
+     * used for nearly all rendering operations as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
+     *
+     * @param e the effect to use, or null to disable effects
+     * @throws UnsupportedOperationException if this implementation does not
+     *         support effects
+     */
+    void setEffect(Effect e);
+
+    /**
+     * Gets a copy of the effect to be applied after the next draw call.
+     * A null return value means that no effect will be applied after subsequent
+     * rendering calls.
+     * The current effect is a <a href="#comm-attr">common attribute</a>
+     * used for nearly all rendering operations as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
+     *
+     * @return the current effect used for all rendering calls,
+     *         or null if there is no current effect
+     */
+    Effect getEffect();
+
+    /**
      * Intersects the current clip with the specified rectangle and applies it to
      * subsequent rendering operations as a clipping mask.
      * The current clip is a <a href="#comm-attr">common attribute</a>
@@ -932,6 +967,7 @@ public interface DrawingContext {
      *     <li>Global Alpha</li>
      *     <li>Global Blend Operation</li>
      *     <li>Transform</li>
+     *     <li>Effect</li>
      *     <li>Fill Paint</li>
      *     <li>Stroke Paint</li>
      *     <li>Line Width</li>
@@ -960,6 +996,7 @@ public interface DrawingContext {
      *     <li>Global Alpha</li>
      *     <li>Global Blend Operation</li>
      *     <li>Transform</li>
+     *     <li>Effect</li>
      *     <li>Fill Paint</li>
      *     <li>Stroke Paint</li>
      *     <li>Line Width</li>
@@ -1014,7 +1051,7 @@ public interface DrawingContext {
     /**
      * Clears a portion of the drawing surface with a transparent color value.
      * <p>
-     * This method is not affected by any of the rendering attributes.
+     * This method is affected only by the current transform, clip, and effect.
      *
      * @param x X position of the upper left corner of the rectangle.
      * @param y Y position of the upper left corner of the rectangle.
