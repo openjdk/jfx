@@ -173,6 +173,20 @@ public class WritableImage extends Image {
      * {@code DrawingContext} previously obtained from it ({@code Node.snapshot} and
      * {@code Scene.snapshot}). This is a known limitation and is expected to change so that
      * snapshots render into the existing storage, leaving the {@code DrawingContext} usable.
+     * <p>
+     * The returned {@code DrawingContext} is currently implemented by the software renderer,
+     * which does not support all optional features of {@code DrawingContext}:
+     * <ul>
+     *     <li>effects;
+     *     <li>path based clipping;
+     *     <li>clipping under a transform containing rotation or shear;
+     *     <li>blend modes other than {@link javafx.scene.effect.BlendMode#SRC_OVER SRC_OVER}.
+     * </ul>
+     * Fractional clip rectangles are rounded inward to the image's pixel grid
+     * (with the identity transform, clip coordinates are image pixels), so a clip
+     * covering less than one pixel may become empty.
+     * These are limitations of the current implementation and are not part of the
+     * {@code DrawingContext} contract; they may be lifted in a future release.
      *
      * @return the {@link DrawingContext} associated with this image, never {@code null}
      * @throws IllegalStateException if this image's pixel storage cannot back a {@code DrawingContext}:
