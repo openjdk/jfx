@@ -25,6 +25,7 @@
 
 package test.javafx.scene.canvas;
 
+import javafx.geometry.NodeOrientation;
 import javafx.geometry.VPos;
 import test.javafx.scene.NodeTest;
 import javafx.scene.canvas.Canvas;
@@ -564,6 +565,25 @@ public class CanvasTest {
         gc.setEffect(null);
 
         assertNull(gc.getEffect());
+    }
+
+    @Test
+    public void testGCTextDirection() {
+        assertEquals(NodeOrientation.INHERIT, gc.getTextDirection());
+
+        gc.setTextDirection(NodeOrientation.RIGHT_TO_LEFT);
+
+        assertEquals(NodeOrientation.RIGHT_TO_LEFT, gc.getTextDirection());
+
+        gc.setTextDirection(null);  // a null value is ignored and leaves the value unchanged
+
+        assertEquals(NodeOrientation.RIGHT_TO_LEFT, gc.getTextDirection());
+
+        gc.save();
+        gc.setTextDirection(NodeOrientation.LEFT_TO_RIGHT);
+        gc.restore();
+
+        assertEquals(NodeOrientation.RIGHT_TO_LEFT, gc.getTextDirection());
     }
 
     @Test

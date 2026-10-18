@@ -39,6 +39,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import javafx.geometry.NodeOrientation;
 import javafx.geometry.VPos;
 import javafx.scene.effect.BlendMode;
 import javafx.scene.effect.DropShadow;
@@ -1913,6 +1914,7 @@ public class SWDrawingContextTest {
         h.context.setFont(Font.font(24));
         h.context.setTextAlign(TextAlignment.CENTER);
         h.context.setTextBaseline(VPos.CENTER);
+        h.context.setTextDirection(NodeOrientation.RIGHT_TO_LEFT);
         h.context.setFontSmoothingType(FontSmoothingType.LCD);
 
         h.context.save();
@@ -1920,6 +1922,7 @@ public class SWDrawingContextTest {
         h.context.setFont(Font.font(12));
         h.context.setTextAlign(TextAlignment.RIGHT);
         h.context.setTextBaseline(VPos.BOTTOM);
+        h.context.setTextDirection(NodeOrientation.LEFT_TO_RIGHT);
         h.context.setFontSmoothingType(FontSmoothingType.GRAY);
 
         h.context.restore();
@@ -1927,6 +1930,7 @@ public class SWDrawingContextTest {
         assertEquals(Font.font(24), h.context.getFont());
         assertEquals(TextAlignment.CENTER, h.context.getTextAlign());
         assertEquals(VPos.CENTER, h.context.getTextBaseline());
+        assertEquals(NodeOrientation.RIGHT_TO_LEFT, h.context.getTextDirection());
         assertEquals(FontSmoothingType.LCD, h.context.getFontSmoothingType());
     }
 
@@ -1963,6 +1967,42 @@ public class SWDrawingContextTest {
         h.context.setTextBaseline(null);  // a null value is ignored and leaves the value unchanged
 
         assertEquals(VPos.CENTER, h.context.getTextBaseline());
+    }
+
+    @Test
+    public void shouldGetAndSetTextDirection() {
+        assertEquals(NodeOrientation.INHERIT, h.context.getTextDirection());
+
+        h.context.setTextDirection(NodeOrientation.RIGHT_TO_LEFT);
+
+        assertEquals(NodeOrientation.RIGHT_TO_LEFT, h.context.getTextDirection());
+
+        h.context.setTextDirection(null);  // a null value is ignored and leaves the value unchanged
+
+        assertEquals(NodeOrientation.RIGHT_TO_LEFT, h.context.getTextDirection());
+    }
+
+    @Test
+    public void textDirectionShouldChangeTheTextAlignment() {
+        // Two lines, the short line will be left or right aligned depending on text direction
+        String text = "MMM\nMMMM";
+
+        h.context.setFont(Font.font("System", 16));
+        h.context.setTextAlign(TextAlignment.LEFT);
+        h.context.fillText(text, 0, 30);
+
+        assertTrue(hasPaintedPixel(0, 19, 2, 24));    // the short line starts at the left
+        assertFalse(hasPaintedPixel(62, 19, 64, 24));
+
+        reset();
+
+        h.context.setFont(Font.font("System", 16));
+        h.context.setTextAlign(TextAlignment.LEFT);
+        h.context.setTextDirection(NodeOrientation.RIGHT_TO_LEFT);
+        h.context.fillText(text, 0, 30);
+
+        assertFalse(hasPaintedPixel(0, 19, 2, 24));   // the short line is right aligned
+        assertTrue(hasPaintedPixel(62, 19, 64, 24));
     }
 
     @Test
@@ -2098,6 +2138,7 @@ public class SWDrawingContextTest {
         h.context.setFont(Font.getDefault());
         h.context.setTextAlign(TextAlignment.LEFT);
         h.context.setTextBaseline(VPos.BASELINE);
+        h.context.setTextDirection(NodeOrientation.INHERIT);
         h.context.setFontSmoothingType(FontSmoothingType.GRAY);
         h.context.setImageSmoothing(true);
         h.context.clearRect(0, 0, WIDTH, HEIGHT);

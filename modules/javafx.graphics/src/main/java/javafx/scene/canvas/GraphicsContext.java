@@ -521,6 +521,7 @@ public final class GraphicsContext implements DrawingContext {
         FontSmoothingType fontsmoothing;
         TextAlignment textalign;
         VPos textbaseline;
+        NodeOrientation textdirection;
         Effect effect;
         FillRule fillRule;
         boolean imageSmoothing = true;
@@ -539,6 +540,8 @@ public final class GraphicsContext implements DrawingContext {
                 Font.getDefault(), FontSmoothingType.GRAY,
                 TextAlignment.LEFT, VPos.BASELINE,
                 null, FillRule.NON_ZERO, true);
+
+            textdirection = NodeOrientation.INHERIT;
         }
 
         State(State copy) {
@@ -550,6 +553,8 @@ public final class GraphicsContext implements DrawingContext {
                 copy.numClipPaths,
                 copy.font, copy.fontsmoothing, copy.textalign, copy.textbaseline,
                 copy.effect, copy.fillRule, copy.imageSmoothing);
+
+            textdirection = copy.textdirection;
         }
 
         final void set(double globalAlpha, BlendMode blendop,
@@ -612,6 +617,7 @@ public final class GraphicsContext implements DrawingContext {
             ctx.setFontSmoothingType(fontsmoothing);
             ctx.setTextAlign(textalign);
             ctx.setTextBaseline(textbaseline);
+            ctx.setTextDirection(textdirection);
             ctx.setEffect(effect);
             ctx.setImageSmoothing(imageSmoothing);
         }
@@ -783,7 +789,11 @@ public final class GraphicsContext implements DrawingContext {
         buf.putFloat((float) x);
         buf.putFloat((float) y);
         buf.putFloat((float) maxWidth);
-        buf.putBoolean(theCanvas.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT);
+        boolean mirror = theCanvas.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT;
+        boolean textRtl = curState.textdirection == NodeOrientation.RIGHT_TO_LEFT
+            || (curState.textdirection == NodeOrientation.INHERIT && mirror);
+        buf.putBoolean(textRtl);
+        buf.putBoolean(mirror);
         buf.putObject(text);
     }
 
@@ -1277,6 +1287,18 @@ public final class GraphicsContext implements DrawingContext {
     @Override
     public VPos getTextBaseline() {
         return curState.textbaseline;
+    }
+
+    @Override
+    public void setTextDirection(NodeOrientation direction) {
+        if (direction != null) {
+            curState.textdirection = direction;
+        }
+    }
+
+    @Override
+    public NodeOrientation getTextDirection() {
+        return curState.textdirection;
     }
 
     @Override

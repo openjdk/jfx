@@ -25,6 +25,7 @@
 
 package javafx.scene.image;
 
+import javafx.geometry.NodeOrientation;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -214,6 +215,14 @@ import javafx.scene.transform.Affine;
  *         <td class="colLast">
  *             The type of smoothing (antialiasing) applied to the glyphs in the font
  *             for all fill text operations.
+ *         </td>
+ *     </tr>
+ *     <tr class="rowColor">
+ *         <th scope="row" class="colLast" style="width:15%">{@link #setTextDirection(javafx.geometry.NodeOrientation) Text Direction}</th>
+ *         <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
+ *         <td class="colLast" style="width:10%; text-align:center">{@link NodeOrientation#INHERIT INHERIT}</td>
+ *         <td class="colLast">
+ *             The direction in which text is rendered.
  *         </td>
  *     </tr>
  *     <tr><th colspan="3" scope="row"><a id="path-attr">Path Attributes</a></th></tr>
@@ -984,6 +993,7 @@ public interface DrawingContext {
      *     <li>Font</li>
      *     <li>Text Align</li>
      *     <li>Text Baseline</li>
+     *     <li>Text Direction</li>
      *     <li>Font Smoothing Type</li>
      *     <li>Image Smoothing</li>
      *     <li>Fill Rule</li>
@@ -1013,6 +1023,7 @@ public interface DrawingContext {
      *     <li>Font</li>
      *     <li>Text Align</li>
      *     <li>Text Baseline</li>
+     *     <li>Text Direction</li>
      *     <li>Font Smoothing Type</li>
      *     <li>Image Smoothing</li>
      *     <li>Fill Rule</li>
@@ -1570,6 +1581,35 @@ public interface DrawingContext {
      * @param baseline the {@code VPos} to set or null.
      */
     void setTextBaseline(VPos baseline);
+
+    /**
+     * Gets the current text direction.
+     * The default value is {@link NodeOrientation#INHERIT INHERIT}.
+     * The text direction is a text attribute used for any of the text methods.
+     * <p>
+     * {@code INHERIT} leaves the direction to the implementation, which may derive
+     * it from the drawing surface's owner. For example, a {@code GraphicsContext}
+     * derives it from the {@code Canvas} node orientation, while a drawing context
+     * that is not associated with a node uses left-to-right text.
+     *
+     * @return the current text direction
+     */
+    NodeOrientation getTextDirection();
+
+    /**
+     * Sets the current text direction.
+     * The default value is {@link NodeOrientation#INHERIT INHERIT}.
+     * A {@code null} value will be ignored and the current value will remain unchanged.
+     * The text direction is a text attribute used for any of the text methods.
+     * <p>
+     * {@code INHERIT} leaves the direction to the implementation, while
+     * {@link NodeOrientation#LEFT_TO_RIGHT LEFT_TO_RIGHT} and
+     * {@link NodeOrientation#RIGHT_TO_LEFT RIGHT_TO_LEFT} select the direction
+     * explicitly.
+     *
+     * @param direction the text direction or null
+     */
+    void setTextDirection(NodeOrientation direction);
 
     /**
      * Sets the current Font Smoothing Type.

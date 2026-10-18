@@ -60,6 +60,7 @@ import java.util.Deque;
 import java.util.Objects;
 import java.util.function.Consumer;
 
+import javafx.geometry.NodeOrientation;
 import javafx.geometry.VPos;
 import javafx.scene.effect.BlendMode;
 import javafx.scene.effect.Effect;
@@ -160,6 +161,7 @@ public class SWDrawingContext implements DrawingContext {
     private Font font = Font.getDefault();
     private TextAlignment textAlign = TextAlignment.LEFT;
     private VPos textBaseline = VPos.BASELINE;
+    private NodeOrientation textDirection = NodeOrientation.INHERIT;
     private FontSmoothingType fontSmoothingType = FontSmoothingType.GRAY;
 
     // Path attributes
@@ -187,6 +189,7 @@ public class SWDrawingContext implements DrawingContext {
         Font font,
         TextAlignment textAlign,
         VPos textBaseline,
+        NodeOrientation textDirection,
         FontSmoothingType fontSmoothingType,
         double mxx, double myx, double mxy, double myy, double mxt, double myt,
         Rectangle clip
@@ -650,7 +653,7 @@ public class SWDrawingContext implements DrawingContext {
             miterLimit,
             lineDashes != null ? lineDashes.clone() : null, lineDashOffset,
             fillRule, imageSmoothing,
-            font, textAlign, textBaseline, fontSmoothingType,
+            font, textAlign, textBaseline, textDirection, fontSmoothingType,
             transform.getMxx(), transform.getMyx(), transform.getMxy(), transform.getMyy(),
             transform.getMxt(), transform.getMyt(),
             clip != null ? new Rectangle(clip) : null
@@ -682,6 +685,7 @@ public class SWDrawingContext implements DrawingContext {
         setFont(s.font());
         setTextAlign(s.textAlign());
         setTextBaseline(s.textBaseline());
+        setTextDirection(s.textDirection());
         setFontSmoothingType(s.fontSmoothingType());
         setFillRule(s.fillRule());
         setImageSmoothing(s.imageSmoothing());
@@ -1141,6 +1145,18 @@ public class SWDrawingContext implements DrawingContext {
     }
 
     @Override
+    public NodeOrientation getTextDirection() {
+        return textDirection;
+    }
+
+    @Override
+    public void setTextDirection(NodeOrientation direction) {
+        if (direction != null) {
+            textDirection = direction;
+        }
+    }
+
+    @Override
     public void setFontSmoothingType(FontSmoothingType fontsmoothing) {
         if (fontsmoothing != null) {
             fontSmoothingType = fontsmoothing;
@@ -1189,7 +1205,7 @@ public class SWDrawingContext implements DrawingContext {
 
         layout.setContent(text, FontHelper.getNativeFont(font));
         layout.setAlignment(textAlign.ordinal());
-        layout.setDirection(TextLayout.DIRECTION_LTR);
+        layout.setDirection(textDirection == NodeOrientation.RIGHT_TO_LEFT ? TextLayout.DIRECTION_RTL : TextLayout.DIRECTION_LTR);
 
         BaseBounds bounds = layout.getBounds();
         float layoutWidth = bounds.getWidth();
