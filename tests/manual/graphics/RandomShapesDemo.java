@@ -30,6 +30,7 @@ import javafx.animation.Animation.Status;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Application;
+import javafx.geometry.NodeOrientation;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -62,10 +63,12 @@ public class RandomShapesDemo extends Application {
     private static final int WIDTH = 800;
     private static final int HEIGHT = 800;
     private static final int SHAPES = 40;
-    private static final String[] TEXTS = {"WritableImage", "Canvas", "&", "@", "1\n2\n3"};
+    private static final String[] TEXTS = {
+        "WritableImage", "Canvas", "&", "@", "1\n2\n3", "abc \u05E9\u05DC\u05D5\u05DD xyz"
+    };
 
-    private final int seed = (int)(1000 * Math.random());
-    private final Random rnd = new Random(seed);
+    private int seed = (int)(1000 * Math.random());
+    private Random rnd = new Random(seed);
 
     @Override
     public void start(Stage primaryStage) {
@@ -86,12 +89,14 @@ public class RandomShapesDemo extends Application {
         BorderPane root = new BorderPane();
         Label label = new Label("WritableImage in ImageView");
         Label label2 = new Label("Canvas");
+        Label seedLabel = new Label("seed: " + seed);
 
         label.setStyle("-fx-text-fill: white; -fx-font-weight: bold");
         label2.setStyle("-fx-text-fill: white; -fx-font-weight: bold");
 
         HBox hbox = new HBox(10, new VBox(label, imageView), new VBox(label2, canvas));
         Button button = new Button("Toggle Animation");
+        Button resetButton = new Button("Reset");
 
         Timeline timeline = new Timeline(
             new KeyFrame(Duration.ZERO, _ -> addRandomShape(dc, gc)),
@@ -109,10 +114,23 @@ public class RandomShapesDemo extends Application {
             }
         });
 
+        resetButton.setOnAction(_ -> {
+            seed = (int)(1000 * Math.random());
+            rnd = new Random(seed);
+            seedLabel.setText("seed: " + seed);
+
+            dc.setFill(Color.WHITE);
+            dc.fillRect(0, 0, WIDTH, HEIGHT);
+            gc.setFill(Color.WHITE);
+            gc.fillRect(0, 0, WIDTH, HEIGHT);
+
+            drawRandomShapes(dc, gc);
+        });
+
         hbox.setSpacing(10);
         hbox.setStyle("-fx-background-color: BLACK; -fx-border-width: 10; -fx-border-color: BLACK;");
 
-        root.setTop(new HBox(button, new Label("seed: " + seed)));
+        root.setTop(new HBox(10, button, resetButton, seedLabel));
         root.setCenter(hbox);
 
         Scene scene = new Scene(root);
@@ -179,6 +197,12 @@ public class RandomShapesDemo extends Application {
             case 4 -> {
                 Font font = randomFont();
                 String text = TEXTS[rnd.nextInt(TEXTS.length)];
+                NodeOrientation textDirection = rnd.nextBoolean()
+                    ? NodeOrientation.RIGHT_TO_LEFT
+                    : NodeOrientation.LEFT_TO_RIGHT;
+
+                dc.setTextDirection(textDirection);
+                gc.setTextDirection(textDirection);
 
                 dc.setFont(font);
                 gc.setFont(font);
