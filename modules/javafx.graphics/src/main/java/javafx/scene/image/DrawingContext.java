@@ -951,6 +951,10 @@ public interface DrawingContext {
      * current transform contains rotation or shear, since the clip could not be
      * represented as an axis-aligned rectangle. Implementations that support such
      * clips exactly will not throw.
+     * <p>
+     * Implementations that store the clip on a pixel grid may round the
+     * transformed rectangle inward to that grid; in such implementations a clip
+     * smaller than a pixel may become empty.
      *
      * @param x the X position of the upper left corner of the rectangle
      * @param y the Y position of the upper left corner of the rectangle

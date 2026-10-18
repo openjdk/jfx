@@ -1797,6 +1797,52 @@ public class SWDrawingContextTest {
     }
 
     @Test
+    public void fractionalClipRectShouldNotPaintOutsideTheRequestedRegion() {
+        h.context.setFill(Color.RED);
+        h.context.fillRect(0, 0, WIDTH, HEIGHT);
+
+        h.context.clipRect(0.5, 0.5, 10, 10);  // device [0.5, 10.5] x [0.5, 10.5]
+        h.context.setFill(Color.BLUE);
+        h.context.fillRect(0, 0, WIDTH, HEIGHT);
+
+        assertPixel(1, 1, Color.BLUE);  // inside the inward-rounded region
+        assertPixel(5, 5, Color.BLUE);  // inside the requested region
+        assertPixel(9, 9, Color.BLUE);  // inside the inward-rounded region
+
+        // the clip must not grow to include pixels outside the requested region
+        assertPixel(0, 0, Color.RED);
+        assertPixel(10, 10, Color.RED);
+    }
+
+    @Test
+    public void clipRectShouldNotGrowFromFloatingPointError() {
+        // 50 / 0.3 * 0.3 is 50.00000000000001
+        h.context.setTransform(0.3, 0, 0, 0.3, 0, 0);
+        h.context.clipRect(0, 0, 50 / 0.3, 50 / 0.3);
+
+        h.context.setTransform(1, 0, 0, 1, 0, 0);  // the clip is frozen in device space
+        h.context.setFill(Color.RED);
+        h.context.fillRect(0, 0, WIDTH, HEIGHT);
+
+        assertPixel(49, 49, Color.RED);  // inside the intended 50x50 clip
+        assertPixel(50, 50, Color.TRANSPARENT);  // must not become 51x51
+    }
+
+    @Test
+    public void clipRectShouldNotShrinkFromFloatingPointError() {
+        // 50 / 0.19 * 0.19 is 49.99999999999999
+        h.context.setTransform(0.19, 0, 0, 0.19, 0, 0);
+        h.context.clipRect(0, 0, 50 / 0.19, 50 / 0.19);
+
+        h.context.setTransform(1, 0, 0, 1, 0, 0);  // the clip is frozen in device space
+        h.context.setFill(Color.RED);
+        h.context.fillRect(0, 0, WIDTH, HEIGHT);
+
+        assertPixel(49, 49, Color.RED);  // inside the intended 50x50 clip
+        assertPixel(50, 50, Color.TRANSPARENT);  // must not shrink to 49x49
+    }
+
+    @Test
     public void shouldSaveAndRestoreAttributes() {
         h.context.setFill(Color.RED);
         h.context.setGlobalAlpha(0.5);

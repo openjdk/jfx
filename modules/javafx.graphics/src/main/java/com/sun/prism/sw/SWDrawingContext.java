@@ -99,6 +99,7 @@ import javafx.scene.transform.Affine;
  * <ul>
  *     <li>Only SRC_OVER blend mode is supported; others will throw an exception.
  *     <li>Arbitrary path clipping is not supported, only {@link #clipRect(double, double, double, double)}.
+ *     <li>Fractional clip rectangles are rounded inward to the image's pixel grid.
  *     <li>Effects are not supported; {@link #setEffect(javafx.scene.effect.Effect) setEffect} will throw an exception.
  * </ul>
  * <p>
@@ -115,6 +116,13 @@ public class SWDrawingContext implements DrawingContext {
     static {
         NativeLibLoader.loadLibrary("prism_sw");
     }
+
+    /*
+     * Values within this distance of an integer are snapped to that integer when
+     * rounding clip rectangles, so floating point error cannot add or remove a
+     * whole device pixel from a clip.
+     */
+    private static final double CLIP_EPSILON = 1e-6;
 
     private final SWGraphics graphics;
     private final SWResourceFactory resourceFactory;
@@ -612,10 +620,21 @@ public class SWDrawingContext implements DrawingContext {
 
         transform.transform(src, 0, dst, 0, 4);
 
-        double minX = Math.max(0, Math.floor(Math.min(Math.min(dst[0], dst[2]), Math.min(dst[4], dst[6]))));
-        double minY = Math.max(0, Math.floor(Math.min(Math.min(dst[1], dst[3]), Math.min(dst[5], dst[7]))));
-        double maxX = Math.min(imageWidth, Math.ceil(Math.max(Math.max(dst[0], dst[2]), Math.max(dst[4], dst[6]))));
-        double maxY = Math.min(imageHeight, Math.ceil(Math.max(Math.max(dst[1], dst[3]), Math.max(dst[5], dst[7]))));
+        double rawMinX = Math.min(Math.min(dst[0], dst[2]), Math.min(dst[4], dst[6]));
+        double rawMinY = Math.min(Math.min(dst[1], dst[3]), Math.min(dst[5], dst[7]));
+        double rawMaxX = Math.max(Math.max(dst[0], dst[2]), Math.max(dst[4], dst[6]));
+        double rawMaxY = Math.max(Math.max(dst[1], dst[3]), Math.max(dst[5], dst[7]));
+
+        /*
+         * Round inward to the image's pixel grid, so the clip never includes
+         * pixels that are outside the requested rectangle. CLIP_EPSILON
+         * prevents floating point error from adding or removing a whole pixel:
+         */
+
+        double minX = Math.max(0, Math.ceil(rawMinX - CLIP_EPSILON));
+        double minY = Math.max(0, Math.ceil(rawMinY - CLIP_EPSILON));
+        double maxX = Math.min(imageWidth, Math.floor(rawMaxX + CLIP_EPSILON));
+        double maxY = Math.min(imageHeight, Math.floor(rawMaxY + CLIP_EPSILON));
 
         if (maxX <= minX || maxY <= minY) {
             return null;
