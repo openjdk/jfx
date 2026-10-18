@@ -315,7 +315,13 @@ void WindowContext::process_map() {
 
     // For window state (fullscreen, maximized, iconified) set before showing
     if (initial_state_mask != 0) {
-        update_initial_state();
+        // Delay so it does not race with sizing
+        initial_state_idle = g_idle_add_full(G_PRIORITY_DEFAULT_IDLE, [](gpointer data) -> gboolean {
+            WindowContext* ctx = static_cast<WindowContext*>(data);
+            ctx->initial_state_idle = 0;
+            ctx->update_initial_state();
+            return G_SOURCE_REMOVE;
+        }, this, nullptr);
     }
 
     // Must be called last, as geometry constraints are only enforced on
@@ -1814,6 +1820,11 @@ Point WindowContext::get_view_position() {
 WindowContext::~WindowContext() {
     LOG(LIFECYCLE, log_id, "~WindowContext\n");
     disableIME();
+
+    // In case ctx is destroyed befoce the idle runs
+    if (initial_state_idle != 0) {
+        g_source_remove(initial_state_idle);
+    }
 
     gtk_widget_destroy(gtk_widget);
 }

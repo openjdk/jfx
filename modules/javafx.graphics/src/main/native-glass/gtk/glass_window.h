@@ -283,6 +283,7 @@ class WindowContext: public DeletedMemDebug<0xCC> {
     bool mapped{false};
     unsigned long window_id{};
     gint initial_state_mask{0};
+    guint initial_state_idle{0};
 
     WindowFrameType frame_type;
     WindowType window_type;
