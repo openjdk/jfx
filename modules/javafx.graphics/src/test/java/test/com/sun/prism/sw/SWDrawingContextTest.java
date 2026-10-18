@@ -1000,6 +1000,35 @@ public class SWDrawingContextTest {
     }
 
     @Test
+    public void drawImageShouldUsePixelScale() {
+        int[] pixels = new int[16];
+
+        for (int y = 0; y < 4; y++) {
+            for (int x = 0; x < 4; x++) {
+                pixels[y * 4 + x] = x < 2 && y < 2
+                    ? argb(255, 255, 0, 0)   // top-left quarter: red
+                    : argb(255, 0, 0, 255);  // remaining pixels: blue
+            }
+        }
+
+        // 4x4 physical pixels at pixel scale 2 => 2x2 logical pixels
+        com.sun.prism.Image prismImage = com.sun.prism.Image.fromIntArgbPreData(IntBuffer.wrap(pixels), 4, 4, 16, 2.0f);
+        StubImageLoaderFactory factory = ((StubToolkit) Toolkit.getToolkit()).getImageLoaderFactory();
+
+        factory.registerImage(prismImage, new StubPlatformImageInfo(4, 4));
+
+        Image source = Toolkit.getImageAccessor().fromPlatformImage(prismImage);
+
+        h.context.setImageSmoothing(false);
+        h.context.drawImage(source, 0, 0, 2, 2, 0, 0, 4, 4);  // whole logical image -> 4x4 destination
+
+        assertPixel(0, 0, Color.RED);
+        assertPixel(1, 1, Color.RED);
+        assertPixel(2, 2, Color.BLUE);
+        assertPixel(3, 3, Color.BLUE);
+    }
+
+    @Test
     public void shouldIgnoreNullImage() {
         h.context.setFill(Color.RED);
         h.context.fillRect(0, 0, WIDTH, HEIGHT);

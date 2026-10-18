@@ -1274,6 +1274,15 @@ public class SWDrawingContext implements DrawingContext {
         try {
             tex.setLinearFiltering(imageSmoothing);
 
+            float pixelScale = prismImage.getPixelScale();
+
+            if (pixelScale != 1.0f) {
+                sx *= pixelScale;
+                sy *= pixelScale;
+                sw *= pixelScale;
+                sh *= pixelScale;
+            }
+
             graphics.resetPaintBounds();
             graphics.drawTexture(tex, (float)dx, (float)dy, (float)(dx + dw), (float)(dy + dh), (float)sx, (float)sy, (float)(sx + sw), (float)(sy + sh));
 
