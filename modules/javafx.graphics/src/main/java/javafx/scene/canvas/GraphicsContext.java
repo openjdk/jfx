@@ -1289,6 +1289,11 @@ public final class GraphicsContext implements DrawingContext {
         return curState.textbaseline;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @since 28
+     */
     @Override
     public void setTextDirection(NodeOrientation direction) {
         if (direction != null) {
@@ -1296,6 +1301,11 @@ public final class GraphicsContext implements DrawingContext {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @since 28
+     */
     @Override
     public NodeOrientation getTextDirection() {
         return curState.textdirection;
