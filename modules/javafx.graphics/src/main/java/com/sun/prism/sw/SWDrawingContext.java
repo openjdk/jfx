@@ -90,8 +90,7 @@ import javafx.scene.transform.Affine;
  * Features include:
  * <ul>
  *     <li>Stroke and fill management (line width, line caps, joins, miter limits, dashes).
- *     <li>Global alpha and support for {@link javafx.scene.effect.BlendMode#SRC_OVER} and
- *         {@link javafx.scene.effect.BlendMode#ADD}.
+ *     <li>Global alpha and support for {@link javafx.scene.effect.BlendMode#SRC_OVER}.
  *     <li>Drawing of lines, rectangles, rounded rectangles, ovals, arcs, polygons, polylines, and images.
  *     <li>Automatic dirty-region tracking for efficient pixel updates.
  * </ul>
