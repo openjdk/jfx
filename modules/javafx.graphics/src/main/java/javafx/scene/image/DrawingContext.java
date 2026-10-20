@@ -459,20 +459,13 @@ import javafx.scene.transform.Affine;
  * <p>
  * Example:
  *
- * <pre>
- * import javafx.scene.*;
- * import javafx.scene.image.*;
- * import javafx.scene.paint.*;
- *
- * WritableImage writableImage = new WritableImage(250,250);
- * ImageView root = new ImageView(writableImage);
- * Scene s = new Scene(root, 300, 300, Color.BLACK);
- *
+ * {@snippet :
+ * WritableImage writableImage = new WritableImage(250, 250);
  * DrawingContext c = writableImage.getDrawingContext();
  *
  * c.setFill(Color.BLUE);
- * c.fillRect(75,75,100,100);
- * </pre>
+ * c.fillRect(75, 75, 100, 100);
+ * }
  *
  * @see WritableImage
  * @since 28
