@@ -111,6 +111,26 @@ static volatile jobject glassClassLoader = NULL;
     return _ApplicationClass;
 }
 
++ (jclass)MacApplicationClass
+{
+    static jclass _MacApplicationClass = NULL;
+    if (_MacApplicationClass == NULL)
+    {
+        GET_MAIN_JENV;
+        _MacApplicationClass =
+            [GlassHelper ClassForName:"com.sun.glass.ui.mac.MacApplication" withEnv:env];
+        if (_MacApplicationClass) {
+            _MacApplicationClass = (*env)->NewGlobalRef(env, _MacApplicationClass);
+        }
+        GLASS_CHECK_EXCEPTION(env);
+    }
+    if (_MacApplicationClass == NULL)
+    {
+        NSLog(@"GlassHelper error: _MacApplicationClass == NULL");
+    }
+    return _MacApplicationClass;
+}
+
 + (jmethodID)ApplicationNotifyWillFinishLaunchingMethod
 {
     static jmethodID _ApplicationNotifyWillFinishLaunchingMethod = NULL;
@@ -301,6 +321,22 @@ static volatile jobject glassClassLoader = NULL;
         NSLog(@"GlassHelper error: _ApplicationNotifyWillQuitMethod == NULL");
     }
     return _ApplicationNotifyWillQuitMethod;
+}
+
++ (jmethodID)ApplicationInitAwt
+{
+    static jmethodID _ApplicationInitAwt = NULL;
+    if (_ApplicationInitAwt == NULL)
+    {
+        GET_MAIN_JENV;
+        _ApplicationInitAwt = (*env)->GetStaticMethodID(env, [GlassHelper MacApplicationClass], "initAwt", "()Z");
+        GLASS_CHECK_EXCEPTION(env);
+    }
+    if (_ApplicationInitAwt == NULL)
+    {
+        NSLog(@"GlassHelper error: _ApplicationInitAwt == NULL");
+    }
+    return _ApplicationInitAwt;
 }
 
 #pragma mark --- Invocation

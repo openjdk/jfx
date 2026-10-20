@@ -214,16 +214,14 @@ static NSMutableArray<GlassRunnable*> *deferredRunnables = nil;
         return;
     }
 
-    JNIEnv *env = jEnv;
-    jclass awt = [GlassHelper ClassForName:"java.awt.Toolkit" withEnv:env];
-    jmethodID method = (*env)->GetMethodID(env, awt, "getDefaultToolkit", "()V");
+    GET_MAIN_JENV;
 
-    if ((*env)->ExceptionCheck(env) == JNI_TRUE) {
-        return;
+    jboolean ok = (*env)->CallStaticBooleanMethod(env, [GlassHelper MacApplicationClass], [GlassHelper ApplicationInitAwt]);
+    GLASS_CHECK_EXCEPTION(env);
+
+    if (ok == JNI_TRUE) {
+        awtInitialized = true;
     }
-
-    (*env)->CallVoidMethod(env, awt, method);
-    awtInitialized = true;
 }
 
 - (void)GlassApplicationDidChangeScreenParameters
