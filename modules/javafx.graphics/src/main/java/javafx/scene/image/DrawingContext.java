@@ -1710,6 +1710,10 @@ public interface DrawingContext {
      * or <a href="#image-attr">image</a>
      * attributes as specified in the
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
+     * <p>
+     * The behavior is unspecified if {@code img} shares pixel storage with the
+     * drawing destination; for example, a {@code WritableImage} must not be
+     * drawn onto itself.
      *
      * @param img the image to be drawn or null.
      * @param x the X coordinate on the destination for the upper left of the image.
@@ -1733,6 +1737,10 @@ public interface DrawingContext {
      * or <a href="#image-attr">image</a>
      * attributes as specified in the
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
+     * <p>
+     * The behavior is unspecified if {@code img} shares pixel storage with the
+     * drawing destination; for example, a {@code WritableImage} must not be
+     * drawn onto itself.
      *
      * @param img the image to be drawn or null.
      * @param x the X coordinate on the destination for the upper left of the image.
@@ -1758,6 +1766,10 @@ public interface DrawingContext {
      * or <a href="#image-attr">image</a>
      * attributes as specified in the
      * <a href="#attr-ops-table">Rendering Attributes Table</a>.
+     * <p>
+     * The behavior is unspecified if {@code img} shares pixel storage with the
+     * drawing destination; for example, a {@code WritableImage} must not be
+     * drawn onto itself.
      *
      * @param img the image to be drawn or null.
      * @param sx the source rectangle's X coordinate position.
