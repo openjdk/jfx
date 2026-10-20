@@ -27,6 +27,7 @@ package test.com.sun.javafx.pgstub;
 
 import java.io.File;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -57,6 +58,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.ImagePattern;
 import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.RadialGradient;
+import javafx.scene.paint.Stop;
 import javafx.scene.shape.FillRule;
 import javafx.scene.shape.PathElement;
 import javafx.scene.shape.SVGPath;
@@ -245,14 +247,47 @@ public class StubToolkit extends Toolkit {
 
     @Override
     protected Object createLinearGradientPaint(LinearGradient paint) {
-        // Non functioning but compiles
-        return new com.sun.prism.paint.Color(1, 1, 1, 1);
+        int cmi = switch (paint.getCycleMethod()) {
+            case NO_CYCLE -> com.sun.prism.paint.Gradient.PAD;
+            case REFLECT -> com.sun.prism.paint.Gradient.REFLECT;
+            default -> com.sun.prism.paint.Gradient.REPEAT;
+        };
+
+        return new com.sun.prism.paint.LinearGradient(
+            (float) paint.getStartX(), (float) paint.getStartY(),
+            (float) paint.getEndX(), (float) paint.getEndY(),
+            null, paint.isProportional(), cmi,
+            convertStops(paint.getStops())
+        );
     }
 
     @Override
     protected Object createRadialGradientPaint(RadialGradient paint) {
-        // Non functioning but compiles
-        return new com.sun.prism.paint.Color(1, 1, 1, 1);
+        int cmi = switch (paint.getCycleMethod()) {
+            case NO_CYCLE -> com.sun.prism.paint.Gradient.PAD;
+            case REFLECT -> com.sun.prism.paint.Gradient.REFLECT;
+            default -> com.sun.prism.paint.Gradient.REPEAT;
+        };
+
+        return new com.sun.prism.paint.RadialGradient(
+            (float) paint.getCenterX(), (float) paint.getCenterY(),
+            (float) paint.getFocusAngle(), (float) paint.getFocusDistance(),
+            (float) paint.getRadius(), null, paint.isProportional(), cmi,
+            convertStops(paint.getStops())
+        );
+    }
+
+    private List<com.sun.prism.paint.Stop> convertStops(List<Stop> paintStops) {
+        List<com.sun.prism.paint.Stop> stops = new ArrayList<>();
+
+        for (Stop s : paintStops) {
+            stops.add(new com.sun.prism.paint.Stop(
+                (com.sun.prism.paint.Color) createColorPaint(s.getColor()),
+                (float) s.getOffset()
+            ));
+        }
+
+        return stops;
     }
 
     @Override

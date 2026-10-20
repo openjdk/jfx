@@ -38,6 +38,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.IntFunction;
 
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.VPos;
@@ -2006,6 +2007,31 @@ public class SWDrawingContextTest {
     }
 
     @Test
+    public void textWithProportionalGradientShouldAnchorAtTheTextPosition() {
+        LinearGradient gradient = new LinearGradient(
+            0, 0, 1, 0, true, CycleMethod.NO_CYCLE,
+            new Stop(0, Color.BLUE),
+            new Stop(1, Color.BLACK)
+        );
+
+        h.context.setFont(Font.font("System", 16));
+        h.context.setTextAlign(TextAlignment.LEFT);
+        h.context.setFill(gradient);
+        h.context.fillText("MM", 32, 32);
+
+        /*
+         * The text occupies x=32..63, and the gradient must span that text exactly. The gradient
+         * doesn't end at full black due to how it is sampled.
+         */
+
+        assertEquals(
+            ".".repeat(32) + "fffeeddccbbaa9988776655443322110",
+            rowPattern(0, 25, WIDTH, argb -> argb == 0 ? '.' : Character.forDigit((argb >> 4) & 0xf, 16)),
+            "proportional gradient across the text"
+        );
+    }
+
+    @Test
     public void shouldGetAndSetFontSmoothingType() {
         h.context.setFontSmoothingType(FontSmoothingType.LCD);
 
@@ -2107,6 +2133,16 @@ public class SWDrawingContextTest {
                 );
             }
         }
+    }
+
+    private String rowPattern(int x, int y, int width, IntFunction<Character> colorToChar) {
+        StringBuilder pattern = new StringBuilder(width);
+
+        for (int i = 0; i < width; i++) {
+            pattern.append(colorToChar.apply(h.image.getArgb(x + i, y)));
+        }
+
+        return pattern.toString();
     }
 
     private Rectangle textBounds(Runnable draw) {

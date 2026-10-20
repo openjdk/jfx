@@ -1242,6 +1242,20 @@ public class SWDrawingContext implements DrawingContext {
 
         graphics.setTransform(textTx);
 
+        boolean proportional = stroke ? prismStrokePaint.isProportional() : prismFillPaint.isProportional();
+
+        RectBounds textBounds = null;
+
+        if (proportional) {
+            textBounds = new RectBounds();
+            layout.getBounds(null, textBounds);
+            textBounds.setBounds(
+                textBounds.getMinX() + layoutX, textBounds.getMinY() + layoutY,
+                textBounds.getMaxX() + layoutX, textBounds.getMaxY() + layoutY
+            );
+            graphics.setNodeBounds(textBounds);
+        }
+
         PGFont pgFont = (PGFont) FontHelper.getNativeFont(font);
         int smoothing = fontSmoothingType == FontSmoothingType.LCD ? FontResource.AA_LCD : FontResource.AA_GREYSCALE;
         FontStrike strike = pgFont.getStrike(textTx, smoothing);
@@ -1276,6 +1290,10 @@ public class SWDrawingContext implements DrawingContext {
         }
 
         graphics.setTransform(transform);
+
+        if (textBounds != null) {
+            graphics.setNodeBounds(null);
+        }
 
         reportGraphicsPaintBounds();
     }
