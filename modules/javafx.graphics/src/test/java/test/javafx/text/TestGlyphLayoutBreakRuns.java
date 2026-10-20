@@ -34,26 +34,24 @@ import com.sun.javafx.scene.text.GlyphList;
 import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.tk.Toolkit;
 
-/**
- *
- */
+/// Tests `GlyphLayout.breakRuns()` with several scripts that require surrogate pairs.
 public class TestGlyphLayoutBreakRuns {
 
-    record TC(String text, int ... runs) { }
+    record TestCase(String text, int ... runs) { }
 
-    private static List<TC> breakRunsSource() {
+    private static List<TestCase> breakRunsSource() {
         return List.of(
-            new TC("good", 4),
-            new TC("Adlam Pular: 𞤀𞤣𞤤𞤢𞤥 𞤆𞤵𞤤𞤢𞤪", 13, 21),
-            new TC("Ancient South Arabian: 𐩣𐩯𐩬𐩵", 23, 8),
-            new TC("Old Aramaic: 𐤀𐤓𐤌𐤉𐤀;", 13, 10, 1),
-            new TC("Imperial Aramaic: 𐡀𐡓𐡌𐡉𐡀", 18, 10)
+            new TestCase("good", 4),
+            new TestCase("Adlam Pular: 𞤀𞤣𞤤𞤢𞤥 𞤆𞤵𞤤𞤢𞤪", 13, 21),
+            new TestCase("Ancient South Arabian: 𐩣𐩯𐩬𐩵", 23, 8),
+            new TestCase("Old Aramaic: 𐤀𐤓𐤌𐤉𐤀;", 13, 10, 1),
+            new TestCase("Imperial Aramaic: 𐡀𐡓𐡌𐡉𐡀", 18, 10)
         );
     }
 
     @ParameterizedTest
     @MethodSource("breakRunsSource")
-    public void testBreakRunsSurrogatePairsAdlam(TC tc) {
+    public void testBreakRunsSurrogatePairs(TestCase tc) {
         // JDK-8394318
         String text = tc.text();
         TextLayout layout = Toolkit.getToolkit().getTextLayoutFactory().createLayout();
