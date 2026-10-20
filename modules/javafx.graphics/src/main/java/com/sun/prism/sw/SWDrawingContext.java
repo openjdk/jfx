@@ -772,8 +772,6 @@ public class SWDrawingContext implements DrawingContext {
     @Override
     public void fillOval(double x, double y, double w, double h) {
         if (w != 0 && h != 0) {
-            applyStrokeParameters();
-
             graphics.setPaint(prismFillPaint);
             graphics.resetPaintBounds();
             graphics.fillEllipse((float)x, (float)y, (float)w, (float)h);
