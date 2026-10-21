@@ -244,6 +244,23 @@ public class Region extends Parent {
         return a <= b ? a : b;
     }
 
+    /**
+     * Returns {@code width} reduced by the horizontal margins. If pixel snapping is enabled, the left and
+     * right margins are independently snapped as horizontal space before they are subtracted.
+     * <p>
+     * This method deliberately does not snap {@code width} or the returned value. It performs only the
+     * margin adjustment and does not choose a fitting policy for a potentially unsnapped input width.
+     * A caller that chooses to consume the result as a pixel-aligned allocated content span is responsible
+     * for applying the appropriate snapping operation.
+     * <p>
+     * A {@code null} or empty margin is equivalent to zero margins and leaves {@code width} unchanged;
+     * in particular, it does not cause {@code width} to be normalized.
+     *
+     * @param width the width to adjust
+     * @param margin the margins to subtract, or {@code null}
+     * @return {@code width} minus the left and right margins, independently snapped when
+     *         pixel snapping is enabled; the result itself is not snapped
+     */
     double adjustWidthByMargin(double width, Insets margin) {
         if (margin == null || margin == Insets.EMPTY) {
             return width;
@@ -252,6 +269,23 @@ public class Region extends Parent {
         return width - snapSpaceX(margin.getLeft(), isSnapToPixel) - snapSpaceX(margin.getRight(), isSnapToPixel);
     }
 
+    /**
+     * Returns {@code height} reduced by the vertical margins. If pixel snapping is enabled, the top and
+     * bottom margins are independently snapped as vertical space before they are subtracted.
+     * <p>
+     * This method deliberately does not snap {@code height} or the returned value. It performs only the
+     * margin adjustment and does not choose a fitting policy for a potentially unsnapped input height.
+     * A caller that chooses to consume the result as a pixel-aligned allocated content span is responsible
+     * for applying the appropriate snapping operation.
+     * <p>
+     * A {@code null} or empty margin is equivalent to zero margins and leaves {@code height} unchanged;
+     * in particular, it does not cause {@code height} to be normalized.
+     *
+     * @param height the height to adjust
+     * @param margin the margins to subtract, or {@code null}
+     * @return {@code height} minus the top and bottom margins, independently snapped when
+     *         pixel snapping is enabled; the result itself is not snapped
+     */
     double adjustHeightByMargin(double height, Insets margin) {
         if (margin == null || margin == Insets.EMPTY) {
             return height;
@@ -391,6 +425,18 @@ public class Region extends Parent {
         double s = getSnapScaleY();
 
         return value > 0 ? ScaledMath.floor(value, s) : ScaledMath.ceil(value, s);
+    }
+
+    /**
+     * If snapToPixel is true, rounds the value to the nearest pixel. This method is used to
+     * remove floating-point drift after a calculation that involves known-aligned values.
+     * <p>
+     * This method is mathematically equivalent to {@link #snapSpace(double, boolean, double)},
+     * but has a distinct name that clearly communicates that the author knows that the value
+     * is already pixel-aligned.
+     */
+    private static double snapAligned(double value, boolean snapToPixel, double snapScale) {
+        return snapToPixel ? ScaledMath.round(value, snapScale) : value;
     }
 
     double getAreaBaselineOffset(List<Node> children, Callback<Node, Insets> margins,
@@ -1905,164 +1951,347 @@ public class Region extends Parent {
         return snappedRightInset;
     }
 
-
+    /**
+     * Returns the minimum horizontal space required to lay out the child, including its left and right margins.
+     * <p>
+     * When {@link #isSnapToPixel()} is true, the result is guaranteed to be aligned to the horizontal
+     * pixel grid. Otherwise, no pixel-alignment guarantee is made.
+     *
+     * @param child the child to measure
+     * @param margin the child's margin, or {@code null} for no margin
+     * @return the minimum horizontal space required to lay out the child
+     */
     double computeChildMinAreaWidth(Node child, Insets margin) {
         return computeChildMinAreaWidth(child, -1, margin, -1, false);
     }
 
-    double computeChildMinAreaWidth(Node child, double baselineComplement, Insets margin, double availableHeight, boolean fillHeight) {
-        final boolean snap = isSnapToPixel();
-        double left = margin != null? snapSpaceX(margin.getLeft(), snap) : 0;
-        double right = margin != null? snapSpaceX(margin.getRight(), snap) : 0;
+    /**
+     * Returns the minimum horizontal space required to lay out the child, including its left and right margins.
+     * For a resizable child with vertical content bias, {@code availableHeight} determines the height used to
+     * compute its width.
+     * <p>
+     * When {@link #isSnapToPixel()} is true, the result is guaranteed to be aligned to the horizontal pixel grid.
+     * Otherwise, no pixel-alignment guarantee is made.
+     *
+     * @param child the child to measure
+     * @param baselineComplement the extent below the common baseline, or {@code -1} when baseline alignment is not used
+     * @param margin the child's margin, or {@code null} for no margin
+     * @param availableHeight the available height including margins, or {@code -1} when unknown
+     * @param fillHeight whether the child may fill the available height instead of being limited to its preferred height
+     * @return the minimum horizontal space required to lay out the child
+     */
+    double computeChildMinAreaWidth(Node child, double baselineComplement, Insets margin,
+                                    double availableHeight, boolean fillHeight) {
+        boolean snap = isSnapToPixel();
+        double scaleX = getSnapScaleX();
+        double scaleY = getSnapScaleY();
+        double snappedLeft = margin != null ? snapSpace(margin.getLeft(), snap, scaleX) : 0;
+        double snappedRight = margin != null ? snapSpace(margin.getRight(), snap, scaleX) : 0;
         double alt = -1;
-        if (availableHeight != -1 && child.isResizable() && child.getContentBias() == Orientation.VERTICAL) { // width depends on height
-            double top = margin != null? snapSpaceY(margin.getTop(), snap) : 0;
-            double bottom = (margin != null? snapSpaceY(margin.getBottom(), snap) : 0);
-            double bo = child.getBaselineOffset();
-            final double contentHeight = bo == BASELINE_OFFSET_SAME_AS_HEIGHT && baselineComplement != -1 ?
-                    availableHeight - top - bottom - baselineComplement :
-                    availableHeight - top - bottom;
-            alt = computedBoundedHeight(child, fillHeight, contentHeight);
+
+        if (availableHeight != -1 && child.isResizable() && child.getContentBias() == Orientation.VERTICAL) {
+            double snappedContentHeight = computeContentHeight(margin, availableHeight, snap, scaleY);
+            double baseline = child.getBaselineOffset();
+            if (baseline == BASELINE_OFFSET_SAME_AS_HEIGHT && baselineComplement != -1) {
+                // The outer height is a size allocation, while the complement is space.
+                double snappedComplement = snapSpace(baselineComplement, snap, scaleY);
+                snappedContentHeight = snapAligned(snappedContentHeight - snappedComplement, snap, scaleY);
+            }
+
+            alt = computeBoundedHeight(child, fillHeight, snappedContentHeight, snap, scaleY);
         }
-        return left + snapSizeX(child.minWidth(alt)) + right;
+
+        double snappedChildWidth = snapSize(child.minWidth(alt), snap, scaleX);
+        return snapAligned(snappedLeft + snappedChildWidth + snappedRight, snap, scaleX);
     }
 
+    /**
+     * Returns the minimum vertical space required to lay out the child, including its top and bottom margins.
+     * <p>
+     * When {@link #isSnapToPixel()} is true, the result is guaranteed to be aligned to the vertical pixel grid.
+     * Otherwise, no pixel-alignment guarantee is made.
+     *
+     * @param child the child to measure
+     * @param margin the child's margin, or {@code null} for no margin
+     * @return the minimum vertical space required to lay out the child
+     */
     double computeChildMinAreaHeight(Node child, Insets margin) {
         return computeChildMinAreaHeight(child, -1, margin, -1, false);
     }
 
-    double computeChildMinAreaHeight(Node child, double minBaselineComplement, Insets margin, double availableWidth, boolean fillWidth) {
-        final boolean snap = isSnapToPixel();
-        double top =margin != null? snapSpaceY(margin.getTop(), snap) : 0;
-        double bottom = margin != null? snapSpaceY(margin.getBottom(), snap) : 0;
-
+    /**
+     * Returns the minimum vertical space required to lay out the child, taking its margins and optional
+     * common-baseline alignment into account. For a resizable child with horizontal content bias,
+     * {@code availableWidth} determines the width used to compute its height.
+     * <p>
+     * When {@link #isSnapToPixel()} is true, the result is guaranteed to be aligned to the vertical pixel grid.
+     * Otherwise, no pixel-alignment guarantee is made.
+     *
+     * @param child the child to measure
+     * @param minBaselineComplement the extent below the common baseline, or {@code -1} when baseline alignment is not used
+     * @param margin the child's margin, or {@code null} for no margin
+     * @param availableWidth the available width including margins, or {@code -1} when unknown
+     * @param fillWidth whether the child may fill the available width instead of being limited to its preferred width
+     * @return the minimum vertical space required to lay out the child
+     */
+    double computeChildMinAreaHeight(Node child, double minBaselineComplement, Insets margin,
+                                     double availableWidth, boolean fillWidth) {
+        boolean snap = isSnapToPixel();
+        double scaleX = getSnapScaleX();
+        double scaleY = getSnapScaleY();
+        double snappedTop = margin != null ? snapSpace(margin.getTop(), snap, scaleY) : 0;
+        double snappedBottom = margin != null ? snapSpace(margin.getBottom(), snap, scaleY) : 0;
         double alt = -1;
-        if (availableWidth != -1 && child.isResizable() && child.getContentBias() == Orientation.HORIZONTAL) { // height depends on width
-            double contentWidth = computeContentWidth(margin, availableWidth);
 
-            alt = computeBoundedWidth(child, fillWidth, contentWidth);
+        if (availableWidth != -1 && child.isResizable() && child.getContentBias() == Orientation.HORIZONTAL) {
+            double snappedContentWidth = computeContentWidth(margin, availableWidth, snap, scaleX);
+            alt = computeBoundedWidth(child, fillWidth, snappedContentWidth, snap, scaleX);
         }
 
-        // For explanation, see computeChildPrefAreaHeight
         if (minBaselineComplement != -1) {
             double baseline = child.getBaselineOffset();
-            if (child.isResizable() && baseline == BASELINE_OFFSET_SAME_AS_HEIGHT) {
-                return top + snapSizeY(child.minHeight(alt)) + bottom
-                        + minBaselineComplement;
+
+            // The baseline complement is the extent below the common baseline. It is deliberately kept raw because
+            // it is an intermediate part of the complete baseline-aligned area; snapping it separately could lose
+            // precision or over-allocate. Combine it with the extent above the baseline and snap the resulting
+            // content size instead.
+            if (baseline == BASELINE_OFFSET_SAME_AS_HEIGHT) {
+                double snappedChildMinHeight = snapSize(child.minHeight(alt), snap, scaleY);
+                double snappedAbove = snapAligned(snappedTop + snappedBottom + snappedChildMinHeight, snap, scaleY);
+                return snapSize(snappedAbove + minBaselineComplement, snap, scaleY);
             } else {
-                return baseline + minBaselineComplement;
+                return snapSize(baseline + minBaselineComplement, snap, scaleY);
             }
         } else {
-            return top + snapSizeY(child.minHeight(alt)) + bottom;
+            double snappedChildHeight = snapSize(child.minHeight(alt), snap, scaleY);
+            return snapAligned(snappedTop + snappedBottom + snappedChildHeight, snap, scaleY);
         }
     }
 
+    /**
+     * Returns the preferred horizontal space required to lay out the child, including its left and right margins.
+     * <p>
+     * When {@link #isSnapToPixel()} is true, the result is guaranteed to be aligned to the horizontal pixel grid.
+     * Otherwise, no pixel-alignment guarantee is made.
+     *
+     * @param child the child to measure
+     * @param margin the child's margin, or {@code null} for no margin
+     * @return the preferred horizontal space to lay out the child
+     */
     double computeChildPrefAreaWidth(Node child, Insets margin) {
         return computeChildPrefAreaWidth(child, -1, margin, -1, false);
     }
 
-    double computeChildPrefAreaWidth(Node child, double baselineComplement, Insets margin, double availableHeight, boolean fillHeight) {
-        final boolean snap = isSnapToPixel();
-        double left = margin != null? snapSpaceX(margin.getLeft(), snap) : 0;
-        double right = margin != null? snapSpaceX(margin.getRight(), snap) : 0;
+    /**
+     * Returns the preferred horizontal space required to lay out the child, including its left and right margins.
+     * For a resizable child with vertical content bias, {@code availableHeight} determines the height used
+     * to compute its width.
+     * <p>
+     * When {@link #isSnapToPixel()} is true, the result is guaranteed to be aligned to the horizontal pixel grid.
+     * Otherwise, no pixel-alignment guarantee is made.
+     *
+     * @param child the child to measure
+     * @param baselineComplement the extent below the common baseline, or {@code -1} when baseline alignment is not used
+     * @param margin the child's margin, or {@code null} for no margin
+     * @param availableHeight the available height including margins, or {@code -1} when unknown
+     * @param fillHeight whether the child may fill the available height instead of being limited to its preferred height
+     * @return the preferred horizontal space to lay out the child
+     */
+    double computeChildPrefAreaWidth(Node child, double baselineComplement, Insets margin,
+                                     double availableHeight, boolean fillHeight) {
+        boolean snap = isSnapToPixel();
+        double scaleX = getSnapScaleX();
+        double scaleY = getSnapScaleY();
+        double snappedLeft = margin != null ? snapSpace(margin.getLeft(), snap, scaleX) : 0;
+        double snappedRight = margin != null ? snapSpace(margin.getRight(), snap, scaleX) : 0;
         double alt = -1;
+
         if (availableHeight != -1 && child.isResizable() && child.getContentBias() == Orientation.VERTICAL) { // width depends on height
-            double top = margin != null? snapSpaceY(margin.getTop(), snap) : 0;
-            double bottom = margin != null? snapSpaceY(margin.getBottom(), snap) : 0;
-            double bo = child.getBaselineOffset();
-            final double contentHeight = bo == BASELINE_OFFSET_SAME_AS_HEIGHT && baselineComplement != -1 ?
-                    availableHeight - top - bottom - baselineComplement :
-                    availableHeight - top - bottom;
-            alt = computedBoundedHeight(child, fillHeight, contentHeight);
+            double snappedContentHeight = computeContentHeight(margin, availableHeight, snap, scaleY);
+            double baseline = child.getBaselineOffset();
+            if (baseline == BASELINE_OFFSET_SAME_AS_HEIGHT && baselineComplement != -1) {
+                // The outer height is a size allocation, while the complement is space.
+                double snappedComplement = snapSpace(baselineComplement, snap, scaleY);
+                snappedContentHeight = snapAligned(snappedContentHeight - snappedComplement, snap, scaleY);
+            }
+
+            alt = computeBoundedHeight(child, fillHeight, snappedContentHeight, snap, scaleY);
         }
-        return left + snapSizeX(boundedSize(child.minWidth(alt), child.prefWidth(alt), child.maxWidth(alt))) + right;
+
+        double rawChildPrefWidth = boundedSize(child.minWidth(alt), child.prefWidth(alt), child.maxWidth(alt));
+        double snappedChildPrefWidth = snapSize(rawChildPrefWidth, snap, scaleX);
+        return snapAligned(snappedLeft + snappedRight + snappedChildPrefWidth, snap, scaleX);
     }
 
+    /**
+     * Returns the preferred vertical space to lay out the child, including its top and bottom margins.
+     * <p>
+     * When {@link #isSnapToPixel()} is true, the result is guaranteed to be aligned to the vertical pixel grid.
+     * Otherwise, no pixel-alignment guarantee is made.
+     *
+     * @param child the child to measure
+     * @param margin the child's margin, or {@code null} for no margin
+     * @return the preferred vertical space to lay out the child
+     */
     double computeChildPrefAreaHeight(Node child, Insets margin) {
         return computeChildPrefAreaHeight(child, -1, margin, -1, false);
     }
 
-    double computeChildPrefAreaHeight(Node child, double prefBaselineComplement, Insets margin, double availableWidth, boolean fillWidth) {
-        final boolean snap = isSnapToPixel();
-        double top = margin != null? snapSpaceY(margin.getTop(), snap) : 0;
-        double bottom = margin != null? snapSpaceY(margin.getBottom(), snap) : 0;
-
+    /**
+     * Returns the preferred vertical space to lay out the child, taking its margins and optional common-baseline
+     * alignment into account. For a resizable child with horizontal content bias, {@code availableWidth}
+     * determines the width used to compute its height.
+     * <p>
+     * When {@link #isSnapToPixel()} is true, the result is guaranteed to be aligned to the vertical pixel grid.
+     * Otherwise, no pixel-alignment guarantee is made.
+     *
+     * @param child the child to measure
+     * @param prefBaselineComplement the extent below the common baseline, or {@code -1} when baseline alignment is not used
+     * @param margin the child's margin, or {@code null} for no margin
+     * @param availableWidth the available width including margins, or {@code -1} when unknown
+     * @param fillWidth whether the child may fill the available width instead of being limited to its preferred width
+     * @return the preferred vertical space to lay out the child
+     */
+    double computeChildPrefAreaHeight(Node child, double prefBaselineComplement, Insets margin,
+                                      double availableWidth, boolean fillWidth) {
+        boolean snap = isSnapToPixel();
+        double scaleX = getSnapScaleX();
+        double scaleY = getSnapScaleY();
+        double snappedTop = margin != null ? snapSpace(margin.getTop(), snap, scaleY) : 0;
+        double snappedBottom = margin != null ? snapSpace(margin.getBottom(), snap, scaleY) : 0;
         double alt = -1;
-        if (availableWidth != -1 && child.isResizable() && child.getContentBias() == Orientation.HORIZONTAL) { // height depends on width
-            double contentWidth = computeContentWidth(margin, availableWidth);
 
-            alt = computeBoundedWidth(child, fillWidth, contentWidth);
+        if (availableWidth != -1 && child.isResizable() && child.getContentBias() == Orientation.HORIZONTAL) { // height depends on width
+            double contentWidth = computeContentWidth(margin, availableWidth, snap, scaleX);
+            alt = computeBoundedWidth(child, fillWidth, contentWidth, snap, scaleX);
         }
 
         if (prefBaselineComplement != -1) {
-            double baseline = child.getBaselineOffset();
-            if (child.isResizable() && baseline == BASELINE_OFFSET_SAME_AS_HEIGHT) {
-                // When baseline is same as height, the preferred height of the node will be above the baseline, so we need to add
-                // the preferred complement to it
-                return top + snapSizeY(boundedSize(child.minHeight(alt), child.prefHeight(alt), child.maxHeight(alt))) + bottom
-                        + prefBaselineComplement;
+            double rawBaseline = child.getBaselineOffset();
+
+            // The baseline complement is the extent below the common baseline. It is deliberately kept raw because
+            // it is an intermediate part of the complete baseline-aligned area; snapping it separately could lose
+            // precision or over-allocate. Combine it with the extent above the baseline and snap the resulting
+            // content size instead.
+            if (rawBaseline == BASELINE_OFFSET_SAME_AS_HEIGHT) {
+                double rawChildPrefHeight = boundedSize(child.minHeight(alt), child.prefHeight(alt), child.maxHeight(alt));
+                double snappedChildPrefHeight = snapSize(rawChildPrefHeight, snap, scaleY);
+                double snappedHeightAboveBaseline = snapAligned(snappedTop + snappedBottom + snappedChildPrefHeight, snap, scaleY);
+                return snapSize(snappedHeightAboveBaseline + prefBaselineComplement, snap, scaleY);
             } else {
-                // For all other Nodes, it's just their baseline and the complement.
-                // Note that the complement already contain the Node's preferred (or fixed) height
-                return top + baseline + prefBaselineComplement + bottom;
+                double snappedMargins = snapAligned(snappedTop + snappedBottom, snap, scaleY);
+                return snapSize(snappedMargins + rawBaseline + prefBaselineComplement, snap, scaleY);
             }
         } else {
-            return top + snapSizeY(boundedSize(child.minHeight(alt), child.prefHeight(alt), child.maxHeight(alt))) + bottom;
+            double rawChildPrefHeight = boundedSize(child.minHeight(alt), child.prefHeight(alt), child.maxHeight(alt));
+            double snappedChildPrefHeight = snapSize(rawChildPrefHeight, snap, scaleY);
+            return snapAligned(snappedTop + snappedBottom + snappedChildPrefHeight, snap, scaleY);
         }
     }
 
-    double computeChildMaxAreaWidth(Node child, double baselineComplement, Insets margin, double availableHeight, boolean fillHeight) {
-        double max = child.maxWidth(-1);
-        if (max == Double.MAX_VALUE) {
-            return max;
-        }
-        final boolean snap = isSnapToPixel();
-        double left = margin != null? snapSpaceX(margin.getLeft(), snap) : 0;
-        double right = margin != null? snapSpaceX(margin.getRight(), snap) : 0;
+    /**
+     * Returns the maximum horizontal space to lay out the child, including its left and right margins.
+     * For a resizable child with vertical content bias, {@code availableHeight} determines the height used
+     * to compute its width. If the child has no finite maximum width, {@link Double#MAX_VALUE} is returned
+     * unchanged.
+     * <p>
+     * When {@link #isSnapToPixel()} is true, every result other than the {@code Double.MAX_VALUE} sentinel
+     * is guaranteed to be aligned to the horizontal pixel grid. Otherwise, no pixel-alignment guarantee
+     * is made.
+     *
+     * @param child the child to measure
+     * @param baselineComplement the extent below the common baseline, or {@code -1} when baseline alignment is not used
+     * @param margin the child's margin, or {@code null} for no margin
+     * @param availableHeight the available height including margins, or {@code -1} when unknown
+     * @param fillHeight whether the child may fill the available height instead of being limited to its preferred height
+     * @return the maximum horizontal space to lay out the child, or {@code Double.MAX_VALUE} if it has no finite maximum width
+     */
+    double computeChildMaxAreaWidth(Node child, double baselineComplement, Insets margin,
+                                    double availableHeight, boolean fillHeight) {
+        boolean snap = isSnapToPixel();
+        double scaleX = getSnapScaleX();
+        double scaleY = getSnapScaleY();
+        double snappedLeft = margin != null ? snapSpace(margin.getLeft(), snap, scaleX) : 0;
+        double snappedRight = margin != null ? snapSpace(margin.getRight(), snap, scaleX) : 0;
         double alt = -1;
+
         if (availableHeight != -1 && child.isResizable() && child.getContentBias() == Orientation.VERTICAL) { // width depends on height
-            double top = margin != null? snapSpaceY(margin.getTop(), snap) : 0;
-            double bottom = (margin != null? snapSpaceY(margin.getBottom(), snap) : 0);
-            double bo = child.getBaselineOffset();
-            final double contentHeight = bo == BASELINE_OFFSET_SAME_AS_HEIGHT && baselineComplement != -1 ?
-                    availableHeight - top - bottom - baselineComplement :
-                    availableHeight - top - bottom;
+            double snappedContentHeight = computeContentHeight(margin, availableHeight, snap, scaleY);
+            double rawBaseline = child.getBaselineOffset();
+            if (rawBaseline == BASELINE_OFFSET_SAME_AS_HEIGHT && baselineComplement != -1) {
+                // The outer height is a size allocation, while the complement is space.
+                double snappedComplement = snapSpace(baselineComplement, snap, scaleY);
+                snappedContentHeight = snapAligned(snappedContentHeight - snappedComplement, snap, scaleY);
+            }
 
-            alt = computedBoundedHeight(child, fillHeight, contentHeight);
-            max = child.maxWidth(alt);
+            alt = computeBoundedHeight(child, fillHeight, snappedContentHeight, snap, scaleY);
         }
-        // if min > max, min wins, so still need to call boundedSize()
-        return left + snapSizeX(boundedSize(child.minWidth(alt), max, Double.MAX_VALUE)) + right;
-    }
 
-    double computeChildMaxAreaHeight(Node child, double maxBaselineComplement, Insets margin, double availableWidth, boolean fillWidth) {
-        double max = child.maxHeight(-1);
+        double max = child.maxWidth(alt);
         if (max == Double.MAX_VALUE) {
             return max;
         }
 
-        final boolean snap = isSnapToPixel();
-        double top = margin != null? snapSpaceY(margin.getTop(), snap) : 0;
-        double bottom = margin != null? snapSpaceY(margin.getBottom(), snap) : 0;
-        double alt = -1;
-        if (availableWidth != -1 && child.isResizable() && child.getContentBias() == Orientation.HORIZONTAL) { // height depends on width
-            double contentWidth = computeContentWidth(margin, availableWidth);
+        double snappedChildWidth = snapSize(boundedSize(child.minWidth(alt), max, Double.MAX_VALUE), snap, scaleX);
+        return snapAligned(snappedLeft + snappedChildWidth + snappedRight, snap, scaleX);
+    }
 
-            alt = computeBoundedWidth(child, fillWidth, contentWidth);
-            max = child.maxHeight(alt);
+    /**
+     * Returns the maximum vertical space to lay out the child, taking its margins and optional common-baseline
+     * alignment into account. For a resizable child with horizontal content bias, {@code availableWidth}
+     * determines the width used to compute its height. If the child has no finite maximum height,
+     * {@link Double#MAX_VALUE} is returned unchanged.
+     * <p>
+     * When {@link #isSnapToPixel()} is true, every result other than the {@code Double.MAX_VALUE} sentinel
+     * is guaranteed to be aligned to the vertical pixel grid. Otherwise, no pixel-alignment guarantee
+     * is made.
+     *
+     * @param child the child to measure
+     * @param maxBaselineComplement the extent below the common baseline, or {@code -1} when baseline alignment is not used
+     * @param margin the child's margin, or {@code null} for no margin
+     * @param availableWidth the available width including margins, or {@code -1} when unknown
+     * @param fillWidth whether the child may fill the available width instead of being limited to its preferred width
+     * @return the maximum vertical space to lay out the child, or {@code Double.MAX_VALUE} if it has no finite maximum height
+     */
+    double computeChildMaxAreaHeight(Node child, double maxBaselineComplement, Insets margin,
+                                     double availableWidth, boolean fillWidth) {
+        boolean snap = isSnapToPixel();
+        double scaleX = getSnapScaleX();
+        double scaleY = getSnapScaleY();
+        double snappedTop = margin != null ? snapSpace(margin.getTop(), snap, scaleY) : 0;
+        double snappedBottom = margin != null ? snapSpace(margin.getBottom(), snap, scaleY) : 0;
+        double alt = -1;
+
+        if (availableWidth != -1 && child.isResizable() && child.getContentBias() == Orientation.HORIZONTAL) { // height depends on width
+            double snappedContentWidth = computeContentWidth(margin, availableWidth, snap, scaleX);
+            alt = computeBoundedWidth(child, fillWidth, snappedContentWidth, snap, scaleX);
         }
-        // For explanation, see computeChildPrefAreaHeight
+
+        double max = child.maxHeight(alt);
+        if (max == Double.MAX_VALUE) {
+            return max;
+        }
+
         if (maxBaselineComplement != -1) {
-            double baseline = child.getBaselineOffset();
-            if (child.isResizable() && baseline == BASELINE_OFFSET_SAME_AS_HEIGHT) {
-                return top + snapSizeY(boundedSize(child.minHeight(alt), max, Double.MAX_VALUE)) + bottom
-                        + maxBaselineComplement;
+            double rawBaseline = child.getBaselineOffset();
+
+            // The baseline complement is the extent below the common baseline. It is deliberately kept raw because
+            // it is an intermediate part of the complete baseline-aligned area; snapping it separately could lose
+            // precision or over-allocate. Combine it with the extent above the baseline and snap the resulting
+            // content size instead.
+            if (rawBaseline == BASELINE_OFFSET_SAME_AS_HEIGHT) {
+                double rawChildMaxHeight = boundedSize(child.minHeight(alt), max, Double.MAX_VALUE);
+                double snappedChildMaxHeight = snapSize(rawChildMaxHeight, snap, scaleY);
+                double snappedHeightAboveBaseline = snapAligned(snappedTop + snappedBottom + snappedChildMaxHeight, snap, scaleY);
+                return snapSize(snappedHeightAboveBaseline + maxBaselineComplement, snap, scaleY);
             } else {
-                return top + baseline + maxBaselineComplement + bottom;
+                double snappedMargins = snapAligned(snappedTop + snappedBottom, snap, scaleY);
+                return snapSize(snappedMargins + rawBaseline + maxBaselineComplement, snap, scaleY);
             }
         } else {
             // if min > max, min wins, so still need to call boundedSize()
-            return top + snapSizeY(boundedSize(child.minHeight(alt), max, Double.MAX_VALUE)) + bottom;
+            double snappedChildHeight = snapSize(boundedSize(child.minHeight(alt), max, Double.MAX_VALUE), snap, scaleY);
+            return snapAligned(snappedTop + snappedBottom + snappedChildHeight, snap, scaleY);
         }
     }
 
@@ -2094,15 +2323,16 @@ public class Region extends Parent {
      * controls whether the content width or the child's preferred width is used to compute
      * the bounded width.
      */
-    private double computeBoundedWidth(Node child, boolean fill, double contentWidth) {
+    private double computeBoundedWidth(Node child, boolean fill, double contentWidth,
+                                       boolean snapToPixel, double snapScale) {
         double min = child.minWidth(-1);
         double max = child.maxWidth(-1);
 
         if (fill) {
-            return snapSizeX(boundedSize(min, contentWidth, max));
+            return snapSize(boundedSize(min, contentWidth, max), snapToPixel, snapScale);
         }
 
-        return snapSizeX(boundedSize(min, child.prefWidth(-1), Math.min(max, contentWidth)));
+        return snapSize(boundedSize(min, child.prefWidth(-1), Math.min(max, contentWidth)), snapToPixel, snapScale);
     }
 
     /*
@@ -2110,27 +2340,38 @@ public class Region extends Parent {
      * controls whether the content height or the child's preferred height is used to compute
      * the bounded height.
      */
-    private double computedBoundedHeight(Node child, boolean fill, double contentHeight) {
+    private double computeBoundedHeight(Node child, boolean fill, double contentHeight,
+                                        boolean snapToPixel, double snapScale) {
         double min = child.minHeight(-1);
         double max = child.maxHeight(-1);
 
         if (fill) {
-            return snapSizeY(boundedSize(min, contentHeight, max));
+            return snapSize(boundedSize(min, contentHeight, max), snapToPixel, snapScale);
         }
 
-        return snapSizeY(boundedSize(min, child.prefHeight(-1), Math.min(max, contentHeight)));
+        return snapSize(boundedSize(min, child.prefHeight(-1), Math.min(max, contentHeight)), snapToPixel, snapScale);
     }
 
     /*
-     * Removes the given Margin (if any) from a width which still includes margins
+     * Removes the given margin (if any) from a width which still includes margins
      * to create a content width.
      */
-    private double computeContentWidth(Insets margin, double width) {
-        boolean snap = isSnapToPixel();
-        double left = margin != null ? snapSpaceX(margin.getLeft(), snap) : 0;
-        double right = margin != null ? snapSpaceX(margin.getRight(), snap) : 0;
+    private double computeContentWidth(Insets margin, double width, boolean snapToPixel, double snapScale) {
+        double left = margin != null ? snapSpace(margin.getLeft(), snapToPixel, snapScale) : 0;
+        double right = margin != null ? snapSpace(margin.getRight(), snapToPixel, snapScale) : 0;
+        double snappedWidth = snapSize(width, snapToPixel, snapScale);
+        return snapAligned(snappedWidth - left - right, snapToPixel, snapScale);
+    }
 
-        return width - left - right;
+    /*
+     * Removes the given margin (if any) from a height which still includes margins
+     * to create a content height.
+     */
+    private double computeContentHeight(Insets margin, double height, boolean snapToPixel, double snapScale) {
+        double top = margin != null ? snapSpace(margin.getTop(), snapToPixel, snapScale) : 0;
+        double bottom = margin != null ? snapSpace(margin.getBottom(), snapToPixel, snapScale) : 0;
+        double snappedHeight = snapSize(height, snapToPixel, snapScale);
+        return snapAligned(snappedHeight - top - bottom, snapToPixel, snapScale);
     }
 
     /* Max of children's minimum area widths */
@@ -2392,7 +2633,7 @@ public class Region extends Parent {
                 snapSpace(childMargin.getRight(), isSnapToPixel, snapScaleX),
                 snapSpace(childMargin.getBottom(), isSnapToPixel, snapScaleY),
                 snapSpace(childMargin.getLeft(), isSnapToPixel, snapScaleX),
-                halignment, valignment, isSnapToPixel);
+                halignment, valignment, isSnapToPixel, snapScaleX, snapScaleY);
     }
 
     /**
@@ -2618,67 +2859,79 @@ public class Region extends Parent {
                                double areaBaselineOffset,
                                Insets margin, boolean fillWidth, boolean fillHeight,
                                HPos halignment, VPos valignment, boolean isSnapToPixel) {
-
         Insets childMargin = margin != null ? margin : Insets.EMPTY;
         double snapScaleX = isSnapToPixel ? getSnapScaleX(child) : 1.0;
         double snapScaleY = isSnapToPixel ? getSnapScaleY(child) : 1.0;
 
-        double top = snapSpace(childMargin.getTop(), isSnapToPixel, snapScaleY);
-        double bottom = snapSpace(childMargin.getBottom(), isSnapToPixel, snapScaleY);
-        double left = snapSpace(childMargin.getLeft(), isSnapToPixel, snapScaleX);
-        double right = snapSpace(childMargin.getRight(), isSnapToPixel, snapScaleX);
+        double snappedTop = snapSpace(childMargin.getTop(), isSnapToPixel, snapScaleY);
+        double snappedBottom = snapSpace(childMargin.getBottom(), isSnapToPixel, snapScaleY);
+        double snappedLeft = snapSpace(childMargin.getLeft(), isSnapToPixel, snapScaleX);
+        double snappedRight = snapSpace(childMargin.getRight(), isSnapToPixel, snapScaleX);
 
+        // Don't snap areaBaselineOffset independently, as this would lose precision.
+        // Instead, we only snap the final derived spans like snappedTop and snappedBottom.
         if (valignment == VPos.BASELINE) {
-            double bo = child.getBaselineOffset();
-            if (bo == BASELINE_OFFSET_SAME_AS_HEIGHT) {
-                if (child.isResizable()) {
-                    // Everything below the baseline is like an "inset". The Node with BASELINE_OFFSET_SAME_AS_HEIGHT cannot
-                    // be resized to this area
-                    bottom += snapSpace(areaHeight - areaBaselineOffset, isSnapToPixel, snapScaleY);
-                } else {
-                    top = snapSpace(areaBaselineOffset - child.getLayoutBounds().getHeight(), isSnapToPixel, snapScaleY);
-                }
-            } else {
-                top = snapSpace(areaBaselineOffset - bo, isSnapToPixel, snapScaleY);
+            double rawBaseline = child.getBaselineOffset();
+            if (rawBaseline != BASELINE_OFFSET_SAME_AS_HEIGHT) {
+                snappedTop = snapSpace(areaBaselineOffset - rawBaseline, isSnapToPixel, snapScaleY);
+            } else if (child.isResizable()) {
+                // Everything below the baseline is like an "inset".
+                // The Node with BASELINE_OFFSET_SAME_AS_HEIGHT cannot be resized to this area.
+                snappedBottom = snapSpace(areaHeight - areaBaselineOffset, isSnapToPixel, snapScaleY);
             }
         }
 
+        // We size-snap areaWidth and areaHeight to derive the resizable child's size allocation,
+        // but deliberately don't use these snapped values for positioning later.
         if (child.isResizable()) {
-            Vec2d size = boundedNodeSizeWithBias(child, areaWidth - left - right, areaHeight - top - bottom,
-                    fillWidth, fillHeight, isSnapToPixel, snapScaleX, snapScaleY, TEMP_VEC2D);
+            double snappedAreaWidth = snapSize(areaWidth, isSnapToPixel, snapScaleX);
+            double snappedAreaHeight = snapSize(areaHeight, isSnapToPixel, snapScaleY);
+            double snappedAvailableWidth = snapAligned(snappedAreaWidth - snappedLeft - snappedRight, isSnapToPixel, snapScaleX);
+            double snappedAvailableHeight = snapAligned(snappedAreaHeight - snappedTop - snappedBottom, isSnapToPixel, snapScaleY);
+            Vec2d size = boundedNodeSizeWithBias(child, snappedAvailableWidth, snappedAvailableHeight,
+                fillWidth, fillHeight, isSnapToPixel, snapScaleX, snapScaleY, TEMP_VEC2D);
             child.resize(size.x, size.y);
         }
+
         position(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset,
-                top, right, bottom, left, halignment, valignment, isSnapToPixel);
+                 snappedTop, snappedRight, snappedBottom, snappedLeft,
+                 halignment, valignment, isSnapToPixel, snapScaleX, snapScaleY);
     }
 
-    private static void position(Node child, double areaX, double areaY, double areaWidth, double areaHeight,
-                          double areaBaselineOffset,
-                          double topMargin, double rightMargin, double bottomMargin, double leftMargin,
-                          HPos hpos, VPos vpos, boolean isSnapToPixel) {
-        final double xoffset = leftMargin + computeXOffset(areaWidth - leftMargin - rightMargin,
-                                                     child.getLayoutBounds().getWidth(), hpos);
-        final double yoffset;
+    private static void position(Node child,
+                                 double rawAreaX, double rawAreaY,
+                                 double rawAreaWidth, double rawAreaHeight,
+                                 double rawAreaBaselineOffset,
+                                 double snappedTopMargin, double snappedRightMargin,
+                                 double snappedBottomMargin, double snappedLeftMargin,
+                                 HPos hpos, VPos vpos,
+                                 boolean isSnapToPixel,
+                                 double snapScaleX, double snapScaleY) {
+        final double rawXOffset = snappedLeftMargin + computeXOffset(
+            rawAreaWidth - snappedLeftMargin - snappedRightMargin,
+            child.getLayoutBounds().getWidth(), hpos);
+
+        final double rawYOffset;
         if (vpos == VPos.BASELINE) {
             double bo = child.getBaselineOffset();
             if (bo == BASELINE_OFFSET_SAME_AS_HEIGHT) {
                 // We already know the layout bounds at this stage, so we can use them
-                yoffset = areaBaselineOffset - child.getLayoutBounds().getHeight();
+                rawYOffset = rawAreaBaselineOffset - child.getLayoutBounds().getHeight();
             } else {
-                yoffset = areaBaselineOffset - bo;
+                rawYOffset = rawAreaBaselineOffset - bo;
             }
         } else {
-            yoffset = topMargin + computeYOffset(areaHeight - topMargin - bottomMargin,
-                                         child.getLayoutBounds().getHeight(), vpos);
-        }
-        double x = areaX + xoffset;
-        double y = areaY + yoffset;
-        if (isSnapToPixel) {
-            x = snapPosition(x, true, getSnapScaleX(child));
-            y = snapPosition(y, true, getSnapScaleY(child));
+            rawYOffset = snappedTopMargin + computeYOffset(
+                rawAreaHeight - snappedTopMargin - snappedBottomMargin,
+                child.getLayoutBounds().getHeight(), vpos);
         }
 
-        child.relocate(x,y);
+        double rawX = rawAreaX + rawXOffset;
+        double rawY = rawAreaY + rawYOffset;
+        double snappedX = snapPosition(rawX, isSnapToPixel, snapScaleX);
+        double snappedY = snapPosition(rawY, isSnapToPixel, snapScaleY);
+
+        child.relocate(snappedX, snappedY);
     }
 
      /* ************************************************************************

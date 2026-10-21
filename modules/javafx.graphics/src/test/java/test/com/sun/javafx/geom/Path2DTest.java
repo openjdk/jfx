@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -590,5 +590,14 @@ public class Path2DTest {
         Path2D p2dtest = new Path2D();
         p2dtest.appendSVGPath(svgpathminWS);
         checkShapes(p2dref, p2dtest);
+    }
+
+    @Test
+    void testQuarterCircleArcTo() {
+        Path2D path = new Path2D();
+        path.appendSVGPath("M11.65,6.47A1.69,1.69 0 0,1 13.34,4.78");
+
+        assertEquals(13.34f, path.getCurrentX(), 0.001f);
+        assertEquals(4.78f, path.getCurrentY(), 0.001f);
     }
 }

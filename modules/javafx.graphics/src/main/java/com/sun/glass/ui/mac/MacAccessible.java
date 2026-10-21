@@ -27,7 +27,9 @@ package com.sun.glass.ui.mac;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -119,6 +121,7 @@ final class MacAccessible extends Accessible {
         AXMenuItemCmdGlyph(ACCELERATOR, MacVariant::createNSNumberForInt),
         AXMenuItemCmdModifiers(ACCELERATOR, MacVariant::createNSNumberForInt),
         AXMenuItemMarkChar(SELECTED, MacVariant::createNSString),
+        AXVisibleItemRange(VISIBLE_ITEM_RANGE, MacVariant::createNSValueForRange),
         AXDateTimeComponents(null, MacVariant::createNSNumberForInt),
 
         // NSAccessibilityMenuRole
@@ -1300,6 +1303,31 @@ final class MacAccessible extends Accessible {
             return null;
         }
         Object result = getAttribute(jfxAttr);
+        if (attr == MacAttribute.NSAccessibilitySelectedRowsAttribute
+                && role == AccessibleRole.TABLE_VIEW) {
+            @SuppressWarnings("unchecked")
+            ObservableList<Node> selectedCells = (ObservableList<Node>)result;
+            Set<Node> selectedRows = new LinkedHashSet<>();
+            if (selectedCells != null) {
+                for (Node cell : selectedCells) {
+                    Accessible cellAccessible = getAccessible(cell);
+                    if (cellAccessible == null) {
+                        continue;
+                    }
+
+                    Integer rowIndex = (Integer)cellAccessible.getAttribute(ROW_INDEX);
+                    if (rowIndex == null) {
+                        continue;
+                    }
+
+                    Node row = (Node)getAttribute(ROW_AT_INDEX, rowIndex);
+                    if (row != null) {
+                        selectedRows.add(row);
+                    }
+                }
+            }
+            result = FXCollections.observableArrayList(selectedRows);
+        }
         if (result == null) {
             switch (attr) {
                 case NSAccessibilityParentAttribute: break;
@@ -1696,12 +1724,15 @@ final class MacAccessible extends Accessible {
                     if (variant != null && variant.longArray != null && variant.longArray.length > 0) {
                         long[] ids = variant.longArray;
                         ObservableList<Node> items = FXCollections.observableArrayList();
+                        AccessibleRole controlRole = (AccessibleRole)getAttribute(ROLE);
                         for (long id : ids) {
                             MacAccessible acc = GlassAccessibleToMacAccessible(id);
                             if (acc != null) {
                                 Integer index = (Integer)acc.getAttribute(INDEX);
                                 if (index != null) {
-                                    Node cell = (Node)getAttribute(ROW_AT_INDEX, index);
+                                    AccessibleAttribute itemAttribute = controlRole == AccessibleRole.LIST_VIEW
+                                            ? ITEM_AT_INDEX : ROW_AT_INDEX;
+                                    Node cell = (Node)getAttribute(itemAttribute, index);
                                     if (cell != null) {
                                         items.add(cell);
                                     }

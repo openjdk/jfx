@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -196,7 +196,7 @@ public class Locator {
      * manipulation in order to be used and this procedure fails to produce a
      * usable URI.
      * @throws IllegalArgumentException if the URI is a Jar URL as described in
-     * {@link JarURLConnection https://docs.oracle.com/javase/8/docs/api/java/net/JarURLConnection.html},
+     * {@link java.net.JarURLConnection},
      * and the scheme of the URL after removing the leading four characters is
      * <code>null</code>.
      * @throws UnsupportedOperationException if the URI's protocol is

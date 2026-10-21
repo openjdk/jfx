@@ -1613,7 +1613,7 @@ public class RichTextArea extends Control {
      */
     public final TextPos getTextPosition(double screenX, double screenY) {
         Point2D local = vflow().getContentPane().screenToLocal(screenX, screenY);
-        return vflow().getTextPosLocal(local.getX(), local.getY());
+        return vflow().findTextPosLocal(local.getX(), local.getY());
     }
 
     /**
@@ -2459,7 +2459,10 @@ public class RichTextArea extends Control {
         });
 
         b.setSegHandler(StyleAttributeMap.FONT_FAMILY, (c, cx, v) -> {
-            cx.addStyle("-fx-font-family:'" + v + "';");
+            v = RichUtils.toCssFont(v);
+            if (v != null) {
+                cx.addStyle("-fx-font-family:'" + v + "';");
+            }
         });
 
         b.setSegHandler(StyleAttributeMap.FONT_SIZE, (c, cx, v) -> {

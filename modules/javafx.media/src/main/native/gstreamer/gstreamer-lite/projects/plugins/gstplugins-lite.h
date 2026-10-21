@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,7 +40,6 @@ gboolean plugin_init_wavparse (GstPlugin * plugin);
 gboolean plugin_init_aiff (GstPlugin * plugin);
 gboolean plugin_init_app (GstPlugin * plugin);
 gboolean plugin_init_audioparsers (GstPlugin * plugin);
-gboolean plugin_init_qtdemux (GstPlugin * plugin);
 
 #ifdef WIN32
 gboolean plugin_init_directsound (GstPlugin * plugin);
@@ -55,6 +54,7 @@ gboolean plugin_init_osxaudio (GstPlugin * plugin);
 gboolean plugin_init_audiofx (GstPlugin * plugin);
 gboolean plugin_init_alsa (GstPlugin * plugin);
 gboolean plugin_init_volume (GstPlugin * plugin);
+gboolean plugin_init_qtdemux (GstPlugin * plugin);
 #endif
 
 G_END_DECLS

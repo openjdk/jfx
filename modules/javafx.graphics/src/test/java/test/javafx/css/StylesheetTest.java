@@ -25,6 +25,7 @@
 
 package test.javafx.css;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -803,6 +804,52 @@ public class StylesheetTest {
 
         root.applyCss();
         assertEquals(Background.fill(Color.RED), root.getBackground());
+    }
+
+    @Test
+    void serializeStylesheetWithTransitions() throws IOException {
+        String css = """
+            .control {
+                transition: -fx-background-color 120ms ease-out,
+                            -fx-opacity 0.2s 30ms linear,
+                            -fx-scale-x 160ms cubic-bezier(0.1, 0.2, 0.3, 0.4),
+                            -fx-scale-y 0.2s steps(3, jump-both),
+                            -fx-rotate 180ms linear(0 0%, 0.25 50%, 1 100%);
+            }
+            .longhand {
+                transition-property: -fx-scale-x, -fx-scale-y;
+                transition-duration: 160ms, 0.2s;
+                transition-delay: 0s, -20ms;
+                transition-timing-function: ease-out, linear,
+                                            cubic-bezier(0.5, 2, 0.5, -1),
+                                            step-start, step-end,
+                                            steps(3), steps(3, start), steps(3, end),
+                                            steps(3, jump-start), steps(3, jump-end),
+                                            steps(3, jump-none), steps(3, jump-both),
+                                            linear(0, 0.3, 1),
+                                            linear(0 0%, 0.25 25% 75%, 1 100%);
+            }
+            @media (prefers-reduced-motion: reduce) {
+                .control { transition: all 0s; }
+            }
+            """;
+
+        var source = new CssParser().parse(css);
+        var restored = Stylesheet.loadBinary(new ByteArrayInputStream(convertCssTextToBinary(css)));
+        assertEquals(source.getRules().size(), restored.getRules().size());
+
+        for (int rule = 0; rule < source.getRules().size(); rule++) {
+            var original = source.getRules().get(rule).getDeclarations();
+            var loaded = restored.getRules().get(rule).getDeclarations();
+            assertEquals(original.size(), loaded.size());
+
+            for (int declaration = 0; declaration < original.size(); declaration++) {
+                assertArrayEquals(
+                    (Object[])original.get(declaration).getParsedValue().convert(null),
+                    (Object[])loaded.get(declaration).getParsedValue().convert(null),
+                    original.get(declaration).getProperty());
+            }
+        }
     }
 
     @Test
