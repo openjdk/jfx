@@ -49,6 +49,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -155,6 +156,18 @@ public class CanvasTest {
         gc.strokePolygon( xPoints, yPoints, 2);
         gc.strokePolygon( null, yPoints, 2);
         gc.strokePolygon( xPoints, null, 2);
+    }
+
+    @Test
+    public void testGCMalformedPolygonArraysAreIgnored() {
+        assertDoesNotThrow(() -> {
+            gc.fillPolygon(new double[] {0, 10}, new double[] {0, 10, 20}, 3);
+            gc.fillPolygon(new double[] {0, 10, 20}, new double[] {0, 10}, 3);
+            gc.fillPolygon(null, new double[] {0, 10, 20}, 3);
+            gc.strokePolygon(new double[] {0}, new double[] {0, 10}, 2);
+            gc.strokePolygon(null, new double[] {0, 10}, 2);
+            gc.strokePolyline(new double[] {0, 10}, new double[] {0}, 2);
+        });
     }
 
     @Test

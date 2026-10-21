@@ -730,7 +730,9 @@ public final class GraphicsContext implements DrawingContext {
     private void writePoly(double xPoints[], double yPoints[], int nPoints,
                            boolean close, byte command)
     {
-        if (xPoints == null || yPoints == null) return;
+        if (xPoints == null || yPoints == null || nPoints > xPoints.length || nPoints > yPoints.length) {
+            return;
+        }
         GrowableDataBuffer buf = getBuffer();
         buf.putByte(NGCanvas.PATHSTART);
         int pos = 0;

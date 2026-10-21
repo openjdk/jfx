@@ -1208,6 +1208,8 @@ public interface DrawingContext {
      * Strokes a polyline with the given points using the currently set stroke
      * paint attribute.
      * A {@code null} value for any of the arrays will be ignored and nothing will be drawn.
+     * If {@code nPoints} is less than 2, or if either array contains fewer than
+     * {@code nPoints} elements, nothing will be drawn.
      * <p>
      * This method will be affected by any of the
      * <a href="#comm-attr">global common</a>
@@ -1224,6 +1226,8 @@ public interface DrawingContext {
     /**
      * Strokes a polygon with the given points using the currently set stroke paint.
      * A {@code null} value for any of the arrays will be ignored and nothing will be drawn.
+     * If {@code nPoints} is less than 2, or if either array contains fewer than
+     * {@code nPoints} elements, nothing will be drawn.
      * <p>
      * This method will be affected by any of the
      * <a href="#comm-attr">global common</a>
@@ -1240,6 +1244,8 @@ public interface DrawingContext {
     /**
      * Fills a polygon with the given points using the currently set fill paint.
      * A {@code null} value for any of the arrays will be ignored and nothing will be drawn.
+     * If {@code nPoints} is less than 3, or if either array contains fewer than
+     * {@code nPoints} elements, nothing will be drawn.
      * <p>
      * This method will be affected by any of the
      * <a href="#comm-attr">global common</a>,
