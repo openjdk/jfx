@@ -102,6 +102,7 @@ import javafx.scene.transform.Affine;
  *     <li>Arbitrary path clipping is not supported, only {@link #clipRect(double, double, double, double)}.
  *     <li>Fractional clip rectangles are rounded inward to the image's pixel grid.
  *     <li>Effects are not supported; {@link #setEffect(javafx.scene.effect.Effect) setEffect} will throw an exception.
+ *     <li>Images with a width or height larger than 32767 pixels are not supported.
  * </ul>
  * <p>
  * This class is intended for use in contexts where direct drawing into a Prism image is needed, such as the
@@ -206,12 +207,22 @@ public class SWDrawingContext implements DrawingContext {
      * @param pixelsDirty a consumer of dirty rectangles, cannot be {@code null}
      * @throws NullPointerException if any argument is {@code null}
      * @throws IllegalStateException if the image is not backed by a writable buffer
-     *     in a format supported by the software renderer
+     *     in a format supported by the software renderer, or if either image dimension
+     *     exceeds the maximum size supported by the implementation
      */
     public SWDrawingContext(com.sun.prism.Image img, Consumer<Rectangle> pixelsDirty) {
         this.pixelsDirty = Objects.requireNonNull(pixelsDirty, "pixelsDirty");
         this.imageWidth = img.getWidth();  // implicit null check for img
         this.imageHeight = img.getHeight();
+
+        /*
+         * Pisces uses signed 16.16 fixed-point math, reject images that are too large:
+         */
+
+        if (imageWidth > Short.MAX_VALUE || imageHeight > Short.MAX_VALUE) {
+            throw new IllegalStateException("image dimensions must not exceed " + Short.MAX_VALUE);
+        }
+
         this.resourceFactory = new SWResourceFactory(null);
 
         SWRTTexture texture = createTexture(resourceFactory, img);

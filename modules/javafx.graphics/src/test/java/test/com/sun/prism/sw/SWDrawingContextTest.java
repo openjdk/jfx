@@ -65,6 +65,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
@@ -181,6 +182,18 @@ public class SWDrawingContextTest {
         com.sun.prism.Image image = com.sun.prism.Image.fromIntArgbPreData(small, WIDTH, HEIGHT);
 
         assertThrows(IllegalStateException.class, () -> new SWDrawingContext(image, _ -> {}));
+    }
+
+    @Test
+    public void constructorShouldRejectOversizedImage() {
+        assertThrows(IllegalStateException.class, () -> new SWDrawingContext(prismImage(Short.MAX_VALUE + 1, 1), _ -> {}));
+        assertThrows(IllegalStateException.class, () -> new SWDrawingContext(prismImage(1, Short.MAX_VALUE + 1), _ -> {}));
+    }
+
+    @Test
+    public void constructorShouldAcceptMaximumImageDimension() {
+        assertDoesNotThrow(() -> new SWDrawingContext(prismImage(Short.MAX_VALUE, 1), _ -> {}));
+        assertDoesNotThrow(() -> new SWDrawingContext(prismImage(1, Short.MAX_VALUE), _ -> {}));
     }
 
     @Test

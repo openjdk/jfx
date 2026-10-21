@@ -52,6 +52,12 @@ import javafx.scene.transform.Affine;
  * JavaFX Application Thread. A provider that is not associated with any scene may permit
  * the operations to be called from any single other thread.
  * <p>
+ * The maximum size of a drawing surface, and other implementation-specific
+ * limits, are not specified by this interface. Consult the documentation of
+ * the method that provides the context, such as
+ * {@link WritableImage#getDrawingContext()} or
+ * {@link javafx.scene.canvas.Canvas#getGraphicsContext2D()}, for details.
+ * <p>
  * The {@code DrawingContext} maintains the following rendering attributes
  * which affect various subsets of the rendering methods:
  * <table class="overviewSummary" style="width:80%; margin-left:auto; margin-right:auto">

@@ -182,6 +182,10 @@ public class WritableImage extends Image {
      *     <li>clipping under a transform containing rotation or shear;
      *     <li>blend modes other than {@link javafx.scene.effect.BlendMode#SRC_OVER SRC_OVER}.
      * </ul>
+     * Image dimensions larger than 32767 pixels in either direction are not
+     * supported by the current implementation; such images are rejected with
+     * an {@link IllegalStateException}. This limit may change in a future release.
+     * <p>
      * Fractional clip rectangles are rounded inward to the image's pixel grid
      * (with the identity transform, clip coordinates are image pixels), so a clip
      * covering less than one pixel may become empty.
@@ -191,7 +195,8 @@ public class WritableImage extends Image {
      * @return the {@link DrawingContext} associated with this image, never {@code null}
      * @throws IllegalStateException if this image's pixel storage cannot back a {@code DrawingContext}:
      *     the pixel format is not {@code INT_ARGB_PRE}, the {@code IntBuffer} is neither a direct buffer
-     *     in native byte order nor backed by an accessible array, or the buffer is read-only
+     *     in native byte order nor backed by an accessible array, or the buffer is read-only; or if
+     *     either image dimension exceeds the maximum size supported by the implementation
      * @since 28
      */
     public final DrawingContext getDrawingContext() {
