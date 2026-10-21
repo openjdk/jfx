@@ -2855,6 +2855,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         for (int i = 0, max = pile.size(); i < max; i++) {
             T cell = pile.get(i);
             cell.setVisible(false);
+
+            // Notify the cell that it is now empty (as it will land in the pile, removed from the viewport).
             if (cell.getIndex() != -1) {
                 cell.updateIndex(-1);
             }
