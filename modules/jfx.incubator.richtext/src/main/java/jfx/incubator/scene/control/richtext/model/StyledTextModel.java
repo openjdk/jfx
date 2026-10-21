@@ -110,6 +110,8 @@ public abstract class StyledTextModel {
     public interface Listener {
         /**
          * Informs the listener that the model content has changed.
+         * For a content change, marker positions are updated after all listeners return.
+         * If a listener reads a marker, it will be its position from before the change.
          * @param ch the change
          */
         public void onContentChange(ContentChange ch);
@@ -372,8 +374,6 @@ public abstract class StyledTextModel {
      * @param forImport true if the handler supports import operations
      * @param priority from 0 (lowest, usually plain text) to {@code Integer.MAX_VALUE}
      */
-    // TODO this method could be made public to allow for adding new handlers to existing models
-    // such as RichTextModel.
     protected final void registerDataFormatHandler(DataFormatHandler h, boolean forExport, boolean forImport, int priority) {
         FHPriority p = new FHPriority(h, priority);
         if (forExport) {
@@ -450,10 +450,8 @@ public abstract class StyledTextModel {
      */
     public void fireChangeEvent(TextPos start, TextPos end, int charsTop, int linesAdded, int charsBottom) {
         ContentChange ch = ContentChange.ofEdit(start, end, charsTop, linesAdded, charsBottom);
+        fireChangeEvent(ch);
         markers.update(start, end, charsTop, linesAdded, charsBottom);
-        for (Listener li : listeners) {
-            li.onContentChange(ch);
-        }
     }
 
     /**
@@ -465,8 +463,16 @@ public abstract class StyledTextModel {
      */
     public void fireStyleChangeEvent(TextPos start, TextPos end) {
         ContentChange ch = ContentChange.ofStyleChange(start, end);
+        fireChangeEvent(ch);
+    }
+
+    private void fireChangeEvent(ContentChange ch) {
         for (Listener li : listeners) {
-            li.onContentChange(ch);
+            try {
+                li.onContentChange(ch);
+            } catch (Exception e) {
+                Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
+            }
         }
     }
 
@@ -609,7 +615,8 @@ public abstract class StyledTextModel {
 
     /**
      * Returns the {@link Marker} at the specified position.
-     * The actual text position tracked by the marker will always be within the document boundaries.
+     * The actual text position tracked by the marker will always be within the document boundaries,
+     * getting updated after the model listeners receive their {@code ContentChange} events.
      *
      * @param pos text position
      * @return Marker instance
