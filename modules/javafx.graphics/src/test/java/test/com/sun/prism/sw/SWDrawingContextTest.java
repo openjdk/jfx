@@ -830,6 +830,27 @@ public class SWDrawingContextTest {
     }
 
     @Test
+    public void shouldIgnoreMalformedPolygons() {
+        h.context.setFill(Color.RED);
+        h.context.setStroke(Color.BLUE);
+        h.context.setLineWidth(4);
+
+        h.context.fillPolygon(null, new double[] {0, 10, 20}, 3);
+        h.context.fillPolygon(new double[] {0, 10, 20}, null, 3);
+        h.context.fillPolygon(new double[] {0, 10}, new double[] {0, 10, 20}, 3);
+        h.context.fillPolygon(new double[] {0, 10, 20}, new double[] {0, 10}, 3);
+        h.context.fillPolygon(new double[] {0, 10, 20}, new double[] {0, 10, 20}, 2);
+
+        h.context.strokePolygon(null, new double[] {0, 10}, 2);
+        h.context.strokePolygon(new double[] {0}, new double[] {0, 10}, 2);
+        h.context.strokePolygon(new double[] {0, 10}, new double[] {0, 10}, 1);
+        h.context.strokePolyline(new double[] {0, 10}, new double[] {0}, 2);
+
+        assertTrue(h.dirtyRects.isEmpty());
+        assertFalse(hasPaintedPixel(0, 0, WIDTH, HEIGHT));
+    }
+
+    @Test
     public void shouldFillPath() {
         h.context.setFill(Color.RED);
         h.context.beginPath();
