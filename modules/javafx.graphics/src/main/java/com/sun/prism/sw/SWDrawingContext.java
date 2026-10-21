@@ -1326,8 +1326,34 @@ public class SWDrawingContext implements DrawingContext {
             throw new IllegalArgumentException("PlatformImage must be a Prism Image");
         }
 
-        // Create a texture from the Prism image
-        Texture tex = resourceFactory.createTexture(prismImage, Usage.DEFAULT, Texture.WrapMode.CLAMP_TO_EDGE);
+        // Use a compatible, array-backed image directly instead of copying it
+        Texture tex = null;
+        boolean wrapped = false;
+
+        if (prismImage.getPixelFormat() == PixelFormat.INT_ARGB_PRE
+                && prismImage.getPixelBuffer() instanceof IntBuffer buffer
+                && buffer.hasArray()
+                && !buffer.isReadOnly()) {
+            int width = prismImage.getWidth();
+            int height = prismImage.getHeight();
+            int stride = prismImage.getScanlineStride() / 4;
+            int minX = prismImage.getMinX();
+            int minY = prismImage.getMinY();
+            long offset = buffer.arrayOffset() + (long) minY * stride + minX;
+            int[] data = buffer.array();
+
+            if (stride >= width && offset >= 0 && offset + (long) (height - 1) * stride + width <= data.length) {
+                tex = new SWArgbPreTexture(
+                    resourceFactory, Texture.WrapMode.CLAMP_TO_EDGE,
+                    width, height, data, (int) offset, stride
+                );
+                wrapped = true;
+            }
+        }
+
+        if (!wrapped) {
+            tex = resourceFactory.createTexture(prismImage, Usage.DEFAULT, Texture.WrapMode.CLAMP_TO_EDGE);
+        }
 
         if (tex == null) {
             throw new IllegalStateException("Unable to draw image, insufficient resources");
@@ -1351,7 +1377,9 @@ public class SWDrawingContext implements DrawingContext {
             reportGraphicsPaintBounds();
         }
         finally {
-            tex.dispose();
+            if (!wrapped) {
+                tex.dispose();
+            }
         }
     }
 

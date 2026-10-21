@@ -1127,9 +1127,69 @@ public class SWDrawingContextTest {
         h.context.setImageSmoothing(false);
         h.context.drawImage(source, 0, 0, 2, 2, 0, 0, 4, 4);  // whole logical image -> 4x4 destination
 
-        assertPixel(0, 0, Color.RED);
-        assertPixel(1, 1, Color.RED);
-        assertPixel(2, 2, Color.BLUE);
+        IntFunction<Character> toChar = argb -> argb == 0xffff0000 ? 'R' : argb == 0xff0000ff ? 'B' : '.';
+
+        assertEquals("RRBB", rowPattern(0, 0, 4, toChar), "top row");
+        assertEquals("BBBB", rowPattern(0, 3, 4, toChar), "bottom row");
+    }
+
+    @Test
+    public void drawImageShouldDrawSubimageFromHeapBackedSource() {
+        int[] pixels = new int[16];
+
+        for (int i = 0; i < pixels.length; i++) {
+            pixels[i] = argb(255, i * 16, 0, 0);
+        }
+
+        Image source = createFxImage(com.sun.prism.Image.fromIntArgbPreData(pixels, 4, 4), 4, 4);
+
+        h.context.setImageSmoothing(false);
+        h.context.drawImage(source, 1, 1, 2, 2, 0, 0, 2, 2);
+
+        assertPixel(0, 0, argb(255, 5 * 16, 0, 0));
+        assertPixel(1, 1, argb(255, 10 * 16, 0, 0));
+    }
+
+    @Test
+    public void drawImageShouldDrawFromHeapBackedSourceWithOffset() {
+        int[] backing = new int[21];
+
+        Arrays.fill(backing, argb(255, 255, 0, 0));
+
+        for (int i = 5; i < 5 + 16; i++) {
+            backing[i] = argb(255, 0, 255, 0);
+        }
+
+        IntBuffer buffer = IntBuffer.wrap(backing);
+
+        buffer.position(5);
+
+        IntBuffer slice = buffer.slice();
+        Image source = createFxImage(com.sun.prism.Image.fromIntArgbPreData(slice, 4, 4), 4, 4);
+
+        h.context.setImageSmoothing(false);
+        h.context.drawImage(source, 0, 0, 4, 4, 0, 0, 4, 4);
+
+        assertPixel(0, 0, Color.LIME);
+        assertPixel(3, 3, Color.LIME);
+    }
+
+    @Test
+    public void drawImageShouldCopyDirectBufferSource() {
+        IntBuffer pixels = ByteBuffer.allocateDirect(4 * 4 * 4)
+            .order(ByteOrder.nativeOrder())
+            .asIntBuffer();
+
+        for (int i = 0; i < 16; i++) {
+            pixels.put(i, argb(255, 0, 0, 255));
+        }
+
+        Image source = createFxImage(com.sun.prism.Image.fromIntArgbPreData(pixels, 4, 4), 4, 4);
+
+        h.context.setImageSmoothing(false);
+        h.context.drawImage(source, 0, 0, 4, 4, 0, 0, 4, 4);
+
+        assertPixel(0, 0, Color.BLUE);
         assertPixel(3, 3, Color.BLUE);
     }
 
@@ -2281,6 +2341,14 @@ public class SWDrawingContextTest {
         h.context.setFontSmoothingType(FontSmoothingType.GRAY);
         h.context.setImageSmoothing(true);
         h.context.clearRect(0, 0, WIDTH, HEIGHT);
+    }
+
+    private static Image createFxImage(com.sun.prism.Image prismImage, int w, int h) {
+        StubImageLoaderFactory factory = ((StubToolkit) Toolkit.getToolkit()).getImageLoaderFactory();
+
+        factory.registerImage(prismImage, new StubPlatformImageInfo(w, h));
+
+        return Toolkit.getImageAccessor().fromPlatformImage(prismImage);
     }
 
     private static Image createSolidFxImage(int w, int h, int argbpre) {

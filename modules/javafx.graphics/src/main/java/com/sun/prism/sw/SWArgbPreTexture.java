@@ -55,6 +55,16 @@ class SWArgbPreTexture extends SWTexture {
         this.data = data;
     }
 
+    SWArgbPreTexture(SWResourceFactory factory, WrapMode wrapMode, int w, int h,
+                     int[] data, int offset, int scanlineStride) {
+        super(factory, wrapMode, w, h);
+
+        this.allocated = true;  // the supplied data is already allocated
+        this.data = data;
+        this.offset = offset;
+        this.physicalWidth = scanlineStride;
+    }
+
     SWArgbPreTexture(SWArgbPreTexture sharedTex, WrapMode altMode) {
         super(sharedTex, altMode);
         this.data = sharedTex.data;
