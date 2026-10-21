@@ -234,6 +234,13 @@ import javafx.scene.text.FontSmoothingType;
  * The type of smoothing (antialiasing) applied to the glyphs in the font
  * for all fill text operations.
  * </td></tr>
+ * <tr class="rowColor">
+ * <th scope="row" class="colLast" style="width:15%">{@link #setTextDirection(javafx.geometry.NodeOrientation) Text Direction}</th>
+ * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
+ * <td class="colLast" style="width:10%; text-align:center">{@link NodeOrientation#INHERIT INHERIT}</td>
+ * <td class="colLast">
+ * The direction in which text is rendered.
+ * </td></tr>
  * <tr><th colspan="3" scope="row"><a id="path-attr">Path Attributes</a></th></tr>
  * <tr class="rowColor">
  * <th scope="row" class="colLast" style="width:15%">{@link #beginPath() Current Path}</th>
