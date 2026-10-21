@@ -129,6 +129,10 @@ static void
 surface_acquire(AbstractSurface* abstractSurface, JNIEnv* env, jobject surfaceHandle) {
     JavaSurface* surface = (JavaSurface*)abstractSurface;
 
+    surface->arrayData = NULL;
+    surface->dataHandle = NULL;
+    abstractSurface->super.data = NULL;
+
     surface->dataHandle = (*env)->GetObjectField(env, surfaceHandle, surface->javaArrayFieldID);
 
     jint dataArrayLength = (*env)->GetArrayLength(env, surface->dataHandle);
@@ -152,6 +156,7 @@ surface_acquire(AbstractSurface* abstractSurface, JNIEnv* env, jobject surfaceHa
     jint* arrayData = (jint*)(*env)->GetPrimitiveArrayCritical(env, surface->dataHandle, NULL);
 
     if (arrayData == NULL) {
+        abstractSurface->super.data = NULL;
         surface->dataHandle = NULL;
         setMemErrorFlag();
         return;
@@ -165,7 +170,14 @@ static void
 surface_release(AbstractSurface* abstractSurface, JNIEnv* env, jobject surfaceHandle) {
     JavaSurface* surface = (JavaSurface*)abstractSurface;
 
-    if (surface->arrayData == NULL) return;
+    abstractSurface->super.data = NULL;
+
+    if (surface->arrayData == NULL) {
+        surface->dataHandle = NULL;
+
+        return;
+    }
+
     (*env)->ReleasePrimitiveArrayCritical(env, surface->dataHandle, surface->arrayData, 0);
     surface->arrayData = NULL;
     surface->dataHandle = NULL;
