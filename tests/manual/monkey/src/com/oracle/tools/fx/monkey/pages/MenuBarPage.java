@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,8 @@
 package com.oracle.tools.fx.monkey.pages;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.function.Supplier;
 import javafx.collections.ObservableList;
@@ -32,6 +34,7 @@ import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckMenuItem;
+import javafx.scene.control.Control;
 import javafx.scene.control.CustomMenuItem;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
@@ -40,6 +43,9 @@ import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.skin.MenuBarSkin;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyCombination.ModifierValue;
 import com.oracle.tools.fx.monkey.Loggers;
 import com.oracle.tools.fx.monkey.options.BooleanOption;
 import com.oracle.tools.fx.monkey.sheets.ControlPropertySheet;
@@ -76,6 +82,28 @@ public class MenuBarPage extends TestPaneBase implements HasSkinnable {
 
         setContent(control);
         setOptions(op);
+    }
+
+    private Node createItemsOptions(String name, ObservableList<Menu> items) {
+        ObjectSelector<List<Menu>> s = new ObjectSelector<>(name, items::setAll);
+        s.addChoiceSupplier("No Custom Menus", () -> {
+            Menu m = new Menu("No Custom Menus");
+            m.getItems().add(new MenuItem("Regular Menu Item"));
+            return List.of(m);
+        });
+        s.addChoiceSupplier("1 Menu", mk(1));
+        s.addChoiceSupplier("5 Menus", mk(5));
+        s.addChoiceSupplier("Invisible/Disabled", createInvisibleDisabled());
+        s.addChoiceSupplier("Accelerators", () -> withAccelerators("", false, false, false, false, false));
+        s.addChoiceSupplier("Accelerators+(shift)", () -> withAccelerators("(shift)", true, false, false, false, false));
+        s.addChoiceSupplier("Accelerators+(ctrl)", () -> withAccelerators("(ctrl)", false, true, false, false, false));
+        s.addChoiceSupplier("Accelerators+(alt)", () -> withAccelerators("(alt)", false, false, true, false, false));
+        s.addChoiceSupplier("Accelerators+(meta)", () -> withAccelerators("(meta)", false, false, false, true, false));
+        s.addChoiceSupplier("Accelerators+(shortcut)", () -> withAccelerators("(shortcut)", false, false, false, false, true));
+        s.addChoiceSupplier("Accelerators+(shift-shortcut)", () -> withAccelerators("(shift-shortcut)", true, false, false, false, true));
+        s.addChoiceSupplier("<empty>", mk(0));
+        s.selectFirst();
+        return s;
     }
 
     private Supplier<List<Menu>> mk(int count) {
@@ -141,21 +169,6 @@ public class MenuBarPage extends TestPaneBase implements HasSkinnable {
         };
     }
 
-    private Node createItemsOptions(String name, ObservableList<Menu> items) {
-        ObjectSelector<List<Menu>> s = new ObjectSelector<>(name, items::setAll);
-        s.addChoiceSupplier("No Custom Menus", () -> {
-            Menu m = new Menu("No Custom Menus");
-            m.getItems().add(new MenuItem("Regular Menu Item"));
-            return List.of(m);
-        });
-        s.addChoiceSupplier("1 Menu", mk(1));
-        s.addChoiceSupplier("5 Items", mk(5));
-        s.addChoiceSupplier("Invisible/Disabled", createInvisibleDisabled());
-        s.addChoiceSupplier("<empty>", mk(0));
-        s.selectFirst();
-        return s;
-    }
-
     @Override
     public void nullSkin() {
         control.setSkin(null);
@@ -164,5 +177,48 @@ public class MenuBarPage extends TestPaneBase implements HasSkinnable {
     @Override
     public void newSkin() {
         control.setSkin(new MenuBarSkin(control));
+    }
+
+    @Override
+    public Control getSkinnableControl() {
+        return control;
+    }
+
+    private List<Menu> withAccelerators(String type, boolean shift, boolean control, boolean alt, boolean meta, boolean shortcut) {
+        KeyCode[] all = KeyCode.values();
+        Arrays.sort(all, new Comparator<KeyCode>() {
+            @Override
+            public int compare(KeyCode a, KeyCode b) {
+                return a.getName().compareTo(b.getName());
+            }
+        });
+        //IO.println(all.length); // 224
+        ArrayList<Menu> rv = new ArrayList();
+        Menu m = new Menu("Accelerators " + type);
+        rv.add(m);
+        for (KeyCode k : all) {
+            String name = k.getName();
+            MenuItem mi = new MenuItem(name);
+            KeyCodeCombination kc;
+            try {
+                kc = new KeyCodeCombination(
+                    k,
+                    shift ? ModifierValue.DOWN : ModifierValue.UP,
+                    control ? ModifierValue.DOWN : ModifierValue.UP,
+                    alt ? ModifierValue.DOWN : ModifierValue.UP,
+                    meta ? ModifierValue.DOWN : ModifierValue.UP,
+                    shortcut ? ModifierValue.DOWN : ModifierValue.UP
+                );
+            } catch(Exception e) {
+                continue;
+            }
+
+            mi.setAccelerator(kc);
+            mi.setOnAction((_) -> {
+                IO.println("menu invoked via accelerator: " + kc);
+            });
+            m.getItems().add(mi);
+        }
+        return rv;
     }
 }

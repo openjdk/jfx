@@ -2455,6 +2455,11 @@ xmlOutputBufferWrite(xmlOutputBuffer *out, int len, const char *data) {
             if (nbchars < MINLEN)
                 break;
 
+            if (nbchars >= INT_MAX) {
+                out->error = XML_ERR_INTERNAL_ERROR;
+                return(-1);
+            }
+
             ret = out->writecallback(out->context,
                        (const char *)xmlBufContent(buf), nbchars);
             if (ret < 0) {
@@ -2662,15 +2667,25 @@ xmlOutputBufferFlush(xmlOutputBuffer *out) {
      */
     if ((out->conv != NULL) && (out->encoder != NULL) &&
         (out->writecallback != NULL)) {
+        size_t bufsize = xmlBufUse(out->conv);
+        if (bufsize >= INT_MAX) {
+            out->error = XML_ERR_INTERNAL_ERROR;
+            return(-1);
+        }
         ret = out->writecallback(out->context,
                                  (const char *)xmlBufContent(out->conv),
-                                 xmlBufUse(out->conv));
+                                 bufsize);
         if (ret >= 0)
             xmlBufShrink(out->conv, ret);
     } else if (out->writecallback != NULL) {
+        size_t bufsize = xmlBufUse(out->buffer);
+        if (bufsize >= INT_MAX) {
+            out->error = XML_ERR_INTERNAL_ERROR;
+            return(-1);
+        }
         ret = out->writecallback(out->context,
                                  (const char *)xmlBufContent(out->buffer),
-                                 xmlBufUse(out->buffer));
+                                 bufsize);
         if (ret >= 0)
             xmlBufShrink(out->buffer, ret);
     }

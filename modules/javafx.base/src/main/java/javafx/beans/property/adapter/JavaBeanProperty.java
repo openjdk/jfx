@@ -31,6 +31,13 @@ import javafx.beans.property.Property;
  * {@code JavaBeanProperty} is the super interface of all adapters between
  * writable Java Bean properties and JavaFX properties.
  *
+ * @implNote
+ * The implementations of this interface in the JavaFX library notify their invalidation
+ * listeners whenever {@code set} is called, even if the new value is equal to the current
+ * value, because the Java Bean's setter is invoked and a change is reported unconditionally.
+ * They therefore do not provide the guarantee that a property only becomes invalid when the
+ * value it holds changes.
+ *
  * @param <T> The type of the wrapped property
  * @since JavaFX 2.1
  */

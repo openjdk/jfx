@@ -29,6 +29,7 @@ import static javafx.print.PageOrientation.REVERSE_LANDSCAPE;
 import static javafx.print.PageOrientation.REVERSE_PORTRAIT;
 import java.util.Set;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.geometry.Rectangle2D;
 import javafx.geometry.VPos;
 import javafx.print.JobSettings;
@@ -45,6 +46,10 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 
 public class PrintOrientTest extends Application {
 
@@ -64,19 +69,23 @@ public class PrintOrientTest extends Application {
         stage.setX((bds.getWidth() - WIDTH) / 2);
         stage.setY((bds.getHeight() - HEIGHT) / 2);
         stage.setScene(createScene(stage));
+        stage.sizeToScene();
         stage.show();
     }
 
-    static final String instructions =
-       "This tests that paper orientation is correct for all supported "+
-       "cases of portrait, reverse portrait, landscape, and reverse "+
-       "landscape. Since not all printers support the 4 cases, pay attention "+
-       "to the text on the printed page. If it says 'unsupported on this "+
-       "printer', you can ignore that page. For the other cases, "+
-       "the test passes if the rectangle has uniform margins 1\" from "+
-       "the edge the paper. Also the 'reverse' orientations should emerge "+
-       "from the printer 180 degrees rotated from the non-reversed cases."+
-       "Take care to examine this as it came out from the printer.";
+    static final String instructions = """
+            This test verifies paper orientation for all supported cases:
+            portrait, reverse portrait, landscape, and reverse landscape.
+
+            Press 'Print' button and inspect each sheet in the same orientation in which it emerges from the printer.
+            DO NOT rotate, flip, or reorder the sheets.
+            If a page says that its orientation is 'unsupported on this printer',
+            ignore that page.
+
+            For every supported orientation, verify that the rectangle has uniform 1-inch margins from the edges of the paper.
+            The reverse portrait and reverse landscape pages must emerge rotated 180 degrees relative to their corresponding non-reversed pages.
+            The test passes only if all supported orientations meet these conditions.
+            """;
 
     static final String noprinter =
         "There are no printers installed. This test cannot run";
@@ -84,35 +93,29 @@ public class PrintOrientTest extends Application {
     private Text createInfo(String msg) {
         Text t = new Text(msg);
         t.setWrappingWidth(WIDTH-50);
-        t.setLayoutX(20);
-        t.setLayoutY(20);
         return t;
     }
 
     private Scene createScene(final Stage stage) {
-
-        Group g = new Group();
-        final Scene scene = new Scene(new Group());
-        scene.setFill(Color.WHITE);
-
-        String msg = instructions;
-        if (Printer.getDefaultPrinter() == null) {
-          msg = noprinter;
-        }
+        String msg = Printer.getDefaultPrinter() == null ? noprinter : instructions;
         Text info = createInfo(msg);
-        ((Group)scene.getRoot()).getChildren().add(info);
 
         Button print = new Button("Print");
-        print.setLayoutX(80);
-        print.setLayoutY(200);
         print.setOnAction(e -> {
             createJob(PORTRAIT);
             createJob(REVERSE_PORTRAIT);
             createJob(LANDSCAPE);
             createJob(REVERSE_LANDSCAPE);
         });
-        ((Group)scene.getRoot()).getChildren().add(print);
-        return scene;
+
+        HBox passFailButtons = createPassFailButtons();
+        passFailButtons.setAlignment(Pos.CENTER);
+
+        VBox root = new VBox(15, info, print, passFailButtons);
+        root.setPadding(new Insets(20));
+        root.setAlignment(Pos.TOP_CENTER);
+
+        return new Scene(root, WIDTH, -1, Color.WHITE);
     }
 
     public void createJob(PageOrientation orient) {
@@ -173,5 +176,21 @@ public class PrintOrientTest extends Application {
         printingRoot.getChildren().add(root);
         boolean success = job.printPage(printingRoot);
         job.endJob();
+    }
+
+    private HBox createPassFailButtons() {
+        var passButton = new Button("Pass");
+        passButton.setOnAction(e -> {
+            System.out.println("TEST PASSED");
+            Platform.exit();
+        });
+        var failButton = new Button("Fail");
+        failButton.setOnAction(e -> {
+            System.out.println("TEST FAILED");
+            Platform.exit();
+            throw new AssertionError("Test failed");
+        });
+        var hbox = new HBox(10, passButton, failButton);
+        return hbox;
     }
 }

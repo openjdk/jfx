@@ -56,7 +56,6 @@ import javafx.scene.AccessibleRole;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Parent;
-import javafx.scene.Scene;
 import javafx.scene.control.Cell;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.control.ScrollBar;
@@ -252,9 +251,10 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * (for horizontal) operation on each cell, the first cell aligns with the
      * node.
      * The following relation should always be true:
-     * 0 <= absoluteOffset <= (estimatedSize - viewportLength)
-     * Based on this relation, the position p is defined as
-     * 0 <= absoluteOffset/(estimatedSize - viewportLength) <= 1
+     * 0 <= absoluteOffset <= max(0, estimatedSize - viewportLength)
+     * When estimatedSize > viewportLength, the position p is defined as
+     * p = absoluteOffset / (estimatedSize - viewportLength), with 0 <= p <= 1.
+     * Otherwise, both absoluteOffset and p are zero.
      * As a consequence, whenever p, estimatedSize, or viewportLength
      * changes, the absoluteOffset needs to change as well.
      * The method <code>adjustAbsoluteOffset()</code> can be used to calculate the
@@ -1061,6 +1061,9 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      */
     void adjustPosition() {
         if (viewportLength >= estimatedSize) {
+            // The position may already be zero, so its invalidated() method
+            // may not be called to reset the offset.
+            absoluteOffset = 0;
             setPosition(0.);
         } else {
             setPosition(absoluteOffset / (estimatedSize - viewportLength));
@@ -1095,6 +1098,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             releaseCell(accumCell);
 
             resetIndex(cells);
+            resetIndex(pile);
 
             addAllToPile();
             releaseAllPrivateCells();
@@ -2845,13 +2849,15 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     }
 
     private void cleanPile() {
-        boolean wasFocusOwner = false;
+        boolean focusOwnerWithScene = hasFocusOwnerWithScene();
 
         List<T> removedCells = null;
         for (int i = 0, max = pile.size(); i < max; i++) {
             T cell = pile.get(i);
-            wasFocusOwner = wasFocusOwner || doesCellContainFocus(cell);
             cell.setVisible(false);
+            if (cell.getIndex() != -1) {
+                cell.updateIndex(-1);
+            }
 
             // Everything that ended up in the pile should not be inside the sheet.
             if (cell.getParent() != null) {
@@ -2866,33 +2872,26 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             sheetChildren.removeAll(removedCells);
         }
 
-        // Fix for JDK-8095710: Rather than have the cells do weird things with
-        // focus (in particular, have focus jump between cells), we return focus
-        // to the VirtualFlow itself.
-        if (wasFocusOwner) {
-            requestFocus();
+        // Since we update the cell index and remove them from the viewport, the focus may be cleared.
+        // If that happened, we will request focus.
+        // If the cells did shift the focus away to something else, we will NOT steal it.
+        if (focusOwnerWithScene) {
+            if (!hasFocusOwnerWithScene()) {
+                requestFocus();
+            }
         }
     }
 
-    private boolean doesCellContainFocus(T c) {
-        Scene scene = c.getScene();
-        final Node focusOwner = scene == null ? null : scene.getFocusOwner();
-
-        if (focusOwner != null) {
-            if (c.equals(focusOwner)) {
-                return true;
-            }
-
-            Parent p = focusOwner.getParent();
-            while (p != null && ! (p instanceof VirtualFlow)) {
-                if (c.equals(p)) {
-                    return true;
-                }
-                p = p.getParent();
-            }
+    private boolean hasFocusOwnerWithScene() {
+        if (getScene() == null) {
+            return false;
         }
 
-        return false;
+        if (getScene().getFocusOwner() == null) {
+            return false;
+        }
+
+        return getScene().getFocusOwner().getScene() != null;
     }
 
     private double getPrefBreadth(double oppDimension) {

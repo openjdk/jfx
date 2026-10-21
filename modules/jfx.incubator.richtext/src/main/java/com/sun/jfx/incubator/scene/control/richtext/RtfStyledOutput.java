@@ -153,7 +153,7 @@ public class RtfStyledOutput implements StyledOutput {
             if (fam == null) {
                 write("\\fnil");
                 write(" ");
-                write(name);
+                write(encode(name, true));
             } else {
                 write(fam);
             }
@@ -359,7 +359,7 @@ public class RtfStyledOutput implements StyledOutput {
         }
 
         String text = seg.getText();
-        String encoded = encode(text);
+        String encoded = encode(text, false);
         write(encoded);
     }
 
@@ -405,12 +405,12 @@ public class RtfStyledOutput implements StyledOutput {
     }
 
     // TODO unit test!
-    private static String encode(String text) {
+    private static String encode(String text, boolean semiColon) {
         if (text == null) {
             return "";
         }
 
-        int ix = indexOfSpecialChar(text);
+        int ix = indexOfSpecialChar(text, semiColon);
         if (ix < 0) {
             return text;
         }
@@ -441,6 +441,13 @@ public class RtfStyledOutput implements StyledOutput {
                 case '}':
                     sb.append("\\}");
                     break;
+                case ';':
+                    if (semiColon) {
+                        sb.append("\\;");
+                    } else {
+                        sb.append(c);
+                    }
+                    break;
                 default:
                     sb.append(c);
                     break;
@@ -455,7 +462,7 @@ public class RtfStyledOutput implements StyledOutput {
         return sb.toString();
     }
 
-    private static int indexOfSpecialChar(String text) {
+    private static int indexOfSpecialChar(String text, boolean semiColon) {
         int len = text.length();
         for (int i = 0; i < len; i++) {
             char c = text.charAt(i);
@@ -472,6 +479,11 @@ public class RtfStyledOutput implements StyledOutput {
                 case '{':
                 case '}':
                     return i;
+                case ';':
+                    if (semiColon) {
+                        return i;
+                    }
+                    continue;
                 default:
                     continue;
                 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,7 +30,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.fail;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.getListenerCount;
 import java.util.List;
-import java.util.stream.Stream;
 import javafx.beans.property.ObjectProperty;
 import javafx.scene.Group;
 import javafx.scene.Scene;
@@ -47,12 +46,7 @@ import javafx.scene.control.TreeTableView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCombination;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
@@ -378,7 +372,6 @@ public class AcceleratorParameterizedTest {
         assertEquals(2, eventCounter);
     }
 
-    @Disabled("JDK-8268374")
     @ParameterizedTest
     @MethodSource("parameters")
     public void testAcceleratorShouldNotGetFiredWhenControlsIsRemovedFromSceneThenContextMenuIsSetToNullAndControlIsAddedBackToScene(Class testClass) {

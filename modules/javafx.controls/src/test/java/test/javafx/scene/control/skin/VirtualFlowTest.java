@@ -56,6 +56,8 @@ import javafx.scene.shape.Circle;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.javafx.scene.control.SkinStub;
 
@@ -1202,6 +1204,31 @@ public class VirtualFlowTest {
         pulse();
         IndexedCell vc = flow.getVisibleCell(90);
         assertNotNull(vc);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"true, 75", "true, 100", "false, 75", "false, 100"})
+    public void testScrollToTopKeepsAllCellsVisibleWhenTheyFit(boolean vertical, double viewportLength) {
+        flow.setCellCount(3);
+        flow.setVertical(vertical);
+        flow.resize(vertical ? 300 : viewportLength, vertical ? viewportLength : 300);
+        pulse();
+        assertEquals(viewportLength, flow.getViewportLength());
+
+        flow.scrollToTop(2);
+        pulse();
+
+        // Refreshing the cells must preserve their alignment when the scroll position stays at zero.
+        flow.recreateCells();
+        pulse();
+
+        assertEquals(0.0, flow.getPosition());
+
+        for (int i = 0; i < flow.getCellCount(); i++) {
+            IndexedCell<?> cell = flow.getVisibleCell(i);
+            assertNotNull(cell);
+            assertEquals(i * 25.0, flow.getCellPosition(cell));
+        }
     }
 
     @Test

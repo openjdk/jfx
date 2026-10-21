@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -515,7 +515,7 @@ public class ArcTo extends PathElement {
         n = Math.sqrt((ux * ux + uy * uy) * (vx * vx + vy * vy));
         p = ux * vx + uy * vy;
         sign = ((ux * vy - uy * vx < 0.0) ? -1.0 : 1.0);
-        double angleExtent = Math.toDegrees(sign * Math.acos(p / n));
+        double angleExtent = Math.toDegrees(sign * Math.acos(Math.clamp(p / n, -1.0, 1.0)));
         if (!localSweepFlag && (angleExtent > 0)) {
             angleExtent -= 360.0;
         } else if (localSweepFlag && (angleExtent < 0)) {
