@@ -1631,7 +1631,7 @@ public final class GraphicsContext implements DrawingContext {
     public void strokeArc(double x, double y, double w, double h,
                         double startAngle, double arcExtent, ArcType closure)
     {
-        if (w != 0 && h != 0 && closure != null) {
+        if ((w != 0 || h != 0) && closure != null) {
             writeArcType(closure);
             writeOp6(x, y, w, h, startAngle, arcExtent, NGCanvas.STROKE_ARC);
         }
@@ -1650,7 +1650,7 @@ public final class GraphicsContext implements DrawingContext {
     public void strokeRoundRect(double x, double y, double w, double h,
                               double arcWidth, double arcHeight)
     {
-        if (w != 0 && h != 0) {
+        if (w != 0 || h != 0) {
             writeOp6(x, y, w, h, arcWidth, arcHeight, NGCanvas.STROKE_ROUND_RECT);
         }
     }

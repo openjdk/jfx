@@ -543,16 +543,6 @@ public class SWDrawingContextTest {
     }
 
     @Test
-    public void shouldIgnoreZeroSizeFillRect() {
-        h.context.setFill(Color.RED);
-        h.context.fillRect(10, 10, 0, 10);
-        h.context.fillRect(10, 10, 10, 0);
-
-        assertTrue(h.dirtyRects.isEmpty());
-        assertPixel(10, 10, Color.TRANSPARENT);
-    }
-
-    @Test
     public void shouldApplyGlobalAlphaToFillRect() {
         h.context.setFill(Color.RED);
         h.context.setGlobalAlpha(0.5);
@@ -649,6 +639,85 @@ public class SWDrawingContextTest {
         assertPixel(15, 45, Color.CYAN);
         assertPixel(45, 15, Color.CYAN);
         assertPixel(45, 45, Color.CYAN);
+    }
+
+    @Test
+    public void shouldIgnoreZeroSizeFills() {
+        h.context.setFill(Color.RED);
+
+        h.context.fillRect(10, 10, 0, 10);
+        h.context.fillRect(10, 10, 10, 0);
+        h.context.fillOval(10, 10, 0, 10);
+        h.context.fillOval(10, 10, 10, 0);
+        h.context.fillRoundRect(10, 10, 0, 10, 5, 5);
+        h.context.fillRoundRect(10, 10, 10, 0, 5, 5);
+        h.context.fillArc(10, 10, 0, 10, 0, 90, ArcType.OPEN);
+        h.context.fillArc(10, 10, 10, 0, 0, 90, ArcType.OPEN);
+
+        assertTrue(h.dirtyRects.isEmpty());
+        assertFalse(hasPaintedPixel(0, 0, WIDTH, HEIGHT));
+    }
+
+    @Test
+    public void shouldIgnoreZeroSizeClearRect() {
+        h.context.setFill(Color.RED);
+        h.context.fillRect(0, 0, WIDTH, HEIGHT);
+
+        int dirtyCount = h.dirtyRects.size();
+
+        h.context.clearRect(10, 10, 0, 10);
+        h.context.clearRect(10, 10, 10, 0);
+
+        assertEquals(dirtyCount, h.dirtyRects.size());
+        assertPixel(10, 10, Color.RED);
+        assertPixel(20, 20, Color.RED);
+    }
+
+    @Test
+    public void shouldIgnoreZeroSizeStrokes() {
+        h.context.setStroke(Color.BLACK);
+        h.context.setLineWidth(4);
+
+        h.context.strokeRect(10, 10, 0, 0);
+        h.context.strokeOval(10, 10, 0, 0);
+        h.context.strokeRoundRect(10, 10, 0, 0, 5, 5);
+        h.context.strokeArc(10, 10, 0, 0, 0, 90, ArcType.OPEN);
+
+        assertTrue(h.dirtyRects.isEmpty());
+        assertFalse(hasPaintedPixel(0, 0, WIDTH, HEIGHT));
+    }
+
+    @Test
+    public void shouldStrokeDegenerateGeometries() {
+        h.context.setStroke(Color.BLACK);
+        h.context.setLineWidth(4);
+        h.context.strokeRect(10, 10, 0, 20);
+
+        assertTrue(hasPaintedPixel(0, 0, WIDTH, HEIGHT));
+
+        reset();
+
+        h.context.setStroke(Color.BLACK);
+        h.context.setLineWidth(4);
+        h.context.strokeOval(10, 10, 0, 20);
+
+        assertTrue(hasPaintedPixel(0, 0, WIDTH, HEIGHT));
+
+        reset();
+
+        h.context.setStroke(Color.BLACK);
+        h.context.setLineWidth(4);
+        h.context.strokeRoundRect(10, 10, 0, 20, 5, 5);
+
+        assertTrue(hasPaintedPixel(0, 0, WIDTH, HEIGHT));
+
+        reset();
+
+        h.context.setStroke(Color.BLACK);
+        h.context.setLineWidth(4);
+        h.context.strokeArc(10, 10, 0, 20, 0, 90, ArcType.OPEN);
+
+        assertTrue(hasPaintedPixel(0, 0, WIDTH, HEIGHT));
     }
 
     @Test

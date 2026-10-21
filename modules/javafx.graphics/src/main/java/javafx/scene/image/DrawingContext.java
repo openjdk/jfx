@@ -1042,6 +1042,8 @@ public interface DrawingContext {
 
     /**
      * Strokes a rectangle using the current stroke paint.
+     * If both width and height are zero, nothing is drawn;
+     * a rectangle with only one zero dimension is still stroked.
      * <p>
      * This method will be affected by any of the
      * <a href="#comm-attr">global common</a>
@@ -1058,6 +1060,7 @@ public interface DrawingContext {
 
     /**
      * Clears a portion of the drawing surface with a transparent color value.
+     * A zero width or height results in nothing being drawn.
      * <p>
      * This method is affected only by the current transform, clip, and effect.
      *
@@ -1070,6 +1073,7 @@ public interface DrawingContext {
 
     /**
      * Fills a rectangle using the current fill paint.
+     * A zero width or height results in nothing being drawn.
      * <p>
      * This method will be affected by any of the
      * <a href="#comm-attr">global common</a>
@@ -1086,6 +1090,8 @@ public interface DrawingContext {
 
     /**
      * Strokes a rounded rectangle using the current stroke paint.
+     * If both width and height are zero, nothing is drawn;
+     * a rounded rectangle with only one zero dimension is still stroked.
      * <p>
      * This method will be affected by any of the
      * <a href="#comm-attr">global common</a>
@@ -1104,6 +1110,7 @@ public interface DrawingContext {
 
     /**
      * Fills a rounded rectangle using the current fill paint.
+     * A zero width or height results in nothing being drawn.
      * <p>
      * This method will be affected by any of the
      * <a href="#comm-attr">global common</a>
@@ -1122,6 +1129,8 @@ public interface DrawingContext {
 
     /**
      * Strokes an oval using the current stroke paint.
+     * If both width and height are zero, nothing is drawn;
+     * an oval with only one zero dimension is still stroked.
      * <p>
      * This method will be affected by any of the
      * <a href="#comm-attr">global common</a>
@@ -1138,6 +1147,7 @@ public interface DrawingContext {
 
     /**
      * Fills an oval using the current fill paint.
+     * A zero width or height results in nothing being drawn.
      * <p>
      * This method will be affected by any of the
      * <a href="#comm-attr">global common</a>
@@ -1153,8 +1163,10 @@ public interface DrawingContext {
     void fillOval(double x, double y, double w, double h);
 
     /**
-     * Strokes an Arc using the current stroke paint. A {@code null} ArcType or
-     * zero width or height will cause the render command to be ignored.
+     * Strokes an Arc using the current stroke paint. A {@code null} ArcType will
+     * result in nothing being drawn. If both width and height are zero,
+     * nothing is drawn; an arc with only one zero dimension is
+     * still stroked.
      * <p>
      * This method will be affected by any of the
      * <a href="#comm-attr">global common</a>
@@ -1174,7 +1186,7 @@ public interface DrawingContext {
 
     /**
      * Fills an arc using the current fill paint. A {@code null} ArcType or
-     * zero width or height will cause the render command to be ignored.
+     * a zero width or height results in nothing being drawn.
      * <p>
      * This method will be affected by any of the
      * <a href="#comm-attr">global common</a>

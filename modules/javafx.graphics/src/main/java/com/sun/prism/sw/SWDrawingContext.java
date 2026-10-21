@@ -782,7 +782,7 @@ public class SWDrawingContext implements DrawingContext {
 
     @Override
     public void strokeArc(double x, double y, double w, double h, double startAngle, double arcExtent, ArcType closure) {
-        if (w != 0 && h != 0 && closure != null) {
+        if ((w != 0 || h != 0) && closure != null) {
             int arcType = switch (closure) {
                 case CHORD -> Arc2D.CHORD;
                 case OPEN -> Arc2D.OPEN;
