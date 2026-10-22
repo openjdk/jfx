@@ -1856,10 +1856,11 @@ public class GridPane extends Pane {
 
         // if there are percentage rows, give them their percentages first
         if (rowPercentTotal > 0) {
+            final double scale = isSnapToPixel() ? getSnapScaleY(this) : 1;
             double remainder = 0;
             for (int i = 0; i < rowPercentHeight.length; i++) {
                 if (rowPercentHeight[i] >= 0) {
-                    double size = (contentHeight - vgaps) * (rowPercentHeight[i]/100);
+                    double size = (contentHeight - vgaps) * (rowPercentHeight[i]/100) * scale;
                     double floor = Math.floor(size);
                     remainder += size - floor;
 
@@ -1869,7 +1870,7 @@ public class GridPane extends Pane {
                         size++;
                         remainder = (-1.0) + remainder;
                     }
-                    heights.setSize(i, size);
+                    heights.setSize(i, size / scale);
                 }
             }
         }
@@ -2100,10 +2101,11 @@ public class GridPane extends Pane {
 
         // if there are percentage rows, give them their percentages first
         if (columnPercentTotal > 0) {
+            final double scale = isSnapToPixel() ? getSnapScaleX(this) : 1;
             double remainder = 0;
             for (int i = 0; i < columnPercentWidth.length; i++) {
                 if (columnPercentWidth[i] >= 0) {
-                    double size = (contentWidth - hgaps) * (columnPercentWidth[i]/100);
+                    double size = (contentWidth - hgaps) * (columnPercentWidth[i]/100) * scale;
                     double floor = Math.floor(size);
                     remainder += size - floor;
 
@@ -2113,7 +2115,7 @@ public class GridPane extends Pane {
                         size++;
                         remainder = (-1.0) + remainder;
                     }
-                    widths.setSize(i, size);
+                    widths.setSize(i, size / scale);
                 }
             }
         }

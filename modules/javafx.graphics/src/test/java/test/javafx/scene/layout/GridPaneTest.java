@@ -3256,9 +3256,11 @@ public class GridPaneTest {
         fixedArea.assertSize();
     }
 
-    @Test
-    public void testPercentageGrowthReservesVgaps() {
-        gridpane.setVgap(10);
+    @ParameterizedTest
+    @MethodSource("scalesAndGaps")
+    public void testPercentageGrowthReservesVgaps(double scale, double vgap) {
+        setRenderScale(scale);
+        gridpane.setVgap(vgap);
         RowConstraints half1 = new RowConstraints();
         half1.setPercentHeight(50);
         RowConstraints half2 = new RowConstraints();
@@ -3273,14 +3275,16 @@ public class GridPaneTest {
         gridpane.layout();
 
         // row 1 is empty, so only one vgap is rendered and the percent rows must share the rest
-        assertEquals(95, top.getHeight(), 1e-100);
-        assertEquals(105, bottom.getLayoutY(), 1e-100);
-        assertEquals(95, bottom.getHeight(), 1e-100);
+        assertEquals(200, bottom.getLayoutY() + bottom.getHeight(), 1e-10);
+        assertEquals(gridpane.snapSpaceY(vgap), bottom.getLayoutY() - top.getHeight(), 1e-10);
+        assertEquals(top.getHeight(), bottom.getHeight(), 1 / scale + 1e-10);
     }
 
-    @Test
-    public void testPercentageGrowthReservesHgaps() {
-        gridpane.setHgap(10);
+    @ParameterizedTest
+    @MethodSource("scalesAndGaps")
+    public void testPercentageGrowthReservesHgaps(double scale, double hgap) {
+        setRenderScale(scale);
+        gridpane.setHgap(hgap);
         ColumnConstraints half1 = new ColumnConstraints();
         half1.setPercentWidth(50);
         ColumnConstraints half2 = new ColumnConstraints();
@@ -3294,9 +3298,9 @@ public class GridPaneTest {
         gridpane.resize(200, 100);
         gridpane.layout();
 
-        assertEquals(95, left.getWidth(), 1e-100);
-        assertEquals(105, right.getLayoutX(), 1e-100);
-        assertEquals(95, right.getWidth(), 1e-100);
+        assertEquals(200, right.getLayoutX() + right.getWidth(), 1e-10);
+        assertEquals(gridpane.snapSpaceX(hgap), right.getLayoutX() - left.getWidth(), 1e-10);
+        assertEquals(right.getWidth(), left.getWidth(), 1 / scale + 1e-10);
     }
 
     private void setRenderScale(double scale) {
@@ -3354,9 +3358,11 @@ public class GridPaneTest {
         assertEquals(gridpane.snapSpaceX(hgap), col1.getLayoutX() - col0.getWidth(), 1e-10);
     }
 
-    @Test
-    public void testPercentageRowsMinPrefHeightAccountsVgap() {
-        gridpane.setVgap(10);
+    @ParameterizedTest
+    @MethodSource("scalesAndGaps")
+    public void testPercentageRowsMinPrefHeightAccountsVgap(double scale, double gap) {
+        setRenderScale(scale);
+        gridpane.setVgap(gap);
         MockResizable child1 = new MockResizable(100, 100, 100, 100, 5000, 5000);
         MockResizable child2 = new MockResizable(0, 0, 0, 0, 5000, 5000);
         gridpane.add(child1, 0, 0);
@@ -3368,13 +3374,15 @@ public class GridPaneTest {
         row1.setPercentHeight(50);
         gridpane.getRowConstraints().addAll(row0, row1);
 
-        assertEquals(210, gridpane.minHeight(-1), 1e-10);
-        assertEquals(210, gridpane.prefHeight(-1), 1e-10);
+        assertEquals(200 + gridpane.snapSpaceY(gap), gridpane.minHeight(-1), 1e-10);
+        assertEquals(200 + gridpane.snapSpaceY(gap), gridpane.prefHeight(-1), 1e-10);
     }
 
-    @Test
-    public void testPercentageColumnsMinPrefWidthAccountsHgap() {
-        gridpane.setHgap(10);
+    @ParameterizedTest
+    @MethodSource("scalesAndGaps")
+    public void testPercentageColumnsMinPrefWidthAccountsHgap(double scale, double gap) {
+        setRenderScale(scale);
+        gridpane.setHgap(gap);
         MockResizable child1 = new MockResizable(100, 100, 100, 100, 5000, 5000);
         MockResizable child2 = new MockResizable(0, 0, 0, 0, 5000, 5000);
         gridpane.add(child1, 0, 0);
@@ -3386,8 +3394,8 @@ public class GridPaneTest {
         column1.setPercentWidth(50);
         gridpane.getColumnConstraints().addAll(column0, column1);
 
-        assertEquals(210, gridpane.minWidth(-1), 1e-10);
-        assertEquals(210, gridpane.prefWidth(-1), 1e-10);
+        assertEquals(200 + gridpane.snapSpaceX(gap), gridpane.minWidth(-1), 1e-10);
+        assertEquals(200 + gridpane.snapSpaceX(gap), gridpane.prefWidth(-1), 1e-10);
     }
 
     @Test
