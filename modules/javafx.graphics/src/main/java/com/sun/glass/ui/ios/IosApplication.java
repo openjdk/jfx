@@ -69,7 +69,7 @@ public final class IosApplication extends Application {
      * @inheritDoc
      */
     @Override
-    public Window createWindow(Window owner, Screen screen, int styleMask) {
+    public Window createWindow(Window owner, Screen screen, int styleMask, int backdropID) {
         return new IosWindow(owner, screen, styleMask);
     }
 
