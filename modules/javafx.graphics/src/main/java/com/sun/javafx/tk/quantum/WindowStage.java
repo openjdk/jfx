@@ -26,6 +26,7 @@
 package com.sun.javafx.tk.quantum;
 
 import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -397,7 +398,8 @@ public class WindowStage extends GlassStage {
             Image im = (Image)icon;
             if (im == null || !(im.getPixelFormat() == PixelFormat.BYTE_RGB ||
                 im.getPixelFormat() == PixelFormat.BYTE_BGRA_PRE ||
-                im.getPixelFormat() == PixelFormat.BYTE_GRAY))
+                im.getPixelFormat() == PixelFormat.BYTE_GRAY ||
+                im.getPixelFormat() == PixelFormat.INT_ARGB_PRE))
             {
                 continue;
             }
@@ -492,23 +494,46 @@ public class WindowStage extends GlassStage {
                                                             image.getBytesPerPixelUnit(),
                                                             SMALL_ICON_WIDTH, SMALL_ICON_HEIGHT, true);
 
-        //shrink the image and convert the format to INT_ARGB_PRE
-        ByteBuffer buf = (ByteBuffer) image.getPixelBuffer();
-        byte bytes[] = new byte[buf.limit()];
-
+        int iwidth = image.getWidth();
         int iheight = image.getHeight();
+        int bands = image.getBytesPerPixelUnit();
+        int stride = image.getScanlineStride();
+        int minX = image.getMinX();
+        int minY = image.getMinY();
+        int rowBytes = iwidth * bands;
+        byte[] bytes = new byte[rowBytes];
 
-        //Iterate through each scanline of the image
-        //and pass it one at a time to the scaling object
-        for (int z = 0; z < iheight; z++) {
-            buf.position(z*image.getScanlineStride());
-            buf.get(bytes, 0, image.getScanlineStride());
-            scaler.putSourceScanline(bytes, 0);
+        if (image.getPixelFormat() == PixelFormat.INT_ARGB_PRE) {
+            IntBuffer buf = (IntBuffer) image.getPixelBuffer();
+            int intStride = stride / 4;
+
+            for (int z = 0; z < iheight; z++) {
+                int row = (minY + z) * intStride + minX;
+
+                for (int x = 0; x < iwidth; x++) {
+                    int pixel = buf.get(row + x);
+                    int off = x * 4;
+
+                    bytes[off] = (byte) pixel;
+                    bytes[off + 1] = (byte) (pixel >>> 8);
+                    bytes[off + 2] = (byte) (pixel >>> 16);
+                    bytes[off + 3] = (byte) (pixel >>> 24);
+                }
+
+                scaler.putSourceScanline(bytes, 0);
+            }
+        } else {
+            ByteBuffer buf = (ByteBuffer) image.getPixelBuffer();
+
+            for (int z = 0; z < iheight; z++) {
+                buf.get((minY + z) * stride + minX * bands, bytes, 0, rowBytes);
+                scaler.putSourceScanline(bytes, 0);
+            }
         }
 
-        buf.rewind();
+        PixelFormat iconFormat = image.getPixelFormat() == PixelFormat.INT_ARGB_PRE ? PixelFormat.BYTE_BGRA_PRE : image.getPixelFormat();
+        Image img = image.iconify(scaler.getDestination(), SMALL_ICON_WIDTH, SMALL_ICON_HEIGHT, iconFormat);
 
-        final Image img = image.iconify(scaler.getDestination(), SMALL_ICON_WIDTH, SMALL_ICON_HEIGHT);
         platformWindow.setIcon(PixelUtils.imageToPixels(img));
     }
 
