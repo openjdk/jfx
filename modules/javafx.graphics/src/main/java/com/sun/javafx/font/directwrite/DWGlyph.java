@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -175,6 +175,11 @@ public class DWGlyph implements Glyph {
             return new byte[0];
         }
 
+        if (DWFontStrike.SYMMETRIC_GLYPHS) {
+            IDWriteFactory factory = DWFactory.getDWriteFactory();
+            target.SetTextRenderingMode(factory, OS.DWRITE_RENDERING_MODE_NATURAL_SYMMETRIC);
+        }
+
         DWRITE_MATRIX matrix = strike.matrix;
         D2D1_MATRIX_3X2_F transform;
         if (matrix != null) {
@@ -260,9 +265,10 @@ public class DWGlyph implements Glyph {
     IDWriteGlyphRunAnalysis createAnalysis(float x, float y) {
         if (run.fontFace == 0) return null;
         IDWriteFactory factory = DWFactory.getDWriteFactory();
-        int renderingMode = DWFontStrike.SUBPIXEL_Y ?
-                            OS.DWRITE_RENDERING_MODE_NATURAL_SYMMETRIC :
-                            OS.DWRITE_RENDERING_MODE_NATURAL;
+        int renderingMode = OS.DWRITE_RENDERING_MODE_NATURAL;
+        if (DWFontStrike.SUBPIXEL_Y || DWFontStrike.SYMMETRIC_GLYPHS) {
+            renderingMode = OS.DWRITE_RENDERING_MODE_NATURAL_SYMMETRIC;
+        }
         int measuringMode = OS.DWRITE_MEASURING_MODE_NATURAL;
         DWRITE_MATRIX matrix = strike.matrix; /* can be null */
         float dpi = 1;  /* Assumes WICBitmap has 96 dpi */
