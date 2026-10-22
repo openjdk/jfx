@@ -1244,6 +1244,7 @@ public class SWDrawingContextTest {
 
         assertEquals(1, h.dirtyRects.size());
         assertEquals(new Rectangle(10, 10, 50, 30), h.dirtyRects.get(0));
+        assertPixel(20, 20, Color.RED);
     }
 
     @Test
@@ -1254,6 +1255,7 @@ public class SWDrawingContextTest {
         // only the part inside the image can be dirty
         assertEquals(1, h.dirtyRects.size());
         assertEquals(new Rectangle(60, 60, 4, 4), h.dirtyRects.get(0));
+        assertPixel(60, 60, Color.RED);
     }
 
     @Test
@@ -1390,6 +1392,7 @@ public class SWDrawingContextTest {
 
         assertEquals(1, h.dirtyRects.size());
         assertEquals(new Rectangle(10, 20, 5, 5), h.dirtyRects.get(0));
+        assertPixel(10, 20, Color.RED);
     }
 
     @Test
