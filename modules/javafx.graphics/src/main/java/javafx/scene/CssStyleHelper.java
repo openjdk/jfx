@@ -35,7 +35,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import javafx.beans.value.WritableValue;
 import javafx.css.CssMetaData;
 import javafx.css.CssParser;
 import javafx.css.FontCssMetaData;
@@ -723,8 +722,7 @@ final class CssStyleHelper {
                     }
                     styleableProperty.applyStyle(originOfCalculatedValue, value);
 
-                    CalculatedValue initialValue = new CalculatedValue(currentValue, originOfCurrentValue, true);
-                    cacheContainer.cssSetProperties.put(cssMetaData, initialValue);
+                    addPropertyIfNotExists(node, cssMetaData, originOfCurrentValue);
                 }
             } catch (Exception e) {
                 // This exception should have been handled by transitionToState().
@@ -937,15 +935,8 @@ final class CssStyleHelper {
 
                     styleableProperty.applyStyle(originOfCalculatedValue, value);
 
-                    if (cacheContainer.cssSetProperties.containsKey(cssMetaData) == false) {
-                        // track this property
-                        CalculatedValue initialValue = new CalculatedValue(
-                            cssMetaData.getInitialValue(node), originOfCurrentValue, false);
-                        cacheContainer.cssSetProperties.put(cssMetaData, initialValue);
-                    }
-
+                    addPropertyIfNotExists(node, cssMetaData, originOfCurrentValue);
                 }
-
             } catch (Exception e) {
 
                 StyleableProperty styleableProperty = cssMetaData.getStyleableProperty(node);
@@ -985,6 +976,14 @@ final class CssStyleHelper {
 
         }
         transitionStateInProgress = false;
+    }
+
+    private void addPropertyIfNotExists(Node node, CssMetaData<Styleable, ?> cssMetaData, StyleOrigin originOfCurrentValue) {
+        if (!cacheContainer.cssSetProperties.containsKey(cssMetaData)) {
+            CalculatedValue initialValue = new CalculatedValue(
+                cssMetaData.getInitialValue(node), originOfCurrentValue, false);
+            cacheContainer.cssSetProperties.put(cssMetaData, initialValue);
+        }
     }
 
     /**
