@@ -1169,7 +1169,7 @@ public interface DrawingContext {
     void fillOval(double x, double y, double w, double h);
 
     /**
-     * Strokes an Arc using the current stroke paint. A {@code null} ArcType will
+     * Strokes an arc using the current stroke paint. A {@code null} ArcType will
      * result in nothing being drawn. If both width and height are zero,
      * nothing is drawn; an arc with only one zero dimension is
      * still stroked.
