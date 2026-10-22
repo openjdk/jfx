@@ -1326,38 +1326,7 @@ public class SWDrawingContext implements DrawingContext {
             throw new IllegalArgumentException("PlatformImage must be a Prism Image");
         }
 
-        // Use a compatible, array-backed image directly instead of copying it
-        Texture tex = null;
-        boolean wrapped = false;
-
-        if (prismImage.getPixelFormat() == PixelFormat.INT_ARGB_PRE
-                && prismImage.getPixelBuffer() instanceof IntBuffer buffer
-                && buffer.hasArray()
-                && !buffer.isReadOnly()) {
-            int width = prismImage.getWidth();
-            int height = prismImage.getHeight();
-            int stride = prismImage.getScanlineStride() / 4;
-            int minX = prismImage.getMinX();
-            int minY = prismImage.getMinY();
-            long offset = buffer.arrayOffset() + (long) minY * stride + minX;
-            int[] data = buffer.array();
-
-            if (stride >= width && offset >= 0 && offset + (long) (height - 1) * stride + width <= data.length) {
-                tex = new SWArgbPreTexture(
-                    resourceFactory, Texture.WrapMode.CLAMP_TO_EDGE,
-                    width, height, data, (int) offset, stride
-                );
-                wrapped = true;
-            }
-        }
-
-        if (!wrapped) {
-            tex = resourceFactory.createTexture(prismImage, Usage.DEFAULT, Texture.WrapMode.CLAMP_TO_EDGE);
-        }
-
-        if (tex == null) {
-            throw new IllegalStateException("Unable to draw image, insufficient resources");
-        }
+        Texture tex = createSourceTexture(prismImage);
 
         try {
             tex.setLinearFiltering(imageSmoothing);
@@ -1377,10 +1346,38 @@ public class SWDrawingContext implements DrawingContext {
             reportGraphicsPaintBounds();
         }
         finally {
-            if (!wrapped) {
-                tex.dispose();
+            tex.dispose();
+        }
+    }
+
+    private Texture createSourceTexture(com.sun.prism.Image image) {
+        if (image.getPixelFormat() == PixelFormat.INT_ARGB_PRE
+                && image.getPixelBuffer() instanceof IntBuffer buffer
+                && buffer.hasArray()
+                && !buffer.isReadOnly()) {
+            int width = image.getWidth();
+            int height = image.getHeight();
+            int stride = image.getScanlineStride() / 4;
+            int minX = image.getMinX();
+            int minY = image.getMinY();
+            long offset = buffer.arrayOffset() + (long) minY * stride + minX;
+            int[] data = buffer.array();
+
+            if (stride >= width && offset >= 0 && offset + (long) (height - 1) * stride + width <= data.length) {
+                return new SWArgbPreTexture(
+                    resourceFactory, Texture.WrapMode.CLAMP_TO_EDGE,
+                    width, height, data, (int) offset, stride
+                );
             }
         }
+
+        Texture tex = resourceFactory.createTexture(image, Usage.DEFAULT, Texture.WrapMode.CLAMP_TO_EDGE);
+
+        if (tex == null) {
+            throw new IllegalStateException("Unable to draw image, insufficient resources");
+        }
+
+        return tex;
     }
 
     private void reportGraphicsPaintBounds() {
