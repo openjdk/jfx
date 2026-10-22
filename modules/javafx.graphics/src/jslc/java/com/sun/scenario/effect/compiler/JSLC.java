@@ -27,6 +27,7 @@ package com.sun.scenario.effect.compiler;
 
 import com.sun.scenario.effect.compiler.backend.hw.ES2Backend;
 import com.sun.scenario.effect.compiler.backend.hw.HLSLBackend;
+import com.sun.scenario.effect.compiler.backend.hw.HLSL6Backend;
 import com.sun.scenario.effect.compiler.backend.hw.MSLBackend;
 import com.sun.scenario.effect.compiler.backend.prism.PrismBackend;
 import com.sun.scenario.effect.compiler.backend.sw.java.JSWBackend;
@@ -59,14 +60,14 @@ public class JSLC {
     public static final int OUT_D3D      = (1 << 0);
     public static final int OUT_ES2      = (1 << 1);
     public static final int OUT_MTL      = (1 << 2);
-    public static final int OUT_JAVA     = (1 << 3);
-    public static final int OUT_PRISM    = (1 << 4);
+    public static final int OUT_D3D12    = (1 << 3);
+    public static final int OUT_JAVA     = (1 << 4);
+    public static final int OUT_PRISM    = (1 << 5);
 
-
-    public static final int OUT_SSE_JAVA        = (1 << 5);
-    public static final int OUT_SSE_NATIVE      = (1 << 6);
-    public static final int OUT_ME_JAVA         = (1 << 7);
-    public static final int OUT_ME_NATIVE       = (1 << 8);
+    public static final int OUT_SSE_JAVA        = (1 << 6);
+    public static final int OUT_SSE_NATIVE      = (1 << 7);
+    public static final int OUT_ME_JAVA         = (1 << 8);
+    public static final int OUT_ME_NATIVE       = (1 << 9);
 
     public static final int OUT_ME       = OUT_ME_JAVA | OUT_ME_NATIVE;
     public static final int OUT_SSE      = OUT_SSE_JAVA | OUT_SSE_NATIVE;
@@ -75,7 +76,7 @@ public class JSLC {
     public static final int OUT_HW_PEERS   = OUT_PRISM;
     public static final int OUT_ALL_PEERS  = OUT_SW_PEERS | OUT_HW_PEERS;
 
-    public static final int OUT_HW_SHADERS = OUT_D3D | OUT_ES2 | OUT_MTL;
+    public static final int OUT_HW_SHADERS = OUT_D3D | OUT_D3D12 | OUT_ES2 | OUT_MTL;
 
     private static final String rootPkg = "com/sun/scenario/effect";
     public static final STGroup group;
@@ -137,6 +138,7 @@ public class JSLC {
         OUT_D3D,        "decora-d3d/build/gensrc/{pkg}/impl/hw/d3d/hlsl/{name}.hlsl",
         OUT_MTL,        "decora-mtl/build/gensrc/{pkg}/impl/hw/mtl/msl/{name}.metal",
         OUT_ES2,        "decora-es2/build/gensrc/{pkg}/impl/es2/glsl/{name}.frag",
+        OUT_D3D12,      "decora-d3d12/build/gensrc/{pkg}/impl/hw/d3d12/hlsl6/{name}.hlsl",
         OUT_JAVA,       "decora-jsw/build/gensrc/{pkg}/impl/sw/java/JSW{name}Peer.java",
         OUT_PRISM,      "decora-prism-ps/build/gensrc/{pkg}/impl/prism/ps/PPS{name}Peer.java",
         OUT_SSE_JAVA,   "decora-sse/build/gensrc/{pkg}/impl/sw/sse/SSE{name}Peer.java",
@@ -223,6 +225,17 @@ public class JSLC {
                 ES2Backend es2Backend = new ES2Backend(pinfo.parser, pinfo.visitor);
                 es2Backend.scan(pinfo.program);
                 write(es2Backend.getShader(), outFile);
+            }
+        }
+
+        if ((outTypes & OUT_D3D12) != 0) {
+            File outFile = jslcinfo.getOutputFile(OUT_D3D12);
+            if (jslcinfo.force || outOfDate(outFile, sourceTime)) {
+                if (pinfo == null) pinfo = getParserInfo(stream);
+                String fullShaderName = outFile.getName().replace(".hlsl", "");
+                HLSL6Backend hlsl6Backend = new HLSL6Backend(pinfo.parser, pinfo.visitor, fullShaderName, outFile.getCanonicalPath());
+                hlsl6Backend.scan(pinfo.program);
+                write(hlsl6Backend.getShader(), outFile);
             }
         }
 
@@ -357,7 +370,7 @@ public class JSLC {
             String prefix0 = "Usage: java "+prog+" ";
             String prefix1 = "";
             for (int i = 0; i < prefix0.length(); i++) prefix1 += " ";
-            out.println(prefix0+"[-d3d | -es2 | -mtl | -java | -sse | -me | -sw | -hw | -all]");
+            out.println(prefix0+"[-d3d | -d3d12 | -es2 | -mtl | -java | -sse | -me | -sw | -hw | -all]");
             out.println(prefix1+"[-o <outdir>] [-i <srcdir>] [-t]");
             out.println(prefix1+"[-name <name>] [-ifname <interface name>]");
             if (extraOpts != null) {
@@ -401,6 +414,8 @@ public class JSLC {
                 outTypes |= OUT_D3D;
             } else if (arg.equals("-es2")) {
                 outTypes |= OUT_ES2;
+            } else if (arg.equals("-d3d12")) {
+                outTypes |= OUT_D3D12;
             } else if (arg.equals("-mtl")) {
                 outTypes |= OUT_MTL;
             } else if (arg.equals("-java")) {
