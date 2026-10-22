@@ -1893,6 +1893,7 @@ public class GridPane extends Pane {
         if (extraHeight <= 0) {
             return extraHeight;
         }
+        final double scale = isSnapToPixel() ? getSnapScaleY(this) : 1;
 
         Set<Integer> rowsAlways = new TreeSet<>();
         Set<Integer> rowsSometimes = new TreeSet<>();
@@ -1918,8 +1919,8 @@ public class GridPane extends Pane {
 
         double remaining = extraHeight;
 
-        while (rowsAlways.size() > 0 && remaining > rowsAlways.size()) {
-            double rowPortion = Math.floor(remaining / rowsAlways.size());
+        while (rowsAlways.size() > 0 && remaining * scale > rowsAlways.size()) {
+            double rowPortion = ScaledMath.floor(remaining / rowsAlways.size(), scale);
             for (Iterator<Integer> it = rowsAlways.iterator(); it.hasNext();) {
                 int i = it.next();
                 double maxOfRow = getRowMaxHeight(i);
@@ -1936,7 +1937,7 @@ public class GridPane extends Pane {
                             }
                         }
                         double curLength = heights.computeTotal(interval.begin, interval.end);
-                        actualPortion = Math.min(Math.floor(Math.max(0, (ms.getValue() - curLength) / intervalRows)),
+                        actualPortion = Math.min(ScaledMath.floor(Math.max(0, (ms.getValue() - curLength) / intervalRows), scale),
                                 actualPortion);
                     }
                 }
@@ -1954,8 +1955,8 @@ public class GridPane extends Pane {
             }
         }
 
-        while (rowsSometimes.size() > 0 && remaining > rowsSometimes.size()) {
-            double colPortion = Math.floor(remaining / rowsSometimes.size());
+        while (rowsSometimes.size() > 0 && remaining * scale > rowsSometimes.size()) {
+            double colPortion = ScaledMath.floor(remaining / rowsSometimes.size(), scale);
             for (Iterator<Integer> it = rowsSometimes.iterator(); it.hasNext();) {
                 int i = it.next();
                 double maxOfRow = getRowMaxHeight(i);
@@ -1972,7 +1973,7 @@ public class GridPane extends Pane {
                             }
                         }
                         double curLength = heights.computeTotal(interval.begin, interval.end);
-                        actualPortion = Math.min(Math.floor(Math.max(0, (ms.getValue() - curLength) / intervalRows)),
+                        actualPortion = Math.min(ScaledMath.floor(Math.max(0, (ms.getValue() - curLength) / intervalRows), scale),
                                 actualPortion);
                     }
                 }
@@ -1991,8 +1992,8 @@ public class GridPane extends Pane {
         }
 
 
-        while (lastRows.size() > 0 && remaining > lastRows.size()) {
-            double colPortion = Math.floor(remaining / lastRows.size());
+        while (lastRows.size() > 0 && remaining * scale > lastRows.size()) {
+            double colPortion = ScaledMath.floor(remaining / lastRows.size(), scale);
             for (Iterator<Integer> it = lastRows.iterator(); it.hasNext();) {
                 int i = it.next();
                 double maxOfRow = getRowMaxHeight(i);
@@ -2136,6 +2137,7 @@ public class GridPane extends Pane {
         if (extraWidth <= 0) {
             return extraWidth;
         }
+        final double scale = isSnapToPixel() ? getSnapScaleX(this) : 1;
 
         Set<Integer> columnsAlways = new TreeSet<>();
         Set<Integer> columnsSometimes = new TreeSet<>();
@@ -2161,8 +2163,8 @@ public class GridPane extends Pane {
 
         double remaining = extraWidth;
 
-        while (columnsAlways.size() > 0 && remaining > columnsAlways.size()) {
-            double colPortion = Math.floor(remaining / columnsAlways.size());
+        while (columnsAlways.size() > 0 && remaining * scale > columnsAlways.size()) {
+            double colPortion = ScaledMath.floor(remaining / columnsAlways.size(), scale);
             for (Iterator<Integer> it = columnsAlways.iterator(); it.hasNext();) {
                 int i = it.next();
                 double maxOfColumn = getColumnMaxWidth(i);
@@ -2179,7 +2181,7 @@ public class GridPane extends Pane {
                             }
                         }
                         double curLength = widths.computeTotal(interval.begin, interval.end);
-                        actualPortion = Math.min(Math.floor(Math.max(0, (ms.getValue() - curLength) / intervalColumns)),
+                        actualPortion = Math.min(ScaledMath.floor(Math.max(0, (ms.getValue() - curLength) / intervalColumns), scale),
                                 actualPortion);
                     }
                 }
@@ -2197,8 +2199,8 @@ public class GridPane extends Pane {
             }
         }
 
-        while (columnsSometimes.size() > 0 && remaining > columnsSometimes.size()) {
-            double colPortion = Math.floor(remaining / columnsSometimes.size());
+        while (columnsSometimes.size() > 0 && remaining * scale > columnsSometimes.size()) {
+            double colPortion = ScaledMath.floor(remaining / columnsSometimes.size(), scale);
             for (Iterator<Integer> it = columnsSometimes.iterator(); it.hasNext();) {
                 int i = it.next();
                 double maxOfColumn = getColumnMaxWidth(i);
@@ -2215,7 +2217,7 @@ public class GridPane extends Pane {
                             }
                         }
                         double curLength = widths.computeTotal(interval.begin, interval.end);
-                        actualPortion = Math.min(Math.floor(Math.max(0, (ms.getValue() - curLength) / intervalColumns)),
+                        actualPortion = Math.min(ScaledMath.floor(Math.max(0, (ms.getValue() - curLength) / intervalColumns), scale),
                                 actualPortion);
                     }
                 }
@@ -2234,8 +2236,8 @@ public class GridPane extends Pane {
         }
 
 
-        while (lastColumns.size() > 0 && remaining > lastColumns.size()) {
-            double colPortion = Math.floor(remaining / lastColumns.size());
+        while (lastColumns.size() > 0 && remaining * scale > lastColumns.size()) {
+            double colPortion = ScaledMath.floor(remaining / lastColumns.size(), scale);
             for (Iterator<Integer> it = lastColumns.iterator(); it.hasNext();) {
                 int i = it.next();
                 double maxOfColumn = getColumnMaxWidth(i);

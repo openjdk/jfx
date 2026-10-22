@@ -3427,4 +3427,54 @@ public class GridPaneTest {
 
         assertEquals(50.25, child2.getLayoutX(), 1e-10);
     }
+
+    private static Stream<Double> scales() {
+        return Stream.of(1.0, 1.25, 1.5, 1.75, 2.0, 2.25);
+    }
+
+    @ParameterizedTest
+    @MethodSource("scales")
+    public void testRowsGrowingToMultiSpanPrefHeight(double scale) {
+        MockResizable span = new MockResizable(0, 0, 10, 38, 5000, 5000);
+        gridpane.add(span, 0, 0, 1, 3);
+        MockResizable child1 = new MockResizable(0, 0, 10, 10, 5000, 5000);
+        MockResizable child2 = new MockResizable(0, 0, 10, 10, 5000, 5000);
+        MockResizable child3 = new MockResizable(0, 0, 10, 10, 5000, 5000);
+        GridPane.setVgrow(child1, Priority.ALWAYS);
+        GridPane.setVgrow(child2, Priority.ALWAYS);
+        GridPane.setVgrow(child3, Priority.ALWAYS);
+        gridpane.add(child1, 1, 0);
+        gridpane.add(child2, 1, 1);
+        gridpane.add(child3, 1, 2);
+        setRenderScale(scale);
+
+        gridpane.resize(100, 44);
+        gridpane.layout();
+
+        assertEquals(44, span.getHeight(), 1e-6);
+        assertEquals(44, child3.getLayoutY() + child3.getHeight(), 1e-6);
+    }
+
+    @ParameterizedTest
+    @MethodSource("scales")
+    public void testColumnsGrowingToMultiSpanPrefWidth(double scale) {
+        MockResizable span = new MockResizable(0, 0, 38, 10, 5000, 5000);
+        gridpane.add(span, 0, 0, 3, 1);
+        MockResizable child1 = new MockResizable(0, 0, 10, 10, 5000, 5000);
+        MockResizable child2 = new MockResizable(0, 0, 10, 10, 5000, 5000);
+        MockResizable child3 = new MockResizable(0, 0, 10, 10, 5000, 5000);
+        GridPane.setHgrow(child1, Priority.ALWAYS);
+        GridPane.setHgrow(child2, Priority.ALWAYS);
+        GridPane.setHgrow(child3, Priority.ALWAYS);
+        gridpane.add(child1, 0, 1);
+        gridpane.add(child2, 1, 1);
+        gridpane.add(child3, 2, 1);
+        setRenderScale(scale);
+
+        gridpane.resize(44, 100);
+        gridpane.layout();
+
+        assertEquals(44, span.getWidth(), 1e-6);
+        assertEquals(44, child3.getLayoutX() + child3.getWidth(), 1e-6);
+    }
 }
