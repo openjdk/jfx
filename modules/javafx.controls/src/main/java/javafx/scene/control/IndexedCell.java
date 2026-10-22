@@ -26,6 +26,7 @@
 package javafx.scene.control;
 
 import javafx.css.PseudoClass;
+import javafx.scene.AccessibleAttribute;
 import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.ReadOnlyIntegerWrapper;
 
@@ -138,7 +139,9 @@ public class IndexedCell<T> extends Cell<T> {
      * @param newIndex the new index
      */
     void indexChanged(int oldIndex, int newIndex) {
-        // no-op
+        if (oldIndex != newIndex) {
+            notifyAccessibleAttributeChanged(AccessibleAttribute.INDEX);
+        }
     }
 
     /* *************************************************************************
