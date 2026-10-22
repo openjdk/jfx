@@ -217,6 +217,15 @@ public class TextFieldTreeCell<T> extends DefaultTreeCell<T> {
         CellUtils.updateItem(this, getConverter(), hbox, getTreeItemGraphic(), textField);
     }
 
+    /** {@inheritDoc} */
+    @Override
+    public void stopEdit() {
+        if (!isEditing()) {
+            return;
+        }
+
+        CellUtils.stopEdit(this, getConverter(), textField.getText());
+    }
 
 
     /* *************************************************************************

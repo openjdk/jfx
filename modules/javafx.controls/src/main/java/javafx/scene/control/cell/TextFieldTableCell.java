@@ -206,4 +206,14 @@ public class TextFieldTableCell<S,T> extends TableCell<S,T> {
         super.updateItem(item, empty);
         CellUtils.updateItem(this, getConverter(), null, null, textField);
     }
+
+    /** {@inheritDoc} */
+    @Override
+    public void stopEdit() {
+        if (!isEditing()) {
+            return;
+        }
+
+        CellUtils.stopEdit(this, getConverter(), textField.getText());
+    }
 }
