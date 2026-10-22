@@ -37,7 +37,8 @@ REM The current officially supported Visual Studio version is VS 2022
 REM Try the following in order of priority:
 REM 1. The VSCOMNTOOLS env var
 REM 2. The legacy VS150COMNTOOLS env var
-REM 3. Look in standard locations for Visual Studio (2022,2019,2017)
+REM 3. vswhere.exe which ships with the VS installer since VS2017 and knows
+REM    about every installed VS version
 
 
 set AUXBUILD=VC\Auxiliary\Build
@@ -47,18 +48,16 @@ if not "%VSCOMNTOOLS%"=="" (
 ) else if not "%VS150COMNTOOLS%"=="" (
     set "VSTOOLSDIR=%VS150COMNTOOLS%"
 ) else (
-    for %%a in (2022, 2019, 2017) do (
-        set year=%%a
-        for %%b in (Enterprise, Professional, Community, BuildTools) do (
-            set edition=%%b
-            for %%c in ("Program Files", "Program Files (x86)") do (
-                set ProgramFiles=%%~c
-                set "TMPDIR=C:\!ProgramFiles!\Microsoft Visual Studio\!year!\!edition!\%AUXBUILD%"
-                if exist "!TMPDIR!" (
-                    set "VSTOOLSDIR=!TMPDIR!"
-                    goto FOUNDVS
-                )
-            )
+    set "VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
+    if exist "!VSWHERE!" (
+        REM -version 15.0 means "15.0 or later" (VS2017+)
+        for /f "usebackq tokens=*" %%i in (`"!VSWHERE!" -latest -all -prerelease ^
+            -products Microsoft.VisualStudio.Product.Community Microsoft.VisualStudio.Product.Professional Microsoft.VisualStudio.Product.Enterprise Microsoft.VisualStudio.Product.BuildTools ^
+            -version 15.0 ^
+            -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 ^
+            -property installationPath`) do (
+            set "TMPDIR=%%i\%AUXBUILD%"
+            if exist "!TMPDIR!" set "VSTOOLSDIR=!TMPDIR!"
         )
     )
 )
