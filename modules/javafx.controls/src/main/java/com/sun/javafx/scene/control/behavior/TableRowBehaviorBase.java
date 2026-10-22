@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,8 +26,8 @@
 package com.sun.javafx.scene.control.behavior;
 
 import javafx.collections.ObservableList;
-import javafx.scene.control.Cell;
 import javafx.scene.control.Control;
+import javafx.scene.control.IndexedCell;
 import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TablePositionBase;
 import javafx.scene.control.TableSelectionModel;
@@ -36,7 +36,7 @@ import javafx.scene.input.MouseEvent;
 
 import java.util.List;
 
-public abstract class TableRowBehaviorBase<T extends Cell> extends CellBehaviorBase<T> {
+public abstract class TableRowBehaviorBase<T extends IndexedCell<?>> extends CellBehaviorBase<T> {
 
     /***************************************************************************
      *                                                                         *
@@ -81,6 +81,11 @@ public abstract class TableRowBehaviorBase<T extends Cell> extends CellBehaviorB
                    final int clickCount, final boolean shiftDown, final boolean shortcutDown) {
         final Control table = getCellContainer();
         if (table == null) return;
+
+        int count = getItemCount();
+        if (getNode().getIndex() >= count) {
+            return;
+        }
 
         // if the user has clicked on the disclosure node, we do nothing other
         // than expand/collapse the tree item (if applicable). We do not do editing!
