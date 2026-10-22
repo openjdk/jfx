@@ -2005,7 +2005,8 @@ public class GridPane extends Pane {
                     final Interval interval = ms.getKey();
                     if (interval.end - 1 == i) {
                         double curLength = heights.computeTotal(interval.begin, interval.end);
-                        actualPortion = Math.min(Math.max(0, ms.getValue() - curLength),
+                        double missing = Math.max(0, ms.getValue() - curLength);
+                        actualPortion = Math.min(isSnapToPixel() ? ScaledMath.floor(missing, scale) : missing,
                                 actualPortion);
                     }
                 }
@@ -2250,7 +2251,8 @@ public class GridPane extends Pane {
                     final Interval interval = ms.getKey();
                     if (interval.end - 1 == i) {
                         double curLength = widths.computeTotal(interval.begin, interval.end);
-                        actualPortion = Math.min(Math.max(0, ms.getValue() - curLength),
+                        double missing = Math.max(0, ms.getValue() - curLength);
+                        actualPortion = Math.min(isSnapToPixel() ? ScaledMath.floor(missing, scale) : missing,
                                 actualPortion);
                     }
                 }

@@ -3485,4 +3485,70 @@ public class GridPaneTest {
         assertEquals(44, span.getWidth(), 1e-6);
         assertEquals(44, child3.getLayoutX() + child3.getWidth(), 1e-6);
     }
+
+    @ParameterizedTest
+    @MethodSource("scales")
+    public void testGrowingRowsToMultiSpanPrefHeightLastRow(double scale) {
+        MockResizable child0 = new MockResizable(0, 0, 10, 10, 5000, 5000);
+        MockResizable child1 = new MockResizable(0, 0, 10, 10, 5000, 5000);
+        GridPane.setVgrow(child0, Priority.ALWAYS);
+        gridpane.add(child0, 1, 0);
+        gridpane.add(child1, 1, 1);
+        gridpane.add(new MockResizable(0, 0, 10, 41, 5000, 5000), 0, 0, 1, 2);
+        setRenderScale(scale);
+
+        gridpane.resize(50, 100);
+        gridpane.layout();
+
+        assertEquals(100, child1.getLayoutY() + child1.getHeight(), 1e-10);
+    }
+
+    @ParameterizedTest
+    @MethodSource("scales")
+    public void testGrowingColumnsToMultiSpanPrefWidthLastColumn(double scale) {
+        MockResizable child0 = new MockResizable(0, 0, 10, 10, 5000, 5000);
+        MockResizable child1 = new MockResizable(0, 0, 10, 10, 5000, 5000);
+        GridPane.setHgrow(child0, Priority.ALWAYS);
+        gridpane.add(child0, 0, 1);
+        gridpane.add(child1, 1, 1);
+        gridpane.add(new MockResizable(0, 0, 41, 10, 5000, 5000), 0, 0, 2, 1);
+        setRenderScale(scale);
+
+        gridpane.resize(100, 50);
+        gridpane.layout();
+
+        assertEquals(100, child1.getLayoutX() + child1.getWidth(), 1e-10);
+    }
+
+    @Test
+    public void testGrowingRowsToMultiSpanPrefHeightWithoutSnapToPixel() {
+        gridpane.setSnapToPixel(false);
+        MockResizable child0 = new MockResizable(0, 0, 10, 10, 5000, 5000);
+        MockResizable child1 = new MockResizable(0, 0, 10, 10, 5000, 5000);
+        MockResizable span = new MockResizable(0, 0, 10, 41.5, 5000, 5000);
+        gridpane.add(child0, 1, 0);
+        gridpane.add(child1, 1, 1);
+        gridpane.add(span, 0, 0, 1, 2);
+
+        gridpane.resize(50, 100);
+        gridpane.layout();
+
+        assertEquals(41.5, span.getHeight(), 1e-10);
+    }
+
+    @Test
+    public void testGrowingColumnsToMultiSpanPrefWidthWithoutSnapToPixel() {
+        gridpane.setSnapToPixel(false);
+        MockResizable child0 = new MockResizable(0, 0, 10, 10, 5000, 5000);
+        MockResizable child1 = new MockResizable(0, 0, 10, 10, 5000, 5000);
+        MockResizable span = new MockResizable(0, 0, 41.5, 10, 5000, 5000);
+        gridpane.add(child0, 0, 1);
+        gridpane.add(child1, 1, 1);
+        gridpane.add(span, 0, 0, 2, 1);
+
+        gridpane.resize(100, 50);
+        gridpane.layout();
+
+        assertEquals(41.5, span.getWidth(), 1e-10);
+    }
 }
