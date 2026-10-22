@@ -270,8 +270,8 @@ public class LabeledText extends Text {
             // if Text's property is changing but not because a style is being applied,
             // then it's either because the set method was called on the Labeled's property or
             // because CSS is resetting Labeled's property to its initial value
-            // (see CssStyleHelper#resetToInitialValues(Styleable))
-            if (applying == false) {
+            // (see CssStyleHelper#resetToInitialValue)
+            if (!applying) {
                 super.applyStyle(null, ((ObservableValue<T>)observable).getValue());
             }
         }
