@@ -79,6 +79,7 @@ public final class PiscesRenderer {
 
     private long nativePtr = 0L;
     private AbstractSurface surface;
+    private Disposer.Record disposerRecord;
 
     /**
      * Creates a renderer that will write into a given surface.
@@ -88,7 +89,27 @@ public final class PiscesRenderer {
     public PiscesRenderer(AbstractSurface surface) {
         this.surface = surface;
         initialize();
-        Disposer.addRecord(this, new PiscesRendererDisposerRecord(nativePtr));
+        addDisposerRecord();
+    }
+
+    private synchronized void addDisposerRecord() {
+        disposerRecord = new PiscesRendererDisposerRecord(nativePtr);
+
+        Disposer.addRecord(this, disposerRecord);
+    }
+
+    /**
+     * Releases the native resources of this renderer. Calling this method more
+     * than once has no further effect.
+     */
+    public synchronized void dispose() {
+        Disposer.Record record = disposerRecord;
+        disposerRecord = null;
+        surface = null;
+
+        if (record != null) {
+            record.dispose();
+        }
     }
 
     private native void initialize();
@@ -449,7 +470,7 @@ public final class PiscesRenderer {
         }
 
         @Override
-        public void dispose() {
+        public synchronized void dispose() {
             if (nativeHandle != 0L) {
                 disposeNative(nativeHandle);
                 nativeHandle = 0L;

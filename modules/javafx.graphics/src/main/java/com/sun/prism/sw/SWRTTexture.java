@@ -171,6 +171,16 @@ class SWRTTexture extends SWArgbPreTexture implements RTTexture {
     }
 
     @Override
+    public void dispose() {
+        if (pr != null) {
+            pr.dispose();
+            pr = null;
+        }
+
+        surface.dispose();
+    }
+
+    @Override
     public boolean isOpaque() {
         return isOpaque;
     }

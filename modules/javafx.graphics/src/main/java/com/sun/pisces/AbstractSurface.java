@@ -29,6 +29,7 @@ import com.sun.prism.impl.Disposer;
 
 public abstract class AbstractSurface implements Surface {
 
+    private Disposer.Record disposerRecord;
     private long nativePtr = 0L;
     private int width;
     private int height;
@@ -48,8 +49,23 @@ public abstract class AbstractSurface implements Surface {
         this.height = height;
     }
 
-    protected void addDisposerRecord() {
-        Disposer.addRecord(this, new AbstractSurfaceDisposerRecord(nativePtr));
+    protected synchronized void addDisposerRecord() {
+        disposerRecord = new AbstractSurfaceDisposerRecord(nativePtr);
+
+        Disposer.addRecord(this, disposerRecord);
+    }
+
+    /**
+     * Releases the native resources of this surface. Calling this method more
+     * than once has no further effect.
+     */
+    public final synchronized void dispose() {
+        Disposer.Record record = disposerRecord;
+        disposerRecord = null;
+
+        if (record != null) {
+            record.dispose();
+        }
     }
 
     @Override
@@ -115,7 +131,7 @@ public abstract class AbstractSurface implements Surface {
         }
 
         @Override
-        public void dispose() {
+        public synchronized void dispose() {
             if (nativeHandle != 0L) {
                 disposeNative(nativeHandle);
                 nativeHandle = 0L;
