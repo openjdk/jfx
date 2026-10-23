@@ -57,8 +57,6 @@ public class TextAreaTabPolicyTest extends Application {
 
     @Override
     public void start(Stage stage) throws Exception {
-        setUncaughtExceptionHandler();
-
         root = new BorderPane();
         stage.setScene(new Scene(root, 800, 400));
         stage.setOnShown(l -> {
@@ -69,6 +67,7 @@ public class TextAreaTabPolicyTest extends Application {
 
     @BeforeAll
     public static void beforeAll() throws Exception {
+        setUncaughtExceptionHandler();
         startupLatch = new CountDownLatch(1);
         Util.launch(startupLatch, TextAreaTabPolicyTest.class);
     }
@@ -76,6 +75,7 @@ public class TextAreaTabPolicyTest extends Application {
     @AfterAll
     public static void afterAll() {
         Util.shutdown();
+        removeUncaughtExceptionHandler();
     }
 
     @BeforeEach
