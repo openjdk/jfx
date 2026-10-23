@@ -29,14 +29,15 @@ import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.tk.ImageLoader;
 import com.sun.javafx.tk.PlatformImage;
 import com.sun.javafx.tk.Toolkit;
-import javafx.beans.NamedArg;
-import javafx.beans.property.ReadOnlyObjectProperty;
-import javafx.scene.paint.Color;
 
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.util.Objects;
+
+import javafx.beans.NamedArg;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.scene.paint.Color;
 
 /**
  * The {@code WritableImage} class represents a custom graphical image
@@ -60,6 +61,7 @@ public class WritableImage extends Image {
     }
 
     private ImageLoader tkImageLoader;
+    private DrawingContext drawingContext;
 
     /**
      * Constructs an empty image of the specified dimensions.
@@ -155,6 +157,63 @@ public class WritableImage extends Image {
     {
         super(width, height);
         getPixelWriter().setPixels(0, 0, width, height, reader, x, y);
+    }
+
+    /**
+     * Returns the {@link DrawingContext} associated with this image.
+     * <p>
+     * The pixel storage of this image must be in {@link PixelFormat.Type#INT_ARGB_PRE INT_ARGB_PRE} format,
+     * backed by an {@link java.nio.IntBuffer} that is either a direct buffer in native byte order or backed
+     * by an accessible array, which is the case for images created with the {@code (width, height)}
+     * constructor. An image created from a {@link PixelBuffer} must use a pixel format of that
+     * type and a buffer of that kind.
+     *
+     * @implNote
+     * A snapshot into this image currently replaces its pixel storage, detaching any
+     * {@code DrawingContext} previously obtained from it ({@code Node.snapshot} and
+     * {@code Scene.snapshot}). This is a known limitation and is expected to change so that
+     * snapshots render into the existing storage, leaving the {@code DrawingContext} usable.
+     * <p>
+     * The returned {@code DrawingContext} is currently implemented by the software renderer,
+     * which does not support all optional features of {@code DrawingContext}:
+     * <ul>
+     *     <li>effects;
+     *     <li>path based clipping;
+     *     <li>clipping under a transform containing rotation or shear;
+     *     <li>blend modes other than {@link javafx.scene.effect.BlendMode#SRC_OVER SRC_OVER}.
+     * </ul>
+     * Image dimensions larger than 32767 pixels in either direction are not
+     * supported by the current implementation; such images are rejected with
+     * an {@link IllegalStateException}. This limit may change in a future release.
+     * <p>
+     * Fractional clip rectangles are rounded inward to the image's pixel grid
+     * (with the identity transform, clip coordinates are image pixels), so a clip
+     * covering less than one pixel may become empty.
+     * These are limitations of the current implementation and are not part of the
+     * {@code DrawingContext} contract; they may be lifted in a future release.
+     *
+     * @return the {@link DrawingContext} associated with this image, never {@code null}
+     * @throws IllegalStateException if this image's pixel storage cannot back a {@code DrawingContext}:
+     *     the pixel format is not {@code INT_ARGB_PRE}, the {@code IntBuffer} is neither a direct buffer
+     *     in native byte order nor backed by an accessible array, or the buffer is read-only; or if
+     *     either image dimension exceeds the maximum size supported by the implementation
+     * @since 28
+     */
+    public final DrawingContext getDrawingContext() {
+        if (drawingContext == null) {
+            drawingContext = Toolkit.getToolkit().createDrawingContext(getWritablePlatformImage(), this::notifyDrawingContextDirty);
+        }
+
+        return drawingContext;
+    }
+
+    private void notifyDrawingContextDirty(Rectangle rect) {
+        if (pixelBuffer != null) {
+            pixelBuffer.bufferDirty(rect);
+        }
+        else {
+            bufferDirty(rect);
+        }
     }
 
     @Override
