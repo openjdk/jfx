@@ -490,9 +490,17 @@ public class WindowStage extends GlassStage {
             return;
         }
 
-        PushbroomScaler scaler = ScalerFactory.createScaler(image.getWidth(), image.getHeight(),
-                                                            image.getBytesPerPixelUnit(),
-                                                            SMALL_ICON_WIDTH, SMALL_ICON_HEIGHT, true);
+        Image img = createIconImage(image, SMALL_ICON_WIDTH, SMALL_ICON_HEIGHT);
+
+        platformWindow.setIcon(PixelUtils.imageToPixels(img));
+    }
+
+    static Image createIconImage(Image image, int width, int height) {
+        PushbroomScaler scaler = ScalerFactory.createScaler(
+            image.getWidth(), image.getHeight(),
+            image.getBytesPerPixelUnit(),
+            width, height, true
+        );
 
         int iwidth = image.getWidth();
         int iheight = image.getHeight();
@@ -532,9 +540,8 @@ public class WindowStage extends GlassStage {
         }
 
         PixelFormat iconFormat = image.getPixelFormat() == PixelFormat.INT_ARGB_PRE ? PixelFormat.BYTE_BGRA_PRE : image.getPixelFormat();
-        Image img = image.iconify(scaler.getDestination(), SMALL_ICON_WIDTH, SMALL_ICON_HEIGHT, iconFormat);
 
-        platformWindow.setIcon(PixelUtils.imageToPixels(img));
+        return image.iconify(scaler.getDestination(), width, height, iconFormat);
     }
 
     @Override public void setTitle(String title) {

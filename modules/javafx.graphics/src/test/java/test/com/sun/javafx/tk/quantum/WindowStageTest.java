@@ -64,6 +64,25 @@ public class WindowStageTest {
     }
 
     @Test
+    public void createIconImageShouldPreserveIntArgbPrePixels() {
+        int[] pixels = {
+            0xFF112233, 0xFF445566,
+            0xFF778899, 0xFFAABBCC
+        };
+        Image image = Image.fromIntArgbPreData(pixels, 2, 2);
+        Image icon = WindowStageShim.createIconImage(image, 2, 2);
+
+        assertEquals(2, icon.getWidth());
+        assertEquals(2, icon.getHeight());
+
+        for (int y = 0; y < 2; y++) {
+            for (int x = 0; x < 2; x++) {
+                assertEquals(pixels[y * 2 + x], icon.getArgb(x, y), "pixel at " + x + ", " + y);
+            }
+        }
+    }
+
+    @Test
     public void bestIconSizeTest() {
         List<Object> images = new ArrayList<>();
         addImage(images, 16);
