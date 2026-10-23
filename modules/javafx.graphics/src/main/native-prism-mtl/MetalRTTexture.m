@@ -180,8 +180,65 @@
     }
     [super dealloc];
 }
+
+- (BOOL) doReadPixels:(void*)pixels
+               length:(int)length
+         contentWidth:(int)cntW
+        contentHeight:(int)cntH {
+
+    if (pixelFormat != MTLPixelFormatBGRA8Unorm) {
+        NSLog(@"[MetalRTTexture doReadPixels] doesn't support format");
+        return false;
+    }
+
+    char* pSrcPixels = (char*)[[self getPixelBuffer] contents];
+    char* pDstPixels = pixels;
+
+    for (int y = 0; y != cntH; y++) {
+        memcpy(pDstPixels, pSrcPixels, cntW * 4);
+        pSrcPixels += width * 4;
+        pDstPixels += cntW * 4;
+    }
+    return true;
+}
+
 @end // MetalRTTexture
 
+
+jboolean doReadPixels(JNIEnv *env, jclass class, jlong jTexPtr,
+                    jobject buf, jarray pixelArray, jint length, jint cntW, jint cntH) {
+
+    if (length <= 0 || cntW <= 0 || cntH <= 0) {
+        NSLog(@"doReadPixels: invalid dimensions "
+          "length=%d, width=%d, height=%d", length, cntW, cntH);
+        return JNI_FALSE;
+    }
+    if (length / 4 / cntW < cntH) {
+        NSLog(@"doReadPixels: pixel buffer is small");
+        return JNI_FALSE;
+    }
+
+    void* pDst = (void*) (pixelArray ?
+            (*env)->GetPrimitiveArrayCritical(env, pixelArray, NULL) :
+            (*env)->GetDirectBufferAddress(env, buf));
+
+    if (pDst == nil) {
+        NSLog(@"doReadPixels: pixel buffer is NULL");
+        return JNI_FALSE;
+    }
+
+    MetalRTTexture* rtt = (MetalRTTexture*) jlong_to_ptr(jTexPtr);
+
+    jboolean res = [rtt doReadPixels:pDst
+                              length:length
+                        contentWidth:cntW
+                       contentHeight:cntH];
+
+    if (pixelArray) {
+        (*env)->ReleasePrimitiveArrayCritical(env, pixelArray, pDst, 0);
+    }
+    return res;
+}
 
 // ** JNI METHODS **
 
@@ -249,6 +306,32 @@ JNIEXPORT void JNICALL Java_com_sun_prism_mtl_MTLRTTexture_nReadPixelsFromRTT
     MetalRTTexture* rtt = (MetalRTTexture*) jlong_to_ptr(jTexPtr);
     int* pDst = (int*) (*env)->GetDirectBufferAddress(env, pixData);
     [rtt readPixelsFromRTT:pDst];
+}
+
+/*
+ * Class:     com_sun_prism_mtl_MTLRTTexture
+ * Method:    nReadPixelsByte
+ * Signature: (JLjava/nio/ByteBuffer;[BIII)J
+ */
+JNIEXPORT jboolean JNICALL Java_com_sun_prism_mtl_MTLRTTexture_nReadPixelsByte
+    (JNIEnv *env, jclass class,
+        jlong jTexPtr, jobject pixData, jbyteArray pixelArr,
+        jint length, jint cntW, jint cntH)
+{
+    return doReadPixels(env, class, jTexPtr, pixData, pixelArr, length, cntW, cntH);
+}
+
+/*
+ * Class:     com_sun_prism_mtl_MTLRTTexture
+ * Method:    nReadPixelsInt
+ * Signature: (JLjava/nio/IntBuffer;[IIII)J
+ */
+JNIEXPORT jboolean JNICALL Java_com_sun_prism_mtl_MTLRTTexture_nReadPixelsInt
+    (JNIEnv *env, jclass class,
+        jlong jTexPtr, jobject pixData, jintArray pixelArr,
+        jint length, jint cntW, jint cntH)
+{
+    return doReadPixels(env, class, jTexPtr, pixData, pixelArr, length, cntW, cntH);
 }
 
 /*

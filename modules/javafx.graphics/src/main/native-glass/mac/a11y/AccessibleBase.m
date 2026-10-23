@@ -129,7 +129,7 @@ static NSMutableDictionary * rolesMap;
  */
 - (id)requestNodeAttribute:(NSString *)attribute
 {
-    GET_MAIN_JENV;
+    GET_MAIN_JENV_NOWARN;
     if (env == NULL) return NULL;
     jobject jresult = (jobject)(*env)->CallLongMethod(env, [self getJAccessible],
                                               jAccessibilityAttributeValue, (jlong)attribute);
@@ -145,7 +145,7 @@ static NSMutableDictionary * rolesMap;
 
 - (id)requestNodeAttribute:(NSString *)attribute forParameter:(id)parameter
 {
-    GET_MAIN_JENV;
+    GET_MAIN_JENV_NOWARN;
     if (env == NULL) return NULL;
     jobject jresult = (jobject)(*env)->CallLongMethod(env, [self getJAccessible],
                                               jAccessibilityAttributeValueForParameter,
@@ -156,7 +156,7 @@ static NSMutableDictionary * rolesMap;
 
 - (NSInteger)requestNodeArrayAttributeCount:(NSString *)attribute
 {
-    GET_MAIN_JENV;
+    GET_MAIN_JENV_NOWARN;
     if (env == NULL) {
         return -1;
     }
@@ -169,7 +169,7 @@ static NSMutableDictionary * rolesMap;
 
 - (NSArray *)requestNodeArrayAttribute:(NSString *)attribute index:(NSUInteger)index maxCount:(NSUInteger)maxCount
 {
-     GET_MAIN_JENV;
+     GET_MAIN_JENV_NOWARN;
      if (env == NULL) {
          return nil;
      }
@@ -187,7 +187,7 @@ static NSMutableDictionary * rolesMap;
  */
 - (BOOL)isNodeAttributeSettable:(NSString *)attribute
 {
-    GET_MAIN_JENV;
+    GET_MAIN_JENV_NOWARN;
     if (env == NULL) return FALSE;
     jboolean jresult = (*env)->CallBooleanMethod(env, [self getJAccessible],
                                                  jAccessibilityIsAttributeSettable,
@@ -201,7 +201,7 @@ static NSMutableDictionary * rolesMap;
  */
 - (void)setNodeAttribute:(id)value forAttribute:(NSString *)attribute
 {
-    GET_MAIN_JENV;
+    GET_MAIN_JENV_NOWARN;
     if (env == NULL) return;
     (*env)->CallVoidMethod(env, [self getJAccessible], jAccessibilitySetValue,
                            (jlong)value, (jlong)attribute);
@@ -260,7 +260,7 @@ static NSMutableDictionary * rolesMap;
 
 - (id)accessibilityFocusedUIElement
 {
-    GET_MAIN_JENV;
+    GET_MAIN_JENV_NOWARN;
     if (env == NULL) return NULL;
     id result = (id)(*env)->CallLongMethod(env, self->jAccessible,
                                            jAccessibilityFocusedUIElement);
@@ -277,7 +277,7 @@ static NSMutableDictionary * rolesMap;
 // Actions support
 - (BOOL)performAccessibleAction:(NSString *)action
 {
-    GET_MAIN_JENV;
+    GET_MAIN_JENV_NOWARN;
     if (env != NULL) {
         BOOL result = TRUE;
         (*env)->CallVoidMethod(env, self->jAccessible, jAccessibilityPerformAction, (jlong)action);
