@@ -116,6 +116,7 @@ extern "C" {
         // Make sure HLS is ready first
         bool hlsMode = (callbacks->Property(HLS_PROP_GET_HLS_MODE, 0) == 1);
         if (hlsMode && callbacks->Property(HLS_PROP_GET_IS_READY, 0) != 1) {
+            callbacks->CloseConnection();
             delete callbacks;
             delete locator;
             return ERROR_MEDIA_INVALID;
@@ -145,6 +146,8 @@ extern "C" {
             }
 
             if (audioStreamCallbacks->Property(HLS_PROP_GET_IS_READY, 0) != 1) {
+                audioStreamCallbacks->CloseConnection();
+                callbacks->CloseConnection();
                 delete callbacks;
                 delete audioStreamCallbacks;
                 delete locator;

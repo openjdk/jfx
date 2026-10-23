@@ -59,7 +59,9 @@ final class HLSConnectionHolder extends ConnectionHolder {
     private HLSConnectionHolder audioConnectionHolder = null;
     private URLConnection urlConnection = null;
     private boolean sendHeader = false;
+    private URLConnection headerURLConnection = null;
     private ReadableByteChannel headerChannel = null;
+    private String lastSentHeaderUri = null;
     private String cachedHeaderUri = null;
     private byte[] cachedHeader = null;
     private final PlaylistLoader playlistLoader;
@@ -224,10 +226,14 @@ final class HLSConnectionHolder extends ConnectionHolder {
 
     @Override
     public void closeConnection() {
-        currentPlaylist.close();
+        if (currentPlaylist != null) {
+            currentPlaylist.close();
+        }
         super.closeConnection();
         resetConnection();
-        playlistLoader.putState(PlaylistLoader.STATE_EXIT);
+        if (playlistLoader != null) {
+            playlistLoader.putState(PlaylistLoader.STATE_EXIT);
+        }
     }
 
     @Override
@@ -320,11 +326,9 @@ final class HLSConnectionHolder extends ConnectionHolder {
 
         // An HLS media playlist should not have any unsupported segments
         // and must contain at least one media segment.
-        if (currentPlaylist == null || currentPlaylist.hasUnsupportedSegmentURI()) {
-            String playlistURI = currentPlaylist == null ? "Unknown" :
-                    currentPlaylist.playlistURI.toString();
+        if (currentPlaylist == null) {
             MediaUtils.error(this, MediaError.ERROR_MEDIA_INVALID.code(),
-                    "HLS media playlist contains an unsupported segment URI: " + playlistURI, null);
+                    "HLS media playlist is unavailable", null);
             return false;
         }
 
@@ -384,6 +388,8 @@ final class HLSConnectionHolder extends ConnectionHolder {
         } catch (IOException ioex) {
         } finally {
             headerChannel = null;
+            Locator.closeConnection(headerURLConnection);
+            headerURLConnection = null;
         }
     }
 
@@ -410,12 +416,12 @@ final class HLSConnectionHolder extends ConnectionHolder {
         try (InputStream in = connection.getInputStream()) {
             long length = connection.getContentLengthLong();
             if (length > MAX_HEADER_SIZE) {
-                throw new IOException("HLS init segment is too large: " + length);
+                return null;
             }
 
             byte[] header = in.readNBytes((int)(MAX_HEADER_SIZE + 1));
             if (header.length > MAX_HEADER_SIZE) {
-               throw new IOException("HLS init segment is too large: " + length);
+               return null;
             }
             cachedHeader = header;
             cachedHeaderUri = mediaFile;
@@ -434,24 +440,7 @@ final class HLSConnectionHolder extends ConnectionHolder {
         String mediaFile;
         int headerLength = 0;
 
-        if (sendHeader) {
-            mediaFile = currentPlaylist.getHeaderFile();
-            if (mediaFile == null) {
-                return -1;
-            }
-
-            try {
-                byte[] header = getCachedHeader(mediaFile);
-                headerChannel = Channels.newChannel(new ByteArrayInputStream(header));
-                headerLength = header.length;
-            } catch (IOException | URISyntaxException e) {
-                return -1;
-            }
-            if (!SEND_HEADER_WITH_EACH_SEGMENT) {
-                sendHeader = false;
-            }
-        }
-
+        // Load next segment.
         mediaFile = currentPlaylist.getNextMediaFile();
         if (mediaFile == null) {
             if (currentPlaylist.isFragmentedMP4()) {
@@ -466,6 +455,35 @@ final class HLSConnectionHolder extends ConnectionHolder {
             channel = openChannel();
         } catch (IOException | URISyntaxException e) {
             return -1;
+        }
+
+        // For live streams init segment might change, so we check for it
+        // after we got next segment.
+        if (currentPlaylist.isFragmentedMP4()) {
+            String headerFile = currentPlaylist.getHeaderFile();
+            if (headerFile == null) {
+                return -1;
+            }
+            if (sendHeader || !headerFile.equals(lastSentHeaderUri)) {
+                try {
+                    byte[] header = getCachedHeader(headerFile);
+                    if (header != null) {
+                        headerChannel = Channels.newChannel(new ByteArrayInputStream(header));
+                        headerLength = header.length;
+                    } else {
+                        URI uri = new URI(headerFile);
+                        headerURLConnection = uri.toURL().openConnection();
+                        headerChannel = Channels.newChannel(headerURLConnection.getInputStream());
+                        headerLength = headerURLConnection.getContentLength();
+                    }
+                } catch (IOException | URISyntaxException e) {
+                    return -1;
+                }
+                lastSentHeaderUri = headerFile;
+                if (!SEND_HEADER_WITH_EACH_SEGMENT) {
+                    sendHeader = false;
+                }
+            }
         }
 
         if (currentPlaylist.isCurrentMediaFileDiscontinuity()) {
@@ -1455,17 +1473,36 @@ final class HLSConnectionHolder extends ConnectionHolder {
             isVideoStreamFragmentedMP4 = value;
         }
 
+        // Will unblock getNextMediaFile() if live waiting for it.
+        void notifyLiveIfNeeded() {
+            synchronized (lock) {
+                if (isGetNextMediaFileWaits) {
+                    lock.notifyAll();
+                }
+            }
+        }
+
         void addMediaFile(String uri, double duration, boolean isDiscontinuity, boolean isInitSegment)
                 throws URISyntaxException, MalformedURLException {
-            synchronized (lock) {
 
-                uri = resolveURI(uri, playlistURI);
-                if (uri == null) {
-                    // Mark playlist to report error when we done parsing.
+            String resolvedURI = resolveURI(uri, playlistURI);
+            if (resolvedURI == null) {
+                // Mark playlist that it has unsupported segment
+                synchronized (lock) {
                     hasUnsupportedSegmentURI = true;
-                    return;
+                    notifyLiveIfNeeded();
                 }
 
+                // Report error here
+                MediaUtils.error(this, MediaError.ERROR_MEDIA_INVALID.code(),
+                        "HLS media playlist contains an unsupported segment URI: " +
+                        uri + " in a playlist: " + playlistURI, null);
+
+                return;
+            }
+
+            synchronized (lock) {
+                uri = resolvedURI;
                 if (isLive) {
                     if (sequenceNumberUpdated && !isInitSegment) {
                         int index = mediaFiles.indexOf(uri);
@@ -1518,18 +1555,17 @@ final class HLSConnectionHolder extends ConnectionHolder {
                 }
 
                 // Notify live that we got new segment
-                if (isLive) {
-                    if (isGetNextMediaFileWaits) {
-                        lock.notifyAll();
-                    }
-                }
+                notifyLiveIfNeeded();
             }
         }
 
         String getNextMediaFile() {
                 synchronized (lock) {
                 // If live check if we need to wait for segment
-                while (isLive &&  !isPlaylistClosed && !abortGetNextMediaFile &&
+                while (isLive &&
+                        !isPlaylistClosed &&
+                        !abortGetNextMediaFile &&
+                        !hasUnsupportedSegmentURI &&
                         ((mediaFileIndex + 1) >= mediaFiles.size())) {
                     try {
                         isGetNextMediaFileWaits = true;
@@ -1542,12 +1578,12 @@ final class HLSConnectionHolder extends ConnectionHolder {
                     }
                 }
 
-                if (isPlaylistClosed || abortGetNextMediaFile) {
+                if (isPlaylistClosed || abortGetNextMediaFile || hasUnsupportedSegmentURI) {
                     if (abortGetNextMediaFile) {
                         abortGetNextMediaFile = false;
                     }
                     return null;
-            }
+                }
 
                 mediaFileIndex++;
                 if (mediaFileIndex >= mediaFiles.size()) {
