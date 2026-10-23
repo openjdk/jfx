@@ -39,23 +39,15 @@ import com.sun.javafx.PlatformUtil;
  * A concrete behavior implementation should do the following:
  * <ol>
  * <li> provide default behavior methods (one for each function tag)
- * <li> implement {@link #populateSkinInputMap()} method, in which map control's function tags to
- *      the behavior methods, map key bindings to the function tags, add additional event handlers, using
+ * <li> implement {@link #populateSkinInputMap()} method which maps the function tags to the behavior methods,
+ *      maps the key bindings to the function tags, and adds additional event handlers - using variety of methods like
  *      {@link #registerFunction(FunctionTag, Runnable)},
  *      {@link #registerKey(KeyBinding, FunctionTag)},
  *      {@link #registerKey(KeyCode, FunctionTag)},
  *      and
  *      {@code addHandler()} methods.
- * <li> in the corresponding skin's {@code Skin.install()}, set the skin input map to the control's input map.
+ * <li> implement a {@code public SkinInputMap getSkinInputMap()} method in the corresponding skin
  * </ol>
- * Example (in the actual skin class):
- * <pre>{@code
- *     @Override
- *     public void install() {
- *         super.install();
- *         setSkinInputMap(behavior.getSkinInputMap());
- *   }
- * }</pre>
  *
  * @param <C> the type of the control
  * @since 999 TODO
@@ -73,11 +65,9 @@ public abstract class BehaviorBase<C extends Control> {
     }
 
     /**
-     * In this method, which is called by {@link javafx.scene.control.Skin#install()},
-     * the child class populates the {@code SkinInputMap}
+     * In this method, which is called by {@link #getSkinInputMap()} once,
+     * the skin input map is populated by the implementation
      * by registering key mappings and event handlers.
-     * <p>
-     * If a subclass overrides this method, it is important to call the superclass implementation.
      */
     protected abstract void populateSkinInputMap();
 
@@ -136,7 +126,6 @@ public abstract class BehaviorBase<C extends Control> {
 
     /**
      * Maps a key binding to the specified function tag in the skin input map.
-     * This method will not override a user mapping added by {@link #registerKey(KeyBinding,FunctionTag)}.
      *
      * @param code the key code to construct a {@link KeyBinding}
      * @param tag the function tag
