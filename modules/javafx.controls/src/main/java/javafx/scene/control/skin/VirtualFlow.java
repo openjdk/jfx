@@ -2851,17 +2851,18 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     private void cleanPile() {
         boolean focusOwnerWithScene = hasFocusOwnerWithScene();
 
-        List<T> removedCells = null;
-        for (int i = 0, max = pile.size(); i < max; i++) {
-            T cell = pile.get(i);
+        for (T cell : pile) {
             cell.setVisible(false);
 
             // Notify the cell that it is now empty (as it will land in the pile, removed from the viewport).
             if (cell.getIndex() != -1) {
                 cell.updateIndex(-1);
             }
+        }
 
-            // Everything that ended up in the pile should not be inside the sheet.
+        // Remove all cells that are still in the viewport, but in the pile and therefore not used anymore.
+        List<T> removedCells = null;
+        for (T cell : pile) {
             if (cell.getParent() != null) {
                 if (removedCells == null) {
                     removedCells = new ArrayList<>();
