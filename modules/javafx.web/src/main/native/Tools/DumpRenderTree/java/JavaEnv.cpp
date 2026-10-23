@@ -83,7 +83,7 @@ static void initRefs(JNIEnv* env) {
 JNIEnv* JNICALL DumpRenderTree_GetJavaEnv()
 {
     void* env;
-    jvm->GetEnv(&env, JNI_VERSION_1_2);
+    jvm->GetEnv(&env, JNI_VERSION_1_8);
     return (JNIEnv*)env;
 }
 
@@ -105,12 +105,12 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved)
 {
     jvm = vm;
     JNIEnv *env;
-    if (jvm->GetEnv((void **)&env, JNI_VERSION_1_2)) {
+    if (jvm->GetEnv((void **)&env, JNI_VERSION_1_8)) {
         fprintf(stderr, "DumpRenderTree::JNI_OnLoad() failed \n");
         return JNI_ERR; /* JNI version not supported */
     }
     initRefs(env);
-    return JNI_VERSION_1_2;
+    return JNI_VERSION_1_8;
 }
 
 JNIEXPORT void JNICALL JNI_OnUnLoad(JavaVM* vm, void* reserved)

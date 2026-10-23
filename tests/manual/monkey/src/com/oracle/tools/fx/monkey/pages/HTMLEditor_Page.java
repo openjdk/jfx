@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@ package com.oracle.tools.fx.monkey.pages;
 
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
+import javafx.scene.control.Control;
 import javafx.scene.web.HTMLEditor;
 import javafx.scene.web.HTMLEditorSkin;
 import com.oracle.tools.fx.monkey.Loggers;
@@ -82,5 +83,10 @@ public class HTMLEditor_Page extends TestPaneBase implements HasSkinnable {
     @Override
     public void newSkin() {
         control.setSkin(new HTMLEditorSkin(control));
+    }
+
+    @Override
+    public Control getSkinnableControl() {
+        return control;
     }
 }

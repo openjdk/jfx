@@ -59,7 +59,7 @@ import com.oracle.tools.fx.monkey.util.Utils;
 public class StagePage extends TestPaneBase {
     private final ToggleButton button;
     private final Label status;
-    private Stage stage;
+    private final SimpleObjectProperty<Stage> stageProperty = new SimpleObjectProperty<>();
     private final SimpleBooleanProperty focused = new SimpleBooleanProperty();
     private final SimpleObjectProperty<HeaderBars.Choice> headerBar = new SimpleObjectProperty<>(HeaderBars.Choice.NONE);
     private final SimpleDoubleProperty maxHeight = new SimpleDoubleProperty(Double.MAX_VALUE);
@@ -78,10 +78,13 @@ public class StagePage extends TestPaneBase {
     public StagePage() {
         super("WindowPage");
 
-        button = new ToggleButton("Show Stage");
+        button = new ToggleButton();
         button.setOnAction((ev) -> {
             toggleStage();
         });
+        button.textProperty().bind(Bindings.createStringBinding(() -> {
+            return stageProperty.get() == null ? "Show Stage" : "Hide Stage";
+        }, stageProperty));
 
         status = new Label();
         status.setFont(Font.font("Monospace"));
@@ -204,20 +207,23 @@ public class StagePage extends TestPaneBase {
     }
 
     private void toggleStage() {
+        Stage stage = stageProperty.get();
         if (stage == null) {
             stage = createStage();
             stage.show();
             stage.showingProperty().addListener((s, p, on) -> {
                 if (!on) {
                     button.setSelected(false);
-                    stage = null;
+                    stageProperty.set(null);
                     clearStatus();
                 }
             });
             status.textProperty().bind(Bindings.createStringBinding(
                 () -> {
-                    String s = getStatusText(stage);
-                    System.out.println(s.replace('\n', ' '));
+                    String s = getStatusText(stageProperty.get());
+                    if (s != null) {
+                        System.out.println(s.replace('\n', ' '));
+                    }
                     return s;
                 },
                 stage.xProperty(),
@@ -226,7 +232,8 @@ public class StagePage extends TestPaneBase {
                 stage.heightProperty(),
                 stage.iconifiedProperty(),
                 stage.maximizedProperty(),
-                stage.fullScreenProperty()
+                stage.fullScreenProperty(),
+                stageProperty
             ));
         } else {
             stage.hide();
@@ -234,6 +241,7 @@ public class StagePage extends TestPaneBase {
             button.setSelected(false);
             clearStatus();
         }
+        stageProperty.set(stage);
     }
 
     private void clearStatus() {
@@ -247,14 +255,18 @@ public class StagePage extends TestPaneBase {
     }
 
     private void close() {
+        Stage stage = stageProperty.get();
         if (stage != null) {
             stage.hide();
-            stage = null;
+            stageProperty.set(null);
             button.setSelected(false);
         }
     }
 
     private static String getStatusText(Stage s) {
+        if (s == null) {
+            return null;
+        }
         return
             "P: " + f(s.getX()) + ", " + f(s.getY()) + "\n" +
             "S: " + f(s.getWidth()) + ", " + f(s.getHeight()) + "\n" +
