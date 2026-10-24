@@ -67,8 +67,8 @@ void SuspendableWorkQueue::suspend(Function<void()>&& suspendFunction, Completio
         return completionHandler();
 
     // Last suspend function will be the one that is used.
-    m_suspendFunction = WTFMove(suspendFunction);
-    m_suspensionCompletionHandlers.append(WTFMove(completionHandler));
+    m_suspendFunction = WTF::move(suspendFunction);
+    m_suspensionCompletionHandlers.append(WTF::move(completionHandler));
     if (m_state == State::WillSuspend)
         return;
 
@@ -97,16 +97,25 @@ void SuspendableWorkQueue::resume()
 void SuspendableWorkQueue::dispatch(Function<void()>&& function)
 {
     RELEASE_ASSERT(function);
-    WorkQueue::dispatch([protectedThis = Ref { *this }, function = WTFMove(function)] {
+    WorkQueue::dispatch([protectedThis = Ref { *this }, function = WTF::move(function)] {
         protectedThis->suspendIfNeeded();
         function();
     });
 }
 
+void SuspendableWorkQueue::dispatchWithQOS(Function<void()>&& function, QOS qos)
+{
+    RELEASE_ASSERT(function);
+    WorkQueue::dispatchWithQOS([protectedThis = Ref { *this }, function = WTF::move(function)] {
+        protectedThis->suspendIfNeeded();
+        function();
+    }, qos);
+}
+
 void SuspendableWorkQueue::dispatchAfter(Seconds seconds, Function<void()>&& function)
 {
     RELEASE_ASSERT(function);
-    WorkQueue::dispatchAfter(seconds, [protectedThis = Ref { *this }, function = WTFMove(function)] {
+    WorkQueue::dispatchAfter(seconds, [protectedThis = Ref { *this }, function = WTF::move(function)] {
         protectedThis->suspendIfNeeded();
         function();
     });
@@ -120,7 +129,7 @@ void SuspendableWorkQueue::dispatchSync(Function<void()>&& function)
         Locker suspensionLocker { m_suspensionLock };
         RELEASE_ASSERT(m_state == State::Running);
     }
-    WorkQueue::dispatchSync(WTFMove(function));
+    WorkQueue::dispatchSync(WTF::move(function));
 }
 
 void SuspendableWorkQueue::invokeAllSuspensionCompletionHandlers()
@@ -159,6 +168,14 @@ void SuspendableWorkQueue::suspendIfNeeded()
         m_suspensionCondition.wait(m_suspensionLock);
 
     RELEASE_LOG_IF(m_shouldLog, SuspendableWorkQueue, "%p - SuspendableWorkQueue::suspendIfNeeded end suspension", this);
+}
+
+bool SuspendableWorkQueue::isSuspended() const
+{
+    ASSERT(isMainThread());
+    Locker suspensionLocker { m_suspensionLock };
+
+    return m_state == State::Suspended;
 }
 
 } // namespace WTF

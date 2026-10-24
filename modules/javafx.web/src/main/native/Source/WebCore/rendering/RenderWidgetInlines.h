@@ -25,15 +25,15 @@
 
 #pragma once
 
-#include "RenderObjectInlines.h"
-#include "RenderWidget.h"
+#include <WebCore/RenderObjectNode.h>
+#include <WebCore/RenderWidget.h>
 
 namespace WebCore {
 
 inline void WidgetHierarchyUpdatesSuspensionScope::scheduleWidgetToMove(Widget& widget, LocalFrameView* frame)
 {
     s_haveScheduledWidgetToMove = true;
-    widgetNewParentMap().set(&widget, frame);
+    widgetNewParentMap().set(widget, frame);
 }
 
 inline HTMLFrameOwnerElement& RenderWidget::frameOwnerElement() const

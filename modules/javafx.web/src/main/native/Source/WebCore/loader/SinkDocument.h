@@ -25,12 +25,13 @@
 
 #pragma once
 
+#include "DocumentSettingsValues.h"
 #include "HTMLDocument.h"
 
 namespace WebCore {
 
 class SinkDocument final : public HTMLDocument {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SinkDocument);
+    WTF_MAKE_TZONE_ALLOCATED(SinkDocument);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SinkDocument);
 public:
     static Ref<SinkDocument> create(LocalFrame& frame, const URL& url)

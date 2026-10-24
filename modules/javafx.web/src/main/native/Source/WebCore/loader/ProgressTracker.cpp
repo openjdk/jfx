@@ -77,7 +77,7 @@ public:
 
 ProgressTracker::ProgressTracker(Page& page, UniqueRef<ProgressTrackerClient>&& client)
     : m_page(page)
-    , m_client(WTFMove(client))
+    , m_client(WTF::move(client))
     , m_progressHeartbeatTimer(*this, &ProgressTracker::progressHeartbeatTimerFired)
 {
 }

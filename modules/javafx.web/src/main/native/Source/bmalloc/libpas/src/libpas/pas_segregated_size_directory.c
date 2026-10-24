@@ -32,7 +32,6 @@
 #include "pas_bitfit_heap.h"
 #include "pas_deferred_decommit_log.h"
 #include "pas_exclusive_view_template_memo_table.h"
-#include "pas_monotonic_time.h"
 #include "pas_page_malloc.h"
 #include "pas_page_sharing_pool.h"
 #include "pas_segregated_directory_inlines.h"

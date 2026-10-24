@@ -33,7 +33,7 @@ namespace WebCore {
 
 CSSCanvasValue::CSSCanvasValue(String&& name)
     : CSSValue { ClassType::Canvas }
-    , m_name { WTFMove(name) }
+    , m_name { WTF::move(name) }
 {
 }
 

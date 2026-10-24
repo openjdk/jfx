@@ -27,9 +27,9 @@
 
 #pragma once
 
-#include "CSSRayFunction.h"
-#include "StylePosition.h"
-#include "StylePrimitiveNumericTypes.h"
+#include <WebCore/CSSRayFunction.h>
+#include <WebCore/StylePosition.h>
+#include <WebCore/StylePrimitiveNumericTypes.h>
 
 namespace WebCore {
 namespace Style {

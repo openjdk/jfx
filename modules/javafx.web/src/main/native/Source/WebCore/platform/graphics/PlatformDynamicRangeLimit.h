@@ -60,7 +60,7 @@ public:
     constexpr auto operator<=>(const PlatformDynamicRangeLimit&) const = default;
 
 private:
-    friend struct IPC::ArgumentCoder<WebCore::PlatformDynamicRangeLimit, void>;
+    friend struct IPC::ArgumentCoder<WebCore::PlatformDynamicRangeLimit>;
     friend Style::DynamicRangeLimit;
 
     constexpr PlatformDynamicRangeLimit(ValueType value) : m_value(std::clamp(value, 0.0f, 1.0f)) { }

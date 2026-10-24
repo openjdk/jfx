@@ -137,13 +137,13 @@ public:
 
     void dump(PrintStream& out) const;
 
-    std::span<WordType> storage() { return bits; }
-    std::span<const WordType> storage() const { return bits; }
+    std::span<WordType> storage() LIFETIME_BOUND { return bits; }
+    std::span<const WordType> storage() const LIFETIME_BOUND { return bits; }
 
     constexpr size_t storageLengthInBytes() { return sizeof(bits); }
 
-    std::span<uint8_t> storageBytes() { return unsafeMakeSpan(reinterpret_cast<uint8_t*>(bits.data()), storageLengthInBytes()); }
-    std::span<const uint8_t> storageBytes() const { return unsafeMakeSpan(reinterpret_cast<const uint8_t*>(bits.data()), storageLengthInBytes()); }
+    std::span<uint8_t> storageBytes() LIFETIME_BOUND { return unsafeMakeSpan(reinterpret_cast<uint8_t*>(bits.data()), storageLengthInBytes()); }
+    std::span<const uint8_t> storageBytes() const LIFETIME_BOUND { return unsafeMakeSpan(reinterpret_cast<const uint8_t*>(bits.data()), storageLengthInBytes()); }
 
 private:
     void cleanseLastWord();
@@ -207,9 +207,7 @@ ALWAYS_INLINE constexpr bool BitSet<bitSetSize, WordType>::concurrentTestAndSet(
 {
     WordType mask = one << (n % wordSize);
     size_t index = n / wordSize;
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    WordType* data = dependency.consume(bits.data()) + index;
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    WordType* data = dependency.consume(&bits[index]);
     // transactionRelaxed() returns true if the bit was changed. If the bit was changed,
     // then the previous bit must have been false since we're trying to set it. Hence,
     // the result of transactionRelaxed() is the inverse of our expected result.
@@ -228,9 +226,7 @@ ALWAYS_INLINE constexpr bool BitSet<bitSetSize, WordType>::concurrentTestAndClea
 {
     WordType mask = one << (n % wordSize);
     size_t index = n / wordSize;
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    WordType* data = dependency.consume(bits.data()) + index;
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    WordType* data = dependency.consume(&bits[index]);
     // transactionRelaxed() returns true if the bit was changed. If the bit was changed,
     // then the previous bit must have been true since we're trying to clear it. Hence,
     // the result of transactionRelaxed() matches our expected result.

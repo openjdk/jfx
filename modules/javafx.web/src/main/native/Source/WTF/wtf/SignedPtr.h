@@ -81,8 +81,9 @@ public:
 
     T* operator->() const { return get(); }
 
-    template <typename U = T>
-    typename std::enable_if<!std::is_void_v<U>, U&>::type operator*() const { return *get(); }
+    template<typename U = T>
+        requires (!std::is_void_v<U>)
+    U& operator*() const { return *get(); }
 
     bool operator!() const { return !m_value; }
 

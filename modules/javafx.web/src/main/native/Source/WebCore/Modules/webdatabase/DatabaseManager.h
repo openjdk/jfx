@@ -25,10 +25,11 @@
 
 #pragma once
 
-#include "DatabaseDetails.h"
+#include <WebCore/DatabaseDetails.h>
 #include <wtf/Assertions.h>
 #include <wtf/HashSet.h>
 #include <wtf/Lock.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
@@ -84,7 +85,7 @@ private:
 
     static void logErrorMessage(Document&, const String& message);
 
-    DatabaseManagerClient* m_client { nullptr };
+    WeakPtr<DatabaseManagerClient> m_client;
     bool m_databaseIsAvailable { true };
 
     Lock m_proposedDatabasesLock;

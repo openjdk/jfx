@@ -43,7 +43,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(MediaStreamTrackProcessor);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MediaStreamTrackProcessor);
 
 ExceptionOr<Ref<MediaStreamTrackProcessor>> MediaStreamTrackProcessor::create(ScriptExecutionContext& context, Init&& init)
 {
@@ -59,7 +59,7 @@ ExceptionOr<Ref<MediaStreamTrackProcessor>> MediaStreamTrackProcessor::create(Sc
 MediaStreamTrackProcessor::MediaStreamTrackProcessor(ScriptExecutionContext& context, Ref<MediaStreamTrack>&& track, unsigned short maxVideoFramesCount)
     : ContextDestructionObserver(&context)
     , m_videoFrameObserverWrapper(VideoFrameObserverWrapper::create(context.identifier(), *this, Ref { track->sourceForProcessor() }, maxVideoFramesCount))
-    , m_track(WTFMove(track))
+    , m_track(WTF::move(track))
 {
 }
 
@@ -98,14 +98,12 @@ void MediaStreamTrackProcessor::stopVideoFrameObserver()
 
 void MediaStreamTrackProcessor::tryEnqueueingVideoFrame()
 {
-    ASSERT(!m_readable || m_readableStreamSource);
-
     RefPtr context = scriptExecutionContext();
     RefPtr videoFrameObserverWrapper = m_videoFrameObserverWrapper;
     if (!context || !videoFrameObserverWrapper || !m_readable)
         return;
 
-    if (m_readableStreamSource->isCancelled())
+    if (m_readableStreamSource->isCancelled() || !m_readableStreamSource->isEnabled())
         return;
 
     // FIXME: If the stream is waiting, we might want to buffer based on
@@ -123,11 +121,11 @@ Ref<MediaStreamTrackProcessor::VideoFrameObserverWrapper> MediaStreamTrackProces
     if (source->deviceType() == CaptureDevice::DeviceType::Camera)
         maxVideoFramesCount = 1;
 #endif
-    return adoptRef(*new VideoFrameObserverWrapper(identifier, processor, WTFMove(source), maxVideoFramesCount));
+    return adoptRef(*new VideoFrameObserverWrapper(identifier, processor, WTF::move(source), maxVideoFramesCount));
 }
 
 MediaStreamTrackProcessor::VideoFrameObserverWrapper::VideoFrameObserverWrapper(ScriptExecutionContextIdentifier identifier, MediaStreamTrackProcessor& processor, Ref<RealtimeMediaSource>&& source, unsigned short maxVideoFramesCount)
-    : m_observer(makeUniqueRef<VideoFrameObserver>(identifier, processor, WTFMove(source), maxVideoFramesCount))
+    : m_observer(makeUniqueRef<VideoFrameObserver>(identifier, processor, WTF::move(source), maxVideoFramesCount))
 {
 }
 
@@ -142,9 +140,9 @@ void MediaStreamTrackProcessor::VideoFrameObserverWrapper::start()
 WTF_MAKE_TZONE_ALLOCATED_IMPL(MediaStreamTrackProcessor::VideoFrameObserver);
 
 MediaStreamTrackProcessor::VideoFrameObserver::VideoFrameObserver(ScriptExecutionContextIdentifier identifier, WeakPtr<MediaStreamTrackProcessor>&& processor, Ref<RealtimeMediaSource>&& source, unsigned short maxVideoFramesCount)
-    : m_realtimeVideoSource(WTFMove(source))
+    : m_realtimeVideoSource(WTF::move(source))
     , m_contextIdentifier(identifier)
-    , m_processor(WTFMove(processor))
+    , m_processor(WTF::move(processor))
     , m_maxVideoFramesCount(maxVideoFramesCount)
 {
     ASSERT(isContextThread());
@@ -185,7 +183,7 @@ RefPtr<WebCodecsVideoFrame> MediaStreamTrackProcessor::VideoFrameObserver::takeV
         .colorSpace = videoFrame->colorSpace()
     };
 
-    return WebCodecsVideoFrame::create(context, videoFrame.releaseNonNull(), WTFMove(init));
+    return WebCodecsVideoFrame::create(context, videoFrame.releaseNonNull(), WTF::move(init));
 }
 
 void MediaStreamTrackProcessor::VideoFrameObserver::videoFrameAvailable(VideoFrame& frame, VideoFrameTimeMetadata)
@@ -206,10 +204,10 @@ void MediaStreamTrackProcessor::VideoFrameObserver::videoFrameAvailable(VideoFra
 }
 
 using MediaStreamTrackProcessorSource = MediaStreamTrackProcessor::Source;
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(MediaStreamTrackProcessorSource);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MediaStreamTrackProcessorSource);
 
 MediaStreamTrackProcessor::Source::Source(Ref<MediaStreamTrackPrivate>&& privateTrack, MediaStreamTrackProcessor& processor)
-    : m_privateTrack(WTFMove(privateTrack))
+    : m_privateTrack(WTF::move(privateTrack))
     , m_processor(processor)
 {
     m_privateTrack->addObserver(*this);
@@ -262,7 +260,7 @@ void MediaStreamTrackProcessor::Source::doPull()
     Ref { m_processor.get() }->tryEnqueueingVideoFrame();
 }
 
-void MediaStreamTrackProcessor::Source::doCancel()
+void MediaStreamTrackProcessor::Source::doCancel(JSC::JSValue)
 {
     m_isCancelled = true;
     Ref { m_processor.get() }->stopVideoFrameObserver();

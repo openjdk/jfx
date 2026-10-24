@@ -46,6 +46,14 @@ Vector<PseudoClassInvalidationKey, 4> makePseudoClassInvalidationKeys(CSSSelecto
         });
     }
 
+    if (element.hasAttributesWithoutUpdate()) {
+        for (auto& attribute : element.attributes()) {
+            if (unlikelyToHaveSelectorForAttribute(attribute.localNameLowercase()))
+                continue;
+            keys.append(makePseudoClassInvalidationKey(pseudoClass, InvalidationKeyType::Attribute, attribute.localNameLowercase()));
+        }
+    }
+
     keys.append(makePseudoClassInvalidationKey(pseudoClass, InvalidationKeyType::Tag, element.localNameLowercase()));
     keys.append(makePseudoClassInvalidationKey(pseudoClass, InvalidationKeyType::Universal));
 
@@ -120,7 +128,7 @@ void PseudoClassChangeInvalidation::collectRuleSets(const PseudoClassInvalidatio
 
     collect(m_element.styleResolver().ruleSets());
 
-    if (auto* shadowRoot = m_element.shadowRoot())
+    if (RefPtr shadowRoot = m_element.shadowRoot())
         collect(shadowRoot->styleScope().resolver().ruleSets(), MatchElement::Host);
 }
 

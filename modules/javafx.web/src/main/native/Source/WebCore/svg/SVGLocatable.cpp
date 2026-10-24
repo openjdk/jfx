@@ -25,12 +25,14 @@
 
 #include "ContainerNodeInlines.h"
 #include "RenderElement.h"
+#include "RenderObjectDocument.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGGraphicsElement.h"
 #include "SVGImageElement.h"
 #include "SVGLayerTransformComputation.h"
 #include "SVGMatrix.h"
 #include "SVGNames.h"
+#include "Settings.h"
 #include "TransformState.h"
 
 namespace WebCore {
@@ -106,7 +108,7 @@ AffineTransform SVGLocatable::computeCTM(SVGElement* element, CTMScope mode, Sty
 
     AffineTransform ctm;
 
-    for (Element* currentElement = element; currentElement; currentElement = currentElement->parentOrShadowHostElement()) {
+    for (RefPtr<Element> currentElement = element; currentElement; currentElement = currentElement->parentOrShadowHostElement()) {
         RefPtr svgElement = dynamicDowncast<SVGElement>(*currentElement);
         if (!svgElement)
             break;

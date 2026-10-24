@@ -31,6 +31,7 @@
 #include "SQLiteDatabase.h"
 #include <wtf/Deque.h>
 #include <wtf/Lock.h>
+#include <wtf/UniqueRef.h>
 
 namespace WebCore {
 
@@ -52,7 +53,7 @@ template<typename> class ExceptionOr;
 
 using DatabaseGUID = int;
 
-class Database : public ThreadSafeRefCounted<Database> {
+class Database : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<Database> {
 public:
     ~Database();
 
@@ -165,7 +166,7 @@ private:
     bool m_opened { false };
     bool m_new { false };
 
-    SQLiteDatabase m_sqliteDatabase;
+    const UniqueRef<SQLiteDatabase> m_sqliteDatabase;
 
     const Ref<DatabaseAuthorizer> m_databaseAuthorizer;
 

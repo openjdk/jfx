@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,6 +48,15 @@
 #define HLS_VALUE_MIMETYPE_FMP4 3
 #define HLS_VALUE_MIMETYPE_AAC  4
 
+// Queue settings common
+#define QUEUE_MAX_BYTES   0
+#define QUEUE_MAX_BUFFERS 10
+#define QUEUE_MAX_TIME    0
+
+// Queue settings HLS Live
+#define QUEUE_MAX_BYTES_HLSL   0
+#define QUEUE_MAX_BUFFERS_HLSL 180
+#define QUEUE_MAX_TIME_HLSL    (3 * GST_SECOND)
 
 //*************************************************************************************************
 //********** class CGstPipelineFactory
@@ -83,6 +92,10 @@ uint32_t CGstPipelineFactory::CreatePlayerPipeline(CLocator* locator, CPipelineO
 
     // Save content type to options
     pOptions->SetContentType(locator->GetContentType());
+
+    uRetCode = ConfigurePipelineOptions(pOptions);
+    if (uRetCode != ERROR_NONE)
+        return uRetCode;
 
     CLocatorStream* streamLocator = (CLocatorStream*)locator;
     CStreamCallbacks *callbacks = streamLocator->GetCallbacks();
@@ -139,6 +152,23 @@ uint32_t CGstPipelineFactory::CreatePlayerPipeline(CLocator* locator, CPipelineO
     LOWLEVELPERF_EXECTIMESTOP("CGstPipelineFactory::CreatePlayerPipeline()");
 
     return uRetCode;
+}
+
+// TODO: Move all configuration before creating pipeline
+uint32_t CGstPipelineFactory::ConfigurePipelineOptions(CPipelineOptions *pOptions)
+{
+    if (NULL == pOptions)
+        return ERROR_FUNCTION_PARAM_NULL;
+
+#if TARGET_OS_WIN32
+    if (CONTENT_TYPE_MP4 == pOptions->GetContentType() ||
+            CONTENT_TYPE_M4A == pOptions->GetContentType() ||
+            CONTENT_TYPE_M4V == pOptions->GetContentType()) {
+        pOptions->SetParserPullModeOnly(true);
+    }
+#endif
+
+    return ERROR_NONE;
 }
 
 // Creates pipeline based on options provided.
@@ -262,6 +292,15 @@ uint32_t CGstPipelineFactory::CreateSourceElement(CLocator *locator, CStreamCall
         g_object_set(javaSource, "mimetype", CONTENT_TYPE_FMP4, NULL);
     else if (streamMimeType == HLS_VALUE_MIMETYPE_AAC)
         g_object_set(javaSource, "mimetype", CONTENT_TYPE_AAC, NULL);
+    // Use CONTENT_TYPE_FMP4 for CONTENT_TYPE_MP4 and CONTENT_TYPE_M4V.
+    // qtdemux only accepts "video/quicktime" and "audio/x-m4a", so
+    // we convert "video/mp4" and "video/x-m4v" to "video/quicktime".
+    else if (CONTENT_TYPE_MP4 == locator->GetContentType() ||
+             CONTENT_TYPE_M4V == locator->GetContentType())
+        g_object_set(javaSource, "mimetype", CONTENT_TYPE_FMP4, NULL);
+    else // Set mimetype to content type of locator anyway, so javasource
+         // can send caps event which is required by GStreamer.
+        g_object_set (javaSource, "mimetype", locator->GetContentType().c_str(), NULL);
 
     g_object_set(javaSource,
                  "size", (gint64)locator->GetSizeHint(),
@@ -272,6 +311,10 @@ uint32_t CGstPipelineFactory::CreateSourceElement(CLocator *locator, CStreamCall
 
     bool needBuffer = callbacks->NeedBuffer();
     pOptions->SetBufferingEnabled(needBuffer);
+
+    // Check if we need to add buffer anyway for pull only parser
+    if (!isRandomAccess && pOptions->GetParserPullModeOnly())
+        needBuffer = true;
 
     if (needBuffer)
     {
@@ -361,104 +404,31 @@ GstElement* CGstPipelineFactory::CreateAudioSinkElement()
 #endif
 }
 
-void CGstPipelineFactory::OnBufferPadAdded(GstElement* element, GstPad* pad, GstElement* peer)
-{
-    uint32_t uErrorCode = ERROR_NONE;
-
-    GstElement* source_bin = GST_ELEMENT_PARENT(element);
-    GstElement* pipeline = GST_ELEMENT_PARENT(source_bin);
-
-    GstPad *src_pad = gst_ghost_pad_new("src", pad);
-    if (NULL == src_pad)
-        uErrorCode = ERROR_GSTREAMER_CREATE_GHOST_PAD;
-
-    if (ERROR_NONE == uErrorCode)
-    {
-        if (!gst_pad_set_active(src_pad, TRUE) || !gst_element_add_pad(source_bin, src_pad))
-            uErrorCode = ERROR_GSTREAMER_ELEMENT_ADD_PAD;
-
-        if (ERROR_NONE == uErrorCode)
-        {
-            if (!gst_bin_add(GST_BIN(pipeline), peer))
-                uErrorCode = ERROR_GSTREAMER_BIN_ADD_ELEMENT;
-
-            if (ERROR_NONE == uErrorCode)
-            {
-                if (GST_STATE_CHANGE_FAILURE == gst_element_set_state(peer, GST_STATE_READY))
-                    uErrorCode = ERROR_GSTREAMER_PIPELINE_STATE_CHANGE;
-
-                if (ERROR_NONE == uErrorCode)
-                {
-                    if (!gst_element_link(source_bin, peer))
-                        uErrorCode = ERROR_GSTREAMER_ELEMENT_LINK;
-
-                    if (ERROR_NONE == uErrorCode)
-                        if (!gst_element_sync_state_with_parent(peer))
-                            uErrorCode = ERROR_GSTREAMER_PIPELINE_STATE_CHANGE;
-                }
-            }
-        }
-    }
-
-    if (ERROR_NONE != uErrorCode)
-    {
-        GstBus* bus = gst_pipeline_get_bus(GST_PIPELINE (pipeline));
-        GError* error = g_error_new (0, uErrorCode, "%s",
-                                     "Error in CGstPipelineFactory::OnBufferPadAdded().");
-        GstMessage* message = gst_message_new_error (GST_OBJECT (pipeline), error,
-                                                     "Error in CGstPipelineFactory::OnBufferPadAdded().");
-        gst_bus_post (bus, message);
-        gst_object_unref (bus);
-    }
-
-    g_signal_handlers_disconnect_by_func(element, (void*)G_CALLBACK(OnBufferPadAdded), peer);
-}
-
 uint32_t CGstPipelineFactory::AttachToSource(GstBin* bin, GstElement* source, GstElement* buffer, GstElement* element)
 {
-    // Look for progressbuffer element in the source
-    GstElement* progressbuffer = GetByFactoryName(source, "progressbuffer");
-    if (progressbuffer)
+    // Look for progressbuffer element in the source if buffer is not provided
+    if (buffer == NULL)
     {
-#if ENABLE_BREAK_MY_DATA
-        GstElement* dataBreaker = CreateElement ("breakmydata");
-        g_object_set (G_OBJECT (dataBreaker), "skip", BREAK_MY_DATA_SKIP, "probability", BREAK_MY_DATA_PROBABILITY, NULL);
-        if (!gst_bin_add (bin, dataBreaker))
-            return ERROR_GSTREAMER_BIN_ADD_ELEMENT;
-        if (!gst_element_link(dataBreaker, element))
-            return ERROR_GSTREAMER_ELEMENT_LINK;
-        g_signal_connect (progressbuffer, "pad-added", G_CALLBACK (OnBufferPadAdded), dataBreaker);
-#else
-        g_signal_connect (progressbuffer, "pad-added", G_CALLBACK (OnBufferPadAdded), element);
-#endif
-        gst_object_unref(progressbuffer);
-        return ERROR_NONE;
+        buffer = GetByFactoryName(source, "progressbuffer");
+        // Look for hlsprogressbuffer
+        if (buffer == NULL)
+        {
+            buffer = GetByFactoryName(source, "hlsprogressbuffer");
+        }
+    }
+    else
+    {
+        // Ref provided buffer, since we will unref it
+        gst_object_ref(buffer);
     }
 
-    // Source does not contain "progressbuffer".
     if (!gst_bin_add(bin, element))
         return ERROR_GSTREAMER_BIN_ADD_ELEMENT;
 
-#if ENABLE_BREAK_MY_DATA
-    GstElement* dataBreaker = CreateElement ("breakmydata");
-    g_object_set (G_OBJECT (dataBreaker), "skip", BREAK_MY_DATA_SKIP, "probability", BREAK_MY_DATA_PROBABILITY, NULL);
-    gst_bin_add (GST_BIN (pipeline), dataBreaker, NULL);
-    gst_element_link_many(source, dataBreaker, element);
-#else
-
-    // Create src pad on source bin if we have hlsprogressbuffer
-    GstElement* hlsprogressbuffer = NULL;
+    // Create src pad on source bin if we have buffer
     if (buffer)
     {
-        gst_object_ref(buffer);
-        hlsprogressbuffer = buffer;
-    }
-    else
-        hlsprogressbuffer = GetByFactoryName(source, "hlsprogressbuffer");
-
-    if (hlsprogressbuffer)
-    {
-        GstPad* src_pad = gst_element_get_static_pad(hlsprogressbuffer, "src");
+        GstPad* src_pad = gst_element_get_static_pad(buffer, "src");
         if (NULL == src_pad)
             return ERROR_GSTREAMER_ELEMENT_GET_PAD;
 
@@ -478,12 +448,11 @@ uint32_t CGstPipelineFactory::AttachToSource(GstBin* bin, GstElement* source, Gs
 
         gst_object_unref(src_pad);
 
-        gst_object_unref(hlsprogressbuffer);
+        gst_object_unref(buffer);
     }
 
     if (!gst_element_link(source, element))
         return ERROR_GSTREAMER_ELEMENT_LINK;
-#endif
 
     return ERROR_NONE;
 }
@@ -508,7 +477,7 @@ uint32_t CGstPipelineFactory::CreateMP4Pipeline(GstElement* pVideoSink,
 #if TARGET_OS_WIN32
     // We need to load dshowwrapper (H.264) or mfwrapper (H.265), but we do not know which one based on .mp4
     // extension, so intead we will load video decoder dynamically when qtdemux will signal video pad added.
-    pOptions->SetStreamParser("qtdemux")->SetAudioDecoder("dshowwrapper");
+    pOptions->SetStreamParser("mfdemux")->SetAudioDecoder("dshowwrapper");
     return CreateAVPipeline(true, pVideoSink, pOptions, pElements, ppPipeline);
 #elif TARGET_OS_MAC
     return ERROR_PLATFORM_UNSUPPORTED;
@@ -566,13 +535,13 @@ uint32_t CGstPipelineFactory::CreateHLSPipeline(GstElement* pVideoSink, CPipelin
         if (pOptions->GetStreamMimeType() == HLS_VALUE_MIMETYPE_MP2T)
             pOptions->SetStreamParser("dshowwrapper")->SetVideoDecoder("dshowwrapper");
         else if (pOptions->GetStreamMimeType() == HLS_VALUE_MIMETYPE_FMP4)
-            pOptions->SetStreamParser("qtdemux"); // Video decoder loaded dynamically
+            pOptions->SetStreamParser("mfdemux"); // Video decoder loaded dynamically
         else
             return ERROR_PLATFORM_UNSUPPORTED;
 
         // Audio stream can be FMP4 or AAC
         if (pOptions->GetAudioStreamMimeType() == HLS_VALUE_MIMETYPE_FMP4)
-            pOptions->SetAudioStreamParser("qtdemux")->SetAudioDecoder("dshowwrapper");
+            pOptions->SetAudioStreamParser("mfdemux")->SetAudioDecoder("dshowwrapper");
         else if (pOptions->GetAudioStreamMimeType() == HLS_VALUE_MIMETYPE_AAC)
             pOptions->SetAudioDecoder("dshowwrapper");
         else
@@ -600,7 +569,7 @@ uint32_t CGstPipelineFactory::CreateHLSPipeline(GstElement* pVideoSink, CPipelin
         else if (pOptions->GetStreamMimeType() == HLS_VALUE_MIMETYPE_FMP4)
         {
             // Video decoder is loaded dynamically
-            pOptions->SetStreamParser("qtdemux")->SetAudioDecoder("dshowwrapper");
+            pOptions->SetStreamParser("mfdemux")->SetAudioDecoder("dshowwrapper");
             return CreateAVPipeline(true, pVideoSink, pOptions, pElements, ppPipeline);
         }
         else
@@ -689,7 +658,7 @@ uint32_t CGstPipelineFactory::CreateAudioPipeline(bool bConvertFormat, CPipeline
 
     int flags = 0;
     GstElement* audiobin;
-    uRetCode = CreateAudioBin(pOptions->GetStreamParser(),
+    uRetCode = CreateAudioBin(pOptions, pOptions->GetStreamParser(),
                               pOptions->GetAudioDecoder(),
                               bConvertFormat, pElements, &flags, &audiobin);
     if (ERROR_NONE != uRetCode)
@@ -752,6 +721,10 @@ uint32_t CGstPipelineFactory::CreateAVPipeline(bool bConvertFormat, GstElement* 
     if (bAudioStream) {
         g_object_set(demuxer, "disable-mp2t-pts-reset", TRUE, NULL);
     }
+    if (pOptions->GetHLSModeEnabled() &&
+            strcmp(pOptions->GetStreamParser(), "mfdemux") == 0) {
+        g_object_set(demuxer, "hls-mode", TRUE, NULL);
+    }
     if (!gst_bin_add (GST_BIN (pipeline), source))
         return ERROR_GSTREAMER_BIN_ADD_ELEMENT;
     uRetCode = AttachToSource(GST_BIN (pipeline), source, (*pElements)[SOURCE_BUFFER], demuxer);
@@ -770,6 +743,15 @@ uint32_t CGstPipelineFactory::CreateAVPipeline(bool bConvertFormat, GstElement* 
             if (NULL == audioDemuxer)
                 return ERROR_GSTREAMER_ELEMENT_CREATE;
 
+            // Configure audio demuxer if needed
+            if (bAudioStream) {
+                g_object_set(audioDemuxer, "disable-mp2t-pts-reset", TRUE, NULL);
+            }
+            if (pOptions->GetHLSModeEnabled() &&
+                    strcmp(pOptions->GetAudioStreamParser(), "mfdemux") == 0) {
+                g_object_set(audioDemuxer, "hls-mode", TRUE, NULL);
+            }
+
             uRetCode = AttachToSource(GST_BIN (pipeline), audioSource, (*pElements)[AUDIO_SOURCE_BUFFER], audioDemuxer);
             if (ERROR_NONE != uRetCode)
                 return uRetCode;
@@ -778,7 +760,7 @@ uint32_t CGstPipelineFactory::CreateAVPipeline(bool bConvertFormat, GstElement* 
 
     int audioFlags = 0;
     GstElement *audiobin = NULL;
-    uRetCode = CreateAudioBin(NULL, pOptions->GetAudioDecoder(), bConvertFormat,
+    uRetCode = CreateAudioBin(pOptions, NULL, pOptions->GetAudioDecoder(), bConvertFormat,
                               pElements, &audioFlags, &audiobin);
     if (ERROR_NONE != uRetCode)
         return uRetCode;
@@ -807,7 +789,7 @@ uint32_t CGstPipelineFactory::CreateAVPipeline(bool bConvertFormat, GstElement* 
     }
 
     GstElement *videobin;
-    uRetCode = CreateVideoBin(pOptions->GetVideoDecoder(), pVideoSink, pElements, &videobin);
+    uRetCode = CreateVideoBin(pOptions, pOptions->GetVideoDecoder(), pVideoSink, pElements, &videobin);
     if (ERROR_NONE != uRetCode)
         return uRetCode;
 
@@ -823,12 +805,12 @@ uint32_t CGstPipelineFactory::CreateAVPipeline(bool bConvertFormat, GstElement* 
     return uRetCode;
 }
 
-uint32_t CGstPipelineFactory::CreateAudioBin(const char* strParserName, const char* strDecoderName,
-                                             bool bConvertFormat,
+uint32_t CGstPipelineFactory::CreateAudioBin(CPipelineOptions *pOptions, const char* strParserName,
+                                             const char* strDecoderName, bool bConvertFormat,
                                              GstElementContainer* elements, int* pFlags,
                                              GstElement** ppAudiobin)
 {
-    if ((NULL == strParserName && NULL == strDecoderName) || NULL == elements || NULL == pFlags || NULL == ppAudiobin)
+    if (NULL == pOptions || (NULL == strParserName && NULL == strDecoderName) || NULL == elements || NULL == pFlags || NULL == ppAudiobin)
         return ERROR_FUNCTION_PARAM_NULL;
 
     *ppAudiobin = gst_bin_new(NULL);
@@ -963,15 +945,37 @@ uint32_t CGstPipelineFactory::CreateAudioBin(const char* strParserName, const ch
         *pFlags |= AUDIO_DECODER_HAS_SOURCE_PROBE | AUDIO_DECODER_HAS_SINK_PROBE;
     }
 
-    // Switch off limiting of the audioqueue for bytes and buffers.
-    g_object_set(audioqueue, "max-size-bytes", (guint)0, "max-size-buffers", (guint)10, "max-size-time", (guint64)0, NULL);
+    // Configure audio queue
+    guint max_bytes = QUEUE_MAX_BYTES;
+    guint max_buffers = QUEUE_MAX_BUFFERS;
+    guint64 max_time = QUEUE_MAX_TIME;
+
+#if TARGET_OS_WIN32
+    // Special case for HLS on Windows due to source reader reload for
+    // each segment. We need to queue more data to avoid glitching when
+    // reload.
+    if (pOptions->GetHLSModeEnabled() &&
+            (pOptions->GetStreamMimeType() == HLS_VALUE_MIMETYPE_FMP4 ||
+             pOptions->GetAudioStreamMimeType() == HLS_VALUE_MIMETYPE_FMP4))
+    {
+        max_bytes = QUEUE_MAX_BYTES_HLSL;
+        max_buffers = QUEUE_MAX_BUFFERS_HLSL;
+        max_time = QUEUE_MAX_TIME_HLSL;
+    }
+#endif
+
+    g_object_set(audioqueue, "max-size-bytes", max_bytes, "max-size-buffers",
+            max_buffers, "max-size-time", max_time, NULL);
 
     return ERROR_NONE;
 }
 
-uint32_t CGstPipelineFactory::CreateVideoBin(const char* strDecoderName, GstElement* pVideoSink,
+uint32_t CGstPipelineFactory::CreateVideoBin(CPipelineOptions *pOptions, const char* strDecoderName, GstElement* pVideoSink,
                                              GstElementContainer* elements, GstElement** ppVideobin)
 {
+    if (NULL == pOptions)
+        return ERROR_FUNCTION_PARAM_NULL;
+
     *ppVideobin = gst_bin_new(NULL);
     if (NULL == *ppVideobin)
         return ERROR_GSTREAMER_BIN_CREATE;
@@ -1041,8 +1045,26 @@ uint32_t CGstPipelineFactory::CreateVideoBin(const char* strDecoderName, GstElem
     add(VIDEO_DECODER, videodec).
     add(VIDEO_SINK, pVideoSink);
 
-    // Switch off limiting of the videoqueue for bytes and buffers.
-    g_object_set(videoqueue, "max-size-bytes", (guint)0, "max-size-buffers", (guint)10, "max-size-time", (guint64)0, NULL);
+    // Configure audio queue
+    guint max_bytes = QUEUE_MAX_BYTES;
+    guint max_buffers = QUEUE_MAX_BUFFERS;
+    guint64 max_time = QUEUE_MAX_TIME;
+
+#if TARGET_OS_WIN32
+    // Special case for HLS on Windows due to source reader reload for
+    // each segment. We need to queue more data to avoid glitching when
+    // reload.
+    if (pOptions->GetHLSModeEnabled() &&
+            pOptions->GetStreamMimeType() == HLS_VALUE_MIMETYPE_FMP4)
+    {
+        max_bytes = QUEUE_MAX_BYTES_HLSL;
+        max_buffers = QUEUE_MAX_BUFFERS_HLSL;
+        max_time = QUEUE_MAX_TIME_HLSL;
+    }
+#endif
+
+    g_object_set(videoqueue, "max-size-bytes", max_bytes, "max-size-buffers",
+            max_buffers, "max-size-time", max_time, NULL);
     g_object_set(pVideoSink, "qos", TRUE, NULL);
 
     return ERROR_NONE;

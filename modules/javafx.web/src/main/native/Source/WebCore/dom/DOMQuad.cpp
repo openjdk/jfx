@@ -28,13 +28,14 @@
 
 #include "DOMPoint.h"
 #include "DOMRect.h"
+#include "ScriptWrappableInlines.h"
 #include <wtf/MathExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 using namespace WTF;
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(DOMQuad);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DOMQuad);
 
 DOMQuad::DOMQuad(const DOMPointInit& p1, const DOMPointInit& p2, const DOMPointInit& p3, const DOMPointInit& p4)
     : m_p1(DOMPoint::create(p1))
@@ -65,5 +66,7 @@ Ref<DOMRect> DOMQuad::getBounds() const
 
     return DOMRect::create(left, top, right - left, bottom - top);
 }
+
+DOMQuad::~DOMQuad() = default;
 
 }

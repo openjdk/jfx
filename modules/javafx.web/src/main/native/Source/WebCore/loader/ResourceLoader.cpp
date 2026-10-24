@@ -30,31 +30,33 @@
 #include "config.h"
 #include "ResourceLoader.h"
 
-#include "ApplicationCacheHost.h"
 #include "AuthenticationChallenge.h"
 #include "ContentRuleListResults.h"
 #include "DNS.h"
 #include "DataURLDecoder.h"
 #include "DiagnosticLoggingClient.h"
 #include "DiagnosticLoggingKeys.h"
-#include "Document.h"
-#include "DocumentInlines.h"
 #include "DocumentLoader.h"
+#include "DocumentPage.h"
+#include "DocumentQuirks.h"
+#include "DocumentSecurityOrigin.h"
+#include "FrameConsoleClient.h"
 #include "FrameDestructionObserverInlines.h"
+#include "FrameInlines.h"
 #include "FrameLoader.h"
 #include "HTMLFrameOwnerElement.h"
 #include "InspectorInstrumentation.h"
+#include "LegacySchemeRegistry.h"
 #include "LoaderStrategy.h"
 #include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "LocalFrameLoaderClient.h"
 #include "Logging.h"
 #include "NetworkingContext.h"
 #include "OriginAccessPatterns.h"
 #include "Page.h"
-#include "PageConsoleClient.h"
 #include "PlatformStrategies.h"
 #include "ProgressTracker.h"
-#include "Quirks.h"
 #include "ResourceError.h"
 #include "ResourceHandle.h"
 #include "ResourceMonitor.h"
@@ -73,10 +75,6 @@
 #include "PreviewConverter.h"
 #endif
 
-#if PLATFORM(COCOA)
-#include "BundleResourceLoader.h"
-#endif
-
 #undef RESOURCELOADER_RELEASE_LOG
 #define PAGE_ID (this->frame() && this->frame()->pageID() ? this->frame()->pageID()->toUInt64() : 0)
 #define FRAME_ID (this->frame() ? this->frame()->frameID().toUInt64() : 0)
@@ -85,7 +83,7 @@
 
 namespace WebCore {
 
-DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(ResourceLoader);
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CoreResourceLoader);
 
 ResourceLoader::ResourceLoader(LocalFrame& frame, ResourceLoaderOptions options)
     : m_frame { &frame }
@@ -166,7 +164,7 @@ void ResourceLoader::init(ResourceRequest&& clientRequest, CompletionHandler<voi
         return completionHandler(false);
     }
 
-    if (!portAllowed(clientRequest.url())) {
+    if (!isPortAllowed(clientRequest.url())) {
         RESOURCELOADER_RELEASE_LOG("init: Cancelling load to a blocked port.");
         FrameLoader::reportBlockedLoadFailed(*frame, clientRequest.url());
         releaseResources();
@@ -191,7 +189,7 @@ void ResourceLoader::init(ResourceRequest&& clientRequest, CompletionHandler<voi
     }
     FrameLoader::addSameSiteInfoToRequestIfNeeded(clientRequest, frame->protectedDocument().get());
 
-    willSendRequestInternal(WTFMove(clientRequest), ResourceResponse(), [this, protectedThis = Ref { *this }, completionHandler = WTFMove(completionHandler)](ResourceRequest&& request) mutable {
+    willSendRequestInternal(WTF::move(clientRequest), ResourceResponse(), [this, protectedThis = Ref { *this }, completionHandler = WTF::move(completionHandler)](ResourceRequest&& request) mutable {
 
 #if PLATFORM(IOS_FAMILY)
         // If this ResourceLoader was stopped as a result of willSendRequest, bail out.
@@ -207,7 +205,7 @@ void ResourceLoader::init(ResourceRequest&& clientRequest, CompletionHandler<voi
             return completionHandler(false);
         }
 
-        m_request = WTFMove(request);
+        m_request = WTF::move(request);
         m_originalRequest = m_request;
         completionHandler(true);
     });
@@ -215,7 +213,7 @@ void ResourceLoader::init(ResourceRequest&& clientRequest, CompletionHandler<voi
 
 void ResourceLoader::deliverResponseAndData(ResourceResponse&& response, RefPtr<FragmentedSharedBuffer>&& buffer)
 {
-    didReceiveResponse(WTFMove(response), [this, protectedThis = Ref { *this }, buffer = WTFMove(buffer)]() mutable {
+    didReceiveResponse(WTF::move(response), [this, protectedThis = Ref { *this }, buffer = WTF::move(buffer)]() mutable {
         if (reachedTerminalState())
             return;
 
@@ -245,11 +243,6 @@ void ResourceLoader::start()
     }
 #endif
 
-    if (RefPtr documentLoader = m_documentLoader) {
-        if (documentLoader->applicationCacheHost().maybeLoadResource(*this, m_request, m_request.url()))
-        return;
-    }
-
     if (m_defersLoading) {
         m_deferredRequest = m_request;
         return;
@@ -262,13 +255,6 @@ void ResourceLoader::start()
         loadDataURL();
         return;
     }
-
-#if PLATFORM(COCOA)
-    if (isPDFJSResourceLoad()) {
-        BundleResourceLoader::loadResourceFromBundle(*this, "pdfjs/"_s);
-        return;
-    }
-#endif
 
 #if USE(SOUP)
     if (m_request.url().protocolIs("resource"_s) || isPDFJSResourceLoad()) {
@@ -290,7 +276,7 @@ void ResourceLoader::start()
 
     bool isMainFrameNavigation = frame() && frame()->isMainFrame() && options().mode == FetchOptions::Mode::Navigate;
 
-    m_handle = ResourceHandle::create(frameLoader->protectedNetworkingContext().get(), m_request, this, m_defersLoading, m_options.sniffContent == ContentSniffingPolicy::SniffContent, m_options.contentEncodingSniffingPolicy, WTFMove(sourceOrigin), isMainFrameNavigation);
+    m_handle = ResourceHandle::create(frameLoader->protectedNetworkingContext().get(), m_request, this, m_defersLoading, m_options.sniffContent == ContentSniffingPolicy::SniffContent, m_options.contentEncodingSniffingPolicy, WTF::move(sourceOrigin), isMainFrameNavigation);
 }
 
 void ResourceLoader::setDefersLoading(bool defers)
@@ -350,7 +336,7 @@ void ResourceLoader::loadDataURL()
 
         auto dataSize = decodeResult->data.size();
         ResourceResponse dataResponse = ResourceResponse::dataURLResponse(url, decodeResult.value());
-        this->didReceiveResponse(WTFMove(dataResponse), [this, protectedThis = WTFMove(protectedThis), dataSize, data = SharedBuffer::create(WTFMove(decodeResult->data))]() {
+        this->didReceiveResponse(WTF::move(dataResponse), [this, protectedThis = WTF::move(protectedThis), dataSize, data = SharedBuffer::create(WTF::move(decodeResult->data))]() {
             if (!this->reachedTerminalState() && dataSize && m_request.httpMethod() != "HEAD"_s)
                 this->didReceiveBuffer(data, dataSize, DataPayloadWholeResource);
 
@@ -392,7 +378,7 @@ void ResourceLoader::addBuffer(const FragmentedSharedBuffer& buffer, DataPayload
 
 const FragmentedSharedBuffer* ResourceLoader::resourceData() const
 {
-    return m_resourceData.get().get();
+    return m_resourceData.buffer();
 }
 
 RefPtr<const FragmentedSharedBuffer> ResourceLoader::protectedResourceData() const
@@ -436,12 +422,12 @@ void ResourceLoader::willSendRequestInternal(ResourceRequest&& request, const Re
 
     RefPtr frameLoader = this->frameLoader();
 #if ENABLE(CONTENT_EXTENSIONS)
-    if (!redirectResponse.isNull() && frameLoader) {
-        RefPtr page = frameLoader->frame().page();
+    RefPtr userContentProvider = frameLoader ? frameLoader->frame().userContentProvider() : nullptr;
+    RefPtr page = frameLoader ? frameLoader->frame().page() : nullptr;
         RefPtr documentLoader = m_documentLoader;
-        if (page && documentLoader) {
-            auto results = page->protectedUserContentProvider()->processContentRuleListsForLoad(*page, request.url(), m_resourceType, *documentLoader, redirectResponse.url());
-            ContentExtensions::applyResultsToRequest(WTFMove(results), page.get(), request);
+    if (!redirectResponse.isNull() && frameLoader && page && userContentProvider && documentLoader) {
+        auto results = userContentProvider->processContentRuleListsForLoad(*page, request.url(), m_resourceType, *documentLoader, redirectResponse.url());
+        ContentExtensions::applyResultsToRequest(WTF::move(results), page.get(), request);
             if (results.shouldBlock()) {
                 RESOURCELOADER_RELEASE_LOG("willSendRequestInternal: resource load canceled because of content blocker");
                 didFail(blockedByContentBlockerError());
@@ -449,7 +435,6 @@ void ResourceLoader::willSendRequestInternal(ResourceRequest&& request, const Re
                 return;
             }
         }
-    }
 #endif
 
     if (request.isNull()) {
@@ -470,13 +455,13 @@ void ResourceLoader::willSendRequestInternal(ResourceRequest&& request, const Re
 
     if (m_options.sendLoadCallbacks == SendCallbackPolicy::SendCallbacks) {
         if (createdResourceIdentifier && frameLoader)
-            frameLoader->notifier().assignIdentifierToInitialRequest(*m_identifier, options().mode == FetchOptions::Mode::Navigate ? IsMainResourceLoad::Yes : IsMainResourceLoad::No, protectedDocumentLoader().get(), request);
+            frameLoader->notifier().assignIdentifierToInitialRequest(*m_identifier, protectedDocumentLoader().get(), request);
 
 #if PLATFORM(IOS_FAMILY)
         // If this ResourceLoader was stopped as a result of assignIdentifierToInitialRequest, bail out
         if (m_reachedTerminalState) {
             RESOURCELOADER_RELEASE_LOG("willSendRequestInternal: resource load reached terminal state after calling assignIdentifierToInitialRequest()");
-            completionHandler(WTFMove(request));
+            completionHandler(WTF::move(request));
             return;
         }
 #endif
@@ -516,12 +501,12 @@ void ResourceLoader::willSendRequestInternal(ResourceRequest&& request, const Re
     }
 
     RESOURCELOADER_RELEASE_LOG_FORWARDABLE(RESOURCELOADER_WILLSENDREQUESTINTERNAL);
-    completionHandler(WTFMove(request));
+    completionHandler(WTF::move(request));
 }
 
 void ResourceLoader::willSendRequest(ResourceRequest&& request, const ResourceResponse& redirectResponse, CompletionHandler<void(ResourceRequest&&)>&& completionHandler)
 {
-    willSendRequestInternal(WTFMove(request), redirectResponse, WTFMove(completionHandler));
+    willSendRequestInternal(WTF::move(request), redirectResponse, WTF::move(completionHandler));
 }
 
 void ResourceLoader::didSendData(unsigned long long, unsigned long long)
@@ -554,7 +539,7 @@ static void logResourceResponseSource(LocalFrame* frame, ResourceResponse::Sourc
         sourceKey = DiagnosticLoggingKeys::memoryCacheAfterValidationKey();
         break;
     case ResourceResponse::Source::DOMCache:
-    case ResourceResponse::Source::ApplicationCache:
+    case ResourceResponse::Source::LegacyApplicationCachePlaceholder:
     case ResourceResponse::Source::InspectorOverride:
     case ResourceResponse::Source::Unknown:
         return;
@@ -595,7 +580,7 @@ void ResourceLoader::didBlockAuthenticationChallenge()
 void ResourceLoader::didReceiveResponse(ResourceResponse&& r, CompletionHandler<void()>&& policyCompletionHandler)
 {
     ASSERT(!m_reachedTerminalState);
-    CompletionHandlerCallingScope completionHandlerCaller(WTFMove(policyCompletionHandler));
+    CompletionHandlerCallingScope completionHandlerCaller(WTF::move(policyCompletionHandler));
 
     // Protect this in this delegate method since the additional processing can do
     // anything including possibly derefing this; one example of this is Radar 3266216.
@@ -605,10 +590,8 @@ void ResourceLoader::didReceiveResponse(ResourceResponse&& r, CompletionHandler<
     if (r.usedLegacyTLS() && frame) {
         if (RefPtr document = frame->document()) {
             if (!document->usedLegacyTLS()) {
-                if (RefPtr page = document->page()) {
                     RESOURCELOADER_RELEASE_LOG("usedLegacyTLS:");
-                    page->console().addMessage(MessageSource::Network, MessageLevel::Warning, makeString("Loaded resource from "_s, r.url().host(), " using TLS 1.0 or 1.1, which are deprecated protocols that will be removed. Please use TLS 1.2 or newer instead."_s), 0, document.get());
-                }
+                frame->console().addMessage(MessageSource::Network, MessageLevel::Warning, makeString("Loaded resource from "_s, r.url().host(), " using TLS 1.0 or 1.1, which are deprecated protocols that will be removed. Please use TLS 1.2 or newer instead."_s), 0, document.get());
                 document->setUsedLegacyTLS(true);
             }
         }
@@ -623,7 +606,7 @@ void ResourceLoader::didReceiveResponse(ResourceResponse&& r, CompletionHandler<
 
     logResourceResponseSource(frame.get(), r.source());
 
-    m_response = WTFMove(r);
+    m_response = WTF::move(r);
 
     RefPtr frameLoader = this->frameLoader();
     if (frameLoader && m_options.sendLoadCallbacks == SendCallbackPolicy::SendCallbacks && m_identifier)
@@ -800,15 +783,15 @@ ResourceError ResourceLoader::httpsUpgradeRedirectLoopError()
     return platformStrategies()->loaderStrategy()->httpsUpgradeRedirectLoopError(m_request);
 }
 
+bool ResourceLoader::isPortAllowed(const URL& url)
+{
+    return portAllowed(url) || (url.port() && !url.port().value() && LegacySchemeRegistry::schemeIsHandledBySchemeHandler(url.protocol()));
+}
+
 void ResourceLoader::willSendRequestAsync(ResourceHandle* handle, ResourceRequest&& request, ResourceResponse&& redirectResponse, CompletionHandler<void(ResourceRequest&&)>&& completionHandler)
 {
     RefPtr protectedHandle { handle };
-    if (protectedDocumentLoader()->applicationCacheHost().maybeLoadFallbackForRedirect(this, request, redirectResponse)) {
-        RESOURCELOADER_RELEASE_LOG("willSendRequestAsync: exiting early because maybeLoadFallbackForRedirect returned false");
-        completionHandler(WTFMove(request));
-        return;
-    }
-    willSendRequestInternal(WTFMove(request), redirectResponse, WTFMove(completionHandler));
+    willSendRequestInternal(WTF::move(request), redirectResponse, WTF::move(completionHandler));
 }
 
 void ResourceLoader::didSendData(ResourceHandle*, unsigned long long bytesSent, unsigned long long totalBytesToBeSent)
@@ -818,11 +801,7 @@ void ResourceLoader::didSendData(ResourceHandle*, unsigned long long bytesSent, 
 
 void ResourceLoader::didReceiveResponseAsync(ResourceHandle*, ResourceResponse&& response, CompletionHandler<void()>&& completionHandler)
 {
-    if (protectedDocumentLoader()->applicationCacheHost().maybeLoadFallbackForResponse(this, response)) {
-        completionHandler();
-        return;
-    }
-    didReceiveResponse(WTFMove(response), WTFMove(completionHandler));
+    didReceiveResponse(WTF::move(response), WTF::move(completionHandler));
 }
 
 void ResourceLoader::didReceiveData(ResourceHandle*, const SharedBuffer& buffer, int encodedDataLength)
@@ -842,8 +821,6 @@ void ResourceLoader::didFinishLoading(ResourceHandle*, const NetworkLoadMetrics&
 
 void ResourceLoader::didFail(ResourceHandle*, const ResourceError& error)
 {
-    if (protectedDocumentLoader()->applicationCacheHost().maybeLoadFallbackForError(this, error))
-        return;
     didFail(error);
 }
 

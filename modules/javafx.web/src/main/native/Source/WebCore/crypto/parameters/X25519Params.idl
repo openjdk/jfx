@@ -1,6 +1,7 @@
 [
     Conditional=WEB_CRYPTO,
     ImplementedAs=CryptoAlgorithmX25519Params,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary X25519Params : CryptoAlgorithmParameters {
     required CryptoKey publicKey;
 

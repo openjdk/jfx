@@ -6,12 +6,14 @@ Release/
 bin/
 build/
 dist/
-gradle.properties
 testbin/
 **/Ensemble8/lib/
 **/Ensemble8/src/generated/resources/ensemble/search/index/write.lock
 **/nbproject/private/
 hs_err_pid*
+
+# JavaFX user-local properties for the build
+gradle-local.properties
 
 # Ignore webrevs
 /webrev/

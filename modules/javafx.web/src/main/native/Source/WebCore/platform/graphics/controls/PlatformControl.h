@@ -25,9 +25,10 @@
 
 #pragma once
 
-#include "ControlStyle.h"
-#include "FloatRect.h"
+#include <WebCore/ControlStyle.h>
+#include <WebCore/FloatRect.h>
 #include <wtf/TZoneMallocInlines.h>
+#include <wtf/ThreadSafeWeakPtr.h>
 
 namespace WebCore {
 
@@ -40,10 +41,7 @@ class PlatformControl {
     WTF_MAKE_TZONE_ALLOCATED_INLINE(PlatformControl);
 
 public:
-    PlatformControl(ControlPart& owningPart)
-        : m_owningPart(owningPart)
-    {
-    }
+    PlatformControl(ControlPart& owningPart);
 
     virtual ~PlatformControl() = default;
 
@@ -58,7 +56,7 @@ public:
     virtual void draw(GraphicsContext&, const FloatRoundedRect&, float, const ControlStyle&) { }
 
 protected:
-    ControlPart& m_owningPart;
+    ThreadSafeWeakRef<ControlPart> m_owningPart;
 };
 
 } // namespace WebCore

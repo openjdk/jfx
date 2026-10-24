@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "IDBDatabaseConnectionIdentifier.h"
-#include "UniqueIDBDatabase.h"
+#include <WebCore/IDBDatabaseConnectionIdentifier.h>
+#include <WebCore/UniqueIDBDatabase.h>
 #include <wtf/HashMap.h>
 #include <wtf/Identified.h>
 #include <wtf/Ref.h>
@@ -52,9 +52,10 @@ public:
     WEBCORE_EXPORT ~UniqueIDBDatabaseConnection();
 
     const IDBResourceIdentifier& openRequestIdentifier() { return m_openRequestIdentifier; }
-    UniqueIDBDatabase* database() { return m_database.get(); }
-    UniqueIDBDatabaseManager* manager();
     IDBConnectionToClient& connectionToClient() { return m_connectionToClient; }
+    UniqueIDBDatabase* database() { return m_database.get(); }
+    WEBCORE_EXPORT CheckedPtr<UniqueIDBDatabase> checkedDatabase();
+    UniqueIDBDatabaseManager* manager();
     Ref<IDBConnectionToClient> protectedConnectionToClient();
 
     WEBCORE_EXPORT void connectionPendingCloseFromClient();
@@ -65,7 +66,7 @@ public:
     bool hasNonFinishedTransactions() const;
 
     void fireVersionChangeEvent(const IDBResourceIdentifier& requestIdentifier, uint64_t requestedVersion);
-    UniqueIDBDatabaseTransaction& createVersionChangeTransaction(uint64_t newVersion);
+    Ref<UniqueIDBDatabaseTransaction> createVersionChangeTransaction(uint64_t newVersion);
 
     WEBCORE_EXPORT void establishTransaction(const IDBTransactionInfo&);
     void didAbortTransaction(UniqueIDBDatabaseTransaction&, const IDBError&);
@@ -96,7 +97,7 @@ private:
 
     bool m_closePending { false };
 
-    HashMap<IDBResourceIdentifier, RefPtr<UniqueIDBDatabaseTransaction>> m_transactionMap;
+    HashMap<IDBResourceIdentifier, Ref<UniqueIDBDatabaseTransaction>> m_transactionMap;
 };
 
 } // namespace IDBServer

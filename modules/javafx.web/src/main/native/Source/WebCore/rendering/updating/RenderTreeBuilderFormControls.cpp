@@ -26,8 +26,8 @@
 #include "config.h"
 #include "RenderTreeBuilderFormControls.h"
 
+#include "RenderBlockFlow.h"
 #include "RenderBlockInlines.h"
-#include "RenderBoxInlines.h"
 #include "RenderButton.h"
 #include "RenderMenuList.h"
 #include "RenderTreeBuilderBlock.h"
@@ -44,13 +44,13 @@ RenderTreeBuilder::FormControls::FormControls(RenderTreeBuilder& builder)
 
 void RenderTreeBuilder::FormControls::attach(RenderButton& parent, RenderPtr<RenderObject> child, RenderObject* beforeChild)
 {
-    m_builder.blockBuilder().attach(findOrCreateParentForChild(parent), WTFMove(child), beforeChild);
+    m_builder.blockBuilder().attach(findOrCreateParentForChild(parent), WTF::move(child), beforeChild);
 }
 
 void RenderTreeBuilder::FormControls::attach(RenderMenuList& parent, RenderPtr<RenderObject> child, RenderObject* beforeChild)
 {
     auto& newChild = *child.get();
-    m_builder.blockBuilder().attach(findOrCreateParentForChild(parent), WTFMove(child), beforeChild);
+    m_builder.blockBuilder().attach(findOrCreateParentForChild(parent), WTF::move(child), beforeChild);
     parent.didAttachChild(newChild, beforeChild);
 }
 
@@ -81,7 +81,7 @@ RenderBlock& RenderTreeBuilder::FormControls::findOrCreateParentForChild(RenderB
 
     auto wrapper = Block::createAnonymousBlockWithStyle(parent.protectedDocument(), parent.style());
     innerRenderer = wrapper.get();
-    m_builder.blockBuilder().attach(parent, WTFMove(wrapper), nullptr);
+    m_builder.blockBuilder().attach(parent, WTF::move(wrapper), nullptr);
     parent.setInnerRenderer(*innerRenderer);
     return *innerRenderer;
 }
@@ -94,7 +94,7 @@ RenderBlock& RenderTreeBuilder::FormControls::findOrCreateParentForChild(RenderM
 
     auto wrapper = Block::createAnonymousBlockWithStyle(parent.protectedDocument(), parent.style());
     innerRenderer = wrapper.get();
-    m_builder.blockBuilder().attach(parent, WTFMove(wrapper), nullptr);
+    m_builder.blockBuilder().attach(parent, WTF::move(wrapper), nullptr);
     parent.setInnerRenderer(*innerRenderer);
     return *innerRenderer;
 }

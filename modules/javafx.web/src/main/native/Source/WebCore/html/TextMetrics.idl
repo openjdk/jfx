@@ -24,10 +24,10 @@
  */
 
 // https://html.spec.whatwg.org/multipage/canvas.html#textmetrics
+
 [
     Exposed=(Window,Worker),
 ] interface TextMetrics {
-
     // x-direction
     readonly attribute double width; // advance width
     readonly attribute double actualBoundingBoxLeft;

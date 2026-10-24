@@ -35,7 +35,7 @@ public:
     enum EIndentType { Indent, Outdent };
     static Ref<IndentOutdentCommand> create(Ref<Document>&& document, EIndentType type)
     {
-        return adoptRef(*new IndentOutdentCommand(WTFMove(document), type));
+        return adoptRef(*new IndentOutdentCommand(WTF::move(document), type));
     }
 
     bool preservesTypingStyle() const override { return true; }

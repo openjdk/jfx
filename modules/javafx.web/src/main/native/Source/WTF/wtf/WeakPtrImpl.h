@@ -41,8 +41,6 @@ class WeakPtrImplBase : public ThreadSafeRefCounted<Derived> {
     WTF_MAKE_NONCOPYABLE(WeakPtrImplBase);
     WTF_DEPRECATED_MAKE_FAST_COMPACT_ALLOCATED_WITH_HEAP_IDENTIFIER(WeakPtrImplBase, WeakPtrImplBase);
 public:
-    ~WeakPtrImplBase() = default;
-
     template<typename T> typename T::WeakValueType* get()
     {
         return static_cast<typename T::WeakValueType*>(m_ptr);
@@ -87,8 +85,6 @@ class WeakPtrImplBaseSingleThread {
     WTF_MAKE_NONCOPYABLE(WeakPtrImplBaseSingleThread);
     WTF_DEPRECATED_MAKE_FAST_COMPACT_ALLOCATED_WITH_HEAP_IDENTIFIER(WeakPtrImplBaseSingleThread, WeakPtrImplBaseSingleThread);
 public:
-    ~WeakPtrImplBaseSingleThread() = default;
-
     template<typename T> typename T::WeakValueType* get()
     {
         return static_cast<typename T::WeakValueType*>(m_ptr);

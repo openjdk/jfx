@@ -32,7 +32,9 @@ import javafx.print.Printer;
 import javafx.print.PrinterJob;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.Separator;
 import javafx.scene.control.TextArea;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 import javafx.stage.Screen;
@@ -80,7 +82,7 @@ public class PrintToFileTest extends Application {
 
     private Scene createScene() {
 
-        root = new VBox();
+        root = new VBox(10);
         scene = new Scene(root);
 
         String msg = instructions;
@@ -96,11 +98,15 @@ public class PrintToFileTest extends Application {
         print.setOnAction(e -> runTest());
         root.getChildren().add(print);
 
+        Separator separator = new Separator();
+        HBox passFailButtons = createPassFailButtons();
+        root.getChildren().addAll(separator, passFailButtons);
+
         return scene;
     }
 
     public void runTest() {
-        new Thread(() -> {
+        Thread printThread = new Thread(() -> {
             passed = false;
             failed = false;
             System.out.println("START OF PRINT JOB");
@@ -131,8 +137,10 @@ public class PrintToFileTest extends Application {
                 failed = true;
             }
             System.out.println("END OF PRINT JOB");
-        }).start();
-        new Thread(() -> {
+        });
+        printThread.setDaemon(true);
+        printThread.start();
+        Thread pollThread = new Thread(() -> {
             while (!passed && !failed) {
                 try {
                     Thread.sleep(500);
@@ -141,7 +149,9 @@ public class PrintToFileTest extends Application {
             }
             Platform.runLater(() -> displayMessage());
 
-        }).start();
+        });
+        pollThread.setDaemon(true);
+        pollThread.start();
     }
 
     private void displayMessage() {
@@ -152,5 +162,21 @@ public class PrintToFileTest extends Application {
             t.setText("TEST FAILED!");
         }
         root.getChildren().add(t);
+    }
+
+    private HBox createPassFailButtons() {
+        var passButton = new Button("Pass");
+        passButton.setOnAction(e -> {
+            System.out.println("TEST PASSED");
+            Platform.exit();
+        });
+        var failButton = new Button("Fail");
+        failButton.setOnAction(e -> {
+            System.out.println("TEST FAILED");
+            Platform.exit();
+            throw new AssertionError("Test failed");
+        });
+        var hbox = new HBox(10, passButton, failButton);
+        return hbox;
     }
 }

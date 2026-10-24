@@ -43,13 +43,14 @@ class WebXRHand;
 class WebXRSession;
 
 class WebXRJointSpace final: public RefCounted<WebXRJointSpace>, public WebXRSpace {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WebXRJointSpace);
+    WTF_MAKE_TZONE_ALLOCATED(WebXRJointSpace);
 public:
     static Ref<WebXRJointSpace> create(Document&, WebXRHand&, XRHandJoint, std::optional<PlatformXR::FrameData::InputSourceHandJoint>&& = std::nullopt);
     virtual ~WebXRJointSpace();
 
-    using RefCounted<WebXRJointSpace>::ref;
-    using RefCounted<WebXRJointSpace>::deref;
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     XRHandJoint jointName() const { return m_jointName; }
 

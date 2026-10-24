@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "InlineDisplayContent.h"
 #include "InlineFormattingContext.h"
+#include <WebCore/InlineDisplayContent.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -41,7 +41,7 @@ class InlineContentBuilder {
 public:
     InlineContentBuilder(const RenderBlockFlow&);
 
-    FloatRect build(Layout::InlineLayoutResult&&, InlineContent&, const Layout::InlineDamage*) const;
+    FloatRect build(std::unique_ptr<Layout::InlineLayoutResult>&&, InlineContent&, const Layout::InlineDamage*) const;
     void updateLineOverflow(InlineContent&) const;
 
 private:

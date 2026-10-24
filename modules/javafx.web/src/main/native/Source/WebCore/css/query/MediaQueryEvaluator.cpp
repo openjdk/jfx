@@ -27,7 +27,7 @@
 
 #include "CSSToLengthConversionData.h"
 #include "Document.h"
-#include "DocumentInlines.h"
+#include "DocumentView.h"
 #include "FontCascade.h"
 #include "MediaQuery.h"
 #include "MediaQueryFeatures.h"
@@ -76,13 +76,17 @@ bool MediaQueryEvaluator::evaluate(const MediaQuery& query) const
             return EvaluationResult::True;
 
         RefPtr document = m_document.get();
-        if (!document || !m_rootElementStyle)
+        if (!document)
+            return m_staticMediaConditionResult;
+
+        CheckedPtr rootElementStyle = m_rootElementStyle;
+        if (!rootElementStyle)
             return m_staticMediaConditionResult;
 
         if (!document->view() || !document->documentElement())
             return EvaluationResult::Unknown;
 
-        FeatureEvaluationContext context { *document, { *m_rootElementStyle, m_rootElementStyle, nullptr, document->renderView() }, nullptr };
+        FeatureEvaluationContext context { *document, { *rootElementStyle, rootElementStyle.get(), nullptr, document->renderView() }, nullptr };
         return evaluateCondition(*query.condition, context);
     }();
 

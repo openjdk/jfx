@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,6 @@
 
 package test.javafx.scene.chart;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
@@ -39,6 +37,8 @@ import javafx.scene.chart.PieChart;
 import javafx.scene.text.Text;
 import org.junit.jupiter.api.Test;
 import com.sun.javafx.charts.Legend;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  *
@@ -96,6 +96,48 @@ public class PieChartTest extends ChartTestBase {
         addTestData();
         pc.getData().remove(0);
         assertEquals(4, pc.getData().size());
+    }
+
+    @Test
+    public void testDataItemAddedImmediatelyWhenReducedMotionIsEnabled() {
+        createChart();
+        pc.setAnimated(true);
+        data.add(new PieChart.Data("Sun", 20));
+        startApp();
+
+        getTestScene().getPreferences().setReducedMotion(true);
+        pulse();
+
+        PieChart.Data addedData = new PieChart.Data("Moon", 30);
+        pc.getData().add(addedData);
+        pulse();
+
+        assertTrue(ChartShim.getChartChildren(pc).contains(addedData.getNode()));
+        assertSame(pc, addedData.getChart());
+        assertTrue(ChartShim.getChartChildren(pc).stream()
+            .filter(Text.class::isInstance)
+            .map(Text.class::cast)
+            .anyMatch(text -> addedData.getName().equals(text.getText())));
+    }
+
+    @Test
+    public void testDataItemRemovedImmediatelyWhenReducedMotionIsEnabled() {
+        createChart();
+        pc.setAnimated(true);
+        PieChart.Data removedData = new PieChart.Data("Sun", 20);
+        data.addAll(removedData, new PieChart.Data("Moon", 30));
+        startApp();
+
+        getTestScene().getPreferences().setReducedMotion(true);
+        pulse();
+
+        assertTrue(ChartShim.getChartChildren(pc).contains(removedData.getNode()));
+
+        pc.getData().remove(removedData);
+        pulse();
+
+        assertFalse(ChartShim.getChartChildren(pc).contains(removedData.getNode()));
+        assertNull(removedData.getChart());
     }
 
     @Test

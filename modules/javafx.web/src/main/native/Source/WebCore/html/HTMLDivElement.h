@@ -22,12 +22,12 @@
 
 #pragma once
 
-#include "HTMLElement.h"
+#include <WebCore/HTMLElement.h>
 
 namespace WebCore {
 
 class HTMLDivElement : public HTMLElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLDivElement);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLDivElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLDivElement);
 public:
     WEBCORE_EXPORT static Ref<HTMLDivElement> create(Document&);

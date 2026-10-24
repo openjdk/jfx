@@ -87,7 +87,7 @@ void SignalHandlers::add(Signal signal, SignalHandler&& handler)
 #endif
     RELEASE_ASSERT(nextFree < maxNumberOfHandlers);
     SignalHandlerMemory* memory = &handlers[signalIndex][nextFree];
-    new (memory) SignalHandler(WTFMove(handler));
+    new (memory) SignalHandler(WTF::move(handler));
 
     numberOfHandlers[signalIndex]++;
 }
@@ -400,12 +400,8 @@ inline void setExceptionPorts(const AbstractLocker& threadGroupLocker, Thread& t
 
 static ThreadGroup& activeThreads()
 {
-    static LazyNeverDestroyed<std::shared_ptr<ThreadGroup>> activeThreads;
-    static std::once_flag initializeKey;
-    std::call_once(initializeKey, [&] {
-        activeThreads.construct(ThreadGroup::create());
-    });
-    return (*activeThreads.get());
+    static NeverDestroyed<Ref<ThreadGroup>> activeThreads = ThreadGroup::create();
+    return activeThreads.get();
 }
 
 void registerThreadForMachExceptionHandling(Thread& thread)
@@ -416,7 +412,7 @@ void registerThreadForMachExceptionHandling(Thread& thread)
         return;
 
     Locker locker { activeThreads().getLock() };
-    if (activeThreads().add(locker, thread) == ThreadGroupAddResult::NewlyAdded)
+    if (Ref { activeThreads() }->add(locker, thread) == ThreadGroupAddResult::NewlyAdded)
         setExceptionPorts(locker, thread);
 }
 
@@ -486,7 +482,7 @@ void activateSignalHandlersFor(Signal signal)
 
 void addSignalHandler(Signal signal, SignalHandler&& handler)
 {
-    g_wtfConfig.signalHandlers.add(signal, WTFMove(handler));
+    g_wtfConfig.signalHandlers.add(signal, WTF::move(handler));
 }
 
 static void jscSignalHandler(int sig, siginfo_t* info, void* ucontext)
@@ -541,9 +537,7 @@ static void jscSignalHandler(int sig, siginfo_t* info, void* ucontext)
     }
 
     unsigned oldActionIndex = static_cast<size_t>(signal) + (sig == SIGBUS);
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GTK/WPE port
-    struct sigaction& oldAction = handlers.oldActions[static_cast<size_t>(oldActionIndex)];
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    struct sigaction& oldAction = handlers.oldActions[oldActionIndex];
     if (signal == Signal::Usr) {
         if (oldAction.sa_sigaction)
             oldAction.sa_sigaction(sig, info, ucontext);
@@ -606,11 +600,9 @@ void SignalHandlers::finalize()
             RELEASE_ASSERT(!result);
             action.sa_flags = SA_SIGINFO;
             auto systemSignals = toSystemSignal(signal);
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GTK/WPE port
             result = sigaction(std::get<0>(systemSignals), &action, &handlers.oldActions[offsetForSystemSignal(std::get<0>(systemSignals))]);
             if (std::get<1>(systemSignals))
                 result |= sigaction(*std::get<1>(systemSignals), &action, &handlers.oldActions[offsetForSystemSignal(*std::get<1>(systemSignals))]);
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
             RELEASE_ASSERT(!result);
         }
     }

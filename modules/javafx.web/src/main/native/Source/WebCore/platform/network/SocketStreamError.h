@@ -38,7 +38,7 @@ namespace WebCore {
 
 class SocketStreamError {
 private:
-    friend struct IPC::ArgumentCoder<SocketStreamError, void>;
+    friend struct IPC::ArgumentCoder<SocketStreamError>;
 public:
     SocketStreamError() = default;
 

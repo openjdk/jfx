@@ -22,21 +22,22 @@
 
 #include "DOMMimeType.h"
 #include "Navigator.h"
+#include "ScriptWrappableInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/AtomString.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(DOMMimeTypeArray);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DOMMimeTypeArray);
 
 Ref<DOMMimeTypeArray> DOMMimeTypeArray::create(Navigator& navigator, Vector<Ref<DOMMimeType>>&& types)
 {
-    return adoptRef(*new DOMMimeTypeArray(navigator, WTFMove(types)));
+    return adoptRef(*new DOMMimeTypeArray(navigator, WTF::move(types)));
 }
 
 DOMMimeTypeArray::DOMMimeTypeArray(Navigator& navigator, Vector<Ref<DOMMimeType>>&& types)
     : m_navigator(navigator)
-    , m_types(WTFMove(types))
+    , m_types(WTF::move(types))
 {
 }
 

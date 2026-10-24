@@ -899,7 +899,7 @@ private:
         case EnumeratorPutByVal:
         case PutByValDirect:
         case PutByVal:
-        case PutByValAlias:
+        case PutByValDirectResolved:
         case PutByValMegamorphic: {
             Edge child1 = m_graph.varArgChild(node, 0);
             Edge child2 = m_graph.varArgChild(node, 1);
@@ -1054,6 +1054,7 @@ private:
         case ConstructForwardVarargs:
         case TailCallForwardVarargsInlinedCaller:
         case CallWasm:
+        case TailCallInlinedCallerWasm:
         case CallCustomAccessorGetter:
         case GetGlobalVar:
         case GetGlobalLexicalVariable:
@@ -1139,6 +1140,9 @@ private:
             break;
 
         case MapStorage:
+            setPrediction(SpecCellOther | SpecEmpty);
+            break;
+
         case MapStorageOrSentinel:
         case MapIterationNext:
             setPrediction(SpecCellOther);
@@ -1573,7 +1577,7 @@ private:
 
         case NewArrayWithButterfly:
         case NewButterflyWithSize:
-        case PutByValAlias:
+        case PutByValDirectResolved:
         case DoubleAsInt32:
         case CheckTypeInfoFlags:
         case Arrayify:
@@ -1734,6 +1738,12 @@ private:
         case DataViewSet:
         case InvalidationPoint:
         case ObjectAssign:
+        case ResolvePromiseFirstResolving:
+        case RejectPromiseFirstResolving:
+        case FulfillPromiseFirstResolving:
+        case PromiseResolve:
+        case PromiseReject:
+        case PromiseThen:
             break;
 
         // This gets ignored because it only pretends to produce a value.

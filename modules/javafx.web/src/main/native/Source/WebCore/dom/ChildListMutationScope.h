@@ -31,8 +31,9 @@
 #pragma once
 
 #include "ContainerNode.h"
-#include "DocumentInlines.h"
-#include "MutationObserver.h"
+#include "Document.h"
+#include "MutationObserverOptions.h"
+#include "NodeDocument.h"
 #include <memory>
 #include <wtf/Noncopyable.h>
 #include <wtf/RefCounted.h>

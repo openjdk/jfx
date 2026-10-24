@@ -28,7 +28,6 @@
 
 #include "Allowlist.h"
 #include "Document.h"
-#include "DocumentInlines.h"
 #include "ElementInlines.h"
 #include "HTMLIFrameElement.h"
 #include "HTMLNames.h"
@@ -90,6 +89,8 @@ static ASCIILiteral toFeatureNameForLogging(PermissionsPolicy::Feature feature)
 #endif
     case PermissionsPolicy::Feature::PrivateToken:
         return "PrivateToken"_s;
+    case PermissionsPolicy::Feature::StorageAccess:
+        return "StorageAccess"_s;
     case PermissionsPolicy::Feature::Invalid:
         return "Invalid"_s;
     }
@@ -129,6 +130,7 @@ static std::pair<PermissionsPolicy::Feature, StringView> readFeatureIdentifier(S
     constexpr auto xrSpatialTrackingToken { "xr-spatial-tracking"_s };
 #endif
     constexpr auto privateTokenToken { "private-token"_s };
+    constexpr auto storageAccessToken { "storage-access"_s };
 
     if (value.startsWith(cameraToken)) {
         feature = PermissionsPolicy::Feature::Camera;
@@ -190,6 +192,9 @@ static std::pair<PermissionsPolicy::Feature, StringView> readFeatureIdentifier(S
     } else if (value.startsWith(privateTokenToken)) {
         feature = PermissionsPolicy::Feature::PrivateToken;
         remainingValue = value.substring(privateTokenToken.length());
+    } else if (value.startsWith(storageAccessToken)) {
+        feature = PermissionsPolicy::Feature::StorageAccess;
+        remainingValue = value.substring(storageAccessToken.length());
     }
 
     // FIXME: webkit.org/b/274159.
@@ -206,6 +211,7 @@ static ASCIILiteral defaultAllowlistValue(PermissionsPolicy::Feature feature)
     switch (feature) {
     case PermissionsPolicy::Feature::Gamepad:
     case PermissionsPolicy::Feature::SyncXHR:
+    case PermissionsPolicy::Feature::StorageAccess:
         return "*"_s;
     case PermissionsPolicy::Feature::Camera:
     case PermissionsPolicy::Feature::Microphone:
@@ -343,7 +349,7 @@ static Allowlist parseAllowlist(StringView value, const SecurityOriginData& cont
         value = remainingValue;
     }
 
-    return Allowlist { WTFMove(allowedOrigins) };
+    return Allowlist { WTF::move(allowedOrigins) };
 }
 
 // https://w3c.github.io/webappsec-permissions-policy/#algo-parse-policy-directive

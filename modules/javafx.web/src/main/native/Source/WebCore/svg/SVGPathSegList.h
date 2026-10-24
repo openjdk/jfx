@@ -49,7 +49,7 @@ public:
 
     static Ref<SVGPathSegList> create(Ref<SVGPathSeg>&& newItem)
     {
-        return adoptRef(*new SVGPathSegList(WTFMove(newItem)));
+        return adoptRef(*new SVGPathSegList(WTF::move(newItem)));
     }
 
     SVGPathSegList& operator=(const SVGPathSegList& other)
@@ -83,21 +83,21 @@ public:
     ExceptionOr<Ref<SVGPathSeg>> initialize(Ref<SVGPathSeg>&& newItem)
     {
         itemsWillChange();
-        return Base::initialize(WTFMove(newItem));
+        return Base::initialize(WTF::move(newItem));
     }
 
     ExceptionOr<Ref<SVGPathSeg>> insertItemBefore(Ref<SVGPathSeg>&& newItem, unsigned index)
     {
         ensureItems();
         itemsWillChange();
-        return Base::insertItemBefore(WTFMove(newItem), index);
+        return Base::insertItemBefore(WTF::move(newItem), index);
     }
 
     ExceptionOr<Ref<SVGPathSeg>> replaceItem(Ref<SVGPathSeg>&& newItem, unsigned index)
     {
         ensureItems();
         itemsWillChange();
-        return Base::replaceItem(WTFMove(newItem), index);
+        return Base::replaceItem(WTF::move(newItem), index);
     }
 
     ExceptionOr<Ref<SVGPathSeg>> removeItem(unsigned index)
@@ -112,13 +112,13 @@ public:
         ensureItems();
         appendPathSegToPathByteStream(newItem);
         clearPath();
-        return Base::appendItem(WTFMove(newItem));
+        return Base::appendItem(WTF::move(newItem));
     }
 
     // Override SVGList::setItem() because replaceItem() isn't virtual.
     ExceptionOr<void> setItem(unsigned index, Ref<SVGPathSeg>&& newItem)
     {
-        auto result = replaceItem(WTFMove(newItem), index);
+        auto result = replaceItem(WTF::move(newItem), index);
         if (result.hasException())
             return result.releaseException();
         return { };
@@ -127,7 +127,7 @@ public:
     void updateByteStreamData(DataRef<SVGPathByteStream::Data>&& byteStreamData)
     {
         pathByteStreamWillChange();
-        m_pathByteStream.setData(WTFMove(byteStreamData));
+        m_pathByteStream.setData(WTF::move(byteStreamData));
     }
 
     void clearByteStreamData()
@@ -183,7 +183,7 @@ private:
     // Used by appendPathSegToPathByteStream() to create a temporary SVGPathSegList with one item.
     SVGPathSegList(Ref<SVGPathSeg>&& newItem)
     {
-        append(WTFMove(newItem));
+        append(WTF::move(newItem));
     }
 
     // Called when changing an item in the list.

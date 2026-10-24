@@ -93,9 +93,9 @@ Vector<String> IntlCollator::sortLocaleData(const String& locale, RelevantExtens
                 if (collation == "standard"_s || collation == "search"_s)
                     continue;
                 if (auto mapped = mapICUCollationKeywordToBCP47(collation))
-                    keyLocaleData.append(WTFMove(mapped.value()));
+                    keyLocaleData.append(WTF::move(mapped.value()));
                 else
-                    keyLocaleData.append(WTFMove(collation));
+                    keyLocaleData.append(WTF::move(collation));
             }
         }
         break;
@@ -164,7 +164,7 @@ void IntlCollator::initializeCollator(JSGlobalObject* globalObject, JSValue loca
                 throwRangeError(globalObject, scope, "collation is not a well-formed collation value"_s);
                 return;
             }
-            localeOptions[static_cast<unsigned>(RelevantExtensionKey::Co)] = WTFMove(collation);
+            localeOptions[static_cast<unsigned>(RelevantExtensionKey::Co)] = WTF::move(collation);
         }
     }
 
@@ -444,7 +444,7 @@ void IntlCollator::checkICULocaleInvariants(const LocaleSet& locales)
             bool allAreGood = true;
             for (unsigned x = 0; x < 128; ++x) {
                 for (unsigned y = 0; y < 128; ++y) {
-                    if (canUseASCIIUCADUCETComparison(static_cast<LChar>(x)) && canUseASCIIUCADUCETComparison(static_cast<LChar>(y))) {
+                    if (canUseASCIIUCADUCETComparison(static_cast<Latin1Character>(x)) && canUseASCIIUCADUCETComparison(static_cast<Latin1Character>(y))) {
                         UErrorCode status = U_ZERO_ERROR;
                         char16_t xstring[] = { static_cast<char16_t>(x), 0 };
                         char16_t ystring[] = { static_cast<char16_t>(y), 0 };

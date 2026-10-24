@@ -32,12 +32,12 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(EXTTextureCompressionBPTC);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(EXTTextureCompressionBPTC);
 
 EXTTextureCompressionBPTC::EXTTextureCompressionBPTC(WebGLRenderingContextBase& context)
     : WebGLExtension(context, WebGLExtensionName::EXTTextureCompressionBPTC)
 {
-    context.protectedGraphicsContextGL()->ensureExtensionEnabled("GL_EXT_texture_compression_bptc"_s);
+    context.graphicsContextGL()->enableExtension(GCGLExtension::EXT_texture_compression_bptc);
 
     context.addCompressedTextureFormat(GraphicsContextGL::COMPRESSED_RGBA_BPTC_UNORM_EXT);
     context.addCompressedTextureFormat(GraphicsContextGL::COMPRESSED_SRGB_ALPHA_BPTC_UNORM_EXT);
@@ -49,7 +49,7 @@ EXTTextureCompressionBPTC::~EXTTextureCompressionBPTC() = default;
 
 bool EXTTextureCompressionBPTC::supported(GraphicsContextGL& context)
 {
-    return context.supportsExtension("GL_EXT_texture_compression_bptc"_s);
+    return context.supportsExtension(GCGLExtension::EXT_texture_compression_bptc);
 }
 
 } // namespace WebCore

@@ -40,7 +40,9 @@ typedef double DOMHighResTimeStamp;
     [CallWith=CurrentScriptExecutionContext] static readonly attribute FrozenArray<DOMString> supportedEntryTypes;
 };
 
-dictionary PerformanceObserverInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary PerformanceObserverInit {
     sequence<DOMString> entryTypes;
     DOMString type;
     boolean buffered = false;

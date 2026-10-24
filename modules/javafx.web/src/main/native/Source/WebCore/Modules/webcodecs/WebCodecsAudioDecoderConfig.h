@@ -39,7 +39,7 @@ struct WebCodecsAudioDecoderConfig {
     size_t sampleRate;
     size_t numberOfChannels;
 
-    WebCodecsAudioDecoderConfig isolatedCopyWithoutDescription() && { return { WTFMove(codec).isolatedCopy(), { }, sampleRate, numberOfChannels }; }
+    WebCodecsAudioDecoderConfig isolatedCopyWithoutDescription() && { return { WTF::move(codec).isolatedCopy(), { }, sampleRate, numberOfChannels }; }
     WebCodecsAudioDecoderConfig isolatedCopyWithoutDescription() const & { return { codec.isolatedCopy(), { }, sampleRate, numberOfChannels }; }
 };
 

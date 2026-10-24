@@ -32,12 +32,16 @@
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "Document.h"
+#include "DocumentPage.h"
+#include "DocumentView.h"
 #include "ElementInlines.h"
 #include "EventNames.h"
+#include "FrameDestructionObserverInlines.h"
 #include "HTMLImageLoader.h"
 #include "HTMLNames.h"
 #include "ImageBuffer.h"
 #include "JSDOMPromiseDeferred.h"
+#include "LocalDOMWindow.h"
 #include "LocalFrame.h"
 #include "Logging.h"
 #include "MediaPlayerPrivate.h"
@@ -46,10 +50,12 @@
 #include "PictureInPictureSupport.h"
 #include "RenderImage.h"
 #include "RenderLayerCompositor.h"
-#include "RenderVideo.h"
+#include "RenderObjectDocument.h"
+#include "RenderVideoInlines.h"
 #include "RenderView.h"
 #include "ScriptController.h"
 #include "Settings.h"
+#include "ShareableBitmap.h"
 #include "VideoFrameMetadata.h"
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
@@ -63,14 +69,25 @@
 #include "PictureInPictureObserver.h"
 #endif
 
+#if RELEASE_LOG_DISABLED
+#define HTMLVIDEOELEMENT_RELEASE_LOG(formatString, ...)
+#else
 #define HTMLVIDEOELEMENT_RELEASE_LOG(formatString, ...) \
-if (willLog(WTFLogLevel::Always)) { \
-    RELEASE_LOG_FORWARDABLE(Media, HTMLVIDEOELEMENT_##formatString, identifier().toUInt64(), ##__VA_ARGS__); \
-} \
+do { \
+    if (willLog(WTFLogLevel::Always)) { \
+        RELEASE_LOG_FORWARDABLE(Media, HTMLVIDEOELEMENT_##formatString, logIdentifier(), ##__VA_ARGS__); \
+        if (logger().hasEnabledInspector()) { \
+            std::array<char, 1024> buffer { }; \
+            SAFE_SPRINTF(std::span { buffer }, MESSAGE_HTMLVIDEOELEMENT_##formatString, logIdentifier(), ##__VA_ARGS__); \
+            logger().toObservers(logChannel(), WTFLogLevel::Always, String::fromUTF8(buffer.data())); \
+        } \
+    } \
+} while (0)
+#endif
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLVideoElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLVideoElement);
 
 using namespace HTMLNames;
 
@@ -107,7 +124,7 @@ bool HTMLVideoElement::rendererIsNeeded(const RenderStyle& style)
 
 RenderPtr<RenderElement> HTMLVideoElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
-    return createRenderer<RenderVideo>(*this, WTFMove(style));
+    return createRenderer<RenderVideo>(*this, WTF::move(style));
 }
 
 void HTMLVideoElement::didAttachRenderers()
@@ -156,8 +173,8 @@ void HTMLVideoElement::computeAcceleratedRenderingStateAndUpdateMediaPlayer()
 #else
     bool isInFullScreen = false;
 #endif
-    auto* renderer = this->renderer();
-    bool canBeAccelerated = player->supportsAcceleratedRendering() && (isInFullScreen || (renderer && renderer->view().compositor().hasAcceleratedCompositing()));
+    CheckedPtr renderer = this->renderer();
+    bool canBeAccelerated = player->supportsAcceleratedRendering() && (isInFullScreen || (renderer && renderer->checkedView()->compositor().hasAcceleratedCompositing()));
     if (canBeAccelerated == m_renderingCanBeAccelerated)
         return;
     m_renderingCanBeAccelerated = canBeAccelerated;
@@ -313,7 +330,7 @@ bool HTMLVideoElement::shouldDisplayPosterImage() const
     if (posterImageURL().isEmpty())
         return false;
 
-    auto* renderer = this->renderer();
+    CheckedPtr renderer = this->renderer();
     if (renderer && renderer->failedToLoadPosterImage())
         return false;
 
@@ -332,8 +349,10 @@ void HTMLVideoElement::mediaPlayerFirstVideoFrameAvailable()
     if (RefPtr player = this->player())
         player->prepareForRendering();
 
-    if (CheckedPtr renderer = this->renderer())
+    if (CheckedPtr renderer = this->renderer()) {
         renderer->updateFromElement();
+        protectedDocument()->didPaintImage(*this, nullptr, renderer->videoBox());
+    }
 }
 
 std::optional<DestinationColorSpace> HTMLVideoElement::colorSpace() const
@@ -347,7 +366,9 @@ std::optional<DestinationColorSpace> HTMLVideoElement::colorSpace() const
 
 RefPtr<ImageBuffer> HTMLVideoElement::createBufferForPainting(const FloatSize& size, RenderingMode renderingMode, const DestinationColorSpace& colorSpace, ImageBufferFormat pixelFormat) const
 {
-    auto* hostWindow = document().view() && document().view()->root() ? document().view()->root()->hostWindow() : nullptr;
+    CheckedPtr view = document().view();
+    CheckedPtr root = view ? view->root() : nullptr;
+    auto* hostWindow = root ? root->hostWindow() : nullptr;
     return ImageBuffer::create(size, renderingMode, RenderingPurpose::MediaPainting, 1, colorSpace, pixelFormat, hostWindow);
 }
 
@@ -388,10 +409,34 @@ bool HTMLVideoElement::shouldGetNativeImageForCanvasDrawing() const
     return player()->shouldGetNativeImageForCanvasDrawing();
 }
 
-RefPtr<NativeImage> HTMLVideoElement::nativeImageForCurrentTime()
+RefPtr<NativeImage> HTMLVideoElement::nativeImageForCurrentTime() const
 {
     RefPtr player = this->player();
-    return player? player->nativeImageForCurrentTime() : nullptr;
+    return player ? player->nativeImageForCurrentTime() : nullptr;
+}
+
+RefPtr<ShareableBitmap> HTMLVideoElement::bitmapImageForCurrentTime() const
+{
+#if !PLATFORM(JAVA) // recheck
+    RefPtr image = nativeImageForCurrentTime();
+    if (!image)
+        return { };
+
+    auto imageSize = image->size();
+    auto bitmap = ShareableBitmap::create({ imageSize, colorSpace() });
+    if (!bitmap)
+        return { };
+
+    auto context = bitmap->createGraphicsContext();
+    if (!context)
+        return { };
+
+    context->drawNativeImage(*image, FloatRect { { }, imageSize }, FloatRect { { }, imageSize });
+
+    return bitmap;
+#else
+    return nullptr;
+#endif
 }
 
 ExceptionOr<void> HTMLVideoElement::webkitEnterFullscreen()
@@ -597,8 +642,8 @@ void HTMLVideoElement::didEnterFullscreenOrPictureInPicture(const FloatSize& siz
         setChangingVideoFullscreenMode(false);
 
 #if ENABLE(PICTURE_IN_PICTURE_API)
-        if (m_pictureInPictureObserver)
-            m_pictureInPictureObserver->didEnterPictureInPicture(flooredIntSize(size));
+        if (RefPtr observer = m_pictureInPictureObserver.get())
+            observer->didEnterPictureInPicture(flooredIntSize(size));
 #else
         UNUSED_PARAM(size);
 #endif
@@ -608,8 +653,8 @@ void HTMLVideoElement::didEnterFullscreenOrPictureInPicture(const FloatSize& siz
     if (m_exitingPictureInPicture) {
         m_exitingPictureInPicture = false;
 #if ENABLE(PICTURE_IN_PICTURE_API)
-        if (m_pictureInPictureObserver)
-            m_pictureInPictureObserver->didExitPictureInPicture();
+        if (RefPtr observer = m_pictureInPictureObserver.get())
+            observer->didExitPictureInPicture();
 #endif
     }
 
@@ -626,8 +671,8 @@ void HTMLVideoElement::didExitFullscreenOrPictureInPicture()
         setChangingVideoFullscreenMode(false);
 
 #if ENABLE(PICTURE_IN_PICTURE_API)
-        if (m_pictureInPictureObserver)
-            m_pictureInPictureObserver->didExitPictureInPicture();
+        if (RefPtr observer = m_pictureInPictureObserver.get())
+            observer->didExitPictureInPicture();
 #endif
         return;
     }
@@ -666,8 +711,10 @@ void HTMLVideoElement::setVideoFullscreenFrame(const FloatRect& frame)
         return;
 
 #if ENABLE(PICTURE_IN_PICTURE_API)
-    if (!m_enteringPictureInPicture && !m_exitingPictureInPicture && m_pictureInPictureObserver)
-        m_pictureInPictureObserver->pictureInPictureWindowResized(IntSize(frame.size()));
+    if (!m_enteringPictureInPicture && !m_exitingPictureInPicture) {
+        if (RefPtr observer = m_pictureInPictureObserver.get())
+            observer->pictureInPictureWindowResized(IntSize(frame.size()));
+    }
 #endif
 }
 
@@ -697,7 +744,7 @@ unsigned HTMLVideoElement::requestVideoFrameCallback(Ref<VideoFrameRequestCallba
     }
 
     auto identifier = ++m_nextVideoFrameRequestIndex;
-    m_videoFrameRequests.append(makeUniqueRef<VideoFrameRequest>(identifier, WTFMove(callback)));
+    m_videoFrameRequests.append(makeUniqueRef<VideoFrameRequest>(identifier, WTF::move(callback)));
 
     if (RefPtr page = document().page())
         page->scheduleRenderingUpdate(RenderingUpdateStep::VideoFrameCallbacks);

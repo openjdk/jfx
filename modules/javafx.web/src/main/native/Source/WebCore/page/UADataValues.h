@@ -26,11 +26,12 @@
 #pragma once
 
 #include "NavigatorUABrandVersion.h"
+#include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
-struct UADataValues {
+struct UADataValues : RefCounted<UADataValues> {
     String architecture;
     String bitness;
     Vector<NavigatorUABrandVersion> brands;
@@ -42,5 +43,14 @@ struct UADataValues {
     String platformVersion;
     String uaFullVersion;
     bool wow64;
+
+    static Ref<UADataValues> create(const Vector<NavigatorUABrandVersion>& brands, bool mobile, const String& platform)
+    {
+        return adoptRef(*new UADataValues(brands, mobile, platform));
+    }
+
+private:
+    UADataValues(const Vector<NavigatorUABrandVersion>& brands, bool mobile, const String& platform)
+        : brands(brands), mobile(mobile), platform(platform) { }
 };
 }

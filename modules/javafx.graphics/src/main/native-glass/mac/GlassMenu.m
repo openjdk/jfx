@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,6 +32,7 @@
 #import "GlassMenu.h"
 #import "GlassHelper.h"
 #import "GlassKey.h"
+#import "GlassWindow+Java.h"
 
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
@@ -168,7 +169,7 @@ static jfieldID  jPixelsScaleYField = 0;
 {
     if (self->jCallback != NULL)
     {
-        GET_MAIN_JENV;
+        GET_MAIN_JENV_NOWARN;
         if (env != NULL)
         {
             (*env)->CallVoidMethod(env, self->jCallback, jMenuActionMethod, NULL);
@@ -178,9 +179,23 @@ static jfieldID  jPixelsScaleYField = 0;
 
 // JDK-8096139: do not use menuNeedsUpdate here, even though Cocoa prohibits
 // changing the menu structure during menuWillOpen...
-- (void)menuWillOpen: (NSMenu *)menu
+- (void)menuWillOpen: (NSMenu *)_menu
 {
-    GET_MAIN_JENV;
+    if ([GlassWindow _hasGrab]) {
+        // If an auto-hide popup window is showing, it has an active grab.
+        // In this case, we close the popup and let the menu open.
+        //
+        // Note: After JDK-8372398, [_menu cancelTrackingWithoutAnimation] was used to cancel the menu tracking loop,
+        // in order to prevent the menu from showing up. However, starting macOS 27 that call leaves AppKit
+        // stuck in the menu tracking loop, and the application stops receiving mouse events (JDK-8393642).
+        // Therefore, the call is removed, keeping _resetGrab, to hide the popup, while the menu opens.
+
+        // _resetGrab fires FOCUS_UNGRAB on the popup's owner window, which
+        // will trigger doAutoHide() -> hide() on the popup.
+        [GlassWindow _resetGrab];
+    }
+
+    GET_MAIN_JENV_NOWARN;
     if (env != NULL)
     {
         jobject jmenu = (*env)->GetObjectField(env, jDelegate, jDelegateMenuField);
@@ -190,7 +205,7 @@ static jfieldID  jPixelsScaleYField = 0;
 
 - (void)menuDidClose: (NSMenu *)menu
 {
-    GET_MAIN_JENV;
+    GET_MAIN_JENV_NOWARN;
     if (env != NULL)
     {
         jobject jmenu = (*env)->GetObjectField(env, jDelegate, jDelegateMenuField);
@@ -203,7 +218,7 @@ static jfieldID  jPixelsScaleYField = 0;
 - (BOOL)validateMenuItem:(NSMenuItem *)menuItem
 {
     LOG("validateMenuItem: %s action: %p", [[menuItem title] UTF8String], [menuItem action]);
-    GET_MAIN_JENV;
+    GET_MAIN_JENV_NOWARN;
     if (env != NULL)
     {
         GlassMenu *glassTargetItem = (GlassMenu *)[menuItem target];

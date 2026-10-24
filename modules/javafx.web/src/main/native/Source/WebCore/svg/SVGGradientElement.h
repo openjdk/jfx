@@ -58,7 +58,7 @@ struct SVGPropertyTraits<SVGSpreadMethodType> {
         return emptyString();
     }
 
-    static SVGSpreadMethodType fromString(const String& value)
+    static SVGSpreadMethodType fromString(SVGElement&, const String& value)
     {
         if (value == "pad"_s)
             return SVGSpreadMethodPad;
@@ -71,7 +71,7 @@ struct SVGPropertyTraits<SVGSpreadMethodType> {
 };
 
 class SVGGradientElement : public SVGElement, public SVGURIReference {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGGradientElement);
+    WTF_MAKE_TZONE_ALLOCATED(SVGGradientElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGGradientElement);
 public:
     enum {

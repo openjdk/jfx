@@ -24,7 +24,9 @@
  */
 
 // https://drafts.csswg.org/cssom-view/#extension-to-the-element-interface
-dictionary CheckVisibilityOptions {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary CheckVisibilityOptions {
     boolean opacityProperty = false;
     boolean visibilityProperty = false;
     boolean contentVisibilityAuto = false;

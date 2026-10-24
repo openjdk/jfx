@@ -24,9 +24,9 @@
 
 #pragma once
 
-#include "CSSPrimitiveNumericTypes.h"
-#include "StylePrimitiveNumeric.h"
-#include "StylePrimitiveNumericOrKeyword.h"
+#include <WebCore/CSSPrimitiveNumericTypes.h>
+#include <WebCore/StylePrimitiveNumeric.h>
+#include <WebCore/StylePrimitiveNumericOrKeyword.h>
 
 namespace WebCore {
 namespace Style {
@@ -38,16 +38,16 @@ template<CSS::Range nR = CSS::All, CSS::Range pR = nR, typename V = double> stru
 
     NumberOrPercentage(Variant<Number, Percentage>&& value)
     {
-        WTF::switchOn(WTFMove(value), [this](auto&& alternative) { this->value = WTFMove(alternative); });
+        WTF::switchOn(WTF::move(value), [this](auto&& alternative) { this->value = WTF::move(alternative); });
     }
 
     NumberOrPercentage(Number value)
-        : value { WTFMove(value) }
+        : value { WTF::move(value) }
     {
     }
 
     NumberOrPercentage(Percentage value)
-        : value { WTFMove(value) }
+        : value { WTF::move(value) }
     {
     }
 
@@ -73,7 +73,7 @@ template<CSS::Range nR = CSS::All, CSS::Range pR = nR, typename V = double> stru
 
 private:
     NumberOrPercentage(CSS::PrimitiveDataEmptyToken token)
-        : value { WTFMove(token) }
+        : value { WTF::move(token) }
     {
     }
 
@@ -88,18 +88,28 @@ template<CSS::Range nR = CSS::All, CSS::Range pR = nR, typename V = double> stru
 
     Number value { 0 };
 
-    constexpr NumberOrPercentageResolvedToNumber(typename Number::ResolvedValueType value)
-        : value { value }
-    {
-    }
-
     constexpr NumberOrPercentageResolvedToNumber(Number number)
         : value { number }
     {
     }
 
     constexpr NumberOrPercentageResolvedToNumber(Percentage percentage)
-        : value { percentage.value / 100.0 }
+        : value { percentage.value / static_cast<V>(100) }
+    {
+    }
+
+    constexpr NumberOrPercentageResolvedToNumber(typename Number::ResolvedValueType value)
+        : NumberOrPercentageResolvedToNumber { Number { value } }
+    {
+    }
+
+    constexpr NumberOrPercentageResolvedToNumber(CSS::ValueLiteral<CSS::NumberUnit::Number> literal)
+        : NumberOrPercentageResolvedToNumber { Number { literal } }
+    {
+    }
+
+    constexpr NumberOrPercentageResolvedToNumber(CSS::ValueLiteral<CSS::PercentageUnit::Percentage> literal)
+        : NumberOrPercentageResolvedToNumber { Percentage { literal } }
     {
     }
 

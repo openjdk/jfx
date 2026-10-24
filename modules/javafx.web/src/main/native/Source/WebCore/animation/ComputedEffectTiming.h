@@ -25,11 +25,11 @@
 
 #pragma once
 
-#include "AnimationEffectPhase.h"
-#include "CSSNumericValue.h"
-#include "EffectTiming.h"
-#include "TimingFunction.h"
-#include "WebAnimationTypes.h"
+#include <WebCore/AnimationEffectPhase.h>
+#include <WebCore/CSSNumericValue.h>
+#include <WebCore/EffectTiming.h>
+#include <WebCore/TimingFunction.h>
+#include <WebCore/WebAnimationTypes.h>
 
 namespace WebCore {
 

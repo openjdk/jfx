@@ -43,6 +43,9 @@ namespace WebCore {
 
 class DeferredPromise;
 class PeerConnectionBackend;
+class RTCEncodedStreamProducer;
+
+struct RTCEncodedStreams;
 struct RTCRtpCapabilities;
 
 class RTCRtpReceiver final : public RefCounted<RTCRtpReceiver>
@@ -51,11 +54,11 @@ class RTCRtpReceiver final : public RefCounted<RTCRtpReceiver>
     , private LoggerHelper
 #endif
     {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RTCRtpReceiver);
+    WTF_MAKE_TZONE_ALLOCATED(RTCRtpReceiver);
 public:
     static Ref<RTCRtpReceiver> create(PeerConnectionBackend& connection, Ref<MediaStreamTrack>&& track, std::unique_ptr<RTCRtpReceiverBackend>&& backend)
     {
-        return adoptRef(*new RTCRtpReceiver(connection, WTFMove(track), WTFMove(backend)));
+        return adoptRef(*new RTCRtpReceiver(connection, WTF::move(track), WTF::move(backend)));
     }
     virtual ~RTCRtpReceiver();
 
@@ -63,7 +66,7 @@ public:
 
     void stop();
 
-    void setBackend(std::unique_ptr<RTCRtpReceiverBackend>&& backend) { m_backend = WTFMove(backend); }
+    void setBackend(std::unique_ptr<RTCRtpReceiverBackend>&& backend) { m_backend = WTF::move(backend); }
     RTCRtpParameters getParameters() { return m_backend ? m_backend->getParameters() : RTCRtpParameters(); }
     Vector<RTCRtpContributingSource> getContributingSources() const { return m_backend ? m_backend->getContributingSources() : Vector<RTCRtpContributingSource> { }; }
     Vector<RTCRtpSynchronizationSource> getSynchronizationSources() const { return m_backend ? m_backend->getSynchronizationSources() : Vector<RTCRtpSynchronizationSource> { }; }
@@ -71,7 +74,7 @@ public:
     MediaStreamTrack& track() { return m_track.get(); }
 
     RTCDtlsTransport* transport() { return m_transport.get(); }
-    void setTransport(RefPtr<RTCDtlsTransport>&& transport) { m_transport = WTFMove(transport); }
+    void setTransport(RefPtr<RTCDtlsTransport>&& transport) { m_transport = WTF::move(transport); }
 
     RTCRtpReceiverBackend* backend() { return m_backend.get(); }
     void getStats(Ref<DeferredPromise>&&);
@@ -79,8 +82,10 @@ public:
     std::optional<RTCRtpTransform::Internal> transform();
     ExceptionOr<void> setTransform(std::unique_ptr<RTCRtpTransform>&&);
 
+    ExceptionOr<RTCEncodedStreams> createEncodedStreams(ScriptExecutionContext&);
+
     const Vector<WeakPtr<MediaStream>>& associatedStreams() const { return m_associatedStreams; }
-    void setAssociatedStreams(Vector<WeakPtr<MediaStream>>&& streams) { m_associatedStreams = WTFMove(streams); }
+    void setAssociatedStreams(Vector<WeakPtr<MediaStream>>&& streams) { m_associatedStreams = WTF::move(streams); }
 private:
     RTCRtpReceiver(PeerConnectionBackend&, Ref<MediaStreamTrack>&&, std::unique_ptr<RTCRtpReceiverBackend>&&);
 
@@ -96,6 +101,7 @@ private:
     std::unique_ptr<RTCRtpReceiverBackend> m_backend;
     WeakPtr<PeerConnectionBackend> m_connection;
     std::unique_ptr<RTCRtpTransform> m_transform;
+    const RefPtr<RTCEncodedStreamProducer> m_encodedStreamProducer;
     Vector<WeakPtr<MediaStream>> m_associatedStreams;
 #if !RELEASE_LOG_DISABLED
     const Ref<const Logger> m_logger;

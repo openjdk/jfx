@@ -25,10 +25,12 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(REMOTE_INSPECTOR)
 
-#include "InspectorFrontendChannel.h"
-#include "RemoteControllableTarget.h"
+#include <JavaScriptCore/InspectorFrontendChannel.h>
+#include <JavaScriptCore/RemoteControllableTarget.h>
 #include <wtf/Lock.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/ThreadSafeWeakPtr.h>
@@ -70,6 +72,7 @@ public:
     std::optional<TargetID> targetIdentifier() const WTF_REQUIRES_LOCK(m_targetMutex);
 #if PLATFORM(COCOA)
     NSString *connectionIdentifier() const;
+    RetainPtr<NSString> protectedConnectionIdentifier() const;
     NSString *destination() const;
 
     Lock& queueMutex() { return m_queueMutex; }

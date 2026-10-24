@@ -35,6 +35,7 @@
 #include "ResourceResponse.h"
 #include "SharedBuffer.h"
 #include <mutex>
+#include <wtf/CompletionHandler.h>
 #include <wtf/EnumTraits.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/CString.h>
@@ -73,6 +74,11 @@ void MockContentFilter::willSendRequest(ResourceRequest& request, const Resource
         return;
     }
 
+    if (auto delay = MockContentFilterSettings::singleton().willSendRequestDecisionDelay()) {
+        LOG(ContentFiltering, "MockContentFilter delaying decision in willSendRequest\n");
+        WTF::sleep(Seconds(delay));
+    }
+
     if (redirectResponse.isNull())
         maybeDetermineStatus(DecisionPoint::AfterWillSendRequest);
     else
@@ -87,11 +93,17 @@ void MockContentFilter::willSendRequest(ResourceRequest& request, const Resource
 
     URL modifiedRequestURL { request.url(), modifiedRequestURLString };
     if (!modifiedRequestURL.isValid()) {
-        LOG(ContentFiltering, "MockContentFilter failed to convert %s to a  URL.\n", modifiedRequestURL.string().ascii().data());
+        LOG(ContentFiltering, "MockContentFilter failed to convert %s to a  URL.\n", modifiedRequestURL.string().utf8().data());
         return;
     }
 
-    request.setURL(WTFMove(modifiedRequestURL));
+    request.setURL(WTF::move(modifiedRequestURL));
+}
+
+void MockContentFilter::willSendRequest(ResourceRequest&& request, const ResourceResponse& redirectResponse, CompletionHandler<void(String&&)>&& completionHandler)
+{
+    willSendRequest(request, redirectResponse);
+    completionHandler(String { request.url().string() });
 }
 
 void MockContentFilter::responseReceived(const ResourceResponse&)

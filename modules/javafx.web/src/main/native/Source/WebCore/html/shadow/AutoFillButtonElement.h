@@ -26,16 +26,17 @@
 #pragma once
 
 #include "HTMLDivElement.h"
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 
 namespace WebCore {
 
 class TextFieldInputType;
 
 class AutoFillButtonElement final : public HTMLDivElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(AutoFillButtonElement);
+    WTF_MAKE_TZONE_ALLOCATED(AutoFillButtonElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(AutoFillButtonElement);
 public:
-    class AutoFillButtonOwner {
+    class AutoFillButtonOwner : public AbstractRefCountedAndCanMakeWeakPtr<AutoFillButtonOwner> {
     public:
         virtual ~AutoFillButtonOwner() = default;
         virtual void autoFillButtonElementWasClicked() = 0;
@@ -43,12 +44,14 @@ public:
 
     static Ref<AutoFillButtonElement> create(Document&, AutoFillButtonOwner&);
 
+    void removeOwner() { m_owner = nullptr; }
+
 private:
     explicit AutoFillButtonElement(Document&, AutoFillButtonOwner&);
 
     void defaultEventHandler(Event&) override;
 
-    AutoFillButtonOwner& m_owner;
+    WeakPtr<AutoFillButtonOwner> m_owner;
 };
 
 } // namespace WebCore

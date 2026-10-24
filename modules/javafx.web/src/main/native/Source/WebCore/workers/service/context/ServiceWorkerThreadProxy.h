@@ -25,19 +25,19 @@
 
 #pragma once
 
-#include "CacheStorageConnection.h"
-#include "Document.h"
-#include "FetchIdentifier.h"
-#include "Page.h"
-#include "PushSubscriptionData.h"
-#include "ServiceWorkerDebuggable.h"
-#include "ServiceWorkerIdentifier.h"
-#include "ServiceWorkerInspectorProxy.h"
-#include "ServiceWorkerThread.h"
-#include "StorageBlockingPolicy.h"
-#include "WorkerBadgeProxy.h"
-#include "WorkerDebuggerProxy.h"
-#include "WorkerLoaderProxy.h"
+#include <WebCore/CacheStorageConnection.h>
+#include <WebCore/Document.h>
+#include <WebCore/FetchIdentifier.h>
+#include <WebCore/Page.h>
+#include <WebCore/PushSubscriptionData.h>
+#include <WebCore/ServiceWorkerDebuggable.h>
+#include <WebCore/ServiceWorkerIdentifier.h>
+#include <WebCore/ServiceWorkerInspectorProxy.h>
+#include <WebCore/ServiceWorkerThread.h>
+#include <WebCore/StorageBlockingPolicy.h>
+#include <WebCore/WorkerBadgeProxy.h>
+#include <WebCore/WorkerDebuggerProxy.h>
+#include <WebCore/WorkerLoaderProxy.h>
 #include <wtf/CheckedPtr.h>
 #include <wtf/HashMap.h>
 #include <wtf/URLHash.h>
@@ -105,10 +105,11 @@ public:
     ServiceWorkerDebuggable& remoteDebuggable() { return m_remoteDebuggable; }
 #endif
 
-    uint32_t checkedPtrCount() const { return CanMakeThreadSafeCheckedPtr<ServiceWorkerThreadProxy>::checkedPtrCount(); }
-    uint32_t checkedPtrCountWithoutThreadCheck() const { return CanMakeThreadSafeCheckedPtr<ServiceWorkerThreadProxy>::checkedPtrCountWithoutThreadCheck(); }
-    void incrementCheckedPtrCount() const { CanMakeThreadSafeCheckedPtr<ServiceWorkerThreadProxy>::incrementCheckedPtrCount(); }
-    void decrementCheckedPtrCount() const { CanMakeThreadSafeCheckedPtr<ServiceWorkerThreadProxy>::decrementCheckedPtrCount(); }
+    uint32_t checkedPtrCount() const final { return CanMakeThreadSafeCheckedPtr<ServiceWorkerThreadProxy>::checkedPtrCount(); }
+    uint32_t checkedPtrCountWithoutThreadCheck() const final { return CanMakeThreadSafeCheckedPtr<ServiceWorkerThreadProxy>::checkedPtrCountWithoutThreadCheck(); }
+    void incrementCheckedPtrCount() const final { CanMakeThreadSafeCheckedPtr<ServiceWorkerThreadProxy>::incrementCheckedPtrCount(); }
+    void decrementCheckedPtrCount() const final { CanMakeThreadSafeCheckedPtr<ServiceWorkerThreadProxy>::decrementCheckedPtrCount(); }
+    void setDidBeginCheckedPtrDeletion() final { CanMakeThreadSafeCheckedPtr<ServiceWorkerThreadProxy>::setDidBeginCheckedPtrDeletion(); }
 
 private:
     WEBCORE_EXPORT ServiceWorkerThreadProxy(Ref<Page>&&, ServiceWorkerContextData&&, ServiceWorkerData&&, String&& userAgent, WorkerThreadMode, CacheStorageProvider&, std::unique_ptr<NotificationClient>&&);

@@ -36,9 +36,9 @@ class FrontendChannel;
 namespace WebCore {
 
 class FloatRect;
-class InspectorController;
 class LocalFrame;
 class Page;
+class PageInspectorController;
 
 enum class InspectorBackendClientDeveloperPreference : uint8_t {
     PrivateClickMeasurementDebugModeEnabled,
@@ -54,7 +54,7 @@ public:
     virtual void inspectedPageDestroyed() = 0;
     virtual void frontendCountChanged(unsigned) { }
 
-    virtual Inspector::FrontendChannel* openLocalFrontend(InspectorController*) = 0;
+    virtual Inspector::FrontendChannel* openLocalFrontend(PageInspectorController*) = 0;
     virtual void bringFrontendToFront() = 0;
     virtual void didResizeMainFrame(LocalFrame*) { }
 
@@ -77,10 +77,6 @@ public:
 
 #if ENABLE(INSPECTOR_NETWORK_THROTTLING)
     virtual bool setEmulatedConditions(std::optional<int64_t>&& /* bytesPerSecondLimit */) { return false; }
-#endif
-
-#if ENABLE(REMOTE_INSPECTOR)
-    virtual bool allowRemoteInspectionToPageDirectly() const { return false; }
 #endif
 };
 

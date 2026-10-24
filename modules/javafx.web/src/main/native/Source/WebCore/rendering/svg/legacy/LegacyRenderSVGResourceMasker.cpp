@@ -28,16 +28,16 @@
 #include "Image.h"
 #include "IntRect.h"
 #include "LegacyRenderSVGResourceMaskerInlines.h"
-#include "SVGRenderStyle.h"
+#include "RenderStyle+GettersInlines.h"
 #include "SVGRenderingContext.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(LegacyRenderSVGResourceMasker);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(LegacyRenderSVGResourceMasker);
 
 LegacyRenderSVGResourceMasker::LegacyRenderSVGResourceMasker(SVGMaskElement& element, RenderStyle&& style)
-    : LegacyRenderSVGResourceContainer(Type::LegacySVGResourceMasker, element, WTFMove(style))
+    : LegacyRenderSVGResourceContainer(Type::LegacySVGResourceMasker, element, WTF::move(style))
 {
 }
 
@@ -65,28 +65,30 @@ auto LegacyRenderSVGResourceMasker::applyResource(RenderElement& renderer, const
 
     MaskerData* maskerData = m_masker.get(renderer);
     AffineTransform absoluteTransform = SVGRenderingContext::calculateTransformationToOutermostCoordinateSystem(renderer);
-    // FIXME: This needs to be bounding box and should not use repaint rect.
-    // https://bugs.webkit.org/show_bug.cgi?id=278551
-    FloatRect repaintRect = renderer.repaintRectInLocalCoordinates(RepaintRectCalculation::Accurate);
+    FloatRect decoratedBounds = renderer.decoratedBoundingBox();
+
+    // Masks define a clipping region via x/y/width/height attributes.
+    // We need to get the effective area to mask.
+    SVGRenderSupport::applyResourceEffectsToRect(renderer, decoratedBounds);
 
     // Ignore 2D rotation, as it doesn't affect the size of the mask.
     FloatSize scale(absoluteTransform.xScale(), absoluteTransform.yScale());
 
     // Determine scale factor for the mask. The size of intermediate ImageBuffers shouldn't be bigger than kMaxFilterSize.
-    ImageBuffer::sizeNeedsClamping(repaintRect.size(), scale);
+    ImageBuffer::sizeNeedsClamping(decoratedBounds.size(), scale);
 
-    if (!maskerData->maskImage && !repaintRect.isEmpty()) {
+    if (!maskerData->maskImage && !decoratedBounds.isEmpty()) {
         auto maskColorSpace = DestinationColorSpace::SRGB();
         auto drawColorSpace = DestinationColorSpace::SRGB();
 
-        if (style().svgStyle().colorInterpolation() == ColorInterpolation::LinearRGB) {
+        if (style().colorInterpolation() == ColorInterpolation::LinearRGB) {
 #if USE(CG) || USE(SKIA)
             maskColorSpace = DestinationColorSpace::LinearSRGB();
 #endif
             drawColorSpace = DestinationColorSpace::LinearSRGB();
         }
         // FIXME (149470): This image buffer should not be unconditionally unaccelerated. Making it match the context breaks alpha masking, though.
-        maskerData->maskImage = context->createScaledImageBuffer(repaintRect, scale, maskColorSpace, RenderingMode::Unaccelerated);
+        maskerData->maskImage = context->createScaledImageBuffer(decoratedBounds, scale, maskColorSpace, RenderingMode::Unaccelerated);
         if (!maskerData->maskImage)
             return { };
 
@@ -97,7 +99,7 @@ auto LegacyRenderSVGResourceMasker::applyResource(RenderElement& renderer, const
     if (!maskerData->maskImage)
         return { };
 
-    SVGRenderingContext::clipToImageBuffer(*context, repaintRect, scale, maskerData->maskImage, missingMaskerData);
+    SVGRenderingContext::clipToImageBuffer(*context, decoratedBounds, scale, maskerData->maskImage, missingMaskerData);
     return { ApplyResult::ResourceApplied };
 }
 
@@ -117,7 +119,7 @@ bool LegacyRenderSVGResourceMasker::drawContentIntoMaskImage(MaskerData* maskerD
 #endif
 
     // Create the luminance mask.
-    if (style().svgStyle().maskType() == MaskType::Luminance)
+    if (style().maskType() == MaskType::Luminance)
         maskImage->convertToLuminanceMask();
 
     return true;
@@ -143,7 +145,7 @@ bool LegacyRenderSVGResourceMasker::drawContentIntoContext(GraphicsContext& cont
         if (renderer->needsLayout())
             return false;
         const CheckedRef style = renderer->style();
-        if (style->display() == DisplayType::None || style->usedVisibility() != Visibility::Visible)
+        if (style->display() == DisplayType::None)
             continue;
         SVGRenderingContext::renderSubtreeToContext(context, *renderer, maskContentTransformation);
     }
@@ -174,7 +176,7 @@ void LegacyRenderSVGResourceMasker::calculateMaskContentRepaintRect(RepaintRectC
         if (!renderer || !childNode->isSVGElement())
             continue;
         const CheckedRef style = renderer->style();
-        if (style->display() == DisplayType::None || style->usedVisibility() != Visibility::Visible)
+        if (style->display() == DisplayType::None)
              continue;
         m_maskContentBoundaries[repaintRectCalculation].unite(renderer->localToParentTransform().mapRect(renderer->repaintRectInLocalCoordinates(repaintRectCalculation)));
     }
@@ -184,7 +186,7 @@ FloatRect LegacyRenderSVGResourceMasker::resourceBoundingBox(const RenderObject&
 {
     FloatRect objectBoundingBox = object.objectBoundingBox();
     Ref maskElement = this->maskElement();
-    FloatRect maskBoundaries = SVGLengthContext::resolveRectangle<SVGMaskElement>(maskElement.ptr(), maskElement->maskUnits(), objectBoundingBox);
+    FloatRect maskBoundaries = SVGLengthContext::resolveRectangle(maskElement.get(), maskElement->maskUnits(), objectBoundingBox);
 
     // Resource was not layouted yet. Give back clipping rect of the mask.
     if (selfNeedsLayout())

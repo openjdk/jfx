@@ -69,7 +69,7 @@ public:
     static constexpr bool forceConvertInRead = false;
     static constexpr unsigned flagCount = StringHasher::flagCount;
     static constexpr unsigned maskHash = StringHasher::maskHash;
-    static constexpr uint64_t secret[4] = { 0xa0761d6478bd642full, 0xe7037ed1a0b428dbull, 0x8ebc6af09c88c6e3ull, 0x589965cc75374cc3ull };
+    static constexpr std::array<uint64_t, 4> secret { 0xa0761d6478bd642full, 0xe7037ed1a0b428dbull, 0x8ebc6af09c88c6e3ull, 0x589965cc75374cc3ull };
     using DefaultConverter = StringHasher::DefaultConverter;
 
     WYHash() = default;
@@ -180,7 +180,7 @@ private:
         }
     };
 
-    // LChar data is interpreted as Latin-1-encoded (zero-extended to 16 bits).
+    // Latin1Character data is interpreted as Latin-1-encoded (zero-extended to 16 bits).
     // To match the hash value of char16_t with same content, extend 16 bits (0xff)
     // to 32 bits (0x00ff).
     template<typename T, typename Converter = DefaultConverter>

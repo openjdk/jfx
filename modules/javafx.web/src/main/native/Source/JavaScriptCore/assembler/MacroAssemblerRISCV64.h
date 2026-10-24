@@ -115,10 +115,6 @@ public:
         return { m_allowScratchRegister };
     }
 
-    static bool supportsFloatingPoint() { return true; }
-    static bool supportsFloatingPointTruncate() { return true; }
-    static bool supportsFloatingPointSqrt() { return true; }
-    static bool supportsFloatingPointAbs() { return true; }
     static bool supportsFloatingPointRounding() { return true; }
     static bool supportsFloat16() { return false; }
 
@@ -863,6 +859,25 @@ public:
         m_assembler.maskRegister<32>(dest);
     }
 
+    void load8SignedExtendTo64(Address address, RegisterID dest)
+    {
+        auto resolution = resolveAddress(address, lazyTemp<Memory>());
+        m_assembler.lbInsn(dest, resolution.base, Imm::I(resolution.offset));
+    }
+
+    void load8SignedExtendTo64(BaseIndex address, RegisterID dest)
+    {
+        auto resolution = resolveAddress(address, lazyTemp<Memory>());
+        m_assembler.lbInsn(dest, resolution.base, Imm::I(resolution.offset));
+    }
+
+    void load8SignedExtendTo64(const void* address, RegisterID dest)
+    {
+        auto temp = temps<Memory>();
+        loadImmediate(TrustedImmPtr(address), temp.memory());
+        m_assembler.lbInsn(dest, temp.memory(), Imm::I<0>());
+    }
+
     void load16(Address address, RegisterID dest)
     {
         auto resolution = resolveAddress(address, lazyTemp<Memory>());
@@ -921,6 +936,44 @@ public:
         loadImmediate(TrustedImmPtr(address), temp.memory());
         m_assembler.lhInsn(dest, temp.memory(), Imm::I<0>());
         m_assembler.maskRegister<32>(dest);
+    }
+
+    void load16SignedExtendTo64(Address address, RegisterID dest)
+    {
+        auto resolution = resolveAddress(address, lazyTemp<Memory>());
+        m_assembler.lhInsn(dest, resolution.base, Imm::I(resolution.offset));
+    }
+
+    void load16SignedExtendTo64(BaseIndex address, RegisterID dest)
+    {
+        auto resolution = resolveAddress(address, lazyTemp<Memory>());
+        m_assembler.lhInsn(dest, resolution.base, Imm::I(resolution.offset));
+    }
+
+    void load16SignedExtendTo64(const void* address, RegisterID dest)
+    {
+        auto temp = temps<Memory>();
+        loadImmediate(TrustedImmPtr(address), temp.memory());
+        m_assembler.lhInsn(dest, temp.memory(), Imm::I<0>());
+    }
+
+    void load32SignedExtendTo64(Address address, RegisterID dest)
+    {
+        auto resolution = resolveAddress(address, lazyTemp<Memory>());
+        m_assembler.lwInsn(dest, resolution.base, Imm::I(resolution.offset));
+    }
+
+    void load32SignedExtendTo64(BaseIndex address, RegisterID dest)
+    {
+        auto resolution = resolveAddress(address, lazyTemp<Memory>());
+        m_assembler.lwInsn(dest, resolution.base, Imm::I(resolution.offset));
+    }
+
+    void load32SignedExtendTo64(const void* address, RegisterID dest)
+    {
+        auto temp = temps<Memory>();
+        loadImmediate(TrustedImmPtr(address), temp.memory());
+        m_assembler.lwInsn(dest, temp.memory(), Imm::I<0>());
     }
 
     void load32(Address address, RegisterID dest)
@@ -1871,6 +1924,7 @@ public:
 
     void move(RegisterID src, RegisterID dest)
     {
+        if (src != dest)
         m_assembler.addiInsn(dest, src, Imm::I<0>());
     }
 
@@ -1939,6 +1993,7 @@ public:
 
     void moveFloat(FPRegisterID src, FPRegisterID dest)
     {
+        if (src != dest)
         m_assembler.fsgnjInsn<32>(dest, src, src);
     }
 
@@ -1954,6 +2009,7 @@ public:
 
     void moveDouble(FPRegisterID src, FPRegisterID dest)
     {
+        if (src != dest)
         m_assembler.fsgnjInsn<64>(dest, src, src);
     }
 
@@ -4302,10 +4358,8 @@ private:
     };
 
     struct Imm {
-        template<typename T>
-        using EnableIfInteger = std::enable_if_t<(std::is_same_v<T, int32_t> || std::is_same_v<T, int64_t>)>;
-
-        template<typename ImmediateType, typename T, typename = EnableIfInteger<T>>
+        template<typename ImmediateType, typename T>
+            requires (std::same_as<T, int32_t> || std::same_as<T, int64_t>)
         static bool isValid(T value) { return ImmediateType::isValid(value); }
 
         using IType = RISCV64Assembler::IImmediate;
@@ -4486,14 +4540,14 @@ private:
     Jump branchForArithmeticOverflow(RegisterID op1, Op2Type op2, RegisterID dest)
     {
         static_assert(bitSize == 32 || bitSize == 64);
-        static_assert(std::is_same_v<Op2Type, RegisterID> || std::is_same_v<Op2Type, TrustedImm32>);
+        static_assert(std::same_as<Op2Type, RegisterID> || std::same_as<Op2Type, TrustedImm32>);
         auto temp = temps<Data, Memory>();
 
         if constexpr (bitSize == 32) {
             RELEASE_ASSERT(op1 == temp.data() || op1 != temp.memory());
             m_assembler.signExtend<32>(temp.data(), op1);
 
-            if constexpr (!std::is_same_v<Op2Type, TrustedImm32>) {
+            if constexpr (!std::same_as<Op2Type, TrustedImm32>) {
                 RELEASE_ASSERT(op2 == temp.memory() || op1 != temp.data());
                 m_assembler.signExtend<32>(temp.memory(), op2);
             } else
@@ -4530,7 +4584,7 @@ private:
         RELEASE_ASSERT(dest != temp.data() && dest != temp.memory());
 
         RegisterID rop2;
-        if constexpr (std::is_same_v<Op2Type, TrustedImm32>) {
+        if constexpr (std::same_as<Op2Type, TrustedImm32>) {
             loadImmediate(op2, temp.memory());
             rop2 = temp.memory();
         } else {

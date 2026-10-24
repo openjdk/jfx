@@ -36,13 +36,16 @@ struct BlendingContext;
 
 class StyleCrossfadeImage final : public StyleGeneratedImage, private CachedImageClient {
     WTF_DEPRECATED_MAKE_FAST_ALLOCATED(StyleCrossfadeImage);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(StyleCrossfadeImage);
 public:
     static Ref<StyleCrossfadeImage> create(RefPtr<StyleImage> from, RefPtr<StyleImage> to, double percentage, bool isPrefixed)
     {
-        return adoptRef(*new StyleCrossfadeImage(WTFMove(from), WTFMove(to), percentage, isPrefixed));
+        return adoptRef(*new StyleCrossfadeImage(WTF::move(from), WTF::move(to), percentage, isPrefixed));
     }
     virtual ~StyleCrossfadeImage();
+
+    // CachedResourceClient.
+    void ref() const final { StyleGeneratedImage::ref(); }
+    void deref() const final { StyleGeneratedImage::deref(); }
 
     RefPtr<StyleCrossfadeImage> blend(const StyleCrossfadeImage&, const BlendingContext&) const;
 
@@ -58,7 +61,7 @@ private:
     Ref<CSSValue> computedStyleValue(const RenderStyle&) const final;
     bool isPending() const final;
     void load(CachedResourceLoader&, const ResourceLoaderOptions&) final;
-    RefPtr<Image> image(const RenderElement*, const FloatSize&, bool isForFirstLine) const final;
+    RefPtr<Image> image(const RenderElement*, const FloatSize&, const GraphicsContext& destinationContext, bool isForFirstLine) const final;
     bool knownToBeOpaque(const RenderElement&) const final;
     FloatSize fixedSize(const RenderElement&) const final;
     void didAddClient(RenderElement&) final { }

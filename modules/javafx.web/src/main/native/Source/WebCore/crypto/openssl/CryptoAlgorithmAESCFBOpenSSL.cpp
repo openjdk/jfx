@@ -91,7 +91,7 @@ ExceptionOr<Vector<uint8_t>> CryptoAlgorithmAESCFB::platformEncrypt(const Crypto
     auto output = cryptEncrypt(key.key(), parameters.ivVector(), Vector<uint8_t>(plainText));
     if (!output)
         return Exception { ExceptionCode::OperationError };
-    return WTFMove(*output);
+    return WTF::move(*output);
 }
 
 ExceptionOr<Vector<uint8_t>> CryptoAlgorithmAESCFB::platformDecrypt(const CryptoAlgorithmAesCbcCfbParams& parameters, const CryptoKeyAES& key, const Vector<uint8_t>& cipherText)
@@ -99,7 +99,7 @@ ExceptionOr<Vector<uint8_t>> CryptoAlgorithmAESCFB::platformDecrypt(const Crypto
     auto output = cryptDecrypt(key.key(), parameters.ivVector(), cipherText);
     if (!output)
         return Exception { ExceptionCode::OperationError };
-    return WTFMove(*output);
+    return WTF::move(*output);
 }
 
 } // namespace WebCore

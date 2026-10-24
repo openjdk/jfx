@@ -33,7 +33,8 @@
 #include "CommonAtomStrings.h"
 #include "ContextDestructionObserverInlines.h"
 #include "Document.h"
-#include "DocumentInlines.h"
+#include "DocumentPage.h"
+#include "DocumentQuirks.h"
 #include "Event.h"
 #include "EventNames.h"
 #include "EventTargetInlines.h"
@@ -58,6 +59,7 @@
 #include "Page.h"
 #include "PhotoCapabilities.h"
 #include "PlatformMediaSessionManager.h"
+#include "Quirks.h"
 #include "RealtimeMediaSourceCenter.h"
 #include "ScriptExecutionContext.h"
 #include "Settings.h"
@@ -70,11 +72,11 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(MediaStreamTrack);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MediaStreamTrack);
 
 Ref<MediaStreamTrack> MediaStreamTrack::create(ScriptExecutionContext& context, Ref<MediaStreamTrackPrivate>&& privateTrack, RegisterCaptureTrackToOwner registerCaptureTrackToOwner)
 {
-    auto track = adoptRef(*new MediaStreamTrack(context, WTFMove(privateTrack)));
+    auto track = adoptRef(*new MediaStreamTrack(context, WTF::move(privateTrack)));
     track->suspendIfNeeded();
 
     if (track->isCaptureTrack() && !track->ended() && registerCaptureTrackToOwner == RegisterCaptureTrackToOwner::Yes)
@@ -85,16 +87,21 @@ Ref<MediaStreamTrack> MediaStreamTrack::create(ScriptExecutionContext& context, 
 
 MediaStreamTrack::MediaStreamTrack(ScriptExecutionContext& context, Ref<MediaStreamTrackPrivate>&& privateTrack)
     : ActiveDOMObject(&context)
-    , m_private(WTFMove(privateTrack))
+    , m_private(WTF::move(privateTrack))
     , m_muted(m_private->muted())
     , m_isCaptureTrack(is<Document>(context) && m_private->isCaptureTrack())
 {
+    relaxAdoptionRequirement();
     ALWAYS_LOG(LOGIDENTIFIER);
 
     m_private->addObserver(*this);
 
-    if (!isCaptureTrack())
+    if (!isCaptureTrack()) {
+        RefPtr document = dynamicDowncast<Document>(context);
+        if (document && document->quirks().shouldEnableRemoteTrackLabelQuirk())
+            m_private->updateLabelIfRemoteTrack();
         return;
+    }
 
     ASSERT(isMainThread());
     ASSERT(is<Document>(context));
@@ -328,7 +335,7 @@ auto MediaStreamTrack::takePhoto(PhotoSettings&& settings) -> Ref<TakePhotoPromi
 {
     ASSERT(!m_ended);
 
-    return m_private->takePhoto(WTFMove(settings))->whenSettled(RunLoop::mainSingleton(), [protectedThis = Ref { *this }] (auto&& result) mutable {
+    return m_private->takePhoto(WTF::move(settings))->whenSettled(RunLoop::mainSingleton(), [protectedThis = Ref { *this }] (auto&& result) mutable {
 
         // https://w3c.github.io/mediacapture-image/#dom-imagecapture-takephoto
         // If the operation cannot be completed for any reason (for example, upon
@@ -336,13 +343,13 @@ auto MediaStreamTrack::takePhoto(PhotoSettings&& settings) -> Ref<TakePhotoPromi
         // then reject p with a new DOMException whose name is UnknownError, and
         // abort these steps.
         if (!result)
-            return TakePhotoPromise::createAndReject(Exception { ExceptionCode::UnknownError, WTFMove(result.error()) });
+            return TakePhotoPromise::createAndReject(Exception { ExceptionCode::UnknownError, WTF::move(result.error()) });
 
         RefPtr context = protectedThis->scriptExecutionContext();
         if (!context || context->activeDOMObjectsAreStopped() || protectedThis->m_ended)
             return TakePhotoPromise::createAndReject(Exception { ExceptionCode::OperationError, "Track has ended"_s });
 
-        return TakePhotoPromise::createAndResolve(WTFMove(result.value()));
+        return TakePhotoPromise::createAndResolve(WTF::move(result.value()));
     });
 }
 
@@ -357,13 +364,13 @@ auto MediaStreamTrack::getPhotoCapabilities() -> Ref<PhotoCapabilitiesPromise>
         // asynchronously), then reject p with a new DOMException whose name is OperationError, and
         // abort these steps.
         if (!result)
-            return PhotoCapabilitiesPromise::createAndReject(Exception { ExceptionCode::UnknownError, WTFMove(result.error()) });
+            return PhotoCapabilitiesPromise::createAndReject(Exception { ExceptionCode::UnknownError, WTF::move(result.error()) });
 
         RefPtr context = protectedThis->scriptExecutionContext();
         if (!context || context->activeDOMObjectsAreStopped() || protectedThis->m_ended)
             return PhotoCapabilitiesPromise::createAndReject(Exception { ExceptionCode::OperationError, "Track has ended"_s });
 
-        return PhotoCapabilitiesPromise::createAndResolve(WTFMove(result.value()));
+        return PhotoCapabilitiesPromise::createAndResolve(WTF::move(result.value()));
     });
 }
 
@@ -378,13 +385,13 @@ auto MediaStreamTrack::getPhotoSettings() -> Ref<PhotoSettingsPromise>
         // asynchronously), then reject p with a new DOMException whose name is OperationError, and
         // abort these steps.
         if (!result)
-            return PhotoSettingsPromise::createAndReject(Exception { ExceptionCode::UnknownError, WTFMove(result.error()) });
+            return PhotoSettingsPromise::createAndReject(Exception { ExceptionCode::UnknownError, WTF::move(result.error()) });
 
         RefPtr context = protectedThis->scriptExecutionContext();
         if (!context || context->activeDOMObjectsAreStopped() || protectedThis->m_ended)
             return PhotoSettingsPromise::createAndReject(Exception { ExceptionCode::OperationError, "Track has ended"_s });
 
-        return PhotoSettingsPromise::createAndResolve(WTFMove(result.value()));
+        return PhotoSettingsPromise::createAndResolve(WTF::move(result.value()));
     });
 }
 
@@ -405,10 +412,10 @@ void MediaStreamTrack::applyConstraints(const std::optional<MediaTrackConstraint
         return;
     }
 
-    m_private->applyConstraints(createMediaConstraints(constraints), [this, protectedThis = Ref { *this }, constraints, promise = WTFMove(promise)](auto&& error) mutable {
-        queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [error = WTFMove(error), constraints, promise = WTFMove(promise)](auto& track) mutable {
+    m_private->applyConstraints(createMediaConstraints(constraints), [this, protectedThis = Ref { *this }, constraints, promise = WTF::move(promise)](auto&& error) mutable {
+        queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [error = WTF::move(error), constraints, promise = WTF::move(promise)](auto& track) mutable {
         if (error) {
-                promise.rejectType<IDLInterface<OverconstrainedError>>(OverconstrainedError::create(error->invalidConstraint, WTFMove(error->message)));
+                promise.rejectType<IDLInterface<OverconstrainedError>>(OverconstrainedError::create(error->invalidConstraint, WTF::move(error->message)));
             return;
         }
 
@@ -554,7 +561,7 @@ void MediaStreamTrack::trackMutedChanged(MediaStreamTrackPrivate&)
     if (m_shouldFireMuteEventImmediately)
         updateMuted();
     else {
-        queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [updateMuted = WTFMove(updateMuted)](auto&) {
+        queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [updateMuted = WTF::move(updateMuted)](auto&) {
             updateMuted();
         });
     }
@@ -645,14 +652,14 @@ UniqueRef<MediaStreamTrackDataHolder> MediaStreamTrack::detach()
 
 Ref<MediaStreamTrack> MediaStreamTrack::create(ScriptExecutionContext& context, UniqueRef<MediaStreamTrackDataHolder>&& dataHolder)
 {
-    auto privateTrack = MediaStreamTrackPrivate::create(Logger::create(&context), WTFMove(dataHolder), [identifier = context.identifier()](Function<void()>&& task) {
-        ScriptExecutionContext::postTaskTo(identifier, [task = WTFMove(task)] (auto&) mutable {
+    auto privateTrack = MediaStreamTrackPrivate::create(Logger::create(&context), WTF::move(dataHolder), [identifier = context.identifier()](Function<void()>&& task) {
+        ScriptExecutionContext::postTaskTo(identifier, [task = WTF::move(task)] (auto&) mutable {
             task();
         });
     });
 
     bool isEnded = privateTrack->ended();
-    Ref track = MediaStreamTrack::create(context, WTFMove(privateTrack), RegisterCaptureTrackToOwner::No);
+    Ref track = MediaStreamTrack::create(context, WTF::move(privateTrack), RegisterCaptureTrackToOwner::No);
     if (isEnded) {
         track->m_ended = true;
         track->m_readyState = State::Ended;
@@ -671,7 +678,7 @@ RefPtr<MediaSessionManagerInterface> MediaStreamTrack::mediaSessionManager() con
     if (!page)
         return nullptr;
 
-    return &page->mediaSessionManager();
+    return page->mediaSessionManager();
 }
 
 ScriptExecutionContext* MediaStreamTrack::scriptExecutionContext() const

@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "LocalFrameViewLayoutContext.h"
+#include <WebCore/LocalFrameViewLayoutContext.h>
 #include <wtf/CheckedPtr.h>
 
 namespace WebCore {
@@ -36,7 +36,7 @@ public:
     TextBoxTrimmer(const RenderBlockFlow& blockContainer, const RenderBlockFlow& lastFormattedLineRoot);
     ~TextBoxTrimmer();
 
-    static RenderBlockFlow* lastInlineFormattingContextRootForTrimEnd(const RenderBlockFlow& blockContainer);
+    static CheckedPtr<RenderBlockFlow> lastInlineFormattingContextRootForTrimEnd(const RenderBlockFlow& blockContainer);
 
 private:
     void adjustTextBoxTrimStatusBeforeLayout(const RenderBlockFlow* lastFormattedLineRoot);
@@ -46,6 +46,16 @@ private:
     CheckedPtr<const RenderBlockFlow> m_blockContainer;
     std::optional<LocalFrameViewLayoutContext::TextBoxTrim> m_previousTextBoxTrimStatus { };
     bool m_shouldRestoreTextBoxTrimStatus { false };
+};
+
+class TextBoxTrimStartDisabler {
+public:
+    TextBoxTrimStartDisabler(const RenderBox&);
+    ~TextBoxTrimStartDisabler();
+
+private:
+    CheckedPtr<const RenderBox> m_renderBox;
+    std::optional<LocalFrameViewLayoutContext::TextBoxTrim> m_previousTextBoxTrimStatus { };
 };
 
 }

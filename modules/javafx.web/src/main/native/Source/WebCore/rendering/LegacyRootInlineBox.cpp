@@ -36,19 +36,20 @@
 #include "RenderInline.h"
 #include "RenderLayoutState.h"
 #include "RenderView.h"
-#include "StyleLineBoxContain.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(LegacyRootInlineBox);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(LegacyRootInlineBox);
 
 struct SameSizeAsLegacyRootInlineBox : LegacyInlineFlowBox, CanMakeWeakPtr<LegacyRootInlineBox>, CanMakeCheckedPtr<SameSizeAsLegacyRootInlineBox> {
-    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(SameSizeAsLegacyRootInlineBox);
+    WTF_MAKE_STRUCT_TZONE_ALLOCATED(SameSizeAsLegacyRootInlineBox);
     WTF_STRUCT_OVERRIDE_DELETE_FOR_CHECKED_PTR(SameSizeAsLegacyRootInlineBox);
 
     int layoutUnits[4];
 };
+
+WTF_MAKE_STRUCT_TZONE_ALLOCATED_IMPL(SameSizeAsLegacyRootInlineBox);
 
 static_assert(sizeof(LegacyRootInlineBox) == sizeof(SameSizeAsLegacyRootInlineBox), "LegacyRootInlineBox should stay small");
 #if !ASSERT_ENABLED

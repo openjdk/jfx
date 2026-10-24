@@ -30,8 +30,10 @@
 #include "ColorSerialization.h"
 #include "ContainerNodeInlines.h"
 #include "Document.h"
+#include "DocumentView.h"
 #include "ElementInlines.h"
 #include "FrameSelection.h"
+#include "GraphicsLayer.h"
 #include "HTMLElement.h"
 #include "HTMLNames.h"
 #include "HTMLSpanElement.h"
@@ -45,6 +47,7 @@
 #include "LocalFrame.h"
 #include "LocalFrameView.h"
 #include "Logging.h"
+#include "NodeInlines.h"
 #include "PrintContext.h"
 #include "PseudoElement.h"
 #include "RemoteFrame.h"
@@ -78,6 +81,7 @@
 #include "ScriptDisallowedScope.h"
 #include "ShadowRoot.h"
 #include "StylePropertiesInlines.h"
+#include "StylePrimitiveKeyword+Logging.h"
 #include "StylePrimitiveNumericTypes+Logging.h"
 #include <wtf/HexNumber.h>
 #include <wtf/Vector.h>
@@ -195,8 +199,8 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
     if (behavior.contains(RenderAsTextFlag::ShowAddresses))
         ts << ' ' << &o;
 
-    if (o.style().usedZIndex()) // FIXME: This should use !hasAutoUsedZIndex().
-        ts << " zI: "_s << o.style().usedZIndex();
+    if (auto value = o.style().usedZIndex().tryValue(); value && value->value) // FIXME: This should log even when value->value is zero.
+        ts << " zI: "_s << value->value;
 
     if (o.node()) {
         String tagName = getTagName(o.node());
@@ -253,28 +257,28 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
             ts << ' ' << quoteAndEscapeNonPrintables(control->fileTextValue());
 
         if (renderElement->parent()) {
-            Color color = renderElement->style().visitedDependentColor(CSSPropertyColor);
-            if (!equalIgnoringSemanticColor(renderElement->parent()->style().visitedDependentColor(CSSPropertyColor), color))
+            auto color = renderElement->style().visitedDependentColor();
+            if (!equalIgnoringSemanticColor(renderElement->parent()->style().visitedDependentColor(), color))
                 ts << " [color="_s << serializationForRenderTreeAsText(color) << ']';
 
             // Do not dump invalid or transparent backgrounds, since that is the default.
-            Color backgroundColor = renderElement->style().visitedDependentColor(CSSPropertyBackgroundColor);
-            if (!equalIgnoringSemanticColor(renderElement->parent()->style().visitedDependentColor(CSSPropertyBackgroundColor), backgroundColor)
+            auto backgroundColor = renderElement->style().visitedDependentBackgroundColor();
+            if (!equalIgnoringSemanticColor(renderElement->parent()->style().visitedDependentBackgroundColor(), backgroundColor)
                 && backgroundColor != Color::transparentBlack)
                 ts << " [bgcolor="_s << serializationForRenderTreeAsText(backgroundColor) << ']';
 
-            Color textFillColor = renderElement->style().visitedDependentColor(CSSPropertyWebkitTextFillColor);
-            if (!equalIgnoringSemanticColor(renderElement->parent()->style().visitedDependentColor(CSSPropertyWebkitTextFillColor), textFillColor)
+            auto textFillColor = renderElement->style().visitedDependentTextFillColor();
+            if (!equalIgnoringSemanticColor(renderElement->parent()->style().visitedDependentTextFillColor(), textFillColor)
                 && textFillColor != color && textFillColor != Color::transparentBlack)
                 ts << " [textFillColor="_s << serializationForRenderTreeAsText(textFillColor) << ']';
 
-            Color textStrokeColor = renderElement->style().visitedDependentColor(CSSPropertyWebkitTextStrokeColor);
-            if (!equalIgnoringSemanticColor(renderElement->parent()->style().visitedDependentColor(CSSPropertyWebkitTextStrokeColor), textStrokeColor)
+            auto textStrokeColor = renderElement->style().visitedDependentTextStrokeColor();
+            if (!equalIgnoringSemanticColor(renderElement->parent()->style().visitedDependentTextStrokeColor(), textStrokeColor)
                 && textStrokeColor != color && textStrokeColor != Color::transparentBlack)
                 ts << " [textStrokeColor="_s << serializationForRenderTreeAsText(textStrokeColor) << ']';
 
             if (renderElement->parent()->style().textStrokeWidth() != renderElement->style().textStrokeWidth() && renderElement->style().textStrokeWidth().isPositive())
-                ts << " [textStrokeWidth="_s << Style::evaluate(renderElement->style().textStrokeWidth()) << ']';
+                ts << " [textStrokeWidth="_s << Style::evaluate<float>(renderElement->style().textStrokeWidth(), renderElement->style().usedZoomForLength()) << ']';
         }
 
         auto* box = dynamicDowncast<RenderBoxModelObject>(o);
@@ -285,7 +289,7 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
         LayoutUnit borderRight = box->borderRight();
         LayoutUnit borderBottom = box->borderBottom();
         LayoutUnit borderLeft = box->borderLeft();
-        bool overridden = renderElement->style().borderImage().overridesBorderWidths();
+        bool overridden = renderElement->style().borderImageWidth().overridesBorderWidths();
         if (box->isFieldset()) {
             const auto& block = downcast<RenderBlock>(*box);
             switch (renderElement->writingMode().blockDirection()) {
@@ -305,34 +309,33 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
         if (borderTop || borderRight || borderBottom || borderLeft) {
             ts << " [border:"_s;
 
-            auto printBorder = [&] (const LayoutUnit& width, const BorderStyle& style, const Style::Color& color) {
+            auto printBorder = [&] (const LayoutUnit& width, const BorderStyle& style, const Color& resolvedColor) {
                 if (!width)
                     ts << " none"_s;
             else {
                     ts << " ("_s << width << "px "_s;
                     printBorderStyle(ts, style);
-                    auto resolvedColor = renderElement->style().colorResolvingCurrentColor(color);
                     ts << serializationForRenderTreeAsText(resolvedColor) << ')';
             }
 
             };
 
             BorderValue prevBorder = renderElement->style().borderTop();
-            printBorder(borderTop, renderElement->style().borderTopStyle(), renderElement->style().borderTopColor());
+            printBorder(borderTop, renderElement->style().borderTopStyle(), renderElement->style().borderTopColorResolvingCurrentColor());
 
             if (renderElement->style().borderRight() != prevBorder || (overridden && borderRight != borderTop)) {
                 prevBorder = renderElement->style().borderRight();
-                printBorder(borderRight, renderElement->style().borderRightStyle(), renderElement->style().borderRightColor());
+                printBorder(borderRight, renderElement->style().borderRightStyle(), renderElement->style().borderRightColorResolvingCurrentColor());
             }
 
             if (renderElement->style().borderBottom() != prevBorder || (overridden && borderBottom != borderRight)) {
                 prevBorder = renderElement->style().borderBottom();
-                printBorder(borderBottom, renderElement->style().borderBottomStyle(), renderElement->style().borderBottomColor());
+                printBorder(borderBottom, renderElement->style().borderBottomStyle(), renderElement->style().borderBottomColorResolvingCurrentColor());
             }
 
             if (renderElement->style().borderLeft() != prevBorder || (overridden && borderLeft != borderBottom)) {
                 prevBorder = renderElement->style().borderLeft();
-                printBorder(borderLeft, renderElement->style().borderLeftStyle(), renderElement->style().borderLeftColor());
+                printBorder(borderLeft, renderElement->style().borderLeftStyle(), renderElement->style().borderLeftColorResolvingCurrentColor());
                 }
             ts << ']';
         }
@@ -461,16 +464,18 @@ void writeDebugInfo(TextStream& ts, const RenderObject& object, OptionSet<Render
     }
 }
 
-void write(TextStream& ts, const RenderObject& o, OptionSet<RenderAsTextFlag> behavior)
+static inline void writeTextRuns(TextStream& ts, auto& textRenderer)
 {
-    auto writeTextRun = [&] (auto& textRenderer, auto& textRun) {
+    auto writeTextRun = [&] (auto& textRun) {
+        ts << indent;
+
         auto rect = textRun.visualRectIgnoringBlockDirection();
         int x = rect.x();
         int y = rect.y();
         // FIXME: Use non-logical width. webkit.org/b/206809.
         int logicalWidth = ceilf(rect.x() + (textRun.isHorizontal() ? rect.width() : rect.height())) - x;
         // FIXME: Table cell adjustment is temporary until results can be updated.
-        if (auto* tableCell = dynamicDowncast<RenderTableCell>(*o.containingBlock()))
+        if (auto* tableCell = dynamicDowncast<RenderTableCell>(*textRenderer.containingBlock()))
             y -= floorToInt(tableCell->intrinsicPaddingBefore());
 
         ts << "text run at ("_s << x << ',' << y << ") width "_s << logicalWidth;
@@ -483,69 +488,77 @@ void write(TextStream& ts, const RenderObject& o, OptionSet<RenderAsTextFlag> be
         ts << '\n';
     };
 
+    for (auto& run : InlineIterator::textBoxesFor(textRenderer))
+        writeTextRun(run);
+}
 
-    if (auto* svgShape = dynamicDowncast<LegacyRenderSVGShape>(o)) {
+static inline void writeSVGRenderer(TextStream& ts, const RenderObject& renderer, OptionSet<RenderAsTextFlag> behavior)
+{
+    if (auto* svgShape = dynamicDowncast<LegacyRenderSVGShape>(renderer)) {
         write(ts, *svgShape, behavior);
         return;
     }
-    if (auto* svgGradientStop = dynamicDowncast<RenderSVGGradientStop>(o)) {
+    if (auto* svgGradientStop = dynamicDowncast<RenderSVGGradientStop>(renderer)) {
         writeSVGGradientStop(ts, *svgGradientStop, behavior);
         return;
     }
-    if (auto* svgResourceContainer = dynamicDowncast<LegacyRenderSVGResourceContainer>(o)) {
+    if (auto* svgResourceContainer = dynamicDowncast<LegacyRenderSVGResourceContainer>(renderer)) {
         writeSVGResourceContainer(ts, *svgResourceContainer, behavior);
         return;
     }
-    if (auto* svgContainer = dynamicDowncast<LegacyRenderSVGContainer>(o)) {
+    if (auto* svgContainer = dynamicDowncast<LegacyRenderSVGContainer>(renderer)) {
         writeSVGContainer(ts, *svgContainer, behavior);
         return;
     }
-    if (auto* svgRoot = dynamicDowncast<LegacyRenderSVGRoot>(o)) {
+    if (auto* svgRoot = dynamicDowncast<LegacyRenderSVGRoot>(renderer)) {
         write(ts, *svgRoot, behavior);
         return;
     }
-    if (auto* text = dynamicDowncast<RenderSVGText>(o)) {
+    if (auto* text = dynamicDowncast<RenderSVGText>(renderer)) {
         writeSVGText(ts, *text, behavior);
         return;
     }
-    if (auto* inlineText = dynamicDowncast<RenderSVGInlineText>(o)) {
+    if (auto* inlineText = dynamicDowncast<RenderSVGInlineText>(renderer)) {
         writeSVGInlineText(ts, *inlineText, behavior);
         return;
     }
-    if (auto* svgImage = dynamicDowncast<LegacyRenderSVGImage>(o)) {
+    if (auto* svgImage = dynamicDowncast<LegacyRenderSVGImage>(renderer)) {
         writeSVGImage(ts, *svgImage, behavior);
+        return;
+    }
+}
+
+void write(TextStream& ts, const RenderObject& renderer, OptionSet<RenderAsTextFlag> behavior)
+{
+
+    if (is<LegacyRenderSVGShape>(renderer) || is<RenderSVGGradientStop>(renderer) || is<LegacyRenderSVGResourceContainer>(renderer)
+        || is<LegacyRenderSVGContainer>(renderer) || is<LegacyRenderSVGRoot>(renderer) || is<RenderSVGText>(renderer)
+        || is<RenderSVGInlineText>(renderer) || is<LegacyRenderSVGImage>(renderer)) {
+        writeSVGRenderer(ts, renderer, behavior);
         return;
     }
 
     ts << indent;
-
-    RenderTreeAsText::writeRenderObject(ts, o, behavior);
+    RenderTreeAsText::writeRenderObject(ts, renderer, behavior);
     ts << '\n';
 
     TextStream::IndentScope indentScope(ts);
-
-    if (auto* text = dynamicDowncast<RenderText>(o)) {
-        for (auto& run : InlineIterator::textBoxesFor(*text)) {
-            ts << indent;
-            writeTextRun(*text, run);
+    if (auto* textRenderer = dynamicDowncast<RenderText>(renderer)) {
+        writeTextRuns(ts, *textRenderer);
+        return;
         }
-    } else {
-        for (auto& child : childrenOfType<RenderObject>(downcast<RenderElement>(o))) {
+
+    for (auto& child : childrenOfType<RenderObject>(downcast<RenderElement>(renderer))) {
             if (child.hasLayer())
                 continue;
             write(ts, child, behavior);
         }
-    }
 
-    if (auto* renderWidget = dynamicDowncast<RenderWidget>(o)) {
-        if (auto* widget = renderWidget->widget()) {
-            if (auto* frameView = dynamicDowncast<FrameView>(widget))
-                frameView->writeRenderTreeAsText(ts, behavior);
-        }
-    }
+    if (auto* renderWidget = dynamicDowncast<RenderWidget>(renderer); renderWidget && renderWidget->widget() && is<FrameView>(renderWidget->widget()))
+        dynamicDowncast<FrameView>(renderWidget->widget())->writeRenderTreeAsText(ts, behavior);
 
-    if  (is<RenderSVGModelObject>(o) || is<RenderSVGRoot>(o))
-        writeResources(ts, o, behavior);
+    if (is<RenderSVGModelObject>(renderer) || is<RenderSVGRoot>(renderer))
+        writeResources(ts, renderer, behavior);
 }
 
 enum LayerPaintPhase {
@@ -656,21 +669,19 @@ static void writeLayers(TextStream& ts, const RenderLayer& rootLayer, RenderLaye
     }
 
     // Calculate the clip rects we should use.
-    LayoutRect layerBounds;
-    ClipRect damageRect;
-    ClipRect clipRectToApply;
     LayoutSize offsetFromRoot = layer.offsetFromAncestor(&rootLayer);
-    layer.calculateRects(RenderLayer::ClipRectsContext(&rootLayer, PaintingClipRects, RenderLayer::clipRectTemporaryOptions), paintDirtyRect, layerBounds, damageRect, clipRectToApply, offsetFromRoot);
+    RenderLayer::ClipRectsContext clipRectsContext(&rootLayer, PaintingClipRects, RenderLayer::clipRectTemporaryOptions);
+    auto rects = layer.calculateRects(clipRectsContext, offsetFromRoot, paintDirtyRect);
 
     // Ensure our lists are up-to-date.
     layer.updateLayerListsIfNeeded();
     layer.updateDescendantDependentFlags();
 
-    bool shouldPaint = (behavior.contains(RenderAsTextFlag::ShowAllLayers)) ? true : layer.intersectsDamageRect(layerBounds, damageRect.rect(), &rootLayer, layer.offsetFromAncestor(&rootLayer));
+    bool shouldPaint = (behavior.contains(RenderAsTextFlag::ShowAllLayers)) ? true : layer.intersectsDamageRect(rects.layerBounds(), rects.dirtyBackgroundRect().rect(), &rootLayer, layer.offsetFromAncestor(&rootLayer));
     auto negativeZOrderLayers = layer.negativeZOrderLayers();
     bool paintsBackgroundSeparately = negativeZOrderLayers.size() > 0;
     if (shouldPaint && paintsBackgroundSeparately) {
-        writeLayer(ts, layer, layerBounds, damageRect.rect(), clipRectToApply.rect(), LayerPaintPhaseBackground, behavior);
+        writeLayer(ts, layer, rects.layerBounds(), rects.dirtyBackgroundRect().rect(), rects.dirtyForegroundRect().rect(), LayerPaintPhaseBackground, behavior);
         writeLayerRenderers(ts, layer, LayerPaintPhaseBackground, behavior);
     }
 
@@ -688,7 +699,7 @@ static void writeLayers(TextStream& ts, const RenderLayer& rootLayer, RenderLaye
     }
 
     if (shouldPaint) {
-        writeLayer(ts, layer, layerBounds, damageRect.rect(), clipRectToApply.rect(), paintsBackgroundSeparately ? LayerPaintPhaseForeground : LayerPaintPhaseAll, behavior);
+        writeLayer(ts, layer, rects.layerBounds(), rects.dirtyBackgroundRect().rect(), rects.dirtyForegroundRect().rect(), paintsBackgroundSeparately ? LayerPaintPhaseForeground : LayerPaintPhaseAll, behavior);
 
         if (behavior.contains(RenderAsTextFlag::ShowLayerFragments)) {
             LayerFragments layerFragments;
@@ -698,7 +709,7 @@ static void writeLayers(TextStream& ts, const RenderLayer& rootLayer, RenderLaye
                 TextStream::IndentScope indentScope(ts, 2);
                 for (unsigned i = 0; i < layerFragments.size(); ++i) {
                     const auto& fragment = layerFragments[i];
-                    ts << indent << " fragment "_s << i << ": bounds in layer "_s << fragment.layerBounds << " fragment bounds "_s << fragment.boundingBox << '\n';
+                    ts << indent << " fragment "_s << i << ": bounds in layer "_s << fragment.layerBounds() << " fragment bounds "_s << fragment.boundingBox() << '\n';
                 }
             }
         }
@@ -829,9 +840,9 @@ String externalRepresentation(LocalFrame* frame, OptionSet<RenderAsTextFlag> beh
     if (!renderer)
         return String();
 
-    PrintContext printContext(frame);
+    Ref printContext = PrintContext::create(frame);
     if (behavior.contains(RenderAsTextFlag::PrintingMode))
-        printContext.begin(renderer->width());
+        printContext->begin(renderer->width());
 
     return externalRepresentation(*renderer, behavior);
 }

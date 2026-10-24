@@ -44,9 +44,6 @@ template<typename> class ExceptionOr;
 
 class FontFace final : public RefCounted<FontFace>, public ActiveDOMObject, public CSSFontFaceClient {
 public:
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
-
     struct Descriptors {
         String style;
         String weight;
@@ -57,13 +54,15 @@ public:
         String sizeAdjust;
     };
 
-    using RefCounted::ref;
-    using RefCounted::deref;
-
     using Source = Variant<String, RefPtr<JSC::ArrayBuffer>, RefPtr<JSC::ArrayBufferView>>;
     static Ref<FontFace> create(ScriptExecutionContext&, const String& family, Source&&, const Descriptors&);
     static Ref<FontFace> create(ScriptExecutionContext*, CSSFontFace&);
     virtual ~FontFace();
+
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+    USING_CAN_MAKE_WEAKPTR(CSSFontFaceClient);
 
     ExceptionOr<void> setFamily(const String&);
     ExceptionOr<void> setStyle(ScriptExecutionContext&, const String&);

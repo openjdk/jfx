@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "FontRanges.h"
+#include <WebCore/FontRanges.h>
 #include <wtf/Forward.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
 

@@ -31,8 +31,11 @@
 #include "HeapInlines.h"
 #include "JITWorklist.h"
 #include "VM.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(JITWorklistThread);
 
 class JITWorklistThread::WorkScope final {
 public:
@@ -40,22 +43,22 @@ public:
         : m_thread(thread)
         , m_tier(thread.m_plan->tier())
     {
-        RELEASE_ASSERT(m_thread.m_plan);
+        RELEASE_ASSERT(m_thread->m_plan);
     }
 
     ~WorkScope()
     {
-        Locker locker { *m_thread.m_worklist.m_lock };
-        m_thread.m_plan = nullptr;
-        m_thread.m_worklist.m_ongoingCompilationsPerTier[static_cast<unsigned>(m_tier)]--;
+        Locker locker { *m_thread->m_worklist.m_lock };
+        m_thread->m_plan = nullptr;
+        m_thread->m_worklist.m_ongoingCompilationsPerTier[static_cast<unsigned>(m_tier)]--;
 
-        ASSERT(m_thread.m_planLoad);
-        ASSERT(m_thread.m_worklist.m_totalLoad >= m_thread.m_planLoad);
-        m_thread.m_worklist.m_totalLoad -= m_thread.m_planLoad;
-        m_thread.m_planLoad = 0;
+        ASSERT(m_thread->m_planLoad);
+        ASSERT(m_thread->m_worklist.m_totalLoad >= m_thread->m_planLoad);
+        m_thread->m_worklist.m_totalLoad -= m_thread->m_planLoad;
+        m_thread->m_planLoad = 0;
 
-        ASSERT(!m_thread.m_worklist.m_totalLoad ==
-            (!m_thread.m_worklist.queueLength(locker) && !m_thread.m_worklist.totalOngoingCompilations(locker)));
+        ASSERT(!m_thread->m_worklist.m_totalLoad ==
+            (!m_thread->m_worklist.queueLength(locker) && !m_thread->m_worklist.totalOngoingCompilations(locker)));
     }
 
 private:
@@ -63,7 +66,7 @@ private:
     // Must be constructed before we allocate anything using SequesteredArenaMalloc
     ArenaLifetime m_saLifetime { };
 #endif
-    JITWorklistThread& m_thread;
+    CheckedRef<JITWorklistThread> m_thread;
     JITPlan::Tier m_tier;
 };
 
@@ -152,7 +155,7 @@ auto JITWorklistThread::work() -> WorkResult
         }
 
         RELEASE_ASSERT(!m_plan->vm()->heap.worldIsStopped());
-        m_worklist.m_readyPlans.append(WTFMove(m_plan));
+        m_worklist.m_readyPlans.append(m_plan.releaseNonNull());
         m_worklist.m_planCompiledOrCancelled.notifyAll();
     }
 

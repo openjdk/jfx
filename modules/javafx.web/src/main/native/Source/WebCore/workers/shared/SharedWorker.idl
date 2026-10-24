@@ -33,3 +33,4 @@ interface SharedWorker : EventTarget {
   readonly attribute MessagePort port;
 };
 SharedWorker includes AbstractWorker;
+

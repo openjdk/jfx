@@ -25,10 +25,12 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(JIT)
 
-#include "DOMJITEffect.h"
-#include "Snippet.h"
+#include <JavaScriptCore/DOMJITEffect.h>
+#include <JavaScriptCore/Snippet.h>
 
 namespace JSC { namespace DOMJIT {
 

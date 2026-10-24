@@ -35,16 +35,16 @@ namespace WebCore {
 
 inline CSSCrossfadeValue::CSSCrossfadeValue(Ref<CSSValue>&& fromValueOrNone, Ref<CSSValue>&& toValueOrNone, Ref<CSSPrimitiveValue>&& percentageValue, bool isPrefixed)
     : CSSValue { ClassType::Crossfade }
-    , m_fromValueOrNone { WTFMove(fromValueOrNone) }
-    , m_toValueOrNone { WTFMove(toValueOrNone) }
-    , m_percentageValue { WTFMove(percentageValue) }
+    , m_fromValueOrNone { WTF::move(fromValueOrNone) }
+    , m_toValueOrNone { WTF::move(toValueOrNone) }
+    , m_percentageValue { WTF::move(percentageValue) }
     , m_isPrefixed { isPrefixed }
 {
 }
 
 Ref<CSSCrossfadeValue> CSSCrossfadeValue::create(Ref<CSSValue>&& fromValueOrNone, Ref<CSSValue>&& toValueOrNone, Ref<CSSPrimitiveValue>&& percentageValue, bool isPrefixed)
 {
-    return adoptRef(*new CSSCrossfadeValue(WTFMove(fromValueOrNone), WTFMove(toValueOrNone), WTFMove(percentageValue), isPrefixed));
+    return adoptRef(*new CSSCrossfadeValue(WTF::move(fromValueOrNone), WTF::move(toValueOrNone), WTF::move(percentageValue), isPrefixed));
 }
 
 CSSCrossfadeValue::~CSSCrossfadeValue() = default;

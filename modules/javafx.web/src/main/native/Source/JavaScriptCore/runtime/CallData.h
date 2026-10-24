@@ -28,7 +28,7 @@
 
 #pragma once
 
-#include "NativeFunction.h"
+#include <JavaScriptCore/NativeFunction.h>
 #include <wtf/Forward.h>
 #include <wtf/NakedPtr.h>
 

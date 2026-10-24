@@ -50,6 +50,7 @@ public:
 
     const RenderStyle* style() const { ASSERT(!isDeleted()); return m_style.get(); }
     bool isDeleted() const { return HashTraits<std::unique_ptr<RenderStyle>>::isDeletedValue(m_style); }
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
 
     unsigned hash() const { return m_hash; }
 
@@ -66,12 +67,6 @@ inline bool operator==(const TextAutoSizingKey& a, const TextAutoSizingKey& b)
         return a.style() == b.style();
     return a.style()->equalForTextAutosizing(*b.style());
 }
-
-struct TextAutoSizingHash {
-    static unsigned hash(const TextAutoSizingKey& key) { return key.hash(); }
-    static bool equal(const TextAutoSizingKey& a, const TextAutoSizingKey& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = true;
-};
 
 struct TextAutoSizingHashTranslator {
     static unsigned hash(const RenderStyle& style)
@@ -106,7 +101,7 @@ public:
 private:
     void reset();
 
-    HashSet<RefPtr<Text>> m_autoSizedNodes;
+    HashSet<Ref<Text>> m_autoSizedNodes;
 };
 
 struct TextAutoSizingTraits : HashTraits<TextAutoSizingKey> {
@@ -125,7 +120,7 @@ public:
     void reset();
 
 private:
-    HashMap<TextAutoSizingKey, std::unique_ptr<TextAutoSizingValue>, TextAutoSizingHash, TextAutoSizingTraits> m_textNodes;
+    HashMap<TextAutoSizingKey, std::unique_ptr<TextAutoSizingValue>, DefaultHash<TextAutoSizingKey>, TextAutoSizingTraits> m_textNodes;
 };
 
 } // namespace WebCore

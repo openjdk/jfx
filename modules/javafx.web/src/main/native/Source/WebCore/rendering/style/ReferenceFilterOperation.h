@@ -41,7 +41,7 @@ class ReferenceFilterOperation final : public FilterOperation {
 public:
     static Ref<ReferenceFilterOperation> create(URL url, AtomString fragment)
     {
-        return adoptRef(*new ReferenceFilterOperation(WTFMove(url), WTFMove(fragment)));
+        return adoptRef(*new ReferenceFilterOperation(WTF::move(url), WTF::move(fragment)));
     }
     virtual ~ReferenceFilterOperation();
 
@@ -75,7 +75,7 @@ private:
     URL m_url;
     AtomString m_fragment;
 
-    std::unique_ptr<CachedSVGDocumentReference> m_cachedSVGDocumentReference;
+    const RefPtr<CachedSVGDocumentReference> m_cachedSVGDocumentReference;
 };
 
 } // Style

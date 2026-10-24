@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "Node.h"
-#include "StyleChange.h"
+#include <WebCore/Node.h>
+#include <WebCore/StyleChange.h>
 #include <wtf/HashMap.h>
 #include <wtf/ListHashSet.h>
 #include <wtf/TZoneMalloc.h>
@@ -56,7 +56,7 @@ struct TextUpdate {
     std::optional<std::unique_ptr<RenderStyle>> inheritedDisplayContentsStyle;
 };
 
-class Update final : public CanMakeCheckedPtr<Update> {
+class Update final : public CanMakeCheckedPtr<Update, WTF::DefaultedOperatorEqual::No, WTF::CheckedPtrDeleteCheckException::Yes> {
     WTF_MAKE_TZONE_ALLOCATED(Update);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(Update);
 public:
@@ -64,7 +64,7 @@ public:
     ~Update();
 
     const ListHashSet<RefPtr<ContainerNode>>& roots() const { return m_roots; }
-    ListHashSet<RefPtr<Element>> takeRebuildRoots() { return WTFMove(m_rebuildRoots); }
+    ListHashSet<RefPtr<Element>> takeRebuildRoots() { return WTF::move(m_rebuildRoots); }
 
     const ElementUpdate* elementUpdate(const Element&) const;
     ElementUpdate* elementUpdate(const Element&);
@@ -94,8 +94,8 @@ private:
     const Ref<Document> m_document;
     ListHashSet<RefPtr<ContainerNode>> m_roots;
     ListHashSet<RefPtr<Element>> m_rebuildRoots;
-    HashMap<RefPtr<const Element>, ElementUpdate> m_elements;
-    HashMap<RefPtr<const Text>, TextUpdate> m_texts;
+    HashMap<Ref<const Element>, ElementUpdate> m_elements;
+    HashMap<Ref<const Text>, TextUpdate> m_texts;
     std::unique_ptr<RenderStyle> m_initialContainingBlockUpdate;
 };
 

@@ -28,6 +28,9 @@
 
 #include "JSCInlines.h"
 #include "JSInternalFieldObjectImplInlines.h"
+#include "JSPromise.h"
+#include "JSPromiseReaction.h"
+#include "ObjectConstructor.h"
 
 namespace JSC {
 
@@ -68,5 +71,76 @@ void JSAsyncGenerator::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 }
 
 DEFINE_VISIT_CHILDREN(JSAsyncGenerator);
+
+void JSAsyncGenerator::enqueue(VM& vm, JSValue value, int32_t mode, JSPromise* promise)
+{
+    if (isQueueEmpty()) {
+        setResumeValue(vm, value);
+        setResumeMode(mode);
+        setResumePromise(vm, promise);
+    } else {
+        JSValue last = queue();
+        if (last.isNull()) {
+            JSPromiseReaction* item = JSPromiseReaction::create(
+                vm,
+                promise,
+                value,
+                jsNumber(mode),
+                jsUndefined(), // Will be set to self (prev)
+                nullptr // Will be set to self (next)
+            );
+            item->setNext(vm, item);
+            item->setContext(vm, item);
+            setQueue(vm, item);
+        } else {
+            JSPromiseReaction* tail = jsCast<JSPromiseReaction*>(last);
+            JSPromiseReaction* head = tail->next();
+            JSPromiseReaction* item = JSPromiseReaction::create(
+                vm,
+                promise,
+                value,
+                jsNumber(mode),
+                tail, // prev = old tail
+                head // next = head (to maintain circular)
+            );
+            tail->setNext(vm, item);
+            head->setContext(vm, item);
+            setQueue(vm, item);
+        }
+    }
+}
+
+std::tuple<JSValue, int32_t, JSPromise*> JSAsyncGenerator::dequeue(VM& vm)
+{
+    ASSERT(!isQueueEmpty());
+
+    JSValue value = resumeValue();
+    int32_t mode = resumeMode();
+    JSPromise* promise = jsCast<JSPromise*>(resumePromise());
+
+    JSValue last = queue();
+    if (last.isNull()) {
+        setResumeMode(static_cast<int32_t>(AsyncGeneratorResumeMode::Empty));
+        setResumeValue(vm, jsUndefined());
+        setResumePromise(vm, jsUndefined());
+    } else {
+        JSPromiseReaction* tail = jsCast<JSPromiseReaction*>(last);
+        JSPromiseReaction* head = tail->next();
+
+        setResumePromise(vm, head->promise());
+        setResumeValue(vm, head->onFulfilled());
+        setResumeMode(head->onRejected().asInt32());
+
+        if (head == tail)
+            setQueue(vm, jsNull());
+        else {
+            JSPromiseReaction* newHead = head->next();
+            newHead->setContext(vm, tail); // newHead.prev = tail
+            tail->setNext(vm, newHead);
+        }
+    }
+
+    return { value, mode, promise };
+}
 
 } // namespace JSC

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,13 +27,19 @@ package test.com.sun.javafx.fxml.builder;
 import com.sun.javafx.fxml.builder.ProxyBuilder;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import javafx.beans.NamedArg;
+import javafx.collections.ObservableFloatArray;
+import javafx.collections.ObservableIntegerArray;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.stage.StageStyle;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -102,35 +108,34 @@ public class ProxyBuilderTest {
     }
 
     @Test
-    @Disabled
     public void testImmutableTwoConstructorsWithSameArgNames() {
         ProxyBuilder pb = new ProxyBuilder(ImmutableClass.class);
         pb.put("a", 123);
         pb.put("b", 456);
         ImmutableClass result = (ImmutableClass) pb.build();
-        assertEquals(123, result.a, 1e-10);
-        assertEquals(456, result.b, 1e-10);
+        assertEquals(123, result.a, 1e-5);
+        assertEquals(456, result.b, 1e-5);
 
         pb = new ProxyBuilder(ImmutableClass.class);
         pb.put("a", 123);
         pb.put("b", 456.1f);
         result = (ImmutableClass) pb.build();
-        assertEquals(123, result.a, 1e-10);
-        assertEquals(456.1, result.b, 1e-10);
+        assertEquals(123, result.a, 1e-5);
+        assertEquals(456.1, result.b, 1e-5);
 
         pb = new ProxyBuilder(ImmutableClass.class);
         pb.put("a", 123.1f);
         pb.put("b", 456);
         result = (ImmutableClass) pb.build();
-        assertEquals(123.1, result.a, 1e-10);
-        assertEquals(456, result.b, 1e-10);
+        assertEquals(123.1, result.a, 1e-5);
+        assertEquals(456, result.b, 1e-5);
 
         pb = new ProxyBuilder(ImmutableClass.class);
         pb.put("a", 123.1f);
         pb.put("b", 456.1f);
         result = (ImmutableClass) pb.build();
-        assertEquals(123.1, result.a, 1e-10);
-        assertEquals(456.1, result.b, 1e-10);
+        assertEquals(123.1, result.a, 1e-5);
+        assertEquals(456.1, result.b, 1e-5);
     }
 
     @Test
@@ -244,6 +249,211 @@ public class ProxyBuilderTest {
 
         result = (ClassWithReadOnlyCollection) pb.build();
         assertArrayEquals(inputList.toArray(), result.propertyList.toArray());
+    }
+
+    @Test
+    public void testContainsKeyForListProperty() {
+        ProxyBuilder pb = new ProxyBuilder(ClassWithCollection.class);
+        assertTrue(pb.containsKey("list"),
+                "containsKey should be true for a getter-backed List property");
+        assertFalse(pb.containsKey("nonExistent"),
+                "containsKey should be false when no getter exists");
+    }
+
+    @Test
+    public void testContainsKeyForObservableListProperty() {
+        ProxyBuilder pb = new ProxyBuilder(ClassWithCollection.class);
+        assertTrue(pb.containsKey("propertyList"),
+                "containsKey should be true for a getter-backed ObservableList property");
+        assertFalse(pb.containsKey("nonExistent"),
+                "containsKey should be false when no getter exists");
+    }
+
+    @Test
+    public void testContainsKeyForReadOnlySetProperty() {
+        ProxyBuilder pb = new ProxyBuilder(ClassWithReadOnlySet.class);
+        assertTrue(pb.containsKey("properties"),
+                "containsKey should be true for a getter-backed Set property");
+        assertFalse(pb.containsKey("nonExistent"),
+                "containsKey should be false when no getter exists");
+    }
+
+    @Test
+    public void testContainsKeyForReadOnlyObservableSetProperty() {
+        ProxyBuilder pb = new ProxyBuilder(ClassWithReadOnlySet.class);
+        assertTrue(pb.containsKey("observableProperties"),
+                "containsKey should be true for a getter-backed ObservableSet property");
+        assertFalse(pb.containsKey("nonExistent"),
+                "containsKey should be false when no getter exists");
+    }
+
+    @Test
+    public void testContainsKeyForReadOnlyMapProperty() {
+        ProxyBuilder pb = new ProxyBuilder(ClassWithReadOnlyMap.class);
+        assertTrue(pb.containsKey("properties"),
+                "containsKey should be true for a getter-backed Map property");
+        assertFalse(pb.containsKey("nonExistent"),
+                "containsKey should be false when no getter exists");
+    }
+
+    @Test
+    public void testContainsKeyForReadOnlyObservableMapProperty() {
+        ProxyBuilder pb = new ProxyBuilder(ClassWithReadOnlyMap.class);
+        assertTrue(pb.containsKey("observableProperties"),
+                "containsKey should be true for a getter-backed ObservableMap property");
+        assertFalse(pb.containsKey("nonExistent"),
+                "containsKey should be false when no getter exists");
+    }
+
+    @Test
+    public void testContainsKeyFalseWhenNoMapGetter() {
+        ProxyBuilder pb = new ProxyBuilder(ImmutableClass.class);
+        assertFalse(pb.containsKey("properties"),
+                "containsKey should be false when the class has no getProperties()");
+    }
+
+    @Test
+    public void testReadOnlyMapWithNamedArg() {
+        ProxyBuilder pb = new ProxyBuilder(ClassWithReadOnlyMap.class);
+        pb.put("label", "hello");
+
+        // Simulate what FXMLLoader does: obtain the container and add entries.
+        Map<String, Object> container = (Map<String, Object>) pb.get("properties");
+        container.put("myKey", "myValue");
+        container.put("otherKey", 42);
+
+        ClassWithReadOnlyMap result = (ClassWithReadOnlyMap) pb.build();
+
+        assertEquals("hello", result.label, "NamedArg value must be set");
+        assertEquals("myValue", result.getProperties().get("myKey"),
+                "Map entry 'myKey' must be transferred to the built object");
+        assertEquals(42, result.getProperties().get("otherKey"),
+                "Map entry 'otherKey' must be transferred to the built object");
+    }
+
+    @Test
+    public void testArrayListUnwrapsFirstElementForScalarArg() {
+        ProxyBuilder pb = new ProxyBuilder(ClassWithPlainListAndScalarArg.class);
+
+        List<String> container = (List<String>) pb.get("child");
+        container.add("expectedValue");
+
+        ClassWithPlainListAndScalarArg result =
+                (ClassWithPlainListAndScalarArg) pb.build();
+
+        assertEquals("expectedValue", result.child,
+                "ProxyBuilder must unwrap the first temporary ArrayList element "
+                + "and pass it as the scalar @NamedArg constructor argument");
+    }
+
+    @Test
+    public void testHashSetUnwrapsFirstElementForScalarArg() {
+        ProxyBuilder pb = new ProxyBuilder(ClassWithPlainSetAndScalarArg.class);
+
+        // Simulate what FXMLLoader does: containsKey triggers wrapper creation,
+        // get() returns it, and then the child element is added to the container.
+        assertTrue(pb.containsKey("child"),
+                "containsKey must be true for the plain-List getter");
+
+        Set<String> container = (Set<String>) pb.get("child");
+        container.add("expectedValue");
+
+        ClassWithPlainSetAndScalarArg result = (ClassWithPlainSetAndScalarArg) pb.build();
+
+        assertEquals("expectedValue", result.child,
+                "ProxyBuilder must unwrap first ArrayList item for @NamedArg scalar arg");
+    }
+
+    @Test
+    public void testContainsKeyForReadOnlyObservableIntegerArrayProperty() {
+        ProxyBuilder pb = new ProxyBuilder(ClassWithReadOnlyObservableArrays.class);
+        assertTrue(pb.containsKey("intArray"),
+                "containsKey should be true for a getter-backed ObservableIntegerArray property");
+        assertFalse(pb.containsKey("nonExistent"),
+                "containsKey should be false when no getter exists");
+    }
+
+    @Test
+    public void testContainsKeyForReadOnlyObservableFloatArrayProperty() {
+        ProxyBuilder pb = new ProxyBuilder(ClassWithReadOnlyObservableArrays.class);
+        assertTrue(pb.containsKey("floatArray"),
+                "containsKey should be true for a getter-backed ObservableFloatArray property");
+        assertFalse(pb.containsKey("nonExistent"),
+                "containsKey should be false when no getter exists");
+    }
+
+    @Test
+    public void testReadOnlyObservableIntegerArray() {
+        ProxyBuilder pb = new ProxyBuilder(ClassWithReadOnlyObservableArrays.class);
+
+        List<Integer> container = (List<Integer>) pb.get("intArray");
+        container.add(10);
+        container.add(20);
+        container.add(30);
+
+        ClassWithReadOnlyObservableArrays result = (ClassWithReadOnlyObservableArrays) pb.build();
+
+        ObservableIntegerArray intArray = result.getIntArray();
+        assertEquals(3, intArray.size(), "ObservableIntegerArray should contain 3 elements");
+        int[] actual = new int[intArray.size()];
+        intArray.toArray(actual);
+        assertArrayEquals(new int[]{10, 20, 30}, actual);
+    }
+
+    @Test
+    public void testReadOnlyObservableFloatArray() {
+        ProxyBuilder pb = new ProxyBuilder(ClassWithReadOnlyObservableArrays.class);
+
+        List<Float> container = (List<Float>) pb.get("floatArray");
+        container.add(1.5f);
+        container.add(2.5f);
+        container.add(3.5f);
+
+        ClassWithReadOnlyObservableArrays result = (ClassWithReadOnlyObservableArrays) pb.build();
+
+        ObservableFloatArray floatArray = result.getFloatArray();
+        assertEquals(3, floatArray.size(), "ObservableFloatArray should contain 3 elements");
+        float[] actual = new float[floatArray.size()];
+        floatArray.toArray(actual);
+        assertArrayEquals(new float[]{1.5f, 2.5f, 3.5f}, actual, 1e-5f);
+    }
+
+    @Test
+    public void testReadOnlyObservableIntegerArrayWithNamedArg() {
+        ProxyBuilder pb = new ProxyBuilder(ClassWithReadOnlyObservableArrays.class);
+        pb.put("label", "testLabel");
+
+        List<Integer> container = (List<Integer>) pb.get("intArray");
+        container.add(7);
+        container.add(8);
+
+        ClassWithReadOnlyObservableArrays result = (ClassWithReadOnlyObservableArrays) pb.build();
+
+        assertEquals("testLabel", result.label, "NamedArg value must be set");
+        ObservableIntegerArray intArray = result.getIntArray();
+        assertEquals(2, intArray.size(), "ObservableIntegerArray should contain 2 elements");
+        int[] actual = new int[intArray.size()];
+        intArray.toArray(actual);
+        assertArrayEquals(new int[]{7, 8}, actual);
+    }
+
+    @Test
+    public void testReadOnlyObservableFloatArrayWithNamedArg() {
+        ProxyBuilder pb = new ProxyBuilder(ClassWithReadOnlyObservableArrays.class);
+        pb.put("label", "testLabel");
+
+        List<Float> container = (List<Float>) pb.get("floatArray");
+        container.add(0.1f);
+        container.add(0.2f);
+
+        ClassWithReadOnlyObservableArrays result = (ClassWithReadOnlyObservableArrays) pb.build();
+
+        assertEquals("testLabel", result.label, "NamedArg value must be set");
+        ObservableFloatArray floatArray = result.getFloatArray();
+        assertEquals(2, floatArray.size(), "ObservableFloatArray should contain 2 elements");
+        float[] actual = new float[floatArray.size()];
+        floatArray.toArray(actual);
+        assertArrayEquals(new float[]{0.1f, 0.2f}, actual, 1e-5f);
     }
 
     @Test

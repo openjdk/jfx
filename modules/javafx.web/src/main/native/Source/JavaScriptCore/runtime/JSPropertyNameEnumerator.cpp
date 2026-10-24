@@ -34,7 +34,7 @@ namespace JSC {
 
 const ClassInfo JSPropertyNameEnumerator::s_info = { "JSPropertyNameEnumerator"_s, nullptr, nullptr, nullptr, CREATE_METHOD_TABLE(JSPropertyNameEnumerator) };
 
-JSPropertyNameEnumerator* JSPropertyNameEnumerator::tryCreate(VM& vm, Structure* structure, uint32_t indexedLength, uint32_t numberStructureProperties, PropertyNameArray&& propertyNames)
+JSPropertyNameEnumerator* JSPropertyNameEnumerator::tryCreate(VM& vm, Structure* structure, uint32_t indexedLength, uint32_t numberStructureProperties, PropertyNameArrayBuilder&& propertyNames)
 {
     unsigned propertyNamesSize = propertyNames.size();
     auto propertyNamesBufferSizeInBytes = CheckedUint32(propertyNamesSize) * sizeof(WriteBarrier<JSString>);
@@ -73,11 +73,11 @@ JSPropertyNameEnumerator::JSPropertyNameEnumerator(VM& vm, Structure* structure,
         m_flags |= JSPropertyNameEnumerator::GenericMode;
 }
 
-void JSPropertyNameEnumerator::finishCreation(VM& vm, RefPtr<PropertyNameArrayData>&& identifiers)
+void JSPropertyNameEnumerator::finishCreation(VM& vm, RefPtr<PropertyNameArray>&& identifiers)
 {
     Base::finishCreation(vm);
 
-    PropertyNameArrayData::PropertyNameVector& vector = identifiers->propertyNameVector();
+    PropertyNameArray::PropertyNameVector& vector = identifiers->propertyNameVector();
     ASSERT(m_endGenericPropertyIndex == vector.size());
     for (unsigned i = 0; i < vector.size(); ++i) {
         const Identifier& identifier = vector[i];
@@ -102,7 +102,7 @@ DEFINE_VISIT_CHILDREN(JSPropertyNameEnumerator);
 
 // FIXME: Assert that properties returned by getOwnPropertyNames() are reported enumerable by getOwnPropertySlot().
 // https://bugs.webkit.org/show_bug.cgi?id=219926
-void getEnumerablePropertyNames(JSGlobalObject* globalObject, JSObject* base, PropertyNameArray& propertyNames, uint32_t& indexedLength, uint32_t& structurePropertyCount)
+void getEnumerablePropertyNames(JSGlobalObject* globalObject, JSObject* base, PropertyNameArrayBuilder& propertyNames, uint32_t& indexedLength, uint32_t& structurePropertyCount)
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);

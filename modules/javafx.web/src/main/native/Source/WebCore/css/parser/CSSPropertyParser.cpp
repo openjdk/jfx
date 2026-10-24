@@ -42,6 +42,7 @@
 #include "CSSPrimitiveValue.h"
 #include "CSSPropertyParserConsumer+AngleDefinitions.h"
 #include "CSSPropertyParserConsumer+CSSPrimitiveValueResolver.h"
+#include "CSSPropertyParserConsumer+Color.h"
 #include "CSSPropertyParserConsumer+Ident.h"
 #include "CSSPropertyParserConsumer+Image.h"
 #include "CSSPropertyParserConsumer+IntegerDefinitions.h"
@@ -50,6 +51,7 @@
 #include "CSSPropertyParserConsumer+List.h"
 #include "CSSPropertyParserConsumer+NumberDefinitions.h"
 #include "CSSPropertyParserConsumer+PercentageDefinitions.h"
+#include "CSSPropertyParserConsumer+Primitives.h"
 #include "CSSPropertyParserConsumer+ResolutionDefinitions.h"
 #include "CSSPropertyParserConsumer+String.h"
 #include "CSSPropertyParserConsumer+TimeDefinitions.h"
@@ -59,17 +61,17 @@
 #include "CSSPropertyParsing.h"
 #include "CSSTokenizer.h"
 #include "CSSTransformListValue.h"
+#include "CSSURLValue.h"
 #include "CSSVariableParser.h"
 #include "CSSVariableReferenceValue.h"
 #include "CSSWideKeyword.h"
 #include "ComputedStyleDependencies.h"
 #include "StyleBuilder.h"
-#include "StyleBuilderConverter.h"
 #include "StyleCustomProperty.h"
+#include "StylePrimitiveNumericTypes+CSSValueConversion.h"
 #include "StylePropertyShorthand.h"
 #include "StylePropertyShorthandFunctions.h"
 #include "StyleRuleType.h"
-#include "TransformOperationsBuilder.h"
 #include <memory>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/ParsingUtilities.h>
@@ -110,6 +112,9 @@ static bool consumeViewTransitionDescriptor(CSSParserTokenRange&, const CSSParse
 
 // @position-try descriptors.
 static bool consumePositionTryDescriptor(CSSParserTokenRange&, const CSSParserContext&, CSSPropertyID, IsImportant, CSS::PropertyParserResult&);
+
+// @function descriptors.
+static bool consumeFunctionDescriptor(CSSParserTokenRange&, const CSSParserContext&, CSSPropertyID, CSS::PropertyParserResult&);
 
 // MARK: - CSSPropertyID parsing
 
@@ -220,6 +225,59 @@ static std::optional<CSSWideKeyword> consumeCSSWideKeyword(CSSParserTokenRange& 
     return keyword;
 }
 
+// MARK: - function value consumer
+
+static bool consumeFunctionArgument(CSSParserTokenRange& range, unsigned index, CSSPropertyID property, CSS::PropertyParserState& state, CSS::PropertyParserResult& result)
+{
+    auto argument = CSSPropertyParserHelpers::consumeArgument(range, index);
+    if (!argument)
+        return false;
+
+    const auto& context = state.context;
+    auto important = state.important;
+    auto ruleType = state.currentRule;
+
+    return consumeStyleProperty(*argument, context, property, important, ruleType, result);
+}
+
+static bool consumeInternalAutoBaseFunction(CSSParserTokenRange& range, CSSPropertyID property, CSS::PropertyParserState& state, CSS::PropertyParserResult& result)
+{
+    // -internal-auto-base() = -internal-auto-base( <auto value>, <base value> )
+
+    if (!state.context.cssInternalAutoBaseParsingEnabled)
+        return false;
+
+    if (range.peek().functionId() != CSSValueInternalAutoBase)
+        return false;
+
+    auto args = CSSPropertyParserHelpers::consumeFunction(range);
+
+    Vector<CSSProperty, 256> autoProperties;
+    CSS::PropertyParserResult autoResult { autoProperties };
+
+    if (!consumeFunctionArgument(args, 0, property, state, autoResult))
+        return false;
+
+    Vector<CSSProperty, 256> baseProperties;
+    CSS::PropertyParserResult baseResult { baseProperties };
+
+    if (!consumeFunctionArgument(args, 1, property, state, baseResult))
+        return false;
+
+    if (autoProperties.size() != baseProperties.size())
+        return false;
+
+    for (unsigned index = 0; index < autoProperties.size(); ++index) {
+        const auto& autoProperty = autoProperties[index];
+        const auto& baseProperty = baseProperties[index];
+
+        Ref value = CSSFunctionValue::create(CSSValueInternalAutoBase, autoProperty.protectedValue(), baseProperty.protectedValue());
+        result.addProperty(CSSProperty(autoProperty.metadata(), WTF::move(value)));
+    }
+
+    return true;
+}
+
 // MARK: - Parser entry points
 
 using namespace CSSPropertyParserHelpers;
@@ -257,6 +315,9 @@ bool CSSPropertyParser::parseValue(CSSPropertyID property, IsImportant important
         break;
     case StyleRuleType::PositionTry:
         parseSuccess = consumePositionTryDescriptor(range, context, property, important, result);
+        break;
+    case StyleRuleType::Function:
+        parseSuccess = consumeFunctionDescriptor(range, context, property, result);
         break;
     default:
         parseSuccess = consumeStyleProperty(range, context, property, important, ruleType, result);
@@ -530,52 +591,37 @@ std::optional<Variant<Ref<const Style::CustomProperty>, CSSWideKeyword>> consume
     auto resolveSyntaxValue = [&, syntaxType = syntaxType](const CSSValue& value) -> std::optional<Style::CustomProperty::Value> {
         switch (syntaxType) {
         case CSSCustomPropertySyntax::Type::LengthPercentage:
-        case CSSCustomPropertySyntax::Type::Length: {
-            auto length = Style::BuilderConverter::convertLength(builderState, downcast<CSSPrimitiveValue>(value));
-            return { WTFMove(length) };
-        }
+            return Style::toStyleFromCSSValue<Style::LengthPercentage<>>(builderState, downcast<CSSPrimitiveValue>(value));
+        case CSSCustomPropertySyntax::Type::Length:
+            return Style::toStyleFromCSSValue<Style::Length<>>(builderState, downcast<CSSPrimitiveValue>(value));
         case CSSCustomPropertySyntax::Type::Integer:
-        case CSSCustomPropertySyntax::Type::Number: {
-            auto doubleValue = downcast<CSSPrimitiveValue>(value).resolveAsNumber(builderState.cssToLengthConversionData());
-            return { Style::CustomProperty::Numeric { doubleValue, CSSUnitType::CSS_NUMBER } };
-        }
-        case CSSCustomPropertySyntax::Type::Percentage: {
-            auto doubleValue = downcast<CSSPrimitiveValue>(value).resolveAsPercentage(builderState.cssToLengthConversionData());
-            return { Style::CustomProperty::Numeric { doubleValue, CSSUnitType::CSS_PERCENTAGE } };
-        }
-        case CSSCustomPropertySyntax::Type::Angle: {
-            auto doubleValue = downcast<CSSPrimitiveValue>(value).resolveAsAngle(builderState.cssToLengthConversionData());
-            return { Style::CustomProperty::Numeric { doubleValue, CSSUnitType::CSS_DEG } };
-        }
-        case CSSCustomPropertySyntax::Type::Time: {
-            auto doubleValue = downcast<CSSPrimitiveValue>(value).resolveAsTime(builderState.cssToLengthConversionData());
-            return { Style::CustomProperty::Numeric { doubleValue, CSSUnitType::CSS_S } };
-        }
-        case CSSCustomPropertySyntax::Type::Resolution: {
-            auto doubleValue = downcast<CSSPrimitiveValue>(value).resolveAsResolution(builderState.cssToLengthConversionData());
-            return { Style::CustomProperty::Numeric { doubleValue, CSSUnitType::CSS_DPPX } };
-        }
+        case CSSCustomPropertySyntax::Type::Number:
+            return Style::toStyleFromCSSValue<Style::Number<>>(builderState, downcast<CSSPrimitiveValue>(value));
+        case CSSCustomPropertySyntax::Type::Percentage:
+            return Style::toStyleFromCSSValue<Style::Percentage<>>(builderState, downcast<CSSPrimitiveValue>(value));
+        case CSSCustomPropertySyntax::Type::Angle:
+            return Style::toStyleFromCSSValue<Style::Angle<>>(builderState, downcast<CSSPrimitiveValue>(value));
+        case CSSCustomPropertySyntax::Type::Time:
+            return Style::toStyleFromCSSValue<Style::Time<>>(builderState, downcast<CSSPrimitiveValue>(value));
+        case CSSCustomPropertySyntax::Type::Resolution:
+            return Style::toStyleFromCSSValue<Style::Resolution<>>(builderState, downcast<CSSPrimitiveValue>(value));
         case CSSCustomPropertySyntax::Type::Color:
-            return { Style::toStyleFromCSSValue<Style::Color>(builderState, value, Style::ForVisitedLink::No) };
+            return Style::toStyleFromCSSValue<Style::Color>(builderState, value, Style::ForVisitedLink::No);
         case CSSCustomPropertySyntax::Type::Image: {
             auto styleImage = builderState.createStyleImage(value);
             if (!styleImage)
                 return { };
-            return { WTFMove(styleImage) };
+            return Style::ImageWrapper { styleImage.releaseNonNull() };
         }
         case CSSCustomPropertySyntax::Type::URL:
-            return { Style::toStyle(downcast<CSSURLValue>(value).url(), builderState) };
+            return Style::toStyle(downcast<CSSURLValue>(value).url(), builderState);
         case CSSCustomPropertySyntax::Type::CustomIdent:
-            return { CustomIdentifier { AtomString { downcast<CSSPrimitiveValue>(value).stringValue() } } };
+            return CustomIdentifier { AtomString { downcast<CSSPrimitiveValue>(value).stringValue() } };
         case CSSCustomPropertySyntax::Type::String:
-            return { downcast<CSSPrimitiveValue>(value).stringValue() };
+            return downcast<CSSPrimitiveValue>(value).stringValue();
         case CSSCustomPropertySyntax::Type::TransformFunction:
-        case CSSCustomPropertySyntax::Type::TransformList: {
-            auto operation = Style::createTransformOperation(value, builderState);
-            if (!operation)
-                return { };
-            return { Style::CustomProperty::Transform { *operation } };
-        }
+        case CSSCustomPropertySyntax::Type::TransformList:
+            return Style::toStyleFromCSSValue<Style::TransformFunction>(builderState, value);
         case CSSCustomPropertySyntax::Type::Unknown:
             return { };
     }
@@ -590,16 +636,16 @@ std::optional<Variant<Ref<const Style::CustomProperty>, CSSWideKeyword>> consume
             auto syntaxValue = resolveSyntaxValue(listValue);
             if (!syntaxValue)
                 return { };
-            syntaxValueList.values.append(WTFMove(*syntaxValue));
+            syntaxValueList.values.append(WTF::move(*syntaxValue));
         }
-        return { { Style::CustomProperty::createForValueList(name, WTFMove(syntaxValueList)) } };
+        return { { Style::CustomProperty::createForValueList(name, WTF::move(syntaxValueList)) } };
     };
 
     auto syntaxValue = resolveSyntaxValue(*value);
     if (!syntaxValue)
         return { };
 
-    return { { Style::CustomProperty::createForValue(name, WTFMove(*syntaxValue)) } };
+    return { { Style::CustomProperty::createForValue(name, WTF::move(*syntaxValue)) } };
 }
 
 // MARK: - Root consumers
@@ -616,10 +662,13 @@ bool consumeStyleProperty(CSSParserTokenRange& range, const CSSParserContext& co
         .important = important,
     };
 
+    if (consumeInternalAutoBaseFunction(range, property, state, result))
+        return true;
+
     if (WebCore::isShorthand(property)) {
         auto rangeCopy = range;
         if (RefPtr keywordValue = consumeCSSWideKeywordValue(rangeCopy)) {
-            result.addPropertyForAllLonghandsOfCurrentShorthand(state, WTFMove(keywordValue));
+            result.addPropertyForAllLonghandsOfCurrentShorthand(state, WTF::move(keywordValue));
             range = rangeCopy;
     return true;
         }
@@ -636,7 +685,7 @@ bool consumeStyleProperty(CSSParserTokenRange& range, const CSSParserContext& co
     } else {
         auto rangeCopy = range;
         if (RefPtr keywordValue = consumeCSSWideKeywordValue(rangeCopy)) {
-            result.addProperty(state, property, CSSPropertyInvalid, WTFMove(keywordValue), important);
+            result.addProperty(state, property, CSSPropertyInvalid, WTF::move(keywordValue), important);
             range = rangeCopy;
     return true;
         }
@@ -645,7 +694,7 @@ bool consumeStyleProperty(CSSParserTokenRange& range, const CSSParserContext& co
 
         RefPtr parsedValue = CSSPropertyParsing::parseStylePropertyLonghand(range, property, state);
         if (parsedValue && range.atEnd()) {
-            result.addProperty(state, property, CSSPropertyInvalid, WTFMove(parsedValue), important);
+            result.addProperty(state, property, CSSPropertyInvalid, WTF::move(parsedValue), important);
         return true;
         }
 
@@ -671,7 +720,7 @@ bool consumeFontFaceDescriptor(CSSParserTokenRange& range, const CSSParserContex
     if (!parsedValue || !range.atEnd())
             return false;
 
-    result.addProperty(state, property, CSSPropertyInvalid, WTFMove(parsedValue), IsImportant::No);
+    result.addProperty(state, property, CSSPropertyInvalid, WTF::move(parsedValue), IsImportant::No);
     return true;
 }
 
@@ -688,7 +737,7 @@ bool consumeFontPaletteValuesDescriptor(CSSParserTokenRange& range, const CSSPar
     if (!parsedValue || !range.atEnd())
         return false;
 
-    result.addProperty(state, property, CSSPropertyInvalid, WTFMove(parsedValue), IsImportant::No);
+    result.addProperty(state, property, CSSPropertyInvalid, WTF::move(parsedValue), IsImportant::No);
     return true;
 }
 
@@ -705,7 +754,7 @@ bool consumeCounterStyleDescriptor(CSSParserTokenRange& range, const CSSParserCo
     if (!parsedValue || !range.atEnd())
                     return false;
 
-    result.addProperty(state, property, CSSPropertyInvalid, WTFMove(parsedValue), IsImportant::No);
+    result.addProperty(state, property, CSSPropertyInvalid, WTF::move(parsedValue), IsImportant::No);
     return true;
 }
 
@@ -747,7 +796,7 @@ bool consumePageDescriptor(CSSParserTokenRange& range, const CSSParserContext& c
         if (!range.atEnd())
                         return false;
 
-        result.addProperty(state, property, CSSPropertyInvalid, WTFMove(parsedValue), IsImportant::No);
+        result.addProperty(state, property, CSSPropertyInvalid, WTF::move(parsedValue), IsImportant::No);
     return true;
     }
 
@@ -767,7 +816,7 @@ bool consumePropertyDescriptor(CSSParserTokenRange& range, const CSSParserContex
     if (!parsedValue || !range.atEnd())
         return false;
 
-    result.addProperty(state, property, CSSPropertyInvalid, WTFMove(parsedValue), IsImportant::No);
+    result.addProperty(state, property, CSSPropertyInvalid, WTF::move(parsedValue), IsImportant::No);
     return true;
 }
 
@@ -786,7 +835,7 @@ bool consumeViewTransitionDescriptor(CSSParserTokenRange& range, const CSSParser
     if (!parsedValue || !range.atEnd())
                 return false;
 
-    result.addProperty(state, property, CSSPropertyInvalid, WTFMove(parsedValue), IsImportant::No);
+    result.addProperty(state, property, CSSPropertyInvalid, WTF::move(parsedValue), IsImportant::No);
     return true;
 }
 
@@ -815,6 +864,25 @@ bool consumePositionTryDescriptor(CSSParserTokenRange& range, const CSSParserCon
                 return false;
 
     return consumeStyleProperty(range, context, property, important, StyleRuleType::PositionTry, result);
+}
+
+bool consumeFunctionDescriptor(CSSParserTokenRange& range, const CSSParserContext& context, CSSPropertyID property, CSS::PropertyParserResult& result)
+{
+    ASSERT(context.propertySettings.cssFunctionAtRuleEnabled);
+
+    auto state = CSS::PropertyParserState {
+        .context = context,
+        .currentRule = StyleRuleType::Function,
+        .currentProperty = property,
+        .important = IsImportant::No,
+    };
+
+    RefPtr parsedValue = CSSPropertyParsing::parseFunctionDescriptor(range, property, state);
+    if (!parsedValue || !range.atEnd())
+        return false;
+
+    result.addProperty(state, property, CSSPropertyInvalid, WTF::move(parsedValue), IsImportant::No);
+    return true;
 }
 
 } // namespace WebCore

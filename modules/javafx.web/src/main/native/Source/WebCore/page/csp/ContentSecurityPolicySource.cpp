@@ -59,6 +59,16 @@ bool ContentSecurityPolicySource::matches(const URL& url, bool didReceiveRedirec
     return hostMatches(url) && portMatches(url) && (didReceiveRedirectResponse || pathMatches(url));
 }
 
+// 'self' sources can upgrade to secure protocols (http->https, ws->wss) and
+// side-grade insecure protocols (http->ws). Requires a non-empty scheme since
+// opaque origins lack scheme/host/port tuple fields and should never match.
+static bool isSelfSourceSchemeUpgrade(const String& scheme, StringView urlScheme)
+{
+    if (scheme.isEmpty())
+        return false;
+    return (urlScheme == "https"_s || urlScheme == "wss"_s) || (scheme == "http"_s && urlScheme == "ws"_s);
+}
+
 bool ContentSecurityPolicySource::schemeMatches(const URL& url) const
 {
     // https://www.w3.org/TR/CSP3/#match-schemes.
@@ -76,9 +86,7 @@ bool ContentSecurityPolicySource::schemeMatches(const URL& url) const
     if (scheme == "wss"_s && urlScheme == "https"_s)
         return true;
 
-    // self-sources can always upgrade to secure protocols and side-grade insecure protocols.
-    if ((m_isSelfSource
-        && ((urlScheme == "https"_s || urlScheme == "wss"_s) || (scheme == "http"_s && urlScheme == "ws"_s))))
+    if (m_isSelfSource && isSelfSourceSchemeUpgrade(scheme, urlScheme))
         return true;
 
     return false;
@@ -106,15 +114,48 @@ bool ContentSecurityPolicySource::hostMatches(const URL& url) const
 
 bool ContentSecurityPolicySource::pathMatches(const URL& url) const
 {
+    // https://www.w3.org/TR/CSP3/#match-paths
+    // Path A is the source expression's path (m_path, from the CSP directive).
+    // Path B is the URL's path being checked against the policy.
+
+    // Step 1: empty path automatically matches.
     if (m_path.isEmpty())
         return true;
 
-    auto path = PAL::decodeURLEscapeSequences(url.path());
+    auto urlPath = url.path();
 
-    if (m_path.endsWith('/'))
-        return path.startsWith(m_path);
+    // Step 2: "/" matches empty path.
+    if (m_path == "/"_s && urlPath.isEmpty())
+        return true;
 
-    return path == m_path;
+    // Step 3: directory match if path A ends with '/'.
+    bool exactMatch = !m_path.endsWith('/');
+
+    // Step 4: strictly split both on '/'.
+    auto pathListA = m_path.splitAllowingEmptyEntries('/');
+    auto pathListB = urlPath.toString().splitAllowingEmptyEntries('/');
+
+    // Step 5: path A must not have more segments than path B.
+    if (pathListA.size() > pathListB.size())
+        return false;
+
+    // Step 6: exact match requires same number of segments.
+    if (exactMatch && pathListA.size() != pathListB.size())
+        return false;
+
+    // Step 7: for directory match, remove trailing empty segment from A.
+    if (!exactMatch) {
+        ASSERT(pathListA.last().isEmpty());
+        pathListA.removeLast();
+    }
+
+    // Step 8: compare each segment after percent-decoding.
+    for (unsigned i = 0; i < pathListA.size(); ++i) {
+        if (PAL::decodeURLEscapeSequences(pathListA[i]) != PAL::decodeURLEscapeSequences(pathListB[i]))
+            return false;
+    }
+
+    return true;
 }
 
 bool ContentSecurityPolicySource::portMatches(const URL& url) const

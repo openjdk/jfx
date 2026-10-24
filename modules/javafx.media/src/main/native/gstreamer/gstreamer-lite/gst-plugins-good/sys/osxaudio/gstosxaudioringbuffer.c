@@ -130,10 +130,7 @@ gst_osx_audio_ring_buffer_dispose (GObject * object)
 
   osxbuf = GST_OSX_AUDIO_RING_BUFFER (object);
 
-  if (osxbuf->core_audio) {
-    g_object_unref (osxbuf->core_audio);
-    osxbuf->core_audio = NULL;
-  }
+  g_clear_object (&osxbuf->core_audio);
   G_OBJECT_CLASS (ring_parent_class)->dispose (object);
 }
 
@@ -172,11 +169,9 @@ gst_osx_audio_ring_buffer_acquire (GstAudioRingBuffer * buf,
     GstAudioRingBufferSpec * spec)
 {
   gboolean ret = FALSE, is_passthrough = FALSE;
-  GstOsxAudioRingBuffer *osxbuf;
+  GstOsxAudioRingBuffer *osxbuf = GST_OSX_AUDIO_RING_BUFFER (buf);
   AudioStreamBasicDescription format = { 0 };
   guint32 frames_per_packet = 0;
-
-  osxbuf = GST_OSX_AUDIO_RING_BUFFER (buf);
 
   if (RINGBUFFER_IS_SPDIF (spec->type)) {
     format.mFormatID = kAudioFormat60958AC3;
@@ -314,7 +309,5 @@ gst_osx_audio_ring_buffer_delay (GstAudioRingBuffer * buf)
           GST_AUDIO_INFO_RATE (&buf->spec.info), &samples, &latency)) {
     return 0;
   }
-  GST_DEBUG_OBJECT (buf, "Got latency: %f seconds -> %d samples",
-      latency, samples);
   return samples;
 }

@@ -32,7 +32,7 @@ namespace WebCore {
 enum class FilterRenderingMode : uint8_t {
     Software        = 1 << 0,
     Accelerated     = 1 << 1,
-    GraphicsContext = 1 << 2
+    GraphicsContext = 1 << 2,
 };
 
 constexpr OptionSet<FilterRenderingMode> allFilterRenderingModes = {

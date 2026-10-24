@@ -26,7 +26,7 @@
 #pragma once
 
 #if USE(CG)
-#include "ImageBufferCGBitmapBackend.h"
+#include <WebCore/ImageBufferCGBitmapBackend.h>
 #elif USE(CAIRO)
 #include "ImageBufferCairoImageSurfaceBackend.h"
 #elif PLATFORM(JAVA)

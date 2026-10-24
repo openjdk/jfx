@@ -25,9 +25,10 @@
 
 #pragma once
 
-#include "LayoutUnits.h"
-#include "RenderStyle.h"
-#include "RenderStyleConstants.h"
+#include <WebCore/LayoutUnits.h>
+#include <WebCore/RenderObject.h>
+#include <WebCore/RenderStyle.h>
+#include <WebCore/RenderStyleConstants.h>
 #include <wtf/CheckedPtr.h>
 #include <wtf/TZoneMalloc.h>
 
@@ -45,7 +46,7 @@ class LayoutState;
 class TreeBuilder;
 
 class Box : public CanMakeCheckedPtr<Box> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(Box);
+    WTF_MAKE_TZONE_ALLOCATED(Box);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(Box);
 public:
     enum class NodeType : uint8_t {
@@ -72,9 +73,9 @@ public:
     };
 
     enum BaseTypeFlag : uint8_t {
-        InlineTextBoxFlag          = 1 << 0,
-        ElementBoxFlag             = 1 << 1,
-        InitialContainingBlockFlag = 1 << 2,
+        InlineTextBoxFlag,
+        ElementBoxFlag,
+        InitialContainingBlockFlag,
     };
 
     virtual ~Box();
@@ -126,34 +127,37 @@ public:
     bool isInterlinearRubyAnnotationBox() const;
 
     bool isDocumentBox() const { return m_nodeType == NodeType::DocumentElement; }
-    bool isBodyBox() const { return m_nodeType == NodeType::Body; }
-    bool isRuby() const { return style().display() == DisplayType::Ruby; }
-    bool isRubyBase() const { return style().display() == DisplayType::RubyBase; }
-    bool isRubyInlineBox() const { return isRuby() || isRubyBase(); }
     bool isTableWrapperBox() const { return m_nodeType == NodeType::TableWrapperBox; }
     bool isTableBox() const { return m_nodeType == NodeType::TableBox; }
-    bool isTableCaption() const { return style().display() == DisplayType::TableCaption; }
-    bool isTableHeader() const { return style().display() == DisplayType::TableHeaderGroup; }
-    bool isTableBody() const { return style().display() == DisplayType::TableRowGroup; }
-    bool isTableFooter() const { return style().display() == DisplayType::TableFooterGroup; }
-    bool isTableRow() const { return style().display() == DisplayType::TableRow; }
-    bool isTableColumnGroup() const { return style().display() == DisplayType::TableColumnGroup; }
-    bool isTableColumn() const { return style().display() == DisplayType::TableColumn; }
-    bool isTableCell() const { return style().display() == DisplayType::TableCell; }
-    bool isInternalTableBox() const;
-    bool isFlexBox() const { return style().display() == DisplayType::Flex || style().display() == DisplayType::InlineFlex || m_nodeType == NodeType::ImplicitFlexBox; }
-    bool isFlexItem() const;
-    bool isGridBox() const { return style().display() == DisplayType::Grid || style().display() == DisplayType::InlineGrid; }
+    bool isBodyBox() const { return m_nodeType == NodeType::Body; }
+    bool isLineBreakBox() const { return m_nodeType == NodeType::LineBreak || m_nodeType == NodeType::WordBreakOpportunity; }
     bool isIFrame() const { return m_nodeType == NodeType::IFrame; }
     bool isImage() const { return m_nodeType == NodeType::Image; }
-    bool isLineBreakBox() const { return m_nodeType == NodeType::LineBreak || m_nodeType == NodeType::WordBreakOpportunity; }
-    bool isWordBreakOpportunity() const { return m_nodeType == NodeType::WordBreakOpportunity; }
-    bool isListItem() const { return style().display() == DisplayType::ListItem; }
     bool isListMarkerBox() const { return m_nodeType == NodeType::ListMarker; }
     bool isReplacedBox() const { return m_nodeType == NodeType::ReplacedElement || m_nodeType == NodeType::Image || m_nodeType == NodeType::ListMarker; }
+    bool isWordBreakOpportunity() const { return m_nodeType == NodeType::WordBreakOpportunity; }
+    bool isInternalTableBox() const;
+    inline bool isRuby() const;
+    inline bool isRubyBase() const;
+    inline bool isRubyInlineBox() const;
+    inline bool isTableCaption() const;
+    inline bool isTableHeader() const;
+    inline bool isTableBody() const;
+    inline bool isTableFooter() const;
+    inline bool isTableRow() const;
+    inline bool isTableColumnGroup() const;
+    inline bool isTableColumn() const;
+    inline bool isTableCell() const;
+    inline bool isFlexBox() const;
+    bool isFlexItem() const;
+    inline bool isGridFormattingContext() const;
+    inline bool isGridBox() const;
+    inline bool isGridLanesBox() const;
+    bool isGridItem() const;
+    inline bool isListItem() const;
 
     bool isInlineIntegrationRoot() const { return m_isInlineIntegrationRoot; }
-    bool isFirstChildForIntegration() const { return m_isFirstChildForIntegration; }
+    bool isAnonymousTextIndentCandidateForIntegration() const { return m_isAnonymousTextIndentCandidateForIntegration; }
 
     const ElementBox& parent() const { return *m_parent; }
     const Box* nextSibling() const { return m_nextSibling.get(); }
@@ -164,7 +168,8 @@ public:
     const Box* previousInFlowSibling() const;
     const Box* previousInFlowOrFloatingSibling() const;
     const Box* previousOutOfFlowSibling() const;
-    bool isDescendantOf(const ElementBox&) const;
+    bool isDescendantOf(const Box&) const;
+    bool isDescendantOfWithinFormattingContext(const Box&) const;
     bool isInFormattingContextEstablishedBy(const ElementBox& formattingContextRoot) const;
 
     // FIXME: This is currently needed for style updates.
@@ -192,7 +197,7 @@ public:
     std::optional<LayoutUnit> columnWidth() const;
 
     void setIsInlineIntegrationRoot() { m_isInlineIntegrationRoot = true; }
-    void setIsFirstChildForIntegration(bool value) { m_isFirstChildForIntegration = value; }
+    void setIsAnonymousTextIndentCandidateForIntegration(bool value) { m_isAnonymousTextIndentCandidateForIntegration = value; }
 
     const LayoutShape* shape() const;
     void setShape(RefPtr<const LayoutShape>);
@@ -205,7 +210,7 @@ public:
     UniqueRef<Box> removeFromParent();
 
 protected:
-    Box(ElementAttributes&&, RenderStyle&&, std::unique_ptr<RenderStyle>&& firstLineStyle, OptionSet<BaseTypeFlag>);
+    Box(ElementAttributes&&, RenderStyle&&, std::unique_ptr<RenderStyle>&& firstLineStyle, EnumSet<BaseTypeFlag>);
 
 private:
     friend class ElementBox;
@@ -229,7 +234,7 @@ private:
     BoxRareData& ensureRareData();
     void removeRareData();
 
-    OptionSet<BaseTypeFlag> baseTypeFlags() const { return OptionSet<BaseTypeFlag>::fromRaw(m_baseTypeFlags); }
+    EnumSet<BaseTypeFlag> baseTypeFlags() const { return EnumSet<BaseTypeFlag>::fromRaw(m_baseTypeFlags); }
 
     typedef HashMap<const Box*, std::unique_ptr<BoxRareData>> RareDataMap;
 
@@ -238,10 +243,10 @@ private:
     NodeType m_nodeType : 4;
     bool m_isAnonymous : 1;
 
-    unsigned m_baseTypeFlags : 4; // OptionSet<BaseTypeFlag>
+    unsigned m_baseTypeFlags : 4; // EnumSet<BaseTypeFlag>
     bool m_hasRareData : 1 { false };
     bool m_isInlineIntegrationRoot : 1 { false };
-    bool m_isFirstChildForIntegration : 1 { false };
+    bool m_isAnonymousTextIndentCandidateForIntegration : 1 { false }; // Either first anonymous block box child or simple anonymous block container (e.g flex item).
 
     RenderStyle m_style;
 

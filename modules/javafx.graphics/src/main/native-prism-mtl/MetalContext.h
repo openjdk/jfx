@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,7 +34,6 @@
 @class MetalShader;
 @class MetalMeshView;
 
-#define BUFFER_SIZE 1
 #define ARGS_BUFFER_SIZE (8  * 1024 * 1024)
 #define DATA_BUFFER_SIZE (20 * 1024 * 1024)
 
@@ -93,7 +92,7 @@ typedef enum VertexInputIndex {
     MTLScissorRect scissorRect;
     bool isScissorEnabled;
     MetalRTTexture* rtt;
-    bool clearDepthTexture;
+    bool encoderHasDepthAttachment;
     float clearColor[4];
     MTLRenderPassDescriptor* rttPassDesc;
 
@@ -101,7 +100,6 @@ typedef enum VertexInputIndex {
     MTLRenderPassDescriptor* phongRPD;
     vector_float4 cPos;
     bool depthEnabled;
-    NSUInteger currentBufferIndex;
 
     int compositeMode;
     int cullMode;
@@ -128,7 +126,6 @@ typedef enum VertexInputIndex {
 - (void) endCurrentRenderEncoder;
 
 - (id<MTLRenderPipelineState>) getPhongPipelineStateWithNumLights:(int)numLights;
-- (NSUInteger) getCurrentBufferIndex;
 
 - (void) updateDepthDetails:(bool)depthTest;
 - (void) verifyDepthTexture;
@@ -176,8 +173,8 @@ typedef enum VertexInputIndex {
 - (void) setCameraPosition:(float)x y:(float)y z:(float)z;
 - (vector_float4) getCameraPosition;
 - (MTLScissorRect) getScissorRect;
-- (bool) clearDepth;
 - (bool) isDepthEnabled;
+- (bool) encoderHasDepthAttachment;
 - (bool) isScissorEnabled;
 - (bool) isCurrentRTT:(MetalRTTexture*)rttPtr;
 - (void) dealloc;

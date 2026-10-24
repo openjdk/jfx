@@ -40,13 +40,14 @@ class Document;
 class WorkletGlobalScopeProxy;
 class WorkletPendingTasks;
 
-class Worklet : public RefCountedAndCanMakeWeakPtr<Worklet>, public ScriptWrappable, public ActiveDOMObject {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(Worklet);
+class Worklet : public RefCounted<Worklet>, public ScriptWrappable, public ActiveDOMObject {
+    WTF_MAKE_TZONE_ALLOCATED(Worklet);
 public:
+    virtual ~Worklet();
+
+    // ContextDestructionObserver.
     void ref() const final { RefCounted::ref(); }
     void deref() const final { RefCounted::deref(); }
-
-    virtual ~Worklet();
 
     virtual void addModule(const String& moduleURL, WorkletOptions&&, DOMPromiseDeferred<void>&&);
 
@@ -55,6 +56,8 @@ public:
 
     const Vector<Ref<WorkletGlobalScopeProxy>>& proxies() const { return m_proxies; }
     const String& identifier() const { return m_identifier; }
+
+    virtual bool isAudioWorklet() const { return false; }
 
 protected:
     explicit Worklet(Document&);

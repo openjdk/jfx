@@ -45,9 +45,8 @@ template<typename> class ExceptionOr;
 
 class MediaStreamTrackProcessor
     : public RefCounted<MediaStreamTrackProcessor>
-    , public CanMakeWeakPtr<MediaStreamTrackProcessor>
-    , private ContextDestructionObserver {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(MediaStreamTrackProcessor);
+    , public ContextDestructionObserver {
+    WTF_MAKE_TZONE_ALLOCATED(MediaStreamTrackProcessor);
 public:
     struct Init {
         RefPtr<MediaStreamTrack> track;
@@ -57,17 +56,22 @@ public:
     static ExceptionOr<Ref<MediaStreamTrackProcessor>> create(ScriptExecutionContext&, Init&&);
     ~MediaStreamTrackProcessor();
 
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); };
+    void deref() const final { RefCounted::deref(); };
+
     ExceptionOr<Ref<ReadableStream>> readable(JSC::JSGlobalObject&);
 
     // Lives in ScriptExecutionContext only.
     class Source final
         : public ReadableStreamSource
         , public MediaStreamTrackPrivateObserver {
-        WTF_MAKE_TZONE_OR_ISO_ALLOCATED(Source);
+        WTF_MAKE_TZONE_ALLOCATED(Source);
     public:
         Source(Ref<MediaStreamTrackPrivate>&&, MediaStreamTrackProcessor&);
         ~Source();
 
+        bool isEnabled() const { return m_privateTrack->enabled(); }
         bool isWaiting() const { return m_isWaiting; }
         bool isCancelled() const { return m_isCancelled; }
         void close();
@@ -91,7 +95,7 @@ public:
         void setInactive() { };
         void doStart() final;
         void doPull() final;
-        void doCancel() final;
+        void doCancel(JSC::JSValue) final;
 
         bool m_isWaiting { false };
         bool m_isCancelled { false };

@@ -34,6 +34,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -109,6 +110,8 @@ public abstract class StyledTextModel {
     public interface Listener {
         /**
          * Informs the listener that the model content has changed.
+         * For a content change, marker positions are updated after all listeners return.
+         * If a listener reads a marker, it will be its position from before the change.
          * @param ch the change
          */
         public void onContentChange(ContentChange ch);
@@ -229,7 +232,6 @@ public abstract class StyledTextModel {
 
     /**
      * Applies style to the specified text range within a single paragraph.
-     * The new attributes override any existing attributes.
      * The {@code end} argument may exceed the paragraph length, in which case the outcome should be the same
      * as supplying the paragraph length value.
      *
@@ -237,20 +239,27 @@ public abstract class StyledTextModel {
      * @param start the start offset
      * @param end the end offset
      * @param a the character attributes
-     * @param merge determines whether to merge with or overwrite the existing attributes
+     * @param merge determines whether to merge with or completely replace the existing attribute map
      * @throws UnsupportedOperationException if the model is not {@link #isWritable() writable}
      */
     protected abstract void applyStyle(int index, int start, int end, StyleAttributeMap a, boolean merge);
 
     /**
      * Returns the {@link StyleAttributeMap} of the character at the specified position's {@code charIndex}.
-     * When at the end of the document, returns the attributes of the last character.
+     * <p>
+     * When the position points to the boundary between two text segments with different attributes,
+     * the value of {@code forInsert} determines which segment will be used: when {@code true}, the preceding
+     * segment's attributes will be returned so inserted/typed text has the same style as the
+     * preceding text.  When {@code forInsert} is {@code false}, the returned attributes correspond exactly
+     * to the symbol indicated by the specified position.
      *
      * @param resolver the style resolver
      * @param pos the text position
+     * @param forInsert whether to pick preceding style at the segment boundary
      * @return the style attributes, non-null
+     * @since 27
      */
-    public abstract StyleAttributeMap getStyleAttributeMap(StyleResolver resolver, TextPos pos);
+    public abstract StyleAttributeMap getStyleAttributeMap(StyleResolver resolver, TextPos pos, boolean forInsert);
 
     /**
      * Returns the set of attributes supported attributes.  When this method returns a non-null set,
@@ -365,8 +374,6 @@ public abstract class StyledTextModel {
      * @param forImport true if the handler supports import operations
      * @param priority from 0 (lowest, usually plain text) to {@code Integer.MAX_VALUE}
      */
-    // TODO this method could be made public to allow for adding new handlers to existing models
-    // such as RichTextModel.
     protected final void registerDataFormatHandler(DataFormatHandler h, boolean forExport, boolean forImport, int priority) {
         FHPriority p = new FHPriority(h, priority);
         if (forExport) {
@@ -443,10 +450,8 @@ public abstract class StyledTextModel {
      */
     public void fireChangeEvent(TextPos start, TextPos end, int charsTop, int linesAdded, int charsBottom) {
         ContentChange ch = ContentChange.ofEdit(start, end, charsTop, linesAdded, charsBottom);
+        fireChangeEvent(ch);
         markers.update(start, end, charsTop, linesAdded, charsBottom);
-        for (Listener li : listeners) {
-            li.onContentChange(ch);
-        }
     }
 
     /**
@@ -458,8 +463,16 @@ public abstract class StyledTextModel {
      */
     public void fireStyleChangeEvent(TextPos start, TextPos end) {
         ContentChange ch = ContentChange.ofStyleChange(start, end);
+        fireChangeEvent(ch);
+    }
+
+    private void fireChangeEvent(ContentChange ch) {
         for (Listener li : listeners) {
-            li.onContentChange(ch);
+            try {
+                li.onContentChange(ch);
+            } catch (Exception e) {
+                Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
+            }
         }
     }
 
@@ -493,6 +506,16 @@ public abstract class StyledTextModel {
             TextPos p = start;
             start = end;
             end = p;
+        }
+
+        String ver = versionString();
+        if (ver != null) {
+            out.consume(StyledSegment.ofVersion(ver));
+        }
+
+        Map<String, String> dp = documentProperties();
+        if ((dp != null) && (!dp.isEmpty())) {
+            out.consume(StyledSegment.ofDocumentProperties(dp));
         }
 
         int ix0 = start.index();
@@ -535,6 +558,38 @@ public abstract class StyledTextModel {
     }
 
     /**
+     * This method is called by {@link #export(TextPos, TextPos, StyledOutput)}
+     * to export the model's version string, if any.
+     *
+     * @return the model version string, or null
+     * @since 27
+     */
+    protected String versionString() {
+        return null;
+    }
+
+    /**
+     * This method is called by {@link #export(TextPos, TextPos, StyledOutput)}
+     * to ensure that the document properties, if any, are exported.
+     *
+     * @return the document properties, or null
+     * @since 27
+     */
+    protected Map<String,String> documentProperties() {
+        return null;
+    }
+
+    /**
+     * This method is called by any of the {@code replace()} methods when encountering
+     * a {@link StyledSegment.Type#DOCUMENT_PROPERTIES} segment.
+     * @param props the document properties
+     * @param completeReplacement indicates whether replacing the model's content completely
+     * @since 27
+     */
+    protected void handleDocumentProperties(Map<String, String> props, boolean completeReplacement) {
+    }
+
+    /**
      * Exports part of the paragraph as a sequence of styled segments.
      * The caller guarantees that the start position precedes the end.
      * The subclass may override this method to provide a more performant implementation.
@@ -560,7 +615,8 @@ public abstract class StyledTextModel {
 
     /**
      * Returns the {@link Marker} at the specified position.
-     * The actual text position tracked by the marker will always be within the document boundaries.
+     * The actual text position tracked by the marker will always be within the document boundaries,
+     * getting updated after the model listeners receive their {@code ContentChange} events.
      *
      * @param pos text position
      * @return Marker instance
@@ -577,7 +633,7 @@ public abstract class StyledTextModel {
      * @return the text position within the document and paragraph limits
      */
     public final TextPos clamp(TextPos p) {
-        Objects.nonNull(p);
+        Objects.requireNonNull(p);
         int len;
         int ct = size();
         int ix = p.index();
@@ -642,8 +698,8 @@ public abstract class StyledTextModel {
      * <p>
      * This is a convenience method which eventually calls
      * {@link #replace(StyleResolver, TextPos, TextPos, StyledInput)}
-     * with the attributes provided by {@link #getStyleAttributeMap(StyleResolver, TextPos)} at the
-     * {@code start} position.
+     * with the attributes provided by {@link #getStyleAttributeMap(StyleResolver, TextPos, boolean)}
+     * (with {@code forInsert} parameter set to {@code true}) at the {@code start} position.
      * It creates an undo/redo entry if
      * {@link #isUndoRedoEnabled()} returns {@code true}.
      *
@@ -657,8 +713,16 @@ public abstract class StyledTextModel {
     public final TextPos replace(StyleResolver resolver, TextPos start, TextPos end, String text) {
         checkWritable();
 
-        // TODO pick the lowest from start,end.  Possibly add (end) argument to getStyleAttributes?
-        StyleAttributeMap a = getStyleAttributeMap(resolver, start);
+        start = clamp(start);
+        end = clamp(end);
+        int cmp = start.compareTo(end);
+        if (cmp > 0) {
+            TextPos p = start;
+            start = end;
+            end = p;
+        }
+
+        StyleAttributeMap a = getStyleAttributeMap(resolver, start, true);
         StyledInput in = StyledInput.of(text, a);
         return replace(resolver, start, end, in);
     }
@@ -684,6 +748,7 @@ public abstract class StyledTextModel {
 
     // only UndoableChange is allowed to disable undo/redo records
     private final TextPos replace(StyleResolver resolver, TextPos start, TextPos end, StyledInput input, boolean allowUndo, boolean isEdit) {
+        RichUtils.log("start={0} end={1}", start, end);
         checkWritable();
 
         // clamp and normalize
@@ -695,6 +760,8 @@ public abstract class StyledTextModel {
             start = end;
             end = p;
         }
+
+        boolean completeReplacement = TextPos.ZERO.equals(start) && end.equals(getDocumentEnd());
 
         UndoableChange ch = allowUndo ? UndoableChange.create(this, start, end, isEdit) : null;
 
@@ -709,6 +776,7 @@ public abstract class StyledTextModel {
 
         StyledSegment seg;
         while ((seg = input.nextSegment()) != null) {
+            RichUtils.log("seg={0}", seg);
             switch (seg.getType()) {
             case LINE_BREAK:
                 insertLineBreak(index, offset);
@@ -728,12 +796,13 @@ public abstract class StyledTextModel {
                 insertParagraph(index, gen);
                 break;
             case TEXT:
+            case INLINE_NODE:
                 String text = seg.getText();
                 StyleAttributeMap a = seg.getStyleAttributeMap(resolver);
                 if (a == null) {
                     a = StyleAttributeMap.EMPTY;
                 } else {
-                    a = filterUnsupportedAttributes(a);
+                    a = RichUtils.filterUnsupportedAttributes(a, getSupportedAttributes());
                 }
                 int len = insertTextSegment(index, offset, text, a);
                 if (index == start.index()) {
@@ -741,6 +810,9 @@ public abstract class StyledTextModel {
                 }
                 offset += len;
                 btm += len;
+                break;
+            case DOCUMENT_PROPERTIES:
+                handleDocumentProperties(seg.getDocumentProperties(), completeReplacement);
                 break;
             }
         }
@@ -769,13 +841,13 @@ public abstract class StyledTextModel {
      * {@link #isUndoRedoEnabled()} returns {@code true}.
      * <p>
      * Depending on {@code mergeAttributes} parameter, the attributes will either be merged with (true) or completely
-     * replace the existing attributes within the range.  The affected range might be wider than the range specified
+     * replace the existing attribute map within the range.  The affected range might be wider than the range specified
      * when applying the paragraph attributes.
      *
      * @param start the start of text range
      * @param end the end of text range
      * @param attrs the style attributes to set
-     * @param mergeAttributes whether to merge or replace the attributes
+     * @param mergeAttributes whether to merge or replace the attribute map
      * @throws UnsupportedOperationException if the model is not {@link #isWritable() writable}
      */
     public final void applyStyle(TextPos start, TextPos end, StyleAttributeMap attrs, boolean mergeAttributes) {
@@ -790,7 +862,7 @@ public abstract class StyledTextModel {
             end = p;
         }
 
-        attrs = filterUnsupportedAttributes(attrs);
+        attrs = RichUtils.filterUnsupportedAttributes(attrs, getSupportedAttributes());
 
         TextPos evStart;
         TextPos evEnd;
@@ -851,27 +923,6 @@ public abstract class StyledTextModel {
                 add(ch, end);
             }
         }
-    }
-
-    /**
-     * Removes unsupported attributes per {@link #getSupportedAttributes()}.
-     *
-     * @param attrs the input attributes
-     * @return the attributes that exclude unsupported ones
-     */
-    private StyleAttributeMap filterUnsupportedAttributes(StyleAttributeMap attrs) {
-        Set<StyleAttribute<?>> supported = getSupportedAttributes();
-        if (supported == null) {
-            return attrs;
-        }
-
-        StyleAttributeMap.Builder b = StyleAttributeMap.builder();
-        for (StyleAttribute a : attrs.getAttributes()) {
-            if (supported.contains(a)) {
-                b.set(a, attrs.get(a));
-            }
-        }
-        return b.build();
     }
 
     /**

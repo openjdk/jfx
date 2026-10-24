@@ -25,6 +25,8 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
 #include "FixedVector.h"
 #include "Mutex.h"
 #include "Range.h"
@@ -75,3 +77,5 @@ inline void Zone::addRange(Range range)
 } // namespace bmalloc
 
 #endif
+
+#endif // __cplusplus

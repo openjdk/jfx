@@ -34,7 +34,7 @@
 namespace WebCore {
 
 class MathMLPresentationElement : public MathMLElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(MathMLPresentationElement);
+    WTF_MAKE_TZONE_ALLOCATED(MathMLPresentationElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(MathMLPresentationElement);
 public:
     static Ref<MathMLPresentationElement> create(const QualifiedName& tagName, Document&);
@@ -56,7 +56,7 @@ protected:
 
 private:
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) override;
-    bool isPresentationMathML() const final { return true; }
+    bool isPresentationMathML() const override { return true; }
 
     static Length parseNumberAndUnit(StringView, bool acceptLegacyMathMLLengths);
     static Length parseNamedSpace(StringView);

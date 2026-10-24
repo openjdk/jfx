@@ -76,7 +76,7 @@ DEFINE_STATIC_PER_PROCESS_STORAGE(Scavenger);
 
 Scavenger::Scavenger(const LockHolder&)
 {
-    BASSERT(!Environment::get()->isSystemHeapEnabled());
+    BASSERT(!Environment::get()->shouldBmallocAllocateThroughSystemHeap());
 
 #if BOS(DARWIN)
     auto queue = dispatch_queue_create("WebKit Malloc Memory Pressure Handler", DISPATCH_QUEUE_SERIAL);
@@ -275,7 +275,7 @@ size_t Scavenger::freeableMemory()
 
 size_t Scavenger::footprint()
 {
-    RELEASE_BASSERT(!Environment::get()->isSystemHeapEnabled());
+    RELEASE_BASSERT(!Environment::get()->shouldBmallocAllocateThroughSystemHeap());
 
     size_t result = 0;
     for (unsigned i = numHeaps; i--;) {

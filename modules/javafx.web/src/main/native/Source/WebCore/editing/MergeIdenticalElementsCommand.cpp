@@ -27,13 +27,14 @@
 #include "MergeIdenticalElementsCommand.h"
 
 #include "Element.h"
+#include "NodeDocument.h"
 
 namespace WebCore {
 
 MergeIdenticalElementsCommand::MergeIdenticalElementsCommand(Ref<Element>&& first, Ref<Element>&& second)
     : SimpleEditCommand(first->document())
-    , m_element1(WTFMove(first))
-    , m_element2(WTFMove(second))
+    , m_element1(WTF::move(first))
+    , m_element2(WTF::move(second))
 {
     ASSERT(m_element1->nextSibling() == m_element2.ptr());
 }
@@ -46,10 +47,10 @@ void MergeIdenticalElementsCommand::doApply()
     m_atChild = m_element2->firstChild();
 
     Vector<Ref<Node>> children;
-    for (Node* child = m_element1->firstChild(); child; child = child->nextSibling())
+    for (RefPtr child = m_element1->firstChild(); child; child = child->nextSibling())
         children.append(*child);
 
-    for (auto& child : children)
+    for (Ref child : children)
         m_element2->insertBefore(child, m_atChild.copyRef());
 
     m_element1->remove();
@@ -57,7 +58,7 @@ void MergeIdenticalElementsCommand::doApply()
 
 void MergeIdenticalElementsCommand::doUnapply()
 {
-    RefPtr<Node> atChild = WTFMove(m_atChild);
+    RefPtr<Node> atChild = WTF::move(m_atChild);
 
     RefPtr parent = m_element2->parentNode();
     if (!parent || !parent->hasEditableStyle())
@@ -67,10 +68,10 @@ void MergeIdenticalElementsCommand::doUnapply()
         return;
 
     Vector<Ref<Node>> children;
-    for (Node* child = m_element2->firstChild(); child && child != atChild; child = child->nextSibling())
+    for (RefPtr child = m_element2->firstChild(); child && child != atChild; child = child->nextSibling())
         children.append(*child);
 
-    for (auto& child : children)
+    for (Ref child : children)
         m_element1->appendChild(child);
 }
 

@@ -23,10 +23,10 @@
 
 #pragma once
 
-#include "FormAssociatedElement.h"
-#include "Node.h"
+#include <WebCore/FormAssociatedElement.h>
+#include <WebCore/Node.h>
+#include <wtf/CanMakeWeakPtr.h>
 #include <wtf/TZoneMalloc.h>
-#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -40,13 +40,13 @@ class HTMLFormElement;
 class ValidityState;
 
 // https://html.spec.whatwg.org/multipage/forms.html#category-listed
-class FormListedElement : public FormAssociatedElement {
+class FormListedElement : public FormAssociatedElement, public CanMakeWeakPtr<FormListedElement> {
     WTF_MAKE_TZONE_ALLOCATED(FormListedElement);
     WTF_MAKE_NONCOPYABLE(FormListedElement);
 public:
     virtual ~FormListedElement();
 
-    ValidityState* validity();
+    ValidityState& validity();
 
     virtual bool isValidatedFormListedElement() const = 0;
     virtual bool isEnumeratable() const = 0;
@@ -90,7 +90,7 @@ public:
     virtual ValidatedFormListedElement* asValidatedFormListedElement() = 0;
 
 protected:
-    FormListedElement(HTMLFormElement*);
+    explicit FormListedElement(HTMLFormElement*);
 
     void clearForm() { setForm(nullptr); }
 

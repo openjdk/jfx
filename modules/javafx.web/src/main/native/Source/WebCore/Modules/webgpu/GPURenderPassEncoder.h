@@ -54,7 +54,7 @@ class GPURenderPassEncoder : public RefCounted<GPURenderPassEncoder> {
 public:
     static Ref<GPURenderPassEncoder> create(Ref<WebGPU::RenderPassEncoder>&& backing, WebGPU::Device& device)
     {
-        return adoptRef(*new GPURenderPassEncoder(WTFMove(backing), device));
+        return adoptRef(*new GPURenderPassEncoder(WTF::move(backing), device));
     }
 
     String label() const;
@@ -113,6 +113,7 @@ private:
 
     Ref<WebGPU::RenderPassEncoder> m_backing;
     WeakPtr<WebGPU::Device> m_device;
+    std::optional<String> m_overrideLabel;
 };
 
 }

@@ -43,9 +43,13 @@ template<typename T, class... Args> inline RenderPtr<T> createRenderer(Args&&...
     return RenderPtr<T>(new T(std::forward<Args>(args)...));
 }
 
-template<typename T, typename U> inline RenderPtr<T> static_pointer_cast(RenderPtr<U>&& p)
+} // namespace WebCore
+
+namespace WTF {
+
+template<typename T, typename U> inline WebCore::RenderPtr<T> downcast(WebCore::RenderPtr<U>&& p)
 {
-    return RenderPtr<T>(downcast<T>(p.release()));
+    return WebCore::RenderPtr<T>(downcast<T>(p.release()));
 }
 
-} // namespace WebCore
+} // namespace WTF

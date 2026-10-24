@@ -42,7 +42,7 @@ namespace WebCore::WebGPU {
 WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderPassEncoderImpl);
 
 RenderPassEncoderImpl::RenderPassEncoderImpl(WebGPUPtr<WGPURenderPassEncoder>&& renderPassEncoder, ConvertToBackingContext& convertToBackingContext)
-    : m_backing(WTFMove(renderPassEncoder))
+    : m_backing(WTF::move(renderPassEncoder))
     , m_convertToBackingContext(convertToBackingContext)
 {
 }
@@ -91,7 +91,7 @@ void RenderPassEncoderImpl::drawIndexedIndirect(const Buffer& indirectBuffer, Si
 void RenderPassEncoderImpl::setBindGroup(Index32 index, const BindGroup* bindGroup,
     std::optional<Vector<BufferDynamicOffset>>&& dynamicOffsets)
 {
-    wgpuRenderPassEncoderSetBindGroup(m_backing.get(), index, bindGroup ? m_convertToBackingContext->convertToBacking(*bindGroup) : nullptr, WTFMove(dynamicOffsets));
+    wgpuRenderPassEncoderSetBindGroup(m_backing.get(), index, bindGroup ? m_convertToBackingContext->convertToBacking(*bindGroup) : nullptr, WTF::move(dynamicOffsets));
 }
 
 void RenderPassEncoderImpl::setBindGroup(Index32, const BindGroup*, std::span<const uint32_t>, Size64, Size32)

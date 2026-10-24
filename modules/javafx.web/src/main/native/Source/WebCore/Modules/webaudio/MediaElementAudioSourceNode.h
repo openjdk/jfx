@@ -29,7 +29,6 @@
 
 #include "AudioNode.h"
 #include "AudioSourceProviderClient.h"
-#include "HTMLMediaElement.h"
 #include "MultiChannelResampler.h"
 #include <memory>
 #include <wtf/Lock.h>
@@ -37,10 +36,12 @@
 namespace WebCore {
 
 class AudioContext;
+class HTMLMediaElement;
 struct MediaElementAudioSourceOptions;
 
 class MediaElementAudioSourceNode final : public AudioNode, public AudioSourceProviderClient {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(MediaElementAudioSourceNode);
+    WTF_MAKE_TZONE_ALLOCATED(MediaElementAudioSourceNode);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(MediaElementAudioSourceNode);
 public:
     static ExceptionOr<Ref<MediaElementAudioSourceNode>> create(BaseAudioContext&, MediaElementAudioSourceOptions&&);
 
@@ -51,10 +52,12 @@ public:
     HTMLMediaElement& mediaElement() { return m_mediaElement; }
 
     // AudioNode
-    void process(size_t framesToProcess) override;
+    void process(size_t framesToProcess) final;
 
     // AudioSourceProviderClient
-    void setFormat(size_t numberOfChannels, float sampleRate) override;
+    void setFormat(size_t numberOfChannels, float sampleRate) final;
+    void ref() const final { AudioNode::ref(); }
+    void deref() const final { AudioNode::deref(); }
 
     Lock& processLock() WTF_RETURNS_LOCK(m_processLock) { return m_processLock; }
 
@@ -82,5 +85,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_AUDIONODE(MediaElementAudioSourceNode, NodeTypeMediaElementAudioSource);
 
 #endif // ENABLE(WEB_AUDIO) && ENABLE(VIDEO)

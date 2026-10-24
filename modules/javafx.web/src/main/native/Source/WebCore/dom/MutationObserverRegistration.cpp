@@ -34,6 +34,7 @@
 
 #include "Document.h"
 #include "JSNodeCustom.h"
+#include "NodeDocument.h"
 #include "QualifiedName.h"
 #include "WebCoreOpaqueRootInlines.h"
 #include <wtf/TZoneMallocInlines.h>
@@ -41,6 +42,11 @@
 namespace WebCore {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(MutationObserverRegistration);
+
+Ref<MutationObserverRegistration> MutationObserverRegistration::create(MutationObserver& observer, Node& node, MutationObserverOptions options, const MemoryCompactLookupOnlyRobinHoodHashSet<AtomString>& attributeFilter)
+{
+    return adoptRef(*new MutationObserverRegistration(observer, node, options, attributeFilter));
+}
 
 MutationObserverRegistration::MutationObserverRegistration(MutationObserver& observer, Node& node, MutationObserverOptions options, const MemoryCompactLookupOnlyRobinHoodHashSet<AtomString>& attributeFilter)
     : m_observer(observer)

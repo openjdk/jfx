@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,7 +27,6 @@
 
 package jfx.incubator.scene.control.richtext;
 
-import java.util.Objects;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import com.sun.jfx.incubator.scene.control.richtext.MarkerHelper;
@@ -55,7 +54,6 @@ public final class Marker implements Comparable<Marker> {
     private final ReadOnlyObjectWrapper<TextPos> pos;
 
     private Marker(TextPos pos) {
-        Objects.nonNull(pos);
         this.pos = new ReadOnlyObjectWrapper<>(pos);
     }
 

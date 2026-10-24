@@ -44,12 +44,13 @@
 #include "SVGElementTypeHelpers.h"
 #include "SVGNames.h"
 #include "SVGSMILElement.h"
+#include "Settings.h"
 #include "XLinkNames.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGAElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SVGAElement);
 
 inline SVGAElement::SVGAElement(const QualifiedName& tagName, Document& document)
     : SVGGraphicsElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
@@ -57,10 +58,11 @@ inline SVGAElement::SVGAElement(const QualifiedName& tagName, Document& document
 {
     ASSERT(hasTagName(SVGNames::aTag));
 
-    static std::once_flag onceFlag;
-    std::call_once(onceFlag, [] {
+    static bool didRegistration = false;
+    if (!didRegistration) [[unlikely]] {
+        didRegistration = true;
         PropertyRegistry::registerProperty<SVGNames::targetAttr, &SVGAElement::m_target>();
-    });
+    }
 }
 
 SVGAElement::~SVGAElement() = default;
@@ -87,6 +89,17 @@ void SVGAElement::attributeChanged(const QualifiedName& name, const AtomString& 
         Ref { m_target }->setBaseValInternal(newValue);
         return;
     } else if (name == SVGNames::relAttr) {
+        // Update SVGAElement::relList() if more rel attributes values are supported.
+        static MainThreadNeverDestroyed<const AtomString> noReferrer("noreferrer"_s);
+        static MainThreadNeverDestroyed<const AtomString> noOpener("noopener"_s);
+        static MainThreadNeverDestroyed<const AtomString> opener("opener"_s);
+        SpaceSplitString relValue(newValue, SpaceSplitString::ShouldFoldCase::Yes);
+        if (relValue.contains(noReferrer))
+            m_linkRelations.add(Relation::NoReferrer);
+        if (relValue.contains(noOpener))
+            m_linkRelations.add(Relation::NoOpener);
+        if (relValue.contains(opener))
+            m_linkRelations.add(Relation::Opener);
         if (m_relList)
             m_relList->associatedAttributeValueChanged();
     }
@@ -110,12 +123,12 @@ RenderPtr<RenderElement> SVGAElement::createElementRenderer(RenderStyle&& style,
 {
     RefPtr svgParent = dynamicDowncast<SVGElement>(parentNode());
     if (svgParent && svgParent->isTextContent())
-        return createRenderer<RenderSVGInline>(RenderObject::Type::SVGInline, *this, WTFMove(style));
+        return createRenderer<RenderSVGInline>(RenderObject::Type::SVGInline, *this, WTF::move(style));
 
     if (document().settings().layerBasedSVGEngineEnabled())
-        return createRenderer<RenderSVGTransformableContainer>(*this, WTFMove(style));
+        return createRenderer<RenderSVGTransformableContainer>(*this, WTF::move(style));
 
-    return createRenderer<LegacyRenderSVGTransformableContainer>(*this, WTFMove(style));
+    return createRenderer<LegacyRenderSVGTransformableContainer>(*this, WTF::move(style));
 }
 
 void SVGAElement::defaultEventHandler(Event& event)
@@ -138,13 +151,21 @@ void SVGAElement::defaultEventHandler(Event& event)
                 }
             }
 
+            Ref document = this->document();
+            URL completedURL = document->completeURL(url);
+
             auto target = this->target();
             if (target.isEmpty() && attributeWithoutSynchronization(XLinkNames::showAttr) == "new"_s)
                 target = blankTargetFrameName();
             event.setDefaultHandled();
 
-            if (RefPtr frame = document().frame())
-                frame->loader().changeLocation(protectedDocument()->completeURL(url), target, &event, ReferrerPolicy::EmptyString, document().shouldOpenExternalURLsPolicyToPropagate());
+            auto referrerPolicy = hasRel(Relation::NoReferrer) ? ReferrerPolicy::NoReferrer : ReferrerPolicy::EmptyString;
+            NewFrameOpenerPolicy newFrameOpenerPolicy = NewFrameOpenerPolicy::Allow;
+            if (hasRel(Relation::NoOpener) || hasRel(Relation::NoReferrer) || (!hasRel(Relation::Opener) && isBlankTargetFrameName(target) && !completedURL.protocolIsJavaScript()))
+                newFrameOpenerPolicy = NewFrameOpenerPolicy::Suppress;
+
+            if (RefPtr frame = document->frame())
+                frame->loader().changeLocation(completedURL, target, &event, referrerPolicy, document->shouldOpenExternalURLsPolicyToPropagate(), newFrameOpenerPolicy);
             return;
         }
     }
@@ -237,10 +258,15 @@ DOMTokenList& SVGAElement::relList()
             if (equalLettersIgnoringASCIICase(token, "ar"_s))
                 return true;
 #endif
-            return equalLettersIgnoringASCIICase(token, "noreferrer"_s) || equalLettersIgnoringASCIICase(token, "noopener"_s);
+            return equalLettersIgnoringASCIICase(token, "noreferrer"_s) || equalLettersIgnoringASCIICase(token, "noopener"_s) || equalLettersIgnoringASCIICase(token, "opener"_s);
         }));
     }
     return *m_relList;
+}
+
+bool SVGAElement::hasRel(Relation relation) const
+{
+    return m_linkRelations.contains(relation);
 }
 
 } // namespace WebCore

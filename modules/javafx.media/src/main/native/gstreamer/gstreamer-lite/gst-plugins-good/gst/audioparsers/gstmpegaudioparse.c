@@ -824,7 +824,8 @@ gst_mpeg_audio_parse_handle_frame (GstBaseParse * parse,
   /* restore default minimum */
   gst_base_parse_set_min_frame_size (parse, MIN_FRAME_SIZE);
 
-  res = TRUE;
+  /* output one frame if we have enough data */
+  res = bpf <= map.size;
 
   /* metadata handling */
   if (G_UNLIKELY (caps_change)) {
@@ -914,7 +915,7 @@ cleanup:
     GST_BUFFER_DURATION (frame->buffer) = 0;
   }
 
-  if (res && bpf <= map.size) {
+  if (res) {
     return gst_base_parse_finish_frame (parse, frame, bpf);
   }
 

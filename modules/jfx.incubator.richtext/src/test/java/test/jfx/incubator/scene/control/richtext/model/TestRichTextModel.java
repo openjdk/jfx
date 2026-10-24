@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,16 +26,27 @@
 package test.jfx.incubator.scene.control.richtext.model;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import javafx.scene.paint.Color;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import com.sun.jfx.incubator.scene.control.richtext.EmbeddedImageHelper;
+import com.sun.jfx.incubator.scene.control.richtext.Params;
 import com.sun.jfx.incubator.scene.control.richtext.SegmentStyledInput;
+import com.sun.jfx.incubator.scene.control.richtext.SegmentStyledOutput;
 import jfx.incubator.scene.control.richtext.LineEnding;
+import jfx.incubator.scene.control.richtext.Marker;
 import jfx.incubator.scene.control.richtext.TextPos;
 import jfx.incubator.scene.control.richtext.model.RichParagraph;
 import jfx.incubator.scene.control.richtext.model.RichTextModel;
@@ -49,6 +60,12 @@ import test.jfx.incubator.scene.control.richtext.support.RTUtil;
  * Tests RichTextModel.
  */
 public class TestRichTextModel {
+
+    /** RichTextModel version segment */
+    public static final String VERSION = "{@" + Params.VERSION_3 + "}";
+    /** standard document properties */
+    public static final String DOC_PROPS = "{#tabs|0.0}";
+
     private static final StyleAttributeMap BOLD = StyleAttributeMap.builder().setBold(true).build();
     private static final StyleAttributeMap BULLET = StyleAttributeMap.builder().setBullet("x").build();
     private static final StyleAttributeMap ITALIC = StyleAttributeMap.builder().setItalic(true).build();
@@ -142,6 +159,10 @@ public class TestRichTextModel {
 
     private static TextPos t(int index, int offset) {
         return TextPos.ofLeading(index, offset);
+    }
+
+    private static TextPos t(int offset) {
+        return TextPos.ofLeading(0, offset);
     }
 
     protected void test(List<RichParagraph> initial, List<RichParagraph> expected, Consumer<StyledTextModel> op) {
@@ -350,5 +371,155 @@ public class TestRichTextModel {
         assertEquals(1, counter.get());
         String text = p.getPlainText();
         assertEquals("1yo!", text);
+    }
+
+    public static String header() {
+        return VERSION + DOC_PROPS;
+    }
+
+    @Test
+    public void requireNonNull() {
+        RichTextModel m = createModel("1\n2\n3");
+        assertThrows(NullPointerException.class, () -> {
+            m.clamp(null);
+        });
+    }
+
+    @Test
+    public void insertSameImageTwice() {
+        byte[] bytes = RTUtil.redPng32x32();
+        StyleAttributeMap a = StyleAttributeMap.of(StyleAttributeMap.EMBEDDED_IMAGE, EmbeddedImageHelper.create(bytes, 32, 32, 32, 32, true));
+
+        // insert before
+        {
+            RichTextModel m = createModel("");
+            m.replace(null, TextPos.ZERO, TextPos.ZERO, StyledInput.of("1", a));
+            m.replace(null, TextPos.ZERO, TextPos.ZERO, StyledInput.of("2", a));
+
+            RichParagraph p = m.getParagraph(0);
+            assertEquals(2, p.getSegmentCount());
+            assertEquals(a, p.getSegment(0).getStyleAttributeMap(null));
+            assertEquals(a, p.getSegment(1).getStyleAttributeMap(null));
+        }
+
+        // insert after
+        {
+            RichTextModel m = createModel("");
+            m.replace(null, TextPos.ZERO, TextPos.ZERO, StyledInput.of("1", a));
+            TextPos pos = TextPos.ofLeading(0, 1);
+            m.replace(null, pos, pos, StyledInput.of("2", a));
+
+            RichParagraph p = m.getParagraph(0);
+            assertEquals(2, p.getSegmentCount());
+            assertEquals(a, p.getSegment(0).getStyleAttributeMap(null));
+            assertEquals(a, p.getSegment(1).getStyleAttributeMap(null));
+        }
+    }
+
+    @Test
+    public void applyStyle() {
+        RichTextModel m = createModel("ABCDEF");
+        m.applyStyle(t(4), t(6), BOLD, true); // EF
+        m.applyStyle(t(0), t(2), BOLD, true); // AB
+
+        assertEquals("ABCDEF", m.getPlainText(0));
+        assertEquals(BOLD, m.getStyleAttributeMap(null, t(1), true));
+        assertEquals(StyleAttributeMap.EMPTY, m.getStyleAttributeMap(null, t(0, 3), true));
+        assertEquals(BOLD, m.getStyleAttributeMap(null, t(5), true));
+    }
+
+    @Test
+    public void applyStyleAllCases() throws Exception {
+
+        // RichTextModel.whichCase()
+        // paragraph:   start [=============] end
+        //      case:
+        //             0a:                  |-
+        //             0b:                      |-
+        //              1:  -------------------->
+        //              2:    |----------------->
+        //              3:    |-------------|
+        //              4:    |--------|
+        //              5:        |------------->
+        //              6:        |---------|
+        //              7:        |----|
+        //              8:  -----------|
+        //              9:  ----------------|
+        //
+        // each case starts with the model set to "a\nbcd\ne" -
+        //   a
+        //   bcd
+        //   e
+        // the expected string: uppercase text when it's bold, '-' for newline
+
+        assertApply("0a", t(1, 6), t(99, 99), "a-bcd-E");
+        assertApply("0b", t(98, 98), t(99, 99), "a-bcd-e");
+        assertApply("1", TextPos.ZERO, t(99, 99), "A-BCD-E");
+        assertApply("2", t(1, 0), t(99, 99), "a-BCD-E");
+        assertApply("3", t(1, 0), t(1, 6), "a-BCD-e");
+        assertApply("4", t(1, 0), t(1, 2), "a-BCd-e");
+        assertApply("5", t(1, 2), t(99, 99), "a-bcD-E");
+        assertApply("6", t(1, 2), t(1, 6), "a-bcD-e");
+        assertApply("7", t(1, 1), t(1, 2), "a-bCd-e");
+        assertApply("8", TextPos.ZERO, t(1, 2), "A-BCd-e");
+        assertApply("8", TextPos.ZERO, t(1, 6), "A-BCD-e");
+    }
+
+    private void assertApply(String which, TextPos start, TextPos end, String expected) throws Exception {
+        RichTextModel m = createModel("a\nbcd\ne");
+        m.applyStyle(start, end, BOLD, true);
+        SegmentStyledOutput out = new SegmentStyledOutput(8);
+        m.export(TextPos.ZERO, m.getDocumentEnd(), out);
+        StyledSegment[] segments = out.getSegments();
+        StringBuilder sb = new StringBuilder();
+        for (StyledSegment seg : segments) {
+            switch(seg.getType()) {
+            case DOCUMENT_PROPERTIES:
+            case VERSION:
+            case PARAGRAPH_ATTRIBUTES:
+                // ignore
+                break;
+            case LINE_BREAK:
+                sb.append("-");
+                break;
+            case TEXT:
+                StyleAttributeMap a = seg.getStyleAttributeMap(null);
+                String txt = seg.getText();
+                if(BOLD.equals(a)) {
+                    txt = txt.toUpperCase(Locale.ROOT);
+                }
+                sb.append(txt);
+                break;
+            case REGION:
+            case INLINE_NODE:
+            default:
+                fail();
+            }
+        }
+        assertEquals(expected, sb.toString(), "case=" + which);
+    }
+
+    @Test
+    public void explodingListener() {
+        String pattern = "BoOm!";
+        Marker marker = null;
+        // see OutputRedirect
+        PrintStream stderr = System.err;
+        ByteArrayOutputStream os = new ByteArrayOutputStream();
+        System.setErr(new PrintStream(os, true, StandardCharsets.UTF_8));
+        try {
+            RichTextModel m = createModel("1");
+            m.addListener((ch) -> {
+                throw new RuntimeException(pattern);
+            });
+            marker = m.getMarker(t(0, 1));
+            m.replace(null, m.getDocumentEnd(), m.getDocumentEnd(), "23");
+        } finally {
+            System.setErr(stderr);
+            String s = new String(os.toByteArray(), StandardCharsets.UTF_8);
+            assertTrue(s.contains(pattern));
+        }
+        assertNotNull(marker);
+        assertEquals(t(0, 3), marker.getTextPos());
     }
 }

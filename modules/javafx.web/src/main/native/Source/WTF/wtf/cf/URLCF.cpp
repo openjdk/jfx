@@ -47,7 +47,7 @@ RetainPtr<CFURLRef> URL::createCFURL(const String& string)
 {
     if (string.is8Bit() && string.containsOnlyASCII()) [[likely]] {
         auto characters = string.span8();
-        return adoptCF(CFURLCreateAbsoluteURLWithBytes(nullptr, characters.data(), characters.size(), kCFStringEncodingUTF8, nullptr, true));
+        return adoptCF(CFURLCreateAbsoluteURLWithBytes(nullptr, byteCast<UInt8>(characters.data()), characters.size(), kCFStringEncodingUTF8, nullptr, true));
     }
     CString utf8 = string.utf8();
     auto utf8Span = utf8.span();

@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "JSObject.h"
+#include <JavaScriptCore/JSObject.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 

@@ -79,7 +79,7 @@ static inline Vector<uint8_t> extractSTUNOrTURNMessages(Vector<uint8_t>&& buffer
 
             memcpySpan(buffered.mutableSpan(), data);
             buffered.shrink(data.size());
-            return WTFMove(buffered);
+            return WTF::move(buffered);
         }
 
         processMessage(data.first(lengths->messageLength));
@@ -103,7 +103,7 @@ static inline Vector<uint8_t> extractDataMessages(Vector<uint8_t>&& buffered, NO
 
             memcpySpan(buffered.mutableSpan(), data);
             buffered.shrink(data.size());
-            return WTFMove(buffered);
+            return WTF::move(buffered);
         }
 
         skip(data, lengthFieldSize);
@@ -114,7 +114,7 @@ static inline Vector<uint8_t> extractDataMessages(Vector<uint8_t>&& buffered, NO
 
 Vector<uint8_t> extractMessages(Vector<uint8_t>&& buffer, MessageType type, NOESCAPE const Function<void(std::span<const uint8_t> data)>& processMessage)
 {
-    return type == MessageType::STUN ? extractSTUNOrTURNMessages(WTFMove(buffer), processMessage) : extractDataMessages(WTFMove(buffer), processMessage);
+    return type == MessageType::STUN ? extractSTUNOrTURNMessages(WTF::move(buffer), processMessage) : extractDataMessages(WTF::move(buffer), processMessage);
 }
 
 } // namespace WebRTC

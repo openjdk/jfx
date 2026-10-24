@@ -36,7 +36,9 @@
     [NewObject, CallWith=CurrentScriptExecutionContext] Promise<undefined> claim();
 };
 
-dictionary ClientQueryOptions {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary ClientQueryOptions {
     boolean includeUncontrolled = false;
     ServiceWorkerClientType type = "window";
 };

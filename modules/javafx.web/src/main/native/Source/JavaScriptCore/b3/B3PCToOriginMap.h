@@ -40,7 +40,7 @@ public:
     { }
 
     PCToOriginMap(PCToOriginMap&& other)
-        : m_ranges(WTFMove(other.m_ranges))
+        : m_ranges(WTF::move(other.m_ranges))
     { }
 
     struct OriginRange {
@@ -51,8 +51,11 @@ public:
     void appendItem(MacroAssembler::Label label, Origin origin)
     {
         if (m_ranges.size()) {
-            if (m_ranges.last().label == label)
+            if (m_ranges.last().label == label) {
+                // Last origin was not adding any code. Let's update with the new origin.
+                m_ranges.last().origin = origin;
                 return;
+        }
         }
 
         m_ranges.append(OriginRange{label, origin});

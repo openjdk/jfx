@@ -33,20 +33,12 @@
 #include "GCReachableRef.h"
 #include "MutationObserver.h"
 #include <wtf/CheckedRef.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/RobinHoodHashSet.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/AtomString.h>
 #include <wtf/text/AtomStringHash.h>
-
-namespace WebCore {
-class MutationObserverRegistration;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::MutationObserverRegistration> : std::true_type { };
-}
 
 namespace JSC {
 class AbstractSlotVisitor;
@@ -56,10 +48,10 @@ namespace WebCore {
 
 class QualifiedName;
 
-class MutationObserverRegistration : public CanMakeWeakPtr<MutationObserverRegistration> {
+class MutationObserverRegistration final : public RefCountedAndCanMakeWeakPtr<MutationObserverRegistration> {
     WTF_MAKE_TZONE_ALLOCATED(MutationObserverRegistration);
 public:
-    MutationObserverRegistration(MutationObserver&, Node&, MutationObserverOptions, const MemoryCompactLookupOnlyRobinHoodHashSet<AtomString>& attributeFilter);
+    static Ref<MutationObserverRegistration> create(MutationObserver&, Node&, MutationObserverOptions, const MemoryCompactLookupOnlyRobinHoodHashSet<AtomString>& attributeFilter);
     ~MutationObserverRegistration();
 
     void resetObservation(MutationObserverOptions, const MemoryCompactLookupOnlyRobinHoodHashSet<AtomString>& attributeFilter);
@@ -72,12 +64,15 @@ public:
 
     MutationObserver& observer() { return m_observer.get(); }
     Node& node() { return m_node; }
+    Ref<Node> protectedNode() { return m_node.get(); };
     MutationRecordDeliveryOptions deliveryOptions() const { return m_options & MutationObserver::AllDeliveryFlags; }
     MutationObserverOptions mutationTypes() const { return m_options & MutationObserver::AllMutationTypes; }
 
     bool isReachableFromOpaqueRoots(JSC::AbstractSlotVisitor&) const;
 
 private:
+    MutationObserverRegistration(MutationObserver&, Node&, MutationObserverOptions, const MemoryCompactLookupOnlyRobinHoodHashSet<AtomString>& attributeFilter);
+
     const Ref<MutationObserver> m_observer;
     WeakRef<Node, WeakPtrImplWithEventTargetData> m_node;
     RefPtr<Node> m_nodeKeptAlive;

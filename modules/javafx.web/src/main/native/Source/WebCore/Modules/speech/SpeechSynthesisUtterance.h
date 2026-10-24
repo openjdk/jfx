@@ -27,23 +27,21 @@
 
 #if ENABLE(SPEECH_SYNTHESIS)
 
-#include "ActiveDOMObject.h"
-#include "ContextDestructionObserver.h"
-#include "EventTarget.h"
-#include "PlatformSpeechSynthesisUtterance.h"
-#include "SpeechSynthesisErrorCode.h"
-#include "SpeechSynthesisVoice.h"
+#include <WebCore/ActiveDOMObject.h>
+#include <WebCore/ContextDestructionObserver.h>
+#include <WebCore/EventTarget.h>
+#include <WebCore/EventTargetInterfaces.h>
+#include <WebCore/PlatformSpeechSynthesisUtterance.h>
+#include <WebCore/SpeechSynthesisErrorCode.h>
+#include <WebCore/SpeechSynthesisVoice.h>
 #include <wtf/RefCounted.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class WEBCORE_EXPORT SpeechSynthesisUtterance final : public PlatformSpeechSynthesisUtteranceClient, public RefCounted<SpeechSynthesisUtterance>, public ActiveDOMObject, public EventTarget {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(SpeechSynthesisUtterance, WEBCORE_EXPORT);
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(SpeechSynthesisUtterance, WEBCORE_EXPORT);
 public:
-    void ref() const final;
-    void deref() const final;
-
     using UtteranceCompletionHandler = Function<void(const SpeechSynthesisUtterance&)>;
     static Ref<SpeechSynthesisUtterance> create(ScriptExecutionContext&, const String&, UtteranceCompletionHandler&&);
     static Ref<SpeechSynthesisUtterance> create(ScriptExecutionContext&, const String&);
@@ -52,6 +50,11 @@ public:
     SpeechSynthesisUtterance();
 
     virtual ~SpeechSynthesisUtterance();
+
+    // ContextDestructionObserver, PlatformSpeechSynthesisUtteranceClient.
+    void ref() const final;
+    void deref() const final;
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
 
     const String& text() const { return m_platformUtterance->text(); }
     void setText(const String& text) { m_platformUtterance->setText(text); }
@@ -76,12 +79,15 @@ public:
 
     PlatformSpeechSynthesisUtterance& platformUtterance() const { return m_platformUtterance.get(); }
 
-    void eventOccurred(const AtomString& type, unsigned long charIndex, unsigned long charLength, const String& name);
+    void eventOccurred(const AtomString& type, unsigned long charIndex, unsigned long charLength, const String& name) final;
     void errorEventOccurred(const AtomString& type, SpeechSynthesisErrorCode);
     void setIsActiveForEventDispatch(bool);
 
 private:
     SpeechSynthesisUtterance(ScriptExecutionContext&, const String&, UtteranceCompletionHandler&&);
+
+    bool isSpeechSynthesisUtterance() const final { return true; }
+
     void dispatchEventAndUpdateState(Event&);
     void incrementActivityCountForEventDispatch();
     void decrementActivityCountForEventDispatch();
@@ -123,5 +129,16 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::SpeechSynthesisUtterance)
+    static bool isType(const WebCore::EventTarget& context)
+    {
+        return context.eventTargetInterface() == WebCore::EventTargetInterfaceType::SpeechSynthesisUtterance;
+    }
+    static bool isType(const WebCore::PlatformSpeechSynthesisUtteranceClient& client)
+    {
+        return client.isSpeechSynthesisUtterance();
+    }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(SPEECH_SYNTHESIS)

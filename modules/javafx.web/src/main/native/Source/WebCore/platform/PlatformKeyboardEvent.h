@@ -26,9 +26,10 @@
 
 #pragma once
 
-#include "CompositionUnderline.h"
-#include "KeypressCommand.h"
-#include "PlatformEvent.h"
+#include <WebCore/CompositionUnderline.h>
+#include <WebCore/KeypressCommand.h>
+#include <WebCore/PlatformEvent.h>
+#include <wtf/Platform.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WindowsExtras.h>
 #include <wtf/text/WTFString.h>
@@ -56,8 +57,10 @@ namespace WebCore {
         {
         }
 
+        static std::optional<PlatformKeyboardEvent> syntheticEventFromText(Type, const String&);
+
         PlatformKeyboardEvent(Type type, const String& text, const String& unmodifiedText, const String& key, const String& code,
-        const String& keyIdentifier, int windowsVirtualKeyCode, bool isAutoRepeat, bool isKeypad, bool isSystemKey, OptionSet<Modifier> modifiers, WallTime timestamp)
+        const String& keyIdentifier, int windowsVirtualKeyCode, bool isAutoRepeat, bool isKeypad, bool isSystemKey, OptionSet<Modifier> modifiers, MonotonicTime timestamp)
             : PlatformEvent(type, modifiers, timestamp)
             , m_autoRepeat(isAutoRepeat)
             , m_isKeypad(isKeypad)
@@ -92,13 +95,14 @@ namespace WebCore {
 
         // Most compatible Windows virtual key code associated with the event.
         // Zero for Char events.
-        int windowsVirtualKeyCode() const { return m_windowsVirtualKeyCode; }
+        int windowsVirtualKeyCode() const { return m_type != Type::Char ? m_windowsVirtualKeyCode : 0; }
         void setWindowsVirtualKeyCode(int code) { m_windowsVirtualKeyCode = code; }
+        int windowsVirtualKeyCodeWithoutKeyPressOverride() const { return m_windowsVirtualKeyCode; }
 
-#if USE(APPKIT) || PLATFORM(IOS_FAMILY) || PLATFORM(GTK) || USE(LIBWPE)
+#if USE(APPKIT) || PLATFORM(IOS_FAMILY) || PLATFORM(GTK) || USE(LIBWPE) || ENABLE(WPE_PLATFORM)
         bool handledByInputMethod() const { return m_handledByInputMethod; }
 #endif
-#if PLATFORM(GTK) || USE(LIBWPE)
+#if PLATFORM(GTK) || USE(LIBWPE) || ENABLE(WPE_PLATFORM)
         const std::optional<Vector<WebCore::CompositionUnderline>>& preeditUnderlines() const { return m_preeditUnderlines; }
         const std::optional<uint64_t>& preeditSelectionRangeStart() const { return m_preeditSelectionRangeStart; }
         const std::optional<uint64_t>& preeditSelectionRangeLength() const { return m_preeditSelectionRangeLength; }
@@ -129,25 +133,11 @@ namespace WebCore {
 #endif
 #endif
 
-#if PLATFORM(WIN)
-        WEBCORE_EXPORT PlatformKeyboardEvent(HWND, WPARAM, LPARAM, Type, bool);
-#endif
-
-#if PLATFORM(GTK)
-        // Used by WebKit2
-        static String keyValueForGdkKeyCode(unsigned);
-        static String keyCodeForHardwareKeyCode(unsigned);
-        static String keyIdentifierForGdkKeyCode(unsigned);
-        static int windowsKeyCodeForGdkKeyCode(unsigned);
-        static String singleCharacterString(unsigned);
-#endif
-
 #if PLATFORM(JAVA)
         PlatformKeyboardEvent(jint type, jstring text, jstring keyIdentifier,
                               jint windowsVirtualKeyCode, jboolean shift,
                               jboolean ctrl, jboolean alt, jboolean meta, jdouble timestamp);
 #endif
-
 #if USE(LIBWPE)
         static String keyValueForWPEKeyCode(unsigned);
         static String keyCodeForHardwareKeyCode(unsigned);
@@ -169,10 +159,10 @@ namespace WebCore {
         int m_windowsVirtualKeyCode { 0 };
 
         bool m_isSyntheticEvent { false };
-#if USE(APPKIT) || PLATFORM(IOS_FAMILY) || PLATFORM(GTK) || USE(LIBWPE)
+#if USE(APPKIT) || PLATFORM(IOS_FAMILY) || PLATFORM(GTK) || USE(LIBWPE) || ENABLE(WPE_PLATFORM)
         bool m_handledByInputMethod { false };
 #endif
-#if PLATFORM(GTK) || USE(LIBWPE)
+#if PLATFORM(GTK) || USE(LIBWPE) || ENABLE(WPE_PLATFORM)
         std::optional<Vector<WebCore::CompositionUnderline>> m_preeditUnderlines;
         std::optional<uint64_t> m_preeditSelectionRangeStart;
         std::optional<uint64_t> m_preeditSelectionRangeLength;

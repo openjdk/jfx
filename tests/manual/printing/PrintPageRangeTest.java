@@ -24,6 +24,7 @@
  */
 
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.print.PrinterJob;
@@ -112,7 +113,8 @@ public class PrintPageRangeTest extends Application {
         naviBar.setPadding(new Insets(PADDING_VALUE));
         bottomMessageLabel = new Label();
         final VBox root = new VBox();
-        root.getChildren().addAll(instructionsText, naviBar, webView, bottomMessageLabel);
+        HBox passFailButtons = createPassFailButtons();
+        root.getChildren().addAll(instructionsText, naviBar, webView, passFailButtons, bottomMessageLabel);
         VBox.setVgrow(webView, Priority.ALWAYS);
         String htmlContent = createHtmlPage();
         webEngine.loadContent(htmlContent);
@@ -137,5 +139,21 @@ public class PrintPageRangeTest extends Application {
             }
         }
         setMessage("END OF PRINT JOB");
+    }
+
+    private HBox createPassFailButtons() {
+        var passButton = new Button("Pass");
+        passButton.setOnAction(e -> {
+            System.out.println("TEST PASSED");
+            Platform.exit();
+        });
+        var failButton = new Button("Fail");
+        failButton.setOnAction(e -> {
+            System.out.println("TEST FAILED");
+            Platform.exit();
+            throw new AssertionError("Test failed");
+        });
+        var hbox = new HBox(10, passButton, failButton);
+        return hbox;
     }
 }

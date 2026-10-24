@@ -25,32 +25,41 @@
 
 #pragma once
 
-#include "IDLTypes.h"
-#include "JSDOMPromiseDeferred.h"
 #include "NavigatorUABrandVersion.h"
-#include <wtf/Forward.h>
+#include <WebCore/IDLTypes.h>
+#include <WebCore/JSDOMPromiseDeferred.h>
+#include <wtf/NeverDestroyed.h>
+#include <wtf/RefCounted.h>
 
 namespace WebCore {
 struct NavigatorUABrandVersion;
 struct UADataValues;
 struct UALowEntropyJSON;
+struct UserAgentStringData;
 
 class NavigatorUAData : public RefCounted<NavigatorUAData> {
 public:
     static Ref<NavigatorUAData> create();
+    static Ref<NavigatorUAData> create(Ref<UserAgentStringData>&&);
     const Vector<NavigatorUABrandVersion>& brands() const;
     bool mobile() const;
-    const String& platform() const;
+    String platform() const;
     UALowEntropyJSON toJSON() const;
 
-    using ValuesPromise = DOMPromiseDeferred<IDLSequence<IDLDictionary<UADataValues>>>;
+    using ValuesPromise = DOMPromiseDeferred<IDLDictionary<UADataValues>>;
     void getHighEntropyValues(const Vector<String>& hints, ValuesPromise&&) const;
     ~NavigatorUAData();
 
 private:
     NavigatorUAData();
+    NavigatorUAData(Ref<UserAgentStringData>&&);
+    static String createArbitraryVersion();
+    static String createArbitraryBrand();
 
-    const Vector<NavigatorUABrandVersion> m_brands = { };
-    const String m_platform = ""_s;
+    bool overrideFromUserAgentString { false };
+    bool mobileOverride { false };
+    inline static LazyNeverDestroyed<Vector<NavigatorUABrandVersion>> m_brands;
+
+    String platformOverride;
 };
 }

@@ -32,6 +32,8 @@
     readonly attribute DataTransfer? clipboardData;
 };
 
-dictionary ClipboardEventInit : EventInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary ClipboardEventInit : EventInit {
     DataTransfer? clipboardData = null;
 };

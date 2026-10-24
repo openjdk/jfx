@@ -122,10 +122,10 @@ static std::optional<KeywordType> getKeywordType(CSSValueID id)
     case CSSValueXEnd:
     case CSSValueSpanXStart:
     case CSSValueSpanXEnd:
-    case CSSValueXSelfStart:
-    case CSSValueXSelfEnd:
-    case CSSValueSpanXSelfStart:
-    case CSSValueSpanXSelfEnd:
+    case CSSValueSelfXStart:
+    case CSSValueSelfXEnd:
+    case CSSValueSpanSelfXStart:
+    case CSSValueSpanSelfXEnd:
         return KeywordType::PhysicalX;
 
     case CSSValueTop:
@@ -136,10 +136,10 @@ static std::optional<KeywordType> getKeywordType(CSSValueID id)
     case CSSValueYEnd:
     case CSSValueSpanYStart:
     case CSSValueSpanYEnd:
-    case CSSValueYSelfStart:
-    case CSSValueYSelfEnd:
-    case CSSValueSpanYSelfStart:
-    case CSSValueSpanYSelfEnd:
+    case CSSValueSelfYStart:
+    case CSSValueSelfYEnd:
+    case CSSValueSpanSelfYStart:
+    case CSSValueSpanSelfYEnd:
         return KeywordType::PhysicalY;
 
     case CSSValueBlockStart:

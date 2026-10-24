@@ -37,15 +37,15 @@ class ThreadSafeDataBuffer;
 class ThreadSafeDataBufferImpl : public ThreadSafeRefCounted<ThreadSafeDataBufferImpl> {
 private:
     friend class ThreadSafeDataBuffer;
-    friend struct IPC::ArgumentCoder<ThreadSafeDataBufferImpl, void>;
+    friend struct IPC::ArgumentCoder<ThreadSafeDataBufferImpl>;
 
     static Ref<ThreadSafeDataBufferImpl> create(Vector<uint8_t>&& data)
     {
-        return adoptRef(*new ThreadSafeDataBufferImpl(WTFMove(data)));
+        return adoptRef(*new ThreadSafeDataBufferImpl(WTF::move(data)));
     }
 
     ThreadSafeDataBufferImpl(Vector<uint8_t>&& data)
-        : m_data(WTFMove(data))
+        : m_data(WTF::move(data))
     {
     }
 
@@ -59,11 +59,11 @@ private:
 
 class ThreadSafeDataBuffer {
 private:
-    friend struct IPC::ArgumentCoder<ThreadSafeDataBuffer, void>;
+    friend struct IPC::ArgumentCoder<ThreadSafeDataBuffer>;
 public:
     static ThreadSafeDataBuffer create(Vector<uint8_t>&& data)
     {
-        return ThreadSafeDataBuffer(WTFMove(data));
+        return ThreadSafeDataBuffer(WTF::move(data));
     }
 
     static ThreadSafeDataBuffer copyData(std::span<const uint8_t> data)
@@ -96,16 +96,16 @@ public:
 private:
     static ThreadSafeDataBuffer create(RefPtr<ThreadSafeDataBufferImpl>&& impl)
     {
-        return ThreadSafeDataBuffer(WTFMove(impl));
+        return ThreadSafeDataBuffer(WTF::move(impl));
     }
 
     explicit ThreadSafeDataBuffer(RefPtr<ThreadSafeDataBufferImpl>&& impl)
-        : m_impl(WTFMove(impl))
+        : m_impl(WTF::move(impl))
     {
     }
 
     explicit ThreadSafeDataBuffer(Vector<uint8_t>&& data)
-        : m_impl(adoptRef(new ThreadSafeDataBufferImpl(WTFMove(data))))
+        : m_impl(adoptRef(new ThreadSafeDataBufferImpl(WTF::move(data))))
     {
     }
 

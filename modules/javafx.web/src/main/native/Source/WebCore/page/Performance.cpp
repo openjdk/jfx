@@ -41,8 +41,12 @@
 #include "EventLoop.h"
 #include "EventNames.h"
 #include "ExceptionOr.h"
+#include "InspectorInstrumentation.h"
+#include "LargestContentfulPaint.h"
 #include "LocalFrame.h"
+#include "Logging.h"
 #include "PerformanceEntry.h"
+#include "PerformanceEventTiming.h"
 #include "PerformanceMarkOptions.h"
 #include "PerformanceMeasureOptions.h"
 #include "PerformanceNavigation.h"
@@ -54,6 +58,8 @@
 #include "PerformanceUserTiming.h"
 #include "ResourceResponse.h"
 #include "ScriptExecutionContext.h"
+#include "dom/DOMHighResTimeStamp.h"
+#include <JavaScriptCore/ProfilerSupport.h>
 #include <ranges>
 #include <wtf/SystemTracing.h>
 #include <wtf/TZoneMallocInlines.h>
@@ -61,21 +67,19 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(Performance);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Performance);
 
 static Seconds timePrecision { 1_ms };
 
 static bool isSignpostEnabled()
 {
-    static bool flag = false;
-    static std::once_flag onceKey;
-    std::call_once(onceKey, [&] {
-        const char* value = getenv("WebKitPerformanceSignpostEnabled");
-        if (value) {
+    static bool flag = [] {
+        if (const char* value = getenv("WebKitPerformanceSignpostEnabled")) {
             if (auto result = parseInteger<int>(StringView::fromLatin1(value)); result && result.value())
-                flag = true;
+                return true;
         }
-    });
+        return false;
+    }();
     return flag;
 }
 
@@ -127,10 +131,14 @@ Seconds Performance::timeResolution()
     return timePrecision;
 }
 
+Seconds Performance::relativeTimeFromTimeOriginInReducedResolutionSeconds(MonotonicTime timestamp) const
+{
+    return reduceTimeResolution(timestamp - m_timeOrigin);
+}
+
 DOMHighResTimeStamp Performance::relativeTimeFromTimeOriginInReducedResolution(MonotonicTime timestamp) const
 {
-    Seconds seconds = timestamp - m_timeOrigin;
-    return reduceTimeResolution(seconds).milliseconds();
+    return relativeTimeFromTimeOriginInReducedResolutionSeconds(timestamp).milliseconds();
 }
 
 MonotonicTime Performance::monotonicTimeFromRelativeTime(DOMHighResTimeStamp relativeTime) const
@@ -143,40 +151,45 @@ ScriptExecutionContext* Performance::scriptExecutionContext() const
     return ContextDestructionObserver::scriptExecutionContext();
 }
 
-EventCounts* Performance::eventCounts()
+EventCounts& Performance::eventCounts()
 {
-    if (!is<Document>(scriptExecutionContext()))
-        return nullptr;
-
+    ASSERT(is<Document>(scriptExecutionContext()));
     ASSERT(isMainThread());
+
     // FIXME: stop lazy-initializing m_eventCounts after event
     // timing stops being gated by a flag:
     if (!m_eventCounts)
         lazyInitialize(m_eventCounts, makeUniqueWithoutRefCountedCheck<EventCounts>(this));
 
-    return m_eventCounts.get();
+    return *m_eventCounts;
 }
 
-PerformanceNavigation* Performance::navigation()
+uint64_t Performance::interactionCount()
 {
-    if (!is<Document>(scriptExecutionContext()))
-        return nullptr;
-
+    ASSERT(is<Document>(scriptExecutionContext()));
     ASSERT(isMainThread());
+
+    return downcast<Document>(*scriptExecutionContext()).window()->interactionCount();
+}
+
+PerformanceNavigation& Performance::navigation()
+{
+    ASSERT(is<Document>(scriptExecutionContext()));
+    ASSERT(isMainThread());
+
     if (!m_navigation)
         m_navigation = PerformanceNavigation::create(downcast<Document>(*scriptExecutionContext()).window());
-    return m_navigation.get();
+    return *m_navigation;
 }
 
-PerformanceTiming* Performance::timing()
+PerformanceTiming& Performance::timing()
 {
-    if (!is<Document>(scriptExecutionContext()))
-        return nullptr;
-
+    ASSERT(is<Document>(scriptExecutionContext()));
     ASSERT(isMainThread());
+
     if (!m_timing)
         m_timing = PerformanceTiming::create(downcast<Document>(*scriptExecutionContext()).window());
-    return m_timing.get();
+    return *m_timing;
 }
 
 Vector<Ref<PerformanceEntry>> Performance::getEntries() const
@@ -196,6 +209,11 @@ Vector<Ref<PerformanceEntry>> Performance::getEntries() const
     if (m_firstContentfulPaint)
         entries.append(*m_firstContentfulPaint);
 
+    // getEntries should not include largest-contentful-paint.
+
+    if (m_firstInput)
+        entries.append(*m_firstInput);
+
     std::ranges::sort(entries, PerformanceEntry::startTimeCompareLessThan);
     return entries;
 }
@@ -213,12 +231,17 @@ Vector<Ref<PerformanceEntry>> Performance::getEntriesByType(const String& entryT
     if (m_firstContentfulPaint && entryType == "paint"_s)
         entries.append(*m_firstContentfulPaint);
 
+    // getEntriesByType should not include largest-contentful-paint.
+
     if (m_userTiming) {
         if (entryType == "mark"_s)
             entries.appendVector(m_userTiming->getMarks());
         else if (entryType == "measure"_s)
             entries.appendVector(m_userTiming->getMeasures());
     }
+
+    if (entryType == "first-input"_s && m_firstInput)
+        entries.append(*m_firstInput);
 
     std::ranges::sort(entries, PerformanceEntry::startTimeCompareLessThan);
     return entries;
@@ -241,11 +264,18 @@ Vector<Ref<PerformanceEntry>> Performance::getEntriesByName(const String& name, 
     if (m_firstContentfulPaint && (entryType.isNull() || entryType == "paint"_s) && name == "first-contentful-paint"_s)
         entries.append(*m_firstContentfulPaint);
 
+    // getEntriesByName should not include largest-contentful-paint.
+
     if (m_userTiming) {
         if (entryType.isNull() || entryType == "mark"_s)
             entries.appendVector(m_userTiming->getMarks(name));
         if (entryType.isNull() || entryType == "measure"_s)
             entries.appendVector(m_userTiming->getMeasures(name));
+    }
+
+    if (entryType.isNull() || entryType == "first-input"_s) {
+        if (m_firstInput && name == m_firstInput->name())
+            entries.append(*m_firstInput);
     }
 
     std::ranges::sort(entries, PerformanceEntry::startTimeCompareLessThan);
@@ -254,9 +284,7 @@ Vector<Ref<PerformanceEntry>> Performance::getEntriesByName(const String& name, 
 
 void Performance::appendBufferedEntriesByType(const String& entryType, Vector<Ref<PerformanceEntry>>& entries, PerformanceObserver& observer) const
 {
-    if (m_navigationTiming
-        && entryType == "navigation"_s
-        && !observer.hasNavigationTiming()) {
+    if (m_navigationTiming && entryType == "navigation"_s && !observer.hasNavigationTiming()) {
         entries.append(*m_navigationTiming);
         observer.addedNavigationTiming();
     }
@@ -266,6 +294,15 @@ void Performance::appendBufferedEntriesByType(const String& entryType, Vector<Re
 
     if (entryType == "paint"_s && m_firstContentfulPaint)
         entries.append(*m_firstContentfulPaint);
+
+    if (entryType == "largest-contentful-paint"_s && m_largestContentfulPaint)
+        entries.append(*m_largestContentfulPaint);
+
+    if (entryType == "event"_s)
+        entries.appendVector(m_eventTimingBuffer);
+
+    if (entryType == "first-input"_s && m_firstInput)
+        entries.append(*m_firstInput);
 
     if (m_userTiming) {
         if (entryType.isNull() || entryType == "mark"_s)
@@ -278,7 +315,47 @@ void Performance::appendBufferedEntriesByType(const String& entryType, Vector<Re
 void Performance::countEvent(EventType type)
 {
     ASSERT(isMainThread());
-    eventCounts()->add(type);
+    eventCounts().add(type);
+}
+
+void Performance::processEventEntry(const PerformanceEventTimingCandidate& candidate)
+{
+    // Constants to avoid the need to round to the appropriate resolution
+    // (PerformanceEventTiming::durationResolution) when filtering candidates:
+    static constexpr Seconds minDurationCutoffBeforeRounding = PerformanceEventTiming::minimumDurationThreshold - (PerformanceEventTiming::durationResolution / 2);
+    static constexpr Seconds defaultDurationCutoffBeforeRounding = PerformanceEventTiming::defaultDurationThreshold - (PerformanceEventTiming::durationResolution / 2);
+
+    // The event timing spec requires us to set first-input and call
+    // setDispatchedInputEvent() when an entry with nonzero interactionID has
+    // its duration set, and only if hasDispatchedInputEvent() is false. This, however,
+    // causes inconsistent behavior: a pointerdown event that had its duration assigned
+    // before receiving an interactionID wouldn't qualify for first-input.
+    //
+    // We instead set first-input and call setDispatchedInputEvent() here; ongoing
+    // spec discussion at https://github.com/w3c/event-timing/issues/159 :
+    if (!m_firstInput && !candidate.interactionID.isUnassigned()) {
+        m_firstInput = PerformanceEventTiming::create(candidate, true);
+        queueEntry(*m_firstInput);
+        if (RefPtr document = dynamicDowncast<Document>(*scriptExecutionContext())) {
+            if (RefPtr window = document->window())
+                window->setDispatchedInputEvent();
+        }
+    }
+
+    if (candidate.duration < minDurationCutoffBeforeRounding)
+        return;
+
+    // FIXME: early return more often by keeping track of m_observers; we
+    // should keep track of the minimum defaultThreshold and whether any
+    // observers are interested in 'event' entries:
+    if (candidate.duration <= defaultDurationCutoffBeforeRounding && !m_observers.size())
+        return;
+
+    auto entry = PerformanceEventTiming::create(candidate);
+    if (m_eventTimingBuffer.size() < m_eventTimingBufferSize && candidate.duration > defaultDurationCutoffBeforeRounding)
+        m_eventTimingBuffer.append(entry);
+
+    queueEntry(entry);
 }
 
 void Performance::clearResourceTimings()
@@ -293,11 +370,23 @@ void Performance::setResourceTimingBufferSize(unsigned size)
     m_resourceTimingBufferFullFlag = false;
 }
 
-void Performance::reportFirstContentfulPaint()
+void Performance::reportFirstContentfulPaint(DOMHighResTimeStamp timestamp)
 {
+    if (RefPtr context = scriptExecutionContext())
+        InspectorInstrumentation::didEnqueueFirstContentfulPaint(*context);
+
     ASSERT(!m_firstContentfulPaint);
-    m_firstContentfulPaint = PerformancePaintTiming::createFirstContentfulPaint(now());
+    m_firstContentfulPaint = PerformancePaintTiming::createFirstContentfulPaint(timestamp);
     queueEntry(*m_firstContentfulPaint);
+}
+
+void Performance::enqueueLargestContentfulPaint(Ref<LargestContentfulPaint>&& paintEntry)
+{
+    if (RefPtr context = scriptExecutionContext())
+        InspectorInstrumentation::didEnqueueLargestContentfulPaint(*context, paintEntry.get());
+
+    m_largestContentfulPaint = RefPtr { WTF::move(paintEntry) };
+    queueEntry(*m_largestContentfulPaint);
 }
 
 void Performance::addNavigationTiming(DocumentLoader& documentLoader, Document& document, CachedResource& resource, const DocumentLoadTiming& timing, const NetworkLoadMetrics& metrics)
@@ -305,12 +394,20 @@ void Performance::addNavigationTiming(DocumentLoader& documentLoader, Document& 
     m_navigationTiming = PerformanceNavigationTiming::create(m_timeOrigin, resource, timing, metrics, document.eventTiming(), document.securityOrigin(), documentLoader.triggeringAction().type());
 }
 
-void Performance::navigationFinished(const NetworkLoadMetrics& metrics)
+void Performance::documentLoadFinished(const NetworkLoadMetrics& metrics)
 {
     if (!m_navigationTiming)
         return;
-    m_navigationTiming->navigationFinished(metrics);
 
+    m_navigationTiming->documentLoadFinished(metrics);
+}
+
+void Performance::navigationFinished(MonotonicTime loadEventEnd)
+{
+    if (!m_navigationTiming)
+        return;
+
+    m_navigationTiming->documentLoadTiming().setLoadEventEnd(loadEventEnd);
     queueEntry(*m_navigationTiming);
 }
 
@@ -318,10 +415,10 @@ void Performance::addResourceTiming(ResourceTiming&& resourceTiming)
 {
     ASSERT(scriptExecutionContext());
 
-    auto entry = PerformanceResourceTiming::create(m_timeOrigin, WTFMove(resourceTiming));
+    auto entry = PerformanceResourceTiming::create(m_timeOrigin, WTF::move(resourceTiming));
 
     if (m_waitingForBackupBufferToBeProcessed) {
-        m_backupResourceTimingBuffer.append(WTFMove(entry));
+        m_backupResourceTimingBuffer.append(WTF::move(entry));
         return;
     }
 
@@ -334,14 +431,14 @@ void Performance::addResourceTiming(ResourceTiming&& resourceTiming)
 
     if (isResourceTimingBufferFull()) {
         ASSERT(!m_resourceTimingBufferFullTimer.isActive());
-        m_backupResourceTimingBuffer.append(WTFMove(entry));
+        m_backupResourceTimingBuffer.append(WTF::move(entry));
         m_waitingForBackupBufferToBeProcessed = true;
         m_resourceTimingBufferFullTimer.startOneShot(0_s);
         return;
     }
 
     queueEntry(entry.get());
-    m_resourceTimingBuffer.append(WTFMove(entry));
+    m_resourceTimingBuffer.append(WTF::move(entry));
 }
 
 bool Performance::isResourceTimingBufferFull() const
@@ -399,7 +496,7 @@ ExceptionOr<Ref<PerformanceMark>> Performance::mark(JSC::JSGlobalObject& globalO
     if (!m_userTiming)
         m_userTiming = makeUnique<PerformanceUserTiming>(*this);
 
-    auto mark = m_userTiming->mark(globalObject, markName, WTFMove(markOptions));
+    auto mark = m_userTiming->mark(globalObject, markName, WTF::move(markOptions));
     if (mark.hasException())
         return mark.releaseException();
 
@@ -419,13 +516,15 @@ ExceptionOr<Ref<PerformanceMeasure>> Performance::measure(JSC::JSGlobalObject& g
     if (!m_userTiming)
         m_userTiming = makeUnique<PerformanceUserTiming>(*this);
 
-    auto measure = m_userTiming->measure(globalObject, measureName, WTFMove(startOrMeasureOptions), endMark);
+    auto measure = m_userTiming->measure(globalObject, measureName, WTF::move(startOrMeasureOptions), endMark);
     if (measure.hasException())
         return measure.releaseException();
 
     if (isSignpostEnabled()) {
-#if OS(DARWIN)
         Ref entry { measure.returnValue() };
+        auto message = measureName.utf8();
+#if OS(DARWIN)
+        {
         auto startTime = m_continuousTimeOrigin + Seconds::fromMilliseconds(entry->startTime());
         auto endTime = m_continuousTimeOrigin + Seconds::fromMilliseconds(entry->startTime() + entry->duration());
         uint64_t platformStartTime = startTime.toMachContinuousTime();
@@ -435,9 +534,17 @@ ExceptionOr<Ref<PerformanceMeasure>> Performance::measure(JSC::JSGlobalObject& g
         // Because signpost intervals are closed invervals [start, end], we decrease the endTime by 1 if startTime and endTime is not the same.
         if (correctedStartTime != correctedEndTime)
             correctedEndTime -= 1;
-        auto message = measureName.utf8();
-        WTFEmitSignpostAlways(entry.ptr(), WebKitPerformance, "%{public}s %{public, signpost.description:begin_time}llu %{public, signpost.description:end_time}llu", message.data(), correctedStartTime, correctedEndTime);
+
+            WTFBeginSignpostAlwaysWithSpecificTime(entry.ptr(), WebKitPerformance, correctedStartTime, "%" PUBLIC_LOG_STRING, message.data());
+            WTFEndSignpostAlwaysWithSpecificTime(entry.ptr(), WebKitPerformance, correctedEndTime, "%" PUBLIC_LOG_STRING, message.data());
+        }
 #endif
+        {
+            auto timeOrigin = m_continuousTimeOrigin.approximateMonotonicTime();
+            auto startTime = timeOrigin + Seconds::fromMilliseconds(entry->startTime());
+            auto endTime = timeOrigin + Seconds::fromMilliseconds(entry->startTime() + entry->duration());
+            JSC::ProfilerSupport::markInterval(entry.ptr(), JSC::ProfilerSupport::Category::WebKitPerformanceSignpost, startTime, endTime, WTF::move(message));
+        }
     }
 
     queueEntry(measure.returnValue().get());
@@ -461,13 +568,6 @@ void Performance::removeAllObservers()
 void Performance::registerPerformanceObserver(PerformanceObserver& observer)
 {
     m_observers.add(&observer);
-
-    if (m_navigationTiming
-        && observer.typeFilter().contains(PerformanceEntry::Type::Navigation)
-        && !observer.hasNavigationTiming()) {
-        observer.queueEntry(*m_navigationTiming);
-        observer.addedNavigationTiming();
-    }
 }
 
 void Performance::unregisterPerformanceObserver(PerformanceObserver& observer)
@@ -475,17 +575,18 @@ void Performance::unregisterPerformanceObserver(PerformanceObserver& observer)
     m_observers.remove(&observer);
 }
 
-void Performance::scheduleNavigationObservationTaskIfNeeded()
-{
-    if (m_navigationTiming)
-        scheduleTaskIfNeeded();
-}
-
 void Performance::queueEntry(PerformanceEntry& entry)
 {
     bool shouldScheduleTask = false;
     for (auto& observer : m_observers) {
-        if (observer->typeFilter().contains(entry.performanceEntryType())) {
+        bool isObserverInterested = observer->typeFilter().contains(entry.performanceEntryType());
+        if (entry.performanceEntryType() == PerformanceEntry::Type::Event && entry.duration() < observer->durationThreshold().milliseconds())
+            isObserverInterested = false;
+
+        if (entry.performanceEntryType() == PerformanceEntry::Type::Navigation && observer->hasNavigationTiming())
+            isObserverInterested = false;
+
+        if (isObserverInterested) {
             observer->queueEntry(entry);
             shouldScheduleTask = true;
         }
@@ -494,25 +595,26 @@ void Performance::queueEntry(PerformanceEntry& entry)
     if (!shouldScheduleTask)
         return;
 
+    LOG_WITH_STREAM(PerformanceTimeline, stream << "PerformanceEntry of type " << entry.name() << " dispatched to interested observer at t=" << now());
     scheduleTaskIfNeeded();
 }
 
 void Performance::scheduleTaskIfNeeded()
 {
-    if (m_hasScheduledTimingBufferDeliveryTask)
+    if (m_hasScheduledDeliveryTask)
         return;
 
-    auto* context = scriptExecutionContext();
+    RefPtr context = scriptExecutionContext();
     if (!context)
         return;
 
-    m_hasScheduledTimingBufferDeliveryTask = true;
+    m_hasScheduledDeliveryTask = true;
     context->eventLoop().queueTask(TaskSource::PerformanceTimeline, [protectedThis = Ref { *this }, this] {
-        auto* context = scriptExecutionContext();
+        RefPtr context = scriptExecutionContext();
         if (!context)
             return;
 
-        m_hasScheduledTimingBufferDeliveryTask = false;
+        m_hasScheduledDeliveryTask = false;
         for (auto& observer : copyToVector(m_observers))
             observer->deliver();
     });

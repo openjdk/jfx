@@ -27,8 +27,8 @@
 
 #if ENABLE(CONTENT_EXTENSIONS)
 
-#include "DFABytecodeInterpreter.h"
-#include "StyleSheetContents.h"
+#include <WebCore/DFABytecodeInterpreter.h>
+#include <WebCore/StyleSheetContents.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>

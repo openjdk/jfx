@@ -25,18 +25,10 @@
 
 #pragma once
 
-#include "Color.h"
+#include <WebCore/Color.h>
 #include <wtf/HashTraits.h>
 
 namespace WTF {
-
-struct ColorHash {
-    static unsigned hash(const WebCore::Color& key) { return computeHash(key); }
-    static bool equal(const WebCore::Color& a, const WebCore::Color& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = true;
-};
-
-template<> struct DefaultHash<WebCore::Color> : ColorHash { };
 
 template<> struct HashTraits<WebCore::Color> : GenericHashTraits<WebCore::Color> {
     static const bool emptyValueIsZero = false;

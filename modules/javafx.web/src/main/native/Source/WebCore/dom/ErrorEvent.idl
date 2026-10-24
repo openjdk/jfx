@@ -42,7 +42,9 @@
     [CallWith=CurrentGlobalObject] readonly attribute any error;
 };
 
-dictionary ErrorEventInit : EventInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary ErrorEventInit : EventInit {
     DOMString message = "";
     USVString filename = "";
     unsigned long lineno = 0;

@@ -27,16 +27,17 @@
 #include "NavigationDestination.h"
 
 #include "JSDOMGlobalObject.h"
+#include "ScriptWrappableInlines.h"
 #include "SerializedScriptValue.h"
 #include <JavaScriptCore/JSCJSValueInlines.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(NavigationDestination);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(NavigationDestination);
 
 NavigationDestination::NavigationDestination(const URL& url, RefPtr<NavigationHistoryEntry>&& entry, bool isSameDocument)
-    : m_entry(WTFMove(entry))
+    : m_entry(WTF::move(entry))
     , m_url(url)
     , m_isSameDocument(isSameDocument)
 {
@@ -49,5 +50,7 @@ JSC::JSValue NavigationDestination::getState(JSDOMGlobalObject& globalObject) co
 
     return m_stateObject->deserialize(globalObject, &globalObject, SerializationErrorMode::Throwing);
 }
+
+NavigationDestination::~NavigationDestination() = default;
 
 } // namespace WebCore

@@ -29,10 +29,10 @@ else:
 
 config.setdefault('attributes', [])
 config.setdefault('config-macros', [])
-config.setdefault('one-submodule-per-header', False)
 config.setdefault('requirements', [])
 config.setdefault('textual-headers', [])
 config.setdefault('module', {})
+config.setdefault('default-module', '')
 
 submodule_mappings = {path: module_name
                       for module_name, module in config['module'].items()
@@ -45,11 +45,7 @@ for header in filelist['headers']:
         path_to_header = (path_to_header.removeprefix('PrivateHeaders/')
                           .removeprefix('Headers/'))
     if path_to_header not in submodule_mappings:
-        if config['one-submodule-per-header']:
-            default_submodule_name = os.path.splitext(os.path.basename(path_to_header))[0].replace('-', '')
-            submodule_mappings[path_to_header] = default_submodule_name
-        else:
-            submodule_mappings[path_to_header] = ''
+        submodule_mappings[path_to_header] = config.get('default-module')
 
 if config.get('framework-module'):
     sys.stdout.write('framework ')
@@ -84,6 +80,7 @@ for module_name, paths in itertools.groupby(
         if path in config['textual-headers']:
             sys.stdout.write('textual ')
         sys.stdout.write(f'header "{path}"\n')
+    sys.stdout.write(f'{indent}export *\n')
     if in_submodule:
         sys.stdout.write('    }\n')
 

@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "CachedCall.h"
+#include "CachedCallInlines.h"
 #include "ExceptionHelpers.h"
-#include "JSImmutableButterfly.h"
+#include "JSCellButterfly.h"
 #include "ObjectConstructor.h"
 #include "ParseInt.h"
 #include "StringPrototype.h"
@@ -68,7 +68,9 @@ ALWAYS_INLINE std::tuple<int32_t, int32_t> extractSliceOffsets(int32_t length, i
     return { from, to };
 }
 
-template<typename NumberType>
+template<typename T> concept Arithmetic = std::is_arithmetic_v<T>;
+
+template<Arithmetic NumberType>
 ALWAYS_INLINE JSString* stringSlice(JSGlobalObject* globalObject, VM& vm, JSString* string, int32_t length, NumberType start, std::optional<NumberType> endValue)
 {
     if constexpr (std::is_same_v<NumberType, int32_t>) {
@@ -91,10 +93,8 @@ ALWAYS_INLINE JSString* stringSlice(JSGlobalObject* globalObject, VM& vm, JSStri
 
 ALWAYS_INLINE std::tuple<int32_t, int32_t> extractSubstringOffsets(int32_t length, int32_t startValue, std::optional<int32_t> endValue)
 {
-    int32_t start = std::min<int32_t>(std::max<int32_t>(startValue, 0), length);
-    int32_t end = length;
-    if (endValue)
-        end = std::min<int32_t>(std::max<int32_t>(endValue.value(), 0), length);
+    int32_t start = std::clamp(startValue, 0, length);
+    int32_t end = std::clamp(endValue.value_or(length), 0, length);
 
     ASSERT(start >= 0);
     ASSERT(end >= 0);
@@ -152,7 +152,7 @@ ALWAYS_INLINE JSString* jsSpliceSubstringsWithSeparators(JSGlobalObject* globalO
         return jsEmptyString(vm);
 
     if (source.is8Bit() && allSeparators8Bit) {
-        std::span<LChar> buffer;
+        std::span<Latin1Character> buffer;
         auto impl = StringImpl::tryCreateUninitialized(totalLength, buffer);
         if (!impl) {
             throwOutOfMemoryError(globalObject, scope);
@@ -237,7 +237,7 @@ ALWAYS_INLINE JSString* jsSpliceSubstringsWithSeparator(JSGlobalObject* globalOb
         return jsEmptyString(vm);
 
     if (source.is8Bit() && allSeparators8Bit) {
-        std::span<LChar> buffer;
+        std::span<Latin1Character> buffer;
         auto impl = StringImpl::tryCreateUninitialized(totalLength, buffer);
         if (!impl) {
             throwOutOfMemoryError(globalObject, scope);
@@ -329,7 +329,7 @@ ALWAYS_INLINE JSString* stringReplaceStringString(JSGlobalObject* globalObject, 
                 return nullptr;
             }
 
-    return jsString(vm, WTFMove(result));
+    return jsString(vm, WTF::move(result));
 }
 
 template<StringReplaceSubstitutions substitutions, StringReplaceUseTable useTable, typename TableType>
@@ -397,7 +397,7 @@ inline JSString* replaceUsingStringSearch(VM& vm, JSGlobalObject* globalObject, 
         replaceString = asString(replaceValue)->value(globalObject);
         RETURN_IF_EXCEPTION(scope, nullptr);
     } else {
-        callData = JSC::getCallData(replaceValue);
+        callData = JSC::getCallDataInline(replaceValue);
         if (callData.type == CallData::Type::None) {
             replaceString = replaceValue.toWTFString(globalObject);
             RETURN_IF_EXCEPTION(scope, nullptr);
@@ -524,7 +524,7 @@ static ALWAYS_INLINE JSString* jsSpliceSubstrings(JSGlobalObject* globalObject, 
         return jsEmptyString(vm);
 
     if (source.is8Bit()) {
-        std::span<LChar> buffer;
+        std::span<Latin1Character> buffer;
         auto sourceData = source.span8();
         auto impl = StringImpl::tryCreateUninitialized(totalLength, buffer);
         if (!impl) {
@@ -689,14 +689,14 @@ static ALWAYS_INLINE JSString* removeAllUsingRegExpSearch(VM& vm, JSGlobalObject
     RELEASE_AND_RETURN(scope, jsSpliceSubstrings(globalObject, string, source, sourceRanges.span()));
 }
 
-ALWAYS_INLINE JSImmutableButterfly* addToRegExpSearchCache(VM& vm, JSGlobalObject* globalObject, JSString* string, const String& source, RegExp* regExp)
+ALWAYS_INLINE JSCellButterfly* addToRegExpSearchCache(VM& vm, JSGlobalObject* globalObject, JSString* string, const String& source, RegExp* regExp)
 {
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     if (auto* entry = vm.stringReplaceCache.get(source, regExp)) {
         auto lastMatch = entry->m_lastMatch;
         auto matchResult = entry->m_matchResult;
-        globalObject->regExpGlobalData().resetResultFromCache(globalObject, regExp, string, matchResult, WTFMove(lastMatch));
+        globalObject->regExpGlobalData().resetResultFromCache(globalObject, regExp, string, matchResult, WTF::move(lastMatch));
         RELEASE_AND_RETURN(scope, entry->m_result);
     }
 
@@ -748,7 +748,7 @@ ALWAYS_INLINE JSImmutableButterfly* addToRegExpSearchCache(VM& vm, JSGlobalObjec
     if (results.isEmpty())
         RELEASE_AND_RETURN(scope, nullptr);
 
-    JSImmutableButterfly* result = JSImmutableButterfly::tryCreateFromArgList(vm, results);
+    JSCellButterfly* result = JSCellButterfly::tryCreateFromArgList(vm, results);
     if (!result) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return nullptr;
@@ -758,7 +758,7 @@ ALWAYS_INLINE JSImmutableButterfly* addToRegExpSearchCache(VM& vm, JSGlobalObjec
     RELEASE_AND_RETURN(scope, result);
 }
 
-static ALWAYS_INLINE JSString* replaceAllWithCacheUsingRegExpSearchThreeArguments(VM& vm, JSGlobalObject* globalObject, JSString* string, const String& source, RegExp* regExp, JSFunction* replaceFunction, JSImmutableButterfly* result)
+static ALWAYS_INLINE JSString* replaceAllWithCacheUsingRegExpSearchThreeArguments(VM& vm, JSGlobalObject* globalObject, JSString* string, const String& source, RegExp* regExp, JSFunction* replaceFunction, JSCellButterfly* result)
 {
     auto scope = DECLARE_THROW_SCOPE(vm);
 
@@ -800,6 +800,8 @@ static ALWAYS_INLINE JSString* replaceAllWithCacheUsingRegExpSearchThreeArgument
             RETURN_IF_EXCEPTION_WITH_TRAPS_DEFERRED(scope, nullptr);
 
             auto string = jsString->value(globalObject);
+            RETURN_IF_EXCEPTION_WITH_TRAPS_DEFERRED(scope, nullptr);
+
             replacementsAre8Bit &= string->is8Bit();
             totalLength += string->length();
             totalLength += (start - lastIndex);
@@ -812,14 +814,9 @@ static ALWAYS_INLINE JSString* replaceAllWithCacheUsingRegExpSearchThreeArgument
             totalLength += (sourceLen - lastIndex);
     }
 
-    if (totalLength > StringImpl::MaxLength) [[unlikely]] {
-        throwOutOfMemoryError(globalObject, scope);
-        return nullptr;
-    }
-
     StringView sourceView { source };
     if (sourceView.is8Bit() && replacementsAre8Bit) {
-        std::span<LChar> buffer;
+        std::span<Latin1Character> buffer;
         auto impl = StringImpl::tryCreateUninitialized(totalLength, buffer);
         if (!impl) [[unlikely]] {
             throwOutOfMemoryError(globalObject, scope);
@@ -903,7 +900,7 @@ static ALWAYS_INLINE JSString* replaceAllWithCacheUsingRegExpSearch(VM& vm, JSGl
     unsigned cachedCount = regExp->numSubpatterns() + 2;
     unsigned argCount = cachedCount + 1;
 
-    JSImmutableButterfly* result = addToRegExpSearchCache(vm, globalObject, string, source, regExp);
+    JSCellButterfly* result = addToRegExpSearchCache(vm, globalObject, string, source, regExp);
     RETURN_IF_EXCEPTION(scope, nullptr);
     if (!result)
         return string;
@@ -948,7 +945,7 @@ static ALWAYS_INLINE JSString* replaceAllWithCacheUsingRegExpSearch(VM& vm, JSGl
                 replacementsAre8Bit &= string.is8Bit();
                 totalLength += string.length();
                 totalLength += (start - lastIndex);
-                slot = WTFMove(string);
+                slot = WTF::move(string);
 
                 lastIndex = end;
                 ++index;
@@ -957,14 +954,9 @@ static ALWAYS_INLINE JSString* replaceAllWithCacheUsingRegExpSearch(VM& vm, JSGl
                 totalLength += (sourceLen - lastIndex);
         }
 
-        if (totalLength > StringImpl::MaxLength) [[unlikely]] {
-            throwOutOfMemoryError(globalObject, scope);
-            return nullptr;
-        }
-
         StringView sourceView { source };
         if (sourceView.is8Bit() && replacementsAre8Bit) {
-            std::span<LChar> buffer;
+            std::span<Latin1Character> buffer;
             auto impl = StringImpl::tryCreateUninitialized(totalLength, buffer);
             if (!impl) [[unlikely]] {
                 throwOutOfMemoryError(globalObject, scope);
@@ -1063,7 +1055,7 @@ static ALWAYS_INLINE JSString* replaceAllWithCacheUsingRegExpSearch(VM& vm, JSGl
         auto string = jsResult.toWTFString(globalObject);
         RETURN_IF_EXCEPTION_WITH_TRAPS_DEFERRED(scope, nullptr);
 
-        slot = WTFMove(string);
+        slot = WTF::move(string);
 
         lastIndex = end;
         cursor += cachedCount;
@@ -1117,6 +1109,7 @@ static ALWAYS_INLINE JSString* tryTrimSpaces(VM& vm, JSGlobalObject* globalObjec
     case Yarr::SpecificPattern::TrailingSpacesStar:
     case Yarr::SpecificPattern::LeadingSpacesStar:
     case Yarr::SpecificPattern::Atom:
+    case Yarr::SpecificPattern::Newlines:
     case Yarr::SpecificPattern::None:
         break;
     }
@@ -1243,14 +1236,21 @@ ALWAYS_INLINE JSString* replaceOneWithStringUsingRegExpSearch(VM& vm, JSGlobalOb
     auto after = StringView { source }.substring(result.end, source.length() - result.end);
 
     size_t dollarPos = replacementString.find('$');
-    if (dollarPos == WTF::notFound) [[likely]]
-        RELEASE_AND_RETURN(scope, jsString(vm, makeString(before, StringView { replacementString }, after)));
+    if (dollarPos == WTF::notFound) [[likely]] {
+        auto concatenated = tryMakeString(before, StringView { replacementString }, after);
+        if (!concatenated) [[unlikely]]
+            OUT_OF_MEMORY(globalObject, scope);
+        RELEASE_AND_RETURN(scope, jsString(vm, WTF::move(concatenated)));
+    }
 
     StringBuilder replacement(OverflowPolicy::RecordOverflow);
     substituteBackreferencesSlow(replacement, replacementString, source, ovector, regExp, dollarPos);
     if (replacement.hasOverflowed()) [[unlikely]]
         OUT_OF_MEMORY(globalObject, scope);
-    RELEASE_AND_RETURN(scope, jsString(vm, makeString(before, StringView { replacement }, after)));
+    auto concatenated = tryMakeString(before, StringView { replacement }, after);
+    if (!concatenated) [[unlikely]]
+        OUT_OF_MEMORY(globalObject, scope);
+    RELEASE_AND_RETURN(scope, jsString(vm, WTF::move(concatenated)));
 }
 
 ALWAYS_INLINE JSString* replaceUsingRegExpSearch(VM& vm, JSGlobalObject* globalObject, JSString* string, JSValue searchValue, const CallData& callData, const String& replacementString, JSValue replaceValue)
@@ -1293,6 +1293,7 @@ ALWAYS_INLINE JSString* replaceUsingRegExpSearch(VM& vm, JSGlobalObject* globalO
             break;
         }
         case Yarr::SpecificPattern::Atom:
+        case Yarr::SpecificPattern::Newlines:
         case Yarr::SpecificPattern::None:
             break;
         }
@@ -1507,7 +1508,7 @@ ALWAYS_INLINE JSString* replaceUsingRegExpSearch(VM& vm, JSGlobalObject* globalO
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     String replacementString;
-    auto callData = JSC::getCallData(replaceValue);
+    auto callData = JSC::getCallDataInline(replaceValue);
     if (callData.type == CallData::Type::None) {
         replacementString = replaceValue.toWTFString(globalObject);
         RETURN_IF_EXCEPTION(scope, nullptr);
@@ -1565,13 +1566,24 @@ ALWAYS_INLINE JSString* replace(VM& vm, JSGlobalObject* globalObject, JSValue th
         auto searchString = searchJSString->value(globalObject);
         RETURN_IF_EXCEPTION(scope, nullptr);
 
-        RELEASE_AND_RETURN(scope, replaceUsingStringSearch<replaceMode>(vm, globalObject, string, thisString, WTFMove(searchString), replaceValue));
+        RELEASE_AND_RETURN(scope, replaceUsingStringSearch<replaceMode>(vm, globalObject, string, thisString, WTF::move(searchString), replaceValue));
     }
 
     String searchString = searchValue.toWTFString(globalObject);
     RETURN_IF_EXCEPTION(scope, nullptr);
 
-    RELEASE_AND_RETURN(scope, replaceUsingStringSearch<replaceMode>(vm, globalObject, string, thisString, WTFMove(searchString), replaceValue));
+    RELEASE_AND_RETURN(scope, replaceUsingStringSearch<replaceMode>(vm, globalObject, string, thisString, WTF::move(searchString), replaceValue));
+}
+
+ALWAYS_INLINE char32_t codePointAt(const String& string, unsigned position, unsigned length)
+{
+    RELEASE_ASSERT(position < length);
+    if (string.is8Bit())
+        return string.span8()[position];
+    char32_t character;
+    auto characters = string.span16();
+    U16_NEXT(characters, position, length, character);
+    return character;
 }
 
 } // namespace JSC

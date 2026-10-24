@@ -26,12 +26,11 @@
 #include "config.h"
 #include "XMLDocument.h"
 
-#include "DocumentInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(XMLDocument);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(XMLDocument);
 
 Ref<XMLDocument> XMLDocument::createXHTML(LocalFrame* frame, const Settings& settings, const URL& url)
 {

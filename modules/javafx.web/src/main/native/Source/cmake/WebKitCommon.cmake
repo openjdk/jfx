@@ -221,11 +221,22 @@ if (NOT HAS_RUN_WEBKIT_COMMON)
         endif ()
     endif ()
 
-    # We cannot check for RUBY_FOUND because it is set only when the full package is installed and
+    # We cannot check for Ruby_FOUND because it is set only when the full package is installed and
     # the only thing we need is the interpreter. Unlike Python, cmake does not provide a macro
     # for finding only the Ruby interpreter.
-    find_package(Ruby 2.5)
-    if (NOT RUBY_EXECUTABLE OR RUBY_VERSION VERSION_LESS 2.5)
+    message(CHECK_START "Ruby interpreter executable")
+    find_package(Ruby 2.5 QUIET)
+    if (Ruby_EXECUTABLE AND Ruby_VERSION)
+        if (Ruby_VERSION VERSION_LESS 2.5)
+            message(CHECK_FAIL "${Ruby_EXECUTABLE} (version: ${Ruby_VERSION}, minimum required 2.5)")
+            set(Ruby_EXECUTABLE NOTFOUND)
+        else ()
+            message(CHECK_PASS "${Ruby_EXECUTABLE} (version: ${Ruby_VERSION})")
+        endif ()
+    else ()
+        message(CHECK_FAIL "not found")
+    endif ()
+    if (NOT Ruby_EXECUTABLE)
         message(FATAL_ERROR "Ruby 2.5 or higher is required.")
     endif ()
 
@@ -265,6 +276,77 @@ if (NOT HAS_RUN_WEBKIT_COMMON)
     if (ENABLE_WEBCORE)
         # TODO Enforce version requirement for gperf
         find_package(Gperf 3.0.1 REQUIRED)
+    endif ()
+
+    # -------------------------------------------------------------------------
+    # PGO (Profile-Guided Optimization) support
+    # -------------------------------------------------------------------------
+    if (ENABLE_LLVM_PROFILE_GENERATION AND NOT COMPILER_IS_CLANG)
+        message(FATAL_ERROR "ENABLE_LLVM_PROFILE_GENERATION requires Clang.")
+    endif ()
+
+    if (USE_PGO_PROFILE AND NOT COMPILER_IS_CLANG)
+        message(FATAL_ERROR "USE_PGO_PROFILE requires Clang.")
+    endif ()
+
+    # Phase 1: Profile Generation - build instrumented binary that writes .profraw files
+    if (ENABLE_LLVM_PROFILE_GENERATION AND COMPILER_IS_CLANG AND NOT MSVC)
+        include(CheckCXXSourceCompiles)
+        cmake_push_check_state()
+        set(CMAKE_REQUIRED_FLAGS "-fprofile-generate")
+        set(CMAKE_REQUIRED_LINK_OPTIONS "-fprofile-generate")
+        check_cxx_source_compiles("int main() { return 0; }" HAVE_CLANG_PROFILE_RUNTIME)
+        cmake_pop_check_state()
+
+        if (NOT HAVE_CLANG_PROFILE_RUNTIME)
+            message(FATAL_ERROR
+                "ENABLE_LLVM_PROFILE_GENERATION requires the Clang profile runtime (libclang_rt.profile).\n"
+                "Install it or disable PGO with: -DENABLE_LLVM_PROFILE_GENERATION=OFF")
+        endif ()
+
+        set(PGO_PROFILE_DIR "" CACHE PATH "Runtime directory for PGO profile output. Leave empty for clang default.")
+
+        if (PGO_PROFILE_DIR)
+            set(PGO_COMPILE_OPTIONS "-fprofile-generate=${PGO_PROFILE_DIR}" CACHE INTERNAL "")
+        else ()
+            set(PGO_COMPILE_OPTIONS "-fprofile-generate" CACHE INTERNAL "")
+        endif ()
+
+        # LTO builds error out on duplicate __llvm_profile_filename definitions.
+        set(PGO_LINK_FLAGS "${PGO_COMPILE_OPTIONS}")
+        if (LD_SUPPORTS_ALLOW_MULTIPLE_DEFINITION)
+            string(PREPEND PGO_LINK_FLAGS "-Wl,--allow-multiple-definition ")
+        endif ()
+        string(PREPEND CMAKE_EXE_LINKER_FLAGS "${PGO_LINK_FLAGS} ")
+        string(PREPEND CMAKE_SHARED_LINKER_FLAGS "${PGO_LINK_FLAGS} ")
+        string(PREPEND CMAKE_MODULE_LINKER_FLAGS "${PGO_LINK_FLAGS} ")
+
+        if (PGO_PROFILE_DIR)
+            message(STATUS "PGO profile generation enabled. Profile output: ${PGO_PROFILE_DIR}")
+        else ()
+            message(STATUS "PGO profile generation enabled. Using clang default profile output.")
+        endif ()
+        message(STATUS "  Override at runtime with: LLVM_PROFILE_FILE=/your/path/%p_%m.profraw")
+    endif ()
+
+    # Phase 2: Profile Use - build optimized binary using collected profile data
+    if (USE_PGO_PROFILE AND COMPILER_IS_CLANG AND NOT MSVC)
+        set(PGO_PROFILE_PATH "" CACHE FILEPATH "Path to merged .profdata file for PGO")
+        if (NOT PGO_PROFILE_PATH)
+            message(FATAL_ERROR "USE_PGO_PROFILE is ON but PGO_PROFILE_PATH is not set")
+        endif ()
+        if (NOT EXISTS "${PGO_PROFILE_PATH}")
+            message(FATAL_ERROR "PGO_PROFILE_PATH does not exist: ${PGO_PROFILE_PATH}")
+        endif ()
+
+        # profile counter mismatches (e.g., source changed since profiling) trigger backend-plugin warnings,
+        # which would break the build with our usage of -Werror in CI
+        WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS("-fprofile-use=${PGO_PROFILE_PATH}" "-Wno-error=backend-plugin")
+        string(PREPEND CMAKE_EXE_LINKER_FLAGS "-fprofile-use=${PGO_PROFILE_PATH} ")
+        string(PREPEND CMAKE_SHARED_LINKER_FLAGS "-fprofile-use=${PGO_PROFILE_PATH} ")
+        string(PREPEND CMAKE_MODULE_LINKER_FLAGS "-fprofile-use=${PGO_PROFILE_PATH} ")
+
+        message(STATUS "PGO profile use enabled with: ${PGO_PROFILE_PATH}")
     endif ()
 
     # -----------------------------------------------------------------------------

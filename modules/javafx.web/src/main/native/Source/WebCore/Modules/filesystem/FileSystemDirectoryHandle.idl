@@ -23,15 +23,21 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-dictionary FileSystemGetFileOptions {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary FileSystemGetFileOptions {
     boolean create = false;
 };
 
-dictionary FileSystemGetDirectoryOptions {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary FileSystemGetDirectoryOptions {
     boolean create = false;
 };
 
-dictionary FileSystemRemoveOptions {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary FileSystemRemoveOptions {
     boolean recursive = false;
 };
 

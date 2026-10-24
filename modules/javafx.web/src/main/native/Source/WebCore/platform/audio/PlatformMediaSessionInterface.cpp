@@ -44,8 +44,6 @@ public:
     bool supportsSeeking() const final { return false; }
     bool shouldOverrideBackgroundPlaybackRestriction(PlatformMediaSessionInterruptionType) const final { return false; }
     std::optional<MediaSessionGroupIdentifier> mediaSessionGroupIdentifier() const final { return std::nullopt; }
-    void isActiveNowPlayingSessionChanged() final { }
-    std::optional<ProcessID> mediaSessionPresentingApplicationPID() const final { return std::nullopt; }
 
 #if !RELEASE_LOG_DISABLED
     virtual const Logger& logger() const { return emptyLogger(); }

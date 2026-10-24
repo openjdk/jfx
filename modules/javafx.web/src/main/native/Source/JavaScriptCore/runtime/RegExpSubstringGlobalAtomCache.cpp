@@ -159,9 +159,6 @@ JSValue RegExpSubstringGlobalAtomCache::collectMatches(JSGlobalObject* globalObj
     globalObject->regExpGlobalData().recordMatch(vm, globalObject, regExp, substring, lastResult, oneCharacterMatch);
     RETURN_IF_EXCEPTION(scope, { });
 
-    globalObject->regExpGlobalData().recordMatch(vm, globalObject, regExp, substring, lastResult, oneCharacterMatch);
-    RETURN_IF_EXCEPTION(scope, { });
-
     // Cache
     {
         m_lastSubstringBase.set(vm, globalObject, substringBase);

@@ -25,7 +25,9 @@
 
 #pragma once
 
+#include <cstdint>
 #include <wtf/Compiler.h>
+#include <wtf/Platform.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
@@ -53,7 +55,7 @@ namespace WTF {
 #define UCHARPAIR_TOUINT32(a, b) \
     ((((uint32_t)(a)) << 16) + (uint32_t)(b))
 #define UCHARQUAD_TOUINT64(a, b, c, d) \
-    ((((uint64_t)(UCHARQUAD_TOUINT64(a, b))) << 32) + UCHARPAIR_TOUINT32(c, d))
+    ((((uint64_t)(UCHARPAIR_TOUINT32(a, b))) << 32) + UCHARPAIR_TOUINT32(c, d))
 
 #else // CPU(BIG_ENDIAN)
 

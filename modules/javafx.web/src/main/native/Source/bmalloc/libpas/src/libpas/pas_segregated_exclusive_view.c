@@ -29,13 +29,10 @@
 
 #include "pas_segregated_exclusive_view.h"
 
-#include "pas_epoch.h"
 #include "pas_immortal_heap.h"
 #include "pas_log.h"
-#include "pas_page_malloc.h"
 #include "pas_page_sharing_pool.h"
 #include "pas_segregated_heap.h"
-#include "pas_segregated_page_inlines.h"
 #include "pas_segregated_size_directory.h"
 
 size_t pas_segregated_exclusive_view_count;

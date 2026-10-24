@@ -38,7 +38,7 @@ class CSSURLValue final : public CSSValue {
 public:
     static Ref<CSSURLValue> create(CSS::URL url)
     {
-        return adoptRef(*new CSSURLValue(WTFMove(url)));
+        return adoptRef(*new CSSURLValue(WTF::move(url)));
     }
 
     const CSS::URL& url() const { return m_url; }
@@ -52,7 +52,7 @@ public:
 private:
     CSSURLValue(CSS::URL&& url)
         : CSSValue(ClassType::URL)
-        , m_url { WTFMove(url) }
+        , m_url { WTF::move(url) }
     {
     }
 

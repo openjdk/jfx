@@ -28,7 +28,7 @@ package com.sun.jfx.incubator.scene.control.richtext;
 import javafx.util.Duration;
 
 /**
- * Various constants.
+ * Internal constants and defaults.
  */
 public class Params {
     /** max number of paragraphs for accessible selected text */
@@ -120,4 +120,31 @@ public class Params {
 
     /** The number of paragraphs to lay out before and after the view point in VFlow. */
     public static final int SLIDING_WINDOW_EXTENT = 100;
+
+    /** Style name for text highlight (background color) 1 */
+    public static final String STYLE_TEXT_HIGHLIGHT_1 = "text-highlight-1";
+
+    /** Style name for text highlight (background color) 2 */
+    public static final String STYLE_TEXT_HIGHLIGHT_2 = "text-highlight-2";
+
+    /** Style name for text highlight (background color) 3 */
+    public static final String STYLE_TEXT_HIGHLIGHT_3 = "text-highlight-3";
+
+    /** Style name for text highlight (background color) 4 */
+    public static final String STYLE_TEXT_HIGHLIGHT_4 = "text-highlight-4";
+
+    /** Style name for text highlight (background color) 5 */
+    public static final String STYLE_TEXT_HIGHLIGHT_5 = "text-highlight-5";
+
+    /** Style name for wavy underline color 1 */
+    public static final String STYLE_WAVY_UNDERLINE_1 = "wavy-underline-1";
+
+    /** Style name for wavy underline color 2 */
+    public static final String STYLE_WAVY_UNDERLINE_2 = "wavy-underline-2";
+
+    /** Style name for wavy underline color 3 */
+    public static final String STYLE_WAVY_UNDERLINE_3 = "wavy-underline-3";
+
+    /** RichTextModel format version. */
+    public static final String VERSION_3 = "RichText-v3-Incubator";
 }

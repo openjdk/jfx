@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,8 +44,8 @@ PlatformWheelEvent::PlatformWheelEvent(
         ctrlKey,
         altKey,
         metaKey,
-        WallTime {})
-        , m_granularity(ScrollByPixelWheelEvent)
+        MonotonicTime {})
+        , m_granularity(PlatformWheelEventGranularity::ScrollByPixelWheelEvent)
         , m_position(pos)
         , m_globalPosition(globalPos)
       // For some unknown reason, EventHandler expects deltaX/deltaY < 0 for

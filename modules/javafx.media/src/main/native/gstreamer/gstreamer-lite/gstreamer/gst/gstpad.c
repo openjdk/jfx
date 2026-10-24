@@ -840,7 +840,7 @@ gst_pad_get_property (GObject * object, guint prop_id,
 
 /**
  * gst_pad_new:
- * @name: (allow-none): the name of the new pad.
+ * @name: (nullable): the name of the new pad.
  * @direction: the #GstPadDirection of the pad.
  *
  * Creates a new pad with the given name in the given direction.
@@ -862,7 +862,7 @@ gst_pad_new (const gchar * name, GstPadDirection direction)
 /**
  * gst_pad_new_from_template:
  * @templ: the pad template to use
- * @name: (allow-none): the name of the pad
+ * @name: (nullable): the name of the pad
  *
  * Creates a new pad with the given name from the given template.
  * If name is %NULL, a guaranteed unique name (across all pads)
@@ -2964,7 +2964,7 @@ gst_pad_get_single_internal_link (GstPad * pad)
 /**
  * gst_pad_iterate_internal_links_default:
  * @pad: the #GstPad to get the internal links of.
- * @parent: (allow-none): the parent of @pad or %NULL
+ * @parent: (nullable): the parent of @pad or %NULL
  *
  * Iterate the list of pads to which the given pad is linked to inside of
  * the parent element.
@@ -3093,12 +3093,15 @@ gst_pad_forward (GstPad * pad, GstPadForwardFunction forward,
   GstIterator *iter;
   gboolean done = FALSE;
   GValue item = { 0, };
-  GList *pushed_pads = NULL;
+  GHashTable *pushed_pads = NULL;
+  gboolean resynced = FALSE;
 
   iter = gst_pad_iterate_internal_links (pad);
 
   if (!iter)
     goto no_iter;
+
+  pushed_pads = g_hash_table_new (NULL, NULL);
 
   while (!done) {
     switch (gst_iterator_next (iter, &item)) {
@@ -3108,8 +3111,9 @@ gst_pad_forward (GstPad * pad, GstPadForwardFunction forward,
 
         intpad = g_value_get_object (&item);
 
-        /* if already pushed, skip. FIXME, find something faster to tag pads */
-        if (intpad == NULL || g_list_find (pushed_pads, intpad)) {
+        /* if we have resynced, check if we have already pushed */
+        if (intpad == NULL || (resynced
+                && g_hash_table_contains (pushed_pads, intpad))) {
           g_value_reset (&item);
           break;
         }
@@ -3118,7 +3122,7 @@ gst_pad_forward (GstPad * pad, GstPadForwardFunction forward,
             GST_DEBUG_PAD_NAME (intpad));
         done = result = forward (intpad, user_data);
 
-        pushed_pads = g_list_prepend (pushed_pads, intpad);
+        g_hash_table_add (pushed_pads, intpad);
 
         g_value_reset (&item);
         break;
@@ -3128,6 +3132,7 @@ gst_pad_forward (GstPad * pad, GstPadForwardFunction forward,
          * again on pads that got the event already and because we need
          * to consider the result of the previous pushes */
         gst_iterator_resync (iter);
+        resynced = TRUE;
         break;
       case GST_ITERATOR_ERROR:
         GST_ERROR_OBJECT (pad, "Could not iterate over internally linked pads");
@@ -3141,7 +3146,7 @@ gst_pad_forward (GstPad * pad, GstPadForwardFunction forward,
   g_value_unset (&item);
   gst_iterator_free (iter);
 
-  g_list_free (pushed_pads);
+  g_hash_table_destroy (pushed_pads);
 
 no_iter:
   return result;
@@ -3173,7 +3178,7 @@ event_forward_func (GstPad * pad, EventData * data)
 /**
  * gst_pad_event_default:
  * @pad: a #GstPad to call the default event handler on.
- * @parent: (allow-none): the parent of @pad or %NULL
+ * @parent: (nullable): the parent of @pad or %NULL
  * @event: (transfer full): the #GstEvent to handle.
  *
  * Invokes the default event handler for the given pad.
@@ -3272,8 +3277,9 @@ gst_pad_query_accept_caps_default (GstPad * pad, GstQuery * query)
       result = gst_caps_is_subset (caps, allowed);
     }
     if (!result) {
-      GST_CAT_WARNING_OBJECT (GST_CAT_CAPS, pad, "caps: %" GST_PTR_FORMAT
-          " were not compatible with: %" GST_PTR_FORMAT, caps, allowed);
+      GST_INFO_OBJECT (pad,
+          "caps: %" GST_PTR_FORMAT " were not compatible with: %"
+          GST_PTR_FORMAT, caps, allowed);
     }
     gst_caps_unref (allowed);
   } else {
@@ -3501,7 +3507,7 @@ query_forward_func (GstPad * pad, QueryData * data)
 /**
  * gst_pad_query_default:
  * @pad: a #GstPad to call the default query handler on.
- * @parent: (allow-none): the parent of @pad or %NULL
+ * @parent: (nullable): the parent of @pad or %NULL
  * @query: (transfer none): the #GstQuery to handle.
  *
  * Invokes the default query handler for the given pad.
@@ -5166,6 +5172,8 @@ get_range_failed:
     GST_CAT_LEVEL_LOG (GST_CAT_SCHEDULING,
         (ret >= GST_FLOW_EOS) ? GST_LEVEL_INFO : GST_LEVEL_WARNING,
         pad, "getrange failed, flow: %s", gst_flow_get_name (ret));
+    if (*buffer == NULL)
+      gst_clear_buffer (&res_buf);
     return ret;
   }
 }
@@ -6693,12 +6701,81 @@ join_failed:
 }
 
 /**
+ * gst_pad_probe_info_get_type:
+ * @info: a #GstPadProbeInfo
+ *
+ * Returns: The #GstPadProbeType from the probe
+ *
+ * Since: 1.28
+ */
+GstPadProbeType
+gst_pad_probe_info_get_type (GstPadProbeInfo * info)
+{
+  return GST_PAD_PROBE_INFO_TYPE (info);
+}
+
+/**
+ * gst_pad_probe_info_get_id:
+ * @info: a #GstPadProbeInfo
+ *
+ * Returns: The probe ID from the probe
+ *
+ * Since: 1.28
+ */
+gulong
+gst_pad_probe_info_get_id (GstPadProbeInfo * info)
+{
+  return GST_PAD_PROBE_INFO_ID (info);
+}
+
+/**
+ * gst_pad_probe_info_get_offset:
+ * @info: a #GstPadProbeInfo
+ *
+ * Returns: The offset from the probe
+ *
+ * Since: 1.28
+ */
+guint64
+gst_pad_probe_info_get_offset (GstPadProbeInfo * info)
+{
+  return GST_PAD_PROBE_INFO_OFFSET (info);
+}
+
+/**
+ * gst_pad_probe_info_get_size:
+ * @info: a #GstPadProbeInfo
+ *
+ * Returns: The size from the probe
+ *
+ * Since: 1.28
+ */
+gsize
+gst_pad_probe_info_get_size (GstPadProbeInfo * info)
+{
+  return GST_PAD_PROBE_INFO_SIZE (info);
+}
+
+/**
+ * gst_pad_probe_info_get_flow_return:
+ * @info: a #GstPadProbeInfo
+ *
+ * Returns: The #GstFlowReturn from the probe
+ *
+ * Since: 1.28
+ */
+GstFlowReturn
+gst_pad_probe_info_get_flow_return (GstPadProbeInfo * info)
+{
+  return GST_PAD_PROBE_INFO_FLOW_RETURN (info);
+}
+
+/**
  * gst_pad_probe_info_get_event:
  * @info: a #GstPadProbeInfo
  *
  * Returns: (transfer none) (nullable): The #GstEvent from the probe
  */
-
 GstEvent *
 gst_pad_probe_info_get_event (GstPadProbeInfo * info)
 {
@@ -6708,14 +6785,12 @@ gst_pad_probe_info_get_event (GstPadProbeInfo * info)
   return GST_PAD_PROBE_INFO_EVENT (info);
 }
 
-
 /**
  * gst_pad_probe_info_get_query:
  * @info: a #GstPadProbeInfo
  *
  * Returns: (transfer none) (nullable): The #GstQuery from the probe
  */
-
 GstQuery *
 gst_pad_probe_info_get_query (GstPadProbeInfo * info)
 {
@@ -6731,7 +6806,6 @@ gst_pad_probe_info_get_query (GstPadProbeInfo * info)
  *
  * Returns: (transfer none) (nullable): The #GstBuffer from the probe
  */
-
 GstBuffer *
 gst_pad_probe_info_get_buffer (GstPadProbeInfo * info)
 {
@@ -6746,13 +6820,84 @@ gst_pad_probe_info_get_buffer (GstPadProbeInfo * info)
  *
  * Returns: (transfer none) (nullable): The #GstBufferList from the probe
  */
-
 GstBufferList *
 gst_pad_probe_info_get_buffer_list (GstPadProbeInfo * info)
 {
   g_return_val_if_fail (info->type & GST_PAD_PROBE_TYPE_BUFFER_LIST, NULL);
 
   return GST_PAD_PROBE_INFO_BUFFER_LIST (info);
+}
+
+/**
+ * gst_pad_probe_info_set_event:
+ * @info: a #GstPadProbeInfo
+ * @event: (transfer full) (nullable): a #GstEvent
+ *
+ * Updates @info with @event or %NULL.
+ *
+ * Since: 1.28
+ */
+void
+gst_pad_probe_info_set_event (GstPadProbeInfo * info, GstEvent * event)
+{
+  g_return_if_fail (info->type & (GST_PAD_PROBE_TYPE_EVENT_DOWNSTREAM |
+          GST_PAD_PROBE_TYPE_EVENT_UPSTREAM));
+
+  gst_clear_mini_object (&info->data);
+  info->data = event;
+}
+
+/**
+ * gst_pad_probe_info_set_buffer:
+ * @info: a #GstPadProbeInfo
+ * @buffer: (transfer full) (nullable): a #GstBuffer
+ *
+ * Updates @info with @buffer or %NULL.
+ *
+ * Since: 1.28
+ */
+void
+gst_pad_probe_info_set_buffer (GstPadProbeInfo * info, GstBuffer * buffer)
+{
+  g_return_if_fail (info->type & GST_PAD_PROBE_TYPE_BUFFER);
+
+  gst_clear_mini_object (&info->data);
+  info->data = buffer;
+}
+
+/**
+ * gst_pad_probe_info_set_buffer_list:
+ * @info: a #GstPadProbeInfo
+ * @list: (transfer full) (nullable): a #GstBufferList
+ *
+ * Updates @info with @list or %NULL.
+ *
+ * Since: 1.28
+ */
+void
+gst_pad_probe_info_set_buffer_list (GstPadProbeInfo * info,
+    GstBufferList * list)
+{
+  g_return_if_fail (info->type & GST_PAD_PROBE_TYPE_BUFFER_LIST);
+
+  gst_clear_mini_object (&info->data);
+  info->data = list;
+}
+
+/**
+ * gst_pad_probe_info_set_flow_return:
+ * @info: a #GstPadProbeInfo
+ * @flow_ret: A #GstFlowReturn
+ *
+ * Updates @info with @flow_ret.
+ *
+ * Since: 1.28
+ */
+void
+gst_pad_probe_info_set_flow_return (GstPadProbeInfo * info,
+    GstFlowReturn flow_ret)
+{
+  info->ABI.abi.flow_ret = flow_ret;
 }
 
 /**

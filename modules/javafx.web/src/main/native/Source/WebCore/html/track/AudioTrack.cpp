@@ -79,7 +79,12 @@ AudioTrack::AudioTrack(ScriptExecutionContext* context, AudioTrackPrivate& track
 
 AudioTrack::~AudioTrack()
 {
-    removeClientFromTrackPrivateBase(Ref { m_private });
+    removeClientFromTrackPrivateBase(protectedPrivate());
+}
+
+Ref<AudioTrackPrivate> AudioTrack::protectedPrivate() const
+{
+    return m_private;
 }
 
 void AudioTrack::setPrivate(AudioTrackPrivate& trackPrivate)
@@ -87,18 +92,18 @@ void AudioTrack::setPrivate(AudioTrackPrivate& trackPrivate)
     if (m_private.ptr() == &trackPrivate)
         return;
 
-    removeClientFromTrackPrivateBase(Ref { m_private });
+    removeClientFromTrackPrivateBase(protectedPrivate());
     m_private = trackPrivate;
-    m_private->setEnabled(m_enabled);
+    trackPrivate.setEnabled(m_enabled);
     addClientToTrackPrivateBase(*this, trackPrivate);
 
 #if !RELEASE_LOG_DISABLED
-    m_private->setLogger(logger(), logIdentifier());
+    trackPrivate.setLogger(protectedLogger(), logIdentifier());
 #endif
 
     updateKindFromPrivate();
     updateConfigurationFromPrivate();
-    setId(m_private->id());
+    setId(trackPrivate.id());
 }
 
 void AudioTrack::setLanguage(const AtomString& language)
@@ -125,7 +130,7 @@ void AudioTrack::setEnabled(bool enabled)
     if (m_enabled == enabled)
         return;
 
-    m_private->setEnabled(enabled);
+    protectedPrivate()->setEnabled(enabled);
     m_clients.forEach([this] (auto& client) {
         client.audioTrackEnabledChanged(*this);
     });
@@ -145,7 +150,7 @@ void AudioTrack::clearClient(AudioTrackClient& client)
 
 size_t AudioTrack::inbandTrackIndex() const
 {
-    return m_private->trackIndex();
+    return protectedPrivate()->trackIndex();
 }
 
 void AudioTrack::enabledChanged(bool enabled)
@@ -176,17 +181,17 @@ void AudioTrack::idChanged(TrackID id)
     });
 }
 
-void AudioTrack::labelChanged(const AtomString& label)
+void AudioTrack::labelChanged(const String& label)
 {
-    setLabel(label);
+    setLabel(AtomString { label.isolatedCopy() });
     m_clients.forEach([this] (auto& client) {
         client.audioTrackLabelChanged(*this);
     });
 }
 
-void AudioTrack::languageChanged(const AtomString& language)
+void AudioTrack::languageChanged(const String& language)
 {
-    setLanguage(language);
+    setLanguage(AtomString { language.isolatedCopy() });
 }
 
 void AudioTrack::willRemove()
@@ -198,7 +203,7 @@ void AudioTrack::willRemove()
 
 void AudioTrack::updateKindFromPrivate()
 {
-    switch (m_private->kind()) {
+    switch (protectedPrivate()->kind()) {
     case AudioTrackPrivate::Kind::Alternative:
         setKind("alternative"_s);
         break;
@@ -235,7 +240,7 @@ void AudioTrack::updateConfigurationFromPrivate()
 void AudioTrack::setLogger(const Logger& logger, uint64_t logIdentifier)
 {
     TrackBase::setLogger(logger, logIdentifier);
-    m_private->setLogger(logger, this->logIdentifier());
+    protectedPrivate()->setLogger(logger, this->logIdentifier());
 }
 #endif
 

@@ -23,12 +23,13 @@
 
 #pragma once
 
-#include "ContainerNode.h"
+#include <WebCore/ContainerNode.h>
 #include <wtf/MainThread.h>
+#include <wtf/Platform.h>
 #include <wtf/RuntimeApplicationChecks.h>
 
 #if PLATFORM(IOS_FAMILY)
-#include "WebCoreThread.h"
+#include <WebCore/WebCoreThread.h>
 #endif
 
 namespace WebCore {
@@ -108,30 +109,6 @@ public:
             return !s_count || !isInWebProcess();
 #endif
         }
-    };
-
-    class InMainThreadOfWebProcess {
-    public:
-        InMainThreadOfWebProcess()
-            : m_isInWebProcess(isInWebProcess())
-        {
-            ASSERT(isMainThread());
-            if (!m_isInWebProcess)
-                return;
-            ++s_count;
-        }
-
-        ~InMainThreadOfWebProcess()
-        {
-            ASSERT(isMainThread());
-            if (!m_isInWebProcess)
-                return;
-            ASSERT(s_count);
-            --s_count;
-        }
-
-    private:
-        bool m_isInWebProcess;
     };
 
 #if ASSERT_ENABLED

@@ -25,8 +25,9 @@
 
 #pragma once
 
-#include "IntPoint.h"
-#include "LayoutUnit.h"
+#include <WebCore/IntPoint.h>
+#include <WebCore/LayoutUnit.h>
+#include <wtf/Platform.h>
 #include <wtf/TZoneMalloc.h>
 
 #if USE(CG)
@@ -200,7 +201,7 @@ public:
 
     // Return false if x + width or y + height overflows.
     WEBCORE_EXPORT bool isValid() const;
-    WEBCORE_EXPORT IntRect WARN_UNUSED_RETURN toRectWithExtentsClippedToNumericLimits() const;
+    [[nodiscard]] WEBCORE_EXPORT IntRect toRectWithExtentsClippedToNumericLimits() const;
 
     friend bool operator==(const IntRect&, const IntRect&) = default;
 

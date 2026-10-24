@@ -27,8 +27,8 @@
 
 #if ENABLE(WEB_AUTHN)
 
-#include "AuthenticationExtensionsClientOutputs.h"
-#include "IDLTypes.h"
+#include <WebCore/AuthenticationExtensionsClientOutputs.h>
+#include <WebCore/IDLTypes.h>
 #include <wtf/RefCounted.h>
 #include <wtf/TypeCasts.h>
 

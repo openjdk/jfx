@@ -25,6 +25,8 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
 #include "VMAllocate.h"
 #include <vector>
 
@@ -97,3 +99,5 @@ private:
 } // namespace bmalloc
 
 #endif
+
+#endif // __cplusplus

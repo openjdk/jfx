@@ -152,7 +152,7 @@ std::optional<MappedFileData> FileHandle::map(MappedFileMode, FileOpenMode openM
         return { };
 
     if (!*size)
-        return MappedFileData { };
+        return MappedFileData::emptyFile();
 
     DWORD pageProtection = PAGE_READONLY;
     DWORD desiredAccess = FILE_MAP_READ;
@@ -180,7 +180,7 @@ std::optional<MappedFileData> FileHandle::map(MappedFileMode, FileOpenMode openM
         return { };
 
     std::span fileData = { static_cast<uint8_t*>(data), static_cast<size_t>(*size) };
-    return MappedFileData { fileData, WTFMove(fileMapping) };
+    return MappedFileData { fileData, WTF::move(fileMapping) };
 }
 
 } // WTF::FileSystemImpl

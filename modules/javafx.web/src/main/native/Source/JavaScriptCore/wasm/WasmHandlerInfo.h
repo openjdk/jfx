@@ -25,9 +25,11 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(WEBASSEMBLY)
 
-#include "CodeLocation.h"
+#include <JavaScriptCore/CodeLocation.h>
 #include <wtf/Forward.h>
 #include <wtf/text/ASCIILiteral.h>
 

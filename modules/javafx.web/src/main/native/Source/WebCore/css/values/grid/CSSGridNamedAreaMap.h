@@ -24,8 +24,8 @@
 
 #pragma once
 
-#include "CSSValueTypes.h"
-#include "GridArea.h"
+#include <WebCore/CSSValueTypes.h>
+#include <WebCore/GridArea.h>
 #include <wtf/HashMap.h>
 #include <wtf/text/WTFString.h>
 

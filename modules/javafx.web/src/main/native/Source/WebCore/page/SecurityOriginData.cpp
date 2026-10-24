@@ -76,12 +76,47 @@ SecurityOriginData SecurityOriginData::fromFrame(LocalFrame* frame)
     return document->securityOrigin().data();
 }
 
+#if PLATFORM(JAVA)
+static std::optional<URL> innerURLForJarURL(const URL& url)
+{
+    auto fullURL = url.string();
+    if (!fullURL.startsWithIgnoringASCIICase("jar:"_s))
+        return std::nullopt;
+
+    auto separator = fullURL.find("!/"_s);
+    if (separator == notFound || separator <= 4)
+        return std::nullopt;
+
+    auto innerString = fullURL.substring(4, separator - 4);
+    URL innerURL { innerString };
+    if (!innerURL.isValid())
+        return std::nullopt;
+
+    return innerURL;
+}
+#endif
+
+#if PLATFORM(JAVA)
+SecurityOriginData SecurityOriginData::fromURL(const URL& tmpUrl)
+{
+    const URL* url = &tmpUrl;
+
+    std::optional<URL> innerURL;
+    if ((innerURL = innerURLForJarURL(*url)))
+        url = &*innerURL;
+
+    if (shouldTreatAsOpaqueOrigin(*url))
+        return createOpaque();
+    return fromURLWithoutStrictOpaqueness(*url);
+}
+#else
 SecurityOriginData SecurityOriginData::fromURL(const URL& url)
 {
     if (shouldTreatAsOpaqueOrigin(url))
         return createOpaque();
     return fromURLWithoutStrictOpaqueness(url);
 }
+#endif
 
 SecurityOriginData SecurityOriginData::fromURLWithoutStrictOpaqueness(const URL& url)
 {
@@ -167,7 +202,7 @@ SecurityOriginData SecurityOriginData::isolatedCopy() const &
 
 SecurityOriginData SecurityOriginData::isolatedCopy() &&
 {
-    return SecurityOriginData { crossThreadCopy(WTFMove(m_data)) };
+    return SecurityOriginData { crossThreadCopy(WTF::move(m_data)) };
 }
 
 bool operator==(const SecurityOriginData& a, const SecurityOriginData& b)
@@ -186,8 +221,17 @@ static bool schemeRequiresHost(const URL& url)
     return url.protocolIsInHTTPFamily() || url.protocolIs("ftp"_s);
 }
 
+#if PLATFORM(JAVA)
+bool SecurityOriginData::shouldTreatAsOpaqueOrigin(const URL& tmpUrl)
+#else
 bool SecurityOriginData::shouldTreatAsOpaqueOrigin(const URL& url)
+#endif
 {
+#if PLATFORM(JAVA)
+    auto innerURL = innerURLForJarURL(tmpUrl);
+    const URL& url = innerURL ? *innerURL : tmpUrl;
+#endif
+
     if (!url.isValid())
         return true;
 

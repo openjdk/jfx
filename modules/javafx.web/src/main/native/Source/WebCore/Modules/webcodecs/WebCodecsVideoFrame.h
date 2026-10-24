@@ -27,13 +27,13 @@
 
 #if ENABLE(WEB_CODECS)
 
-#include "ContextDestructionObserver.h"
-#include "DOMRectReadOnly.h"
-#include "JSDOMPromiseDeferredForward.h"
-#include "PlaneLayout.h"
-#include "VideoColorSpaceInit.h"
-#include "WebCodecsAlphaOption.h"
-#include "WebCodecsVideoFrameData.h"
+#include <WebCore/ContextDestructionObserver.h>
+#include <WebCore/DOMRectReadOnly.h>
+#include <WebCore/JSDOMPromiseDeferredForward.h>
+#include <WebCore/PlaneLayout.h>
+#include <WebCore/VideoColorSpaceInit.h>
+#include <WebCore/WebCodecsAlphaOption.h>
+#include <WebCore/WebCodecsVideoFrameData.h>
 
 namespace WebCore {
 
@@ -55,6 +55,10 @@ template<typename> class ExceptionOr;
 class WebCodecsVideoFrame : public RefCounted<WebCodecsVideoFrame>, public ContextDestructionObserver {
 public:
     ~WebCodecsVideoFrame();
+
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     using CanvasImageSource = Variant<RefPtr<HTMLImageElement>
         , RefPtr<SVGImageElement>
@@ -103,7 +107,7 @@ public:
     static ExceptionOr<Ref<WebCodecsVideoFrame>> create(ScriptExecutionContext&, ImageBuffer&, IntSize, Init&&);
     WEBCORE_EXPORT static ExceptionOr<Ref<WebCodecsVideoFrame>> create(ScriptExecutionContext&, Ref<NativeImage>&&);
     static Ref<WebCodecsVideoFrame> create(ScriptExecutionContext&, Ref<VideoFrame>&&, BufferInit&&);
-    static Ref<WebCodecsVideoFrame> create(ScriptExecutionContext& context, WebCodecsVideoFrameData&& data) { return adoptRef(*new WebCodecsVideoFrame(context, WTFMove(data))); }
+    static Ref<WebCodecsVideoFrame> create(ScriptExecutionContext& context, WebCodecsVideoFrameData&& data) { return adoptRef(*new WebCodecsVideoFrame(context, WTF::move(data))); }
 
     std::optional<VideoPixelFormat> format() const { return m_data.format; }
     size_t codedWidth() const { return m_data.codedWidth; }

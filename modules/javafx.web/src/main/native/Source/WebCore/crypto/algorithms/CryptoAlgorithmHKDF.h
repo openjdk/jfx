@@ -47,6 +47,10 @@ private:
     void importKey(CryptoKeyFormat, KeyData&&, const CryptoAlgorithmParameters&, bool extractable, CryptoKeyUsageBitmap, KeyCallback&&, ExceptionCallback&&) final;
     ExceptionOr<std::optional<size_t>> getKeyLength(const CryptoAlgorithmParameters&) final;
 
+public:
+    static ExceptionOr<Vector<uint8_t>> deriveBits(const CryptoAlgorithmHkdfParams&, const CryptoKeyRaw&, size_t);
+
+private:
     static ExceptionOr<Vector<uint8_t>> platformDeriveBits(const CryptoAlgorithmHkdfParams&, const CryptoKeyRaw&, size_t);
 };
 

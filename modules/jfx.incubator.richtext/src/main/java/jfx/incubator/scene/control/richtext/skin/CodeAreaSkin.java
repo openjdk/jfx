@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -65,19 +65,21 @@ public class CodeAreaSkin extends RichTextAreaSkin {
             Font f = control.getFont();
             if (f != null) {
                 double size = f.getSize();
-                String family = f.getFamily();
-                String name = f.getName();
-                if (RichUtils.isLogicalFont(family)) {
-                    String lowerCaseName = name.toLowerCase(Locale.ENGLISH);
-                    String style = RichUtils.guessFontStyle(lowerCaseName);
-                    String weight = RichUtils.guessFontWeight(lowerCaseName);
-                    cx.addStyle("-fx-font-family:'" + family + "';");
-                    cx.addStyle("-fx-font-style:" + style + ";");
-                    cx.addStyle("-fx-font-weight:" + weight + ";");
-                } else {
-                    cx.addStyle("-fx-font-family:'" + name + "';");
+                String family = RichUtils.toCssFont(f.getFamily());
+                String name = RichUtils.toCssFont(f.getName());
+                if ((family != null) && (name != null)) {
+                    if (RichUtils.isLogicalFont(family)) {
+                        String lowerCaseName = name.toLowerCase(Locale.ENGLISH);
+                        String style = RichUtils.guessFontStyle(lowerCaseName);
+                        String weight = RichUtils.guessFontWeight(lowerCaseName);
+                        cx.addStyle("-fx-font-family:'" + family + "';");
+                        cx.addStyle("-fx-font-style:" + style + ";");
+                        cx.addStyle("-fx-font-weight:" + weight + ";");
+                    } else {
+                        cx.addStyle("-fx-font-family:'" + name + "';");
+                    }
+                    cx.addStyle("-fx-font-size:" + size + ";");
                 }
-                cx.addStyle("-fx-font-size:" + size + ";");
             }
 
             // line spacing
@@ -85,7 +87,7 @@ public class CodeAreaSkin extends RichTextAreaSkin {
             cx.addStyle("-fx-line-spacing:" + lineSpacing + ";");
 
             // tab size
-            double tabSize = control.getTabSize();
+            int tabSize = control.getTabSize();
             cx.addStyle("-fx-tab-size:" + tabSize + ";");
         }
     }

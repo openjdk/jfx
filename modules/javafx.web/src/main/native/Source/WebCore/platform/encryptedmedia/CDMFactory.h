@@ -30,6 +30,8 @@
 #if ENABLE(ENCRYPTED_MEDIA)
 
 #include <memory>
+#include <wtf/AbstractRefCounted.h>
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 #include <wtf/Forward.h>
 
 #if !RELEASE_LOG_DISABLED
@@ -43,19 +45,19 @@ namespace WebCore {
 class CDMPrivate;
 class CDMPrivateClient;
 
-class CDMFactory {
+class CDMFactory : public AbstractRefCountedAndCanMakeWeakPtr<CDMFactory> {
 public:
     virtual ~CDMFactory() { };
     virtual std::unique_ptr<CDMPrivate> createCDM(const String& keySystem, const String& mediaKeysHashSalt, const CDMPrivateClient&) = 0;
     virtual bool supportsKeySystem(const String&) = 0;
 
-    WEBCORE_EXPORT static Vector<CDMFactory*>& registeredFactories();
+    WEBCORE_EXPORT static Vector<WeakRef<CDMFactory>>& registeredFactories();
     WEBCORE_EXPORT static void registerFactory(CDMFactory&);
     WEBCORE_EXPORT static void unregisterFactory(CDMFactory&);
 
     // Platform-specific function that's called when the list of
     // registered CDMFactory objects is queried for the first time.
-    WEBCORE_EXPORT static void platformRegisterFactories(Vector<CDMFactory*>&);
+    WEBCORE_EXPORT static void platformRegisterFactories(Vector<WeakRef<CDMFactory>>&);
 };
 
 } // namespace WebCore

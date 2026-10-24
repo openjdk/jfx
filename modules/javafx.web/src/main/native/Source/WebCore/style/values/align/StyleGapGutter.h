@@ -24,7 +24,7 @@
 
 #pragma once
 
-#include "StyleLengthWrapper.h"
+#include <WebCore/StyleLengthWrapper.h>
 
 namespace WebCore {
 namespace Style {
@@ -33,6 +33,8 @@ namespace Style {
 // https://drafts.csswg.org/css-align/#column-row-gap
 struct GapGutter : LengthWrapperBase<LengthPercentage<CSS::Nonnegative>, CSS::Keyword::Normal> {
     using Base::Base;
+
+    ALWAYS_INLINE bool isNormal() const { return holdsAlternative<CSS::Keyword::Normal>(); }
 };
 
 } // namespace Style

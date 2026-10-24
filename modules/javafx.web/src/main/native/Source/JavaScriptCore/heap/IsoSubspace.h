@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "AlignedMemoryAllocator.h"
-#include "BlockDirectory.h"
-#include "Subspace.h"
-#include "SubspaceAccess.h"
+#include <JavaScriptCore/AlignedMemoryAllocator.h>
+#include <JavaScriptCore/BlockDirectory.h>
+#include <JavaScriptCore/Subspace.h>
+#include <JavaScriptCore/SubspaceAccess.h>
 #include <wtf/SinglyLinkedListWithTail.h>
 #include <wtf/TZoneMalloc.h>
 

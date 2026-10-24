@@ -37,8 +37,8 @@ ReadableStreamSource::~ReadableStreamSource() = default;
 void ReadableStreamSource::start(ReadableStreamDefaultController&& controller, DOMPromiseDeferred<void>&& promise)
 {
     ASSERT(!m_promise);
-    m_promise = makeUnique<DOMPromiseDeferred<void>>(WTFMove(promise));
-    m_controller = WTFMove(controller);
+    m_promise = makeUnique<DOMPromiseDeferred<void>>(WTF::move(promise));
+    m_controller = WTF::move(controller);
 
     setActive();
     doStart();
@@ -49,7 +49,7 @@ void ReadableStreamSource::pull(DOMPromiseDeferred<void>&& promise)
     ASSERT(!m_promise);
     ASSERT(m_controller);
 
-    m_promise = makeUnique<DOMPromiseDeferred<void>>(WTFMove(promise));
+    m_promise = makeUnique<DOMPromiseDeferred<void>>(WTF::move(promise));
 
     setActive();
     doPull();
@@ -71,10 +71,16 @@ void ReadableStreamSource::pullFinished()
     setInactive();
 }
 
-void ReadableStreamSource::cancel(JSC::JSValue)
+void ReadableStreamSource::cancel(JSC::JSValue value)
 {
     clean();
-    doCancel();
+    doCancel(value);
+}
+
+void ReadableStreamSource::error(JSC::JSGlobalObject& globalObject, JSC::JSValue value)
+{
+    if (m_controller)
+        m_controller->error(globalObject, value);
 }
 
 void ReadableStreamSource::clean()
@@ -85,7 +91,7 @@ void ReadableStreamSource::clean()
     }
 }
 
-void SimpleReadableStreamSource::doCancel()
+void SimpleReadableStreamSource::doCancel(JSC::JSValue)
 {
     m_isCancelled = true;
 }

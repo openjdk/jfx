@@ -32,6 +32,7 @@
 
 #include "DOMPointInit.h"
 #include "FloatPoint3D.h"
+#include "PlatformExportMacros.h"
 #include "ScriptWrappable.h"
 #include <wtf/NoVirtualDestructorBase.h>
 #include <wtf/RefCounted.h>
@@ -45,12 +46,14 @@ struct DOMMatrixInit;
 template<typename> class ExceptionOr;
 
 class DOMPointReadOnly : public ScriptWrappable, public RefCounted<DOMPointReadOnly>, public NoVirtualDestructorBase {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(DOMPointReadOnly, WEBCORE_EXPORT);
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(DOMPointReadOnly, WEBCORE_EXPORT);
 public:
     static Ref<DOMPointReadOnly> create(double x, double y, double z, double w) { return adoptRef(*new DOMPointReadOnly(x, y, z, w)); }
     static Ref<DOMPointReadOnly> create(const DOMPointInit& init) { return create(init.x, init.y, init.z, init.w); }
     static Ref<DOMPointReadOnly> fromPoint(const DOMPointInit& init) { return create(init.x, init.y, init.z, init.w); }
     static Ref<DOMPointReadOnly> fromFloatPoint(const FloatPoint3D& p) { return create(p.x(), p.y(), p.z(), 1); }
+
+    WEBCORE_EXPORT ~DOMPointReadOnly();
 
     double x() const { return m_x; }
     double y() const { return m_y; }

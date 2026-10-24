@@ -29,7 +29,7 @@
 #include "FontCascade.h"
 #include "InlineContentBreaker.h"
 #include "InlineFormattingContext.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 
 namespace WebCore {
 namespace Layout {
@@ -48,34 +48,40 @@ void AbstractLineBuilder::reset()
     m_wrapOpportunityList.shrink(0);
     m_partialLeadingTextItem = { };
     m_previousLine = { };
+    m_isFirstFormattedLineCandidate = false;
 }
 
-std::optional<InlineLayoutUnit> AbstractLineBuilder::eligibleOverflowWidthAsLeading(const InlineContentBreaker::ContinuousContent::RunList& candidateRuns, const InlineContentBreaker::Result& lineBreakingResult, bool isFirstFormattedLine) const
+std::optional<InlineLayoutUnit> AbstractLineBuilder::overflowWidthAsLeadingForNextLine(const InlineContentBreaker::ContinuousContent::RunList& candidateRuns, const InlineContentBreaker::Result& lineBreakingResult) const
 {
-    auto eligibleTrailingRunIndex = [&]() -> std::optional<size_t> {
+    auto trailingTextRunIndexAsLeadingCandidate = [&]() -> std::optional<size_t> {
         ASSERT(lineBreakingResult.action == InlineContentBreaker::Result::Action::Wrap || lineBreakingResult.action == InlineContentBreaker::Result::Action::Break);
-        if (candidateRuns.size() == 1 && candidateRuns.first().inlineItem.isText()) {
-            // A single text run is always a candidate.
+
+        auto trailingRunIndex = [&]() -> std::optional<size_t> {
+            if (candidateRuns.size() == 1)
             return { 0 };
-        }
-        if (lineBreakingResult.action == InlineContentBreaker::Result::Action::Break && lineBreakingResult.partialTrailingContent) {
-            auto& trailingRun = candidateRuns[lineBreakingResult.partialTrailingContent->trailingRunIndex];
-            if (trailingRun.inlineItem.isText())
+            if (lineBreakingResult.action == InlineContentBreaker::Result::Action::Break && lineBreakingResult.partialTrailingContent)
                 return lineBreakingResult.partialTrailingContent->trailingRunIndex;
-        }
         return { };
-    }();
+        };
+        auto candidateIndex = trailingRunIndex();
+        if (!candidateIndex || !candidateRuns[*candidateIndex].inlineItem.isText())
+            return { };
+        auto& inlineTextItem = downcast<InlineTextItem>(candidateRuns[*candidateIndex].inlineItem);
+        // For whitespace content we can only re-use measured width when no position dependent character(s) is present.
+        return !inlineTextItem.isWhitespace() || inlineTextItem.width().has_value() ? candidateIndex : std::nullopt;
+    };
 
-    if (!eligibleTrailingRunIndex)
+    auto index = trailingTextRunIndexAsLeadingCandidate();
+    if (!index)
         return { };
 
-    auto& overflowingRun = candidateRuns[*eligibleTrailingRunIndex];
-    // FIXME: Add support for other types of continuous content.
-    ASSERT(is<InlineTextItem>(overflowingRun.inlineItem));
-    auto& inlineTextItem = downcast<InlineTextItem>(overflowingRun.inlineItem);
-    if (inlineTextItem.isWhitespace())
+    auto& overflowingRun = candidateRuns[*index];
+    auto* inlineTextItem = dynamicDowncast<InlineTextItem>(overflowingRun.inlineItem);
+    if (!inlineTextItem) {
+        ASSERT_NOT_REACHED();
         return { };
-    if (isFirstFormattedLine) {
+    }
+    if (isFirstFormattedLineCandidate()) {
         auto& usedStyle = overflowingRun.style;
         auto& style = overflowingRun.inlineItem.style();
         if (&usedStyle != &style && !usedStyle.fontCascadeEqual(style)) {
@@ -99,7 +105,7 @@ void AbstractLineBuilder::setIntrinsicWidthMode(IntrinsicWidthMode intrinsicWidt
 
 const RenderStyle& AbstractLineBuilder::rootStyle() const
 {
-    return isFirstFormattedLine() ? root().firstLineStyle() : root().style();
+    return isFirstFormattedLineCandidate() ? root().firstLineStyle() : root().style();
 }
 
 const InlineLayoutState& AbstractLineBuilder::layoutState() const

@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "WebGPUDeviceLostReason.h"
+#include <WebCore/WebGPUDeviceLostReason.h>
 #include <optional>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
@@ -37,7 +37,7 @@ class DeviceLostInfo final : public RefCounted<DeviceLostInfo> {
 public:
     static Ref<DeviceLostInfo> create(DeviceLostReason reason, String&& message)
     {
-        return adoptRef(*new DeviceLostInfo(reason, WTFMove(message)));
+        return adoptRef(*new DeviceLostInfo(reason, WTF::move(message)));
     }
 
     DeviceLostReason reason() const { return m_reason; }
@@ -46,7 +46,7 @@ public:
 protected:
     DeviceLostInfo(DeviceLostReason reason, String&& message)
         : m_reason(reason)
-        , m_message(WTFMove(message))
+        , m_message(WTF::move(message))
     {
     }
 

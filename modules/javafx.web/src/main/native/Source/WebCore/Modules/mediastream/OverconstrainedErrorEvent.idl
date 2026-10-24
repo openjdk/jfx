@@ -35,6 +35,8 @@
     readonly attribute OverconstrainedError? error;
 };
 
-dictionary OverconstrainedErrorEventInit : EventInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary OverconstrainedErrorEventInit : EventInit {
     OverconstrainedError? error = null;
 };

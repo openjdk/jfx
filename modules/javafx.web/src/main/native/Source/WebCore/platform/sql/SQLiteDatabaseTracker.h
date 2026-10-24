@@ -26,7 +26,7 @@
 #ifndef SQLiteDatabaseTracker_h
 #define SQLiteDatabaseTracker_h
 
-#include "SQLiteDatabaseTrackerClient.h"
+#include <WebCore/SQLiteDatabaseTrackerClient.h>
 
 namespace WebCore {
 

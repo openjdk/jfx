@@ -25,14 +25,16 @@
 
 #pragma once
 
-#include "ChromeClient.h"
-#include "GraphicsLayerClient.h"
-#include "LayerAncestorClippingStack.h"
-#include "RenderLayer.h"
+#include <WebCore/ChromeClient.h>
+#include <WebCore/GraphicsLayerClient.h>
+#include <WebCore/LayerAncestorClippingStack.h>
+#include <WebCore/RenderLayer.h>
 #include <pal/HysteresisActivity.h>
 #include <wtf/CheckedPtr.h>
 #include <wtf/HashMap.h>
+#include <wtf/InlineWeakPtr.h>
 #include <wtf/OptionSet.h>
+#include <wtf/Platform.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakHashSet.h>
 
@@ -147,8 +149,8 @@ private:
 
     ChromeClient& m_chromeClient;
 
-    SingleThreadWeakHashSet<RenderLayer> m_scrollingLayers;
-    SingleThreadWeakHashSet<RenderLayer> m_viewportConstrainedLayers;
+    InlineWeakKeyHashSet<RenderLayer> m_scrollingLayers;
+    InlineWeakKeyHashSet<RenderLayer> m_viewportConstrainedLayers;
 
     const bool m_coordinateViewportConstrainedLayers;
 };
@@ -257,7 +259,7 @@ public:
     // Notify us that a layer has been removed
     void layerWillBeRemoved(RenderLayer& parent, RenderLayer& child);
 
-    void layerStyleChanged(StyleDifference, RenderLayer&, const RenderStyle* oldStyle);
+    void layerStyleChanged(Style::Difference, RenderLayer&, const RenderStyle* oldStyle);
     void layerGainedCompositedScrollableOverflow(RenderLayer&);
 
     void establishesTopLayerWillChangeForLayer(RenderLayer&);
@@ -435,7 +437,7 @@ private:
     bool canUpdateCompositingPolicy() const;
 
     // GraphicsLayerClient implementation
-    void paintContents(const GraphicsLayer*, GraphicsContext&, const FloatRect&, OptionSet<GraphicsLayerPaintBehavior>) override;
+    void paintContents(const GraphicsLayer&, GraphicsContext&, const FloatRect&, OptionSet<GraphicsLayerPaintBehavior>) override;
     void customPositionForVisibleRectComputation(const GraphicsLayer*, FloatPoint&) const override;
     bool shouldDumpPropertyForLayer(const GraphicsLayer*, ASCIILiteral propertyName, OptionSet<LayerTreeAsTextOptions>) const override;
     bool backdropRootIsOpaque(const GraphicsLayer*) const override;
@@ -518,7 +520,7 @@ private:
     void updateScrollLayerPosition();
     void updateScrollLayerClipping();
 
-    FloatPoint positionForClipLayer() const;
+    FloatRect insetClipLayerRect() const;
 
     void notifyIFramesOfCompositingChange();
 
@@ -693,8 +695,8 @@ private:
     Color m_viewBackgroundColor;
     Color m_rootExtendedBackgroundColor;
 
-    HashMap<ScrollingNodeID, SingleThreadWeakPtr<RenderLayer>> m_scrollingNodeToLayerMap;
-    SingleThreadWeakHashSet<RenderLayer> m_layersWithUnresolvedRelations;
+    HashMap<ScrollingNodeID, InlineWeakPtr<RenderLayer>> m_scrollingNodeToLayerMap;
+    InlineWeakKeyHashSet<RenderLayer> m_layersWithUnresolvedRelations;
 #if PLATFORM(IOS_FAMILY)
     std::unique_ptr<LegacyWebKitScrollingLayerCoordinator> m_legacyScrollingLayerCoordinator;
 #endif

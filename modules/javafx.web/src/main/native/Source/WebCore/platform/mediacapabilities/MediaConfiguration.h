@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "AudioConfiguration.h"
-#include "VideoConfiguration.h"
+#include <WebCore/AudioConfiguration.h>
+#include <WebCore/VideoConfiguration.h>
 #include <wtf/CrossThreadCopier.h>
 
 namespace WebCore {
@@ -49,7 +49,8 @@ inline MediaConfiguration MediaConfiguration::isolatedCopy() const &
 
 inline MediaConfiguration MediaConfiguration::isolatedCopy() &&
 {
-    return { crossThreadCopy(WTFMove(video)),  crossThreadCopy(WTFMove(audio)), crossThreadCopy(WTFMove(allowedMediaContainerTypes)), crossThreadCopy(WTFMove(allowedMediaCodecTypes)) };
+    return { crossThreadCopy(WTF::move(video)),  crossThreadCopy(WTF::move(audio)), crossThreadCopy(WTF::move(allowedMediaContainerTypes)), crossThreadCopy(WTF::move(allowedMediaCodecTypes)) };
 }
 
 } // namespace WebCore
+

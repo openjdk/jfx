@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "StageModeOperations.h"
+#include <WebCore/StageModeOperations.h>
 
 namespace WebCore {
 
@@ -44,12 +44,17 @@ public:
     virtual std::optional<FloatPoint3D> boundingBoxCenter() const = 0;
     virtual std::optional<FloatPoint3D> boundingBoxExtents() const = 0;
 
-#if ENABLE(MODEL_PROCESS)
+    virtual void invalidateTransform() = 0;
+
+#if ENABLE(MODEL_ELEMENT_PORTAL)
     virtual bool hasPortal() const = 0;
     virtual void setHasPortal(bool) = 0;
+#endif
+
+#if ENABLE(MODEL_ELEMENT_STAGE_MODE)
     virtual StageModeOperation stageMode() const = 0;
     virtual void setStageMode(StageModeOperation) = 0;
 #endif
 };
 
-}
+} // namespace WebCore

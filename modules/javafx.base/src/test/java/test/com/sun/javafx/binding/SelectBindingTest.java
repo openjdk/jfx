@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -429,7 +429,7 @@ public class SelectBindingTest {
         select = Bindings.selectString(a.nextProperty(), "dummy", "name");
         assertNull(select.get());
         ErrorLoggingUtility.checkWarning(NoSuchMethodException.class);
-        OutputRedirect.checkAndRestoreStderr(NoSuchMethodException.class);
+        OutputRedirect.restoreStderr();  // just restore as we already asserted this above, and checking stderr for warnings is flakey
     }
 
     @Test

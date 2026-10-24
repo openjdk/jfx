@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 package com.sun.jfx.incubator.scene.control.richtext;
 
 import com.sun.javafx.util.Utils;
+import jfx.incubator.scene.control.richtext.model.StyleAttribute;
 import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 
 /**
@@ -82,9 +83,25 @@ public class StyleAttributeMapHelper {
      */
     public static StyleAttributeMap filter(StyleAttributeMap ss, boolean forParagraph) {
         if (forParagraph) {
-            return StyleAttributeMapHelper.getParagraphAttrs(ss);
+            return getParagraphAttrs(ss);
         } else {
-            return StyleAttributeMapHelper.getCharacterAttrs(ss);
+            return getCharacterAttrs(ss);
+        }
+    }
+
+    /**
+     * Returns true if the given attribute is a character one (isParagraph = false),
+     * or a paragraph one (isParagraph = true)
+     * @param a the attribute
+     * @param isParagraph whether the expected type is a paragraph or a character
+     * @return true if the given attribute is a character one (isParagraph = false),
+     * or a paragraph one (isParagraph = true)
+     */
+    public static boolean isAcceptable(StyleAttribute<?> a, boolean isParagraph) {
+        if (isParagraph) {
+            return a.isParagraphAttribute();
+        } else {
+            return a.isCharacterAttribute();
         }
     }
 }

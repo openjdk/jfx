@@ -40,7 +40,7 @@ class GtkWindow extends Window {
         super(owner, screen, styleMask);
 
         if (isExtendedWindow()) {
-            prefHeaderButtonHeightProperty().subscribe(this::onPrefHeaderButtonHeightChanged);
+            headerButtonHeightProperty().subscribe(this::onPrefHeaderButtonHeightChanged);
         }
     }
 
@@ -257,7 +257,8 @@ class GtkWindow extends Window {
             _setSystemMinimumSize(super.getRawHandle(), w, h);
         });
 
-        overlay.prefButtonHeightProperty().bind(prefHeaderButtonHeightProperty());
+        overlay.buttonPrefHeightProperty().bind(headerButtonHeightProperty());
+        overlay.buttonDarkStyleProperty().bind(headerButtonDarkStyleProperty());
         return overlay;
     }
 

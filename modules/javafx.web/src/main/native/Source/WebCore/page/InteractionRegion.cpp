@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2022-2025 Apple Inc. All rights reserved.
+ * Copyright (C) 2026 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,8 +27,10 @@
 #include "config.h"
 #include "InteractionRegion.h"
 
+#include "AXObjectCache.h"
 #include "AccessibilityObject.h"
 #include "BorderShape.h"
+#include "ContainerNodeInlines.h"
 #include "Document.h"
 #include "ElementAncestorIteratorInlines.h"
 #include "ElementInlines.h"
@@ -59,14 +62,17 @@
 #include "RenderImage.h"
 #include "RenderLayer.h"
 #include "RenderLayerBacking.h"
+#include "RenderObjectStyle.h"
 #include "RenderVideo.h"
 #include "SVGSVGElement.h"
+#include "Settings.h"
 #include "SimpleRange.h"
 #include "SliderThumbElement.h"
 #include "StyleResolver.h"
 #include "TextIterator.h"
 #include <wtf/NeverDestroyed.h>
 #include <wtf/text/MakeString.h>
+#include "FrameDestructionObserverInlines.h"
 
 #if ENABLE(FORM_CONTROL_REFRESH)
 #include "PathCG.h"
@@ -172,6 +178,7 @@ static bool shouldAllowAccessibilityRoleAsPointerCursorReplacement(const Element
     case AccessibilityRole::MenuItemRadio:
     case AccessibilityRole::PopUpButton:
     case AccessibilityRole::RadioButton:
+    case AccessibilityRole::Slider:
     case AccessibilityRole::Switch:
     case AccessibilityRole::TextField:
     case AccessibilityRole::ToggleButton:
@@ -194,8 +201,7 @@ static bool elementMatchesHoverRules(Element& element)
 
         for (auto& invalidationRuleSet : *invalidationRuleSets) {
             element.document().userActionElements().setHovered(element, invalidationRuleSet.isNegation == Style::IsNegation::No);
-            Style::ElementRuleCollector ruleCollector(element, *invalidationRuleSet.ruleSet, nullptr);
-            ruleCollector.setMode(SelectorChecker::Mode::CollectingRulesIgnoringVirtualPseudoElements);
+            Style::ElementRuleCollector ruleCollector(element, *invalidationRuleSet.ruleSet, nullptr, SelectorChecker::Mode::StyleInvalidation);
             if (ruleCollector.matchesAnyAuthorRules()) {
                 foundHoverRules = true;
                 break;
@@ -242,7 +248,7 @@ static bool shouldGetOcclusion(const RenderElement& renderer)
             return false;
     }
 
-    if (renderer.style().specifiedZIndex() > 0)
+    if (auto specifiedZIndexValue = renderer.style().specifiedZIndex().tryValue(); specifiedZIndexValue && *specifiedZIndexValue > 0)
         return true;
 
     if (renderer.isFixedPositioned())
@@ -260,7 +266,7 @@ static bool hasTransparentContainerStyle(const RenderStyle& style)
         && !style.hasExplicitlySetBorderRadius()
         // No visible borders or borders that do not create a complete box.
         && (!style.hasVisibleBorder()
-            || !(style.borderTopWidth() && style.borderRightWidth() && style.borderBottomWidth() && style.borderLeftWidth()));
+            || !(style.usedBorderTopWidth() && style.usedBorderRightWidth() && style.usedBorderBottomWidth() && style.usedBorderLeftWidth()));
 }
 
 static bool canTweakShapeForStyle(const RenderStyle& style)
@@ -287,20 +293,12 @@ static bool colorIsChallengingToHighlight(const Color& color)
 
 static bool styleIsChallengingToHighlight(const RenderStyle& style)
 {
-    auto fillPaintType = style.fill().type;
-
-    if (fillPaintType == Style::SVGPaintType::None) {
-        auto strokePaintType = style.stroke().type;
-        if (strokePaintType != Style::SVGPaintType::RGBColor && strokePaintType != Style::SVGPaintType::CurrentColor)
-            return false;
-
-        return colorIsChallengingToHighlight(style.colorResolvingCurrentColor(style.stroke().color));
-    }
-
-    if (fillPaintType != Style::SVGPaintType::RGBColor && fillPaintType != Style::SVGPaintType::CurrentColor)
+    auto color = (style.fill().isNone() ? style.stroke() : style.fill()).tryColor();
+    if (!color)
         return false;
 
-    return colorIsChallengingToHighlight(style.colorResolvingCurrentColor(style.fill().color));
+    Style::ColorResolver colorResolver { style };
+    return colorIsChallengingToHighlight(colorResolver.colorResolvingCurrentColor(*color));
 }
 
 static bool isGuardContainer(const Element& element)
@@ -391,7 +389,7 @@ static String interactionRegionTextContentForNode(Node& node)
 }
 #endif
 
-std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject& regionRenderer, const FloatRect& bounds, const FloatSize& clipOffset, const std::optional<AffineTransform>& transform)
+std::optional<InteractionRegion> interactionRegionForRenderedRegion(const RenderObject& regionRenderer, const FloatRect& bounds, const FloatSize& clipOffset, const std::optional<AffineTransform>& transform)
 {
     if (bounds.isEmpty())
         return std::nullopt;
@@ -515,7 +513,7 @@ std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject
             }();
         } else if (regionRenderer.style().hasBackgroundImage()) {
             isPhoto = [&]() -> bool {
-                auto* backgroundImage = regionRenderer.style().backgroundLayers().image();
+                RefPtr backgroundImage = regionRenderer.style().backgroundLayers().usedFirst().image().tryStyleImage();
                 if (!backgroundImage || !backgroundImage->cachedImage())
                     return false;
 
@@ -688,7 +686,7 @@ std::optional<InteractionRegion> interactionRegionForRenderedRegion(RenderObject
             }
 
             // Expand the interaction region by the width of the CSS border, if necessary.
-            const auto rectOffset = RenderThemeCocoa::inflateRectForInteractionRegion(regionRenderer, rect);
+            const auto rectOffset = RenderThemeCocoa::inflateRectForInteractionRegion(*regionRendererBox, rect);
             if (clipPath && !rectOffset.isZero())
                 clipPath->translate(rectOffset);
         } else

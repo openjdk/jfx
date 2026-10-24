@@ -23,7 +23,6 @@
 #pragma once
 
 #include "AffineTransform.h"
-#include "RenderObjectInlines.h"
 #include "RenderSVGBlock.h"
 #include "SVGBoundingBoxComputation.h"
 #include "SVGTextChunk.h"
@@ -41,7 +40,7 @@ class SVGTextElement;
 class SVGTextLayoutEngine;
 
 class RenderSVGText final : public RenderSVGBlock {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderSVGText);
+    WTF_MAKE_TZONE_ALLOCATED(RenderSVGText);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSVGText);
 public:
     RenderSVGText(SVGTextElement&, RenderStyle&&);
@@ -73,6 +72,7 @@ public:
     FloatRect strokeBoundingBox() const final;
     bool isObjectBoundingBoxValid() const;
     FloatRect repaintRectInLocalCoordinates(RepaintRectCalculation = RepaintRectCalculation::Fast) const final;
+    FloatRect decoratedBoundingBox() const final;
 
     LayoutRect visualOverflowRectEquivalent() const { return SVGBoundingBoxComputation::computeVisualOverflowRect(*this); }
 
@@ -91,16 +91,10 @@ private:
     bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) override;
     bool hitTestInlineChildren(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) override;
 
-    void applyTransform(TransformationMatrix&, const RenderStyle&, const FloatRect& boundingBox, OptionSet<RenderStyle::TransformOperationOption>) const final;
-    VisiblePosition positionForPoint(const LayoutPoint&, HitTestSource, const RenderFragmentContainer*) override;
+    void applyTransform(TransformationMatrix&, const RenderStyle&, const FloatRect& boundingBox, OptionSet<Style::TransformResolverOption>) const final;
+    PositionWithAffinity positionForPoint(const LayoutPoint&, HitTestSource, const RenderFragmentContainer*) override;
 
-    bool requiresLayer() const override
-    {
-        if (document().settings().layerBasedSVGEngineEnabled())
-            return true;
-        return false;
-    }
-
+    bool requiresLayer() const override;
     void layout() override;
 
     void computePerCharacterLayoutInformation();
@@ -111,7 +105,7 @@ private:
 
     void willBeDestroyed() override;
 
-    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) final;
+    void styleDidChange(Style::Difference, const RenderStyle* oldStyle) final;
 
     // FIXME: [LBSE] Begin code only needed for legacy SVG engine.
     bool nodeAtFloatPoint(const HitTestRequest&, HitTestResult&, const FloatPoint& pointInParent, HitTestAction) override;

@@ -27,6 +27,7 @@
 #include "ElementInlines.h"
 #include "Event.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
 #include "JSRequestPriority.h"
@@ -41,7 +42,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLScriptElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLScriptElement);
 
 using namespace HTMLNames;
 
@@ -78,6 +79,7 @@ void HTMLScriptElement::removedFromAncestor(RemovalType type, ContainerNode& con
 {
     HTMLElement::removedFromAncestor(type, container);
     unblockRendering();
+    unregisterSpeculationRules();
 }
 
 void HTMLScriptElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
@@ -108,7 +110,7 @@ void HTMLScriptElement::didFinishInsertingNode()
 
 void HTMLScriptElement::setText(String&& value)
 {
-    setTextContent(WTFMove(value));
+    setTextContent(WTF::move(value));
 }
 
 DOMTokenList& HTMLScriptElement::blocking()
@@ -150,12 +152,12 @@ void HTMLScriptElement::unblockRendering()
 // https://html.spec.whatwg.org/multipage/scripting.html#dom-script-text
 ExceptionOr<void> HTMLScriptElement::setText(Variant<RefPtr<TrustedScript>, String>&& value)
 {
-    return setTextContent(trustedTypeCompliantString(*protectedScriptExecutionContext(), WTFMove(value), "HTMLScriptElement text"_s));
+    return setTextContent(trustedTypeCompliantString(*protectedScriptExecutionContext(), WTF::move(value), "HTMLScriptElement text"_s));
 }
 
 ExceptionOr<void> HTMLScriptElement::setTextContent(std::optional<Variant<RefPtr<TrustedScript>, String>>&& value)
 {
-    return setTextContent(trustedTypeCompliantString(*protectedScriptExecutionContext(), value ? WTFMove(*value) : emptyString(), "HTMLScriptElement textContent"_s));
+    return setTextContent(trustedTypeCompliantString(*protectedScriptExecutionContext(), value ? WTF::move(*value) : emptyString(), "HTMLScriptElement textContent"_s));
 }
 
 ExceptionOr<void> HTMLScriptElement::setTextContent(ExceptionOr<String> value)
@@ -166,20 +168,20 @@ ExceptionOr<void> HTMLScriptElement::setTextContent(ExceptionOr<String> value)
     auto newValue = value.releaseReturnValue();
 
     setTrustedScriptText(newValue);
-    setTextContent(WTFMove(newValue));
+    setTextContent(WTF::move(newValue));
     return { };
 }
 
 ExceptionOr<void> HTMLScriptElement::setInnerText(Variant<RefPtr<TrustedScript>, String>&& value)
 {
-    auto stringValueHolder = trustedTypeCompliantString(*protectedScriptExecutionContext(), WTFMove(value), "HTMLScriptElement innerText"_s);
+    auto stringValueHolder = trustedTypeCompliantString(*protectedScriptExecutionContext(), WTF::move(value), "HTMLScriptElement innerText"_s);
     if (stringValueHolder.hasException())
         return stringValueHolder.releaseException();
 
     auto newValue = stringValueHolder.releaseReturnValue();
 
     setTrustedScriptText(newValue);
-    setInnerText(WTFMove(newValue));
+    setInnerText(WTF::move(newValue));
     return { };
 }
 
@@ -206,7 +208,7 @@ String HTMLScriptElement::src() const
 
 ExceptionOr<void> HTMLScriptElement::setSrc(Variant<RefPtr<TrustedScriptURL>, String>&& value)
 {
-    auto stringValueHolder = trustedTypeCompliantString(*protectedScriptExecutionContext(), WTFMove(value), "HTMLScriptElement src"_s);
+    auto stringValueHolder = trustedTypeCompliantString(*protectedScriptExecutionContext(), WTF::move(value), "HTMLScriptElement src"_s);
     if (stringValueHolder.hasException())
         return stringValueHolder.releaseException();
 

@@ -51,7 +51,7 @@ MemoryIndexCursor::MemoryIndexCursor(MemoryIndex& index, const IDBCursorInfo& cu
 {
     LOG(IndexedDB, "MemoryIndexCursor::MemoryIndexCursor %s", cursorInfo.range().loggingString().utf8().data());
 
-    auto* valueStore = index.valueStore();
+    CheckedPtr valueStore = index.valueStore();
     if (!valueStore)
         return;
 
@@ -81,7 +81,7 @@ void MemoryIndexCursor::currentData(IDBGetResult& getResult)
         getResult = { m_currentKey, m_currentPrimaryKey };
     else {
         IDBValue value = { m_index->protectedObjectStore()->valueForKey(m_currentPrimaryKey), { }, { } };
-        getResult = { m_currentKey, m_currentPrimaryKey, WTFMove(value), m_index->protectedObjectStore()->info().keyPath() };
+        getResult = { m_currentKey, m_currentPrimaryKey, WTF::move(value), m_index->protectedObjectStore()->info().keyPath() };
     }
 }
 
@@ -99,7 +99,7 @@ void MemoryIndexCursor::iterate(const IDBKeyData& key, const IDBKeyData& primary
         // Cannot iterate by both a count and to a key
         ASSERT(!count);
 
-        auto* valueStore = index->valueStore();
+        CheckedPtr valueStore = index->valueStore();
         if (!valueStore) {
             m_currentKey = { };
             m_currentPrimaryKey = { };
@@ -144,7 +144,7 @@ void MemoryIndexCursor::iterate(const IDBKeyData& key, const IDBKeyData& primary
         count = 1;
 
     if (!m_currentIterator.isValid()) {
-        auto* valueStore = index->valueStore();
+        CheckedPtr valueStore = index->valueStore();
         if (!valueStore) {
             m_currentKey = { };
             m_currentPrimaryKey = { };
@@ -220,7 +220,12 @@ void MemoryIndexCursor::indexRecordsAllChanged()
 
 void MemoryIndexCursor::indexValueChanged(const IDBKeyData& key, const IDBKeyData& primaryKey)
 {
-    if (m_currentKey != key || m_currentPrimaryKey != primaryKey)
+    // For Prev/Prevunique cursors, m_currentIterator wraps std::set reverse_iterators
+    // whose stored base() points one element past the logical position. Erasing that
+    // adjacent element leaves base() dangling even though m_currentKey/m_currentPrimaryKey
+    // are unchanged, so for reverse cursors we must invalidate on any index mutation
+    // and let iterate() re-seek via reverseFind().
+    if (info().isDirectionForward() && (m_currentKey != key || m_currentPrimaryKey != primaryKey))
         return;
 
     m_currentIterator.invalidate();

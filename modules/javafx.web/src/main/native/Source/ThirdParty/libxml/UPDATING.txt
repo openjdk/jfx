@@ -9,13 +9,13 @@ Updating libxml in OpenJFX:
 
 - For windows
 4. Configure libxml.
-        > cd modules/javafx.web/src/main/native/Source/ThirdParty/libxml/src/win32
-        > cscript configure.js compiler=msvc catalog=no xml_debug=no http=no iconv=no legacy=no modules=no regexps=no schemas=no schematron=no valid=no xinclude=no xptr=no zlib=no
-        - Above command generates a header file `libxml\src\include\libxml\xmlversion.h` and may update the `src/config.h` file. (on all platforms)
+        > cd modules/javafx.web/src/main/native/Source/ThirdParty/libxml/src
+        > cmake -S . -B win32-build -DBUILD_SHARED_LIBS=OFF -DLIBXML2_WITH_CATALOG=OFF -DLIBXML2_WITH_DEBUG=OFF -DLIBXML2_WITH_HTTP=OFF -DLIBXML2_WITH_ICONV=OFF -DLIBXML2_WITH_ISO8859X=OFF -DLIBXML2_WITH_LEGACY=OFF -DLIBXML2_WITH_MODULES=OFF -DLIBXML2_WITH_REGEXPS=OFF -DLIBXML2_WITH_RELAXNG=OFF -DLIBXML2_WITH_SCHEMAS=OFF -DLIBXML2_WITH_SCHEMATRON=OFF -DLIBXML2_WITH_VALID=OFF -DLIBXML2_WITH_XINCLUDE=OFF -DLIBXML2_WITH_XPTR=OFF -DLIBXML2_WITH_ZLIB=OFF -DLIBXML2_WITH_PROGRAMS=OFF -DLIBXML2_WITH_TESTS=OFF -DLIBXML2_WITH_C14N=OFF
+        - Above command generates a header file `libxml\src\win32-build\libxml\xmlversion.h` and may update the `src/config.h` file. (on all platforms)
 
-4.1 Copy `libxml\src\include\libxml\xmlversion.h` to `libxml\win32\include\libxml\xmlversion.h'. xmlversion.h file defines several macros to control libxml features. We do not require all of the features to be enabled. Compare the generated `libxml\src\include\libxml\xmlversion.h` with existing `libxml\win32\include\libxml\xmlversion.h' and retain macro definitions from the later.
+4.1 Copy `libxml\src\win32-build\libxml\xmlversion.h` to `libxml\win32\include\libxml\xmlversion.h'. xmlversion.h file defines several macros to control libxml features. We do not require all of the features to be enabled. Compare the generated `libxml\src\win32-build\libxml\xmlversion.h` with existing `libxml\win32\include\libxml\xmlversion.h' and retain macro definitions from the later.
 
-4.2 Copy `libxml\src\config.h` to `libxml\win32\config.h`
+4.2 Copy `libxml\src\win32-build\config.h` to `libxml\win32\config.h`
 
 5. Remove files & directories which are not relevant to JavaFX WebKit.
 
@@ -24,7 +24,7 @@ Updating libxml in OpenJFX:
 
 7. Configure libxml.
         > cd modules/javafx.web/src/main/native/Source/ThirdParty/libxml/src
-        > ./configure
+        > ./configure --without-catalog --without-debug --without-http --without-iconv --without-legacy --without-modules --without-regexps --without-relaxng --without-schemas --without-schematron --without-valid --without-xinclude --without-xptr --without-zlib --without-c14n --with-icu
 
 7.1 Copy `libxml/src/include/libxml/xmlversion.h` to `libxml/mac/include/libxml/xmlversion.h` and follow same guidelines as Windows to retain changes from our repo.
 
@@ -35,13 +35,13 @@ Updating libxml in OpenJFX:
 
 9. Configure libxml.
         > cd modules/javafx.web/src/main/native/Source/ThirdParty/libxml/src
-        > ./configure
+        > ./configure --without-catalog --without-debug --without-http --without-iconv --without-legacy --without-modules --without-regexps --without-relaxng --without-schemas --without-schematron --without-valid --without-xinclude --without-xptr --without-zlib --without-c14n --with-icu
 
 9.1 Copy `libxml/src/include/libxml/xmlversion.h` to `libxml/linux/include/libxml/xmlversion.h` and follow same guidelines as Windows to retain changes from our repo.
 
 9.2 Copy libxml/src/config.h to libxml/linux/config.h
 
-10. Update version info in 'modules/javafx.web/src/main/legal/libxml.md'. Also, update copyright if any new files are added.
+10. Update version info in 'modules/javafx.web/src/main/legal/libxml2.md'. Also, update copyright if any new files are added.
 
 11. Helper commands for removing tabs and trailing whitespaces from source files(.h and .c).
 

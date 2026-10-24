@@ -20,7 +20,9 @@
 #include "config.h"
 #include "GLDisplay.h"
 
+#include "FourCC.h"
 #include "GLContext.h"
+#include "Logging.h"
 #include <wtf/Locker.h>
 #include <wtf/MainThread.h>
 #include <wtf/text/StringView.h>
@@ -32,7 +34,12 @@
 #include <EGL/eglext.h>
 #endif
 
-#if USE(GBM)
+#if OS(ANDROID)
+#include "BufferFormatAndroid.h"
+#include <android/hardware_buffer.h>
+#include <drm/drm_fourcc.h>
+#include <wtf/NeverDestroyed.h>
+#elif USE(GBM)
 #include <drm_fourcc.h>
 #endif
 
@@ -51,7 +58,9 @@ namespace WebCore {
 
 RefPtr<GLDisplay> GLDisplay::create(EGLDisplay eglDisplay)
 {
+#if !USE(GRAPHICS_LAYER_WC)
     ASSERT(isMainThread());
+#endif
     if (eglDisplay == EGL_NO_DISPLAY)
         return nullptr;
 
@@ -85,6 +94,11 @@ GLDisplay::GLDisplay(EGLDisplay eglDisplay)
     m_extensions.EXT_image_dma_buf_import = findExtension("EGL_EXT_image_dma_buf_import"_s);
     m_extensions.EXT_image_dma_buf_import_modifiers = findExtension("EGL_EXT_image_dma_buf_import_modifiers"_s);
     m_extensions.MESA_image_dma_buf_export = findExtension("EGL_MESA_image_dma_buf_export"_s);
+
+#if OS(ANDROID)
+    m_extensions.ANDROID_get_native_client_buffer = findExtension("EGL_ANDROID_get_native_client_buffer"_s);
+    m_extensions.ANDROID_image_native_buffer = findExtension("EGL_ANDROID_image_native_buffer"_s);
+#endif
 }
 
 void GLDisplay::terminate()
@@ -148,7 +162,7 @@ bool GLDisplay::destroyImage(EGLImage image) const
 }
 
 #if USE(GBM)
-static Vector<GLDisplay::DMABufFormat> queryDMABufFormats(EGLDisplay eglDisplay, const Vector<EGLint>& supportedFormats, bool supportModifiers)
+static Vector<GLDisplay::BufferFormat> queryDMABufFormats(EGLDisplay eglDisplay, const Vector<FourCC>& supportedFormats, bool supportModifiers)
 {
         static PFNEGLQUERYDMABUFFORMATSEXTPROC s_eglQueryDmaBufFormatsEXT = reinterpret_cast<PFNEGLQUERYDMABUFFORMATSEXTPROC>(eglGetProcAddress("eglQueryDmaBufFormatsEXT"));
         if (!s_eglQueryDmaBufFormatsEXT)
@@ -162,69 +176,114 @@ static Vector<GLDisplay::DMABufFormat> queryDMABufFormats(EGLDisplay eglDisplay,
     if (!s_eglQueryDmaBufFormatsEXT(eglDisplay, formatsCount, reinterpret_cast<EGLint*>(formats.mutableSpan().data()), &formatsCount))
         return { };
 
-    static PFNEGLQUERYDMABUFMODIFIERSEXTPROC s_eglQueryDmaBufModifiersEXT = supportModifiers ?
-            reinterpret_cast<PFNEGLQUERYDMABUFMODIFIERSEXTPROC>(eglGetProcAddress("eglQueryDmaBufModifiersEXT")) : nullptr;
+    static PFNEGLQUERYDMABUFMODIFIERSEXTPROC s_eglQueryDmaBufModifiersEXT = reinterpret_cast<PFNEGLQUERYDMABUFMODIFIERSEXTPROC>(eglGetProcAddress("eglQueryDmaBufModifiersEXT"));
 
-    return WTF::compactMap(supportedFormats, [&](auto format) -> std::optional<GLDisplay::DMABufFormat> {
+    return WTF::compactMap(supportedFormats, [&](FourCC format) -> std::optional<GLDisplay::BufferFormat> {
             if (!formats.contains(format))
                 return std::nullopt;
 
             Vector<uint64_t, 1> dmabufModifiers = { DRM_FORMAT_MOD_INVALID };
-            if (s_eglQueryDmaBufModifiersEXT) {
+        if (supportModifiers && s_eglQueryDmaBufModifiersEXT) {
                 EGLint modifiersCount;
-            if (s_eglQueryDmaBufModifiersEXT(eglDisplay, format, 0, nullptr, nullptr, &modifiersCount) && modifiersCount) {
+            if (s_eglQueryDmaBufModifiersEXT(eglDisplay, format.value, 0, nullptr, nullptr, &modifiersCount) && modifiersCount) {
                     Vector<EGLuint64KHR> modifiers(modifiersCount);
-                if (s_eglQueryDmaBufModifiersEXT(eglDisplay, format, modifiersCount, reinterpret_cast<EGLuint64KHR*>(modifiers.mutableSpan().data()), nullptr, &modifiersCount)) {
+                if (s_eglQueryDmaBufModifiersEXT(eglDisplay, format.value, modifiersCount, reinterpret_cast<EGLuint64KHR*>(modifiers.mutableSpan().data()), nullptr, &modifiersCount)) {
                         dmabufModifiers.grow(modifiersCount);
                         for (int i = 0; i < modifiersCount; ++i)
                             dmabufModifiers[i] = modifiers[i];
                     }
                 }
             }
-        return GLDisplay::DMABufFormat { static_cast<uint32_t>(format), WTFMove(dmabufModifiers) };
+        return GLDisplay::BufferFormat { format, WTF::move(dmabufModifiers) };
         });
 }
 
-const Vector<GLDisplay::DMABufFormat>& GLDisplay::dmabufFormats()
+const Vector<GLDisplay::BufferFormat>& GLDisplay::bufferFormats()
 {
-    Locker locker { m_dmabufFormatsLock };
-    if (!m_dmabufFormatsInitialized) {
+    Locker locker { m_bufferFormatsLock };
+    if (!m_bufferFormatsInitialized) {
         if (m_display != EGL_NO_DISPLAY && m_extensions.EXT_image_dma_buf_import) {
         // For now we only support formats that can be created with a single GBM buffer for all planes.
-        static const Vector<EGLint> s_supportedFormats = {
+            static const Vector<FourCC> s_supportedFormats = {
             DRM_FORMAT_XRGB8888, DRM_FORMAT_RGBX8888, DRM_FORMAT_XBGR8888, DRM_FORMAT_BGRX8888,
             DRM_FORMAT_ARGB8888, DRM_FORMAT_RGBA8888, DRM_FORMAT_ABGR8888, DRM_FORMAT_BGRA8888,
             DRM_FORMAT_RGB565,
             DRM_FORMAT_XRGB2101010, DRM_FORMAT_XBGR2101010, DRM_FORMAT_ARGB2101010, DRM_FORMAT_ABGR2101010,
             DRM_FORMAT_XRGB16161616F, DRM_FORMAT_XBGR16161616F, DRM_FORMAT_ARGB16161616F, DRM_FORMAT_ABGR16161616F
         };
-        m_dmabufFormats = queryDMABufFormats(m_display, s_supportedFormats, m_extensions.EXT_image_dma_buf_import_modifiers);
+            m_bufferFormats = queryDMABufFormats(m_display, s_supportedFormats, m_extensions.EXT_image_dma_buf_import_modifiers);
         }
-        m_dmabufFormatsInitialized = true;
+        m_bufferFormatsInitialized = true;
     }
-    return m_dmabufFormats;
+    return m_bufferFormats;
 }
 
 #if USE(GSTREAMER)
-const Vector<GLDisplay::DMABufFormat>& GLDisplay::dmabufFormatsForVideo()
+const Vector<GLDisplay::BufferFormat>& GLDisplay::bufferFormatsForVideo()
 {
-    Locker locker { m_dmabufFormatsForVideoLock };
-    if (!m_dmabufFormatsForVideoInitialized) {
+    Locker locker { m_bufferFormatsForVideoLock };
+    if (!m_bufferFormatsForVideoInitialized) {
         if (m_display != EGL_NO_DISPLAY && m_extensions.EXT_image_dma_buf_import) {
         // Formats supported by the texture mapper.
         // FIXME: add support for YUY2, YVYU, UYVY, VYUY, AYUV.
-        static const Vector<EGLint> s_supportedFormats = {
+            static const Vector<FourCC> s_supportedFormats = {
             DRM_FORMAT_XRGB8888, DRM_FORMAT_XBGR8888, DRM_FORMAT_ARGB8888, DRM_FORMAT_ABGR8888,
             DRM_FORMAT_YUV420, DRM_FORMAT_YVU420, DRM_FORMAT_NV12, DRM_FORMAT_NV21,
             DRM_FORMAT_YUV444, DRM_FORMAT_YUV411, DRM_FORMAT_YUV422, DRM_FORMAT_P010
         };
-        m_dmabufFormatsForVideo = queryDMABufFormats(m_display, s_supportedFormats, m_extensions.EXT_image_dma_buf_import_modifiers);
+            m_bufferFormatsForVideo = queryDMABufFormats(m_display, s_supportedFormats, m_extensions.EXT_image_dma_buf_import_modifiers);
         }
-        m_dmabufFormatsForVideoInitialized = true;
+        m_bufferFormatsForVideoInitialized = true;
     }
-    return m_dmabufFormatsForVideo;
+    return m_bufferFormatsForVideo;
 }
 #endif
 #endif // USE(GBM)
+
+#if OS(ANDROID)
+const Vector<GLDisplay::BufferFormat>& GLDisplay::bufferFormats()
+{
+    static LazyNeverDestroyed<Vector<GLDisplay::BufferFormat>> formats;
+    static std::once_flag flag;
+    std::call_once(flag, []() {
+        formats.construct();
+
+        // This list includes those formats supported by AHardwareBuffer which are suitable for rendering content, sorted by preference. See:
+        // https://android.googlesource.com/platform/frameworks/native/+/4f463a6b1de9198963dc6aff74154a504ba3f8f6/libs/nativewindow/include/android/hardware_buffer.h#66
+        static constexpr FourCC drmFormats[] = {
+            DRM_FORMAT_RGBA8888,
+            DRM_FORMAT_RGBX8888,
+            DRM_FORMAT_RGB565,
+            DRM_FORMAT_RGBA1010102,
+            DRM_FORMAT_RGB888,
+        };
+
+        // The usage flags match the common set used in the usageToAHardwareBufferUsage() helper function
+        // in AcceleratedSurface.cpp, under the assumption that the additional flag hinting that buffers
+        // may be mapped, and the scanout flags can be added to formats determined here to be supported.
+        //
+        // The width, height, and layers count cannot be zero, otherwise AHardwareBuffer_isSupported()
+        // will always fail. Ideally the check would be done with the actual size needed for an allocation
+        // but that would require additional plumbing and does not seem to be needed at the moment.
+        AHardwareBuffer_Desc description { };
+        description.usage = AHARDWAREBUFFER_USAGE_GPU_FRAMEBUFFER | AHARDWAREBUFFER_USAGE_GPU_SAMPLED_IMAGE;
+        description.width = description.height = description.layers = 1;
+
+        for (const auto& drmFormat : drmFormats) {
+            const auto ahbFormat = toAHardwareBufferFormat(drmFormat);
+            RELEASE_ASSERT(ahbFormat);
+            description.format = ahbFormat.value();
+            if (AHardwareBuffer_isSupported(&description)) {
+                RELEASE_LOG_DEBUG(GraphicsBuffer, "AHB: Adding supported DRM format '%s'", drmFormat.string().data());
+                formats->append(GLDisplay::BufferFormat(drmFormat.value));
+            } else
+                RELEASE_LOG_DEBUG(GraphicsBuffer, "AHB: Skipping unsupported DRM format '%s'", drmFormat.string().data());
+        }
+        RELEASE_LOG_DEBUG(GraphicsBuffer, "AHB: There are %zu supported formats", formats->size());
+    });
+
+    return formats.get();
+}
+#endif // OS(ANDROID)
 
 } // namespace WebCore

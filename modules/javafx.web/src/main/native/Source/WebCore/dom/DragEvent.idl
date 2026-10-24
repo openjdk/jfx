@@ -31,6 +31,8 @@
     readonly attribute DataTransfer? dataTransfer;
 };
 
-dictionary DragEventInit : MouseEventInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary DragEventInit : MouseEventInit {
     DataTransfer? dataTransfer;
 };

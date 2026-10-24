@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "JSCJSValue.h"
-#include "ProfilerOrigin.h"
+#include <JavaScriptCore/JSCJSValue.h>
+#include <JavaScriptCore/ProfilerOrigin.h>
 #include <wtf/PrintStream.h>
 #include <wtf/Vector.h>
 
@@ -64,6 +64,7 @@ public:
     unsigned hash() const;
 
     bool isHashTableDeletedValue() const;
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
 
     void dump(PrintStream&) const;
     Ref<JSON::Value> toJSON(Dumper&) const;
@@ -77,18 +78,9 @@ inline bool OriginStack::isHashTableDeletedValue() const
     return m_stack.size() == 1 && m_stack[0].isHashTableDeletedValue();
 }
 
-struct OriginStackHash {
-    static unsigned hash(const OriginStack& key) { return key.hash(); }
-    static bool equal(const OriginStack& a, const OriginStack& b) { return a == b; }
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
-};
-
 } } // namespace JSC::Profiler
 
 namespace WTF {
-
-template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::Profiler::OriginStack> : JSC::Profiler::OriginStackHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::Profiler::OriginStack> : SimpleClassHashTraits<JSC::Profiler::OriginStack> { };

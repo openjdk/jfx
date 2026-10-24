@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "ResourceResponse.h"
-#include "SharedBuffer.h"
+#include <WebCore/ResourceResponse.h>
+#include <WebCore/SharedBuffer.h>
 #include <wtf/URL.h>
 
 namespace WebCore {
@@ -40,9 +40,9 @@ public:
     SubstituteData() = default;
 
     SubstituteData(RefPtr<FragmentedSharedBuffer>&& content, URL&& failingURL, ResourceResponse&& response, SessionHistoryVisibility shouldRevealToSessionHistory)
-            : m_content(WTFMove(content))
-        , m_failingURL(WTFMove(failingURL))
-        , m_response(WTFMove(response))
+        : m_content(WTF::move(content))
+        , m_failingURL(WTF::move(failingURL))
+        , m_response(WTF::move(response))
             , m_shouldRevealToSessionHistory(shouldRevealToSessionHistory)
         {
         }

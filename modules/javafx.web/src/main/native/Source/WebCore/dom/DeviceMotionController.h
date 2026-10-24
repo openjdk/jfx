@@ -56,12 +56,20 @@ public:
     RefPtr<Event> getLastEvent() override;
     DeviceClient& client() final;
 
-    static ASCIILiteral supplementName();
     static DeviceMotionController* from(Page*);
     static bool isActiveAt(Page*);
 
 private:
+    static ASCIILiteral supplementName() { return "DeviceMotionController"_s; }
+    bool isDeviceMotionController() const final { return true; }
+
+    CheckedRef<DeviceMotionClient> checkedClient();
+
     WeakRef<DeviceMotionClient> m_client;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::DeviceMotionController)
+    static bool isType(const WebCore::SupplementBase& supplement) { return supplement.isDeviceMotionController(); }
+SPECIALIZE_TYPE_TRAITS_END()

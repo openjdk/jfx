@@ -418,7 +418,7 @@ count_power (guint v)
 }
 
 /**
- * gst_audio_quantize_new: (skip):
+ * gst_audio_quantize_new: (constructor) (skip):
  * @dither: a #GstAudioDitherMethod
  * @ns: a #GstAudioNoiseShapingMethod
  * @flags: #GstAudioQuantizeFlags
@@ -511,8 +511,8 @@ gst_audio_quantize_reset (GstAudioQuantize * quant)
 /**
  * gst_audio_quantize_samples:
  * @quant: a #GstAudioQuantize
- * @in: input samples
- * @out: output samples
+ * @in: (array) (element-type gpointer): input samples
+ * @out: (array) (element-type gpointer): output samples
  * @samples: number of samples
  *
  * Perform quantization on @samples in @in and write the result to @out.

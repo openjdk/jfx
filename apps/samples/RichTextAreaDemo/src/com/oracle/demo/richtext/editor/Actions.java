@@ -35,6 +35,7 @@ package com.oracle.demo.richtext.editor;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.util.List;
 import java.util.Locale;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
@@ -43,15 +44,18 @@ import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.control.ButtonBar.ButtonData;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Dialog;
+import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.input.DataFormat;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.paint.Color;
+import javafx.scene.text.TabStopPolicy;
 import javafx.stage.FileChooser;
 import javafx.stage.Window;
 import com.oracle.demo.richtext.common.Styles;
@@ -60,16 +64,18 @@ import com.oracle.demo.richtext.editor.settings.EndKey;
 import com.oracle.demo.richtext.util.ExceptionDialog;
 import com.oracle.demo.richtext.util.FX;
 import com.oracle.demo.richtext.util.FxAction;
+import com.oracle.demo.richtext.util.Utils;
 import jfx.incubator.scene.control.richtext.LineNumberDecorator;
 import jfx.incubator.scene.control.richtext.RichTextArea;
 import jfx.incubator.scene.control.richtext.SelectionSegment;
 import jfx.incubator.scene.control.richtext.TextPos;
-import jfx.incubator.scene.control.richtext.model.ContentChange;
+import jfx.incubator.scene.control.richtext.model.EmbeddedImage;
 import jfx.incubator.scene.control.richtext.model.RichTextFormatHandler;
 import jfx.incubator.scene.control.richtext.model.RichTextModel;
 import jfx.incubator.scene.control.richtext.model.StyleAttribute;
 import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 import jfx.incubator.scene.control.richtext.model.StyledTextModel;
+import jfx.incubator.scene.control.richtext.model.TabStops;
 
 /**
  * This is a bit of hack.  JavaFX has no actions (yet), so here we are using FxActions from
@@ -111,15 +117,19 @@ public class Actions {
     private final ReadOnlyObjectWrapper<File> file = new ReadOnlyObjectWrapper<>();
     private final SimpleObjectProperty<StyleAttributeMap> styles = new SimpleObjectProperty<>();
     private final SimpleObjectProperty<TextStyle> textStyle = new SimpleObjectProperty<>();
+    private final SimpleBooleanProperty rulerVisible = new SimpleBooleanProperty(true);
 
     private final RichEditorToolbar toolbar;
     private final RichTextArea editor;
+    private final TabStopPolicy tabPolicy = new TabStopPolicy();
+    private final StyledTextModel.Listener changeListener = (ch) -> handleEdit();
 
     public Actions(RichEditorToolbar tb, RichTextArea ed) {
         this.toolbar = tb;
         this.editor = ed;
 
         // undo/redo actions
+
         redo.disabledProperty().bind(editor.redoableProperty().not());
         undo.disabledProperty().bind(editor.undoableProperty().not());
 
@@ -135,10 +145,12 @@ public class Actions {
 
         // editor
 
-        editor.getModel().addListener(new StyledTextModel.Listener() {
-            @Override
-            public void onContentChange(ContentChange ch) {
-                handleEdit();
+        editor.modelProperty().subscribe((prev, m) -> {
+            if (prev != null) {
+                prev.removeListener(changeListener);
+            }
+            if (m != null) {
+                m.addListener(changeListener);
             }
         });
 
@@ -212,8 +224,11 @@ public class Actions {
             toolbar.setTextStyle(c);
         });
 
+        rulerVisible.subscribe(this::updateRuler);
+
         // settings
         Settings.endKey.subscribe(this::setEndKey);
+        Settings.contentPadding.bindBidirectional(editor.contentPaddingProperty());
 
         // defaults
         highlightCurrentLine.setSelected(true, false);
@@ -253,13 +268,14 @@ public class Actions {
         FX.item(m, "Underline", underline).setAccelerator(KeyCombination.keyCombination("shortcut+U"));
         FX.separator(m);
         FX.item(m, "Paragraph...", paragraphStyle);
+        FX.item(m, "Tabs...", this::openTabs);
 
         // view
         FX.menu(m, "View");
         FX.checkItem(m, "Highlight Current Paragraph", highlightCurrentLine);
         FX.checkItem(m, "Show Line Numbers", lineNumbers);
+        FX.checkItem(m, "Show Ruler", rulerVisible);
         FX.checkItem(m, "Wrap Text", wrapText);
-        // TODO line spacing
 
         // tools
         FX.menu(m, "Tools");
@@ -274,6 +290,22 @@ public class Actions {
 
     public ContextMenu createContextMenu() {
         ContextMenu m = new ContextMenu();
+
+        // otherwise the menu won't be shown
+        FX.item(m, "Dummy");
+
+        m.setOnShowing((ev) -> {
+            populate(m);
+        });
+        return m;
+    }
+
+    private void populate(ContextMenu m) {
+        m.getItems().clear();
+
+        TextPos p = caretAtPopup();
+        EmbeddedImage im = embeddedImageAt(p);
+
         FX.item(m, "Undo", undo);
         FX.item(m, "Redo", redo);
         FX.separator(m);
@@ -285,7 +317,81 @@ public class Actions {
         FX.item(m, "Select All", selectAll);
         FX.separator(m);
         // TODO Font...
+        Menu m2 = FX.menu(m, "Highlight");
+        FX.item(m2, "Color 1", () -> toggleBooleanAttribute(StyleAttributeMap.TEXT_HIGHLIGHT_1));
+        FX.item(m2, "Color 2", () -> toggleBooleanAttribute(StyleAttributeMap.TEXT_HIGHLIGHT_2));
+        FX.item(m2, "Color 3", () -> toggleBooleanAttribute(StyleAttributeMap.TEXT_HIGHLIGHT_3));
+        FX.item(m2, "Color 4", () -> toggleBooleanAttribute(StyleAttributeMap.TEXT_HIGHLIGHT_4));
+        FX.item(m2, "Color 5", () -> toggleBooleanAttribute(StyleAttributeMap.TEXT_HIGHLIGHT_5));
+        m2 = FX.menu(m, "Wavy Underline");
+        FX.item(m2, "Color 1", () -> toggleBooleanAttribute(StyleAttributeMap.WAVY_UNDERLINE_1));
+        FX.item(m2, "Color 2", () -> toggleBooleanAttribute(StyleAttributeMap.WAVY_UNDERLINE_2));
+        FX.item(m2, "Color 3", () -> toggleBooleanAttribute(StyleAttributeMap.WAVY_UNDERLINE_3));
         FX.item(m, "Paragraph...", paragraphStyle);
+        if (im != null) {
+            m2 = FX.menu(m, "Image");
+            Menu m3 = FX.menu(m2, "Width");
+            FX.item(m3, "AUTO", () -> formatImage(p, im, EmbeddedImage.AUTO, im.getTargetHeight(), im.isKeepAspectRatio()));
+            FX.item(m3, "FIT_WIDTH", () -> formatImage(p, im, EmbeddedImage.FIT_WIDTH, im.getTargetHeight(), im.isKeepAspectRatio()));
+            FX.item(m3, "FIT_WIDTH_ALWAYS", () -> formatImage(p, im, EmbeddedImage.FIT_WIDTH_ALWAYS, im.getTargetHeight(), im.isKeepAspectRatio()));
+            FX.item(m3, "50", () -> formatImage(p, im, 50, im.getTargetHeight(), im.isKeepAspectRatio()));
+            FX.item(m3, "500", () -> formatImage(p, im, 500, im.getTargetHeight(), im.isKeepAspectRatio()));
+            m3 = FX.menu(m2, "Height");
+            FX.item(m3, "AUTO", () -> formatImage(p, im, im.getTargetWidth(), EmbeddedImage.AUTO, im.isKeepAspectRatio()));
+            FX.item(m3, "50", () -> formatImage(p, im, im.getTargetWidth(), 50, im.isKeepAspectRatio()));
+            FX.item(m3, "500", () -> formatImage(p, im, im.getTargetWidth(), 500, im.isKeepAspectRatio()));
+            FX.checkItem(m2, "Keep Aspect Ratio", im.isKeepAspectRatio(), (v) -> formatImage(p, im, im.getTargetWidth(), im.getTargetHeight(), !im.isKeepAspectRatio()));
+            FX.separator(m2);
+            FX.item(m2, "Fit to Width", () -> formatImage(p, im, EmbeddedImage.FIT_WIDTH, EmbeddedImage.AUTO, true));
+            FX.item(m2, "Fit to Width Always", () -> formatImage(p, im, EmbeddedImage.FIT_WIDTH_ALWAYS, EmbeddedImage.AUTO, true));
+            FX.item(m2, "Original Size", () -> formatImage(p, im, EmbeddedImage.AUTO, EmbeddedImage.AUTO, true));
+        }
+    }
+
+    private void toggleBooleanAttribute(StyleAttribute<Boolean> a) {
+        SelectionSegment sel = editor.getSelection();
+        if (sel != null) {
+            if (!sel.isCollapsed()) {
+                StyleAttributeMap attr = editor.getStyleAttributeMap(sel.getMin(), false);
+                Boolean on = attr.get(a);
+                on = (on == null) ? Boolean.TRUE : !on;
+                editor.applyStyle(sel.getMin(), sel.getMax(), StyleAttributeMap.of(a, on));
+            }
+        }
+    }
+
+    // returns caret position only if selection exists and collapsed, otherwise null
+    private TextPos caretAtPopup() {
+        SelectionSegment sel = editor.getSelection();
+        if (sel != null) {
+            if (sel.isCollapsed()) {
+                return sel.getMin();
+            }
+        }
+        return null;
+    }
+
+    private EmbeddedImage embeddedImageAt(TextPos p) {
+        if (p != null) {
+            StyleAttributeMap a = editor.getStyleAttributeMap(p, false);
+            return a.get(StyleAttributeMap.EMBEDDED_IMAGE);
+        }
+        return null;
+    }
+
+    private void formatImage(TextPos p, EmbeddedImage im, double targetWidth, double targetHeight, boolean keepAspectRatio) {
+        TextPos start = Utils.leading(p);
+        TextPos end = Utils.trailing(p);
+        EmbeddedImage updated = im.copy(targetWidth, targetHeight, keepAspectRatio);
+        StyleAttributeMap a = StyleAttributeMap.of(StyleAttributeMap.EMBEDDED_IMAGE, updated);
+        editor.applyStyle(start, end, a);
+    }
+
+    private ContextMenu createRulerPopupMenu() {
+        ContextMenu m = new ContextMenu();
+        FX.item(m, "Clear Tabs", this::clearTabs);
+        FX.separator(m);
+        FX.item(m, "Hide Ruler", this::hideRuler);
         return m;
     }
 
@@ -317,6 +423,10 @@ public class Actions {
         return file.get();
     }
 
+    private final void setFile(File f) {
+        file.set(f);
+    }
+
     private void handleEdit() {
         setModified(true);
     }
@@ -326,8 +436,10 @@ public class Actions {
         cut.setEnabled(sel);
         copy.setEnabled(sel);
 
-        StyleAttributeMap a = editor.getActiveStyleAttributeMap();
-        toolbar.updateStyles(a);
+        if (!sel) {
+            StyleAttributeMap a = editor.getActiveStyleAttributeMap();
+            toolbar.updateStyles(a);
+        }
     }
 
     public void setFontSize(Double size) {
@@ -342,11 +454,14 @@ public class Actions {
         apply(StyleAttributeMap.TEXT_COLOR, color);
     }
 
-    private void newDocument() {
+    public void newDocument() {
         if (askToSave()) {
             return;
         }
-        editor.setModel(new RichTextModel());
+        setFile(null);
+        RichTextModel m = new RichTextModel();
+        m.setDefaultTabStops(Settings.DEFAULT_TAB_STOPS);
+        editor.setModel(m);
         setModified(false);
     }
 
@@ -365,12 +480,25 @@ public class Actions {
 
         File f = ch.showOpenDialog(parentWindow());
         if (f != null) {
-            try {
-                DataFormat fmt = guessFormat(f);
-                readFile(f, fmt);
-            } catch (Exception e) {
-                new ExceptionDialog(editor, e).open();
-            }
+            doOpen(f);
+        }
+    }
+
+    public void openFile(File f) {
+        if (askToSave()) {
+            return;
+        }
+        doOpen(f);
+    }
+
+    private void doOpen(File f) {
+        try {
+            setModified(false);
+            newDocument();
+            DataFormat fmt = guessFormat(f);
+            readFile(f, fmt);
+        } catch (Exception e) {
+            new ExceptionDialog(editor, e).open();
         }
     }
 
@@ -383,7 +511,7 @@ public class Actions {
             }
         }
 
-        file.set(f);
+        setFile(f);
         try {
             writeFile(f);
         } catch (Exception e) {
@@ -394,7 +522,7 @@ public class Actions {
     private boolean saveAs() {
         File f = chooseFileForSave();
         if (f != null) {
-            file.set(f);
+            setFile(f);
             try {
                 writeFile(f);
                 return true;
@@ -415,6 +543,7 @@ public class Actions {
         ch.setTitle("Save File");
         ch.getExtensionFilters().addAll(
             filterRich(),
+            filterHtml(),
             filterRtf(),
             filterTxt()
         );
@@ -425,7 +554,7 @@ public class Actions {
     private void readFile(File f, DataFormat fmt) throws Exception {
         try (FileInputStream in = new FileInputStream(f)) {
             editor.read(fmt, in);
-            file.set(f);
+            setFile(f);
             editor.setEditable(f.canWrite());
             setModified(false);
         }
@@ -435,7 +564,7 @@ public class Actions {
         DataFormat fmt = guessFormat(f);
         try (FileOutputStream out = new FileOutputStream(f)) {
             editor.write(fmt, out);
-            file.set(f);
+            setFile(f);
             setModified(false);
         }
     }
@@ -567,6 +696,10 @@ public class Actions {
         return new FileChooser.ExtensionFilter("Rich Text Files", "*.rich");
     }
 
+    private static FileChooser.ExtensionFilter filterHtml() {
+        return new FileChooser.ExtensionFilter("HTML Files", "*.html");
+    }
+
     private static FileChooser.ExtensionFilter filterRtf() {
         return new FileChooser.ExtensionFilter("RTF Files", "*.rtf");
     }
@@ -576,13 +709,26 @@ public class Actions {
     }
 
     private static DataFormat guessFormat(File f) {
-        String name = f.getName().toLowerCase(Locale.ENGLISH);
+        String name = f.getName().toLowerCase(Locale.ROOT);
         if (name.endsWith(".rich")) {
             return RichTextFormatHandler.DATA_FORMAT;
         } else if (name.endsWith(".rtf")) {
             return DataFormat.RTF;
+        } else if (name.endsWith(".html")) {
+            return DataFormat.HTML;
         }
         return DataFormat.PLAIN_TEXT;
+    }
+
+    public File fileToOpen(List<File> files) {
+        if (files.size() == 1) {
+            File f = files.get(0);
+            String name = f.getName().toLowerCase(Locale.ROOT);
+            if (name.endsWith(".rich")) {
+                return f;
+            }
+        }
+        return null;
     }
 
     public void quit() {
@@ -693,15 +839,29 @@ public class Actions {
 
     private StyleAttributeMap getInsertStyles() {
         StyleAttributeMap.Builder b = StyleAttributeMap.builder();
-        b.
-            setBold(bold.isSelected()).
-            setFontFamily(toolbar.fontFamily.getSelectionModel().getSelectedItem()).
-            setItalic(italic.isSelected()).
-            setStrikeThrough(strikeThrough.isSelected()).
-            setTextColor(toolbar.textColor.getValue()).
-            setUnderline(underline.isSelected());
-        if (toolbar.fontSize.getSelectionModel().getSelectedItem() != null) {
-            b.setFontSize(toolbar.fontSize.getSelectionModel().getSelectedItem());
+        if (bold.isSelected()) {
+            b.setBold(true);
+        }
+        String s = toolbar.fontFamily.getSelectionModel().getSelectedItem();
+        if (s != null) {
+            b.setFontFamily(s);
+        }
+        if (italic.isSelected()) {
+            b.setItalic(true);
+        }
+        if (strikeThrough.isSelected()) {
+            b.setStrikeThrough(true);
+        }
+        Color c = toolbar.textColor.getValue();
+        if (c != null) {
+            b.setTextColor(c);
+        }
+        if (underline.isSelected()) {
+            b.setUnderline(true);
+        }
+        Double v = toolbar.fontSize.getSelectionModel().getSelectedItem();
+        if (v != null) {
+            b.setFontSize(v);
         }
         return b.build();
     }
@@ -717,5 +877,41 @@ public class Actions {
     private void openSettings() {
         Window w = FX.getParentWindow(editor);
         new SettingsWindow(w).show();
+    }
+
+    private void openTabs() {
+        new TabsDialog(editor).show();
+    }
+
+    private void updateRuler(boolean on) {
+        Ruler r = toolbar.setRulerFor(on ? editor : null);
+        if (r != null) {
+            r.setOnChange(this::handleTabStopChange);
+            r.setTabStopPolicy(tabPolicy);
+            FX.setPopupMenu(r, this::createRulerPopupMenu);
+        }
+    }
+
+    private void handleTabStopChange() {
+        SelectionSegment sel = editor.getSelection();
+        if (sel != null) {
+            TabStops stops = new TabStops(tabPolicy.tabStops());
+            StyleAttributeMap a = StyleAttributeMap.builder().set(StyleAttributeMap.TAB_STOPS, stops).build();
+            int min = sel.getMin().index();
+            int max = sel.getMax().index();
+            for (int ix = min; ix <= max; ix++) {
+                TextPos p = TextPos.ofLeading(ix, 0);
+                editor.applyStyle(p, p, a);
+            }
+        }
+    }
+
+    private void clearTabs() {
+        tabPolicy.tabStops().clear();
+        handleTabStopChange();
+    }
+
+    private void hideRuler() {
+        rulerVisible.set(false);
     }
 }

@@ -21,8 +21,8 @@
 
 #pragma once
 
-#include "EventLoop.h"
 #include <JavaScriptCore/MicrotaskQueue.h>
+#include <WebCore/EventLoop.h>
 #include <wtf/Forward.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
@@ -36,7 +36,7 @@ class VM;
 namespace WebCore {
 
 class WebCoreMicrotaskDispatcher : public JSC::MicrotaskDispatcher {
-    WTF_MAKE_TZONE_ALLOCATED(WebCoreMicrotaskDispatcher);
+    WTF_MAKE_COMPACT_TZONE_ALLOCATED(WebCoreMicrotaskDispatcher);
 public:
     WebCoreMicrotaskDispatcher(Type type, EventLoopTaskGroup& group)
         : JSC::MicrotaskDispatcher(type)
@@ -68,8 +68,10 @@ public:
 
     bool isEmpty() const { return m_microtaskQueue.isEmpty(); }
     bool hasMicrotasksForFullyActiveDocument() const;
+    bool isPerformingCheckpoint() const { return m_performingMicrotaskCheckpoint; }
 
     static void runJSMicrotask(JSC::JSGlobalObject*, JSC::VM&, JSC::QueuedTask&);
+    static void runJSMicrotaskWithDebugger(JSC::JSGlobalObject*, JSC::VM&, JSC::QueuedTask&);
 
 private:
     JSC::VM& vm() const { return m_vm.get(); }

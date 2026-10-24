@@ -27,13 +27,13 @@
 
 #if ENABLE(ATTACHMENT_ELEMENT)
 
-#include "HTMLAttachmentElement.h"
-#include "RenderReplaced.h"
+#include <WebCore/HTMLAttachmentElement.h>
+#include <WebCore/RenderReplaced.h>
 
 namespace WebCore {
 
 class RenderAttachment final : public RenderReplaced {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderAttachment);
+    WTF_MAKE_TZONE_ALLOCATED(RenderAttachment);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderAttachment);
 public:
     RenderAttachment(HTMLAttachmentElement&, RenderStyle&&);
@@ -59,7 +59,8 @@ private:
     LayoutSize layoutWideLayoutAttachmentOnly();
     void layoutShadowContent(const LayoutSize&) override;
 
-    bool shouldDrawSelectionTint() const override { return isWideLayout(); }
+    bool shouldDrawSelectionTint() const final { return false; }
+    void setSelectionState(HighlightState) final;
     void paintReplaced(PaintInfo&, const LayoutPoint& offset) final;
 
     void layout() override;

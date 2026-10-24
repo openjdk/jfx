@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,11 +30,15 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InvalidClassException;
 import java.io.ObjectInput;
+import java.io.ObjectInputFilter;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -245,6 +249,49 @@ final class QuantumClipboard implements TKClipboard {
         systemAssistant.flush();
     }
 
+    // Read a direct serialized String from the input stream using a restrictive
+    // ObjectInputStream and ObjectInputFilter. The ObjectInputStream prevents
+    // resolving any classes or interfaces via the class loader.
+    // The ObjectInputFilter rejects all classes.
+    // Note that String objects are handled specially. They bypass the class
+    // resolver and filtering, and are accepted by a post-read instanceof check.
+    private Object readObjectFiltered(ByteArrayInputStream bis)
+            throws IOException, ClassNotFoundException {
+
+        // Define an ObjectInputStream that throws an exception on an attempt
+        // to resolve any class
+        ObjectInputStream in = new ObjectInputStream(bis) {
+            @Override
+            protected Class<?> resolveClass(ObjectStreamClass desc)
+                    throws IOException, ClassNotFoundException {
+
+                throw new InvalidClassException("Resolving classes is unsupported");
+            }
+
+            @Override
+            protected Class<?> resolveProxyClass(String[] interfaces)
+                    throws IOException, ClassNotFoundException {
+
+                throw new InvalidClassException("Resolving interfaces is unsupported");
+            }
+        };
+
+        // Set a restrictive serialization filter that rejects all classes.
+        // java.lang.String objects bypass the filter and are checked later.
+        ObjectInputFilter filter = (ObjectInputFilter.FilterInfo filterInfo) -> {
+            return ObjectInputFilter.Status.REJECTED;
+        };
+        in.setObjectInputFilter(filter);
+
+        // Read the object from the stream using the restrictive object input
+        // stream and filter. Then verify that the returned object is a String.
+        Object o = in.readObject();
+        if (o instanceof String) {
+            return o;
+        }
+        throw new InvalidClassException("Class not supported");
+    }
+
     @Override public Object getContent(DataFormat dataFormat) {
         if (dataCache != null) {
             for (Pair<DataFormat, Object> pair : dataCache) {
@@ -280,15 +327,21 @@ final class QuantumClipboard implements TKClipboard {
                     ByteBuffer bb = (ByteBuffer) data;
                     ByteArrayInputStream bis = new ByteArrayInputStream(
                             bb.array());
-                    ObjectInput in = new ObjectInputStream(bis) {
-                        @Override protected Class<?> resolveClass(
-                                ObjectStreamClass desc)
-                                throws IOException, ClassNotFoundException {
-                            return Class.forName(desc.getName(), false,
-                                    Thread.currentThread().getContextClassLoader());
-                        }
-                    };
-                    data = in.readObject();
+                    boolean deserializeObjGraphDND = Boolean.parseBoolean(
+                            System.getProperty("javafx.dnd.deserializeObjectGraph", "false"));
+                    if (deserializeObjGraphDND) {
+                        ObjectInput in = new ObjectInputStream(bis) {
+                            @Override protected Class<?> resolveClass(
+                                    ObjectStreamClass desc)
+                                    throws IOException, ClassNotFoundException {
+                                return Class.forName(desc.getName(), false,
+                                        Thread.currentThread().getContextClassLoader());
+                            }
+                        };
+                        data = in.readObject();
+                    } else {
+                        data = readObjectFiltered(bis);
+                    }
                 } catch (IOException e) {
                     // ignore, just return the ByteBuffer if we cannot parse it
                 } catch (ClassNotFoundException e) {
@@ -339,7 +392,7 @@ final class QuantumClipboard implements TKClipboard {
         if (rawData == null) {
             Object htmlData = assistant.getData(Clipboard.HTML_TYPE);
             if (htmlData != null) {
-                String url = parseIMG(htmlData);
+                String url = getLocalHtmlImageUrl(htmlData);
                 if (url != null) {
                     return (new Image(url));
                 }
@@ -352,6 +405,35 @@ final class QuantumClipboard implements TKClipboard {
     private static final Pattern findTagIMG =
             Pattern.compile("IMG\\s+SRC=\\\"([^\\\"]+)\\\"",
                             Pattern.DOTALL | Pattern.CASE_INSENSITIVE);
+
+    /**
+     * Extracts an image URL from HTML clipboard content and rejects values that
+     * would require a network fetch. Only data: URIs and local file: URIs are
+     * accepted.
+     */
+    private String getLocalHtmlImageUrl(Object htmlData) {
+        String url = parseIMG(htmlData);
+        if (url == null) {
+            return null;
+        }
+        try {
+            URI uri = new URI(url);
+            String scheme = uri.getScheme();
+            if ("data".equalsIgnoreCase(scheme)) {
+                return uri.toString();
+            }
+            if ("file".equalsIgnoreCase(scheme)) {
+                uri = uri.normalize();
+                String host = uri.getHost();
+                if (host == null || host.isEmpty()
+                        || "localhost".equalsIgnoreCase(host)) {
+                    return uri.toString();
+                }
+            }
+        } catch (URISyntaxException ex) {
+        }
+        return null;
+    }
 
     private String parseIMG(Object data) {
         if (data == null) {
@@ -420,7 +502,7 @@ final class QuantumClipboard implements TKClipboard {
                 // JDK-8128413 - IE puts images on the clipboard in a HTML IMG url
                 try {
                     //HTML header could be improperly formatted and we can get an exception here
-                    if (parseIMG(assistant.getData(Clipboard.HTML_TYPE)) != null) {
+                    if (getLocalHtmlImageUrl(assistant.getData(Clipboard.HTML_TYPE)) != null) {
                         set.add(DataFormat.IMAGE);
                     }
                 } catch (Exception ex) {
@@ -463,9 +545,8 @@ final class QuantumClipboard implements TKClipboard {
                        t.equalsIgnoreCase(Clipboard.URI_TYPE)) {
                 return true;
             } else if (dataFormat == DataFormat.IMAGE &&
-                       t.equalsIgnoreCase(Clipboard.HTML_TYPE) &&
-                       parseIMG(assistant.getData(Clipboard.HTML_TYPE)) != null) {
-                return true;
+                       t.equalsIgnoreCase(Clipboard.HTML_TYPE)) {
+                return getLocalHtmlImageUrl(assistant.getData(Clipboard.HTML_TYPE)) != null;
             } else if (dataFormat == DataFormat.FILES &&
                     t.equalsIgnoreCase(Clipboard.FILE_LIST_TYPE)) {
                 return true;

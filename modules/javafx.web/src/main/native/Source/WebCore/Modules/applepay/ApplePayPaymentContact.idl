@@ -26,7 +26,8 @@
 [
     Conditional=APPLE_PAY,
     JSGenerateToJSObject,
-    JSGenerateToNativeObject
+    JSGenerateToNativeObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary ApplePayPaymentContact {
     DOMString phoneNumber;
     DOMString emailAddress;

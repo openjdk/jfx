@@ -25,17 +25,19 @@
 
 #pragma once
 
-#include "ScriptWrappable.h"
+#include <WebCore/PlatformExportMacros.h>
+#include <WebCore/ScriptWrappable.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 class TrustedHTML : public ScriptWrappable, public RefCounted<TrustedHTML> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(TrustedHTML, WEBCORE_EXPORT);
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(TrustedHTML, WEBCORE_EXPORT);
 public:
     static Ref<TrustedHTML> create(const String& data);
-    ~TrustedHTML() = default;
+    WEBCORE_EXPORT ~TrustedHTML();
 
     String toString() const { return m_data; }
     String toJSON() const { return toString(); }

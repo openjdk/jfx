@@ -28,21 +28,29 @@ package javafx.stage;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.sun.javafx.beans.property.NullCoalescingPropertyBase;
+import com.sun.javafx.stage.ExtendedStageProperties;
 import javafx.application.ColorScheme;
 import javafx.application.Platform;
+import javafx.beans.binding.ObjectBinding;
 import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.ReadOnlyDoubleProperty;
+import javafx.beans.property.ReadOnlyDoubleWrapper;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.property.StringPropertyBase;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
+import javafx.geometry.Dimension2D;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.HeaderBar;
 
-import com.sun.javafx.PreviewFeature;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.collections.VetoableListDecorator;
 import com.sun.javafx.collections.TrackableObservableList;
@@ -60,6 +68,7 @@ import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
+import javafx.util.Subscription;
 
 /**
  * The JavaFX {@code Stage} class is the top level JavaFX container.
@@ -97,7 +106,7 @@ import javafx.beans.value.ObservableValue;
  * and no decorations.</li>
  * <li>{@link StageStyle#UTILITY} - a stage with a solid white background and
  * minimal platform decorations.</li>
- * <li>{@link StageStyle#EXTENDED} - a decorated stage with a custom {@link HeaderBar} (Preview Feature).</li>
+ * <li>{@link StageStyle#EXTENDED} - a decorated stage with a custom {@link HeaderBar}.</li>
  * </ul>
  * <p>The style must be initialized before the stage is made visible.</p>
  * <p>On some platforms decorations might not be available. For example, on
@@ -206,18 +215,8 @@ public class Stage extends Window {
             }
 
             @Override
-            public void setPrefHeaderButtonHeight(Stage stage, double height) {
-                stage.setPrefHeaderButtonHeight(height);
-            }
-
-            @Override
-            public double getPrefHeaderButtonHeight(Stage stage) {
-                return stage.getPrefHeaderButtonHeight();
-            }
-
-            @Override
-            public ObservableValue<HeaderButtonMetrics> getHeaderButtonMetrics(Stage stage) {
-                return stage.headerButtonMetricsProperty();
+            public ExtendedStageProperties getExtendedProperties(Stage stage) {
+                return stage.getExtendedProperties();
             }
         });
     }
@@ -251,7 +250,7 @@ public class Stage extends Window {
 
         @Override
         public void setHeaderButtonMetrics(Stage stage, HeaderButtonMetrics metrics) {
-            stage.headerButtonMetricsProperty().set(metrics);
+            stage.getExtendedProperties().setHeaderButtonMetrics(metrics);
         }
     };
 
@@ -469,11 +468,7 @@ public class Stage extends Window {
      *
      * @defaultValue StageStyle.DECORATED
      */
-    @SuppressWarnings("deprecation")
     public final void initStyle(StageStyle style) {
-        if (style == StageStyle.EXTENDED) {
-            PreviewFeature.STAGE_STYLE_EXTENDED.checkEnabled();
-        }
         if (hasBeenVisible) {
             throw new IllegalStateException("Cannot set style once stage has been set visible");
         }
@@ -1125,7 +1120,13 @@ public class Stage extends Window {
                     (int) Math.ceil(getMinHeight()));
             getPeer().setMaximumSize((int) Math.floor(getMaxWidth()),
                     (int) Math.floor(getMaxHeight()));
-            getPeer().setPrefHeaderButtonHeight(getPrefHeaderButtonHeight());
+
+            if (style == StageStyle.EXTENDED) {
+                var extendedProperties = getExtendedProperties();
+                getPeer().setHeaderButtonHeight(extendedProperties.systemButtonHeightProperty().get());
+                getPeer().setHeaderButtonDarkStyle(extendedProperties.systemColorSchemeProperty().get() == ColorScheme.DARK);
+            }
+
             setPeerListener(new StagePeerListener(this, STAGE_ACCESSOR));
         }
     }
@@ -1292,28 +1293,179 @@ public class Stage extends Window {
         return fullScreenExitHint;
     }
 
-    private ObjectProperty<HeaderButtonMetrics> headerButtonMetrics;
+    private ExtendedPropertiesImpl extendedProperties;
 
-    private ObjectProperty<HeaderButtonMetrics> headerButtonMetricsProperty() {
-        if (headerButtonMetrics == null) {
-            headerButtonMetrics = new SimpleObjectProperty<>(this, "headerButtonMetrics");
+    private ExtendedPropertiesImpl getExtendedProperties() {
+        if (extendedProperties == null) {
+            extendedProperties = new ExtendedPropertiesImpl(this);
         }
 
-        return headerButtonMetrics;
+        return extendedProperties;
     }
 
-    private double prefHeaderButtonHeight = HeaderBar.USE_DEFAULT_SIZE;
+    /**
+     * This class holds attached properties for the {@link StageStyle#EXTENDED} style that are defined on
+     * {@code HeaderBar}, but associated with and stored per {@code Stage}. {@code HeaderBar} uses these
+     * properties for layout purposes, and also subscribes to invalidation notifications that cause
+     * {@code HeaderBar} to request a new layout pass.
+     */
+    private static final class ExtendedPropertiesImpl implements ExtendedStageProperties {
 
-    private double getPrefHeaderButtonHeight() {
-        return prefHeaderButtonHeight;
-    }
+        private static final Dimension2D EMPTY = new Dimension2D(0, 0);
 
-    private void setPrefHeaderButtonHeight(double height) {
-        prefHeaderButtonHeight = height;
+        private final Stage stage;
+        private final ReadOnlyObjectWrapper<Dimension2D> leftSystemInset;
+        private final ReadOnlyObjectWrapper<Dimension2D> rightSystemInset;
+        private final ReadOnlyDoubleWrapper systemMinHeight;
+        private final DoubleProperty systemButtonHeight;
+        private final NullCoalescingPropertyBase<ColorScheme> systemColorScheme;
+        private final List<Runnable> layoutInvalidatedListeners = new ArrayList<>();
 
-        TKStage peer = getPeer();
-        if (peer != null) {
-            peer.setPrefHeaderButtonHeight(height);
+        private boolean currentFullScreen;
+        private HeaderButtonMetrics currentMetrics;
+
+        public ExtendedPropertiesImpl(Stage stage) {
+            this.stage = stage;
+            this.leftSystemInset = new ReadOnlyObjectWrapper<>(stage, "leftSystemInset", EMPTY);
+            this.rightSystemInset = new ReadOnlyObjectWrapper<>(stage, "rightSystemInset", EMPTY);
+            this.systemMinHeight = new ReadOnlyDoubleWrapper(stage, "systemMinHeight");
+
+            this.systemButtonHeight = new SimpleDoubleProperty(
+                    stage, "systemButtonHeight", HeaderBar.USE_DEFAULT_SIZE) {
+                @Override
+                protected void invalidated() {
+                    if (stage.getPeer() instanceof TKStage peer) {
+                        peer.setHeaderButtonHeight(get());
+                    }
+                }
+            };
+
+            this.systemColorScheme = new NullCoalescingPropertyBase<>(new ColorSchemeBinding(stage)) {
+                {
+                    connect();
+                }
+
+                @Override
+                public Object getBean() {
+                    return stage;
+                }
+
+                @Override
+                public String getName() {
+                    return "systemColorScheme";
+                }
+
+                @Override
+                protected void onInvalidated() {
+                    if (stage.getPeer() instanceof TKStage peer) {
+                        peer.setHeaderButtonDarkStyle(get() == ColorScheme.DARK);
+                    }
+                }
+            };
+
+            stage.fullScreenProperty().subscribe(this::onFullScreenChanged);
+            stage.sceneProperty().flatMap(Scene::effectiveNodeOrientationProperty).subscribe(this::updateInsets);
+        }
+
+        @Override
+        public ReadOnlyObjectProperty<Dimension2D> leftSystemInsetProperty() {
+            return leftSystemInset.getReadOnlyProperty();
+        }
+
+        @Override
+        public ReadOnlyObjectProperty<Dimension2D> rightSystemInsetProperty() {
+            return rightSystemInset.getReadOnlyProperty();
+        }
+
+        @Override
+        public ReadOnlyDoubleProperty systemMinHeightProperty() {
+            return systemMinHeight.getReadOnlyProperty();
+        }
+
+        @Override
+        public DoubleProperty systemButtonHeightProperty() {
+            return systemButtonHeight;
+        }
+
+        @Override
+        public ObjectProperty<ColorScheme> systemColorSchemeProperty() {
+            return systemColorScheme;
+        }
+
+        @Override
+        public Subscription subscribeLayoutInvalidated(Runnable listener) {
+            layoutInvalidatedListeners.add(listener);
+            return () -> layoutInvalidatedListeners.remove(listener);
+        }
+
+        private void setHeaderButtonMetrics(HeaderButtonMetrics metrics) {
+            currentMetrics = metrics;
+
+            updateInsets(stage.getScene() instanceof Scene scene
+                ? scene.getEffectiveNodeOrientation()
+                : NodeOrientation.LEFT_TO_RIGHT);
+        }
+
+        private void onFullScreenChanged(boolean fullScreen) {
+            currentFullScreen = fullScreen;
+
+            updateInsets(stage.getScene() instanceof Scene scene
+                ? scene.getEffectiveNodeOrientation()
+                : NodeOrientation.LEFT_TO_RIGHT);
+        }
+
+        private void updateInsets(NodeOrientation orientation) {
+            if (currentFullScreen || currentMetrics == null) {
+                leftSystemInset.set(EMPTY);
+                rightSystemInset.set(EMPTY);
+                systemMinHeight.set(0);
+            } else if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
+                leftSystemInset.set(currentMetrics.leftInset());
+                rightSystemInset.set(currentMetrics.rightInset());
+                systemMinHeight.set(currentMetrics.minHeight());
+            } else {
+                leftSystemInset.set(currentMetrics.rightInset());
+                rightSystemInset.set(currentMetrics.leftInset());
+                systemMinHeight.set(currentMetrics.minHeight());
+            }
+
+            for (Runnable listener : layoutInvalidatedListeners) {
+                try {
+                    listener.run();
+                } catch (Throwable ex) {
+                    Thread currentThread = Thread.currentThread();
+                    currentThread.getUncaughtExceptionHandler().uncaughtException(currentThread, ex);
+                }
+            }
+        }
+
+        private static final class ColorSchemeBinding extends ObjectBinding<ColorScheme> {
+            private final Stage stage;
+            private ObservableValue<? extends ColorScheme> source;
+
+            ColorSchemeBinding(Stage stage) {
+                this.stage = stage;
+                bind(stage.sceneProperty());
+            }
+
+            @Override
+            protected ColorScheme computeValue() {
+                ObservableValue<? extends ColorScheme> newSource =
+                    stage.getScene() instanceof Scene scene
+                        ? scene.getPreferences().colorSchemeProperty()
+                        : PlatformImpl.getPlatformPreferences().colorSchemeProperty();
+
+                if (source != newSource) {
+                    if (source != null) {
+                        unbind(source);
+                    }
+
+                    source = newSource;
+                    bind(source);
+                }
+
+                return source.getValue();
+            }
         }
     }
 }

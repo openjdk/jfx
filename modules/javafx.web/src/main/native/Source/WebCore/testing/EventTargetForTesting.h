@@ -40,7 +40,7 @@ class EventTargetForTesting final
     , public EventTarget
     , public RefCounted<EventTargetForTesting>
     , private MessageClientForTesting {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(EventTargetForTesting);
+    WTF_MAKE_TZONE_ALLOCATED(EventTargetForTesting);
 public:
     static Ref<EventTargetForTesting> create(ScriptExecutionContext&, MessageTargetForTesting&);
     virtual ~EventTargetForTesting();
@@ -48,6 +48,7 @@ public:
     // MessageClientForTesting, ActiveDOMObject
     void ref() const final { return RefCounted::ref(); }
     void deref() const final { return RefCounted::deref(); }
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
 
 private:
     EventTargetForTesting(ScriptExecutionContext&, MessageTargetForTesting&);
@@ -59,7 +60,7 @@ private:
 
     // EventTarget
     enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::EventTarget; }
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
+    ScriptExecutionContext* scriptExecutionContext() const final;
     void refEventTarget() final { return RefCounted::ref(); }
     void derefEventTarget() final { return RefCounted::deref(); }
 

@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "FloatRect.h"
-#include "ImageTypes.h"
+#include <WebCore/FloatRect.h>
+#include <WebCore/ImageTypes.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {

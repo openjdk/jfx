@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,10 +26,11 @@
 package com.sun.glass.ui;
 
 import com.sun.glass.events.MouseEvent;
-import com.sun.javafx.util.Utils;
+import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
@@ -54,7 +55,6 @@ import javafx.scene.Scene;
 import javafx.scene.layout.HeaderBar;
 import javafx.scene.layout.HeaderButtonType;
 import javafx.scene.layout.Region;
-import javafx.scene.paint.Paint;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
@@ -132,8 +132,8 @@ import java.util.stream.Stream;
  *         <tr><th>.dark</th>
  *             <td>all buttons</td>
  *             <td style="white-space: break-line">
- *                 This style class will be present if the brightness of {@link Scene#fillProperty()}
- *                 as determined by {@link Utils#calculateAverageBrightness(Paint)} is less than 0.5
+ *                 This style class will be present if {@link HeaderBar#systemColorSchemeProperty(Stage)}
+ *                 or {@link Scene.Preferences#colorSchemeProperty()} specifies a dark color scheme.
  *             </td>
  *         </tr>
  *         <tr><th>.restore</th><th>{@code -FX-INTERNAL-maximize-button}</th><td style="white-space: break-line">
@@ -231,13 +231,25 @@ public class HeaderButtonOverlay extends Region {
         this, "metrics", new HeaderButtonMetrics(new Dimension2D(0, 0), new Dimension2D(0, 0), 0));
 
     /**
+     * Specifies whether header buttons should use a dark style.
+     */
+    private final BooleanProperty buttonDarkStyle = new SimpleBooleanProperty(
+        this, "buttonDarkStyle", false) {
+            @Override
+            protected void invalidated() {
+                updateButtonMetrics(); // needed here because this property is not CSS-styleable
+                updateStyleClass();
+            }
+        };
+
+    /**
      * Specifies the preferred height of header buttons.
      * <p>
      * Negative values are interpreted as "no preference", which causes the buttons to be laid out
      * with their preferred height set to the value of {@link #buttonDefaultHeight}.
      */
-    private final DoubleProperty prefButtonHeight = new SimpleDoubleProperty(
-        this, "prefButtonHeight", HeaderBar.USE_DEFAULT_SIZE) {
+    private final DoubleProperty buttonPrefHeight = new SimpleDoubleProperty(
+        this, "buttonPrefHeight", HeaderBar.USE_DEFAULT_SIZE) {
             @Override
             protected void invalidated() {
                 updateButtonMetrics(); // needed here because this property is not CSS-styleable
@@ -318,31 +330,24 @@ public class HeaderButtonOverlay extends Region {
             .map(w -> w instanceof Stage ? (Stage)w : null);
 
         var focusedSubscription = stage
-            .flatMap(Stage::focusedProperty)
+            .flatMap(s -> s != null ? s.focusedProperty() : null)
             .orElse(true)
             .subscribe(this::onFocusedChanged);
 
         var resizableSubscription = stage
-            .flatMap(Stage::resizableProperty)
+            .flatMap(s -> s != null ? s.resizableProperty() : null)
             .orElse(true)
             .subscribe(this::onResizableChanged);
 
         var maximizedSubscription = stage
-            .flatMap(Stage::maximizedProperty)
+            .flatMap(s -> s != null ? s.maximizedProperty() : null)
             .orElse(false)
             .subscribe(this::onMaximizedChanged);
-
-        var updateStylesheetSubscription = sceneProperty()
-            .flatMap(Scene::fillProperty)
-            .map(this::isDarkBackground)
-            .orElse(false)
-            .subscribe(_ -> updateStyleClass()); // use a value subscriber, not an invalidation subscriber
 
         subscriptions = Subscription.combine(
             focusedSubscription,
             resizableSubscription,
             maximizedSubscription,
-            updateStylesheetSubscription,
             stylesheet.subscribe(this::updateStylesheet));
 
         getStyleClass().setAll("-FX-INTERNAL-header-button-container");
@@ -364,8 +369,12 @@ public class HeaderButtonOverlay extends Region {
         return metrics;
     }
 
-    public DoubleProperty prefButtonHeightProperty() {
-        return prefButtonHeight;
+    public DoubleProperty buttonPrefHeightProperty() {
+        return buttonPrefHeight;
+    }
+
+    public BooleanProperty buttonDarkStyleProperty() {
+        return buttonDarkStyle;
     }
 
     protected Region getButtonGlyph(HeaderButtonType buttonType) {
@@ -498,10 +507,10 @@ public class HeaderButtonOverlay extends Region {
     }
 
     private void updateStyleClass() {
-        boolean darkScene = isDarkBackground(getScene() != null ? getScene().getFill() : null);
-        toggleStyleClass(iconifyButton, DARK_STYLE_CLASS, darkScene);
-        toggleStyleClass(maximizeButton, DARK_STYLE_CLASS, darkScene);
-        toggleStyleClass(closeButton, DARK_STYLE_CLASS, darkScene);
+        boolean darkStyle = buttonDarkStyle.get();
+        toggleStyleClass(iconifyButton, DARK_STYLE_CLASS, darkStyle);
+        toggleStyleClass(maximizeButton, DARK_STYLE_CLASS, darkStyle);
+        toggleStyleClass(closeButton, DARK_STYLE_CLASS, darkStyle);
     }
 
     private void updateStylesheet(String stylesheet) {
@@ -516,12 +525,8 @@ public class HeaderButtonOverlay extends Region {
         }
     }
 
-    private boolean isDarkBackground(Paint paint) {
-        return paint != null && Utils.calculateAverageBrightness(paint) < 0.5;
-    }
-
     private double getEffectiveButtonHeight() {
-        double prefHeight = prefButtonHeight.get();
+        double prefHeight = buttonPrefHeight.get();
         return prefHeight >= 0 ? prefHeight : buttonDefaultHeight.get();
     }
 

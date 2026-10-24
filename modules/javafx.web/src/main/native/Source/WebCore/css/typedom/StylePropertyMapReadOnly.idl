@@ -27,12 +27,13 @@
 [
     Exposed=(Window,Worker,PaintWorklet),
     SkipVTableValidation,
-    JSGenerateToJSObject,
     JSCustomMarkFunction
 ] interface StylePropertyMapReadOnly {
-    iterable<USVString, sequence<CSSStyleValue>>;
+    // FIXME: iterable value should be `sequence<CSSStyleValue>`.
+    iterable<USVString, sequence<CSSStyleValue?>>;
     [CallWith=CurrentScriptExecutionContext] (undefined or CSSStyleValue) get([AtomString] USVString property);
-    [CallWith=CurrentScriptExecutionContext] sequence<CSSStyleValue> getAll([AtomString] USVString property);
+    // FIXME: `getAll` should return `sequence<CSSStyleValue>`.
+    [CallWith=CurrentScriptExecutionContext] sequence<CSSStyleValue?> getAll([AtomString] USVString property);
     [CallWith=CurrentScriptExecutionContext] boolean has([AtomString] USVString property);
 
     readonly attribute unsigned long size;

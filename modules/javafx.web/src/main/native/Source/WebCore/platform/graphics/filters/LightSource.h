@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "FloatPoint3D.h"
+#include <WebCore/FloatPoint3D.h>
 #include <wtf/RefCounted.h>
 
 namespace WTF {

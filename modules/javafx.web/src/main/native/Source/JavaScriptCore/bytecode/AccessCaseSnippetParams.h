@@ -40,7 +40,7 @@ class AccessCaseSnippetParams final : public SnippetParams {
 public:
     friend class InlineCacheCompiler;
     AccessCaseSnippetParams(VM& vm, Vector<Value>&& regs, Vector<GPRReg>&& gpScratch, Vector<FPRReg>&& fpScratch)
-        : SnippetParams(vm, WTFMove(regs), WTFMove(gpScratch), WTFMove(fpScratch))
+        : SnippetParams(vm, WTF::move(regs), WTF::move(gpScratch), WTF::move(fpScratch))
     {
     }
 

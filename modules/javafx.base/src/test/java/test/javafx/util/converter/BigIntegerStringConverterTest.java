@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,31 +25,30 @@
 
 package test.javafx.util.converter;
 
-import java.math.BigInteger;
-import javafx.util.converter.BigIntegerStringConverter;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.junit.jupiter.api.BeforeEach;
+import java.math.BigInteger;
+
 import org.junit.jupiter.api.Test;
 
-/**
- */
+import javafx.util.converter.BigIntegerStringConverter;
+
 public class BigIntegerStringConverterTest {
-    private BigIntegerStringConverter converter;
 
-    @BeforeEach public void setup() {
-        converter = new BigIntegerStringConverter();
+    private static final BigIntegerStringConverter CONVERTER = new BigIntegerStringConverter();
+
+    @Test
+    void fromString_testValidStringInput() {
+        assertEquals(BigInteger.TEN, CONVERTER.fromString("10"));
     }
 
-    @Test public void fromString_testValidStringInput() {
-        assertEquals(BigInteger.TEN, converter.fromString("10"));
+    @Test
+    void fromString_testValidStringInputWithWhiteSpace() {
+        assertEquals(BigInteger.TEN, CONVERTER.fromString("      10      "));
     }
 
-    @Test public void fromString_testValidStringInputWithWhiteSpace() {
-        assertEquals(BigInteger.TEN, converter.fromString("      10      "));
-    }
-
-    @Test public void toString_testStringInput() {
-        assertEquals("10", converter.toString(BigInteger.TEN));
+    @Test
+    void toString_testStringInput() {
+        assertEquals("10", CONVERTER.toString(BigInteger.TEN));
     }
 }

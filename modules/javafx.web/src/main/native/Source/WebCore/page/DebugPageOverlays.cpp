@@ -28,13 +28,16 @@
 
 #include "ColorHash.h"
 #include "Cursor.h"
+#include "DocumentView.h"
 #include "ElementIterator.h"
 #include "FloatRoundedRect.h"
 #include "Gradient.h"
 #include "GraphicsContext.h"
+#include "GraphicsLayer.h"
 #include "HitTestResult.h"
 #include "InteractionRegion.h"
 #include "LocalFrameView.h"
+#include "NodeInlines.h"
 #include "Page.h"
 #include "PageOverlay.h"
 #include "PageOverlayController.h"
@@ -48,6 +51,11 @@
 #include "RenderView.h"
 #include "ScrollingCoordinator.h"
 #include "Settings.h"
+
+#if PLATFORM(COCOA)
+#include <pal/cocoa/EnhancedSecurityCocoa.h>
+#endif
+
 #include <wtf/SortedArrayMap.h>
 #include <wtf/text/MakeString.h>
 
@@ -137,7 +145,7 @@ bool MouseWheelRegionOverlay::updateRegion()
     region->translate(m_overlay->viewToOverlayOffset());
 
     bool regionChanged = !m_region || !(*m_region == *region);
-    m_region = WTFMove(region);
+    m_region = WTF::move(region);
     return regionChanged;
 #endif
 }
@@ -172,7 +180,7 @@ bool NonFastScrollableRegionOverlay::updateRegion()
         return false;
     bool regionChanged = false;
 
-    if (RefPtr scrollingCoordinator = m_page->scrollingCoordinator()) {
+    if (RefPtr scrollingCoordinator = page->scrollingCoordinator()) {
         EventTrackingRegions eventTrackingRegions = scrollingCoordinator->absoluteEventTrackingRegions();
 
         if (eventTrackingRegions != m_eventTrackingRegions) {
@@ -197,7 +205,7 @@ static void drawRightAlignedText(const String& text, GraphicsContext& context, c
 
 void NonFastScrollableRegionOverlay::drawRect(PageOverlay& pageOverlay, GraphicsContext& context, const IntRect&)
 {
-    static constexpr std::pair<EventTrackingRegions::EventType, SRGBA<uint8_t>> colorMappings[] = {
+    constexpr SortedArrayMap colors { std::to_array<std::pair<EventTrackingRegions::EventType, SRGBA<uint8_t>>>({
         { EventTrackingRegions::EventType::Mousedown, { 80, 245, 80, 50 } },
         { EventTrackingRegions::EventType::Mousemove, { 245, 245, 80, 50 } },
         { EventTrackingRegions::EventType::Mouseup, { 80, 245, 176, 50 } },
@@ -206,8 +214,7 @@ void NonFastScrollableRegionOverlay::drawRect(PageOverlay& pageOverlay, Graphics
         { EventTrackingRegions::EventType::Touchmove, { 80, 204, 245, 50 } },
         { EventTrackingRegions::EventType::Touchstart, { 191, 191, 63, 50 } },
         { EventTrackingRegions::EventType::Wheel, { 255, 128, 0, 50 } },
-    };
-    constexpr SortedArrayMap colors { colorMappings };
+    }) };
     constexpr auto defaultColor = Color::black.colorWithAlphaByte(64);
 
     IntRect bounds = pageOverlay.bounds();
@@ -221,7 +228,7 @@ void NonFastScrollableRegionOverlay::drawRect(PageOverlay& pageOverlay, Graphics
     fontDescription.setSpecifiedSize(12);
     fontDescription.setComputedSize(12);
     fontDescription.setWeight(FontSelectionValue(500));
-    FontCascade font(WTFMove(fontDescription));
+    FontCascade font(WTF::move(fontDescription));
     font.update(nullptr);
 
     auto drawLegend = [&] (const Color& color, ASCIILiteral text) {
@@ -306,7 +313,7 @@ private:
 
 bool InteractionRegionOverlay::updateRegion()
 {
-    m_overlay->setNeedsDisplay();
+    protectedOverlay()->setNeedsDisplay();
     return true;
 }
 
@@ -340,7 +347,7 @@ std::optional<std::pair<RenderLayer&, GraphicsLayer&>> InteractionRegionOverlay:
     if (!hitNode || !hitNode->renderer())
         return std::nullopt;
 
-    CheckedPtr rendererLayer = hitNode->renderer()->enclosingLayer();
+    CheckedPtr rendererLayer = hitNode->checkedRenderer()->enclosingLayer();
     if (!rendererLayer)
         return std::nullopt;
 
@@ -443,7 +450,7 @@ static void drawCheckbox(const String& text, GraphicsContext& context, const Fon
     context.drawText(font, textRun, box.location() + FloatSize { checkboxRect.width() + textHorizontalPadding, lineHeight });
 
     Path checkboxPath;
-    checkboxPath.addRoundedRect(FloatRoundedRect { checkboxRect, FloatRoundedRect::Radii { 3 } });
+    checkboxPath.addRoundedRect(FloatRoundedRect { checkboxRect, CornerRadii { 3 } });
 
     if (state) {
         context.setFillColor(Color::darkGray);
@@ -457,7 +464,7 @@ static void drawCheckbox(const String& text, GraphicsContext& context, const Fon
 
 FloatRect InteractionRegionOverlay::rectForSettingAtIndex(unsigned index) const
 {
-    RefPtr mainFrameView = m_page->mainFrame().virtualView();
+    RefPtr mainFrameView = RefPtr { m_page.get() }->protectedMainFrame()->virtualView();
     if (!mainFrameView)
         return FloatRect();
     auto viewSize = mainFrameView->layoutSize();
@@ -494,7 +501,7 @@ void InteractionRegionOverlay::drawSettings(GraphicsContext& context)
     {
         GraphicsContextStateSaver stateSaver(context);
         context.setDropShadow({ { }, 5, Color(Color::black).colorWithAlpha(0.5), ShadowRadiusMode::Default });
-        context.fillRoundedRect(FloatRoundedRect { rect, FloatRoundedRect::Radii { 6 } }, Color(Color::white).colorWithAlpha(0.85));
+        context.fillRoundedRect(FloatRoundedRect { rect, CornerRadii { 6 } }, Color(Color::white).colorWithAlpha(0.85));
     }
 
     FontCascadeDescription fontDescription;
@@ -502,7 +509,7 @@ void InteractionRegionOverlay::drawSettings(GraphicsContext& context)
     fontDescription.setSpecifiedSize(12);
     fontDescription.setComputedSize(12);
     fontDescription.setWeight(FontSelectionValue(500));
-    FontCascade font(WTFMove(fontDescription));
+    FontCascade font(WTF::move(fontDescription));
     font.update(nullptr);
 
     for (unsigned i = 0; i < m_settings.size(); i++) {
@@ -531,7 +538,7 @@ void InteractionRegionOverlay::drawRect(PageOverlay&, GraphicsContext& context, 
         };
 
         auto makeGradient = [&] (Gradient::RadialData gradientData) {
-            auto gradient = Gradient::create(WTFMove(gradientData), { ColorInterpolationMethod::SRGB { }, AlphaPremultiplication::Unpremultiplied });
+            auto gradient = Gradient::create(WTF::move(gradientData), { ColorInterpolationMethod::SRGB { }, AlphaPremultiplication::Unpremultiplied });
             if (region && valueForSetting("wash"_s) && valueForSetting("clip"_s)) {
                 gradient->addColorStop({ 0.1, Color(Color::white).colorWithAlpha(0.5) });
                 gradient->addColorStop({ 1, Color(Color::white).colorWithAlpha(0.1) });
@@ -587,7 +594,7 @@ void InteractionRegionOverlay::drawRect(PageOverlay&, GraphicsContext& context, 
                     backdropGradient->addColorStop({ 0.1, Color(Color::black).colorWithAlpha(0.2) });
                     backdropGradient->addColorStop({ 1, Color(Color::black).colorWithAlpha(0) });
 
-                    context.setFillGradient(WTFMove(backdropGradient));
+                    context.setFillGradient(WTF::move(backdropGradient));
                     context.fillPath(path);
                 }
             } else {
@@ -595,7 +602,7 @@ void InteractionRegionOverlay::drawRect(PageOverlay&, GraphicsContext& context, 
                 backdropGradient->addColorStop({ 0.1, Color(Color::black).colorWithAlpha(0.2) });
                 backdropGradient->addColorStop({ 1, Color(Color::black).colorWithAlpha(0) });
 
-                context.setFillGradient(WTFMove(backdropGradient));
+                context.setFillGradient(WTF::move(backdropGradient));
                 context.fillRect(dirtyRect);
             }
         }
@@ -617,7 +624,7 @@ void InteractionRegionOverlay::drawRect(PageOverlay&, GraphicsContext& context, 
         fontDescription.setSpecifiedSize(10);
         fontDescription.setComputedSize(10);
         fontDescription.setWeight(FontSelectionValue(500));
-        FontCascade font(WTFMove(fontDescription));
+        FontCascade font(WTF::move(fontDescription));
         font.update(nullptr);
 
         TextRun textRun = TextRun(region->text);
@@ -648,7 +655,7 @@ bool InteractionRegionOverlay::mouseEvent(PageOverlay& overlay, const PlatformMo
     else if (!valueForSetting("hover"_s))
         cursorToSet = pointerCursor();
 
-    auto eventInContentsCoordinates = mainFrameView->windowToContents(event.position());
+    auto eventInContentsCoordinates = mainFrameView->windowToContents(flooredIntPoint(event.position()));
     for (unsigned i = 0; i < m_settings.size(); i++) {
         if (!rectForSettingAtIndex(i).contains(eventInContentsCoordinates))
             continue;
@@ -673,64 +680,47 @@ bool InteractionRegionOverlay::mouseEvent(PageOverlay& overlay, const PlatformMo
 }
 
 #if COMPILER(CLANG)
-#pragma mark - SiteIsolationOverlay
+#pragma mark - EnhancedSecurityOverlay
 #endif
 
-class SiteIsolationOverlay final : public RegionOverlay {
+class EnhancedSecurityOverlay final : public RegionOverlay {
 public:
-    static Ref<SiteIsolationOverlay> create(Page& page)
+    static Ref<EnhancedSecurityOverlay> create(Page& page)
     {
-        return adoptRef(*new SiteIsolationOverlay(page));
+        return adoptRef(*new EnhancedSecurityOverlay(page));
     }
 
 private:
-    explicit SiteIsolationOverlay(Page& page)
-        : RegionOverlay(page, Color::green.colorWithAlphaByte(102))
+    explicit EnhancedSecurityOverlay(Page& page)
+        : RegionOverlay(page, Color::transparentBlack)
     {
     }
 
-    bool updateRegion() final;
+    bool updateRegion() final
+    {
+        protectedOverlay()->setNeedsDisplay();
+        return true;
+    }
     void drawRect(PageOverlay&, GraphicsContext&, const IntRect& dirtyRect) final;
-
-    bool mouseEvent(PageOverlay&, const PlatformMouseEvent&) final;
 };
 
-bool SiteIsolationOverlay::updateRegion()
-{
-    m_overlay->setNeedsDisplay();
-    return true;
-}
-
-void SiteIsolationOverlay::drawRect(PageOverlay&, GraphicsContext& context, const IntRect&)
+void EnhancedSecurityOverlay::drawRect(PageOverlay&, GraphicsContext& context, const IntRect& dirtyRect)
 {
     RefPtr page = m_page.get();
     if (!page)
         return;
-    GraphicsContextStateSaver stateSaver(context);
 
-    FontCascadeDescription fontDescription;
-    fontDescription.setOneFamily("Helvetica"_s);
-    fontDescription.setSpecifiedSize(12);
-    fontDescription.setComputedSize(12);
-    fontDescription.setWeight(FontSelectionValue(500));
-    FontCascade font(WTFMove(fontDescription));
-    font.update(nullptr);
+#if PLATFORM(COCOA)
+    bool isEnhancedSecurityEnabled = PAL::isEnhancedSecurityEnabledForCurrentProcess();
+#else
+    bool isEnhancedSecurityEnabled = false;
+#endif
 
-    for (RefPtr frame = page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
-        if (!frame->virtualView())
-            continue;
-        auto frameView = frame->virtualView();
-        auto debugStr = makeString(is<RemoteFrame>(frame) ? "remote("_s : "local("_s, frame->frameID().toUInt64(), ')');
-        TextRun textRun = TextRun(debugStr);
-        context.setFillColor(Color::black);
+    Color overlayColor = isEnhancedSecurityEnabled
+        ? Color::green.colorWithAlphaByte(32) // Green overlay when enabled
+        : Color::red.colorWithAlphaByte(32); // Red overlay when disabled
 
-        context.drawText(font, textRun, FloatPoint { static_cast<float>(frameView->x()), static_cast<float>(frameView->y() + 12) });
-    }
-}
-
-bool SiteIsolationOverlay::mouseEvent(PageOverlay& , const PlatformMouseEvent&)
-{
-    return false;
+    context.fillRect(dirtyRect, overlayColor);
 }
 
 #if COMPILER(CLANG)
@@ -746,8 +736,8 @@ Ref<RegionOverlay> RegionOverlay::create(Page& page, DebugPageOverlays::RegionTy
         return NonFastScrollableRegionOverlay::create(page);
     case DebugPageOverlays::RegionType::InteractionRegion:
         return InteractionRegionOverlay::create(page);
-    case DebugPageOverlays::RegionType::SiteIsolationRegion:
-        return SiteIsolationOverlay::create(page);
+    case DebugPageOverlays::RegionType::EnhancedSecurity:
+        return EnhancedSecurityOverlay::create(page);
     }
     ASSERT_NOT_REACHED();
     return MouseWheelRegionOverlay::create(page);
@@ -838,7 +828,7 @@ static inline size_t indexOf(DebugPageOverlays::RegionType regionType)
     return static_cast<size_t>(regionType);
 }
 
-RegionOverlay& DebugPageOverlays::ensureRegionOverlayForPage(Page& page, RegionType regionType)
+Ref<RegionOverlay> DebugPageOverlays::ensureRegionOverlayForPage(Page& page, RegionType regionType)
 {
     auto it = m_pageRegionOverlays.find(page);
     if (it != m_pageRegionOverlays.end()) {
@@ -849,16 +839,16 @@ RegionOverlay& DebugPageOverlays::ensureRegionOverlayForPage(Page& page, RegionT
     }
 
     Vector<RefPtr<RegionOverlay>> visualizers(NumberOfRegionTypes);
-    auto visualizer = RegionOverlay::create(page, regionType);
+    Ref visualizer = RegionOverlay::create(page, regionType);
     visualizers[indexOf(regionType)] = visualizer.copyRef();
-    m_pageRegionOverlays.add(page, WTFMove(visualizers));
+    m_pageRegionOverlays.add(page, WTF::move(visualizers));
     return visualizer;
 }
 
 void DebugPageOverlays::showRegionOverlay(Page& page, RegionType regionType)
 {
-    auto& visualizer = ensureRegionOverlayForPage(page, regionType);
-    page.pageOverlayController().installPageOverlay(visualizer.overlay(), PageOverlay::FadeMode::DoNotFade);
+    Ref visualizer = ensureRegionOverlayForPage(page, regionType);
+    page.pageOverlayController().installPageOverlay(visualizer->protectedOverlay(), PageOverlay::FadeMode::DoNotFade);
 }
 
 void DebugPageOverlays::hideRegionOverlay(Page& page, RegionType regionType)
@@ -869,7 +859,7 @@ void DebugPageOverlays::hideRegionOverlay(Page& page, RegionType regionType)
     auto& visualizer = it->value[indexOf(regionType)];
     if (!visualizer)
         return;
-    page.pageOverlayController().uninstallPageOverlay(visualizer->overlay(), PageOverlay::FadeMode::DoNotFade);
+    page.pageOverlayController().uninstallPageOverlay(visualizer->protectedOverlay(), PageOverlay::FadeMode::DoNotFade);
     visualizer = nullptr;
 }
 
@@ -919,10 +909,10 @@ void DebugPageOverlays::updateOverlayRegionVisibility(Page& page, OptionSet<Debu
     else
         hideRegionOverlay(page, RegionType::InteractionRegion);
 
-    if (visibleRegions.contains(DebugOverlayRegions::SiteIsolationRegion))
-        showRegionOverlay(page, RegionType::SiteIsolationRegion);
+    if (visibleRegions.contains(DebugOverlayRegions::EnhancedSecurity))
+        showRegionOverlay(page, RegionType::EnhancedSecurity);
     else
-        hideRegionOverlay(page, RegionType::SiteIsolationRegion);
+        hideRegionOverlay(page, RegionType::EnhancedSecurity);
 }
 
 void DebugPageOverlays::settingsChanged(Page& page)

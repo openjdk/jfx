@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "FrameIdentifier.h"
-#include "PageIdentifier.h"
-#include "SameSiteInfo.h"
+#include <WebCore/FrameIdentifier.h>
+#include <WebCore/PageIdentifier.h>
+#include <WebCore/SameSiteInfo.h>
 #include <optional>
 #include <wtf/Forward.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
@@ -83,7 +83,7 @@ public:
     virtual ~CookieJar();
 protected:
     static SameSiteInfo sameSiteInfo(const Document&, IsForDOMCookieAccess = IsForDOMCookieAccess::No);
-    static IncludeSecureCookies shouldIncludeSecureCookies(const Document&, const URL&);
+    static IncludeSecureCookies shouldIncludeSecureCookies(const URL&);
     CookieJar(Ref<StorageSessionProvider>&&);
 
 private:

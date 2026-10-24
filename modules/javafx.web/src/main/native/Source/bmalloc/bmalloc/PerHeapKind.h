@@ -25,6 +25,8 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
 #include "HeapKind.h"
 #include <array>
 
@@ -54,7 +56,7 @@ public:
 
     const T& at(size_t i) const
     {
-        return *reinterpret_cast<T*>(&m_memory[i]);
+        return *reinterpret_cast<const T*>(&m_memory[i]);
     }
 
     T& at(HeapKind heapKind)
@@ -73,10 +75,10 @@ public:
     const T& operator[](HeapKind heapKind) const { return at(heapKind); }
 
 private:
-    BALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    typedef typename std::array<typename std::aligned_storage<sizeof(T), std::alignment_of<T>::value>::type, numHeaps> Memory;
-    BALLOW_DEPRECATED_DECLARATIONS_END
-    Memory m_memory;
+    struct alignas(T) Element {
+        std::byte data[sizeof(T)];
+    };
+    std::array<Element, numHeaps> m_memory;
 };
 
 template<typename T>
@@ -110,3 +112,5 @@ public:
 } // namespace bmalloc
 
 #endif
+
+#endif // __cplusplus

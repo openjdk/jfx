@@ -73,19 +73,19 @@ GST_BASE_API
 void            gst_byte_writer_free                    (GstByteWriter *writer);
 
 GST_BASE_API
-guint8 *        gst_byte_writer_free_and_get_data       (GstByteWriter *writer);
+guint8 *        gst_byte_writer_free_and_get_data       (GstByteWriter *writer) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_BASE_API
-GstBuffer *     gst_byte_writer_free_and_get_buffer     (GstByteWriter *writer) G_GNUC_MALLOC;
+GstBuffer *     gst_byte_writer_free_and_get_buffer     (GstByteWriter *writer) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_BASE_API
 void            gst_byte_writer_reset                   (GstByteWriter *writer);
 
 GST_BASE_API
-guint8 *        gst_byte_writer_reset_and_get_data      (GstByteWriter *writer);
+guint8 *        gst_byte_writer_reset_and_get_data      (GstByteWriter *writer) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_BASE_API
-GstBuffer *     gst_byte_writer_reset_and_get_buffer    (GstByteWriter *writer) G_GNUC_MALLOC;
+GstBuffer *     gst_byte_writer_reset_and_get_buffer    (GstByteWriter *writer) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 /**
  * gst_byte_writer_get_pos:

@@ -30,7 +30,7 @@
 #include "LayoutContainingBlockChainIterator.h"
 #include "LayoutElementBox.h"
 #include "LayoutState.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include "TableFormattingContext.h"
 #include "TableGrid.h"
 
@@ -63,7 +63,7 @@ LayoutUnit TableFormattingQuirks::heightValueOfNearestContainingBlockWithFixedHe
     // e.g <div style="height: 100px"><table><tr><td style="height: 100%"></td></tr></table></div> is resolved to 0px.
     for (auto& ancestor : containingBlockChainWithinFormattingContext(layoutBox, formattingContext().root())) {
         if (auto fixedHeight = ancestor.style().logicalHeight().tryFixed())
-            return LayoutUnit { fixedHeight->value };
+            return LayoutUnit { fixedHeight->resolveZoom(ancestor.style().usedZoomForLength()) };
     }
     return { };
 }

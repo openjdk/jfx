@@ -32,7 +32,7 @@
 namespace WebCore {
 
 class SpeechRecognitionResult final : public RefCounted<SpeechRecognitionResult> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SpeechRecognitionResult);
+    WTF_MAKE_TZONE_ALLOCATED(SpeechRecognitionResult);
 public:
     static Ref<SpeechRecognitionResult> create(Vector<Ref<SpeechRecognitionAlternative>>&&, bool isFinal);
 

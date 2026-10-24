@@ -272,7 +272,7 @@ static DialogFeaturesMap parseDialogFeaturesMap(StringView string)
             value = valueView.left(valueView.find(' ')).toString();
         }
 
-        features.set(WTFMove(key), WTFMove(value));
+        features.set(WTF::move(key), WTF::move(value));
     }
 
     return features;

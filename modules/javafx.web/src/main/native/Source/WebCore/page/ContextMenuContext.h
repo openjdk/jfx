@@ -28,8 +28,9 @@
 
 #if ENABLE(CONTEXT_MENUS)
 
-#include "HitTestResult.h"
-#include "Image.h"
+#include <WebCore/HTMLMediaElementIdentifier.h>
+#include <WebCore/HitTestResult.h>
+#include <WebCore/Image.h>
 
 namespace WebCore {
 
@@ -81,6 +82,11 @@ public:
     Image* potentialQRCodeViewportSnapshotImage() const { return m_potentialQRCodeViewportSnapshotImage.get(); }
 #endif
 
+#if ENABLE(MEDIA_CONTROLS_CONTEXT_MENUS)
+    void setMediaElementIdentifier(HTMLMediaElementIdentifier identifier) { m_mediaElementIdentifier = identifier; }
+    std::optional<HTMLMediaElementIdentifier> mediaElementIdentifier() const { return m_mediaElementIdentifier; }
+#endif
+
 private:
     Type m_type { Type::ContextMenu };
     HitTestResult m_hitTestResult;
@@ -97,6 +103,10 @@ private:
 #if ENABLE(CONTEXT_MENU_QR_CODE_DETECTION)
     RefPtr<Image> m_potentialQRCodeNodeSnapshotImage;
     RefPtr<Image> m_potentialQRCodeViewportSnapshotImage;
+#endif
+
+#if ENABLE(MEDIA_CONTROLS_CONTEXT_MENUS)
+    Markable<HTMLMediaElementIdentifier> m_mediaElementIdentifier;
 #endif
 };
 

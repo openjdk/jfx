@@ -30,8 +30,13 @@
 #include "FEGaussianBlurSoftwareApplier.h"
 //#endif
 #include "Filter.h"
+#include "GraphicsContext.h"
 #include <numbers>
 #include <wtf/text/TextStream.h>
+
+#if USE(CORE_IMAGE)
+#include "FEGaussianBlurCoreImageApplier.h"
+#endif
 
 #if USE(SKIA)
 #include "FEGaussianBlurSkiaApplier.h"
@@ -155,24 +160,28 @@ bool FEGaussianBlur::resultIsAlphaImage(std::span<const Ref<FilterImage>> inputs
     return inputs[0]->isAlphaImage();
 }
 
-OptionSet<FilterRenderingMode> FEGaussianBlur::supportedFilterRenderingModes() const
+OptionSet<FilterRenderingMode> FEGaussianBlur::supportedFilterRenderingModes(OptionSet<FilterRenderingMode> preferredFilterRenderingModes) const
 {
     OptionSet<FilterRenderingMode> modes = FilterRenderingMode::Software;
-#if USE(SKIA)
+#if USE(CORE_IMAGE)
+    modes.add(FilterRenderingMode::Accelerated);
+#elif USE(SKIA)
     if (m_edgeMode == EdgeModeType::None)
         modes.add(FilterRenderingMode::Accelerated);
 #endif
     // FIXME: Ensure the correctness of the CG GaussianBlur filter (http://webkit.org/b/243816).
-#if 0 && HAVE(CGSTYLE_COLORMATRIX_BLUR)
-    if (m_stdX == m_stdY)
+#if HAVE(CGSTYLE_COLORMATRIX_BLUR) && HAVE(FIX_FOR_RADAR_163968203) && HAVE(FIX_FOR_RADAR_160309842)
+    if (m_stdX == m_stdY && preferredFilterRenderingModes.contains(FilterRenderingMode::GraphicsContext))
         modes.add(FilterRenderingMode::GraphicsContext);
 #endif
-    return modes;
+    return modes & preferredFilterRenderingModes;
 }
 
 std::unique_ptr<FilterEffectApplier> FEGaussianBlur::createAcceleratedApplier() const
 {
-#if USE(SKIA)
+#if USE(CORE_IMAGE)
+    return FilterEffectApplier::create<FEGaussianBlurCoreImageApplier>(*this);
+#elif USE(SKIA)
     return FilterEffectApplier::create<FEGaussianBlurSkiaApplier>(*this);
 #else
     return nullptr;

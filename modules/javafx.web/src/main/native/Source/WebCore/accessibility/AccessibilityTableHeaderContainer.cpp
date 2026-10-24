@@ -29,8 +29,10 @@
 #include "config.h"
 #include "AccessibilityTableHeaderContainer.h"
 
+#include "AXLoggerBase.h"
 #include "AXObjectCache.h"
-#include "AccessibilityTable.h"
+#include "AccessibilityObjectInlines.h"
+#include "AccessibilityNodeObject.h"
 
 namespace WebCore {
 
@@ -62,11 +64,11 @@ bool AccessibilityTableHeaderContainer::computeIsIgnored() const
 
 void AccessibilityTableHeaderContainer::addChildren()
 {
-    ASSERT(!m_childrenInitialized);
+    AX_ASSERT(!m_childrenInitialized);
 
     m_childrenInitialized = true;
-    RefPtr parentTable = dynamicDowncast<AccessibilityTable>(m_parent.get());
-    if (!parentTable || !parentTable->isExposable())
+    RefPtr parentTable = dynamicDowncast<AccessibilityNodeObject>(m_parent.get());
+    if (!parentTable || !parentTable->isExposableTable())
         return;
 
     for (auto& columnHeader : parentTable->columnHeaders())
