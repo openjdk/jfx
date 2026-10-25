@@ -55,6 +55,9 @@ class Observable {
     std::function<void(const T&)> onChange;
     bool assigned_since_init{false};
     bool notifying{false};
+    bool pending{false};
+
+    static constexpr int MAX_RENOTIFY = 8;
 
 public:
     Observable(const T& initialValue = T()) : value(initialValue) {}
@@ -70,13 +73,25 @@ public:
     void invalidate() {
         if (!onChange) return;
         if (notifying) {
-            fprintf(stderr,"WARNING: Re-entrant call to Observable::invalidate() (possible cyclic dependency)\n");
+            // The value changed (or was invalidated) from within onChange; notify
+            // again with the latest value once the current notification returns.
+            pending = true;
             return;
         }
 
         notifying = true;
 
-        onChange(value);
+        int rounds = 0;
+        // Nested notification can happen if java is notified and reacts to the change
+        do {
+            pending = false;
+            onChange(value);
+        } while (pending && ++rounds < MAX_RENOTIFY);
+
+        if (pending) {
+            fprintf(stderr, "WARNING: Observable::invalidate() kept changing during notification (possible cyclic dependency)\n");
+            pending = false;
+        }
 
         notifying = false;
     }

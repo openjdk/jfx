@@ -1466,7 +1466,7 @@ void WindowContext::set_focusable(bool focusable) {
 
 void WindowContext::set_title(const char* title) {
     gtk_window_set_title(GTK_WINDOW(gtk_widget), title);
-    log_id = title;
+    log_id = title ? title : "";
 }
 
 void WindowContext::set_alpha(double alpha) {
@@ -1930,12 +1930,12 @@ void WindowContextExtended::process_mouse_cross(GdkEventCrossing* event) {
 void WindowContextExtended::process_mouse_motion(GdkEventMotion* event) {
     GdkWindowEdge edge;
 
-    // Call the base implementation for client area events.
-    if (jview && (!is_floating() || !is_resizable() || !get_window_edge(event->x, event->y, &edge))) {
+    if (!jview || !jwindow || !is_floating() || !is_resizable()
+            || !get_window_edge(event->x, event->y, &edge)) {
         // If is_mouse_entered is false at this point, the cursor was on the resize border just a moment
         // ago (which doesn't count as a client area, even though it is on the window). Since the cursor
         // has now entered the client area, we need to send MouseEvent.ENTER to FX.
-        if (!is_mouse_entered) {
+        if (!is_mouse_entered && jview) {
             is_mouse_entered = true;
             mainEnv->CallVoidMethod(jview, jViewNotifyMouse,
                 com_sun_glass_events_MouseEvent_ENTER,
