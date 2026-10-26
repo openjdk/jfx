@@ -68,6 +68,7 @@ public class RichEditorDemoWindow extends Stage {
 
     public RichEditorDemoWindow() {
         editor = new RichTextArea();
+        editor.getInputMap().registerFunction(RichTextArea.Tag.ERROR_FEEDBACK, this::errorFeedback);
         toolbar = new RichEditorToolbar();
 
         status = new Label();
@@ -193,6 +194,11 @@ public class RichEditorDemoWindow extends Stage {
             sb.append(" *");
         }
         return sb.toString();
+    }
+
+    private void errorFeedback() {
+        // TODO beep
+        IO.println("Error!");
     }
 
     // in the demo, the editor and the model are always editable.
