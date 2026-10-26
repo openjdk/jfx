@@ -1324,6 +1324,10 @@ void WindowContext::set_visible(bool visible) {
             notify_focus(com_sun_glass_events_WindowEvent_FOCUS_GAINED);
         }
     } else {
+        if (sm_grab_window == this) {
+            ungrab_focus();
+        }
+
         gtk_widget_hide(gtk_widget);
         if (jview && is_mouse_entered) {
             is_mouse_entered = false;
