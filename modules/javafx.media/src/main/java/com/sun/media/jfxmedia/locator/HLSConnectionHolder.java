@@ -1513,7 +1513,7 @@ final class HLSConnectionHolder extends ConnectionHolder {
                                 mediaFiles.remove(removeIndex);
                                 mediaFilesDiscontinuities.remove(removeIndex);
                                 mediaFilesStartTimes.remove(removeIndex);
-                                if (mediaFileIndex == -1) {
+                                if (mediaFileIndex < removeIndex) {
                                     forceDiscontinuity = true;
                                 }
                                 if (mediaFileIndex >= removeIndex) {
