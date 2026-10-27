@@ -34,7 +34,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 
 /**
  * Tests TextArea behavior by exercising every key binding registered by the skin
