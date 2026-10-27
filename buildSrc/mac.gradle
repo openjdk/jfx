@@ -172,15 +172,22 @@ def linkFlags = IS_STATIC_BUILD ? staticLinkFlags : dynamicLinkFlags
 def linkFlagsAlt = IS_STATIC_BUILD ? staticLinkFlags : dynamicLinkFlagsAlt
 
 def toolchainDir
+def metalToolchainDir
 def metalCompiler
 def metalLinker
 
 if (hasProperty('toolchainDir')) {
     toolchainDir = ext.toolchainDir + "/"
-    metalCompiler = "${toolchainDir}metal"
-    metalLinker = "${toolchainDir}metallib"
+    if (hasProperty('metalToolchainDir')) {
+        metalToolchainDir = ext.metalToolchainDir + "/"
+    } else {
+        metalToolchainDir = toolchainDir
+    }
+    metalCompiler = "${metalToolchainDir}metal"
+    metalLinker = "${metalToolchainDir}metallib"
 } else {
     toolchainDir = ""
+    metalToolchainDir = ""
     ByteArrayOutputStream path = new ByteArrayOutputStream();
     execOps.exec { spec ->
         // xcrun -f --sdk macosx metal
