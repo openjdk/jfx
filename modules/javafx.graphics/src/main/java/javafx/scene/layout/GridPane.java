@@ -1781,6 +1781,10 @@ public class GridPane extends Pane {
                     areaH += heights.hasGapBefore(j) ? snapvgap : 0;
                     areaH += heights.getSize(j);
                 }
+                if (isSnapToPixel()) {
+                    areaW = ScaledMath.rint(areaW, getSnapScaleX(this));
+                    areaH = ScaledMath.rint(areaH, getSnapScaleY(this));
+                }
 
                 HPos halign = getHalignment(child);
                 VPos valign = getValignment(child);
@@ -2005,9 +2009,8 @@ public class GridPane extends Pane {
                     final Interval interval = ms.getKey();
                     if (interval.end - 1 == i) {
                         double curLength = heights.computeTotal(interval.begin, interval.end);
-                        double missing = Math.max(0, ms.getValue() - curLength);
-                        actualPortion = Math.min(isSnapToPixel() ? ScaledMath.floor(missing, scale) : missing,
-                                actualPortion);
+                        double pref = isSnapToPixel() ? ScaledMath.ceil(ms.getValue(), scale) : ms.getValue();
+                        actualPortion = Math.min(Math.max(0, pref - curLength), actualPortion);
                     }
                 }
 
@@ -2251,9 +2254,8 @@ public class GridPane extends Pane {
                     final Interval interval = ms.getKey();
                     if (interval.end - 1 == i) {
                         double curLength = widths.computeTotal(interval.begin, interval.end);
-                        double missing = Math.max(0, ms.getValue() - curLength);
-                        actualPortion = Math.min(isSnapToPixel() ? ScaledMath.floor(missing, scale) : missing,
-                                actualPortion);
+                        double pref = isSnapToPixel() ? ScaledMath.ceil(ms.getValue(), scale) : ms.getValue();
+                        actualPortion = Math.min(Math.max(0, pref - curLength), actualPortion);
                     }
                 }
 

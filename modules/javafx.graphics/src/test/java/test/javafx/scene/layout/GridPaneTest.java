@@ -3505,6 +3505,104 @@ public class GridPaneTest {
 
     @ParameterizedTest
     @MethodSource("scales")
+    public void testGrowingRowsToMultiSpanPrefHeightFractionalMaxHeight(double scale) {
+        MockResizable child0 = new MockResizable(0, 0, 10, 20, 5000, 5000);
+        MockResizable child1 = new MockResizable(0, 0, 10, 10, 5000, 5000);
+
+        RowConstraints row0 = new RowConstraints();
+        RowConstraints row1 = new RowConstraints();
+        row0.setMaxHeight(10.25);
+        gridpane.getRowConstraints().addAll(row0, row1);
+
+        MockResizable span = new MockResizable(0, 0, 10, 40, 5000, 5000);
+        gridpane.add(child0, 1, 0);
+        gridpane.add(child1, 1, 1);
+        gridpane.add(span, 0, 0, 1, 2);
+
+        setRenderScale(scale);
+
+        gridpane.resize(50, 100);
+        gridpane.layout();
+
+        assertEquals(40, gridpane.getCellBounds(0, 1).getMaxY(), 1e-10);
+    }
+
+    @ParameterizedTest
+    @MethodSource("scales")
+    public void testGrowingColumnsToMultiSpanPrefWidthFractionalMaxWidth(double scale) {
+        MockResizable child0 = new MockResizable(0, 0, 20, 10, 5000, 5000);
+        MockResizable child1 = new MockResizable(0, 0, 10, 10, 5000, 5000);
+
+        ColumnConstraints column0 = new ColumnConstraints();
+        ColumnConstraints column1 = new ColumnConstraints();
+        column0.setMaxWidth(10.25);
+        gridpane.getColumnConstraints().addAll(column0, column1);
+
+        MockResizable span = new MockResizable(0, 0, 40, 10, 5000, 5000);
+        gridpane.add(child0, 0, 1);
+        gridpane.add(child1, 1, 1);
+        gridpane.add(span, 0, 0, 2, 1);
+
+        setRenderScale(scale);
+
+        gridpane.resize(100, 50);
+        gridpane.layout();
+
+        assertEquals(40, gridpane.getCellBounds(1, 0).getMaxX(), 1e-10);
+    }
+
+    @ParameterizedTest
+    @MethodSource("scales")
+    public void testChildSpanningPercentageColumnsFitsWidth(double scale) {
+        ColumnConstraints column0 = new ColumnConstraints();
+        ColumnConstraints column1 = new ColumnConstraints();
+        ColumnConstraints column2 = new ColumnConstraints();
+        ColumnConstraints column3 = new ColumnConstraints();
+        column0.setPercentWidth(25);
+        column1.setPercentWidth(25);
+        column2.setPercentWidth(25);
+        column3.setPercentWidth(25);
+        gridpane.getColumnConstraints().addAll(column0, column1, column2, column3);
+
+        MockResizable child = new MockResizable(0, 0, 10, 10, 5000, 5000);
+        gridpane.add(child, 0, 0, 4, 1);
+
+        setRenderScale(scale);
+        double width = 57 / scale;
+
+        gridpane.resize(width, 50);
+        gridpane.layout();
+
+        assertEquals(width, child.getWidth(), 1e-10);
+    }
+
+    @ParameterizedTest
+    @MethodSource("scales")
+    public void testChildSpanningPercentageRowsFitsHeight(double scale) {
+        RowConstraints row0 = new RowConstraints();
+        RowConstraints row1 = new RowConstraints();
+        RowConstraints row2 = new RowConstraints();
+        RowConstraints row3 = new RowConstraints();
+        row0.setPercentHeight(25);
+        row1.setPercentHeight(25);
+        row2.setPercentHeight(25);
+        row3.setPercentHeight(25);
+        gridpane.getRowConstraints().addAll(row0, row1, row2, row3);
+
+        MockResizable child = new MockResizable(0, 0, 10, 10, 5000, 5000);
+        gridpane.add(child, 0, 0, 1, 4);
+
+        setRenderScale(scale);
+        double height = 57 / scale;
+
+        gridpane.resize(50, height);
+        gridpane.layout();
+
+        assertEquals(height, child.getHeight(), 1e-10);
+    }
+
+    @ParameterizedTest
+    @MethodSource("scales")
     public void testGrowingColumnsToMultiSpanPrefWidthLastColumn(double scale) {
         MockResizable child0 = new MockResizable(0, 0, 10, 10, 5000, 5000);
         MockResizable child1 = new MockResizable(0, 0, 10, 10, 5000, 5000);
