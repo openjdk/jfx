@@ -9866,11 +9866,8 @@ public abstract sealed class Node
                 ? pseudoClassStates.add(pseudoClass)
                 : pseudoClassStates.remove(pseudoClass);
 
-        if (modified && styleHelper != null) {
-            final boolean isTransition = styleHelper.pseudoClassStateChanged(pseudoClass);
-            if (isTransition) {
-                requestCssStateTransition();
-            }
+        if (modified && cssTriggerStates != null && cssTriggerStates.contains(pseudoClass)) {
+            requestCssStateTransition();
         }
    }
 
@@ -10216,6 +10213,12 @@ public abstract sealed class Node
      * and knows how to apply them when our state changes.
      */
     CssStyleHelper styleHelper;
+
+    /**
+     * The pseudo-classes of this node that a selector matching this node or one of its descendants depends on.
+     * Only a change of one of these pseudo-classes triggers a CSS update of this node and its descendants.
+     */
+    PseudoClassState cssTriggerStates;
 
     private static final PseudoClass HOVER_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("hover");
     private static final PseudoClass PRESSED_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("pressed");

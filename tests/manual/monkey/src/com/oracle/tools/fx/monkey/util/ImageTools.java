@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import javax.imageio.ImageIO;
+import javafx.embed.swing.SwingFXUtils;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.Image;
@@ -74,6 +75,9 @@ public class ImageTools {
     }
 
     public static Image createImage(String s, int w, int h) {
+        if (s == null) {
+            s = "";
+        }
         byte[] hash;
         try {
             hash = MessageDigest.getInstance("sha-256").digest(s.getBytes());
@@ -97,10 +101,35 @@ public class ImageTools {
      * @throws IOException if an I/O error occurs
      */
     public static byte[] writePNG(Image im) throws IOException {
+        return writeImage(im, "PNG");
+    }
+
+    /**
+     * Writes an Image to a byte array in JPG format.
+     *
+     * @param im source image
+     * @return byte array containing JPG image
+     * @throws IOException if an I/O error occurs
+     */
+    public static byte[] writeJPG(Image im) throws IOException {
+        return writeImage(im, "JPG");
+    }
+
+    private static byte[] writeImage(Image im, String format) throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream(65536);
-        // this might conflict with user-set value
-        ImageIO.setUseCache(false);
-        ImageIO.write(ImgUtil.fromFXImage(im, null), "PNG", out);
+        try {
+            // using disk cache slows things down
+            boolean old = ImageIO.getUseCache();
+            ImageIO.setUseCache(false);
+            try {
+                var bi = SwingFXUtils.fromFXImage(im, null);
+                ImageIO.write(bi, format, out);
+            } finally {
+                ImageIO.setUseCache(old);
+            }
+        } finally {
+            out.close();
+        }
         return out.toByteArray();
     }
 }

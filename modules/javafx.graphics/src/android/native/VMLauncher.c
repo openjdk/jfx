@@ -57,11 +57,11 @@ jint JNI_OnLoad(JavaVM* vm, void* reserved)
     dalvikJavaVMPtr = vm;
     __android_log_print(3,"JVM", "JNI_OnLoad calling GetEnv()");
     JNIEnv* env = NULL;
-    (*vm)->GetEnv(vm, (void**) &env, JNI_VERSION_1_8);
+    (*vm)->GetEnv(vm, (void**) &env, JNI_VERSION_1_6);
     __android_log_print(3,"JVM", "JNI_OnLoad calling initDalvikProxySelectorData()");
     initDalvikProxySelectorData(env);
     __android_log_print(3,"JVM", "JNI_OnLoad returning()");
-    return JNI_VERSION_1_8;
+    return JNI_VERSION_1_6;
 }
 
 static void logArgs(int argc, char** argv) {

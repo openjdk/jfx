@@ -70,6 +70,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad_prism_mtl(JavaVM *vm, void *reserved) {
         commitOnDraw = false;
         currentRenderEncoder = nil;
         meshIndexCount = 0;
+        encoderHasDepthAttachment = false;
         linearSamplerDict = [[NSMutableDictionary alloc] init];
         nonLinearSamplerDict = [[NSMutableDictionary alloc] init];
         compositeMode = com_sun_prism_mtl_MTLContext_MTL_COMPMODE_SRCOVER; //default
@@ -350,6 +351,14 @@ JNIEXPORT jint JNICALL JNI_OnLoad_prism_mtl(JavaVM *vm, void *reserved) {
             // gets used in other class methods.
             // Take up the ownership of this RenderEncoder object using retain.
             currentRenderEncoder = [[cb renderCommandEncoderWithDescriptor:rttPassDesc] retain];
+            if (rttPassDesc.depthAttachment.texture == nil) {
+                encoderHasDepthAttachment = false;
+            } else {
+                encoderHasDepthAttachment = true;
+                if (rttPassDesc.depthAttachment.loadAction == MTLLoadActionClear) {
+                    rttPassDesc.depthAttachment.loadAction = MTLLoadActionLoad;
+                }
+            }
         }
     }
     return currentRenderEncoder;
@@ -362,6 +371,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad_prism_mtl(JavaVM *vm, void *reserved) {
         [currentRenderEncoder endEncoding];
         [currentRenderEncoder release];
         currentRenderEncoder = nil;
+        encoderHasDepthAttachment = false;
     }
 }
 
@@ -408,14 +418,11 @@ JNIEXPORT jint JNICALL JNI_OnLoad_prism_mtl(JavaVM *vm, void *reserved) {
 
     MetalShader* shader = [self getCurrentShader];
     [shadersUsedInCB addObject:shader];
-
     [renderEncoder setRenderPipelineState:[shader getPipelineState:[rtt isMSAAEnabled]
                                                      compositeMode:compositeMode]];
-    if (depthEnabled) {
-        id<MTLDepthStencilState> depthStencilState =
-            [[self getPipelineManager] getDepthStencilState];
-        [renderEncoder setDepthStencilState:depthStencilState];
-    }
+    id<MTLDepthStencilState> depthStencilState =
+        [[self getPipelineManager] getDepthStencilState];
+    [renderEncoder setDepthStencilState:depthStencilState];
 
     if ([shader getArgumentBufferLength] != 0) {
         [shader copyArgBufferToRingBuffer];
@@ -478,10 +485,13 @@ JNIEXPORT jint JNICALL JNI_OnLoad_prism_mtl(JavaVM *vm, void *reserved) {
     if (depthTest &&
         ([rtt getDepthTexture] != nil)) {
         depthEnabled = true;
+        if (encoderHasDepthAttachment == false) {
+            [self endCurrentRenderEncoder];
+        }
     } else {
         depthEnabled = false;
     }
-    [self updateDepthDetails:depthTest];
+    [self updateDepthDetails:depthEnabled];
 }
 
 - (void) setProjViewMatrix:(float)m00
@@ -523,10 +533,8 @@ JNIEXPORT jint JNICALL JNI_OnLoad_prism_mtl(JavaVM *vm, void *reserved) {
             alpha:(float)alpha
        clearDepth:(bool)clearDepth
 {
-    clearDepthTexture = false;
     if (clearDepth &&
         [rtt getDepthTexture] != nil) {
-        clearDepthTexture = true;
         rttPassDesc.depthAttachment.clearDepth = 1.0;
         rttPassDesc.depthAttachment.loadAction = MTLLoadActionClear;
         if ([[self getRTT] isMSAAEnabled]) {
@@ -539,7 +547,8 @@ JNIEXPORT jint JNICALL JNI_OnLoad_prism_mtl(JavaVM *vm, void *reserved) {
             rttPassDesc.depthAttachment.resolveTexture = nil;
         }
     } else {
-        rttPassDesc.depthAttachment = nil;
+        rttPassDesc.depthAttachment.texture = nil;
+        rttPassDesc.depthAttachment.resolveTexture = nil;
     }
     clearColor[0] = red;
     clearColor[1] = green;
@@ -549,11 +558,9 @@ JNIEXPORT jint JNICALL JNI_OnLoad_prism_mtl(JavaVM *vm, void *reserved) {
     id<MTLRenderCommandEncoder> renderEncoder = [self getCurrentRenderEncoder];
 
     [renderEncoder setRenderPipelineState:[pipelineManager getClearRttPipeState]];
-    if (clearDepthTexture) {
-        id<MTLDepthStencilState> depthStencilState =
-            [[self getPipelineManager] getDepthStencilState];
-        [renderEncoder setDepthStencilState:depthStencilState];
-    }
+    id<MTLDepthStencilState> depthStencilState =
+        [[self getPipelineManager] getDepthStencilState];
+    [renderEncoder setDepthStencilState:depthStencilState];
     [renderEncoder setFrontFacingWinding:MTLWindingClockwise];
     [renderEncoder setCullMode:MTLCullModeNone];
     [renderEncoder setTriangleFillMode:MTLTriangleFillModeFill];
@@ -582,6 +589,8 @@ JNIEXPORT jint JNICALL JNI_OnLoad_prism_mtl(JavaVM *vm, void *reserved) {
 
     if (clearDepth && !depthEnabled) {
         [self endCurrentRenderEncoder];
+        rttPassDesc.depthAttachment.texture = nil;
+        rttPassDesc.depthAttachment.resolveTexture = nil;
     }
 }
 
@@ -677,7 +686,8 @@ JNIEXPORT jint JNICALL JNI_OnLoad_prism_mtl(JavaVM *vm, void *reserved) {
             rttPassDesc.depthAttachment.resolveTexture = nil;
         }
     } else {
-        rttPassDesc.depthAttachment = nil;
+        rttPassDesc.depthAttachment.texture = nil;
+        rttPassDesc.depthAttachment.resolveTexture = nil;
     }
 }
 
@@ -743,14 +753,14 @@ JNIEXPORT jint JNICALL JNI_OnLoad_prism_mtl(JavaVM *vm, void *reserved) {
     return scissorRect;
 }
 
-- (bool) clearDepth
-{
-    return clearDepthTexture;
-}
-
 - (bool) isDepthEnabled
 {
     return depthEnabled;
+}
+
+- (bool) encoderHasDepthAttachment
+{
+    return encoderHasDepthAttachment;
 }
 
 - (bool) isScissorEnabled
@@ -1555,6 +1565,22 @@ JNIEXPORT void JNICALL Java_com_sun_prism_mtl_MTLResourceFactory_nReleaseTexture
     pTex = nil;
 }
 
+/*
+ * Class:     com_sun_prism_mtl_MTLResourceFactory
+ * Method:    nGetMaximumTextureSize
+ * Signature: (J)I
+ */
+JNIEXPORT jint JNICALL Java_com_sun_prism_mtl_MTLResourceFactory_nGetMaximumTextureSize
+    (JNIEnv *env, jclass class, jlong pContext)
+{
+    MetalContext* context = (MetalContext*)jlong_to_ptr(pContext);
+    id<MTLDevice> device = [context getDevice];
+
+    if ([device supportsFamily:MTLGPUFamilyMac2]) {
+        return 16384;
+    }
+    return 8192;
+}
 
 // MTLPipeline methods
 
