@@ -3603,6 +3603,52 @@ public class GridPaneTest {
 
     @ParameterizedTest
     @MethodSource("scales")
+    public void testRowsFitFractionalGridHeight(double scale) {
+        MockResizable child0 = new MockResizable(0, 0, 10, 10, 5000, 5000);
+        MockResizable child1 = new MockResizable(0, 0, 10, 10, 5000, 5000);
+        MockResizable child2 = new MockResizable(0, 0, 10, 10, 5000, 5000);
+        GridPane.setVgrow(child0, Priority.ALWAYS);
+        GridPane.setVgrow(child1, Priority.ALWAYS);
+        GridPane.setVgrow(child2, Priority.NEVER);
+        gridpane.add(child0, 1, 0);
+        gridpane.add(child1, 1, 1);
+        gridpane.add(child2, 1, 2);
+
+        MockResizable span = new MockResizable(0, 0, 10, 36, 5000, 5000);
+        gridpane.add(span, 0, 0, 1, 3);
+
+        setRenderScale(scale);
+        gridpane.resize(50, 36.5);
+        gridpane.layout();
+
+        assertEquals(Math.floor(36.5 * scale) / scale, child2.getLayoutY() + child2.getHeight(), 1e-10);
+    }
+
+    @ParameterizedTest
+    @MethodSource("scales")
+    public void testColumnsFitFractionalGridWidth(double scale) {
+        MockResizable child0 = new MockResizable(0, 0, 10, 10, 5000, 5000);
+        MockResizable child1 = new MockResizable(0, 0, 10, 10, 5000, 5000);
+        MockResizable child2 = new MockResizable(0, 0, 10, 10, 5000, 5000);
+        GridPane.setHgrow(child0, Priority.ALWAYS);
+        GridPane.setHgrow(child1, Priority.ALWAYS);
+        GridPane.setHgrow(child2, Priority.NEVER);
+        gridpane.add(child0, 0, 1);
+        gridpane.add(child1, 1, 1);
+        gridpane.add(child2, 2, 1);
+
+        MockResizable span = new MockResizable(0, 0, 36, 10, 5000, 5000);
+        gridpane.add(span, 0, 0, 3, 1);
+
+        setRenderScale(scale);
+        gridpane.resize(36.5, 50);
+        gridpane.layout();
+
+        assertEquals(Math.floor(36.5 * scale) / scale, child2.getLayoutX() + child2.getWidth(), 1e-10);
+    }
+
+    @ParameterizedTest
+    @MethodSource("scales")
     public void testGrowingColumnsToMultiSpanPrefWidthLastColumn(double scale) {
         MockResizable child0 = new MockResizable(0, 0, 10, 10, 5000, 5000);
         MockResizable child1 = new MockResizable(0, 0, 10, 10, 5000, 5000);

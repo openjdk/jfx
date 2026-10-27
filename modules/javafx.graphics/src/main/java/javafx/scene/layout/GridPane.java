@@ -1856,7 +1856,7 @@ public class GridPane extends Pane {
         final double top = snapSpaceY(getInsets().getTop());
         final double bottom = snapSpaceY(getInsets().getBottom());
         final double vgaps = heights.computeGaps(0, heights.getLength());
-        final double contentHeight = height - top - bottom;
+        final double contentHeight = (isSnapToPixel() ? ScaledMath.floor(height, getSnapScaleY(this)) : height) - top - bottom;
 
         // if there are percentage rows, give them their percentages first
         if (rowPercentTotal > 0) {
@@ -1880,7 +1880,7 @@ public class GridPane extends Pane {
         }
         double rowTotal = heights.computeTotal();
         if (rowPercentTotal < 100) {
-            double heightAvailable = height - top - bottom - rowTotal;
+            double heightAvailable = contentHeight - rowTotal;
             // now that both fixed and percentage rows have been computed, divy up any surplus or deficit
             if (heightAvailable != 0) {
                 // maybe grow or shrink row heights
@@ -2101,7 +2101,7 @@ public class GridPane extends Pane {
         final double left = snapSpaceX(getInsets().getLeft());
         final double right = snapSpaceX(getInsets().getRight());
         final double hgaps = widths.computeGaps(0, widths.getLength());
-        final double contentWidth = width - left - right;
+        final double contentWidth = (isSnapToPixel() ? ScaledMath.floor(width, getSnapScaleX(this)) : width) - left - right;
 
         // if there are percentage rows, give them their percentages first
         if (columnPercentTotal > 0) {
@@ -2126,7 +2126,7 @@ public class GridPane extends Pane {
 
         double columnTotal = widths.computeTotal();
         if (columnPercentTotal < 100) {
-            double widthAvailable = width - left - right - columnTotal;
+            double widthAvailable = contentWidth - columnTotal;
             // now that both fixed and percentage rows have been computed, divy up any surplus or deficit
             if (widthAvailable != 0) {
                 // maybe grow or shrink row heights
