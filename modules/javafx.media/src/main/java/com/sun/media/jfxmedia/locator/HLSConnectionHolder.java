@@ -76,10 +76,6 @@ final class HLSConnectionHolder extends ConnectionHolder {
     private long readStartTime = -1;
     private boolean isInitialized = false;
     private int duration = -1;
-    // Will be set to adjusted start time of segment.
-    // Seek will set this value and HLS_PROP_SEGMENT_START_TIME
-    // should return it if set.
-    private int segmentStartTimeAfterSeek = -1;
     private static final boolean SEND_HEADER_WITH_EACH_SEGMENT = PlatformUtil.isWindows();
     static final long HLS_VALUE_FLOAT_MULTIPLIER = 1000;
     static final int HLS_PROP_GET_DURATION = 1;
@@ -226,13 +222,15 @@ final class HLSConnectionHolder extends ConnectionHolder {
 
     @Override
     public void closeConnection() {
-        if (currentPlaylist != null) {
-            currentPlaylist.close();
-        }
-        super.closeConnection();
-        resetConnection();
-        if (playlistLoader != null) {
-            playlistLoader.putState(PlaylistLoader.STATE_EXIT);
+        try {
+            if (currentPlaylist != null) {
+                currentPlaylist.close();
+            }
+            resetConnection();
+        } finally {
+            if (playlistLoader != null) {
+                playlistLoader.putState(PlaylistLoader.STATE_EXIT);
+            }
         }
     }
 
@@ -262,14 +260,7 @@ final class HLSConnectionHolder extends ConnectionHolder {
             case HLS_PROP_LOAD_SEGMENT:
                 return loadNextSegment();
             case HLS_PROP_SEGMENT_START_TIME:
-                int segmentStart;
-                if (segmentStartTimeAfterSeek != -1) {
-                    segmentStart = segmentStartTimeAfterSeek;
-                    segmentStartTimeAfterSeek = -1;
-                } else {
-                    segmentStart = (int) (currentPlaylist.getMediaFileStartTime() * HLS_VALUE_FLOAT_MULTIPLIER);
-                }
-                return segmentStart;
+                return (int) (currentPlaylist.getMediaFileStartTime() * HLS_VALUE_FLOAT_MULTIPLIER);
             case HLS_PROP_HAS_AUDIO_EXT_STREAM:
                 return hasAudioExtStream ? 1 : 0;
             default:
@@ -421,7 +412,7 @@ final class HLSConnectionHolder extends ConnectionHolder {
 
             byte[] header = in.readNBytes((int)(MAX_HEADER_SIZE + 1));
             if (header.length > MAX_HEADER_SIZE) {
-               return null;
+                return null;
             }
             cachedHeader = header;
             cachedHeaderUri = mediaFile;
@@ -477,6 +468,8 @@ final class HLSConnectionHolder extends ConnectionHolder {
                         headerLength = headerURLConnection.getContentLength();
                     }
                 } catch (IOException | URISyntaxException e) {
+                    // Close data segment connection if we fail to load header.
+                    resetConnection();
                     return -1;
                 }
                 lastSentHeaderUri = headerFile;
@@ -773,16 +766,16 @@ final class HLSConnectionHolder extends ConnectionHolder {
             try {
                 long timeout;
                 synchronized (reloadLock) {
-                    timeout = TimeUnit.SECONDS.toMillis(
-                            reloadPlaylist.getTargetDuration());
+                    timeout = reloadPlaylist.isLive() ?
+                            TimeUnit.SECONDS.toMillis(reloadPlaylist.getTargetDuration()) : 0;
 
                     if (!reloadPlaylistChanged) {
                         timeout /= 2;
                     }
 
                     if (reloadAudioExtPlaylist != null) {
-                        long audioTimeout = TimeUnit.SECONDS.toMillis(
-                                reloadAudioExtPlaylist.getTargetDuration());
+                        long audioTimeout = reloadAudioExtPlaylist.isLive() ?
+                                TimeUnit.SECONDS.toMillis(reloadAudioExtPlaylist.getTargetDuration()) : 0;
 
                         if (!reloadAudioExtPlaylistChanged) {
                             audioTimeout /= 2;
@@ -798,13 +791,17 @@ final class HLSConnectionHolder extends ConnectionHolder {
 
             boolean scheduleReload = false;
             synchronized (reloadLock) {
-                reloadPlaylistChanged = reloadPlaylist.update();
+                if (reloadPlaylist.isLive()) {
+                    reloadPlaylistChanged = reloadPlaylist.update();
+                }
 
-                if (reloadAudioExtPlaylist != null) {
+                if (reloadAudioExtPlaylist != null && reloadAudioExtPlaylist.isLive()) {
                     reloadAudioExtPlaylistChanged = reloadAudioExtPlaylist.update();
                 }
 
-                scheduleReload = reloadPlaylist.isLive();
+                // Reload as long as at least one stream is still live.
+                scheduleReload = reloadPlaylist.isLive() ||
+                        (reloadAudioExtPlaylist != null && reloadAudioExtPlaylist.isLive());
             }
 
             // Reload only if we have live list
@@ -1402,13 +1399,13 @@ final class HLSConnectionHolder extends ConnectionHolder {
 
             setLive(parser.isLivePlaylist());
 
-             if (oldMediaFiles != null) {
+            if (oldMediaFiles != null) {
                 synchronized (lock) {
                     return !oldMediaFiles.equals(mediaFiles);
                 }
-             }
+            }
 
-             return true;
+            return true;
         }
 
         void setMediaFileIndex(int value) {
@@ -1419,12 +1416,6 @@ final class HLSConnectionHolder extends ConnectionHolder {
 
         int getMediaFileIndex() {
             return mediaFileIndex;
-        }
-
-        boolean hasUnsupportedSegmentURI() {
-            synchronized (lock) {
-                return hasUnsupportedSegmentURI;
-            }
         }
 
         boolean isEmpty() {
@@ -1834,12 +1825,6 @@ final class HLSConnectionHolder extends ConnectionHolder {
             synchronized (lock) {
                 sequenceNumberUpdated = sequenceNumber != -1 && sequenceNumber != value;
                 sequenceNumber = value;
-            }
-        }
-
-        int getSequenceNumber() {
-            synchronized (lock) {
-                return sequenceNumber;
             }
         }
 
