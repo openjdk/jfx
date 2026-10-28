@@ -3695,4 +3695,46 @@ public class GridPaneTest {
 
         assertEquals(41.5, span.getWidth(), 1e-10);
     }
+
+    @ParameterizedTest
+    @MethodSource("scales")
+    public void testShrinkingRowsKeepsMultiSpanMinHeight(double scale) {
+        MockResizable child0 = new MockResizable(0, 20, 10, 200, 5000, 5000);
+        MockResizable child1 = new MockResizable(0, 0, 10, 200, 5000, 5000);
+        MockResizable child2 = new MockResizable(0, 34, 10, 200, 5000, 5000);
+        MockResizable child3 = new MockResizable(0, 0, 10, 200, 5000, 5000);
+        MockResizable span = new MockResizable(0, 100, 10, 100, 5000, 5000);
+        gridpane.add(child0, 1, 0);
+        gridpane.add(child1, 1, 1);
+        gridpane.add(child2, 1, 2);
+        gridpane.add(child3, 1, 3);
+        gridpane.add(span, 0, 1, 1, 3);
+        setRenderScale(scale);
+
+        gridpane.resize(50, 120);
+        gridpane.layout();
+
+        assertEquals(100, gridpane.getCellBounds(0, 3).getMaxY() - gridpane.getCellBounds(0, 1).getMinY(), 1e-10);
+    }
+
+    @ParameterizedTest
+    @MethodSource("scales")
+    public void testShrinkingColumnsKeepsMultiSpanMinWidth(double scale) {
+        MockResizable child0 = new MockResizable(20, 0, 200, 10, 5000, 5000);
+        MockResizable child1 = new MockResizable(0, 0, 200, 10, 5000, 5000);
+        MockResizable child2 = new MockResizable(34, 0, 200, 10, 5000, 5000);
+        MockResizable child3 = new MockResizable(0, 0, 200, 10, 5000, 5000);
+        MockResizable span = new MockResizable(100, 0, 100, 10, 5000, 5000);
+        gridpane.add(child0, 0, 1);
+        gridpane.add(child1, 1, 1);
+        gridpane.add(child2, 2, 1);
+        gridpane.add(child3, 3, 1);
+        gridpane.add(span, 1, 0, 3, 1);
+        setRenderScale(scale);
+
+        gridpane.resize(120, 50);
+        gridpane.layout();
+
+        assertEquals(100, gridpane.getCellBounds(3, 0).getMaxX() - gridpane.getCellBounds(1, 0).getMinX(), 1e-10);
+    }
 }

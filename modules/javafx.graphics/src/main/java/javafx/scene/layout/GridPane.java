@@ -2666,33 +2666,47 @@ public class GridPane extends Pane {
             if (!isPreset(position) && multiSizes != null) {
                 for (Interval i : multiSizes.keySet()) {
                     if (i.contains(position)) {
-                        double total = multiSizes.get(i) - computeGaps(i.begin, i.end);
-                        double propSize = segment(total, i, position, pixelSize);
-                        for (int j = i.begin; j < i.end; ++j) {
-                            if (j != position) {
-                                double segment = segment(total, i, j, pixelSize);
-                                if (min ? singleSizes[j] > segment : singleSizes[j] < segment) {
-                                    propSize += segment - singleSizes[j];
+                        // positions beyond an equal share keep their own size, the others split the rest
+                        double rest = multiSizes.get(i) - computeGaps(i.begin, i.end);
+                        int count = i.size();
+                        boolean[] own = new boolean[i.size()];
+                        boolean changed;
+                        do {
+                            changed = false;
+                            double share = rest / count;
+                            for (int j = i.begin; j < i.end; ++j) {
+                                if (!own[j - i.begin] && (min ? singleSizes[j] > share : singleSizes[j] < share)) {
+                                    own[j - i.begin] = true;
+                                    rest -= singleSizes[j];
+                                    count--;
+                                    changed = true;
                                 }
                             }
+                        } while (changed && count > 0);
+                        
+                        if (!own[position - i.begin]) {
+                            int index = 0;
+                            for (int j = i.begin; j < position; ++j) {
+                                index += own[j - i.begin] ? 0 : 1;
+                            }
+                            double propSize = segment(rest, count, index, pixelSize);
+                            result = min ? Math.max(result, propSize) : Math.min(result, propSize);
                         }
-                        result = min ? Math.max(result, propSize) : Math.min(result, propSize);
                     }
                 }
             }
             return result;
         }
 
-        // For a total length in logical pixels, compute the length of a position in span i for a set device pixel-size. Leftover pixels go to the first elements.
-        // But no element gets more than 1 leftover.
-        private static double segment(double total, Interval i, int position, double pixelSize) {
+        // Splits total into count segments of whole pixels. Leftover pixels go to the first segments.
+        private static double segment(double total, int count, int index, double pixelSize) {
             if (pixelSize == 0) {
-                return total / i.size();
+                return total / count;
             }
             double pixels = Math.rint(total / pixelSize);
-            double base = Math.floor(pixels / i.size());
-            double remainder = pixels - base * i.size();
-            return (base + (position - i.begin < remainder ? 1 : 0)) * pixelSize;
+            double base = Math.floor(pixels / count);
+            double remainder = pixels - base * count;
+            return (base + (index < remainder ? 1 : 0)) * pixelSize;
         }
 
         private double computeTotal(final int from, final int to) {
