@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,7 @@ import javafx.beans.property.SimpleDoubleProperty;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
@@ -154,10 +155,10 @@ class SnappingTest {
                     gridPane.getChildren().add(node);
                     return gridPane;
                 }),
-                new ContainerCreator<>(AnchorPane::new)
+                new ContainerCreator<>(AnchorPane::new),
 //                new ContainerCreator<>(Pane::new),
 //                new ContainerCreator<>(StackPane::new),
-//                new ContainerCreator<>(BorderPane::new),
+                new ContainerCreator<>(BorderPane::new)
 //                new ContainerCreator<>(node -> {
 //                    TilePane tilePane = new TilePane(node);
 //                    tilePane.setPrefColumns(1);
