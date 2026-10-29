@@ -130,7 +130,6 @@ class GtkWindow extends Window {
     @Override
     protected boolean _minimize(long ptr, boolean minimize) {
         minimizeImpl(ptr, minimize);
-        notifyStateChanged(WindowEvent.MINIMIZE);
         return minimize;
     }
 
@@ -138,21 +137,7 @@ class GtkWindow extends Window {
     protected boolean _maximize(long ptr, boolean maximize,
                                 boolean wasMaximized) {
         maximizeImpl(ptr, maximize, wasMaximized);
-        notifyStateChanged(WindowEvent.MAXIMIZE);
         return maximize;
-    }
-
-    protected void notifyStateChanged(final int state) {
-        switch (state) {
-            case WindowEvent.MINIMIZE:
-            case WindowEvent.MAXIMIZE:
-            case WindowEvent.RESTORE:
-                notifyResize(state, getWidth(), getHeight());
-                break;
-            default:
-                System.err.println("Unknown window state: " + state);
-                break;
-        }
     }
 
     @Override
