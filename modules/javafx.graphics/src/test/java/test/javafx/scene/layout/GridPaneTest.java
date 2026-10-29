@@ -3813,4 +3813,48 @@ public class GridPaneTest {
 
         assertEquals(32, child1.getLayoutX() + child1.getWidth(), 1e-10);
     }
+
+    @ParameterizedTest
+    @MethodSource("scales")
+    public void testShrinkingRowsWithPercentageRowFitHeight(double scale) {
+        RowConstraints row0 = new RowConstraints();
+        row0.setPercentHeight(20);
+        gridpane.getRowConstraints().addAll(row0, new RowConstraints(), new RowConstraints());
+        MockResizable child0 = new MockResizable(0, 0, 10, 200, 5000, 5000);
+        MockResizable child1 = new MockResizable(0, 80, 10, 200, 5000, 5000);
+        MockResizable child2 = new MockResizable(0, 0, 10, 200, 5000, 5000);
+        MockResizable span = new MockResizable(0, 100, 10, 100, 5000, 5000);
+        gridpane.add(child0, 1, 0);
+        gridpane.add(child1, 1, 1);
+        gridpane.add(child2, 1, 2);
+        gridpane.add(span, 0, 0, 1, 3);
+        setRenderScale(scale);
+
+        gridpane.resize(50, 100);
+        gridpane.layout();
+
+        assertEquals(100, gridpane.getCellBounds(1, 2).getMaxY(), 1e-10);
+    }
+
+    @ParameterizedTest
+    @MethodSource("scales")
+    public void testShrinkingColumnsWithPercentageColumnFitWidth(double scale) {
+        ColumnConstraints column0 = new ColumnConstraints();
+        column0.setPercentWidth(20);
+        gridpane.getColumnConstraints().addAll(column0, new ColumnConstraints(), new ColumnConstraints());
+        MockResizable child0 = new MockResizable(0, 0, 200, 10, 5000, 5000);
+        MockResizable child1 = new MockResizable(80, 0, 200, 10, 5000, 5000);
+        MockResizable child2 = new MockResizable(0, 0, 200, 10, 5000, 5000);
+        MockResizable span = new MockResizable(100, 0, 100, 10, 5000, 5000);
+        gridpane.add(child0, 0, 1);
+        gridpane.add(child1, 1, 1);
+        gridpane.add(child2, 2, 1);
+        gridpane.add(span, 0, 0, 3, 1);
+        setRenderScale(scale);
+
+        gridpane.resize(100, 50);
+        gridpane.layout();
+
+        assertEquals(100, gridpane.getCellBounds(2, 1).getMaxX(), 1e-10);
+    }
 }

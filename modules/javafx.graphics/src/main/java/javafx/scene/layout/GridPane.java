@@ -2070,7 +2070,7 @@ public class GridPane extends Pane {
             if (portion != 0) {
                 for (Iterator<Integer> i = adjusting.iterator(); i.hasNext();) {
                     final int index = i.next();
-                    double limit = snapSpaceY(limitSize.getProportionalMinOrMaxSize(index, shrinking, isSnapToPixel() ? pixelSize : 0))
+                    double limit = snapSpaceY(limitSize.getProportionalMinOrMaxSize(index, shrinking, isSnapToPixel() ? pixelSize : 0, heights))
                             - heights.getSize(index); // negative in shrinking case
                     if (shrinking && limit > 0
                             || !shrinking && limit < 0) { // Limit completely if current size
@@ -2318,7 +2318,7 @@ public class GridPane extends Pane {
             if (portion != 0) {
                 for (Iterator<Integer> i = adjusting.iterator(); i.hasNext();) {
                     final int index = i.next();
-                    double limit = snapSpaceX(limitSize.getProportionalMinOrMaxSize(index, shrinking, isSnapToPixel() ? pixelSize : 0))
+                    double limit = snapSpaceX(limitSize.getProportionalMinOrMaxSize(index, shrinking, isSnapToPixel() ? pixelSize : 0, widths))
                             - widths.getSize(index); // negative in shrinking case
                     if (shrinking && limit > 0
                             || !shrinking && limit < 0) { // Limit completely if current size
@@ -2669,7 +2669,7 @@ public class GridPane extends Pane {
             }
         }
 
-        private double getProportionalMinOrMaxSize(int position, boolean min, double pixelSize) {
+        private double getProportionalMinOrMaxSize(int position, boolean min, double pixelSize, CompositeSize current) {
             double result = singleSizes[position];
             if (!isPreset(position) && multiSizes != null) {
                 for (Interval i : multiSizes.keySet()) {
@@ -2678,8 +2678,15 @@ public class GridPane extends Pane {
                         double rest = multiSizes.get(i) - computeGaps(i.begin, i.end);
                         int count = i.size();
                         boolean[] own = new boolean[i.size()];
-                        boolean changed;
-                        do {
+                        for (int j = i.begin; j < i.end; ++j) {
+                            if (fixedPercent[j] >= 0) { // percentage rows/columns keep their current size
+                                own[j - i.begin] = true;
+                                rest -= current.getSize(j);
+                                count--;
+                            }
+                        }
+                        boolean changed = true;
+                        while (changed && count > 0) {
                             changed = false;
                             double share = rest / count;
                             for (int j = i.begin; j < i.end; ++j) {
@@ -2690,8 +2697,7 @@ public class GridPane extends Pane {
                                     changed = true;
                                 }
                             }
-                        } while (changed && count > 0);
-                        
+                        }
                         if (!own[position - i.begin]) {
                             int index = 0;
                             for (int j = i.begin; j < position; ++j) {
