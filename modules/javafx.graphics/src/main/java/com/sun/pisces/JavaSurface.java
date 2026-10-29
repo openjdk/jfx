@@ -25,22 +25,43 @@
 
 package com.sun.pisces;
 
-import java.nio.IntBuffer;
-
 public final class JavaSurface extends AbstractSurface {
 
-    private IntBuffer dataBuffer;
+    private final int[] dataInt;  // referenced by name in JNI
+    private final int dataOffset;  // referenced by name in JNI
 
-    private int[] dataInt;
-
-    public JavaSurface(int[] dataInt, int dataType, int width, int height) {
+    /**
+     * Constructs a new surface over the given array. If the buffer is too small or
+     * the selected range would exceed the buffer's capacity, an {@link IllegalArgumentException} is thrown.
+     *
+     * @param buffer a buffer to back the surface with, cannot be {@code null}
+     * @param dataType the pixel format to use, must be {@code RendererBase.TYPE_INT_ARGB_PRE}
+     * @param width the width, cannot be negative
+     * @param height the height, cannot be negative
+     * @param offset the offset into the buffer, cannot be negative
+     * @throws NullPointerException if {@code buffer} is {@code null}
+     * @throws IllegalArgumentException if {@code dataType} is unsupported, {@code offset} is negative
+     *     or if the selected range exceeds the available range
+     */
+    public JavaSurface(int[] buffer, int dataType, int width, int height, int offset) {
         super(width, height);
-        if (dataInt.length / width < height) {
-            throw new IllegalArgumentException("width(=" + width + ") * height(="
-                    + height + ") is greater than dataInt.length(=" + dataInt.length + ")");
+
+        if (dataType != RendererBase.TYPE_INT_ARGB_PRE) {
+            throw new IllegalArgumentException("dataType is unsupported: " + dataType);
         }
-        this.dataInt = dataInt;
-        this.dataBuffer = IntBuffer.wrap(this.dataInt);
+
+        if (offset < 0) {
+            throw new IllegalArgumentException("offset cannot be negative: " + offset);
+        }
+
+        long end = offset + (long) width * height;
+
+        if (end > buffer.length) {  // implicit null check for buffer
+            throw new IllegalArgumentException("selected range exceeds allowed range: [" + offset + ", " + end + ") exceeds [0, " + buffer.length + ")");
+        }
+
+        this.dataInt = buffer;
+        this.dataOffset = offset;
 
         initialize(dataType, width, height);
         // The native method initialize() creates the native object of
@@ -49,10 +70,6 @@ public final class JavaSurface extends AbstractSurface {
         // creating disposer record hence the below call to addDisposerRecord()
         // is needed here and cannot be made in super class constructor.
         addDisposerRecord();
-    }
-
-    public IntBuffer getDataIntBuffer() {
-        return this.dataBuffer;
     }
 
     private native void initialize(int dataType, int width, int height);

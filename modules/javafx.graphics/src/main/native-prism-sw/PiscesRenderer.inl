@@ -498,8 +498,6 @@ updateRendererSurface(Renderer* rdr) {
             surface->height;
     rdr->_data = 
             surface->data;
-    rdr->_imageOffset = 
-            surface->offset;
     rdr->_imageScanlineStride = 
             surface->scanlineStride;
     rdr->_imagePixelStride = 
