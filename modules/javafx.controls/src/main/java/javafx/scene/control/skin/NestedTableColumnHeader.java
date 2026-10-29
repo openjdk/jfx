@@ -653,7 +653,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
      **************************************************************************/
 
     private boolean isColumnResizingEnabled() {
-        // this used to check if ! PlatformUtil.isEmbedded(), but has been changed
+        // this used to check if !GlassPlatform.isEmbedded(), but has been changed
         // to always return true (for now), as we want to support column resizing
         // everywhere
         return true;

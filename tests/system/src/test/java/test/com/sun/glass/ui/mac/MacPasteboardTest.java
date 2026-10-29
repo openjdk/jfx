@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,6 +38,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import com.sun.glass.ui.Clipboard;
+import com.sun.glass.ui.GlassPlatform;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.mac.MacPasteboardShim;
 import com.sun.javafx.PlatformUtil;
@@ -50,7 +51,7 @@ public class MacPasteboardTest {
 
     @BeforeAll
     public static void setup() throws Exception {
-        if (PlatformUtil.isMac() && !PlatformUtil.isHeadless()) {
+        if (PlatformUtil.isMac() && !GlassPlatform.isHeadless()) {
             Platform.startup(() -> {
                 macPasteboardShim = new MacPasteboardShim();
                 startupLatch.countDown();
@@ -60,14 +61,14 @@ public class MacPasteboardTest {
 
     @AfterAll
     public static void teardown() {
-        if (PlatformUtil.isMac() && !PlatformUtil.isHeadless()) {
+        if (PlatformUtil.isMac() && !GlassPlatform.isHeadless()) {
             Platform.exit();
         }
     }
 
     @Test
     public void testValidLocalImageURLMacPasteboard() throws Exception {
-        assumeTrue(PlatformUtil.isMac() && !PlatformUtil.isHeadless());
+        assumeTrue(PlatformUtil.isMac() && !GlassPlatform.isHeadless());
         final String localImage = getClass().getResource("blue.png").toURI().toURL().toString();
         runAndWait(() -> {
             macPasteboardShim.pushMacPasteboard(new HashMap<>(Map.of(Clipboard.URI_TYPE, localImage)));
@@ -82,7 +83,7 @@ public class MacPasteboardTest {
 
     @Test
     public void testDataBase64ImageMacPasteboard() {
-        assumeTrue(PlatformUtil.isMac() && !PlatformUtil.isHeadless());
+        assumeTrue(PlatformUtil.isMac() && !GlassPlatform.isHeadless());
         final String encodedImage = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAKCAIAAAA7N+mxAAAAAXNSR0IArs4c6QAAAAR"
                 + "nQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAcSURBVChTY/jPwADBZACyNMHAqGYSwZDU/P8/ABieT81GAGKoAAAAAElFTkSuQmCC";
         runAndWait(() -> {
@@ -94,7 +95,7 @@ public class MacPasteboardTest {
 
     @Test
     public void testNotAnImageURLMacPasteboard() {
-        assumeTrue(PlatformUtil.isMac() && !PlatformUtil.isHeadless());
+        assumeTrue(PlatformUtil.isMac() && !GlassPlatform.isHeadless());
         final String invalidImage = "not.an.image.url";
         runAndWait(() -> {
             macPasteboardShim.pushMacPasteboard(new HashMap<>(Map.of(Clipboard.URI_TYPE, invalidImage)));
