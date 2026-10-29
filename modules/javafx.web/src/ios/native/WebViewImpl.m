@@ -36,7 +36,7 @@
 
 #define PATH_DELIMITER          '/'
 
-jint JNI_OnLoad_webview(JavaVM *vm, void *reserved) {
+JNIEXPORT jint JNICALL JNI_OnLoad_webview(JavaVM *vm, void *reserved) {
     return JNI_VERSION_1_8;
 }
 

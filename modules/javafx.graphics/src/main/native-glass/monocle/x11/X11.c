@@ -28,6 +28,12 @@
 #include <X11/Xlibint.h>
 #include "Monocle.h"
 
+#ifdef STATIC_BUILD
+JNIEXPORT jint JNICALL JNI_OnLoad_glass_monocle_x11(JavaVM *vm, void *reserved) {
+    return JNI_VERSION_1_8;
+}
+#endif // STATIC_BUILD
+
 JNIEXPORT void JNICALL
  Java_com_sun_glass_ui_monocle_X_XInitThreads
  (JNIEnv *UNUSED(env), jclass UNUSED(xClass)) {

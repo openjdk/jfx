@@ -26,6 +26,12 @@
 #include <jni.h>
 #include "com_sun_glass_ui_Application.h"
 
+#ifdef STATIC_BUILD
+JNIEXPORT jint JNICALL JNI_OnLoad_prism_common(JavaVM *vm, void *reserved) {
+    return JNI_VERSION_1_8;
+}
+#endif // STATIC_BUILD
+
 /*
  * Class com_sun_glass_ui_Application
  * Method: _overrideNativeWindowHandle

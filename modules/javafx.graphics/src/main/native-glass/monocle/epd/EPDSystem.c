@@ -34,6 +34,12 @@
 
 #include "Monocle.h"
 
+#ifdef STATIC_BUILD
+JNIEXPORT jint JNICALL JNI_OnLoad_glass_monocle_epd(JavaVM *vm, void *reserved) {
+    return JNI_VERSION_1_8;
+}
+#endif // STATIC_BUILD
+
 // EPDSystem
 
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_monocle_EPDSystem_ioctl

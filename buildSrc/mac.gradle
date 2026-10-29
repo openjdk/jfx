@@ -238,7 +238,7 @@ MAC.glass.lib = "glass"
 
 MAC.decora = [:]
 MAC.decora.compiler = compiler
-MAC.decora.ccFlags = ["-O1", "-ffast-math", "-c", ccBaseFlags].flatten()
+MAC.decora.ccFlags = ["-O1", "-ffast-math", "-c", IS_STATIC_BUILD ? "-DSTATIC_BUILD" : "", ccBaseFlags].flatten()
 MAC.decora.linker = linker
 MAC.decora.linkFlags = linkFlagsAlt
 MAC.decora.lib = "decora_sse"

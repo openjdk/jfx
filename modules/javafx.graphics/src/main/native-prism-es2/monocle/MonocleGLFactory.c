@@ -47,11 +47,11 @@ extern void *get_dlsym(void *handle, const char *symbol, int warn);
 #define asPtr(x) ((void *) (unsigned long) (x))
 #define asJLong(x) ((jlong) (unsigned long) (x))
 
-//Builtin library entrypoint
-JNIEXPORT jint JNICALL JNI_OnLoad_prism_es2_monocle(JavaVM *vm, void * reserved) {
-    fprintf(stderr, "In JNI_OnLoad_prism_es2\n");
+#ifdef STATIC_BUILD
+JNIEXPORT jint JNICALL JNI_OnLoad_prism_es2_monocle(JavaVM *vm, void *reserved) {
     return JNI_VERSION_1_8;
 }
+#endif // STATIC_BUILD
 
 JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_MonocleGLFactory_nPopulateNativeCtxInfo
 (JNIEnv *env, jclass clazz, jlong libraryHandle) {
