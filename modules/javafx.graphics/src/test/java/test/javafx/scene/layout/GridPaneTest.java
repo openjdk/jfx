@@ -3737,4 +3737,80 @@ public class GridPaneTest {
 
         assertEquals(100, gridpane.getCellBounds(3, 0).getMaxX() - gridpane.getCellBounds(1, 0).getMinX(), 1e-10);
     }
+
+    @ParameterizedTest
+    @MethodSource("scales")
+    public void testFractionalMaxHeightMatchesPrefHeight(double scale) {
+        MockResizable child = new MockResizable(0, 0, 10, 60, 5000, 5000);
+        RowConstraints row = new RowConstraints();
+        row.setMaxHeight(50.25);
+        gridpane.getRowConstraints().add(row);
+        gridpane.add(child, 0, 0);
+
+        setRenderScale(scale);
+
+        double prefHeight = gridpane.prefHeight(-1);
+        gridpane.resize(50, prefHeight);
+        gridpane.layout();
+
+        assertEquals(prefHeight, child.getHeight(), 1e-10);
+    }
+
+    @ParameterizedTest
+    @MethodSource("scales")
+    public void testFractionalMaxWidthMatchesPrefWidth(double scale) {
+        MockResizable child = new MockResizable(0, 0, 60, 10, 5000, 5000);
+        ColumnConstraints column = new ColumnConstraints();
+        column.setMaxWidth(50.25);
+        gridpane.getColumnConstraints().add(column);
+        gridpane.add(child, 0, 0);
+
+        setRenderScale(scale);
+
+        double prefWidth = gridpane.prefWidth(-1);
+        gridpane.resize(prefWidth, 50);
+        gridpane.layout();
+
+        assertEquals(prefWidth, child.getWidth(), 1e-10);
+    }
+
+    @ParameterizedTest
+    @MethodSource("scales")
+    public void testGrowingRowsFitWithFractionalMaxHeight(double scale) {
+        MockResizable child0 = new MockResizable(0, 0, 10, 20, 5000, 5000);
+        MockResizable child1 = new MockResizable(0, 0, 10, 20, 5000, 5000);
+        GridPane.setVgrow(child1, Priority.ALWAYS);
+        RowConstraints row0 = new RowConstraints();
+        RowConstraints row1 = new RowConstraints();
+        row0.setMaxHeight(10.5);
+        gridpane.getRowConstraints().addAll(row0, row1);
+        gridpane.add(child0, 0, 0);
+        gridpane.add(child1, 0, 1);
+
+        setRenderScale(scale);
+        gridpane.resize(50, 32);
+        gridpane.layout();
+
+        assertEquals(32, child1.getLayoutY() + child1.getHeight(), 1e-10);
+    }
+
+    @ParameterizedTest
+    @MethodSource("scales")
+    public void testGrowingColumnsFitWithFractionalMaxWidth(double scale) {
+        MockResizable child0 = new MockResizable(0, 0, 20, 10, 5000, 5000);
+        MockResizable child1 = new MockResizable(0, 0, 20, 10, 5000, 5000);
+        GridPane.setHgrow(child1, Priority.ALWAYS);
+        ColumnConstraints column0 = new ColumnConstraints();
+        ColumnConstraints column1 = new ColumnConstraints();
+        column0.setMaxWidth(10.5);
+        gridpane.getColumnConstraints().addAll(column0, column1);
+        gridpane.add(child0, 0, 0);
+        gridpane.add(child1, 1, 0);
+
+        setRenderScale(scale);
+        gridpane.resize(32, 50);
+        gridpane.layout();
+
+        assertEquals(32, child1.getLayoutX() + child1.getWidth(), 1e-10);
+    }
 }

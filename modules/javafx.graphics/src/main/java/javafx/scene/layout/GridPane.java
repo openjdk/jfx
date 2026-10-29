@@ -1304,10 +1304,18 @@ public class GridPane extends Pane {
         return HPos.LEFT;
     }
 
+    private double snapConstraintX(double size) {
+        return size >= 0 ? snapSizeX(size) : size;
+    }
+
+    private double snapConstraintY(double size) {
+        return size >= 0 ? snapSizeY(size) : size;
+    }
+
     private double getColumnMinWidth(int columnIndex) {
         if (columnIndex < getColumnConstraints().size()) {
             ColumnConstraints constraints = getColumnConstraints().get(columnIndex);
-            return constraints.getMinWidth();
+            return snapConstraintX(constraints.getMinWidth());
 
         }
         return USE_COMPUTED_SIZE;
@@ -1316,7 +1324,7 @@ public class GridPane extends Pane {
     private double getRowMinHeight(int rowIndex) {
         if (rowIndex < getRowConstraints().size()) {
             RowConstraints constraints = getRowConstraints().get(rowIndex);
-            return constraints.getMinHeight();
+            return snapConstraintY(constraints.getMinHeight());
         }
         return USE_COMPUTED_SIZE;
     }
@@ -1324,7 +1332,7 @@ public class GridPane extends Pane {
     private double getColumnMaxWidth(int columnIndex) {
         if (columnIndex < getColumnConstraints().size()) {
             ColumnConstraints constraints = getColumnConstraints().get(columnIndex);
-            return constraints.getMaxWidth();
+            return snapConstraintX(constraints.getMaxWidth());
 
         }
         return USE_COMPUTED_SIZE;
@@ -1333,7 +1341,7 @@ public class GridPane extends Pane {
     private double getColumnPrefWidth(int columnIndex) {
         if (columnIndex < getColumnConstraints().size()) {
             ColumnConstraints constraints = getColumnConstraints().get(columnIndex);
-            return constraints.getPrefWidth();
+            return snapConstraintX(constraints.getPrefWidth());
 
         }
         return USE_COMPUTED_SIZE;
@@ -1342,7 +1350,7 @@ public class GridPane extends Pane {
     private double getRowPrefHeight(int rowIndex) {
         if (rowIndex < getRowConstraints().size()) {
             RowConstraints constraints = getRowConstraints().get(rowIndex);
-            return constraints.getPrefHeight();
+            return snapConstraintY(constraints.getPrefHeight());
 
         }
         return USE_COMPUTED_SIZE;
@@ -1351,7 +1359,7 @@ public class GridPane extends Pane {
     private double getRowMaxHeight(int rowIndex) {
         if (rowIndex < getRowConstraints().size()) {
             RowConstraints constraints = getRowConstraints().get(rowIndex);
-            return constraints.getMaxHeight();
+            return snapConstraintY(constraints.getMaxHeight());
         }
         return USE_COMPUTED_SIZE;
     }
