@@ -96,6 +96,9 @@ class NativeCompileTask extends DefaultTask {
         execOperations.exec(action);
     }
 
+    protected void prepareCompile() {
+    }
+
     @TaskAction void compile() {
         // Get the existing native-dependencies file from build/dependency-cache and load its contents into
         // memory. If the file doesn't exist, then we will just have an empty dependency map.
@@ -118,6 +121,8 @@ class NativeCompileTask extends DefaultTask {
         // content (HSLS files, for example) which might have changed since
         // the task was configured (i.e. when source() was called).
         updateFiles();
+        prepareCompile();
+
         def source = project.files(allFiles);
         boolean forceCompile = false;
         Set<File> files = new HashSet<File>();

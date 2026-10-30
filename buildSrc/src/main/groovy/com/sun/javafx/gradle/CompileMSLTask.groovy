@@ -28,6 +28,16 @@ import org.gradle.process.ExecOperations
 import javax.inject.Inject
 
 class CompileMSLTask extends NativeCompileTask {
+    private String shaderCompiler;
+    private String includeDir;
+
+    @Override
+    protected void prepareCompile() {
+        super.prepareCompile();
+        shaderCompiler = project.metalCompiler
+        includeDir = "${project.buildDir}/gensrc/mtl-headers";
+    }
+
     @Inject
     CompileMSLTask(ExecOperations execOperations) {
         super(execOperations);
@@ -38,14 +48,14 @@ class CompileMSLTask extends NativeCompileTask {
     }
 
     protected void doCompile(File sourceFile, File outputFile){
-        def headerDir = 'gensrc/mtl-headers';
-        def includeDir = "$project.buildDir/$headerDir";
+        String _shaderCompiler = shaderCompiler
+        String _includeDir = includeDir
         execCompile { spec ->
             spec.commandLine = [
-                "${project.metalCompiler}",
+                _shaderCompiler,
                 "-Wdeprecated",
                 "-std=macos-metal2.4",
-                "-I", "$includeDir",
+                "-I", "$_includeDir",
                 "-c", "$sourceFile",
                 "-o", "$outputFile"
             ]

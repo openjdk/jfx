@@ -28,6 +28,9 @@ import org.gradle.process.ExecOperations
 import javax.inject.Inject
 
 class CompileHLSLTask extends NativeCompileTask {
+    private String shaderCompiler;
+    private Map<String, String> projectEnv;
+
     @Inject
     CompileHLSLTask(ExecOperations execOperations) {
         super(execOperations);
@@ -37,16 +40,30 @@ class CompileHLSLTask extends NativeCompileTask {
         new File("$output/${sourceFile.name.replace('.hlsl', '.obj')}");
     }
 
+    @Override
+    protected void prepareCompile() {
+        super.prepareCompile();
+        shaderCompiler = project.FXC.toString();
+        Map<String, String> prjEnv = new LinkedHashMap<>();
+        project.WINDOWS_NATIVE_COMPILE_ENVIRONMENT.each { key, value ->
+            prjEnv.put(key.toString(), value.toString());
+        }
+        projectEnv = Collections.unmodifiableMap(prjEnv);
+    }
+
     protected void doCompile(File sourceFile, File outputFile){
+        final String _shaderCompiler = shaderCompiler;
+        final Map<String, String> _projectEnv = projectEnv;
+
         execCompile { spec ->
             spec.commandLine = [
-                "$project.FXC",
+                _shaderCompiler,
                 "/nologo",
                 "/T", "ps_3_0",
                 "/Fo", "$outputFile",
                 "$sourceFile"
             ]
-            spec.environment(project.WINDOWS_NATIVE_COMPILE_ENVIRONMENT);
+            spec.environment(_projectEnv);
         }
     }
 }
