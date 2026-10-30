@@ -36,6 +36,27 @@ class CCTask extends NativeCompileTask {
     @Optional @InputDirectory File headers;
     @Optional @Input Closure eachOutputFile; // will be given a File and must return a File
     @Input boolean exe = false;
+    private boolean isWindows = false;
+    private Map<String, String> projectEnv;
+    private List<File> sourceDirs;
+
+    @Override
+    protected void prepareCompile() {
+        super.prepareCompile();
+        List<File> dirs = sourceRoots.collect { root ->
+            root instanceof File ? (File) root : project.file(root);
+        }
+        sourceDirs = Collections.unmodifiableList(dirs);
+
+        isWindows = project.IS_WINDOWS;
+        if (isWindows) {
+            Map<String, String> prjEnv = new LinkedHashMap<>();
+            project.WINDOWS_NATIVE_COMPILE_ENVIRONMENT.each { key, value ->
+                prjEnv.put(key.toString(), value.toString());
+            }
+            projectEnv = Collections.unmodifiableMap(prjEnv);
+        }
+    }
 
     @Inject
     CCTask(ExecOperations execOperations) {
@@ -55,6 +76,10 @@ class CCTask extends NativeCompileTask {
         // or compile sources using CC
         final int lastDot = outputFile.name.lastIndexOf(".");
         final File pdbFile = new File("$output/${lastDot > 0 ? outputFile.name.substring(0, lastDot) + '.pdb' : outputFile.name + '.pdb'}");
+
+        final boolean _isWindows = isWindows;
+        final Map<String, String> _projectEnv = projectEnv;
+        final List<File> _sourceDirs = sourceDirs;
 
         // TODO the PDB file is never being built -- maybe because it is only built during
         // debug builds, otherwise that flag is ignored "/Fd" or "-Fd"
@@ -76,13 +101,12 @@ class CCTask extends NativeCompileTask {
             if (headers != null) spec.args("-I$headers");
 
             // Add the source roots in as include directories
-            sourceRoots.each { root ->
-                final File file = root instanceof File ? (File) root : project.file(root)
+            _sourceDirs.each { File file ->
                 if (file.isDirectory()) spec.args("-I$file");
             }
 
             // Add the name of the source file to compile
-            if (project.IS_WINDOWS) {
+            if (_isWindows) {
                 if (exe) {
                     final File exeFile = new File("$output/${lastDot > 0 ? outputFile.name.substring(0, lastDot) + '.exe' : outputFile.name + '.exe'}");
                     spec.args(/*"/Fd$pdbFile",*/ "/Fo$outputFile", "/Fe$exeFile", "$sourceFile")
@@ -100,8 +124,8 @@ class CCTask extends NativeCompileTask {
                 spec.args(linkerOptions);
             }
 
-            if (project.IS_WINDOWS){
-                spec.environment(project.WINDOWS_NATIVE_COMPILE_ENVIRONMENT);
+            if (_isWindows) {
+                spec.environment(_projectEnv);
             }
         }
     }
