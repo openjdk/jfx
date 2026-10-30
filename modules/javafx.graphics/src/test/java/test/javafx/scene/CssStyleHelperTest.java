@@ -37,6 +37,7 @@ import com.sun.javafx.tk.Toolkit;
 import javafx.application.ColorScheme;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.collections.ObservableList;
 import javafx.css.CssMetaData;
 import javafx.css.CssParser;
 import javafx.css.CssParser.ParseError;
@@ -62,7 +63,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -74,6 +75,7 @@ public class CssStyleHelperTest {
     private Scene scene;
     private Stage stage;
     private StackPane root;
+    private ObservableList<CssParser.ParseError> errors;
 
     private static void resetStyleManager() {
         StyleManager sm = StyleManager.getInstance();
@@ -92,12 +94,14 @@ public class CssStyleHelperTest {
         stage.setScene(scene);
         resetStyleManager();
 
-        // Apparently, need to access this property first, or nothing will be appended at all.
-        CssParser.errorsProperty().clear();
+        errors = CssParser.errorsProperty();
+        errors.clear();
     }
 
-    @AfterAll
-    public static void cleanupOnce() {
+
+    @AfterEach
+    void tearDown() {
+        errors.clear();
         resetStyleManager();
     }
 
@@ -1248,6 +1252,125 @@ public class CssStyleHelperTest {
         assertEquals(List.of(1.0, 2.0, 1.5, 1.0), trace);
     }
 
+    /**
+     * The css reset of translateX sets the opacity in a listener, which comes before translateX in the CSS metadata.
+     * Because the style precedence is: USER < AUTHOR, this change should not have any effect.
+     */
+    @Test
+    void testStyleOverrideByTranslateListenerOnPseudoClassChange() {
+        scene.getStylesheets().add(toDataURL("""
+                .node:hover { -fx-translate-x: 10; }
+                .node { -fx-opacity: 0.5; }
+                """));
+
+        Pane node = new Pane();
+        node.getStyleClass().add("node");
+        root.getChildren().add(node);
+        node.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
+        root.applyCss();
+
+        assertEquals(10, node.getTranslateX());
+        assertEquals(0.5, node.getOpacity());
+
+        node.translateXProperty().addListener((_, _, _) -> node.setOpacity(0.2));
+
+        node.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), false);
+        root.applyCss();
+
+        assertEquals(0, node.getTranslateX());
+        assertEquals(0.5, node.getOpacity());
+    }
+
+    /**
+     * The css reset of opacity sets translateX in a listener, which comes after opacity in the CSS metadata.
+     * Because the style precedence is: USER < AUTHOR, this change should not have any effect.
+     */
+    @Test
+    void testStyleOverrideByOpacityListenerOnPseudoClassChange() {
+        scene.getStylesheets().add(toDataURL("""
+                .node:hover { -fx-opacity: 0.5; }
+                .node { -fx-translate-x: 10; }
+                """));
+
+        Pane node = new Pane();
+        node.getStyleClass().add("node");
+        root.getChildren().add(node);
+        node.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
+        root.applyCss();
+
+        assertEquals(0.5, node.getOpacity());
+        assertEquals(10, node.getTranslateX());
+
+        node.opacityProperty().addListener((_, _, _) -> node.setTranslateX(20));
+
+        node.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), false);
+        root.applyCss();
+
+        assertEquals(1, node.getOpacity());
+        assertEquals(10, node.getTranslateX());
+    }
+
+    /**
+     * A property which is not settable while its style is removed must still be reset by a later CSS pass.
+     */
+    @Test
+    void testTemporarilyUnsettablePropertyIsResetWhenSettableAgain() {
+        scene.getStylesheets().add(toDataURL("""
+                .node:hover { -fx-value: 10; }
+                .node:pressed { -fx-opacity: 0.5; }
+                """));
+
+        TemporarilyUnsettableControl node = new TemporarilyUnsettableControl();
+        node.getStyleClass().add("node");
+        root.getChildren().add(node);
+        node.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
+        root.applyCss();
+
+        assertEquals(10, node.getValue());
+
+        node.settable = false;
+        node.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), false);
+        root.applyCss();
+
+        assertEquals(10, node.getValue());
+
+        node.settable = true;
+        node.pseudoClassStateChanged(PseudoClass.getPseudoClass("pressed"), true);
+        root.applyCss();
+
+        assertEquals(1, node.getValue());
+    }
+
+    /**
+     * A failing reset must be reported as error and retried by a later CSS pass.
+     */
+    @Test
+    void testFailedResetIsReportedAndRetried() {
+        scene.getStylesheets().add(toDataURL("""
+                .node:hover { -fx-boom: 10; }
+                """));
+
+        ExceptionalPropertyControl node = new ExceptionalPropertyControl();
+        node.getStyleClass().add("node");
+        root.getChildren().add(node);
+        node.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
+        root.applyCss();
+
+        assertEquals(10, node.getBoom());
+
+        node.explodeOnApply = true;
+        node.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), false);
+        root.applyCss();
+
+        assertEquals(10, node.getBoom());
+        assertEquals(1, errors.size());
+
+        node.explodeOnApply = false;
+        root.applyCss();
+
+        assertEquals(1, node.getBoom());
+    }
+
     private static String toDataURL(String stylesheet) {
         return "data:text/plain;base64," + Base64.getEncoder().encodeToString(stylesheet.getBytes(StandardCharsets.UTF_8));
     }
@@ -1378,6 +1501,50 @@ public class CssStyleHelperTest {
 
         double getBoom() {
             return boom.get();
+        }
+
+        @Override
+        public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
+            return STYLEABLES;
+        }
+    }
+
+    /**
+     * A Pane subclass with one extra styleable property, "-fx-value", which can be made non-settable.
+     */
+    private static final class TemporarilyUnsettableControl extends Pane {
+
+        private static final CssMetaData<TemporarilyUnsettableControl, Number> VALUE =
+            new CssMetaData<>("-fx-value", SizeConverter.getInstance(), 1.0) {
+                @Override
+                public boolean isSettable(TemporarilyUnsettableControl node) {
+                    return node.settable;
+                }
+
+                @Override
+                public StyleableProperty<Number> getStyleableProperty(TemporarilyUnsettableControl node) {
+                    return node.value;
+                }
+            };
+
+        private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
+
+        static {
+            List<CssMetaData<? extends Styleable, ?>> styleables = new ArrayList<>(Pane.getClassCssMetaData());
+            styleables.add(VALUE);
+            STYLEABLES = Collections.unmodifiableList(styleables);
+        }
+
+        private boolean settable = true;
+
+        private final StyleableDoubleProperty value = new StyleableDoubleProperty(1.0) {
+            @Override public Object getBean() { return TemporarilyUnsettableControl.this; }
+            @Override public String getName() { return "value"; }
+            @Override public CssMetaData<TemporarilyUnsettableControl, Number> getCssMetaData() { return VALUE; }
+        };
+
+        double getValue() {
+            return value.get();
         }
 
         @Override
