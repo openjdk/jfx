@@ -41,11 +41,14 @@ class DWFontStrike extends PrismFontStrike<DWFontFile> {
     static final boolean SUBPIXEL_ON;
     static final boolean SUBPIXEL_Y;
     static final boolean SUBPIXEL_NATIVE;
+    static final boolean SYMMETRIC_GLYPHS;
+
     static {
         int mode = PrismFontFactory.getFontFactory().getSubPixelMode();
         SUBPIXEL_ON = (mode & PrismFontFactory.SUB_PIXEL_ON) != 0;
         SUBPIXEL_Y = (mode & PrismFontFactory.SUB_PIXEL_Y) != 0;
         SUBPIXEL_NATIVE = (mode & PrismFontFactory.SUB_PIXEL_NATIVE) != 0;
+        SYMMETRIC_GLYPHS = PrismFontFactory.useSymmetricGlyphs();
     }
 
     DWFontStrike(DWFontFile fontResource, float size, BaseTransform tx,
