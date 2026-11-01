@@ -273,8 +273,9 @@ inline void log(int category,
     }
 }
 
-#define LOG(category, artifact, fmt, ...) \
-    log(category, #category, artifact, fmt, ##__VA_ARGS__)
+#define LOG(category, artifact, fmt, ...) do {\
+    log(category, #category, artifact, fmt, ##__VA_ARGS__);\
+} while(0)
 
 #define LOG0(msg) {printf(msg);fflush(stdout);}
 #define LOG1(msg, param) {printf(msg, param);fflush(stdout);}

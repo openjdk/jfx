@@ -129,8 +129,7 @@ struct Rectangle {
     }
 
     bool operator==(const Rectangle& other) const {
-        return x == other.x && y == other.y
-               && width == other.width && height == other.height;
+        return !(*this != other);
     }
 };
 
@@ -142,7 +141,7 @@ struct Size {
     }
 
     bool operator==(const Size& other) const {
-        return width == other.width && height == other.height;
+        return !(*this != other);
     }
 
     bool is_valid() const {
@@ -177,7 +176,7 @@ struct Point {
     }
 
     bool operator==(const Point& other) const {
-        return x == other.x && y == other.y;
+        return !(*this != other);
     }
 };
 

@@ -103,13 +103,15 @@ void WindowContext::commitIME(gchar *str) {
         EXCEPTION_OCCURED(mainEnv);
         jsize slen = mainEnv->GetStringLength(jstr);
 
-        mainEnv->CallVoidMethod(jview,
-                jViewNotifyInputMethodLinux,
-                jstr,
-                slen,
-                slen,
-                0);
-        LOG_EXCEPTION(mainEnv)
+        if (jview) {
+            mainEnv->CallVoidMethod(jview,
+                    jViewNotifyInputMethodLinux,
+                    jstr,
+                    slen,
+                    slen,
+                    0);
+            LOG_EXCEPTION(mainEnv)
+        }
     } else {
         im_ctx.send_keypress = true;
     }
