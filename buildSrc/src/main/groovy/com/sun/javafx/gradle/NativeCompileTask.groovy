@@ -96,6 +96,17 @@ class NativeCompileTask extends DefaultTask {
         execOperations.exec(action);
     }
 
+    protected void prepareCompile() {
+    }
+
+    protected Map<String, String> fetchWinNativeCompileEnv() {
+        Map<String, String> prjEnv = new LinkedHashMap<>();
+        project.WINDOWS_NATIVE_COMPILE_ENVIRONMENT.each { key, value ->
+            prjEnv.put(key.toString(), value.toString());
+        }
+        return Collections.unmodifiableMap(prjEnv);
+    }
+
     @TaskAction void compile() {
         // Get the existing native-dependencies file from build/dependency-cache and load its contents into
         // memory. If the file doesn't exist, then we will just have an empty dependency map.
@@ -118,6 +129,8 @@ class NativeCompileTask extends DefaultTask {
         // content (HSLS files, for example) which might have changed since
         // the task was configured (i.e. when source() was called).
         updateFiles();
+        prepareCompile();
+
         def source = project.files(allFiles);
         boolean forceCompile = false;
         Set<File> files = new HashSet<File>();
