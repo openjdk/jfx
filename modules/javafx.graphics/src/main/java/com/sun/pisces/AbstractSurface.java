@@ -25,11 +25,13 @@
 
 package com.sun.pisces;
 
-import com.sun.prism.impl.Disposer;
+import com.sun.javafx.util.FXCleaner;
+
+import java.lang.ref.Cleaner.Cleanable;
 
 public abstract class AbstractSurface implements Surface {
 
-    private Disposer.Record disposerRecord;
+    private Cleanable cleanable;
     private long nativePtr = 0L;
     private int width;
     private int height;
@@ -49,10 +51,8 @@ public abstract class AbstractSurface implements Surface {
         this.height = height;
     }
 
-    protected synchronized void addDisposerRecord() {
-        disposerRecord = new AbstractSurfaceDisposerRecord(nativePtr);
-
-        Disposer.addRecord(this, disposerRecord);
+    protected synchronized void addCleanerRecord() {
+        cleanable = FXCleaner.register(this, new AbstractSurfaceCleanup(nativePtr));
     }
 
     /**
@@ -60,11 +60,12 @@ public abstract class AbstractSurface implements Surface {
      * than once has no further effect.
      */
     public final synchronized void dispose() {
-        Disposer.Record record = disposerRecord;
-        disposerRecord = null;
+        Cleanable c = cleanable;
 
-        if (record != null) {
-            record.dispose();
+        cleanable = null;
+
+        if (c != null) {
+            c.clean();
         }
     }
 
@@ -123,15 +124,15 @@ public abstract class AbstractSurface implements Surface {
 
     private static native void disposeNative(long nativeHandle);
 
-    private static class AbstractSurfaceDisposerRecord implements Disposer.Record {
+    private static class AbstractSurfaceCleanup implements Runnable {
         private long nativeHandle;
 
-        AbstractSurfaceDisposerRecord(long nh) {
+        AbstractSurfaceCleanup(long nh) {
             nativeHandle = nh;
         }
 
         @Override
-        public synchronized void dispose() {
+        public void run() {
             if (nativeHandle != 0L) {
                 disposeNative(nativeHandle);
                 nativeHandle = 0L;

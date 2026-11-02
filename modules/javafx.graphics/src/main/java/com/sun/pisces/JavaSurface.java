@@ -67,9 +67,9 @@ public final class JavaSurface extends AbstractSurface {
         // The native method initialize() creates the native object of
         // struct JavaSurface and saves it's reference in the super class
         // member AbstractSurface.nativePtr. This reference is needed for
-        // creating disposer record hence the below call to addDisposerRecord()
+        // creating the cleaner record hence the below call to addCleanerRecord()
         // is needed here and cannot be made in super class constructor.
-        addDisposerRecord();
+        addCleanerRecord();
     }
 
     private native void initialize(int dataType, int width, int height);
