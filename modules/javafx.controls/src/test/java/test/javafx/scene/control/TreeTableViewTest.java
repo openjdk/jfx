@@ -27,6 +27,7 @@ package test.javafx.scene.control;
 
 import static javafx.scene.control.TreeTableColumn.SortType.ASCENDING;
 import static javafx.scene.control.TreeTableColumn.SortType.DESCENDING;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -121,9 +122,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.Arguments;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -132,7 +130,6 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertTimeout;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -7930,6 +7927,41 @@ public class TreeTableViewTest {
     }
 
     @Test
+    void testDoubleClickOnEmptyCell() {
+        TreeTableView<Person> table = new TreeTableView<>();
+
+        TreeTableColumn<Person, String> firstNameCol = new TreeTableColumn<>();
+        firstNameCol.setCellValueFactory(
+                cellData -> new SimpleStringProperty(cellData.getValue().getValue().getFirstName()));
+
+        table.setRoot(new TreeItem<>(new Person("John")));
+        table.getColumns().add(firstNameCol);
+
+        stageLoader = new StageLoader(table);
+
+        TreeTableCell<Person, String> cell = (TreeTableCell<Person, String>) VirtualFlowTestUtils.getCell(table, 1, 0);
+        MouseEventFirer mouse = new MouseEventFirer(cell);
+        assertDoesNotThrow(() -> mouse.fireMousePressAndRelease(2, 40, 0));
+    }
+
+    @Test
+    void testDoubleClickOnEmptyRow() {
+        TreeTableView<Person> table = new TreeTableView<>();
+
+        TreeTableColumn<Person, String> firstNameCol = new TreeTableColumn<>();
+        firstNameCol.setCellValueFactory(
+                cellData -> new SimpleStringProperty(cellData.getValue().getValue().getFirstName()));
+
+        table.setRoot(new TreeItem<>(new Person("John")));
+        table.getColumns().add(firstNameCol);
+
+        stageLoader = new StageLoader(table);
+
+        TreeTableRow<Person> row = (TreeTableRow<Person>) VirtualFlowTestUtils.getCell(table, 1);
+        MouseEventFirer mouse = new MouseEventFirer(row);
+        assertDoesNotThrow(() -> mouse.fireMousePressAndRelease(2));
+    }
+
     public void testGetTreeItem() {
         List<TreeItem<String>> treeItems = new ArrayList<>(20);
         for (int i = 0; i < 20; i++) {
