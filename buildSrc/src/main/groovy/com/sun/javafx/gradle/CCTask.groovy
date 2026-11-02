@@ -50,11 +50,7 @@ class CCTask extends NativeCompileTask {
 
         isWindows = project.IS_WINDOWS;
         if (isWindows) {
-            Map<String, String> prjEnv = new LinkedHashMap<>();
-            project.WINDOWS_NATIVE_COMPILE_ENVIRONMENT.each { key, value ->
-                prjEnv.put(key.toString(), value.toString());
-            }
-            projectEnv = Collections.unmodifiableMap(prjEnv);
+            projectEnv = fetchWinNativeCompileEnv();
         }
     }
 

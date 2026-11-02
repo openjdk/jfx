@@ -44,11 +44,7 @@ class CompileHLSLTask extends NativeCompileTask {
     protected void prepareCompile() {
         super.prepareCompile();
         shaderCompiler = project.FXC.toString();
-        Map<String, String> prjEnv = new LinkedHashMap<>();
-        project.WINDOWS_NATIVE_COMPILE_ENVIRONMENT.each { key, value ->
-            prjEnv.put(key.toString(), value.toString());
-        }
-        projectEnv = Collections.unmodifiableMap(prjEnv);
+        projectEnv = fetchWinNativeCompileEnv();
     }
 
     protected void doCompile(File sourceFile, File outputFile){
