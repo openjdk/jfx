@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 package com.oracle.tools.fx.monkey.pages;
 
 import javafx.scene.AccessibleAttribute;
+import javafx.scene.control.Control;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.skin.TextAreaSkin;
 import com.oracle.tools.fx.monkey.Loggers;
@@ -66,5 +67,10 @@ public class TextAreaPage extends TestPaneBase implements HasSkinnable {
     @Override
     public void newSkin() {
         control.setSkin(new TextAreaSkin(control));
+    }
+
+    @Override
+    public Control getSkinnableControl() {
+        return control;
     }
 }
