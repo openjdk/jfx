@@ -117,7 +117,12 @@ public class BeanAdapter extends AbstractMap<String, Object> {
             if (Modifier.isPublic(type.getModifiers())) {
                 // only interested in public methods in public classes in
                 // non-restricted packages
-                final Method[] declaredMethods = type.getDeclaredMethods();
+                /*
+                [EDIT]
+                using getMethods() instead of getDecalredMethods() to include inherited methods like default interface methods
+                also to be consistent with ProxyBuilder which uses getMethods()
+                */
+                final Method[] declaredMethods = type.getMethods();
                 for (int i = 0; i < declaredMethods.length; i++) {
                     Method method = declaredMethods[i];
                     int modifiers = method.getModifiers();
