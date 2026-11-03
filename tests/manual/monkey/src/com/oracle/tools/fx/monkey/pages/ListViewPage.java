@@ -35,6 +35,7 @@ import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.Button;
+import javafx.scene.control.Control;
 import javafx.scene.control.FocusModel;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
@@ -78,7 +79,7 @@ public class ListViewPage extends TestPaneBase implements HasSkinnable {
                 return v;
             }
         };
-        control.setTooltip(new Tooltip("edit to 'update' to commit the change"));
+        control.setTooltip(new Tooltip("<tooltip>"));
         control.setOnEditCommit((ev) -> {
             int ix = ev.getIndex();
             ev.getSource().getItems().set(ix, ev.getNewValue());
@@ -154,6 +155,11 @@ public class ListViewPage extends TestPaneBase implements HasSkinnable {
     @Override
     public void newSkin() {
         control.setSkin(new ListViewSkin(control));
+    }
+
+    @Override
+    public Control getSkinnableControl() {
+        return control;
     }
 
     private Node createCellFactoryOptions() {

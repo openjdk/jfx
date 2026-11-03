@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,12 +22,20 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.javafx.binding;
 
-public class ExpressionHelperShim {
+package test.com.sun.javafx.images;
 
-    public static void fireValueChangedEvent(ExpressionHelper helper) {
-        helper.fireValueChangedEvent();
+import java.net.URL;
+
+/// Provides test images.
+public class Images {
+    /**
+     * Returns the test image URL to pass to the {@code Image} constructor.
+     * @param name resource name
+     * @return the URL string
+     */
+    public static String getURL(String name) {
+        URL u = Images.class.getResource(name);
+        return u == null ? null : u.toExternalForm();
     }
-
 }

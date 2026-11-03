@@ -70,6 +70,7 @@ public class DnDPage extends TestPaneBase {
     private final SimpleObjectProperty<Image> dragImage = new SimpleObjectProperty<>();
     private final SimpleDoubleProperty offsetX = new SimpleDoubleProperty();
     private final SimpleDoubleProperty offsetY = new SimpleDoubleProperty();
+    private final SimpleBooleanProperty logMovement = new SimpleBooleanProperty(true);
 
     public DnDPage() {
         super("DnDPage");
@@ -171,6 +172,8 @@ public class DnDPage extends TestPaneBase {
         op.option(new BooleanOption("copy", "accepts COPY", acceptsCopy));
         op.option(new BooleanOption("link", "accepts LINK", acceptsLink));
         op.option(new BooleanOption("move", "accepts MOVE", acceptsMove));
+        op.section("Logging");
+        op.option(new BooleanOption("showMovement", "log mouse move events", logMovement));
 
         setContent(bp);
         setOptions(op);
@@ -197,22 +200,29 @@ public class DnDPage extends TestPaneBase {
 
     private void print(DragEvent ev) {
         StringBuilder sb = new StringBuilder();
-        sb.append("{event=" + ev.getEventType());
+        sb.append("{event=").append(ev.getEventType());
         sb.append(", x/y=(").append(f(ev.getX())).append(", ").append(f(ev.getY()));
         sb.append("), screen=(").append(f(ev.getScreenX())).append(", ").append(f(ev.getScreenY()));
         sb.append("), scene=(").append(f(ev.getSceneX())).append(", ").append(f(ev.getSceneY()));
         sb.append(")}");
-        System.out.println(sb);
+        IO.println(sb);
     }
 
     private void print(MouseEvent ev) {
+        var t = ev.getEventType();
+        if (!logMovement.get() && (t == MouseEvent.MOUSE_MOVED)) {
+            return;
+        }
         StringBuilder sb = new StringBuilder();
-        sb.append("{event=" + ev.getEventType());
+        sb.append("{event=").append(t);
         sb.append(", x/y=(").append(f(ev.getX())).append(", ").append(f(ev.getY()));
         sb.append("), screen=(").append(f(ev.getScreenX())).append(", ").append(f(ev.getScreenY()));
-        sb.append("), scene=(").append(f(ev.getSceneX())).append(", ").append(f(ev.getSceneY()));
-        sb.append(")}");
-        System.out.println(sb);
+        sb.append("), scene=(").append(f(ev.getSceneX())).append(", ").append(f(ev.getSceneY())).append(")");
+        if (t == MouseEvent.MOUSE_CLICKED) {
+            sb.append(" clicks=").append(ev.getClickCount());
+        }
+        sb.append("}");
+        IO.println(sb);
     }
 
     private static String f(double v) {

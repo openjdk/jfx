@@ -31,6 +31,7 @@ import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.CheckBoxTreeItem;
+import javafx.scene.control.Control;
 import javafx.scene.control.FocusModel;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TreeItem;
@@ -192,5 +193,10 @@ public class TreeViewPage extends TestPaneBase implements HasSkinnable {
     @Override
     public void newSkin() {
         control.setSkin(new TreeViewSkin(control));
+    }
+
+    @Override
+    public Control getSkinnableControl() {
+        return control;
     }
 }
