@@ -135,8 +135,7 @@ public:
               const NIPtr<Internal::IRenderTarget>& dstRT, const Coords_Box_UINT32& dst);
     bool ReadTexture(const NIPtr<NativeTexture>& texture, void* buffer, size_t pixelCount,
                      uint32_t srcx, uint32_t srcy, uint32_t srcw, uint32_t srch);
-    bool UpdateTexture(const NIPtr<NativeTexture>& texture, const void* data, size_t
-         pixelCount, PixelFormat srcFormat,
+    bool UpdateTexture(const NIPtr<NativeTexture>& texture, const void* data, size_t pixelCount, PixelFormat srcFormat,
                        uint32_t dstx, uint32_t dsty, uint32_t srcx, uint32_t srcy, uint32_t srcw, uint32_t srch, uint32_t srcstride);
 
     bool PrepareSwapChain(const NIPtr<NativeSwapChain>& swapChain, const D3D12_RECT& dirtyRegion);

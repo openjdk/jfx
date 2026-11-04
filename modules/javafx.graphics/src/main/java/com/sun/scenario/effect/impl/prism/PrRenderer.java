@@ -68,7 +68,7 @@ public abstract class PrRenderer extends Renderer {
             if (pipe == null) {
                 return null;
             }
-            isHW = pipe.supportsShaderModel(ShaderModel.SM3) | pipe.supportsShaderModel(ShaderModel.SM6);
+            isHW = pipe.supportsShaderModel(ShaderModel.SM3) || pipe.supportsShaderModel(ShaderModel.SM6);
         }
         return createRenderer(fctx, isHW);
     }

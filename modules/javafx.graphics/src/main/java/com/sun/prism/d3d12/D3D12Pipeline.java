@@ -46,6 +46,53 @@ import com.sun.prism.d3d12.ni.D3D12NativeShader;
 
 
 public final class D3D12Pipeline extends GraphicsPipeline {
+    static class D3D12ShutdownHook implements Runnable {
+        private static List<WeakReference<D3D12NativeDevice>> deviceRefs = new ArrayList<>();
+        private static boolean isShutdown = false;
+
+        static {
+            Toolkit.getToolkit().addShutdownHook(new D3D12ShutdownHook());
+        }
+
+        public static void addNativeDevice(D3D12NativeDevice device) {
+            synchronized (deviceRefs) {
+                if (isShutdown) {
+                    if (device != null) {
+                        // addNativeDevice should always be called on QuantumRenderer so this is fine to call here as-is
+                        device.waitUntilIdle();
+                    }
+                } else {
+                    for (ListIterator<WeakReference<D3D12NativeDevice>> it = deviceRefs.listIterator(); it.hasNext();) {
+                        D3D12NativeDevice dev = it.next().get();
+                        if (dev == null) {
+                            it.remove();
+                        }
+                    }
+
+                    deviceRefs.add(new WeakReference<>(device));
+                }
+            }
+        }
+
+        @Override
+        public void run() {
+            synchronized (deviceRefs) {
+                for (ListIterator<WeakReference<D3D12NativeDevice>> it = deviceRefs.listIterator(); it.hasNext();) {
+                    D3D12NativeDevice device = it.next().get();
+                    if (device != null) {
+                        QuantumToolkit.runInRenderThreadAndWait(() -> {
+                            device.waitUntilIdle();
+                        });
+                    } else {
+                        it.remove();
+                    }
+                }
+
+                isShutdown = true;
+            }
+        }
+    }
+
     private static final Thread creator;
     private static boolean isEnabled;
     private static D3D12Pipeline theInstance;
@@ -110,9 +157,7 @@ public final class D3D12Pipeline extends GraphicsPipeline {
 
     private D3D12ResourceFactory createResourceFactory(int adapter, Screen screen) {
         D3D12ResourceFactory factory = new D3D12ResourceFactory(mInstance, adapter, screen);
-        if (factory != null) {
-            D3D12ShutdownHook.addNativeDevice(factory.getContext().getDevice());
-        }
+        D3D12ShutdownHook.addNativeDevice(factory.getContext().getDevice());
         return factory;
     }
 
@@ -193,12 +238,14 @@ public final class D3D12Pipeline extends GraphicsPipeline {
 
     @Override
     public boolean init() {
-        if (!isEnabled)
+        if (!isEnabled) {
             return false;
+        }
 
         mInstance = new D3D12NativeInstance();
-        if (!mInstance.Init())
+        if (!mInstance.Init()) {
             return false;
+        }
 
         try {
             loadInternalShaders();
@@ -295,53 +342,4 @@ public final class D3D12Pipeline extends GraphicsPipeline {
         }
     }
 
-}
-
-class D3D12ShutdownHook implements Runnable {
-
-    private static List<WeakReference<D3D12NativeDevice>> deviceRefs = new ArrayList<>();
-    private static boolean isShutdown = false;
-
-    static {
-        Toolkit.getToolkit().addShutdownHook(new D3D12ShutdownHook());
-    }
-
-    public static void addNativeDevice(D3D12NativeDevice device) {
-        synchronized (deviceRefs) {
-            if (isShutdown) {
-                if (device != null) {
-                    QuantumToolkit.runInRenderThreadAndWait(() -> {
-                        device.waitUntilIdle();
-                    });
-                }
-            } else {
-                for (ListIterator<WeakReference<D3D12NativeDevice>> it = deviceRefs.listIterator(); it.hasNext();) {
-                    D3D12NativeDevice dev = it.next().get();
-                    if (dev == null) {
-                        it.remove();
-                    }
-                }
-
-                deviceRefs.add(new WeakReference<>(device));
-            }
-        }
-    }
-
-    @Override
-    public void run() {
-        synchronized (deviceRefs) {
-            for (ListIterator<WeakReference<D3D12NativeDevice>> it = deviceRefs.listIterator(); it.hasNext();) {
-                D3D12NativeDevice device = it.next().get();
-                if (device != null) {
-                    QuantumToolkit.runInRenderThreadAndWait(() -> {
-                        device.waitUntilIdle();
-                    });
-                } else {
-                    it.remove();
-                }
-            }
-
-            isShutdown = true;
-        }
-    }
 }

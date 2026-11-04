@@ -340,7 +340,7 @@ class D3D12ResourceFactory extends BaseShaderFactory {
         }
 
         D3D12RTTexture tex = D3D12RTTexture.create(mContext, createw, createh, width, height, format, wrapMode, aaSamples, enableDirtyBBox);
-        if (!tex.isValid()) {
+        if (tex == null || !tex.isValid()) {
             return null;
         }
 

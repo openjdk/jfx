@@ -52,7 +52,15 @@ public class D3D12RTTexture extends D3D12Texture implements RTTexture, ReadbackR
     public static D3D12RTTexture create(D3D12Context context, int physWidth, int physHeight, int contentWidth, int contentHeight,
                                         PixelFormat format, WrapMode wrapMode, int aaSamples, boolean enableDirtyBBox) {
         D3D12NativeTexture tex = context.getDevice().createTexture(physWidth, physHeight, format, Usage.DEFAULT, wrapMode, aaSamples, false, true);
+        if (tex == null) {
+            return null;
+        }
+
         D3D12NativeRenderTarget rt = context.getDevice().createRenderTarget(tex, enableDirtyBBox);
+        if (rt == null) {
+            tex.dispose();
+            return null;
+        }
 
         return new D3D12RTTexture(new D3D12Resource<D3D12TextureData>(
                                       new D3D12TextureData(
@@ -73,8 +81,9 @@ public class D3D12RTTexture extends D3D12Texture implements RTTexture, ReadbackR
 
     // Resizes the RTT - resizes underlying texture and recreates its RTV if needed
     boolean resize(int width, int height) {
-        if (!resource.getResource().getNativeTexture().resize(width, height))
+        if (!resource.getResource().getNativeTexture().resize(width, height)) {
             return false;
+        }
 
         return resource.getResource().getRenderTarget().refresh();
     }
@@ -160,7 +169,9 @@ public class D3D12RTTexture extends D3D12Texture implements RTTexture, ReadbackR
     @Override
     public boolean readPixels(Buffer pixels, int x, int y, int width, int height) {
         // true on success, false on fail
-        if (mContext.isDisposed()) return false;
+        if (mContext.isDisposed()) {
+            return false;
+        }
 
         mContext.flushVertexBuffer();
         return mContext.getDevice().readTexture(resource.getResource().getNativeTexture(), pixels, x, y, width, height);

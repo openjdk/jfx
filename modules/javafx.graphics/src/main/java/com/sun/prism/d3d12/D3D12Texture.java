@@ -32,6 +32,7 @@ import com.sun.prism.MediaFrame;
 import com.sun.prism.PixelFormat;
 import com.sun.prism.Texture;
 import com.sun.prism.impl.BaseTexture;
+import com.sun.prism.impl.PrismSettings;
 import com.sun.prism.d3d12.ni.D3D12NativeTexture;
 
 class D3D12Texture extends BaseTexture<D3D12Resource<D3D12TextureData>> {
@@ -74,7 +75,7 @@ class D3D12Texture extends BaseTexture<D3D12Resource<D3D12TextureData>> {
     @Override
     public void update(Buffer buffer, PixelFormat format, int dstx, int dsty, int srcx, int srcy, int srcw, int srch,
                        int srcscan, boolean skipFlush) {
-        if (!resource.isValid()) {
+        if (!resource.isValid() && PrismSettings.verbose) {
             System.err.println("update cancelled, resource not valid");
             return;
         }
@@ -161,7 +162,7 @@ class D3D12Texture extends BaseTexture<D3D12Resource<D3D12TextureData>> {
 
     @Override
     public void update(MediaFrame frame, boolean skipFlush) {
-        if (!resource.isValid()) {
+        if (!resource.isValid() && PrismSettings.verbose) {
             System.err.println("update(MediaFrame) cancelled, resource not valid");
             return;
         }

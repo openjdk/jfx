@@ -130,7 +130,19 @@ class D3D12Context extends BaseShaderContext {
     protected void updateTexture(int texUnit, Texture tex) {
         D3D12Texture texture = (D3D12Texture)tex;
         if (texture != null) {
-            texture.getNativeTexture().setSamplerParameters(tex.getWrapMode(), tex.getLinearFiltering());
+            Texture.WrapMode wrapMode = tex.getWrapMode();
+            switch (wrapMode) {
+            case CLAMP_TO_EDGE_SIMULATED:
+            case CLAMP_TO_ZERO_SIMULATED:
+                wrapMode = Texture.WrapMode.CLAMP_TO_EDGE;
+                break;
+            case REPEAT_SIMULATED:
+                wrapMode = Texture.WrapMode.REPEAT;
+                break;
+            default:
+                break; // other modes can be passed through as-is
+            }
+            texture.getNativeTexture().setSamplerParameters(wrapMode, tex.getLinearFiltering());
             mDevice.setTexture(texUnit, texture.getNativeTexture());
         } else {
             mDevice.setTexture(texUnit, null);
