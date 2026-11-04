@@ -881,6 +881,8 @@ jint execute_dnd(JNIEnv *env, jobject data, jint supported)
         gtk_main_iteration();
     }
 
+    WindowContextBase::reset_mouse_drag_focus();
+
     return dnd_get_performed_action();
 }
 
