@@ -68,8 +68,9 @@ gboolean validateToken(const gchar *token) {
     }
 
     gboolean isValid = g_utf8_validate(token, -1, NULL);
+
     if (!isValid) {
-        DEBUG_SCREENCAST("!!! restore token is not valid UTF-8\n", NULL);
+        DEBUG_SCREENCAST("restore token is not a valid UTF-8 string:\n\"%s\"\n", token);
     }
     return isValid;
 }
