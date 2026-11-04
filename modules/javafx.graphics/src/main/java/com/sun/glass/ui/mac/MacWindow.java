@@ -263,15 +263,15 @@ final class MacWindow extends Window {
             NAME_TO_ID.put("macOS.Tooltip", BackdropID.TOOLTIP);
 
             // Support for NSGlassEffectView must wait for the macOS 26 SDK
-            // try {
-            //     var osVers = System.getProperty("os.version");
-            //     String major = osVers.replaceFirst("(\\d+)\\.\\d+.*", "$1");
-            //     int v = Integer.parseInt(major);
-            //     if (v >= 26) {
-            //         NAME_TO_ID.put("macOS.ClearGlass", BackdropID.CLEARGLASS);
-            //     }
-            // } catch (Exception e) {
-            // }
+            try {
+                var osVers = System.getProperty("os.version");
+                String major = osVers.replaceFirst("(\\d+)\\.\\d+.*", "$1");
+                int v = Integer.parseInt(major);
+                if (v >= 26) {
+                    NAME_TO_ID.put("macOS.ClearGlass", BackdropID.CLEARGLASS);
+                }
+            } catch (Exception e) {
+            }
 
             NAMES = Collections.unmodifiableList(new ArrayList<>(NAME_TO_ID.keySet()));
         }

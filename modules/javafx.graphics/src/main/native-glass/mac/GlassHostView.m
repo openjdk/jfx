@@ -26,7 +26,7 @@
 #import "GlassHostView.h"
 
 // Support for the NSGlassEffectView must wait for the macOS 26 SDK
-#define SUPPORT_GLASS_EFFECT 0
+#define SUPPORT_GLASS_EFFECT 1
 
 @implementation GlassHostView
 {
