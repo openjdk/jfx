@@ -1310,6 +1310,7 @@ JNIEXPORT jobjectArray JNICALL Java_com_sun_glass_ui_win_WinSystemClipboard_popM
                     getClipboardFormat(MS_FILE_DESCRIPTOR)
                 };
                 bool bContinue = true;
+                bool mimesErased = false;
 
                 for (int i = 0; i < 2 && bContinue; ++i) {
                     //FILEGROUPDESCRIPTORW for MS_FILE_DESCRIPTOR_UNICODE
@@ -1332,9 +1333,6 @@ JNIEXPORT jobjectArray JNICALL Java_com_sun_glass_ui_win_WinSystemClipboard_popM
                         if ((pdata->cItems > 0) &&
                             (bufferSize == (jlong)pdata->cItems * itemSize))
                         {
-                            mimes.erase(MS_FILE_CONTENT);
-                            mimes.erase(MS_FILE_DESCRIPTOR_UNICODE);
-                            mimes.erase(MS_FILE_DESCRIPTOR);
                             for (UINT k = 0; k < pdata->cItems; ++k) {
                                 WCHAR buffer[64];
                                 _bstr_t bsId;
@@ -1349,6 +1347,14 @@ JNIEXPORT jobjectArray JNICALL Java_com_sun_glass_ui_win_WinSystemClipboard_popM
 
                                 if (!me.isInternalAddress(&fd, itemSize)) {
                                     OLE_HRT(E_INVALIDARG)
+                                }
+
+                                size_t fileNameLen = (0 == i)
+                                    ? wcsnlen_s(pdata->fgd[k].cFileName, MAX_PATH)
+                                    : strnlen_s(reinterpret_cast<LPFILEGROUPDESCRIPTORA>(pdata)->fgd[k].cFileName, MAX_PATH);
+
+                                if (fileNameLen >= MAX_PATH) {
+                                    continue;
                                 }
 
                                 if (fd.dwFlags & FD_FILESIZE) {
@@ -1375,10 +1381,16 @@ JNIEXPORT jobjectArray JNICALL Java_com_sun_glass_ui_win_WinSystemClipboard_popM
 
                                 //RFC 1521 extension for [message/external-body] mime
                                 static const _bstr_t bsAcessType(L";access-type=clipboard");
+                                if (!mimesErased) {
+                                    mimes.erase(MS_FILE_CONTENT);
+                                    mimes.erase(MS_FILE_DESCRIPTOR_UNICODE);
+                                    mimes.erase(MS_FILE_DESCRIPTOR);
+                                    mimesErased = true;
+                                }
                                 mimes.insert(MS_FILE_CONTENT + bsAcessType + bsId);
+                                // Success; stop outer loop
+                                bContinue = false;
                             }
-                            //stop on the first success
-                            bContinue = false;
                         }
                     }
                 }
