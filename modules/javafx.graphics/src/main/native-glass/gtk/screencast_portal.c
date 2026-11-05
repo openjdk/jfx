@@ -74,6 +74,7 @@ gboolean validateToken(const gchar *token) {
     return isValid;
 }
 
+
 /**
  * @return TRUE on success
  */
