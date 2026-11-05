@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,6 +35,7 @@
  * <li>allows for reverting customization to the default implementation
  * <li>guarantees priorities between the application and the skin event handlers and key mappings
  * <li>allows for gradual migration of the existing controls to use the InputMap
+ * <li>supports stateful and stateless (fully static) behavior implementations
  * </ul>
  * <p>
  * <b><a href="https://openjdk.org/jeps/11">Incubating Feature.</a>
