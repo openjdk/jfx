@@ -894,6 +894,9 @@ final class MacAccessible extends Accessible {
             ObservableList<Node> children = (ObservableList<Node>)accessible.getAttribute(CHILDREN);
             if (children != null) {
                 for (Node child : children) {
+                    if (!child.isVisible()) {
+                        continue;
+                    }
                     MacAccessible childAccessible = (MacAccessible)getAccessible(child);
                     if (childAccessible != null) {
                         pending.push(childAccessible);
