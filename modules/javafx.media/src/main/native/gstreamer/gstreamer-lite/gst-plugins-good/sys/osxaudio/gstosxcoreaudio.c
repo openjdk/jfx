@@ -548,12 +548,13 @@ _core_audio_parse_channel_descriptions (AudioChannelLayout * layout,
   if (_core_audio_has_invalid_channel_labels (layout)) {
     GST_DEBUG
         ("Invalid channel positions given by CoreAudio, setting all to unpositioned");
+    *channels =
+        MIN (layout->mNumberChannelDescriptions, GST_OSX_AUDIO_MAX_CHANNEL);
+    *channel_mask = 0;
     if (pos) {
-      for (i = 0; i < layout->mNumberChannelDescriptions; ++i)
+      for (i = 0; i < *channels; ++i)
         pos[i] = GST_AUDIO_CHANNEL_POSITION_NONE;
     }
-    *channels = layout->mNumberChannelDescriptions;
-    *channel_mask = 0;
     return;
   }
 

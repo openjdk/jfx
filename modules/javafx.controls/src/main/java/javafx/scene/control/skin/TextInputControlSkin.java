@@ -362,7 +362,8 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
 
                 @Override public String getSelectedText() {
                     IndexRange selection = control.getSelection();
-                    return control.getText(selection.getStart(), selection.getEnd());
+                    String s = control.getText(selection.getStart(), selection.getEnd());
+                    return maskText(s);
                 }
 
                 @Override public int getInsertPositionOffset() {
@@ -377,15 +378,17 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
                 }
 
                 @Override public String getCommittedText(int begin, int end) {
+                    String s;
                     if (begin < imstart) {
                         if (end <= imstart) {
-                            return control.getText(begin, end);
+                            s = control.getText(begin, end);
                         } else {
-                            return control.getText(begin, imstart) + control.getText(imstart + imlength, end + imlength);
+                            s = control.getText(begin, imstart) + control.getText(imstart + imlength, end + imlength);
                         }
                     } else {
-                        return control.getText(begin + imlength, end + imlength);
+                        s = control.getText(begin + imlength, end + imlength);
                     }
+                    return maskText(s);
                 }
 
                 @Override public int getCommittedTextLength() {

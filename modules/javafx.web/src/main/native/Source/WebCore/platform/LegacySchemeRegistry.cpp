@@ -273,7 +273,14 @@ static URLSchemesMap& schemesAllowingDatabaseAccessInPrivateBrowsing()
 
 static std::span<const ASCIILiteral> builtinCORSEnabledSchemes()
 {
-    static constexpr std::array schemes { "http"_s, "https"_s };
+    static constexpr std::array schemes {
+        "http"_s,
+        "https"_s,
+#if PLATFORM(JAVA)
+        "jar:http"_s,
+        "jar:https"_s,
+#endif
+    };
     return schemes;
 }
 
