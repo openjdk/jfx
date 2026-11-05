@@ -1657,6 +1657,9 @@ gst_wavparse_stream_headers (GstWavParse * wav)
             if (wav->streaming) {
               const guint8 *data = NULL;
 
+              if (!gst_wavparse_peek_chunk (wav, &tag, &size)) {
+                goto exit;
+              }
               gst_adapter_flush (wav->adapter, 12);
               wav->offset += 12;
               data = gst_adapter_map (wav->adapter, data_size);

@@ -6431,7 +6431,7 @@ error:
 }
 
 static guint8 *
-convert_to_s334_1a (const guint8 * ccpair, guint8 ccpair_size, guint field,
+convert_to_s334_1a (const guint8 * ccpair, gsize ccpair_size, guint field,
     gsize * res)
 {
   guint8 *storage;
@@ -6505,7 +6505,7 @@ extract_cc_from_data (QtDemuxStream * stream, const guint8 * data, gsize size,
       /* Check for another atom ? */
       if (size > atom_length + 8) {
         guint32 new_atom_length = QT_UINT32 (data + atom_length);
-        if (size >= atom_length + new_atom_length) {
+        if (new_atom_length > 8 && size - atom_length >= new_atom_length) {
           fourcc = QT_FOURCC (data + atom_length + 4);
           if (fourcc == FOURCC_cdat) {
             if (cdat == NULL)
@@ -6944,7 +6944,7 @@ gst_qtdemux_split_and_push_buffer (GstQTDemux * qtdemux, QtDemuxStream * stream,
 {
   GstFlowReturn ret = GST_FLOW_OK;
 
-  if (stream->subtype == FOURCC_clcp
+  if (stream->subtype == FOURCC_clcp && CUR_STREAM (stream)->fps_d
       && CUR_STREAM (stream)->fourcc == FOURCC_c608 && stream->need_split) {
     GstMapInfo map;
     guint n_output_buffers, n_field1 = 0, n_field2 = 0;
@@ -10254,6 +10254,9 @@ gst_qtdemux_configure_stream (GstQTDemux * qtdemux, QtDemuxStream * stream)
       gst_caps_set_simple (CUR_STREAM (stream)->caps,
           "framerate", GST_TYPE_FRACTION, CUR_STREAM (stream)->fps_n,
           CUR_STREAM (stream)->fps_d, NULL);
+    } else {
+      GST_WARNING_OBJECT (qtdemux,
+          "Can't handle CEA608 captions without framerate correctly");
     }
   }
 
@@ -15562,10 +15565,10 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak, guint32 * mvhd_matrix)
               QT_UINT16 (mdcv_data + 8 + 3 * 2 * 2 + 2);
           CUR_STREAM (stream)->
               mastering_display_info.max_display_mastering_luminance =
-              QT_UINT16 (mdcv_data + 8 + 3 * 2 * 2 + 2 * 2);
+              QT_UINT32 (mdcv_data + 8 + 3 * 2 * 2 + 2 * 2);
           CUR_STREAM (stream)->
               mastering_display_info.min_display_mastering_luminance =
-              QT_UINT16 (mdcv_data + 8 + 3 * 2 * 2 + 2 * 2 + 4);
+              QT_UINT32 (mdcv_data + 8 + 3 * 2 * 2 + 2 * 2 + 4);
         }
       }
 
@@ -20044,7 +20047,8 @@ qtdemux_audio_caps (GstQTDemux * qtdemux, QtDemuxStream * stream,
     case GST_MAKE_FOURCC ('a', 'c', '-', '4'):
     {
       _codec ("AC4");
-      caps = gst_caps_new_empty_simple ("audio/x-ac4");
+      caps = gst_caps_new_simple ("audio/x-ac4",
+          "stream-format", G_TYPE_STRING, "raw", NULL);
       break;
     }
     case FOURCC_mha1:

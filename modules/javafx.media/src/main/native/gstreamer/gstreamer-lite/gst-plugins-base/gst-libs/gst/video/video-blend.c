@@ -179,10 +179,17 @@ gst_video_blend_scale_linear_RGBA (GstVideoInfo * src, GstBuffer * src_buffer,
 
   g_return_if_fail (dest_buffer != NULL);
 
+  *dest_buffer = NULL;
+
   gst_video_info_init (dest);
   if (!gst_video_info_set_format (dest, GST_VIDEO_INFO_FORMAT (src),
           dest_width, dest_height)) {
     g_warn_if_reached ();
+    return;
+  }
+
+  if (GST_VIDEO_INFO_COMP_DEPTH (src, 0) != 8) {
+    GST_WARNING ("Only 8-bit depth formats are supported");
     return;
   }
 
