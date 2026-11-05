@@ -197,10 +197,10 @@ class D3D12Context extends BaseShaderContext {
     public void blit(RTTexture srcRTT, RTTexture dstRTT, int srcX0, int srcY0, int srcX1, int srcY1,
                     int dstX0, int dstY0, int dstX1, int dstY1) {
         D3D12RTTexture srcRT = (D3D12RTTexture)srcRTT;
-        D3D12RTTexture dstRT = (D3D12RTTexture)dstRTT;
+        D3D12RTTexture dstRT = (dstRTT == null) ? null : (D3D12RTTexture)dstRTT;
 
         mDevice.blit(srcRT.getNativeRenderTarget(), srcX0, srcY0, srcX1, srcY1,
-                     dstRT.getNativeRenderTarget(), dstX0, dstY0, dstX1, dstY1);
+                     (dstRT == null) ? null : dstRT.getNativeRenderTarget(), dstX0, dstY0, dstX1, dstY1);
     }
 
     void renderMeshView(D3D12MeshView meshView, Graphics g) {

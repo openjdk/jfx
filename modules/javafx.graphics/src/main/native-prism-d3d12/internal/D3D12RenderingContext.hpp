@@ -195,6 +195,11 @@ public:
         return mRenderThread.GetCommandQueue();
     }
 
+    inline const NIPtr<IRenderTarget>& GetCurrentRenderTarget() const
+    {
+        return mRenderTarget.Get();
+    }
+
     inline void WaitUntilIdle()
     {
         mRenderThread.WaitUntilIdle();

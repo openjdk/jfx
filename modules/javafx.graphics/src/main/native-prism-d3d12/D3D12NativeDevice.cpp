@@ -382,7 +382,7 @@ int NativeDevice::GetMaximumMSAASampleSize(DXGI_FORMAT format) const
     {
         msaaLevels.SampleCount = i;
         HRESULT hr = mDevice->CheckFeatureSupport(D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS, &msaaLevels, sizeof(msaaLevels));
-        if (SUCCEEDED(hr))
+        if (SUCCEEDED(hr) && (msaaLevels.NumQualityLevels > 0))
         {
             maxSamples = i;
         }
@@ -568,7 +568,19 @@ void NativeDevice::SetViewProjTransform(const Internal::Matrix<float>& matrix)
 bool NativeDevice::Blit(const NIPtr<NativeRenderTarget>& srcRT, const Coords_Box_UINT32& src,
                         const NIPtr<Internal::IRenderTarget>& dstRT, const Coords_Box_UINT32& dst)
 {
-    if (dstRT->GetMSAASamples() > 1)
+    // we allow null dstRT here - if it's null we reuse what is now stored in the Context
+    NIPtr<Internal::IRenderTarget> destRTT = dstRT;
+    if (!destRTT)
+    {
+        destRTT = mRenderingContext->GetCurrentRenderTarget();
+        if (!destRTT)
+        {
+            D3D12NI_LOG_ERROR("Blit failed: provided no destination RT and there is no RT bound to the Context");
+            return false;
+        }
+    }
+
+    if (destRTT->GetMSAASamples() > 1)
     {
         // TODO: D3D12: should it? I'm pretty sure D3D9's StretchRect did not support it.
         D3D12NI_LOG_ERROR("BlitTexture() does not support MSAA destination textures");
@@ -576,7 +588,7 @@ bool NativeDevice::Blit(const NIPtr<NativeRenderTarget>& srcRT, const Coords_Box
     }
 
     if (src.x1 > srcRT->GetWidth() || src.y1 > srcRT->GetHeight() ||
-        dst.x1 > dstRT->GetWidth() || dst.y1 > dstRT->GetHeight())
+        dst.x1 > destRTT->GetWidth() || dst.y1 > destRTT->GetHeight())
     {
         D3D12NI_LOG_ERROR("Invalid Blit dimensions");
         return false;
@@ -591,12 +603,12 @@ bool NativeDevice::Blit(const NIPtr<NativeRenderTarget>& srcRT, const Coords_Box
     {
         if (srcRT->GetMSAASamples() == 1)
         {
-            mRenderingContext->CopyTexture(dstRT, dst.x0, dst.y0, srcRT, src.x0, src.y0, srcWidth, srcHeight);
+            mRenderingContext->CopyTexture(destRTT, dst.x0, dst.y0, srcRT, src.x0, src.y0, srcWidth, srcHeight);
         }
         else
         {
             // use ResolveSubresourceRegion
-            mRenderingContext->ResolveRegion(dstRT, dst.x0, dst.y0, srcRT, src.x0, src.y0, srcWidth, srcHeight, dstRT->GetFormat());
+            mRenderingContext->ResolveRegion(destRTT, dst.x0, dst.y0, srcRT, src.x0, src.y0, srcWidth, srcHeight, destRTT->GetFormat());
         }
     }
     else
@@ -638,14 +650,15 @@ bool NativeDevice::Blit(const NIPtr<NativeRenderTarget>& srcRT, const Coords_Box
         mRenderingContext->SetFillMode(D3D12_FILL_MODE_SOLID);
 
         mRenderingContext->SetTexture(0, sourceTexture);
-        mRenderingContext->SetRenderTarget(dstRT);
+        if (dstRT) mRenderingContext->SetRenderTarget(destRTT); // only set RT here if we have an external target provided
+                                                                // otherwise we use what is already set
         mRenderingContext->SetCompositeMode(CompositeMode::SRC);
 
         // prepare quad vertices for blitting
         QuadVertices vertices;
         QuadColors colors;
         AssembleVertexQuadForBlit(src, sourceTexture->GetWidth(), sourceTexture->GetHeight(),
-                                  dst, dstRT->GetWidth(), dstRT->GetHeight(),
+                                  dst, destRTT->GetWidth(), destRTT->GetHeight(),
                                   vertices, colors);
 
         Internal::MemoryView<float> verticesView(vertices.data(), vertices.size() * sizeof(float));
@@ -1163,7 +1176,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_d3d12_ni_D3D12NativeDevice_nBlit
 {
     if (!ptr) return false;
     if (!srcRTPtr) return false;
-    if (!dstRTPtr) return false;
+    // Prism supports dstRTPtr being NULL - we use currently bound RTT then
     if (srcX0 < 0 || srcY0 < 0 || srcX1 < 0 || srcY1 < 0) return false;
     if (srcX0 > srcX1 || srcY0 > srcY1) return false;
     if (dstX0 < 0 || dstY0 < 0 || dstX1 < 0 || dstY1 < 0) return false;
@@ -1172,15 +1185,23 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_d3d12_ni_D3D12NativeDevice_nBlit
     const D3D12::NIPtr<D3D12::NativeRenderTarget>& srcRT = D3D12::GetNIObject<D3D12::NativeRenderTarget>(srcRTPtr);
     if (!srcRT) return false;
 
-    const D3D12::NIPtr<D3D12::NativeRenderTarget>& dstRT = D3D12::GetNIObject<D3D12::NativeRenderTarget>(dstRTPtr);
-    if (!dstRT) return false;
-
     D3D12::Coords_Box_UINT32 srcBox{static_cast<uint32_t>(srcX0), static_cast<uint32_t>(srcY0),
                                     static_cast<uint32_t>(srcX1), static_cast<uint32_t>(srcY1)};
     D3D12::Coords_Box_UINT32 dstBox{static_cast<uint32_t>(dstX0), static_cast<uint32_t>(dstY0),
                                     static_cast<uint32_t>(dstX1), static_cast<uint32_t>(dstY1)};
 
-    return D3D12::GetNIObject<D3D12::NativeDevice>(ptr)->Blit(srcRT, srcBox, dstRT, dstBox);
+    if (dstRTPtr)
+    {
+        const D3D12::NIPtr<D3D12::NativeRenderTarget>& dstRT = D3D12::GetNIObject<D3D12::NativeRenderTarget>(dstRTPtr);
+        if (!dstRT) return false;
+
+        return D3D12::GetNIObject<D3D12::NativeDevice>(ptr)->Blit(srcRT, srcBox, dstRT, dstBox);
+    }
+    else
+    {
+        D3D12::NIPtr<D3D12::NativeRenderTarget> nullDstRT;
+        return D3D12::GetNIObject<D3D12::NativeDevice>(ptr)->Blit(srcRT, srcBox, nullDstRT, dstBox);
+    }
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_prism_d3d12_ni_D3D12NativeDevice_nBlitToSwapChain

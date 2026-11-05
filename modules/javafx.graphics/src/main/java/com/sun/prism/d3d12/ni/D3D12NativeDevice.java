@@ -224,7 +224,7 @@ public final class D3D12NativeDevice extends D3D12NativeObject {
     public boolean blit(D3D12NativeRenderTarget srcRT, int srcX0, int srcY0, int srcX1, int srcY1,
                         D3D12NativeRenderTarget dstRT, int dstX0, int dstY0, int dstX1, int dstY1) {
         return nBlit(ptr, srcRT.getPtr(), srcX0, srcY0, srcX1, srcY1,
-                          dstRT.getPtr(), dstX0, dstY0, dstX1, dstY1);
+                          (dstRT == null) ? 0L : dstRT.getPtr(), dstX0, dstY0, dstX1, dstY1);
     }
 
     public boolean blit(D3D12NativeRenderTarget srcRT, int srcX0, int srcY0, int srcX1, int srcY1,

@@ -119,6 +119,11 @@ public:
         return mParameter;
     }
 
+    const T& Get() const
+    {
+        return mParameter;
+    }
+
     bool IsSet() const
     {
         return mIsSet;
