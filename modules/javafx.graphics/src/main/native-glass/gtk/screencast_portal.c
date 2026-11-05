@@ -62,18 +62,18 @@ void errHandle(
 }
 
 gboolean validateToken(const gchar *token) {
-    if (!token || !*token) {
-        DEBUG_SCREENCAST("restore token is empty\n", NULL);
+    if (!token) {
         return FALSE;
     }
 
-    gboolean isValid = g_utf8_validate(token, -1, NULL);
+    gboolean isValid = g_uuid_string_is_valid(token);
     if (!isValid) {
-        DEBUG_SCREENCAST("!!! restore token is not valid UTF-8\n", NULL);
+        DEBUG_SCREENCAST("!!! restore token "
+                         "is not a valid UUID string:\n\"%s\"\n",
+                         token);
     }
     return isValid;
 }
-
 
 /**
  * @return TRUE on success
