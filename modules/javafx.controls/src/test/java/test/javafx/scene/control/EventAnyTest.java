@@ -93,9 +93,10 @@ public class EventAnyTest {
 
     }
 
+    @SuppressWarnings("removal")
     private static Event listViewEditEvent() {
-        return new ListView.EditEvent<>(new ListView<String>(),
-                ListView.<String>editCommitEvent(), "", 1);
+        return new ListView.EditEvent<>(new ListView<>(),
+                ListView.<String>editCommitEvent(), "old", "new", 1);
     }
 
     private static Event scrollToEvent() {

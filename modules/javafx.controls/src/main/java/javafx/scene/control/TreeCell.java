@@ -356,33 +356,29 @@ public class TreeCell<T> extends IndexedCell<T> {
 
     /** {@inheritDoc} */
     @Override public void startEdit() {
-        if (isEditing()) return;
+        if (isEditing()) {
+            return;
+        }
 
         final TreeView<T> tree = getTreeView();
-        if (! isEditable() || (tree != null && ! tree.isEditable())) {
-//            if (Logging.getControlsLogger().isLoggable(PlatformLogger.SEVERE)) {
-//                Logging.getControlsLogger().severe(
-//                    "Can not call TreeCell.startEdit() on this TreeCell, as it "
-//                        + "is not allowed to enter its editing state (TreeCell: "
-//                        + this + ", TreeView: " + tree + ").");
-//            }
+        if (!isEditable() ||
+                (tree != null && !tree.isEditable())) {
             return;
         }
 
         updateItem(-1);
 
-        // it makes sense to get the cell into its editing state before firing
-        // the event to the TreeView below, so that's what we're doing here
-        // by calling super.startEdit().
         super.startEdit();
 
-        if (!isEditing()) return;
+        if (!isEditing()) {
+            return;
+        }
 
         treeItemAtStartEdit = getTreeItem();
          // Inform the TreeView of the edit starting.
         if (tree != null) {
             tree.fireEvent(new TreeView.EditEvent<>(tree,
-                    TreeView.<T>editStartEvent(),
+                    TreeView.editStartEvent(),
                     treeItemAtStartEdit,
                     getItem(),
                     null));
@@ -393,7 +389,9 @@ public class TreeCell<T> extends IndexedCell<T> {
 
      /** {@inheritDoc} */
     @Override public void commitEdit(T newValue) {
-        if (! isEditing()) return;
+        if (!isEditing()) {
+            return;
+        }
 
         // inform parent classes of the commit, so that they can switch us
         // out of the editing state.
@@ -416,7 +414,7 @@ public class TreeCell<T> extends IndexedCell<T> {
 
             // Inform the TreeView of the edit being ready to be committed.
             tree.fireEvent(new TreeView.EditEvent<>(tree,
-                    TreeView.<T>editCommitEvent(),
+                    TreeView.editCommitEvent(),
                     treeItem,
                     getItem(),
                     newValue));
@@ -505,111 +503,137 @@ public class TreeCell<T> extends IndexedCell<T> {
     private boolean isFirstRun = true;
     private void updateItem(int oldIndex) {
         TreeView<T> tv = getTreeView();
-        if (tv == null) return;
+        final int itemCount = tv == null ? -1 : tv.getExpandedItemCount();
 
         // Compute whether the index for this cell is for a real item
         int index = getIndex();
-        boolean valid = index >=0 && index < tv.getExpandedItemCount();
-        final boolean isEmpty = isEmpty();
         final TreeItem<T> oldTreeItem = getTreeItem();
 
-        // Cause the cell to update itself
-        outer: if (valid) {
-            // update the TreeCell state.
-            // get the new treeItem that is about to go in to the TreeCell
-            TreeItem<T> newTreeItem = tv.getTreeItem(index);
-            T newValue = newTreeItem == null ? null : newTreeItem.getValue();
-            T oldValue = oldTreeItem == null ? null : oldTreeItem.getValue();
+        final boolean indexExceedsItemCount = index >= itemCount;
 
-            // For the sake of JDK-8113226, it is important that the order of these
-            // method calls is as shown below. If the order is switched, it is
-            // likely that events will be fired where the item is null, even
-            // though calling cell.getTreeItem().getValue() returns the value
-            // as expected
-
-            // JDK-8092593 - if the index didn't change, then avoid calling updateItem
-            // unless the item has changed.
-            if (oldIndex == index) {
-                if (!isItemChanged(oldValue, newValue)) {
-                    // JDK-8096969:  we break out of the if/else code here and
-                    // proceed with the code following this, so that we may
-                    // still update references, listeners, etc as required.
-                    break outer;
-                }
-            }
-            updateTreeItem(newTreeItem);
-            updateItem(newValue, false);
-        } else {
+        if (indexExceedsItemCount || index < 0) {
             // JDK-8116529 We need to allow a first run to be special-cased to allow
             // for the updateItem method to be called at least once to allow for
             // the correct visual state to be set up. In particular, in JDK-8116529
             // refer to Ensemble8PopUpTree.png - in this case the arrows are being
             // shown as the new cells are instantiated with the arrows in the
             // children list, and are only hidden in updateItem.
-            if ((!isEmpty && oldTreeItem != null) || isFirstRun) {
+            final boolean isEmpty = isEmpty();
+            if (!isEmpty || isFirstRun) {
                 updateTreeItem(null);
                 updateItem(null, true);
                 isFirstRun = false;
             }
+            return;
+        }
+
+        // update the TreeCell state.
+        // get the new treeItem that is about to go in to the TreeCell
+        TreeItem<T> newTreeItem = tv.getTreeItem(index);
+        T newValue = newTreeItem == null ? null : newTreeItem.getValue();
+        T oldValue = oldTreeItem == null ? null : oldTreeItem.getValue();
+
+        // For the sake of JDK-8113226, it is important that the order of these
+        // method calls is as shown below. If the order is switched, it is
+        // likely that events will be fired where the item is null, even
+        // though calling cell.getTreeItem().getValue() returns the value
+        // as expected
+
+        // JDK-8092593 - if the index didn't change, then avoid calling updateItem
+        // unless the item has changed.
+        boolean shouldUpdate = true;
+        if (oldIndex == index) {
+            if (!isItemChanged(oldValue, newValue)) {
+                shouldUpdate = false;
+            }
+        }
+        if (shouldUpdate) {
+            updateTreeItem(newTreeItem);
+            updateItem(newValue, false);
         }
     }
 
     private void updateSelection() {
-        if (isEmpty()) return;
-        if (getIndex() == -1 || getTreeView() == null) return;
+        int index = getIndex();
+        if (index == -1) {
+            return;
+        }
 
-        SelectionModel<TreeItem<T>> sm = getTreeView().getSelectionModel();
+        TreeView<T> treeView = getTreeView();
+        if (treeView == null) {
+            return;
+        }
+
+        SelectionModel<TreeItem<T>> sm = treeView.getSelectionModel();
         if (sm == null) {
             updateSelected(false);
             return;
         }
 
-        boolean isSelected = sm.isSelected(getIndex());
-        if (isSelected() == isSelected) return;
+        boolean isSelectedNow = sm.isSelected(index);
+        if (isSelected() == isSelectedNow) {
+            return;
+        }
 
-        updateSelected(isSelected);
+        updateSelected(isSelectedNow);
     }
 
     private void updateFocus() {
-        if (getIndex() == -1 || getTreeView() == null) return;
+        int index = getIndex();
+        if (index == -1) {
+            return;
+        }
 
-        FocusModel<TreeItem<T>> fm = getTreeView().getFocusModel();
+        TreeView<T> treeView = getTreeView();
+        if (treeView == null) {
+            return;
+        }
+
+        FocusModel<TreeItem<T>> fm = treeView.getFocusModel();
         if (fm == null) {
             setFocused(false);
             return;
         }
 
-        setFocused(fm.isFocused(getIndex()));
+        setFocused(fm.isFocused(index));
     }
 
     private boolean updateEditingIndex = true;
     private void updateEditing() {
-        final int index = getIndex();
-        final TreeView<T> tree = getTreeView();
-        final TreeItem<T> treeItem = getTreeItem();
-        final TreeItem<T> editItem = tree == null ? null : tree.getEditingItem();
-        final boolean editing = isEditing();
-
-        if (index == -1 || tree == null || treeItem == null) {
-            if (editing) {
+        int index = getIndex();
+        if (index == -1) {
+            if (isEditing()) {
                 // JDK-8265210: must cancel edit if index changed to -1 by re-use
-                doCancelEditing();
+                doCancelEdit();
             }
             return;
         }
 
-        final boolean match = treeItem.equals(editItem);
+        final TreeView<T> tree = getTreeView();
+        final TreeItem<T> treeItem = getTreeItem();
+        if (tree == null || treeItem == null) {
+            if (isEditing()) {
+                // JDK-8265210: must cancel edit if index changed to -1 by re-use
+                doCancelEdit();
+            }
+            return;
+        }
 
-        // If my tree item is the item being edited and I'm not currently in
-        // the edit mode, then I need to enter the edit mode
-        if (match && !editing) {
-            startEdit();
-        } else if (! match && editing) {
-            doCancelEditing();
+        final TreeItem<T> editingItem = tree.getEditingItem();
+        final boolean rowMatch = treeItem.equals(editingItem);
+
+        if (isEditing()) {
+            if (!rowMatch) {
+                doCancelEdit();
+            }
+        } else {
+            if (rowMatch) {
+                startEdit();
+            }
         }
     }
 
-    private void doCancelEditing() {
+    private void doCancelEdit() {
         // If my tree item is not the one being edited then I need to cancel
         // the edit. The tricky thing here is that as part of this call
         // I cannot end up calling tree.edit(null) the way that the standard
