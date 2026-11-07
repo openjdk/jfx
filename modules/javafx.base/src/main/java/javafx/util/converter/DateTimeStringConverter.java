@@ -37,7 +37,7 @@ import java.util.Locale;
 /// @since JavaFX 2.1
 /// @deprecated Prefer [LocalDateTimeStringConverter] in JDK versions where [java.time.LocalDateTime] is available as a
 ///     replacement for `Date`.
-@Deprecated(forRemoval = false)
+@Deprecated(forRemoval = false, since = "28")
 public class DateTimeStringConverter extends BaseStringConverter<Date> {
 
     /// Reads the default locale at the time of creation. If the default locale is changed during the application's life,

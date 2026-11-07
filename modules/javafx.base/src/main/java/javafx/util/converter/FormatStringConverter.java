@@ -67,7 +67,7 @@ public class FormatStringConverter<T> extends BaseStringConverter<T> {
     /// {@return the `Format` instance for formatting and parsing in this `FormatStringConverter`}
     ///
     /// @deprecated This method was exposed erroneously and will be removed in a future version.
-    @Deprecated(forRemoval = true)
+    @Deprecated(forRemoval = true, since = "28")
     protected Format getFormat() {
         return format;
     }
