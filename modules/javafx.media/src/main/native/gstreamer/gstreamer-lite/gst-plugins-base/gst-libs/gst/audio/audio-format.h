@@ -354,7 +354,7 @@ GstAudioFormat gst_audio_format_build_integer    (gboolean sign, gint endianness
                                                   gint width, gint depth) G_GNUC_CONST;
 
 GST_AUDIO_API
-GstAudioFormat gst_audio_format_from_string      (const gchar *format) G_GNUC_CONST;
+GstAudioFormat gst_audio_format_from_string      (const gchar *format);
 
 GST_AUDIO_API
 const gchar *  gst_audio_format_to_string        (GstAudioFormat format) G_GNUC_CONST;

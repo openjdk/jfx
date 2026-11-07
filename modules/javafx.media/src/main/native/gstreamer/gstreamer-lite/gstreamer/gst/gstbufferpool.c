@@ -127,6 +127,7 @@ static GstFlowReturn default_acquire_buffer (GstBufferPool * pool,
 static void default_reset_buffer (GstBufferPool * pool, GstBuffer * buffer);
 static void default_free_buffer (GstBufferPool * pool, GstBuffer * buffer);
 static void default_release_buffer (GstBufferPool * pool, GstBuffer * buffer);
+static void do_free_buffer (GstBufferPool * pool, GstBuffer * buffer);
 
 static void
 gst_buffer_pool_class_init (GstBufferPoolClass * klass)
@@ -326,8 +327,11 @@ default_start (GstBufferPool * pool)
   guint i;
   GstBufferPoolPrivate *priv = pool->priv;
   GstBufferPoolClass *pclass;
+  GPtrArray *buffers;
 
   pclass = GST_BUFFER_POOL_GET_CLASS (pool);
+
+  buffers = g_ptr_array_sized_new (priv->min_buffers);
 
   /* we need to prealloc buffers */
   for (i = 0; i < priv->min_buffers; i++) {
@@ -336,17 +340,31 @@ default_start (GstBufferPool * pool)
     if (do_alloc_buffer (pool, &buffer, NULL) != GST_FLOW_OK)
       goto alloc_failed;
 
+    g_ptr_array_add (buffers, buffer);
+  }
+
+  for (i = 0; i < buffers->len; i++) {
+    GstBuffer *buffer = g_ptr_array_index (buffers, i);
+
     /* release to the queue, we call the vmethod directly, we don't need to do
      * the other refcount handling right now. */
     if (G_LIKELY (pclass->release_buffer))
       pclass->release_buffer (pool, buffer);
   }
+
+  g_ptr_array_unref (buffers);
   return TRUE;
 
   /* ERRORS */
 alloc_failed:
   {
     GST_WARNING_OBJECT (pool, "failed to allocate buffer");
+    for (i = 0; i < buffers->len; i++) {
+      GstBuffer *buffer = g_ptr_array_index (buffers, i);
+
+      do_free_buffer (pool, buffer);
+    }
+    g_ptr_array_unref (buffers);
     return FALSE;
   }
 }
