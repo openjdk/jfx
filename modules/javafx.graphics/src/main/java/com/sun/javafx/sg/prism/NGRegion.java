@@ -1099,10 +1099,7 @@ public class NGRegion extends NGGroup {
                 final Paint paint = getPlatformPaint(fill.getFill());
                 g.setPaint(paint);
                 final CornerRadii radii = getNormalizedFillRadii(i);
-                // This is a workaround for JDK-8087965 so we use path rasterizer for small radius's We are
-                // keeping old rendering. We do not apply workaround when using Caspian or Embedded
-                if (radii.isUniform() &&
-                        !(!PlatformImpl.isCaspian() && !(PlatformUtil.isEmbedded() || PlatformUtil.isIOS()) && radii.getTopLeftHorizontalRadius() > 0 && radii.getTopLeftHorizontalRadius() <= 4)) {
+                if (radii.isUniform()) {
                     // If the radii is uniform then we know every corner matches, so we can do some
                     // faster rendering paths.
                     float tlhr = (float) radii.getTopLeftHorizontalRadius();
