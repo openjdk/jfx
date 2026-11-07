@@ -1,4 +1,4 @@
-## xmlsoft.org: libxml2 v2.15.3
+## xmlsoft.org: libxml2 v2.15.4
 
 ### libxml2 License
 ```
@@ -86,9 +86,13 @@ Nick Wellnhofer
 
 Thanks to the following contributors:
 
-- Ariel Schon
-- Hieu Le Minh
-- James Lan
-- LCaliman
-- Yenya
+- Brett Kail
+- Ion Nistor
+- Kevin Braun
+- Mohammad Seet
+- rootvector2
+- Ruben Thijssen
+- yirou_yang
+- Zhihan Zheng
+- zhuofeng
 ```

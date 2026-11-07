@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -367,6 +367,12 @@ public class StyleConverter<F, T> {
         case "javafx.css.converter.CursorConverter" :
             styleConverter = javafx.css.converter.CursorConverter.getInstance();
             break;
+        case "javafx.css.converter.DurationConverter" :
+            styleConverter = DurationConverter.getInstance();
+            break;
+        case "javafx.css.converter.DurationConverter$SequenceConverter" :
+            styleConverter = DurationConverter.SequenceConverter.getInstance();
+            break;
         case "javafx.css.converter.EffectConverter" :
             styleConverter = javafx.css.converter.EffectConverter.getInstance();
             break;
@@ -430,6 +436,19 @@ public class StyleConverter<F, T> {
             break;
         case "javafx.css.converter.URLConverter$SequenceConverter" :
             styleConverter = javafx.css.converter.URLConverter.SequenceConverter.getInstance();
+            break;
+
+        case "com.sun.javafx.css.InterpolatorConverter" :
+            styleConverter = com.sun.javafx.css.InterpolatorConverter.getInstance();
+            break;
+        case "com.sun.javafx.css.InterpolatorConverter$SequenceConverter" :
+            styleConverter = com.sun.javafx.css.InterpolatorConverter.SequenceConverter.getInstance();
+            break;
+        case "com.sun.javafx.css.TransitionDefinitionConverter" :
+            styleConverter = com.sun.javafx.css.TransitionDefinitionConverter.getInstance();
+            break;
+        case "com.sun.javafx.css.TransitionDefinitionConverter$SequenceConverter" :
+            styleConverter = com.sun.javafx.css.TransitionDefinitionConverter.SequenceConverter.getInstance();
             break;
 
         // Region stuff  - including 2.x class names

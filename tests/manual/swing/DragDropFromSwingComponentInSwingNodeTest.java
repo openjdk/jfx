@@ -36,9 +36,6 @@ import java.awt.dnd.DropTargetDropEvent;
 import java.awt.dnd.DropTargetListener;
 
 import javafx.application.Application;
-import javafx.application.Platform;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.embed.swing.SwingNode;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -76,30 +73,27 @@ public class DragDropFromSwingComponentInSwingNodeTest extends Application {
         stage.setTitle("Swing in JavaFX");
         Button passButton = new Button("Pass");
         Button failButton = new Button("Fail");
-        passButton.setOnAction(e -> this.quit());
+        passButton.setOnAction(e -> {
+            System.out.println("TEST PASSED");
+            stage.close();
+        });
         failButton.setOnAction(e -> {
-            this.quit();
+            System.out.println("TEST FAILED");
+            stage.close();
             throw new AssertionError("Drag / drop from a Swing component in a SwingNode not working");
         });
 
         VBox rootNode = new VBox(6,
-                new Label("1. This is a test for drag / drop from a Swing component in a SwingNode."),
-                new Label("2. Drag JLabel \"Drag Me!\" text and drop into console."),
-                new Label("3. When the content is dropped into console, if it prints \"some string data\", click on Pass or else click on Fail"),
-                new Label(""),
+                new Label("""
+                        1. This test verifies drag-and-drop from a Swing component inside a SwingNode.
+                        2. Open a plain-text editor, such as TextEdit on macOS or Notepad on Windows.
+                        3. Create a blank document, then drag the "Drag me!" item into the document.
+                        4. Click Pass if the exact text "some string data" is inserted; otherwise, click Fail.
+                        """),
                 new HBox(10, passButton, failButton), pane);
 
         stage.setScene(new Scene(rootNode, 600, 250));
-        stage.onCloseRequestProperty().addListener(new InvalidationListener(){
-            @Override public void invalidated(Observable observable) {
-                System.exit(0);
-            }
-        });
         stage.show();
-    }
-
-    private void quit() {
-        Platform.exit();
     }
 
     private void createSwingContent(final SwingNode swingNode) {

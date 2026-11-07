@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,6 +34,8 @@ import com.oracle.tools.fx.monkey.settings.FxSettings;
  * Applications stores its user preferences (window location, etc.) in ~/.MonkeyTester directory.
  * To use a different directory, redefine the "user.home" system property, -Duser.home=<...>.
  * To disable saving, specify -Ddisable.settings=true vm agrument.
+ * <p>
+ * Use {@code --title=XXX} command line argument to change the prefix in the title bar.
  */
 public class MonkeyTesterApp extends Application {
     public static void main(String[] args) {
@@ -53,6 +55,7 @@ public class MonkeyTesterApp extends Application {
 
     @Override
     public void start(Stage stage) throws Exception {
-        new MainWindow().show();
+        String title = getParameters().getNamed().get("title");
+        new MainWindow(title).show();
     }
 }

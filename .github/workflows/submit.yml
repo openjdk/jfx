@@ -73,9 +73,9 @@ jobs:
       # BOOT_JDK_FILENAME: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_FILENAME }}"
       # BOOT_JDK_URL: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_URL }}"
       # BOOT_JDK_SHA256: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_SHA256 }}"
-      BOOT_JDK_VERSION: "25.0.1"
-      BOOT_JDK_FILENAME: "jdk-25.0.1_linux-x64_bin.tar.gz"
-      BOOT_JDK_URL: "https://download.oracle.com/java/25/archive/jdk-25.0.1_linux-x64_bin.tar.gz"
+      BOOT_JDK_VERSION: "26.0.2"
+      BOOT_JDK_FILENAME: "jdk-26.0.2_linux-x64_bin.tar.gz"
+      BOOT_JDK_URL: "https://download.oracle.com/java/26/archive/jdk-26.0.2_linux-x64_bin.tar.gz"
       # ANT_DIR: "apache-ant-1.10.5"
       # ANT_FILENAME: "apache-ant-1.10.5.tar.gz"
       # ANT_URL: "https://archive.apache.org/dist/ant/binaries/apache-ant-1.10.5-bin.tar.gz"
@@ -158,9 +158,9 @@ jobs:
       # BOOT_JDK_FILENAME: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_AARCH64_BOOT_JDK_FILENAME }}"
       # BOOT_JDK_URL: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_AARCH64_BOOT_JDK_URL }}"
       # BOOT_JDK_SHA256: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_AARCH64_BOOT_JDK_SHA256 }}"
-      BOOT_JDK_VERSION: "25.0.1"
-      BOOT_JDK_FILENAME: "jdk-25.0.1_linux-aarch64_bin.tar.gz"
-      BOOT_JDK_URL: "https://download.oracle.com/java/25/archive/jdk-25.0.1_linux-aarch64_bin.tar.gz"
+      BOOT_JDK_VERSION: "26.0.2"
+      BOOT_JDK_FILENAME: "jdk-26.0.2_linux-aarch64_bin.tar.gz"
+      BOOT_JDK_URL: "https://download.oracle.com/java/26/archive/jdk-26.0.2_linux-aarch64_bin.tar.gz"
       # ANT_DIR: "apache-ant-1.10.5"
       # ANT_FILENAME: "apache-ant-1.10.5.tar.gz"
       # ANT_URL: "https://archive.apache.org/dist/ant/binaries/apache-ant-1.10.5-bin.tar.gz"
@@ -242,9 +242,9 @@ jobs:
       # BOOT_JDK_FILENAME: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_FILENAME }}"
       # BOOT_JDK_URL: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_URL }}"
       # BOOT_JDK_SHA256: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_SHA256 }}"
-      BOOT_JDK_VERSION: "25.0.1"
-      BOOT_JDK_FILENAME: "jdk-25.0.1_macos-x64_bin.tar.gz"
-      BOOT_JDK_URL: "https://download.oracle.com/java/25/archive/jdk-25.0.1_macos-x64_bin.tar.gz"
+      BOOT_JDK_VERSION: "26.0.2"
+      BOOT_JDK_FILENAME: "jdk-26.0.2_macos-x64_bin.tar.gz"
+      BOOT_JDK_URL: "https://download.oracle.com/java/26/archive/jdk-26.0.2_macos-x64_bin.tar.gz"
       # Disabled due to timeout downloading ant; use ant installed on system
       #ANT_DIR: "apache-ant-1.10.5"
       #ANT_FILENAME: "apache-ant-1.10.5.tar.gz"
@@ -296,8 +296,9 @@ jobs:
           java -version
           which ant
           ant -version
-          # Production builds use Xcode 15.4, but 16.0 is the lowest that the GHA macOS 15 runner supports
-          sudo xcode-select --switch /Applications/Xcode_16.0.app/Contents/Developer
+          # Production builds use Xcode 26.6, but 26.3 is the highest that the GHA macOS 15 runner supports
+          sudo xcode-select --switch /Applications/Xcode_26.3.0.app/Contents/Developer
+          xcodebuild -downloadComponent metalToolchain
           xcodebuild -version
 
       - name: Build JavaFX artifacts
@@ -321,7 +322,7 @@ jobs:
   macos_aarch64_build:
     name: macOS aarch64
     needs: validation
-    runs-on: "macos-14"
+    runs-on: "macos-26"
 
     env:
       # FIXME: read this information from a property file
@@ -329,9 +330,9 @@ jobs:
       # BOOT_JDK_FILENAME: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_FILENAME }}"
       # BOOT_JDK_URL: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_URL }}"
       # BOOT_JDK_SHA256: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_SHA256 }}"
-      BOOT_JDK_VERSION: "25.0.1"
-      BOOT_JDK_FILENAME: "jdk-25.0.1_macos-aarch64_bin.tar.gz"
-      BOOT_JDK_URL: "https://download.oracle.com/java/25/archive/jdk-25.0.1_macos-aarch64_bin.tar.gz"
+      BOOT_JDK_VERSION: "26.0.2"
+      BOOT_JDK_FILENAME: "jdk-26.0.2_macos-aarch64_bin.tar.gz"
+      BOOT_JDK_URL: "https://download.oracle.com/java/26/archive/jdk-26.0.2_macos-aarch64_bin.tar.gz"
       # Disabled due to timeout downloading ant; use ant installed on system
       #ANT_DIR: "apache-ant-1.10.5"
       #ANT_FILENAME: "apache-ant-1.10.5.tar.gz"
@@ -383,7 +384,8 @@ jobs:
           java -version
           which ant
           ant -version
-          sudo xcode-select --switch /Applications/Xcode_15.4.app/Contents/Developer
+          sudo xcode-select --switch /Applications/Xcode_26.6.app/Contents/Developer
+          xcodebuild -downloadComponent metalToolchain
           xcodebuild -version
 
       - name: Build JavaFX artifacts
@@ -415,9 +417,9 @@ jobs:
       # BOOT_JDK_FILENAME: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_FILENAME }}"
       # BOOT_JDK_URL: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_URL }}"
       # BOOT_JDK_SHA256: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_SHA256 }}"
-      BOOT_JDK_VERSION: "25.0.1"
-      BOOT_JDK_FILENAME: "jdk-25.0.1_windows-x64_bin.zip"
-      BOOT_JDK_URL: "https://download.oracle.com/java/25/archive/jdk-25.0.1_windows-x64_bin.zip"
+      BOOT_JDK_VERSION: "26.0.2"
+      BOOT_JDK_FILENAME: "jdk-26.0.2_windows-x64_bin.zip"
+      BOOT_JDK_URL: "https://download.oracle.com/java/26/archive/jdk-26.0.2_windows-x64_bin.zip"
       ANT_DIR: "apache-ant-1.10.5"
       ANT_FILENAME: "apache-ant-1.10.5.tar.gz"
       ANT_URL: "https://archive.apache.org/dist/ant/binaries/apache-ant-1.10.5-bin.tar.gz"

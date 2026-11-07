@@ -6715,4 +6715,69 @@ public class TableViewTest {
         sm.clearSelection();
         assertEquals(List.of(), sm.getSelectedIndices());
     }
+
+    @Test
+    void testRefreshShouldUpdateCellsInPile() {
+        TableColumn<Person, String> firstNameCol = new TableColumn<>("First Name");
+        firstNameCol.setCellValueFactory(e -> new SimpleStringProperty(e.getValue().getFirstName()));
+
+        TableView<Person> table = new TableView<>();
+        table.setFixedCellSize(24);
+        table.setPrefHeight(300);
+        for (int i = 0; i < 20; i++) {
+            table.getItems().add(new Person("old " + i));
+        }
+        table.getColumns().add(firstNameCol);
+
+        stageLoader = new StageLoader(table);
+        Toolkit.getToolkit().firePulse();
+
+        table.setPrefHeight(100);
+        Toolkit.getToolkit().firePulse();
+
+        table.getItems().forEach(p -> p.setFirstName(p.getFirstName().replace("old", "new")));
+        table.refresh();
+        Toolkit.getToolkit().firePulse();
+
+        table.setPrefHeight(300);
+        Toolkit.getToolkit().firePulse();
+
+        VirtualFlow<?> flow = VirtualFlowTestUtils.getVirtualFlow(table);
+        for (int i = flow.getFirstVisibleCell().getIndex(); i <= flow.getLastVisibleCell().getIndex(); i++) {
+            IndexedCell<?> cell = VirtualFlowTestUtils.getCell(table, i, 0);
+            assertEquals("new " + i, cell.getText());
+        }
+    }
+
+    @Test
+    void testReplaceItemWithItselfShouldUpdateCellInPile() {
+        TableColumn<Person, String> firstNameCol = new TableColumn<>("First Name");
+        firstNameCol.setCellValueFactory(e -> new SimpleStringProperty(e.getValue().getFirstName()));
+
+        TableView<Person> table = new TableView<>();
+        table.setFixedCellSize(24);
+        table.setPrefHeight(300);
+        for (int i = 0; i < 20; i++) {
+            table.getItems().add(new Person("old " + i));
+        }
+        table.getColumns().add(firstNameCol);
+
+        stageLoader = new StageLoader(table);
+        Toolkit.getToolkit().firePulse();
+
+        table.setPrefHeight(100);
+        Toolkit.getToolkit().firePulse();
+
+        int index = 8;
+        Person person = table.getItems().get(index);
+        person.setFirstName("new " + index);
+        table.getItems().set(index, person);
+        Toolkit.getToolkit().firePulse();
+
+        table.setPrefHeight(300);
+        Toolkit.getToolkit().firePulse();
+
+        IndexedCell<?> cell = VirtualFlowTestUtils.getCell(table, index, 0);
+        assertEquals("new " + index, cell.getText());
+    }
 }

@@ -105,6 +105,6 @@ public class TextureMapperTest {
         });
 
         assertTrue(Util.await(transitionStarted), "Timeout waiting for the view transition to start");
-        Util.sleep(500);
+        Util.sleep(800);
     }
 }

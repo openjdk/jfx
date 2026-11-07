@@ -23,23 +23,28 @@
  * questions.
  */
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.util.Optional;
+
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.geometry.Insets;
+import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.input.KeyCode;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 public class CapsLockTest {
 
-    private static BufferedReader reader;
-
     public static class App extends Application {
-        private void checkCapsLock(boolean expected) throws Exception {
+        private final Label result = new Label();
+
+        private void checkCapsLock(boolean expected) {
             Optional<Boolean> capsLock = Platform.isKeyLocked(KeyCode.CAPS);
             if (capsLock.isPresent()) {
                 System.out.println("isKeyLocked(CAPS) is " + capsLock.get());
+                result.setText("isKeyLocked(CAPS) is " + capsLock.get());
                 if (capsLock.get() != expected) {
                     System.out.println("TEST FAILED");
                     System.exit(1);
@@ -52,21 +57,31 @@ public class CapsLockTest {
         }
 
         @Override
-        public void start(Stage stage) throws Exception {
-            checkCapsLock(true);
-            System.out.println("Disable Caps Lock on your system then press ENTER");
-            reader.readLine();
-            checkCapsLock(false);
-            Platform.exit();
-        }
+        public void start(Stage stage) {
+            Label instructions = new Label("Enable Caps Lock on your system, then click Check Caps Lock.");
+            instructions.setWrapText(true);
+            Button checkButton = new Button("Check Caps Lock");
+            checkButton.setOnAction(e -> {
+                checkCapsLock(true);
+                instructions.setText("Disable Caps Lock on your system, then click Check Caps Lock.");
+                checkButton.setOnAction(event -> {
+                    checkCapsLock(false);
+                    instructions.setText("TEST PASSED. Click Close to exit.");
+                    checkButton.setText("Close");
+                    checkButton.setOnAction(closeEvent -> Platform.exit());
+                });
+            });
 
+            VBox root = new VBox(10, instructions, result, checkButton);
+            root.setPadding(new Insets(10));
+            stage.setTitle("Caps Lock Test");
+            stage.setScene(new Scene(root, 500, 150));
+            stage.show();
+        }
     }
 
     public static void main(String[] args) {
-        System.out.println("Enable Caps Lock on your system then press ENTER");
         try {
-            reader = new BufferedReader(new InputStreamReader(System.in));
-            reader.readLine();
             Application.launch(App.class, args);
         } catch (Exception ex) {
             ex.printStackTrace(System.out);
