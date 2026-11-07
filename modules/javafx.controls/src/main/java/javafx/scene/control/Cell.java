@@ -32,6 +32,7 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.ObservableList;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
@@ -456,6 +457,7 @@ public class Cell<T> extends Labeled {
     private ReadOnlyBooleanWrapper selected = new ReadOnlyBooleanWrapper() {
         @Override protected void invalidated() {
             pseudoClassStateChanged(PSEUDO_CLASS_SELECTED, get());
+            notifyAccessibleAttributeChanged(AccessibleAttribute.SELECTED);
         }
 
         @Override
