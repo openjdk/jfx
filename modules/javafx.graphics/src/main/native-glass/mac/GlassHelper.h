@@ -37,6 +37,7 @@
 
 + (void)SetGlassClassLoader:(jobject)classLoader withEnv:(JNIEnv*)env;
 + (jclass)ClassForName:(char*)className withEnv:(JNIEnv*)env;
++ (jclass)MacApplicationClass;
 + (jmethodID)ApplicationNotifyWillFinishLaunchingMethod;
 + (jmethodID)ApplicationNotifyDidFinishLaunchingMethod;
 + (jmethodID)ApplicationNotifyWillBecomeActiveMethod;
@@ -49,6 +50,7 @@
 + (jmethodID)ApplicationNotifyDidUnhideMethod;
 + (jmethodID)ApplicationNotifyOpenFilesMethod;
 + (jmethodID)ApplicationNotifyWillQuitMethod;
++ (jmethodID)ApplicationInitAwt;
 
 + (BOOL)InvokeSelectorIfAvailable:(SEL)aSelector forClass:(Class)aClass withArgument:(void *)anArgument withReturnValue:(void **)aReturnValue;
 
