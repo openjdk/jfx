@@ -54,6 +54,7 @@ import javafx.scene.shape.StrokeType;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.StageStyle;
+import javafx.stage.StageBackdropStyle;
 import javafx.stage.Window;
 import java.io.File;
 import java.io.InputStream;
@@ -624,9 +625,10 @@ public final class QuantumToolkit extends Toolkit {
     }
 
     @Override public TKStage createTKStage(Window peerWindow, StageStyle stageStyle, boolean primary,
-                                           Modality modality, TKStage owner, boolean rtl, boolean darkFrame) {
+                                           Modality modality, TKStage owner, boolean rtl, boolean darkFrame,
+                                           StageBackdropStyle backdropStyle) {
         assertToolkitRunning();
-        WindowStage stage = new WindowStage(peerWindow, stageStyle, modality, owner, darkFrame);
+        WindowStage stage = new WindowStage(peerWindow, stageStyle, modality, owner, darkFrame, backdropStyle);
         if (primary) {
             stage.setIsPrimary();
         }
@@ -709,7 +711,7 @@ public final class QuantumToolkit extends Toolkit {
 
     @Override public TKStage createTKPopupStage(Window peerWindow, StageStyle popupStyle, TKStage owner) {
         assertToolkitRunning();
-        WindowStage stage = new WindowStage(peerWindow, popupStyle, null, owner, false);
+        WindowStage stage = new WindowStage(peerWindow, popupStyle, null, owner, false, null);
         stage.setIsPopup();
         stage.init(systemMenu);
         return stage;
@@ -1275,6 +1277,8 @@ public final class QuantumToolkit extends Toolkit {
                 return Application.GetApplication().supportsUnifiedWindows();
             case EXTENDED_WINDOW:
                 return Application.GetApplication().supportsExtendedWindows();
+            case WINDOW_BACKDROP:
+                return Application.GetApplication().supportsWindowBackdrops();
             case TWO_LEVEL_FOCUS:
                 return Application.GetApplication().hasTwoLevelFocus();
             case VIRTUAL_KEYBOARD:
@@ -1853,5 +1857,15 @@ public final class QuantumToolkit extends Toolkit {
     @Override
     public GlassRobot createRobot() {
         return com.sun.glass.ui.Application.GetApplication().createRobot();
+    }
+
+    @Override
+    public List<String> getPlatformBackdropStyleNames() {
+        return Application.GetApplication().getPlatformBackdropStyleNames();
+    }
+
+    @Override
+    public StageBackdropStyle createPlatformBackdropStyle(String name) {
+        return Application.GetApplication().createPlatformBackdropStyle(name);
     }
 }
