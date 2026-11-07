@@ -68,6 +68,11 @@ public class FormatStringConverter<T> extends BaseStringConverter<T> {
     }
 
     @Override
+    public String toString() {
+        return super.toString();
+    }
+
+    @Override
     String toStringFromNonNull(T object) {
         return format.format(object);
     }
