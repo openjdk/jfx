@@ -819,6 +819,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setEnabled
     GLASS_POOL_ENTER;
     {
         GlassWindow *window = getGlassWindow(env, jPtr);
+        BOOL wasEnabled = window->isEnabled;
         window->isEnabled = (BOOL)isEnabled;
         NSButton *zoomButton = [window->nsWindow standardWindowButton:NSWindowZoomButton];
         if ((window->isEnabled) && (window->isResizable)){
@@ -837,6 +838,12 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setEnabled
             [window->nsWindow setStyleMask:
                 (window->enabledStyleMask & ~(NSUInteger)(NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable))];
             [zoomButton setEnabled:NO];
+        }
+        if (!wasEnabled && window->isEnabled && [window->nsWindow isKeyWindow]) {
+            // the window became focused/key while it was disabled.
+            // So we have to resend the suppressed focus event.
+            [window windowDidBecomeKey:[NSNotification notificationWithName:NSWindowDidBecomeKeyNotification
+                                                                    object:window->nsWindow]];
         }
     }
     GLASS_POOL_EXIT;
