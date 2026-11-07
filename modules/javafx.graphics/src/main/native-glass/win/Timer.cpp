@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,9 +45,14 @@ class RunnableTimer : public Timer {
             }
         }
 
-        static void Stop(jlong timer)
+        static bool Stop(jlong timer)
         {
-            delete (RunnableTimer*)jlong_to_ptr(timer);
+            RunnableTimer* runnableTimer = (RunnableTimer*)jlong_to_ptr(timer);
+            if (runnableTimer->cancel()) {
+                delete runnableTimer;
+                return true;
+            }
+            return false;
         }
 
         RunnableTimer(jobject r, jint period) : env(NULL), runnable(r)
@@ -98,7 +103,12 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_win_WinTimer__1start
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinTimer__1stop
   (JNIEnv * env, jobject jThis, jlong timer)
 {
-    RunnableTimer::Stop(timer);
+    if (!RunnableTimer::Stop(timer)) {
+        jclass ise = env->FindClass("java/lang/IllegalStateException");
+        if (ise) {
+            env->ThrowNew(ise, "Unable to stop timer");
+        }
+    }
 }
 
 /*

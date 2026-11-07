@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,7 +34,9 @@ import javafx.beans.value.ObservableValue;
  * respectively {@link Observable#removeListener(InvalidationListener)}.
  * <p>
  * For an in-depth explanation of invalidation events and how they differ from
- * change events, see the documentation of {@code ObservableValue}.
+ * change events, see the documentation of {@link ObservableValue}. The guarantees
+ * provided by the implementations in the JavaFX library are described in the
+ * documentation of {@link Observable}.
  * <p>
  * The same instance of {@code InvalidationListener} can be registered to listen
  * to multiple {@code Observables}.

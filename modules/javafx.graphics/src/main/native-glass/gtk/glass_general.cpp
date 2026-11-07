@@ -146,7 +146,7 @@ JNIEXPORT jint JNICALL
 JNI_OnLoad_glassgtk3(JavaVM *jvm, void *reserved)
 #else
 JNI_OnLoad(JavaVM *jvm, void *reserved)
-#endif
+#endif // STATIC_BUILD
 {
     (void)reserved;
 
@@ -155,8 +155,8 @@ JNI_OnLoad(JavaVM *jvm, void *reserved)
     Display* display;
 
     javaVM = jvm;
-    if (jvm->GetEnv((void **)&env, JNI_VERSION_1_6)) {
-         return JNI_ERR; /* JNI version not supported */
+    if (jvm->GetEnv((void **)&env, JNI_VERSION_1_8)) {
+        return JNI_ERR; /* JNI version not supported */
     }
 
     clazz = env->FindClass("java/lang/String");
@@ -381,7 +381,7 @@ JNI_OnLoad(JavaVM *jvm, void *reserved)
     jColorRgb = env->GetStaticMethodID(jColorCls, "rgb", "(IIID)Ljavafx/scene/paint/Color;");
     if (env->ExceptionCheck()) return JNI_ERR;
 
-    return JNI_VERSION_1_6;
+    return JNI_VERSION_1_8;
 }
 
 #ifdef STATIC_BUILD

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -367,7 +367,7 @@ static INLINE void checkBoundsRepeat(jint *a, jlong *la, jint min, jint max) {
     jint aval = *a;
     if (aval < min || aval > max) {
         if (max >= 0) {
-            *la = lmod(*la, (max+1) << 16);
+            *la = lmod(*la, ((jlong)max+1) << 16);
             *a = (jint)(*la >> 16);
         } else {
             *la = 0;
@@ -388,8 +388,8 @@ static INLINE void checkBoundsNoRepeat(jint *a, jlong *la, jint min, jint max) {
 static INLINE void getPointsToInterpolate(jint *pts, jint *data, jint sidx, jint stride, jint p00,
     jint tx, jint txMax, jint ty, jint tyMax)
 {
-    jint sidx2 = (ty >= tyMax) ? sidx : sidx + stride;
-    jboolean isXin = (tx < txMax);
+    jint sidx2 = (ty >= tyMax || ty < 0) ? sidx : sidx + stride;
+    jboolean isXin = (tx < txMax && tx >= 0);
     pts[0] = (isXin) ? data[sidx + 1] : p00;
     pts[1] = data[sidx2];
     pts[2] = (isXin) ? data[sidx2 + 1] : data[sidx2];
@@ -398,8 +398,8 @@ static INLINE void getPointsToInterpolate(jint *pts, jint *data, jint sidx, jint
 static INLINE void getPointsToInterpolateRepeat(jint *pts, jint *data, jint sidx, jint stride, jint p00,
     jint tx, jint txMax, jint ty, jint tyMax)
 {
-    jint sidx2 = (ty >= tyMax) ? MAX(tx,0) : sidx + stride;
-    jboolean isXin = (tx < txMax);
+    jint sidx2 = (ty >= tyMax || ty < 0) ? MAX(tx,0) : sidx + stride;
+    jboolean isXin = (tx < txMax && tx >= 0);
     pts[0] = (isXin) ? data[sidx + 1] : data[sidx - MAX(tx,0)];
     pts[1] = data[sidx2];
     pts[2] = (isXin) ? data[sidx2 + 1] : data[sidx2 - MAX(tx,0)];

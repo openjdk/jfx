@@ -1617,8 +1617,7 @@ xmlTextReaderNext(xmlTextReader *reader) {
 static void
 xmlTextReaderDumpCopy(xmlTextReaderPtr reader, xmlOutputBufferPtr output,
                       xmlNodePtr node) {
-    if ((node->type == XML_DTD_NODE) ||
-        (node->type == XML_ELEMENT_DECL) ||
+    if ((node->type == XML_ELEMENT_DECL) ||
         (node->type == XML_ATTRIBUTE_DECL) ||
         (node->type == XML_ENTITY_DECL))
         return;

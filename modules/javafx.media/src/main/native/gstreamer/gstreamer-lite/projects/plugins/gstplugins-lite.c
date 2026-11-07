@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,8 +41,7 @@ gboolean lite_plugins_init (GstPlugin * plugin)
       !plugin_init_wavparse(plugin) ||
       !plugin_init_aiff(plugin) ||
       !plugin_init_app(plugin) ||
-      !plugin_init_audioparsers(plugin) ||
-      !plugin_init_qtdemux(plugin))
+      !plugin_init_audioparsers(plugin))
     return FALSE;
 
 #ifdef WIN32
@@ -59,7 +58,8 @@ gboolean lite_plugins_init (GstPlugin * plugin)
 #ifdef LINUX
   if (!plugin_init_audiofx(plugin) ||
       !plugin_init_alsa(plugin) ||
-      !plugin_init_volume(plugin))
+      !plugin_init_volume(plugin) ||
+      !plugin_init_qtdemux(plugin))
     return FALSE;
 #endif
 
