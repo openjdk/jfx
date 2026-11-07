@@ -414,7 +414,7 @@ public class GridPane extends Pane {
         return -1;
     }
 
-    private static final Callback<Node, Insets> marginAccessor = n -> getMargin(n);
+    private static final Callback<Layoutable, Insets> marginAccessor = n -> getMargin((Node)n);
 
     /**
      * Sets the horizontal alignment for the child when contained by a gridpane.
