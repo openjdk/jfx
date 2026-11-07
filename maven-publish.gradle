@@ -77,14 +77,14 @@ ext.configurePublication = { List<Project> projects, CompileTarget t, Task previ
     projects.each { Project project ->
         def moduleName = project.ext.moduleName
         def buildDir = project.layout.buildDirectory.get()
-        def sourceDir = project.sourceSets.main.allJava
+        def sourceDir = project.sourceSets.main.allSource
 
         def dstModularJarDir="${publicationDir}"
         def srcClassesDir = "${buildDir}/${platformPrefix}module-classes"
         def srcLibsDir = "${buildDir}/${platformPrefix}module-lib"
 
         def modularEmptyPublicationJarName = "${moduleName}.jar"
-        def modularEmptyPublicationJarTask = project.tasks.register("moduleEmptyPublicationJar${t.capital}", Jar) {
+        def modularEmptyPublicationJarTask = project.tasks.register("modularEmptyPublicationJar${t.capital}", Jar) {
             dependsOn previousTask
 
             destinationDirectory = file("${dstModularJarDir}")
@@ -107,7 +107,7 @@ ext.configurePublication = { List<Project> projects, CompileTarget t, Task previ
         }
 
         def modularPublicationSourcesJarName = "${moduleName}-sources.jar"
-        def modularPublicationSourceJarTask = project.tasks.register("modulePublicationSourcesJar${t.capital}", Jar) {
+        def modularPublicationSourcesJarTask = project.tasks.register("modularPublicationSourcesJar${t.capital}", Jar) {
             dependsOn modularPublicationJarTask
 
             destinationDirectory = file("${dstModularJarDir}")
@@ -117,7 +117,7 @@ ext.configurePublication = { List<Project> projects, CompileTarget t, Task previ
 
         // Only run during the all task.
         rootProject.tasks.named("all").configure {
-            dependsOn modularPublicationSourceJarTask
+            dependsOn modularPublicationSourcesJarTask
         }
     }
 }
@@ -186,11 +186,11 @@ void addMavenPublication(Project project, List<Project> projectDependencies) {
                     artifactId = artifactName
 
                     afterEvaluate {
-                        artifact project.tasks."moduleEmptyPublicationJar$t.capital"
+                        artifact project.tasks."modularEmptyPublicationJar$t.capital"
                         artifact project.tasks."modularPublicationJar$t.capital" {
                             archiveClassifier.set("$t.name")
                         }
-                        artifact project.tasks."modulePublicationSourcesJar$t.capital" {
+                        artifact project.tasks."modularPublicationSourcesJar$t.capital" {
                             archiveClassifier.set("sources")
                         }
                     }
