@@ -32,10 +32,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 
-import javafx.beans.value.WritableValue;
 import javafx.css.CssMetaData;
 import javafx.css.CssParser;
 import javafx.css.FontCssMetaData;
@@ -75,6 +73,10 @@ import static com.sun.javafx.css.CalculatedValue.*;
 
 /**
  * The StyleHelper is a helper class used for applying CSS information to Nodes.
+ * <p>
+ * Each Node that can is styled will have a StyleHelper. Unstyled Nodes do not.
+ * When created, a StyleHelper will always have a correct {@link #firstStyleableAncestor} set.
+ * It will be recreated when the scene structure changes and therefore can be reliably used and trusted later on.
  */
 final class CssStyleHelper {
 
@@ -85,18 +87,63 @@ final class CssStyleHelper {
     }
 
     /**
-     * Creates a new StyleHelper.
+     * Creates the {@link CssStyleHelper} for the {@link Node} and installs it, or set it to null
+     * if there are no style matching it.
+     *
+     * @return whether the children of the node must be updated as well.
+     * This the case for when:
+     * <ul>
+     *     <li>
+     *         the node has no style helper (as styles may depend on being a child of it)
+     *     </li>
+     *     <li>
+     *         its style helper was replaced,
+     *     </li>
+     *     <li>
+     *         was already replaced by a descendant before
+     *     </li>
+     * </ul>
      */
-    static CssStyleHelper createStyleHelper(final Node node) {
+    static boolean createStyleHelper(final Node node) {
+        List<Styleable> path = createStyleableChain(node);
 
-        // need to know how far we are to root in order to init arrays.
-        // TODO: should we hang onto depth to avoid this nonsense later?
-        // TODO: is there some other way of knowing how far from the root a node is?
-        Styleable parent = node;
-        int depth = 0;
-        while(parent != null) {
-            depth++;
-            parent = parent.getStyleableParent();
+        Node styleableAncestor = null;
+        for (int index = path.size() - 1; index > 0; index--) {
+            if (!(path.get(index) instanceof Node ancestor)) {
+                continue;
+            }
+
+            if (ancestor.cssHelperStale) {
+                ancestor.cssHelperResolvedEarly = true;
+                updateStyleHelper(ancestor, styleableAncestor, path, index);
+            }
+
+            if (ancestor.styleHelper != null) {
+                styleableAncestor = ancestor;
+            }
+        }
+
+        CssStyleHelper oldHelper = node.styleHelper;
+        boolean resolvedEarly = node.cssHelperResolvedEarly;
+        node.cssHelperResolvedEarly = false;
+
+        updateStyleHelper(node, styleableAncestor, path, 0);
+
+        return resolvedEarly || node.styleHelper == null || node.styleHelper != oldHelper;
+    }
+
+    /**
+     * Creates or reuses the {@link CssStyleHelper} for the node at {@code index} of {@code path} and installs it.
+     * Sets null, if there are no styles matching this node.
+     * <p>
+     * No properties are modified here yet.
+     * Properties no longer styled are reset when the styles are applied in {@link #transitionToState(Node)}.
+     */
+    private static void updateStyleHelper(Node node, Node styleableAncestor, List<Styleable> path, int index) {
+        final CssStyleHelper currentHelper = node.styleHelper;
+
+        if (currentHelper != null) {
+            setFirstStyleableAncestor(currentHelper, styleableAncestor);
         }
 
         // The List<CacheEntry> should only contain entries for those
@@ -108,16 +155,13 @@ final class CssStyleHelper {
         // are gotten. By comparing the actual pseudo-class state to the
         // pseudo-class states that apply, a CacheEntry can be created or
         // fetched using only those pseudoclasses that matter.
-        final PseudoClassState[] triggerStates = new PseudoClassState[depth];
+        final PseudoClassState[] triggerStates = new PseudoClassState[path.size() - index];
 
         final StyleMap styleMap =
                 StyleManager.getInstance().findMatchingStyles(node, node.getSubScene(), triggerStates);
 
-        //
-        // reuse the existing styleHelper if possible.
-        //
-        if (canReuseStyleHelper(node, styleMap)) {
-
+        final Styleable parent = index + 1 < path.size() ? path.get(index + 1) : null;
+        if (currentHelper != null && canReuseStyleHelper(node, styleMap, parent)) {
             //
             // JDK-8123731
             //
@@ -128,19 +172,20 @@ final class CssStyleHelper {
             // trigger a REAPPLY. If the REAPPLY comes because of a change in font, then the fontSizeCache
             // needs to be invalidated (cleared) so that new values will be looked up for all transition states.
             //
-            if (node.styleHelper.isUserSetFont(node)) {
-                node.styleHelper.cacheContainer.fontSizeCache.clear();
+            if (isUserSetFont(path, index)) {
+                currentHelper.cacheContainer.fontSizeCache.clear();
             }
 
-            updateTriggerStates(node, depth, triggerStates);
-            return node.styleHelper;
+            updateTriggerStates(path, index, triggerStates);
+            node.cssHelperStale = false;
+            return;
         }
 
         // The trigger states are collected again for the new style map.
         node.cssTriggerStates = null;
 
+        boolean resetOnly = false;
         if (styleMap == null || styleMap.isEmpty()) {
-
             boolean mightInherit = false;
 
             final List<CssMetaData<? extends Styleable, ?>> props = node.getCssMetaData();
@@ -155,128 +200,133 @@ final class CssStyleHelper {
                 }
             }
 
+            // There are no styles in the StyleMap and no styles inherit, so this node does not need a style helper,
+            // unless properties set by CSS must still be reset.
             if (!mightInherit) {
-
-                // If this node had a style helper, then reset properties to their initial value
-                // since the node won't have a style helper after this call
-                if (node.styleHelper != null) {
-                    node.styleHelper.resetToInitialValues(node, styleMap);
+                if (currentHelper == null || currentHelper.cacheContainer.cssSetProperties.isEmpty()) {
+                    node.styleHelper = null;
+                    node.cssHelperStale = false;
+                    return;
                 }
 
-                //
-                // This node didn't have a StyleHelper before and it doesn't need one now since there are
-                // no styles in the StyleMap and no inherited styles.
-                return null;
+                resetOnly = true;
             }
-
         }
 
-        updateTriggerStates(node, depth, triggerStates);
+        CssStyleHelper helper = new CssStyleHelper(new CacheContainer(node, styleMap, path, index));
+        helper.cacheContainer.resetOnly = resetOnly;
+        setFirstStyleableAncestor(helper, styleableAncestor);
 
-        CssStyleHelper helper = new CssStyleHelper(new CacheContainer(node, styleMap, depth));
+        updateTriggerStates(path, index, triggerStates);
 
-        helper.firstStyleableAncestor = new WeakReference<>(findFirstStyleableAncestor(node));
+        node.styleHelper = helper;
+        node.cssHelperStale = false;
 
-        // If this node had a style helper, we need to reset all properties that will be unset with the
-        // new style map to their initial values. Properties that remain set with the new style map carry
-        // over to the new style helper.
-        if (node.styleHelper != null) {
-            Map<CssMetaData, CalculatedValue> remainingProperties =
-                node.styleHelper.resetToInitialValues(node, styleMap);
+        // The css set properties carry over, so those no longer styled are reset when the styles are applied.
+        if (currentHelper != null) {
+            helper.cacheContainer.cssSetProperties.putAll(currentHelper.cacheContainer.cssSetProperties);
+            helper.cacheContainer.resetUnexposedProperties = true;
+        }
+    }
 
-            helper.cacheContainer.cssSetProperties.putAll(remainingProperties);
+    /**
+     * Collects the chain of {@link Styleable} nodes up to the root.
+     *
+     * @param styleable the {@link Styleable}
+     * @return the {@link Styleable} chain until the root
+     */
+    private static List<Styleable> createStyleableChain(Styleable styleable) {
+        List<Styleable> path = new ArrayList<>();
+
+        for (Styleable current = styleable; current != null; current = current.getStyleableParent()) {
+            path.add(current);
         }
 
-        return helper;
+        return path;
     }
 
     /**
      * Adds the pseudo-classes found when matching selectors to the trigger states of the node and its parents.
      */
-    private static void updateTriggerStates(Node node, int depth, PseudoClassState[] triggerStates) {
-        Styleable styleable = node;
-        for (int n = 0; n < depth; n++) {
-            final PseudoClassState triggerState = triggerStates[n];
-
+    private static void updateTriggerStates(List<Styleable> path, int startIndex, PseudoClassState[] triggerStates) {
+        // make sure parent's transition states include the pseudo-classes found when matching selectors
+        for (int triggerIndex = 0; triggerIndex < triggerStates.length; triggerIndex++) {
             // TODO: this means that a style like .menu-item:hover won't work. Need to separate CssStyleHelper tree from scene-graph tree
-            if (styleable instanceof Node styleableNode && triggerState != null && !triggerState.isEmpty()) {
+            if (!(path.get(startIndex + triggerIndex) instanceof Node styleableNode)) {
+                continue;
+            }
+
+            final PseudoClassState triggerState = triggerStates[triggerIndex];
+
+            if (triggerState != null && !triggerState.isEmpty()) {
                 if (styleableNode.cssTriggerStates == null) {
                     styleableNode.cssTriggerStates = new PseudoClassState();
                 }
                 styleableNode.cssTriggerStates.addAll(triggerState);
             }
-
-            styleable = styleable.getStyleableParent();
         }
     }
-    //
-    // return true if the fontStyleableProperty's origin is USER
-    //
-    private boolean isUserSetFont(Styleable node) {
 
-        if (node == null) return false; // should never happen, but just to be safe...
-
-        CssMetaData<Styleable, Font> fontCssMetaData = cacheContainer.fontProp;
-        if (fontCssMetaData != null) {
-            StyleableProperty<Font> fontStyleableProperty = fontCssMetaData != null ? fontCssMetaData.getStyleableProperty(node) : null;
-            if (fontStyleableProperty != null && fontStyleableProperty.getStyleOrigin() == StyleOrigin.USER) return true;
+    /**
+     * Whether the font of the node at {@code index} of {@code path} or one of its ancestors was set by the user.
+     *
+     * @return true, if the user was set by the user, false otherwise
+     */
+    private static boolean isUserSetFont(List<Styleable> path, int index) {
+        for (int pathIndex = index; pathIndex < path.size(); pathIndex++) {
+            if (path.get(pathIndex) instanceof Node node && node.styleHelper != null) {
+                StyleableProperty<Font> fontProperty = node.styleHelper.cacheContainer.getFontProperty(node);
+                if (fontProperty != null && fontProperty.getStyleOrigin() == StyleOrigin.USER) {
+                    return true;
+                }
+            }
         }
-
-        Styleable styleableParent = firstStyleableAncestor.get();
-        CssStyleHelper parentStyleHelper = getStyleHelper(firstStyleableAncestor.get());
-
-        if (parentStyleHelper != null) {
-            return parentStyleHelper.isUserSetFont(styleableParent);
-        } else {
-            return false;
-        }
+        return false;
     }
 
     private static CssStyleHelper getStyleHelper(Node n) {
-        return (n != null)? n.styleHelper : null;
+        return (n != null) ? n.styleHelper : null;
     }
 
-    private static Node findFirstStyleableAncestor(Styleable st) {
-        Node ancestor = null;
-        Styleable parent = st.getStyleableParent();
-        while (parent != null) {
-            if (parent instanceof Node) {
-                if (((Node) parent).styleHelper != null) {
-                    ancestor = (Node) parent;
-                    break;
-                }
+    private static Node getFirstStyleableAncestor(Styleable styleable) {
+        if (styleable instanceof Node node) {
+            WeakReference<Node> ancestorRef = node.styleHelper.firstStyleableAncestor;
+            if (ancestorRef != null) {
+                return ancestorRef.get();
             }
-            parent = parent.getStyleableParent();
         }
-
-        return ancestor;
+        return null;
     }
 
-    //
-    // return true if the Node's current styleHelper can be reused.
-    //
-    private static boolean canReuseStyleHelper(final Node node, final StyleMap styleMap) {
-
-        // Obviously, we cannot reuse the node's style helper if it doesn't have one.
-        if (node == null || node.styleHelper == null) {
-            return false;
+    private static void setFirstStyleableAncestor(CssStyleHelper helper, Node ancestor) {
+        if (ancestor == null) {
+            helper.firstStyleableAncestor = null;
+            return;
         }
+        helper.firstStyleableAncestor = new WeakReference<>(ancestor);
+    }
 
-        // If we have a styleHelper but the new styleMap is null, then we don't need a styleHelper at all
+    /**
+     * Whether {@code helper}, the current style helper of {@code node}, can be reused for {@code styleMap}.
+     */
+    private static boolean canReuseStyleHelper(Node node, StyleMap styleMap, Styleable parent) {
+        // If the new styleMap is null, then we don't need a styleHelper at all.
         if (styleMap == null) {
             return false;
         }
 
-        StyleMap currentMap = node.styleHelper.getStyleMap(node);
+        final CssStyleHelper helper = node.styleHelper;
 
-        // We cannot reuse the style helper if the styleMap is not the same instance as the current one
-        // Note: check instance equality!
-        if (currentMap != styleMap) {
+        // The helper was only kept to reset the properties set by CSS, which is done.
+        if (helper.cacheContainer.resetOnly && helper.cacheContainer.cssSetProperties.isEmpty()) {
             return false;
         }
 
-        //update ancestor since this node may have changed positions in the scene graph (JDK-8237469)
-        node.styleHelper.firstStyleableAncestor = new WeakReference<>(findFirstStyleableAncestor(node));
+        // We cannot reuse the style helper if the styleMap is not the same instance as the current one
+        // Note: check instance equality!
+        if (helper.getStyleMap(node) != styleMap) {
+            return false;
+        }
 
         //
         // The current map might be the same, but one of the node's parent's maps might have changed which
@@ -285,21 +335,18 @@ final class CssStyleHelper {
         // since it is made up of the current set of StyleMap ids.
         //
 
-        Styleable parent = node.getStyleableParent();
-
         // if the node's parent is null and the style maps are the same, then we can certainly reuse the style-helper
         if (parent == null) {
             return true;
         }
 
-        CssStyleHelper parentHelper = getStyleHelper(node.styleHelper.firstStyleableAncestor.get());
-
+        Node styleableAncestor = getFirstStyleableAncestor(node);
+        CssStyleHelper parentHelper = getStyleHelper(styleableAncestor);
         if (parentHelper != null) {
             int[] parentIds = parentHelper.cacheContainer.styleCacheKey.getStyleMapIds();
-            int[] nodeIds = node.styleHelper.cacheContainer.styleCacheKey.getStyleMapIds();
+            int[] nodeIds = helper.cacheContainer.styleCacheKey.getStyleMapIds();
 
             if (parentIds.length == nodeIds.length - 1) {
-
                 boolean isSame = true;
 
                 // check that all of the style map ids are the same.
@@ -311,18 +358,19 @@ final class CssStyleHelper {
                 }
 
                 return isSame;
-
             }
         }
 
         return false;
     }
 
-    private static final WeakReference<Node> EMPTY_NODE = new WeakReference<>(null);
 
-    /* This is the first Styleable parent (of Node this StyleHelper belongs to)
-     * having a valid StyleHelper */
-    private WeakReference<Node> firstStyleableAncestor = EMPTY_NODE;
+    /**
+     * This is the first valid styleable ancestor of this helper.
+     * The first styleable ancestor is a styleable parent of the node (this helper belongs to) that has a
+     * styleHelper (with styles) and therefore might be important for styling this node.
+     */
+    private WeakReference<Node> firstStyleableAncestor = null;
 
     private final CacheContainer cacheContainer;
 
@@ -332,10 +380,10 @@ final class CssStyleHelper {
         private CacheContainer(
                 Node node,
                 final StyleMap styleMap,
-                int depth) {
-
+                List<Styleable> path,
+                int startIndex) {
             int ctr = 0;
-            int[] smapIds = new int[depth];
+            int[] smapIds = new int[path.size() - startIndex];
             smapIds[ctr++] = this.smapId = styleMap.getId();
 
             //
@@ -347,16 +395,14 @@ final class CssStyleHelper {
             // set of smapId's can potentially share previously calculated
             // values.
             //
-            Styleable parent = node.getStyleableParent();
-            for(int d=1; d<depth; d++) {
+            for (int pathIndex = startIndex + 1; pathIndex < path.size(); pathIndex++) {
                 // TODO: won't work for something like .menu-item:hover. Need to separate CssStyleHelper tree from scene-graph tree
-                if (parent instanceof Node parentNode) {
+                if (path.get(pathIndex) instanceof Node parentNode) {
                     CssStyleHelper helper = parentNode.styleHelper;
                     if (helper != null) {
                         smapIds[ctr++] = helper.cacheContainer.smapId;
                     }
                 }
-                parent = parent.getStyleableParent();
             }
 
             this.styleCacheKey = new StyleCache.Key(smapIds, ctr);
@@ -379,7 +425,6 @@ final class CssStyleHelper {
             this.fontSizeCache = new HashMap<>();
 
             this.cssSetProperties = new HashMap<>();
-
         }
 
         private StyleMap getStyleMap(Styleable styleable) {
@@ -389,7 +434,14 @@ final class CssStyleHelper {
             } else {
                 return StyleMap.EMPTY_MAP;
             }
+        }
 
+        private StyleableProperty<Font> getFontProperty(Styleable node) {
+            if (fontProp == null) {
+                return null;
+            }
+
+            return fontProp.getStyleableProperty(node);
         }
 
         // This is the key we use to find the shared cache
@@ -414,70 +466,49 @@ final class CssStyleHelper {
         // here so the property can be reset without expanding properties that
         // were not set by css.
         private final Map<CssMetaData, CalculatedValue> cssSetProperties;
+
+        // The cssSetProperties were carried over from a replaced style helper and may contain properties
+        // the node no longer exposes, which must be reset on the next transitionToState().
+        private boolean resetUnexposedProperties;
+
+        // The node has no styles and nothing to inherit, so the style helper is only needed to reset
+        // the properties set by CSS and is not reused once they are reset.
+        private boolean resetOnly;
     }
 
-    private boolean resetInProgress = false;
-
     /**
-     * Resets any properties on the given {@code Styleable} that were set with the old style map, but will no
-     * longer be set after applying {@code newStyleMap}. Properties that remain set with {@code newStyleMap}
-     * are not reset here, because the next {@link Node#applyCss()} pass will compute and apply their new values.
-     *
-     * @return the properties that remain set with {@code newStyleMap}
+     * Resets the properties set by CSS whose {@link CssMetaData} the node no longer exposes,
+     * e.g. after its skin was replaced, and which are no longer styled.
      */
-    private Map<CssMetaData, CalculatedValue> resetToInitialValues(Styleable styleable, StyleMap newStyleMap) {
-        Map<CssMetaData, CalculatedValue> cssSetProperties = cacheContainer.cssSetProperties;
-        if (cssSetProperties.isEmpty()) {
-            return Map.of();
+    private void resetUnexposedProperties(Node node, List<CssMetaData<? extends Styleable, ?>> styleables,
+                                          StyleMap styleMap) {
+        Map<String, List<CascadingStyle>> cascadingStyles = styleMap.getCascadingStyles();
+        List<Map.Entry<CssMetaData, CalculatedValue>> resetList = null;
+
+        var it = cacheContainer.cssSetProperties.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<CssMetaData, CalculatedValue> entry = it.next();
+            CssMetaData cssMetaData = entry.getKey();
+            if (cssMetaData != TransitionDefinitionCssMetaData.getInstance() && !styleables.contains(cssMetaData)
+                    && !containsProperty(cascadingStyles, cssMetaData)) {
+                if (resetList == null) {
+                    resetList = new ArrayList<>();
+                }
+
+                resetList.add(entry);
+                it.remove();
+            }
         }
 
-        resetInProgress = true;
+        if (resetList == null) {
+            return;
+        }
 
-        try {
-            Map<String, List<CascadingStyle>> newCascadingStyles =
-                newStyleMap != null ? newStyleMap.getCascadingStyles() : Map.of();
-
-            List<Entry<CssMetaData, CalculatedValue>> resetList = null;
-            Entry<CssMetaData, CalculatedValue> transitionEntry = null;
-            var it = cssSetProperties.entrySet().iterator();
-            int idx = 0;
-
-            while (it.hasNext()) {
-                Entry<CssMetaData, CalculatedValue> entry = it.next();
-                CssMetaData key = entry.getKey();
-
-                if (!containsProperty(newCascadingStyles, key)) {
-                    if (key != TransitionDefinitionCssMetaData.getInstance()) {
-                        if (resetList == null) {
-                            resetList = new ArrayList<>(cssSetProperties.size() - idx);
-                        }
-
-                        resetList.add(entry);
-                    } else {
-                        transitionEntry = entry;
-                    }
-
-                    it.remove();
-                }
-
-                ++idx;
+        for (Map.Entry<CssMetaData, CalculatedValue> entry : resetList) {
+            CssMetaData cssMetaData = entry.getKey();
+            if (cssMetaData.isSettable(node)) {
+                resetToInitialValue(node, cssMetaData, entry.getValue());
             }
-
-            // The transition property must be reset before all other properties, as its value might
-            // affect the transitions that are applied to other properties.
-            if (transitionEntry != null) {
-                resetToInitialValue(styleable, transitionEntry.getKey(), transitionEntry.getValue());
-            }
-
-            if (resetList != null) {
-                for (Entry<CssMetaData, CalculatedValue> entry : resetList) {
-                    resetToInitialValue(styleable, entry.getKey(), entry.getValue());
-                }
-            }
-
-            return cssSetProperties;
-        } finally {
-            resetInProgress = false;
         }
     }
 
@@ -604,21 +635,9 @@ final class CssStyleHelper {
     // This method is a reduced version of transitionToState() method, it is added as a fix for JDK-8204568.
     // Any modifications to the method transitionToState() should be applied here if needed.
     void recalculateRelativeSizeProperties(final Node node, Font fontForRelativeSizes) {
-
-        if (transitionStateInProgress || resetInProgress) {
-            // It is not required to recalculate the relative sized properties,
-            // 1. [transitionStateInProgress]: if transitionToState() is being executed for the current control then all
-            //    the css properties will get calculated there, OR
-            // 2. [resetInProgress]: if resetToInitialValues() is being executed, which sets font to default font.
-            //    The css style set by user if any is applied post this reset which calls
-            //    recalculateRelativeSizeProperties() again.
-            //    JDK-8266966: StyleManager.styleMapList stores the StyleMaps of nodes using an id as key.
-            //    Each node stores this id in CssStyleHelper.CacheContainer.smapId
-            //    CssStyleHelper.getStyleMap(node) gets a StyleMap from StyleManager.styleMapList by using the
-            //    CssStyleHelper.CacheContainer.smapId as key.
-            //    When resetToInitialValues() is in progress, the StyleManager.styleMapList gets updated, therefore
-            //    calls to getStyleMap(node) should be avoided, as it may return an incorrect StyleMap for a given node.
-
+        if (transitionStateInProgress) {
+            // It is not required to recalculate the relative sized properties if transitionToState() is being
+            // executed for the current control, as all the css properties (including resets) will be calculated there.
             return;
         }
         final StyleMap styleMap = getStyleMap(node);
@@ -745,16 +764,14 @@ final class CssStyleHelper {
     private boolean transitionStateInProgress = false;
 
     /**
-     * Called by the Node whenever it has transitioned from one set of
-     * pseudo-class states to another. This function will then lookup the
-     * new values for each of the styleable variables on the Node, and
-     * then set the new value via {@link StyleableProperty#applyStyle}.
+     * Applies the styles of the node.
+     * Each CSS property is looked up (or taken from the shared style cache) and set via
+     * {@link StyleableProperty#applyStyle}.
+     * Properties previously set by CSS that are no longer styled are reset to their initial value.
+     * Called on every CSS pass of the node.
      */
     void transitionToState(final Node node) {
-
-        //
         // If styleMap is null, then StyleManager has blown it away and we need to reapply CSS.
-        //
         final StyleMap styleMap = getStyleMap(node);
         if (styleMap == null) {
             node.styleHelper = null;
@@ -765,10 +782,7 @@ final class CssStyleHelper {
         // if the style-map is empty, then we are only looking for inherited styles.
         final boolean inheritOnly = styleMap.isEmpty();
 
-        //
-        // Styles that need lookup can be cached provided none of the styles
-        // are from Node.style.
-        //
+        // Styles that need lookup can be cached.
         final StyleCache sharedCache = StyleManager.getInstance().getSharedCache(node, node.getSubScene(), cacheContainer.styleCacheKey);
 
         if (sharedCache == null) {
@@ -823,8 +837,14 @@ final class CssStyleHelper {
                     (CssMetaData<Styleable, ?>)(CssMetaData<?, ?>)TransitionDefinitionCssMetaData.getInstance() :
                     (CssMetaData<Styleable, ?>)styleables.get(n);
 
-            // Don't bother looking up styles that don't inherit.
-            if (inheritOnly && cssMetaData.isInherits() == false) {
+            // Don't bother looking up styles that don't inherit, but reset them if they were set by CSS before.
+            if (inheritOnly && !cssMetaData.isInherits()) {
+                if (!cacheContainer.cssSetProperties.isEmpty()) {
+                    CalculatedValue initialValue = cacheContainer.cssSetProperties.remove(cssMetaData);
+                    if (initialValue != null && cssMetaData.isSettable(node)) {
+                        resetToInitialValue(node, cssMetaData, initialValue);
+                    }
+                }
                 continue;
             }
 
@@ -984,6 +1004,12 @@ final class CssStyleHelper {
             }
 
         }
+
+        if (cacheContainer.resetUnexposedProperties) {
+            cacheContainer.resetUnexposedProperties = false;
+            resetUnexposedProperties(node, styleables, styleMap);
+        }
+
         transitionStateInProgress = false;
     }
 
@@ -1213,21 +1239,21 @@ final class CssStyleHelper {
             final Styleable styleable,
             final String property) {
 
-        Styleable parent = ((Node)styleable).styleHelper.firstStyleableAncestor.get();
-        CssStyleHelper parentStyleHelper = getStyleHelper((Node) parent);
+        Node ancestor = getFirstStyleableAncestor(styleable);
+        CssStyleHelper parentStyleHelper = getStyleHelper(ancestor);
 
-        if (parent != null && parentStyleHelper != null) {
+        if (ancestor != null && parentStyleHelper != null) {
 
-            StyleMap parentStyleMap = parentStyleHelper.getStyleMap(parent);
-            Set<PseudoClass> transitionStates = ((Node)parent).pseudoClassStates;
-            CascadingStyle cascadingStyle = parentStyleHelper.getStyle(parent, property, parentStyleMap, transitionStates);
+            StyleMap parentStyleMap = parentStyleHelper.getStyleMap(ancestor);
+            Set<PseudoClass> transitionStates = ancestor.pseudoClassStates;
+            CascadingStyle cascadingStyle = parentStyleHelper.getStyle(ancestor, property, parentStyleMap, transitionStates);
 
             if (cascadingStyle != null) {
 
                 final ParsedValue cssValue = cascadingStyle.getParsedValue();
 
                 if ("inherit".equals(cssValue.getValue())) {
-                    return getInheritedStyle(parent, property);
+                    return getInheritedStyle(ancestor, property);
                 }
                 return cascadingStyle;
             }
@@ -1258,20 +1284,17 @@ final class CssStyleHelper {
             } else {
                 // TODO: This block was copied from inherit. Both should use same code somehow.
 
-                Styleable styleableParent = ((Node)styleable).styleHelper.firstStyleableAncestor.get();
-                CssStyleHelper parentStyleHelper = getStyleHelper((Node) styleableParent);
+                Node ancestor = getFirstStyleableAncestor(styleable);
+                CssStyleHelper parentStyleHelper = getStyleHelper(ancestor);
 
-                if (styleableParent == null || parentStyleHelper == null) {
+                if (ancestor == null || parentStyleHelper == null) {
                     return null;
                 }
 
-                StyleMap parentStyleMap = parentStyleHelper.getStyleMap(styleableParent);
-                Set<PseudoClass> styleableParentPseudoClassStates =
-                    styleableParent instanceof Node
-                        ? ((Node)styleableParent).pseudoClassStates
-                        : styleable.getPseudoClassStates();
+                StyleMap parentStyleMap = parentStyleHelper.getStyleMap(ancestor);
+                Set<PseudoClass> styleableParentPseudoClassStates = ancestor.pseudoClassStates;
 
-                return parentStyleHelper.resolveRef(styleableParent, property,
+                return parentStyleHelper.resolveRef(ancestor, property,
                         parentStyleMap, styleableParentPseudoClassStates);
             }
         }
@@ -1775,12 +1798,13 @@ final class CssStyleHelper {
         // use the font property's value if it was set by the user and
         // there is not an inline or author style.
 
-        if (cacheContainer.fontProp != null) {
-            StyleableProperty<Font> styleableProp = cacheContainer.fontProp.getStyleableProperty(styleable);
-            StyleOrigin fpOrigin = styleableProp.getStyleOrigin();
-            Font font = styleableProp.getValue();
-            if (font == null) font = Font.getDefault();
+        StyleableProperty<Font> fontProperty = cacheContainer.getFontProperty(styleable);
+
+        if (fontProperty != null) {
+            StyleOrigin fpOrigin = fontProperty.getStyleOrigin();
             if (fpOrigin == StyleOrigin.USER) {
+                Font font = fontProperty.getValue();
+                if (font == null) font = Font.getDefault();
                 origin = fpOrigin;
                 family = getFontFamily(font);
                 size = font.getSize();
@@ -2098,23 +2122,29 @@ final class CssStyleHelper {
      * @return
      */
     static List<Style> getMatchingStyles(final Styleable styleable, final CssMetaData styleableProperty) {
-
-        if (!(styleable instanceof Node)) return Collections.<Style>emptyList();
+        if (!(styleable instanceof Node)) return Collections.emptyList();
 
         Node node = (Node)styleable;
-        final CssStyleHelper helper = (node.styleHelper != null) ? node.styleHelper : createStyleHelper(node);
+        if (node.styleHelper == null) {
+            createStyleHelper(node);
+        }
+
+        final CssStyleHelper helper = node.styleHelper;
 
         if (helper != null) {
             return helper.getMatchingStyles(node, styleableProperty, false);
         }
         else {
-            return Collections.<Style>emptyList();
+            return Collections.emptyList();
         }
     }
 
     static Map<StyleableProperty<?>, List<Style>> getMatchingStyles(Map<StyleableProperty<?>, List<Style>> map, final Node node) {
+        if (node.styleHelper == null) {
+            createStyleHelper(node);
+        }
 
-        final CssStyleHelper helper = (node.styleHelper != null) ? node.styleHelper : createStyleHelper(node);
+        final CssStyleHelper helper = node.styleHelper;
         if (helper != null) {
             if (map == null) map = new HashMap<>();
             for (CssMetaData metaData : node.getCssMetaData()) {
