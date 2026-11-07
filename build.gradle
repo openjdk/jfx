@@ -2110,7 +2110,7 @@ allprojects {
     project.ext.moduleRuntime = true
     project.ext.moduleName = projectDir.name
 
-    // not the right way of determining a module in Gralde, but it will do until a proper modular setup exists
+    // not the right way of determining a module in Gradle, but it will do until a proper modular setup exists
     if (file("src/main/java/module-info.java").exists()) {
         project.ext.moduleSourcePath = defaultModuleSourcePath
         project.ext.moduleSourcePathShim = defaultModuleSourcePathShim
@@ -4360,8 +4360,8 @@ allprojects {
        compileTestJava.dependsOn(copyGeneratedShimsTask)
     }
 
-    // the 'modulePathArgs' are needed only for non-module projects. The `buildModule` is WIP check
-    if (project.hasProperty('modulePathArgs') && project.ext.buildModule == false) {
+    // 'modulePathArgs' is needed only by projects that don't compile via --module-source-path
+    if (project.hasProperty('modulePathArgs') && !project.hasProperty('moduleSourcePath')) {
         project.compileJava.options.compilerArgs.addAll(modulePathArgs)
     }
 
