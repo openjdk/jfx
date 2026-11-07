@@ -56,10 +56,12 @@ import java.util.Objects;
 class MTLResourceFactory extends BaseShaderFactory {
 
     private final MTLContext context;
+    private final int maxTextureSize;
 
     MTLResourceFactory(Screen screen) {
         context = new MTLContext(screen, this);
         context.initState();
+        maxTextureSize = computeMaxTextureSize();
         if (PrismSettings.noClampToZero && PrismSettings.verbose) {
             System.err.println("prism.noClampToZero not supported by MTL");
         }
@@ -290,11 +292,23 @@ class MTLResourceFactory extends BaseShaderFactory {
         };
     }
 
+    private int computeMaxTextureSize() {
+        int size = nGetMaximumTextureSize(context.getContextHandle());
+        if (PrismSettings.verbose) {
+            System.err.println("Maximum supported texture size: " + size);
+        }
+        if (size > PrismSettings.maxTextureSize) {
+            size = PrismSettings.maxTextureSize;
+            if (PrismSettings.verbose) {
+                System.err.println("Maximum texture size clamped to " + size);
+            }
+        }
+        return size;
+    }
+
     @Override
     public int getMaximumTextureSize() {
-        // This value can be fetched from the MTLDevice.
-        // This value comes from Metal feature set tables
-        return 16384; // For MTLGPUFamilyApple3 and above
+        return maxTextureSize;
     }
 
     @Override
@@ -414,6 +428,8 @@ class MTLResourceFactory extends BaseShaderFactory {
     }
 
     // Native methods
+
+    static native int nGetMaximumTextureSize(long pContext);
 
     static native long nCreateTexture(long pContext, int format, int hint, boolean isRTT,
                                       int width, int height, int samples, boolean useMipmap);

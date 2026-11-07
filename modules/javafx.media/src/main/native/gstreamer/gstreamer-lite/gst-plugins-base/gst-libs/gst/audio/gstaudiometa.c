@@ -35,6 +35,10 @@
 #include <string.h>
 #include <gst/base/base.h>
 
+#ifdef GSTREAMER_LITE
+#include <gst/glib-compat-private.h>
+#endif // GSTREAMER_LITE
+
 static gboolean
 gst_audio_downmix_meta_init (GstMeta * meta, gpointer params,
     GstBuffer * buffer)
@@ -384,6 +388,19 @@ gst_audio_meta_serialize (const GstMeta * meta, GstByteArrayInterface * data,
   return TRUE;
 }
 
+static gint
+gst_audio_meta_compare_offsets (gconstpointer a, gconstpointer b, gpointer data)
+{
+  gsize x = *(const gsize *) a;
+  gsize y = *(const gsize *) b;
+
+  if (x < y)
+    return -1;
+  if (x > y)
+    return 1;
+  return 0;
+}
+
 static GstMeta *
 gst_audio_meta_deserialize (const GstMetaInfo * info, GstBuffer * buffer,
     const guint8 * data, gsize size, guint8 version)
@@ -410,8 +427,19 @@ gst_audio_meta_deserialize (const GstMetaInfo * info, GstBuffer * buffer,
   if (!success)
     return NULL;
 
+  if (format < 0 || format >= GST_AUDIO_FORMAT_LAST ||
+      (layout != GST_AUDIO_LAYOUT_INTERLEAVED
+          && layout != GST_AUDIO_LAYOUT_NON_INTERLEAVED) ||
+      rate <= 0 || channels < 1)
+    return NULL;
+
   /* Position is limited to 64 */
   gint n_position = channels > 64 ? 0 : channels;
+
+  /* make sure the payload holds all channel positions and offsets */
+  if (size < 20 + (guint64) n_position * 4 + 8 + (guint64) channels * 8)
+    return NULL;
+
   gint32 *position = g_new (gint32, n_position);
   guint64 *offsets64 = g_new (guint64, channels);
   guint64 samples = 0;
@@ -449,7 +477,70 @@ gst_audio_meta_deserialize (const GstMetaInfo * info, GstBuffer * buffer,
   audio_info.flags = flags;
   audio_info.layout = layout;
 
-  ameta = gst_buffer_add_audio_meta (buffer, &audio_info, samples, offsets);
+  if (audio_info.finfo->width == 0) {
+    g_free (offsets);
+    g_free (position);
+    return NULL;
+  }
+
+  {
+    /* make sure the audio data is inside the buffer */
+    gsize buffer_size = gst_buffer_get_size (buffer);
+    guint64 size_per_channel;
+
+    if (samples > G_MAXUINT64 / audio_info.finfo->width) {
+      g_free (offsets);
+      g_free (position);
+      return NULL;
+    }
+
+    size_per_channel = samples * audio_info.finfo->width / 8;
+
+    if (audio_info.layout == GST_AUDIO_LAYOUT_INTERLEAVED) {
+      if (size_per_channel > G_MAXUINT64 / (guint64) channels ||
+          size_per_channel * (guint64) channels > (guint64) buffer_size) {
+        g_free (offsets);
+        g_free (position);
+        return NULL;
+      }
+    } else {
+      gsize max_offset = 0;
+      for (int i = 0; i < channels; i++)
+        max_offset = MAX (max_offset, offsets[i]);
+      if (max_offset > buffer_size ||
+          size_per_channel > (guint64) buffer_size - max_offset) {
+        g_free (offsets);
+        g_free (position);
+        return NULL;
+      }
+
+      /* make sure the channel planes do not overlap in memory. All planes
+       * have the same size, so in a sorted copy of the offsets consecutive
+       * entries must be at least size_per_channel apart */
+      {
+        gsize *sorted = g_memdup2 (offsets, channels * sizeof (gsize));
+#if GLIB_CHECK_VERSION (2, 82, 0)
+        g_sort_array (sorted, channels, sizeof (gsize),
+            gst_audio_meta_compare_offsets, NULL);
+#else
+        g_qsort_with_data (sorted, channels, sizeof (gsize),
+            gst_audio_meta_compare_offsets, NULL);
+#endif
+        for (int i = 0; i + 1 < channels; i++) {
+          if ((guint64) sorted[i] + size_per_channel > sorted[i + 1]) {
+            g_free (sorted);
+            g_free (offsets);
+            g_free (position);
+            return NULL;
+          }
+        }
+        g_free (sorted);
+      }
+    }
+  }
+
+  ameta = gst_buffer_add_audio_meta (buffer, &audio_info, samples,
+      layout == GST_AUDIO_LAYOUT_NON_INTERLEAVED ? offsets : NULL);
 
   g_free (offsets);
   g_free (position);
@@ -515,7 +606,7 @@ gst_buffer_add_audio_meta (GstBuffer * buffer, const GstAudioInfo * info,
   if (info->layout == GST_AUDIO_LAYOUT_NON_INTERLEAVED) {
 #ifndef G_DISABLE_CHECKS
     gsize max_offset = 0;
-    gint j;
+    gint k;
 #endif
 
     if (G_UNLIKELY (info->channels > 8))
@@ -528,19 +619,37 @@ gst_buffer_add_audio_meta (GstBuffer * buffer, const GstAudioInfo * info,
         meta->offsets[i] = offsets[i];
 #ifndef G_DISABLE_CHECKS
         max_offset = MAX (max_offset, offsets[i]);
-        for (j = 0; j < info->channels; j++) {
-          if (i != j && !(offsets[j] + plane_size <= offsets[i]
-                  || offsets[i] + plane_size <= offsets[j])) {
+#endif
+      }
+
+#ifndef G_DISABLE_CHECKS
+      /* make sure the channel planes do not overlap in memory. All planes
+       * have the same size, so in a sorted copy of the offsets consecutive
+       * entries must be at least plane_size apart */
+      {
+        gsize *sorted = g_memdup2 (offsets, info->channels * sizeof (gsize));
+#if GLIB_CHECK_VERSION (2, 82, 0)
+        g_sort_array (sorted, info->channels, sizeof (gsize),
+            gst_audio_meta_compare_offsets, NULL);
+#else
+        g_qsort_with_data (sorted, info->channels, sizeof (gsize),
+            gst_audio_meta_compare_offsets, NULL);
+#endif
+
+        for (k = 0; k + 1 < info->channels; k++) {
+          if ((guint64) sorted[k] + plane_size > sorted[k + 1]) {
             g_critical ("GstAudioMeta properties would cause channel memory "
-                "areas to overlap! offsets: %" G_GSIZE_FORMAT " (%d), %"
-                G_GSIZE_FORMAT " (%d) with plane size %" G_GSIZE_FORMAT,
-                offsets[i], i, offsets[j], j, plane_size);
+                "areas to overlap! offsets: %" G_GSIZE_FORMAT ", %"
+                G_GSIZE_FORMAT " with plane size %" G_GSIZE_FORMAT, sorted[k],
+                sorted[k + 1], plane_size);
             gst_buffer_remove_meta (buffer, (GstMeta *) meta);
+            g_free (sorted);
             return NULL;
           }
         }
-#endif
+        g_free (sorted);
       }
+#endif
     } else {
       /* default offsets assume channels are laid out sequentially in memory */
       for (i = 0; i < info->channels; i++)
