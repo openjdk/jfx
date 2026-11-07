@@ -26,6 +26,7 @@
 package com.sun.javafx.geom;
 
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.geom.transform.NoninvertibleTransformException;
 import java.util.Arrays;
 
 /**
@@ -1780,6 +1781,238 @@ import java.util.Arrays;
     }
 
     /**
+     * Adds segments to the current path to make an arc.
+     * <p>
+     * If {@code p0} is the current point in the path and {@code p1} is the
+     * point specified by {@code (x1, y1)} and {@code p2} is the point
+     * specified by {@code (x2, y2)}, then the arc segments appended will
+     * be segments along the circumference of a circle of the specified
+     * radius touching and inscribed into the convex (interior) side of
+     * {@code p0->p1->p2}.  The path will contain a line segment (if
+     * needed) to the tangent point between that circle and {@code p0->p1}
+     * followed by circular arc segments to reach the tangent point between
+     * the circle and {@code p1->p2} and will end with the current point at
+     * that tangent point (not at {@code p2}).
+     * <p>
+     * Note that the radius and circularity of the arc segments will be
+     * measured or considered relative to the given transform, but the
+     * resulting segments that are computed from those untransformed
+     * points will then be transformed when they are added to the path.
+     * Since all computation is done in untransformed space, but the
+     * pre-existing path segments are all transformed, the ability to
+     * correctly perform the computation may implicitly depend on being
+     * able to inverse transform the current end of the current path back
+     * into untransformed coordinates.
+     * <p>
+     * If there is no current point in the path, or if the segments
+     * {@code p0->p1} and {@code p1->p2} are colinear or either has zero
+     * length, or the radius is not positive, then nothing is appended and an
+     * {@link IllegalPathStateException} is thrown.
+     *
+     * @param tx the transform relative to which the arc is computed
+     * @param x1 the X coordinate of the first point of the arc.
+     * @param y1 the Y coordinate of the first point of the arc.
+     * @param x2 the X coordinate of the second point of the arc.
+     * @param y2 the Y coordinate of the second point of the arc.
+     * @param radius the radius of the arc in the range {0.0-positive infinity}.
+     * @throws NullPointerException if {@code tx} is {@code null}
+     * @throws IllegalPathStateException if there is no current point in the path or the arc cannot be inscribed
+     * @throws NoninvertibleTransformException if the current point of the path cannot be untransformed for computation
+     */
+    public final void arcTo(BaseTransform tx, float x1, float y1, float x2, float y2, float radius) throws NoninvertibleTransformException {
+        float[] p0 = getUntransformedCurrentPoint(tx);
+        Path2D arc = new Path2D();
+
+        arc.moveTo(p0[0], p0[1]);
+
+        if (!arc.tryArcTo(p0[0], p0[1], x1, y1, x2, y2, radius)) {
+            throw new IllegalPathStateException("unable to inscribe an arc of the given radius");
+        }
+
+        append(arc.getPathIterator(tx), true);
+    }
+
+    /*
+     * Computes the arc segments for the arcTo operation, appending a line
+     * to the initial tangent point and the arc, built from the standard
+     * Arc2D path iterator, to this path. All coordinates are in
+     * untransformed space. Returns false if no arc can be inscribed.
+     */
+    private boolean tryArcTo(float x0, float y0, float x1, float y1, float x2, float y2, float radius) {
+        // call x1,y1 the corner point
+        // If 2*theta is the angle described by p0->p1->p2
+        // then theta is the angle described by p0->p1->centerpt and
+        // centerpt->p1->p2
+        // We know that the distance from the arc center to the tangent points
+        // is r, and if A is the distance from the corner to the tangent point
+        // then we know:
+        // tan(theta) = r/A
+        // A = r / sin(theta)
+        // B = A * cos(theta) = r * (sin/cos) = r * tan
+        // We use the cosine rule on the triangle to get the 2*theta angle:
+        // cosB = (a^2 + c^2 - b^2) / (2ac)
+        // where a and c are the adjacent sides and b is the opposite side
+        // i.e. a = p0->p1, c=p1->p2, b=p0->p2
+        // Then we can use the tan^2 identity to compute B:
+        // tan^2 = (1 - cos(2theta)) / (1 + cos(2theta))
+        double lsq01 = lenSq(x0, y0, x1, y1);
+        double lsq12 = lenSq(x1, y1, x2, y2);
+        double lsq02 = lenSq(x0, y0, x2, y2);
+        double len01 = Math.sqrt(lsq01);
+        double len12 = Math.sqrt(lsq12);
+        double cosnum = lsq01 + lsq12 - lsq02;
+        double cosden = 2.0 * len01 * len12;
+        if (cosden == 0.0 || radius <= 0f) {
+            return false;
+        }
+        double cos_2theta = cosnum / cosden;
+        double tansq_den = (1.0 + cos_2theta);
+        if (tansq_den == 0.0) {
+            return false;
+        }
+        double tansq_theta = (1.0 - cos_2theta) / tansq_den;
+        double A = radius / Math.sqrt(tansq_theta);
+        double tx0 = x1 + (A / len01) * (x0 - x1);
+        double ty0 = y1 + (A / len01) * (y0 - y1);
+        double tx1 = x1 + (A / len12) * (x2 - x1);
+        double ty1 = y1 + (A / len12) * (y2 - y1);
+        // The midpoint between the two tangent points
+        double mx = (tx0 + tx1) / 2.0;
+        double my = (ty0 + ty1) / 2.0;
+        // similar triangles tell us that:
+        // len(m,center)/len(m,tangent) = len(m,tangent)/len(corner,m)
+        // len(m,center) = lensq(m,tangent)/len(corner,m)
+        // center = m + (m - p1) * len(m,center) / len(corner,m)
+        //   = m + (m - p1) * (lensq(m,tangent) / lensq(corner,m))
+        double lenratioden = lenSq(mx, my, x1, y1);
+        if (lenratioden == 0.0) {
+            return false;
+        }
+        double lenratio = lenSq(mx, my, tx0, ty0) / lenratioden;
+        double cx = mx + (mx - x1) * lenratio;
+        double cy = my + (my - y1) * lenratio;
+        if (!(cx == cx && cy == cy)) {
+            return false;
+        }
+        // Looks like we are good to draw, first we have to get to the
+        // initial tangent point with a line segment.
+        if (tx0 != x0 || ty0 != y0) {
+            lineTo((float) tx0, (float) ty0);
+        }
+        // Compute the start angle and sweep of the arc from the first
+        // tangent point to the second and hand it off to the standard
+        // Arc2D path iterator, which approximates it with cubic beziers.
+        double a0 = Math.toDegrees(Math.atan2(ty0 - cy, tx0 - cx));
+        double a1 = Math.toDegrees(Math.atan2(ty1 - cy, tx1 - cx));
+        double extent = a1 - a0;
+        boolean ccw = (ty0 - cy) * (tx1 - cx) > (ty1 - cy) * (tx0 - cx);
+
+        if (ccw) {
+            if (extent > 0) {
+                extent -= 360;
+            }
+        }
+        else {
+            if (extent < 0) {
+                extent += 360;
+            }
+        }
+
+        Arc2D a2d = new Arc2D(
+            (float) (cx - radius), (float) (cy - radius),
+            2 * radius, 2 * radius,
+            (float) -a0, (float) -extent, Arc2D.OPEN
+        );
+
+        append(a2d.getPathIterator(null), true);
+
+        return true;
+    }
+
+    private static double lenSq(double x0, double y0, double x1, double y1) {
+        x1 -= x0;
+        y1 -= y0;
+
+        return x1 * x1 + y1 * y1;
+    }
+
+    /**
+     * Appends the geometry of the path in the specified {@code String}
+     * argument in the format of an SVG path, transforming the coordinates
+     * through the given transform as they are added.
+     * <p>
+     * If there is no current path the string must then start with either
+     * type of move command.
+     *
+     * @param tx the transform to apply to the added coordinates
+     * @param svgpath the SVG Path string.
+     * @throws NullPointerException if {@code tx} or {@code svgpath} is {@code null}
+     * @throws IllegalArgumentException if {@code svgpath} does not match the indicated SVG path grammar
+     * @throws IllegalPathStateException if there is no current point in the path
+     * @throws NoninvertibleTransformException if the current point of the path cannot be untransformed for computation
+     */
+    public final void appendSVGPath(BaseTransform tx, String svgpath) throws NoninvertibleTransformException {
+        boolean prependMoveto = true;
+        boolean skipMoveto = true;
+
+        for (int i = 0; i < svgpath.length(); i++) {
+            switch (svgpath.charAt(i)) {
+                case ' ':
+                case '\t':
+                case '\r':
+                case '\n':
+                    continue;
+                case 'M':
+                    prependMoveto = skipMoveto = false;
+                    break;
+                case 'm':
+                    if (getNumCommands() == 0) {
+                        // An initial relative moveTo becomes absolute
+                        prependMoveto = false;
+                    }
+                    // Even if we prepend an initial moveTo in the temp
+                    // path, we do not want to delete the resulting initial
+                    // moveTo because the relative moveto will be folded
+                    // into it by an optimization in the Path2D object.
+                    skipMoveto = false;
+                    break;
+            }
+            break;
+        }
+
+        Path2D p2d = new Path2D();
+
+        if (prependMoveto && getNumCommands() > 0) {
+            float[] p0 = getUntransformedCurrentPoint(tx);
+
+            if (p0 != null) {
+                p2d.moveTo(p0[0], p0[1]);
+            }
+            else {
+                // cannot untransform the current point to merge with, so do
+                // not prepend a moveTo; non-move SVG commands will then fail
+                // on the empty path
+                skipMoveto = false;
+            }
+        }
+        else {
+            skipMoveto = false;
+        }
+
+        p2d.appendSVGPath(svgpath);
+
+        PathIterator pi = p2d.getPathIterator(tx);
+
+        if (skipMoveto) {
+            // We need to delete the initial moveto and let the path
+            // extend from the actual existing geometry.
+            pi.next();
+        }
+
+        append(pi, false);
+    }
+
+    /**
      * Appends the geometry of the path in the specified {@code String}
      * argument in the format of an SVG path.
      * The specification of the grammar of the language for an SVG path
@@ -1799,6 +2032,7 @@ import java.util.Arrays;
      *     if {@code svgpath} does not match the indicated SVG path grammar
      * @throws IllegalPathStateException
      *     if there is no current point in the path
+     * @throws NullPointerException if {@code svgPath} is {@code null}
      */
     public final void appendSVGPath(String svgpath) {
         SVGParser p = new SVGParser(svgpath);
@@ -2322,6 +2556,14 @@ import java.util.Arrays;
         int crossings = rectCrossings(x, y, x+w, y+h);
         return (crossings == Shape.RECT_INTERSECTS ||
                     (crossings & mask) != 0);
+    }
+
+    private float[] getUntransformedCurrentPoint(BaseTransform tx) throws NoninvertibleTransformException {
+        float[] coords = {getCurrentX(), getCurrentY()};
+
+        tx.inverseTransform(coords, 0, coords, 0, 1);
+
+        return coords;
     }
 
     /**

@@ -25,7 +25,9 @@
 
 package com.sun.pisces;
 
-import com.sun.prism.impl.Disposer;
+import com.sun.javafx.util.FXCleaner;
+
+import java.lang.ref.Cleaner.Cleanable;
 
 /**
  * PiscesRenderer class is basic public API accessing Pisces library capabilities.
@@ -79,6 +81,7 @@ public final class PiscesRenderer {
 
     private long nativePtr = 0L;
     private AbstractSurface surface;
+    private Cleanable cleanable;
 
     /**
      * Creates a renderer that will write into a given surface.
@@ -88,7 +91,26 @@ public final class PiscesRenderer {
     public PiscesRenderer(AbstractSurface surface) {
         this.surface = surface;
         initialize();
-        Disposer.addRecord(this, new PiscesRendererDisposerRecord(nativePtr));
+        addCleanerRecord();
+    }
+
+    private synchronized void addCleanerRecord() {
+        cleanable = FXCleaner.register(this, new PiscesRendererCleanup(nativePtr));
+    }
+
+    /**
+     * Releases the native resources of this renderer. Calling this method more
+     * than once has no further effect.
+     */
+    public synchronized void dispose() {
+        Cleanable c = cleanable;
+
+        cleanable = null;
+        surface = null;
+
+        if (c != null) {
+            c.clean();
+        }
     }
 
     private native void initialize();
@@ -441,15 +463,15 @@ public final class PiscesRenderer {
 
     private static native void disposeNative(long nativeHandle);
 
-    private static class PiscesRendererDisposerRecord implements Disposer.Record {
+    private static class PiscesRendererCleanup implements Runnable {
         private long nativeHandle;
 
-        PiscesRendererDisposerRecord(long nh) {
+        PiscesRendererCleanup(long nh) {
             nativeHandle = nh;
         }
 
         @Override
-        public void dispose() {
+        public void run() {
             if (nativeHandle != 0L) {
                 disposeNative(nativeHandle);
                 nativeHandle = 0L;

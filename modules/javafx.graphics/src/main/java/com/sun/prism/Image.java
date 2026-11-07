@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,6 @@
 package com.sun.prism;
 
 import com.sun.javafx.image.AlphaType;
-import com.sun.javafx.image.impl.ByteIndexed;
 import com.sun.javafx.image.impl.EightBitIndexed;
 import com.sun.javafx.image.impl.FourBitIndexed;
 import com.sun.javafx.image.impl.OneBitIndexed;
@@ -643,13 +642,17 @@ public class Image implements PlatformImage {
      * @return a new INT_ARGB PRE image
      */
     public Image iconify(ByteBuffer iconBuffer, int twidth, int theight) {
-        if (pixelFormat == PixelFormat.MULTI_YCbCr_420) {
-            throw new IllegalArgumentException("Format not supported "+pixelFormat);
+        return iconify(iconBuffer, twidth, theight, pixelFormat);
+    }
+
+    public Image iconify(ByteBuffer iconBuffer, int twidth, int theight, PixelFormat format) {
+        if (format == PixelFormat.MULTI_YCbCr_420) {
+            throw new IllegalArgumentException("Format not supported: " + format);
         }
 
         //grab the number of bytes per pixel, used for determining if
         //the image has alpha
-        int tnumBands = this.getBytesPerPixelUnit();
+        int tnumBands = format.getBytesPerPixelUnit();
 
         //compute the new scanlinestride of the small image
         int tscanlineStride = twidth * tnumBands;
@@ -657,10 +660,12 @@ public class Image implements PlatformImage {
         ByteToIntPixelConverter converter;
         if (tnumBands == 1) {
             converter = ByteGray.ToIntArgbPreConverter();
-        } else if (pixelFormat == PixelFormat.BYTE_BGRA_PRE) {
+        } else if (format == PixelFormat.BYTE_BGRA_PRE) {
             converter = ByteBgraPre.ToIntArgbPreConverter();
-        } else { // BYTE_RGB
+        } else if (format == PixelFormat.BYTE_RGB) {
             converter = ByteRgb.ToIntArgbPreConverter();
+        } else {
+            throw new IllegalArgumentException("Format not supported: " + format);
         }
 
         //new int array for holding new int formatted image data
@@ -698,21 +703,32 @@ public class Image implements PlatformImage {
     public static class Serial {
         private int id;
         private Rectangle dirtyRegion;
-
-        Serial() {
-            id = 0;
-            dirtyRegion = null;
-        }
+        private boolean readSinceWrite;
 
         public synchronized Pair<Integer, Rectangle> getIdRect() {
             // Called on quantumRenderer-0
-            return new Pair(id, (dirtyRegion == null)? null : new Rectangle(dirtyRegion));
+            readSinceWrite = true;
+
+            return new Pair<>(id, (dirtyRegion == null)? null : new Rectangle(dirtyRegion));
         }
 
         public synchronized void update(Rectangle rect) {
             // Called on FX Application thread
-            id++;
-            dirtyRegion = rect;
+            if (readSinceWrite) {  // start a new burst if read
+                id++;
+                readSinceWrite = false;
+                dirtyRegion = rect == null ? null : new Rectangle(rect);
+            }
+            else if (dirtyRegion == null) {  // first write of a new burst
+                id++;
+                dirtyRegion = rect == null ? null : new Rectangle(rect);
+            }
+            else if (rect == null) {  // full invalidation
+                dirtyRegion = null;
+            }
+            else {  // burst was not read yet, coalesce region
+                dirtyRegion.add(rect);
+            }
         }
     }
 
