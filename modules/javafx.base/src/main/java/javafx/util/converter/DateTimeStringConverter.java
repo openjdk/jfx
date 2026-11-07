@@ -126,6 +126,7 @@ public class DateTimeStringConverter extends BaseStringConverter<Date> {
         return DateFormat.getDateTimeInstance(dateStyle, timeStyle, locale);
     }
 
+    /// @throws IllegalArgumentException if the beginning of the specified string cannot be parsed
     @Override
     public Date fromString(String value) {
         return super.fromString(value);

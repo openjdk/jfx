@@ -48,13 +48,21 @@ public class FormatStringConverter<T> extends BaseStringConverter<T> {
         this.format = Objects.requireNonNull(format);
     }
 
+    /// @throws IllegalArgumentException if `string` was only partially parsed
+    @Override
+    public T fromString(String string) {
+        return super.fromString(string);
+    }
+
     @Override
     T fromNonEmptyString(String string) {
         var pos = new ParsePosition(0);
         @SuppressWarnings("unchecked")
         T result = (T) format.parseObject(string, pos);
+        // An error in parsing will keep pos at 0 and result will be null, but this is not caught and null will be
+        // returned. The checked case below happens only when not all of the string was parsed.
         if (pos.getIndex() != string.length()) {
-            throw new IllegalArgumentException("Parsed string not according to the format");
+            throw new IllegalArgumentException("string was not parsed according to the format");
         }
         return result;
     }
