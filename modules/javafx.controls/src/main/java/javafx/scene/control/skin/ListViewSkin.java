@@ -376,6 +376,15 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
                 }
                 return null;
             }
+            case VISIBLE_ITEM_RANGE: {
+                ListCell<T> firstVisibleCell = flow.getFirstVisibleCellWithinViewport();
+                ListCell<T> lastVisibleCell = flow.getLastVisibleCellWithinViewport();
+                if (firstVisibleCell == null || lastVisibleCell == null) {
+                    return new int[] { 0, 0 };
+                }
+                int firstIndex = firstVisibleCell.getIndex();
+                return new int[] { firstIndex, lastVisibleCell.getIndex() - firstIndex + 1 };
+            }
             case SELECTED_ITEMS: {
                 MultipleSelectionModel<T> sm = getSkinnable().getSelectionModel();
                 if (sm == null) {

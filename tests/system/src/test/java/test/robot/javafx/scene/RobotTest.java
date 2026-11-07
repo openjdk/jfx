@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -545,7 +545,7 @@ public class RobotTest {
         int scrollMultiplier = PlatformUtil.isMac() ? -1 : 40;
         Util.runAndWait(() -> {
             button.setOnScroll(event -> {
-                totalScroll[0] += event.getDeltaY() * Screen.getPrimary().getOutputScaleY();
+                totalScroll[0] += event.getDeltaY();
                 if (firstScrollMillis[0] == 0) {
                     firstScrollMillis[0] = System.currentTimeMillis();
                 } else {

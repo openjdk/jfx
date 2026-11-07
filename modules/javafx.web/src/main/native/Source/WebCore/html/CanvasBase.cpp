@@ -230,7 +230,11 @@ void CanvasBase::setSize(const IntSize& size)
 
 bool CanvasBase::shouldAccelerate() const
 {
+#if !PLATFORM(JAVA)
     size_t area = size().unclampedArea();
+#else
+    uint64_t area = size().unclampedArea();
+#endif
     RefPtr scriptExecutionContext = this->scriptExecutionContext();
 #if USE(CA) || USE(SKIA)
     if (!scriptExecutionContext->settingsValues().canvasUsesAcceleratedDrawing)
@@ -250,7 +254,11 @@ bool CanvasBase::shouldAccelerate() const
 
 bool CanvasBase::validateArea() const
 {
+#if !PLATFORM(JAVA)
     size_t area = size().unclampedArea();
+#else
+    uint64_t area = size().unclampedArea();
+#endif
     if (!area)
         return false;
     if (area > maxCanvasArea()) {

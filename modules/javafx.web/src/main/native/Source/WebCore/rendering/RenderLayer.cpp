@@ -315,8 +315,6 @@ static ScrollingScope nextScrollingScope()
     return ++currentScope;
 }
 
-WTF_MAKE_PREFERABLY_COMPACT_TZONE_ALLOCATED_IMPL(RenderLayer);
-
 RenderLayer::RenderLayer(RenderLayerModelObject& renderer)
     : m_isRenderViewLayer(renderer.isRenderView())
     , m_forcedStackingContext(renderer.isRenderMedia())
@@ -1088,7 +1086,7 @@ void RenderLayer::willUpdateLayerPositions()
         markers->invalidateRectsForAllMarkers();
 }
 
-#if !LOG_DISABLED || ENABLE(TREE_DEBUGGING)
+#if ENABLE(TREE_DEBUGGING)
 static inline bool compositingLogEnabledRenderLayer()
 {
     return LogCompositing.state == WTFLogChannelState::On;

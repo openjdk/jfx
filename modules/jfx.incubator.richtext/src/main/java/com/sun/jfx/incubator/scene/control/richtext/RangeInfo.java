@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,113 +25,100 @@
 
 package com.sun.jfx.incubator.scene.control.richtext;
 
-import javafx.scene.shape.LineTo;
-import javafx.scene.shape.MoveTo;
-import javafx.scene.shape.PathElement;
+import java.util.List;
+import javafx.geometry.Rectangle2D;
+import javafx.scene.text.LayoutInfo;
+import javafx.scene.text.TextLineInfo;
 
 /**
- * Represents the text geometry as a sequence of bounding rectangles.
+ * Represents the text geometry as a sequence of bounding rectangles
+ * in the TextFlow coordinates for the purposes of vertical navigation
+ * within the VFlow.
  */
-public class RangeInfo {
-    /** the sequence of rectangles encoded as [xmin, ymin, xmax, ymax], ... */
-    private final double[] data;
+public final class RangeInfo {
+    /// contains one or more pairs of {miny, maxy} values, or null
+    private final double[] lines;
     private final double ymin;
     private final double ymax;
 
-    private RangeInfo(double[] data, double ymin, double ymax) {
-        this.data = data;
+    private RangeInfo(double[] lines, double ymin, double ymax) {
+        this.lines = lines;
         this.ymin = ymin;
         this.ymax = ymax;
     }
 
-    public static RangeInfo of(double width, double height) {
-        double[] d = { 0.0, 0.0, width, height };
-        return new RangeInfo(d, 0.0, height);
+    public static RangeInfo of(double height) {
+        return new RangeInfo(null, 0.0, height);
     }
 
-    public static RangeInfo of(PathElement[] elements, double lineSpacing) {
-        // this code depends on the current implementation (see PrismLayout::getRange)
-        // which generates path elements with the following pattern:
-        //   result.add(new MoveTo(x + l,  y + top));
-        //   result.add(new LineTo(x + r, y + top));
-        //   result.add(new LineTo(x + r, y + bottom));
-        //   result.add(new LineTo(x + l,  y + bottom));
-        //   result.add(new LineTo(x + l,  y + top));
-        int sz = (elements.length / 5);
-        double[] d = new double[sz * 4];
-        int srcIndex = 0;
-        int tgtIndex = 0;
-        double ymin = Double.POSITIVE_INFINITY;
-        double ymax = Double.NEGATIVE_INFINITY;
+    public static RangeInfo of(LayoutInfo la, double lineSpacing, double height) {
+        List<TextLineInfo> lines = la.getTextLines(true);
+        if (lines.size() == 0) {
+            return new RangeInfo(null, 0.0, height);
+        }
+        Rectangle2D r = la.getLogicalBounds(false);
+        double ymin = r.getMinY();
+        double ymax = r.getMaxY();
+        int sz = lines.size();
+        double[] d = new double[sz + sz];
+        int dest = 0;
         for (int i = 0; i < sz; i++) {
-            // we could do extra checking here, but the hope is that we will create a new API
-            // for the caret info and text range which would contain information we need.
-            MoveTo m = (MoveTo)elements[srcIndex];
-            double x = m.getX();
-            double y = m.getY();
-            d[tgtIndex++] = x;
-            d[tgtIndex++] = y;
-            if (y < ymin) {
-                ymin = y;
-            }
-            if (y > ymax) {
-                ymax = y;
-            }
-
-            LineTo t = (LineTo)elements[srcIndex + 2];
-            x = t.getX();
-            y = t.getY() + lineSpacing;
-            d[tgtIndex++] = x;
-            d[tgtIndex++] = y;
-            if (y < ymin) {
-                ymin = y;
-            }
-            if (y > ymax) {
-                ymax = y;
-            }
-
-            srcIndex += 5;
+            r = lines.get(i).bounds();
+            d[dest++] = r.getMinY();
+            d[dest++] = r.getMaxY();
+        }
+        // remove line spacing from the last line to force navigating to the next cell
+        if (d.length > 0) {
+            d[d.length - 1] -= lineSpacing;
         }
         return new RangeInfo(d, ymin, ymax);
     }
 
-    public int getSegmentCount() {
-        return data.length / 4;
+    public double getFirstLineMidY() {
+        if ((lines != null) && (lines.length > 0)) {
+            double min = lines[0];
+            double max = lines[1];
+            return midPoint(min, max);
+        }
+        return midPoint(ymin, ymax);
     }
 
-    public boolean contains(int ix, double x, double y) {
-        ix *= 4;
-        if (data[ix++] <= x) {
-            if (data[ix++] <= y) {
-                if (data[ix++] >= x) {
-                    if (data[ix] >= y) {
-                        return true;
-                    }
+    public double getLastLineMidY() {
+        if (lines != null) {
+            int ix = lines.length;
+            if (ix > 0) {
+                double max = lines[--ix];
+                double min = lines[--ix];
+                return midPoint(min, max);
+            }
+        }
+        return midPoint(ymin, ymax);
+    }
+
+    public double findHitMidpoint(double y) {
+        if (lines != null) {
+            int sz = lines.length;
+            if (y < lines[0]) {
+                return midPoint(lines[0], lines[1]);
+            } else if (y >= lines[sz - 1]) {
+                return midPoint(lines[sz - 2], lines[sz - 1]);
+            }
+            for (int i = 0; i < sz;) {
+                double min = lines[i++];
+                double max = lines[i++];
+                if ((y >= min) && (y < max)) {
+                    return midPoint(min, max);
                 }
             }
         }
-        return false;
+        return midPoint(ymin, ymax);
     }
 
-    public boolean containsX(int ix, double x) {
-        ix *= 4;
-        return (data[ix] <= x) && (data[ix + 2] >= x);
+    private static double midPoint(double min, double max) {
+        return (min + max) / 2.0;
     }
 
-    public double midPointY(int ix) {
-        ix *= 4;
-        return (data[ix + 1] + data[ix + 3]) / 2.0;
-    }
-
-    public double getMinY(int ix) {
-        return data[ix * 4 + 1];
-    }
-
-    public double getMaxY(int ix) {
-        return data[ix * 4 + 3];
-    }
-
-    public boolean insideY(double y) {
-        return (ymin <= y) && (y <= ymax);
+    public boolean isOutsideTextRangeY(double y) {
+        return (y < ymin) || (y >= ymax);
     }
 }

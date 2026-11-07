@@ -631,7 +631,7 @@ gst_video_time_code_compare (const GstVideoTimeCode * tc1,
  * gst_video_time_code_new:
  * @fps_n: Numerator of the frame rate
  * @fps_d: Denominator of the frame rate
- * @latest_daily_jam: The latest daily jam of the #GstVideoTimeCode
+ * @latest_daily_jam: (allow-none): The latest daily jam of the #GstVideoTimeCode
  * @flags: #GstVideoTimeCodeFlags
  * @hours: the hours field of #GstVideoTimeCode
  * @minutes: the minutes field of #GstVideoTimeCode
@@ -640,7 +640,6 @@ gst_video_time_code_compare (const GstVideoTimeCode * tc1,
  * @field_count: Interlaced video field count
  *
  * @field_count is 0 for progressive, 1 or 2 for interlaced.
- * @latest_daiy_jam reference is stolen from caller.
  *
  * Returns: a new #GstVideoTimeCode with the given values.
  * The values are not checked for being in a valid range. To see if your
@@ -834,7 +833,6 @@ gst_video_time_code_new_from_date_time_full (guint fps_n, guint fps_d,
  * @field_count: Interlaced video field count
  *
  * @field_count is 0 for progressive, 1 or 2 for interlaced.
- * @latest_daiy_jam reference is stolen from caller.
  *
  * Initializes @tc with the given values.
  * The values are not checked for being in a valid range. To see if your

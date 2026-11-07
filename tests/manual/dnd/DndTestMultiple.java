@@ -25,13 +25,16 @@
 
 
  import javafx.application.Application;
+ import javafx.application.Platform;
  import javafx.scene.Group;
  import javafx.scene.Node;
  import javafx.scene.Scene;
+ import javafx.scene.control.Button;
  import javafx.scene.control.Label;
  import javafx.scene.input.Dragboard;
  import javafx.scene.input.ClipboardContent;
  import javafx.scene.input.TransferMode;
+ import javafx.scene.layout.HBox;
  import javafx.scene.layout.VBox;
  import javafx.scene.paint.Color;
  import javafx.scene.text.Text;
@@ -63,11 +66,15 @@
 
          Group group = new Group();
 
+         HBox passFailButtons = createPassFailButtons();
+
          VBox root = new VBox(3,
                  new Label("Drag and drop from DRAG ME onto DROP HERE."),
                  new Label("If DROP HERE changes to SUCCESS the test passed"),
                  new Label(""),
-                 group);
+                 group,
+                 new Label(""),
+                 passFailButtons);
 
          Scene scene = new Scene(root, 400, 200);
 
@@ -178,6 +185,22 @@
          stage.setScene(scene);
          stage.show();
      }
+
+    private HBox createPassFailButtons() {
+        var passButton = new Button("Pass");
+        passButton.setOnAction(e -> {
+            System.out.println("TEST PASSED");
+            Platform.exit();
+        });
+        var failButton = new Button("Fail");
+        failButton.setOnAction(e -> {
+            System.out.println("TEST FAILED");
+            Platform.exit();
+            throw new AssertionError("Test failed");
+        });
+        var hbox = new HBox(10, passButton, failButton);
+        return hbox;
+    }
 
      public static void main(String[] args) {
          Application.launch(args);

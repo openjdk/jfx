@@ -134,6 +134,10 @@ public abstract class NodeHelper {
         getHelper(node).processCSSImpl(node);
     }
 
+    public static List<String> getStyleClassOrNull(Node node) {
+        return nodeAccessor.getStyleClassOrNull(node);
+    }
+
     /*
      * Methods that will be overridden by subclasses
      */
@@ -431,6 +435,7 @@ public abstract class NodeHelper {
         void removeTransitionTimer(Node node, String propertyName);
         TransitionTimer findTransitionTimer(Node node, String propertyName);
         MediaQueryContext getMediaQueryContext(Node node);
+        List<String> getStyleClassOrNull(Node node);
     }
 
 }

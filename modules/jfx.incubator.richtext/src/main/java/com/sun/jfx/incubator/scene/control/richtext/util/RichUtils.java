@@ -26,7 +26,6 @@
 package com.sun.jfx.incubator.scene.control.richtext.util;
 
 import java.io.BufferedInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -37,7 +36,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.function.Supplier;
-import javax.imageio.ImageIO;
 import javafx.application.ColorScheme;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
@@ -68,6 +66,7 @@ import javafx.scene.text.TextFlow;
 import com.sun.javafx.scene.text.TextFlowHelper;
 import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.scene.text.TextLine;
+import com.sun.javafx.util.ImageUtils;
 import jfx.incubator.scene.control.richtext.RichTextArea;
 import jfx.incubator.scene.control.richtext.TextPos;
 import jfx.incubator.scene.control.richtext.model.StyleAttribute;
@@ -111,6 +110,27 @@ public final class RichUtils {
         }
 
         return text.substring(start, end);
+    }
+
+    public static String toCssFont(String name) {
+        if (name == null) {
+            return null;
+        }
+        int len = name.length();
+        for (int i = 0; i < len; i++) {
+            char c = name.charAt(i);
+            switch (c) {
+            case '\'':
+            case '"':
+            case '\\':
+                return null;
+            default:
+                if (Character.isISOControl(c)) {
+                    return null;
+                }
+            }
+        }
+        return name;
     }
 
     /** Converts Color to "#rrggbb" or "rgba(r,g,b,a)" string */
@@ -435,6 +455,17 @@ public final class RichUtils {
     }
 
     /**
+     * Writes an Image to a byte array in JPG format.
+     *
+     * @param im source image
+     * @return byte array containing JPG image
+     * @throws IOException if an I/O error occurs
+     */
+    public static byte[] writeJPG(Image im) throws IOException {
+        return ImageUtils.writeImage(im, "JPG");
+    }
+
+    /**
      * Writes an Image to a byte array in PNG format.
      *
      * @param im source image
@@ -442,11 +473,7 @@ public final class RichUtils {
      * @throws IOException if an I/O error occurs
      */
     public static byte[] writePNG(Image im) throws IOException {
-        ByteArrayOutputStream out = new ByteArrayOutputStream(65536);
-        // this might conflict with user-set value
-        ImageIO.setUseCache(false);
-        ImageIO.write(ImgUtil.fromFXImage(im, null), "PNG", out);
-        return out.toByteArray();
+        return ImageUtils.writeImage(im, "PNG");
     }
 
     /**
@@ -759,6 +786,13 @@ public final class RichUtils {
             if (a.isInlineNode()) {
                 return true;
             }
+        }
+        return false;
+    }
+
+    public static boolean canMerge(StyleAttributeMap a, StyleAttributeMap b) {
+        if (a.equals(b)) {
+            return !containsInlineNodes(a);
         }
         return false;
     }

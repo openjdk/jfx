@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -92,5 +92,30 @@ public class RichParagraphTest {
             addSegment("italic", ITALIC).
             setParagraphAttributes(PAR).
             build();
+    }
+
+    @Test
+    public void requireNonNull() {
+        assertThrows(NullPointerException.class, () -> {
+            RichParagraph.builder().addWithStyleNames(null);
+        });
+        assertThrows(NullPointerException.class, () -> {
+            RichParagraph.builder().addWithStyleNames("a", (String[])null);
+        });
+        assertThrows(NullPointerException.class, () -> {
+            RichParagraph.builder().addWithInlineAndStyleNames(null, "a");
+        });
+        assertThrows(NullPointerException.class, () -> {
+            RichParagraph.builder().addWithInlineStyle(null, "a");
+        });
+        assertThrows(NullPointerException.class, () -> {
+            RichParagraph.builder().addSegment(null, StyleAttributeMap.EMPTY);
+        });
+        assertThrows(NullPointerException.class, () -> {
+            RichParagraph.builder().addSegment("a", null);
+        });
+        assertThrows(NullPointerException.class, () -> {
+            RichParagraph.builder().addSegment(null, 0, 1, StyleAttributeMap.EMPTY);
+        });
     }
 }
