@@ -182,6 +182,10 @@ Java_com_sun_prism_d3d_D3DShader_setConstantsF
     IDirect3DDevice9Ex *pd3dDevice = pCtx->Get3DDevice();
     RETURN_STATUS_IF_NULL(pd3dDevice, E_FAIL);
 
+    // Safeguard for cases where the below constants are written over currently cached ones. This shouldn't happen under
+    // correct behavior. For example, Decora's 2D effects can take an erroneous path that overwrite these constants.
+    pCtx->invalidateLightsConstants();
+
     HRESULT res = pd3dDevice->SetPixelShaderConstantF(reg, (const float *)buf, count);
     if (FAILED(res)) {
         DebugPrintD3DError(res, "setConstantsI: SetPixelShaderConstantF failed");
@@ -198,16 +202,7 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DShader_nGetRegister
 
 #ifdef STATIC_BUILD
 JNIEXPORT jint JNICALL JNI_OnLoad_prism_d3d(JavaVM *vm, void *reserved) {
-#ifdef JNI_VERSION_1_8
-    //min. returned JNI_VERSION required by JDK8 for builtin libraries
-    JNIEnv *env;
-    if (vm->GetEnv((void **)&env, JNI_VERSION_1_8) != JNI_OK) {
-        return JNI_VERSION_1_4;
-    }
     return JNI_VERSION_1_8;
-#else
-    return JNI_VERSION_1_4;
-#endif // JNI_VERSION_1_8
 }
 #endif // STATIC_BUILD
 

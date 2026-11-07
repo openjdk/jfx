@@ -557,6 +557,10 @@ gst_audio_channel_positions_to_valid_order (GstAudioChannelPosition * position,
   if (position[0] == GST_AUDIO_CHANNEL_POSITION_NONE)
     return TRUE;
 
+  // More than 64 channels are always unpositioned
+  g_return_val_if_fail (channels <= 64, FALSE);
+  channels = MIN (channels, 64);
+
   check_valid_channel_positions (position, channels, FALSE, &channel_mask);
 
   memset (tmp, 0xff, sizeof (tmp));

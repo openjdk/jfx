@@ -259,7 +259,6 @@ static const FormatInfo formats[] = {
   {"image/ppm", "Portable PixMap (PPM)", FLAG_IMAGE, "ppm"},
   {"image/svg+xml", "Scalable Vector Graphics (SVG)", FLAG_IMAGE, "svg"},
   {"image/tiff", "TIFF", FLAG_IMAGE, "tiff"},
-  {"image/x-cmu-raster", "CMU Raster Format", FLAG_IMAGE, ""},
   {"image/x-degas", "DEGAS", FLAG_IMAGE, ""},
   {"image/x-icon", "ICO", FLAG_IMAGE, "ico"},
   {"image/x-j2c", "JPEG 2000", FLAG_VIDEO | FLAG_IMAGE, ""},

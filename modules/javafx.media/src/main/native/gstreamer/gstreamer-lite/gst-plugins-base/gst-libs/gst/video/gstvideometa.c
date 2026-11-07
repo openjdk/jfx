@@ -276,7 +276,11 @@ video_meta_deserialize (const GstMetaInfo * info, GstBuffer * buffer,
   success &= gst_byte_reader_get_uint32_le (&br, &height);
   success &= gst_byte_reader_get_uint32_le (&br, &n_planes);
 
-  if (!success || n_planes > GST_VIDEO_MAX_PLANES)
+  if (!success || n_planes < 1 || n_planes > GST_VIDEO_MAX_PLANES)
+    return NULL;
+
+  /* make sure the payload holds all plane offsets, strides and alignments */
+  if (size < 36 + n_planes * 16)
     return NULL;
 
   for (int n = 0; n < n_planes; n++)
@@ -303,6 +307,50 @@ video_meta_deserialize (const GstMetaInfo * info, GstBuffer * buffer,
 #else
   gsize *offset = (gsize *) offset64;
 #endif
+
+  GstVideoInfo vinfo;
+  if (format < 0 || format >= GST_VIDEO_FORMAT_LAST || width == 0
+      || height == 0
+      || !gst_video_info_set_format (&vinfo, format, width, height)
+      || vinfo.finfo->n_planes != n_planes)
+    return NULL;
+
+  {
+    /* make sure all planes are inside the buffer */
+    gsize buffer_size = gst_buffer_get_size (buffer);
+    guint frame_height;
+
+    /* a buffer with the ONEFIELD flag only stores a single field and not the
+     * full frame */
+    if (flags & GST_VIDEO_FRAME_FLAG_ONEFIELD)
+      frame_height = GST_ROUND_UP_2 (height) / 2;
+    else
+      frame_height = height;
+
+    for (int n = 0; n < n_planes; n++) {
+      guint64 plane_size;
+
+      if (stride[n] < 0)
+        return NULL;
+
+      if (GST_VIDEO_FORMAT_INFO_IS_TILED (vinfo.finfo)) {
+        plane_size = (guint64) GST_VIDEO_TILE_X_TILES (stride[n]) *
+            GST_VIDEO_TILE_Y_TILES (stride[n]) *
+            GST_VIDEO_FORMAT_INFO_TILE_SIZE (vinfo.finfo, n);
+      } else if (GST_VIDEO_FORMAT_INFO_HAS_PALETTE (vinfo.finfo) && n == 1) {
+        plane_size = 256 * 4;
+      } else {
+        gint comp[GST_VIDEO_MAX_COMPONENTS];
+        gst_video_format_info_component (vinfo.finfo, n, comp);
+        plane_size = (guint64) (gsize) stride[n] *
+            GST_VIDEO_FORMAT_INFO_SCALE_HEIGHT (vinfo.finfo, comp[0],
+            frame_height);
+      }
+
+      if (offset[n] > buffer_size || plane_size > buffer_size - offset[n])
+        return NULL;
+    }
+  }
 
   vmeta =
       gst_buffer_add_video_meta_full (buffer, flags, format, width, height,
@@ -1695,7 +1743,7 @@ gst_buffer_add_video_time_code_meta (GstBuffer * buffer,
  * @buffer: a #GstBuffer
  * @fps_n: framerate numerator
  * @fps_d: framerate denominator
- * @latest_daily_jam: a #GDateTime for the latest daily jam
+ * @latest_daily_jam: (allow-none): a #GDateTime for the latest daily jam
  * @flags: a #GstVideoTimeCodeFlags
  * @hours: hours since the daily jam
  * @minutes: minutes since the daily jam

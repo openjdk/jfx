@@ -29,6 +29,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Comparator;
+import java.util.List;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
@@ -38,8 +39,10 @@ import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.CheckMenuItem;
+import javafx.scene.control.Control;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
@@ -71,20 +74,24 @@ import com.oracle.tools.fx.monkey.util.Formats;
 import com.oracle.tools.fx.monkey.util.HasSkinnable;
 import com.oracle.tools.fx.monkey.util.SingleInstance;
 import com.oracle.tools.fx.monkey.util.TestPaneBase;
+import com.oracle.tools.fx.monkey.util.Utils;
 
 /**
  * Monkey Tester Main Window
  */
 public class MainWindow extends Stage {
     private final ObservableList<DemoPage> pages = FXCollections.observableArrayList();
+    private final String title;
     private ListView<DemoPage> pageSelector;
     private BorderPane contentPane;
     private DemoPage currentPage;
     private Label status;
     private EventHandler<InputMethodEvent> monitor;
 
-    public MainWindow() {
+    public MainWindow(String title) {
         FX.name(this, "MainWindow");
+
+        this.title = (title == null) ? "Monkey Tester" : title;
 
         status = new Label();
         status.setPadding(new Insets(2, 2, 2, 2));
@@ -205,6 +212,8 @@ public class MainWindow extends Stage {
         FX.menu(m, "Skin");
         FX.item(m, "Set New Skin", this::newSkin);
         FX.item(m, "<null> Skin", this::nullSkin);
+        FX.separator(m);
+        FX.item(m, "Skin Structure", this::showSkinStructure);
         // Tools
         FX.menu(m, "Tools");
         FX.item(m, "Clipboard Viewer", this::openClipboardViewer);
@@ -225,8 +234,8 @@ public class MainWindow extends Stage {
         m1 = FX.menu(m, "Window");
         FX.item(m, orientation);
         m2 = FX.menu(m1, "Stylesheet");
-        FX.item(m2, "Modena.css", this::useModenaCSS);
-        FX.item(m2, "Caspian.css", this::useCaspianCSS);
+        FX.item(m2, "modena.css", this::useModenaCSS);
+        FX.item(m2, "caspian.css", this::useCaspianCSS);
         FX.separator(m);
         FX.item(m, "Fullscreen", () -> setFullScreen(true));
         FX.item(m, "Maximize", () -> setMaximized(true));
@@ -253,7 +262,7 @@ public class MainWindow extends Stage {
 
     private void updateTitle() {
         StringBuilder sb = new StringBuilder();
-        sb.append("Monkey Tester");
+        sb.append(title);
         if (currentPage != null) {
             sb.append(" - ");
             sb.append(currentPage.toString());
@@ -377,6 +386,65 @@ public class MainWindow extends Stage {
         if (n instanceof HasSkinnable s) {
             s.newSkin();
         }
+    }
+
+    private void showSkinStructure() {
+        Node n = contentPane.getCenter();
+        if (n instanceof HasSkinnable h) {
+            Control c = h.getSkinnableControl();
+            StringBuilder sb = new StringBuilder();
+            if (c == null) {
+                sb.append("<null>");
+            } else {
+                printStylesRecursively(sb, c, 0);
+            }
+            IO.println(sb);
+        }
+    }
+
+    private static void printStylesRecursively(StringBuilder sb, Node node, int indent) {
+        for (int i = 0; i < indent; i++) {
+            sb.append("  ");
+        }
+        List<String> ss = node.getStyleClass();
+        for (String s : ss) {
+            sb.append(" .");
+            sb.append(s);
+        }
+        sb.append(" (");
+        sb.append(getClassName(node));
+        sb.append(") ");
+
+        String id = node.getId();
+        if (!Utils.isBlank(id)) {
+            sb.append(" #");
+            sb.append(id);
+        }
+        sb.append("\n");
+
+        if (node instanceof Parent p) {
+            indent++;
+            List<Node> cs = p.getChildrenUnmodifiable();
+            for (Node n : cs) {
+                printStylesRecursively(sb, n, indent);
+            }
+        }
+    }
+
+    private static String getClassName(Object x) {
+        if (x == null) {
+            return "<null>";
+        }
+        Class<?> c = x.getClass();
+        return getUsableClassName(c);
+    }
+
+    private static String getUsableClassName(Class<?> c) {
+        String s = c.getSimpleName();
+        if (Utils.isBlank(s)) {
+            return getUsableClassName(c.getSuperclass());
+        }
+        return s;
     }
 
     private void openPlatformPreferencesMonitor() {

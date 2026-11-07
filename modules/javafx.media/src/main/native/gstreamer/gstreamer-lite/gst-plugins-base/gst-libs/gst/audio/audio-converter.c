@@ -453,10 +453,11 @@ do_unpack (AudioChain * chain, gpointer user_data)
   in_writable = convert->in_writable;
   num_samples = convert->in_frames;
 
-  if (!chain->allow_ip || !in_writable || !convert->in_default) {
+  if (!chain->allow_ip || !in_writable || !convert->in_default ||
+      !convert->in_data) {
     gint i;
 
-    if (in_writable && chain->allow_ip) {
+    if (in_writable && chain->allow_ip && convert->in_data) {
       tmp = convert->in_data;
       GST_LOG ("unpack in-place %p, %" G_GSIZE_FORMAT, tmp, num_samples);
     } else {
@@ -481,7 +482,7 @@ do_unpack (AudioChain * chain, gpointer user_data)
     } else {
       for (i = 0; i < chain->blocks; i++) {
         gst_audio_format_info_fill_silence (chain->finfo, tmp[i],
-            num_samples * chain->inc);
+            num_samples * chain->stride);
       }
     }
   } else {
@@ -565,8 +566,10 @@ do_convert_out (AudioChain * chain, gpointer user_data)
   out = (chain->allow_ip ? in : audio_chain_alloc_samples (chain, num_samples));
   GST_LOG ("convert out %p, %p %" G_GSIZE_FORMAT, in, out, num_samples);
 
-  for (i = 0; i < chain->blocks; i++)
-    convert->convert_out (out[i], in[i], num_samples * chain->inc);
+  if (in && out) {
+    for (i = 0; i < chain->blocks; i++)
+      convert->convert_out (out[i], in[i], num_samples * chain->inc);
+  }
 
   audio_chain_set_samples (chain, out, num_samples);
 
@@ -1126,7 +1129,8 @@ converter_passthrough (GstAudioConverter * convert,
     }
   } else {
     for (i = 0; i < chain->blocks; i++)
-      gst_audio_format_info_fill_silence (convert->in.finfo, out[i], samples);
+      gst_audio_format_info_fill_silence (convert->in.finfo, out[i],
+          samples * (convert->in.bpf / convert->in.channels));
   }
   return TRUE;
 }
@@ -1272,7 +1276,8 @@ converter_endian (GstAudioConverter * convert,
       convert->swap_endian (out[i], in[i], samples);
   } else {
     for (i = 0; i < chain->blocks; i++)
-      gst_audio_format_info_fill_silence (convert->in.finfo, out[i], samples);
+      gst_audio_format_info_fill_silence (convert->in.finfo, out[i],
+          samples * (convert->in.bpf / convert->in.channels));
   }
   return TRUE;
 }

@@ -887,7 +887,6 @@ gst_date_time_new_from_iso8601_string (const gchar * string)
   gint gmt_offset_hour = -99, gmt_offset_min = -99;
   gdouble second = -1.0;
   gfloat tzoffset = 0.0;
-  guint64 usecs;
   gint len, ret;
 
   g_return_val_if_fail (string != NULL, NULL);
@@ -903,25 +902,44 @@ gst_date_time_new_from_iso8601_string (const gchar * string)
     return NULL;
 
   if (g_ascii_isdigit (string[2]) && g_ascii_isdigit (string[3])) {
-    ret = sscanf (string, "%04d-%02d-%02d", &year, &month, &day);
+    guint year_u, month_u, day_u;
 
-    if (ret == 0)
+    /* Parse to temporary unsigned integers */
+    ret = sscanf (string, "%04u-%02u-%02u", &year_u, &month_u, &day_u);
+
+    /* First sanity-check parsing */
+    if (ret == 3 && day_u > 31)
+      return NULL;
+    if (ret >= 2 && month_u > 12)
+      return NULL;
+    if (ret >= 1 && (year_u == 0 || year_u > 9999))
+      return NULL;
+    if (ret <= 0)
       return NULL;
 
-    if (ret == 3 && day <= 0) {
-      ret = 2;
-      day = -1;
+    /* Then assign to signed integers, giving month/day 0 a special meaning of
+     * being unset by setting them to -1 */
+    if (ret == 3) {
+      if (day_u == 0) {
+        ret = 2;
+        day = -1;
+      } else {
+        day = day_u;
+      }
     }
 
-    if (ret >= 2 && month <= 0) {
-      ret = 1;
-      month = day = -1;
+    if (ret >= 2) {
+      if (month_u == 0) {
+        ret = 1;
+        month = day = -1;
+      } else {
+        month = month_u;
+      }
     }
 
-    if (ret >= 1 && (year <= 0 || year > 9999 || month > 12 || day > 31))
-      return NULL;
+    year = year_u;
 
-    else if (ret >= 1 && len < 16)
+    if (ret >= 1 && len < 16)
       /* YMD is 10 chars. XMD + HM will be 16 chars. if it is less,
        * it make no sense to continue. We will stay with YMD. */
       goto ymd;
@@ -933,43 +951,60 @@ gst_date_time_new_from_iso8601_string (const gchar * string)
 
     string += 1;
   }
-  /* if hour or minute fails, then we will use only ymd. */
-  hour = g_ascii_strtoull (string, (gchar **) & string, 10);
-  if (hour > 24 || *string != ':')
-    goto ymd;
 
-  /* minute */
-  minute = g_ascii_strtoull (string + 1, (gchar **) & string, 10);
-  if (minute > 59)
-    goto ymd;
+  {
+    /* Also here parse hour/minute/second/subseconds as unsigned integers for
+     * being able to detect errors correctly, then validate values, and only
+     * then assign to signed integers. -1 has a special meaning of the values
+     * being unset */
+    guint64 hour_u64, minute_u64;
 
-  /* second */
-  if (*string == ':') {
-    second = g_ascii_strtoull (string + 1, (gchar **) & string, 10);
-    /* if we fail here, we still can reuse hour and minute. We
-     * will still attempt to parse any timezone information */
-    if (second > 59) {
-      second = -1.0;
-    } else {
-      /* microseconds */
-      if (*string == '.' || *string == ',') {
-        const gchar *usec_start = string + 1;
-        guint digits;
+    /* if hour or minute fails, then we will use only ymd. */
+    hour_u64 = g_ascii_strtoull (string, (gchar **) & string, 10);
+    if (hour_u64 > 24 || *string != ':')
+      goto ymd;
 
-        usecs = g_ascii_strtoull (string + 1, (gchar **) & string, 10);
-        if (usecs != G_MAXUINT64 && string > usec_start) {
-          digits = (guint) (string - usec_start);
-          second += (gdouble) usecs / pow (10.0, digits);
+    /* minute */
+    minute_u64 = g_ascii_strtoull (string + 1, (gchar **) & string, 10);
+    if (minute_u64 > 59)
+      goto ymd;
+
+    hour = hour_u64;
+    minute = minute_u64;
+
+    /* second */
+    if (*string == ':') {
+      guint64 second_u64 =
+          g_ascii_strtoull (string + 1, (gchar **) & string, 10);
+
+      /* if we fail here, we still can reuse hour and minute. We
+       * will still attempt to parse any timezone information */
+      if (second_u64 > 59) {
+        second = -1.0;
+      } else {
+        guint64 usecs;
+
+        second = second_u64;
+
+        /* microseconds */
+        if (*string == '.' || *string == ',') {
+          const gchar *usec_start = string + 1;
+          gsize digits;
+
+          usecs = g_ascii_strtoull (string + 1, (gchar **) & string, 10);
+          if (usecs != G_MAXUINT64 && string > usec_start) {
+            digits = (gsize) (string - usec_start);
+            second += (gdouble) usecs / pow (10.0, digits);
+          }
         }
       }
     }
   }
 
-  if (*string == 'Z')
+  if (*string == 'Z') {
     goto ymd_hms;
-  else {
-    /* reuse some code from gst-plugins-base/gst-libs/gst/tag/gstxmptag.c */
-    gint gmt_offset = -1;
+  } else {
+    guint gmt_offset_hour_u32, gmt_offset_min_u32;
     const gchar *plus_pos = NULL;
     const gchar *neg_pos = NULL;
     const gchar *pos = NULL;
@@ -986,25 +1021,38 @@ gst_date_time_new_from_iso8601_string (const gchar * string)
 
     if (pos && strlen (pos) >= 3) {
       gint ret_tz;
-      if (pos[2] == ':')
-        ret_tz = sscanf (pos, "%d:%d", &gmt_offset_hour, &gmt_offset_min);
-      else
-        ret_tz = sscanf (pos, "%02d%02d", &gmt_offset_hour, &gmt_offset_min);
 
       GST_DEBUG ("Parsing timezone: %s", pos);
 
-      if (ret_tz == 2) {
+      /* Also here for the timezone parse as unsigned integers, then validate
+       * and only then assign to the signed integers based on the existence of
+       * a literal `-` or `+` */
+      if (pos[2] == ':')
+        ret_tz =
+            sscanf (pos, "%u:%u", &gmt_offset_hour_u32, &gmt_offset_min_u32);
+      else
+        ret_tz =
+            sscanf (pos, "%02u%02u", &gmt_offset_hour_u32, &gmt_offset_min_u32);
+
+      if (ret_tz == 2 && gmt_offset_hour_u32 < 24 && gmt_offset_min_u32 < 60) {
+        gint gmt_offset = -1;
+
         if (neg_pos != NULL && neg_pos + 1 == pos) {
-          gmt_offset_hour *= -1;
-          gmt_offset_min *= -1;
+          gmt_offset_hour = -gmt_offset_hour_u32;
+          gmt_offset_min = -gmt_offset_min_u32;
+        } else {
+          gmt_offset_hour = gmt_offset_hour_u32;
+          gmt_offset_min = gmt_offset_min_u32;
         }
+
         gmt_offset = gmt_offset_hour * 60 + gmt_offset_min;
 
         tzoffset = gmt_offset / 60.0;
 
         GST_LOG ("Timezone offset: %f (%d minutes)", tzoffset, gmt_offset);
-      } else
+      } else {
         GST_WARNING ("Failed to parse timezone information");
+      }
     }
   }
 
@@ -1017,10 +1065,8 @@ ymd_hms:
     if (!now_utc)
       return NULL;
 
-    if (tzoffset != 0.0) {
-      /* If a timezone offset was supplied, get the date of that timezone */
-      g_assert (gmt_offset_min != -99);
-      g_assert (gmt_offset_hour != -99);
+    /* Set to valid values above otherwise */
+    if (gmt_offset_hour != -99 && gmt_offset_min != -99) {
       now_in_given_tz =
           g_date_time_add_minutes (now_utc,
           (60 * gmt_offset_hour) + gmt_offset_min);
