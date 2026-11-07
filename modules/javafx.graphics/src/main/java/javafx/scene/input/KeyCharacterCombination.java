@@ -48,7 +48,7 @@ import javafx.beans.NamedArg;
  */
 public final class KeyCharacterCombination extends KeyCombination {
     /** The key character associated with this key combination. */
-    private String character = "";
+    private final String character;
 
     /**
      * Gets the key character associated with this key combination.

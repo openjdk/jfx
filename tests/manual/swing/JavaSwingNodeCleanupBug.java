@@ -37,6 +37,7 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.stage.Window;
 import javafx.stage.WindowEvent;
 
 import java.awt.EventQueue;
@@ -52,10 +53,14 @@ public class JavaSwingNodeCleanupBug extends Application {
     public void start(Stage stage) throws Exception {
         Button passButton = new Button("Pass");
         Button failButton = new Button("Fail");
-        passButton.setOnAction(e -> this.quit());
-        failButton.setOnAction(e -> {
+        passButton.setOnAction(e -> {
+            System.out.println("TEST PASSED");
             this.quit();
-            System.out.println("Test failed as cleaning up SwingNode caused NPE");
+        });
+        failButton.setOnAction(e -> {
+            System.out.println("TEST FAILED");
+            this.quit();
+            throw new AssertionError("Test failed due to a NullPointerException");
         });
 
         BorderPane pane = new BorderPane();
@@ -86,6 +91,9 @@ public class JavaSwingNodeCleanupBug extends Application {
     private static void testNPE() {
         Stage st = new Stage();
         st.setTitle("Second Stage");
+        Window instructionStage = Window.getWindows().get(0);
+        st.setX(instructionStage.getX() + instructionStage.getWidth() + 10);
+        st.setY(instructionStage.getY());
         SwingNode swingNode = new SwingNode();
         SwingUtilities.invokeLater(() -> {
             swingNode.setContent(new JLabel("Swing"));

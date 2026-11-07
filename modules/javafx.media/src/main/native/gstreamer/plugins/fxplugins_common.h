@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,7 +33,9 @@ G_BEGIN_DECLS
 // Custom events
 enum
 {
-    FX_EVENT_RANGE_READY = GST_EVENT_MAKE_TYPE (64, GST_EVENT_TYPE_DOWNSTREAM | GST_EVENT_TYPE_SERIALIZED)
+    FX_EVENT_RANGE_READY = GST_EVENT_MAKE_TYPE (64, GST_EVENT_TYPE_DOWNSTREAM | GST_EVENT_TYPE_SERIALIZED),
+    FX_EVENT_SEGMENT_READY = GST_EVENT_MAKE_TYPE (65, GST_EVENT_TYPE_DOWNSTREAM | GST_EVENT_TYPE_SERIALIZED),
+    FX_EVENT_NEXT_SEGMENT = GST_EVENT_MAKE_TYPE (66, GST_EVENT_TYPE_UPSTREAM | GST_EVENT_TYPE_SERIALIZED)
 };
 
 // Query to find out if a sinkpad supports progressive getrange
@@ -46,9 +48,9 @@ enum JFX_CODEC_ID
 {
     JFX_CODEC_ID_UNKNOWN = 0,
     JFX_CODEC_ID_AAC,
-    JFX_CODEC_ID_H264, // HLS
-    JFX_CODEC_ID_AVC1, // MP4
-    JFX_CODEC_ID_H265, // MP4
+    JFX_CODEC_ID_H264, // HLS (H.264 with start codes)
+    JFX_CODEC_ID_AVC1, // MP4 (H.264 without start codes)
+    JFX_CODEC_ID_HEVC, // H.265 with start codes
 };
 
 // Custom error codes used by our plugins

@@ -28,6 +28,9 @@
 
 // See     Light.h
 
+// Limit of 3 lights per mesh due to shader model 3 allowances
+#define MAX_NUM_LIGHTS 3
+
 class D3DLight {
 public:
     D3DLight() = default;

@@ -33,6 +33,7 @@ import javafx.css.StyleConverter.StringStore;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 
+import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -428,7 +429,7 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
     final static private byte BOOLEAN = 7;
     final static private byte URL = 8;
     final static private byte SIZE = 9;
-
+    final static private byte NUMBER = 10;
 
     public final void writeBinary(DataOutputStream os, StringStore stringStore)
         throws IOException {
@@ -541,6 +542,10 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
 
             final int index = stringStore.addString(size.getUnits().name());
             os.writeShort(index);
+
+        } else if (value instanceof Number n) {
+            os.writeByte(NUMBER);
+            NumberType.writeBinary(os, n);
 
         } else if (value instanceof String) {
             os.writeByte(STRING);
@@ -676,6 +681,9 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
             }
             return new ParsedValueImpl<Size,Size>(new Size(val,units), converter, lookup);
 
+        } else if (valType == NUMBER) {
+            return new ParsedValueImpl(NumberType.readBinary(is), converter, lookup);
+
         } else if (valType == STRING) {
             String str = strings[is.readShort()];
             return new ParsedValueImpl(str, converter, lookup);
@@ -694,6 +702,50 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
 
         } else {
             throw new InternalError("unknown type: " + valType);
+        }
+    }
+
+    private enum NumberType {
+        INT(0, (stream, number) -> stream.writeInt(number.intValue()), DataInputStream::readInt),
+        DOUBLE(1, (stream, number) -> stream.writeDouble(number.doubleValue()), DataInputStream::readDouble);
+
+        NumberType(int typeCode, Serializer serializer, Deserializer deserializer) {
+            this.typeCode = typeCode;
+            this.serializer = serializer;
+            this.deserializer = deserializer;
+        }
+
+        final int typeCode;
+        final Serializer serializer;
+        final Deserializer deserializer;
+
+        static void writeBinary(DataOutputStream stream, Number number) throws IOException {
+            NumberType typeCode = switch (number) {
+                case Integer _ -> INT;
+                case Double _ -> DOUBLE;
+                default -> throw new InternalError();
+            };
+
+            stream.writeByte(typeCode.typeCode);
+            typeCode.serializer.serialize(stream, number);
+        }
+
+        static Number readBinary(DataInputStream stream) throws IOException {
+            NumberType typeCode = switch (stream.readUnsignedByte()) {
+                case 0 -> INT;
+                case 1 -> DOUBLE;
+                default -> throw new IOException("Unknown number type");
+            };
+
+            return typeCode.deserializer.deserialize(stream);
+        }
+
+        interface Serializer {
+            void serialize(DataOutputStream stream, Number number) throws IOException;
+        }
+
+        interface Deserializer {
+            Number deserialize(DataInputStream stream) throws IOException;
         }
     }
 }
