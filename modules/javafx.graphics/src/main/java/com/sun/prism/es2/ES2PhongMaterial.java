@@ -26,7 +26,7 @@
 package com.sun.prism.es2;
 
 import com.sun.glass.ui.GlassPlatform;
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.logging.PlatformLogger;
 import com.sun.prism.Image;
 import com.sun.prism.PhongMaterial;
 import com.sun.prism.Texture;
@@ -34,7 +34,6 @@ import com.sun.prism.TextureMap;
 import com.sun.prism.impl.BasePhongMaterial;
 import com.sun.prism.impl.Disposer;
 import com.sun.prism.paint.Color;
-import com.sun.javafx.logging.PlatformLogger;
 
 /**
  * TODO: 3D - Need documentation

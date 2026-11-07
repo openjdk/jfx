@@ -33,11 +33,11 @@ import java.util.Locale;
  */
 public final class GlassPlatform {
 
-    public static final String MAC = "Mac";
-    public static final String WINDOWS = "Win";
-    public static final String GTK = "Gtk";
-    public static final String IOS = "Ios";
-    public static final String HEADLESS = "Headless";
+    private static final String MAC = "Mac";
+    private static final String WINDOWS = "Win";
+    private static final String GTK = "Gtk";
+    private static final String IOS = "Ios";
+    private static final String HEADLESS = "Headless";
     private static final String MONOCLE = "Monocle";
 
     private static final String PLATFORM_FACTORY;
@@ -52,7 +52,11 @@ public final class GlassPlatform {
     static {
         // PlatformUtil must be initialized first (in getPlatform()), as it may set the system properties read below.
         String platform = getPlatform();
-        PLATFORM_FACTORY = "com.sun.glass.ui." + platform.toLowerCase(Locale.ROOT) + "." + platform + "PlatformFactory";
+        if (platform != null) {
+            PLATFORM_FACTORY = "com.sun.glass.ui." + platform.toLowerCase(Locale.ROOT) + "." + platform + "PlatformFactory";
+        } else {
+            PLATFORM_FACTORY = null;
+        }
 
         USE_EGL = Boolean.getBoolean("use.egl");
         IS_EMBEDDED = Boolean.getBoolean("com.sun.javafx.isEmbedded");
@@ -65,12 +69,12 @@ public final class GlassPlatform {
         if (override != null) {
             IS_ACCESSIBILITY_ENABLED = Boolean.parseBoolean(override);
         } else {
-            IS_ACCESSIBILITY_ENABLED = true;
+            IS_ACCESSIBILITY_ENABLED = PlatformUtil.isMac() || PlatformUtil.isWindows();
         }
     }
 
     /**
-     * Returns the Glass platform in use, or {@code null} if it could not be determined.
+     * Returns the fully qualified Glass platform factory class (name), or {@code null} if it could not be determined.
      */
     public static String getPlatformFactory() {
         return PLATFORM_FACTORY;

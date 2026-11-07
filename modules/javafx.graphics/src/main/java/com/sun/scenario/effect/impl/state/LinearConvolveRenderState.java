@@ -26,13 +26,13 @@
 package com.sun.scenario.effect.impl.state;
 
 import com.sun.glass.ui.GlassPlatform;
-import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.scenario.effect.Color4f;
 import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.ImageData;
 import com.sun.scenario.effect.impl.EffectPeer;
 import com.sun.scenario.effect.impl.Renderer;
+
 import java.nio.FloatBuffer;
 
 /**

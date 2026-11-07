@@ -26,7 +26,6 @@
 package com.sun.prism.mtl;
 
 import com.sun.glass.ui.GlassPlatform;
-import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.prism.Image;
 import com.sun.prism.PhongMaterial;
