@@ -31,21 +31,20 @@ import java.util.Locale;
 
 /// A `StringConverter` implementation for [Date] values that represent time.
 ///
-/// Note that using `Date` is not recommended in JDK versions where [java.time.LocalTime] is available, in which case
-/// [LocalTimeStringConverter] should be used.
-///
 /// @since JavaFX 2.1
+/// @deprecated Prefer [LocalTimeStringConverter] in JDK versions where [java.time.LocalTime] is available as a
+///     replacement for `Date`.
+@Deprecated(forRemoval = false, since = "28")
 public class TimeStringConverter extends DateTimeStringConverter {
 
-    /// Creates a `TimeStringConverter` that uses a formatter/parser based on {@link DateFormat#DEFAULT} for the
-    /// time style, and the user's {@link Locale}.
+    /// Creates a `TimeStringConverter` that uses a formatter/parser based on [DateFormat#DEFAULT] for the time style,
+    /// and the user's [Locale].
     public TimeStringConverter() {}
 
     /// Creates a `TimeStringConverter` that uses a formatter/parser based on the given time style, and the user's
-    /// {@link Locale}.
+    /// [Locale].
     ///
-    /// @param timeStyle the formatting style for times. For example, {@link DateFormat#SHORT} for "h:mm a" in the US
-    ///        locale.
+    /// @param timeStyle the formatting style for times. For example, [DateFormat#SHORT] for "h:mm a" in the US locale.
     ///
     /// @since JavaFX 8u40
     public TimeStringConverter(int timeStyle) {
