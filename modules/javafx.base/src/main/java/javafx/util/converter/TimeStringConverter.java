@@ -37,15 +37,14 @@ import java.util.Locale;
 @Deprecated(forRemoval = false)
 public class TimeStringConverter extends DateTimeStringConverter {
 
-    /// Creates a `TimeStringConverter` that uses a formatter/parser based on {@link DateFormat#DEFAULT} for the
-    /// time style, and the user's {@link Locale}.
+    /// Creates a `TimeStringConverter` that uses a formatter/parser based on [DateFormat#DEFAULT] for the time style,
+    /// and the user's [Locale].
     public TimeStringConverter() {}
 
     /// Creates a `TimeStringConverter` that uses a formatter/parser based on the given time style, and the user's
-    /// {@link Locale}.
+    /// [Locale].
     ///
-    /// @param timeStyle the formatting style for times. For example, {@link DateFormat#SHORT} for "h:mm a" in the US
-    ///        locale.
+    /// @param timeStyle the formatting style for times. For example, [DateFormat#SHORT] for "h:mm a" in the US locale.
     ///
     /// @since JavaFX 8u40
     public TimeStringConverter(int timeStyle) {
