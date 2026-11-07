@@ -34,10 +34,10 @@ import java.util.Locale;
 /// A `StringConverter` implementation for [Date] values that represent dates and times. Instances of this class are
 /// immutable unless created with the [#DateTimeStringConverter(DateFormat)] constructor (with a non-`null` argument).
 ///
-/// Note that using `Date` is not recommended in JDK versions where [java.time.LocalDateTime] is available, in which
-/// case [LocalDateTimeStringConverter] should be used.
-///
 /// @since JavaFX 2.1
+/// @deprecated Prefer [LocalDateTimeStringConverter] in JDK versions where [java.time.LocalDateTime] is available as a
+///     replacement for `Date`.
+@Deprecated(forRemoval = false)
 public class DateTimeStringConverter extends BaseStringConverter<Date> {
 
     /// Reads the default locale at the time of creation. If the default locale is changed during the application's life,
