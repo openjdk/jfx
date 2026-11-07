@@ -164,7 +164,8 @@ final class GtkApplication extends Application implements
             throw new UnsupportedOperationException("Unable to load glass GTK library.");
         }
 
-        _initGTK(gtkVersion, gtkVersionVerbose, overrideUIScale);
+        _initGTK(gtkVersion, gtkVersionVerbose, overrideUIScale,
+                System.getProperty("glass.gtk.logCategories", "all"));
 
         // Embedded in SWT, with shared event thread
         boolean isEventThread = Boolean.getBoolean("javafx.embed.isEventThread");
@@ -186,7 +187,7 @@ final class GtkApplication extends Application implements
      */
     private static native int _queryLibrary(int version, boolean verbose);
 
-    private static native void _initGTK(int version, boolean verbose, float overrideUIScale);
+    private static native void _initGTK(int version, boolean verbose, float overrideUIScale, String logCategories);
 
     private void initDisplay() {
         Map ds = getDeviceDetails();
