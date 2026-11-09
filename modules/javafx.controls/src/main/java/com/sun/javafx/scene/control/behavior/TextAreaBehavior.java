@@ -417,7 +417,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         int pos = textArea.getCaretPosition();
         if (pos == 0) {
             atWordStart = true;
-        } else if (pos < textArea.getLength() ){
+        } else if (pos < textArea.getLength()) {
             String text = textArea.getText();
             atWordStart = Character.isWhitespace(text.charAt(pos - 1)) && !Character.isWhitespace(text.charAt(pos));
         }
