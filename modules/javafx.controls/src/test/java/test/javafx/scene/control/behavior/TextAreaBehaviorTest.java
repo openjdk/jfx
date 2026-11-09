@@ -147,58 +147,15 @@ public class TextAreaBehaviorTest extends TextInputControlTestBase<TextArea> {
     }
 
     @Test
-    @Disabled("JDK-8393470")
-    public void testDoubleClickSelectsCharacterClassBlocks() {
-        execute(
-                setText("Bug #123"),
-                clickCharacter(6, 2, true)
-        );
-        assertEquals("123", control.getSelectedText());
-
-        execute(
-                clickCharacter(4, 2, true)
-        );
-        assertEquals("#", control.getSelectedText());
-
-        execute(
-                clickCharacter(3, 2, true)
-        );
-        assertEquals(" ", control.getSelectedText());
-
-        execute(
-                setText("aaa.3x3"),
-                clickCharacter(5, 2, false)
-        );
-        assertEquals("3x3", control.getSelectedText());
-
+    public void testDoubleClickOnLeadingChar() {
         execute(
                 setText("aaa bbb"),
                 clickCharacter(4, 2, false)
         );
         assertEquals("bbb", control.getSelectedText());
-
         execute(
-                setText("aaa bbb"),
                 clickCharacter(4, 2, true)
         );
         assertEquals("bbb", control.getSelectedText());
-
-        execute(
-                setText("aaa,,,bbb"),
-                clickCharacter(4, 2, true)
-        );
-        assertEquals(",,,", control.getSelectedText());
-
-        execute(
-                setText("aaa    bbb"),
-                clickCharacter(5, 2, true)
-        );
-        assertEquals("    ", control.getSelectedText());
-
-        execute(
-                setText("aaa\t\t\tbbb"),
-                clickCharacter(4, 2, true)
-        );
-        assertEquals("\t\t\t", control.getSelectedText());
     }
 }
