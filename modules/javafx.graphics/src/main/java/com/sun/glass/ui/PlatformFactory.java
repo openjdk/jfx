@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,8 +24,6 @@
  */
 package com.sun.glass.ui;
 
-import java.util.Locale;
-
 import com.sun.glass.ui.delegate.ClipboardDelegate;
 import com.sun.glass.ui.delegate.MenuBarDelegate;
 import com.sun.glass.ui.delegate.MenuDelegate;
@@ -36,10 +34,13 @@ public abstract class PlatformFactory {
     public static synchronized PlatformFactory getPlatformFactory() {
         if (instance == null) {
             try {
-                String platform = Platform.determinePlatform();
-                String factory = "com.sun.glass.ui." +  platform.toLowerCase(Locale.ROOT) + "."+ platform + "PlatformFactory";
+                String factory = GlassPlatform.getPlatformFactory();
+                if (factory == null) {
+                    throw new IllegalStateException("Platform Factory is null");
+                }
+
                 // System.out.println("Loading Glass Factory " + factory);
-                Class c = Class.forName(factory);
+                Class<?> c = Class.forName(factory);
                 instance = (PlatformFactory) c.getDeclaredConstructor().newInstance();
             } catch (Exception e) {
                 e.printStackTrace();
