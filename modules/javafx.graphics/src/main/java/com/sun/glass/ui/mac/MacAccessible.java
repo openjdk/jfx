@@ -897,6 +897,8 @@ final class MacAccessible extends Accessible {
                     if (!child.isVisible()) {
                         continue;
                     }
+                    // This will ensure that the native peer of this child
+                    // and all of his descendants are initialized
                     MacAccessible childAccessible = (MacAccessible)getAccessible(child);
                     if (childAccessible != null) {
                         pending.push(childAccessible);
