@@ -30,7 +30,6 @@ import com.sun.javafx.tk.HeaderAreaType;
 import java.lang.annotation.Native;
 import java.lang.ref.WeakReference;
 import java.util.Map;
-import java.util.function.Supplier;
 
 public abstract class View {
 
@@ -42,23 +41,6 @@ public abstract class View {
     @Native public final static byte IME_ATTR_CONVERTED             = 0x02;
     @Native public final static byte IME_ATTR_TARGET_NOTCONVERTED   = 0x03;
     @Native public final static byte IME_ATTR_INPUT_ERROR           = 0x04;
-
-    final static boolean accessible = ((Supplier<Boolean>) () -> {
-        String force = System.getProperty("glass.accessible.force");
-        if (force != null) return Boolean.parseBoolean(force);
-
-        /* By default accessibility is enabled for Mac 10.9 or greater and Windows 7 or greater. */
-        try {
-            String platform = Platform.determinePlatform();
-            String major = System.getProperty("os.version").replaceFirst("(\\d+)\\.\\d+.*", "$1");
-            String minor = System.getProperty("os.version").replaceFirst("\\d+\\.(\\d+).*", "$1");
-            int v = Integer.parseInt(major) * 100 + Integer.parseInt(minor);
-            return (platform.equals(Platform.MAC) && v >= 1009) ||
-                   (platform.equals(Platform.WINDOWS) && v >= 601);
-        } catch (Exception e) {
-            return false;
-        }
-    }).get();
 
     public static class EventHandler {
         public void handleViewEvent(View view, long time, int type) {
@@ -1145,7 +1127,7 @@ public abstract class View {
     long getAccessible() {
         Application.checkEventThread();
         checkNotClosed();
-        if (accessible) {
+        if (GlassPlatform.isAccessibilityEnabled()) {
             Accessible acc = eventHandler.getSceneAccessible();
             if (acc != null) {
                 acc.setView(this);
