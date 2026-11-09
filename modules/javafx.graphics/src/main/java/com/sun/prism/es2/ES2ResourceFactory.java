@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,7 @@ package com.sun.prism.es2;
 import java.io.InputStream;
 import java.util.Map;
 
+import com.sun.glass.ui.GlassPlatform;
 import com.sun.glass.ui.Screen;
 import com.sun.javafx.PlatformUtil;
 import com.sun.prism.Image;
@@ -73,7 +74,7 @@ public class ES2ResourceFactory extends BaseShaderFactory {
             int maxVUC, maxFUC, maxVC;
             // We need this if-else block is because iMX6 doesn't support component queries
             // and Mac  doesn't support vectors queries.
-            if (PlatformUtil.isEmbedded()) {
+            if (GlassPlatform.isEmbedded()) {
                 // Multiply by 4 as it is documented that a vector has 4 components.
                 maxVUC = context.getGLContext().getIntParam(GLContext.GL_MAX_VERTEX_UNIFORM_VECTORS) * 4;
                 maxFUC = context.getGLContext().getIntParam(GLContext.GL_MAX_FRAGMENT_UNIFORM_VECTORS) * 4;
