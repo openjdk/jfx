@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,5 +41,5 @@ module jfx.incubator.input {
     exports jfx.incubator.scene.control.input;
 
     // becomes unnecessary once InputMap is moved to Control JDK-8314968
-    exports com.sun.jfx.incubator.scene.control.input to jfx.incubator.richtext;
+    exports com.sun.jfx.incubator.scene.control.input to javafx.controls, jfx.incubator.richtext;
 }
