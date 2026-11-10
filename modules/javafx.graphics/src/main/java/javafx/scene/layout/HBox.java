@@ -210,7 +210,7 @@ public class HBox extends Pane {
         return (Insets)getConstraint(child, MARGIN_CONSTRAINT);
     }
 
-    private static final Callback<Node, Insets> marginAccessor = n -> getMargin(n);
+    private static final Callback<Layoutable, Insets> marginAccessor = n -> getMargin((Node)n);
 
     /**
      * Removes all hbox constraints from the child node.
