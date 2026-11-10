@@ -53,6 +53,12 @@ PlatformSupport* platformSupport = NULL;
 
 extern gboolean disableGrab;
 
+// Silently consume X errors for the lifetime of the GTK main loop.
+static int glass_x_error_handler(Display*, XErrorEvent*)
+{
+    return 0;
+}
+
 void checkGtkVersion(JNIEnv* env, jint reqMajor) {
     // Major version is checked before loading
     // GTK_3_MIN_MINOR_VERSION and GTK_3_MIN_MICRO_VERSION comes from the build system
@@ -226,7 +232,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1runLoop
     // Disable X error handling
 #ifndef VERBOSE
     if (!noErrorTrap) {
-        gdk_error_trap_push();
+        XSetErrorHandler(glass_x_error_handler);
     }
 #endif
 
@@ -242,7 +248,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1runLoop
     // Restore X error handling
     // #ifndef VERBOSE
     //     if (!noErrorTrap) {
-    //         gdk_error_trap_pop();
+    //         XSetErrorHandler(NULL);
     //     }
     // #endif
 
