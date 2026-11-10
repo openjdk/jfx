@@ -1706,10 +1706,13 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
             // Add any necessary leading cells
             if (firstCell != null) {
-                // NOTE: The index might be -1, but the call to addLeadingCells() is still required.
-                int previousIndex = getCellIndex(firstCell) - 1;
-                double prevIndexSize = getCellLength(previousIndex);
-                addLeadingCells(previousIndex, getCellPosition(firstCell) - prevIndexSize);
+                double firstCellPosition = getCellPosition(firstCell);
+                if (firstCellPosition > 0) {
+                    // NOTE: The index might be -1, but the call to addLeadingCells() is still required.
+                    int previousIndex = getCellIndex(firstCell) - 1;
+                    double prevIndexSize = getCellLength(previousIndex);
+                    addLeadingCells(previousIndex, firstCellPosition - prevIndexSize);
+                }
             } else {
                 int currentIndex = computeCurrentIndex();
 
@@ -2848,17 +2851,28 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     private void cleanPile() {
         boolean focusOwnerWithScene = hasFocusOwnerWithScene();
 
-        for (int i = 0, max = pile.size(); i < max; i++) {
-            T cell = pile.get(i);
+        for (T cell : pile) {
             cell.setVisible(false);
+
+            // Notify the cell that it is now empty (as it will land in the pile, removed from the viewport).
             if (cell.getIndex() != -1) {
                 cell.updateIndex(-1);
             }
         }
 
-        // Remove all cells that are in the pile and therefore not relevant anymore.
-        if (sheetChildren.size() != cells.size()) {
-            sheetChildren.removeAll(pile);
+        // Remove all cells that are still in the viewport, but in the pile and therefore not used anymore.
+        List<T> removedCells = null;
+        for (T cell : pile) {
+            if (cell.getParent() != null) {
+                if (removedCells == null) {
+                    removedCells = new ArrayList<>();
+                }
+                removedCells.add(cell);
+            }
+        }
+
+        if (removedCells != null) {
+            sheetChildren.removeAll(removedCells);
         }
 
         // Since we update the cell index and remove them from the viewport, the focus may be cleared.
