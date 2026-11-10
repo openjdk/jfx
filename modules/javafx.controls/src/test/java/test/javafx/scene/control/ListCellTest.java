@@ -780,6 +780,54 @@ public class ListCellTest {
     }
 
     @Test
+    public void testEditStartEventCarriesTheOldValue() {
+        list.setEditable(true);
+        cell.updateListView(list);
+        cell.updateIndex(1);
+        List<EditEvent<String>> events = new ArrayList<>();
+        list.setOnEditStart(events::add);
+
+        cell.startEdit();
+
+        assertEquals(1, events.size());
+        assertEquals("Oranges", events.get(0).getOldValue(), "old value of start event");
+        assertNull(events.get(0).getNewValue(), "new value of start event");
+    }
+
+    @Test
+    public void testEditCommitEventCarriesTheOldAndTheNewValue() {
+        list.setEditable(true);
+        cell.updateListView(list);
+        cell.updateIndex(1);
+        cell.startEdit();
+        List<EditEvent<String>> events = new ArrayList<>();
+        list.setOnEditCommit(events::add);
+
+        cell.commitEdit("Watermelon");
+
+        assertEquals(1, events.size());
+        assertEquals("Oranges", events.get(0).getOldValue(), "old value of commit event");
+        assertEquals("Watermelon", events.get(0).getNewValue(), "new value of commit event");
+    }
+
+    @Test
+    public void testEditCancelEventCarriesTheOldValue() {
+        list.setEditable(true);
+        cell.updateListView(list);
+        cell.updateIndex(1);
+        cell.startEdit();
+        List<EditEvent<String>> events = new ArrayList<>();
+        list.setOnEditCancel(events::add);
+
+        cell.cancelEdit();
+
+        assertEquals(1, events.size());
+        assertEquals("Oranges", events.get(0).getOldValue(), "old value of cancel event");
+        assertNull(events.get(0).getNewValue(), "new value of cancel event");
+    }
+
+    @Test
+    @SuppressWarnings("removal")
     public void testEditCancelEventAfterCancelOnCell() {
         list.setEditable(true);
         cell.updateListView(list);
@@ -794,6 +842,7 @@ public class ListCellTest {
     }
 
     @Test
+    @SuppressWarnings("removal")
     public void testEditCancelEventAfterCancelOnList() {
         list.setEditable(true);
         cell.updateListView(list);
@@ -808,6 +857,7 @@ public class ListCellTest {
     }
 
     @Test
+    @SuppressWarnings("removal")
     public void testEditCancelEventAfterChangeEditingIndexOnList() {
         list.setEditable(true);
         cell.updateListView(list);
@@ -822,6 +872,7 @@ public class ListCellTest {
     }
 
     @Test
+    @SuppressWarnings("removal")
     public void testEditCancelEventAfterCellReuse() {
         list.setEditable(true);
         cell.updateListView(list);
@@ -836,6 +887,7 @@ public class ListCellTest {
     }
 
     @Test
+    @SuppressWarnings("removal")
     public void testEditCancelEventAfterModifyItems() {
         list.setEditable(true);
         stageLoader = new StageLoader(list);
@@ -850,6 +902,7 @@ public class ListCellTest {
     }
 
     @Test
+    @SuppressWarnings("removal")
     public void testEditCancelEventAfterRemoveEditingItem() {
         list.setEditable(true);
         stageLoader = new StageLoader(list);
@@ -887,6 +940,7 @@ public class ListCellTest {
     }
 
     @Test
+    @SuppressWarnings("removal")
     public void testCommitEditMustNotFireCancel() {
         list.setEditable(true);
         // JDK-8187307: handler that resets control's editing state
