@@ -26,6 +26,7 @@ package com.sun.prism.sw;
 
 import java.nio.Buffer;
 import java.nio.IntBuffer;
+import java.util.Objects;
 import com.sun.javafx.image.PixelConverter;
 import com.sun.javafx.image.PixelGetter;
 import com.sun.javafx.image.PixelUtils;
@@ -45,8 +46,50 @@ class SWArgbPreTexture extends SWTexture {
     private boolean hasAlpha = true;
 
     SWArgbPreTexture(SWResourceFactory factory, WrapMode wrapMode, int w, int h) {
+        this(factory, wrapMode, w, h, null);
+    }
+
+    /**
+     * Creates a texture backed by the supplied pixel array. If {@code data} is
+     * non-null, the array is used directly and is not copied; this texture
+     * retains a reference to it and does not own or dispose of it. If
+     * {@code data} is null, this texture allocates its own buffer on first use.
+     *
+     * @param factory the resource factory that owns this texture
+     * @param wrapMode the wrap mode for texture sampling
+     * @param w the width of the texture
+     * @param h the height of the texture
+     * @param data the pixel data, or null to allocate a buffer on first use
+     */
+    SWArgbPreTexture(SWResourceFactory factory, WrapMode wrapMode, int w, int h, int[] data) {
         super(factory, wrapMode, w, h);
-        offset = 0;
+
+        this.allocated = data != null;
+        this.data = data;
+    }
+
+    /**
+     * Creates a texture over the supplied pixel array, which is used directly
+     * and is not copied; this texture retains a reference to it and does not
+     * own or dispose of it.
+     *
+     * @param factory the resource factory that owns this texture
+     * @param wrapMode the wrap mode for texture sampling
+     * @param w the width of the texture
+     * @param h the height of the texture
+     * @param data the pixel data, cannot be {@code null}
+     * @param offset the index of the first pixel in {@code data}
+     * @param scanlineStride the distance between rows in {@code data}, in elements
+     * @throws NullPointerException if {@code data} is null
+     */
+    SWArgbPreTexture(SWResourceFactory factory, WrapMode wrapMode, int w, int h,
+                     int[] data, int offset, int scanlineStride) {
+        super(factory, wrapMode, w, h);
+
+        this.allocated = true;  // the supplied data is already allocated
+        this.data = Objects.requireNonNull(data, "data");
+        this.offset = offset;
+        this.physicalWidth = scanlineStride;
     }
 
     SWArgbPreTexture(SWArgbPreTexture sharedTex, WrapMode altMode) {

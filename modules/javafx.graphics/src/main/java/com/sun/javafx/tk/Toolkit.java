@@ -29,6 +29,7 @@ import javafx.application.ConditionalFeature;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.geometry.Dimension2D;
 import javafx.scene.effect.BlurType;
+import javafx.scene.image.DrawingContext;
 import javafx.scene.image.Image;
 import javafx.scene.image.PixelFormat;
 import javafx.scene.image.WritableImage;
@@ -64,6 +65,7 @@ import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
+import java.util.function.Consumer;
 import com.sun.glass.ui.CommonDialogs.FileChooserResult;
 import com.sun.glass.ui.GlassRobot;
 import com.sun.glass.utils.NativeLibLoader;
@@ -71,6 +73,7 @@ import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.beans.event.AbstractNotifyListener;
 import com.sun.javafx.embed.HostInterface;
 import com.sun.javafx.geom.Path2D;
+import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.perf.PerformanceTracker;
 import com.sun.javafx.runtime.VersionInfo;
@@ -542,6 +545,20 @@ public abstract class Toolkit {
     public abstract ImageLoader loadPlatformImage(Object platformImage);
 
     public abstract PlatformImage createPlatformImage(int w, int h);
+
+    /**
+     * Creates a {@link DrawingContext} that can draw into the pixels of the
+     * given writable platform image, reporting each changed region to
+     * {@code pixelsDirty}. The returned context draws into the platform
+     * image's own pixel storage so that changes become visible to anything
+     * rendering the image once the reported regions have been handled.
+     *
+     * @param image the writable platform image to draw into, cannot be {@code null}
+     * @param pixelsDirty a consumer of dirty rectangles, cannot be {@code null}
+     * @return a {@link DrawingContext} drawing into the image, never {@code null}
+     * @throws UnsupportedOperationException if the toolkit does not provide a drawing context for the image
+     */
+    public abstract DrawingContext createDrawingContext(PlatformImage image, Consumer<Rectangle> pixelsDirty);
 
     // Indicates the default state of smooth for ImageView and MediaView
     // Subclasses may override this to provide a platform-specific default

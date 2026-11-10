@@ -824,7 +824,7 @@ clearRect8888_any(Renderer *rdr, jint x, jint y, jint w, jint h) {
                 (rdr->_cgreen << 8) | rdr->_cblue;
     jint pixelStride = rdr->_imagePixelStride;
     //jint scanlineSkip = rdr->_imageScanlineStride - w * pixelStride;
-    jint* intData = (jint*)rdr->_data + rdr->_imageOffset +
+    jint* intData = (jint*)rdr->_data +
                     y * rdr->_imageScanlineStride + x * pixelStride;
     jint* intData2 = intData;
     jint* intData2End = intData + w;

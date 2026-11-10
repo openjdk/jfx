@@ -159,6 +159,11 @@ public non-sealed class Canvas extends Node {
 
     /**
      * returns the {@code GraphicsContext} associated with this {@code Canvas}.
+     * <p>
+     * The context is backed by an implementation-specific drawing surface.
+     * The maximum supported canvas size depends on the rendering pipeline and
+     * display configuration.
+     *
      * @return the {@code GraphicsContext} associated with this {@code Canvas}
      */
     public GraphicsContext getGraphicsContext2D() {

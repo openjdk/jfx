@@ -237,7 +237,7 @@ public class StubFontLoader extends FontLoader {
 
         @Override
         public FontStrike getStrike(BaseTransform transform, int smoothingType) {
-            return null;
+            return new StubFontStrike(getFontResource(), getSize(), transform);
         }
 
         @Override
