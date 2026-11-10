@@ -686,6 +686,23 @@ public class TooltipTest {
         assertTooltipHiddenAfter(rect, 200);
     }
 
+    @Test
+    public void testTooltipShowDelayCssShowTwice() {
+        toolTip.setStyle("-fx-show-delay: 200ms;");
+
+        Rectangle rect = new Rectangle(0, 0, 100, 100);
+
+        stageLoader = new StageLoader(rect);
+
+        Tooltip.install(rect, toolTip);
+
+        assertTooltipShownAfter(rect, 200);
+        assertTooltipHiddenAfter(rect, 200);
+
+        assertTooltipShownAfter(rect, 200);
+        assertTooltipHiddenAfter(rect, 200);
+    }
+
     private void assertTooltipShownAfter(Rectangle rect, int millis) {
         MouseEvent mouseEvent = MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 1, 1);
         rect.fireEvent(mouseEvent);
