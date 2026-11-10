@@ -227,6 +227,11 @@ public class RichTextAreaSkin extends SkinBase<RichTextArea> {
                 rta.setOnInputMethodTextChanged(null);
             }
 
+            StyledTextModel m = rta.getModel();
+            if (m != null) {
+                m.removeListener(vflow);
+            }
+
             listenerHelper.disconnect();
             vflow.dispose();
             getChildren().remove(vflow);

@@ -622,7 +622,6 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
         // mouse press may not arrive when right click dismisses the existing popup menu
         // the side effect of this is that the cursor may still blink on right click
         suppressBlink.set(Math.max(0, suppressBlink.get() + (on ? 1 : -1)));
-        IO.println("setSuppressBlink " + on + " supp=" + (suppressBlink.get())); // FIX
         if (caretAnimation != null) {
             if (on) {
                 caretAnimation.stop();
@@ -634,7 +633,6 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
 
     private void destroyCaretAnimation() {
         if (caretAnimation != null) {
-            IO.println("caret animation destroyed"); // FIX
             caretAnimation.stop();
             caretAnimation.getKeyFrames().clear();
             caretAnimation = null;
@@ -643,7 +641,6 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
 
     // on control.displayCaretProperty change
     public final void updateDisplayCaret() {
-        IO.println("updateDisplayCaret"); // FIX
         if (control.isDisplayCaret()) {
             if (caretAnimation == null) {
                 caretAnimation = new Timeline();
@@ -657,7 +654,6 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
 
     private void handleCaretVisible() {
         if ((caretAnimation != null) && caretPath.isVisible() && (caretAnimation.getStatus() != Animation.Status.RUNNING)) {
-            IO.println("handleCaretVisible, play"); // FIX
             caretAnimation.play();
         }
     }
@@ -672,7 +668,6 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
                 new KeyFrame(t1, (ev) -> setCaretVisible(false)),
                 new KeyFrame(t2)
             );
-            IO.println("updateBlinkRate " + caretAnimation.getKeyFrames()); // FIX
             caretAnimation.play();
         }
     }
