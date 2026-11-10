@@ -1371,6 +1371,36 @@ public class CssStyleHelperTest {
         assertEquals(1, node.getBoom());
     }
 
+    @Test
+    void testStyleKeptWhenApplyingCssAfterWindowWasHidden() {
+        assertStyleIsKeptWhenApplyingCss(() -> stage.hide());
+    }
+
+    @Test
+    void testStyleKeptWhenApplyingCssAfterSceneWasRemovedFromWindow() {
+        assertStyleIsKeptWhenApplyingCss(() -> stage.setScene(null));
+    }
+
+    private void assertStyleIsKeptWhenApplyingCss(Runnable hideScene) {
+        scene.getStylesheets().add(toDataURL("""
+                .a { -fx-opacity: 0.5; }
+                .b { -fx-rotate: 5; }
+                """));
+        Pane child = new Pane();
+        child.getStyleClass().add("a");
+        root.getChildren().add(child);
+        stage.show();
+
+        hideScene.run();
+
+        Pane child2 = new Pane();
+        child2.getStyleClass().add("b");
+        root.getChildren().add(child2);
+        root.applyCss();
+
+        assertEquals(0.5, child.getOpacity());
+    }
+
     private static String toDataURL(String stylesheet) {
         return "data:text/plain;base64," + Base64.getEncoder().encodeToString(stylesheet.getBytes(StandardCharsets.UTF_8));
     }

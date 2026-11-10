@@ -112,4 +112,23 @@ public class Scene_preferences_Test {
         Toolkit.getToolkit().firePulse();
         assertEquals(Color.GREEN, rect.getFill());
     }
+
+    @ParameterizedTest
+    @MethodSource("changedScenePreferenceReappliesCSS_testRuns")
+    void changedScenePreferenceReappliesCSSOnApplyCss(TestRun testRun) {
+        scene.getStylesheets().add("data:base64," + Base64.getEncoder().encodeToString("""
+            #rect { -fx-fill: red; }
+            @media (%s) {
+                #rect { -fx-fill: green; }
+            }
+            """.formatted(testRun.mediaQuery).getBytes(StandardCharsets.UTF_8)));
+
+        testRun.state1.accept(scene.getPreferences());
+        Toolkit.getToolkit().firePulse();
+        assertEquals(Color.RED, rect.getFill());
+
+        testRun.state2.accept(scene.getPreferences());
+        rect.applyCss();
+        assertEquals(Color.GREEN, rect.getFill());
+    }
 }

@@ -842,6 +842,7 @@ public class Window implements EventTarget {
                 oldScene.getPreferences().colorSchemeProperty().removeListener(colorSchemeListener);
                 SceneHelper.setWindow(oldScene, null);
                 StyleManager.getInstance().forget(oldScene);
+                NodeHelper.scheduleReapplyCSS(oldScene.getRoot(), false);
             }
             if (newScene != null) {
                 final Window oldWindow = newScene.getWindow();
