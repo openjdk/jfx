@@ -77,6 +77,9 @@ static NSString* JavaRunLoopMode = @"AWTRunLoopMode";
 // don't deadlock.
 static NSArray<NSString*> *runLoopModes = nil;
 
+// Specifies whether awt is initialized to receive embedded events.
+static bool awtInitialized = false;
+
 // Custom event that is provided by AWT to allow libraries like
 // JavaFX to forward native events to AWT even if AWT runs in
 // embedded mode.
@@ -203,6 +206,23 @@ static NSMutableArray<GlassRunnable*> *deferredRunnables = nil;
 }
 
 #pragma mark --- delegate methods
+
+- (void)_initAwt {
+    LOG("_initAwt");
+
+    if (awtInitialized) {
+        return;
+    }
+
+    GET_MAIN_JENV;
+
+    jboolean ok = (*env)->CallStaticBooleanMethod(env, [GlassHelper MacApplicationClass], [GlassHelper ApplicationInitAwt]);
+    GLASS_CHECK_EXCEPTION(env);
+
+    if (ok == JNI_TRUE) {
+        awtInitialized = true;
+    }
+}
 
 - (void)GlassApplicationDidChangeScreenParameters
 {
@@ -502,10 +522,12 @@ static NSMutableArray<GlassRunnable*> *deferredRunnables = nil;
     return YES;
 }
 
-- (void) application:(NSApplication *)theApplication openURLs:(NSArray<NSURL *> *)urls
+- (void)application:(NSApplication *)theApplication openURLs:(NSArray<NSURL *> *)urls
 {
+    [self _initAwt];
+
     for (NSURL* url in urls) {
-         NSDictionary *userInfo = @{
+        NSDictionary *userInfo = @{
             @"name": @"openURL",
             @"url": url.absoluteString
         };
