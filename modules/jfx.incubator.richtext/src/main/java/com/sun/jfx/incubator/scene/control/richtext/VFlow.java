@@ -146,6 +146,10 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
     private static final int CARET_ORDER = -10;
     private static final int SELECTION_ORDER = 10;
     private static final int CARET_LINE_ORDER = 20;
+    // blink suppression masks
+    public static final int MASK_KEY = 0x0001;
+    public static final int MASK_MOUSE = 0x0002;
+    public static final int MASK_SEL = 0x0004;
 
     public VFlow(RichTextAreaSkin skin, ScrollBar vsb, ScrollBar hsb) {
         this.skin = skin;
@@ -220,7 +224,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
             protected boolean computeValue() {
                 return
                     control.isDisplayCaret() &&
-                    (caretVisible.get() || (suppressBlink.get() > 0)) &&
+                    (caretVisible.get() || (suppressBlink.get() != 0)) &&
                     control.isFocused() &&
                     (!control.isDisabled());
             }
@@ -424,10 +428,10 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
     }
 
     public void handleSelectionChange() {
-        setSuppressBlink(true); // FIX nested calls with mouse press/release
+        setSuppressBlink(MASK_SEL, true); // FIX nested calls with mouse press/release
         updateCaretAndSelection();
         scrollCaretToVisible();
-        setSuppressBlink(false);
+        setSuppressBlink(MASK_SEL, false);
     }
 
     public void updateCaretAndSelection() {
@@ -618,10 +622,12 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
         return pe;
     }
 
-    public final void setSuppressBlink(boolean on) {
+    public final void setSuppressBlink(int mask, boolean on) {
         // mouse press may not arrive when right click dismisses the existing popup menu
-        // the side effect of this is that the cursor may still blink on right click
-        suppressBlink.set(Math.max(0, suppressBlink.get() + (on ? 1 : -1)));
+        // the side effect will be that the cursor may still blink on right click
+        // this condition will self-heal on the next click
+        int v = suppressBlink.get();
+        suppressBlink.set(on ? (v | mask) : (v & ~mask));
         if (caretAnimation != null) {
             if (on) {
                 caretAnimation.stop();
@@ -649,6 +655,17 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
             updateBlinkRate();
         } else {
             destroyCaretAnimation();
+        }
+    }
+
+    // on control.focusedProperty change
+    public void updateFocused() {
+        if (caretAnimation != null) {
+            if (control.isFocused()) {
+                caretAnimation.play();
+            } else {
+                caretAnimation.stop();
+            }
         }
     }
 
