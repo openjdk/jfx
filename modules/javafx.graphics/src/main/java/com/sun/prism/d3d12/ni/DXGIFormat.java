@@ -27,7 +27,6 @@ package com.sun.prism.d3d12.ni;
 
 import com.sun.prism.PixelFormat;
 
-
 /*
  * Converter from Prism's PixelFormat to DXGI_FORMAT constants.
  *
