@@ -1157,6 +1157,7 @@ public class Window implements EventTarget {
                         peer.setScene(null);
                         SceneHelper.disposePeer(getScene());
                         StyleManager.getInstance().forget(getScene());
+                        NodeHelper.scheduleReapplyCSS(getScene().getRoot(), false);
                     }
 
                     // Remove toolkit pulse listener

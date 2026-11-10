@@ -689,9 +689,7 @@ public class TooltipTest {
     @Test
     public void testTooltipShowDelayCssShowTwice() {
         toolTip.setStyle("-fx-show-delay: 200ms;");
-
         Rectangle rect = new Rectangle(0, 0, 100, 100);
-
         stageLoader = new StageLoader(rect);
 
         Tooltip.install(rect, toolTip);

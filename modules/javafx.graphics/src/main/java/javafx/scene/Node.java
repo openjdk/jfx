@@ -622,9 +622,12 @@ public abstract sealed class Node
             }
 
             @Override
-            public void scheduleReapplyCSS(Node node) {
+            public void scheduleReapplyCSS(Node node, boolean requestPulse) {
                 node.cssFlag = CssFlags.REAPPLY;
-                Toolkit.getToolkit().requestNextPulse();
+                node.notifyParentsOfInvalidatedCSS();
+                if (requestPulse) {
+                    Toolkit.getToolkit().requestNextPulse();
+                }
             }
 
             @Override
