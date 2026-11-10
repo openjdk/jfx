@@ -247,6 +247,7 @@ public:
     bool grab_focus();
     bool grab_mouse_drag_focus();
     void ungrab_focus();
+    static void reset_mouse_drag_focus();
     void ungrab_mouse_drag_focus();
     void set_cursor(GdkCursor*);
     void set_cursor_override(GdkCursor*);
