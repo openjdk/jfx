@@ -376,6 +376,8 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
     }
 
     protected void handleMousePressed(MouseEvent ev) {
+        vflow.setSuppressBlink(true);
+
         if (ev.isPopupTrigger() || (ev.getButton() != MouseButton.PRIMARY)) {
             return;
         }
@@ -384,8 +386,6 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         if (pos == null) {
             return;
         }
-
-        vflow.setSuppressBlink(true);
 
         RichTextArea control = getControl();
         if (ev.isShiftDown()) {

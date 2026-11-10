@@ -40,6 +40,7 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.property.SimpleIntegerProperty;
 import javafx.event.EventType;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
@@ -76,26 +77,30 @@ import jfx.incubator.scene.control.richtext.model.StyledSegment;
 import jfx.incubator.scene.control.richtext.model.StyledTextModel;
 import jfx.incubator.scene.control.richtext.skin.RichTextAreaSkin;
 
-/**
- * Contains all the parts representing the visuals of the RichTextAreaSkin.
- *
- * Skin structure:
- * <pre>
- *  RichTextArea (Region) .rich-text-area
- *    └─ VFlow (Pane) .vflow
- *        ├─ left gutter (ClippedPane) .left-side
- *        ├─ right gutter (ClippedPane) .right-side
- *        ├─ vertical ScrollBar
- *        ├─ horizontal ScrollBar
- *        └─ view port (ClippedPane) .vport
- *            └─ content (StackPane) .content
- *                ├─ dropTarget (Path) .drop-target
- *                ├─ caret (Path) .caret
- *                ├─ cells[]
- *                ├─ selection highlight (Path) .selection-highlight
- *                └─ caret line highlight (Path) .caret-line
- * </pre>
- */
+/// VFlow container manages the layout (virtual flow) of the cells and other components of the [RichTextAreaSkin].
+///
+/// ## Skin structure
+/// ```
+/// RichTextArea (Region) .rich-text-area
+///   └─ VFlow (Pane) .vflow
+///       ├─ left gutter (ClippedPane) .left-side
+///       ├─ right gutter (ClippedPane) .right-side
+///       ├─ vertical ScrollBar
+///       ├─ horizontal ScrollBar
+///       └─ view port (ClippedPane) .vport
+///           └─ content (StackPane) .content
+///               ├─ dropTarget (Path) .drop-target
+///               ├─ caret (Path) .caret
+///               ├─ cells[]
+///               ├─ selection highlight (Path) .selection-highlight
+///               └─ caret line highlight (Path) .caret-line
+/// ```
+///
+/// ## Caret
+/// VFlow manages the caret animation, which includes the following usability features:
+/// - caret blinking stops when mouse is pressed
+/// - caret blinking stops during navigation and editing in order to provide immediate feedback
+///
 public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listener {
     private final RichTextAreaSkin skin;
     private final RichTextArea control;
@@ -110,10 +115,10 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
     private final Path selectionHighlight;
     private Path dropTarget;
     private final SimpleBooleanProperty caretVisible = new SimpleBooleanProperty(true);
-    private final SimpleBooleanProperty suppressBlink = new SimpleBooleanProperty(false);
+    private final SimpleIntegerProperty suppressBlink = new SimpleIntegerProperty(0);
     private final SimpleDoubleProperty offsetX = new SimpleDoubleProperty(0.0);
     private final ReadOnlyObjectWrapper<Origin> origin = new ReadOnlyObjectWrapper(Origin.ZERO);
-    private final Timeline caretAnimation;
+    private Timeline caretAnimation;
     private final FastCache<TextCell> cellCache;
     private CellArrangement arrangement;
     private boolean dirty = true;
@@ -200,9 +205,6 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
         selectionHighlight.setViewOrder(SELECTION_ORDER);
         caretLineHighlight.setViewOrder(CARET_LINE_ORDER);
 
-        caretAnimation = new Timeline();
-        caretAnimation.setCycleCount(Animation.INDEFINITE);
-
         caretPath.visibleProperty().bind(new BooleanBinding() {
             {
                 bind(
@@ -217,18 +219,19 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
             @Override
             protected boolean computeValue() {
                 return
-                    (isCaretVisible() || suppressBlink.get()) &&
                     control.isDisplayCaret() &&
+                    (caretVisible.get() || (suppressBlink.get() > 0)) &&
                     control.isFocused() &&
                     (!control.isDisabled());
             }
         });
+        caretPath.visibleProperty().subscribe(this::handleCaretVisible);
 
         offsetX.addListener((p) -> updateHorizontalScrollBar());
         origin.addListener((p) -> handleOriginChange());
         widthProperty().addListener((p) -> handleWidthChange());
         heightProperty().addListener((p) -> handleHeightChange());
-        // there might be more subscriptions
+        // there might be more subscriptions (or, move this to the skin?)
         subscriptions = control.dropTargetProperty().subscribe(this::handleDropTarget);
 
         vscroll.addEventFilter(MouseEvent.ANY, this::handleVScrollMouseEvent);
@@ -238,6 +241,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
     }
 
     public void dispose() {
+        destroyCaretAnimation();
         subscriptions.unsubscribe();
         caretPath.visibleProperty().unbind();
     }
@@ -393,12 +397,8 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
         return unwrappedContentWidth + contentPaddingLeft + contentPaddingRight + snapPositionX(Params.HORIZONTAL_GUARD);
     }
 
-    public void setCaretVisible(boolean on) {
+    private void setCaretVisible(boolean on) {
         caretVisible.set(on);
-    }
-
-    public boolean isCaretVisible() {
-        return caretVisible.get();
     }
 
     /** reacts to width changes */
@@ -424,7 +424,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
     }
 
     public void handleSelectionChange() {
-        setSuppressBlink(true);
+        setSuppressBlink(true); // FIX nested calls with mouse press/release
         updateCaretAndSelection();
         scrollCaretToVisible();
         setSuppressBlink(false);
@@ -619,23 +619,62 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
     }
 
     public final void setSuppressBlink(boolean on) {
-        suppressBlink.set(on);
-        if (!on) {
-            updateRateRestartBlink();
+        // mouse press may not arrive when right click dismisses the existing popup menu
+        // the side effect of this is that the cursor may still blink on right click
+        suppressBlink.set(Math.max(0, suppressBlink.get() + (on ? 1 : -1)));
+        IO.println("setSuppressBlink " + on + " supp=" + (suppressBlink.get())); // FIX
+        if (caretAnimation != null) {
+            if (on) {
+                caretAnimation.stop();
+            } else {
+                caretAnimation.play();
+            }
         }
     }
 
-    public final void updateRateRestartBlink() {
-        Duration t2 = control.getCaretBlinkPeriod();
-        Duration t1 = t2.divide(2.0);
+    private void destroyCaretAnimation() {
+        if (caretAnimation != null) {
+            IO.println("caret animation destroyed"); // FIX
+            caretAnimation.stop();
+            caretAnimation.getKeyFrames().clear();
+            caretAnimation = null;
+        }
+    }
 
-        caretAnimation.stop();
-        caretAnimation.getKeyFrames().setAll(
-            new KeyFrame(Duration.ZERO, (ev) -> setCaretVisible(true)),
-            new KeyFrame(t1, (ev) -> setCaretVisible(false)),
-            new KeyFrame(t2)
-        );
-        caretAnimation.play();
+    // on control.displayCaretProperty change
+    public final void updateDisplayCaret() {
+        IO.println("updateDisplayCaret"); // FIX
+        if (control.isDisplayCaret()) {
+            if (caretAnimation == null) {
+                caretAnimation = new Timeline();
+                caretAnimation.setCycleCount(Animation.INDEFINITE);
+            }
+            updateBlinkRate();
+        } else {
+            destroyCaretAnimation();
+        }
+    }
+
+    private void handleCaretVisible() {
+        if ((caretAnimation != null) && caretPath.isVisible() && (caretAnimation.getStatus() != Animation.Status.RUNNING)) {
+            IO.println("handleCaretVisible, play"); // FIX
+            caretAnimation.play();
+        }
+    }
+
+    public final void updateBlinkRate() {
+        if (caretAnimation != null) {
+            caretAnimation.stop();
+            Duration t2 = control.getCaretBlinkPeriod();
+            Duration t1 = t2.divide(2.0);
+            caretAnimation.getKeyFrames().setAll(
+                new KeyFrame(Duration.ZERO, (ev) -> setCaretVisible(true)),
+                new KeyFrame(t1, (ev) -> setCaretVisible(false)),
+                new KeyFrame(t2)
+            );
+            IO.println("updateBlinkRate " + caretAnimation.getKeyFrames()); // FIX
+            caretAnimation.play();
+        }
     }
 
     public final int getParagraphCount() {
