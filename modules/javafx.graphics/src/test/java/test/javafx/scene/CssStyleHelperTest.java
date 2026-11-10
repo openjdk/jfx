@@ -1371,6 +1371,60 @@ public class CssStyleHelperTest {
         assertEquals(1, node.getBoom());
     }
 
+    /**
+     * A property which was set by CSS (pseudo class), but whose metadata was removed from the node
+     * (like a skin property after the skin was removed), must not be reset anymore.
+     */
+    @Test
+    void testRemovedMetadataIsNotResetOnPseudoClassChange() {
+        scene.getStylesheets().add(toDataURL("""
+                .node:hover { -fx-extra: 10; }
+                """));
+
+        DummyControl node = new DummyControl();
+        node.attachExtraProperty();
+        node.getStyleClass().add("node");
+        root.getChildren().add(node);
+        node.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
+        root.applyCss();
+
+        assertEquals(10, node.getExtra());
+
+        node.detachExtraProperty();
+        root.applyCss();
+
+        node.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), false);
+        root.applyCss();
+
+        assertEquals(10, node.getExtra());
+    }
+
+    /**
+     * A property which was set by CSS (style class), but whose metadata was removed from the node
+     * (like a skin property after the skin was removed), must not be reset anymore.
+     */
+    @Test
+    void testRemovedMetadataIsNotResetOnStyleMapChange() {
+        scene.getStylesheets().add(toDataURL("""
+                .node { -fx-extra: 10; }
+                """));
+
+        DummyControl node = new DummyControl();
+        node.attachExtraProperty();
+        node.getStyleClass().add("node");
+        root.getChildren().add(node);
+        root.applyCss();
+
+        assertEquals(10, node.getExtra());
+
+        node.detachExtraProperty();
+        node.getStyleClass().remove("node");
+        root.applyCss();
+
+        assertEquals(10, node.getExtra());
+    }
+
+
     @Test
     void testStyleKeptWhenApplyingCssAfterWindowWasHidden() {
         assertStyleIsKeptWhenApplyingCss(() -> stage.hide());
@@ -1459,6 +1513,11 @@ public class CssStyleHelperTest {
 
         void attachExtraProperty() {
             extraAttached = true;
+            cachedMetaData = null;
+        }
+
+        void detachExtraProperty() {
+            extraAttached = false;
             cachedMetaData = null;
         }
 

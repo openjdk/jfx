@@ -946,14 +946,22 @@ final class CssStyleHelper {
      * Resets the properties set by CSS which are no longer styled, as decided by {@code isUnstyled}.
      * The transition property is reset first, as its value might affect the transitions
      * that are applied to other properties.
+     * Properties whose metadata was removed from the {@code Styleable} (e.g. by a skin change)
+     * are no longer tracked and not reset, as their metadata may not be applicable anymore.
      */
     private void resetProperties(Styleable styleable, Predicate<CssMetaData> isUnstyled) {
         List<Entry<CssMetaData, CalculatedValue>> resetList = null;
+        List<CssMetaData<? extends Styleable, ?>> styleables = styleable.getCssMetaData();
 
         Iterator<Entry<CssMetaData, CalculatedValue>> it = cacheContainer.cssSetProperties.entrySet().iterator();
         while (it.hasNext()) {
             Entry<CssMetaData, CalculatedValue> entry = it.next();
             CssMetaData cssMetaData = entry.getKey();
+            if (cssMetaData != TransitionDefinitionCssMetaData.getInstance() && !styleables.contains(cssMetaData)) {
+                it.remove();
+                continue;
+            }
+
             if (!isUnstyled.test(cssMetaData) || !cssMetaData.isSettable(styleable)) {
                 continue;
             }
