@@ -30,6 +30,7 @@
 #include "unicode/ustring.h"
 #include "unicode/localpointer.h"
 #include "unicode/dtfmtsym.h"
+#include "unicode/errorcode.h"
 #include "unicode/smpdtfmt.h"
 #include "unicode/msgfmt.h"
 #include "unicode/numsys.h"
@@ -39,6 +40,7 @@
 #include "cmemory.h"
 #include "cstring.h"
 #include "charstr.h"
+#include "erarules.h"
 #include "dt_impl.h"
 #include "locbased.h"
 #include "gregoimp.h"
@@ -50,6 +52,7 @@
 #include "shareddateformatsymbols.h"
 #include "unicode/calendar.h"
 #include "unifiedcache.h"
+#include "standardplural.h"
 
 // *****************************************************************************
 // class DateFormatSymbols
@@ -255,6 +258,7 @@ static const char gNumberElementsTag[]="NumberElements";
 static const char gSymbolsTag[]="symbols";
 static const char gTimeSeparatorTag[]="timeSeparator";
 static const char gDayPeriodTag[]="dayPeriod";
+static const char gDayOfMonthNamesTag[]="dayOfMonthNames";
 
 // static const char gZoneStringsTag[]="zoneStrings";
 
@@ -400,10 +404,8 @@ DateFormatSymbols::createZoneStrings(const UnicodeString *const * otherStrings)
  */
 void
 DateFormatSymbols::copyData(const DateFormatSymbols& other) {
-    UErrorCode status = U_ZERO_ERROR;
-    U_LOCALE_BASED(locBased, *this);
-    locBased.setLocaleIDs(other.validLocale, other.actualLocale, status);
-    U_ASSERT(U_SUCCESS(status));
+    validLocale = other.validLocale;
+    actualLocale = other.actualLocale;
     assignArray(fEras, fErasCount, other.fEras, other.fErasCount);
     assignArray(fEraNames, fEraNamesCount, other.fEraNames, other.fEraNamesCount);
     assignArray(fNarrowEras, fNarrowErasCount, other.fNarrowEras, other.fNarrowErasCount);
@@ -422,6 +424,7 @@ DateFormatSymbols::copyData(const DateFormatSymbols& other) {
     assignArray(fStandaloneShorterWeekdays, fStandaloneShorterWeekdaysCount, other.fStandaloneShorterWeekdays, other.fStandaloneShorterWeekdaysCount);
     assignArray(fStandaloneNarrowWeekdays, fStandaloneNarrowWeekdaysCount, other.fStandaloneNarrowWeekdays, other.fStandaloneNarrowWeekdaysCount);
     assignArray(fAmPms, fAmPmsCount, other.fAmPms, other.fAmPmsCount);
+    assignArray(fWideAmPms, fWideAmPmsCount, other.fWideAmPms, other.fWideAmPmsCount );
     assignArray(fNarrowAmPms, fNarrowAmPmsCount, other.fNarrowAmPms, other.fNarrowAmPmsCount );
     fTimeSeparator.fastCopyFrom(other.fTimeSeparator);  // fastCopyFrom() - see assignArray comments
     assignArray(fQuarters, fQuartersCount, other.fQuarters, other.fQuartersCount);
@@ -442,6 +445,13 @@ DateFormatSymbols::copyData(const DateFormatSymbols& other) {
                 other.fStandaloneNarrowDayPeriods, other.fStandaloneNarrowDayPeriodsCount);
     assignArray(fStandaloneAbbreviatedDayPeriods, fStandaloneAbbreviatedDayPeriodsCount,
                 other.fStandaloneAbbreviatedDayPeriods, other.fStandaloneAbbreviatedDayPeriodsCount);
+    {
+        int32_t unusedCount = 0;
+        int32_t srcCount = other.fDayOfMonthOrdinalNames != nullptr ? StandardPlural::COUNT : 0;
+        assignArray(fDayOfMonthOrdinalNames, unusedCount, other.fDayOfMonthOrdinalNames, srcCount);
+    }
+    assignArray(fDayOfMonthCardinalNames, fDayOfMonthCardinalNamesCount,
+                other.fDayOfMonthCardinalNames, other.fDayOfMonthCardinalNamesCount);
     if (other.fLeapMonthPatterns != nullptr) {
         assignArray(fLeapMonthPatterns, fLeapMonthPatternsCount, other.fLeapMonthPatterns, other.fLeapMonthPatternsCount);
     } else {
@@ -496,8 +506,6 @@ DateFormatSymbols& DateFormatSymbols::operator=(const DateFormatSymbols& other)
 DateFormatSymbols::~DateFormatSymbols()
 {
     dispose();
-    delete actualLocale;
-    delete validLocale;
 }
 
 void DateFormatSymbols::dispose()
@@ -520,6 +528,7 @@ void DateFormatSymbols::dispose()
     delete[] fStandaloneShorterWeekdays;
     delete[] fStandaloneNarrowWeekdays;
     delete[] fAmPms;
+    delete[] fWideAmPms;
     delete[] fNarrowAmPms;
     delete[] fQuarters;
     delete[] fShortQuarters;
@@ -536,11 +545,11 @@ void DateFormatSymbols::dispose()
     delete[] fStandaloneAbbreviatedDayPeriods;
     delete[] fStandaloneWideDayPeriods;
     delete[] fStandaloneNarrowDayPeriods;
+    delete[] fDayOfMonthOrdinalNames;
+    delete[] fDayOfMonthCardinalNames;
 
-    delete actualLocale;
-    actualLocale = nullptr;
-    delete validLocale;
-    validLocale = nullptr;
+    actualLocale = Locale::getRoot();
+    validLocale = Locale::getRoot();
     disposeZoneStrings();
 }
 
@@ -604,6 +613,7 @@ DateFormatSymbols::operator==(const DateFormatSymbols& other) const
         fStandaloneShorterWeekdaysCount == other.fStandaloneShorterWeekdaysCount &&
         fStandaloneNarrowWeekdaysCount == other.fStandaloneNarrowWeekdaysCount &&
         fAmPmsCount == other.fAmPmsCount &&
+        fWideAmPmsCount == other.fWideAmPmsCount &&
         fNarrowAmPmsCount == other.fNarrowAmPmsCount &&
         fQuartersCount == other.fQuartersCount &&
         fShortQuartersCount == other.fShortQuartersCount &&
@@ -620,6 +630,8 @@ DateFormatSymbols::operator==(const DateFormatSymbols& other) const
         fStandaloneAbbreviatedDayPeriodsCount == other.fStandaloneAbbreviatedDayPeriodsCount &&
         fStandaloneWideDayPeriodsCount == other.fStandaloneWideDayPeriodsCount &&
         fStandaloneNarrowDayPeriodsCount == other.fStandaloneNarrowDayPeriodsCount &&
+        (fDayOfMonthOrdinalNames == nullptr) == (other.fDayOfMonthOrdinalNames == nullptr) &&
+        fDayOfMonthCardinalNamesCount == other.fDayOfMonthCardinalNamesCount &&
         (uprv_memcmp(fCapitalization, other.fCapitalization, sizeof(fCapitalization))==0))
     {
         // Now compare the arrays themselves
@@ -641,6 +653,7 @@ DateFormatSymbols::operator==(const DateFormatSymbols& other) const
             arrayCompare(fStandaloneShorterWeekdays, other.fStandaloneShorterWeekdays, fStandaloneShorterWeekdaysCount) &&
             arrayCompare(fStandaloneNarrowWeekdays, other.fStandaloneNarrowWeekdays, fStandaloneNarrowWeekdaysCount) &&
             arrayCompare(fAmPms, other.fAmPms, fAmPmsCount) &&
+            arrayCompare(fWideAmPms, other.fWideAmPms, fWideAmPmsCount) &&
             arrayCompare(fNarrowAmPms, other.fNarrowAmPms, fNarrowAmPmsCount) &&
             fTimeSeparator == other.fTimeSeparator &&
             arrayCompare(fQuarters, other.fQuarters, fQuartersCount) &&
@@ -660,7 +673,12 @@ DateFormatSymbols::operator==(const DateFormatSymbols& other) const
             arrayCompare(fStandaloneWideDayPeriods, other.fStandaloneWideDayPeriods,
                          fStandaloneWideDayPeriodsCount) &&
             arrayCompare(fStandaloneNarrowDayPeriods, other.fStandaloneNarrowDayPeriods,
-                         fStandaloneWideDayPeriodsCount))
+                         fStandaloneWideDayPeriodsCount)
+            && arrayCompare(fDayOfMonthOrdinalNames, other.fDayOfMonthOrdinalNames,
+                            fDayOfMonthOrdinalNames != nullptr ? StandardPlural::COUNT : 0)
+            && arrayCompare(fDayOfMonthCardinalNames, other.fDayOfMonthCardinalNames,
+                            fDayOfMonthCardinalNamesCount)
+            )
         {
             // Compare the contents of fZoneStrings
             if (fZoneStrings == nullptr && other.fZoneStrings == nullptr) {
@@ -899,8 +917,32 @@ DateFormatSymbols::getTimeSeparatorString(UnicodeString& result) const
 const UnicodeString*
 DateFormatSymbols::getAmPmStrings(int32_t &count) const
 {
-    count = fAmPmsCount;
-    return fAmPms;
+    return getAmPmStrings(count, FORMAT, ABBREVIATED);
+}
+
+const UnicodeString*
+DateFormatSymbols::getAmPmStrings(int32_t &count, DtContextType /*ignored*/, DtWidthType width) const
+{
+    UnicodeString* const* srcArray;
+    int32_t const* srcCount;
+    switch (width) {
+    case WIDE:
+        srcArray = &fWideAmPms;
+        srcCount = &fWideAmPmsCount;
+        break;
+    case NARROW:
+        srcArray = &fNarrowAmPms;
+        srcCount = &fNarrowAmPmsCount;
+        break;
+    case ABBREVIATED:
+    default:
+        srcArray = &fAmPms;
+        srcCount = &fAmPmsCount;
+        break;
+    }
+
+    count = *srcCount;
+    return *srcArray;
 }
 
 const UnicodeString*
@@ -1240,14 +1282,52 @@ DateFormatSymbols::setQuarters(const UnicodeString* quartersArray, int32_t count
 void
 DateFormatSymbols::setAmPmStrings(const UnicodeString* amPmsArray, int32_t count)
 {
+    setAmPmStrings(amPmsArray, count, FORMAT, ABBREVIATED);
+}
+
+void
+DateFormatSymbols::setAmPmStrings(const UnicodeString* amPmsArray, int32_t count, DtContextType /*ignored*/, DtWidthType width)
+{
+    UnicodeString** targetArray;
+    int32_t* targetCount;
+    switch (width) {
+    case WIDE:
+        targetArray = &fWideAmPms;
+        targetCount = &fWideAmPmsCount;
+        break;
+    case NARROW:
+        targetArray = &fNarrowAmPms;
+        targetCount = &fNarrowAmPmsCount;
+        break;
+    case ABBREVIATED:
+    default:
+        targetArray = &fAmPms;
+        targetCount = &fAmPmsCount;
+        break;
+    }
+
     // delete the old list if we own it
-    delete[] fAmPms;
+    delete[] *targetArray;
 
     // we always own the new list, which we create here (we duplicate rather
     // than adopting the list passed in)
-    fAmPms = newUnicodeStringArray(count);
-    uprv_arrayCopy(amPmsArray,fAmPms,count);
-    fAmPmsCount = count;
+    *targetArray = newUnicodeStringArray(count);
+    uprv_arrayCopy(amPmsArray,*targetArray,count);
+    *targetCount = count;
+}
+
+const UnicodeString*
+DateFormatSymbols::getDayOfMonthOrdinalNames(DtContextType /*context*/,
+                                             DtWidthType /*width*/) const {
+    return fDayOfMonthOrdinalNames;
+}
+
+const UnicodeString*
+DateFormatSymbols::getDayOfMonthCardinalNames(int32_t& count,
+                                              DtContextType /*context*/,
+                                              DtWidthType /*width*/) const {
+    count = fDayOfMonthCardinalNamesCount;
+    return fDayOfMonthCardinalNames;
 }
 
 void
@@ -1620,7 +1700,9 @@ struct CalendarDataSink : public ResourceSink {
                        || uprv_strcmp(key, gQuartersTag) == 0
                        || uprv_strcmp(key, gDayPeriodTag) == 0
                        || uprv_strcmp(key, gMonthPatternsTag) == 0
-                       || uprv_strcmp(key, gCyclicNameSetsTag) == 0) {
+                       || uprv_strcmp(key, gCyclicNameSetsTag) == 0
+                       || uprv_strcmp(key, gDayOfMonthNamesTag) == 0
+                       ) {
                 processResource(keyUString, key, value, errorCode);
             }
         }
@@ -1848,6 +1930,31 @@ CalendarDataSink::~CalendarDataSink() {
 }
 
 //------------------------------------------------------
+static CharString
+&buildResourcePath(CharString &path, const char* segment1, UErrorCode &errorCode) {
+    return path.clear().append(segment1, -1, errorCode);
+}
+
+static CharString
+&buildResourcePath(CharString &path, const char* segment1, const char* segment2,
+                   UErrorCode &errorCode) {
+    return buildResourcePath(path, segment1, errorCode).append('/', errorCode)
+                                                       .append(segment2, -1, errorCode);
+}
+
+static CharString
+&buildResourcePath(CharString &path, const char* segment1, const char* segment2,
+                   const char* segment3, UErrorCode &errorCode) {
+    return buildResourcePath(path, segment1, segment2, errorCode).append('/', errorCode)
+                                                                 .append(segment3, -1, errorCode);
+}
+
+static CharString
+&buildResourcePath(CharString &path, const char* segment1, const char* segment2,
+                   const char* segment3, const char* segment4, UErrorCode &errorCode) {
+    return buildResourcePath(path, segment1, segment2, segment3, errorCode).append('/', errorCode)
+                                                                           .append(segment4, -1, errorCode);
+}
 
 static void
 initField(UnicodeString **field, int32_t& length, const char16_t *data, LastResortSize numStr, LastResortSize strLen, UErrorCode &status) {
@@ -1909,6 +2016,80 @@ initField(UnicodeString **field, int32_t& length, CalendarDataSink &sink, CharSt
 }
 
 static void
+loadEraNames(UnicodeString *eras, int32_t length, Hashtable *eraNamesTable, UResourceBundle *calBaseBundle,
+        const char *eraWidth, const EraRules *eraRules, UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return;
+    }
+    int32_t maxEra = eraRules->getMaxEraCode();
+    U_ASSERT(maxEra < length);
+    const char *calType = eraRules->getCalendarType();
+
+    UErrorCode resStatus = U_ZERO_ERROR;
+    LocalUResourceBundlePointer ctb(ures_getByKeyWithFallback(calBaseBundle, calType, nullptr, &resStatus));
+    LocalUResourceBundlePointer cteb(ures_getByKeyWithFallback(ctb.getAlias(), gErasTag, nullptr, &resStatus));
+    LocalUResourceBundlePointer ctewb(ures_getByKeyWithFallback(cteb.getAlias(), eraWidth, nullptr, &resStatus));
+    const UResourceBundle *ctewbPtr = (U_SUCCESS(resStatus))? ctewb.getAlias() : nullptr;
+
+    for (int32_t eraCode = 0; eraCode <= maxEra; eraCode++) {
+        char eraCodeStr[12]; // T_CString_integerToString is documented to generate at most 12 bytes including nul terminator
+        int32_t eraCodeStrLen = T_CString_integerToString(eraCodeStr, eraCode, 10);
+        UnicodeString eraCodeKey = UnicodeString(eraCodeStr, eraCodeStrLen, US_INV);
+        UnicodeString *eraName = static_cast<UnicodeString*>(eraNamesTable->get(eraCodeKey));
+        eras[eraCode].remove();
+        if (eraName != nullptr) {
+            // Get eraName from map (created by CalendarSink)
+            eras[eraCode].fastCopyFrom(*eraName);
+        } else if (ctewbPtr != nullptr) {
+            // Try filling in missing items from parent locale(s)
+            resStatus = U_ZERO_ERROR;
+            LocalUResourceBundlePointer ctewkb(ures_getByKeyWithFallback(ctewbPtr, eraCodeStr, nullptr, &resStatus));
+            if (U_SUCCESS(resStatus)) {
+                int32_t eraNameLen;
+                const UChar* eraNamePtr = ures_getString(ctewkb.getAlias(), &eraNameLen, &resStatus);
+                if (U_SUCCESS(resStatus)) {
+                    eras[eraCode].setTo(false, eraNamePtr, eraNameLen);
+                }
+            }
+        }
+    }
+
+    // Also load era names from resource corresponding to the inherited era rules if any.
+    const EraRules *inheritEraRules = eraRules->getInheritEraRules();
+    if (inheritEraRules != nullptr) {
+        loadEraNames(eras, length, eraNamesTable, calBaseBundle, eraWidth, inheritEraRules, status);
+    }
+}
+
+static void initEras(UnicodeString **field, int32_t& length, CalendarDataSink &sink, UResourceBundle *calBaseBundle,
+        const char *eraWidth, EraRules *eraRules, UErrorCode &status) {
+    if (U_FAILURE(status)) {
+        return;
+    }
+    CharString key;
+    buildResourcePath(key, gErasTag, eraWidth, status);
+    if (U_FAILURE(status)) {
+        return;
+    }
+    UnicodeString keyUString(key.data(), -1, US_INV);
+    Hashtable *eraNamesTable = static_cast<Hashtable*>(sink.maps.get(keyUString));
+    if (eraNamesTable == nullptr) {
+        status = U_MISSING_RESOURCE_ERROR;
+        return;
+    }
+
+    // Note: maxEra value should be from the primary EraRules.
+    int32_t maxEra = eraRules->getMaxEraCode();
+    *field = new UnicodeString[maxEra + 1];
+    if (*field == nullptr) {
+        status = U_MEMORY_ALLOCATION_ERROR;
+        return;
+    }
+    length = maxEra + 1;
+    loadEraNames(*field, length, eraNamesTable, calBaseBundle, eraWidth, eraRules, status);
+}
+
+static void
 initLeapMonthPattern(UnicodeString *field, int32_t index, CalendarDataSink &sink, CharString &path, UErrorCode &status) {
     field[index].remove();
     if (U_SUCCESS(status)) {
@@ -1926,32 +2107,6 @@ initLeapMonthPattern(UnicodeString *field, int32_t index, CalendarDataSink &sink
         }
         status = U_MISSING_RESOURCE_ERROR;
     }
-}
-
-static CharString
-&buildResourcePath(CharString &path, const char* segment1, UErrorCode &errorCode) {
-    return path.clear().append(segment1, -1, errorCode);
-}
-
-static CharString
-&buildResourcePath(CharString &path, const char* segment1, const char* segment2,
-                   UErrorCode &errorCode) {
-    return buildResourcePath(path, segment1, errorCode).append('/', errorCode)
-                                                       .append(segment2, -1, errorCode);
-}
-
-static CharString
-&buildResourcePath(CharString &path, const char* segment1, const char* segment2,
-                   const char* segment3, UErrorCode &errorCode) {
-    return buildResourcePath(path, segment1, segment2, errorCode).append('/', errorCode)
-                                                                 .append(segment3, -1, errorCode);
-}
-
-static CharString
-&buildResourcePath(CharString &path, const char* segment1, const char* segment2,
-                   const char* segment3, const char* segment4, UErrorCode &errorCode) {
-    return buildResourcePath(path, segment1, segment2, segment3, errorCode).append('/', errorCode)
-                                                                           .append(segment4, -1, errorCode);
 }
 
 typedef struct {
@@ -2016,6 +2171,56 @@ UnicodeString* loadDayPeriodStrings(CalendarDataSink &sink, CharString &path,
     return strings;
 }
 
+static const int32_t kDayOfMonthCardinalNamesCount = 33; // indices 1-32; index 0 unused
+
+static void loadDayOfMonthNames(CalendarDataSink &sink, CharString &path,
+                                UnicodeString *&ordinalNames,
+                                UnicodeString *&cardinalNames, int32_t &cardinalCount,
+                                UErrorCode &status) {
+    if (U_FAILURE(status)) { return; }
+
+    UnicodeString pathUString(path.data(), -1, US_INV);
+    Hashtable *map = static_cast<Hashtable*>(sink.maps.get(pathUString));
+    if (map == nullptr) { return; } // resource not found; leave fields nullptr
+
+    // Allocate both arrays up front so LocalArray cleans up both on any failure.
+    // UnicodeString default-constructs to empty string, which serves as the
+    // "no data" sentinel (empty is never a valid day name or pattern).
+    LocalArray<UnicodeString> ordinal(new UnicodeString[StandardPlural::COUNT], status);
+    LocalArray<UnicodeString> cardinal(new UnicodeString[kDayOfMonthCardinalNamesCount], status);
+    if (U_FAILURE(status)) { return; }
+
+    // Push: iterate over the table entries and dispatch each to the right array.
+    int32_t pos = UHASH_FIRST;
+    const UHashElement *e;
+    while ((e = map->nextElement(pos)) != nullptr) {
+        const UnicodeString *key   = static_cast<const UnicodeString*>(e->key.pointer);
+        const UnicodeString *value = static_cast<const UnicodeString*>(e->value.pointer);
+        if (key == nullptr || value == nullptr) { continue; }
+
+        if (key->charAt(0) >= u'0' && key->charAt(0) <= u'9') {
+            // Cardinal entry: key is a day number string ("1"–"32").
+            char numBuf[4];
+            if (key->length() >= (int32_t)sizeof(numBuf)) { continue; }
+            key->extract(0, key->length(), numBuf, sizeof(numBuf), US_INV);
+            numBuf[key->length()] = '\0';
+            char *endPtr;
+            long day = uprv_strtol(numBuf, &endPtr, 10);
+            if (*endPtr == '\0' && day >= 1 && day < kDayOfMonthCardinalNamesCount) {
+                cardinal[(int32_t)day].fastCopyFrom(*value);
+            }
+        } else {
+            // Ordinal entry: key is a plural category name.
+            StandardPlural::Form form = StandardPlural::orOtherFromString(*key);
+            ordinal[(int32_t)form].fastCopyFrom(*value);
+        }
+    }
+
+    ordinalNames = ordinal.orphan();
+    cardinalNames = cardinal.orphan();
+    cardinalCount = kDayOfMonthCardinalNamesCount;
+}
+
 
 void
 DateFormatSymbols::initializeData(const Locale& locale, const char *type, UErrorCode& status, UBool useLastResortData)
@@ -2058,6 +2263,8 @@ DateFormatSymbols::initializeData(const Locale& locale, const char *type, UError
     fStandaloneNarrowWeekdaysCount=0;
     fAmPms = nullptr;
     fAmPmsCount=0;
+    fWideAmPms = nullptr;
+    fWideAmPmsCount=0;
     fNarrowAmPms = nullptr;
     fNarrowAmPmsCount=0;
     fTimeSeparator.setToBogus();
@@ -2095,6 +2302,9 @@ DateFormatSymbols::initializeData(const Locale& locale, const char *type, UError
     fStandaloneWideDayPeriodsCount = 0;
     fStandaloneNarrowDayPeriods = nullptr;
     fStandaloneNarrowDayPeriodsCount = 0;
+    fDayOfMonthOrdinalNames = nullptr;
+    fDayOfMonthCardinalNames = nullptr;
+    fDayOfMonthCardinalNamesCount = 0;
     uprv_memset(fCapitalization, 0, sizeof(fCapitalization));
 
     // We need to preserve the requested locale for
@@ -2281,6 +2491,12 @@ DateFormatSymbols::initializeData(const Locale& locale, const char *type, UError
                             buildResourcePath(path, gDayPeriodTag, gNamesStandaloneTag, gNamesNarrowTag, status),
                             fStandaloneNarrowDayPeriodsCount, status);
 
+    loadDayOfMonthNames(calendarSink,
+                        buildResourcePath(path, gDayOfMonthNamesTag, gNamesFormatTag, gNamesAbbrTag, status),
+                        fDayOfMonthOrdinalNames,
+                        fDayOfMonthCardinalNames, fDayOfMonthCardinalNamesCount,
+                        status);
+
     // Fill in for missing/bogus items (dayPeriods are a map so single items might be missing)
     if (U_SUCCESS(status)) {
         for (int32_t dpidx = 0; dpidx < fAbbreviatedDayPeriodsCount; ++dpidx) {
@@ -2302,28 +2518,54 @@ DateFormatSymbols::initializeData(const Locale& locale, const char *type, UError
         }
     }
 
-    U_LOCALE_BASED(locBased, *this);
     // if we make it to here, the resource data is cool, and we can get everything out
     // of it that we need except for the time-zone and localized-pattern data, which
     // are stored in a separate file
-    locBased.setLocaleIDs(ures_getLocaleByType(cb.getAlias(), ULOC_VALID_LOCALE, &status),
-                          ures_getLocaleByType(cb.getAlias(), ULOC_ACTUAL_LOCALE, &status), status);
+    validLocale = Locale(ures_getLocaleByType(cb.getAlias(), ULOC_VALID_LOCALE, &status));
+    actualLocale = Locale(ures_getLocaleByType(cb.getAlias(), ULOC_ACTUAL_LOCALE, &status));
 
+    // Era setup
+    if (type == nullptr) {
+        type = "gregorian";
+    }
     // Load eras
-    initField(&fEras, fErasCount, calendarSink, buildResourcePath(path, gErasTag, gNamesAbbrTag, status), status);
+    UErrorCode preErasStatus = status;
     UErrorCode oldStatus = status;
-    initField(&fEraNames, fEraNamesCount, calendarSink, buildResourcePath(path, gErasTag, gNamesWideTag, status), status);
+    LocalPointer<EraRules> eraRules(EraRules::createInstance(type, false, status));
+    if (status == U_MISSING_RESOURCE_ERROR) {
+        // call IDs unsupported in supplmental era rules such as
+        // "iso8601" or bogus "unknown". Similar code in Java.
+        status = oldStatus;
+        type = "gregorian";
+        LocalPointer<EraRules> eraRulesRetry(EraRules::createInstance(type, false, status));
+        eraRules = std::move(eraRulesRetry);
+    }
+    initEras(&fEras, fErasCount, calendarSink, cb.getAlias(), gNamesAbbrTag, eraRules.getAlias(), status);
+    oldStatus = status;
+    initEras(&fEraNames, fEraNamesCount, calendarSink, cb.getAlias(), gNamesWideTag, eraRules.getAlias(), status);
     if (status == U_MISSING_RESOURCE_ERROR) { // Workaround because eras/wide was omitted from CLDR 1.3
         status = oldStatus;
         assignArray(fEraNames, fEraNamesCount, fEras, fErasCount);
     }
     // current ICU4J falls back to abbreviated if narrow eras are missing, so we will too
     oldStatus = status;
-    initField(&fNarrowEras, fNarrowErasCount, calendarSink, buildResourcePath(path, gErasTag, gNamesNarrowTag, status), status);
+    initEras(&fNarrowEras, fNarrowErasCount, calendarSink, cb.getAlias(), gNamesNarrowTag, eraRules.getAlias(), status);
     if (status == U_MISSING_RESOURCE_ERROR) { // Workaround because eras/wide was omitted from CLDR 1.3
         status = oldStatus;
         assignArray(fNarrowEras, fNarrowErasCount, fEras, fErasCount);
     }
+    if (status == U_MISSING_RESOURCE_ERROR) {
+        // If we still can't load any era names, we restore the pre-eras status
+        // so that we can continue loading the rest of the data.
+        // The era names will be empty strings. Not great, but having the era names
+        // AND month names AND day of week AND am/pm be empty strings is worse.
+        status = preErasStatus;
+    }
+    // if the error was something other (worse) than U_MISSING_RESOURCE_ERROR
+    // the code goes on to load the rest of the data (doing nothing, because
+    // the status is already set to an error code) and it is handled by the
+    // if (U_FAILURE(status)) { if (useLastResortData) { ... } }
+    // block at the end of this function.
 
     // Load month names
     initField(&fMonths, fMonthsCount, calendarSink,
@@ -2361,25 +2603,28 @@ DateFormatSymbols::initializeData(const Locale& locale, const char *type, UError
         assignArray(fStandaloneNarrowMonths, fStandaloneNarrowMonthsCount, fShortMonths, fShortMonthsCount);
     }
 
-    // Load AM/PM markers; if wide or narrow not available, use short
-    UErrorCode ampmStatus = U_ZERO_ERROR;
+    // Load AM/PM markers.
+    ErrorCode ampmStatus;
     initField(&fAmPms, fAmPmsCount, calendarSink,
-              buildResourcePath(path, gAmPmMarkersTag, ampmStatus), ampmStatus);
-    if (U_FAILURE(ampmStatus)) {
-        initField(&fAmPms, fAmPmsCount, calendarSink,
-                  buildResourcePath(path, gAmPmMarkersAbbrTag, status), status);
+              buildResourcePath(path, gAmPmMarkersAbbrTag, ampmStatus), ampmStatus);
+    if (ampmStatus.isFailure()) {
+        // No-op: fall back to last-resort names, which are pre-populated
     }
-    ampmStatus = U_ZERO_ERROR;
+    ampmStatus.reset();
     initField(&fNarrowAmPms, fNarrowAmPmsCount, calendarSink,
               buildResourcePath(path, gAmPmMarkersNarrowTag, ampmStatus), ampmStatus);
-    if (U_FAILURE(ampmStatus)) {
-        initField(&fNarrowAmPms, fNarrowAmPmsCount, calendarSink,
-                  buildResourcePath(path, gAmPmMarkersAbbrTag, status), status);
-    }
-    if(status == U_MISSING_RESOURCE_ERROR) {
-        status = U_ZERO_ERROR;
+    if (ampmStatus.isFailure()) {
+        // Narrow falls back to Abbreviated
         assignArray(fNarrowAmPms, fNarrowAmPmsCount, fAmPms, fAmPmsCount);
     }
+    ampmStatus.reset();
+    initField(&fWideAmPms, fWideAmPmsCount, calendarSink,
+              buildResourcePath(path, gAmPmMarkersTag, ampmStatus), ampmStatus);
+    if (ampmStatus.isFailure()) {
+        // Wide falls back to Abbreviated
+        assignArray(fWideAmPms, fWideAmPmsCount, fAmPms, fAmPmsCount);
+    }
+    ampmStatus.reset();
 
     // Load quarters
     initField(&fQuarters, fQuartersCount, calendarSink,

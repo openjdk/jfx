@@ -2033,7 +2033,6 @@ allprojects {
     }
 
     if (JFX_DEPS_URL == "" && IS_COMPILE_WEBKIT) {
-        def icuReleaseVersion = "${icuVersion}".replaceAll('\\.', '-')
         repositories {
             ivy {
                 url icuRepositoryURL
@@ -2041,7 +2040,7 @@ allprojects {
                     artifact()
                 }
                 patternLayout {
-                    artifact "download/release-$icuReleaseVersion/[artifact].[ext]"
+                    artifact "download/release-${icuVersion}/[artifact].[ext]"
                 }
             }
         }
@@ -3832,8 +3831,7 @@ project(":web") {
     def baseTestOutput = project(":base").sourceSets.test.output
     dependencies {
         if (IS_COMPILE_WEBKIT) {
-            def icuFileVersion = "${icuVersion}".replaceAll('\\.', '_')
-            icu name: "icu4c-${icuFileVersion}-data-bin-l", ext: "zip"
+            icu name: "icu4c-${icuVersion}-data-bin-l", ext: "zip"
         }
         implementation project(":base")
         implementation project(":graphics")

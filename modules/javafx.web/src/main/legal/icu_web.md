@@ -1,10 +1,12 @@
-## IBM International Components for Unicode (ICU4C) v77.1
+## IBM International Components for Unicode (ICU4C) v79.1
 
 ### ICU License
 
 UNICODE LICENSE V3
 
 COPYRIGHT AND PERMISSION NOTICE
+
+Copyright © 1991-2026 Unicode, Inc.
 
 ```
 
