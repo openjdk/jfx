@@ -124,38 +124,8 @@ public class TextAreaBehaviorTest extends TextInputControlTestBase<TextArea> {
     }
 
     @Test
-    public void testDoubleClickWithSpecialChars() {
-        execute(
-                setText("Bug #123"),
-                clickCharacter(0, 2, true)
-        );
-        if (isWindows()) {
-            assertEquals("Bug ", control.getSelectedText());
-        } else {
-            assertEquals("Bug", control.getSelectedText());
-        }
-
-        execute(
-                clickCharacter(6, 2, true)
-        );
-        assertEquals("#123", control.getSelectedText());
-
-        execute(
-                clickCharacter(4, 2, false)
-        );
-        assertEquals("#123", control.getSelectedText());
-    }
+    public void testDoubleClickWithSpecialChars() { super.testDoubleClickWithSpecialChars(); }
 
     @Test
-    public void testDoubleClickOnLeadingChar() {
-        execute(
-                setText("aaa bbb"),
-                clickCharacter(4, 2, false)
-        );
-        assertEquals("bbb", control.getSelectedText());
-        execute(
-                clickCharacter(4, 2, true)
-        );
-        assertEquals("bbb", control.getSelectedText());
-    }
+    public void testDoubleClickOnLeadingChar() { super.testDoubleClickOnLeadingChar(); }
 }

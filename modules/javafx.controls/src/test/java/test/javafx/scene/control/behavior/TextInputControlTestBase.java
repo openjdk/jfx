@@ -24,7 +24,9 @@
  */
 package test.javafx.scene.control.behavior;
 
+import static com.sun.javafx.PlatformUtil.isWindows;
 import static javafx.scene.input.KeyCode.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import javafx.geometry.Rectangle2D;
 import javafx.scene.control.IndexRange;
@@ -393,6 +395,40 @@ public abstract class TextInputControlTestBase<T extends TextInputControl> exten
             KP_LEFT, KP_LEFT, KP_LEFT, KP_LEFT, KP_LEFT,
             key(RIGHT, KeyModifier.CTRL, KeyModifier.SHIFT), checkSelection(4, win ? 8 : 7)
         );
+    }
+
+    protected void testDoubleClickWithSpecialChars() {
+        execute(
+                setText("Bug #123"),
+                clickCharacter(0, 2, true)
+        );
+        if (isWindows()) {
+            assertEquals("Bug ", control.getSelectedText());
+        } else {
+            assertEquals("Bug", control.getSelectedText());
+        }
+
+        execute(
+                clickCharacter(6, 2, true)
+        );
+        assertEquals("#123", control.getSelectedText());
+
+        execute(
+                clickCharacter(4, 2, false)
+        );
+        assertEquals("#123", control.getSelectedText());
+    }
+
+    protected void testDoubleClickOnLeadingChar() {
+        execute(
+                setText("aaa bbb"),
+                clickCharacter(4, 2, false)
+        );
+        assertEquals("bbb", control.getSelectedText());
+        execute(
+                clickCharacter(4, 2, true)
+        );
+        assertEquals("bbb", control.getSelectedText());
     }
 
     /**

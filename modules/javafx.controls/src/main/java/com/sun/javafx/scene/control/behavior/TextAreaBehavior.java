@@ -401,27 +401,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
     }
 
     protected void mouseDoubleClick(HitInfo hit) {
-        final TextArea textArea = getNode();
-        if (!isAtWordStart(textArea)) {
-            textArea.previousWord();
-        }
-        if (isWindows()) {
-            textArea.selectNextWord();
-        } else {
-            textArea.selectEndOfNextWord();
-        }
-    }
-
-    private boolean isAtWordStart(TextArea textArea) {
-        boolean atWordStart = false;
-        int pos = textArea.getCaretPosition();
-        if (pos == 0) {
-            atWordStart = true;
-        } else if (pos < textArea.getLength()) {
-            String text = textArea.getText();
-            atWordStart = Character.isWhitespace(text.charAt(pos - 1)) && !Character.isWhitespace(text.charAt(pos));
-        }
-        return atWordStart;
+        selectHitWord(hit);
     }
 
     protected void mouseTripleClick(HitInfo hit) {
