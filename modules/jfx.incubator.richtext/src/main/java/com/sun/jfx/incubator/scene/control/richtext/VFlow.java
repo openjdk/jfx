@@ -63,6 +63,7 @@ import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import javafx.util.Duration;
 import javafx.util.Subscription;
+import com.sun.javafx.scene.TreeShowingProperty;
 import com.sun.jfx.incubator.scene.control.richtext.util.RichUtils;
 import jfx.incubator.scene.control.richtext.RichTextArea;
 import jfx.incubator.scene.control.richtext.SideDecorator;
@@ -118,6 +119,8 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
     private final SimpleIntegerProperty suppressBlink = new SimpleIntegerProperty(0);
     private final SimpleDoubleProperty offsetX = new SimpleDoubleProperty(0.0);
     private final ReadOnlyObjectWrapper<Origin> origin = new ReadOnlyObjectWrapper(Origin.ZERO);
+    private final TreeShowingProperty treeShowing;
+    private final BooleanBinding blinking;
     private Timeline caretAnimation;
     private final FastCache<TextCell> cellCache;
     private CellArrangement arrangement;
@@ -156,6 +159,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
         this.control = skin.getSkinnable();
         this.vscroll = vsb;
         this.hscroll = hsb;
+        this.treeShowing = new TreeShowingProperty(control);
 
         vscroll.setManaged(false);
         vscroll.setMin(0.0);
@@ -229,14 +233,20 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
                     (!control.isDisabled());
             }
         });
-        caretPath.visibleProperty().subscribe(this::handleCaretVisible);
+        blinking = control.focusedProperty().
+            and(control.displayCaretProperty()).
+            and(control.disabledProperty().not()).
+            and(treeShowing).
+            and(suppressBlink.isEqualTo(0));
 
         offsetX.addListener((p) -> updateHorizontalScrollBar());
         origin.addListener((p) -> handleOriginChange());
         widthProperty().addListener((p) -> handleWidthChange());
         heightProperty().addListener((p) -> handleHeightChange());
-        // there might be more subscriptions (or, move this to the skin?)
-        subscriptions = control.dropTargetProperty().subscribe(this::handleDropTarget);
+
+        subscriptions = Subscription.combine(
+            control.dropTargetProperty().subscribe(this::handleDropTarget),
+            blinking.subscribe(this::updateCaretAnimation));
 
         vscroll.addEventFilter(MouseEvent.ANY, this::handleVScrollMouseEvent);
 
@@ -245,6 +255,8 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
     }
 
     public void dispose() {
+        treeShowing.dispose();
+        blinking.dispose();
         destroyCaretAnimation();
         subscriptions.unsubscribe();
         caretPath.visibleProperty().unbind();
@@ -645,39 +657,31 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
         }
     }
 
-    // on control.displayCaretProperty change
-    public final void updateDisplayCaret() {
-        if (control.isDisplayCaret()) {
+    private void updateCaretAnimation() {
+        boolean off = !blinking.get();
+        if (off) {
+            if (caretAnimation != null) {
+                caretAnimation.stop();
+            }
+        } else {
             if (caretAnimation == null) {
                 caretAnimation = new Timeline();
                 caretAnimation.setCycleCount(Animation.INDEFINITE);
+                updateBlinkRate();
             }
-            updateBlinkRate();
-        } else {
-            destroyCaretAnimation();
-        }
-    }
-
-    // on control.focusedProperty change
-    public void updateFocused() {
-        if (caretAnimation != null) {
-            if (control.isFocused()) {
-                caretAnimation.play();
-            } else {
-                caretAnimation.stop();
+            if (caretAnimation.getStatus() != Animation.Status.RUNNING) {
+                caretAnimation.playFromStart();
             }
         }
     }
 
-    private void handleCaretVisible() {
-        if ((caretAnimation != null) && caretPath.isVisible() && (caretAnimation.getStatus() != Animation.Status.RUNNING)) {
-            caretAnimation.play();
-        }
-    }
-
+    // on control.caretBlinkPeriodProperty
     public final void updateBlinkRate() {
         if (caretAnimation != null) {
-            caretAnimation.stop();
+            boolean running = (caretAnimation.getStatus() == Animation.Status.RUNNING);
+            if (running) {
+                caretAnimation.stop();
+            }
             Duration t2 = control.getCaretBlinkPeriod();
             Duration t1 = t2.divide(2.0);
             caretAnimation.getKeyFrames().setAll(
@@ -685,7 +689,9 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
                 new KeyFrame(t1, (ev) -> setCaretVisible(false)),
                 new KeyFrame(t2)
             );
-            caretAnimation.play();
+            if (running) {
+                caretAnimation.playFromStart();
+            }
         }
     }
 
