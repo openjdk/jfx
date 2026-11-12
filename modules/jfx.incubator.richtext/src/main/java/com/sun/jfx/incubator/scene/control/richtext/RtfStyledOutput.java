@@ -52,7 +52,7 @@ import jfx.incubator.scene.control.richtext.model.StyledSegment;
 public class RtfStyledOutput implements StyledOutput {
     private final LookupTable<Color> colorTable = new LookupTable<>(Color.BLACK);
     private final LookupTable<String> fontTable = new LookupTable<>("system");
-    private final CachingStyleResolver resolver;
+    private final StyleResolver resolver;
     private final Writer writer;
     private boolean startOfLine = true;
     private StyleAttributeMap prevStyle;
