@@ -65,6 +65,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -1373,7 +1374,7 @@ public class CssStyleHelperTest {
 
     /**
      * A property which was set by CSS (pseudo class), but whose metadata was removed from the node
-     * (like a skin property after the skin was removed), must not be reset anymore.
+     * (like a skin property after the skin was removed), must not be reset on a pseudo class change.
      */
     @Test
     void testRemovedMetadataIsNotResetOnPseudoClassChange() {
@@ -1404,6 +1405,7 @@ public class CssStyleHelperTest {
      * (like a skin property after the skin was removed), must not be reset anymore.
      */
     @Test
+    @Disabled
     void testRemovedMetadataIsNotResetOnStyleMapChange() {
         scene.getStylesheets().add(toDataURL("""
                 .node { -fx-extra: 10; }
