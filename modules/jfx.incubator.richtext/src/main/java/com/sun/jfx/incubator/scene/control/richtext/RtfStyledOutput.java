@@ -65,15 +65,11 @@ public class RtfStyledOutput implements StyledOutput {
     private String fontFamily;
     private Double fontSize;
     private Font font;
-    private boolean writeFontSize;
 
     public RtfStyledOutput(StyleResolver r, Writer wr) {
         this.resolver = new CachingStyleResolver(r);
         this.writer = wr;
-        this.font = resolver.getFont();
-        if (font != null) {
-            writeFontSize = true;
-        }
+        this.font = RichUtils.codeAreaFont(r);
     }
 
     public StyledOutput firstPassBuilder() {
@@ -309,11 +305,11 @@ public class RtfStyledOutput implements StyledOutput {
                 fontFamily = fam;
             }
 
-            if (writeFontSize) {
+            if (font != null) {
                 write("\\f0\\fs");
                 double fs = font.getSize() * 2.0;
                 write(String.valueOf((int)Math.round(fs)));
-                writeFontSize = false;
+                font = null;
             } else if (RichUtils.notEquals(fontSize, fsize)) {
                 write("\\fs");
                 // twice the points

@@ -186,6 +186,21 @@ public class CodeAreaTest {
     }
 
     @Test
+    public void copyHtml() {
+        RTUtil.copyToClipboard("yo");
+        control.appendText("123");
+        control.setFont(Font.font("Amble Regular", 33));
+        control.selectAll();
+        control.copy();
+        assertTrue(Clipboard.getSystemClipboard().getContentTypes().contains(DataFormat.HTML));
+        String s = Clipboard.getSystemClipboard().getHtml();
+        assertNotNull(s);
+        assertTrue(s.contains("123"));
+        assertTrue(s.contains("font-family: \"Amble\","));
+        assertTrue(s.contains("font-size: 33pt;"));
+    }
+
+    @Test
     public void copyRTF() {
         RTUtil.copyToClipboard("yo");
         control.appendText("123");
@@ -193,11 +208,11 @@ public class CodeAreaTest {
         control.selectAll();
         control.copy();
         assertTrue(Clipboard.getSystemClipboard().getContentTypes().contains(DataFormat.RTF));
-        String rtf = Clipboard.getSystemClipboard().getRtf();
-        assertNotNull(rtf);
-        assertTrue(rtf.contains("123"));
-        assertTrue(rtf.contains("\\f0\\fnil\\fcharset0 Amble;"));
-        assertTrue(rtf.contains("\\f0\\fs66"));
+        String s = Clipboard.getSystemClipboard().getRtf();
+        assertNotNull(s);
+        assertTrue(s.contains("123"));
+        assertTrue(s.contains("\\f0\\fnil\\fcharset0 Amble;"));
+        assertTrue(s.contains("\\f0\\fs66"));
     }
 
     @Test

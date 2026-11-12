@@ -33,6 +33,7 @@ import javafx.scene.Node;
 import javafx.scene.image.WritableImage;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
 import com.sun.jfx.incubator.scene.control.richtext.util.RichUtils;
 import jfx.incubator.scene.control.richtext.StyleResolver;
 import jfx.incubator.scene.control.richtext.model.StyleAttribute;
@@ -53,11 +54,13 @@ public class HtmlStyledOutput implements StyledOutput {
     private final boolean inlineStyles;
     private record Key(StyleAttribute attr, Object value) { }
     private final HashMap<Key,Val> styles = new HashMap<>();
+    private Font font;
 
     public HtmlStyledOutput(StyleResolver resolver, Writer wr, boolean inlineStyles) {
         this.resolver = resolver;
         this.wr = wr;
         this.inlineStyles = inlineStyles;
+        this.font = RichUtils.codeAreaFont(resolver);
     }
 
     @Override
@@ -363,6 +366,15 @@ public class HtmlStyledOutput implements StyledOutput {
         wr.write("<html>\n");
         wr.write("<head>\n");
         wr.write("<meta charset=\"utf-8\">\n");
+        if (font != null) {
+            wr.write("<style>\nbody {\n");
+            wr.write("  font-family: \"");
+            wr.write(encode(font.getName()));
+            wr.write("\", monospace;\n  font-size: ");
+            wr.write(String.valueOf((int)font.getSize()));
+            wr.write("pt;\n");
+            wr.write("}\n</style>\n");
+        }
         if (!inlineStyles) {
             wr.write("<style>\n");
             for (Val v : styles.values()) {
