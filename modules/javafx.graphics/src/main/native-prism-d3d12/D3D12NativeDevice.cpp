@@ -466,10 +466,16 @@ void NativeDevice::RenderQuads(const Internal::MemoryView<float>& vertices, cons
 
 void NativeDevice::RenderMeshView(const NIPtr<NativeMeshView>& meshView)
 {
+    NIPtr<NativePhongMaterial> material = meshView->GetMaterial();
+    NIPtr<NativeMesh> mesh = meshView->GetMesh();
+    if (!mesh || !material)
+    {
+        D3D12NI_LOG_ERROR("RenderMeshView failed: Mesh or material referred to by the MeshView are invalid or disposed");
+        return;
+    }
+
     // set shaders and their constants
     mRenderingContext->SetVertexShader(mPhongVS);
-
-    const NIPtr<NativePhongMaterial>& material = meshView->GetMaterial();
 
     PhongShaderSpec spec;
     spec.mapping = material->GetMappingVariant();
@@ -491,8 +497,6 @@ void NativeDevice::RenderMeshView(const NIPtr<NativeMeshView>& meshView)
 
     mPhongVS->SetConstants("gData", &mTransforms, sizeof(Transforms));
     ps->SetConstants("gColor", &meshView->GetPSColorSpec(), sizeof(PSColorSpec));
-
-    const NIPtr<NativeMesh>& mesh = meshView->GetMesh();
 
     mRenderingContext->SetCompositeMode(CompositeMode::SRC_OVER);
     mRenderingContext->SetCullMode(meshView->GetCullMode());

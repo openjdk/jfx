@@ -914,12 +914,16 @@ public:
         , mIBFormat(DXGI_FORMAT_UNKNOWN)
         , mIndexCount(0)
     {
-        if (meshView && meshView->GetMesh())
+        if (meshView)
         {
-            mVertexBuffer = meshView->GetMesh()->GetVertexBuffer();
-            mIndexBuffer = meshView->GetMesh()->GetIndexBuffer();
-            mIBFormat = meshView->GetMesh()->GetIndexBufferFormat();
-            mIndexCount = meshView->GetMesh()->GetIndexCount();
+            NIPtr<NativeMesh> mesh = meshView->GetMesh();
+            if (mesh)
+            {
+                mVertexBuffer = mesh->GetVertexBuffer();
+                mIndexBuffer = mesh->GetIndexBuffer();
+                mIBFormat = mesh->GetIndexBufferFormat();
+                mIndexCount = mesh->GetIndexCount();
+            }
         }
     }
 

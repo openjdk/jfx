@@ -51,10 +51,10 @@ private:
     };
 
     NIPtr<NativeDevice> mNativeDevice;
-    NIPtr<NativeMesh> mMesh;
+    NIWeakPtr<NativeMesh> mMesh;
+    NIWeakPtr<NativePhongMaterial> mMaterial;
     D3D12_CULL_MODE mCullMode;
     D3D12_FILL_MODE mFillMode;
-    NIPtr<NativePhongMaterial> mMaterial;
     LightDataArray<bool> mLightEnabled;
     LightDataArray<SpotLightFactorsRaw> mLightSpotFactors;
 
@@ -91,9 +91,13 @@ public:
 
     inline const PSColorSpec& GetPSColorSpec()
     {
-        // get diffuse and specular colors from the material
-        mColorsPS.diffuse = mMaterial->GetDiffuseColor();
-        mColorsPS.specular = mMaterial->GetSpecularColor();
+        NIPtr<NativePhongMaterial> material = GetMaterial();
+        if (material)
+        {
+            // get diffuse and specular colors from the material
+            mColorsPS.diffuse = material->GetDiffuseColor();
+            mColorsPS.specular = material->GetSpecularColor();
+        }
 
         return mColorsPS;
     }
@@ -131,14 +135,14 @@ public:
         return count;
     }
 
-    inline const NIPtr<NativeMesh>& GetMesh() const
+    inline NIPtr<NativeMesh> GetMesh() const
     {
-        return mMesh;
+        return mMesh.lock();
     }
 
-    inline const NIPtr<NativePhongMaterial>& GetMaterial() const
+    inline NIPtr<NativePhongMaterial> GetMaterial() const
     {
-        return mMaterial;
+        return mMaterial.lock();
     }
 };
 
