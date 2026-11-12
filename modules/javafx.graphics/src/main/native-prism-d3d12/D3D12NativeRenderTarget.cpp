@@ -67,6 +67,12 @@ NativeRenderTarget::~NativeRenderTarget()
 
 bool NativeRenderTarget::Init(const NIPtr<NativeTexture>& texture, bool enableDirtyBBox)
 {
+    if (!texture)
+    {
+        D3D12NI_LOG_ERROR("Cannot create RTT with NULL Texture provided");
+        return false;
+    }
+
     mTextureBase = mTexture = texture;
     mBBoxState = (enableDirtyBBox ? BBoxTrackingState::Enabled : BBoxTrackingState::Disabled);
     mDescriptors = mNativeDevice->GetRTVDescriptorAllocator()->Allocate(1);
@@ -75,6 +81,10 @@ bool NativeRenderTarget::Init(const NIPtr<NativeTexture>& texture, bool enableDi
         D3D12NI_LOG_ERROR("Failed to allocate RTV descriptors for Render Target");
         return false;
     }
+
+    // in case RTTs are reused as a source texture for rendering - set filtering to Linear
+    // D3D does this globally via D3DContext::setDeviceParametersFor3D() because of how 9's API was designed
+    mTexture->SetSamplerParameters(mTexture->GetSamplerDesc().wrapMode, true);
 
     return Refresh();
 }

@@ -74,6 +74,7 @@ class NativeSwapChain: public Internal::IRenderTarget, RenderThread::IWaitableOp
     NIPtr<Internal::TextureBase> mNullTexture;
 
     bool GetSwapChainBuffers(UINT count);
+    bool IsTearingSupported(const DXGIFactoryPtr& factory);
 
 public:
     NativeSwapChain(const NIPtr<NativeDevice>& nativeDevice);

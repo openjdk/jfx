@@ -92,6 +92,27 @@ bool NativeSwapChain::GetSwapChainBuffers(UINT count)
     return true;
 }
 
+bool NativeSwapChain::IsTearingSupported(const DXGIFactoryPtr& factory)
+{
+    Ptr<IDXGIFactory5> dxgiFactory5;
+    HRESULT hr = factory.As(&dxgiFactory5);
+    if (FAILED(hr))
+    {
+        D3D12NI_LOG_WARN("SwapChain: Failed to get DXGI Factory interface to check tearing support.");
+        return false;
+    }
+
+    BOOL tearingSupported = false;
+    hr = dxgiFactory5->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &tearingSupported, sizeof(tearingSupported));
+    if (FAILED(hr))
+    {
+        D3D12NI_LOG_WARN("SwapChain: Failed to check for tearing support.");
+        return false;
+    }
+
+    return tearingSupported;
+}
+
 NativeSwapChain::NativeSwapChain(const NIPtr<NativeDevice>& nativeDevice)
     : mNativeDevice(nativeDevice)
     , mSwapChain()
@@ -142,8 +163,32 @@ NativeSwapChain::~NativeSwapChain()
 bool NativeSwapChain::Init(const DXGIFactoryPtr& factory, HWND hwnd)
 {
     mVSyncEnabled = Internal::Config::IsVsyncEnabled();
-    mSwapChainFlags = DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+    mSwapChainFlags = 0;
+    mPresentFlags = 0;
     mBBoxState = BBoxTrackingState::Disabled; // SwapChain doesn't use dirty bbox opts
+
+    if (!mVSyncEnabled)
+    {
+        if (IsTearingSupported(factory))
+        {
+            D3D12NI_LOG_DEBUG("SwapChain: VSync disabled");
+            mSwapInterval = 0;
+            mSwapChainFlags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+            mPresentFlags |= DXGI_PRESENT_ALLOW_TEARING;
+        }
+        else
+        {
+            // force-enable VSync, current device does not support tearing
+            D3D12NI_LOG_WARN("SwapChain: Requested disabled VSync, but tearing is not supported by this device; VSync will stay enabled.");
+            mVSyncEnabled = true;
+        }
+    }
+
+    if (mVSyncEnabled)
+    {
+        D3D12NI_LOG_DEBUG("SwapChain: VSync enabled");
+        mSwapInterval = 1;
+    }
 
     DXGI_SWAP_CHAIN_DESC1 desc;
     D3D12NI_ZERO_STRUCT(desc);
@@ -190,12 +235,6 @@ bool NativeSwapChain::Init(const DXGIFactoryPtr& factory, HWND hwnd)
     {
         return false;
     }
-
-    mSwapInterval = mVSyncEnabled ? 1 : 0;
-    // TODO: D3D12: allowing tearing is required for supporting VRR displays - investigate if we should
-    //              do this differently.
-    // TODO: D3D12: Also note fullscreen related requirements
-    mPresentFlags = mVSyncEnabled ? 0 : DXGI_PRESENT_ALLOW_TEARING;
 
     D3D12_RESOURCE_DESC bufDesc = mTextureBuffers[0]->GetD3D12Resource()->GetDesc();
     mWidth = static_cast<UINT>(bufDesc.Width);

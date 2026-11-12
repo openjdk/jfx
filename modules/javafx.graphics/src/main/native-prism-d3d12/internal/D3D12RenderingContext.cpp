@@ -139,14 +139,12 @@ void RenderingContext::RecordClear(float r, float g, float b, float a, bool clea
     if (clearDepth && mRenderTarget.Get()->HasDepthTexture())
     {
         if (!AddToRTPayload(CreateRTExec<ClearDepthStencilAction>(mPayloadAllocator,
-            mRenderTarget.Get()->GetDepthTexture(), mRenderTarget.Get()->GetDSVDescriptorData().CPU(0),  1.0f, clearRect
+            mRenderTarget.Get()->GetDepthTexture(), mRenderTarget.Get()->GetDSVDescriptorData().CPU(0), 1.0f, clearRect
         )))
         {
             return;
         }
     }
-
-    mRenderTarget.Get()->ResetDirtyBBox();
 }
 
 BBox RenderingContext::EstimateDirtyBBox(const MemoryView<float>& vertices, uint32_t vertexCount, const Internal::Matrix<float>& worldTransform)
@@ -306,23 +304,18 @@ void RenderingContext::Clear(float r, float g, float b, float a, bool clearDepth
     // if the RTT was NOT fully used we don't have to clear the whole thing
     // determine how much of the space actually needs to be cleared (unless the request is for a smaller section)
     D3D12_RECT clearRect = GetScissor().Get();
-    const BBox& rttDirtyBBox = mRenderTarget.Get()->GetDirtyBBox();
+    const BBox& rttDirtyBBox = mRenderTarget.Get()->BBoxEnabled() ? mRenderTarget.Get()->GetDirtyBBox() : BBox();
 
-    if (Config::Instance().IsClearOptsEnabled() && mRenderTarget.Get()->BBoxEnabled() &&
+    if (Config::Instance().IsClearOptsEnabled() && r == 0.0f && g == 0.0f && b == 0.0f && a == 0.0f &&
         rttDirtyBBox.Valid() && rttDirtyBBox.Inside(clearRect))
     {
         // if RTT was dirited by less area than the clear rect demands it AND the clear area
-        // contains our dirty bbox, we can safely shrink the clear rect to save some clear time
+        // contains our dirty bbox, we can safely shrink the clear rect to save some time
         clearRect.left = std::max(clearRect.left, static_cast<LONG>(std::round(rttDirtyBBox.min.x)));
         clearRect.top = std::max(clearRect.top, static_cast<LONG>(std::round(rttDirtyBBox.min.y)));
         clearRect.right = std::min(clearRect.right, static_cast<LONG>(std::round(rttDirtyBBox.max.x)));
         clearRect.bottom = std::min(clearRect.bottom, static_cast<LONG>(std::round(rttDirtyBBox.max.y)));
-    }
 
-    if (Config::Instance().IsClearOptsEnabled() &&
-        r == 0.0f && g == 0.0f && b == 0.0f && a == 0.0f)
-    {
-        // clearing to all zeroes could be optimized out by directly overdrawing the RT
         // delay the clear until first Draw() call (or until RT switch) to see if it's actually possible
         mClearOptState.clearDelayed = true;
         mClearOptState.clearDepth = clearDepth;
@@ -330,6 +323,10 @@ void RenderingContext::Clear(float r, float g, float b, float a, bool clearDepth
     }
     else
     {
+        // update RT dirty BBox with an invalid one to disable dirty bbox optimizations for this frame
+        // there can be scenarios in which we ex. successfully optimize a clear, but then the RTT will be
+        // reused with a non-transparent non-zero clear which can (and should) exceed dirty bounds
+        mRenderTarget.Get()->UpdateDirtyBBox(BBox());
         RecordClear(r, g, b, a, clearDepth, clearRect);
     }
 }
@@ -841,6 +838,17 @@ void RenderingContext::UnsetRenderTargetIfSet(IRenderTarget* rt)
     }
 }
 
+void RenderingContext::UnsetTextureIfSet(const NIPtr<TextureBase>& tex)
+{
+    for (uint32_t i = 0; i < Constants::MAX_TEXTURE_UNITS; ++i)
+    {
+        if (mTextures.GetTexture(i) == tex)
+        {
+            ClearTextureUnit(i);
+        }
+    }
+}
+
 void RenderingContext::SetRenderTarget(const NIPtr<IRenderTarget>& renderTarget)
 {
     if (renderTarget == mRenderTarget.Get())
@@ -949,7 +957,7 @@ void RenderingContext::SetFillMode(D3D12_FILL_MODE mode)
 
 void RenderingContext::SetVertexShader(const NIPtr<Shaders::Shader>& vertexShader)
 {
-    if (mPipelineState.Get().vertexShader == vertexShader) return;
+    if (mVertexShader.Get() == vertexShader) return;
 
     mPipelineState.SetVertexShader(vertexShader);
     mVertexShader.Set(vertexShader);
@@ -958,7 +966,7 @@ void RenderingContext::SetVertexShader(const NIPtr<Shaders::Shader>& vertexShade
 
 void RenderingContext::SetPixelShader(const NIPtr<Shaders::Shader>& pixelShader)
 {
-    if (mPipelineState.Get().pixelShader == pixelShader) return;
+    if (mPixelShader.Get() == pixelShader) return;
 
     mPipelineState.SetPixelShader(pixelShader);
     mPixelShader.Set(pixelShader);
@@ -967,7 +975,7 @@ void RenderingContext::SetPixelShader(const NIPtr<Shaders::Shader>& pixelShader)
 
 void RenderingContext::SetComputeShader(const NIPtr<Shaders::Shader>& computeShader)
 {
-    if (mComputePipelineState.Get().shader == computeShader) return;
+    if (mComputeShader.Get() == computeShader) return;
 
     mComputePipelineState.SetComputeShader(computeShader);
     mComputeShader.Set(computeShader);

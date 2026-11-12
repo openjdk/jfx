@@ -170,6 +170,7 @@ public:
 
     void ClearTextureUnit(uint32_t unit);
     void UnsetRenderTargetIfSet(IRenderTarget* rt);
+    void UnsetTextureIfSet(const NIPtr<TextureBase>& tex);
     void SetRenderTarget(const NIPtr<IRenderTarget>& renderTarget);
     void SetScissor(bool enabled, const D3D12_RECT& scissor);
     void SetTexture(uint32_t unit, const NIPtr<TextureBase>& texture);

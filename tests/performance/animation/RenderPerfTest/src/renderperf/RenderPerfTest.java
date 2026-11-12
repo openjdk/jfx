@@ -287,9 +287,12 @@ public class RenderPerfTest {
     }
 
     static {
-        // ensure JavaFX will run with fullspeed animation
-        // that disables vsync and animation intervals are instant
-        System.setProperty("javafx.animation.fullspeed", "true");
+        String fullspeed = System.getProperty("javafx.animation.fullspeed");
+        if (fullspeed == null) {
+            // ensure JavaFX will run with fullspeed animation (if the property was not set beforehand)
+            // that disables vsync and animation intervals are instant
+            System.setProperty("javafx.animation.fullspeed", "true");
+        }
     }
 
     interface Renderable {

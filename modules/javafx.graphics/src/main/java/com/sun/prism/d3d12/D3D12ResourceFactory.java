@@ -344,6 +344,9 @@ class D3D12ResourceFactory extends BaseShaderFactory {
             return null;
         }
 
+        // pre-clear entire texture to fully transparent 0's
+        // Like D3D, this makes sure RTT is in this state because Decora expects it
+        tex.createGraphics().clear();
         return tex;
     }
 

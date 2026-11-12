@@ -33,7 +33,7 @@
 #endif
 
 #include <d3d12.h>
-#include <dxgi1_4.h>
+#include <dxgi1_5.h>
 #include <dxgidebug.h>
 #include <dxcapi.h>
 #include <d3d12shader.h>
@@ -116,6 +116,16 @@ using D3D12DebugDevicePtr = Ptr<ID3D12DebugDevice2>;
 // smart-pointer container for internal objects
 template <typename T>
 using NIPtr = std::shared_ptr<T>;
+
+// weak reference to NIPtr objects - for places like PhongMaterial
+template <typename T>
+using NIWeakPtr = std::weak_ptr<T>;
+
+template <typename T>
+bool WeakPtrIsEmpty(const NIWeakPtr<T>& ptr)
+{
+    return !ptr.owner_before(NIWeakPtr<T>()) && !NIWeakPtr<T>().owner_before(ptr);
+}
 
 // forward declaration of potentially the most important objects
 class NativeInstance;

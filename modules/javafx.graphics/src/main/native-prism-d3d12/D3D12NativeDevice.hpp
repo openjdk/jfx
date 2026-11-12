@@ -114,6 +114,7 @@ public:
     int GetMaximumTextureSize() const;
     void MarkDisposed(const D3D12PageablePtr& pageable);
     void MarkDisposed(const NIPtr<Internal::ITrackedResource>& resource);
+    void MarkDisposed(const NIPtr<NativeTexture>& tex); // specialization for Textures to unbind them if they were used
     void MarkDisposed(const NIPtr<NativeRenderTarget>& rtt); // specialization for RTTs to do some extra cleanup in the process
 
     void Clear(float r, float g, float b, float a, bool clearDepth);

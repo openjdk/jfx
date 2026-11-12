@@ -38,7 +38,12 @@ class NativePhongMaterial
     Pixel_RGBA32_FLOAT mDiffuseColor;
     bool mSpecularColorSet;
     Pixel_RGBA32_FLOAT mSpecularColor;
-    NIPtr<NativeTexture> mMaps[static_cast<size_t>(TextureMapType::MAX_ENUM)];
+    NIWeakPtr<NativeTexture> mMaps[static_cast<size_t>(TextureMapType::MAX_ENUM)];
+
+    inline bool IsValidMap(const NIWeakPtr<NativeTexture>& texPtr) const
+    {
+        return !WeakPtrIsEmpty(texPtr) && !texPtr.expired();
+    }
 
 public:
     NativePhongMaterial(const NIPtr<NativeDevice>& nativeDevice);
@@ -59,24 +64,24 @@ public:
         return mSpecularColor;
     }
 
-    inline const NIPtr<NativeTexture>& GetMap(TextureMapType map) const
+    inline NIPtr<NativeTexture> GetMap(TextureMapType map) const
     {
-        return mMaps[static_cast<size_t>(map)];
+        return mMaps[static_cast<size_t>(map)].lock();
     }
 
     inline bool IsBumpMap() const
     {
-        return static_cast<bool>(GetMap(TextureMapType::BUMP));
+        return IsValidMap(mMaps[static_cast<size_t>(TextureMapType::BUMP)]);
     }
 
     inline bool IsSpecularMap() const
     {
-        return static_cast<bool>(GetMap(TextureMapType::SPECULAR));
+        return IsValidMap(mMaps[static_cast<size_t>(TextureMapType::SPECULAR)]);
     }
 
     inline bool IsSelfIllum() const
     {
-        return static_cast<bool>(GetMap(TextureMapType::SELF_ILLUM));
+        return IsValidMap(mMaps[static_cast<size_t>(TextureMapType::SELF_ILLUM)]);
     }
 
     inline PhongShaderSpecularVariant GetSpecularVariant() const
