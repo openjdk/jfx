@@ -98,7 +98,7 @@ import jfx.incubator.scene.control.richtext.skin.RichTextAreaSkin;
  */
 public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listener {
     private final RichTextAreaSkin skin;
-    private final RichTextArea control;
+    public final RichTextArea control;
     private final ScrollBar vscroll;
     private final ScrollBar hscroll;
     private final ClippedPane leftGutter;

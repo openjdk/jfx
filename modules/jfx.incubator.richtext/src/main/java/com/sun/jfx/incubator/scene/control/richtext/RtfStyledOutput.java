@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,6 +36,7 @@ import java.util.List;
 import javafx.scene.Node;
 import javafx.scene.image.WritableImage;
 import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
 import com.sun.jfx.incubator.scene.control.richtext.util.RichUtils;
 import jfx.incubator.scene.control.richtext.StyleResolver;
 import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
@@ -51,7 +52,7 @@ import jfx.incubator.scene.control.richtext.model.StyledSegment;
 public class RtfStyledOutput implements StyledOutput {
     private final LookupTable<Color> colorTable = new LookupTable<>(Color.BLACK);
     private final LookupTable<String> fontTable = new LookupTable<>("system");
-    private final StyleResolver resolver;
+    private final CachingStyleResolver resolver;
     private final Writer writer;
     private boolean startOfLine = true;
     private StyleAttributeMap prevStyle;
@@ -63,10 +64,16 @@ public class RtfStyledOutput implements StyledOutput {
     private boolean strike;
     private String fontFamily;
     private Double fontSize;
+    private Font font;
+    private boolean writeFontSize;
 
     public RtfStyledOutput(StyleResolver r, Writer wr) {
         this.resolver = new CachingStyleResolver(r);
         this.writer = wr;
+        this.font = resolver.getFont();
+        if (font != null) {
+            writeFontSize = true;
+        }
     }
 
     public StyledOutput firstPassBuilder() {
@@ -90,7 +97,7 @@ public class RtfStyledOutput implements StyledOutput {
                         //                        colorTable.add(c);
                         //                    }
 
-                        // TODO font table
+                        // font table
                         String family = a.getFontFamily();
                         if (family != null) {
                             fontTable.add(family);
@@ -144,19 +151,25 @@ public class RtfStyledOutput implements StyledOutput {
 
         // font table
         write("{\\fonttbl");
-        int ix = 0;
-        for (String name : fontTable.getItems()) {
-            String fam = lookupFontFamily(name);
+        if(font == null) {
+            int ix = 0;
+            for (String name : fontTable.getItems()) {
+                String fam = lookupFontFamily(name);
 
-            write("\\f");
-            write(String.valueOf(ix++));
-            if (fam == null) {
-                write("\\fnil");
-                write(" ");
-                write(encode(name, true));
-            } else {
-                write(fam);
+                write("\\f");
+                write(String.valueOf(ix++));
+                if (fam == null) {
+                    write("\\fnil");
+                    write(" ");
+                    write(encode(name, true));
+                } else {
+                    write(fam);
+                }
+                write(";");
             }
+        } else {
+            write("\\f0\\fnil\\fcharset0 ");
+            write(encode(font.getName(), true));
             write(";");
         }
         write("}\r\n");
@@ -296,7 +309,12 @@ public class RtfStyledOutput implements StyledOutput {
                 fontFamily = fam;
             }
 
-            if (RichUtils.notEquals(fontSize, fsize)) {
+            if (writeFontSize) {
+                write("\\f0\\fs");
+                double fs = font.getSize() * 2.0;
+                write(String.valueOf((int)Math.round(fs)));
+                writeFontSize = false;
+            } else if (RichUtils.notEquals(fontSize, fsize)) {
                 write("\\fs");
                 // twice the points
                 double fs = (fsize == null) ? 24.0 : (fsize * 2.0);

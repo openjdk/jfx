@@ -26,6 +26,7 @@
 package test.jfx.incubator.scene.control.richtext;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -182,6 +183,21 @@ public class CodeAreaTest {
         control.copy();
         String nl = System.getProperty("line.separator");
         assertEquals(nl + "4", Clipboard.getSystemClipboard().getString());
+    }
+
+    @Test
+    public void copyRTF() {
+        RTUtil.copyToClipboard("yo");
+        control.appendText("123");
+        control.setFont(Font.font("Amble Regular", 33));
+        control.selectAll();
+        control.copy();
+        assertTrue(Clipboard.getSystemClipboard().getContentTypes().contains(DataFormat.RTF));
+        String rtf = Clipboard.getSystemClipboard().getRtf();
+        assertNotNull(rtf);
+        assertTrue(rtf.contains("123"));
+        assertTrue(rtf.contains("\\f0\\fnil\\fcharset0 Amble;"));
+        assertTrue(rtf.contains("\\f0\\fs66"));
     }
 
     @Test

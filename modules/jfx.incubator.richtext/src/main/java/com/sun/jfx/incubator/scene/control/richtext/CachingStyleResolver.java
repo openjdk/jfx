@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,8 @@ package com.sun.jfx.incubator.scene.control.richtext;
 import java.util.HashMap;
 import javafx.scene.Node;
 import javafx.scene.image.WritableImage;
+import javafx.scene.text.Font;
+import jfx.incubator.scene.control.richtext.CodeArea;
 import jfx.incubator.scene.control.richtext.StyleResolver;
 import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 
@@ -62,5 +64,14 @@ public class CachingStyleResolver implements StyleResolver {
     @Override
     public WritableImage snapshot(Node node) {
         return resolver.snapshot(node);
+    }
+
+    public Font getFont() {
+        if (resolver instanceof VFlow vf) {
+            if (vf.control instanceof CodeArea c) {
+                return c.getFont();
+            }
+        }
+        return null;
     }
 }
