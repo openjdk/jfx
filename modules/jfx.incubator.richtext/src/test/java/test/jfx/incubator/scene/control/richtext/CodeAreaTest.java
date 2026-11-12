@@ -39,6 +39,7 @@ import javafx.scene.input.Clipboard;
 import javafx.scene.input.DataFormat;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
+import javafx.scene.text.FontPosture;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -189,7 +190,7 @@ public class CodeAreaTest {
     public void copyHtml() {
         RTUtil.copyToClipboard("yo");
         control.appendText("123");
-        control.setFont(Font.font("Amble Regular", 33));
+        control.setFont(Font.font("Amble", FontPosture.REGULAR, 33));
         control.selectAll();
         control.copy();
         assertTrue(Clipboard.getSystemClipboard().getContentTypes().contains(DataFormat.HTML));
@@ -197,22 +198,22 @@ public class CodeAreaTest {
         assertNotNull(s);
         assertTrue(s.contains("123"));
         assertTrue(s.contains("font-family: \"Amble\","));
-        assertTrue(s.contains("font-size: 33pt;"));
+        assertTrue(s.contains("font-size: 33.0pt;"));
     }
 
     @Test
     public void copyRTF() {
         RTUtil.copyToClipboard("yo");
         control.appendText("123");
-        control.setFont(Font.font("Amble Regular", 33));
+        control.setFont(Font.font("Amble", FontPosture.REGULAR, 33));
         control.selectAll();
         control.copy();
         assertTrue(Clipboard.getSystemClipboard().getContentTypes().contains(DataFormat.RTF));
         String s = Clipboard.getSystemClipboard().getRtf();
         assertNotNull(s);
         assertTrue(s.contains("123"));
-        assertTrue(s.contains("\\f0\\fnil\\fcharset0 Amble;"));
-        assertTrue(s.contains("\\f0\\fs66"));
+        assertTrue(s.contains("\\fnil Amble;"));
+        assertTrue(s.contains("\\fs66"));
     }
 
     @Test

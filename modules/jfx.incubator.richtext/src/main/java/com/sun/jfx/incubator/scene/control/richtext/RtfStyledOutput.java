@@ -70,6 +70,9 @@ public class RtfStyledOutput implements StyledOutput {
         this.resolver = new CachingStyleResolver(r);
         this.writer = wr;
         this.font = RichUtils.codeAreaFont(r);
+        if (font != null) {
+            fontTable.add(font.getFamily());
+        }
     }
 
     public StyledOutput firstPassBuilder() {
@@ -147,25 +150,19 @@ public class RtfStyledOutput implements StyledOutput {
 
         // font table
         write("{\\fonttbl");
-        if(font == null) {
-            int ix = 0;
-            for (String name : fontTable.getItems()) {
-                String fam = lookupFontFamily(name);
+        int ix = 0;
+        for (String name : fontTable.getItems()) {
+            String fam = lookupFontFamily(name);
 
-                write("\\f");
-                write(String.valueOf(ix++));
-                if (fam == null) {
-                    write("\\fnil");
-                    write(" ");
-                    write(encode(name, true));
-                } else {
-                    write(fam);
-                }
-                write(";");
+            write("\\f");
+            write(String.valueOf(ix++));
+            if (fam == null) {
+                write("\\fnil");
+                write(" ");
+                write(encode(name, true));
+            } else {
+                write(fam);
             }
-        } else {
-            write("\\f0\\fnil\\fcharset0 ");
-            write(encode(font.getName(), true));
             write(";");
         }
         write("}\r\n");
@@ -292,6 +289,10 @@ public class RtfStyledOutput implements StyledOutput {
                 fam = a.getFontFamily();
                 fsize = a.getFontSize();
             }
+            if (font != null) {
+                fam = font.getFamily();
+                fsize = font.getSize();
+            }
 
             prevStyle = a;
 
@@ -305,12 +306,7 @@ public class RtfStyledOutput implements StyledOutput {
                 fontFamily = fam;
             }
 
-            if (font != null) {
-                write("\\f0\\fs");
-                double fs = font.getSize() * 2.0;
-                write(String.valueOf((int)Math.round(fs)));
-                font = null;
-            } else if (RichUtils.notEquals(fontSize, fsize)) {
+            if (RichUtils.notEquals(fontSize, fsize)) {
                 write("\\fs");
                 // twice the points
                 double fs = (fsize == null) ? 24.0 : (fsize * 2.0);

@@ -369,9 +369,9 @@ public class HtmlStyledOutput implements StyledOutput {
         if (font != null) {
             wr.write("<style>\nbody {\n");
             wr.write("  font-family: \"");
-            wr.write(encode(font.getName()));
+            wr.write(encode(font.getFamily()));
             wr.write("\", monospace;\n  font-size: ");
-            wr.write(String.valueOf((int)font.getSize()));
+            wr.write(String.valueOf(font.getSize()));
             wr.write("pt;\n");
             wr.write("}\n</style>\n");
         }
