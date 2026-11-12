@@ -98,9 +98,9 @@ import jfx.incubator.scene.control.richtext.skin.RichTextAreaSkin;
 /// ```
 ///
 /// ## Caret
-/// VFlow manages the caret animation, which includes the following usability features:
+/// VFlow manages the caret animation, including stopping blinking (a usability feature):
 /// - caret blinking stops when mouse is pressed
-/// - caret blinking stops during navigation and editing in order to provide immediate feedback
+/// - caret blinking stops during navigation and editing
 ///
 public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listener {
     private final RichTextAreaSkin skin;
@@ -246,7 +246,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
 
         subscriptions = Subscription.combine(
             control.dropTargetProperty().subscribe(this::handleDropTarget),
-            blinking.subscribe(this::updateCaretAnimation));
+            blinking.subscribe((_) -> updateCaretAnimation()));
 
         vscroll.addEventFilter(MouseEvent.ANY, this::handleVScrollMouseEvent);
 
@@ -275,10 +275,6 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
     public void handleModelChange() {
         setOrigin(new Origin(0, -contentPaddingTop));
         handleWrapText();
-//        setUnwrappedContentWidth(0.0);
-//        setOffsetX(0.0);
-//        requestControlLayout(true);
-//        control.select(TextPos.ZERO);
     }
 
     public void handleWrapText() {
@@ -640,13 +636,6 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
         // this condition will self-heal on the next click
         int v = suppressBlink.get();
         suppressBlink.set(on ? (v | mask) : (v & ~mask));
-        if (caretAnimation != null) {
-            if (on) {
-                caretAnimation.stop();
-            } else {
-                caretAnimation.play();
-            }
-        }
     }
 
     private void destroyCaretAnimation() {
@@ -678,8 +667,8 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
     // on control.caretBlinkPeriodProperty
     public final void updateBlinkRate() {
         if (caretAnimation != null) {
-            boolean running = (caretAnimation.getStatus() == Animation.Status.RUNNING);
-            if (running) {
+            boolean restart = blinking.get();
+            if (restart) {
                 caretAnimation.stop();
             }
             Duration t2 = control.getCaretBlinkPeriod();
@@ -689,7 +678,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
                 new KeyFrame(t1, (ev) -> setCaretVisible(false)),
                 new KeyFrame(t2)
             );
-            if (running) {
+            if (restart) {
                 caretAnimation.playFromStart();
             }
         }
