@@ -234,6 +234,7 @@ class PrintLogger extends Logger {
      * in the order in which they were allocated, up to the first incomplete one.
      */
     private synchronized void complete(PulseData pulseData) {
+        pulseData.endTime = System.nanoTime();
         pulseData.state = COMPLETE;
         for (PulseData data = head; data != null && data.state != INCOMPLETE; data = data.next) {
             if (data.state == COMPLETE) {
@@ -335,6 +336,7 @@ class PrintLogger extends Logger {
         PulseData next;
         volatile int state = AVAILABLE;
         long startTime;
+        long endTime;
         long interval;
         int pulseCount;
         boolean pushedRender;
@@ -350,7 +352,9 @@ class PrintLogger extends Logger {
         }
 
         void printAndReset() {
-            long endTime = System.nanoTime();
+            // Use the time of completion, not the current time, as a complete
+            // pulse may have to wait for the rendering of a previous pulse
+            // to end before it is printed
             long totalTime = (endTime - startTime)/1000000L;
 
             if (state != COMPLETE) {
