@@ -41,7 +41,7 @@ abstract class BaseTemporalStringConverter<T extends Temporal> extends BaseStrin
 
     /// Reads the default locale at the time of creation. If the default locale is changed during the application's life,
     /// new converters will use the new default locale.
-    private static final Locale defaultLocale() {
+    private static Locale defaultLocale() {
         return Locale.getDefault(Locale.Category.FORMAT);
     }
 
@@ -66,7 +66,8 @@ abstract class BaseTemporalStringConverter<T extends Temporal> extends BaseStrin
                     createParser(dateStyle, timeStyle, defaultLocale(), DEFAULT_CHRONO);
     }
 
-    private final DateTimeFormatter createParser(FormatStyle dateStyle, FormatStyle timeStyle, Locale locale, Chronology chrono) {
+    private static DateTimeFormatter createParser(FormatStyle dateStyle, FormatStyle timeStyle, Locale locale,
+                Chronology chrono) {
         String pattern = DateTimeFormatterBuilder.getLocalizedDateTimePattern(dateStyle, timeStyle, chrono, locale);
         return new DateTimeFormatterBuilder().parseLenient()
                 .appendPattern(pattern)
@@ -77,7 +78,7 @@ abstract class BaseTemporalStringConverter<T extends Temporal> extends BaseStrin
 
     /// To satisfy the requirements of date formatters as described in, e.g.,
     /// [LocalDateStringConverter#LocalDateStringConverter()], the method checks if there's a need to modify the pattern.
-    private final DateTimeFormatter createFormatter(FormatStyle dateStyle, FormatStyle timeStyle, Locale locale, Chronology chrono) {
+    private DateTimeFormatter createFormatter(FormatStyle dateStyle, FormatStyle timeStyle, Locale locale, Chronology chrono) {
         if (dateStyle != null) {
             String pattern = DateTimeFormatterBuilder.getLocalizedDateTimePattern(dateStyle, timeStyle, chrono, locale);
             if (pattern.contains("yy") && !pattern.contains("yyy")) {
