@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,6 +38,8 @@ public class ControlShim extends Control {
      * @param control the control to set the default skin on
      */
     public static void installDefaultSkin(Control control) {
+        // must disconnected the current skin first
+        control.setSkin(null);
         control.setSkin(control.createDefaultSkin());
     }
 
@@ -56,5 +58,4 @@ public class ControlShim extends Control {
     public static  double computePrefHeight(Control c, double width) {
         return c.computePrefHeight(width);
     }
-
 }
