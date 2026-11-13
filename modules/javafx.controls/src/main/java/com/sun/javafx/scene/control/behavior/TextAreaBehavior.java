@@ -401,13 +401,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
     }
 
     protected void mouseDoubleClick(HitInfo hit) {
-        final TextArea textArea = getNode();
-        textArea.previousWord();
-        if (isWindows()) {
-            textArea.selectNextWord();
-        } else {
-            textArea.selectEndOfNextWord();
-        }
+        selectHitWord(hit);
     }
 
     protected void mouseTripleClick(HitInfo hit) {
