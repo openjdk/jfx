@@ -867,7 +867,7 @@ public final class RichUtils {
 
     public static Font codeAreaFont(StyleResolver r) {
         if (r instanceof VFlow f) {
-            if (f.control instanceof CodeArea c) {
+            if (f.getRichTextArea() instanceof CodeArea c) {
                 return c.getFont();
             }
         }
