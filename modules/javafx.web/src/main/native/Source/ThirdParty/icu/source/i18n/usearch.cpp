@@ -152,57 +152,43 @@ inline int32_t getCE(const UStringSearch *strsrch, uint32_t sourcece)
 }
 
 /**
-* Allocate a memory and returns nullptr if it failed.
-* Internal method, status assumed to be a success.
-* @param size to allocate
-* @param status output error if any, caller to check status before calling
-*               method, status assumed to be success when passed in.
-* @return newly allocated array, nullptr otherwise
-*/
-static
-inline void * allocateMemory(uint32_t size, UErrorCode *status)
-{
-    uint32_t* result = static_cast<uint32_t*>(uprv_malloc(size));
-    if (result == nullptr) {
-        *status = U_MEMORY_ALLOCATION_ERROR;
-    }
-    return result;
-}
-
-/**
 * Adds a uint32_t value to a destination array.
 * Creates a new array if we run out of space. The caller will have to
 * manually deallocate the newly allocated array.
-* Internal method, status assumed to be success, caller has to check status
-* before calling this method. destination not to be nullptr and has at least
-* size destinationlength.
+* destination not to be nullptr and has at least size destinationCapacity.
 * @param destination target array
+* @param destinationCapacity target array size, return value for the new size
+* @param destOnHeap whether the destination array is heap-allocated
 * @param offset destination offset to add value
-* @param destinationlength target array size, return value for the new size
 * @param value to be added
 * @param increments incremental size expected
-* @param status output error if any, caller to check status before calling
-*               method, status assumed to be success when passed in.
+* @param status output error if any
 * @return new destination array, destination if there was no new allocation
 */
 static
 inline int32_t * addTouint32_tArray(int32_t    *destination,
+                                    uint32_t   *destinationCapacity,
+                                    bool        destOnHeap,
                                     uint32_t    offset,
-                                    uint32_t   *destinationlength,
                                     uint32_t    value,
                                     uint32_t    increments,
                                     UErrorCode *status)
 {
-    uint32_t newlength = *destinationlength;
-    if (offset + 1 == newlength) {
-        newlength += increments;
-        int32_t* temp = static_cast<int32_t*>(allocateMemory(
-                                         sizeof(int32_t) * newlength, status));
-        if (U_FAILURE(*status)) {
-            return nullptr;
+    if (U_FAILURE(*status)) {
+        return destination;
+    }
+    if (offset >= *destinationCapacity) {
+        uint32_t newlength = offset + increments;
+        int32_t* temp = static_cast<int32_t*>(uprv_malloc(sizeof(int32_t) * newlength));
+        if (temp == nullptr) {
+            *status = U_MEMORY_ALLOCATION_ERROR;
+            return destination;
         }
         uprv_memcpy(temp, destination, sizeof(int32_t) * (size_t)offset);
-        *destinationlength = newlength;
+        if (destOnHeap) {
+            uprv_free(destination);
+        }
+        *destinationCapacity = newlength;
         destination        = temp;
     }
     destination[offset] = value;
@@ -213,43 +199,43 @@ inline int32_t * addTouint32_tArray(int32_t    *destination,
 * Adds a uint64_t value to a destination array.
 * Creates a new array if we run out of space. The caller will have to
 * manually deallocate the newly allocated array.
-* Internal method, status assumed to be success, caller has to check status
-* before calling this method. destination not to be nullptr and has at least
-* size destinationlength.
+* destination not to be nullptr and has at least size destinationCapacity.
 * @param destination target array
+* @param destinationCapacity target array size, return value for the new size
+* @param destOnHeap whether the destination array is heap-allocated
 * @param offset destination offset to add value
-* @param destinationlength target array size, return value for the new size
 * @param value to be added
 * @param increments incremental size expected
-* @param status output error if any, caller to check status before calling
-*               method, status assumed to be success when passed in.
+* @param status output error if any
 * @return new destination array, destination if there was no new allocation
 */
 static
 inline int64_t * addTouint64_tArray(int64_t    *destination,
+                                    uint32_t   *destinationCapacity,
+                                    bool        destOnHeap,
                                     uint32_t    offset,
-                                    uint32_t   *destinationlength,
                                     uint64_t    value,
                                     uint32_t    increments,
                                     UErrorCode *status)
 {
-    uint32_t newlength = *destinationlength;
-    if (offset + 1 == newlength) {
-        newlength += increments;
-        int64_t* temp = static_cast<int64_t*>(allocateMemory(
-                                         sizeof(int64_t) * newlength, status));
-
-        if (U_FAILURE(*status)) {
-            return nullptr;
+    if (U_FAILURE(*status)) {
+        return destination;
+    }
+    if (offset >= *destinationCapacity) {
+        uint32_t newlength = offset + increments;
+        int64_t* temp = static_cast<int64_t*>(uprv_malloc(sizeof(int64_t) * newlength));
+        if (temp == nullptr) {
+            *status = U_MEMORY_ALLOCATION_ERROR;
+            return destination;
         }
-
         uprv_memcpy(temp, destination, sizeof(int64_t) * (size_t)offset);
-        *destinationlength = newlength;
+        if (destOnHeap) {
+            uprv_free(destination);
+        }
+        *destinationCapacity = newlength;
         destination        = temp;
     }
-
     destination[offset] = value;
-
     return destination;
 }
 
@@ -299,22 +285,22 @@ inline void initializePatternCETable(UStringSearch *strsrch, UErrorCode *status)
            U_SUCCESS(*status)) {
         uint32_t newce = getCE(strsrch, ce);
         if (newce) {
-            int32_t *temp = addTouint32_tArray(cetable, offset, &cetablesize,
-                                  newce,
-                                  patternlength - ucol_getOffset(coleiter) + 1,
-                                  status);
-            if (U_FAILURE(*status)) {
-                return;
-            }
+            cetable = addTouint32_tArray(
+                cetable, &cetablesize, /* destOnHeap= */ cetable != pattern->cesBuffer,
+                offset, newce, patternlength - ucol_getOffset(coleiter) + 1, status);
             offset ++;
-            if (cetable != temp && cetable != pattern->cesBuffer) {
-                uprv_free(cetable);
-            }
-            cetable = temp;
         }
     }
 
-    cetable[offset]   = 0;
+    cetable = addTouint32_tArray(
+        cetable, &cetablesize, /* destOnHeap= */ cetable != pattern->cesBuffer,
+        offset, 0, 1, status);
+    if (U_FAILURE(*status)) {
+        if (cetable != pattern->cesBuffer) {
+            uprv_free(cetable);
+        }
+        return;
+    }
     pattern->ces       = cetable;
     pattern->cesLength = offset;
 }
@@ -368,25 +354,21 @@ inline void initializePatternPCETable(UStringSearch *strsrch,
     // **  whether a CE is signed or unsigned. For example, look at routine above this one.)
     while ((pce = iter.nextProcessed(nullptr, nullptr, status)) != UCOL_PROCESSED_NULLORDER &&
            U_SUCCESS(*status)) {
-        int64_t *temp = addTouint64_tArray(pcetable, offset, &pcetablesize,
-                              pce,
-                              patternlength - ucol_getOffset(coleiter) + 1,
-                              status);
-
-        if (U_FAILURE(*status)) {
-            return;
-        }
-
+        pcetable = addTouint64_tArray(
+            pcetable, &pcetablesize, /* destOnHeap= */ pcetable != pattern->pcesBuffer,
+            offset, pce, patternlength - ucol_getOffset(coleiter) + 1, status);
         offset += 1;
-
-        if (pcetable != temp && pcetable != pattern->pcesBuffer) {
-            uprv_free(pcetable);
-        }
-
-        pcetable = temp;
     }
 
-    pcetable[offset]   = 0;
+    pcetable = addTouint64_tArray(
+        pcetable, &pcetablesize, /* destOnHeap= */ pcetable != pattern->pcesBuffer,
+        offset, 0, 1, status);
+    if (U_FAILURE(*status)) {
+        if (pcetable != pattern->pcesBuffer) {
+            uprv_free(pcetable);
+        }
+        return;
+    }
     pattern->pces       = pcetable;
     pattern->pcesLength = offset;
 }
@@ -1392,8 +1374,8 @@ struct CEIBuffer {
     CEI                  defBuf[DEFAULT_CEBUFFER_SIZE];
     CEI                 *buf;
     int32_t              bufSize;
-    int32_t              firstIx;
-    int32_t              limitIx;
+    int64_t              firstIx;
+    int64_t              limitIx;
     UCollationElements  *ceIter;
     UStringSearch       *strSearch;
 
@@ -1401,8 +1383,8 @@ struct CEIBuffer {
 
                CEIBuffer(UStringSearch *ss, UErrorCode *status);
                ~CEIBuffer();
-   const CEI   *get(int32_t index);
-   const CEI   *getPrevious(int32_t index);
+   const CEI   *get(int64_t index);
+   const CEI   *getPrevious(int64_t index);
 };
 
 
@@ -1455,8 +1437,8 @@ CEIBuffer::~CEIBuffer() {
 //   where n is the largest index to have been fetched by some previous call to this function.
 //   The CE value will be UCOL__PROCESSED_NULLORDER at end of input.
 //
-const CEI *CEIBuffer::get(int32_t index) {
-    int i = index % bufSize;
+const CEI *CEIBuffer::get(int64_t index) {
+    int i = static_cast<int>(index % bufSize);
 
     if (index>=firstIx && index<limitIx) {
         // The request was for an entry already in our buffer.
@@ -1498,8 +1480,8 @@ const CEI *CEIBuffer::get(int32_t index) {
 //   where n is the largest index to have been fetched by some previous call to this function.
 //   The CE value will be UCOL__PROCESSED_NULLORDER at end of input.
 //
-const CEI *CEIBuffer::getPrevious(int32_t index) {
-    int i = index % bufSize;
+const CEI *CEIBuffer::getPrevious(int64_t index) {
+    int i = static_cast<int>(index % bufSize);
 
     if (index>=firstIx && index<limitIx) {
         // The request was for an entry already in our buffer.
@@ -1810,7 +1792,7 @@ U_CAPI UBool U_EXPORT2 usearch_search(UStringSearch  *strsrch,
         return false;
     }
 
-    int32_t    targetIx = 0;
+    int64_t    targetIx = 0;
     const CEI *targetCEI = nullptr;
     int32_t    patIx;
     UBool      found;
@@ -1841,7 +1823,7 @@ U_CAPI UBool U_EXPORT2 usearch_search(UStringSearch  *strsrch,
         found = true;
         //  Inner loop checks for a match beginning at each
         //  position from the outer loop.
-        int32_t targetIxOffset = 0;
+        int64_t targetIxOffset = 0;
         int64_t patCE = 0;
         // For targetIx > 0, this ceb.get gets a CE that is as far back in the ring buffer
         // (compared to the last CE fetched for the previous targetIx value) as we need to go
@@ -2122,7 +2104,7 @@ U_CAPI UBool U_EXPORT2 usearch_searchBackwards(UStringSearch  *strsrch,
     }
 
     CEIBuffer ceb(strsrch, status);
-    int32_t    targetIx = 0;
+    int64_t    targetIx = 0;
 
     /*
      * Pre-load the buffer with the CE's for the grapheme
@@ -2160,7 +2142,7 @@ U_CAPI UBool U_EXPORT2 usearch_searchBackwards(UStringSearch  *strsrch,
     int32_t    patIx;
     UBool      found;
 
-    int32_t  limitIx = targetIx;
+    int64_t  limitIx = targetIx;
     int32_t  mStart = -1;
     int32_t  mLimit = -1;
     int32_t  minLimit;
@@ -2188,7 +2170,7 @@ U_CAPI UBool U_EXPORT2 usearch_searchBackwards(UStringSearch  *strsrch,
         }
         //  Inner loop checks for a match beginning at each
         //  position from the outer loop.
-        int32_t targetIxOffset = 0;
+        int64_t targetIxOffset = 0;
         for (patIx = strsrch->pattern.pcesLength - 1; patIx >= 0; patIx -= 1) {
             int64_t patCE = strsrch->pattern.pces[patIx];
 

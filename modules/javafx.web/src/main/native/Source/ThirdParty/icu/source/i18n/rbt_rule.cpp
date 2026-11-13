@@ -50,7 +50,7 @@ U_NAMESPACE_BEGIN
  * segments, or null if there are none.  The array itself is adopted,
  * but the pointers within it are not.
  * @param segsCount number of elements in segs[]
- * @param anchorStart true if the the rule is anchored on the left to
+ * @param anchorStart true if the rule is anchored on the left to
  * the context start
  * @param anchorEnd true if the rule is anchored on the right to the
  * context limit
@@ -64,10 +64,7 @@ TransliterationRule::TransliterationRule(const UnicodeString& input,
                                          UBool anchorStart, UBool anchorEnd,
                                          const TransliterationRuleData* theData,
                                          UErrorCode& status) :
-    UMemory(),
-    segments(nullptr),
-    data(theData) {
-
+        data(theData) {
     if (U_FAILURE(status)) {
         return;
     }
@@ -162,18 +159,12 @@ TransliterationRule::TransliterationRule(const UnicodeString& input,
  * Copy constructor.
  */
 TransliterationRule::TransliterationRule(TransliterationRule& other) :
-    UMemory(other),
-    anteContext(nullptr),
-    key(nullptr),
-    postContext(nullptr),
-    pattern(other.pattern),
-    anteContextLength(other.anteContextLength),
-    keyLength(other.keyLength),
-    flags(other.flags),
-    data(other.data) {
-
-    segments = nullptr;
-    segmentsCount = 0;
+        UMemory(other),
+        pattern(other.pattern),
+        anteContextLength(other.anteContextLength),
+        keyLength(other.keyLength),
+        flags(other.flags),
+        data(other.data) {
     if (other.segmentsCount > 0) {
         segments = static_cast<UnicodeFunctor**>(uprv_malloc(other.segmentsCount * sizeof(UnicodeFunctor*)));
         uprv_memcpy(segments, other.segments, (size_t)other.segmentsCount*sizeof(segments[0]));

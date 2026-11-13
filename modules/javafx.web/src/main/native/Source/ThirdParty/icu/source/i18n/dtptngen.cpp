@@ -197,6 +197,7 @@ static const dtTypeElem dtTypes[] = {
     {LOW_E, UDATPG_WEEKDAY_FIELD, DT_SHORTER - DT_DELTA, 6, 0},
 
     {LOW_D, UDATPG_DAY_FIELD, DT_NUMERIC, 1, 2},
+    {LOW_D, UDATPG_DAY_FIELD, DT_SHORT, 3, 0},
     {LOW_G, UDATPG_DAY_FIELD, DT_NUMERIC + DT_DELTA, 1, 20}, // really internal use, so we don't care
 
     {CAP_D, UDATPG_DAY_OF_YEAR_FIELD, DT_NUMERIC, 1, 3},
@@ -333,11 +334,9 @@ DateTimePatternGenerator::createEmptyInstance(UErrorCode& status) {
 }
 
 DateTimePatternGenerator::DateTimePatternGenerator(UErrorCode &status) :
-    skipMatcher(nullptr),
-    fAvailableFormatKeyHash(nullptr),
-    fDefaultHourFormatChar(0),
-    internalErrorCode(U_ZERO_ERROR)
+    UObject()
 {
+    emptyString.getTerminatedBuffer();
     fp = new FormatParser();
     dtMatcher = new DateTimeMatcher();
     distanceInfo = new DistanceInfo();
@@ -348,30 +347,15 @@ DateTimePatternGenerator::DateTimePatternGenerator(UErrorCode &status) :
 }
 
 DateTimePatternGenerator::DateTimePatternGenerator(const Locale& locale, UErrorCode &status, UBool skipStdPatterns) :
-    skipMatcher(nullptr),
-    fAvailableFormatKeyHash(nullptr),
-    fDefaultHourFormatChar(0),
-    internalErrorCode(U_ZERO_ERROR)
+    DateTimePatternGenerator(status)
 {
-    fp = new FormatParser();
-    dtMatcher = new DateTimeMatcher();
-    distanceInfo = new DistanceInfo();
-    patternMap = new PatternMap();
-    if (fp == nullptr || dtMatcher == nullptr || distanceInfo == nullptr || patternMap == nullptr) {
-        internalErrorCode = status = U_MEMORY_ALLOCATION_ERROR;
-    }
-    else {
-        initData(locale, status, skipStdPatterns);
-    }
+    initData(locale, status, skipStdPatterns);
 }
 
 DateTimePatternGenerator::DateTimePatternGenerator(const DateTimePatternGenerator& other) :
-    UObject(),
-    skipMatcher(nullptr),
-    fAvailableFormatKeyHash(nullptr),
-    fDefaultHourFormatChar(0),
-    internalErrorCode(U_ZERO_ERROR)
+    UObject()
 {
+    emptyString.getTerminatedBuffer();
     fp = new FormatParser();
     dtMatcher = new DateTimeMatcher();
     distanceInfo = new DistanceInfo();
@@ -853,7 +837,7 @@ DateTimePatternGenerator::addICUPatterns(const Locale& locale, UErrorCode& statu
 
         if (U_SUCCESS(status)) {
             UnicodeString conflictingPattern;
-            addPatternWithSkeleton(pattern, nullptr, false, conflictingPattern, status);
+            addPatternWithOptionalSkeleton(pattern, nullptr, false, conflictingPattern, status);
         }
     }
 }
@@ -1049,7 +1033,7 @@ struct DateTimePatternGenerator::AvailableFormatsSink : public ResourceSink {
             // derived from std patterns, but not a previous availableFormats entry:
             const UnicodeString& formatValue = value.getUnicodeString(errorCode);
             conflictingPattern.remove();
-            dtpg.addPatternWithSkeleton(formatValue, &formatKey, true, conflictingPattern, errorCode);
+            dtpg.addPatternWithSkeleton(formatValue, formatKey, true, conflictingPattern, errorCode);
         }
     }
 };
@@ -1406,7 +1390,6 @@ DateTimePatternGenerator::setDateTimeFormat(UDateFormatStyle style, const Unicod
 
 const UnicodeString&
 DateTimePatternGenerator::getDateTimeFormat(UDateFormatStyle style, UErrorCode& status) const {
-    static const UnicodeString emptyString = UNICODE_STRING_SIMPLE("");
     if (U_FAILURE(status)) {
         return emptyString;
     }
@@ -1513,7 +1496,18 @@ DateTimePatternGenerator::addPattern(
         return UDATPG_NO_CONFLICT;
     }
 
-    return addPatternWithSkeleton(pattern, nullptr, override, conflictingPattern, status);
+    return addPatternWithOptionalSkeleton(pattern, nullptr, override, conflictingPattern, status);
+}
+
+UDateTimePatternConflict
+DateTimePatternGenerator::addPatternWithSkeleton(
+    const UnicodeString& pattern,
+    const UnicodeString& skeletonToUse,
+    UBool override,
+    UnicodeString& conflictingPattern,
+    UErrorCode& status)
+{
+    return addPatternWithOptionalSkeleton(pattern, &skeletonToUse, override, conflictingPattern, status);
 }
 
 // For DateTimePatternGenerator::addPatternWithSkeleton -
@@ -1527,7 +1521,7 @@ DateTimePatternGenerator::addPattern(
 // 3. When adding the pattern (patternMap->add), we set a new boolean to indicate that the added entry had a
 // specified skeleton (which sets a new field in the PtnElem in the PatternMap).
 UDateTimePatternConflict
-DateTimePatternGenerator::addPatternWithSkeleton(
+DateTimePatternGenerator::addPatternWithOptionalSkeleton(
     const UnicodeString& pattern,
     const UnicodeString* skeletonToUse,
     UBool override,
@@ -1623,6 +1617,21 @@ DateTimePatternGenerator::getFieldAndWidthIndices(const char* key, UDateTimePGDi
     return UDATPG_FIELD_COUNT;
 }
 
+// A pattern whose skeleton specifies a two-digit year (such as the en availableFormats entry
+// yyMMMd{"MMM d, ’yy"}) can contain literal text that only makes sense with a two-digit year,
+// so it's only a valid match for a request that also asks for a two-digit year.  Without this
+// check, a request for "yyyyMMMd" would match the "yyMMMd" entry-- its year field length is closer
+// to the requested 4 than the "yMMMd" entry's is --and produce "MMM d, ’yyyy".
+static UBool yearLengthIsCompatible(const PtnSkeleton& request, const PtnSkeleton& trial) {
+    // a type value greater than 0 means the year field is present and numeric (y/Y/u/r, as opposed
+    // to the cyclic year U); we don't want to interfere with matching of the non-numeric years
+    if (request.type[UDATPG_YEAR_FIELD] <= 0 || trial.type[UDATPG_YEAR_FIELD] <= 0) {
+        return true;
+    }
+    return trial.original.getFieldLength(UDATPG_YEAR_FIELD) != 2
+        || request.original.getFieldLength(UDATPG_YEAR_FIELD) == 2;
+}
+
 const UnicodeString*
 DateTimePatternGenerator::getBestRaw(DateTimeMatcher& source,
                                      int32_t includeMask,
@@ -1641,6 +1650,9 @@ DateTimePatternGenerator::getBestRaw(DateTimeMatcher& source,
     for (it.set(*patternMap); it.hasNext(); ) {
         DateTimeMatcher trial = it.next();
         if (trial.equals(skipMatcher)) {
+            continue;
+        }
+        if (!yearLengthIsCompatible(source.skeleton, trial.skeleton)) {
             continue;
         }
         int32_t distance=source.getDistance(trial, includeMask, tempInfo);
@@ -1726,7 +1738,7 @@ DateTimePatternGenerator::adjustFieldTypes(const UnicodeString& pattern,
                     //    field length, but options bits can be used to override this.
                     // 2. There is a specified skeleton for the found pattern and one of the following is true:
                     //    a) The length of the field in the skeleton (skelFieldLen) is equal to reqFieldLen.
-                    //    b) The pattern field is numeric and the skeleton field is not, or vice versa.
+                    //    b) The pattern field is numeric and the requested field is not, or vice versa.
 
                     char16_t reqFieldChar = dtMatcher->skeleton.original.getFieldChar(typeValue);
                     int32_t reqFieldLen = dtMatcher->skeleton.original.getFieldLength(typeValue);
@@ -1744,8 +1756,8 @@ DateTimePatternGenerator::adjustFieldTypes(const UnicodeString& pattern,
                         // https://www.unicode.org/reports/tr35/tr35-dates.html#Date_Field_Symbol_Table for more info)
                         int32_t skelFieldLen = specifiedSkeleton->original.getFieldLength(typeValue);
                         UBool patFieldIsNumeric = (row->type > 0);
-                        UBool skelFieldIsNumeric = (specifiedSkeleton->type[typeValue] > 0);
-                        if (skelFieldLen == reqFieldLen || (patFieldIsNumeric && !skelFieldIsNumeric) || (skelFieldIsNumeric && !patFieldIsNumeric)) {
+                        UBool reqFieldIsNumeric = (dtMatcher->skeleton.type[typeValue] > 0);
+                        if (skelFieldLen == reqFieldLen || (patFieldIsNumeric && !reqFieldIsNumeric) || (reqFieldIsNumeric && !patFieldIsNumeric)) {
                             // don't adjust the field length in the found pattern
                             adjFieldLen = field.length();
                         }
@@ -2306,7 +2318,9 @@ DateTimeMatcher::DateTimeMatcher(const DateTimeMatcher& other) {
 }
 
 DateTimeMatcher& DateTimeMatcher::operator=(const DateTimeMatcher& other) {
-    copyFrom(other.skeleton);
+    if (this != &other) {
+        copyFrom(other.skeleton);
+    }
     return *this;
 }
 
@@ -2803,6 +2817,9 @@ PtnSkeleton::PtnSkeleton(const PtnSkeleton& other) {
 }
 
 void PtnSkeleton::copyFrom(const PtnSkeleton& other) {
+    if (this == &other) {
+        return;
+    }
     uprv_memcpy(type, other.type, sizeof(type));
     original.copyFrom(other.original);
     baseOriginal.copyFrom(other.baseOriginal);
@@ -2913,7 +2930,7 @@ DTSkeletonEnumeration::DTSkeletonEnumeration(PatternMap& patternMap, dtStrEnum t
 }
 
 const UnicodeString*
-DTSkeletonEnumeration::snext(UErrorCode& status) {
+DTSkeletonEnumeration::snext(UErrorCode& status) U_LIFETIME_BOUND {
     if (U_SUCCESS(status) && fSkeletons.isValid() && pos < fSkeletons->size()) {
         return static_cast<const UnicodeString*>(fSkeletons->elementAt(pos++));
     }
@@ -2980,7 +2997,7 @@ DTRedundantEnumeration::add(const UnicodeString& pattern, UErrorCode& status) {
 }
 
 const UnicodeString*
-DTRedundantEnumeration::snext(UErrorCode& status) {
+DTRedundantEnumeration::snext(UErrorCode& status) U_LIFETIME_BOUND {
     if (U_SUCCESS(status) && fPatterns.isValid() && pos < fPatterns->size()) {
         return static_cast<const UnicodeString*>(fPatterns->elementAt(pos++));
     }
