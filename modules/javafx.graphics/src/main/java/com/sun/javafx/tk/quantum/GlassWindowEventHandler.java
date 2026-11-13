@@ -32,6 +32,7 @@ import com.sun.glass.ui.Window;
 import com.sun.glass.ui.Window.Level;
 
 import com.sun.javafx.tk.FocusCause;
+import com.sun.javafx.tk.TKStageListener;
 
 import java.util.function.Supplier;
 
@@ -48,21 +49,29 @@ class GlassWindowEventHandler extends Window.EventHandler implements Supplier<Vo
 
     @Override
     public Void get() {
-        if (stage == null || stage.stageListener == null) {
+        if (stage == null) {
             return null;
         }
+
+        // Read the listener once as it can be cleared while this event is
+        // being processed, e.g. if an application listener hides the stage
+        TKStageListener listener = stage.stageListener;
+        if (listener == null) {
+            return null;
+        }
+
         switch (type) {
             case WindowEvent.MINIMIZE:
-                stage.stageListener.changedIconified(true);
+                listener.changedIconified(true);
                 break;
             case WindowEvent.MAXIMIZE:
-                stage.stageListener.changedIconified(false);
-                stage.stageListener.changedMaximized(true);
+                listener.changedIconified(false);
+                listener.changedMaximized(true);
                 forceRepaint();
                 break;
             case WindowEvent.RESTORE:
-                stage.stageListener.changedIconified(false);
-                stage.stageListener.changedMaximized(false);
+                listener.changedIconified(false);
+                listener.changedMaximized(false);
                 forceRepaint();
                 break;
             case WindowEvent.MOVE: {
@@ -83,7 +92,7 @@ class GlassWindowEventHandler extends Window.EventHandler implements Supplier<Vo
                     newx = wx;
                     newy = wy;
                 }
-                stage.stageListener.changedLocation(newx, newy);
+                listener.changedLocation(newx, newy);
                 //We need to sync the new x,y for painting
                 if (!Application.GetApplication().hasWindowManager()) {
                     QuantumToolkit.runWithRenderLock(() -> {
@@ -99,34 +108,34 @@ class GlassWindowEventHandler extends Window.EventHandler implements Supplier<Vo
             case WindowEvent.RESIZE: {
                 float pScaleX = window.getPlatformScaleX();
                 float pScaleY = window.getPlatformScaleY();
-                stage.stageListener.changedSize(window.getWidth()  / pScaleX,
-                                                window.getHeight() / pScaleY);
+                listener.changedSize(window.getWidth()  / pScaleX,
+                                     window.getHeight() / pScaleY);
                  break;
             }
             case WindowEvent.RESCALE: {
                 float outScaleX = window.getOutputScaleX();
                 float outScaleY = window.getOutputScaleY();
-                stage.stageListener.changedScale(outScaleX, outScaleY);
+                listener.changedScale(outScaleX, outScaleY);
                 forceRepaint();
                 break;
             }
             case WindowEvent.FOCUS_GAINED:
                 WindowStage.addActiveWindow(stage);
-                stage.stageListener.changedFocused(true, FocusCause.ACTIVATED);
+                listener.changedFocused(true, FocusCause.ACTIVATED);
                 break;
             case WindowEvent.FOCUS_LOST:
-                stage.stageListener.changedFocused(false, FocusCause.DEACTIVATED);
+                listener.changedFocused(false, FocusCause.DEACTIVATED);
                 break;
             case WindowEvent.FOCUS_UNGRAB:
-                stage.stageListener.focusUngrab();
+                listener.focusUngrab();
                 break;
             case WindowEvent.FOCUS_GAINED_FORWARD:
                 WindowStage.addActiveWindow(stage);
-                stage.stageListener.changedFocused(true, FocusCause.TRAVERSED_FORWARD);
+                listener.changedFocused(true, FocusCause.TRAVERSED_FORWARD);
                 break;
             case WindowEvent.FOCUS_GAINED_BACKWARD:
                 WindowStage.addActiveWindow(stage);
-                stage.stageListener.changedFocused(true, FocusCause.TRAVERSED_BACKWARD);
+                listener.changedFocused(true, FocusCause.TRAVERSED_BACKWARD);
                 break;
             case WindowEvent.FOCUS_DISABLED:
                 stage.handleFocusDisabled();
@@ -134,10 +143,10 @@ class GlassWindowEventHandler extends Window.EventHandler implements Supplier<Vo
             case WindowEvent.DESTROY:
                 stage.setPlatformWindowClosed();
                 WindowStage.removeActiveWindow(stage);
-                stage.stageListener.closed();
+                listener.closed();
                 break;
             case WindowEvent.CLOSE:
-                stage.stageListener.closing();
+                listener.closing();
                 break;
             default:
                 if (QuantumToolkit.verbose) {
@@ -165,7 +174,10 @@ class GlassWindowEventHandler extends Window.EventHandler implements Supplier<Vo
     @Override
     public void handleLevelEvent(int level) {
         QuantumToolkit.runWithoutRenderLock(() -> {
-            stage.stageListener.changedAlwaysOnTop(level != Level.NORMAL);
+            TKStageListener listener = stage.stageListener;
+            if (listener != null) {
+                listener.changedAlwaysOnTop(level != Level.NORMAL);
+            }
             return null;
         });
     }
@@ -190,7 +202,10 @@ class GlassWindowEventHandler extends Window.EventHandler implements Supplier<Vo
         }
 
         QuantumToolkit.runWithoutRenderLock(() -> {
-            stage.stageListener.changedScreen(oldScreen, newScreen);
+            TKStageListener listener = stage.stageListener;
+            if (listener != null) {
+                listener.changedScreen(oldScreen, newScreen);
+            }
             return null;
         });
     }

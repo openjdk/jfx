@@ -37,6 +37,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Locale;
 
+import com.sun.glass.ui.GlassPlatform;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.utils.NativeLibLoader;
 import com.sun.javafx.PlatformUtil;
@@ -84,7 +85,7 @@ public abstract class PrismFontFactory implements FontFactory {
         isLinux   = PlatformUtil.isLinux();
         isIOS     = PlatformUtil.isIOS();
         isAndroid = PlatformUtil.isAndroid();
-        isEmbedded = PlatformUtil.isEmbedded();
+        isEmbedded = GlassPlatform.isEmbedded();
         int[] tempCacheLayoutSize = {0x10000};
 
         NativeLibLoader.loadLibrary("javafx_font");
