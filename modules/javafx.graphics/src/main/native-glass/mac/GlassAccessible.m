@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -57,6 +57,20 @@
 }
 
 /* Attributes */
+
+/*
+ * Initializes descendant accessibility peers and determines whether the window
+ * contains context-menu or tooltip content.
+ * Move this method to the appropriate window accessibility peer once implemented.
+ */
+- (BOOL)accessibilityIsPopup
+{
+    GET_MAIN_JENV_NOWARN;
+    if (env == NULL) return NO;
+    jboolean result = (*env)->CallBooleanMethod(env, self->jAccessible, jAccessibilityIsPopup);
+    GLASS_CHECK_EXCEPTION(env);
+    return result;
+}
 
 - (NSArray *)accessibilityAttributeNames
 {
@@ -449,6 +463,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacAccessible__1initIDs
         jAccessibilityFocusedUIElement = (*env)->GetMethodID(env, jAccessibleClass, "accessibilityFocusedUIElement", "()J");
         if ((*env)->ExceptionCheck(env)) return;
         jAccessibilityIsIgnored = (*env)->GetMethodID(env, jAccessibleClass, "accessibilityIsIgnored", "()Z");
+        if ((*env)->ExceptionCheck(env)) return;
+        jAccessibilityIsPopup = (*env)->GetMethodID(env, jAccessibleClass, "accessibilityIsPopup", "()Z");
         if ((*env)->ExceptionCheck(env)) return;
         jAccessibilityHitTest = (*env)->GetMethodID(env, jAccessibleClass, "accessibilityHitTest", "(FF)J");
         if ((*env)->ExceptionCheck(env)) return;
