@@ -24,12 +24,16 @@
  */
 
 import javafx.application.Application;
+import javafx.application.Platform;
+import javafx.geometry.Insets;
 import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.TransferMode;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
@@ -51,14 +55,37 @@ public class DndTest extends Application {
 
         Group group = new Group();
 
-        VBox root = new VBox(5,
-                new Label("1. Click on \"DRAG ME\" and drop on \"DROP HERE\"."),
-                new Label("2. Click on \"DRAG ME\" and drop outside this program."),
-                new Label("3. Click on \"DRAG ME\" and drop on \"DROP HERE\"\n pressing SHIFT (Cmd on Mac)."),
-                new Label(""),
-                group);
+        Label instructions = new Label("""
+                Perform each case separately. Click Reset after each case.
 
-        Scene scene = new Scene(root, 400, 200);
+                1. Drag "DRAG ME" onto "DROP HERE".
+                Expected: "DROP HERE" changes to "DRAG ME".
+
+                2. Drag "DRAG ME" into a text editor that accepts text drops.
+                Expected: The editor shows the text "DRAG ME".
+
+                3. Drag "DRAG ME" onto "DROP HERE", holding Shift (Command on macOS)
+                until you drop.
+                Expected: "DROP HERE" changes to "DRAG ME" and the original text disappears.
+                """);
+        instructions.setWrapText(true);
+
+        Button reset = new Button("Reset");
+        reset.setOnAction(event -> {
+            source.setText("DRAG ME");
+            target.setText("DROP HERE");
+            source.setFill(Color.BLACK);
+            target.setFill(Color.BLACK);
+        });
+
+        HBox passFailButtons = createPassFailButtons();
+
+        HBox buttonBox = new HBox(25, reset, passFailButtons);
+
+        VBox root = new VBox(10, instructions, group, buttonBox);
+        root.setPadding(new Insets(10));
+
+        Scene scene = new Scene(root, 700, 300);
 
         source.setOnDragDetected(event -> {
             Dragboard db = source.startDragAndDrop(TransferMode.ANY);
@@ -120,6 +147,22 @@ public class DndTest extends Application {
 
         stage.setScene(scene);
         stage.show();
+    }
+
+    private HBox createPassFailButtons() {
+        var passButton = new Button("Pass");
+        passButton.setOnAction(e -> {
+            System.out.println("TEST PASSED");
+            Platform.exit();
+        });
+        var failButton = new Button("Fail");
+        failButton.setOnAction(e -> {
+            System.out.println("TEST FAILED");
+            Platform.exit();
+            throw new AssertionError("Test failed");
+        });
+        var hbox = new HBox(10, passButton, failButton);
+        return hbox;
     }
 
     public static void main(String[] args) {

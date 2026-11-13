@@ -70,12 +70,14 @@ public class InputTypeAcceptAttributeTest extends Application {
 
         Button passButton = new Button("Pass");
         passButton.setOnAction(e -> {
+            System.out.println("TEST PASSED");
             cleanup();
             Platform.exit();
         });
 
         Button failButton = new Button("Fail");
         failButton.setOnAction(e -> {
+            System.out.println("TEST FAILED");
             cleanup();
             Platform.exit();
             throw new AssertionError("Displayed wrong type file.");
@@ -87,7 +89,7 @@ public class InputTypeAcceptAttributeTest extends Application {
                 " <body>\n" +
                 " 1. <input type = file /> should show all files. If not press Fail. <br/>" +
                 " 2. <input type = file accept = image/* /> should show only (PNG.png, JPG.jpg) files. If not press Fail. <br/>" +
-                " 3. <input type = file accept = text/* /> should show only TEXT.txt file. If not press Fail. <br/>" +
+                " 3. <input type = file accept = text/* /> should show only TEXT.txt and other text files. If not press Fail. <br/>" +
                 " 4. <input type = file accept = image/png /> should show only PNG.png file. If not press Fail. <br/>" +
                 " 5. <input type = file accept = image/jpg /> should show only JPG.jpg file. If not press Fail. <br/>" +
                 " </body>\n" +

@@ -29,13 +29,14 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.function.Predicate;
 
-import javafx.beans.value.WritableValue;
 import javafx.css.CssMetaData;
 import javafx.css.CssParser;
 import javafx.css.FontCssMetaData;
@@ -80,7 +81,8 @@ final class CssStyleHelper {
 
     private static final PlatformLogger LOGGER = com.sun.javafx.util.Logging.getCSSLogger();
 
-    private CssStyleHelper() {
+    private CssStyleHelper(CacheContainer cacheContainer) {
+        this.cacheContainer = cacheContainer;
     }
 
     /**
@@ -115,7 +117,7 @@ final class CssStyleHelper {
         //
         // reuse the existing styleHelper if possible.
         //
-        if ( canReuseStyleHelper(node, styleMap) ) {
+        if (canReuseStyleHelper(node, styleMap)) {
 
             //
             // JDK-8123731
@@ -127,18 +129,16 @@ final class CssStyleHelper {
             // trigger a REAPPLY. If the REAPPLY comes because of a change in font, then the fontSizeCache
             // needs to be invalidated (cleared) so that new values will be looked up for all transition states.
             //
-            if (node.styleHelper.cacheContainer != null && node.styleHelper.isUserSetFont(node)) {
+            if (node.styleHelper.isUserSetFont(node)) {
                 node.styleHelper.cacheContainer.fontSizeCache.clear();
             }
 
-            if (triggerStates[0] != null) {
-                node.styleHelper.triggerStates.addAll(triggerStates[0]);
-            }
-
-            updateParentTriggerStates(node, depth, triggerStates);
+            updateTriggerStates(node, depth, triggerStates);
             return node.styleHelper;
-
         }
+
+        // The trigger states are collected again for the new style map.
+        node.cssTriggerStates = null;
 
         if (styleMap == null || styleMap.isEmpty()) {
 
@@ -156,7 +156,7 @@ final class CssStyleHelper {
                 }
             }
 
-            if (mightInherit == false) {
+            if (!mightInherit) {
 
                 // If this node had a style helper, then reset properties to their initial value
                 // since the node won't have a style helper after this call
@@ -172,15 +172,9 @@ final class CssStyleHelper {
 
         }
 
-        final CssStyleHelper helper = new CssStyleHelper();
+        updateTriggerStates(node, depth, triggerStates);
 
-        if (triggerStates[0] != null) {
-            helper.triggerStates.addAll(triggerStates[0]);
-        }
-
-        updateParentTriggerStates(node, depth, triggerStates);
-
-        helper.cacheContainer = new CacheContainer(node, styleMap, depth);
+        CssStyleHelper helper = new CssStyleHelper(new CacheContainer(node, styleMap, depth));
 
         helper.firstStyleableAncestor = new WeakReference<>(findFirstStyleableAncestor(node));
 
@@ -197,38 +191,24 @@ final class CssStyleHelper {
         return helper;
     }
 
-    private static void updateParentTriggerStates(Styleable styleable, int depth, PseudoClassState[] triggerStates) {
-        // make sure parent's transition states include the pseudo-classes
-        // found when matching selectors
-        Styleable parent = styleable.getStyleableParent();
-        for(int n=1; n<depth; n++) {
-
-            // TODO: this means that a style like .menu-item:hover won't work. Need to separate CssStyleHelper tree from scene-graph tree
-            if (parent instanceof Node == false) {
-                parent=parent.getStyleableParent();
-                continue;
-            }
-            Node parentNode = (Node)parent;
-
+    /**
+     * Adds the pseudo-classes found when matching selectors to the trigger states of the node and its parents.
+     */
+    private static void updateTriggerStates(Node node, int depth, PseudoClassState[] triggerStates) {
+        Styleable styleable = node;
+        for (int n = 0; n < depth; n++) {
             final PseudoClassState triggerState = triggerStates[n];
 
-            // if there is nothing in triggerState, then continue since there
-            // isn't any pseudo-class state that might trigger a state change
-            if (triggerState != null && triggerState.size() > 0) {
-
-                // Create a StyleHelper for the parent, if necessary.
-                // TODO : check why calling createStyleHelper(parentNode) does not work here?
-                if (parentNode.styleHelper == null) {
-                    parentNode.styleHelper = new CssStyleHelper();
-                    parentNode.styleHelper.firstStyleableAncestor = new WeakReference(findFirstStyleableAncestor(parentNode)) ;
+            // TODO: this means that a style like .menu-item:hover won't work. Need to separate CssStyleHelper tree from scene-graph tree
+            if (styleable instanceof Node styleableNode && triggerState != null && !triggerState.isEmpty()) {
+                if (styleableNode.cssTriggerStates == null) {
+                    styleableNode.cssTriggerStates = new PseudoClassState();
                 }
-                parentNode.styleHelper.triggerStates.addAll(triggerState);
-
+                styleableNode.cssTriggerStates.addAll(triggerState);
             }
 
-            parent=parent.getStyleableParent();
+            styleable = styleable.getStyleableParent();
         }
-
     }
     //
     // return true if the fontStyleableProperty's origin is USER
@@ -237,7 +217,7 @@ final class CssStyleHelper {
 
         if (node == null) return false; // should never happen, but just to be safe...
 
-        CssMetaData<Styleable, Font> fontCssMetaData = cacheContainer != null ? cacheContainer.fontProp : null;
+        CssMetaData<Styleable, Font> fontCssMetaData = cacheContainer.fontProp;
         if (fontCssMetaData != null) {
             StyleableProperty<Font> fontStyleableProperty = fontCssMetaData != null ? fontCssMetaData.getStyleableProperty(node) : null;
             if (fontStyleableProperty != null && fontStyleableProperty.getStyleOrigin() == StyleOrigin.USER) return true;
@@ -274,20 +254,6 @@ final class CssStyleHelper {
     }
 
     //
-    // return the value of the property
-    //
-    private static boolean isTrue(WritableValue<Boolean> booleanProperty) {
-        return booleanProperty != null && booleanProperty.getValue();
-    }
-
-    //
-    // set the value of the property to true
-    //
-    private static void setTrue(WritableValue<Boolean> booleanProperty) {
-        if (booleanProperty != null) booleanProperty.setValue(true);
-    }
-
-    //
     // return true if the Node's current styleHelper can be reused.
     //
     private static boolean canReuseStyleHelper(final Node node, final StyleMap styleMap) {
@@ -313,12 +279,6 @@ final class CssStyleHelper {
         //update ancestor since this node may have changed positions in the scene graph (JDK-8237469)
         node.styleHelper.firstStyleableAncestor = new WeakReference<>(findFirstStyleableAncestor(node));
 
-        // If the style maps are the same instance, we can re-use the current styleHelper if the cacheContainer is null.
-        // Under this condition, there are no styles for this node _and_ no styles inherit.
-        if (node.styleHelper.cacheContainer == null) {
-            return true;
-        }
-
         //
         // The current map might be the same, but one of the node's parent's maps might have changed which
         // might cause some calculated values to change. To see if we can re-use the style-helper, we need to
@@ -335,8 +295,7 @@ final class CssStyleHelper {
 
         CssStyleHelper parentHelper = getStyleHelper(node.styleHelper.firstStyleableAncestor.get());
 
-        if (parentHelper != null && parentHelper.cacheContainer != null) {
-
+        if (parentHelper != null) {
             int[] parentIds = parentHelper.cacheContainer.styleCacheKey.getStyleMapIds();
             int[] nodeIds = node.styleHelper.cacheContainer.styleCacheKey.getStyleMapIds();
 
@@ -366,7 +325,7 @@ final class CssStyleHelper {
      * having a valid StyleHelper */
     private WeakReference<Node> firstStyleableAncestor = EMPTY_NODE;
 
-    private CacheContainer cacheContainer;
+    private final CacheContainer cacheContainer;
 
     private final static class CacheContainer {
 
@@ -391,17 +350,14 @@ final class CssStyleHelper {
             //
             Styleable parent = node.getStyleableParent();
             for(int d=1; d<depth; d++) {
-
                 // TODO: won't work for something like .menu-item:hover. Need to separate CssStyleHelper tree from scene-graph tree
-                if ( parent instanceof Node) {
-                    Node parentNode = (Node)parent;
-                final CssStyleHelper helper = parentNode.styleHelper;
-                    if (helper != null && helper.cacheContainer != null) {
+                if (parent instanceof Node parentNode) {
+                    CssStyleHelper helper = parentNode.styleHelper;
+                    if (helper != null) {
                         smapIds[ctr++] = helper.cacheContainer.smapId;
                     }
                 }
                 parent = parent.getStyleableParent();
-
             }
 
             this.styleCacheKey = new StyleCache.Key(smapIds, ctr);
@@ -471,58 +427,18 @@ final class CssStyleHelper {
      * @return the properties that remain set with {@code newStyleMap}
      */
     private Map<CssMetaData, CalculatedValue> resetToInitialValues(Styleable styleable, StyleMap newStyleMap) {
-        if (cacheContainer == null) {
-            return Map.of();
-        }
-
         Map<CssMetaData, CalculatedValue> cssSetProperties = cacheContainer.cssSetProperties;
         if (cssSetProperties.isEmpty()) {
             return Map.of();
         }
 
+        Map<String, List<CascadingStyle>> newCascadingStyles =
+                newStyleMap != null ? newStyleMap.getCascadingStyles() : Map.of();
+
         resetInProgress = true;
 
         try {
-            Map<String, List<CascadingStyle>> newCascadingStyles =
-                newStyleMap != null ? newStyleMap.getCascadingStyles() : Map.of();
-
-            List<Entry<CssMetaData, CalculatedValue>> resetList = null;
-            Entry<CssMetaData, CalculatedValue> transitionEntry = null;
-            var it = cssSetProperties.entrySet().iterator();
-            int idx = 0;
-
-            while (it.hasNext()) {
-                Entry<CssMetaData, CalculatedValue> entry = it.next();
-                CssMetaData key = entry.getKey();
-
-                if (!containsProperty(newCascadingStyles, key)) {
-                    if (key != TransitionDefinitionCssMetaData.getInstance()) {
-                        if (resetList == null) {
-                            resetList = new ArrayList<>(cssSetProperties.size() - idx);
-                        }
-
-                        resetList.add(entry);
-                    } else {
-                        transitionEntry = entry;
-                    }
-
-                    it.remove();
-                }
-
-                ++idx;
-            }
-
-            // The transition property must be reset before all other properties, as its value might
-            // affect the transitions that are applied to other properties.
-            if (transitionEntry != null) {
-                resetToInitialValue(styleable, transitionEntry.getKey(), transitionEntry.getValue());
-            }
-
-            if (resetList != null) {
-                for (Entry<CssMetaData, CalculatedValue> entry : resetList) {
-                    resetToInitialValue(styleable, entry.getKey(), entry.getValue());
-                }
-            }
+            resetProperties(styleable, cssMetaData -> !containsProperty(newCascadingStyles, cssMetaData));
 
             return cssSetProperties;
         } finally {
@@ -568,36 +484,8 @@ final class CssStyleHelper {
     }
 
     private StyleMap getStyleMap(Styleable styleable) {
-        if (cacheContainer == null || styleable == null) return null;
+        if (styleable == null) return null;
         return cacheContainer.getStyleMap(styleable);
-    }
-
-    /**
-     * A Set of all the pseudo-class states which, if they change, need to
-     * cause the Node to be set to UPDATE its CSS styles on the next pulse.
-     * For example, your stylesheet might have:
-     * <pre><code>
-     * .button { ... }
-     * .button:hover { ... }
-     * .button *.label { text-fill: black }
-     * .button:hover *.label { text-fill: blue }
-     * </code></pre>
-     * In this case, the first 2 rules apply to the Button itself, but the
-     * second two rules apply to the label within a Button. When the hover
-     * changes on the Button, however, we must mark the Button as needing
-     * an UPDATE. StyleHelper though only contains styles for the first two
-     * rules for Button. The pseudoclassStateMask would in this case have
-     * only a single bit set for "hover". In this way the StyleHelper associated
-     * with the Button would know whether a change to "hover" requires the
-     * button and all children to be update. Other pseudo-class state changes
-     * that are not in this hash set are ignored.
-     * *
-     * Called "triggerStates" since they would trigger a CSS update.
-     */
-    private final PseudoClassState triggerStates = new PseudoClassState();
-
-    boolean pseudoClassStateChanged(PseudoClass pseudoClass) {
-        return triggerStates.contains(pseudoClass);
     }
 
     /**
@@ -611,10 +499,6 @@ final class CssStyleHelper {
      */
     // TODO: this should work on Styleable, not Node
     private Set<PseudoClass>[] getTransitionStates(final Node node) {
-
-        // if cacheContainer is null, then CSS just doesn't apply to this node
-        if (cacheContainer == null) return null;
-
         int depth = 0;
         Node parent = node;
         while (parent != null) {
@@ -623,8 +507,8 @@ final class CssStyleHelper {
         }
 
         //
-        // StyleHelper#triggerStates is the set of pseudo-classes that appear
-        // in the style maps of this StyleHelper. Calculated values are
+        // Node#cssTriggerStates is the set of pseudo-classes that appear
+        // in the selectors matching the node or its descendants. Calculated values are
         // cached by pseudo-class state, but only the pseudo-class states
         // that mater are used in the search. So we take the transition states
         // and intersect them with triggerStates to remove the
@@ -646,11 +530,13 @@ final class CssStyleHelper {
         parent = node;
 
         while (parent != null) { // This loop traverses through all ancestors till root
-            if (parent.styleHelper != null) {
+            if (parent.styleHelper != null || parent.cssTriggerStates != null) {
                 PseudoClassState pseudoClassState = new PseudoClassState();
 
-                pseudoClassState.addAll(parent.pseudoClassStates);
-                pseudoClassState.retainAll(parent.styleHelper.triggerStates);
+                if (parent.cssTriggerStates != null) {
+                    pseudoClassState.addAll(parent.pseudoClassStates);
+                    pseudoClassState.retainAll(parent.cssTriggerStates);
+                }
 
                 retainedStates[count++] = ImmutablePseudoClassSetsCache.of(pseudoClassState);
             }
@@ -698,9 +584,6 @@ final class CssStyleHelper {
             //    When resetToInitialValues() is in progress, the StyleManager.styleMapList gets updated, therefore
             //    calls to getStyleMap(node) should be avoided, as it may return an incorrect StyleMap for a given node.
 
-            return;
-        }
-        if (cacheContainer == null) {
             return;
         }
         final StyleMap styleMap = getStyleMap(node);
@@ -834,16 +717,12 @@ final class CssStyleHelper {
      */
     void transitionToState(final Node node) {
 
-        if (cacheContainer == null) {
-            return;
-        }
-
         //
         // If styleMap is null, then StyleManager has blown it away and we need to reapply CSS.
         //
         final StyleMap styleMap = getStyleMap(node);
         if (styleMap == null) {
-            cacheContainer = null;
+            node.styleHelper = null;
             node.reapplyCSS();
             return;
         }
@@ -860,7 +739,7 @@ final class CssStyleHelper {
         if (sharedCache == null) {
             // Shared cache was blown away by StyleManager.
             // Therefore, this CssStyleHelper is no good.
-            cacheContainer = null;
+            node.styleHelper = null;
             node.reapplyCSS();
             return;
 
@@ -892,14 +771,25 @@ final class CssStyleHelper {
             sharedCache.addStyleCacheEntry(cacheEntryKey, cacheEntry);
         }
 
+        // For each property that is settable, we need to do a lookup and transition to that value.
+        transitionStateInProgress = true;
+
+        try {
+            applyStyles(node, styleMap, inheritOnly, transitionStates, cachedFont, cacheEntry);
+        } finally {
+            transitionStateInProgress = false;
+        }
+    }
+
+    /**
+     * Applies the calculated styles of the current state to the properties of the node.
+     */
+    private void applyStyles(Node node, StyleMap styleMap, boolean inheritOnly, Set<PseudoClass>[] transitionStates,
+                             CalculatedValue cachedFont, StyleCacheEntry cacheEntry) {
         final List<CssMetaData<? extends Styleable,  ?>> styleables = node.getCssMetaData();
 
         // Used in the for loop below, and a convenient place to stop when debugging.
         final int max = styleables.size();
-
-        // For each property that is settable, we need to do a lookup and
-        // transition to that value.
-        transitionStateInProgress = true;
 
         for (int n = -1; n < max; n++) {
             // The 'transition' property is a special pseudo-property that is always processed
@@ -909,72 +799,36 @@ final class CssStyleHelper {
                     (CssMetaData<Styleable, ?>)(CssMetaData<?, ?>)TransitionDefinitionCssMetaData.getInstance() :
                     (CssMetaData<Styleable, ?>)styleables.get(n);
 
+            // Reset after the transition property was applied, so the reset uses the transitions of the new style.
+            if (n == 0) {
+                resetUnstyledProperties(node, styleMap, transitionStates, cachedFont, cacheEntry);
+            }
+
             // Don't bother looking up styles that don't inherit.
-            if (inheritOnly && cssMetaData.isInherits() == false) {
+            if (inheritOnly && !cssMetaData.isInherits()) {
                 continue;
             }
 
             final String property = cssMetaData.getProperty();
 
-            CalculatedValue calculatedValue = cacheEntry.get(property);
-
+            CalculatedValue calculatedValue =
+                    getCalculatedValue(node, cssMetaData, styleMap, transitionStates, cachedFont, cacheEntry);
             if (calculatedValue == null) {
+                continue;
+            }
 
+            try {
                 /*
-                 * A cache miss occurred; this means that either we're the first to evaluate
-                 * this property, or that the CssMetaData didn't include this property yet
-                 * (not all styleables have stable CssMetaData, most notably Control).
+                 * Skip this property (after caching) if it can't be set (usually because it is bound).
+                 * The cached value is still useful for others sharing this entry.
                  */
-
-                calculatedValue = lookup(node, cssMetaData, styleMap, transitionStates[0],
-                        node, cachedFont);
-
-                // lookup is not supposed to return null.
-                if (calculatedValue == null) {
-                    assert false : "lookup returned null for " + property;
+                if (!cssMetaData.isSettable(node)) {
                     continue;
                 }
 
-                cacheEntry.put(property, calculatedValue);
-            }
-
-            /*
-             * Skip this property (after caching) if it can't be set (usually because it is bound).
-             * The cached value is still useful for others sharing this entry.
-             */
-
-            if (!cssMetaData.isSettable(node)) continue;
-
-            // StyleableProperty#applyStyle might throw an exception and it is called
-            // from two places in this try block.
-            try {
-
-                /*
-                 * JDK-8127435: If there is no style for the property (SKIP), then check if it must be reset
-                 * to its initial value. Otherwise, continue with CSS application.
-                 */
-
-                if (calculatedValue == SKIP) {  // calculatedValue is never null here
-
-                    // cssSetProperties keeps track of the StyleableProperty's that were set by CSS in the previous state.
-                    // If this property is not in cssSetProperties map, then the property was not set in the previous state.
-                    // This accomplishes two things. First, it lets us know if the property was set in the previous state
-                    // so it can be reset in this state if there is no value for it. Second, it avoids calling
-                    // CssMetaData#getStyleableProperty which is rather expensive as it may cause expansion of lazy
-                    // properties.
-                    CalculatedValue initialValue = cacheContainer.cssSetProperties.get(cssMetaData);
-
-                    /*
-                     * If the initial value is not null, then the property was set by CSS
-                     * on this node, and so it must be reset:
-                     */
-
-                    if (initialValue != null) {
-                        resetToInitialValue(node, cssMetaData, initialValue);
-                    }
-
+                // Properties without a style (SKIP) were already reset.
+                if (calculatedValue == SKIP) {
                     continue;
-
                 }
 
                 StyleableProperty styleableProperty = cssMetaData.getStyleableProperty(node);
@@ -1054,10 +908,7 @@ final class CssStyleHelper {
                 // the value to initial and thereafter skip setting the property
                 cacheEntry.put(property, SKIP);
 
-                CalculatedValue cachedValue = null;
-                if (cacheContainer != null && cacheContainer.cssSetProperties != null) {
-                    cachedValue = cacheContainer.cssSetProperties.get(cssMetaData);
-                }
+                CalculatedValue cachedValue = cacheContainer.cssSetProperties.get(cssMetaData);
                 Object value = (cachedValue != null) ? cachedValue.getValue() : cssMetaData.getInitialValue(node);
                 StyleOrigin origin = (cachedValue != null) ? cachedValue.getOrigin() : null;
                 try {
@@ -1073,7 +924,108 @@ final class CssStyleHelper {
             }
 
         }
-        transitionStateInProgress = false;
+    }
+
+    /**
+     * Resets any properties on the given {@code Styleable} which are not styled in the current state.
+     * This happens before any new style other than the transition is applied,
+     * so a listener reacting to the reset can not override them.
+     */
+    private void resetUnstyledProperties(Node node, StyleMap styleMap, Set<PseudoClass>[] transitionStates,
+                                         CalculatedValue cachedFont, StyleCacheEntry cacheEntry) {
+        Map<CssMetaData, CalculatedValue> cssSetProperties = cacheContainer.cssSetProperties;
+        if (cssSetProperties.isEmpty()) {
+            return;
+        }
+
+        resetProperties(node, cssMetaData ->
+                getCalculatedValue(node, cssMetaData, styleMap, transitionStates, cachedFont, cacheEntry) == SKIP);
+    }
+
+    /**
+     * Resets the properties set by CSS which are no longer styled, as decided by {@code isUnstyled}.
+     * The transition property is reset first, as its value might affect the transitions
+     * that are applied to other properties.
+     */
+    private void resetProperties(Styleable styleable, Predicate<CssMetaData> isUnstyled) {
+        List<Entry<CssMetaData, CalculatedValue>> resetList = null;
+
+        Iterator<Entry<CssMetaData, CalculatedValue>> it = cacheContainer.cssSetProperties.entrySet().iterator();
+        while (it.hasNext()) {
+            Entry<CssMetaData, CalculatedValue> entry = it.next();
+            CssMetaData cssMetaData = entry.getKey();
+            if (!isUnstyled.test(cssMetaData) || !cssMetaData.isSettable(styleable)) {
+                continue;
+            }
+
+            if (resetList == null) {
+                resetList = new ArrayList<>();
+            }
+
+            if (cssMetaData == TransitionDefinitionCssMetaData.getInstance()) {
+                resetList.addFirst(entry);
+            } else {
+                resetList.add(entry);
+            }
+
+            it.remove();
+        }
+
+        if (resetList == null) {
+            return;
+        }
+
+        for (Entry<CssMetaData, CalculatedValue> entry : resetList) {
+            CssMetaData cssMetaData = entry.getKey();
+            try {
+                resetToInitialValue(styleable, cssMetaData, entry.getValue());
+            } catch (Exception e) {
+                // Track the property again, so a later pass can retry the reset.
+                cacheContainer.cssSetProperties.put(cssMetaData, entry.getValue());
+
+                final String msg = String.format("Failed to reset css [%s] on [%s] due to '%s'\n",
+                        cssMetaData.getProperty(), styleable, e.getMessage());
+
+                List<CssParser.ParseError> errors = StyleManager.getErrors();
+                if (errors != null) {
+                    errors.add(new CssParser.ParseError.PropertySetError(cssMetaData, styleable, msg));
+                }
+
+                PlatformLogger logger = Logging.getCSSLogger();
+                if (logger.isLoggable(Level.WARNING)) {
+                    logger.warning(msg);
+                }
+            }
+        }
+    }
+
+    /**
+     * Returns the calculated value of the property from the cache entry, looking it up and caching it if missing.
+     */
+    private CalculatedValue getCalculatedValue(Node node, CssMetaData<Styleable, ?> cssMetaData, StyleMap styleMap,
+                                               Set<PseudoClass>[] transitionStates, CalculatedValue cachedFont,
+                                               StyleCacheEntry cacheEntry) {
+        final String property = cssMetaData.getProperty();
+
+        CalculatedValue calculatedValue = cacheEntry.get(property);
+        if (calculatedValue == null) {
+            /*
+             * A cache miss occurred; this means that either we're the first to evaluate
+             * this property, or that the CssMetaData didn't include this property yet
+             * (not all styleables have stable CssMetaData, most notably Control).
+             */
+            calculatedValue = lookup(node, cssMetaData, styleMap, transitionStates[0], node, cachedFont);
+
+            // lookup is not supposed to return null.
+            if (calculatedValue == null) {
+                assert false : "lookup returned null for " + property;
+                return null;
+            }
+
+            cacheEntry.put(property, calculatedValue);
+        }
+
+        return calculatedValue;
     }
 
     /**
@@ -1730,21 +1682,12 @@ final class CssStyleHelper {
 
         final CssStyleHelper parentHelper = parent.styleHelper;
 
-        // if there is no parentHelper,
-        // or there is a parentHelper but no cacheContainer,
-        // then look to the next parent
-        if (parentHelper == null || parentHelper.cacheContainer == null) {
-
+        // if there is no parentHelper, then look to the next parent
+        if (parentHelper == null) {
             cachedFont = getCachedFont(parent.getStyleableParent());
-
-        // there is a parent helper and a cacheContainer,
         } else  {
-
             CacheContainer parentCacheContainer = parentHelper.cacheContainer;
-            if ( parentCacheContainer != null
-                    && parentCacheContainer.fontSizeCache != null
-                    && parentCacheContainer.fontSizeCache.isEmpty() == false) {
-
+            if (!parentCacheContainer.fontSizeCache.isEmpty()) {
                 Set<PseudoClass>[] transitionStates = parentHelper.getTransitionStates(parent);
                 StyleCacheEntry.Key parentCacheEntryKey = new StyleCacheEntry.Key(transitionStates, Font.getDefault());
                 cachedFont = parentCacheContainer.fontSizeCache.get(parentCacheEntryKey);

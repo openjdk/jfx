@@ -963,11 +963,13 @@ gst_aac_parse_check_loas_frame (GstAacParse * aacparse,
   return FALSE;
 }
 
-/* caller ensure sufficient data */
-static inline void
+static inline gboolean
 gst_aac_parse_parse_adts_header (GstAacParse * aacparse, const guint8 * data,
-    gint * rate, gint * channels, gint * object, gint * version)
+    const guint avail, gint * rate, gint * channels, gint * object,
+    gint * version)
 {
+  if (avail < 4)
+    return FALSE;
 
   if (rate) {
     gint sr_idx = (data[2] & 0x3c) >> 2;
@@ -984,6 +986,8 @@ gst_aac_parse_parse_adts_header (GstAacParse * aacparse, const guint8 * data,
     *version = (data[1] & 0x08) ? 2 : 4;
   if (object)
     *object = ((data[2] & 0xc0) >> 6) + 1;
+
+  return TRUE;
 }
 
 /**
@@ -1054,8 +1058,12 @@ gst_aac_parse_detect_stream (GstAacParse * aacparse,
 
     GST_INFO ("ADTS ID: %d, framesize: %d", (data[1] & 0x08) >> 3, *framesize);
 
-    gst_aac_parse_parse_adts_header (aacparse, data, &rate, &channels,
-        &aacparse->object_type, &aacparse->mpegversion);
+    if (!gst_aac_parse_parse_adts_header (aacparse, data, avail, &rate,
+            &channels, &aacparse->object_type, &aacparse->mpegversion)) {
+      GST_DEBUG_OBJECT (aacparse,
+          "impossible ADTS configuration or not enough data");
+      return FALSE;
+    }
 
     if (!channels || !framesize) {
       GST_DEBUG_OBJECT (aacparse, "impossible ADTS configuration");
@@ -1484,8 +1492,17 @@ gst_aac_parse_handle_frame (GstBaseParse * parse,
     /* see above */
     frame->overhead = 7;
 
-    gst_aac_parse_parse_adts_header (aacparse, map.data,
-        &rate, &channels, NULL, NULL);
+    if (!gst_aac_parse_parse_adts_header (aacparse, map.data, map.size,
+            &rate, &channels, NULL, NULL)) {
+      /* This is pretty normal when skipping data at the start of
+       * random stream (MPEG-TS capture for example) */
+      GST_DEBUG_OBJECT (aacparse, "Error reading ADTS header. Skipping.");
+      /* Since we don't fully parsed the ADTS header, we don't know for sure
+       * how much to skip. Just skip 1 to end up to the next marker and
+       * resume parsing from there */
+      *skipsize = 1;
+      goto exit;
+    }
 
     GST_LOG_OBJECT (aacparse, "rate: %d, chans: %d", rate, channels);
 

@@ -49,7 +49,6 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
-import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.control.behavior.TitledPaneBehavior;
 
@@ -68,12 +67,6 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane>  {
      **************************************************************************/
 
     private static final Duration TRANSITION_DURATION = new Duration(350.0);
-
-    // caching results in poorer looking text (it is blurry), so we don't do it
-    // unless on a low powered device (admittedly the test below isn't a great
-    // indicator of power, but it'll do for now).
-    private static final boolean CACHE_ANIMATION = PlatformUtil.isEmbedded();
-
 
 
     /* *************************************************************************
@@ -354,7 +347,6 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane>  {
                 Duration.ZERO,
                     event -> {
                         // start expand
-                        if (CACHE_ANIMATION) content.setCache(true);
                         content.setVisible(true);
                     },
                 new KeyValue(transitionProperty(), transitionStartValue)
@@ -362,20 +354,12 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane>  {
 
             k2 = new KeyFrame(
                 duration,
-                    event -> {
-                        // end expand
-                        if (CACHE_ANIMATION) content.setCache(false);
-                    },
                 new KeyValue(transitionProperty(), 1, Interpolator.LINEAR)
 
             );
         } else {
             k1 = new KeyFrame(
                 Duration.ZERO,
-                    event -> {
-                        // Start collapse
-                        if (CACHE_ANIMATION) content.setCache(true);
-                    },
                 new KeyValue(transitionProperty(), transitionStartValue)
             );
 
@@ -384,7 +368,6 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane>  {
                     event -> {
                         // end collapse
                         content.setVisible(false);
-                        if (CACHE_ANIMATION) content.setCache(false);
                     },
                 new KeyValue(transitionProperty(), 0, Interpolator.LINEAR)
             );

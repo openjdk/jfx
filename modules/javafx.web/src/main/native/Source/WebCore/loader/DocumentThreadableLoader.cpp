@@ -103,6 +103,30 @@ static inline bool shouldPerformSecurityChecks()
     return platformStrategies()->loaderStrategy()->shouldPerformSecurityChecks();
 }
 
+#if PLATFORM(JAVA)
+enum class JarURLType : uint8_t {
+    NotJar,
+    Local,
+    Remote
+};
+
+static JarURLType jarURLType(const URL& url)
+{
+    auto protocol = url.protocol();
+    if (protocol == "jar:file"_s)
+        return JarURLType::Local;
+    if (protocol == "jar:http"_s || protocol == "jar:https"_s)
+        return JarURLType::Remote;
+    return JarURLType::NotJar;
+}
+
+static bool remoteJarURLCannotRequestLocalJarURL(const URL& source, const URL& target)
+{
+    return jarURLType(source) == JarURLType::Remote
+        && jarURLType(target) == JarURLType::Local;
+}
+#endif
+
 bool DocumentThreadableLoader::shouldSetHTTPHeadersToKeep() const
 {
     if (m_options.mode == FetchOptions::Mode::Cors && shouldPerformSecurityChecks())
@@ -147,6 +171,14 @@ DocumentThreadableLoader::DocumentThreadableLoader(Document& document, Threadabl
     ASSERT(!request.hasHTTPReferrer() && !request.hasHTTPOrigin());
 
     ASSERT_WITH_SECURITY_IMPLICATION(isAllowedByContentSecurityPolicy(request.url(), ContentSecurityPolicy::RedirectResponseReceived::No));
+
+#if PLATFORM(JAVA)
+    if (m_options.initiatorType == cachedResourceRequestInitiatorTypes().xmlhttprequest
+        && remoteJarURLCannotRequestLocalJarURL(document.url(), request.url())) {
+        logErrorAndFail(ResourceError(errorDomainWebKitInternal, 0, request.url(), "Remote jar URLs are not allowed to request local jar URLs."_s, ResourceError::Type::AccessControl));
+        return;
+    }
+#endif
 
     m_options.storedCredentialsPolicy = (m_options.credentials == FetchOptions::Credentials::Include || (m_options.credentials == FetchOptions::Credentials::SameOrigin && m_sameOriginRequest)) ? StoredCredentialsPolicy::Use : StoredCredentialsPolicy::DoNotUse;
 

@@ -27,9 +27,11 @@ import java.util.ArrayList;
 import java.util.UUID;
 import java.util.Set;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.Group;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.Dragboard;
@@ -85,7 +87,9 @@ public class DndBasic extends Application {
         instructions.setWrapText(true);
         instructions.setMaxWidth(620);
 
-        VBox withInstructions = new VBox(instructions, columns);
+        HBox passFailButtons = createPassFailButtons();
+
+        VBox withInstructions = new VBox(instructions, columns, passFailButtons);
         withInstructions.setSpacing(20);
         withInstructions.setPadding(new Insets(10, 10, 10, 10));
         Scene s = new Scene(withInstructions);
@@ -250,6 +254,22 @@ public class DndBasic extends Application {
         target.setFill(Color.LIGHTBLUE);
 
         return new Group(target, labels);
+    }
+
+    private HBox createPassFailButtons() {
+        var passButton = new Button("Pass");
+        passButton.setOnAction(e -> {
+            System.out.println("TEST PASSED");
+            Platform.exit();
+        });
+        var failButton = new Button("Fail");
+        failButton.setOnAction(e -> {
+            System.out.println("TEST FAILED");
+            Platform.exit();
+            throw new AssertionError("Test failed");
+        });
+        var hbox = new HBox(10, passButton, failButton);
+        return hbox;
     }
 
     public static void main(String[] args) {

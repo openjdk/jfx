@@ -46,9 +46,11 @@ public class NotResizableWindowTest extends Application{
             dialog.show();
         });
         passButton.setOnAction((e)->{
+            System.out.println("TEST PASSED");
             quit();
         });
         failButton.setOnAction((e)->{
+            System.out.println("TEST FAILED");
             quit();
             throw new AssertionError("The window buttons are not same");
         });
