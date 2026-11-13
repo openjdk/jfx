@@ -67,7 +67,10 @@ import com.sun.javafx.scene.text.TextFlowHelper;
 import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.scene.text.TextLine;
 import com.sun.javafx.util.ImageUtils;
+import com.sun.jfx.incubator.scene.control.richtext.VFlow;
+import jfx.incubator.scene.control.richtext.CodeArea;
 import jfx.incubator.scene.control.richtext.RichTextArea;
+import jfx.incubator.scene.control.richtext.StyleResolver;
 import jfx.incubator.scene.control.richtext.TextPos;
 import jfx.incubator.scene.control.richtext.model.StyleAttribute;
 import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
@@ -860,5 +863,14 @@ public final class RichUtils {
         } else {
             System.out.println(x);
         }
+    }
+
+    public static Font codeAreaFont(StyleResolver r) {
+        if (r instanceof VFlow f) {
+            if (f.getRichTextArea() instanceof CodeArea c) {
+                return c.getFont();
+            }
+        }
+        return null;
     }
 }

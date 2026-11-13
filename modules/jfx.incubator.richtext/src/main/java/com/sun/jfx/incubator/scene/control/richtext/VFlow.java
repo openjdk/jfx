@@ -242,6 +242,10 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
         caretPath.visibleProperty().unbind();
     }
 
+    public RichTextArea getRichTextArea() {
+        return control;
+    }
+
     public Pane getContentPane() {
         return content;
     }
