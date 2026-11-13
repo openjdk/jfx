@@ -65,6 +65,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -1371,6 +1372,91 @@ public class CssStyleHelperTest {
         assertEquals(1, node.getBoom());
     }
 
+    /**
+     * A property which was set by CSS (pseudo class), but whose metadata was removed from the node
+     * (like a skin property after the skin was removed), must not be reset on a pseudo class change.
+     */
+    @Test
+    void testRemovedMetadataIsNotResetOnPseudoClassChange() {
+        scene.getStylesheets().add(toDataURL("""
+                .node:hover { -fx-extra: 10; }
+                """));
+
+        DummyControl node = new DummyControl();
+        node.attachExtraProperty();
+        node.getStyleClass().add("node");
+        root.getChildren().add(node);
+        node.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
+        root.applyCss();
+
+        assertEquals(10, node.getExtra());
+
+        node.detachExtraProperty();
+        root.applyCss();
+
+        node.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), false);
+        root.applyCss();
+
+        assertEquals(10, node.getExtra());
+    }
+
+    /**
+     * A property which was set by CSS (style class), but whose metadata was removed from the node
+     * (like a skin property after the skin was removed), must not be reset anymore.
+     */
+    @Test
+    @Disabled
+    void testRemovedMetadataIsNotResetOnStyleMapChange() {
+        scene.getStylesheets().add(toDataURL("""
+                .node { -fx-extra: 10; }
+                """));
+
+        DummyControl node = new DummyControl();
+        node.attachExtraProperty();
+        node.getStyleClass().add("node");
+        root.getChildren().add(node);
+        root.applyCss();
+
+        assertEquals(10, node.getExtra());
+
+        node.detachExtraProperty();
+        node.getStyleClass().remove("node");
+        root.applyCss();
+
+        assertEquals(10, node.getExtra());
+    }
+
+
+    @Test
+    void testStyleKeptWhenApplyingCssAfterWindowWasHidden() {
+        assertStyleIsKeptWhenApplyingCss(() -> stage.hide());
+    }
+
+    @Test
+    void testStyleKeptWhenApplyingCssAfterSceneWasRemovedFromWindow() {
+        assertStyleIsKeptWhenApplyingCss(() -> stage.setScene(null));
+    }
+
+    private void assertStyleIsKeptWhenApplyingCss(Runnable hideScene) {
+        scene.getStylesheets().add(toDataURL("""
+                .a { -fx-opacity: 0.5; }
+                .b { -fx-rotate: 5; }
+                """));
+        Pane child = new Pane();
+        child.getStyleClass().add("a");
+        root.getChildren().add(child);
+        stage.show();
+
+        hideScene.run();
+
+        Pane child2 = new Pane();
+        child2.getStyleClass().add("b");
+        root.getChildren().add(child2);
+        root.applyCss();
+
+        assertEquals(0.5, child.getOpacity());
+    }
+
     private static String toDataURL(String stylesheet) {
         return "data:text/plain;base64," + Base64.getEncoder().encodeToString(stylesheet.getBytes(StandardCharsets.UTF_8));
     }
@@ -1429,6 +1515,11 @@ public class CssStyleHelperTest {
 
         void attachExtraProperty() {
             extraAttached = true;
+            cachedMetaData = null;
+        }
+
+        void detachExtraProperty() {
+            extraAttached = false;
             cachedMetaData = null;
         }
 
