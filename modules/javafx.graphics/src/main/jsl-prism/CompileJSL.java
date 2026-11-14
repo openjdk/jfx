@@ -504,6 +504,7 @@ public class CompileJSL {
             compileSolidTexture(jslcinfo, "YV12", alphaTest);
             compileSolidTexture(jslcinfo, "FirstPassLCD", alphaTest);
             compileLCDShader(jslcinfo, "SecondPassLCD", alphaTest);
+            compileLCDShader(jslcinfo, "SecondPassLCDNew", alphaTest);
         }
     }
 }
