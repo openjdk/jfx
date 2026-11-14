@@ -97,29 +97,31 @@ static gboolean on_retrieve_surrounding(GtkIMContext* self, gpointer user_data) 
     return TRUE;
 }
 
-void WindowContextBase::commitIME(gchar *str) {
+void WindowContext::commitIME(gchar *str) {
     if (im_ctx.in_preedit_window || !im_ctx.on_key_event) {
         jstring jstr = mainEnv->NewStringUTF(str);
         EXCEPTION_OCCURED(mainEnv);
         jsize slen = mainEnv->GetStringLength(jstr);
 
-        mainEnv->CallVoidMethod(jview,
-                jViewNotifyInputMethodLinux,
-                jstr,
-                slen,
-                slen,
-                0);
-        LOG_EXCEPTION(mainEnv)
+        if (jview) {
+            mainEnv->CallVoidMethod(jview,
+                    jViewNotifyInputMethodLinux,
+                    jstr,
+                    slen,
+                    slen,
+                    0);
+            LOG_EXCEPTION(mainEnv)
+        }
     } else {
         im_ctx.send_keypress = true;
     }
 }
 
-bool WindowContextBase::hasIME() {
+bool WindowContext::hasIME() {
     return im_ctx.enabled;
 }
 
-bool WindowContextBase::filterIME(GdkEvent *event) {
+bool WindowContext::filterIME(GdkEvent *event) {
     if (!hasIME()) {
         return false;
     }
@@ -145,18 +147,20 @@ bool WindowContextBase::filterIME(GdkEvent *event) {
     return filtered;
 }
 
-void WindowContextBase::setOnPreEdit(bool preedit) {
+void WindowContext::setOnPreEdit(bool preedit) {
     im_ctx.on_preedit = preedit;
 }
 
-void WindowContextBase::updateCaretPos() {
+void WindowContext::updateCaretPos() {
+    if (!jview) return;
+
     double *nativePos;
 
-    jdoubleArray pos = (jdoubleArray)mainEnv->CallObjectMethod(get_jview(),
+    jdoubleArray pos = (jdoubleArray)mainEnv->CallObjectMethod(jview,
                                       jViewNotifyInputMethodCandidateRelativePosRequest,
                                       0);
 
-    nativePos = mainEnv->GetDoubleArrayElements(pos, NULL);
+    nativePos = mainEnv->GetDoubleArrayElements(pos, nullptr);
 
     GdkRectangle rect;
     if (nativePos) {
@@ -170,7 +174,7 @@ void WindowContextBase::updateCaretPos() {
     }
 }
 
-void WindowContextBase::enableOrResetIME() {
+void WindowContext::enableOrResetIME() {
     if (im_ctx.on_preedit) {
         gtk_im_context_focus_out(im_ctx.ctx);
     }
@@ -196,10 +200,10 @@ void WindowContextBase::enableOrResetIME() {
     im_ctx.in_preedit_window = false;
 }
 
-void WindowContextBase::disableIME() {
-    if (im_ctx.ctx != NULL) {
+void WindowContext::disableIME() {
+    if (im_ctx.ctx != nullptr) {
         g_object_unref(im_ctx.ctx);
-        im_ctx.ctx = NULL;
+        im_ctx.ctx = nullptr;
     }
 
     im_ctx.enabled = false;

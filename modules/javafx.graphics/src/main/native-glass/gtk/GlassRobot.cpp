@@ -273,7 +273,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkRobot__1getScreenCapture
     GdkPixbuf *screenshot, *tmp;
     GdkWindow *root_window = gdk_get_default_root_window();
 
-    tmp = glass_pixbuf_from_window(root_window, x, y, width, height);
+    tmp = gdk_pixbuf_get_from_window(root_window, x, y, width, height);
     if (!tmp) {
         return;
     }
