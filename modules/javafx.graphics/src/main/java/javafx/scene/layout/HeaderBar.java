@@ -511,6 +511,8 @@ public class HeaderBar extends Region {
      * Creates a new {@code HeaderBar}.
      */
     public HeaderBar() {
+        getStyleClass().add("header-bar");
+
         // Inflate the minHeight property. This is important so that we can track whether a stylesheet or
         // user code changes the property value before we set it to the height of the native title bar.
         minHeightProperty();
