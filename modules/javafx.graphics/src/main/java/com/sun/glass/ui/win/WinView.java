@@ -25,7 +25,6 @@
 package com.sun.glass.ui.win;
 
 import com.sun.glass.events.MouseEvent;
-import com.sun.glass.ui.HeaderButtonOverlay;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.View;
 import com.sun.javafx.tk.HeaderAreaType;
@@ -133,12 +132,6 @@ final class WinView extends View {
             double wx = x / window.getPlatformScaleX();
             double wy = y / window.getPlatformScaleY();
 
-            // Give the header button overlay the first chance to handle the event.
-            if (window.headerButtonOverlayProperty().get() instanceof HeaderButtonOverlay overlay
-                    && overlay.handleMouseEvent(type, button, wx, wy)) {
-                return true;
-            }
-
             if (window.isResizable()
                     && clickCount == 2
                     && type == MouseEvent.DOWN
@@ -148,8 +141,6 @@ final class WinView extends View {
             }
         }
 
-        // If the overlay didn't handle the event, we pass it down to the application.
-        handleMouseEvent(time, type, button, x, y, xAbs, yAbs, modifiers, false, false);
-        return true;
+        return false;
     }
 }

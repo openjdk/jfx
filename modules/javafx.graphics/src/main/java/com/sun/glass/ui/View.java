@@ -909,6 +909,23 @@ public abstract class View {
     private static int clickCount;
     private static boolean dragProcessed = false;
 
+    private HeaderButtonEventRouter headerButtonRouter;
+
+    private boolean routeNonClientEvent(long time, int type, int button, int x, int y, int xAbs, int yAbs,
+                                        int modifiers, boolean isSynthesized) {
+        if (headerButtonRouter == null) {
+            headerButtonRouter = new HeaderButtonEventRouter(this);
+        }
+
+        if (headerButtonRouter.routeEvent(time, type, button, x, y, xAbs, yAbs, modifiers, isSynthesized)) {
+            return true;
+        }
+
+        // A full-screen window has no non-client area, and thus the non-client handler is not notified.
+        return !inFullscreen
+            && handleNonClientMouseEvent(time, type, button, x, y, xAbs, yAbs, modifiers, clickCount);
+    }
+
     protected void notifyMouse(int type, int button, int x, int y, int xAbs,
                                int yAbs, int modifiers, boolean isPopupTrigger,
                                boolean isSynthesized) {
@@ -935,15 +952,12 @@ public abstract class View {
             lastClickedTime = now;
         }
 
-        // If this is an extended window, we give the non-client handler the first chance to handle the event.
-        // Note that a full-screen window has no non-client area, and thus the non-client event handler
-        // is not notified.
+        // If this is an extended window, we give the header button overlay and then the
+        // non-client handler the first chance to handle the event.
         boolean handled = window != null
             && window.isExtendedWindow()
-            && !isSynthesized
-            && !inFullscreen
             && shouldHandleEvent()
-            && handleNonClientMouseEvent(now, type, button, x, y, xAbs, yAbs, modifiers, clickCount);
+            && routeNonClientEvent(now, type, button, x, y, xAbs, yAbs, modifiers, isSynthesized);
 
         if (handled) {
             return;
