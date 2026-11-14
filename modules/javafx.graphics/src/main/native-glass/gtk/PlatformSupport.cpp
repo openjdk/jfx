@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,6 @@
 
 #include "PlatformSupport.h"
 #include "glass_general.h"
-#include <gtk/gtk.h>
 
 namespace
 {
@@ -79,12 +78,19 @@ namespace
     void notifyNetworkChanged(GNetworkMonitor*, gboolean, PlatformSupport* instance) {
         instance->updatePreferences();
     }
+
+    void notifyStyleChanged(GtkStyleContext*, PlatformSupport* instance) {
+        instance->scheduleUpdatePreferences();
+    }
 }
 
 constexpr const char* PlatformSupport::OBSERVED_SETTINGS[];
 
 PlatformSupport::PlatformSupport(JNIEnv* env, jobject application)
-        : env(env), application(env->NewGlobalRef(application)), preferences(NULL) {
+    : env(env),
+      application(env->NewGlobalRef(application)),
+      styleContext(gtk_style_context_new()),
+      preferences(NULL) {
     GtkSettings* settings = gtk_settings_get_default();
     if (settings != NULL) {
         for (int i = 0; i < NUM_OBSERVED_SETTINGS; ++i) {
@@ -99,6 +105,10 @@ PlatformSupport::PlatformSupport(JNIEnv* env, jobject application)
         G_OBJECT(g_network_monitor_get_default()), "network-changed",
         G_CALLBACK(notifyNetworkChanged), this,
         NULL, G_CONNECT_AFTER);
+
+    styleChangedHandler = g_signal_connect(
+        G_OBJECT(styleContext), "changed",
+        G_CALLBACK(notifyStyleChanged), this);
 }
 
 PlatformSupport::~PlatformSupport() {
@@ -111,6 +121,13 @@ PlatformSupport::~PlatformSupport() {
     }
 
     g_signal_handler_disconnect(G_OBJECT(g_network_monitor_get_default()), networkChangedHandler);
+
+    if (scheduledUpdateId != 0) {
+        g_source_remove(scheduledUpdateId);
+    }
+
+    g_signal_handler_disconnect(G_OBJECT(styleContext), styleChangedHandler);
+    g_object_unref(styleContext);
 
     env->DeleteGlobalRef(application);
 
@@ -197,4 +214,17 @@ void PlatformSupport::updatePreferences() const {
     }
 
     env->DeleteLocalRef(newPreferences);
+}
+
+void PlatformSupport::scheduleUpdatePreferences() {
+    if (scheduledUpdateId != 0) {
+        return;
+    }
+
+    scheduledUpdateId = gdk_threads_add_idle([](gpointer data) -> gboolean {
+        PlatformSupport* instance = static_cast<PlatformSupport*>(data);
+        instance->scheduledUpdateId = 0;
+        instance->updatePreferences();
+        return G_SOURCE_REMOVE;
+    }, this);
 }
