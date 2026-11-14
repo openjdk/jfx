@@ -414,9 +414,8 @@ public class HeaderButtonOverlay extends Region {
      * @param button the button type
      * @param x the X coordinate, in pixels relative to the window
      * @param y the Y coordinate, in pixels relative to the window
-     * @return {@code true} if the event was handled, {@code false} otherwise
      */
-    public boolean handleMouseEvent(int type, int button, double x, double y) {
+    public void handleMouseEvent(int type, int button, double x, double y) {
         HeaderButtonType buttonType = buttonAt(x, y);
         Node node = buttonType != null ? switch (buttonType) {
             case ICONIFY -> iconifyButton;
@@ -433,12 +432,6 @@ public class HeaderButtonOverlay extends Region {
         } else if (node != null && type == MouseEvent.DOWN && button == MouseEvent.BUTTON_LEFT) {
             handleMouseDown(node);
         }
-
-        if (type == MouseEvent.ENTER || type == MouseEvent.EXIT) {
-            return false;
-        }
-
-        return node != null || buttonAtMouseDown != null;
     }
 
     private void handleMouseOver(Node button) {
