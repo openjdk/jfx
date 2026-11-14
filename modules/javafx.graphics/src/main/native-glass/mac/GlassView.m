@@ -288,17 +288,8 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacView__1create
             jCapabilitiesRef = (*env)->NewGlobalRef(env, jCapabilities);
         }
 
-        // embed ourselves into GlassHostView, so we can later swap our view between windows (ex. fullscreen mode)
-        NSView *hostView = [[GlassHostView alloc] initWithFrame:NSMakeRect(0, 0, 0, 0)]; // alloc creates ref count of 1
-        [hostView setAutoresizingMask:(NSViewWidthSizable|NSViewHeightSizable)];
-        [hostView setAutoresizesSubviews:YES];
+        NSView* view = [[GlassView3D alloc] initWithFrame:NSMakeRect(0, 0, 10, 10) withJview:jView withJproperties:jCapabilities];
 
-        //NSLog(@"--- hostView bounds = (%f, %f) - (%f, %f)", [hostView bounds].origin.x, [hostView bounds].origin.y, [hostView bounds].size.width, [hostView bounds].size.height);
-
-        NSView* view = [[GlassView3D alloc] initWithFrame:[hostView bounds] withJview:jView withJproperties:jCapabilities];
-        [view setAutoresizingMask:(NSViewWidthSizable|NSViewHeightSizable)];
-
-        [hostView addSubview:view];
         jfieldID jfID = (*env)->GetFieldID(env, jViewClass, "ptr", "J");
         GLASS_CHECK_EXCEPTION(env);
         (*env)->SetLongField(env, jView, jfID, ptr_to_jlong(view));
@@ -441,10 +432,10 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacView__1close
     GLASS_POOL_ENTER;
     {
         NSView<GlassView> *view = getGlassView(env, jPtr);
-        NSView * host = [view superview];
-        if (host != nil) {
-            [view removeFromSuperview];
-            [host release];
+        NSView *superView = [view superview];
+        if ([superView isKindOfClass: [GlassHostView class]]) {
+            GlassHostView* host = (GlassHostView*) superView;
+            [host setJFXView: nil];
         }
         [view release];
     }
