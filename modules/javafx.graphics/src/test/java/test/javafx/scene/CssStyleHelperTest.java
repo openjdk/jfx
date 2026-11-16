@@ -1405,7 +1405,7 @@ public class CssStyleHelperTest {
      * (like a skin property after the skin was removed), must not be reset anymore.
      */
     @Test
-    @Disabled
+    @Disabled("JDK-8397428")
     void testRemovedMetadataIsNotResetOnStyleMapChange() {
         scene.getStylesheets().add(toDataURL("""
                 .node { -fx-extra: 10; }
