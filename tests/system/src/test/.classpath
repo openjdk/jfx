@@ -50,7 +50,7 @@
 			<attribute name="add-exports" value="java.desktop/sun.awt.datatransfer=ALL-UNNAMED"/>
 		</attributes>
 	</classpathentry>
-    <classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/5">
+    <classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/6">
         <attributes>
             <attribute name="test" value="true"/>
         </attributes>
@@ -69,5 +69,7 @@
             <attribute name="test" value="true"/>
         </attributes>
     </classpathentry>
+    <classpathentry kind="src" path="/incubator.richtext"/>
+    <classpathentry kind="src" path="/incubator.input"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

@@ -152,6 +152,107 @@ static char *gst_info_printf_pointer_extension_func (const char *format,
 #define GST_ENABLE_FORMAT_NONLITERAL_WARNING
 #endif
 
+#ifndef GSTREAMER_LITE
+#undef GST_TIME_ARGS
+#undef GST_STIME_ARGS
+#undef GST_TIME_FORMAT
+#undef GST_STIME_FORMAT
+
+static inline int
+_u32_to_dec (char *p, guint32 v)
+{
+  if (v == 0) {
+    *p = '0';
+    return 1;
+  }
+  char tmp[10];                 /* UINT32_MAX = 4294967295, 10 digits */
+  int n = 0;
+  while (v) {
+    tmp[n++] = '0' + (v % 10);
+    v /= 10;
+  }
+  for (int i = 0; i < n; ++i)
+    p[i] = tmp[n - 1 - i];
+  return n;
+}
+
+/* Internal: writes "[H...]H:MM:SS.nnnnnnnnn" at p, returns the end pointer.
+   Caller guarantees ns < GST_SECOND. */
+static inline char *
+_gst_write_hms_ns (char *p, guint64 sec, guint ns)
+{
+  guint h = (guint) (sec / 3600);       /* fits in 32 bits:
+                                           max ≈ 5.12e6 (unsigned)
+                                           max ≈ 2.56e6 (signed) */
+  guint r = (guint) (sec - (guint64) h * 3600);
+  guint m = r / 60;
+  guint s = r - m * 60;
+
+  p += _u32_to_dec (p, h);
+  *p++ = ':';
+  *p++ = '0' + (m / 10);
+  *p++ = '0' + (m % 10);
+  *p++ = ':';
+  *p++ = '0' + (s / 10);
+  *p++ = '0' + (s % 10);
+  *p++ = '.';
+  for (int i = 8; i >= 0; --i) {
+    p[i] = '0' + (ns % 10);
+    ns /= 10;
+  }
+  return p + 9;
+}
+
+static inline const char *
+_gst_t_str (GstClockTime t, char *buf)
+{
+  if (G_UNLIKELY (!GST_CLOCK_TIME_IS_VALID (t))) {
+    memcpy (buf, "99:99:99.999999999", 19);     /* incl. NUL */
+    return buf;
+  }
+  guint64 sec = t / GST_SECOND;
+  guint ns = (guint) (t - sec * GST_SECOND);
+  *_gst_write_hms_ns (buf, sec, ns) = '\0';
+  return buf;
+}
+
+static inline const char *
+_gst_st_str (GstClockTimeDiff t, char *buf)
+{
+  if (G_UNLIKELY (!GST_CLOCK_STIME_IS_VALID (t))) {
+    memcpy (buf, "+99:99:99.999999999", 20);    /* incl. NUL */
+    return buf;
+  }
+  char *p = buf;
+  guint64 abs_t;
+  if (t < 0) {
+    *p++ = '-';
+    /* Unsigned negation is defined modulo 2^64 and yields the correct
+       magnitude even at t == G_MININT64, where -(gint64)t would be UB.
+       For valid inputs (t != G_MININT64) the magnitude fits in gint64
+       anyway; this idiom just avoids a special case. */
+    abs_t = -(guint64) t;
+  } else {
+    *p++ = '+';
+    abs_t = (guint64) t;
+  }
+  guint64 sec = abs_t / GST_SECOND;
+  guint ns = (guint) (abs_t - sec * GST_SECOND);
+  *_gst_write_hms_ns (p, sec, ns) = '\0';
+  return buf;
+}
+
+/*
+ * The use of compound literals here is fine because the scope is the enclosing
+ * block, which is more than enough. The memory is only used for log formatting
+ * and isn't used outside of the formatting function call.
+ */
+#define GST_TIME_FORMAT  "s"
+#define GST_TIME_ARGS(t) _gst_t_str((t), (char[32]){0})
+
+#define GST_STIME_FORMAT  "s"
+#define GST_STIME_ARGS(t) _gst_st_str((t), (char[32]){0})
+#endif // GSTREAMER_LITE
 
 #ifdef G_OS_WIN32
 #  define WIN32_LEAN_AND_MEAN   /* prevents from including too many things */
@@ -361,6 +462,10 @@ struct _GstDebugMessage
 
   /* heap-allocated write area for short names */
   gchar tmp_id[32];
+
+  /* Inline buffer @message is formatted into; vasnprintf falls back to malloc
+   * only if the result doesn't fit. */
+  gchar inline_buf[1024];
 };
 
 struct _GstLogContext
@@ -460,6 +565,13 @@ _priv_gst_debug_file_name (const gchar * env)
   return name;
 }
 
+#ifdef G_OS_WIN32
+/* HANDLE for the configured log file. This needs to be in static storage
+ * because the address allows us to check when gst_debug_log_default() is
+ * called with a custom FILE* pointer by the user. */
+static HANDLE _gst_debug_log_handle = INVALID_HANDLE_VALUE;
+#endif
+
 /* Initialize the debugging system */
 void
 _priv_gst_debug_init (void)
@@ -474,13 +586,37 @@ _priv_gst_debug_init (void)
         log_file = stdout;
       } else {
         gchar *name = _priv_gst_debug_file_name (env);
+#ifdef G_OS_WIN32
+        wchar_t *wname = g_utf8_to_utf16 (name, -1, NULL, NULL, NULL);
+        if (wname) {
+          /* FILE_APPEND_DATA makes the kernel append each call's buffer
+           * atomically, so multiple threads logging in parallel never
+           * interleave lines and there is no userspace lock to contend on
+           * FILE_SHARE_READ allows other processes to read the file.
+           */
+          _gst_debug_log_handle = CreateFileW (wname, FILE_APPEND_DATA,
+              FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL,
+              NULL);
+          g_free (wname);
+        }
+        if (_gst_debug_log_handle == INVALID_HANDLE_VALUE) {
+          g_printerr ("Could not open log file '%s' for writing: %u\n", env,
+              (guint) GetLastError ());
+          log_file = stderr;
+        } else {
+          /* Sentinel: _gst_debug_fprintf detects this by pointer-equality and
+           * writes via the HANDLE instead of through the CRT FILE* layer. */
+          log_file = (FILE *) & _gst_debug_log_handle;
+        }
+#else
         log_file = g_fopen (name, "w");
-        g_free (name);
         if (log_file == NULL) {
           g_printerr ("Could not open log file '%s' for writing: %s\n", env,
               g_strerror (errno));
           log_file = stderr;
         }
+#endif
+        g_free (name);
       }
     } else {
       log_file = stderr;
@@ -843,7 +979,8 @@ gst_debug_log_full_valist (GstDebugCategory * category, GstLogContext * ctx,
   }
   g_rw_lock_reader_unlock (&__log_func_mutex);
 
-  g_free (message.message);
+  if (message.message != message.inline_buf)
+    g_free (message.message);
   if (message.free_object_id)
     g_free (message.object_id);
   va_end (message.arguments);
@@ -1016,8 +1153,8 @@ gst_debug_message_get (GstDebugMessage * message)
   if (message->message == NULL) {
     int len;
 
-    len = __gst_vasprintf (&message->message, message->format,
-        message->arguments);
+    len = __gst_vasprintf_buf (&message->message, message->inline_buf,
+        sizeof (message->inline_buf), message->format, message->arguments);
 
     if (len < 0)
       message->message = NULL;
@@ -1775,11 +1912,13 @@ static void
 _gst_debug_fprintf (FILE * file, const gchar * format, ...)
 {
   va_list args;
+  gchar inline_buf[1024];
   gchar *str = NULL;
   gint length;
 
   va_start (args, format);
-  length = gst_info_vasprintf (&str, format, args);
+  length = __gst_vasprintf_buf (&str, inline_buf, sizeof (inline_buf),
+      format, args);
   va_end (args);
 
   if (length == 0 || !str)
@@ -1794,16 +1933,18 @@ _gst_debug_fprintf (FILE * file, const gchar * format, ...)
     g_printerr ("%s", str);
   } else if (file == stdout) {
     g_print ("%s", str);
+  } else if (file == (FILE *) & _gst_debug_log_handle) {
+    /* By default, we can bypass the CRT's buffering by using WriteFile */
+    DWORD written;
+    WriteFile (_gst_debug_log_handle, str, (DWORD) length, &written, NULL);
   } else {
-    /* We are writing to file. Text editors/viewers should be able to
-     * decode valid UTF-8 string regardless of codepage setting */
+    /* Cater for a custom FILE* user_data in gst_debug_add_log_function */
     fwrite (str, 1, length, file);
-
-    /* FIXME: fflush here might be redundant if setvbuf works as expected */
     fflush (file);
   }
 
-  g_free (str);
+  if (str != inline_buf)
+    g_free (str);
 }
 #endif
 
@@ -3309,6 +3450,10 @@ _priv_gst_debug_cleanup (void)
     __log_functions = g_slist_delete_link (__log_functions, __log_functions);
   }
   g_rw_lock_writer_unlock (&__log_func_mutex);
+
+#ifdef G_OS_WIN32
+  CloseHandle (_gst_debug_log_handle);
+#endif
 
 #ifdef HAVE_UNWIND
 # ifdef HAVE_DW

@@ -1297,7 +1297,8 @@ static jstring convertNSStringToJString(id aString, int length)
 
 - (GlassAccessible*)getAccessible
 {
-    GET_MAIN_JENV;
+    GET_MAIN_JENV_NOWARN;
+    if (env == NULL) return nil;
     jlong accessible = (*env)->CallLongMethod(env, self->jView, jViewGetAccessible);
     GLASS_CHECK_EXCEPTION(env);
     return (GlassAccessible*)jlong_to_ptr(accessible);

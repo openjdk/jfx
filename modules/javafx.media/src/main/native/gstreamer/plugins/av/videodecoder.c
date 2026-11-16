@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -208,7 +208,7 @@ static gboolean videodecoder_is_decoder_by_codec_id_supported(gint codec_id)
 {
     switch(codec_id)
     {
-    case JFX_CODEC_ID_H265:
+    case JFX_CODEC_ID_HEVC:
 #if HEVC_SUPPORT
         return TRUE;
 #else // HEVC_SUPPORT

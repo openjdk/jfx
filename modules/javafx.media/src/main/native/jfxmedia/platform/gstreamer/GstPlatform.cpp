@@ -50,17 +50,14 @@ extern "C" {
     /* Initialize the Java VM instance variable when the library is first loaded */
     JavaVM *g_pJVM;
 
-    /*
-     * Specify the require JNI version.
-     */
 #ifdef STATIC_BUILD
     JNIEXPORT jint JNICALL JNI_OnLoad_jfxmedia(JavaVM *vm, void *reserved)
 #else
     JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
-#endif
+#endif // STATIC_BUILD
     {
         g_pJVM = vm;
-        return JNI_VERSION_1_2;
+        return JNI_VERSION_1_8;
     }
 
     /**

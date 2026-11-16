@@ -35,12 +35,12 @@ import com.sun.prism.ReadbackRenderTarget;
 import com.sun.prism.Texture;
 
 import java.nio.Buffer;
+import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 
 
 class MTLRTTexture extends MTLTexture<MTLTextureData>
                        implements RTTexture, ReadbackRenderTarget {
-    private final int[] pixels;
     private final int  rttWidth;
     private final int  rttHeight;
     private final long nTexPtr;
@@ -62,7 +62,7 @@ class MTLRTTexture extends MTLTexture<MTLTextureData>
                 maxContentWidth, maxContentHeight, false);
         rttWidth  = contentWidth;
         rttHeight = contentHeight;
-        pixels  = new int[rttWidth * rttHeight];
+        int[] pixels = new int[rttWidth * rttHeight];
         nTexPtr = resource.getResource().getResource();
         opaque  = false;
         MSAA    = msaa;
@@ -115,22 +115,44 @@ class MTLRTTexture extends MTLTexture<MTLTextureData>
 
     @Override
     public int[] getPixels() {
-        // Flush the VB before reading the pixels.
-        getContext().flushVertexBuffer();
-        nReadPixels(nTexPtr, pixels);
-        return pixels;
+        return null;
     }
 
     @Override
-    public boolean readPixels(Buffer pix) {
-        // The call from Canvas rendering expects IntBuffer, which is implemented here.
-        // In future, if needed, need to implement pix as ByteBuffer
-        if (pix instanceof IntBuffer pixBuf) {
-            nReadPixelsFromRTT(nTexPtr, pixBuf);
-            // pix = IntBuffer.wrap(pixels);
-            return true;
+    public boolean readPixels(Buffer pixels, int x, int y, int width, int height) {
+        if (x != getContentX() || y != getContentY()
+                || width != getContentWidth() || height != getContentHeight())
+        {
+            throw new IllegalArgumentException("reading subtexture not yet supported!");
         }
-        return false;
+        return readPixels(pixels);
+    }
+
+    @Override
+    public boolean readPixels(Buffer pixels) {
+        final MTLContext context = getContext();
+        if (context.isDisposed()) {
+            return false;
+        }
+        context.flushVertexBuffer();
+        boolean res = false;
+        if (pixels instanceof ByteBuffer buf) {
+            // The call from Webkit-RTImage expects ByteBuffer
+            byte[] arr = buf.hasArray() ? buf.array() : null;
+            int length = buf.capacity();
+            res = nReadPixelsByte(nTexPtr, pixels, arr, length,
+                                  getContentWidth(), getContentHeight());
+        } else if (pixels instanceof IntBuffer buf) {
+            // The call from canvas & tiled-texture rendering expects IntBuffer
+            int[] arr = buf.hasArray() ? buf.array() : null;
+            int lengthInBytes = buf.capacity() * 4;
+            res = nReadPixelsInt(nTexPtr, pixels, arr, lengthInBytes,
+                                 getContentWidth(), getContentHeight());
+        } else {
+            throw new IllegalArgumentException("Buffer of this type is " +
+                                               "not supported: " + pixels);
+        }
+        return res;
     }
 
     @Override
@@ -172,14 +194,14 @@ class MTLRTTexture extends MTLTexture<MTLTextureData>
     private static native void nReadPixelsFromRTT(long nativeHandle, IntBuffer pixBuffer);
     private static native long nGetPixelDataPtr(long nativeHandle);
     private static native void nInitRTT(long pTex, int[] pix);
-
+    private static native boolean nReadPixelsByte(long nativeHandle,
+                                                    Buffer pixels, byte[] arr, int length,
+                                                    int contentWidth, int contentHeight);
+    private static native boolean nReadPixelsInt(long nativeHandle,
+                                                    Buffer pixels, int[] arr, int length,
+                                                    int contentWidth, int contentHeight);
 
     // Unsupported Operation methods
-
-    @Override
-    public boolean readPixels(Buffer pixels, int x, int y, int width, int height) {
-        throw new UnsupportedOperationException("Not implemented");
-    }
 
     @Override
     public void setContentWidth(int contentWidth) {

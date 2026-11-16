@@ -27,6 +27,7 @@ package com.sun.media.jfxmedia.locator;
 import com.sun.media.jfxmedia.MediaError;
 import com.sun.media.jfxmedia.MediaException;
 import com.sun.media.jfxmediaimpl.MediaUtils;
+import com.sun.javafx.PlatformUtil;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -73,6 +74,7 @@ final class HLSConnectionHolder extends ConnectionHolder {
     // Seek will set this value and HLS_PROP_SEGMENT_START_TIME
     // should return it if set.
     private int segmentStartTimeAfterSeek = -1;
+    private static final boolean SEND_HEADER_WITH_EACH_SEGMENT = PlatformUtil.isWindows();
     static final long HLS_VALUE_FLOAT_MULTIPLIER = 1000;
     static final int HLS_PROP_GET_DURATION = 1;
     static final int HLS_PROP_GET_HLS_MODE = 2;
@@ -368,7 +370,9 @@ final class HLSConnectionHolder extends ConnectionHolder {
             } catch (IOException | URISyntaxException e) {
                 return -1;
             }
-            sendHeader = false;
+            if (!SEND_HEADER_WITH_EACH_SEGMENT) {
+                sendHeader = false;
+            }
         }
 
         mediaFile = currentPlaylist.getNextMediaFile();

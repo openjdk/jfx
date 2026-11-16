@@ -62,8 +62,13 @@
                            mtlTex:(long)pTex;
 
 - (void) initRTT:(int*)arr;
+
 - (void) readPixels:(int*)pDst;
 - (void) readPixelsFromRTT:(int*)pDst;
+- (BOOL) doReadPixels:(void*)pixels
+               length:(int)length
+         contentWidth:(int)cntW
+        contentHeight:(int)cntH;
 
 - (void) createDepthTexture;
 - (void) dealloc;

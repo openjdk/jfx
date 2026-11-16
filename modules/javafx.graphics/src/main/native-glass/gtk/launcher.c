@@ -64,7 +64,7 @@ JNI_OnLoad(JavaVM *jvm, void *reserved)
 
     javaVM = jvm;
 
-    return JNI_VERSION_1_6;
+    return JNI_VERSION_1_8;
 }
 
 // our library combinations defined
@@ -215,4 +215,3 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1queryLibrary
 
     return com_sun_glass_ui_gtk_GtkApplication_QUERY_ERROR;
 }
-

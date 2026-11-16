@@ -65,15 +65,10 @@ private:
     UHashtable               *fHashTable;
     RBBIRuleScanner          *fRuleScanner;
 
-    // These next two fields are part of the mechanism for passing references to
-    //   already-constructed UnicodeSets back to the UnicodeSet constructor
-    //   when the pattern includes $variable references.
-    const UnicodeString      ffffString;      // = "/uffff"
-    UnicodeSet              *fCachedSetLookup;
-
 public:
     //  API inherited from class SymbolTable
     virtual const UnicodeString*  lookup(const UnicodeString& s) const override;
+    virtual const UnicodeSet* lookupSet(const UnicodeString& s) const override;
     virtual const UnicodeFunctor* lookupMatcher(UChar32 ch) const override;
     virtual UnicodeString parseReference(const UnicodeString& text,
                                          ParsePosition& pos, int32_t limit) const override;

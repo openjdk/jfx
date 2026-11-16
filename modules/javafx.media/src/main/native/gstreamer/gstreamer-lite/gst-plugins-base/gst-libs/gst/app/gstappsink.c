@@ -267,6 +267,8 @@ static gboolean gst_app_sink_setcaps (GstBaseSink * sink, GstCaps * caps);
 static GstCaps *gst_app_sink_getcaps (GstBaseSink * psink, GstCaps * filter);
 static gboolean gst_app_sink_propose_allocation (GstBaseSink * bsink,
     GstQuery * query);
+static GstStateChangeReturn gst_app_sink_change_state (GstElement * element,
+    GstStateChange transition);
 
 static guint gst_app_sink_signals[LAST_SIGNAL] = { 0 };
 
@@ -742,6 +744,8 @@ gst_app_sink_class_init (GstAppSinkClass * klass)
   gst_element_class_add_static_pad_template (element_class,
       &gst_app_sink_template);
 
+  element_class->change_state = gst_app_sink_change_state;
+
   basesink_class->unlock = gst_app_sink_unlock_start;
   basesink_class->unlock_stop = gst_app_sink_unlock_stop;
   basesink_class->start = gst_app_sink_start;
@@ -991,6 +995,18 @@ gst_app_sink_unlock_stop (GstBaseSink * bsink)
 }
 
 static void
+gst_app_sink_clear_sample_contents (GstAppSink * appsink)
+{
+  GstAppSinkPrivate *priv = appsink->priv;
+
+  priv->sample = gst_sample_make_writable (priv->sample);
+  gst_sample_set_buffer (priv->sample, NULL);
+  gst_sample_set_buffer_list (priv->sample, NULL);
+  gst_sample_set_caps (priv->sample, NULL);
+  gst_sample_set_segment (priv->sample, NULL);
+}
+
+static void
 gst_app_sink_flush_unlocked (GstAppSink * appsink)
 {
   GstMiniObject *obj;
@@ -1025,6 +1041,7 @@ gst_app_sink_flush_unlocked (GstAppSink * appsink)
 
   gst_queue_status_info_reset (&priv->queue_status_info);
 
+  gst_app_sink_clear_sample_contents (appsink);
   gst_caps_replace (&priv->last_caps, NULL);
   g_cond_signal (&priv->cond);
   priv->in = priv->out = priv->dropped = 0;
@@ -1043,11 +1060,7 @@ gst_app_sink_start (GstBaseSink * psink)
   priv->started = TRUE;
   gst_segment_init (&priv->preroll_segment, GST_FORMAT_TIME);
   gst_segment_init (&priv->last_segment, GST_FORMAT_TIME);
-  priv->sample = gst_sample_make_writable (priv->sample);
-  gst_sample_set_buffer (priv->sample, NULL);
-  gst_sample_set_buffer_list (priv->sample, NULL);
-  gst_sample_set_caps (priv->sample, NULL);
-  gst_sample_set_segment (priv->sample, NULL);
+  gst_app_sink_clear_sample_contents (appsink);
   priv->in = priv->out = priv->dropped = 0;
   g_mutex_unlock (&priv->mutex);
 
@@ -1071,11 +1084,7 @@ gst_app_sink_stop (GstBaseSink * psink)
   gst_caps_replace (&priv->last_caps, NULL);
   gst_segment_init (&priv->preroll_segment, GST_FORMAT_UNDEFINED);
   gst_segment_init (&priv->last_segment, GST_FORMAT_UNDEFINED);
-  priv->sample = gst_sample_make_writable (priv->sample);
-  gst_sample_set_buffer (priv->sample, NULL);
-  gst_sample_set_buffer_list (priv->sample, NULL);
-  gst_sample_set_caps (priv->sample, NULL);
-  gst_sample_set_segment (priv->sample, NULL);
+  gst_app_sink_clear_sample_contents (appsink);
   priv->in = priv->out = priv->dropped = 0;
   g_mutex_unlock (&priv->mutex);
 
@@ -2708,6 +2717,32 @@ gst_app_sink_propose_allocation (GstBaseSink * bsink, GstQuery * query)
 
   g_clear_pointer (&callbacks, callbacks_unref);
   g_clear_pointer (&simple_callbacks, gst_app_sink_simple_callbacks_unref);
+
+  return ret;
+}
+
+static GstStateChangeReturn
+gst_app_sink_change_state (GstElement * element, GstStateChange transition)
+{
+  GstAppSink *appsink = GST_APP_SINK_CAST (element);
+  GstAppSinkPrivate *priv = appsink->priv;
+
+  GstStateChangeReturn ret;
+
+  ret = GST_ELEMENT_CLASS (parent_class)->change_state (element, transition);
+  if (ret == GST_STATE_CHANGE_FAILURE) {
+    return ret;
+  }
+
+  switch (transition) {
+    case GST_STATE_CHANGE_PAUSED_TO_READY:
+      g_mutex_lock (&priv->mutex);
+      priv->is_eos = FALSE;
+      g_mutex_unlock (&priv->mutex);
+      break;
+    default:
+      break;
+  }
 
   return ret;
 }

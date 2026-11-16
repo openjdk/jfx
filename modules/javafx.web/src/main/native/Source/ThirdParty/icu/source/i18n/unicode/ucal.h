@@ -1533,7 +1533,7 @@ ucal_isWeekend(const UCalendar *cal, UDate date, UErrorCode *status);
 
 /**
  * Return the difference between the target time and the time this calendar object is currently set to.
- * If the target time is after the current calendar setting, the the returned value will be positive.
+ * If the target time is after the current calendar setting, the returned value will be positive.
  * The field parameter specifies the units of the return value. For example, if field is UCAL_MONTH
  * and ucal_getFieldDifference returns 3, then the target time is 3 to less than 4 months after the
  * current calendar setting.
@@ -1750,7 +1750,7 @@ typedef enum UTimeZoneLocalOption UTimeZoneLocalOption; /**< @stable ICU 69 */
 * is, the offset not including DST adjustments.
 * If the status is set to one of the error code, the value set is unspecified.
 * @param dstOffset output parameter to receive the DST offset,
-* that is, the offset to be added to `rawOffset' to obtain the
+* that is, the offset to be added to `rawOffset` to obtain the
 * total offset between local and GMT time. If DST is not in
 * effect, this value is zero; otherwise it is a positive value,
 * typically one hour.

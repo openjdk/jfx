@@ -600,7 +600,9 @@ JNIEXPORT jbyteArray JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1getItemAs
                     if (file != nil)
                     {
                         NSURL *url = [NSURL URLWithString:file];
-                        image = [[[NSImage alloc] initByReferencingURL:url] autorelease];
+                        if ([url isFileURL]) {
+                            image = [[[NSImage alloc] initByReferencingURL:url] autorelease];
+                        }
                     }
                 }
                 if (image == nil)
@@ -610,7 +612,9 @@ JNIEXPORT jbyteArray JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1getItemAs
                     if (file != nil)
                     {
                         NSURL *url = [NSURL URLWithString:file];
-                        image = [[[NSImage alloc] initByReferencingURL:url] autorelease];
+                        if ([url isFileURL]) {
+                            image = [[[NSImage alloc] initByReferencingURL:url] autorelease];
+                        }
                     }
                 }
 

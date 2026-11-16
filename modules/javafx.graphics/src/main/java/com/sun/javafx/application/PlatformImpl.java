@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package com.sun.javafx.application;
 
+import com.sun.glass.ui.GlassPlatform;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.PreviewFeature;
 import com.sun.javafx.SecurityUtil;
@@ -787,7 +788,7 @@ public class PlatformImpl {
                 uaStylesheets.add("com/sun/javafx/scene/control/skin/modena/touch.css");
             }
             // when running on embedded add a extra stylesheet to tune performance of modena theme
-            if (PlatformUtil.isEmbedded()) {
+            if (GlassPlatform.isEmbedded()) {
                 uaStylesheets.add("com/sun/javafx/scene/control/skin/modena/modena-embedded-performance.css");
             }
             if (PlatformUtil.isAndroid()) {
@@ -849,7 +850,7 @@ public class PlatformImpl {
                 if (isMediaSupported == null) {
                     isMediaSupported = checkForClass(
                             "javafx.scene.media.MediaView");
-                    if (isMediaSupported && PlatformUtil.isEmbedded()) {
+                    if (isMediaSupported && GlassPlatform.isEmbedded()) {
                         String s = System.getProperty(
                                 "com.sun.javafx.experimental.embedded.media",
                                 "false");
@@ -860,7 +861,7 @@ public class PlatformImpl {
             case WEB:
                 if (isWebSupported == null) {
                     isWebSupported = checkForClass("javafx.scene.web.WebView");
-                    if (isWebSupported && PlatformUtil.isEmbedded()) {
+                    if (isWebSupported && GlassPlatform.isEmbedded()) {
                         String s = System.getProperty(
                                 "com.sun.javafx.experimental.embedded.web",
                                 "false");

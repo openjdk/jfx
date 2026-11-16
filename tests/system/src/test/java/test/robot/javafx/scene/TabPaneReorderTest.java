@@ -88,9 +88,16 @@ public class TabPaneReorderTest {
         }
     };
 
+    /// select triggers mac a11y so it must be done on the application thread
+    private void select(int index) {
+        Util.runAndWait(() -> {
+            tabPane.getSelectionModel().select(index);
+        });
+    }
+
     @Test
     public void testReorderTop() {
-        tabPane.getSelectionModel().select(0);
+        select(0);
         setDragPolicyAndSide(TabPane.TabDragPolicy.REORDER, Side.TOP);
         dragDistance = (int)(tabPaneWidth * DRAG_DISTANCE_PERCENTAGE);
         testReorder((int)(tabPaneWidth / TAB_COUNT * DRAG_TAB), DY, true);
@@ -98,7 +105,7 @@ public class TabPaneReorderTest {
 
     @Test
     public void testReorderBottom() {
-        tabPane.getSelectionModel().select(8);
+        select(8);
         setDragPolicyAndSide(TabPane.TabDragPolicy.REORDER, Side.BOTTOM);
         dragDistance = (int)(tabPaneWidth * DRAG_DISTANCE_PERCENTAGE);
         testReorder((int)(tabPaneWidth / TAB_COUNT * DRAG_TAB),
@@ -107,7 +114,7 @@ public class TabPaneReorderTest {
 
     @Test
     public void testReorderLeft() {
-        tabPane.getSelectionModel().select(8);
+        select(8);
         setDragPolicyAndSide(TabPane.TabDragPolicy.REORDER, Side.LEFT);
         dragDistance = (int)(tabPaneHeight * DRAG_DISTANCE_PERCENTAGE);
         testReorder(DX, (int)(tabPaneHeight / TAB_COUNT * DRAG_TAB), false);
@@ -115,7 +122,7 @@ public class TabPaneReorderTest {
 
     @Test
     public void testReorderRight() {
-        tabPane.getSelectionModel().select(0);
+        select(0);
         setDragPolicyAndSide(TabPane.TabDragPolicy.REORDER, Side.RIGHT);
         dragDistance = (int)(tabPaneHeight * DRAG_DISTANCE_PERCENTAGE);
         testReorder(tabPaneWidth - DX,
@@ -163,7 +170,7 @@ public class TabPaneReorderTest {
         tabPane.getSelectionModel().selectedItemProperty().
                 addListener(selectionChangeListener);
         selectionLatch = new CountDownLatch(1);
-        tabPane.getSelectionModel().select(0);
+        select(0);
         Util.waitForLatch(selectionLatch, 5, "Timeout waiting for tab[0] to get selected.");
 
         for (int i = 1; i < TAB_COUNT; i++) {

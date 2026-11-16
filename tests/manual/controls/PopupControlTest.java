@@ -24,6 +24,7 @@
  */
 
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -33,6 +34,7 @@ import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.Tooltip;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.layout.Priority;
 import javafx.stage.Stage;
@@ -115,7 +117,9 @@ public class PopupControlTest extends Application {
         instructions.setEditable(false);
         VBox.setVgrow(instructions, Priority.ALWAYS);
 
-        root.getChildren().addAll(menuBarPane, button1, button2, button3, instructions);
+        HBox passFailButtons = createPassFailButtons();
+
+        root.getChildren().addAll(menuBarPane, button1, button2, button3, instructions, passFailButtons);
 
         return root;
     }
@@ -124,6 +128,22 @@ public class PopupControlTest extends Application {
     public void start(Stage stage) throws Exception {
         stage.setScene(new Scene(createContent()));
         stage.show();
+    }
+
+    private HBox createPassFailButtons() {
+        var passButton = new Button("Pass");
+        passButton.setOnAction(e -> {
+            System.out.println("TEST PASSED");
+            Platform.exit();
+        });
+        var failButton = new Button("Fail");
+        failButton.setOnAction(e -> {
+            System.out.println("TEST FAILED");
+            Platform.exit();
+            throw new AssertionError("Test failed");
+        });
+        var hbox = new HBox(10, passButton, failButton);
+        return hbox;
     }
 
     public static void main(String[] args) {

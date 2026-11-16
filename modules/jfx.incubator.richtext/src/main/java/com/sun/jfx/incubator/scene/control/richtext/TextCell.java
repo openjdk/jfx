@@ -84,7 +84,7 @@ public final class TextCell extends BorderPane {
      * @param embedsNode whether the content is a paragraph
      */
     public TextCell(int index, Region content, boolean embedsNode) {
-        Objects.nonNull(content);
+        Objects.requireNonNull(content);
         this.index = index;
         this.content = content;
         this.embedsNode = embedsNode;

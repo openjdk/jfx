@@ -34,6 +34,7 @@ import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ContextMenu;
+import javafx.scene.control.Label;
 import javafx.scene.control.MenuButton;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.GridPane;
@@ -58,7 +59,11 @@ import com.oracle.tools.fx.monkey.util.Utils;
  * GridPane Page.
  */
 public class GridPanePage extends TestPaneBase {
-    static record GridCoordinates(int col, int row) { }
+    static record GridCoordinates(int col, int row, int colSpan, int rowSpan) {
+        public GridCoordinates(int col, int row) {
+            this(col, row, 1, 1);
+        }
+    }
 
     private final GridPane pane;
 
@@ -121,7 +126,7 @@ public class GridPanePage extends TestPaneBase {
                 for (Map.Entry<GridCoordinates, Node> en: m.entrySet()) {
                     GridCoordinates c = en.getKey();
                     Node n = en.getValue();
-                    pane.add(n, c.col(), c.row());
+                    pane.add(n, c.col(), c.row(), c.colSpan(), c.rowSpan());
                 }
             }
         });
@@ -130,6 +135,7 @@ public class GridPanePage extends TestPaneBase {
         s.addChoiceSupplier("Diagonal", this::createDiagonal);
         s.addChoiceSupplier("With Unmanaged Nodes", this::withUnmanaged);
         s.addChoiceSupplier("With Unmanaged + Center", this::withUnmanagedCenter);
+        s.addChoiceSupplier("Overlapping", this::createOverlapping);
         return s;
     }
 
@@ -166,6 +172,18 @@ public class GridPanePage extends TestPaneBase {
         m.put(new GridCoordinates(0, 0), createRegion());
         m.put(new GridCoordinates(1, 1), createRegion());
         m.put(new GridCoordinates(2, 2), createRegion());
+        return m;
+    }
+
+    private Map<GridCoordinates, Node> createOverlapping() {
+        Label t = new Label("one two three four five six seven eight nine ten eleven twelve");
+        t.setWrapText(true);
+
+        Map<GridCoordinates, Node> m = new HashMap<>();
+        m.put(new GridCoordinates(0, 0), createRegion());
+        m.put(new GridCoordinates(1, 0), createRegion());
+        m.put(new GridCoordinates(2, 0), createRegion());
+        m.put(new GridCoordinates(0, 0, 3, 1), t);
         return m;
     }
 

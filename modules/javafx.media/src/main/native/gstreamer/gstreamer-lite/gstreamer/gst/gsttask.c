@@ -121,6 +121,9 @@ struct _GstTaskPrivate
   /* remember the pool and id that is currently running. */
   gpointer id;
   GstTaskPool *pool_id;
+
+  /* we're currently inside gst_task_join() */
+  gboolean joining;
 };
 
 #ifdef _MSC_VER
@@ -258,6 +261,7 @@ gst_task_init (GstTask * task)
   klass = GST_TASK_GET_CLASS (task);
 
   task->priv = gst_task_get_instance_private (task);
+  task->priv->joining = FALSE;
   task->running = FALSE;
   task->thread = NULL;
   task->lock = NULL;
@@ -346,6 +350,7 @@ gst_task_func (GstTask * task)
   GRecMutex *lock;
   GThread *tself;
   GstTaskPrivate *priv;
+  gboolean joining;
 
   priv = task->priv;
 
@@ -414,18 +419,21 @@ exit:
   }
   /* now we allow messing with the lock again by setting the running flag to
    * %FALSE. Together with the SIGNAL this is the sign for the _join() to
-   * complete.
-   * Note that we still have not dropped the final ref on the task. We could
-   * check here if there is a pending join() going on and drop the last ref
-   * before releasing the lock as we can be sure that a ref is held by the
-   * caller of the join(). */
+   * complete. */
   task->running = FALSE;
   GST_TASK_SIGNAL (task);
+  /* Someone called join() while we're exiting, so they are holding
+   * a reference and we can drop ours already. This ensures that finalize() is
+   * called when the joiner's reference is dropped. */
+  joining = task->priv->joining;
+  if (joining)
+    gst_object_unref (task);
+  GST_DEBUG ("Exit task %p, thread %p", task, g_thread_self ());
   GST_OBJECT_UNLOCK (task);
 
-  GST_DEBUG ("Exit task %p, thread %p", task, g_thread_self ());
+  if (!joining)
+    gst_object_unref (task);
 
-  gst_object_unref (task);
   return;
 
 no_lock:
@@ -719,6 +727,7 @@ start_task (GstTask * task)
   /* mark task as running so that a join will wait until we schedule
    * and exit the task function. */
   task->running = TRUE;
+  task->priv->joining = FALSE;
 
   /* push on the thread pool, we remember the original pool because the user
    * could change it later on and then we join to the wrong pool. */
@@ -931,6 +940,7 @@ gst_task_join (GstTask * task)
   GST_OBJECT_LOCK (task);
   if (G_UNLIKELY (tself == task->thread))
     goto joining_self;
+  priv->joining = TRUE;
   SET_TASK_STATE (task, GST_TASK_STOPPED);
   /* signal the state change for when it was blocked in PAUSED. */
   GST_TASK_SIGNAL (task);
@@ -946,6 +956,7 @@ gst_task_join (GstTask * task)
   id = priv->id;
   priv->pool_id = NULL;
   priv->id = NULL;
+  priv->joining = FALSE;
   GST_OBJECT_UNLOCK (task);
 
   if (pool) {

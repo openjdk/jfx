@@ -112,6 +112,27 @@ public final class RichUtils {
         return text.substring(start, end);
     }
 
+    public static String toCssFont(String name) {
+        if (name == null) {
+            return null;
+        }
+        int len = name.length();
+        for (int i = 0; i < len; i++) {
+            char c = name.charAt(i);
+            switch (c) {
+            case '\'':
+            case '"':
+            case '\\':
+                return null;
+            default:
+                if (Character.isISOControl(c)) {
+                    return null;
+                }
+            }
+        }
+        return name;
+    }
+
     /** Converts Color to "#rrggbb" or "rgba(r,g,b,a)" string */
     public static String toCssColor(Color c) {
         if (c.getOpacity() == 1.0) {
@@ -431,6 +452,17 @@ public final class RichUtils {
             sb.append((char)c);
         }
         return sb.toString();
+    }
+
+    /**
+     * Writes an Image to a byte array in JPG format.
+     *
+     * @param im source image
+     * @return byte array containing JPG image
+     * @throws IOException if an I/O error occurs
+     */
+    public static byte[] writeJPG(Image im) throws IOException {
+        return ImageUtils.writeImage(im, "JPG");
     }
 
     /**
@@ -754,6 +786,13 @@ public final class RichUtils {
             if (a.isInlineNode()) {
                 return true;
             }
+        }
+        return false;
+    }
+
+    public static boolean canMerge(StyleAttributeMap a, StyleAttributeMap b) {
+        if (a.equals(b)) {
+            return !containsInlineNodes(a);
         }
         return false;
     }

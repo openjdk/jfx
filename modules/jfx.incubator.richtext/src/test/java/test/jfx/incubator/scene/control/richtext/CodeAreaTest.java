@@ -195,9 +195,9 @@ public class CodeAreaTest {
                 String text = model.getPlainText(index);
                 RichParagraph.Builder b = RichParagraph.builder();
                 int len = text.length();
-                b.addSegment(text, 0, 1, null);
+                b.addSegment(text, 0, 1, StyleAttributeMap.EMPTY);
                 b.addSegment(text, 1, 2, DIGITS);
-                b.addSegment(text, 2, len, null);
+                b.addSegment(text, 2, len, StyleAttributeMap.EMPTY);
                 return b.build();
             }
 

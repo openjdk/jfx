@@ -2207,22 +2207,19 @@ setup_borderline (GstVideoConverter * convert)
     guint32 border_val;
     gint i, w_sub;
     const GstVideoFormatInfo *out_finfo;
+    const GstVideoFormatInfo *out_pack_finfo;
     gpointer planes[GST_VIDEO_MAX_PLANES];
     gint strides[GST_VIDEO_MAX_PLANES];
 
     convert->borderline = g_malloc0 (sizeof (guint16) * width * 4);
 
     out_finfo = convert->out_info.finfo;
+    out_pack_finfo = gst_video_format_get_info (convert->pack_format);
 
-    if (GST_VIDEO_INFO_IS_YUV (&convert->out_info)) {
+    if (GST_VIDEO_FORMAT_INFO_IS_YUV (out_pack_finfo)) {
       MatrixData cm;
-      gint a, r, g, b;
-      gint y, u, v;
-
-      /* Get Color matrix. */
-      color_matrix_set_identity (&cm);
-      compute_matrix_to_YUV (convert, &cm, TRUE);
-      color_matrix_convert (&cm);
+      gint64 a, r, g, b;
+      gint64 y, u, v;
 
       border_val = GINT32_FROM_BE (convert->border_argb);
 
@@ -2231,16 +2228,32 @@ setup_borderline (GstVideoConverter * convert)
       r = (0x0000FF00 & border_val) >> 8;
       a = (0x000000FF & border_val);
 
-      y = 16 + ((r * cm.im[0][0] + g * cm.im[0][1] + b * cm.im[0][2]) >> 8);
-      u = 128 + ((r * cm.im[1][0] + g * cm.im[1][1] + b * cm.im[1][2]) >> 8);
-      v = 128 + ((r * cm.im[2][0] + g * cm.im[2][1] + b * cm.im[2][2]) >> 8);
+      /* Get Color matrix. */
+      color_matrix_set_identity (&cm);
+
+      /* border_argb is 8-bit RGB, normalize it to [0, 1] */
+      color_matrix_scale_components (&cm,
+          1.0 / 255.0, 1.0 / 255.0, 1.0 / 255.0);
+
+      compute_matrix_to_YUV (convert, &cm, TRUE);
+
+      /* convert to integer scale, same as prepare_matrix() */
+      color_matrix_scale_components (&cm, SCALE_F, SCALE_F, SCALE_F);
+      color_matrix_convert (&cm);
+
+      y = (r * cm.im[0][0] + g * cm.im[0][1] + b * cm.im[0][2] +
+          cm.im[0][3]) >> SCALE;
+      u = (r * cm.im[1][0] + g * cm.im[1][1] + b * cm.im[1][2] +
+          cm.im[1][3]) >> SCALE;
+      v = (r * cm.im[2][0] + g * cm.im[2][1] + b * cm.im[2][2] +
+          cm.im[2][3]) >> SCALE;
 
       a = CLAMP (a, 0, 255);
       y = CLAMP (y, 0, 255);
       u = CLAMP (u, 0, 255);
       v = CLAMP (v, 0, 255);
 
-      border_val = a | (y << 8) | (u << 16) | ((guint32) v << 24);
+      border_val = (guint32) (a | (y << 8) | (u << 16) | v << 24);
     } else {
       border_val = GINT32_FROM_BE (convert->border_argb);
     }

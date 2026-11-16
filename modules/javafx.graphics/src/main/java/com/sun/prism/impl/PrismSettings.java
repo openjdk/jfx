@@ -28,6 +28,8 @@ package com.sun.prism.impl;
 import java.util.List;
 import java.util.Properties;
 import java.util.StringTokenizer;
+
+import com.sun.glass.ui.GlassPlatform;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.util.Utils;
 
@@ -247,7 +249,7 @@ public final class PrismSettings {
 
         String primtex = systemProperties.getProperty("prism.primtextures");
         if (primtex == null) {
-            primTextureSize = PlatformUtil.isEmbedded() ? -1 : 0;
+            primTextureSize = GlassPlatform.isEmbedded() ? -1 : 0;
         } else if (primtex.equals("true")) {
             primTextureSize = -1;
         } else if (primtex.equals("false")) {
@@ -320,7 +322,7 @@ public final class PrismSettings {
          * when rendering into small RTT.
          */
        minRTTSize = getInt(systemProperties, "prism.minrttsize",
-               PlatformUtil.isEmbedded() ? 16 : 0, "Try -Dprism.minrttsize=<number>");
+               GlassPlatform.isEmbedded() ? 16 : 0, "Try -Dprism.minrttsize=<number>");
 
         disableRegionCaching = getBoolean(systemProperties,
                                           "prism.disableRegionCaching",
