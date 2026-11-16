@@ -189,16 +189,31 @@ public class CodeAreaTest {
     @Test
     public void copyHtml() {
         RTUtil.copyToClipboard("yo");
-        control.appendText("123");
+        control.appendText("123<>\"&'\t\n\ttab");
         control.setFont(Font.font("Amble", FontPosture.REGULAR, 33));
         control.selectAll();
         control.copy();
         assertTrue(Clipboard.getSystemClipboard().getContentTypes().contains(DataFormat.HTML));
         String s = Clipboard.getSystemClipboard().getHtml();
         assertNotNull(s);
-        assertTrue(s.contains("123"));
-        assertTrue(s.contains("font-family: \"Amble\","));
-        assertTrue(s.contains("font-size: 33.0pt;"));
+        assertEquals(
+            """
+            <html>
+            <head>
+            <meta charset="utf-8">
+            <style>
+            pre {
+              font-family: "Amble", monospace;
+              font-size: 33.0pt;
+              white-space: pre-wrap;
+            }
+            </style>
+            </head>
+            <body>
+            <pre>123&lt;&gt;&#34;&amp;&#39;&#9;
+            &#9;tab</pre>
+            </body></html>
+            """, s);
     }
 
     @Test
