@@ -306,15 +306,19 @@ void RenderingContext::Clear(float r, float g, float b, float a, bool clearDepth
     D3D12_RECT clearRect = GetScissor().Get();
     const BBox& rttDirtyBBox = mRenderTarget.Get()->BBoxEnabled() ? mRenderTarget.Get()->GetDirtyBBox() : BBox();
 
-    if (Config::Instance().IsClearOptsEnabled() && r == 0.0f && g == 0.0f && b == 0.0f && a == 0.0f &&
-        rttDirtyBBox.Valid() && rttDirtyBBox.Inside(clearRect))
+    if (Config::Instance().IsClearOptsEnabled() && mRenderTarget.Get()->BBoxEnabled() &&
+        r == 0.0f && g == 0.0f && b == 0.0f && a == 0.0f)
     {
-        // if RTT was dirited by less area than the clear rect demands it AND the clear area
-        // contains our dirty bbox, we can safely shrink the clear rect to save some time
-        clearRect.left = std::max(clearRect.left, static_cast<LONG>(std::round(rttDirtyBBox.min.x)));
-        clearRect.top = std::max(clearRect.top, static_cast<LONG>(std::round(rttDirtyBBox.min.y)));
-        clearRect.right = std::min(clearRect.right, static_cast<LONG>(std::round(rttDirtyBBox.max.x)));
-        clearRect.bottom = std::min(clearRect.bottom, static_cast<LONG>(std::round(rttDirtyBBox.max.y)));
+        if (rttDirtyBBox.Valid() && rttDirtyBBox.Inside(clearRect))
+        {
+            // if RTT was dirited by less area than the clear rect demands it AND the clear area
+            // contains our dirty bbox, we can safely shrink the clear rect to save some time
+            // Note we do the reduction only if RTT's BBox is valid, otherwise it makes no sense
+            clearRect.left = std::max(clearRect.left, static_cast<LONG>(std::round(rttDirtyBBox.min.x)));
+            clearRect.top = std::max(clearRect.top, static_cast<LONG>(std::round(rttDirtyBBox.min.y)));
+            clearRect.right = std::min(clearRect.right, static_cast<LONG>(std::round(rttDirtyBBox.max.x)));
+            clearRect.bottom = std::min(clearRect.bottom, static_cast<LONG>(std::round(rttDirtyBBox.max.y)));
+        }
 
         // delay the clear until first Draw() call (or until RT switch) to see if it's actually possible
         mClearOptState.clearDelayed = true;
@@ -423,6 +427,9 @@ void RenderingContext::DrawMeshView(const NIPtr<NativeMeshView>& meshView)
     }
 
     AddToRTPayload(CreateRTExec<DrawMeshViewAction>(mPayloadAllocator, meshView));
+
+    // 3D rendering is more complex, we will disable clear opts for this RTT
+    mRenderTarget.Get()->UpdateDirtyBBox(BBox());
 }
 
 void RenderingContext::Dispatch(uint32_t x, uint32_t y, uint32_t z)
