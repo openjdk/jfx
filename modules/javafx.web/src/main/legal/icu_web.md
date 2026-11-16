@@ -1,10 +1,12 @@
-## IBM International Components for Unicode (ICU4C) v77.1
+## IBM International Components for Unicode (ICU4C) v79.1
 
 ### ICU License
 
 UNICODE LICENSE V3
 
 COPYRIGHT AND PERMISSION NOTICE
+
+Copyright © 1991-2026 Unicode, Inc.
 
 ```
 
@@ -57,6 +59,7 @@ dealings in these Data Files or Software without prior written
 authorization of the copyright holder.
 
 SPDX-License-Identifier: Unicode-3.0
+
 ----------------------------------------------------------------------
 
 Third-Party Software Licenses
@@ -71,7 +74,7 @@ ICU License - ICU 1.8.1 to ICU 57.1
 
 COPYRIGHT AND PERMISSION NOTICE
 
-Copyright (C) 1995-2016 International Business Machines Corporation and others
+Copyright (c) 1995-2016 International Business Machines Corporation and others
 All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining
@@ -160,8 +163,8 @@ Chinese/Japanese Word Break Dictionary Data (cjdict.txt)
  #  ---------COPYING.libtabe ---- BEGIN--------------------
  #
  #  /*
- #   * Copyright (C) 1999 TaBE Project.
- #   * Copyright (C) 1999 Pai-Hsiang Hsiao.
+ #   * Copyright (c) 1999 TaBE Project.
+ #   * Copyright (c) 1999 Pai-Hsiang Hsiao.
  #   * All rights reserved.
  #   *
  #   * Redistribution and use in source and binary forms, with or without
@@ -193,7 +196,7 @@ Chinese/Japanese Word Break Dictionary Data (cjdict.txt)
  #   */
  #
  #  /*
- #   * Copyright (C) 1999 Computer Systems and Communication Lab,
+ #   * Copyright (c) 1999 Computer Systems and Communication Lab,
  #   *                    Institute of Information Science, Academia
  #       *                    Sinica. All rights reserved.
  #   *
@@ -314,7 +317,7 @@ Lao Word Break Dictionary Data (laodict.txt)
 
  # Copyright (C) 2016 and later: Unicode, Inc. and others.
  # License & terms of use: http://www.unicode.org/copyright.html
- # Copyright (C) 2015 International Business Machines Corporation
+ # Copyright (c) 2015 International Business Machines Corporation
  # and others. All Rights Reserved.
  #
  # Project: https://github.com/rober42539/lao-dictionary
@@ -354,14 +357,14 @@ Lao Word Break Dictionary Data (laodict.txt)
 
 Burmese Word Break Dictionary Data (burmesedict.txt)
 
- #  Copyright (C) 2014 International Business Machines Corporation
+ #  Copyright (c) 2014 International Business Machines Corporation
  #  and others. All Rights Reserved.
  #
  #  This list is part of a project hosted at:
  #    github.com/kanyawtech/myanmar-karen-word-lists
  #
  #  --------------------------------------------------------------------------
- #  Copyright (C) 2013, LeRoy Benjamin Sharon
+ #  Copyright (c) 2013, LeRoy Benjamin Sharon
  #  All rights reserved.
  #
  #  Redistribution and use in source and binary forms, with or without
@@ -456,7 +459,7 @@ File: vendor/json/upstream/single_include/nlohmann/json.hpp (only for ICU4C)
 
 MIT License
 
-Copyright (C) 2013-2022 Niels Lohmann
+Copyright (c) 2013-2022 Niels Lohmann
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

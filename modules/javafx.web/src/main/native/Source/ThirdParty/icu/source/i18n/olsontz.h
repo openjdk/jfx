@@ -113,12 +113,12 @@ class SimpleTimeZone;
  * (UN M.49 - World).  This data is generated from "zone.tab"
  * in the tz database.
  */
-class U_I18N_API OlsonTimeZone: public BasicTimeZone {
+class U_I18N_API_CLASS OlsonTimeZone : public BasicTimeZone {
  public:
     /**
      * Construct from a resource bundle.
      * @param top the top-level zoneinfo resource bundle.  This is used
-     * to lookup the rule that `res' may refer to, if there is one.
+     * to lookup the rule that `res` may refer to, if there is one.
      * @param res the resource bundle of the zone to be constructed
      * @param tzid the time zone ID
      * @param ec input-output error code
@@ -141,7 +141,7 @@ class U_I18N_API OlsonTimeZone: public BasicTimeZone {
     /**
      * Assignment operator
      */
-    OlsonTimeZone& operator=(const OlsonTimeZone& other);
+    U_I18N_API OlsonTimeZone& operator=(const OlsonTimeZone& other);
 
     /**
      * Returns true if the two TimeZone objects are equal.
@@ -156,7 +156,7 @@ class U_I18N_API OlsonTimeZone: public BasicTimeZone {
     /**
      * TimeZone API.
      */
-    static UClassID U_EXPORT2 getStaticClassID();
+    U_I18N_API static UClassID U_EXPORT2 getStaticClassID();
 
     /**
      * TimeZone API.
