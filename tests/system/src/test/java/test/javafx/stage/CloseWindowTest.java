@@ -110,15 +110,12 @@ public class CloseWindowTest {
             childStage.initOwner(secondaryStage);
             childStage.setScene(new Scene(new StackPane(new Label("Child stage")), 200, 120));
 
-            secondaryStage.setOnHidden(_ -> {
-                doneLatch.countDown();
-                childStage.hide();
-            });
+            childStage.setOnHidden(_ -> doneLatch.countDown());
+            secondaryStage.setOnHidden(_ -> childStage.hide());
             secondaryStage.show();
 
             childStage.setOnShown(_ -> startupLatch.countDown());
             childStage.show();
         }
     }
-
 }
