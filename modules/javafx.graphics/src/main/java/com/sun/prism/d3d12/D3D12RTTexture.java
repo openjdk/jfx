@@ -52,12 +52,12 @@ public class D3D12RTTexture extends D3D12Texture implements RTTexture, ReadbackR
     public static D3D12RTTexture create(D3D12Context context, int physWidth, int physHeight, int contentWidth, int contentHeight,
                                         PixelFormat format, WrapMode wrapMode, int aaSamples, boolean enableDirtyBBox) {
         D3D12NativeTexture tex = context.getDevice().createTexture(physWidth, physHeight, format, Usage.DEFAULT, wrapMode, aaSamples, false, true);
-        if (tex == null) {
+        if (!tex.isValid()) {
             return null;
         }
 
         D3D12NativeRenderTarget rt = context.getDevice().createRenderTarget(tex, enableDirtyBBox);
-        if (rt == null) {
+        if (!rt.isValid()) {
             tex.dispose();
             return null;
         }

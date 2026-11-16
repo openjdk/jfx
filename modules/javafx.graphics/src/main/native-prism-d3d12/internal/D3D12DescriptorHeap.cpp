@@ -152,7 +152,7 @@ void DescriptorHeap::Free(const DescriptorData& data)
     size_t finalSlot = slot + data.count;
 
     uint32_t freed = 0;
-    for (slot; slot < finalSlot; ++slot)
+    for (; slot < finalSlot; ++slot)
     {
         mSlotAvailability[slot] = true;
         freed++;

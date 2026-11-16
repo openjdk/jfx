@@ -640,6 +640,8 @@ bool NativeDevice::Blit(const NIPtr<NativeRenderTarget>& srcRT, const Coords_Box
                 return false;
             }
 
+            intermediateTexture->SetSamplerParameters(TextureWrapMode::CLAMP_NOT_NEEDED, true);
+
             mRenderingContext->Resolve(intermediateTexture, srcRT, srcRT->GetFormat());
             sourceTexture = intermediateTexture;
         }

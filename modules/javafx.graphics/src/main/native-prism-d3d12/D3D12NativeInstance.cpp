@@ -82,7 +82,7 @@ bool NativeInstance::Init()
     // which is not an error, just an information we went through all of the adapters available
     D3D12NI_LOG_DEBUG("DXGI enumerated adapters:");
     while ((hr = mDXGIFactory->EnumAdapters1(i, &adapter)) != DXGI_ERROR_NOT_FOUND) {
-        if (FAILED(hr) && hr != DXGI_ERROR_NOT_FOUND)
+        if (FAILED(hr))
         {
             _com_error err(hr);
             D3D12NI_LOG_ERROR("Failed to enumerate DXGI Adapters: %x (%ws)", hr, err.ErrorMessage());
@@ -141,7 +141,7 @@ int NativeInstance::GetAdapterOrdinal(HMONITOR monitor)
         int outputIdx = 0;
         DXGIOutputPtr output;
         while ((hr = mDXGIAdapters[adapterIdx]->EnumOutputs(outputIdx, &output)) != DXGI_ERROR_NOT_FOUND) {
-            if (FAILED(hr) && hr != DXGI_ERROR_NOT_FOUND)
+            if (FAILED(hr))
             {
                 _com_error err(hr);
                 D3D12NI_LOG_ERROR("Failed to enumerate DXGI Outputs: %x (%ws)", hr, err.ErrorMessage());

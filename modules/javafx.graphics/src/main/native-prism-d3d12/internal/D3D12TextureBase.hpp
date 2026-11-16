@@ -47,6 +47,8 @@ protected:
     D3D12ResourcePtr mResource;
     D3D12_RESOURCE_DESC mResourceDesc;
     std::vector<D3D12_RESOURCE_STATES> mStates;
+    // TODO: This SamplerDesc association is not what JavaFX expects.
+    // To make this closer to old-D3D9 API, samplers should be stored with Texture slots in RenderingContext.
     SamplerDesc mSamplerDesc;
     std::string mDebugName;
 
