@@ -28,9 +28,10 @@
 
 namespace
 {
-    void putColor(JNIEnv* env, jobject prefs, GtkStyle* style, const char* lookupColorName, const char* prefColorName) {
-        GdkColor color;
-        if (!gtk_style_lookup_color(style, lookupColorName, &color)) {
+    void putColor(JNIEnv* env, jobject prefs, GtkStyleContext* context,
+                  const char* lookupColorName, const char* prefColorName) {
+        GdkRGBA color;
+        if (!gtk_style_context_lookup_color(context, lookupColorName, &color)) {
             return;
         }
 
@@ -39,9 +40,9 @@ namespace
 
         jobject prefValue = env->CallStaticObjectMethod(
             jColorCls, jColorRgb,
-            (int)(CLAMP((double)color.red / 65535.0, 0.0, 1.0) * 255.0),
-            (int)(CLAMP((double)color.green / 65535.0, 0.0, 1.0) * 255.0),
-            (int)(CLAMP((double)color.blue / 65535.0, 0.0, 1.0) * 255.0),
+            (int)(CLAMP(color.red, 0.0, 1.0) * 255.0),
+            (int)(CLAMP(color.green, 0.0, 1.0) * 255.0),
+            (int)(CLAMP(color.blue, 0.0, 1.0) * 255.0),
             1.0);
         CHECK_JNI_EXCEPTION(env);
 
@@ -140,28 +141,24 @@ jobject PlatformSupport::collectPreferences() const {
     jobject prefs = env->NewObject(jHashMapCls, jHashMapInit);
     if (EXCEPTION_OCCURED(env) || prefs == NULL) return NULL;
 
-    GtkStyle* style = gtk_style_new();
-    if (style == NULL) return NULL;
-
-    putColor(env, prefs, style, "theme_fg_color", "GTK.theme_fg_color");
-    putColor(env, prefs, style, "theme_bg_color", "GTK.theme_bg_color");
-    putColor(env, prefs, style, "theme_base_color", "GTK.theme_base_color");
-    putColor(env, prefs, style, "theme_selected_bg_color", "GTK.theme_selected_bg_color");
-    putColor(env, prefs, style, "theme_selected_fg_color", "GTK.theme_selected_fg_color");
-    putColor(env, prefs, style, "insensitive_bg_color", "GTK.insensitive_bg_color");
-    putColor(env, prefs, style, "insensitive_fg_color", "GTK.insensitive_fg_color");
-    putColor(env, prefs, style, "insensitive_base_color", "GTK.insensitive_base_color");
-    putColor(env, prefs, style, "theme_unfocused_fg_color", "GTK.theme_unfocused_fg_color");
-    putColor(env, prefs, style, "theme_unfocused_bg_color", "GTK.theme_unfocused_bg_color");
-    putColor(env, prefs, style, "theme_unfocused_base_color", "GTK.theme_unfocused_base_color");
-    putColor(env, prefs, style, "theme_unfocused_selected_bg_color", "GTK.theme_unfocused_selected_bg_color");
-    putColor(env, prefs, style, "theme_unfocused_selected_fg_color", "GTK.theme_unfocused_selected_fg_color");
-    putColor(env, prefs, style, "borders", "GTK.borders");
-    putColor(env, prefs, style, "unfocused_borders", "GTK.unfocused_borders");
-    putColor(env, prefs, style, "warning_color", "GTK.warning_color");
-    putColor(env, prefs, style, "error_color", "GTK.error_color");
-    putColor(env, prefs, style, "success_color", "GTK.success_color");
-    g_object_unref(style);
+    putColor(env, prefs, styleContext, "theme_fg_color", "GTK.theme_fg_color");
+    putColor(env, prefs, styleContext, "theme_bg_color", "GTK.theme_bg_color");
+    putColor(env, prefs, styleContext, "theme_base_color", "GTK.theme_base_color");
+    putColor(env, prefs, styleContext, "theme_selected_bg_color", "GTK.theme_selected_bg_color");
+    putColor(env, prefs, styleContext, "theme_selected_fg_color", "GTK.theme_selected_fg_color");
+    putColor(env, prefs, styleContext, "insensitive_bg_color", "GTK.insensitive_bg_color");
+    putColor(env, prefs, styleContext, "insensitive_fg_color", "GTK.insensitive_fg_color");
+    putColor(env, prefs, styleContext, "insensitive_base_color", "GTK.insensitive_base_color");
+    putColor(env, prefs, styleContext, "theme_unfocused_fg_color", "GTK.theme_unfocused_fg_color");
+    putColor(env, prefs, styleContext, "theme_unfocused_bg_color", "GTK.theme_unfocused_bg_color");
+    putColor(env, prefs, styleContext, "theme_unfocused_base_color", "GTK.theme_unfocused_base_color");
+    putColor(env, prefs, styleContext, "theme_unfocused_selected_bg_color", "GTK.theme_unfocused_selected_bg_color");
+    putColor(env, prefs, styleContext, "theme_unfocused_selected_fg_color", "GTK.theme_unfocused_selected_fg_color");
+    putColor(env, prefs, styleContext, "borders", "GTK.borders");
+    putColor(env, prefs, styleContext, "unfocused_borders", "GTK.unfocused_borders");
+    putColor(env, prefs, styleContext, "warning_color", "GTK.warning_color");
+    putColor(env, prefs, styleContext, "error_color", "GTK.error_color");
+    putColor(env, prefs, styleContext, "success_color", "GTK.success_color");
 
     GtkSettings* settings = gtk_settings_get_default();
     if (settings != NULL) {

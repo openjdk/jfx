@@ -54,7 +54,6 @@ public:
 
 private:
     static constexpr const char* OBSERVED_SETTINGS[] = {
-        "notify::gtk-theme-name",
         "notify::gtk-enable-animations",
         "notify::gtk-overlay-scrolling"
     };
