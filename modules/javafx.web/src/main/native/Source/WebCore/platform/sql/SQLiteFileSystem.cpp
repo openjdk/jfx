@@ -37,6 +37,7 @@
 #include <pal/crypto/CryptoDigest.h>
 #include <sqlite3.h>
 #include <wtf/FileSystem.h>
+#include <wtf/HexNumber.h>
 #include <wtf/text/MakeString.h>
 
 #if PLATFORM(COCOA)
@@ -51,9 +52,7 @@ namespace WebCore {
 
 static constexpr std::array<ASCIILiteral, 3> databaseFileSuffixes { ""_s, "-shm"_s, "-wal"_s };
 
-SQLiteFileSystem::SQLiteFileSystem()
-{
-}
+SQLiteFileSystem::SQLiteFileSystem() = default;
 
 String SQLiteFileSystem::appendDatabaseFileNameToPath(StringView path, StringView fileName)
 {
@@ -104,7 +103,7 @@ void SQLiteFileSystem::setCanSuspendLockedFileAttribute(const String& filePath)
         auto path = makeString(filePath, suffix);
         char excluded = 0xff;
         auto result = setxattr(FileSystem::fileSystemRepresentation(path).data(), "com.apple.runningboard.can-suspend-locked", &excluded, sizeof(excluded), 0, 0);
-        if (result < 0 && !strcmp(suffix, ""))
+        if (result < 0 && suffix == ""_s)
             RELEASE_LOG_ERROR(SQLDatabase, "SQLiteFileSystem::setCanSuspendLockedFileAttribute: setxattr failed: %" PUBLIC_LOG_STRING, strerror(errno));
     }
 }
@@ -151,19 +150,8 @@ String SQLiteFileSystem::computeHashForFileName(StringView fileName)
 {
     auto cryptoDigest = PAL::CryptoDigest::create(PAL::CryptoDigest::Algorithm::SHA_256);
     auto utf8FileName = fileName.utf8();
-    cryptoDigest->addBytes(utf8FileName.span());
-    auto digest = cryptoDigest->computeHash();
-
-    // Convert digest to hex.
-    char* start = 0;
-    unsigned digestLength = digest.size();
-    CString result = CString::newUninitialized(digestLength * 2, start);
-    char* buffer = start;
-    for (size_t i = 0; i < digestLength; ++i) {
-        snprintf(buffer, 3, "%02X", digest.at(i));
-        buffer += 2;
-    }
-    return String::fromUTF8(result.span());
+    cryptoDigest->addBytes(byteCast<uint8_t>(utf8FileName.span()));
+    return cryptoDigest->toHexString();
 }
 
 } // namespace WebCore

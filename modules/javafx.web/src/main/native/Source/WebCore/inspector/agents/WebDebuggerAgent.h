@@ -27,6 +27,8 @@
 
 #include "InspectorWebAgentBase.h"
 #include <JavaScriptCore/InspectorDebuggerAgent.h>
+#include <wtf/TZoneMalloc.h>
+#include <wtf/WeakRef.h>
 
 namespace WebCore {
 
@@ -38,7 +40,7 @@ class TimerBase;
 
 class WebDebuggerAgent : public Inspector::InspectorDebuggerAgent {
     WTF_MAKE_NONCOPYABLE(WebDebuggerAgent);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(WebDebuggerAgent);
 public:
     ~WebDebuggerAgent() override;
     bool enabled() const override;
@@ -53,6 +55,10 @@ public:
     void didFailPostMessage(int postMessageIdentifier);
     void willDispatchPostMessage(int postMessageIdentifier);
     void didDispatchPostMessage(int postMessageIdentifier);
+    void didRequestAnimationFrame(int callbackId, JSC::JSGlobalObject&);
+    void willFireAnimationFrame(int callbackId);
+    void didCancelAnimationFrame(int callbackId);
+    void didFireAnimationFrame(int callbackId);
 
 protected:
     WebDebuggerAgent(WebAgentContext&);
@@ -61,7 +67,7 @@ protected:
 
     void didClearAsyncStackTraceData() final;
 
-    InstrumentingAgents& m_instrumentingAgents;
+    WeakRef<InstrumentingAgents> m_instrumentingAgents;
 
 private:
     HashMap<const RegisteredEventListener*, int> m_registeredEventListeners;

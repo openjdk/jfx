@@ -27,19 +27,20 @@
 #include "NavigatorBeacon.h"
 
 #include "CachedRawResource.h"
-#include "CachedResourceLoader.h"
-#include "Document.h"
-#include "DocumentInlines.h"
 #include "DocumentLoader.h"
+#include "DocumentResourceLoader.h"
 #include "FrameDestructionObserverInlines.h"
 #include "HTTPParsers.h"
-#include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "Navigator.h"
 #include "Page.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/URL.h>
 #include <wtf/text/MakeString.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(NavigatorBeacon);
 
 NavigatorBeacon::NavigatorBeacon(Navigator& navigator)
     : m_navigator(navigator)
@@ -52,20 +53,25 @@ NavigatorBeacon::~NavigatorBeacon()
         beacon->removeClient(*this);
 }
 
-NavigatorBeacon* NavigatorBeacon::from(Navigator& navigator)
+void NavigatorBeacon::ref() const
 {
-    auto* supplement = static_cast<NavigatorBeacon*>(Supplement<Navigator>::from(&navigator, supplementName()));
-    if (!supplement) {
-        auto newSupplement = makeUnique<NavigatorBeacon>(navigator);
-        supplement = newSupplement.get();
-        provideTo(&navigator, supplementName(), WTFMove(newSupplement));
-    }
-    return supplement;
+    m_navigator->ref();
 }
 
-ASCIILiteral NavigatorBeacon::supplementName()
+void NavigatorBeacon::deref() const
 {
-    return "NavigatorBeacon"_s;
+    m_navigator->deref();
+}
+
+Ref<NavigatorBeacon> NavigatorBeacon::from(Navigator& navigator)
+{
+    RefPtr supplement = downcast<NavigatorBeacon>(Supplement<Navigator>::from(&navigator, supplementName()));
+    if (!supplement) {
+        auto newSupplement = makeUniqueWithoutRefCountedCheck<NavigatorBeacon>(navigator);
+        supplement = newSupplement.get();
+        provideTo(&navigator, supplementName(), WTF::move(newSupplement));
+    }
+    return supplement.releaseNonNull();
 }
 
 void NavigatorBeacon::notifyFinished(CachedResource& resource, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess)
@@ -83,7 +89,7 @@ void NavigatorBeacon::logError(const ResourceError& error)
 {
     ASSERT(!error.isNull());
 
-    RefPtr frame = m_navigator.frame();
+    RefPtr frame = m_navigator->frame();
     if (!frame)
         return;
 
@@ -122,7 +128,7 @@ ExceptionOr<bool> NavigatorBeacon::sendBeacon(Document& document, const String& 
         return true;
     }
 
-    ResourceRequest request(parsedUrl);
+    ResourceRequest request(WTF::move(parsedUrl));
     request.setHTTPMethod("POST"_s);
     request.setRequester(ResourceRequestRequester::Beacon);
     if (RefPtr documentLoader = document.loader())
@@ -137,7 +143,7 @@ ExceptionOr<bool> NavigatorBeacon::sendBeacon(Document& document, const String& 
     if (body) {
         options.mode = FetchOptions::Mode::NoCors;
         String mimeType;
-        auto result = FetchBody::extract(WTFMove(body.value()), mimeType);
+        auto result = FetchBody::extract(WTF::move(body.value()), mimeType);
         if (result.hasException())
             return result.releaseException();
         auto fetchBody = result.releaseReturnValue();
@@ -154,7 +160,7 @@ ExceptionOr<bool> NavigatorBeacon::sendBeacon(Document& document, const String& 
         }
     }
 
-    auto cachedResource = document.protectedCachedResourceLoader()->requestBeaconResource({ WTFMove(request), options });
+    auto cachedResource = document.protectedCachedResourceLoader()->requestBeaconResource({ WTF::move(request), options });
     if (!cachedResource) {
         logError(cachedResource.error());
         return false;
@@ -168,7 +174,7 @@ ExceptionOr<bool> NavigatorBeacon::sendBeacon(Document& document, const String& 
 
 ExceptionOr<bool> NavigatorBeacon::sendBeacon(Navigator& navigator, Document& document, const String& url, std::optional<FetchBody::Init>&& body)
 {
-    return NavigatorBeacon::from(navigator)->sendBeacon(document, url, WTFMove(body));
+    return NavigatorBeacon::from(navigator)->sendBeacon(document, url, WTF::move(body));
 }
 
 }

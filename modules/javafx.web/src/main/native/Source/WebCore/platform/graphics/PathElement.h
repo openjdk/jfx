@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "FloatPoint.h"
+#include <WebCore/FloatPoint.h>
 #include <wtf/Function.h>
 
 namespace WebCore {
@@ -39,7 +39,7 @@ struct PathElement {
         CloseSubpath
     };
     Type type;
-    FloatPoint points[3];
+    std::array<FloatPoint, 3> points;
 };
 
 using PathElementApplier = Function<void(const PathElement&)>;

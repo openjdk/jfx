@@ -24,10 +24,11 @@
 
 #pragma once
 
-#include "LoaderMalloc.h"
-#include "SecurityOriginHash.h"
-#include "Timer.h"
+#include <WebCore/LoaderMalloc.h>
+#include <WebCore/SecurityOriginHash.h>
+#include <WebCore/Timer.h>
 #include <pal/SessionID.h>
+#include <wtf/CheckedRef.h>
 #include <wtf/Forward.h>
 #include <wtf/Function.h>
 #include <wtf/HashMap.h>
@@ -61,8 +62,11 @@ struct ClientOrigin;
 // -------|-----+++++++++++++++|
 // -------|-----+++++++++++++++|+++++
 
-class MemoryCache {
-    WTF_MAKE_NONCOPYABLE(MemoryCache); WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
+class MemoryCache final : public CanMakeCheckedPtr<MemoryCache> {
+    WTF_MAKE_NONCOPYABLE(MemoryCache);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(MemoryCache, Loader);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(MemoryCache);
+
     friend NeverDestroyed<MemoryCache>;
     friend class Internals;
 public:
@@ -93,6 +97,10 @@ public:
 
     WEBCORE_EXPORT static MemoryCache& singleton();
 
+    // Do nothing since this is a singleton.
+    void ref() const { }
+    void deref() const { }
+
     WEBCORE_EXPORT CachedResource* resourceForRequest(const ResourceRequest&, PAL::SessionID);
 
     bool add(CachedResource&);
@@ -104,8 +112,8 @@ public:
     void revalidationSucceeded(CachedResource& revalidatingResource, const ResourceResponse&);
     void revalidationFailed(CachedResource& revalidatingResource);
 
-    void forEachResource(const Function<void(CachedResource&)>&);
-    void forEachSessionResource(PAL::SessionID, const Function<void(CachedResource&)>&);
+    void forEachResource(NOESCAPE const Function<void(CachedResource&)>&);
+    void forEachSessionResource(PAL::SessionID, NOESCAPE const Function<void(CachedResource&)>&);
     WEBCORE_EXPORT void destroyDecodedDataForAllImages();
 
     // Sets the cache's memory capacities, in bytes. These will hold only approximately,
@@ -153,7 +161,7 @@ public:
     void resourceAccessed(CachedResource&);
     bool inLiveDecodedResourcesList(CachedResource&) const;
 
-    typedef HashSet<RefPtr<SecurityOrigin>> SecurityOriginSet;
+    using SecurityOriginSet = HashSet<RefPtr<SecurityOrigin>>;
     WEBCORE_EXPORT void removeResourcesWithOrigin(const SecurityOrigin&);
     void removeResourcesWithOrigin(const SecurityOrigin&, const String& cachePartition);
     WEBCORE_EXPORT void removeResourcesWithOrigin(const ClientOrigin&);

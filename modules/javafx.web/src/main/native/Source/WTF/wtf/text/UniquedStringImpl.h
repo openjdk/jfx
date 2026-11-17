@@ -31,20 +31,20 @@ namespace WTF {
 
 // It represents that the string impl is uniqued in some ways.
 // When the given 2 string impls are both uniqued string impls, we can compare it just using pointer comparison.
-class SUPPRESS_REFCOUNTED_WITHOUT_VIRTUAL_DESTRUCTOR UniquedStringImpl : public StringImpl {
+class UniquedStringImpl : public StringImpl {
 private:
     UniquedStringImpl() = delete;
 protected:
-    inline UniquedStringImpl(CreateSymbolTag, std::span<const LChar>);
-    inline UniquedStringImpl(CreateSymbolTag, std::span<const UChar>);
+    inline UniquedStringImpl(CreateSymbolTag, std::span<const Latin1Character>);
+    inline UniquedStringImpl(CreateSymbolTag, std::span<const char16_t>);
     inline UniquedStringImpl(CreateSymbolTag);
 };
 
-inline UniquedStringImpl::UniquedStringImpl(CreateSymbolTag, std::span<const LChar> characters)
+inline UniquedStringImpl::UniquedStringImpl(CreateSymbolTag, std::span<const Latin1Character> characters)
     : StringImpl(CreateSymbol, characters)
 { }
 
-inline UniquedStringImpl::UniquedStringImpl(CreateSymbolTag, std::span<const UChar> characters)
+inline UniquedStringImpl::UniquedStringImpl(CreateSymbolTag, std::span<const char16_t> characters)
     : StringImpl(CreateSymbol, characters)
 { }
 
@@ -68,6 +68,11 @@ ValueCheck<const UniquedStringImpl*> {
     static void checkConsistency(const UniquedStringImpl*) { }
 };
 #endif // ASSERT_ENABLED
+
+inline void printInternal(PrintStream& out, const UniquedStringImpl* value) { printInternal(out, std::bit_cast<const StringImpl*>(value)); }
+inline void printInternal(PrintStream& out, const UniquedStringImpl& value) { printInternal(out, &value); }
+inline void printInternal(PrintStream& out, UniquedStringImpl* value) { printInternal(out, static_cast<const UniquedStringImpl*>(value)); }
+inline void printInternal(PrintStream& out, UniquedStringImpl& value) { printInternal(out, &value); }
 
 } // namespace WTF
 

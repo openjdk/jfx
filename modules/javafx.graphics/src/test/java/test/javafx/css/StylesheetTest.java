@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,12 +25,13 @@
 
 package test.javafx.css;
 
-import com.sun.javafx.css.SimpleSelector;
-import com.sun.javafx.css.StyleManager;
-import javafx.css.StyleConverter.StringStore;
-import javafx.css.converter.EnumConverter;
-import javafx.css.converter.StringConverter;
-
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -41,22 +42,27 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import javafx.application.ColorScheme;
 import javafx.css.CssParser;
+import javafx.css.CssParserShim;
 import javafx.css.Declaration;
 import javafx.css.ParsedValue;
 import javafx.css.Rule;
 import javafx.css.RuleShim;
 import javafx.css.Selector;
 import javafx.css.StyleConverter;
+import javafx.css.StyleConverter.StringStore;
 import javafx.css.StyleOrigin;
 import javafx.css.StyleableProperty;
 import javafx.css.Stylesheet;
 import javafx.css.StylesheetShim;
-
+import javafx.css.converter.EnumConverter;
+import javafx.css.converter.StringConverter;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
@@ -73,9 +79,14 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontSmoothingType;
 import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
-
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
+import com.sun.javafx.css.BinarySerializer;
+import com.sun.javafx.css.RuleHelper;
+import com.sun.javafx.css.SimpleSelector;
+import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.css.media.MediaFeaturesShim;
+import com.sun.javafx.css.media.TriState;
+import com.sun.javafx.css.media.expression.FunctionExpression;
 
 public class StylesheetTest {
 
@@ -651,7 +662,7 @@ public class StylesheetTest {
     }
 
     private byte[] convertCssTextToBinary(String cssText) throws IOException {
-        var stylesheet = new CssParser().parse(cssText);
+        var stylesheet = new CssParserShim().parseUnmerged(cssText, true);
         var stream = new ByteArrayOutputStream();
         var stringStore = new StringStore();
         StylesheetShim.writeBinary(stylesheet, new DataOutputStream(stream), stringStore);
@@ -793,5 +804,146 @@ public class StylesheetTest {
 
         root.applyCss();
         assertEquals(Background.fill(Color.RED), root.getBackground());
+    }
+
+    @Test
+    void serializeStylesheetWithTransitions() throws IOException {
+        String css = """
+            .control {
+                transition: -fx-background-color 120ms ease-out,
+                            -fx-opacity 0.2s 30ms linear,
+                            -fx-scale-x 160ms cubic-bezier(0.1, 0.2, 0.3, 0.4),
+                            -fx-scale-y 0.2s steps(3, jump-both),
+                            -fx-rotate 180ms linear(0 0%, 0.25 50%, 1 100%);
+            }
+            .longhand {
+                transition-property: -fx-scale-x, -fx-scale-y;
+                transition-duration: 160ms, 0.2s;
+                transition-delay: 0s, -20ms;
+                transition-timing-function: ease-out, linear,
+                                            cubic-bezier(0.5, 2, 0.5, -1),
+                                            step-start, step-end,
+                                            steps(3), steps(3, start), steps(3, end),
+                                            steps(3, jump-start), steps(3, jump-end),
+                                            steps(3, jump-none), steps(3, jump-both),
+                                            linear(0, 0.3, 1),
+                                            linear(0 0%, 0.25 25% 75%, 1 100%);
+            }
+            @media (prefers-reduced-motion: reduce) {
+                .control { transition: all 0s; }
+            }
+            """;
+
+        var source = new CssParser().parse(css);
+        var restored = Stylesheet.loadBinary(new ByteArrayInputStream(convertCssTextToBinary(css)));
+        assertEquals(source.getRules().size(), restored.getRules().size());
+
+        for (int rule = 0; rule < source.getRules().size(); rule++) {
+            var original = source.getRules().get(rule).getDeclarations();
+            var loaded = restored.getRules().get(rule).getDeclarations();
+            assertEquals(original.size(), loaded.size());
+
+            for (int declaration = 0; declaration < original.size(); declaration++) {
+                assertArrayEquals(
+                    (Object[])original.get(declaration).getParsedValue().convert(null),
+                    (Object[])loaded.get(declaration).getParsedValue().convert(null),
+                    original.get(declaration).getProperty());
+            }
+        }
+    }
+
+    @Test
+    void serializeStylesheetWithMediaRule() throws IOException {
+        byte[] data = convertCssTextToBinary("""
+            .rect { -fx-fill: blue; }
+            @media (prefers-color-scheme: dark) {
+                .rect { -fx-fill: red; }
+            }
+            """);
+
+        var stylesheet = Stylesheet.loadBinary(new ByteArrayInputStream(data));
+        assertEquals(2, stylesheet.getRules().size());
+        assertNull(RuleHelper.getMediaRule(stylesheet.getRules().get(0)));
+
+        var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().get(1));
+        assertEquals(
+            FunctionExpression.of("prefers-color-scheme", "dark", _ -> null, ColorScheme.DARK),
+            mediaRule.getQueries().getFirst());
+    }
+
+    @Test
+    void serializeStylesheetWithConditionalImport() throws IOException {
+        var oldDefault = MediaFeaturesShim.getDefault();
+
+        try {
+            TriState[] testFeatureValue = new TriState[] { TriState.FALSE };
+
+            MediaFeaturesShim.setDefault((_, _) -> FunctionExpression.of(
+                "StylesheetTest-feature1", "value", () -> testFeatureValue[0], _ -> null, null));
+
+            byte[] data = convertCssTextToBinary("""
+                @import url("%s") (StylesheetTest-feature1);
+                .rect2 { -fx-fill: green; }
+                """.formatted("data:base64," + Base64.getEncoder().encodeToString("""
+                .rect1 { -fx-fill: blue; }
+                @media (prefers-color-scheme: dark) {
+                    .rect1 { -fx-fill: red; }
+                }
+                """.getBytes(StandardCharsets.UTF_8))));
+
+            // 1. If the import condition never matches, the stylesheet is not imported.
+            testFeatureValue[0] = TriState.FALSE;
+            var stylesheet = Stylesheet.loadBinary(new ByteArrayInputStream(data));
+            assertEquals(1, stylesheet.getRules().size());
+            assertNull(RuleHelper.getMediaRule(stylesheet.getRules().getFirst()));
+
+            // 2. If the import condition always matches, the stylesheet is unconditionally imported.
+            testFeatureValue[0] = TriState.TRUE;
+            stylesheet = Stylesheet.loadBinary(new ByteArrayInputStream(data));
+            assertEquals(3, stylesheet.getRules().size());
+            assertNull(RuleHelper.getMediaRule(stylesheet.getRules().get(0))); // unconditional import
+            assertNotNull(RuleHelper.getMediaRule(stylesheet.getRules().get(1)));
+            assertNull(RuleHelper.getMediaRule(stylesheet.getRules().get(2)));
+
+            // 3. If the import condition is unknown, the stylesheet is conditionally imported.
+            testFeatureValue[0] = TriState.UNKNOWN;
+            stylesheet = Stylesheet.loadBinary(new ByteArrayInputStream(data));
+            assertEquals(3, stylesheet.getRules().size());
+            assertNotNull(RuleHelper.getMediaRule(stylesheet.getRules().get(0))); // conditional import
+            assertNotNull(RuleHelper.getMediaRule(stylesheet.getRules().get(1)));
+            assertNull(RuleHelper.getMediaRule(stylesheet.getRules().get(2)));
+        } finally {
+            MediaFeaturesShim.setDefault(oldDefault);
+        }
+    }
+
+    @Test
+    public void testSortedPseudoClasses() throws Exception {
+        String name = "yo";
+        List<String> styleClasses = List.of("test", "TEST");
+        List<String> pseudoClasses = List.of(
+            "z",
+            "a",
+            "d",
+            "b",
+            "x",
+            "gggg",
+            "uu",
+            "zzz"
+            );
+        String id = "id";
+        Selector selector = new SimpleSelector(name, styleClasses, pseudoClasses, id);
+
+        StringStore store = new StringStore();
+        DataOutputStream out = new DataOutputStream(new ByteArrayOutputStream());
+        BinarySerializer.write(selector, out, store);
+
+        ArrayList<String> expected = new ArrayList<>();
+        expected.add(name);
+        expected.addAll(styleClasses);
+        expected.add(id);
+        expected.addAll(pseudoClasses.stream().sorted().toList());
+
+        assertEquals(expected, store.strings);
     }
 }

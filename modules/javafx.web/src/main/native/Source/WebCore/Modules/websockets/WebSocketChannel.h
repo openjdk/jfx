@@ -60,36 +60,39 @@ class SocketStreamHandle;
 class SocketStreamError;
 class WebSocketChannelClient;
 class WebSocketChannel;
-using WebSocketChannelIdentifier = LegacyNullableAtomicObjectIdentifier<WebSocketChannel>;
+using WebSocketChannelIdentifier = AtomicObjectIdentifier<WebSocketChannel>;
 
-class WebSocketChannel : public RefCounted<WebSocketChannel>, public SocketStreamHandleClient, public ThreadableWebSocketChannel, public FileReaderLoaderClient
+class WebSocketChannel final : public RefCounted<WebSocketChannel>, public SocketStreamHandleClient, public ThreadableWebSocketChannel, public FileReaderLoaderClient
 {
     WTF_MAKE_TZONE_ALLOCATED(WebSocketChannel);
 public:
     static Ref<WebSocketChannel> create(Document& document, WebSocketChannelClient& client, SocketProvider& provider) { return adoptRef(*new WebSocketChannel(document, client, provider)); }
     virtual ~WebSocketChannel();
 
-    bool send(std::span<const uint8_t> data);
+    // FileReaderLoaderClient, ThreadableWebSocketChannel.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
+    void send(std::span<const uint8_t> data);
 
     // ThreadableWebSocketChannel functions.
-    ConnectStatus connect(const URL&, const String& protocol) override;
-    String subprotocol() override;
-    String extensions() override;
-    ThreadableWebSocketChannel::SendResult send(CString&&) override;
-    ThreadableWebSocketChannel::SendResult send(const JSC::ArrayBuffer&, unsigned byteOffset, unsigned byteLength) override;
-    ThreadableWebSocketChannel::SendResult send(Blob&) override;
-    unsigned bufferedAmount() const override;
-    void close(int code, const String& reason) override; // Start closing handshake.
-    void fail(String&& reason) override;
-    void disconnect() override;
+    ConnectStatus connect(const URL&, const String& protocol) final;
+    String subprotocol() final;
+    String extensions() final;
+    void send(CString&&) final;
+    void send(const JSC::ArrayBuffer&, unsigned byteOffset, unsigned byteLength) final;
+    void send(Blob&) final;
+    void close(int code, const String& reason) final; // Start closing handshake.
+    void fail(String&& reason) final;
+    void disconnect() final;
 
-    void suspend() override;
-    void resume() override;
+    void suspend() final;
+    void resume() final;
 
     // SocketStreamHandleClient functions.
     void didOpenSocketStream(SocketStreamHandle&) final;
     void didCloseSocketStream(SocketStreamHandle&) final;
-    void didReceiveSocketStreamData(SocketStreamHandle&, std::span<const uint8_t>) override;
+    void didReceiveSocketStreamData(SocketStreamHandle&, std::span<const uint8_t>) final;
     void didFailToReceiveSocketStreamData(SocketStreamHandle&) final;
     void didUpdateBufferedAmount(SocketStreamHandle&, size_t bufferedAmount) final;
     void didFailSocketStream(SocketStreamHandle&, const SocketStreamError&) final;
@@ -106,16 +109,10 @@ public:
     ResourceRequest clientHandshakeRequest(const CookieGetter&) const final;
     const ResourceResponse& serverHandshakeResponse() const final;
 
-    using RefCounted<WebSocketChannel>::ref;
-    using RefCounted<WebSocketChannel>::deref;
-
     Document* document();
 
 private:
     WEBCORE_EXPORT WebSocketChannel(Document&, WebSocketChannelClient&, SocketProvider&);
-
-    void refThreadableWebSocketChannel() override { ref(); }
-    void derefThreadableWebSocketChannel() override { deref(); }
 
     bool appendToBuffer(std::span<const uint8_t>);
     void skipBuffer(size_t len);
@@ -140,7 +137,7 @@ private:
         QueuedFrameTypeBlob
     };
     struct QueuedFrame {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(QueuedFrame);
 
         WebSocketFrame::OpCode opCode;
         QueuedFrameType frameType;
@@ -179,8 +176,10 @@ private:
         BlobLoaderFailed
     };
 
+    RefPtr<WebSocketChannelClient> protectedClient() const;
+
     WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
-    WeakPtr<WebSocketChannelClient> m_client;
+    ThreadSafeWeakPtr<WebSocketChannelClient> m_client;
     std::unique_ptr<WebSocketHandshake> m_handshake;
     RefPtr<SocketStreamHandle> m_handle;
     Vector<uint8_t> m_buffer;
@@ -208,11 +207,11 @@ private:
     OutgoingFrameQueueStatus m_outgoingFrameQueueStatus { OutgoingFrameQueueOpen };
 
     // FIXME: Load two or more Blobs simultaneously for better performance.
-    std::unique_ptr<FileReaderLoader> m_blobLoader;
+    RefPtr<FileReaderLoader> m_blobLoader;
     BlobLoaderStatus m_blobLoaderStatus { BlobLoaderNotStarted };
 
     WebSocketDeflateFramer m_deflateFramer;
-    Ref<SocketProvider> m_socketProvider;
+    const Ref<SocketProvider> m_socketProvider;
 };
 
 } // namespace WebCore

@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "BackgroundFetchUIOptions.h"
+#include <WebCore/BackgroundFetchUIOptions.h>
 #include <wtf/CrossThreadCopier.h>
 
 namespace WebCore {
@@ -33,13 +33,13 @@ namespace WebCore {
 struct BackgroundFetchOptions : BackgroundFetchUIOptions {
     BackgroundFetchOptions() = default;
     BackgroundFetchOptions(Vector<ImageResource>&& icons, String title, uint64_t downloadTotal)
-        : BackgroundFetchUIOptions(WTFMove(icons), WTFMove(title))
+        : BackgroundFetchUIOptions(WTF::move(icons), WTF::move(title))
         , downloadTotal(downloadTotal)
     {
     }
 
     BackgroundFetchOptions isolatedCopy() const & { return { crossThreadCopy(icons), title.isolatedCopy(), downloadTotal }; }
-    BackgroundFetchOptions isolatedCopy() && { return { crossThreadCopy(WTFMove(icons)), WTFMove(title).isolatedCopy(), downloadTotal }; }
+    BackgroundFetchOptions isolatedCopy() && { return { crossThreadCopy(WTF::move(icons)), WTF::move(title).isolatedCopy(), downloadTotal }; }
 
     uint64_t downloadTotal { 0 };
 };

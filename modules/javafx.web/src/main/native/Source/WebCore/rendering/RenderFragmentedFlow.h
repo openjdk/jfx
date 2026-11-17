@@ -33,6 +33,8 @@
 #include "PODIntervalTree.h"
 #include "RenderBlockFlow.h"
 #include "RenderFragmentContainer.h"
+#include <wtf/InlineWeakPtr.h>
+#include <wtf/WeakHashMap.h>
 #include <wtf/WeakListHashSet.h>
 
 namespace WebCore {
@@ -41,11 +43,10 @@ class CurrentRenderFragmentContainerMaintainer;
 class RenderFragmentedFlow;
 class RenderStyle;
 class RenderFragmentContainer;
-class LegacyRootInlineBox;
 
 typedef SingleThreadWeakListHashSet<RenderFragmentContainer> RenderFragmentContainerList;
-typedef Vector<SingleThreadWeakPtr<RenderLayer>> RenderLayerList;
-typedef HashMap<const LegacyRootInlineBox*, SingleThreadWeakPtr<RenderFragmentContainer>> ContainingFragmentMap;
+typedef Vector<InlineWeakPtr<RenderLayer>> RenderLayerList;
+typedef PODIntervalTree<LayoutUnit, SingleThreadWeakPtr<RenderFragmentContainer>> FragmentIntervalTree;
 
 // RenderFragmentedFlow is used to collect all the render objects that participate in a
 // flow thread. It will also help in doing the layout. However, it will not render
@@ -54,7 +55,7 @@ typedef HashMap<const LegacyRootInlineBox*, SingleThreadWeakPtr<RenderFragmentCo
 // of the RenderFragmentedFlow.
 
 class RenderFragmentedFlow : public RenderBlockFlow {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderFragmentedFlow);
+    WTF_MAKE_TZONE_ALLOCATED(RenderFragmentedFlow);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderFragmentedFlow);
 public:
     virtual ~RenderFragmentedFlow();
@@ -67,12 +68,6 @@ public:
         return renderBox && m_fragmentRangeMap.contains(*renderBox);
     }
 #endif
-
-#if !ASSERT_WITH_SECURITY_IMPLICATION_DISABLED
-    bool checkLinesConsistency(const RenderBlockFlow&) const;
-#endif
-
-    void deleteLines() override;
 
     virtual void addFragmentToThread(RenderFragmentContainer*) = 0;
     void removeFragmentFromThread(RenderFragmentContainer&);
@@ -93,7 +88,7 @@ public:
     // Called when a descendant box's layout is finished and it has been positioned within its container.
     virtual void fragmentedFlowDescendantBoxLaidOut(RenderBox*) { }
 
-    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
+    void styleDidChange(Style::Difference, const RenderStyle* oldStyle) override;
 
     void repaintRectangleInFragments(const LayoutRect&) const;
 
@@ -114,7 +109,7 @@ public:
 
     virtual RenderFragmentContainer* mapFromFlowToFragment(TransformState&) const;
 
-    void logicalWidthChangedInFragmentsForBlock(const RenderBlock&, bool&);
+    void logicalWidthChangedInFragmentsForBlock(const RenderBlock&, RelayoutChildren&);
 
     LayoutUnit contentLogicalWidthOfFirstFragment() const;
     LayoutUnit contentLogicalHeightOfFirstFragment() const;
@@ -134,16 +129,14 @@ public:
     // Check if the object should be painted in this fragment and if the fragment is part of this flow thread.
     bool objectShouldFragmentInFlowFragment(const RenderObject*, const RenderFragmentContainer*) const;
 
-    void markFragmentsForOverflowLayoutIfNeeded();
-
     virtual bool addForcedFragmentBreak(const RenderBlock*, LayoutUnit, RenderBox* breakChild, bool isBefore, LayoutUnit* offsetBreakAdjustment = 0);
     virtual void applyBreakAfterContent(LayoutUnit) { }
 
     virtual bool isPageLogicalHeightKnown() const { return true; }
     bool pageLogicalSizeChanged() const { return m_pageLogicalSizeChanged; }
 
-    void collectLayerFragments(LayerFragments&, const LayoutRect& layerBoundingBox, const LayoutRect& dirtyRect);
-    LayoutRect fragmentsBoundingBox(const LayoutRect& layerBoundingBox);
+    void collectLayerFragments(LayerFragments&, const LayoutRect& layerBoundingBox, const LayoutRect& dirtyRect) const;
+    LayoutRect fragmentsBoundingBox(const LayoutRect& layerBoundingBox) const;
 
     LayoutUnit offsetFromLogicalTopOfFirstFragment(const RenderBlock*) const;
     void clearRenderBoxFragmentInfoAndCustomStyle(const RenderBox&, const RenderFragmentContainer*, const RenderFragmentContainer*, const RenderFragmentContainer*, const RenderFragmentContainer*);
@@ -167,12 +160,12 @@ public:
 
     bool absoluteQuadsForBox(Vector<FloatQuad>&, bool*, const RenderBox&) const;
 
+    bool boxIsFragmented(const RenderBox&) const;
+
     void layout() override;
 
     void setCurrentFragmentMaintainer(CurrentRenderFragmentContainerMaintainer* currentFragmentMaintainer) { m_currentFragmentMaintainer = currentFragmentMaintainer; }
     RenderFragmentContainer* currentFragment() const;
-
-    ContainingFragmentMap& containingFragmentMap();
 
     bool cachedEnclosingFragmentedFlowNeedsUpdate() const override { return false; }
 
@@ -193,10 +186,7 @@ protected:
 
     // Overridden by columns/pages to set up an initial logical width of the page width even when
     // no fragments have been generated yet.
-    virtual LayoutUnit initialLogicalWidth() const { return 0; };
-
-    void clearLinesToFragmentMap();
-    void willBeDestroyed() override;
+    virtual LayoutUnit initialLogicalWidth() const { return 0_lu; };
 
     void mapLocalToContainer(const RenderLayerModelObject* ancestorContainer, TransformState&, OptionSet<MapCoordinatesMode>, bool* wasFixed) const override;
 
@@ -205,8 +195,7 @@ protected:
 
     bool getFragmentRangeForBoxFromCachedInfo(const RenderBox&, RenderFragmentContainer*& startFragment, RenderFragmentContainer*& endFragment) const;
 
-    void removeRenderBoxFragmentInfo(RenderBox&);
-    void removeLineFragmentInfo(const RenderBlockFlow&);
+    void removeRenderBoxFragmentInfo(const RenderBox&);
 
     class RenderFragmentContainerRange {
     public:
@@ -238,19 +227,10 @@ protected:
 
     RenderFragmentContainerList m_fragmentList;
 
-    // Map a line to its containing fragment.
-    std::unique_ptr<ContainingFragmentMap> m_lineToFragmentMap;
-
     // Map a box to the list of fragments in which the box is rendered.
-    using RenderFragmentContainerRangeMap = HashMap<SingleThreadWeakRef<const RenderBox>, RenderFragmentContainerRange>;
+    using RenderFragmentContainerRangeMap = SingleThreadWeakHashMap<const RenderBox, RenderFragmentContainerRange>;
     RenderFragmentContainerRangeMap m_fragmentRangeMap;
 
-    // Map a box with a fragment break to the auto height fragment affected by that break.
-    using RenderBoxToFragmentMap = HashMap<SingleThreadWeakRef<RenderBox>, SingleThreadWeakRef<RenderFragmentContainer>>;
-    RenderBoxToFragmentMap m_breakBeforeToFragmentMap;
-    RenderBoxToFragmentMap m_breakAfterToFragmentMap;
-
-    using FragmentIntervalTree = PODIntervalTree<LayoutUnit, SingleThreadWeakPtr<RenderFragmentContainer>>;
     FragmentIntervalTree m_fragmentIntervalTree;
 
     CurrentRenderFragmentContainerMaintainer* m_currentFragmentMaintainer;

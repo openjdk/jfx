@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1292,7 +1292,7 @@ is being used to size a border should also be in pixels.
 }
 .text-input:focused {
     -fx-highlight-fill: -fx-accent;
-    -fx-highlight-text-fill: white;
+    -fx-highlight-text-fill: -fx-focused-text-base-color;
     -fx-background-color:
         -fx-focus-color,
         -fx-control-inner-background,
@@ -1300,7 +1300,6 @@ is being used to size a border should also be in pixels.
         linear-gradient(from 0px 0px to 0px 5px, derive(-fx-control-inner-background, -9%), -fx-control-inner-background);
     -fx-background-insets: -0.2, 1, -1.4, 3;
     -fx-background-radius: 3, 2, 4, 0;
-    -fx-prompt-text-fill: transparent;
 }
 
 /*******************************************************************************
@@ -1976,10 +1975,6 @@ is being used to size a border should also be in pixels.
     -fx-background-radius: 6, 5;
     -fx-padding: 1em; /* 12 */
     -fx-effect: dropshadow( gaussian , rgba(0,0,0,0.2) , 12, 0.0 , 0 , 8 );
-}
-.color-palette > .color-picker-grid {
-    -fx-padding: 0.5px;
-    -fx-snap-to-pixel: false;
 }
 .color-palette > .color-picker-grid > .color-square {
     -fx-background-color: transparent;
@@ -3455,7 +3450,6 @@ is being used to size a border should also be in pixels.
         linear-gradient(from 0px 0px to 0px 5px, derive(-fx-control-inner-background, -9%), -fx-control-inner-background);
     -fx-background-insets: 0, 1;
     -fx-background-radius: 3, 2;
-    -fx-cursor: text;
     -fx-padding: 0;
     -fx-content-padding: 4 8 4 8;
 }
@@ -3475,6 +3469,11 @@ is being used to size a border should also be in pixels.
     -fx-background-insets: -0.2, 1, -1.4, 3;
     -fx-background-radius: 3, 2, 4, 0;
     -fx-prompt-text-fill: transparent;
+}
+
+.rich-text-area .drop-target {
+    -fx-stroke: black;
+    -fx-stroke-width: 2px;
 }
 
 .rich-text-area .caret {
@@ -3509,4 +3508,49 @@ is being used to size a border should also be in pixels.
 
 .line-number-decorator .text {
     -fx-bounds-type: visual;
+}
+
+.rich-text-area .content {
+    -fx-cursor: text;
+}
+
+.code-area .content {
+    -fx-cursor: text;
+}
+
+.rich-text-area .text-highlight-1 {
+    -fx-fill: #e7ff0055;
+    -fx-stroke-width: 0;
+}
+
+.rich-text-area .text-highlight-2 {
+    -fx-fill: #64ff0055;
+    -fx-stroke-width: 0;
+}
+
+.rich-text-area .text-highlight-3 {
+    -fx-fill: #5fe8ff55;
+    -fx-stroke-width: 0;
+}
+
+.rich-text-area .text-highlight-4 {
+    -fx-fill: #ff10f055;
+    -fx-stroke-width: 0;
+}
+
+.rich-text-area .text-highlight-5 {
+    -fx-fill: #ff730055;
+    -fx-stroke-width: 0;
+}
+
+.rich-text-area .wavy-underline-1 {
+    -fx-stroke: red;
+}
+
+.rich-text-area .wavy-underline-2 {
+    -fx-stroke: green;
+}
+
+.rich-text-area .wavy-underline-3 {
+    -fx-stroke: blue;
 }

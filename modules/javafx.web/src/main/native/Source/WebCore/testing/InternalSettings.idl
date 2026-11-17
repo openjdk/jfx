@@ -34,7 +34,6 @@ enum UserInterfaceDirectionPolicy { "Content", "System" };
 
 [
     LegacyNoInterfaceObject,
-    JSGenerateToJSObject,
     ExportMacro=WEBCORE_TESTSUPPORT_EXPORT,
 ] interface InternalSettings : InternalSettingsGenerated {
     // Settings
@@ -64,7 +63,6 @@ enum UserInterfaceDirectionPolicy { "Content", "System" };
     undefined setCustomPasteboardDataEnabled(boolean enabled);
 
     readonly attribute boolean vp9DecoderEnabled;
-    readonly attribute boolean mediaSourceInlinePaintingEnabled;
 
     undefined setShouldManageAudioSessionCategory(boolean should);
 

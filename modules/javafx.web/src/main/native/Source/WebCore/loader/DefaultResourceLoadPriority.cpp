@@ -33,6 +33,7 @@ ResourceLoadPriority DefaultResourceLoadPriority::forResourceType(CachedResource
     case CachedResource::Type::MainResource:
         return ResourceLoadPriority::VeryHigh;
     case CachedResource::Type::CSSStyleSheet:
+    case CachedResource::Type::JSON:
     case CachedResource::Type::Script:
         return ResourceLoadPriority::High;
     case CachedResource::Type::SVGFontResource:
@@ -59,6 +60,7 @@ ResourceLoadPriority DefaultResourceLoadPriority::forResourceType(CachedResource
         return ResourceLoadPriority::Low;
 #endif
 #if ENABLE(MODEL_ELEMENT)
+    case CachedResource::Type::EnvironmentMapResource:
     case CachedResource::Type::ModelResource:
         return ResourceLoadPriority::Medium;
 #endif

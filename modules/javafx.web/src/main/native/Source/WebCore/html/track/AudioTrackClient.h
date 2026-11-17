@@ -27,22 +27,13 @@
 
 #if ENABLE(VIDEO)
 
-#include <wtf/WeakPtr.h>
-
-namespace WebCore {
-class AudioTrackClient;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::AudioTrackClient> : std::true_type { };
-}
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 
 namespace WebCore {
 
 class AudioTrack;
 
-class AudioTrackClient : public CanMakeWeakPtr<AudioTrackClient> {
+class AudioTrackClient : public AbstractRefCountedAndCanMakeWeakPtr<AudioTrackClient> {
 public:
     virtual ~AudioTrackClient() = default;
     virtual void audioTrackEnabledChanged(AudioTrack&) { }
@@ -50,6 +41,7 @@ public:
     virtual void audioTrackKindChanged(AudioTrack&) { }
     virtual void audioTrackLabelChanged(AudioTrack&) { }
     virtual void audioTrackLanguageChanged(AudioTrack&) { }
+    virtual void audioTrackConfigurationChanged(AudioTrack&) { }
     virtual void willRemoveAudioTrack(AudioTrack&) { }
 };
 

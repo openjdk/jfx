@@ -25,11 +25,11 @@
 
 #pragma once
 
-#include "DestinationColorSpace.h"
-#include "ImageBufferPixelFormat.h"
-#include "IntSize.h"
-#include "PixelFormat.h"
-#include "RenderingMode.h"
+#include <WebCore/DestinationColorSpace.h>
+#include <WebCore/ImageBufferFormat.h>
+#include <WebCore/IntSize.h>
+#include <WebCore/PixelFormat.h>
+#include <WebCore/RenderingMode.h>
 
 namespace WebCore {
 
@@ -37,7 +37,7 @@ struct ImageBufferBackendParameters {
     IntSize backendSize;
     float resolutionScale; // Resolution scale is of the ImageBuffer logical size.
     DestinationColorSpace colorSpace;
-    ImageBufferPixelFormat pixelFormat;
+    ImageBufferFormat bufferFormat;
     RenderingPurpose purpose;
 };
 

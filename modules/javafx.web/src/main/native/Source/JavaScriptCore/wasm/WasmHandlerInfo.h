@@ -25,9 +25,11 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(WEBASSEMBLY)
 
-#include "CodeLocation.h"
+#include <JavaScriptCore/CodeLocation.h>
 #include <wtf/Forward.h>
 #include <wtf/text/ASCIILiteral.h>
 
@@ -42,6 +44,10 @@ enum class HandlerType {
     Catch = 0,
     CatchAll = 1,
     Delegate = 2,
+    TryTableCatch = 3,
+    TryTableCatchRef = 4,
+    TryTableCatchAll = 5,
+    TryTableCatchAllRef = 6,
 };
 
 struct HandlerInfoBase {
@@ -89,6 +95,14 @@ struct UnlinkedHandlerInfo : public HandlerInfoBase {
             return "catchall"_s;
         case HandlerType::Delegate:
             return "delegate"_s;
+        case HandlerType::TryTableCatch:
+            return "try_table catch"_s;
+        case HandlerType::TryTableCatchRef:
+            return "try_table catch_ref"_s;
+        case HandlerType::TryTableCatchAll:
+            return "try_table catch_all"_s;
+        case HandlerType::TryTableCatchAllRef:
+            return "try_table catch_all_ref"_s;
         default:
             ASSERT_NOT_REACHED();
             break;

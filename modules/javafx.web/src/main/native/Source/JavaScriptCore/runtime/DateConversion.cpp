@@ -31,6 +31,8 @@
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/WTFString.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 template<int width>
@@ -57,8 +59,8 @@ void appendNumber<2>(StringBuilder& builder, int value)
 
 String formatDateTime(const GregorianDateTime& t, DateTimeFormat format, bool asUTCVariant, DateCache& dateCache)
 {
-    bool appendDate = format & DateTimeFormatDate;
-    bool appendTime = format & DateTimeFormatTime;
+    bool appendDate = static_cast<int>(format) & static_cast<int>(DateTimeFormat::Date);
+    bool appendTime = static_cast<int>(format) & static_cast<int>(DateTimeFormat::Time);
 
     StringBuilder builder;
 
@@ -103,3 +105,5 @@ String formatDateTime(const GregorianDateTime& t, DateTimeFormat format, bool as
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

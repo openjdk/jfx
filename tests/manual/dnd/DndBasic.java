@@ -27,9 +27,11 @@ import java.util.ArrayList;
 import java.util.UUID;
 import java.util.Set;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.Group;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.Dragboard;
@@ -81,13 +83,48 @@ public class DndBasic extends Application {
         HBox columns = new HBox(sources, targets);
         columns.setSpacing(10);
 
-        Label instructions = new Label("Drag from a source to a destination (the desktop can be either)");
-        VBox withInstructions = new VBox(instructions, columns);
+        Label instructions = new Label(instructionsText());
+        instructions.setWrapText(true);
+        instructions.setMaxWidth(620);
+
+        HBox passFailButtons = createPassFailButtons();
+
+        VBox withInstructions = new VBox(instructions, columns, passFailButtons);
         withInstructions.setSpacing(20);
         withInstructions.setPadding(new Insets(10, 10, 10, 10));
         Scene s = new Scene(withInstructions);
         primaryStage.setScene(s);
         primaryStage.show();
+    }
+
+    private String instructionsText() {
+        String os = System.getProperty("os.name", "");
+        String modifiers;
+
+        if (os.startsWith("Mac")) {
+            modifiers =
+                    "macOS: Use no modifier for COPY, 'Command' for MOVE, " +
+                            "and 'Control' for LINK.";
+        } else {
+            modifiers =
+                    "Windows/Linux: Use 'Ctrl' for COPY, 'Shift' for MOVE, " +
+                            "and 'Ctrl+Shift' for LINK.";
+        }
+
+        return """
+               Drag from a green Source to a blue Destination. The desktop applications may
+               also be used as either the drag source or the drop destination.
+               The names inside each Source and Destination box show its supported actions.
+               An action is compatible when it appears in both boxes.
+
+               %s
+
+               For each Source/Destination pair being tested, first drag without holding any modifier keys.
+               Then repeat with each modifier combination listed above, holding the keys until the drop completes.
+               A successful drop must show 'accepted MODE' in the Source and
+               'Dropped here, proposed MODE' in the Destination, where MODE is
+               supported by both boxes. An unsupported combination must be rejected.
+               """.formatted(modifiers);
     }
 
     private Text modesToText(String l, TransferMode[] modes) {
@@ -217,6 +254,22 @@ public class DndBasic extends Application {
         target.setFill(Color.LIGHTBLUE);
 
         return new Group(target, labels);
+    }
+
+    private HBox createPassFailButtons() {
+        var passButton = new Button("Pass");
+        passButton.setOnAction(e -> {
+            System.out.println("TEST PASSED");
+            Platform.exit();
+        });
+        var failButton = new Button("Fail");
+        failButton.setOnAction(e -> {
+            System.out.println("TEST FAILED");
+            Platform.exit();
+            throw new AssertionError("Test failed");
+        });
+        var hbox = new HBox(10, passButton, failButton);
+        return hbox;
     }
 
     public static void main(String[] args) {

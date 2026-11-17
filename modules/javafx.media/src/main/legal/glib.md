@@ -1,11 +1,11 @@
-## GNU Glib v2.82.4
+## GNU Glib v2.84.3
 
 ### Glib Notice
 ```
 
-You are receiving a copy of GNU Glib, Version: 2.82.4 in either source or
+You are receiving a copy of GNU Glib, Version: 2.84.3 in either source or
 object code in the JavaFX runtime or JavaFX SDK. The terms of the
-Oracle license do NOT apply to the GNU Glib, Version: 2.82.4; it is
+Oracle license do NOT apply to the GNU Glib, Version: 2.84.3; it is
 licensed under the following license, separately from the Oracle programs
 you receive. If you do not wish to install this library, you may delete
 this library:
@@ -95,7 +95,9 @@ Copyright (C) 2005-2007 Imendio AB
 Copyright (C) 2018-2020 Endless Mobile, Inc.
 Copyright (C) 1999-2000 Tom Tromey
 Copyright (C) 2003 Noah Levitt
+Copyright (C) 2022-2023 David Rheinsberg
 Copyright (C) 2020 William Manley
+Copyright (C) 2024 Christian Hergert
 Copyright (C) 2009 Benjamin Otte <otte@gnome.org>
 Copyright (C) 2010  Intel Corp.
 Copyright (C) 2010 Christian Persch

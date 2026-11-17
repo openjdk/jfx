@@ -36,7 +36,8 @@
 };
 
 [
-    JSGenerateToJSObject
+    JSGenerateToJSObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary StorageEstimate {
     unsigned long long usage;
     unsigned long long quota;

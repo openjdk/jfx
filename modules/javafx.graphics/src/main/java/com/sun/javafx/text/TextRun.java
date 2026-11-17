@@ -332,6 +332,17 @@ public class TextRun implements GlyphList {
                 cacheWidth = x;
                 return x;
             }
+
+            if (isComplex()) {
+                if (glyphIndex == glyphCount) {
+                    return getWidth();
+                }
+                float x = 0;
+                for (int i = 0; i < glyphIndex; i++) {
+                    x += getAdvance(i);
+                }
+                return x;
+            }
             return positions[glyphIndex<<1];
         }
         return glyphIndex == 0 ? 0 : getWidth();
@@ -394,7 +405,7 @@ public class TextRun implements GlyphList {
                 return getPosX(glyphIndex + (leading ? 1 : 0));
             }
         }
-        if (isTab()) {
+        if (isTab() || isEmbedded()) {
             if (ltr) {
                 return leading ? 0 : getWidth();
             } else {

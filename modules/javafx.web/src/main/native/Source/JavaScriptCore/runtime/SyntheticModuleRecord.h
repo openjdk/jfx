@@ -25,8 +25,9 @@
 
 #pragma once
 
-#include "AbstractModuleRecord.h"
-#include "SourceCode.h"
+#include <JavaScriptCore/AbstractModuleRecord.h>
+#include <JavaScriptCore/ArgList.h>
+#include <JavaScriptCore/SourceCode.h>
 
 namespace JSC {
 
@@ -41,7 +42,9 @@ public:
 
     DECLARE_EXPORT_INFO;
 
-    static constexpr bool needsDestruction = true;
+    DECLARE_VISIT_CHILDREN;
+
+    static constexpr DestructionMode needsDestruction = NeedsDestruction;
     static void destroy(JSCell*);
 
     template<typename CellType, SubspaceAccess mode>
@@ -65,8 +68,6 @@ private:
     static SyntheticModuleRecord* tryCreateWithExportNamesAndValues(JSGlobalObject*, const Identifier& moduleKey, const Vector<Identifier, 4>& exportNames, const MarkedArgumentBuffer& exportValues);
 
     void finishCreation(JSGlobalObject*, VM&);
-
-    DECLARE_VISIT_CHILDREN;
 };
 
 } // namespace JSC

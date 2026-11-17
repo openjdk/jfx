@@ -31,10 +31,10 @@
 
 #pragma once
 
-#include "Exception.h"
-#include "InspectorEnvironment.h"
-#include "InspectorProtocolObjects.h"
-#include "ScriptFunctionCall.h"
+#include <JavaScriptCore/Exception.h>
+#include <JavaScriptCore/InspectorEnvironment.h>
+#include <JavaScriptCore/InspectorProtocolObjects.h>
+#include <JavaScriptCore/ScriptFunctionCall.h>
 #include <wtf/Expected.h>
 #include <wtf/Forward.h>
 #include <wtf/Function.h>
@@ -51,9 +51,12 @@ using AsyncCallCallback = WTF::Function<void(Protocol::ErrorString&, RefPtr<Prot
 
 JS_EXPORT_PRIVATE RefPtr<JSON::Value> toInspectorValue(JSC::JSGlobalObject*, JSC::JSValue);
 
-class JS_EXPORT_PRIVATE InjectedScriptBase {
+class InjectedScriptBase {
 public:
-    virtual ~InjectedScriptBase();
+    JS_EXPORT_PRIVATE InjectedScriptBase(const InjectedScriptBase&);
+    JS_EXPORT_PRIVATE virtual ~InjectedScriptBase();
+
+    JS_EXPORT_PRIVATE InjectedScriptBase& operator=(const InjectedScriptBase&);
 
     const String& name() const { return m_name; }
     bool hasNoValue() const { return !m_injectedScriptObject.get(); }
@@ -63,7 +66,8 @@ protected:
     InjectedScriptBase(const String& name);
     InjectedScriptBase(const String& name, JSC::JSGlobalObject*, JSC::JSObject*, InspectorEnvironment*);
 
-    InspectorEnvironment* inspectorEnvironment() const { return m_environment; }
+    InspectorEnvironment& inspectorEnvironment() const { return *m_environment.get(); }
+    CheckedRef<InspectorEnvironment> checkedInspectorEnvironment() const { return inspectorEnvironment(); }
 
     bool hasAccessToInspectedScriptState() const;
 
@@ -80,7 +84,7 @@ private:
     String m_name;
     JSC::JSGlobalObject* m_globalObject { nullptr };
     JSC::Strong<JSC::JSObject> m_injectedScriptObject;
-    InspectorEnvironment* m_environment { nullptr };
+    WeakPtr<InspectorEnvironment> m_environment;
 };
 
 } // namespace Inspector

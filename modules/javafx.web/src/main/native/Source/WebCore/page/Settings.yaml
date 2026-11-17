@@ -22,13 +22,6 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 # THE POSSIBILITY OF SUCH DAMAGE.
 
-AcceleratedCompositedAnimationsEnabled:
-  type: bool
-  webcoreOnChange: setNeedsRecalcStyleInAllFrames
-  defaultValue:
-    WebCore:
-      default: true
-
 AllowAnimationControlsOverride:
   type: bool
   defaultValue:
@@ -133,7 +126,7 @@ FixedElementsLayoutRelativeToFrame:
 
 FontFallbackPrefersPictographs:
   type: bool
-  webcoreOnChange: setNeedsRecalcStyleInAllFrames
+  webcoreOnChange: fontFallbackPrefersPictographsChanged
   defaultValue:
     WebCore:
       default: false
@@ -274,7 +267,7 @@ MaximumHTMLParserDOMTreeDepth:
   type: uint32_t
   defaultValue:
     WebCore:
-      default: defaultMaximumHTMLParserDOMTreeDepth
+      default: SettingsBase::defaultMaximumHTMLParserDOMTreeDepth
 
 MaximumSourceBufferSize:
   comment: >-
@@ -414,6 +407,13 @@ StorageBlockingPolicy:
     WebCore:
       default: StorageBlockingPolicy::AllowAll
 
+SuppressHDRShouldBeAllowedInFullscreenVideo:
+  type: bool
+  defaultValue:
+    WebCore:
+      PLATFORM(MAC): false
+      default: true
+
 TextAutosizingWindowSizeOverrideHeight:
   type: uint32_t
   webcoreOnChange: setNeedsRecalcStyleInAllFrames
@@ -518,11 +518,4 @@ WebkitImageReadyEventEnabled:
   type: bool
   defaultValue:
     WebCore:
-      default: false
-
-YouTubeFlashPluginReplacementEnabled:
-  type: bool
-  defaultValue:
-    WebCore:
-      PLATFORM(COCOA): true
       default: false

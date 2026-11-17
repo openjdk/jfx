@@ -1,8 +1,11 @@
-/*
- * Summary: interface for all global variables of the library
- * Description: Deprecated, don't use
+/**
+ * @file
  *
- * Copy: See Copyright for the status of this software.
+ * @brief interface for all global variables of the library
+ *
+ * Deprecated, don't use
+ *
+ * @copyright See Copyright for the status of this software.
  */
 
 #ifndef __XML_GLOBALS_H
@@ -21,21 +24,5 @@
 #include <libxml/xmlIO.h>
 #include <libxml/xmlsave.h>
 #include <libxml/threads.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-typedef struct _xmlGlobalState xmlGlobalState;
-typedef xmlGlobalState *xmlGlobalStatePtr;
-
-XML_DEPRECATED XMLPUBFUN void
-xmlInitializeGlobalState(xmlGlobalStatePtr gs);
-XML_DEPRECATED XMLPUBFUN
-xmlGlobalStatePtr xmlGetGlobalState(void);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* __XML_GLOBALS_H */

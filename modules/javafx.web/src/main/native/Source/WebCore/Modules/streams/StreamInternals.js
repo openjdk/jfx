@@ -38,7 +38,7 @@ function shieldingPromiseResolve(result)
 {
     "use strict";
 
-    const promise = @Promise.@resolve(result);
+    const promise = @promiseResolve(@Promise, result);
     if (promise.@then === @undefined)
         promise.@then = @Promise.prototype.@then;
     return promise;
@@ -49,7 +49,7 @@ function promiseInvokeOrNoopMethodNoCatch(object, method, args)
     "use strict";
 
     if (method === @undefined)
-        return @Promise.@resolve();
+        return @promiseResolve(@Promise, @undefined);
     return @shieldingPromiseResolve(method.@apply(object, args));
 }
 
@@ -68,7 +68,7 @@ function promiseInvokeOrNoopMethod(object, method, args)
         return @promiseInvokeOrNoopMethodNoCatch(object, method, args);
     }
     catch(error) {
-        return @Promise.@reject(error);
+        return @promiseReject(@Promise, error);
     }
 }
 
@@ -80,7 +80,7 @@ function promiseInvokeOrNoop(object, key, args)
         return @promiseInvokeOrNoopNoCatch(object, key, args);
     }
     catch(error) {
-        return @Promise.@reject(error);
+        return @promiseReject(@Promise, error);
     }
 }
 
@@ -95,7 +95,7 @@ function promiseInvokeOrFallbackOrNoop(object, key1, args1, key2, args2)
         return @shieldingPromiseResolve(method.@apply(object, args1));
     }
     catch(error) {
-        return @Promise.@reject(error);
+        return @promiseReject(@Promise, error);
     }
 }
 
@@ -210,7 +210,7 @@ function extractHighWaterMarkFromQueuingStrategyInit(init)
 function createFulfilledPromise(value)
 {
     const promise = @newPromise();
-    @fulfillPromise(promise, value);
+    @fulfillPromiseWithFirstResolvingFunctionCallCheck(promise, value);
     return promise;
 }
 

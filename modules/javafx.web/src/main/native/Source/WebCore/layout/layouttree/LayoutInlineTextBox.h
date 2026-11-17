@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "LayoutBox.h"
+#include <WebCore/LayoutBox.h>
 #include <wtf/OptionSet.h>
 #include <wtf/TZoneMalloc.h>
 
@@ -34,36 +34,38 @@ namespace WebCore {
 namespace Layout {
 
 class InlineTextBox : public Box {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(InlineTextBox);
+    WTF_MAKE_TZONE_ALLOCATED(InlineTextBox);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(InlineTextBox);
 public:
     enum class ContentCharacteristic : uint8_t {
-        CanUseSimplifiedContentMeasuring         = 1 << 0,
-        CanUseSimpledFontCodepath                = 1 << 1,
-        HasPositionDependentContentWidth         = 1 << 2,
-        HasStrongDirectionalityContent           = 1 << 3,
+        CanUseSimplifiedContentMeasuring,
+        CanUseSimpleFontCodepath,
+        ShouldUseSimpleGlyphOverflowCodePath,
+        HasPositionDependentContentWidth,
+        HasStrongDirectionalityContent
     };
-    InlineTextBox(String, bool isCombined, OptionSet<ContentCharacteristic>, RenderStyle&&, std::unique_ptr<RenderStyle>&& firstLineStyle = nullptr);
+    InlineTextBox(String, bool isCombined, EnumSet<ContentCharacteristic>, RenderStyle&&, std::unique_ptr<RenderStyle>&& firstLineStyle = nullptr);
     virtual ~InlineTextBox() = default;
 
     const String& content() const { return m_content; }
     bool isCombined() const { return m_isCombined; }
     // FIXME: This should not be a box's property.
     bool canUseSimplifiedContentMeasuring() const { return m_contentCharacteristicSet.contains(ContentCharacteristic::CanUseSimplifiedContentMeasuring); }
-    bool canUseSimpleFontCodePath() const { return m_contentCharacteristicSet.contains(ContentCharacteristic::CanUseSimpledFontCodepath); }
+    bool canUseSimpleFontCodePath() const { return m_contentCharacteristicSet.contains(ContentCharacteristic::CanUseSimpleFontCodepath); }
+    bool shouldUseSimpleGlyphOverflowCodePath() const { return m_contentCharacteristicSet.contains(ContentCharacteristic::ShouldUseSimpleGlyphOverflowCodePath); }
     bool hasPositionDependentContentWidth() const { return m_contentCharacteristicSet.contains(ContentCharacteristic::HasPositionDependentContentWidth); }
     bool hasStrongDirectionalityContent() const { return m_contentCharacteristicSet.contains(ContentCharacteristic::HasStrongDirectionalityContent); }
 
-    void setContent(String newContent, OptionSet<ContentCharacteristic>);
-    void setContentCharacteristic(OptionSet<ContentCharacteristic> contentCharacteristicSet) { m_contentCharacteristicSet = contentCharacteristicSet; }
+    void setContent(String newContent, EnumSet<ContentCharacteristic>);
+    void setContentCharacteristic(EnumSet<ContentCharacteristic> contentCharacteristicSet) { m_contentCharacteristicSet = contentCharacteristicSet; }
 
 private:
     String m_content;
     bool m_isCombined { false };
-    OptionSet<ContentCharacteristic> m_contentCharacteristicSet;
+    EnumSet<ContentCharacteristic> m_contentCharacteristicSet;
 };
 
-inline void InlineTextBox::setContent(String newContent, OptionSet<ContentCharacteristic> contentCharacteristicSet)
+inline void InlineTextBox::setContent(String newContent, EnumSet<ContentCharacteristic> contentCharacteristicSet)
 {
     m_content = newContent;
     m_contentCharacteristicSet = contentCharacteristicSet;

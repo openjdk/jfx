@@ -37,6 +37,7 @@
 #include "DocumentLoader.h"
 #include "FrameLoader.h"
 #include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "NetworkLoadMetrics.h"
 #include "Performance.h"
 #include "ResourceResponse.h"
@@ -350,7 +351,7 @@ unsigned long long PerformanceTiming::loadEventEnd() const
 
 const DocumentLoader* PerformanceTiming::documentLoader() const
 {
-    auto* frame = this->frame();
+    RefPtr frame = this->frame();
     if (!frame)
         return nullptr;
 
@@ -359,11 +360,11 @@ const DocumentLoader* PerformanceTiming::documentLoader() const
 
 const DocumentEventTiming* PerformanceTiming::documentEventTiming() const
 {
-    auto* frame = this->frame();
+    RefPtr frame = this->frame();
     if (!frame)
         return nullptr;
 
-    auto* document = frame->document();
+    RefPtr document = frame->document();
     if (!document)
         return nullptr;
 
@@ -372,7 +373,7 @@ const DocumentEventTiming* PerformanceTiming::documentEventTiming() const
 
 const DocumentLoadTiming* PerformanceTiming::documentLoadTiming() const
 {
-    auto* loader = documentLoader();
+    RefPtr loader = documentLoader();
     if (!loader)
         return nullptr;
 
@@ -381,7 +382,7 @@ const DocumentLoadTiming* PerformanceTiming::documentLoadTiming() const
 
 const NetworkLoadMetrics* PerformanceTiming::networkLoadMetrics() const
 {
-    auto* loader = documentLoader();
+    RefPtr loader = documentLoader();
     if (!loader)
         return nullptr;
     return loader->response().deprecatedNetworkLoadMetricsOrNull();

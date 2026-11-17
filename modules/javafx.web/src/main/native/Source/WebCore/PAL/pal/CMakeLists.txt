@@ -1,13 +1,13 @@
 set(PAL_PUBLIC_HEADERS
     ExportMacros.h
     FileSizeFormatter.h
-    Gunzip.h
     HysteresisActivity.h
     Logging.h
     SessionID.h
     ThreadGlobalData.h
 
     crypto/CryptoDigest.h
+    crypto/CryptoDigestHashFunction.h
 
     system/Clock.h
     system/ClockGeneric.h
@@ -37,6 +37,7 @@ set(PAL_PUBLIC_HEADERS
 set(PAL_SOURCES
     FileSizeFormatter.cpp
     Logging.cpp
+    PALTZoneImpls.cpp
     SessionID.cpp
     ThreadGlobalData.cpp
 
@@ -79,6 +80,7 @@ set(PAL_INTERFACE_DEPENDENCIES PAL_CopyHeaders)
 
 WEBKIT_FRAMEWORK_DECLARE(PAL)
 WEBKIT_INCLUDE_CONFIG_FILES_IF_EXISTS()
+WEBKIT_ADD_TARGET_UNSAFE_BUFFER_WARNINGS(PAL)
 
 WEBKIT_COPY_FILES(PAL_CopyHeaders
     DESTINATION ${PAL_FRAMEWORK_HEADERS_DIR}/pal

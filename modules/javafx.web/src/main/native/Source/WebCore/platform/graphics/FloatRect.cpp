@@ -96,7 +96,7 @@ void FloatRect::intersect(const FloatRect& other)
         b = 0;
     }
 
-    setLocationAndSizeFromEdges(l, t, r, b);
+    shiftEdgesTo(l, t, r, b);
 }
 
 bool FloatRect::edgeInclusiveIntersect(const FloatRect& other)
@@ -138,7 +138,7 @@ void FloatRect::uniteEvenIfEmpty(const FloatRect& other)
     float maxX = std::max(this->maxX(), other.maxX());
     float maxY = std::max(this->maxY(), other.maxY());
 
-    setLocationAndSizeFromEdges(minX, minY, maxX, maxY);
+    shiftEdgesTo(minX, minY, maxX, maxY);
 }
 
 void FloatRect::uniteIfNonZero(const FloatRect& other)
@@ -154,14 +154,26 @@ void FloatRect::uniteIfNonZero(const FloatRect& other)
     uniteEvenIfEmpty(other);
 }
 
-void FloatRect::extend(const FloatPoint& p)
+void FloatRect::extend(FloatPoint p)
 {
     float minX = std::min(x(), p.x());
     float minY = std::min(y(), p.y());
     float maxX = std::max(this->maxX(), p.x());
     float maxY = std::max(this->maxY(), p.y());
 
-    setLocationAndSizeFromEdges(minX, minY, maxX, maxY);
+    shiftEdgesTo(minX, minY, maxX, maxY);
+}
+
+void FloatRect::extend(FloatPoint minPoint, FloatPoint maxPoint)
+{
+    ASSERT(minPoint.x() <= maxPoint.x() && minPoint.y() <= maxPoint.y());
+
+    float minX = std::min(x(), minPoint.x());
+    float minY = std::min(y(), minPoint.y());
+    float maxX = std::max(this->maxX(), maxPoint.x());
+    float maxY = std::max(this->maxY(), maxPoint.y());
+
+    shiftEdgesTo(minX, minY, maxX, maxY);
 }
 
 void FloatRect::scale(float sx, float sy)
@@ -215,11 +227,11 @@ TextStream& operator<<(TextStream& ts, const FloatRect &r)
 {
     if (ts.hasFormattingFlag(TextStream::Formatting::SVGStyleRect)) {
         // FIXME: callers should use the NumberRespectingIntegers flag.
-        return ts << "at (" << TextStream::FormatNumberRespectingIntegers(r.x()) << "," << TextStream::FormatNumberRespectingIntegers(r.y())
+        return ts << "at ("_s << TextStream::FormatNumberRespectingIntegers(r.x()) << ',' << TextStream::FormatNumberRespectingIntegers(r.y())
             << ") size " << TextStream::FormatNumberRespectingIntegers(r.width()) << "x" << TextStream::FormatNumberRespectingIntegers(r.height());
     }
 
-    return ts << r.location() << " " << r.size();
+    return ts << r.location() << ' ' << r.size();
 }
 
 Ref<JSON::Object> FloatRect::toJSONObject() const

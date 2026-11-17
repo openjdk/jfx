@@ -346,7 +346,7 @@ GST_BASE_API
 void            gst_base_transform_set_prefer_passthrough (GstBaseTransform *trans,
                                                            gboolean prefer_passthrough);
 GST_BASE_API
-GstBufferPool * gst_base_transform_get_buffer_pool  (GstBaseTransform *trans);
+GstBufferPool * gst_base_transform_get_buffer_pool  (GstBaseTransform *trans) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_BASE_API
 void            gst_base_transform_get_allocator    (GstBaseTransform *trans,

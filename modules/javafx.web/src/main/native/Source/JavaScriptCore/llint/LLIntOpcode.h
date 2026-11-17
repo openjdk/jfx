@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(C_LOOP)
 
 #define FOR_EACH_LLINT_NOJIT_NATIVE_HELPER(macro) \
@@ -59,8 +61,10 @@
     macro(op_iterator_open) \
     macro(op_iterator_next) \
     macro(op_construct) \
+    macro(op_super_construct) \
     macro(op_call_varargs) \
     macro(op_construct_varargs) \
+    macro(op_super_construct_varargs) \
     macro(op_get_by_id) \
     macro(op_get_by_id_direct) \
     macro(op_get_length) \
@@ -73,4 +77,5 @@
     macro(op_enumerator_get_by_val) \
     macro(op_enumerator_put_by_val) \
     macro(op_enumerator_in_by_val) \
+    macro(op_instanceof) \
 

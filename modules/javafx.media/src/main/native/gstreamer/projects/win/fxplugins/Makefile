@@ -27,7 +27,8 @@ SYSTEM_LIBS = glib-lite.lib \
               oleaut32.lib \
               strmiids.lib \
               Mfplat.lib \
-              mfuuid.lib
+              mfuuid.lib \
+              Mfreadwrite.lib
 
 LDFLAGS = -out:$(shell cygpath -ma $(TARGET)) -nologo -incremental:no -libpath:$(shell cygpath -ma $(BUILD_DIR)) -dll $(SYSTEM_LIBS) \
           -nodefaultlib:libcmt -manifest -manifestfile:$(MANIFEST) -manifestuac:"level='asInvoker' uiAccess='false'" -implib:$(IMPLIB) \
@@ -60,6 +61,8 @@ CPP_SOURCES = dshowwrapper/Allocator.cpp \
               dshowwrapper/Sink.cpp \
               dshowwrapper/Src.cpp \
               mfwrapper/mfwrapper.cpp \
+              mfwrapper/mfdemux.cpp \
+              mfwrapper/mfgstbytestream.cpp \
               mfwrapper/mfgstbuffer.cpp
 
 COMPILER_FLAGS = -nologo -W3 -WX- -EHsc -GS -fp:precise \
@@ -78,6 +81,7 @@ INCLUDES =  $(addprefix -I$(SRCBASE_DIR)/,$(DIRLIST)) \
 
 CFLAGS =   -DWIN32 \
            -D_WINDOWS \
+           -D_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR \
            -D_USRDLL \
            -DENABLE_PULL_MODE=1 \
            -DENABLE_SOURCE_SEEKING=1 \
@@ -88,7 +92,6 @@ CFLAGS =   -DWIN32 \
            -DGST_DISABLE_LOADSAVE \
            -DG_DISABLE_DEPRECATED \
            -DG_DISABLE_ASSERT \
-           -DG_DISABLE_CHECKS \
            -D_WINDLL \
            -D_MBCS \
            -DINITGUID \

@@ -35,10 +35,11 @@
 #include "pas_large_sharing_pool.h"
 #include "pas_page_malloc.h"
 #include "pas_page_sharing_pool.h"
+#include "pas_zero_memory.h"
 
 bool pas_large_utility_free_heap_talks_to_large_sharing_pool = true;
 
-static const bool verbose = false;
+static const bool verbose = PAS_SHOULD_LOG(PAS_LOG_LARGE_HEAPS);
 
 static pas_aligned_allocation_result large_utility_aligned_allocator(size_t size,
                                                                      pas_alignment alignment,
@@ -164,7 +165,7 @@ void pas_large_free_heap_helpers_deallocate(
     pas_will_deallocate(ptr, size, pas_large_utility_free_heap_kind, pas_object_allocation);
     if (pas_large_utility_free_heap_talks_to_large_sharing_pool) {
         if (verbose) {
-            pas_log("freeing %p...%p.\n",
+            pas_log("large free heap freeing %p...%p.\n",
                     (void*)ptr,
                     (char*)ptr + size);
         }

@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "IndexingType.h"
-#include "JSArray.h"
+#include <JavaScriptCore/IndexingType.h>
+#include <JavaScriptCore/JSArray.h>
 
 namespace JSC {
 
@@ -50,9 +50,10 @@ public:
     IndexingType selectIndexingType()
     {
         ASSERT(!isCompilationThread());
-        JSArray* lastArray = m_storage.pointer();
-        if (lastArray && UNLIKELY(lastArray->indexingType() != current().indexingType()))
+        if (JSArray* lastArray = m_storage.pointer()) {
+            if (lastArray->indexingType() != current().indexingType()) [[unlikely]]
             updateProfile();
+        }
         return current().indexingType();
     }
 
@@ -67,8 +68,10 @@ public:
         ASSERT(!isCompilationThread());
         JSArray* lastArray = m_storage.pointer();
         unsigned largestSeenVectorLength = current().vectorLength();
-        if (lastArray && (largestSeenVectorLength != BASE_CONTIGUOUS_VECTOR_LEN_MAX) && UNLIKELY(lastArray->getVectorLength() > largestSeenVectorLength))
+        if (lastArray && (largestSeenVectorLength != BASE_CONTIGUOUS_VECTOR_LEN_MAX)) {
+            if (lastArray->getVectorLength() > largestSeenVectorLength) [[unlikely]]
             updateProfile();
+        }
         return current().vectorLength();
     }
 
@@ -132,7 +135,7 @@ private:
         IndexingType indexingType() const { return m_bits >> indexingTypeShift; }
         unsigned vectorLength() const { return m_bits & vectorLengthMask; }
 
-        IndexingTypeAndVectorLength withIndexingType(IndexingType indexingType) WARN_UNUSED_RETURN
+        [[nodiscard]] IndexingTypeAndVectorLength withIndexingType(IndexingType indexingType)
         {
             return IndexingTypeAndVectorLength(indexingType, vectorLength());
         }

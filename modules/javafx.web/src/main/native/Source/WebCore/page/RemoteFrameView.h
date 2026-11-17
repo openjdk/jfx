@@ -25,15 +25,17 @@
 
 #pragma once
 
-#include "FrameView.h"
-#include "RemoteFrame.h"
+#include <WebCore/FrameView.h>
+#include <WebCore/RemoteFrame.h>
+
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class RemoteFrame;
 
 class RemoteFrameView final : public FrameView {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(RemoteFrameView);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RemoteFrameView);
 public:
     static Ref<RemoteFrameView> create(RemoteFrame& frame) { return adoptRef(*new RemoteFrameView(frame)); }
@@ -41,6 +43,14 @@ public:
     Type viewType() const final { return Type::Remote; }
     void writeRenderTreeAsText(TextStream&, OptionSet<RenderAsTextFlag>) override;
     RemoteFrame& frame() const final { return m_frame; }
+
+    WEBCORE_EXPORT LayoutRect layoutViewportRect() const final;
+    std::optional<LayoutRect> visibleRectOfChild(const Frame&) const final;
+
+    // Set the frame rectangle, like setFrameRect, without synching the new rect to other Local/RemoteFrameViews.
+    // When frameRect of a RemoteFrameView changes, it syncs the new rect to other Local/RemoteFrameViews.
+    // RemoteFrameViews on the receiving end will set using this method to avoid repeating the sync.
+    WEBCORE_EXPORT void setFrameRectWithoutSync(const IntRect&);
 
 private:
     WEBCORE_EXPORT RemoteFrameView(RemoteFrame&);

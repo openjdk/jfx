@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2012 Google Inc. All rights reserved.
+ * Copyright (C) 2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -31,16 +32,21 @@
 #include "config.h"
 #include "InspectorHistory.h"
 
+#include "ExceptionOr.h"
 #include "Node.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(InspectorHistory);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(InspectorHistory::Action);
 
 class UndoableStateMark : public InspectorHistory::Action {
 private:
     ExceptionOr<void> perform() final { return { }; }
     ExceptionOr<void> undo() final { return { }; }
     ExceptionOr<void> redo() final { return { }; }
-    bool isUndoableStateMark() final { return true; }
+    bool isUndoableStateMark() const final { return true; }
 };
 
 ExceptionOr<void> InspectorHistory::perform(std::unique_ptr<Action> action)
@@ -50,10 +56,10 @@ ExceptionOr<void> InspectorHistory::perform(std::unique_ptr<Action> action)
         return performResult.releaseException();
 
     if (!action->mergeId().isEmpty() && m_afterLastActionIndex > 0 && action->mergeId() == m_history[m_afterLastActionIndex - 1]->mergeId())
-        m_history[m_afterLastActionIndex - 1]->merge(WTFMove(action));
+        m_history[m_afterLastActionIndex - 1]->merge(WTF::move(action));
     else {
         m_history.resize(m_afterLastActionIndex);
-        m_history.append(WTFMove(action));
+        m_history.append(WTF::move(action));
         ++m_afterLastActionIndex;
     }
     return { };

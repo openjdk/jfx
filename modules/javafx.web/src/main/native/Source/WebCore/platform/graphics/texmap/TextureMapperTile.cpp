@@ -17,74 +17,17 @@
  Boston, MA 02110-1301, USA.
  */
 #include "config.h"
-#if PLATFORM(JAVA)
-
-#include "TextureMapperTile.h"
-
-#include "Image.h"
-#include "TextureMapper.h"
-
-namespace WebCore {
-
-class GraphicsLayer;
-
-void TextureMapperTile::updateContents(TextureMapper& textureMapper, Image* image, const IntRect& dirtyRect)
-{
-    IntRect targetRect = enclosingIntRect(m_rect);
-    targetRect.intersect(dirtyRect);
-    if (targetRect.isEmpty())
-        return;
-    IntPoint sourceOffset = targetRect.location();
-
-    // Normalize sourceRect to the buffer's coordinates.
-    sourceOffset.move(-dirtyRect.x(), -dirtyRect.y());
-
-    // Normalize targetRect to the texture's coordinates.
-    targetRect.move(-m_rect.x(), -m_rect.y());
-    if (!m_texture) {
-        m_texture = textureMapper.createTexture();
-        m_texture->reset(targetRect.size(), image->currentFrameKnownToBeOpaque() ? 0 : BitmapTexture::SupportsAlpha);
-    }
-    auto nativeImage = image->currentNativeImage();
-    m_texture->updateContents(nativeImage.get(), targetRect, sourceOffset);
-
-}
-
-void TextureMapperTile::updateContents(TextureMapper& textureMapper, GraphicsLayer* sourceLayer, const IntRect& dirtyRect, float scale)
-{
-    IntRect targetRect = enclosingIntRect(m_rect);
-    targetRect.intersect(dirtyRect);
-    if (targetRect.isEmpty())
-        return;
-    IntPoint sourceOffset = targetRect.location();
-
-    // Normalize targetRect to the texture's coordinates.
-    targetRect.move(-m_rect.x(), -m_rect.y());
-
-    if (!m_texture) {
-        m_texture = textureMapper.createTexture();
-        m_texture->reset(targetRect.size(), BitmapTexture::SupportsAlpha);
-    }
-
-    m_texture->updateContents(sourceLayer, targetRect, sourceOffset, scale);
-}
-
-void TextureMapperTile::paint(TextureMapper& textureMapper, const TransformationMatrix& transform, float opacity, const unsigned exposedEdges)
-{
-    if (texture().get())
-        textureMapper.drawTexture(*texture().get(), rect(), transform, opacity, exposedEdges);
-}
-
-} // namespace WebCore
-#else
-#include "config.h"
 #include "TextureMapperTile.h"
 
 #include "BitmapTexture.h"
 #include "Image.h"
+#include "NativeImage.h"
 #include "TextureMapper.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TextureMapperTile);
 
 class GraphicsLayer;
 
@@ -153,4 +96,3 @@ void TextureMapperTile::paint(TextureMapper& textureMapper, const Transformation
 }
 
 } // namespace WebCore
-#endif

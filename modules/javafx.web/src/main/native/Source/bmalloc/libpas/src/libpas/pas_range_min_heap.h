@@ -43,7 +43,7 @@ static inline int pas_range_compare_begin(pas_range* left,
 
 static inline size_t pas_range_get_index(pas_range* range)
 {
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     PAS_UNUSED_PARAM(range);
     return 0;
 }

@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "EventTarget.h"
-#include "WebSocketFrame.h"
+#include <WebCore/EventTarget.h>
+#include <WebCore/WebSocketFrame.h>
 #include <wtf/Forward.h>
 #include <wtf/ObjectIdentifier.h>
 
@@ -39,7 +39,7 @@ class ResourceResponse;
 class WebSocketChannel;
 class WebSocketChannelInspector;
 
-using WebSocketChannelIdentifier = LegacyNullableAtomicObjectIdentifier<WebSocketChannel>;
+using WebSocketChannelIdentifier = AtomicObjectIdentifier<WebSocketChannel>;
 
 class WEBCORE_EXPORT WebSocketChannelInspector {
 public:
@@ -54,7 +54,7 @@ public:
     void didSendWebSocketFrame(const WebSocketFrame&) const;
     void didReceiveWebSocketFrameError(const String& errorMessage) const;
 
-    WebSocketChannelIdentifier progressIdentifier() const;
+    WebSocketChannelIdentifier progressIdentifier() const { return m_progressIdentifier; }
 
     static WebSocketFrame createFrame(std::span<const uint8_t> data, WebSocketFrame::OpCode);
 

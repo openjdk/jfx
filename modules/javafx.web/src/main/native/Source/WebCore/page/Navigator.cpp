@@ -2,7 +2,7 @@
  *  Copyright (C) 2000 Harri Porten (porten@kde.org)
  *  Copyright (c) 2000 Daniel Molkentin (molkentin@kde.org)
  *  Copyright (c) 2000 Stefan Schimanski (schimmi@kde.org)
- *  Copyright (C) 2003-2023 Apple Inc.
+ *  Copyright (C) 2003-2025 Apple Inc. All rights reserved.
  *  Copyright (C) 2008 Nokia Corporation and/or its subsidiary(-ies)
  *
  *  This library is free software; you can redistribute it and/or
@@ -30,50 +30,47 @@
 #include "DOMMimeTypeArray.h"
 #include "DOMPlugin.h"
 #include "DOMPluginArray.h"
-#include "Document.h"
-#include "DocumentInlines.h"
+#include "DocumentPage.h"
+#include "DocumentQuirks.h"
+#include "FrameInlines.h"
 #include "FrameLoader.h"
 #include "GPU.h"
 #include "Geolocation.h"
 #include "JSDOMPromiseDeferred.h"
-#include "JSPushSubscription.h"
 #include "LoaderStrategy.h"
-#include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "LocalFrameLoaderClient.h"
 #include "LocalizedStrings.h"
-#include "Page.h"
+#include "NavigatorUAData.h"
 #include "PermissionsPolicy.h"
 #include "PlatformStrategies.h"
 #include "PluginData.h"
-#include "PushStrategy.h"
-#include "Quirks.h"
 #include "ResourceLoadObserver.h"
 #include "ScriptController.h"
+#include "ScriptWrappableInlines.h"
 #include "SecurityOrigin.h"
 #include "Settings.h"
 #include "ShareData.h"
 #include "ShareDataReader.h"
 #include "SharedBuffer.h"
+#include "UserAgentStringData.h"
+#include "UserAgentStringParser.h"
+#include "inspector/InspectorInstrumentation.h"
+#include <JavaScriptCore/ConsoleTypes.h>
+#include <optional>
 #include <wtf/Language.h>
 #include <wtf/RunLoop.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/WeakPtr.h>
 
-#if ENABLE(DECLARATIVE_WEB_PUSH)
-#include "Logging.h"
-#endif
-
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(Navigator);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Navigator);
 
 Navigator::Navigator(ScriptExecutionContext* context, LocalDOMWindow& window)
     : NavigatorBase(context)
     , LocalDOMWindowProperty(&window)
-#if ENABLE(DECLARATIVE_WEB_PUSH)
-    , m_pushManager(*this)
-#endif
 {
 }
 
@@ -81,11 +78,11 @@ Navigator::~Navigator() = default;
 
 String Navigator::appVersion() const
 {
-    auto* frame = this->frame();
+    RefPtr frame = this->frame();
     if (!frame)
         return String();
     if (frame->settings().webAPIStatisticsEnabled())
-        ResourceLoadObserver::shared().logNavigatorAPIAccessed(*frame->protectedDocument(), NavigatorAPIsAccessed::AppVersion);
+        ResourceLoadObserver::singleton().logNavigatorAPIAccessed(*frame->protectedDocument(), NavigatorAPIsAccessed::AppVersion);
     return NavigatorBase::appVersion();
 }
 
@@ -95,7 +92,15 @@ const String& Navigator::userAgent() const
     if (!frame || !frame->page())
         return m_userAgent;
     if (frame->settings().webAPIStatisticsEnabled())
-        ResourceLoadObserver::shared().logNavigatorAPIAccessed(*frame->protectedDocument(), NavigatorAPIsAccessed::UserAgent);
+        ResourceLoadObserver::singleton().logNavigatorAPIAccessed(*frame->protectedDocument(), NavigatorAPIsAccessed::UserAgent);
+
+#if PLATFORM(IOS_FAMILY)
+    if (RefPtr document = frame->document(); document && document->quirks().needsChromeOSNavigatorUserAgentQuirk(*document)) {
+        static NeverDestroyed<String> chromeOSUserAgent = "Mozilla/5.0 (X11; CrOS x86_64 15917.71.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36"_s;
+        return chromeOSUserAgent.get();
+    }
+#endif
+
     if (m_userAgent.isNull())
         m_userAgent = frame->loader().userAgent(frame->document()->url());
     return m_userAgent;
@@ -193,16 +198,18 @@ void Navigator::share(Document& document, const ShareData& data, Ref<DeferredPro
         ShareDataOriginator::Web,
     };
     if (document.settings().webShareFileAPIEnabled() && !data.files.isEmpty()) {
-        if (m_loader)
-            m_loader->cancel();
+        RefPtr loader = m_loader;
+        if (loader)
+            loader->cancel();
 
-        m_loader = ShareDataReader::create([this, promise = WTFMove(promise)] (ExceptionOr<ShareDataWithParsedURL&> readData) mutable {
-            showShareData(readData, WTFMove(promise));
+        loader = ShareDataReader::create([this, protectedThis = Ref { *this }, promise = WTF::move(promise)](ExceptionOr<ShareDataWithParsedURL&> readData) mutable {
+            showShareData(readData, WTF::move(promise));
         });
-        m_loader->start(&document, WTFMove(shareData));
+        m_loader = loader.copyRef();
+        loader->start(&document, WTF::move(shareData));
         return;
     }
-    this->showShareData(shareData, WTFMove(promise));
+    this->showShareData(shareData, WTF::move(promise));
 }
 
 void Navigator::showShareData(ExceptionOr<ShareDataWithParsedURL&> readData, Ref<DeferredPromise>&& promise)
@@ -219,7 +226,7 @@ void Navigator::showShareData(ExceptionOr<ShareDataWithParsedURL&> readData, Ref
     m_hasPendingShare = true;
 
     if (frame->page()->isControlledByAutomation()) {
-        RunLoop::main().dispatch([promise = WTFMove(promise), weakThis = WeakPtr { *this }] {
+        RunLoop::mainSingleton().dispatch([promise = WTF::move(promise), weakThis = WeakPtr { *this }] {
             if (weakThis)
                 weakThis->m_hasPendingShare = false;
         promise->resolve();
@@ -229,7 +236,7 @@ void Navigator::showShareData(ExceptionOr<ShareDataWithParsedURL&> readData, Ref
 
     auto shareData = readData.returnValue();
 
-    frame->page()->chrome().showShareSheet(shareData, [promise = WTFMove(promise), weakThis = WeakPtr { *this }] (bool completed) {
+    frame->page()->chrome().showShareSheet(WTF::move(shareData), [promise = WTF::move(promise), weakThis = WeakPtr { *this }](bool completed) {
         if (weakThis)
             weakThis->m_hasPendingShare = false;
         if (completed) {
@@ -263,10 +270,10 @@ void Navigator::initializePluginAndMimeTypeArrays()
         return;
 
     RefPtr frame = this->frame();
-    bool needsEmptyNavigatorPluginsQuirk = frame && frame->document() && frame->document()->quirks().shouldNavigatorPluginsBeEmpty();
+    bool needsEmptyNavigatorPluginsQuirk = frame && frame->document() && frame->protectedDocument()->quirks().shouldNavigatorPluginsBeEmpty();
     if (!frame || !frame->page() || needsEmptyNavigatorPluginsQuirk) {
         if (needsEmptyNavigatorPluginsQuirk)
-            frame->document()->addConsoleMessage(MessageSource::Other, MessageLevel::Info, "QUIRK: Navigator plugins / mimeTypes empty on marcus.com. More information at https://bugs.webkit.org/show_bug.cgi?id=248798"_s);
+            frame->protectedDocument()->addConsoleMessage(MessageSource::Other, MessageLevel::Info, "QUIRK: Navigator plugins / mimeTypes empty on marcus.com. More information at https://bugs.webkit.org/show_bug.cgi?id=248798"_s);
         m_plugins = DOMPluginArray::create(*this);
         m_mimeTypes = DOMMimeTypeArray::create(*this);
         return;
@@ -281,7 +288,7 @@ void Navigator::initializePluginAndMimeTypeArrays()
 
     // macOS uses a PDF Plugin (which may be disabled). Other ports handle PDF's through native
     // platform views outside the engine, or use pdf.js.
-    PluginInfo pdfPluginInfo = frame->page()->pluginData().builtInPDFPlugin().value_or(PluginData::dummyPDFPluginInfo());
+    PluginInfo pdfPluginInfo = frame->protectedPage()->pluginData().builtInPDFPlugin().value_or(PluginData::dummyPDFPluginInfo());
 
     Vector<Ref<DOMPlugin>> domPlugins;
     Vector<Ref<DOMMimeType>> domMimeTypes;
@@ -302,14 +309,14 @@ void Navigator::initializePluginAndMimeTypeArrays()
             domMimeTypes.appendVector(domPlugins.last()->mimeTypes());
     }
 
-    m_plugins = DOMPluginArray::create(*this, WTFMove(domPlugins));
-    m_mimeTypes = DOMMimeTypeArray::create(*this, WTFMove(domMimeTypes));
+    m_plugins = DOMPluginArray::create(*this, WTF::move(domPlugins));
+    m_mimeTypes = DOMMimeTypeArray::create(*this, WTF::move(domMimeTypes));
 }
 
 DOMPluginArray& Navigator::plugins()
 {
-    if (auto* frame = this->frame(); frame && frame->settings().webAPIStatisticsEnabled())
-        ResourceLoadObserver::shared().logNavigatorAPIAccessed(*frame->protectedDocument(), NavigatorAPIsAccessed::Plugins);
+    if (RefPtr frame = this->frame(); frame && frame->settings().webAPIStatisticsEnabled())
+        ResourceLoadObserver::singleton().logNavigatorAPIAccessed(*frame->protectedDocument(), NavigatorAPIsAccessed::Plugins);
 
     initializePluginAndMimeTypeArrays();
     return *m_plugins;
@@ -317,8 +324,8 @@ DOMPluginArray& Navigator::plugins()
 
 DOMMimeTypeArray& Navigator::mimeTypes()
 {
-    if (auto* frame = this->frame(); frame && frame->settings().webAPIStatisticsEnabled())
-        ResourceLoadObserver::shared().logNavigatorAPIAccessed(*frame->protectedDocument(), NavigatorAPIsAccessed::MimeTypes);
+    if (RefPtr frame = this->frame(); frame && frame->settings().webAPIStatisticsEnabled())
+        ResourceLoadObserver::singleton().logNavigatorAPIAccessed(*frame->protectedDocument(), NavigatorAPIsAccessed::MimeTypes);
 
     initializePluginAndMimeTypeArrays();
     return *m_mimeTypes;
@@ -333,12 +340,12 @@ bool Navigator::pdfViewerEnabled()
 
 bool Navigator::cookieEnabled() const
 {
-    auto* frame = this->frame();
+    RefPtr frame = this->frame();
     if (!frame)
         return false;
 
     if (frame->settings().webAPIStatisticsEnabled())
-        ResourceLoadObserver::shared().logNavigatorAPIAccessed(*frame->protectedDocument(), NavigatorAPIsAccessed::CookieEnabled);
+        ResourceLoadObserver::singleton().logNavigatorAPIAccessed(*frame->protectedDocument(), NavigatorAPIsAccessed::CookieEnabled);
 
     RefPtr page = frame->page();
     if (!page)
@@ -358,7 +365,7 @@ bool Navigator::cookieEnabled() const
 
 bool Navigator::standalone() const
 {
-    auto* frame = this->frame();
+    RefPtr frame = this->frame();
     return frame && frame->settings().standalone();
 }
 
@@ -368,15 +375,15 @@ GPU* Navigator::gpu()
 {
 #if HAVE(WEBGPU_IMPLEMENTATION)
     if (!m_gpuForWebGPU) {
-        auto* frame = this->frame();
+        RefPtr frame = this->frame();
         if (!frame)
             return nullptr;
         if (!frame->settings().webGPUEnabled())
             return nullptr;
-        auto* page = frame->page();
+        RefPtr page = frame->page();
         if (!page)
             return nullptr;
-        auto gpu = page->chrome().createGPUForWebGPU();
+        RefPtr gpu = page->chrome().createGPUForWebGPU();
         if (!gpu)
             return nullptr;
 
@@ -387,10 +394,32 @@ GPU* Navigator::gpu()
     return m_gpuForWebGPU.get();
 }
 
+Page* Navigator::page()
+{
+    RefPtr frame = this->frame();
+    return frame ? frame->page() : nullptr;
+}
+
+RefPtr<Page> Navigator::protectedPage()
+{
+    return page();
+}
+
+const Document* Navigator::document() const
+{
+    RefPtr frame = this->frame();
+    return frame ? frame->document() : nullptr;
+}
+
 Document* Navigator::document()
 {
-    auto* frame = this->frame();
+    RefPtr frame = this->frame();
     return frame ? frame->document() : nullptr;
+}
+
+RefPtr<Document> Navigator::protectedDocument()
+{
+    return document();
 }
 
 void Navigator::setAppBadge(std::optional<unsigned long long> badge, Ref<DeferredPromise>&& promise)
@@ -413,110 +442,44 @@ void Navigator::setAppBadge(std::optional<unsigned long long> badge, Ref<Deferre
         return;
     }
 
-    page->badgeClient().setAppBadge(page.get(), SecurityOriginData::fromFrame(frame.get()), badge);
+    page->badgeClient().setAppBadge(frame.get(), SecurityOriginData::fromFrame(frame.get()), badge);
     promise->resolve();
 }
 
 void Navigator::clearAppBadge(Ref<DeferredPromise>&& promise)
 {
-    setAppBadge(0, WTFMove(promise));
+    setAppBadge(0, WTF::move(promise));
 }
 
-void Navigator::setClientBadge(std::optional<unsigned long long> badge, Ref<DeferredPromise>&& promise)
+int Navigator::maxTouchPoints() const
+{
+#if ENABLE(IOS_TOUCH_EVENTS) && !PLATFORM(MACCATALYST)
+    RefPtr document = this->document();
+    if (!document || !document->quirks().needsZeroMaxTouchPointsQuirk())
+        return 5;
+#endif
+
+    return 0;
+}
+
+NavigatorUAData& Navigator::userAgentData() const
 {
     RefPtr frame = this->frame();
-    if (!frame) {
-        promise->reject();
-        return;
+    if (frame && frame->page()) {
+        RefPtr client = frame->loader().client();
+        if (client->hasCustomUserAgent() || (frame->document() && frame->protectedDocument()->quirks().needsCustomUserAgentData())) {
+            auto userAgentString = frame->loader().userAgent({ });
+            Ref parser = UserAgentStringParser::create(userAgentString);
+            std::optional userAgentStringData = parser->parse();
+            if (userAgentStringData) {
+                m_navigatorUAData = NavigatorUAData::create(WTF::move(*userAgentStringData));
+                return *m_navigatorUAData;
+            }
+        }
     }
 
-    RefPtr page = frame->page();
-    if (!page) {
-        promise->reject();
-        return;
-    }
-
-    page->badgeClient().setClientBadge(*page, SecurityOriginData::fromFrame(frame.get()), badge);
-    promise->resolve();
-}
-
-void Navigator::clearClientBadge(Ref<DeferredPromise>&& promise)
-{
-    setClientBadge(0, WTFMove(promise));
-}
-
-#if ENABLE(DECLARATIVE_WEB_PUSH)
-PushManager& Navigator::pushManager()
-{
-    return m_pushManager;
-}
-
-static URL toScope(Navigator& navigator)
-{
-    if (auto* frame = navigator.frame()) {
-        if (auto* document = frame->document())
-            return URL { document->url().protocolHostAndPort() };
-    }
-
-    return { };
-}
-
-void Navigator::subscribeToPushService(const Vector<uint8_t>& applicationServerKey, DOMPromiseDeferred<IDLInterface<PushSubscription>>&& promise)
-{
-    LOG(Push, "Navigator::subscribeToPushService");
-
-    platformStrategies()->pushStrategy()->navigatorSubscribeToPushService(toScope(*this), applicationServerKey, [protectedThis = Ref { *this }, promise = WTFMove(promise)](auto&& result) mutable {
-        LOG(Push, "Navigator::subscribeToPushService completed");
-        if (result.hasException()) {
-            promise.reject(result.releaseException());
-            return;
-        }
-
-        promise.resolve(PushSubscription::create(result.releaseReturnValue(), protectedThis.ptr()));
-    });
-}
-
-void Navigator::unsubscribeFromPushService(PushSubscriptionIdentifier subscriptionIdentifier, DOMPromiseDeferred<IDLBoolean>&& promise)
-{
-    LOG(Push, "Navigator::unsubscribeFromPushService");
-
-    platformStrategies()->pushStrategy()->navigatorUnsubscribeFromPushService(toScope(*this), subscriptionIdentifier, [promise = WTFMove(promise)](auto&& result) mutable {
-        LOG(Push, "Navigator::unsubscribeFromPushService completed");
-        promise.settle(WTFMove(result));
-    });
-}
-
-void Navigator::getPushSubscription(DOMPromiseDeferred<IDLNullable<IDLInterface<PushSubscription>>>&& promise)
-{
-    LOG(Push, "Navigator::getPushSubscription");
-
-    platformStrategies()->pushStrategy()->navigatorGetPushSubscription(toScope(*this), [protectedThis = Ref { *this }, promise = WTFMove(promise)](auto&& result) mutable {
-        LOG(Push, "Navigator::getPushSubscription completed");
-        if (result.hasException()) {
-            promise.reject(result.releaseException());
-            return;
-        }
-
-        auto optionalPushSubscriptionData = result.releaseReturnValue();
-        if (!optionalPushSubscriptionData) {
-            promise.resolve(nullptr);
-            return;
-        }
-
-        promise.resolve(PushSubscription::create(WTFMove(*optionalPushSubscriptionData), protectedThis.ptr()).ptr());
-    });
-}
-
-void Navigator::getPushPermissionState(DOMPromiseDeferred<IDLEnumeration<PushPermissionState>>&& promise)
-{
-    LOG(Push, "Navigator::getPushPermissionState");
-
-    platformStrategies()->pushStrategy()->navigatorGetPushPermissionState(toScope(*this), [promise = WTFMove(promise)](auto&& result) mutable {
-        LOG(Push, "Navigator::getPushPermissionState completed");
-        promise.settle(WTFMove(result));
-    });
-}
-
-#endif // #if ENABLE(DECLARATIVE_WEB_PUSH)
+    m_navigatorUAData = NavigatorUAData::create();
+    return *m_navigatorUAData;
+};
 
 } // namespace WebCore

@@ -33,7 +33,9 @@
     readonly attribute unsigned long long? newVersion;
 };
 
-dictionary IDBVersionChangeEventInit : EventInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary IDBVersionChangeEventInit : EventInit {
     unsigned long long oldVersion = 0;
     unsigned long long? newVersion = null;
 };

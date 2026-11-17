@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,7 +39,7 @@ namespace WebCore {
         //typedef void (*MediaEngineSupportedTypes)(HashSet<String>& types);
         //typedef MediaPlayer::SupportsType (*MediaEngineSupportsType)(const String& type, const String& codecs);
         //typedef void (*MediaEngineRegistrar)(CreateMediaEnginePlayer, MediaEngineSupportedTypes, MediaEngineSupportsType);
-        MediaPlayerPrivate(MediaPlayer *player);
+        MediaPlayerPrivate(MediaPlayer &player);
 
         static void MediaEngineSupportedTypes(HashSet<String>& types);
 
@@ -52,10 +52,11 @@ namespace WebCore {
 
     public:
         virtual ~MediaPlayerPrivate();
-        void ref() final { RefCounted::ref(); }
-        void deref() final { RefCounted::deref(); }
+        void ref() const override { RefCounted::ref(); }
+        void deref() const override { RefCounted::deref(); }
         virtual void load(const String& url) override;
         virtual void cancelLoad() override;
+        constexpr MediaPlayerType mediaPlayerType() const override;
 
         virtual void prepareToPlay() override;
         //virtual PlatformMedia platformMedia() const { return NoPlatformMedia; }
@@ -74,7 +75,7 @@ namespace WebCore {
         virtual bool hasVideo() const override;
         virtual bool hasAudio() const override;
 
-        virtual void setPageIsVisible(bool, String&& sceneIdentifier = ""_s) override;
+        virtual void setPageIsVisible(bool) override;
 
         virtual MediaTime duration() const override;
 
@@ -153,7 +154,7 @@ namespace WebCore {
         void notifyBufferChanged(std::unique_ptr<PlatformTimeRanges> timeRanges, int bytesLoaded);
 
     private:
-        MediaPlayer* m_player;
+        MediaPlayer &m_player;
 
         volatile MediaPlayer::NetworkState m_networkState;
         volatile MediaPlayer::ReadyState m_readyState;

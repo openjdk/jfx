@@ -36,7 +36,7 @@ namespace WebCore {
 class MathMLTokenElement;
 
 class RenderMathMLToken : public RenderMathMLBlock {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderMathMLToken);
+    WTF_MAKE_TZONE_ALLOCATED(RenderMathMLToken);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderMathMLToken);
 public:
     RenderMathMLToken(Type, MathMLTokenElement&, RenderStyle&&);
@@ -52,20 +52,17 @@ protected:
     void paint(PaintInfo&, const LayoutPoint&) override;
     void paintChildren(PaintInfo& forSelf, const LayoutPoint&, PaintInfo& forChild, bool usePrintRect) override;
     std::optional<LayoutUnit> firstLineBaseline() const override;
-    void layoutBlock(bool relayoutChildren, LayoutUnit pageLogicalHeight = 0_lu) override;
+    void layoutBlock(RelayoutChildren, LayoutUnit pageLogicalHeight = 0_lu) override;
     void computePreferredLogicalWidths() override;
 
 private:
     bool isRenderMathMLToken() const final { return true; }
     ASCIILiteral renderName() const override { return "RenderMathMLToken"_s; }
     bool isChildAllowed(const RenderObject&, const RenderStyle&) const final { return true; };
-    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
+    void styleDidChange(Style::Difference, const RenderStyle* oldStyle) override;
     void updateMathVariantGlyph();
-    void setMathVariantGlyphDirty()
-    {
-        m_mathVariantGlyphDirty = true;
-        setNeedsLayoutAndPrefWidthsRecalc();
-    }
+    void setMathVariantGlyphDirty();
+
     std::optional<char32_t> m_mathVariantCodePoint { std::nullopt };
     bool m_mathVariantIsMirrored { false };
     bool m_mathVariantGlyphDirty { false };

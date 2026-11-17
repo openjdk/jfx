@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,6 +30,7 @@ import static com.sun.javafx.scene.control.ContextMenuContentShim.getCurrentFocu
 import static com.sun.javafx.scene.control.ContextMenuContentShim.getOpenSubMenu;
 import static com.sun.javafx.scene.control.ContextMenuContentShim.getShowingMenuContent;
 import static com.sun.javafx.scene.control.ContextMenuContentShim.getShowingSubMenu;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -61,6 +62,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.sun.javafx.scene.control.ContextMenuContent;
 import com.sun.javafx.scene.control.ContextMenuContentShim;
+import test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
@@ -348,6 +350,31 @@ public class ContextMenuTest {
 
         cm.hide();
         assertFalse(cm.isShowing());
+    }
+
+    @Test
+    public void test_showWithAnchorNotInScene() {
+        ContextMenu cm = createContextMenu(false);
+        Button detachedAnchor = new Button("Detached");
+        cm.show(detachedAnchor, Side.RIGHT, 0, 0);
+    }
+
+    @Test
+    public void test_showSubMenuAfterItemsChanged() {
+        ContextMenu cm = createContextMenu(true);
+
+        // Press down twice to select the subMenu
+        pressDownKey(cm);
+        pressDownKey(cm);
+
+        // Changing items recreates the item containers, so the
+        // previously selected container is no longer part of the scene
+        cm.getItems().add(new MenuItem("MenuItem 2"));
+
+        assertDoesNotThrow(() -> {
+            // Fail on internal exceptions that are not propagated to the caller by the show() method
+            ControlTestUtils.runWithExceptionHandler(() -> subMenu.show());
+        });
     }
 
     @Test public void test_navigateMenu_downwards() {

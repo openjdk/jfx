@@ -31,7 +31,7 @@
 #include "CDMFactory.h"
 #include "CDMPrivate.h"
 #include "ContextDestructionObserverInlines.h"
-#include "Document.h"
+#include "DocumentPage.h"
 #include "InitDataRegistry.h"
 #include "MediaKeysRequirement.h"
 #include "MediaPlayer.h"
@@ -52,30 +52,32 @@ namespace WebCore {
 
 bool CDM::supportsKeySystem(const String& keySystem)
 {
-    for (auto* factory : CDMFactory::registeredFactories()) {
-        if (factory->supportsKeySystem(keySystem))
+    for (auto& weakFactory : CDMFactory::registeredFactories()) {
+        if (Ref { weakFactory.get() }->supportsKeySystem(keySystem))
             return true;
     }
     return false;
 }
 
-Ref<CDM> CDM::create(Document& document, const String& keySystem)
+Ref<CDM> CDM::create(Document& document, const String& keySystem, const String& mediaKeysHashSalt)
 {
-    return adoptRef(*new CDM(document, keySystem));
+    return adoptRef(*new CDM(document, keySystem, mediaKeysHashSalt));
 }
 
-CDM::CDM(Document& document, const String& keySystem)
+CDM::CDM(Document& document, const String& keySystem, const String& mediaKeysHashSalt)
     : ContextDestructionObserver(&document)
 #if !RELEASE_LOG_DISABLED
     , m_logger(document.logger())
     , m_logIdentifier(LoggerHelper::uniqueLogIdentifier())
 #endif
     , m_keySystem(keySystem)
+    , m_mediaKeysHashSalt { mediaKeysHashSalt }
 {
     ASSERT(supportsKeySystem(keySystem));
-    for (auto* factory : CDMFactory::registeredFactories()) {
+    for (auto& weakFactory : CDMFactory::registeredFactories()) {
+        Ref factory = weakFactory.get();
         if (factory->supportsKeySystem(keySystem)) {
-            m_private = factory->createCDM(keySystem, *this);
+            lazyInitialize(m_private, factory->createCDM(keySystem, m_mediaKeysHashSalt, *this));
 #if !RELEASE_LOG_DISABLED
             m_private->setLogIdentifier(m_logIdentifier);
 #endif
@@ -92,17 +94,18 @@ void CDM::getSupportedConfiguration(MediaKeySystemConfiguration&& candidateConfi
     // W3C Editor's Draft 09 November 2016
     // Implemented in CDMPrivate::getSupportedConfiguration()
 
-    Document* document = downcast<Document>(scriptExecutionContext());
+    RefPtr document = downcast<Document>(scriptExecutionContext());
     if (!document || !m_private) {
         callback(std::nullopt);
         return;
     }
 
+    RefPtr page = document->page();
     auto access = CDMPrivate::LocalStorageAccess::Allowed;
-    bool isEphemeral = !document->page() || document->page()->sessionID().isEphemeral();
+    bool isEphemeral = !page || page->sessionID().isEphemeral();
     if (isEphemeral || document->canAccessResource(ScriptExecutionContext::ResourceType::LocalStorage) == ScriptExecutionContext::HasResourceAccess::No)
         access = CDMPrivate::LocalStorageAccess::NotAllowed;
-    m_private->getSupportedConfiguration(WTFMove(candidateConfiguration), access, WTFMove(callback));
+    m_private->getSupportedConfiguration(WTF::move(candidateConfiguration), access, WTF::move(callback));
 }
 
 void CDM::loadAndInitialize()
@@ -138,7 +141,7 @@ bool CDM::supportsInitDataType(const AtomString& initDataType) const
 
 RefPtr<SharedBuffer> CDM::sanitizeInitData(const AtomString& initDataType, const SharedBuffer& initData)
 {
-    return InitDataRegistry::shared().sanitizeInitData(initDataType, initData);
+    return InitDataRegistry::singleton().sanitizeInitData(initDataType, initData);
 }
 
 bool CDM::supportsInitData(const AtomString& initDataType, const SharedBuffer& initData)

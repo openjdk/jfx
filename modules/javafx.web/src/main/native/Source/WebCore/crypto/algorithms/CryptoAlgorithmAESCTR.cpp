@@ -30,8 +30,10 @@
 #include "CryptoAlgorithmAesCtrParams.h"
 #include "CryptoAlgorithmAesKeyParams.h"
 #include "CryptoKeyAES.h"
+#include "ExceptionOr.h"
 #include <wtf/CrossThreadCopier.h>
 #include <wtf/FlipBytes.h>
+#include <wtf/StdLibExtras.h>
 
 namespace WebCore {
 
@@ -39,8 +41,8 @@ namespace CryptoAlgorithmAESCTRInternal {
 static constexpr auto ALG128 = "A128CTR"_s;
 static constexpr auto ALG192 = "A192CTR"_s;
 static constexpr auto ALG256 = "A256CTR"_s;
-static const size_t CounterSize = 16;
-static const uint64_t AllBitsSet = ~(uint64_t)0;
+static constexpr size_t counterSize = 16;
+static constexpr uint64_t allBitsSet = ~(uint64_t)0;
 }
 
 static inline bool usagesAreInvalidForCryptoAlgorithmAESCTR(CryptoKeyUsageBitmap usages)
@@ -51,7 +53,7 @@ static inline bool usagesAreInvalidForCryptoAlgorithmAESCTR(CryptoKeyUsageBitmap
 static bool parametersAreValid(const CryptoAlgorithmAesCtrParams& parameters)
 {
     using namespace CryptoAlgorithmAESCTRInternal;
-    if (parameters.counterVector().size() != CounterSize)
+    if (parameters.counterVector().size() != counterSize)
         return false;
     if (!parameters.length || parameters.length > 128)
         return false;
@@ -76,8 +78,8 @@ void CryptoAlgorithmAESCTR::encrypt(const CryptoAlgorithmParameters& parameters,
         return;
     }
 
-    dispatchOperationInWorkQueue(workQueue, context, WTFMove(callback), WTFMove(exceptionCallback),
-        [parameters = crossThreadCopy(aesParameters), key = WTFMove(key), plainText = WTFMove(plainText)] {
+    dispatchOperationInWorkQueue(workQueue, context, WTF::move(callback), WTF::move(exceptionCallback),
+        [parameters = crossThreadCopy(aesParameters), key = WTF::move(key), plainText = WTF::move(plainText)] {
             return platformEncrypt(parameters, downcast<CryptoKeyAES>(key.get()), plainText);
         });
 }
@@ -90,8 +92,8 @@ void CryptoAlgorithmAESCTR::decrypt(const CryptoAlgorithmParameters& parameters,
         return;
     }
 
-    dispatchOperationInWorkQueue(workQueue, context, WTFMove(callback), WTFMove(exceptionCallback),
-        [parameters = crossThreadCopy(aesParameters), key = WTFMove(key), cipherText = WTFMove(cipherText)] {
+    dispatchOperationInWorkQueue(workQueue, context, WTF::move(callback), WTF::move(exceptionCallback),
+        [parameters = crossThreadCopy(aesParameters), key = WTF::move(key), cipherText = WTF::move(cipherText)] {
             return platformDecrypt(parameters, downcast<CryptoKeyAES>(key.get()), cipherText);
         });
 }
@@ -111,10 +113,10 @@ void CryptoAlgorithmAESCTR::generateKey(const CryptoAlgorithmParameters& paramet
         return;
     }
 
-    callback(WTFMove(result));
+    callback(WTF::move(result));
 }
 
-void CryptoAlgorithmAESCTR::importKey(CryptoKeyFormat format, KeyData&& data, const CryptoAlgorithmParameters& parameters, bool extractable, CryptoKeyUsageBitmap usages, KeyCallback&& callback, ExceptionCallback&& exceptionCallback, UseCryptoKit)
+void CryptoAlgorithmAESCTR::importKey(CryptoKeyFormat format, KeyData&& data, const CryptoAlgorithmParameters& parameters, bool extractable, CryptoKeyUsageBitmap usages, KeyCallback&& callback, ExceptionCallback&& exceptionCallback)
 {
     using namespace CryptoAlgorithmAESCTRInternal;
 
@@ -126,7 +128,7 @@ void CryptoAlgorithmAESCTR::importKey(CryptoKeyFormat format, KeyData&& data, co
     RefPtr<CryptoKeyAES> result;
     switch (format) {
     case CryptoKeyFormat::Raw:
-        result = CryptoKeyAES::importRaw(parameters.identifier, WTFMove(std::get<Vector<uint8_t>>(data)), extractable, usages);
+        result = CryptoKeyAES::importRaw(parameters.identifier, WTF::move(std::get<Vector<uint8_t>>(data)), extractable, usages);
         break;
     case CryptoKeyFormat::Jwk: {
         auto checkAlgCallback = [](size_t length, const String& alg) -> bool {
@@ -140,7 +142,7 @@ void CryptoAlgorithmAESCTR::importKey(CryptoKeyFormat format, KeyData&& data, co
             }
             return false;
         };
-        result = CryptoKeyAES::importJwk(parameters.identifier, WTFMove(std::get<JsonWebKey>(data)), extractable, usages, WTFMove(checkAlgCallback));
+        result = CryptoKeyAES::importJwk(parameters.identifier, WTF::move(std::get<JsonWebKey>(data)), extractable, usages, WTF::move(checkAlgCallback));
         break;
     }
     default:
@@ -155,7 +157,7 @@ void CryptoAlgorithmAESCTR::importKey(CryptoKeyFormat format, KeyData&& data, co
     callback(*result);
 }
 
-void CryptoAlgorithmAESCTR::exportKey(CryptoKeyFormat format, Ref<CryptoKey>&& key, KeyDataCallback&& callback, ExceptionCallback&& exceptionCallback, UseCryptoKit)
+void CryptoAlgorithmAESCTR::exportKey(CryptoKeyFormat format, Ref<CryptoKey>&& key, KeyDataCallback&& callback, ExceptionCallback&& exceptionCallback)
 {
     using namespace CryptoAlgorithmAESCTRInternal;
     const auto& aesKey = downcast<CryptoKeyAES>(key.get());
@@ -185,7 +187,7 @@ void CryptoAlgorithmAESCTR::exportKey(CryptoKeyFormat format, Ref<CryptoKey>&& k
         default:
             ASSERT_NOT_REACHED();
         }
-        result = WTFMove(jwk);
+        result = WTF::move(jwk);
         break;
     }
     default:
@@ -193,10 +195,10 @@ void CryptoAlgorithmAESCTR::exportKey(CryptoKeyFormat format, Ref<CryptoKey>&& k
         return;
     }
 
-    callback(format, WTFMove(result));
+    callback(format, WTF::move(result));
 }
 
-ExceptionOr<size_t> CryptoAlgorithmAESCTR::getKeyLength(const CryptoAlgorithmParameters& parameters)
+ExceptionOr<std::optional<size_t>> CryptoAlgorithmAESCTR::getKeyLength(const CryptoAlgorithmParameters& parameters)
 {
     return CryptoKeyAES::getKeyLength(parameters);
 }
@@ -206,12 +208,12 @@ CryptoAlgorithmAESCTR::CounterBlockHelper::CounterBlockHelper(const Vector<uint8
 {
     using namespace CryptoAlgorithmAESCTRInternal;
 
-    ASSERT(counterVector.size() == CounterSize);
-    ASSERT(counterLength <= CounterSize * 8);
+    ASSERT(counterVector.size() == counterSize);
+    ASSERT(counterLength <= counterSize * 8);
     bool littleEndian = false; // counterVector is stored in big-endian.
-    memcpy(&m_bits.m_hi, counterVector.data(), 8);
+    memcpySpan(asMutableByteSpan(m_bits.m_hi), counterVector.span().first(8));
     m_bits.m_hi = flipBytesIfLittleEndian(m_bits.m_hi, littleEndian);
-    memcpy(&m_bits.m_lo, counterVector.data() + 8, 8);
+    memcpySpan(asMutableByteSpan(m_bits.m_lo), counterVector.subspan(8));
     m_bits.m_lo = flipBytesIfLittleEndian(m_bits.m_lo, littleEndian);
 }
 
@@ -253,11 +255,11 @@ Vector<uint8_t> CryptoAlgorithmAESCTR::CounterBlockHelper::counterVectorAfterOve
     auto bits = m_bits & nonceMask;
 
     bool littleEndian = false; // counterVector is stored in big-endian.
-    Vector<uint8_t> counterVector(CounterSize);
+    Vector<uint8_t> counterVector(counterSize);
     uint64_t hi = flipBytesIfLittleEndian(bits.m_hi, littleEndian);
-    memcpy(counterVector.data(), &hi, 8);
+    memcpySpan(counterVector.mutableSpan(), asByteSpan(hi));
     uint64_t lo = flipBytesIfLittleEndian(bits.m_lo, littleEndian);
-    memcpy(counterVector.data() + 8, &lo, 8);
+    memcpySpan(counterVector.mutableSpan().subspan(8), asByteSpan(lo));
 
     return counterVector;
 }
@@ -265,14 +267,14 @@ Vector<uint8_t> CryptoAlgorithmAESCTR::CounterBlockHelper::counterVectorAfterOve
 void CryptoAlgorithmAESCTR::CounterBlockHelper::CounterBlockBits::set()
 {
     using namespace CryptoAlgorithmAESCTRInternal;
-    m_hi = AllBitsSet;
-    m_lo = AllBitsSet;
+    m_hi = allBitsSet;
+    m_lo = allBitsSet;
 }
 
 bool CryptoAlgorithmAESCTR::CounterBlockHelper::CounterBlockBits::all() const
 {
     using namespace CryptoAlgorithmAESCTRInternal;
-    return m_hi == AllBitsSet && m_lo == AllBitsSet;
+    return m_hi == allBitsSet && m_lo == allBitsSet;
 }
 
 bool CryptoAlgorithmAESCTR::CounterBlockHelper::CounterBlockBits::any() const

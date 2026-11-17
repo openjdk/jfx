@@ -29,7 +29,7 @@
 #include "AdaptiveInferredPropertyValueWatchpointBase.h"
 #include "CacheableIdentifierInlines.h"
 #include "CachedSpecialPropertyAdaptiveStructureWatchpoint.h"
-#include "JSImmutableButterfly.h"
+#include "JSCellButterfly.h"
 #include "JSObjectInlines.h"
 #include "JSPropertyNameEnumerator.h"
 #include "JSString.h"
@@ -39,6 +39,8 @@
 #include "StructureRareDataInlines.h"
 #include <wtf/TZoneMalloc.h>
 #include <wtf/TZoneMallocInlines.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -114,7 +116,7 @@ SpecialPropertyCache& StructureRareData::ensureSpecialPropertyCacheSlow()
     ASSERT(!m_specialPropertyCache);
     auto cache = makeUnique<SpecialPropertyCache>();
     WTF::storeStoreFence(); // Expose valid struct for concurrent threads including concurrent compilers.
-    m_specialPropertyCache = WTFMove(cache);
+    m_specialPropertyCache = WTF::move(cache);
     return *m_specialPropertyCache.get();
 }
 
@@ -264,7 +266,7 @@ CachedSpecialPropertyAdaptiveInferredPropertyValueWatchpoint::CachedSpecialPrope
 
 bool CachedSpecialPropertyAdaptiveInferredPropertyValueWatchpoint::isValid() const
 {
-    return m_structureRareData->isLive();
+    return !m_structureRareData->isPendingDestruction();
 }
 
 void CachedSpecialPropertyAdaptiveInferredPropertyValueWatchpoint::handleFire(VM& vm, const FireDetail&)
@@ -286,3 +288,5 @@ void CachedSpecialPropertyAdaptiveInferredPropertyValueWatchpoint::handleFire(VM
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

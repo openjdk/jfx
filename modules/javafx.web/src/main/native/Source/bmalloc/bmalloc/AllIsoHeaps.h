@@ -25,6 +25,12 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
+#include "BPlatform.h"
+
+#if !BUSE(TZONE)
+
 #include "IsoHeapImpl.h"
 #include "StaticPerProcess.h"
 #include "Vector.h"
@@ -54,3 +60,6 @@ BALLOW_DEPRECATED_DECLARATIONS_END
 } // namespace bmalloc
 
 #endif
+#endif // !BUSE(TZONE)
+
+#endif // __cplusplus

@@ -20,11 +20,13 @@
 
 #pragma once
 
-#include "FilterEffect.h"
+#include <WebCore/FilterEffect.h>
 
 namespace WebCore {
 
-class SourceAlpha : public FilterEffect {
+class SourceAlpha final : public FilterEffect {
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(SourceAlpha);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SourceAlpha);
 public:
     WEBCORE_EXPORT static Ref<SourceAlpha> create(const DestinationColorSpace& = DestinationColorSpace::SRGB());
 
@@ -33,7 +35,9 @@ public:
 private:
     explicit SourceAlpha(DestinationColorSpace);
 
+    OptionSet<FilterRenderingMode> supportedFilterRenderingModes(OptionSet<FilterRenderingMode> preferredFilterRenderingModes) const override;
     std::unique_ptr<FilterEffectApplier> createSoftwareApplier() const override;
+    std::unique_ptr<FilterEffectApplier> createAcceleratedApplier() const override;
 
     WTF::TextStream& externalRepresentation(WTF::TextStream&, FilterRepresentation) const override;
 };

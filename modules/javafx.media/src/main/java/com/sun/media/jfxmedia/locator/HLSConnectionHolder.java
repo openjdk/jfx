@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,7 @@ package com.sun.media.jfxmedia.locator;
 import com.sun.media.jfxmedia.MediaError;
 import com.sun.media.jfxmedia.MediaException;
 import com.sun.media.jfxmediaimpl.MediaUtils;
+import com.sun.javafx.PlatformUtil;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -73,6 +74,7 @@ final class HLSConnectionHolder extends ConnectionHolder {
     // Seek will set this value and HLS_PROP_SEGMENT_START_TIME
     // should return it if set.
     private int segmentStartTimeAfterSeek = -1;
+    private static final boolean SEND_HEADER_WITH_EACH_SEGMENT = PlatformUtil.isWindows();
     static final long HLS_VALUE_FLOAT_MULTIPLIER = 1000;
     static final int HLS_PROP_GET_DURATION = 1;
     static final int HLS_PROP_GET_HLS_MODE = 2;
@@ -368,7 +370,9 @@ final class HLSConnectionHolder extends ConnectionHolder {
             } catch (IOException | URISyntaxException e) {
                 return -1;
             }
-            sendHeader = false;
+            if (!SEND_HEADER_WITH_EACH_SEGMENT) {
+                sendHeader = false;
+            }
         }
 
         mediaFile = currentPlaylist.getNextMediaFile();
@@ -452,6 +456,28 @@ final class HLSConnectionHolder extends ConnectionHolder {
                 newCurrentPlaylist = null;
             }
         }
+    }
+
+    // Returns absolute URI for segment media file or extension playlist.
+    // Only HTTP/HTTPS protocols are supported. For other protocols exception
+    // will be thrown.
+    // Relative URI will be resolved against playlist.
+    static String resolveURI(String uri, URI playlistURI)
+            throws URISyntaxException, MalformedURLException {
+        URI segmentURI = new URI(uri);
+        if (segmentURI.isAbsolute()) {
+            if (segmentURI.getScheme().equalsIgnoreCase("http") ||
+                    segmentURI.getScheme().equalsIgnoreCase("https")) {
+                return segmentURI.toString();
+            }
+        } else {
+            return playlistURI.resolve(segmentURI).toString();
+        }
+
+        MediaUtils.error(HLSConnectionHolder.class, MediaError.ERROR_MEDIA_INVALID.code(),
+                "Unsupported segment URI: " + uri, null);
+
+        return null;
     }
 
     static String stripParameters(String mediaFile) {
@@ -691,6 +717,9 @@ final class HLSConnectionHolder extends ConnectionHolder {
                     }
                 }
             } catch (IOException e) {
+            } catch (URISyntaxException e) {
+                MediaUtils.error(this, MediaError.ERROR_MEDIA_INVALID.code(),
+                        e.getMessage(), e);
             } finally {
                 if (reader != null) {
                     try {
@@ -755,7 +784,8 @@ final class HLSConnectionHolder extends ConnectionHolder {
             throw new MediaException("Invalid HLS playlist");
         }
 
-        private void parse(BufferedReader reader) throws IOException {
+        private void parse(BufferedReader reader)
+                throws IOException, URISyntaxException, MalformedURLException {
             String line;
             while ((line = reader.readLine()) != null) {
                 // Ignore blank lines and comments
@@ -775,8 +805,8 @@ final class HLSConnectionHolder extends ConnectionHolder {
                         validateArray(tagParams, 2);
                         String[] params = tagParams[1].split(",");
                         validateArray(params, 1);
-                        String URI = getNextLine(reader);
-                        getPlaylist().addMediaFile(URI,
+                        String uri = getNextLine(reader);
+                        getPlaylist().addMediaFile(uri,
                                 Double.parseDouble(params[0]), isDiscontinuity);
                         // Clear discontinue flag, until it is set again by parser.
                         isDiscontinuity = false;
@@ -1009,8 +1039,9 @@ final class HLSConnectionHolder extends ConnectionHolder {
         void addExtStreamInf(ExtStreamInf item) {
             // Before adding ext stream inf we need to resolve URI against variant playlist.
             try {
-                item.setPlaylistURI(locationToURI(item.getLocation()));
-            } catch (URISyntaxException | MalformedURLException e) {
+                URI uri = new URI(resolveURI(item.getLocation(), playlistURI));
+                item.setPlaylistURI(uri);
+            } catch (NullPointerException | URISyntaxException | MalformedURLException e) {
                 throw new MediaException("Invalid HLS playlist");
             }
             extStreamInf.add(item);
@@ -1065,8 +1096,9 @@ final class HLSConnectionHolder extends ConnectionHolder {
             // Before adding audio ext media we need to resolve URI against variant
             // playlist.
             try {
-                item.setPlaylistURI(locationToURI(item.getLocation()));
-            } catch (URISyntaxException | MalformedURLException e) {
+                URI uri = new URI(resolveURI(item.getLocation(), playlistURI));
+                item.setPlaylistURI(uri);
+            } catch (NullPointerException | URISyntaxException | MalformedURLException e) {
                 throw new MediaException("Invalid HLS playlist");
             }
             audioExtMedia.add(item);
@@ -1119,20 +1151,6 @@ final class HLSConnectionHolder extends ConnectionHolder {
             return item == null ? null : item.getPlaylist();
         }
 
-        // Converts playlist location to URI. .m3u8 playlist can have absolute URI or
-        // relatively to
-        // variant playlist. This function takes string value from playlist and returns
-        // resolved URI
-        private URI locationToURI(String location) throws URISyntaxException, MalformedURLException {
-            if (location.startsWith("http://") || location.startsWith("https://")) {
-                return new URI(location);
-            } else {
-                return new URI(
-                        playlistURI.toURL().toString().substring(0, playlistURI.toURL().toString().lastIndexOf("/") + 1)
-                                + location);
-            }
-        }
-
         Playlist getPlaylistBasedOnBitrate(int bitrate) {
             int playlistIndex = -1;
             int playlistBitrate = 0;
@@ -1179,8 +1197,6 @@ final class HLSConnectionHolder extends ConnectionHolder {
         private final List<String> mediaFiles = new ArrayList<>();
         final List<Double> mediaFilesStartTimes = new ArrayList<>();
         private final List<Boolean> mediaFilesDiscontinuities = new ArrayList<>();
-        private boolean needBaseURI = true;
-        private String baseURI = null;
         private double startTime = 0.0;
         private double duration = 0.0;
         private int sequenceNumber = -1;
@@ -1261,16 +1277,21 @@ final class HLSConnectionHolder extends ConnectionHolder {
             isVideoStreamFragmentedMP4 = value;
         }
 
-        void addMediaFile(String URI, double duration, boolean isDiscontinuity) {
+        void addMediaFile(String uri, double duration, boolean isDiscontinuity)
+                throws URISyntaxException, MalformedURLException {
             synchronized (lock) {
 
-                if (needBaseURI) {
-                    setBaseURI(playlistURI.toString(), URI);
+                uri = resolveURI(uri, playlistURI);
+                if (uri == null) {
+                    // Just ignore. resolveURI() will signal MediaPlayer error
+                    // if fail. If it is just one segment we will recover and
+                    // start playback. MediaUtils.error() will not halt player.
+                    return;
                 }
 
                 if (isLive) {
                     if (sequenceNumberUpdated) {
-                        int index = mediaFiles.indexOf(URI);
+                        int index = mediaFiles.indexOf(uri);
                         if (index != -1) {
                             for (int i = 0; i < index; i++) {
                                 mediaFiles.remove(0);
@@ -1286,12 +1307,12 @@ final class HLSConnectionHolder extends ConnectionHolder {
                         sequenceNumberUpdated = false;
                     }
 
-                    if (mediaFiles.contains(URI)) {
+                    if (mediaFiles.contains(uri)) {
                         return; // Nothing to add
                     }
                 }
 
-                mediaFiles.add(URI);
+                mediaFiles.add(uri);
                 mediaFilesDiscontinuities.add(isDiscontinuity);
 
                 if (isLive) {
@@ -1341,11 +1362,7 @@ final class HLSConnectionHolder extends ConnectionHolder {
             synchronized (lock) {
                 mediaFileIndex++;
                 if (mediaFileIndex < mediaFiles.size()) {
-                    if (baseURI != null) {
-                        return baseURI + mediaFiles.get(mediaFileIndex);
-                    } else {
-                        return mediaFiles.get(mediaFileIndex);
-                    }
+                    return mediaFiles.get(mediaFileIndex);
                 } else {
                     return null;
                 }
@@ -1355,11 +1372,7 @@ final class HLSConnectionHolder extends ConnectionHolder {
         String getHeaderFile() {
             synchronized (lock) {
                 if (mediaFiles.size() > 0) {
-                    if (baseURI != null) {
-                        return baseURI + mediaFiles.get(0);
-                    } else {
-                        return mediaFiles.get(0);
-                    }
+                    return mediaFiles.get(0);
                 } else {
                     return null;
                 }
@@ -1572,13 +1585,6 @@ final class HLSConnectionHolder extends ConnectionHolder {
                 isPlaylistClosed = true;
                 liveSemaphore.release();
             }
-        }
-
-        private void setBaseURI(String playlistURI, String URI) {
-            if (!URI.startsWith("http://") && !URI.startsWith("https://")) {
-                baseURI = playlistURI.substring(0, playlistURI.lastIndexOf("/") + 1);
-            }
-            needBaseURI = false;
         }
 
         void setAudioGroupID(String value) {

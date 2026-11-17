@@ -36,7 +36,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(WebVTTElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebVTTElement);
 
 static const QualifiedName& nodeTypeToTagName(WebVTTNodeType nodeType)
 {
@@ -84,9 +84,9 @@ Ref<Element> WebVTTElement::create(WebVTTNodeType nodeType, AtomString language,
         return adoptRef(*new WebVTTElement(nodeType, language, document));
 }
 
-Ref<Element> WebVTTElement::cloneElementWithoutAttributesAndChildren(Document& targetDocument)
+Ref<Element> WebVTTElement::cloneElementWithoutAttributesAndChildren(Document& document, CustomElementRegistry*) const
 {
-    return create(m_webVTTNodeType, m_language, targetDocument);
+    return create(m_webVTTNodeType, m_language, document);
 }
 
 Ref<HTMLElement> WebVTTElement::createEquivalentHTMLElement(Document& document)

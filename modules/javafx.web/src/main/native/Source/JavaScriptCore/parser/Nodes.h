@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2024 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2025 Apple Inc. All rights reserved.
  *  Copyright (C) 2007 Cameron Zwarich (cwzwarich@uwaterloo.ca)
  *  Copyright (C) 2007 Maks Orlovich
  *  Copyright (C) 2007 Eric Seidel <eric@webkit.org>
@@ -94,7 +94,7 @@ namespace JSC {
     }
 
     struct SwitchInfo {
-        enum SwitchType : uint8_t { SwitchNone, SwitchImmediate, SwitchCharacter, SwitchString };
+        enum class SwitchType : uint8_t { None, Immediate, Character, ImmediateList, CharacterList, String };
         uint32_t bytecodeOffset;
         SwitchType switchType;
     };
@@ -135,7 +135,7 @@ namespace JSC {
 
     DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(ParserArenaRoot);
     class ParserArenaRoot {
-        WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(ParserArenaRoot);
+        WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(ParserArenaRoot, ParserArenaRoot);
     protected:
         ParserArenaRoot(ParserArena&);
 
@@ -672,6 +672,7 @@ namespace JSC {
 
         const Identifier& identifier() const { return m_ident; }
         bool isArguments(VM& vm) const final { return m_ident == vm.propertyNames->arguments; }
+        bool getFromScopeCanThrow(BytecodeGenerator&) const;
 
     private:
         RegisterID* emitBytecode(BytecodeGenerator&, RegisterID* = nullptr) final;
@@ -1183,9 +1184,9 @@ namespace JSC {
         ExpressionNode* m_expr;
     };
 
-    class TypeOfResolveNode final : public ExpressionNode {
+    class TypeOfResolveNode final : public ExpressionNode, public ThrowableExpressionData {
     public:
-        TypeOfResolveNode(const JSTokenLocation&, const Identifier&);
+        TypeOfResolveNode(const JSTokenLocation&, const Identifier&, const JSTextPosition&, const JSTextPosition&, const JSTextPosition&);
 
         const Identifier& identifier() const { return m_ident; }
 
@@ -1616,10 +1617,12 @@ namespace JSC {
 
     class AssignErrorNode final : public ExpressionNode, public ThrowableExpressionData {
     public:
-        AssignErrorNode(const JSTokenLocation&, const JSTextPosition& divot, const JSTextPosition& divotStart, const JSTextPosition& divotEnd);
+        AssignErrorNode(const JSTokenLocation&, ExpressionNode*, const JSTextPosition& divot, const JSTextPosition& divotStart, const JSTextPosition& divotEnd);
 
     private:
         RegisterID* emitBytecode(BytecodeGenerator&, RegisterID* = nullptr) final;
+
+        ExpressionNode* m_left;
     };
 
     class CommaNode final : public ExpressionNode {
@@ -1966,6 +1969,7 @@ namespace JSC {
         bool usesSuperCall() const { return m_features & SuperCallFeature; }
         bool usesSuperProperty() const { return m_features & SuperPropertyFeature; }
         bool usesNewTarget() const { return m_features & NewTargetFeature; }
+        bool isAsyncFunctionWithoutAwait() const { return m_features & AsyncFunctionWithoutAwaitFeature; }
         bool needsActivation() const { return (hasCapturedVariables()) || (m_features & (EvalFeature | WithFeature)); }
         bool hasCapturedVariables() const { return m_varDeclarations.hasCapturedVariables(); }
         bool captures(UniquedStringImpl* uid) { return m_varDeclarations.captures(uid); }
@@ -2060,7 +2064,7 @@ namespace JSC {
         unsigned m_startColumn;
         unsigned m_endColumn;
         bool m_usesAwait;
-        Ref<ModuleScopeData> m_moduleScopeData;
+        const Ref<ModuleScopeData> m_moduleScopeData;
     };
 
     class ModuleNameNode final : public Node {
@@ -2127,7 +2131,11 @@ namespace JSC {
 
     class ImportDeclarationNode final : public ModuleDeclarationNode {
     public:
-        ImportDeclarationNode(const JSTokenLocation&, ImportSpecifierListNode*, ModuleNameNode*, ImportAttributesListNode*);
+        enum class ImportType : uint8_t {
+            Normal,
+            Deferred
+        };
+        ImportDeclarationNode(const JSTokenLocation&, ImportType, ImportSpecifierListNode*, ModuleNameNode*, ImportAttributesListNode*);
 
         ImportSpecifierListNode* specifierList() const { return m_specifierList; }
         ModuleNameNode* moduleName() const { return m_moduleName; }
@@ -2140,6 +2148,7 @@ namespace JSC {
         ImportSpecifierListNode* m_specifierList;
         ModuleNameNode* m_moduleName;
         ImportAttributesListNode* m_attributesList;
+        ImportType m_type;
     };
 
     class ExportAllDeclarationNode final : public ModuleDeclarationNode {
@@ -2478,6 +2487,7 @@ namespace JSC {
         virtual bool isAssignmentElementNode() const { return false; }
         virtual bool isRestParameter() const { return false; }
 
+        virtual bool bindValueCanThrow(BytecodeGenerator&) const { return true; }
         virtual RegisterID* writableDirectBindingIfPossible(BytecodeGenerator&) const { return nullptr; }
         virtual void finishDirectBindingAssignment(BytecodeGenerator&) const { }
 
@@ -2566,6 +2576,7 @@ namespace JSC {
         const JSTextPosition& divotStart() const { return m_divotStart; }
         const JSTextPosition& divotEnd() const { return m_divotEnd; }
 
+        bool bindValueCanThrow(BytecodeGenerator&) const final;
         RegisterID* writableDirectBindingIfPossible(BytecodeGenerator&) const final;
         void finishDirectBindingAssignment(BytecodeGenerator&) const;
 
@@ -2607,6 +2618,7 @@ namespace JSC {
         const JSTextPosition& divotStart() const { return m_divotStart; }
         const JSTextPosition& divotEnd() const { return m_divotEnd; }
 
+        bool bindValueCanThrow(BytecodeGenerator&) const final;
         RegisterID* writableDirectBindingIfPossible(BytecodeGenerator&) const final;
         void finishDirectBindingAssignment(BytecodeGenerator&) const;
 

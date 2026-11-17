@@ -32,6 +32,9 @@
 #include "ReleaseHeapAccessScope.h"
 #include "TypedArrayController.h"
 #include "WaiterListManager.h"
+#include <wtf/SIMDHelpers.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -57,6 +60,7 @@ FOR_EACH_ATOMICS_FUNC(DECLARE_FUNC_PROTO)
 #undef DECLARE_FUNC_PROTO
 
 static JSC_DECLARE_HOST_FUNCTION(atomicsFuncWaitAsync);
+static JSC_DECLARE_HOST_FUNCTION(atomicsFuncPause);
 
 const ClassInfo AtomicsObject::s_info = { "Atomics"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(AtomicsObject) };
 
@@ -87,16 +91,17 @@ void AtomicsObject::finishCreation(VM& vm, JSGlobalObject* globalObject)
     FOR_EACH_ATOMICS_FUNC(PUT_DIRECT_NATIVE_FUNC)
 #undef PUT_DIRECT_NATIVE_FUNC
 
-    if (vm.vmType == VM::Default)
-        putDirectNativeFunctionWithoutTransition(vm, globalObject, Identifier::fromString(vm, "waitAsync"_s), 4, atomicsFuncWaitAsync, ImplementationVisibility::Public, AtomicsWaitAsyncIntrinsic, static_cast<unsigned>(PropertyAttribute::DontEnum));
+    JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION("pause"_s, atomicsFuncPause, static_cast<unsigned>(PropertyAttribute::DontEnum), 0, ImplementationVisibility::Public, AtomicsPauseIntrinsic);
 
+    if (vm.vmType == VM::VMType::Default)
+        JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION("waitAsync"_s, atomicsFuncWaitAsync, static_cast<unsigned>(PropertyAttribute::DontEnum), 4, ImplementationVisibility::Public, AtomicsWaitAsyncIntrinsic);
     JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 }
 
 namespace {
 
 template<typename Adaptor, typename Func>
-EncodedJSValue atomicReadModifyWriteCase(JSGlobalObject* globalObject, VM& vm, const JSValue* args, JSArrayBufferView* typedArrayView, unsigned accessIndex, const Func& func)
+EncodedJSValue atomicReadModifyWriteCase(JSGlobalObject* globalObject, VM& vm, const JSValue* args, JSArrayBufferView* typedArrayView, uint64_t accessIndex, const Func& func)
 {
     auto scope = DECLARE_THROW_SCOPE(vm);
 
@@ -116,12 +121,12 @@ EncodedJSValue atomicReadModifyWriteCase(JSGlobalObject* globalObject, VM& vm, c
     RELEASE_AND_RETURN(scope, JSValue::encode(Adaptor::toJSValue(globalObject, result)));
 }
 
-static unsigned validateAtomicAccess(JSGlobalObject* globalObject, VM& vm, JSArrayBufferView* typedArrayView, JSValue accessIndexValue)
+static uint64_t validateAtomicAccess(JSGlobalObject* globalObject, VM& vm, JSArrayBufferView* typedArrayView, JSValue accessIndexValue)
 {
     auto scope = DECLARE_THROW_SCOPE(vm);
-    unsigned accessIndex = 0;
+    uint64_t accessIndex = 0;
     size_t length = typedArrayView->length();
-    if (LIKELY(accessIndexValue.isUInt32()))
+    if (accessIndexValue.isUInt32()) [[likely]]
         accessIndex = accessIndexValue.asUInt32();
     else {
         accessIndex = accessIndexValue.toIndex(globalObject, "accessIndex"_s);
@@ -182,7 +187,7 @@ EncodedJSValue atomicReadModifyWrite(JSGlobalObject* globalObject, VM& vm, const
     JSArrayBufferView* typedArrayView = validateIntegerTypedArray<TypedArrayOperationMode::ReadWrite>(globalObject, args[0]);
     RETURN_IF_EXCEPTION(scope, { });
 
-    unsigned accessIndex = validateAtomicAccess(globalObject, vm, typedArrayView, args[1]);
+    uint64_t accessIndex = validateAtomicAccess(globalObject, vm, typedArrayView, args[1]);
     RETURN_IF_EXCEPTION(scope, { });
 
     scope.release();
@@ -324,7 +329,7 @@ EncodedJSValue isLockFree(JSGlobalObject* globalObject, JSValue arg)
 }
 
 template<typename Adaptor>
-EncodedJSValue atomicStoreCase(JSGlobalObject* globalObject, VM& vm, JSValue operand, JSArrayBufferView* typedArrayView, unsigned accessIndex)
+EncodedJSValue atomicStoreCase(JSGlobalObject* globalObject, VM& vm, JSValue operand, JSArrayBufferView* typedArrayView, uint64_t accessIndex)
 {
     auto scope = DECLARE_THROW_SCOPE(vm);
 
@@ -360,7 +365,7 @@ EncodedJSValue atomicStore(JSGlobalObject* globalObject, VM& vm, JSValue base, J
     JSArrayBufferView* typedArrayView = validateIntegerTypedArray<TypedArrayOperationMode::ReadWrite>(globalObject, base);
     RETURN_IF_EXCEPTION(scope, { });
 
-    unsigned accessIndex = validateAtomicAccess(globalObject, vm, typedArrayView, index);
+    uint64_t accessIndex = validateAtomicAccess(globalObject, vm, typedArrayView, index);
     RETURN_IF_EXCEPTION(scope, { });
 
     scope.release();
@@ -436,7 +441,7 @@ JSC_DEFINE_HOST_FUNCTION(atomicsFuncSub, (JSGlobalObject* globalObject, CallFram
 
 
 template<typename ValueType, typename JSArrayType>
-JSValue atomicsWaitImpl(JSGlobalObject* globalObject, JSArrayType* typedArray, unsigned accessIndex, ValueType expectedValue, JSValue timeoutValue, AtomicsWaitType type)
+JSValue atomicsWaitImpl(JSGlobalObject* globalObject, JSArrayType* typedArray, uint64_t accessIndex, ValueType expectedValue, JSValue timeoutValue, AtomicsWaitType type)
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -465,6 +470,9 @@ JSValue atomicsWaitImpl(JSGlobalObject* globalObject, JSArrayType* typedArray, u
         return vm.smallStrings.notEqualString();
     case WaiterListManager::WaitSyncResult::TimedOut:
         return vm.smallStrings.timedOutString();
+    case WaiterListManager::WaitSyncResult::Terminated:
+        vm.throwTerminationException();
+        return { };
     }
     RELEASE_ASSERT_NOT_REACHED();
     return { };
@@ -481,7 +489,7 @@ JSC_DEFINE_HOST_FUNCTION(atomicsFuncWait, (JSGlobalObject* globalObject, CallFra
     if (!typedArrayView->isShared())
         return throwVMTypeError(globalObject, scope, "Typed array for wait/waitAsync/notify must wrap a SharedArrayBuffer."_s);
 
-    unsigned accessIndex = validateAtomicAccess(globalObject, vm, typedArrayView, callFrame->argument(1));
+    uint64_t accessIndex = validateAtomicAccess(globalObject, vm, typedArrayView, callFrame->argument(1));
     RETURN_IF_EXCEPTION(scope, { });
 
     switch (typedArrayView->type()) {
@@ -513,7 +521,7 @@ JSC_DEFINE_HOST_FUNCTION(atomicsFuncWaitAsync, (JSGlobalObject* globalObject, Ca
     if (!typedArrayView->isShared())
         return throwVMTypeError(globalObject, scope, "Typed array for wait/waitAsync/notify must wrap a SharedArrayBuffer."_s);
 
-    unsigned accessIndex = validateAtomicAccess(globalObject, vm, typedArrayView, callFrame->argument(1));
+    uint64_t accessIndex = validateAtomicAccess(globalObject, vm, typedArrayView, callFrame->argument(1));
     RETURN_IF_EXCEPTION(scope, { });
 
     switch (typedArrayView->type()) {
@@ -534,6 +542,25 @@ JSC_DEFINE_HOST_FUNCTION(atomicsFuncWaitAsync, (JSGlobalObject* globalObject, Ca
     return { };
 }
 
+JSC_DEFINE_HOST_FUNCTION(atomicsFuncPause, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    JSValue argument = callFrame->argument(0);
+    if (!argument.isUndefined()) {
+        if (!argument.isNumber() || !isInteger(argument.asNumber())) [[unlikely]]
+            return throwVMTypeError(globalObject, scope, "Atomics.pause argument needs to be either undefined or integer number"_s);
+        // Right now, argument integer is not used.
+    }
+
+    // Note that we use "isb" for ARM64 instead of "yield".
+    // https://stackoverflow.com/questions/70810121/why-does-hintspin-loop-use-isb-on-aarch64
+    simde_mm_pause();
+
+    return JSValue::encode(jsUndefined());
+}
+
 EncodedJSValue getWaiterListSize(JSGlobalObject* globalObject, CallFrame* callFrame)
 {
     VM& vm = globalObject->vm();
@@ -545,7 +572,7 @@ EncodedJSValue getWaiterListSize(JSGlobalObject* globalObject, CallFrame* callFr
     if (!typedArrayView->isShared())
         return throwVMTypeError(globalObject, scope, "Typed array for waiterListSize must wrap a SharedArrayBuffer."_s);
 
-    unsigned accessIndex = validateAtomicAccess(globalObject, vm, typedArrayView, callFrame->argument(1));
+    uint64_t accessIndex = validateAtomicAccess(globalObject, vm, typedArrayView, callFrame->argument(1));
     RETURN_IF_EXCEPTION(scope, { });
 
     switch (typedArrayView->type()) {
@@ -573,7 +600,7 @@ JSC_DEFINE_HOST_FUNCTION(atomicsFuncNotify, (JSGlobalObject* globalObject, CallF
     auto* typedArrayView = validateIntegerTypedArray<TypedArrayOperationMode::Wait>(globalObject, callFrame->argument(0));
     RETURN_IF_EXCEPTION(scope, { });
 
-    unsigned accessIndex = validateAtomicAccess(globalObject, vm, typedArrayView, callFrame->argument(1));
+    uint64_t accessIndex = validateAtomicAccess(globalObject, vm, typedArrayView, callFrame->argument(1));
     RETURN_IF_EXCEPTION(scope, { });
 
     JSValue countValue = callFrame->argument(2);
@@ -714,3 +741,4 @@ IGNORE_WARNINGS_END
 
 } // namespace JSC
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

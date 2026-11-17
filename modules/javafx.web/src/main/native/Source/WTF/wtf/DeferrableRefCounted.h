@@ -38,8 +38,8 @@ namespace WTF {
 // sometimes even for some additional functionality.
 
 class DeferrableRefCountedBase {
-    static constexpr unsigned deferredFlag = 1;
-    static constexpr unsigned normalIncrement = 2;
+    static constexpr uint32_t deferredFlag = 1;
+    static constexpr uint32_t normalIncrement = 2;
 
 public:
     void ref() const
@@ -52,7 +52,7 @@ public:
         return refCount() == 1;
     }
 
-    unsigned refCount() const
+    uint32_t refCount() const
     {
         return m_refCount / normalIncrement;
     }
@@ -89,12 +89,12 @@ protected:
     }
 
 private:
-    mutable unsigned m_refCount;
+    mutable uint32_t m_refCount;
 };
 
 template<typename T>
 class DeferrableRefCounted : public DeferrableRefCountedBase {
-    WTF_MAKE_NONCOPYABLE(DeferrableRefCounted); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_NONCOPYABLE(DeferrableRefCounted); WTF_DEPRECATED_MAKE_FAST_ALLOCATED(DeferrableRefCounted);
 public:
     void deref() const
     {

@@ -28,6 +28,7 @@
 
 #if ENABLE(WEBXR)
 
+#include "ContextDestructionObserverInlines.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSWebFakeXRDevice.h"
 #include "JSXRReferenceSpaceType.h"
@@ -39,29 +40,26 @@
 namespace WebCore {
 
 WebXRTest::WebXRTest(WeakPtr<WebXRSystem, WeakPtrImplWithEventTargetData>&& system)
-    : m_context(WTFMove(system))
+    : m_context(WTF::move(system))
 {
 }
 
 WebXRTest::~WebXRTest() = default;
 
-static PlatformXR::Device::FeatureList parseFeatures(const Vector<JSC::JSValue>& featureList, ScriptExecutionContext& context)
+static PlatformXR::Device::FeatureList parseFeatures(const Vector<String>& featureList)
 {
     PlatformXR::Device::FeatureList features;
-    if (auto* globalObject = context.globalObject()) {
         for (auto& feature : featureList) {
-            auto featureString = feature.toWTFString(globalObject);
-            if (auto sessionFeature = PlatformXR::parseSessionFeatureDescriptor(featureString))
+        if (auto sessionFeature = PlatformXR::parseSessionFeatureDescriptor(feature))
                 features.append(*sessionFeature);
         }
-    }
     return features;
 }
 
 void WebXRTest::simulateDeviceConnection(ScriptExecutionContext& context, const FakeXRDeviceInit& init, WebFakeXRDevicePromise&& promise)
 {
     // https://immersive-web.github.io/webxr-test-api/#dom-xrtest-simulatedeviceconnection
-    context.postTask([this, protectedThis = Ref { *this }, init, promise = WTFMove(promise)] (ScriptExecutionContext& context) mutable {
+    context.postTask([this, protectedThis = Ref { *this }, init, promise = WTF::move(promise)](ScriptExecutionContext&) mutable {
         auto device = WebFakeXRDevice::create();
         auto& simulatedDevice = device->simulatedXRDevice();
 
@@ -69,10 +67,10 @@ void WebXRTest::simulateDeviceConnection(ScriptExecutionContext& context, const 
 
         PlatformXR::Device::FeatureList supportedFeatures;
         if (init.supportedFeatures)
-            supportedFeatures = parseFeatures(init.supportedFeatures.value(), context);
+            supportedFeatures = parseFeatures(init.supportedFeatures.value());
         PlatformXR::Device::FeatureList enabledFeatures;
         if (init.enabledFeatures)
-            enabledFeatures = parseFeatures(init.enabledFeatures.value(), context);
+            enabledFeatures = parseFeatures(init.enabledFeatures.value());
 
         if (init.boundsCoordinates) {
             if (init.boundsCoordinates->size() < 3) {
@@ -87,6 +85,11 @@ void WebXRTest::simulateDeviceConnection(ScriptExecutionContext& context, const 
 
         if (init.floorOrigin)
             device->setFloorOrigin(init.floorOrigin.value());
+
+#if ENABLE(WEBXR_HIT_TEST)
+        if (init.world)
+            device->setWorld(init.world.value());
+#endif
 
         Vector<XRSessionMode> supportedModes;
         if (init.supportedModes) {
@@ -107,7 +110,7 @@ void WebXRTest::simulateDeviceConnection(ScriptExecutionContext& context, const 
         m_context->registerSimulatedXRDeviceForTesting(simulatedDevice);
 
         promise.resolve(device.get());
-        m_devices.append(WTFMove(device));
+        m_devices.append(WTF::move(device));
     });
 }
 
@@ -116,7 +119,7 @@ void WebXRTest::simulateUserActivation(Document& document, XRSimulateUserActivat
     // https://immersive-web.github.io/webxr-test-api/#dom-xrtest-simulateuseractivation
     // Invoke function as if it had transient activation.
     UserGestureIndicator gestureIndicator(IsProcessingUserGesture::Yes, &document);
-    function.handleEvent();
+    function.invoke();
 }
 
 void WebXRTest::disconnectAllDevices(DOMPromiseDeferred<void>&& promise)

@@ -26,6 +26,8 @@
 #include "config.h"
 #include "WasmBBQJIT64.h"
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 #include "WasmBBQJIT.h"
 
 #if ENABLE(WEBASSEMBLY_BBQJIT)
@@ -40,7 +42,7 @@
 #include "CompilerTimingScope.h"
 #include "GPRInfo.h"
 #include "JSCast.h"
-#include "JSWebAssemblyArray.h"
+#include "JSWebAssemblyArrayInlines.h"
 #include "JSWebAssemblyException.h"
 #include "JSWebAssemblyStruct.h"
 #include "MacroAssembler.h"
@@ -48,6 +50,7 @@
 #include "WasmBBQDisassembler.h"
 #include "WasmCallingConvention.h"
 #include "WasmCompilationMode.h"
+#include "WasmFaultSignalHandler.h"
 #include "WasmFormat.h"
 #include "WasmFunctionParser.h"
 #include "WasmIRGeneratorHelpers.h"
@@ -59,6 +62,7 @@
 #include "WasmOps.h"
 #include "WasmThunks.h"
 #include "WasmTypeDefinition.h"
+#include "WebAssemblyFunctionBase.h"
 #include <bit>
 #include <wtf/Assertions.h>
 #include <wtf/Compiler.h>
@@ -91,11 +95,6 @@ bool Location::isRegister() const
     return isGPR() || isFPR();
 }
 
-bool BBQJIT::typeNeedsGPR2(TypeKind)
-{
-    return false;
-}
-
 uint32_t BBQJIT::sizeOfType(TypeKind type)
 {
     switch (type) {
@@ -117,14 +116,16 @@ uint32_t BBQJIT::sizeOfType(TypeKind type)
     case TypeKind::Subfinal:
     case TypeKind::Struct:
     case TypeKind::Structref:
+    case TypeKind::Exnref:
     case TypeKind::Externref:
     case TypeKind::Array:
     case TypeKind::Arrayref:
     case TypeKind::Eqref:
     case TypeKind::Anyref:
-    case TypeKind::Nullref:
-    case TypeKind::Nullfuncref:
-    case TypeKind::Nullexternref:
+    case TypeKind::Noexnref:
+    case TypeKind::Noneref:
+    case TypeKind::Nofuncref:
+    case TypeKind::Noexternref:
         return sizeof(EncodedJSValue);
     case TypeKind::Void:
         return 0;
@@ -160,7 +161,7 @@ Value BBQJIT::instanceValue()
 }
 
 // Tables
-PartialResult WARN_UNUSED_RETURN BBQJIT::addTableGet(unsigned tableIndex, Value index, Value& result)
+[[nodiscard]] PartialResult BBQJIT::addTableGet(unsigned tableIndex, Value index, Value& result)
 {
     // FIXME: Emit this inline <https://bugs.webkit.org/show_bug.cgi?id=198506>.
     ASSERT(index.type() == TypeKind::I32);
@@ -178,16 +179,16 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addTableGet(unsigned tableIndex, Value 
 
     LOG_INSTRUCTION("TableGet", tableIndex, index, RESULT(result));
 
-    throwExceptionIf(ExceptionType::OutOfBoundsTableAccess, m_jit.branchTest64(ResultCondition::Zero, resultLocation.asGPR()));
+    recordJumpToThrowException(ExceptionType::OutOfBoundsTableAccess, m_jit.branchTest64(ResultCondition::Zero, resultLocation.asGPR()));
     return { };
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::getGlobal(uint32_t index, Value& result)
+[[nodiscard]] PartialResult BBQJIT::getGlobal(uint32_t index, Value& result)
 {
     const Wasm::GlobalInformation& global = m_info.globals[index];
     Type type = global.type;
 
-    int32_t offset = JSWebAssemblyInstance::offsetOfGlobalPtr(m_info.importFunctionCount(), m_info.tableCount(), index);
+    int32_t offset = JSWebAssemblyInstance::offsetOfGlobal(m_info, index);
     Value globalValue = Value::pinned(type.kind, Location::fromGlobal(offset));
 
     switch (global.bindingMode) {
@@ -225,15 +226,17 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::getGlobal(uint32_t index, Value& result
         case TypeKind::Subfinal:
         case TypeKind::Struct:
         case TypeKind::Structref:
+        case TypeKind::Exnref:
         case TypeKind::Externref:
         case TypeKind::Array:
         case TypeKind::Arrayref:
         case TypeKind::I31ref:
         case TypeKind::Eqref:
         case TypeKind::Anyref:
-        case TypeKind::Nullref:
-        case TypeKind::Nullfuncref:
-        case TypeKind::Nullexternref:
+        case TypeKind::Noexnref:
+        case TypeKind::Noneref:
+        case TypeKind::Nofuncref:
+        case TypeKind::Noexternref:
             m_jit.load64(Address(wasmScratchGPR), resultLocation.asGPR());
             break;
         case TypeKind::Void:
@@ -247,12 +250,12 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::getGlobal(uint32_t index, Value& result
     return { };
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::setGlobal(uint32_t index, Value value)
+[[nodiscard]] PartialResult BBQJIT::setGlobal(uint32_t index, Value value)
 {
     const Wasm::GlobalInformation& global = m_info.globals[index];
     Type type = global.type;
 
-    int32_t offset = JSWebAssemblyInstance::offsetOfGlobalPtr(m_info.importFunctionCount(), m_info.tableCount(), index);
+    int32_t offset = JSWebAssemblyInstance::offsetOfGlobal(m_info, index);
     Location valueLocation = locationOf(value);
 
     switch (global.bindingMode) {
@@ -306,15 +309,17 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::setGlobal(uint32_t index, Value value)
         case TypeKind::Subfinal:
         case TypeKind::Struct:
         case TypeKind::Structref:
+        case TypeKind::Exnref:
         case TypeKind::Externref:
         case TypeKind::Array:
         case TypeKind::Arrayref:
         case TypeKind::I31ref:
         case TypeKind::Eqref:
         case TypeKind::Anyref:
-        case TypeKind::Nullref:
-        case TypeKind::Nullfuncref:
-        case TypeKind::Nullexternref:
+        case TypeKind::Noexnref:
+        case TypeKind::Noneref:
+        case TypeKind::Nofuncref:
+        case TypeKind::Noexternref:
             m_jit.store64(valueLocation.asGPR(), Address(wasmScratchGPR));
             break;
         case TypeKind::Void:
@@ -335,9 +340,9 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::setGlobal(uint32_t index, Value value)
 
 // Memory
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::load(LoadOpType loadOp, Value pointer, Value& result, uint32_t uoffset)
+[[nodiscard]] PartialResult BBQJIT::load(LoadOpType loadOp, Value pointer, Value& result, uint32_t uoffset)
 {
-    if (UNLIKELY(sumOverflows<uint32_t>(uoffset, sizeOfLoadOp(loadOp)))) {
+    if (sumOverflows<uint32_t>(uoffset, sizeOfLoadOp(loadOp))) [[unlikely]] {
         // FIXME: Same issue as in AirIRGenerator::load(): https://bugs.webkit.org/show_bug.cgi?id=166435
         emitThrowException(ExceptionType::OutOfBoundsMemoryAccess);
         consume(pointer);
@@ -378,8 +383,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::load(LoadOpType loadOp, Value pointer, 
                 m_jit.load8SignedExtendTo32(location, resultLocation.asGPR());
                 break;
             case LoadOpType::I64Load8S:
-                m_jit.load8SignedExtendTo32(location, resultLocation.asGPR());
-                m_jit.signExtend32To64(resultLocation.asGPR(), resultLocation.asGPR());
+                m_jit.load8SignedExtendTo64(location, resultLocation.asGPR());
                 break;
             case LoadOpType::I32Load8U:
                 m_jit.load8(location, resultLocation.asGPR());
@@ -391,8 +395,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::load(LoadOpType loadOp, Value pointer, 
                 m_jit.load16SignedExtendTo32(location, resultLocation.asGPR());
                 break;
             case LoadOpType::I64Load16S:
-                m_jit.load16SignedExtendTo32(location, resultLocation.asGPR());
-                m_jit.signExtend32To64(resultLocation.asGPR(), resultLocation.asGPR());
+                m_jit.load16SignedExtendTo64(location, resultLocation.asGPR());
                 break;
             case LoadOpType::I32Load16U:
                 m_jit.load16(location, resultLocation.asGPR());
@@ -407,8 +410,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::load(LoadOpType loadOp, Value pointer, 
                 m_jit.load32(location, resultLocation.asGPR());
                 break;
             case LoadOpType::I64Load32S:
-                m_jit.load32(location, resultLocation.asGPR());
-                m_jit.signExtend32To64(resultLocation.asGPR(), resultLocation.asGPR());
+                m_jit.load32SignedExtendTo64(location, resultLocation.asGPR());
                 break;
             case LoadOpType::I64Load:
                 m_jit.load64(location, resultLocation.asGPR());
@@ -430,10 +432,10 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::load(LoadOpType loadOp, Value pointer, 
     return { };
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::store(StoreOpType storeOp, Value pointer, Value value, uint32_t uoffset)
+[[nodiscard]] PartialResult BBQJIT::store(StoreOpType storeOp, Value pointer, Value value, uint32_t uoffset)
 {
     Location valueLocation = locationOf(value);
-    if (UNLIKELY(sumOverflows<uint32_t>(uoffset, sizeOfStoreOp(storeOp)))) {
+    if (sumOverflows<uint32_t>(uoffset, sizeOfStoreOp(storeOp))) [[unlikely]] {
         // FIXME: Same issue as in AirIRGenerator::load(): https://bugs.webkit.org/show_bug.cgi?id=166435
         emitThrowException(ExceptionType::OutOfBoundsMemoryAccess);
         consume(pointer);
@@ -629,7 +631,7 @@ void BBQJIT::emitAtomicOpGeneric(ExtAtomicOpType op, Address address, GPRReg old
 #endif
 }
 
-Value WARN_UNUSED_RETURN BBQJIT::emitAtomicLoadOp(ExtAtomicOpType loadOp, Type valueType, Location pointer, uint32_t uoffset)
+[[nodiscard]] Value BBQJIT::emitAtomicLoadOp(ExtAtomicOpType loadOp, Type valueType, Location pointer, uint32_t uoffset)
 {
     ASSERT(pointer.isGPR());
 
@@ -639,7 +641,7 @@ Value WARN_UNUSED_RETURN BBQJIT::emitAtomicLoadOp(ExtAtomicOpType loadOp, Type v
     Address address = Address(pointer.asGPR());
 
     if (accessWidth(loadOp) != Width8)
-        throwExceptionIf(ExceptionType::OutOfBoundsMemoryAccess, m_jit.branchTest64(ResultCondition::NonZero, pointer.asGPR(), TrustedImm64(sizeOfAtomicOpMemoryAccess(loadOp) - 1)));
+        recordJumpToThrowException(ExceptionType::UnalignedMemoryAccess, m_jit.branchTest64(ResultCondition::NonZero, pointer.asGPR(), TrustedImm64(sizeOfAtomicOpMemoryAccess(loadOp) - 1)));
 
     Value result = topValue(valueType.kind);
     Location resultLocation = allocate(result);
@@ -731,7 +733,7 @@ void BBQJIT::emitAtomicStoreOp(ExtAtomicOpType storeOp, Type, Location pointer, 
     Address address = Address(pointer.asGPR());
 
     if (accessWidth(storeOp) != Width8)
-        throwExceptionIf(ExceptionType::OutOfBoundsMemoryAccess, m_jit.branchTest64(ResultCondition::NonZero, pointer.asGPR(), TrustedImm64(sizeOfAtomicOpMemoryAccess(storeOp) - 1)));
+        recordJumpToThrowException(ExceptionType::UnalignedMemoryAccess, m_jit.branchTest64(ResultCondition::NonZero, pointer.asGPR(), TrustedImm64(sizeOfAtomicOpMemoryAccess(storeOp) - 1)));
 
     GPRReg scratch1GPR = InvalidGPRReg;
     GPRReg scratch2GPR = InvalidGPRReg;
@@ -832,7 +834,7 @@ Value BBQJIT::emitAtomicBinaryRMWOp(ExtAtomicOpType op, Type valueType, Location
     Address address = Address(pointer.asGPR());
 
     if (accessWidth(op) != Width8)
-        throwExceptionIf(ExceptionType::OutOfBoundsMemoryAccess, m_jit.branchTest64(ResultCondition::NonZero, pointer.asGPR(), TrustedImm64(sizeOfAtomicOpMemoryAccess(op) - 1)));
+        recordJumpToThrowException(ExceptionType::UnalignedMemoryAccess, m_jit.branchTest64(ResultCondition::NonZero, pointer.asGPR(), TrustedImm64(sizeOfAtomicOpMemoryAccess(op) - 1)));
 
     Value result = topValue(valueType.kind);
     Location resultLocation = allocate(result);
@@ -1185,7 +1187,7 @@ Value BBQJIT::emitAtomicBinaryRMWOp(ExtAtomicOpType op, Type valueType, Location
     return result;
 }
 
-Value WARN_UNUSED_RETURN BBQJIT::emitAtomicCompareExchange(ExtAtomicOpType op, Type, Location pointer, Value expected, Value value, uint32_t uoffset)
+[[nodiscard]] Value BBQJIT::emitAtomicCompareExchange(ExtAtomicOpType op, Type, Location pointer, Value expected, Value value, uint32_t uoffset)
 {
     ASSERT(pointer.isGPR());
 
@@ -1196,7 +1198,7 @@ Value WARN_UNUSED_RETURN BBQJIT::emitAtomicCompareExchange(ExtAtomicOpType op, T
     Width accessWidth = this->accessWidth(op);
 
     if (accessWidth != Width8)
-        throwExceptionIf(ExceptionType::OutOfBoundsMemoryAccess, m_jit.branchTest64(ResultCondition::NonZero, pointer.asGPR(), TrustedImm64(sizeOfAtomicOpMemoryAccess(op) - 1)));
+        recordJumpToThrowException(ExceptionType::UnalignedMemoryAccess, m_jit.branchTest64(ResultCondition::NonZero, pointer.asGPR(), TrustedImm64(sizeOfAtomicOpMemoryAccess(op) - 1)));
 
     Value result = topValue(expected.type());
     Location resultLocation = allocate(result);
@@ -1334,166 +1336,12 @@ void BBQJIT::truncInBounds(TruncationKind truncationKind, Location operandLocati
     }
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::truncTrapping(OpType truncationOp, Value operand, Value& result, Type returnType, Type operandType)
-{
-    ScratchScope<0, 2> scratches(*this);
-
-    Location operandLocation;
-    if (operand.isConst()) {
-        operandLocation = Location::fromFPR(wasmScratchFPR);
-        emitMoveConst(operand, operandLocation);
-    } else
-        operandLocation = loadIfNecessary(operand);
-    ASSERT(operandLocation.isRegister());
-
-    consume(operand); // Allow temp operand location to be reused
-
-    result = topValue(returnType.kind);
-    Location resultLocation = allocate(result);
-    TruncationKind kind = truncationKind(truncationOp);
-    auto range = lookupTruncationRange(kind);
-    auto minFloatConst = range.min;
-    auto maxFloatConst = range.max;
-    Location minFloat = Location::fromFPR(scratches.fpr(0));
-    Location maxFloat = Location::fromFPR(scratches.fpr(1));
-
-    // FIXME: Can we do better isel here? Two floating-point constant materializations for every
-    // trunc seems costly.
-    emitMoveConst(minFloatConst, minFloat);
-    emitMoveConst(maxFloatConst, maxFloat);
-
-    LOG_INSTRUCTION("TruncSaturated", operand, operandLocation, RESULT(result));
-
-    DoubleCondition minCondition = range.closedLowerEndpoint ? DoubleCondition::DoubleLessThanOrUnordered : DoubleCondition::DoubleLessThanOrEqualOrUnordered;
-    Jump belowMin = operandType == Types::F32
-        ? m_jit.branchFloat(minCondition, operandLocation.asFPR(), minFloat.asFPR())
-        : m_jit.branchDouble(minCondition, operandLocation.asFPR(), minFloat.asFPR());
-    throwExceptionIf(ExceptionType::OutOfBoundsTrunc, belowMin);
-
-    Jump aboveMax = operandType == Types::F32
-        ? m_jit.branchFloat(DoubleCondition::DoubleGreaterThanOrEqualOrUnordered, operandLocation.asFPR(), maxFloat.asFPR())
-        : m_jit.branchDouble(DoubleCondition::DoubleGreaterThanOrEqualOrUnordered, operandLocation.asFPR(), maxFloat.asFPR());
-    throwExceptionIf(ExceptionType::OutOfBoundsTrunc, aboveMax);
-
-    truncInBounds(kind, operandLocation, resultLocation, scratches.fpr(0), scratches.fpr(1));
-
-    return { };
-}
-
-PartialResult WARN_UNUSED_RETURN BBQJIT::truncSaturated(Ext1OpType truncationOp, Value operand, Value& result, Type returnType, Type operandType)
-{
-    ScratchScope<0, 2> scratches(*this);
-
-    TruncationKind kind = truncationKind(truncationOp);
-    auto range = lookupTruncationRange(kind);
-    auto minFloatConst = range.min;
-    auto maxFloatConst = range.max;
-    Location minFloat = Location::fromFPR(scratches.fpr(0));
-    Location maxFloat = Location::fromFPR(scratches.fpr(1));
-
-    // FIXME: Can we do better isel here? Two floating-point constant materializations for every
-    // trunc seems costly.
-    emitMoveConst(minFloatConst, minFloat);
-    emitMoveConst(maxFloatConst, maxFloat);
-
-    // FIXME: Lots of this is duplicated from AirIRGeneratorBase. Might be nice to unify it?
-    uint64_t minResult = 0;
-    uint64_t maxResult = 0;
-    switch (kind) {
-    case TruncationKind::I32TruncF32S:
-    case TruncationKind::I32TruncF64S:
-        maxResult = bitwise_cast<uint32_t>(INT32_MAX);
-        minResult = bitwise_cast<uint32_t>(INT32_MIN);
-        break;
-    case TruncationKind::I32TruncF32U:
-    case TruncationKind::I32TruncF64U:
-        maxResult = bitwise_cast<uint32_t>(UINT32_MAX);
-        minResult = bitwise_cast<uint32_t>(0U);
-        break;
-    case TruncationKind::I64TruncF32S:
-    case TruncationKind::I64TruncF64S:
-        maxResult = bitwise_cast<uint64_t>(INT64_MAX);
-        minResult = bitwise_cast<uint64_t>(INT64_MIN);
-        break;
-    case TruncationKind::I64TruncF32U:
-    case TruncationKind::I64TruncF64U:
-        maxResult = bitwise_cast<uint64_t>(UINT64_MAX);
-        minResult = bitwise_cast<uint64_t>(0ULL);
-        break;
-    }
-
-    Location operandLocation;
-    if (operand.isConst()) {
-        operandLocation = Location::fromFPR(wasmScratchFPR);
-        emitMoveConst(operand, operandLocation);
-    } else
-        operandLocation = loadIfNecessary(operand);
-    ASSERT(operandLocation.isRegister());
-
-    consume(operand); // Allow temp operand location to be reused
-
-    result = topValue(returnType.kind);
-    Location resultLocation = allocate(result);
-
-    LOG_INSTRUCTION("TruncSaturated", operand, operandLocation, RESULT(result));
-
-    Jump lowerThanMin = operandType == Types::F32
-        ? m_jit.branchFloat(DoubleCondition::DoubleLessThanOrEqualOrUnordered, operandLocation.asFPR(), minFloat.asFPR())
-        : m_jit.branchDouble(DoubleCondition::DoubleLessThanOrEqualOrUnordered, operandLocation.asFPR(), minFloat.asFPR());
-    Jump higherThanMax = operandType == Types::F32
-        ? m_jit.branchFloat(DoubleCondition::DoubleGreaterThanOrEqualOrUnordered, operandLocation.asFPR(), maxFloat.asFPR())
-        : m_jit.branchDouble(DoubleCondition::DoubleGreaterThanOrEqualOrUnordered, operandLocation.asFPR(), maxFloat.asFPR());
-
-    // In-bounds case. Emit normal truncation instructions.
-    truncInBounds(kind, operandLocation, resultLocation, scratches.fpr(0), scratches.fpr(1));
-
-    Jump afterInBounds = m_jit.jump();
-
-    // Below-minimum case.
-    lowerThanMin.link(&m_jit);
-
-    // As an optimization, if the min result is 0; we can unconditionally return
-    // that if the above-minimum-range check fails; otherwise, we need to check
-    // for NaN since it also will fail the above-minimum-range-check
-    if (!minResult) {
-        if (returnType == Types::I32)
-            m_jit.move(TrustedImm32(0), resultLocation.asGPR());
-        else
-            m_jit.move(TrustedImm64(0), resultLocation.asGPR());
-    } else {
-        Jump isNotNaN = operandType == Types::F32
-            ? m_jit.branchFloat(DoubleCondition::DoubleEqualAndOrdered, operandLocation.asFPR(), operandLocation.asFPR())
-            : m_jit.branchDouble(DoubleCondition::DoubleEqualAndOrdered, operandLocation.asFPR(), operandLocation.asFPR());
-
-        // NaN case. Set result to zero.
-        if (returnType == Types::I32)
-            m_jit.move(TrustedImm32(0), resultLocation.asGPR());
-        else
-            m_jit.move(TrustedImm64(0), resultLocation.asGPR());
-        Jump afterNaN = m_jit.jump();
-
-        // Non-NaN case. Set result to the minimum value.
-        isNotNaN.link(&m_jit);
-        emitMoveConst(returnType == Types::I32 ? Value::fromI32(static_cast<int32_t>(minResult)) : Value::fromI64(static_cast<int64_t>(minResult)), resultLocation);
-        afterNaN.link(&m_jit);
-    }
-    Jump afterMin = m_jit.jump();
-
-    // Above maximum case.
-    higherThanMax.link(&m_jit);
-    emitMoveConst(returnType == Types::I32 ? Value::fromI32(static_cast<int32_t>(maxResult)) : Value::fromI64(static_cast<int64_t>(maxResult)), resultLocation);
-
-    afterInBounds.link(&m_jit);
-    afterMin.link(&m_jit);
-
-    return { };
-}
-
 // GC
-PartialResult WARN_UNUSED_RETURN BBQJIT::addRefI31(ExpressionType value, ExpressionType& result)
+[[nodiscard]] PartialResult BBQJIT::addRefI31(ExpressionType value, ExpressionType& result)
 {
     if (value.isConst()) {
-        result = Value::fromI64((((value.asI32() & 0x7fffffff) << 1) >> 1) | JSValue::NumberTag);
+        uint32_t lo32 = (value.asI32() << 1) >> 1;
+        result = Value::fromI64(lo32 | JSValue::NumberTag);
         LOG_INSTRUCTION("RefI31", value, RESULT(result));
         return { };
     }
@@ -1506,15 +1354,15 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addRefI31(ExpressionType value, Express
 
     LOG_INSTRUCTION("RefI31", value, RESULT(result));
 
-    m_jit.and32(TrustedImm32(0x7fffffff), initialValue.asGPR(), resultLocation.asGPR());
     m_jit.lshift32(TrustedImm32(1), resultLocation.asGPR());
     m_jit.rshift32(TrustedImm32(1), resultLocation.asGPR());
     m_jit.or64(TrustedImm64(JSValue::NumberTag), resultLocation.asGPR());
     return { };
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addI31GetS(ExpressionType value, ExpressionType& result)
+[[nodiscard]] PartialResult BBQJIT::addI31GetS(TypedExpression typedValue, ExpressionType& result)
 {
+    auto value = typedValue.value();
     if (value.isConst()) {
         if (JSValue::decode(value.asI64()).isNumber())
             result = Value::fromI32((value.asI64() << 33) >> 33);
@@ -1530,6 +1378,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addI31GetS(ExpressionType value, Expres
 
 
     Location initialValue = loadIfNecessary(value);
+    if (typedValue.type().isNullable())
     emitThrowOnNullReference(ExceptionType::NullI31Get, initialValue);
     consume(value);
 
@@ -1538,13 +1387,14 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addI31GetS(ExpressionType value, Expres
 
     LOG_INSTRUCTION("I31GetS", value, RESULT(result));
 
-    m_jit.move(initialValue.asGPR(), resultLocation.asGPR());
+    m_jit.zeroExtend32ToWord(initialValue.asGPR(), resultLocation.asGPR());
 
     return { };
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addI31GetU(ExpressionType value, ExpressionType& result)
+[[nodiscard]] PartialResult BBQJIT::addI31GetU(TypedExpression typedValue, ExpressionType& result)
 {
+    auto value = typedValue.value();
     if (value.isConst()) {
         if (JSValue::decode(value.asI64()).isNumber())
             result = Value::fromI32(value.asI64() & 0x7fffffffu);
@@ -1560,6 +1410,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addI31GetU(ExpressionType value, Expres
 
 
     Location initialValue = loadIfNecessary(value);
+    if (typedValue.type().isNullable())
     emitThrowOnNullReference(ExceptionType::NullI31Get, initialValue);
     consume(value);
 
@@ -1579,7 +1430,7 @@ Value BBQJIT::marshallToI64(Value value)
     ASSERT(!value.isLocal());
     if (value.type() == TypeKind::F32 || value.type() == TypeKind::F64) {
         if (value.isConst())
-            return Value::fromI64(value.type() == TypeKind::F32 ? bitwise_cast<uint32_t>(value.asI32()) : bitwise_cast<uint64_t>(value.asF64()));
+            return Value::fromI64(value.type() == TypeKind::F32 ? std::bit_cast<uint32_t>(value.asI32()) : std::bit_cast<uint64_t>(value.asF64()));
         // This is a bit silly. We could just move initValue to the right argument GPR if we know it's in an FPR already.
         flushValue(value);
         return Value::fromTemp(TypeKind::I64, value.asTemp());
@@ -1587,130 +1438,247 @@ Value BBQJIT::marshallToI64(Value value)
     return value;
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addArrayNew(uint32_t typeIndex, ExpressionType size, ExpressionType initValue, ExpressionType& result)
+void BBQJIT::emitAllocateGCArrayUninitialized(GPRReg resultGPR, uint32_t typeIndex, ExpressionType size, GPRReg scratchGPR, GPRReg scratchGPR2)
 {
-    result = topValue(TypeKind::Arrayref);
+    RELEASE_ASSERT(m_info.hasGCObjectTypes());
+    JumpList slowPath;
+    const ArrayType* typeDefinition = m_info.typeSignatures[typeIndex]->expand().template as<ArrayType>();
+    MacroAssembler::Address allocatorBufferBase(GPRInfo::wasmContextInstancePointer, JSWebAssemblyInstance::offsetOfAllocatorForGCObject(m_info, 0));
+    MacroAssembler::Address structureIDAddress(GPRInfo::wasmContextInstancePointer, JSWebAssemblyInstance::offsetOfGCObjectStructureID(m_info, typeIndex));
+    Location sizeLocation;
+    size_t elementSize = typeDefinition->elementType().type.elementSize();
+    if (size.isConst()) {
+        std::optional<unsigned> sizeInBytes = JSWebAssemblyArray::allocationSizeInBytes(typeDefinition->elementType(), size.asI32());
 
-    if (initValue.type() != TypeKind::V128) {
-        initValue = marshallToI64(initValue);
-
-        Vector<Value, 8> arguments = {
-            instanceValue(),
-            Value::fromI32(typeIndex),
-            size,
-            initValue,
-        };
-        emitCCall(operationWasmArrayNew, arguments, result);
-    } else {
-        ASSERT(!initValue.isConst());
-        Location valueLocation = loadIfNecessary(initValue);
-        consume(initValue);
-
-        Value lane0, lane1;
-        {
-            ScratchScope<2, 0> scratches(*this);
-            lane0 = Value::pinned(TypeKind::I64, Location::fromGPR(scratches.gpr(0)));
-            lane1 = Value::pinned(TypeKind::I64, Location::fromGPR(scratches.gpr(1)));
-
-            m_jit.vectorExtractLaneInt64(TrustedImm32(0), valueLocation.asFPR(), scratches.gpr(0));
-            m_jit.vectorExtractLaneInt64(TrustedImm32(1), valueLocation.asFPR(), scratches.gpr(1));
+        if (sizeInBytes && sizeInBytes.value() <= MarkedSpace::largeCutoff) {
+            size_t sizeClassIndex = MarkedSpace::sizeClassToIndex(sizeInBytes.value());
+            m_jit.loadPtr(allocatorBufferBase.withOffset(sizeClassIndex * sizeof(Allocator)), scratchGPR2);
+            JIT_COMMENT(m_jit, "Do array allocation constant sized");
+            m_jit.emitAllocateWithNonNullAllocator(resultGPR, JITAllocator::variableNonNull(), scratchGPR2, scratchGPR, slowPath, AssemblyHelpers::SlowAllocationResult::UndefinedBehavior);
+            m_jit.load32(structureIDAddress, scratchGPR);
+            m_jit.move(TrustedImm32(JSWebAssemblyArray::typeInfoBlob().blob()), scratchGPR2);
+            static_assert(JSCell::structureIDOffset() + sizeof(int32_t) == JSCell::indexingTypeAndMiscOffset());
+            m_jit.storePair32(scratchGPR, scratchGPR2, MacroAssembler::Address(resultGPR, JSCell::structureIDOffset()));
+            m_jit.storePtr(TrustedImmPtr(nullptr), MacroAssembler::Address(resultGPR, JSObject::butterflyOffset()));
+            m_jit.store32(TrustedImm32(size.asI32()), MacroAssembler::Address(resultGPR, JSWebAssemblyArray::offsetOfSize()));
+        } else {
+            // FIXME: emitCCall can't handle being passed a destination... which is why we just jump to the slow path here.
+            slowPath.append(m_jit.jump());
         }
 
-        Vector<Value, 8> arguments = {
-            instanceValue(),
-            Value::fromI32(typeIndex),
-            size,
-            lane0,
-            lane1,
-        };
-        emitCCall(operationWasmArrayNewVector, arguments, result);
+    } else {
+        sizeLocation = loadIfNecessary(size);
+
+        JIT_COMMENT(m_jit, "Do array allocation variable sized");
+
+        ASSERT(hasOneBitSet(elementSize));
+        m_jit.zeroExtend32ToWord(sizeLocation.asGPR(), scratchGPR);
+        m_jit.lshift64(scratchGPR, TrustedImm32(getLSBSet(elementSize)), scratchGPR);
+        m_jit.add64(TrustedImm64(sizeof(JSWebAssemblyArray)), scratchGPR);
+
+        m_jit.emitAllocateVariableSized(resultGPR, JITAllocator::variableNonNull(), allocatorBufferBase, scratchGPR, scratchGPR, scratchGPR2, slowPath, AssemblyHelpers::SlowAllocationResult::UndefinedBehavior);
+        m_jit.load32(structureIDAddress, scratchGPR);
+        m_jit.move(TrustedImm32(JSWebAssemblyArray::typeInfoBlob().blob()), scratchGPR2);
+        static_assert(JSCell::structureIDOffset() + sizeof(int32_t) == JSCell::indexingTypeAndMiscOffset());
+        m_jit.storePair32(scratchGPR, scratchGPR2, MacroAssembler::Address(resultGPR, JSCell::structureIDOffset()));
+        m_jit.storePtr(TrustedImmPtr(nullptr), MacroAssembler::Address(resultGPR, JSObject::butterflyOffset()));
+        m_jit.store32(sizeLocation.asGPR(), MacroAssembler::Address(resultGPR, JSWebAssemblyArray::offsetOfSize()));
     }
 
-    Location resultLocation = loadIfNecessary(result);
-    emitThrowOnNullReference(ExceptionType::BadArrayNew, resultLocation);
+    // FIXME: Ideally we'd have a way for our caller to set the label they want us to return to since e.g. addArrayNewDefault doesn't need to initialize
+    // if we hit the slow path. But the way Labels work we need to know the exact offset we're returning to when moving to the slow path.
+    JIT_COMMENT(m_jit, "Slow path return");
+    MacroAssembler::Label done(m_jit);
+    m_slowPaths.append({ origin(), WTF::move(slowPath), WTF::move(done), copyBindings(), [typeIndex, size, sizeLocation, resultGPR](BBQJIT& bbq, CCallHelpers& jit) {
+        jit.prepareWasmCallOperation(GPRInfo::wasmContextInstancePointer);
+        if (size.isConst())
+            jit.setupArguments<decltype(operationWasmArrayNewEmpty)>(GPRInfo::wasmContextInstancePointer, TrustedImm32(typeIndex), TrustedImm32(size.asI32()));
+        else
+            jit.setupArguments<decltype(operationWasmArrayNewEmpty)>(GPRInfo::wasmContextInstancePointer, TrustedImm32(typeIndex), sizeLocation.asGPR());
+        jit.callOperation<OperationPtrTag>(operationWasmArrayNewEmpty);
+        jit.move(GPRInfo::returnValueGPR, resultGPR);
+        bbq.emitThrowOnNullReference(ExceptionType::BadArrayNew, Location::fromGPR(resultGPR));
+    } });
+}
+
+[[nodiscard]] PartialResult BBQJIT::addArrayNew(uint32_t typeIndex, ExpressionType size, ExpressionType initValue, ExpressionType& result)
+{
+    GPRReg resultGPR;
+        {
+            ScratchScope<2, 0> scratches(*this);
+        resultGPR = scratches.gpr(0);
+        GPRReg scratchGPR = scratches.gpr(1);
+        emitAllocateGCArrayUninitialized(resultGPR, typeIndex, size, wasmScratchGPR, scratchGPR);
+
+        JIT_COMMENT(m_jit, "Array allocation done do initialization");
+
+        std::optional<ScratchScope<1, 0>> sizeScratch;
+        Location sizeLocation = materializeToGPR(size, sizeScratch);
+        StorageType elementType = getArrayElementType(typeIndex);
+        emitArrayGetPayload(elementType, resultGPR, scratchGPR);
+
+        MacroAssembler::Label loop(m_jit);
+        JIT_COMMENT(m_jit, "Array initialization loop header");
+        Jump done = m_jit.branchTest32(MacroAssembler::Zero, sizeLocation.asGPR());
+        m_jit.sub32(TrustedImm32(1), sizeLocation.asGPR());
+        constexpr bool preserveIndex = true;
+        emitArrayStoreElementUnchecked(elementType, scratchGPR, sizeLocation, initValue, preserveIndex);
+        m_jit.jump(loop);
+        done.link(m_jit);
+
+        if (Wasm::isRefType(elementType.unpacked()))
+            emitMutatorFence();
+
+#if ASSERT_ENABLED
+        if (Wasm::isRefType(elementType.unpacked())) {
+            m_jit.probeDebug([=] (Probe::Context& context) {
+                auto* arrayPtr = context.gpr<JSWebAssemblyArray*>(resultGPR);
+                if (!arrayPtr->isPreciseAllocation())
+                    ASSERT(arrayPtr->sizeInBytes() + sizeof(JSWebAssemblyArray) <= arrayPtr->markedBlock().handle().cellSize());
+                auto span = arrayPtr->refTypeSpan();
+                for (uint64_t value : span)
+                    validateWasmValue(value, elementType.unpacked());
+            });
+        }
+#endif
+
+    }
+
+    consume(size);
+    consume(initValue);
+    result = topValue(TypeKind::Ref);
+    bind(result, Location::fromGPR(resultGPR));
 
     LOG_INSTRUCTION("ArrayNew", typeIndex, size, initValue, RESULT(result));
     return { };
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addArrayNewFixed(uint32_t typeIndex, Vector<ExpressionType>& args, ExpressionType& result)
+[[nodiscard]] PartialResult BBQJIT::addArrayNewFixed(uint32_t typeIndex, ArgumentList& args, ExpressionType& result)
 {
-    // Allocate an uninitialized array whose length matches the argument count
-    // FIXME: inline the allocation.
-    // https://bugs.webkit.org/show_bug.cgi?id=244388
-    Vector<Value, 8> arguments = {
-        instanceValue(),
-        Value::fromI32(typeIndex),
-        Value::fromI32(args.size()),
-    };
-    Value allocationResult = Value::fromTemp(TypeKind::Arrayref, currentControlData().enclosedHeight() + currentControlData().implicitSlots() + m_parser->expressionStack().size() + args.size());
-    emitCCall(operationWasmArrayNewEmpty, arguments, allocationResult);
+    GPRReg resultGPR;
+    {
+        Value size = Value::fromI32(args.size());
+        ScratchScope<2, 0> scratches(*this);
+        resultGPR = scratches.gpr(0);
+        GPRReg scratchGPR = scratches.gpr(1);
+        emitAllocateGCArrayUninitialized(resultGPR, typeIndex, size, wasmScratchGPR, scratchGPR);
 
-    Location allocationResultLocation = loadIfNecessary(allocationResult);
-    emitThrowOnNullReference(ExceptionType::BadArrayNew, allocationResultLocation);
+        JIT_COMMENT(m_jit, "Array allocation done do initialization");
+        StorageType elementType = getArrayElementType(typeIndex);
+        emitArrayGetPayload(elementType, resultGPR, scratchGPR);
 
-    for (uint32_t i = 0; i < args.size(); ++i) {
-        // Emit the array set code -- note that this omits the bounds check, since
-        // if operationWasmArrayNewEmpty() returned a non-null value, it's an array of the right size
-        allocationResultLocation = loadIfNecessary(allocationResult);
-        Value pinnedResult = Value::pinned(TypeKind::I64, allocationResultLocation);
-        emitArraySetUnchecked(typeIndex, pinnedResult, Value::fromI32(i), args[i]);
-        consume(pinnedResult);
+        for (uint32_t i = 0; i < args.size(); ++i) {
+            emitArrayStoreElementUnchecked(elementType, scratchGPR, Value::fromI32(i), args[i]);
+            consume(args[i]);
+        }
+
+        if (Wasm::isRefType(elementType.unpacked()))
+            emitMutatorFence();
+
     }
 
-    result = topValue(TypeKind::Arrayref);
-    Location resultLocation;
-
-    // If args.isEmpty() then allocationResult.asTemp() == result.asTemp() so we will consume our result.
-    if (args.size()) {
-        consume(allocationResult);
-        resultLocation = allocate(result);
-        emitMove(allocationResult.type(), allocationResultLocation, resultLocation);
-        if (isRefType(getArrayElementType(typeIndex).unpacked()))
-            emitWriteBarrier(resultLocation.asGPR());
-    } else {
-        RELEASE_ASSERT(result.asTemp() == allocationResult.asTemp());
-        resultLocation = allocationResultLocation;
-    }
+    result = topValue(TypeKind::Ref);
+    bind(result, Location::fromGPR(resultGPR));
 
     LOG_INSTRUCTION("ArrayNewFixed", typeIndex, args.size(), RESULT(result));
     return { };
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addArrayGet(ExtGCOpType arrayGetKind, uint32_t typeIndex, ExpressionType arrayref, ExpressionType index, ExpressionType& result)
+
+[[nodiscard]] PartialResult BBQJIT::addArrayNewDefault(uint32_t typeIndex, ExpressionType size, ExpressionType& result)
 {
+    StorageType elementType = getArrayElementType(typeIndex);
+    // FIXME: We don't have a good way to fill V128s yet so just make a call.
+    if (elementType.unpacked().isV128()) {
+    Vector<Value, 8> arguments = {
+        instanceValue(),
+        Value::fromI32(typeIndex),
+            size,
+    };
+    result = topValue(TypeKind::Arrayref);
+        emitCCall(operationWasmArrayNewEmpty, arguments, result);
+
+        Location resultLocation = loadIfNecessary(result);
+        emitThrowOnNullReference(ExceptionType::BadArrayNew, resultLocation);
+
+        LOG_INSTRUCTION("ArrayNewDefault", typeIndex, size, RESULT(result));
+        return { };
+    }
+
+    GPRReg resultGPR;
+    {
+        ScratchScope<2, 0> scratches(*this);
+        resultGPR = scratches.gpr(0);
+        GPRReg scratchGPR = scratches.gpr(1);
+
+        emitAllocateGCArrayUninitialized(resultGPR, typeIndex, size, wasmScratchGPR, scratchGPR);
+
+        JIT_COMMENT(m_jit, "Array allocation done do initialization");
+        std::optional<ScratchScope<1, 0>> sizeScratch;
+        Location sizeLocation = materializeToGPR(size, sizeScratch);
+        Value initValue = Value::fromI64(Wasm::isRefType(elementType.unpacked()) ? JSValue::encode(jsNull()) : 0);
+
+        emitArrayGetPayload(elementType, resultGPR, scratchGPR);
+
+        MacroAssembler::Label loop(m_jit);
+        JIT_COMMENT(m_jit, "Array initialization loop header");
+        Jump done = m_jit.branchTest32(MacroAssembler::Zero, sizeLocation.asGPR());
+        m_jit.sub32(TrustedImm32(1), sizeLocation.asGPR());
+        constexpr bool preserveIndex = true;
+        emitArrayStoreElementUnchecked(elementType, scratchGPR, sizeLocation, initValue, preserveIndex);
+        m_jit.jump(loop);
+        done.link(m_jit);
+
+        if (Wasm::isRefType(elementType.unpacked()))
+            emitMutatorFence();
+    }
+
+    consume(size);
+    result = topValue(TypeKind::Ref);
+    bind(result, Location::fromGPR(resultGPR));
+
+    LOG_INSTRUCTION("ArrayNewDefault", typeIndex, size, RESULT(result));
+    return { };
+}
+
+[[nodiscard]] PartialResult BBQJIT::addArrayGet(ExtGCOpType arrayGetKind, uint32_t typeIndex, TypedExpression typedArray, ExpressionType index, ExpressionType& result)
+{
+    auto arrayref = typedArray.value();
     StorageType elementType = getArrayElementType(typeIndex);
     Type resultType = elementType.unpacked();
 
     if (arrayref.isConst()) {
         ASSERT(arrayref.asI64() == JSValue::encode(jsNull()));
-        emitThrowException(ExceptionType::NullArrayGet);
-        result = Value::fromRef(resultType.kind, 0);
+        consume(index);
+        emitThrowException(ExceptionType::NullAccess);
+        result = topValue(resultType.kind);
         return { };
     }
 
     Location arrayLocation = loadIfNecessary(arrayref);
-    emitThrowOnNullReference(ExceptionType::NullArrayGet, arrayLocation);
+    if (typedArray.type().isNullable())
+        emitThrowOnNullReferenceBeforeAccess(arrayLocation, JSWebAssemblyArray::offsetOfSize());
 
     Location indexLocation;
     if (index.isConst()) {
         m_jit.load32(MacroAssembler::Address(arrayLocation.asGPR(), JSWebAssemblyArray::offsetOfSize()), wasmScratchGPR);
-        throwExceptionIf(ExceptionType::OutOfBoundsArrayGet,
+        recordJumpToThrowException(ExceptionType::OutOfBoundsArrayGet,
             m_jit.branch32(MacroAssembler::BelowOrEqual, wasmScratchGPR, TrustedImm32(index.asI32())));
     } else {
         indexLocation = loadIfNecessary(index);
-        throwExceptionIf(ExceptionType::OutOfBoundsArrayGet,
+        recordJumpToThrowException(ExceptionType::OutOfBoundsArrayGet,
             m_jit.branch32(MacroAssembler::AboveOrEqual, indexLocation.asGPR(), MacroAssembler::Address(arrayLocation.asGPR(), JSWebAssemblyArray::offsetOfSize())));
+        m_jit.zeroExtend32ToWord(indexLocation.asGPR(), indexLocation.asGPR());
     }
 
-    m_jit.loadPtr(MacroAssembler::Address(arrayLocation.asGPR(), JSWebAssemblyArray::offsetOfPayload()), wasmScratchGPR);
+    emitArrayGetPayload(elementType, arrayLocation.asGPR(), wasmScratchGPR);
 
     consume(arrayref);
     result = topValue(resultType.kind);
     Location resultLocation = allocate(result);
 
     if (index.isConst()) {
-        auto fieldAddress = MacroAssembler::Address(wasmScratchGPR, JSWebAssemblyArray::offsetOfElements(elementType) + elementType.elementSize() * index.asI32());
+        auto fieldAddress = MacroAssembler::Address(wasmScratchGPR, elementType.elementSize() * index.asI32());
 
         if (elementType.is<PackedType>()) {
             switch (elementType.as<Wasm::PackedType>()) {
@@ -1747,8 +1715,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addArrayGet(ExtGCOpType arrayGetKind, u
         }
     } else {
         auto scale = static_cast<MacroAssembler::Scale>(std::bit_width(std::min(size_t { 8 }, elementType.elementSize()) - 1));
-        auto fieldAddress = MacroAssembler::Address(wasmScratchGPR, JSWebAssemblyArray::offsetOfElements(elementType));
-        auto fieldBaseIndex = fieldAddress.indexedBy(indexLocation.asGPR(), scale);
+        auto fieldBaseIndex = MacroAssembler::BaseIndex(wasmScratchGPR, indexLocation.asGPR(), scale);
 
         if (elementType.is<PackedType>()) {
             switch (elementType.as<Wasm::PackedType>()) {
@@ -1777,7 +1744,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addArrayGet(ExtGCOpType arrayGetKind, u
             case TypeKind::V128:
                 // For V128, the index computation above doesn't work so we index differently.
                 m_jit.mul32(Imm32(4), indexLocation.asGPR(), indexLocation.asGPR());
-                m_jit.loadVector(fieldAddress.indexedBy(indexLocation.asGPR(), MacroAssembler::Scale::TimesFour), resultLocation.asFPR());
+                m_jit.loadVector(MacroAssembler::BaseIndex(wasmScratchGPR, indexLocation.asGPR(), MacroAssembler::Scale::TimesFour), resultLocation.asFPR());
                 break;
             default:
                 RELEASE_ASSERT_NOT_REACHED();
@@ -1815,6 +1782,37 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addArrayGet(ExtGCOpType arrayGetKind, u
     return { };
 }
 
+void BBQJIT::emitArrayStoreElementUnchecked(StorageType elementType, GPRReg payloadGPR, Location index, Value value, bool preserveIndex)
+{
+    ASSERT(index.isRegister());
+
+    auto scale = static_cast<MacroAssembler::Scale>(std::bit_width(std::min(size_t { 8 }, elementType.elementSize())) - 1);
+    auto fieldBaseIndex = MacroAssembler::BaseIndex(payloadGPR, index.asGPR(), scale);
+
+    // If we need to preserve the index then we need wasmScratchGPR to hold our temporary.
+    ASSERT_IMPLIES(preserveIndex, payloadGPR != wasmScratchGPR);
+    if (value.type() == TypeKind::V128) {
+        GPRReg scratchGPR = preserveIndex ? wasmScratchGPR : index.asGPR();
+        m_jit.mul32(TrustedImm32(4), index.asGPR(), scratchGPR);
+        fieldBaseIndex = MacroAssembler::BaseIndex(payloadGPR, scratchGPR, MacroAssembler::Scale::TimesFour);
+    }
+
+    emitMove(elementType, value, fieldBaseIndex);
+}
+
+void BBQJIT::emitArrayStoreElementUnchecked(StorageType elementType, GPRReg payloadGPR, Value index, Value value)
+{
+    if (index.isConst()) {
+        auto fieldAddress = MacroAssembler::Address(payloadGPR, elementType.elementSize() * index.asI32());
+        if (!value.isConst())
+            loadIfNecessary(value);
+        emitMove(elementType, value, fieldAddress);
+        } else {
+        Location indexLocation = loadIfNecessary(index);
+        emitArrayStoreElementUnchecked(elementType, payloadGPR, indexLocation, value);
+            }
+}
+
 void BBQJIT::emitArraySetUnchecked(uint32_t typeIndex, Value arrayref, Value index, Value value)
 {
     StorageType elementType = getArrayElementType(typeIndex);
@@ -1824,139 +1822,41 @@ void BBQJIT::emitArraySetUnchecked(uint32_t typeIndex, Value arrayref, Value ind
         arrayLocation = locationOf(arrayref);
     else
         arrayLocation = loadIfNecessary(arrayref);
-    m_jit.loadPtr(MacroAssembler::Address(arrayLocation.asGPR(), JSWebAssemblyArray::offsetOfPayload()), wasmScratchGPR);
 
-    if (index.isConst()) {
-        ScratchScope<1, 0> scratches(*this);
-        auto fieldAddress = MacroAssembler::Address(wasmScratchGPR, JSWebAssemblyArray::offsetOfElements(elementType) + elementType.elementSize() * index.asI32());
-
-        Location valueLocation;
-        if (value.isConst() && value.isFloat()) {
-            ScratchScope<0, 1> scratches(*this);
-            valueLocation = Location::fromFPR(scratches.fpr(0));
-            // Materialize the constant to ensure constant blinding.
-            emitMoveConst(value, valueLocation);
-        } else if (value.isConst()) {
-            ScratchScope<1, 0> scratches(*this);
-            valueLocation = Location::fromGPR(scratches.gpr(0));
-            // Materialize the constant to ensure constant blinding.
-            emitMoveConst(value, valueLocation);
-        } else
-            valueLocation = loadIfNecessary(value);
-        ASSERT(valueLocation.isRegister());
-
-        if (elementType.is<PackedType>()) {
-            switch (elementType.as<Wasm::PackedType>()) {
-            case Wasm::PackedType::I8:
-                m_jit.store8(valueLocation.asGPR(), fieldAddress);
-                break;
-            case Wasm::PackedType::I16:
-                m_jit.store16(valueLocation.asGPR(), fieldAddress);
-                break;
-            }
-        } else {
-            ASSERT(elementType.is<Type>());
-            switch (value.type()) {
-            case TypeKind::I32:
-                m_jit.store32(valueLocation.asGPR(), fieldAddress);
-                break;
-            case TypeKind::I64:
-                m_jit.store64(valueLocation.asGPR(), fieldAddress);
-                break;
-            case TypeKind::F32:
-                m_jit.storeFloat(valueLocation.asFPR(), fieldAddress);
-                break;
-            case TypeKind::F64:
-                m_jit.storeDouble(valueLocation.asFPR(), fieldAddress);
-                break;
-            case TypeKind::V128:
-                m_jit.storeVector(valueLocation.asFPR(), fieldAddress);
-                break;
-            default:
-                RELEASE_ASSERT_NOT_REACHED();
-                break;
-            }
-        }
-    } else {
-        Location indexLocation = loadIfNecessary(index);
-        auto scale = static_cast<MacroAssembler::Scale>(std::bit_width(std::min(size_t { 8 }, elementType.elementSize())) - 1);
-        auto fieldAddress = MacroAssembler::Address(wasmScratchGPR, JSWebAssemblyArray::offsetOfElements(elementType));
-        auto fieldBaseIndex = fieldAddress.indexedBy(indexLocation.asGPR(), scale);
-
-        Location valueLocation;
-        if (value.isConst() && value.isFloat()) {
-            ScratchScope<0, 1> scratches(*this);
-            valueLocation = Location::fromFPR(scratches.fpr(0));
-            emitMoveConst(value, valueLocation);
-        } else if (value.isConst()) {
-            ScratchScope<1, 0> scratches(*this);
-            valueLocation = Location::fromGPR(scratches.gpr(0));
-            emitMoveConst(value, valueLocation);
-        } else
-            valueLocation = loadIfNecessary(value);
-        ASSERT(valueLocation.isRegister());
-
-        if (elementType.is<PackedType>()) {
-            switch (elementType.as<Wasm::PackedType>()) {
-            case Wasm::PackedType::I8:
-                m_jit.store8(valueLocation.asGPR(), fieldBaseIndex);
-                break;
-            case Wasm::PackedType::I16:
-                m_jit.store16(valueLocation.asGPR(), fieldBaseIndex);
-                break;
-            }
-        } else {
-            ASSERT(elementType.is<Type>());
-            switch (value.type()) {
-            case TypeKind::I32:
-                m_jit.store32(valueLocation.asGPR(), fieldBaseIndex);
-                break;
-            case TypeKind::I64:
-                m_jit.store64(valueLocation.asGPR(), fieldBaseIndex);
-                break;
-            case TypeKind::F32:
-                m_jit.storeFloat(valueLocation.asFPR(), fieldBaseIndex);
-                break;
-            case TypeKind::F64:
-                m_jit.storeDouble(valueLocation.asFPR(), fieldBaseIndex);
-                break;
-            case TypeKind::V128:
-                // For V128, the index computation above doesn't work so we index differently.
-                m_jit.mul32(Imm32(4), indexLocation.asGPR(), indexLocation.asGPR());
-                m_jit.storeVector(valueLocation.asFPR(), fieldAddress.indexedBy(indexLocation.asGPR(), MacroAssembler::Scale::TimesFour));
-                break;
-            default:
-                RELEASE_ASSERT_NOT_REACHED();
-                break;
-            }
-        }
-    }
+    emitArrayGetPayload(elementType, arrayLocation.asGPR(), wasmScratchGPR);
+    emitArrayStoreElementUnchecked(elementType, wasmScratchGPR, index, value);
 
     consume(index);
     consume(value);
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addArraySet(uint32_t typeIndex, ExpressionType arrayref, ExpressionType index, ExpressionType value)
+[[nodiscard]] PartialResult BBQJIT::addArraySet(uint32_t typeIndex, TypedExpression typedArray, ExpressionType index, ExpressionType value)
 {
+    auto arrayref = typedArray.value();
     if (arrayref.isConst()) {
         ASSERT(arrayref.asI64() == JSValue::encode(jsNull()));
+
         LOG_INSTRUCTION("ArraySet", typeIndex, arrayref, index, value);
+        consume(index);
         consume(value);
-        emitThrowException(ExceptionType::NullArraySet);
+        emitThrowException(ExceptionType::NullAccess);
         return { };
     }
 
     Location arrayLocation = loadIfNecessary(arrayref);
-    emitThrowOnNullReference(ExceptionType::NullArraySet, arrayLocation);
+    if (typedArray.type().isNullable())
+        emitThrowOnNullReferenceBeforeAccess(arrayLocation, JSWebAssemblyArray::offsetOfSize());
 
+    ASSERT(index.type() == TypeKind::I32);
     if (index.isConst()) {
         m_jit.load32(MacroAssembler::Address(arrayLocation.asGPR(), JSWebAssemblyArray::offsetOfSize()), wasmScratchGPR);
-        throwExceptionIf(ExceptionType::OutOfBoundsArraySet,
+        recordJumpToThrowException(ExceptionType::OutOfBoundsArraySet,
             m_jit.branch32(MacroAssembler::BelowOrEqual, wasmScratchGPR, TrustedImm32(index.asI32())));
     } else {
         Location indexLocation = loadIfNecessary(index);
-        throwExceptionIf(ExceptionType::OutOfBoundsArraySet,
+        recordJumpToThrowException(ExceptionType::OutOfBoundsArraySet,
             m_jit.branch32(MacroAssembler::AboveOrEqual, indexLocation.asGPR(), MacroAssembler::Address(arrayLocation.asGPR(), JSWebAssemblyArray::offsetOfSize())));
+        m_jit.zeroExtend32ToWord(indexLocation.asGPR(), indexLocation.asGPR());
     }
 
     emitArraySetUnchecked(typeIndex, arrayref, index, value);
@@ -1969,11 +1869,12 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addArraySet(uint32_t typeIndex, Express
     return { };
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addArrayLen(ExpressionType arrayref, ExpressionType& result)
+[[nodiscard]] PartialResult BBQJIT::addArrayLen(TypedExpression typedArray, ExpressionType& result)
 {
+    auto arrayref = typedArray.value();
     if (arrayref.isConst()) {
         ASSERT(arrayref.asI64() == JSValue::encode(jsNull()));
-        emitThrowException(ExceptionType::NullArrayLen);
+        emitThrowException(ExceptionType::NullAccess);
         result = Value::fromI32(0);
         LOG_INSTRUCTION("ArrayLen", arrayref, RESULT(result), "Exception");
         return { };
@@ -1981,7 +1882,8 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addArrayLen(ExpressionType arrayref, Ex
 
     Location arrayLocation = loadIfNecessary(arrayref);
     consume(arrayref);
-    emitThrowOnNullReference(ExceptionType::NullArrayLen, arrayLocation);
+    if (typedArray.type().isNullable())
+        emitThrowOnNullReferenceBeforeAccess(arrayLocation, JSWebAssemblyArray::offsetOfSize());
 
     result = topValue(TypeKind::I32);
     Location resultLocation = allocateWithHint(result, arrayLocation);
@@ -1991,11 +1893,14 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addArrayLen(ExpressionType arrayref, Ex
     return { };
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addArrayFill(uint32_t typeIndex, ExpressionType arrayref, ExpressionType offset, ExpressionType value, ExpressionType size)
+[[nodiscard]] PartialResult BBQJIT::addArrayFill(uint32_t typeIndex, TypedExpression typedArray, ExpressionType offset, ExpressionType value, ExpressionType size)
 {
+    auto arrayref = typedArray.value();
     if (arrayref.isConst()) {
         ASSERT(arrayref.asI64() == JSValue::encode(jsNull()));
+
         LOG_INSTRUCTION("ArrayFill", typeIndex, arrayref, offset, value, size);
+
         consume(offset);
         consume(value);
         consume(size);
@@ -2003,6 +1908,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addArrayFill(uint32_t typeIndex, Expres
         return { };
     }
 
+    if (typedArray.type().isNullable())
     emitThrowOnNullReference(ExceptionType::NullArrayFill, loadIfNecessary(arrayref));
 
     Value shouldThrow = topValue(TypeKind::I32);
@@ -2045,195 +1951,191 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addArrayFill(uint32_t typeIndex, Expres
 
     LOG_INSTRUCTION("ArrayFill", typeIndex, arrayref, offset, value, size);
 
-    throwExceptionIf(ExceptionType::OutOfBoundsArrayFill, m_jit.branchTest32(ResultCondition::Zero, shouldThrowLocation.asGPR()));
+    recordJumpToThrowException(ExceptionType::OutOfBoundsArrayFill, m_jit.branchTest32(ResultCondition::Zero, shouldThrowLocation.asGPR()));
 
     consume(shouldThrow);
 
     return { };
 }
 
-void BBQJIT::emitStructPayloadSet(GPRReg payloadGPR, const StructType& structType, uint32_t fieldIndex, Value value)
+bool BBQJIT::emitStructSet(GPRReg structGPR, const StructType& structType, uint32_t fieldIndex, Value value)
 {
-    unsigned fieldOffset = *structType.offsetOfField(fieldIndex);
+    unsigned fieldOffset = JSWebAssemblyStruct::offsetOfData() + structType.offsetOfFieldInPayload(fieldIndex);
     RELEASE_ASSERT((std::numeric_limits<int32_t>::max() & fieldOffset) == fieldOffset);
 
-    TypeKind kind = toValueKind(structType.field(fieldIndex).type.unpacked().kind);
-    if (value.isConst()) {
-        switch (kind) {
-        case TypeKind::I32:
-            if (structType.field(fieldIndex).type.is<PackedType>()) {
-                ScratchScope<1, 0> scratches(*this);
-                // If it's a packed type, we materialize the constant to ensure constant blinding.
-                emitMoveConst(value, Location::fromGPR(scratches.gpr(0)));
-                switch (structType.field(fieldIndex).type.as<PackedType>()) {
-                case PackedType::I8:
-                    m_jit.store8(scratches.gpr(0), MacroAssembler::Address(payloadGPR, fieldOffset));
-                    break;
-                case PackedType::I16:
-                    m_jit.store16(scratches.gpr(0), MacroAssembler::Address(payloadGPR, fieldOffset));
-                    break;
-                }
-                break;
-            }
-            m_jit.store32(MacroAssembler::Imm32(value.asI32()), MacroAssembler::Address(payloadGPR, fieldOffset));
-            break;
-        case TypeKind::F32:
-            m_jit.store32(MacroAssembler::Imm32(value.asI32()), MacroAssembler::Address(payloadGPR, fieldOffset));
-            break;
-        case TypeKind::I64:
-        case TypeKind::F64:
-            m_jit.store64(MacroAssembler::Imm64(value.asI64()), MacroAssembler::Address(payloadGPR, fieldOffset));
-            break;
-        default:
-            RELEASE_ASSERT_NOT_REACHED();
-            break;
-        }
-        return;
-    }
+    StorageType storageType = structType.field(fieldIndex).type;
 
-    Location valueLocation;
-    if (value.isPinned())
-        valueLocation = locationOf(value);
-    else
-        valueLocation = loadIfNecessary(value);
-    switch (kind) {
-    case TypeKind::I32:
-        if (structType.field(fieldIndex).type.is<PackedType>()) {
-            switch (structType.field(fieldIndex).type.as<PackedType>()) {
-            case PackedType::I8:
-                m_jit.store8(valueLocation.asGPR(), MacroAssembler::Address(payloadGPR, fieldOffset));
-                break;
-            case PackedType::I16:
-                m_jit.store16(valueLocation.asGPR(), MacroAssembler::Address(payloadGPR, fieldOffset));
-                break;
-            }
-            break;
-        }
-        m_jit.store32(valueLocation.asGPR(), MacroAssembler::Address(payloadGPR, fieldOffset));
-        break;
-    case TypeKind::I64:
-        m_jit.store64(valueLocation.asGPR(), MacroAssembler::Address(payloadGPR, fieldOffset));
-        break;
-    case TypeKind::F32:
-        m_jit.storeFloat(valueLocation.asFPR(), MacroAssembler::Address(payloadGPR, fieldOffset));
-        break;
-    case TypeKind::F64:
-        m_jit.storeDouble(valueLocation.asFPR(), MacroAssembler::Address(payloadGPR, fieldOffset));
-        break;
-    case TypeKind::V128:
-        m_jit.storeVector(valueLocation.asFPR(), MacroAssembler::Address(payloadGPR, fieldOffset));
-        break;
-    default:
-        RELEASE_ASSERT_NOT_REACHED();
-        break;
-    }
+    JIT_COMMENT(m_jit, "emitStructSet for ", fieldIndex, " (", storageType, ") in ", structType);
+    emitMove(storageType, value, Address(structGPR, fieldOffset));
+
+    if (value.isConst()) {
+        ASSERT_IMPLIES(isRefType(storageType.unpacked()), !JSValue::decode(value.asI64()).isCell());
+        return false;
+                }
+
     consume(value);
+    return isRefType(storageType.unpacked());
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addStructNewDefault(uint32_t typeIndex, ExpressionType& result)
+void BBQJIT::emitAllocateGCStructUninitialized(GPRReg resultGPR, uint32_t typeIndex, GPRReg scratchGPR, GPRReg scratchGPR2)
 {
+    RELEASE_ASSERT(m_info.hasGCObjectTypes());
+    JumpList slowPath;
+    const StructType* typeDefinition = m_info.typeSignatures[typeIndex]->expand().template as<StructType>();
+    MacroAssembler::Address allocatorBufferBase(GPRInfo::wasmContextInstancePointer, JSWebAssemblyInstance::offsetOfAllocatorForGCObject(m_info, 0));
+    MacroAssembler::Address structureIDAddress(GPRInfo::wasmContextInstancePointer, JSWebAssemblyInstance::offsetOfGCObjectStructureID(m_info, typeIndex));
+    Location sizeLocation;
 
-    Vector<Value, 8> arguments = {
-        instanceValue(),
-        Value::fromI32(typeIndex),
-    };
-    result = topValue(TypeKind::I64);
-    emitCCall(operationWasmStructNewEmpty, arguments, result);
+    size_t sizeInBytes = JSWebAssemblyStruct::allocationSize(typeDefinition->instancePayloadSize());
 
+    if (sizeInBytes <= MarkedSpace::largeCutoff) {
+        size_t sizeClassIndex = MarkedSpace::sizeClassToIndex(sizeInBytes);
+        m_jit.loadPtr(allocatorBufferBase.withOffset(sizeClassIndex * sizeof(Allocator)), scratchGPR2);
+        JIT_COMMENT(m_jit, "Do struct allocation");
+        m_jit.emitAllocateWithNonNullAllocator(resultGPR, JITAllocator::variableNonNull(), scratchGPR2, scratchGPR, slowPath, AssemblyHelpers::SlowAllocationResult::UndefinedBehavior);
+        m_jit.load32(structureIDAddress, scratchGPR);
+        m_jit.move(TrustedImm32(JSWebAssemblyStruct::typeInfoBlob().blob()), scratchGPR2);
+        static_assert(JSCell::structureIDOffset() + sizeof(int32_t) == JSCell::indexingTypeAndMiscOffset());
+        m_jit.storePair32(scratchGPR, scratchGPR2, MacroAssembler::Address(resultGPR, JSCell::structureIDOffset()));
+        m_jit.storePtr(TrustedImmPtr(nullptr), MacroAssembler::Address(resultGPR, JSObject::butterflyOffset()));
+        m_jit.store32(TrustedImm32(typeDefinition->instancePayloadSize()), MacroAssembler::Address(resultGPR, JSWebAssemblyStruct::offsetOfSize()));
+    } else {
+        // FIXME: emitCCall can't handle being passed a destination... which is why we just jump to the slow path here.
+        slowPath.append(m_jit.jump());
+    }
+
+    JIT_COMMENT(m_jit, "Slow path return");
+    MacroAssembler::Label done(m_jit);
+    m_slowPaths.append({ origin(), WTF::move(slowPath), WTF::move(done), copyBindings(), [typeIndex, resultGPR](BBQJIT& bbq, CCallHelpers& jit) {
+        jit.prepareWasmCallOperation(GPRInfo::wasmContextInstancePointer);
+        jit.setupArguments<decltype(operationWasmStructNewEmpty)>(GPRInfo::wasmContextInstancePointer, TrustedImm32(typeIndex));
+        jit.callOperation<OperationPtrTag>(operationWasmStructNewEmpty);
+        jit.move(GPRInfo::returnValueGPR, resultGPR);
+        bbq.emitThrowOnNullReference(ExceptionType::BadStructNew, Location::fromGPR(resultGPR));
+    }});
+}
+
+[[nodiscard]] PartialResult BBQJIT::addStructNewDefault(uint32_t typeIndex, ExpressionType& result)
+{
     const auto& structType = *m_info.typeSignatures[typeIndex]->expand().template as<StructType>();
-    Location structLocation = loadIfNecessary(result);
-    emitThrowOnNullReference(ExceptionType::BadStructNew, structLocation);
-    m_jit.loadPtr(MacroAssembler::Address(structLocation.asGPR(), JSWebAssemblyStruct::offsetOfPayload()), wasmScratchGPR);
+    GPRReg resultGPR;
+    {
+        ScratchScope<2, 0> scratches(*this);
+        resultGPR = scratches.gpr(0);
+        GPRReg scratchGPR = scratches.gpr(1);
+        emitAllocateGCStructUninitialized(resultGPR, typeIndex, wasmScratchGPR, scratchGPR);
+
+        JIT_COMMENT(m_jit, "Struct allocation done, do initialization");
+        bool needsMutatorFence = false;
     for (StructFieldCount i = 0; i < structType.fieldCount(); ++i) {
         if (Wasm::isRefType(structType.field(i).type))
-            emitStructPayloadSet(wasmScratchGPR, structType, i, Value::fromRef(TypeKind::RefNull, JSValue::encode(jsNull())));
+                needsMutatorFence |= emitStructSet(resultGPR, structType, i, Value::fromRef(TypeKind::RefNull, JSValue::encode(jsNull())));
         else if (structType.field(i).type.unpacked().isV128()) {
             materializeVectorConstant(v128_t { }, Location::fromFPR(wasmScratchFPR));
-            emitStructPayloadSet(wasmScratchGPR, structType, i, Value::pinned(TypeKind::V128, Location::fromFPR(wasmScratchFPR)));
+                needsMutatorFence |= emitStructSet(resultGPR, structType, i, Value::pinned(TypeKind::V128, Location::fromFPR(wasmScratchFPR)));
         } else
-            emitStructPayloadSet(wasmScratchGPR, structType, i, Value::fromI64(0));
+                needsMutatorFence |= emitStructSet(resultGPR, structType, i, Value::fromI64(0));
     }
 
     // No write barrier needed here as all fields are set to constants.
+        ASSERT_UNUSED(needsMutatorFence, !needsMutatorFence);
+    }
+
+    result = topValue(TypeKind::Ref);
+    bind(result, Location::fromGPR(resultGPR));
+
+#if ASSERT_ENABLED
+    auto debugStructType = &structType;
+    m_jit.probeDebug([=] (Probe::Context& context) {
+        auto* structPtr = context.gpr<JSWebAssemblyStruct*>(resultGPR);
+        for (unsigned i = 0; i < debugStructType->fieldCount(); ++i) {
+            auto type = debugStructType->field(i).type.unpacked();
+            if (type.kind != TypeKind::V128)
+                validateWasmValue(structPtr->get(i), type);
+        }
+    });
+#endif
 
     LOG_INSTRUCTION("StructNewDefault", typeIndex, RESULT(result));
 
     return { };
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addStructNew(uint32_t typeIndex, Vector<Value>& args, Value& result)
+[[nodiscard]] PartialResult BBQJIT::addStructNew(uint32_t typeIndex, ArgumentList& args, Value& result)
 {
-    Vector<Value, 8> arguments = {
-        instanceValue(),
-        Value::fromI32(typeIndex),
-    };
-    // Note: using topValue here would be wrong because args[0] would be clobbered by the result.
-    Value allocationResult = Value::fromTemp(TypeKind::Structref, currentControlData().enclosedHeight() + currentControlData().implicitSlots() + m_parser->expressionStack().size() + args.size());
-    emitCCall(operationWasmStructNewEmpty, arguments, allocationResult);
-
     const auto& structType = *m_info.typeSignatures[typeIndex]->expand().template as<StructType>();
-    Location structLocation = loadIfNecessary(allocationResult);
-    emitThrowOnNullReference(ExceptionType::BadStructNew, structLocation);
-    m_jit.loadPtr(MacroAssembler::Address(structLocation.asGPR(), JSWebAssemblyStruct::offsetOfPayload()), wasmScratchGPR);
-    bool hasRefTypeField = false;
-    for (uint32_t i = 0; i < args.size(); ++i) {
-        if (isRefType(structType.field(i).type))
-            hasRefTypeField = true;
-        emitStructPayloadSet(wasmScratchGPR, structType, i, args[i]);
+    GPRReg resultGPR;
+    {
+        ScratchScope<2, 0> scratches(*this);
+        resultGPR = scratches.gpr(0);
+        GPRReg scratchGPR = scratches.gpr(1);
+        emitAllocateGCStructUninitialized(resultGPR, typeIndex, wasmScratchGPR, scratchGPR);
+
+        JIT_COMMENT(m_jit, "Struct allocation done, do initialization");
+        bool needsMutatorFence = false;
+        for (uint32_t i = 0; i < args.size(); ++i)
+            needsMutatorFence |= emitStructSet(resultGPR, structType, i, args[i]);
+
+        if (needsMutatorFence)
+            emitMutatorFence();
+
     }
 
-    if (hasRefTypeField)
-        emitWriteBarrier(structLocation.asGPR());
+    result = topValue(TypeKind::Ref);
+    bind(result, Location::fromGPR(resultGPR));
 
-    result = topValue(TypeKind::Structref);
-    Location resultLocation;
-    // If args.isEmpty() then allocationResult.asTemp() == result.asTemp() so we will consume our result.
-    if (args.size()) {
-        consume(allocationResult);
-        resultLocation = allocate(result);
-        emitMove(allocationResult.type(), structLocation, resultLocation);
-    } else {
-        RELEASE_ASSERT(result.asTemp() == allocationResult.asTemp());
-        resultLocation = structLocation;
+#if ASSERT_ENABLED
+    auto debugStructType = &structType;
+    m_jit.probeDebug([=] (Probe::Context& context) {
+        auto* structPtr = context.gpr<JSWebAssemblyStruct*>(resultGPR);
+        for (unsigned i = 0; i < debugStructType->fieldCount(); ++i) {
+            auto type = debugStructType->field(i).type.unpacked();
+            if (type.kind != TypeKind::V128)
+                validateWasmValue(structPtr->get(i), type);
     }
+    });
+#endif
 
     LOG_INSTRUCTION("StructNew", typeIndex, args, RESULT(result));
 
     return { };
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addStructGet(ExtGCOpType structGetKind, Value structValue, const StructType& structType, uint32_t fieldIndex, Value& result)
+[[nodiscard]] PartialResult BBQJIT::addStructGet(ExtGCOpType structGetKind, TypedExpression typedStruct, const StructType& structType, const RTT&, uint32_t fieldIndex, Value& result)
 {
+    auto structValue = typedStruct.value();
     TypeKind resultKind = structType.field(fieldIndex).type.unpacked().kind;
     if (structValue.isConst()) {
         // This is the only constant struct currently possible.
         ASSERT(JSValue::decode(structValue.asRef()).isNull());
-        emitThrowException(ExceptionType::NullStructGet);
-        result = Value::fromRef(resultKind, 0);
+        emitThrowException(ExceptionType::NullAccess);
+        result = topValue(resultKind);
         LOG_INSTRUCTION("StructGet", structValue, fieldIndex, "Exception");
         return { };
     }
 
-    Location structLocation = loadIfNecessary(structValue);
-    emitThrowOnNullReference(ExceptionType::NullStructGet, structLocation);
-
-    m_jit.loadPtr(MacroAssembler::Address(structLocation.asGPR(), JSWebAssemblyStruct::offsetOfPayload()), wasmScratchGPR);
-    unsigned fieldOffset = *structType.offsetOfField(fieldIndex);
+    unsigned fieldOffset = JSWebAssemblyStruct::offsetOfData() + structType.offsetOfFieldInPayload(fieldIndex);
     RELEASE_ASSERT((std::numeric_limits<int32_t>::max() & fieldOffset) == fieldOffset);
 
+    Location structLocation = loadIfNecessary(structValue);
+    if (typedStruct.type().isNullable())
+        emitThrowOnNullReferenceBeforeAccess(structLocation, fieldOffset);
+
+    // We're ok with reusing the struct value for our result since their live ranges don't overlap within a struct.get.
     consume(structValue);
     result = topValue(resultKind);
     Location resultLocation = allocate(result);
 
+    JIT_COMMENT(m_jit, "emitStructGet for ", fieldIndex, " in ", structType);
     switch (result.type()) {
     case TypeKind::I32:
         if (structType.field(fieldIndex).type.is<PackedType>()) {
             switch (structType.field(fieldIndex).type.as<PackedType>()) {
             case PackedType::I8:
-                m_jit.load8(MacroAssembler::Address(wasmScratchGPR, fieldOffset), resultLocation.asGPR());
+                m_jit.load8(MacroAssembler::Address(structLocation.asGPR(), fieldOffset), resultLocation.asGPR());
                 break;
             case PackedType::I16:
-                m_jit.load16(MacroAssembler::Address(wasmScratchGPR, fieldOffset), resultLocation.asGPR());
+                m_jit.load16(MacroAssembler::Address(structLocation.asGPR(), fieldOffset), resultLocation.asGPR());
                 break;
             }
             switch (structGetKind) {
@@ -2252,45 +2154,64 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addStructGet(ExtGCOpType structGetKind,
                 return { };
             }
         }
-        m_jit.load32(MacroAssembler::Address(wasmScratchGPR, fieldOffset), resultLocation.asGPR());
+        m_jit.load32(MacroAssembler::Address(structLocation.asGPR(), fieldOffset), resultLocation.asGPR());
         break;
     case TypeKind::I64:
-        m_jit.load64(MacroAssembler::Address(wasmScratchGPR, fieldOffset), resultLocation.asGPR());
+        m_jit.load64(MacroAssembler::Address(structLocation.asGPR(), fieldOffset), resultLocation.asGPR());
         break;
     case TypeKind::F32:
-        m_jit.loadFloat(MacroAssembler::Address(wasmScratchGPR, fieldOffset), resultLocation.asFPR());
+        m_jit.loadFloat(MacroAssembler::Address(structLocation.asGPR(), fieldOffset), resultLocation.asFPR());
         break;
     case TypeKind::F64:
-        m_jit.loadDouble(MacroAssembler::Address(wasmScratchGPR, fieldOffset), resultLocation.asFPR());
+        m_jit.loadDouble(MacroAssembler::Address(structLocation.asGPR(), fieldOffset), resultLocation.asFPR());
         break;
     case TypeKind::V128:
-        m_jit.loadVector(MacroAssembler::Address(wasmScratchGPR, fieldOffset), resultLocation.asFPR());
+        m_jit.loadVector(MacroAssembler::Address(structLocation.asGPR(), fieldOffset), resultLocation.asFPR());
         break;
     default:
         RELEASE_ASSERT_NOT_REACHED();
         break;
     }
 
+#if ASSERT_ENABLED
+    if (isRefType(structType.field(fieldIndex).type.unpacked())) {
+        auto resultGPR = resultLocation.asGPR();
+        auto debugStructType = &structType;
+        m_jit.probeDebug([=] (Probe::Context& context) {
+            auto type = debugStructType->field(fieldIndex).type.unpacked();
+            validateWasmValue(context.gpr<uint64_t>(resultGPR), type);
+        });
+    }
+#endif
+
     LOG_INSTRUCTION("StructGet", structValue, fieldIndex, RESULT(result));
     return { };
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addStructSet(Value structValue, const StructType& structType, uint32_t fieldIndex, Value value)
+[[nodiscard]] PartialResult BBQJIT::addStructSet(TypedExpression typedStruct, const StructType& structType, const RTT&, uint32_t fieldIndex, Value value)
 {
+    auto structValue = typedStruct.value();
     if (structValue.isConst()) {
         // This is the only constant struct currently possible.
         ASSERT(JSValue::decode(structValue.asRef()).isNull());
 
         LOG_INSTRUCTION("StructSet", structValue, fieldIndex, value, "Exception");
         consume(value);
-        emitThrowException(ExceptionType::NullStructSet);
+        emitThrowException(ExceptionType::NullAccess);
         return { };
     }
 
-    Location structLocation = loadIfNecessary(structValue);
-    emitThrowOnNullReference(ExceptionType::NullStructSet, structLocation);
+    unsigned fieldOffset = JSWebAssemblyStruct::offsetOfData() + structType.offsetOfFieldInPayload(fieldIndex);
+    RELEASE_ASSERT((std::numeric_limits<int32_t>::max() & fieldOffset) == fieldOffset);
 
-    emitStructSet(structLocation.asGPR(), structType, fieldIndex, value);
+    Location structLocation = loadIfNecessary(structValue);
+    if (typedStruct.type().isNullable())
+        emitThrowOnNullReferenceBeforeAccess(structLocation, fieldOffset);
+
+    bool needsWriteBarrier = emitStructSet(structLocation.asGPR(), structType, fieldIndex, value);
+    if (needsWriteBarrier)
+        emitWriteBarrier(structLocation.asGPR());
+
     LOG_INSTRUCTION("StructSet", structValue, fieldIndex, value);
 
     consume(structValue);
@@ -2298,25 +2219,182 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addStructSet(Value structValue, const S
     return { };
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addRefCast(ExpressionType reference, bool allowNull, int32_t heapType, ExpressionType& result)
+void BBQJIT::emitRefTestOrCast(CastKind castKind, const TypedExpression& typedValue, GPRReg valueGPR, bool allowNull, int32_t toHeapType, JumpList& failureCases)
 {
-    Vector<Value, 8> arguments = {
-        instanceValue(),
-        reference,
-        Value::fromI32(allowNull),
-        Value::fromI32(heapType),
+    auto castAccessOffset = [&] -> std::optional<ptrdiff_t> {
+        if (castKind == CastKind::Test)
+            return std::nullopt;
+
+        if (allowNull)
+            return std::nullopt;
+
+        if (typeIndexIsType(static_cast<Wasm::TypeIndex>(toHeapType)))
+            return std::nullopt;
+
+        Wasm::TypeDefinition& signature = m_info.typeSignatures[toHeapType];
+        if (signature.expand().is<Wasm::FunctionSignature>())
+            return WebAssemblyFunctionBase::offsetOfRTT();
+
+        if (!typedValue.type().definitelyIsCellOrNull())
+            return std::nullopt;
+
+        if (!typedValue.type().definitelyIsWasmGCObjectOrNull())
+            return JSCell::typeInfoTypeOffset();
+        return JSCell::structureIDOffset();
     };
+
+    JumpList doneCases;
+    if (typedValue.type().isNullable()) {
+        if (auto offset = castAccessOffset(); offset && offset.value() <= maxAcceptableOffsetForNullReference()) {
+            // We will have access which will be trapped.
+        } else {
+            if (allowNull)
+                doneCases.append(m_jit.branchIfNull(valueGPR));
+            else
+                failureCases.append(m_jit.branchIfNull(valueGPR));
+        }
+    }
+
+    if (typeIndexIsType(static_cast<Wasm::TypeIndex>(toHeapType))) {
+        switch (static_cast<TypeKind>(toHeapType)) {
+        case Wasm::TypeKind::Funcref:
+        case Wasm::TypeKind::Externref:
+        case Wasm::TypeKind::Anyref:
+        case Wasm::TypeKind::Exnref:
+            // Casts to these types cannot fail as they are the top types of their respective hierarchies, and static type-checking does not allow cross-hierarchy casts.
+            break;
+        case Wasm::TypeKind::Noneref:
+        case Wasm::TypeKind::Nofuncref:
+        case Wasm::TypeKind::Noexternref:
+        case Wasm::TypeKind::Noexnref:
+            // Casts to any bottom type should always fail.
+            failureCases.append(m_jit.jump());
+            break;
+        case Wasm::TypeKind::Eqref: {
+            auto checkObjectCase = m_jit.branchIfNotInt32(valueGPR, DoNotHaveTagRegisters);
+            failureCases.append(m_jit.branch32(CCallHelpers::GreaterThan, valueGPR, TrustedImm32(Wasm::maxI31ref)));
+            failureCases.append(m_jit.branch32(CCallHelpers::LessThan, valueGPR, TrustedImm32(Wasm::minI31ref)));
+            doneCases.append(m_jit.jump());
+
+            checkObjectCase.link(m_jit);
+            if (!typedValue.type().definitelyIsCellOrNull())
+                failureCases.append(m_jit.branchIfNotCell(valueGPR, DoNotHaveTagRegisters));
+            if (!typedValue.type().definitelyIsWasmGCObjectOrNull())
+                failureCases.append(m_jit.branchIfNotType(valueGPR, JSType::WebAssemblyGCObjectType));
+            break;
+        }
+        case Wasm::TypeKind::I31ref: {
+            failureCases.append(m_jit.branchIfNotInt32(valueGPR, DoNotHaveTagRegisters));
+            failureCases.append(m_jit.branch32(CCallHelpers::GreaterThan, valueGPR, TrustedImm32(Wasm::maxI31ref)));
+            failureCases.append(m_jit.branch32(CCallHelpers::LessThan, valueGPR, TrustedImm32(Wasm::minI31ref)));
+            break;
+        }
+        case Wasm::TypeKind::Arrayref:
+        case Wasm::TypeKind::Structref: {
+            if (!typedValue.type().definitelyIsCellOrNull())
+                failureCases.append(m_jit.branchIfNotCell(valueGPR, DoNotHaveTagRegisters));
+            if (!typedValue.type().definitelyIsWasmGCObjectOrNull())
+                failureCases.append(m_jit.branchIfNotType(valueGPR, JSType::WebAssemblyGCObjectType));
+            m_jit.emitLoadStructure(valueGPR, wasmScratchGPR);
+            m_jit.loadPtr(Address(wasmScratchGPR, WebAssemblyGCStructure::offsetOfRTT()), wasmScratchGPR);
+            failureCases.append(m_jit.branch8(CCallHelpers::NotEqual, Address(wasmScratchGPR, RTT::offsetOfKind()), TrustedImm32(static_cast<int32_t>(static_cast<TypeKind>(toHeapType) == Wasm::TypeKind::Arrayref ? RTTKind::Array : RTTKind::Struct))));
+            break;
+        }
+        default:
+            RELEASE_ASSERT_NOT_REACHED();
+        }
+    } else {
+        ([&] {
+            Wasm::TypeDefinition& signature = m_info.typeSignatures[toHeapType];
+            Ref targetRTT = m_info.rtts[toHeapType];
+            if (signature.expand().is<Wasm::FunctionSignature>())
+                m_jit.loadPtr(Address(valueGPR, WebAssemblyFunctionBase::offsetOfRTT()), wasmScratchGPR);
+            else {
+                // The cell check is only needed for non-functions, as the typechecker does not allow non-Cell values for funcref casts.
+                if (!typedValue.type().definitelyIsCellOrNull())
+                    failureCases.append(m_jit.branchIfNotCell(valueGPR, DoNotHaveTagRegisters));
+                if (!typedValue.type().definitelyIsWasmGCObjectOrNull())
+                    failureCases.append(m_jit.branchIfNotType(valueGPR, JSType::WebAssemblyGCObjectType));
+                m_jit.emitLoadStructure(valueGPR, wasmScratchGPR);
+
+                if (targetRTT->displaySizeExcludingThis() < WebAssemblyGCStructure::inlinedTypeDisplaySize) {
+                    m_jit.loadPtr(Address(wasmScratchGPR, WebAssemblyGCStructure::offsetOfInlinedTypeDisplay() + targetRTT->displaySizeExcludingThis() * sizeof(RefPtr<const RTT>)), wasmScratchGPR);
+                    failureCases.append(m_jit.branchPtr(CCallHelpers::NotEqual, wasmScratchGPR, TrustedImmPtr(targetRTT.ptr())));
+                    return;
+                }
+                m_jit.loadPtr(Address(wasmScratchGPR, WebAssemblyGCStructure::offsetOfRTT()), wasmScratchGPR);
+            }
+
+            if (signature.isFinalType()) {
+                // If signature is final type and pointer equality failed, this value must not be a subtype.
+                failureCases.append(m_jit.branchPtr(CCallHelpers::NotEqual, wasmScratchGPR, TrustedImmPtr(targetRTT.ptr())));
+            } else {
+                doneCases.append(m_jit.branchPtr(CCallHelpers::Equal, wasmScratchGPR, TrustedImmPtr(targetRTT.ptr())));
+                failureCases.append(m_jit.branch32(CCallHelpers::BelowOrEqual, Address(wasmScratchGPR, RTT::offsetOfDisplaySizeExcludingThis()), TrustedImm32(targetRTT->displaySizeExcludingThis())));
+                failureCases.append(m_jit.branchPtr(CCallHelpers::NotEqual, Address(wasmScratchGPR, (RTT::offsetOfData() + targetRTT->displaySizeExcludingThis() * sizeof(RefPtr<const RTT>))), TrustedImmPtr(targetRTT.ptr())));
+            }
+        }());
+    }
+
+    doneCases.link(m_jit);
+}
+
+[[nodiscard]] PartialResult BBQJIT::addRefCast(TypedExpression typedValue, bool allowNull, int32_t toHeapType, ExpressionType& result)
+{
+    auto value = typedValue.value();
+    Location valueLocation;
+    if (value.isConst()) {
+        valueLocation = Location::fromGPR(wasmScratchGPR);
+        emitMoveConst(value, valueLocation);
+    } else
+        valueLocation = loadIfNecessary(value);
+    ASSERT(valueLocation.isGPR());
+    consume(value);
+
     result = topValue(TypeKind::Ref);
-    emitCCall(operationWasmRefCast, arguments, result);
-    Location resultLocation = loadIfNecessary(result);
-    throwExceptionIf(ExceptionType::CastFailure, m_jit.branchTest64(MacroAssembler::Zero, resultLocation.asGPR()));
+    Location resultLocation = allocate(result);
 
-    LOG_INSTRUCTION("RefCast", reference, allowNull, heapType, RESULT(result));
+    JumpList failureCases;
+    emitRefTestOrCast(CastKind::Cast, typedValue, valueLocation.asGPR(), allowNull, toHeapType, failureCases);
+    recordJumpToThrowException(ExceptionType::CastFailure, failureCases);
+    emitMove(TypeKind::Ref, valueLocation, resultLocation);
 
+    LOG_INSTRUCTION("RefCast", value, allowNull, toHeapType, RESULT(result));
     return { };
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addI64Add(Value lhs, Value rhs, Value& result)
+[[nodiscard]] PartialResult BBQJIT::addRefTest(TypedExpression typedValue, bool allowNull, int32_t toHeapType, bool shouldNegate, ExpressionType& result)
+{
+    auto value = typedValue.value();
+    Location valueLocation;
+    if (value.isConst()) {
+        valueLocation = Location::fromGPR(wasmScratchGPR);
+        emitMoveConst(value, valueLocation);
+    } else
+        valueLocation = loadIfNecessary(value);
+    ASSERT(valueLocation.isGPR());
+    consume(value);
+
+    result = topValue(TypeKind::I32);
+    Location resultLocation = allocate(result);
+
+    JumpList doneCases;
+    JumpList failureCases;
+
+    emitRefTestOrCast(CastKind::Test, typedValue, valueLocation.asGPR(), allowNull, toHeapType, failureCases);
+    emitMoveConst(Value::fromI32(shouldNegate ? 0 : 1), resultLocation);
+    doneCases.append(m_jit.jump());
+
+    failureCases.link(m_jit);
+    emitMoveConst(Value::fromI32(shouldNegate ? 1 : 0), resultLocation);
+
+    doneCases.link(m_jit);
+
+    LOG_INSTRUCTION("RefTest", value, allowNull, toHeapType, RESULT(result));
+    return { };
+}
+
+[[nodiscard]] PartialResult BBQJIT::addI64Add(Value lhs, Value rhs, Value& result)
 {
     EMIT_BINARY(
         "I64Add", TypeKind::I64,
@@ -2325,7 +2403,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addI64Add(Value lhs, Value rhs, Value& 
             m_jit.add64(lhsLocation.asGPR(), rhsLocation.asGPR(), resultLocation.asGPR());
         ),
         BLOCK(
-            if (LIKELY(isRepresentableAs<int32_t>(ImmHelpers::imm(lhs, rhs).asI64())))
+            if (isRepresentableAs<int32_t>(ImmHelpers::imm(lhs, rhs).asI64())) [[likely]]
                 m_jit.add64(TrustedImm32(ImmHelpers::imm(lhs, rhs).asI64()), ImmHelpers::regLocation(lhsLocation, rhsLocation).asGPR(), resultLocation.asGPR());
             else {
             m_jit.move(ImmHelpers::regLocation(lhsLocation, rhsLocation).asGPR(), resultLocation.asGPR());
@@ -2335,7 +2413,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addI64Add(Value lhs, Value rhs, Value& 
     );
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addI64Sub(Value lhs, Value rhs, Value& result)
+[[nodiscard]] PartialResult BBQJIT::addI64Sub(Value lhs, Value rhs, Value& result)
 {
     EMIT_BINARY(
         "I64Sub", TypeKind::I64,
@@ -2354,7 +2432,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addI64Sub(Value lhs, Value rhs, Value& 
     );
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addI64Mul(Value lhs, Value rhs, Value& result)
+[[nodiscard]] PartialResult BBQJIT::addI64Mul(Value lhs, Value rhs, Value& result)
 {
     EMIT_BINARY(
         "I64Mul", TypeKind::I64,
@@ -2372,10 +2450,19 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addI64Mul(Value lhs, Value rhs, Value& 
 
 void BBQJIT::emitThrowOnNullReference(ExceptionType type, Location ref)
 {
-    throwExceptionIf(type, m_jit.branch64(MacroAssembler::Equal, ref.asGPR(), TrustedImm64(JSValue::encode(jsNull()))));
+    recordJumpToThrowException(type, m_jit.branchIfNull(ref.asGPR()));
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addI64And(Value lhs, Value rhs, Value& result)
+void BBQJIT::emitThrowOnNullReferenceBeforeAccess(Location ref, ptrdiff_t offset)
+{
+    if (Options::useWasmFaultSignalHandler()) {
+        if (offset <= maxAcceptableOffsetForNullReference())
+            return;
+    }
+    emitThrowOnNullReference(ExceptionType::NullAccess, ref);
+}
+
+[[nodiscard]] PartialResult BBQJIT::addI64And(Value lhs, Value rhs, Value& result)
 {
     EMIT_BINARY(
         "I64And", TypeKind::I64,
@@ -2389,7 +2476,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addI64And(Value lhs, Value rhs, Value& 
     );
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addI64Xor(Value lhs, Value rhs, Value& result)
+[[nodiscard]] PartialResult BBQJIT::addI64Xor(Value lhs, Value rhs, Value& result)
 {
     EMIT_BINARY(
         "I64Xor", TypeKind::I64,
@@ -2403,7 +2490,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addI64Xor(Value lhs, Value rhs, Value& 
     );
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addI64Or(Value lhs, Value rhs, Value& result)
+[[nodiscard]] PartialResult BBQJIT::addI64Or(Value lhs, Value rhs, Value& result)
 {
     EMIT_BINARY(
         "I64Or", TypeKind::I64,
@@ -2417,7 +2504,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addI64Or(Value lhs, Value rhs, Value& r
     );
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addI64Shl(Value lhs, Value rhs, Value& result)
+[[nodiscard]] PartialResult BBQJIT::addI64Shl(Value lhs, Value rhs, Value& result)
 {
     PREPARE_FOR_SHIFT;
     EMIT_BINARY(
@@ -2439,7 +2526,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addI64Shl(Value lhs, Value rhs, Value& 
     );
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addI64ShrS(Value lhs, Value rhs, Value& result)
+[[nodiscard]] PartialResult BBQJIT::addI64ShrS(Value lhs, Value rhs, Value& result)
 {
     PREPARE_FOR_SHIFT;
     EMIT_BINARY(
@@ -2461,7 +2548,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addI64ShrS(Value lhs, Value rhs, Value&
     );
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addI64ShrU(Value lhs, Value rhs, Value& result)
+[[nodiscard]] PartialResult BBQJIT::addI64ShrU(Value lhs, Value rhs, Value& result)
 {
     PREPARE_FOR_SHIFT;
     EMIT_BINARY(
@@ -2483,7 +2570,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addI64ShrU(Value lhs, Value rhs, Value&
     );
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addI64Rotl(Value lhs, Value rhs, Value& result)
+[[nodiscard]] PartialResult BBQJIT::addI64Rotl(Value lhs, Value rhs, Value& result)
 {
     PREPARE_FOR_SHIFT;
     EMIT_BINARY(
@@ -2523,7 +2610,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addI64Rotl(Value lhs, Value rhs, Value&
     );
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addI64Rotr(Value lhs, Value rhs, Value& result)
+[[nodiscard]] PartialResult BBQJIT::addI64Rotr(Value lhs, Value rhs, Value& result)
 {
     PREPARE_FOR_SHIFT;
     EMIT_BINARY(
@@ -2545,7 +2632,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addI64Rotr(Value lhs, Value rhs, Value&
     );
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addI64Clz(Value operand, Value& result)
+[[nodiscard]] PartialResult BBQJIT::addI64Clz(Value operand, Value& result)
 {
     EMIT_UNARY(
         "I64Clz", TypeKind::I64,
@@ -2556,7 +2643,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addI64Clz(Value operand, Value& result)
     );
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addI64Ctz(Value operand, Value& result)
+[[nodiscard]] PartialResult BBQJIT::addI64Ctz(Value operand, Value& result)
 {
     EMIT_UNARY(
         "I64Ctz", TypeKind::I64,
@@ -2590,12 +2677,12 @@ PartialResult BBQJIT::addI32WrapI64(Value operand, Value& result)
         "I32WrapI64", TypeKind::I32,
         BLOCK(Value::fromI32(static_cast<int32_t>(operand.asI64()))),
         BLOCK(
-            m_jit.move(operandLocation.asGPR(), resultLocation.asGPR());
+            m_jit.zeroExtend32ToWord(operandLocation.asGPR(), resultLocation.asGPR());
         )
     )
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addI64Extend8S(Value operand, Value& result)
+[[nodiscard]] PartialResult BBQJIT::addI64Extend8S(Value operand, Value& result)
 {
     EMIT_UNARY(
         "I64Extend8S", TypeKind::I64,
@@ -2606,7 +2693,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addI64Extend8S(Value operand, Value& re
     )
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addI64Extend16S(Value operand, Value& result)
+[[nodiscard]] PartialResult BBQJIT::addI64Extend16S(Value operand, Value& result)
 {
     EMIT_UNARY(
         "I64Extend16S", TypeKind::I64,
@@ -2617,7 +2704,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addI64Extend16S(Value operand, Value& r
     )
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addI64Extend32S(Value operand, Value& result)
+[[nodiscard]] PartialResult BBQJIT::addI64Extend32S(Value operand, Value& result)
 {
     EMIT_UNARY(
         "I64Extend32S", TypeKind::I64,
@@ -2628,7 +2715,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addI64Extend32S(Value operand, Value& r
     )
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addI64ExtendSI32(Value operand, Value& result)
+[[nodiscard]] PartialResult BBQJIT::addI64ExtendSI32(Value operand, Value& result)
 {
     EMIT_UNARY(
         "I64ExtendSI32", TypeKind::I64,
@@ -2639,7 +2726,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addI64ExtendSI32(Value operand, Value& 
     )
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addI64ExtendUI32(Value operand, Value& result)
+[[nodiscard]] PartialResult BBQJIT::addI64ExtendUI32(Value operand, Value& result)
 {
     EMIT_UNARY(
         "I64ExtendUI32", TypeKind::I64,
@@ -2650,7 +2737,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addI64ExtendUI32(Value operand, Value& 
     )
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addI64Eqz(Value operand, Value& result)
+[[nodiscard]] PartialResult BBQJIT::addI64Eqz(Value operand, Value& result)
 {
     EMIT_UNARY(
         "I64Eqz", TypeKind::I32,
@@ -2661,47 +2748,40 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addI64Eqz(Value operand, Value& result)
     )
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addI64ReinterpretF64(Value operand, Value& result)
+[[nodiscard]] PartialResult BBQJIT::addI64ReinterpretF64(Value operand, Value& result)
 {
     EMIT_UNARY(
         "I64ReinterpretF64", TypeKind::I64,
-        BLOCK(Value::fromI64(bitwise_cast<int64_t>(operand.asF64()))),
+        BLOCK(Value::fromI64(std::bit_cast<int64_t>(operand.asF64()))),
         BLOCK(
             m_jit.moveDoubleTo64(operandLocation.asFPR(), resultLocation.asGPR());
         )
     )
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addF64ReinterpretI64(Value operand, Value& result)
+[[nodiscard]] PartialResult BBQJIT::addF64ReinterpretI64(Value operand, Value& result)
 {
     EMIT_UNARY(
         "F64ReinterpretI64", TypeKind::F64,
-        BLOCK(Value::fromF64(bitwise_cast<double>(operand.asI64()))),
+        BLOCK(Value::fromF64(std::bit_cast<double>(operand.asI64()))),
         BLOCK(
             m_jit.move64ToDouble(operandLocation.asGPR(), resultLocation.asFPR());
         )
     )
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addF32ConvertUI32(Value operand, Value& result)
+[[nodiscard]] PartialResult BBQJIT::addF32ConvertUI32(Value operand, Value& result)
 {
     EMIT_UNARY(
         "F32ConvertUI32", TypeKind::F32,
         BLOCK(Value::fromF32(static_cast<uint32_t>(operand.asI32()))),
         BLOCK(
-#if CPU(X86_64)
-            ScratchScope<1, 0> scratches(*this);
-            m_jit.zeroExtend32ToWord(operandLocation.asGPR(), wasmScratchGPR);
-            m_jit.convertUInt64ToFloat(wasmScratchGPR, resultLocation.asFPR(), scratches.gpr(0));
-#else
-            m_jit.zeroExtend32ToWord(operandLocation.asGPR(), wasmScratchGPR);
-            m_jit.convertUInt64ToFloat(wasmScratchGPR, resultLocation.asFPR());
-#endif
+            m_jit.convertUInt32ToFloat(operandLocation.asGPR(), resultLocation.asFPR());
         )
     )
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addF32ConvertSI64(Value operand, Value& result)
+[[nodiscard]] PartialResult BBQJIT::addF32ConvertSI64(Value operand, Value& result)
 {
     EMIT_UNARY(
         "F32ConvertSI64", TypeKind::F32,
@@ -2712,7 +2792,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addF32ConvertSI64(Value operand, Value&
     )
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addF32ConvertUI64(Value operand, Value& result)
+[[nodiscard]] PartialResult BBQJIT::addF32ConvertUI64(Value operand, Value& result)
 {
     EMIT_UNARY(
         "F32ConvertUI64", TypeKind::F32,
@@ -2727,25 +2807,18 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addF32ConvertUI64(Value operand, Value&
     )
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addF64ConvertUI32(Value operand, Value& result)
+[[nodiscard]] PartialResult BBQJIT::addF64ConvertUI32(Value operand, Value& result)
 {
     EMIT_UNARY(
         "F64ConvertUI32", TypeKind::F64,
         BLOCK(Value::fromF64(static_cast<uint32_t>(operand.asI32()))),
         BLOCK(
-#if CPU(X86_64)
-            ScratchScope<1, 0> scratches(*this);
-            m_jit.zeroExtend32ToWord(operandLocation.asGPR(), wasmScratchGPR);
-            m_jit.convertUInt64ToDouble(wasmScratchGPR, resultLocation.asFPR(), scratches.gpr(0));
-#else
-            m_jit.zeroExtend32ToWord(operandLocation.asGPR(), wasmScratchGPR);
-            m_jit.convertUInt64ToDouble(wasmScratchGPR, resultLocation.asFPR());
-#endif
+            m_jit.convertUInt32ToDouble(operandLocation.asGPR(), resultLocation.asFPR());
         )
     )
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addF64ConvertSI64(Value operand, Value& result)
+[[nodiscard]] PartialResult BBQJIT::addF64ConvertSI64(Value operand, Value& result)
 {
     EMIT_UNARY(
         "F64ConvertSI64", TypeKind::F64,
@@ -2756,7 +2829,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addF64ConvertSI64(Value operand, Value&
     )
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addF64ConvertUI64(Value operand, Value& result)
+[[nodiscard]] PartialResult BBQJIT::addF64ConvertUI64(Value operand, Value& result)
 {
     EMIT_UNARY(
         "F64ConvertUI64", TypeKind::F64,
@@ -2771,71 +2844,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addF64ConvertUI64(Value operand, Value&
     )
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addF64Copysign(Value lhs, Value rhs, Value& result)
-{
-    if constexpr (isX86())
-        clobber(shiftRCX);
-
-    EMIT_BINARY(
-        "F64Copysign", TypeKind::F64,
-        BLOCK(Value::fromF64(doubleCopySign(lhs.asF64(), rhs.asF64()))),
-        BLOCK(
-            // FIXME: Better than what we have in the Air backend, but still not great. I think
-            // there's some vector instruction we can use to do this much quicker.
-
-#if CPU(X86_64)
-            m_jit.moveDoubleTo64(lhsLocation.asFPR(), wasmScratchGPR);
-            m_jit.and64(TrustedImm64(0x7fffffffffffffffll), wasmScratchGPR);
-            m_jit.move64ToDouble(wasmScratchGPR, wasmScratchFPR);
-            m_jit.moveDoubleTo64(rhsLocation.asFPR(), wasmScratchGPR);
-            m_jit.urshift64(wasmScratchGPR, TrustedImm32(63), wasmScratchGPR);
-            m_jit.lshift64(wasmScratchGPR, TrustedImm32(63), wasmScratchGPR);
-            m_jit.move64ToDouble(wasmScratchGPR, resultLocation.asFPR());
-            m_jit.orDouble(resultLocation.asFPR(), wasmScratchFPR, resultLocation.asFPR());
-#else
-            m_jit.moveDoubleTo64(rhsLocation.asFPR(), wasmScratchGPR);
-
-            // Probably saves us a bit of space compared to reserving another register and
-            // materializing a 64-bit constant.
-            m_jit.urshift64(wasmScratchGPR, TrustedImm32(63), wasmScratchGPR);
-            m_jit.lshift64(wasmScratchGPR, TrustedImm32(63), wasmScratchGPR);
-            m_jit.move64ToDouble(wasmScratchGPR, wasmScratchFPR);
-
-            m_jit.absDouble(lhsLocation.asFPR(), lhsLocation.asFPR());
-            m_jit.orDouble(lhsLocation.asFPR(), wasmScratchFPR, resultLocation.asFPR());
-#endif
-        ),
-        BLOCK(
-            if (lhs.isConst()) {
-                m_jit.moveDoubleTo64(rhsLocation.asFPR(), wasmScratchGPR);
-                m_jit.urshift64(wasmScratchGPR, TrustedImm32(63), wasmScratchGPR);
-                m_jit.lshift64(wasmScratchGPR, TrustedImm32(63), wasmScratchGPR);
-                m_jit.move64ToDouble(wasmScratchGPR, wasmScratchFPR);
-
-                // Moving this constant clobbers wasmScratchGPR, but not wasmScratchFPR
-                emitMoveConst(Value::fromF64(std::abs(lhs.asF64())), resultLocation);
-                m_jit.orDouble(resultLocation.asFPR(), wasmScratchFPR, resultLocation.asFPR());
-            } else {
-                bool signBit = bitwise_cast<uint64_t>(rhs.asF64()) & 0x8000000000000000ull;
-#if CPU(X86_64)
-                m_jit.moveDouble(lhsLocation.asFPR(), resultLocation.asFPR());
-                m_jit.move64ToDouble(TrustedImm64(0x7fffffffffffffffll), wasmScratchFPR);
-                m_jit.andDouble(wasmScratchFPR, resultLocation.asFPR());
-                if (signBit) {
-                    m_jit.xorDouble(wasmScratchFPR, wasmScratchFPR);
-                    m_jit.subDouble(wasmScratchFPR, resultLocation.asFPR(), resultLocation.asFPR());
-                }
-#else
-                m_jit.absDouble(lhsLocation.asFPR(), resultLocation.asFPR());
-                if (signBit)
-                    m_jit.negateDouble(resultLocation.asFPR(), resultLocation.asFPR());
-#endif
-            }
-        )
-    )
-}
-
-PartialResult WARN_UNUSED_RETURN BBQJIT::addF32Floor(Value operand, Value& result)
+[[nodiscard]] PartialResult BBQJIT::addF32Floor(Value operand, Value& result)
 {
     EMIT_UNARY(
         "F32Floor", TypeKind::F32,
@@ -2846,7 +2855,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addF32Floor(Value operand, Value& resul
     )
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addF64Floor(Value operand, Value& result)
+[[nodiscard]] PartialResult BBQJIT::addF64Floor(Value operand, Value& result)
 {
     EMIT_UNARY(
         "F64Floor", TypeKind::F64,
@@ -2857,7 +2866,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addF64Floor(Value operand, Value& resul
     )
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addF32Ceil(Value operand, Value& result)
+[[nodiscard]] PartialResult BBQJIT::addF32Ceil(Value operand, Value& result)
 {
     EMIT_UNARY(
         "F32Ceil", TypeKind::F32,
@@ -2868,7 +2877,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addF32Ceil(Value operand, Value& result
     )
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addF64Ceil(Value operand, Value& result)
+[[nodiscard]] PartialResult BBQJIT::addF64Ceil(Value operand, Value& result)
 {
     EMIT_UNARY(
         "F64Ceil", TypeKind::F64,
@@ -2879,7 +2888,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addF64Ceil(Value operand, Value& result
     )
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addF32Nearest(Value operand, Value& result)
+[[nodiscard]] PartialResult BBQJIT::addF32Nearest(Value operand, Value& result)
 {
     EMIT_UNARY(
         "F32Nearest", TypeKind::F32,
@@ -2890,7 +2899,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addF32Nearest(Value operand, Value& res
     )
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addF64Nearest(Value operand, Value& result)
+[[nodiscard]] PartialResult BBQJIT::addF64Nearest(Value operand, Value& result)
 {
     EMIT_UNARY(
         "F64Nearest", TypeKind::F64,
@@ -2901,31 +2910,31 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addF64Nearest(Value operand, Value& res
     )
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addF32Trunc(Value operand, Value& result)
+[[nodiscard]] PartialResult BBQJIT::addF32Trunc(Value operand, Value& result)
 {
     EMIT_UNARY(
         "F32Trunc", TypeKind::F32,
         BLOCK(Value::fromF32(Math::truncFloat(operand.asF32()))),
         BLOCK(
-            m_jit.roundTowardZeroFloat(operandLocation.asFPR(), resultLocation.asFPR());
+            m_jit.truncFloat(operandLocation.asFPR(), resultLocation.asFPR());
         )
     )
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addF64Trunc(Value operand, Value& result)
+[[nodiscard]] PartialResult BBQJIT::addF64Trunc(Value operand, Value& result)
 {
     EMIT_UNARY(
         "F64Trunc", TypeKind::F64,
         BLOCK(Value::fromF64(Math::truncDouble(operand.asF64()))),
         BLOCK(
-            m_jit.roundTowardZeroDouble(operandLocation.asFPR(), resultLocation.asFPR());
+            m_jit.truncDouble(operandLocation.asFPR(), resultLocation.asFPR());
         )
     )
 }
 
 // References
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addRefIsNull(Value operand, Value& result)
+[[nodiscard]] PartialResult BBQJIT::addRefIsNull(Value operand, Value& result)
 {
     EMIT_UNARY(
         "RefIsNull", TypeKind::I32,
@@ -2938,7 +2947,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addRefIsNull(Value operand, Value& resu
     return { };
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addRefAsNonNull(Value value, Value& result)
+[[nodiscard]] PartialResult BBQJIT::addRefAsNonNull(Value value, Value& result)
 {
     Location valueLocation;
     if (value.isConst()) {
@@ -2952,7 +2961,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addRefAsNonNull(Value value, Value& res
     result = topValue(TypeKind::Ref);
     Location resultLocation = allocate(result);
     ASSERT(JSValue::encode(jsNull()) >= 0 && JSValue::encode(jsNull()) <= INT32_MAX);
-    throwExceptionIf(ExceptionType::NullRefAsNonNull, m_jit.branch64(RelationalCondition::Equal, valueLocation.asGPR(), TrustedImm32(static_cast<int32_t>(JSValue::encode(jsNull())))));
+    emitThrowOnNullReference(ExceptionType::NullRefAsNonNull, valueLocation);
     emitMove(TypeKind::Ref, valueLocation, resultLocation);
 
     return { };
@@ -2961,7 +2970,12 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addRefAsNonNull(Value value, Value& res
 void BBQJIT::emitCatchPrologue()
 {
     m_frameSizeLabels.append(m_jit.moveWithPatch(TrustedImmPtr(nullptr), GPRInfo::nonPreservedNonArgumentGPR0));
+#if CPU(ARM64)
     m_jit.subPtr(GPRInfo::callFrameRegister, GPRInfo::nonPreservedNonArgumentGPR0, MacroAssembler::stackPointerRegister);
+#else
+    m_jit.subPtr(GPRInfo::callFrameRegister, GPRInfo::nonPreservedNonArgumentGPR0, GPRInfo::nonPreservedNonArgumentGPR0);
+    m_jit.move(GPRInfo::nonPreservedNonArgumentGPR0, CCallHelpers::stackPointerRegister);
+#endif
     if (!!m_info.memory)
         loadWebAssemblyGlobalState(wasmBaseMemoryPointer, wasmBoundsCheckingSizeRegister);
     static_assert(noOverlap(GPRInfo::nonPreservedNonArgumentGPR0, GPRInfo::returnValueGPR, GPRInfo::returnValueGPR2));
@@ -2985,9 +2999,7 @@ void BBQJIT::emitCatchImpl(ControlData& dataCatch, const TypeDefinition& excepti
     dataCatch.startBlock(*this, emptyStack);
 
     if (exceptionSignature.as<FunctionSignature>()->argumentCount()) {
-        ScratchScope<1, 0> scratches(*this);
-        GPRReg bufferGPR = scratches.gpr(0);
-        m_jit.loadPtr(Address(GPRInfo::returnValueGPR, JSWebAssemblyException::offsetOfPayload() + JSWebAssemblyException::Payload::offsetOfStorage()), bufferGPR);
+        m_jit.loadPtr(Address(GPRInfo::returnValueGPR, JSWebAssemblyException::offsetOfPayload() + JSWebAssemblyException::Payload::offsetOfStorage()), wasmScratchGPR);
         unsigned offset = 0;
         for (unsigned i = 0; i < exceptionSignature.as<FunctionSignature>()->argumentCount(); ++i) {
             Type type = exceptionSignature.as<FunctionSignature>()->argumentType(i);
@@ -2995,7 +3007,7 @@ void BBQJIT::emitCatchImpl(ControlData& dataCatch, const TypeDefinition& excepti
             Location slot = canonicalSlot(result);
             switch (type.kind) {
             case TypeKind::I32:
-                m_jit.transfer32(Address(bufferGPR, JSWebAssemblyException::Payload::Storage::offsetOfData() + offset * sizeof(uint64_t)), slot.asAddress());
+                m_jit.transfer32(Address(wasmScratchGPR, JSWebAssemblyException::Payload::Storage::offsetOfData() + offset * sizeof(uint64_t)), slot.asAddress());
                 break;
             case TypeKind::I31ref:
             case TypeKind::I64:
@@ -3004,28 +3016,30 @@ void BBQJIT::emitCatchImpl(ControlData& dataCatch, const TypeDefinition& excepti
             case TypeKind::Arrayref:
             case TypeKind::Structref:
             case TypeKind::Funcref:
+            case TypeKind::Exnref:
             case TypeKind::Externref:
             case TypeKind::Eqref:
             case TypeKind::Anyref:
-            case TypeKind::Nullref:
-            case TypeKind::Nullfuncref:
-            case TypeKind::Nullexternref:
+            case TypeKind::Noexnref:
+            case TypeKind::Noneref:
+            case TypeKind::Nofuncref:
+            case TypeKind::Noexternref:
             case TypeKind::Rec:
             case TypeKind::Sub:
             case TypeKind::Subfinal:
             case TypeKind::Array:
             case TypeKind::Struct:
             case TypeKind::Func:
-                m_jit.transfer64(Address(bufferGPR, JSWebAssemblyException::Payload::Storage::offsetOfData() + offset * sizeof(uint64_t)), slot.asAddress());
+                m_jit.transfer64(Address(wasmScratchGPR, JSWebAssemblyException::Payload::Storage::offsetOfData() + offset * sizeof(uint64_t)), slot.asAddress());
                 break;
             case TypeKind::F32:
-                m_jit.transfer32(Address(bufferGPR, JSWebAssemblyException::Payload::Storage::offsetOfData() + offset * sizeof(uint64_t)), slot.asAddress());
+                m_jit.transfer32(Address(wasmScratchGPR, JSWebAssemblyException::Payload::Storage::offsetOfData() + offset * sizeof(uint64_t)), slot.asAddress());
                 break;
             case TypeKind::F64:
-                m_jit.transfer64(Address(bufferGPR, JSWebAssemblyException::Payload::Storage::offsetOfData() + offset * sizeof(uint64_t)), slot.asAddress());
+                m_jit.transfer64(Address(wasmScratchGPR, JSWebAssemblyException::Payload::Storage::offsetOfData() + offset * sizeof(uint64_t)), slot.asAddress());
                 break;
             case TypeKind::V128:
-                m_jit.transferVector(Address(bufferGPR, JSWebAssemblyException::Payload::Storage::offsetOfData() + offset * sizeof(uint64_t)), slot.asAddress());
+                m_jit.transferVector(Address(wasmScratchGPR, JSWebAssemblyException::Payload::Storage::offsetOfData() + offset * sizeof(uint64_t)), slot.asAddress());
                 break;
             case TypeKind::Void:
                 RELEASE_ASSERT_NOT_REACHED();
@@ -3038,49 +3052,217 @@ void BBQJIT::emitCatchImpl(ControlData& dataCatch, const TypeDefinition& excepti
     }
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addRethrow(unsigned, ControlType& data)
+void BBQJIT::emitCatchTableImpl(ControlData& entryData, ControlType::TryTableTarget& target)
+{
+    HandlerType handlerType;
+    switch (target.type) {
+    case CatchKind::Catch:
+        handlerType = HandlerType::TryTableCatch;
+        break;
+    case CatchKind::CatchRef:
+        handlerType = HandlerType::TryTableCatchRef;
+        break;
+    case CatchKind::CatchAll:
+        handlerType = HandlerType::TryTableCatchAll;
+        break;
+    case CatchKind::CatchAllRef:
+        handlerType = HandlerType::TryTableCatchAllRef;
+        break;
+    }
+
+    JIT_COMMENT(m_jit, "catch handler");
+    m_catchEntrypoints.append(m_jit.label());
+    m_exceptionHandlers.append({ handlerType, entryData.tryStart(), m_callSiteIndex, 0, m_tryCatchDepth, target.tag });
+    emitCatchPrologue();
+
+    auto& targetControl = m_parser->resolveControlRef(target.target).controlData;
+    if (target.type == CatchKind::CatchRef || target.type == CatchKind::CatchAllRef) {
+        if (targetControl.targetLocations().last().isGPR())
+            m_jit.move(GPRInfo::returnValueGPR, targetControl.targetLocations().last().asGPR());
+        else
+            m_jit.storePtr(GPRInfo::returnValueGPR, targetControl.targetLocations().last().asAddress());
+    }
+
+    if (target.type == CatchKind::Catch || target.type == CatchKind::CatchRef) {
+        auto signature = target.exceptionSignature->template as<FunctionSignature>();
+        if (signature->argumentCount()) {
+            m_jit.loadPtr(Address(GPRInfo::returnValueGPR, JSWebAssemblyException::offsetOfPayload() + JSWebAssemblyException::Payload::offsetOfStorage()), wasmScratchGPR);
+            unsigned offset = 0;
+            for (unsigned i = 0; i < signature->argumentCount(); ++i) {
+                Type type = signature->argumentType(i);
+                Location slot = targetControl.targetLocations()[i];
+                switch (type.kind) {
+                case TypeKind::I32:
+                    if (slot.isGPR())
+                        m_jit.load32(Address(wasmScratchGPR, JSWebAssemblyException::Payload::Storage::offsetOfData() + offset * sizeof(uint64_t)), slot.asGPR());
+                    else
+                        m_jit.transfer32(Address(wasmScratchGPR, JSWebAssemblyException::Payload::Storage::offsetOfData() + offset * sizeof(uint64_t)), slot.asAddress());
+                    break;
+                case TypeKind::I31ref:
+                case TypeKind::I64:
+                case TypeKind::Ref:
+                case TypeKind::RefNull:
+                case TypeKind::Arrayref:
+                case TypeKind::Structref:
+                case TypeKind::Funcref:
+                case TypeKind::Exnref:
+                case TypeKind::Externref:
+                case TypeKind::Eqref:
+                case TypeKind::Anyref:
+                case TypeKind::Noexnref:
+                case TypeKind::Noneref:
+                case TypeKind::Nofuncref:
+                case TypeKind::Noexternref:
+                case TypeKind::Rec:
+                case TypeKind::Sub:
+                case TypeKind::Subfinal:
+                case TypeKind::Array:
+                case TypeKind::Struct:
+                case TypeKind::Func:
+                    if (slot.isGPR())
+                        m_jit.load64(Address(wasmScratchGPR, JSWebAssemblyException::Payload::Storage::offsetOfData() + offset * sizeof(uint64_t)), slot.asGPR());
+                    else
+                        m_jit.transfer64(Address(wasmScratchGPR, JSWebAssemblyException::Payload::Storage::offsetOfData() + offset * sizeof(uint64_t)), slot.asAddress());
+                    break;
+                case TypeKind::F32:
+                    if (slot.isFPR())
+                        m_jit.loadFloat(Address(wasmScratchGPR, JSWebAssemblyException::Payload::Storage::offsetOfData() + offset * sizeof(uint64_t)), slot.asFPR());
+                    else
+                        m_jit.transfer32(Address(wasmScratchGPR, JSWebAssemblyException::Payload::Storage::offsetOfData() + offset * sizeof(uint64_t)), slot.asAddress());
+                    break;
+                case TypeKind::F64:
+                    if (slot.isFPR())
+                        m_jit.loadDouble(Address(wasmScratchGPR, JSWebAssemblyException::Payload::Storage::offsetOfData() + offset * sizeof(uint64_t)), slot.asFPR());
+                    else
+                        m_jit.transfer64(Address(wasmScratchGPR, JSWebAssemblyException::Payload::Storage::offsetOfData() + offset * sizeof(uint64_t)), slot.asAddress());
+                    break;
+                case TypeKind::V128:
+                    if (slot.isFPR())
+                        m_jit.loadVector(Address(wasmScratchGPR, JSWebAssemblyException::Payload::Storage::offsetOfData() + offset * sizeof(uint64_t)), slot.asFPR());
+                    else
+                        m_jit.transferVector(Address(wasmScratchGPR, JSWebAssemblyException::Payload::Storage::offsetOfData() + offset * sizeof(uint64_t)), slot.asAddress());
+                    break;
+                case TypeKind::Void:
+                    RELEASE_ASSERT_NOT_REACHED();
+                    break;
+                }
+                offset += type.kind == TypeKind::V128 ? 2 : 1;
+            }
+        }
+    }
+
+    // jump to target
+    targetControl.addBranch(m_jit.jump());
+}
+
+[[nodiscard]] PartialResult BBQJIT::addThrowRef(Value exception, Stack&)
+{
+    LOG_INSTRUCTION("ThrowRef", exception);
+
+    emitMove(exception, Location::fromGPR(GPRInfo::argumentGPR1));
+    consume(exception);
+
+    ++m_callSiteIndex;
+    if (m_profiledCallee.hasExceptionHandlers()) {
+        m_jit.store32(CCallHelpers::TrustedImm32(m_callSiteIndex), CCallHelpers::tagFor(CallFrameSlot::argumentCountIncludingThis));
+        flushRegisters();
+    }
+
+    // Check for a null exception
+    m_jit.move(CCallHelpers::TrustedImmPtr(JSValue::encode(jsNull())), wasmScratchGPR);
+    auto noexnref = m_jit.branchPtr(CCallHelpers::Equal, GPRInfo::argumentGPR1, wasmScratchGPR);
+
+    m_jit.move(GPRInfo::wasmContextInstancePointer, GPRInfo::argumentGPR0);
+    emitThrowRefImpl(m_jit);
+
+    noexnref.linkTo(m_jit.label(), &m_jit);
+
+    emitThrowException(ExceptionType::NullExnrefReference);
+
+    return { };
+}
+
+[[nodiscard]] PartialResult BBQJIT::addRethrow(unsigned, ControlType& data)
 {
     LOG_INSTRUCTION("Rethrow", exception(data));
 
     ++m_callSiteIndex;
-    bool mayHaveExceptionHandlers = !m_hasExceptionHandlers || m_hasExceptionHandlers.value();
-    if (mayHaveExceptionHandlers) {
+    if (m_profiledCallee.hasExceptionHandlers()) {
         m_jit.store32(CCallHelpers::TrustedImm32(m_callSiteIndex), CCallHelpers::tagFor(CallFrameSlot::argumentCountIncludingThis));
         flushRegisters();
     }
     emitMove(this->exception(data), Location::fromGPR(GPRInfo::argumentGPR1));
     m_jit.move(GPRInfo::wasmContextInstancePointer, GPRInfo::argumentGPR0);
-    emitRethrowImpl(m_jit);
+    emitThrowRefImpl(m_jit);
     return { };
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addBranchNull(ControlData& data, ExpressionType reference, Stack& returnValues, bool shouldNegate, ExpressionType& result)
+[[nodiscard]] PartialResult BBQJIT::addBranchNull(ControlData& data, ExpressionType reference, Stack& returnValues, bool shouldNegate, ExpressionType& result)
 {
-    Value condition;
-    if (reference.isConst())
-        condition = Value::fromI32(reference.asRef() == JSValue::encode(jsNull()));
-    else {
-        // Don't consume the reference since we either need to branch with it or keep it on stack.
-        Location referenceLocation = loadIfNecessary(reference);
-        ASSERT(referenceLocation.isGPR());
-        // The branch will try to move to the scratch anyway so this is fine.
-        condition = Value::pinned(TypeKind::I32, Location::fromGPR(wasmScratchGPR));
-        Location conditionLocation = locationOf(condition);
-        ASSERT(JSValue::encode(jsNull()) >= 0 && JSValue::encode(jsNull()) <= INT32_MAX);
-        m_jit.compare64(shouldNegate ? RelationalCondition::NotEqual : RelationalCondition::Equal, referenceLocation.asGPR(), TrustedImm32(static_cast<int32_t>(JSValue::encode(jsNull()))), conditionLocation.asGPR());
+    if (reference.isConst() && (reference.asRef() == JSValue::encode(jsNull())) == shouldNegate) {
+        // If branch is known to be not-taken, exit early.
+    if (!shouldNegate)
+        result = reference;
+        return { };
     }
 
-    WASM_FAIL_IF_HELPER_FAILS(addBranch(data, condition, returnValues));
+    // The way we use referenceLocation is a little tricky, here's the breakdown:
+    //
+    //  - For a br_on_null, we discard the reference when the branch is taken. In
+    //    this case, we consume the reference as if it was popped (since it was),
+    //    but use its referenceLocation after the branch. This is safe, because
+    //    in the case we don't take the branch, the only operations between
+    //    materializing the ref and writing the result are (1) flushing at the
+    //    block boundary, which can't overwrite non-scratch registers, and (2)
+    //    emitting the branch, which uses the ref but doesn't clobber it. So the
+    //    ref will be live in the same register if we didn't take the branch.
+    //
+    //  - For a br_on_non_null, we discard the reference when we don't take the
+    //    branch. Because the ref is on the expression stack in this case when we
+    //    emit the branch, we don't want to eagerly consume() it - it's not used
+    //    until it's passed as a parameter to the branch target. So, we don't
+    //    consume the value, and rely on block parameter passing logic to ensure
+    //    it's left in the right place.
+    //
+    // Between these cases, we ensure that the reference value is live in
+    // referenceLocation by the time we reach its use.
+
+    Location referenceLocation;
+    if (!reference.isConst())
+        referenceLocation = loadIfNecessary(reference);
+    if (!shouldNegate)
+        consume(reference);
 
     LOG_INSTRUCTION(shouldNegate ? "BrOnNonNull" : "BrOnNull", reference);
 
-    if (!shouldNegate)
-        result = reference;
+    if (reference.isConst()) {
+        // If we didn't exit early, the branch must be always-taken.
+        currentControlData().flushAndSingleExit(*this, data, returnValues, false, false);
+        data.addBranch(m_jit.jump());
+    } else {
+        ASSERT(referenceLocation.isGPR());
+        ASSERT(JSValue::encode(jsNull()) >= 0 && JSValue::encode(jsNull()) <= INT32_MAX);
+        currentControlData().flushAtBlockBoundary(*this, 0, returnValues, false);
+        Jump ifNotTaken = m_jit.branch64(shouldNegate ? CCallHelpers::Equal : CCallHelpers::NotEqual, referenceLocation.asGPR(), TrustedImm32(static_cast<int32_t>(JSValue::encode(jsNull()))));
+        currentControlData().addExit(*this, data.targetLocations(), returnValues);
+        data.addBranch(m_jit.jump());
+        ifNotTaken.link(&m_jit);
+        currentControlData().finalizeBlock(*this, data.targetLocations().size(), returnValues, true);
+    }
+
+    if (!shouldNegate) {
+        result = topValue(reference.type());
+        Location resultLocation = allocate(result);
+        if (reference.isConst())
+            emitMoveConst(reference, resultLocation);
+        else
+            emitMove(reference.type(), referenceLocation, resultLocation);
+    }
 
     return { };
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addBranchCast(ControlData& data, ExpressionType reference, Stack& returnValues, bool allowNull, int32_t heapType, bool shouldNegate)
+[[nodiscard]] PartialResult BBQJIT::addBranchCast(ControlData& data, ExpressionType reference, Stack& returnValues, bool allowNull, int32_t heapType, bool shouldNegate)
 {
     Value condition;
     if (reference.isConst()) {
@@ -3147,10 +3329,11 @@ void BBQJIT::restoreWebAssemblyGlobalStateAfterWasmCall()
 
 void BBQJIT::notifyFunctionUsesSIMD()
 {
+    ASSERT(m_info.usesSIMD(m_functionIndex));
     m_usesSIMD = true;
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addSIMDLoad(ExpressionType pointer, uint32_t uoffset, ExpressionType& result)
+[[nodiscard]] PartialResult BBQJIT::addSIMDLoad(ExpressionType pointer, uint32_t uoffset, ExpressionType& result)
 {
     result = emitCheckAndPrepareAndMaterializePointerApply(pointer, uoffset, bytesForWidth(Width::Width128), [&](auto location) -> Value {
         consume(pointer);
@@ -3163,7 +3346,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addSIMDLoad(ExpressionType pointer, uin
     return { };
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addSIMDStore(ExpressionType value, ExpressionType pointer, uint32_t uoffset)
+[[nodiscard]] PartialResult BBQJIT::addSIMDStore(ExpressionType value, ExpressionType pointer, uint32_t uoffset)
 {
     emitCheckAndPrepareAndMaterializePointerApply(pointer, uoffset, bytesForWidth(Width::Width128), [&](auto location) -> void {
         Location valueLocation = loadIfNecessary(value);
@@ -3175,7 +3358,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addSIMDStore(ExpressionType value, Expr
     return { };
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addSIMDSplat(SIMDLane lane, ExpressionType value, ExpressionType& result)
+[[nodiscard]] PartialResult BBQJIT::addSIMDSplat(SIMDLane lane, ExpressionType value, ExpressionType& result)
 {
     Location valueLocation;
     if (value.isConst()) {
@@ -3250,7 +3433,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addSIMDSplat(SIMDLane lane, ExpressionT
     return { };
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addSIMDShuffle(v128_t imm, ExpressionType a, ExpressionType b, ExpressionType& result)
+[[nodiscard]] PartialResult BBQJIT::addSIMDShuffle(v128_t imm, ExpressionType a, ExpressionType b, ExpressionType& result)
 {
 #if CPU(X86_64)
     ScratchScope<0, 1> scratches(*this);
@@ -3308,7 +3491,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addSIMDShuffle(v128_t imm, ExpressionTy
     return { };
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addSIMDShift(SIMDLaneOperation op, SIMDInfo info, ExpressionType src, ExpressionType shift, ExpressionType& result)
+[[nodiscard]] PartialResult BBQJIT::addSIMDShift(SIMDLaneOperation op, SIMDInfo info, ExpressionType src, ExpressionType shift, ExpressionType& result)
 {
 #if CPU(X86_64)
     // Clobber and preserve RCX on x86, since we need it to do shifts.
@@ -3388,7 +3571,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addSIMDShift(SIMDLaneOperation op, SIMD
     return { };
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addSIMDExtmul(SIMDLaneOperation op, SIMDInfo info, ExpressionType left, ExpressionType right, ExpressionType& result)
+[[nodiscard]] PartialResult BBQJIT::addSIMDExtmul(SIMDLaneOperation op, SIMDInfo info, ExpressionType left, ExpressionType right, ExpressionType& result)
 {
     ASSERT(info.signMode != SIMDSignMode::None);
 
@@ -3402,22 +3585,14 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addSIMDExtmul(SIMDLaneOperation op, SIM
 
     LOG_INSTRUCTION("Vector", op, left, leftLocation, right, rightLocation, RESULT(result));
 
-    ScratchScope<0, 1> scratches(*this, leftLocation, rightLocation, resultLocation);
-    FPRReg scratchFPR = scratches.fpr(0);
-    if (op == SIMDLaneOperation::ExtmulLow) {
-        m_jit.vectorExtendLow(info, leftLocation.asFPR(), scratchFPR);
-        m_jit.vectorExtendLow(info, rightLocation.asFPR(), resultLocation.asFPR());
-    } else {
-        ASSERT(op == SIMDLaneOperation::ExtmulHigh);
-        m_jit.vectorExtendHigh(info, leftLocation.asFPR(), scratchFPR);
-        m_jit.vectorExtendHigh(info, rightLocation.asFPR(), resultLocation.asFPR());
-    }
-    emitVectorMul(info, Location::fromFPR(scratchFPR), resultLocation, resultLocation);
-
+    if (op == SIMDLaneOperation::ExtmulLow)
+        m_jit.vectorMulLow(info, leftLocation.asFPR(), rightLocation.asFPR(), resultLocation.asFPR(), wasmScratchFPR);
+    else
+        m_jit.vectorMulHigh(info, leftLocation.asFPR(), rightLocation.asFPR(), resultLocation.asFPR(), wasmScratchFPR);
     return { };
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addSIMDLoadSplat(SIMDLaneOperation op, ExpressionType pointer, uint32_t uoffset, ExpressionType& result)
+[[nodiscard]] PartialResult BBQJIT::addSIMDLoadSplat(SIMDLaneOperation op, ExpressionType pointer, uint32_t uoffset, ExpressionType& result)
 {
     Width width;
     switch (op) {
@@ -3470,7 +3645,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addSIMDLoadSplat(SIMDLaneOperation op, 
     return { };
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addSIMDLoadLane(SIMDLaneOperation op, ExpressionType pointer, ExpressionType vector, uint32_t uoffset, uint8_t lane, ExpressionType& result)
+[[nodiscard]] PartialResult BBQJIT::addSIMDLoadLane(SIMDLaneOperation op, ExpressionType pointer, ExpressionType vector, uint32_t uoffset, uint8_t lane, ExpressionType& result)
 {
     Width width;
     switch (op) {
@@ -3521,7 +3696,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addSIMDLoadLane(SIMDLaneOperation op, E
     return { };
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addSIMDStoreLane(SIMDLaneOperation op, ExpressionType pointer, ExpressionType vector, uint32_t uoffset, uint8_t lane)
+[[nodiscard]] PartialResult BBQJIT::addSIMDStoreLane(SIMDLaneOperation op, ExpressionType pointer, ExpressionType vector, uint32_t uoffset, uint8_t lane)
 {
     Width width;
     switch (op) {
@@ -3568,7 +3743,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addSIMDStoreLane(SIMDLaneOperation op, 
     return { };
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addSIMDLoadExtend(SIMDLaneOperation op, ExpressionType pointer, uint32_t uoffset, ExpressionType& result)
+[[nodiscard]] PartialResult BBQJIT::addSIMDLoadExtend(SIMDLaneOperation op, ExpressionType pointer, uint32_t uoffset, ExpressionType& result)
 {
     SIMDLane lane;
     SIMDSignMode signMode;
@@ -3617,7 +3792,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addSIMDLoadExtend(SIMDLaneOperation op,
     return { };
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addSIMDLoadPad(SIMDLaneOperation op, ExpressionType pointer, uint32_t uoffset, ExpressionType& result)
+[[nodiscard]] PartialResult BBQJIT::addSIMDLoadPad(SIMDLaneOperation op, ExpressionType pointer, uint32_t uoffset, ExpressionType& result)
 {
     result = emitCheckAndPrepareAndMaterializePointerApply(pointer, uoffset, op == SIMDLaneOperation::LoadPad32 ? sizeof(float) : sizeof(double), [&](auto location) -> Value {
         consume(pointer);
@@ -3639,6 +3814,11 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addSIMDLoadPad(SIMDLaneOperation op, Ex
 
 void BBQJIT::materializeVectorConstant(v128_t value, Location result)
 {
+    if (isARM64()) {
+        m_jit.move128ToVector(value, result.asFPR());
+        return;
+    }
+
     if (!value.u64x2[0] && !value.u64x2[1])
         m_jit.moveZeroToVector(result.asFPR());
     else if (value.u64x2[0] == 0xffffffffffffffffull && value.u64x2[1] == 0xffffffffffffffffull)
@@ -3648,10 +3828,10 @@ void BBQJIT::materializeVectorConstant(v128_t value, Location result)
         m_jit.compareIntegerVector(RelationalCondition::Equal, SIMDInfo { SIMDLane::i32x4, SIMDSignMode::Unsigned }, result.asFPR(), result.asFPR(), result.asFPR());
 #endif
     else
-        m_jit.materializeVector(value, result.asFPR());
+        m_jit.move128ToVector(value, result.asFPR());
 }
 
-ExpressionType WARN_UNUSED_RETURN BBQJIT::addConstant(v128_t value)
+[[nodiscard]] ExpressionType BBQJIT::addSIMDConstant(v128_t value)
 {
     // We currently don't track constant Values for V128s, since folding them seems like a lot of work that might not be worth it.
     // Maybe we can look into this eventually?
@@ -3664,7 +3844,7 @@ ExpressionType WARN_UNUSED_RETURN BBQJIT::addConstant(v128_t value)
 
 // SIMD generated
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addExtractLane(SIMDInfo info, uint8_t lane, Value value, Value& result)
+[[nodiscard]] PartialResult BBQJIT::addSIMDExtractLane(SIMDInfo info, uint8_t lane, Value value, Value& result)
 {
     Location valueLocation = loadIfNecessary(value);
     consume(value);
@@ -3680,7 +3860,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addExtractLane(SIMDInfo info, uint8_t l
     return { };
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addReplaceLane(SIMDInfo info, uint8_t lane, ExpressionType vector, ExpressionType scalar, ExpressionType& result)
+[[nodiscard]] PartialResult BBQJIT::addSIMDReplaceLane(SIMDInfo info, uint8_t lane, ExpressionType vector, ExpressionType scalar, ExpressionType& result)
 {
     Location vectorLocation = loadIfNecessary(vector);
     Location scalarLocation;
@@ -3710,7 +3890,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addReplaceLane(SIMDInfo info, uint8_t l
     return { };
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addSIMDI_V(SIMDLaneOperation op, SIMDInfo info, ExpressionType value, ExpressionType& result)
+[[nodiscard]] PartialResult BBQJIT::addSIMDI_V(SIMDLaneOperation op, SIMDInfo info, ExpressionType value, ExpressionType& result)
 {
     Location valueLocation = loadIfNecessary(value);
     consume(value);
@@ -3817,7 +3997,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addSIMDI_V(SIMDLaneOperation op, SIMDIn
     }
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addSIMDV_V(SIMDLaneOperation op, SIMDInfo info, ExpressionType value, ExpressionType& result)
+[[nodiscard]] PartialResult BBQJIT::addSIMDV_V(SIMDLaneOperation op, SIMDInfo info, ExpressionType value, ExpressionType& result)
 {
     Location valueLocation = loadIfNecessary(value);
     consume(value);
@@ -4005,7 +4185,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addSIMDV_V(SIMDLaneOperation op, SIMDIn
     }
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addSIMDBitwiseSelect(ExpressionType left, ExpressionType right, ExpressionType selector, ExpressionType& result)
+[[nodiscard]] PartialResult BBQJIT::addSIMDBitwiseSelect(ExpressionType left, ExpressionType right, ExpressionType selector, ExpressionType& result)
 {
     Location leftLocation = loadIfNecessary(left);
     Location rightLocation = loadIfNecessary(right);
@@ -4031,7 +4211,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addSIMDBitwiseSelect(ExpressionType lef
     return { };
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addSIMDRelOp(SIMDLaneOperation op, SIMDInfo info, ExpressionType left, ExpressionType right, B3::Air::Arg relOp, ExpressionType& result)
+[[nodiscard]] PartialResult BBQJIT::addSIMDRelOp(SIMDLaneOperation op, SIMDInfo info, ExpressionType left, ExpressionType right, B3::Air::Arg relOp, ExpressionType& result)
 {
     Location leftLocation = loadIfNecessary(left);
     Location rightLocation = loadIfNecessary(right);
@@ -4124,7 +4304,7 @@ void BBQJIT::emitVectorMul(SIMDInfo info, Location left, Location right, Locatio
         m_jit.vectorMul(info, left.asFPR(), right.asFPR(), result.asFPR());
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::fixupOutOfBoundsIndicesForSwizzle(Location a, Location b, Location result)
+[[nodiscard]] PartialResult BBQJIT::fixupOutOfBoundsIndicesForSwizzle(Location a, Location b, Location result)
 {
     ASSERT(isX86());
     // Let each byte mask be 112 (0x70) then after VectorAddSat
@@ -4140,7 +4320,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::fixupOutOfBoundsIndicesForSwizzle(Locat
     return { };
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addSIMDV_VV(SIMDLaneOperation op, SIMDInfo info, ExpressionType left, ExpressionType right, ExpressionType& result)
+[[nodiscard]] PartialResult BBQJIT::addSIMDV_VV(SIMDLaneOperation op, SIMDInfo info, ExpressionType left, ExpressionType right, ExpressionType& result)
 {
     Location leftLocation = loadIfNecessary(left);
     Location rightLocation = loadIfNecessary(right);
@@ -4290,7 +4470,7 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addSIMDV_VV(SIMDLaneOperation op, SIMDI
     }
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addSIMDRelaxedFMA(SIMDLaneOperation op, SIMDInfo info, ExpressionType mul1, ExpressionType mul2, ExpressionType addend, ExpressionType& result)
+[[nodiscard]] PartialResult BBQJIT::addSIMDRelaxedFMA(SIMDLaneOperation op, SIMDInfo info, ExpressionType mul1, ExpressionType mul2, ExpressionType addend, ExpressionType& result)
 {
     Location mul1Location = loadIfNecessary(mul1);
     Location mul2Location = loadIfNecessary(mul2);
@@ -4326,36 +4506,116 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addSIMDRelaxedFMA(SIMDLaneOperation op,
 void BBQJIT::emitStoreConst(Value constant, Location loc)
 {
     LOG_INSTRUCTION("Store", constant, RESULT(loc));
+    // Doesn't have to be a real Type we just need the TypeKind for the StorageType.
+    emitStoreConst(StorageType(Type { constant.type(), 0 }), constant, loc.asAddress());
+}
 
+void BBQJIT::emitStoreConst(StorageType type, Value constant, BaseIndex loc)
+{
     ASSERT(constant.isConst());
-    ASSERT(loc.isMemory());
 
-    switch (constant.type()) {
-    case TypeKind::I32:
-    case TypeKind::F32:
-        m_jit.store32(Imm32(constant.asI32()), loc.asAddress());
+    switch (type.elementSize()) {
+    case 1:
+        m_jit.store8(TrustedImm32(constant.asI32()), loc);
         break;
-    case TypeKind::Ref:
-    case TypeKind::Funcref:
-    case TypeKind::Arrayref:
-    case TypeKind::Structref:
-    case TypeKind::RefNull:
-    case TypeKind::Externref:
-    case TypeKind::Eqref:
-    case TypeKind::Anyref:
-    case TypeKind::Nullref:
-    case TypeKind::Nullfuncref:
-    case TypeKind::Nullexternref:
-        m_jit.store64(TrustedImm64(constant.asRef()), loc.asAddress());
+    case 2:
+        m_jit.store16(TrustedImm32(constant.asI32()), loc);
         break;
-    case TypeKind::I64:
-    case TypeKind::F64:
-        m_jit.store64(Imm64(constant.asI64()), loc.asAddress());
+    case 4:
+        m_jit.store32(TrustedImm32(constant.asI32()), loc);
+        break;
+    case 8:
+        m_jit.store64(TrustedImm64(constant.asI64()), loc);
         break;
     default:
         RELEASE_ASSERT_NOT_REACHED_WITH_MESSAGE("Unimplemented constant typekind.");
         break;
     }
+}
+
+void BBQJIT::emitStoreConst(StorageType type, Value constant, Address loc)
+{
+    ASSERT(constant.isConst());
+
+    switch (type.elementSize()) {
+    case 1:
+        m_jit.store8(TrustedImm32(constant.asI32()), loc);
+        break;
+    case 2:
+        m_jit.store16(TrustedImm32(constant.asI32()), loc);
+        break;
+    case 4:
+        m_jit.store32(TrustedImm32(constant.asI32()), loc);
+        break;
+    case 8:
+        m_jit.store64(TrustedImm64(constant.asI64()), loc);
+        break;
+    default:
+        RELEASE_ASSERT_NOT_REACHED_WITH_MESSAGE("Unimplemented constant typekind.");
+        break;
+    }
+}
+
+
+void BBQJIT::emitStore(StorageType type, Location src, BaseIndex dst)
+{
+    ASSERT_WITH_MESSAGE(src.isRegister(), "Memory source locations not supported. Use emitMove instead");
+
+    switch (type.elementSize()) {
+    case 1:
+        m_jit.store8(src.asGPR(), dst);
+        break;
+    case 2:
+        m_jit.store16(src.asGPR(), dst);
+        break;
+    case 4:
+        m_jit.store32FromReg(src.asReg(), dst);
+        break;
+    case 8:
+        m_jit.store64FromReg(src.asReg(), dst);
+        break;
+    case 16:
+        m_jit.storeVector(src.asFPR(), dst);
+        break;
+    default:
+        RELEASE_ASSERT_NOT_REACHED_WITH_MESSAGE("Unimplemented constant width.");
+        break;
+    }
+}
+
+void BBQJIT::emitStore(StorageType type, Location src, Address dst)
+{
+    ASSERT_WITH_MESSAGE(src.isRegister(), "Memory source locations not supported. Use emitMove instead");
+
+    switch (type.elementSize()) {
+    case 1:
+        m_jit.store8(src.asGPR(), dst);
+        break;
+    case 2:
+        m_jit.store16(src.asGPR(), dst);
+        break;
+    case 4:
+        m_jit.store32FromReg(src.asReg(), dst);
+        break;
+    case 8:
+        m_jit.store64FromReg(src.asReg(), dst);
+        break;
+    case 16:
+        m_jit.storeVector(src.asFPR(), dst);
+        break;
+    default:
+        RELEASE_ASSERT_NOT_REACHED_WITH_MESSAGE("Unimplemented constant width.");
+        break;
+    }
+}
+
+void BBQJIT::emitStore(TypeKind type, Location src, Location dst)
+{
+    ASSERT(dst.isMemory());
+    ASSERT(src.isRegister());
+
+    // Doesn't have to be a real Type we just need the TypeKind for the StorageType.
+    emitStore(StorageType(Type { type, 0 }), src, dst.asAddress());
 }
 
 void BBQJIT::emitMoveConst(Value constant, Location loc)
@@ -4383,19 +4643,21 @@ void BBQJIT::emitMoveConst(Value constant, Location loc)
     case TypeKind::Arrayref:
     case TypeKind::Structref:
     case TypeKind::RefNull:
+    case TypeKind::Exnref:
     case TypeKind::Externref:
     case TypeKind::Eqref:
     case TypeKind::Anyref:
-    case TypeKind::Nullref:
-    case TypeKind::Nullfuncref:
-    case TypeKind::Nullexternref:
+    case TypeKind::Noexnref:
+    case TypeKind::Noneref:
+    case TypeKind::Nofuncref:
+    case TypeKind::Noexternref:
         m_jit.move(TrustedImm64(constant.asRef()), loc.asGPR());
         break;
     case TypeKind::F32:
-        m_jit.moveFloat(Imm32(constant.asI32()), loc.asFPR());
+        m_jit.move32ToFloat(Imm32(constant.asI32()), loc.asFPR());
         break;
     case TypeKind::F64:
-        m_jit.moveDouble(Imm64(constant.asI64()), loc.asFPR());
+        m_jit.move64ToDouble(Imm64(constant.asI64()), loc.asFPR());
         break;
     default:
         RELEASE_ASSERT_NOT_REACHED_WITH_MESSAGE("Unimplemented constant typekind.");
@@ -4403,43 +4665,55 @@ void BBQJIT::emitMoveConst(Value constant, Location loc)
     }
 }
 
-void BBQJIT::emitStore(TypeKind type, Location src, Location dst)
+void BBQJIT::emitMoveMemory(StorageType type, Location src, Address dst)
 {
-    ASSERT(dst.isMemory());
-    ASSERT(src.isRegister());
+    ASSERT_WITH_MESSAGE(src.isMemory(), "Register source locations not supported. Use emitMove instead");
 
-    switch (type) {
-    case TypeKind::I32:
-        m_jit.store32(src.asGPR(), dst.asAddress());
+    switch (type.elementSize()) {
+    case 1:
+        m_jit.transfer8(src.asAddress(), dst);
         break;
-    case TypeKind::I64:
-        m_jit.store64(src.asGPR(), dst.asAddress());
+    case 2:
+        m_jit.transfer16(src.asAddress(), dst);
         break;
-    case TypeKind::F32:
-        m_jit.storeFloat(src.asFPR(), dst.asAddress());
+    case 4:
+        m_jit.transfer32(src.asAddress(), dst);
         break;
-    case TypeKind::F64:
-        m_jit.storeDouble(src.asFPR(), dst.asAddress());
+    case 8:
+        m_jit.transfer64(src.asAddress(), dst);
         break;
-    case TypeKind::I31ref:
-    case TypeKind::Externref:
-    case TypeKind::Ref:
-    case TypeKind::RefNull:
-    case TypeKind::Funcref:
-    case TypeKind::Arrayref:
-    case TypeKind::Structref:
-    case TypeKind::Eqref:
-    case TypeKind::Anyref:
-    case TypeKind::Nullref:
-    case TypeKind::Nullfuncref:
-    case TypeKind::Nullexternref:
-        m_jit.store64(src.asGPR(), dst.asAddress());
-        break;
-    case TypeKind::V128:
-        m_jit.storeVector(src.asFPR(), dst.asAddress());
+    case 16:
+        m_jit.transferVector(src.asAddress(), dst);
         break;
     default:
-        RELEASE_ASSERT_NOT_REACHED_WITH_MESSAGE("Unimplemented type kind store.");
+        RELEASE_ASSERT_NOT_REACHED_WITH_MESSAGE("Invalid StorageType width.");
+        break;
+    }
+}
+
+void BBQJIT::emitMoveMemory(StorageType type, Location src, BaseIndex dst)
+{
+    ASSERT_WITH_MESSAGE(src.isMemory(), "Register source locations not supported. Use emitMove instead");
+
+    switch (type.elementSize()) {
+    case 1:
+        m_jit.transfer8(src.asAddress(), dst);
+        break;
+    case 2:
+        m_jit.transfer16(src.asAddress(), dst);
+        break;
+    case 4:
+        m_jit.transfer32(src.asAddress(), dst);
+        break;
+    case 8:
+        m_jit.transfer64(src.asAddress(), dst);
+        break;
+    case 16:
+        m_jit.transferVector(src.asAddress(), dst);
+        break;
+    default:
+        RELEASE_ASSERT_NOT_REACHED_WITH_MESSAGE("Invalid StorageType width.");
+        break;
     }
 }
 
@@ -4461,6 +4735,7 @@ void BBQJIT::emitMoveMemory(TypeKind type, Location src, Location dst)
         m_jit.transfer64(src.asAddress(), dst.asAddress());
         break;
     case TypeKind::I31ref:
+    case TypeKind::Exnref:
     case TypeKind::Externref:
     case TypeKind::Ref:
     case TypeKind::RefNull:
@@ -4469,9 +4744,10 @@ void BBQJIT::emitMoveMemory(TypeKind type, Location src, Location dst)
     case TypeKind::Arrayref:
     case TypeKind::Eqref:
     case TypeKind::Anyref:
-    case TypeKind::Nullref:
-    case TypeKind::Nullfuncref:
-    case TypeKind::Nullexternref:
+    case TypeKind::Noexnref:
+    case TypeKind::Noneref:
+    case TypeKind::Nofuncref:
+    case TypeKind::Noexternref:
         m_jit.transfer64(src.asAddress(), dst.asAddress());
         break;
     case TypeKind::V128:
@@ -4494,6 +4770,7 @@ void BBQJIT::emitMoveRegister(TypeKind type, Location src, Location dst)
     case TypeKind::I32:
     case TypeKind::I31ref:
     case TypeKind::I64:
+    case TypeKind::Exnref:
     case TypeKind::Externref:
     case TypeKind::Ref:
     case TypeKind::RefNull:
@@ -4502,9 +4779,10 @@ void BBQJIT::emitMoveRegister(TypeKind type, Location src, Location dst)
     case TypeKind::Structref:
     case TypeKind::Eqref:
     case TypeKind::Anyref:
-    case TypeKind::Nullref:
-    case TypeKind::Nullfuncref:
-    case TypeKind::Nullexternref:
+    case TypeKind::Noexnref:
+    case TypeKind::Noneref:
+    case TypeKind::Nofuncref:
+    case TypeKind::Noexternref:
         m_jit.move(src.asGPR(), dst.asGPR());
         break;
     case TypeKind::F32:
@@ -4540,15 +4818,17 @@ void BBQJIT::emitLoad(TypeKind type, Location src, Location dst)
     case TypeKind::I31ref:
     case TypeKind::Ref:
     case TypeKind::RefNull:
+    case TypeKind::Exnref:
     case TypeKind::Externref:
     case TypeKind::Funcref:
     case TypeKind::Arrayref:
     case TypeKind::Structref:
     case TypeKind::Eqref:
     case TypeKind::Anyref:
-    case TypeKind::Nullref:
-    case TypeKind::Nullfuncref:
-    case TypeKind::Nullexternref:
+    case TypeKind::Noexnref:
+    case TypeKind::Noneref:
+    case TypeKind::Nofuncref:
+    case TypeKind::Noexternref:
         m_jit.load64(src.asAddress(), dst.asGPR());
         break;
     case TypeKind::V128:
@@ -4559,13 +4839,76 @@ void BBQJIT::emitLoad(TypeKind type, Location src, Location dst)
     }
 }
 
-Location BBQJIT::allocateRegisterPair()
+Location BBQJIT::materializeToGPR(Value value, std::optional<ScratchScope<1, 0>>& sizeScratch)
 {
+    if (value.isPinned())
+        return value.asPinned();
+    if (value.isConst()) {
+        sizeScratch.emplace(*this);
+        Location result = Location::fromGPR(sizeScratch->gpr(0));
+
+        switch (value.type()) {
+        case TypeKind::I32:
+            m_jit.move(TrustedImm32(value.asI32()), result.asGPR());
+            return result;
+        case TypeKind::I31ref:
+        case TypeKind::Ref:
+        case TypeKind::RefNull:
+        case TypeKind::Structref:
+        case TypeKind::Arrayref:
+        case TypeKind::Funcref:
+        case TypeKind::Exnref:
+        case TypeKind::Externref:
+        case TypeKind::Eqref:
+        case TypeKind::Anyref:
+        case TypeKind::Noexnref:
+        case TypeKind::Noneref:
+        case TypeKind::Nofuncref:
+        case TypeKind::Noexternref:
+        case TypeKind::I64:
+            m_jit.move(TrustedImm64(value.asI64()), result.asGPR());
+            return result;
+        default:
     RELEASE_ASSERT_NOT_REACHED();
+            break;
+        }
+        return result;
+    }
+
+    return loadIfNecessary(value);
 }
 
-PartialResult WARN_UNUSED_RETURN BBQJIT::addCallRef(const TypeDefinition& originalSignature, Vector<Value>& args, ResultList& results)
+void BBQJIT::emitMove(StorageType type, Value src, BaseIndex dst)
 {
+    if (src.isConst()) {
+        emitStoreConst(type, src, dst);
+        return;
+    }
+
+    Location srcLocation = locationOf(src);
+    if (srcLocation.isMemory())
+        emitMoveMemory(type, srcLocation, dst);
+    else
+        emitStore(type, srcLocation, dst);
+}
+
+void BBQJIT::emitMove(StorageType type, Value src, Address dst)
+{
+    if (src.isConst()) {
+        emitStoreConst(type, src, dst);
+        return;
+    }
+
+    Location srcLocation = locationOf(src);
+    if (srcLocation.isMemory())
+        emitMoveMemory(type, srcLocation, dst);
+    else
+        emitStore(type, srcLocation, dst);
+}
+
+[[nodiscard]] PartialResult BBQJIT::addCallRef(unsigned callProfileIndex, const TypeDefinition& originalSignature, ArgumentList& args, ResultList& results, CallType callType)
+{
+    emitIncrementCallProfileCount(callProfileIndex);
     Value callee = args.takeLast();
     const TypeDefinition& signature = originalSignature.expand();
     ASSERT(signature.as<FunctionSignature>()->argumentCount() == args.size());
@@ -4574,14 +4917,12 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addCallRef(const TypeDefinition& origin
     Checked<int32_t> calleeStackSize = WTF::roundUpToMultipleOf<stackAlignmentBytes()>(callInfo.headerAndArgumentStackSizeInBytes);
     m_maxCalleeStackSize = std::max<int>(calleeStackSize, m_maxCalleeStackSize);
 
-    GPRReg calleePtr;
-    GPRReg calleeInstance;
-    GPRReg calleeCode;
+    GPRReg importableFunction = GPRInfo::nonPreservedNonArgumentGPR1;
     {
-        ScratchScope<1, 0> calleeCodeScratch(*this, RegisterSetBuilder::argumentGPRS());
-        calleeCode = calleeCodeScratch.gpr(0);
-        calleeCodeScratch.unbindPreserved();
-
+        clobber(importableFunction);
+        ScratchScope<0, 0> importableFunctionScope(*this, importableFunction);
+        static_assert(GPRInfo::nonPreservedNonArgumentGPR0 == wasmScratchGPR);
+    {
         ScratchScope<1, 0> otherScratch(*this);
 
         Location calleeLocation;
@@ -4592,28 +4933,23 @@ PartialResult WARN_UNUSED_RETURN BBQJIT::addCallRef(const TypeDefinition& origin
         } else
             calleeLocation = loadIfNecessary(callee);
         consume(callee);
-        emitThrowOnNullReference(ExceptionType::NullReference, calleeLocation);
+            emitThrowOnNullReferenceBeforeAccess(calleeLocation, WebAssemblyFunctionBase::offsetOfTargetInstance());
 
-        calleePtr = calleeLocation.asGPR();
-        calleeInstance = otherScratch.gpr(0);
-
-        {
-            auto calleeTmp = calleeInstance;
-            m_jit.loadPtr(Address(calleePtr, WebAssemblyFunctionBase::offsetOfBoxedWasmCalleeLoadLocation()), calleeTmp);
-            m_jit.loadPtr(Address(calleeTmp), calleeTmp);
-            m_jit.storeWasmCalleeCallee(calleeTmp);
+            GPRReg calleePtr = calleeLocation.asGPR();
+            m_jit.addPtr(TrustedImm32(WebAssemblyFunctionBase::offsetOfImportableFunction()), calleePtr, importableFunction);
         }
-
-        m_jit.loadPtr(MacroAssembler::Address(calleePtr, WebAssemblyFunctionBase::offsetOfInstance()), calleeInstance);
-        m_jit.loadPtr(MacroAssembler::Address(calleePtr, WebAssemblyFunctionBase::offsetOfEntrypointLoadLocation()), calleeCode);
-
     }
 
-    emitIndirectCall("CallRef", callee, calleeInstance, calleeCode, signature, args, results);
+    if (callType == CallType::Call)
+        emitIndirectCall("CallRef", callProfileIndex, callee, importableFunction, signature, args, results);
+    else
+        emitIndirectTailCall("ReturnCallRef", callee, importableFunction, signature, args);
     return { };
 }
 
 } } } // namespace JSC::Wasm::BBQJITImpl
 
 #endif // USE(JSVALUE64)
-#endif // ENABLE(WEBASSEMBLY_OMGJIT)
+#endif // ENABLE(WEBASSEMBLY_BBQJIT)
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

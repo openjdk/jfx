@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -192,6 +192,8 @@ public abstract class BaseShaderContext extends BaseContext {
         private float lastConst5 = Float.NaN;
         private float lastConst6 = Float.NaN;
         private boolean lastState3D = false;
+
+        public Texture[] getLastTextures() { return lastTextures; }
     }
 
     @Override
@@ -719,7 +721,7 @@ public abstract class BaseShaderContext extends BaseContext {
         }
     }
 
-    private void setTexture(int texUnit, Texture tex) {
+    protected void setTexture(int texUnit, Texture tex) {
         if (checkDisposed()) return;
 
         if (tex != null) tex.assertLocked();

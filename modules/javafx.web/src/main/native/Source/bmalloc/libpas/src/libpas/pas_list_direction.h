@@ -45,7 +45,7 @@ static inline const char* pas_list_direction_get_string(pas_list_direction direc
     case pas_list_direction_next:
         return "next";
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 
@@ -57,7 +57,7 @@ static inline pas_list_direction pas_list_direction_invert(pas_list_direction di
     case pas_list_direction_next:
         return pas_list_direction_prev;
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return pas_list_direction_prev;
 }
 

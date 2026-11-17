@@ -32,43 +32,48 @@
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
+namespace JSC {
+class JSGlobalObject;
+class JSValue;
+}
+
 namespace WebCore {
 
 enum class RunAsAsyncFunction : bool { No, Yes };
 enum class ForceUserGesture : bool { No, Yes };
 enum class RemoveTransientActivation : bool { No, Yes };
 
-using ArgumentWireBytesMap = HashMap<String, Vector<uint8_t>>;
+using ArgumentMap = HashMap<String, Function<JSC::JSValue(JSC::JSGlobalObject&)>>;
 
 struct RunJavaScriptParameters {
-    RunJavaScriptParameters(String&& source, JSC::SourceTaintedOrigin taintedness, URL&& sourceURL, RunAsAsyncFunction runAsAsyncFunction, std::optional<ArgumentWireBytesMap>&& arguments, ForceUserGesture forceUserGesture, RemoveTransientActivation removeTransientActivation)
-        : source(WTFMove(source))
+    RunJavaScriptParameters(String&& source, JSC::SourceTaintedOrigin taintedness, URL&& sourceURL, RunAsAsyncFunction runAsAsyncFunction, std::optional<ArgumentMap>&& arguments, ForceUserGesture forceUserGesture, RemoveTransientActivation removeTransientActivation)
+        : source(WTF::move(source))
         , taintedness(taintedness)
-        , sourceURL(WTFMove(sourceURL))
+        , sourceURL(WTF::move(sourceURL))
         , runAsAsyncFunction(runAsAsyncFunction)
-        , arguments(WTFMove(arguments))
+        , arguments(WTF::move(arguments))
         , forceUserGesture(forceUserGesture)
         , removeTransientActivation(removeTransientActivation)
     {
     }
 
-    RunJavaScriptParameters(const String& source, JSC::SourceTaintedOrigin taintedness, URL&& sourceURL, bool runAsAsyncFunction, std::optional<ArgumentWireBytesMap>&& arguments, bool forceUserGesture, RemoveTransientActivation removeTransientActivation)
+    RunJavaScriptParameters(const String& source, JSC::SourceTaintedOrigin taintedness, URL&& sourceURL, bool runAsAsyncFunction, std::optional<ArgumentMap>&& arguments, bool forceUserGesture, RemoveTransientActivation removeTransientActivation)
         : source(source)
         , taintedness(taintedness)
-        , sourceURL(WTFMove(sourceURL))
+        , sourceURL(WTF::move(sourceURL))
         , runAsAsyncFunction(runAsAsyncFunction ? RunAsAsyncFunction::Yes : RunAsAsyncFunction::No)
-        , arguments(WTFMove(arguments))
+        , arguments(WTF::move(arguments))
         , forceUserGesture(forceUserGesture ? ForceUserGesture::Yes : ForceUserGesture::No)
         , removeTransientActivation(removeTransientActivation)
     {
     }
 
-    RunJavaScriptParameters(String&& source, JSC::SourceTaintedOrigin taintedness, URL&& sourceURL, bool runAsAsyncFunction, std::optional<ArgumentWireBytesMap>&& arguments, bool forceUserGesture, RemoveTransientActivation removeTransientActivation)
-        : source(WTFMove(source))
+    RunJavaScriptParameters(String&& source, JSC::SourceTaintedOrigin taintedness, URL&& sourceURL, bool runAsAsyncFunction, std::optional<ArgumentMap>&& arguments, bool forceUserGesture, RemoveTransientActivation removeTransientActivation)
+        : source(WTF::move(source))
         , taintedness(taintedness)
-        , sourceURL(WTFMove(sourceURL))
+        , sourceURL(WTF::move(sourceURL))
         , runAsAsyncFunction(runAsAsyncFunction ? RunAsAsyncFunction::Yes : RunAsAsyncFunction::No)
-        , arguments(WTFMove(arguments))
+        , arguments(WTF::move(arguments))
         , forceUserGesture(forceUserGesture ? ForceUserGesture::Yes : ForceUserGesture::No)
         , removeTransientActivation(removeTransientActivation)
     {
@@ -78,7 +83,7 @@ struct RunJavaScriptParameters {
     JSC::SourceTaintedOrigin taintedness;
     URL sourceURL;
     RunAsAsyncFunction runAsAsyncFunction;
-    std::optional<ArgumentWireBytesMap> arguments;
+    std::optional<ArgumentMap> arguments;
     ForceUserGesture forceUserGesture;
     RemoveTransientActivation removeTransientActivation;
 };

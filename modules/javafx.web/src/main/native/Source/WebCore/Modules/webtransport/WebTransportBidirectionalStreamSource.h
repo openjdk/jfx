@@ -29,16 +29,20 @@
 
 namespace WebCore {
 
+class WebTransportBidirectionalStream;
+
 class WebTransportBidirectionalStreamSource : public RefCountedReadableStreamSource {
 public:
     static Ref<WebTransportBidirectionalStreamSource> create() { return adoptRef(*new WebTransportBidirectionalStreamSource()); }
-    void receiveIncomingStream();
+    bool receiveIncomingStream(JSC::JSGlobalObject&, Ref<WebTransportBidirectionalStream>&);
 private:
     void setActive() final { }
     void setInactive() final { }
     void doStart() final { }
     void doPull() final { }
-    void doCancel() final;
+    void doCancel(JSC::JSValue) final { doCancel(); }
+
+    void doCancel();
 
     bool m_isCancelled { false };
 };

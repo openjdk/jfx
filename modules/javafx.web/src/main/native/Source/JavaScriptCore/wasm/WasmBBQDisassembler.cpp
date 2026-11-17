@@ -26,7 +26,7 @@
 #include "config.h"
 #include "WasmBBQDisassembler.h"
 
-#if ENABLE(WEBASSEMBLY_OMGJIT) || ENABLE(WEBASSEMBLY_BBQJIT)
+#if ENABLE(WEBASSEMBLY_BBQJIT)
 
 #include "Disassembler.h"
 #include "LinkBuffer.h"
@@ -35,24 +35,10 @@
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 namespace Wasm {
-
-ASCIILiteral makeString(PrefixedOpcode prefixedOpcode)
-{
-    switch (prefixedOpcode.prefixOrOpcode) {
-    case OpType::Ext1:
-        return makeString(prefixedOpcode.prefixed.ext1Opcode);
-    case OpType::ExtSIMD:
-        return makeString(prefixedOpcode.prefixed.simdOpcode);
-    case OpType::ExtGC:
-        return makeString(prefixedOpcode.prefixed.gcOpcode);
-    case OpType::ExtAtomic:
-        return makeString(prefixedOpcode.prefixed.atomicOpcode);
-    default:
-        return makeString(prefixedOpcode.prefixOrOpcode);
-    }
-}
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(BBQDisassembler);
 
@@ -63,7 +49,7 @@ BBQDisassembler::~BBQDisassembler() = default;
 void BBQDisassembler::dump(PrintStream& out, LinkBuffer& linkBuffer)
 {
     m_codeStart = linkBuffer.entrypoint<DisassemblyPtrTag>().untaggedPtr();
-    m_codeEnd = bitwise_cast<uint8_t*>(m_codeStart) + linkBuffer.size();
+    m_codeEnd = std::bit_cast<uint8_t*>(m_codeStart) + linkBuffer.size();
 
     dumpHeader(out, linkBuffer);
     if (m_labels.isEmpty())
@@ -86,18 +72,17 @@ void BBQDisassembler::dumpHeader(PrintStream& out, LinkBuffer& linkBuffer)
     out.print("   Code at [", RawPointer(linkBuffer.debugAddress()), ", ", RawPointer(static_cast<char*>(linkBuffer.debugAddress()) + linkBuffer.size()), "):\n");
 }
 
-Vector<BBQDisassembler::DumpedOp> BBQDisassembler::dumpVectorForInstructions(LinkBuffer& linkBuffer, const char* prefix, Vector<std::tuple<MacroAssembler::Label, PrefixedOpcode, size_t>>& labels, MacroAssembler::Label endLabel)
+Vector<BBQDisassembler::DumpedOp> BBQDisassembler::dumpVectorForInstructions(LinkBuffer& linkBuffer, const char* prefix, Vector<std::tuple<MacroAssembler::Label, OpcodeOrigin>>& labels, MacroAssembler::Label endLabel)
 {
     StringPrintStream out;
     Vector<DumpedOp> result;
 
     for (unsigned i = 0; i < labels.size();) {
         out.reset();
-        auto opcode = std::get<1>(labels[i]);
-        auto offset = std::get<2>(labels[i]);
+        auto origin = std::get<1>(labels[i]);
         result.append(DumpedOp { { } });
         out.print(prefix);
-        out.println("[", makeString(pad(' ', 8, makeString("0x"_s, hex(offset, 0, Lowercase)))), "] "_s, makeString(opcode));
+        out.println("[", makeString(pad(' ', 8, makeString("0x"_s, hex(origin.location(), 0, Lowercase)))), "] "_s, origin.opcodeString());
         unsigned nextIndex = i + 1;
         if (nextIndex >= labels.size()) {
             dumpDisassembly(out, linkBuffer, std::get<0>(labels[i]), endLabel);
@@ -112,7 +97,7 @@ Vector<BBQDisassembler::DumpedOp> BBQDisassembler::dumpVectorForInstructions(Lin
     return result;
 }
 
-void BBQDisassembler::dumpForInstructions(PrintStream& out, LinkBuffer& linkBuffer, const char* prefix, Vector<std::tuple<MacroAssembler::Label, PrefixedOpcode, size_t>>& labels, MacroAssembler::Label endLabel)
+void BBQDisassembler::dumpForInstructions(PrintStream& out, LinkBuffer& linkBuffer, const char* prefix, Vector<std::tuple<MacroAssembler::Label, OpcodeOrigin>>& labels, MacroAssembler::Label endLabel)
 {
     Vector<DumpedOp> dumpedOps = dumpVectorForInstructions(linkBuffer, prefix, labels, endLabel);
 
@@ -130,4 +115,6 @@ void BBQDisassembler::dumpDisassembly(PrintStream& out, LinkBuffer& linkBuffer, 
 } // namespace Wasm
 } // namespace JSC
 
-#endif // ENABLE(WEBASSEMBLY_OMGJIT)
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+
+#endif // ENABLE(WEBASSEMBLY_BBQJIT)

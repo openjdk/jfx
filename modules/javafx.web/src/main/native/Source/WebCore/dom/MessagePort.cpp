@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2023 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,8 +27,11 @@
 #include "config.h"
 #include "MessagePort.h"
 
+#include "ContextDestructionObserverInlines.h"
 #include "Document.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
+#include "ExceptionOr.h"
 #include "Logging.h"
 #include "MessageEvent.h"
 #include "MessagePortChannelProvider.h"
@@ -44,7 +47,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(MessagePort);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MessagePort);
 
 static Lock allMessagePortsLock;
 static HashMap<MessagePortIdentifier, ThreadSafeWeakPtr<MessagePort>>& allMessagePorts() WTF_REQUIRES_LOCK(allMessagePortsLock)
@@ -68,20 +71,45 @@ bool MessagePort::isMessagePortAliveForTesting(const MessagePortIdentifier& iden
 void MessagePort::notifyMessageAvailable(const MessagePortIdentifier& identifier)
 {
     ASSERT(isMainThread());
-    ScriptExecutionContextIdentifier scriptExecutionContextIdentifier;
+    std::optional<ScriptExecutionContextIdentifier> scriptExecutionContextIdentifier;
     ThreadSafeWeakPtr<MessagePort> weakPort;
     {
         Locker locker { allMessagePortsLock };
-        scriptExecutionContextIdentifier = portToContextIdentifier().get(identifier);
+        scriptExecutionContextIdentifier = portToContextIdentifier().getOptional(identifier);
         weakPort = allMessagePorts().get(identifier);
     }
     if (!scriptExecutionContextIdentifier)
         return;
 
-    ScriptExecutionContext::ensureOnContextThread(scriptExecutionContextIdentifier, [weakPort = WTFMove(weakPort)](auto&) {
+    ScriptExecutionContext::ensureOnContextThread(*scriptExecutionContextIdentifier, [weakPort = WTF::move(weakPort)](auto&) {
         if (RefPtr port = weakPort.get())
             port->messageAvailable();
     });
+}
+
+void MessagePort::notifyAllConnectionsClosed()
+{
+    ASSERT(isMainThread());
+    Vector<std::pair<ScriptExecutionContextIdentifier, ThreadSafeWeakPtr<MessagePort>>> entries;
+    {
+        Locker locker { allMessagePortsLock };
+        entries.reserveInitialCapacity(allMessagePorts().size());
+        for (auto& [identifier, weakPort] : allMessagePorts()) {
+            if (auto contextIdentifier = portToContextIdentifier().getOptional(identifier))
+                entries.append({ *contextIdentifier, weakPort });
+        }
+    }
+
+    for (auto& [contextIdentifier, weakPort] : entries) {
+        ScriptExecutionContext::ensureOnContextThread(contextIdentifier, [weakPort = WTF::move(weakPort)](auto&) {
+            RefPtr port = weakPort.get();
+            if (!port || port->m_isDetached)
+                return;
+            port->m_isDetached = true;
+            port->m_entangled = false;
+            port->removeAllEventListeners();
+        });
+    }
 }
 
 Ref<MessagePort> MessagePort::create(ScriptExecutionContext& scriptExecutionContext, const MessagePortIdentifier& local, const MessagePortIdentifier& remote)
@@ -104,7 +132,7 @@ MessagePort::MessagePort(ScriptExecutionContext& scriptExecutionContext, const M
     portToContextIdentifier().set(m_identifier, scriptExecutionContext.identifier());
 
     // Make sure the WeakPtrFactory gets initialized eagerly on the thread the MessagePort gets constructed on for thread-safety reasons.
-    initializeWeakPtrFactory();
+    EventTarget::initializeWeakPtrFactory();
 
     scriptExecutionContext.createdMessagePort(*this);
 
@@ -129,13 +157,13 @@ MessagePort::~MessagePort()
     if (m_entangled)
         close();
 
-    if (auto* context = scriptExecutionContext())
+    if (RefPtr context = scriptExecutionContext())
         context->destroyedMessagePort(*this);
 }
 
 void MessagePort::entangle()
 {
-    MessagePortChannelProvider::fromContext(*protectedScriptExecutionContext()).entangleLocalPortInThisProcessToRemote(m_identifier, m_remoteIdentifier);
+    MessagePortChannelProvider::protectedFromContext(*protectedScriptExecutionContext())->entangleLocalPortInThisProcessToRemote(m_identifier, m_remoteIdentifier);
 }
 
 ExceptionOr<void> MessagePort::postMessage(JSC::JSGlobalObject& state, JSC::JSValue messageValue, StructuredSerializeOptions&& options)
@@ -143,7 +171,7 @@ ExceptionOr<void> MessagePort::postMessage(JSC::JSGlobalObject& state, JSC::JSVa
     LOG(MessagePorts, "Attempting to post message to port %s (to be received by port %s)", m_identifier.logString().utf8().data(), m_remoteIdentifier.logString().utf8().data());
 
     Vector<Ref<MessagePort>> ports;
-    auto messageData = SerializedScriptValue::create(state, messageValue, WTFMove(options.transfer), ports, SerializationForStorage::No, SerializationContext::WorkerPostMessage);
+    auto messageData = SerializedScriptValue::create(state, messageValue, WTF::move(options.transfer), ports, SerializationForStorage::No, SerializationContext::WorkerPostMessage);
     if (messageData.hasException())
         return messageData.releaseException();
 
@@ -159,17 +187,17 @@ ExceptionOr<void> MessagePort::postMessage(JSC::JSGlobalObject& state, JSC::JSVa
                 return Exception { ExceptionCode::DataCloneError };
         }
 
-        auto disentangleResult = MessagePort::disentanglePorts(WTFMove(ports));
+        auto disentangleResult = MessagePort::disentanglePorts(WTF::move(ports));
         if (disentangleResult.hasException())
             return disentangleResult.releaseException();
         transferredPorts = disentangleResult.releaseReturnValue();
     }
 
-    MessageWithMessagePorts message { messageData.releaseReturnValue(), WTFMove(transferredPorts) };
+    MessageWithMessagePorts message { messageData.releaseReturnValue(), WTF::move(transferredPorts) };
 
     LOG(MessagePorts, "Actually posting message to port %s (to be received by port %s)", m_identifier.logString().utf8().data(), m_remoteIdentifier.logString().utf8().data());
 
-    MessagePortChannelProvider::fromContext(*protectedScriptExecutionContext()).postMessageToRemote(WTFMove(message), m_remoteIdentifier);
+    MessagePortChannelProvider::protectedFromContext(*protectedScriptExecutionContext())->postMessageToRemote(WTF::move(message), m_remoteIdentifier);
     return { };
 }
 
@@ -179,7 +207,7 @@ TransferredMessagePort MessagePort::disentangle()
     m_entangled = false;
 
     Ref context = *scriptExecutionContext();
-    MessagePortChannelProvider::fromContext(context).messagePortDisentangled(m_identifier);
+    MessagePortChannelProvider::protectedFromContext(context)->messagePortDisentangled(m_identifier);
 
     // We can't receive any messages or generate any events after this, so remove ourselves from the list of active ports.
     context->destroyedMessagePort(*this);
@@ -249,12 +277,12 @@ void MessagePort::dispatchMessages()
     if (!context || context->activeDOMObjectsAreSuspended() || !isEntangled())
         return;
 
-    auto messagesTakenHandler = [this, protectedThis = makePendingActivity(*this)](Vector<MessageWithMessagePorts>&& messages, CompletionHandler<void()>&& completionCallback) mutable {
-        auto scopeExit = makeScopeExit(WTFMove(completionCallback));
+    auto messagesTakenHandler = [pendingActivity = makePendingActivity(*this)](Vector<MessageWithMessagePorts>&& messages, CompletionHandler<void()>&& completionCallback) mutable {
+        auto scopeExit = makeScopeExit(WTF::move(completionCallback));
 
-        LOG(MessagePorts, "MessagePort %s (%p) dispatching %zu messages", m_identifier.logString().utf8().data(), this, messages.size());
+        LOG(MessagePorts, "MessagePort %s (%p) dispatching %zu messages", pendingActivity->object().m_identifier.logString().utf8().data(), &pendingActivity->object(), messages.size());
 
-        RefPtrAllowingPartiallyDestroyed<ScriptExecutionContext> context = scriptExecutionContext();
+        RefPtr context = pendingActivity->object().scriptExecutionContext();
         if (!context || !context->globalObject())
             return;
 
@@ -263,28 +291,28 @@ void MessagePort::dispatchMessages()
         Ref vm = globalObject->vm();
         auto scope = DECLARE_CATCH_SCOPE(vm);
 
-        auto* workerGlobalScope = dynamicDowncast<WorkerGlobalScope>(*context);
+        RefPtr workerGlobalScope = dynamicDowncast<WorkerGlobalScope>(*context);
         for (auto& message : messages) {
             // close() in Worker onmessage handler should prevent next message from dispatching.
             if (workerGlobalScope && workerGlobalScope->isClosing())
                 return;
 
-            auto ports = MessagePort::entanglePorts(*context, WTFMove(message.transferredPorts));
-            auto event = MessageEvent::create(*globalObject, message.message.releaseNonNull(), { }, { }, { }, WTFMove(ports));
-            if (UNLIKELY(scope.exception())) {
+            auto ports = MessagePort::entanglePorts(*context, WTF::move(message.transferredPorts));
+            auto event = MessageEvent::create(*globalObject, message.message.releaseNonNull(), { }, { }, { }, WTF::move(ports));
+            if (scope.exception()) [[unlikely]] {
                 // Currently, we assume that the only way we can get here is if we have a termination.
                 RELEASE_ASSERT(vm->hasPendingTerminationException());
                 return;
             }
 
             // Per specification, each MessagePort object has a task source called the port message queue.
-            queueTaskKeepingObjectAlive(*this, TaskSource::PostedMessageQueue, [this, event = WTFMove(event)] {
-                dispatchEvent(event.event);
+            queueTaskKeepingObjectAlive(pendingActivity->object(), TaskSource::PostedMessageQueue, [event = WTF::move(event)](auto& port) {
+                port.dispatchEvent(event.event);
             });
         }
     };
 
-    MessagePortChannelProvider::fromContext(*context).takeAllMessagesForPort(m_identifier, WTFMove(messagesTakenHandler));
+    MessagePortChannelProvider::protectedFromContext(*context)->takeAllMessagesForPort(m_identifier, WTF::move(messagesTakenHandler));
 }
 
 void MessagePort::dispatchEvent(Event& event)
@@ -304,8 +332,7 @@ void MessagePort::dispatchEvent(Event& event)
 bool MessagePort::virtualHasPendingActivity() const
 {
     // If the ScriptExecutionContext has been shut down on this object close()'ed, we can GC.
-    auto* context = scriptExecutionContext();
-    if (!context || m_isDetached)
+    if (!scriptExecutionContext() || m_isDetached)
         return false;
 
     // If this MessagePort has no message event handler then there is no point in keeping it alive.
@@ -347,8 +374,8 @@ Vector<Ref<MessagePort>> MessagePort::entanglePorts(ScriptExecutionContext& cont
     if (transferredPorts.isEmpty())
         return { };
 
-    return WTF::map(WTFMove(transferredPorts), [&](auto&& port) -> Ref<MessagePort> {
-        return MessagePort::entangle(context, WTFMove(port));
+    return WTF::map(WTF::move(transferredPorts), [&](auto&& port) -> Ref<MessagePort> {
+        return MessagePort::entangle(context, WTF::move(port));
     });
 }
 
@@ -367,7 +394,7 @@ bool MessagePort::addEventListener(const AtomString& eventType, Ref<EventListene
         m_hasMessageEventListener = true;
     }
 
-    return EventTarget::addEventListener(eventType, WTFMove(listener), options);
+    return EventTarget::addEventListener(eventType, WTF::move(listener), options);
 }
 
 bool MessagePort::removeEventListener(const AtomString& eventType, EventListener& listener, const EventListenerOptions& options)
@@ -378,6 +405,11 @@ bool MessagePort::removeEventListener(const AtomString& eventType, EventListener
         m_hasMessageEventListener = false;
 
     return result;
+}
+
+ScriptExecutionContext* MessagePort::scriptExecutionContext() const
+{
+    return ActiveDOMObject::scriptExecutionContext();
 }
 
 WebCoreOpaqueRoot root(MessagePort* port)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -69,7 +69,8 @@ class ViewContainer {
         void HandleViewKeyEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
         void HandleViewDeadKeyEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
         void HandleViewTypedEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
-        BOOL HandleViewMouseEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+        BOOL HandleViewMouseEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, BOOL extendedWindow);
+        void HandleViewNonClientMouseEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
         BOOL HandleViewInputMethodEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
         LRESULT HandleViewGetAccessible(HWND hwnd, WPARAM wParam, LPARAM lParam);
 

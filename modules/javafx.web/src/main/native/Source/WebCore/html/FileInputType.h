@@ -35,6 +35,7 @@
 #include "FileChooser.h"
 #include "FileIconLoader.h"
 #include <wtf/RefPtr.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -45,6 +46,7 @@ class FileList;
 class Icon;
 
 class FileInputType final : public BaseClickableWithKeyInputType, private FileChooserClient, private FileIconLoaderClient, public CanMakeWeakPtr<FileInputType> {
+    WTF_MAKE_TZONE_ALLOCATED(FileInputType);
 public:
     static Ref<FileInputType> create(HTMLInputElement& element)
     {
@@ -55,6 +57,7 @@ public:
 
     String firstElementPathForInputValue() const; // Checked first, before internal storage or the value attribute.
     FileList& files() { return m_fileList; }
+    Ref<FileList> protectedFiles() const { return m_fileList; }
     void setFiles(RefPtr<FileList>&&, WasSetByJavaScript);
 
     static std::pair<Vector<FileChooserFileInfo>, String> filesFromFormControlState(const FormControlState&);
@@ -104,6 +107,8 @@ private:
     bool allowsDirectories() const;
 
     bool dirAutoUsesValue() const final;
+
+    RefPtr<FileChooser> protectedFileChooser() const { return m_fileChooser; }
 
     RefPtr<FileChooser> m_fileChooser;
     std::unique_ptr<FileIconLoader> m_fileIconLoader;

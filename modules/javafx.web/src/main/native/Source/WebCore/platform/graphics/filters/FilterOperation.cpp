@@ -27,8 +27,6 @@
 #include "FilterOperation.h"
 
 #include "AnimationUtilities.h"
-#include "CachedResourceLoader.h"
-#include "CachedSVGDocumentReference.h"
 #include "ColorBlending.h"
 #include "ColorConversion.h"
 #include "ColorMatrix.h"
@@ -37,8 +35,7 @@
 #include "FEGaussianBlur.h"
 #include "FilterEffect.h"
 #include "ImageBuffer.h"
-#include "LengthFunctions.h"
-#include "SVGURIReference.h"
+#include <wtf/RuntimeApplicationChecks.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
@@ -54,47 +51,6 @@ bool DefaultFilterOperation::operator==(const FilterOperation& operation) const
 FilterOperation::Type DefaultFilterOperation::representedType() const
 {
     return m_representedType;
-}
-
-ReferenceFilterOperation::ReferenceFilterOperation(const String& url, AtomString&& fragment)
-    : FilterOperation(Type::Reference)
-    , m_url(url)
-    , m_fragment(WTFMove(fragment))
-{
-}
-
-ReferenceFilterOperation::~ReferenceFilterOperation() = default;
-
-bool ReferenceFilterOperation::operator==(const FilterOperation& operation) const
-{
-    if (!isSameType(operation))
-        return false;
-
-    return m_url == downcast<ReferenceFilterOperation>(operation).m_url;
-}
-
-bool ReferenceFilterOperation::isIdentity() const
-{
-    // Answering this question requires access to the renderer and the referenced filterElement.
-    ASSERT_NOT_REACHED();
-    return false;
-}
-
-IntOutsets ReferenceFilterOperation::outsets() const
-{
-    // Answering this question requires access to the renderer and the referenced filterElement.
-    ASSERT_NOT_REACHED();
-    return { };
-}
-
-void ReferenceFilterOperation::loadExternalDocumentIfNeeded(CachedResourceLoader& cachedResourceLoader, const ResourceLoaderOptions& options)
-{
-    if (m_cachedSVGDocumentReference)
-        return;
-    if (!SVGURIReference::isExternalURIReference(m_url, *cachedResourceLoader.protectedDocument()))
-        return;
-    m_cachedSVGDocumentReference = makeUnique<CachedSVGDocumentReference>(m_url);
-    m_cachedSVGDocumentReference->load(cachedResourceLoader, options);
 }
 
 double FilterOperation::blendAmounts(double from, double to, const BlendingContext& context) const
@@ -412,25 +368,37 @@ RefPtr<FilterOperation> BlurFilterOperation::blend(const FilterOperation* from, 
     if (from && !from->isSameType(*this))
         return this;
 
-    LengthType lengthType = m_stdDeviation.type();
-
     if (blendToPassthrough)
-        return BlurFilterOperation::create(WebCore::blend(m_stdDeviation, Length(lengthType), context));
+        return BlurFilterOperation::create(std::max(0.0f, WebCore::blend(m_stdDeviation, 0.0f, context)));
 
     const BlurFilterOperation* fromOperation = downcast<BlurFilterOperation>(from);
-    Length fromLength = fromOperation ? fromOperation->m_stdDeviation : Length(lengthType);
-    return BlurFilterOperation::create(WebCore::blend(fromLength, m_stdDeviation, context, ValueRange::NonNegative));
+    auto fromStdDeviation = fromOperation ? fromOperation->m_stdDeviation : 0.0f;
+    return BlurFilterOperation::create(std::max(0.0f, WebCore::blend(fromStdDeviation, m_stdDeviation, context)));
 }
 
 bool BlurFilterOperation::isIdentity() const
 {
-    return floatValueForLength(m_stdDeviation, 0) <= 0;
+    return m_stdDeviation <= 0;
 }
 
 IntOutsets BlurFilterOperation::outsets() const
 {
-    float stdDeviation = floatValueForLength(m_stdDeviation, 0);
-    return FEGaussianBlur::calculateOutsets({ stdDeviation, stdDeviation });
+    return FEGaussianBlur::calculateOutsets({ m_stdDeviation, m_stdDeviation });
+}
+
+bool DropShadowFilterOperationBase::nonColorEqual(const DropShadowFilterOperationBase& other) const
+{
+    return m_location == other.m_location && m_stdDeviation == other.m_stdDeviation;
+}
+
+bool DropShadowFilterOperationBase::isIdentity() const
+{
+    return m_stdDeviation < 0 || (!m_stdDeviation && m_location.isZero());
+}
+
+IntOutsets DropShadowFilterOperationBase::outsets() const
+{
+    return FEDropShadow::calculateOutsets(FloatSize(x(), y()), FloatSize(m_stdDeviation, m_stdDeviation));
 }
 
 bool DropShadowFilterOperation::operator==(const FilterOperation& operation) const
@@ -438,19 +406,26 @@ bool DropShadowFilterOperation::operator==(const FilterOperation& operation) con
     if (!isSameType(operation))
         return false;
     const DropShadowFilterOperation& other = downcast<DropShadowFilterOperation>(operation);
-    return m_location == other.m_location && m_stdDeviation == other.m_stdDeviation && m_color == other.m_color;
+    return nonColorEqual(other) && m_color == other.m_color;
 }
 
 RefPtr<FilterOperation> DropShadowFilterOperation::blend(const FilterOperation* from, const BlendingContext& context, bool blendToPassthrough)
 {
-    if (from && !from->isSameType(*this))
-        return this;
+#if PLATFORM(COCOA)
+    // This should only be called in the context of remote layer tree animations. In other situations,
+    // such as within the Web process, only DropShadowFilterOperationWithStyleColor should get blended.
+    ASSERT(!isInAuxiliaryProcess());
+#endif
 
-    if (blendToPassthrough)
+    // We should only ever be blending with null or similar operations.
+    ASSERT(!from || from->isSameType(*this));
+
+    if (blendToPassthrough) {
         return DropShadowFilterOperation::create(
             WebCore::blend(m_location, IntPoint(), context),
             WebCore::blend(m_stdDeviation, 0, context),
             WebCore::blend(m_color, Color::transparentBlack, context));
+    }
 
     const DropShadowFilterOperation* fromOperation = downcast<DropShadowFilterOperation>(from);
     IntPoint fromLocation = fromOperation ? fromOperation->location() : IntPoint();
@@ -463,87 +438,83 @@ RefPtr<FilterOperation> DropShadowFilterOperation::blend(const FilterOperation* 
         WebCore::blend(fromColor, m_color, context));
 }
 
-bool DropShadowFilterOperation::isIdentity() const
+void DropShadowFilterOperation::dump(TextStream& ts) const
 {
-    return m_stdDeviation < 0 || (!m_stdDeviation && m_location.isZero());
-}
-
-IntOutsets DropShadowFilterOperation::outsets() const
-{
-    return FEDropShadow::calculateOutsets(FloatSize(x(), y()), FloatSize(m_stdDeviation, m_stdDeviation));
+    ts << "drop-shadow("_s << x() << ' ' << y() << ' ' << location() << ' ';
+    ts << color() << ')';
 }
 
 TextStream& operator<<(TextStream& ts, const FilterOperation& filter)
 {
     switch (filter.type()) {
     case FilterOperation::Type::Reference:
-        ts << "reference";
+        ts << "reference"_s;
         break;
     case FilterOperation::Type::Grayscale: {
         const auto& colorMatrixFilter = downcast<BasicColorMatrixFilterOperation>(filter);
-        ts << "grayscale(" << colorMatrixFilter.amount() << ")";
+        ts << "grayscale("_s << colorMatrixFilter.amount() << ')';
         break;
     }
     case FilterOperation::Type::Sepia: {
         const auto& colorMatrixFilter = downcast<BasicColorMatrixFilterOperation>(filter);
-        ts << "sepia(" << colorMatrixFilter.amount() << ")";
+        ts << "sepia("_s << colorMatrixFilter.amount() << ')';
         break;
     }
     case FilterOperation::Type::Saturate: {
         const auto& colorMatrixFilter = downcast<BasicColorMatrixFilterOperation>(filter);
-        ts << "saturate(" << colorMatrixFilter.amount() << ")";
+        ts << "saturate("_s << colorMatrixFilter.amount() << ')';
         break;
     }
     case FilterOperation::Type::HueRotate: {
         const auto& colorMatrixFilter = downcast<BasicColorMatrixFilterOperation>(filter);
-        ts << "hue-rotate(" << colorMatrixFilter.amount() << ")";
+        ts << "hue-rotate("_s << colorMatrixFilter.amount() << ')';
         break;
     }
     case FilterOperation::Type::Invert: {
         const auto& componentTransferFilter = downcast<BasicComponentTransferFilterOperation>(filter);
-        ts << "invert(" << componentTransferFilter.amount() << ")";
+        ts << "invert("_s << componentTransferFilter.amount() << ')';
         break;
     }
     case FilterOperation::Type::AppleInvertLightness: {
-        ts << "apple-invert-lightness()";
+        ts << "apple-invert-lightness()"_s;
         break;
     }
     case FilterOperation::Type::Opacity: {
         const auto& componentTransferFilter = downcast<BasicComponentTransferFilterOperation>(filter);
-        ts << "opacity(" << componentTransferFilter.amount() << ")";
+        ts << "opacity("_s << componentTransferFilter.amount() << ')';
         break;
     }
     case FilterOperation::Type::Brightness: {
         const auto& componentTransferFilter = downcast<BasicComponentTransferFilterOperation>(filter);
-        ts << "brightness(" << componentTransferFilter.amount() << ")";
+        ts << "brightness("_s << componentTransferFilter.amount() << ')';
         break;
     }
     case FilterOperation::Type::Contrast: {
         const auto& componentTransferFilter = downcast<BasicComponentTransferFilterOperation>(filter);
-        ts << "contrast(" << componentTransferFilter.amount() << ")";
+        ts << "contrast("_s << componentTransferFilter.amount() << ')';
         break;
     }
     case FilterOperation::Type::Blur: {
         const auto& blurFilter = downcast<BlurFilterOperation>(filter);
-        ts << "blur(" << blurFilter.stdDeviation().value() << ")"; // FIXME: should call floatValueForLength() but that's outisde of platform/.
+        ts << "blur("_s << blurFilter.stdDeviation() << ')';
         break;
     }
-    case FilterOperation::Type::DropShadow: {
-        const auto& dropShadowFilter = downcast<DropShadowFilterOperation>(filter);
-        ts << "drop-shadow(" << dropShadowFilter.x() << " " << dropShadowFilter.y() << " " << dropShadowFilter.location() << " ";
-        ts << dropShadowFilter.color() << ")";
+    case FilterOperation::Type::DropShadow:
+    case FilterOperation::Type::DropShadowWithStyleColor: {
+        const auto& dropShadowFilter = downcast<DropShadowFilterOperationBase>(filter);
+        dropShadowFilter.dump(ts);
         break;
     }
     case FilterOperation::Type::Passthrough:
-        ts << "passthrough";
+        ts << "passthrough"_s;
         break;
     case FilterOperation::Type::Default: {
         const auto& defaultFilter = downcast<DefaultFilterOperation>(filter);
-        ts << "default type=" << (int)defaultFilter.representedType();
+        ts << "default type="_s << (int)defaultFilter.representedType();
         break;
     }
     case FilterOperation::Type::None:
-        ts << "none";
+        ts << "none"_s;
         break;
     }
     return ts;

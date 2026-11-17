@@ -302,9 +302,11 @@ std::ostream& operator<<(std::ostream& os, Int128Impl v) {
 
 void printInternal(PrintStream& out, UInt128 value)
 {
-    auto vector = numberToStringUnsigned<Vector<LChar, 50>>(value);
+    auto vector = numberToStringUnsigned<Vector<Latin1Character, 50>>(value);
     vector.append('\0');
-    out.printf("%s", bitwise_cast<const char*>(vector.data()));
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+    out.printf("%s", std::bit_cast<const char*>(vector.span().data()));
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 }
 
 void printInternal(PrintStream& out, Int128 value)
@@ -318,9 +320,11 @@ void printInternal(PrintStream& out, Int128 value)
         positive = static_cast<UInt128>(0x8000'0000'0000'0000ULL) << 64;
     else
         positive = -value;
-    auto vector = numberToStringUnsigned<Vector<LChar, 50>>(positive);
+    auto vector = numberToStringUnsigned<Vector<Latin1Character, 50>>(positive);
     vector.append('\0');
-    out.printf("-%s", bitwise_cast<const char*>(vector.data()));
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+    out.printf("-%s", std::bit_cast<const char*>(vector.span().data()));
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 }
 
 }  // namespace WTF

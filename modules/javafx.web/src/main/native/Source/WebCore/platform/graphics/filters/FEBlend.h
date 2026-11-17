@@ -23,12 +23,14 @@
 
 #pragma once
 
-#include "FilterEffect.h"
-#include "GraphicsTypes.h"
+#include <WebCore/FilterEffect.h>
+#include <WebCore/GraphicsTypes.h>
 
 namespace WebCore {
 
-class FEBlend : public FilterEffect {
+class FEBlend final : public FilterEffect {
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(FEBlend);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(FEBlend);
 public:
     WEBCORE_EXPORT static Ref<FEBlend> create(BlendMode, DestinationColorSpace = DestinationColorSpace::SRGB());
 
@@ -44,6 +46,8 @@ private:
 
     unsigned numberOfEffectInputs() const override { return 2; }
 
+    OptionSet<FilterRenderingMode> supportedFilterRenderingModes(OptionSet<FilterRenderingMode>) const override;
+    std::unique_ptr<FilterEffectApplier> createAcceleratedApplier() const override;
     std::unique_ptr<FilterEffectApplier> createSoftwareApplier() const override;
 
     WTF::TextStream& externalRepresentation(WTF::TextStream&, FilterRepresentation) const override;

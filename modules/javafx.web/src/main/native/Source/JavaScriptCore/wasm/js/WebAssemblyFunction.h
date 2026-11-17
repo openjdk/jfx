@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,12 +25,14 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(WEBASSEMBLY)
 
-#include "ArityCheckMode.h"
-#include "MacroAssemblerCodeRef.h"
-#include "WasmCallee.h"
-#include "WebAssemblyFunctionBase.h"
+#include <JavaScriptCore/ArityCheckMode.h>
+#include <JavaScriptCore/MacroAssemblerCodeRef.h>
+#include <JavaScriptCore/WasmCallee.h>
+#include <JavaScriptCore/WebAssemblyFunctionBase.h>
 #include <wtf/Noncopyable.h>
 
 namespace JSC {
@@ -40,12 +42,14 @@ struct ProtoCallFrame;
 class WebAssemblyInstance;
 
 class WebAssemblyFunction final : public WebAssemblyFunctionBase {
+    friend JSC::LLIntOffsetsExtractor;
+
 public:
     using Base = WebAssemblyFunctionBase;
 
     static constexpr unsigned StructureFlags = Base::StructureFlags;
 
-    static constexpr bool needsDestruction = true;
+    static constexpr DestructionMode needsDestruction = NeedsDestruction;
     static void destroy(JSCell*);
 
     template<typename CellType, SubspaceAccess mode>
@@ -56,50 +60,51 @@ public:
 
     DECLARE_EXPORT_INFO;
 
-    JS_EXPORT_PRIVATE static WebAssemblyFunction* create(VM&, JSGlobalObject*, Structure*, unsigned, const String&, JSWebAssemblyInstance*, Wasm::JSEntrypointCallee& jsEntrypoint, Wasm::Callee* wasmCallee, WasmToWasmImportableFunction::LoadLocation, Wasm::TypeIndex, RefPtr<const Wasm::RTT>);
+    DECLARE_VISIT_CHILDREN;
+
+    JS_EXPORT_PRIVATE static WebAssemblyFunction* create(VM&, JSGlobalObject*, Structure*, unsigned, const String&, JSWebAssemblyInstance*, Wasm::JSToWasmCallee&, Wasm::IPIntCallee&, WasmToWasmImportableFunction::LoadLocation, Wasm::TypeIndex, Ref<const Wasm::RTT>&&);
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
-    CodePtr<WasmEntryPtrTag> jsEntrypoint(ArityCheckMode arity)
+    Wasm::JSToWasmCallee* jsToWasmCallee() const { return m_boxedJSToWasmCallee.ptr(); }
+    CodePtr<WasmEntryPtrTag> jsToWasm(ArityCheckMode arity)
     {
-        ASSERT_UNUSED(arity, arity == ArityCheckNotRequired || arity == MustCheckArity);
-        return m_jsEntrypoint.entrypoint();
+        ASSERT_UNUSED(arity, arity == ArityCheckMode::ArityCheckNotRequired || arity == ArityCheckMode::MustCheckArity);
+        return m_boxedJSToWasmCallee->entrypoint();
     }
 
-    CodePtr<JSEntryPtrTag> jsCallEntrypoint()
+    CodePtr<JSEntryPtrTag> jsCallICEntrypoint()
     {
 #if ENABLE(JIT)
-        if (m_jsToWasmICCallee)
-            return m_jsToWasmICCallee->entrypoint().retagged<JSEntryPtrTag>();
-        return jsCallEntrypointSlow();
+        if (m_taintedness >= SourceTaintedOrigin::IndirectlyTainted)
+            return nullptr;
+
+        // Prep the entrypoint for the slow path.
+        executable()->entrypointFor(CodeSpecializationKind::CodeForCall, ArityCheckMode::MustCheckArity);
+        if (!m_jsToWasmICJITCode)
+            m_jsToWasmICJITCode = signature().jsToWasmICEntrypoint();
+        return m_jsToWasmICJITCode;
 #else
         return nullptr;
 #endif
     }
 
-    static constexpr ptrdiff_t offsetOfJSToWasmCallee() { return OBJECT_OFFSETOF(WebAssemblyFunction, m_jsToWasmCallee); }
+    SourceTaintedOrigin taintedness() const { return m_taintedness; }
+
+    static constexpr ptrdiff_t offsetOfBoxedJSToWasmCallee() { return OBJECT_OFFSETOF(WebAssemblyFunction, m_boxedJSToWasmCallee); }
+    static constexpr ptrdiff_t offsetOfFrameSize() { return OBJECT_OFFSETOF(WebAssemblyFunction, m_frameSize); }
 
 private:
-    DECLARE_VISIT_CHILDREN;
-    WebAssemblyFunction(VM&, NativeExecutable*, JSGlobalObject*, Structure*, JSWebAssemblyInstance*, Wasm::JSEntrypointCallee& jsEntrypoint, Wasm::Callee* wasmCallee, WasmToWasmImportableFunction::LoadLocation entrypointLoadLocation, Wasm::TypeIndex, RefPtr<const Wasm::RTT>);
+    WebAssemblyFunction(VM&, NativeExecutable*, JSGlobalObject*, Structure*, JSWebAssemblyInstance*, Wasm::JSToWasmCallee&, Wasm::IPIntCallee&, WasmToWasmImportableFunction::LoadLocation entrypointLoadLocation, Wasm::TypeIndex, Ref<const Wasm::RTT>&&);
 
-#if ENABLE(JIT)
     CodePtr<JSEntryPtrTag> jsCallEntrypointSlow();
-#endif
-    bool usesTagRegisters() const;
-    RegisterAtOffsetList usedCalleeSaveRegisters() const;
 
-    RegisterSet calleeSaves() const;
-
-    // It's safe to just hold the raw callee because we have a reference
-    // to our Instance, which points to the Module that exported us, which
-    // ensures that the actual Signature/code doesn't get deallocated.
-    Wasm::JSEntrypointCallee& m_jsEntrypoint;
-    // This is the callee needed by LLInt/IPInt
-    uintptr_t m_boxedWasmCallee;
     // This let's the JS->Wasm interpreter find its metadata
-    RefPtr<Wasm::JITLessJSEntrypointCallee> m_jsToWasmCallee;
+    Ref<Wasm::JSToWasmCallee, BoxedNativeCalleePtrTraits<Wasm::JSToWasmCallee>> m_boxedJSToWasmCallee;
+    uint32_t m_frameSize;
+    SourceTaintedOrigin m_taintedness;
+
 #if ENABLE(JIT)
-    RefPtr<Wasm::JSToWasmICCallee> m_jsToWasmICCallee;
+    CodePtr<JSEntryPtrTag> m_jsToWasmICJITCode;
 #endif
 };
 

@@ -25,9 +25,10 @@
 
 #pragma once
 
-#include "FloatSize.h"
-#include "ScrollTypes.h"
+#include <WebCore/FloatSize.h>
+#include <WebCore/ScrollTypes.h>
 #include <wtf/Deque.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -57,7 +58,7 @@ protected:
 };
 
 class BasicWheelEventDeltaFilter final : public WheelEventDeltaFilter {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(BasicWheelEventDeltaFilter);
 public:
     BasicWheelEventDeltaFilter();
     void updateFromEvent(const PlatformWheelEvent&) final;

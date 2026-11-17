@@ -25,6 +25,7 @@
 
 [
     EnabledBySetting=WebTransportEnabled,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary WebTransportHash {
     DOMString algorithm;
     BufferSource value;

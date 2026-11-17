@@ -1,0 +1,78 @@
+Modules/WebGPU/Implementation/WebGPUAdapterImpl.cpp
+Modules/WebGPU/Implementation/WebGPUBindGroupImpl.cpp
+Modules/WebGPU/Implementation/WebGPUBufferImpl.cpp
+Modules/WebGPU/Implementation/WebGPUCommandBufferImpl.cpp
+Modules/WebGPU/Implementation/WebGPUCommandEncoderImpl.cpp
+Modules/WebGPU/Implementation/WebGPUComputePassEncoderImpl.cpp
+Modules/WebGPU/Implementation/WebGPUComputePipelineImpl.cpp
+Modules/WebGPU/Implementation/WebGPUCreateImpl.cpp
+Modules/WebGPU/Implementation/WebGPUDeviceImpl.cpp
+Modules/WebGPU/Implementation/WebGPUImpl.cpp
+Modules/WebGPU/Implementation/WebGPUPipelineLayoutImpl.cpp
+Modules/WebGPU/Implementation/WebGPUPresentationContextImpl.cpp
+Modules/WebGPU/Implementation/WebGPUQuerySetImpl.cpp
+Modules/WebGPU/Implementation/WebGPUQueueImpl.cpp
+Modules/WebGPU/Implementation/WebGPURenderBundleEncoderImpl.cpp
+Modules/WebGPU/Implementation/WebGPURenderPassEncoderImpl.cpp
+Modules/WebGPU/Implementation/WebGPURenderPipelineImpl.cpp
+Modules/WebGPU/Implementation/WebGPUSamplerImpl.cpp
+Modules/WebGPU/Implementation/WebGPUShaderModuleImpl.cpp
+Modules/WebGPU/Implementation/WebGPUTextureImpl.cpp
+Modules/WebGPU/Implementation/WebGPUTextureViewImpl.cpp
+Modules/WebGPU/Implementation/WebGPUXRBindingImpl.cpp
+Modules/WebGPU/Implementation/WebGPUXRSubImageImpl.cpp
+Modules/notifications/NotificationController.h
+Modules/webdatabase/DatabaseThread.h
+accessibility/AccessibilityObject.cpp
+bindings/js/GarbageCollectionController.cpp
+bindings/js/JSLocationCustom.cpp
+bindings/js/JSPaintRenderingContext2DCustom.cpp
+css/CSSStyleProperties.h
+css/CSSToLengthConversionData.h
+css/StyleSheetContents.cpp
+css/StyleSheetContents.h
+css/values/primitives/CSSPrimitiveData.h
+dom/CustomElementReactionQueue.h
+dom/Element.h
+dom/Node.h
+editing/Editor.h
+editing/TextIterator.cpp
+html/HTMLMediaElement.cpp
+html/canvas/PlaceholderRenderingContext.cpp
+html/shadow/DateTimeEditElement.h
+inspector/InspectorStyleSheet.h
+inspector/InstrumentingAgents.h
+inspector/PageInspectorController.h
+inspector/UserGestureEmulationScope.h
+inspector/agents/InspectorNetworkAgent.h
+inspector/agents/InspectorPageAgent.h
+layout/formattingContexts/inline/InlineFormattingContext.h
+layout/formattingContexts/inline/InlineItemsBuilder.cpp
+layout/formattingContexts/inline/InlineLine.h
+layout/integration/inline/LayoutIntegrationLineLayout.h
+layout/layouttree/LayoutElementBox.h
+[ iOS ] page/ios/ContentChangeObserver.h
+[ Mac ] page/mac/ImageOverlayControllerMac.mm
+[ Mac ] page/mac/ServicesOverlayController.mm
+page/scrolling/ScrollingStateNode.h
+[ Mac ] page/scrolling/ScrollingStateScrollingNode.cpp
+platform/PODRedBlackTree.h
+platform/Scrollbar.h
+platform/cocoa/TelephoneNumberDetectorCocoa.cpp
+[ iOS ] platform/cocoa/WebAVPlayerLayerView.mm
+platform/graphics/ImageBufferContextSwitcher.h
+platform/graphics/ca/PlatformCALayer.h
+platform/graphics/ca/TileController.cpp
+[ iOS ] platform/ios/DeviceMotionClientIOS.h
+[ iOS ] platform/ios/LegacyTileCache.h
+platform/mediastream/libwebrtc/LibWebRTCDav1dDecoder.cpp
+[ iOS ] platform/text/TextBoundaries.cpp
+rendering/MarkedText.h
+rendering/RenderLayerBacking.cpp
+rendering/RenderLayerCompositor.cpp
+rendering/RenderTextLineBoxes.h
+rendering/style/StyleCachedImage.cpp
+rendering/svg/SVGRenderingContext.h
+style/StyleExtractorState.h
+style/StyleScope.h
+testing/Internals.cpp

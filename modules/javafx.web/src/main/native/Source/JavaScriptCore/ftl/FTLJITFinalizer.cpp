@@ -59,10 +59,18 @@ bool JITFinalizer::finalize()
     m_plan.runMainThreadFinalizationTasks();
 
     CodeBlock* codeBlock = m_plan.codeBlock();
-
+    m_jitCode->setSize(m_codeSize);
     codeBlock->setJITCode(*m_jitCode);
 
-    if (UNLIKELY(m_plan.compilation()))
+    if (Options::dumpFTLCodeSize()) [[unlikely]] {
+        auto* baselineCodeBlock = codeBlock->baselineAlternative();
+        size_t baselineCodeSize = 0;
+        if (auto jitCode = baselineCodeBlock->jitCode())
+            baselineCodeSize = jitCode->size();
+        dataLogLn("FTL: name:(", codeBlock->inferredNameWithHash(), "),codeSize:(", m_jitCode->size(), "),nodes:(", m_jitCode->numberOfCompiledDFGNodes(), "),baselineCodeSize:(", baselineCodeSize, "),bytecodeCost:(", baselineCodeBlock->bytecodeCost(), ")");
+    }
+
+    if (m_plan.compilation()) [[unlikely]]
         vm.m_perBytecodeProfiler->addCompilation(codeBlock, *m_plan.compilation());
 
     // The codeBlock is now responsible for keeping many things alive (e.g. frozen values)

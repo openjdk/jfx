@@ -25,15 +25,15 @@
 
 #pragma once
 
-#include "LayoutGeometryRect.h"
-#include "LayoutUnits.h"
+#include <WebCore/LayoutGeometryRect.h>
+#include <WebCore/LayoutUnits.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 namespace Layout {
 
 class BoxGeometry {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(BoxGeometry);
+    WTF_MAKE_TZONE_ALLOCATED(BoxGeometry);
 public:
     BoxGeometry(const BoxGeometry&);
     BoxGeometry() = default;
@@ -48,6 +48,8 @@ public:
     struct VerticalEdges {
         LayoutUnit before;
         LayoutUnit after;
+
+        VerticalEdges& operator+=(VerticalEdges other);
     };
 
     struct HorizontalEdges {
@@ -161,6 +163,9 @@ public:
 
     void setVerticalSpaceForScrollbar(LayoutUnit scrollbarHeight) { m_verticalSpaceForScrollbar = scrollbarHeight; }
     void setHorizontalSpaceForScrollbar(LayoutUnit scrollbarWidth) { m_horizontalSpaceForScrollbar = scrollbarWidth; }
+    void setSpaceForScrollbar(LayoutSize);
+
+    void reset();
 
 private:
     LayoutUnit top() const;
@@ -458,6 +463,20 @@ inline LayoutUnit BoxGeometry::borderEnd() const
 {
     ASSERT(m_hasValidBorder);
     return m_border.horizontal.end;
+}
+
+inline void BoxGeometry::setSpaceForScrollbar(LayoutSize scrollbarSize)
+{
+    setVerticalSpaceForScrollbar(scrollbarSize.height());
+    setHorizontalSpaceForScrollbar(scrollbarSize.width());
+}
+
+inline BoxGeometry::VerticalEdges& BoxGeometry::VerticalEdges::operator+=(VerticalEdges other)
+{
+    before += other.before;
+    after +=other.after;
+
+    return *this;
 }
 
 }

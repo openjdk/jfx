@@ -35,8 +35,7 @@
 #include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
 
-namespace WebCore {
-namespace XPath {
+namespace WebCore::XPath {
 
 const NodeSet& Value::toNodeSet() const
 {
@@ -92,7 +91,7 @@ double Value::toNumber() const
             // String::toDouble() supports exponential notation, which is not allowed in XPath.
             unsigned len = str.length();
             for (unsigned i = 0; i < len; ++i) {
-                UChar c = str[i];
+            char16_t c = str[i];
                 if (!isASCIIDigit(c) && c != '.'  && c != '-')
                     return std::numeric_limits<double>::quiet_NaN();
             }
@@ -117,7 +116,7 @@ String Value::toString() const
     case Type::NodeSet:
             if (m_data->nodeSet.isEmpty())
                 return emptyString();
-            return stringValue(m_data->nodeSet.firstNode());
+        return stringValue(Ref { *m_data->nodeSet.firstNode() });
     case Type::String:
             return m_data->string;
     case Type::Number:
@@ -136,5 +135,4 @@ String Value::toString() const
     return String();
 }
 
-} // namespace XPath
-} // namespace WebCore
+} // namespace WebCore::XPath

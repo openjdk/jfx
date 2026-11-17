@@ -52,7 +52,7 @@ bool MatrixTransformOperation::operator==(const TransformOperation& other) const
     return m_a == m.m_a && m_b == m.m_b && m_c == m.m_c && m_d == m.m_d && m_e == m.m_e && m_f == m.m_f;
 }
 
-Ref<TransformOperation> MatrixTransformOperation::blend(const TransformOperation* from, const BlendingContext& context, bool blendToIdentity)
+Ref<TransformOperation> MatrixTransformOperation::blend(const TransformOperation* from, const BlendingContext& context, bool blendToIdentity) const
 {
     auto createOperation = [] (TransformationMatrix& to, TransformationMatrix& from, const BlendingContext& context) {
         to.blend(from, context.progress, context.compositeOperation);
@@ -60,7 +60,7 @@ Ref<TransformOperation> MatrixTransformOperation::blend(const TransformOperation
     };
 
     if (!sharedPrimitiveType(from))
-        return *this;
+        return const_cast<MatrixTransformOperation&>(*this);
 
     // convert the TransformOperations into matrices
     TransformationMatrix fromT;
@@ -77,13 +77,13 @@ Ref<TransformOperation> MatrixTransformOperation::blend(const TransformOperation
 
 void MatrixTransformOperation::dump(TextStream& ts) const
 {
-    ts << "("
-        << TextStream::FormatNumberRespectingIntegers(m_a) << ", "
-        << TextStream::FormatNumberRespectingIntegers(m_b) << ", "
-        << TextStream::FormatNumberRespectingIntegers(m_c) << ", "
-        << TextStream::FormatNumberRespectingIntegers(m_d) << ", "
-        << TextStream::FormatNumberRespectingIntegers(m_e) << ", "
-        << TextStream::FormatNumberRespectingIntegers(m_f) << ")";
+    ts << '('
+        << TextStream::FormatNumberRespectingIntegers(m_a) << ", "_s
+        << TextStream::FormatNumberRespectingIntegers(m_b) << ", "_s
+        << TextStream::FormatNumberRespectingIntegers(m_c) << ", "_s
+        << TextStream::FormatNumberRespectingIntegers(m_d) << ", "_s
+        << TextStream::FormatNumberRespectingIntegers(m_e) << ", "_s
+        << TextStream::FormatNumberRespectingIntegers(m_f) << ')';
 }
 
 } // namespace WebCore

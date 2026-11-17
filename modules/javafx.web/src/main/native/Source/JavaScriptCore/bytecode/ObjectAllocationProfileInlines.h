@@ -136,7 +136,7 @@ ALWAYS_INLINE void ObjectAllocationProfileBase<Derived>::initializeProfile(VM& v
     WTF::storeStoreFence();
 
     // The watchpoint should have been fired already but it's prudent to be safe here.
-    if (UNLIKELY(functionRareData && m_structure && m_structure.get() != structure)) {
+    if (functionRareData && m_structure && m_structure.get() != structure) [[unlikely]] {
         ASSERT(functionRareData->allocationProfileWatchpointSet().hasBeenInvalidated());
         functionRareData->allocationProfileWatchpointSet().fireAll(vm, "Clearing to be safe because structure has changed");
     }
@@ -152,9 +152,9 @@ ALWAYS_INLINE unsigned ObjectAllocationProfileBase<Derived>::possibleDefaultProp
         return 0;
 
     size_t count = 0;
-    PropertyNameArray propertyNameArray(vm, PropertyNameMode::StringsAndSymbols, PrivateSymbolMode::Include);
-    prototype->structure()->getPropertyNamesFromStructure(vm, propertyNameArray, DontEnumPropertiesMode::Include);
-    PropertyNameArrayData::PropertyNameVector& propertyNameVector = propertyNameArray.data()->propertyNameVector();
+    PropertyNameArrayBuilder propertyNameArrayBuilder(vm, PropertyNameMode::StringsAndSymbols, PrivateSymbolMode::Include);
+    prototype->structure()->getPropertyNamesFromStructure(vm, propertyNameArrayBuilder, DontEnumPropertiesMode::Include);
+    PropertyNameArray::PropertyNameVector& propertyNameVector = propertyNameArrayBuilder.data()->propertyNameVector();
     for (size_t i = 0; i < propertyNameVector.size(); ++i) {
         JSValue value = prototype->getDirect(vm, propertyNameVector[i]);
 

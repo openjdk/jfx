@@ -24,10 +24,12 @@
  */
 
 #include "config.h"
-#include "ObjectIdentifier.h"
+#include <wtf/ObjectIdentifier.h>
 
-#include "MainThread.h"
 #include <atomic>
+#include <wtf/MainThread.h>
+#include <wtf/PrintStream.h>
+#include <wtf/text/TextStream.h>
 
 namespace WTF {
 
@@ -38,10 +40,9 @@ uint64_t ObjectIdentifierMainThreadAccessTraits<uint64_t>::generateIdentifierInt
     return ++current;
 }
 
-TextStream& operator<<(TextStream& ts, const ObjectIdentifierGenericBase<uint64_t>& identifier)
+void printInternal(PrintStream& out, const ObjectIdentifierGenericBase<uint64_t>& identifier)
 {
-    ts << identifier.toRawValue();
-    return ts;
+    out.print(identifier.toRawValue());
 }
 
 uint64_t ObjectIdentifierThreadSafeAccessTraits<uint64_t>::generateIdentifierInternal()
@@ -61,10 +62,9 @@ UUID ObjectIdentifierThreadSafeAccessTraits<UUID>::generateIdentifierInternal()
     return UUID::createVersion4();
 }
 
-TextStream& operator<<(TextStream& ts, const ObjectIdentifierGenericBase<UUID>& identifier)
+void printInternal(PrintStream& out, const ObjectIdentifierGenericBase<UUID>& identifier)
 {
-    ts << identifier.toRawValue();
-    return ts;
+    out.print(identifier.toRawValue());
 }
 
 } // namespace WTF

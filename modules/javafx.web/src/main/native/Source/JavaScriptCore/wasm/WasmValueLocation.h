@@ -26,11 +26,13 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(WEBASSEMBLY)
 
-#include "FPRInfo.h"
-#include "GPRInfo.h"
-#include "Reg.h"
+#include <JavaScriptCore/FPRInfo.h>
+#include <JavaScriptCore/GPRInfo.h>
+#include <JavaScriptCore/Reg.h>
 #include <wtf/PrintStream.h>
 #include <wtf/TZoneMalloc.h>
 
@@ -123,7 +125,9 @@ private:
 
         U()
         {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
             memset(static_cast<void*>(this), 0, sizeof(*this));
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         }
     } u;
     Kind m_kind;
@@ -132,6 +136,13 @@ private:
 } } // namespace JSC::Wasm
 
 namespace WTF {
+
+template<>
+struct VectorTraits<JSC::Wasm::ValueLocation> : VectorTraitsBase<false, JSC::Wasm::ValueLocation> {
+    static constexpr bool canInitializeWithMemset = true;
+    static constexpr bool canMoveWithMemcpy = true;
+    static constexpr bool canCopyWithMemcpy = true;
+};
 
 void printInternal(PrintStream&, JSC::Wasm::ValueLocation::Kind);
 

@@ -160,7 +160,7 @@ public:
     template<typename T = void*>
     T taggedPtr() const
     {
-        return bitwise_cast<T>(m_value);
+        return std::bit_cast<T>(m_value);
     }
 
     template<typename T = void*>
@@ -181,7 +181,7 @@ public:
     T dataLocation() const
     {
         ASSERT_VALID_CODE_POINTER(m_value);
-        return bitwise_cast<T>(m_value ? bitwise_cast<char*>(m_value) - 1 : nullptr);
+        return std::bit_cast<T>(m_value ? std::bit_cast<char*>(m_value) - 1 : nullptr);
     }
 #else
     template<typename T = void*>
@@ -202,14 +202,17 @@ public:
 
     // Disallow any casting operations (except for booleans). Instead, the client
     // should be asking taggedPtr() explicitly.
-    template<typename T, typename = std::enable_if_t<!std::is_same<T, bool>::value>>
+    template<typename T>
+        requires (!std::same_as<T, bool>)
     operator T() = delete;
 
-    CodePtr operator+(size_t sizeInBytes) const { return CodePtr::fromUntaggedPtr(untaggedPtr<uint8_t*>() + sizeInBytes); }
-    CodePtr operator-(size_t sizeInBytes) const { return CodePtr::fromUntaggedPtr(untaggedPtr<uint8_t*>() - sizeInBytes); }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+    WTF_UNSAFE_BUFFER_USAGE CodePtr operator+(size_t sizeInBytes) const { return CodePtr::fromUntaggedPtr(untaggedPtr<uint8_t*>() + sizeInBytes); }
+    WTF_UNSAFE_BUFFER_USAGE CodePtr operator-(size_t sizeInBytes) const { return CodePtr::fromUntaggedPtr(untaggedPtr<uint8_t*>() - sizeInBytes); }
 
-    CodePtr& operator+=(size_t sizeInBytes) { return *this = *this + sizeInBytes; }
-    CodePtr& operator-=(size_t sizeInBytes) { return *this = *this - sizeInBytes; }
+    WTF_UNSAFE_BUFFER_USAGE CodePtr& operator+=(size_t sizeInBytes) { return *this = *this + sizeInBytes; }
+    WTF_UNSAFE_BUFFER_USAGE CodePtr& operator-=(size_t sizeInBytes) { return *this = *this - sizeInBytes; }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     void dumpWithName(ASCIILiteral name, PrintStream& out) const
     {
@@ -238,6 +241,8 @@ public:
     unsigned hash() const { return PtrHash<void*>::hash(m_value); }
 
     static void initialize();
+    static constexpr PtrTag getTag() { return tag; }
+    void validate() const { assertIsTaggedWith<tag>(m_value); }
 
 private:
     CodePtr(AlreadyTaggedValueTag, void* ptr)
@@ -246,8 +251,8 @@ private:
         assertIsTaggedWith<tag>(ptr);
     }
 
-    static void* emptyValue() { return bitwise_cast<void*>(static_cast<intptr_t>(1)); }
-    static void* deletedValue() { return bitwise_cast<void*>(static_cast<intptr_t>(2)); }
+    static void* emptyValue() { return std::bit_cast<void*>(static_cast<intptr_t>(1)); }
+    static void* deletedValue() { return std::bit_cast<void*>(static_cast<intptr_t>(2)); }
 
     template<typename FuncPtr>
     ALWAYS_INLINE static constexpr void* encodeFunc(FuncPtr ptr)

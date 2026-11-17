@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,7 +48,7 @@ import com.sun.jfx.incubator.scene.control.richtext.util.RichUtils;
 public class HighlightShape extends Path {
     public enum Type {
         HIGHLIGHT,
-        SQUIGGLY,
+        WAVY_UNDERLINE,
     }
 
     private final Type type;
@@ -64,9 +64,9 @@ public class HighlightShape extends Path {
     private PathElement[] createPath(TextFlow f) {
         switch (type) {
         case HIGHLIGHT:
-            return f.rangeShape(start, end);
-        case SQUIGGLY:
-            PathElement[] pe = f.underlineShape(start, end);
+            return f.getRangeShape(start, end, true);
+        case WAVY_UNDERLINE:
+            PathElement[] pe = f.getUnderlineShape(start, end);
             return generateSquiggly(pe);
         default:
             // never happens

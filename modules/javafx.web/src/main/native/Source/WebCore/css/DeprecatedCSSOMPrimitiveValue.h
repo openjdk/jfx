@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "CSSParserIdioms.h"
-#include "CSSPrimitiveValue.h"
-#include "DeprecatedCSSOMValue.h"
+#include <WebCore/CSSParserIdioms.h>
+#include <WebCore/CSSPrimitiveValue.h>
+#include <WebCore/DeprecatedCSSOMValue.h>
 
 namespace WebCore {
 
@@ -74,7 +74,7 @@ public:
     }
 
     bool equals(const DeprecatedCSSOMPrimitiveValue& other) const { return m_value->equals(other.m_value); }
-    String cssText() const { return m_value->cssText(); }
+    String cssText() const;
 
     WEBCORE_EXPORT unsigned short primitiveType() const;
     WEBCORE_EXPORT ExceptionOr<float> getFloatValue(unsigned short unitType) const;
@@ -95,6 +95,8 @@ private:
         , m_value(value)
     {
     }
+
+    Ref<const CSSValue> protectedValue() const { return m_value; }
 
     Ref<const CSSValue> m_value;
 };

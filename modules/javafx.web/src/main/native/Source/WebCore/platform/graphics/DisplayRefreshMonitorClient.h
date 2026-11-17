@@ -25,11 +25,11 @@
 
 #pragma once
 
-#include "AnimationFrameRate.h"
-#include "PlatformScreen.h"
+#include <WebCore/AnimationFrameRate.h>
+#include <WebCore/PlatformScreen.h>
 #include <optional>
 #include <wtf/CheckedRef.h>
-#include <wtf/FastMalloc.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -39,7 +39,7 @@ class DisplayRefreshMonitorFactory;
 struct DisplayUpdate;
 
 class DisplayRefreshMonitorClient : public CanMakeCheckedPtr<DisplayRefreshMonitorClient> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(DisplayRefreshMonitorClient);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DisplayRefreshMonitorClient);
 public:
     DisplayRefreshMonitorClient();

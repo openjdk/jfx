@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,7 +30,7 @@
 #include <string.h>
 #include <math.h>
 
-#include "PrismES2Defs.h"
+#include "../PrismES2Defs.h"
 #include "com_sun_prism_es2_IOSGLContext.h"
 
 extern void printAndReleaseResources(jlong pf, jlong ctx, const char *message);
@@ -79,7 +79,6 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_IOSGLContext_nInitialize
     jboolean result;
     ContextInfo *ctxInfo = NULL;
     DrawableInfo* dInfo =  (DrawableInfo* )jlong_to_ptr(nativeDInfo);
-    PixelFormatInfo* pfInfo =  (PixelFormatInfo* )jlong_to_ptr(nativePFInfo);
 
     if (dInfo == NULL) {
         return 0;
@@ -309,7 +308,7 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_IOSGLContext_nMakeCurrent
     }
     interval = (vSyncNeeded) ? 1 : 0;
     ctxInfo->state.vSyncEnabled = vSyncNeeded;
-    setSwapInterval(ctxInfo->context, interval);
+    setSwapInterval((void *)(ctxInfo->context), interval);
     if (pulseLoggingRequested) {
         fprintf(stderr, "setSwapInterval(%d)\n", interval);
     }

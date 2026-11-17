@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package javafx.css;
 
+import com.sun.javafx.css.StyleablePropertyHelper;
 import com.sun.javafx.css.TransitionMediator;
 import com.sun.javafx.css.TransitionDefinition;
 import com.sun.javafx.scene.NodeHelper;
@@ -50,6 +51,15 @@ import javafx.scene.Node;
  */
 public abstract class StyleableLongProperty
     extends LongPropertyBase implements StyleableProperty<Number> {
+
+    static {
+        StyleablePropertyHelper.setLongAccessor(new StyleablePropertyHelper.Accessor() {
+            @Override
+            public boolean equalsEndValue(StyleableProperty<?> property, Object value) {
+                return ((StyleableLongProperty)property).equalsEndValue(value);
+            }
+        });
+    }
 
     /**
      * The constructor of the {@code StyleableLongProperty}.
@@ -117,6 +127,15 @@ public abstract class StyleableLongProperty
         }
     }
 
+    private boolean equalsEndValue(Object value) {
+        if (!(value instanceof Long longValue)) {
+            return false;
+        }
+
+        long endValue = mediator != null ? mediator.endValue : get();
+        return longValue == endValue;
+    }
+
     private StyleOrigin origin;
     private TransitionMediatorImpl mediator;
 
@@ -136,7 +155,7 @@ public abstract class StyleableLongProperty
             // Longs are interpolated in real number space and rounded to the nearest long.
             long diff = endValue - startValue;
             long result = startValue + Math.round(progress * diff);
-            StyleableLongProperty.super.set(progress < 1 ? Utils.clamp(startValue, result, endValue) : endValue);
+            StyleableLongProperty.super.set(progress != 1 ? Utils.clamp(startValue, result, endValue) : endValue);
         }
 
         @Override

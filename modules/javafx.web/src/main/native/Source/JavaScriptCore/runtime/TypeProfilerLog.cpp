@@ -34,6 +34,8 @@
 #include "TypeLocation.h"
 #include <wtf/TZoneMallocInlines.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 namespace TypeProfilerLogInternal {
@@ -72,8 +74,8 @@ void TypeProfilerLog::processLogEntries(VM& vm, const String& reason)
         before = MonotonicTime::now();
     }
 
-    HashMap<Structure*, RefPtr<StructureShape>> cachedMonoProtoShapes;
-    HashMap<std::pair<Structure*, JSCell*>, RefPtr<StructureShape>> cachedPolyProtoShapes;
+    UncheckedKeyHashMap<Structure*, RefPtr<StructureShape>> cachedMonoProtoShapes;
+    UncheckedKeyHashMap<std::pair<Structure*, JSCell*>, RefPtr<StructureShape>> cachedPolyProtoShapes;
 
     LogEntry* entry = m_logStartPtr;
 
@@ -110,7 +112,7 @@ void TypeProfilerLog::processLogEntries(VM& vm, const String& reason)
         location->m_lastSeenType = type;
         if (location->m_globalTypeSet)
             location->m_globalTypeSet->addTypeInformation(type, shape.copyRef(), structure, sawPolyProtoStructure);
-        location->m_instructionTypeSet->addTypeInformation(type, WTFMove(shape), structure, sawPolyProtoStructure);
+        location->m_instructionTypeSet->addTypeInformation(type, WTF::move(shape), structure, sawPolyProtoStructure);
 
         entry++;
     }
@@ -142,3 +144,5 @@ void TypeProfilerLog::visit(AbstractSlotVisitor& visitor)
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

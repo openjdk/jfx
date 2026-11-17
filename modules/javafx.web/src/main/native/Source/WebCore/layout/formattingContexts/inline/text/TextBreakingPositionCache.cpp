@@ -27,10 +27,13 @@
 #include "TextBreakingPositionCache.h"
 
 #include "RenderStyle.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 namespace Layout {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TextBreakingPositionCache);
 
 static constexpr size_t evictionSoftThreshold = 500000; // At this amount of content (string + breaking position list) we should start evicting
 static constexpr size_t evictionHardCapMultiplier = 5; // Do not let the cache grow beyond this
@@ -75,7 +78,7 @@ void TextBreakingPositionCache::set(const Key& key, List&& breakingPositionList)
     evictIfNeeded();
 
     m_cachedContentSize += (std::get<0>(key).length() + 4 * breakingPositionList.size());
-    m_breakingPositionMap.set(key, WTFMove(breakingPositionList));
+    m_breakingPositionMap.set(key, WTF::move(breakingPositionList));
 }
 
 const TextBreakingPositionCache::List* TextBreakingPositionCache::get(const Key& key) const
@@ -94,7 +97,7 @@ void TextBreakingPositionCache::clear()
 
 void add(Hasher& hasher, const TextBreakingPositionContext& context)
 {
-    add(hasher, context.whitespace, context.overflowWrap, context.lineBreak, context.wordBreak, context.nbspMode, context.locale);
+    add(hasher, context.whitespaceCollapseBehavior, context.overflowWrap, context.lineBreak, context.wordBreak, context.nbspMode, context.locale);
 }
 
 }

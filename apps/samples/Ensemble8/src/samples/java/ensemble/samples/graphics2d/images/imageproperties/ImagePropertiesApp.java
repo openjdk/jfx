@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2016, Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2025, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -63,16 +63,19 @@ public class ImagePropertiesApp extends Application {
         String resource = "/ensemble/samples/shared-resources/sanfran.jpg";
         String url = getClass().getResource(resource).toString();
         ImageView sample1 = new ImageView(new Image(url, 30, 70, false, true));
+        sample1.setAccessibleText("Sample 1");
 
         ImageView sample2 = new ImageView(new Image(url));
         // image can be resized to preferred width
         sample2.setFitWidth(200);
         sample2.setPreserveRatio(true);
+        sample2.setAccessibleText("Sample 2");
 
         ImageView sample3 = new ImageView(new Image(url));
         // image can be resized to preferred height
         sample3.setFitHeight(20);
         sample3.setPreserveRatio(true);
+        sample3.setAccessibleText("Sample 3");
 
         ImageView sample4 = new ImageView(new Image(url));
         // one can resize image without preserving ratio between height and width
@@ -80,6 +83,7 @@ public class ImagePropertiesApp extends Application {
         sample4.setFitHeight(80);
         sample4.setPreserveRatio(false);
         sample4.setSmooth(true); //the usage of the better filter
+        sample4.setAccessibleText("Sample 4");
 
         ImageView sample5 = new ImageView(new Image(url));
         sample5.setFitHeight(60);
@@ -87,6 +91,7 @@ public class ImagePropertiesApp extends Application {
         // viewport is used for displaying the part of image
         Rectangle2D rectangle2D = new Rectangle2D(50, 200, 120, 60);
         sample5.setViewport(rectangle2D);
+        sample5.setAccessibleText("Sample 5");
         // add the imageviews to layout
         HBox hBox = new HBox();
         hBox.setSpacing(10);

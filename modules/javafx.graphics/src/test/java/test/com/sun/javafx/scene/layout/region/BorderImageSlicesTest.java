@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -89,19 +89,34 @@ public class BorderImageSlicesTest {
         }
 
         @Test
-        public void interpolationFactorSmallerThanOrEqualToZeroReturnsStartInstance() {
+        public void interpolationFactorZeroReturnsStartInstance() {
             var startValue = new BorderImageSlices(BorderWidths.EMPTY, true);
             var endValue = new BorderImageSlices(BorderWidths.FULL, true);
             assertSame(startValue, startValue.interpolate(endValue, 0));
-            assertSame(startValue, startValue.interpolate(endValue, -1));
         }
 
         @Test
-        public void interpolationFactorGreaterThanOrEqualToOneReturnsEndInstance() {
+        public void interpolationFactorOneReturnsEndInstance() {
             var startValue = new BorderImageSlices(BorderWidths.EMPTY, true);
             var endValue = new BorderImageSlices(BorderWidths.FULL, true);
             assertSame(endValue, startValue.interpolate(endValue, 1));
-            assertSame(endValue, startValue.interpolate(endValue, 1.5));
+        }
+
+        @Test
+        public void interpolationFactorLessThanZero() {
+            var startValue = new BorderImageSlices(new BorderWidths(1), true);
+            var endValue = new BorderImageSlices(new BorderWidths(2), true);
+            var expected = new BorderImageSlices(new BorderWidths(0), true);
+            assertEquals(expected, startValue.interpolate(endValue, -1));
+            assertEquals(expected, startValue.interpolate(endValue, -2));
+        }
+
+        @Test
+        public void interpolationFactorGreaterThanOne() {
+            var startValue = new BorderImageSlices(new BorderWidths(1), true);
+            var endValue = new BorderImageSlices(new BorderWidths(2), true);
+            assertEquals(new BorderImageSlices(new BorderWidths(3), true), startValue.interpolate(endValue, 2));
+            assertEquals(new BorderImageSlices(new BorderWidths(4), true), startValue.interpolate(endValue, 3));
         }
     }
 }

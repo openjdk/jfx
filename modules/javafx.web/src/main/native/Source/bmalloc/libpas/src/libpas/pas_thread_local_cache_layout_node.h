@@ -43,7 +43,7 @@ typedef struct pas_segregated_size_directory pas_segregated_size_directory;
 typedef struct pas_thread_local_cache pas_thread_local_cache;
 typedef struct pas_thread_local_cache_layout_node_opaque* pas_thread_local_cache_layout_node;
 
-#define PAS_THREAD_LOCAL_CACHE_LAYOUT_NODE_KIND_MASK 3lu
+#define PAS_THREAD_LOCAL_CACHE_LAYOUT_NODE_KIND_MASK 3llu
 
 static inline void* pas_thread_local_cache_layout_node_get_ptr(pas_thread_local_cache_layout_node node)
 {

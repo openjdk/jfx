@@ -804,7 +804,7 @@ GST_BYTE_READER_PEEK_GET(64,gdouble,float64_be)
 /**
  * gst_byte_reader_get_data:
  * @reader: a #GstByteReader instance
- * @size: Size in bytes
+ * @size: (in): Size in bytes
  * @val: (out) (transfer none) (array length=size): address of a
  *     #guint8 pointer variable in which to store the result
  *
@@ -824,7 +824,7 @@ gst_byte_reader_get_data (GstByteReader * reader, guint size,
 /**
  * gst_byte_reader_peek_data:
  * @reader: a #GstByteReader instance
- * @size: Size in bytes
+ * @size: (in): Size in bytes
  * @val: (out) (transfer none) (array length=size): address of a
  *     #guint8 pointer variable in which to store the result
  *
@@ -844,7 +844,7 @@ gst_byte_reader_peek_data (const GstByteReader * reader, guint size,
 /**
  * gst_byte_reader_dup_data:
  * @reader: a #GstByteReader instance
- * @size: Size in bytes
+ * @size: (in): Size in bytes
  * @val: (out) (transfer full) (array length=size): address of a
  *     #guint8 pointer variable in which to store the result
  *

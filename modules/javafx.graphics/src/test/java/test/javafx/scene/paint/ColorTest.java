@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1019,19 +1019,44 @@ public class ColorTest {
         }
 
         @Test
-        public void interpolationFactorSmallerThanOrEqualToZeroReturnsStartInstance() {
+        public void interpolationFactorZeroReturnsStartInstance() {
             var startValue = new Color(0.2, 0.4, 0.6, 0.8);
             var endValue = new Color(0.3, 0.5, 0.7, 0.9);
             assertSame(startValue, startValue.interpolate(endValue, 0));
-            assertSame(startValue, startValue.interpolate(endValue, -1));
         }
 
         @Test
-        public void interpolationFactorGreaterThanOrEqualToOneReturnsEndInstance() {
+        public void interpolationFactorOneReturnsEndInstance() {
             var startValue = new Color(0.2, 0.4, 0.6, 0.8);
             var endValue = new Color(0.3, 0.5, 0.7, 0.9);
             assertSame(endValue, startValue.interpolate(endValue, 1));
-            assertSame(endValue, startValue.interpolate(endValue, 1.5));
+        }
+
+        @Test
+        public void interpolationFactorLessThanZero() {
+            var startValue = new Color(0.2, 0.4, 0.6, 0.8);
+            var endValue = new Color(0.3, 0.5, 0.7, 0.9);
+            assertSimilar(new Color(0.1, 0.3, 0.5, 0.7), startValue.interpolate(endValue, -1));
+            assertSimilar(new Color(0, 0.2, 0.4, 0.6), startValue.interpolate(endValue, -2));
+            assertSimilar(new Color(0, 0.1, 0.3, 0.5), startValue.interpolate(endValue, -3));
+            assertSimilar(new Color(0, 0, 0.2, 0.4), startValue.interpolate(endValue, -4));
+        }
+
+        @Test
+        public void interpolationFactorGreaterThanOne() {
+            var startValue = new Color(0.2, 0.4, 0.6, 0.8);
+            var endValue = new Color(0.3, 0.5, 0.7, 0.9);
+            assertSimilar(new Color(0.4, 0.6, 0.8, 1), startValue.interpolate(endValue, 2));
+            assertSimilar(new Color(0.5, 0.7, 0.9, 1), startValue.interpolate(endValue, 3));
+            assertSimilar(new Color(0.6, 0.8, 1, 1), startValue.interpolate(endValue, 4));
+            assertSimilar(new Color(0.7, 0.9, 1, 1), startValue.interpolate(endValue, 5));
+        }
+
+        private static void assertSimilar(Color expected, Color actual) {
+            assertEquals(expected.getRed(), actual.getRed(), 0.0001);
+            assertEquals(expected.getGreen(), actual.getGreen(), 0.0001);
+            assertEquals(expected.getBlue(), actual.getBlue(), 0.0001);
+            assertEquals(expected.getOpacity(), actual.getOpacity(), 0.0001);
         }
     }
 

@@ -27,6 +27,7 @@
 #include "MIMESniffer.h"
 
 #include <array>
+#include <wtf/StdLibExtras.h>
 
 namespace WebCore {
 
@@ -35,7 +36,7 @@ namespace MIMESniffer {
 template<std::size_t N>
 constexpr auto span8(const char(&p)[N])
 {
-    return std::span<const uint8_t, N - 1>(byteCast<uint8_t>(&p[0]), N - 1);
+    return unsafeMakeSpan<const uint8_t, N - 1>(byteCast<uint8_t>(static_cast<const char*>(p)), N - 1);
 }
 
 static bool hasSignatureForMP4(std::span<const uint8_t> sequence)
@@ -139,7 +140,7 @@ static bool hasSignatureForWebM(std::span<const uint8_t> sequence)
     //   6. While iter is less than length and iter is less than 38, continuously loop through these steps:
     while (iter < length && iter < 38) {
         //  1. If the two bytes from sequence[iter] to sequence[iter + 1] are equal to 0x42 0x82,
-        if (sequence[iter] == 0x42 && sequence[iter + 1] == 0x82) {
+        if (iter + 1 < length && sequence[iter] == 0x42 && sequence[iter + 1] == 0x82) {
             //  1. Increment iter by 2.
             iter += 2;
             //  2. If iter is greater or equal than length, abort these steps.
@@ -155,12 +156,18 @@ static bool hasSignatureForWebM(std::span<const uint8_t> sequence)
             //  5. If iter is less than length - 4, abort these steps.
             // TODO: this is a spec error. It will always be less than length - 4 unless an error occurred.
             //  6. Let matched be the result of matching a padded sequence 0x77 0x65 0x62 0x6D ("webm") on sequence at offset iter.
-            while (!sequence[iter] && iter < length)
+            while (iter < length && !sequence[iter])
                 iter++;
             if (iter >= length - 4)
                 break;
             //  7. If matched is true, abort these steps and return true.
             if (sequence[iter] == 0x77 && sequence[iter + 1] == 0x65 && sequence[iter + 2] == 0x62 && sequence[iter + 3] == 0x6d)
+                return true;
+
+            // case for matroska, treat it as webm.
+            if (iter + 8 >= length)
+                break;
+            if (sequence[iter] == 'm' && sequence[iter + 1] == 'a' && sequence[iter + 2] == 't' && sequence[iter + 3] == 'r' && sequence[iter + 4] == 'o' && sequence[iter + 5] == 's' && sequence[iter + 6] == 'k' && sequence[iter + 7] == 'a')
                 return true;
         }
         //  2. Increment iter by 1.
@@ -283,7 +290,7 @@ static String mimeTypeFromSnifferEntries(std::span<const uint8_t> sequence)
         const ASCIILiteral contentType;
     };
 
-    static const MIMESniffEntry sSnifferEntries[] = {
+    static const auto sSnifferEntries = std::to_array<MIMESniffEntry>({
         // The string "FORM" followed by four bytes followed by the string "AIFF", the AIFF signature.
         { span8("\x46\x4F\x52\x4D\x00\x00\x00\x00\x41\x49\x46\x46"), span8("\xFF\xFF\xFF\xFF\x00\x00\x00\x00\xFF\xFF\xFF\xFF"), "audio/aiff"_s },
         // The string "ID3", the ID3v2-tagged MP3 signature.
@@ -291,12 +298,12 @@ static String mimeTypeFromSnifferEntries(std::span<const uint8_t> sequence)
         // The string "OggS" followed by NUL, the Ogg container signature.
         { span8("\x4F\x67\x67\x53\x00"), span8("\xFF\xFF\xFF\xFF\xFF"), "application/ogg"_s },
         // The string "MThd" followed by four bytes representing the number 6 in 32 bits (big-endian), the MIDI signature.
-        { span8("\0x4D\x54\x68\x64\x00\x00\x00\x06"), span8("\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF"), "audio/midi"_s },
+        { span8("\x4D\x54\x68\x64\x00\x00\x00\x06"), span8("\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF"), "audio/midi"_s },
         // The string "RIFF" followed by four bytes followed by the string "AVI ", the AVI signature.
-        { span8("\0x52\x49\x46\x46\x00\x00\x00\x00\x41\x56\x49\x20"), span8("\xFF\xFF\xFF\xFF\x00\x00\x00\x00\xFF\xFF\xFF\xFF"), "video/avi"_s },
+        { span8("\x52\x49\x46\x46\x00\x00\x00\x00\x41\x56\x49\x20"), span8("\xFF\xFF\xFF\xFF\x00\x00\x00\x00\xFF\xFF\xFF\xFF"), "video/avi"_s },
         // The string "RIFF" followed by four bytes followed by the string "WAVE", the WAVE signature.
         { span8("\x52\x49\x46\x46\x00\x00\x00\x00\x57\x41\x56\x45"), span8("\xFF\xFF\xFF\xFF\x00\x00\x00\x00\xFF\xFF\xFF\xFF"), "audio/wave"_s },
-    };
+    });
 
     // 1. Execute the following steps for each row row in the following table:
     //   1. Let patternMatched be the result of the pattern matching algorithm given input,

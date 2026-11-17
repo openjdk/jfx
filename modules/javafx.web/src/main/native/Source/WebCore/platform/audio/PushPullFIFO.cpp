@@ -28,39 +28,39 @@
 #include "PushPullFIFO.h"
 
 #include "AudioBus.h"
+#include <wtf/StdLibExtras.h>
 
 namespace WebCore {
 
 PushPullFIFO::PushPullFIFO(unsigned numberOfChannels, size_t fifoLength)
     : m_fifoLength(fifoLength)
+    , m_fifoBus(AudioBus::create(numberOfChannels, m_fifoLength))
 {
     ASSERT(m_fifoLength <= maxFIFOLength);
-    m_fifoBus = AudioBus::create(numberOfChannels, m_fifoLength);
 }
 
 PushPullFIFO::~PushPullFIFO() = default;
 
 // Push the data from |inputBus| to FIFO. The size of push is determined by
 // the length of |inputBus|.
-void PushPullFIFO::push(const AudioBus* inputBus)
+void PushPullFIFO::push(const AudioBus& inputBus)
 {
-    ASSERT(inputBus);
-    ASSERT(inputBus->length() <= m_fifoLength);
+    ASSERT(inputBus.length() <= m_fifoLength);
     ASSERT(m_indexWrite < m_fifoLength);
 
-    const size_t inputBusLength = inputBus->length();
+    const size_t inputBusLength = inputBus.length();
     const size_t remainder = m_fifoLength - m_indexWrite;
 
     for (unsigned i = 0; i < m_fifoBus->numberOfChannels(); ++i) {
-        float* fifoBusChannel = m_fifoBus->channel(i)->mutableData();
-        const float* inputBusChannel = inputBus->channel(i)->data();
+        auto fifoBusChannel = m_fifoBus->channel(i)->mutableSpan();
+        auto inputBusChannel = inputBus.channel(i)->span();
         if (remainder >= inputBusLength) {
             // The remainder is big enough for the input data.
-            memcpy(fifoBusChannel + m_indexWrite, inputBusChannel, inputBusLength * sizeof(*fifoBusChannel));
+            memcpySpan(fifoBusChannel.subspan(m_indexWrite), inputBusChannel);
         } else {
             // The input data overflows the remainder size. Wrap around the index.
-            memcpy(fifoBusChannel + m_indexWrite, inputBusChannel, remainder * sizeof(*fifoBusChannel));
-            memcpy(fifoBusChannel, inputBusChannel + remainder, (inputBusLength - remainder) * sizeof(*fifoBusChannel));
+            memcpySpan(fifoBusChannel.subspan(m_indexWrite), inputBusChannel.first(remainder));
+            memcpySpan(fifoBusChannel, inputBusChannel.subspan(remainder));
         }
     }
 
@@ -79,10 +79,9 @@ void PushPullFIFO::push(const AudioBus* inputBus)
 
 // Pull the data out of FIFO to |outputBus|. If remaining frame in the FIFO
 // is less than the frames to pull, provides remaining frame plus the silence.
-size_t PushPullFIFO::pull(AudioBus* outputBus, size_t framesRequested)
+size_t PushPullFIFO::pull(AudioBus& outputBus, size_t framesRequested)
 {
-    ASSERT(outputBus);
-    ASSERT(framesRequested <= outputBus->length());
+    ASSERT(framesRequested <= outputBus.length());
     ASSERT(framesRequested <= m_fifoLength);
     ASSERT(m_indexRead < m_fifoLength);
 
@@ -90,24 +89,24 @@ size_t PushPullFIFO::pull(AudioBus* outputBus, size_t framesRequested)
     const size_t framesToFill = std::min(m_framesAvailable, framesRequested);
 
     for (unsigned i = 0; i < m_fifoBus->numberOfChannels(); ++i) {
-        const float* fifoBusChannel = m_fifoBus->channel(i)->data();
-        float* outputBusChannel = outputBus->channel(i)->mutableData();
+        auto fifoBusChannel = m_fifoBus->channel(i)->span();
+        auto outputBusChannel = outputBus.channel(i)->mutableSpan();
 
         // Fill up the output bus with the available frames first.
         if (remainder >= framesToFill) {
             // The remainder is big enough for the frames to pull.
-            memcpy(outputBusChannel, fifoBusChannel + m_indexRead, framesToFill * sizeof(*fifoBusChannel));
+            memcpySpan(outputBusChannel, fifoBusChannel.subspan(m_indexRead, framesToFill));
         } else {
             // The frames to pull is bigger than the remainder size.
             // Wrap around the index.
-            memcpy(outputBusChannel, fifoBusChannel + m_indexRead, remainder * sizeof(*fifoBusChannel));
-            memcpy(outputBusChannel + remainder, fifoBusChannel, (framesToFill - remainder) * sizeof(*fifoBusChannel));
+            memcpySpan(outputBusChannel, fifoBusChannel.subspan(m_indexRead, remainder));
+            memcpySpan(outputBusChannel.subspan(remainder), fifoBusChannel.first(framesToFill - remainder));
         }
 
         // The frames available was not enough to fulfill the requested frames. Fill
         // the rest of the channel with silence.
         if (framesRequested > framesToFill)
-            memset(outputBusChannel + framesToFill, 0, (framesRequested - framesToFill) * sizeof(*outputBusChannel));
+            zeroSpan(outputBusChannel.subspan(framesToFill, framesRequested - framesToFill));
     }
 
     // Update the read index; wrap it around if necessary.

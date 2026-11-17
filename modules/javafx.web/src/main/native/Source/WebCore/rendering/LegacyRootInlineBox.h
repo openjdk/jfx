@@ -20,10 +20,10 @@
 
 #pragma once
 
-#include "BidiContext.h"
-#include "LegacyInlineFlowBox.h"
-#include "RenderBox.h"
-#include <wtf/FastMalloc.h>
+#include <WebCore/BidiContext.h>
+#include <WebCore/LegacyInlineFlowBox.h>
+#include <WebCore/RenderBox.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -36,7 +36,7 @@ struct BidiStatus;
 struct GapRects;
 
 class LegacyRootInlineBox : public LegacyInlineFlowBox, public CanMakeWeakPtr<LegacyRootInlineBox>, public CanMakeCheckedPtr<LegacyRootInlineBox> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(LegacyRootInlineBox);
+    WTF_MAKE_TZONE_ALLOCATED(LegacyRootInlineBox);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(LegacyRootInlineBox);
 public:
     explicit LegacyRootInlineBox(RenderBlockFlow&);
@@ -72,15 +72,10 @@ public:
         m_lineBoxBottom = lineBoxBottom;
     }
 
-    LayoutUnit baselinePosition(FontBaseline baselineType) const final;
-    LayoutUnit lineHeight() const final;
-
     RenderObject::HighlightState selectionState() const final;
     const LegacyInlineBox* firstSelectedBox() const;
     const LegacyInlineBox* lastSelectedBox() const;
 
-    void extractLineBoxFromRenderObject() final;
-    void attachLineBoxToRenderObject() final;
     void removeLineBoxFromRenderObject() final;
 
     FontBaseline baselineType() const { return static_cast<FontBaseline>(m_baselineType); }

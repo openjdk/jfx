@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2025, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,7 @@ package test.com.sun.javafx.pgstub;
 import java.lang.ref.WeakReference;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import javafx.scene.text.Font;
 import com.sun.javafx.font.CharToGlyphMapper;
 import com.sun.javafx.font.FontResource;
@@ -98,7 +99,7 @@ public class StubFontResource implements FontResource {
             String name = font.getStyle();
             bold = name.toLowerCase(Locale.ROOT).contains("bold");
         }
-        return bold.booleanValue();
+        return bold;
     }
 
     @Override
@@ -188,5 +189,18 @@ public class StubFontResource implements FontResource {
                 return charCode;
             }
         };
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof StubFontResource that)) {
+            return false;
+        }
+        return Objects.equals(font, that.font) && Objects.equals(bold, that.bold);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(font, bold);
     }
 }

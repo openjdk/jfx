@@ -30,8 +30,11 @@
 #include "SelectorFilter.h"
 #include "StyleRule.h"
 #include "TypedElementDescendantIteratorInlines.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore::Style {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HasSelectorFilter);
 
 // FIXME: Support additional pseudo-classes.
 static constexpr unsigned HoverSalt = 101;
@@ -41,11 +44,11 @@ HasSelectorFilter::HasSelectorFilter(const Element& element, Type type)
 {
     switch (type) {
     case Type::Descendants:
-        for (auto& descendant : descendantsOfType<Element>(element))
+        for (Ref descendant : descendantsOfType<Element>(element))
             add(descendant);
         break;
     case Type::Children:
-        for (auto& child : childrenOfType<Element>(element))
+        for (Ref child : childrenOfType<Element>(element))
             add(child);
         break;
     }
@@ -67,7 +70,7 @@ auto HasSelectorFilter::makeKey(const CSSSelector& hasSelector) -> Key
 {
     SelectorFilter::CollectedSelectorHashes hashes;
     bool hasHoverInCompound = false;
-    for (auto* simpleSelector = &hasSelector; simpleSelector; simpleSelector = simpleSelector->tagHistory()) {
+    for (auto* simpleSelector = &hasSelector; simpleSelector; simpleSelector = simpleSelector->precedingInComplexSelector()) {
         if (simpleSelector->match() == CSSSelector::Match::PseudoClass && simpleSelector->pseudoClass() == CSSSelector::PseudoClass::Hover)
             hasHoverInCompound = true;
         SelectorFilter::collectSimpleSelectorHash(hashes, *simpleSelector);

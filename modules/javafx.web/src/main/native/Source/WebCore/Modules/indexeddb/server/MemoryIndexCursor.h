@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,8 @@
 #include "IDBCursorInfo.h"
 #include "IndexValueStore.h"
 #include "MemoryCursor.h"
+#include <wtf/CheckedRef.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 namespace IDBServer {
@@ -35,18 +37,21 @@ namespace IDBServer {
 class MemoryIndex;
 
 class MemoryIndexCursor : public MemoryCursor {
+    WTF_MAKE_TZONE_ALLOCATED(MemoryIndexCursor);
 public:
-    MemoryIndexCursor(MemoryIndex&, const IDBCursorInfo&);
+    static Ref<MemoryIndexCursor> create(MemoryIndex&, const IDBCursorInfo&, MemoryBackingStoreTransaction&);
+
     virtual ~MemoryIndexCursor();
 
     void indexRecordsAllChanged();
     void indexValueChanged(const IDBKeyData& indexKey, const IDBKeyData& primaryKey);
 
 private:
+    MemoryIndexCursor(MemoryIndex&, const IDBCursorInfo&, MemoryBackingStoreTransaction&);
     void currentData(IDBGetResult&) final;
     void iterate(const IDBKeyData&, const IDBKeyData& primaryKey, uint32_t count, IDBGetResult&) final;
 
-    MemoryIndex& m_index;
+    const CheckedRef<MemoryIndex> m_index;
 
     IndexValueStore::Iterator m_currentIterator;
     IDBKeyData m_currentKey;

@@ -28,7 +28,9 @@ enum PremultiplyAlpha { "none", "premultiply", "default" };
 enum ColorSpaceConversion { "none", "default" };
 enum ResizeQuality { "pixelated", "low", "medium", "high" };
 
-dictionary ImageBitmapOptions {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary ImageBitmapOptions {
     [ImplementedAs=orientation] ImageOrientation imageOrientation = "from-image";
     PremultiplyAlpha premultiplyAlpha = "default";
     ColorSpaceConversion colorSpaceConversion = "default";

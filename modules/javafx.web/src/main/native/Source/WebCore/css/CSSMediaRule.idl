@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006-2024 Apple Inc. All rights reserved.
- * Copyright (C) 2006 Samuel Weinig <sam.weinig@gmail.com>
+ * Copyright (C) 2006-2025 Samuel Weinig <sam.weinig@gmail.com>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -24,4 +24,6 @@
     Exposed=Window
 ] interface CSSMediaRule : CSSConditionRule {
     [SameObject, PutForwards=mediaText] readonly attribute MediaList media;
+    // FIXME: Add support for `matches`.
+    // readonly attribute boolean matches;
 };

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006 Oliver Hunt <ojh16@student.canterbury.ac.nz>
- * Copyright (C) 2006 Apple Inc.
+ * Copyright (C) 2006 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Google Inc.
  *
  * This library is free software; you can redistribute it and/or
@@ -28,11 +28,11 @@
 namespace WebCore {
 
 class RenderSVGTSpan final : public RenderSVGInline {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderSVGTSpan);
+    WTF_MAKE_TZONE_ALLOCATED(RenderSVGTSpan);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSVGTSpan);
 public:
     explicit RenderSVGTSpan(SVGTextPositioningElement& element, RenderStyle&& style)
-        : RenderSVGInline(Type::SVGTSpan, element, WTFMove(style))
+        : RenderSVGInline(Type::SVGTSpan, element, WTF::move(style))
     {
         ASSERT(isRenderSVGTSpan());
     }

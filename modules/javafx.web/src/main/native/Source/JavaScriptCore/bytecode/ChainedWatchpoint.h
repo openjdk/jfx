@@ -25,8 +25,9 @@
 
 #pragma once
 
-#include "PackedCellPtr.h"
-#include "Watchpoint.h"
+#include <JavaScriptCore/JSCell.h>
+#include <JavaScriptCore/PackedCellPtr.h>
+#include <JavaScriptCore/Watchpoint.h>
 
 namespace JSC {
 
@@ -56,9 +57,7 @@ inline void ChainedWatchpoint::install(InlineWatchpointSet& fromWatchpoint, VM&)
 
 inline void ChainedWatchpoint::fireInternal(VM& vm, const FireDetail&)
 {
-    if (!m_owner->isLive())
-        return;
-
+    if (!m_owner->isPendingDestruction())
     m_watchpointSet.fireAll(vm, StringFireDetail("chained watchpoint is fired."));
 }
 

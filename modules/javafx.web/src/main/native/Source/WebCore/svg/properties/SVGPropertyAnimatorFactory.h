@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc.  All rights reserved.
+ * Copyright (C) 2019-2024 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,7 +35,7 @@
 namespace WebCore {
 
 class SVGPropertyAnimatorFactory {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(SVGPropertyAnimatorFactory);
 public:
     SVGPropertyAnimatorFactory() = default;
 
@@ -82,27 +82,27 @@ private:
 
     static auto createColorAnimator(const QualifiedName& attributeName, Ref<SVGProperty>&& property, AnimationMode animationMode, CalcMode calcMode, bool isAccumulated, bool isAdditive)
     {
-        return SVGColorAnimator::create(attributeName, WTFMove(property), animationMode, calcMode, isAccumulated, isAdditive);
+        return SVGColorAnimator::create(attributeName, WTF::move(property), animationMode, calcMode, isAccumulated, isAdditive);
     }
 
     static auto createLengthAnimator(const QualifiedName& attributeName, Ref<SVGProperty>&& property, AnimationMode animationMode, CalcMode calcMode, bool isAccumulated, bool isAdditive)
     {
-        return SVGLengthAnimator::create(attributeName, WTFMove(property), animationMode, calcMode, isAccumulated, isAdditive);
+        return SVGLengthAnimator::create(attributeName, WTF::move(property), animationMode, calcMode, isAccumulated, isAdditive);
     }
 
     static auto createLengthListAnimator(const QualifiedName& attributeName, Ref<SVGProperty>&& property, AnimationMode animationMode, CalcMode calcMode, bool isAccumulated, bool isAdditive)
     {
-        return SVGLengthListAnimator::create(attributeName, WTFMove(property), animationMode, calcMode, isAccumulated, isAdditive);
+        return SVGLengthListAnimator::create(attributeName, WTF::move(property), animationMode, calcMode, isAccumulated, isAdditive);
     }
 
     static auto createNumberAnimator(const QualifiedName& attributeName, Ref<SVGProperty>&& property, AnimationMode animationMode, CalcMode calcMode, bool isAccumulated, bool isAdditive)
     {
-        return SVGNumberAnimator::create(attributeName,  WTFMove(property), animationMode, calcMode, isAccumulated, isAdditive);
+        return SVGNumberAnimator::create(attributeName,  WTF::move(property), animationMode, calcMode, isAccumulated, isAdditive);
     }
 
     static auto createStringAnimator(const QualifiedName& attributeName, Ref<SVGProperty>&& property, AnimationMode animationMode, CalcMode calcMode, bool isAccumulated, bool isAdditive)
     {
-        return SVGStringAnimator::create(attributeName, WTFMove(property), animationMode, calcMode, isAccumulated, isAdditive);
+        return SVGStringAnimator::create(attributeName, WTF::move(property), animationMode, calcMode, isAccumulated, isAdditive);
     }
 
     static const AttributeAnimatorCreator& attributeAnimatorCreator()
@@ -117,7 +117,6 @@ private:
             Pair { SVGNames::strokeAttr->impl(),         { SVGValueProperty<Color>::create, SVGPropertyAnimatorFactory::createColorAnimator } },
 
             Pair { SVGNames::font_sizeAttr->impl(),         { []() { return SVGLength::create(); }, SVGPropertyAnimatorFactory::createLengthAnimator } },
-            Pair { SVGNames::kerningAttr->impl(),           { []() { return SVGLength::create(); }, SVGPropertyAnimatorFactory::createLengthAnimator } },
             Pair { SVGNames::letter_spacingAttr->impl(),    { []() { return SVGLength::create(); }, SVGPropertyAnimatorFactory::createLengthAnimator } },
             Pair { SVGNames::stroke_dashoffsetAttr->impl(), { []() { return SVGLength::create(); }, SVGPropertyAnimatorFactory::createLengthAnimator } },
             Pair { SVGNames::stroke_widthAttr->impl(),      { []() { return SVGLength::create(); }, SVGPropertyAnimatorFactory::createLengthAnimator } },

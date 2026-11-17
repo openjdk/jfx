@@ -40,7 +40,8 @@
 #include "RenderBoxModelObjectInlines.h"
 #include "RenderLayer.h"
 #include "RenderLayerBacking.h"
-#include "RenderStyleInlines.h"
+#include "RenderObjectInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include "RenderView.h"
 #include <wtf/TZoneMallocInlines.h>
 
@@ -48,10 +49,10 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderHTMLCanvas);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderHTMLCanvas);
 
 RenderHTMLCanvas::RenderHTMLCanvas(HTMLCanvasElement& element, RenderStyle&& style)
-    : RenderReplaced(Type::HTMLCanvas, element, WTFMove(style), element.size())
+    : RenderReplaced(Type::HTMLCanvas, element, WTF::move(style), element.size())
 {
     ASSERT(isRenderHTMLCanvas());
 }
@@ -73,6 +74,8 @@ bool RenderHTMLCanvas::requiresLayer() const
 
 void RenderHTMLCanvas::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
+    ASSERT(!isSkippedContentRoot(*this));
+
     GraphicsContext& context = paintInfo.context();
 
     LayoutRect contentBoxRect = this->contentBoxRect();
@@ -116,6 +119,14 @@ void RenderHTMLCanvas::canvasSizeChanged()
     if (!parent())
         return;
     setNeedsLayoutIfNeededAfterIntrinsicSizeChange();
+}
+
+void RenderHTMLCanvas::styleDidChange(Style::Difference difference, const RenderStyle* oldStyle)
+{
+    RenderReplaced::styleDidChange(difference, oldStyle);
+
+    if (!oldStyle || style().dynamicRangeLimit() != oldStyle->dynamicRangeLimit())
+        canvasElement().dynamicRangeLimitDidChange(style().dynamicRangeLimit().toPlatformDynamicRangeLimit());
 }
 
 } // namespace WebCore

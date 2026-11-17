@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2011, 2012, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,14 +41,11 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLTableRowsCollection);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLTableRowsCollection);
 
 static inline void assertRowIsInTable(HTMLTableElement& table, HTMLTableRowElement* row)
 {
 #if ASSERT_ENABLED
-    UNUSED_PARAM(table);
-    UNUSED_PARAM(row);
-#else // not ASSERT_ENABLED
     if (!row)
         return;
     if (row->parentNode() == &table)
@@ -56,6 +53,9 @@ static inline void assertRowIsInTable(HTMLTableElement& table, HTMLTableRowEleme
     ASSERT(row->parentNode());
     ASSERT(row->parentNode()->hasTagName(theadTag) || row->parentNode()->hasTagName(tbodyTag) || row->parentNode()->hasTagName(tfootTag));
     ASSERT(row->parentNode()->parentNode() == &table);
+#else
+    UNUSED_PARAM(table);
+    UNUSED_PARAM(row);
 #endif // not ASSERT_ENABLED
 }
 
@@ -166,7 +166,7 @@ Ref<HTMLTableRowsCollection> HTMLTableRowsCollection::create(HTMLTableElement& t
 
 Element* HTMLTableRowsCollection::customElementAfter(Element* previous) const
 {
-    return rowAfter(const_cast<HTMLTableElement&>(tableElement()), downcast<HTMLTableRowElement>(previous));
+    return rowAfter(protectedTableElement().get(), downcast<HTMLTableRowElement>(previous));
 }
 
 }

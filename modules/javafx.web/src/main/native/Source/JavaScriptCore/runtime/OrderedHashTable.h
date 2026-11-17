@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "OrderedHashTableHelper.h"
+#include <JavaScriptCore/OrderedHashTableHelper.h>
 
 namespace JSC {
 
@@ -36,7 +36,7 @@ class OrderedHashTable : public JSNonFinalObject {
 public:
     using HashTable = OrderedHashTable<Traits>;
     using Helper = OrderedHashTableHelper<Traits>;
-    using Storage = JSImmutableButterfly;
+    using Storage = JSCellButterfly;
     using TableIndex = typename Helper::TableIndex;
 
     DECLARE_VISIT_CHILDREN;
@@ -46,7 +46,7 @@ public:
     {
     }
 
-    static ptrdiff_t offsetOfButterfly() { return OBJECT_OFFSETOF(OrderedHashTable, m_storage); }
+    static ptrdiff_t offsetOfStorage() { return OBJECT_OFFSETOF(OrderedHashTable, m_storage); }
 
     void finishCreation(VM& vm) { Base::finishCreation(vm); }
     void finishCreation(JSGlobalObject* globalObject, VM& vm, HashTable* base)
@@ -137,6 +137,17 @@ public:
         m_storage.set(vm, this, storage);
     }
 
+    ALWAYS_INLINE JSCell* tryGetStorage(JSGlobalObject* globalObject)
+    {
+        materializeIfNeeded(globalObject);
+        return m_storage.get();
+    }
+
+    ALWAYS_INLINE JSCell* storage()
+    {
+        return m_storage.get();
+    }
+
     ALWAYS_INLINE JSCell* storageOrSentinel(VM& vm)
     {
         if (m_storage)
@@ -197,6 +208,37 @@ public:
     {
         ASSERT(m_storage);
         return Helper::get(storageRef(), keyIndex + 1);
+    }
+
+    template<typename GetValueFunctor>
+    ALWAYS_INLINE JSValue getOrInsert(JSGlobalObject* globalObject, JSValue key, const GetValueFunctor& getValueFunctor)
+    {
+        VM& vm = getVM(globalObject);
+        auto scope = DECLARE_THROW_SCOPE(vm);
+
+        materializeIfNeeded(globalObject);
+        RETURN_IF_EXCEPTION(scope, { });
+
+        Storage& storage = storageRef();
+
+        JSValue value;
+
+        auto result = Helper::find(globalObject, storage, key);
+        RETURN_IF_EXCEPTION(scope, { });
+
+        if (Helper::isValidTableIndex(result.entryKeyIndex))
+            value = Helper::get(storage, result.entryKeyIndex + 1);
+        else {
+            value = getValueFunctor();
+            RETURN_IF_EXCEPTION(scope, { });
+
+                // Call to getValueFunctor can modify our state, so we need to re-check the index
+            // There is a chance that callback inserts an entry for this |key|.
+            add(globalObject, key, value);
+            RETURN_IF_EXCEPTION(scope, { });
+        }
+
+        return value;
     }
 
     static JSCell* createSentinel(VM& vm) { return Helper::tryCreate(vm, 0); }

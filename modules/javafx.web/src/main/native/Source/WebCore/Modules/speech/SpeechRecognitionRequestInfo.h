@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "ClientOrigin.h"
-#include "FrameIdentifier.h"
-#include "SpeechRecognitionConnectionClientIdentifier.h"
+#include <WebCore/ClientOrigin.h>
+#include <WebCore/FrameIdentifier.h>
+#include <WebCore/SpeechRecognitionConnectionClientIdentifier.h>
 
 namespace WebCore {
 
@@ -38,7 +38,7 @@ struct SpeechRecognitionRequestInfo {
     bool interimResults { false };
     uint64_t maxAlternatives { 1 };
     ClientOrigin clientOrigin;
-    FrameIdentifier frameIdentifier;
+    FrameIdentifier mainFrameIdentifier;
 };
 
 } // namespace WebCore

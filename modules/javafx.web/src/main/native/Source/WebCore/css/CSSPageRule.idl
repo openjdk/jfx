@@ -20,13 +20,13 @@
 
 // https://drafts.csswg.org/cssom/#csspagerule
 
-// Introduced in DOM Level 2:
+typedef USVString CSSOMString;
+
+// FIXME: This should inherit from CSSGroupRule.
 [
     Exposed=Window
 ] interface CSSPageRule : CSSRule {
-    // FIXME: `selectorText` should not be nullable.
-    attribute DOMString? selectorText;
-    // FIXME: Add [SameObject] below after https://webkit.org/b/163414
-    [PutForwards=cssText] readonly attribute CSSStyleDeclaration style;
+    attribute CSSOMString selectorText;
+    [SameObject, PutForwards=cssText] readonly attribute CSSPageDescriptors style;
 };
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,14 +27,14 @@
 
 #if ENABLE(JIT)
 
+#include "JITMathIC.h"
 #include "JSInterfaceJIT.h"
 #include "SpecializedThunkJIT.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace JSC {
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL(JSInterfaceJIT);
-WTF_MAKE_TZONE_ALLOCATED_IMPL(SpecializedThunkJIT);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MathICGenerationState);
 
 } // namespace JSC
 

@@ -42,7 +42,7 @@ JSInstruction* returnToThrow(VM& vm)
 {
     UNUSED_PARAM(vm);
 #if LLINT_TRACING
-    if (UNLIKELY(Options::traceLLIntSlowPath())) {
+    if (Options::traceLLIntSlowPath()) [[unlikely]] {
         auto scope = DECLARE_CATCH_SCOPE(vm);
         dataLog("Throwing exception ", JSValue(scope.exception()), " (returnToThrow).\n");
     }
@@ -50,23 +50,11 @@ JSInstruction* returnToThrow(VM& vm)
     return LLInt::exceptionInstructions();
 }
 
-WasmInstruction* wasmReturnToThrow(VM& vm)
-{
-    UNUSED_PARAM(vm);
-#if LLINT_TRACING
-    if (UNLIKELY(Options::traceLLIntSlowPath())) {
-        auto scope = DECLARE_CATCH_SCOPE(vm);
-        dataLog("Throwing exception ", JSValue(scope.exception()), " (returnToThrow).\n");
-    }
-#endif
-    return LLInt::wasmExceptionInstructions();
-}
-
 MacroAssemblerCodeRef<ExceptionHandlerPtrTag> callToThrow(VM& vm)
 {
     UNUSED_PARAM(vm);
 #if LLINT_TRACING
-    if (UNLIKELY(Options::traceLLIntSlowPath())) {
+    if (Options::traceLLIntSlowPath()) [[unlikely]] {
         auto scope = DECLARE_CATCH_SCOPE(vm);
         dataLog("Throwing exception ", JSValue(scope.exception()), " (callToThrow).\n");
     }
@@ -104,45 +92,5 @@ MacroAssemblerCodeRef<ExceptionHandlerPtrTag> handleCatch(OpcodeSize size)
     RELEASE_ASSERT_NOT_REACHED();
     return {};
 }
-
-#if ENABLE(WEBASSEMBLY)
-MacroAssemblerCodeRef<ExceptionHandlerPtrTag> handleWasmCatch(OpcodeSize size)
-{
-#if ENABLE(JIT)
-    if (Options::useJIT())
-        return handleWasmCatchThunk(size);
-#endif
-    WasmOpcodeID opcode = wasm_catch;
-    switch (size) {
-    case OpcodeSize::Narrow:
-        return LLInt::getCodeRef<ExceptionHandlerPtrTag>(opcode);
-    case OpcodeSize::Wide16:
-        return LLInt::getWide16CodeRef<ExceptionHandlerPtrTag>(opcode);
-    case OpcodeSize::Wide32:
-        return LLInt::getWide32CodeRef<ExceptionHandlerPtrTag>(opcode);
-    }
-    RELEASE_ASSERT_NOT_REACHED();
-    return { };
-}
-
-MacroAssemblerCodeRef<ExceptionHandlerPtrTag> handleWasmCatchAll(OpcodeSize size)
-{
-#if ENABLE(JIT)
-    if (Options::useJIT())
-        return handleWasmCatchAllThunk(size);
-#endif
-    WasmOpcodeID opcode = wasm_catch_all;
-    switch (size) {
-    case OpcodeSize::Narrow:
-        return LLInt::getCodeRef<ExceptionHandlerPtrTag>(opcode);
-    case OpcodeSize::Wide16:
-        return LLInt::getWide16CodeRef<ExceptionHandlerPtrTag>(opcode);
-    case OpcodeSize::Wide32:
-        return LLInt::getWide32CodeRef<ExceptionHandlerPtrTag>(opcode);
-    }
-    RELEASE_ASSERT_NOT_REACHED();
-    return { };
-}
-#endif // ENABLE(WEBASSEMBLY)
 
 } } // namespace JSC::LLInt

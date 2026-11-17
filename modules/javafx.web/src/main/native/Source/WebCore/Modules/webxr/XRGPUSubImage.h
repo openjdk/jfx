@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Apple, Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Apple, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,39 +25,55 @@
 
 #pragma once
 
-#if ENABLE(WEBXR_LAYERS)
+#if ENABLE(WEBXR_LAYERS) && ENABLE(WEBGPU)
 
 #include "GPUTexture.h"
 #include "GPUTextureViewDescriptor.h"
+#include "WebGPUXREye.h"
+#include "WebGPUXRSubImage.h"
 #include "XRSubImage.h"
 
 #include <wtf/TZoneMalloc.h>
 
+
+
 namespace WebCore {
 
 class GPUTexture;
+class IntRect;
 
 // https://github.com/immersive-web/WebXR-WebGPU-Binding/blob/main/explainer.md
 class XRGPUSubImage : public XRSubImage {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(XRGPUSubImage);
+    WTF_MAKE_TZONE_ALLOCATED(XRGPUSubImage);
 public:
-    static Ref<XRGPUSubImage> create(Ref<WebGPU::XRSubImage>&& backing)
+    static Ref<XRGPUSubImage> create(Ref<WebGPU::XRSubImage>&& backing, WebGPU::XREye eye, std::array<uint16_t, 2>&& physicalSize, WebCore::IntRect&& viewport, GPUDevice& device)
     {
-        return adoptRef(*new XRGPUSubImage(WTFMove(backing)));
+        return adoptRef(*new XRGPUSubImage(WTF::move(backing), eye, WTF::move(physicalSize), WTF::move(viewport), device));
     }
 
-    Ref<GPUTexture> colorTexture() const { RELEASE_ASSERT_NOT_REACHED(); }
-    RefPtr<GPUTexture> depthStencilTexture() const { RELEASE_ASSERT_NOT_REACHED(); }
-    RefPtr<GPUTexture> motionVectorTexture() const { RELEASE_ASSERT_NOT_REACHED(); }
+    const WebXRViewport& viewport() const final;
+    ExceptionOr<Ref<GPUTexture>> colorTexture();
+    RefPtr<GPUTexture> depthStencilTexture();
+    RefPtr<GPUTexture> motionVectorTexture();
 
-    // const GPUTextureViewDescriptor& viewDescriptor() const { return m_viewDescriptor; }
+    const GPUTextureViewDescriptor& getViewDescriptor() const;
 private:
-    XRGPUSubImage(Ref<WebGPU::XRSubImage>&&);
+    XRGPUSubImage(Ref<WebGPU::XRSubImage>&&, WebGPU::XREye, std::array<uint16_t, 2>&&, WebCore::IntRect&&, GPUDevice&);
 
-    Ref<WebGPU::XRSubImage> m_backing;
-    GPUTextureViewDescriptor m_viewDescriptor;
+    bool isXRGPUSubImage() const final { return true; }
+
+    const Ref<WebGPU::XRSubImage> m_backing;
+    const Ref<GPUDevice> m_device;
+    const GPUTextureViewDescriptor m_descriptor;
+    const Ref<WebXRViewport> m_viewport;
+    const unsigned m_width;
+    const unsigned m_height;
 };
 
 } // namespace WebCore
 
-#endif // ENABLE(WEBXR_LAYERS)
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::XRGPUSubImage)
+    static bool isType(const WebCore::XRSubImage& image) { return image.isXRGPUSubImage(); }
+SPECIALIZE_TYPE_TRAITS_END()
+
+#endif // ENABLE(WEBXR_LAYERS) && ENABLE(WEBGPU)

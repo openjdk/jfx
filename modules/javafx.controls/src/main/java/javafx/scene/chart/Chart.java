@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,8 +37,6 @@ import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.property.StringPropertyBase;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WritableValue;
 import javafx.collections.ObservableList;
 import javafx.css.CssMetaData;
@@ -55,7 +53,6 @@ import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
-import javafx.stage.Window;
 import javafx.util.Subscription;
 import com.sun.javafx.charts.ChartLayoutAnimator;
 import com.sun.javafx.charts.Legend;
@@ -308,12 +305,18 @@ public abstract class Chart extends Region {
     }
 
     /**
-     * This is used to check if any given animation should run. It returns true if animation is enabled and the node
-     * is visible and in a scene.
-     * @return true if animation is enabled and the node is visible and in a scene
+     * This is used to check if any given animation should run.
+     * <p>
+     * The default implementation returns true if animation is enabled, the node
+     * is visible and in a scene, and reduced-motion mode is not enabled.
+     *
+     * @return {@code true} if animations should run, {@code false} otherwise
      */
-    protected final boolean shouldAnimate(){
-        return getAnimated() && NodeHelper.isTreeShowing(this);
+    protected boolean shouldAnimate(){
+        return getAnimated()
+            && NodeHelper.isTreeShowing(this)
+            && getScene() instanceof Scene scene
+            && !scene.getPreferences().isReducedMotion();
     }
 
     /**

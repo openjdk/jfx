@@ -31,13 +31,13 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(IDBDatabaseInfo);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(IDBDatabaseInfo);
 
 IDBDatabaseInfo::IDBDatabaseInfo(const String& name, uint64_t version, uint64_t maxIndexID, HashMap<IDBObjectStoreIdentifier, IDBObjectStoreInfo>&& objectStoreMap)
     : m_name(name)
     , m_version(version)
     , m_maxIndexID(maxIndexID)
-    , m_objectStoreMap(WTFMove(objectStoreMap))
+    , m_objectStoreMap(WTF::move(objectStoreMap))
 {
 }
 
@@ -67,10 +67,14 @@ bool IDBDatabaseInfo::hasObjectStore(const String& name) const
 
 IDBObjectStoreInfo IDBDatabaseInfo::createNewObjectStore(const String& name, std::optional<IDBKeyPath>&& keyPath, bool autoIncrement)
 {
+    // ObjectIdentifier generation begins anew from 1 each time the program is restarted. But the IDBObjectStores
+    // held in m_objectStoreMap and their identifiers are perisisted to disk. So we must ensure that newly created
+    // identifiers do not conflict with identifiers for pre-existing IDBObjectStores loaded from disk.
     auto objectStoreIdentifier = IDBObjectStoreIdentifier::generate();
     while (m_objectStoreMap.contains(objectStoreIdentifier))
         objectStoreIdentifier = IDBObjectStoreIdentifier::generate();
-    IDBObjectStoreInfo info(objectStoreIdentifier, name, WTFMove(keyPath), autoIncrement);
+
+    IDBObjectStoreInfo info(objectStoreIdentifier, name, WTF::move(keyPath), autoIncrement);
     m_objectStoreMap.set(info.identifier(), info);
     return info;
 }
@@ -78,8 +82,6 @@ IDBObjectStoreInfo IDBDatabaseInfo::createNewObjectStore(const String& name, std
 void IDBDatabaseInfo::addExistingObjectStore(const IDBObjectStoreInfo& info)
 {
     ASSERT(!m_objectStoreMap.contains(info.identifier()));
-
-
     m_objectStoreMap.set(info.identifier(), info);
 }
 

@@ -68,7 +68,9 @@ typedef (DOMString or sequence<DOMString>) IDBKeyPath;
     undefined deleteIndex(DOMString name);
 };
 
-dictionary IDBIndexParameters {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary IDBIndexParameters {
     boolean unique = false;
     boolean multiEntry = false;
 };

@@ -26,7 +26,7 @@
 
 #if ENABLE(MEDIA_STREAM)
 
-#include "MediaSettingsRange.h"
+#include <WebCore/MediaSettingsRange.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -35,6 +35,8 @@ enum class FillLightMode : uint8_t;
 enum class RedEyeReduction : uint8_t;
 
 struct PhotoCapabilities {
+    PhotoCapabilities isolatedCopy() const { return *this; }
+
     std::optional<RedEyeReduction> redEyeReduction;
     std::optional<MediaSettingsRange> imageHeight;
     std::optional<MediaSettingsRange> imageWidth;

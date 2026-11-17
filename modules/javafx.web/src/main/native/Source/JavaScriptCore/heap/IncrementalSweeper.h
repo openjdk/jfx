@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "JSRunLoopTimer.h"
+#include <JavaScriptCore/JSRunLoopTimer.h>
 
 namespace JSC {
 
@@ -38,7 +38,6 @@ public:
     JS_EXPORT_PRIVATE explicit IncrementalSweeper(Heap*);
 
     JS_EXPORT_PRIVATE void startSweeping(Heap&);
-    void freeFastMallocMemoryAfterSweeping() { m_shouldFreeFastMallocMemoryAfterSweeping = true; }
 
     void doWorkUntil(VM&, MonotonicTime deadline);
     void doWork(VM&) final;
@@ -52,7 +51,6 @@ private:
 
     BlockDirectory* m_currentDirectory;
     bool m_lastOpportunisticTaskDidFinishSweeping { false };
-    bool m_shouldFreeFastMallocMemoryAfterSweeping { false };
 };
 
 } // namespace JSC

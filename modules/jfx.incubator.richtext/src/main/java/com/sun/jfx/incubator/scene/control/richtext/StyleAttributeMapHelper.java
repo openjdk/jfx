@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 package com.sun.jfx.incubator.scene.control.richtext;
 
 import com.sun.javafx.util.Utils;
+import jfx.incubator.scene.control.richtext.model.StyleAttribute;
 import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 
 /**
@@ -52,20 +53,55 @@ public class StyleAttributeMapHelper {
     /**
      * Returns a new StyleAttributeMap instance which contains only the character attributes,
      * or null if no character attributes found.
+     *
      * @param ss the style attribute map
-     * @return the instance
+     * @return the instance of StyleAttributeMap, or null
      */
     public static StyleAttributeMap getCharacterAttrs(StyleAttributeMap ss) {
         return accessor.filterAttributes(ss, false);
     }
 
     /**
-     * Returns a new StyleAttributeMap instance which contains only the paragraph attributes.,
+     * Returns a new StyleAttributeMap instance which contains only the paragraph attributes,
      * or null if no paragraph attributes found.
+     *
      * @param ss the style attribute map
-     * @return the instance
+     * @return the instance of StyleAttributeMap, or null
      */
     public static StyleAttributeMap getParagraphAttrs(StyleAttributeMap ss) {
         return accessor.filterAttributes(ss, true);
+    }
+
+    /**
+     * Returns a new StyleAttributeMap instance which contains only paragraph attributes
+     * when {@code forParagraph=true}, or character attributes when {@code forParagraph=false},
+     * or null when no attributes of the specified type are found.
+     *
+     * @param ss the style attribute map
+     * @param forParagraph determines which attributes to retain
+     * @return the instance of StyleAttributeMap, or null
+     */
+    public static StyleAttributeMap filter(StyleAttributeMap ss, boolean forParagraph) {
+        if (forParagraph) {
+            return getParagraphAttrs(ss);
+        } else {
+            return getCharacterAttrs(ss);
+        }
+    }
+
+    /**
+     * Returns true if the given attribute is a character one (isParagraph = false),
+     * or a paragraph one (isParagraph = true)
+     * @param a the attribute
+     * @param isParagraph whether the expected type is a paragraph or a character
+     * @return true if the given attribute is a character one (isParagraph = false),
+     * or a paragraph one (isParagraph = true)
+     */
+    public static boolean isAcceptable(StyleAttribute<?> a, boolean isParagraph) {
+        if (isParagraph) {
+            return a.isParagraphAttribute();
+        } else {
+            return a.isCharacterAttribute();
+        }
     }
 }

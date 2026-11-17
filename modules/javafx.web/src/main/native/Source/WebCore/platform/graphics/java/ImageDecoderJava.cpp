@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,6 +34,8 @@
 #include "Logging.h"
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ImageDecoderJava);
 
 #ifndef NDEBUG
   struct ImageDecoderCounter {
@@ -237,8 +239,19 @@ WTF::Seconds ImageDecoderJava::frameDurationAtIndex(size_t idx) const
 
 EncodedDataStatus ImageDecoderJava::encodedDataStatus() const
 {
-    if (isSizeAvailable())
+    if (m_encodedDataStatus == EncodedDataStatus::Complete)
+    {
+        return m_encodedDataStatus;
+    }
+
+    if (m_isAllDataReceived)
+    {
+        m_encodedDataStatus = EncodedDataStatus::Complete;
+    }
+    else if (isSizeAvailable())
+    {
         m_encodedDataStatus = EncodedDataStatus::SizeAvailable;
+    }
 
     return m_encodedDataStatus;
 }
@@ -290,7 +303,7 @@ bool ImageDecoderJava::frameIsCompleteAtIndex(size_t idx) const
 {
     JNIEnv* env = WTF::GetJavaEnv();
     if (!env || !m_nativeDecoder) {
-        return { };
+        return false;
     }
     static jmethodID midGetFrameIsComplete = env->GetMethodID(
         PG_GetGraphicsImageDecoderClass(env),

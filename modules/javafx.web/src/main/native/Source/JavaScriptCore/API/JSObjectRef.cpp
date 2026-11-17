@@ -55,6 +55,8 @@
 
 using namespace JSC;
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 JSClassRef JSClassCreate(const JSClassDefinition* definition)
 {
     JSC::initialize();
@@ -146,7 +148,7 @@ JSObjectRef JSObjectMakeFunction(JSContextRef ctx, JSStringRef name, unsigned pa
     for (unsigned i = 0; i < parameterCount; i++)
         args.append(jsString(vm, parameterNames[i]->string()));
     args.append(jsString(vm, body->string()));
-    if (UNLIKELY(args.hasOverflowed())) {
+    if (args.hasOverflowed()) [[unlikely]] {
         auto throwScope = DECLARE_THROW_SCOPE(vm);
         throwOutOfMemoryError(globalObject, throwScope);
         handleExceptionIfNeeded(scope, ctx, exception);
@@ -177,7 +179,7 @@ JSObjectRef JSObjectMakeArray(JSContextRef ctx, size_t argumentCount, const JSVa
         argList.ensureCapacity(argumentCount);
         for (size_t i = 0; i < argumentCount; ++i)
             argList.append(toJS(globalObject, arguments[i]));
-        if (UNLIKELY(argList.hasOverflowed())) {
+        if (argList.hasOverflowed()) [[unlikely]] {
             auto throwScope = DECLARE_THROW_SCOPE(vm);
             throwOutOfMemoryError(globalObject, throwScope);
             handleExceptionIfNeeded(scope, ctx, exception);
@@ -209,7 +211,7 @@ JSObjectRef JSObjectMakeDate(JSContextRef ctx, size_t argumentCount, const JSVal
     argList.ensureCapacity(argumentCount);
     for (size_t i = 0; i < argumentCount; ++i)
         argList.append(toJS(globalObject, arguments[i]));
-    if (UNLIKELY(argList.hasOverflowed())) {
+    if (argList.hasOverflowed()) [[unlikely]] {
         auto throwScope = DECLARE_THROW_SCOPE(vm);
         throwOutOfMemoryError(globalObject, throwScope);
         handleExceptionIfNeeded(scope, ctx, exception);
@@ -260,7 +262,7 @@ JSObjectRef JSObjectMakeRegExp(JSContextRef ctx, size_t argumentCount, const JSV
     argList.ensureCapacity(argumentCount);
     for (size_t i = 0; i < argumentCount; ++i)
         argList.append(toJS(globalObject, arguments[i]));
-    if (UNLIKELY(argList.hasOverflowed())) {
+    if (argList.hasOverflowed()) [[unlikely]] {
         auto throwScope = DECLARE_THROW_SCOPE(vm);
         throwOutOfMemoryError(globalObject, throwScope);
         handleExceptionIfNeeded(scope, ctx, exception);
@@ -377,7 +379,7 @@ void JSObjectSetProperty(JSContextRef ctx, JSObjectRef object, JSStringRef prope
     JSValue jsValue = toJS(globalObject, value);
 
     bool doesNotHaveProperty = attributes && !jsObject->hasProperty(globalObject, name);
-    if (LIKELY(!scope.exception())) {
+    if (!scope.exception()) [[likely]] {
         if (doesNotHaveProperty) {
             PropertyDescriptor desc(jsValue, attributes);
             jsObject->methodTable()->defineOwnProperty(jsObject, globalObject, name, desc, false);
@@ -452,7 +454,7 @@ void JSObjectSetPropertyForKey(JSContextRef ctx, JSObjectRef object, JSValueRef 
         return;
 
     bool doesNotHaveProperty = attributes && !jsObject->hasProperty(globalObject, ident);
-    if (LIKELY(!scope.exception())) {
+    if (!scope.exception()) [[likely]] {
         if (doesNotHaveProperty) {
             PropertyDescriptor desc(jsValue, attributes);
             jsObject->methodTable()->defineOwnProperty(jsObject, globalObject, ident, desc, false);
@@ -724,7 +726,7 @@ JSValueRef JSObjectCallAsFunction(JSContextRef ctx, JSObjectRef object, JSObject
     argList.ensureCapacity(argumentCount);
     for (size_t i = 0; i < argumentCount; i++)
         argList.append(toJS(globalObject, arguments[i]));
-    if (UNLIKELY(argList.hasOverflowed())) {
+    if (argList.hasOverflowed()) [[unlikely]] {
         auto throwScope = DECLARE_THROW_SCOPE(vm);
         throwOutOfMemoryError(globalObject, throwScope);
         handleExceptionIfNeeded(scope, ctx, exception);
@@ -771,7 +773,7 @@ JSObjectRef JSObjectCallAsConstructor(JSContextRef ctx, JSObjectRef object, size
     argList.ensureCapacity(argumentCount);
     for (size_t i = 0; i < argumentCount; i++)
         argList.append(toJS(globalObject, arguments[i]));
-    if (UNLIKELY(argList.hasOverflowed())) {
+    if (argList.hasOverflowed()) [[unlikely]] {
         auto throwScope = DECLARE_THROW_SCOPE(vm);
         throwOutOfMemoryError(globalObject, throwScope);
         handleExceptionIfNeeded(scope, ctx, exception);
@@ -785,7 +787,7 @@ JSObjectRef JSObjectCallAsConstructor(JSContextRef ctx, JSObjectRef object, size
 }
 
 struct OpaqueJSPropertyNameArray {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(OpaqueJSPropertyNameArray);
 public:
     // FIXME: Why not inherit from RefCounted?
     OpaqueJSPropertyNameArray(VM* vm)
@@ -812,10 +814,10 @@ JSPropertyNameArrayRef JSObjectCopyPropertyNames(JSContextRef ctx, JSObjectRef o
 
     JSObject* jsObject = toJS(object);
     JSPropertyNameArrayRef propertyNames = new OpaqueJSPropertyNameArray(&vm);
-    PropertyNameArray array(vm, PropertyNameMode::Strings, PrivateSymbolMode::Exclude);
-    jsObject->getPropertyNames(globalObject, array, DontEnumPropertiesMode::Exclude);
+    PropertyNameArrayBuilder arrayBuilder(vm, PropertyNameMode::Strings, PrivateSymbolMode::Exclude);
+    jsObject->getPropertyNames(globalObject, arrayBuilder, DontEnumPropertiesMode::Exclude);
 
-    propertyNames->array = WTF::map(array, [](auto& item) {
+    propertyNames->array = WTF::map(arrayBuilder, [](auto& item) {
         return OpaqueJSString::tryCreate(item.string()).releaseNonNull();
     });
 
@@ -848,7 +850,7 @@ JSStringRef JSPropertyNameArrayGetNameAtIndex(JSPropertyNameArrayRef array, size
 
 void JSPropertyNameAccumulatorAddName(JSPropertyNameAccumulatorRef array, JSStringRef propertyName)
 {
-    PropertyNameArray* propertyNames = toJS(array);
+    PropertyNameArrayBuilder* propertyNames = toJS(array);
     VM& vm = propertyNames->vm();
     JSLockHolder locker(vm);
     propertyNames->add(propertyName->identifier(&vm));
@@ -877,3 +879,4 @@ JSGlobalContextRef JSObjectGetGlobalContext(JSObjectRef objectRef)
     return reinterpret_cast<JSGlobalContextRef>(object->globalObject());
 }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

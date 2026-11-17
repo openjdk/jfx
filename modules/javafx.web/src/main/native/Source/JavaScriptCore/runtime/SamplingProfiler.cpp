@@ -54,6 +54,8 @@
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 static double sNumTotalStackTraces = 0;
@@ -137,10 +139,19 @@ protected:
 #if ENABLE(WEBASSEMBLY)
                 // At this point, Wasm::Callee would be dying (ref count is 0), but its fields are still live.
                 // And we can safely copy Wasm::IndexOrName even when any lock is held by suspended threads.
-                    auto* wasmCallee = static_cast<Wasm::Callee*>(nativeCallee);
-                stackTrace[m_depth].wasmIndexOrName = wasmCallee->indexOrName();
+                    auto* wasmCallee = uncheckedDowncast<Wasm::Callee>(nativeCallee);
                 stackTrace[m_depth].wasmCompilationMode = wasmCallee->compilationMode();
-#if ENABLE(JIT)
+                    stackTrace[m_depth].wasmIndexOrName = wasmCallee->indexOrName();
+                    stackTrace[m_depth].callSiteIndex = m_callFrame->unsafeCallSiteIndex();
+#if ENABLE(WEBASSEMBLY_OMGJIT)
+                    // FIXME: We should be able to add all stack traces including inlined ones in SamplingProfiler.
+                    if (wasmCallee->compilationMode() == Wasm::CompilationMode::OMGMode) {
+                        auto* omgCallee = uncheckedDowncast<const Wasm::OptimizingJITCallee>(wasmCallee);
+                        bool isInlined = false;
+                        auto origin = omgCallee->getOrigin(stackTrace[m_depth].callSiteIndex.bits(), 0, isInlined);
+                        if (isInlined)
+                            stackTrace[m_depth].wasmIndexOrName = origin;
+                    }
                     stackTrace[m_depth].wasmPCMap = NativeCalleeRegistry::singleton().codeOriginMap(wasmCallee);
 #endif
 #endif
@@ -194,7 +205,7 @@ protected:
 
     bool isValidFramePointer(void* callFrame)
     {
-        uint8_t* fpCast = bitwise_cast<uint8_t*>(callFrame);
+        uint8_t* fpCast = std::bit_cast<uint8_t*>(callFrame);
         for (auto& thread : m_vm.heap.machineThreads().threads(m_machineThreadsLocker)) {
             uint8_t* stackBase = static_cast<uint8_t*>(thread->stack().origin());
             uint8_t* stackLimit = static_cast<uint8_t*>(thread->stack().end());
@@ -308,7 +319,7 @@ SamplingProfiler::SamplingProfiler(VM& vm, Ref<Stopwatch>&& stopwatch)
     , m_isShutDown(false)
     , m_vm(vm)
     , m_weakRandom()
-    , m_stopwatch(WTFMove(stopwatch))
+    , m_stopwatch(WTF::move(stopwatch))
     , m_timingInterval(Seconds::fromMicroseconds(Options::sampleInterval()))
 {
     if (sReportStats) {
@@ -341,7 +352,7 @@ void SamplingProfiler::timerLoop()
         Seconds stackTraceProcessingTime = 0_s;
         {
             Locker locker { m_lock };
-            if (UNLIKELY(m_isShutDown))
+            if (m_isShutDown) [[unlikely]]
                 return;
 
             if (!m_isPaused && m_jscExecutionThread)
@@ -451,7 +462,7 @@ void SamplingProfiler::takeSample(Seconds& stackTraceProcessingTime)
                     stackTrace.append(UnprocessedStackFrame { machinePC });
                 stackTrace.appendRange(m_currentFrames.begin(), m_currentFrames.begin() + walkSize);
 
-                m_unprocessedStackTraces.append(UnprocessedStackTrace { timestamp, nowTime, machinePC, topFrameIsLLInt, llintPC, regExp, WTFMove(stackTrace) });
+                m_unprocessedStackTraces.append(UnprocessedStackTrace { timestamp, nowTime, machinePC, topFrameIsLLInt, llintPC, regExp, WTF::move(stackTrace) });
 
                 if (didRunOutOfVectorSpace)
                     m_currentFrames.grow(m_currentFrames.size() * 1.25);
@@ -493,7 +504,6 @@ void SamplingProfiler::processUnverifiedStackTraces()
                 location.lineColumn = codeBlock->lineColumnForBytecodeIndex(bytecodeIndex);
                 location.bytecodeIndex = bytecodeIndex;
             }
-            if (codeBlock->hasHash())
                 location.codeBlockHash = codeBlock->hash();
             location.jitType = jitType;
         };
@@ -650,7 +660,7 @@ void SamplingProfiler::processUnverifiedStackTraces()
                 // by ignoring it.
                 BytecodeIndex bytecodeIndex = BytecodeIndex(0);
                 if (topCodeBlock->jitType() == JITType::InterpreterThunk || topCodeBlock->jitType() == JITType::BaselineJIT) {
-                    unsigned bits = static_cast<unsigned>(bitwise_cast<uintptr_t>(unprocessedStackTrace.llintPC));
+                    unsigned bits = static_cast<unsigned>(std::bit_cast<uintptr_t>(unprocessedStackTrace.llintPC));
                     bytecodeIndex = tryGetBytecodeIndex(bits, topCodeBlock);
 
                     UNUSED_PARAM(bytecodeIndex); // FIXME: do something with this info for the web inspector: https://bugs.webkit.org/show_bug.cgi?id=153455
@@ -755,7 +765,7 @@ void SamplingProfiler::pause()
 void SamplingProfiler::noticeCurrentThreadAsJSCExecutionThreadWithLock()
 {
     ASSERT(m_lock.isLocked());
-    m_jscExecutionThread = &Thread::current();
+    m_jscExecutionThread = &Thread::currentSingleton();
 }
 
 void SamplingProfiler::noticeCurrentThreadAsJSCExecutionThread()
@@ -911,7 +921,7 @@ unsigned SamplingProfiler::StackFrame::functionStartColumn()
     return std::numeric_limits<unsigned>::max();
 }
 
-SourceID SamplingProfiler::StackFrame::sourceID()
+std::tuple<SourceProvider*, SourceID> SamplingProfiler::StackFrame::sourceProviderAndID()
 {
     switch (frameType) {
     case FrameType::Unknown:
@@ -919,16 +929,18 @@ SourceID SamplingProfiler::StackFrame::sourceID()
     case FrameType::RegExp:
     case FrameType::C:
     case FrameType::Wasm:
-        return internalSourceID;
+        return { nullptr, internalSourceID };
 
-    case FrameType::Executable:
+    case FrameType::Executable: {
         if (executable->isHostFunction())
-            return internalSourceID;
+            return { nullptr, internalSourceID };
 
-        return static_cast<ScriptExecutable*>(executable)->sourceID();
+        auto* provider = static_cast<ScriptExecutable*>(executable)->source().provider();
+        return { provider, provider->asID() };
+    }
     }
     RELEASE_ASSERT_NOT_REACHED();
-    return internalSourceID;
+    return { nullptr, internalSourceID };
 }
 
 String SamplingProfiler::StackFrame::url()
@@ -961,7 +973,7 @@ Vector<SamplingProfiler::StackTrace> SamplingProfiler::releaseStackTraces()
         processUnverifiedStackTraces();
     }
 
-    Vector<StackTrace> result(WTFMove(m_stackTraces));
+    Vector<StackTrace> result(WTF::move(m_stackTraces));
     clearData();
     return result;
 }
@@ -971,7 +983,7 @@ static String descriptionForLocation(SamplingProfiler::StackFrame::CodeLocation 
     if (wasmCompilationMode) {
         StringPrintStream description;
         description.print(":");
-        description.print(Wasm::makeString(wasmCompilationMode.value()));
+        description.print(wasmCompilationMode.value());
         description.print(":");
         if (wasmOffset) {
             uintptr_t offset = wasmOffset.offset();
@@ -1011,7 +1023,6 @@ struct Tiers {
     static constexpr ASCIILiteral ftl { "FTL"_s };
     static constexpr ASCIILiteral builtin { "js builtin"_s };
     static constexpr ASCIILiteral ipint { "IPInt"_s };
-    static constexpr ASCIILiteral wasmllint { "WasmLLInt"_s };
     static constexpr ASCIILiteral bbq { "BBQ"_s };
     static constexpr ASCIILiteral omg { "OMG"_s };
     static constexpr ASCIILiteral wasm { "Wasm"_s };
@@ -1044,18 +1055,15 @@ static String tierName(SamplingProfiler::StackFrame& frame)
     case SamplingProfiler::FrameType::Wasm:
         if (frame.wasmCompilationMode) {
             switch (frame.wasmCompilationMode.value()) {
-            case Wasm::CompilationMode::LLIntMode:
-                return Tiers::wasmllint;
             case Wasm::CompilationMode::IPIntMode:
                 return Tiers::ipint;
-            case Wasm::CompilationMode::JSEntrypointJITMode:
-            case Wasm::CompilationMode::JITLessJSEntrypointMode:
+            case Wasm::CompilationMode::JSToWasmMode:
             case Wasm::CompilationMode::JSToWasmICMode:
             case Wasm::CompilationMode::WasmToJSMode:
+            case Wasm::CompilationMode::WasmBuiltinMode:
                 // Just say "Wasm" for now.
                 break;
             case Wasm::CompilationMode::BBQMode:
-            case Wasm::CompilationMode::BBQForOSREntryMode:
                 return Tiers::bbq;
             case Wasm::CompilationMode::OMGMode:
             case Wasm::CompilationMode::OMGForOSREntryMode:
@@ -1085,11 +1093,19 @@ Ref<JSON::Value> SamplingProfiler::stackTracesAsJSON()
         processUnverifiedStackTraces();
     }
 
+    UncheckedKeyHashMap<SourceID, Ref<SourceProvider>> sources;
+
     auto stackFrameAsJSON = [&](StackFrame& stackFrame) {
+        auto [provider, sourceID] = stackFrame.sourceProviderAndID();
+        if (provider)
+            sources.add(sourceID, Ref { *provider });
+
         auto result = JSON::Object::create();
-        result->setDouble("sourceID"_s, stackFrame.sourceID());
+        result->setDouble("sourceID"_s, sourceID);
         result->setString("name"_s, stackFrame.displayName(m_vm));
         result->setString("location"_s, descriptionForLocation(stackFrame.semanticLocation, stackFrame.wasmCompilationMode, stackFrame.wasmOffset));
+        result->setDouble("line"_s, stackFrame.semanticLocation.lineColumn.line);
+        result->setDouble("column"_s, stackFrame.semanticLocation.lineColumn.column);
         result->setString("category"_s, tierName(stackFrame));
         uint32_t flags = 0;
         if (stackFrame.frameType == SamplingProfiler::FrameType::Executable && stackFrame.executable) {
@@ -1102,8 +1118,10 @@ Ref<JSON::Value> SamplingProfiler::stackTracesAsJSON()
             auto inliner = JSON::Object::create();
             inliner->setString("name"_s, String::fromUTF8(machineLocation->second->inferredName().span()));
             inliner->setString("location"_s, descriptionForLocation(machineLocation->first, std::nullopt, BytecodeIndex()));
+            inliner->setDouble("line"_s, machineLocation->first.lineColumn.line);
+            inliner->setDouble("column"_s, machineLocation->first.lineColumn.column);
             inliner->setString("category"_s, tierName(stackFrame));
-            result->setValue("inliner"_s, WTFMove(inliner));
+            result->setValue("inliner"_s, WTF::move(inliner));
         }
         return result;
     };
@@ -1115,8 +1133,20 @@ Ref<JSON::Value> SamplingProfiler::stackTracesAsJSON()
             auto frames = JSON::Array::create();
             for (StackFrame& stackFrame : stackTrace.frames)
                 frames->pushValue(stackFrameAsJSON(stackFrame));
-            result->setValue("frames"_s, WTFMove(frames));
+            result->setValue("frames"_s, WTF::move(frames));
     }
+        return result;
+    };
+
+    auto sourceAsJSON = [&](SourceProvider& provider) {
+        auto result = JSON::Object::create();
+        result->setDouble("sourceID"_s, provider.asID());
+        if (!provider.sourceURL().isEmpty())
+            result->setString("url"_s, provider.sourceURL());
+        if (!provider.sourceURLDirective().isEmpty())
+            result->setString("sourceURL"_s, provider.sourceURLDirective());
+        if (!provider.sourceMappingURLDirective().isEmpty())
+            result->setString("sourceMappingURL"_s, provider.sourceMappingURLDirective());
         return result;
     };
 
@@ -1125,7 +1155,12 @@ Ref<JSON::Value> SamplingProfiler::stackTracesAsJSON()
     auto traces = JSON::Array::create();
     for (StackTrace& stackTrace : m_stackTraces)
         traces->pushValue(stackTraceAsJSON(stackTrace));
-    result->setValue("traces"_s, traces);
+    result->setValue("traces"_s, WTF::move(traces));
+
+    auto sourcesArray = JSON::Array::create();
+    for (auto& [ sourceID, sourceProvider ] : sources)
+        sourcesArray->pushValue(sourceAsJSON(sourceProvider.get()));
+    result->setValue("sources"_s, WTF::move(sourcesArray));
 
     clearData();
 
@@ -1135,12 +1170,12 @@ Ref<JSON::Value> SamplingProfiler::stackTracesAsJSON()
 void SamplingProfiler::registerForReportAtExit()
 {
     static Lock registrationLock;
-    static HashSet<RefPtr<SamplingProfiler>>* profilesToReport;
+    static UncheckedKeyHashSet<RefPtr<SamplingProfiler>>* profilesToReport;
 
     Locker locker { registrationLock };
 
     if (!profilesToReport) {
-        profilesToReport = new HashSet<RefPtr<SamplingProfiler>>();
+        profilesToReport = new UncheckedKeyHashSet<RefPtr<SamplingProfiler>>();
         atexit([]() {
             for (const auto& profile : *profilesToReport)
                 profile->reportDataToOptionFile();
@@ -1182,7 +1217,7 @@ void SamplingProfiler::reportTopFunctions(PrintStream& out)
     }
 
     size_t totalSamples = 0;
-    HashMap<String, size_t> functionCounts;
+    UncheckedKeyHashMap<String, size_t> functionCounts;
     for (StackTrace& stackTrace : m_stackTraces) {
         if (!stackTrace.frames.size())
             continue;
@@ -1195,7 +1230,7 @@ void SamplingProfiler::reportTopFunctions(PrintStream& out)
             hash = stream.toString();
         } else
             hash = "<nil>"_s;
-        SourceID sourceID = frame.sourceID();
+        SourceID sourceID = std::get<1>(frame.sourceProviderAndID());
         if (Options::samplingProfilerIgnoreExternalSourceID()) {
             if (sourceID != internalSourceID)
                 sourceID = aggregatedExternalSourceID;
@@ -1248,8 +1283,8 @@ void SamplingProfiler::reportTopBytecodes(PrintStream& out)
     }
 
     size_t totalSamples = 0;
-    HashMap<String, size_t> bytecodeCounts;
-    HashMap<String, size_t> tierCounts;
+    UncheckedKeyHashMap<String, size_t> bytecodeCounts;
+    UncheckedKeyHashMap<String, size_t> tierCounts;
 
     auto forEachTier = [&] (auto func) {
         func(Tiers::llint);
@@ -1258,7 +1293,6 @@ void SamplingProfiler::reportTopBytecodes(PrintStream& out)
         func(Tiers::ftl);
         func(Tiers::builtin);
         func(Tiers::ipint);
-        func(Tiers::wasmllint);
         func(Tiers::bbq);
         func(Tiers::omg);
         func(Tiers::wasm);
@@ -1277,7 +1311,7 @@ void SamplingProfiler::reportTopBytecodes(PrintStream& out)
         auto frameDescription = makeString(frame.displayName(m_vm), descriptionForLocation(frame.semanticLocation, frame.wasmCompilationMode, frame.wasmOffset));
         if (std::optional<std::pair<StackFrame::CodeLocation, CodeBlock*>> machineLocation = frame.machineLocation) {
             frameDescription = makeString(frameDescription, " <-- "_s,
-                span(machineLocation->second->inferredName().data()), descriptionForLocation(machineLocation->first, std::nullopt, BytecodeIndex()));
+                unsafeSpan(machineLocation->second->inferredName().data()), descriptionForLocation(machineLocation->first, std::nullopt, BytecodeIndex()));
         }
         bytecodeCounts.add(frameDescription, 0).iterator->value++;
 
@@ -1373,5 +1407,7 @@ void printInternal(PrintStream& out, SamplingProfiler::FrameType frameType)
 }
 
 } // namespace WTF
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(SAMPLING_PROFILER)

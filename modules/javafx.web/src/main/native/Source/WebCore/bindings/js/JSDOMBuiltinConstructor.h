@@ -81,7 +81,7 @@ template<typename JSClass> inline JSC::Structure* JSDOMBuiltinConstructor<JSClas
 {
     auto& vm = JSC::getVM(lexicalGlobalObject);
 
-    if (LIKELY(newTarget == this))
+    if (newTarget == this) [[likely]]
         return getDOMStructure<JSClass>(vm, *globalObject());
 
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -96,7 +96,7 @@ template<typename JSClass> inline JSC::EncodedJSValue JSC_HOST_CALL_ATTRIBUTES J
     ASSERT(callFrame);
     auto* castedThis = JSC::jsCast<JSDOMBuiltinConstructor*>(callFrame->jsCallee());
     auto* structure = castedThis->getDOMStructureForJSObject(lexicalGlobalObject, asObject(callFrame->newTarget()));
-    if (UNLIKELY(!structure))
+    if (!structure) [[unlikely]]
         return { };
 
     auto* jsObject = JSClass::create(structure, castedThis->globalObject());

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2026 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "Image.h"
-#include "MediaUniqueIdentifier.h"
+#include <WebCore/Image.h>
+#include <WebCore/MediaUniqueIdentifier.h>
 #include <wtf/URL.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
@@ -56,13 +56,15 @@ struct NowPlayingMetadata {
 
 struct NowPlayingInfo {
     NowPlayingMetadata metadata;
+    uint64_t updateTime { 0 };
     double duration { 0 };
     double currentTime { 0 };
     double rate { 1.0 };
     bool supportsSeeking { false };
-    MediaUniqueIdentifier uniqueIdentifier;
+    Markable<MediaUniqueIdentifier> uniqueIdentifier;
     bool isPlaying { false };
     bool allowsNowPlayingControlsVisibility { false };
+    bool isVideo { false };
 
     friend bool operator==(const NowPlayingInfo&, const NowPlayingInfo&) = default;
 };

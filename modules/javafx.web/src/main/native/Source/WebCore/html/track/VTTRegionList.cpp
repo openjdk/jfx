@@ -52,14 +52,14 @@ VTTRegion* VTTRegionList::getRegionById(const String& id) const
 
 void VTTRegionList::add(Ref<VTTRegion>&& region)
 {
-    m_vector.append(WTFMove(region));
+    m_vector.append(WTF::move(region));
 }
 
 void VTTRegionList::remove(VTTRegion& region)
 {
     for (unsigned i = 0, size = m_vector.size(); i < size; ++i) {
         if (m_vector[i].ptr() == &region) {
-            m_vector.remove(i);
+            m_vector.removeAt(i);
             return;
         }
     }

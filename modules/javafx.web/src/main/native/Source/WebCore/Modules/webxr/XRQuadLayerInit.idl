@@ -29,6 +29,7 @@
     EnabledBySetting=WebXRLayersAPIEnabled,
     JSGenerateToJSObject,
     JSGenerateToNativeObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary XRQuadLayerInit : XRLayerInit {
     XRTextureType textureType = "texture";
     WebXRRigidTransform? transform;

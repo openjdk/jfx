@@ -26,13 +26,19 @@
 #include "config.h"
 #include "RenderSelectionGeometry.h"
 
+#include "FloatQuad.h"
 #include "RenderText.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderSelectionGeometryBase);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderSelectionGeometry);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderBlockSelectionGeometry);
+
 RenderSelectionGeometryBase::RenderSelectionGeometryBase(RenderObject& renderer)
     : m_renderer(renderer)
-    , m_repaintContainer(renderer.containerForRepaint().renderer.get())
+    , m_repaintContainer(renderer.containerForRepaint().renderer.unsafeGet())
     , m_state(renderer.selectionState())
 {
 }

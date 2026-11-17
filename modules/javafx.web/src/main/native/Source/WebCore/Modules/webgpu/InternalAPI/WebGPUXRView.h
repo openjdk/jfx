@@ -26,7 +26,7 @@
 #pragma once
 
 #include <wtf/Ref.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore::WebGPU {
@@ -34,9 +34,12 @@ namespace WebCore::WebGPU {
 class Device;
 class GPUTexture;
 
-class XRView : public RefCounted<XRView>, public CanMakeWeakPtr<XRView> {
+class XRView : public RefCountedAndCanMakeWeakPtr<XRView> {
 public:
     virtual ~XRView() = default;
+
+    virtual bool isRemoteXRViewProxy() const { return false; }
+    virtual bool isXRViewImpl() const { return false; }
 
 protected:
     XRView() = default;

@@ -48,11 +48,11 @@ JSValue JavaArray::convertJObjectToArray(JSGlobalObject* globalObject, jobject a
     if (type[0] != '[')
         return jsUndefined();
 
-    return RuntimeArray::create(globalObject, new JavaArray(anObject, type, WTFMove(rootObject), accessControlContext));
+    return RuntimeArray::create(globalObject, new JavaArray(anObject, type, WTF::move(rootObject), accessControlContext));
 }
 
 JavaArray::JavaArray(jobject array, const char* type, RefPtr<RootObject>&& rootObject, jobject accessControlContext)
-    : Array(WTFMove(rootObject))
+    : Array(WTF::move(rootObject))
 {
     m_array = JobjectWrapper::create(array);
 

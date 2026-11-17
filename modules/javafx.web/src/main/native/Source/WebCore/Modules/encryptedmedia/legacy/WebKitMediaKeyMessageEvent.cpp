@@ -33,7 +33,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(WebKitMediaKeyMessageEvent);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebKitMediaKeyMessageEvent);
 
 WebKitMediaKeyMessageEvent::WebKitMediaKeyMessageEvent(const AtomString& type, Uint8Array* message, const String& destinationURL)
     : Event(EventInterfaceType::WebKitMediaKeyMessageEvent, type, CanBubble::No, IsCancelable::No)

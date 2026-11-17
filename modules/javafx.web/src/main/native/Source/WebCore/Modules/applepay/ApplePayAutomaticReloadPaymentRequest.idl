@@ -28,6 +28,7 @@
     ExportMacro=WEBCORE_EXPORT,
     JSGenerateToJSObject,
     JSGenerateToNativeObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary ApplePayAutomaticReloadPaymentRequest {
     required DOMString paymentDescription;
     required ApplePayLineItem automaticReloadBilling; // must be `paymentTiming: "automaticReload"`

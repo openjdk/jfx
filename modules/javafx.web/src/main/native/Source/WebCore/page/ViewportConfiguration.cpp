@@ -29,6 +29,7 @@
 #include "Logging.h"
 #include <wtf/Assertions.h>
 #include <wtf/MathExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/TextStream.h>
 
@@ -37,6 +38,8 @@
 #endif
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ViewportConfiguration);
 
 static inline bool viewportArgumentValueIsValid(float value)
 {
@@ -52,6 +55,15 @@ static inline void adjustViewportArgumentsToAvoidExcessiveZooming(ViewportArgume
     auto zoomedWidthFromArguments = arguments.zoom * arguments.width;
     arguments.zoom = std::min(arguments.zoom, maximumInitialZoomScale);
     arguments.width = zoomedWidthFromArguments / arguments.zoom;
+}
+
+static inline void ignoreViewportArgumentsToAvoidEnlargedView(ViewportArguments& arguments, FloatSize viewLayoutSize)
+{
+    if (!viewportArgumentValueIsValid(arguments.width))
+        return;
+
+    if (arguments.width < viewLayoutSize.width())
+        arguments.width = 0;
 }
 
 constexpr double defaultDesktopViewportWidth = 980;
@@ -145,7 +157,17 @@ bool ViewportConfiguration::setContentsSize(const IntSize& contentSize)
 bool ViewportConfiguration::setViewLayoutSize(const FloatSize& viewLayoutSize, std::optional<double>&& scaleFactor, std::optional<double>&& minimumEffectiveDeviceWidthFromClient)
 {
     double newScaleFactor = scaleFactor.value_or(m_layoutSizeScaleFactor);
-    double newEffectiveWidth = minimumEffectiveDeviceWidthFromClient.value_or(m_minimumEffectiveDeviceWidthForView);
+    double newEffectiveWidth = [&] {
+        if (!m_configuration.shouldHonorMinimumEffectiveDeviceWidthFromClient)
+            return m_minimumEffectiveDeviceWidthForView;
+
+        if (!minimumEffectiveDeviceWidthFromClient)
+            return m_minimumEffectiveDeviceWidthForView;
+
+        m_minimumEffectiveDeviceWidthWasSetByClient = true;
+        return *minimumEffectiveDeviceWidthFromClient;
+    }();
+
     if (m_viewLayoutSize == viewLayoutSize && m_layoutSizeScaleFactor == newScaleFactor && newEffectiveWidth == m_minimumEffectiveDeviceWidthForView)
         return false;
 
@@ -194,6 +216,9 @@ bool ViewportConfiguration::setViewportArguments(const ViewportArguments& viewpo
 
     if (m_canIgnoreViewportArgumentsToAvoidExcessiveZoom)
         adjustViewportArgumentsToAvoidExcessiveZooming(m_viewportArguments);
+
+    if (m_canIgnoreViewportArgumentsToAvoidEnlargedView)
+        ignoreViewportArgumentsToAvoidEnlargedView(m_viewportArguments, m_viewLayoutSize);
 
     updateDefaultConfiguration();
     updateMinimumLayoutSize();
@@ -339,6 +364,9 @@ double ViewportConfiguration::minimumScale() const
 
     if (m_forceAlwaysUserScalable)
         minimumScale = std::min(minimumScale, forceAlwaysUserScalableMinimumScale());
+
+    if (m_configuration.minimumScaleDoesNotAdaptToContent)
+        return minimumScale;
 
     auto scaleForFittingContentIsApproximatelyEqualToMinimumScale = [] (double viewLength, double contentLength, double minimumScale) {
         if (contentLength <= 1 || viewLength <= 1)
@@ -518,6 +546,9 @@ void ViewportConfiguration::updateConfiguration()
         m_configuration.heightIsSet = viewportArgumentsOverridesHeight;
     }
 
+    if (!m_configuration.shouldHonorMinimumEffectiveDeviceWidthFromClient && std::exchange(m_minimumEffectiveDeviceWidthWasSetByClient, false))
+        m_minimumEffectiveDeviceWidthForView = 0;
+
     if (m_configuration.initialScaleIsSet && m_minimumEffectiveDeviceWidthForView > m_viewLayoutSize.width())
         m_configuration.ignoreInitialScaleForLayoutWidth = true;
 
@@ -529,8 +560,12 @@ void ViewportConfiguration::updateConfiguration()
     else if (booleanViewportArgumentIsSet(m_viewportArguments.shrinkToFit))
         m_configuration.allowsShrinkToFit = m_viewportArguments.shrinkToFit != 0.;
 
-    if (canOverrideConfigurationParameters() && !viewportArgumentsOverridesWidth)
+    if (canOverrideConfigurationParameters()) {
+        if (!viewportArgumentsOverridesWidth)
         m_configuration.width = m_minimumLayoutSize.width();
+        else if (layoutSizeIsExplicitlyScaled() && m_viewportArguments.width > 0)
+            m_configuration.width /= effectiveLayoutScale;
+    }
 
     m_configuration.avoidsUnsafeArea = m_viewportArguments.viewportFit != ViewportFit::Cover;
     m_configuration.initialScaleIgnoringLayoutScaleFactor = m_configuration.initialScale;
@@ -677,23 +712,26 @@ bool ViewportConfiguration::setIsKnownToLayOutWiderThanViewport(bool value)
 TextStream& operator<<(TextStream& ts, const ViewportConfiguration::Parameters& parameters)
 {
     ts.startGroup();
-    ts << "width " << parameters.width << ", set: " << (parameters.widthIsSet ? "true" : "false");
+    ts << "width "_s << parameters.width << ", set: "_s << (parameters.widthIsSet ? "true"_s : "false"_s);
     ts.endGroup();
 
     ts.startGroup();
-    ts << "height " << parameters.height << ", set: " << (parameters.heightIsSet ? "true" : "false");
+    ts << "height "_s << parameters.height << ", set: "_s << (parameters.heightIsSet ? "true"_s : "false"_s);
     ts.endGroup();
 
     ts.startGroup();
-    ts << "initialScale " << parameters.initialScale << ", set: " << (parameters.initialScaleIsSet ? "true" : "false");
+    ts << "initialScale "_s << parameters.initialScale << ", set: "_s << (parameters.initialScaleIsSet ? "true"_s : "false"_s);
     ts.endGroup();
 
-    ts.dumpProperty("initialScaleIgnoringLayoutScaleFactor", parameters.initialScaleIgnoringLayoutScaleFactor);
-    ts.dumpProperty("minimumScale", parameters.minimumScale);
-    ts.dumpProperty("maximumScale", parameters.maximumScale);
-    ts.dumpProperty("allowsUserScaling", parameters.allowsUserScaling);
-    ts.dumpProperty("allowsShrinkToFit", parameters.allowsShrinkToFit);
-    ts.dumpProperty("avoidsUnsafeArea", parameters.avoidsUnsafeArea);
+    ts.dumpProperty("initialScaleIgnoringLayoutScaleFactor"_s, parameters.initialScaleIgnoringLayoutScaleFactor);
+    ts.dumpProperty("minimumScale"_s, parameters.minimumScale);
+    ts.dumpProperty("maximumScale"_s, parameters.maximumScale);
+    ts.dumpProperty("allowsUserScaling"_s, parameters.allowsUserScaling);
+    ts.dumpProperty("allowsShrinkToFit"_s, parameters.allowsShrinkToFit);
+    ts.dumpProperty("avoidsUnsafeArea"_s, parameters.avoidsUnsafeArea);
+    ts.dumpProperty("ignoreInitialScaleForLayoutWidth"_s, parameters.ignoreInitialScaleForLayoutWidth);
+    ts.dumpProperty("shouldHonorMinimumEffectiveDeviceWidthFromClient"_s, parameters.shouldHonorMinimumEffectiveDeviceWidthFromClient);
+    ts.dumpProperty("minimumScaleDoesNotAdaptToContent"_s, parameters.minimumScaleDoesNotAdaptToContent);
 
     return ts;
 }
@@ -708,37 +746,38 @@ String ViewportConfiguration::description() const
     TextStream ts;
 
     ts.startGroup();
-    ts << "viewport-configuration " << (void*)this;
+    ts << "viewport-configuration "_s << (void*)this;
     {
         TextStream::GroupScope scope(ts);
-        ts << "viewport arguments";
+        ts << "viewport arguments"_s;
         ts << m_viewportArguments;
     }
     {
         TextStream::GroupScope scope(ts);
-        ts << "configuration";
+        ts << "configuration"_s;
         ts << m_configuration;
     }
     {
         TextStream::GroupScope scope(ts);
-        ts << "default configuration";
+        ts << "default configuration"_s;
         ts << m_defaultConfiguration;
     }
 
-    ts.dumpProperty("contentSize", m_contentSize);
-    ts.dumpProperty("minimumLayoutSize", m_minimumLayoutSize);
-    ts.dumpProperty("layoutSizeScaleFactor", m_layoutSizeScaleFactor);
-    ts.dumpProperty("computed initial scale", initialScale());
-    ts.dumpProperty("computed minimum scale", minimumScale());
-    ts.dumpProperty("computed layout size", layoutSize());
-    ts.dumpProperty("ignoring horizontal scaling constraints", shouldIgnoreHorizontalScalingConstraints() ? "true" : "false");
-    ts.dumpProperty("ignoring vertical scaling constraints", shouldIgnoreVerticalScalingConstraints() ? "true" : "false");
-    ts.dumpProperty("avoids unsafe area", avoidsUnsafeArea() ? "true" : "false");
-    ts.dumpProperty("minimum effective device width (for view)", m_minimumEffectiveDeviceWidthForView);
-    ts.dumpProperty("minimum effective device width (for shrink-to-fit)", m_minimumEffectiveDeviceWidthForShrinkToFit);
-    ts.dumpProperty("known to lay out wider than viewport", m_isKnownToLayOutWiderThanViewport ? "true" : "false");
-    ts.dumpProperty("prefers horizontal scrolling", m_prefersHorizontalScrollingBelowDesktopViewportWidths ? "true" : "false");
-    ts.dumpProperty("can ignore viewport width and zoom", m_canIgnoreViewportArgumentsToAvoidExcessiveZoom ? "true" : "false");
+    ts.dumpProperty("contentSize"_s, m_contentSize);
+    ts.dumpProperty("minimumLayoutSize"_s, m_minimumLayoutSize);
+    ts.dumpProperty("layoutSizeScaleFactor"_s, m_layoutSizeScaleFactor);
+    ts.dumpProperty("computed initial scale"_s, initialScale());
+    ts.dumpProperty("computed minimum scale"_s, minimumScale());
+    ts.dumpProperty("computed layout size"_s, layoutSize());
+    ts.dumpProperty("ignoring horizontal scaling constraints"_s, shouldIgnoreHorizontalScalingConstraints() ? "true"_s : "false"_s);
+    ts.dumpProperty("ignoring vertical scaling constraints"_s, shouldIgnoreVerticalScalingConstraints() ? "true"_s : "false"_s);
+    ts.dumpProperty("avoids unsafe area"_s, avoidsUnsafeArea() ? "true"_s : "false"_s);
+    ts.dumpProperty("minimum effective device width (for view)"_s, m_minimumEffectiveDeviceWidthForView);
+    ts.dumpProperty("minimum effective device width (for shrink-to-fit)"_s, m_minimumEffectiveDeviceWidthForShrinkToFit);
+    ts.dumpProperty("known to lay out wider than viewport"_s, m_isKnownToLayOutWiderThanViewport ? "true"_s : "false"_s);
+    ts.dumpProperty("prefers horizontal scrolling"_s, m_prefersHorizontalScrollingBelowDesktopViewportWidths ? "true"_s : "false"_s);
+    ts.dumpProperty("can ignore viewport width and zoom"_s, m_canIgnoreViewportArgumentsToAvoidExcessiveZoom ? "true"_s : "false"_s);
+    ts.dumpProperty("can ignore viewport width"_s, m_canIgnoreViewportArgumentsToAvoidEnlargedView ? "true"_s : "false"_s);
 
     ts.endGroup();
 

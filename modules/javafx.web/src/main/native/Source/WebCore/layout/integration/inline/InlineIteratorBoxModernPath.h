@@ -25,10 +25,12 @@
 
 #pragma once
 
-#include "FontCascade.h"
-#include "LayoutElementBox.h"
-#include "LayoutIntegrationInlineContent.h"
-#include "TextBoxSelectableRange.h"
+#include <WebCore/FontCascade.h>
+#include <WebCore/InlineIteratorBoxLegacyPath.h>
+#include <WebCore/LayoutElementBox.h>
+#include <WebCore/LayoutIntegrationInlineContent.h>
+#include <WebCore/RenderBlockFlow.h>
+#include <WebCore/TextBoxSelectableRange.h>
 
 namespace WebCore {
 namespace InlineIterator {
@@ -49,10 +51,14 @@ public:
     bool isText() const { return box().isTextOrSoftLineBreak(); }
     bool isInlineBox() const { return box().isInlineBox(); }
     bool isRootInlineBox() const { return box().isRootInlineBox(); }
+    // Blocks-in-inline.
+    bool isBlockLevelBox() const { return box().isBlockLevelBox(); }
+    bool isAtomicInlineBox() const { return box().isAtomicInlineBox(); }
 
     FloatRect visualRectIgnoringBlockDirection() const { return box().visualRectIgnoringBlockDirection(); }
 
     inline bool isHorizontal() const;
+    WritingMode writingMode() const { return box().writingMode(); }
     bool isLineBreak() const { return box().isLineBreak(); }
 
     unsigned minimumCaretOffset() const { return isText() ? start() : 0; }
@@ -85,7 +91,8 @@ public:
             length(),
             extraTrailingLength(),
             box.isLineBreak(),
-            textContent.partiallyVisibleContentLength()
+            textContent.partiallyVisibleContentLength(),
+            formattingContextRoot().writingMode().bidiDirection() != direction()
         };
     }
 
@@ -126,7 +133,7 @@ public:
         ASSERT(box().isTextOrSoftLineBreak());
     }
 
-    void traverseNextOnLine()
+    void traverseNextLeafOnLine()
     {
         ASSERT(!atEnd());
 
@@ -138,7 +145,7 @@ public:
             setAtEnd();
     }
 
-    void traversePreviousOnLine()
+    void traversePreviousLeafOnLine()
     {
         ASSERT(!atEnd());
 
@@ -180,6 +187,43 @@ public:
         ASSERT(box().isInlineBox());
     }
 
+    void traverseNextBoxOnLine()
+    {
+        auto lineIndex = box().lineIndex();
+
+        traverseNextBox();
+
+        if (!atEnd() && lineIndex != box().lineIndex())
+            setAtEnd();
+    }
+
+    void traverseNextBoxOnLineSkippingChildren()
+    {
+        auto lineIndex = box().lineIndex();
+        bool wasInlineBox = box().isInlineBox();
+        auto& startBox = box().layoutBox();
+
+        traverseNextBox();
+
+        if (wasInlineBox) {
+            while (!atEnd() && isWithinInlineBox(startBox))
+                traverseNextBox();
+        }
+
+        if (!atEnd() && lineIndex != box().lineIndex())
+            setAtEnd();
+    }
+
+    void traversePreviousBoxOnLine()
+    {
+        auto lineIndex = box().lineIndex();
+
+        traversePreviousBox();
+
+        if (!atEnd() && lineIndex != box().lineIndex())
+            setAtEnd();
+    }
+
     BoxModernPath firstLeafBoxForInlineBox() const
     {
         ASSERT(box().isInlineBox());
@@ -188,7 +232,7 @@ public:
 
         // The next box is the first descendant of this box;
         auto first = *this;
-        first.traverseNextOnLine();
+        first.traverseNextLeafOnLine();
 
         if (!first.atEnd() && !first.isWithinInlineBox(inlineBox))
             first.setAtEnd();
@@ -204,7 +248,7 @@ public:
 
         // FIXME: Get the last box index directly from the display box.
         auto last = firstLeafBoxForInlineBox();
-        for (auto box = last; !box.atEnd() && box.isWithinInlineBox(inlineBox); box.traverseNextOnLine())
+        for (auto box = last; !box.atEnd() && box.isWithinInlineBox(inlineBox); box.traverseNextLeafOnLine())
             last = box;
 
         return last;
@@ -232,7 +276,12 @@ public:
     }
 
     TextDirection direction() const { return bidiLevel() % 2 ? TextDirection::RTL : TextDirection::LTR; }
-    bool isFirstLine() const { return !box().lineIndex(); }
+    bool isFirstFormattedLine() const { return box().isFirstFormattedLine(); }
+
+    const Vector<SVGTextFragment>& svgTextFragments() const
+    {
+        return m_inlineContent->svgTextFragments(m_boxIndex);
+    }
 
     friend bool operator==(const BoxModernPath&, const BoxModernPath&) = default;
 
@@ -240,13 +289,16 @@ public:
     const InlineDisplay::Box& box() const { return boxes()[m_boxIndex]; }
     auto& inlineContent() const { return *m_inlineContent; }
 
+    size_t boxIndex() const { return m_boxIndex; }
+
 private:
     bool isWithinInlineBox(const Layout::Box& inlineBox)
     {
-        auto* layoutBox = &box().layoutBox().parent();
-        for (; layoutBox->isInlineBox(); layoutBox = &layoutBox->parent()) {
+        for (auto* layoutBox = &box().layoutBox().parent();; layoutBox = &layoutBox->parent()) {
             if (layoutBox == &inlineBox)
                 return true;
+            if (!layoutBox->isInlineBox())
+                return false;
         }
         return false;
     }

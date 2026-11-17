@@ -155,7 +155,7 @@ END
 
     print F "\n";
     for my $name (sort keys %parameters) {
-        print F "    ${name}.construct(&${name}Data);\n";
+        print F "    ${name}.construct(${name}Data);\n";
     }
 
     print F "\n";
@@ -510,7 +510,13 @@ END
     my $settingsConditional = $allElements{$elementKey}{settingsConditional};
     my $deprecatedGlobalSettingsConditional = $allElements{$elementKey}{deprecatedGlobalSettingsConditional};
     if ($settingsConditional) {
+        if ($settingsConditional =~ /&/) {
+            my @conditions = split(/&/, $settingsConditional);
+            my @runtime_parts = map { "document.settings().$_()" } @conditions;
+            $runtimeCondition = join(' && ', @runtime_parts);
+        } else {
         $runtimeCondition = "document.settings().${settingsConditional}()";
+        }
     } elsif ($deprecatedGlobalSettingsConditional) {
         $runtimeCondition = "DeprecatedGlobalSettings::${deprecatedGlobalSettingsConditional}Enabled()";
     }
@@ -798,11 +804,13 @@ sub printTypeHelpersHeaderFile
     printLicenseHeader($F);
 
     print F "#pragma once\n\n";
-    print F "#include \"".$parameters{namespace}."Names.h\"\n\n";
+    print F "#include <WebCore/".$parameters{namespace}."Names.h>\n\n";
 
-    # FIXME: Remove `if` condition below once HTMLElementTypeHeaders.h is made inline.
+    # FIXME: Remove `if` condition below once HTMLElementTypeHelpers.h is made inline.
     if ($parameters{namespace} eq "SVG") {
-        print F "#include \"".$parameters{namespace}."ElementInlines.h\"\n\n";
+        print F "#include \"SVGElementInlines.h\"\n\n";
+    } elsif ($parameters{namespace} eq "MathML") {
+        print F "#include \"MathMLElement.h\"\n\n";
     }
     printTypeHelpers($F, \%allElements);
 
@@ -816,10 +824,11 @@ sub printNamesHeaderFile
     open F, ">$headerPath";
 
     printLicenseHeader($F);
-    printHeaderHead($F, "DOM", $parameters{namespace}, <<END, "class $parameters{namespace}QualifiedName : public QualifiedName { };\n\n");
+    printHeaderHead($F, "DOM", $parameters{namespace}, <<END, "class $parameters{namespace}QualifiedName : public QualifiedName {\npublic:\n    using QualifiedName::QualifiedName;\n};\n\n");
+#include <WebCore/QualifiedName.h>
+#include <span>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/text/AtomString.h>
-#include "QualifiedName.h"
 END
 
     my $lowercaseNamespacePrefix = lc($parameters{namespacePrefix});
@@ -840,12 +849,12 @@ END
     print F "\n";
 
     if (keys %allElements) {
-        print F "const unsigned $parameters{namespace}TagsCount = ", scalar(keys %allElements), ";\n";
-        print F "const WebCore::$parameters{namespace}QualifiedName* const* get$parameters{namespace}Tags();\n";
+        print F "constexpr unsigned $parameters{namespace}TagsCount = ", scalar(keys %allElements), ";\n";
+        print F "std::span<const WebCore::$parameters{namespace}QualifiedName* const, $parameters{namespace}TagsCount> get$parameters{namespace}Tags();\n";
     }
 
     if (keys %allAttrs) {
-        print F "const unsigned $parameters{namespace}AttrsCount = ", scalar(keys %allAttrs), ";\n";
+        print F "constexpr unsigned $parameters{namespace}AttrsCount = ", scalar(keys %allAttrs), ";\n";
     }
 
     printInit($F, 1);
@@ -942,7 +951,7 @@ sub printTagNameHeaderFile
     print F "inline LazyNeverDestroyed<EnumeratedArray<TagName, AtomString, lastTagNameEnumValue>> tagNameStrings;\n";
     print F "\n";
     print F "WEBCORE_EXPORT void initializeTagNameStrings();\n";
-    print F "TagName findTagName(std::span<const UChar>);\n";
+    print F "TagName findTagName(std::span<const char16_t>);\n";
     print F "#if ASSERT_ENABLED\n";
     print F "TagName findTagName(const String&);\n";
     print F "#endif\n";
@@ -991,38 +1000,31 @@ sub printTagNameCppFile
     print F "\n";
     print F "namespace WebCore {\n";
     print F "\n";
-    print F "static constexpr void* tagQualifiedNamePointers[] = {\n";
-    my %handledTags = ();
-    for my $elementKey (sort byElementNameOrder keys %allElements) {
-        my $cppNamespace = $allElements{$elementKey}{cppNamespace};
-        my $identifier = $allElements{$elementKey}{identifier};
-        print F "    &${cppNamespace}Names::${identifier}Tag,\n" unless $handledTags{$identifier};
-        $handledTags{$identifier} = 1;
-    }
-    print F "};\n";
-    print F "\n";
-    print F "static constexpr StringImpl::StaticStringImpl unadjustedTagNames[] = {\n";
-    for my $elementKey (sort byElementNameOrder keys %allElements) {
-        next if $allElements{$elementKey}{unadjustedTagEnumValue} eq "";
-        print F "    StringImpl::StaticStringImpl { \"$allElements{$elementKey}{parsedTagName}\" },\n";
-    }
-    print F "};\n";
-    print F "\n";
     print F "void initializeTagNameStrings() {\n";
     print F "    static bool initialized = false;\n";
     print F "    if (std::exchange(initialized, true))\n";
     print F "        return;\n";
     print F "\n";
     print F "    tagNameStrings.construct();\n";
-    print F "    auto tagNamesEntry = tagNameStrings->begin();\n";
-    print F "    ++tagNamesEntry; // Skip TagName::Unknown\n";
-    print F "    for (auto* qualifiedName : tagQualifiedNamePointers)\n";
-    print F "        *(tagNamesEntry++) = reinterpret_cast<LazyNeverDestroyed<QualifiedName>*>(qualifiedName)->get().localName();\n";
-    print F "    for (auto& string : unadjustedTagNames) {\n";
-    print F "        reinterpret_cast<const StringImpl&>(string).assertHashIsCorrect();\n";
-    print F "        *(tagNamesEntry++) = AtomString(&string);\n";
-    print F "    }\n";
-    print F "    ASSERT(tagNamesEntry == tagNameStrings->end());\n";
+    print F "    auto& strings = tagNameStrings.get();\n";
+    print F "\n";
+    print F "    // Initialize tag name strings from QualifiedName objects\n";
+    my %handledTags = ();
+    for my $elementKey (sort byElementNameOrder keys %allElements) {
+        my $cppNamespace = $allElements{$elementKey}{cppNamespace};
+        my $identifier = $allElements{$elementKey}{identifier};
+        my $tagEnumValue = $allElements{$elementKey}{tagEnumValue};
+        next if $handledTags{$identifier};
+        $handledTags{$identifier} = 1;
+        print F "    strings[TagName::$tagEnumValue] = ${cppNamespace}Names::${identifier}Tag->localName();\n";
+    }
+    print F "\n";
+    print F "    // Initialize unadjusted tag names\n";
+    for my $elementKey (sort byElementNameOrder keys %allElements) {
+        next if $allElements{$elementKey}{unadjustedTagEnumValue} eq "";
+        my $unadjustedTagEnumValue = $allElements{$elementKey}{unadjustedTagEnumValue};
+        print F "    strings[TagName::$unadjustedTagEnumValue] = \"$allElements{$elementKey}{parsedTagName}\"_s;\n";
+    }
     print F "}\n";
     print F "\n";
     print F "template <typename characterType>\n";
@@ -1031,7 +1033,7 @@ sub printTagNameCppFile
     generateFindBody(\%allElements, \&byElementNameOrder, "parsedTagName", "TagName", "parsedTagEnumValue");
     print F "}\n";
     print F "\n";
-    print F "TagName findTagName(std::span<const UChar> buffer)\n";
+    print F "TagName findTagName(std::span<const char16_t> buffer)\n";
     print F "{\n";
     print F "    return findTagFromBuffer(buffer);\n";
     print F "}\n";
@@ -1046,6 +1048,7 @@ sub printTagNameCppFile
     print F "#endif\n";
     print F "\n";
     print F "} // namespace WebCore\n";
+    print F "\n";
     close F;
 }
 
@@ -1058,8 +1061,8 @@ sub printNodeNameHeaderFile
     printLicenseHeader($F);
     print F "#pragma once\n";
     print F "\n";
-    print F "#include \"Namespace.h\"\n";
-    print F "#include \"TagName.h\"\n";
+    print F "#include <WebCore/Namespace.h>\n";
+    print F "#include <WebCore/TagName.h>\n";
     print F "#include <wtf/EnumTraits.h>\n";
     print F "#include <wtf/Forward.h>\n";
     print F "\n";
@@ -1114,8 +1117,8 @@ sub printNodeNameHeaderFile
     print F "} // namespace AttributeNames\n";
     print F "\n";
     print F "NodeName findNodeName(Namespace, const String&);\n";
-    print F "ElementName findHTMLElementName(std::span<const LChar>);\n";
-    print F "ElementName findHTMLElementName(std::span<const UChar>);\n";
+    print F "ElementName findHTMLElementName(std::span<const Latin1Character>);\n";
+    print F "ElementName findHTMLElementName(std::span<const char16_t>);\n";
     print F "ElementName findHTMLElementName(const String&);\n";
     print F "ElementName findSVGElementName(const String&);\n";
     print F "ElementName findMathMLElementName(const String&);\n";
@@ -1142,7 +1145,7 @@ sub printNodeNameHeaderFile
     print F "{\n";
     print F "    constexpr auto s_lastUniqueTagName = TagName::$lastUniqueTagEnumValue;\n";
     print F"\n";
-    print F "    if (LIKELY(enumToUnderlyingType(elementName) <= enumToUnderlyingType(s_lastUniqueTagName)))\n";
+    print F "    if (enumToUnderlyingType(elementName) <= enumToUnderlyingType(s_lastUniqueTagName)) [[likely]]\n";
     print F "        return static_cast<TagName>(elementName);\n";
     print F "\n";
     print F "    switch (elementName) {\n";
@@ -1167,10 +1170,10 @@ sub printNodeNameHeaderFile
         print F "        constexpr auto s_firstUnique${namespace}TagName = TagName::$firstUniqueTagEnumValueByNamespace{$namespace};\n";
         print F "        constexpr auto s_lastUnique${namespace}TagName = TagName::$lastUniqueTagEnumValueByNamespace{$namespace};\n";
         print F "\n";
-        print F "        if (UNLIKELY(tagName < s_firstUnique${namespace}TagName))\n";
+        print F "        if (tagName < s_firstUnique${namespace}TagName) [[unlikely]]\n";
         print F "            return ElementName::Unknown;\n";
         print F "\n";
-        print F "        if (LIKELY(tagName <= s_lastUnique${namespace}TagName))\n";
+        print F "        if (tagName <= s_lastUnique${namespace}TagName) [[likely]]\n";
         print F "            return static_cast<ElementName>(tagName);\n";
         print F "\n";
         my @tagKeysForNonUniqueTags = grep { elementCount($allElements{$_}{localName}) > 1 && $allElements{$_}{namespace} eq $namespace } sort byElementNameOrder keys %allElements;
@@ -1252,12 +1255,12 @@ sub printNodeNameCppFile
     print F "    return findNodeNameFromBuffer(ns, name.span16());\n";
     print F "}\n";
     print F "\n";
-    print F "ElementName findHTMLElementName(std::span<const LChar> buffer)\n";
+    print F "ElementName findHTMLElementName(std::span<const Latin1Character> buffer)\n";
     print F "{\n";
     print F "    return findHTMLNodeName(buffer);\n";
     print F "}\n";
     print F "\n";
-    print F "ElementName findHTMLElementName(std::span<const UChar> buffer)\n";
+    print F "ElementName findHTMLElementName(std::span<const char16_t> buffer)\n";
     print F "{\n";
     print F "    return findHTMLNodeName(buffer);\n";
     print F "}\n";
@@ -1306,6 +1309,7 @@ sub printNodeNameCppFile
     print F "}\n";
     print F "\n";
     print F "} // namespace WebCore\n";
+    print F "\n";
     close F;
 }
 
@@ -1376,7 +1380,7 @@ sub generateFindNameForLength
                 my $letter = substr($string, $currentIndex, 1);
                 print F "${indent}if (buffer[$currentIndex] == '$letter') {\n";
             } else {
-                my $bufferStart = $currentIndex > 0 ? "buffer.data() + $currentIndex" : "buffer.data()";
+                my $bufferStart = $currentIndex > 0 ? "buffer.subspan($currentIndex).data()" : "buffer.data()";
                 if ($lengthToCompare <= 8) {
                     print F "${indent}if (compareCharacters($bufferStart";
                     for (my $index = $currentIndex; $index < $length; $index = $index + 1) {
@@ -1385,7 +1389,7 @@ sub generateFindNameForLength
                     }
                     print F ")) {\n";
                 } else {
-                    print F "${indent}if (WTF::equal($bufferStart, \"". substr($string, $currentIndex, $length - $currentIndex) . "\"_span)) {\n";
+                    print F "${indent}if (WTF::equal($bufferStart, \"". substr($string, $currentIndex, $length - $currentIndex) . "\"_span8)) {\n";
             }
             }
             print F "$indent    return ${enumClass}::$enumValue;\n";
@@ -1467,6 +1471,7 @@ sub printNamesCppFile
     printCppHead($F, "DOM", $parameters{namespace}, <<END, "WebCore");
 #include "Namespace.h"
 #include "NodeName.h"
+#include <array>
 END
 
     my $lowercaseNamespacePrefix = lc($parameters{namespacePrefix});
@@ -1489,8 +1494,8 @@ END
             print F "WEBCORE_EXPORT LazyNeverDestroyed<const $parameters{namespace}QualifiedName> $allElements{$elementKey}{identifier}Tag;\n";
         }
 
-        print F "\n\nconst WebCore::$parameters{namespace}QualifiedName* const* get$parameters{namespace}Tags()\n";
-        print F "{\n    static const WebCore::$parameters{namespace}QualifiedName* const $parameters{namespace}Tags[] = {\n";
+        print F "\n\nstd::span<const WebCore::$parameters{namespace}QualifiedName* const, $parameters{namespace}TagsCount> get$parameters{namespace}Tags()\n";
+        print F "{\n    static const std::array<const WebCore::$parameters{namespace}QualifiedName*, $parameters{namespace}TagsCount> $parameters{namespace}Tags {\n";
         for my $elementKey (sort keys %allElements) {
             print F "        &$allElements{$elementKey}{identifier}Tag.get(),\n";
         }
@@ -1645,36 +1650,14 @@ sub printDefinitions
     my ($F, $namesRef, $type, $namespaceURI, $namespaceEnumValue) = @_;
 
     my $shortCamelType = ucfirst(substr(substr($type, 0, -1), 0, 4));
-    my $capitalizedType = ucfirst($type);
-
-    my @tableEntryFields = (
-        "LazyNeverDestroyed<const QualifiedName>* targetAddress",
-        "const StaticStringImpl& name",
-        "NodeName nodeName"
-    );
-
-    my $cast = $type eq "tags" ? "(LazyNeverDestroyed<const QualifiedName>*)" : "";
 
     print F "\n";
-    print F "    struct ${capitalizedType}TableEntry {\n";
-
-    print F map { "        $_;\n" } @tableEntryFields;
-
-    print F "    };\n";
-    print F "\n";
-    print F "    static const ${capitalizedType}TableEntry ${type}Table[] = {\n";
-
+    print F "    // Initialize $type\n";
     for my $key (sort keys %$namesRef) {
         my $identifier = $namesRef->{$key}{identifier};
         my $nodeNameEnumValue = $namesRef->{$key}{nodeNameEnumValue} || "Unknown";
-        # Attribute names never correspond to a recognized NodeName.
-        print F "        { $cast&$identifier$shortCamelType, *(&${identifier}Data), NodeName::$nodeNameEnumValue },\n";
+        print F "    $identifier$shortCamelType.construct(nullAtom(), AtomString(${identifier}Data), $namespaceURI, Namespace::$namespaceEnumValue, NodeName::$nodeNameEnumValue);\n";
     }
-
-    print F "    };\n";
-    print F "\n";
-    print F "    for (auto& entry : ${type}Table)\n";
-    print F "        entry.targetAddress->construct(nullAtom(), AtomString(&entry.name), $namespaceURI, Namespace::$namespaceEnumValue, entry.nodeName);\n";
 }
 
 ## ElementFactory routines
@@ -1897,8 +1880,8 @@ sub printWrapperFunctions
 static JSDOMObject* create${JSInterfaceName}Wrapper(JSDOMGlobalObject* globalObject, Ref<$parameters{namespace}Element>&& element)
 {
     if (element->is$parameters{fallbackInterfaceName}())
-        return createWrapper<$parameters{fallbackInterfaceName}>(globalObject, WTFMove(element));
-    return createWrapper<${JSInterfaceName}>(globalObject, WTFMove(element));
+        return createWrapper<$parameters{fallbackInterfaceName}>(globalObject, WTF::move(element));
+    return createWrapper<${JSInterfaceName}>(globalObject, WTF::move(element));
 }
 
 END
@@ -1907,8 +1890,8 @@ END
 static JSDOMObject* create$allElements{$elementKey}{interfaceName}Wrapper(JSDOMGlobalObject* globalObject, Ref<$parameters{namespace}Element>&& element)
 {
     if (element->is$parameters{fallbackInterfaceName}())
-        return createWrapper<$parameters{fallbackInterfaceName}>(globalObject, WTFMove(element));
-    return createWrapper<${JSInterfaceName}>(globalObject, WTFMove(element));
+        return createWrapper<$parameters{fallbackInterfaceName}>(globalObject, WTF::move(element));
+    return createWrapper<${JSInterfaceName}>(globalObject, WTF::move(element));
 }
 
 END
@@ -1918,15 +1901,15 @@ END
 static JSDOMObject* create${JSInterfaceName}Wrapper(JSDOMGlobalObject* globalObject, Ref<$parameters{namespace}Element>&& element)
 {
     if (element->is$parameters{fallbackInterfaceName}())
-        return createWrapper<$parameters{fallbackJSInterfaceName}>(globalObject, WTFMove(element));
-    return createWrapper<${JSInterfaceName}>(globalObject, WTFMove(element));
+        return createWrapper<$parameters{fallbackJSInterfaceName}>(globalObject, WTF::move(element));
+    return createWrapper<${JSInterfaceName}>(globalObject, WTF::move(element));
 }
 END
         } else {
             print F <<END;
 static JSDOMObject* create${JSInterfaceName}Wrapper(JSDOMGlobalObject* globalObject, Ref<$parameters{namespace}Element>&& element)
 {
-    return createWrapper<${JSInterfaceName}>(globalObject, WTFMove(element));
+    return createWrapper<${JSInterfaceName}>(globalObject, WTF::move(element));
 }
 
 END
@@ -2008,7 +1991,7 @@ END
             $ucName = $allElements{$elementKey}{JSInterfaceName};
         }
         print F "    case NodeName::" . $parameters{namespace} . "_" . $allElements{$elementKey}{identifier} . ":\n";
-        print F "        return create${ucName}Wrapper(globalObject, WTFMove(element));\n";
+        print F "        return create${ucName}Wrapper(globalObject, WTF::move(element));\n";
         print F "#endif\n" if $conditional;
     }
     print F "    default:\n";
@@ -2017,7 +2000,7 @@ END
     if ($parameters{customElementInterfaceName}) {
         print F <<END;
     if (!element->isUnknownElement())
-        return createWrapper<$parameters{customElementInterfaceName}>(globalObject, WTFMove(element));
+        return createWrapper<$parameters{customElementInterfaceName}>(globalObject, WTF::move(element));
 END
     }
 
@@ -2028,7 +2011,7 @@ END
     }
 
     print F <<END;
-    return createWrapper<$parameters{fallbackJSInterfaceName}>(globalObject, WTFMove(element));
+    return createWrapper<$parameters{fallbackJSInterfaceName}>(globalObject, WTF::move(element));
 }
 
 }

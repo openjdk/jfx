@@ -28,6 +28,7 @@
 
 #if OS(WINDOWS)
 
+#include "ContainerNodeInlines.h"
 #include "Element.h"
 #include "KeyboardEvent.h"
 #include "RenderMenuList.h"

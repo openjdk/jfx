@@ -56,6 +56,8 @@ namespace Inspector {""")
     AlternateDispatchersHeaderPrelude = (
     """#pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(INSPECTOR_ALTERNATE_DISPATCHERS)
 
 ${includes}
@@ -64,7 +66,7 @@ namespace Inspector {
 
 class AlternateBackendDispatcher {
 public:
-    void setBackendDispatcher(RefPtr<BackendDispatcher>&& dispatcher) { m_backendDispatcher = WTFMove(dispatcher); }
+    void setBackendDispatcher(RefPtr<BackendDispatcher>&& dispatcher) { m_backendDispatcher = WTF::move(dispatcher); }
     BackendDispatcher* backendDispatcher() const { return m_backendDispatcher.get(); }
 private:
     RefPtr<BackendDispatcher> m_backendDispatcher;
@@ -110,13 +112,15 @@ private:
     Alternate${domainName}BackendDispatcher* m_alternateDispatcher { nullptr };
 #endif // ENABLE(INSPECTOR_ALTERNATE_DISPATCHERS)""")
 
-    BackendDispatcherHeaderAsyncCommandDeclaration = (
+    BackendDispatcherHeaderAsyncCommandReplyThunkDeclaration = (
     """    ${classAndExportMacro} ${callbackName} : public BackendDispatcher::CallbackBase {
     public:
         ${callbackName}(Ref<BackendDispatcher>&&, int id);
         void sendSuccess(${returns});
-    };
-    virtual void ${commandName}(${parameters}) = 0;""")
+    };""")
+
+    BackendDispatcherHeaderAsyncCommandDeclaration = (
+        """    virtual void ${commandName}(${parameters}) = 0;""")
 
     BackendDispatcherImplementationSmallSwitch = (
     """void ${domainName}BackendDispatcher::dispatch(long protocol_requestId, const String& protocol_method, Ref<JSON::Object>&& protocol_message)
@@ -127,7 +131,7 @@ private:
 
 ${dispatchCases}
 
-    m_backendDispatcher->reportProtocolError(BackendDispatcher::MethodNotFound, makeString("'${domainName}."_s, protocol_method, "' was not found"_s));
+    m_backendDispatcher->reportProtocolError(BackendDispatcher::MethodNotFound, makeString("'${domainExposedAs}."_s, protocol_method, "' was not found"_s));
 }""")
 
     BackendDispatcherImplementationLargeSwitch = (
@@ -145,11 +149,11 @@ ${dispatchCases}
 
     auto findResult = dispatchMap->find(protocol_method);
     if (findResult == dispatchMap->end()) {
-        m_backendDispatcher->reportProtocolError(BackendDispatcher::MethodNotFound, makeString("'${domainName}."_s, protocol_method, "' was not found"_s));
+        m_backendDispatcher->reportProtocolError(BackendDispatcher::MethodNotFound, makeString("'${domainExposedAs}."_s, protocol_method, "' was not found"_s));
         return;
     }
 
-    ((*this).*findResult->value)(protocol_requestId, WTFMove(protocol_parameters));
+    ((*this).*findResult->value)(protocol_requestId, WTF::move(protocol_parameters));
 }""")
 
     BackendDispatcherImplementationDomainConstructor = (
@@ -162,50 +166,61 @@ ${domainName}BackendDispatcher::${domainName}BackendDispatcher(BackendDispatcher
     : SupplementalBackendDispatcher(backendDispatcher)
     , m_agent(agent)
 {
-    m_backendDispatcher->registerDispatcherForDomain("${domainName}"_s, this);
+    m_backendDispatcher->registerDispatcherForDomain("${domainExposedAs}"_s, this);
 }""")
 
     BackendDispatcherImplementationPrepareCommandArguments = (
 """${parameterDeclarations}
     if (m_backendDispatcher->hasProtocolErrors()) {
-        m_backendDispatcher->reportProtocolError(BackendDispatcher::InvalidParams, "Some arguments of method \'${domainName}.${commandName}\' can't be processed"_s);
+        m_backendDispatcher->reportProtocolError(BackendDispatcher::InvalidParams, "Some arguments of method \'${domainExposedAs}.${commandName}\' can't be processed"_s);
         return;
     }
 """)
 
-    BackendDispatcherImplementationAsyncCommand = (
-"""${domainName}BackendDispatcherHandler::${callbackName}::${callbackName}(Ref<BackendDispatcher>&& backendDispatcher, int id) : BackendDispatcher::CallbackBase(WTFMove(backendDispatcher), id) { }
+    BackendDispatcherImplementationAsyncCommandReplyThunk = (
+"""${domainName}BackendDispatcherHandler::${callbackName}::${callbackName}(Ref<BackendDispatcher>&& backendDispatcher, int id) : BackendDispatcher::CallbackBase(WTF::move(backendDispatcher), id) { }
 
 void ${domainName}BackendDispatcherHandler::${callbackName}::sendSuccess(${callbackParameters})
 {
     auto protocol_jsonMessage = JSON::Object::create();
 ${returnAssignments}
-    CallbackBase::sendSuccess(WTFMove(protocol_jsonMessage));
+    CallbackBase::sendSuccess(WTF::move(protocol_jsonMessage));
 }""")
 
     FrontendDispatcherDomainDispatcherDeclaration = (
 """${classAndExportMacro} ${domainName}FrontendDispatcher {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(${domainName}FrontendDispatcher);
 public:
-    ${domainName}FrontendDispatcher(FrontendRouter& frontendRouter) : m_frontendRouter(frontendRouter) { }
+    ${domainName}FrontendDispatcher(FrontendRouter&);
+    ~${domainName}FrontendDispatcher();
+    WTF_MAKE_NONCOPYABLE(${domainName}FrontendDispatcher);
+    WTF_MAKE_NONMOVABLE(${domainName}FrontendDispatcher);
 ${eventDeclarations}
 private:
-    FrontendRouter& m_frontendRouter;
+    const CheckedRef<FrontendRouter> m_frontendRouter;
 };""")
 
     ProtocolObjectBuilderDeclarationPrelude = (
-"""    template<int STATE>
+"""    using JSON::ObjectBase::setBoolean;
+    using JSON::ObjectBase::setInteger;
+    using JSON::ObjectBase::setDouble;
+    using JSON::ObjectBase::setString;
+    using JSON::ObjectBase::setValue;
+    using JSON::ObjectBase::setObject;
+    using JSON::ObjectBase::setArray;
+
+    template<int STATE>
     class Builder {
     private:
-        RefPtr<JSON::Object> m_result;
+        RefPtr<${objectType}> m_result;
 
         template<int STEP> Builder<STATE | STEP>& castState()
         {
-            return *reinterpret_cast<Builder<STATE | STEP>*>(this);
+            SUPPRESS_MEMORY_UNSAFE_CAST return *reinterpret_cast<Builder<STATE | STEP>*>(this);
         }
 
-        Builder(Ref</*${objectType}*/JSON::Object>&& object)
-            : m_result(WTFMove(object))
+        Builder(Ref<${objectType}>&& object)
+            : m_result(WTF::move(object))
         {
             static_assert(STATE == NoFieldsSet, "builder created in non init state");
         }
@@ -219,19 +234,21 @@ private:
             static_assert(STATE == AllFieldsSet, "result is not ready");
             static_assert(sizeof(${objectType}) == sizeof(JSON::Object), "cannot cast");
 
-            Ref<JSON::Object> jsonResult = m_result.releaseNonNull();
-            auto result = WTFMove(*reinterpret_cast<Ref<${objectType}>*>(&jsonResult));
-            return result;
+            return m_result.releaseNonNull();
         }
     };
 
+private:
+    ${objectType}() = default;
+
+public:
     /*
      * Synthetic constructor:
 ${constructorExample}
      */
     static Builder<NoFieldsSet> create()
     {
-        return Builder<NoFieldsSet>(JSON::Object::create());
+        return Builder<NoFieldsSet>(adoptRef(*new ${objectType}));
     }""")
 
     ProtocolObjectRuntimeCast = (
@@ -240,6 +257,6 @@ ${constructorExample}
     auto result = value->asObject();
     BindingTraits<${objectType}>::assertValueHasExpectedType(result.get());
     static_assert(sizeof(${objectType}) == sizeof(JSON::ObjectBase), "type cast problem");
-    return static_reference_cast<${objectType}>(static_reference_cast<JSON::ObjectBase>(result.releaseNonNull()));
+    return unsafeRefDowncast<${objectType}>(upcast<JSON::ObjectBase>(result.releaseNonNull()));
 }
 """)

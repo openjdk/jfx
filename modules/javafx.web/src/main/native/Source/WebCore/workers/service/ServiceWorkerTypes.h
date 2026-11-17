@@ -25,12 +25,13 @@
 
 #pragma once
 
-#include "ProcessIdentifier.h"
-#include "ProcessQualified.h"
-#include "ScriptBuffer.h"
-#include "ScriptExecutionContextIdentifier.h"
-#include "ServiceWorkerIdentifier.h"
-#include <variant>
+#include <WebCore/ProcessIdentifier.h>
+#include <WebCore/ProcessQualified.h>
+#include <WebCore/ScriptBuffer.h>
+#include <WebCore/ScriptExecutionContextIdentifier.h>
+#include <WebCore/ServiceWorkerIdentifier.h>
+#include <wtf/HashIterators.h>
+#include <wtf/KeyValuePair.h>
 #include <wtf/ObjectIdentifier.h>
 #include <wtf/RobinHoodHashMap.h>
 #include <wtf/URLHash.h>
@@ -65,22 +66,22 @@ enum class ServiceWorkerClientFrameType : uint8_t {
 enum class ServiceWorkerIsInspectable : bool { No, Yes };
 enum class ShouldNotifyWhenResolved : bool { No, Yes };
 
-enum class ServiceWorkerRegistrationIdentifierType { };
-using ServiceWorkerRegistrationIdentifier = LegacyNullableAtomicObjectIdentifier<ServiceWorkerRegistrationIdentifierType>;
+struct ServiceWorkerRegistrationIdentifierType;
+using ServiceWorkerRegistrationIdentifier = AtomicObjectIdentifier<ServiceWorkerRegistrationIdentifierType>;
 
-enum class ServiceWorkerJobIdentifierType { };
-using ServiceWorkerJobIdentifier = LegacyNullableAtomicObjectIdentifier<ServiceWorkerJobIdentifierType>;
+struct ServiceWorkerJobIdentifierType;
+using ServiceWorkerJobIdentifier = AtomicObjectIdentifier<ServiceWorkerJobIdentifierType>;
 
 enum class SWServerToContextConnectionIdentifierType { };
-using SWServerToContextConnectionIdentifier = LegacyNullableObjectIdentifier<SWServerToContextConnectionIdentifierType>;
+using SWServerToContextConnectionIdentifier = ObjectIdentifier<SWServerToContextConnectionIdentifierType>;
 
 using SWServerConnectionIdentifierType = ProcessIdentifierType;
-using SWServerConnectionIdentifier = LegacyNullableObjectIdentifier<SWServerConnectionIdentifierType>;
+using SWServerConnectionIdentifier = ObjectIdentifier<SWServerConnectionIdentifierType>;
 
-using ServiceWorkerOrClientData = std::variant<ServiceWorkerData, ServiceWorkerClientData>;
+using ServiceWorkerOrClientData = Variant<ServiceWorkerData, ServiceWorkerClientData>;
 
 // FIXME: It should be possible to replace ServiceWorkerOrClientIdentifier with ScriptExecutionContextIdentifier entirely.
-using ServiceWorkerOrClientIdentifier = std::variant<ServiceWorkerIdentifier, ScriptExecutionContextIdentifier>;
+using ServiceWorkerOrClientIdentifier = Variant<ScriptExecutionContextIdentifier, ServiceWorkerIdentifier>;
 
 struct ServiceWorkerScripts {
     ServiceWorkerScripts isolatedCopy() const
@@ -88,7 +89,7 @@ struct ServiceWorkerScripts {
         MemoryCompactRobinHoodHashMap<WTF::URL, ScriptBuffer> isolatedImportedScripts;
         for (auto& [url, script] : importedScripts)
             isolatedImportedScripts.add(url.isolatedCopy(), script.isolatedCopy());
-        return { identifier, mainScript.isolatedCopy(), WTFMove(isolatedImportedScripts) };
+        return { identifier, mainScript.isolatedCopy(), WTF::move(isolatedImportedScripts) };
     }
 
     ServiceWorkerIdentifier identifier;

@@ -38,14 +38,11 @@ namespace JSC { namespace Profiler {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(Database);
 
-static std::atomic<int> databaseCounter;
-
 static Lock registrationLock;
-static std::atomic<int> didRegisterAtExit;
 static Database* firstDatabase;
 
 Database::Database(VM& vm)
-    : m_databaseID(++databaseCounter)
+    : m_databaseID(DatabaseID::generate())
     , m_vm(vm)
     , m_shouldSaveAtExit(false)
     , m_nextRegisteredDatabase(nullptr)
@@ -70,7 +67,7 @@ Bytecodes* Database::ensureBytecodesFor(const AbstractLocker&, CodeBlock* codeBl
 {
     codeBlock = codeBlock->baselineAlternative();
 
-    HashMap<CodeBlock*, Bytecodes*>::iterator iter = m_bytecodesMap.find(codeBlock);
+    UncheckedKeyHashMap<CodeBlock*, Bytecodes*>::iterator iter = m_bytecodesMap.find(codeBlock);
     if (iter != m_bytecodesMap.end())
         return iter->value;
 
@@ -95,7 +92,7 @@ void Database::addCompilation(CodeBlock* codeBlock, Ref<Compilation>&& compilati
     Locker locker { m_lock };
 
     m_compilations.append(compilation.copyRef());
-    m_compilationMap.set(codeBlock, WTFMove(compilation));
+    m_compilationMap.set(codeBlock, WTF::move(compilation));
 }
 
 Ref<JSON::Value> Database::toJSON() const
@@ -106,17 +103,17 @@ Ref<JSON::Value> Database::toJSON() const
     auto bytecodes = JSON::Array::create();
     for (unsigned i = 0; i < m_bytecodes.size(); ++i)
         bytecodes->pushValue(m_bytecodes[i].toJSON(dumper));
-    result->setValue(dumper.keys().m_bytecodes, WTFMove(bytecodes));
+    result->setValue(dumper.keys().m_bytecodes, WTF::move(bytecodes));
 
     auto compilations = JSON::Array::create();
     for (unsigned i = 0; i < m_compilations.size(); ++i)
         compilations->pushValue(m_compilations[i]->toJSON(dumper));
-    result->setValue(dumper.keys().m_compilations, WTFMove(compilations));
+    result->setValue(dumper.keys().m_compilations, WTF::move(compilations));
 
     auto events = JSON::Array::create();
     for (unsigned i = 0; i < m_events.size(); ++i)
         events->pushValue(m_events[i].toJSON(dumper));
-    result->setValue(dumper.keys().m_events, WTFMove(events));
+    result->setValue(dumper.keys().m_events, WTF::move(events));
 
     return result;
 }
@@ -152,12 +149,16 @@ void Database::logEvent(CodeBlock* codeBlock, const char* summary, const CString
 
 void Database::addDatabaseToAtExit()
 {
-    if (++didRegisterAtExit == 1)
+    static std::once_flag onceKey;
+    std::call_once(onceKey, [] {
         atexit(atExitCallback);
+    });
 
+    {
     Locker locker { registrationLock };
     m_nextRegisteredDatabase = firstDatabase;
     firstDatabase = this;
+    }
 }
 
 void Database::removeDatabaseFromAtExit()

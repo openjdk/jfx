@@ -30,11 +30,13 @@ struct CounterDirectives {
     std::optional<int> incrementValue;
     std::optional<int> setValue;
 
-    friend constexpr bool operator==(const CounterDirectives&, const CounterDirectives&) = default;
+    constexpr bool operator==(const CounterDirectives&) const = default;
 };
 
 struct CounterDirectiveMap {
     HashMap<AtomString, CounterDirectives> map;
+
+    bool operator==(const CounterDirectiveMap&) const = default;
 };
 
 } // namespace WebCore

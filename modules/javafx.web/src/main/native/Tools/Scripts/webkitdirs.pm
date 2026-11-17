@@ -95,10 +95,10 @@ BEGIN {
        &configuration
        &configuredXcodeWorkspace
        &coverageIsEnabled
-       &fuzzilliIsEnabled
        &currentPerlPath
        &currentSVNRevision
        &debugMiniBrowser
+       &debugSwiftBrowser
        &debugSafari
        &debugWebKitTestRunner
        &determineCurrentSVNRevision
@@ -109,6 +109,7 @@ BEGIN {
        &extractNonMacOSHostConfiguration
        &forceOptimizationLevel
        &formatBuildTime
+       &fuzzilliIsEnabled
        &generateBuildSystemFromCMakeProject
        &getCrossTargetName
        &getJhbuildPath
@@ -145,6 +146,8 @@ BEGIN {
        &libFuzzerIsEnabled
        &ltoMode
        &markBaseProductDirectoryAsCreatedByXcodeBuildSystem
+       &maybeEnterWebKitContainerSDK
+       &maybeUseContainerSDKRootDir
        &maxCPULoad
        &nativeArchitecture
        &nmPath
@@ -165,9 +168,9 @@ BEGIN {
        &runIOSWebKitApp
        &runInCrossTargetEnvironment
        &runInFlatpak
-       &runInFlatpakIfAvailable
        &runMacWebKitApp
        &runMiniBrowser
+       &runSwiftBrowser
        &runSafari
        &runWebKitTestRunner
        &safariPath
@@ -182,17 +185,19 @@ BEGIN {
        &setXcodeSDK
        &setupMacWebKitEnvironment
        &setupUnixWebKitEnvironment
-       &setupWindowsWebKitEnvironment
        &sharedCommandLineOptions
        &sharedCommandLineOptionsUsage
        &shouldBuild32Bit
        &shouldBuildForCrossTarget
        &shouldUseFlatpak
+       &shouldUseVcpkg
        &sourceDir
        &splitVersionString
        &tsanIsEnabled
        &ubsanIsEnabled
+       &updateGtkOrWpeLibs
        &usesCryptexPath
+       &vcpkgArgsFromFeatures
        &willUseAppleTVDeviceSDK
        &willUseAppleTVSimulatorSDK
        &willUseIOSDeviceSDK
@@ -218,6 +223,7 @@ BEGIN {
 # Ports
 use constant {
     GTK         => "GTK",
+    Haiku       => "Haiku",
     iOS         => "iOS",
     tvOS        => "tvOS",
     watchOS     => "watchOS",
@@ -538,6 +544,7 @@ sub determineNativeArchitecture($)
         $output = "arm64";
     }
 
+    $output = "arm64" if $output =~ m/^aarch64$/;
     $output = "arm" if $output =~ m/^armv[78]l$/;
     $nativeArchitectureMap{@{$remotes}} = $output;
 }
@@ -569,7 +576,23 @@ sub determineArchitecture
             $compiler = $ENV{'CC'} if (defined($ENV{'CC'}));
             my @compiler_machine = split('-', `$compiler -dumpmachine`);
             $architecture = $compiler_machine[0];
-        } elsif (open my $cmake_sysinfo, "cmake --system-information |") {
+        } else {
+            my $prefix = "";
+            # This gets called from argumentsForConfiguration() which needs to resolve the target architecture
+            # before entering into the cross-toolchain-env, so to achieve that we call the cross-target cmake.
+            if (shouldBuildForCrossTarget()) {
+                my $helper = File::Spec->catfile(sourceDir(), "Tools", "Scripts", "cross-toolchain-helper");
+                my $target = getCrossTargetName();
+                # Pre-build the toolchain if needed so its (potentially multi-hour) bitbake output reaches
+                # the terminal instead of being swallowed by the pipe opened below.
+                # The build-toolchain call runs with info log level (the default) because it is the first
+                # one to happen, so those messages are printed at the start. Next calls to cross-toolchain-helper
+                # should pass --log-level=quiet to avoid repeated messages.
+                system($helper, "--cross-target=$target", "--build-toolchain") == 0
+                    or die "cross-toolchain-helper --build-toolchain failed for $target\n";
+                $prefix = "$helper --log-level=quiet --cross-target=$target --cross-toolchain-run-cmd";
+            }
+            if (open my $cmake_sysinfo, "$prefix cmake --system-information |") {
             while (<$cmake_sysinfo>) {
                 next unless index($_, 'CMAKE_SYSTEM_PROCESSOR') == 0;
                 if (/^CMAKE_SYSTEM_PROCESSOR \"([^"]+)\"/) {
@@ -580,8 +603,10 @@ sub determineArchitecture
             close $cmake_sysinfo;
         }
     }
+    }
 
     $architecture = 'x86_64' if $architecture =~ /amd64/i;
+    $architecture = 'x86' if $architecture =~ /BePC/i && isHaiku();
     $architecture = 'arm64' if $architecture =~ /aarch64/i;
 }
 
@@ -748,7 +773,7 @@ sub determineLTOMode
     return if defined $ltoMode;
     determineBaseProductDir();
 
-    if (open LTO, "$baseProductDir/LTO") {
+    if (open LTO, File::Spec->catfile($baseProductDir, "LTO")) {
         $ltoMode = <LTO>;
         close LTO;
         chomp $ltoMode;
@@ -760,6 +785,8 @@ sub determineNumberOfCPUs
     return if defined $numberOfCPUs;
     if (defined($ENV{NUMBER_OF_PROCESSORS})) {
         $numberOfCPUs = $ENV{NUMBER_OF_PROCESSORS};
+    } elsif (isHaiku()) {
+        $numberOfCPUs = `sysinfo -cpu | grep "CPU #" | wc -l`
     } elsif (isLinux()) {
         use POSIX;
         $numberOfCPUs = POSIX::sysconf(83); # _SC_NPROCESSORS_ONLN = 83
@@ -836,6 +863,7 @@ sub argumentsForConfiguration()
     push(@args, '--jsc-only') if isJSCOnly();
     push(@args, '--win') if isWin();
     push(@args, '--playstation') if isPlayStation();
+    push(@args, '--haiku') if isHaiku();
     return @args;
 }
 
@@ -974,9 +1002,11 @@ sub determineXcodeSDKPlatformName {
         $xcodeSDKPlatformNameExplanation ||= "via argument, `--simulator`";
         $simulatorIdiom = 'iPhone';
     }
-    if (checkForArgumentAndRemoveFromARGV("--ios-simulator")) {
+    if (checkForArgumentAndRemoveFromARGV("--iphone-simulator") ||
+        checkForArgumentAndRemoveFromARGV("--ios-simulator")) {
+        # `--ios-simulator` option checking is for compatible here.
         $xcodeSDKPlatformName ||= 'iphonesimulator';
-        $xcodeSDKPlatformNameExplanation ||= "via argument, `--ios-simulator`";
+        $xcodeSDKPlatformNameExplanation ||= "via argument, `--iphone-simulator`";
         $simulatorIdiom = 'iPhone';
     }
     if (checkForArgumentAndRemoveFromARGV("--ipad-simulator")) {
@@ -1016,6 +1046,7 @@ sub determineXcodeSDKPlatformName {
 
 sub determineXcodeSDK
 {
+    return if $^O ne 'darwin'; #skip for Linux and window
     determineXcodeSDKPlatformName();  # This can set $xcodeSDK if --sdk was used.
     return if defined $xcodeSDK;
 
@@ -1147,7 +1178,7 @@ sub determineConfigurationProductDir
     return if defined $configurationProductDir;
     determineBaseProductDir();
     determineConfiguration();
-    if (isWin() || isPlayStation()) {
+    if (isWin() || isPlayStation() || (isJSCOnly() && isWindows())) {
         $configurationProductDir = File::Spec->catdir($baseProductDir, $configuration);
     } else {
         if (usesPerConfigurationBuildDirectory()) {
@@ -1385,9 +1416,6 @@ sub XcodeOptions
     push @options, @baseProductDirOption;
     push @options, "ARCHS=$architecture" if $didUserSpecifyArchitecture;
     push @options, "SDKROOT=$xcodeSDK" if $xcodeSDK;
-    if (xcodeVersion() lt "15.0") {
-        push @options, "TAPI_USE_SRCROOT=YES" if $ENV{UseSRCROOTSupportForTAPI};
-    }
 
     my @features = webkitperl::FeatureList::getFeatureOptionList();
     foreach (@features) {
@@ -1723,6 +1751,7 @@ sub determinePortName()
 
     my %argToPortName = (
         gtk => GTK,
+        haiku => Haiku,
         'jsc-only' => JSCOnly,
         playstation => PlayStation,
         wincairo => WinCairo,
@@ -1902,6 +1931,11 @@ sub isBSD()
     return ($^O eq "freebsd") || ($^O eq "openbsd") || ($^O eq "netbsd") || 0;
 }
 
+sub isHaiku()
+{
+    return ($^O eq "haiku") || 0;
+}
+
 sub isX86_64()
 {
     return (architecture() eq "x86_64") || 0;
@@ -1914,6 +1948,10 @@ sub isARM64()
 
 sub isCrossCompilation()
 {
+    if (isPlayStation()) {
+        return 1;
+    }
+
     my $compiler = "";
     $compiler = $ENV{'CC'} if (defined($ENV{'CC'}));
     if ($compiler =~ /gcc/) {
@@ -2243,7 +2281,7 @@ sub scriptPathForName($)
 }
 sub launcherPath()
 {
-    if (isGtk() || isWPE()) {
+    if (isGtk() || isWPE() || isHaiku()) {
         return scriptPathForName("run-minibrowser");
     } elsif (isAppleWebKit()) {
         return scriptPathForName("run-safari");
@@ -2252,7 +2290,7 @@ sub launcherPath()
 
 sub launcherName()
 {
-    if (isGtk() || isWPE()) {
+    if (isGtk() || isWPE() || isHaiku()) {
         return "MiniBrowser";
     } elsif (isAppleMacWebKit()) {
         return "Safari";
@@ -2298,11 +2336,6 @@ sub windowsSourceSourceDir()
     return File::Spec->catdir(windowsSourceDir(), "Source");
 }
 
-sub windowsLibrariesDir()
-{
-    return File::Spec->catdir(windowsSourceDir(), "WebKitLibraries", "win");
-}
-
 sub windowsOutputDir()
 {
     return File::Spec->catdir(windowsSourceDir(), "WebKitBuild");
@@ -2325,8 +2358,6 @@ sub setupCygwinEnv()
 
     print "Building results into: ", baseProductDir(), "\n";
     print "WEBKIT_OUTPUTDIR is set to: ", $ENV{"WEBKIT_OUTPUTDIR"}, "\n";
-    print "WEBKIT_LIBRARIES is set to: ", $ENV{"WEBKIT_LIBRARIES"}, "\n";
-    # FIXME (125180): Remove the following temporary 64-bit support once official support is available.
 
     # We will actually use MSBuild to build WebKit, but we need to find the Visual Studio install (above) to make
     # sure we use the right options.
@@ -2478,13 +2509,20 @@ sub isCachedArgumentfileOutOfDate($@)
     }
 
     open(CONTENTS_FILE, $filename);
+    local $/; # Slurp whole input file at once.
     chomp(my $previousContents = <CONTENTS_FILE> || "");
     close(CONTENTS_FILE);
 
-    if ($previousContents ne $currentContents) {
-        print "Contents for file $filename have changed.\n";
-        print "Previous contents were: $previousContents\n\n";
-        print "New contents are: $currentContents\n";
+    my %old_lines = map { $_ => 1 } split /\n/, $previousContents;
+    my %new_lines = map { $_ => 1 } split /\n/, $currentContents;
+
+    my @removed = sort grep { !exists $new_lines{$_} } keys %old_lines;
+    my @added   = sort grep { !exists $old_lines{$_} } keys %new_lines;
+
+    if (@removed or @added) {
+        print "Contents for file $filename have changed:\n";
+        print "- $_\n" for @removed;
+        print "+ $_\n" for @added;
         return 1;
     }
 
@@ -2500,11 +2538,85 @@ sub inFlatpakSandbox()
 sub runInCrossTargetEnvironment(@)
 {
     return if not shouldBuildForCrossTarget();
+    # Run with quiet log level to avoid repeated messages, the first run at determineArchitecture()
+    # to build the toolchain happens with log level info (the default)
     my @prefix = (File::Spec->catfile(sourceDir(), "Tools", "Scripts", "cross-toolchain-helper"),
-                  "--cross-target", getCrossTargetName(), "--cross-toolchain-run-cmd");
+                  "--log-level=quiet", "--cross-target", getCrossTargetName(), "--cross-toolchain-run-cmd");
     my @command = @_;
     exec @prefix, @command, argumentsForConfiguration(), @ARGV or die;
 }
+
+sub maybeEnterWebKitContainerSDK()
+{
+    # Must match linux_container_sdk_utils.AUTOENTER_DECLINED_EXIT_CODE.
+    my $AUTOENTER_DECLINED_EXIT_CODE = 100;
+
+    return if not isLinux();
+    # Cross-target builds use their own toolchain wrapper (runInCrossTargetEnvironment);
+    # don't double-wrap them in the SDK container.
+    return if (shouldBuildForCrossTarget() or inCrossTargetEnvironment());
+
+    # Mirror the cheap opt-out checks from maybe_enter_webkit_container_sdk so
+    # that the overwhelmingly common no-op case avoids forking a Python
+    # interpreter on every wrapper invocation. Keep in sync with that function.
+    return if ($ENV{'WEBKIT_FLATPAK'} // '') eq '1';
+    return if ($ENV{'WEBKIT_JHBUILD'} // '') eq '1';
+    return if ($ENV{'WEBKIT_CONTAINER_SDK_INSIDE_MOUNT_NAMESPACE'} // '') eq '1';
+    return unless -f File::Spec->catfile(sourceDir(), ".wkdev-sdk-version");
+
+    # Auto-enter is opt-in on the host. Inside the container we always invoke
+    # the helper so the version-mismatch warning fires regardless of opt-in.
+    return if (($ENV{'WEBKIT_CONTAINER_SDK'} // '') ne '1'
+               and ($ENV{'WEBKIT_CONTAINER_SDK_ENABLE_AUTOENTER'} // '') ne '1');
+
+    # Delegate to the Python helper. It either replaces this process with
+    # `podman exec ...` (never returning), or exits with
+    # $AUTOENTER_DECLINED_EXIT_CODE to signal "continue on the host".
+    my $helper = File::Spec->catfile($FindBin::Bin, "container-sdk-autoenter");
+    return unless -x $helper;
+    system($helper, Cwd::realpath($0) // $0, @ARGV);
+    my $status = exitStatus($?);
+    return if $status == $AUTOENTER_DECLINED_EXIT_CODE;
+    exit $status;
+}
+
+sub maybeUseContainerSDKRootDir()
+{
+    return if not isLinux();
+    return if (shouldUseFlatpak() or shouldBuildForCrossTarget() or inCrossTargetEnvironment());
+    return if ($ENV{'WEBKIT_CONTAINER_SDK_INSIDE_MOUNT_NAMESPACE'} // '') eq '1';
+    return if ($ENV{'WEBKIT_FLATPAK'} // '') eq '1';
+    return if ($ENV{'WEBKIT_JHBUILD'} // '') eq '1';
+    if (($ENV{'WEBKIT_CONTAINER_SDK'} // '') ne '1') {
+        print STDERR "WARNING: Running outside wkdev-sdk container. For proper testing, use https://github.com/Igalia/webkit-container-sdk\n";
+        return;
+    }
+
+    my $sourceDir = sourceDir();
+    my @wrapperScript = (File::Spec->catfile($sourceDir, "Tools", "Scripts", "container-sdk-rootdir-wrapper"));
+
+    if (system(@wrapperScript, "--create-symlink") != 0) {
+        print STDERR "WARNING: Unable to create symlink at /sdk/webkit. Skipping setting up SDK common root dir feature\n";
+        return 1;
+    }
+
+    my @checkCommand = ('test', '-f', '/sdk/webkit/Tools/Scripts/build-webkit');
+    my $command = $0;
+    if (system(@wrapperScript, @checkCommand) == 0) {
+        if (index($command, $sourceDir) == 0) {
+            $command = '/sdk/webkit' . substr($command, length($sourceDir));
+        }
+        print "Running in private mount namespace at /sdk/webkit\n";
+        exec @wrapperScript, $command, argumentsForConfiguration(), @ARGV or die;
+    }
+    print STDERR "WARNING: Unable to create /sdk/webkit private mount namespace. Continuing only with symlink support.\n";
+    if ($command =~ /\/build-webkit$/) {
+        # This can allow remote ccache to hit even when the bind-mount was not possible, however it won't work for sccache.
+        $ENV{"CFLAGS"} = "-ffile-prefix-map=$sourceDir=/sdk/webkit" . ($ENV{"CFLAGS"} || "");
+        $ENV{"CXXFLAGS"} = "-ffile-prefix-map=$sourceDir=/sdk/webkit" . ($ENV{"CXXFLAGS"} || "");
+    }
+}
+
 
 sub runInFlatpak(@)
 {
@@ -2534,29 +2646,6 @@ sub runInFlatpak(@)
     }
 
     exec @command, argumentsForConfiguration(), @flatpakArgs, "--command", @_, argumentsForConfiguration(), @filteredArgv or die;
-}
-
-sub runInFlatpakIfAvailable(@)
-{
-    my $prefix = wrapperPrefixIfNeeded();
-    if (defined($prefix)) {
-        return 0;
-    }
-
-    if (inFlatpakSandbox()) {
-        return 0;
-    }
-
-    my @command = (File::Spec->catfile(sourceDir(), "Tools", "Scripts", "webkit-flatpak"));
-    if (system(@command, "--available") != 0) {
-        return 0;
-    }
-
-    if (! -e getUserFlatpakPath()) {
-        return 0;
-    }
-
-    runInFlatpak(@_)
 }
 
 sub jhbuildWrapperPrefix()
@@ -2593,7 +2682,7 @@ sub shouldBuildForCrossTarget()
 
 sub wrapperPrefixIfNeeded()
 {
-    if (isAnyWindows() || isJSCOnly() || isPlayStation()) {
+    if (isAnyWindows() || isJSCOnly() || isPlayStation() || isHaiku()) {
         return ();
     }
     if (isAppleCocoaWebKit()) {
@@ -2603,35 +2692,19 @@ sub wrapperPrefixIfNeeded()
         return ();
     }
 
-    # Returning () here means either Flatpak or no wrapper will be used.
-    if (isGtk() or isWPE()) {
-        # Respect user's choice.
-        if (defined $ENV{'WEBKIT_JHBUILD'}) {
-            if ($ENV{'WEBKIT_JHBUILD'} and -e getJhbuildPath()) {
-                return jhbuildWrapperPrefix();
-            } else {
-                return ();
-            }
-            # or let Flatpak take precedence over JHBuild.
-        } elsif (-e getUserFlatpakPath()) {
-            return ();
-        } elsif (-e getJhbuildPath()) {
+    if ((isGtk() or isWPE()) and (defined $ENV{'WEBKIT_JHBUILD'} and $ENV{'WEBKIT_JHBUILD'} and -e getJhbuildPath())) {
             return jhbuildWrapperPrefix();
         }
-    }
     return ();
 }
 
 sub shouldUseFlatpak()
 {
-    # TODO: Use flatpak for JSCOnly on Linux? Could be useful when the SDK
-    # supports cross-compilation for ARMv7 and Aarch64 for instance.
-
     if (!isGtk() and !isWPE()) {
         return 0;
     }
 
-    if ((defined $ENV{'WEBKIT_JHBUILD'} && $ENV{'WEBKIT_JHBUILD'}) or defined $ENV{'WEBKIT_BUILD_USE_SYSTEM_LIBRARIES'}) {
+    if (defined $ENV{'WEBKIT_JHBUILD'} and $ENV{'WEBKIT_JHBUILD'}) {
         return 0;
     }
 
@@ -2639,8 +2712,15 @@ sub shouldUseFlatpak()
         return 0;
     }
 
+    return 0 unless (defined $ENV{'WEBKIT_FLATPAK'} and $ENV{'WEBKIT_FLATPAK'});
+
     my @prefix = wrapperPrefixIfNeeded();
     return ((! inFlatpakSandbox()) and (@prefix == 0) and -e getUserFlatpakPath());
+}
+
+sub shouldUseVcpkg()
+{
+    return isWin() || (isJSCOnly() && isWindows());
 }
 
 sub cmakeCachePath()
@@ -2659,11 +2739,22 @@ sub shouldRemoveCMakeCache(@)
     # We check this first, because we always want to create this file for a fresh build.
     my $productDir = productDir();
     my $optionsCache = File::Spec->catdir($productDir, "build-webkit-options.txt");
-    my $joinedBuildArgs = join(" ", @buildArgs);
-    if (isCachedArgumentfileOutOfDate($optionsCache, $joinedBuildArgs)) {
+    my $buildArgsEnv = "ARGS=" . join(" ", @buildArgs);
+    my @relevantEnvFlags = ( "AR", "AS", "CC", "CXX", "LD", "NM", "RANLIB", "STRIP", # Toolchain
+                             "CFLAGS", "CXXFLAGS", "CPPFLAGS", "LDFLAGS", # Compiler and linker flags
+                             "PKG_CONFIG_LIBDIR", "PKG_CONFIG_PATH", # pkg-config
+                             "CPATH", "LIBRARY_PATH", # GCC/Clang include/lib helpers
+                             "CMAKE_MODULE_PATH", "CMAKE_PREFIX_PATH", # CMake-specific
+                             # WebKit-tooling build modifiers
+                             "WEBKIT_CONTAINER_SDK", "WEBKIT_FLATPAK", "WEBKIT_JHBUILD", "WEBKIT_USE_SCCACHE");
+    for my $envFlag (@relevantEnvFlags) {
+        my $flagValue = $ENV{$envFlag} || "";
+            $buildArgsEnv .= "\n" . $envFlag . "=" . $flagValue;
+    }
+    if (isCachedArgumentfileOutOfDate($optionsCache, $buildArgsEnv)) {
         File::Path::mkpath($productDir) unless -d $productDir;
         open(CACHED_ARGUMENTS, ">", $optionsCache);
-        print CACHED_ARGUMENTS $joinedBuildArgs;
+        print CACHED_ARGUMENTS $buildArgsEnv;
         close(CACHED_ARGUMENTS);
 
         return 1;
@@ -2707,7 +2798,7 @@ sub shouldRemoveCMakeCache(@)
 
     if(isAnyWindows()) {
         my $winConfiguration = File::Spec->catdir(sourceDir(), "Source", "cmake", "OptionsWin.cmake");
-        if ($cacheFileModifiedTime < stat($winConfiguration)->mtime) {
+        if ($cacheFileModifiedTime < (stat($winConfiguration))[9]) {
             return 1;
         }
     }
@@ -2729,7 +2820,10 @@ sub removeCMakeCache(@)
     my (@buildArgs) = @_;
     if (shouldRemoveCMakeCache(@buildArgs)) {
         my $cmakeCache = cmakeCachePath();
-        unlink($cmakeCache) if -e $cmakeCache;
+        if (-e $cmakeCache) {
+            print "Removing CMake Cache at " . $cmakeCache . "\n";
+            unlink($cmakeCache);
+    }
     }
 }
 
@@ -2805,7 +2899,10 @@ sub generateBuildSystemFromCMakeProject
 
     push @args, "-DLTO_MODE=$ltoMode" if ltoMode();
 
-    if (isPlayStation()) {
+    if (shouldUseVcpkg()) {
+        push @args, '-DCMAKE_TOOLCHAIN_FILE="' . $ENV{VCPKG_ROOT} . '\\scripts\\buildsystems\\vcpkg.cmake"';
+        push @args, '-DVCPKG_TARGET_TRIPLET=x64-windows-webkit'
+    } elsif (isPlayStation()) {
         my $toolChainFile = $ENV{'CMAKE_TOOLCHAIN_FILE'} || "Platform/PlayStation5";
         push @args, '-DCMAKE_TOOLCHAIN_FILE=' . $toolChainFile;
     }
@@ -2852,10 +2949,43 @@ sub generateBuildSystemFromCMakeProject
         $ENV{"CXXFLAGS"} = "-m32" . ($ENV{"CXXFLAGS"} || "");
         $ENV{"LDFLAGS"} = "-m32" . ($ENV{"LDFLAGS"} || "");
     }
+    if (architecture() eq "arm64" && shouldBuild32Bit()) {
+        my $compiler = "";
+        $compiler = $ENV{'CC'} if (defined($ENV{'CC'}));
+        # CMAKE_LIBRARY_ARCHITECTURE is needed to get the right .pc
+        # files in Debian-based systems, for the others
+        # CMAKE_PREFIX_PATH will get us /usr/lib, which should be the
+        # right path for 32bit. See FindPkgConfig.cmake.
+        push @cmakeArgs, '-DFORCE_32BIT=ON -DCMAKE_PREFIX_PATH="/usr" -DCMAKE_LIBRARY_ARCHITECTURE=armv7-a+fp ';
+        $ENV{"CFLAGS"} =  " -march=armv7-a+fp " . ($ENV{"CFLAGS"} || "");
+        $ENV{"CXXFLAGS"} = " -march=armv7-a+fp " . ($ENV{"CXXFLAGS"} || "");
+        $ENV{"LDFLAGS"} = " -march=armv7-a+fp " . ($ENV{"LDFLAGS"} || "");
+
+        if ($compiler =~ /clang/) {
+            $ENV{"CFLAGS"} =  " -m32 " . ($ENV{"CFLAGS"} || "");
+            $ENV{"CXXFLAGS"} = " -m32 " . ($ENV{"CXXFLAGS"} || "");
+            $ENV{"LDFLAGS"} = " -m32 " . ($ENV{"LDFLAGS"} || "");
+        }
+    }
     push @args, @cmakeArgs if @cmakeArgs;
 
     my $cmakeSourceDir = isCygwin() ? windowsSourceDir() : sourceDir();
     push @args, '"' . $cmakeSourceDir . '"';
+
+    # The GTK and WPE bots build and test with -DENABLE_ASSERTS=ON (both on Release and Debug).
+    # Warn when the local build differs from the CI configuration.
+    if (isGtk() || isWPE()) {
+        # configuration() is the name of the build config and directory, and in the case of a cross-toolchain
+        # build it is something like "Release_rpi4-64bits-mesa" (for example), so this doesn't trigger in that case.
+        # That is intentional: the CI does not enable assertions for cross-toolchain builds, so no need to warn.
+        if (configuration() eq "Release") {
+            my $assertsOn = grep { /^-DENABLE_ASSERTS=ON\b/i } @args;
+            print STDERR "WARNING: Building Release without assertions. Pass --asserts to match the CI build.\n" unless $assertsOn;
+        } elsif (configuration() eq "Debug") {
+            my $assertsOff = grep { /^-DENABLE_ASSERTS=OFF\b/i } @args;
+            print STDERR "WARNING: Building Debug with assertions disabled. Drop --no-asserts to match the CI build.\n" if $assertsOff;
+        }
+    }
 
     # We call system("cmake @args") instead of system("cmake", @args) so that @args is
     # parsed for shell metacharacters.
@@ -2956,6 +3086,51 @@ sub cmakeArgsFromFeatures(\@;$)
     return @args;
 }
 
+sub vcpkgArgsFromFeatures(\@;$)
+{
+    my ($featuresArrayRef, $enableExperimentalFeatures) = @_;
+
+    my @args;
+    my $avif = 0;
+    my $jpegxl = 1;
+    my $lcms = 1;
+    my $skia = 1;
+    my $woff2 = 1;
+
+    if (isJSCOnly()) {
+        return;
+    }
+
+    foreach (@$featuresArrayRef) {
+        my $featureName = $_->{define};
+        if ($featureName) {
+            my $featureValue = ${$_->{value}}; # Undef to let the build system use its default.
+            if (defined($featureValue)) {
+                if ($featureName eq "USE_AVIF") {
+                    $avif = $featureValue;
+                } elsif ($featureName eq "USE_JPEGXL") {
+                    $jpegxl = $featureValue;
+                } elsif ($featureName eq "USE_LCMS") {
+                    $lcms = $featureValue;
+                } elsif ($featureName eq "USE_SKIA") {
+                    $skia = $featureValue;
+                } elsif ($featureName eq "USE_WOFF2") {
+                    $woff2 = $featureValue;
+                }
+            }
+        }
+    }
+
+    push @args, "web";
+    push @args, "avif" if $avif;
+    push @args, "jpeg-xl" if $jpegxl;
+    push @args, "lcms" if $lcms;
+    push @args, $skia ? "skia" : "cairo";
+    push @args, "woff2" if $woff2;
+
+    return "-DVCPKG_MANIFEST_FEATURES=" . join(";", @args);
+}
+
 sub cmakeBasedPortName()
 {
     return ucfirst portName();
@@ -3011,9 +3186,10 @@ sub printHelpAndExitForRunAndDebugWebKitAppIfNeeded
     return unless checkForArgumentAndRemoveFromARGV("--help");
 
     print STDERR <<EOF;
-Usage: @{[basename($0)]} [options] [args ...]
+Usage: @{[basename($0)]} [options] <application-path>
   --help                            Show this help message
   --no-saved-state                  Launch the application without state restoration
+  --debug|release                   build configuration
 
 Options specific to macOS:
   -g|--guard-malloc                 Enable Guard Malloc
@@ -3070,18 +3246,8 @@ sub setupUnixWebKitEnvironment($)
 {
     my ($productDir) = @_;
 
+    prependToEnvironmentVariableList("LD_LIBRARY_PATH", File::Spec->catfile($productDir, "lib"));
     $ENV{TEST_RUNNER_INJECTED_BUNDLE_FILENAME} = File::Spec->catfile($productDir, "lib", "libTestRunnerInjectedBundle.so");
-}
-
-sub setupWindowsWebKitEnvironment()
-{
-    my $lib;
-    if ($ENV{WEBKIT_LIBRARIES}) {
-        $lib = File::Spec->catfile($ENV{WEBKIT_LIBRARIES}, 'bin');
-    } else  {
-        $lib = File::Spec->catfile(sourceDir(), 'WebKitLibraries', 'win', 'bin');
-    }
-    $ENV{PATH} = $lib . ';' . $ENV{PATH};
 }
 
 sub setupIOSWebKitEnvironment($)
@@ -3138,6 +3304,21 @@ sub mobileMiniBrowserBundle()
         return "$configurationProductDir/MobileMiniBrowser.app";
     }
     return installedMobileMiniBrowserBundle();
+}
+
+sub installedSwiftBrowserBundle()
+{
+    return File::Spec->catfile(iosSimulatorApplicationsPath(), "SwiftBrowser.app");
+}
+
+sub swiftBrowserBundle()
+{
+    determineConfigurationProductDir();
+
+    if (isIOSWebKit() && -d "$configurationProductDir/SwiftBrowser.app") {
+        return "$configurationProductDir/SwiftBrowser.app";
+    }
+    return installedSwiftBrowserBundle();
 }
 
 
@@ -3255,7 +3436,15 @@ sub simulatorRuntime($)
 
     my $output = `xcrun --sdk $xcodeSDK simctl list runtimes $platformName --json` or die "Failed to run find simulator runtime";
     for my $runtime (@{decode_json($output)->{runtimes}}) {
-        return $runtime->{identifier} if $runtime->{version} eq $xcodeSDKVersion;
+        if ($runtime->{version} eq $xcodeSDKVersion) {
+            return $runtime->{identifier};
+        }
+        if ($runtime->{version} =~ /^$xcodeSDKVersion/) {
+            my $runtime_version = $runtime->{version};
+            my $runtime_id = $runtime->{identifier};
+            warn "WARNING: Fuzzy-matched $platformName SDK version $xcodeSDKVersion to runtime $runtime_id with version $runtime_version.";
+            return $runtime_id;
+        }
     }
 }
 
@@ -3265,9 +3454,10 @@ sub findOrCreateSimulatorForIOSDevice($)
     my $simulatorName;
     my $simulatorDeviceType;
 
+    # These should match the DEFAULT_DEVICE_TYPES in webkitpy/port/ios_simulator.py.
     if ($simulatorIdiom eq "iPad") {
-        $simulatorName = "iPad Pro " . $simulatorNameSuffix;
-        $simulatorDeviceType = "com.apple.CoreSimulator.SimDeviceType.iPad-Pro--9-7-inch-";
+        $simulatorName = "iPad (9th generation) " . $simulatorNameSuffix;
+        $simulatorDeviceType = "com.apple.CoreSimulator.SimDeviceType.iPad-9th-generation";
     } else {
         $simulatorName = "iPhone 12 " . $simulatorNameSuffix;
         $simulatorDeviceType = "com.apple.CoreSimulator.SimDeviceType.iPhone-12";
@@ -3503,7 +3693,27 @@ sub debugMiniBrowser
     if (isAppleMacWebKit()) {
         execMacWebKitAppForDebugging(File::Spec->catfile(productDir(), "MiniBrowser.app", "Contents", "MacOS", "MiniBrowser"));
     }
-    
+
+    return 1;
+}
+
+sub runSwiftBrowser
+{
+    if (isAppleMacWebKit()) {
+        return runMacWebKitApp(File::Spec->catfile(productDir(), "SwiftBrowser.app", "Contents", "MacOS", "SwiftBrowser"));
+    }
+    if (isIOSWebKit()) {
+        return runIOSWebKitApp(swiftBrowserBundle());
+    }
+    return 1;
+}
+
+sub debugSwiftBrowser
+{
+    if (isAppleMacWebKit()) {
+        execMacWebKitAppForDebugging(File::Spec->catfile(productDir(), "SwiftBrowser.app", "Contents", "MacOS", "SwiftBrowser"));
+    }
+
     return 1;
 }
 
@@ -3568,7 +3778,34 @@ sub runGitUpdate()
 {
     # This will die if branch.$BRANCHNAME.merge isn't set, which is
     # almost certainly what we want.
-    system("git", "pull") == 0 or die;
+    system("git", "pull", "--autostash") == 0 or die;
 }
+
+
+# Never returns to the caller: either exec()s an external program or exit()s directly.
+# Exit code follows shell convention (0 = success, non-zero = failure).
+sub updateGtkOrWpeLibs
+{
+    my ($port) = @_;
+    my $scriptsDir = relativeScriptsDir();
+    if (defined $ENV{'WEBKIT_JHBUILD'} and $ENV{'WEBKIT_JHBUILD'}) {
+        exec("perl", "$scriptsDir/update-webkit-libs-jhbuild", "--$port", @ARGV)
+            or die "Failed to exec update-webkit-libs-jhbuild: $!";
+    } elsif (defined $ENV{'WEBKIT_CROSS_TARGET'} or grep(/^--cross-target/, @ARGV)) {
+        exec("$scriptsDir/cross-toolchain-helper", "--build-toolchain", @ARGV)
+            or die "Failed to exec cross-toolchain-helper: $!";
+    } elsif (defined $ENV{'WEBKIT_FLATPAK'} and $ENV{'WEBKIT_FLATPAK'}) {
+        exec("$scriptsDir/update-webkit-flatpak", @ARGV)
+            or die "Failed to exec update-webkit-flatpak: $!";
+    }
+    if (defined $ENV{'WEBKIT_CONTAINER_SDK'} and $ENV{'WEBKIT_CONTAINER_SDK'}) {
+        # FIXME: implement a way to check if the update is needed by calling some script at /wkdev-sdk and then print a different message.
+        print "Running inside wkdev-sdk: execute wkdev-update on the host to check for updates.\n";
+        exit 0;  # success
+    }
+    warn "Please download and install wkdev-sdk from https://github.com/Igalia/webkit-container-sdk\n";
+    exit 1;  # failure
+}
+
 
 1;

@@ -49,7 +49,8 @@ class JSAudioWorkletProcessorConstructor;
 struct WorkletParameters;
 
 class AudioWorkletGlobalScope final : public WorkletGlobalScope {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(AudioWorkletGlobalScope);
+    WTF_MAKE_TZONE_ALLOCATED(AudioWorkletGlobalScope);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(AudioWorkletGlobalScope);
 public:
     static RefPtr<AudioWorkletGlobalScope> tryCreate(AudioWorkletThread&, const WorkletParameters&);
     ~AudioWorkletGlobalScope();
@@ -65,7 +66,7 @@ public:
 
     double currentTime() const { return m_sampleRate > 0.0 ? m_currentFrame / static_cast<double>(m_sampleRate) : 0.0; }
 
-    AudioWorkletThread& thread() const;
+    Ref<AudioWorkletThread> thread() const;
     void prepareForDestruction() final;
 
     std::unique_ptr<AudioWorkletProcessorConstructionData> takePendingProcessorConstructionData();
@@ -82,7 +83,7 @@ private:
 
     size_t m_currentFrame { 0 };
     const float m_sampleRate;
-    MemoryCompactRobinHoodHashMap<String, RefPtr<JSAudioWorkletProcessorConstructor>> m_processorConstructorMap;
+    MemoryCompactRobinHoodHashMap<String, Ref<JSAudioWorkletProcessorConstructor>> m_processorConstructorMap;
     ThreadSafeWeakHashSet<AudioWorkletProcessor> m_processors;
     std::unique_ptr<AudioWorkletProcessorConstructionData> m_pendingProcessorConstructionData;
     std::optional<JSC::VM::DrainMicrotaskDelayScope> m_delayMicrotaskDrainingDuringRendering;

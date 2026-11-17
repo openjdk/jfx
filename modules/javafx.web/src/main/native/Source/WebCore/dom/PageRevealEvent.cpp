@@ -25,20 +25,21 @@
 
 #include "config.h"
 #include "PageRevealEvent.h"
+
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(PageRevealEvent);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PageRevealEvent);
 
 Ref<PageRevealEvent> PageRevealEvent::create(const AtomString& type, Init&& eventInitDict, IsTrusted isTrusted)
 {
-    return adoptRef(*new PageRevealEvent(type, WTFMove(eventInitDict), isTrusted));
+    return adoptRef(*new PageRevealEvent(type, WTF::move(eventInitDict), isTrusted));
 }
 
 PageRevealEvent::PageRevealEvent(const AtomString& type, Init&& eventInitDict, IsTrusted isTrusted)
     : Event(EventInterfaceType::PageRevealEvent, type, eventInitDict, isTrusted)
-    , m_viewTransition(WTFMove(eventInitDict.viewTransition))
+    , m_viewTransition(WTF::move(eventInitDict.viewTransition))
 { }
 
 PageRevealEvent::~PageRevealEvent() = default;

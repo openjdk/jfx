@@ -48,6 +48,7 @@ COMPILER_FLAGS = -nologo -W3 -WX- -EHsc -GS -fp:precise -Gm- \
 INCLUDES =  -I$(BASECLASSES_DIR)
 
 CFLAGS =   -DWIN32 \
+           -D_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR \
            -D_LIB \
            -D_WIN32_DCOM \
            -D_MBCS \

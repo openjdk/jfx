@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Oleksandr Skachkov <gskachkov@gmail.com>.
+ * Copyright (C) 2025 Sosuke Suzuki <aosukeke@gmail.com>.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,10 +23,53 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-@overriddenName="[Symbol.asyncIterator]"
-function symbolAsyncIteratorGetter()
+@linkTimeConstant
+function promiseReturnUndefinedOnFulfilled(argument)
 {
     "use strict";
 
-    return this;
+    return @undefined;
+}
+
+// https://tc39.es/proposal-explicit-resource-management/#sec-%asynciteratorprototype%-@@asyncdispose
+@overriddenName="[Symbol.asyncDispose]"
+function asyncDispose()
+{
+    'use strict';
+
+    var promise = @newPromise();
+    var returnMethod;
+    try {
+        returnMethod = this.return;
+    } catch (e) {
+        @rejectPromiseWithFirstResolvingFunctionCallCheck(promise, e);
+        return promise;
+    }
+
+    if (returnMethod === @undefined)
+        @resolvePromiseWithFirstResolvingFunctionCallCheck(promise, @undefined);
+    else {
+        var result;
+        try {
+            result = returnMethod.@call(this);
+        } catch (e) {
+            @rejectPromiseWithFirstResolvingFunctionCallCheck(promise, e);
+            return promise;
+        }
+        var resultWrapper;
+        try {
+            if (@isPromise(result) && result.constructor == @Promise)
+                resultWrapper = result;
+            else {
+                resultWrapper = @newPromise();
+                @resolvePromiseWithFirstResolvingFunctionCallCheck(resultWrapper, result);
+            }
+        } catch (e) {
+            @rejectPromiseWithFirstResolvingFunctionCallCheck(promise, e);
+            return promise;
+        }
+        @performPromiseThen(resultWrapper, @promiseReturnUndefinedOnFulfilled, @undefined, promise);
+    }
+
+    return promise;
 }

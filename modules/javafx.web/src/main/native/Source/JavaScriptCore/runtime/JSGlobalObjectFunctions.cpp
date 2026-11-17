@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2002 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2023 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2025 Apple Inc. All rights reserved.
  *  Copyright (C) 2007 Cameron Zwarich (cwzwarich@uwaterloo.ca)
  *  Copyright (C) 2007 Maks Orlovich
  *
@@ -41,27 +41,22 @@
 #include "LiteralParser.h"
 #include "ObjectConstructorInlines.h"
 #include "ParseInt.h"
+#include "SourceProfiler.h"
 #include <stdio.h>
 #include <wtf/ASCIICType.h>
 #include <wtf/Assertions.h>
 #include <wtf/HexNumber.h>
 #include <wtf/dtoa.h>
+#include <wtf/text/ASCIIFastPath.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringBuilder.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
 const ASCIILiteral ObjectProtoCalledOnNullOrUndefinedError { "Object.prototype.__proto__ called on null or undefined"_s };
 const ASCIILiteral RestrictedPropertyAccessError { "'arguments', 'callee', and 'caller' cannot be accessed in this context."_s };
-
-template<unsigned charactersCount>
-static constexpr WTF::BitSet<256> makeCharacterBitmap(const char (&characters)[charactersCount])
-{
-    static_assert(charactersCount > 0, "Since string literal is null terminated, characterCount is always larger than 0");
-    WTF::BitSet<256> bitmap;
-    for (unsigned i = 0; i < charactersCount - 1; ++i)
-        bitmap.set(characters[i]);
-    return bitmap;
-}
 
 template<typename CharacterType>
 static JSValue encode(JSGlobalObject* globalObject, const WTF::BitSet<256>& doNotEscape, std::span<const CharacterType> characters)
@@ -76,7 +71,7 @@ static JSValue encode(JSGlobalObject* globalObject, const WTF::BitSet<256>& doNo
         return JSC::throwException(globalObject, scope, createURIError(globalObject, "String contained an illegal UTF-16 sequence."_s));
     };
 
-    StringBuilder builder(StringBuilder::OverflowHandler::RecordOverflow);
+    StringBuilder builder(OverflowPolicy::RecordOverflow);
     builder.reserveCapacity(characters.size());
 
     // 4. Repeat
@@ -88,7 +83,7 @@ static JSValue encode(JSGlobalObject* globalObject, const WTF::BitSet<256>& doNo
         if (character < doNotEscape.size() && doNotEscape.get(character)) {
             // 4-c-i. Let S be a String containing only the code unit C.
             // 4-c-ii. Let R be a new String value computed by concatenating the previous value of R and S.
-            builder.append(static_cast<LChar>(character));
+            builder.append(static_cast<Latin1Character>(character));
             continue;
         }
 
@@ -122,7 +117,7 @@ static JSValue encode(JSGlobalObject* globalObject, const WTF::BitSet<256>& doNo
         }
 
         // 4-d-iv. Let Octets be the array of octets resulting by applying the UTF-8 transformation to V, and let L be the array size.
-        LChar utf8OctetsBuffer[U8_MAX_LENGTH];
+        Latin1Character utf8OctetsBuffer[U8_MAX_LENGTH];
         unsigned utf8Length = 0;
         // We can use U8_APPEND_UNSAFE here since codePoint is either
         // 1. non surrogate one, correct code point.
@@ -140,7 +135,7 @@ static JSValue encode(JSGlobalObject* globalObject, const WTF::BitSet<256>& doNo
         }
     }
 
-    if (UNLIKELY(builder.hasOverflowed()))
+    if (builder.hasOverflowed()) [[unlikely]]
         return throwOutOfMemoryError(globalObject, scope);
     return jsString(vm, builder.toString());
 }
@@ -161,9 +156,9 @@ static JSValue decode(JSGlobalObject* globalObject, std::span<const CharType> ch
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    StringBuilder builder(StringBuilder::OverflowHandler::RecordOverflow);
+    StringBuilder builder(OverflowPolicy::RecordOverflow);
     size_t k = 0;
-    UChar u = 0;
+    char16_t u = 0;
     while (k < characters.size()) {
         const CharType* p = characters.data() + k;
         CharType c = *p;
@@ -198,7 +193,7 @@ static JSValue decode(JSGlobalObject* globalObject, std::span<const CharType> ch
                             u = U16_TRAIL(character);
                         } else {
                             ASSERT(!U_IS_SURROGATE(character));
-                            u = static_cast<UChar>(character);
+                            u = static_cast<char16_t>(character);
                         }
                     }
                 }
@@ -212,10 +207,10 @@ static JSValue decode(JSGlobalObject* globalObject, std::span<const CharType> ch
                         && isASCIIHexDigit(p[2]) && isASCIIHexDigit(p[3])
                         && isASCIIHexDigit(p[4]) && isASCIIHexDigit(p[5])) {
                     charLen = 6;
-                    u = Lexer<UChar>::convertUnicode(p[2], p[3], p[4], p[5]);
+                    u = Lexer<char16_t>::convertUnicode(p[2], p[3], p[4], p[5]);
                 }
             }
-            if (charLen && (u >= 128 || !doNotUnescape.get(static_cast<LChar>(u)))) {
+            if (charLen && (u >= 128 || !doNotUnescape.get(static_cast<Latin1Character>(u)))) {
                 builder.append(u);
                 k += charLen;
                 continue;
@@ -224,7 +219,7 @@ static JSValue decode(JSGlobalObject* globalObject, std::span<const CharType> ch
         ++k;
         builder.append(c);
     }
-    if (UNLIKELY(builder.hasOverflowed()))
+    if (builder.hasOverflowed()) [[unlikely]]
         return throwOutOfMemoryError(globalObject, scope);
     RELEASE_AND_RETURN(scope, jsString(vm, builder.toString()));
 }
@@ -259,12 +254,11 @@ template <typename CharType>
 static double jsBinaryIntegerLiteral(std::span<const CharType>& data)
 {
     // Binary number.
-    data = data.subspan(2);
+    skip(data, 2);
     auto firstDigitPosition = data;
     double number = 0;
     while (true) {
-        number = number * 2 + (data.front() - '0');
-        data = data.subspan(1);
+        number = number * 2 + (consume(data) - '0');
         if (data.empty())
             break;
         if (!isASCIIBinaryDigit(data.front()))
@@ -281,12 +275,11 @@ template <typename CharType>
 static double jsOctalIntegerLiteral(std::span<const CharType>& data)
 {
     // Octal number.
-    data = data.subspan(2);
+    skip(data, 2);
     auto firstDigitPosition = data;
     double number = 0;
     while (true) {
-        number = number * 8 + (data.front() - '0');
-        data = data.subspan(1);
+        number = number * 8 + (consume(data) - '0');
         if (data.empty())
             break;
         if (!isASCIIOctalDigit(data.front()))
@@ -303,12 +296,11 @@ template <typename CharType>
 static double jsHexIntegerLiteral(std::span<const CharType>& data)
 {
     // Hex number.
-    data = data.subspan(2);
+    skip(data, 2);
     auto firstDigitPosition = data;
     double number = 0;
     while (true) {
-        number = number * 16 + toASCIIHexValue(data.front());
-        data = data.subspan(1);
+        number = number * 16 + toASCIIHexValue(consume(data));
         if (data.empty())
             break;
         if (!isASCIIHexDigit(data.front()))
@@ -329,7 +321,7 @@ static double jsStrDecimalLiteral(std::span<const CharType>& data)
     size_t parsedLength;
     double number = parseDouble(data, parsedLength);
     if (parsedLength) {
-        data = data.subspan(parsedLength);
+        skip(data, parsedLength);
         return number;
     }
 
@@ -337,21 +329,21 @@ static double jsStrDecimalLiteral(std::span<const CharType>& data)
     switch (data.front()) {
     case 'I':
         if (isInfinity(data)) {
-            data = data.subspan(SizeOfInfinity);
+            skip(data, SizeOfInfinity);
             return std::numeric_limits<double>::infinity();
         }
         break;
 
     case '+':
         if (isInfinity(data.subspan(1))) {
-            data = data.subspan(SizeOfInfinity + 1);
+            skip(data, SizeOfInfinity + 1);
             return std::numeric_limits<double>::infinity();
         }
         break;
 
     case '-':
         if (isInfinity(data.subspan(1))) {
-            data = data.subspan(SizeOfInfinity + 1);
+            skip(data, SizeOfInfinity + 1);
             return -std::numeric_limits<double>::infinity();
         }
         break;
@@ -365,10 +357,7 @@ template <typename CharacterType>
 static double toDouble(std::span<const CharacterType> characters)
 {
     // Skip leading white space.
-    for (; !characters.empty(); characters = characters.subspan(1)) {
-        if (!isStrWhiteSpace(characters.front()))
-            break;
-    }
+    skipWhile<isStrWhiteSpace>(characters);
 
     // Empty string.
     if (characters.empty())
@@ -388,10 +377,8 @@ static double toDouble(std::span<const CharacterType> characters)
         number = jsStrDecimalLiteral(characters);
 
     // Allow trailing white space.
-    for (; !characters.empty(); characters = characters.subspan(1)) {
-        if (!isStrWhiteSpace(characters.front()))
-            break;
-    }
+    skipWhile<isStrWhiteSpace>(characters);
+
     if (!characters.empty())
         return PNaN;
 
@@ -433,7 +420,7 @@ double jsToNumber(StringView s)
 static double parseFloat(StringView s)
 {
     if (s.length() == 1) {
-        UChar c = s[0];
+        char16_t c = s[0];
         if (isASCIIDigit(c))
             return c - '0';
         return PNaN;
@@ -443,10 +430,7 @@ static double parseFloat(StringView s)
         auto data = s.span8();
 
         // Skip leading white space.
-        for (; !data.empty(); data = data.subspan(1)) {
-            if (!isStrWhiteSpace(data.front()))
-                break;
-        }
+        skipWhile<isStrWhiteSpace>(data);
 
         // Empty string.
         if (data.empty())
@@ -458,10 +442,7 @@ static double parseFloat(StringView s)
     auto data = s.span16();
 
     // Skip leading white space.
-    for (; !data.empty(); data = data.subspan(1)) {
-        if (!isStrWhiteSpace(data.front()))
-            break;
-    }
+    skipWhile<isStrWhiteSpace>(data);
 
     // Empty string.
     if (data.empty())
@@ -476,48 +457,68 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncEval, (JSGlobalObject* globalObject, CallFram
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue x = callFrame->argument(0);
-    JSString* codeString = nullptr;
-    if (LIKELY(x.isString()))
-        codeString = asString(x);
-    else if (Options::useTrustedTypes()) {
+    String programSource;
+    bool isTrusted = false;
+    if (x.isString()) [[likely]] {
+        programSource = x.toWTFString(globalObject);
+        RETURN_IF_EXCEPTION(scope, { });
+    } else if (Options::useTrustedTypes() && x.isObject()) {
+        auto* structure = globalObject->trustedScriptStructure();
+        if (structure == asObject(x)->structure()) {
+            programSource = x.toWTFString(globalObject);
+            RETURN_IF_EXCEPTION(scope, { });
+            isTrusted = true;
+        } else {
         auto code = globalObject->globalObjectMethodTable()->codeForEval(globalObject, x);
-        if (!code.isNull())
-            codeString = jsString(vm, code);
+            RETURN_IF_EXCEPTION(scope, { });
+            if (!code.isNull()) {
+                programSource = code;
+                isTrusted = true;
+            }
+        }
     }
 
-    if (!codeString)
+    if (programSource.isNull())
         return JSValue::encode(x);
 
-    auto s = codeString->value(globalObject);
-    RETURN_IF_EXCEPTION(scope, encodedJSValue());
-
-    if (Options::useTrustedTypes() && globalObject->requiresTrustedTypes() && !globalObject->globalObjectMethodTable()->canCompileStrings(globalObject, CompilationType::IndirectEval, s, x)) {
+    if (globalObject->trustedTypesEnforcement() != TrustedTypesEnforcement::None && !isTrusted) {
+        bool canCompileStrings = globalObject->globalObjectMethodTable()->canCompileStrings(globalObject, CompilationType::IndirectEval, programSource, *vm.emptyList);
+        RETURN_IF_EXCEPTION(scope, { });
+        if (!canCompileStrings) {
         throwException(globalObject, scope, createEvalError(globalObject, "Refused to evaluate a string as JavaScript because this document requires a 'Trusted Type' assignment."_s));
         return { };
     }
+    }
 
-    if (!globalObject->evalEnabled()) {
-        globalObject->globalObjectMethodTable()->reportViolationForUnsafeEval(globalObject, codeString);
+    if (!globalObject->evalEnabled() && globalObject->trustedTypesEnforcement() != TrustedTypesEnforcement::EnforcedWithEvalEnabled) {
+        globalObject->globalObjectMethodTable()->reportViolationForUnsafeEval(globalObject, programSource);
         throwException(globalObject, scope, createEvalError(globalObject, globalObject->evalDisabledErrorMessage()));
         return JSValue::encode(jsUndefined());
     }
 
-    JSValue parsedObject;
-    if (s->is8Bit()) {
-        LiteralParser preparser(globalObject, s->span8(), SloppyJSON, nullptr);
-        parsedObject = preparser.tryLiteralParse();
-    } else {
-        LiteralParser preparser(globalObject, s->span16(), SloppyJSON, nullptr);
-        parsedObject = preparser.tryLiteralParse();
+    if (SourceProfiler::g_profilerHook) [[unlikely]] {
+        SourceOrigin sourceOrigin = callFrame->callerSourceOrigin(vm);
+        SourceTaintedOrigin sourceTaintedOrigin = computeNewSourceTaintedOriginFromStack(vm, callFrame);
+        auto source = makeSource(programSource, sourceOrigin, sourceTaintedOrigin);
+        SourceProfiler::profile(SourceProfiler::Type::Eval, source);
     }
-    RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    if (parsedObject)
-        return JSValue::encode(parsedObject);
+
+    JSValue parsedValue;
+    if (programSource.is8Bit()) {
+        LiteralParser<Latin1Character, JSONReviverMode::Disabled> preparser(globalObject, programSource.span8(), SloppyJSON, nullptr);
+        parsedValue = preparser.tryEval();
+    } else {
+        LiteralParser<char16_t, JSONReviverMode::Disabled> preparser(globalObject, programSource.span16(), SloppyJSON, nullptr);
+        parsedValue = preparser.tryEval();
+    }
+    RETURN_IF_EXCEPTION(scope, { });
+    if (parsedValue)
+        return JSValue::encode(parsedValue);
 
     SourceOrigin sourceOrigin = callFrame->callerSourceOrigin(vm);
     SourceTaintedOrigin sourceTaintedOrigin = computeNewSourceTaintedOriginFromStack(vm, callFrame);
     LexicallyScopedFeatures lexicallyScopedFeatures = globalObject->globalScopeExtension() ? TaintedByWithScopeLexicallyScopedFeature : NoLexicallyScopedFeatures;
-    EvalExecutable* eval = IndirectEvalExecutable::tryCreate(globalObject, makeSource(s, sourceOrigin, sourceTaintedOrigin), lexicallyScopedFeatures, DerivedContextType::None, false, EvalContextType::None);
+    EvalExecutable* eval = IndirectEvalExecutable::tryCreate(globalObject, makeSource(programSource, sourceOrigin, sourceTaintedOrigin), lexicallyScopedFeatures, DerivedContextType::None, false, EvalContextType::None);
     EXCEPTION_ASSERT(!!scope.exception() == !eval);
     if (!eval)
         return encodedJSValue();
@@ -568,8 +569,8 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncParseFloat, (JSGlobalObject* globalObject, Ca
 
 JSC_DEFINE_HOST_FUNCTION(globalFuncDecodeURI, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    static constexpr auto doNotUnescapeWhenDecodingURI = makeCharacterBitmap(
-        "#$&+,/:;=?@"
+    static constexpr auto doNotUnescapeWhenDecodingURI = makeLatin1CharacterBitSet(
+        "#$&+,/:;=?@"_s
     );
 
     return JSValue::encode(decode(globalObject, callFrame->argument(0), doNotUnescapeWhenDecodingURI, true));
@@ -583,22 +584,22 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncDecodeURIComponent, (JSGlobalObject* globalOb
 
 JSC_DEFINE_HOST_FUNCTION(globalFuncEncodeURI, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    static constexpr auto doNotEscapeWhenEncodingURI = makeCharacterBitmap(
+    static constexpr auto doNotEscapeWhenEncodingURI = makeLatin1CharacterBitSet(
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         "abcdefghijklmnopqrstuvwxyz"
         "0123456789"
-        "!#$&'()*+,-./:;=?@_~"
+        "!#$&'()*+,-./:;=?@_~"_s
     );
     return JSValue::encode(encode(globalObject, callFrame->argument(0), doNotEscapeWhenEncodingURI));
 }
 
 JSC_DEFINE_HOST_FUNCTION(globalFuncEncodeURIComponent, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    static constexpr auto doNotEscapeWhenEncodingURIComponent = makeCharacterBitmap(
+    static constexpr auto doNotEscapeWhenEncodingURIComponent = makeLatin1CharacterBitSet(
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         "abcdefghijklmnopqrstuvwxyz"
         "0123456789"
-        "!'()*-._~"
+        "!'()*-._~"_s
     );
     return JSValue::encode(encode(globalObject, callFrame->argument(0), doNotEscapeWhenEncodingURIComponent));
 }
@@ -606,17 +607,17 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncEncodeURIComponent, (JSGlobalObject* globalOb
 JSC_DEFINE_HOST_FUNCTION(globalFuncEscape, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     return JSValue::encode(toStringView(globalObject, callFrame->argument(0), [&] (StringView view) -> JSString* {
-        static constexpr auto doNotEscape = makeCharacterBitmap(
+        static constexpr auto doNotEscape = makeLatin1CharacterBitSet(
             "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
             "abcdefghijklmnopqrstuvwxyz"
             "0123456789"
-            "*+-./@_"
+            "*+-./@_"_s
         );
 
         VM& vm = globalObject->vm();
         auto scope = DECLARE_THROW_SCOPE(vm);
 
-        StringBuilder builder(StringBuilder::OverflowHandler::RecordOverflow);
+        StringBuilder builder(OverflowPolicy::RecordOverflow);
         if (view.is8Bit()) {
             for (auto character : view.span8()) {
                 if (doNotEscape.get(character))
@@ -628,14 +629,14 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncEscape, (JSGlobalObject* globalObject, CallFr
             for (auto character : view.span16()) {
                 if (character >= doNotEscape.size())
                     builder.append("%u"_s, hex(static_cast<uint8_t>(character >> 8), 2), hex(static_cast<uint8_t>(character), 2));
-                else if (doNotEscape.get(static_cast<LChar>(character)))
+                else if (doNotEscape.get(static_cast<Latin1Character>(character)))
                     builder.append(character);
                 else
                     builder.append('%', hex(character, 2));
             }
         }
 
-        if (UNLIKELY(builder.hasOverflowed())) {
+        if (builder.hasOverflowed()) [[unlikely]] {
             throwOutOfMemoryError(globalObject, scope);
             return { };
         }
@@ -654,23 +655,23 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncUnescape, (JSGlobalObject* globalObject, Call
         VM& vm = globalObject->vm();
         auto scope = DECLARE_THROW_SCOPE(vm);
 
-        StringBuilder builder(StringBuilder::OverflowHandler::RecordOverflow);
+        StringBuilder builder(OverflowPolicy::RecordOverflow);
         builder.reserveCapacity(length);
 
         if (view.is8Bit()) {
             auto characters = view.span8();
-            LChar convertedLChar;
+            Latin1Character converted;
             while (k < length) {
                 auto c = characters.subspan(k);
                 if (c[0] == '%' && k <= length - 6 && c[1] == 'u') {
                     if (isASCIIHexDigit(c[2]) && isASCIIHexDigit(c[3]) && isASCIIHexDigit(c[4]) && isASCIIHexDigit(c[5])) {
-                        builder.append(Lexer<UChar>::convertUnicode(c[2], c[3], c[4], c[5]));
+                        builder.append(Lexer<char16_t>::convertUnicode(c[2], c[3], c[4], c[5]));
                         k += 6;
                         continue;
                     }
                 } else if (c[0] == '%' && k <= length - 3 && isASCIIHexDigit(c[1]) && isASCIIHexDigit(c[2])) {
-                    convertedLChar = LChar(Lexer<LChar>::convertHex(c[1], c[2]));
-                    c = span(convertedLChar);
+                    converted = Latin1Character(Lexer<Latin1Character>::convertHex(c[1], c[2]));
+                    c = span(converted);
                     k += 2;
                 }
                 builder.append(c.front());
@@ -681,16 +682,16 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncUnescape, (JSGlobalObject* globalObject, Call
 
             while (k < length) {
                 auto c = characters.subspan(k);
-                UChar convertedUChar;
+                char16_t converted;
                 if (c[0] == '%' && k <= length - 6 && c[1] == 'u') {
                     if (isASCIIHexDigit(c[2]) && isASCIIHexDigit(c[3]) && isASCIIHexDigit(c[4]) && isASCIIHexDigit(c[5])) {
-                        convertedUChar = Lexer<UChar>::convertUnicode(c[2], c[3], c[4], c[5]);
-                        c = span(convertedUChar);
+                        converted = Lexer<char16_t>::convertUnicode(c[2], c[3], c[4], c[5]);
+                        c = span(converted);
                         k += 5;
                     }
                 } else if (c[0] == '%' && k <= length - 3 && isASCIIHexDigit(c[1]) && isASCIIHexDigit(c[2])) {
-                    convertedUChar = UChar(Lexer<UChar>::convertHex(c[1], c[2]));
-                    c = span(convertedUChar);
+                    converted = char16_t(Lexer<char16_t>::convertHex(c[1], c[2]));
+                    c = span(converted);
                     k += 2;
                 }
                 ++k;
@@ -698,7 +699,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncUnescape, (JSGlobalObject* globalObject, Call
             }
         }
 
-        if (UNLIKELY(builder.hasOverflowed())) {
+        if (builder.hasOverflowed()) [[unlikely]] {
             throwOutOfMemoryError(globalObject, scope);
             return { };
         }
@@ -787,41 +788,6 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncSetPrototypeDirectOrThrow, (JSGlobalObject* g
     return JSValue::encode(jsUndefined());
 }
 
-JSC_DEFINE_HOST_FUNCTION(globalFuncHostPromiseRejectionTracker, (JSGlobalObject* globalObject, CallFrame* callFrame))
-{
-    VM& vm = globalObject->vm();
-    auto scope = DECLARE_THROW_SCOPE(vm);
-
-    JSPromise* promise = jsCast<JSPromise*>(callFrame->argument(0));
-
-    // InternalPromises should not be exposed to user scripts.
-    if (jsDynamicCast<JSInternalPromise*>(promise))
-        return JSValue::encode(jsUndefined());
-
-    JSValue operationValue = callFrame->argument(1);
-
-    ASSERT(operationValue.isNumber());
-    auto operation = static_cast<JSPromiseRejectionOperation>(operationValue.toUInt32(globalObject));
-    ASSERT(operation == JSPromiseRejectionOperation::Reject || operation == JSPromiseRejectionOperation::Handle);
-    scope.assertNoException();
-
-    if (globalObject->globalObjectMethodTable()->promiseRejectionTracker)
-        globalObject->globalObjectMethodTable()->promiseRejectionTracker(globalObject, promise, operation);
-    else {
-        switch (operation) {
-        case JSPromiseRejectionOperation::Reject:
-            vm.promiseRejected(promise);
-            break;
-        case JSPromiseRejectionOperation::Handle:
-            // do nothing
-            break;
-        }
-    }
-    RETURN_IF_EXCEPTION(scope, { });
-
-    return JSValue::encode(jsUndefined());
-}
-
 JSC_DEFINE_HOST_FUNCTION(globalFuncBuiltinLog, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     dataLog(callFrame->argument(0).toWTFString(globalObject), "\n");
@@ -831,15 +797,6 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncBuiltinLog, (JSGlobalObject* globalObject, Ca
 JSC_DEFINE_HOST_FUNCTION(globalFuncBuiltinDescribe, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     return JSValue::encode(jsString(globalObject->vm(), toString(callFrame->argument(0))));
-}
-
-JSC_DEFINE_HOST_FUNCTION(globalFuncImportMapStatus, (JSGlobalObject* globalObject, CallFrame*))
-{
-    // https://wicg.github.io/import-maps/#integration-wait-for-import-maps
-    globalObject->importMap().setAcquiringImportMaps();
-    if (auto* promise = globalObject->importMapStatusPromise())
-        return JSValue::encode(promise);
-    return JSValue::encode(jsUndefined());
 }
 
 JSC_DEFINE_HOST_FUNCTION(globalFuncImportModule, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -868,17 +825,11 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncImportModule, (JSGlobalObject* globalObject, 
 
 static bool canPerformFastPropertyEnumerationForCopyDataProperties(Structure* structure)
 {
-    if (structure->typeInfo().overridesGetOwnPropertySlot())
-        return false;
-    if (structure->typeInfo().overridesAnyFormOfGetOwnPropertyNames())
+    if (!structure->canPerformFastPropertyEnumerationCommon())
         return false;
     // FIXME: Indexed properties can be handled.
     // https://bugs.webkit.org/show_bug.cgi?id=185358
     if (hasIndexedProperties(structure->indexingType()))
-        return false;
-    if (structure->hasAnyKindOfGetterSetterProperties())
-        return false;
-    if (structure->isUncacheableDictionary())
         return false;
     return true;
 };
@@ -943,8 +894,10 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncCopyDataProperties, (JSGlobalObject* globalOb
         RETURN_IF_EXCEPTION(scope, { });
     }
 
-    if (LIKELY(canPerformFastPropertyEnumerationForCopyDataProperties(source->structure()))) {
-        Vector<RefPtr<UniquedStringImpl>, 8> properties;
+    auto sourceStructure = source->structure();
+    if (canPerformFastPropertyEnumerationForCopyDataProperties(sourceStructure)) [[likely]] {
+        EnsureStillAliveScope sourceStructureScope(sourceStructure);
+        Vector<UniquedStringImpl*, 8> properties; // sourceStructure ensures the lifetimes of these strings.
         MarkedArgumentBuffer values;
 
         // FIXME: It doesn't seem like we should have to do this in two phases, but
@@ -954,7 +907,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncCopyDataProperties, (JSGlobalObject* globalOb
         // that ends up transitioning the structure underneath us.
         // https://bugs.webkit.org/show_bug.cgi?id=187837
 
-        source->structure()->forEachProperty(vm, [&](const PropertyTableEntry& entry) ALWAYS_INLINE_LAMBDA {
+        sourceStructure->forEachProperty(vm, [&](const PropertyTableEntry& entry) ALWAYS_INLINE_LAMBDA {
             PropertyName propertyName(entry.key());
             if (propertyName.isPrivateName())
                 return true;
@@ -974,16 +927,17 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncCopyDataProperties, (JSGlobalObject* globalOb
         // excludedSet is no longer used.
         ensureStillAliveHere(unlinkedCodeBlock);
 
-        if (LIKELY(target->inherits<JSFinalObject>() && target->canPerformFastPutInlineExcludingProto() && target->isStructureExtensible()))
-            target->putOwnDataPropertyBatching(vm, properties.data(), values.data(), properties.size());
+        if (target->inherits<JSFinalObject>() && target->canPerformFastPutInlineExcludingProto() && target->isStructureExtensible()) [[likely]]
+            target->putOwnDataPropertyBatching(vm, properties.mutableSpan().data(), values.data(), properties.size());
         else {
             for (size_t i = 0; i < properties.size(); ++i)
-            target->putDirect(vm, properties[i].get(), values.at(i));
+                target->putDirect(vm, properties[i], values.at(i));
         }
+
         return JSValue::encode(target);
     }
 
-        PropertyNameArray propertyNames(vm, PropertyNameMode::StringsAndSymbols, PrivateSymbolMode::Exclude);
+    PropertyNameArrayBuilder propertyNames(vm, PropertyNameMode::StringsAndSymbols, PrivateSymbolMode::Exclude);
         source->methodTable()->getOwnPropertyNames(source, globalObject, propertyNames, DontEnumPropertiesMode::Include);
         RETURN_IF_EXCEPTION(scope, { });
 
@@ -1000,7 +954,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncCopyDataProperties, (JSGlobalObject* globalOb
                 continue;
 
             JSValue value;
-            if (LIKELY(!slot.isTaintedByOpaqueObject()))
+        if (!slot.isTaintedByOpaqueObject()) [[likely]]
                 value = slot.getValue(globalObject, propertyName);
             else
                 value = source->get(globalObject, propertyName);
@@ -1031,7 +985,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncCloneObject, (JSGlobalObject* globalObject, C
     }
 
     Structure* sourceStructure = source->structure();
-    if (LIKELY(sourceStructure->canPerformFastPropertyEnumerationCommon())) {
+    if (sourceStructure->canPerformFastPropertyEnumerationCommon()) [[likely]] {
         if (auto* cloned = tryCreateObjectViaCloning(vm, globalObject, source))
             return JSValue::encode(cloned);
     }
@@ -1039,8 +993,9 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncCloneObject, (JSGlobalObject* globalObject, C
     JSObject* target = constructEmptyObject(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
 
-    if (LIKELY(canPerformFastPropertyEnumerationForCopyDataProperties(sourceStructure))) {
-        Vector<RefPtr<UniquedStringImpl>, 8> properties;
+    if (canPerformFastPropertyEnumerationForCopyDataProperties(sourceStructure)) [[likely]] {
+        EnsureStillAliveScope sourceStructureScope(sourceStructure);
+        Vector<UniquedStringImpl*, 8> properties; // sourceStructure ensures the lifetimes of these strings.
         MarkedArgumentBuffer values;
 
         // FIXME: It doesn't seem like we should have to do this in two phases, but
@@ -1064,11 +1019,12 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncCloneObject, (JSGlobalObject* globalObject, C
         });
         RETURN_IF_EXCEPTION(scope, { });
 
-        target->putOwnDataPropertyBatching(vm, properties.data(), values.data(), properties.size());
+        target->putOwnDataPropertyBatching(vm, properties.mutableSpan().data(), values.data(), properties.size());
+
         return JSValue::encode(target);
     }
 
-    PropertyNameArray propertyNames(vm, PropertyNameMode::StringsAndSymbols, PrivateSymbolMode::Exclude);
+    PropertyNameArrayBuilder propertyNames(vm, PropertyNameMode::StringsAndSymbols, PrivateSymbolMode::Exclude);
     source->methodTable()->getOwnPropertyNames(source, globalObject, propertyNames, DontEnumPropertiesMode::Include);
     RETURN_IF_EXCEPTION(scope, { });
 
@@ -1082,7 +1038,7 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncCloneObject, (JSGlobalObject* globalObject, C
             continue;
 
         JSValue value;
-        if (LIKELY(!slot.isTaintedByOpaqueObject()))
+        if (!slot.isTaintedByOpaqueObject()) [[likely]]
             value = slot.getValue(globalObject, propertyName);
         else
             value = source->get(globalObject, propertyName);
@@ -1145,6 +1101,12 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncHandlePositiveProxySetTrapResult, (JSGlobalOb
     return JSValue::encode(jsUndefined());
 }
 
+JSC_DEFINE_HOST_FUNCTION(globalFuncIsFinite, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    JSValue argument = callFrame->argument(0);
+    return JSValue::encode(jsBoolean(std::isfinite(argument.toNumber(globalObject))));
+}
+
 JSC_DEFINE_HOST_FUNCTION(globalFuncIsNaN, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     JSValue argument = callFrame->argument(0);
@@ -1173,3 +1135,5 @@ JSC_DEFINE_HOST_FUNCTION(globalFuncSpeciesGetter, (JSGlobalObject* globalObject,
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

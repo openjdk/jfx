@@ -50,6 +50,9 @@ JSC_ANNOTATE_JIT_OPERATION(vmEntryToJavaScriptWith0Arguments);
 JSC_ANNOTATE_JIT_OPERATION(vmEntryToJavaScriptWith1Arguments);
 JSC_ANNOTATE_JIT_OPERATION(vmEntryToJavaScriptWith2Arguments);
 JSC_ANNOTATE_JIT_OPERATION(vmEntryToJavaScriptWith3Arguments);
+JSC_ANNOTATE_JIT_OPERATION(vmEntryToJavaScriptWith4Arguments);
+JSC_ANNOTATE_JIT_OPERATION(vmEntryToJavaScriptWith5Arguments);
+JSC_ANNOTATE_JIT_OPERATION(vmEntryToJavaScriptWith6Arguments);
 JSC_ANNOTATE_JIT_OPERATION(vmEntryToNative);
 JSC_ANNOTATE_JIT_OPERATION_RETURN(vmEntryToJavaScriptGateAfter);
 JSC_ANNOTATE_JIT_OPERATION_RETURN(llint_function_for_call_arity_checkUntagGateAfter);
@@ -205,101 +208,12 @@ MacroAssemblerCodeRef<JSEntryPtrTag> moduleProgramEntryThunk()
 }
 
 #if ENABLE(WEBASSEMBLY)
-MacroAssemblerCodeRef<JITThunkPtrTag> wasmFunctionEntryThunk()
-{
-    static LazyNeverDestroyed<MacroAssemblerCodeRef<JITThunkPtrTag>> codeRef;
-    static std::once_flag onceKey;
-    std::call_once(onceKey, [&] {
-        codeRef.construct(generateThunkWithJumpToPrologue<JITThunkPtrTag>(wasm_function_prologue, "function for wasm call"));
-    });
-    return codeRef;
-}
-
-MacroAssemblerCodeRef<JITThunkPtrTag> wasmFunctionEntryThunkSIMD()
-{
-    static LazyNeverDestroyed<MacroAssemblerCodeRef<JITThunkPtrTag>> codeRef;
-    static std::once_flag onceKey;
-    std::call_once(onceKey, [&] {
-        codeRef.construct(generateThunkWithJumpToPrologue<JITThunkPtrTag>(wasm_function_prologue_simd, "function for wasm SIMD call"));
-    });
-    return codeRef;
-}
-
 
 ALWAYS_INLINE void* untaggedPtr(void* ptr)
 {
     return CodePtr<CFunctionPtrTag>::fromTaggedPtr(ptr).template untaggedPtr<>();
 }
 
-MacroAssemblerCodeRef<JITThunkPtrTag> inPlaceInterpreterEntryThunk()
-{
-    static LazyNeverDestroyed<MacroAssemblerCodeRef<JITThunkPtrTag>> codeRef;
-    static std::once_flag onceKey;
-    std::call_once(onceKey, [&] {
-        JSInterfaceJIT jit;
-        void* ptr = reinterpret_cast<void*>(ipint_entry);
-        void* untagged = untaggedPtr(ptr);
-        void* retagged = nullptr;
-#if ENABLE(JIT_CAGE)
-        if (Options::useJITCage())
-#else
-        if (false)
-#endif
-            retagged = tagCodePtr<OperationPtrTag>(untagged);
-        else
-            retagged = WTF::tagNativeCodePtrImpl<OperationPtrTag>(untagged);
-
-        assertIsTaggedWith<OperationPtrTag>(retagged);
-
-#if ENABLE(WEBASSEMBLY)
-        CCallHelpers::RegisterID scratch = Wasm::wasmCallingConvention().prologueScratchGPRs[0];
-#else
-        CCallHelpers::RegisterID scratch = JSInterfaceJIT::regT0;
-#endif
-        jit.tagReturnAddress();
-        jit.move(JSInterfaceJIT::TrustedImmPtr(retagged), scratch);
-        jit.farJump(scratch, OperationPtrTag);
-
-        LinkBuffer patchBuffer(jit, GLOBAL_THUNK_ID, LinkBuffer::Profile::LLIntThunk);
-        codeRef.construct(FINALIZE_THUNK(patchBuffer, JITThunkPtrTag, "inPlaceInterpreterEntryThunk"_s, "LLInt %s jump to prologue thunk", "function for wasm in place interpreter"));
-    });
-    return codeRef;
-}
-
-MacroAssemblerCodeRef<JITThunkPtrTag> inPlaceInterpreterEntryThunkSIMD()
-{
-    static LazyNeverDestroyed<MacroAssemblerCodeRef<JITThunkPtrTag>> codeRef;
-    static std::once_flag onceKey;
-    std::call_once(onceKey, [&] {
-        JSInterfaceJIT jit;
-        void* ptr = reinterpret_cast<void*>(ipint_entry_simd);
-        void* untagged = untaggedPtr(ptr);
-        void* retagged = nullptr;
-#if ENABLE(JIT_CAGE)
-        if (Options::useJITCage())
-#else
-        if (false)
-#endif
-            retagged = tagCodePtr<OperationPtrTag>(untagged);
-        else
-            retagged = WTF::tagNativeCodePtrImpl<OperationPtrTag>(untagged);
-
-        assertIsTaggedWith<OperationPtrTag>(retagged);
-
-#if ENABLE(WEBASSEMBLY)
-        CCallHelpers::RegisterID scratch = Wasm::wasmCallingConvention().prologueScratchGPRs[0];
-#else
-        CCallHelpers::RegisterID scratch = JSInterfaceJIT::regT0;
-#endif
-        jit.tagReturnAddress();
-        jit.move(JSInterfaceJIT::TrustedImmPtr(retagged), scratch);
-        jit.farJump(scratch, OperationPtrTag);
-
-        LinkBuffer patchBuffer(jit, GLOBAL_THUNK_ID, LinkBuffer::Profile::LLIntThunk);
-        codeRef.construct(FINALIZE_THUNK(patchBuffer, JITThunkPtrTag, "inPlaceInterpreterEntryThunkSIMD"_s, "LLInt %s jump to prologue thunk", "function for wasm in place interpreter"));
-    });
-    return codeRef;
-}
 #endif // ENABLE(WEBASSEMBLY)
 
 MacroAssemblerCodeRef<JSEntryPtrTag> defaultCallThunk()
@@ -424,74 +338,6 @@ MacroAssemblerCodeRef<ExceptionHandlerPtrTag> handleCatchThunk(OpcodeSize size)
     RELEASE_ASSERT_NOT_REACHED();
     return { };
 }
-
-#if ENABLE(WEBASSEMBLY)
-MacroAssemblerCodeRef<ExceptionHandlerPtrTag> handleWasmCatchThunk(OpcodeSize size)
-{
-    WasmOpcodeID opcode = wasm_catch;
-    switch (size) {
-    case OpcodeSize::Narrow: {
-        static LazyNeverDestroyed<MacroAssemblerCodeRef<ExceptionHandlerPtrTag>> codeRef;
-        static std::once_flag onceKey;
-        std::call_once(onceKey, [&] {
-            codeRef.construct(generateThunkWithJumpTo<ExceptionHandlerPtrTag>(LLInt::getCodeFunctionPtr<OperationPtrTag>(opcode), "wasm_catch"));
-        });
-        return codeRef;
-    }
-    case OpcodeSize::Wide16: {
-        static LazyNeverDestroyed<MacroAssemblerCodeRef<ExceptionHandlerPtrTag>> codeRef;
-        static std::once_flag onceKey;
-        std::call_once(onceKey, [&] {
-            codeRef.construct(generateThunkWithJumpTo<ExceptionHandlerPtrTag>(LLInt::getWide16CodeFunctionPtr<OperationPtrTag>(opcode), "wasm_catch16"));
-        });
-        return codeRef;
-    }
-    case OpcodeSize::Wide32: {
-        static LazyNeverDestroyed<MacroAssemblerCodeRef<ExceptionHandlerPtrTag>> codeRef;
-        static std::once_flag onceKey;
-        std::call_once(onceKey, [&] {
-            codeRef.construct(generateThunkWithJumpTo<ExceptionHandlerPtrTag>(LLInt::getWide32CodeFunctionPtr<OperationPtrTag>(opcode), "wasm_catch32"));
-        });
-        return codeRef;
-    }
-    }
-    RELEASE_ASSERT_NOT_REACHED();
-    return { };
-}
-
-MacroAssemblerCodeRef<ExceptionHandlerPtrTag> handleWasmCatchAllThunk(OpcodeSize size)
-{
-    WasmOpcodeID opcode = wasm_catch_all;
-    switch (size) {
-    case OpcodeSize::Narrow: {
-        static LazyNeverDestroyed<MacroAssemblerCodeRef<ExceptionHandlerPtrTag>> codeRef;
-        static std::once_flag onceKey;
-        std::call_once(onceKey, [&] {
-            codeRef.construct(generateThunkWithJumpTo<ExceptionHandlerPtrTag>(LLInt::getCodeFunctionPtr<OperationPtrTag>(opcode), "wasm_catch_all"));
-        });
-        return codeRef;
-    }
-    case OpcodeSize::Wide16: {
-        static LazyNeverDestroyed<MacroAssemblerCodeRef<ExceptionHandlerPtrTag>> codeRef;
-        static std::once_flag onceKey;
-        std::call_once(onceKey, [&] {
-            codeRef.construct(generateThunkWithJumpTo<ExceptionHandlerPtrTag>(LLInt::getWide16CodeFunctionPtr<OperationPtrTag>(opcode), "wasm_catch_all16"));
-        });
-        return codeRef;
-    }
-    case OpcodeSize::Wide32: {
-        static LazyNeverDestroyed<MacroAssemblerCodeRef<ExceptionHandlerPtrTag>> codeRef;
-        static std::once_flag onceKey;
-        std::call_once(onceKey, [&] {
-            codeRef.construct(generateThunkWithJumpTo<ExceptionHandlerPtrTag>(LLInt::getWide32CodeFunctionPtr<OperationPtrTag>(opcode), "wasm_catch_all32"));
-        });
-        return codeRef;
-    }
-    }
-    RELEASE_ASSERT_NOT_REACHED();
-    return { };
-}
-#endif
 
 MacroAssemblerCodeRef<JSEntryPtrTag> genericReturnPointThunk(OpcodeSize size)
 {
@@ -948,23 +794,62 @@ MacroAssemblerCodeRef<JSEntryPtrTag> returnLocationThunk(OpcodeID opcodeID, Opco
 
 #else // ENABLE(JIT)
 
+#endif // ENABLE(JIT)
+
 namespace LLInt {
 
 #if ENABLE(WEBASSEMBLY)
-MacroAssemblerCodeRef<JITThunkPtrTag> wasmFunctionEntryThunk()
+#if ENABLE(JIT)
+
+MacroAssemblerCodeRef<JITThunkPtrTag> inPlaceInterpreterEntryThunk()
 {
-    return { };
+    static LazyNeverDestroyed<MacroAssemblerCodeRef<JITThunkPtrTag>> codeRef;
+    static std::once_flag onceKey;
+    std::call_once(onceKey, [&] {
+        codeRef.construct(generateThunkWithJumpToPrologue<JITThunkPtrTag>(ipint_entry, "function for IPInt entry"));
+    });
+    return codeRef;
 }
 
-MacroAssemblerCodeRef<JITThunkPtrTag> wasmFunctionEntryThunkSIMD()
-{
-    return { };
-}
-#endif // ENABLE(WEBASSEMBLY)
+#define DEFINE_IPINT_THUNK_FOR_CATCH(funcName, target) \
+    MacroAssemblerCodeRef<JITThunkPtrTag> funcName() \
+    { \
+        static LazyNeverDestroyed<MacroAssemblerCodeRef<JITThunkPtrTag>> codeRef; \
+        static std::once_flag onceKey; \
+        std::call_once(onceKey, [&] { \
+            if (Options::useJIT()) \
+                codeRef.construct(generateThunkWithJumpTo<JITThunkPtrTag>(target, #target)); \
+            else \
+                codeRef.construct(getCodeRef<JITThunkPtrTag>(target)); \
+        }); \
+        return codeRef; \
+    }
+
+#else
+
+#define DEFINE_IPINT_THUNK_FOR_CATCH(funcName, target) \
+    MacroAssemblerCodeRef<JITThunkPtrTag> funcName() \
+    { \
+        static LazyNeverDestroyed<MacroAssemblerCodeRef<JITThunkPtrTag>> codeRef; \
+        static std::once_flag onceKey; \
+        std::call_once(onceKey, [&] { \
+            codeRef.construct(getCodeRef<JITThunkPtrTag>(target)); \
+        }); \
+        return codeRef; \
+    }
+
+#endif
+
+DEFINE_IPINT_THUNK_FOR_CATCH(inPlaceInterpreterCatchEntryThunk, ipint_catch_entry)
+DEFINE_IPINT_THUNK_FOR_CATCH(inPlaceInterpreterCatchAllEntryThunk, ipint_catch_all_entry)
+DEFINE_IPINT_THUNK_FOR_CATCH(inPlaceInterpreterTableCatchEntryThunk, ipint_table_catch_entry)
+DEFINE_IPINT_THUNK_FOR_CATCH(inPlaceInterpreterTableCatchRefEntryThunk, ipint_table_catch_ref_entry)
+DEFINE_IPINT_THUNK_FOR_CATCH(inPlaceInterpreterTableCatchAllEntryThunk, ipint_table_catch_all_entry)
+DEFINE_IPINT_THUNK_FOR_CATCH(inPlaceInterpreterTableCatchAllrefEntryThunk, ipint_table_catch_allref_entry)
+
+#endif
 
 } // namespace LLInt
-
-#endif // ENABLE(JIT)
 
 #if ENABLE(C_LOOP)
 // Non-JIT (i.e. C Loop LLINT) case:

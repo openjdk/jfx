@@ -37,15 +37,15 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(MediaSourceHandle);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MediaSourceHandle);
 
 class MediaSourceHandle::SharedPrivate final : public ThreadSafeRefCounted<SharedPrivate> {
 public:
-    static Ref<SharedPrivate> create(MediaSource& mediaSource, MediaSourceHandle::DispatcherType&& dispatcher) { return adoptRef(*new SharedPrivate(mediaSource, WTFMove(dispatcher))); }
+    static Ref<SharedPrivate> create(MediaSource& mediaSource, MediaSourceHandle::DispatcherType&& dispatcher) { return adoptRef(*new SharedPrivate(mediaSource, WTF::move(dispatcher))); }
 
     void dispatch(MediaSourceHandle::TaskType&& task, bool forceRunInWorker = false) const
     {
-        m_dispatcher(WTFMove(task), forceRunInWorker);
+        m_dispatcher(WTF::move(task), forceRunInWorker);
     }
 
     void setMediaSourcePrivate(MediaSourcePrivate& mediaSourcePrivate)
@@ -64,7 +64,7 @@ public:
     SharedPrivate(MediaSource& mediaSource, MediaSourceHandle::DispatcherType&& dispatcher)
         : m_client(mediaSource.client().get())
         , m_isManaged(mediaSource.isManaged())
-        , m_dispatcher(WTFMove(dispatcher))
+        , m_dispatcher(WTF::move(dispatcher))
     {
     }
     mutable Lock m_lock;
@@ -75,9 +75,9 @@ public:
     const MediaSourceHandle::DispatcherType m_dispatcher;
 };
 
-Ref<MediaSourceHandle> MediaSourceHandle::create(MediaSource& mediaSource, MediaSourceHandle::DispatcherType&& dispatcher)
+Ref<MediaSourceHandle> MediaSourceHandle::create(MediaSource& mediaSource, MediaSourceHandle::DispatcherType&& dispatcher, bool detachable)
 {
-    return adoptRef(*new MediaSourceHandle(mediaSource, WTFMove(dispatcher)));
+    return adoptRef(*new MediaSourceHandle(mediaSource, WTF::move(dispatcher), detachable));
 }
 
 Ref<MediaSourceHandle> MediaSourceHandle::create(Ref<MediaSourceHandle>&& other)
@@ -86,13 +86,15 @@ Ref<MediaSourceHandle> MediaSourceHandle::create(Ref<MediaSourceHandle>&& other)
     return other;
 }
 
-MediaSourceHandle::MediaSourceHandle(MediaSource& mediaSource, MediaSourceHandle::DispatcherType&& dispatcher)
-    : m_private(MediaSourceHandle::SharedPrivate::create(mediaSource, WTFMove(dispatcher)))
+MediaSourceHandle::MediaSourceHandle(MediaSource& mediaSource, MediaSourceHandle::DispatcherType&& dispatcher, bool detachable)
+    : m_detachable(detachable)
+    , m_private(MediaSourceHandle::SharedPrivate::create(mediaSource, WTF::move(dispatcher)))
 {
 }
 
 MediaSourceHandle::MediaSourceHandle(MediaSourceHandle& other)
-    : m_private(other.m_private)
+    : m_detachable(other.m_detachable)
+    , m_private(other.m_private)
 {
     ASSERT(!other.m_detached);
     other.m_detached = true;
@@ -122,7 +124,7 @@ bool MediaSourceHandle::isManaged() const
 
 void MediaSourceHandle::ensureOnDispatcher(MediaSourceHandle::TaskType&& task, bool forceRun) const
 {
-    m_private->dispatch(WTFMove(task), forceRun);
+    m_private->dispatch(WTF::move(task), forceRun);
 }
 
 Ref<DetachedMediaSourceHandle> MediaSourceHandle::detach()

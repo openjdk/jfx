@@ -27,9 +27,13 @@
 #include "RenderTreePosition.h"
 
 #include "ComposedTreeIterator.h"
+#include "ContainerNodeInlines.h"
 #include "PseudoElement.h"
+#include "RenderBlockFlow.h"
+#include "RenderElementInlines.h"
 #include "RenderInline.h"
 #include "RenderObject.h"
+#include "RenderStyle+GettersInlines.h"
 #include "ShadowRoot.h"
 
 namespace WebCore {
@@ -40,7 +44,7 @@ void RenderTreePosition::computeNextSibling(const Node& node)
     if (m_hasValidNextSibling) {
 #if ASSERT_ENABLED
         const unsigned oNSquaredAvoidanceLimit = 20;
-        bool skipAssert = m_parent.isRenderView() || ++m_assertionLimitCounter > oNSquaredAvoidanceLimit;
+        bool skipAssert = m_parent->isRenderView() || ++m_assertionLimitCounter > oNSquaredAvoidanceLimit;
         ASSERT(skipAssert || nextSiblingRenderer(node) == m_nextSibling);
 #endif
         return;
@@ -61,7 +65,7 @@ RenderObject* RenderTreePosition::nextSiblingRenderer(const Node& node) const
 {
     ASSERT(!node.renderer());
 
-    auto* parentElement = m_parent.element();
+    auto* parentElement = m_parent->element();
     if (!parentElement)
         return nullptr;
     // FIXME: PlugingReplacement shadow trees are very wrong.

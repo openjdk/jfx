@@ -37,15 +37,17 @@
 #include <wtf/text/MakeString.h>
 #include <wtf/text/StringView.h>
 
+#if USE(CF) && !PLATFORM(JAVA)
+#include <wtf/cf/VectorCF.h>
+#endif
+
 namespace WebCore {
 
-HTTPHeaderMap::HTTPHeaderMap()
-{
-}
+HTTPHeaderMap::HTTPHeaderMap() = default;
 
 HTTPHeaderMap::HTTPHeaderMap(CommonHeadersVector&& commonHeaders, UncommonHeadersVector&& uncommonHeaders)
-    : m_commonHeaders(WTFMove(commonHeaders))
-    , m_uncommonHeaders(WTFMove(uncommonHeaders))
+    : m_commonHeaders(WTF::move(commonHeaders))
+    , m_uncommonHeaders(WTF::move(uncommonHeaders))
 {
 }
 
@@ -60,8 +62,8 @@ HTTPHeaderMap HTTPHeaderMap::isolatedCopy() const &
 HTTPHeaderMap HTTPHeaderMap::isolatedCopy() &&
 {
     HTTPHeaderMap map;
-    map.m_commonHeaders = crossThreadCopy(WTFMove(m_commonHeaders));
-    map.m_uncommonHeaders = crossThreadCopy(WTFMove(m_uncommonHeaders));
+    map.m_commonHeaders = crossThreadCopy(WTF::move(m_commonHeaders));
+    map.m_uncommonHeaders = crossThreadCopy(WTF::move(m_uncommonHeaders));
     return map;
 }
 
@@ -82,18 +84,17 @@ String HTTPHeaderMap::getUncommonHeader(StringView name) const
     return index != notFound ? m_uncommonHeaders[index].value : String();
 }
 
-#if USE(CF)
+#if USE(CF) && !PLATFORM(JAVA)
 
 void HTTPHeaderMap::set(CFStringRef name, const String& value)
 {
     // Fast path: avoid constructing a temporary String in the common header case.
-    if (auto* nameCharacters = CFStringGetCStringPtr(name, kCFStringEncodingASCII)) {
-        unsigned length = CFStringGetLength(name);
+    if (auto asciiCharacters = CFStringGetASCIICStringSpan(name); asciiCharacters.data()) {
         HTTPHeaderName headerName;
-        if (findHTTPHeaderName(StringView(std::span { nameCharacters, length }), headerName))
+        if (findHTTPHeaderName(StringView(asciiCharacters), headerName))
             set(headerName, value);
         else
-            setUncommonHeader(String({ nameCharacters, length }), value);
+            setUncommonHeader(String(asciiCharacters), value);
 
         return;
     }

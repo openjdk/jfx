@@ -26,12 +26,14 @@
 #pragma once
 
 #include <type_traits>
+#include <utility>
+#include <wtf/FastMalloc.h>
 
 namespace WTF {
 
 template<typename Functor>
 class RecursableLambda {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(RecursableLambda);
 public:
     explicit RecursableLambda(Functor&& functor)
         : m_functor(std::forward<Functor>(functor))

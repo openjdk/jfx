@@ -53,14 +53,31 @@ ensure_debug_category (void)
 
 
 #define PRECISION_INT 10
+#define NONZERO_DENSITY_THRESHOLD 0.5
 
 typedef void (*MixerFunc) (GstAudioChannelMixer * mix, const gpointer src[],
     gpointer dst[], gint samples);
+
+typedef struct _MixOutEntry
+{
+  guint index;
+  guint offset;
+  guint count;
+} MixOutEntry;
+
+typedef struct _MixEntry
+{
+  guint index;
+  gfloat coeff;
+  gint coeff_int;
+} MixEntry;
 
 struct _GstAudioChannelMixer
 {
   gint in_channels;
   gint out_channels;
+
+  const GstAudioFormatInfo *finfo;
 
   /* channel conversion matrix, m[in_channels][out_channels].
    * If identity matrix, passthrough applies. */
@@ -69,6 +86,13 @@ struct _GstAudioChannelMixer
   /* channel conversion matrix with int values, m[in_channels][out_channels].
    * this is matrix * (2^10) as integers */
   gint **matrix_int;
+
+  MixOutEntry *out_entry;
+  MixEntry *entry;
+
+  guint num_valid_out_ch;
+  gboolean non_interleaved;
+  gsize clear_unit;
 
   MixerFunc func;
 };
@@ -88,12 +112,15 @@ gst_audio_channel_mixer_free (GstAudioChannelMixer * mix)
   for (i = 0; i < mix->in_channels; i++)
     g_free (mix->matrix[i]);
   g_free (mix->matrix);
-  mix->matrix = NULL;
 
-  for (i = 0; i < mix->in_channels; i++)
-    g_free (mix->matrix_int[i]);
-  g_free (mix->matrix_int);
-  mix->matrix_int = NULL;
+  if (mix->matrix_int) {
+    for (i = 0; i < mix->in_channels; i++)
+      g_free (mix->matrix_int[i]);
+    g_free (mix->matrix_int);
+  }
+
+  g_free (mix->out_entry);
+  g_free (mix->entry);
 
   g_free (mix);
 }
@@ -631,6 +658,75 @@ gst_audio_channel_mixer_fill_special (gfloat ** matrix, gint in_channels,
  * Automagically generate conversion matrix.
  */
 
+typedef enum
+{
+  GST_AUDIO_CHANNEL_MIXER_VIRTUAL_INPUT_NONE = 0,
+  GST_AUDIO_CHANNEL_MIXER_VIRTUAL_INPUT_MONO,
+  GST_AUDIO_CHANNEL_MIXER_VIRTUAL_INPUT_STEREO
+} GstAudioChannelMixerVirtualInput;
+
+/* Detects specific input channels configurations introduced in the
+ * audioconvert element (since version 1.26) with the
+ * `GstAudioConvertInputChannelsReorder` configurations.
+ *
+ * If all input channels are positioned to GST_AUDIO_CHANNEL_POSITION_MONO,
+ * the automatic mixing matrix should be configured like if there was only one
+ * virtual input mono channel. This virtual mono channel is the mix of all the
+ * real mono channels.
+ *
+ * If all input channels with an even index are positioned to
+ * GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT and all input channels with an odd
+ * index are positioned to GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, then the
+ * automatic mixing matrix should be configured like if there were only one
+ * virtual input left channel and one virtual input right channel. This virtual
+ * left or right channel is the mix of all the real left or right channels.
+ */
+static gboolean
+gst_audio_channel_mixer_detect_virtual_input_channels (gint channels,
+    GstAudioChannelPosition * position,
+    GstAudioChannelMixerVirtualInput * virtual_input)
+{
+  g_return_val_if_fail (position != NULL, FALSE);
+  g_return_val_if_fail (virtual_input != NULL, FALSE);
+
+  *virtual_input = GST_AUDIO_CHANNEL_MIXER_VIRTUAL_INPUT_NONE;
+
+  if (channels < 2)
+    return FALSE;
+
+  static const GstAudioChannelPosition alternate_positions[2] =
+      { GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+    GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT
+  };
+
+  gboolean is_mono = TRUE;
+  gboolean is_alternate = TRUE;
+  for (gint i = 0; i < channels; ++i) {
+    if (position[i] != GST_AUDIO_CHANNEL_POSITION_MONO)
+      is_mono = FALSE;
+
+    if (position[i] != alternate_positions[i % 2])
+      is_alternate = FALSE;
+
+    if (!is_mono && !is_alternate)
+      return FALSE;
+  }
+
+  if (is_mono) {
+    g_assert (!is_alternate);
+    *virtual_input = GST_AUDIO_CHANNEL_MIXER_VIRTUAL_INPUT_MONO;
+    return TRUE;
+  }
+
+  if (is_alternate && (channels > 2)) {
+    g_assert (!is_mono);
+    *virtual_input = GST_AUDIO_CHANNEL_MIXER_VIRTUAL_INPUT_STEREO;
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
 static void
 gst_audio_channel_mixer_fill_matrix (gfloat ** matrix,
     GstAudioChannelMixerFlags flags, gint in_channels,
@@ -641,15 +737,71 @@ gst_audio_channel_mixer_fill_matrix (gfloat ** matrix,
           out_channels, out_position))
     return;
 
-  gst_audio_channel_mixer_fill_identical (matrix, in_channels, in_position,
+  /* If all input channels are positioned to mono, the mix matrix should be
+   * configured like if there was only one virtual input mono channel. This
+   * virtual mono channel is the mix of all the real input mono channels.
+   *
+   * If all input channels are positioned to left and right alternately, the mix
+   * matrix should be configured like if there were only two virtual input
+   * channels: one left and one right. This virtual left or right channel is the
+   * mix of all the real input left or right channels.
+   */
+  gint in_size = in_channels;
+  GstAudioChannelMixerVirtualInput virtual_input =
+      GST_AUDIO_CHANNEL_MIXER_VIRTUAL_INPUT_NONE;
+  if (gst_audio_channel_mixer_detect_virtual_input_channels (in_size,
+          in_position, &virtual_input)) {
+    switch (virtual_input) {
+      case GST_AUDIO_CHANNEL_MIXER_VIRTUAL_INPUT_MONO:
+        in_size = 1;
+        break;
+      case GST_AUDIO_CHANNEL_MIXER_VIRTUAL_INPUT_STEREO:
+        in_size = 2;
+        break;
+      default:
+        break;
+    }
+  }
+
+  gst_audio_channel_mixer_fill_identical (matrix, in_size, in_position,
       out_channels, out_position, flags);
 
   if (!(flags & GST_AUDIO_CHANNEL_MIXER_FLAGS_UNPOSITIONED_IN)) {
-    gst_audio_channel_mixer_fill_compatible (matrix, in_channels, in_position,
+    gst_audio_channel_mixer_fill_compatible (matrix, in_size, in_position,
         out_channels, out_position);
-    gst_audio_channel_mixer_fill_others (matrix, in_channels, in_position,
+    gst_audio_channel_mixer_fill_others (matrix, in_size, in_position,
         out_channels, out_position);
-    gst_audio_channel_mixer_fill_normalize (matrix, in_channels, out_channels);
+    gst_audio_channel_mixer_fill_normalize (matrix, in_size, out_channels);
+  }
+
+  switch (virtual_input) {
+    case GST_AUDIO_CHANNEL_MIXER_VIRTUAL_INPUT_MONO:{
+      for (gint out = 0; out < out_channels; ++out)
+        matrix[0][out] /= in_channels;
+
+      for (gint in = 1; in < in_channels; ++in)
+        memcpy (matrix[in], matrix[0], out_channels * sizeof (gfloat));
+
+      break;
+    }
+
+    case GST_AUDIO_CHANNEL_MIXER_VIRTUAL_INPUT_STEREO:{
+      gint right_channels = in_channels >> 1;
+      gint left_channels = right_channels + (in_channels % 2);
+
+      for (gint out = 0; out < out_channels; ++out) {
+        matrix[0][out] /= left_channels;
+        matrix[1][out] /= right_channels;
+      }
+
+      for (gint in = 2; in < in_channels; ++in)
+        memcpy (matrix[in], matrix[in % 2], out_channels * sizeof (gfloat));
+
+      break;
+    }
+
+    default:
+      break;
   }
 }
 
@@ -725,6 +877,89 @@ _get_out_data_planar_##type (type * out_data[], \
   return &out_data[channel][sample]; \
 }
 
+#define DEFINE_INTEGER_SPARSE_MIX_FUNC(bits, resbits, inlayout, outlayout) \
+static void \
+gst_audio_channel_mixer_sparse_mix_int##bits##_##inlayout##_##outlayout ( \
+    GstAudioChannelMixer * mix, const gint##bits * in_data[], \
+    gint##bits * out_data[], gint samples) \
+{ \
+  gint in, out, n; \
+  gint##resbits res; \
+  gint inchannels, outchannels; \
+  guint offset, count; \
+  const MixOutEntry *out_entry; \
+  const MixEntry *entry; \
+  \
+  inchannels = mix->in_channels; \
+  outchannels = mix->out_channels; \
+  \
+  n = mix->non_interleaved ? mix->out_channels : 1; \
+  for (out = 0; out < n; out++) { \
+    gst_audio_format_info_fill_silence (mix->finfo, \
+      out_data[out], samples * mix->clear_unit); \
+  } \
+  \
+  for (n = 0; n < samples; n++) { \
+    for (out = 0; out < mix->num_valid_out_ch; out++) { \
+      /* convert */ \
+      out_entry = &mix->out_entry[out]; \
+      offset = out_entry->offset; \
+      count = out_entry->count; \
+      res = 0; \
+      for (in = 0; in < count; in++) { \
+        entry = &mix->entry[offset + in]; \
+        res += \
+          _get_in_data_##inlayout##_gint##bits (in_data, n, entry->index, inchannels) * \
+          (gint##resbits) entry->coeff_int; \
+      } \
+      /* remove factor from int matrix */ \
+      res = (res + (1 << (PRECISION_INT - 1))) >> PRECISION_INT; \
+      *_get_out_data_##outlayout##_gint##bits (out_data, n, out_entry->index, outchannels) = \
+          CLAMP (res, G_MININT##bits, G_MAXINT##bits); \
+    } \
+  } \
+}
+
+#define DEFINE_FLOAT_SPARSE_MIX_FUNC(type, inlayout, outlayout) \
+static void \
+gst_audio_channel_mixer_sparse_mix_##type##_##inlayout##_##outlayout ( \
+    GstAudioChannelMixer * mix, const g##type * in_data[], \
+    g##type * out_data[], gint samples) \
+{ \
+  gint in, out, n; \
+  g##type res; \
+  gint inchannels, outchannels; \
+  guint offset, count; \
+  const MixOutEntry *out_entry; \
+  const MixEntry *entry; \
+  \
+  inchannels = mix->in_channels; \
+  outchannels = mix->out_channels; \
+  \
+  n = mix->non_interleaved ? mix->out_channels : 1; \
+  for (out = 0; out < n; out++) { \
+    gst_audio_format_info_fill_silence (mix->finfo, \
+      out_data[out], samples * mix->clear_unit); \
+  } \
+  \
+  for (n = 0; n < samples; n++) { \
+    for (out = 0; out < mix->num_valid_out_ch; out++) { \
+      /* convert */ \
+      out_entry = &mix->out_entry[out]; \
+      offset = out_entry->offset; \
+      count = out_entry->count; \
+      res = 0.0; \
+      for (in = 0; in < count; in++) { \
+        entry = &mix->entry[offset + in]; \
+        res += \
+          _get_in_data_##inlayout##_g##type (in_data, n, entry->index, inchannels) * \
+          entry->coeff; \
+      } \
+      *_get_out_data_##outlayout##_g##type (out_data, n, out_entry->index, outchannels) = res; \
+    } \
+  } \
+}
+
 #define DEFINE_INTEGER_MIX_FUNC(bits, resbits, inlayout, outlayout) \
 static void \
 gst_audio_channel_mixer_mix_int##bits##_##inlayout##_##outlayout ( \
@@ -788,11 +1023,21 @@ DEFINE_INTEGER_MIX_FUNC (16, 32, interleaved, planar);
 DEFINE_INTEGER_MIX_FUNC (16, 32, planar, interleaved);
 DEFINE_INTEGER_MIX_FUNC (16, 32, planar, planar);
 
+DEFINE_INTEGER_SPARSE_MIX_FUNC (16, 32, interleaved, interleaved);
+DEFINE_INTEGER_SPARSE_MIX_FUNC (16, 32, interleaved, planar);
+DEFINE_INTEGER_SPARSE_MIX_FUNC (16, 32, planar, interleaved);
+DEFINE_INTEGER_SPARSE_MIX_FUNC (16, 32, planar, planar);
+
 DEFINE_GET_DATA_FUNCS (gint32);
 DEFINE_INTEGER_MIX_FUNC (32, 64, interleaved, interleaved);
 DEFINE_INTEGER_MIX_FUNC (32, 64, interleaved, planar);
 DEFINE_INTEGER_MIX_FUNC (32, 64, planar, interleaved);
 DEFINE_INTEGER_MIX_FUNC (32, 64, planar, planar);
+
+DEFINE_INTEGER_SPARSE_MIX_FUNC (32, 64, interleaved, interleaved);
+DEFINE_INTEGER_SPARSE_MIX_FUNC (32, 64, interleaved, planar);
+DEFINE_INTEGER_SPARSE_MIX_FUNC (32, 64, planar, interleaved);
+DEFINE_INTEGER_SPARSE_MIX_FUNC (32, 64, planar, planar);
 
 DEFINE_GET_DATA_FUNCS (gfloat);
 DEFINE_FLOAT_MIX_FUNC (float, interleaved, interleaved);
@@ -800,24 +1045,95 @@ DEFINE_FLOAT_MIX_FUNC (float, interleaved, planar);
 DEFINE_FLOAT_MIX_FUNC (float, planar, interleaved);
 DEFINE_FLOAT_MIX_FUNC (float, planar, planar);
 
+DEFINE_FLOAT_SPARSE_MIX_FUNC (float, interleaved, interleaved);
+DEFINE_FLOAT_SPARSE_MIX_FUNC (float, interleaved, planar);
+DEFINE_FLOAT_SPARSE_MIX_FUNC (float, planar, interleaved);
+DEFINE_FLOAT_SPARSE_MIX_FUNC (float, planar, planar);
+
 DEFINE_GET_DATA_FUNCS (gdouble);
 DEFINE_FLOAT_MIX_FUNC (double, interleaved, interleaved);
 DEFINE_FLOAT_MIX_FUNC (double, interleaved, planar);
 DEFINE_FLOAT_MIX_FUNC (double, planar, interleaved);
 DEFINE_FLOAT_MIX_FUNC (double, planar, planar);
 
+DEFINE_FLOAT_SPARSE_MIX_FUNC (double, interleaved, interleaved);
+DEFINE_FLOAT_SPARSE_MIX_FUNC (double, interleaved, planar);
+DEFINE_FLOAT_SPARSE_MIX_FUNC (double, planar, interleaved);
+DEFINE_FLOAT_SPARSE_MIX_FUNC (double, planar, planar);
+
+static gboolean
+gst_audio_channel_mixer_build_sparse_matrix (GstAudioChannelMixer * mix)
+{
+  const gfloat eps = 1e-6f;
+  gint out, in;
+  gint offset = 0;
+  gint total_pairs = 0;
+  gdouble density;
+
+  for (out = 0; out < mix->out_channels; out++) {
+    for (in = 0; in < mix->in_channels; in++) {
+      if (fabsf (mix->matrix[in][out]) > eps)
+        total_pairs++;
+    }
+  }
+
+  density = ((double) total_pairs) / (mix->out_channels * mix->in_channels);
+
+  GST_DEBUG ("nonzero coeff ratio: %.2lf (%d / %d)", density, total_pairs,
+      mix->out_channels * mix->in_channels);
+
+  /* Sparse matrix mixing involves extra lookup and memset overhead.
+   * Use sparse optimization only when a sufficient number of zero coefficients
+   * is detected */
+  if (NONZERO_DENSITY_THRESHOLD <= density)
+    return FALSE;
+
+  mix->out_entry = g_new0 (MixOutEntry, mix->out_channels);
+  mix->entry = g_new0 (MixEntry, total_pairs);
+
+  for (out = 0; out < mix->out_channels; out++) {
+    guint count = 0;
+    for (in = 0; in < mix->in_channels; in++) {
+      gfloat coeff = mix->matrix[in][out];
+      if (fabsf (coeff) > eps) {
+        mix->entry[offset].index = in;
+        if (GST_AUDIO_FORMAT_INFO_IS_INTEGER (mix->finfo)) {
+          mix->entry[offset].coeff_int =
+              (gint) (((gfloat) (1 << PRECISION_INT)) * coeff);
+        } else {
+          mix->entry[offset].coeff = coeff;
+        }
+        offset++;
+        count++;
+      }
+    }
+
+    if (count > 0) {
+      MixOutEntry *out_entry = &mix->out_entry[mix->num_valid_out_ch];
+      out_entry->index = out;
+      out_entry->offset = offset - count;
+      out_entry->count = count;
+      mix->num_valid_out_ch++;
+    }
+  }
+
+  GST_DEBUG ("Use sparse matrix");
+
+  return TRUE;
+}
+
 /**
- * gst_audio_channel_mixer_new_with_matrix: (skip):
+ * gst_audio_channel_mixer_new_with_matrix: (constructor) (skip):
  * @flags: #GstAudioChannelMixerFlags
  * @in_channels: number of input channels
  * @out_channels: number of output channels
- * @matrix: (transfer full) (nullable): channel conversion matrix, m[@in_channels][@out_channels].
+ * @matrix: (array) (element-type float*) (transfer full) (nullable): channel conversion matrix, m[@in_channels][@out_channels].
  *   If identity matrix, passthrough applies. If %NULL, a (potentially truncated)
  *   identity matrix is generated.
  *
  * Create a new channel mixer object for the given parameters.
  *
- * Returns: a new #GstAudioChannelMixer object.
+ * Returns: (transfer full): a new #GstAudioChannelMixer object.
  *   Free with gst_audio_channel_mixer_free() after usage.
  *
  * Since: 1.14
@@ -828,11 +1144,14 @@ gst_audio_channel_mixer_new_with_matrix (GstAudioChannelMixerFlags flags,
     gint in_channels, gint out_channels, gfloat ** matrix)
 {
   GstAudioChannelMixer *mix;
+  gboolean use_sparse;
 
   g_return_val_if_fail (format == GST_AUDIO_FORMAT_S16
       || format == GST_AUDIO_FORMAT_S32
       || format == GST_AUDIO_FORMAT_F32
       || format == GST_AUDIO_FORMAT_F64, NULL);
+  g_return_val_if_fail (in_channels > 0, NULL);
+  g_return_val_if_fail (out_channels > 0, NULL);
 
   mix = g_new0 (GstAudioChannelMixer, 1);
   mix->in_channels = in_channels;
@@ -854,7 +1173,19 @@ gst_audio_channel_mixer_new_with_matrix (GstAudioChannelMixerFlags flags,
     mix->matrix = matrix;
   }
 
-  gst_audio_channel_mixer_setup_matrix_int (mix);
+  mix->finfo = gst_audio_format_get_info (format);
+
+  use_sparse = gst_audio_channel_mixer_build_sparse_matrix (mix);
+  if (use_sparse) {
+    if (flags & GST_AUDIO_CHANNEL_MIXER_FLAGS_NON_INTERLEAVED_OUT) {
+      mix->non_interleaved = TRUE;
+      mix->clear_unit = mix->finfo->width / 8;
+    } else {
+      mix->clear_unit = mix->finfo->width * out_channels / 8;
+    }
+  } else if (GST_AUDIO_FORMAT_INFO_IS_INTEGER (mix->finfo)) {
+    gst_audio_channel_mixer_setup_matrix_int (mix);
+  }
 
 #ifndef GST_DISABLE_GST_DEBUG
   /* debug */
@@ -889,17 +1220,33 @@ gst_audio_channel_mixer_new_with_matrix (GstAudioChannelMixerFlags flags,
         if (flags & GST_AUDIO_CHANNEL_MIXER_FLAGS_NON_INTERLEAVED_OUT) {
           mix->func = (MixerFunc)
               gst_audio_channel_mixer_mix_int16_planar_planar;
+          if (use_sparse) {
+            mix->func = (MixerFunc)
+                gst_audio_channel_mixer_sparse_mix_int16_planar_planar;
+          }
         } else {
           mix->func = (MixerFunc)
               gst_audio_channel_mixer_mix_int16_planar_interleaved;
+          if (use_sparse) {
+            mix->func = (MixerFunc)
+                gst_audio_channel_mixer_sparse_mix_int16_planar_interleaved;
+          }
         }
       } else {
         if (flags & GST_AUDIO_CHANNEL_MIXER_FLAGS_NON_INTERLEAVED_OUT) {
           mix->func = (MixerFunc)
               gst_audio_channel_mixer_mix_int16_interleaved_planar;
+          if (use_sparse) {
+            mix->func = (MixerFunc)
+                gst_audio_channel_mixer_sparse_mix_int16_interleaved_planar;
+          }
         } else {
           mix->func = (MixerFunc)
               gst_audio_channel_mixer_mix_int16_interleaved_interleaved;
+          if (use_sparse) {
+            mix->func = (MixerFunc)
+                gst_audio_channel_mixer_sparse_mix_int16_interleaved_interleaved;
+          }
         }
       }
       break;
@@ -908,17 +1255,33 @@ gst_audio_channel_mixer_new_with_matrix (GstAudioChannelMixerFlags flags,
         if (flags & GST_AUDIO_CHANNEL_MIXER_FLAGS_NON_INTERLEAVED_OUT) {
           mix->func = (MixerFunc)
               gst_audio_channel_mixer_mix_int32_planar_planar;
+          if (use_sparse) {
+            mix->func = (MixerFunc)
+                gst_audio_channel_mixer_sparse_mix_int32_planar_planar;
+          }
         } else {
           mix->func = (MixerFunc)
               gst_audio_channel_mixer_mix_int32_planar_interleaved;
+          if (use_sparse) {
+            mix->func = (MixerFunc)
+                gst_audio_channel_mixer_sparse_mix_int32_planar_interleaved;
+          }
         }
       } else {
         if (flags & GST_AUDIO_CHANNEL_MIXER_FLAGS_NON_INTERLEAVED_OUT) {
           mix->func = (MixerFunc)
               gst_audio_channel_mixer_mix_int32_interleaved_planar;
+          if (use_sparse) {
+            mix->func = (MixerFunc)
+                gst_audio_channel_mixer_sparse_mix_int32_interleaved_planar;
+          }
         } else {
           mix->func = (MixerFunc)
               gst_audio_channel_mixer_mix_int32_interleaved_interleaved;
+          if (use_sparse) {
+            mix->func = (MixerFunc)
+                gst_audio_channel_mixer_sparse_mix_int32_interleaved_interleaved;
+          }
         }
       }
       break;
@@ -927,17 +1290,33 @@ gst_audio_channel_mixer_new_with_matrix (GstAudioChannelMixerFlags flags,
         if (flags & GST_AUDIO_CHANNEL_MIXER_FLAGS_NON_INTERLEAVED_OUT) {
           mix->func = (MixerFunc)
               gst_audio_channel_mixer_mix_float_planar_planar;
+          if (use_sparse) {
+            mix->func = (MixerFunc)
+                gst_audio_channel_mixer_sparse_mix_float_planar_planar;
+          }
         } else {
           mix->func = (MixerFunc)
               gst_audio_channel_mixer_mix_float_planar_interleaved;
+          if (use_sparse) {
+            mix->func = (MixerFunc)
+                gst_audio_channel_mixer_sparse_mix_float_planar_interleaved;
+          }
         }
       } else {
         if (flags & GST_AUDIO_CHANNEL_MIXER_FLAGS_NON_INTERLEAVED_OUT) {
           mix->func = (MixerFunc)
               gst_audio_channel_mixer_mix_float_interleaved_planar;
+          if (use_sparse) {
+            mix->func = (MixerFunc)
+                gst_audio_channel_mixer_sparse_mix_float_interleaved_planar;
+          }
         } else {
           mix->func = (MixerFunc)
               gst_audio_channel_mixer_mix_float_interleaved_interleaved;
+          if (use_sparse) {
+            mix->func = (MixerFunc)
+                gst_audio_channel_mixer_sparse_mix_float_interleaved_interleaved;
+          }
         }
       }
       break;
@@ -946,17 +1325,33 @@ gst_audio_channel_mixer_new_with_matrix (GstAudioChannelMixerFlags flags,
         if (flags & GST_AUDIO_CHANNEL_MIXER_FLAGS_NON_INTERLEAVED_OUT) {
           mix->func = (MixerFunc)
               gst_audio_channel_mixer_mix_double_planar_planar;
+          if (use_sparse) {
+            mix->func = (MixerFunc)
+                gst_audio_channel_mixer_sparse_mix_double_planar_planar;
+          }
         } else {
           mix->func = (MixerFunc)
               gst_audio_channel_mixer_mix_double_planar_interleaved;
+          if (use_sparse) {
+            mix->func = (MixerFunc)
+                gst_audio_channel_mixer_sparse_mix_double_planar_interleaved;
+          }
         }
       } else {
         if (flags & GST_AUDIO_CHANNEL_MIXER_FLAGS_NON_INTERLEAVED_OUT) {
           mix->func = (MixerFunc)
               gst_audio_channel_mixer_mix_double_interleaved_planar;
+          if (use_sparse) {
+            mix->func = (MixerFunc)
+                gst_audio_channel_mixer_sparse_mix_double_interleaved_planar;
+          }
         } else {
           mix->func = (MixerFunc)
               gst_audio_channel_mixer_mix_double_interleaved_interleaved;
+          if (use_sparse) {
+            mix->func = (MixerFunc)
+                gst_audio_channel_mixer_sparse_mix_double_interleaved_interleaved;
+          }
         }
       }
       break;
@@ -968,16 +1363,16 @@ gst_audio_channel_mixer_new_with_matrix (GstAudioChannelMixerFlags flags,
 }
 
 /**
- * gst_audio_channel_mixer_new: (skip):
+ * gst_audio_channel_mixer_new: (constructor) (skip):
  * @flags: #GstAudioChannelMixerFlags
  * @in_channels: number of input channels
- * @in_position: positions of input channels
+ * @in_position: (array length=in_channels): positions of input channels
  * @out_channels: number of output channels
- * @out_position: positions of output channels
+ * @out_position: (array length=out_channels): positions of output channels
  *
  * Create a new channel mixer object for the given parameters.
  *
- * Returns: a new #GstAudioChannelMixer object.
+ * Returns: (transfer full): a new #GstAudioChannelMixer object.
  *   Free with gst_audio_channel_mixer_free() after usage.
  */
 GstAudioChannelMixer *
@@ -1047,8 +1442,8 @@ gst_audio_channel_mixer_is_passthrough (GstAudioChannelMixer * mix)
 /**
  * gst_audio_channel_mixer_samples:
  * @mix: a #GstAudioChannelMixer
- * @in: input samples
- * @out: output samples
+ * @in: (array) (element-type gpointer): input samples
+ * @out: (array) (element-type gpointer): output samples
  * @samples: number of samples
  *
  * In case the samples are interleaved, @in and @out must point to an

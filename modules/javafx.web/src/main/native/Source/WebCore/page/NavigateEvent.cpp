@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2023 Igalia S.L. All rights reserved.
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,38 +28,50 @@
 #include "NavigateEvent.h"
 
 #include "AbortController.h"
+#include "CommonVM.h"
+#include "DocumentView.h"
+#include "Element.h"
+#include "FrameDestructionObserverInlines.h"
 #include "ExceptionCode.h"
+#include "HTMLBodyElement.h"
+#include "HistoryController.h"
+#include "LocalFrameInlines.h"
+#include "LocalFrameView.h"
+#include "Navigation.h"
+#include "NavigationNavigationType.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(NavigateEvent);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(NavigateEvent);
 
-NavigateEvent::NavigateEvent(const AtomString& type, const NavigateEvent::Init& init, AbortController* abortController)
-    : Event(EventInterfaceType::NavigateEvent, type, init, Event::IsTrusted::Yes)
+NavigateEvent::NavigateEvent(const AtomString& type, NavigateEvent::Init&& init, EventIsTrusted isTrusted, AbortController* abortController)
+    : Event(EventInterfaceType::NavigateEvent, type, init, isTrusted)
     , m_navigationType(init.navigationType)
-    , m_destination(init.destination)
-    , m_signal(init.signal)
+    , m_destination(init.destination.releaseNonNull())
+    , m_signal(init.signal.releaseNonNull())
     , m_formData(init.formData)
     , m_downloadRequest(init.downloadRequest)
-    , m_info(init.info)
+    , m_sourceElement(init.sourceElement)
     , m_canIntercept(init.canIntercept)
     , m_userInitiated(init.userInitiated)
     , m_hashChange(init.hashChange)
     , m_hasUAVisualTransition(init.hasUAVisualTransition)
     , m_abortController(abortController)
 {
+    Locker<JSC::JSLock> locker(commonVM().apiLock());
+    m_info.setWeakly(init.info);
 }
 
-Ref<NavigateEvent> NavigateEvent::create(const AtomString& type, const NavigateEvent::Init& init, AbortController* abortController)
+Ref<NavigateEvent> NavigateEvent::create(const AtomString& type, NavigateEvent::Init&& init, AbortController* abortController)
 {
-    return adoptRef(*new NavigateEvent(type, init, abortController));
+    return adoptRef(*new NavigateEvent(type, WTF::move(init), EventIsTrusted::Yes, abortController));
 }
 
-Ref<NavigateEvent> NavigateEvent::create(const AtomString& type, const NavigateEvent::Init& init)
+Ref<NavigateEvent> NavigateEvent::create(const AtomString& type, NavigateEvent::Init&& init)
 {
     // FIXME: AbortController is required but JS bindings need to create it with one.
-    return adoptRef(*new NavigateEvent(type, init, nullptr));
+    return adoptRef(*new NavigateEvent(type, WTF::move(init), EventIsTrusted::No, nullptr));
 }
 
 // https://html.spec.whatwg.org/multipage/nav-history-apis.html#navigateevent-perform-shared-checks
@@ -108,6 +121,39 @@ ExceptionOr<void> NavigateEvent::intercept(Document& document, NavigationInterce
     return { };
 }
 
+// https://html.spec.whatwg.org/multipage/nav-history-apis.html#process-scroll-behavior
+void NavigateEvent::processScrollBehavior(Document& document)
+{
+    ASSERT(m_interceptionState == InterceptionState::Committed);
+    m_interceptionState = InterceptionState::Scrolled;
+
+    if (m_navigationType == NavigationNavigationType::Traverse) {
+        document.frame()->loader().history().restoreScrollPositionAndViewState();
+        return;
+    }
+
+    if (!document.url().hasFragmentIdentifier()) {
+        if (m_navigationType == NavigationNavigationType::Reload)
+            document.frame()->loader().history().restoreScrollPositionAndViewState();
+        else
+            protect(protect(document)->frame()->view())->setScrollPosition({ 0, 0 });
+        return;
+    }
+
+    // LocalFrameView::scrollToFragment() will fail only when anchor is not found
+    // if the url has fragment and the fragment is not text fragment.
+    if (!document.findAnchor(document.url().fragmentIdentifier())) {
+        if (m_navigationType == NavigationNavigationType::Reload)
+            document.frame()->loader().history().restoreScrollPositionAndViewState();
+        return;
+    }
+
+    if (!document.haveStylesheetsLoaded())
+        document.setGotoAnchorNeededAfterStylesheetsLoad(true);
+    else
+        protect(protect(document)->frame()->view())->scrollToFragment(document.url());
+}
+
 // https://html.spec.whatwg.org/multipage/nav-history-apis.html#dom-navigateevent-scroll
 ExceptionOr<void> NavigateEvent::scroll(Document& document)
 {
@@ -118,22 +164,51 @@ ExceptionOr<void> NavigateEvent::scroll(Document& document)
     if (m_interceptionState != InterceptionState::Committed)
         return Exception { ExceptionCode::InvalidStateError, "Interception has not been committed"_s };
 
-    // FIXME: Scroll document: https://html.spec.whatwg.org/multipage/nav-history-apis.html#process-scroll-behavior
+    processScrollBehavior(document);
 
     return { };
 }
 
+// https://html.spec.whatwg.org/multipage/nav-history-apis.html#potentially-process-scroll-behavior
+void NavigateEvent::potentiallyProcessScrollBehavior(Document& document)
+{
+    ASSERT(m_interceptionState == InterceptionState::Committed || m_interceptionState == InterceptionState::Scrolled);
+    if (m_interceptionState == InterceptionState::Scrolled || m_scrollBehavior == NavigationScrollBehavior::Manual)
+        return;
+
+    processScrollBehavior(document);
+}
+
 // https://html.spec.whatwg.org/multipage/nav-history-apis.html#navigateevent-finish
-void NavigateEvent::finish()
+void NavigateEvent::finish(Document& document, InterceptionHandlersDidFulfill didFulfill, FocusDidChange focusChanged)
 {
     ASSERT(m_interceptionState != InterceptionState::Intercepted && m_interceptionState != InterceptionState::Finished);
     if (!m_interceptionState)
         return;
 
-    // FIXME: 3. Potentially reset the focus
-    // FIXME: 4. If didFulfill is true, then potentially process scroll behavior given event.
+    ASSERT(m_interceptionState == InterceptionState::Committed || m_interceptionState == InterceptionState::Scrolled);
+    if (focusChanged == FocusDidChange::No && m_focusReset != NavigationFocusReset::Manual) {
+        RefPtr documentElement = document.documentElement();
+        ASSERT(documentElement);
+
+        RefPtr<Element> focusTarget = documentElement->findAutofocusDelegate();
+        if (!focusTarget)
+            focusTarget = document.body();
+        if (!focusTarget)
+            focusTarget = documentElement;
+
+        document.setFocusedElement(focusTarget.get());
+    }
+
+    if (didFulfill == InterceptionHandlersDidFulfill::Yes)
+        potentiallyProcessScrollBehavior(document);
 
     m_interceptionState = InterceptionState::Finished;
+}
+
+WebCoreOpaqueRoot root(NavigateEvent* event)
+{
+    return WebCoreOpaqueRoot { event };
 }
 
 } // namespace WebCore

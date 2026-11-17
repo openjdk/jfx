@@ -25,12 +25,13 @@
 
 #pragma once
 
-#include "SWServer.h"
-#include "ServiceWorkerJobData.h"
-#include "Timer.h"
-#include "WorkerFetchResult.h"
+#include <WebCore/SWServer.h>
+#include <WebCore/ServiceWorkerJobData.h>
+#include <WebCore/Timer.h>
+#include <WebCore/WorkerFetchResult.h>
 #include <wtf/CheckedPtr.h>
 #include <wtf/Deque.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -39,7 +40,7 @@ class ServiceWorkerJob;
 struct WorkerFetchResult;
 
 class SWServerJobQueue final : public CanMakeCheckedPtr<SWServerJobQueue> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(SWServerJobQueue);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SWServerJobQueue);
 public:
     explicit SWServerJobQueue(SWServer&, const ServiceWorkerRegistrationKey&);
@@ -48,7 +49,7 @@ public:
 
     const ServiceWorkerJobData& firstJob() const { return m_jobQueue.first(); }
     const ServiceWorkerJobData& lastJob() const { return m_jobQueue.last(); }
-    void enqueueJob(ServiceWorkerJobData&& jobData) { m_jobQueue.append(WTFMove(jobData)); }
+    void enqueueJob(ServiceWorkerJobData&& jobData) { m_jobQueue.append(WTF::move(jobData)); }
     size_t size() const { return m_jobQueue.size(); }
 
     void runNextJob();
@@ -76,7 +77,7 @@ private:
 
     void install(SWServerRegistration&, ServiceWorkerIdentifier);
 
-    void removeAllJobsMatching(const Function<bool(ServiceWorkerJobData&)>&);
+    void removeAllJobsMatching(NOESCAPE const Function<bool(ServiceWorkerJobData&)>&);
     void scriptAndImportedScriptsFetchFinished(const ServiceWorkerJobData&, SWServerRegistration&);
 
     Ref<SWServer> protectedServer() const { return m_server.get(); }

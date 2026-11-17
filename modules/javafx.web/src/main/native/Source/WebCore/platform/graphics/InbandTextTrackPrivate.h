@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +27,8 @@
 
 #if ENABLE(VIDEO)
 
-#include "InbandTextTrackPrivateClient.h"
+#include <WebCore/InbandTextTrackPrivateClient.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
@@ -38,11 +39,13 @@ enum class InbandTextTrackPrivateMode : uint8_t {
 };
 
 class InbandTextTrackPrivate : public TrackPrivateBase {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(InbandTextTrackPrivate);
 public:
     enum class CueFormat : uint8_t {
         Data,
         Generic,
-        WebVTT
+        WebVTT,
+        Unknown
     };
     static Ref<InbandTextTrackPrivate> create(CueFormat format) { return adoptRef(*new InbandTextTrackPrivate(format)); }
     virtual ~InbandTextTrackPrivate() = default;
@@ -68,10 +71,10 @@ public:
     virtual bool isMainProgramContent() const { return true; }
     virtual bool isEasyToRead() const { return false; }
     virtual bool isDefault() const { return false; }
-    AtomString label() const override { return emptyAtom(); }
-    AtomString language() const override { return emptyAtom(); }
-    std::optional<AtomString> trackUID() const override { return emptyAtom(); }
-    virtual AtomString inBandMetadataTrackDispatchType() const { return emptyAtom(); }
+    String label() const override { return emptyString(); }
+    String language() const override { return emptyString(); }
+    std::optional<String> trackUID() const override { return emptyString(); }
+    virtual String inBandMetadataTrackDispatchType() const { return emptyString(); }
 
     CueFormat cueFormat() const { return m_format; }
 
@@ -95,6 +98,12 @@ public:
 
     Type type() const final { return Type::Text; };
 
+    enum class InbandTextTrackType : uint8_t {
+        BaseTrack,
+        AVFTrack
+    };
+    virtual InbandTextTrackType inbandTextTrackType() const { return InbandTextTrackType::BaseTrack; }
+
 protected:
     InbandTextTrackPrivate(CueFormat format)
         : m_format(format)
@@ -102,7 +111,7 @@ protected:
     }
 
 private:
-    CueFormat m_format;
+    CueFormat m_format { CueFormat::Unknown };
     Mode m_mode { Mode::Disabled };
 };
 
@@ -113,3 +122,4 @@ static bool isType(const WebCore::TrackPrivateBase& track) { return track.type()
 SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(VIDEO)
+

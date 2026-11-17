@@ -31,8 +31,7 @@
 #include <wtf/HashTraits.h>
 #include <wtf/RawPtrTraits.h>
 #include <wtf/SingleThreadIntegralWrapper.h>
-#include <wtf/StackTrace.h>
-#include <wtf/text/WTFString.h>
+#include <wtf/TypeTraits.h>
 
 #if ASSERT_ENABLED
 #include <wtf/Threading.h>
@@ -40,22 +39,28 @@
 
 namespace WTF {
 
+#define USING_CAN_MAKE_CHECKEDPTR(BASE) \
+    using BASE::checkedPtrCount; \
+    using BASE::checkedPtrCountWithoutThreadCheck; \
+    using BASE::incrementCheckedPtrCount; \
+    using BASE::decrementCheckedPtrCount
+
 template<typename T, typename PtrTraits>
 class CheckedRef {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(CheckedRef);
 public:
 
     ~CheckedRef()
     {
         unpoison(*this);
         if (auto* ptr = PtrTraits::exchange(m_ptr, nullptr))
-            PtrTraits::unwrap(ptr)->decrementPtrCount();
+            PtrTraits::unwrap(ptr)->decrementCheckedPtrCount();
     }
 
     CheckedRef(T& object)
         : m_ptr(&object)
     {
-        PtrTraits::unwrap(m_ptr)->incrementPtrCount();
+        PtrTraits::unwrap(m_ptr)->incrementCheckedPtrCount();
     }
 
     enum AdoptTag { Adopt };
@@ -68,7 +73,7 @@ public:
         : m_ptr { PtrTraits::unwrap(other.m_ptr) }
     {
         auto* ptr = PtrTraits::unwrap(m_ptr);
-        ptr->incrementPtrCount();
+        ptr->incrementCheckedPtrCount();
     }
 
     template<typename OtherType, typename OtherPtrTraits>
@@ -76,7 +81,7 @@ public:
         : m_ptr { PtrTraits::unwrap(other.m_ptr) }
     {
         auto* ptr = PtrTraits::unwrap(m_ptr);
-        ptr->incrementPtrCount();
+        ptr->incrementCheckedPtrCount();
     }
 
     ALWAYS_INLINE CheckedRef(CheckedRef&& other)
@@ -104,23 +109,27 @@ public:
 
     ALWAYS_INLINE T* ptr() const
     {
-        // In normal execution, a CheckedPtr always points to an object with a non-zero ptrCount().
+        // In normal execution, a CheckedPtr always points to an object with a non-zero checkedPtrCount().
         // When it detects a dangling pointer, WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR scribbles an object with zeroes and then leaks it.
-        // When we check ptrCountWithoutThreadCheck() here, we're checking for a scribbled object.
-        ASSERT(PtrTraits::unwrap(m_ptr)->ptrCountWithoutThreadCheck());
+        // When we check checkedPtrCountWithoutThreadCheck() here, we're checking for a scribbled object.
+        ASSERT(PtrTraits::unwrap(m_ptr)->checkedPtrCountWithoutThreadCheck());
         return PtrTraits::unwrap(m_ptr);
     }
 
     ALWAYS_INLINE T& get() const
     {
-        ASSERT(ptr());
+        RELEASE_ASSERT(m_ptr);
         return *ptr();
     }
 
-    ALWAYS_INLINE T* operator->() const { return ptr(); }
+    ALWAYS_INLINE T* operator->() const
+    {
+        RELEASE_ASSERT(m_ptr);
+        return ptr();
+    }
 
     ALWAYS_INLINE operator T&() const { return get(); }
-    ALWAYS_INLINE explicit operator bool() const { return get(); }
+    ALWAYS_INLINE explicit operator bool() const { return ptr(); }
 
     CheckedRef& operator=(T& reference)
     {
@@ -149,7 +158,7 @@ public:
     CheckedRef& operator=(CheckedRef&& other)
     {
         unpoison(*this);
-        CheckedRef moved { WTFMove(other) };
+        CheckedRef moved { WTF::move(other) };
         PtrTraits::swap(m_ptr, moved.m_ptr);
         return *this;
     }
@@ -157,7 +166,7 @@ public:
     template<typename OtherType, typename OtherPtrTraits> CheckedRef& operator=(CheckedRef<OtherType, OtherPtrTraits>&& other)
     {
         unpoison(*this);
-        CheckedRef moved { WTFMove(other) };
+        CheckedRef moved { WTF::move(other) };
         PtrTraits::swap(m_ptr, moved.m_ptr);
         return *this;
     }
@@ -204,7 +213,7 @@ struct GetPtrHelper<CheckedRef<T, PtrTraits>> {
 template <typename T, typename U>
 struct IsSmartPtr<CheckedRef<T, U>> {
     static constexpr bool value = true;
-    static constexpr bool isNullable = true;
+    static constexpr bool isNullable = false;
 };
 
 template<typename ExpectedType, typename ArgType, typename ArgPtrTraits>
@@ -226,7 +235,7 @@ inline ExpectedType& downcast(CheckedRef<ArgType, ArgPtrTraits>& source)
 }
 
 template<typename ExpectedType, typename ArgType, typename ArgPtrTraits>
-inline const ExpectedType& downcast(const CheckedRef<ArgType, ArgPtrTraits>& source)
+inline ExpectedType& downcast(const CheckedRef<ArgType, ArgPtrTraits>& source)
 {
     return downcast<ExpectedType>(source.get());
 }
@@ -235,6 +244,37 @@ template<typename ExpectedType, typename ArgType, typename ArgPtrTraits>
 inline const ExpectedType& downcast(CheckedRef<const ArgType, ArgPtrTraits>& source)
 {
     return downcast<ExpectedType>(source.get());
+}
+
+template<typename ExpectedType, typename ArgType, typename ArgPtrTraits>
+inline CheckedPtr<match_constness_t<ArgType, ExpectedType>> dynamicDowncast(CheckedRef<ArgType, ArgPtrTraits>& source)
+{
+    return dynamicDowncast<ExpectedType>(source.get());
+}
+
+template<typename ExpectedType, typename ArgType, typename ArgPtrTraits>
+inline CheckedPtr<match_constness_t<ArgType, ExpectedType>> dynamicDowncast(const CheckedRef<ArgType, ArgPtrTraits>& source)
+{
+    return dynamicDowncast<ExpectedType>(source.get());
+}
+
+template<typename ExpectedType, typename ArgType, typename ArgPtrTraits>
+inline const CheckedPtr<match_constness_t<ArgType, ExpectedType>> dynamicDowncast(CheckedRef<const ArgType, ArgPtrTraits>& source)
+{
+    return dynamicDowncast<ExpectedType>(source.get());
+}
+
+template<typename T, typename PtrTraits = RawPtrTraits<T>>
+    requires (HasCheckedPtrMemberFunctions<T>::value && !HasRefPtrMemberFunctions<T>::value)
+ALWAYS_INLINE CLANG_POINTER_CONVERSION CheckedRef<T, PtrTraits> protect(T& reference)
+{
+    return CheckedRef<T, PtrTraits>(reference);
+}
+
+template<typename T, typename PtrTraits>
+ALWAYS_INLINE CLANG_POINTER_CONVERSION CheckedRef<T, PtrTraits> protect(const CheckedRef<T, PtrTraits>& reference)
+{
+    return reference;
 }
 
 template<typename P> struct CheckedRefHashTraits : SimpleClassHashTraits<CheckedRef<P>> {
@@ -255,7 +295,7 @@ template<typename P> struct CheckedRefHashTraits : SimpleClassHashTraits<Checked
     static PeekType peek(P* value) { return value; }
 
     using TakeType = CheckedPtr<P>;
-    static TakeType take(CheckedRef<P>&& value) { return isEmptyValue(value) ? nullptr : CheckedPtr<P>(WTFMove(value)); }
+    static TakeType take(CheckedRef<P>&& value) { return isEmptyValue(value) ? nullptr : CheckedPtr<P>(WTF::move(value)); }
 };
 
 template<typename P> struct HashTraits<CheckedRef<P>> : CheckedRefHashTraits<P> { };
@@ -266,7 +306,12 @@ template<typename P> struct PtrHash<CheckedRef<P>> : PtrHashBase<CheckedRef<P>, 
 
 template<typename P> struct DefaultHash<CheckedRef<P>> : PtrHash<CheckedRef<P>> { };
 
-template <typename StorageType, typename PtrCounterType> class CanMakeCheckedPtrBase {
+enum class DefaultedOperatorEqual : bool { No, Yes };
+
+// DO NOT make use of this enum in new code. An object which supports CanMakeCheckedPtr must be heap allocated on its own.
+enum class CheckedPtrDeleteCheckException : bool { No, Yes };
+
+template <typename StorageType, typename PtrCounterType, typename DeletionFlagType, CheckedPtrDeleteCheckException deleteException> class CanMakeCheckedPtrBase {
 public:
     CanMakeCheckedPtrBase() = default;
     CanMakeCheckedPtrBase(CanMakeCheckedPtrBase&&) { }
@@ -274,48 +319,79 @@ public:
     CanMakeCheckedPtrBase(const CanMakeCheckedPtrBase&) { }
     CanMakeCheckedPtrBase& operator=(const CanMakeCheckedPtrBase&) { return *this; }
 
-    ~CanMakeCheckedPtrBase() = default;
-
-    PtrCounterType ptrCount() const { return m_count; }
-    void incrementPtrCount() const { ++m_count; }
-    void decrementPtrCount() const
+    ~CanMakeCheckedPtrBase()
     {
-        // In normal execution, a CheckedPtr always points to an object with a non-zero ptrCount().
-        // When it detects a dangling pointer, WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR scribbles an object with zeroes and then leaks it.
-        // When we check ptrCountWithoutThreadCheck() here, we're checking for a scribbled object.
-        RELEASE_ASSERT(ptrCountWithoutThreadCheck());
-        --m_count;
+        ASSERT_WITH_SECURITY_IMPLICATION(m_didBeginDeletion || deleteException == CheckedPtrDeleteCheckException::Yes);
     }
 
-    ALWAYS_INLINE PtrCounterType ptrCountWithoutThreadCheck() const
+    PtrCounterType checkedPtrCount() const { return m_checkedPtrCount; }
+    void incrementCheckedPtrCount() const { ++m_checkedPtrCount; }
+    ALWAYS_INLINE void decrementCheckedPtrCount() const
+    {
+        // In normal execution, a CheckedPtr always points to an object with a non-zero checkedPtrCount().
+        // When it detects a dangling pointer, WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR scribbles an object with zeroes and then leaks it.
+        // When we check checkedPtrCountWithoutThreadCheck() here, we're checking for a scribbled object.
+        if (!checkedPtrCountWithoutThreadCheck()) [[unlikely]]
+            crashDueToCheckedPtrToDeadObject();
+        --m_checkedPtrCount;
+    }
+
+    ALWAYS_INLINE PtrCounterType checkedPtrCountWithoutThreadCheck() const
         {
         if constexpr (std::is_same_v<StorageType, std::atomic<uint32_t>>)
-            return m_count;
+            return m_checkedPtrCount;
         else
-            return m_count.valueWithoutThreadCheck();
+            return m_checkedPtrCount.valueWithoutThreadCheck();
         }
 
-    friend bool operator==(const CanMakeCheckedPtrBase&, const CanMakeCheckedPtrBase&) { return true; }
+    void setDidBeginCheckedPtrDeletion()
+    {
+#if ASSERT_ENABLED || ENABLE(SECURITY_ASSERTIONS)
+        m_didBeginDeletion = true;
+#endif
+    }
 
 private:
-    mutable StorageType m_count { 0 };
+    static NO_RETURN_DUE_TO_CRASH NEVER_INLINE void crashDueToCheckedPtrToDeadObject()
+    {
+        CRASH();
+    }
+
+    mutable StorageType m_checkedPtrCount { 0 };
+#if ASSERT_ENABLED || ENABLE(SECURITY_ASSERTIONS)
+    DeletionFlagType m_didBeginDeletion { false };
+#endif
 };
 
-template<typename T> class CanMakeCheckedPtr : public CanMakeCheckedPtrBase<SingleThreadIntegralWrapper<uint32_t>, uint32_t> {
+template<typename T, DefaultedOperatorEqual defaultedOperatorEqual = DefaultedOperatorEqual::No, CheckedPtrDeleteCheckException deleteException = CheckedPtrDeleteCheckException::No>
+class CanMakeCheckedPtr : public CanMakeCheckedPtrBase<SingleThreadIntegralWrapper<uint32_t>, uint32_t, bool, deleteException> {
 public:
     ~CanMakeCheckedPtr()
     {
-        static_assert(std::is_same<typename T::WTFIsFastAllocated, int>::value, "Objects that use CanMakeCheckedPtr must use FastMalloc (WTF_MAKE_FAST_ALLOCATED)");
+        static_assert(std::is_same<typename T::WTFIsFastMallocAllocated, int>::value, "Objects that use CanMakeCheckedPtr must use FastMalloc (WTF_DEPRECATED_MAKE_FAST_ALLOCATED)");
         static_assert(std::is_same<typename T::WTFDidOverrideDeleteForCheckedPtr, int>::value, "Objects that use CanMakeCheckedPtr must use WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR");
+    }
+
+    friend bool operator==(const CanMakeCheckedPtr&, const CanMakeCheckedPtr&)
+    {
+        static_assert(defaultedOperatorEqual == DefaultedOperatorEqual::Yes, "Derived class should opt-in when defaulting operator==, or invalid/undefined comparison should be reworked/defined");
+        return true;
     }
 };
 
-template<typename T> class CanMakeThreadSafeCheckedPtr : public CanMakeCheckedPtrBase<std::atomic<uint32_t>, uint32_t> {
+template<typename T, DefaultedOperatorEqual defaultedOperatorEqual = DefaultedOperatorEqual::No, CheckedPtrDeleteCheckException deleteException = CheckedPtrDeleteCheckException::No>
+class CanMakeThreadSafeCheckedPtr : public CanMakeCheckedPtrBase<std::atomic<uint32_t>, uint32_t, std::atomic<bool>, deleteException> {
 public:
     ~CanMakeThreadSafeCheckedPtr()
     {
-        static_assert(std::is_same<typename T::WTFIsFastAllocated, int>::value, "Objects that use CanMakeCheckedPtr must use FastMalloc (WTF_MAKE_FAST_ALLOCATED)");
+        static_assert(std::is_same<typename T::WTFIsFastMallocAllocated, int>::value, "Objects that use CanMakeCheckedPtr must use FastMalloc (WTF_DEPRECATED_MAKE_FAST_ALLOCATED)");
         static_assert(std::is_same<typename T::WTFDidOverrideDeleteForCheckedPtr, int>::value, "Objects that use CanMakeCheckedPtr must use WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR");
+    }
+
+    friend bool operator==(const CanMakeThreadSafeCheckedPtr&, const CanMakeThreadSafeCheckedPtr&)
+    {
+        static_assert(defaultedOperatorEqual == DefaultedOperatorEqual::Yes, "Derived class should opt-in when defaulting operator==, or invalid/undefined comparison should be reworked/defined");
+        return true;
     }
 };
 
@@ -324,3 +400,4 @@ public:
 using WTF::CanMakeCheckedPtr;
 using WTF::CanMakeThreadSafeCheckedPtr;
 using WTF::CheckedRef;
+using WTF::protect;

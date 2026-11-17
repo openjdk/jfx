@@ -27,14 +27,15 @@
 
 #pragma once
 
-#include "FloatPlane3D.h"
 #include "FloatPoint3D.h"
-#include "FloatRect.h"
 #include "TransformationMatrix.h"
 #include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
+
+class FloatPlane3D;
+class FloatRect;
 
 // FloatPolygon3D represents planar polygon in 3D space
 
@@ -55,7 +56,7 @@ private:
     FloatPolygon3D(Vector<FloatPoint3D>&&, const FloatPoint3D&);
 
     Vector<FloatPoint3D> m_vertices;
-    FloatPoint3D m_normal = { 0, 0, 1 };
+    FloatPoint3D m_normal { 0, 0, 1 };
 };
 
 } // namespace WebCore

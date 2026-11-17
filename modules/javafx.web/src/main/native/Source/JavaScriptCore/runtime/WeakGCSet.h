@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "WeakGCHashTable.h"
-#include "WeakInlines.h"
+#include <JavaScriptCore/WeakGCHashTable.h>
+#include <JavaScriptCore/WeakInlines.h>
 #include <wtf/HashSet.h>
 #include <wtf/TZoneMalloc.h>
 
@@ -36,8 +36,8 @@ namespace JSC {
 
 template<typename T>
 struct WeakGCSetHashTraits : HashTraits<Weak<T>> {
-    static constexpr bool hasIsReleasedWeakValueFunction = true;
-    static bool isReleasedWeakValue(const Weak<T>& value)
+    static constexpr bool hasIsWeakNullValueFunction = true;
+    static bool isWeakNullValue(const Weak<T>& value)
     {
         return !value.isHashTableDeletedValue() && !value.isHashTableEmptyValue() && !value;
     }
@@ -59,17 +59,17 @@ struct WeakGCSetHash {
 // FIXME: This doesn't currently accept WeakHandleOwners by default... it's probably not hard to add but it's not exactly clear how to handle multiple different handle owners for the same value.
 template<typename ValueArg, typename HashArg = WeakGCSetHash<ValueArg>, typename TraitsArg = WeakGCSetHashTraits<ValueArg>>
 class WeakGCSet final : public WeakGCHashTable {
-    WTF_MAKE_TZONE_ALLOCATED_EXPORT(WeakGCSet, JS_EXPORT_PRIVATE);
+    WTF_MAKE_TZONE_NON_HEAP_ALLOCATABLE(WeakGCSet);
     using ValueType = Weak<ValueArg>;
-    using HashSetType = HashSet<ValueType, HashArg, TraitsArg>;
+    using HashSetType = UncheckedKeyHashSet<ValueType, HashArg, TraitsArg>;
 
 public:
     using AddResult = typename HashSetType::AddResult;
     using iterator = typename HashSetType::iterator;
     using const_iterator = typename HashSetType::const_iterator;
 
-    inline explicit WeakGCSet(VM&);
-    inline ~WeakGCSet() final;
+    explicit WeakGCSet(VM&);
+    ~WeakGCSet() final;
 
     void clear()
     {
@@ -79,7 +79,7 @@ public:
     AddResult add(ValueArg* key)
     {
         // Constructing a Weak shouldn't trigger a GC but add this ASSERT for good measure.
-        DisallowGC disallowGC;
+        AssertNoGC assertNoGC;
         return m_set.add(key);
     }
 
@@ -88,7 +88,7 @@ public:
     {
         // If functor invokes GC, GC can prune WeakGCSet, and manipulate HashSet while we are touching it in the ensure function.
         // The functor must not invoke GC.
-        DisallowGC disallowGC;
+        AssertNoGC assertNoGC;
 
         auto result = m_set.template ensure<HashTranslator>(std::forward<T>(key), functor);
         return result.iterator->get();

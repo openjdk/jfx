@@ -25,46 +25,116 @@
 
 #pragma once
 
-#include "CSSNumericValue.h"
-#include "ScrollTimeline.h"
-#include "ViewTimelineOptions.h"
+#include <WebCore/CSSNumericValue.h>
+#include <WebCore/CSSPrimitiveValue.h>
+#include <WebCore/ScrollTimeline.h>
+#include <WebCore/StyleViewTimelineInsets.h>
+#include <WebCore/Styleable.h>
+#include <WebCore/ViewTimelineOptions.h>
 #include <wtf/Ref.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
-class CSSViewValue;
-class Element;
+namespace Style {
+class BuilderState;
+enum class SingleAnimationRangeName : uint8_t;
+}
 
-struct ViewTimelineInsets {
-    std::optional<Length> start;
-    std::optional<Length> end;
-    bool operator==(const auto& other) const { return start == other.start && end == other.end; }
+class Element;
+class StickyPositionViewportConstraints;
+
+struct StickinessAdjustmentData {
+    bool operator==(const StickinessAdjustmentData& other) const = default;
+
+    enum class StickinessLocation {
+        BeforeEntry,
+        DuringEntry,
+        WhileContained,
+        DuringExit,
+        AfterExit
+    };
+
+    float entryDistanceAdjustment() const;
+    float exitDistanceAdjustment() const;
+    float rangeStartAdjustment() const;
+    float rangeEndAdjustment() const;
+
+    static StickinessAdjustmentData computeStickinessAdjustmentData(const StickyPositionViewportConstraints&, ScrollTimeline::ResolvedScrollDirection, float scrollContainerSize, float subjectSize, float subjectOffset);
+
+    float stickyTopOrLeftAdjustment { 0 };
+    StickinessLocation topOrLeftAdjustmentLocation { StickinessLocation::WhileContained };
+    float stickyBottomOrRightAdjustment { 0 };
+    StickinessLocation bottomOrRightAdjustmentLocation { StickinessLocation::WhileContained };
 };
 
 class ViewTimeline final : public ScrollTimeline {
 public:
-    static Ref<ViewTimeline> create(ViewTimelineOptions&& = { });
-    static Ref<ViewTimeline> create(const AtomString&, ScrollAxis, ViewTimelineInsets&&);
-    static Ref<ViewTimeline> createFromCSSValue(const CSSViewValue&);
+    static ExceptionOr<Ref<ViewTimeline>> create(Document&, ViewTimelineOptions&& = { });
+    static Ref<ViewTimeline> create(const AtomString&, ScrollAxis, const Style::ViewTimelineInsetItem&);
 
-    Element* subject() const { return m_subject.get(); }
-    const CSSNumericValue& startOffset() const { return m_startOffset.get(); }
-    const CSSNumericValue& endOffset() const { return m_endOffset.get(); }
-    const ViewTimelineInsets& insets() const { return m_insets; }
+    const Element* subject() const;
+    const WeakStyleable subjectStyleable() const { return m_subject; }
+    void setSubject(Element*);
+    void setSubject(const Styleable&);
+
+    const Style::ViewTimelineInsetItem& insets() const { return m_insets; }
+    void setInsets(const Style::ViewTimelineInsetItem& insets) { m_insets = insets; }
+
+    Ref<CSSNumericValue> startOffset() const;
+    Ref<CSSNumericValue> endOffset() const;
+
+    AnimationTimeline::ShouldUpdateAnimationsAndSendEvents documentWillUpdateAnimationsAndSendEvents() override;
+    AnimationTimelinesController* controller() const override;
+
+    const RenderBox* sourceScrollerRenderer() const;
+    CheckedPtr<const RenderElement> stickyContainer() const;
+    RefPtr<Element> bindingsSource() const override;
+    RefPtr<Element> source() const override;
+    Style::SingleAnimationRange defaultRange() const final;
+
+    std::pair<WebAnimationTime, WebAnimationTime> intervalForAttachmentRange(const Style::SingleAnimationRange&) const final;
+    std::pair<double, double> offsetIntervalForAttachmentRange(const Style::SingleAnimationRange&) const;
+    std::pair<double, double> offsetIntervalForTimelineRangeName(Style::SingleAnimationRangeName) const;
 
 private:
-    explicit ViewTimeline(ViewTimelineOptions&& = { });
-    explicit ViewTimeline(const AtomString&, ScrollAxis, ViewTimelineInsets&&);
+    ScrollTimeline::Data computeTimelineData(UseCachedCurrentTime = UseCachedCurrentTime::Yes) const final;
+    std::pair<double, double> intervalForTimelineRangeName(const ScrollTimeline::Data&, Style::SingleAnimationRangeName) const;
+    template<typename F> double mapOffsetToTimelineRange(const ScrollTimeline::Data&, Style::SingleAnimationRangeName, F&&) const;
 
-    Ref<CSSValue> toCSSValue() const final;
+    explicit ViewTimeline(ScrollAxis);
+    explicit ViewTimeline(const AtomString&, ScrollAxis, const Style::ViewTimelineInsetItem&);
+
     bool isViewTimeline() const final { return true; }
 
-    WeakPtr<Element, WeakPtrImplWithEventTargetData> m_subject;
-    Ref<CSSNumericValue> m_startOffset;
-    Ref<CSSNumericValue> m_endOffset;
-    ViewTimelineInsets m_insets;
+    struct CurrentTimeData {
+        float scrollOffset { 0 };
+        float scrollContainerSize { 0 };
+        float subjectOffset { 0 };
+        float subjectSize { 0 };
+        float insetStart { 0 };
+        float insetEnd { 0 };
+        StickinessAdjustmentData stickinessData { };
+    };
+
+    void cacheCurrentTime();
+
+    struct SpecifiedViewTimelineInsets {
+        RefPtr<CSSPrimitiveValue> start;
+        RefPtr<CSSPrimitiveValue> end;
+    };
+
+    ExceptionOr<SpecifiedViewTimelineInsets> validateSpecifiedInsets(const ViewTimelineInsetValue, const Document&);
+
+    WeakStyleable m_subject;
+    std::optional<SpecifiedViewTimelineInsets> m_specifiedInsets;
+    Style::ViewTimelineInsetItem m_insets;
+    CurrentTimeData m_cachedCurrentTimeData { };
 };
+
+WTF::TextStream& operator<<(WTF::TextStream&, const StickinessAdjustmentData&);
+WTF::TextStream& operator<<(WTF::TextStream&, const StickinessAdjustmentData::StickinessLocation&);
+WTF::TextStream& operator<<(WTF::TextStream&, const ViewTimeline&);
 
 } // namespace WebCore
 

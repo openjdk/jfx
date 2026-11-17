@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,10 +26,12 @@
 #pragma once
 
 #include <wtf/Box.h>
+#include <wtf/CheckedRef.h>
 #include <wtf/Condition.h>
 #include <wtf/Lock.h>
 #include <wtf/RefPtr.h>
 #include <wtf/SharedTask.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/Threading.h>
 #include <wtf/Vector.h>
@@ -64,9 +66,11 @@ class AutomaticThreadCondition;
 
 class ParallelHelperClient;
 
-class ParallelHelperPool : public ThreadSafeRefCounted<ParallelHelperPool> {
+class ParallelHelperPool final : public ThreadSafeRefCounted<ParallelHelperPool>, public CanMakeThreadSafeCheckedPtr<ParallelHelperPool> {
+    WTF_MAKE_TZONE_ALLOCATED(ParallelHelperPool);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ParallelHelperPool);
 public:
-    WTF_EXPORT_PRIVATE ParallelHelperPool(ASCIILiteral threadName);
+    WTF_EXPORT_PRIVATE static Ref<ParallelHelperPool> create(ASCIILiteral threadName);
     WTF_EXPORT_PRIVATE ~ParallelHelperPool();
 
     WTF_EXPORT_PRIVATE void ensureThreads(unsigned numThreads);
@@ -76,6 +80,8 @@ public:
     WTF_EXPORT_PRIVATE void doSomeHelping();
 
 private:
+    explicit ParallelHelperPool(ASCIILiteral threadName);
+
     friend class ParallelHelperClient;
     class Thread;
     friend class Thread;
@@ -86,7 +92,7 @@ private:
     ParallelHelperClient* getClientWithTask() WTF_REQUIRES_LOCK(m_lock);
 
     Box<Lock> m_lock; // AutomaticThread wants this in a box for safety.
-    Ref<AutomaticThreadCondition> m_workAvailableCondition;
+    const Ref<AutomaticThreadCondition> m_workAvailableCondition;
     Condition m_workCompleteCondition;
 
     WeakRandom m_random;
@@ -163,7 +169,7 @@ private:
 // will lead to RELEASE_ASSERT's or worse.
 class ParallelHelperClient {
     WTF_MAKE_NONCOPYABLE(ParallelHelperClient);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(ParallelHelperClient);
 public:
     WTF_EXPORT_PRIVATE ParallelHelperClient(RefPtr<ParallelHelperPool>&&);
     WTF_EXPORT_PRIVATE ~ParallelHelperClient();
@@ -206,7 +212,7 @@ private:
     RefPtr<SharedTask<void ()>> claimTask() WTF_REQUIRES_LOCK(*m_pool->m_lock);
     void runTask(const RefPtr<SharedTask<void ()>>&);
 
-    RefPtr<ParallelHelperPool> m_pool;
+    const RefPtr<ParallelHelperPool> m_pool;
     RefPtr<SharedTask<void ()>> m_task;
     unsigned m_numActive { 0 };
 };

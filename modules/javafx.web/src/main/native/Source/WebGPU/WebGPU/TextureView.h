@@ -25,15 +25,15 @@
 
 #pragma once
 
+#import "BindableResource.h"
+#import <WebGPU/WGPUTextureViewImpl.h>
 #import <wtf/FastMalloc.h>
 #import <wtf/Ref.h>
-#import <wtf/RefCounted.h>
+#import <wtf/RefCountedAndCanMakeWeakPtr.h>
+#import <wtf/RetainReleaseSwift.h>
 #import <wtf/TZoneMalloc.h>
 #import <wtf/WeakHashSet.h>
 #import <wtf/WeakPtr.h>
-
-struct WGPUTextureViewImpl {
-};
 
 namespace WebGPU {
 
@@ -42,7 +42,7 @@ class Device;
 class Texture;
 
 // https://gpuweb.github.io/gpuweb/#gputextureview
-class TextureView : public WGPUTextureViewImpl, public RefCounted<TextureView>, public CanMakeWeakPtr<TextureView> {
+class TextureView : public RefCountedAndCanMakeWeakPtr<TextureView>, public WGPUTextureViewImpl, public TrackedResource {
     WTF_MAKE_TZONE_ALLOCATED(TextureView);
 public:
     static Ref<TextureView> create(id<MTLTexture> texture, const WGPUTextureViewDescriptor& descriptor, const std::optional<WGPUExtent3D>& renderExtent, Texture& parentTexture, Device& device)
@@ -89,6 +89,10 @@ public:
     Texture& apiParentTexture() { return m_parentTexture; }
     uint32_t parentRelativeSlice() const;
     uint32_t parentRelativeMipLevel() const;
+    bool is2DTexture() const { return dimension() == WGPUTextureViewDimension_2D; }
+    bool is2DArrayTexture() const { return dimension() == WGPUTextureViewDimension_2DArray; }
+    bool is3DTexture() const { return dimension() == WGPUTextureViewDimension_3D; }
+    id<MTLRasterizationRateMap> rasterizationMapForSlice(uint32_t slice) const;
 
 private:
     TextureView(id<MTLTexture>, const WGPUTextureViewDescriptor&, const std::optional<WGPUExtent3D>&, Texture&, Device&);
@@ -100,8 +104,17 @@ private:
     const std::optional<WGPUExtent3D> m_renderExtent;
 
     const Ref<Device> m_device;
-    Ref<Texture> m_parentTexture;
-    mutable WeakHashSet<CommandEncoder> m_commandEncoders;
-};
+    const Ref<Texture> m_parentTexture;
+} SWIFT_SHARED_REFERENCE(refTextureView, derefTextureView);
 
 } // namespace WebGPU
+
+inline void refTextureView(WebGPU::TextureView* obj)
+{
+    WTF::ref(obj);
+}
+
+inline void derefTextureView(WebGPU::TextureView* obj)
+{
+    WTF::deref(obj);
+}

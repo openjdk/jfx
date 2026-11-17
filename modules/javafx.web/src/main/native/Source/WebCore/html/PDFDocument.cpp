@@ -27,8 +27,9 @@
 
 #if ENABLE(PDFJS)
 
-#include "AddEventListenerOptions.h"
+#include "AddEventListenerOptionsInlines.h"
 #include "DocumentLoader.h"
+#include "DocumentSettingsValues.h"
 #include "EventListener.h"
 #include "EventNames.h"
 #include "FrameDestructionObserverInlines.h"
@@ -45,12 +46,14 @@
 #include "RawDataDocumentParser.h"
 #include "ScriptController.h"
 #include "Settings.h"
+#include "UserScriptTypes.h"
+#include "WindowPostMessageOptions.h"
 #include <JavaScriptCore/ObjectConstructor.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(PDFDocument);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PDFDocument);
 
 using namespace HTMLNames;
 
@@ -148,12 +151,12 @@ void PDFDocument::createDocumentStructure()
     // Description of parameters:
     // - Empty `?file=` parameter prevents default pdf from loading.
     auto viewerURL = "webkit-pdfjs-viewer://pdfjs/web/viewer.html?file="_s;
-    auto rootElement = HTMLHtmlElement::create(*this);
+    Ref rootElement = HTMLHtmlElement::create(*this);
     appendChild(rootElement);
 
     frame()->injectUserScripts(UserScriptInjectionTime::DocumentStart);
 
-    auto body = HTMLBodyElement::create(*this);
+    Ref body = HTMLBodyElement::create(*this);
     body->setAttribute(styleAttr, "margin: 0px;height: 100vh;"_s);
     rootElement->appendChild(body);
 
@@ -201,7 +204,7 @@ void PDFDocument::postMessageToIframe(const String& name, JSC::JSObject* data)
     WindowPostMessageOptions options;
     if (data)
         options = WindowPostMessageOptions { "/"_s, Vector { JSC::Strong<JSC::JSObject> { vm, data } } };
-    auto returnValue = contentWindow->postMessage(*contentWindowGlobalObject, *contentWindow, message, WTFMove(options));
+    auto returnValue = contentWindow->postMessage(*contentWindowGlobalObject, *contentWindow, message, WTF::move(options));
     if (returnValue.hasException())
         returnValue.releaseException();
 }
@@ -214,7 +217,7 @@ void PDFDocument::sendPDFArrayBuffer()
         if (auto arrayBuffer = mainResourceData->tryCreateArrayBuffer()) {
     auto& vm = globalObject()->vm();
     JSC::JSLockHolder lock(vm);
-    auto* dataObject = JSC::JSArrayBuffer::create(vm, globalObject()->arrayBufferStructure(arrayBuffer->sharingMode()), WTFMove(arrayBuffer));
+            auto* dataObject = JSC::JSArrayBuffer::create(vm, globalObject()->arrayBufferStructure(arrayBuffer->sharingMode()), WTF::move(arrayBuffer));
     postMessageToIframe("open-pdf"_s, dataObject);
         }
     }
@@ -239,7 +242,7 @@ void PDFDocument::injectStyleAndContentScript()
 
     auto* contentDocument = m_iframe->contentDocument();
     ASSERT(contentDocument->head());
-    auto link = HTMLLinkElement::create(HTMLNames::linkTag, *contentDocument, false);
+    Ref link = HTMLLinkElement::create(HTMLNames::linkTag, *contentDocument, false);
     link->setAttribute(relAttr, "stylesheet"_s);
 #if PLATFORM(COCOA)
     link->setAttribute(hrefAttr, "webkit-pdfjs-viewer://pdfjs/extras/cocoa/style.css"_s);

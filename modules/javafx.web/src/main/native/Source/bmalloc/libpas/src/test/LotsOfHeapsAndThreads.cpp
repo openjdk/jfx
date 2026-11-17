@@ -42,7 +42,7 @@ void testLotsOfHeapsAndThreads(unsigned numHeaps, unsigned numThreads, unsigned 
     pas_heap_ref* heaps = new pas_heap_ref[numHeaps];
 
     for (unsigned i = numHeaps; i--;)
-        heaps[i] = BMALLOC_HEAP_REF_INITIALIZER(new bmalloc_type(BMALLOC_TYPE_INITIALIZER(16, 16, "test")));
+        heaps[i] = BMALLOC_HEAP_REF_INITIALIZER(new bmalloc_type(BMALLOC_TYPE_INITIALIZER(16, 16, "test")), pas_bmalloc_heap_ref_kind_non_compact);
 
     for (unsigned i = numThreads; i--;) {
         threads[i] = thread([&] () {

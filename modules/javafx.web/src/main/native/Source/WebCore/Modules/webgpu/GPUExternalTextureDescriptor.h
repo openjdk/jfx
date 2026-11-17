@@ -32,13 +32,15 @@
 #include "WebGPUExternalTextureDescriptor.h"
 #include <wtf/RefPtr.h>
 
-typedef struct __CVBuffer* CVPixelBufferRef;
+#if PLATFORM(COCOA)
+typedef struct CF_BRIDGED_TYPE(id) __CVBuffer* CVPixelBufferRef;
+#endif
 
 namespace WebCore {
 
 class HTMLVideoElement;
 #if ENABLE(WEB_CODECS)
-using GPUVideoSource = std::variant<RefPtr<HTMLVideoElement>, RefPtr<WebCodecsVideoFrame>>;
+using GPUVideoSource = Variant<RefPtr<HTMLVideoElement>, RefPtr<WebCodecsVideoFrame>>;
 #else
 using GPUVideoSource = RefPtr<HTMLVideoElement>;
 #endif
@@ -50,7 +52,12 @@ struct GPUExternalTextureDescriptor : public GPUObjectDescriptorBase {
     {
 #if ENABLE(WEB_CODECS)
         return WTF::switchOn(videoSource, [&](const RefPtr<HTMLVideoElement> videoElement) -> WebGPU::VideoSourceIdentifier {
-            return videoElement->playerIdentifier();
+            if (auto playerIdentifier = videoElement->playerIdentifier())
+                return playerIdentifier;
+            RefPtr<WebCore::VideoFrame> result;
+            if (videoElement->player())
+                result = videoElement->protectedPlayer()->videoFrameForCurrentTime();
+            return result;
         }
         , [&](const RefPtr<WebCodecsVideoFrame> videoFrame) -> WebGPU::VideoSourceIdentifier {
             return videoFrame->internalFrame();

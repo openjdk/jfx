@@ -33,8 +33,8 @@
 namespace WebCore {
 
 IntPoint::IntPoint(const FloatPoint& p)
-    : m_x(clampToInteger(p.x()))
-    , m_y(clampToInteger(p.y()))
+    : m_x(clampTo<int>(p.x()))
+    , m_y(clampTo<int>(p.y()))
 {
 }
 
@@ -53,7 +53,7 @@ IntPoint IntPoint::constrainedWithin(const IntRect& rect) const
 
 TextStream& operator<<(TextStream& ts, const IntPoint& p)
 {
-    return ts << "(" << p.x() << "," << p.y() << ")";
+    return ts << '(' << p.x() << ',' << p.y() << ')';
 }
 
 }

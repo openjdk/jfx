@@ -32,9 +32,12 @@
 #include "ScrollingStatePluginHostingNode.h"
 #include "ScrollingStateTree.h"
 #include "ScrollingTree.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ScrollingTreePluginHostingNode);
 
 Ref<ScrollingTreePluginHostingNode> ScrollingTreePluginHostingNode::create(ScrollingTree& scrollingTree, ScrollingNodeID nodeID)
 {
@@ -60,7 +63,7 @@ void ScrollingTreePluginHostingNode::applyLayerPositions()
 
 void ScrollingTreePluginHostingNode::dumpProperties(TextStream& ts, OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const
 {
-    ts << "plugin hosting node";
+    ts << "plugin hosting node"_s;
     ScrollingTreeNode::dumpProperties(ts, behavior);
 }
 

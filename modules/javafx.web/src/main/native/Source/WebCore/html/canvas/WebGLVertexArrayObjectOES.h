@@ -33,14 +33,22 @@ namespace WebCore {
 
 class WebGLVertexArrayObjectOES final : public WebGLVertexArrayObjectBase {
 public:
+    static Ref<WebGLVertexArrayObjectOES> createLost();
     static Ref<WebGLVertexArrayObjectOES> createDefault(WebGLRenderingContextBase&);
-    static RefPtr<WebGLVertexArrayObjectOES> createUser(WebGLRenderingContextBase&);
+    static Ref<WebGLVertexArrayObjectOES> createUser(WebGLRenderingContextBase&);
+
     virtual ~WebGLVertexArrayObjectOES();
 private:
     WebGLVertexArrayObjectOES(WebGLRenderingContextBase&, PlatformGLObject, Type);
+    WebGLVertexArrayObjectOES();
     void deleteObjectImpl(const AbstractLocker&, GraphicsContextGL*, PlatformGLObject) final;
+    ArrayObjectType arrayObjectType() const final { return ArrayObjectType::ObjectOES; }
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WebGLVertexArrayObjectOES)
+    static bool isType(const WebCore::WebGLVertexArrayObjectBase& objectBase) { return objectBase.arrayObjectType() == WebCore::WebGLVertexArrayObjectBase::ArrayObjectType::ObjectOES; }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif

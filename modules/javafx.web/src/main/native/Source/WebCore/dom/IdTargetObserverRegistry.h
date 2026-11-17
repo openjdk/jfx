@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Google Inc. All Rights Reserved.
+ * Copyright (C) 2012 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,30 +30,32 @@
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/AtomString.h>
 #include <wtf/text/AtomStringHash.h>
 
 namespace WebCore {
 
+class Element;
 class IdTargetObserver;
 
 class IdTargetObserverRegistry final : public CanMakeCheckedPtr<IdTargetObserverRegistry> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(IdTargetObserverRegistry);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(IdTargetObserverRegistry);
     friend class IdTargetObserver;
 public:
     IdTargetObserverRegistry();
     ~IdTargetObserverRegistry();
 
-    void notifyObservers(const AtomString& id);
+    void notifyObservers(Element&, const AtomString& id);
 
 private:
     void addObserver(const AtomString& id, IdTargetObserver&);
     void removeObserver(const AtomString& id, IdTargetObserver&);
-    void notifyObserversInternal(const AtomString& id);
+    void notifyObserversInternal(Element&, const AtomString& id);
 
     struct ObserverSet final : public CanMakeCheckedPtr<ObserverSet> {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(ObserverSet);
         WTF_STRUCT_OVERRIDE_DELETE_FOR_CHECKED_PTR(ObserverSet);
 
         ObserverSet();
@@ -66,13 +68,13 @@ private:
     CheckedPtr<ObserverSet> m_notifyingObserversInSet;
 };
 
-inline void IdTargetObserverRegistry::notifyObservers(const AtomString& id)
+inline void IdTargetObserverRegistry::notifyObservers(Element& element, const AtomString& id)
 {
     ASSERT(!id.isEmpty());
     ASSERT(!m_notifyingObserversInSet);
     if (m_registry.isEmpty())
         return;
-    IdTargetObserverRegistry::notifyObserversInternal(id);
+    IdTargetObserverRegistry::notifyObserversInternal(element, id);
 }
 
 } // namespace WebCore

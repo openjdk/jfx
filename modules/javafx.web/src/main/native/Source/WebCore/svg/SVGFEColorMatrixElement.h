@@ -23,6 +23,7 @@
 
 #include "FEColorMatrix.h"
 #include "SVGFilterPrimitiveStandardAttributes.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -49,7 +50,7 @@ struct SVGPropertyTraits<ColorMatrixType> {
         return emptyString();
     }
 
-    static ColorMatrixType fromString(const String& value)
+    static ColorMatrixType fromString(SVGElement&, const String& value)
     {
         if (value == "matrix"_s)
             return ColorMatrixType::FECOLORMATRIX_TYPE_MATRIX;
@@ -64,7 +65,7 @@ struct SVGPropertyTraits<ColorMatrixType> {
 };
 
 class SVGFEColorMatrixElement final : public SVGFilterPrimitiveStandardAttributes {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGFEColorMatrixElement);
+    WTF_MAKE_TZONE_ALLOCATED(SVGFEColorMatrixElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGFEColorMatrixElement);
 public:
     static Ref<SVGFEColorMatrixElement> create(const QualifiedName&, Document&);
@@ -77,12 +78,10 @@ public:
     SVGAnimatedEnumeration& typeAnimated() { return m_type; }
     SVGAnimatedNumberList& valuesAnimated() { return m_values; }
 
-private:
-    SVGFEColorMatrixElement(const QualifiedName&, Document&);
-
     using PropertyRegistry = SVGPropertyOwnerRegistry<SVGFEColorMatrixElement, SVGFilterPrimitiveStandardAttributes>;
 
-    bool isInvalidValuesLength() const;
+private:
+    SVGFEColorMatrixElement(const QualifiedName&, Document&);
 
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) override;
     void svgAttributeChanged(const QualifiedName&) override;

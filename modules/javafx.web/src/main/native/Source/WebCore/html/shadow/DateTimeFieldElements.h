@@ -26,15 +26,13 @@
 
 #pragma once
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
-
 #include "DateTimeNumericFieldElement.h"
 #include "DateTimeSymbolicFieldElement.h"
 
 namespace WebCore {
 
 class DateTimeDayFieldElement final : public DateTimeNumericFieldElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(DateTimeDayFieldElement);
+    WTF_MAKE_TZONE_ALLOCATED(DateTimeDayFieldElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DateTimeDayFieldElement);
 
 public:
@@ -49,7 +47,7 @@ private:
 };
 
 class DateTimeHourFieldElement final : public DateTimeNumericFieldElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(DateTimeHourFieldElement);
+    WTF_MAKE_TZONE_ALLOCATED(DateTimeHourFieldElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DateTimeHourFieldElement);
 
 public:
@@ -64,7 +62,7 @@ private:
 };
 
 class DateTimeMeridiemFieldElement final : public DateTimeSymbolicFieldElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(DateTimeMeridiemFieldElement);
+    WTF_MAKE_TZONE_ALLOCATED(DateTimeMeridiemFieldElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DateTimeMeridiemFieldElement);
 
 public:
@@ -83,7 +81,7 @@ private:
 };
 
 class DateTimeMillisecondFieldElement final : public DateTimeNumericFieldElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(DateTimeMillisecondFieldElement);
+    WTF_MAKE_TZONE_ALLOCATED(DateTimeMillisecondFieldElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DateTimeMillisecondFieldElement);
 
 public:
@@ -98,7 +96,7 @@ private:
 };
 
 class DateTimeMinuteFieldElement final : public DateTimeNumericFieldElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(DateTimeMinuteFieldElement);
+    WTF_MAKE_TZONE_ALLOCATED(DateTimeMinuteFieldElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DateTimeMinuteFieldElement);
 
 public:
@@ -113,7 +111,7 @@ private:
 };
 
 class DateTimeMonthFieldElement final : public DateTimeNumericFieldElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(DateTimeMonthFieldElement);
+    WTF_MAKE_TZONE_ALLOCATED(DateTimeMonthFieldElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DateTimeMonthFieldElement);
 
 public:
@@ -128,7 +126,7 @@ private:
 };
 
 class DateTimeSecondFieldElement final : public DateTimeNumericFieldElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(DateTimeSecondFieldElement);
+    WTF_MAKE_TZONE_ALLOCATED(DateTimeSecondFieldElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DateTimeSecondFieldElement);
 
 public:
@@ -143,7 +141,7 @@ private:
 };
 
 class DateTimeSymbolicMonthFieldElement final : public DateTimeSymbolicFieldElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(DateTimeSymbolicMonthFieldElement);
+    WTF_MAKE_TZONE_ALLOCATED(DateTimeSymbolicMonthFieldElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DateTimeSymbolicMonthFieldElement);
 
 public:
@@ -158,11 +156,14 @@ private:
 };
 
 class DateTimeYearFieldElement final : public DateTimeNumericFieldElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(DateTimeYearFieldElement);
+    WTF_MAKE_TZONE_ALLOCATED(DateTimeYearFieldElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DateTimeYearFieldElement);
 
 public:
     static Ref<DateTimeYearFieldElement> create(Document&, DateTimeFieldElementFieldOwner&);
+
+    void stepDown() final;
+    void stepUp() final;
 
 private:
     DateTimeYearFieldElement(Document&, DateTimeFieldElementFieldOwner&);
@@ -173,5 +174,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(DATE_AND_TIME_INPUT_TYPES)

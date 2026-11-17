@@ -34,6 +34,7 @@
 #include <libxml/xmlstring.h>
 #include <wtf/CheckedRef.h>
 #include <wtf/HashMap.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/AtomStringHash.h>
 #include <wtf/text/CString.h>
 
@@ -63,7 +64,7 @@ private:
 };
 
 class XMLDocumentParser final : public ScriptableDocumentParser, public PendingScriptClient, public CanMakeCheckedPtr<XMLDocumentParser> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(XMLDocumentParser);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(XMLDocumentParser);
 public:
     enum class IsInFrameView : bool { No, Yes };
@@ -73,14 +74,14 @@ public:
     }
     static Ref<XMLDocumentParser> create(DocumentFragment& fragment, HashMap<AtomString, AtomString>&& prefixToNamespaceMap, const AtomString& defaultNamespaceURI, OptionSet<ParserContentPolicy> parserContentPolicy)
     {
-        return adoptRef(*new XMLDocumentParser(fragment, WTFMove(prefixToNamespaceMap), defaultNamespaceURI, parserContentPolicy));
+        return adoptRef(*new XMLDocumentParser(fragment, WTF::move(prefixToNamespaceMap), defaultNamespaceURI, parserContentPolicy));
     }
 
     XMLDocumentParser() = delete;
     ~XMLDocumentParser();
 
     // Exposed for callbacks:
-    void handleError(XMLErrors::ErrorType, const char* message, TextPosition);
+    void handleError(XMLErrors::Type, const char* message, TextPosition);
 
     void setIsXHTMLDocument(bool isXHTML) { m_isXHTMLDocument = isXHTML; }
     bool isXHTMLDocument() const { return m_isXHTMLDocument; }
@@ -97,10 +98,11 @@ private:
     XMLDocumentParser(DocumentFragment&, HashMap<AtomString, AtomString>&&, const AtomString&, OptionSet<ParserContentPolicy>);
 
     // CheckedPtr interface
-    uint32_t ptrCount() const final { return CanMakeCheckedPtr::ptrCount(); }
-    uint32_t ptrCountWithoutThreadCheck() const final { return CanMakeCheckedPtr::ptrCountWithoutThreadCheck(); }
-    void incrementPtrCount() const final { CanMakeCheckedPtr::incrementPtrCount(); }
-    void decrementPtrCount() const final { CanMakeCheckedPtr::decrementPtrCount(); }
+    uint32_t checkedPtrCount() const final { return CanMakeCheckedPtr::checkedPtrCount(); }
+    uint32_t checkedPtrCountWithoutThreadCheck() const final { return CanMakeCheckedPtr::checkedPtrCountWithoutThreadCheck(); }
+    void incrementCheckedPtrCount() const final { CanMakeCheckedPtr::incrementCheckedPtrCount(); }
+    void decrementCheckedPtrCount() const final { CanMakeCheckedPtr::decrementCheckedPtrCount(); }
+    void setDidBeginCheckedPtrDeletion() final { CanMakeCheckedPtr::setDidBeginCheckedPtrDeletion(); }
 
     void insert(SegmentedString&&) final;
     void append(RefPtr<StringImpl>&&) final;
@@ -124,14 +126,14 @@ public:
     // Callbacks from parser SAX, and other functions needed inside
     // the parser implementation, but outside this class.
 
-    void error(XMLErrors::ErrorType, const char* message, va_list args) WTF_ATTRIBUTE_PRINTF(3, 0);
+    void error(XMLErrors::Type, const char* message, va_list args) WTF_ATTRIBUTE_PRINTF(3, 0);
     void startElementNs(const xmlChar* xmlLocalName, const xmlChar* xmlPrefix, const xmlChar* xmlURI,
         int numNamespaces, const xmlChar** namespaces,
         int numAttributes, int numDefaulted, const xmlChar** libxmlAttributes);
     void endElementNs();
     void characters(std::span<const xmlChar>);
     void processingInstruction(const xmlChar* target, const xmlChar* data);
-    void cdataBlock(const xmlChar*, int length);
+    void cdataBlock(std::span<const xmlChar>);
     void comment(const xmlChar*);
     void startDocument(const xmlChar* version, const xmlChar* encoding, int standalone);
     void internalSubset(const xmlChar* name, const xmlChar* externalID, const xmlChar* systemID);
@@ -152,6 +154,8 @@ private:
     void doWrite(const String&);
     void doEnd();
 
+    RefPtr<Text> protectedLeafTextNode() const { return m_leafTextNode; }
+
     xmlParserCtxtPtr context() const { return m_context ? m_context->context() : nullptr; };
 
     IsInFrameView m_isInFrameView { IsInFrameView::No };
@@ -159,11 +163,11 @@ private:
     SegmentedString m_originalSourceForTransform;
 
     RefPtr<XMLParserContext> m_context;
-    std::unique_ptr<PendingCallbacks> m_pendingCallbacks;
+    const UniqueRef<PendingCallbacks> m_pendingCallbacks;
     Vector<xmlChar> m_bufferedText;
 
-    ContainerNode* m_currentNode { nullptr };
-    Vector<ContainerNode*> m_currentNodeStack;
+    WeakPtr<ContainerNode, WeakPtrImplWithEventTargetData> m_currentNode;
+    Vector<WeakPtr<ContainerNode, WeakPtrImplWithEventTargetData>> m_currentNodeStack;
 
     RefPtr<Text> m_leafTextNode;
 

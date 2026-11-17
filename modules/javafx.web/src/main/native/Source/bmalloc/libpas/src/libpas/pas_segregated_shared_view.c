@@ -36,7 +36,6 @@
 #include "pas_page_sharing_pool.h"
 #include "pas_physical_memory_transaction.h"
 #include "pas_range16.h"
-#include "pas_segregated_page_inlines.h"
 #include "pas_segregated_shared_handle.h"
 #include "pas_segregated_shared_page_directory.h"
 #include "pas_segregated_shared_view_inlines.h"
@@ -205,7 +204,7 @@ static bool compute_summary_for_each_live_object_callback(
     pas_range range,
     void* arg)
 {
-    static const bool verbose = false;
+    static const bool verbose = PAS_SHOULD_LOG(PAS_LOG_SEGREGATED_HEAPS);
 
     compute_summary_data* data;
     unsigned index;
@@ -256,7 +255,7 @@ static bool compute_summary_for_each_live_object_callback(
 static pas_heap_summary compute_summary(pas_segregated_shared_view* view,
                                         const pas_segregated_page_config* page_config_ptr)
 {
-    static const bool verbose = false;
+    static const bool verbose = PAS_SHOULD_LOG(PAS_LOG_SEGREGATED_HEAPS);
 
     pas_segregated_page_config page_config;
     pas_segregated_page* page;
@@ -281,7 +280,7 @@ static pas_heap_summary compute_summary(pas_segregated_shared_view* view,
     end_of_page = page_config.base.page_size;
 
     if (verbose)
-        pas_log("index = %d, bump_offset = %lu/%lu.\n", view->index, end_of_payload, end_of_page);
+        pas_log("index = %d, bump_offset = %zu/%zu.\n", view->index, end_of_payload, end_of_page);
 
     PAS_ASSERT(start_of_payload >= start_of_page);
     PAS_ASSERT(end_of_payload >= start_of_payload);

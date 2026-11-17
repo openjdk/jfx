@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, Google Inc. All rights reserved.
+ * Copyright (C) 2011 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,17 +30,19 @@
 #include "UpSampler.h"
 #include "WaveShaperProcessor.h"
 #include <memory>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 // WaveShaperDSPKernel is an AudioDSPKernel and is responsible for non-linear distortion on one channel.
 
 class WaveShaperDSPKernel final : public AudioDSPKernel {
+    WTF_MAKE_TZONE_ALLOCATED(WaveShaperDSPKernel);
 public:
     explicit WaveShaperDSPKernel(WaveShaperProcessor*);
 
     // AudioDSPKernel
-    void process(const float* source, float* dest, size_t framesToProcess) final;
+    void process(std::span<const float> source, std::span<float> destination) final;
     void reset() final;
     double tailTime() const final { return 0; }
     double latencyTime() const final;
@@ -48,18 +50,21 @@ public:
     // Oversampling requires more resources, so let's only allocate them if needed.
     void lazyInitializeOversampling();
 
-private:
     // Apply the shaping curve.
-    void processCurve(const float* source, float* dest, size_t framesToProcess);
+    WEBCORE_EXPORT static void processCurveWithData(std::span<const float> source, std::span<float> destination, std::span<const float> curveData);
 
+private:
+    bool isWaveShaperDSPKernel() const final { return true; }
+
+    void processCurve(std::span<const float> source, std::span<float> destination);
     // Use up-sampling, process at the higher sample-rate, then down-sample.
-    void processCurve2x(const float* source, float* dest, size_t framesToProcess);
-    void processCurve4x(const float* source, float* dest, size_t framesToProcess);
+    void processCurve2x(std::span<const float> source, std::span<float> destination);
+    void processCurve4x(std::span<const float> source, std::span<float> destination);
 
     bool requiresTailProcessing() const final;
 
-    WaveShaperProcessor* waveShaperProcessor() { return static_cast<WaveShaperProcessor*>(processor()); }
-    const WaveShaperProcessor* waveShaperProcessor() const { return static_cast<const WaveShaperProcessor*>(processor()); }
+    WaveShaperProcessor* waveShaperProcessor() { return downcast<WaveShaperProcessor>(processor()); }
+    const WaveShaperProcessor* waveShaperProcessor() const { return downcast<WaveShaperProcessor>(processor()); }
 
     // Oversampling.
     std::unique_ptr<AudioFloatArray> m_tempBuffer;
@@ -71,3 +76,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WaveShaperDSPKernel)
+    static bool isType(const WebCore::AudioDSPKernel& kernel) { return kernel.isWaveShaperDSPKernel(); }
+SPECIALIZE_TYPE_TRAITS_END()

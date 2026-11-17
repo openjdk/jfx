@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1163,6 +1163,7 @@ public class StyleManagerTest {
         var root = new StackPane(rect);
         rect.getStyleClass().add("rect");
 
+        String userAgentStylesheet = Application.getUserAgentStylesheet();
         try {
             // Stylesheet content: .rect { -fx-fill: blue; }
             Application.setUserAgentStylesheet("data:base64,LnJlY3QgeyAtZngtZmlsbDogYmx1ZTsgfQ==");
@@ -1171,7 +1172,7 @@ public class StyleManagerTest {
 
             assertEquals(Color.BLUE, rect.getFill());
         } finally {
-            Application.setUserAgentStylesheet("data:,");
+            Application.setUserAgentStylesheet(userAgentStylesheet);
         }
     }
 }

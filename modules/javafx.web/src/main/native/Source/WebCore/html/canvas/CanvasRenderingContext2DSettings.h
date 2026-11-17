@@ -35,6 +35,11 @@ struct CanvasRenderingContext2DSettings {
     bool desynchronized { false };
     bool willReadFrequently { false };
     PredefinedColorSpace colorSpace { PredefinedColorSpace::SRGB };
+    enum class ColorType : bool {
+        Unorm8,
+        Float16,
+    };
+    ColorType colorType { ColorType::Unorm8 };
     enum class RenderingMode {
         Unaccelerated,
         Accelerated

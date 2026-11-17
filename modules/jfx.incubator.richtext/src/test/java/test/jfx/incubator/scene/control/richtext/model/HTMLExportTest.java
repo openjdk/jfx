@@ -51,7 +51,7 @@ public class HTMLExportTest {
 
     @Test
     public void characterAttributes() throws Exception {
-        model.replace(null, TextPos.ZERO, TextPos.ZERO, "111\n", false);
+        model.replace(null, TextPos.ZERO, TextPos.ZERO, "111\n");
         check(
             """
             <html>

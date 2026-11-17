@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2006 Apple Inc.  All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +27,8 @@
 #include "InsertLineBreakCommand.h"
 
 #include "Document.h"
-#include "Editing.h"
+#include "EditingInlines.h"
+#include "EditingStyle.h"
 #include "FrameSelection.h"
 #include "HTMLBRElement.h"
 #include "HTMLHRElement.h"
@@ -35,7 +36,8 @@
 #include "HTMLTableElement.h"
 #include "LocalFrame.h"
 #include "RenderElement.h"
-#include "RenderStyleInlines.h"
+#include "RenderObjectStyle.h"
+#include "RenderStyle+GettersInlines.h"
 #include "RenderText.h"
 #include "Text.h"
 #include "VisibleUnits.h"
@@ -45,7 +47,7 @@ namespace WebCore {
 using namespace HTMLNames;
 
 InsertLineBreakCommand::InsertLineBreakCommand(Ref<Document>&& document)
-    : CompositeEditCommand(WTFMove(document))
+    : CompositeEditCommand(WTF::move(document))
 {
 }
 
@@ -60,7 +62,7 @@ bool InsertLineBreakCommand::shouldUseBreakElement(const Position& position)
     // An editing position like [input, 0] actually refers to the position before
     // the input element, and in that case we need to check the input element's
     // parent's renderer.
-    auto node = position.parentAnchoredEquivalent().protectedDeprecatedNode();
+    RefPtr node = position.parentAnchoredEquivalent().deprecatedNode();
     return node && node->renderer() && !node->renderer()->style().preserveNewline();
 }
 
@@ -85,7 +87,7 @@ void InsertLineBreakCommand::doApply()
     if (!isEditablePosition(position))
         return;
 
-    Ref document = protectedDocument();
+    Ref document = this->document();
     RefPtr<Node> nodeToInsert;
     if (shouldUseBreakElement(position))
         nodeToInsert = HTMLBRElement::create(document);
@@ -103,7 +105,7 @@ void InsertLineBreakCommand::doApply()
             insertNodeBefore(nodeToInsert->cloneNode(false), *nodeToInsert);
 
         VisiblePosition endingPosition(positionBeforeNode(nodeToInsert.get()));
-        setEndingSelection(VisibleSelection(endingPosition, endingSelection().isDirectional()));
+        setEndingSelection(VisibleSelection(endingPosition, endingSelection().directionality()));
     } else if (position.deprecatedEditingOffset() <= caretMinOffset(*position.deprecatedNode())) {
         insertNodeAt(*nodeToInsert, position);
 
@@ -111,12 +113,12 @@ void InsertLineBreakCommand::doApply()
         if (!isStartOfParagraph(positionBeforeNode(nodeToInsert.get())))
             insertNodeBefore(nodeToInsert->cloneNode(false), *nodeToInsert);
 
-        setEndingSelection(VisibleSelection(positionInParentAfterNode(nodeToInsert.get()), Affinity::Downstream, endingSelection().isDirectional()));
+        setEndingSelection(VisibleSelection(positionInParentAfterNode(nodeToInsert.get()), Affinity::Downstream, endingSelection().directionality()));
     // If we're inserting after all of the rendered text in a text node, or into a non-text node,
     // a simple insertion is sufficient.
     } else if (position.deprecatedEditingOffset() >= caretMaxOffset(*position.deprecatedNode()) || !is<Text>(*position.deprecatedNode())) {
         insertNodeAt(*nodeToInsert, position);
-        setEndingSelection(VisibleSelection(positionInParentAfterNode(nodeToInsert.get()), Affinity::Downstream, endingSelection().isDirectional()));
+        setEndingSelection(VisibleSelection(positionInParentAfterNode(nodeToInsert.get()), Affinity::Downstream, endingSelection().directionality()));
     } else if (RefPtr textNode = dynamicDowncast<Text>(*position.deprecatedNode())) {
         // Split a text node
         splitTextNode(*textNode, position.deprecatedEditingOffset());
@@ -140,7 +142,7 @@ void InsertLineBreakCommand::doApply()
             }
         }
 
-        setEndingSelection(VisibleSelection(endingPosition, Affinity::Downstream, endingSelection().isDirectional()));
+        setEndingSelection(VisibleSelection(endingPosition, Affinity::Downstream, endingSelection().directionality()));
     }
 
     // Handle the case where there is a typing style.

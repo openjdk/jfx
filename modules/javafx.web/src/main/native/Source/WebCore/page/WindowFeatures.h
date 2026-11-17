@@ -28,15 +28,15 @@
 
 #pragma once
 
-#include "DisabledAdaptations.h"
+#include <WebCore/DisabledAdaptations.h>
+#include <WebCore/FloatRect.h>
 #include <wtf/Function.h>
 #include <wtf/OptionSet.h>
+#include <wtf/Platform.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
-
-class FloatRect;
 
 struct WindowFeatures {
     bool hasAdditionalFeatures { false };
@@ -54,6 +54,10 @@ struct WindowFeatures {
     std::optional<bool> locationBarVisible;
     std::optional<bool> scrollbarsVisible;
     std::optional<bool> resizable;
+
+#if PLATFORM(GTK)
+    FloatRect oldWindowRect { };
+#endif
 
     std::optional<bool> fullscreen;
     std::optional<bool> dialog;
@@ -132,6 +136,6 @@ WindowFeatures parseDialogFeatures(StringView dialogFeaturesString, const FloatR
 OptionSet<DisabledAdaptations> parseDisabledAdaptations(StringView);
 
 enum class FeatureMode { Window, Viewport };
-void processFeaturesString(StringView features, FeatureMode, const Function<void(StringView type, StringView value)>& callback);
+void processFeaturesString(StringView features, FeatureMode, NOESCAPE const Function<void(StringView type, StringView value)>& callback);
 
 } // namespace WebCore

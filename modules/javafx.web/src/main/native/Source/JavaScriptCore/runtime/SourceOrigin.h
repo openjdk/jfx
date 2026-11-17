@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "ScriptFetcher.h"
+#include <JavaScriptCore/ScriptFetcher.h>
 #include <wtf/URL.h>
 
 namespace JSC {
@@ -39,7 +39,7 @@ public:
 
     explicit SourceOrigin(const URL& url, Ref<ScriptFetcher>&& fetcher)
         : m_url(url)
-        , m_fetcher(WTFMove(fetcher))
+        , m_fetcher(WTF::move(fetcher))
     {
     }
 
@@ -50,6 +50,8 @@ public:
     bool isNull() const { return url().isNull(); }
 
     ScriptFetcher* fetcher() const { return m_fetcher.get(); }
+
+    friend bool operator==(const SourceOrigin&, const SourceOrigin&) = default;
 
 private:
     URL m_url;

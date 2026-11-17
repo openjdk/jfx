@@ -28,7 +28,6 @@ DIRLIST = gstreamer/gst                     \
           gst-plugins-base/gst/typefind \
           gst-plugins-base/gst/audioconvert \
           gst-plugins-good/gst/audioparsers \
-          gst-plugins-good/gst/isomp4 \
           gst-plugins-good/gst/audiofx \
           gst-plugins-good/gst/equalizer \
           gst-plugins-good/gst/spectrum \
@@ -108,6 +107,7 @@ C_SOURCES = gstreamer/gst/gst.c \
             gstreamer/gst/gstevent.c \
             gstreamer/gst/gstformat.c \
             gstreamer/gst/gstghostpad.c \
+            gstreamer/gst/gstidstr.c \
             gstreamer/gst/gstinfo.c \
             gstreamer/gst/gstiterator.c \
             gstreamer/gst/gstmemory.c \
@@ -150,6 +150,7 @@ C_SOURCES = gstreamer/gst/gst.c \
             gstreamer/gst/gsturi.c \
             gstreamer/gst/gstutils.c \
             gstreamer/gst/gstvalue.c \
+            gstreamer/gst/gstvecdeque.c \
             gstreamer/libs/gst/base/gstadapter.c \
             gstreamer/libs/gst/base/gstbaseparse.c \
             gstreamer/libs/gst/base/gstbasesink.c \
@@ -164,6 +165,7 @@ C_SOURCES = gstreamer/gst/gst.c \
             gstreamer/libs/gst/base/gstpushsrc.c \
             gstreamer/libs/gst/base/gstqueuearray.c \
             gstreamer/libs/gst/base/gsttypefindhelper.c \
+            gst-plugins-base/gst-libs/gst/app/app-enumtypes.c \
             gst-plugins-base/gst-libs/gst/app/gstapp-marshal.c \
             gst-plugins-base/gst-libs/gst/app/gstappsink.c \
             gst-plugins-base/gst-libs/gst/app/gstapputils.c \
@@ -211,11 +213,16 @@ C_SOURCES = gstreamer/gst/gst.c \
             gst-plugins-base/gst-libs/gst/tag/lang.c \
             gst-plugins-base/gst-libs/gst/tag/tags.c \
             gst-plugins-base/gst-libs/gst/tag/tag-enumtypes.c \
+            gst-plugins-base/gst-libs/gst/video/gstvideometa.c \
+            gst-plugins-base/gst-libs/gst/video/gstvideopool.c \
+            gst-plugins-base/gst-libs/gst/video/gstvideotimecode.c \
             gst-plugins-base/gst-libs/gst/video/video.c \
             gst-plugins-base/gst-libs/gst/video/video-chroma.c \
             gst-plugins-base/gst-libs/gst/video/video-color.c \
             gst-plugins-base/gst-libs/gst/video/video-converter.c \
             gst-plugins-base/gst-libs/gst/video/video-format.c \
+            gst-plugins-base/gst-libs/gst/video/video-frame.c \
+            gst-plugins-base/gst-libs/gst/video/video-hdr.c \
             gst-plugins-base/gst-libs/gst/video/video-enumtypes.c \
             gst-plugins-base/gst-libs/gst/video/video-info.c \
             gst-plugins-base/gst-libs/gst/video/video-multiview.c \
@@ -245,16 +252,6 @@ C_SOURCES = gstreamer/gst/gst.c \
             gst-plugins-good/gst/equalizer/gstiirequalizer.c \
             gst-plugins-good/gst/equalizer/gstiirequalizernbands.c \
             gst-plugins-good/gst/equalizer/gstiirequalizerplugin.c \
-            gst-plugins-good/gst/isomp4/isomp4-plugin.c \
-            gst-plugins-good/gst/isomp4/gstisomp4element.c \
-            gst-plugins-good/gst/isomp4/qtdemux-webvtt.c \
-            gst-plugins-good/gst/isomp4/qtdemux.c \
-            gst-plugins-good/gst/isomp4/gstisoff.c \
-            gst-plugins-good/gst/isomp4/qtdemux_dump.c \
-            gst-plugins-good/gst/isomp4/qtdemux_lang.c \
-            gst-plugins-good/gst/isomp4/qtdemux_tags.c \
-            gst-plugins-good/gst/isomp4/qtdemux_tree.c \
-            gst-plugins-good/gst/isomp4/qtdemux_types.c \
             gst-plugins-good/gst/spectrum/gstspectrum.c \
             gst-plugins-good/gst/wavparse/gstwavparse.c \
             gstreamer/plugins/elements/gstcoreelementsplugin.c \

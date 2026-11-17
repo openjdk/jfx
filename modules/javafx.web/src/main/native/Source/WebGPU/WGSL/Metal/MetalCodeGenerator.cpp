@@ -28,9 +28,13 @@
 
 #include "AST.h"
 #include "MetalFunctionWriter.h"
-#include <notify.h>
 #include <wtf/DataLog.h>
 #include <wtf/text/StringBuilder.h>
+
+#if PLATFORM(COCOA)
+#include <notify.h>
+#include <wtf/darwin/DispatchExtras.h>
+#endif
 
 namespace WGSL {
 
@@ -48,13 +52,14 @@ static StringView metalCodePrologue()
 
 }
 
+#if PLATFORM(COCOA)
 static void dumpMetalCodeIfNeeded(StringBuilder& stringBuilder)
 {
     static bool dumpMetalCode = false;
     static std::once_flag onceFlag;
     std::call_once(onceFlag, [] {
         int dumpMetalCodeToken;
-        notify_register_dispatch("com.apple.WebKit.WebGPU.TogglePrintMetalCode", &dumpMetalCodeToken, dispatch_get_main_queue(), ^(int) {
+        notify_register_dispatch("com.apple.WebKit.WebGPU.TogglePrintMetalCode", &dumpMetalCodeToken, mainDispatchQueueSingleton(), ^(int) {
             dumpMetalCode = !dumpMetalCode;
         });
     });
@@ -64,15 +69,18 @@ static void dumpMetalCodeIfNeeded(StringBuilder& stringBuilder)
         dataLogLn(stringBuilder.toString());
     }
 }
+#endif
 
-String generateMetalCode(ShaderModule& shaderModule, PrepareResult& prepareResult, const HashMap<String, ConstantValue>& constantValues)
+String generateMetalCode(ShaderModule& shaderModule, PrepareResult& prepareResult, const HashMap<String, ConstantValue>& constantValues, DeviceState&& deviceState)
 {
     StringBuilder stringBuilder;
     stringBuilder.append(metalCodePrologue());
 
-    Metal::emitMetalFunctions(stringBuilder, shaderModule, prepareResult, constantValues);
+    Metal::emitMetalFunctions(stringBuilder, shaderModule, prepareResult, constantValues, WTF::move(deviceState));
 
+#if PLATFORM(COCOA)
     dumpMetalCodeIfNeeded(stringBuilder);
+#endif
 
     return stringBuilder.toString();
 }

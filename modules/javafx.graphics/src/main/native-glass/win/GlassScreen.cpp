@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -603,7 +603,7 @@ jobjectArray GlassScreen::CreateJavaScreens(JNIEnv *env)
     jclass screenCls = GetScreenCls(env);
 
     jobjectArray jScreens = env->NewObjectArray(numMonitors, screenCls, NULL);
-    if (CheckAndClearException(env)) {
+    if (CheckAndClearException(env) || jScreens == NULL) {
         free(g_MonitorInfos.pMonitorInfos);
         g_MonitorInfos.numInfos = g_MonitorInfos.maxInfos = 0;
         g_MonitorInfos.pMonitorInfos = NULL;

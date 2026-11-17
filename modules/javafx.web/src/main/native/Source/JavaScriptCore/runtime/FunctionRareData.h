@@ -25,11 +25,11 @@
 
 #pragma once
 
-#include "InternalFunctionAllocationProfile.h"
-#include "JSCast.h"
-#include "ObjectAllocationProfile.h"
-#include "PackedCellPtr.h"
-#include "Watchpoint.h"
+#include <JavaScriptCore/InternalFunctionAllocationProfile.h>
+#include <JavaScriptCore/JSCast.h>
+#include <JavaScriptCore/ObjectAllocationProfile.h>
+#include <JavaScriptCore/PackedCellPtr.h>
+#include <JavaScriptCore/Watchpoint.h>
 
 namespace JSC {
 
@@ -53,7 +53,7 @@ public:
 
     static FunctionRareData* create(VM&, ExecutableBase*);
 
-    static constexpr bool needsDestruction = true;
+    static constexpr DestructionMode needsDestruction = NeedsDestruction;
 
     template<typename CellType, SubspaceAccess mode>
     static GCClient::IsoSubspace* subspaceFor(VM& vm)

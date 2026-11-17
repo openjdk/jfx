@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,23 +25,29 @@
 
 package test.javafx.scene.text;
 
-import javafx.scene.text.Font;
-import javafx.scene.text.Text;
-import javafx.scene.layout.HBox;
-import javafx.scene.Scene;
-import javafx.stage.Stage;
-import test.com.sun.javafx.pgstub.StubToolkit;
-
-import com.sun.javafx.tk.Toolkit;
-
-import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import javafx.geometry.Bounds;
+import javafx.geometry.Point2D;
+import javafx.geometry.VPos;
+import javafx.scene.Scene;
+import javafx.scene.layout.HBox;
+import javafx.scene.shape.Path;
+import javafx.scene.shape.PathElement;
+import javafx.scene.text.Font;
+import javafx.scene.text.HitInfo;
+import javafx.scene.text.Text;
+import javafx.stage.Stage;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.tk.Toolkit;
+import test.com.sun.javafx.pgstub.StubToolkit;
 
 public class TextTest {
+
+    private static final double EPSILON = 0.00001;
 
     @Test
     public void testCtors() {
@@ -318,5 +324,239 @@ public class TextTest {
         } finally {
             stage.hide();
         }
-  }
+    }
+
+    private static Text text(String text) {
+        Text t = new Text(text);
+        t.setFont(new Font("System", 12.0));
+        return t;
+    }
+
+    // new StubTextLayout generates prodictable text shapes
+    private static void checkNear(PathElement[] em, double ex, double ey, double ew, double eh) {
+        Bounds b = new Path(em).getBoundsInLocal();
+        double x = b.getMinX();
+        double y = b.getMinY();
+        double w = b.getWidth();
+        double h = b.getHeight();
+        assertEquals(ex, x, EPSILON);
+        assertEquals(ey, y, EPSILON);
+        assertEquals(ew, w, EPSILON);
+        assertEquals(eh, h, EPSILON);
+    }
+
+    private void checkNear(HitInfo h, int expectedCharIndex, boolean expectedLeading, int expectedInsert) {
+        assertEquals(expectedCharIndex, h.getCharIndex());
+        assertEquals(expectedLeading, h.isLeading());
+        assertEquals(expectedInsert, h.getInsertionIndex());
+    }
+
+    @Test
+    public void caretShape() {
+        int first = 0;
+        int second = 6;
+
+        Text t = text("01234\n56789");
+
+        // top
+        t.setTextOrigin(VPos.TOP);
+        t.setLineSpacing(0);
+        checkNear(t.caretShape(first, true), -1, -1, 2, 14);
+        checkNear(t.caretShape(second, true), -1, 11, 2, 14);
+        t.setLineSpacing(50);
+        checkNear(t.caretShape(first, true), -1, -1, 2, 14);
+        checkNear(t.caretShape(second, true), -1, 61, 2, 14);
+
+        // baseline
+        t.setTextOrigin(VPos.BASELINE);
+        t.setLineSpacing(0);
+        checkNear(t.caretShape(first, true), -1, -10.6, 2, 14);
+        checkNear(t.caretShape(second, true), -1, 1.4, 2, 14);
+        t.setLineSpacing(50);
+        checkNear(t.caretShape(first, true), -1, -10.6, 2, 14);
+        checkNear(t.caretShape(second, true), -1, 51.4, 2, 14);
+
+        // center
+        t.setTextOrigin(VPos.CENTER);
+        t.setLineSpacing(0);
+        checkNear(t.caretShape(first, true), -1, -13, 2, 14);
+        checkNear(t.caretShape(second, true), -1, -1, 2, 14);
+        t.setLineSpacing(50);
+        checkNear(t.caretShape(first, true), -1, -38, 2, 14);
+        checkNear(t.caretShape(second, true), -1, 24, 2, 14);
+
+        // bottom
+        t.setTextOrigin(VPos.BOTTOM);
+        t.setLineSpacing(0);
+        checkNear(t.caretShape(first, true), -1, -25, 2, 14);
+        checkNear(t.caretShape(second, true), -1, -13, 2, 14);
+        t.setLineSpacing(50);
+        checkNear(t.caretShape(first, true), -1, -75, 2, 14);
+        checkNear(t.caretShape(second, true), -1, -13, 2, 14);
+    }
+
+    @Test
+    public void hitInfo() {
+        double first = 0;
+        double second = 12;
+        double baseline = -9;
+        double height = -24;
+        double lineSpacing = 50;
+
+        Text t = text("01234\n56789");
+
+        // top
+        t.setTextOrigin(VPos.TOP);
+        t.setLineSpacing(0);
+        checkNear(t.hitTest(new Point2D(0, first)), 0, true, 0);
+        checkNear(t.hitTest(new Point2D(0, second)), 6, true, 6);
+        t.setLineSpacing(lineSpacing);
+        checkNear(t.hitTest(new Point2D(0, first)), 0, true, 0);
+        checkNear(t.hitTest(new Point2D(0, lineSpacing + second)), 6, true, 6);
+
+        // baseline
+        t.setTextOrigin(VPos.BASELINE);
+        t.setLineSpacing(0);
+        checkNear(t.hitTest(new Point2D(0, baseline + first)), 0, true, 0);
+        checkNear(t.hitTest(new Point2D(0, baseline + second)), 6, true, 6);
+        t.setLineSpacing(lineSpacing);
+        checkNear(t.hitTest(new Point2D(0, baseline + first)), 0, true, 0);
+        checkNear(t.hitTest(new Point2D(0, baseline + lineSpacing + second)), 6, true, 6);
+
+        // center
+        t.setTextOrigin(VPos.CENTER);
+        t.setLineSpacing(0);
+        checkNear(t.hitTest(new Point2D(0, height / 2 + first)), 0, true, 0);
+        checkNear(t.hitTest(new Point2D(0, height / 2 + second)), 6, true, 6);
+        t.setLineSpacing(lineSpacing);
+        checkNear(t.hitTest(new Point2D(0, height / 2 + first)), 0, true, 0);
+        checkNear(t.hitTest(new Point2D(0, height / 2 + lineSpacing + second)), 6, true, 6);
+
+        // bottom
+        t.setTextOrigin(VPos.BOTTOM);
+        t.setLineSpacing(0);
+        checkNear(t.hitTest(new Point2D(0, height + first)), 0, true, 0);
+        checkNear(t.hitTest(new Point2D(0, height + second)), 6, true, 6);
+        t.setLineSpacing(lineSpacing);
+        checkNear(t.hitTest(new Point2D(0, height + first)), 0, true, 0);
+        checkNear(t.hitTest(new Point2D(0, height + lineSpacing + second)), 6, true, 6);
+    }
+
+    @Test
+    public void rangeShape() {
+        Text t = text("01234\n56789");
+        double lineSpacing = 50;
+
+        // top
+        t.setTextOrigin(VPos.TOP);
+        t.setLineSpacing(0);
+        checkNear(t.rangeShape(0, 10), -1, -1, 62, 26);
+        checkNear(t.getRangeShape(0, 10, false), -1, -1, 62, 26);
+        checkNear(t.getRangeShape(0, 10, true), -1, -1, 62, 26);
+        t.setLineSpacing(lineSpacing);
+        checkNear(t.rangeShape(0, 10), -1, -1, 62, 76);
+        checkNear(t.getRangeShape(0, 10, false), -1, -1, 62, 76);
+        checkNear(t.getRangeShape(0, 10, true), -1, -1, 62, 126);
+
+        // baseline
+        t.setTextOrigin(VPos.BASELINE);
+        t.setLineSpacing(0);
+        checkNear(t.rangeShape(0, 10), -1, -10.6, 62, 26);
+        checkNear(t.getRangeShape(0, 10, false), -1, -10.6, 62, 26);
+        checkNear(t.getRangeShape(0, 10, true), -1, -10.6, 62, 26);
+        t.setLineSpacing(lineSpacing);
+        checkNear(t.rangeShape(0, 10), -1, -10.6, 62, 76);
+        checkNear(t.getRangeShape(0, 10, false), -1, -10.6, 62, 76);
+        checkNear(t.getRangeShape(0, 10, true), -1, -10.6, 62, 126);
+
+        // center
+        t.setTextOrigin(VPos.CENTER);
+        t.setLineSpacing(0);
+        checkNear(t.rangeShape(0, 10), -1, -13, 62, 26);
+        checkNear(t.getRangeShape(0, 10, false), -1, -13, 62, 26);
+        checkNear(t.getRangeShape(0, 10, true), -1, -13, 62, 26);
+        t.setLineSpacing(lineSpacing);
+        checkNear(t.rangeShape(0, 10), -1, -38, 62, 76);
+        checkNear(t.getRangeShape(0, 10, false), -1, -38, 62, 76);
+        checkNear(t.getRangeShape(0, 10, true), -1, -38, 62, 126);
+
+        // bottom
+        t.setTextOrigin(VPos.BOTTOM);
+        t.setLineSpacing(0);
+        checkNear(t.rangeShape(0, 10), -1, -25, 62, 26);
+        checkNear(t.getRangeShape(0, 10, false), -1, -25, 62, 26);
+        checkNear(t.getRangeShape(0, 10, true), -1, -25, 62, 26);
+        t.setLineSpacing(lineSpacing);
+        checkNear(t.rangeShape(0, 10), -1, -75, 62, 76);
+        checkNear(t.getRangeShape(0, 10, false), -1, -75, 62, 76);
+        checkNear(t.getRangeShape(0, 10, true), -1, -75, 62, 126);
+    }
+
+    @Test
+    public void strikeThroughShape() {
+        Text t = text("01234\n56789");
+        double lineSpacing = 50;
+
+        // top
+        t.setTextOrigin(VPos.TOP);
+        t.setLineSpacing(0);
+        checkNear(t.getStrikeThroughShape(0, 10), -1, 8.6, 62, 15);
+        t.setLineSpacing(lineSpacing);
+        checkNear(t.getStrikeThroughShape(0, 10), -1, 8.6, 62, 65);
+
+        // baseline
+        t.setTextOrigin(VPos.BASELINE);
+        t.setLineSpacing(0);
+        checkNear(t.getStrikeThroughShape(0, 10), -1, -1, 62, 15);
+        t.setLineSpacing(lineSpacing);
+        checkNear(t.getStrikeThroughShape(0, 10), -1, -1, 62, 65);
+
+        // center
+        t.setTextOrigin(VPos.CENTER);
+        t.setLineSpacing(0);
+        checkNear(t.getStrikeThroughShape(0, 10), -1, -3.4, 62, 15);
+        t.setLineSpacing(lineSpacing);
+        checkNear(t.getStrikeThroughShape(0, 10), -1, -28.4, 62, 65);
+
+        // bottom
+        t.setTextOrigin(VPos.BOTTOM);
+        t.setLineSpacing(0);
+        checkNear(t.getStrikeThroughShape(0, 10), -1, -15.4, 62, 15);
+        t.setLineSpacing(lineSpacing);
+        checkNear(t.getStrikeThroughShape(0, 10), -1, -65.4, 62, 65);
+    }
+
+    @Test
+    public void underlineShape() {
+        Text t = text("01234\n56789");
+        double lineSpacing = 50;
+
+        // top
+        t.setTextOrigin(VPos.TOP);
+        t.setLineSpacing(0);
+        checkNear(t.underlineShape(0, 10), -1, 9.6, 62, 15);
+        t.setLineSpacing(lineSpacing);
+        checkNear(t.underlineShape(0, 10), -1, 9.6, 62, 65);
+
+        // baseline
+        t.setTextOrigin(VPos.BASELINE);
+        t.setLineSpacing(0);
+        checkNear(t.underlineShape(0, 10), -1, 0, 62, 15);
+        t.setLineSpacing(lineSpacing);
+        checkNear(t.underlineShape(0, 10), -1, 0, 62, 65);
+
+        // center
+        t.setTextOrigin(VPos.CENTER);
+        t.setLineSpacing(0);
+        checkNear(t.underlineShape(0, 10), -1, -2.4, 62, 15);
+        t.setLineSpacing(lineSpacing);
+        checkNear(t.underlineShape(0, 10), -1, -27.4, 62, 65);
+
+        // bottom
+        t.setTextOrigin(VPos.BOTTOM);
+        t.setLineSpacing(0);
+        checkNear(t.underlineShape(0, 10), -1, -14.4, 62, 15);
+        t.setLineSpacing(lineSpacing);
+        checkNear(t.underlineShape(0, 10), -1, -64.4, 62, 65);
+    }
 }

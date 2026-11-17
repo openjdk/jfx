@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,7 @@
  */
 package com.oracle.tools.fx.monkey.pages;
 
+import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.ScatterChart;
 import javafx.scene.chart.XYChart;
 import com.oracle.tools.fx.monkey.sheets.XYChartPropertySheet;
@@ -38,13 +39,18 @@ public class ScatterChartPage extends XYChartPageBase {
     public ScatterChartPage() {
         super("ScatterChartPage");
 
-        chart = new ScatterChart<>(createNumberAxis("X Axis"), createNumberAxis("Y Axis"));
+        NumberAxis xAxis = createNumberAxis("X Axis");
+        NumberAxis yAxis = createNumberAxis("Y Axis");
+
+        chart = new ScatterChart<>(xAxis, yAxis);
         chart.setTitle("Scatter Chart");
         addSeries();
 
         OptionPane op = new OptionPane();
         op.section("ScatterChart");
         op.label("no specific properties");
+        numberAxisOptions("X Axis", "x", op, xAxis);
+        numberAxisOptions("Y Axis", "y", op, yAxis);
         XYChartPropertySheet.appendTo(this, op, chart);
 
         setContent(chart);

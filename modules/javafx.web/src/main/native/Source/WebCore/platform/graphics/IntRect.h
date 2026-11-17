@@ -25,25 +25,27 @@
 
 #pragma once
 
-#include "IntPoint.h"
-#include "LayoutUnit.h"
+#include <WebCore/IntPoint.h>
+#include <WebCore/LayoutUnit.h>
+#include <wtf/Platform.h>
+#include <wtf/TZoneMalloc.h>
 
 #if USE(CG)
 typedef struct CGRect CGRect;
 #endif
 
 #if PLATFORM(MAC)
-#ifdef NSGEOMETRY_TYPES_SAME_AS_CGGEOMETRY_TYPES
 typedef struct CGRect NSRect;
-#else
-typedef struct _NSRect NSRect;
-#endif
 #endif
 
 #if PLATFORM(IOS_FAMILY)
 #ifndef NSRect
 #define NSRect CGRect
 #endif
+#endif
+
+#if USE(SKIA)
+struct SkIRect;
 #endif
 
 #if PLATFORM(WIN)
@@ -64,7 +66,7 @@ class FloatRect;
 class LayoutRect;
 
 class IntRect {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(IntRect);
 public:
     IntRect() = default;
     IntRect(const IntPoint& location, const IntSize& size)
@@ -199,7 +201,7 @@ public:
 
     // Return false if x + width or y + height overflows.
     WEBCORE_EXPORT bool isValid() const;
-    WEBCORE_EXPORT IntRect WARN_UNUSED_RETURN toRectWithExtentsClippedToNumericLimits() const;
+    [[nodiscard]] WEBCORE_EXPORT IntRect toRectWithExtentsClippedToNumericLimits() const;
 
     friend bool operator==(const IntRect&, const IntRect&) = default;
 
@@ -217,8 +219,9 @@ public:
     WEBCORE_EXPORT operator CGRect() const;
 #endif
 
-#if PLATFORM(MAC) && !defined(NSGEOMETRY_TYPES_SAME_AS_CGGEOMETRY_TYPES)
-    WEBCORE_EXPORT operator NSRect() const;
+#if USE(SKIA)
+    IntRect(const SkIRect&);
+    WEBCORE_EXPORT operator SkIRect() const;
 #endif
 
 private:
@@ -254,10 +257,6 @@ inline IntRect operator-(const IntRect& r, const IntPoint& offset)
 
 #if USE(CG)
 WEBCORE_EXPORT IntRect enclosingIntRect(const CGRect&);
-#endif
-
-#if PLATFORM(MAC) && !defined(NSGEOMETRY_TYPES_SAME_AS_CGGEOMETRY_TYPES)
-WEBCORE_EXPORT IntRect enclosingIntRect(const NSRect&);
 #endif
 
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const IntRect&);

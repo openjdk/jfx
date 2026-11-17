@@ -28,6 +28,7 @@
 
 #if ENABLE(MEDIA_SOURCE)
 
+#include "DestinationColorSpace.h"
 #include "MediaPlayer.h"
 #include "MediaSourcePrivate.h"
 #include "MediaSourcePrivateClient.h"
@@ -36,15 +37,18 @@
 #include <wtf/NativePromise.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/RunLoop.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 class MediaPlayerFactoryMediaSourceMock final : public MediaPlayerFactory {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(MediaPlayerFactoryMediaSourceMock);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(MediaPlayerFactoryMediaSourceMock);
 private:
     MediaPlayerEnums::MediaEngineIdentifier identifier() const final { return MediaPlayerEnums::MediaEngineIdentifier::MockMSE; };
 
-    Ref<MediaPlayerPrivateInterface> createMediaEnginePlayer(MediaPlayer* player) const final { return adoptRef(*new MockMediaPlayerMediaSource(player)); }
+    Ref<MediaPlayerPrivateInterface> createMediaEnginePlayer(MediaPlayer& player) const final { return adoptRef(*new MockMediaPlayerMediaSource(player)); }
 
     void getSupportedTypes(HashSet<String>& types) const final
     {
@@ -97,7 +101,7 @@ MediaPlayer::SupportsType MockMediaPlayerMediaSource::supportsType(const MediaEn
     return MediaPlayer::SupportsType::MayBeSupported;
 }
 
-MockMediaPlayerMediaSource::MockMediaPlayerMediaSource(MediaPlayer* player)
+MockMediaPlayerMediaSource::MockMediaPlayerMediaSource(MediaPlayer& player)
     : m_player(player)
 {
 }
@@ -109,8 +113,13 @@ void MockMediaPlayerMediaSource::load(const String&)
     ASSERT_NOT_REACHED();
 }
 
-void MockMediaPlayerMediaSource::load(const URL&, const ContentType&, MediaSourcePrivateClient& source)
+void MockMediaPlayerMediaSource::load(const URL&, const LoadOptions&, MediaSourcePrivateClient& source)
 {
+    if (RefPtr mediaSourcePrivate = downcast<MockMediaSourcePrivate>(source.mediaSourcePrivate())) {
+        mediaSourcePrivate->setPlayer(this);
+        m_mediaSourcePrivate = WTF::move(mediaSourcePrivate);
+        source.reOpen();
+    } else
     m_mediaSourcePrivate = MockMediaSourcePrivate::create(*this, source);
 }
 
@@ -138,12 +147,21 @@ FloatSize MockMediaPlayerMediaSource::naturalSize() const
 
 bool MockMediaPlayerMediaSource::hasVideo() const
 {
-    return m_mediaSourcePrivate ? m_mediaSourcePrivate->hasVideo() : false;
+    RefPtr mediaSourcePrivate = m_mediaSourcePrivate;
+    return mediaSourcePrivate ? mediaSourcePrivate->hasVideo() : false;
 }
 
 bool MockMediaPlayerMediaSource::hasAudio() const
 {
-    return m_mediaSourcePrivate ? m_mediaSourcePrivate->hasAudio() : false;
+    RefPtr mediaSourcePrivate = m_mediaSourcePrivate;
+    return mediaSourcePrivate ? mediaSourcePrivate->hasAudio() : false;
+}
+
+void MockMediaPlayerMediaSource::characteristicsFromMediaSourceChanged()
+{
+    assertIsMainThread();
+    if (RefPtr player = m_player.get())
+        player->characteristicChanged();
 }
 
 void MockMediaPlayerMediaSource::setPageIsVisible(bool)
@@ -167,7 +185,20 @@ MediaPlayer::NetworkState MockMediaPlayerMediaSource::networkState() const
 
 MediaPlayer::ReadyState MockMediaPlayerMediaSource::readyState() const
 {
-    return m_readyState;
+    RefPtr mediaSourcePrivate = m_mediaSourcePrivate;
+    return mediaSourcePrivate ? mediaSourcePrivate->mediaPlayerReadyState() : MediaPlayer::ReadyState::HaveNothing;
+}
+
+void MockMediaPlayerMediaSource::readyStateFromMediaSourceChanged()
+{
+    assertIsMainThread();
+    if (RefPtr player = m_player.get())
+        player->readyStateChanged();
+}
+
+void MockMediaPlayerMediaSource::mediaSourceHasRetrievedAllData()
+{
+    setNetworkState(MediaPlayer::NetworkState::Loaded);
 }
 
 MediaTime MockMediaPlayerMediaSource::maxTimeSeekable() const
@@ -201,7 +232,10 @@ MediaTime MockMediaPlayerMediaSource::currentTime() const
 
 bool MockMediaPlayerMediaSource::timeIsProgressing() const
 {
-    return m_playing && m_mediaSourcePrivate && m_mediaSourcePrivate->hasFutureTime(currentTime());
+    if (!m_playing)
+        return false;
+    RefPtr mediaSourcePrivate = m_mediaSourcePrivate;
+    return mediaSourcePrivate && mediaSourcePrivate->hasFutureTime(currentTime());
 }
 
 void MockMediaPlayerMediaSource::notifyActiveSourceBuffersChanged()
@@ -212,43 +246,48 @@ void MockMediaPlayerMediaSource::notifyActiveSourceBuffersChanged()
 
 MediaTime MockMediaPlayerMediaSource::duration() const
 {
-    return m_mediaSourcePrivate ? m_mediaSourcePrivate->duration() : MediaTime::zeroTime();
+    RefPtr mediaSourcePrivate = m_mediaSourcePrivate;
+    return mediaSourcePrivate ? mediaSourcePrivate->duration() : MediaTime::zeroTime();
+}
+
+RefPtr<MockMediaSourcePrivate> MockMediaPlayerMediaSource::protectedMediaSourcePrivate()
+{
+    return m_mediaSourcePrivate;
 }
 
 void MockMediaPlayerMediaSource::seekToTarget(const SeekTarget& target)
 {
     m_lastSeekTarget = target;
-    m_mediaSourcePrivate->waitForTarget(target)->whenSettled(RunLoop::current(), [this, weakThis = WeakPtr { this }](auto&& result) {
-        if (!weakThis || !result)
+    protectedMediaSourcePrivate()->waitForTarget(target)->whenSettled(RunLoop::currentSingleton(), [weakThis = WeakPtr { this }](auto&& result) {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis || !result)
             return;
 
-        m_mediaSourcePrivate->seekToTime(*result)->whenSettled(RunLoop::current(), [this, weakThis, seekTime = *result] {
-            RefPtr protectedThis = weakThis.get();
-            if (!protectedThis)
-                return;
-            m_lastSeekTarget.reset();
-            m_currentTime = seekTime;
+        const auto seekTime = *result;
+        protectedThis->protectedMediaSourcePrivate()->seekToTime(seekTime);
+            protectedThis->m_lastSeekTarget.reset();
+            protectedThis->m_currentTime = seekTime;
 
-            if (auto player = m_player.get()) {
+            if (RefPtr player = protectedThis->m_player.get()) {
                 player->seeked(seekTime);
             player->timeChanged();
             }
 
-            if (m_playing) {
-                callOnMainThread([this, protectedThis = WTFMove(protectedThis)] {
-                advanceCurrentTime();
+            if (protectedThis->m_playing) {
+            callOnMainThread([protectedThis = WTF::move(protectedThis)] {
+                    protectedThis->advanceCurrentTime();
             });
     }
         });
-    });
 }
 
 void MockMediaPlayerMediaSource::advanceCurrentTime()
 {
-    if (!m_mediaSourcePrivate)
+    RefPtr mediaSourcePrivate = m_mediaSourcePrivate;
+    if (!mediaSourcePrivate)
         return;
 
-    auto buffered = m_mediaSourcePrivate->buffered();
+    auto buffered = mediaSourcePrivate->buffered();
     size_t pos = buffered.find(m_currentTime);
     if (pos == notFound)
         return;
@@ -269,16 +308,6 @@ void MockMediaPlayerMediaSource::updateDuration(const MediaTime& duration)
         player->durationChanged();
 }
 
-void MockMediaPlayerMediaSource::setReadyState(MediaPlayer::ReadyState readyState)
-{
-    if (readyState == m_readyState)
-        return;
-
-    m_readyState = readyState;
-    if (auto player = m_player.get())
-        player->readyStateChanged();
-}
-
 void MockMediaPlayerMediaSource::setNetworkState(MediaPlayer::NetworkState networkState)
 {
     if (networkState == m_networkState)
@@ -291,7 +320,8 @@ void MockMediaPlayerMediaSource::setNetworkState(MediaPlayer::NetworkState netwo
 
 std::optional<VideoPlaybackQualityMetrics> MockMediaPlayerMediaSource::videoPlaybackQualityMetrics()
 {
-    return m_mediaSourcePrivate ? m_mediaSourcePrivate->videoPlaybackQualityMetrics() : std::nullopt;
+    RefPtr mediaSourcePrivate = m_mediaSourcePrivate;
+    return mediaSourcePrivate ? mediaSourcePrivate->videoPlaybackQualityMetrics() : std::nullopt;
 }
 
 DestinationColorSpace MockMediaPlayerMediaSource::colorSpace()

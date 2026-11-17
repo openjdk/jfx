@@ -27,14 +27,15 @@
 
 #if ENABLE(VIDEO)
 
-#include "Color.h"
-#include "InbandGenericCue.h"
-#include "TrackPrivateBase.h"
+#include <WebCore/Color.h>
+#include <WebCore/InbandGenericCue.h>
+#include <WebCore/TrackPrivateBase.h>
 #include <wtf/JSONValues.h>
 #include <wtf/MediaTime.h>
+#include <wtf/TZoneMallocInlines.h>
 
 #if ENABLE(DATACUE_VALUE)
-#include "SerializedPlatformDataCue.h"
+#include <WebCore/SerializedPlatformDataCue.h>
 #endif
 
 namespace WebCore {
@@ -43,6 +44,7 @@ class InbandTextTrackPrivate;
 class ISOWebVTTCue;
 
 class InbandTextTrackPrivateClient : public TrackPrivateBaseClient {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(InbandTextTrackPrivateClient);
 public:
     virtual ~InbandTextTrackPrivateClient() = default;
 

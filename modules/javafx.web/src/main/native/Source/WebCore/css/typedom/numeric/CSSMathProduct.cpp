@@ -26,7 +26,7 @@
 #include "config.h"
 #include "CSSMathProduct.h"
 
-#include "CSSCalcOperationNode.h"
+#include "CSSCalcTree.h"
 #include "CSSMathInvert.h"
 #include "CSSNumericArray.h"
 #include "ExceptionOr.h"
@@ -35,11 +35,11 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(CSSMathProduct);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CSSMathProduct);
 
 ExceptionOr<Ref<CSSMathProduct>> CSSMathProduct::create(FixedVector<CSSNumberish> numberishes)
 {
-    return create(WTF::map(WTFMove(numberishes), rectifyNumberish));
+    return create(WTF::map(WTF::move(numberishes), rectifyNumberish));
 }
 
 ExceptionOr<Ref<CSSMathProduct>> CSSMathProduct::create(Vector<Ref<CSSNumericValue>> values)
@@ -51,12 +51,12 @@ ExceptionOr<Ref<CSSMathProduct>> CSSMathProduct::create(Vector<Ref<CSSNumericVal
     if (!type)
         return Exception { ExceptionCode::TypeError };
 
-    return adoptRef(*new CSSMathProduct(WTFMove(values), WTFMove(*type)));
+    return adoptRef(*new CSSMathProduct(WTF::move(values), WTF::move(*type)));
 }
 
 CSSMathProduct::CSSMathProduct(Vector<Ref<CSSNumericValue>> values, CSSNumericType type)
-    : CSSMathValue(WTFMove(type))
-    , m_values(CSSNumericArray::create(WTFMove(values)))
+    : CSSMathValue(WTF::move(type))
+    , m_values(CSSNumericArray::create(WTF::move(values)))
 {
 }
 
@@ -107,25 +107,28 @@ auto CSSMathProduct::toSumValue() const -> std::optional<SumValue>
         for (auto& item1 : values) {
             for (auto& item2 : *newValues) {
                 Addend item { item1.value * item2.value, productOfUnits(item1.units, item2.units) };
-                temp.append(WTFMove(item));
+                temp.append(WTF::move(item));
             }
         }
-        values = WTFMove(temp);
+        values = WTF::move(temp);
     }
-    return { WTFMove(values) };
+    return { WTF::move(values) };
 }
 
-RefPtr<CSSCalcExpressionNode> CSSMathProduct::toCalcExpressionNode() const
+std::optional<CSSCalc::Child> CSSMathProduct::toCalcTreeNode() const
 {
-    Vector<Ref<CSSCalcExpressionNode>> values;
-    values.reserveInitialCapacity(m_values->length());
-    for (auto& item : m_values->array()) {
-        auto value = item->toCalcExpressionNode();
-        if (!value)
-            return nullptr;
-        values.append(value.releaseNonNull());
-    }
-    return CSSCalcOperationNode::createProduct(WTFMove(values));
+    CSSCalc::Children children = WTF::compactMap(m_values->array(), [](auto& child) {
+        return child->toCalcTreeNode();
+    });
+    if (children.size() != m_values->array().size())
+        return std::nullopt;
+
+    auto product = CSSCalc::Product { .children = WTF::move(children) };
+    auto type = CSSCalc::toType(product);
+    if (!type)
+        return std::nullopt;
+
+    return CSSCalc::makeChild(WTF::move(product), *type);
 }
 
 } // namespace WebCore

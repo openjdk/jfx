@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,7 +36,7 @@ class GPUCompilationInfo : public RefCounted<GPUCompilationInfo> {
 public:
     static Ref<GPUCompilationInfo> create(Ref<WebGPU::CompilationInfo>&& backing)
     {
-        return adoptRef(*new GPUCompilationInfo(WTFMove(backing)));
+        return adoptRef(*new GPUCompilationInfo(WTF::move(backing)));
     }
 
     Vector<Ref<GPUCompilationMessage>> messages() const;
@@ -46,11 +46,11 @@ public:
 
 private:
     GPUCompilationInfo(Ref<WebGPU::CompilationInfo>&& backing)
-        : m_backing(WTFMove(backing))
+        : m_backing(WTF::move(backing))
     {
     }
 
-    Ref<WebGPU::CompilationInfo> m_backing;
+    const Ref<WebGPU::CompilationInfo> m_backing;
 };
 
 }

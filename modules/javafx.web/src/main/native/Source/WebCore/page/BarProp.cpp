@@ -32,11 +32,13 @@
 #include "Chrome.h"
 #include "LocalFrame.h"
 #include "Page.h"
+#include "ScriptWrappableInlines.h"
 #include <wtf/TZoneMallocInlines.h>
+#include "DocumentPage.h"
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(BarProp);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(BarProp);
 
 BarProp::BarProp(LocalDOMWindow& window, Type type)
     : LocalDOMWindowProperty(&window)
@@ -46,7 +48,7 @@ BarProp::BarProp(LocalDOMWindow& window, Type type)
 
 bool BarProp::visible() const
 {
-    auto* frame = this->frame();
+    RefPtr frame = this->frame();
     if (!frame)
         return false;
     RefPtr page = frame->page();
@@ -69,5 +71,7 @@ bool BarProp::visible() const
     ASSERT_NOT_REACHED();
     return false;
 }
+
+BarProp::~BarProp() = default;
 
 } // namespace WebCore

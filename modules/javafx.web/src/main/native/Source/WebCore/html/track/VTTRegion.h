@@ -33,10 +33,11 @@
 
 #if ENABLE(VIDEO)
 
-#include "ContextDestructionObserver.h"
-#include "FloatPoint.h"
-#include "TextTrack.h"
-#include "Timer.h"
+#include <WebCore/ContextDestructionObserver.h>
+#include <WebCore/FloatPoint.h>
+#include <WebCore/TextTrack.h>
+#include <WebCore/Timer.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 
 namespace WebCore {
 
@@ -52,6 +53,10 @@ public:
     }
 
     virtual ~VTTRegion();
+
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     const String& id() const { return m_id; }
     void setId(const String&);
@@ -117,6 +122,8 @@ private:
 
     static const AtomString& textTrackCueContainerScrollingClass();
 
+    RefPtr<Document> protectedDocument() const;
+
     String m_id;
     String m_settings;
 
@@ -130,8 +137,8 @@ private:
 
     // The cue container is the container that is scrolled up to obtain the
     // effect of scrolling cues when this is enabled for the regions.
-    RefPtr<HTMLDivElement> m_cueContainer;
-    RefPtr<HTMLDivElement> m_regionDisplayTree;
+    const RefPtr<HTMLDivElement> m_cueContainer;
+    const RefPtr<HTMLDivElement> m_regionDisplayTree;
 
     // Keep track of the current numeric value of the css "top" property.
     double m_currentTop { 0 };

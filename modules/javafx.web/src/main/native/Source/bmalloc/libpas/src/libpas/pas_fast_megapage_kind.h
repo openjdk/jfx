@@ -48,7 +48,7 @@ static inline const char* pas_fast_megapage_kind_get_string(pas_fast_megapage_ki
     case pas_small_other_fast_megapage_kind:
         return "small_other_fast_megapage";
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 

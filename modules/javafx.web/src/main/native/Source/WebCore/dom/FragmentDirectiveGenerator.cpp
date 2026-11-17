@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,10 +27,15 @@
 #include "FragmentDirectiveGenerator.h"
 
 #include "Document.h"
+#include "FragmentDirectiveParser.h"
+#include "FragmentDirectiveRangeFinder.h"
+#include "FragmentDirectiveUtilities.h"
 #include "HTMLParserIdioms.h"
 #include "Logging.h"
+#include "PositionInlines.h"
 #include "Range.h"
 #include "SimpleRange.h"
+#include "TextIterator.h"
 #include "VisibleUnits.h"
 #include <wtf/Deque.h>
 #include <wtf/URL.h>
@@ -39,60 +44,109 @@
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
+using namespace FragmentDirectiveUtilities;
 
 constexpr int maximumInlineStringLength = 300;
-constexpr int minimumInlineContextlessStringLength = 20;
-constexpr int numberOfWordsOfContext = 3;
+constexpr int minimumContextlessStringLength = 20;
+constexpr int defaultWordsOfContext = 3;
+constexpr int maximumExtraWordsOfContext = 4;
 
 FragmentDirectiveGenerator::FragmentDirectiveGenerator(const SimpleRange& textFragmentRange)
 {
     generateFragmentDirective(textFragmentRange);
 }
 
-static String previousWordsFromPosition(unsigned numberOfWords, VisiblePosition& startPosition)
+static bool positionsHaveSameBlockAncestor(const VisiblePosition& a, const VisiblePosition& b)
+{
+    RefPtr aNode = a.deepEquivalent().containerNode();
+    RefPtr bNode = b.deepEquivalent().containerNode();
+    return aNode && bNode && &nearestBlockAncestor(*aNode) == &nearestBlockAncestor(*bNode);
+}
+
+static VisiblePosition beforeStartOfCurrentBlock(const VisiblePosition& visiblePosition)
+{
+    auto position = visiblePosition.deepEquivalent();
+    Ref blockContainer = nearestBlockAncestor(*position.protectedContainerNode().get());
+    VisiblePosition firstPositionInBlock = firstPositionInNode(blockContainer.ptr());
+    if (firstPositionInBlock == visiblePosition)
+        return visiblePosition.previous();
+    return visiblePosition;
+}
+
+static VisiblePosition afterEndOfCurrentBlock(const VisiblePosition& visiblePosition)
+{
+    auto position = visiblePosition.deepEquivalent();
+    Ref blockContainer = nearestBlockAncestor(*position.protectedContainerNode().get());
+    VisiblePosition lastPositionInBlock = lastPositionInNode(blockContainer.ptr());
+    if (lastPositionInBlock == visiblePosition)
+        return visiblePosition.next();
+    return visiblePosition;
+}
+
+static VisiblePosition startVisiblePositionForRangeRemovingLeadingWhitespace(const SimpleRange& range)
+{
+    CharacterIterator characterIterator(range);
+    while (!characterIterator.atEnd() && !characterIterator.text().isEmpty() && isASCIIWhitespace(characterIterator.text()[0]))
+        characterIterator.advance(1);
+    if (characterIterator.atEnd())
+        return { makeContainerOffsetPosition(range.end) };
+    return { makeContainerOffsetPosition(characterIterator.range().start) };
+}
+
+static VisiblePosition endVisiblePositionForRangeRemovingTrailingWhitespace(const SimpleRange& range)
+{
+    BackwardsCharacterIterator characterIterator(range);
+    while (!characterIterator.atEnd() && !characterIterator.text().isEmpty() && isASCIIWhitespace(characterIterator.text()[characterIterator.text().length() - 1]))
+        characterIterator.advance(1);
+    if (characterIterator.atEnd())
+        return { makeContainerOffsetPosition(range.start) };
+    return { makeContainerOffsetPosition(characterIterator.range().end) };
+}
+
+static String previousWordsFromPositionInSameBlock(unsigned numberOfWords, VisiblePosition& startPosition)
 {
     auto previousPosition = startPosition;
     while (numberOfWords--) {
         auto potentialPreviousPosition = previousWordPosition(previousPosition);
-        if (potentialPreviousPosition.deepEquivalent().containerNode() != startPosition.deepEquivalent().containerNode())
+        if (!positionsHaveSameBlockAncestor(potentialPreviousPosition, startPosition))
             break;
         previousPosition = potentialPreviousPosition;
     }
 
-    auto document = startPosition.deepEquivalent().document();
+    RefPtr document = startPosition.deepEquivalent().document();
     if (!document)
         return { };
 
-    auto range = Range::create(*document);
+    Ref range = Range::create(*document);
     RefPtr startNode = previousPosition.deepEquivalent().containerNode();
     range->setStart(startNode.releaseNonNull(), previousPosition.deepEquivalent().computeOffsetInContainerNode());
     RefPtr endNode = startPosition.deepEquivalent().containerNode();
     range->setEnd(endNode.releaseNonNull(), startPosition.deepEquivalent().computeOffsetInContainerNode());
 
-    return range->toString().trim(isHTMLSpaceButNotLineBreak);
+    return range->toString().trim(isHTMLSpaceButNotLineBreak).simplifyWhiteSpace(isASCIIWhitespace);
 }
 
-static String nextWordsFromPosition(unsigned numberOfWords, VisiblePosition& startPosition)
+static String nextWordsFromPositionInSameBlock(unsigned numberOfWords, VisiblePosition& startPosition)
 {
     auto nextPosition = startPosition;
     while (numberOfWords--) {
         auto potentialNextPosition = nextWordPosition(nextPosition);
-        if (potentialNextPosition.deepEquivalent().containerNode() != startPosition.deepEquivalent().containerNode())
+        if (!positionsHaveSameBlockAncestor(potentialNextPosition, startPosition))
             break;
         nextPosition = potentialNextPosition;
     }
 
-    auto document = nextPosition.deepEquivalent().document();
+    RefPtr document = nextPosition.deepEquivalent().document();
     if (!document)
         return { };
 
-    auto range = Range::create(*document);
+    Ref range = Range::create(*document);
     RefPtr startNode = startPosition.deepEquivalent().containerNode();
     range->setStart(startNode.releaseNonNull(), startPosition.deepEquivalent().computeOffsetInContainerNode());
     RefPtr endNode = nextPosition.deepEquivalent().containerNode();
     range->setEnd(endNode.releaseNonNull(), nextPosition.deepEquivalent().computeOffsetInContainerNode());
 
-    return range->toString().trim(isHTMLSpaceButNotLineBreak);
+    return range->toString().trim(isHTMLSpaceButNotLineBreak).simplifyWhiteSpace(isASCIIWhitespace);
 }
 
 // https://wicg.github.io/scroll-to-text-fragment/#generating-text-fragment-directives
@@ -100,52 +154,70 @@ void FragmentDirectiveGenerator::generateFragmentDirective(const SimpleRange& te
 {
     LOG_WITH_STREAM(TextFragment, stream << " generateFragmentDirective: ");
 
-    String textDirectivePrefix = ":~:text="_s;
+    Ref document = textFragmentRange.startContainer().document();
+    document->updateLayoutIgnorePendingStylesheets();
 
-    auto url = textFragmentRange.startContainer().document().url();
-    auto textFromRange = createLiveRange(textFragmentRange)->toString();
+    auto url = document->url();
+    auto textFromRange = createLiveRange(textFragmentRange)->toString().simplifyWhiteSpace(isASCIIWhitespace);
+    VisiblePosition visibleStartPosition = startVisiblePositionForRangeRemovingLeadingWhitespace(textFragmentRange);
+    VisiblePosition visibleEndPosition = endVisiblePositionForRangeRemovingTrailingWhitespace(textFragmentRange);
 
-    VisiblePosition visibleEndPosition = VisiblePosition(Position(textFragmentRange.protectedEndContainer(), textFragmentRange.endOffset(), Position::PositionIsOffsetInAnchor));
-    VisiblePosition visibleStartPosition = VisiblePosition(Position(textFragmentRange.protectedStartContainer(), textFragmentRange.startOffset(), Position::PositionIsOffsetInAnchor));
+    if (visibleStartPosition == visibleEndPosition)
+        return;
 
-    std::optional<String> prefix;
-    std::optional<String> startText;
-    std::optional<String> endText;
-    std::optional<String> suffix;
-
-    auto encodeComponent = [] (const String& component) -> std::optional<String> {
-        auto encodedComponent = percentEncodeFragmentDirectiveSpecialCharacters(component);
-        if (encodedComponent.isEmpty())
-            return std::nullopt;
-        return encodedComponent;
-    };
-
-    if (textFromRange.length() >= maximumInlineStringLength) {
-        startText = encodeComponent(nextWordsFromPosition(numberOfWordsOfContext, visibleStartPosition));
-        endText = encodeComponent(previousWordsFromPosition(numberOfWordsOfContext, visibleEndPosition));
-    } else if (textFromRange.length() > minimumInlineContextlessStringLength)
-        startText = encodeComponent(textFromRange);
-    else {
-        prefix = encodeComponent(previousWordsFromPosition(numberOfWordsOfContext, visibleStartPosition));
-        startText = encodeComponent(textFromRange);
-        suffix = encodeComponent(nextWordsFromPosition(numberOfWordsOfContext, visibleEndPosition));
+    VisiblePosition visiblePrefixEndPosition = beforeStartOfCurrentBlock(visibleStartPosition);
+    VisiblePosition visibleSuffixStartPosition = afterEndOfCurrentBlock(visibleEndPosition);
+    auto generateDirective = [&] (unsigned wordsOfContext, unsigned wordsOfStartAndEndText) {
+        ParsedTextDirective directive;
+        if (textFromRange.length() >= maximumInlineStringLength || !positionsHaveSameBlockAncestor(visibleStartPosition, visibleEndPosition)) {
+            directive.startText = nextWordsFromPositionInSameBlock(wordsOfStartAndEndText, visibleStartPosition);
+            directive.endText = previousWordsFromPositionInSameBlock(wordsOfStartAndEndText, visibleEndPosition);
+        } else
+            directive.startText = textFromRange;
+        if (wordsOfContext) {
+            directive.prefix = previousWordsFromPositionInSameBlock(wordsOfContext, visiblePrefixEndPosition);
+            directive.suffix = nextWordsFromPositionInSameBlock(wordsOfContext, visibleSuffixStartPosition);
     }
 
-    Vector<String> components;
-    if (prefix)
-        components.append(makeString(*prefix, '-'));
-    if (startText)
-        components.append(*startText);
-    if (endText)
-        components.append(*endText);
-    if (suffix)
-        components.append(makeString('-', *suffix));
+        return directive;
+    };
+    auto testDirective = [&] (ParsedTextDirective directive) {
+        auto foundRange = FragmentDirectiveRangeFinder::findRangeFromTextDirective(directive, document.get());
+        if (!foundRange)
+            return false;
 
-    url.setFragmentIdentifier(makeString(textDirectivePrefix, makeStringByJoining(components, ","_s)));
+        return VisiblePosition(makeContainerOffsetPosition(foundRange->start)) == visibleStartPosition && VisiblePosition(makeContainerOffsetPosition(foundRange->end)) == visibleEndPosition;
+    };
+    auto wordsOfContext = textFromRange.length() < minimumContextlessStringLength ? defaultWordsOfContext : 0;
+    auto wordsOfStartAndEndText = defaultWordsOfContext;
+    auto directive = [&] -> std::optional<ParsedTextDirective> {
+        for (unsigned extraWordsOfContext = 0; extraWordsOfContext <= maximumExtraWordsOfContext; extraWordsOfContext++) {
+            auto directive = generateDirective(wordsOfContext + extraWordsOfContext, wordsOfStartAndEndText + extraWordsOfContext);
+
+            if (testDirective(directive))
+                return directive;
+        }
+
+        return std::nullopt;
+    }();
 
     m_urlWithFragment = url;
+    if (directive) {
+        Vector<String> components;
+        if (!directive->prefix.isEmpty())
+            components.append(makeString(percentEncodeFragmentDirectiveSpecialCharacters(directive->prefix), '-'));
+        if (!directive->startText.isEmpty())
+            components.append(percentEncodeFragmentDirectiveSpecialCharacters(directive->startText));
+        if (!directive->endText.isEmpty())
+            components.append(percentEncodeFragmentDirectiveSpecialCharacters(directive->endText));
+        if (!directive->suffix.isEmpty())
+            components.append(makeString('-', percentEncodeFragmentDirectiveSpecialCharacters(directive->suffix)));
 
-    LOG_WITH_STREAM(TextFragment, stream << m_urlWithFragment);
+        static constexpr auto textDirectivePrefix = ":~:text="_s;
+        m_urlWithFragment.setFragmentIdentifier(makeString(textDirectivePrefix, makeStringByJoining(components, ","_s)));
+        LOG_WITH_STREAM(TextFragment, stream << "    Successfully generated fragment directive: " << m_urlWithFragment);
+    } else
+        LOG_WITH_STREAM(TextFragment, stream << "    Failed to generate fragment directive");
 }
 
 } // namespace WebCore

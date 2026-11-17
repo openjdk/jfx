@@ -31,8 +31,9 @@
 #include "InlineIteratorLineBox.h"
 #include "PlacedFloats.h"
 #include "RenderBlockFlow.h"
-#include "RenderStyleInlines.h"
-#include "RenderTableCell.h"
+#include "RenderStyle+GettersInlines.h"
+#include "StyleOrphans.h"
+#include "StyleWidows.h"
 
 namespace WebCore {
 namespace LayoutIntegration {
@@ -94,8 +95,8 @@ std::pair<Vector<LineAdjustment>, std::optional<LayoutRestartLine>> computeAdjus
     std::optional<size_t> previousPageBreakIndex;
     std::optional<LayoutRestartLine> layoutRestartLine;
 
-    size_t widows = flow.style().hasAutoWidows() ? 0 : flow.style().widows();
-    size_t orphans = flow.style().orphans();
+    size_t widows = flow.style().widows().tryValue().value_or(0).value;
+    size_t orphans = flow.style().orphans().tryValue().value_or(2).value;
 
     auto accumulatedOffset = 0_lu;
     for (size_t lineIndex = 0; lineIndex < lineCount;) {
@@ -138,7 +139,7 @@ std::pair<Vector<LineAdjustment>, std::optional<LayoutRestartLine>> computeAdjus
 
         if (adjustment.isFirstAfterPageBreak) {
             if (!lineIndex)
-                accumulatedOffset += inlineContent.clearGapBeforeFirstLine;
+                accumulatedOffset += inlineContent.clearGapBeforeFirstLine();
 
             if (flow.style().lineSnap() != LineSnap::None && blockLayoutState.lineGrid())
                 accumulatedOffset += computeFirstLineSnapAdjustment(inlineContent.displayContent().lines[lineIndex], *blockLayoutState.lineGrid());
@@ -163,13 +164,13 @@ void adjustLinePositionsForPagination(InlineContent& inlineContent, const Vector
         return;
 
     auto writingMode = inlineContent.formattingContextRoot().style().writingMode();
-    auto isHorizontalWritingMode = WebCore::isHorizontalWritingMode(writingMode);
+    bool isHorizontalWritingMode = writingMode.isHorizontal();
 
     auto& displayContent = inlineContent.displayContent();
     for (size_t lineIndex = 0; lineIndex < displayContent.lines.size(); ++lineIndex) {
         auto& line = displayContent.lines[lineIndex];
         auto& adjustment = adjustments[lineIndex];
-        line.moveInBlockDirection(adjustment.offset, isHorizontalWritingMode);
+        displayContent.moveLineInBlockDirection(lineIndex, adjustment.offset);
         if (adjustment.isFirstAfterPageBreak)
             line.setIsFirstAfterPageBreak();
     }
@@ -180,11 +181,7 @@ void adjustLinePositionsForPagination(InlineContent& inlineContent, const Vector
         else
             box.moveHorizontally(offset);
     }
-
-    inlineContent.isPaginated = true;
-    inlineContent.firstLinePaginationOffset = adjustments[0].offset;
 }
 
 }
 }
-

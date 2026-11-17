@@ -31,6 +31,8 @@
 #include "B3Value.h"
 #include "B3ValueKey.h"
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC { namespace B3 {
 
 inline ValueKey::ValueKey(Kind kind, Type type, Value* child)
@@ -55,6 +57,15 @@ inline ValueKey::ValueKey(Kind kind, Type type, Value* a, Value* b, Value* c)
     u.indices[0] = a->index();
     u.indices[1] = b->index();
     u.indices[2] = c->index();
+}
+
+inline ValueKey::ValueKey(Kind kind, Type type, Value* a, int32_t value)
+    : m_kind(kind)
+    , m_type(type)
+{
+    u.indices[0] = a->index();
+    u.indices[1] = value;
+    u.indices[2] = UINT32_MAX;
 }
 
 inline ValueKey::ValueKey(Kind kind, Type type, SIMDInfo simdInfo, Value* a)
@@ -105,9 +116,11 @@ inline ValueKey::ValueKey(Kind kind, Type type, SIMDInfo simdInfo, Value* a, Val
 
 inline Value* ValueKey::child(Procedure& proc, unsigned index) const
 {
-    return proc.values()[index];
+    return proc.values()[u.indices[index]];
 }
 
 } } // namespace JSC::B3
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(B3_JIT)

@@ -21,8 +21,8 @@
 
 #define __GLIB_GOBJECT_H_INSIDE__
 
-#include <gobject/gbinding.h>
 #ifndef GSTREAMER_LITE
+#include <gobject/gbinding.h>
 #include <gobject/gbindinggroup.h>
 #endif // GSTREAMER_LITE
 #include <gobject/gboxed.h>

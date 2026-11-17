@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "WebGPUBindGroupLayout.h"
+#include <WebCore/WebGPUBindGroupLayout.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Ref.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
@@ -36,7 +36,7 @@ namespace WebCore::WebGPU {
 
 class CompilationInfo;
 
-class ShaderModule : public RefCounted<ShaderModule>, public CanMakeWeakPtr<ShaderModule> {
+class ShaderModule : public RefCountedAndCanMakeWeakPtr<ShaderModule> {
 public:
     virtual ~ShaderModule() = default;
 
@@ -44,11 +44,13 @@ public:
 
     void setLabel(String&& label)
     {
-        m_label = WTFMove(label);
+        m_label = WTF::move(label);
         setLabelInternal(m_label);
     }
 
     virtual void compilationInfo(CompletionHandler<void(Ref<CompilationInfo>&&)>&&) = 0;
+    virtual bool isRemoteShaderModuleProxy() const { return false; }
+    virtual bool isShaderModuleImpl() const { return false; }
 
 protected:
     ShaderModule() = default;

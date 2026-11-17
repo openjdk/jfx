@@ -767,6 +767,38 @@ gst_object_get_parent (GstObject * object)
   return result;
 }
 
+#ifndef GSTREAMER_LITE
+/**
+ * gst_object_get_toplevel:
+ * @object: a #GstObject
+ *
+ * Returns the toplevel parent of @object. This function increases the refcount
+ * of the toplevel object so you should gst_object_unref() it after usage.
+ *
+ * Returns: (transfer full): toplevel of @object, or @object itself if it has no
+ *   parent. unref after usage.
+ *
+ * MT safe. Grabs and releases @object's LOCK.
+ *
+ * Since: 1.28
+ */
+GstObject *
+gst_object_get_toplevel (GstObject * object)
+{
+  GstObject *result = NULL, *parent;
+
+  g_return_val_if_fail (GST_IS_OBJECT (object), NULL);
+
+  result = gst_object_ref (object);
+  while ((parent = gst_object_get_parent (result))) {
+    gst_object_unref (result);
+    result = parent;
+  }
+
+  return result;
+}
+#endif // GSTREAMER_LITE
+
 /**
  * gst_object_unparent:
  * @object: a #GstObject to unparent
@@ -1498,4 +1530,24 @@ gst_object_set_control_rate (GstObject * object, GstClockTime control_rate)
   g_return_if_fail (GST_IS_OBJECT (object));
 
   object->control_rate = control_rate;
+}
+
+/**
+ * gst_object_call_async:
+ * @object: (transfer none): a #GstObject
+ * @func: (scope async): function to call asynchronously from another thread
+ * @user_data: data to pass to @func
+ *
+ * Equivalent to gst_element_call_async() but this API allows @func to be called
+ * with #GstObject. See also gst_element_call_async()
+ *
+ * Since: 1.28
+ */
+void
+gst_object_call_async (GstObject * object, GstObjectCallAsyncFunc func,
+    gpointer user_data)
+{
+  g_return_if_fail (GST_IS_OBJECT (object));
+
+  _priv_gst_object_call_async (object, (GFunc) func, user_data, NULL);
 }

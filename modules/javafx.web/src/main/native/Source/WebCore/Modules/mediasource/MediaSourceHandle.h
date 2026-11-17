@@ -35,12 +35,13 @@
 namespace WebCore {
 
 class MediaSource;
+class MediaSource;
 class MediaSourcePrivate;
 class MediaSourcePrivateClient;
 
 class MediaSourceHandle
     : public RefCounted<MediaSourceHandle> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(MediaSourceHandle);
+    WTF_MAKE_TZONE_ALLOCATED(MediaSourceHandle);
 public:
     static Ref<MediaSourceHandle> create(Ref<MediaSourceHandle>&&);
     Ref<MediaSourceHandle> detach();
@@ -49,6 +50,7 @@ public:
 
     bool isDetached() const { return m_detached; }
     bool canDetach() const;
+    bool detachable() const { return m_detachable; }
 
     void setHasEverBeenAssignedAsSrcObject();
     bool hasEverBeenAssignedAsSrcObject() const;
@@ -66,14 +68,15 @@ private:
 
     using DispatcherType = Function<void(TaskType, bool)>;
 
-    static Ref<MediaSourceHandle> create(MediaSource&, DispatcherType&&);
-    MediaSourceHandle(MediaSource&, DispatcherType&&);
+    static Ref<MediaSourceHandle> create(MediaSource&, DispatcherType&&, bool);
+    MediaSourceHandle(MediaSource&, DispatcherType&&, bool);
     explicit MediaSourceHandle(MediaSourceHandle&);
     void mediaSourceDidOpen(MediaSourcePrivate&);
     void setDetached(bool value) { m_detached = value; }
 
+    const bool m_detachable;
     bool m_detached { false };
-    Ref<SharedPrivate> m_private;
+    const Ref<SharedPrivate> m_private;
 };
 
 using DetachedMediaSourceHandle = MediaSourceHandle;

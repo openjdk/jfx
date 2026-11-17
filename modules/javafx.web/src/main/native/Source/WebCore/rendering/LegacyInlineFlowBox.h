@@ -20,9 +20,8 @@
 
 #pragma once
 
-#include "LegacyInlineBox.h"
-#include "RenderOverflow.h"
-#include "ShadowData.h"
+#include <WebCore/LegacyInlineBox.h>
+#include <WebCore/RenderOverflow.h>
 
 namespace WebCore {
 
@@ -37,7 +36,7 @@ struct GlyphOverflow;
 typedef HashMap<const LegacyInlineTextBox*, std::pair<Vector<SingleThreadWeakPtr<const Font>>, GlyphOverflow>> GlyphOverflowAndFallbackFontsMap;
 
 class LegacyInlineFlowBox : public LegacyInlineBox {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(LegacyInlineFlowBox);
+    WTF_MAKE_TZONE_ALLOCATED(LegacyInlineFlowBox);
 public:
     explicit LegacyInlineFlowBox(RenderBoxModelObject& renderer)
         : LegacyInlineBox(renderer)
@@ -78,16 +77,9 @@ public:
 
     void addToLine(LegacyInlineBox* child);
     void deleteLine() final;
-    void extractLine() final;
-    void attachLine() final;
     void adjustPosition(float dx, float dy) override;
 
-    virtual void extractLineBoxFromRenderObject();
-    virtual void attachLineBoxToRenderObject();
     virtual void removeLineBoxFromRenderObject();
-
-    void paint(PaintInfo&, const LayoutPoint&, LayoutUnit lineTop, LayoutUnit lineBottom) override;
-    bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, LayoutUnit lineTop, LayoutUnit lineBottom, HitTestAction) override;
 
     void computeOverflow(LayoutUnit lineTop, LayoutUnit lineBottom, GlyphOverflowAndFallbackFontsMap&);
 
@@ -160,7 +152,7 @@ protected:
     // The following members are only used by RootInlineBox but moved here to keep the bits packed.
 
     // Whether or not this line uses alphabetic or ideographic baselines by default.
-    unsigned m_baselineType : 1 { AlphabeticBaseline }; // FontBaseline
+    unsigned m_baselineType : 1 { enumToUnderlyingType(FontBaseline::Alphabetic) }; // FontBaseline
 
     unsigned m_lineBreakBidiStatusEor : 5; // UCharDirection
     unsigned m_lineBreakBidiStatusLastStrong : 5; // UCharDirection
@@ -176,7 +168,7 @@ private:
 #endif
 
 protected:
-    RefPtr<RenderOverflow> m_overflow;
+    std::unique_ptr<RenderOverflow> m_overflow;
 
     LegacyInlineBox* m_firstChild { nullptr };
     LegacyInlineBox* m_lastChild { nullptr };

@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "PluginReplacement.h"
+#include <WebCore/PluginReplacement.h>
 #include <wtf/HashMap.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/AtomStringHash.h>
@@ -50,7 +50,6 @@ private:
     static bool supportsMIMEType(const String&);
     static bool supportsFileExtension(StringView);
     static bool supportsURL(const URL&);
-    static bool isEnabledBySettings(const Settings&);
 
     void installReplacement(ShadowRoot&) final;
 

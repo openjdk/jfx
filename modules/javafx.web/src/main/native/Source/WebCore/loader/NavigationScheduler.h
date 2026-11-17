@@ -30,10 +30,10 @@
 
 #pragma once
 
-#include "FrameLoaderTypes.h"
-#include "LoaderMalloc.h"
-#include "Timer.h"
-#include <wtf/CheckedRef.h>
+#include <WebCore/FrameLoaderTypes.h>
+#include <WebCore/LoaderMalloc.h>
+#include <WebCore/Timer.h>
+#include <wtf/CanMakeWeakPtr.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Forward.h>
 #include <wtf/WeakRef.h>
@@ -49,13 +49,16 @@ class SecurityOrigin;
 
 enum class NewLoadInProgress : bool { No, Yes };
 enum class ScheduleLocationChangeResult : uint8_t { Stopped, Completed, Started };
+enum class ScheduleHistoryNavigationResult : bool { Completed, Aborted };
 
-class NavigationScheduler final : public CanMakeCheckedPtr<NavigationScheduler> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
-    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(NavigationScheduler);
+class NavigationScheduler final : public CanMakeWeakPtr<NavigationScheduler> {
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(NavigationScheduler, Loader);
 public:
     explicit NavigationScheduler(Frame&);
     ~NavigationScheduler();
+
+    void ref() const;
+    void deref() const;
 
     bool redirectScheduledDuringLoad();
     bool locationChangePending();
@@ -65,6 +68,7 @@ public:
     void scheduleFormSubmission(Ref<FormSubmission>&&);
     void scheduleRefresh(Document& initiatingDocument);
     void scheduleHistoryNavigation(int steps);
+    void scheduleHistoryNavigationByKey(const String&key, CompletionHandler<void(ScheduleHistoryNavigationResult)>&&);
     void schedulePageBlock(Document& originDocument);
 
     void startTimer();

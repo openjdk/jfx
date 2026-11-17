@@ -54,42 +54,42 @@ public:
             return;
         uintptr_t pointer = std::exchange(m_pointer, 0);
         if (pointer)
-            delete bitwise_cast<T*>(pointer);
+            delete std::bit_cast<T*>(pointer);
     }
 
     bool isInitialized() const { return !(m_pointer & lazyTag); }
 
-    const T& get(const OwnerType& owner) const
+    T& get(OwnerType& owner) const LIFETIME_BOUND
     {
-        return const_cast<LazyUniqueRef&>(*this).get(const_cast<OwnerType&>(owner));
+        return const_cast<LazyUniqueRef&>(*this).get(owner);
     }
 
-    T& get(OwnerType& owner)
+    T& get(OwnerType& owner) LIFETIME_BOUND
     {
         ASSERT(m_pointer);
         ASSERT(!(m_pointer & initializingTag));
-        if (UNLIKELY(m_pointer & lazyTag)) {
-            FuncType func = *bitwise_cast<FuncType*>(m_pointer & ~(lazyTag | initializingTag));
+        if (m_pointer & lazyTag) [[unlikely]] {
+            FuncType func = *std::bit_cast<FuncType*>(m_pointer & ~(lazyTag | initializingTag));
             return *func(owner, *this);
         }
-        return *bitwise_cast<T*>(m_pointer);
+        return *std::bit_cast<T*>(m_pointer);
     }
 
-    const T* getIfExists() const
+    const T* getIfExists() const LIFETIME_BOUND
     {
         return const_cast<LazyUniqueRef&>(*this).getIfExists();
     }
 
-    T* getIfExists()
+    T* getIfExists() LIFETIME_BOUND
     {
         ASSERT(m_pointer);
         if (m_pointer & lazyTag)
             return nullptr;
-        return bitwise_cast<T*>(m_pointer);
+        return std::bit_cast<T*>(m_pointer);
     }
 
-    T* ptr(OwnerType& owner) RETURNS_NONNULL { &get(owner); }
-    T* ptr(const OwnerType& owner) const RETURNS_NONNULL { return &get(owner); }
+    T* ptr(OwnerType& owner) LIFETIME_BOUND RETURNS_NONNULL { return &get(owner); }
+    T* ptr(const OwnerType& owner) const LIFETIME_BOUND RETURNS_NONNULL { return &get(owner); }
 
     template<typename Func>
     void initLater(const Func&)
@@ -102,13 +102,13 @@ public:
         // variable. The "theFunc" variable is guaranteed to be native-aligned, i.e. at least a
         // multiple of 4.
         static constexpr FuncType theFunc = &callFunc<Func>;
-        m_pointer = lazyTag | bitwise_cast<uintptr_t>(&theFunc);
+        m_pointer = lazyTag | std::bit_cast<uintptr_t>(&theFunc);
     }
 
     void set(UniqueRef<T>&& ref)
     {
-        UniqueRef<T> local = WTFMove(ref);
-        m_pointer = bitwise_cast<uintptr_t>(local.moveToUniquePtr().release());
+        UniqueRef<T> local = WTF::move(ref);
+        m_pointer = std::bit_cast<uintptr_t>(local.moveToUniquePtr().release());
     }
 
 private:
@@ -122,10 +122,10 @@ private:
         callStatelessLambda<void, Func>(owner, ref);
         RELEASE_ASSERT(!(ref.m_pointer & lazyTag));
         RELEASE_ASSERT(!(ref.m_pointer & initializingTag));
-        return bitwise_cast<T*>(ref.m_pointer);
+        return std::bit_cast<T*>(ref.m_pointer);
     }
 
-    uintptr_t m_pointer { 0 };
+    mutable uintptr_t m_pointer { 0 };
 };
 
 } // namespace WTF

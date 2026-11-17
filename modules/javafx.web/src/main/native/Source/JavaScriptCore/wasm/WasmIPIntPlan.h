@@ -30,7 +30,6 @@
 #include "WasmCallee.h"
 #include "WasmEntryPlan.h"
 #include "WasmIPIntGenerator.h"
-#include "WasmLLIntPlan.h"
 
 namespace JSC {
 
@@ -38,9 +37,9 @@ namespace Wasm {
 
 class IPIntCallee;
 
-using JSEntrypointCalleeMap = HashMap<uint32_t, RefPtr<JSEntrypointCallee>, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>>;
+using JSToWasmCalleeMap = UncheckedKeyHashMap<uint32_t, RefPtr<JSToWasmCallee>, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>>;
 
-using TailCallGraph = HashMap<uint32_t, HashSet<uint32_t, IntHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>>, IntHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>>;
+using TailCallGraph = UncheckedKeyHashMap<uint32_t, UncheckedKeyHashSet<uint32_t, IntHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>>, IntHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>>;
 
 
 class IPIntPlan final : public EntryPlan {
@@ -54,13 +53,13 @@ public:
     Vector<Ref<IPIntCallee>>&& takeCallees()
     {
         RELEASE_ASSERT(!failed() && !hasWork());
-        return WTFMove(m_calleesVector);
+        return WTF::move(m_calleesVector);
     }
 
-    JSEntrypointCalleeMap&& takeJSCallees()
+    JSToWasmCalleeMap&& takeJSToWasmCallees()
     {
         RELEASE_ASSERT(!failed() && !hasWork());
-        return WTFMove(m_jsEntrypointCallees);
+        return WTF::move(m_jsToWasmCallees);
     }
 
     bool hasWork() const final
@@ -70,11 +69,11 @@ public:
         return m_state < State::Compiled;
     }
 
-    void work(CompilationEffort) final;
+    void work() final;
 
-    bool didReceiveFunctionData(unsigned, const FunctionData&) final;
+    bool didReceiveFunctionData(FunctionCodeIndex, const FunctionData&) final;
 
-    void compileFunction(uint32_t functionIndex) final;
+    void compileFunction(FunctionCodeIndex functionIndex) final;
 
     void completeInStreaming();
     void didCompileFunctionInStreaming();
@@ -84,16 +83,16 @@ private:
     bool prepareImpl() final;
     void didCompleteCompilation() WTF_REQUIRES_LOCK(m_lock) final;
 
-    void addTailCallEdge(uint32_t, uint32_t);
+    void addTailCallEdge(uint32_t, uint32_t) WTF_REQUIRES_LOCK(m_lock);
     void computeTransitiveTailCalls() const;
 
-    bool ensureEntrypoint(IPIntCallee&, unsigned functionIndex);
+    bool ensureEntrypoint(IPIntCallee&, FunctionCodeIndex functionIndex);
 
     Vector<std::unique_ptr<FunctionIPIntMetadataGenerator>> m_wasmInternalFunctions;
     const Ref<IPIntCallee>* m_callees { nullptr };
     Vector<Ref<IPIntCallee>> m_calleesVector;
-    Vector<RefPtr<JSEntrypointCallee>> m_entrypoints;
-    JSEntrypointCalleeMap m_jsEntrypointCallees;
+    Vector<RefPtr<JSToWasmCallee>> m_entrypoints;
+    JSToWasmCalleeMap m_jsToWasmCallees;
     TailCallGraph m_tailCallGraph;
 };
 

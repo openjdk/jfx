@@ -211,6 +211,7 @@ struct _GUri {
   GUriFlags  flags;
 };
 
+#ifndef GSTREAMER_LITE
 /**
  * g_uri_ref: (skip)
  * @uri: a #GUri
@@ -261,6 +262,7 @@ g_uri_unref (GUri *uri)
 
   g_atomic_rc_box_release_full (uri, (GDestroyNotify)g_uri_clear);
 }
+#endif // GSTREAMER_LITE
 
 static gboolean
 g_uri_char_is_unreserved (gchar ch)
@@ -449,6 +451,7 @@ _uri_encoder (GString      *out,
     }
 }
 
+#ifndef GSTREAMER_LITE
 /* Parse the IP-literal construction from RFC 6874 (which extends RFC 3986 to
  * support IPv6 zone identifiers.
  *
@@ -800,6 +803,8 @@ normalize_port (const char *scheme,
   return port;
 }
 
+#endif // GSTREAMER_LITE
+
 int
 g_uri_get_default_scheme_port (const char *scheme)
 {
@@ -818,6 +823,7 @@ g_uri_get_default_scheme_port (const char *scheme)
   return -1;
 }
 
+#ifndef GSTREAMER_LITE
 static gboolean
 g_uri_split_internal (const gchar  *uri_string,
                       GUriFlags     flags,
@@ -1533,6 +1539,18 @@ g_uri_parse_relative (GUri         *base_uri,
   else
     {
       remove_dot_segments (uri->path);
+    }
+
+  /* Fix up the invalid cases from
+   * https://datatracker.ietf.org/doc/html/rfc3986#section-3, as otherwise
+   * calling g_uri_to_string() on this URI will fail. These can be caused by
+   * remove_dot_segments(), e.g. `data:/.//` gets normalised to `data://` whose
+   * path is invalid given the lack of an authority. */
+  if (uri->host == NULL && uri->path[0] == '/' && uri->path[1] == '/')
+    {
+      char *new_path = g_strconcat ("/.", uri->path, NULL);
+      g_free (uri->path);
+      uri->path = g_steal_pointer (&new_path);
     }
 
   return g_steal_pointer (&uri);
@@ -2585,6 +2603,7 @@ g_uri_get_flags (GUri *uri)
 
   return uri->flags;
 }
+#endif // GSTREAMER_LITE
 
 /**
  * g_uri_unescape_segment:
@@ -2703,13 +2722,14 @@ g_uri_escape_string (const gchar *unescaped,
 
   g_return_val_if_fail (unescaped != NULL, NULL);
 
-  s = g_string_sized_new (strlen (unescaped) * 1.25);
+  s = g_string_sized_new ((size_t) (strlen (unescaped) * 1.25));
 
   g_string_append_uri_escaped (s, unescaped, reserved_chars_allowed, allow_utf8);
 
   return g_string_free (s, FALSE);
 }
 
+#ifndef GSTREAMER_LITE
 /**
  * g_uri_unescape_bytes:
  * @escaped_string: A URI-escaped string
@@ -2797,7 +2817,7 @@ g_uri_escape_bytes (const guint8 *unescaped,
 
   g_return_val_if_fail (unescaped != NULL, NULL);
 
-  string = g_string_sized_new (length * 1.25);
+  string = g_string_sized_new ((size_t) (length * 1.25));
 
   _uri_encoder (string, unescaped, length,
                reserved_chars_allowed, FALSE);
@@ -2891,5 +2911,6 @@ g_uri_peek_scheme (const gchar *uri)
 
   return scheme;
 }
+#endif // GSTREAMER_LITE
 
 G_DEFINE_QUARK (g-uri-quark, g_uri_error)

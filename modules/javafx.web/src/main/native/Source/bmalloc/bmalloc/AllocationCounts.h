@@ -25,6 +25,8 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
 #include "BExport.h"
 #include <atomic>
 
@@ -46,7 +48,11 @@
 // size of the allocation in bytes.
 
 #if __has_include(<WebKitAdditions/AllocationCountsAdditions.h>)
+// FIXME: Properly support using WKA in modules.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnon-modular-include-in-module"
 #include <WebKitAdditions/AllocationCountsAdditions.h>
+#pragma clang diagnostic pop
 #elif __has_include(<AllocationCountsAdditions.h>)
 #include <AllocationCountsAdditions.h>
 #endif
@@ -110,3 +116,26 @@
 #define BENABLE_PROFILE_COMPACTIBLE_TRY_ALLOCATION 0
 #define BPROFILE_TRY_ALLOCATION_COMPACTIBLE(ptr, size) do { } while (false)
 #endif
+
+#ifdef BPROFILE_ZERO_FILL_PAGE
+#define BENABLE_PROFILE_ZERO_FILL_PAGE 1
+#else
+#define BENABLE_PROFILE_ZERO_FILL_PAGE 0
+#define BPROFILE_ZERO_FILL_PAGE(ptr, size, flags, tag) do { } while (false)
+#endif
+
+#ifdef BPROFILE_ALLOCATION_VM_ALLOCATION
+#define BENABLE_PROFILE_VM_ALLOCATION 1
+#else
+#define BENABLE_PROFILE_VM_ALLOCATION 0
+#define BPROFILE_ALLOCATION_VM_ALLOCATION(size, usage) do { } while (false)
+#endif
+
+#ifdef BPROFILE_ALLOCATION_INITIAL_GIGACAGE
+#define BENABLE_PROFILE_INITIAL_GIGACAGE_ALLOCATION 1
+#else
+#define BENABLE_PROFILE_INITIAL_GIGACAGE_ALLOCATION 0
+#define BPROFILE_ALLOCATION_INITIAL_GIGACAGE(size) do { } while (false)
+#endif
+
+#endif // __cplusplus

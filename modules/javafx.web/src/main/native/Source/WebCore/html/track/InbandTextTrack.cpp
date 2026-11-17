@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,7 +38,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(InbandTextTrack);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(InbandTextTrack);
 
 Ref<InbandTextTrack> InbandTextTrack::create(ScriptExecutionContext& context, InbandTextTrackPrivate& trackPrivate)
 {
@@ -49,7 +49,10 @@ Ref<InbandTextTrack> InbandTextTrack::create(ScriptExecutionContext& context, In
         return InbandGenericTextTrack::create(context, trackPrivate);
     case InbandTextTrackPrivate::CueFormat::WebVTT:
         return InbandWebVTTTextTrack::create(context, trackPrivate);
+    case InbandTextTrackPrivate::CueFormat::Unknown:
+        break;
     }
+
     ASSERT_NOT_REACHED();
     auto textTrack = InbandDataTextTrack::create(context, trackPrivate);
     textTrack->suspendIfNeeded();
@@ -57,7 +60,7 @@ Ref<InbandTextTrack> InbandTextTrack::create(ScriptExecutionContext& context, In
 }
 
 InbandTextTrack::InbandTextTrack(ScriptExecutionContext& context, InbandTextTrackPrivate& trackPrivate)
-    : TextTrack(&context, emptyAtom(), trackPrivate.id(), trackPrivate.label(), trackPrivate.language(), InBand)
+    : TextTrack(&context, emptyAtom(), trackPrivate.id(), AtomString { trackPrivate.label().isolatedCopy() }, AtomString { trackPrivate.language().isolatedCopy() }, InBand)
     , m_private(trackPrivate)
 {
     addClientToTrackPrivateBase(*this, trackPrivate);
@@ -80,7 +83,12 @@ void InbandTextTrack::setPrivate(InbandTextTrackPrivate& trackPrivate)
 
     setModeInternal(mode());
     updateKindFromPrivate();
-    setId(m_private->id());
+    setId(protectedPrivate()->id());
+}
+
+Ref<InbandTextTrackPrivate> InbandTextTrack::protectedPrivate() const
+{
+    return m_private;
 }
 
 void InbandTextTrack::setMode(Mode mode)
@@ -105,47 +113,47 @@ static inline InbandTextTrackPrivate::Mode toPrivate(TextTrack::Mode mode)
 
 void InbandTextTrack::setModeInternal(Mode mode)
 {
-    m_private->setMode(toPrivate(mode));
+    protectedPrivate()->setMode(toPrivate(mode));
 }
 
 bool InbandTextTrack::isClosedCaptions() const
 {
-    return m_private->isClosedCaptions();
+    return protectedPrivate()->isClosedCaptions();
 }
 
 bool InbandTextTrack::isSDH() const
 {
-    return m_private->isSDH();
+    return protectedPrivate()->isSDH();
 }
 
 bool InbandTextTrack::containsOnlyForcedSubtitles() const
 {
-    return m_private->containsOnlyForcedSubtitles();
+    return protectedPrivate()->containsOnlyForcedSubtitles();
 }
 
 bool InbandTextTrack::isMainProgramContent() const
 {
-    return m_private->isMainProgramContent();
+    return protectedPrivate()->isMainProgramContent();
 }
 
 bool InbandTextTrack::isEasyToRead() const
 {
-    return m_private->isEasyToRead();
+    return protectedPrivate()->isEasyToRead();
 }
 
 bool InbandTextTrack::isDefault() const
 {
-    return m_private->isDefault();
+    return protectedPrivate()->isDefault();
 }
 
 size_t InbandTextTrack::inbandTrackIndex()
 {
-    return m_private->trackIndex();
+    return protectedPrivate()->trackIndex();
 }
 
-AtomString InbandTextTrack::inBandMetadataTrackDispatchType() const
+String InbandTextTrack::inBandMetadataTrackDispatchType() const
 {
-    return m_private->inBandMetadataTrackDispatchType();
+    return protectedPrivate()->inBandMetadataTrackDispatchType();
 }
 
 void InbandTextTrack::idChanged(TrackID id)
@@ -153,14 +161,14 @@ void InbandTextTrack::idChanged(TrackID id)
     setId(id);
 }
 
-void InbandTextTrack::labelChanged(const AtomString& label)
+void InbandTextTrack::labelChanged(const String& label)
 {
-    setLabel(label);
+    setLabel(AtomString { label.isolatedCopy() });
 }
 
-void InbandTextTrack::languageChanged(const AtomString& language)
+void InbandTextTrack::languageChanged(const String& language)
 {
-    setLanguage(language);
+    setLanguage(AtomString { language.isolatedCopy() });
 }
 
 void InbandTextTrack::willRemove()
@@ -172,7 +180,7 @@ void InbandTextTrack::willRemove()
 
 void InbandTextTrack::updateKindFromPrivate()
 {
-    switch (m_private->kind()) {
+    switch (protectedPrivate()->kind()) {
     case InbandTextTrackPrivate::Kind::Subtitles:
         setKind(Kind::Subtitles);
         return;
@@ -199,14 +207,14 @@ void InbandTextTrack::updateKindFromPrivate()
 
 MediaTime InbandTextTrack::startTimeVariance() const
 {
-    return m_private->startTimeVariance();
+    return protectedPrivate()->startTimeVariance();
 }
 
 #if !RELEASE_LOG_DISABLED
-void InbandTextTrack::setLogger(const Logger& logger, const void* logIdentifier)
+void InbandTextTrack::setLogger(const Logger& logger, uint64_t logIdentifier)
 {
     TextTrack::setLogger(logger, logIdentifier);
-    m_private->setLogger(logger, this->logIdentifier());
+    protectedPrivate()->setLogger(logger, this->logIdentifier());
 }
 #endif
 

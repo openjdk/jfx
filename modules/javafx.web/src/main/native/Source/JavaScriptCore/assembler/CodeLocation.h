@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "MacroAssemblerCodeRef.h"
+#include <JavaScriptCore/MacroAssemblerCodeRef.h>
 
 namespace JSC {
 
@@ -69,7 +69,8 @@ public:
     template<typename T = void*>
     T dataLocation() const { return Base::template dataLocation<T>(); }
 
-    template<typename T, typename = std::enable_if_t<std::is_base_of<CodeLocationCommon<tag>, T>::value>>
+    template<typename T>
+        requires (std::is_base_of_v<CodeLocationCommon<tag>, T>)
     operator T()
     {
         return T(CodePtr<tag>::fromTaggedPtr(this->taggedPtr()));

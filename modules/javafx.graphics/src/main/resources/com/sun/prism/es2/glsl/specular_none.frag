@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,5 +54,7 @@ uniform sampler2D specularMap;
 
 vec4 apply_specular()
 {
-    return vec4(0.0,0.0,0.0,0.0);
+    // Use 32 which is default for specular power if specular color is not set
+    // Because pow(0, 0) is undefined (https://www.khronos.org/registry/OpenGL-Refpages/es3.0/html/pow.xhtml)
+    return vec4(0.0,0.0,0.0,32.0);
 }

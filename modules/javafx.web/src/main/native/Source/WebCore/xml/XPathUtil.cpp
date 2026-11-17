@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2005 Frerich Raabe <raabe@kde.org>
- * Copyright (C) 2006, 2009 Apple Inc.
+ * Copyright (C) 2006, 2009 Apple Inc. All rights reserved.
  * Copyright (C) 2019 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,26 +31,25 @@
 #include "ContainerNode.h"
 #include "TextNodeTraversal.h"
 
-namespace WebCore {
-namespace XPath {
+namespace WebCore::XPath {
 
 bool isRootDomNode(Node* node)
 {
     return node && !node->parentNode();
 }
 
-String stringValue(Node* node)
+String stringValue(Node& node)
 {
-    switch (node->nodeType()) {
+    switch (node.nodeType()) {
         case Node::ATTRIBUTE_NODE:
         case Node::PROCESSING_INSTRUCTION_NODE:
         case Node::COMMENT_NODE:
         case Node::TEXT_NODE:
         case Node::CDATA_SECTION_NODE:
-            return node->nodeValue();
+            return node.nodeValue();
         default:
-            if (isRootDomNode(node) || node->isElementNode())
-                return TextNodeTraversal::contentsAsString(*node);
+            if (isRootDomNode(&node) || node.isElementNode())
+                return TextNodeTraversal::contentsAsString(node);
     }
     return String();
 }
@@ -74,5 +73,4 @@ bool isValidContextNode(Node& node)
     return false;
 }
 
-}
-}
+} // namespace WebCore::XPath

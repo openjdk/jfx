@@ -44,7 +44,7 @@ unsigned SymbolImpl::nextHashForSymbol()
 
 Ref<SymbolImpl> SymbolImpl::create(StringImpl& rep)
 {
-    auto* ownerRep = (rep.bufferOwnership() == BufferSubstring) ? rep.substringBuffer() : &rep;
+    RefPtr ownerRep = (rep.bufferOwnership() == BufferSubstring) ? rep.substringBuffer() : &rep;
     ASSERT(ownerRep->bufferOwnership() != BufferSubstring);
     if (rep.is8Bit())
         return adoptRef(*new SymbolImpl(rep.span8(), *ownerRep));
@@ -58,7 +58,7 @@ Ref<SymbolImpl> SymbolImpl::createNullSymbol()
 
 Ref<PrivateSymbolImpl> PrivateSymbolImpl::create(StringImpl& rep)
 {
-    auto* ownerRep = (rep.bufferOwnership() == BufferSubstring) ? rep.substringBuffer() : &rep;
+    RefPtr ownerRep = (rep.bufferOwnership() == BufferSubstring) ? rep.substringBuffer() : &rep;
     ASSERT(ownerRep->bufferOwnership() != BufferSubstring);
     if (rep.is8Bit())
         return adoptRef(*new PrivateSymbolImpl(rep.span8(), *ownerRep));
@@ -67,7 +67,7 @@ Ref<PrivateSymbolImpl> PrivateSymbolImpl::create(StringImpl& rep)
 
 Ref<RegisteredSymbolImpl> RegisteredSymbolImpl::create(StringImpl& rep, SymbolRegistry& symbolRegistry)
 {
-    auto* ownerRep = (rep.bufferOwnership() == BufferSubstring) ? rep.substringBuffer() : &rep;
+    RefPtr ownerRep = (rep.bufferOwnership() == BufferSubstring) ? rep.substringBuffer() : &rep;
     ASSERT(ownerRep->bufferOwnership() != BufferSubstring);
     if (rep.is8Bit())
         return adoptRef(*new RegisteredSymbolImpl(rep.span8(), *ownerRep, symbolRegistry));
@@ -76,7 +76,7 @@ Ref<RegisteredSymbolImpl> RegisteredSymbolImpl::create(StringImpl& rep, SymbolRe
 
 Ref<RegisteredSymbolImpl> RegisteredSymbolImpl::createPrivate(StringImpl& rep, SymbolRegistry& symbolRegistry)
 {
-    auto* ownerRep = (rep.bufferOwnership() == BufferSubstring) ? rep.substringBuffer() : &rep;
+    RefPtr ownerRep = (rep.bufferOwnership() == BufferSubstring) ? rep.substringBuffer() : &rep;
     ASSERT(ownerRep->bufferOwnership() != BufferSubstring);
     if (rep.is8Bit())
         return adoptRef(*new RegisteredSymbolImpl(rep.span8(), *ownerRep, symbolRegistry, s_flagIsRegistered | s_flagIsPrivate));

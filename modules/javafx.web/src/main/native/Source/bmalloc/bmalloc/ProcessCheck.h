@@ -25,6 +25,8 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
 #include "BPlatform.h"
 
 namespace bmalloc {
@@ -40,8 +42,12 @@ inline bool gigacageEnabledForProcess() { return true; }
 #endif
 
 #if BOS(DARWIN) && !BPLATFORM_JAVA
+const char* processNameString();
 bool shouldAllowMiniMode();
 #else
+inline const char* processNameString() {
+    return "FakeProcessName";
+}
 inline bool shouldAllowMiniMode() { return true; }
 #endif
 
@@ -50,3 +56,5 @@ bool shouldProcessUnconditionallyUseBmalloc();
 #endif
 
 }
+
+#endif // __cplusplus

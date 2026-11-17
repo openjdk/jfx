@@ -105,7 +105,7 @@
 
 #define QTDEMUX_TREE_NODE_FOURCC(n) (QT_FOURCC(((guint8 *) (n)->data) + 4))
 
-#define STREAM_IS_EOS(s) ((s)->time_position == GST_CLOCK_TIME_NONE)
+#define STREAM_IS_EOS(s) ((s)->cur_global_pts == GST_CLOCK_TIME_NONE)
 
 #define ABSDIFF(x, y) ( (x) > (y) ? ((x) - (y)) : ((y) - (x)) )
 
@@ -127,18 +127,22 @@ typedef struct _QtDemuxAavdEncryptionInfo QtDemuxAavdEncryptionInfo;
 /* Macros for converting to/from timescale */
 #define QTSTREAMTIME_TO_GSTTIME(stream, value) (gst_util_uint64_scale((value), GST_SECOND, (stream)->timescale))
 #define GSTTIME_TO_QTSTREAMTIME(stream, value) (gst_util_uint64_scale((value), (stream)->timescale, GST_SECOND))
+#define GSTTIME_TO_QTSTREAMTIME_CEIL(stream, value) (gst_util_uint64_scale_ceil((value), (stream)->timescale, GST_SECOND))
 
 #define QTTIME_TO_GSTTIME(qtdemux, value) (gst_util_uint64_scale((value), GST_SECOND, (qtdemux)->timescale))
 #define GSTTIME_TO_QTTIME(qtdemux, value) (gst_util_uint64_scale((value), (qtdemux)->timescale, GST_SECOND))
 
 /* timestamp is the DTS */
 #define QTSAMPLE_DTS(stream,sample) (QTSTREAMTIME_TO_GSTTIME((stream), (sample)->timestamp))
+#define QTSAMPLE_DTS_STREAMTIME(sample) ((sample)->timestamp)
 /* timestamp + offset + cslg_shift is the outgoing PTS */
 #define QTSAMPLE_PTS(stream,sample) (QTSTREAMTIME_TO_GSTTIME((stream), (sample)->timestamp + (stream)->cslg_shift + (sample)->pts_offset))
+#define QTSAMPLE_PTS_STREAMTIME(sample) ((sample)->timestamp + (stream)->cslg_shift + (sample)->pts_offset)
 /* timestamp + offset is the PTS used for internal seek calculations */
 #define QTSAMPLE_PTS_NO_CSLG(stream,sample) (QTSTREAMTIME_TO_GSTTIME((stream), (sample)->timestamp + (sample)->pts_offset))
-/* timestamp + duration - dts is the duration */
-#define QTSAMPLE_DUR_DTS(stream, sample, dts) (QTSTREAMTIME_TO_GSTTIME ((stream), (sample)->timestamp + (sample)->duration) - (dts))
+
+#define QTSAMPLE_DUR_STREAMTIME(sample,dts) (((sample)->timestamp + (sample)->duration) - (dts))
+#define QTSAMPLE_DUR_ROUND_UP(stream, sample) (QTSTREAMTIME_TO_GSTTIME ((stream), (sample)->timestamp + (sample)->duration) > QTSTREAMTIME_TO_GSTTIME ((stream), (sample)->timestamp) + QTSTREAMTIME_TO_GSTTIME ((stream), (sample)->duration))
 
 #define QTSAMPLE_KEYFRAME(stream,sample) ((stream)->all_keyframe || (sample)->keyframe)
 
@@ -215,8 +219,8 @@ typedef struct _QtDemuxAavdEncryptionInfo QtDemuxAavdEncryptionInfo;
 struct _QtDemuxSegment
 {
   /* global time and duration, all gst time */
-  GstClockTime time;
-  GstClockTime stop_time;
+  GstClockTime time;            /* global PTS at which the segment starts playing */
+  GstClockTime stop_time;       /* global PTS at which the segment finishes playing */
   GstClockTime duration;
   /* media time of trak, all gst time */
   GstClockTime media_start;
@@ -370,19 +374,20 @@ static void gst_qtdemux_handle_esds (GstQTDemux * qtdemux,
 #endif // GSTREAMER_LITE
 static GstCaps *qtdemux_video_caps (GstQTDemux * qtdemux,
     QtDemuxStream * stream, QtDemuxStreamStsdEntry * entry, guint32 fourcc,
-    const guint8 * stsd_entry_data, gchar ** codec_name);
+    GNode * stsd_entry, gchar ** codec_name);
 static GstCaps *qtdemux_audio_caps (GstQTDemux * qtdemux,
     QtDemuxStream * stream, QtDemuxStreamStsdEntry * entry, guint32 fourcc,
-    const guint8 * data, int len, gchar ** codec_name);
+    guint8 stsd_version, guint32 version, GNode * stsd_entry,
+    gchar ** codec_name);
 static GstCaps *qtdemux_sub_caps (GstQTDemux * qtdemux, QtDemuxStream * stream,
-    QtDemuxStreamStsdEntry * entry, guint32 fourcc, const guint8 * data,
+    QtDemuxStreamStsdEntry * entry, guint32 fourcc, GNode * stsd_entry,
     gchar ** codec_name);
 static GstCaps *qtdemux_meta_caps (GstQTDemux * qtdemux, QtDemuxStream * stream,
-    QtDemuxStreamStsdEntry * entry, guint32 fourcc, const guint8 * data,
+    QtDemuxStreamStsdEntry * entry, guint32 fourcc, GNode * stsd_entry,
     gchar ** codec_name);
 static GstCaps *qtdemux_generic_caps (GstQTDemux * qtdemux,
     QtDemuxStream * stream, QtDemuxStreamStsdEntry * entry, guint32 fourcc,
-    const guint8 * stsd_entry_data, gchar ** codec_name);
+    GNode * stsd_entry, gchar ** codec_name);
 
 static gboolean qtdemux_parse_samples (GstQTDemux * qtdemux,
     QtDemuxStream * stream, guint32 n);
@@ -416,6 +421,9 @@ static void qtdemux_gst_structure_free (GstStructure * gststructure);
 static void gst_qtdemux_reset (GstQTDemux * qtdemux, gboolean hard);
 static void qtdemux_clear_protection_events_on_all_streams (GstQTDemux *
     qtdemux);
+
+static GstFlowReturn gst_qtdemux_combine_flows (GstQTDemux * demux,
+    QtDemuxStream * stream, GstFlowReturn ret);
 
 static void
 gst_qtdemux_class_init (GstQTDemuxClass * klass)
@@ -1088,21 +1096,21 @@ parse_failed:
   }
 }
 
-/* find the segment for @time_position for @stream
+/* find the segment for @target_global_pts for @stream
  *
- * Returns the index of the segment containing @time_position.
+ * Returns the index of the segment containing @global_pts.
  * Returns the last segment and sets the @eos variable to TRUE
  * if the time is beyond the end. @eos may be NULL
  */
 static guint32
 gst_qtdemux_find_segment (GstQTDemux * qtdemux, QtDemuxStream * stream,
-    GstClockTime time_position)
+    GstClockTime target_global_pts)
 {
   gint i;
   guint32 seg_idx;
 
   GST_LOG_OBJECT (stream->pad, "finding segment for %" GST_TIME_FORMAT,
-      GST_TIME_ARGS (time_position));
+      GST_TIME_ARGS (target_global_pts));
 
   seg_idx = -1;
   for (i = 0; i < stream->n_segments; i++) {
@@ -1114,7 +1122,8 @@ gst_qtdemux_find_segment (GstQTDemux * qtdemux, QtDemuxStream * stream,
 
     /* For the last segment we include stop_time in the last segment */
     if (i < stream->n_segments - 1) {
-      if (segment->time <= time_position && time_position < segment->stop_time) {
+      if (segment->time <= target_global_pts
+          && target_global_pts < segment->stop_time) {
         GST_LOG_OBJECT (stream->pad, "segment %d matches", i);
         seg_idx = i;
         break;
@@ -1317,7 +1326,8 @@ gst_qtdemux_do_push_seek (GstQTDemux * qtdemux, GstPad * pad, GstEvent * event)
   GstEvent * new_event = NULL;
 #endif // GSTREAMER_LITE
 
-  GST_DEBUG_OBJECT (qtdemux, "doing push-based seek");
+  GST_DEBUG_OBJECT (qtdemux,
+      "doing push-based seek with event %" GST_PTR_FORMAT, event);
 
   gst_event_parse_seek (event, &rate, &format, &flags,
       &cur_type, &cur, &stop_type, &stop);
@@ -1433,7 +1443,7 @@ no_format:
 /* perform the seek.
  *
  * We set all segment_indexes in the streams to unknown and
- * adjust the time_position to the desired position. this is enough
+ * adjust the cur_global_pts to the desired position. this is enough
  * to trigger a segment switch in the streaming thread to start
  * streaming from the desired position.
  *
@@ -1486,13 +1496,13 @@ gst_qtdemux_perform_seek (GstQTDemux * qtdemux, GstSegment * segment,
   for (i = 0; i < QTDEMUX_N_STREAMS (qtdemux); i++) {
     QtDemuxStream *stream = QTDEMUX_NTH_STREAM (qtdemux, i);
 
-    stream->time_position = desired_offset;
+    stream->cur_global_pts = desired_offset;
     stream->accumulated_base = 0;
     stream->sample_index = -1;
     stream->offset_in_sample = 0;
     stream->segment_index = -1;
     stream->sent_eos = FALSE;
-    stream->last_keyframe_dts = GST_CLOCK_TIME_NONE;
+    stream->last_keyframe_pts = GST_CLOCK_TIME_NONE;
 
     if (segment->flags & GST_SEEK_FLAG_FLUSH)
       gst_segment_init (&stream->segment, GST_FORMAT_TIME);
@@ -1532,7 +1542,7 @@ gst_qtdemux_do_seek (GstQTDemux * qtdemux, GstPad * pad, GstEvent * event)
   GstEvent *flush_event;
   gboolean ret;
 
-  GST_DEBUG_OBJECT (qtdemux, "doing seek with event");
+  GST_DEBUG_OBJECT (qtdemux, "doing seek with event %" GST_PTR_FORMAT, event);
 
   gst_event_parse_seek (event, &rate, &format, &flags,
       &cur_type, &cur, &stop_type, &stop);
@@ -1597,13 +1607,19 @@ gst_qtdemux_do_seek (GstQTDemux * qtdemux, GstPad * pad, GstEvent * event)
 
   /* configure the segment with the seek variables */
   GST_DEBUG_OBJECT (qtdemux, "configuring seek");
-  if (!gst_segment_do_seek (&seeksegment, rate, format, flags,
-          cur_type, cur, stop_type, stop, &update)) {
+  GST_DEBUG_OBJECT (qtdemux, "Previous segment was %" GST_SEGMENT_FORMAT,
+      &seeksegment);
+  if (!gst_segment_do_seek (&seeksegment, rate, format, flags, cur_type, cur,
+          stop_type, stop, &update)) {
     ret = FALSE;
     GST_ERROR_OBJECT (qtdemux, "inconsistent seek values, doing nothing");
   } else {
     /* now do the seek */
+    GST_DEBUG_OBJECT (qtdemux, "New segment is %" GST_SEGMENT_FORMAT,
+        &seeksegment);
     ret = gst_qtdemux_perform_seek (qtdemux, &seeksegment, seqnum, flags);
+    GST_DEBUG_OBJECT (qtdemux, "Adjusted segment is %" GST_SEGMENT_FORMAT,
+        &seeksegment);
   }
 
   /* prepare for streaming again */
@@ -1918,7 +1934,7 @@ _create_stream (GstQTDemux * demux, guint32 track_id)
   stream->need_clip = FALSE;
   stream->process_func = NULL;
   stream->segment_index = -1;
-  stream->time_position = 0;
+  stream->cur_global_pts = 0;
   stream->sample_index = -1;
   stream->offset_in_sample = 0;
   stream->new_stream = TRUE;
@@ -1931,10 +1947,16 @@ _create_stream (GstQTDemux * demux, guint32 track_id)
   stream->n_samples_moof = 0;
   stream->duration_moof = 0;
   stream->duration_last_moof = 0;
+  stream->trun_next_dts = 0;
   stream->alignment = 1;
+  stream->needs_row_alignment = FALSE;
+  stream->need_reorder = FALSE;
+  g_queue_init (&stream->reorder_queue);
   stream->stream_tags = gst_tag_list_new_empty ();
   gst_tag_list_set_scope (stream->stream_tags, GST_TAG_SCOPE_STREAM);
   g_queue_init (&stream->protection_scheme_event_queue);
+  gst_video_info_init (&stream->info);
+  gst_video_info_init (&stream->pre_info);
   stream->ref_count = 1;
   /* consistent default for push based mode */
   gst_segment_init (&stream->segment, GST_FORMAT_TIME);
@@ -2166,9 +2188,9 @@ gst_qtdemux_reset (GstQTDemux * qtdemux, gboolean hard)
     for (i = 0; i < QTDEMUX_N_STREAMS (qtdemux); i++) {
       QtDemuxStream *stream = QTDEMUX_NTH_STREAM (qtdemux, i);
       stream->sent_eos = FALSE;
-      stream->time_position = 0;
+      stream->cur_global_pts = 0;
       stream->accumulated_base = 0;
-      stream->last_keyframe_dts = GST_CLOCK_TIME_NONE;
+      stream->last_keyframe_pts = GST_CLOCK_TIME_NONE;
     }
   }
 }
@@ -2206,7 +2228,7 @@ gst_qtdemux_map_and_push_segments (GstQTDemux * qtdemux, GstSegment * segment)
   for (iter = 0; iter < QTDEMUX_N_STREAMS (qtdemux); iter++) {
     QtDemuxStream *stream = QTDEMUX_NTH_STREAM (qtdemux, iter);
 
-    stream->time_position = segment->start;
+    stream->cur_global_pts = segment->start;
 
     /* in push mode we should be guaranteed that we will have empty segments
      * at the beginning and then one segment after, other scenarios are not
@@ -2215,10 +2237,10 @@ gst_qtdemux_map_and_push_segments (GstQTDemux * qtdemux, GstSegment * segment)
       if (stream->segments[i].stop_time > segment->start) {
         /* push the empty segment and move to the next one */
         gst_qtdemux_activate_segment (qtdemux, stream, i,
-            stream->time_position);
+            stream->cur_global_pts);
         if (QTSEGMENT_IS_EMPTY (&stream->segments[i])) {
           gst_qtdemux_send_gap_for_segment (qtdemux, stream, i,
-              stream->time_position);
+              stream->cur_global_pts);
 
           /* accumulate previous segments */
           if (GST_CLOCK_TIME_IS_VALID (stream->segment.stop))
@@ -2609,7 +2631,7 @@ gst_qtdemux_stream_flush_samples_data (QtDemuxStream * stream)
   stream->sample_index = -1;
   stream->stbl_index = -1;
   stream->n_samples = 0;
-  stream->time_position = 0;
+  stream->cur_global_pts = 0;
 
   stream->n_samples_moof = 0;
   stream->duration_moof = 0;
@@ -2626,6 +2648,16 @@ gst_qtdemux_stream_clear (QtDemuxStream * stream)
     gst_buffer_unref (GST_BUFFER_CAST (stream->buffers->data));
     stream->buffers = g_slist_delete_link (stream->buffers, stream->buffers);
   }
+#if defined (GSTREAMER_LITE) && defined(LINUX)
+  // g_queue_clear_full() is available staring with 2.60, but we need
+  // to support older GLib versions.
+  g_queue_foreach (&stream->reorder_queue, (GFunc) gst_mini_object_unref, NULL);
+  g_queue_clear (&stream->reorder_queue);
+#else // GSTREAMER_LITE
+  g_queue_clear_full (&stream->reorder_queue,
+      (GDestroyNotify) gst_mini_object_unref);
+
+#endif // GSTREAMER_LITE
   for (i = 0; i < stream->stsd_entries_length; i++) {
     QtDemuxStreamStsdEntry *entry = &stream->stsd_entries[i];
     if (entry->rgb8_palette) {
@@ -3076,7 +3108,7 @@ qtdemux_parse_piff (GstQTDemux * qtdemux, const guint8 * buffer, gint length,
 }
 
 static void
-qtdemux_parse_uuid (GstQTDemux * qtdemux, const guint8 * buffer, gint length)
+qtdemux_parse_uuid (GstQTDemux * qtdemux, const guint8 * buffer, gsize length)
 {
   static const guint8 xmp_uuid[] = { 0xBE, 0x7A, 0xCF, 0xCB,
     0x97, 0xA9, 0x42, 0xE8,
@@ -3121,16 +3153,18 @@ qtdemux_parse_uuid (GstQTDemux * qtdemux, const guint8 * buffer, gint length)
     qtdemux_handle_xmp_taglist (qtdemux, qtdemux->tag_list, taglist);
 
   } else if (memcmp (buffer + offset, playready_uuid, 16) == 0) {
-    int len;
-    const gunichar2 *s_utf16;
-    char *contents;
+    if (length >= offset + 0x30 + 2) {
+      guint16 len = GST_READ_UINT16_LE (buffer + offset + 0x30);
 
-    len = GST_READ_UINT16_LE (buffer + offset + 0x30);
-    s_utf16 = (const gunichar2 *) (buffer + offset + 0x32);
-    contents = g_utf16_to_utf8 (s_utf16, len / 2, NULL, NULL, NULL);
-    GST_ERROR_OBJECT (qtdemux, "contents: %s", contents);
+      if (length >= offset + 0x30 + 2 + len) {
+        const gunichar2 *s_utf16 = (const gunichar2 *) (buffer + offset + 0x32);
+        char *contents = g_utf16_to_utf8 (s_utf16, len / 2, NULL, NULL, NULL);
 
-    g_free (contents);
+        GST_ERROR_OBJECT (qtdemux, "contents: %s", GST_STR_NULL (contents));
+
+        g_free (contents);
+      }
+    }
 
     GST_ELEMENT_ERROR (qtdemux, STREAM, DECRYPT,
         (_("Cannot play stream because it is encrypted with PlayReady DRM.")),
@@ -3561,48 +3595,38 @@ qtdemux_parse_trun (GstQTDemux * qtdemux, GstByteReader * trun,
   if (stream->samples == NULL)
     goto out_of_memory;
 
-  if (qtdemux->fragment_start != -1) {
+  if (has_tfdt) {
+    /* this specific fragment has a tfdt, use it. */
+    timestamp = decode_ts;
+    gst_ts = QTSTREAMTIME_TO_GSTTIME (stream, timestamp);
+    GST_INFO_OBJECT (qtdemux, "first sample ts %" GST_TIME_FORMAT
+        " (using tfdt)", GST_TIME_ARGS (gst_ts));
+  } else if (qtdemux->fragment_start != -1) {
+    /* adaptive streaming: haven't seen any tfdt since the start of the current
+     * segment, so we use the PTS from the manifest as a fallback. */
     timestamp = GSTTIME_TO_QTSTREAMTIME (stream, qtdemux->fragment_start);
     qtdemux->fragment_start = -1;
+    gst_ts = QTSTREAMTIME_TO_GSTTIME (stream, timestamp);
+    GST_INFO_OBJECT (qtdemux, "first sample ts %" GST_TIME_FORMAT
+        " (using upstream buffer PTS)", GST_TIME_ARGS (gst_ts));
+  } else if (stream->pending_seek != NULL) {
+    /* if we don't have a timestamp from a tfdt box, we'll use the one
+     * from the mfra seek table */
+    GST_INFO_OBJECT (stream->pad, "pending seek ts = %" GST_TIME_FORMAT,
+        GST_TIME_ARGS (stream->pending_seek->ts));
+
+    /* FIXME: this is not fully correct, the timestamp refers to the random
+     * access sample refered to in the tfra entry, which may not necessarily
+     * be the first sample in the tfrag/trun (but hopefully/usually is) */
+    timestamp = GSTTIME_TO_QTSTREAMTIME (stream, stream->pending_seek->ts);
   } else {
-    if (stream->n_samples == 0) {
-      if (decode_ts > 0) {
-        timestamp = decode_ts;
-      } else if (stream->pending_seek != NULL) {
-        /* if we don't have a timestamp from a tfdt box, we'll use the one
-         * from the mfra seek table */
-        GST_INFO_OBJECT (stream->pad, "pending seek ts = %" GST_TIME_FORMAT,
-            GST_TIME_ARGS (stream->pending_seek->ts));
-
-        /* FIXME: this is not fully correct, the timestamp refers to the random
-         * access sample refered to in the tfra entry, which may not necessarily
-         * be the first sample in the tfrag/trun (but hopefully/usually is) */
-        timestamp = GSTTIME_TO_QTSTREAMTIME (stream, stream->pending_seek->ts);
-      } else {
-        timestamp = 0;
-      }
-
-      gst_ts = QTSTREAMTIME_TO_GSTTIME (stream, timestamp);
-      GST_INFO_OBJECT (stream->pad, "first sample ts %" GST_TIME_FORMAT,
-          GST_TIME_ARGS (gst_ts));
-    } else {
-      /* If this is a GST_FORMAT_BYTES stream and we have a tfdt then use it
-       * instead of the sum of sample durations */
-      if (has_tfdt && !qtdemux->upstream_format_is_time) {
-        timestamp = decode_ts;
-        gst_ts = QTSTREAMTIME_TO_GSTTIME (stream, timestamp);
-        GST_INFO_OBJECT (qtdemux, "first sample ts %" GST_TIME_FORMAT
-            " (using tfdt)", GST_TIME_ARGS (gst_ts));
-      } else {
-        /* subsequent fragments extend stream */
-        timestamp =
-            stream->samples[stream->n_samples - 1].timestamp +
-            stream->samples[stream->n_samples - 1].duration;
-        gst_ts = QTSTREAMTIME_TO_GSTTIME (stream, timestamp);
-        GST_INFO_OBJECT (qtdemux, "first sample ts %" GST_TIME_FORMAT
-            " (extends previous samples)", GST_TIME_ARGS (gst_ts));
-      }
-    }
+    /* subsequent fragments extend the stream, be it the previous fragment or
+     * (in the case of the first fragment) the end of the non-fragmented part
+     * of the movie. */
+    timestamp = stream->trun_next_dts;
+    gst_ts = QTSTREAMTIME_TO_GSTTIME (stream, timestamp);
+    GST_INFO_OBJECT (qtdemux, "first sample ts %" GST_TIME_FORMAT "%s",
+        GST_TIME_ARGS (gst_ts), timestamp ? " (extends previous samples)" : "");
   }
 
   initial_offset = *running_offset;
@@ -3678,7 +3702,7 @@ qtdemux_parse_trun (GstQTDemux * qtdemux, GstByteReader * trun,
   else
     stream->cslg_shift = 0;
 
-  GST_DEBUG_OBJECT (qtdemux, "Using clsg_shift %" G_GUINT64_FORMAT,
+  GST_DEBUG_OBJECT (qtdemux, "Using cslg_shift %" G_GUINT64_FORMAT,
       stream->cslg_shift);
 
   /* Update total duration if needed */
@@ -3694,6 +3718,7 @@ qtdemux_parse_trun (GstQTDemux * qtdemux, GstByteReader * trun,
 
   stream->n_samples += samples_count;
   stream->n_samples_moof += samples_count;
+  stream->trun_next_dts = timestamp;
 
   if (stream->pending_seek != NULL)
     stream->pending_seek = NULL;
@@ -4559,7 +4584,7 @@ qtdemux_parse_moof (GstQTDemux * qtdemux, const guint8 * buffer, guint length,
             break;
           }
           sbgp_node = qtdemux_tree_get_sibling_by_type_full (sbgp_node,
-              FOURCC_sgpd, &sbgp_data);
+              FOURCC_sbgp, &sbgp_data);
         }
       }
     }
@@ -4756,7 +4781,7 @@ qtdemux_parse_moof (GstQTDemux * qtdemux, const guint8 * buffer, guint length,
 
     for (i = 0; i < QTDEMUX_N_STREAMS (qtdemux); i++) {
       QtDemuxStream *stream = QTDEMUX_NTH_STREAM (qtdemux, i);
-      stream->time_position = min_dts;
+      stream->cur_global_pts = min_dts;
     }
 
     /* Before this code was run a segment was already sent when the moov was
@@ -5312,12 +5337,60 @@ gst_qtdemux_seek_to_previous_keyframe (GstQTDemux * qtdemux)
 {
   guint32 seg_idx = 0, k_index = 0;
   guint32 ref_seg_idx, ref_k_index;
-  GstClockTime k_pos = 0, last_stop = 0;
+  GstClockTime k_pos = 0, position = 0;
   QtDemuxSegment *seg = NULL;
   QtDemuxStream *ref_str = NULL;
   guint64 seg_media_start_mov;  /* segment media start time in mov format */
   guint64 target_ts;
   gint i;
+
+  /* First push any buffers downstream now in reverse order */
+  for (i = 0; i < QTDEMUX_N_STREAMS (qtdemux); i++) {
+    QtDemuxStream *str = QTDEMUX_NTH_STREAM (qtdemux, i);
+    GstMiniObject *obj;
+
+    while ((obj = g_queue_pop_head (&str->reorder_queue))) {
+      if (GST_IS_BUFFER (obj)) {
+        GstFlowReturn flow_ret;
+        GstBuffer *buffer = GST_BUFFER_CAST (obj);
+
+        buffer = gst_buffer_make_writable (buffer);
+
+        if (G_UNLIKELY (str->discont)) {
+          GST_LOG_OBJECT (qtdemux, "marking discont buffer");
+          GST_BUFFER_FLAG_SET (buffer, GST_BUFFER_FLAG_DISCONT);
+          str->discont = FALSE;
+        } else {
+          GST_BUFFER_FLAG_UNSET (buffer, GST_BUFFER_FLAG_DISCONT);
+        }
+
+        GST_LOG_OBJECT (str->pad,
+            "Pushing pending buffer with dts %" GST_TIME_FORMAT
+            ", pts %" GST_TIME_FORMAT ", duration %" GST_TIME_FORMAT
+            " on pad %s", GST_TIME_ARGS (GST_BUFFER_DTS (buffer)),
+            GST_TIME_ARGS (GST_BUFFER_PTS (buffer)),
+            GST_TIME_ARGS (GST_BUFFER_DURATION (buffer)),
+            GST_PAD_NAME (str->pad));
+
+        flow_ret = gst_pad_push (str->pad, buffer);
+        if (flow_ret == GST_FLOW_EOS)
+          flow_ret = GST_FLOW_OK;
+        flow_ret = gst_qtdemux_combine_flows (qtdemux, str, flow_ret);
+
+        if (flow_ret != GST_FLOW_OK)
+          return flow_ret;
+      } else if (GST_IS_EVENT (obj)) {
+        GstEvent *event = GST_EVENT_CAST (obj);
+        g_assert (GST_EVENT_TYPE (event) == GST_EVENT_GAP);
+
+        GST_DEBUG_OBJECT (str->pad,
+            "Pushing pending gap event %" GST_PTR_FORMAT, event);
+        gst_pad_push_event (GST_PAD_CAST (str->pad), event);
+      } else {
+        g_assert_not_reached ();
+      }
+    }
+  }
 
   /* Now we choose an arbitrary stream, get the previous keyframe timestamp
    * and finally align all the other streams on that timestamp with their
@@ -5395,7 +5468,7 @@ gst_qtdemux_seek_to_previous_keyframe (GstQTDemux * qtdemux)
   k_pos =
       QTSTREAMTIME_TO_GSTTIME (ref_str,
       target_ts - seg->trak_media_start) + seg->time;
-  last_stop =
+  position =
       QTSTREAMTIME_TO_GSTTIME (ref_str,
       ref_str->samples[ref_str->from_sample].timestamp -
       seg->trak_media_start) + seg->time;
@@ -5404,12 +5477,12 @@ gst_qtdemux_seek_to_previous_keyframe (GstQTDemux * qtdemux)
       "now going to sample %u (pts %" GST_TIME_FORMAT ")", ref_str->from_sample,
       k_index, GST_TIME_ARGS (k_pos));
 
-  /* Set last_stop with the keyframe timestamp we pushed of that stream */
-  qtdemux->segment.position = last_stop;
-  GST_DEBUG_OBJECT (qtdemux, "last_stop now is %" GST_TIME_FORMAT,
-      GST_TIME_ARGS (last_stop));
+  /* Set position with the keyframe timestamp we pushed of that stream */
+  qtdemux->segment.position = position;
+  GST_DEBUG_OBJECT (qtdemux, "segment position now is %" GST_TIME_FORMAT,
+      GST_TIME_ARGS (position));
 
-  if (G_UNLIKELY (last_stop < qtdemux->segment.start)) {
+  if (G_UNLIKELY (position < qtdemux->segment.start)) {
     GST_DEBUG_OBJECT (qtdemux, "reached the beginning of segment");
     goto eos;
   }
@@ -5458,7 +5531,19 @@ gst_qtdemux_seek_to_previous_keyframe (GstQTDemux * qtdemux)
     }
 
     /* Remember until where we want to go */
-    if (str->from_sample == 0) {
+    if (str->from_sample == k_index) {
+      if (str == ref_str) {
+        GST_ERROR_OBJECT (qtdemux,
+            "track-id %u ended up at same sample %u for reference track",
+            str->track_id, k_index);
+        return GST_FLOW_ERROR;
+      }
+
+      GST_LOG_OBJECT (qtdemux,
+          "track-id %u not outputting same samples from %u again",
+          str->track_id, k_index);
+      continue;
+    } else if (str->from_sample == 0) {
       GST_LOG_OBJECT (qtdemux, "already at sample 0");
       str->to_sample = 0;
     } else {
@@ -5467,25 +5552,35 @@ gst_qtdemux_seek_to_previous_keyframe (GstQTDemux * qtdemux)
     /* Define our time position */
     target_ts =
         str->samples[k_index].timestamp + str->samples[k_index].pts_offset;
-    str->time_position = QTSTREAMTIME_TO_GSTTIME (str, target_ts) + seg->time;
+    str->cur_global_pts = QTSTREAMTIME_TO_GSTTIME (str, target_ts) + seg->time;
     if (seg->media_start != GST_CLOCK_TIME_NONE)
-      str->time_position -= seg->media_start;
+      str->cur_global_pts -= seg->media_start;
 
-    /* Now seek back in time */
+    /* Now seek back in time
+     *
+     * Only keep the discont flag from before here. Moving the stream backwards
+     * will always set the discont flag, but there is only ever a real
+     * discontinuity on the first buffer after a seek for raw data. */
+    gboolean discont = str->discont;
     gst_qtdemux_move_stream (qtdemux, str, k_index);
+    str->discont = discont || !str->need_reorder;
     GST_DEBUG_OBJECT (qtdemux, "track-id %u keyframe at %u, time position %"
         GST_TIME_FORMAT " playing from sample %u to %u", str->track_id, k_index,
-        GST_TIME_ARGS (str->time_position), str->from_sample, str->to_sample);
+        GST_TIME_ARGS (str->cur_global_pts), str->from_sample, str->to_sample);
   }
 
   return GST_FLOW_OK;
 
 eos:
+  /* Set position to the beginning of the seek segment now */
+  qtdemux->segment.position = qtdemux->segment.start;
+  GST_DEBUG_OBJECT (qtdemux, "segment position now is %" GST_TIME_FORMAT,
+      GST_TIME_ARGS (qtdemux->segment.start));
   return GST_FLOW_EOS;
 }
 
 /*
- * Gets the current qt segment start, stop and position for the
+ * Gets the current (edit list) qt segment start, stop and position for the
  * given time offset. This is used in update_segment()
  */
 static void
@@ -5512,8 +5607,8 @@ gst_qtdemux_stream_segment_get_boundaries (GstQTDemux * qtdemux,
     seg_time = segment->duration;
   }
 
-  /* qtdemux->segment.stop is in outside-time-realm, whereas
-   * segment->media_stop is in track-time-realm.
+  /* qtdemux->segment.stop is in global time, whereas
+   * segment->media_stop is in track-specific media time.
    *
    * In order to compare the two, we need to bring segment.stop
    * into the track-time-realm
@@ -5800,29 +5895,29 @@ gst_qtdemux_activate_segment (GstQTDemux * qtdemux, QtDemuxStream * stream,
 static gboolean
 gst_qtdemux_prepare_current_sample (GstQTDemux * qtdemux,
     QtDemuxStream * stream, gboolean * empty, guint64 * offset, guint * size,
-    GstClockTime * dts, GstClockTime * pts, GstClockTime * duration,
-    gboolean * keyframe)
+    guint64 * dts, guint64 * pts, guint64 * duration,
+    gboolean * round_up_duration, gboolean * keyframe)
 {
   QtDemuxSample *sample;
-  GstClockTime time_position;
+  GstClockTime cur_global_pts;
   guint32 seg_idx;
 
   g_return_val_if_fail (stream != NULL, FALSE);
 
-  time_position = stream->time_position;
-  if (G_UNLIKELY (time_position == GST_CLOCK_TIME_NONE))
+  cur_global_pts = stream->cur_global_pts;
+  if (G_UNLIKELY (cur_global_pts == GST_CLOCK_TIME_NONE))
     goto eos;
 
   seg_idx = stream->segment_index;
   if (G_UNLIKELY (seg_idx == -1)) {
-    /* find segment corresponding to time_position if we are looking
+    /* find segment corresponding to cur_global_pts if we are looking
      * for a segment. */
-    seg_idx = gst_qtdemux_find_segment (qtdemux, stream, time_position);
+    seg_idx = gst_qtdemux_find_segment (qtdemux, stream, cur_global_pts);
   }
 
   /* different segment, activate it, sample_index will be set. */
   if (G_UNLIKELY (stream->segment_index != seg_idx))
-    gst_qtdemux_activate_segment (qtdemux, stream, seg_idx, time_position);
+    gst_qtdemux_activate_segment (qtdemux, stream, seg_idx, cur_global_pts);
 
   if (G_UNLIKELY (QTSEGMENT_IS_EMPTY (&stream->
               segments[stream->segment_index]))) {
@@ -5832,8 +5927,10 @@ gst_qtdemux_prepare_current_sample (GstQTDemux * qtdemux,
         " prepare empty sample");
 
     *empty = TRUE;
-    *pts = *dts = time_position;
-    *duration = seg->duration - (time_position - seg->time);
+    *pts = *dts = GSTTIME_TO_QTSTREAMTIME (stream, cur_global_pts);
+    *duration =
+        GSTTIME_TO_QTSTREAMTIME (stream,
+        seg->duration - (cur_global_pts - seg->time));
 
     return TRUE;
   }
@@ -5873,11 +5970,12 @@ gst_qtdemux_prepare_current_sample (GstQTDemux * qtdemux,
   /* now get the info for the sample we're at */
   sample = &stream->samples[stream->sample_index];
 
-  *dts = QTSAMPLE_DTS (stream, sample);
-  *pts = QTSAMPLE_PTS (stream, sample);
+  *dts = QTSAMPLE_DTS_STREAMTIME (sample);
+  *pts = QTSAMPLE_PTS_STREAMTIME (sample);
   *offset = sample->offset;
   *size = sample->size;
-  *duration = QTSAMPLE_DUR_DTS (stream, sample, *dts);
+  *duration = QTSAMPLE_DUR_STREAMTIME (sample, *dts);
+  *round_up_duration = QTSAMPLE_DUR_ROUND_UP (stream, sample);
   *keyframe = QTSAMPLE_KEYFRAME (stream, sample);
 
   return TRUE;
@@ -5885,7 +5983,7 @@ gst_qtdemux_prepare_current_sample (GstQTDemux * qtdemux,
   /* special cases */
 eos:
   {
-    stream->time_position = GST_CLOCK_TIME_NONE;
+    stream->cur_global_pts = GST_CLOCK_TIME_NONE;
     return FALSE;
   }
 }
@@ -5912,7 +6010,7 @@ gst_qtdemux_advance_sample (GstQTDemux * qtdemux, QtDemuxStream * stream)
     /* Mark the stream as EOS */
     GST_DEBUG_OBJECT (qtdemux,
         "reached max allowed sample %u, mark EOS", stream->to_sample);
-    stream->time_position = GST_CLOCK_TIME_NONE;
+    stream->cur_global_pts = GST_CLOCK_TIME_NONE;
     return;
   }
 
@@ -5936,25 +6034,41 @@ gst_qtdemux_advance_sample (GstQTDemux * qtdemux, QtDemuxStream * stream)
   /* get next sample */
   sample = &stream->samples[stream->sample_index];
 
-  GST_TRACE_OBJECT (qtdemux, "sample dts %" GST_TIME_FORMAT " media_stop: %"
-      GST_TIME_FORMAT, GST_TIME_ARGS (QTSAMPLE_DTS (stream, sample)),
-      GST_TIME_ARGS (segment->media_stop));
+  GST_TRACE_OBJECT (qtdemux, "track_ID=%d segment->time=%"
+      GST_TIME_FORMAT " segment->stop_time=%" GST_TIME_FORMAT
+      " segment->media_start=%" GST_TIME_FORMAT " media DTS=%" GST_TIME_FORMAT
+      " media PTS=%" GST_TIME_FORMAT,
+      stream->track_id, GST_TIME_ARGS (segment->time),
+      GST_TIME_ARGS (segment->stop_time), GST_TIME_ARGS (segment->media_start),
+      GST_TIME_ARGS (QTSAMPLE_DTS (stream, sample)),
+      GST_TIME_ARGS (QTSAMPLE_PTS (stream, sample)));
 
   /* see if we are past the segment */
   if (G_UNLIKELY (QTSAMPLE_DTS (stream, sample) >= segment->media_stop))
     goto next_segment;
 
-  if (QTSAMPLE_DTS (stream, sample) >= segment->media_start) {
-    /* inside the segment, update time_position, looks very familiar to
+  /* cur_global_pts is used for scheduling samples. It must be increasing and not
+   * overrun the current edit list segment boundaries. */
+  GstClockTime new_global_pts;
+  if (QTSAMPLE_PTS (stream, sample) >= segment->media_start) {
+    /* inside the segment, update cur_global_pts, looks very familiar to
      * GStreamer segments, doesn't it? */
-    stream->time_position =
-        QTSAMPLE_DTS (stream, sample) - segment->media_start + segment->time;
+    new_global_pts =
+        QTSAMPLE_PTS (stream, sample) - segment->media_start + segment->time;
+    /* clamp to segment boundaries */
+    if (new_global_pts > segment->stop_time)
+      new_global_pts = segment->stop_time;
   } else {
     /* not yet in segment, time does not yet increment. This means
      * that we are still prerolling keyframes to the decoder so it can
      * decode the first sample of the segment. */
-    stream->time_position = segment->time;
+    new_global_pts = segment->time;
   }
+  if (new_global_pts > stream->cur_global_pts)
+    stream->cur_global_pts = new_global_pts;
+  GST_TRACE_OBJECT (qtdemux,
+      "track_ID=%d has new cur_global_pts=%" GST_TIME_FORMAT, stream->track_id,
+      GST_TIME_ARGS (stream->cur_global_pts));
   return;
 
   /* move to the next segment */
@@ -5964,10 +6078,10 @@ next_segment:
 
     if (stream->segment_index == stream->n_segments - 1) {
       /* are we at the end of the last segment, we're EOS */
-      stream->time_position = GST_CLOCK_TIME_NONE;
+      stream->cur_global_pts = GST_CLOCK_TIME_NONE;
     } else {
       /* else we're only at the end of the current segment */
-      stream->time_position = segment->stop_time;
+      stream->cur_global_pts = segment->stop_time;
     }
     /* make sure we select a new segment */
 
@@ -6068,10 +6182,9 @@ gst_qtdemux_combine_flows (GstQTDemux * demux, QtDemuxStream * stream,
  * Should be used only with raw buffers */
 static GstBuffer *
 gst_qtdemux_clip_buffer (GstQTDemux * qtdemux, QtDemuxStream * stream,
-    GstBuffer * buf)
+    GstBuffer * buf, guint64 * dts, guint64 * pts, guint64 * duration)
 {
   guint64 start, stop, cstart, cstop, diff;
-  GstClockTime pts, duration;
   gsize size, osize;
   gint num_rate, denom_rate;
   gint frame_size;
@@ -6099,19 +6212,16 @@ gst_qtdemux_clip_buffer (GstQTDemux * qtdemux, QtDemuxStream * stream,
     goto bad_frame_size;
 
   /* we can only clip if we have a valid pts */
-  pts = GST_BUFFER_PTS (buf);
-  if (G_UNLIKELY (!GST_CLOCK_TIME_IS_VALID (pts)))
+  if (G_UNLIKELY (*pts == -1))
     goto no_pts;
 
-  duration = GST_BUFFER_DURATION (buf);
-
-  if (G_UNLIKELY (!GST_CLOCK_TIME_IS_VALID (duration))) {
-    duration =
-        gst_util_uint64_scale_int (size / frame_size, num_rate, denom_rate);
+  if (G_UNLIKELY (*duration == -1)) {
+    *duration = GSTTIME_TO_QTSTREAMTIME (stream,
+        gst_util_uint64_scale_int (size / frame_size, num_rate, denom_rate));
   }
 
-  start = pts;
-  stop = start + duration;
+  start = QTSTREAMTIME_TO_GSTTIME (stream, *pts);
+  stop = QTSTREAMTIME_TO_GSTTIME (stream, *pts + *duration);
 
   if (G_UNLIKELY (!gst_segment_clip (&stream->segment,
               GST_FORMAT_TIME, start, stop, &cstart, &cstop)))
@@ -6120,8 +6230,9 @@ gst_qtdemux_clip_buffer (GstQTDemux * qtdemux, QtDemuxStream * stream,
   /* see if some clipping happened */
   diff = cstart - start;
   if (diff > 0) {
-    pts += diff;
-    duration -= diff;
+    *pts += GSTTIME_TO_QTSTREAMTIME (stream, diff);
+    /* ceil diff, otherwise we might end up not clipping at all */
+    *duration -= GSTTIME_TO_QTSTREAMTIME_CEIL (stream, diff);
 
     if (clip_data) {
       /* bring clipped time to samples and to bytes */
@@ -6138,7 +6249,7 @@ gst_qtdemux_clip_buffer (GstQTDemux * qtdemux, QtDemuxStream * stream,
   }
   diff = stop - cstop;
   if (diff > 0) {
-    duration -= diff;
+    *duration -= GSTTIME_TO_QTSTREAMTIME_CEIL (stream, diff);
 
     if (clip_data) {
       /* bring clipped time to samples and then to bytes */
@@ -6154,9 +6265,7 @@ gst_qtdemux_clip_buffer (GstQTDemux * qtdemux, QtDemuxStream * stream,
   if (offset != 0 || size != osize)
     gst_buffer_resize (buf, offset, size);
 
-  GST_BUFFER_DTS (buf) = GST_CLOCK_TIME_NONE;
-  GST_BUFFER_PTS (buf) = pts;
-  GST_BUFFER_DURATION (buf) = duration;
+  *dts = -1;
 
   return buf;
 
@@ -6182,6 +6291,36 @@ clipped:
     gst_buffer_unref (buf);
     return NULL;
   }
+}
+
+static GstBuffer *
+gst_qtdemux_reorder_audio_channels (GstQTDemux * demux,
+    QtDemuxStream * stream, GstBuffer * buffer)
+{
+  buffer = gst_buffer_make_writable (buffer);
+
+  GstMapInfo map;
+
+  if (!gst_buffer_map (buffer, &map, GST_MAP_READWRITE))
+    return buffer;
+
+  if (map.size % (CUR_STREAM (stream)->bytes_per_sample *
+          CUR_STREAM (stream)->n_channels) != 0) {
+    GST_WARNING_OBJECT (demux,
+        "Odd number of frames in raw audio buffer of length %" G_GSIZE_FORMAT
+        " with %u bps and %u channels", map.size,
+        CUR_STREAM (stream)->bytes_per_sample, CUR_STREAM (stream)->n_channels);
+    goto out;
+  }
+
+  gst_audio_reorder_channels_with_reorder_map (map.data, map.size,
+      CUR_STREAM (stream)->bytes_per_sample, CUR_STREAM (stream)->n_channels,
+      CUR_STREAM (stream)->reorder_map);
+
+out:
+  gst_buffer_unmap (buffer, &map);
+
+  return buffer;
 }
 
 static GstBuffer *
@@ -6220,6 +6359,75 @@ gst_qtdemux_align_buffer (GstQTDemux * demux,
 
   gst_buffer_unmap (buffer, &map);
   return buffer;
+}
+
+/* Adds padding to the end of each row to achieve byte-alignment
+ *
+ * Returns NULL if failed
+ */
+static GstBuffer *
+gst_qtdemux_row_align_buffer (GstQTDemux * qtdemux, QtDemuxStream * stream,
+    GstBuffer * pre_buffer)
+{
+  GstVideoFrame pre_frame;
+  GstVideoFrame new_frame;
+  GstVideoInfo pre_info = stream->pre_info;
+  GstVideoInfo new_info = stream->info;
+  GstBuffer *new_buffer = NULL;
+  gboolean pre_frame_mapped = FALSE;
+  gboolean new_frame_mapped = FALSE;
+
+  /* Map Buffer to Frame */
+  pre_frame_mapped =
+      gst_video_frame_map (&pre_frame, &pre_info, pre_buffer, GST_MAP_READ);
+  if (!pre_frame_mapped) {
+    GST_ERROR_OBJECT (qtdemux, "Failed to map video frame.");
+    goto error;
+  }
+
+  /* Allocate New Buffer */
+  GstAllocationParams params = { 0, stream->alignment - 1, 0, 0, };
+  new_buffer = gst_buffer_new_allocate (NULL, new_info.size, &params);
+  if (!new_buffer) {
+    GST_ERROR_OBJECT (qtdemux, "Failed to allocate new buffer.");
+    goto error;
+  }
+
+  /* Map New Frame */
+  new_frame_mapped =
+      gst_video_frame_map (&new_frame, &new_info, new_buffer, GST_MAP_WRITE);
+  if (!new_frame_mapped) {
+    GST_ERROR_OBJECT (qtdemux, "Failed to map new video frame.");
+    goto error;
+  }
+
+  /* Copying the frame will automatically row-align the buffer */
+  if (!gst_video_frame_copy (&new_frame, &pre_frame)) {
+    GST_ERROR_OBJECT (qtdemux, "Failed to copy video frame.");
+    goto error;
+  }
+
+  /* Cleanup before returning */
+  gst_video_frame_unmap (&pre_frame);
+  gst_video_frame_unmap (&new_frame);
+
+  gst_buffer_copy_into (new_buffer, pre_buffer, GST_BUFFER_COPY_METADATA, 0,
+      -1);
+
+  gst_buffer_unref (pre_buffer);
+  return new_buffer;
+
+error:
+  if (new_frame_mapped) {
+    gst_video_frame_unmap (&new_frame);
+  }
+  if (pre_frame_mapped) {
+    gst_video_frame_unmap (&pre_frame);
+  }
+  if (new_buffer) {
+    gst_buffer_unref (new_buffer);
+  }
+  return NULL;
 }
 
 static guint8 *
@@ -6363,7 +6571,8 @@ invalid_cdat:
  * but time/duration etc not yet set and need not be preserved */
 static GstBuffer *
 gst_qtdemux_process_buffer_clcp (GstQTDemux * qtdemux, QtDemuxStream * stream,
-    GstBuffer * buf)
+    GstBuffer * buf, guint64 dts, guint64 pts, guint64 duration,
+    gboolean round_up_duration)
 {
   GstBuffer *outbuf = NULL;
   GstMapInfo map;
@@ -6399,7 +6608,8 @@ gst_qtdemux_process_buffer_clcp (GstQTDemux * qtdemux, QtDemuxStream * stream,
  * but time/duration etc not yet set and need not be preserved */
 static GstBuffer *
 gst_qtdemux_process_buffer_dvd (GstQTDemux * qtdemux, QtDemuxStream * stream,
-    GstBuffer * buf)
+    GstBuffer * buf, guint64 dts, guint64 pts, guint64 duration,
+    gboolean round_up_duration)
 {
   /* send a one time dvd clut event */
   if (stream->pending_event && stream->pad)
@@ -6421,7 +6631,8 @@ gst_qtdemux_process_buffer_dvd (GstQTDemux * qtdemux, QtDemuxStream * stream,
  * but time/duration etc not yet set and need not be preserved */
 static GstBuffer *
 gst_qtdemux_process_buffer_text (GstQTDemux * qtdemux, QtDemuxStream * stream,
-    GstBuffer * buf)
+    GstBuffer * buf, guint64 dts, guint64 pts, guint64 duration,
+    gboolean round_up_duration)
 {
   GstBuffer *outbuf = NULL;
   GstMapInfo map;
@@ -6470,10 +6681,16 @@ gst_qtdemux_process_buffer_text (GstQTDemux * qtdemux, QtDemuxStream * stream,
 /* WebVTT sample handling according to 14496-30 */
 static GstBuffer *
 gst_qtdemux_process_buffer_wvtt (GstQTDemux * qtdemux, QtDemuxStream * stream,
-    GstBuffer * buf)
+    GstBuffer * buf, guint64 dts, guint64 pts, guint64 duration,
+    gboolean round_up_duration)
 {
   GstBuffer *outbuf = NULL;
   GstMapInfo map;
+
+  GstClockTime pts_gsttime = (pts == -1) ? GST_CLOCK_TIME_NONE :
+      QTSTREAMTIME_TO_GSTTIME (stream, pts);
+  GstClockTime duration_gsttime = (duration == -1) ? GST_CLOCK_TIME_NONE :
+      QTSTREAMTIME_TO_GSTTIME (stream, duration) + round_up_duration;
 
   if (!gst_buffer_map (buf, &map, GST_MAP_READ)) {
     g_assert_not_reached ();    /* The buffer must be mappable */
@@ -6482,17 +6699,20 @@ gst_qtdemux_process_buffer_wvtt (GstQTDemux * qtdemux, QtDemuxStream * stream,
   if (qtdemux_webvtt_is_empty (qtdemux, map.data, map.size)) {
     GstEvent *gap = NULL;
     /* Push a gap event */
-    stream->segment.position = GST_BUFFER_PTS (buf);
-    gap =
-        gst_event_new_gap (stream->segment.position, GST_BUFFER_DURATION (buf));
-    gst_pad_push_event (stream->pad, gap);
+    stream->segment.position = pts_gsttime;
+    gap = gst_event_new_gap (stream->segment.position, duration_gsttime);
+    if (stream->segment.rate < 0.0 && stream->need_reorder) {
+      g_queue_push_head (&stream->reorder_queue, gap);
+    } else {
+      gst_pad_push_event (stream->pad, gap);
+    }
 
-    if (GST_BUFFER_DURATION_IS_VALID (buf))
-      stream->segment.position += GST_BUFFER_DURATION (buf);
+    if (GST_CLOCK_TIME_IS_VALID (duration_gsttime))
+      stream->segment.position += duration_gsttime;
   } else {
     outbuf =
-        qtdemux_webvtt_decode (qtdemux, GST_BUFFER_PTS (buf),
-        GST_BUFFER_DURATION (buf), map.data, map.size);
+        qtdemux_webvtt_decode (qtdemux, pts_gsttime, duration_gsttime, map.data,
+        map.size);
     gst_buffer_copy_into (outbuf, buf, GST_BUFFER_COPY_METADATA, 0, -1);
   }
 
@@ -6504,18 +6724,20 @@ gst_qtdemux_process_buffer_wvtt (GstQTDemux * qtdemux, QtDemuxStream * stream,
 
 static GstFlowReturn
 gst_qtdemux_push_buffer (GstQTDemux * qtdemux, QtDemuxStream * stream,
-    GstBuffer * buf)
+    GstBuffer * buf, guint64 dts, guint64 pts, guint64 duration,
+    gboolean round_up_duration)
 {
   GstFlowReturn ret = GST_FLOW_OK;
-  GstClockTime pts, duration;
+
 
   if (stream->need_clip)
-    buf = gst_qtdemux_clip_buffer (qtdemux, stream, buf);
+    buf = gst_qtdemux_clip_buffer (qtdemux, stream, buf, &dts, &pts, &duration);
 
   if (G_UNLIKELY (buf == NULL))
     goto exit;
 
-  if (G_UNLIKELY (stream->discont)) {
+  if (G_UNLIKELY (stream->discont && (!stream->need_reorder
+              || stream->segment.rate > 0.0))) {
     GST_LOG_OBJECT (qtdemux, "marking discont buffer");
     GST_BUFFER_FLAG_SET (buf, GST_BUFFER_FLAG_DISCONT);
     stream->discont = FALSE;
@@ -6525,10 +6747,13 @@ gst_qtdemux_push_buffer (GstQTDemux * qtdemux, QtDemuxStream * stream,
 
   GST_LOG_OBJECT (qtdemux,
       "Pushing buffer with dts %" GST_TIME_FORMAT ", pts %" GST_TIME_FORMAT
-      ", duration %" GST_TIME_FORMAT " on pad %s",
-      GST_TIME_ARGS (GST_BUFFER_DTS (buf)),
-      GST_TIME_ARGS (GST_BUFFER_PTS (buf)),
-      GST_TIME_ARGS (GST_BUFFER_DURATION (buf)), GST_PAD_NAME (stream->pad));
+      ", duration %" GST_TIME_FORMAT " on pad %s (discont: %d, keyframe: %d)",
+      GST_TIME_ARGS (QTSTREAMTIME_TO_GSTTIME (stream, dts)),
+      GST_TIME_ARGS (QTSTREAMTIME_TO_GSTTIME (stream, pts)),
+      GST_TIME_ARGS (QTSTREAMTIME_TO_GSTTIME (stream,
+              duration)) + round_up_duration, GST_PAD_NAME (stream->pad),
+      GST_BUFFER_IS_DISCONT (buf), !GST_BUFFER_FLAG_IS_SET (buf,
+          GST_BUFFER_FLAG_DELTA_UNIT));
 
   if (stream->protected && stream->protection_scheme_type == FOURCC_aavd) {
     GstStructure *crypto_info;
@@ -6547,7 +6772,7 @@ gst_qtdemux_push_buffer (GstQTDemux * qtdemux, QtDemuxStream * stream,
     guint64 start_of_trailing_padding;
     guint64 start_clip = 0, end_clip = 0;
     guint64 total_num_clipped_samples;
-    GstClockTime timestamp_decrement;
+    guint64 timestamp_decrement;
 
     /* Attach GstAudioClippingMeta to exclude padding data. */
 
@@ -6565,7 +6790,8 @@ gst_qtdemux_push_buffer (GstQTDemux * qtdemux, QtDemuxStream * stream,
       start_clip = MIN (num_padding_audio_samples, stream->stts_duration);
     }
 
-    timestamp_decrement = qtdemux->gapless_audio_info.start_padding_duration;
+    timestamp_decrement =
+        qtdemux->gapless_audio_info.num_start_padding_pcm_frames;
 
     if (audio_sample_offset >= start_of_trailing_padding) {
       /* This case happens when the buffer is located fully past
@@ -6574,7 +6800,8 @@ gst_qtdemux_push_buffer (GstQTDemux * qtdemux, QtDemuxStream * stream,
        * continuous timestamps when transitioning from gapless
        * media to gapless media. */
       end_clip = stream->stts_duration;
-      timestamp_decrement += qtdemux->gapless_audio_info.end_padding_duration;
+      timestamp_decrement +=
+          qtdemux->gapless_audio_info.num_end_padding_pcm_frames;
     } else if (audio_sample_offset_end >= start_of_trailing_padding) {
       /* This case happens when the beginning of the padding area that
        * is located at the end of the stream intersects the buffer. */
@@ -6591,29 +6818,26 @@ gst_qtdemux_push_buffer (GstQTDemux * qtdemux, QtDemuxStream * stream,
           start_clip, end_clip);
 
       if (total_num_clipped_samples >= stream->stts_duration) {
-        GST_BUFFER_DURATION (buf) = 0;
+        duration = 0;
+        round_up_duration = FALSE;
         GST_BUFFER_FLAG_SET (buf, GST_BUFFER_FLAG_DECODE_ONLY);
         GST_BUFFER_FLAG_SET (buf, GST_BUFFER_FLAG_DROPPABLE);
       } else {
         guint64 num_valid_samples =
             stream->stts_duration - total_num_clipped_samples;
-        GST_BUFFER_DURATION (buf) =
-            QTSTREAMTIME_TO_GSTTIME (stream, num_valid_samples);
+        duration = num_valid_samples;
+        round_up_duration = FALSE;
       }
     }
 
     /* The timestamps need to be shifted to factor in the skipped padding data. */
 
-    if (GST_BUFFER_PTS_IS_VALID (buf)) {
-      GstClockTime ts = GST_BUFFER_PTS (buf);
-      GST_BUFFER_PTS (buf) =
-          (ts >= timestamp_decrement) ? (ts - timestamp_decrement) : 0;
+    if (pts != -1) {
+      pts = (pts >= timestamp_decrement) ? (pts - timestamp_decrement) : 0;
     }
 
-    if (GST_BUFFER_DTS_IS_VALID (buf)) {
-      GstClockTime ts = GST_BUFFER_DTS (buf);
-      GST_BUFFER_DTS (buf) =
-          (ts >= timestamp_decrement) ? (ts - timestamp_decrement) : 0;
+    if (dts != -1) {
+      dts = (dts >= timestamp_decrement) ? (dts - timestamp_decrement) : 0;
     }
   }
 
@@ -6674,17 +6898,38 @@ gst_qtdemux_push_buffer (GstQTDemux * qtdemux, QtDemuxStream * stream,
     }
   }
 
-  if (stream->alignment > 1)
+  /* Copy buffer to ensure alignment */
+  if (stream->needs_row_alignment) {
+    buf = gst_qtdemux_row_align_buffer (qtdemux, stream, buf);
+    if (buf == NULL) {
+      ret = GST_FLOW_ERROR;
+      goto exit;
+    }
+  } else if (stream->alignment > 1) {
     buf = gst_qtdemux_align_buffer (qtdemux, buf, stream->alignment);
+  }
 
-  pts = GST_BUFFER_PTS (buf);
-  duration = GST_BUFFER_DURATION (buf);
+  if (CUR_STREAM (stream)->needs_reorder)
+    buf = gst_qtdemux_reorder_audio_channels (qtdemux, stream, buf);
 
-  ret = gst_pad_push (stream->pad, buf);
+  GST_BUFFER_DTS (buf) = (dts == -1) ? GST_CLOCK_TIME_NONE :
+      QTSTREAMTIME_TO_GSTTIME (stream, dts);
+  GST_BUFFER_PTS (buf) = (pts == -1) ? GST_CLOCK_TIME_NONE :
+      QTSTREAMTIME_TO_GSTTIME (stream, pts);
+  GST_BUFFER_DURATION (buf) = (duration == -1) ? GST_CLOCK_TIME_NONE :
+      QTSTREAMTIME_TO_GSTTIME (stream, duration) + round_up_duration;
 
-  if (GST_CLOCK_TIME_IS_VALID (pts) && GST_CLOCK_TIME_IS_VALID (duration)) {
+  if (stream->segment.rate < 0.0 && stream->need_reorder) {
+    g_queue_push_head (&stream->reorder_queue, buf);
+    ret = GST_FLOW_OK;
+  } else {
+    ret = gst_pad_push (stream->pad, buf);
+  }
+
+  if (pts != -1 && duration != -1) {
     /* mark position in stream, we'll need this to know when to send GAP event */
-    stream->segment.position = pts + duration;
+    stream->segment.position =
+        QTSTREAMTIME_TO_GSTTIME (stream, pts + duration) + round_up_duration;
   }
 
 exit:
@@ -6694,7 +6939,8 @@ exit:
 
 static GstFlowReturn
 gst_qtdemux_split_and_push_buffer (GstQTDemux * qtdemux, QtDemuxStream * stream,
-    GstBuffer * buf)
+    GstBuffer * buf, guint64 dts, guint64 pts, guint64 duration,
+    gboolean round_up_duration)
 {
   GstFlowReturn ret = GST_FLOW_OK;
 
@@ -6728,14 +6974,15 @@ gst_qtdemux_split_and_push_buffer (GstQTDemux * qtdemux, QtDemuxStream * stream,
      * pass through */
     if (n_field1 > 1 || n_field2 > 1) {
       n_output_buffers =
-          gst_util_uint64_scale (GST_BUFFER_DURATION (buf),
-          CUR_STREAM (stream)->fps_n, GST_SECOND * CUR_STREAM (stream)->fps_d);
+          gst_util_uint64_scale (duration, CUR_STREAM (stream)->fps_n,
+          stream->timescale * CUR_STREAM (stream)->fps_d);
 
       for (i = 0; i < n_output_buffers; i++) {
         GstBuffer *outbuf =
             gst_buffer_new_and_alloc ((n_field1 ? 3 : 0) + (n_field2 ? 3 : 0));
         GstMapInfo outmap;
         guint8 *outptr;
+        guint64 out_pts, out_dur;
 
         gst_buffer_map (outbuf, &outmap, GST_MAP_WRITE);
         outptr = outmap.data;
@@ -6786,17 +7033,18 @@ gst_qtdemux_split_and_push_buffer (GstQTDemux * qtdemux, QtDemuxStream * stream,
 
         gst_buffer_unmap (outbuf, &outmap);
 
-        GST_BUFFER_PTS (outbuf) =
-            GST_BUFFER_PTS (buf) + gst_util_uint64_scale (i,
-            GST_SECOND * CUR_STREAM (stream)->fps_d,
+        out_pts = pts + gst_util_uint64_scale (i,
+            stream->timescale * CUR_STREAM (stream)->fps_d,
             CUR_STREAM (stream)->fps_n);
-        GST_BUFFER_DURATION (outbuf) =
-            gst_util_uint64_scale (GST_SECOND, CUR_STREAM (stream)->fps_d,
-            CUR_STREAM (stream)->fps_n);
+        out_dur = gst_util_uint64_scale (stream->timescale,
+            CUR_STREAM (stream)->fps_d, CUR_STREAM (stream)->fps_n);
+
         GST_BUFFER_OFFSET (outbuf) = -1;
         GST_BUFFER_OFFSET_END (outbuf) = -1;
 
-        ret = gst_qtdemux_push_buffer (qtdemux, stream, outbuf);
+        ret =
+            gst_qtdemux_push_buffer (qtdemux, stream, outbuf, -1, out_pts,
+            out_dur, round_up_duration && (i + 1 == n_output_buffers));
 
         if (ret != GST_FLOW_OK && ret != GST_FLOW_NOT_LINKED)
           break;
@@ -6805,10 +7053,14 @@ gst_qtdemux_split_and_push_buffer (GstQTDemux * qtdemux, QtDemuxStream * stream,
       gst_buffer_unref (buf);
     } else {
       gst_buffer_unmap (buf, &map);
-      ret = gst_qtdemux_push_buffer (qtdemux, stream, buf);
+      ret =
+          gst_qtdemux_push_buffer (qtdemux, stream, buf, dts, pts, duration,
+          round_up_duration);
     }
   } else {
-    ret = gst_qtdemux_push_buffer (qtdemux, stream, buf);
+    ret =
+        gst_qtdemux_push_buffer (qtdemux, stream, buf, dts, pts, duration,
+        round_up_duration);
   }
 
   return ret;
@@ -6821,8 +7073,8 @@ gst_qtdemux_split_and_push_buffer (GstQTDemux * qtdemux, QtDemuxStream * stream,
 static GstFlowReturn
 gst_qtdemux_decorate_and_push_buffer (GstQTDemux * qtdemux,
     QtDemuxStream * stream, GstBuffer * buf,
-    GstClockTime dts, GstClockTime pts, GstClockTime duration,
-    gboolean keyframe, GstClockTime position, guint64 byte_position)
+    guint64 dts, guint64 pts, guint64 duration, gboolean round_up_duration,
+    gboolean keyframe, guint64 position, guint64 byte_position)
 {
   GstFlowReturn ret = GST_FLOW_OK;
 
@@ -6852,7 +7104,7 @@ gst_qtdemux_decorate_and_push_buffer (GstQTDemux * qtdemux,
 
   /* position reporting */
   if (qtdemux->segment.rate >= 0) {
-    qtdemux->segment.position = position;
+    qtdemux->segment.position = QTSTREAMTIME_TO_GSTTIME (stream, position);
     gst_qtdemux_sync_streams (qtdemux);
   }
 
@@ -6866,7 +7118,8 @@ gst_qtdemux_decorate_and_push_buffer (GstQTDemux * qtdemux,
   while (stream->buffers) {
     GstBuffer *buffer = (GstBuffer *) stream->buffers->data;
 
-    if (G_UNLIKELY (stream->discont)) {
+    if (G_UNLIKELY (stream->discont && (!stream->need_reorder
+                || stream->segment.rate > 0.0))) {
       GST_LOG_OBJECT (qtdemux, "marking discont buffer");
       GST_BUFFER_FLAG_SET (buffer, GST_BUFFER_FLAG_DISCONT);
       stream->discont = FALSE;
@@ -6876,9 +7129,22 @@ gst_qtdemux_decorate_and_push_buffer (GstQTDemux * qtdemux,
 
     if (stream->alignment > 1)
       buffer = gst_qtdemux_align_buffer (qtdemux, buffer, stream->alignment);
-    gst_pad_push (stream->pad, buffer);
+    if (CUR_STREAM (stream)->needs_reorder)
+      buffer = gst_qtdemux_reorder_audio_channels (qtdemux, stream, buffer);
+
+    if (stream->segment.rate < 0.0 && stream->need_reorder) {
+      g_queue_push_head (&stream->reorder_queue, buffer);
+      ret = GST_FLOW_OK;
+    } else {
+      ret = gst_pad_push (stream->pad, buffer);
+    }
 
     stream->buffers = g_slist_delete_link (stream->buffers, stream->buffers);
+
+    if (ret != GST_FLOW_OK) {
+      gst_buffer_unref (buf);
+      goto exit;
+    }
   }
 
   /* we're going to modify the metadata */
@@ -6888,19 +7154,19 @@ gst_qtdemux_decorate_and_push_buffer (GstQTDemux * qtdemux,
     static GstStaticCaps unix_caps = GST_STATIC_CAPS ("timestamp/x-unix");
     GstCaps *caps = gst_static_caps_get (&unix_caps);
     gst_buffer_add_reference_timestamp_meta (buf, caps,
-        pts + qtdemux->start_utc_time - stream->cslg_shift,
+        QTSTREAMTIME_TO_GSTTIME (stream,
+            pts) + qtdemux->start_utc_time - stream->cslg_shift,
         GST_CLOCK_TIME_NONE);
     gst_caps_unref (caps);
   }
 
-  GST_BUFFER_DTS (buf) = dts;
-  GST_BUFFER_PTS (buf) = pts;
-  GST_BUFFER_DURATION (buf) = duration;
   GST_BUFFER_OFFSET (buf) = -1;
   GST_BUFFER_OFFSET_END (buf) = -1;
 
   if (G_UNLIKELY (stream->process_func))
-    buf = stream->process_func (qtdemux, stream, buf);
+    buf =
+        stream->process_func (qtdemux, stream, buf, dts, pts, duration,
+        round_up_duration);
 
   if (!buf) {
     goto exit;
@@ -6908,9 +7174,6 @@ gst_qtdemux_decorate_and_push_buffer (GstQTDemux * qtdemux,
 
   if (!keyframe) {
     GST_BUFFER_FLAG_SET (buf, GST_BUFFER_FLAG_DELTA_UNIT);
-    stream->on_keyframe = FALSE;
-  } else {
-    stream->on_keyframe = TRUE;
   }
 
   if (G_UNLIKELY (CUR_STREAM (stream)->rgb8_palette))
@@ -6940,7 +7203,9 @@ gst_qtdemux_decorate_and_push_buffer (GstQTDemux * qtdemux,
   }
 #endif
 
-  ret = gst_qtdemux_split_and_push_buffer (qtdemux, stream, buf);
+  ret =
+      gst_qtdemux_split_and_push_buffer (qtdemux, stream, buf, dts, pts,
+      duration, round_up_duration);
 
 exit:
   return ret;
@@ -7000,7 +7265,7 @@ gst_qtdemux_do_fragmented_seek (GstQTDemux * qtdemux)
 
     entry =
         gst_qtdemux_stream_seek_fragment (qtdemux, stream,
-        stream->time_position, !is_audio_or_video);
+        stream->cur_global_pts, !is_audio_or_video);
 
     GST_INFO_OBJECT (stream->pad, "%" GST_TIME_FORMAT " at offset "
         "%" G_GUINT64_FORMAT, GST_TIME_ARGS (entry->ts), entry->moof_offset);
@@ -7049,7 +7314,7 @@ gst_qtdemux_do_fragmented_seek (GstQTDemux * qtdemux)
 
   GST_INFO_OBJECT (qtdemux, "seek to %" GST_TIME_FORMAT ", best fragment "
       "moof offset: %" G_GUINT64_FORMAT ", ts %" GST_TIME_FORMAT,
-      GST_TIME_ARGS (QTDEMUX_NTH_STREAM (qtdemux, 0)->time_position),
+      GST_TIME_ARGS (QTDEMUX_NTH_STREAM (qtdemux, 0)->cur_global_pts),
       best_entry->moof_offset, GST_TIME_ARGS (best_entry->ts));
 
   qtdemux->moof_offset = best_entry->moof_offset;
@@ -7066,11 +7331,12 @@ gst_qtdemux_loop_state_movie (GstQTDemux * qtdemux)
   GstFlowReturn ret = GST_FLOW_OK;
   GstBuffer *buf = NULL;
   QtDemuxStream *stream, *target_stream = NULL;
-  GstClockTime min_time;
+  guint64 min_time;             /* PTS global time, nanoseconds */
   guint64 offset = 0;
-  GstClockTime dts = GST_CLOCK_TIME_NONE;
-  GstClockTime pts = GST_CLOCK_TIME_NONE;
-  GstClockTime duration = 0;
+  guint64 dts = -1;
+  guint64 pts = -1;
+  guint64 duration = 0;
+  gboolean round_up_duration = FALSE;
   gboolean keyframe = FALSE;
   guint sample_size = 0;
   guint num_samples = 1;
@@ -7095,7 +7361,9 @@ gst_qtdemux_loop_state_movie (GstQTDemux * qtdemux)
     GstClockTime position;
 
     stream = QTDEMUX_NTH_STREAM (qtdemux, i);
-    position = stream->time_position;
+    position = stream->cur_global_pts;
+    GST_TRACE_OBJECT (qtdemux, "track_ID=%d cur_global_pts=%" GST_TIME_FORMAT,
+        stream->track_id, GST_TIME_ARGS (stream->cur_global_pts));
 
     /* position of -1 is EOS */
     if (position != GST_CLOCK_TIME_NONE && position < min_time) {
@@ -7108,20 +7376,37 @@ gst_qtdemux_loop_state_movie (GstQTDemux * qtdemux)
     GST_DEBUG_OBJECT (qtdemux, "all streams are EOS");
     goto eos;
   }
-
-  /* check for segment end */
-  if (G_UNLIKELY (qtdemux->segment.stop != -1
-          && qtdemux->segment.rate >= 0
-          && qtdemux->segment.stop <= min_time && target_stream->on_keyframe)) {
-    GST_DEBUG_OBJECT (qtdemux, "we reached the end of our segment.");
-    target_stream->time_position = GST_CLOCK_TIME_NONE;
-    goto eos_stream;
-  }
+  GST_TRACE_OBJECT (qtdemux, "Chose to advance track_ID=%d",
+      target_stream->track_id);
 
   /* fetch info for the current sample of this stream */
   if (G_UNLIKELY (!gst_qtdemux_prepare_current_sample (qtdemux, target_stream,
-              &empty, &offset, &sample_size, &dts, &pts, &duration, &keyframe)))
+              &empty, &offset, &sample_size, &dts, &pts, &duration,
+              &round_up_duration, &keyframe)))
     goto eos_stream;
+
+  /* Check whether we're after the seek segment stop now. This check uses
+   * DTS instead of PTS to make sure no future samples have a PTS before
+   * the segment stop. */
+  if (G_UNLIKELY (qtdemux->segment.stop != -1 && qtdemux->segment.rate >= 0)) {
+    const QtDemuxSegment *segment;
+    GstClockTime dts_gst = QTSTREAMTIME_TO_GSTTIME (target_stream, dts);
+    GstClockTime global_dts;
+
+    /* Need to convert from time inside the media segment to global time */
+    g_assert (target_stream->segment_index < target_stream->n_segments);
+    segment = &target_stream->segments[target_stream->segment_index];
+    global_dts =
+        (dts_gst >=
+        segment->media_start) ? ((dts_gst - segment->media_start) +
+        segment->time) : 0;
+
+    if (qtdemux->segment.stop <= global_dts) {
+      GST_DEBUG_OBJECT (qtdemux, "we reached the end of our segment.");
+      target_stream->cur_global_pts = GST_CLOCK_TIME_NONE;
+      goto eos_stream;
+    }
+  }
 
   /* Send catche-up GAP event for each other stream if required.
    * This logic will be applied only for positive rate */
@@ -7167,7 +7452,11 @@ gst_qtdemux_loop_state_movie (GstQTDemux * qtdemux)
             gst_event_new_gap (stream->segment.position, gap_threshold);
         GST_LOG_OBJECT (stream->pad, "Sending %" GST_PTR_FORMAT, gap);
 
-        gst_pad_push_event (stream->pad, gap);
+        if (stream->segment.rate < 0.0 && stream->need_reorder) {
+          g_queue_push_head (&stream->reorder_queue, gap);
+        } else {
+          gst_pad_push_event (stream->pad, gap);
+        }
         stream->segment.position += gap_threshold;
         pseudo_cur_time += gap_threshold;
       }
@@ -7194,18 +7483,18 @@ gst_qtdemux_loop_state_movie (GstQTDemux * qtdemux)
         GstClockTimeDiff interval;
 
         if (qtdemux->segment.rate > 0)
-          interval = stream->time_position - stream->last_keyframe_dts;
+          interval = stream->cur_global_pts - stream->last_keyframe_pts;
         else
-          interval = stream->last_keyframe_dts - stream->time_position;
+          interval = stream->last_keyframe_pts - stream->cur_global_pts;
 
-        if (GST_CLOCK_TIME_IS_VALID (stream->last_keyframe_dts)
+        if (GST_CLOCK_TIME_IS_VALID (stream->last_keyframe_pts)
             && interval < qtdemux->trickmode_interval) {
           GST_LOG_OBJECT (qtdemux,
               "Skipping keyframe within interval on track-id %u",
               stream->track_id);
           goto next;
         } else {
-          stream->last_keyframe_dts = stream->time_position;
+          stream->last_keyframe_pts = stream->cur_global_pts;
         }
       }
     }
@@ -7215,15 +7504,27 @@ gst_qtdemux_loop_state_movie (GstQTDemux * qtdemux)
       "pushing from track-id %u, empty %d offset %" G_GUINT64_FORMAT
       ", size %d, dts=%" GST_TIME_FORMAT ", pts=%" GST_TIME_FORMAT
       ", duration %" GST_TIME_FORMAT, stream->track_id, empty, offset,
-      sample_size, GST_TIME_ARGS (dts), GST_TIME_ARGS (pts),
-      GST_TIME_ARGS (duration));
+      sample_size,
+      GST_TIME_ARGS (QTSTREAMTIME_TO_GSTTIME (stream, dts)),
+      GST_TIME_ARGS (QTSTREAMTIME_TO_GSTTIME (stream, pts)),
+      GST_TIME_ARGS (QTSTREAMTIME_TO_GSTTIME (stream, duration)));
 
   if (G_UNLIKELY (empty)) {
+    GstClockTime gst_pts = QTSTREAMTIME_TO_GSTTIME (stream, pts);
+    GstClockTime gst_dur = QTSTREAMTIME_TO_GSTTIME (stream, duration);
+
     /* empty segment, push a gap if there's a second or more
      * difference and move to the next one */
-    if ((pts + duration - stream->segment.position) >= GST_SECOND)
-      gst_pad_push_event (stream->pad, gst_event_new_gap (pts, duration));
-    stream->segment.position = pts + duration;
+    if ((gst_pts + gst_dur - stream->segment.position) >= GST_SECOND) {
+      GstEvent *gap = gst_event_new_gap (gst_pts, gst_dur);
+
+      if (stream->segment.rate < 0.0 && stream->need_reorder) {
+        g_queue_push_head (&stream->reorder_queue, gap);
+      } else {
+        gst_pad_push_event (stream->pad, gap);
+      }
+    }
+    stream->segment.position = gst_pts + gst_dur;
     goto next;
   }
 
@@ -7330,38 +7631,32 @@ gst_qtdemux_loop_state_movie (GstQTDemux * qtdemux)
 
   /* Update for both splitting and combining of samples */
   if (size != sample_size) {
-    pts += gst_util_uint64_scale_int (GST_SECOND,
-        stream->offset_in_sample / CUR_STREAM (stream)->bytes_per_frame,
-        stream->timescale);
-    dts +=
-        gst_util_uint64_scale_int (GST_SECOND,
-        stream->offset_in_sample / CUR_STREAM (stream)->bytes_per_frame,
-        stream->timescale);
-    duration =
-        gst_util_uint64_scale_int (GST_SECOND,
-        size / CUR_STREAM (stream)->bytes_per_frame, stream->timescale);
+    pts += stream->offset_in_sample / CUR_STREAM (stream)->bytes_per_frame;
+    dts += stream->offset_in_sample / CUR_STREAM (stream)->bytes_per_frame;
+    duration = size / CUR_STREAM (stream)->bytes_per_frame;
   }
 
   ret = gst_qtdemux_decorate_and_push_buffer (qtdemux, stream, buf,
-      dts, pts, duration, keyframe, min_time, offset);
+      dts, pts, duration, round_up_duration, keyframe,
+      GSTTIME_TO_QTSTREAMTIME (stream, min_time), offset);
 
   if (size < sample_size) {
     QtDemuxSample *sample = &stream->samples[stream->sample_index];
     QtDemuxSegment *segment = &stream->segments[stream->segment_index];
 
-    GstClockTime time_position = QTSTREAMTIME_TO_GSTTIME (stream,
-        sample->timestamp +
+    GstClockTime media_time = QTSTREAMTIME_TO_GSTTIME (stream,
+        sample->timestamp + sample->pts_offset +
         stream->offset_in_sample / CUR_STREAM (stream)->bytes_per_frame);
-    if (time_position >= segment->media_start) {
-      /* inside the segment, update time_position, looks very familiar to
+    if (media_time >= segment->media_start) {
+      /* inside the segment, update cur_global_pts, looks very familiar to
        * GStreamer segments, doesn't it? */
-      stream->time_position = (time_position - segment->media_start) +
+      stream->cur_global_pts = (media_time - segment->media_start) +
           segment->time;
     } else {
       /* not yet in segment, time does not yet increment. This means
        * that we are still prerolling keyframes to the decoder so it can
        * decode the first sample of the segment. */
-      stream->time_position = segment->time;
+      stream->cur_global_pts = segment->time;
     }
   } else if (size > sample_size) {
     /* Increase to the last sample we already pulled so that advancing
@@ -7477,6 +7772,21 @@ pause:
           GstMessage *message;
           GstEvent *event;
 
+          /* segment.position will still be at the last timestamp and won't always
+           * include the duration of the last packet. Expand that to the segment
+           * duration so that segment.base is increased correctly to include the
+           * length of the last packet when doing segment seeks. We need to do
+           * this before the segment-done event goes out so everything's ready
+           * for the next seek request coming in. */
+          if (GST_CLOCK_TIME_IS_VALID (stop)) {
+            GST_DEBUG_OBJECT (qtdemux,
+                "End of segment, updating segment.position from %"
+                GST_TIME_FORMAT " to stop %" GST_TIME_FORMAT,
+                GST_TIME_ARGS (qtdemux->segment.position),
+                GST_TIME_ARGS (stop));
+            qtdemux->segment.position = stop;
+          }
+
           GST_LOG_OBJECT (qtdemux, "Sending segment done, at end of segment");
           message = gst_message_new_segment_done (GST_OBJECT_CAST (qtdemux),
               GST_FORMAT_TIME, stop);
@@ -7490,6 +7800,15 @@ pause:
         } else {
           GstMessage *message;
           GstEvent *event;
+
+          if (qtdemux->segment.position != qtdemux->segment.start) {
+            GST_DEBUG_OBJECT (qtdemux,
+                "End of segment, updating segment.position from %"
+                GST_TIME_FORMAT " to start %" GST_TIME_FORMAT,
+                GST_TIME_ARGS (qtdemux->segment.position),
+                GST_TIME_ARGS (qtdemux->segment.start));
+            qtdemux->segment.position = qtdemux->segment.start;
+          }
 
           /*  For Reverse Playback */
           GST_LOG_OBJECT (qtdemux, "Sending segment done, at start of segment");
@@ -7735,9 +8054,14 @@ gst_qtdemux_check_send_pending_segment (GstQTDemux * demux)
       QtDemuxStream *stream = QTDEMUX_NTH_STREAM (demux, i);
       gst_qtdemux_push_tags (demux, stream);
       if (CUR_STREAM (stream)->sparse) {
+        GstEvent *gap =
+            gst_event_new_gap (stream->segment.position, GST_CLOCK_TIME_NONE);
         GST_INFO_OBJECT (demux, "Sending gap event on stream %d", i);
-        gst_pad_push_event (stream->pad,
-            gst_event_new_gap (stream->segment.position, GST_CLOCK_TIME_NONE));
+        if (stream->segment.rate < 0.0 && stream->need_reorder) {
+          g_queue_push_head (&stream->reorder_queue, gap);
+        } else {
+          gst_pad_push_event (stream->pad, gap);
+        }
       }
     }
   }
@@ -7754,7 +8078,7 @@ gst_qtdemux_send_gap_for_segment (GstQTDemux * demux,
   dur =
       stream->segments[segment_index].duration - (pos -
       stream->segments[segment_index].time);
-  stream->time_position += dur;
+  stream->cur_global_pts += dur;
 
   /* Only gaps with a duration of at least one second are propagated.
    * Same workaround as in pull mode.
@@ -7765,7 +8089,11 @@ gst_qtdemux_send_gap_for_segment (GstQTDemux * demux,
 
     GST_DEBUG_OBJECT (stream->pad, "Pushing gap for empty "
         "segment: %" GST_PTR_FORMAT, gap);
-    gst_pad_push_event (stream->pad, gap);
+    if (stream->segment.rate < 0.0 && stream->need_reorder) {
+      g_queue_push_head (&stream->reorder_queue, gap);
+    } else {
+      gst_pad_push_event (stream->pad, gap);
+    }
   }
 }
 
@@ -7979,46 +8307,11 @@ gst_qtdemux_chain (GstPad * sinkpad, GstObject * parent, GstBuffer * inbuf)
   gst_adapter_push (demux->adapter, inbuf);
 
   GST_DEBUG_OBJECT (demux,
-      "pushing in inbuf %p, neededbytes:%u, available:%" G_GSIZE_FORMAT, inbuf,
-      demux->neededbytes, gst_adapter_available (demux->adapter));
+      "pushing in inbuf %p, neededbytes:%" G_GUINT64_FORMAT ", available:%"
+      G_GSIZE_FORMAT, inbuf, demux->neededbytes,
+      gst_adapter_available (demux->adapter));
 
   return gst_qtdemux_process_adapter (demux, FALSE);
-}
-
-static guint64
-gst_segment_to_stream_time_clamped (const GstSegment * segment,
-    guint64 position)
-{
-  guint64 segment_stream_time_start;
-  guint64 segment_stream_time_stop = GST_CLOCK_TIME_NONE;
-  guint64 stream_pts_unsigned;
-  int ret;
-
-  g_return_val_if_fail (segment != NULL, GST_CLOCK_TIME_NONE);
-  g_return_val_if_fail (segment->format == GST_FORMAT_TIME,
-      GST_CLOCK_TIME_NONE);
-
-  segment_stream_time_start = segment->time;
-  if (segment->stop != GST_CLOCK_TIME_NONE)
-    segment_stream_time_stop =
-        gst_segment_to_stream_time (segment, GST_FORMAT_TIME, segment->stop);
-
-  ret =
-      gst_segment_to_stream_time_full (segment, GST_FORMAT_TIME, position,
-      &stream_pts_unsigned);
-  /* ret == 0 if the segment is invalid (either position, segment->time or the segment start are -1). */
-  g_return_val_if_fail (ret != 0, GST_CLOCK_TIME_NONE);
-
-  if (ret == -1 || stream_pts_unsigned < segment_stream_time_start) {
-    /* Negative or prior to segment start stream time, clamp to segment start. */
-    return segment_stream_time_start;
-  } else if (segment_stream_time_stop != GST_CLOCK_TIME_NONE
-      && stream_pts_unsigned > segment_stream_time_stop) {
-    /* Clamp to segment end. */
-    return segment_stream_time_stop;
-  } else {
-    return stream_pts_unsigned;
-  }
 }
 
 static GstFlowReturn
@@ -8043,10 +8336,11 @@ gst_qtdemux_process_adapter (GstQTDemux * demux, gboolean force)
           gst_adapter_distance_from_discont (demux->adapter);
 
       GST_DEBUG_OBJECT (demux,
-          "state:%s , demux->neededbytes:%d, demux->offset:%" G_GUINT64_FORMAT
-          " adapter offset :%" G_GUINT64_FORMAT " (+ %" G_GUINT64_FORMAT
-          " bytes)", qt_demux_state_string (demux->state), demux->neededbytes,
-          demux->offset, discont_offset, distance_from_discont);
+          "state:%s , demux->neededbytes:%" G_GUINT64_FORMAT ", demux->offset:%"
+          G_GUINT64_FORMAT " adapter offset :%" G_GUINT64_FORMAT " (+ %"
+          G_GUINT64_FORMAT " bytes)", qt_demux_state_string (demux->state),
+          demux->neededbytes, demux->offset, discont_offset,
+          distance_from_discont);
     }
 #endif
 
@@ -8076,7 +8370,7 @@ gst_qtdemux_process_adapter (GstQTDemux * demux, gboolean force)
           break;
         }
         if (fourcc == FOURCC_mdat) {
-          gint next_entry = next_entry_size (demux);
+          guint64 next_entry = next_entry_size (demux);
           if (QTDEMUX_N_STREAMS (demux) > 0 && (next_entry != -1
                   || !demux->fragmented)) {
             /* we have the headers, start playback */
@@ -8231,9 +8525,11 @@ gst_qtdemux_process_adapter (GstQTDemux * demux, gboolean force)
             if (ret != GST_FLOW_OK)
               break;
 
+            /* For fragmented MP4 we need to parse the moof first to be able to
+             * create the correct segment */
+            if (!demux->fragmented)
+              gst_qtdemux_check_send_pending_segment (demux);
             demux->got_moov = TRUE;
-
-            gst_qtdemux_check_send_pending_segment (demux);
 
             if (demux->moov_node_compressed) {
               g_node_destroy (demux->moov_node_compressed);
@@ -8457,7 +8753,8 @@ gst_qtdemux_process_adapter (GstQTDemux * demux, gboolean force)
       case QTDEMUX_STATE_MOVIE:{
         QtDemuxStream *stream = NULL;
         QtDemuxSample *sample;
-        GstClockTime dts, pts, stream_pts, duration;
+        guint64 dts, pts, duration;
+        gboolean round_up_duration = FALSE;
         gboolean keyframe;
         gint i;
 
@@ -8564,27 +8861,53 @@ gst_qtdemux_process_adapter (GstQTDemux * demux, gboolean force)
         sample = &stream->samples[stream->sample_index];
 
         if (G_LIKELY (!(STREAM_IS_EOS (stream)))) {
+          GstClockTime global_dts;
+
           GST_DEBUG_OBJECT (demux, "stream : %" GST_FOURCC_FORMAT,
               GST_FOURCC_ARGS (CUR_STREAM (stream)->fourcc));
 
-          dts = QTSAMPLE_DTS (stream, sample);
-          pts = QTSAMPLE_PTS (stream, sample);
-          stream_pts =
-              gst_segment_to_stream_time_clamped (&stream->segment, pts);
-          duration = QTSAMPLE_DUR_DTS (stream, sample, dts);
+          dts = QTSAMPLE_DTS_STREAMTIME (sample);
+          pts = QTSAMPLE_PTS_STREAMTIME (sample);
+          duration = QTSAMPLE_DUR_STREAMTIME (sample, dts);
+          round_up_duration = QTSAMPLE_DUR_ROUND_UP (stream, sample);
           keyframe = QTSAMPLE_KEYFRAME (stream, sample);
 
-          /* check for segment end */
-          if (G_UNLIKELY (stream->segment.stop != -1
-                  && stream->segment.stop <= stream_pts && keyframe)
-              && !(demux->upstream_format_is_time && stream->segment.rate < 0)) {
+          if (!demux->upstream_format_is_time) {
+            const QtDemuxSegment *segment = NULL;
+
+            g_assert (stream->segment_index < stream->n_segments);
+            segment = &stream->segments[stream->segment_index];
+
+            /* Need to convert from time inside the media segment to global time */
+            global_dts =
+                (dts >=
+                segment->media_start) ? ((dts - segment->media_start) +
+                segment->time) : 0;
+          } else {
+            global_dts = dts;
+          }
+
+          /* Check whether we're after the seek segment stop now. This check uses
+           * DTS instead of PTS to make sure no future samples have a PTS before
+           * the segment stop. */
+          if (G_UNLIKELY (demux->segment.stop != -1
+                  && global_dts != GST_CLOCK_TIME_NONE
+                  && demux->segment.stop <= global_dts
+                  && stream->segment.rate >= 0)) {
             GST_DEBUG_OBJECT (demux, "we reached the end of our segment.");
-            stream->time_position = GST_CLOCK_TIME_NONE;        /* this means EOS */
+            stream->cur_global_pts = GST_CLOCK_TIME_NONE;       /* this means EOS */
 
             /* skip this data, stream is EOS */
             gst_adapter_flush (demux->adapter, demux->neededbytes);
 
             ret = GST_FLOW_EOS;
+          } else if ((demux->segment.flags &
+                  GST_SEGMENT_FLAG_TRICKMODE_KEY_UNITS) != 0 &&
+              stream->subtype == FOURCC_vide && !keyframe) {
+            GST_LOG_OBJECT (demux, "Skipping non-keyframe on track-id %u",
+                stream->track_id);
+            gst_adapter_flush (demux->adapter, demux->neededbytes);
+            ret = GST_FLOW_OK;
           } else {
             GstBuffer *outbuf;
 
@@ -8595,7 +8918,8 @@ gst_qtdemux_process_adapter (GstQTDemux * demux, gboolean force)
             g_return_val_if_fail (outbuf != NULL, GST_FLOW_ERROR);
 
             ret = gst_qtdemux_decorate_and_push_buffer (demux, stream, outbuf,
-                dts, pts, duration, keyframe, dts, demux->offset);
+                dts, pts, duration, round_up_duration, keyframe, dts,
+                demux->offset);
           }
 
           /* combine flows */
@@ -8611,7 +8935,8 @@ gst_qtdemux_process_adapter (GstQTDemux * demux, gboolean force)
         stream->offset_in_sample = 0;
 
         /* update current offset and figure out size of next buffer */
-        GST_LOG_OBJECT (demux, "increasing offset %" G_GUINT64_FORMAT " by %u",
+        GST_LOG_OBJECT (demux,
+            "increasing offset %" G_GUINT64_FORMAT " by %" G_GUINT64_FORMAT,
             demux->offset, demux->neededbytes);
         demux->offset += demux->neededbytes;
         GST_LOG_OBJECT (demux, "offset is now %" G_GUINT64_FORMAT,
@@ -8920,67 +9245,6 @@ qtdemux_parse_container (GstQTDemux * qtdemux, GNode * node, const guint8 * buf,
 }
 
 static gboolean
-qtdemux_parse_theora_extension (GstQTDemux * qtdemux, QtDemuxStream * stream,
-    GNode * xdxt)
-{
-  int len = QT_UINT32 (xdxt->data);
-  guint8 *buf = xdxt->data;
-  guint8 *end = buf + len;
-  GstBuffer *buffer;
-
-  /* skip size and type */
-  buf += 8;
-  end -= 8;
-
-  while (buf < end) {
-    guint32 size;
-    guint32 type;
-
-    size = QT_UINT32 (buf);
-    type = QT_FOURCC (buf + 4);
-
-    GST_LOG_OBJECT (qtdemux, "%p %p", buf, end);
-
-    if (end - buf < size || size < 8)
-      break;
-
-    buf += 8;
-    size -= 8;
-
-    GST_WARNING_OBJECT (qtdemux, "have cookie %" GST_FOURCC_FORMAT,
-        GST_FOURCC_ARGS (type));
-
-    switch (type) {
-      case FOURCC_tCtH:
-        buffer = gst_buffer_new_and_alloc (size);
-        gst_buffer_fill (buffer, 0, buf, size);
-        stream->buffers = g_slist_append (stream->buffers, buffer);
-        GST_LOG_OBJECT (qtdemux, "parsing theora header");
-        break;
-      case FOURCC_tCt_:
-        buffer = gst_buffer_new_and_alloc (size);
-        gst_buffer_fill (buffer, 0, buf, size);
-        stream->buffers = g_slist_append (stream->buffers, buffer);
-        GST_LOG_OBJECT (qtdemux, "parsing theora comment");
-        break;
-      case FOURCC_tCtC:
-        buffer = gst_buffer_new_and_alloc (size);
-        gst_buffer_fill (buffer, 0, buf, size);
-        stream->buffers = g_slist_append (stream->buffers, buffer);
-        GST_LOG_OBJECT (qtdemux, "parsing theora codebook");
-        break;
-      default:
-        GST_WARNING_OBJECT (qtdemux,
-            "unknown theora cookie %" GST_FOURCC_FORMAT,
-            GST_FOURCC_ARGS (type));
-        break;
-    }
-    buf += size;
-  }
-  return TRUE;
-}
-
-static gboolean
 qtdemux_parse_node (GstQTDemux * qtdemux, GNode * node, const guint8 * buffer,
     guint length)
 {
@@ -9033,7 +9297,55 @@ qtdemux_parse_node (GstQTDemux * qtdemux, GNode * node, const guint8 * buffer,
       case FOURCC_fLaC:
       case FOURCC_aavd:
       case FOURCC_opus:
+      case FOURCC_lpcm:
+      case FOURCC_wma_:
+      case FOURCC_owma:
+      case FOURCC_sowt:
+      case FOURCC_twos:
+      case FOURCC_in24:
+      case FOURCC_in32:
+      case FOURCC_fl32:
+      case FOURCC_fl64:
+      case FOURCC_s16l:
+      case FOURCC_ipcm:
+      case FOURCC_fpcm:
+      case FOURCC_samr:
+      case FOURCC_sawb:
+      case FOURCC_QDM2:
+      case FOURCC_QDMC:
+      case FOURCC_MAC6:
+      case FOURCC_MAC3:
+      case FOURCC_ima4:
+      case FOURCC_ulaw:
+      case FOURCC_alaw:
+      case FOURCC_agsm:
+      case 0x20736d:
+      case GST_MAKE_FOURCC ('s', 'a', 'c', '3'):       // Nero Recode
+      case FOURCC_ac_3:
+      case FOURCC_ec_3:
+      case 0x0200736d:
+      case 0x6d730002:
+      case 0x1100736d:
+      case 0x6d730011:
+      case 0x1700736d:
+      case 0x6d730017:
+      case 0x5500736d:
+      case 0x6d730055:
+      case FOURCC__mp3:
+      case FOURCC_mp3_:
+      case GST_MAKE_FOURCC ('.', 'm', 'p', '2'):
+      case GST_MAKE_FOURCC ('d', 't', 's', 'c'):
+      case GST_MAKE_FOURCC ('D', 'T', 'S', ' '):
+      case GST_MAKE_FOURCC ('O', 'g', 'g', 'V'):
+      case GST_MAKE_FOURCC ('d', 'v', 'c', 'a'):
+      case GST_MAKE_FOURCC ('Q', 'c', 'l', 'p'):
+      case GST_MAKE_FOURCC ('a', 'c', '-', '4'):
+      case FOURCC_enca:
+      case FOURCC_mha1:
+      case FOURCC_mhm1:
+        /* FIXME FOURCC_raw_ but that is used for video too */
       {
+        guint8 stsd_version;
         guint32 version;
         guint32 offset;
         guint min_size;
@@ -9062,30 +9374,57 @@ qtdemux_parse_node (GstQTDemux * qtdemux, GNode * node, const guint8 * buffer,
         /* 'version' here is the sound sample description version. Types 0 and
            1 are documented in the QTFF reference, but type 2 is not: it's
            described in Apple header files instead (struct SoundDescriptionV2
-           in Movies.h) */
+           in Movies.h).
+
+           For ISOBMFF there's only version 0 and 1, and both have the same size.
+           The distinction between the two version 1 can be made via the stsd (parent)
+           node version.
+         */
+        stsd_version = QT_UINT8 ((const guint8 *) node->data + 8);
         version = QT_UINT16 (buffer + 16);
 
-        GST_DEBUG_OBJECT (qtdemux, "%" GST_FOURCC_FORMAT " version 0x%08x",
-            GST_FOURCC_ARGS (fourcc), version);
+        GST_DEBUG_OBJECT (qtdemux,
+            "%" GST_FOURCC_FORMAT " stsd version %u version %u",
+            GST_FOURCC_ARGS (fourcc), stsd_version, version);
 
-        /* parse any esds descriptors */
-        switch (version) {
-          case 0:
-            offset = 0x24;
-            break;
-          case 1:
-            offset = 0x34;
-            break;
-          case 2:
-            offset = 0x48;
-            break;
-          default:
-            GST_WARNING_OBJECT (qtdemux,
-                "unhandled %" GST_FOURCC_FORMAT " version 0x%08x",
-                GST_FOURCC_ARGS (fourcc), version);
-            offset = 0;
-            break;
+        if (stsd_version == 0) {
+          /* parse any esds descriptors and other optional boxes */
+          switch (version) {
+            case 0:
+              offset = 36;
+              break;
+            case 1:
+              offset = 52;
+              break;
+            case 2:
+              offset = 72;
+              break;
+            default:
+              GST_WARNING_OBJECT (qtdemux,
+                  "unhandled %" GST_FOURCC_FORMAT " version %u",
+                  GST_FOURCC_ARGS (fourcc), version);
+              offset = 0;
+              break;
+          }
+        } else if (stsd_version == 1) {
+          switch (version) {
+            case 0:
+            case 1:
+              offset = 36;
+              break;
+            default:
+              GST_WARNING_OBJECT (qtdemux,
+                  "unhandled %" GST_FOURCC_FORMAT " version %u",
+                  GST_FOURCC_ARGS (fourcc), version);
+              offset = 0;
+              break;
+          }
+        } else {
+          GST_WARNING_OBJECT (qtdemux,
+              "unhandled stsd version %u", stsd_version);
+          offset = 0;
         }
+
         if (offset)
           qtdemux_parse_container (qtdemux, node, buffer + offset, end);
         break;
@@ -9099,11 +9438,26 @@ qtdemux_parse_node (GstQTDemux * qtdemux, GNode * node, const guint8 * buffer,
       case FOURCC_apcn:
       case FOURCC_apco:
       case FOURCC_ap4h:
+      case FOURCC_ap4x:
       case FOURCC_xvid:
       case FOURCC_XVID:
       case FOURCC_H264:
       case FOURCC_avc1:
+      case FOURCC_dva1:
       case FOURCC_avc3:
+      case FOURCC_dvav:
+      case FOURCC_ai12:
+      case FOURCC_ai13:
+      case FOURCC_ai15:
+      case FOURCC_ai16:
+      case FOURCC_ai1p:
+      case FOURCC_ai1q:
+      case FOURCC_ai52:
+      case FOURCC_ai53:
+      case FOURCC_ai55:
+      case FOURCC_ai56:
+      case FOURCC_ai5p:
+      case FOURCC_ai5q:
       case FOURCC_H265:
       case FOURCC_hvc1:
       case FOURCC_hev1:
@@ -9111,6 +9465,149 @@ qtdemux_parse_node (GstQTDemux * qtdemux, GNode * node, const guint8 * buffer,
       case FOURCC_dvhe:
       case FOURCC_mjp2:
       case FOURCC_encv:
+      case FOURCC_H266:
+      case FOURCC_vvc1:
+      case FOURCC_vvi1:
+      case FOURCC_av01:
+      case FOURCC_uncv:
+      case FOURCC_SVQ3:
+      case FOURCC_VP31:
+      case FOURCC_jpeg:
+      case FOURCC_rle_:
+      case FOURCC_WRLE:
+      case FOURCC_ovc1:
+      case FOURCC_vc_1:
+      case FOURCC_VP80:
+      case FOURCC_vp08:
+      case FOURCC_vp09:
+      case FOURCC_png:
+      case GST_MAKE_FOURCC ('m', 'j', 'p', 'a'):
+      case GST_MAKE_FOURCC ('A', 'V', 'D', 'J'):
+      case GST_MAKE_FOURCC ('M', 'J', 'P', 'G'):
+      case GST_MAKE_FOURCC ('d', 'm', 'b', '1'):
+      case GST_MAKE_FOURCC ('m', 'j', 'p', 'b'):
+      case GST_MAKE_FOURCC ('s', 'v', 'q', 'i'):
+      case GST_MAKE_FOURCC ('S', 'V', 'Q', '1'):
+      case GST_MAKE_FOURCC ('W', 'R', 'A', 'W'):
+      case GST_MAKE_FOURCC ('y', 'v', '1', '2'):
+      case GST_MAKE_FOURCC ('y', 'u', 'v', '2'):
+      case GST_MAKE_FOURCC ('Y', 'u', 'v', '2'):
+      case GST_MAKE_FOURCC ('2', 'V', 'u', 'y'):
+      case GST_MAKE_FOURCC ('v', '3', '0', '8'):
+      case GST_MAKE_FOURCC ('v', '2', '1', '6'):
+      case FOURCC_v210:
+      case GST_MAKE_FOURCC ('r', '2', '1', '0'):
+      case GST_MAKE_FOURCC ('m', 'p', 'e', 'g'):
+      case GST_MAKE_FOURCC ('m', 'p', 'g', '1'):
+      case GST_MAKE_FOURCC ('m', '1', 'v', ' '):
+      case GST_MAKE_FOURCC ('h', 'd', 'v', '1'):
+      case GST_MAKE_FOURCC ('h', 'd', 'v', '2'):
+      case GST_MAKE_FOURCC ('h', 'd', 'v', '3'):
+      case GST_MAKE_FOURCC ('h', 'd', 'v', '4'):
+      case GST_MAKE_FOURCC ('h', 'd', 'v', '5'):
+      case GST_MAKE_FOURCC ('h', 'd', 'v', '6'):
+      case GST_MAKE_FOURCC ('h', 'd', 'v', '7'):
+      case GST_MAKE_FOURCC ('h', 'd', 'v', '8'):
+      case GST_MAKE_FOURCC ('h', 'd', 'v', '9'):
+      case GST_MAKE_FOURCC ('h', 'd', 'v', 'a'):
+      case GST_MAKE_FOURCC ('m', 'x', '5', 'n'):
+      case GST_MAKE_FOURCC ('m', 'x', '5', 'p'):
+      case GST_MAKE_FOURCC ('m', 'x', '4', 'n'):
+      case GST_MAKE_FOURCC ('m', 'x', '4', 'p'):
+      case GST_MAKE_FOURCC ('m', 'x', '3', 'n'):
+      case GST_MAKE_FOURCC ('m', 'x', '3', 'p'):
+      case GST_MAKE_FOURCC ('x', 'd', 'v', '1'):
+      case GST_MAKE_FOURCC ('x', 'd', 'v', '2'):
+      case GST_MAKE_FOURCC ('x', 'd', 'v', '3'):
+      case GST_MAKE_FOURCC ('x', 'd', 'v', '4'):
+      case GST_MAKE_FOURCC ('x', 'd', 'v', '5'):
+      case GST_MAKE_FOURCC ('x', 'd', 'v', '6'):
+      case GST_MAKE_FOURCC ('x', 'd', 'v', '7'):
+      case GST_MAKE_FOURCC ('x', 'd', 'v', '8'):
+      case GST_MAKE_FOURCC ('x', 'd', 'v', '9'):
+      case GST_MAKE_FOURCC ('x', 'd', 'v', 'a'):
+      case GST_MAKE_FOURCC ('x', 'd', 'v', 'b'):
+      case GST_MAKE_FOURCC ('x', 'd', 'v', 'c'):
+      case GST_MAKE_FOURCC ('x', 'd', 'v', 'd'):
+      case GST_MAKE_FOURCC ('x', 'd', 'v', 'e'):
+      case GST_MAKE_FOURCC ('x', 'd', 'v', 'f'):
+      case GST_MAKE_FOURCC ('x', 'd', '5', '1'):
+      case GST_MAKE_FOURCC ('x', 'd', '5', '4'):
+      case GST_MAKE_FOURCC ('x', 'd', '5', '5'):
+      case GST_MAKE_FOURCC ('x', 'd', '5', '9'):
+      case GST_MAKE_FOURCC ('x', 'd', '5', 'a'):
+      case GST_MAKE_FOURCC ('x', 'd', '5', 'b'):
+      case GST_MAKE_FOURCC ('x', 'd', '5', 'c'):
+      case GST_MAKE_FOURCC ('x', 'd', '5', 'd'):
+      case GST_MAKE_FOURCC ('x', 'd', '5', 'e'):
+      case GST_MAKE_FOURCC ('x', 'd', '5', 'f'):
+      case GST_MAKE_FOURCC ('x', 'd', 'h', 'd'):
+      case GST_MAKE_FOURCC ('x', 'd', 'h', '2'):
+      case GST_MAKE_FOURCC ('A', 'V', 'm', 'p'):
+      case GST_MAKE_FOURCC ('m', 'p', 'g', '2'):
+      case GST_MAKE_FOURCC ('m', 'p', '2', 'v'):
+      case GST_MAKE_FOURCC ('m', '2', 'v', '1'):
+      case GST_MAKE_FOURCC ('g', 'i', 'f', ' '):
+      case FOURCC_h263:
+      case GST_MAKE_FOURCC ('H', '2', '6', '3'):
+      case FOURCC_s263:
+      case GST_MAKE_FOURCC ('U', '2', '6', '3'):
+      case GST_MAKE_FOURCC ('3', 'i', 'v', 'd'):
+      case GST_MAKE_FOURCC ('3', 'I', 'V', 'D'):
+      case GST_MAKE_FOURCC ('D', 'I', 'V', '3'):
+      case GST_MAKE_FOURCC ('D', 'I', 'V', 'X'):
+      case GST_MAKE_FOURCC ('d', 'i', 'v', 'x'):
+      case GST_MAKE_FOURCC ('D', 'X', '5', '0'):
+      case GST_MAKE_FOURCC ('F', 'F', 'V', '1'):
+      case GST_MAKE_FOURCC ('3', 'I', 'V', '1'):
+      case GST_MAKE_FOURCC ('3', 'I', 'V', '2'):
+      case GST_MAKE_FOURCC ('U', 'M', 'P', '4'):
+      case GST_MAKE_FOURCC ('c', 'v', 'i', 'd'):
+      case GST_MAKE_FOURCC ('q', 'd', 'r', 'w'):
+      case GST_MAKE_FOURCC ('r', 'p', 'z', 'a'):
+      case GST_MAKE_FOURCC ('I', 'V', '3', '2'):
+      case GST_MAKE_FOURCC ('i', 'v', '3', '2'):
+      case GST_MAKE_FOURCC ('I', 'V', '4', '1'):
+      case GST_MAKE_FOURCC ('i', 'v', '4', '1'):
+      case FOURCC_dvcp:
+      case FOURCC_dvc_:
+      case GST_MAKE_FOURCC ('d', 'v', 's', 'd'):
+      case GST_MAKE_FOURCC ('D', 'V', 'S', 'D'):
+      case GST_MAKE_FOURCC ('d', 'v', 'c', 's'):
+      case GST_MAKE_FOURCC ('D', 'V', 'C', 'S'):
+      case GST_MAKE_FOURCC ('d', 'v', '2', '5'):
+      case GST_MAKE_FOURCC ('d', 'v', 'p', 'p'):
+      case FOURCC_dv5n:
+      case FOURCC_dv5p:
+      case GST_MAKE_FOURCC ('d', 'v', 'h', '5'):
+      case GST_MAKE_FOURCC ('d', 'v', 'h', '6'):
+      case GST_MAKE_FOURCC ('s', 'm', 'c', ' '):
+      case GST_MAKE_FOURCC ('V', 'P', '6', 'F'):
+      case FOURCC_drac:
+      case GST_MAKE_FOURCC ('t', 'i', 'f', 'f'):
+      case GST_MAKE_FOURCC ('i', 'c', 'o', 'd'):
+      case GST_MAKE_FOURCC ('A', 'V', 'd', 'n'):
+      case GST_MAKE_FOURCC ('A', 'V', 'd', 'h'):
+      case FOURCC_cfhd:
+      case FOURCC_SHQ0:
+      case FOURCC_SHQ1:
+      case FOURCC_SHQ2:
+      case FOURCC_SHQ3:
+      case FOURCC_SHQ4:
+      case FOURCC_SHQ5:
+      case FOURCC_SHQ6:
+      case FOURCC_SHQ7:
+      case FOURCC_SHQ8:
+      case FOURCC_SHQ9:
+      case FOURCC_LAGS:
+      case FOURCC_Hap1:
+      case FOURCC_Hap5:
+      case FOURCC_HapY:
+      case FOURCC_HapM:
+      case FOURCC_HapA:
+      case FOURCC_Hap7:
+      case FOURCC_HapH:
+        /* FIXME FOURCC_raw_ but that is used for audio too */
       {
         guint32 version;
         guint32 str_len;
@@ -9220,19 +9717,9 @@ qtdemux_parse_node (GstQTDemux * qtdemux, GNode * node, const guint8 * buffer,
         }
         break;
       }
-      case FOURCC_in24:
-      {
-        qtdemux_parse_container (qtdemux, node, buffer + 0x34, end);
-        break;
-      }
       case FOURCC_uuid:
       {
         qtdemux_parse_uuid (qtdemux, buffer, end - buffer);
-        break;
-      }
-      case FOURCC_enca:
-      {
-        qtdemux_parse_container (qtdemux, node, buffer + 36, end);
         break;
       }
       default:
@@ -9670,6 +10157,16 @@ gst_qtdemux_configure_stream (GstQTDemux * qtdemux, QtDemuxStream * stream)
         gst_caps_set_simple (CUR_STREAM (stream)->caps, "colorimetry",
             G_TYPE_STRING, colorimetry, NULL);
         g_free (colorimetry);
+      }
+
+      if (CUR_STREAM (stream)->content_light_level_set) {
+        gst_video_content_light_level_add_to_caps (&CUR_STREAM
+            (stream)->content_light_level, CUR_STREAM (stream)->caps);
+      }
+
+      if (CUR_STREAM (stream)->mastering_display_info_set) {
+        gst_video_mastering_display_info_add_to_caps (&CUR_STREAM
+            (stream)->mastering_display_info, CUR_STREAM (stream)->caps);
       }
 
       if (stream->multiview_mode != GST_VIDEO_MULTIVIEW_MODE_NONE) {
@@ -10188,8 +10685,7 @@ qtdemux_merge_sample_table (GstQTDemux * qtdemux, QtDemuxStream * stream)
       num_chunks);
 
   if (gst_byte_reader_get_remaining (&stream->stsc) <
-      stream->n_samples_per_chunk * 3 * 4 +
-      (stream->n_samples_per_chunk - 1) * 4) {
+      stream->n_samples_per_chunk * 3 * 4) {
     GST_DEBUG_OBJECT (qtdemux, "Too small stsc");
     return;
   }
@@ -10292,13 +10788,8 @@ qtdemux_stbl_init (GstQTDemux * qtdemux, QtDemuxStream * stream, GNode * stbl)
   GST_LOG_OBJECT (qtdemux, "%u timestamp blocks", stream->n_sample_times);
 
   /* make sure there's enough data */
-  if (!qt_atom_parser_has_chunks (&stream->stts, stream->n_sample_times, 8)) {
-    stream->n_sample_times = gst_byte_reader_get_remaining (&stream->stts) / 8;
-    GST_LOG_OBJECT (qtdemux, "overriding to %u timestamp blocks",
-        stream->n_sample_times);
-    if (!stream->n_sample_times)
-      goto corrupt_file;
-  }
+  if (!qt_atom_parser_has_chunks (&stream->stts, stream->n_sample_times, 8))
+    goto corrupt_file;
 
   /* sync sample atom */
   stream->stps_present = FALSE;
@@ -10361,6 +10852,11 @@ qtdemux_stbl_init (GstQTDemux * qtdemux, QtDemuxStream * stream, GNode * stbl)
   if (!stream->n_samples)
     goto no_samples;
 
+  if (stream->sample_size == 0) {
+    if (!qt_atom_parser_has_chunks (&stream->stsz, stream->n_samples, 4))
+      goto corrupt_file;
+  }
+
   /* sample-to-chunk atom */
   if (!qtdemux_tree_get_child_by_type_full (stbl, FOURCC_stsc, &stream->stsc))
     goto corrupt_file;
@@ -10381,7 +10877,6 @@ qtdemux_stbl_init (GstQTDemux * qtdemux, QtDemuxStream * stream, GNode * stbl)
   if (!qt_atom_parser_has_chunks (&stream->stsc, stream->n_samples_per_chunk,
           12))
     goto corrupt_file;
-
 
   /* chunk offset */
   if (qtdemux_tree_get_child_by_type_full (stbl, FOURCC_stco, &stream->stco))
@@ -10406,9 +10901,20 @@ qtdemux_stbl_init (GstQTDemux * qtdemux, QtDemuxStream * stream, GNode * stbl)
     /* treat chunks as samples */
     if (!gst_byte_reader_get_uint32_be (&stream->stco, &stream->n_samples))
       goto corrupt_file;
+
+    /* make sure there's enough data */
+    if (!qt_atom_parser_has_chunks (&stream->stco, stream->n_samples,
+            stream->co_size))
+      goto corrupt_file;
   } else {
-    /* skip number of entries */
-    if (!gst_byte_reader_skip (&stream->stco, 4))
+    guint32 num_entries;
+
+    if (!gst_byte_reader_get_uint32_be (&stream->stco, &num_entries))
+      goto corrupt_file;
+
+    /* make sure there's enough data */
+    if (!qt_atom_parser_has_chunks (&stream->stco, num_entries,
+            stream->co_size))
       goto corrupt_file;
 
     /* make sure there are enough data in the stsz atom */
@@ -10555,7 +11061,7 @@ qtdemux_stbl_init (GstQTDemux * qtdemux, QtDemuxStream * stream, GNode * stbl)
     stream->cslg_shift = 0;
   }
 
-  GST_DEBUG_OBJECT (qtdemux, "Using clsg_shift %" G_GUINT64_FORMAT,
+  GST_DEBUG_OBJECT (qtdemux, "Using cslg_shift %" G_GUINT64_FORMAT,
       stream->cslg_shift);
 
   /* For raw audio streams especially we might want to merge the samples
@@ -11011,6 +11517,9 @@ done:
           break;
     }
   }
+  /* fragments time start after the non-fragment part. */
+  if (stream->stts_time > stream->trun_next_dts)
+    stream->trun_next_dts = stream->stts_time;
   GST_OBJECT_UNLOCK (qtdemux);
 
   return TRUE;
@@ -11238,103 +11747,6 @@ done:
   return TRUE;
 }
 
-/*
- * Parses the stsd atom of a svq3 trak looking for
- * the SMI and gama atoms.
- */
-static void
-qtdemux_parse_svq3_stsd_data (GstQTDemux * qtdemux,
-    const guint8 * stsd_entry_data, const guint8 ** gamma, GstBuffer ** seqh)
-{
-  const guint8 *_gamma = NULL;
-  GstBuffer *_seqh = NULL;
-  const guint8 *stsd_data = stsd_entry_data;
-  guint32 length = QT_UINT32 (stsd_data);
-  guint16 version;
-
-  if (length < 32) {
-    GST_WARNING_OBJECT (qtdemux, "stsd too short");
-    goto end;
-  }
-
-  stsd_data += 16;
-  length -= 16;
-  version = QT_UINT16 (stsd_data);
-  if (version == 3) {
-    if (length >= 70) {
-      length -= 70;
-      stsd_data += 70;
-      while (length > 8) {
-        guint32 fourcc, size;
-        const guint8 *data;
-        size = QT_UINT32 (stsd_data);
-        fourcc = QT_FOURCC (stsd_data + 4);
-        data = stsd_data + 8;
-
-        if (size == 0) {
-          GST_WARNING_OBJECT (qtdemux, "Atom of size 0 found, aborting "
-              "svq3 atom parsing");
-          goto end;
-        }
-
-        switch (fourcc) {
-          case FOURCC_gama:{
-            if (size == 12) {
-              _gamma = data;
-            } else {
-              GST_WARNING_OBJECT (qtdemux, "Unexpected size %" G_GUINT32_FORMAT
-                  " for gama atom, expected 12", size);
-            }
-            break;
-          }
-          case FOURCC_SMI_:{
-            if (size > 16 && QT_FOURCC (data) == FOURCC_SEQH) {
-              guint32 seqh_size;
-              if (_seqh != NULL) {
-                GST_WARNING_OBJECT (qtdemux, "Unexpected second SEQH SMI atom "
-                    " found, ignoring");
-              } else {
-                /* Note: The size does *not* include the fourcc and the size field itself */
-                seqh_size = QT_UINT32 (data + 4);
-                if (seqh_size > 0 && seqh_size <= size - 8) {
-                  _seqh = gst_buffer_new_and_alloc (seqh_size);
-                  gst_buffer_fill (_seqh, 0, data + 8, seqh_size);
-                }
-              }
-            }
-            break;
-          }
-          default:{
-            GST_WARNING_OBJECT (qtdemux, "Unhandled atom %" GST_FOURCC_FORMAT
-                " in SVQ3 entry in stsd atom", GST_FOURCC_ARGS (fourcc));
-          }
-        }
-
-        if (size <= length) {
-          length -= size;
-          stsd_data += size;
-        }
-      }
-    } else {
-      GST_WARNING_OBJECT (qtdemux, "SVQ3 entry too short in stsd atom");
-    }
-  } else {
-    GST_WARNING_OBJECT (qtdemux, "Unexpected version for SVQ3 entry %"
-        G_GUINT16_FORMAT, version);
-    goto end;
-  }
-
-end:
-  if (gamma) {
-    *gamma = _gamma;
-  }
-  if (seqh) {
-    *seqh = _seqh;
-  } else if (_seqh) {
-    gst_buffer_unref (_seqh);
-  }
-}
-
 static gchar *
 qtdemux_get_rtsp_uri_from_hndl (GstQTDemux * qtdemux, GNode * minf)
 {
@@ -11430,7 +11842,7 @@ qtdemux_get_rtsp_uri_from_hndl (GstQTDemux * qtdemux, GNode * minf)
 #define AMR_NB_ALL_MODES        0x81ff
 #define AMR_WB_ALL_MODES        0x83ff
 static guint
-qtdemux_parse_amr_bitrate (GstBuffer * buf, gboolean wb)
+qtdemux_parse_amr_bitrate (const guint8 * data, guint32 len, gboolean wb)
 {
   /* The 'damr' atom is of the form:
    *
@@ -11449,24 +11861,21 @@ qtdemux_parse_amr_bitrate (GstBuffer * buf, gboolean wb)
   static const guint wb_bitrates[] = {
     6600, 8850, 12650, 14250, 15850, 18250, 19850, 23050, 23850
   };
-  GstMapInfo map;
   gsize max_mode;
   guint16 mode_set;
 
-  gst_buffer_map (buf, &map, GST_MAP_READ);
-
-  if (map.size != 0x11) {
-    GST_DEBUG ("Atom should have size 0x11, not %" G_GSIZE_FORMAT, map.size);
+  if (len != 0x11) {
+    GST_DEBUG ("Atom should have size 0x11, not %u", len);
     goto bad_data;
   }
 
-  if (QT_FOURCC (map.data + 4) != FOURCC_damr) {
+  if (QT_FOURCC (data + 4) != FOURCC_damr) {
     GST_DEBUG ("Unknown atom in %" GST_FOURCC_FORMAT,
-        GST_FOURCC_ARGS (QT_UINT32 (map.data + 4)));
+        GST_FOURCC_ARGS (QT_UINT32 (data + 4)));
     goto bad_data;
   }
 
-  mode_set = QT_UINT16 (map.data + 13);
+  mode_set = QT_UINT16 (data + 13);
 
   if (mode_set == (wb ? AMR_WB_ALL_MODES : AMR_NB_ALL_MODES))
     max_mode = 7 + (wb ? 1 : 0);
@@ -11480,11 +11889,9 @@ qtdemux_parse_amr_bitrate (GstBuffer * buf, gboolean wb)
     goto bad_data;
   }
 
-  gst_buffer_unmap (buf, &map);
   return wb ? wb_bitrates[max_mode] : nb_bitrates[max_mode];
 
 bad_data:
-  gst_buffer_unmap (buf, &map);
   return 0;
 }
 
@@ -11512,18 +11919,86 @@ qtdemux_parse_transformation_matrix (GstQTDemux * qtdemux,
   matrix[7] = gst_byte_reader_get_uint32_be_unchecked (reader);
   matrix[8] = gst_byte_reader_get_uint32_be_unchecked (reader);
 
+  /* The 2.30 value conversion does not work for negative values */
   GST_DEBUG_OBJECT (qtdemux, "Transformation matrix from atom %s", atom);
-  GST_DEBUG_OBJECT (qtdemux, "%u.%u %u.%u %u.%u", matrix[0] >> 16,
-      matrix[0] & 0xFFFF, matrix[1] >> 16, matrix[1] & 0xFF, matrix[2] >> 16,
-      matrix[2] & 0xFF);
-  GST_DEBUG_OBJECT (qtdemux, "%u.%u %u.%u %u.%u", matrix[3] >> 16,
-      matrix[3] & 0xFFFF, matrix[4] >> 16, matrix[4] & 0xFF, matrix[5] >> 16,
-      matrix[5] & 0xFF);
-  GST_DEBUG_OBJECT (qtdemux, "%u.%u %u.%u %u.%u", matrix[6] >> 16,
-      matrix[6] & 0xFFFF, matrix[7] >> 16, matrix[7] & 0xFF, matrix[8] >> 16,
-      matrix[8] & 0xFF);
+  GST_DEBUG_OBJECT (qtdemux, "%i.%u %i.%u %u.%u", (gint16) (matrix[0] >> 16),
+      matrix[0] & 0xFFFF, (gint16) (matrix[1] >> 16), matrix[1] & 0xFFFF,
+      matrix[2] >> 30, matrix[2] & 0x3FFFFFFF);
+  GST_DEBUG_OBJECT (qtdemux, "%i.%u %i.%u %u.%u", (gint16) (matrix[3] >> 16),
+      matrix[3] & 0xFFFF, (gint16) (matrix[4] >> 16), matrix[4] & 0xFFFF,
+      matrix[5] >> 30, matrix[5] & 0x3FFFFFFF);
+  GST_DEBUG_OBJECT (qtdemux, "%i.%u %i.%u %u.%u", (gint16) (matrix[6] >> 16),
+      matrix[6] & 0xFFFF, (gint16) (matrix[7] >> 16), matrix[7] & 0xFFFF,
+      matrix[8] >> 30, matrix[8] & 0x3FFFFFFF);
 
   return TRUE;
+}
+
+/* Check if all matrix elements are either 0, 1 or -1 */
+static gboolean
+qtdemux_transformation_matrix_is_simple (GstQTDemux * qtdemux, guint32 * m)
+{
+  int i;
+
+  for (i = 0; i < 9; i++) {
+    switch (i) {
+      case 2:
+      case 5:
+        /* 2.30 */
+        if (m[i] != 0U)
+          GST_INFO_OBJECT (qtdemux, "Matrix non-zero UV values ignored");
+        break;
+      case 6:
+      case 7:
+        /* 16.16 */
+        if (m[i] != 0U)
+          GST_INFO_OBJECT (qtdemux, "Matrix non-zero XY values ignored");
+        break;
+      case 8:
+        /* 2.30 */
+        if (m[i] != 0U && m[i] != (1U << 30) && m[i] != (3U << 30))
+          return FALSE;
+        break;
+      default:
+        /* 16.16 */
+        if (m[i] != 0U && m[i] != (1U << 16)
+            && m[i] != (((guint32) G_MAXUINT16) << 16))
+          return FALSE;
+        break;
+    }
+  }
+
+  return TRUE;
+}
+
+static void
+qtdemux_mul_transformation_matrix (GstQTDemux * qtdemux,
+    guint32 * a, guint32 * b, guint32 * c)
+{
+#define QTMUL_MATRIX(_a,_b) (((_a) == 0 || (_b) == 0) ? 0 : \
+      ((_a) == (_b) ? 1 : -1))
+#define QTADD_MATRIX(_a,_b) ((_a) + (_b) > 0 ? (1U << 16) : \
+      ((_a) + (_b) < 0) ? (((guint32) G_MAXUINT16) << 16) : 0u)
+
+  if (!qtdemux_transformation_matrix_is_simple (qtdemux, a) ||
+      !qtdemux_transformation_matrix_is_simple (qtdemux, b)) {
+    GST_WARNING_OBJECT (qtdemux,
+        "Cannot handle transform matrix with element values other than 0, 1 or -1");
+    /* Pretend to have an identity matrix in this case */
+    c[1] = c[2] = c[3] = c[5] = c[6] = c[7] = 0;
+    c[0] = c[4] = (1U << 16);
+    c[8] = (1 << 30);
+  } else {
+    c[2] = c[5] = c[6] = c[7] = 0;
+    c[0] = QTADD_MATRIX (QTMUL_MATRIX (a[0], b[0]), QTMUL_MATRIX (a[1], b[3]));
+    c[1] = QTADD_MATRIX (QTMUL_MATRIX (a[0], b[1]), QTMUL_MATRIX (a[1], b[4]));
+    c[3] = QTADD_MATRIX (QTMUL_MATRIX (a[3], b[0]), QTMUL_MATRIX (a[4], b[3]));
+    c[4] = QTADD_MATRIX (QTMUL_MATRIX (a[3], b[1]), QTMUL_MATRIX (a[4], b[4]));
+    c[8] = a[8];
+  }
+
+#undef QTMUL_MATRIX
+#undef QTADD_MATRIX
 }
 
 static void
@@ -11535,11 +12010,11 @@ qtdemux_inspect_transformation_matrix (GstQTDemux * qtdemux,
  * [d e f]
  * [g h i]
  *
- * This macro will only compare value abdegh, it expects cfi to have already
+ * This macro will only compare value abde, it expects cfi to have already
  * been checked
  */
-#define QTCHECK_MATRIX(m,a,b,d,e) ((m)[0] == (a << 16) && (m)[1] == (b << 16) && \
-                                   (m)[3] == (d << 16) && (m)[4] == (e << 16))
+#define QTCHECK_MATRIX(m,a,b,d,e) ((m)[0] == (((guint32) (a)) << 16) && (m)[1] == (((guint32) (b)) << 16) && \
+                                   (m)[3] == (((guint32) (d)) << 16) && (m)[4] == (((guint32) (e)) << 16))
 
   /* only handle the cases where the last column has standard values */
   if (matrix[2] == 0 && matrix[5] == 0 && matrix[8] == 1 << 30) {
@@ -11550,11 +12025,18 @@ qtdemux_inspect_transformation_matrix (GstQTDemux * qtdemux,
       /* NOP */
     } else if (QTCHECK_MATRIX (matrix, 0, 1, G_MAXUINT16, 0)) {
       rotation_tag = "rotate-90";
-    } else if (QTCHECK_MATRIX (matrix, G_MAXUINT16, 0, 0, G_MAXUINT16) ||
-        QTCHECK_MATRIX (matrix, G_MAXUINT16, 0, 0, 1)) {
+    } else if (QTCHECK_MATRIX (matrix, G_MAXUINT16, 0, 0, G_MAXUINT16)) {
       rotation_tag = "rotate-180";
     } else if (QTCHECK_MATRIX (matrix, 0, G_MAXUINT16, 1, 0)) {
       rotation_tag = "rotate-270";
+    } else if (QTCHECK_MATRIX (matrix, G_MAXUINT16, 0, 0, 1)) {
+      rotation_tag = "flip-rotate-0";
+    } else if (QTCHECK_MATRIX (matrix, 0, G_MAXUINT16, G_MAXUINT16, 0)) {
+      rotation_tag = "flip-rotate-90";
+    } else if (QTCHECK_MATRIX (matrix, 1, 0, 0, G_MAXUINT16)) {
+      rotation_tag = "flip-rotate-180";
+    } else if (QTCHECK_MATRIX (matrix, 0, 1, 1, 0)) {
+      rotation_tag = "flip-rotate-270";
     } else {
       GST_FIXME_OBJECT (qtdemux, "Unhandled transformation matrix values");
     }
@@ -11835,13 +12317,2695 @@ qtdemux_parse_stereo_svmi_atom (GstQTDemux * qtdemux, QtDemuxStream * stream,
   return TRUE;
 }
 
+typedef enum
+{
+  // ISO/IEC 23001-17 Table 1 - Component Types
+  COMPONENT_MONOCHROME = 0,     // Gray
+  COMPONENT_Y = 1,              // Luma: Y
+  COMPONENT_U = 2,              // Chroma: Cb or U
+  COMPONENT_V = 3,              // Chroma: Cr or V
+  COMPONENT_RED = 4,            // R
+  COMPONENT_GREEN = 5,          // G
+  COMPONENT_BLUE = 6,           // B
+  COMPONENT_ALPHA = 7,          // A
+  COMPONENT_DEPTH = 8,          //
+  COMPONENT_DISPARITY = 9,      //
+  COMPONENT_PALETTE = 10,       // The component_format value for this component shall be 0.
+  COMPONENT_FILTER_ARRAY = 11,  // Bayer, RGBW, etc.
+  COMPONENT_PADDING = 12,       // unused bit/bytes
+  COMPONENT_CYAN = 13,          //
+  COMPONENT_MAGENTA = 14,       //
+  COMPONENT_YELLOW = 15,        //
+  COMPONENT_KEY = 16,           // Black
+  // Values 17 to 0x7FFF are reserved
+  // Values 0x8000 to 0xFFFF are user-defined
+} ComponentType;
+
+typedef enum
+{
+  // ISO/IEC 23001-17 Table 4 - Interleave Types
+  INTERLEAVE_COMPONENT = 0,     // Planar: RRR... GGG... BBB...
+  INTERLEAVE_PIXEL = 1,         // Packed: RGB RGB RGB ...
+  INTERLEAVE_MIXED = 2,         // All Y components followed by interleaved U and V components.
+  INTERLEAVE_ROW = 3,           // Interleaved by rows
+  INTERLEAVE_TILE = 4,          // Interleaved by tiles
+  INTERLEAVE_MULTI_Y = 5,       // Multiple Y components with a single UV pair
+} InterleaveType;
+
+typedef enum
+{
+  // ISO/IEC 23001-17 Table 3 - Sampling Types
+  SAMPLING_444 = 0,             // 4:4:4 (no subsampling)
+  SAMPLING_422 = 1,             // 4:2:2
+  SAMPLING_420 = 2,             // 4:2:0
+  SAMPLING_411 = 3,             // 4:1:1
+} SamplingType;
+
+typedef struct ComponentDefinitionBox
+{
+  // ComponentDefinitionBox
+  guint32 component_count;      // Should match the uncC component_count
+  ComponentType *types;         // The type of component (R,G,B,A,Y,U,V, etc.)
+  const gchar **type_uris;      // Describes a user-defined component type
+} ComponentDefinitionBox;
+
+typedef struct UncompressedFrameConfigComponent
+{
+  guint16 index;                // Index associated with the cmpd box
+  guint8 bit_depth;             // The number of bits to store a component value.
+  guint8 format;                // 0: int, 1: float, 2: complex
+  guint8 align_size;            // The number of bytes used to store a component value. If 0, refer to bit_depth.
+} UncompressedFrameConfigComponent;
+
+typedef struct UncompressedFrameConfigBox
+{
+  guint8 version;
+  guint32 flags;
+  guint32 profile;              // indicates a predefined configuration
+  guint32 component_count;      // Should match the cmpd component_count
+  UncompressedFrameConfigComponent *components; // Array of Components
+  guint8 sampling_type;         // 0=4:4:4, 1=4:2:2, 2=4:2:0, 3=4:1:1
+  guint8 interleave_type;       // Planar, interleaved, etc.
+  guint8 block_size;            // Stores data in fixed-sized blocks
+  gboolean components_little_endian;    // indicates that components are stored as little endian
+  gboolean block_pad_lsb;       // Padding bits location
+  gboolean block_little_endian; // Block Endianness
+  gboolean block_reversed;      // Indicates if component order is reversed within the block
+  gboolean pad_unknown;         // the value of padded bits is unknown
+  guint32 pixel_size;           // number of bytes used to store all components for a single pixel
+  guint32 row_align_size;       // Padding between rows
+  guint32 tile_align_size;      // Padding between tiles
+  guint32 num_tile_cols;        // Number of horizontal tiles
+  guint32 num_tile_rows;        // Number of vertical tiles
+} UncompressedFrameConfigBox;
+
+static void
+qtdemux_clear_uncC (UncompressedFrameConfigBox * uncC)
+{
+  if (!uncC)
+    return;
+
+  g_free (uncC->components);
+}
+
+static void
+qtdemux_clear_cmpd (ComponentDefinitionBox * cmpd)
+{
+  if (!cmpd)
+    return;
+
+  g_free (cmpd->types);
+  g_free (cmpd->type_uris);
+}
+
+static gboolean
+qtdemux_parse_cmpd (GstQTDemux * qtdemux, GstByteReader * reader,
+    ComponentDefinitionBox * cmpd)
+{
+  /* There should be enough to parse the component_count (4) */
+  if (gst_byte_reader_get_remaining (reader) < 4) {
+    GST_ERROR_OBJECT (qtdemux, "cmpd is too short");
+    goto error;
+  }
+
+  cmpd->component_count = gst_byte_reader_get_uint32_be_unchecked (reader);
+
+  /* Let's use 16 as a upper bound here for now to avoid overflows and
+   * allocating lots of memory */
+  if (cmpd->component_count > 16) {
+    GST_ERROR_OBJECT (qtdemux, "Unsupported number of cmpd components %u",
+        cmpd->component_count);
+    goto error;
+  }
+
+  guint32 minimum_size = cmpd->component_count * 2 + 4; // assuming type_uris are not used
+  if (gst_byte_reader_get_size (reader) < minimum_size) {
+    GST_ERROR_OBJECT (qtdemux, "cmpd size is too short");
+    goto error;
+  }
+
+  cmpd->types = g_new0 (ComponentType, cmpd->component_count);
+  cmpd->type_uris = g_new0 (const gchar *, cmpd->component_count);
+
+  guint16 type = 0;
+  for (guint32 i = 0; i < cmpd->component_count; i++) {
+    if (!gst_byte_reader_get_uint16_be (reader, &type)) {
+      GST_ERROR_OBJECT (qtdemux, "Failed to read component type");
+      goto error;
+    }
+    if (type >= 0x8000) {
+      if (!gst_byte_reader_get_string (reader, &cmpd->type_uris[i])) {
+        GST_ERROR_OBJECT (qtdemux, "Failed to read component type URI");
+        goto error;
+      }
+    }
+    cmpd->types[i] = (ComponentType) type;
+  }
+
+  /* Success */
+  return TRUE;
+
+error:
+  return FALSE;
+}
+
+static gboolean
+qtdemux_parse_uncC (GstQTDemux * qtdemux, GstByteReader * reader,
+    UncompressedFrameConfigBox * uncC)
+{
+  /* There should be enough to parse the version/flags (4) & profile (4) */
+  if (gst_byte_reader_get_remaining (reader) < 8) {
+    GST_ERROR_OBJECT (qtdemux, "uncC is too short");
+    goto error;
+  }
+
+  uncC->version = gst_byte_reader_get_uint8_unchecked (reader);
+  uncC->flags = gst_byte_reader_get_uint24_be_unchecked (reader);
+
+  uncC->profile = gst_byte_reader_get_uint32_le_unchecked (reader);
+  if (uncC->version == 1) {
+    /* Use the profile for predetermined settings */
+    goto success;
+  } else if (uncC->version != 0) {
+    GST_ERROR_OBJECT (qtdemux, "Unsupported uncC version");
+    goto error;
+  }
+
+  if (!gst_byte_reader_get_uint32_be (reader, &uncC->component_count)) {
+    GST_ERROR_OBJECT (qtdemux, "Failed to read component count");
+    goto error;
+  }
+
+  /* Let's use 16 as a upper bound here for now to avoid overflows and
+   * allocating lots of memory */
+  if (uncC->component_count > 16) {
+    GST_ERROR_OBJECT (qtdemux, "Unsupported number of uncC components %u",
+        uncC->component_count);
+    goto error;
+  }
+
+  guint32 expected_size = uncC->component_count * 5 + 36;
+  if (gst_byte_reader_get_size (reader) != expected_size) {
+    GST_ERROR_OBJECT (qtdemux, "uncC size is incorrect");
+    goto error;
+  }
+
+  guint32 expected_remaining = uncC->component_count * 5 + 24;
+  if (gst_byte_reader_get_remaining (reader) < expected_remaining) {
+    GST_ERROR_OBJECT (qtdemux, "uncC is too short");
+    goto error;
+  }
+
+  uncC->components =
+      g_new0 (UncompressedFrameConfigComponent, uncC->component_count);
+
+  for (guint32 i = 0; i < uncC->component_count; i++) {
+    UncompressedFrameConfigComponent *component = &uncC->components[i];
+    component->index = gst_byte_reader_get_uint16_be_unchecked (reader);
+    component->bit_depth = gst_byte_reader_get_uint8_unchecked (reader) + 1;
+    component->format = gst_byte_reader_get_uint8_unchecked (reader);
+    component->align_size = gst_byte_reader_get_uint8_unchecked (reader);
+  }
+
+  uncC->sampling_type = gst_byte_reader_get_uint8_unchecked (reader);
+  uncC->interleave_type = gst_byte_reader_get_uint8_unchecked (reader);
+  uncC->block_size = gst_byte_reader_get_uint8_unchecked (reader);
+
+  guint8 block_flags = gst_byte_reader_get_uint8_unchecked (reader);
+  uncC->components_little_endian = (block_flags >> 7) & 0x01;
+  uncC->block_pad_lsb = (block_flags >> 6) & 0x01;
+  uncC->block_little_endian = (block_flags >> 5) & 0x01;
+  uncC->block_reversed = (block_flags >> 4) & 0x01;
+  uncC->pad_unknown = (block_flags >> 3) & 0x01;
+
+  uncC->pixel_size = gst_byte_reader_get_uint32_be_unchecked (reader);
+  uncC->row_align_size = gst_byte_reader_get_uint32_be_unchecked (reader);
+  uncC->tile_align_size = gst_byte_reader_get_uint32_be_unchecked (reader);
+  uncC->num_tile_cols = gst_byte_reader_get_uint32_be_unchecked (reader) + 1;
+  uncC->num_tile_rows = gst_byte_reader_get_uint32_be_unchecked (reader) + 1;
+
+success:
+  return TRUE;
+
+error:
+  return FALSE;
+}
+
+typedef struct ComponentFormatMapping
+{
+  GstVideoFormat format;
+  UncompressedFrameConfigBox uncC;
+  UncompressedFrameConfigComponent component_config;    // All components are assumed to have the same config
+  guint16 component_types[4];   // From cmpd
+} ComponentFormatMapping;
+
+static const ComponentFormatMapping component_lookup[] = {
+  {
+        GST_VIDEO_FORMAT_GRAY8,
+        {.component_count = 1,.interleave_type =
+              INTERLEAVE_PIXEL,.sampling_type = SAMPLING_444,.pixel_size = 1},
+        {.bit_depth = 8,.format = 0,.align_size = 1},
+      {COMPONENT_MONOCHROME}},
+  {
+        GST_VIDEO_FORMAT_GRAY8,
+        {.component_count = 1,.interleave_type =
+              INTERLEAVE_COMPONENT,.sampling_type = SAMPLING_444,.pixel_size =
+              1},
+        {.bit_depth = 8,.format = 0,.align_size = 1},
+      {COMPONENT_MONOCHROME}},
+  {
+        GST_VIDEO_FORMAT_GRAY16_BE,
+        {.component_count = 1,.interleave_type =
+              INTERLEAVE_COMPONENT,.sampling_type = SAMPLING_444,.pixel_size =
+              2,.components_little_endian = FALSE},
+        {.bit_depth = 16,.format = 0,.align_size = 2},
+      {COMPONENT_MONOCHROME}},
+  {
+        GST_VIDEO_FORMAT_RGB,
+        {.component_count = 3,.interleave_type =
+              INTERLEAVE_PIXEL,.sampling_type = SAMPLING_444,.pixel_size = 3},
+        {.bit_depth = 8,.format = 0,.align_size = 1},
+      {COMPONENT_RED, COMPONENT_GREEN, COMPONENT_BLUE}},
+  {
+        GST_VIDEO_FORMAT_RGBP,
+        {.component_count = 3,.interleave_type =
+              INTERLEAVE_COMPONENT,.sampling_type = SAMPLING_444,.pixel_size =
+              3},
+        {.bit_depth = 8,.format = 0,.align_size = 1},
+      {COMPONENT_RED, COMPONENT_GREEN, COMPONENT_BLUE}},
+  {
+        GST_VIDEO_FORMAT_BGRP,
+        {.component_count = 3,.interleave_type =
+              INTERLEAVE_COMPONENT,.sampling_type = SAMPLING_444,.pixel_size =
+              3},
+        {.bit_depth = 8,.format = 0,.align_size = 1},
+      {COMPONENT_BLUE, COMPONENT_GREEN, COMPONENT_RED}},
+  {
+        GST_VIDEO_FORMAT_RGBx,
+        {.component_count = 3,.interleave_type =
+              INTERLEAVE_PIXEL,.sampling_type = SAMPLING_444,.pixel_size = 4},
+        {.bit_depth = 8,.format = 0,.align_size = 1},
+        {COMPONENT_RED, COMPONENT_GREEN, COMPONENT_BLUE}
+      },
+  {
+        GST_VIDEO_FORMAT_GBR,
+        {.component_count = 3,.interleave_type =
+              INTERLEAVE_COMPONENT,.sampling_type = SAMPLING_444,.pixel_size =
+              3},
+        {.bit_depth = 8,.format = 0,.align_size = 1},
+        {COMPONENT_GREEN, COMPONENT_BLUE, COMPONENT_RED}
+      },
+  {
+        GST_VIDEO_FORMAT_BGR,
+        {.component_count = 3,.interleave_type =
+              INTERLEAVE_PIXEL,.sampling_type = SAMPLING_444,.pixel_size = 3},
+        {.bit_depth = 8,.format = 0,.align_size = 1},
+        {COMPONENT_BLUE, COMPONENT_GREEN, COMPONENT_RED}
+      },
+  {
+        GST_VIDEO_FORMAT_BGRx,
+        {.component_count = 3,.interleave_type =
+              INTERLEAVE_PIXEL,.sampling_type = SAMPLING_444,.pixel_size = 4},
+        {.bit_depth = 8,.format = 0,.align_size = 1},
+        {COMPONENT_BLUE, COMPONENT_GREEN, COMPONENT_RED}
+      },
+  {
+        GST_VIDEO_FORMAT_r210,
+        {.component_count = 3,.interleave_type =
+              INTERLEAVE_PIXEL,.sampling_type = SAMPLING_444,.pixel_size =
+              4,.block_size = 4},
+        {.bit_depth = 10,.format = 0,.align_size = 0},
+        {COMPONENT_RED, COMPONENT_GREEN, COMPONENT_BLUE}
+      },
+  {
+        GST_VIDEO_FORMAT_Y444,
+        {.component_count = 3,.interleave_type =
+              INTERLEAVE_COMPONENT,.sampling_type = SAMPLING_444,.pixel_size =
+              3},
+        {.bit_depth = 8,.format = 0,.align_size = 1},
+        {COMPONENT_Y, COMPONENT_U, COMPONENT_V}
+      },
+  {
+        GST_VIDEO_FORMAT_v308,
+        {.component_count = 3,.interleave_type =
+              INTERLEAVE_PIXEL,.sampling_type = SAMPLING_444,.pixel_size = 3},
+        {.bit_depth = 8,.format = 0,.align_size = 1},
+        {COMPONENT_Y, COMPONENT_U, COMPONENT_V}
+      },
+  {
+        GST_VIDEO_FORMAT_Y42B,
+        {.component_count = 3,.interleave_type =
+              INTERLEAVE_COMPONENT,.sampling_type = SAMPLING_422,.pixel_size =
+              3},
+        {.bit_depth = 8,.format = 0,.align_size = 1},
+        {COMPONENT_Y, COMPONENT_U, COMPONENT_V}
+      },
+  {
+        GST_VIDEO_FORMAT_I420,
+        {.component_count = 3,.interleave_type =
+              INTERLEAVE_COMPONENT,.sampling_type = SAMPLING_420,.pixel_size =
+              3},
+        {.bit_depth = 8,.format = 0,.align_size = 1},
+        {COMPONENT_Y, COMPONENT_U, COMPONENT_V}
+      },
+  {
+        GST_VIDEO_FORMAT_YV12,
+        {.component_count = 3,.interleave_type =
+              INTERLEAVE_COMPONENT,.sampling_type = SAMPLING_420,.pixel_size =
+              3},
+        {.bit_depth = 8,.format = 0,.align_size = 1},
+        {COMPONENT_Y, COMPONENT_V, COMPONENT_U}
+      },
+  {
+        GST_VIDEO_FORMAT_IYU2,
+        {.component_count = 3,.interleave_type =
+              INTERLEAVE_PIXEL,.sampling_type = SAMPLING_444,.pixel_size = 3},
+        {.bit_depth = 8,.format = 0,.align_size = 1},
+        {COMPONENT_U, COMPONENT_Y, COMPONENT_V}
+      },
+  {
+        GST_VIDEO_FORMAT_NV12,
+        {.component_count = 3,.interleave_type =
+              INTERLEAVE_MIXED,.sampling_type = SAMPLING_420,.pixel_size = 3},
+        {.bit_depth = 8,.format = 0,.align_size = 1},
+        {COMPONENT_Y, COMPONENT_U, COMPONENT_V}
+      },
+  {
+        GST_VIDEO_FORMAT_NV21,
+        {.component_count = 3,.interleave_type =
+              INTERLEAVE_MIXED,.sampling_type = SAMPLING_420,.pixel_size = 3},
+        {.bit_depth = 8,.format = 0,.align_size = 1},
+        {COMPONENT_Y, COMPONENT_V, COMPONENT_U}
+      },
+  {
+        GST_VIDEO_FORMAT_NV16,
+        {.component_count = 3,.interleave_type =
+              INTERLEAVE_MIXED,.sampling_type = SAMPLING_422,.pixel_size = 3},
+        {.bit_depth = 8,.format = 0,.align_size = 1},
+        {COMPONENT_Y, COMPONENT_U, COMPONENT_V}
+      },
+  {
+        GST_VIDEO_FORMAT_Y41B,
+        {.component_count = 3,.interleave_type =
+              INTERLEAVE_COMPONENT,.sampling_type = SAMPLING_411,.pixel_size =
+              3},
+        {.bit_depth = 8,.format = 0,.align_size = 1},
+        {COMPONENT_Y, COMPONENT_U, COMPONENT_V}
+      },
+  {
+        GST_VIDEO_FORMAT_AYUV,
+        {.component_count = 4,.interleave_type =
+              INTERLEAVE_PIXEL,.sampling_type = SAMPLING_444,.pixel_size = 4},
+        {.bit_depth = 8,.format = 0,.align_size = 1},
+        {COMPONENT_ALPHA, COMPONENT_Y, COMPONENT_U, COMPONENT_V}
+      },
+  {
+        GST_VIDEO_FORMAT_ARGB,
+        {.component_count = 4,.interleave_type =
+              INTERLEAVE_PIXEL,.sampling_type = SAMPLING_444,.pixel_size = 4},
+        {.bit_depth = 8,.format = 0,.align_size = 1},
+        {COMPONENT_ALPHA, COMPONENT_RED, COMPONENT_GREEN, COMPONENT_BLUE}
+      },
+  {
+        GST_VIDEO_FORMAT_BGRA,
+        {.component_count = 4,.interleave_type =
+              INTERLEAVE_PIXEL,.sampling_type = SAMPLING_444,.pixel_size = 4},
+        {.bit_depth = 8,.format = 0,.align_size = 1},
+        {COMPONENT_BLUE, COMPONENT_GREEN, COMPONENT_RED, COMPONENT_ALPHA}
+      },
+  {
+        GST_VIDEO_FORMAT_RGBA,
+        {.component_count = 4,.interleave_type =
+              INTERLEAVE_PIXEL,.sampling_type = SAMPLING_444,.pixel_size = 4},
+        {.bit_depth = 8,.format = 0,.align_size = 1},
+        {COMPONENT_RED, COMPONENT_GREEN, COMPONENT_BLUE, COMPONENT_ALPHA}
+      },
+  {
+        GST_VIDEO_FORMAT_RGBx,
+        {.component_count = 4,.interleave_type =
+              INTERLEAVE_PIXEL,.sampling_type = SAMPLING_444,.pixel_size = 4},
+        {.bit_depth = 8,.format = 0,.align_size = 1},
+        {COMPONENT_RED, COMPONENT_GREEN, COMPONENT_BLUE, COMPONENT_PADDING}
+      },
+};
+
+
+static GstVideoFormat
+qtdemux_get_format_from_uncv (GstQTDemux * qtdemux,
+    UncompressedFrameConfigBox * uncC, ComponentDefinitionBox * cmpd)
+{
+  guint32 num_components = uncC->component_count;
+  guint16 component_types[4];
+
+  if (uncC->version == 1) {
+    // Determine format with profile
+    // The only permitted profiles for version 1 are `rgb3`, `rgba`, and `abgr`
+    switch (uncC->profile) {
+      case GST_MAKE_FOURCC ('r', 'g', 'b', '3'):       // RGB 24 bits packed
+        return GST_VIDEO_FORMAT_RGB;
+        break;
+
+      case GST_MAKE_FOURCC ('r', 'g', 'b', 'a'):       // RGBA 32 bits packed
+        return GST_VIDEO_FORMAT_RGBA;
+        break;
+
+      case GST_MAKE_FOURCC ('a', 'b', 'g', 'r'):       // RGBA 32 bits packed
+        return GST_VIDEO_FORMAT_ABGR;
+        break;
+
+      default:
+        goto unsupported_feature;
+    }
+
+  } else if (uncC->version == 0) {
+    // Determine format with uncC & cmpd boxes
+  } else {
+    GST_WARNING_OBJECT (qtdemux, "Unsupported uncv version: %u", uncC->version);
+    goto unsupported_feature;
+  }
+
+  if (num_components > 4 || num_components == 0) {
+    GST_WARNING_OBJECT (qtdemux,
+        "Unsupported number of components for uncC: %u", num_components);
+    goto unsupported_feature;
+  }
+
+  /* Assert that components are similar */
+  UncompressedFrameConfigComponent *first_comp = &uncC->components[0];
+  guint8 align_size = first_comp->align_size;
+  for (guint32 i = 0; i < num_components; i++) {
+    // For now, assert that each component has the same bit depth
+    UncompressedFrameConfigComponent *comp = &uncC->components[i];
+    if (comp->bit_depth != first_comp->bit_depth) {
+      GST_WARNING_OBJECT (qtdemux,
+          "Unsupported bit_depth combination for uncompressed track: %u != %u",
+          comp->bit_depth, first_comp->bit_depth);
+      goto unsupported_feature;
+    }
+    // For now, assert that each component has the same align size
+    if (comp->align_size != first_comp->align_size) {
+      GST_WARNING_OBJECT (qtdemux,
+          "Unsupported component_align_size for uncompressed track: %u != %u",
+          comp->align_size, first_comp->align_size);
+      goto unsupported_feature;
+    }
+  }
+
+
+  /* Unsupported Features */
+  if (align_size) {
+    // If component_align_size is 0, the component value
+    // is coded on component_bit_depth bits exactly
+    GST_WARNING_OBJECT (qtdemux,
+        "Unsupported align_size for uncompressed track: %u", align_size);
+    goto unsupported_feature;
+  } else if (uncC->tile_align_size) {
+    // tile_align_size indicates the padding between tiles
+    GST_WARNING_OBJECT (qtdemux,
+        "Unsupported tile_align_size for uncompressed track: %u",
+        uncC->tile_align_size);
+    goto unsupported_feature;
+  }
+
+  // Get Component Types
+  for (guint32 i = 0; i < num_components; i++) {
+    guint16 component_index = uncC->components[i].index;
+    if (component_index >= cmpd->component_count) {
+      GST_WARNING_OBJECT (qtdemux,
+          "Invalid component index %u for component %u", component_index, i);
+      goto unsupported_feature;
+    }
+    component_types[i] = cmpd->types[component_index];
+  }
+
+  // Lookup Format
+  const ComponentFormatMapping *lut = component_lookup;
+  for (guint i = 0; i < G_N_ELEMENTS (component_lookup); i++) {
+    // Component Count
+    if (num_components != lut[i].uncC.component_count) {
+      continue;
+    }
+
+    // Component Bit Depth
+    if (first_comp->bit_depth != lut[i].component_config.bit_depth) {
+      continue;
+    }
+
+    // Component Align Size
+    if (align_size && align_size != lut[i].component_config.align_size) {
+      continue;                 // If set, the align size must match
+    }
+
+    // Interleave Types
+    if (uncC->interleave_type != lut[i].uncC.interleave_type) {
+      continue;
+    }
+
+    // Sampling Types
+    if (uncC->sampling_type != lut[i].uncC.sampling_type) {
+      continue;
+    }
+
+    // Pixel Size
+    if (uncC->pixel_size && uncC->pixel_size != lut[i].uncC.pixel_size) {
+      continue;                 // If set, the pixel size must match
+    }
+
+    // Block Size
+    if (uncC->block_size && uncC->block_size != lut[i].uncC.block_size) {
+      continue;                 // If set, the block size must match
+    }
+
+    // Endian
+    if (uncC->components_little_endian != lut[i].uncC.components_little_endian) {
+      continue;
+    }
+
+    if (memcmp (component_types, lut[i].component_types,
+            num_components * sizeof (guint16))) {
+      continue;
+    }
+
+    /* success */
+    return lut[i].format;
+  }
+
+unsupported_feature:
+  GST_WARNING_OBJECT (qtdemux, "Unsupported uncv format");
+  return GST_VIDEO_FORMAT_UNKNOWN;
+}
+
+static gboolean
+qtdemux_set_info_from_uncv (GstQTDemux * qtdemux,
+    QtDemuxStreamStsdEntry * entry, UncompressedFrameConfigBox * uncC,
+    GstVideoInfo * info)
+{
+  guint32 num_components = uncC->component_count;
+  guint32 row_align_size = uncC->row_align_size;
+  guint height = entry->height;
+
+  if (uncC->version == 1) {
+    switch (uncC->profile) {
+      case GST_MAKE_FOURCC ('r', 'g', 'b', '3'):
+        num_components = 3;
+        break;
+      case GST_MAKE_FOURCC ('r', 'g', 'b', 'a'):
+      case GST_MAKE_FOURCC ('a', 'b', 'g', 'r'):
+        num_components = 4;
+        break;
+      default:
+        GST_WARNING_OBJECT (qtdemux, "Unsupported uncv profile: %u",
+            uncC->profile);
+        return FALSE;
+    }
+    info->stride[0] = entry->width * num_components;
+    info->size = info->stride[0] * height;
+    return TRUE;
+  }
+
+  guint default_stride;
+  // We only support 8/16 bit formats right now, and r210. Other formats need
+  // updating below to calculate the correct strides and sizes.
+  g_assert (uncC->components[0].bit_depth % 8 == 0
+      || info->finfo->format == GST_VIDEO_FORMAT_r210);
+  if (row_align_size) {
+    default_stride = row_align_size;
+  } else {
+    default_stride = (uncC->components[0].bit_depth / 8) * entry->width;
+  }
+
+  switch (uncC->sampling_type) {
+    case SAMPLING_444:{
+      switch (uncC->interleave_type) {
+        case INTERLEAVE_PIXEL:{
+          guint min_stride =
+              (uncC->components[0].bit_depth / 8) * entry->width *
+              num_components;
+
+          // Special case for r210
+          if (info->finfo->format == GST_VIDEO_FORMAT_r210)
+            min_stride = entry->width * 4;
+
+          if (row_align_size) {
+            if (row_align_size < min_stride) {
+              GST_WARNING_OBJECT (qtdemux,
+                  "Invalid row align size %u smaller than minimum %u",
+                  row_align_size, min_stride);
+              return FALSE;
+            }
+            info->stride[0] = row_align_size;
+          } else {
+            info->stride[0] = min_stride;
+          }
+          info->size = info->stride[0] * height;
+          break;
+        }
+        case INTERLEAVE_COMPONENT:{
+          guint min_stride = (uncC->components[0].bit_depth / 8) * entry->width;
+          if (default_stride < min_stride) {
+            GST_WARNING_OBJECT (qtdemux,
+                "Invalid row align size %u smaller than minimum %u",
+                default_stride, min_stride);
+            return FALSE;
+          }
+
+          for (gint i = 0; i < num_components; i++) {
+            info->stride[i] = default_stride;
+          }
+          info->size = info->stride[0] * height * num_components;
+          break;
+        }
+        default:
+          return FALSE;
+      }
+      break;
+    }
+    case SAMPLING_422:{
+      guint min_stride = (uncC->components[0].bit_depth / 8) * entry->width;
+      if (default_stride < min_stride) {
+        GST_WARNING_OBJECT (qtdemux,
+            "Invalid row align size %u smaller than minimum %u", default_stride,
+            min_stride);
+        return FALSE;
+      }
+      if (entry->width % 2 != 0) {
+        GST_WARNING_OBJECT (qtdemux,
+            "Require even widths for 4:2:2 subsampling");
+        return FALSE;
+      }
+
+      info->stride[0] = default_stride;
+      switch (uncC->interleave_type) {
+        case INTERLEAVE_COMPONENT:
+          info->stride[1] = info->stride[0] / 2;
+          info->stride[2] = info->stride[1];
+          break;
+        case INTERLEAVE_MIXED:
+          info->stride[1] = info->stride[0];
+          break;
+        default:
+          return FALSE;
+      }
+      info->size = info->stride[0] * height * 2;
+      break;
+    }
+    case SAMPLING_420:{
+      guint min_stride = (uncC->components[0].bit_depth / 8) * entry->width;
+      if (default_stride < min_stride) {
+        GST_WARNING_OBJECT (qtdemux,
+            "Invalid row align size %u smaller than minimum %u", default_stride,
+            min_stride);
+        return FALSE;
+      }
+      if (entry->width % 2 != 0) {
+        GST_WARNING_OBJECT (qtdemux,
+            "Require even widths for 4:2:0 subsampling");
+        return FALSE;
+      }
+      if (entry->height % 2 != 0) {
+        GST_WARNING_OBJECT (qtdemux,
+            "Require even heights for 4:2:0 subsampling");
+        return FALSE;
+      }
+
+      info->stride[0] = default_stride;
+      switch (uncC->interleave_type) {
+        case INTERLEAVE_COMPONENT:
+          info->stride[1] = info->stride[0] / 2;
+          info->stride[2] = info->stride[1];
+          break;
+        case INTERLEAVE_MIXED:
+          info->stride[1] = info->stride[0];
+          break;
+        default:
+          return FALSE;
+      }
+      info->size = info->stride[0] * height * 3 / 2;
+      break;
+    }
+    case SAMPLING_411:{
+      guint min_stride = (uncC->components[0].bit_depth / 8) * entry->width;
+      if (default_stride < min_stride) {
+        GST_WARNING_OBJECT (qtdemux,
+            "Invalid row align size %u smaller than minimum %u", default_stride,
+            min_stride);
+        return FALSE;
+      }
+      if (entry->width % 4 != 0) {
+        GST_WARNING_OBJECT (qtdemux,
+            "Require widths that are an integer multiple of 4 for 4:1:1 subsampling");
+        return FALSE;
+      }
+
+      info->stride[0] = default_stride;
+      switch (uncC->interleave_type) {
+        case INTERLEAVE_COMPONENT:
+          info->stride[1] = info->stride[0] / 4;
+          info->stride[2] = info->stride[1];
+          break;
+        case INTERLEAVE_MIXED:
+          info->stride[1] = info->stride[0];
+          break;
+        default:
+          return FALSE;
+      }
+      info->size = info->stride[0] * height * 3 / 2;
+      break;
+    }
+    default:
+      return FALSE;
+  }
+
+  return TRUE;
+}
+
+/* *INDENT-OFF* */
+
+// ISO/IEC 23091-3
+static const GstAudioChannelPosition chnl_positions[] = {
+  // 0
+  GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+  GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+  GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+  GST_AUDIO_CHANNEL_POSITION_LFE1,
+  GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+  GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+  GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT_OF_CENTER,
+  GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT_OF_CENTER,
+  GST_AUDIO_CHANNEL_POSITION_REAR_LEFT,
+  GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT,
+  // 10
+  GST_AUDIO_CHANNEL_POSITION_REAR_CENTER,
+  GST_AUDIO_CHANNEL_POSITION_SURROUND_LEFT,
+  GST_AUDIO_CHANNEL_POSITION_SURROUND_RIGHT,
+  GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+  GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+  GST_AUDIO_CHANNEL_POSITION_WIDE_LEFT,
+  GST_AUDIO_CHANNEL_POSITION_WIDE_RIGHT,
+  GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_LEFT,
+  GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_RIGHT,
+  GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_CENTER,
+  // 20
+  GST_AUDIO_CHANNEL_POSITION_TOP_REAR_LEFT,
+  GST_AUDIO_CHANNEL_POSITION_TOP_REAR_RIGHT,
+  GST_AUDIO_CHANNEL_POSITION_TOP_REAR_CENTER,
+  GST_AUDIO_CHANNEL_POSITION_TOP_SIDE_LEFT,
+  GST_AUDIO_CHANNEL_POSITION_TOP_SIDE_RIGHT,
+  GST_AUDIO_CHANNEL_POSITION_TOP_CENTER,
+  GST_AUDIO_CHANNEL_POSITION_LFE2,
+  GST_AUDIO_CHANNEL_POSITION_BOTTOM_FRONT_LEFT,
+  GST_AUDIO_CHANNEL_POSITION_BOTTOM_FRONT_RIGHT,
+  GST_AUDIO_CHANNEL_POSITION_BOTTOM_FRONT_CENTER,
+  // 30
+  GST_AUDIO_CHANNEL_POSITION_TOP_SURROUND_LEFT,
+  GST_AUDIO_CHANNEL_POSITION_TOP_SURROUND_RIGHT,
+  GST_AUDIO_CHANNEL_POSITION_INVALID, // reserved
+  GST_AUDIO_CHANNEL_POSITION_INVALID, // reserved
+  GST_AUDIO_CHANNEL_POSITION_INVALID, // reserved
+  GST_AUDIO_CHANNEL_POSITION_INVALID, // reserved
+  GST_AUDIO_CHANNEL_POSITION_INVALID, // low frequency enhancement 3
+  GST_AUDIO_CHANNEL_POSITION_INVALID, // left edge of screen
+  GST_AUDIO_CHANNEL_POSITION_INVALID, // right edge of screen
+  GST_AUDIO_CHANNEL_POSITION_INVALID, // half-way between centre of screen and
+                                      // left edge of screen
+  // 40
+  GST_AUDIO_CHANNEL_POSITION_INVALID, // half-way between centre of screen and
+                                      // right edge of screen
+  GST_AUDIO_CHANNEL_POSITION_INVALID, // left back surround
+  GST_AUDIO_CHANNEL_POSITION_INVALID, // right back surround
+  // 43-125 reserved
+  // 126 explicit position
+  // 127 unknown / undefined
+};
+
+// Pre-defined channel layouts
+//
+// Each layout is terminated by INVALID to allow counting the number of
+// channels in the layout.
+static const GstAudioChannelPosition chnl_layouts[][25] = {
+ // 0
+ { GST_AUDIO_CHANNEL_POSITION_INVALID, },
+ // 1
+ { GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER, GST_AUDIO_CHANNEL_POSITION_INVALID, },
+ // 2
+ { GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT, GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT, GST_AUDIO_CHANNEL_POSITION_INVALID, },
+ // 3
+ {
+   GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+   GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT, GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+   GST_AUDIO_CHANNEL_POSITION_INVALID,
+ },
+ // 4
+ {
+   GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+   GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT, GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+   GST_AUDIO_CHANNEL_POSITION_REAR_CENTER,
+   GST_AUDIO_CHANNEL_POSITION_INVALID,
+ },
+ // 5
+ {
+   GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+   GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT, GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+   GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT, GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+   GST_AUDIO_CHANNEL_POSITION_INVALID,
+ },
+ // 6
+ {
+   GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+   GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT, GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+   GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT, GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+   GST_AUDIO_CHANNEL_POSITION_LFE1,
+   GST_AUDIO_CHANNEL_POSITION_INVALID,
+ },
+ // 7
+ {
+   GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+   GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT_OF_CENTER, GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT_OF_CENTER,
+   GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT, GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+   GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT, GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+   GST_AUDIO_CHANNEL_POSITION_LFE1,
+   GST_AUDIO_CHANNEL_POSITION_INVALID,
+ },
+ // 8
+ { GST_AUDIO_CHANNEL_POSITION_INVALID, },
+ // 9
+ {
+   GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT, GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+   GST_AUDIO_CHANNEL_POSITION_REAR_CENTER,
+   GST_AUDIO_CHANNEL_POSITION_INVALID,
+ },
+ // 10
+ {
+   GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT, GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+   GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT, GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+   GST_AUDIO_CHANNEL_POSITION_INVALID,
+ },
+ // 11
+ {
+   GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+   GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT, GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+   GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT, GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+   GST_AUDIO_CHANNEL_POSITION_REAR_CENTER,
+   GST_AUDIO_CHANNEL_POSITION_LFE1,
+   GST_AUDIO_CHANNEL_POSITION_INVALID,
+ },
+ // 12
+ {
+   GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+   GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT, GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+   GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT, GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+   GST_AUDIO_CHANNEL_POSITION_REAR_LEFT, GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT,
+   GST_AUDIO_CHANNEL_POSITION_LFE1,
+   GST_AUDIO_CHANNEL_POSITION_INVALID,
+ },
+ // 13
+ {
+   GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+   GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT_OF_CENTER, GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT_OF_CENTER,
+   GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT, GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+   GST_AUDIO_CHANNEL_POSITION_SURROUND_LEFT, GST_AUDIO_CHANNEL_POSITION_SURROUND_RIGHT,
+   GST_AUDIO_CHANNEL_POSITION_REAR_LEFT, GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT,
+   GST_AUDIO_CHANNEL_POSITION_REAR_CENTER,
+   GST_AUDIO_CHANNEL_POSITION_LFE1, GST_AUDIO_CHANNEL_POSITION_LFE2,
+   GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_CENTER,
+   GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_LEFT, GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_RIGHT,
+   GST_AUDIO_CHANNEL_POSITION_TOP_SIDE_LEFT, GST_AUDIO_CHANNEL_POSITION_TOP_SIDE_RIGHT,
+   GST_AUDIO_CHANNEL_POSITION_TOP_CENTER,
+   GST_AUDIO_CHANNEL_POSITION_TOP_REAR_LEFT, GST_AUDIO_CHANNEL_POSITION_TOP_REAR_RIGHT,
+   GST_AUDIO_CHANNEL_POSITION_TOP_REAR_CENTER,
+   GST_AUDIO_CHANNEL_POSITION_BOTTOM_FRONT_CENTER,
+   GST_AUDIO_CHANNEL_POSITION_BOTTOM_FRONT_LEFT, GST_AUDIO_CHANNEL_POSITION_BOTTOM_FRONT_RIGHT,
+   GST_AUDIO_CHANNEL_POSITION_INVALID,
+ },
+ // 14
+ {
+   GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+   GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT, GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+   GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT, GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+   GST_AUDIO_CHANNEL_POSITION_LFE1,
+   GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_LEFT, GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_RIGHT,
+   GST_AUDIO_CHANNEL_POSITION_INVALID,
+ },
+
+};
+/* *INDENT-ON* */
+
+static void
+qtdemux_parse_chnl (GstQTDemux * qtdemux, GstByteReader * br,
+    QtDemuxStream * stream, QtDemuxStreamStsdEntry * entry)
+{
+  GstAudioChannelPosition positions[64];
+  guint n_channels = 0;
+
+  guint8 version = gst_byte_reader_get_uint8_unchecked (br);
+  guint32 flags = gst_byte_reader_get_uint24_be_unchecked (br);
+
+  if (version == 0 && flags == 0) {
+    guint8 stream_structure;
+    if (!gst_byte_reader_get_uint8 (br, &stream_structure)) {
+      GST_WARNING_OBJECT (qtdemux, "Too short chnl box");
+      goto error;
+    }
+
+    // stream carries channels
+    if (stream_structure & 1) {
+      guint8 defined_layout;
+
+      if (!gst_byte_reader_get_uint8 (br, &defined_layout)) {
+        GST_WARNING_OBJECT (qtdemux, "Too short chnl box");
+        goto error;
+      }
+
+      n_channels = entry->n_channels;
+      if (n_channels == 0) {
+        GST_WARNING_OBJECT (qtdemux, "Unknown number of channels");
+        goto error;
+      }
+
+      if (n_channels >= 64) {
+        GST_WARNING_OBJECT (qtdemux, "Unsupported number of channels %d",
+            n_channels);
+        goto error;
+      }
+
+      if (defined_layout == 0) {
+        for (unsigned int i = 0; i < n_channels; i++) {
+          guint8 speaker_position;
+
+          if (!gst_byte_reader_get_uint8 (br, &speaker_position)) {
+            GST_WARNING_OBJECT (qtdemux, "Too short chnl box");
+            goto error;
+          }
+
+          // explicit position
+          if (speaker_position == 126) {
+            GST_WARNING_OBJECT (qtdemux,
+                "Explicit speaker position not supported");
+            goto error;
+          }
+
+          if (speaker_position >= G_N_ELEMENTS (chnl_positions) ||
+              chnl_positions[speaker_position] ==
+              GST_AUDIO_CHANNEL_POSITION_INVALID) {
+            GST_WARNING_OBJECT (qtdemux,
+                "Unsupported speaker channel %u position %u", i,
+                speaker_position);
+            goto error;
+          }
+
+          positions[i] = chnl_positions[speaker_position];
+        }
+      } else {
+        guint64 omitted_channels_map;
+
+        if (!gst_byte_reader_get_uint64_be (br, &omitted_channels_map)) {
+          GST_WARNING_OBJECT (qtdemux, "Too short chnl box");
+          goto error;
+        }
+
+        if (defined_layout >= G_N_ELEMENTS (chnl_layouts) ||
+            chnl_layouts[defined_layout][0] ==
+            GST_AUDIO_CHANNEL_POSITION_INVALID) {
+          GST_WARNING_OBJECT (qtdemux, "Unsupported defined layout %u",
+              defined_layout);
+          goto error;
+        }
+
+        const GstAudioChannelPosition *layout = chnl_layouts[defined_layout];
+
+        // The omitted channel map defines which of the channels of the
+        // pre-defined layout are *not* included.
+        for (unsigned int c = 0; c < n_channels; c++) {
+          // Find c-th channel in layout that is not omitted
+          unsigned int l_c = 0;
+          for (unsigned int i = 0; i < 64; i++) {
+            // If there are not enough non-omitted channels in the layout we end
+            // up here and return
+            if (layout[i] == GST_AUDIO_CHANNEL_POSITION_INVALID) {
+              GST_WARNING_OBJECT (qtdemux,
+                  "Invalid defined layout %u with %u channels and omitted channels map %016"
+                  G_GINT64_MODIFIER "x", defined_layout, n_channels,
+                  omitted_channels_map);
+              goto error;
+            }
+
+            // The i-th channel of the layout is included
+            if (((omitted_channels_map >> i) & 1) == 0) {
+              // The channel we're looking for
+              if (l_c == c) {
+                positions[c] = layout[l_c];
+                break;
+              }
+              l_c += 1;
+            }
+          }
+
+          // If there are not enough non-omitted channels in the omitted
+          // channels map then return here
+          if (positions[c] == GST_AUDIO_CHANNEL_POSITION_INVALID) {
+            GST_WARNING_OBJECT (qtdemux,
+                "Invalid defined layout %u with %u channels and omitted channels map %016"
+                G_GINT64_MODIFIER "x", defined_layout, n_channels,
+                omitted_channels_map);
+            goto error;
+          }
+        }
+      }
+    }
+
+    // stream carries objects
+    if (stream_structure & 2) {
+      guint8 object_count;
+
+      if (!gst_byte_reader_get_uint8 (br, &object_count)) {
+        GST_WARNING_OBJECT (qtdemux, "Too short chnl box");
+        goto error;
+      }
+
+      GST_WARNING_OBJECT (qtdemux, "Stream carries %u objects", object_count);
+      goto error;
+    }
+  } else if (version == 1 && flags == 0) {
+    guint8 b;
+
+    if (!gst_byte_reader_get_uint8 (br, &b)) {
+      GST_WARNING_OBJECT (qtdemux, "Too short chnl box");
+      goto error;
+    }
+
+    guint8 stream_structure = b >> 4;
+    // guint8 format_ordering = b & 0x0f;
+
+    guint8 base_channel_count;
+    if (!gst_byte_reader_get_uint8 (br, &base_channel_count)) {
+      GST_WARNING_OBJECT (qtdemux, "Too short chnl box");
+      goto error;
+    }
+
+    // stream carries channels
+    if (stream_structure & 1) {
+      guint8 defined_layout;
+
+      if (!gst_byte_reader_get_uint8 (br, &defined_layout)) {
+        GST_WARNING_OBJECT (qtdemux, "Too short chnl box");
+        goto error;
+      }
+
+      if (defined_layout == 0) {
+        guint8 layout_channel_count;
+
+        if (!gst_byte_reader_get_uint8 (br, &layout_channel_count)) {
+          GST_WARNING_OBJECT (qtdemux, "Too short chnl box");
+          goto error;
+        }
+
+        if (layout_channel_count == 0) {
+          // Not present so configure a default based on the sample entry
+          goto error;
+        }
+
+        if (layout_channel_count >= 64) {
+          GST_WARNING_OBJECT (qtdemux, "Unsupported number of channels %d",
+              layout_channel_count);
+          goto error;
+        }
+
+        n_channels = layout_channel_count;
+        for (unsigned int i = 0; i < layout_channel_count; i++) {
+          guint8 speaker_position;
+
+          if (!gst_byte_reader_get_uint8 (br, &speaker_position)) {
+            GST_WARNING_OBJECT (qtdemux, "Too short chnl box");
+            goto error;
+          }
+
+          // explicit position
+          if (speaker_position == 126) {
+            GST_WARNING_OBJECT (qtdemux,
+                "Explicit speaker position not supported");
+            goto error;
+          }
+
+          if (speaker_position >= G_N_ELEMENTS (chnl_positions) ||
+              chnl_positions[speaker_position] ==
+              GST_AUDIO_CHANNEL_POSITION_INVALID) {
+            GST_WARNING_OBJECT (qtdemux,
+                "Unsupported speaker channel %u position %u", i,
+                speaker_position);
+            goto error;
+          }
+
+          positions[i] = chnl_positions[speaker_position];
+        }
+      } else {
+        if (!gst_byte_reader_get_uint8 (br, &b)) {
+          GST_WARNING_OBJECT (qtdemux, "Too short chnl box");
+          goto error;
+        }
+
+        guint8 channel_order_definition = (b >> 1) & 0x07;
+        guint8 omitted_channels_present = b & 0x01;
+
+        if (channel_order_definition != 0) {
+          GST_WARNING_OBJECT (qtdemux,
+              "Channel order definition %u not supported",
+              channel_order_definition);
+          goto error;
+        }
+
+        guint64 omitted_channels_map = 0;
+        if (omitted_channels_present) {
+          if (!gst_byte_reader_get_uint64_be (br, &omitted_channels_map)) {
+            GST_WARNING_OBJECT (qtdemux, "Too short chnl box");
+            goto error;
+          }
+        }
+
+        if (defined_layout >= G_N_ELEMENTS (chnl_layouts) ||
+            chnl_layouts[defined_layout][0] ==
+            GST_AUDIO_CHANNEL_POSITION_INVALID) {
+          GST_WARNING_OBJECT (qtdemux, "Unsupported defined layout %u",
+              defined_layout);
+          goto error;
+        }
+
+        const GstAudioChannelPosition *layout = chnl_layouts[defined_layout];
+
+        // Calculate number of channels: number of channels in the layout
+        // minus number of omitted channels
+        n_channels = 0;
+        for (unsigned int i = 0; i < G_N_ELEMENTS (chnl_layouts[0]); i++) {
+          if (layout[i] == GST_AUDIO_CHANNEL_POSITION_INVALID)
+            break;
+
+          n_channels += 1;
+        }
+        for (unsigned int i = 0; i < 64; i++) {
+          // The i-th channel is omitted
+          if (((omitted_channels_map >> i) & 1) == 1) {
+            n_channels -= 1;
+          }
+          // No channels present
+          if (n_channels == 0) {
+            goto error;
+          }
+        }
+
+        // Guaranteed above by construction
+        g_assert (n_channels < 64);
+
+        // The omitted channel map defines which of the channels of the
+        // pre-defined layout are *not* included.
+        for (unsigned int c = 0; c < n_channels; c++) {
+          // Find c-th channel in layout that is not omitted
+          unsigned int l_c = 0;
+          for (unsigned int i = 0; i < 64; i++) {
+            // If there are not enough non-omitted channels in the layout we end
+            // up here and return
+            if (layout[i] == GST_AUDIO_CHANNEL_POSITION_INVALID) {
+              GST_WARNING_OBJECT (qtdemux,
+                  "Invalid defined layout %u with %u channels and omitted channels map %016"
+                  G_GINT64_MODIFIER "x", defined_layout, n_channels,
+                  omitted_channels_map);
+              goto error;
+            }
+
+            // The i-th channel of the layout is included
+            if (((omitted_channels_map >> i) & 1) == 0) {
+              // The channel we're looking for
+              if (l_c == c) {
+                positions[c] = layout[l_c];
+                break;
+              }
+              l_c += 1;
+            }
+          }
+
+          // If there are not enough non-omitted channels in the omitted
+          // channels map then return here
+          if (positions[c] == GST_AUDIO_CHANNEL_POSITION_INVALID) {
+            GST_WARNING_OBJECT (qtdemux,
+                "Invalid defined layout %u with %u channels and omitted channels map %016"
+                G_GINT64_MODIFIER "x", defined_layout, n_channels,
+                omitted_channels_map);
+            goto error;
+          }
+        }
+      }
+    }
+
+    // stream carries objects
+    if (stream_structure & 2) {
+      guint8 object_count = base_channel_count - n_channels;
+      GST_WARNING_OBJECT (qtdemux, "Stream carries %u objects", object_count);
+      goto error;
+    }
+  } else {
+    GST_WARNING_OBJECT (qtdemux,
+        "Unsupported chnl version %u flags %06x", version, flags);
+
+    goto error;
+  }
+
+#ifndef GST_DISABLE_GST_DEBUG
+  {
+    gchar *s =
+        gst_audio_channel_positions_to_string (positions, MIN (n_channels, 64));
+
+    GST_DEBUG_OBJECT (qtdemux, "Retrieved channel positions %s", s);
+
+    g_free (s);
+  }
+#endif
+
+  if (n_channels < 64) {
+    guint64 channel_mask;
+    GstAudioChannelPosition valid_positions[64];
+
+    if (!gst_audio_channel_positions_to_mask (positions, n_channels, FALSE,
+            &channel_mask)) {
+      GST_WARNING_OBJECT (qtdemux, "Can't convert channel positions to mask");
+      goto error;
+    }
+
+    memcpy (valid_positions, positions, sizeof (positions[0]) * n_channels);
+    if (!gst_audio_channel_positions_to_valid_order (valid_positions,
+            n_channels)) {
+      GST_WARNING_OBJECT (qtdemux,
+          "Can't convert channel positions to GStreamer channel order");
+      goto error;
+    }
+
+    if (n_channels > 1) {
+      if (!gst_audio_get_channel_reorder_map (n_channels, positions,
+              valid_positions, entry->reorder_map)) {
+        GST_WARNING_OBJECT (qtdemux, "Can't calculate channel reorder map");
+        goto error;
+      }
+      entry->needs_reorder =
+          memcmp (positions, valid_positions,
+          sizeof (positions[0]) * n_channels) != 0;
+    }
+
+    gst_caps_set_simple (entry->caps, "channel-mask", GST_TYPE_BITMASK,
+        channel_mask, NULL);
+  } else {
+    gst_caps_set_simple (entry->caps, "channel-mask", GST_TYPE_BITMASK,
+        G_GUINT64_CONSTANT (0), NULL);
+  }
+
+  // Update based on the actual channel count from this box
+  entry->samples_per_frame = n_channels;
+  entry->bytes_per_frame = n_channels * entry->bytes_per_sample;
+  entry->samples_per_packet = entry->samples_per_frame;
+  entry->bytes_per_packet = entry->bytes_per_sample;
+
+  stream->min_buffer_size = 1024 * entry->bytes_per_frame;
+  stream->max_buffer_size = entry->rate * entry->bytes_per_frame;
+  GST_DEBUG ("setting min/max buffer sizes to %d/%d", stream->min_buffer_size,
+      stream->max_buffer_size);
+
+  return;
+
+error:
+  {
+    GST_WARNING_OBJECT (qtdemux,
+        "Configuring default channel mask for %u channels", entry->n_channels);
+
+    if (entry->n_channels > 1) {
+      // Set a default channel mask on errors
+      guint64 default_mask =
+          gst_audio_channel_get_fallback_mask (entry->n_channels);
+
+      gst_caps_set_simple (entry->caps, "channel-mask", GST_TYPE_BITMASK,
+          default_mask, NULL);
+    }
+  }
+}
+
+// See CoreAudioTypes.h and ffmpeg's mov_chan.h
+typedef enum
+{
+  AUDIO_CHANNEL_LAYOUT_TAG_USECHANNELDESCRIPTIONS = (0 << 16) | 0,
+  AUDIO_CHANNEL_LAYOUT_TAG_USECHANNELBITMAP = (1 << 16) | 0,
+
+  AUDIO_CHANNEL_LAYOUT_TAG_MONO = (100 << 16) | 1,
+  AUDIO_CHANNEL_LAYOUT_TAG_STEREO = (101 << 16) | 2,
+  AUDIO_CHANNEL_LAYOUT_TAG_STEREOHEADPHONES = (102 << 16) | 2,
+  AUDIO_CHANNEL_LAYOUT_TAG_MATRIXSTEREO = (103 << 16) | 2,
+  AUDIO_CHANNEL_LAYOUT_TAG_MIDSIDE = (104 << 16) | 2,
+  AUDIO_CHANNEL_LAYOUT_TAG_XY = (105 << 16) | 2,
+  AUDIO_CHANNEL_LAYOUT_TAG_BINAURAL = (106 << 16) | 2,
+  AUDIO_CHANNEL_LAYOUT_TAG_AMBISONIC_B_FORMAT = (107 << 16) | 4,
+
+  AUDIO_CHANNEL_LAYOUT_TAG_QUADRAPHONIC = (108 << 16) | 4,
+  AUDIO_CHANNEL_LAYOUT_TAG_PENTAGONAL = (109 << 16) | 5,
+  AUDIO_CHANNEL_LAYOUT_TAG_HEXAGONAL = (110 << 16) | 6,
+  AUDIO_CHANNEL_LAYOUT_TAG_OCTAGONAL = (111 << 16) | 8,
+  AUDIO_CHANNEL_LAYOUT_TAG_CUBE = (112 << 16) | 8,
+
+  AUDIO_CHANNEL_LAYOUT_TAG_MPEG_3_0_A = (113 << 16) | 3,
+  AUDIO_CHANNEL_LAYOUT_TAG_MPEG_3_0_B = (114 << 16) | 3,
+  AUDIO_CHANNEL_LAYOUT_TAG_MPEG_4_0_A = (115 << 16) | 4,
+  AUDIO_CHANNEL_LAYOUT_TAG_MPEG_4_0_B = (116 << 16) | 4,
+  AUDIO_CHANNEL_LAYOUT_TAG_MPEG_5_0_A = (117 << 16) | 5,
+  AUDIO_CHANNEL_LAYOUT_TAG_MPEG_5_0_B = (118 << 16) | 5,
+  AUDIO_CHANNEL_LAYOUT_TAG_MPEG_5_0_C = (119 << 16) | 5,
+  AUDIO_CHANNEL_LAYOUT_TAG_MPEG_5_0_D = (120 << 16) | 5,
+  AUDIO_CHANNEL_LAYOUT_TAG_MPEG_5_1_A = (121 << 16) | 6,
+  AUDIO_CHANNEL_LAYOUT_TAG_MPEG_5_1_B = (122 << 16) | 6,
+  AUDIO_CHANNEL_LAYOUT_TAG_MPEG_5_1_C = (123 << 16) | 6,
+  AUDIO_CHANNEL_LAYOUT_TAG_MPEG_5_1_D = (124 << 16) | 6,
+  AUDIO_CHANNEL_LAYOUT_TAG_MPEG_6_1_A = (125 << 16) | 7,
+  AUDIO_CHANNEL_LAYOUT_TAG_MPEG_7_1_A = (126 << 16) | 8,
+  AUDIO_CHANNEL_LAYOUT_TAG_MPEG_7_1_B = (127 << 16) | 8,
+  AUDIO_CHANNEL_LAYOUT_TAG_MPEG_7_1_C = (128 << 16) | 8,
+  AUDIO_CHANNEL_LAYOUT_TAG_EMAGIC_DEFAULT_7_1 = (129 << 16) | 8,
+  AUDIO_CHANNEL_LAYOUT_TAG_SMPTE_DTV = (130 << 16) | 8,
+
+  AUDIO_CHANNEL_LAYOUT_TAG_ITU_2_1 = (131 << 16) | 3,
+  AUDIO_CHANNEL_LAYOUT_TAG_ITU_2_2 = (132 << 16) | 4,
+
+  AUDIO_CHANNEL_LAYOUT_TAG_DVD_4 = (133 << 16) | 3,
+  AUDIO_CHANNEL_LAYOUT_TAG_DVD_5 = (134 << 16) | 4,
+  AUDIO_CHANNEL_LAYOUT_TAG_DVD_6 = (135 << 16) | 5,
+  AUDIO_CHANNEL_LAYOUT_TAG_DVD_10 = (136 << 16) | 4,
+  AUDIO_CHANNEL_LAYOUT_TAG_DVD_11 = (137 << 16) | 5,
+  AUDIO_CHANNEL_LAYOUT_TAG_DVD_18 = (138 << 16) | 5,
+
+  AUDIO_CHANNEL_LAYOUT_TAG_AUDIOUNIT_6_0 = (139 << 16) | 6,
+  AUDIO_CHANNEL_LAYOUT_TAG_AUDIOUNIT_7_0 = (140 << 16) | 7,
+  AUDIO_CHANNEL_LAYOUT_TAG_AUDIOUNIT_7_0_FRONT = (148 << 16) | 7,
+  AUDIO_CHANNEL_LAYOUT_TAG_AAC_6_0 = (141 << 16) | 6,
+  AUDIO_CHANNEL_LAYOUT_TAG_AAC_6_1 = (142 << 16) | 7,
+  AUDIO_CHANNEL_LAYOUT_TAG_AAC_7_0 = (143 << 16) | 7,
+  AUDIO_CHANNEL_LAYOUT_TAG_AAC_7_1_B = (183 << 16) | 8,
+  AUDIO_CHANNEL_LAYOUT_TAG_AAC_OCTAGONAL = (144 << 16) | 8,
+
+  AUDIO_CHANNEL_LAYOUT_TAG_TMH_10_2_STD = (145 << 16) | 16,
+  AUDIO_CHANNEL_LAYOUT_TAG_TMH_10_2_FULL = (146 << 16) | 21,
+
+  AUDIO_CHANNEL_LAYOUT_TAG_AC3_1_0_1 = (149 << 16) | 2,
+  AUDIO_CHANNEL_LAYOUT_TAG_AC3_3_0 = (150 << 16) | 3,
+  AUDIO_CHANNEL_LAYOUT_TAG_AC3_3_1 = (151 << 16) | 4,
+  AUDIO_CHANNEL_LAYOUT_TAG_AC3_3_0_1 = (152 << 16) | 4,
+  AUDIO_CHANNEL_LAYOUT_TAG_AC3_2_1_1 = (153 << 16) | 4,
+  AUDIO_CHANNEL_LAYOUT_TAG_AC3_3_1_1 = (154 << 16) | 5,
+
+  AUDIO_CHANNEL_LAYOUT_TAG_EAC_6_0_A = (155 << 16) | 6,
+  AUDIO_CHANNEL_LAYOUT_TAG_EAC_7_0_A = (156 << 16) | 7,
+
+  AUDIO_CHANNEL_LAYOUT_TAG_EAC3_6_1_A = (157 << 16) | 7,
+  AUDIO_CHANNEL_LAYOUT_TAG_EAC3_6_1_B = (158 << 16) | 7,
+  AUDIO_CHANNEL_LAYOUT_TAG_EAC3_6_1_C = (159 << 16) | 7,
+  AUDIO_CHANNEL_LAYOUT_TAG_EAC3_7_1_A = (160 << 16) | 8,
+  AUDIO_CHANNEL_LAYOUT_TAG_EAC3_7_1_B = (161 << 16) | 8,
+  AUDIO_CHANNEL_LAYOUT_TAG_EAC3_7_1_C = (162 << 16) | 8,
+  AUDIO_CHANNEL_LAYOUT_TAG_EAC3_7_1_D = (163 << 16) | 8,
+  AUDIO_CHANNEL_LAYOUT_TAG_EAC3_7_1_E = (164 << 16) | 8,
+
+  AUDIO_CHANNEL_LAYOUT_TAG_EAC3_7_1_F = (165 << 16) | 8,
+  AUDIO_CHANNEL_LAYOUT_TAG_EAC3_7_1_G = (166 << 16) | 8,
+  AUDIO_CHANNEL_LAYOUT_TAG_EAC3_7_1_H = (167 << 16) | 8,
+
+  AUDIO_CHANNEL_LAYOUT_TAG_DTS_3_1 = (168 << 16) | 4,
+  AUDIO_CHANNEL_LAYOUT_TAG_DTS_4_1 = (169 << 16) | 5,
+  AUDIO_CHANNEL_LAYOUT_TAG_DTS_6_0_A = (170 << 16) | 6,
+  AUDIO_CHANNEL_LAYOUT_TAG_DTS_6_0_B = (171 << 16) | 6,
+  AUDIO_CHANNEL_LAYOUT_TAG_DTS_6_0_C = (172 << 16) | 6,
+  AUDIO_CHANNEL_LAYOUT_TAG_DTS_6_1_A = (173 << 16) | 7,
+  AUDIO_CHANNEL_LAYOUT_TAG_DTS_6_1_B = (174 << 16) | 7,
+  AUDIO_CHANNEL_LAYOUT_TAG_DTS_6_1_C = (175 << 16) | 7,
+  AUDIO_CHANNEL_LAYOUT_TAG_DTS_7_0 = (176 << 16) | 7,
+  AUDIO_CHANNEL_LAYOUT_TAG_DTS_7_1 = (177 << 16) | 8,
+  AUDIO_CHANNEL_LAYOUT_TAG_DTS_8_0_A = (178 << 16) | 8,
+  AUDIO_CHANNEL_LAYOUT_TAG_DTS_8_0_B = (179 << 16) | 8,
+  AUDIO_CHANNEL_LAYOUT_TAG_DTS_8_1_A = (180 << 16) | 9,
+  AUDIO_CHANNEL_LAYOUT_TAG_DTS_8_1_B = (181 << 16) | 9,
+  AUDIO_CHANNEL_LAYOUT_TAG_DTS_6_1_D = (182 << 16) | 7,
+
+  AUDIO_CHANNEL_LAYOUT_TAG_HOA_ACN_SN3D = (190U << 16) | 0,
+  AUDIO_CHANNEL_LAYOUT_TAG_HOA_ACN_N3D = (191U << 16) | 0,
+
+  AUDIO_CHANNEL_LAYOUT_TAG_ATMOS_7_1_4 = (192U << 16) | 12,
+  AUDIO_CHANNEL_LAYOUT_TAG_ATMOS_9_1_6 = (193U << 16) | 16,
+  AUDIO_CHANNEL_LAYOUT_TAG_ATMOS_5_1_2 = (194U << 16) | 8,
+
+  AUDIO_CHANNEL_LAYOUT_TAG_DISCRETEINORDER = (147 << 16) | 0,
+  AUDIO_CHANNEL_LAYOUT_TAG_UNKNOWN = 0xFFFF0000
+} AudioChannelLayoutTag;
+
+static const struct
+{
+  AudioChannelLayoutTag tag;
+  const GstAudioChannelPosition *positions;
+} chan_layout_map[] = {
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_MONO,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_MONO,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_STEREO,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_STEREOHEADPHONES,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_MATRIXSTEREO,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_MIDSIDE,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_XY,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_BINAURAL,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+            },
+      },
+  // TODO: AUDIO_CHANNEL_LAYOUT_TAG_AMBISONIC_B_FORMAT
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_QUADRAPHONIC,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_REAR_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_PENTAGONAL,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_REAR_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_HEXAGONAL,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_REAR_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_REAR_CENTER,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_OCTAGONAL,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_REAR_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_REAR_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_CUBE,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_REAR_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_TOP_REAR_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_TOP_REAR_RIGHT,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_MPEG_3_0_A,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_MPEG_3_0_B,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_MPEG_4_0_A,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_REAR_CENTER,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_MPEG_4_0_B,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_REAR_CENTER,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_MPEG_5_0_A,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_MPEG_5_0_B,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_MPEG_5_0_C,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_MPEG_5_0_D,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_MPEG_5_1_A,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_LFE1,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_MPEG_5_1_B,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_LFE1,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_MPEG_5_1_C,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_LFE1,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_MPEG_5_1_D,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_LFE1,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_MPEG_6_1_A,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_LFE1,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_REAR_CENTER,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_MPEG_7_1_A,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_LFE1,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT_OF_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT_OF_CENTER,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_MPEG_7_1_B,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT_OF_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT_OF_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_LFE1,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_MPEG_7_1_C,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_LFE1,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_REAR_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_EMAGIC_DEFAULT_7_1,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_LFE1,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT_OF_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT_OF_CENTER,
+            },
+      },
+  // TODO: AUDIO_CHANNEL_LAYOUT_TAG_SMPTE_DTV
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_ITU_2_1,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_REAR_CENTER,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_ITU_2_2,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_DVD_4,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_LFE1,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_DVD_5,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_LFE1,
+              GST_AUDIO_CHANNEL_POSITION_REAR_CENTER,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_DVD_6,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_LFE1,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_DVD_10,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_LFE1,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_DVD_11,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_LFE1,
+              GST_AUDIO_CHANNEL_POSITION_REAR_CENTER,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_DVD_18,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_LFE1,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_AUDIOUNIT_6_0,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_REAR_CENTER,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_AUDIOUNIT_7_0,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_REAR_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_AUDIOUNIT_7_0_FRONT,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT_OF_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT_OF_CENTER,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_AAC_6_0,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_REAR_CENTER,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_AAC_6_1,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_REAR_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_LFE1,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_AAC_7_0,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_REAR_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_AAC_7_1_B,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_REAR_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_LFE1,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_AAC_OCTAGONAL,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_REAR_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_REAR_CENTER,
+            },
+      },
+
+// TODO: AUDIO_CHANNEL_LAYOUT_TAG_TMH_10_2_STD
+// TODO: AUDIO_CHANNEL_LAYOUT_TAG_TMH_10_2_FULL
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_AC3_1_0_1,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_LFE1,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_AC3_3_0,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_AC3_3_1,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_REAR_CENTER,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_AC3_3_0_1,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_LFE1,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_AC3_2_1_1,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_REAR_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_LFE1,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_AC3_3_1_1,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_REAR_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_LFE1,
+            },
+      },
+
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_EAC_6_0_A,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_REAR_CENTER,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_EAC_7_0_A,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_REAR_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT,
+            },
+      },
+
+
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_EAC3_6_1_A,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_LFE1,
+              GST_AUDIO_CHANNEL_POSITION_REAR_CENTER,
+            },
+      },
+// TODO: AUDIO_CHANNEL_LAYOUT_TAG_EAC3_6_1_B,
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_EAC3_6_1_C,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_LFE1,
+              GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_CENTER,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_EAC3_7_1_A,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_LFE1,
+              GST_AUDIO_CHANNEL_POSITION_REAR_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_EAC3_7_1_B,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_LFE1,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT_OF_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT_OF_CENTER,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_EAC3_7_1_C,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_LFE1,
+              GST_AUDIO_CHANNEL_POSITION_SURROUND_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_SURROUND_RIGHT,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_EAC3_7_1_D,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_LFE1,
+              GST_AUDIO_CHANNEL_POSITION_WIDE_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_WIDE_RIGHT,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_EAC3_7_1_E,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_LFE1,
+              GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_RIGHT,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_EAC3_7_1_F,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_LFE1,
+              GST_AUDIO_CHANNEL_POSITION_REAR_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_TOP_CENTER,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_EAC3_7_1_G,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_LFE1,
+              GST_AUDIO_CHANNEL_POSITION_REAR_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_CENTER,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_EAC3_7_1_H,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_LFE1,
+              GST_AUDIO_CHANNEL_POSITION_TOP_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_CENTER,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_DTS_3_1,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_LFE1,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_DTS_4_1,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_REAR_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_LFE1,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_DTS_6_0_A,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT_OF_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT_OF_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_DTS_6_0_B,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_REAR_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_TOP_CENTER,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_DTS_6_0_C,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_REAR_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_REAR_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_DTS_6_1_A,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT_OF_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT_OF_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_LFE1,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_DTS_6_1_B,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_REAR_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_TOP_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_LFE1,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_DTS_6_1_C,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_REAR_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_REAR_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_LFE1,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_DTS_7_0,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT_OF_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT_OF_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_DTS_7_1,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT_OF_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT_OF_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_LFE1,
+            },
+      },
+
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_DTS_8_0_A,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT_OF_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT_OF_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_REAR_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_DTS_8_0_B,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT_OF_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT_OF_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_REAR_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+            },
+      },
+
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_DTS_8_1_A,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT_OF_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT_OF_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_REAR_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_LFE1,
+            },
+      },
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_DTS_8_1_B,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT_OF_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT_OF_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_REAR_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_LFE1,
+            },
+      },
+
+  {
+        AUDIO_CHANNEL_LAYOUT_TAG_DTS_6_1_D,
+        (const GstAudioChannelPosition[]) {
+              GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+              GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+              GST_AUDIO_CHANNEL_POSITION_LFE1,
+              GST_AUDIO_CHANNEL_POSITION_REAR_CENTER,
+            },
+      },
+
+  // TODO: AUDIO_CHANNEL_LAYOUT_TAG_HOA_ACN_SN3D
+  // TODO: AUDIO_CHANNEL_LAYOUT_TAG_HOA_ACN_N3D
+  // TODO: AUDIO_CHANNEL_LAYOUT_TAG_ATMOS_7_1_4
+  // TODO: AUDIO_CHANNEL_LAYOUT_TAG_ATMOS_9_1_6
+  // TODO: AUDIO_CHANNEL_LAYOUT_TAG_ATMOS_5_1_2
+};
+
+// Mapping bit N to GstAudioChannelPosition
+static const GstAudioChannelPosition audio_channel_bitmap_mapping[32] = {
+  GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,        // 0
+  GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+  GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+  GST_AUDIO_CHANNEL_POSITION_LFE1,
+  GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+  GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+  GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT_OF_CENTER,
+  GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT_OF_CENTER,
+  GST_AUDIO_CHANNEL_POSITION_REAR_CENTER,
+  GST_AUDIO_CHANNEL_POSITION_SURROUND_LEFT,
+  GST_AUDIO_CHANNEL_POSITION_SURROUND_RIGHT,    // 10
+  GST_AUDIO_CHANNEL_POSITION_TOP_CENTER,
+  GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_LEFT,
+  GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_CENTER,
+  GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_RIGHT,
+  GST_AUDIO_CHANNEL_POSITION_TOP_REAR_LEFT,
+  GST_AUDIO_CHANNEL_POSITION_TOP_REAR_CENTER,
+  GST_AUDIO_CHANNEL_POSITION_TOP_REAR_RIGHT,    // 17
+  GST_AUDIO_CHANNEL_POSITION_INVALID,
+  GST_AUDIO_CHANNEL_POSITION_INVALID,
+  GST_AUDIO_CHANNEL_POSITION_INVALID,   // 20
+  GST_AUDIO_CHANNEL_POSITION_INVALID,   // LeftTopMiddle
+  GST_AUDIO_CHANNEL_POSITION_INVALID,
+  GST_AUDIO_CHANNEL_POSITION_INVALID,   // RightTopMiddle
+  GST_AUDIO_CHANNEL_POSITION_INVALID,   // LeftTopRear
+  GST_AUDIO_CHANNEL_POSITION_INVALID,   // CenterTopRear
+  GST_AUDIO_CHANNEL_POSITION_INVALID,   // RightTopRear
+};
+
+typedef enum
+{
+  AUDIO_CHANNEL_LABEL_UNKNOWN = 0xFFFFFFFF,
+  AUDIO_CHANNEL_LABEL_UNUSED = 0,
+  AUDIO_CHANNEL_LABEL_USE_COORDINATES = 100,
+
+  AUDIO_CHANNEL_LABEL_LEFT = 1,
+  AUDIO_CHANNEL_LABEL_RIGHT = 2,
+  AUDIO_CHANNEL_LABEL_CENTER = 3,
+  AUDIO_CHANNEL_LABEL_LFE_SCREEN = 4,
+  AUDIO_CHANNEL_LABEL_LEFT_SURROUND = 5,
+  AUDIO_CHANNEL_LABEL_RIGHT_SURROUND = 6,
+  AUDIO_CHANNEL_LABEL_LEFT_CENTER = 7,
+  AUDIO_CHANNEL_LABEL_RIGHT_CENTER = 8,
+  AUDIO_CHANNEL_LABEL_CENTER_SURROUND = 9,
+  AUDIO_CHANNEL_LABEL_LEFT_SURROUND_DIRECT = 10,
+  AUDIO_CHANNEL_LABEL_RIGHT_SURROUND_DIRECT = 11,
+  AUDIO_CHANNEL_LABEL_TOP_CENTER_SURROUND = 12,
+  AUDIO_CHANNEL_LABEL_VERTICAL_HEIGHT_LEFT = 13,
+  AUDIO_CHANNEL_LABEL_VERTICAL_HEIGHT_CENTER = 14,
+  AUDIO_CHANNEL_LABEL_VERTICAL_HEIGHT_RIGHT = 15,
+
+  AUDIO_CHANNEL_LABEL_TOP_BACK_LEFT = 16,
+  AUDIO_CHANNEL_LABEL_TOP_BACK_CENTER = 17,
+  AUDIO_CHANNEL_LABEL_TOP_BACK_RIGHT = 18,
+
+  AUDIO_CHANNEL_LABEL_REAR_SURROUND_LEFT = 33,
+  AUDIO_CHANNEL_LABEL_REAR_SURROUND_RIGHT = 34,
+  AUDIO_CHANNEL_LABEL_LEFT_WIDE = 35,
+  AUDIO_CHANNEL_LABEL_RIGHT_WIDE = 36,
+  AUDIO_CHANNEL_LABEL_LFE2 = 37,
+  AUDIO_CHANNEL_LABEL_LEFT_TOTAL = 38,
+  AUDIO_CHANNEL_LABEL_RIGHT_TOTAL = 39,
+  AUDIO_CHANNEL_LABEL_HEARING_IMPAIRED = 40,
+  AUDIO_CHANNEL_LABEL_NARRATION = 41,
+  AUDIO_CHANNEL_LABEL_MONO = 42,
+  AUDIO_CHANNEL_LABEL_DIALOG_CENTRIC_MIX = 43,
+
+  AUDIO_CHANNEL_LABEL_CENTER_SURROUND_DIRECT = 44,
+
+  AUDIO_CHANNEL_LABEL_HAPTIC = 45,
+
+  AUDIO_CHANNEL_LABEL_LEFT_TOP_MIDDLE = 49,
+  AUDIO_CHANNEL_LABEL_RIGHT_TOP_MIDDLE = 51,
+  AUDIO_CHANNEL_LABEL_LEFT_TOP_REAR = 52,
+  AUDIO_CHANNEL_LABEL_CENTER_TOP_REAR = 53,
+  AUDIO_CHANNEL_LABEL_RIGHT_TOP_REAR = 54,
+
+  AUDIO_CHANNEL_LABEL_AMBISONIC_W = 200,
+  AUDIO_CHANNEL_LABEL_AMBISONIC_X = 201,
+  AUDIO_CHANNEL_LABEL_AMBISONIC_Y = 202,
+  AUDIO_CHANNEL_LABEL_AMBISONIC_Z = 203,
+
+  AUDIO_CHANNEL_LABEL_MS_MID = 204,
+  AUDIO_CHANNEL_LABEL_MS_SIDE = 205,
+
+  AUDIO_CHANNEL_LABEL_XY_X = 206,
+  AUDIO_CHANNEL_LABEL_XY_Y = 207,
+
+  AUDIO_CHANNEL_LABEL_BINAURAL_LEFT = 208,
+  AUDIO_CHANNEL_LABEL_BINAURAL_RIGHT = 209,
+
+  AUDIO_CHANNEL_LABEL_HEADPHONES_LEFT = 301,
+  AUDIO_CHANNEL_LABEL_HEADPHONES_RIGHT = 302,
+  AUDIO_CHANNEL_LABEL_CLICK_TRACK = 304,
+  AUDIO_CHANNEL_LABEL_FOREIGN_LANGUAGE = 305,
+} AudioChannelLabel;
+
+static const struct
+{
+  AudioChannelLabel label;
+  GstAudioChannelPosition position;
+} audio_channel_label_mapping[] = {
+  {
+        AUDIO_CHANNEL_LABEL_MONO,
+      GST_AUDIO_CHANNEL_POSITION_MONO},
+  {
+        AUDIO_CHANNEL_LABEL_LEFT,
+      GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT},
+  {
+        AUDIO_CHANNEL_LABEL_RIGHT,
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+      },
+  {
+        AUDIO_CHANNEL_LABEL_CENTER,
+        GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER,
+      },
+  {
+        AUDIO_CHANNEL_LABEL_LFE_SCREEN,
+        GST_AUDIO_CHANNEL_POSITION_LFE1,
+      },
+  {
+        AUDIO_CHANNEL_LABEL_LEFT_SURROUND,
+        GST_AUDIO_CHANNEL_POSITION_REAR_LEFT,
+      },
+  {
+        AUDIO_CHANNEL_LABEL_RIGHT_SURROUND,
+        GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT,
+      },
+  {
+        AUDIO_CHANNEL_LABEL_LEFT_CENTER,
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT_OF_CENTER,
+      },
+  {
+        AUDIO_CHANNEL_LABEL_RIGHT_CENTER,
+      GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT_OF_CENTER},
+  {
+        AUDIO_CHANNEL_LABEL_CENTER_SURROUND,
+        GST_AUDIO_CHANNEL_POSITION_REAR_CENTER,
+      },
+  {
+        AUDIO_CHANNEL_LABEL_LEFT_SURROUND_DIRECT,
+        GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT,
+      },
+  {
+        AUDIO_CHANNEL_LABEL_RIGHT_SURROUND_DIRECT,
+        GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT,
+      },
+  {
+        AUDIO_CHANNEL_LABEL_TOP_CENTER_SURROUND,
+        GST_AUDIO_CHANNEL_POSITION_TOP_CENTER,
+      },
+  {
+        AUDIO_CHANNEL_LABEL_VERTICAL_HEIGHT_LEFT,
+        GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_LEFT,
+      },
+  {
+        AUDIO_CHANNEL_LABEL_VERTICAL_HEIGHT_CENTER,
+        GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_CENTER,
+      },
+  {
+        AUDIO_CHANNEL_LABEL_VERTICAL_HEIGHT_RIGHT,
+        GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_RIGHT,
+      },
+  {
+        AUDIO_CHANNEL_LABEL_TOP_BACK_LEFT,
+        GST_AUDIO_CHANNEL_POSITION_TOP_REAR_LEFT,
+      },
+  {
+        AUDIO_CHANNEL_LABEL_TOP_BACK_CENTER,
+        GST_AUDIO_CHANNEL_POSITION_TOP_REAR_CENTER,
+      },
+  {
+        AUDIO_CHANNEL_LABEL_TOP_BACK_RIGHT,
+        GST_AUDIO_CHANNEL_POSITION_TOP_REAR_RIGHT,
+      },
+  {
+        AUDIO_CHANNEL_LABEL_REAR_SURROUND_LEFT,
+        GST_AUDIO_CHANNEL_POSITION_TOP_REAR_LEFT,
+      },
+  {
+        AUDIO_CHANNEL_LABEL_REAR_SURROUND_RIGHT,
+        GST_AUDIO_CHANNEL_POSITION_TOP_REAR_RIGHT,
+      },
+  {
+        AUDIO_CHANNEL_LABEL_LEFT_WIDE,
+        GST_AUDIO_CHANNEL_POSITION_WIDE_LEFT,
+      },
+  {
+        AUDIO_CHANNEL_LABEL_RIGHT_WIDE,
+        GST_AUDIO_CHANNEL_POSITION_WIDE_RIGHT,
+      },
+  {
+        AUDIO_CHANNEL_LABEL_LFE2,
+        GST_AUDIO_CHANNEL_POSITION_LFE2,
+      },
+  {
+        AUDIO_CHANNEL_LABEL_BINAURAL_LEFT,
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+      },
+  {
+        AUDIO_CHANNEL_LABEL_BINAURAL_RIGHT,
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+      },
+  {
+        AUDIO_CHANNEL_LABEL_HEADPHONES_LEFT,
+        GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
+      },
+  {
+        AUDIO_CHANNEL_LABEL_HEADPHONES_RIGHT,
+        GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT,
+      }
+};
+
+static void
+qtdemux_parse_chan (GstQTDemux * qtdemux, GstByteReader * br,
+    QtDemuxStream * stream, QtDemuxStreamStsdEntry * entry)
+{
+  GstAudioChannelPosition positions[64];
+  guint n_channels = 0;
+
+  // Skip over version and flags
+  gst_byte_reader_skip_unchecked (br, 4);
+
+  if (gst_byte_reader_get_remaining (br) < 12)
+    return;
+
+  guint32 layout_tag = gst_byte_reader_get_uint32_be_unchecked (br);
+  guint32 bitmap = gst_byte_reader_get_uint32_be_unchecked (br);
+  guint32 num_channel_descs = gst_byte_reader_get_uint32_be_unchecked (br);
+
+  if (gst_byte_reader_get_remaining (br) < num_channel_descs * 5 * 4)
+    return;
+
+  if (layout_tag == AUDIO_CHANNEL_LAYOUT_TAG_USECHANNELBITMAP) {
+    // Invalid/unsupported positions are mapped to defaults later
+    for (gsize i = 0; i < G_N_ELEMENTS (audio_channel_bitmap_mapping); i++) {
+      if (bitmap & (1 << i)) {
+        positions[n_channels] = audio_channel_bitmap_mapping[i];
+        n_channels += 1;
+      }
+    }
+  } else if (layout_tag == AUDIO_CHANNEL_LAYOUT_TAG_USECHANNELDESCRIPTIONS) {
+    if (num_channel_descs < 64) {
+      n_channels = num_channel_descs;
+
+      for (guint32 i = 0; i < num_channel_descs; i++) {
+        positions[i] = GST_AUDIO_CHANNEL_POSITION_INVALID;
+
+        guint32 label = gst_byte_reader_get_uint32_be_unchecked (br);
+
+        // Discrete channel
+        if (label == 400 || (label >> 16) == 1) {
+          positions[i] = GST_AUDIO_CHANNEL_POSITION_NONE;
+        } else {
+          // If a label is not found the channel stays invalid and is
+          // handled as an error later with mapping to the defaults
+          for (gsize j = 0; j < G_N_ELEMENTS (audio_channel_label_mapping); j++) {
+            if (audio_channel_label_mapping[j].label == label) {
+              positions[i] = audio_channel_label_mapping[j].position;
+              break;
+            }
+          }
+        }
+
+        // Skip coordinates and flags
+        gst_byte_reader_skip_unchecked (br, 4 * 4);
+      }
+    }
+  } else if (layout_tag == AUDIO_CHANNEL_LAYOUT_TAG_DISCRETEINORDER) {
+    // Unordered
+    for (gsize i = 0; i < G_N_ELEMENTS (positions); i++) {
+      positions[i] = GST_AUDIO_CHANNEL_POSITION_NONE;
+    }
+  } else if (layout_tag & 0xffff) {
+    for (gsize i = 0; i < G_N_ELEMENTS (chan_layout_map); i++) {
+      if (chan_layout_map[i].tag == layout_tag) {
+        n_channels = layout_tag & 0xffff;
+        // Guaranteed by construction of the layout map table
+        g_assert (n_channels < 64);
+        memcpy (positions, chan_layout_map[i].positions,
+            n_channels * sizeof (GstAudioChannelPosition));
+        break;
+      }
+    }
+  } else if (layout_tag == AUDIO_CHANNEL_LAYOUT_TAG_UNKNOWN) {
+    GST_INFO_OBJECT (qtdemux,
+        "Channel layout tag is \"unknown\", marking as unpositioned");
+
+    if (entry->n_channels > 1) {
+      gst_caps_set_simple (entry->caps, "channel-mask", GST_TYPE_BITMASK,
+          0, NULL);
+    }
+
+    return;
+  }
+
+  /* If the channel counts don't match, ignore the chan atom layout */
+  if (n_channels == 0) {
+    GST_WARNING_OBJECT (qtdemux, "Unsupported channel layout tag 0x%08x",
+        layout_tag);
+    n_channels = entry->n_channels;
+    goto error;
+  }
+
+#ifndef GST_DISABLE_GST_DEBUG
+  {
+    gchar *s =
+        gst_audio_channel_positions_to_string (positions, MIN (n_channels, 64));
+
+    GST_DEBUG_OBJECT (qtdemux, "Retrieved channel positions %s", s);
+
+    g_free (s);
+  }
+#endif
+
+  if (n_channels < 64) {
+    guint64 channel_mask;
+    GstAudioChannelPosition valid_positions[64];
+
+    if (!gst_audio_channel_positions_to_mask (positions, n_channels, FALSE,
+            &channel_mask)) {
+      GST_WARNING_OBJECT (qtdemux, "Can't convert channel positions to mask");
+      goto error;
+    }
+
+    memcpy (valid_positions, positions, sizeof (positions[0]) * n_channels);
+    if (!gst_audio_channel_positions_to_valid_order (valid_positions,
+            n_channels)) {
+      GST_WARNING_OBJECT (qtdemux,
+          "Can't convert channel positions to GStreamer channel order");
+      goto error;
+    }
+
+    if (n_channels > 1) {
+      if (!gst_audio_get_channel_reorder_map (n_channels, positions,
+              valid_positions, entry->reorder_map)) {
+        GST_WARNING_OBJECT (qtdemux, "Can't calculate channel reorder map");
+        goto error;
+      }
+      entry->needs_reorder =
+          memcmp (positions, valid_positions,
+          sizeof (positions[0]) * n_channels) != 0;
+    }
+
+    gst_caps_set_simple (entry->caps, "channel-mask", GST_TYPE_BITMASK,
+        channel_mask, NULL);
+  } else {
+    gst_caps_set_simple (entry->caps, "channel-mask", GST_TYPE_BITMASK,
+        G_GUINT64_CONSTANT (0), NULL);
+  }
+
+  // Update based on the actual channel count from this box
+  entry->samples_per_frame = n_channels;
+  entry->bytes_per_frame = n_channels * entry->bytes_per_sample;
+  entry->samples_per_packet = entry->samples_per_frame;
+  entry->bytes_per_packet = entry->bytes_per_sample;
+
+  stream->min_buffer_size = 1024 * entry->bytes_per_frame;
+  stream->max_buffer_size = entry->rate * entry->bytes_per_frame;
+  GST_DEBUG ("setting min/max buffer sizes to %d/%d", stream->min_buffer_size,
+      stream->max_buffer_size);
+
+  return;
+
+error:
+  {
+    GST_WARNING_OBJECT (qtdemux,
+        "Configuring default channel mask for %u channels", entry->n_channels);
+
+    if (entry->n_channels > 1) {
+      // Set a default channel mask on errors
+      guint64 default_mask =
+          gst_audio_channel_get_fallback_mask (entry->n_channels);
+
+      gst_caps_set_simple (entry->caps, "channel-mask", GST_TYPE_BITMASK,
+          default_mask, NULL);
+    }
+  }
+}
+
 /* parse the traks.
  * With each track we associate a new QtDemuxStream that contains all the info
  * about the trak.
  * traks that do not decode to something (like strm traks) will not have a pad.
  */
 static gboolean
-qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
+qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak, guint32 * mvhd_matrix)
 {
   GstByteReader tkhd;
   int offset;
@@ -11851,16 +15015,13 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
   GNode *minf;
   GNode *stbl;
   GNode *stsd;
-  GNode *mp4a;
-  GNode *mp4v;
   GNode *esds;
   GNode *tref;
   GNode *udta;
 
   QtDemuxStream *stream = NULL;
   const guint8 *stsd_data;
-  const guint8 *stsd_entry_data;
-  guint remaining_stsd_len;
+  guint8 stsd_version;
   guint stsd_entry_count;
   guint stsd_index;
   guint16 lang_code;            /* quicktime lang code or packed iso code */
@@ -11871,6 +15032,7 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
   guint value_size, stsd_len, len;
   guint32 track_id;
   guint32 dummy;
+  guint32 fourcc;
 
   GST_DEBUG_OBJECT (qtdemux, "parse_trak");
 
@@ -11977,20 +15139,23 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
     /* don't overflow */
     tdur1 = stream->timescale * (guint64) qtdemux->duration;
     tdur2 = qtdemux->timescale * (guint64) stream->duration;
+    if (tdur1 != 0) {
+      guint64 divresult = gst_util_uint64_scale (tdur2, 10, tdur1);
 
-    /* HACK:
-     * some of those trailers, nowadays, have prologue images that are
-     * themselves video tracks as well. I haven't really found a way to
-     * identify those yet, except for just looking at their duration. */
-    if (tdur1 != 0 && (tdur2 * 10 / tdur1) < 2) {
-      GST_WARNING_OBJECT (qtdemux,
-          "Track shorter than 20%% (%" G_GUINT64_FORMAT "/%" G_GUINT32_FORMAT
-          " vs. %" G_GUINT64_FORMAT "/%" G_GUINT32_FORMAT ") of the stream "
-          "found, assuming preview image or something; skipping track",
-          stream->duration, stream->timescale, qtdemux->duration,
-          qtdemux->timescale);
-      gst_qtdemux_stream_unref (stream);
-      return TRUE;
+      /* HACK:
+       * some of those trailers, nowadays, have prologue images that are
+       * themselves video tracks as well. I haven't really found a way to
+       * identify those yet, except for just looking at their duration. */
+      if (divresult < 2) {
+        GST_WARNING_OBJECT (qtdemux,
+            "Track shorter than 20%% (%" G_GUINT64_FORMAT "/%" G_GUINT32_FORMAT
+            " vs. %" G_GUINT64_FORMAT "/%" G_GUINT32_FORMAT ") of the stream "
+            "found, assuming preview image or something; skipping track",
+            stream->duration, stream->timescale, qtdemux->duration,
+            qtdemux->timescale);
+        gst_qtdemux_stream_unref (stream);
+        return TRUE;
+      }
     }
   }
 
@@ -12018,14 +15183,20 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
 
   /* parse rest of tkhd */
   if (stream->subtype == FOURCC_vide) {
+    guint32 tkhd_matrix[9];
     guint32 matrix[9];
 
     /* version 1 uses some 64-bit ints */
     if (!gst_byte_reader_skip (&tkhd, 20 + value_size))
       goto corrupt_file;
 
-    if (!qtdemux_parse_transformation_matrix (qtdemux, &tkhd, matrix, "tkhd"))
+    if (!qtdemux_parse_transformation_matrix (qtdemux, &tkhd, tkhd_matrix,
+            "tkhd"))
       goto corrupt_file;
+
+    /* calculate the final matrix from the mvhd_matrix and the tkhd matrix */
+    qtdemux_mul_transformation_matrix (qtdemux, mvhd_matrix, tkhd_matrix,
+        matrix);
 
     if (!gst_byte_reader_get_uint32_be (&tkhd, &w)
         || !gst_byte_reader_get_uint32_be (&tkhd, &h))
@@ -12052,6 +15223,7 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
     }
   }
 
+  stsd_version = QT_UINT8 (stsd_data + 8);
   stream->stsd_entries_length = stsd_entry_count = QT_UINT32 (stsd_data + 12);
   /* each stsd entry must contain at least 8 bytes */
   if (stream->stsd_entries_length == 0
@@ -12071,17 +15243,19 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
   GST_LOG_OBJECT (qtdemux, "stsd len:           %d", stsd_len);
   GST_LOG_OBJECT (qtdemux, "stsd entry count:   %u", stsd_entry_count);
 
-  stsd_entry_data = stsd_data + 16;
-  remaining_stsd_len = stsd_len - 16;
   for (stsd_index = 0; stsd_index < stsd_entry_count; stsd_index++) {
-    guint32 fourcc;
+    GNode *stsd_entry;
+    const guint8 *stsd_entry_data;
     gchar *codec = NULL;
     QtDemuxStreamStsdEntry *entry = &stream->stsd_entries[stsd_index];
 
-    /* and that entry should fit within stsd */
-    len = QT_UINT32 (stsd_entry_data);
-    if (len > remaining_stsd_len)
+    stsd_entry = qtdemux_tree_get_child_by_index (stsd, stsd_index);
+    if (!stsd_entry)
       goto corrupt_file;
+
+    stsd_entry_data = stsd_entry->data;
+
+    len = QT_UINT32 (stsd_entry_data);
 
     entry->fourcc = fourcc = QT_FOURCC (stsd_entry_data + 4);
     GST_LOG_OBJECT (qtdemux, "stsd type:          %" GST_FOURCC_FORMAT,
@@ -12108,11 +15282,9 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
     }
 
     if (fourcc == FOURCC_encv || fourcc == FOURCC_enca) {
-      /* FIXME this looks wrong, there might be multiple children
-       * with the same type */
-      GNode *enc = qtdemux_tree_get_child_by_type (stsd, fourcc);
       stream->protected = TRUE;
-      if (!qtdemux_parse_protection_scheme_info (qtdemux, stream, enc, &fourcc)) {
+      if (!qtdemux_parse_protection_scheme_info (qtdemux, stream, stsd_entry,
+              &fourcc)) {
         GST_ERROR_OBJECT (qtdemux, "Failed to parse protection scheme info");
         goto corrupt_file;
       }
@@ -12122,6 +15294,10 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
       GNode *colr;
       GNode *fiel;
       GNode *pasp;
+      GNode *btrt;
+      GNode *clli;
+      GNode *mdcv;
+      guint32 version;
       gboolean gray;
       gint depth, palette_size, palette_count;
       guint32 *palette_data = NULL;
@@ -12132,9 +15308,11 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
       stream->display_height = h >> 16;
 
       offset = 16;
-      if (len < 86)             /* TODO verify */
+      /* sample description entry (16) + visual sample description (70) */
+      if (len < 86)
         goto corrupt_file;
 
+      version = QT_UINT32 (stsd_entry_data + offset);
       entry->width = QT_UINT16 (stsd_entry_data + offset + 16);
       entry->height = QT_UINT16 (stsd_entry_data + offset + 18);
       entry->fps_n = 0;         /* this is filled in later */
@@ -12242,7 +15420,7 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
         gst_caps_unref (entry->caps);
 
       entry->caps =
-          qtdemux_video_caps (qtdemux, stream, entry, fourcc, stsd_entry_data,
+          qtdemux_video_caps (qtdemux, stream, entry, fourcc, stsd_entry,
           &codec);
       if (G_UNLIKELY (!entry->caps)) {
         g_free (palette_data);
@@ -12288,31 +15466,13 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
       GST_LOG_OBJECT (qtdemux, "frame count:   %u",
           QT_UINT16 (stsd_entry_data + offset + 32));
 
-      esds = NULL;
-      pasp = NULL;
-      colr = NULL;
-      fiel = NULL;
-      /* pick 'the' stsd child */
-      mp4v = qtdemux_tree_get_child_by_index (stsd, stsd_index);
-      // We should skip parsing the stsd for non-protected streams if
-      // the entry doesn't match the fourcc, since they don't change
-      // format. However, for protected streams we can have partial
-      // encryption, where parts of the stream are encrypted and parts
-      // not. For both parts of such streams, we should ensure the
-      // esds overrides are parsed for both from the stsd.
-      if (QTDEMUX_TREE_NODE_FOURCC (mp4v) != fourcc) {
-        if (stream->protected && QTDEMUX_TREE_NODE_FOURCC (mp4v) != FOURCC_encv)
-          mp4v = NULL;
-        else if (!stream->protected)
-          mp4v = NULL;
-      }
-
-      if (mp4v) {
-        esds = qtdemux_tree_get_child_by_type (mp4v, FOURCC_esds);
-        pasp = qtdemux_tree_get_child_by_type (mp4v, FOURCC_pasp);
-        colr = qtdemux_tree_get_child_by_type (mp4v, FOURCC_colr);
-        fiel = qtdemux_tree_get_child_by_type (mp4v, FOURCC_fiel);
-      }
+      esds = qtdemux_tree_get_child_by_type (stsd_entry, FOURCC_esds);
+      pasp = qtdemux_tree_get_child_by_type (stsd_entry, FOURCC_pasp);
+      colr = qtdemux_tree_get_child_by_type (stsd_entry, FOURCC_colr);
+      fiel = qtdemux_tree_get_child_by_type (stsd_entry, FOURCC_fiel);
+      btrt = qtdemux_tree_get_child_by_type (stsd_entry, FOURCC_btrt);
+      clli = qtdemux_tree_get_child_by_type (stsd_entry, FOURCC_clli);
+      mdcv = qtdemux_tree_get_child_by_type (stsd_entry, FOURCC_mdcv);
 
       if (pasp) {
         const guint8 *pasp_data = (const guint8 *) pasp->data;
@@ -12370,6 +15530,78 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
         }
       }
 
+      if (clli) {
+        const guint8 *clli_data = clli->data;
+        guint32 len = QT_UINT32 (clli_data);
+
+        if (len >= 8 + 2 * 2) {
+          CUR_STREAM (stream)->content_light_level_set = TRUE;
+          CUR_STREAM (stream)->content_light_level.max_content_light_level =
+              QT_UINT16 (clli_data + 8);
+          CUR_STREAM (stream)->
+              content_light_level.max_frame_average_light_level =
+              QT_UINT16 (clli_data + 10);
+        }
+      }
+
+      if (mdcv) {
+        const guint8 *mdcv_data = mdcv->data;
+        guint32 len = QT_UINT32 (mdcv_data);
+
+        if (len >= 8 + 3 * 2 * 2 + 2 * 2 + 2 * 4) {
+          CUR_STREAM (stream)->mastering_display_info_set = TRUE;
+          for (gsize c = 0; c < 3; c++) {
+            CUR_STREAM (stream)->mastering_display_info.display_primaries[c].x =
+                QT_UINT16 (mdcv_data + 8 + c * 2 * 2);
+            CUR_STREAM (stream)->mastering_display_info.display_primaries[c].y =
+                QT_UINT16 (mdcv_data + 8 + c * 2 * 2 + 2);
+          }
+          CUR_STREAM (stream)->mastering_display_info.white_point.x =
+              QT_UINT16 (mdcv_data + 8 + 3 * 2 * 2);
+          CUR_STREAM (stream)->mastering_display_info.white_point.y =
+              QT_UINT16 (mdcv_data + 8 + 3 * 2 * 2 + 2);
+          CUR_STREAM (stream)->
+              mastering_display_info.max_display_mastering_luminance =
+              QT_UINT16 (mdcv_data + 8 + 3 * 2 * 2 + 2 * 2);
+          CUR_STREAM (stream)->
+              mastering_display_info.min_display_mastering_luminance =
+              QT_UINT16 (mdcv_data + 8 + 3 * 2 * 2 + 2 * 2 + 4);
+        }
+      }
+
+      if (btrt) {
+        const guint8 *data;
+        guint32 size;
+
+        data = btrt->data;
+        size = QT_UINT32 (data);
+
+        /* bufferSizeDB, maxBitrate and avgBitrate - 4 bytes each */
+        if (size >= 8 + 12) {
+
+          guint32 max_bitrate = QT_UINT32 (data + 8 + 4);
+          guint32 avg_bitrate = QT_UINT32 (data + 8 + 8);
+
+          /* Some muxers seem to swap the average and maximum bitrates
+           * (I'm looking at you, YouTube), so we swap for sanity. */
+          if (max_bitrate > 0 && max_bitrate < avg_bitrate) {
+            guint temp = avg_bitrate;
+
+            avg_bitrate = max_bitrate;
+            max_bitrate = temp;
+          }
+          if (max_bitrate > 0 && max_bitrate < G_MAXUINT32) {
+            gst_tag_list_add (stream->stream_tags,
+                GST_TAG_MERGE_REPLACE, GST_TAG_MAXIMUM_BITRATE,
+                max_bitrate, NULL);
+          }
+          if (avg_bitrate > 0 && avg_bitrate < G_MAXUINT32) {
+            gst_tag_list_add (stream->stream_tags,
+                GST_TAG_MERGE_REPLACE, GST_TAG_BITRATE, avg_bitrate, NULL);
+          }
+        }
+      }
+
       if (esds) {
 #ifdef GSTREAMER_LITE
         if (!gst_qtdemux_handle_esds (qtdemux, stream, entry, esds,
@@ -12385,108 +15617,60 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
           case FOURCC_avc1:
           case FOURCC_avc3:
           {
-            guint32 len = QT_UINT32 (stsd_entry_data);
-            len = len <= 0x56 ? 0 : len - 0x56;
-            const guint8 *avc_data = stsd_entry_data + 0x56;
+            GNode *avcC =
+                qtdemux_tree_get_child_by_type (stsd_entry, FOURCC_avcC);
+            GNode *strf =
+                qtdemux_tree_get_child_by_type (stsd_entry, FOURCC_strf);
 
-            /* find avcC */
-            while (len >= 8) {
-              guint32 size = QT_UINT32 (avc_data);
+            if (avcC) {
+              const guint8 *data;
+              guint32 size;
 
-              if (size < 8 || size > len)
-                break;
+              data = avcC->data;
+              size = QT_UINT32 (data);
+              if (size >= 8 + 1) {
+                GstBuffer *buf;
 
-              switch (QT_FOURCC (avc_data + 4)) {
-                case FOURCC_avcC:
-                {
-                  /* parse, if found */
-                  GstBuffer *buf;
+                GST_DEBUG_OBJECT (qtdemux, "found avcC codec_data in stsd");
 
-                  if (size < 8 + 1)
-                    break;
-
-                  GST_DEBUG_OBJECT (qtdemux, "found avcC codec_data in stsd");
-
-                  /* First 4 bytes are the length of the atom, the next 4 bytes
-                   * are the fourcc, the next 1 byte is the version, and the
-                   * subsequent bytes are profile_tier_level structure like data. */
-                  gst_codec_utils_h264_caps_set_level_and_profile (entry->caps,
-                      avc_data + 8 + 1, size - 8 - 1);
-                  buf = gst_buffer_new_and_alloc (size - 8);
-                  gst_buffer_fill (buf, 0, avc_data + 8, size - 8);
-                  gst_caps_set_simple (entry->caps,
-                      "codec_data", GST_TYPE_BUFFER, buf, NULL);
-                  gst_buffer_unref (buf);
-
-                  break;
-                }
-                case FOURCC_strf:
-                {
-                  GstBuffer *buf;
-
-                  if (size < 8 + 40 + 1)
-                    break;
-
-                  GST_DEBUG_OBJECT (qtdemux, "found strf codec_data in stsd");
-
-                  /* First 4 bytes are the length of the atom, the next 4 bytes
-                   * are the fourcc, next 40 bytes are BITMAPINFOHEADER,
-                   * next 1 byte is the version, and the
-                   * subsequent bytes are sequence parameter set like data. */
-
-                  gst_codec_utils_h264_caps_set_level_and_profile
-                      (entry->caps, avc_data + 8 + 40 + 1, size - 8 - 40 - 1);
-
-                  buf = gst_buffer_new_and_alloc (size - 8 - 40);
-                  gst_buffer_fill (buf, 0, avc_data + 8 + 40, size - 8 - 40);
-                  gst_caps_set_simple (entry->caps,
-                      "codec_data", GST_TYPE_BUFFER, buf, NULL);
-                  gst_buffer_unref (buf);
-                  break;
-                }
-                case FOURCC_btrt:
-                {
-                  guint avg_bitrate, max_bitrate;
-
-                  /* bufferSizeDB, maxBitrate and avgBitrate - 4 bytes each */
-                  if (size < 8 + 12)
-                    break;
-
-                  max_bitrate = QT_UINT32 (avc_data + 8 + 4);
-                  avg_bitrate = QT_UINT32 (avc_data + 8 + 8);
-
-                  if (!max_bitrate && !avg_bitrate)
-                    break;
-
-                  /* Some muxers seem to swap the average and maximum bitrates
-                   * (I'm looking at you, YouTube), so we swap for sanity. */
-                  if (max_bitrate > 0 && max_bitrate < avg_bitrate) {
-                    guint temp = avg_bitrate;
-
-                    avg_bitrate = max_bitrate;
-                    max_bitrate = temp;
-                  }
-
-                  if (max_bitrate > 0 && max_bitrate < G_MAXUINT32) {
-                    gst_tag_list_add (stream->stream_tags,
-                        GST_TAG_MERGE_REPLACE, GST_TAG_MAXIMUM_BITRATE,
-                        max_bitrate, NULL);
-                  }
-                  if (avg_bitrate > 0 && avg_bitrate < G_MAXUINT32) {
-                    gst_tag_list_add (stream->stream_tags,
-                        GST_TAG_MERGE_REPLACE, GST_TAG_BITRATE, avg_bitrate,
-                        NULL);
-                  }
-
-                  break;
-                }
-
-                default:
-                  break;
+                /* First 4 bytes are the length of the atom, the next 4 bytes
+                 * are the fourcc, the next 1 byte is the version, and the
+                 * subsequent bytes are profile_tier_level structure like data. */
+                gst_codec_utils_h264_caps_set_level_and_profile (entry->caps,
+                    data + 8 + 1, size - 8 - 1);
+                buf = gst_buffer_new_and_alloc (size - 8);
+                gst_buffer_fill (buf, 0, data + 8, size - 8);
+                gst_caps_set_simple (entry->caps,
+                    "codec_data", GST_TYPE_BUFFER, buf, NULL);
+                gst_buffer_unref (buf);
               }
+            } else if (strf) {
+              const guint8 *data;
+              guint32 size;
 
-              len -= size;
-              avc_data += size;
+              data = strf->data;
+              size = QT_UINT32 (data);
+
+              if (size >= 8 + 40 + 1) {
+                GstBuffer *buf;
+
+
+                GST_DEBUG_OBJECT (qtdemux, "found strf codec_data in stsd");
+
+                /* First 4 bytes are the length of the atom, the next 4 bytes
+                 * are the fourcc, next 40 bytes are BITMAPINFOHEADER,
+                 * next 1 byte is the version, and the
+                 * subsequent bytes are sequence parameter set like data. */
+
+                gst_codec_utils_h264_caps_set_level_and_profile
+                    (entry->caps, data + 8 + 40 + 1, size - 8 - 40 - 1);
+
+                buf = gst_buffer_new_and_alloc (size - 8 - 40);
+                gst_buffer_fill (buf, 0, data + 8 + 40, size - 8 - 40);
+                gst_caps_set_simple (entry->caps,
+                    "codec_data", GST_TYPE_BUFFER, buf, NULL);
+                gst_buffer_unref (buf);
+              }
             }
 
             break;
@@ -12497,46 +15681,77 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
           case FOURCC_dvh1:
           case FOURCC_dvhe:
           {
-            guint32 len = QT_UINT32 (stsd_entry_data);
-            len = len <= 0x56 ? 0 : len - 0x56;
-            const guint8 *hevc_data = stsd_entry_data + 0x56;
+            GNode *hvcC =
+                qtdemux_tree_get_child_by_type (stsd_entry, FOURCC_hvcC);
 
-            /* find hevc */
-            while (len >= 8) {
-              guint32 size = QT_UINT32 (hevc_data);
+            if (hvcC) {
+              const guint8 *data;
+              guint32 size;
 
-              if (size < 8 || size > len)
-                break;
+              data = hvcC->data;
+              size = QT_UINT32 (data);
 
-              switch (QT_FOURCC (hevc_data + 4)) {
-                case FOURCC_hvcC:
-                {
-                  /* parse, if found */
-                  GstBuffer *buf;
+              if (size >= 8 + 1) {
+                GstBuffer *buf;
 
-                  if (size < 8 + 1)
-                    break;
+                GST_DEBUG_OBJECT (qtdemux, "found hvcC codec_data in stsd");
 
-                  GST_DEBUG_OBJECT (qtdemux, "found hvcC codec_data in stsd");
+                /* First 4 bytes are the length of the atom, the next 4 bytes
+                 * are the fourcc, the next 1 byte is the version, and the
+                 * subsequent bytes are sequence parameter set like data. */
+                gst_codec_utils_h265_caps_set_level_tier_and_profile
+                    (entry->caps, data + 8 + 1, size - 8 - 1);
 
-                  /* First 4 bytes are the length of the atom, the next 4 bytes
-                   * are the fourcc, the next 1 byte is the version, and the
-                   * subsequent bytes are sequence parameter set like data. */
-                  gst_codec_utils_h265_caps_set_level_tier_and_profile
-                      (entry->caps, hevc_data + 8 + 1, size - 8 - 1);
+                buf = gst_buffer_new_and_alloc (size - 8);
+                gst_buffer_fill (buf, 0, data + 8, size - 8);
+                gst_caps_set_simple (entry->caps,
+                    "codec_data", GST_TYPE_BUFFER, buf, NULL);
+                gst_buffer_unref (buf);
+              }
+            }
+            break;
+          }
+          case FOURCC_H266:
+          case FOURCC_vvc1:
+          case FOURCC_vvi1:
+          {
+            GNode *vvcC =
+                qtdemux_tree_get_child_by_type (stsd_entry, FOURCC_vvcC);
 
-                  buf = gst_buffer_new_and_alloc (size - 8);
-                  gst_buffer_fill (buf, 0, hevc_data + 8, size - 8);
-                  gst_caps_set_simple (entry->caps,
-                      "codec_data", GST_TYPE_BUFFER, buf, NULL);
-                  gst_buffer_unref (buf);
+            if (vvcC) {
+              const guint8 *data;
+              guint32 size;
+
+              data = vvcC->data;
+              size = QT_UINT32 (data);
+
+
+              if (size >= 12 + 1) {
+                GstBuffer *buf;
+                guint8 version;
+
+                GST_DEBUG_OBJECT (qtdemux, "found vvcC codec_data in stsd");
+
+                /* First 4 bytes are the length of the atom, the next 4 bytes
+                 * are the fourcc, the next 1 byte is the version, the next 3 bytes are flags and the
+                 * subsequent bytes are the decoder configuration record. */
+                version = data[8];
+                if (version != 0) {
+                  GST_ERROR_OBJECT (qtdemux,
+                      "Unsupported vvcC version %u. Only version 0 is supported",
+                      version);
                   break;
                 }
-                default:
-                  break;
+
+                gst_codec_utils_h266_caps_set_level_tier_and_profile
+                    (entry->caps, data + 12, size - 12);
+
+                buf = gst_buffer_new_and_alloc (size - 12);
+                gst_buffer_fill (buf, 0, data + 12, size - 12);
+                gst_caps_set_simple (entry->caps,
+                    "codec_data", GST_TYPE_BUFFER, buf, NULL);
+                gst_buffer_unref (buf);
               }
-              len -= size;
-              hevc_data += size;
             }
             break;
           }
@@ -12553,8 +15768,7 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
                 GST_FOURCC_ARGS (fourcc));
 
             /* codec data might be in glbl extension atom */
-            glbl = mp4v ?
-                qtdemux_tree_get_child_by_type (mp4v, FOURCC_glbl) : NULL;
+            glbl = qtdemux_tree_get_child_by_type (stsd_entry, FOURCC_glbl);
             if (glbl) {
               guint8 *data;
               GstBuffer *buf;
@@ -12577,10 +15791,11 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
           case FOURCC_mjp2:
           {
             /* see annex I of the jpeg2000 spec */
-            GNode *jp2h, *ihdr, *colr, *mjp2, *field, *prefix, *cmap, *cdef;
+            GNode *jp2h, *ihdr, *colr, *prefix, *cmap, *cdef;
             const guint8 *data;
             const gchar *colorspace = NULL;
             gint ncomp = 0;
+            guint32 colr_len;
             guint32 ncomp_map = 0;
             gint32 *comp_map = NULL;
             guint32 nchan_def = 0;
@@ -12588,10 +15803,7 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
 
             GST_DEBUG_OBJECT (qtdemux, "found mjp2");
             /* some required atoms */
-            mjp2 = qtdemux_tree_get_child_by_index (stsd, stsd_index);
-            if (!mjp2)
-              break;
-            jp2h = qtdemux_tree_get_child_by_type (mjp2, FOURCC_jp2h);
+            jp2h = qtdemux_tree_get_child_by_type (stsd_entry, FOURCC_jp2h);
             if (!jp2h)
               break;
 
@@ -12604,6 +15816,9 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
 
             colr = qtdemux_tree_get_child_by_type (jp2h, FOURCC_colr);
             if (!colr)
+              break;
+            colr_len = QT_UINT32 (colr->data);
+            if (colr_len < 15)
               break;
             GST_DEBUG_OBJECT (qtdemux, "found colr");
             /* extract colour space info */
@@ -12728,17 +15943,15 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
               g_free (chan_def);
             }
 
-            /* some optional atoms */
-            field = qtdemux_tree_get_child_by_type (mjp2, FOURCC_fiel);
-            prefix = qtdemux_tree_get_child_by_type (mjp2, FOURCC_jp2x);
-
             /* indicate possible fields in caps */
-            if (field) {
-              data = (guint8 *) field->data + 8;
-              if (*data != 1)
-                gst_caps_set_simple (entry->caps, "fields", G_TYPE_INT,
-                    (gint) * data, NULL);
+            if (CUR_STREAM (stream)->interlace_mode != 1) {
+              gst_caps_set_simple (entry->caps, "fields", G_TYPE_INT,
+                  CUR_STREAM (stream)->interlace_mode, NULL);
             }
+
+            /* some optional atoms */
+            prefix = qtdemux_tree_get_child_by_type (stsd_entry, FOURCC_jp2x);
+
             /* add codec_data if provided */
             if (prefix) {
               GstBuffer *buf;
@@ -12761,104 +15974,40 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
           case FOURCC_SVQ3:
           case FOURCC_VP31:
           {
-            GstBuffer *buf;
-            GstBuffer *seqh = NULL;
-            const guint8 *gamma_data = NULL;
-            guint len = QT_UINT32 (stsd_data);  /* FIXME review - why put the whole stsd in codec data? */
+            if (version >> 16 == 3) {
+              GNode *gama, *smi;
 
-            qtdemux_parse_svq3_stsd_data (qtdemux, stsd_entry_data, &gamma_data,
-                &seqh);
-            if (gamma_data) {
-              gst_caps_set_simple (entry->caps, "applied-gamma", G_TYPE_DOUBLE,
-                  QT_FP32 (gamma_data), NULL);
-            }
-            if (seqh) {
-              /* sorry for the bad name, but we don't know what this is, other
-               * than its own fourcc */
-              gst_caps_set_simple (entry->caps, "seqh", GST_TYPE_BUFFER, seqh,
-                  NULL);
-              gst_buffer_unref (seqh);
-            }
+              gama = qtdemux_tree_get_child_by_type (stsd_entry, FOURCC_gama);
+              if (gama) {
+                guint32 size = QT_UINT32 (gama->data);
 
-            GST_DEBUG_OBJECT (qtdemux, "found codec_data in stsd");
-            buf = gst_buffer_new_and_alloc (len);
-            gst_buffer_fill (buf, 0, stsd_data, len);
-            gst_caps_set_simple (entry->caps,
-                "codec_data", GST_TYPE_BUFFER, buf, NULL);
-            gst_buffer_unref (buf);
-            break;
-          }
-          case FOURCC_jpeg:
-          {
-            /* https://developer.apple.com/standards/qtff-2001.pdf,
-             * page 92, "Video Sample Description", under table 3.1 */
-            GstByteReader br;
-
-            const gint compressor_offset =
-                16 + 4 + 4 * 3 + 2 * 2 + 2 * 4 + 4 + 2;
-            const gint min_size = compressor_offset + 32 + 2 + 2;
-            GNode *jpeg;
-            guint32 len;
-            guint16 color_table_id = 0;
-            gboolean ok;
-
-            GST_DEBUG_OBJECT (qtdemux, "found jpeg");
-
-            /* recover information on interlaced/progressive */
-            jpeg = qtdemux_tree_get_child_by_type (stsd, FOURCC_jpeg);
-            if (!jpeg)
-              break;
-
-            len = QT_UINT32 (jpeg->data);
-            GST_DEBUG_OBJECT (qtdemux, "Found jpeg: len %u, need %d", len,
-                min_size);
-            if (len >= min_size) {
-              gst_byte_reader_init (&br, jpeg->data, len);
-
-              gst_byte_reader_skip (&br, compressor_offset + 32 + 2);
-              gst_byte_reader_get_uint16_le (&br, &color_table_id);
-              if (color_table_id != 0) {
-                /* the spec says there can be concatenated chunks in the data, and we want
-                 * to find one called field. Walk through them. */
-                gint offset = min_size;
-                while (offset + 8 < len) {
-                  guint32 size = 0, tag;
-                  ok = gst_byte_reader_get_uint32_le (&br, &size);
-                  ok &= gst_byte_reader_get_uint32_le (&br, &tag);
-                  if (!ok || size < 8) {
-                    GST_WARNING_OBJECT (qtdemux,
-                        "Failed to walk optional chunk list");
-                    break;
-                  }
-                  GST_DEBUG_OBJECT (qtdemux,
-                      "Found optional %4.4s chunk, size %u",
-                      (const char *) &tag, size);
-                  if (tag == FOURCC_fiel) {
-                    guint8 n_fields = 0, ordering = 0;
-                    gst_byte_reader_get_uint8 (&br, &n_fields);
-                    gst_byte_reader_get_uint8 (&br, &ordering);
-                    if (n_fields == 1 || n_fields == 2) {
-                      GST_DEBUG_OBJECT (qtdemux,
-                          "Found fiel tag with %u fields, ordering %u",
-                          n_fields, ordering);
-                      if (n_fields == 2)
-                        gst_caps_set_simple (CUR_STREAM (stream)->caps,
-                            "interlace-mode", G_TYPE_STRING, "interleaved",
-                            NULL);
-                    } else {
-                      GST_WARNING_OBJECT (qtdemux,
-                          "Found fiel tag with invalid fields (%u)", n_fields);
-                    }
-                  }
-                  offset += size;
+                if (size == 12) {
+                  gdouble gamma = QT_FP32 ((const guint8 *) gama->data + 8);
+                  gst_caps_set_simple (entry->caps, "applied-gamma",
+                      G_TYPE_DOUBLE, gamma, NULL);
                 }
-              } else {
-                GST_DEBUG_OBJECT (qtdemux,
-                    "Color table ID is 0, not trying to get interlacedness");
               }
-            } else {
-              GST_WARNING_OBJECT (qtdemux,
-                  "Length of jpeg chunk is too small, not trying to get interlacedness");
+
+              smi = qtdemux_tree_get_child_by_type (stsd_entry, FOURCC_SMI_);
+              if (smi) {
+                const guint8 *data = smi->data;
+                guint32 size = QT_UINT32 (data);
+
+                // This has first a fourcc and then the size
+                if (size > 16 && QT_FOURCC (data + 8) == FOURCC_SEQH) {
+                  guint32 seqh_size = QT_UINT32 (data + 8 + 4);
+                  if (seqh_size > 0 && seqh_size <= size - 8 - 8) {
+                    GstBuffer *seqh = gst_buffer_new_and_alloc (seqh_size);
+                    gst_buffer_fill (seqh, 0, data + 8 + 8, seqh_size);
+
+                    /* sorry for the bad name, but we don't know what this is, other
+                     * than its own fourcc */
+                    gst_caps_set_simple (entry->caps, "seqh", GST_TYPE_BUFFER,
+                        seqh, NULL);
+                    gst_buffer_unref (seqh);
+                  }
+                }
+              }
             }
 
             break;
@@ -12867,41 +16016,67 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
           case FOURCC_WRLE:
           {
             gst_caps_set_simple (entry->caps,
-                "depth", G_TYPE_INT, QT_UINT16 (stsd_entry_data + offset + 66),
-                NULL);
+                "depth", G_TYPE_INT, entry->bits_per_sample, NULL);
             break;
           }
           case FOURCC_XiTh:
           {
-            GNode *xith, *xdxt;
+            GNode *xdxt;
 
             GST_DEBUG_OBJECT (qtdemux, "found XiTh");
-            xith = qtdemux_tree_get_child_by_index (stsd, stsd_index);
-            if (!xith)
-              break;
 
-            xdxt = qtdemux_tree_get_child_by_type (xith, FOURCC_XdxT);
-            if (!xdxt)
-              break;
+            xdxt = qtdemux_tree_get_child_by_type (stsd_entry, FOURCC_XdxT);
+            if (xdxt) {
+              GNode *tcth, *tct, *tctc;
 
-            GST_DEBUG_OBJECT (qtdemux, "found XdxT node");
-            /* collect the headers and store them in a stream list so that we can
-             * send them out first */
-            qtdemux_parse_theora_extension (qtdemux, stream, xdxt);
+              GST_DEBUG_OBJECT (qtdemux, "found XdxT node");
+
+              /* collect the headers and store them in a stream list so that we can
+               * send them out first */
+
+              tcth = qtdemux_tree_get_child_by_type (xdxt, FOURCC_tCtH);
+              if (tcth) {
+                guint32 size = QT_UINT32 (tcth->data);
+                GstBuffer *buffer;
+
+                buffer = gst_buffer_new_and_alloc (size);
+                gst_buffer_fill (buffer, 0, tcth->data, size);
+                stream->buffers = g_slist_append (stream->buffers, buffer);
+                GST_LOG_OBJECT (qtdemux, "parsing theora header");
+              }
+
+              tct = qtdemux_tree_get_child_by_type (xdxt, FOURCC_tCt_);
+              if (tct) {
+                guint32 size = QT_UINT32 (tct->data);
+                GstBuffer *buffer;
+
+                buffer = gst_buffer_new_and_alloc (size);
+                gst_buffer_fill (buffer, 0, tct->data, size);
+                stream->buffers = g_slist_append (stream->buffers, buffer);
+                GST_LOG_OBJECT (qtdemux, "parsing theora comment");
+              }
+
+              tctc = qtdemux_tree_get_child_by_type (xdxt, FOURCC_tCtC);
+              if (tctc) {
+                guint32 size = QT_UINT32 (tctc->data);
+                GstBuffer *buffer;
+
+                buffer = gst_buffer_new_and_alloc (size);
+                gst_buffer_fill (buffer, 0, tctc->data, size);
+                stream->buffers = g_slist_append (stream->buffers, buffer);
+                GST_LOG_OBJECT (qtdemux, "parsing theora codebook");
+              }
+            }
             break;
           }
           case FOURCC_ovc1:
           {
-            GNode *ovc1;
             guint8 *ovc1_data;
             guint ovc1_len;
             GstBuffer *buf;
 
             GST_DEBUG_OBJECT (qtdemux, "parse ovc1 header");
-            ovc1 = qtdemux_tree_get_child_by_index (stsd, stsd_index);
-            if (!ovc1)
-              break;
-            ovc1_data = ovc1->data;
+            ovc1_data = stsd_entry->data;
             ovc1_len = QT_UINT32 (ovc1_data);
             if (ovc1_len <= 198) {
               GST_WARNING_OBJECT (qtdemux, "Too small ovc1 header, skipping");
@@ -12916,279 +16091,275 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
           }
           case FOURCC_vc_1:
           {
-            guint32 len = QT_UINT32 (stsd_entry_data);
-            len = len <= 0x56 ? 0 : len - 0x56;
-            const guint8 *vc1_data = stsd_entry_data + 0x56;
+            GNode *dvc1;
 
-            /* find dvc1 */
-            while (len >= 8) {
-              guint32 size = QT_UINT32 (vc1_data);
+            dvc1 =
+                qtdemux_tree_get_child_by_type (stsd_entry,
+                GST_MAKE_FOURCC ('d', 'v', 'c', '1'));
+            if (dvc1) {
+              guint32 size = QT_UINT32 (dvc1->data);
 
-              if (size < 8 || size > len)
+              if (size >= 8) {
+                GstBuffer *buf;
+
+                GST_DEBUG_OBJECT (qtdemux, "found dvc1 codec_data in stsd");
+                buf = gst_buffer_new_and_alloc (size - 8);
+                gst_buffer_fill (buf, 0, (const guint8 *) dvc1->data + 8,
+                    size - 8);
+                gst_caps_set_simple (entry->caps, "codec_data", GST_TYPE_BUFFER,
+                    buf, NULL);
+                gst_buffer_unref (buf);
+              }
+            }
+            break;
+          }
+          case FOURCC_av01:
+          {
+            GNode *av1C;
+
+            av1C = qtdemux_tree_get_child_by_type (stsd_entry, FOURCC_av1C);
+            if (av1C) {
+              const guint8 *data = av1C->data;
+              guint32 size = QT_UINT32 (data);
+
+              GstBuffer *buf;
+
+              GST_DEBUG_OBJECT (qtdemux,
+                  "found av1C codec_data in stsd of size %d", size);
+
+              /* not enough data, just ignore and hope for the best */
+              if (size < 8 + 4)
                 break;
 
-              switch (QT_FOURCC (vc1_data + 4)) {
-                case GST_MAKE_FOURCC ('d', 'v', 'c', '1'):
-                {
-                  GstBuffer *buf;
+              /* Content is:
+               * 4 bytes: atom length
+               * 4 bytes: fourcc
+               *
+               * version 1 (marker=1):
+               *
+               *  unsigned int (1) marker = 1;
+               *  unsigned int (7) version = 1;
+               *  unsigned int (3) seq_profile;
+               *  unsigned int (5) seq_level_idx_0;
+               *  unsigned int (1) seq_tier_0;
+               *  unsigned int (1) high_bitdepth;
+               *  unsigned int (1) twelve_bit;
+               *  unsigned int (1) monochrome;
+               *  unsigned int (1) chroma_subsampling_x;
+               *  unsigned int (1) chroma_subsampling_y;
+               *  unsigned int (2) chroma_sample_position;
+               *  unsigned int (3) reserved = 0;
+               *
+               *  unsigned int (1) initial_presentation_delay_present;
+               *  if (initial_presentation_delay_present) {
+               *    unsigned int (4) initial_presentation_delay_minus_one;
+               *  } else {
+               *    unsigned int (4) reserved = 0;
+               *  }
+               *
+               *  unsigned int (8) configOBUs[];
+               *
+               * rest: OBUs.
+               */
 
-                  GST_DEBUG_OBJECT (qtdemux, "found dvc1 codec_data in stsd");
+              switch (data[8]) {
+                case 0x81:{
+                  guint8 pres_delay_field;
+
+                  /* We let profile and the other parts be figured out by
+                   * av1parse and only include the presentation delay here
+                   * if present */
+                  /* We skip initial_presentation_delay* for now */
+                  pres_delay_field = *(data + 11);
+                  if (pres_delay_field & (1 << 5)) {
+                    gst_caps_set_simple (entry->caps,
+                        "presentation-delay", G_TYPE_INT,
+                        (gint) (pres_delay_field & 0x0F) + 1, NULL);
+                  }
+
                   buf = gst_buffer_new_and_alloc (size - 8);
-                  gst_buffer_fill (buf, 0, vc1_data + 8, size - 8);
+                  GST_BUFFER_FLAG_SET (buf, GST_BUFFER_FLAG_HEADER);
+                  gst_buffer_fill (buf, 0, data + 8, size - 8);
                   gst_caps_set_simple (entry->caps,
                       "codec_data", GST_TYPE_BUFFER, buf, NULL);
                   gst_buffer_unref (buf);
                   break;
                 }
                 default:
+                  GST_WARNING ("Unknown version 0x%02x of av1C box", data[8]);
                   break;
               }
-              len -= size;
-              vc1_data += size;
-            }
-            break;
-          }
-          case FOURCC_av01:
-          {
-            guint32 len = QT_UINT32 (stsd_entry_data);
-            len = len <= 0x56 ? 0 : len - 0x56;
-            const guint8 *av1_data = stsd_entry_data + 0x56;
-
-            /* find av1C */
-            while (len >= 8) {
-              guint32 size = QT_UINT32 (av1_data);
-
-              if (size < 8 || size > len)
-                break;
-
-              switch (QT_FOURCC (av1_data + 4)) {
-                case FOURCC_av1C:
-                {
-                  /* parse, if found */
-                  GstBuffer *buf;
-
-                  GST_DEBUG_OBJECT (qtdemux,
-                      "found av1C codec_data in stsd of size %d", size);
-
-                  /* not enough data, just ignore and hope for the best */
-                  if (size < 8 + 4)
-                    break;
-
-                  /* Content is:
-                   * 4 bytes: atom length
-                   * 4 bytes: fourcc
-                   *
-                   * version 1 (marker=1):
-                   *
-                   *  unsigned int (1) marker = 1;
-                   *  unsigned int (7) version = 1;
-                   *  unsigned int (3) seq_profile;
-                   *  unsigned int (5) seq_level_idx_0;
-                   *  unsigned int (1) seq_tier_0;
-                   *  unsigned int (1) high_bitdepth;
-                   *  unsigned int (1) twelve_bit;
-                   *  unsigned int (1) monochrome;
-                   *  unsigned int (1) chroma_subsampling_x;
-                   *  unsigned int (1) chroma_subsampling_y;
-                   *  unsigned int (2) chroma_sample_position;
-                   *  unsigned int (3) reserved = 0;
-                   *
-                   *  unsigned int (1) initial_presentation_delay_present;
-                   *  if (initial_presentation_delay_present) {
-                   *    unsigned int (4) initial_presentation_delay_minus_one;
-                   *  } else {
-                   *    unsigned int (4) reserved = 0;
-                   *  }
-                   *
-                   *  unsigned int (8) configOBUs[];
-                   *
-                   * rest: OBUs.
-                   */
-
-                  switch (av1_data[8]) {
-                    case 0x81:{
-                      guint8 pres_delay_field;
-
-                      /* We let profile and the other parts be figured out by
-                       * av1parse and only include the presentation delay here
-                       * if present */
-                      /* We skip initial_presentation_delay* for now */
-                      pres_delay_field = *(av1_data + 11);
-                      if (pres_delay_field & (1 << 5)) {
-                        gst_caps_set_simple (entry->caps,
-                            "presentation-delay", G_TYPE_INT,
-                            (gint) (pres_delay_field & 0x0F) + 1, NULL);
-                      }
-
-                      buf = gst_buffer_new_and_alloc (size - 8);
-                      GST_BUFFER_FLAG_SET (buf, GST_BUFFER_FLAG_HEADER);
-                      gst_buffer_fill (buf, 0, av1_data + 8, size - 8);
-                      gst_caps_set_simple (entry->caps,
-                          "codec_data", GST_TYPE_BUFFER, buf, NULL);
-                      gst_buffer_unref (buf);
-                      break;
-                    }
-                    default:
-                      GST_WARNING ("Unknown version 0x%02x of av1C box",
-                          av1_data[8]);
-                      break;
-                  }
-
-                  break;
-                }
-                default:
-                  break;
-              }
-
-              len -= size;
-              av1_data += size;
             }
 
             break;
           }
 
-            /* TODO: Need to parse vpcC for VP8 codec too.
-             * Note that VPCodecConfigurationBox (vpcC) is defined for
-             * vp08, vp09, and vp10 fourcc. */
+          case FOURCC_vp08:
           case FOURCC_vp09:
           {
-            guint32 len = QT_UINT32 (stsd_entry_data);
-            len = len <= 0x56 ? 0 : len - 0x56;
-            const guint8 *vpcc_data = stsd_entry_data + 0x56;
+            GNode *vpcC;
 
-            /* find vpcC */
-            while (len >= 8) {
-              guint32 size = QT_UINT32 (vpcc_data);
+            vpcC = qtdemux_tree_get_child_by_type (stsd_entry, FOURCC_vpcC);
+            if (vpcC) {
+              const guint8 *data = vpcC->data;
+              guint32 size = QT_UINT32 (data);
+              const gchar *profile_str = NULL;
+              const gchar *chroma_format_str = NULL;
+              guint8 profile;
+              guint8 bitdepth;
+              guint8 chroma_format;
+              GstVideoColorimetry cinfo;
 
-              if (size < 8 || size > len)
+              /* parse, if found */
+              GST_DEBUG_OBJECT (qtdemux,
+                  "found vp codec_data in stsd of size %d", size);
+
+              /* the meaning of "size" is length of the atom body, excluding
+               * atom length and fourcc fields */
+              if (size < 8 + 12)
                 break;
 
-              switch (QT_FOURCC (vpcc_data + 4)) {
-                case FOURCC_vpcC:
-                {
-                  const gchar *profile_str = NULL;
-                  const gchar *chroma_format_str = NULL;
-                  guint8 profile;
-                  guint8 bitdepth;
-                  guint8 chroma_format;
-                  GstVideoColorimetry cinfo;
+              /* Content is:
+               * 4 bytes: atom length
+               * 4 bytes: fourcc
+               * 1 byte: version
+               * 3 bytes: flags
+               * 1 byte: profile
+               * 1 byte: level
+               * 4 bits: bitDepth
+               * 3 bits: chromaSubsampling
+               * 1 bit: videoFullRangeFlag
+               * 1 byte: colourPrimaries
+               * 1 byte: transferCharacteristics
+               * 1 byte: matrixCoefficients
+               * 2 bytes: codecIntializationDataSize (should be zero for vp8 and vp9)
+               * rest: codecIntializationData (not used for vp8 and vp9)
+               */
 
-                  /* parse, if found */
-                  GST_DEBUG_OBJECT (qtdemux,
-                      "found vp codec_data in stsd of size %d", size);
+              if (data[8] != 1) {
+                GST_WARNING_OBJECT (qtdemux,
+                    "unknown vpcC version %d", data[8]);
+                break;
+              }
 
-                  /* the meaning of "size" is length of the atom body, excluding
-                   * atom length and fourcc fields */
-                  if (size < 8 + 12)
-                    break;
-
-                  /* Content is:
-                   * 4 bytes: atom length
-                   * 4 bytes: fourcc
-                   * 1 byte: version
-                   * 3 bytes: flags
-                   * 1 byte: profile
-                   * 1 byte: level
-                   * 4 bits: bitDepth
-                   * 3 bits: chromaSubsampling
-                   * 1 bit: videoFullRangeFlag
-                   * 1 byte: colourPrimaries
-                   * 1 byte: transferCharacteristics
-                   * 1 byte: matrixCoefficients
-                   * 2 bytes: codecIntializationDataSize (should be zero for vp8 and vp9)
-                   * rest: codecIntializationData (not used for vp8 and vp9)
-                   */
-
-                  if (vpcc_data[8] != 1) {
-                    GST_WARNING_OBJECT (qtdemux,
-                        "unknown vpcC version %d", vpcc_data[8]);
-                    break;
-                  }
-
-                  profile = vpcc_data[12];
-                  switch (profile) {
-                    case 0:
-                      profile_str = "0";
-                      break;
-                    case 1:
-                      profile_str = "1";
-                      break;
-                    case 2:
-                      profile_str = "2";
-                      break;
-                    case 3:
-                      profile_str = "3";
-                      break;
-                    default:
-                      break;
-                  }
-
-                  if (profile_str) {
-                    gst_caps_set_simple (entry->caps,
-                        "profile", G_TYPE_STRING, profile_str, NULL);
-                  }
-
-                  /* skip level, the VP9 spec v0.6 defines only one level atm,
-                   * but webm spec define various ones. Add level to caps
-                   * if we really need it then */
-
-                  bitdepth = (vpcc_data[14] & 0xf0) >> 4;
-                  if (bitdepth == 8 || bitdepth == 10 || bitdepth == 12) {
-                    gst_caps_set_simple (entry->caps,
-                        "bit-depth-luma", G_TYPE_UINT, bitdepth,
-                        "bit-depth-chroma", G_TYPE_UINT, bitdepth, NULL);
-                  }
-
-                  chroma_format = (vpcc_data[14] & 0xe) >> 1;
-                  switch (chroma_format) {
-                    case 0:
-                    case 1:
-                      chroma_format_str = "4:2:0";
-                      break;
-                    case 2:
-                      chroma_format_str = "4:2:2";
-                      break;
-                    case 3:
-                      chroma_format_str = "4:4:4";
-                      break;
-                    default:
-                      break;
-                  }
-
-                  if (chroma_format_str) {
-                    gst_caps_set_simple (entry->caps,
-                        "chroma-format", G_TYPE_STRING, chroma_format_str,
-                        NULL);
-                  }
-
-                  if ((vpcc_data[14] & 0x1) != 0)
-                    cinfo.range = GST_VIDEO_COLOR_RANGE_0_255;
-                  else
-                    cinfo.range = GST_VIDEO_COLOR_RANGE_16_235;
-                  cinfo.primaries =
-                      gst_video_color_primaries_from_iso (vpcc_data[15]);
-                  cinfo.transfer =
-                      gst_video_transfer_function_from_iso (vpcc_data[16]);
-                  cinfo.matrix =
-                      gst_video_color_matrix_from_iso (vpcc_data[17]);
-
-                  if (cinfo.primaries != GST_VIDEO_COLOR_PRIMARIES_UNKNOWN &&
-                      cinfo.transfer != GST_VIDEO_TRANSFER_UNKNOWN &&
-                      cinfo.matrix != GST_VIDEO_COLOR_MATRIX_UNKNOWN) {
-                    /* set this only if all values are known, otherwise this
-                     * might overwrite valid ones parsed from other color box */
-                    CUR_STREAM (stream)->colorimetry = cinfo;
-                  }
+              profile = data[12];
+              switch (profile) {
+                case 0:
+                  profile_str = "0";
                   break;
-                }
+                case 1:
+                  profile_str = "1";
+                  break;
+                case 2:
+                  profile_str = "2";
+                  break;
+                case 3:
+                  profile_str = "3";
+                  break;
                 default:
                   break;
               }
 
-              len -= size;
-              vpcc_data += size;
-            }
+              if (profile_str) {
+                gst_caps_set_simple (entry->caps,
+                    "profile", G_TYPE_STRING, profile_str, NULL);
+              }
 
+              /* skip level, the VP9 spec v0.6 defines only one level atm,
+               * but webm spec define various ones. Add level to caps
+               * if we really need it then */
+
+              bitdepth = (data[14] & 0xf0) >> 4;
+              if (bitdepth == 8 || bitdepth == 10 || bitdepth == 12) {
+                gst_caps_set_simple (entry->caps,
+                    "bit-depth-luma", G_TYPE_UINT, bitdepth,
+                    "bit-depth-chroma", G_TYPE_UINT, bitdepth, NULL);
+              }
+
+              chroma_format = (data[14] & 0xe) >> 1;
+              switch (chroma_format) {
+                case 0:
+                case 1:
+                  chroma_format_str = "4:2:0";
+                  break;
+                case 2:
+                  chroma_format_str = "4:2:2";
+                  break;
+                case 3:
+                  chroma_format_str = "4:4:4";
+                  break;
+                default:
+                  break;
+              }
+
+              if (chroma_format_str) {
+                gst_caps_set_simple (entry->caps,
+                    "chroma-format", G_TYPE_STRING, chroma_format_str, NULL);
+              }
+
+              if ((data[14] & 0x1) != 0)
+                cinfo.range = GST_VIDEO_COLOR_RANGE_0_255;
+              else
+                cinfo.range = GST_VIDEO_COLOR_RANGE_16_235;
+              cinfo.primaries = gst_video_color_primaries_from_iso (data[15]);
+              cinfo.transfer = gst_video_transfer_function_from_iso (data[16]);
+              cinfo.matrix = gst_video_color_matrix_from_iso (data[17]);
+
+              if (cinfo.primaries != GST_VIDEO_COLOR_PRIMARIES_UNKNOWN &&
+                  cinfo.transfer != GST_VIDEO_TRANSFER_UNKNOWN &&
+                  cinfo.matrix != GST_VIDEO_COLOR_MATRIX_UNKNOWN) {
+                /* set this only if all values are known, otherwise this
+                 * might overwrite valid ones parsed from other color box */
+                CUR_STREAM (stream)->colorimetry = cinfo;
+              }
+            }
+            break;
+          }
+          case GST_MAKE_FOURCC ('A', 'V', 'd', 'h'):{
+            GNode *adhr;
+
+            adhr =
+                qtdemux_tree_get_child_by_type (stsd_entry,
+                GST_MAKE_FOURCC ('A', 'D', 'H', 'R'));
+            if (adhr) {
+              const guint8 *data = adhr->data;
+              guint32 size = QT_UINT32 (data);
+
+              if (size >= 8 + 4 + 4) {
+                guint32 version = QT_FOURCC (data + 8);
+
+                if (version == GST_MAKE_FOURCC ('0', '0', '0', '1') ||
+                    version == GST_MAKE_FOURCC ('0', '0', '0', '2')) {
+                  guint32 profile = QT_UINT32 (data + 12);
+                  const gchar *profile_s = "dnxhr";
+
+                  switch (profile) {
+                    case 0x4f6:
+                      profile_s = "dnxhr-444";
+                      break;
+                    case 0x4f7:
+                      profile_s = "dnxhr-hqx";
+                      break;
+                    case 0x4f8:
+                      profile_s = "dnxhr-hq";
+                      break;
+                    case 0x4f9:
+                      profile_s = "dnxhr-sq";
+                      break;
+                    case 0x4fa:
+                      profile_s = "dnxhr-lb";
+                      break;
+                    default:
+                      GST_WARNING_OBJECT (qtdemux, "Unknown DNxHR profile %08x",
+                          profile);
+                      break;
+                  }
+
+                  gst_caps_set_simple (entry->caps, "profile", G_TYPE_STRING,
+                      profile_s, NULL);
+                }
+              }
+            }
             break;
           }
           default:
@@ -13201,7 +16372,7 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
           GST_FOURCC_ARGS (fourcc), entry->caps);
 
     } else if (stream->subtype == FOURCC_soun) {
-      GNode *wave;
+      GNode *wave, *btrt;
       guint version, samplesize;
       guint16 compression_id;
       gboolean amrwb = FALSE;
@@ -13239,7 +16410,14 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
 
       offset = 36;
 
-      if (version == 0x00010000) {
+      /* This is only valid in MOV files. To distinguish this from the
+       * AudioSampleEntryV1 from ISOBMFF (which does not have the additional
+       * fields but instead the exact same layout as AudioSampleEntry), the
+       * latter requires a stsd of version 1 to be used.
+       * The same goes for version 2 below, for which no equivalent in ISOBMFF
+       * exists yet, fortunately
+       */
+      if (version == 0x00010000 && stsd_version == 0) {
         /* sample description entry (16) + sound sample description v1 (20+16) */
         if (len < 52)
           goto corrupt_file;
@@ -13266,7 +16444,7 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
           GST_LOG_OBJECT (qtdemux, "samples/frame:    %d",
               entry->samples_per_frame);
         }
-      } else if (version == 0x00020000) {
+      } else if (version == 0x00020000 && stsd_version == 0) {
         /* sample description entry (16) + sound sample description v2 (56) */
         if (len < 72)
           goto corrupt_file;
@@ -13349,23 +16527,25 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
         case FOURCC_sowt:
         case FOURCC_raw_:
         case FOURCC_lpcm:
+        case FOURCC_ipcm:
+        case FOURCC_fpcm:
           /* Sometimes these are set to 0 in the sound sample descriptions so
            * let's try to infer useful values from the other information we
            * have available */
-          if (entry->bytes_per_sample == 0)
+          if (entry->bytes_per_sample == 0 && entry->n_channels > 0)
             entry->bytes_per_sample =
                 entry->bytes_per_frame / entry->n_channels;
           if (entry->bytes_per_sample == 0)
             entry->bytes_per_sample = samplesize / 8;
 
-          if (entry->bytes_per_frame == 0)
+          if (entry->bytes_per_frame == 0 && entry->n_channels > 0)
             entry->bytes_per_frame =
                 entry->bytes_per_sample * entry->n_channels;
 
           if (entry->bytes_per_packet == 0)
             entry->bytes_per_packet = entry->bytes_per_sample;
 
-          if (entry->samples_per_frame == 0)
+          if (entry->samples_per_frame == 0 && entry->n_channels > 0)
             entry->samples_per_frame = entry->n_channels;
 
           if (entry->samples_per_packet == 0)
@@ -13419,7 +16599,7 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
         gst_caps_unref (entry->caps);
 
       entry->caps = qtdemux_audio_caps (qtdemux, stream, entry, fourcc,
-          stsd_entry_data + 32, len - 16, &codec);
+          stsd_version, version, stsd_entry, &codec);
 
       switch (fourcc) {
         case FOURCC_in24:
@@ -13428,39 +16608,40 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
         case FOURCC_fl64:
         {
           GNode *enda;
-          GNode *fmt;
 
-          fmt = qtdemux_tree_get_child_by_type (stsd, fourcc);
-
-          enda = qtdemux_tree_get_child_by_type (fmt, FOURCC_enda);
+          enda = qtdemux_tree_get_child_by_type (stsd_entry, FOURCC_enda);
           if (!enda) {
-            wave = qtdemux_tree_get_child_by_type (fmt, FOURCC_wave);
+            wave = qtdemux_tree_get_child_by_type (stsd_entry, FOURCC_wave);
             if (wave)
               enda = qtdemux_tree_get_child_by_type (wave, FOURCC_enda);
           }
           if (enda) {
-            int enda_value = QT_UINT16 ((guint8 *) enda->data + 8);
             const gchar *format_str;
+            guint32 enda_len = QT_UINT32 (enda->data);
 
-            switch (fourcc) {
-              case FOURCC_in24:
-                format_str = (enda_value) ? "S24LE" : "S24BE";
-                break;
-              case FOURCC_in32:
-                format_str = (enda_value) ? "S32LE" : "S32BE";
-                break;
-              case FOURCC_fl32:
-                format_str = (enda_value) ? "F32LE" : "F32BE";
-                break;
-              case FOURCC_fl64:
-                format_str = (enda_value) ? "F64LE" : "F64BE";
-                break;
-              default:
-                g_assert_not_reached ();
-                break;
+            if (enda_len >= 9) {
+              guint16 enda_value = QT_UINT16 ((guint8 *) enda->data + 8);
+
+              switch (fourcc) {
+                case FOURCC_in24:
+                  format_str = (enda_value) ? "S24LE" : "S24BE";
+                  break;
+                case FOURCC_in32:
+                  format_str = (enda_value) ? "S32LE" : "S32BE";
+                  break;
+                case FOURCC_fl32:
+                  format_str = (enda_value) ? "F32LE" : "F32BE";
+                  break;
+                case FOURCC_fl64:
+                  format_str = (enda_value) ? "F64LE" : "F64BE";
+                  break;
+                default:
+                  g_assert_not_reached ();
+                  break;
+              }
+              gst_caps_set_simple (entry->caps,
+                  "format", G_TYPE_STRING, format_str, NULL);
             }
-            gst_caps_set_simple (entry->caps,
-                "format", G_TYPE_STRING, format_str, NULL);
           }
           break;
         }
@@ -13484,7 +16665,7 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
             gint16 wBitsPerSample;
             gint16 cbSize;
           } WAVEFORMATEX;
-          WAVEFORMATEX *wfex;
+          WAVEFORMATEX wfex;
 
           GST_DEBUG_OBJECT (qtdemux, "parse owma");
           owma_data = stsd_entry_data;
@@ -13493,16 +16674,22 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
             GST_WARNING_OBJECT (qtdemux, "Too small owma header, skipping");
             break;
           }
-          wfex = (WAVEFORMATEX *) (owma_data + 36);
+          wfex.wFormatTag = GST_READ_UINT16_LE (owma_data + 36 + 0);
+          wfex.nChannels = GST_READ_UINT16_LE (owma_data + 36 + 2);
+          wfex.nSamplesPerSec = GST_READ_UINT32_LE (owma_data + 36 + 4);
+          wfex.nAvgBytesPerSec = GST_READ_UINT32_LE (owma_data + 36 + 8);
+          wfex.nBlockAlign = GST_READ_UINT16_LE (owma_data + 36 + 12);
+          wfex.wBitsPerSample = GST_READ_UINT16_LE (owma_data + 36 + 14);
+          wfex.cbSize = GST_READ_UINT16_LE (owma_data + 36 + 16);
           buf = gst_buffer_new_and_alloc (owma_len - 54);
           gst_buffer_fill (buf, 0, owma_data + 54, owma_len - 54);
-          if (wfex->wFormatTag == 0x0161) {
+          if (wfex.wFormatTag == 0x0161) {
             codec_name = "Windows Media Audio";
             version = 2;
-          } else if (wfex->wFormatTag == 0x0162) {
+          } else if (wfex.wFormatTag == 0x0162) {
             codec_name = "Windows Media Audio 9 Pro";
             version = 3;
-          } else if (wfex->wFormatTag == 0x0163) {
+          } else if (wfex.wFormatTag == 0x0163) {
             codec_name = "Windows Media Audio 9 Lossless";
             /* is that correct? gstffmpegcodecmap.c is missing it, but
              * fluendo codec seems to support it */
@@ -13513,10 +16700,10 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
               "codec_data", GST_TYPE_BUFFER, buf,
               "wmaversion", G_TYPE_INT, version,
               "block_align", G_TYPE_INT,
-              GST_READ_UINT16_LE (&wfex->nBlockAlign), "bitrate", G_TYPE_INT,
-              GST_READ_UINT32_LE (&wfex->nAvgBytesPerSec), "width", G_TYPE_INT,
-              GST_READ_UINT16_LE (&wfex->wBitsPerSample), "depth", G_TYPE_INT,
-              GST_READ_UINT16_LE (&wfex->wBitsPerSample), NULL);
+              wfex.nBlockAlign, "bitrate", G_TYPE_INT,
+              wfex.nAvgBytesPerSec, "width", G_TYPE_INT,
+              wfex.wBitsPerSample, "depth", G_TYPE_INT,
+              wfex.wBitsPerSample, NULL);
           gst_buffer_unref (buf);
 
           if (codec_name) {
@@ -13527,9 +16714,6 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
         }
         case FOURCC_wma_:
         {
-          guint32 len = QT_UINT32 (stsd_entry_data);
-          len = len <= offset ? 0 : len - offset;
-          const guint8 *wfex_data = stsd_entry_data + offset;
           const gchar *codec_name = NULL;
           gint version = 1;
           /* from http://msdn.microsoft.com/en-us/library/dd757720(VS.85).aspx */
@@ -13546,84 +16730,77 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
             gint16 cbSize;
           } WAVEFORMATEX;
           WAVEFORMATEX wfex;
+          GNode *wfex_node;
 
           /* FIXME: unify with similar wavformatex parsing code above */
           GST_DEBUG_OBJECT (qtdemux, "parse wma, looking for wfex");
 
-          /* find wfex */
-          while (len >= 8) {
-            guint32 size = QT_UINT32 (wfex_data);
+          wfex_node =
+              qtdemux_tree_get_child_by_type (stsd_entry, GST_MAKE_FOURCC ('w',
+                  'f', 'e', 'x'));
 
-            if (size < 8 || size > len)
+          if (wfex_node) {
+            const guint8 *wfex_data = wfex_node->data;
+            guint32 wfex_size = QT_UINT32 (wfex_data);
+
+            GST_DEBUG_OBJECT (qtdemux, "found wfex in stsd");
+
+            if (wfex_size < 8 + 18)
               break;
 
-            switch (QT_FOURCC (wfex_data + 4)) {
-              case GST_MAKE_FOURCC ('w', 'f', 'e', 'x'):
-              {
-                GST_DEBUG_OBJECT (qtdemux, "found wfex in stsd");
+            wfex.wFormatTag = GST_READ_UINT16_LE (wfex_data + 8 + 0);
+            wfex.nChannels = GST_READ_UINT16_LE (wfex_data + 8 + 2);
+            wfex.nSamplesPerSec = GST_READ_UINT32_LE (wfex_data + 8 + 4);
+            wfex.nAvgBytesPerSec = GST_READ_UINT32_LE (wfex_data + 8 + 8);
+            wfex.nBlockAlign = GST_READ_UINT16_LE (wfex_data + 8 + 12);
+            wfex.wBitsPerSample = GST_READ_UINT16_LE (wfex_data + 8 + 14);
+            wfex.cbSize = GST_READ_UINT16_LE (wfex_data + 8 + 16);
 
-                if (size < 8 + 18)
-                  break;
+            GST_LOG_OBJECT (qtdemux, "Found wfex box in stsd:");
+            GST_LOG_OBJECT (qtdemux, "FormatTag = 0x%04x, Channels = %u, "
+                "SamplesPerSec = %u, AvgBytesPerSec = %u, BlockAlign = %u, "
+                "BitsPerSample = %u, Size = %u", wfex.wFormatTag,
+                wfex.nChannels, wfex.nSamplesPerSec, wfex.nAvgBytesPerSec,
+                wfex.nBlockAlign, wfex.wBitsPerSample, wfex.cbSize);
 
-                wfex.wFormatTag = GST_READ_UINT16_LE (wfex_data + 8 + 0);
-                wfex.nChannels = GST_READ_UINT16_LE (wfex_data + 8 + 2);
-                wfex.nSamplesPerSec = GST_READ_UINT32_LE (wfex_data + 8 + 4);
-                wfex.nAvgBytesPerSec = GST_READ_UINT32_LE (wfex_data + 8 + 8);
-                wfex.nBlockAlign = GST_READ_UINT16_LE (wfex_data + 8 + 12);
-                wfex.wBitsPerSample = GST_READ_UINT16_LE (wfex_data + 8 + 14);
-                wfex.cbSize = GST_READ_UINT16_LE (wfex_data + 8 + 16);
-
-                GST_LOG_OBJECT (qtdemux, "Found wfex box in stsd:");
-                GST_LOG_OBJECT (qtdemux, "FormatTag = 0x%04x, Channels = %u, "
-                    "SamplesPerSec = %u, AvgBytesPerSec = %u, BlockAlign = %u, "
-                    "BitsPerSample = %u, Size = %u", wfex.wFormatTag,
-                    wfex.nChannels, wfex.nSamplesPerSec, wfex.nAvgBytesPerSec,
-                    wfex.nBlockAlign, wfex.wBitsPerSample, wfex.cbSize);
-
-                if (wfex.wFormatTag == 0x0161) {
-                  codec_name = "Windows Media Audio";
-                  version = 2;
-                } else if (wfex.wFormatTag == 0x0162) {
-                  codec_name = "Windows Media Audio 9 Pro";
-                  version = 3;
-                } else if (wfex.wFormatTag == 0x0163) {
-                  codec_name = "Windows Media Audio 9 Lossless";
-                  /* is that correct? gstffmpegcodecmap.c is missing it, but
-                   * fluendo codec seems to support it */
-                  version = 4;
-                }
-
-                gst_caps_set_simple (entry->caps,
-                    "wmaversion", G_TYPE_INT, version,
-                    "block_align", G_TYPE_INT, wfex.nBlockAlign,
-                    "bitrate", G_TYPE_INT, wfex.nAvgBytesPerSec,
-                    "width", G_TYPE_INT, wfex.wBitsPerSample,
-                    "depth", G_TYPE_INT, wfex.wBitsPerSample, NULL);
-
-                if (size > 8 + wfex.cbSize) {
-                  GstBuffer *buf;
-
-                  buf = gst_buffer_new_and_alloc (size - 8 - wfex.cbSize);
-                  gst_buffer_fill (buf, 0, wfex_data + 8 + wfex.cbSize,
-                      size - 8 - wfex.cbSize);
-                  gst_caps_set_simple (entry->caps,
-                      "codec_data", GST_TYPE_BUFFER, buf, NULL);
-                  gst_buffer_unref (buf);
-                } else {
-                  GST_WARNING_OBJECT (qtdemux, "no codec data");
-                }
-
-                if (codec_name) {
-                  g_free (codec);
-                  codec = g_strdup (codec_name);
-                }
-                break;
-              }
-              default:
-                break;
+            if (wfex.wFormatTag == 0x0161) {
+              codec_name = "Windows Media Audio";
+              version = 2;
+            } else if (wfex.wFormatTag == 0x0162) {
+              codec_name = "Windows Media Audio 9 Pro";
+              version = 3;
+            } else if (wfex.wFormatTag == 0x0163) {
+              codec_name = "Windows Media Audio 9 Lossless";
+              /* is that correct? gstffmpegcodecmap.c is missing it, but
+               * fluendo codec seems to support it */
+              version = 4;
             }
-            len -= size;
-            wfex_data += size;
+
+            gst_caps_set_simple (entry->caps,
+                "wmaversion", G_TYPE_INT, version,
+                "block_align", G_TYPE_INT, wfex.nBlockAlign,
+                "bitrate", G_TYPE_INT, wfex.nAvgBytesPerSec,
+                "width", G_TYPE_INT, wfex.wBitsPerSample,
+                "depth", G_TYPE_INT, wfex.wBitsPerSample, NULL);
+
+            if (wfex_size > 8 + wfex.cbSize) {
+              GstBuffer *buf;
+
+              buf = gst_buffer_new_and_alloc (wfex_size - 8 - wfex.cbSize);
+              gst_buffer_fill (buf, 0, wfex_data + 8 + wfex.cbSize,
+                  wfex_size - 8 - wfex.cbSize);
+              gst_caps_set_simple (entry->caps,
+                  "codec_data", GST_TYPE_BUFFER, buf, NULL);
+              gst_buffer_unref (buf);
+            } else {
+              GST_WARNING_OBJECT (qtdemux, "no codec data");
+            }
+
+            if (codec_name) {
+              g_free (codec);
+              codec = g_strdup (codec_name);
+            }
+            break;
           }
           break;
         }
@@ -13638,18 +16815,12 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
           guint8 coupled_count;
           guint8 i;
 
-          GNode *opus;
           GNode *dops;
 
-          opus = qtdemux_tree_get_child_by_type (stsd, FOURCC_opus);
-          if (opus == NULL) {
-            GST_WARNING_OBJECT (qtdemux, "Opus Sample Entry not found");
-            goto corrupt_file;
-          }
-
-          dops = qtdemux_tree_get_child_by_type (opus, FOURCC_dops);
+          dops = qtdemux_tree_get_child_by_type (stsd_entry, FOURCC_dops);
           if (dops == NULL) {
             GST_WARNING_OBJECT (qtdemux, "Opus Specific Box not found");
+            g_free (codec);
             goto corrupt_file;
           }
 
@@ -13675,12 +16846,14 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
           if (len < offset + dops_len) {
             GST_WARNING_OBJECT (qtdemux,
                 "Opus Sample Entry has bogus size %" G_GUINT32_FORMAT, len);
+            g_free (codec);
             goto corrupt_file;
           }
           if (dops_len < 19) {
             GST_WARNING_OBJECT (qtdemux,
                 "Opus Specific Box has bogus size %" G_GUINT32_FORMAT,
                 dops_len);
+            g_free (codec);
             goto corrupt_file;
           }
 
@@ -13693,6 +16866,7 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
               GST_WARNING_OBJECT (qtdemux,
                   "Opus Specific Box has bogus size %" G_GUINT32_FORMAT,
                   dops_len);
+              g_free (codec);
               goto corrupt_file;
             }
 
@@ -13715,15 +16889,97 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
             GST_WARNING_OBJECT (qtdemux,
                 "Opus unexpected nb of channels %d without channel mapping",
                 n_channels);
+            g_free (codec);
             goto corrupt_file;
           }
 
+          gst_caps_unref (entry->caps);
           entry->caps = gst_codec_utils_opus_create_caps (rate, n_channels,
               channel_mapping_family, stream_count, coupled_count,
               channel_mapping);
           g_free (channel_mapping);
 
           entry->sampled = TRUE;
+
+          break;
+        }
+        case FOURCC_ipcm:
+        case FOURCC_fpcm:
+        {
+          GNode *pcmC;
+
+          pcmC = qtdemux_tree_get_child_by_type (stsd_entry, FOURCC_pcmC);
+          if (pcmC) {
+            const guint8 *data = pcmC->data;
+            gsize len = QT_UINT32 (data);
+            if (len >= 8 + 6) {
+              GstByteReader br = GST_BYTE_READER_INIT (data, len);
+
+              gst_byte_reader_skip_unchecked (&br, 4 + 4);
+
+              guint32 version_flags =
+                  gst_byte_reader_get_uint32_be_unchecked (&br);
+              // Version 0, no flags
+              if (version_flags == 0) {
+                guint8 format_flags = gst_byte_reader_get_uint8_unchecked (&br);
+                guint8 pcm_sample_size =
+                    gst_byte_reader_get_uint8_unchecked (&br);
+                GstAudioFormat audio_format = GST_AUDIO_FORMAT_UNKNOWN;
+
+                if (fourcc == FOURCC_ipcm) {
+                  audio_format =
+                      gst_audio_format_build_integer (TRUE,
+                      (format_flags & 0x01) ? G_LITTLE_ENDIAN : G_BIG_ENDIAN,
+                      pcm_sample_size, pcm_sample_size);
+                } else {
+                  switch (pcm_sample_size) {
+                    case 32:
+                      audio_format =
+                          (format_flags & 0x01) ? GST_AUDIO_FORMAT_F32LE :
+                          GST_AUDIO_FORMAT_F32BE;
+                      break;
+                    case 64:
+                      audio_format =
+                          (format_flags & 0x01) ? GST_AUDIO_FORMAT_F64LE :
+                          GST_AUDIO_FORMAT_F64BE;
+                      break;
+                    default:
+                      GST_WARNING_OBJECT (qtdemux,
+                          "Unsupported floating point PCM sample size %u",
+                          pcm_sample_size);
+                      break;
+                  }
+                }
+                gst_caps_set_simple (entry->caps,
+                    "format", G_TYPE_STRING,
+                    audio_format !=
+                    GST_AUDIO_FORMAT_UNKNOWN ?
+                    gst_audio_format_to_string (audio_format) : "UNKNOWN",
+                    NULL);
+
+                entry->bytes_per_sample = pcm_sample_size / 8;
+                entry->samples_per_frame = entry->n_channels;
+                entry->bytes_per_frame =
+                    entry->n_channels * entry->bytes_per_sample;
+                entry->samples_per_packet = entry->samples_per_frame;
+                entry->bytes_per_packet = entry->bytes_per_sample;
+
+                stream->min_buffer_size = 1024 * entry->bytes_per_frame;
+                stream->max_buffer_size = entry->rate * entry->bytes_per_frame;
+                GST_DEBUG ("setting min/max buffer sizes to %d/%d",
+                    stream->min_buffer_size, stream->max_buffer_size);
+
+                stream->alignment = pcm_sample_size / 8;
+              } else {
+                GST_WARNING_OBJECT (qtdemux,
+                    "Unsupported pcmC version/flags %08x", version_flags);
+              }
+            }
+          } else {
+            GST_WARNING_OBJECT (qtdemux,
+                "%" GST_FOURCC_FORMAT " without pcmC box",
+                GST_FOURCC_ARGS (fourcc));
+          }
 
           break;
         }
@@ -13750,29 +17006,46 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
       }
 
       esds = NULL;
-      mp4a = qtdemux_tree_get_child_by_index (stsd, stsd_index);
-      if (QTDEMUX_TREE_NODE_FOURCC (mp4a) != fourcc) {
-        if (stream->protected) {
-          if (QTDEMUX_TREE_NODE_FOURCC (mp4a) == FOURCC_aavd) {
-            esds = qtdemux_tree_get_child_by_type (mp4a, FOURCC_esds);
+      wave = qtdemux_tree_get_child_by_type (stsd_entry, FOURCC_wave);
+      if (wave)
+        esds = qtdemux_tree_get_child_by_type (wave, FOURCC_esds);
+      if (!esds)
+        esds = qtdemux_tree_get_child_by_type (stsd_entry, FOURCC_esds);
+
+      btrt = qtdemux_tree_get_child_by_type (stsd_entry, FOURCC_btrt);
+
+      if (btrt) {
+        const guint8 *data;
+        guint32 size;
+
+        data = btrt->data;
+        size = QT_UINT32 (data);
+
+        /* bufferSizeDB, maxBitrate and avgBitrate - 4 bytes each */
+        if (size >= 8 + 12) {
+
+          guint32 max_bitrate = QT_UINT32 (data + 8 + 4);
+          guint32 avg_bitrate = QT_UINT32 (data + 8 + 8);
+
+          /* Some muxers seem to swap the average and maximum bitrates
+           * (I'm looking at you, YouTube), so we swap for sanity. */
+          if (max_bitrate > 0 && max_bitrate < avg_bitrate) {
+            guint temp = avg_bitrate;
+
+            avg_bitrate = max_bitrate;
+            max_bitrate = temp;
           }
-          if (QTDEMUX_TREE_NODE_FOURCC (mp4a) != FOURCC_enca) {
-            mp4a = NULL;
+          if (max_bitrate > 0 && max_bitrate < G_MAXUINT32) {
+            gst_tag_list_add (stream->stream_tags,
+                GST_TAG_MERGE_REPLACE, GST_TAG_MAXIMUM_BITRATE,
+                max_bitrate, NULL);
           }
-        } else {
-          mp4a = NULL;
+          if (avg_bitrate > 0 && avg_bitrate < G_MAXUINT32) {
+            gst_tag_list_add (stream->stream_tags,
+                GST_TAG_MERGE_REPLACE, GST_TAG_BITRATE, avg_bitrate, NULL);
+          }
         }
       }
-
-      wave = NULL;
-      if (mp4a) {
-        wave = qtdemux_tree_get_child_by_type (mp4a, FOURCC_wave);
-        if (wave)
-          esds = qtdemux_tree_get_child_by_type (wave, FOURCC_esds);
-        if (!esds)
-          esds = qtdemux_tree_get_child_by_type (mp4a, FOURCC_esds);
-      }
-
 
       /* If the fourcc's bottom 16 bits gives 'sm', then the top
          16 bits is a byte-swapped wave-style codec identifier,
@@ -13846,47 +17119,38 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
 #endif // GSTREAMER_LITE
       } else {
         switch (fourcc) {
-#if 0
-            /* FIXME: what is in the chunk? */
+          case FOURCC_QDM2:
           case FOURCC_QDMC:
           {
-            gint len = QT_UINT32 (stsd_data);
+            if (wave) {
+              guint32 len = QT_UINT32 (wave->data);
 
-            /* seems to be always = 116 = 0x74 */
-            break;
-          }
-#endif
-          case FOURCC_QDM2:
-          {
-            gint len = QT_UINT32 (stsd_entry_data);
+              if (len > 8) {
+                GstBuffer *buf = gst_buffer_new_and_alloc (len - 8);
 
-            if (len > 0x3C) {
-              GstBuffer *buf = gst_buffer_new_and_alloc (len - 0x3C);
-
-              gst_buffer_fill (buf, 0, stsd_entry_data + 0x3C, len - 0x3C);
-              gst_caps_set_simple (entry->caps,
-                  "codec_data", GST_TYPE_BUFFER, buf, NULL);
-              gst_buffer_unref (buf);
+                gst_buffer_fill (buf, 0, (const guint8 *) wave->data + 8,
+                    len - 8);
+                gst_caps_set_simple (entry->caps, "codec_data", GST_TYPE_BUFFER,
+                    buf, NULL);
+                gst_buffer_unref (buf);
+              }
             }
+
             gst_caps_set_simple (entry->caps,
                 "samplesize", G_TYPE_INT, samplesize, NULL);
             break;
           }
           case FOURCC_alac:
           {
-            GNode *alac, *wave = NULL;
+            GNode *alac;
 
             /* apparently, m4a has this atom appended directly in the stsd entry,
              * while mov has it in a wave atom */
-            alac = qtdemux_tree_get_child_by_type (stsd, FOURCC_alac);
-            if (alac) {
-              /* alac now refers to stsd entry atom */
-              wave = qtdemux_tree_get_child_by_type (alac, FOURCC_wave);
-              if (wave)
-                alac = qtdemux_tree_get_child_by_type (wave, FOURCC_alac);
-              else
-                alac = qtdemux_tree_get_child_by_type (alac, FOURCC_alac);
-            }
+            /* alac now refers to stsd entry atom */
+            if (wave)
+              alac = qtdemux_tree_get_child_by_type (wave, FOURCC_alac);
+            else
+              alac = qtdemux_tree_get_child_by_type (stsd_entry, FOURCC_alac);
             if (alac) {
               const guint8 *alac_data = alac->data;
               gint len = QT_UINT32 (alac->data);
@@ -13917,13 +17181,10 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
           case FOURCC_fLaC:
           {
             /* The codingname of the sample entry is 'fLaC' */
-            GNode *flac = qtdemux_tree_get_child_by_type (stsd, FOURCC_fLaC);
-
-            if (flac) {
-              /* The 'dfLa' box is added to the sample entry to convey
-                 initializing information for the decoder. */
-              const GNode *dfla =
-                  qtdemux_tree_get_child_by_type (flac, FOURCC_dfLa);
+            /* The 'dfLa' box is added to the sample entry to convey
+               initializing information for the decoder. */
+            const GNode *dfla =
+                qtdemux_tree_get_child_by_type (stsd_entry, FOURCC_dfLa);
 
               if (dfla) {
                 const guint32 len = QT_UINT32 (dfla->data);
@@ -14011,67 +17272,51 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
                    * METADATA_BLOCK_STREAMINFO block */
                   CUR_STREAM (stream)->rate =
                       (QT_UINT32 (metadata_blocks + 14) >> 12) & 0xFFFFF;
-                }
               }
             }
             break;
           }
           case FOURCC_sawb:
-            /* Fallthrough! */
             amrwb = TRUE;
+            /* FALLTHROUGH */
           case FOURCC_samr:
           {
-            gint len = QT_UINT32 (stsd_entry_data);
-
-            if (len > 0x24) {
-              GstBuffer *buf = gst_buffer_new_and_alloc (len - 0x24);
+            const GNode *damr =
+                qtdemux_tree_get_child_by_type (stsd_entry, FOURCC_damr);
+            if (damr) {
+              guint32 len = QT_UINT32 (damr->data);
+              GstBuffer *buf = gst_buffer_new_and_alloc (len);
               guint bitrate;
 
-              gst_buffer_fill (buf, 0, stsd_entry_data + 0x24, len - 0x24);
-
-              /* If we have enough data, let's try to get the 'damr' atom. See
-               * the 3GPP container spec (26.244) for more details. */
-              if ((len - 0x34) > 8 &&
-                  (bitrate = qtdemux_parse_amr_bitrate (buf, amrwb))) {
-                gst_tag_list_add (stream->stream_tags, GST_TAG_MERGE_REPLACE,
-                    GST_TAG_MAXIMUM_BITRATE, bitrate, NULL);
-              }
+              gst_buffer_fill (buf, 0, damr->data, len);
 
               gst_caps_set_simple (entry->caps,
                   "codec_data", GST_TYPE_BUFFER, buf, NULL);
               gst_buffer_unref (buf);
+
+              /* If we have enough data, let's try to get the 'damr' atom. See
+               * the 3GPP container spec (26.244) for more details. */
+              if (len > 8 &&
+                  (bitrate =
+                      qtdemux_parse_amr_bitrate (damr->data, len, amrwb))) {
+                gst_tag_list_add (stream->stream_tags, GST_TAG_MERGE_REPLACE,
+                    GST_TAG_MAXIMUM_BITRATE, bitrate, NULL);
+              }
             }
             break;
           }
           case FOURCC_mp4a:
           {
             /* mp4a atom withtout ESDS; Attempt to build codec data from atom */
-            gint len = QT_UINT32 (stsd_entry_data);
-            guint16 sound_version = 0;
             /* FIXME: Can this be determined somehow? There doesn't seem to be
-             * anything in mp4a atom that specifis compression */
+             * anything in mp4a atom that specifies compression */
             gint profile = 2;
             guint16 channels = entry->n_channels;
-            guint32 time_scale = (guint32) entry->rate;
+            guint32 sample_rate = (guint32) entry->rate;
             gint sample_rate_index = -1;
 
-            if (len >= 34) {
-              sound_version = QT_UINT16 (stsd_entry_data + 16);
-
-              if (sound_version == 1) {
-                channels = QT_UINT16 (stsd_entry_data + 24);
-                time_scale = QT_UINT32 (stsd_entry_data + 30);
-              } else {
-                GST_FIXME_OBJECT (qtdemux, "Unhandled mp4a atom version %d",
-                    sound_version);
-              }
-            } else {
-              GST_DEBUG_OBJECT (qtdemux, "Too small stsd entry data len %d",
-                  len);
-            }
-
             sample_rate_index =
-                gst_codec_utils_aac_get_index_from_sample_rate (time_scale);
+                gst_codec_utils_aac_get_index_from_sample_rate (sample_rate);
             if (sample_rate_index >= 0 && channels > 0) {
               guint8 codec_data[2];
               GstBuffer *buf;
@@ -14090,15 +17335,209 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
             }
             break;
           }
-          case FOURCC_opus:
+          case FOURCC_mha1:
+          case FOURCC_mhm1:
+          {
+            GNode *mhaC =
+                qtdemux_tree_get_child_by_type (stsd_entry, FOURCC_mhaC);
+            if (mhaC) {
+              GstByteReader br;
+              guint32 mhaC_box_length;
+              guint8 configuration_version;
+              guint8 audio_profile_level_indication;
+              guint8 reference_channel_layout;
+              guint16 mpegh3da_config_length;
+              GstBuffer *mpegh3da_config_buf;
+              const guint8 *mpegh3da_config_data;
+              const guint8 *data = mhaC->data;
+
+              /* The mhaC box begins with a MHADecoderConfigurationRecord.
+               * This record contains the following information:
+               *
+               * - configuration version (1 byte)
+               * - MPEG-H 3D audio profile level indication (1 byte)
+               * - reference channel layout (1 byte)
+               * - MPEG-H 3D audio configuration length (2 bytes)
+               *
+               * Combined with the usual FourCC and box length, this
+               * results in a minimum box length of 8+5 = 13 bytes.
+               */
+              const guint32 min_mhaC_box_length = 8 + 5;
+
+              mhaC_box_length = QT_UINT32 (data);
+              if (mhaC_box_length < min_mhaC_box_length) {
+                GST_ERROR_OBJECT (qtdemux,
+                    "mhaC box length is less than expected; "
+                    "expected at least %" G_GUINT32_FORMAT " byte(s), got %"
+                    G_GUINT32_FORMAT, min_mhaC_box_length, mhaC_box_length);
+                goto corrupt_file;
+              }
+
+              /* The 8-byte offset is there to skip over FourCC and length
+               * when setting up the byte reader. */
+              gst_byte_reader_init (&br, data + 8, mhaC_box_length - 8);
+
+              configuration_version = gst_byte_reader_get_uint8_unchecked (&br);
+              if (configuration_version != 1) {
+                GST_INFO_OBJECT (qtdemux, "mhaC configuration box version "
+                    "is %d, which is unsupported (expected version 1)",
+                    configuration_version);
+                goto unknown_stream;
+              }
+
+              /* These profile levels are defined in ISO/IEC 23008-3, subclause 5.3.2.
+               * Levels always start at 1 in the specification. The indication byte
+               * encodes them in ranges. 0x01 - 0x05 Are levels 1 to 5 of the main
+               * profile, 0x06 - 0x0A are levels 1 to 5 of the high profile etc. */
+              audio_profile_level_indication =
+                  gst_byte_reader_get_uint8_unchecked (&br);
+              switch (audio_profile_level_indication) {
+                case 0x01:
+                case 0x02:
+                case 0x03:
+                case 0x04:
+                case 0x05:
+                  gst_caps_set_simple (entry->caps, "profile", G_TYPE_STRING,
+                      "main", "level", G_TYPE_INT,
+                      audio_profile_level_indication - 0x00, NULL);
+                  break;
+                case 0x06:
+                case 0x07:
+                case 0x08:
+                case 0x09:
+                case 0x0A:
+                  gst_caps_set_simple (entry->caps, "profile", G_TYPE_STRING,
+                      "high", "level", G_TYPE_INT,
+                      audio_profile_level_indication - 0x05, NULL);
+                  break;
+                case 0x0B:
+                case 0x0C:
+                case 0x0D:
+                case 0x0E:
+                case 0x0F:
+                  gst_caps_set_simple (entry->caps, "profile", G_TYPE_STRING,
+                      "low-complexity", "level", G_TYPE_INT,
+                      audio_profile_level_indication - 0x0A, NULL);
+                  break;
+                case 0x10:
+                case 0x11:
+                case 0x12:
+                case 0x13:
+                case 0x14:
+                  gst_caps_set_simple (entry->caps, "profile", G_TYPE_STRING,
+                      "baseline", "level", G_TYPE_INT,
+                      audio_profile_level_indication - 0x0F, NULL);
+                  break;
+                default:
+                  GST_WARNING_OBJECT (qtdemux,
+                      "mhaC configuration box audio profile level "
+                      "indication %#x is not supported",
+                      audio_profile_level_indication);
+                  goto unknown_stream;
+              }
+
+              /* This layout is defined in ISO/IEC 23091-3. It is added to the caps
+               * as information about the MPEG-H content, but it is important to note
+               * that this value is _not_ the same as a channel count, and deriving
+               * a channel count out of it is not correct. */
+              reference_channel_layout =
+                  gst_byte_reader_get_uint8_unchecked (&br);
+              gst_caps_set_simple (entry->caps, "reference-channel-layout",
+                  G_TYPE_INT, reference_channel_layout, NULL);
+
+              /* The MPEG-H 3D audio configuration length is now read. Right
+               * after it, the configuration data follows. Consequently, it
+               * is expected that the remaining bytes in the byte reader
+               * are not fewer than what mpegh3da_config_length indicates. */
+
+              mpegh3da_config_length =
+                  gst_byte_reader_get_uint16_be_unchecked (&br);
+              if (G_UNLIKELY ((mpegh3da_config_length == 0) ||
+                      (gst_byte_reader_get_remaining (&br) <
+                          mpegh3da_config_length))) {
+                GST_WARNING_OBJECT (qtdemux,
+                    "mhaC configuration box contains"
+                    " invalid configuration length %" G_GUINT16_FORMAT,
+                    mpegh3da_config_length);
+                goto corrupt_file;
+              }
+
+              GST_DEBUG_OBJECT (qtdemux, "reading mpegh3da config data with %"
+                  G_GUINT16_FORMAT
+                  " byte(s) and adding it to caps as codec_data",
+                  mpegh3da_config_length);
+              mpegh3da_config_data = gst_byte_reader_get_data_unchecked (&br,
+                  mpegh3da_config_length);
+              mpegh3da_config_buf =
+                  gst_buffer_new_memdup (mpegh3da_config_data,
+                  mpegh3da_config_length);
+              gst_caps_set_simple (entry->caps, "codec_data", GST_TYPE_BUFFER,
+                  mpegh3da_config_buf, NULL);
+              gst_buffer_unref (mpegh3da_config_buf);
+            } else {
+              if (fourcc == FOURCC_mha1) {
+                GST_ERROR_OBJECT (qtdemux, "mha1 sample entry does not contain"
+                    " mhaC configuration box");
+                goto corrupt_file;
+              }
+            }
+            break;
+          }
+          case FOURCC_opus:{
+            /* Fully handled elsewhere */
+            break;
+          }
+          case FOURCC_raw_:
+          case FOURCC_sowt:
+          case FOURCC_twos:
           case FOURCC_lpcm:
+          case FOURCC_ipcm:
+          case FOURCC_fpcm:
           case FOURCC_in24:
           case FOURCC_in32:
           case FOURCC_fl32:
           case FOURCC_fl64:
-          case FOURCC_s16l:
-            /* Fully handled elsewhere */
+          case FOURCC_s16l:{
+            GNode *chnl, *chan;
+
+            // Parse channel layout information for raw PCM
+            chnl = qtdemux_tree_get_child_by_type (stsd_entry, FOURCC_chnl);
+            chan = qtdemux_tree_get_child_by_type (stsd_entry, FOURCC_chan);
+
+            if (chnl) {
+              const guint8 *data = chnl->data;
+              gsize len = QT_UINT32 (data);
+              if (len >= 8 + 4) {
+                GstByteReader br = GST_BYTE_READER_INIT (data, len);
+                // Skip over fourcc and length
+                gst_byte_reader_skip_unchecked (&br, 4 + 4);
+                qtdemux_parse_chnl (qtdemux, &br, stream, entry);
+              }
+            } else if (chan) {
+              const guint8 *data = chan->data;
+              gsize len = QT_UINT32 (data);
+              if (len >= 8 + 4) {
+                GstByteReader br = GST_BYTE_READER_INIT (data, len);
+                // Skip over fourcc and length
+                gst_byte_reader_skip_unchecked (&br, 4 + 4);
+                qtdemux_parse_chan (qtdemux, &br, stream, entry);
+              }
+            } else {
+              GST_DEBUG_OBJECT (qtdemux,
+                  "Configuring default channel mask for %u channels",
+                  entry->n_channels);
+
+              if (entry->n_channels > 1) {
+                // Set a default channel mask if all is unknown
+                guint64 default_mask =
+                    gst_audio_channel_get_fallback_mask (entry->n_channels);
+
+                gst_caps_set_simple (entry->caps, "channel-mask",
+                    GST_TYPE_BITMASK, default_mask, NULL);
+              }
+            }
             break;
+          }
           default:
             GST_INFO_OBJECT (qtdemux,
                 "unhandled type %" GST_FOURCC_FORMAT, GST_FOURCC_ARGS (fourcc));
@@ -14126,8 +17565,7 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
       entry->sparse = TRUE;
 
       entry->caps =
-          qtdemux_sub_caps (qtdemux, stream, entry, fourcc, stsd_entry_data,
-          &codec);
+          qtdemux_sub_caps (qtdemux, stream, entry, fourcc, stsd_entry, &codec);
       if (codec) {
         gst_tag_list_add (stream->stream_tags, GST_TAG_MERGE_REPLACE,
             GST_TAG_SUBTITLE_CODEC, codec, NULL);
@@ -14139,13 +17577,10 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
       switch (fourcc) {
         case FOURCC_mp4s:
         {
-          GNode *mp4s = NULL;
           GNode *esds = NULL;
 
           /* look for palette in a stsd->mp4s->esds sub-atom */
-          mp4s = qtdemux_tree_get_child_by_type (stsd, FOURCC_mp4s);
-          if (mp4s)
-            esds = qtdemux_tree_get_child_by_type (mp4s, FOURCC_esds);
+          esds = qtdemux_tree_get_child_by_type (stsd_entry, FOURCC_esds);
           if (esds == NULL) {
             /* Invalid STSD */
             GST_LOG_OBJECT (qtdemux, "Skipping invalid stsd: no esds child");
@@ -14165,11 +17600,17 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
           "type %" GST_FOURCC_FORMAT " caps %" GST_PTR_FORMAT,
           GST_FOURCC_ARGS (fourcc), entry->caps);
     } else if (stream->subtype == FOURCC_meta) {
+      if (fourcc == FOURCC_fdsc) {
+        // GoPro SOS track with file recovery data, ignore this stream
+        // See: https://gitlab.freedesktop.org/gstreamer/gstreamer/-/issues/4679
+        goto ignored_stream;
+      }
+
       entry->sampled = TRUE;
       entry->sparse = TRUE;
 
       entry->caps =
-          qtdemux_meta_caps (qtdemux, stream, entry, fourcc, stsd_entry_data,
+          qtdemux_meta_caps (qtdemux, stream, entry, fourcc, stsd_entry,
           &codec);
       if (codec) {
         gst_tag_list_add (stream->stream_tags, GST_TAG_MERGE_REPLACE,
@@ -14186,7 +17627,7 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
       entry->sampled = TRUE;
 
       entry->caps =
-          qtdemux_generic_caps (qtdemux, stream, entry, fourcc, stsd_entry_data,
+          qtdemux_generic_caps (qtdemux, stream, entry, fourcc, stsd_entry,
           &codec);
 
       if (entry->caps == NULL)
@@ -14214,10 +17655,6 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
     } else if (entry->fourcc == FOURCC_mp4a) {
       entry->sampled = TRUE;
     }
-
-
-    stsd_entry_data += len;
-    remaining_stsd_len -= len;
   }
 
   /* Sample grouping support */
@@ -14347,6 +17784,13 @@ unknown_stream:
   {
     GST_INFO_OBJECT (qtdemux, "unknown subtype %" GST_FOURCC_FORMAT,
         GST_FOURCC_ARGS (stream->subtype));
+    gst_qtdemux_stream_unref (stream);
+    return TRUE;
+  }
+ignored_stream:
+  {
+    GST_INFO_OBJECT (qtdemux, "ignored stream type %" GST_FOURCC_FORMAT,
+        GST_FOURCC_ARGS (fourcc));
     gst_qtdemux_stream_unref (stream);
     return TRUE;
   }
@@ -14961,30 +18405,60 @@ qtdemux_parse_tree (GstQTDemux * qtdemux)
   GNode *pssh;
   guint64 creation_time;
   GstDateTime *datetime = NULL;
-  gint version;
+  guint8 version;
+  GstByteReader mvhd_reader;
+  guint32 matrix[9];
 
   /* make sure we have a usable taglist */
   qtdemux->tag_list = gst_tag_list_make_writable (qtdemux->tag_list);
 
-  mvhd = qtdemux_tree_get_child_by_type (qtdemux->moov_node, FOURCC_mvhd);
+  mvhd = qtdemux_tree_get_child_by_type_full (qtdemux->moov_node,
+      FOURCC_mvhd, &mvhd_reader);
   if (mvhd == NULL) {
     GST_LOG_OBJECT (qtdemux, "No mvhd node found, looking for redirects.");
     return qtdemux_parse_redirects (qtdemux);
   }
 
-  version = QT_UINT8 ((guint8 *) mvhd->data + 8);
+  if (!gst_byte_reader_get_uint8 (&mvhd_reader, &version))
+    return FALSE;
+  /* flags */
+  if (!gst_byte_reader_skip (&mvhd_reader, 3))
+    return FALSE;
   if (version == 1) {
-    creation_time = QT_UINT64 ((guint8 *) mvhd->data + 12);
-    qtdemux->timescale = QT_UINT32 ((guint8 *) mvhd->data + 28);
-    qtdemux->duration = QT_UINT64 ((guint8 *) mvhd->data + 32);
+    if (!gst_byte_reader_get_uint64_be (&mvhd_reader, &creation_time))
+      return FALSE;
+    /* modification time */
+    if (!gst_byte_reader_skip (&mvhd_reader, 8))
+      return FALSE;
+    if (!gst_byte_reader_get_uint32_be (&mvhd_reader, &qtdemux->timescale))
+      return FALSE;
+    if (!gst_byte_reader_get_uint64_be (&mvhd_reader, &qtdemux->duration))
+      return FALSE;
   } else if (version == 0) {
-    creation_time = QT_UINT32 ((guint8 *) mvhd->data + 12);
-    qtdemux->timescale = QT_UINT32 ((guint8 *) mvhd->data + 20);
-    qtdemux->duration = QT_UINT32 ((guint8 *) mvhd->data + 24);
+    guint32 tmp;
+
+    if (!gst_byte_reader_get_uint32_be (&mvhd_reader, &tmp))
+      return FALSE;
+    creation_time = tmp;
+    /* modification time */
+    if (!gst_byte_reader_skip (&mvhd_reader, 4))
+      return FALSE;
+    if (!gst_byte_reader_get_uint32_be (&mvhd_reader, &qtdemux->timescale))
+      return FALSE;
+    if (!gst_byte_reader_get_uint32_be (&mvhd_reader, &tmp))
+      return FALSE;
+    qtdemux->duration = tmp;
   } else {
     GST_WARNING_OBJECT (qtdemux, "Unhandled mvhd version %d", version);
     return FALSE;
   }
+
+  if (!gst_byte_reader_skip (&mvhd_reader, 4 + 2 + 2 + 2 * 4))
+    return FALSE;
+
+  if (!qtdemux_parse_transformation_matrix (qtdemux, &mvhd_reader, matrix,
+          "mvhd"))
+    return FALSE;
 
   /* Moving qt creation time (secs since 1904) to unix time */
   if (creation_time != 0) {
@@ -15055,10 +18529,10 @@ qtdemux_parse_tree (GstQTDemux * qtdemux)
   trak = qtdemux_tree_get_child_by_type (qtdemux->moov_node, FOURCC_trak);
   while (trak) {
 #ifdef GSTREAMER_LITE
-      if (!qtdemux_parse_trak (qtdemux, trak))
+      if (!qtdemux_parse_trak (qtdemux, trak, matrix))
         return FALSE;
 #else
-    qtdemux_parse_trak (qtdemux, trak);
+    qtdemux_parse_trak (qtdemux, trak, matrix);
 #endif // GSTREAMER_LITE
     /* iterate all siblings */
     trak = qtdemux_tree_get_sibling_by_type (trak, FOURCC_trak);
@@ -15234,12 +18708,24 @@ gst_qtdemux_handle_esds (GstQTDemux * qtdemux, QtDemuxStream * stream,
 
     switch (tag) {
       case ES_DESCRIPTOR_TAG:
+        if (len < 3) {
+          GST_WARNING_OBJECT (qtdemux, "ES descriptor too short (%d < 3)", len);
+          ptr += len;
+          break;
+        }
         GST_DEBUG_OBJECT (qtdemux, "ID 0x%04x", QT_UINT16 (ptr));
         GST_DEBUG_OBJECT (qtdemux, "priority 0x%04x", QT_UINT8 (ptr + 2));
         ptr += 3;
         break;
       case DECODER_CONFIG_DESC_TAG:{
         guint max_bitrate, avg_bitrate;
+
+        if (len < 13) {
+          GST_WARNING_OBJECT (qtdemux,
+              "Decoder config descriptor too short (%d < 13)", len);
+          ptr += len;
+          break;
+        }
 
         object_type_id = QT_UINT8 (ptr);
         stream_type = QT_UINT8 (ptr + 1) >> 2;
@@ -15306,6 +18792,12 @@ gst_qtdemux_handle_esds (GstQTDemux * qtdemux, QtDemuxStream * stream,
         ptr += len;
         break;
       case SL_CONFIG_DESC_TAG:
+        if (len < 1) {
+          GST_WARNING_OBJECT (qtdemux,
+              "SL config descriptor too short (%d < 1)", len);
+          ptr += len;
+          break;
+        }
         GST_DEBUG_OBJECT (qtdemux, "data %02x", QT_UINT8 (ptr));
         ptr += 1;
         break;
@@ -15554,7 +19046,7 @@ gst_qtdemux_handle_esds (GstQTDemux * qtdemux, QtDemuxStream * stream,
                   }
 
                   gst_buffer_unref (esds_buffer);
-               }
+              }
           }
               break;
           default:
@@ -15597,7 +19089,7 @@ _get_unknown_codec_name (const gchar * type, guint32 fourcc)
 static GstCaps *
 qtdemux_video_caps (GstQTDemux * qtdemux, QtDemuxStream * stream,
     QtDemuxStreamStsdEntry * entry, guint32 fourcc,
-    const guint8 * stsd_entry_data, gchar ** codec_name)
+    GNode * stsd_entry, gchar ** codec_name)
 {
   GstCaps *caps = NULL;
   GstVideoFormat format = GST_VIDEO_FORMAT_UNKNOWN;
@@ -15653,7 +19145,8 @@ qtdemux_video_caps (GstQTDemux * qtdemux, QtDemuxStream * stream,
     {
       guint16 bps;
 
-      bps = QT_UINT16 (stsd_entry_data + 82);
+      // Read VisualSampleEntry depth. Size is checked by the caller already.
+      bps = QT_UINT16 ((const guint8 *) stsd_entry->data + 82);
       switch (bps) {
         case 15:
           format = GST_VIDEO_FORMAT_RGB15;
@@ -15709,6 +19202,7 @@ qtdemux_video_caps (GstQTDemux * qtdemux, QtDemuxStream * stream,
        */
     case GST_MAKE_FOURCC ('m', 'p', 'e', 'g'):
     case GST_MAKE_FOURCC ('m', 'p', 'g', '1'):
+    case GST_MAKE_FOURCC ('m', '1', 'v', ' '):
       _codec ("MPEG-1 video");
       caps = gst_caps_new_simple ("video/mpeg", "mpegversion", G_TYPE_INT, 1,
           "systemstream", G_TYPE_BOOLEAN, FALSE, NULL);
@@ -15886,6 +19380,19 @@ qtdemux_video_caps (GstQTDemux * qtdemux, QtDemuxStream * stream,
           "stream-format", G_TYPE_STRING, "hev1",
           "alignment", G_TYPE_STRING, "au", NULL);
       break;
+    case FOURCC_H266:
+    case FOURCC_vvc1:
+      _codec ("H.266 / VVC");
+      caps = gst_caps_new_simple ("video/x-h266",
+          "stream-format", G_TYPE_STRING, "vvc1",
+          "alignment", G_TYPE_STRING, "au", NULL);
+      break;
+    case FOURCC_vvi1:
+      _codec ("H.266 / VVC");
+      caps = gst_caps_new_simple ("video/x-h266",
+          "stream-format", G_TYPE_STRING, "vvi1",
+          "alignment", G_TYPE_STRING, "au", NULL);
+      break;
     case FOURCC_rle_:
       _codec ("Run-length encoding");
       caps = gst_caps_new_simple ("video/x-rle",
@@ -15965,7 +19472,15 @@ qtdemux_video_caps (GstQTDemux * qtdemux, QtDemuxStream * stream,
       break;
     case GST_MAKE_FOURCC ('A', 'V', 'd', 'n'):
       _codec ("AVID DNxHD");
-      caps = gst_caps_from_string ("video/x-dnxhd");
+      caps =
+          gst_caps_new_simple ("video/x-dnxhd", "profile", G_TYPE_STRING,
+          "dnxhd", NULL);
+      break;
+    case GST_MAKE_FOURCC ('A', 'V', 'd', 'h'):
+      _codec ("AVID DNxHR");
+      caps =
+          gst_caps_new_simple ("video/x-dnxhd", "profile", G_TYPE_STRING,
+          "dnxhr", NULL);
       break;
     case FOURCC_VP80:
     case FOURCC_vp08:
@@ -16059,6 +19574,107 @@ qtdemux_video_caps (GstQTDemux * qtdemux, QtDemuxStream * stream,
       g_free (format);
       break;
     }
+    case FOURCC_LAGS:
+      _codec ("Lagarith lossless video codec");
+      caps = gst_caps_new_empty_simple ("video/x-lagarith");
+      break;
+    case FOURCC_Hap1:
+    case FOURCC_Hap5:
+    case FOURCC_HapY:
+    case FOURCC_HapM:
+    case FOURCC_HapA:
+    case FOURCC_Hap7:
+    case FOURCC_HapH:{
+      gchar *variant =
+          g_strdup_printf ("%" GST_FOURCC_FORMAT, GST_FOURCC_ARGS (fourcc));
+      caps = gst_caps_new_simple ("video/x-hap",
+          "variant", G_TYPE_STRING, variant, NULL);
+      g_free (variant);
+
+      // https://github.com/Vidvox/hap/blob/master/documentation/HapVideoDRAFT.md
+      switch (fourcc) {
+        case FOURCC_Hap5:
+          _codec ("Hap Alpha");
+          break;
+        case FOURCC_HapY:
+          _codec ("Hap Q");
+          break;
+        case FOURCC_HapM:
+          _codec ("Hap Q Alpha");
+          break;
+        case FOURCC_HapA:
+          _codec ("Hap Alpha-Only");
+          break;
+        case FOURCC_Hap7:
+          _codec ("Hap R");
+          break;
+        case FOURCC_HapH:
+          _codec ("Hap HDR");
+          break;
+        case FOURCC_Hap1:
+        default:
+          _codec ("Hap");
+          break;
+      }
+      break;
+    }
+    case FOURCC_uncv:
+    {
+      GNode *uncC_node, *cmpd_node;
+
+      GstByteReader reader;
+      UncompressedFrameConfigBox uncC = { 0 };
+      ComponentDefinitionBox cmpd = { 0 };
+
+      uncC_node =
+          qtdemux_tree_get_child_by_type_full (stsd_entry, FOURCC_uncC,
+          &reader);
+      if (!uncC_node) {
+        GST_WARNING_OBJECT (qtdemux,
+            "Expected to find uncC box when parsing uncv");
+        break;
+      }
+
+      if (!qtdemux_parse_uncC (qtdemux, &reader, &uncC)) {
+        GST_WARNING_OBJECT (qtdemux, "Failed parsing uncC box");
+        break;
+      }
+
+      cmpd_node =
+          qtdemux_tree_get_child_by_type_full (stsd_entry, FOURCC_cmpd,
+          &reader);
+      if (uncC.version == 0 && !cmpd_node) {
+        GST_WARNING_OBJECT (qtdemux,
+            "Expected to find cmpd box when parsing uncv");
+        break;
+      }
+
+      if (cmpd_node && !qtdemux_parse_cmpd (qtdemux, &reader, &cmpd)) {
+        GST_WARNING_OBJECT (qtdemux, "Failed parsing cmpd box");
+        break;
+      }
+
+      format = qtdemux_get_format_from_uncv (qtdemux, &uncC, &cmpd);
+      if (format != GST_VIDEO_FORMAT_UNKNOWN) {
+        stream->alignment = 32;
+
+        gst_video_info_set_format (&stream->pre_info, format, entry->width,
+            entry->height);
+        if (!qtdemux_set_info_from_uncv (qtdemux, entry, &uncC,
+                &stream->pre_info))
+          format = GST_VIDEO_FORMAT_UNKNOWN;
+      }
+
+      /* Free Memory */
+      qtdemux_clear_uncC (&uncC);
+      qtdemux_clear_cmpd (&cmpd);
+      break;
+    }
+    case GST_MAKE_FOURCC ('t', 's', 'c', '2'):
+      _codec ("TechSmith Screen Capture v2");
+      caps = gst_caps_new_simple ("video/x-tscc",
+          "tsccversion", G_TYPE_INT, 2, NULL);
+      break;
     case GST_MAKE_FOURCC ('k', 'p', 'c', 'd'):
     default:
     {
@@ -16068,16 +19684,21 @@ qtdemux_video_caps (GstQTDemux * qtdemux, QtDemuxStream * stream,
   }
 
   if (format != GST_VIDEO_FORMAT_UNKNOWN) {
-    GstVideoInfo info;
+    gst_video_info_set_format (&stream->info, format, entry->width,
+        entry->height);
 
-    gst_video_info_init (&info);
-    gst_video_info_set_format (&info, format, entry->width, entry->height);
-
-    caps = gst_video_info_to_caps (&info);
+    caps = gst_video_info_to_caps (&stream->info);
     *codec_name = gst_pb_utils_get_codec_description (caps);
+
+    /* If pre_info is initialized, then row_alignment may be neccessary */
+    if (stream->pre_info.size) {
+      stream->needs_row_alignment =
+          !gst_video_info_is_equal (&stream->info, &stream->pre_info);
+    }
 
     /* enable clipping for raw video streams */
     stream->need_clip = TRUE;
+    stream->need_reorder = TRUE;
     stream->alignment = 32;
   }
 
@@ -16098,8 +19719,9 @@ round_up_pow2 (guint n)
 
 static GstCaps *
 qtdemux_audio_caps (GstQTDemux * qtdemux, QtDemuxStream * stream,
-    QtDemuxStreamStsdEntry * entry, guint32 fourcc, const guint8 * data,
-    int len, gchar ** codec_name)
+    QtDemuxStreamStsdEntry * entry, guint32 fourcc,
+    guint8 stsd_version, guint32 version,
+    GNode * stsd_entry, gchar ** codec_name)
 {
   GstCaps *caps;
   const GstStructure *s;
@@ -16119,9 +19741,10 @@ qtdemux_audio_caps (GstQTDemux * qtdemux, QtDemuxStream * stream,
       if (depth == 8)
         format = GST_AUDIO_FORMAT_U8;
       /* otherwise it's signed and big-endian just like 'twos' */
+      /* FALLTHROUGH */
     case FOURCC_twos:
       endian = G_BIG_ENDIAN;
-      /* fall-through */
+      /* FALLTHROUGH */
     case FOURCC_sowt:
     {
       gchar *str;
@@ -16282,21 +19905,21 @@ qtdemux_audio_caps (GstQTDemux * qtdemux, QtDemuxStream * stream,
           "mpegversion", G_TYPE_INT, 4, "framed", G_TYPE_BOOLEAN, TRUE,
           "stream-format", G_TYPE_STRING, "raw", NULL);
       break;
-    case GST_MAKE_FOURCC ('Q', 'D', 'M', 'C'):
+    case FOURCC_QDMC:
       _codec ("QDesign Music");
       caps = gst_caps_new_empty_simple ("audio/x-qdm");
       break;
     case FOURCC_QDM2:
       _codec ("QDesign Music v.2");
       /* FIXME: QDesign music version 2 (no constant) */
-      if (FALSE && data) {
-        caps = gst_caps_new_simple ("audio/x-qdm2",
-            "framesize", G_TYPE_INT, QT_UINT32 (data + 52),
-            "bitrate", G_TYPE_INT, QT_UINT32 (data + 40),
-            "blocksize", G_TYPE_INT, QT_UINT32 (data + 44), NULL);
-      } else {
-        caps = gst_caps_new_empty_simple ("audio/x-qdm2");
-      }
+      // if (FALSE && data) {
+      //   caps = gst_caps_new_simple ("audio/x-qdm2",
+      //       "framesize", G_TYPE_INT, QT_UINT32 (data + 52),
+      //       "bitrate", G_TYPE_INT, QT_UINT32 (data + 40),
+      //       "blocksize", G_TYPE_INT, QT_UINT32 (data + 44), NULL);
+      // } else {
+      caps = gst_caps_new_empty_simple ("audio/x-qdm2");
+      //}
       break;
     case FOURCC_agsm:
       _codec ("GSM audio");
@@ -16339,6 +19962,8 @@ qtdemux_audio_caps (GstQTDemux * qtdemux, QtDemuxStream * stream,
       break;
     case FOURCC_lpcm:
     {
+      const guint8 *data;
+      guint32 len;
       guint32 flags = 0;
       guint32 depth = 0;
       guint32 width = 0;
@@ -16354,11 +19979,17 @@ qtdemux_audio_caps (GstQTDemux * qtdemux, QtDemuxStream * stream,
       };
       _codec ("Raw LPCM audio");
 
-      if (data && len >= 36) {
-        depth = QT_UINT32 (data + 24);
-        flags = QT_UINT32 (data + 28);
-        width = QT_UINT32 (data + 32) * 8 / entry->n_channels;
+      data = stsd_entry->data;
+      len = QT_UINT32 (data);
+
+      if (stsd_version == 0 && version == 0x00020000 && len >= 16 + 56
+          && entry->n_channels > 0) {
+        /* sample description entry (16) + sound sample description v0 (20) */
+        depth = QT_UINT32 (data + 36 + 20);
+        flags = QT_UINT32 (data + 36 + 24);
+        width = QT_UINT32 (data + 36 + 28) * 8 / entry->n_channels;
       }
+
       if ((flags & FLAG_IS_FLOAT) == 0) {
         if (depth == 0)
           depth = 16;
@@ -16401,10 +20032,34 @@ qtdemux_audio_caps (GstQTDemux * qtdemux, QtDemuxStream * stream,
       }
       break;
     }
+    case FOURCC_ipcm:
+    case FOURCC_fpcm:
+    {
+      _codec ("RAW PCM audio");
+      caps =
+          gst_caps_new_simple ("audio/x-raw", "layout", G_TYPE_STRING,
+          "interleaved", NULL);
+      break;
+    }
     case GST_MAKE_FOURCC ('a', 'c', '-', '4'):
     {
       _codec ("AC4");
       caps = gst_caps_new_empty_simple ("audio/x-ac4");
+      break;
+    }
+    case FOURCC_mha1:
+    case FOURCC_mhm1:
+    {
+      caps = gst_caps_new_simple ("audio/x-mpeg-h",
+          "stream-type", G_TYPE_STRING, "single",
+          "framed", G_TYPE_BOOLEAN, TRUE, NULL);
+      if (fourcc == FOURCC_mha1) {
+        gst_caps_set_simple (caps, "stream-format", G_TYPE_STRING, "raw", NULL);
+      } else {
+        gst_caps_set_simple (caps, "stream-format", G_TYPE_STRING, "mhas",
+            NULL);
+      }
+      _codec ("MPEG-H 3D audio");
       break;
     }
     case GST_MAKE_FOURCC ('q', 't', 'v', 'r'):
@@ -16430,6 +20085,7 @@ qtdemux_audio_caps (GstQTDemux * qtdemux, QtDemuxStream * stream,
   name = gst_structure_get_name (s);
   if (g_str_has_prefix (name, "audio/x-raw")) {
     stream->need_clip = TRUE;
+    stream->need_reorder = TRUE;
     stream->min_buffer_size = 1024 * entry->bytes_per_frame;
     stream->max_buffer_size = entry->rate * entry->bytes_per_frame;
     GST_DEBUG ("setting min/max buffer sizes to %d/%d", stream->min_buffer_size,
@@ -16441,7 +20097,7 @@ qtdemux_audio_caps (GstQTDemux * qtdemux, QtDemuxStream * stream,
 static GstCaps *
 qtdemux_sub_caps (GstQTDemux * qtdemux, QtDemuxStream * stream,
     QtDemuxStreamStsdEntry * entry, guint32 fourcc,
-    const guint8 * stsd_entry_data, gchar ** codec_name)
+    GNode * stsd_entry, gchar ** codec_name)
 {
   GstCaps *caps;
 
@@ -16512,7 +20168,7 @@ qtdemux_sub_caps (GstQTDemux * qtdemux, QtDemuxStream * stream,
 static GstCaps *
 qtdemux_meta_caps (GstQTDemux * qtdemux, QtDemuxStream * stream,
     QtDemuxStreamStsdEntry * entry, guint32 fourcc,
-    const guint8 * stsd_entry_data, gchar ** codec_name)
+    GNode * stsd_entry, gchar ** codec_name)
 {
   GstCaps *caps = NULL;
 
@@ -16520,6 +20176,7 @@ qtdemux_meta_caps (GstQTDemux * qtdemux, QtDemuxStream * stream,
 
   switch (fourcc) {
     case FOURCC_metx:{
+      const guint8 *stsd_entry_data = stsd_entry->data;
       gsize size = QT_UINT32 (stsd_entry_data);
       GstByteReader reader = GST_BYTE_READER_INIT (stsd_entry_data, size);
       const gchar *content_encoding;
@@ -16569,7 +20226,7 @@ qtdemux_meta_caps (GstQTDemux * qtdemux, QtDemuxStream * stream,
 static GstCaps *
 qtdemux_generic_caps (GstQTDemux * qtdemux, QtDemuxStream * stream,
     QtDemuxStreamStsdEntry * entry, guint32 fourcc,
-    const guint8 * stsd_entry_data, gchar ** codec_name)
+    GNode * stsd_entry, gchar ** codec_name)
 {
   GstCaps *caps;
 

@@ -36,7 +36,6 @@
 #include "ObjectPropertyConditionSet.h"
 #include "PolyProtoAccessChain.h"
 #include <wtf/CommaPrinter.h>
-#include <wtf/VectorHash.h>
 
 namespace JSC {
 
@@ -151,33 +150,33 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(AccessCase);
     macro(IndexedArrayStorageInHit) \
     macro(IndexedScopedArgumentsInHit) \
     macro(IndexedDirectArgumentsInHit) \
-    macro(IndexedTypedArrayInt8InHit) \
-    macro(IndexedTypedArrayUint8InHit) \
-    macro(IndexedTypedArrayUint8ClampedInHit) \
-    macro(IndexedTypedArrayInt16InHit) \
-    macro(IndexedTypedArrayUint16InHit) \
-    macro(IndexedTypedArrayInt32InHit) \
-    macro(IndexedTypedArrayUint32InHit) \
-    macro(IndexedTypedArrayFloat16InHit) \
-    macro(IndexedTypedArrayFloat32InHit) \
-    macro(IndexedTypedArrayFloat64InHit) \
-    macro(IndexedResizableTypedArrayInt8InHit) \
-    macro(IndexedResizableTypedArrayUint8InHit) \
-    macro(IndexedResizableTypedArrayUint8ClampedInHit) \
-    macro(IndexedResizableTypedArrayInt16InHit) \
-    macro(IndexedResizableTypedArrayUint16InHit) \
-    macro(IndexedResizableTypedArrayInt32InHit) \
-    macro(IndexedResizableTypedArrayUint32InHit) \
-    macro(IndexedResizableTypedArrayFloat16InHit) \
-    macro(IndexedResizableTypedArrayFloat32InHit) \
-    macro(IndexedResizableTypedArrayFloat64InHit) \
+    macro(IndexedTypedArrayInt8In) \
+    macro(IndexedTypedArrayUint8In) \
+    macro(IndexedTypedArrayUint8ClampedIn) \
+    macro(IndexedTypedArrayInt16In) \
+    macro(IndexedTypedArrayUint16In) \
+    macro(IndexedTypedArrayInt32In) \
+    macro(IndexedTypedArrayUint32In) \
+    macro(IndexedTypedArrayFloat16In) \
+    macro(IndexedTypedArrayFloat32In) \
+    macro(IndexedTypedArrayFloat64In) \
+    macro(IndexedResizableTypedArrayInt8In) \
+    macro(IndexedResizableTypedArrayUint8In) \
+    macro(IndexedResizableTypedArrayUint8ClampedIn) \
+    macro(IndexedResizableTypedArrayInt16In) \
+    macro(IndexedResizableTypedArrayUint16In) \
+    macro(IndexedResizableTypedArrayInt32In) \
+    macro(IndexedResizableTypedArrayUint32In) \
+    macro(IndexedResizableTypedArrayFloat16In) \
+    macro(IndexedResizableTypedArrayFloat32In) \
+    macro(IndexedResizableTypedArrayFloat64In) \
     macro(IndexedStringInHit) \
     macro(IndexedNoIndexingInMiss) \
     macro(IndexedProxyObjectIn) \
     macro(IndexedMegamorphicIn) \
 
 class AccessCase : public ThreadSafeRefCounted<AccessCase> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(AccessCase);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(AccessCase, AccessCase);
 public:
     friend class InlineCacheCompiler;
     enum AccessType : uint8_t {
@@ -323,13 +322,13 @@ public:
 protected:
     AccessCase(VM&, JSCell* owner, AccessType, CacheableIdentifier, PropertyOffset, Structure*, const ObjectPropertyConditionSet&, RefPtr<PolyProtoAccessChain>&&);
     AccessCase(AccessCase&& other)
-        : m_type(WTFMove(other.m_type))
-        , m_viaGlobalProxy(WTFMove(other.m_viaGlobalProxy))
-        , m_offset(WTFMove(other.m_offset))
-        , m_structureID(WTFMove(other.m_structureID))
-        , m_conditionSet(WTFMove(other.m_conditionSet))
-        , m_polyProtoAccessChain(WTFMove(other.m_polyProtoAccessChain))
-        , m_identifier(WTFMove(other.m_identifier))
+        : m_type(WTF::move(other.m_type))
+        , m_viaGlobalProxy(WTF::move(other.m_viaGlobalProxy))
+        , m_offset(WTF::move(other.m_offset))
+        , m_structureID(WTF::move(other.m_structureID))
+        , m_conditionSet(WTF::move(other.m_conditionSet))
+        , m_polyProtoAccessChain(WTF::move(other.m_polyProtoAccessChain))
+        , m_identifier(WTF::move(other.m_identifier))
     { }
 
     AccessCase(const AccessCase& other)

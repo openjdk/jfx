@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,10 +25,9 @@
 
 #pragma once
 
-#include "InlineDisplayContent.h"
-#include "InlineLineTypes.h"
-#include <wtf/OptionSet.h>
-#include <wtf/TZoneMallocInlines.h>
+#include <WebCore/InlineDisplayContent.h>
+#include <WebCore/InlineLineTypes.h>
+#include <wtf/EnumSet.h>
 
 namespace WebCore {
 namespace Layout {
@@ -37,20 +36,20 @@ class Box;
 class InlineInvalidation;
 
 class InlineDamage {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_INLINE(InlineDamage);
+    WTF_MAKE_TZONE_ALLOCATED(InlineDamage);
 public:
     InlineDamage() = default;
     ~InlineDamage();
 
     enum class Reason : uint8_t {
-        Append        = 1 << 0,
-        Insert        = 1 << 1,
-        Remove        = 1 << 2,
-        ContentChange          = 1 << 3,
-        StyleChange            = 1 << 4,
-        Pagination             = 1 << 5
+        Append,
+        Insert,
+        Remove,
+        ContentChange,
+        StyleChange,
+        Pagination,
     };
-    OptionSet<Reason> reasons() const { return m_damageReasons; }
+    EnumSet<Reason> reasons() const { return m_damageReasons; }
 
     // FIXME: Add support for damage range with multiple, different damage types.
     struct LayoutPosition {
@@ -63,14 +62,12 @@ public:
     using TrailingDisplayBoxList = Vector<InlineDisplay::Box>;
     std::optional<InlineDisplay::Box> trailingContentForLine(size_t lineIndex) const;
 
-    void addDetachedBox(UniqueRef<Box>&& layoutBox) { m_detachedLayoutBoxes.append(WTFMove(layoutBox)); }
+    void addDetachedBox(UniqueRef<Box>&& layoutBox) { m_detachedLayoutBoxes.append(WTF::move(layoutBox)); }
 
     bool isInlineItemListDirty() const { return m_isInlineItemListDirty; }
     void setInlineItemListClean() { m_isInlineItemListDirty = false; }
 
-#ifndef NDEBUG
     bool hasDetachedContent() const { return !m_detachedLayoutBoxes.isEmpty(); }
-#endif
 
 private:
     friend class InlineInvalidation;
@@ -78,10 +75,10 @@ private:
     void setDamageReason(Reason reason) { m_damageReasons.add(reason); }
     void setLayoutStartPosition(LayoutPosition position) { m_layoutStartPosition = position; }
     void resetLayoutPosition();
-    void setTrailingDisplayBoxes(TrailingDisplayBoxList&& trailingDisplayBoxes) { m_trailingDisplayBoxes = WTFMove(trailingDisplayBoxes); }
+    void setTrailingDisplayBoxes(TrailingDisplayBoxList&& trailingDisplayBoxes) { m_trailingDisplayBoxes = WTF::move(trailingDisplayBoxes); }
     void setInlineItemListDirty() { m_isInlineItemListDirty = true; }
 
-    OptionSet<Reason> m_damageReasons;
+    EnumSet<Reason> m_damageReasons;
     bool m_isInlineItemListDirty { false };
     std::optional<LayoutPosition> m_layoutStartPosition;
     TrailingDisplayBoxList m_trailingDisplayBoxes;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -329,7 +329,7 @@ LRESULT FullScreenWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
         case WM_MOUSEWHEEL:
         case WM_MOUSEHWHEEL:
         case WM_MOUSELEAVE: {
-            BOOL handled = HandleViewMouseEvent(GetHWND(), msg, wParam, lParam);
+            BOOL handled = HandleViewMouseEvent(GetHWND(), msg, wParam, lParam, FALSE);
             if (handled && msg == WM_RBUTTONUP) {
                 // By default, DefWindowProc() sends WM_CONTEXTMENU from WM_LBUTTONUP
                 // Since DefWindowProc() is not called, call the mouse menu handler directly

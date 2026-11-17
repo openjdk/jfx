@@ -31,6 +31,7 @@
 #include "Chrome.h"
 #include "ColorBlending.h"
 #include "DocumentInlines.h"
+#include "DocumentPage.h"
 #include "ElementInlines.h"
 #include "HTMLNames.h"
 #include "HTMLOptionElement.h"
@@ -45,9 +46,11 @@
 #include "RenderBoxInlines.h"
 #include "RenderBoxModelObjectInlines.h"
 #include "RenderChildIterator.h"
+#include "RenderElementStyleInlines.h"
 #include "RenderElementInlines.h"
+#include "RenderObjectInlines.h"
 #include "RenderScrollbar.h"
-#include "RenderStyleSetters.h"
+#include "RenderStyle+SettersInlines.h"
 #include "RenderText.h"
 #include "RenderTheme.h"
 #include "RenderTreeBuilder.h"
@@ -66,7 +69,7 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderMenuList);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderMenuList);
 
 #if PLATFORM(IOS_FAMILY)
 static size_t selectedOptionCount(const RenderMenuList& renderMenuList)
@@ -85,30 +88,11 @@ static size_t selectedOptionCount(const RenderMenuList& renderMenuList)
 #endif
 
 RenderMenuList::RenderMenuList(HTMLSelectElement& element, RenderStyle&& style)
-    : RenderFlexibleBox(Type::MenuList, element, WTFMove(style))
+    : RenderFlexibleBox(Type::MenuList, element, WTF::move(style))
     , m_needsOptionsWidthUpdate(true)
     , m_optionsWidth(0)
-#if !PLATFORM(IOS_FAMILY)
-    , m_popupIsVisible(false)
-#endif
 {
     ASSERT(isRenderMenuList());
-}
-
-RenderMenuList::~RenderMenuList()
-{
-    // Do not add any code here. Add it to willBeDestroyed() instead.
-}
-
-void RenderMenuList::willBeDestroyed()
-{
-#if !PLATFORM(IOS_FAMILY)
-    if (m_popup)
-        m_popup->disconnectClient();
-    m_popup = nullptr;
-#endif
-
-    RenderFlexibleBox::willBeDestroyed();
 }
 
 void RenderMenuList::setInnerRenderer(RenderBlock& innerRenderer)
@@ -124,42 +108,41 @@ void RenderMenuList::adjustInnerStyle()
     innerStyle.setFlexGrow(1);
     innerStyle.setFlexShrink(1);
     // min-width: 0; is needed for correct shrinking.
-    innerStyle.setLogicalMinWidth(Length(0, LengthType::Fixed));
+    innerStyle.setLogicalMinWidth(0_css_px);
     // Use margin:auto instead of align-items:center to get safe centering, i.e.
     // when the content overflows, treat it the same as align-items: flex-start.
     // But we only do that for the cases where html.css would otherwise use center.
-    if (style().alignItems().position() == ItemPosition::Center) {
-        innerStyle.setMarginBefore(Length());
-        innerStyle.setMarginAfter(Length());
-
-        innerStyle.setAlignSelfPosition(ItemPosition::FlexStart);
+    if (style().alignItems().isCenter()) {
+        innerStyle.setMarginBefore(CSS::Keyword::Auto { });
+        innerStyle.setMarginAfter(CSS::Keyword::Auto { });
+        innerStyle.setAlignSelf(CSS::Keyword::FlexStart { });
     }
 
     auto paddingBox = theme().popupInternalPaddingBox(style());
-    if (!style().isHorizontalWritingMode())
-        paddingBox = LengthBox(paddingBox.left().value(), paddingBox.top().value(), paddingBox.right().value(), paddingBox.bottom().value());
+    if (!writingMode().isHorizontal())
+        paddingBox = { paddingBox.left(), paddingBox.top(), paddingBox.right(), paddingBox.bottom() };
 
-    innerStyle.setPaddingBox(WTFMove(paddingBox));
+    innerStyle.setPaddingBox(WTF::move(paddingBox));
 
     if (document().page()->chrome().selectItemWritingDirectionIsNatural()) {
         // Items in the popup will not respect the CSS text-align and direction properties,
         // so we must adjust our own style to match.
-        innerStyle.setTextAlign(TextAlignMode::Left);
+        innerStyle.setTextAlign(Style::TextAlign::Left);
         TextDirection direction = (m_buttonText && m_buttonText->text().defaultWritingDirection() == U_RIGHT_TO_LEFT) ? TextDirection::RTL : TextDirection::LTR;
         innerStyle.setDirection(direction);
 #if PLATFORM(IOS_FAMILY)
     } else if (document().page()->chrome().selectItemAlignmentFollowsMenuWritingDirection()) {
-        innerStyle.setTextAlign(style().direction() == TextDirection::LTR ? TextAlignMode::Left : TextAlignMode::Right);
+        innerStyle.setTextAlign(writingMode().isBidiLTR() ? Style::TextAlign::Left : Style::TextAlign::Right);
         TextDirection direction;
         UnicodeBidi unicodeBidi;
-        if (multiple() && selectedOptionCount(*this) != 1) {
+        if (selectElement().multiple() && selectedOptionCount(*this) != 1) {
             direction = (m_buttonText && m_buttonText->text().defaultWritingDirection() == U_RIGHT_TO_LEFT) ? TextDirection::RTL : TextDirection::LTR;
             unicodeBidi = UnicodeBidi::Normal;
         } else if (m_optionStyle) {
-            direction = m_optionStyle->direction();
+            direction = m_optionStyle->writingMode().bidiDirection();
             unicodeBidi = m_optionStyle->unicodeBidi();
         } else {
-            direction = style().direction();
+            direction = style().writingMode().bidiDirection();
             unicodeBidi = style().unicodeBidi();
         }
 
@@ -168,19 +151,20 @@ void RenderMenuList::adjustInnerStyle()
     }
 #else
     } else if (m_optionStyle && document().page()->chrome().selectItemAlignmentFollowsMenuWritingDirection()) {
-        if ((m_optionStyle->direction() != innerStyle.direction() || m_optionStyle->unicodeBidi() != innerStyle.unicodeBidi()))
-            m_innerBlock->setNeedsLayoutAndPrefWidthsRecalc();
-        innerStyle.setTextAlign(style().isLeftToRightDirection() ? TextAlignMode::Left : TextAlignMode::Right);
-        innerStyle.setDirection(m_optionStyle->direction());
+        if ((m_optionStyle->writingMode().bidiDirection() != innerStyle.writingMode().bidiDirection()
+            || m_optionStyle->unicodeBidi() != innerStyle.unicodeBidi()))
+            m_innerBlock->setNeedsLayoutAndPreferredWidthsUpdate();
+        innerStyle.setTextAlign(writingMode().isBidiLTR() ? Style::TextAlign::Left : Style::TextAlign::Right);
+        innerStyle.setDirection(m_optionStyle->writingMode().bidiDirection());
         innerStyle.setUnicodeBidi(m_optionStyle->unicodeBidi());
     }
 #endif // !PLATFORM(IOS_FAMILY)
 
     if (m_innerBlock && m_innerBlock->layoutBox()) {
-        if (auto* inlineFormattingContextRoot = dynamicDowncast<RenderBlockFlow>(*m_innerBlock); inlineFormattingContextRoot && inlineFormattingContextRoot->modernLineLayout())
-            inlineFormattingContextRoot->modernLineLayout()->rootStyleWillChange(*inlineFormattingContextRoot, innerStyle);
+        if (auto* inlineFormattingContextRoot = dynamicDowncast<RenderBlockFlow>(*m_innerBlock); inlineFormattingContextRoot && inlineFormattingContextRoot->inlineLayout())
+            inlineFormattingContextRoot->inlineLayout()->rootStyleWillChange(*inlineFormattingContextRoot, innerStyle);
         if (auto* lineLayout = LayoutIntegration::LineLayout::containing(*m_innerBlock))
-            lineLayout->styleWillChange(*m_innerBlock, innerStyle);
+            lineLayout->styleWillChange(*m_innerBlock, innerStyle, Style::DifferenceResult::Layout);
         LayoutIntegration::LineLayout::updateStyle(*m_innerBlock);
         for (auto& child : childrenOfType<RenderText>(*m_innerBlock))
             LayoutIntegration::LineLayout::updateStyle(child);
@@ -195,17 +179,17 @@ HTMLSelectElement& RenderMenuList::selectElement() const
 void RenderMenuList::didAttachChild(RenderObject& child, RenderObject*)
 {
     if (CheckedPtr cache = document().existingAXObjectCache())
-        cache->childrenChanged(this, &child);
+        cache->childrenChanged(*this, &child);
 }
 
-void RenderMenuList::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
+void RenderMenuList::styleDidChange(Style::Difference diff, const RenderStyle* oldStyle)
 {
     RenderBlock::styleDidChange(diff, oldStyle);
 
     if (m_innerBlock) // RenderBlock handled updating the anonymous block's style.
         adjustInnerStyle();
 
-    bool fontChanged = !oldStyle || oldStyle->fontCascade() != style().fontCascade();
+    bool fontChanged = !oldStyle || !oldStyle->fontCascadeEqual(style());
     if (fontChanged) {
         updateOptionsWidth();
         m_needsOptionsWidthUpdate = false;
@@ -224,21 +208,10 @@ void RenderMenuList::updateOptionsWidth()
             continue;
 
         String text = option->textIndentedToRespectGroupLabel();
-        text = applyTextTransform(style(), text, ' ');
-        if (theme().popupOptionSupportsTextIndent()) {
-            // Add in the option's text indent.  We can't calculate percentage values for now.
-            float optionWidth = 0;
-            if (auto* optionStyle = option->computedStyleForEditability())
-                optionWidth += minimumValueForLength(optionStyle->textIndent(), 0);
+        text = applyTextTransform(style(), text);
             if (!text.isEmpty()) {
                 const FontCascade& font = style().fontCascade();
                 TextRun run = RenderBlock::constructTextRun(text, style());
-                optionWidth += font.width(run);
-            }
-            maxOptionWidth = std::max(maxOptionWidth, optionWidth);
-        } else if (!text.isEmpty()) {
-            const FontCascade& font = style().fontCascade();
-            TextRun run = RenderBlock::constructTextRun(text, style());
             maxOptionWidth = std::max(maxOptionWidth, font.width(run));
         }
     }
@@ -249,7 +222,7 @@ void RenderMenuList::updateOptionsWidth()
 
     m_optionsWidth = width;
     if (parent())
-        setNeedsLayoutAndPrefWidthsRecalc();
+        setNeedsLayoutAndPreferredWidthsUpdate();
 }
 
 void RenderMenuList::updateFromElement()
@@ -260,9 +233,7 @@ void RenderMenuList::updateFromElement()
     }
 
 #if !PLATFORM(IOS_FAMILY)
-    if (m_popupIsVisible)
-        m_popup->updateFromElement();
-    else
+    if (!selectElement().popupIsVisible())
 #endif
         setTextFromOption(selectElement().selectedIndex());
 }
@@ -283,7 +254,7 @@ void RenderMenuList::setTextFromOption(int optionIndex)
     }
 
 #if PLATFORM(IOS_FAMILY)
-    if (multiple()) {
+    if (selectElement().popupMultiple()) {
         size_t count = selectedOptionCount(*this);
         if (count != 1)
             text = htmlSelectMultipleItems(count);
@@ -298,17 +269,16 @@ void RenderMenuList::setText(const String& s)
 {
     String textToUse = s.isEmpty() ? "\n"_str : s;
 
-    if (m_buttonText) {
+    if (m_buttonText)
         m_buttonText->setText(textToUse.impl(), true);
-        m_buttonText->dirtyLineBoxes(false);
-    } else {
+    else {
         auto newButtonText = createRenderer<RenderText>(Type::Text, document(), textToUse);
         m_buttonText = *newButtonText;
         // FIXME: This mutation should go through the normal RenderTreeBuilder path.
         if (RenderTreeBuilder::current())
-            RenderTreeBuilder::current()->attach(*this, WTFMove(newButtonText));
+            RenderTreeBuilder::current()->attach(*this, WTF::move(newButtonText));
         else
-            RenderTreeBuilder(*document().renderView()).attach(*this, WTFMove(newButtonText));
+            RenderTreeBuilder(*document().renderView()).attach(*this, WTF::move(newButtonText));
     }
 
     adjustInnerStyle();
@@ -326,21 +296,19 @@ LayoutRect RenderMenuList::controlClipRect(const LayoutPoint& additionalOffset) 
     // and if the inner box ever spills out of the outer box, that will get clipped too.
     LayoutRect outerBox(additionalOffset.x() + borderLeft() + paddingLeft(),
                    additionalOffset.y() + borderTop() + paddingTop(),
-                   contentWidth(),
-                   contentHeight());
+        contentBoxWidth(),
+        contentBoxHeight());
 
     LayoutRect innerBox(additionalOffset.x() + m_innerBlock->x() + m_innerBlock->paddingLeft(),
                    additionalOffset.y() + m_innerBlock->y() + m_innerBlock->paddingTop(),
-                   m_innerBlock->contentWidth(),
-                   m_innerBlock->contentHeight());
+        m_innerBlock->contentBoxWidth(),
+        m_innerBlock->contentBoxHeight());
 
     return intersection(outerBox, innerBox);
 }
 
 void RenderMenuList::computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const
 {
-    // FIXME: Fix field-sizing: content with size containment
-    // https://bugs.webkit.org/show_bug.cgi?id=269169
     if (style().fieldSizing() == FieldSizing::Content)
         return RenderFlexibleBox::computeIntrinsicLogicalWidths(minLogicalWidth, maxLogicalWidth);
 
@@ -352,7 +320,7 @@ void RenderMenuList::computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, 
     }
     auto& logicalWidth = style().logicalWidth();
     if (logicalWidth.isCalculated())
-        minLogicalWidth = std::max(0_lu, valueForLength(logicalWidth, 0_lu));
+        minLogicalWidth = std::max(0_lu, Style::evaluate<LayoutUnit>(logicalWidth, 0_lu, style().usedZoomForLength()));
     else if (!logicalWidth.isPercent())
         minLogicalWidth = maxLogicalWidth;
 }
@@ -367,68 +335,14 @@ void RenderMenuList::computePreferredLogicalWidths()
     m_minPreferredLogicalWidth = 0;
     m_maxPreferredLogicalWidth = 0;
 
-    if (style().logicalWidth().isFixed() && style().logicalWidth().value() > 0)
-        m_minPreferredLogicalWidth = m_maxPreferredLogicalWidth = adjustContentBoxLogicalWidthForBoxSizing(style().logicalWidth());
+    if (auto fixedLogicalWidth = style().logicalWidth().tryFixed(); fixedLogicalWidth && fixedLogicalWidth->isPositive())
+        m_minPreferredLogicalWidth = m_maxPreferredLogicalWidth = adjustContentBoxLogicalWidthForBoxSizing(*fixedLogicalWidth);
     else
         computeIntrinsicLogicalWidths(m_minPreferredLogicalWidth, m_maxPreferredLogicalWidth);
 
-    RenderBox::computePreferredLogicalWidths(style().logicalMinWidth(), style().logicalMaxWidth(), style().isHorizontalWritingMode() ? horizontalBorderAndPaddingExtent() : verticalBorderAndPaddingExtent());
+    RenderBox::computePreferredLogicalWidths(style().logicalMinWidth(), style().logicalMaxWidth(), writingMode().isHorizontal() ? horizontalBorderAndPaddingExtent() : verticalBorderAndPaddingExtent());
 
-    setPreferredLogicalWidthsDirty(false);
-}
-
-#if PLATFORM(IOS_FAMILY)
-NO_RETURN_DUE_TO_ASSERT
-void RenderMenuList::showPopup()
-{
-    ASSERT_NOT_REACHED();
-}
-#else
-void RenderMenuList::showPopup()
-{
-    if (m_popupIsVisible)
-        return;
-
-    ASSERT(m_innerBlock);
-    if (!m_popup)
-        m_popup = document().page()->chrome().createPopupMenu(*this);
-    m_popupIsVisible = true;
-
-    // Compute the top left taking transforms into account, but use
-    // the actual width of the element to size the popup.
-    FloatPoint absTopLeft = localToAbsolute(FloatPoint(), UseTransforms);
-    IntRect absBounds = absoluteBoundingBoxRectIgnoringTransforms();
-    absBounds.setLocation(roundedIntPoint(absTopLeft));
-    m_popup->show(absBounds, view().frameView(), selectElement().optionToListIndex(selectElement().selectedIndex())); // May destroy `this`.
-}
-#endif
-
-void RenderMenuList::hidePopup()
-{
-#if !PLATFORM(IOS_FAMILY)
-    if (m_popup)
-        m_popup->hide();
-#endif
-}
-
-void RenderMenuList::valueChanged(unsigned listIndex, bool fireOnChange)
-{
-    // Check to ensure a page navigation has not occurred while
-    // the popup was up.
-    if (&document() != document().frame()->document())
-        return;
-
-    selectElement().optionSelectedByUser(selectElement().listToOptionIndex(listIndex), fireOnChange);
-}
-
-void RenderMenuList::listBoxSelectItem(int listIndex, bool allowMultiplySelections, bool shift, bool fireOnChangeNow)
-{
-    selectElement().listBoxSelectItem(listIndex, allowMultiplySelections, shift, fireOnChangeNow);
-}
-
-bool RenderMenuList::multiple() const
-{
-    return selectElement().multiple();
+    clearNeedsPreferredWidthsUpdate();
 }
 
 void RenderMenuList::didSetSelectedIndex(int listIndex)
@@ -453,107 +367,14 @@ void RenderMenuList::didUpdateActiveOption(int optionIndex)
     if (listIndex < 0 || listIndex >= static_cast<int>(selectElement().listItems().size()))
         return;
 
-    auto* axObject = axCache->get(this);
-    if (RefPtr menuList = dynamicDowncast<AccessibilityMenuList>(axObject))
-        menuList->didUpdateActiveOption(optionIndex);
-}
-
-String RenderMenuList::itemText(unsigned listIndex) const
-{
-    auto& listItems = selectElement().listItems();
-    if (listIndex >= listItems.size())
-        return String();
-
-    String itemString;
-    auto& element = *listItems[listIndex];
-    if (auto* optGroup = dynamicDowncast<HTMLOptGroupElement>(element))
-        itemString = optGroup->groupLabelText();
-    else if (auto* option = dynamicDowncast<HTMLOptionElement>(element))
-        itemString = option->textIndentedToRespectGroupLabel();
-
-    return applyTextTransform(style(), itemString, ' ');
-}
-
-String RenderMenuList::itemLabel(unsigned) const
-{
-    return String();
-}
-
-String RenderMenuList::itemIcon(unsigned) const
-{
-    return String();
-}
-
-String RenderMenuList::itemAccessibilityText(unsigned listIndex) const
-{
-    // Allow the accessible name be changed if necessary.
-    const auto& listItems = selectElement().listItems();
-    if (listIndex >= listItems.size())
-        return String();
-    return listItems[listIndex]->attributeWithoutSynchronization(aria_labelAttr);
-}
-
-String RenderMenuList::itemToolTip(unsigned listIndex) const
-{
-    const auto& listItems = selectElement().listItems();
-    if (listIndex >= listItems.size())
-        return String();
-    return listItems[listIndex]->title();
-}
-
-bool RenderMenuList::itemIsEnabled(unsigned listIndex) const
-{
-    const auto& listItems = selectElement().listItems();
-    if (listIndex >= listItems.size())
-        return false;
-    HTMLElement* element = listItems[listIndex].get();
-    if (!is<HTMLOptionElement>(*element))
-        return false;
-
-    bool groupEnabled = true;
-    if (Element* parentElement = element->parentElement()) {
-        if (is<HTMLOptGroupElement>(*parentElement))
-            groupEnabled = !parentElement->isDisabledFormControl();
-    }
-    if (!groupEnabled)
-        return false;
-
-    return !element->isDisabledFormControl();
-}
-
-PopupMenuStyle RenderMenuList::itemStyle(unsigned listIndex) const
-{
-    const auto& listItems = selectElement().listItems();
-    if (listIndex >= listItems.size()) {
-        // If we are making an out of bounds access, then we want to use the style
-        // of a different option element (index 0). However, if there isn't an option element
-        // before at index 0, we fall back to the menu's style.
-        if (!listIndex)
-            return menuStyle();
-
-        // Try to retrieve the style of an option element we know exists (index 0).
-        listIndex = 0;
-    }
-    HTMLElement* element = listItems[listIndex].get();
-
-    Color itemBackgroundColor;
-    bool itemHasCustomBackgroundColor;
-    getItemBackgroundColor(listIndex, itemBackgroundColor, itemHasCustomBackgroundColor);
-
-    auto* style = element->computedStyleForEditability();
-    if (!style)
-        return menuStyle();
-
-    return PopupMenuStyle(style->visitedDependentColorWithColorFilter(CSSPropertyColor), itemBackgroundColor, style->fontCascade(), style->visibility() == Visibility::Visible,
-        style->display() == DisplayType::None, true, style->textIndent(), style->direction(), isOverride(style->unicodeBidi()),
-        itemHasCustomBackgroundColor ? PopupMenuStyle::CustomBackgroundColor : PopupMenuStyle::DefaultBackgroundColor);
+    axCache->onSelectedOptionChanged(*this, optionIndex);
 }
 
 void RenderMenuList::getItemBackgroundColor(unsigned listIndex, Color& itemBackgroundColor, bool& itemHasCustomBackgroundColor) const
 {
     const auto& listItems = selectElement().listItems();
     if (listIndex >= listItems.size()) {
-        itemBackgroundColor = style().visitedDependentColorWithColorFilter(CSSPropertyBackgroundColor);
+        itemBackgroundColor = style().visitedDependentBackgroundColorApplyingColorFilter();
         itemHasCustomBackgroundColor = false;
         return;
     }
@@ -561,7 +382,7 @@ void RenderMenuList::getItemBackgroundColor(unsigned listIndex, Color& itemBackg
 
     Color backgroundColor;
     if (auto* style = element->computedStyleForEditability())
-        backgroundColor = style->visitedDependentColorWithColorFilter(CSSPropertyBackgroundColor);
+        backgroundColor = style->visitedDependentBackgroundColorApplyingColorFilter();
 
     itemHasCustomBackgroundColor = backgroundColor.isValid() && backgroundColor.isVisible();
     // If the item has an opaque background color, return that.
@@ -571,7 +392,7 @@ void RenderMenuList::getItemBackgroundColor(unsigned listIndex, Color& itemBackg
     }
 
     // Otherwise, the item's background is overlayed on top of the menu background.
-    backgroundColor = blendSourceOver(style().visitedDependentColorWithColorFilter(CSSPropertyBackgroundColor), backgroundColor);
+    backgroundColor = blendSourceOver(style().visitedDependentBackgroundColorApplyingColorFilter(), backgroundColor);
     if (backgroundColor.isOpaque()) {
         itemBackgroundColor = backgroundColor;
         return;
@@ -581,45 +402,11 @@ void RenderMenuList::getItemBackgroundColor(unsigned listIndex, Color& itemBackg
     itemBackgroundColor = blendSourceOver(Color::white, backgroundColor);
 }
 
-PopupMenuStyle RenderMenuList::menuStyle() const
-{
-    const RenderStyle& styleToUse = m_innerBlock ? m_innerBlock->style() : style();
-    IntRect absBounds = absoluteBoundingBoxRectIgnoringTransforms();
-    return PopupMenuStyle(styleToUse.visitedDependentColorWithColorFilter(CSSPropertyColor), styleToUse.visitedDependentColorWithColorFilter(CSSPropertyBackgroundColor),
-        styleToUse.fontCascade(), styleToUse.usedVisibility() == Visibility::Visible, styleToUse.display() == DisplayType::None,
-        style().hasUsedAppearance() && style().usedAppearance() == StyleAppearance::Menulist, styleToUse.textIndent(),
-        style().direction(), isOverride(style().unicodeBidi()), PopupMenuStyle::DefaultBackgroundColor,
-        PopupMenuStyle::SelectPopup, theme().popupMenuSize(styleToUse, absBounds));
-}
-
-HostWindow* RenderMenuList::hostWindow() const
-{
-    return RenderFlexibleBox::hostWindow();
-}
-
-Ref<Scrollbar> RenderMenuList::createScrollbar(ScrollableArea& scrollableArea, ScrollbarOrientation orientation, ScrollbarWidth widthStyle)
-{
-    bool usesLegacyScrollbarStyle = style().usesLegacyScrollbarStyle();
-    if (usesLegacyScrollbarStyle)
-        return RenderScrollbar::createCustomScrollbar(scrollableArea, orientation, &selectElement());
-    return Scrollbar::createNativeScrollbar(scrollableArea, orientation, widthStyle);
-}
-
-int RenderMenuList::clientInsetLeft() const
-{
-    return 0;
-}
-
-int RenderMenuList::clientInsetRight() const
-{
-    return 0;
-}
-
 const int endOfLinePadding = 2;
 
 LayoutUnit RenderMenuList::clientPaddingLeft() const
 {
-    if ((style().usedAppearance() == StyleAppearance::Menulist || style().usedAppearance() == StyleAppearance::MenulistButton) && style().direction() == TextDirection::RTL) {
+    if ((style().usedAppearance() == StyleAppearance::Menulist || style().usedAppearance() == StyleAppearance::MenulistButton) && writingMode().isBidiRTL()) {
         // For these appearance values, the theme applies padding to leave room for the
         // drop-down button. But leaving room for the button inside the popup menu itself
         // looks strange, so we return a small default padding to avoid having a large empty
@@ -633,59 +420,10 @@ LayoutUnit RenderMenuList::clientPaddingLeft() const
 
 LayoutUnit RenderMenuList::clientPaddingRight() const
 {
-    if ((style().usedAppearance() == StyleAppearance::Menulist || style().usedAppearance() == StyleAppearance::MenulistButton) && style().direction() == TextDirection::LTR)
+    if ((style().usedAppearance() == StyleAppearance::Menulist || style().usedAppearance() == StyleAppearance::MenulistButton) && style().writingMode().isBidiLTR())
         return endOfLinePadding;
 
     return paddingRight() + m_innerBlock->paddingRight();
-}
-
-int RenderMenuList::listSize() const
-{
-    return selectElement().listItems().size();
-}
-
-int RenderMenuList::selectedIndex() const
-{
-    return selectElement().optionToListIndex(selectElement().selectedIndex());
-}
-
-void RenderMenuList::popupDidHide()
-{
-#if !PLATFORM(IOS_FAMILY)
-    // PopupMenuMac::show in WebKitLegacy can call this callback even when popup had already been dismissed.
-    m_popupIsVisible = false;
-#endif
-}
-
-bool RenderMenuList::itemIsSeparator(unsigned listIndex) const
-{
-    const auto& listItems = selectElement().listItems();
-    return listIndex < listItems.size() && listItems[listIndex]->hasTagName(hrTag);
-}
-
-bool RenderMenuList::itemIsLabel(unsigned listIndex) const
-{
-    const auto& listItems = selectElement().listItems();
-    return listIndex < listItems.size() && is<HTMLOptGroupElement>(*listItems[listIndex]);
-}
-
-bool RenderMenuList::itemIsSelected(unsigned listIndex) const
-{
-    const auto& listItems = selectElement().listItems();
-    if (listIndex >= listItems.size())
-        return false;
-    auto* option = dynamicDowncast<HTMLOptionElement>(listItems[listIndex].get());
-    return option && option->selected();
-}
-
-void RenderMenuList::setTextFromItem(unsigned listIndex)
-{
-    setTextFromOption(selectElement().listToOptionIndex(listIndex));
-}
-
-FontSelector* RenderMenuList::fontSelector() const
-{
-    return &document().fontSelector();
 }
 
 #if PLATFORM(IOS_FAMILY)

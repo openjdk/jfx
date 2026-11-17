@@ -24,13 +24,14 @@
  */
 
 [
-    EnabledBySetting=CSSContentVisibilityEnabled,
     Exposed=Window
 ] interface ContentVisibilityAutoStateChangeEvent : Event {
     constructor([AtomString] DOMString type, optional ContentVisibilityAutoStateChangeEventInit eventInitDict = {});
     readonly attribute boolean skipped;
 };
 
-dictionary ContentVisibilityAutoStateChangeEventInit : EventInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary ContentVisibilityAutoStateChangeEventInit : EventInit {
     boolean skipped = false;
 };

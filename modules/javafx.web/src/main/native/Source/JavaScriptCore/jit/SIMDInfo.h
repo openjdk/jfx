@@ -25,7 +25,11 @@
 
 #pragma once
 
+#include <JavaScriptCore/JSExportMacros.h>
+#include <wtf/Compiler.h>
 #include <wtf/PrintStream.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -219,3 +223,5 @@ JS_EXPORT_PRIVATE void printInternal(PrintStream& out, JSC::SIMDSignMode);
 JS_EXPORT_PRIVATE void printInternal(PrintStream& out, JSC::v128_t);
 
 } // namespace WTF
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

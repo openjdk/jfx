@@ -85,10 +85,10 @@ std::optional<ApduCommand> ApduCommand::createFromMessage(const Vector<uint8_t>&
 
         if (message.size() == dataLength + kApduCommandDataOffset) {
             // No response expected.
-            data.appendRange(message.begin() + kApduCommandDataOffset, message.end());
+            data.append(message.subspan(kApduCommandDataOffset));
         } else if (message.size() == dataLength + kApduCommandDataOffset + 2) {
             // Maximum response size is stored in final 2 bytes.
-            data.appendRange(message.begin() + kApduCommandDataOffset, message.end() - 2);
+            data.append(message.subspan(kApduCommandDataOffset, message.size() - kApduCommandDataOffset - 2));
             auto responseLengthOffset = kApduCommandDataOffset + dataLength;
             responseLength = parseMessageLength(message, responseLengthOffset);
             // Special case where response length of 0x0000 corresponds to 65536
@@ -100,7 +100,7 @@ std::optional<ApduCommand> ApduCommand::createFromMessage(const Vector<uint8_t>&
         break;
     }
 
-    return ApduCommand(cla, ins, p1, p2, responseLength, WTFMove(data));
+    return ApduCommand(cla, ins, p1, p2, responseLength, WTF::move(data));
 }
 
 ApduCommand::ApduCommand(uint8_t cla, uint8_t ins, uint8_t p1, uint8_t p2, size_t responseLength, Vector<uint8_t>&& data)
@@ -109,7 +109,7 @@ ApduCommand::ApduCommand(uint8_t cla, uint8_t ins, uint8_t p1, uint8_t p2, size_
     , m_p1(p1)
     , m_p2(p2)
     , m_responseLength(responseLength)
-    , m_data(WTFMove(data))
+    , m_data(WTF::move(data))
 {
 }
 
@@ -122,14 +122,12 @@ Vector<uint8_t> ApduCommand::getEncodedCommand() const
     // representation of the request size. If data length is 0, response size (Le)
     // will be prepended with a null byte.
     if (!m_data.isEmpty()) {
-        size_t dataLength = m_data.size();
+        size_t dataLength = std::min(m_data.size(), kApduMaxDataLength);
 
         encoded.append(0x0);
-        if (dataLength > kApduMaxDataLength)
-            dataLength = kApduMaxDataLength;
         encoded.append((dataLength >> 8) & 0xff);
         encoded.append(dataLength & 0xff);
-        encoded.appendRange(m_data.begin(), m_data.begin() + dataLength);
+        encoded.append(m_data.span().first(dataLength));
     } else if (m_responseLength > 0)
         encoded.append(0x0);
 

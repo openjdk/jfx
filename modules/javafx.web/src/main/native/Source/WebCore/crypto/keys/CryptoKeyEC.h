@@ -25,34 +25,23 @@
 
 #pragma once
 
-#include "CryptoKey.h"
-#include "CryptoKeyPair.h"
-#include "ExceptionOr.h"
-
+#include <WebCore/CryptoKey.h>
+#include <WebCore/CryptoKeyPair.h>
 #if ENABLE(WEB_CRYPTO)
-
+#include <wtf/Platform.h>
 #if OS(DARWIN) && !PLATFORM(GTK)
-#include "CommonCryptoUtilities.h"
-#if HAVE(SWIFT_CPP_INTEROP)
-namespace PAL {
+#include <WebCore/CommonCryptoUtilities.h>
+#if !defined(CLANG_WEBKIT_BRANCH)
+namespace pal {
 class ECKey;
 }
 
 namespace WebCore {
-struct CCECCryptorRefDeleter {
-    void operator()(CCECCryptorRef key) const { CCECCryptorRelease(key); }
-};
-
-using CCPlatformECKeyContainer = std::unique_ptr<typename std::remove_pointer<CCECCryptorRef>::type, CCECCryptorRefDeleter>;
-using CKPlatformECKeyContainer = UniqueRef<PAL::ECKey>;
-using PlatformECKeyContainer = std::variant<CCPlatformECKeyContainer, CKPlatformECKeyContainer>;
+using PlatformECKeyContainer = UniqueRef<pal::ECKey>;
 }
 #else
 namespace WebCore {
-struct CCECCryptorRefDeleter {
-    void operator()(CCECCryptorRef key) const { CCECCryptorRelease(key); }
-};
-typedef std::unique_ptr<typename std::remove_pointer<CCECCryptorRef>::type, WebCore::CCECCryptorRefDeleter> PlatformECKeyContainer;
+using PlatformECKeyContainer = std::unique_ptr<std::monostate>;
 }
 #endif
 #endif
@@ -74,10 +63,11 @@ using PlatformECKeyContainer = WebCore::EvpPKeyPtr;
 namespace WebCore {
 
 struct JsonWebKey;
+template<typename> class ExceptionOr;
 
 class CryptoKeyEC final : public CryptoKey {
 public:
-    enum class NamedCurve {
+    enum class NamedCurve : uint8_t {
         P256,
         P384,
         P521,
@@ -85,20 +75,20 @@ public:
 
     static Ref<CryptoKeyEC> create(CryptoAlgorithmIdentifier identifier, NamedCurve curve, CryptoKeyType type, PlatformECKeyContainer&& platformKey, bool extractable, CryptoKeyUsageBitmap usages)
     {
-        return adoptRef(*new CryptoKeyEC(identifier, curve, type, WTFMove(platformKey), extractable, usages));
+        return adoptRef(*new CryptoKeyEC(identifier, curve, type, WTF::move(platformKey), extractable, usages));
     }
     virtual ~CryptoKeyEC();
 
-    WEBCORE_EXPORT static ExceptionOr<CryptoKeyPair> generatePair(CryptoAlgorithmIdentifier, const String& curve, bool extractable, CryptoKeyUsageBitmap, UseCryptoKit);
-    WEBCORE_EXPORT static RefPtr<CryptoKeyEC> importRaw(CryptoAlgorithmIdentifier, const String& curve, Vector<uint8_t>&& keyData, bool extractable, CryptoKeyUsageBitmap, UseCryptoKit);
-    static RefPtr<CryptoKeyEC> importJwk(CryptoAlgorithmIdentifier, const String& curve, JsonWebKey&&, bool extractable, CryptoKeyUsageBitmap, UseCryptoKit);
-    static RefPtr<CryptoKeyEC> importSpki(CryptoAlgorithmIdentifier, const String& curve, Vector<uint8_t>&& keyData, bool extractable, CryptoKeyUsageBitmap, UseCryptoKit);
-    static RefPtr<CryptoKeyEC> importPkcs8(CryptoAlgorithmIdentifier, const String& curve, Vector<uint8_t>&& keyData, bool extractable, CryptoKeyUsageBitmap, UseCryptoKit);
+    WEBCORE_EXPORT static ExceptionOr<CryptoKeyPair> generatePair(CryptoAlgorithmIdentifier, const String& curve, bool extractable, CryptoKeyUsageBitmap);
+    WEBCORE_EXPORT static RefPtr<CryptoKeyEC> importRaw(CryptoAlgorithmIdentifier, const String& curve, Vector<uint8_t>&& keyData, bool extractable, CryptoKeyUsageBitmap);
+    static RefPtr<CryptoKeyEC> importJwk(CryptoAlgorithmIdentifier, const String& curve, JsonWebKey&&, bool extractable, CryptoKeyUsageBitmap);
+    static RefPtr<CryptoKeyEC> importSpki(CryptoAlgorithmIdentifier, const String& curve, Vector<uint8_t>&& keyData, bool extractable, CryptoKeyUsageBitmap);
+    static RefPtr<CryptoKeyEC> importPkcs8(CryptoAlgorithmIdentifier, const String& curve, Vector<uint8_t>&& keyData, bool extractable, CryptoKeyUsageBitmap);
 
-    WEBCORE_EXPORT ExceptionOr<Vector<uint8_t>> exportRaw(UseCryptoKit) const;
-    ExceptionOr<JsonWebKey> exportJwk(UseCryptoKit) const;
-    ExceptionOr<Vector<uint8_t>> exportSpki(UseCryptoKit) const;
-    ExceptionOr<Vector<uint8_t>> exportPkcs8(UseCryptoKit) const;
+    WEBCORE_EXPORT ExceptionOr<Vector<uint8_t>> exportRaw() const;
+    ExceptionOr<JsonWebKey> exportJwk() const;
+    ExceptionOr<Vector<uint8_t>> exportSpki() const;
+    ExceptionOr<Vector<uint8_t>> exportPkcs8() const;
 
     size_t keySizeInBits() const;
     size_t keySizeInBytes() const { return std::ceil(keySizeInBits() / 8.); }
@@ -112,24 +102,20 @@ private:
     CryptoKeyEC(CryptoAlgorithmIdentifier, NamedCurve, CryptoKeyType, PlatformECKeyContainer&&, bool extractable, CryptoKeyUsageBitmap);
 
     CryptoKeyClass keyClass() const final { return CryptoKeyClass::EC; }
-
     KeyAlgorithm algorithm() const final;
-#if HAVE(SWIFT_CPP_INTEROP)
-    static PlatformECKeyContainer toCCPlatformECKeyContainer(CCECCryptorRef);
-    // FIXME: change this to a move construction when Swift reverse interop starts supporting move construction for value types. rdar://126558127
-    static PlatformECKeyContainer toCKPlatformECKeyContainer(PAL::ECKey);
-#endif
+    CryptoKey::Data data() const final;
+
     static bool platformSupportedCurve(NamedCurve);
-    static std::optional<CryptoKeyPair> platformGeneratePair(CryptoAlgorithmIdentifier, NamedCurve, bool extractable, CryptoKeyUsageBitmap, UseCryptoKit = UseCryptoKit::No);
-    static RefPtr<CryptoKeyEC> platformImportRaw(CryptoAlgorithmIdentifier, NamedCurve, Vector<uint8_t>&& keyData, bool extractable, CryptoKeyUsageBitmap, UseCryptoKit = UseCryptoKit::No);
-    static RefPtr<CryptoKeyEC> platformImportJWKPublic(CryptoAlgorithmIdentifier, NamedCurve, Vector<uint8_t>&& x, Vector<uint8_t>&& y, bool extractable, CryptoKeyUsageBitmap, UseCryptoKit = UseCryptoKit::No);
-    static RefPtr<CryptoKeyEC> platformImportJWKPrivate(CryptoAlgorithmIdentifier, NamedCurve, Vector<uint8_t>&& x, Vector<uint8_t>&& y, Vector<uint8_t>&& d, bool extractable, CryptoKeyUsageBitmap, UseCryptoKit = UseCryptoKit::No);
-    static RefPtr<CryptoKeyEC> platformImportSpki(CryptoAlgorithmIdentifier, NamedCurve, Vector<uint8_t>&& keyData, bool extractable, CryptoKeyUsageBitmap, UseCryptoKit = UseCryptoKit::No);
-    static RefPtr<CryptoKeyEC> platformImportPkcs8(CryptoAlgorithmIdentifier, NamedCurve, Vector<uint8_t>&& keyData, bool extractable, CryptoKeyUsageBitmap, UseCryptoKit = UseCryptoKit::No);
-    Vector<uint8_t> platformExportRaw(UseCryptoKit = UseCryptoKit::No) const;
-    bool platformAddFieldElements(JsonWebKey&, UseCryptoKit = UseCryptoKit::No) const;
-    Vector<uint8_t> platformExportSpki(UseCryptoKit = UseCryptoKit::No) const;
-    Vector<uint8_t> platformExportPkcs8(UseCryptoKit = UseCryptoKit::No) const;
+    static std::optional<CryptoKeyPair> platformGeneratePair(CryptoAlgorithmIdentifier, NamedCurve, bool extractable, CryptoKeyUsageBitmap);
+    static RefPtr<CryptoKeyEC> platformImportRaw(CryptoAlgorithmIdentifier, NamedCurve, Vector<uint8_t>&& keyData, bool extractable, CryptoKeyUsageBitmap);
+    static RefPtr<CryptoKeyEC> platformImportJWKPublic(CryptoAlgorithmIdentifier, NamedCurve, Vector<uint8_t>&& x, Vector<uint8_t>&& y, bool extractable, CryptoKeyUsageBitmap);
+    static RefPtr<CryptoKeyEC> platformImportJWKPrivate(CryptoAlgorithmIdentifier, NamedCurve, Vector<uint8_t>&& x, Vector<uint8_t>&& y, Vector<uint8_t>&& d, bool extractable, CryptoKeyUsageBitmap);
+    static RefPtr<CryptoKeyEC> platformImportSpki(CryptoAlgorithmIdentifier, NamedCurve, Vector<uint8_t>&& keyData, bool extractable, CryptoKeyUsageBitmap);
+    static RefPtr<CryptoKeyEC> platformImportPkcs8(CryptoAlgorithmIdentifier, NamedCurve, Vector<uint8_t>&& keyData, bool extractable, CryptoKeyUsageBitmap);
+    Vector<uint8_t> platformExportRaw() const;
+    bool platformAddFieldElements(JsonWebKey&) const;
+    Vector<uint8_t> platformExportSpki() const;
+    Vector<uint8_t> platformExportPkcs8() const;
 
     PlatformECKeyContainer m_platformKey;
     NamedCurve m_curve;

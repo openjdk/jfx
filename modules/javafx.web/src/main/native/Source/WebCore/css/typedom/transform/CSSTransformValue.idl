@@ -32,7 +32,7 @@
     iterable<CSSTransformComponent>;
     readonly attribute unsigned long length;
     getter CSSTransformComponent (unsigned long index);
-    setter CSSTransformComponent (unsigned long index, CSSTransformComponent val);
+    setter undefined (unsigned long index, CSSTransformComponent val);
 
     readonly attribute boolean is2D;
     DOMMatrix toMatrix();

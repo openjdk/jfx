@@ -54,19 +54,19 @@ void SignalHandlers::add(Signal signal, SignalHandler&& handler)
     size_t nextFree = numberOfHandlers[signalIndex];
     RELEASE_ASSERT(nextFree < maxNumberOfHandlers);
     SignalHandlerMemory* memory = &handlers[signalIndex][nextFree];
-    new (memory) SignalHandler(WTFMove(handler));
+    new (memory) SignalHandler(WTF::move(handler));
 
     numberOfHandlers[signalIndex]++;
 }
 
 template<typename Func>
-inline void SignalHandlers::forEachHandler(Signal signal, const Func& func) const
+inline void SignalHandlers::forEachHandler(Signal signal, NOESCAPE const Func& func) const
 {
     size_t signalIndex = static_cast<size_t>(signal);
     size_t handlerIndex = numberOfHandlers[signalIndex];
     while (handlerIndex--) {
         auto* memory = const_cast<SignalHandlerMemory*>(&handlers[signalIndex][handlerIndex]);
-        const SignalHandler& handler = *bitwise_cast<SignalHandler*>(memory);
+        const SignalHandler& handler = *std::bit_cast<SignalHandler*>(memory);
         func(handler);
     }
 }
@@ -94,6 +94,8 @@ inline Signal fromSystemException(DWORD signal)
 LONG WINAPI vectoredHandler(struct _EXCEPTION_POINTERS *exceptionInfo)
 {
     Signal signal = fromSystemException(exceptionInfo->ExceptionRecord->ExceptionCode);
+    if (signal >= Signal::Unknown)
+        return EXCEPTION_CONTINUE_SEARCH;
     SignalHandlers& handlers = g_wtfConfig.signalHandlers;
 
     SigInfo sigInfo;
@@ -123,7 +125,7 @@ void addSignalHandler(Signal signal, SignalHandler&& handler)
 {
     Config::AssertNotFrozenScope assertScope;
     SignalHandlers& handlers = g_wtfConfig.signalHandlers;
-    handlers.add(signal, WTFMove(handler));
+    handlers.add(signal, WTF::move(handler));
 }
 
 void activateSignalHandlersFor(Signal signal)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005 Apple Inc.  All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,12 +28,14 @@
 
 #include "CommonAtomStrings.h"
 #include "Editing.h"
+#include "EditingInlines.h"
 #include "ElementInlines.h"
 #include "HTMLBRElement.h"
 #include "HTMLDivElement.h"
 #include "HTMLNames.h"
 #include "NodeRenderStyle.h"
 #include "NodeTraversal.h"
+#include "PositionInlines.h"
 #include "RenderListItem.h"
 #include "Text.h"
 
@@ -42,7 +44,7 @@ namespace WebCore {
 using namespace HTMLNames;
 
 BreakBlockquoteCommand::BreakBlockquoteCommand(Ref<Document>&& document)
-    : CompositeEditCommand(WTFMove(document))
+    : CompositeEditCommand(WTF::move(document))
 {
 }
 
@@ -84,11 +86,11 @@ void BreakBlockquoteCommand::doApply()
         if (!parentStyle)
             return lineBreak;
 
-        if (parentStyle->direction() == containerNode->renderStyle()->direction())
+        if (parentStyle->writingMode().bidiDirection() == containerNode->renderStyle()->writingMode().bidiDirection())
             return lineBreak;
 
         auto container = HTMLDivElement::create(document());
-        container->setDir(autoAtom());
+        container->setAttributeWithoutSynchronization(dirAttr, autoAtom());
         container->appendChild(lineBreak);
         return container;
     }();
@@ -99,7 +101,7 @@ void BreakBlockquoteCommand::doApply()
     // Instead, insert the break before the blockquote, unless the position is as the end of the quoted content.
     if (isFirstVisiblePositionInNode(visiblePos, topBlockquote.get()) && !isLastVisPosInNode) {
         insertNodeBefore(breakNode.copyRef(), *topBlockquote);
-        setEndingSelection(VisibleSelection(positionBeforeNode(breakNode.ptr()), Affinity::Downstream, endingSelection().isDirectional()));
+        setEndingSelection(VisibleSelection(positionBeforeNode(breakNode.ptr()), Affinity::Downstream, endingSelection().directionality()));
         rebalanceWhitespace();
         return;
     }
@@ -109,7 +111,7 @@ void BreakBlockquoteCommand::doApply()
 
     // If we're inserting the break at the end of the quoted content, we don't need to break the quote.
     if (isLastVisPosInNode) {
-        setEndingSelection(VisibleSelection(positionBeforeNode(breakNode.ptr()), Affinity::Downstream, endingSelection().isDirectional()));
+        setEndingSelection(VisibleSelection(positionBeforeNode(breakNode.ptr()), Affinity::Downstream, endingSelection().directionality()));
         rebalanceWhitespace();
         return;
     }
@@ -124,35 +126,35 @@ void BreakBlockquoteCommand::doApply()
         pos = pos.previous();
 
     // startNode is the first node that we need to move to the new blockquote.
-    auto startNode = pos.protectedDeprecatedNode();
+    RefPtr startNode = pos.deprecatedNode();
     ASSERT(startNode);
     // Split at pos if in the middle of a text node.
     if (RefPtr textNode = dynamicDowncast<Text>(*startNode)) {
         if (static_cast<unsigned>(pos.deprecatedEditingOffset()) >= textNode->length()) {
             if (RefPtr nextNode = NodeTraversal::next(*startNode))
-                startNode = WTFMove(nextNode);
+                startNode = WTF::move(nextNode);
         } else if (pos.deprecatedEditingOffset() > 0)
             splitTextNode(*textNode, pos.deprecatedEditingOffset());
     } else if (pos.deprecatedEditingOffset() > 0) {
         if (RefPtr child = startNode->traverseToChildAt(pos.deprecatedEditingOffset()))
-            startNode = WTFMove(child);
+            startNode = WTF::move(child);
         else if (RefPtr next = NodeTraversal::next(*startNode))
-            startNode = WTFMove(next);
+            startNode = WTF::move(next);
     }
 
     // If there's nothing inside topBlockquote to move, we're finished.
     if (!startNode->isDescendantOf(*topBlockquote)) {
-        setEndingSelection(VisibleSelection(VisiblePosition(firstPositionInOrBeforeNode(startNode.get())), endingSelection().isDirectional()));
+        setEndingSelection(VisibleSelection(VisiblePosition(firstPositionInOrBeforeNode(startNode.get())), endingSelection().directionality()));
         return;
     }
 
     // Build up list of ancestors in between the start node and the top blockquote.
-    Vector<RefPtr<Element>> ancestors;
+    Vector<Ref<Element>> ancestors;
     for (RefPtr node = startNode->parentElement(); node && node != topBlockquote; node = node->parentElement())
-        ancestors.append(node.copyRef());
+        ancestors.append(*node);
 
     // Insert a clone of the top blockquote after the break.
-    auto clonedBlockquote = topBlockquote->cloneElementWithoutChildren(document());
+    auto clonedBlockquote = topBlockquote->cloneElementWithoutChildren(document(), nullptr);
     insertNodeAfter(clonedBlockquote.copyRef(), breakNode);
 
     // Clone startNode's ancestors into the cloned blockquote.
@@ -161,10 +163,10 @@ void BreakBlockquoteCommand::doApply()
     // or clonedBlockquote if ancestors is empty).
     RefPtr<Element> clonedAncestor = clonedBlockquote.copyRef();
     for (size_t i = ancestors.size(); i != 0; --i) {
-        auto clonedChild = ancestors[i - 1]->cloneElementWithoutChildren(document());
+        auto clonedChild = ancestors[i - 1]->cloneElementWithoutChildren(document(), nullptr);
         // Preserve list item numbering in cloned lists.
         if (clonedChild->isElementNode() && clonedChild->hasTagName(olTag)) {
-            RefPtr<Node> listChildNode = i > 1 ? ancestors[i - 2].get() : startNode.get();
+            RefPtr<Node> listChildNode = i > 1 ? ancestors[i - 2].ptr() : startNode.get();
             // The first child of the cloned list might not be a list item element,
             // find the first one so that we know where to start numbering.
             while (listChildNode && !listChildNode->hasTagName(liTag))
@@ -176,7 +178,7 @@ void BreakBlockquoteCommand::doApply()
         }
 
         appendNode(clonedChild.copyRef(), clonedAncestor.releaseNonNull());
-        clonedAncestor = WTFMove(clonedChild);
+        clonedAncestor = WTF::move(clonedChild);
     }
 
     moveRemainingSiblingsToNewParent(startNode.get(), nullptr, *clonedAncestor);
@@ -188,7 +190,7 @@ void BreakBlockquoteCommand::doApply()
         // into the clone corresponding to the ancestor's parent.
         RefPtr<Element> ancestor;
         RefPtr<Element> clonedParent;
-        for (ancestor = ancestors.first(), clonedParent = clonedAncestor->parentElement();
+        for (ancestor = ancestors.first().get(), clonedParent = clonedAncestor->parentElement();
             ancestor && ancestor != topBlockquote;
             ancestor = ancestor->parentElement(), clonedParent = clonedParent->parentElement()) {
             if (!clonedParent)
@@ -207,7 +209,7 @@ void BreakBlockquoteCommand::doApply()
 
     // Put the selection right before br or at the first position in div.
     auto beforeBROrFirstPositionInDiv = isAtomicNode(breakNode.ptr()) ? positionBeforeNode(breakNode.ptr()) : firstPositionInNode(breakNode.ptr());
-    setEndingSelection(VisibleSelection(beforeBROrFirstPositionInDiv, Affinity::Downstream, endingSelection().isDirectional()));
+    setEndingSelection(VisibleSelection(beforeBROrFirstPositionInDiv, Affinity::Downstream, endingSelection().directionality()));
     rebalanceWhitespace();
 }
 

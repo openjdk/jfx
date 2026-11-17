@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "CSSValueKeywords.h"
+#include <WebCore/CSSValueKeywords.h>
 #include <optional>
 #include <wtf/HashMap.h>
 
@@ -36,7 +36,7 @@ enum class CSSUnitType : uint8_t;
 class CSSCalcSymbolTable {
 public:
     struct Value {
-        CSSUnitType type;
+        CSSUnitType unit;
         double value;
     };
 

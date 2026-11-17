@@ -29,26 +29,30 @@
 #include "RenderSVGRect.h"
 #include "SVGElementInlines.h"
 #include "SVGNames.h"
+#include "SVGParsingError.h"
+#include "SVGPropertyOwnerRegistry.h"
+#include "Settings.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGRectElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SVGRectElement);
 
 inline SVGRectElement::SVGRectElement(const QualifiedName& tagName, Document& document)
     : SVGGeometryElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
 {
     ASSERT(hasTagName(SVGNames::rectTag));
 
-    static std::once_flag onceFlag;
-    std::call_once(onceFlag, [] {
+    static bool didRegistration = false;
+    if (!didRegistration) [[unlikely]] {
+        didRegistration = true;
         PropertyRegistry::registerProperty<SVGNames::xAttr, &SVGRectElement::m_x>();
         PropertyRegistry::registerProperty<SVGNames::yAttr, &SVGRectElement::m_y>();
         PropertyRegistry::registerProperty<SVGNames::widthAttr, &SVGRectElement::m_width>();
         PropertyRegistry::registerProperty<SVGNames::heightAttr, &SVGRectElement::m_height>();
         PropertyRegistry::registerProperty<SVGNames::rxAttr, &SVGRectElement::m_rx>();
         PropertyRegistry::registerProperty<SVGNames::ryAttr, &SVGRectElement::m_ry>();
-    });
+    }
 }
 
 Ref<SVGRectElement> SVGRectElement::create(const QualifiedName& tagName, Document& document)
@@ -75,7 +79,7 @@ SVGAnimatedProperty* SVGRectElement::propertyForAttribute(const QualifiedName& n
 
 void SVGRectElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    SVGParsingError parseError = NoError;
+    auto parseError = SVGParsingError::None;
 
     switch (name.nodeName()) {
     case AttributeNames::xAttr:
@@ -118,8 +122,8 @@ void SVGRectElement::svgAttributeChanged(const QualifiedName& attrName)
 RenderPtr<RenderElement> SVGRectElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
     if (document().settings().layerBasedSVGEngineEnabled())
-        return createRenderer<RenderSVGRect>(*this, WTFMove(style));
-    return createRenderer<LegacyRenderSVGRect>(*this, WTFMove(style));
+        return createRenderer<RenderSVGRect>(*this, WTF::move(style));
+    return createRenderer<LegacyRenderSVGRect>(*this, WTF::move(style));
 }
 
 }

@@ -28,6 +28,8 @@
 
 #pragma once
 
+#include <JavaScriptCore/JSExportMacros.h>
+#include <utility>
 #include <wtf/Forward.h>
 #include <wtf/TriState.h>
 
@@ -53,7 +55,7 @@ inline TriState taintednessToTriState(SourceTaintedOrigin origin)
 }
 
 
-JS_EXPORT_PRIVATE SourceTaintedOrigin sourceTaintedOriginFromStack(VM&, CallFrame*);
+JS_EXPORT_PRIVATE std::pair<SourceTaintedOrigin, URL> sourceTaintedOriginFromStack(VM&, CallFrame*);
 JS_EXPORT_PRIVATE SourceTaintedOrigin computeNewSourceTaintedOriginFromStack(VM&, CallFrame*);
 
 JS_EXPORT_PRIVATE String sourceTaintedOriginToString(SourceTaintedOrigin taintedness);

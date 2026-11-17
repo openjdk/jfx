@@ -26,10 +26,11 @@
 #pragma once
 
 #include <optional>
+#include <wtf/AbstractCanMakeCheckedPtr.h>
 
 namespace WebCore {
 
-class WorkerBadgeProxy {
+class WorkerBadgeProxy : public AbstractCanMakeCheckedPtr {
 public:
     virtual ~WorkerBadgeProxy() = default;
 

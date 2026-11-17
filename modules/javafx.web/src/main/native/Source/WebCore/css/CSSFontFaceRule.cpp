@@ -22,8 +22,9 @@
 #include "config.h"
 #include "CSSFontFaceRule.h"
 
+#include "CSSFontFaceDescriptors.h"
+#include "CSSSerializationContext.h"
 #include "MutableStyleProperties.h"
-#include "PropertySetCSSStyleDeclaration.h"
 #include "StyleProperties.h"
 #include "StyleRule.h"
 #include <wtf/text/MakeString.h>
@@ -43,26 +44,21 @@ CSSFontFaceRule::~CSSFontFaceRule()
         m_propertiesCSSOMWrapper->clearParentRule();
 }
 
-CSSStyleDeclaration& CSSFontFaceRule::style()
+CSSFontFaceDescriptors& CSSFontFaceRule::style()
 {
     if (!m_propertiesCSSOMWrapper)
-        m_propertiesCSSOMWrapper = StyleRuleCSSStyleDeclaration::create(m_fontFaceRule->mutableProperties(), *this);
+        m_propertiesCSSOMWrapper = CSSFontFaceDescriptors::create(m_fontFaceRule->mutableProperties(), *this);
     return *m_propertiesCSSOMWrapper;
 }
 
 String CSSFontFaceRule::cssText() const
 {
-    return cssTextInternal(m_fontFaceRule->properties().asText());
+    return cssTextInternal(m_fontFaceRule->properties().asText(CSS::defaultSerializationContext()));
 }
 
-String CSSFontFaceRule::cssTextWithReplacementURLs(const HashMap<String, String>& replacementURLStrings, const HashMap<RefPtr<CSSStyleSheet>, String>&) const
+String CSSFontFaceRule::cssText(const CSS::SerializationContext& context) const
 {
-    auto mutableStyleProperties = m_fontFaceRule->properties().mutableCopy();
-    mutableStyleProperties->setReplacementURLForSubresources(replacementURLStrings);
-    auto declarations = mutableStyleProperties->asText();
-    mutableStyleProperties->clearReplacementURLForSubresources();
-
-    return cssTextInternal(declarations);
+    return cssTextInternal(m_fontFaceRule->properties().asText(context));
 }
 
 String CSSFontFaceRule::cssTextInternal(const String& declarations) const

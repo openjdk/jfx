@@ -21,11 +21,14 @@
 
 #pragma once
 
-#include "CallFrame.h"
-#include "ExceptionHelpers.h"
-#include "JSBigInt.h"
-#include "JSGlobalObject.h"
+#include <JavaScriptCore/CallFrame.h>
+#include <JavaScriptCore/ExceptionHelpers.h>
+#include <JavaScriptCore/JSBigInt.h>
+#include <JavaScriptCore/JSGlobalObject.h>
+#include <JavaScriptCore/JSString.h>
 #include <wtf/text/MakeString.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -98,7 +101,7 @@ ALWAYS_INLINE JSString* jsString(JSGlobalObject* globalObject, const String& u1,
     // We do not account u1 cost in (2) since u1 may be shared StringImpl, and it may not introduce additional cost.
     // We conservatively consider the cost of u1. Currently, we are not considering about is8Bit() case because 16-bit
     // strings are relatively rare. But we can do that if we need to consider it.
-    if (s2->isRope() || (StringImpl::headerSize<LChar>() + length1 + length2) >= sizeof(JSRopeString))
+    if (s2->isRope() || (StringImpl::headerSize<Latin1Character>() + length1 + length2) >= sizeof(JSRopeString))
         return JSRopeString::create(vm, jsString(vm, u1), s2);
 
     ASSERT(!s2->isRope());
@@ -131,7 +134,7 @@ ALWAYS_INLINE JSString* jsString(JSGlobalObject* globalObject, JSString* s1, con
 
     // (1) Cost of making JSString    : sizeof(JSString) (for new string) + sizeof(StringImpl header) + length1 + length2
     // (2) Cost of making JSRopeString: sizeof(JSString) (for u2) + sizeof(JSRopeString)
-    if (s1->isRope() || (StringImpl::headerSize<LChar>() + length1 + length2) >= sizeof(JSRopeString))
+    if (s1->isRope() || (StringImpl::headerSize<Latin1Character>() + length1 + length2) >= sizeof(JSRopeString))
         return JSRopeString::create(vm, s1, jsString(vm, u2));
 
     ASSERT(!s1->isRope());
@@ -150,10 +153,10 @@ ALWAYS_INLINE JSString* jsString(JSGlobalObject* globalObject, JSString* s1, JSS
     VM& vm = getVM(globalObject);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    unsigned length1 = s1->length();
+    unsigned length1 = s1 ? s1->length() : 0;
     if (!length1)
         return s2;
-    unsigned length2 = s2->length();
+    unsigned length2 = s2 ? s2->length() : 0;
     if (!length2)
         return s1;
     static_assert(JSString::MaxLength == std::numeric_limits<int32_t>::max());
@@ -170,15 +173,15 @@ ALWAYS_INLINE JSString* jsString(JSGlobalObject* globalObject, JSString* s1, JSS
     VM& vm = getVM(globalObject);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    unsigned length1 = s1->length();
+    unsigned length1 = s1 ? s1->length() : 0;
     if (!length1)
         RELEASE_AND_RETURN(scope, jsString(globalObject, s2, s3));
 
-    unsigned length2 = s2->length();
+    unsigned length2 = s2 ? s2->length() : 0;
     if (!length2)
         RELEASE_AND_RETURN(scope, jsString(globalObject, s1, s3));
 
-    unsigned length3 = s3->length();
+    unsigned length3 = s3 ? s3->length() : 0;
     if (!length3)
         RELEASE_AND_RETURN(scope, jsString(globalObject, s1, s2));
 
@@ -210,7 +213,7 @@ ALWAYS_INLINE JSString* jsString(JSGlobalObject* globalObject, const String& u1,
 
     // (1) Cost of making JSString    : sizeof(JSString) (for new string) + sizeof(StringImpl header) + length1 + length2
     // (2) Cost of making JSRopeString: sizeof(JSString) (for u1) + sizeof(JSString) (for u2) + sizeof(JSRopeString)
-    if ((StringImpl::headerSize<LChar>() + length1 + length2) >= (sizeof(JSRopeString) + sizeof(JSString)))
+    if ((StringImpl::headerSize<Latin1Character>() + length1 + length2) >= (sizeof(JSRopeString) + sizeof(JSString)))
         return JSRopeString::create(vm, jsString(vm, u1), jsString(vm, u2));
 
     String newString = tryMakeString(u1, u2);
@@ -250,7 +253,7 @@ ALWAYS_INLINE JSString* jsString(JSGlobalObject* globalObject, const String& u1,
 
     // (1) Cost of making JSString    : sizeof(JSString) (for new string) + sizeof(StringImpl header) + length1 + length2 + length3
     // (2) Cost of making JSRopeString: sizeof(JSString) (for u1) + sizeof(JSString) (for u2) + sizeof(JSString) (for u3) + sizeof(JSRopeString)
-    if ((StringImpl::headerSize<LChar>() + length1 + length2 + length3) >= (sizeof(JSRopeString) + sizeof(JSString) * 2))
+    if ((StringImpl::headerSize<Latin1Character>() + length1 + length2 + length3) >= (sizeof(JSRopeString) + sizeof(JSString) * 2))
         return JSRopeString::create(vm, jsString(vm, u1), jsString(vm, u2), jsString(vm, u3));
 
     String newString = tryMakeString(u1, u2, u3);
@@ -308,7 +311,7 @@ ALWAYS_INLINE JSBigInt::ComparisonResult compareBigIntToOtherPrimitive(JSGlobalO
     if (primValue.isString()) {
         auto string = asString(primValue)->value(globalObject);
         RETURN_IF_EXCEPTION(scope, JSBigInt::ComparisonResult::Undefined);
-        JSValue bigIntValue = JSBigInt::stringToBigInt(globalObject, WTFMove(string));
+        JSValue bigIntValue = JSBigInt::stringToBigInt(globalObject, WTF::move(string));
         RETURN_IF_EXCEPTION(scope, JSBigInt::ComparisonResult::Undefined);
         if (!bigIntValue)
             return JSBigInt::ComparisonResult::Undefined;
@@ -348,7 +351,7 @@ ALWAYS_INLINE JSBigInt::ComparisonResult compareBigInt32ToOtherPrimitive(JSGloba
     if (primValue.isString()) {
         auto string = asString(primValue)->value(globalObject);
         RETURN_IF_EXCEPTION(scope, JSBigInt::ComparisonResult::Undefined);
-        JSValue bigIntValue = JSBigInt::stringToBigInt(globalObject, WTFMove(string));
+        JSValue bigIntValue = JSBigInt::stringToBigInt(globalObject, WTF::move(string));
         RETURN_IF_EXCEPTION(scope, JSBigInt::ComparisonResult::Undefined);
         if (!bigIntValue)
             return JSBigInt::ComparisonResult::Undefined;
@@ -551,7 +554,7 @@ ALWAYS_INLINE JSValue jsAddNonNumber(JSGlobalObject* globalObject, JSValue v1, J
     auto scope = DECLARE_THROW_SCOPE(vm);
     ASSERT(!v1.isNumber() || !v2.isNumber());
 
-    if (LIKELY(v1.isString() && !v2.isObject())) {
+    if (v1.isString() && !v2.isObject()) [[likely]] {
         if (v2.isString())
             RELEASE_AND_RETURN(scope, jsString(globalObject, asString(v1), asString(v2)));
         String s2 = v2.toWTFString(globalObject);
@@ -805,7 +808,7 @@ ALWAYS_INLINE JSValue jsURShift(JSGlobalObject* globalObject, JSValue left, JSVa
     std::optional<uint32_t> rightUint32 = right.toUInt32AfterToNumeric(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
 
-    if (UNLIKELY(!leftUint32 || !rightUint32)) {
+    if (!leftUint32 || !rightUint32) [[unlikely]] {
         throwTypeError(globalObject, scope, "BigInt does not support >>> operator"_s);
         return { };
     }
@@ -913,3 +916,5 @@ ALWAYS_INLINE EncodedJSValue getByValWithIndex(JSGlobalObject* globalObject, JSC
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

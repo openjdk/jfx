@@ -371,6 +371,9 @@ gboolean        gst_navigation_message_parse_event          (GstMessage *message
  * of simultaneous touch events. (Since: 1.22)
  * @GST_NAVIGATION_EVENT_TOUCH_CANCEL: An event cancelling all currently active
  * touch points. (Since: 1.22)
+ * @GST_NAVIGATION_EVENT_MOUSE_DOUBLE_CLICK: A mouse button double click event. Use
+ * gst_navigation_event_parse_mouse_button_event() to extract the details from the
+ * event. (Since: 1.26)
  *
  * Enum values for the various events that an element implementing the
  * GstNavigation interface might send up the pipeline. Touch events have been
@@ -447,6 +450,17 @@ typedef enum {
    * Since: 1.22
    */
   GST_NAVIGATION_EVENT_TOUCH_CANCEL               = 12,
+
+  /**
+   * GST_NAVIGATION_EVENT_MOUSE_DOUBLE_CLICK:
+   *
+   * A mouse button double click event.
+   * Use gst_navigation_event_parse_mouse_button_event() to extract the details
+   * from the event.
+   *
+   * Since: 1.26
+   */
+  GST_NAVIGATION_EVENT_MOUSE_DOUBLE_CLICK         = 13,
 } GstNavigationEventType;
 
 GST_VIDEO_API
@@ -462,6 +476,11 @@ GstEvent*       gst_navigation_event_new_key_release          (const gchar * key
 
 GST_VIDEO_API
 GstEvent*       gst_navigation_event_new_mouse_button_press   (gint button, gdouble x,
+                                                               gdouble y,
+                                                               GstNavigationModifierType state) G_GNUC_MALLOC;
+
+GST_VIDEO_API
+GstEvent*       gst_navigation_event_new_mouse_double_click   (gint button, gdouble x,
                                                                gdouble y,
                                                                GstNavigationModifierType state) G_GNUC_MALLOC;
 

@@ -32,19 +32,18 @@
 
 namespace WebCore {
 
-
-IDBObjectStoreInfo::IDBObjectStoreInfo(IDBObjectStoreIdentifier identifier, const String& name, std::optional<IDBKeyPath>&& keyPath, bool autoIncrement, HashMap<uint64_t, IDBIndexInfo>&& indexMap)
+IDBObjectStoreInfo::IDBObjectStoreInfo(IDBObjectStoreIdentifier identifier, const String& name, std::optional<IDBKeyPath>&& keyPath, bool autoIncrement, HashMap<IDBIndexIdentifier, IDBIndexInfo>&& indexMap)
     : m_identifier(identifier)
     , m_name(name)
-    , m_keyPath(WTFMove(keyPath))
+    , m_keyPath(WTF::move(keyPath))
     , m_autoIncrement(autoIncrement)
-    , m_indexMap(WTFMove(indexMap))
+    , m_indexMap(WTF::move(indexMap))
 {
 }
 
-IDBIndexInfo IDBObjectStoreInfo::createNewIndex(uint64_t indexID, const String& name, IDBKeyPath&& keyPath, bool unique, bool multiEntry)
+IDBIndexInfo IDBObjectStoreInfo::createNewIndex(IDBIndexIdentifier indexID, const String& name, IDBKeyPath&& keyPath, bool unique, bool multiEntry)
 {
-    IDBIndexInfo info(indexID, m_identifier, name, WTFMove(keyPath), unique, multiEntry);
+    IDBIndexInfo info(indexID, m_identifier, name, WTF::move(keyPath), unique, multiEntry);
     m_indexMap.set(info.identifier(), info);
     return info;
 }
@@ -67,7 +66,7 @@ bool IDBObjectStoreInfo::hasIndex(const String& name) const
     return false;
 }
 
-bool IDBObjectStoreInfo::hasIndex(uint64_t indexIdentifier) const
+bool IDBObjectStoreInfo::hasIndex(IDBIndexIdentifier indexIdentifier) const
 {
     return m_indexMap.contains(indexIdentifier);
 }
@@ -82,7 +81,7 @@ IDBIndexInfo* IDBObjectStoreInfo::infoForExistingIndex(const String& name)
     return nullptr;
 }
 
-IDBIndexInfo* IDBObjectStoreInfo::infoForExistingIndex(uint64_t identifier)
+IDBIndexInfo* IDBObjectStoreInfo::infoForExistingIndex(IDBIndexIdentifier identifier)
 {
     auto iterator = m_indexMap.find(identifier);
     if (iterator == m_indexMap.end())
@@ -100,8 +99,8 @@ IDBObjectStoreInfo IDBObjectStoreInfo::isolatedCopy() const &
 
 IDBObjectStoreInfo IDBObjectStoreInfo::isolatedCopy() &&
 {
-    IDBObjectStoreInfo result = { m_identifier, WTFMove(m_name).isolatedCopy(), crossThreadCopy(WTFMove(m_keyPath)), m_autoIncrement };
-    result.m_indexMap = crossThreadCopy(WTFMove(m_indexMap));
+    IDBObjectStoreInfo result = { m_identifier, WTF::move(m_name).isolatedCopy(), crossThreadCopy(WTF::move(m_keyPath)), m_autoIncrement };
+    result.m_indexMap = crossThreadCopy(WTF::move(m_indexMap));
     return result;
 }
 
@@ -121,7 +120,7 @@ void IDBObjectStoreInfo::deleteIndex(const String& indexName)
     m_indexMap.remove(info->identifier());
 }
 
-void IDBObjectStoreInfo::deleteIndex(uint64_t indexIdentifier)
+void IDBObjectStoreInfo::deleteIndex(IDBIndexIdentifier indexIdentifier)
 {
     m_indexMap.remove(indexIdentifier);
 }

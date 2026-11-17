@@ -81,27 +81,7 @@ public:
         *this = next();
     }
 
-    friend bool operator==(const Epoch&, const Epoch&) = default;
-
-    bool operator<(const Epoch& other) const
-    {
-        return m_epoch < other.m_epoch;
-    }
-
-    bool operator>(const Epoch& other) const
-    {
-        return other < *this;
-    }
-
-    bool operator<=(const Epoch& other) const
-    {
-        return !(*this > other);
-    }
-
-    bool operator>=(const Epoch& other) const
-    {
-        return !(*this < other);
-    }
+    friend auto operator<=>(const Epoch&, const Epoch&) = default;
 
     void dump(PrintStream&) const;
 

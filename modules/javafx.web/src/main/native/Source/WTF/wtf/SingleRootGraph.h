@@ -36,7 +36,7 @@ namespace WTF {
 
 template <typename Graph>
 class SingleRootGraphNode {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(SingleRootGraphNode);
 public:
     // We use "#root" to refer to the synthetic root we have created.
     static ASCIILiteral rootName() { return "#root"_s; };
@@ -76,7 +76,7 @@ private:
 
 template <typename Graph>
 class SingleRootGraphSet {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(SingleRootGraphSet);
     using Node = SingleRootGraphNode<Graph>;
 public:
     SingleRootGraphSet() = default;
@@ -116,7 +116,7 @@ private:
 
 template<typename T, typename Graph>
 class SingleRootMap {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(SingleRootMap);
     using Node = SingleRootGraphNode<Graph>;
 public:
     SingleRootMap(Graph& graph)
@@ -125,8 +125,8 @@ public:
     }
 
     SingleRootMap(SingleRootMap&& other)
-        : m_map(WTFMove(other.m_map))
-        , m_root(WTFMove(other.m_root))
+        : m_map(WTF::move(other.m_map))
+        , m_root(WTF::move(other.m_root))
     {
     }
 
@@ -138,26 +138,26 @@ public:
 
     size_t size() const { return m_map.size() + 1; }
 
-    T& operator[](size_t index)
+    T& operator[](size_t index) LIFETIME_BOUND
     {
         if (!index)
             return m_root;
         return m_map[index - 1];
     }
 
-    const T& operator[](size_t index) const
+    const T& operator[](size_t index) const LIFETIME_BOUND
     {
         return (*const_cast<SingleRootMap*>(this))[index];
     }
 
-    T& operator[](const Node& node)
+    T& operator[](const Node& node) LIFETIME_BOUND
     {
         if (node.isRoot())
             return m_root;
         return m_map[node.node()];
     }
 
-    const T& operator[](const Node& node) const
+    const T& operator[](const Node& node) const LIFETIME_BOUND
     {
         return (*const_cast<SingleRootMap*>(this))[node];
     }
@@ -170,7 +170,7 @@ private:
 template<typename Graph>
 class SingleRootGraph {
     WTF_MAKE_NONCOPYABLE(SingleRootGraph);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(SingleRootGraph);
 public:
 
     using Node = SingleRootGraphNode<Graph>;

@@ -31,19 +31,16 @@
 
 namespace WebCore {
 
-RefPtr<CSSValue> CSSPendingSubstitutionValue::resolveValue(Style::BuilderState& builderState, CSSPropertyID propertyID) const
+RefPtr<CSSValue> CSSPendingSubstitutionValue::resolveValue(Style::Builder& builder, CSSPropertyID propertyID) const
 {
-    auto cacheValue = [&](auto data) {
+    if (!m_shorthandValue->resolveAndCacheValue(builder, [this](auto data) {
         ParsedPropertyVector parsedProperties;
-        if (!CSSPropertyParser::parseValue(m_shorthandPropertyId, false, data->tokens(), data->context(), parsedProperties, StyleRuleType::Style)) {
+        if (!CSSPropertyParser::parseValue(m_shorthandPropertyId, IsImportant::No, data->tokens(), data->context(), parsedProperties, StyleRuleType::Style)) {
             m_cachedPropertyValues = { };
             return;
         }
 
-        m_cachedPropertyValues = parsedProperties;
-    };
-
-    if (!m_shorthandValue->resolveAndCacheValue(builderState, cacheValue))
+        m_cachedPropertyValues = parsedProperties; }))
         return nullptr;
 
     for (auto& property : m_cachedPropertyValues) {

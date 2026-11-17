@@ -30,6 +30,7 @@
 #include "pas_found_index.h"
 #include "pas_immortal_heap.h"
 #include "pas_utils.h"
+#include "pas_zero_memory.h"
 #include <stdalign.h>
 
 PAS_BEGIN_EXTERN_C;
@@ -284,4 +285,3 @@ PAS_BEGIN_EXTERN_C;
 PAS_END_EXTERN_C;
 
 #endif /* PAS_SEGMENTED_VECTOR_H */
-

@@ -20,7 +20,7 @@
 
 #pragma once
 
-#include "JSObject.h"
+#include <JavaScriptCore/JSObject.h>
 
 namespace JSC {
 
@@ -49,6 +49,6 @@ private:
 
 JS_EXPORT_PRIVATE JSC_DECLARE_HOST_FUNCTION(objectProtoFuncToString);
 JSString* objectPrototypeToString(JSGlobalObject*, JSValue thisValue);
-bool objectPrototypeHasOwnProperty(JSGlobalObject*, JSObject* base, const Identifier& property);
+bool objectPrototypeHasOwnProperty(JSGlobalObject*, JSObject* base, PropertyName);
 
 } // namespace JSC

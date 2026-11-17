@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -422,11 +422,11 @@ public final class Border implements Interpolatable<Border> {
     public Border interpolate(Border endValue, double t) {
         Objects.requireNonNull(endValue, "endValue cannot be null");
 
-        if (t <= 0) {
+        if (t == 0) {
             return this;
         }
 
-        if (t >= 1) {
+        if (t == 1) {
             return endValue;
         }
 

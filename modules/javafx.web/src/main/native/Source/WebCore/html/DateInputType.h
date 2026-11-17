@@ -30,13 +30,14 @@
 
 #pragma once
 
-#if ENABLE(INPUT_TYPE_DATE)
-
 #include "BaseDateAndTimeInputType.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class DateInputType final : public BaseDateAndTimeInputType {
+    WTF_MAKE_TZONE_ALLOCATED(DateInputType);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DateInputType);
 public:
     static Ref<DateInputType> create(HTMLInputElement& element)
     {
@@ -60,5 +61,3 @@ private:
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_INPUT_TYPE(DateInputType, Type::Date)
-
-#endif

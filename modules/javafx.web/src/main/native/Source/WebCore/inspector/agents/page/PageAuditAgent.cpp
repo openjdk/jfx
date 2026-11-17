@@ -26,6 +26,7 @@
 #include "config.h"
 #include "PageAuditAgent.h"
 
+#include "FrameConsoleClient.h"
 #include "InspectorAuditAccessibilityObject.h"
 #include "InspectorAuditDOMObject.h"
 #include "InspectorAuditResourcesObject.h"
@@ -33,20 +34,23 @@
 #include "JSInspectorAuditAccessibilityObject.h"
 #include "JSInspectorAuditDOMObject.h"
 #include "JSInspectorAuditResourcesObject.h"
+#include "LocalFrame.h"
 #include "Page.h"
-#include "PageConsoleClient.h"
 #include <JavaScriptCore/CallFrame.h>
 #include <JavaScriptCore/InjectedScript.h>
 #include <JavaScriptCore/InjectedScriptManager.h>
 #include <JavaScriptCore/JSLock.h>
 #include <wtf/Ref.h>
 #include <wtf/RefPtr.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 using namespace Inspector;
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PageAuditAgent);
 
 PageAuditAgent::PageAuditAgent(PageAgentContext& context)
     : InspectorAuditAgent(context)
@@ -60,14 +64,14 @@ InjectedScript PageAuditAgent::injectedScriptForEval(std::optional<Inspector::Pr
 {
     if (executionContextId)
         return injectedScriptManager().injectedScriptForId(*executionContextId);
-    if (auto* localMainFrame = dynamicDowncast<LocalFrame>(m_inspectedPage.mainFrame()))
+    if (RefPtr localMainFrame = m_inspectedPage->localMainFrame())
         return injectedScriptManager().injectedScriptFor(&mainWorldGlobalObject(*localMainFrame));
     return InjectedScript();
 }
 
 InjectedScript PageAuditAgent::injectedScriptForEval(Inspector::Protocol::ErrorString& errorString, std::optional<Inspector::Protocol::Runtime::ExecutionContextId>&& executionContextId)
 {
-    InjectedScript injectedScript = injectedScriptForEval(WTFMove(executionContextId));
+    InjectedScript injectedScript = injectedScriptForEval(WTF::move(executionContextId));
     if (injectedScript.hasNoValue()) {
         if (executionContextId)
             errorString = "Missing injected script for given executionContextId"_s;
@@ -103,12 +107,12 @@ void PageAuditAgent::populateAuditObject(JSC::JSGlobalObject* lexicalGlobalObjec
 void PageAuditAgent::muteConsole()
 {
     InspectorAuditAgent::muteConsole();
-    PageConsoleClient::mute();
+    FrameConsoleClient::mute();
 }
 
 void PageAuditAgent::unmuteConsole()
 {
-    PageConsoleClient::unmute();
+    FrameConsoleClient::unmute();
     InspectorAuditAgent::unmuteConsole();
 }
 

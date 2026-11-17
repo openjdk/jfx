@@ -32,28 +32,31 @@
 #include "HTMLDocumentParser.h"
 #include "HTMLTableCellElement.h"
 #include "HTMLTableElement.h"
+#include "HTMLTableRowElement.h"
 #include "LocalizedStrings.h"
 #include "Logging.h"
 #include "FTPDirectoryParser.h"
 #include "Settings.h"
 #include "SharedBuffer.h"
 #include "Text.h"
+#include <wtf/CheckedArithmetic.h>
 #include <wtf/GregorianDateTime.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
+#include <wtf/Vector.h>
 #include <wtf/text/MakeString.h>
 #include <wtf/text/StringToIntegerConversion.h>
 #include <wtf/unicode/CharacterNames.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(FTPDirectoryDocument);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FTPDirectoryDocument);
 
 using namespace HTMLNames;
 
 class FTPDirectoryDocumentParser final : public HTMLDocumentParser {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(HTMLDocumentParser);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(FTPDirectoryDocumentParser, HTMLDocumentParser);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(FTPDirectoryDocumentParser);
 public:
     static Ref<FTPDirectoryDocumentParser> create(HTMLDocument& document)
@@ -65,14 +68,12 @@ private:
     void append(RefPtr<StringImpl>&&) override;
     void finish() override;
 
-    void checkBuffer(int len = 10)
+    void checkBuffer(size_t length = 10)
     {
-        if ((m_dest - m_buffer) > m_size - len) {
+        if (m_destIndex > m_size - length) {
             // Enlarge buffer
-            int newSize = std::max(m_size * 2, m_size + len);
-            int oldOffset = m_dest - m_buffer;
-            m_buffer = static_cast<UChar*>(fastRealloc(m_buffer, newSize * sizeof(UChar)));
-            m_dest = m_buffer + oldOffset;
+            CheckedSize newSize = std::max(CheckedSize(m_size) * 2lu, CheckedSize(m_size) + length);
+            m_buffer.grow(newSize);
             m_size = newSize;
         }
     }
@@ -93,9 +94,9 @@ private:
 
     bool m_skipLF { false };
 
-    int m_size { 254 };
-    UChar* m_buffer;
-    UChar* m_dest;
+    size_t m_size { 254 };
+    Vector<char16_t> m_buffer;
+    size_t m_destIndex { 0 };
     StringBuilder m_carryOver;
 
     ListState m_listState;
@@ -103,8 +104,7 @@ private:
 
 FTPDirectoryDocumentParser::FTPDirectoryDocumentParser(HTMLDocument& document)
     : HTMLDocumentParser(document)
-    , m_buffer(static_cast<UChar*>(fastMalloc(sizeof(UChar) * m_size)))
-    , m_dest(m_buffer)
+    , m_buffer(m_size)
 {
 }
 
@@ -123,17 +123,17 @@ void FTPDirectoryDocumentParser::appendEntry(String&& filename, String&& size, S
         typeElement->setAttributeWithoutSynchronization(HTMLNames::classAttr, "ftpDirectoryIcon ftpDirectoryTypeFile"_s);
     rowElement->appendChild(typeElement);
 
-    Ref nameElement = createTDForFilename(WTFMove(filename));
+    Ref nameElement = createTDForFilename(WTF::move(filename));
     nameElement->setAttributeWithoutSynchronization(HTMLNames::classAttr, "ftpDirectoryFileName"_s);
     rowElement->appendChild(nameElement);
 
     Ref dateElement = HTMLTableCellElement::create(tdTag, document);
-    dateElement->appendChild(Text::create(document, WTFMove(date)));
+    dateElement->appendChild(Text::create(document, WTF::move(date)));
     dateElement->setAttributeWithoutSynchronization(HTMLNames::classAttr, "ftpDirectoryFileDate"_s);
     rowElement->appendChild(dateElement);
 
     Ref sizeElement = HTMLTableCellElement::create(tdTag, document);
-    sizeElement->appendChild(Text::create(document, WTFMove(size)));
+    sizeElement->appendChild(Text::create(document, WTF::move(size)));
     sizeElement->setAttributeWithoutSynchronization(HTMLNames::classAttr, "ftpDirectoryFileSize"_s);
     rowElement->appendChild(sizeElement);
     document->setHasVisuallyNonEmptyCustomContent();
@@ -151,8 +151,8 @@ Ref<Element> FTPDirectoryDocumentParser::createTDForFilename(String&& filename)
         fullURL = makeAtomString(baseURL, '/', filename);
 
     Ref anchorElement = HTMLAnchorElement::create(document);
-    anchorElement->setAttributeWithoutSynchronization(HTMLNames::hrefAttr, WTFMove(fullURL));
-    anchorElement->appendChild(Text::create(document, WTFMove(filename)));
+    anchorElement->setAttributeWithoutSynchronization(HTMLNames::hrefAttr, WTF::move(fullURL));
+    anchorElement->appendChild(Text::create(document, WTF::move(filename)));
 
     Ref tdElement = HTMLTableCellElement::create(tdTag, document);
     tdElement->appendChild(anchorElement);
@@ -178,7 +178,7 @@ static String processFilesizeString(const String& size, bool isDirectory)
 
 static bool wasLastDayOfMonth(int year, int month, int day)
 {
-    static const int lastDays[] = { 31, 0, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+    static constexpr std::array lastDays { 31, 0, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
     if (month < 0 || month > 11)
         return false;
 
@@ -255,7 +255,7 @@ void FTPDirectoryDocumentParser::parseAndAppendOneLine(const String& inputLine)
     ListResult result;
     CString latin1Input = inputLine.latin1();
 
-    FTPEntryType typeResult = parseOneFTPLine(latin1Input.data(), m_listState, result);
+    FTPEntryType typeResult = parseOneFTPLine(byteCast<Latin1Character>(latin1Input.mutableSpan()), m_listState, result);
 
     // FTPMiscEntry is a comment or usage statistic which we don't care about, and junk is invalid data - bail in these 2 cases
     if (typeResult == FTPMiscEntry || typeResult == FTPJunkEntry)
@@ -263,17 +263,17 @@ void FTPDirectoryDocumentParser::parseAndAppendOneLine(const String& inputLine)
 
     String filename;
     if (result.type == FTPDirectoryEntry) {
-        filename = makeString(result.filenameSpan(), '/');
+        filename = makeString(result.filename, '/');
 
         // We have no interest in linking to "current directory"
         if (filename == "./"_s)
             return;
     } else
-        filename = String(result.filenameSpan());
+        filename = String(result.filename);
 
     LOG(FTP, "Appending entry - %s, %s", filename.ascii().data(), result.fileSize.ascii().data());
 
-    appendEntry(WTFMove(filename), processFilesizeString(result.fileSize, result.type == FTPDirectoryEntry), processFileDateString(result.modifiedTime), result.type == FTPDirectoryEntry);
+    appendEntry(WTF::move(filename), processFilesizeString(result.fileSize, result.type == FTPDirectoryEntry), processFileDateString(result.modifiedTime), result.type == FTPDirectoryEntry);
 }
 
 static inline RefPtr<SharedBuffer> createTemplateDocumentData(const Settings& settings)
@@ -295,7 +295,7 @@ bool FTPDirectoryDocumentParser::loadDocumentTemplate()
         return false;
     }
 
-    HTMLDocumentParser::insert(String(templateDocumentData.get()->span()));
+    HTMLDocumentParser::insert(String(byteCast<Latin1Character>(templateDocumentData.get()->span())));
 
     Ref document = *this->document();
 
@@ -303,7 +303,7 @@ bool FTPDirectoryDocumentParser::loadDocumentTemplate()
     if (!foundElement)
         LOG_ERROR("Unable to find element by id \"ftpDirectoryTable\" in the template document.");
     else if (RefPtr tableElement = dynamicDowncast<HTMLTableElement>(*foundElement)) {
-        m_tableElement = WTFMove(tableElement);
+        m_tableElement = WTF::move(tableElement);
         return true;
     } else
         LOG_ERROR("Element of id \"ftpDirectoryTable\" is not a table element");
@@ -353,23 +353,23 @@ void FTPDirectoryDocumentParser::append(RefPtr<StringImpl>&& inputSource)
 
     bool foundNewLine = false;
 
-    m_dest = m_buffer;
-    SegmentedString string { String { WTFMove(inputSource) } };
+    m_destIndex = 0;
+    SegmentedString string { String { WTF::move(inputSource) } };
     while (!string.isEmpty()) {
-        UChar c = string.currentCharacter();
+        char16_t c = string.currentCharacter();
 
         if (c == '\r') {
-            *m_dest++ = '\n';
+            m_buffer[m_destIndex++] = '\n';
             foundNewLine = true;
             // possibly skip an LF in the case of an CRLF sequence
             m_skipLF = true;
         } else if (c == '\n') {
             if (!m_skipLF)
-                *m_dest++ = c;
+                m_buffer[m_destIndex++] = c;
             else
                 m_skipLF = false;
         } else {
-            *m_dest++ = c;
+            m_buffer[m_destIndex++] = c;
             m_skipLF = false;
         }
 
@@ -380,28 +380,28 @@ void FTPDirectoryDocumentParser::append(RefPtr<StringImpl>&& inputSource)
     }
 
     if (!foundNewLine) {
-        m_dest = m_buffer;
+        m_destIndex = 0;
         return;
     }
 
-    UChar* start = m_buffer;
-    UChar* cursor = start;
+    size_t start = 0;
+    size_t cursor = 0;
 
-    while (cursor < m_dest) {
-        if (*cursor == '\n') {
-            m_carryOver.append(StringView(std::span(start, cursor - start)));
+    while (cursor < m_destIndex) {
+        if (m_buffer[cursor] == '\n') {
+            m_carryOver.append(StringView(m_buffer.subspan(start, cursor - start)));
             LOG(FTP, "%s", m_carryOver.toString().ascii().data());
             parseAndAppendOneLine(m_carryOver.toString());
             m_carryOver.clear();
 
             start = ++cursor;
         } else
-            cursor++;
+            ++cursor;
     }
 
     // Copy the partial line we have left to the carryover buffer
     if (cursor - start > 1)
-        m_carryOver.append(StringView(std::span(start, cursor - start - 1)));
+        m_carryOver.append(StringView(m_buffer.subspan(start, cursor - start - 1)));
 }
 
 void FTPDirectoryDocumentParser::finish()
@@ -413,7 +413,7 @@ void FTPDirectoryDocumentParser::finish()
     }
 
     m_tableElement = nullptr;
-    fastFree(m_buffer);
+    m_buffer = { };
 
     HTMLDocumentParser::finish();
 }

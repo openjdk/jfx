@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,7 @@
 #include <WebCore/DocumentLoader.h>
 #include <WebCore/FormState.h>
 #include <WebCore/Frame.h>
+#include "FrameInlines.h"
 #include <WebCore/FrameLoader.h>
 #include <WebCore/LocalFrameLoaderClient.h>
 #include <WebCore/FrameView.h>
@@ -38,12 +39,13 @@
 #include <WebCore/ResourceRequest.h>
 #include <WebCore/ResourceResponse.h>
 #include <WebCore/Widget.h>
+#include <wtf/RefCounted.h>
 
 namespace WebCore {
 
 class FrameLoaderClientJava : public LocalFrameLoaderClient {
 public:
-    FrameLoaderClientJava(const JLObject &webPage);
+    FrameLoaderClientJava(FrameLoader& loader, const JLObject &webPage);
     ~FrameLoaderClientJava();
 
     void init();
@@ -94,13 +96,13 @@ public:
 
     void dispatchDecidePolicyForResponse(const ResourceResponse&, const ResourceRequest&, const String& downloadAttribute, FramePolicyFunction&&) override;
     void dispatchDecidePolicyForNewWindowAction(const NavigationAction&, const ResourceRequest&, FormState*, const String& frameName, std::optional<HitTestResult>&&, FramePolicyFunction&&) override;
-    virtual void dispatchDecidePolicyForNavigationAction(const NavigationAction&, const ResourceRequest&, const ResourceResponse& redirectResponse, FormState*, const String& clientRedirectSourceForHistory, std::optional<NavigationIdentifier>, std::optional<HitTestResult>&&, bool hasOpener, SandboxFlags, PolicyDecisionMode, FramePolicyFunction&&) override;
+    virtual void dispatchDecidePolicyForNavigationAction(const NavigationAction&, const ResourceRequest&, const ResourceResponse& redirectResponse, FormState*, const String& clientRedirectSourceForHistory, std::optional<NavigationIdentifier>, std::optional<HitTestResult>&&, bool hasOpener, NavigationUpgradeToHTTPSBehavior, SandboxFlags, PolicyDecisionMode, FramePolicyFunction&&) override;
     void cancelPolicyCheck() override;
 
     void dispatchUnableToImplementPolicy(const ResourceError&) override;
 
     void dispatchWillSendSubmitEvent(Ref<FormState>&&) override {}
-    void dispatchWillSubmitForm(FormState&, CompletionHandler<void()>&&) override;
+    void dispatchWillSubmitForm(FormState&, URL&& requestURL, String&& method, CompletionHandler<void()>&&) override;
 
     void dispatchDidLoadMainResource(DocumentLoader*);
 
@@ -125,28 +127,16 @@ public:
 
     void updateGlobalHistory() override;
     void updateGlobalHistoryRedirectLinks() override;
+    void updateSandboxFlags(SandboxFlags) override;
+    void updateOpener(std::optional<FrameIdentifier> idf) override;
 
-    bool shouldGoToHistoryItem(HistoryItem&) const override;
+    WebCore::ShouldGoToHistoryItem shouldGoToHistoryItem(HistoryItem&, WebCore::IsSameDocumentNavigation,ProcessSwapDisposition processSwapDisposition) const override;
+    void shouldGoToHistoryItemAsync(HistoryItem&, CompletionHandler<void(ShouldGoToHistoryItem)>&&) const override;
 
     // This frame has displayed inactive content (such as an image) from an
     // insecure source.  Inactive content cannot spread to other frames.
-    void didDisplayInsecureContent() override;
+    bool supportsAsyncShouldGoToHistoryItem() const override;
 
-    // The indicated security origin has run active content (such as a
-    // script) from an insecure source.  Note that the insecure content can
-    // spread to other frames in the same origin.
-    void didRunInsecureContent(SecurityOrigin&) override;
-
-    ResourceError cancelledError(const ResourceRequest&) const override;
-    ResourceError blockedByContentBlockerError(const ResourceRequest& request) const override;
-    ResourceError blockedError(const ResourceRequest&) const override;
-    ResourceError cannotShowURLError(const ResourceRequest&) const override;
-    ResourceError interruptedForPolicyChangeError(const ResourceRequest&) const override;
-
-    ResourceError cannotShowMIMETypeError(const ResourceResponse&) const override;
-    ResourceError fileDoesNotExistError(const ResourceResponse&) const override;
-    ResourceError httpsUpgradeRedirectLoopError(const ResourceRequest&) const override;
-    ResourceError pluginWillHandleLoadError(const ResourceResponse&) const override;
 
     bool shouldFallBack(const ResourceError&) const override;
     void loadStorageAccessQuirksIfNeeded() override;
@@ -167,7 +157,7 @@ public:
     void didFinishLoad() override;
     void prepareForDataSourceReplacement() override;
 
-    Ref<DocumentLoader> createDocumentLoader(const ResourceRequest&, const SubstituteData&) override;
+    Ref<DocumentLoader> createDocumentLoader(ResourceRequest&&, SubstituteData&&) override;
     void setTitle(const StringWithDirection& title, const URL&) override;
 
     void willReplaceMultipartContent() override;
@@ -194,14 +184,16 @@ public:
     void prefetchDNS(const String&) override;
     void sendH2Ping(const URL&, CompletionHandler<void(Expected<Seconds, ResourceError>&&)>&&) override;
     void broadcastFrameRemovalToOtherProcesses();
-        ResourceError httpNavigationWithHTTPSOnlyError(const ResourceRequest&) const override;
-        void broadcastMainFrameURLChangeToOtherProcesses(const URL&) override;
-        void dispatchLoadEventToOwnerElementInAnotherProcess() override;
+    void dispatchLoadEventToOwnerElementInAnotherProcess() override;
+    RefPtr<HistoryItem> createHistoryItemTree(bool clipAtTarget, BackForwardItemIdentifier) const override;
+    void setPrinting(bool printing, FloatSize pageSize, FloatSize originalPageSize, float maximumShrinkRatio, AdjustViewSize) override;
+
 private:
     Page* m_page;
     Frame* m_frame;
     ResourceResponse m_response;
     ResourceLoaderIdentifier m_mainResourceRequestID;
+    bool m_mainResourceRequestIDSet { false };
     bool m_isPageRedirected;
     bool m_hasRepresentation;
 

@@ -28,6 +28,7 @@
 #include <wtf/ListDump.h>
 #include <wtf/MathExtras.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/SwiftBridging.h>
 #include <wtf/Vector.h>
 
 namespace WTF {
@@ -51,7 +52,7 @@ namespace WTF {
 
 template<typename RangeType>
 class RangeSet final {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(RangeSet);
 public:
     typedef RangeType Range;
     typedef typename Range::Type Type;
@@ -128,12 +129,12 @@ public:
         out.print("{", listDump(m_ranges), ", isCompact = ", m_isCompact, "}");
     }
 
-    typename VectorType::const_iterator begin() const
+    typename VectorType::const_iterator begin() const LIFETIME_BOUND
     {
         return m_ranges.begin();
     }
 
-    typename VectorType::const_iterator end() const
+    typename VectorType::const_iterator end() const LIFETIME_BOUND
     {
         return m_ranges.end();
     }
@@ -154,9 +155,7 @@ public:
             return;
         }
 
-        std::sort(
-            m_ranges.begin(), m_ranges.end(),
-            [&] (const Range& a, const Range& b) -> bool {
+        std::ranges::sort(m_ranges, [&](const Range& a, const Range& b) {
                 return a.begin() < b.begin();
             });
 
@@ -207,7 +206,7 @@ private:
 
     VectorType m_ranges;
     bool m_isCompact { true };
-};
+} SWIFT_ESCAPABLE;
 
 } // namespace WTF
 

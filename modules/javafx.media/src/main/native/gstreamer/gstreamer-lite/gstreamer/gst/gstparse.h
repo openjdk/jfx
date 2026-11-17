@@ -100,16 +100,16 @@ GST_API
 GType             gst_parse_context_get_type (void);
 
 GST_API
-GstParseContext * gst_parse_context_new (void) G_GNUC_MALLOC;
+GstParseContext * gst_parse_context_new (void) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-gchar          ** gst_parse_context_get_missing_elements (GstParseContext * context) G_GNUC_MALLOC;
+gchar          ** gst_parse_context_get_missing_elements (GstParseContext * context) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void              gst_parse_context_free (GstParseContext * context);
 
 GST_API
-GstParseContext * gst_parse_context_copy (const GstParseContext * context);
+GstParseContext * gst_parse_context_copy (const GstParseContext * context) G_GNUC_WARN_UNUSED_RESULT;
 
 
 /* parse functions */

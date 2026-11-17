@@ -25,9 +25,12 @@
 
 #pragma once
 
-#include "MemoryMode.h"
-#include "Options.h"
-#include "PageCount.h"
+#include <JavaScriptCore/MemoryMode.h>
+#include <JavaScriptCore/Options.h>
+#include <JavaScriptCore/PageCount.h>
+
+#include <atomic>
+#include <set>
 
 #include <wtf/CagedPtr.h>
 #include <wtf/Expected.h>
@@ -45,8 +48,12 @@ class PrintStream;
 }
 
 namespace JSC {
+namespace Wasm {
+class InstanceAnchor;
+}
 
 class LLIntOffsetsExtractor;
+class JSWebAssemblyInstance;
 
 enum class GrowFailReason : uint8_t {
     InvalidDelta,
@@ -57,7 +64,7 @@ enum class GrowFailReason : uint8_t {
 };
 
 struct BufferMemoryResult {
-    enum Kind {
+    enum class Kind {
         Success,
         SuccessAndNotifyMemoryPressure,
         SyncTryToReclaimMemory
@@ -138,7 +145,7 @@ public:
         return m_size.load(order);
     }
 
-    std::span<uint8_t> mutableSpan(std::memory_order order = std::memory_order_seq_cst) { return { static_cast<uint8_t*>(memory()), size(order) }; }
+    std::span<uint8_t> mutableSpan(std::memory_order order = std::memory_order_seq_cst) LIFETIME_BOUND { return unsafeMakeSpan(static_cast<uint8_t*>(memory()), size(order)); }
 
     size_t mappedCapacity() const { return m_mappedCapacity; }
     PageCount initial() const { return m_initial; }
@@ -158,6 +165,12 @@ public:
 
     static void* nullBasePointer();
 
+#if ENABLE(WEBASSEMBLY)
+    const ThreadSafeWeakHashSet<Wasm::InstanceAnchor>& anchors(const AbstractLocker&) const { return m_anchors; }
+    void transferAnchors(BufferMemoryHandle& newHandle);
+    void registerInstance(JSWebAssemblyInstance&);
+#endif
+
 private:
     using CagedMemory = CagedPtr<Gigacage::Primitive, void>;
 
@@ -169,6 +182,9 @@ private:
     size_t m_mappedCapacity { 0 };
     PageCount m_initial;
     PageCount m_maximum;
+#if ENABLE(WEBASSEMBLY)
+    ThreadSafeWeakHashSet<Wasm::InstanceAnchor> m_anchors;
+#endif
 };
 
 } // namespace JSC

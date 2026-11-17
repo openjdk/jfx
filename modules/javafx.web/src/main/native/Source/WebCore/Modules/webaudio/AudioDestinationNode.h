@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2010, Google Inc. All rights reserved.
- * Copyright (C) 2020-2021, Apple Inc. All rights reserved.
+ * Copyright (C) 2010 Google Inc. All rights reserved.
+ * Copyright (C) 2020-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,10 +31,12 @@
 namespace WebCore {
 
 class AudioBus;
+class Exception;
 struct AudioIOPosition;
 
 class AudioDestinationNode : public AudioNode {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(AudioDestinationNode);
+    WTF_MAKE_TZONE_ALLOCATED(AudioDestinationNode);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(AudioDestinationNode);
 public:
     ~AudioDestinationNode();
 
@@ -58,13 +60,17 @@ public:
     void ref() const final;
     void deref() const final;
 
+#if PLATFORM(IOS_FAMILY)
+    virtual void setSceneIdentifier(const String&) { }
+#endif
+
 protected:
     AudioDestinationNode(BaseAudioContext&, float sampleRate);
 
     double tailTime() const final { return 0; }
     double latencyTime() const final { return 0; }
 
-    void renderQuantum(AudioBus* destinationBus, size_t numberOfFrames, const AudioIOPosition& outputPosition);
+    void renderQuantum(AudioBus& destinationBus, size_t numberOfFrames, const AudioIOPosition& outputPosition);
 
 private:
     // Counts the number of sample-frames processed by the destination.
@@ -73,3 +79,5 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_AUDIONODE(AudioDestinationNode, NodeTypeDestination);

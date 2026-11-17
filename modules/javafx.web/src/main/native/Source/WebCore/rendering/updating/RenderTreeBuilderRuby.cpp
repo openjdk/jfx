@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 20170-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,15 +26,19 @@
 #include "config.h"
 #include "RenderTreeBuilderRuby.h"
 
-#include "RenderAncestorIterator.h"
+#include "RenderBlock.h"
 #include "RenderInline.h"
+#include "RenderObjectInlines.h"
 #include "RenderTreeBuilder.h"
 #include "RenderTreeBuilderBlock.h"
-#include "RenderTreeBuilderBlockFlow.h"
 #include "RenderTreeBuilderInline.h"
+#include "RenderStyle+SettersInlines.h"
 #include "UnicodeBidi.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderTreeBuilder::Ruby);
 
 RenderTreeBuilder::Ruby::Ruby(RenderTreeBuilder& builder)
     : m_builder(builder)
@@ -55,54 +59,63 @@ RenderStyle createAnonymousStyleForRuby(const RenderStyle& parentStyle, DisplayT
 static RenderPtr<RenderElement> createAnonymousRendererForRuby(RenderElement& parent, DisplayType display)
 {
     auto style = createAnonymousStyleForRuby(parent.style(), display);
-    auto ruby = createRenderer<RenderInline>(RenderObject::Type::Inline, parent.document(), WTFMove(style));
+    auto ruby = createRenderer<RenderInline>(RenderObject::Type::Inline, parent.document(), WTF::move(style));
     ruby->initializeStyle();
     return ruby;
 }
 
 RenderElement& RenderTreeBuilder::Ruby::findOrCreateParentForStyleBasedRubyChild(RenderElement& parent, const RenderObject& child, RenderObject*& beforeChild)
 {
-    if (!child.isRenderText() && child.style().display() == DisplayType::Ruby && parent.style().display() == DisplayType::RubyBlock)
-        return parent;
+    RenderElement* beforeChildAncestor = &parent;
+    if (auto* rubyInline = dynamicDowncast<RenderInline>(parent); rubyInline && rubyInline->continuation())
+        beforeChildAncestor = RenderTreeBuilder::Inline::parentCandidateInContinuation(*rubyInline, beforeChild).ptr();
+    else if (auto* rubyBlock = dynamicDowncast<RenderBlock>(parent); rubyBlock && rubyBlock->continuation())
+        beforeChildAncestor = RenderTreeBuilder::Block::continuationBefore(*rubyBlock, beforeChild);
 
-    if (parent.style().display() == DisplayType::RubyBlock) {
+    if (!child.isRenderText() && child.style().display() == DisplayType::Ruby && beforeChildAncestor->style().display() == DisplayType::RubyBlock)
+        return *beforeChildAncestor;
+
+    if (beforeChildAncestor->style().display() == DisplayType::RubyBlock) {
         // See if we have an anonymous ruby box already.
         // FIXME: It should be the immediate child but continuations can break this assumption.
-        for (CheckedPtr first = parent.firstChild(); first; first = first->firstChildSlow()) {
+        for (CheckedPtr first = beforeChildAncestor->firstChild(); first; first = first->firstChildSlow()) {
             if (!first->isAnonymous()) {
                 // <ruby blockified><ruby> is valid and still requires construction of an anonymous inline ruby box.
                 ASSERT(first->style().display() == DisplayType::Ruby);
                 break;
             }
-            if (first->style().display() == DisplayType::Ruby)
+            if (first->style().display() == DisplayType::Ruby) {
+                if (beforeChild && !beforeChild->isDescendantOf(first.get()))
+                    beforeChild = nullptr;
                 return downcast<RenderElement>(*first);
+            }
         }
     }
 
-    if (parent.style().display() != DisplayType::Ruby) {
-        auto rubyContainer = createAnonymousRendererForRuby(parent, DisplayType::Ruby);
+    if (beforeChildAncestor->style().display() != DisplayType::Ruby) {
+        auto rubyContainer = createAnonymousRendererForRuby(*beforeChildAncestor, DisplayType::Ruby);
         WeakPtr newParent = rubyContainer.get();
-        m_builder.attach(parent, WTFMove(rubyContainer), beforeChild);
+        m_builder.attach(parent, WTF::move(rubyContainer), beforeChild);
         beforeChild = nullptr;
         return *newParent;
     }
 
     if (!child.isRenderText() && (child.style().display() == DisplayType::RubyBase || child.style().display() == DisplayType::RubyAnnotation))
-        return parent;
+        return *beforeChildAncestor;
 
     if (beforeChild && beforeChild->parent()->style().display() == DisplayType::RubyBase)
         return *beforeChild->parent();
 
-    auto* previous = beforeChild ? beforeChild->previousSibling() : parent.lastChild();
+    auto* previous = beforeChild ? beforeChild->previousSibling() : beforeChildAncestor->lastChild();
     if (previous && previous->style().display() == DisplayType::RubyBase) {
         beforeChild = nullptr;
         return downcast<RenderElement>(*previous);
     }
 
-    auto rubyBase = createAnonymousRendererForRuby(parent, DisplayType::RubyBase);
+    auto rubyBase = createAnonymousRendererForRuby(*beforeChildAncestor, DisplayType::RubyBase);
     rubyBase->initializeStyle();
     WeakPtr newParent = rubyBase.get();
-    m_builder.inlineBuilder().attach(downcast<RenderInline>(parent), WTFMove(rubyBase), beforeChild);
+    m_builder.inlineBuilder().attach(downcast<RenderInline>(parent), WTF::move(rubyBase), beforeChild);
     beforeChild = nullptr;
     return *newParent;
 }
@@ -111,7 +124,7 @@ void RenderTreeBuilder::Ruby::attachForStyleBasedRuby(RenderElement& parent, Ren
 {
     if (parent.style().display() == DisplayType::RubyBlock) {
         ASSERT(child->style().display() == DisplayType::Ruby);
-        m_builder.attachToRenderElementInternal(parent, WTFMove(child), beforeChild);
+        m_builder.attachToRenderElementInternal(parent, WTF::move(child), beforeChild);
         return;
     }
     ASSERT(parent.style().display() == DisplayType::Ruby);
@@ -125,10 +138,10 @@ void RenderTreeBuilder::Ruby::attachForStyleBasedRuby(RenderElement& parent, Ren
         WeakPtr previous = beforeChild ? beforeChild->previousSibling() : parent.lastChild();
         if (!previous || previous->style().display() != DisplayType::RubyBase) {
             auto rubyBase = createAnonymousRendererForRuby(parent, DisplayType::RubyBase);
-            m_builder.attachToRenderElementInternal(parent, WTFMove(rubyBase), beforeChild);
+            m_builder.attachToRenderElementInternal(parent, WTF::move(rubyBase), beforeChild);
         }
     }
-    m_builder.attachToRenderElementInternal(parent, WTFMove(child), beforeChild);
+    m_builder.attachToRenderElementInternal(parent, WTF::move(child), beforeChild);
 }
 
 }

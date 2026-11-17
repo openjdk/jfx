@@ -26,18 +26,19 @@
 
 #pragma once
 
+#include <wtf/StdLibExtras.h>
 #include <wtf/text/ASCIIFastPath.h>
 
 namespace PAL {
 
-template<size_t size> struct UCharByteFiller;
-template<> struct UCharByteFiller<4> {
-    static void copy(LChar* destination, const uint8_t* source)
+template<size_t size> struct ASCIIFastPathByteFiller;
+template<> struct ASCIIFastPathByteFiller<4> {
+    static void copy(std::span<Latin1Character> destination, std::span<const uint8_t> source)
     {
-        memcpy(destination, source, 4);
+        memcpySpan(destination, source.first(4));
     }
 
-    static void copy(UChar* destination, const uint8_t* source)
+    static void copy(std::span<char16_t> destination, std::span<const uint8_t> source)
     {
         destination[0] = source[0];
         destination[1] = source[1];
@@ -45,13 +46,13 @@ template<> struct UCharByteFiller<4> {
         destination[3] = source[3];
     }
 };
-template<> struct UCharByteFiller<8> {
-    static void copy(LChar* destination, const uint8_t* source)
+template<> struct ASCIIFastPathByteFiller<8> {
+    static void copy(std::span<Latin1Character> destination, std::span<const uint8_t> source)
     {
-        memcpy(destination, source, 8);
+        memcpySpan(destination, source.first(8));
     }
 
-    static void copy(UChar* destination, const uint8_t* source)
+    static void copy(std::span<char16_t> destination, std::span<const uint8_t> source)
     {
         destination[0] = source[0];
         destination[1] = source[1];
@@ -64,14 +65,14 @@ template<> struct UCharByteFiller<8> {
     }
 };
 
-inline void copyASCIIMachineWord(LChar* destination, const uint8_t* source)
+inline void copyASCIIMachineWord(std::span<Latin1Character> destination, std::span<const uint8_t> source)
 {
-    UCharByteFiller<sizeof(WTF::MachineWord)>::copy(destination, source);
+    ASCIIFastPathByteFiller<sizeof(WTF::MachineWord)>::copy(destination, source);
 }
 
-inline void copyASCIIMachineWord(UChar* destination, const uint8_t* source)
+inline void copyASCIIMachineWord(std::span<char16_t> destination, std::span<const uint8_t> source)
 {
-    UCharByteFiller<sizeof(WTF::MachineWord)>::copy(destination, source);
+    ASCIIFastPathByteFiller<sizeof(WTF::MachineWord)>::copy(destination, source);
 }
 
 } // namespace PAL

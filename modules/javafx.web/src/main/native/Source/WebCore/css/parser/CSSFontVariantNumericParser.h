@@ -26,7 +26,6 @@
 #pragma once
 
 #include "CSSParserTokenRange.h"
-#include "CSSPropertyParserHelpers.h"
 #include "CSSValueKeywords.h"
 #include "CSSValueList.h"
 #include "CSSValuePool.h"
@@ -82,15 +81,15 @@ public:
     {
         if (m_result.isEmpty())
             return CSSPrimitiveValue::create(CSSValueNormal);
-        return CSSValueList::createSpaceSeparated(WTFMove(m_result));
+        return CSSValueList::createSpaceSeparated(WTF::move(m_result));
     }
 
 private:
-    bool m_sawNumericFigureValue = false;
-    bool m_sawNumericSpacingValue = false;
-    bool m_sawNumericFractionValue = false;
-    bool m_sawOrdinalValue = false;
-    bool m_sawSlashedZeroValue = false;
+    bool m_sawNumericFigureValue : 1 { false };
+    bool m_sawNumericSpacingValue : 1 { false };
+    bool m_sawNumericFractionValue : 1 { false };
+    bool m_sawOrdinalValue : 1 { false };
+    bool m_sawSlashedZeroValue : 1 { false };
     CSSValueListBuilder m_result;
 };
 

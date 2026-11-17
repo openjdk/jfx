@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -240,8 +240,8 @@ public final class MarlinProperties {
         return getBoolean("prism.marlin.logCreateContext", "false");
     }
 
-    public static boolean isLogUnsafeMalloc() {
-        return getBoolean("prism.marlin.logUnsafeMalloc", "false");
+    public static boolean isLogOffHeapMalloc() {
+        return getBoolean("prism.marlin.logOffHeapMalloc", "false");
     }
 
     // quality settings

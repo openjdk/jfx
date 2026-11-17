@@ -25,9 +25,13 @@
 
 #pragma once
 
-#include "SharedBuffer.h"
 #include <JavaScriptCore/DataView.h>
+#include <WebCore/FloatSize.h>
+#include <WebCore/PlatformExportMacros.h>
+#include <WebCore/PlatformVideoColorSpace.h>
+#include <WebCore/SharedBuffer.h>
 #include <wtf/EnumTraits.h>
+#include <wtf/RefPtr.h>
 #include <wtf/text/StringView.h>
 #include <wtf/text/WTFString.h>
 
@@ -66,6 +70,7 @@ enum class AV1ConfigurationLevel : uint8_t {
     Level_7_1 = 21,
     Level_7_2 = 22,
     Level_7_3 = 23,
+    Level_Maximum = 31,
 };
 
 enum class AV1ConfigurationTier : uint8_t {
@@ -88,7 +93,7 @@ enum class AV1ConfigurationRange : uint8_t {
 
 // Ref: ISO/IEC 23091-2:2019
 enum class AV1ConfigurationColorPrimaries : uint8_t {
-    BT_709_6 = 1,
+    BT_709_6 = 1, // CP_BT_709
     Unspecified = 2,
     BT_470_6_M = 4,
     BT_470_7_BG = 5,
@@ -115,7 +120,7 @@ enum class AV1ConfigurationTransferCharacteristics : uint8_t {
     Logrithmic_Sqrt = 10,
     IEC_61966_2_4 = 11,
     BT_1361_0 = 12,
-    IEC_61966_2_1 = 13,
+    IEC_61966_2_1 = 13, // TC_SRGB
     BT_2020_10bit = 14,
     BT_2020_12bit = 15,
     SMPTE_ST_2084 = 16,
@@ -124,7 +129,7 @@ enum class AV1ConfigurationTransferCharacteristics : uint8_t {
 };
 
 enum class AV1ConfigurationMatrixCoefficients : uint8_t {
-    Identity = 0,
+    Identity = 0, // MC_IDENTITY
     BT_709_6 = 1,
     Unspecified = 2,
     FCC = 4,
@@ -151,6 +156,8 @@ struct AV1CodecConfigurationRecord {
     static constexpr uint8_t defaultTransferCharacteristics { static_cast<uint8_t>(AV1ConfigurationTransferCharacteristics::BT_709_6) };
     static constexpr uint8_t defaultMatrixCoefficients { static_cast<uint8_t>(AV1ConfigurationMatrixCoefficients::BT_709_6) };
     static constexpr AV1ConfigurationRange defaultVideoFullRangeFlag { AV1ConfigurationRange::VideoRange };
+    static constexpr uint32_t defaultWidth { 0 };
+    static constexpr uint32_t defaultHeight { 0 };
 
     String codecName;
     AV1ConfigurationProfile profile { defaultProfile };
@@ -163,147 +170,32 @@ struct AV1CodecConfigurationRecord {
     uint8_t transferCharacteristics { defaultTransferCharacteristics };
     uint8_t matrixCoefficients { defaultMatrixCoefficients };
     AV1ConfigurationRange videoFullRangeFlag { defaultVideoFullRangeFlag };
+    uint32_t width { defaultWidth };
+    uint32_t height { defaultHeight };
 };
 
 struct MediaCapabilitiesInfo;
 struct VideoConfiguration;
-struct VideoInfo;
+class VideoInfo;
 
 WEBCORE_EXPORT std::optional<AV1CodecConfigurationRecord> parseAV1CodecParameters(StringView codecString);
 WEBCORE_EXPORT String createAV1CodecParametersString(const AV1CodecConfigurationRecord&);
 
+WEBCORE_EXPORT bool validateAV1ConfigurationRecord(const AV1CodecConfigurationRecord&);
 WEBCORE_EXPORT bool validateAV1PerLevelConstraints(const AV1CodecConfigurationRecord&, const VideoConfiguration&);
 
-std::optional<AV1CodecConfigurationRecord> parseAV1DecoderConfigurationRecord(const SharedBuffer&);
+std::optional<AV1CodecConfigurationRecord> parseAV1DecoderConfigurationRecord(std::span<const uint8_t>);
+std::optional<AV1CodecConfigurationRecord> parseSequenceHeaderOBU(std::span<const uint8_t>);
+WEBCORE_EXPORT PlatformVideoColorSpace createPlatformVideoColorSpaceFromAV1CodecConfigurationRecord(const AV1CodecConfigurationRecord&);
+WEBCORE_EXPORT RefPtr<VideoInfo> createVideoInfoFromAV1Stream(std::span<const uint8_t>, std::optional<FloatSize> = std::nullopt);
 
+template<typename E>
+std::optional<E> parseEnumFromStringView(StringView stringView)
+{
+    auto value = parseInteger<std::underlying_type_t<E>>(stringView);
+    if (!value || !isValidEnum<E>(*value))
+        return std::nullopt;
+    return static_cast<E>(*value);
 }
 
-namespace WTF {
-template<> struct EnumTraits<WebCore::AV1ConfigurationProfile> {
-    using values = EnumValues<
-        WebCore::AV1ConfigurationProfile,
-        WebCore::AV1ConfigurationProfile::Main,
-        WebCore::AV1ConfigurationProfile::High,
-        WebCore::AV1ConfigurationProfile::Professional
-    >;
-};
-
-template<> struct EnumTraits<WebCore::AV1ConfigurationLevel> {
-    using values = EnumValues<
-        WebCore::AV1ConfigurationLevel,
-        WebCore::AV1ConfigurationLevel::Level_2_0,
-        WebCore::AV1ConfigurationLevel::Level_2_1,
-        WebCore::AV1ConfigurationLevel::Level_2_2,
-        WebCore::AV1ConfigurationLevel::Level_2_3,
-        WebCore::AV1ConfigurationLevel::Level_3_0,
-        WebCore::AV1ConfigurationLevel::Level_3_1,
-        WebCore::AV1ConfigurationLevel::Level_3_2,
-        WebCore::AV1ConfigurationLevel::Level_3_3,
-        WebCore::AV1ConfigurationLevel::Level_4_0,
-        WebCore::AV1ConfigurationLevel::Level_4_1,
-        WebCore::AV1ConfigurationLevel::Level_4_2,
-        WebCore::AV1ConfigurationLevel::Level_4_3,
-        WebCore::AV1ConfigurationLevel::Level_5_0,
-        WebCore::AV1ConfigurationLevel::Level_5_1,
-        WebCore::AV1ConfigurationLevel::Level_5_2,
-        WebCore::AV1ConfigurationLevel::Level_5_3,
-        WebCore::AV1ConfigurationLevel::Level_6_0,
-        WebCore::AV1ConfigurationLevel::Level_6_1,
-        WebCore::AV1ConfigurationLevel::Level_6_2,
-        WebCore::AV1ConfigurationLevel::Level_6_3,
-        WebCore::AV1ConfigurationLevel::Level_7_0,
-        WebCore::AV1ConfigurationLevel::Level_7_1,
-        WebCore::AV1ConfigurationLevel::Level_7_2,
-        WebCore::AV1ConfigurationLevel::Level_7_3
-    >;
-};
-
-template<> struct EnumTraits<WebCore::AV1ConfigurationTier> {
-    using values = EnumValues<
-        WebCore::AV1ConfigurationTier,
-        WebCore::AV1ConfigurationTier::Main,
-        WebCore::AV1ConfigurationTier::High
-    >;
-};
-
-template<> struct EnumTraits<WebCore::AV1ConfigurationChromaSubsampling> {
-    using values = EnumValues<
-        WebCore::AV1ConfigurationChromaSubsampling,
-        WebCore::AV1ConfigurationChromaSubsampling::Subsampling_444,
-        WebCore::AV1ConfigurationChromaSubsampling::Subsampling_422,
-        WebCore::AV1ConfigurationChromaSubsampling::Subsampling_420_Unknown,
-        WebCore::AV1ConfigurationChromaSubsampling::Subsampling_420_Vertical,
-        WebCore::AV1ConfigurationChromaSubsampling::Subsampling_420_Colocated
-    >;
-};
-
-template<> struct EnumTraits<WebCore::AV1ConfigurationRange> {
-    using values = EnumValues<
-        WebCore::AV1ConfigurationRange,
-        WebCore::AV1ConfigurationRange::VideoRange,
-        WebCore::AV1ConfigurationRange::FullRange
-    >;
-};
-
-template<> struct EnumTraits<WebCore::AV1ConfigurationColorPrimaries> {
-    using values = EnumValues<
-        WebCore::AV1ConfigurationColorPrimaries,
-        WebCore::AV1ConfigurationColorPrimaries::BT_709_6,
-        WebCore::AV1ConfigurationColorPrimaries::Unspecified,
-        WebCore::AV1ConfigurationColorPrimaries::BT_470_6_M,
-        WebCore::AV1ConfigurationColorPrimaries::BT_470_7_BG,
-        WebCore::AV1ConfigurationColorPrimaries::BT_601_7,
-        WebCore::AV1ConfigurationColorPrimaries::SMPTE_ST_240,
-        WebCore::AV1ConfigurationColorPrimaries::Film,
-        WebCore::AV1ConfigurationColorPrimaries::BT_2020_Nonconstant_Luminance,
-        WebCore::AV1ConfigurationColorPrimaries::SMPTE_ST_428_1,
-        WebCore::AV1ConfigurationColorPrimaries::SMPTE_RP_431_2,
-        WebCore::AV1ConfigurationColorPrimaries::SMPTE_EG_432_1,
-        WebCore::AV1ConfigurationColorPrimaries::EBU_Tech_3213_E
-    >;
-};
-
-template<> struct EnumTraits<WebCore::AV1ConfigurationTransferCharacteristics> {
-    using values = EnumValues<
-        WebCore::AV1ConfigurationTransferCharacteristics,
-        WebCore::AV1ConfigurationTransferCharacteristics::BT_709_6,
-        WebCore::AV1ConfigurationTransferCharacteristics::Unspecified,
-        WebCore::AV1ConfigurationTransferCharacteristics::BT_470_6_M,
-        WebCore::AV1ConfigurationTransferCharacteristics::BT_470_7_BG,
-        WebCore::AV1ConfigurationTransferCharacteristics::BT_601_7,
-        WebCore::AV1ConfigurationTransferCharacteristics::SMPTE_ST_240,
-        WebCore::AV1ConfigurationTransferCharacteristics::Linear,
-        WebCore::AV1ConfigurationTransferCharacteristics::Logrithmic,
-        WebCore::AV1ConfigurationTransferCharacteristics::Logrithmic_Sqrt,
-        WebCore::AV1ConfigurationTransferCharacteristics::IEC_61966_2_4,
-        WebCore::AV1ConfigurationTransferCharacteristics::BT_1361_0,
-        WebCore::AV1ConfigurationTransferCharacteristics::IEC_61966_2_1,
-        WebCore::AV1ConfigurationTransferCharacteristics::BT_2020_10bit,
-        WebCore::AV1ConfigurationTransferCharacteristics::BT_2020_12bit,
-        WebCore::AV1ConfigurationTransferCharacteristics::SMPTE_ST_2084,
-        WebCore::AV1ConfigurationTransferCharacteristics::SMPTE_ST_428_1,
-        WebCore::AV1ConfigurationTransferCharacteristics::BT_2100_HLG
-    >;
-};
-
-template<> struct EnumTraits<WebCore::AV1ConfigurationMatrixCoefficients> {
-    using values = EnumValues<
-        WebCore::AV1ConfigurationMatrixCoefficients,
-        WebCore::AV1ConfigurationMatrixCoefficients::Identity,
-        WebCore::AV1ConfigurationMatrixCoefficients::BT_709_6,
-        WebCore::AV1ConfigurationMatrixCoefficients::Unspecified,
-        WebCore::AV1ConfigurationMatrixCoefficients::FCC,
-        WebCore::AV1ConfigurationMatrixCoefficients::BT_470_7_BG,
-        WebCore::AV1ConfigurationMatrixCoefficients::BT_601_7,
-        WebCore::AV1ConfigurationMatrixCoefficients::SMPTE_ST_240,
-        WebCore::AV1ConfigurationMatrixCoefficients::YCgCo,
-        WebCore::AV1ConfigurationMatrixCoefficients::BT_2020_Nonconstant_Luminance,
-        WebCore::AV1ConfigurationMatrixCoefficients::BT_2020_Constant_Luminance,
-        WebCore::AV1ConfigurationMatrixCoefficients::SMPTE_ST_2085,
-        WebCore::AV1ConfigurationMatrixCoefficients::Chromacity_Nonconstant_Luminance,
-        WebCore::AV1ConfigurationMatrixCoefficients::Chromacity_Constant_Luminance,
-        WebCore::AV1ConfigurationMatrixCoefficients::BT_2100_ICC
-    >;
-};
-
-} // namespace WTF
+}

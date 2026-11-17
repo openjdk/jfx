@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "JSCJSValue.h"
-#include "ProfilerBytecodes.h"
-#include "ProfilerCompilation.h"
-#include "ProfilerEvent.h"
+#include <JavaScriptCore/JSCJSValue.h>
+#include <JavaScriptCore/ProfilerBytecodes.h>
+#include <JavaScriptCore/ProfilerCompilation.h>
+#include <JavaScriptCore/ProfilerEvent.h>
 #include <wtf/HashMap.h>
 #include <wtf/JSONValues.h>
 #include <wtf/Lock.h>
@@ -39,6 +39,9 @@
 
 namespace JSC { namespace Profiler {
 
+struct DatabaseIDType;
+using DatabaseID = AtomicObjectIdentifier<DatabaseIDType>;
+
 class Database {
     WTF_MAKE_TZONE_ALLOCATED(Database);
     WTF_MAKE_NONCOPYABLE(Database);
@@ -46,7 +49,7 @@ public:
     JS_EXPORT_PRIVATE Database(VM&);
     JS_EXPORT_PRIVATE ~Database();
 
-    int databaseID() const { return m_databaseID; }
+    DatabaseID databaseID() const { return m_databaseID; }
 
     Bytecodes* ensureBytecodesFor(CodeBlock*);
     void notifyDestruction(CodeBlock*);
@@ -73,12 +76,12 @@ private:
     static Database* removeFirstAtExitDatabase();
     static void atExitCallback();
 
-    int m_databaseID;
+    DatabaseID m_databaseID;
     VM& m_vm;
     SegmentedVector<Bytecodes> m_bytecodes;
-    HashMap<CodeBlock*, Bytecodes*> m_bytecodesMap;
+    UncheckedKeyHashMap<CodeBlock*, Bytecodes*> m_bytecodesMap;
     Vector<Ref<Compilation>> m_compilations;
-    HashMap<CodeBlock*, Ref<Compilation>> m_compilationMap;
+    UncheckedKeyHashMap<CodeBlock*, Ref<Compilation>> m_compilationMap;
     Vector<Event> m_events;
     bool m_shouldSaveAtExit;
     CString m_atExitSaveFilename;

@@ -25,16 +25,18 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(JIT)
 
-#include "AssemblyHelpers.h"
-#include "CCallHelpers.h"
-#include "CacheableIdentifier.h"
-#include "CodeOrigin.h"
-#include "JITOperationValidation.h"
-#include "JITOperations.h"
-#include "JSCJSValue.h"
-#include "RegisterSet.h"
+#include <JavaScriptCore/AssemblyHelpers.h>
+#include <JavaScriptCore/CCallHelpers.h>
+#include <JavaScriptCore/CacheableIdentifier.h>
+#include <JavaScriptCore/CodeOrigin.h>
+#include <JavaScriptCore/JITOperationValidation.h>
+#include <JavaScriptCore/JITOperations.h>
+#include <JavaScriptCore/JSCJSValue.h>
+#include <JavaScriptCore/RegisterSet.h>
 
 namespace JSC {
 namespace DFG {
@@ -53,7 +55,7 @@ enum class AccessType : int8_t;
 enum class CacheType : int8_t;
 enum class JITType : uint8_t;
 
-using CompileTimeStructureStubInfo = std::variant<StructureStubInfo*, BaselineUnlinkedStructureStubInfo*, DFG::UnlinkedStructureStubInfo*>;
+using CompileTimeStructureStubInfo = Variant<StructureStubInfo*, BaselineUnlinkedStructureStubInfo*, DFG::UnlinkedStructureStubInfo*>;
 
 class JITInlineCacheGenerator {
 protected:

@@ -25,9 +25,17 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
+#include "BPlatform.h"
+
+#if !BUSE(TZONE)
+
 #include "IsoDirectory.h"
 
 #if !BUSE(LIBPAS)
+
+#include "Scavenger.h"
 
 namespace bmalloc {
 
@@ -158,3 +166,6 @@ void IsoDirectory<Config, passedNumPages>::forEachCommittedPage(const LockHolder
 } // namespace bmalloc
 
 #endif
+#endif // !BUSE(TZONE)
+
+#endif // __cplusplus

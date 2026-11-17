@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,6 +41,7 @@ import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.application.PlatformImplShim;
+import test.javafx.util.OutputRedirect;
 import test.util.Util;
 
 /**
@@ -158,8 +159,24 @@ public class ListenerTestCommon {
         listener = null;
     }
 
-    public void doTestIdleImplicit(final boolean implicit,
-            final ThrowableType throwableType) {
+    public void doTestIdleImplicit(boolean implicit, ThrowableType throwableType) {
+        Object[] expected = switch(throwableType) {
+        case ERROR ->
+            new Object[] { InternalError.class };
+        case EXCEPTION ->
+            new Object[] { RuntimeException.class };
+        case NONE ->
+            new Object[0];
+        };
+        OutputRedirect.suppressStderr();
+        try {
+            doTestIdleImplicit2(implicit, throwableType);
+        } finally {
+            OutputRedirect.checkAndRestoreStderr(expected);
+        }
+    }
+
+    private void doTestIdleImplicit2(boolean implicit, ThrowableType throwableType) {
 
         setup();
         assertNotNull(listener);

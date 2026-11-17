@@ -54,6 +54,7 @@ my (
     $accessibilityIsolatedTreeSupport,
     $applePaySupport,
     $applicationManifestSupport,
+    $assertsEnabled,
     $asyncScrollingSupport,
     $attachmentElementSupport,
     $autocapitalizeSupport,
@@ -72,7 +73,6 @@ my (
     $cursorVisibilitySupport,
     $darkModeCSSSupport,
     $datacueValueSupport,
-    $datalistElementSupport,
     $deviceOrientationSupport,
     $dfgJITSupport,
     $dragSupportSupport,
@@ -85,12 +85,6 @@ my (
     $geolocationSupport,
     $gpuProcessSupport,
     $gstreamerGLSupport,
-    $inputTypeColorSupport,
-    $inputTypeDateSupport,
-    $inputTypeDatetimelocalSupport,
-    $inputTypeMonthSupport,
-    $inputTypeTimeSupport,
-    $inputTypeWeekSupport,
     $inspectorAlternateDispatchersSupport,
     $inspectorTelemetrySupport,
     $iosGestureEventsSupport,
@@ -112,8 +106,6 @@ my (
     $lcmsSupport,
     $mouseCursorScaleSupport,
     $navigatorStandaloneSupport,
-    $networkCacheSpeculativeRevalidationSupport,
-    $networkCacheStaleWhileRevalidateSupport,
     $notificationsSupport,
     $offscreenCanvasSupport,
     $offscreenCanvasInWorkersSupport,
@@ -138,6 +130,7 @@ my (
     $speechSynthesisSupport,
     $spellcheckSupport,
     $svgFontsSupport,
+    $swiftDemoUriScheme,
     $isoMallocSupport,
     $systemMallocSupport,
     $telephoneNumberDetectionSupport,
@@ -164,6 +157,7 @@ my (
     $webdriverTouchInteractionsSupport,
     $webdriverWheelInteractionsSupport,
     $webglSupport,
+    $webGpuSwift,
     $webXRSupport,
     $wirelessPlaybackTargetSupport,
     $woff2Support,
@@ -174,6 +168,10 @@ my (
 );
 
 my @features = (
+
+    { option => "asserts", desc => "Toggle assertions (CMake only). Defaults to disable on Release, enable on Debug.",
+      define => "ENABLE_ASSERTS", value => \$assertsEnabled, },
+
     { option => "fatal-warnings", desc => "Toggle warnings as errors (CMake only)",
       define => "DEVELOPER_MODE_FATAL_WARNINGS", value => \$fatalWarnings },
 
@@ -225,9 +223,6 @@ my @features = (
     { option => "datacue-value", desc => "Toggle datacue value support",
       define => "ENABLE_DATACUE_VALUE", value => \$datacueValueSupport },
 
-    { option => "datalist-element", desc => "Toggle Datalist Element support",
-      define => "ENABLE_DATALIST_ELEMENT", value => \$datalistElementSupport },
-
     { option => "device-orientation", desc => "Toggle Device Orientation support",
       define => "ENABLE_DEVICE_ORIENTATION", value => \$deviceOrientationSupport },
 
@@ -257,24 +252,6 @@ my @features = (
 
     { option => "gpu-process", desc => "Toggle GPU Process support",
       define => "ENABLE_GPU_PROCESS", value => \$gpuProcessSupport },
-
-    { option => "input-type-color", desc => "Toggle Input Type Color support",
-      define => "ENABLE_INPUT_TYPE_COLOR", value => \$inputTypeColorSupport },
-
-    { option => "input-type-date", desc => "Toggle Input Type Date support",
-      define => "ENABLE_INPUT_TYPE_DATE", value => \$inputTypeDateSupport },
-
-    { option => "input-type-datetimelocal", desc => "Toggle Input Type Datetimelocal support",
-      define => "ENABLE_INPUT_TYPE_DATETIMELOCAL", value => \$inputTypeDatetimelocalSupport },
-
-    { option => "input-type-month", desc => "Toggle Input Type Month support",
-      define => "ENABLE_INPUT_TYPE_MONTH", value => \$inputTypeMonthSupport },
-
-    { option => "input-type-time", desc => "Toggle Input Type Time support",
-      define => "ENABLE_INPUT_TYPE_TIME", value => \$inputTypeTimeSupport },
-
-    { option => "input-type-week", desc => "Toggle Input Type Week support",
-      define => "ENABLE_INPUT_TYPE_WEEK", value => \$inputTypeWeekSupport },
 
     { option => "inspector-alternate-dispatchers", desc => "Toggle inspector alternate dispatchers support",
       define => "ENABLE_INSPECTOR_ALTERNATE_DISPATCHERS", value => \$inspectorAlternateDispatchersSupport },
@@ -330,12 +307,6 @@ my @features = (
     { option => "navigator-standalone", desc => "Toogle standalone navigator support",
       define => "ENABLE_NAVIGATOR_STANDALONE", value => \$navigatorStandaloneSupport },
 
-    { option => "network-cache-speculative-revalidation", desc => "Toogle network cache speculative revalidation support",
-      define => "ENABLE_NETWORK_CACHE_SPECULATIVE_REVALIDATION", value => \$networkCacheSpeculativeRevalidationSupport },
-
-    { option => "network-cache-stale-while-revalidate", desc => "Toogle network cache stale-while-revalidate caching strategy",
-      define => "ENABLE_NETWORK_CACHE_STALE_WHILE_REVALIDATE", value => \$networkCacheStaleWhileRevalidateSupport },
-
     { option => "notifications", desc => "Toggle Notifications support",
       define => "ENABLE_NOTIFICATIONS", value => \$notificationsSupport },
 
@@ -352,7 +323,7 @@ my @features = (
       define => "ENABLE_ORIENTATION_EVENTS", value => \$orientationEventsSupport },
 
     { option => "overflow-scrolling-touch", desc => "Toggle accelerated scrolling support",
-      define => "ENABLE_OVERFLOW_SCROLLING_TOUCH", value => \$overflowScrollingTouchSupport },
+      define => "ENABLE_WEBKIT_OVERFLOW_SCROLLING_CSS_PROPERTY", value => \$overflowScrollingTouchSupport },
 
     { option => "payment-request", desc => "Toggle Payment Request support",
       define => "ENABLE_PAYMENT_REQUEST", value => \$paymentRequestSupport },
@@ -398,6 +369,9 @@ my @features = (
 
     { option => "spellcheck", desc => "Toggle Spellchecking support (requires Enchant)",
       define => "ENABLE_SPELLCHECK", value => \$spellcheckSupport },
+
+    { option => "swift-demo-uri-scheme", desc => "Toggle demo Swift x-swift-demo: URI handler",
+      define => "ENABLE_SWIFT_DEMO_URI_SCHEME", value => \$swiftDemoUriScheme},
 
     { option => "telephone-number-detection", desc => "Toggle telephone number detection support",
       define => "ENABLE_TELEPHONE_NUMBER_DETECTION", value => \$telephoneNumberDetectionSupport },
@@ -447,6 +421,12 @@ my @features = (
     { option => "webgl", desc => "Toggle WebGL support",
       define => "ENABLE_WEBGL", value => \$webglSupport },
 
+    { option => "webgpu-swift", desc => "Toggle WebGPU Swift Implementation",
+      define => "ENABLE_WEBGPU_SWIFT", value => \$webGpuSwift },
+
+    { option => "webGpuSwift", desc => "Old spelling of \"Toggle WebGPU Swift Implementation\"",
+      hidden => 1, define => "ENABLE_WEBGPU_SWIFT", value => \$webGpuSwift },
+
     { option => "webxr", desc => "Toggle WebXR support",
       define => "ENABLE_WEBXR", value => \$webXRSupport },
 
@@ -471,11 +451,15 @@ my @features = (
     { option => "wireless-playback-target", desc => "Toggle wireless playback target support",
       define => "ENABLE_WIRELESS_PLAYBACK_TARGET", value => \$wirelessPlaybackTargetSupport },
 
+
     { option => "xslt", desc => "Toggle XSLT support",
       define => "ENABLE_XSLT", value => \$xsltSupport },
 
     { option => "avif", desc => "Toggle support for AVIF images",
       define => "USE_AVIF", value => \$avifSupport },
+
+    { option => "gstreamer-gl", desc => "Toggle GStreamer GL support",
+      define => "USE_GSTREAMER_GL", value => \$gstreamerGLSupport },
 
     { option => "gstreamer-gl", desc => "Toggle GStreamer GL support",
       define => "USE_GSTREAMER_GL", value => \$gstreamerGLSupport },

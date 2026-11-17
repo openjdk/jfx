@@ -37,7 +37,7 @@ namespace WebCore {
 class MathMLFractionElement;
 
 class RenderMathMLFraction final : public RenderMathMLRow {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderMathMLFraction);
+    WTF_MAKE_TZONE_ALLOCATED(RenderMathMLFraction);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderMathMLFraction);
 public:
     RenderMathMLFraction(MathMLFractionElement&, RenderStyle&&);
@@ -51,12 +51,13 @@ private:
     ASCIILiteral renderName() const final { return "RenderMathMLFraction"_s; }
 
     void computePreferredLogicalWidths() final;
-    void layoutBlock(bool relayoutChildren, LayoutUnit pageLogicalHeight = 0_lu) final;
+    void layoutBlock(RelayoutChildren, LayoutUnit pageLogicalHeight = 0_lu) final;
     std::optional<LayoutUnit> firstLineBaseline() const final;
     void paint(PaintInfo&, const LayoutPoint&) final;
     RenderMathMLOperator* unembellishedOperator() const final;
+    bool isMathContentCentered() const final { return true; }
 
-    MathMLFractionElement& element() const { return static_cast<MathMLFractionElement&>(nodeForNonAnonymous()); }
+    MathMLFractionElement& element() const;
 
     bool isValid() const;
     RenderBox& numerator() const;

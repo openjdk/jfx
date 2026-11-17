@@ -26,12 +26,13 @@
 #pragma once
 
 #include <wtf/Ref.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore::WebGPU {
 
-class RenderBundle : public RefCounted<RenderBundle> {
+class RenderBundle : public RefCountedAndCanMakeWeakPtr<RenderBundle> {
 public:
     virtual ~RenderBundle() = default;
 
@@ -39,9 +40,12 @@ public:
 
     void setLabel(String&& label)
     {
-        m_label = WTFMove(label);
+        m_label = WTF::move(label);
         setLabelInternal(m_label);
     }
+
+    virtual bool isRemoteRenderBundleProxy() const { return false; }
+    virtual bool isRenderBundleImpl() const { return false; }
 
 protected:
     RenderBundle() = default;

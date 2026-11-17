@@ -21,12 +21,14 @@
 
 #include "DOMMimeType.h"
 #include "Navigator.h"
+#include "ScriptWrappableInlines.h"
+#include <ranges>
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/AtomString.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(DOMPlugin);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DOMPlugin);
 
 Ref<DOMPlugin> DOMPlugin::create(Navigator& navigator, const PluginInfo& info)
 {
@@ -38,7 +40,7 @@ static Vector<Ref<DOMMimeType>> makeMimeTypes(Navigator& navigator, const Plugin
     auto types = info.mimes.map([&](auto& type) {
         return DOMMimeType::create(navigator, type, self);
     });
-    std::sort(types.begin(), types.end(), [](const Ref<DOMMimeType>& a, const Ref<DOMMimeType>& b) {
+    std::ranges::sort(types, [](auto& a, auto& b) {
         return codePointCompareLessThan(a->type(), b->type());
     });
 

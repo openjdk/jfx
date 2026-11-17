@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,7 +28,9 @@
 #include "FloatRoundedRect.h"
 #include "InlineIteratorInlineBox.h"
 #include "InlineIteratorTextBox.h"
+#include "PaintInfo.h"
 #include "RenderObject.h"
+#include "StylePrimitiveNumeric.h"
 #include "TextBoxSelectableRange.h"
 #include "TextDecorationPainter.h"
 #include "TextRun.h"
@@ -37,68 +39,70 @@ namespace WebCore {
 
 class Color;
 class Document;
-class LegacyInlineTextBox;
 class RenderCombineText;
 class RenderStyle;
 class RenderText;
-class ShadowData;
 struct CompositionUnderline;
 struct MarkedText;
-struct PaintInfo;
 struct StyledMarkedText;
+class TextPainter;
 
-template<typename TextBoxPath>
 class TextBoxPainter {
 public:
-    TextBoxPainter(TextBoxPath&&, PaintInfo&, const LayoutPoint& paintOffset);
+    TextBoxPainter(const LayoutIntegration::InlineContent&, const InlineDisplay::Box&, const RenderStyle&, PaintInfo&, const LayoutPoint& paintOffset);
     ~TextBoxPainter();
 
     void paint();
+
+    static inline FloatSize rotateShadowOffset(const SpaceSeparatedPoint<Style::Length<CSS::AllUnzoomed>>& offset, WritingMode, const Style::ZoomFactor&);
 
 protected:
     auto& textBox() const { return m_textBox; }
     InlineIterator::TextBoxIterator makeIterator() const;
 
-    void paintBackground();
+    void paintBackgroundFill();
+    enum class BackgroundStyle : bool { Normal, Rounded };
+    void paintBackgroundFillForRange(unsigned startOffset, unsigned endOffset, const Color&, BackgroundStyle);
+
     void paintForegroundAndDecorations();
-    void paintCompositionBackground();
     void paintCompositionUnderlines();
     void paintCompositionForeground(const StyledMarkedText&);
     void paintPlatformDocumentMarkers();
 
-    enum class BackgroundStyle { Normal, Rounded };
-    void paintBackground(unsigned startOffset, unsigned endOffset, const Color&, BackgroundStyle = BackgroundStyle::Normal);
-    void paintBackground(const StyledMarkedText&);
     void paintForeground(const StyledMarkedText&);
+    bool paintForegroundForShapeRange(TextPainter&);
     TextDecorationPainter createDecorationPainter(const StyledMarkedText&, const FloatRect&);
     void paintBackgroundDecorations(TextDecorationPainter&, const StyledMarkedText&, const FloatRect&);
     void paintForegroundDecorations(TextDecorationPainter&, const StyledMarkedText&, const FloatRect&);
-    void paintCompositionUnderline(const CompositionUnderline&, const FloatRoundedRect::Radii&, bool hasLiveConversion);
-    void fillCompositionUnderline(float start, float width, const CompositionUnderline&, const FloatRoundedRect::Radii&, bool hasLiveConversion) const;
+    void paintCompositionUnderline(const CompositionUnderline&, const CornerRadii&, bool hasLiveConversion);
+    void fillCompositionUnderline(float start, float width, const CompositionUnderline&, const CornerRadii&, bool hasLiveConversion) const;
     void paintPlatformDocumentMarker(const MarkedText&);
+    LayoutRect selectionRectForRange(unsigned startOffset, unsigned endOffset) const;
 
     float textPosition();
     FloatRect computePaintRect(const LayoutPoint& paintOffset);
     bool computeHaveSelection() const;
+    std::pair<unsigned, unsigned> selectionStartEnd() const;
     MarkedText createMarkedTextFromSelectionInBox();
     const FontCascade& fontCascade() const;
+    WritingMode writingMode() const { return m_style->writingMode(); }
     FloatPoint textOriginFromPaintRect(const FloatRect&) const;
+    bool isInsideShapedContent() const;
 
     struct DecoratingBox {
         InlineIterator::InlineBoxIterator inlineBox;
-        const RenderStyle& style;
+        const CheckedRef<const RenderStyle> style;
         TextDecorationPainter::Styles textDecorationStyles;
         FloatPoint location;
     };
     using DecoratingBoxList = Vector<DecoratingBox>;
-    void collectDecoratingBoxesForTextBox(DecoratingBoxList&, const InlineIterator::TextBoxIterator&, FloatPoint textBoxLocation, const TextDecorationPainter::Styles&);
+    void collectDecoratingBoxesForBackgroundPainting(DecoratingBoxList&, const InlineIterator::TextBoxIterator&, FloatPoint textBoxLocation, const TextDecorationPainter::Styles&);
 
-    const ShadowData* debugTextShadow() const;
-
-    const TextBoxPath m_textBox;
-    const RenderText& m_renderer;
-    const Document& m_document;
-    const RenderStyle& m_style;
+    // FIXME: We could just talk to the display box directly.
+    const InlineIterator::BoxModernPath m_textBox;
+    const CheckedRef<const RenderText> m_renderer;
+    const CheckedRef<const Document> m_document;
+    const CheckedRef<const RenderStyle> m_style;
     const FloatRect m_logicalRect;
     const TextRun m_paintTextRun;
     PaintInfo& m_paintInfo;
@@ -109,21 +113,30 @@ protected:
     const bool m_isCombinedText;
     const bool m_isPrinting;
     const bool m_haveSelection;
-    const bool m_containsComposition;
-    const bool m_useCustomUnderlines;
-    std::optional<bool> m_emphasisMarkExistsAndIsAbove { };
+    bool m_containsComposition { false };
+    bool m_compositionWithCustomUnderlines { false };
 };
 
-class LegacyTextBoxPainter : public TextBoxPainter<InlineIterator::BoxLegacyPath> {
-public:
-    LegacyTextBoxPainter(const LegacyInlineTextBox&, PaintInfo&, const LayoutPoint& paintOffset);
+inline FloatSize TextBoxPainter::rotateShadowOffset(const SpaceSeparatedPoint<Style::Length<CSS::AllUnzoomed>>& offset, WritingMode writingMode, const Style::ZoomFactor& zoomFactor)
+{
+    if (writingMode.isHorizontal()) {
+        return {
+            offset.x().resolveZoom(zoomFactor),
+            offset.y().resolveZoom(zoomFactor),
+        };
+    }
 
-    static FloatRect calculateUnionOfAllDocumentMarkerBounds(const LegacyInlineTextBox&);
-};
+    if (writingMode.isLineOverLeft()) { // sideways-lr
+        return {
+            -offset.y().resolveZoom(zoomFactor),
+             offset.x().resolveZoom(zoomFactor),
+        };
+    }
 
-class ModernTextBoxPainter : public TextBoxPainter<InlineIterator::BoxModernPath> {
-public:
-    ModernTextBoxPainter(const LayoutIntegration::InlineContent&, const InlineDisplay::Box&, PaintInfo&, const LayoutPoint& paintOffset);
-};
-
+    return {
+         offset.y().resolveZoom(zoomFactor),
+        -offset.x().resolveZoom(zoomFactor),
+    };
 }
+
+} // namespace WebCore

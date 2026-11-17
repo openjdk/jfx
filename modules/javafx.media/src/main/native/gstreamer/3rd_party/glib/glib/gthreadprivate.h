@@ -34,7 +34,7 @@ struct  _GRealThread
 
   gint ref_count;
   gboolean ours;
-  gchar *name;
+  char name[16];
   gpointer retval;
 };
 
@@ -159,6 +159,8 @@ void            g_system_thread_free            (GRealThread  *thread);
 
 G_NORETURN void g_system_thread_exit            (void);
 void            g_system_thread_set_name        (const gchar  *name);
+void            g_system_thread_get_name        (char         *buffer,
+                                                 gsize         length);
 
 /* gthread.c */
 GThread *g_thread_new_internal (const gchar *name,

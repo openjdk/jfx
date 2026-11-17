@@ -26,236 +26,365 @@
 #include "config.h"
 #include "LayoutIntegrationCoverage.h"
 
-#include "GapLength.h"
-#include "HTMLTextFormControlElement.h"
+#include "Document.h"
 #include "InlineWalker.h"
-#include "LayoutIntegrationLineLayout.h"
 #include "RenderBlockFlow.h"
 #include "RenderDeprecatedFlexibleBox.h"
 #include "RenderFlexibleBox.h"
-#include "RenderFrameSet.h"
-#include "RenderGrid.h"
 #include "RenderImage.h"
 #include "RenderInline.h"
 #include "RenderLineBreak.h"
-#include "RenderListItem.h"
 #include "RenderListMarker.h"
-#include "RenderMathMLBlock.h"
+#include "RenderObjectInlines.h"
 #include "RenderSVGBlock.h"
 #include "RenderSVGForeignObject.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include "RenderTable.h"
 #include "RenderTextControl.h"
 #include "RenderView.h"
 #include "Settings.h"
+#include "StyleComputedStyle+InitialInlines.h"
 #include "StyleContentAlignmentData.h"
 #include "StyleSelfAlignmentData.h"
+#include <pal/Logging.h>
+#include <wtf/EnumSet.h>
 
 namespace WebCore {
 namespace LayoutIntegration {
 
+enum class FlexAvoidanceReason : uint8_t {
+    FeatureIsDisabled,
+    FlexBoxHasNonFixedHeightInMainAxis,
+    FlexBoxNeedsBaseline,
+    FlexBoxIsOutOfFlow,
+    FlexIsVertical,
+    FlexWithNonInitialMinMaxHeight,
+    NoFlexLayoutIsNeeded,
+    FlexBoxHasUnsupportedOverflow,
+    FlexBoxHasUnsupportedTypeOfRenderer,
+    FlexBoxHasMarginTrim,
+    FlexBoxHasOutOfFlowChild,
+    FlexBoxHasSVGChild,
+    FlexBoxHasNestedFlex,
+    FlexItemHasNonFixedHeight,
+    FlexItemHasIntrinsicFlexBasis,
+    FlexItemHasContainsSize,
+    FlexItemHasUnsupportedOverflow,
+    FlexItemHasAspectRatio,
+    FlexItemHasBaselineAlign,
+    EndOfReasons,
+};
+
+enum class IncludeReasons : bool {
+    First,
+    All
+};
+
+#ifndef NDEBUG
+#define ADD_REASON_AND_RETURN_IF_NEEDED(reason, reasons, includeReasons) { \
+        reasons.add(FlexAvoidanceReason::reason); \
+        if (includeReasons == IncludeReasons::First) \
+            return reasons; \
+        }
+#else
+#define ADD_REASON_AND_RETURN_IF_NEEDED(reason, reasons, includeReasons) { \
+        ASSERT_UNUSED(includeReasons, includeReasons == IncludeReasons::First); \
+        reasons.add(FlexAvoidanceReason::reason); \
+        return reasons; \
+    }
+#endif
+
+static inline bool mayHaveScrollbarOrScrollableOverflow(const RenderStyle& style)
+{
+    return !style.isOverflowVisible() || !style.scrollbarGutter().isAuto();
+}
+
+static EnumSet<FlexAvoidanceReason> canUseForFlexLayoutWithReason(const RenderFlexibleBox& flexBox, IncludeReasons includeReasons)
+{
+    auto reasons = EnumSet<FlexAvoidanceReason> { };
+
+    if (!flexBox.document().settings().flexFormattingContextIntegrationEnabled())
+        ADD_REASON_AND_RETURN_IF_NEEDED(FeatureIsDisabled, reasons, includeReasons);
+
+    if (!flexBox.firstInFlowChild())
+        ADD_REASON_AND_RETURN_IF_NEEDED(NoFlexLayoutIsNeeded, reasons, includeReasons);
+
+    auto& flexBoxStyle = flexBox.style();
+    if (flexBoxStyle.display() == DisplayType::InlineFlex)
+        ADD_REASON_AND_RETURN_IF_NEEDED(FlexBoxNeedsBaseline, reasons, includeReasons);
+
+    auto isColumnDirection = flexBoxStyle.flexDirection() == FlexDirection::Column || flexBoxStyle.flexDirection() == FlexDirection::ColumnReverse;
+    auto isHorizontalWritingMode = flexBoxStyle.writingMode().isHorizontal();
+    if (!isHorizontalWritingMode) {
+        // FIXME: Integration layer needs to do geometry translate from logical to physical (or whatever render tree needs).
+        ADD_REASON_AND_RETURN_IF_NEEDED(FlexIsVertical, reasons, includeReasons);
+        }
+
+    if (((isHorizontalWritingMode && isColumnDirection) || (!isHorizontalWritingMode && !isColumnDirection)) && !flexBoxStyle.height().isFixed())
+        ADD_REASON_AND_RETURN_IF_NEEDED(FlexBoxHasNonFixedHeightInMainAxis, reasons, includeReasons);
+
+    if (mayHaveScrollbarOrScrollableOverflow(flexBoxStyle))
+        ADD_REASON_AND_RETURN_IF_NEEDED(FlexBoxHasUnsupportedOverflow, reasons, includeReasons);
+
+    if (flexBoxStyle.marginTrim() != Style::ComputedStyle::initialMarginTrim())
+        ADD_REASON_AND_RETURN_IF_NEEDED(FlexBoxHasMarginTrim, reasons, includeReasons);
+
+    auto isFlexBoxInsideBFC = [&] {
+        // FIXME: This may be somewhat expensive in some deeply nested cases.
+        for (auto* containingBlock = flexBox.containingBlock(); containingBlock && !is<RenderView>(*containingBlock); containingBlock = containingBlock->containingBlock()) {
+            if (containingBlock->style().display() != DisplayType::Block)
+        return false;
+            if (containingBlock->createsNewFormattingContext())
+        return true;
+    }
+            return true;
+    };
+    if (!isFlexBoxInsideBFC()) {
+        // FIXME: Nested flexing content requires integration layer handling "overriding" values (when e.g. parent flex/grid FC flexes this FC)
+        ADD_REASON_AND_RETURN_IF_NEEDED(FlexBoxHasNestedFlex, reasons, includeReasons);
+    }
+
+    if (flexBoxStyle.minHeight() != Style::ComputedStyle::initialMinHeight() || flexBoxStyle.maxHeight() != Style::ComputedStyle::initialMaxHeight())
+        ADD_REASON_AND_RETURN_IF_NEEDED(FlexWithNonInitialMinMaxHeight, reasons, includeReasons);
+
+    if (flexBox.isOutOfFlowPositioned()) {
+        // FIXME: Flex box needs to be able stretch (top/left/bottom/right).
+        ADD_REASON_AND_RETURN_IF_NEEDED(FlexBoxIsOutOfFlow, reasons, includeReasons);
+    }
+
+    for (auto& flexItem : childrenOfType<RenderElement>(flexBox)) {
+        auto& flexItemStyle = flexItem.style();
+
+        if (!flexItemStyle.flexBasis().isFixed()) {
+            // Note that percentage values of flex-basis are resolved against the flex item's containing block and if that containing block's size is indefinite, the used value for flex-basis is content.
+            ADD_REASON_AND_RETURN_IF_NEEDED(FlexItemHasIntrinsicFlexBasis, reasons, includeReasons);
+        }
+
+        if (!is<RenderBlock>(flexItem) || flexItem.isFieldset() || flexItem.isRenderTextControl() || flexItem.isRenderTable())
+            ADD_REASON_AND_RETURN_IF_NEEDED(FlexBoxHasUnsupportedTypeOfRenderer, reasons, includeReasons);
+
+        if (flexItem.isOutOfFlowPositioned())
+            ADD_REASON_AND_RETURN_IF_NEEDED(FlexBoxHasOutOfFlowChild, reasons, includeReasons);
+
+        if (!flexItem.isHorizontalWritingMode())
+            ADD_REASON_AND_RETURN_IF_NEEDED(FlexIsVertical, reasons, includeReasons);
+
+        if (flexItem.isRenderOrLegacyRenderSVGRoot())
+            ADD_REASON_AND_RETURN_IF_NEEDED(FlexBoxHasSVGChild, reasons, includeReasons);
+
+        if (flexItem.isFlexibleBoxIncludingDeprecated())
+            ADD_REASON_AND_RETURN_IF_NEEDED(FlexBoxHasNestedFlex, reasons, includeReasons);
+
+        if (!flexItemStyle.height().isFixed())
+            ADD_REASON_AND_RETURN_IF_NEEDED(FlexItemHasNonFixedHeight, reasons, includeReasons);
+
+        if (flexItemStyle.minHeight() != Style::ComputedStyle::initialMinHeight() || flexItemStyle.maxHeight() != Style::ComputedStyle::initialMaxHeight())
+            ADD_REASON_AND_RETURN_IF_NEEDED(FlexWithNonInitialMinMaxHeight, reasons, includeReasons);
+
+        if (flexItemStyle.usedContain().contains(Style::ContainValue::Size))
+            ADD_REASON_AND_RETURN_IF_NEEDED(FlexItemHasContainsSize, reasons, includeReasons);
+
+        if (mayHaveScrollbarOrScrollableOverflow(flexItemStyle))
+            ADD_REASON_AND_RETURN_IF_NEEDED(FlexItemHasUnsupportedOverflow, reasons, includeReasons);
+
+        if ((is<RenderBox>(flexItem) && downcast<RenderBox>(flexItem).hasIntrinsicAspectRatio()) || flexItemStyle.hasAspectRatio())
+            ADD_REASON_AND_RETURN_IF_NEEDED(FlexItemHasAspectRatio, reasons, includeReasons);
+
+        auto isBaseline = !flexItemStyle.alignSelf().isAuto() ? flexItemStyle.alignSelf().isBaseline() : flexBoxStyle.alignItems().isBaseline();
+        if (isBaseline)
+            ADD_REASON_AND_RETURN_IF_NEEDED(FlexItemHasBaselineAlign, reasons, includeReasons);
+
+        for (auto& child : childrenOfType<RenderElement>(flexItem)) {
+            // FIXME: Should check descendants too?
+            if (child.style().height().isPercentOrCalculated())
+                ADD_REASON_AND_RETURN_IF_NEEDED(FlexItemHasNonFixedHeight, reasons, includeReasons);
+    }
+    }
+    return reasons;
+}
+
+#ifndef NDEBUG
+static void printTextForSubtree(const RenderElement& renderer, size_t& charactersLeft, TextStream& stream)
+{
+    for (auto& child : childrenOfType<RenderObject>(downcast<RenderElement>(renderer))) {
+        if (is<RenderText>(child)) {
+            auto text = downcast<RenderText>(child).text();
+            auto textView = StringView { text }.trim(isASCIIWhitespace<char16_t>);
+            auto length = std::min<size_t>(charactersLeft, textView.length());
+            stream << textView.left(length);
+            charactersLeft -= length;
+            continue;
+        }
+        printTextForSubtree(downcast<RenderElement>(child), charactersLeft, stream);
+    }
+}
+
+static Vector<const RenderFlexibleBox*> collectFlexBoxesForCurrentPage()
+{
+    Vector<const RenderFlexibleBox*> flexBoxes;
+    for (auto document : Document::allDocuments()) {
+        if (!document->renderView() || document->backForwardCacheState() != Document::NotInBackForwardCache)
+            continue;
+        if (!document->isHTMLDocument() && !document->isXHTMLDocument())
+            continue;
+        for (auto& descendant : descendantsOfType<RenderFlexibleBox>(*document->renderView()))
+            flexBoxes.append(&descendant);
+    }
+    return flexBoxes;
+}
+
+static void printReason(FlexAvoidanceReason reason, TextStream& stream)
+{
+    switch (reason) {
+    case FlexAvoidanceReason::FeatureIsDisabled:
+        stream << "modern flex layout is disabled";
+        break;
+    case FlexAvoidanceReason::FlexBoxHasNonFixedHeightInMainAxis:
+        stream << "flex container has non-fixed height";
+        break;
+    case FlexAvoidanceReason::FlexBoxNeedsBaseline:
+        stream << "inline flex box needs baseline";
+        break;
+    case FlexAvoidanceReason::FlexBoxHasUnsupportedOverflow:
+        stream << "flex box has non-hidden overflow";
+        break;
+    case FlexAvoidanceReason::FlexBoxHasUnsupportedTypeOfRenderer:
+        stream << "flex box has unsupported flex item renderer e.g. fieldset";
+        break;
+    case FlexAvoidanceReason::FlexBoxHasMarginTrim:
+        stream << "flex box has non-initial margin-trim";
+        break;
+    case FlexAvoidanceReason::FlexBoxHasOutOfFlowChild:
+        stream << "flex box has out-of-flow child";
+        break;
+    case FlexAvoidanceReason::FlexBoxHasSVGChild:
+        stream << "flex box has svg child";
+        break;
+    case FlexAvoidanceReason::FlexBoxHasNestedFlex:
+        stream << "flex box has nested flex";
+        break;
+    case FlexAvoidanceReason::FlexItemHasNonFixedHeight:
+        stream << "flex item has non-fixed height value";
+        break;
+    case FlexAvoidanceReason::FlexItemHasIntrinsicFlexBasis:
+        stream << "flex item has intrinsic flex basis value (e.g. min-content";
+        break;
+    case FlexAvoidanceReason::FlexItemHasContainsSize:
+        stream << "flex item has contains: size";
+        break;
+    case FlexAvoidanceReason::FlexItemHasUnsupportedOverflow:
+        stream << "flex item has non-hidden overflow";
+        break;
+    case FlexAvoidanceReason::FlexItemHasAspectRatio:
+        stream << "flex item has aspect-ratio ";
+        break;
+    case FlexAvoidanceReason::FlexItemHasBaselineAlign:
+        stream << "flex item has (last)baseline align";
+        break;
+    case FlexAvoidanceReason::FlexBoxIsOutOfFlow:
+        stream << "flex box is out-of-flow positioned";
+        break;
+    case FlexAvoidanceReason::FlexIsVertical:
+        stream << "flex box/item has vertical writing mode";
+        break;
+    case FlexAvoidanceReason::FlexWithNonInitialMinMaxHeight:
+        stream << "flex box/item has non-initial min/max height";
+        break;
+    case FlexAvoidanceReason::NoFlexLayoutIsNeeded:
+        stream << "flex box has no inflow child";
+        break;
+    default:
+        break;
+    }
+}
+
+static void printReasons(EnumSet<FlexAvoidanceReason> reasons, TextStream& stream)
+{
+    stream << " ";
+    for (auto reason : reasons) {
+        printReason(reason, stream);
+        stream << ", ";
+    }
+}
+
+static void printLegacyFlexReasons()
+{
+    auto flexBoxes = collectFlexBoxesForCurrentPage();
+    if (!flexBoxes.size()) {
+        WTFLogAlways("No flex box found in this document\n");
+        return;
+    }
+    TextStream stream;
+    stream << "---------------------------------------------------\n";
+    for (auto* flexBox : flexBoxes) {
+        auto reasons = canUseForFlexLayoutWithReason(*flexBox, IncludeReasons::All);
+        if (reasons.isEmpty())
+            continue;
+        size_t printedLength = 30;
+        stream << "\"";
+        printTextForSubtree(*flexBox, printedLength, stream);
+        stream << "...\"";
+        for (;printedLength > 0; --printedLength)
+            stream << " ";
+        printReasons(reasons, stream);
+        stream << "\n";
+    }
+    stream << "---------------------------------------------------\n";
+    WTFLogAlways("%s", stream.release().utf8().data());
+}
+#endif
+
 bool canUseForLineLayout(const RenderBlockFlow& rootContainer)
 {
-    return !is<RenderSVGBlock>(rootContainer) || rootContainer.isRenderOrLegacyRenderSVGForeignObject();
+    if (is<RenderSVGBlock>(rootContainer) && !rootContainer.isRenderOrLegacyRenderSVGForeignObject())
+        return rootContainer.document().settings().useIFCForSVGText();
+    return true;
 }
 
 bool canUseForPreferredWidthComputation(const RenderBlockFlow& blockContainer)
 {
     for (auto walker = InlineWalker(blockContainer); !walker.atEnd(); walker.advance()) {
         auto& renderer = *walker.current();
-        if (renderer.isRenderText())
-            continue;
-        if (is<RenderLineBreak>(renderer))
-            continue;
-        if (is<RenderInline>(renderer))
-            continue;
-        if (is<RenderListMarker>(renderer))
-            continue;
-        if (renderer.isInFlow() && renderer.style().isHorizontalWritingMode() && renderer.style().logicalWidth().isFixed()) {
-            auto isNonSupportedFixedWidthContent = [&] {
-                // FIXME: Implement this image special in line builder.
-                auto allowImagesToBreak = !blockContainer.document().inQuirksMode() || !blockContainer.isRenderTableCell();
-                if (!allowImagesToBreak)
-                    return true;
-                // FIXME: See RenderReplaced::computePreferredLogicalWidths where m_minPreferredLogicalWidth is set to 0.
-                auto isReplacedWithSpecialIntrinsicWidth = is<RenderReplaced>(renderer) && renderer.style().logicalMaxWidth().isPercentOrCalculated();
-                if (isReplacedWithSpecialIntrinsicWidth)
-                    return true;
-                return false;
-            };
-            if (isNonSupportedFixedWidthContent())
-                return false;
-            continue;
-        }
-        return false;
-    }
-    return true;
-}
-
-bool shouldInvalidateLineLayoutPathAfterChangeFor(const RenderBlockFlow& rootBlockContainer, const RenderObject& renderer, const LineLayout& lineLayout, TypeOfChangeForInvalidation typeOfChange)
-{
-    auto isSupportedRendererWithChange = [&](auto& renderer) {
-        if (is<RenderText>(renderer))
-            return true;
         if (!renderer.isInFlow())
         return false;
-        if (is<RenderLineBreak>(renderer))
-            return true;
-        if (is<RenderReplaced>(renderer))
-            return typeOfChange == TypeOfChangeForInvalidation::NodeInsertion;
-        if (auto* inlineRenderer = dynamicDowncast<RenderInline>(renderer))
-            return typeOfChange == TypeOfChangeForInvalidation::NodeInsertion && !inlineRenderer->firstChild();
+
+        auto isFullySupportedInFlowRenderer = renderer.isRenderText() || is<RenderLineBreak>(renderer) || is<RenderInline>(renderer) || is<RenderListMarker>(renderer);
+        if (isFullySupportedInFlowRenderer)
+            continue;
+
+        auto& unsupportedRenderElement = downcast<RenderElement>(renderer);
+        if (!unsupportedRenderElement.writingMode().isHorizontal() || !unsupportedRenderElement.style().logicalWidth().isFixed())
         return false;
-    };
-    if (!isSupportedRendererWithChange(renderer))
-        return true;
 
-    auto isSupportedParent = [&] {
-        auto* parent = renderer.parent();
-        // Content append under existing inline box is not yet supported.
-        return is<RenderBlockFlow>(parent) || (is<RenderInline>(parent) && !parent->everHadLayout());
-    };
-    if (!isSupportedParent())
-        return true;
-    if (rootBlockContainer.containsFloats())
-    return true;
-
-    auto isBidiContent = [&] {
-        if (lineLayout.contentNeedsVisualReordering())
-            return true;
-        if (auto* textRenderer = dynamicDowncast<RenderText>(renderer)) {
-            auto hasStrongDirectionalityContent = textRenderer->hasStrongDirectionalityContent();
-            if (!hasStrongDirectionalityContent) {
-                hasStrongDirectionalityContent = Layout::TextUtil::containsStrongDirectionalityText(textRenderer->text());
-                const_cast<RenderText*>(textRenderer)->setHasStrongDirectionalityContent(*hasStrongDirectionalityContent);
-            }
-            return *hasStrongDirectionalityContent;
-        }
-        if (is<RenderInline>(renderer)) {
-            auto& style = renderer.style();
-            return !style.isLeftToRightDirection() || (style.rtlOrdering() == Order::Logical && style.unicodeBidi() != UnicodeBidi::Normal);
-        }
-        return false;
-    };
-    if (isBidiContent()) {
-        // FIXME: InlineItemsBuilder needs some work to support paragraph level bidi handling.
-        return true;
-    }
-    auto hasFirstLetter = [&] {
-        // FIXME: RenderTreeUpdater::updateTextRenderer produces odd values for offset/length when first-letter is present webkit.org/b/263343
-        if (rootBlockContainer.style().hasPseudoStyle(PseudoId::FirstLetter))
-            return true;
-        if (rootBlockContainer.isAnonymous())
-            return rootBlockContainer.containingBlock() && rootBlockContainer.containingBlock()->style().hasPseudoStyle(PseudoId::FirstLetter);
-        return false;
-    };
-    if (hasFirstLetter())
-        return true;
-
-    if (auto* previousDamage = lineLayout.damage(); previousDamage && (previousDamage->reasons() != Layout::InlineDamage::Reason::Append || !previousDamage->layoutStartPosition())) {
-        // Only support subsequent append operations where we managed to invalidate the content for partial layout.
-        return true;
-    }
-
-    bool shouldBalance = rootBlockContainer.style().textWrapMode() == TextWrapMode::Wrap && rootBlockContainer.style().textWrapStyle() == TextWrapStyle::Balance;
-    if (rootBlockContainer.style().direction() == TextDirection::RTL || shouldBalance)
-        return true;
-
-    auto rootHasNonSupportedRenderer = [&] {
-        for (auto* sibling = rootBlockContainer.firstChild(); sibling; sibling = sibling->nextSibling()) {
-            if (!is<RenderText>(*sibling) && !is<RenderLineBreak>(*sibling) && !is<RenderReplaced>(*sibling))
+        auto isNonSupportedFixedWidthContent = [&] {
+            // FIXME: Implement this image special in line builder.
+            auto allowImagesToBreak = !blockContainer.document().inQuirksMode() || !blockContainer.isRenderTableCell();
+            if (!allowImagesToBreak)
                 return true;
-        }
-        return !canUseForLineLayout(rootBlockContainer);
-    };
-    switch (typeOfChange) {
-    case TypeOfChangeForInvalidation::NodeRemoval:
-        return (!renderer.previousSibling() && !renderer.nextSibling()) || rootHasNonSupportedRenderer();
-    case TypeOfChangeForInvalidation::NodeInsertion:
-        return renderer.nextSibling() && rootHasNonSupportedRenderer();
-    case TypeOfChangeForInvalidation::NodeMutation:
-        return rootHasNonSupportedRenderer();
-    default:
-        ASSERT_NOT_REACHED();
-        return true;
+            // FIXME: See RenderReplaced::computePreferredLogicalWidths where m_minPreferredLogicalWidth is set to 0.
+            auto isReplacedWithSpecialIntrinsicWidth = [&] {
+                if (CheckedPtr renderReplaced = dynamicDowncast<RenderReplaced>(unsupportedRenderElement))
+                    return renderReplaced->style().logicalMaxWidth().isPercentOrCalculated();
+            return false;
+            };
+            return isReplacedWithSpecialIntrinsicWidth();
+        };
+        if (isNonSupportedFixedWidthContent())
+            return false;
     }
+    return true;
 }
 
 bool canUseForFlexLayout(const RenderFlexibleBox& flexBox)
 {
-    if (!flexBox.document().settings().flexFormattingContextIntegrationEnabled())
-        return false;
-
-    if (!flexBox.firstInFlowChild())
-        return false;
-
-    auto& flexBoxStyle = flexBox.style();
-    // FIXME: Needs baseline support.
-    if (flexBoxStyle.display() == DisplayType::InlineFlex)
-        return false;
-
-    // FIXME: Flex subclasses are not supported yet.
-    if (flexBoxStyle.display() != DisplayType::Flex)
-        return false;
-
-    if (!flexBoxStyle.isHorizontalWritingMode() || !flexBoxStyle.isLeftToRightDirection())
-        return false;
-
-    if (flexBoxStyle.flexDirection() == FlexDirection::Column || flexBoxStyle.flexDirection() == FlexDirection::ColumnReverse)
-        return false;
-
-    if (flexBoxStyle.logicalHeight().isPercent())
-        return false;
-
-    if (flexBoxStyle.overflowY() == Overflow::Scroll || flexBoxStyle.overflowY() == Overflow::Auto)
-        return false;
-
-    auto alignItemValue = flexBoxStyle.alignItems().position();
-    if (alignItemValue == ItemPosition::Baseline || alignItemValue == ItemPosition::LastBaseline || alignItemValue == ItemPosition::SelfStart || alignItemValue == ItemPosition::SelfEnd)
-        return false;
-    if (flexBoxStyle.alignContent().position() != ContentPosition::Normal || flexBoxStyle.alignContent().distribution() != ContentDistribution::Default || flexBoxStyle.alignContent().overflow() != OverflowAlignment::Default)
-        return false;
-    if (!flexBoxStyle.rowGap().isNormal() || !flexBoxStyle.columnGap().isNormal())
-        return false;
-
-    for (auto& flexItem : childrenOfType<RenderElement>(flexBox)) {
-        if (!is<RenderBlock>(flexItem))
-            return false;
-        if (flexItem.isFloating() || flexItem.isOutOfFlowPositioned())
-            return false;
-        if (flexItem.isRenderOrLegacyRenderSVGRoot())
-            return false;
-        // FIXME: No nested flexbox support.
-        if (flexItem.isFlexibleBoxIncludingDeprecated())
-            return false;
-        if (flexItem.isFieldset() || flexItem.isRenderTextControl())
-            return false;
-        if (flexItem.isRenderTable())
-            return false;
-        auto& flexItemStyle = flexItem.style();
-        if (!flexItemStyle.isHorizontalWritingMode() || !flexItemStyle.isLeftToRightDirection())
-            return false;
-        if (!flexItemStyle.height().isFixed())
-            return false;
-        if (!flexItemStyle.flexBasis().isAuto() && !flexItemStyle.flexBasis().isFixed())
-            return false;
-        if (flexItemStyle.flexShrink() > 0 && flexItemStyle.flexShrink() < 1)
-            return false;
-        if (flexItemStyle.flexGrow() > 0 && flexItemStyle.flexGrow() < 1)
-            return false;
-        if (flexItemStyle.containsSize())
-            return false;
-        if (flexItemStyle.overflowX() == Overflow::Scroll || flexItemStyle.overflowY() == Overflow::Scroll)
-            return false;
-        if (flexItem.hasIntrinsicAspectRatio() || flexItemStyle.hasAspectRatio())
-            return false;
-        auto alignSelfValue = flexItemStyle.alignSelf().position();
-        if (alignSelfValue == ItemPosition::Baseline || alignSelfValue == ItemPosition::LastBaseline || alignSelfValue == ItemPosition::SelfStart || alignSelfValue == ItemPosition::SelfEnd)
-            return false;
-    }
-    return true;
+#ifndef NDEBUG
+    static std::once_flag onceFlag;
+    std::call_once(onceFlag, [] {
+        PAL::registerNotifyCallback("com.apple.WebKit.showLegacyFlexReasons"_s, Function<void()> { printLegacyFlexReasons });
+    });
+#endif
+    return canUseForFlexLayoutWithReason(flexBox, IncludeReasons::First).isEmpty();
 }
 
 }
 }
-

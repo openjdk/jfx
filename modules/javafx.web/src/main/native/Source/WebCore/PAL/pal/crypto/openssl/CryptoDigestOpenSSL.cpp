@@ -35,14 +35,6 @@ struct SHA1Functions {
     static constexpr auto final = SHA1_Final;
     static constexpr size_t digestLength = SHA_DIGEST_LENGTH;
 };
-
-struct SHA224Functions {
-    static constexpr auto init = SHA224_Init;
-    static constexpr auto update = SHA224_Update;
-    static constexpr auto final = SHA224_Final;
-    static constexpr size_t digestLength = SHA224_DIGEST_LENGTH;
-};
-
 struct SHA256Functions {
     static constexpr auto init = SHA256_Init;
     static constexpr auto update = SHA256_Update;
@@ -75,7 +67,7 @@ struct CryptoDigestContext {
 
 template <typename SHAContext, typename SHAFunctions>
 struct CryptoDigestContextImpl : public CryptoDigestContext {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(CryptoDigestContextImpl);
 
     static std::unique_ptr<CryptoDigestContext> create()
     {
@@ -95,7 +87,7 @@ struct CryptoDigestContextImpl : public CryptoDigestContext {
     Vector<uint8_t> computeHash() override
     {
         Vector<uint8_t> result(SHAFunctions::digestLength);
-        SHAFunctions::final(result.data(), &m_context);
+        SHAFunctions::final(result.mutableSpan().data(), &m_context);
         return result;
     }
 
@@ -112,8 +104,9 @@ static std::unique_ptr<CryptoDigestContext> createCryptoDigest(CryptoDigest::Alg
     switch (algorithm) {
     case CryptoDigest::Algorithm::SHA_1:
         return CryptoDigestContextImpl<SHA_CTX, SHA1Functions>::create();
-    case CryptoDigest::Algorithm::SHA_224:
-        return CryptoDigestContextImpl<SHA256_CTX, SHA224Functions>::create();
+    case CryptoDigest::Algorithm::DEPRECATED_SHA_224:
+        RELEASE_ASSERT_NOT_REACHED_WITH_MESSAGE("SHA224 is not supported.");
+        return CryptoDigestContextImpl<SHA256_CTX, SHA256Functions>::create();
     case CryptoDigest::Algorithm::SHA_256:
         return CryptoDigestContextImpl<SHA256_CTX, SHA256Functions>::create();
     case CryptoDigest::Algorithm::SHA_384:
@@ -141,18 +134,6 @@ Vector<uint8_t> CryptoDigest::computeHash()
 {
     ASSERT(m_context);
     return m_context->computeHash();
-}
-
-std::optional<Vector<uint8_t>> CryptoDigest::computeHash(CryptoDigest::Algorithm algo, const Vector<uint8_t>& data, UseCryptoKit)
-{
-    std::unique_ptr<CryptoDigest> digest = WTF::makeUnique<CryptoDigest>();
-    if (!digest)
-        return { };
-    digest->m_context = createCryptoDigest(algo);
-    if (!digest->m_context)
-        return { };
-    digest->m_context->addBytes(data.span());
-    return digest->m_context->computeHash();
 }
 
 } // namespace PAL

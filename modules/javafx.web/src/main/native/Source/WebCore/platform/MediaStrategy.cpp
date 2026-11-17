@@ -26,13 +26,21 @@
 #include "config.h"
 #include "MediaStrategy.h"
 
+#include "AudioVideoRenderer.h"
+#if USE(AVFOUNDATION)
+#include "AudioVideoRendererAVFObjC.h"
+#endif
 #include "MediaPlayer.h"
+#include <wtf/TZoneMallocInlines.h>
+
 #if ENABLE(MEDIA_SOURCE)
 #include "DeprecatedGlobalSettings.h"
 #include "MockMediaPlayerMediaSource.h"
 #endif
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MediaStrategy);
 
 MediaStrategy::MediaStrategy() = default;
 
@@ -79,4 +87,45 @@ void MediaStrategy::addMockMediaSourceEngine()
 }
 #endif
 
+#if ENABLE(VIDEO)
+RefPtr<AudioVideoRenderer> MediaStrategy::createAudioVideoRenderer(WTF::LoggerHelper* loggerHelper, HTMLMediaElementIdentifier, MediaPlayerIdentifier) const
+{
+#if USE(AVFOUNDATION)
+    ASSERT(loggerHelper);
+    return AudioVideoRendererAVFObjC::create(Ref { loggerHelper->logger() }, loggerHelper->logIdentifier());
+#else
+    UNUSED_PARAM(loggerHelper);
+    return nullptr;
+#endif
 }
+
+bool MediaStrategy::hasRemoteRendererFor(MediaPlayerMediaEngineIdentifier type) const
+{
+    return m_remoteRenderersEnabled.get(static_cast<uint16_t>(type));
+}
+
+void MediaStrategy::enableRemoteRenderer(MediaPlayerMediaEngineIdentifier type, bool enabled)
+{
+    m_remoteRenderersEnabled.set(static_cast<uint16_t>(type), enabled);
+}
+#endif
+
+#if ENABLE(WIRELESS_PLAYBACK_MEDIA_PLAYER)
+void MediaStrategy::setWirelessPlaybackMediaPlayerEnabled(bool enabled)
+{
+    if (m_wirelessPlaybackMediaPlayerEnabled == enabled)
+        return;
+
+    m_wirelessPlaybackMediaPlayerEnabled = enabled;
+#if ENABLE(VIDEO)
+    MediaPlayer::resetMediaEngines();
+#endif
+}
+
+bool MediaStrategy::wirelessPlaybackMediaPlayerEnabled() const
+{
+    return m_wirelessPlaybackMediaPlayerEnabled;
+}
+#endif
+
+} // namespace WebCore

@@ -42,7 +42,7 @@ class JavaInstance : public Instance {
 public:
     static RefPtr<JavaInstance> create(jobject instance, RefPtr<RootObject>&& rootObject, jobject accessControlContext)
     {
-        return adoptRef(new JavaInstance(instance, WTFMove(rootObject), accessControlContext));
+        return adoptRef(new JavaInstance(instance, WTF::move(rootObject), accessControlContext));
     }
 
     ~JavaInstance();

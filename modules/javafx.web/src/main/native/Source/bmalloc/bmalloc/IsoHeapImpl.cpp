@@ -23,7 +23,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "BPlatform.h"
 #include "IsoHeapImpl.h"
+
+#if !BUSE(TZONE)
 
 #include "AllIsoHeaps.h"
 #include "PerProcess.h"
@@ -38,9 +41,7 @@ IsoHeapImplBase::IsoHeapImplBase(Mutex& lock)
 {
 }
 
-IsoHeapImplBase::~IsoHeapImplBase()
-{
-}
+IsoHeapImplBase::~IsoHeapImplBase() = default;
 
 void IsoHeapImplBase::addToAllIsoHeaps()
 {
@@ -98,3 +99,4 @@ void IsoHeapImplBase::finishScavenging(Vector<DeferredDecommit>& deferredDecommi
 } // namespace bmalloc
 
 #endif
+#endif // !BUSE(TZONE)

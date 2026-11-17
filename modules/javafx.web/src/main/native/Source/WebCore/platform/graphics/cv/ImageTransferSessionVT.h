@@ -25,13 +25,14 @@
 
 #pragma once
 
-#include "FloatRect.h"
-#include "IntSize.h"
+#include <WebCore/FloatRect.h>
+#include <WebCore/IntSize.h>
+#include <wtf/Platform.h>
 #include <wtf/RetainPtr.h>
 
 typedef struct CGImage *CGImageRef;
 typedef struct OpaqueVTPixelTransferSession* VTPixelTransferSessionRef;
-typedef struct __CVBuffer *CVPixelBufferRef;
+typedef struct CF_BRIDGED_TYPE(id) __CVBuffer *CVPixelBufferRef;
 typedef struct __CVPixelBufferPool *CVPixelBufferPoolRef;
 typedef struct __IOSurface *IOSurfaceRef;
 typedef struct opaqueCMSampleBuffer *CMSampleBufferRef;
@@ -69,7 +70,7 @@ public:
     void setMaximumBufferPoolSize(size_t maxBufferPoolSize) { m_maxBufferPoolSize = maxBufferPoolSize; }
 
     RetainPtr<CMSampleBufferRef> convertCMSampleBuffer(CMSampleBufferRef, const IntSize&, const WTF::MediaTime* = nullptr);
-    void setCroppingRectangle(std::optional<FloatRect>);
+    void setCroppingRectangle(std::optional<FloatRect>, FloatSize = { });
 
 private:
     WEBCORE_EXPORT ImageTransferSessionVT(uint32_t pixelFormat, bool shouldUseIOSurface);

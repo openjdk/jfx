@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -233,6 +233,8 @@ public class TableColumnHeader extends Region {
     private final WeakListChangeListener<String> weakStyleClassListener =
             new WeakListChangeListener<>(styleClassListener);
 
+    private static boolean popupTriggeredOnMousePressed;
+
     private static final EventHandler<MouseEvent> mousePressedHandler = me -> {
         TableColumnHeader header = (TableColumnHeader) me.getSource();
         TableColumnBase tableColumn = header.getTableColumn();
@@ -243,6 +245,7 @@ public class TableColumnHeader extends Region {
         }
 
         if (me.isConsumed()) return;
+        popupTriggeredOnMousePressed = me.isPopupTrigger();
         me.consume();
 
         header.getTableHeaderRow().columnDragLock = true;
@@ -251,13 +254,13 @@ public class TableColumnHeader extends Region {
         // the focus rectangle around the table control.
         header.getTableSkin().getSkinnable().requestFocus();
 
-        if (me.isPrimaryButtonDown() && header.isColumnReorderingEnabled()) {
+        if (me.isPrimaryButtonDown() && header.isColumnReorderingEnabled() && !popupTriggeredOnMousePressed) {
             header.columnReorderingStarted(me.getX());
         }
     };
 
     private static final EventHandler<MouseEvent> mouseDraggedHandler = me -> {
-        if (me.isConsumed()) return;
+        if (me.isConsumed() || popupTriggeredOnMousePressed) return;
         me.consume();
 
         TableColumnHeader header = (TableColumnHeader) me.getSource();
@@ -271,7 +274,10 @@ public class TableColumnHeader extends Region {
         TableColumnHeader header = (TableColumnHeader) me.getSource();
         header.getTableHeaderRow().columnDragLock = false;
 
-        if (me.isPopupTrigger()) return;
+        if (popupTriggeredOnMousePressed || me.isPopupTrigger()) {
+            popupTriggeredOnMousePressed = false;
+            return;
+        }
         if (me.isConsumed()) return;
         me.consume();
 

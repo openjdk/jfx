@@ -26,9 +26,9 @@
 // https://gpuweb.github.io/gpuweb/#dictdef-gpublendstate
 
 [
-    EnabledBySetting=WebGPUEnabled
-]
-dictionary GPUBlendState {
+    EnabledBySetting=WebGPUEnabled,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary GPUBlendState {
     required GPUBlendComponent color;
     required GPUBlendComponent alpha;
 };

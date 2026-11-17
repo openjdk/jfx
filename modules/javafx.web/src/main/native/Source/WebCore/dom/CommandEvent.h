@@ -35,18 +35,18 @@ class Element;
 class HTMLElement;
 
 class CommandEvent final : public Event {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CommandEvent);
+    WTF_MAKE_TZONE_ALLOCATED(CommandEvent);
 
 public:
     struct Init : EventInit {
-        RefPtr<Element> invoker;
+        RefPtr<Element> source;
         String command;
     };
 
     static Ref<CommandEvent> create(const AtomString& type, const Init&, IsTrusted = IsTrusted::No);
     static Ref<CommandEvent> createForBindings();
 
-    RefPtr<Element> invoker() const;
+    RefPtr<Element> source() const;
 
     String command() const { return m_command; }
 
@@ -54,11 +54,7 @@ private:
     CommandEvent();
     CommandEvent(const AtomString& type, const Init&, IsTrusted = IsTrusted::No);
 
-    bool isCommandEvent() const final;
-
-    void setCommandr(RefPtr<Element>&& invoker) { m_invoker = WTFMove(invoker); }
-
-    RefPtr<Element> m_invoker;
+    const RefPtr<Element> m_source;
     String m_command;
 };
 

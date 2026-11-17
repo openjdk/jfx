@@ -39,14 +39,14 @@
 #include "LayoutState.h"
 #include "Logging.h"
 #include "RenderBlockFlow.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
 namespace Layout {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(FormattingContext);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FormattingContext);
 
 FormattingContext::FormattingContext(const ElementBox& formattingContextRoot, LayoutState& layoutState)
     : m_root(formattingContextRoot)
@@ -72,7 +72,7 @@ LayoutState& FormattingContext::layoutState()
 
 BoxGeometry& FormattingContext::geometryForBox(const Box& layoutBox, std::optional<EscapeReason>)
 {
-    return layoutState().ensureGeometryForBox(layoutBox);
+    return m_layoutState->ensureGeometryForBox(layoutBox);
 }
 
 const BoxGeometry& FormattingContext::geometryForBox(const Box& layoutBox, std::optional<EscapeReason> escapeReason) const
@@ -156,8 +156,8 @@ const BoxGeometry& FormattingContext::geometryForBox(const Box& layoutBox, std::
     };
 #endif
     ASSERT(isOkToAccessBoxGeometry());
-    ASSERT(layoutState().hasBoxGeometry(layoutBox));
-    return layoutState().geometryForBox(layoutBox);
+    ASSERT(m_layoutState->hasBoxGeometry(layoutBox));
+    return m_layoutState->geometryForBox(layoutBox);
 }
 
 const InitialContainingBlock& FormattingContext::initialContainingBlock(const Box& layoutBox)

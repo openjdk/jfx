@@ -27,18 +27,21 @@
 
 #if ENABLE(WEB_RTC) && USE(LIBWEBRTC)
 
+#include "ContextDestructionObserverInlines.h"
 #include "JSDOMMapLike.h"
 #include "JSRTCIceTcpCandidateType.h"
 #include "JSRTCStatsReport.h"
 #include "LibWebRTCUtils.h"
 #include "Performance.h"
+#include "ScriptExecutionContextInlines.h"
+#include <webrtc/api/stats/rtcstats_objects.h>
 #include <wtf/Assertions.h>
 #include <wtf/MainThread.h>
 
 namespace WebCore {
 
 LibWebRTCStatsCollector::LibWebRTCStatsCollector(CollectorCallback&& callback)
-    : m_callback(WTFMove(callback))
+    : m_callback(WTF::move(callback))
 {
 }
 
@@ -47,7 +50,7 @@ LibWebRTCStatsCollector::~LibWebRTCStatsCollector()
     if (!m_callback)
         return;
 
-    callOnMainThread([callback = WTFMove(m_callback)]() mutable {
+    callOnMainThread([callback = WTF::move(m_callback)]() mutable {
         callback(nullptr);
     });
 }
@@ -665,9 +668,10 @@ RTCStatsReport::VideoSourceStats::VideoSourceStats(const webrtc::RTCVideoSourceS
 template <typename T, typename PreciseType>
 void addToStatsMap(DOMMapAdapter& report, const webrtc::RTCStats& rtcStats)
 {
-    T stats { static_cast<const PreciseType&>(rtcStats) };
+    // This is a cast from a webrtc type, not much we can do to make it safe.
+    SUPPRESS_MEMORY_UNSAFE_CAST T stats { static_cast<const PreciseType&>(rtcStats) };
     String statsId = stats.id;
-    report.set<IDLDOMString, IDLDictionary<T>>(WTFMove(statsId), WTFMove(stats));
+    report.set<IDLDOMString, IDLDictionary<T>>(WTF::move(statsId), WTF::move(stats));
 }
 
 static inline void initializeRTCStatsReportBackingMap(DOMMapAdapter& report, const webrtc::RTCStatsReport& rtcReport)
@@ -704,14 +708,14 @@ static inline void initializeRTCStatsReportBackingMap(DOMMapAdapter& report, con
     }
 }
 
-void LibWebRTCStatsCollector::OnStatsDelivered(const rtc::scoped_refptr<const webrtc::RTCStatsReport>& rtcReport)
+void LibWebRTCStatsCollector::OnStatsDelivered(const webrtc::scoped_refptr<const webrtc::RTCStatsReport>& rtcReport)
 {
-    callOnMainThread([this, protectedThis = rtc::scoped_refptr<LibWebRTCStatsCollector>(this), rtcReport]() {
+    callOnMainThread([this, protectedThis = webrtc::scoped_refptr<LibWebRTCStatsCollector>(this), rtcReport]() {
         m_callback(rtcReport);
     });
 }
 
-Ref<RTCStatsReport> LibWebRTCStatsCollector::createReport(const rtc::scoped_refptr<const webrtc::RTCStatsReport>& rtcReport)
+Ref<RTCStatsReport> LibWebRTCStatsCollector::createReport(const webrtc::scoped_refptr<const webrtc::RTCStatsReport>& rtcReport)
 {
     return RTCStatsReport::create([rtcReport](auto& mapAdapter) {
         if (rtcReport)

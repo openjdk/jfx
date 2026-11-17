@@ -32,36 +32,56 @@
 
 namespace JSC {
 
-// FIXME: This should take in a std::span.
 template<typename CharacterType>
-ALWAYS_INLINE Ref<AtomStringImpl> JSONAtomStringCache::make(std::span<const CharacterType> characters)
+ALWAYS_INLINE Ref<AtomStringImpl> JSONAtomStringCache::makeIdentifier(std::span<const CharacterType> characters)
 {
     if (characters.empty())
-        return *static_cast<AtomStringImpl*>(StringImpl::empty());
+        return *emptyAtom().impl();
 
     auto firstCharacter = characters.front();
     if (characters.size() == 1) {
         if (firstCharacter <= maxSingleCharacterString)
             return vm().smallStrings.singleCharacterStringRep(firstCharacter);
-    } else if (UNLIKELY(characters.size() > maxStringLengthForCache))
+    } else if (characters.size() > maxStringLengthForCache) [[unlikely]]
         return AtomStringImpl::add(characters).releaseNonNull();
 
     auto lastCharacter = characters.back();
     auto& slot = cacheSlot(firstCharacter, lastCharacter, characters.size());
-    if (UNLIKELY(slot.m_length != characters.size() || !equal(slot.m_buffer, characters))) {
+    if (slot.m_length != characters.size() || !equal(slot.m_buffer, characters)) [[unlikely]] {
         auto result = AtomStringImpl::add(characters);
         slot.m_impl = result;
         slot.m_length = characters.size();
-        WTF::copyElements(slot.m_buffer, characters.data(), characters.size());
+        WTF::copyElements(std::span<char16_t> { slot.m_buffer }, characters);
         return result.releaseNonNull();
     }
 
     return *slot.m_impl;
 }
 
+template<typename CharacterType>
+ALWAYS_INLINE AtomStringImpl* JSONAtomStringCache::existingIdentifier(std::span<const CharacterType> characters)
+{
+    if (characters.empty())
+        return emptyAtom().impl();
+
+    auto firstCharacter = characters.front();
+    if (characters.size() == 1) {
+        if (firstCharacter <= maxSingleCharacterString)
+            return vm().smallStrings.existingSingleCharacterStringRep(firstCharacter);
+    } else if (characters.size() > maxStringLengthForCache) [[unlikely]]
+        return nullptr;
+
+    auto lastCharacter = characters.back();
+    auto& slot = cacheSlot(firstCharacter, lastCharacter, characters.size());
+    if (slot.m_length != characters.size() || !equal(slot.m_buffer, characters)) [[unlikely]]
+        return nullptr;
+
+    return slot.m_impl.get();
+}
+
 ALWAYS_INLINE VM& JSONAtomStringCache::vm() const
 {
-    return *bitwise_cast<VM*>(bitwise_cast<uintptr_t>(this) - OBJECT_OFFSETOF(VM, jsonAtomStringCache));
+    return *std::bit_cast<VM*>(std::bit_cast<uintptr_t>(this) - OBJECT_OFFSETOF(VM, jsonAtomStringCache));
 }
 
 } // namespace JSC

@@ -48,7 +48,10 @@
 #include "CCallHelpers.h"
 #include "LinkBuffer.h"
 #include <cmath>
+#include <numeric>
 #include <wtf/BitVector.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC { namespace B3 {
 
@@ -284,11 +287,7 @@ private:
                 Vector<SwitchCase> cases;
                 for (SwitchCase switchCase : switchValue->cases(m_block))
                     cases.append(switchCase);
-                std::sort(
-                    cases.begin(), cases.end(),
-                    [] (const SwitchCase& left, const SwitchCase& right) {
-                        return left.caseValue() < right.caseValue();
-                    });
+                std::ranges::sort(cases, { }, &SwitchCase::caseValue);
                 FrequentedBlock fallThrough = m_block->fallThrough();
                 m_block->values().removeLast();
                 recursivelyBuildSwitch(cases, fallThrough, 0, false, cases.size(), m_block);
@@ -860,7 +859,7 @@ private:
             return;
         }
 
-        unsigned medianIndex = (start + end) / 2;
+        unsigned medianIndex = std::midpoint(start, end);
 
         BasicBlock* left = m_blockInsertionSet.insertAfter(m_block);
         BasicBlock* right = m_blockInsertionSet.insertAfter(m_block);
@@ -900,5 +899,6 @@ bool lowerMacros(Procedure& proc)
 
 } } // namespace JSC::B3
 
-#endif // ENABLE(B3_JIT)
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
+#endif // ENABLE(B3_JIT)

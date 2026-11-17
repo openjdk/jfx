@@ -44,6 +44,7 @@ G_BEGIN_DECLS
  * @GST_STREAM_TYPE_VIDEO: The stream carries video data
  * @GST_STREAM_TYPE_CONTAINER: The stream is a muxed container type
  * @GST_STREAM_TYPE_TEXT: The stream contains subtitle / subpicture data.
+ * @GST_STREAM_TYPE_METADATA: The stream contains metadata.
  *
  * #GstStreamType describes a high level classification set for
  * flows of data in #GstStream objects.
@@ -59,7 +60,16 @@ typedef enum {
   GST_STREAM_TYPE_AUDIO     = 1 << 1,
   GST_STREAM_TYPE_VIDEO     = 1 << 2,
   GST_STREAM_TYPE_CONTAINER = 1 << 3,
-  GST_STREAM_TYPE_TEXT      = 1 << 4
+  GST_STREAM_TYPE_TEXT      = 1 << 4,
+
+  /**
+   * GST_STREAM_TYPE_METADATA:
+   *
+   * The stream contains metadata.
+   *
+   * Since: 1.28
+   */
+  GST_STREAM_TYPE_METADATA  = 1 << 5
 } GstStreamType;
 
 
@@ -119,9 +129,9 @@ GType     gst_stream_get_type (void);
 
 GST_API
 GstStream *gst_stream_new            (const gchar *stream_id,
-              GstCaps *caps,
-              GstStreamType type,
-              GstStreamFlags flags);
+                                      GstCaps *caps,
+                                      GstStreamType type,
+                                      GstStreamFlags flags) G_GNUC_WARN_UNUSED_RESULT;
 GST_API
 const gchar *  gst_stream_get_stream_id (GstStream *stream);
 
@@ -141,13 +151,13 @@ GST_API
 void           gst_stream_set_tags (GstStream *stream, GstTagList *tags);
 
 GST_API
-GstTagList *   gst_stream_get_tags (GstStream *stream);
+GstTagList *   gst_stream_get_tags (GstStream *stream) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void           gst_stream_set_caps (GstStream *stream, GstCaps *caps);
 
 GST_API
-GstCaps *      gst_stream_get_caps (GstStream *stream);
+GstCaps *      gst_stream_get_caps (GstStream *stream) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 const gchar *  gst_stream_type_get_name (GstStreamType stype);

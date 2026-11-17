@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Google, Inc. All Rights Reserved.
+ * Copyright (C) 2010 Google, Inc. All rights reserved.
  * Copyright (C) 2011-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,7 +27,9 @@
 #pragma once
 
 #include "HTMLConstructionSite.h"
+#include "HTMLDocumentParser.h"
 #include "HTMLParserOptions.h"
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/TextPosition.h>
 
@@ -40,21 +42,22 @@ class ScriptElement;
 enum class TagName : uint16_t;
 
 struct CustomElementConstructionData {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(CustomElementConstructionData);
 
-    CustomElementConstructionData(Ref<JSCustomElementInterface>&&, const AtomString& name, Vector<Attribute>&&);
+    CustomElementConstructionData(Ref<JSCustomElementInterface>&&, Ref<CustomElementRegistry>&&, const AtomString& name, Vector<Attribute>&&);
     ~CustomElementConstructionData();
 
     Ref<JSCustomElementInterface> elementInterface;
+    Ref<CustomElementRegistry> registry;
     AtomString name;
     Vector<Attribute> attributes;
 };
 
 class HTMLTreeBuilder {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(HTMLTreeBuilder);
 public:
     HTMLTreeBuilder(HTMLDocumentParser&, HTMLDocument&, OptionSet<ParserContentPolicy>, const HTMLParserOptions&);
-    HTMLTreeBuilder(HTMLDocumentParser&, DocumentFragment&, Element& contextElement, OptionSet<ParserContentPolicy>, const HTMLParserOptions&);
+    HTMLTreeBuilder(HTMLDocumentParser&, DocumentFragment&, Element& contextElement, OptionSet<ParserContentPolicy>, const HTMLParserOptions&, CustomElementRegistry*);
     void setShouldSkipLeadingNewline(bool);
 
     ~HTMLTreeBuilder();
@@ -69,12 +72,15 @@ public:
     // Must be called to take the parser-blocking script before calling the parser again.
     RefPtr<ScriptElement> takeScriptToProcess(TextPosition& scriptStartPosition);
     const ScriptElement* scriptToProcess() const { return m_scriptToProcess.get(); }
+    RefPtr<const ScriptElement> protectedScriptToProcess() const;
 
-    std::unique_ptr<CustomElementConstructionData> takeCustomElementConstructionData() { return WTFMove(m_customElementToConstruct); }
+    std::unique_ptr<CustomElementConstructionData> takeCustomElementConstructionData() { return WTF::move(m_customElementToConstruct); }
     void didCreateCustomOrFallbackElement(Ref<Element>&&, CustomElementConstructionData&);
 
     // Done, close any open tags, etc.
     void finished();
+
+    bool isOnStackOfOpenElements(Element&) const;
 
 private:
     class ExternalCharacterTokenBuffer;
@@ -195,11 +201,11 @@ private:
         HTMLStackItem& contextElementStackItem();
 
     private:
-        DocumentFragment* m_fragment { nullptr };
+        WeakPtr<DocumentFragment, WeakPtrImplWithEventTargetData> m_fragment;
         HTMLStackItem m_contextElementStackItem;
     };
 
-    HTMLDocumentParser& m_parser;
+    WeakRef<HTMLDocumentParser> m_parser;
     const HTMLParserOptions m_options;
     FragmentParsingContext m_fragmentContext;
 
@@ -258,7 +264,7 @@ inline bool HTMLTreeBuilder::hasParserBlockingScriptWork() const
 
 inline DocumentFragment* HTMLTreeBuilder::FragmentParsingContext::fragment() const
 {
-    return m_fragment;
+    return m_fragment.get();
 }
 
 } // namespace WebCore

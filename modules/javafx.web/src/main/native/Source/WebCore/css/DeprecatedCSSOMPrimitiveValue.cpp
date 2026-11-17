@@ -26,13 +26,21 @@
 #include "config.h"
 #include "DeprecatedCSSOMPrimitiveValue.h"
 
+#include "CSSColorValue.h"
 #include "CSSCounterValue.h"
 #include "CSSRectValue.h"
+#include "CSSSerializationContext.h"
+#include "CSSURLValue.h"
 #include "DeprecatedCSSOMCounter.h"
 #include "DeprecatedCSSOMRGBColor.h"
 #include "DeprecatedCSSOMRect.h"
 
 namespace WebCore {
+
+String DeprecatedCSSOMPrimitiveValue::cssText() const
+{
+    return protectedValue()->cssText(CSS::defaultSerializationContext());
+}
 
 unsigned short DeprecatedCSSOMPrimitiveValue::primitiveType() const
 {
@@ -40,6 +48,10 @@ unsigned short DeprecatedCSSOMPrimitiveValue::primitiveType() const
         return CSS_COUNTER;
     if (m_value->isRect())
         return CSS_RECT;
+    if (m_value->isColor())
+        return CSS_RGBCOLOR;
+    if (m_value->isURL())
+        return CSS_URI;
 
     auto* primitiveValue = dynamicDowncast<CSSPrimitiveValue>(m_value.get());
     if (!primitiveValue)
@@ -69,10 +81,8 @@ unsigned short DeprecatedCSSOMPrimitiveValue::primitiveType() const
     case CSSUnitType::CSS_PT:                           return CSS_PT;
     case CSSUnitType::CSS_PX:                           return CSS_PX;
     case CSSUnitType::CSS_RAD:                          return CSS_RAD;
-    case CSSUnitType::CSS_RGBCOLOR:                     return CSS_RGBCOLOR;
     case CSSUnitType::CSS_S:                            return CSS_S;
     case CSSUnitType::CSS_STRING:                       return CSS_STRING;
-    case CSSUnitType::CSS_URI:                          return CSS_URI;
     case CSSUnitType::CSS_VALUE_ID:                     return CSS_IDENT;
 
     // All other, including newer types, should return UNKNOWN.
@@ -109,7 +119,7 @@ ExceptionOr<float> DeprecatedCSSOMPrimitiveValue::getFloatValue(unsigned short u
     auto* primitiveValue = dynamicDowncast<CSSPrimitiveValue>(m_value.get());
     if (!numericType || !primitiveValue)
         return Exception { ExceptionCode::InvalidAccessError };
-    return primitiveValue->getFloatValue(*numericType);
+    return primitiveValue->getFloatValueDeprecated(*numericType);
 }
 
 ExceptionOr<String> DeprecatedCSSOMPrimitiveValue::getStringValue() const
@@ -118,7 +128,7 @@ ExceptionOr<String> DeprecatedCSSOMPrimitiveValue::getStringValue() const
     case CSS_ATTR:      return downcast<CSSPrimitiveValue>(m_value.get()).stringValue();
     case CSS_IDENT:     return downcast<CSSPrimitiveValue>(m_value.get()).stringValue();
     case CSS_STRING:    return downcast<CSSPrimitiveValue>(m_value.get()).stringValue();
-    case CSS_URI:       return downcast<CSSPrimitiveValue>(m_value.get()).stringValue();
+    case CSS_URI:       return downcast<CSSURLValue>(m_value.get()).stringValue();
 
     // All other, including newer types, should raise an exception.
     default:            return Exception { ExceptionCode::InvalidAccessError };
@@ -143,7 +153,7 @@ ExceptionOr<Ref<DeprecatedCSSOMRGBColor>> DeprecatedCSSOMPrimitiveValue::getRGBC
 {
     if (primitiveType() != CSS_RGBCOLOR)
         return Exception { ExceptionCode::InvalidAccessError };
-    return DeprecatedCSSOMRGBColor::create(m_owner, downcast<CSSPrimitiveValue>(m_value.get()).color());
+    return DeprecatedCSSOMRGBColor::create(m_owner, downcast<CSSColorValue>(m_value.get()).color().absoluteColor());
 }
 
 }

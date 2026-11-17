@@ -30,9 +30,12 @@
 
 #pragma once
 
+#include <wtf/AbstractCanMakeCheckedPtr.h>
+
 namespace WebCore {
 
-class WorkerReportingProxy {
+class WorkerReportingProxy : public AbstractCanMakeCheckedPtr {
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(WorkerReportingProxy);
 public:
     virtual ~WorkerReportingProxy() = default;
 

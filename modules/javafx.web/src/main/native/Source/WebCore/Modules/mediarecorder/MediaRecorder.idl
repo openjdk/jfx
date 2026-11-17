@@ -54,7 +54,9 @@ enum RecordingState { "inactive", "recording", "paused" };
     [CallWith=CurrentDocument] static boolean isTypeSupported(DOMString type);
 };
 
-dictionary MediaRecorderOptions {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary MediaRecorderOptions {
     DOMString mimeType;
     unsigned long audioBitsPerSecond;
     unsigned long videoBitsPerSecond;

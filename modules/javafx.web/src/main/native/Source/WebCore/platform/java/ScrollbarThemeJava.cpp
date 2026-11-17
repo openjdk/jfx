@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 #include "config.h"
 
 #include "Frame.h"
+#include "FrameInlines.h"
 #include "FrameView.h"
 #include "GraphicsContext.h"
 #include "HostWindow.h"
@@ -36,6 +37,7 @@
 #include "ScrollbarThemeJava.h"
 #include "ScrollView.h"
 #include "NotImplemented.h"
+#include "DocumentPage.h"
 
 #include "PlatformJavaClasses.h"
 #include "com_sun_webkit_graphics_ScrollBarTheme.h"
@@ -218,7 +220,7 @@ IntRect ScrollbarThemeJava::trackRect(Scrollbar& scrollbar, bool) {
     return getPartRect(scrollbar, TrackBGPart);
 }
 
-int ScrollbarThemeJava::scrollbarThickness(ScrollbarWidth, ScrollbarExpansionState)
+int ScrollbarThemeJava::scrollbarThickness(ScrollbarWidth width, OverlayScrollbarSizeRelevancy relevancy)
 {
     JNIEnv* env = WTF::GetJavaEnv();
 

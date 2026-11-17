@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,8 +40,8 @@ PluginInfoProvider::~PluginInfoProvider()
 
 void PluginInfoProvider::clearPagesPluginData()
 {
-    for (auto& page : m_pages)
-        page.clearPluginData();
+    for (Ref page : m_pages)
+        page->clearPluginData();
 }
 
 void PluginInfoProvider::refresh(bool reloadPages)
@@ -50,24 +50,24 @@ void PluginInfoProvider::refresh(bool reloadPages)
 
     Vector<Ref<LocalFrame>> framesNeedingReload;
 
-    for (auto& page : m_pages) {
-        page.clearPluginData();
+    for (Ref page : m_pages) {
+        page->clearPluginData();
 
         if (!reloadPages)
             continue;
 
-        for (Frame* frame = &page.mainFrame(); frame; frame = frame->tree().traverseNext()) {
-            auto* localFrame = dynamicDowncast<LocalFrame>(frame);
+        for (RefPtr frame = page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
+            RefPtr localFrame = dynamicDowncast<LocalFrame>(frame);
             if (!localFrame)
                 continue;
             if (localFrame->loader().subframeLoader().containsPlugins()) {
-                if (auto* localMainFrame = dynamicDowncast<LocalFrame>(page.mainFrame()))
+                if (RefPtr localMainFrame = page->localMainFrame())
                     framesNeedingReload.append(*localMainFrame);
             }
         }
     }
 
-    for (auto& frame : framesNeedingReload)
+    for (Ref frame : framesNeedingReload)
         frame->loader().reload();
 }
 

@@ -346,7 +346,7 @@ GType           gst_collect_pads_get_type (void);
 /* creating the object */
 
 GST_BASE_API
-GstCollectPads* gst_collect_pads_new      (void);
+GstCollectPads* gst_collect_pads_new      (void) G_GNUC_WARN_UNUSED_RESULT;
 
 /* set the callbacks */
 
@@ -402,10 +402,10 @@ void            gst_collect_pads_set_flushing  (GstCollectPads *pads, gboolean f
 /* get collected buffers */
 
 GST_BASE_API
-GstBuffer*      gst_collect_pads_peek          (GstCollectPads *pads, GstCollectData *data);
+GstBuffer*      gst_collect_pads_peek          (GstCollectPads *pads, GstCollectData *data) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_BASE_API
-GstBuffer*      gst_collect_pads_pop           (GstCollectPads *pads, GstCollectData *data);
+GstBuffer*      gst_collect_pads_pop           (GstCollectPads *pads, GstCollectData *data) G_GNUC_WARN_UNUSED_RESULT;
 
 /* get collected bytes */
 
@@ -417,10 +417,10 @@ guint           gst_collect_pads_flush         (GstCollectPads *pads, GstCollect
                                                 guint size);
 GST_BASE_API
 GstBuffer*      gst_collect_pads_read_buffer   (GstCollectPads * pads, GstCollectData * data,
-                                                guint size);
+                                                guint size) G_GNUC_WARN_UNUSED_RESULT;
 GST_BASE_API
 GstBuffer*      gst_collect_pads_take_buffer   (GstCollectPads * pads, GstCollectData * data,
-                                                guint size);
+                                                guint size) G_GNUC_WARN_UNUSED_RESULT;
 
 /* setting and unsetting waiting mode */
 

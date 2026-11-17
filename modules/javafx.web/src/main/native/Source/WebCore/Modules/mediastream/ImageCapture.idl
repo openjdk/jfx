@@ -37,6 +37,7 @@
     Promise<PhotoCapabilities> getPhotoCapabilities();
 
     Promise<Blob> takePhoto(optional PhotoSettings photoSettings = {});
+    Promise<ImageBitmap> grabFrame();
 
     Promise<PhotoSettings> getPhotoSettings();
 

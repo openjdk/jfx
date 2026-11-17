@@ -41,7 +41,7 @@ bool JSDeprecatedCSSOMValueOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Un
     if (!jsCSSValue->hasCustomProperties())
         return false;
 
-    if (UNLIKELY(reason))
+    if (reason) [[unlikely]]
         *reason = "CSSStyleDeclaration is opaque root"_s;
 
     return containsWebCoreOpaqueRoot(visitor, jsCSSValue->wrapped().owner());
@@ -50,11 +50,11 @@ bool JSDeprecatedCSSOMValueOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Un
 JSValue toJSNewlyCreated(JSGlobalObject*, JSDOMGlobalObject* globalObject, Ref<DeprecatedCSSOMValue>&& value)
 {
     if (value->isValueList())
-        return createWrapper<DeprecatedCSSOMValueList>(globalObject, WTFMove(value));
+        return createWrapper<DeprecatedCSSOMValueList>(globalObject, WTF::move(value));
     // Expose CSS-wide keywords as plain CSSValues to keep the existing behavior.
     if (auto* primitiveValue = dynamicDowncast<DeprecatedCSSOMPrimitiveValue>(value.get()); primitiveValue && !primitiveValue->isCSSWideKeyword())
-        return createWrapper<DeprecatedCSSOMPrimitiveValue>(globalObject, WTFMove(value));
-    return createWrapper<DeprecatedCSSOMValue>(globalObject, WTFMove(value));
+        return createWrapper<DeprecatedCSSOMPrimitiveValue>(globalObject, WTF::move(value));
+    return createWrapper<DeprecatedCSSOMValue>(globalObject, WTF::move(value));
 }
 
 JSValue toJS(JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObject, DeprecatedCSSOMValue& value)

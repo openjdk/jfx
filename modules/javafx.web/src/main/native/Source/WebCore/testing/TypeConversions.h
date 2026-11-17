@@ -26,8 +26,6 @@
 #pragma once
 
 #include "Node.h"
-#include <variant>
-#include <wtf/FastMalloc.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
@@ -48,7 +46,7 @@ public:
         String stringValue;
         String treatNullAsEmptyStringValue;
         Vector<String> sequenceValue;
-        std::variant<RefPtr<Node>, Vector<String>, OtherDictionary> unionValue;
+        Variant<RefPtr<Node>, Vector<String>, OtherDictionary> unionValue;
         int clampLongValue;
         int enforceRangeLongValue;
     };
@@ -126,7 +124,7 @@ public:
     const Vector<KeyValuePair<String, Vector<String>>>& testSequenceRecord() const { return m_sequenceRecord; }
     void setTestSequenceRecord(const Vector<KeyValuePair<String, Vector<String>>>& value) { m_sequenceRecord = value; }
 
-    using TestUnion = std::variant<String, int, bool, RefPtr<Node>, Vector<int>>;
+    using TestUnion = Variant<String, int, bool, RefPtr<Node>, Vector<int>>;
     const TestUnion& testUnion() const { return m_union; }
     void setTestUnion(TestUnion&& value) { m_union = value; }
 
@@ -134,20 +132,20 @@ public:
     void setTestDictionary(Dictionary&& dictionary) { m_testDictionary = dictionary; }
 
 
-    using TestClampUnion = std::variant<String, int, Vector<int>>;
+    using TestClampUnion = Variant<String, int, Vector<int>>;
     const TestClampUnion& testClampUnion() const { return m_clampUnion; }
     void setTestClampUnion(const TestClampUnion& value) { m_clampUnion = value; }
 
-    using TestEnforceRangeUnion = std::variant<String, int, Vector<int>>;
+    using TestEnforceRangeUnion = Variant<String, int, Vector<int>>;
     const TestEnforceRangeUnion& testEnforceRangeUnion() const { return m_enforceRangeUnion; }
     void setTestEnforceRangeUnion(const TestEnforceRangeUnion& value) { m_enforceRangeUnion = value; }
 
-    using TestTreatNullAsEmptyStringUnion = std::variant<String, int, Vector<String>>;
+    using TestTreatNullAsEmptyStringUnion = Variant<String, int, Vector<String>>;
     const TestTreatNullAsEmptyStringUnion& testTreatNullAsEmptyStringUnion() const { return m_treatNullAsEmptyStringUnion; }
     void setTestTreatNullAsEmptyStringUnion(const TestTreatNullAsEmptyStringUnion& value) { m_treatNullAsEmptyStringUnion = value; }
 
-    double testImpureNaNUnrestrictedDouble() const { return bitwise_cast<double>(0xffff000000000000ll); }
-    double testImpureNaN2UnrestrictedDouble() const { return bitwise_cast<double>(0x7ff8000000000001ll); }
+    double testImpureNaNUnrestrictedDouble() const { return std::bit_cast<double>(0xffff000000000000ll); }
+    double testImpureNaN2UnrestrictedDouble() const { return std::bit_cast<double>(0x7ff8000000000001ll); }
     double testQuietNaNUnrestrictedDouble() const { return std::numeric_limits<double>::quiet_NaN(); }
     double testPureNaNUnrestrictedDouble() const { return JSC::PNaN; }
 

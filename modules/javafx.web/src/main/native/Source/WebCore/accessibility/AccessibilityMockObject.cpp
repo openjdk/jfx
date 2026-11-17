@@ -26,18 +26,20 @@
 #include "config.h"
 #include "AccessibilityMockObject.h"
 
+#include "AccessibilityObjectInlines.h"
+
 namespace WebCore {
 
-AccessibilityMockObject::AccessibilityMockObject()
-    : m_parent(nullptr)
+AccessibilityMockObject::AccessibilityMockObject(AXID axID, AXObjectCache& cache)
+    : AccessibilityObject(axID, cache)
 {
 }
 
 AccessibilityMockObject::~AccessibilityMockObject() = default;
 
-bool AccessibilityMockObject::computeAccessibilityIsIgnored() const
+bool AccessibilityMockObject::computeIsIgnored() const
 {
-    return accessibilityIsIgnoredByDefault();
+    return isIgnoredByDefault();
 }
 
-}
+} // namespace WebCore

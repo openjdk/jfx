@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,12 +43,13 @@
 #include "LocalFrame.h"
 #include "LocalFrameLoaderClient.h"
 #include "RawDataDocumentParser.h"
+#include "UserScriptTypes.h"
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ModelDocument);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ModelDocument);
 
 using namespace HTMLNames;
 

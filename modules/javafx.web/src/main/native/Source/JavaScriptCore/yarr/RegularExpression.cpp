@@ -34,6 +34,8 @@
 #include <wtf/BumpPointerAllocator.h>
 #include <wtf/TZoneMallocInlines.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC { namespace Yarr {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(RegularExpression);
@@ -101,12 +103,12 @@ int RegularExpression::match(StringView str, unsigned startFrom, int* matchLengt
     if (str.isNull())
         return -1;
 
-    int offsetVectorSize = (d->m_numSubpatterns + 1) * 2;
+    int offsetVectorSize = d->m_regExpByteCode->m_offsetsSize;
     unsigned* offsetVector;
     Vector<unsigned, 32> nonReturnedOvector;
 
     nonReturnedOvector.grow(offsetVectorSize);
-    offsetVector = nonReturnedOvector.data();
+    offsetVector = nonReturnedOvector.mutableSpan().data();
 
     ASSERT(offsetVector);
     for (unsigned j = 0, i = 0; i < d->m_numSubpatterns + 1; j += 2, i++)
@@ -184,3 +186,5 @@ bool RegularExpression::isValid() const
 }
 
 } } // namespace JSC::Yarr
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

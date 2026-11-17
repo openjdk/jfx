@@ -2,7 +2,7 @@
     Copyright (C) 2000 Harri Porten (porten@kde.org)
     Copyright (C) 2000 Daniel Molkentin (molkentin@kde.org)
     Copyright (C) 2000 Stefan Schimanski (schimmi@kde.org)
-    Copyright (C) 2003, 2004, 2005, 2006, 2007, 2015 Apple Inc. All Rights Reserved.
+    Copyright (C) 2003, 2004, 2005, 2006, 2007, 2015 Apple Inc. All rights reserved.
     Copyright (C) 2008 Nokia Corporation and/or its subsidiary(-ies)
 
     This library is free software; you can redistribute it and/or
@@ -26,6 +26,7 @@
 
 #include "Document.h"
 #include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "LocalizedStrings.h"
 #include "Page.h"
 #include "PluginInfoProvider.h"
@@ -53,7 +54,8 @@ PluginData::PluginData(Page& page)
 void PluginData::initPlugins()
 {
     ASSERT(m_plugins.isEmpty());
-    m_plugins = m_page.pluginInfoProvider().pluginInfo(m_page, m_supportedPluginIdentifiers);
+    Ref page = m_page.get();
+    m_plugins = page->protectedPluginInfoProvider()->pluginInfo(page.get(), m_supportedPluginIdentifiers);
 
     for (auto& plugin : m_plugins) {
         if (isBuiltInPDFPlugIn(plugin)) {
@@ -65,15 +67,16 @@ void PluginData::initPlugins()
 
 const Vector<PluginInfo>& PluginData::webVisiblePlugins() const
 {
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page.mainFrame());
+    Ref page = m_page.get();
+    RefPtr localMainFrame = dynamicDowncast<LocalFrame>(page->mainFrame());
     auto documentURL = localMainFrame && localMainFrame->document() ? localMainFrame->document()->url() : URL { };
     if (!documentURL.isNull() && !protocolHostAndPortAreEqual(m_cachedVisiblePlugins.pageURL, documentURL)) {
-        m_cachedVisiblePlugins.pageURL = WTFMove(documentURL);
+        m_cachedVisiblePlugins.pageURL = WTF::move(documentURL);
         m_cachedVisiblePlugins.pluginList = std::nullopt;
     }
 
     if (!m_cachedVisiblePlugins.pluginList)
-        m_cachedVisiblePlugins.pluginList = m_page.pluginInfoProvider().webVisiblePluginInfo(m_page, m_cachedVisiblePlugins.pageURL);
+        m_cachedVisiblePlugins.pluginList = page->protectedPluginInfoProvider()->webVisiblePluginInfo(page.get(), m_cachedVisiblePlugins.pageURL);
 
     return *m_cachedVisiblePlugins.pluginList;
 }
@@ -109,8 +112,10 @@ bool PluginData::supportsWebVisibleMimeType(const String& mimeType, const Allowe
 
 bool PluginData::supportsWebVisibleMimeTypeForURL(const String& mimeType, const AllowedPluginTypes allowedPluginTypes, const URL& url) const
 {
-    if (!protocolHostAndPortAreEqual(m_cachedVisiblePlugins.pageURL, url))
-        m_cachedVisiblePlugins = { url, m_page.pluginInfoProvider().webVisiblePluginInfo(m_page, url) };
+    if (!protocolHostAndPortAreEqual(m_cachedVisiblePlugins.pageURL, url)) {
+        Ref page = m_page.get();
+        m_cachedVisiblePlugins = { url, page->protectedPluginInfoProvider()->webVisiblePluginInfo(page.get(), url) };
+    }
     if (!m_cachedVisiblePlugins.pluginList)
         return false;
     return supportsMimeTypeForPlugins(mimeType, allowedPluginTypes, *m_cachedVisiblePlugins.pluginList);
@@ -135,7 +140,6 @@ PluginInfo PluginData::dummyPDFPluginInfo()
     info.desc = pdfDocumentTypeDescription();
     info.file = "internal-pdf-viewer"_s;
     info.isApplicationPlugin = true;
-    info.clientLoadPolicy = PluginLoadClientPolicy::Undefined;
 
     MimeClassInfo pdfMimeClassInfo;
     pdfMimeClassInfo.type = "application/pdf"_s;

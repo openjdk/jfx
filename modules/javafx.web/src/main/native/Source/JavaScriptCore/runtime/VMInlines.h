@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,13 +25,17 @@
 
 #pragma once
 
-#include "Debugger.h"
-#include "EntryFrame.h"
-#include "FuzzerAgent.h"
-#include "ProfilerDatabase.h"
-#include "SideDataRepository.h"
-#include "VM.h"
-#include "Watchdog.h"
+#include <JavaScriptCore/Debugger.h>
+#include <JavaScriptCore/EntryFrame.h>
+#include <JavaScriptCore/FuzzerAgent.h>
+#include <JavaScriptCore/ProfilerDatabase.h>
+#include <JavaScriptCore/SideDataRepository.h>
+#include <JavaScriptCore/VM.h>
+#include <JavaScriptCore/Watchdog.h>
+
+#if ENABLE(C_LOOP)
+#include <JavaScriptCore/CLoopStackInlines.h>
+#endif
 
 namespace JSC {
 
@@ -50,21 +54,21 @@ inline ActiveScratchBufferScope::~ActiveScratchBufferScope()
         m_scratchBuffer->setActiveLength(0);
 }
 
-bool VM::ensureStackCapacityFor(Register* newTopOfStack)
+bool VM::ensureJSStackCapacityFor(Register* newTopOfStack)
 {
 #if !ENABLE(C_LOOP)
-    return newTopOfStack >= m_softStackLimit;
+    return newTopOfStack >= softStackLimit();
 #else
-    return ensureStackCapacityForCLoop(newTopOfStack);
+    return cloopStack().ensureCapacityFor(newTopOfStack);
 #endif
 
 }
 
 bool VM::isSafeToRecurseSoft() const
 {
-    bool safe = isSafeToRecurse(m_softStackLimit);
+    bool safe = isSafeToRecurse(softStackLimit());
 #if ENABLE(C_LOOP)
-    safe = safe && isSafeToRecurseSoftCLoop();
+    safe = safe && cloopStack().isSafeToRecurse();
 #endif
     return safe;
 }
@@ -72,7 +76,7 @@ bool VM::isSafeToRecurseSoft() const
 template<typename Func>
 void VM::logEvent(CodeBlock* codeBlock, const char* summary, const Func& func)
 {
-    if (LIKELY(!m_perBytecodeProfiler))
+    if (!m_perBytecodeProfiler) [[likely]]
         return;
 
     m_perBytecodeProfiler->logEvent(codeBlock, summary, func());
@@ -81,14 +85,14 @@ void VM::logEvent(CodeBlock* codeBlock, const char* summary, const Func& func)
 inline CallFrame* VM::topJSCallFrame() const
 {
     CallFrame* frame = topCallFrame;
-    if (UNLIKELY(!frame))
+    if (!frame) [[unlikely]]
         return frame;
-    if (LIKELY(!frame->isNativeCalleeFrame() && !frame->isPartiallyInitializedFrame()))
+    if (!frame->isNativeCalleeFrame() && !frame->isZombieFrame()) [[likely]]
         return frame;
     EntryFrame* entryFrame = topEntryFrame;
     do {
         frame = frame->callerFrame(entryFrame);
-        ASSERT(!frame || !frame->isPartiallyInitializedFrame());
+        ASSERT(!frame || !frame->isZombieFrame());
     } while (frame && frame->isNativeCalleeFrame());
     return frame;
 }
@@ -96,13 +100,13 @@ inline CallFrame* VM::topJSCallFrame() const
 inline void VM::setFuzzerAgent(std::unique_ptr<FuzzerAgent>&& fuzzerAgent)
 {
     RELEASE_ASSERT_WITH_MESSAGE(!m_fuzzerAgent, "Only one FuzzerAgent can be specified at a time.");
-    m_fuzzerAgent = WTFMove(fuzzerAgent);
+    m_fuzzerAgent = WTF::move(fuzzerAgent);
 }
 
 template<typename Func>
 inline void VM::forEachDebugger(const Func& callback)
 {
-    if (LIKELY(m_debuggers.isEmpty()))
+    if (m_debuggers.isEmpty()) [[likely]]
         return;
 
     for (auto* debugger = m_debuggers.head(); debugger; debugger = debugger->next())

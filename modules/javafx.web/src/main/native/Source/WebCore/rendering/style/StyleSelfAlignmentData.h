@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "RenderStyleConstants.h"
+#include <WebCore/RenderStyleConstants.h>
 #include <wtf/EnumTraits.h>
 
 namespace WTF {
@@ -34,11 +34,16 @@ class TextStream;
 
 namespace WebCore {
 
+class LayoutUnit;
+class WritingMode;
+
+enum class LogicalBoxAxis : uint8_t;
+
 class StyleSelfAlignmentData {
 public:
     constexpr StyleSelfAlignmentData() = default;
 
-    // Style data for Self-Aligment and Default-Alignment properties: align-{self, items}, justify-{self, items}.
+    // Style data for Self-Alignment and Default-Alignment properties: align-{self, items}, justify-{self, items}.
     // [ <self-position> && <overflow-position>? ] | [ legacy && [ left | right | center ] ]
     constexpr StyleSelfAlignmentData(ItemPosition position, OverflowAlignment overflow = OverflowAlignment::Default, ItemPositionType positionType = ItemPositionType::NonLegacy)
         : m_position(enumToUnderlyingType(position))
@@ -55,12 +60,33 @@ public:
     ItemPositionType positionType() const { return static_cast<ItemPositionType>(m_positionType); }
     OverflowAlignment overflow() const { return static_cast<OverflowAlignment>(m_overflow); }
 
+    bool isNormal() const
+    {
+        return position() == ItemPosition::Normal;
+    }
+
+    bool isStretch() const
+    {
+        return position() == ItemPosition::Stretch;
+    }
+
+    bool isStretchy(ItemPosition normal) const
+    {
+        if (isNormal())
+            return normal == ItemPosition::Stretch;
+        return position() == ItemPosition::Stretch;
+    }
+
+    // Must resolve Auto before calling. Normal treated as Start.
+    // Returns position adjustment from container's start edge.
+    static LayoutUnit adjustmentFromStartEdge(LayoutUnit extraSpace, ItemPosition alignmentPosition, LogicalBoxAxis containerAxis, WritingMode containerWritingMode, WritingMode selfWritingMode);
+
     friend bool operator==(const StyleSelfAlignmentData&, const StyleSelfAlignmentData&) = default;
 
 private:
-    uint8_t m_position : 4 { 0 }; // ItemPosition
-    uint8_t m_positionType: 1 { 0 }; // ItemPositionType: Whether or not alignment uses the 'legacy' keyword.
-    uint8_t m_overflow : 2 { 0 }; // OverflowAlignment
+    PREFERRED_TYPE(ItemPosition) uint8_t m_position : 4 { 0 };
+    PREFERRED_TYPE(ItemPositionType) uint8_t m_positionType: 1 { 0 }; // Whether or not alignment uses the 'legacy' keyword.
+    PREFERRED_TYPE(OverflowAlignment) uint8_t m_overflow : 2 { 0 };
 };
 
 WTF::TextStream& operator<<(WTF::TextStream&, const StyleSelfAlignmentData&);

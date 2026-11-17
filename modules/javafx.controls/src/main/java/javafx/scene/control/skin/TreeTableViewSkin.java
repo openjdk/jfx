@@ -69,7 +69,7 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
     ObjectProperty<ObservableList<TreeItem<T>>> tableBackingListProperty;
     private final TreeTableViewBehavior<T>  behavior;
     private final EventHandler<TreeItem.TreeModificationEvent<T>> rootListener;
-
+    private boolean treeStructureDirty;
 
 
     /* *************************************************************************
@@ -146,6 +146,11 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
                         markItemCountDirty();
                         control.requestLayout();
                         break;
+                    } else if (eventType.equals(TreeItem.<T>childrenModificationEvent())) {
+                        markItemCountDirty();
+                        treeStructureDirty = true;
+                        control.requestLayout();
+                        break;
                     }
                     eventType = eventType.getSuperType();
                 }
@@ -164,6 +169,11 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
             }
             // fix for JDK-8094887
             control.edit(-1, null);
+
+            if (root == null || root.getValue() == null) {
+                requestRebuildCells();
+            }
+
             updateItemCount();
         });
 
@@ -342,6 +352,10 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
             // A unit test exists in TreeTableViewTest to ensure that
             // the performance issue covered in JDK-8147483 doesn't regress.
             // requestRebuildCells();
+            treeStructureDirty = false;
+        } else if (treeStructureDirty) {
+            requestRebuildCells();
+            treeStructureDirty = false;
         } else {
             needCellsReconfigured = true;
         }

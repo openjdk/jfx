@@ -25,10 +25,9 @@
 
 #pragma once
 
-#include "SpeechRecognitionConnectionClientIdentifier.h"
-#include "SpeechRecognitionError.h"
-#include "SpeechRecognitionResultData.h"
-#include <variant>
+#include <WebCore/SpeechRecognitionConnectionClientIdentifier.h>
+#include <WebCore/SpeechRecognitionError.h>
+#include <WebCore/SpeechRecognitionResultData.h>
 #include <wtf/ArgumentCoder.h>
 
 namespace WebCore {
@@ -61,8 +60,8 @@ public:
     WEBCORE_EXPORT Vector<SpeechRecognitionResultData> result() const;
 
 private:
-    friend struct IPC::ArgumentCoder<SpeechRecognitionUpdate, void>;
-    using Content = std::variant<std::monostate, SpeechRecognitionError, Vector<SpeechRecognitionResultData>>;
+    friend struct IPC::ArgumentCoder<SpeechRecognitionUpdate>;
+    using Content = Variant<std::monostate, SpeechRecognitionError, Vector<SpeechRecognitionResultData>>;
     WEBCORE_EXPORT SpeechRecognitionUpdate(SpeechRecognitionConnectionClientIdentifier, SpeechRecognitionUpdateType, Content);
 
     SpeechRecognitionConnectionClientIdentifier m_clientIdentifier;

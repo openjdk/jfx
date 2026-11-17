@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2000 Peter Kelly (pmk@post.com)
- * Copyright (C) 2005, 2006 Apple Inc.
+ * Copyright (C) 2005, 2006 Apple Inc. All rights reserved.
  * Copyright (C) 2007 Samuel Weinig (sam@webkit.org)
  * Copyright (C) 2010 Google, Inc.
  *
@@ -23,24 +23,27 @@
 
 #pragma once
 
+#include <wtf/CanMakeWeakPtr.h>
 #include <wtf/CheckedPtr.h>
 #include <wtf/Forward.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
 class Document;
 class DocumentWriter;
+class HTMLDocumentParser;
 class SegmentedString;
 class ScriptableDocumentParser;
 class WeakPtrImplWithEventTargetData;
 
-class DocumentParser : public RefCounted<DocumentParser> {
+class DocumentParser : public RefCountedAndCanMakeWeakPtr<DocumentParser> {
 public:
     virtual ~DocumentParser();
 
     virtual ScriptableDocumentParser* asScriptableDocumentParser() { return nullptr; }
+    virtual HTMLDocumentParser* asHTMLDocumentParser() { return nullptr; }
 
     // http://www.whatwg.org/specs/web-apps/current-work/#insertion-point
     virtual bool hasInsertionPoint() { return true; }
@@ -53,7 +56,7 @@ public:
     virtual void flush(DocumentWriter&) = 0;
 
     virtual void append(RefPtr<StringImpl>&&) = 0;
-    virtual void appendSynchronously(RefPtr<StringImpl>&& inputSource) { append(WTFMove(inputSource)); }
+    virtual void appendSynchronously(RefPtr<StringImpl>&& inputSource) { append(WTF::move(inputSource)); }
 
     virtual void finish() = 0;
 

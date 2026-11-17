@@ -28,11 +28,8 @@
 
 #include <gst/gst.h>
 #include <gst/audio/audio-channels.h>
-#ifdef HAVE_IOS
-  #include <CoreAudio/CoreAudioTypes.h>
-  #define AudioDeviceID gint
-  #define kAudioDeviceUnknown 0
-#else
+#include <TargetConditionals.h>
+#if TARGET_OS_OSX
   #include <CoreAudio/CoreAudio.h>
   #include <AudioToolbox/AudioToolbox.h>
   #if MAC_OS_X_VERSION_MIN_REQUIRED < 1060
@@ -43,6 +40,10 @@
     #define AudioComponent Component
     #define AudioComponentDescription ComponentDescription
   #endif
+#else
+  #include <CoreAudio/CoreAudioTypes.h>
+  #define AudioDeviceID gint
+  #define kAudioDeviceUnknown 0
 #endif
 #include <AudioUnit/AudioUnit.h>
 #include <mach/mach_time.h>
@@ -91,18 +92,20 @@ struct _GstCoreAudio
   gboolean is_src;
   gboolean is_passthrough;
   AudioDeviceID device_id;
+  char *unique_id;
+  gboolean is_default;
   gboolean cached_caps_valid; /* thread-safe flag */
   GstCaps *cached_caps;
   gint stream_idx;
   gboolean io_proc_active;
-  gboolean io_proc_needs_deactivation;
+  gboolean io_proc_dropping;
 
   /* For LPCM in/out */
   AudioUnit audiounit;
   UInt32 recBufferSize; /* AudioUnitRender clobbers mDataByteSize */
   AudioBufferList *recBufferList;
 
-#ifndef HAVE_IOS
+#if TARGET_OS_OSX
   /* For SPDIF out */
   pid_t hog_pid;
   gboolean disabled_mixing;
@@ -117,6 +120,11 @@ struct _GstCoreAudio
   uint64_t anchor_hosttime_ns;
   uint32_t anchor_pend_samples;
   float rate_scalar;
+
+#if !TARGET_OS_OSX
+  gdouble first_sample_time;
+  gboolean configure_session;
+#endif
 };
 
 struct _GstCoreAudioClass
@@ -127,8 +135,6 @@ struct _GstCoreAudioClass
 GType gst_core_audio_get_type                                (void);
 
 void gst_core_audio_init_debug (void);
-
-GstCoreAudio * gst_core_audio_new                            (GstObject *osxbuf);
 
 gboolean gst_core_audio_open                                 (GstCoreAudio *core_audio);
 
@@ -172,8 +178,8 @@ AudioChannelLayout *
 gst_core_audio_get_channel_layout (GstCoreAudio * core_audio, gboolean outer);
 
 gboolean gst_core_audio_parse_channel_layout (AudioChannelLayout * layout,
-    guint * channels, guint64 * channel_mask, GstAudioChannelPosition * pos);
-GstCaps * gst_core_audio_asbd_to_caps (AudioStreamBasicDescription * asbd,
+    AudioDeviceID device_id, guint * channels, guint64 * channel_mask, GstAudioChannelPosition * pos);
+GstCaps * gst_core_audio_asbd_to_caps (AudioStreamBasicDescription * asbd, AudioDeviceID device_id,
     AudioChannelLayout * layout);
 
 G_END_DECLS

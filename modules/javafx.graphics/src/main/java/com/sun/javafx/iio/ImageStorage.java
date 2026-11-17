@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -443,13 +443,23 @@ public class ImageStorage {
                     }
                 } else {
                     // Use Mac Retina conventions for >= 1.5f (rounded to the next integer scale)
-                    for (int imageScale = Math.round(devPixelScale); imageScale >= 2; --imageScale) {
-                        try {
-                            String scaledName = ImageTools.getScaledImageName(input, imageScale);
-                            theStream = ImageTools.createInputStream(scaledName);
-                            imgPixelScale = imageScale;
-                            break;
-                        } catch (IOException ignored) {
+                    // first, check if the scale is not already requested in the input
+                    if (ImageTools.hasScaledName(input)) {
+                        // scaled name exists, assume user explicitly wants it and attempt loading
+                        // if we can't find the resource this should throw and cancel the load
+                        theStream = ImageTools.createInputStream(input);
+                    }
+
+                    if (theStream == null) {
+                        // not the case, find the highest available scale
+                        for (int imageScale = Math.round(devPixelScale); imageScale >= 2; --imageScale) {
+                            try {
+                                String scaledName = ImageTools.getScaledImageName(input, imageScale);
+                                theStream = ImageTools.createInputStream(scaledName);
+                                imgPixelScale = imageScale;
+                                break;
+                            } catch (IOException ignored) {
+                            }
                         }
                     }
 

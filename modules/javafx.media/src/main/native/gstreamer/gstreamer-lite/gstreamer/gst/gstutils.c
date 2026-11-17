@@ -44,11 +44,12 @@
 #include "gstinfo.h"
 #include "gstparse.h"
 #include "gstvalue.h"
-#include "gstquark.h"
 #include <glib/gi18n-lib.h>
 #include "glib-compat-private.h"
 #include <math.h>
 
+G_LOCK_DEFINE_STATIC (thread_pool_lock);
+static GThreadPool *gst_async_call_pool = NULL;
 
 static void
 gst_util_dump_mem_offset (const guchar * mem, guint size, guint offset)
@@ -1281,9 +1282,44 @@ gst_element_get_compatible_pad (GstElement * element, GstPad * pad,
  * Gets a string representing the given state.
  *
  * Returns: (transfer none): a string with the name of the state.
+ *
+ * Deprecated: 1.28: Use gst_state_get_name() instead.
  */
 const gchar *
 gst_element_state_get_name (GstState state)
+{
+  return gst_state_get_name (state);
+}
+
+/**
+ * gst_element_state_change_return_get_name:
+ * @state_ret: a #GstStateChangeReturn to get the name of.
+ *
+ * Gets a string representing the given state change result.
+ *
+ * Returns: (transfer none): a string with the name of the state
+ *    result.
+ *
+ * Deprecated: 1.28: Use gst_state_change_return_get_name() instead.
+ */
+const gchar *
+gst_element_state_change_return_get_name (GstStateChangeReturn state_ret)
+{
+  return gst_state_change_return_get_name (state_ret);
+}
+
+/**
+ * gst_state_get_name:
+ * @state: a #GstState to get the name of.
+ *
+ * Gets a string representing the given state.
+ *
+ * Returns: (transfer none): a string with the name of the state.
+ *
+ * Since: 1.28
+ */
+const gchar *
+gst_state_get_name (GstState state)
 {
   switch (state) {
     case GST_STATE_VOID_PENDING:
@@ -1303,16 +1339,18 @@ gst_element_state_get_name (GstState state)
 }
 
 /**
- * gst_element_state_change_return_get_name:
+ * gst_state_change_return_get_name:
  * @state_ret: a #GstStateChangeReturn to get the name of.
  *
  * Gets a string representing the given state change result.
  *
  * Returns: (transfer none): a string with the name of the state
  *    result.
+ *
+ * Since: 1.28
  */
 const gchar *
-gst_element_state_change_return_get_name (GstStateChangeReturn state_ret)
+gst_state_change_return_get_name (GstStateChangeReturn state_ret)
 {
   switch (state_ret) {
     case GST_STATE_CHANGE_FAILURE:
@@ -2164,6 +2202,9 @@ gst_element_link_pads_filtered (GstElement * src, const gchar * srcpadname,
       GST_CAT_ERROR (GST_CAT_ELEMENT_PADS, "Could not make a capsfilter");
       return FALSE;
     }
+    /* The bin could be in the middle of a state change, which would race
+     * against our own change to NULL in the failed case. */
+    gst_element_set_locked_state (capsfilter, TRUE);
 
     parent = gst_object_get_parent (GST_OBJECT (src));
     g_return_val_if_fail (GST_IS_BIN (parent), FALSE);
@@ -2188,6 +2229,8 @@ gst_element_link_pads_filtered (GstElement * src, const gchar * srcpadname,
     lr1 = gst_element_link_pads (src, srcpadname, capsfilter, "sink");
     lr2 = gst_element_link_pads (capsfilter, "src", dest, destpadname);
     if (lr1 && lr2) {
+      gst_element_set_locked_state (capsfilter, FALSE);
+      gst_element_sync_state_with_parent (capsfilter);
       return TRUE;
     } else {
       if (!lr1) {
@@ -3560,10 +3603,11 @@ gst_util_get_timestamp (void)
  * @array: the sorted input array
  * @num_elements: number of elements in the array
  * @element_size: size of every element in bytes
- * @search_func: (scope call): function to compare two elements, @search_data will always be passed as second argument
+ * @search_func: (scope call) (closure user_data): function to compare two
+ *    elements, @search_data will always be passed as second argument
  * @mode: search mode that should be used
  * @search_data: element that should be found
- * @user_data: (closure): data to pass to @search_func
+ * @user_data: data to pass to @search_func
  *
  * Searches inside @array for @search_data by using the comparison function
  * @search_func. @array must be sorted ascending.
@@ -3694,8 +3738,8 @@ gst_util_greatest_common_divisor_int64 (gint64 a, gint64 b)
 
 /**
  * gst_util_simplify_fraction:
- * @numerator: First value as #gint
- * @denominator: Second value as #gint
+ * @numerator: (inout): First value as #gint
+ * @denominator: (inout): Second value as #gint
  * @n_terms: non-significative terms (typical value: 8)
  * @threshold: threshold (typical value: 333)
  *
@@ -3938,6 +3982,86 @@ gst_util_fraction_multiply (gint a_n, gint a_d, gint b_n, gint b_d,
   *res_d = a_d * b_d;
 
   gcd = gst_util_greatest_common_divisor (*res_n, *res_d);
+  *res_n /= gcd;
+  *res_d /= gcd;
+
+  return TRUE;
+}
+
+/**
+ * gst_util_fraction_multiply_int64:
+ * @a_n: Numerator of first value
+ * @a_d: Denominator of first value
+ * @b_n: Numerator of second value
+ * @b_d: Denominator of second value
+ * @res_n: (out): Pointer to #gint to hold the result numerator
+ * @res_d: (out): Pointer to #gint to hold the result denominator
+ *
+ * Multiplies the fractions @a_n/@a_d and @b_n/@b_d and stores
+ * the result in @res_n and @res_d.
+ *
+ * Returns: %FALSE on overflow, %TRUE otherwise.
+ *
+ * Since: 1.26
+ */
+gboolean
+gst_util_fraction_multiply_int64 (gint64 a_n, gint64 a_d, gint64 b_n,
+    gint64 b_d, gint64 * res_n, gint64 * res_d)
+{
+  gint gcd;
+  gint64 initial_a_n, initial_a_d;
+
+  initial_a_n = a_n;
+  initial_a_d = a_d;
+
+  g_return_val_if_fail (res_n != NULL, FALSE);
+  g_return_val_if_fail (res_d != NULL, FALSE);
+  g_return_val_if_fail (a_d != 0, FALSE);
+  g_return_val_if_fail (b_d != 0, FALSE);
+
+  /* early out if either is 0, as its gcd would be 0 */
+  if (a_n == 0 || b_n == 0) {
+    *res_n = 0;
+    *res_d = 1;
+    return TRUE;
+  }
+
+  gcd = gst_util_greatest_common_divisor_int64 (a_n, a_d);
+  a_n /= gcd;
+  a_d /= gcd;
+
+  gcd = gst_util_greatest_common_divisor_int64 (b_n, b_d);
+  b_n /= gcd;
+  b_d /= gcd;
+
+  gcd = gst_util_greatest_common_divisor_int64 (a_n, b_d);
+  a_n /= gcd;
+  b_d /= gcd;
+
+  gcd = gst_util_greatest_common_divisor_int64 (a_d, b_n);
+  a_d /= gcd;
+  b_n /= gcd;
+
+  /* This would result in overflow */
+  if (a_n != 0 && G_MAXINT64 / ABS (a_n) < ABS (b_n)) {
+    gcd = gst_util_greatest_common_divisor_int64 (initial_a_n, initial_a_d);
+    GST_INFO ("gcd(a_n(%" G_GINT64_FORMAT "), a_d(%" G_GINT64_FORMAT ")) = %d",
+        initial_a_n, initial_a_d, gcd);
+    GST_INFO ("Integer overflow in numerator multiplication: %" G_GINT64_FORMAT
+        " * %" G_GINT64_FORMAT " > G_MAXINT64", ABS (a_n), ABS (b_n));
+    return FALSE;
+  }
+  if (G_MAXINT64 / ABS (a_d) < ABS (b_d)) {
+    GST_ERROR ("Integer overflow in denominator multiplication: %"
+        G_GINT64_FORMAT " * %" G_GINT64_FORMAT " > G_MAXINT64", ABS (a_d),
+        ABS (b_d));
+    return FALSE;
+  }
+
+  *res_n = a_n * b_n;
+  *res_d = a_d * b_d;
+
+  gcd = gst_util_greatest_common_divisor_int64 (*res_n, *res_d);
   *res_n /= gcd;
   *res_d /= gcd;
 
@@ -4539,9 +4663,54 @@ gst_util_ceil_log2 (guint32 v)
 #endif // GSTREAMER_LITE
 
 /**
+ * gst_util_floor_log2:
+ * @v: a #guint32 value.
+ *
+ * Returns smallest integral value not bigger than log2(v).
+ *
+ * Returns: a computed #guint val.
+ *
+ * Since: 1.26
+ */
+guint
+gst_util_floor_log2 (guint32 v)
+{
+  guint32 result = 0;
+
+  g_return_val_if_fail (v != 0, -1);
+
+  if (v & 0xffff0000) {
+    v >>= 16;
+    result += 16;
+  }
+
+  if (v & 0xff00) {
+    v >>= 8;
+    result += 8;
+  }
+
+  if (v & 0xf0) {
+    v >>= 4;
+    result += 4;
+  }
+
+  if (v & 0xc) {
+    v >>= 2;
+    result += 2;
+  }
+
+  if (v & 0x2) {
+    v >>= 1;
+    result += 1;
+  }
+
+  return result;
+}
+
+/**
  * gst_calculate_linear_regression: (skip)
- * @xy: Pairs of (x,y) values
- * @temp: Temporary scratch space used by the function
+ * @xy: (array): Pairs of (x,y) values
+ * @temp: (array) (nullable): Temporary scratch space used by the function
  * @n: number of (x,y) pairs
  * @m_num: (out): numerator of calculated slope
  * @m_denom: (out): denominator of calculated slope
@@ -4791,6 +4960,10 @@ invalid:
   }
 }
 
+/* Initialized in _priv_gst_plugin_initialize(). */
+GQuark _priv_gst_plugin_api_quark;
+GQuark _priv_gst_plugin_api_flags_quark;
+
 /**
  * gst_type_mark_as_plugin_api:
  * @type: a GType
@@ -4812,8 +4985,8 @@ invalid:
 void
 gst_type_mark_as_plugin_api (GType type, GstPluginAPIFlags flags)
 {
-  g_type_set_qdata (type, GST_QUARK (PLUGIN_API), GINT_TO_POINTER (TRUE));
-  g_type_set_qdata (type, GST_QUARK (PLUGIN_API_FLAGS),
+  g_type_set_qdata (type, _priv_gst_plugin_api_quark, GINT_TO_POINTER (TRUE));
+  g_type_set_qdata (type, _priv_gst_plugin_api_flags_quark,
       GINT_TO_POINTER (flags));
 }
 
@@ -4833,11 +5006,12 @@ gboolean
 gst_type_is_plugin_api (GType type, GstPluginAPIFlags * flags)
 {
   gboolean ret =
-      !!GPOINTER_TO_INT (g_type_get_qdata (type, GST_QUARK (PLUGIN_API)));
+      !!GPOINTER_TO_INT (g_type_get_qdata (type, _priv_gst_plugin_api_quark));
 
   if (ret && flags) {
     *flags =
-        GPOINTER_TO_INT (g_type_get_qdata (type, GST_QUARK (PLUGIN_API_FLAGS)));
+        GPOINTER_TO_INT (g_type_get_qdata (type,
+            _priv_gst_plugin_api_flags_quark));
   }
 
   return ret;
@@ -4865,6 +5039,8 @@ gst_util_filename_compare (const gchar * a, const gchar * b)
   b_utf8 = g_filename_to_utf8 (b, -1, NULL, NULL, NULL);
 
   if (a_utf8 == NULL || b_utf8 == NULL) {
+    g_free (a_utf8);
+    g_free (b_utf8);
     return strcmp (a, b);
   }
 
@@ -4880,3 +5056,103 @@ gst_util_filename_compare (const gchar * a, const gchar * b)
   return ret;
 }
 #endif // GSTREAMER_LITE
+
+typedef struct
+{
+  GstObject *object;
+  GstCallAsyncFunc func;
+  gpointer user_data;
+  GDestroyNotify notify;
+} GstCallAsyncData;
+
+static void
+gst_call_async_func (gpointer data, gpointer user_data)
+{
+  GstCallAsyncData *async_data = data;
+
+  if (async_data->object) {
+    /* gst_element_call_async() or gst_object_call_async() */
+    GstObjectCallAsyncFunc func = (GstObjectCallAsyncFunc) async_data->func;
+    (*func) (async_data->object, async_data->user_data);
+  } else {
+    /* gst_call_async() */
+    async_data->func (async_data->user_data);
+  }
+
+  /* gst_element_call_async() (deprecated) had a separate destroy callback
+   * for user_data, while newer APIs (gst_object_call_async() and
+   * gst_call_async()) do not */
+  if (async_data->notify)
+    async_data->notify (async_data->user_data);
+  gst_clear_object (&async_data->object);
+  g_free (async_data);
+}
+
+static GThreadPool *
+gst_setup_thread_pool (void)
+{
+  GError *err = NULL;
+  GThreadPool *pool;
+
+  GST_DEBUG ("creating element thread pool");
+  pool = g_thread_pool_new ((GFunc) gst_call_async_func, NULL, -1, FALSE, &err);
+  if (err != NULL) {
+    g_critical ("could not alloc threadpool %s", err->message);
+    g_clear_error (&err);
+  }
+
+  return pool;
+}
+
+static void
+gst_call_async_internal (GstObject * object, GstCallAsyncFunc func,
+    gpointer user_data, GDestroyNotify notify)
+{
+  GstCallAsyncData *data;
+
+  data = g_new0 (GstCallAsyncData, 1);
+  if (object)
+    data->object = gst_object_ref (object);
+  data->func = func;
+  data->user_data = user_data;
+  data->notify = notify;
+
+  G_LOCK (thread_pool_lock);
+  if (!gst_async_call_pool)
+    gst_async_call_pool = gst_setup_thread_pool ();
+  g_thread_pool_push (gst_async_call_pool, data, NULL);
+  G_UNLOCK (thread_pool_lock);
+}
+
+/**
+ * gst_call_async:
+ * @func: (scope async): function to call asynchronously from another thread
+ * @user_data: data to pass to @func
+ *
+ * Calls @func from another thread and passes @user_data to it.
+ *
+ * Since: 1.28
+ */
+void
+gst_call_async (GstCallAsyncFunc func, gpointer user_data)
+{
+  gst_call_async_internal (NULL, func, user_data, NULL);
+}
+
+void
+_priv_gst_object_call_async (GstObject * object, GFunc func,
+    gpointer user_data, GDestroyNotify notify)
+{
+  gst_call_async_internal (object, (GstCallAsyncFunc) func, user_data, notify);
+}
+
+void
+_priv_gst_thread_pool_cleanup (void)
+{
+  G_LOCK (thread_pool_lock);
+  if (gst_async_call_pool) {
+    g_thread_pool_free (gst_async_call_pool, FALSE, TRUE);
+    gst_async_call_pool = NULL;
+  }
+  G_UNLOCK (thread_pool_lock);
+}

@@ -71,8 +71,7 @@ public:
                     // Successor with one predecessor -> merge.
                     if (canMergeWithBlock(block->successor(0))) {
                         ASSERT(block->successor(0)->predecessors[0] == block);
-                        if (extremeLogging)
-                            m_graph.dump();
+                        dataLogLnIf(extremeLogging, m_graph);
                         m_graph.dethread();
                         mergeBlocks(block, block->successor(0), noBlocks());
                         innerChanged = outerChanged = true;
@@ -98,16 +97,14 @@ public:
                         BasicBlock* targetBlock = block->successorForCondition(condition);
                         BasicBlock* jettisonedBlock = block->successorForCondition(!condition);
                         if (canMergeWithBlock(targetBlock)) {
-                            if (extremeLogging)
-                                m_graph.dump();
+                            dataLogLnIf(extremeLogging, m_graph);
                             m_graph.dethread();
                             if (targetBlock == jettisonedBlock)
                                 mergeBlocks(block, targetBlock, noBlocks());
                             else
                                 mergeBlocks(block, targetBlock, oneBlock(jettisonedBlock));
                         } else {
-                            if (extremeLogging)
-                                m_graph.dump();
+                            dataLogLnIf(extremeLogging, m_graph);
                             m_graph.dethread();
 
                             Node* terminal = block->terminal();
@@ -186,14 +183,12 @@ public:
                         }
 
                         if (canMergeWithBlock(targetBlock)) {
-                            if (extremeLogging)
-                                m_graph.dump();
+                            dataLogLnIf(extremeLogging, m_graph);
                             m_graph.dethread();
 
                             mergeBlocks(block, targetBlock, jettisonedBlocks);
                         } else {
-                            if (extremeLogging)
-                                m_graph.dump();
+                            dataLogLnIf(extremeLogging, m_graph);
                             m_graph.dethread();
 
                             NodeOrigin boundaryNodeOrigin = terminal->origin;

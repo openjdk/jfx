@@ -23,7 +23,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-dictionary RTCPeerConnectionIceEventInit : EventInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary RTCPeerConnectionIceEventInit : EventInit {
     RTCIceCandidate? candidate;
     DOMString? url;
 };

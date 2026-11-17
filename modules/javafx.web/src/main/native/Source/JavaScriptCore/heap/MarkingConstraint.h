@@ -25,9 +25,10 @@
 
 #pragma once
 
-#include "ConstraintConcurrency.h"
-#include "ConstraintParallelism.h"
-#include "ConstraintVolatility.h"
+#include <JavaScriptCore/ConstraintConcurrency.h>
+#include <JavaScriptCore/ConstraintParallelism.h>
+#include <JavaScriptCore/ConstraintVolatility.h>
+#include <JavaScriptCore/JSExportMacros.h>
 #include <limits.h>
 #include <wtf/Lock.h>
 #include <wtf/Noncopyable.h>
@@ -54,8 +55,8 @@ public:
 
     unsigned index() const { return m_index; }
 
-    const char* abbreviatedName() const { return m_abbreviatedName.data(); }
-    const char* name() const { return m_name.data(); }
+    const char* abbreviatedName() const LIFETIME_BOUND { return m_abbreviatedName.data(); }
+    const char* name() const LIFETIME_BOUND { return m_name.data(); }
 
     void resetStats();
 

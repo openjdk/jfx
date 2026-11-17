@@ -33,7 +33,7 @@ class RenderImageResource;
 class SVGImageElement;
 
 class LegacyRenderSVGImage final : public LegacyRenderSVGModelObject {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(LegacyRenderSVGImage);
+    WTF_MAKE_TZONE_ALLOCATED(LegacyRenderSVGImage);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(LegacyRenderSVGImage);
 public:
     LegacyRenderSVGImage(SVGImageElement&, RenderStyle&&);
@@ -45,12 +45,13 @@ public:
     void setNeedsBoundariesUpdate() override { m_needsBoundariesUpdate = true; }
     void setNeedsTransformUpdate() override { m_needsTransformUpdate = true; }
 
-    RenderImageResource& imageResource() { return *m_imageResource; }
-    const RenderImageResource& imageResource() const { return *m_imageResource; }
-    CheckedRef<RenderImageResource> checkedImageResource() const;
+    RenderImageResource& imageResource() { return m_imageResource; }
+    const RenderImageResource& imageResource() const { return m_imageResource; }
 
     // Note: Assumes the PaintInfo context has had all local transforms applied.
     void paintForeground(PaintInfo&);
+
+    bool isObjectBoundingBoxValid() const { return !m_objectBoundingBox.isEmpty(); }
 
 private:
     void willBeDestroyed() override;
@@ -62,10 +63,13 @@ private:
 
     const AffineTransform& localToParentTransform() const override { return m_localTransform; }
 
+    void notifyFinished(CachedResource& newImage, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess) override;
+
     FloatRect calculateObjectBoundingBox() const;
     FloatRect objectBoundingBox() const override { return m_objectBoundingBox; }
     FloatRect strokeBoundingBox() const override { return m_objectBoundingBox; }
     FloatRect repaintRectInLocalCoordinates(RepaintRectCalculation = RepaintRectCalculation::Fast) const override { return m_repaintBoundingBox; }
+    FloatRect decoratedBoundingBox() const override { return m_objectBoundingBox; }
 
     void addFocusRingRects(Vector<LayoutRect>&, const LayoutPoint& additionalOffset, const RenderLayerModelObject* paintContainer = 0) const override;
 
@@ -85,7 +89,7 @@ private:
     AffineTransform m_localTransform;
     FloatRect m_objectBoundingBox;
     FloatRect m_repaintBoundingBox;
-    std::unique_ptr<RenderImageResource> m_imageResource;
+    const UniqueRef<RenderImageResource> m_imageResource;
     RefPtr<ImageBuffer> m_bufferedForeground;
 };
 

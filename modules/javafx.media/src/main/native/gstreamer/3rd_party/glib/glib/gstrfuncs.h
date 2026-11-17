@@ -378,6 +378,7 @@ GLIB_AVAILABLE_IN_2_40
 gchar *                 g_str_to_ascii                                  (const gchar   *str,
                                                                          const gchar   *from_locale);
 
+#ifndef GSTREAMER_LITE
 GLIB_AVAILABLE_IN_2_40
 gchar **                g_str_tokenize_and_fold                         (const gchar   *string,
                                                                          const gchar   *translit_locale,
@@ -387,6 +388,7 @@ GLIB_AVAILABLE_IN_2_40
 gboolean                g_str_match_string                              (const gchar   *search_term,
                                                                          const gchar   *potential_hit,
                                                                          gboolean       accept_alternates);
+#endif // GSTREAMER_LITE
 
 GLIB_AVAILABLE_IN_2_44
 gboolean              g_strv_contains  (const gchar * const *strv,
@@ -475,6 +477,10 @@ gboolean              g_ascii_string_to_unsigned   (const gchar  *str,
  *
  * Since: 2.76
  */
+GLIB_AVAILABLE_STATIC_INLINE_IN_2_76
+static inline gboolean g_set_str (char       **str_pointer,
+                                  const char  *new_str);
+
 GLIB_AVAILABLE_STATIC_INLINE_IN_2_76
 static inline gboolean
 g_set_str (char       **str_pointer,

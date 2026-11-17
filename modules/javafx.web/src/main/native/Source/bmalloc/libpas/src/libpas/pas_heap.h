@@ -44,12 +44,14 @@ typedef struct pas_segregated_page pas_segregated_page;
 
 struct pas_heap {
     pas_segregated_heap segregated_heap;
+    pas_large_heap megapage_large_heap;
     pas_large_heap large_heap;
     const pas_heap_type* type;
     pas_heap_ref* heap_ref;
     pas_compact_heap_ptr next_heap;
-    pas_heap_config_kind config_kind : 6;
+    pas_heap_config_kind config_kind : 5;
     pas_heap_ref_kind heap_ref_kind : 2;
+    bool is_non_compact_heap : 1;
 };
 
 PAS_API pas_heap* pas_heap_create(pas_heap_ref* heap_ref,
@@ -61,11 +63,14 @@ PAS_API pas_heap* pas_heap_create(pas_heap_ref* heap_ref,
 PAS_API size_t pas_heap_get_type_size(pas_heap* heap);
 PAS_API size_t pas_heap_get_type_alignment(pas_heap* heap);
 
-/* The large heap belongs to the heap in such a way that given a large heap, we can find the
+/* All large heaps belong to the heap in such a way that given a large heap, we can find the
    heap. */
 static inline pas_heap* pas_heap_for_large_heap(pas_large_heap* large_heap)
 {
-    return (pas_heap*)((uintptr_t)large_heap - PAS_OFFSETOF(pas_heap, large_heap));
+    size_t offset = large_heap->is_megapage_heap
+        ? PAS_OFFSETOF(pas_heap, megapage_large_heap)
+        : PAS_OFFSETOF(pas_heap, large_heap);
+    return (pas_heap*)((uintptr_t)large_heap - offset);
 }
 
 /* FIXME: It would be so much simpler if every segregated_heap belong to a heap, or if they were just

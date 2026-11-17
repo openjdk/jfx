@@ -30,7 +30,8 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
+#include <wtf/Noncopyable.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -40,10 +41,13 @@ class InspectorHistory;
 class Node;
 class Text;
 
+template<typename> class ExceptionOr;
+
 typedef String ErrorString;
 
 class DOMEditor {
-    WTF_MAKE_NONCOPYABLE(DOMEditor); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(DOMEditor);
+    WTF_MAKE_NONCOPYABLE(DOMEditor);
 public:
     explicit DOMEditor(InspectorHistory&);
     ~DOMEditor();

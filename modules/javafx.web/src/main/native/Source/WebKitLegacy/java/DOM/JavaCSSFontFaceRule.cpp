@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,7 +27,7 @@
 
 
 #include <WebCore/CSSFontFaceRule.h>
-#include <WebCore/CSSStyleDeclaration.h>
+#include <WebCore/CSSFontFaceDescriptors.h>
 #include <WebCore/DeprecatedCSSOMValue.h>
 #include <WebCore/JSExecState.h>
 
@@ -48,7 +48,7 @@ extern "C" {
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_CSSFontFaceRuleImpl_getStyleImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<CSSStyleDeclaration>(env, WTF::getPtr(IMPL->style()));
+    return JavaReturn<CSSFontFaceDescriptors>(env, &IMPL->style());
 }
 
 }

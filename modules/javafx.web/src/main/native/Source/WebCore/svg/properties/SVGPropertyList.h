@@ -74,7 +74,7 @@ protected:
         return m_items.at(index).copyRef();
     }
 
-    Ref<PropertyType> insert(unsigned index, Ref<PropertyType>&& newItem) override
+    Ref<PropertyType> insertAt(unsigned index, Ref<PropertyType>&& newItem) override
     {
         ASSERT(index <= size());
 
@@ -85,11 +85,11 @@ protected:
 
         // Spec: Attach newItem to the list object.
         newItem->attach(this, m_access);
-        m_items.insert(index, WTFMove(newItem));
+        m_items.insert(index, WTF::move(newItem));
         return at(index);
     }
 
-    Ref<PropertyType> replace(unsigned index, Ref<PropertyType>&& newItem) override
+    Ref<PropertyType> replaceAt(unsigned index, Ref<PropertyType>&& newItem) override
     {
         ASSERT(index < size());
         Ref<PropertyType>& item = m_items[index];
@@ -102,21 +102,21 @@ protected:
         if (newItem->isAttached())
             item = newItem->clone();
         else
-            item = WTFMove(newItem);
+            item = WTF::move(newItem);
 
         // Spec: Attach newItem to the list object.
         item->attach(this, m_access);
         return at(index);
     }
 
-    Ref<PropertyType> remove(unsigned index) override
+    Ref<PropertyType> removeAt(unsigned index) override
     {
         ASSERT(index < size());
         Ref<PropertyType> item = at(index);
 
         // Spec: Detach item.
         item->detach();
-        m_items.remove(index);
+        m_items.removeAt(index);
         return item;
     }
 
@@ -129,7 +129,7 @@ protected:
 
         // Spec: Attach newItem to the list object.
         newItem->attach(this, m_access);
-        m_items.append(WTFMove(newItem));
+        m_items.append(WTF::move(newItem));
         return at(size() - 1);
     }
 };

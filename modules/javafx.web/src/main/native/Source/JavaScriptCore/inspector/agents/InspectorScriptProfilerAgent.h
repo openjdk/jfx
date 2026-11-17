@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "Debugger.h"
-#include "InspectorAgentBase.h"
-#include "InspectorBackendDispatchers.h"
-#include "InspectorFrontendDispatchers.h"
+#include <JavaScriptCore/Debugger.h>
+#include <JavaScriptCore/InspectorAgentBase.h>
+#include <JavaScriptCore/InspectorBackendDispatchers.h>
+#include <JavaScriptCore/InspectorFrontendDispatchers.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/TZoneMalloc.h>
 
@@ -46,7 +46,7 @@ public:
     ~InspectorScriptProfilerAgent() final;
 
     // InspectorAgentBase
-    void didCreateFrontendAndBackend(FrontendRouter*, BackendDispatcher*) final;
+    void didCreateFrontendAndBackend() final;
     void willDestroyFrontendAndBackend(DisconnectReason) final;
 
     // ScriptProfilerBackendDispatcherHandler
@@ -62,10 +62,11 @@ private:
     void addEvent(Seconds startTime, Seconds endTime, JSC::ProfilingReason);
     void trackingComplete();
     void stopSamplingWhenDisconnecting();
+    CheckedRef<InspectorEnvironment> checkedEnvironment() { return m_environment.get(); }
 
-    std::unique_ptr<ScriptProfilerFrontendDispatcher> m_frontendDispatcher;
-    RefPtr<ScriptProfilerBackendDispatcher> m_backendDispatcher;
-    InspectorEnvironment& m_environment;
+    const UniqueRef<ScriptProfilerFrontendDispatcher> m_frontendDispatcher;
+    const Ref<ScriptProfilerBackendDispatcher> m_backendDispatcher;
+    WeakRef<InspectorEnvironment> m_environment;
     bool m_tracking { false };
 #if ENABLE(SAMPLING_PROFILER)
     bool m_enabledSamplingProfiler { false };

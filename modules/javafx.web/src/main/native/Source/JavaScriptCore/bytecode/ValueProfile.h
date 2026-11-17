@@ -28,13 +28,15 @@
 
 #pragma once
 
-#include "ConcurrentJSLock.h"
-#include "SpeculatedType.h"
-#include "Structure.h"
-#include "VirtualRegister.h"
+#include <JavaScriptCore/ConcurrentJSLock.h>
+#include <JavaScriptCore/SpeculatedType.h>
+#include <JavaScriptCore/Structure.h>
+#include <JavaScriptCore/VirtualRegister.h>
 #include <span>
 #include <wtf/PrintStream.h>
 #include <wtf/StringPrintStream.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -92,15 +94,6 @@ struct ValueProfileBase {
     }
 
     bool isSampledBefore() const { return m_prediction != SpecNone; }
-
-    bool isLive() const
-    {
-        for (unsigned i = 0; i < totalNumberOfBuckets; ++i) {
-            if (!!JSValue::decodeConcurrent(&m_buckets[i]))
-                return true;
-        }
-        return false;
-    }
 
     CString briefDescription(const ConcurrentJSLocker& locker)
     {
@@ -201,12 +194,12 @@ public:
     }
 
     unsigned size() const { return m_size; }
-    ValueProfileAndVirtualRegister* data() const
+    ValueProfileAndVirtualRegister* data() const LIFETIME_BOUND
     {
-        return bitwise_cast<ValueProfileAndVirtualRegister*>(this + 1);
+        return std::bit_cast<ValueProfileAndVirtualRegister*>(this + 1);
     }
 
-    std::span<ValueProfileAndVirtualRegister> span() { return { data(), size() }; }
+    std::span<ValueProfileAndVirtualRegister> span() LIFETIME_BOUND { return { data(), size() }; }
 
 private:
 
@@ -252,3 +245,5 @@ private:
 };
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

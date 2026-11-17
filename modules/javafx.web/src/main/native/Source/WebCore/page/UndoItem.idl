@@ -25,6 +25,7 @@
 
 [
     EnabledBySetting=UndoManagerAPIEnabled,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary UndoItemInit {
     required DOMString label;
     required VoidCallback undo;

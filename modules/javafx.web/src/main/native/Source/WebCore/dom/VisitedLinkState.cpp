@@ -29,6 +29,7 @@
 #include "config.h"
 #include "VisitedLinkState.h"
 
+#include "DocumentPage.h"
 #include "ElementIterator.h"
 #include "FrameDestructionObserverInlines.h"
 #include "HTMLAnchorElementInlines.h"
@@ -40,8 +41,11 @@
 #include "TypedElementDescendantIteratorInlines.h"
 #include "VisitedLinkStore.h"
 #include "XLinkNames.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(VisitedLinkState);
 
 using namespace HTMLNames;
 
@@ -122,7 +126,7 @@ InsideLink VisitedLinkState::determineLinkStateSlowCase(const Element& element)
 
     m_linksCheckedForVisitedState.add(hash);
 
-    if (!page->visitedLinkStore().isLinkVisited(*page, hash, element.document().baseURL(), attribute))
+    if (!page->protectedVisitedLinkStore()->isLinkVisited(*page, hash, element.document().baseURL(), attribute))
         return InsideLink::InsideUnvisited;
 
     return InsideLink::InsideVisited;

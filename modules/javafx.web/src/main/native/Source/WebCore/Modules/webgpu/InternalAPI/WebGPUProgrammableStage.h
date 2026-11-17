@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "WebGPUShaderModule.h"
+#include <WebCore/WebGPUShaderModule.h>
 #include <wtf/KeyValuePair.h>
 #include <wtf/Ref.h>
 #include <wtf/Vector.h>
@@ -39,6 +39,8 @@ struct ProgrammableStage {
     WeakRef<ShaderModule> module;
     std::optional<String> entryPoint;
     Vector<KeyValuePair<String, PipelineConstantValue>> constants;
+
+    Ref<ShaderModule> protectedModule() const { return module.get(); }
 };
 
 } // namespace WebCore::WebGPU

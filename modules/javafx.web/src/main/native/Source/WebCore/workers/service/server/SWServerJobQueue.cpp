@@ -36,9 +36,12 @@
 #include "ServiceWorkerUpdateViaCache.h"
 #include "WorkerFetchResult.h"
 #include "WorkerType.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SWServerJobQueue);
 
 SWServerJobQueue::SWServerJobQueue(SWServer& server, const ServiceWorkerRegistrationKey& key)
     : m_jobTimer(*this, &SWServerJobQueue::runNextJobSynchronously)
@@ -104,7 +107,7 @@ void SWServerJobQueue::scriptFetchFinished(const ServiceWorkerJobDataIdentifier&
 
         auto scriptURLs = newestWorker->importedScriptURLs();
         if (!scriptURLs.isEmpty()) {
-            m_workerFetchResult = WTFMove(result);
+            m_workerFetchResult = WTF::move(result);
             protectedServer()->refreshImportedScripts(job, *registration, scriptURLs, requestingProcessIdentifier);
             return;
         }
@@ -165,7 +168,7 @@ void SWServerJobQueue::scriptContextFailedToStart(const ServiceWorkerJobDataIden
     }
 
     ASSERT(registration->preInstallationWorker());
-    registration->preInstallationWorker()->terminate();
+    registration->protectedPreInstallationWorker()->terminate();
     registration->setPreInstallationWorker(nullptr);
 
     // Invoke Reject Job Promise with job and TypeError.
@@ -236,7 +239,7 @@ void SWServerJobQueue::didResolveRegistrationPromise()
 
     // Queue a task to fire the InstallEvent.
     ASSERT(registration->installingWorker());
-    server->fireInstallEvent(*registration->installingWorker());
+    server->fireInstallEvent(*registration->protectedInstallingWorker());
 }
 
 // https://w3c.github.io/ServiceWorker/#install
@@ -343,7 +346,7 @@ void SWServerJobQueue::runRegisterJob(const ServiceWorkerJobData& job)
         RELEASE_LOG(ServiceWorker, "%p - SWServerJobQueue::runRegisterJob: Found registration %" PRIu64 " for job %s but it needs updating", this, registration->identifier().toUInt64(), job.identifier().loggingString().utf8().data());
     } else {
         Ref newRegistration = SWServerRegistration::create(server.get(), m_registrationKey, job.registrationOptions->updateViaCache, job.scopeURL, job.scriptURL, job.serviceWorkerPageIdentifier(), NavigationPreloadState::defaultValue());
-        server->addRegistration(WTFMove(newRegistration));
+        server->addRegistration(WTF::move(newRegistration));
 
         RELEASE_LOG(ServiceWorker, "%p - SWServerJobQueue::runRegisterJob: No existing registration for job %s, constructing a new one.", this, job.identifier().loggingString().utf8().data());
     }
@@ -419,7 +422,7 @@ void SWServerJobQueue::finishCurrentJob()
         runNextJob();
 }
 
-void SWServerJobQueue::removeAllJobsMatching(const Function<bool(ServiceWorkerJobData&)>& matches)
+void SWServerJobQueue::removeAllJobsMatching(NOESCAPE const Function<bool(ServiceWorkerJobData&)>& matches)
 {
     bool isFirst = true;
     bool didRemoveFirstJob = false;

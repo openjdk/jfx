@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -58,10 +58,12 @@ class GlassWindowEventHandler extends Window.EventHandler implements Supplier<Vo
             case WindowEvent.MAXIMIZE:
                 stage.stageListener.changedIconified(false);
                 stage.stageListener.changedMaximized(true);
+                forceRepaint();
                 break;
             case WindowEvent.RESTORE:
                 stage.stageListener.changedIconified(false);
                 stage.stageListener.changedMaximized(false);
+                forceRepaint();
                 break;
             case WindowEvent.MOVE: {
                 float wx = window.getX();
@@ -105,15 +107,7 @@ class GlassWindowEventHandler extends Window.EventHandler implements Supplier<Vo
                 float outScaleX = window.getOutputScaleX();
                 float outScaleY = window.getOutputScaleY();
                 stage.stageListener.changedScale(outScaleX, outScaleY);
-                // We need to sync the new scales for painting
-                QuantumToolkit.runWithRenderLock(() -> {
-                    GlassScene scene = stage.getScene();
-                    if (scene != null) {
-                        scene.entireSceneNeedsRepaint();
-                        scene.updateSceneState();
-                    }
-                    return null;
-                });
+                forceRepaint();
                 break;
             }
             case WindowEvent.FOCUS_GAINED:
@@ -139,6 +133,7 @@ class GlassWindowEventHandler extends Window.EventHandler implements Supplier<Vo
                 break;
             case WindowEvent.DESTROY:
                 stage.setPlatformWindowClosed();
+                WindowStage.removeActiveWindow(stage);
                 stage.stageListener.closed();
                 break;
             case WindowEvent.CLOSE:
@@ -151,6 +146,20 @@ class GlassWindowEventHandler extends Window.EventHandler implements Supplier<Vo
                 break;
         }
         return null;
+    }
+
+    /**
+     * Used to trigger a repaint after a window leaves an iconified state.
+     */
+    private void forceRepaint() {
+        QuantumToolkit.runWithRenderLock(() -> {
+            GlassScene scene = stage.getScene();
+            if (scene != null) {
+                scene.entireSceneNeedsRepaint();
+                scene.updateSceneState();
+            }
+            return null;
+        });
     }
 
     @Override

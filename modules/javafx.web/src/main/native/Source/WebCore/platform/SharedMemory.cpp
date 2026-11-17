@@ -28,11 +28,23 @@
 
 #include "SharedBuffer.h"
 #include <wtf/StdLibExtras.h>
+#include <wtf/text/ParsingUtilities.h>
 
 namespace WebCore {
 
-SharedMemoryHandle::SharedMemoryHandle(SharedMemoryHandle::Type&& handle, size_t size)
-    : m_handle(WTFMove(handle))
+bool isMemoryAttributionDisabled()
+{
+    static bool result = []() {
+        auto value = unsafeSpan(getenv("WEBKIT_DISABLE_MEMORY_ATTRIBUTION"));
+        if (!value.data())
+            return false;
+        return equalSpans(value, "1"_span);
+    }();
+    return result;
+}
+
+SharedMemoryHandle::SharedMemoryHandle(SharedMemoryHandle::Type&& handle, uint64_t size)
+    : m_handle(WTF::move(handle))
     , m_size(size)
 {
     RELEASE_ASSERT(!!m_handle);
@@ -49,23 +61,9 @@ RefPtr<SharedMemory> SharedMemory::copyBuffer(const FragmentedSharedBuffer& buff
 
     auto destination = sharedMemory->mutableSpan();
     buffer.forEachSegment([&] (std::span<const uint8_t> segment) mutable {
-        memcpySpan(destination, segment);
-        destination = destination.subspan(segment.size());
+        memcpySpan(consumeSpan(destination, segment.size()), segment);
     });
 
-    return sharedMemory;
-}
-
-RefPtr<SharedMemory> SharedMemory::copySpan(std::span<const uint8_t> span)
-{
-    if (!span.size())
-        return nullptr;
-
-    auto sharedMemory = allocate(span.size());
-    if (!sharedMemory)
-        return nullptr;
-
-    memcpySpan(sharedMemory->mutableSpan(), span);
     return sharedMemory;
 }
 
@@ -73,11 +71,8 @@ Ref<SharedBuffer> SharedMemory::createSharedBuffer(size_t dataSize) const
 {
     ASSERT(dataSize <= size());
     return SharedBuffer::create(DataSegment::Provider {
-        [protectedThis = Ref { *this }] () -> const uint8_t* {
-            return protectedThis->span().data();
-        },
-        [dataSize] () -> size_t {
-            return dataSize;
+        [protectedThis = Ref { *this }, dataSize]() {
+            return protectedThis->span().first(dataSize);
         }
     });
 }
@@ -91,19 +86,29 @@ void SharedMemoryHandle::setOwnershipOfMemory(const ProcessIdentity&, MemoryLedg
 {
 }
 
-RefPtr<SharedMemory> SharedMemory::map(Handle&& handle, Protection protection)
+std::optional<SharedMemoryHandle> SharedMemoryHandle::createVMShare(std::span<const uint8_t>, SharedMemoryProtection)
 {
-    return nullptr;
+    return std::nullopt;
 }
 
-SharedMemory::~SharedMemory()
+std::optional<SharedMemoryHandle> SharedMemoryHandle::createVMCopy(std::span<const uint8_t>, SharedMemoryProtection)
 {
-}
-
-RefPtr<SharedMemory> SharedMemory::allocate(size_t size)
-{
-    return nullptr;
+    return std::nullopt;
 }
 #endif
+
+std::optional<SharedMemoryHandle> SharedMemoryHandle::createCopy(std::span<const uint8_t> data, SharedMemoryProtection protection)
+{
+    if (data.empty())
+        return std::nullopt;
+    RefPtr memory = SharedMemory::allocate(data.size());
+    if (!memory)
+        return std::nullopt;
+    auto handle = memory->createHandle(protection);
+    if (!handle)
+        return std::nullopt;
+    memcpySpan(memory->mutableSpan(), data);
+    return handle;
+}
 
 } // namespace WebCore

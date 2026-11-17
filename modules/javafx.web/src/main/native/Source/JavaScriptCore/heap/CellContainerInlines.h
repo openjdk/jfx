@@ -25,11 +25,11 @@
 
 #pragma once
 
-#include "CellContainer.h"
-#include "JSCast.h"
-#include "MarkedBlock.h"
-#include "PreciseAllocation.h"
-#include "VM.h"
+#include <JavaScriptCore/CellContainer.h>
+#include <JavaScriptCore/JSCast.h>
+#include <JavaScriptCore/MarkedBlock.h>
+#include <JavaScriptCore/PreciseAllocation.h>
+#include <JavaScriptCore/VM.h>
 
 namespace JSC {
 
@@ -85,12 +85,6 @@ inline WeakSet& CellContainer::weakSet() const
     if (isPreciseAllocation())
         return preciseAllocation().weakSet();
     return markedBlock().weakSet();
-}
-
-inline void CellContainer::aboutToMark(HeapVersion markingVersion)
-{
-    if (!isPreciseAllocation())
-        markedBlock().aboutToMark(markingVersion);
 }
 
 inline bool CellContainer::areMarksStale() const

@@ -27,16 +27,7 @@
 
 #if ENABLE(VIDEO)
 
-#include <wtf/WeakPtr.h>
-
-namespace WebCore {
-class TextTrackClient;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::TextTrackClient> : std::true_type { };
-}
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 
 namespace WebCore {
 
@@ -44,7 +35,7 @@ class TextTrack;
 class TextTrackCue;
 class TextTrackCueList;
 
-class TextTrackClient : public CanMakeWeakPtr<TextTrackClient> {
+class TextTrackClient : public AbstractRefCountedAndCanMakeWeakPtr<TextTrackClient> {
 public:
     virtual ~TextTrackClient() = default;
     virtual void textTrackIdChanged(TextTrack&) { }

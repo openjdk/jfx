@@ -26,13 +26,17 @@
 #include "config.h"
 #include "TextPlaceholderElement.h"
 
+#include "CSSPropertyNames.h"
+#include "CSSUnits.h"
+#include "CSSValueKeywords.h"
 #include "HTMLNames.h"
 #include "HTMLTextFormControlElement.h"
+#include "LayoutSize.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(TextPlaceholderElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TextPlaceholderElement);
 
 Ref<TextPlaceholderElement> TextPlaceholderElement::create(Document& document, const LayoutSize& size)
 {
@@ -46,6 +50,7 @@ TextPlaceholderElement::TextPlaceholderElement(Document& document, const LayoutS
     setInlineStyleProperty(CSSPropertyDisplay, size.width() ? CSSValueInlineBlock : CSSValueBlock);
     setInlineStyleProperty(CSSPropertyVerticalAlign, CSSValueTop);
     setInlineStyleProperty(CSSPropertyVisibility, CSSValueHidden, IsImportant::Yes);
+    if (size.width())
     setInlineStyleProperty(CSSPropertyWidth, size.width(), CSSUnitType::CSS_PX);
     setInlineStyleProperty(CSSPropertyHeight, size.height(), CSSUnitType::CSS_PX);
 }

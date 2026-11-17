@@ -23,8 +23,9 @@
 
 #pragma once
 
-#include "LegacyRootInlineBox.h"
+#include <WebCore/LegacyRootInlineBox.h>
 #include <wtf/ListHashSet.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -37,7 +38,8 @@ template<typename, typename> class PODInterval;
 template<typename, typename> class PODIntervalTree;
 
 class FloatingObject {
-    WTF_MAKE_NONCOPYABLE(FloatingObject); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(FloatingObject);
+    WTF_MAKE_NONCOPYABLE(FloatingObject);
 public:
     // Note that Type uses bits so you can use FloatLeftRight as a mask to query for both left and right.
     enum Type { FloatLeft = 1, FloatRight = 2, FloatLeftRight = 3 };
@@ -50,7 +52,10 @@ public:
     FloatingObject(RenderBox&, Type, const LayoutRect&, const LayoutSize&, bool shouldPaint, bool isDescendant, bool overflowClipped);
 
     Type type() const { return static_cast<Type>(m_type); }
-    RenderBox& renderer() const { ASSERT(m_renderer); return *m_renderer; }
+    RenderBox* renderer() const { ASSERT(m_renderer); return m_renderer.get(); }
+#if ENABLE(TREE_DEBUGGING)
+    bool hasRenderer() const { return !!m_renderer; }
+#endif
 
     bool isPlaced() const { return m_isPlaced; }
     void setIsPlaced(bool placed = true) { m_isPlaced = placed; }
@@ -122,8 +127,8 @@ struct FloatingObjectHashFunctions {
     using T = std::unique_ptr<FloatingObject>;
     using PtrType = FloatingObject*;
 
-    static unsigned hash(const FloatingObject* key) { return PtrHash<RenderBox*>::hash(&key->renderer()); }
-    static bool equal(const FloatingObject* a, const FloatingObject* b) { return &a->renderer() == &b->renderer(); }
+    static unsigned hash(const FloatingObject* key) { return PtrHash<RenderBox*>::hash(key->renderer()); }
+    static bool equal(const FloatingObject* a, const FloatingObject* b) { return a->renderer() == b->renderer(); }
     static const bool safeToCompareToEmptyOrDeleted = true;
 
     static unsigned hash(const T& key) { return hash(WTF::getPtr(key)); }
@@ -133,7 +138,7 @@ struct FloatingObjectHashFunctions {
 };
 struct FloatingObjectHashTranslator {
     static unsigned hash(const RenderBox& key) { return PtrHash<const RenderBox*>::hash(&key); }
-    static bool equal(const std::unique_ptr<FloatingObject>& a, const RenderBox& b) { return &a->renderer() == &b; }
+    static bool equal(const std::unique_ptr<FloatingObject>& a, const RenderBox& b) { return a->renderer() == &b; }
 };
 
 typedef ListHashSet<std::unique_ptr<FloatingObject>, FloatingObjectHashFunctions> FloatingObjectSet;
@@ -144,7 +149,8 @@ typedef PODIntervalTree<LayoutUnit, FloatingObject*> FloatingObjectTree;
 // FIXME: This is really the same thing as FloatingObjectSet.
 // Change clients to use that set directly, and replace the moveAllToFloatInfoMap function with a takeSet function.
 class FloatingObjects {
-    WTF_MAKE_NONCOPYABLE(FloatingObjects); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(FloatingObjects);
+    WTF_MAKE_NONCOPYABLE(FloatingObjects);
 public:
     explicit FloatingObjects(const RenderBlockFlow&);
     ~FloatingObjects();

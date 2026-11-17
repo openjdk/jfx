@@ -24,7 +24,11 @@
 #include "HitTestResult.h"
 
 #include "CachedImage.h"
+#include "ContainerNodeInlines.h"
 #include "DocumentMarkerController.h"
+#include "DocumentPage.h"
+#include "DocumentSecurityOrigin.h"
+#include "DocumentView.h"
 #include "Editor.h"
 #include "ElementInlines.h"
 #include "File.h"
@@ -39,12 +43,16 @@
 #include "HTMLVideoElement.h"
 #include "ImageOverlay.h"
 #include "LocalFrame.h"
-#include "Page.h"
+#include "LocalFrameInlines.h"
+#include "NodeInlines.h"
+#include "OriginAccessPatterns.h"
 #include "PseudoElement.h"
 #include "Range.h"
 #include "RenderBlockFlow.h"
 #include "RenderImage.h"
 #include "RenderInline.h"
+#include "RenderObjectStyle.h"
+#include "RenderStyle+GettersInlines.h"
 #include "SVGAElement.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGImageElement.h"
@@ -54,6 +62,8 @@
 #include "UserGestureIndicator.h"
 #include "VisibleUnits.h"
 #include "XLinkNames.h"
+#include <wtf/TZoneMallocInlines.h>
+#include "FrameDestructionObserverInlines.h"
 
 #if ENABLE(SERVICE_CONTROLS)
 #include "ImageControlsMac.h"
@@ -63,6 +73,8 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HitTestResult);
+
 static inline void appendToNodeSet(const HitTestResult::NodeSet& source, HitTestResult::NodeSet& destination)
 {
     for (auto& node : source)
@@ -71,21 +83,33 @@ static inline void appendToNodeSet(const HitTestResult::NodeSet& source, HitTest
 
 HitTestResult::HitTestResult() = default;
 
+HitTestResult::HitTestResult(const IntPoint& point)
+    : m_hitTestLocation(point)
+    , m_doublePointInInnerNodeFrame(point)
+{
+}
+
 HitTestResult::HitTestResult(const LayoutPoint& point)
     : m_hitTestLocation(point)
-    , m_pointInInnerNodeFrame(point)
+    , m_doublePointInInnerNodeFrame(point)
+{
+}
+
+HitTestResult::HitTestResult(const DoublePoint& point)
+    : m_hitTestLocation(LayoutPoint(point))
+    , m_doublePointInInnerNodeFrame(point)
 {
 }
 
 HitTestResult::HitTestResult(const LayoutRect& rect)
     : m_hitTestLocation { rect }
-    , m_pointInInnerNodeFrame { rect.center() }
+    , m_doublePointInInnerNodeFrame { rect.center() }
 {
 }
 
 HitTestResult::HitTestResult(const HitTestLocation& other)
     : m_hitTestLocation(other)
-    , m_pointInInnerNodeFrame(m_hitTestLocation.point())
+    , m_doublePointInInnerNodeFrame(m_hitTestLocation.point())
 {
 }
 
@@ -93,11 +117,12 @@ HitTestResult::HitTestResult(const HitTestResult& other)
     : m_hitTestLocation(other.m_hitTestLocation)
     , m_innerNode(other.innerNode())
     , m_innerNonSharedNode(other.innerNonSharedNode())
-    , m_pointInInnerNodeFrame(other.m_pointInInnerNodeFrame)
+    , m_doublePointInInnerNodeFrame(other.m_doublePointInInnerNodeFrame)
     , m_localPoint(other.localPoint())
     , m_innerURLElement(other.URLElement())
     , m_scrollbar(other.scrollbar())
     , m_isOverWidget(other.isOverWidget())
+    , m_pseudoElementIdentifier(other.pseudoElementIdentifier())
 {
     // Only copy the NodeSet in case of list hit test.
     if (other.m_listBasedTestResult) {
@@ -113,11 +138,12 @@ HitTestResult& HitTestResult::operator=(const HitTestResult& other)
     m_hitTestLocation = other.m_hitTestLocation;
     m_innerNode = other.innerNode();
     m_innerNonSharedNode = other.innerNonSharedNode();
-    m_pointInInnerNodeFrame = other.m_pointInInnerNodeFrame;
+    m_doublePointInInnerNodeFrame = other.m_doublePointInInnerNodeFrame;
     m_localPoint = other.localPoint();
     m_innerURLElement = other.URLElement();
     m_scrollbar = other.scrollbar();
     m_isOverWidget = other.isOverWidget();
+    m_pseudoElementIdentifier = other.pseudoElementIdentifier();
 
     // Only copy the NodeSet in case of list hit test.
     if (other.m_listBasedTestResult) {
@@ -170,7 +196,7 @@ void HitTestResult::setURLElement(Element* n)
 
 void HitTestResult::setScrollbar(RefPtr<Scrollbar>&& scrollbar)
 {
-    m_scrollbar = WTFMove(scrollbar);
+    m_scrollbar = WTF::move(scrollbar);
 }
 
 LocalFrame* HitTestResult::innerNodeFrame() const
@@ -182,6 +208,21 @@ LocalFrame* HitTestResult::innerNodeFrame() const
     return 0;
 }
 
+void HitTestResult::setLocalPoint(const LayoutPoint& p)
+{
+    m_localPoint = m_pseudoElementIdentifier ? LayoutPoint() : p;
+}
+
+std::optional<Style::PseudoElementIdentifier> HitTestResult::pseudoElementIdentifier() const
+{
+    return m_pseudoElementIdentifier;
+}
+
+void HitTestResult::setPseudoElementIdentifier(std::optional<Style::PseudoElementIdentifier> pseudoElementIdentifier)
+{
+    m_pseudoElementIdentifier = pseudoElementIdentifier;
+}
+
 LocalFrame* HitTestResult::frame() const
 {
     if (m_innerNonSharedNode)
@@ -190,16 +231,16 @@ LocalFrame* HitTestResult::frame() const
     return nullptr;
 }
 
-LocalFrame* HitTestResult::targetFrame() const
+RefPtr<Frame> HitTestResult::targetFrame() const
 {
     if (!m_innerURLElement)
         return nullptr;
 
-    auto* frame = m_innerURLElement->document().frame();
+    RefPtr frame = m_innerURLElement->document().frame();
     if (!frame)
         return nullptr;
 
-    return dynamicDowncast<LocalFrame>(frame->tree().findBySpecifiedName(m_innerURLElement->target(), *frame));
+    return frame->tree().findBySpecifiedName(m_innerURLElement->target(), *frame);
 }
 
 bool HitTestResult::isSelected() const
@@ -212,6 +253,40 @@ bool HitTestResult::isSelected() const
         return false;
 
     return frame->selection().contains(m_hitTestLocation.point());
+}
+
+bool HitTestResult::allowsFollowingLink() const
+{
+    auto linkURL = absoluteLinkURL();
+    if (linkURL.isEmpty())
+        return false;
+
+    RefPtr innerFrame = innerNodeFrame();
+    if (!innerFrame)
+        return false;
+
+    RefPtr document = innerFrame->document();
+    if (!document)
+        return false;
+
+    return document->protectedSecurityOrigin()->canDisplay(linkURL, OriginAccessPatternsForWebProcess::singleton());
+}
+
+bool HitTestResult::allowsFollowingImageURL() const
+{
+    auto linkURL = absoluteImageURL();
+    if (linkURL.isEmpty())
+        return false;
+
+    RefPtr innerFrame = innerNodeFrame();
+    if (!innerFrame)
+        return false;
+
+    RefPtr document = innerFrame->document();
+    if (!document)
+        return false;
+
+    return document->protectedSecurityOrigin()->canDisplay(linkURL, OriginAccessPatternsForWebProcess::singleton());
 }
 
 String HitTestResult::selectedText() const
@@ -249,12 +324,12 @@ String HitTestResult::spellingToolTip(TextDirection& dir) const
     CheckedPtr markers = m_innerNonSharedNode->document().markersIfExists();
     if (!markers)
         return String();
-    WeakPtr marker = markers->markerContainingPoint(m_hitTestLocation.point(), DocumentMarker::Type::Grammar);
+    WeakPtr marker = markers->markerContainingPoint(m_hitTestLocation.point(), DocumentMarkerType::Grammar);
     if (!marker)
         return String();
 
     if (CheckedPtr renderer = m_innerNonSharedNode->renderer())
-        dir = renderer->style().direction();
+        dir = renderer->writingMode().computedTextDirection();
     return marker->description();
 }
 
@@ -268,7 +343,7 @@ String HitTestResult::replacedString() const
     CheckedPtr markers = m_innerNonSharedNode->document().markersIfExists();
     if (!markers)
         return String();
-    WeakPtr marker = markers->markerContainingPoint(m_hitTestLocation.point(), DocumentMarker::Type::Replacement);
+    WeakPtr marker = markers->markerContainingPoint(m_hitTestLocation.point(), DocumentMarkerType::Replacement);
     if (!marker)
         return String();
 
@@ -285,7 +360,7 @@ String HitTestResult::title(TextDirection& dir) const
             auto title = titleElement->title();
             if (!title.isNull()) {
                 if (auto renderer = titleElement->renderer())
-                    dir = renderer->style().direction();
+                    dir = renderer->writingMode().computedTextDirection();
                 return title;
             }
         }
@@ -304,7 +379,7 @@ String HitTestResult::innerTextIfTruncated(TextDirection& dir) const
             if (block->style().textOverflow() == TextOverflow::Ellipsis) {
                 for (auto lineBox = InlineIterator::firstLineBoxFor(*block); lineBox; lineBox.traverseNext()) {
                     if (lineBox->hasEllipsis()) {
-                        dir = block->style().direction();
+                        dir = block->writingMode().computedTextDirection();
                         return element->innerText();
                         }
                     }
@@ -333,7 +408,7 @@ String HitTestResult::altDisplayString() const
         return displayString(image->attributeWithoutSynchronization(altAttr), m_innerNonSharedNode.get());
 
     if (RefPtr input = dynamicDowncast<HTMLInputElement>(*m_innerNonSharedNode))
-        return displayString(input->alt(), m_innerNonSharedNode.get());
+        return displayString(input->attributeWithoutSynchronization(altAttr), m_innerNonSharedNode.get());
 
     return String();
 }
@@ -390,7 +465,7 @@ bool HitTestResult::hasEntireImage() const
     if (!innerFrame)
         return false;
 
-    if (auto page = innerFrame->page())
+    if (RefPtr page = innerFrame->page())
         return page->hasLocalDataForURL(imageURL);
 
     return false;
@@ -413,7 +488,7 @@ URL HitTestResult::absoluteImageURL() const
         || is<HTMLObjectElement>(*element)
         || is<SVGImageElement>(*element))) {
         auto imageURL = imageNode->document().completeURL(element->imageSourceURL());
-        if (auto* page = imageNode->document().page())
+        if (RefPtr page = imageNode->document().page())
             return page->applyLinkDecorationFiltering(imageURL, LinkDecorationFilteringTrigger::Unspecified);
         return imageURL;
     }
@@ -426,7 +501,7 @@ URL HitTestResult::absolutePDFURL() const
     if (!m_innerNonSharedNode)
         return URL();
 
-    RefPtr element = dynamicDowncast<HTMLPlugInImageElement>(*m_innerNonSharedNode);
+    RefPtr element = dynamicDowncast<HTMLPlugInElement>(*m_innerNonSharedNode);
     if (!element)
         return URL();
 
@@ -442,9 +517,9 @@ URL HitTestResult::absolutePDFURL() const
 URL HitTestResult::absoluteMediaURL() const
 {
 #if ENABLE(VIDEO)
-    if (auto* element = mediaElement()) {
+    if (RefPtr element = mediaElement()) {
         auto sourceURL = element->currentSrc();
-        if (auto* page = element->document().page())
+        if (RefPtr page = element->document().page())
             return page->applyLinkDecorationFiltering(sourceURL, LinkDecorationFilteringTrigger::Unspecified);
         return sourceURL;
     }
@@ -455,11 +530,10 @@ URL HitTestResult::absoluteMediaURL() const
 bool HitTestResult::mediaSupportsFullscreen() const
 {
 #if ENABLE(VIDEO)
-    HTMLMediaElement* mediaElt(mediaElement());
-    return is<HTMLVideoElement>(mediaElt) && mediaElt->supportsFullscreen(HTMLMediaElementEnums::VideoFullscreenModeStandard);
-#else
-    return false;
+    if (RefPtr element = mediaElement())
+        return is<HTMLVideoElement>(*element) && element->supportsFullscreen(HTMLMediaElementEnums::VideoFullscreenModeStandard);
 #endif
+    return false;
 }
 
 #if ENABLE(VIDEO)
@@ -487,7 +561,7 @@ bool HitTestResult::hasMediaElement() const
 void HitTestResult::toggleMediaControlsDisplay() const
 {
 #if ENABLE(VIDEO)
-    if (HTMLMediaElement* mediaElt = mediaElement())
+    if (RefPtr mediaElt = mediaElement())
         mediaElt->setControls(!mediaElt->controls());
 #endif
 }
@@ -495,7 +569,7 @@ void HitTestResult::toggleMediaControlsDisplay() const
 void HitTestResult::toggleMediaLoopPlayback() const
 {
 #if ENABLE(VIDEO)
-    if (HTMLMediaElement* mediaElt = mediaElement())
+    if (RefPtr mediaElt = mediaElement())
         mediaElt->setLoop(!mediaElt->loop());
 #endif
 }
@@ -503,7 +577,7 @@ void HitTestResult::toggleMediaLoopPlayback() const
 void HitTestResult::toggleShowMediaStats() const
 {
 #if ENABLE(VIDEO)
-    if (HTMLMediaElement* mediaElt = mediaElement())
+    if (RefPtr mediaElt = mediaElement())
         mediaElt->setShowingStats(!mediaElt->showingStats());
 #endif
 }
@@ -511,7 +585,7 @@ void HitTestResult::toggleShowMediaStats() const
 bool HitTestResult::mediaIsInFullscreen() const
 {
 #if ENABLE(VIDEO)
-    if (HTMLMediaElement* mediaElement = this->mediaElement())
+    if (RefPtr mediaElement = this->mediaElement())
         return mediaElement->isVideo() && mediaElement->isStandardFullscreen();
 #endif
     return false;
@@ -520,7 +594,7 @@ bool HitTestResult::mediaIsInFullscreen() const
 void HitTestResult::toggleMediaFullscreenState() const
 {
 #if ENABLE(VIDEO)
-    if (HTMLMediaElement* mediaElement = this->mediaElement()) {
+    if (RefPtr mediaElement = this->mediaElement()) {
         if (mediaElement->isVideo() && mediaElement->supportsFullscreen(HTMLMediaElementEnums::VideoFullscreenModeStandard)) {
             UserGestureIndicator indicator(IsProcessingUserGesture::Yes, &mediaElement->document());
             mediaElement->toggleStandardFullscreenState();
@@ -545,11 +619,10 @@ void HitTestResult::enterFullscreenForVideo() const
 bool HitTestResult::mediaIsInVideoViewer() const
 {
 #if PLATFORM(MAC) && ENABLE(VIDEO) && ENABLE(VIDEO_PRESENTATION_MODE)
-    HTMLMediaElement* mediaElt(mediaElement());
+    if (RefPtr mediaElt = mediaElement())
     return is<HTMLVideoElement>(mediaElt) && mediaElt->fullscreenMode() == HTMLMediaElementEnums::VideoFullscreenModeInWindow;
-#else
-    return false;
 #endif
+    return false;
 }
 
 void HitTestResult::toggleVideoViewer() const
@@ -570,7 +643,7 @@ void HitTestResult::toggleVideoViewer() const
 bool HitTestResult::mediaControlsEnabled() const
 {
 #if ENABLE(VIDEO)
-    if (HTMLMediaElement* mediaElement = this->mediaElement())
+    if (RefPtr mediaElement = this->mediaElement())
         return mediaElement->controls();
 #endif
     return false;
@@ -579,7 +652,7 @@ bool HitTestResult::mediaControlsEnabled() const
 bool HitTestResult::mediaLoopEnabled() const
 {
 #if ENABLE(VIDEO)
-    if (HTMLMediaElement* mediaElt = mediaElement())
+    if (RefPtr mediaElt = mediaElement())
         return mediaElt->loop();
 #endif
     return false;
@@ -588,7 +661,7 @@ bool HitTestResult::mediaLoopEnabled() const
 bool HitTestResult::mediaStatsShowing() const
 {
 #if ENABLE(VIDEO)
-    if (HTMLMediaElement* mediaElt = mediaElement())
+    if (RefPtr mediaElt = mediaElement())
         return mediaElt->showingStats();
 #endif
     return false;
@@ -597,7 +670,7 @@ bool HitTestResult::mediaStatsShowing() const
 bool HitTestResult::mediaPlaying() const
 {
 #if ENABLE(VIDEO)
-    if (HTMLMediaElement* mediaElt = mediaElement())
+    if (RefPtr mediaElt = mediaElement())
         return !mediaElt->paused();
 #endif
     return false;
@@ -606,7 +679,7 @@ bool HitTestResult::mediaPlaying() const
 void HitTestResult::toggleMediaPlayState() const
 {
 #if ENABLE(VIDEO)
-    if (HTMLMediaElement* mediaElt = mediaElement())
+    if (RefPtr mediaElt = mediaElement())
         mediaElt->togglePlayState();
 #endif
 }
@@ -614,7 +687,7 @@ void HitTestResult::toggleMediaPlayState() const
 bool HitTestResult::mediaHasAudio() const
 {
 #if ENABLE(VIDEO)
-    if (HTMLMediaElement* mediaElt = mediaElement())
+    if (RefPtr mediaElt = mediaElement())
         return mediaElt->hasAudio();
 #endif
     return false;
@@ -623,7 +696,7 @@ bool HitTestResult::mediaHasAudio() const
 bool HitTestResult::mediaIsVideo() const
 {
 #if ENABLE(VIDEO)
-    if (HTMLMediaElement* mediaElt = mediaElement())
+    if (RefPtr mediaElt = mediaElement())
         return is<HTMLVideoElement>(*mediaElt);
 #endif
     return false;
@@ -632,7 +705,7 @@ bool HitTestResult::mediaIsVideo() const
 bool HitTestResult::mediaMuted() const
 {
 #if ENABLE(VIDEO)
-    if (HTMLMediaElement* mediaElt = mediaElement())
+    if (RefPtr mediaElt = mediaElement())
         return mediaElt->muted();
 #endif
     return false;
@@ -641,7 +714,7 @@ bool HitTestResult::mediaMuted() const
 void HitTestResult::toggleMediaMuteState() const
 {
 #if ENABLE(VIDEO)
-    if (HTMLMediaElement* mediaElt = mediaElement())
+    if (RefPtr mediaElt = mediaElement())
         mediaElt->setMuted(!mediaElt->muted());
 #endif
 }
@@ -649,7 +722,7 @@ void HitTestResult::toggleMediaMuteState() const
 bool HitTestResult::isDownloadableMedia() const
 {
 #if ENABLE(VIDEO)
-    if (HTMLMediaElement* mediaElt = mediaElement())
+    if (RefPtr mediaElt = mediaElement())
         return mediaElt->canSaveMediaData();
 #endif
 
@@ -684,7 +757,7 @@ URL HitTestResult::absoluteLinkURL() const
         return { };
 
     auto url = m_innerURLElement->absoluteLinkURL();
-    if (auto* page = m_innerURLElement->document().page())
+    if (RefPtr page = m_innerURLElement->document().page())
         return page->applyLinkDecorationFiltering(url, LinkDecorationFilteringTrigger::Unspecified);
 
     return url;
@@ -783,7 +856,7 @@ void HitTestResult::append(const HitTestResult& other, const HitTestRequest& req
         m_innerNode = other.innerNode();
         m_innerNonSharedNode = other.innerNonSharedNode();
         m_localPoint = other.localPoint();
-        m_pointInInnerNodeFrame = other.m_pointInInnerNodeFrame;
+        m_doublePointInInnerNodeFrame = other.m_doublePointInInnerNodeFrame;
         m_innerURLElement = other.URLElement();
         m_scrollbar = other.scrollbar();
         m_isOverWidget = other.isOverWidget();
@@ -817,7 +890,7 @@ Vector<String> HitTestResult::dictationAlternatives() const
     if (!markers)
         return Vector<String>();
 
-    WeakPtr marker = markers->markerContainingPoint(pointInInnerNodeFrame(), DocumentMarker::Type::DictationAlternatives);
+    WeakPtr marker = markers->markerContainingPoint(pointInInnerNodeFrame(), DocumentMarkerType::DictationAlternatives);
     if (!marker)
         return Vector<String>();
 
@@ -868,29 +941,27 @@ String HitTestResult::linkSuggestedFilename() const
 bool HitTestResult::mediaSupportsEnhancedFullscreen() const
 {
 #if PLATFORM(MAC) && ENABLE(VIDEO) && ENABLE(VIDEO_PRESENTATION_MODE)
-    HTMLMediaElement* mediaElt(mediaElement());
+    if (RefPtr mediaElt = mediaElement())
     return is<HTMLVideoElement>(mediaElt) && mediaElt->supportsFullscreen(HTMLMediaElementEnums::VideoFullscreenModePictureInPicture);
-#else
-    return false;
 #endif
+    return false;
 }
 
 bool HitTestResult::mediaIsInEnhancedFullscreen() const
 {
 #if PLATFORM(MAC) && ENABLE(VIDEO) && ENABLE(VIDEO_PRESENTATION_MODE)
-    HTMLMediaElement* mediaElt(mediaElement());
+    if (RefPtr mediaElt = mediaElement())
     return is<HTMLVideoElement>(mediaElt) && mediaElt->fullscreenMode() == HTMLMediaElementEnums::VideoFullscreenModePictureInPicture;
-#else
-    return false;
 #endif
+    return false;
 }
 
 void HitTestResult::toggleEnhancedFullscreenForVideo() const
 {
 #if PLATFORM(MAC) && ENABLE(VIDEO) && ENABLE(VIDEO_PRESENTATION_MODE)
-    auto* mediaElement(this->mediaElement());
-    auto* videoElement = dynamicDowncast<HTMLVideoElement>(*mediaElement);
-    if (!videoElement || !mediaElement->supportsFullscreen(HTMLMediaElementEnums::VideoFullscreenModePictureInPicture))
+    RefPtr mediaElement(this->mediaElement());
+    RefPtr videoElement = dynamicDowncast<HTMLVideoElement>(mediaElement);
+    if (!mediaElement || !videoElement || !mediaElement->supportsFullscreen(HTMLMediaElementEnums::VideoFullscreenModePictureInPicture))
         return;
 
     UserGestureIndicator indicator(IsProcessingUserGesture::Yes, &mediaElement->document());
@@ -899,6 +970,16 @@ void HitTestResult::toggleEnhancedFullscreenForVideo() const
     else
         videoElement->webkitSetPresentationMode(HTMLVideoElement::VideoPresentationMode::PictureInPicture);
 #endif
+}
+
+RefPtr<Node> HitTestResult::protectedInnerNonSharedNode() const
+{
+    return innerNonSharedNode();
+}
+
+RefPtr<Element> HitTestResult::protectedURLElement() const
+{
+    return URLElement();
 }
 
 #if ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)

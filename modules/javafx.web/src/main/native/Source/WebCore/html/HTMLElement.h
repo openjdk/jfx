@@ -22,45 +22,41 @@
 
 #pragma once
 
-#include "ColorTypes.h"
-#include "Document.h"
-#include "HTMLNames.h"
-#include "InputMode.h"
-#include "StyledElement.h"
-
-#if ENABLE(AUTOCAPITALIZE)
-#include "Autocapitalize.h"
-#endif
+#include <WebCore/HTMLNames.h>
+#include <WebCore/StyledElement.h>
+#include <wtf/Platform.h>
 
 namespace WebCore {
 
 class ElementInternals;
 class FormListedElement;
 class FormAssociatedElement;
-class HTMLFormControlElement;
+class HTMLButtonElement;
 class HTMLFormElement;
 class VisibleSelection;
+
+struct SRGBADescriptor;
+template<typename, typename> struct BoundedGammaEncoded;
+template<typename T> using SRGBA = BoundedGammaEncoded<T, SRGBADescriptor>;
 
 struct SimpleRange;
 struct TextRecognitionResult;
 
+enum class AutocapitalizeType : uint8_t;
 enum class EnterKeyHint : uint8_t;
+enum class InputMode : uint8_t;
 enum class PageIsEditable : bool;
-enum class FireEvents : bool { No, Yes };
-enum class FocusPreviousElement : bool { No, Yes };
-enum class PopoverVisibilityState : bool;
-enum class PopoverState : uint8_t {
-    None,
-    Auto,
-    Manual,
-};
+enum class ToggleState : bool;
 
 #if PLATFORM(IOS_FAMILY)
 enum class SelectionRenderingBehavior : bool;
 #endif
 
+enum class FireEvents : bool { No, Yes };
+enum class FocusPreviousElement : bool { No, Yes };
+
 class HTMLElement : public StyledElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLElement);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLElement);
 public:
     static Ref<HTMLElement> create(const QualifiedName& tagName, Document&);
@@ -98,10 +94,10 @@ public:
     String accessKeyLabel() const;
 
     WEBCORE_EXPORT const AtomString& dir() const;
-    WEBCORE_EXPORT void setDir(const AtomString&);
 
     virtual bool isTextControlInnerTextElement() const { return false; }
     virtual bool isSearchFieldResultsButtonElement() const { return false; }
+    virtual bool isDataListButtonElement() const { return false; }
 
     bool willRespondToMouseMoveEvents() const override;
     bool willRespondToMouseClickEventsWithEditability(Editability) const override;
@@ -125,7 +121,6 @@ public:
 #if ENABLE(AUTOCAPITALIZE)
     WEBCORE_EXPORT virtual AutocapitalizeType autocapitalizeType() const;
     WEBCORE_EXPORT const AtomString& autocapitalize() const;
-    WEBCORE_EXPORT void setAutocapitalize(const AtomString& value);
 #endif
 
 #if ENABLE(AUTOCORRECT)
@@ -136,29 +131,39 @@ public:
 
     WEBCORE_EXPORT InputMode canonicalInputMode() const;
     const AtomString& inputMode() const;
-    void setInputMode(const AtomString& value);
 
     WEBCORE_EXPORT EnterKeyHint canonicalEnterKeyHint() const;
     String enterKeyHint() const;
-    void setEnterKeyHint(const AtomString& value);
+
+    bool isHiddenUntilFound() const;
+    std::optional<Variant<bool, double, String>> hidden() const;
+    void setHidden(const std::optional<Variant<bool, double, String>>&);
 
     WEBCORE_EXPORT static bool shouldExtendSelectionToTargetNode(const Node& targetNode, const VisibleSelection& selectionBeforeUpdate);
 
     WEBCORE_EXPORT ExceptionOr<Ref<ElementInternals>> attachInternals();
 
-    void queuePopoverToggleEventTask(PopoverVisibilityState oldState, PopoverVisibilityState newState);
-    ExceptionOr<void> showPopover(const HTMLFormControlElement* = nullptr);
+    struct ShowPopoverOptions {
+        RefPtr<HTMLElement> source;
+    };
+
+    struct TogglePopoverOptions : public ShowPopoverOptions {
+        std::optional<bool> force;
+    };
+
+    void queuePopoverToggleEventTask(ToggleState oldState, ToggleState newState);
+    ExceptionOr<void> showPopover(const ShowPopoverOptions&);
+    ExceptionOr<void> showPopoverInternal(HTMLElement* = nullptr);
     ExceptionOr<void> hidePopover();
     ExceptionOr<void> hidePopoverInternal(FocusPreviousElement, FireEvents);
-    ExceptionOr<bool> togglePopover(std::optional<bool> force);
+    ExceptionOr<bool> togglePopover(std::optional<Variant<WebCore::HTMLElement::TogglePopoverOptions, bool>>);
 
-    PopoverState popoverState() const;
     const AtomString& popover() const;
-    void setPopover(const AtomString& value) { setAttributeWithoutSynchronization(HTMLNames::popoverAttr, value); };
+    void setPopover(const AtomString& value);
     void popoverAttributeChanged(const AtomString& value);
 
     bool isValidCommandType(const CommandType) override;
-    bool handleCommandInternal(const HTMLFormControlElement& invoker, const CommandType&) override;
+    bool handleCommandInternal(HTMLButtonElement& invoker, const CommandType&) override;
 
 #if PLATFORM(IOS_FAMILY)
     static SelectionRenderingBehavior selectionRenderingBehavior(const Node*);
@@ -197,6 +202,8 @@ protected:
     static const AtomString& eventNameForEventHandlerAttribute(const QualifiedName& attributeName, const EventHandlerNameMap&);
 
 private:
+    void setInvoker(HTMLElement*);
+
     String nodeName() const final;
 
     void mapLanguageAttributeToLocale(const AtomString&, MutableStyleProperties&);
@@ -230,4 +237,4 @@ SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::HTMLElement)
     }
 SPECIALIZE_TYPE_TRAITS_END()
 
-#include "HTMLElementTypeHelpers.h"
+#include <WebCore/HTMLElementTypeHelpers.h>

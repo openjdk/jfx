@@ -152,6 +152,7 @@ static const FormatInfo formats[] = {
   {"audio/x-private1-lpcm", "DVD LPCM", FLAG_AUDIO, ""},
   {"audio/x-m4a", "MPEG-4 AAC", FLAG_CONTAINER, "m4a"},
   {"audio/x-mod", "Module Music Format (MOD)", FLAG_AUDIO, "mod"},
+  {"audio/x-mpeg-h", "MPEG-H 3D Audio", FLAG_AUDIO, ""},
   {"audio/x-mulaw", "Mu-Law", FLAG_AUDIO, ""},
   {"audio/x-musepack", "Musepack (MPC)", FLAG_AUDIO, "mpc"},
   {"audio/x-ffmpeg-parsed-musepack", "Musepack (MPC)", FLAG_AUDIO, "mpc"},
@@ -321,6 +322,7 @@ static const FormatInfo formats[] = {
   {"video/x-h263", NULL, FLAG_VIDEO, "h263"},
   {"video/x-h264", NULL, FLAG_VIDEO, "h264"},
   {"video/x-h265", NULL, FLAG_VIDEO, "h265"},
+  {"video/x-h266", NULL, FLAG_VIDEO, "h266"},
   {"video/x-indeo", NULL, FLAG_VIDEO, ""},
   {"video/x-msmpeg", NULL, FLAG_VIDEO, ""},
   {"video/x-pn-realvideo", NULL, FLAG_VIDEO, ""},
@@ -339,6 +341,8 @@ static const FormatInfo formats[] = {
   /* metadata */
   {"application/x-onvif-metadata", "ONVIF Timed Metadata", FLAG_METADATA, ""},
   {"meta/x-klv", "KLV Metadata", FLAG_METADATA, ""},
+  {"meta/x-st-2038", "ST-2038 Ancillary Data", FLAG_METADATA, ""},
+  {"meta/x-id3", N_("Timed ID3 tag Metadata"), FLAG_METADATA, ""},
 };
 #else // GSTREAMER_LITE
 static const FormatInfo formats[] = {
@@ -463,6 +467,27 @@ pbutils_desc_get_h265_profile_name_from_nick (const gchar * nick)
   return pbutils_desc_get_profile_name_from_nick (map, sizeof (map), nick);
 }
 
+static const gchar *
+pbutils_desc_get_h266_profile_name_from_nick (const gchar * nick)
+{
+  static const gchar map[] =
+      "main-10\000Main 10\000"
+      "multilayer-main-10\000Multilayer Main 10\000"
+      "main-10-still-picture\000Main 10 Still Picture\000"
+      "main-4:4:4-10\000Main 4:4:4 10\000"
+      "multilayer-main-4:4:4-10\000Multilayer Main 4:4:4 10\000"
+      "main-4:4:4-10-still-picture\000Main 4:4:4 10 Still Picture\000"
+      "main-12\000Main 12\000"
+      "main-12-intra\000Main 12 Intra\000"
+      "main-12-still-picture\000Main 12 Still Picture\000"
+      "main-4:4:4-12\000Main 4:4:4 12\000"
+      "main-4:4:4-12-intra\000Main 4:4:4 12 Intra\000"
+      "main-4:4:4-12-still-picture\000Main 4:4:4 12 Still Picture\000"
+      "main-4:4:4-16\000Main 4:4:4 16\000";
+
+  return pbutils_desc_get_profile_name_from_nick (map, sizeof (map), nick);
+}
+
 /* returns static descriptions and dynamic ones (such as video/x-raw),
  * or NULL if caps aren't known at all */
 static gchar *
@@ -569,6 +594,8 @@ format_info_get_desc (const FormatInfo * info, const GstCaps * caps)
   } else if (strcmp (info->type, "video/x-h264") == 0) {
     const gchar *variant, *ret;
     const gchar *profile;
+    gboolean lcevc = FALSE;
+    const gchar *lcevc_str = "";
 
     variant = gst_structure_get_string (s, "variant");
     if (variant == NULL)
@@ -587,9 +614,13 @@ format_info_get_desc (const FormatInfo * info, const GstCaps * caps)
     profile = gst_structure_get_string (s, "profile");
     if (profile != NULL)
       profile = pbutils_desc_get_h264_profile_name_from_nick (profile);
+    gst_structure_get_boolean (s, "lcevc", &lcevc);
+    if (lcevc)
+      lcevc_str = " (LCEVC)";
     if (profile == NULL)
-      return g_strdup (ret);
-    return g_strdup_printf ("%s (%s Profile)", ret, profile);
+      return g_strdup_printf ("%s%s", ret, lcevc_str);
+    else
+      return g_strdup_printf ("%s (%s Profile)%s", ret, profile, lcevc_str);
   } else if (strcmp (info->type, "video/x-h265") == 0) {
     const gchar *profile = gst_structure_get_string (s, "profile");
 
@@ -599,6 +630,15 @@ format_info_get_desc (const FormatInfo * info, const GstCaps * caps)
       return g_strdup_printf ("H.265 (%s Profile)", profile);
 
     return g_strdup ("H.265");
+  } else if (strcmp (info->type, "video/x-h266") == 0) {
+    const gchar *profile = gst_structure_get_string (s, "profile");
+
+    if (profile != NULL)
+      profile = pbutils_desc_get_h266_profile_name_from_nick (profile);
+    if (profile != NULL)
+      return g_strdup_printf ("H.266 (%s Profile)", profile);
+
+    return g_strdup ("H.266");
   } else if (strcmp (info->type, "video/x-dirac") == 0) {
     const gchar *profile = gst_structure_get_string (s, "profile");
     if (profile == NULL)
@@ -888,6 +928,30 @@ format_info_get_desc (const FormatInfo * info, const GstCaps * caps)
     }
     GST_WARNING ("Unexpected version in %" GST_PTR_FORMAT, caps);
     return g_strdup ("TechSmith Screen Capture");
+  } else if (strcmp (info->type, "video/x-hap") == 0) {
+    const gchar *variant, *ret;
+
+    // https://github.com/Vidvox/hap/blob/master/documentation/HapVideoDRAFT.md
+    variant = gst_structure_get_string (s, "variant");
+    if (variant == NULL || strcmp (variant, "Hap1") == 0)
+      ret = "Hap";
+    else if (strcmp (variant, "Hap5") == 0)
+      ret = "Hap Alpha";
+    else if (strcmp (variant, "HapY") == 0)
+      ret = "Hap Q";
+    else if (strcmp (variant, "HapM") == 0)
+      ret = "Hap Q Alpha";
+    else if (strcmp (variant, "HapA") == 0)
+      ret = "Hap Alpha-Only";
+    else if (strcmp (variant, "Hap7") == 0)
+      ret = "Hap R";
+    else if (strcmp (variant, "HapH") == 0)
+      ret = "Hap HDR";
+    else {
+      GST_WARNING ("Unknown Hap video variant '%s'", variant);
+      ret = "Hap";
+    }
+    return g_strdup (ret);
   }
   return NULL;
 }
@@ -1221,6 +1285,10 @@ gst_pb_utils_add_codec_description_to_tag_list (GstTagList * taglist,
   return TRUE;
 }
 
+GST_LOG_CONTEXT_STATIC_DEFINE (unexisting_media_type_log_context,
+    GST_LOG_CONTEXT_FLAG_THROTTLE);
+#define UNEXISTING_MEDIA_TYPE_LOG_CONTEXT GST_LOG_CONTEXT_LAZY_INIT(unexisting_media_type_log_context)
+
 /**
  * gst_pb_utils_get_codec_description:
  * @caps: the (fixed) #GstCaps for which an format description is needed
@@ -1262,7 +1330,8 @@ gst_pb_utils_get_codec_description (const GstCaps * caps)
        * audio/, video/, image/ and application/ prefixes etc. */
     }
 
-    GST_WARNING ("No description available for media type: %s", str);
+    GST_CTX_WARNING (UNEXISTING_MEDIA_TYPE_LOG_CONTEXT,
+        "No description available for media type: %s", str);
   }
   gst_caps_unref (tmp);
 

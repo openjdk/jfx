@@ -44,6 +44,8 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/TZoneMallocInlines.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(SlotVisitor);
@@ -160,7 +162,7 @@ void SlotVisitor::appendJSCellOrAuxiliary(HeapCell* heapCell)
 #endif
                     out.print("Object contents:");
                     for (unsigned i = 0; i < 2; ++i)
-                        out.print(" ", format("0x%016llx", bitwise_cast<uint64_t*>(jsCell)[i]));
+                        out.print(" ", format("0x%016llx", std::bit_cast<uint64_t*>(jsCell)[i]));
                     out.print("\n");
                     CellContainer container = jsCell->cellContainer();
                     out.print("Is marked: ", container.isMarked(jsCell), "\n");
@@ -225,7 +227,7 @@ void SlotVisitor::appendJSCellOrAuxiliary(HeapCell* heapCell)
 
 void SlotVisitor::appendSlow(JSCell* cell, Dependency dependency)
 {
-    if (UNLIKELY(m_heapAnalyzer))
+    if (m_heapAnalyzer) [[unlikely]]
         m_heapAnalyzer->analyzeEdge(m_currentCell, cell, rootMarkReason());
 
     appendHiddenSlowImpl(cell, dependency);
@@ -279,8 +281,8 @@ ALWAYS_INLINE void SlotVisitor::appendToMarkStack(ContainerType& container, JSCe
 {
     ASSERT(m_heap.isMarked(cell));
 #if CPU(X86_64)
-    if (UNLIKELY(Options::dumpZappedCellCrashData())) {
-        if (UNLIKELY(cell->isZapped()))
+    if (Options::dumpZappedCellCrashData()) [[unlikely]] {
+        if (cell->isZapped()) [[unlikely]]
             reportZappedCellAndCrash(m_heap, cell);
     }
 #endif
@@ -296,7 +298,7 @@ ALWAYS_INLINE void SlotVisitor::appendToMarkStack(ContainerType& container, JSCe
 
 void SlotVisitor::markAuxiliary(const void* base)
 {
-    HeapCell* cell = bitwise_cast<HeapCell*>(base);
+    HeapCell* cell = std::bit_cast<HeapCell*>(base);
 
     ASSERT(cell->heap() == heap());
 
@@ -384,9 +386,9 @@ ALWAYS_INLINE void SlotVisitor::visitChildren(const JSCell* cell)
         // FIXME: This could be so much better.
         // https://bugs.webkit.org/show_bug.cgi?id=162462
 #if CPU(X86_64)
-        if (UNLIKELY(Options::dumpZappedCellCrashData())) {
+        if (Options::dumpZappedCellCrashData()) [[unlikely]] {
             Structure* structure = cell->structure();
-            if (LIKELY(structure)) {
+            if (structure) [[likely]] {
                 const MethodTable* methodTable = &structure->classInfoForCells()->methodTable;
                 methodTable->visitChildren(const_cast<JSCell*>(cell), *this);
                 break;
@@ -398,7 +400,7 @@ ALWAYS_INLINE void SlotVisitor::visitChildren(const JSCell* cell)
         break;
     }
 
-    if (UNLIKELY(m_heapAnalyzer)) {
+    if (m_heapAnalyzer) [[unlikely]] {
         if (m_isFirstVisit)
             m_heapAnalyzer->analyzeNode(const_cast<JSCell*>(cell));
     }
@@ -818,3 +820,5 @@ void SlotVisitor::addParallelConstraintTask(RefPtr<SharedTask<void(SlotVisitor&)
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

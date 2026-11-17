@@ -57,6 +57,17 @@ void pas_committed_pages_vector_construct(pas_committed_pages_vector* vector,
 
 #if PAS_OS(LINUX)
     PAS_SYSCALL(mincore(object, size, (unsigned char*)vector->raw_data));
+#elif PAS_OS(WINDOWS)
+    MEMORY_BASIC_INFORMATION mem_info;
+
+    for (size_t i = 0; i < num_pages; i++) {
+        void *page_address = (char*) object + (i * page_size);
+        SIZE_T result = VirtualQuery(page_address, &mem_info, sizeof(mem_info));
+
+        vector->raw_data[i] = (unsigned char) 0;
+        if (result && (mem_info.State & MEM_COMMIT))
+            vector->raw_data[i] = (unsigned char) 1;
+    }
 #else
     PAS_SYSCALL(mincore(object, size, vector->raw_data));
 #endif

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -288,15 +288,47 @@ public class BackgroundImageTest {
         }
 
         @Test
-        public void interpolationFactorSmallerThanOrEqualToZeroReturnsStartInstance() {
+        public void interpolationFactorZeroReturnsStartInstance() {
             assertSame(BACKGROUND_IMAGE_A, BACKGROUND_IMAGE_A.interpolate(BACKGROUND_IMAGE_B, 0));
-            assertSame(BACKGROUND_IMAGE_A, BACKGROUND_IMAGE_A.interpolate(BACKGROUND_IMAGE_B, -0.5));
         }
 
         @Test
-        public void interpolationFactorGreaterThanOrEqualToOneReturnsEndInstance() {
+        public void interpolationFactorOneReturnsEndInstance() {
             assertSame(BACKGROUND_IMAGE_B, BACKGROUND_IMAGE_A.interpolate(BACKGROUND_IMAGE_B, 1));
-            assertSame(BACKGROUND_IMAGE_B, BACKGROUND_IMAGE_A.interpolate(BACKGROUND_IMAGE_B, 1.5));
+        }
+
+        @Test
+        public void interpolationFactorLessThanZero() {
+            assertEquals(
+                new BackgroundImage(
+                    IMAGE_1, NO_REPEAT, NO_REPEAT,
+                    new BackgroundPosition(Side.LEFT, -10, false, Side.TOP, -20, false),
+                    new BackgroundSize(0, 0, false, false, false, false)),
+                BACKGROUND_IMAGE_A.interpolate(BACKGROUND_IMAGE_B, -1));
+
+            assertEquals(
+                new BackgroundImage(
+                    IMAGE_1, NO_REPEAT, NO_REPEAT,
+                    new BackgroundPosition(Side.LEFT, -20, false, Side.TOP, -40, false),
+                    new BackgroundSize(0, 0, false, false, false, false)),
+                BACKGROUND_IMAGE_A.interpolate(BACKGROUND_IMAGE_B, -2));
+        }
+
+        @Test
+        public void interpolationFactorGreaterThanOne() {
+            assertEquals(
+                new BackgroundImage(
+                    IMAGE_2, REPEAT, SPACE,
+                    new BackgroundPosition(Side.LEFT, 20, false, Side.TOP, 40, false),
+                    new BackgroundSize(150, 300, false, false, false, false)),
+                BACKGROUND_IMAGE_A.interpolate(BACKGROUND_IMAGE_B, 2));
+
+            assertEquals(
+                new BackgroundImage(
+                    IMAGE_2, REPEAT, SPACE,
+                    new BackgroundPosition(Side.LEFT, 30, false, Side.TOP, 60, false),
+                    new BackgroundSize(200, 400, false, false, false, false)),
+                BACKGROUND_IMAGE_A.interpolate(BACKGROUND_IMAGE_B, 3));
         }
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2013 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,6 +30,7 @@
 #include "EditCommand.h"
 #include "CSSPropertyNames.h"
 #include "UndoStep.h"
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakPtr.h>
 
@@ -43,7 +44,7 @@ class StyledElement;
 class Text;
 
 class AccessibilityUndoReplacedText {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(AccessibilityUndoReplacedText);
 public:
     AccessibilityUndoReplacedText() { }
     void configureRangeDeletedByReapplyWithStartingSelection(const VisibleSelection&);
@@ -66,6 +67,8 @@ private:
     VisiblePositionIndexRange m_rangeDeletedByReapply;
 };
 
+enum class ApplyStylePropertyLevel : bool { Default, ForceBlock };
+
 class EditCommandComposition : public UndoStep {
 public:
     enum class AddToUndoStack : bool {
@@ -78,7 +81,7 @@ public:
     void unapply(AddToUndoStack);
     void reapply() override;
     EditAction editingAction() const override { return m_editAction; }
-    void append(SimpleEditCommand*);
+    void append(SimpleEditCommand&);
     bool wasCreateLinkCommand() const { return m_editAction == EditAction::CreateLink; }
 
     const VisibleSelection& startingSelection() const { return m_startingSelection; }
@@ -90,7 +93,7 @@ public:
     void setRangeDeletedByUnapply(const VisiblePositionIndexRange&);
 
 #ifndef NDEBUG
-    virtual void getNodesInCommand(HashSet<Ref<Node>>&);
+    virtual void getNodesInCommand(NodeSet&);
 #endif
 
 private:
@@ -99,12 +102,11 @@ private:
     String label() const final;
     void didRemoveFromUndoManager() final { }
     bool areRootEditabledElementsConnected();
-    RefPtr<Document> protectedDocument() const { return m_document; }
 
-    RefPtr<Document> m_document;
+    const Ref<Document> m_document;
     VisibleSelection m_startingSelection;
     VisibleSelection m_endingSelection;
-    Vector<RefPtr<SimpleEditCommand>> m_commands;
+    Vector<Ref<SimpleEditCommand>> m_commands;
     RefPtr<Element> m_startingRootEditableElement;
     RefPtr<Element> m_endingRootEditableElement;
     AccessibilityUndoReplacedText m_replacedText;
@@ -119,7 +121,7 @@ public:
     bool isFirstCommand(EditCommand* command) { return !m_commands.isEmpty() && m_commands.first() == command; }
     EditCommandComposition* composition() const;
     RefPtr<EditCommandComposition> protectedComposition() const { return composition(); }
-    EditCommandComposition& ensureComposition();
+    Ref<EditCommandComposition> ensureComposition();
 
     virtual bool isTypingCommand() const;
     virtual bool isDictationCommand() const { return false; }
@@ -132,7 +134,7 @@ public:
     virtual String inputEventData() const { return { }; }
     virtual bool isBeforeInputEventCancelable() const { return true; }
     virtual bool shouldDispatchInputEvents() const { return true; }
-    Vector<RefPtr<StaticRange>> targetRangesForBindings() const;
+    Vector<Ref<StaticRange>> targetRangesForBindings() const;
     virtual RefPtr<DataTransfer> inputEventDataTransfer() const;
 
 protected:
@@ -142,7 +144,7 @@ protected:
     virtual bool willApplyCommand();
     virtual void didApplyCommand();
 
-    virtual Vector<RefPtr<StaticRange>> targetRanges() const;
+    virtual Vector<Ref<StaticRange>> targetRanges() const;
 
     //
     // sugary-sweet convenience functions to help create and apply edit commands in composite commands
@@ -151,7 +153,7 @@ protected:
     void applyCommandToComposite(Ref<EditCommand>&&);
     void applyCommandToComposite(Ref<CompositeEditCommand>&&, const VisibleSelection&);
     void applyStyle(const EditingStyle*, EditAction = EditAction::ChangeAttributes);
-    void applyStyle(const EditingStyle*, const Position& start, const Position& end, EditAction = EditAction::ChangeAttributes);
+    void applyStyle(const EditingStyle*, const Position& start, const Position& end, EditAction = EditAction::ChangeAttributes, ApplyStylePropertyLevel = ApplyStylePropertyLevel::Default);
     void applyStyledElement(Ref<Element>&&);
     void removeStyledElement(Ref<Element>&&);
     void deleteSelection(bool smartDelete = false, bool mergeBlocksAfterDelete = true, bool replace = false, bool expandForSpecialElements = true, bool sanitizeMarkup = true);
@@ -166,7 +168,7 @@ protected:
     void insertParagraphSeparatorAtPosition(const Position&, bool useDefaultParagraphElement = false, bool pasteBlockqutoeIntoUnquotedArea = false);
     void insertParagraphSeparator(bool useDefaultParagraphElement = false, bool pasteBlockqutoeIntoUnquotedArea = false);
     void insertLineBreak();
-    void insertTextIntoNode(Text&, unsigned offset, const String& text);
+    void insertTextIntoNode(Text&, unsigned offset, const String& text, AllowPasswordEcho = AllowPasswordEcho::Yes);
     void mergeIdenticalElements(Element&, Element&);
     void rebalanceWhitespace();
     void rebalanceWhitespaceAt(const Position&);
@@ -184,7 +186,7 @@ protected:
     void moveRemainingSiblingsToNewParent(Node*, Node* pastLastNodeToMove, Element& newParent);
     void updatePositionForNodeRemovalPreservingChildren(Position&, Node&);
     void prune(Node*);
-    void replaceTextInNode(Text&, unsigned offset, unsigned count, const String& replacementText);
+    void replaceTextInNode(Text&, unsigned offset, unsigned count, const String& replacementText, AllowPasswordEcho = AllowPasswordEcho::Yes);
     Position replaceSelectedTextInNode(const String&);
     void replaceTextInNodePreservingMarkers(Text&, unsigned offset, unsigned count, const String& replacementText);
     Position positionOutsideTabSpan(const Position&);
@@ -232,3 +234,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CompositeEditCommand)
+    static bool isType(const WebCore::EditCommand& command) { return command.isCompositeEditCommand(); }
+SPECIALIZE_TYPE_TRAITS_END()

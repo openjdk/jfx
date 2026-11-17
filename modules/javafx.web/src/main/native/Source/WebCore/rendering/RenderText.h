@@ -2,6 +2,7 @@
  * (C) 1999 Lars Knoll (knoll@kde.org)
  * (C) 2000 Dirk Mueller (mueller@kde.org)
  * Copyright (C) 2004-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2013 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -22,20 +23,22 @@
 
 #pragma once
 
-#include "DocumentMarker.h"
-#include "RenderElement.h"
-#include "RenderTextLineBoxes.h"
-#include "Text.h"
+#include <WebCore/Color.h>
+#include <WebCore/FontCascade.h>
+#include <WebCore/RenderElement.h>
+#include <WebCore/RenderTextLineBoxes.h>
+#include <WebCore/Text.h>
 #include <wtf/Forward.h>
 #include <wtf/Markable.h>
+#include <wtf/Platform.h>
 #include <wtf/text/TextBreakIterator.h>
 
 namespace WebCore {
 
 class Font;
-class LegacyInlineTextBox;
 struct GlyphOverflow;
 struct WordTrailingSpace;
+enum class DocumentMarkerType : uint32_t;
 
 namespace Layout {
 class InlineTextBox;
@@ -46,7 +49,7 @@ class LineLayout;
 }
 
 class RenderText : public RenderObject {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderText);
+    WTF_MAKE_TZONE_ALLOCATED(RenderText);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderText);
 public:
     RenderText(Type, Text&, const String&);
@@ -58,8 +61,11 @@ public:
     const Layout::InlineTextBox* layoutBox() const;
 
     WEBCORE_EXPORT Text* textNode() const;
+    RefPtr<Text> protectedTextNode() const { return textNode(); }
 
     const RenderStyle& style() const;
+    // FIXME: Remove checkedStyle once https://github.com/llvm/llvm-project/pull/142485 lands. This is a false positive.
+    const CheckedRef<const RenderStyle> checkedStyle() const { return style(); }
     const RenderStyle& firstLineStyle() const;
     const RenderStyle* getCachedPseudoStyle(const Style::PseudoElementIdentifier&, const RenderStyle* parentStyle = nullptr) const;
 
@@ -74,16 +80,9 @@ public:
 
     virtual String originalText() const;
 
-    void extractTextBox(LegacyInlineTextBox& box) { m_lineBoxes.extract(box); }
-    void attachTextBox(LegacyInlineTextBox& box) { m_lineBoxes.attach(box); }
-    void removeTextBox(LegacyInlineTextBox& box) { m_lineBoxes.remove(box); }
 
     const String& text() const { return m_text; }
     String textWithoutConvertingBackslashToYenSymbol() const;
-
-    LegacyInlineTextBox* createInlineTextBox() { return m_lineBoxes.createAndAppendLineBox(*this); }
-    void dirtyLineBoxes(bool fullLayout);
-    void deleteLineBoxes();
 
     void boundingRects(Vector<LayoutRect>&, const LayoutPoint& accumulatedOffset) const final;
     Vector<IntRect> absoluteRectsForRange(unsigned startOffset = 0, unsigned endOffset = UINT_MAX, bool useSelectionHeight = false, bool* wasFixed = nullptr) const;
@@ -98,10 +97,10 @@ public:
 
     Position positionForPoint(const LayoutPoint&, HitTestSource) final;
 
-    UChar characterAt(unsigned) const;
-    unsigned length() const final { return text().length(); }
+    bool hasEmptyText() const { return m_text.isEmpty(); }
 
-    void positionLineBox(LegacyInlineTextBox&);
+    char16_t characterAt(unsigned) const;
+    size_t length() const { return text().length(); }
 
     float width(unsigned from, unsigned length, const FontCascade&, float xPos, SingleThreadWeakHashSet<const Font>* fallbackFonts = nullptr, GlyphOverflow* = nullptr) const;
     float width(unsigned from, unsigned length, float xPos, bool firstLine = false, SingleThreadWeakHashSet<const Font>* fallbackFonts = nullptr, GlyphOverflow* = nullptr) const;
@@ -129,13 +128,13 @@ public:
     float hangablePunctuationEndWidth(unsigned index) const;
     unsigned firstCharacterIndexStrippingSpaces() const;
     unsigned lastCharacterIndexStrippingSpaces() const;
-    static bool isHangableStopOrComma(UChar);
+    static bool isHangableStopOrComma(char16_t);
 
     WEBCORE_EXPORT virtual IntRect linesBoundingBox() const;
     WEBCORE_EXPORT IntPoint firstRunLocation() const;
 
     void setText(const String&, bool force = false);
-    void setTextWithOffset(const String&, unsigned offset, unsigned len, bool force = false);
+    void setTextWithOffset(const String&, unsigned offset);
 
     bool canBeSelectionLeaf() const override { return true; }
 
@@ -143,9 +142,6 @@ public:
 
     inline LayoutUnit marginLeft() const;
     inline LayoutUnit marginRight() const;
-
-    LegacyInlineTextBox* firstTextBox() const { return m_lineBoxes.first(); }
-    LegacyInlineTextBox* lastTextBox() const { return m_lineBoxes.last(); }
 
     int caretMinOffset() const final;
     int caretMaxOffset() const final;
@@ -166,34 +162,28 @@ public:
 
     bool containsOnlyCollapsibleWhitespace() const;
 
-    bool canUseSimpleFontCodePath() const { return m_canUseSimpleFontCodePath; }
+    FontCascade::CodePath fontCodePath() const { return static_cast<FontCascade::CodePath>(m_fontCodePath); }
+    bool canUseSimpleFontCodePath() const { return fontCodePath() == FontCascade::CodePath::Simple; }
+    bool shouldUseSimpleGlyphOverflowCodePath() const { return fontCodePath() == FontCascade::CodePath::SimpleWithGlyphOverflow; }
 
-    void removeAndDestroyTextBoxes();
-
-    virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle);
-
-    virtual std::unique_ptr<LegacyInlineTextBox> createTextBox();
+    virtual void styleDidChange(Style::Difference, const RenderStyle* oldStyle);
 
 #if ENABLE(TEXT_AUTOSIZING)
     float candidateComputedTextSize() const { return m_candidateComputedTextSize; }
     void setCandidateComputedTextSize(float size) { m_candidateComputedTextSize = size; }
 #endif
 
-    bool usesLegacyLineLayoutPath() const;
-
     StringView stringView(unsigned start = 0, std::optional<unsigned> stop = std::nullopt) const;
 
     bool containsOnlyCSSWhitespace(unsigned from, unsigned length) const;
 
-    Vector<std::pair<unsigned, unsigned>> contentRangesBetweenOffsetsForType(const DocumentMarker::Type, unsigned startOffset, unsigned endOffset) const;
+    Vector<std::pair<unsigned, unsigned>> contentRangesBetweenOffsetsForType(const DocumentMarkerType, unsigned startOffset, unsigned endOffset) const;
 
     RenderInline* inlineWrapperForDisplayContents();
     void setInlineWrapperForDisplayContents(RenderInline*);
 
     template <typename MeasureTextCallback>
     static float measureTextConsideringPossibleTrailingSpace(bool currentCharacterIsSpace, unsigned startIndex, unsigned wordLength, WordTrailingSpace&, SingleThreadWeakHashSet<const Font>& fallbackFonts, MeasureTextCallback&&);
-
-    static std::optional<bool> emphasisMarkExistsAndIsAbove(const RenderText&, const RenderStyle&);
 
     void resetMinMaxWidth();
 
@@ -209,11 +199,9 @@ protected:
     void willBeDestroyed() override;
 
     virtual void setRenderedText(const String&);
-    virtual UChar previousCharacter() const;
+    virtual Vector<char16_t> previousCharacter() const;
 
     virtual void setTextInternal(const String&, bool force);
-
-    RenderTextLineBoxes m_lineBoxes;
 
 private:
     RenderText(Type, Node&, const String&);
@@ -222,7 +210,7 @@ private:
 
     bool canHaveChildren() const final { return false; }
 
-    VisiblePosition positionForPoint(const LayoutPoint&, HitTestSource, const RenderFragmentContainer*) override;
+    PositionWithAffinity positionForPoint(const LayoutPoint&, HitTestSource, const RenderFragmentContainer*) override;
 
     void setSelectionState(HighlightState) final;
     LayoutRect selectionRectForRepaint(const RenderLayerModelObject* repaintContainer, bool clipToVisibleContent = true) final;
@@ -230,14 +218,14 @@ private:
 
     void computePreferredLogicalWidths(float leadWidth, SingleThreadWeakHashSet<const Font>& fallbackFonts, GlyphOverflow&, bool forcedMinMaxWidthComputation = false);
 
-    bool computeCanUseSimpleFontCodePath() const;
+    void computeFontCodePath();
 
     bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation&, const LayoutPoint&, HitTestAction) final { ASSERT_NOT_REACHED(); return false; }
 
     float widthFromCache(const FontCascade&, unsigned start, unsigned len, float xPos, SingleThreadWeakHashSet<const Font>* fallbackFonts, GlyphOverflow*, const RenderStyle&) const;
     bool computeUseBackslashAsYenSymbol() const;
 
-    void secureText(UChar mask);
+    void secureText(char16_t mask);
 
     LayoutRect collectSelectionGeometriesForLineBoxes(const RenderLayerModelObject* repaintContainer, bool clipToVisibleContent, Vector<FloatQuad>*);
 
@@ -253,8 +241,8 @@ private:
     // FIXME: This should probably be part of the text sizing structures in Document instead. That would save some memory.
     float m_candidateComputedTextSize { 0 };
 #endif
-    Markable<float, WTF::FloatMarkableTraits> m_minWidth;
-    Markable<float, WTF::FloatMarkableTraits> m_maxWidth;
+    Markable<float> m_minWidth;
+    Markable<float> m_maxWidth;
     float m_beginMinWidth { 0 };
     float m_endMinWidth { 0 };
 
@@ -270,26 +258,24 @@ private:
     unsigned m_hasTab : 1 { false }; // Whether or not we have a variable width tab character (e.g., <pre> with '\t').
     unsigned m_hasBeginWS : 1 { false }; // Whether or not we begin with WS (only true if we aren't pre)
     unsigned m_hasEndWS : 1 { false }; // Whether or not we end with WS (only true if we aren't pre)
-    unsigned m_linesDirty : 1 { false }; // This bit indicates that the text run has already dirtied specific
-                           // line boxes, and this hint will enable layoutInlineChildren to avoid
-                           // just dirtying everything when character data is modified (e.g., appended/inserted
-                           // or removed).
     unsigned m_needsVisualReordering : 1 { false };
     unsigned m_containsOnlyASCII : 1 { false };
-    unsigned m_canUseSimpleFontCodePath : 1 { false };
     mutable unsigned m_knownToHaveNoOverflowAndNoFallbackFonts : 1 { false };
     unsigned m_useBackslashAsYenSymbol : 1 { false };
     unsigned m_originalTextDiffersFromRendered : 1 { false };
     unsigned m_hasInlineWrapperForDisplayContents : 1 { false };
     unsigned m_hasSecureTextTimer : 1 { false };
+    unsigned m_fontCodePath : 2 { 0 };
 };
 
-String applyTextTransform(const RenderStyle&, const String&, UChar previousCharacter);
-String capitalize(const String&, UChar previousCharacter);
+String applyTextTransform(const RenderStyle&, const String&, Vector<char16_t> previousCharacter);
+String applyTextTransform(const RenderStyle&, const String&);
+String capitalize(const String&, Vector<char16_t> previousCharacter);
+String capitalize(const String&);
 TextBreakIterator::LineMode::Behavior mapLineBreakToIteratorMode(LineBreak);
 TextBreakIterator::ContentAnalysis mapWordBreakToContentAnalysis(WordBreak);
 
-inline UChar RenderText::characterAt(unsigned i) const
+inline char16_t RenderText::characterAt(unsigned i) const
 {
     return i >= length() ? 0 : text()[i];
 }
@@ -364,6 +350,11 @@ inline const RenderStyle* RenderText::targetTextPseudoStyle() const
 inline RenderText* Text::renderer() const
 {
     return downcast<RenderText>(Node::renderer());
+}
+
+inline CheckedPtr<RenderText> Text::checkedRenderer() const
+{
+    return renderer();
 }
 
 inline void RenderText::resetMinMaxWidth()

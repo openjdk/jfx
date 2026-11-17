@@ -26,6 +26,7 @@
 #include "GraphicsLayerContentsDisplayDelegate.h"
 #include "Image.h"
 #include "NativeImage.h"
+#include "TextureMapperAnimation.h"
 #include "TextureMapperLayer.h"
 #include "TextureMapperPlatformLayer.h"
 #include "TextureMapperTiledBackingStore.h"
@@ -65,13 +66,13 @@ public:
     void setBackdropFiltersRect(const FloatRoundedRect&) override;
 
     void setNeedsDisplay() override;
-    void setNeedsDisplayInRect(const FloatRect&, ShouldClipToLayer = ClipToLayer) override;
+    void setNeedsDisplayInRect(const FloatRect&, ShouldClipToLayer = ShouldClipToLayer::Clip) override;
     void setContentsNeedsDisplay() override;
     void setContentsRect(const FloatRect&) override;
     void setContentsClippingRect(const FloatRoundedRect&) override;
     void setContentsRectClipsDescendants(bool) override;
 
-    bool addAnimation(const KeyframeValueList&, const FloatSize&, const Animation*, const String&, double) override;
+    bool addAnimation(const GraphicsLayerKeyframeValueList&, const GraphicsLayerAnimation*, const String&, double) override;
     void pauseAnimation(const String&, double) override;
     void removeAnimation(const String&, std::optional<AnimatedProperty>) override;
 
@@ -170,7 +171,7 @@ private:
 
     TextureMapperPlatformLayer* m_contentsLayer;
     FloatRect m_needsDisplayRect;
-    Nicosia::Animations m_animations;
+    TextureMapperAnimations m_animations;
     MonotonicTime m_animationStartTime;
 };
 

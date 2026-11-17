@@ -25,6 +25,12 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
+#include "BPlatform.h"
+
+#if !BUSE(TZONE)
+
 #include "IsoHeap.h"
 #include "IsoPage.h"
 #include "IsoSharedConfig.h"
@@ -61,3 +67,6 @@ uint8_t* indexSlotFor(void* ptr)
 } // namespace bmalloc
 
 #endif
+#endif // !BUSE(TZONE)
+
+#endif // __cplusplus

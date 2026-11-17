@@ -28,7 +28,9 @@
 
 #include <optional>
 #include <span>
+#include <wtf/FastMalloc.h>
 #include <wtf/Forward.h>
+#include <wtf/Platform.h>
 #include <wtf/SystemFree.h>
 
 #if HAVE(BACKTRACE_SYMBOLS) || HAVE(BACKTRACE)
@@ -40,7 +42,6 @@
 #endif
 
 #if HAVE(DLADDR)
-#include <cxxabi.h>
 #include <dlfcn.h>
 #endif
 
@@ -48,6 +49,8 @@
 #include <windows.h>
 #include <wtf/win/DbgHelperWin.h>
 #endif
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WTF {
 
@@ -58,7 +61,7 @@ WTF_EXPORT_PRIVATE char** symbolize(void* const*, int);
 #endif
 
 class StackTrace {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(StackTrace);
 public:
     WTF_EXPORT_PRIVATE NEVER_INLINE static std::unique_ptr<StackTrace> captureStackTrace(size_t maxFrames, size_t framesToSkip = 0);
 
@@ -68,8 +71,7 @@ public:
     }
 
     void dump(PrintStream&) const;
-    template<typename Functor> // void Functor(int frameNumber, void* stackFrame, const char* name)
-    void forEachFrame(Functor) const;
+    void forEachFrame(NOESCAPE const std::invocable<int, void*, const char*> auto&) const;
     WTF_EXPORT_PRIVATE String toString() const;
 
 private:
@@ -96,7 +98,7 @@ public:
     }
 
     class DemangleEntry {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_FAST_ALLOCATED(DemangleEntry);
     public:
         friend class StackTraceSymbolResolver;
         const char* mangledName() const { return m_mangledName; }
@@ -109,13 +111,12 @@ public:
         { }
 
         const char* m_mangledName { nullptr };
-        std::unique_ptr<const char[], SystemFree<const char[]>> m_demangledName;
+        std::unique_ptr<const char, SystemFree<const char>> m_demangledName;
     };
 
     WTF_EXPORT_PRIVATE static std::optional<DemangleEntry> demangle(void*);
 
-    template<typename Functor>
-    void forEach(Functor functor) const
+    void forEach(NOESCAPE const std::invocable<int, void*, const char*> auto& functor) const
     {
 #if USE(LIBBACKTRACE)
         char** symbols = symbolize(m_stack.data(), m_stack.size());
@@ -186,8 +187,7 @@ inline void StackTrace::dump(PrintStream& out) const
     StackTracePrinter { *this }.dump(out);
 }
 
-template<typename Functor>
-void StackTrace::forEachFrame(Functor functor) const
+void StackTrace::forEachFrame(NOESCAPE const std::invocable<int, void*, const char*> auto& functor) const
 {
     StackTraceSymbolResolver { *this }.forEach(functor);
 }
@@ -197,3 +197,5 @@ void StackTrace::forEachFrame(Functor functor) const
 using WTF::StackTrace;
 using WTF::StackTraceSymbolResolver;
 using WTF::StackTracePrinter;
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

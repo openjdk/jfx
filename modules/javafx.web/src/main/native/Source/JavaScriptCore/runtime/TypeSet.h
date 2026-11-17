@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2014 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "ConcurrentJSLock.h"
-#include "RuntimeType.h"
-#include "StructureSet.h"
+#include <JavaScriptCore/ConcurrentJSLock.h>
+#include <JavaScriptCore/RuntimeType.h>
+#include <JavaScriptCore/StructureSet.h>
 #include <wtf/HashSet.h>
 #include <wtf/JSONValues.h>
 #include <wtf/RefCounted.h>
@@ -63,7 +63,7 @@ public:
     Ref<Inspector::Protocol::Runtime::StructureDescription> inspectorRepresentation();
     void setConstructorName(String name) { m_constructorName = (name.isEmpty() ? "Object"_s : name); }
     String constructorName() { return m_constructorName; }
-    void setProto(Ref<StructureShape>&& shape) { m_proto = WTFMove(shape); }
+    void setProto(Ref<StructureShape>&& shape) { m_proto = WTF::move(shape); }
     void enterDictionaryMode();
 
 private:
@@ -73,8 +73,8 @@ private:
 
     bool m_final;
     bool m_isInDictionaryMode;
-    HashSet<RefPtr<UniquedStringImpl>, IdentifierRepHash> m_fields;
-    HashSet<RefPtr<UniquedStringImpl>, IdentifierRepHash> m_optionalFields;
+    UncheckedKeyHashSet<RefPtr<UniquedStringImpl>, IdentifierRepHash> m_fields;
+    UncheckedKeyHashSet<RefPtr<UniquedStringImpl>, IdentifierRepHash> m_optionalFields;
     RefPtr<StructureShape> m_proto;
     std::unique_ptr<String> m_propertyHash;
     String m_constructorName;

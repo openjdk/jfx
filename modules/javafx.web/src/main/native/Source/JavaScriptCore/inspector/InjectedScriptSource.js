@@ -753,7 +753,7 @@ let InjectedScript = class InjectedScript extends PrototypelessObjectBase
                     fakeDescriptor.symbol = symbol;
                 // Silence any possible unhandledrejection exceptions created from accessing a native accessor with a wrong this object.
                 if (@isPromise(fakeDescriptor.value) && InjectedScriptHost.isPromiseRejectedWithNativeGetterTypeError(fakeDescriptor.value))
-                    fakeDescriptor.value.@catch(function(){});
+                    fakeDescriptor.value.@then(@undefined, function(){});
                 return fakeDescriptor;
             } catch (e) {
                 let errorDescriptor = @createObjectWithoutPrototype(

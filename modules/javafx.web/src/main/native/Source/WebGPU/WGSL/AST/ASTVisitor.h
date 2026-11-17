@@ -48,6 +48,9 @@ public:
     virtual void visit(AST::Directive&);
     virtual void visit(AST::DiagnosticDirective&);
 
+    // Diagnostic
+    virtual void visit(AST::Diagnostic&);
+
     // Declaration
     virtual void visit(AST::Declaration&);
     virtual void visit(AST::Function&);
@@ -78,7 +81,6 @@ public:
     virtual void visit(AST::AbstractFloatLiteral&);
     virtual void visit(AST::AbstractIntegerLiteral&);
     virtual void visit(AST::BinaryExpression&);
-    virtual void visit(AST::BitcastExpression&);
     virtual void visit(AST::BoolLiteral&);
     virtual void visit(AST::CallExpression&);
     virtual void visit(AST::FieldAccessExpression&);
@@ -112,7 +114,6 @@ public:
     virtual void visit(AST::LoopStatement&);
     virtual void visit(AST::PhonyAssignmentStatement&);
     virtual void visit(AST::ReturnStatement&);
-    virtual void visit(AST::StaticAssertStatement&);
     virtual void visit(AST::SwitchStatement&);
     virtual void visit(AST::VariableStatement&);
     virtual void visit(AST::WhileStatement&);

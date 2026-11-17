@@ -28,19 +28,23 @@
 #include "DecodingOptions.h"
 #include "ImageTypes.h"
 #include "Timer.h"
-#include <wtf/FastMalloc.h>
+#include <wtf/CanMakeWeakPtr.h>
+#include <wtf/TZoneMalloc.h>
+#include <wtf/ThreadSafeWeakPtr.h>
 
 namespace WebCore {
 
 class BitmapImageSource;
 class ImageFrame;
 
-class ImageFrameAnimator {
-    WTF_MAKE_FAST_ALLOCATED;
+class ImageFrameAnimator : public CanMakeWeakPtr<ImageFrameAnimator> {
+    WTF_MAKE_TZONE_ALLOCATED(ImageFrameAnimator);
 public:
-    static std::unique_ptr<ImageFrameAnimator> create(BitmapImageSource&);
+    explicit ImageFrameAnimator(BitmapImageSource&);
 
-    ImageFrameAnimator(BitmapImageSource&);
+    void ref() const;
+    void deref() const;
+
     ~ImageFrameAnimator();
 
     bool imageFrameDecodeAtIndexHasFinished(unsigned index, ImageAnimatingState, DecodingStatus);
@@ -68,7 +72,7 @@ private:
 
     CString sourceUTF8() const;
 
-    BitmapImageSource& m_source;
+    ThreadSafeWeakRef<BitmapImageSource> m_source;
     unsigned m_frameCount { 0 };
     RepetitionCount m_repetitionCount { RepetitionCountNone };
 

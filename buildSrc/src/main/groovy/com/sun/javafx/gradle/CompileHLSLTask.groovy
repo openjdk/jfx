@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,15 +23,30 @@
  * questions.
  */
 
+import org.gradle.process.ExecOperations
+
+import javax.inject.Inject
+
 class CompileHLSLTask extends NativeCompileTask {
+    @Inject
+    CompileHLSLTask(ExecOperations execOperations) {
+        super(execOperations);
+    }
+
     protected File outputFile(File sourceFile) {
         new File("$output/${sourceFile.name.replace('.hlsl', '.obj')}");
     }
 
     protected void doCompile(File sourceFile, File outputFile){
-        project.exec({
-            commandLine = ["$project.FXC", "/nologo", "/T", "ps_3_0", "/Fo", "$outputFile", "$sourceFile"]
-            environment(project.WINDOWS_NATIVE_COMPILE_ENVIRONMENT);
-        });
+        execCompile { spec ->
+            spec.commandLine = [
+                "$project.FXC",
+                "/nologo",
+                "/T", "ps_3_0",
+                "/Fo", "$outputFile",
+                "$sourceFile"
+            ]
+            spec.environment(project.WINDOWS_NATIVE_COMPILE_ENVIRONMENT);
+        }
     }
 }

@@ -43,3 +43,4 @@ inline MediaCapabilitiesInfo MediaCapabilitiesInfo::isolatedCopy() const
 }
 
 } // namespace WebCore
+

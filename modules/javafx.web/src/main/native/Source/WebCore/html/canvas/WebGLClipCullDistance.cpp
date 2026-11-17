@@ -32,19 +32,19 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(WebGLClipCullDistance);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebGLClipCullDistance);
 
 WebGLClipCullDistance::WebGLClipCullDistance(WebGLRenderingContextBase& context)
     : WebGLExtension(context, WebGLExtensionName::WebGLClipCullDistance)
 {
-    context.protectedGraphicsContextGL()->ensureExtensionEnabled("GL_ANGLE_clip_cull_distance"_s);
+    context.graphicsContextGL()->enableExtension(GCGLExtension::ANGLE_clip_cull_distance);
 }
 
 WebGLClipCullDistance::~WebGLClipCullDistance() = default;
 
 bool WebGLClipCullDistance::supported(GraphicsContextGL& context)
 {
-    return context.supportsExtension("GL_ANGLE_clip_cull_distance"_s);
+    return context.supportsExtension(GCGLExtension::ANGLE_clip_cull_distance);
 }
 
 } // namespace WebCore

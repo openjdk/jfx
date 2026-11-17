@@ -80,8 +80,8 @@ protect_wargv (gint       argc,
     {
       wchar_t *p = wargv[i];
       wchar_t *q;
-      gint len = 0;
-      gint pre_bslash = 0;
+      size_t len = 0;
+      size_t pre_bslash = 0;
       gboolean need_dblquotes = FALSE;
       while (*p)
   {

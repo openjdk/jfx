@@ -34,24 +34,27 @@
 #include "WebGPUTextureImpl.h"
 #include <WebGPU/WebGPUExt.h>
 #include <wtf/BlockPtr.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore::WebGPU {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(QueueImpl);
+
 QueueImpl::QueueImpl(WebGPUPtr<WGPUQueue>&& queue, ConvertToBackingContext& convertToBackingContext)
-    : m_backing(WTFMove(queue))
+    : m_backing(WTF::move(queue))
     , m_convertToBackingContext(convertToBackingContext)
 {
 }
 
 QueueImpl::~QueueImpl() = default;
 
-void QueueImpl::submit(Vector<std::reference_wrapper<CommandBuffer>>&& commandBuffers)
+void QueueImpl::submit(Vector<Ref<WebGPU::CommandBuffer>>&& commandBuffers)
 {
-    auto backingCommandBuffers = commandBuffers.map([&convertToBackingContext = m_convertToBackingContext.get()](auto commandBuffer) {
-        return convertToBackingContext.convertToBacking(commandBuffer);
+    auto backingCommandBuffers = commandBuffers.map([&](auto commandBuffer) {
+        return Ref { m_convertToBackingContext }->convertToBacking(commandBuffer);
     });
 
-    wgpuQueueSubmit(m_backing.get(), backingCommandBuffers.size(), backingCommandBuffers.data());
+    wgpuQueueSubmit(m_backing.get(), backingCommandBuffers.size(), backingCommandBuffers.span().data());
 }
 
 static void onSubmittedWorkDoneCallback(WGPUQueueWorkDoneStatus status, void* userdata)
@@ -63,7 +66,7 @@ static void onSubmittedWorkDoneCallback(WGPUQueueWorkDoneStatus status, void* us
 
 void QueueImpl::onSubmittedWorkDone(CompletionHandler<void()>&& callback)
 {
-    auto blockPtr = makeBlockPtr([callback = WTFMove(callback)](WGPUQueueWorkDoneStatus) mutable {
+    auto blockPtr = makeBlockPtr([callback = WTF::move(callback)](WGPUQueueWorkDoneStatus) mutable {
         callback();
     });
     wgpuQueueOnSubmittedWorkDone(m_backing.get(), &onSubmittedWorkDoneCallback, Block_copy(blockPtr.get())); // Block_copy is matched with Block_release above in onSubmittedWorkDoneCallback().
@@ -95,7 +98,7 @@ void QueueImpl::writeBufferNoCopy(
     Size64 dataOffset,
     std::optional<Size64> size)
 {
-    wgpuQueueWriteBuffer(m_backing.get(), m_convertToBackingContext->convertToBacking(buffer), bufferOffset, source.subspan(dataOffset, size.value_or(source.size() - dataOffset)));
+    wgpuQueueWriteBuffer(m_backing.get(), Ref { m_convertToBackingContext }->convertToBacking(buffer), bufferOffset, source.subspan(dataOffset, size.value_or(source.size() - dataOffset)));
 }
 
 void QueueImpl::writeTexture(
@@ -104,22 +107,22 @@ void QueueImpl::writeTexture(
     const ImageDataLayout& dataLayout,
     const Extent3D& size)
 {
+    Ref convertToBackingContext = m_convertToBackingContext;
+
     WGPUImageCopyTexture backingDestination {
-        .nextInChain = nullptr,
-        .texture = m_convertToBackingContext->convertToBacking(destination.texture),
+        .texture = convertToBackingContext->convertToBacking(destination.protectedTexture().get()),
         .mipLevel = destination.mipLevel,
-        .origin = destination.origin ? m_convertToBackingContext->convertToBacking(*destination.origin) : WGPUOrigin3D { 0, 0, 0 },
-        .aspect = m_convertToBackingContext->convertToBacking(destination.aspect),
+        .origin = destination.origin ? convertToBackingContext->convertToBacking(*destination.origin) : WGPUOrigin3D { 0, 0, 0 },
+        .aspect = convertToBackingContext->convertToBacking(destination.aspect),
     };
 
     WGPUTextureDataLayout backingDataLayout {
-        .nextInChain = nullptr,
         .offset = dataLayout.offset,
         .bytesPerRow = dataLayout.bytesPerRow.value_or(WGPU_COPY_STRIDE_UNDEFINED),
         .rowsPerImage = dataLayout.rowsPerImage.value_or(WGPU_COPY_STRIDE_UNDEFINED),
     };
 
-    WGPUExtent3D backingSize = m_convertToBackingContext->convertToBacking(size);
+    WGPUExtent3D backingSize = convertToBackingContext->convertToBacking(size);
 
     wgpuQueueWriteTexture(m_backing.get(), &backingDestination, source, &backingDataLayout, &backingSize);
 }
@@ -137,6 +140,11 @@ void QueueImpl::copyExternalImageToTexture(
 void QueueImpl::setLabelInternal(const String& label)
 {
     wgpuQueueSetLabel(m_backing.get(), label.utf8().data());
+}
+
+RefPtr<WebCore::NativeImage> QueueImpl::getNativeImage(WebCore::VideoFrame&)
+{
+    RELEASE_ASSERT_NOT_REACHED();
 }
 
 } // namespace WebCore::WebGPU

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -103,19 +103,34 @@ public class MarginsTest {
         }
 
         @Test
-        public void interpolationFactorSmallerThanOrEqualToZeroReturnsStartInstance() {
+        public void interpolationFactorZeroReturnsStartInstance() {
             var startValue = new Margins(2, 4, 6, 8, false);
             var endValue = new Margins(4, 8, 12, 16, false);
             assertSame(startValue, startValue.interpolate(endValue, 0));
-            assertSame(startValue, startValue.interpolate(endValue, -1));
         }
 
         @Test
-        public void interpolationFactorGreaterThanOrEqualToOneReturnsEndInstance() {
+        public void interpolationFactorOneReturnsEndInstance() {
             var startValue = new Margins(2, 4, 6, 8, false);
             var endValue = new Margins(4, 8, 12, 16, false);
             assertSame(endValue, startValue.interpolate(endValue, 1));
-            assertSame(endValue, startValue.interpolate(endValue, 1.5));
+        }
+
+        @Test
+        public void interpolationFactorLessThanZero() {
+            var startValue = new Margins(2, 4, 6, 8, false);
+            var endValue = new Margins(4, 8, 12, 16, false);
+            var expected = new Margins(0, 0, 0, 0, false);
+            assertEquals(expected, startValue.interpolate(endValue, -1));
+            assertEquals(expected, startValue.interpolate(endValue, -2));
+        }
+
+        @Test
+        public void interpolationFactorGreaterThanOne() {
+            var startValue = new Margins(2, 4, 6, 8, false);
+            var endValue = new Margins(4, 8, 12, 16, false);
+            assertEquals(new Margins(6, 12, 18, 24, false), startValue.interpolate(endValue, 2));
+            assertEquals(new Margins(8, 16, 24, 32, false), startValue.interpolate(endValue, 3));
         }
     }
 }

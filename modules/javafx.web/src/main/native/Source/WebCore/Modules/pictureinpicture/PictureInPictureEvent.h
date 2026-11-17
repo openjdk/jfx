@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2019 Carlos Eduardo Ramalho <cadubentzen@gmail.com>.
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,14 +28,14 @@
 
 #if ENABLE(PICTURE_IN_PICTURE_API)
 
-#include "Event.h"
+#include <WebCore/Event.h>
 
 namespace WebCore {
 
 class PictureInPictureWindow;
 
 class PictureInPictureEvent final : public Event {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(PictureInPictureEvent);
+    WTF_MAKE_TZONE_ALLOCATED(PictureInPictureEvent);
 public:
     struct Init : EventInit {
         RefPtr<PictureInPictureWindow> pictureInPictureWindow;
@@ -48,7 +48,7 @@ public:
 private:
     PictureInPictureEvent(const AtomString&, Init&&, IsTrusted = IsTrusted::No);
 
-    Ref<PictureInPictureWindow> m_pictureInPictureWindow;
+    const Ref<PictureInPictureWindow> m_pictureInPictureWindow;
 };
 
 } // namespace WebCore

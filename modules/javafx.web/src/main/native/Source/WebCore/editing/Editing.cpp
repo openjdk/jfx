@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2015 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,9 +29,14 @@
 
 #include "AXObjectCache.h"
 #include "CachedImage.h"
-#include "DocumentInlines.h"
+#include "ContainerNodeInlines.h"
+#include "EditingInlines.h"
 #include "Editor.h"
+#include "ElementChildIteratorInlines.h"
 #include "ElementInlines.h"
+#include "ElementRareData.h"
+#include "FrameDestructionObserverInlines.h"
+#include "GraphicsLayer.h"
 #include "HTMLBodyElement.h"
 #include "HTMLDListElement.h"
 #include "HTMLDivElement.h"
@@ -48,21 +53,28 @@
 #include "HTMLTextFormControlElement.h"
 #include "HTMLUListElement.h"
 #include "HitTestSource.h"
+#include "ImageOverlay.h"
 #include "LocalFrame.h"
 #include "NodeTraversal.h"
 #include "PositionIterator.h"
 #include "Range.h"
 #include "RenderBlock.h"
 #include "RenderElement.h"
-#include "RenderStyleInlines.h"
+#include "RenderLayer.h"
+#include "RenderLayerBacking.h"
+#include "RenderObjectInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include "RenderTableCell.h"
 #include "RenderTextControlSingleLine.h"
+#include "RenderedPosition.h"
 #include "ShadowRoot.h"
 #include "Text.h"
 #include "TextControlInnerElements.h"
 #include "TextIterator.h"
 #include "VisibleUnits.h"
+#include "WritingMode.h"
 #include <wtf/Assertions.h>
+#include <wtf/IterationStatus.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/unicode/CharacterNames.h>
@@ -177,7 +189,7 @@ Element* editableRootForPosition(const Position& position, EditableType editable
     case HasEditableAXRole:
         if (CheckedPtr cache = node->document().existingAXObjectCache())
             return const_cast<Element*>(cache->rootAXEditableElement(node.get()));
-        FALLTHROUGH;
+        [[fallthrough]];
     case ContentIsEditable:
         return node->rootEditableElement();
     }
@@ -187,12 +199,12 @@ Element* editableRootForPosition(const Position& position, EditableType editable
 // Finds the enclosing element until which the tree can be split.
 // When a user hits ENTER, he/she won't expect this element to be split into two.
 // You may pass it as the second argument of splitTreeToNode.
-Element* unsplittableElementForPosition(const Position& position)
+RefPtr<Element> unsplittableElementForPosition(const Position& position)
 {
     // Since enclosingNodeOfType won't search beyond the highest root editable node,
     // this code works even if the closest table cell was outside of the root editable node.
-    if (auto enclosingCell = downcast<Element>(enclosingNodeOfType(position, &isTableCell)))
-        return enclosingCell.get();
+    if (RefPtr enclosingCell = downcast<Element>(enclosingNodeOfType(position, &isTableCell)))
+        return enclosingCell;
     return editableRootForPosition(position);
 }
 
@@ -278,7 +290,7 @@ Position firstEditablePositionAfterPositionInRoot(const Position& position, Cont
     while (candidate.deprecatedNode() && !isEditablePosition(candidate) && candidate.protectedDeprecatedNode()->isDescendantOf(*highestRoot))
         candidate = isAtomicNode(candidate.deprecatedNode()) ? positionInParentAfterNode(candidate.protectedDeprecatedNode().get()) : nextVisuallyDistinctCandidate(candidate);
 
-    if (candidate.deprecatedNode() && candidate.deprecatedNode() != highestRoot && !candidate.protectedDeprecatedNode()->isDescendantOf(*highestRoot))
+    if (candidate.deprecatedNode() && !candidate.protectedDeprecatedNode()->isInclusiveDescendantOf(*highestRoot))
         return { };
 
     return candidate;
@@ -306,7 +318,7 @@ Position lastEditablePositionBeforePositionInRoot(const Position& position, Cont
     while (candidate.deprecatedNode() && !isEditablePosition(candidate) && candidate.protectedDeprecatedNode()->isDescendantOf(*highestRoot))
         candidate = isAtomicNode(candidate.deprecatedNode()) ? positionInParentBeforeNode(candidate.protectedDeprecatedNode().get()) : previousVisuallyDistinctCandidate(candidate);
 
-    if (candidate.deprecatedNode() && candidate.deprecatedNode() != highestRoot && !candidate.protectedDeprecatedNode()->isDescendantOf(*highestRoot))
+    if (candidate.deprecatedNode() && !candidate.protectedDeprecatedNode()->isInclusiveDescendantOf(*highestRoot))
         return { };
 
     return candidate;
@@ -341,7 +353,7 @@ TextDirection directionOfEnclosingBlock(const Position& position)
     auto renderer = block->renderer();
     if (!renderer)
         return TextDirection::LTR;
-    return renderer->style().direction();
+    return renderer->writingMode().bidiDirection();
 }
 
 // This method is used to create positions in the DOM. It returns the maximum valid offset
@@ -357,7 +369,7 @@ int lastOffsetForEditing(const Node& node)
     return editingIgnoresContent(node) ? 1 : 0;
 }
 
-bool isAmbiguousBoundaryCharacter(UChar character)
+bool isAmbiguousBoundaryCharacter(char16_t character)
 {
     // These are characters that can behave as word boundaries, but can appear within words.
     // If they are just typed, i.e. if they are immediately followed by a caret, we want to delay text checking until the next character has been typed.
@@ -377,7 +389,7 @@ String stringWithRebalancedWhitespace(const String& string, bool startIsStartOfP
             previousCharacterWasSpace = false;
             continue;
         }
-        LChar selectedWhitespaceCharacter;
+        Latin1Character selectedWhitespaceCharacter;
         // We need to ensure there is no next sibling text node. See https://bugs.webkit.org/show_bug.cgi?id=123163
         if (previousCharacterWasSpace || (!i && startIsStartOfParagraph) || (i == length - 1 && shouldEmitNBSPbeforeEnd)) {
             selectedWhitespaceCharacter = noBreakSpace;
@@ -416,7 +428,7 @@ const String& nonBreakingSpaceString()
 RefPtr<Element> isFirstPositionAfterTable(const VisiblePosition& position)
 {
     Position upstream(position.deepEquivalent().upstream());
-    auto node = upstream.protectedDeprecatedNode();
+    RefPtr node = upstream.deprecatedNode();
     if (!node)
         return nullptr;
     auto* renderer = node->renderer();
@@ -428,7 +440,7 @@ RefPtr<Element> isFirstPositionAfterTable(const VisiblePosition& position)
 RefPtr<Element> isLastPositionBeforeTable(const VisiblePosition& position)
 {
     Position downstream(position.deepEquivalent().downstream());
-    auto node = downstream.protectedDeprecatedNode();
+    RefPtr node = downstream.deprecatedNode();
     if (!node)
         return nullptr;
     auto* renderer = node->renderer();
@@ -478,7 +490,7 @@ VisiblePosition closestEditablePositionInElementForAbsolutePoint(const Element& 
     auto absoluteBoundingBox = renderer->absoluteBoundingBoxRect();
     auto constrainedAbsolutePoint = point.constrainedBetween(absoluteBoundingBox.minXMinYCorner(), absoluteBoundingBox.maxXMaxYCorner());
     auto localPoint = renderer->absoluteToLocal(constrainedAbsolutePoint, UseTransforms);
-    auto visiblePosition = renderer->positionForPoint(flooredLayoutPoint(localPoint), HitTestSource::User, nullptr);
+    auto visiblePosition = renderer->visiblePositionForPoint(flooredLayoutPoint(localPoint), HitTestSource::User);
     return isEditablePosition(visiblePosition.deepEquivalent()) ? visiblePosition : VisiblePosition { };
 }
 
@@ -495,7 +507,7 @@ bool isListItem(const Node& node)
 Element* enclosingElementWithTag(const Position& position, const QualifiedName& tagName)
 {
     auto root = highestEditableRoot(position);
-    for (RefPtr node = position.protectedDeprecatedNode(); node; node = node->parentNode()) {
+    for (RefPtr node = position.deprecatedNode(); node; node = node->parentNode()) {
         if (root && !node->hasEditableStyle())
             continue;
         auto* element = dynamicDowncast<Element>(*node);
@@ -514,7 +526,7 @@ RefPtr<Node> enclosingNodeOfType(const Position& position, bool (*nodeIsOfType)(
     // FIXME: support CanSkipCrossEditingBoundary
     ASSERT(rule == CanCrossEditingBoundary || rule == CannotCrossEditingBoundary);
     auto root = rule == CannotCrossEditingBoundary ? highestEditableRoot(position) : nullptr;
-    for (auto n = position.protectedDeprecatedNode(); n; n = n->parentNode()) {
+    for (RefPtr n = position.deprecatedNode(); n; n = n->parentNode()) {
         // Don't return a non-editable node if the input position was editable, since
         // the callers from editing will no doubt want to perform editing inside the returned node.
         if (root && !n->hasEditableStyle())
@@ -577,7 +589,7 @@ RefPtr<Element> enclosingTableCell(const Position& position)
 
 RefPtr<Element> enclosingAnchorElement(const Position& p)
 {
-    for (auto node = p.protectedDeprecatedNode(); node; node = node->parentNode()) {
+    for (RefPtr node = p.deprecatedNode(); node; node = node->parentNode()) {
         if (RefPtr element = dynamicDowncast<Element>(*node); element && element->isLink())
             return element;
     }
@@ -648,7 +660,7 @@ RefPtr<HTMLElement> outermostEnclosingList(Node* node, Node* rootList)
     while (RefPtr nextList = enclosingList(list.get())) {
         if (nextList == rootList)
             break;
-        list = WTFMove(nextList);
+        list = WTF::move(nextList);
     }
 
     return list;
@@ -811,7 +823,7 @@ static Ref<Element> createTabSpanElement(Document& document, Text& tabTextNode)
 
 Ref<Element> createTabSpanElement(Document& document, String&& tabText)
 {
-    return createTabSpanElement(document, document.createTextNode(WTFMove(tabText)));
+    return createTabSpanElement(document, document.createTextNode(WTF::move(tabText)));
 }
 
 Ref<Element> createTabSpanElement(Document& document)
@@ -819,16 +831,10 @@ Ref<Element> createTabSpanElement(Document& document)
     return createTabSpanElement(document, document.createEditingTextNode("\t"_s));
 }
 
-bool isNodeRendered(const Node& node)
-{
-    auto* renderer = node.renderer();
-    return renderer && renderer->style().visibility() == Visibility::Visible;
-}
-
 unsigned numEnclosingMailBlockquotes(const Position& position)
 {
     unsigned count = 0;
-    for (auto node = position.protectedDeprecatedNode(); node; node = node->parentNode()) {
+    for (RefPtr node = position.deprecatedNode(); node; node = node->parentNode()) {
         if (isMailBlockquote(*node))
             ++count;
     }
@@ -841,25 +847,25 @@ void updatePositionForNodeRemoval(Position& position, Node& node)
         return;
     switch (position.anchorType()) {
     case Position::PositionIsBeforeChildren:
-        if (node.containsIncludingShadowDOM(position.containerNode()))
+        if (node.isShadowIncludingInclusiveAncestorOf(position.containerNode()))
             position = positionInParentBeforeNode(&node);
         break;
     case Position::PositionIsAfterChildren:
-        if (node.containsIncludingShadowDOM(position.containerNode()))
+        if (node.isShadowIncludingInclusiveAncestorOf(position.containerNode()))
             position = positionInParentBeforeNode(&node);
         break;
     case Position::PositionIsOffsetInAnchor:
         if (position.containerNode() == node.parentNode() && static_cast<unsigned>(position.offsetInContainerNode()) > node.computeNodeIndex())
             position.moveToOffset(position.offsetInContainerNode() - 1);
-        else if (node.containsIncludingShadowDOM(position.containerNode()))
+        else if (node.isShadowIncludingInclusiveAncestorOf(position.containerNode()))
             position = positionInParentBeforeNode(&node);
         break;
     case Position::PositionIsAfterAnchor:
-        if (node.containsIncludingShadowDOM(position.anchorNode()))
+        if (node.isShadowIncludingInclusiveAncestorOf(position.anchorNode()))
             position = positionInParentAfterNode(&node);
         break;
     case Position::PositionIsBeforeAnchor:
-        if (node.containsIncludingShadowDOM(position.anchorNode()))
+        if (node.isShadowIncludingInclusiveAncestorOf(position.anchorNode()))
             position = positionInParentBeforeNode(&node);
         break;
     }
@@ -877,7 +883,16 @@ int caretMinOffset(const Node& node)
 {
     auto* renderer = node.renderer();
     ASSERT(!node.isCharacterDataNode() || !renderer || renderer->isRenderText());
-    return renderer ? renderer->caretMinOffset() : 0;
+
+    if (renderer && renderer->isRenderText())
+        return renderer->caretMinOffset();
+
+    if (RefPtr pictureElement = dynamicDowncast<HTMLPictureElement>(node)) {
+        if (RefPtr firstImage = childrenOfType<HTMLImageElement>(*pictureElement).first())
+            return firstImage->computeNodeIndex();
+    }
+
+    return 0;
 }
 
 // If a node can contain candidates for VisiblePositions, return the offset of the last candidate, otherwise
@@ -909,7 +924,7 @@ bool lineBreakExistsAtPosition(const Position& position)
         return false;
 
     RefPtr textNode = dynamicDowncast<Text>(*position.anchorNode());
-    if (!textNode || !position.anchorNode()->renderer()->style().preserveNewline())
+    if (!textNode || !textNode->renderer()->style().preserveNewline())
         return false;
 
     unsigned offset = position.offsetInContainerNode();
@@ -967,7 +982,7 @@ int indexForVisiblePosition(const VisiblePosition& visiblePosition, RefPtr<Conta
         if (position.containerNode()->isInShadowTree())
             scope = position.containerNode()->containingShadowRoot();
         else
-            scope = WTFMove(document);
+            scope = WTF::move(document);
     }
 
     auto range = *makeSimpleRange(makeBoundaryPointBeforeNodeContents(*scope), position);
@@ -1163,7 +1178,7 @@ LayoutRect localCaretRectInRendererForCaretPainting(const VisiblePosition& caret
         return LayoutRect();
     ASSERT(caretPosition.deepEquivalent().deprecatedNode()->renderer());
     auto [localRect, renderer] = caretPosition.localCaretRect();
-    return localCaretRectInRendererForRect(localRect, caretPosition.deepEquivalent().deprecatedNode(), renderer, caretPainter);
+    return localCaretRectInRendererForRect(localRect, caretPosition.deepEquivalent().deprecatedNode(), renderer.get(), caretPainter);
 }
 
 LayoutRect localCaretRectInRendererForRect(LayoutRect& localRect, Node* node, RenderObject* renderer, RenderBlock*& caretPainter)
@@ -1197,9 +1212,9 @@ IntRect absoluteBoundsForLocalCaretRect(RenderBlock* rendererForCaretPainting, c
     return rendererForCaretPainting->localToAbsoluteQuad(FloatRect(localRect), UseTransforms, insideFixed).enclosingBoundingBox();
 }
 
-HashSet<RefPtr<HTMLImageElement>> visibleImageElementsInRangeWithNonLoadedImages(const SimpleRange& range)
+HashSet<Ref<HTMLImageElement>> visibleImageElementsInRangeWithNonLoadedImages(const SimpleRange& range)
 {
-    HashSet<RefPtr<HTMLImageElement>> result;
+    HashSet<Ref<HTMLImageElement>> result;
     for (TextIterator iterator(range); !iterator.atEnd(); iterator.advance()) {
         RefPtr imageElement = dynamicDowncast<HTMLImageElement>(iterator.node());
         if (!imageElement)
@@ -1207,9 +1222,414 @@ HashSet<RefPtr<HTMLImageElement>> visibleImageElementsInRangeWithNonLoadedImages
 
         auto* cachedImage = imageElement->cachedImage();
         if (cachedImage && cachedImage->isLoading())
-            result.add(WTFMove(imageElement));
+            result.add(imageElement.releaseNonNull());
     }
     return result;
+}
+
+enum class RangeEndpointsToAdjust : uint8_t {
+    Start = 1 << 0,
+    End = 1 << 1,
+};
+
+static std::optional<unsigned> visualDistanceOnSameLine(const RenderedPosition& first, const RenderedPosition& second)
+{
+    if (first.isNull() || second.isNull())
+        return std::nullopt;
+
+    if (first.box() == second.box())
+        return std::max(first.offset(), second.offset()) - std::min(first.offset(), second.offset());
+
+    enum class VisualBoundary : bool { Left, Right };
+    auto distanceFromOffsetToVisualBoundary = [](const RenderedPosition& position, VisualBoundary boundary) {
+        auto box = position.box();
+        auto offset = position.offset();
+        return (boundary == VisualBoundary::Left) == (box->direction() == TextDirection::LTR)
+            ? std::max(box->minimumCaretOffset(), offset) - box->minimumCaretOffset()
+            : std::max(box->maximumCaretOffset(), offset) - offset;
+    };
+
+    unsigned distance = 0;
+    bool foundFirst = false;
+    bool foundSecond = false;
+    for (auto box = first.lineBox()->lineLeftmostLeafBox(); box; box = box->nextLineRightwardOnLine()) {
+        if (box == first.box()) {
+            distance += distanceFromOffsetToVisualBoundary(first, foundSecond ? VisualBoundary::Left : VisualBoundary::Right);
+            foundFirst = true;
+        } else if (box == second.box()) {
+            distance += distanceFromOffsetToVisualBoundary(second, foundFirst ? VisualBoundary::Left : VisualBoundary::Right);
+            foundSecond = true;
+        } else if (foundFirst || foundSecond)
+            distance += box->maximumCaretOffset() - box->minimumCaretOffset();
+
+        if (foundFirst && foundSecond)
+            return distance;
+    }
+
+    return std::nullopt;
+}
+
+static std::optional<BoundaryPoint> findBidiBoundary(const RenderedPosition& position, unsigned bidiLevel, SelectionExtentMovement movement, TextDirection selectionDirection)
+{
+    auto leftBoundary = position.leftBoundaryOfBidiRun(bidiLevel);
+    auto rightBoundary = position.rightBoundaryOfBidiRun(bidiLevel);
+
+    bool moveLeft = [&] {
+        switch (movement) {
+        case SelectionExtentMovement::Left:
+            return true;
+        case SelectionExtentMovement::Right:
+            return false;
+        case SelectionExtentMovement::Closest: {
+            auto distanceToLeft = visualDistanceOnSameLine(position, leftBoundary);
+            if (!distanceToLeft)
+                return false;
+
+            auto distanceToRight = visualDistanceOnSameLine(position, rightBoundary);
+            if (!distanceToRight)
+                return true;
+
+            return *distanceToLeft < *distanceToRight;
+        }
+        }
+        ASSERT_NOT_REACHED();
+        return false;
+    }();
+    // This looks unintuitive, but is necessary to ensure that the boundary is moved
+    // (visually) to the left or right, respectively, in both LTR and RTL paragraphs.
+    return (position.box()->direction() == selectionDirection) == moveLeft ? leftBoundary.boundaryPoint() : rightBoundary.boundaryPoint();
+}
+
+enum class BoxIterationDirection : bool { SameAsLine, OppositeOfLine };
+static InlineIterator::LeafBoxIterator advanceInDirection(InlineIterator::LeafBoxIterator box, TextDirection direction, BoxIterationDirection iterationDirection)
+{
+    bool shouldMoveRight = (iterationDirection == BoxIterationDirection::SameAsLine) == (direction == TextDirection::LTR);
+    return shouldMoveRight ? box->nextLineRightwardOnLine() : box->nextLineLeftwardOnLine();
+}
+
+static void forEachRenderedBoxBetween(const RenderedPosition& first, const RenderedPosition& second, NOESCAPE const Function<IterationStatus(InlineIterator::LeafBoxIterator)>& callback)
+{
+    if (first.isNull()) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
+
+    if (second.isNull()) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
+
+    if (first.lineBox().atEnd()) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
+
+    if (first.box() == second.box()) {
+        callback(first.box());
+        return;
+    }
+
+    bool foundOneEndpoint = false;
+    for (auto box = first.lineBox()->lineLeftmostLeafBox(); box; box = box->nextLineRightwardOnLine()) {
+        bool atFirstEndpoint = box == first.box();
+        bool atSecondEndpoint = box == second.box();
+        bool atEndpoint = atFirstEndpoint || atSecondEndpoint;
+        bool atLastEndpoint = atEndpoint && foundOneEndpoint;
+        if (!atEndpoint && !foundOneEndpoint)
+            continue;
+
+        foundOneEndpoint = true;
+
+        bool shouldSkipBox = [&] {
+            if (!atEndpoint)
+                return false;
+
+            auto& position = (atFirstEndpoint ? first : second);
+            return atLastEndpoint ? position.atLeftmostOffsetInBox() : position.atRightmostOffsetInBox();
+        }();
+
+        if (shouldSkipBox)
+            continue;
+
+        if (callback(box) == IterationStatus::Done)
+            return;
+
+        if (atLastEndpoint)
+            return;
+    }
+}
+
+PositionRange positionsForRange(const SimpleRange& range)
+{
+    return {
+        makeContainerOffsetPosition(range.start).downstream(),
+        makeContainerOffsetPosition(range.end).upstream()
+    };
+}
+
+static InlineIterator::LeafBoxIterator boxWithMinimumBidiLevelBetween(const RenderedPosition& start, const RenderedPosition& end)
+{
+    InlineIterator::LeafBoxIterator result;
+    forEachRenderedBoxBetween(start, end, [&](auto box) {
+        if (!result || box->bidiLevel() < result->bidiLevel())
+            result = box;
+        return IterationStatus::Continue;
+    });
+    return result;
+}
+
+TextDirection primaryDirectionForSingleLineRange(const Position& start, const Position& end)
+{
+    ASSERT(inSameLine(start, end));
+
+    RenderedPosition renderedStart { start, Affinity::Downstream };
+    RenderedPosition renderedEnd { end, Affinity::Upstream };
+
+    auto direction = start.primaryDirection();
+    if (renderedStart.isNull() || renderedEnd.isNull())
+        return direction;
+
+    if (auto box = boxWithMinimumBidiLevelBetween(renderedStart, renderedEnd))
+        return box->direction();
+
+    return direction;
+}
+
+static std::optional<SimpleRange> makeVisuallyContiguousIfNeeded(const SimpleRange& range, OptionSet<RangeEndpointsToAdjust> endpoints, SelectionExtentMovement movement)
+{
+    if (range.collapsed())
+        return std::nullopt;
+
+    auto [start, end] = positionsForRange(range);
+    auto firstLineDirection = TextDirection::LTR;
+    RenderedPosition renderedStart { start };
+    if (renderedStart.isNull() || renderedStart.lineBox().atEnd())
+        return std::nullopt;
+
+    auto lastLineDirection = TextDirection::LTR;
+    RenderedPosition renderedEnd { end };
+    if (renderedEnd.isNull() || renderedEnd.lineBox().atEnd())
+        return std::nullopt;
+
+    if (renderedStart.box() == renderedEnd.box())
+        return std::nullopt;
+
+    auto bidiLevelAtStart = renderedStart.box()->bidiLevel();
+    auto bidiLevelAtEnd = renderedEnd.box()->bidiLevel();
+    auto targetBidiLevelAtStart = bidiLevelAtStart;
+    auto targetBidiLevelAtEnd = bidiLevelAtEnd;
+    std::optional<BoundaryPoint> adjustedStart;
+    std::optional<BoundaryPoint> adjustedEnd;
+    if (inSameLine(start, end)) {
+        if (auto box = boxWithMinimumBidiLevelBetween(renderedStart, renderedEnd)) {
+            targetBidiLevelAtStart = box->bidiLevel();
+            targetBidiLevelAtEnd = targetBidiLevelAtStart;
+            firstLineDirection = box->direction();
+            lastLineDirection = firstLineDirection;
+        }
+    } else {
+        bool firstLineOnlyContainsSelectedTextInOppositeDirection = true;
+        firstLineDirection = start.primaryDirection();
+        std::optional<BoundaryPoint> firstPositionForSelectedTextInOppositeDirectionOnFirstLine;
+        for (auto box = renderedStart.box(); box; box = advanceInDirection(box, firstLineDirection, BoxIterationDirection::SameAsLine)) {
+            targetBidiLevelAtStart = std::min(targetBidiLevelAtStart, box->bidiLevel());
+
+            if (box->direction() == firstLineDirection)
+                firstLineOnlyContainsSelectedTextInOppositeDirection = false;
+
+            if (!firstLineOnlyContainsSelectedTextInOppositeDirection)
+                continue;
+
+            if (RefPtr node = box->renderer().node()) {
+                if (box->isText())
+                    firstPositionForSelectedTextInOppositeDirectionOnFirstLine.emplace(node.releaseNonNull(), box->minimumCaretOffset());
+                else
+                    firstPositionForSelectedTextInOppositeDirectionOnFirstLine = makeBoundaryPointBeforeNode(node.releaseNonNull());
+            }
+        }
+
+        if (firstLineOnlyContainsSelectedTextInOppositeDirection)
+            adjustedStart = WTF::move(firstPositionForSelectedTextInOppositeDirectionOnFirstLine);
+
+        bool lastLineOnlyContainsSelectedTextInOppositeDirection = true;
+        lastLineDirection = end.primaryDirection();
+        std::optional<BoundaryPoint> lastPositionForSelectedTextInOppositeDirectionOnLastLine;
+        for (auto box = renderedEnd.box(); box; box = advanceInDirection(box, lastLineDirection, BoxIterationDirection::OppositeOfLine)) {
+            targetBidiLevelAtEnd = std::min(targetBidiLevelAtEnd, box->bidiLevel());
+
+            if (box->direction() == lastLineDirection)
+                lastLineOnlyContainsSelectedTextInOppositeDirection = false;
+
+            if (!lastLineOnlyContainsSelectedTextInOppositeDirection)
+                continue;
+
+            if (RefPtr node = box->renderer().node()) {
+                if (box->isText())
+                    lastPositionForSelectedTextInOppositeDirectionOnLastLine.emplace(node.releaseNonNull(), box->maximumCaretOffset());
+                else
+                    lastPositionForSelectedTextInOppositeDirectionOnLastLine = makeBoundaryPointAfterNode(node.releaseNonNull());
+        }
+    }
+
+        if (lastLineOnlyContainsSelectedTextInOppositeDirection)
+            adjustedEnd = WTF::move(lastPositionForSelectedTextInOppositeDirectionOnLastLine);
+        }
+
+    if (!adjustedStart && bidiLevelAtStart > targetBidiLevelAtStart && start != logicalStartOfLine(start) && endpoints.contains(RangeEndpointsToAdjust::Start))
+        adjustedStart = findBidiBoundary(renderedStart, targetBidiLevelAtStart + 1, movement, firstLineDirection);
+
+    if (!adjustedEnd && bidiLevelAtEnd > targetBidiLevelAtEnd && end != logicalEndOfLine(end) && endpoints.contains(RangeEndpointsToAdjust::End))
+        adjustedEnd = findBidiBoundary(renderedEnd, targetBidiLevelAtEnd + 1, movement, lastLineDirection);
+
+    if (!adjustedStart && !adjustedEnd)
+        return std::nullopt;
+
+    auto adjustedRange = range;
+    if (adjustedStart)
+        adjustedRange.start = WTF::move(*adjustedStart);
+
+    if (adjustedEnd)
+        adjustedRange.end = WTF::move(*adjustedEnd);
+
+    if (!is_lt(treeOrder(adjustedRange.start, adjustedRange.end)))
+        return std::nullopt;
+
+    return adjustedRange;
+}
+
+SimpleRange adjustToVisuallyContiguousRange(const SimpleRange& range)
+{
+    return makeVisuallyContiguousIfNeeded(range, {
+        RangeEndpointsToAdjust::Start,
+        RangeEndpointsToAdjust::End
+    }, SelectionExtentMovement::Closest).value_or(range);
+}
+
+EnclosingLayerInfomation computeEnclosingLayer(const SimpleRange& range)
+{
+    auto [start, end] = positionsForRange(range);
+
+    if (start.isOrphan() || end.isOrphan())
+        return { };
+
+    if (!isEditablePosition(start) && range.collapsed())
+        return { };
+
+    auto findEnclosingLayer = [](const Position& position) -> RenderLayer* {
+        RefPtr container = position.containerNode();
+        if (!container)
+            return nullptr;
+
+        CheckedPtr renderer = container->renderer();
+        if (!renderer)
+            return nullptr;
+
+        return renderer->enclosingLayer();
+    };
+
+    auto [startLayer, endLayer] = [&] -> std::pair<CheckedPtr<RenderLayer>, CheckedPtr<RenderLayer>> {
+        if (RefPtr container = start.containerNode(); container && ImageOverlay::isInsideOverlay(*container)) {
+            RefPtr host = container->shadowHost();
+            if (!host) {
+                ASSERT_NOT_REACHED();
+                return { };
+            }
+
+            CheckedPtr renderer = host->renderer();
+            if (!renderer)
+                return { };
+
+            CheckedPtr enclosingLayer = renderer->enclosingLayer();
+            return { enclosingLayer, enclosingLayer };
+        }
+
+        return { findEnclosingLayer(start), findEnclosingLayer(end) };
+    }();
+
+    if (!startLayer)
+        return { };
+
+    if (!endLayer)
+        return { };
+
+    for (CheckedPtr layer = startLayer->commonAncestorWithLayer(*endLayer); layer; layer = layer->enclosingContainingBlockLayer(CrossFrameBoundaries::Yes)) {
+        if (!layer->isComposited())
+            continue;
+
+        RefPtr graphicsLayer = [layer] -> RefPtr<GraphicsLayer> {
+            auto* backing = layer->backing();
+            if (RefPtr scrolledContentsLayer = backing->scrolledContentsLayer())
+                return scrolledContentsLayer;
+
+            if (RefPtr foregroundLayer = backing->foregroundLayer())
+                return foregroundLayer;
+
+            if (backing->isFrameLayerWithTiledBacking())
+                return backing->parentForSublayers();
+
+            return backing->graphicsLayer();
+        }();
+
+        if (!graphicsLayer)
+            continue;
+
+        auto identifier = graphicsLayer->layerIDIgnoringStructuralLayer();
+        if (!identifier)
+            continue;
+
+        return { WTF::move(startLayer), WTF::move(endLayer), WTF::move(layer), WTF::move(graphicsLayer), WTF::move(identifier) };
+    }
+    return { };
+}
+
+void adjustVisibleExtentPreservingVisualContiguity(const VisiblePosition& base, VisiblePosition& extent, SelectionExtentMovement movement)
+{
+    auto start = makeBoundaryPoint(base.deepEquivalent());
+    auto end = makeBoundaryPoint(extent.deepEquivalent());
+    if (!start || !end)
+        return;
+
+    OptionSet<RangeEndpointsToAdjust> endpoints;
+    auto baseExtentOrder = treeOrder<ComposedTree>(*start, *end);
+    bool startIsMoving = is_gt(baseExtentOrder);
+    bool endIsMoving = is_lt(baseExtentOrder);
+    if (startIsMoving) {
+        std::swap(start, end);
+        endpoints.add(RangeEndpointsToAdjust::Start);
+    } else if (endIsMoving)
+        endpoints.add(RangeEndpointsToAdjust::End);
+    else
+        return;
+
+    auto adjustedRange = makeVisuallyContiguousIfNeeded({ WTF::move(*start), WTF::move(*end) }, endpoints, movement);
+    if (!adjustedRange)
+        return;
+
+    extent = { makeContainerOffsetPosition(startIsMoving ? adjustedRange->start : adjustedRange->end) };
+}
+
+bool crossesBidiTextBoundaryInSameLine(const VisiblePosition& position, const VisiblePosition& other)
+{
+    if (!inSameLine(position, other))
+        return false;
+
+    std::optional<unsigned char> currentLevel;
+    bool foundDifferentBidiLevel = false;
+    forEachRenderedBoxBetween(RenderedPosition { position }, RenderedPosition { other }, [&](auto box) {
+        auto bidiLevel = box->bidiLevel();
+        if (!currentLevel) {
+            currentLevel = bidiLevel;
+            return IterationStatus::Continue;
+        }
+
+        if (currentLevel == bidiLevel)
+            return IterationStatus::Continue;
+
+        foundDifferentBidiLevel = true;
+        return IterationStatus::Done;
+    });
+
+    return foundDifferentBidiLevel;
 }
 
 } // namespace WebCore

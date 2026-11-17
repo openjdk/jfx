@@ -67,7 +67,7 @@ struct _GError
  * respectively, but they should receive the private data type instead
  * of #GError.
  *
- * See [Extended #GError Domains][gerror-extended-domains] for an example.
+ * See [Extended #GError Domains](error-reporting.html#extended-gerror-domains) for an example.
  *
  * Since: 2.68
  */

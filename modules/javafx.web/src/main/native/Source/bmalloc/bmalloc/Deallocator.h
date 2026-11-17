@@ -25,12 +25,16 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
 #include "BExport.h"
 #include "FixedVector.h"
 #include "SmallPage.h"
 #include <mutex>
 
 #if !BUSE(LIBPAS)
+
+#include "ObjectType.h"
 
 namespace bmalloc {
 
@@ -82,3 +86,5 @@ inline void Deallocator::deallocate(void* object)
 } // namespace bmalloc
 
 #endif
+
+#endif // __cplusplus

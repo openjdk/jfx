@@ -25,19 +25,19 @@
 
 #pragma once
 
-#include "ColorGamut.h"
-#include "HdrMetadataType.h"
-#include "TransferFunction.h"
+#include <WebCore/ColorGamut.h>
+#include <WebCore/HdrMetadataType.h>
+#include <WebCore/TransferFunction.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 struct VideoConfiguration {
     String contentType;
-    uint32_t width;
-    uint32_t height;
-    uint64_t bitrate;
-    double framerate;
+    uint32_t width { };
+    uint32_t height { };
+    uint64_t bitrate { };
+    double framerate { };
     std::optional<bool> alphaChannel;
     std::optional<ColorGamut> colorGamut;
     std::optional<HdrMetadataType> hdrMetadataType;
@@ -54,7 +54,7 @@ inline VideoConfiguration VideoConfiguration::isolatedCopy() const &
 
 inline VideoConfiguration VideoConfiguration::isolatedCopy() &&
 {
-    return { WTFMove(contentType).isolatedCopy(), width, height, bitrate, framerate, alphaChannel, colorGamut, hdrMetadataType, transferFunction };
+    return { WTF::move(contentType).isolatedCopy(), width, height, bitrate, framerate, alphaChannel, colorGamut, hdrMetadataType, transferFunction };
 }
 
 } // namespace WebCore

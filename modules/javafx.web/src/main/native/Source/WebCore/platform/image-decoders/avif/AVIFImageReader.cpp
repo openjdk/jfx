@@ -30,11 +30,14 @@
 
 #include "AVIFImageReader.h"
 #include "AVIFImageDecoder.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(AVIFImageReader);
+
 AVIFImageReader::AVIFImageReader(RefPtr<AVIFImageDecoder>&& decoder)
-    : m_decoder(WTFMove(decoder))
+    : m_decoder(WTF::move(decoder))
     , m_avifDecoder(avifDecoderCreate())
 {
     // Allow the PixelInformationProperty ('pixi') to be missing in AV1 image
@@ -105,7 +108,7 @@ void AVIFImageReader::decodeFrame(size_t frameIndex, ScalableImageDecoderFrame& 
     decodedRGBImage.alphaPremultiplied = m_decoder->premultiplyAlpha();
     decodedRGBImage.format = AVIF_RGB_FORMAT_BGRA;
     decodedRGBImage.rowBytes = imageSize.width() * sizeof(uint32_t);
-    decodedRGBImage.pixels = reinterpret_cast<uint8_t*>(buffer.backingStore()->pixelAt(0, 0));
+    decodedRGBImage.pixels = reinterpret_cast<uint8_t*>(buffer.backingStore()->pixelsStartingAt(0, 0).data());
 
     if (avifImageYUVToRGB(m_avifDecoder->image, &decodedRGBImage) != AVIF_RESULT_OK) {
         m_decoder->setFailed();

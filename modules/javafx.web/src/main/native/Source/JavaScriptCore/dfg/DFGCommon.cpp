@@ -27,6 +27,7 @@
 #include "DFGCommon.h"
 
 #include <wtf/Lock.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/PrintStream.h>
 
 #if ENABLE(DFG_JIT)

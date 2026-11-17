@@ -26,13 +26,18 @@
 #pragma once
 
 #if ENABLE(WEB_AUTHN)
-#include "AttestationConveyancePreference.h"
-#include "AuthenticationExtensionsClientInputs.h"
-#include "BufferSource.h"
-#include "PublicKeyCredentialDescriptor.h"
-#include "PublicKeyCredentialType.h"
-#include "ResidentKeyRequirement.h"
-#include "UserVerificationRequirement.h"
+#include <WebCore/AttestationConveyancePreference.h>
+#include <WebCore/AuthenticationExtensionsClientInputs.h>
+#include <WebCore/AuthenticatorSelectionCriteria.h>
+#include <WebCore/BufferSource.h>
+#include <WebCore/IDLTypes.h>
+#include <WebCore/PublicKeyCredentialDescriptor.h>
+#include <WebCore/PublicKeyCredentialParameters.h>
+#include <WebCore/PublicKeyCredentialRpEntity.h>
+#include <WebCore/PublicKeyCredentialType.h>
+#include <WebCore/PublicKeyCredentialUserEntity.h>
+#include <WebCore/ResidentKeyRequirement.h>
+#include <WebCore/UserVerificationRequirement.h>
 #include <wtf/Forward.h>
 #endif // ENABLE(WEB_AUTHN)
 
@@ -42,38 +47,11 @@ enum class AuthenticatorAttachment : uint8_t;
 
 struct PublicKeyCredentialCreationOptions {
 #if ENABLE(WEB_AUTHN)
-    struct Entity {
-        String name;
-        String icon;
-    };
-
-    struct RpEntity : public Entity {
-        mutable std::optional<String> id;
-    };
-
-    struct UserEntity : public Entity {
-        BufferSource id;
-        String displayName;
-    };
-
-    struct Parameters {
-        PublicKeyCredentialType type;
-        int64_t alg;
-    };
-
-    struct AuthenticatorSelectionCriteria {
-        std::optional<AuthenticatorAttachment> authenticatorAttachment;
-        // residentKey replaces requireResidentKey, see: https://www.w3.org/TR/webauthn-2/#dictionary-authenticatorSelection
-        std::optional<ResidentKeyRequirement> residentKey;
-        bool requireResidentKey { false };
-        UserVerificationRequirement userVerification { UserVerificationRequirement::Preferred };
-    };
-
-    RpEntity rp;
-    UserEntity user;
+    PublicKeyCredentialRpEntity rp;
+    PublicKeyCredentialUserEntity user;
 
     BufferSource challenge;
-    mutable Vector<Parameters> pubKeyCredParams;
+    mutable Vector<PublicKeyCredentialParameters> pubKeyCredParams;
 
     std::optional<unsigned> timeout;
     Vector<PublicKeyCredentialDescriptor> excludeCredentials;

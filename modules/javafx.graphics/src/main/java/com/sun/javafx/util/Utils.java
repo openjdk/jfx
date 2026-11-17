@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -215,7 +215,7 @@ public class Utils {
      **************************************************************************/
 
     /**
-     * Calculates a perceptual brightness for a color between 0.0 black and 1.0 while
+     * Calculates a perceptual brightness for a color between 0.0 (black) and 1.0 (white).
      */
     public static double calculateBrightness(Color color) {
           return  (0.3*color.getRed()) + (0.59*color.getGreen()) + (0.11*color.getBlue());

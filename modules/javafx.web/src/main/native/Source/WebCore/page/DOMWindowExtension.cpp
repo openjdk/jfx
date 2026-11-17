@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2012-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,7 +30,7 @@
 #include "Document.h"
 #include "FrameLoader.h"
 #include "LocalDOMWindow.h"
-#include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "LocalFrameLoaderClient.h"
 #include <wtf/Ref.h>
 
@@ -54,7 +54,8 @@ DOMWindowExtension::~DOMWindowExtension()
 
 LocalFrame* DOMWindowExtension::frame() const
 {
-    return m_window ? m_window->frame() : nullptr;
+    RefPtr window = m_window.get();
+    return window ? window->localFrame() : nullptr;
 }
 
 RefPtr<LocalFrame> DOMWindowExtension::protectedFrame() const
@@ -69,20 +70,20 @@ void DOMWindowExtension::suspendForBackForwardCache()
     Ref protectedThis { *this };
 
     Ref frame = *this->frame();
-    frame->checkedLoader()->client().dispatchWillDisconnectDOMWindowExtensionFromGlobalObject(this);
+    frame->loader().client().dispatchWillDisconnectDOMWindowExtensionFromGlobalObject(this);
 
-    m_disconnectedFrame = WTFMove(frame);
+    m_disconnectedFrame = frame.get();
 }
 
 void DOMWindowExtension::resumeFromBackForwardCache()
 {
     ASSERT(frame());
     ASSERT(m_disconnectedFrame == frame());
-    ASSERT(frame()->document()->domWindow() == m_window);
+    ASSERT(frame()->document()->window() == m_window);
 
     m_disconnectedFrame = nullptr;
 
-    protectedFrame()->checkedLoader()->client().dispatchDidReconnectDOMWindowExtensionToGlobalObject(this);
+    protectedFrame()->loader().client().dispatchDidReconnectDOMWindowExtensionToGlobalObject(this);
 }
 
 void DOMWindowExtension::willDestroyGlobalObjectInCachedFrame()
@@ -93,8 +94,8 @@ void DOMWindowExtension::willDestroyGlobalObjectInCachedFrame()
     // while there is still work to do.
     Ref protectedThis { *this };
 
-    if (RefPtr disconnectedFrame = m_disconnectedFrame)
-        disconnectedFrame->checkedLoader()->client().dispatchWillDestroyGlobalObjectForDOMWindowExtension(this);
+    if (RefPtr disconnectedFrame = m_disconnectedFrame.get())
+        disconnectedFrame->loader().client().dispatchWillDestroyGlobalObjectForDOMWindowExtension(this);
     m_disconnectedFrame = nullptr;
 
     // DOMWindowExtension lifetime isn't tied directly to the LocalDOMWindow itself so it is important that it unregister
@@ -116,7 +117,7 @@ void DOMWindowExtension::willDestroyGlobalObjectInFrame()
     if (!m_wasDetached) {
         RefPtr frame = this->frame();
         ASSERT(frame);
-        frame->checkedLoader()->client().dispatchWillDestroyGlobalObjectForDOMWindowExtension(this);
+        frame->loader().client().dispatchWillDestroyGlobalObjectForDOMWindowExtension(this);
     }
 
     // DOMWindowExtension lifetime isn't tied directly to the LocalDOMWindow itself so it is important that it unregister
@@ -138,7 +139,7 @@ void DOMWindowExtension::willDetachGlobalObjectFromFrame()
 
     RefPtr frame = this->frame();
     ASSERT(frame);
-    frame->checkedLoader()->client().dispatchWillDestroyGlobalObjectForDOMWindowExtension(this);
+    frame->loader().client().dispatchWillDestroyGlobalObjectForDOMWindowExtension(this);
 
     m_wasDetached = true;
 }

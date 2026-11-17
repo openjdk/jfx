@@ -30,6 +30,7 @@
 
 #include "ErrorEvent.h"
 #include "EventNames.h"
+#include "ExceptionOr.h"
 #include "JSDOMGlobalObject.h"
 #include "MessageChannel.h"
 #include "RTCRtpScriptTransformer.h"
@@ -40,7 +41,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RTCRtpScriptTransform);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RTCRtpScriptTransform);
 
 ExceptionOr<Ref<RTCRtpScriptTransform>> RTCRtpScriptTransform::create(JSC::JSGlobalObject& state, Worker& worker, JSC::JSValue options, Vector<JSC::Strong<JSC::JSObject>>&& transfer)
 {
@@ -52,11 +53,11 @@ ExceptionOr<Ref<RTCRtpScriptTransform>> RTCRtpScriptTransform::create(JSC::JSGlo
         return Exception { ExceptionCode::InvalidStateError, "Invalid context"_s };
 
     Vector<Ref<MessagePort>> transferredPorts;
-    auto serializedOptions = SerializedScriptValue::create(state, options, WTFMove(transfer), transferredPorts);
+    auto serializedOptions = SerializedScriptValue::create(state, options, WTF::move(transfer), transferredPorts);
     if (serializedOptions.hasException())
         return serializedOptions.releaseException();
 
-    auto channels = MessagePort::disentanglePorts(WTFMove(transferredPorts));
+    auto channels = MessagePort::disentanglePorts(WTF::move(transferredPorts));
     if (channels.hasException())
         return channels.releaseException();
 
@@ -70,7 +71,7 @@ ExceptionOr<Ref<RTCRtpScriptTransform>> RTCRtpScriptTransform::create(JSC::JSGlo
 
 RTCRtpScriptTransform::RTCRtpScriptTransform(ScriptExecutionContext& context, Ref<Worker>&& worker)
     : ActiveDOMObject(&context)
-    , m_worker(WTFMove(worker))
+    , m_worker(WTF::move(worker))
 {
 }
 
@@ -114,7 +115,7 @@ void RTCRtpScriptTransform::initializeTransformer(RTCRtpTransformBackend& backen
 {
     m_isAttached = true;
     if (!setupTransformer(backend))
-        m_backend = &backend;
+        m_backend = backend;
 }
 
 bool RTCRtpScriptTransform::setupTransformer(Ref<RTCRtpTransformBackend>&& backend)
@@ -123,20 +124,18 @@ bool RTCRtpScriptTransform::setupTransformer(Ref<RTCRtpTransformBackend>&& backe
     if (!m_isTransformerInitialized)
         return false;
 
-    m_worker->postTaskToWorkerGlobalScope([transformer = m_transformer, backend = WTFMove(backend)](auto&) mutable {
+    m_worker->postTaskToWorkerGlobalScope([transformer = m_transformer, backend = WTF::move(backend)](auto&) mutable {
         if (transformer)
-            transformer->start(WTFMove(backend));
+            transformer->start(WTF::move(backend));
     });
     return true;
 }
 
 void RTCRtpScriptTransform::clear(RTCRtpScriptTransformer::ClearCallback clearCallback)
 {
-    m_isAttached = false;
-
     Locker locker { m_transformerLock };
     m_isTransformerInitialized = false;
-    m_worker->postTaskToWorkerGlobalScope([transformer = WTFMove(m_transformer), clearCallback](auto&) mutable {
+    m_worker->postTaskToWorkerGlobalScope([transformer = WTF::move(m_transformer), clearCallback](auto&) mutable {
         if (transformer)
             transformer->clear(clearCallback);
     });

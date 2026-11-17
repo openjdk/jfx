@@ -37,7 +37,7 @@ static const Seconds pendingActionInterval { 100_ms };
 
 MediaPlaybackTargetPicker::MediaPlaybackTargetPicker(Client& client)
     : m_client(&client)
-    , m_pendingActionTimer(RunLoop::main(), this, &MediaPlaybackTargetPicker::pendingActionTimerFired)
+    , m_pendingActionTimer(RunLoop::mainSingleton(), "MediaPlaybackTargetPicker::PendingActionTimer"_s, this, &MediaPlaybackTargetPicker::pendingActionTimerFired)
 {
 }
 
@@ -73,7 +73,7 @@ void MediaPlaybackTargetPicker::addPendingAction(PendingActionFlags action)
     m_pendingActionTimer.startOneShot(pendingActionInterval);
 }
 
-void MediaPlaybackTargetPicker::showPlaybackTargetPicker(PlatformView*, const FloatRect&, bool, bool)
+void MediaPlaybackTargetPicker::showPlaybackTargetPicker(CocoaView*, const FloatRect&, bool, bool)
 {
     ASSERT_NOT_REACHED();
 }

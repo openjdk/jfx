@@ -25,9 +25,10 @@
 
 #pragma once
 
-#include "MediaPlayerEnums.h"
+#include <WebCore/MediaPlayerEnums.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/text/StringHash.h>
 
@@ -36,14 +37,14 @@ namespace WebCore {
 class ContentType;
 
 class WEBCORE_EXPORT MIMETypeCache {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(MIMETypeCache, WEBCORE_EXPORT);
 public:
     MIMETypeCache() = default;
     virtual ~MIMETypeCache() = default;
 
     virtual bool isAvailable() const;
     virtual MediaPlayerEnums::SupportsType canDecodeType(const String&);
-    virtual HashSet<String>& supportedTypes();
+    virtual HashSet<String> supportedTypes();
 
     bool isEmpty() const;
     bool supportsContainerType(const String&);
@@ -52,6 +53,10 @@ protected:
     void addSupportedTypes(const Vector<String>&);
 
 private:
+    void ensureSupportedTypes();
+    std::optional<MediaPlayerEnums::SupportsType> getCachedResult(const String&) const;
+    void addCachedResult(const String&, MediaPlayerEnums::SupportsType);
+
     virtual bool isStaticContainerType(StringView);
     virtual bool isUnsupportedContainerType(const String&);
     virtual void initializeCache(HashSet<String>&);
@@ -59,8 +64,11 @@ private:
 
     bool shouldOverrideExtendedType(const ContentType&);
 
-    std::optional<HashSet<String>> m_supportedTypes;
-    std::optional<HashMap<String, MediaPlayerEnums::SupportsType>> m_cachedResults;
+    mutable Lock m_supportedTypesLock;
+    std::optional<HashSet<String>> m_supportedTypes WTF_GUARDED_BY_LOCK(m_supportedTypesLock);
+
+    mutable Lock m_cachedResultsLock;
+    std::optional<HashMap<String, MediaPlayerEnums::SupportsType>> m_cachedResults WTF_GUARDED_BY_LOCK(m_cachedResultsLock);
 };
 
 } // namespace WebCore

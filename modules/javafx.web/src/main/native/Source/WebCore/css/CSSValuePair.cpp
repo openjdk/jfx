@@ -33,27 +33,27 @@
 namespace WebCore {
 
 CSSValuePair::CSSValuePair(ValueSeparator separator, Ref<CSSValue> first, Ref<CSSValue> second, IdenticalValueSerialization serialization)
-    : CSSValue(ValuePairClass)
+    : CSSValue(ClassType::ValuePair)
     , m_coalesceIdenticalValues(serialization != IdenticalValueSerialization::DoNotCoalesce)
-    , m_first(WTFMove(first))
-    , m_second(WTFMove(second))
+    , m_first(WTF::move(first))
+    , m_second(WTF::move(second))
 {
     m_valueSeparator = separator;
 }
 
 Ref<CSSValuePair> CSSValuePair::create(Ref<CSSValue> first, Ref<CSSValue> second)
 {
-    return adoptRef(*new CSSValuePair(SpaceSeparator, WTFMove(first), WTFMove(second), IdenticalValueSerialization::Coalesce));
+    return adoptRef(*new CSSValuePair(SpaceSeparator, WTF::move(first), WTF::move(second), IdenticalValueSerialization::Coalesce));
 }
 
 Ref<CSSValuePair> CSSValuePair::createSlashSeparated(Ref<CSSValue> first, Ref<CSSValue> second)
 {
-    return adoptRef(*new CSSValuePair(SlashSeparator, WTFMove(first), WTFMove(second), IdenticalValueSerialization::DoNotCoalesce));
+    return adoptRef(*new CSSValuePair(SlashSeparator, WTF::move(first), WTF::move(second), IdenticalValueSerialization::DoNotCoalesce));
 }
 
 Ref<CSSValuePair> CSSValuePair::createNoncoalescing(Ref<CSSValue> first, Ref<CSSValue> second)
 {
-    return adoptRef(*new CSSValuePair(SpaceSeparator, WTFMove(first), WTFMove(second), IdenticalValueSerialization::DoNotCoalesce));
+    return adoptRef(*new CSSValuePair(SpaceSeparator, WTF::move(first), WTF::move(second), IdenticalValueSerialization::DoNotCoalesce));
 }
 
 bool CSSValuePair::canBeCoalesced() const
@@ -61,10 +61,10 @@ bool CSSValuePair::canBeCoalesced() const
     return m_coalesceIdenticalValues && m_first->equals(m_second);
 }
 
-String CSSValuePair::customCSSText() const
+String CSSValuePair::customCSSText(const CSS::SerializationContext& context) const
 {
-    String first = m_first->cssText();
-    String second = m_second->cssText();
+    auto first = m_first->cssText(context);
+    auto second = m_second->cssText(context);
     if (m_coalesceIdenticalValues && first == second)
         return first;
     return makeString(first, separatorCSSText(), second);

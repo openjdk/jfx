@@ -31,15 +31,18 @@
 #include "MIMESniffer.h"
 #include "ResourceRequest.h"
 #include <limits.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MediaResourceSniffer);
 
 Ref<MediaResourceSniffer> MediaResourceSniffer::create(PlatformMediaResourceLoader& loader, ResourceRequest&& request, std::optional<size_t> maxSize)
 {
     if (maxSize)
         request.addHTTPHeaderField(HTTPHeaderName::Range, makeString("bytes="_s, 0, '-', *maxSize));
-    auto resource = loader.requestResource(WTFMove(request), PlatformMediaResourceLoader::LoadOption::DisallowCaching);
+    auto resource = loader.requestResource(WTF::move(request), PlatformMediaResourceLoader::LoadOption::DisallowCaching);
     if (!resource)
         return adoptRef(*new MediaResourceSniffer());
     Ref sniffer = adoptRef(*new MediaResourceSniffer(*resource , maxSize.value_or(SIZE_MAX)));
@@ -54,7 +57,7 @@ MediaResourceSniffer::MediaResourceSniffer()
 }
 
 MediaResourceSniffer::MediaResourceSniffer(Ref<PlatformMediaResource>&& resource, size_t maxSize)
-    : m_resource(WTFMove(resource))
+    : m_resource(WTF::move(resource))
     , m_maxSize(maxSize)
 {
 }
@@ -73,21 +76,21 @@ void MediaResourceSniffer::cancel()
     m_content.reset();
 }
 
-MediaResourceSniffer::Promise& MediaResourceSniffer::promise() const
+Ref<MediaResourceSniffer::Promise> MediaResourceSniffer::promise() const
 {
-    return m_producer.promise().get();
+    return m_producer.promise();
 }
 
 void MediaResourceSniffer::dataReceived(PlatformMediaResource&, const SharedBuffer& buffer)
 {
     m_received += buffer.size();
     m_content.append(buffer);
-    auto contiguousBuffer = m_content.get()->makeContiguous();
+    auto contiguousBuffer = m_content.protectedBuffer()->makeContiguous();
     auto mimeType = MIMESniffer::getMIMETypeFromContent(contiguousBuffer->span());
     if (mimeType.isEmpty() && m_received < m_maxSize)
         return;
     if (!m_producer.isSettled())
-        m_producer.resolve(ContentType { WTFMove(mimeType) });
+        m_producer.resolve(ContentType { WTF::move(mimeType) });
     cancel();
 }
 
@@ -102,9 +105,9 @@ void MediaResourceSniffer::loadFinished(PlatformMediaResource&, const NetworkLoa
 {
     if (m_producer.isSettled())
         return;
-    Ref contiguousBuffer = m_content.takeAsContiguous();
+    Ref contiguousBuffer = m_content.takeBufferAsContiguous();
     auto mimeType = MIMESniffer::getMIMETypeFromContent(contiguousBuffer->span());
-    m_producer.resolve(ContentType { WTFMove(mimeType) });
+    m_producer.resolve(ContentType { WTF::move(mimeType) });
     cancel();
 }
 

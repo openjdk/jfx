@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -33,6 +33,7 @@
 
 #pragma once
 
+#include <wtf/StdLibExtras.h>
 #include <wtf/dragonbox/dragonbox.h>
 
 namespace WTF {
@@ -42,27 +43,25 @@ namespace dragonbox {
 namespace detail {
 
 template <class Float, class FloatTraits, Mode mode, PrintTrailingZero print_trailing_zero>
-WTF_EXPORT_PRIVATE extern char* to_chars_impl(typename FloatTraits::carrier_uint significand, int32_t exponent, char* buffer);
-WTF_EXPORT_PRIVATE extern char* to_shortest(const uint64_t significand, int32_t exponent, char* buffer);
+WTF_EXPORT_PRIVATE extern std::span<char> to_chars_impl(typename FloatTraits::carrier_uint significand, int32_t exponent, std::span<char> buffer);
+WTF_EXPORT_PRIVATE extern std::span<char> to_shortest(const uint64_t significand, int32_t exponent, std::span<char> buffer);
 
 template <>
-WTF_EXPORT_PRIVATE char* to_chars_impl<double, default_float_traits<double>, Mode::ToExponential, PrintTrailingZero::No>(uint64_t significand, int32_t exponent, char* buffer);
+WTF_EXPORT_PRIVATE std::span<char> to_chars_impl<double, default_float_traits<double>, Mode::ToExponential, PrintTrailingZero::No>(uint64_t significand, int32_t exponent, std::span<char> buffer);
 
 template <>
-WTF_EXPORT_PRIVATE char* to_chars_impl<float, default_float_traits<float>, Mode::ToExponential, PrintTrailingZero::No>(uint32_t significand, int32_t exponent, char* buffer);
+WTF_EXPORT_PRIVATE std::span<char> to_chars_impl<float, default_float_traits<float>, Mode::ToExponential, PrintTrailingZero::No>(uint32_t significand, int32_t exponent, std::span<char> buffer);
 
 // Avoid needless ABI overhead incurred by tag dispatch.
 template<Mode mode, class PolicyHolder, class Float, class FloatTraits>
-char* to_chars_n_impl(float_bits<Float, FloatTraits> br, char* buffer) noexcept
+std::span<char> to_chars_n_impl(float_bits<Float, FloatTraits> br, std::span<char> buffer) noexcept
 {
     auto const exponent_bits = br.extract_exponent_bits();
     auto const s = br.remove_exponent_bits(exponent_bits);
 
     if (br.is_finite(exponent_bits)) {
-        if (s.is_negative() && br.is_nonzero()) {
-            *buffer = '-';
-            ++buffer;
-        }
+        if (s.is_negative() && br.is_nonzero())
+            consume(buffer) = '-';
         if (br.is_nonzero()) {
             auto result = to_decimal<Float, FloatTraits>(s,
                 exponent_bits,
@@ -78,37 +77,35 @@ char* to_chars_n_impl(float_bits<Float, FloatTraits> br, char* buffer) noexcept
             case Mode::ToExponential:
                 return to_chars_impl<Float, FloatTraits, Mode::ToExponential, PrintTrailingZero::No>(result.significand, result.exponent, buffer);
             default:
-                return nullptr;
+                return { };
             }
         } else {
             switch (mode) {
             case Mode::ToShortest:
-                *buffer++ = '0';
+                consume(buffer) = '0';
                 return buffer;
             case Mode::ToExponential:
-                memcpy(buffer, "0e+0", 4);
-                return buffer + 4;
+                memcpySpan(buffer, "0e+0"_span);
+                return buffer.subspan(4);
             default:
-                return nullptr;
+                return { };
             }
         }
     } else {
         if (s.has_all_zero_significand_bits()) {
-            if (s.is_negative()) {
-                *buffer = '-';
-                ++buffer;
+            if (s.is_negative())
+                consume(buffer) = '-';
+            memcpySpan(buffer, "Infinity"_span);
+            return buffer.subspan(8);
             }
-            memcpy(buffer, "Infinity", 8);
-            return buffer + 8;
-        }
-        memcpy(buffer, "NaN", 3);
-        return buffer + 3;
+        memcpySpan(buffer, "NaN"_span);
+        return buffer.subspan(3);
     }
 }
 
 // Returns the next-to-end position
 template<Mode mode, class Float, class FloatTraits = default_float_traits<Float>, class... Policies>
-char* to_chars_n(Float x, char* buffer, Policies... policies) noexcept
+std::span<char> to_chars_n(Float x, std::span<char> buffer, Policies... policies) noexcept
 {
     // using namespace detail::policy_impl;
     using policy_holder = decltype(make_policy_holder(
@@ -122,11 +119,11 @@ char* to_chars_n(Float x, char* buffer, Policies... policies) noexcept
 
 // Null-terminate and bypass the return value of fp_to_chars_n
 template<Mode mode, class Float, class FloatTraits = default_float_traits<Float>, class... Policies>
-char* to_chars(Float x, char* buffer, Policies... policies) noexcept
+std::span<char> to_chars(Float x, std::span<char> buffer, Policies... policies) noexcept
 {
-    auto ptr = to_chars_n<mode, Float, FloatTraits>(x, buffer, policies...);
-    *ptr = '\0';
-    return ptr;
+    auto cursor = to_chars_n<mode, Float, FloatTraits>(x, buffer, policies...);
+    cursor[0] = '\0';
+    return cursor;
 }
 
 } // namespace detail
@@ -137,22 +134,22 @@ typedef WTF::double_conversion::StringBuilder StringBuilder;
 template<class Float>
 void ToExponential(Float value, StringBuilder* result_builder)
 {
-    ASSERT((std::is_same<Float, double>::value) || (std::is_same<Float, float>::value));
+    static_assert(std::is_same_v<Float, double> || std::is_same_v<Float, float>);
     constexpr size_t buffer_length = 1 + (std::is_same<Float, float>::value ? to_exponential_max_string_length<ieee754_binary32>() : to_exponential_max_string_length<ieee754_binary64>());
-    char buffer[buffer_length];
-    detail::to_chars<Mode::ToExponential>(value, buffer);
-    result_builder->AddString(buffer);
+    std::array<char, buffer_length> buffer;
+    auto cursor = detail::to_chars_n<Mode::ToExponential>(value, std::span { buffer });
+    result_builder->AddSubstring(std::span { buffer }.first(cursor.data() - buffer.data()));
 }
 
 // See `ToShortest` in double-conversion.h for detailed definitons.
 template<class Float>
 void ToShortest(Float value, StringBuilder* result_builder)
 {
-    ASSERT((std::is_same<Float, double>::value) || (std::is_same<Float, float>::value));
+    static_assert(std::is_same_v<Float, double> || std::is_same_v<Float, float>);
     constexpr size_t buffer_length = 1 + (std::is_same<Float, float>::value ? max_string_length<ieee754_binary32>() : max_string_length<ieee754_binary64>());
-    char buffer[buffer_length];
-    detail::to_chars<Mode::ToShortest>(value, buffer);
-    result_builder->AddString(buffer);
+    std::array<char, buffer_length> buffer;
+    auto cursor = detail::to_chars_n<Mode::ToShortest>(value, std::span { buffer });
+    result_builder->AddSubstring(std::span { buffer }.first(cursor.data() - buffer.data()));
 }
 
 } // namespace dragonbox

@@ -28,8 +28,16 @@
 #include "CachedResourceLoader.h"
 #include "CachedResourceRequest.h"
 #include "Document.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(XSLImportRule);
+
+Ref<XSLImportRule> XSLImportRule::create(XSLStyleSheet& parentSheet, const String& href)
+{
+    return adoptRef(*new XSLImportRule(parentSheet, href));
+}
 
 XSLImportRule::XSLImportRule(XSLStyleSheet& parent, const String& href)
     : m_parentStyleSheet(parent)
@@ -40,7 +48,7 @@ XSLImportRule::XSLImportRule(XSLStyleSheet& parent, const String& href)
 XSLImportRule::~XSLImportRule()
 {
     if (m_styleSheet)
-        m_styleSheet->setParentStyleSheet(nullptr);
+        protectedStyleSheet()->setParentStyleSheet(nullptr);
 
     if (m_cachedSheet)
         m_cachedSheet->removeClient(*this);
@@ -49,13 +57,13 @@ XSLImportRule::~XSLImportRule()
 void XSLImportRule::setXSLStyleSheet(const String& href, const URL& baseURL, const String& sheet)
 {
     if (m_styleSheet)
-        m_styleSheet->setParentStyleSheet(nullptr);
+        protectedStyleSheet()->setParentStyleSheet(nullptr);
 
     // FIXME: parentStyleSheet() should never be null here.
     RefPtr parent = parentStyleSheet();
     m_styleSheet = XSLStyleSheet::create(parent.get(), href, baseURL);
 
-    m_styleSheet->parseString(sheet);
+    protectedStyleSheet()->parseString(sheet);
     m_loading = false;
 
     if (parent)
@@ -93,7 +101,7 @@ void XSLImportRule::loadSheet()
 
     auto options = CachedResourceLoader::defaultCachedResourceOptions();
     options.mode = FetchOptions::Mode::SameOrigin;
-    m_cachedSheet = cachedResourceLoader->requestXSLStyleSheet({ResourceRequest(cachedResourceLoader->document()->completeURL(absHref)), options}).value_or(nullptr);
+    m_cachedSheet = cachedResourceLoader->requestXSLStyleSheet({ ResourceRequest(cachedResourceLoader->protectedDocument()->completeURL(absHref)), options }).value_or(nullptr);
 
     if (m_cachedSheet) {
         m_cachedSheet->addClient(*this);

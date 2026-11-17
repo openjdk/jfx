@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,7 @@
 
 #include "MediaSessionCoordinatorPrivate.h"
 #include <wtf/RefCounted.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -37,7 +38,7 @@ class ScriptExecutionContext;
 class StringCallback;
 
 class MockMediaSessionCoordinator : public MediaSessionCoordinatorPrivate, public CanMakeWeakPtr<MockMediaSessionCoordinator> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(MockMediaSessionCoordinator);
 public:
     static Ref<MockMediaSessionCoordinator> create(ScriptExecutionContext&, RefPtr<StringCallback>&&);
 
@@ -66,7 +67,7 @@ private:
 
     std::optional<Exception> result() const;
 
-    Ref<ScriptExecutionContext> m_context;
+    const Ref<ScriptExecutionContext> m_context;
     RefPtr<StringCallback> m_stateChangeListener;
     bool m_failCommands { false };
 };

@@ -42,31 +42,30 @@ enum ShouldIncludeTypingStyle {
 
 class ApplyStyleCommand : public CompositeEditCommand {
 public:
-    enum class PropertyLevel : bool { Default, ForceBlock };
     enum class InlineStyleRemovalMode : uint8_t { IfNeeded, Always, None };
     enum class AddStyledElement : bool { No, Yes };
     typedef bool (*IsInlineElementToRemoveFunction)(const Element*);
 
-    static Ref<ApplyStyleCommand> create(Ref<Document>&& document, const EditingStyle* style, EditAction action = EditAction::ChangeAttributes, PropertyLevel level = PropertyLevel::Default)
+    static Ref<ApplyStyleCommand> create(Ref<Document>&& document, const EditingStyle* style, EditAction action = EditAction::ChangeAttributes, ApplyStylePropertyLevel level = ApplyStylePropertyLevel::Default)
     {
-        return adoptRef(*new ApplyStyleCommand(WTFMove(document), style, action, level));
+        return adoptRef(*new ApplyStyleCommand(WTF::move(document), style, action, level));
     }
-    static Ref<ApplyStyleCommand> create(Ref<Document>&& document, const EditingStyle* style, const Position& start, const Position& end, EditAction action = EditAction::ChangeAttributes, PropertyLevel level = PropertyLevel::Default)
+    static Ref<ApplyStyleCommand> create(Ref<Document>&& document, const EditingStyle* style, const Position& start, const Position& end, EditAction action = EditAction::ChangeAttributes, ApplyStylePropertyLevel level = ApplyStylePropertyLevel::Default)
     {
-        return adoptRef(*new ApplyStyleCommand(WTFMove(document), style, start, end, action, level));
+        return adoptRef(*new ApplyStyleCommand(WTF::move(document), style, start, end, action, level));
     }
     static Ref<ApplyStyleCommand> create(Ref<Element>&& element, bool removeOnly = false, EditAction action = EditAction::ChangeAttributes)
     {
-        return adoptRef(*new ApplyStyleCommand(WTFMove(element), removeOnly, action));
+        return adoptRef(*new ApplyStyleCommand(WTF::move(element), removeOnly, action));
     }
     static Ref<ApplyStyleCommand> create(Ref<Document>&& document, const EditingStyle* style, IsInlineElementToRemoveFunction isInlineElementToRemoveFunction, EditAction action = EditAction::ChangeAttributes)
     {
-        return adoptRef(*new ApplyStyleCommand(WTFMove(document), style, isInlineElementToRemoveFunction, action));
+        return adoptRef(*new ApplyStyleCommand(WTF::move(document), style, isInlineElementToRemoveFunction, action));
     }
 
 private:
-    ApplyStyleCommand(Ref<Document>&&, const EditingStyle*, EditAction, PropertyLevel);
-    ApplyStyleCommand(Ref<Document>&&, const EditingStyle*, const Position& start, const Position& end, EditAction, PropertyLevel);
+    ApplyStyleCommand(Ref<Document>&&, const EditingStyle*, EditAction, ApplyStylePropertyLevel);
+    ApplyStyleCommand(Ref<Document>&&, const EditingStyle*, const Position& start, const Position& end, EditAction, ApplyStylePropertyLevel);
     ApplyStyleCommand(Ref<Element>&&, bool removeOnly, EditAction);
     ApplyStyleCommand(Ref<Document>&&, const EditingStyle*, bool (*isInlineElementToRemove)(const Element*), EditAction);
 
@@ -120,7 +119,7 @@ private:
     Position endPosition();
 
     RefPtr<EditingStyle> m_style;
-    PropertyLevel m_propertyLevel { PropertyLevel::Default };
+    ApplyStylePropertyLevel m_propertyLevel { ApplyStylePropertyLevel::Default };
     Position m_start;
     Position m_end;
     bool m_useEndingSelection;

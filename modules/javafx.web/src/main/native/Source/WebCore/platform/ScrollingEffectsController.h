@@ -25,19 +25,21 @@
 
 #pragma once
 
-#include "FloatPoint.h"
-#include "FloatSize.h"
+#include <WebCore/FloatPoint.h>
+#include <WebCore/FloatSize.h>
 
-#include "KeyboardScroll.h"
-#include "RectEdges.h"
-#include "ScrollAnimation.h"
-#include "ScrollSnapAnimatorState.h"
-#include "ScrollSnapOffsetsInfo.h"
-#include "ScrollTypes.h"
-#include "WheelEventTestMonitor.h"
+#include <WebCore/KeyboardScroll.h>
+#include <WebCore/RectEdges.h>
+#include <WebCore/ScrollAnimation.h>
+#include <WebCore/ScrollSnapAnimatorState.h>
+#include <WebCore/ScrollSnapOffsetsInfo.h>
+#include <WebCore/ScrollTypes.h>
+#include <WebCore/WheelEventTestMonitor.h>
 #include <wtf/Deque.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/Platform.h>
 #include <wtf/RunLoop.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -51,11 +53,11 @@ class WheelEventTestMonitor;
 struct ScrollExtents;
 
 class ScrollingEffectsControllerTimer : public RunLoop::TimerBase {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ScrollingEffectsControllerTimer);
 public:
     ScrollingEffectsControllerTimer(RunLoop& runLoop, Function<void()>&& callback)
-        : RunLoop::TimerBase(runLoop)
-        , m_callback(WTFMove(callback))
+        : RunLoop::TimerBase(runLoop, "ScrollingEffectsControllerTimer"_s)
+        , m_callback(WTF::move(callback))
     {
     }
 
@@ -147,7 +149,7 @@ public:
 
     void stopKeyboardScrolling();
 
-    bool startMomentumScrollWithInitialVelocity(const FloatPoint& initialOffset, const FloatSize& initialVelocity, const FloatSize& initialDelta, const Function<FloatPoint(const FloatPoint&)>& destinationModifier);
+    bool startMomentumScrollWithInitialVelocity(const FloatPoint& initialOffset, const FloatSize& initialVelocity, const FloatSize& initialDelta, NOESCAPE const Function<FloatPoint(const FloatPoint&)>& destinationModifier);
 
     void willBeginKeyboardScrolling();
     void didStopKeyboardScrolling();
@@ -207,6 +209,8 @@ private:
     bool shouldOverrideMomentumScrolling() const;
     void discreteSnapTransitionTimerFired();
     void scheduleDiscreteScrollSnap(const FloatSize& delta);
+    void scrollendTimerFired();
+    void scheduleScrollendTimer();
 
     bool modifyScrollDeltaForStretching(const PlatformWheelEvent&, FloatSize&, bool isHorizontallyStretched, bool isVerticallyStretched);
     bool applyScrollDeltaWithStretching(const PlatformWheelEvent&, FloatSize, bool isHorizontallyStretched, bool isVerticallyStretched);
@@ -240,6 +244,8 @@ private:
 
     void adjustDeltaForSnappingIfNeeded(float& deltaX, float& deltaY);
 
+    void clampDeltaForAllowedAxes(const PlatformWheelEvent&, FloatSize&);
+
 #if ENABLE(KINETIC_SCROLLING) && !PLATFORM(MAC)
     // Returns true if handled.
     bool processWheelEventForKineticScrolling(const PlatformWheelEvent&);
@@ -267,7 +273,7 @@ private:
     bool m_inScrollGesture { false };
 
 #if PLATFORM(MAC)
-    WallTime m_lastMomentumScrollTimestamp;
+    MonotonicTime m_lastMomentumScrollTimestamp;
     FloatSize m_unappliedOverscrollDelta;
     FloatSize m_stretchScrollForce;
     FloatSize m_momentumVelocity;
@@ -280,6 +286,7 @@ private:
 
     Deque<FloatSize> m_recentDiscreteWheelDeltas;
     std::unique_ptr<ScrollingEffectsControllerTimer> m_discreteSnapTransitionTimer;
+    std::unique_ptr<ScrollingEffectsControllerTimer> m_discreteScrollendTimer;
 
 #if HAVE(RUBBER_BANDING)
     RectEdges<bool> m_rubberBandingEdges;

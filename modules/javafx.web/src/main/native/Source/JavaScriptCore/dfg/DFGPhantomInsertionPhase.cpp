@@ -56,20 +56,14 @@ public:
         // SetLocals execute, which is inaccurate. That causes us to insert too few Phantoms.
         DFG_ASSERT(m_graph, nullptr, m_graph.m_refCountState == ExactRefCount);
 
-        if (verbose) {
-            dataLog("Graph before Phantom insertion:\n");
-            m_graph.dump();
-        }
+        dataLogIf(verbose, "Graph before Phantom insertion:\n", m_graph);
 
         m_graph.clearEpochs();
 
         for (BasicBlock* block : m_graph.blocksInNaturalOrder())
             handleBlock(block);
 
-        if (verbose) {
-            dataLog("Graph after Phantom insertion:\n");
-            m_graph.dump();
-        }
+        dataLogIf(verbose, "Graph after Phantom insertion:\n", m_graph);
 
         return true;
     }
@@ -97,8 +91,7 @@ private:
         unsigned lastExitingIndex = 0;
         for (unsigned nodeIndex = 0; nodeIndex < block->size(); ++nodeIndex) {
             Node* node = block->at(nodeIndex);
-            if (verbose)
-                dataLog("Considering ", node, "\n");
+            dataLogLnIf(verbose, "Considering ", node);
 
             switch (node->op()) {
             case MovHint:

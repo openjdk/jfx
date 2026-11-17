@@ -25,29 +25,19 @@
 
 #pragma once
 
-#include "RenderStyleConstants.h"
-#include <wtf/Forward.h>
-
 namespace WebCore {
 
 class RenderBlockFlow;
 class RenderFlexibleBox;
-class RenderObject;
+class RenderGrid;
 
 namespace LayoutIntegration {
-class LineLayout;
 
 bool canUseForLineLayout(const RenderBlockFlow&);
-bool canUseForPreferredWidthComputation(const RenderBlockFlow&);
-enum class TypeOfChangeForInvalidation : uint8_t {
-    NodeInsertion,
-    NodeRemoval,
-    NodeMutation
-};
-bool shouldInvalidateLineLayoutPathAfterChangeFor(const RenderBlockFlow& rootBlockContainer, const RenderObject& renderer, const LineLayout&, TypeOfChangeForInvalidation);
-
 bool canUseForFlexLayout(const RenderFlexibleBox&);
+bool canUseForGridLayout(const RenderGrid&);
+
+bool canUseForPreferredWidthComputation(const RenderBlockFlow&);
 
 }
 }
-

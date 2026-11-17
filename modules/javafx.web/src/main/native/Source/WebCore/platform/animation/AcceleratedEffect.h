@@ -25,17 +25,17 @@
 
 #pragma once
 
-#if ENABLE(THREADED_ANIMATION_RESOLUTION)
+#if ENABLE(THREADED_ANIMATIONS)
 
-#include "AcceleratedEffectValues.h"
-#include "AnimationEffectTiming.h"
-#include "CompositeOperation.h"
-#include "KeyframeInterpolation.h"
-#include "TimingFunction.h"
-#include "WebAnimationTypes.h"
+#include <WebCore/AcceleratedEffectValues.h>
+#include <WebCore/AcceleratedTimeline.h>
+#include <WebCore/AnimationEffectTiming.h>
+#include <WebCore/CompositeOperation.h>
+#include <WebCore/KeyframeInterpolation.h>
+#include <WebCore/TimingFunction.h>
+#include <WebCore/WebAnimationTypes.h>
 #include <wtf/OptionSet.h>
-#include <wtf/RefCounted.h>
-#include <wtf/Seconds.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 
@@ -45,8 +45,8 @@ class FloatRect;
 class IntRect;
 class KeyframeEffect;
 
-class AcceleratedEffect : public RefCounted<AcceleratedEffect>, public CanMakeWeakPtr<AcceleratedEffect>, public KeyframeInterpolation {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(AcceleratedEffect);
+class AcceleratedEffect : public RefCountedAndCanMakeWeakPtr<AcceleratedEffect>, public KeyframeInterpolation {
+    WTF_MAKE_TZONE_ALLOCATED(AcceleratedEffect);
 public:
 
     class WEBCORE_EXPORT Keyframe final : public KeyframeInterpolation::Keyframe {
@@ -74,18 +74,23 @@ public:
         OptionSet<AcceleratedEffectProperty> m_animatedProperties;
     };
 
-    static RefPtr<AcceleratedEffect> create(const KeyframeEffect&, const IntRect&, const AcceleratedEffectValues&, OptionSet<AcceleratedEffectProperty>&);
-    WEBCORE_EXPORT static Ref<AcceleratedEffect> create(AnimationEffectTiming, Vector<Keyframe>&&, WebAnimationType, CompositeOperation, RefPtr<TimingFunction>&& defaultKeyframeTimingFunction, OptionSet<AcceleratedEffectProperty>&&, bool paused, double playbackRate, std::optional<Seconds> startTime, std::optional<Seconds> holdTime);
+    static Ref<AcceleratedEffect> create(const KeyframeEffect&, const IntRect&, const AcceleratedEffectValues&, OptionSet<AcceleratedEffectProperty>&);
+    WEBCORE_EXPORT static Ref<AcceleratedEffect> create(AnimationEffectTiming, TimelineIdentifier&&, Vector<Keyframe>&&, WebAnimationType, CompositeOperation, RefPtr<TimingFunction>&& defaultKeyframeTimingFunction, OptionSet<AcceleratedEffectProperty>&&, bool paused, double playbackRate, std::optional<WebAnimationTime> startTime, std::optional<WebAnimationTime> holdTime);
 
     virtual ~AcceleratedEffect() = default;
 
     WEBCORE_EXPORT Ref<AcceleratedEffect> clone() const;
     WEBCORE_EXPORT Ref<AcceleratedEffect> copyWithProperties(OptionSet<AcceleratedEffectProperty>&) const;
 
-    WEBCORE_EXPORT void apply(Seconds, AcceleratedEffectValues&, const FloatRect&);
+    WEBCORE_EXPORT void apply(AcceleratedEffectValues&, WebAnimationTime timelineTime, std::optional<WebAnimationTime> timelineDuration) const;
+    WEBCORE_EXPORT ResolvedEffectTiming resolvedTimingForTesting(WebAnimationTime timelineTime, std::optional<WebAnimationTime> timelineDuration) const;
+
+    void clearProperty(AcceleratedEffectProperty);
 
     // Encoding and decoding support
-    AnimationEffectTiming timing() const { return m_timing; }
+    const AnimationEffectTiming& timing() const { return m_timing; }
+    const RefPtr<AcceleratedTimeline>& timeline() const { return m_timeline; }
+    const TimelineIdentifier& timelineIdentifier() const { return m_timelineIdentifier; }
     const Vector<Keyframe>& keyframes() const { return m_keyframes; }
     WebAnimationType animationType() const { return m_animationType; }
     CompositeOperation compositeOperation() const final { return m_compositeOperation; }
@@ -93,8 +98,8 @@ public:
     const OptionSet<AcceleratedEffectProperty>& animatedProperties() const { return m_animatedProperties; }
     bool paused() const { return m_paused; }
     double playbackRate() const { return m_playbackRate; }
-    std::optional<Seconds> startTime() const { return m_startTime; }
-    std::optional<Seconds> holdTime() const { return m_holdTime; }
+    std::optional<WebAnimationTime> startTime() const { return m_startTime; }
+    std::optional<WebAnimationTime> holdTime() const { return m_holdTime; }
 
     const OptionSet<AcceleratedEffectProperty>& disallowedProperties() const { return m_disallowedProperties; }
 
@@ -102,10 +107,11 @@ public:
 
 private:
     AcceleratedEffect(const KeyframeEffect&, const IntRect&, const OptionSet<AcceleratedEffectProperty>&);
-    explicit AcceleratedEffect(AnimationEffectTiming, Vector<Keyframe>&&, WebAnimationType, CompositeOperation, RefPtr<TimingFunction>&& defaultKeyframeTimingFunction, OptionSet<AcceleratedEffectProperty>&&, bool paused, double playbackRate, std::optional<WTF::Seconds> startTime, std::optional<WTF::Seconds> holdTime);
+    explicit AcceleratedEffect(AnimationEffectTiming, TimelineIdentifier&&, Vector<Keyframe>&&, WebAnimationType, CompositeOperation, RefPtr<TimingFunction>&& defaultKeyframeTimingFunction, OptionSet<AcceleratedEffectProperty>&&, bool paused, double playbackRate, std::optional<WebAnimationTime> startTime, std::optional<WebAnimationTime> holdTime);
     explicit AcceleratedEffect(const AcceleratedEffect&, OptionSet<AcceleratedEffectProperty>&);
 
     void validateFilters(const AcceleratedEffectValues& baseValues, OptionSet<AcceleratedEffectProperty>&);
+    ResolvedEffectTiming resolvedTiming(WebAnimationTime timelineTime, std::optional<WebAnimationTime> timelineDuration) const;
 
     // KeyframeInterpolation
     bool isPropertyAdditiveOrCumulative(KeyframeInterpolation::Property) const final;
@@ -114,6 +120,8 @@ private:
     const TimingFunction* timingFunctionForKeyframe(const KeyframeInterpolation::Keyframe&) const final;
 
     AnimationEffectTiming m_timing;
+    RefPtr<AcceleratedTimeline> m_timeline;
+    TimelineIdentifier m_timelineIdentifier;
     Vector<Keyframe> m_keyframes;
     WebAnimationType m_animationType { WebAnimationType::WebAnimation };
     CompositeOperation m_compositeOperation { CompositeOperation::Replace };
@@ -122,12 +130,12 @@ private:
     OptionSet<AcceleratedEffectProperty> m_disallowedProperties;
     bool m_paused { false };
     double m_playbackRate { 1 };
-    std::optional<Seconds> m_startTime;
-    std::optional<Seconds> m_holdTime;
+    std::optional<WebAnimationTime> m_startTime;
+    std::optional<WebAnimationTime> m_holdTime;
 };
 
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_KEYFRAME_INTERPOLATION_KEYFRAME(AcceleratedEffect::Keyframe, isAcceleratedEffectKeyframe());
 
-#endif // ENABLE(THREADED_ANIMATION_RESOLUTION)
+#endif // ENABLE(THREADED_ANIMATIONS)

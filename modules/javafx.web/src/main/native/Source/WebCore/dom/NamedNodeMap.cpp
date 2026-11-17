@@ -28,13 +28,14 @@
 #include "Attr.h"
 #include "ElementInlines.h"
 #include "HTMLElement.h"
+#include "ScriptWrappableInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(NamedNodeMap);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(NamedNodeMap);
 
 void NamedNodeMap::ref()
 {

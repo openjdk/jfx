@@ -35,9 +35,9 @@
 
 namespace WebCore {
 
-static WeakPtr<MessagePortChannelProvider>& globalProvider()
+static RefPtr<MessagePortChannelProvider>& globalProvider()
 {
-    static MainThreadNeverDestroyed<WeakPtr<MessagePortChannelProvider>> globalProvider;
+    static MainThreadNeverDestroyed<RefPtr<MessagePortChannelProvider>> globalProvider;
     return globalProvider;
 }
 
@@ -46,7 +46,7 @@ MessagePortChannelProvider& MessagePortChannelProvider::singleton()
     ASSERT(isMainThread());
     auto& globalProvider = WebCore::globalProvider();
         if (!globalProvider)
-            globalProvider = new MessagePortChannelProviderImpl;
+        globalProvider = MessagePortChannelProviderImpl::create();
     return *globalProvider;
 }
 

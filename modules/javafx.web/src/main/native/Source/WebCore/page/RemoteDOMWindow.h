@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "DOMWindow.h"
-#include "RemoteFrame.h"
-#include "WindowPostMessageOptions.h"
 #include <JavaScriptCore/Strong.h>
+#include <WebCore/DOMWindow.h>
+#include <WebCore/RemoteFrame.h>
+#include <WebCore/WindowPostMessageOptions.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/TypeCasts.h>
 
@@ -46,11 +46,11 @@ class Document;
 class Location;
 
 class RemoteDOMWindow final : public DOMWindow {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(RemoteDOMWindow, WEBCORE_EXPORT);
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(RemoteDOMWindow, WEBCORE_EXPORT);
 public:
     static Ref<RemoteDOMWindow> create(RemoteFrame& frame, GlobalWindowIdentifier&& identifier)
     {
-        return adoptRef(*new RemoteDOMWindow(frame, WTFMove(identifier)));
+        return adoptRef(*new RemoteDOMWindow(frame, WTF::move(identifier)));
     }
 
     ~RemoteDOMWindow() final;
@@ -63,7 +63,6 @@ public:
     void focus(LocalDOMWindow& incumbentWindow);
     void blur();
     unsigned length() const;
-    void setOpener(WindowProxy*);
     void frameDetached();
     ExceptionOr<void> postMessage(JSC::JSGlobalObject&, LocalDOMWindow& incumbentWindow, JSC::JSValue message, WindowPostMessageOptions&&);
 
@@ -71,7 +70,7 @@ private:
     WEBCORE_EXPORT RemoteDOMWindow(RemoteFrame&, GlobalWindowIdentifier&&);
 
     void closePage() final;
-    void setLocation(LocalDOMWindow& activeWindow, const URL& completedURL, NavigationHistoryBehavior, SetLocationLocking) final;
+    void setLocation(LocalDOMWindow& activeWindow, const URL& completedURL, NavigationHistoryBehavior, SetLocationLocking, CanNavigateState) final;
 
     WeakPtr<RemoteFrame> m_frame;
 };

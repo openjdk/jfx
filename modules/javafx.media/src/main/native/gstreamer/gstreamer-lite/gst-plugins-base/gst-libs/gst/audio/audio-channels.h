@@ -60,6 +60,10 @@ G_BEGIN_DECLS
  * @GST_AUDIO_CHANNEL_POSITION_WIDE_RIGHT: Wide right (between front right and side right)
  * @GST_AUDIO_CHANNEL_POSITION_SURROUND_LEFT: Surround left (between rear left and side left)
  * @GST_AUDIO_CHANNEL_POSITION_SURROUND_RIGHT: Surround right (between rear right and side right)
+ * @GST_AUDIO_CHANNEL_POSITION_TOP_SURROUND_LEFT: Top surround left (between rear left and side left)
+ *     (Since: 1.26)
+ * @GST_AUDIO_CHANNEL_POSITION_TOP_SURROUND_RIGHT: Top surround right (between rear right and side right)
+ *     (Since: 1.26)
  * @GST_AUDIO_CHANNEL_POSITION_NONE: used for position-less channels, e.g.
  *     from a sound card that records 1024 channels; mutually exclusive with
  *     any other channel position
@@ -126,7 +130,25 @@ typedef enum {
   GST_AUDIO_CHANNEL_POSITION_WIDE_LEFT,
   GST_AUDIO_CHANNEL_POSITION_WIDE_RIGHT,
   GST_AUDIO_CHANNEL_POSITION_SURROUND_LEFT,
-  GST_AUDIO_CHANNEL_POSITION_SURROUND_RIGHT
+  GST_AUDIO_CHANNEL_POSITION_SURROUND_RIGHT,
+
+  /**
+   * GST_AUDIO_CHANNEL_POSITION_TOP_SURROUND_LEFT:
+   *
+   * Top surround left (between rear left and side left).
+   *
+   * Since: 1.26
+   */
+  GST_AUDIO_CHANNEL_POSITION_TOP_SURROUND_LEFT,
+
+  /**
+   * GST_AUDIO_CHANNEL_POSITION_TOP_SURROUND_RIGHT:
+   *
+   * Top surround right (between rear right and side right).
+   *
+   * Since: 1.26
+   */
+  GST_AUDIO_CHANNEL_POSITION_TOP_SURROUND_RIGHT
 } GstAudioChannelPosition;
 
 #define GST_AUDIO_CHANNEL_POSITION_MASK(pos) (G_GUINT64_CONSTANT(1)<< GST_AUDIO_CHANNEL_POSITION_ ## pos)
@@ -144,6 +166,12 @@ gboolean       gst_audio_reorder_channels        (gpointer data, gsize size,
                                                   gint channels,
                                                   const GstAudioChannelPosition * from,
                                                   const GstAudioChannelPosition * to);
+
+GST_AUDIO_API
+void           gst_audio_reorder_channels_with_reorder_map (gpointer data, gsize size,
+                                                            gint bps,
+                                                            gint channels,
+                                                            const gint *reorder_map);
 
 GST_AUDIO_API
 gboolean       gst_audio_channel_positions_to_valid_order (GstAudioChannelPosition *position,

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,7 @@
 
 #include <gst/gst.h>
 
+#include "mftrace.h"
 #include "mfgstbuffer.h"
 
 #include <mfapi.h>
@@ -73,16 +74,21 @@ struct _GstMFWrapper
     gboolean is_eos_received;
     gboolean is_eos;
     gboolean is_decoder_initialized;
+
     // If set to true do not call decoder it might hang.
     // This flag should be set if decoder calls failed.
     gboolean is_decoder_error;
 
-    gboolean force_discontinuity;
-    gboolean force_output_discontinuity;
+    gboolean is_force_discontinuity;
+    gboolean is_force_output_discontinuity;
+#if TRACE_ENABLE
+    gboolean trace_first_input_sample;
+#endif
 
     HRESULT hr_mfstartup;
 
     IMFTransform *pDecoder;
+    IMFMediaType *pDecoderInputType;
     IMFSample *pDecoderOutput;
     CMFGSTBuffer *pDecoderBuffer;
 
@@ -92,17 +98,18 @@ struct _GstMFWrapper
 
     GstBufferPool *pool;
 
-    BYTE *header;
-    gsize header_size;
-
     guint width;
     guint height;
+    guint visibleWidth;
+    guint visibleHeight;
     guint framerate_num;
     guint framerate_den;
 
-    guint defaultStride;
+    gint defaultStride;
     guint pixel_num;
     guint pixel_den;
+
+    gboolean is_set_caps;
 };
 
 struct _GstMFWrapperClass

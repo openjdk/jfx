@@ -31,6 +31,8 @@
     readonly attribute HTMLElement? submitter;
 };
 
-dictionary SubmitEventInit : EventInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary SubmitEventInit : EventInit {
     HTMLElement? submitter = null;
 };

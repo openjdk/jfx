@@ -25,9 +25,10 @@
 
 #pragma once
 
-#include "Allowlist.h"
+#include <WebCore/Allowlist.h>
 #include <wtf/HashSet.h>
 #include <wtf/HashTraits.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/StringHash.h>
 
 namespace WebCore {
@@ -39,7 +40,7 @@ class HTMLIFrameElement;
 struct OwnerPermissionsPolicyData;
 
 class PermissionsPolicy {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(PermissionsPolicy);
 public:
     PermissionsPolicy();
     PermissionsPolicy(const Document&);
@@ -69,6 +70,7 @@ public:
         XRSpatialTracking,
 #endif
         PrivateToken,
+        StorageAccess,
         Invalid
     };
     enum class ShouldReportViolation : bool { No, Yes };

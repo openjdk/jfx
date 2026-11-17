@@ -25,17 +25,23 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
+#include "BPlatform.h"
+
+BALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 #include "AllocationCounts.h"
 #include "AvailableMemory.h"
 #include "Cache.h"
 #include "CompactAllocationMode.h"
-#include "DebugHeap.h"
 #include "Gigacage.h"
 #include "Heap.h"
 #include "IsoTLS.h"
 #include "Mutex.h"
 #include "PerHeapKind.h"
 #include "Scavenger.h"
+#include "SystemHeap.h"
 
 #if BUSE(LIBPAS)
 #include "bmalloc_heap_inlines.h"
@@ -45,12 +51,12 @@ namespace bmalloc {
 namespace api {
 
 #if BUSE(LIBPAS)
-extern pas_primitive_heap_ref gigacageHeaps[Gigacage::NumberOfKinds];
+extern pas_primitive_heap_ref gigacageHeaps[static_cast<size_t>(Gigacage::NumberOfKinds)];
 
 inline pas_primitive_heap_ref& heapForKind(Gigacage::Kind kind)
 {
-    RELEASE_BASSERT(static_cast<unsigned>(kind) < Gigacage::NumberOfKinds);
-    return gigacageHeaps[static_cast<unsigned>(kind)];
+    RELEASE_BASSERT(static_cast<size_t>(kind) < static_cast<size_t>(Gigacage::NumberOfKinds));
+    return gigacageHeaps[static_cast<size_t>(kind)];
 }
 #endif
 
@@ -141,6 +147,39 @@ BINLINE void* memalign(size_t alignment, size_t size, CompactAllocationMode mode
 }
 
 // Returns null on failure.
+BINLINE void* tryZeroedMemalign(size_t alignment, size_t size, CompactAllocationMode mode, HeapKind kind = HeapKind::Primary)
+{
+#if BUSE(LIBPAS)
+    if (!isGigacage(kind))
+        return bmalloc_try_allocate_zeroed_with_alignment_inline(size, alignment, asPasAllocationMode(mode));
+    return bmalloc_try_allocate_auxiliary_zeroed_with_alignment_inline(
+        &heapForKind(gigacageKind(kind)), size, alignment, asPasAllocationMode(mode));
+#else
+    BUNUSED(mode);
+    auto* mem = Cache::tryAllocate(kind, alignment, size);
+    if (mem)
+        memset(mem, 0, size);
+    return mem;
+#endif
+}
+
+// Crashes on failure.
+BINLINE void* zeroedMemalign(size_t alignment, size_t size, CompactAllocationMode mode, HeapKind kind = HeapKind::Primary)
+{
+#if BUSE(LIBPAS)
+    if (!isGigacage(kind))
+        return bmalloc_allocate_zeroed_with_alignment_inline(size, alignment, asPasAllocationMode(mode));
+    return bmalloc_allocate_auxiliary_zeroed_with_alignment_inline(
+        &heapForKind(gigacageKind(kind)), size, alignment, asPasAllocationMode(mode));
+#else
+    BUNUSED(mode);
+    auto* mem = Cache::allocate(kind, alignment, size);
+    memset(mem, 0, size);
+    return mem;
+#endif
+}
+
+// Returns null on failure.
 BINLINE void* tryRealloc(void* object, size_t newSize, CompactAllocationMode mode, HeapKind kind = HeapKind::Primary)
 {
 #if BUSE(LIBPAS)
@@ -195,6 +234,7 @@ BEXPORT void scavengeThisThread();
 BEXPORT void scavenge();
 
 BEXPORT bool isEnabled(HeapKind kind = HeapKind::Primary);
+BEXPORT bool isMTEEnabled(HeapKind kind = HeapKind::Primary);
 
 // ptr must be aligned to vmPageSizePhysical and size must be divisible
 // by vmPageSizePhysical.
@@ -222,17 +262,17 @@ inline double percentAvailableMemoryInUse()
 BEXPORT void setScavengerThreadQOSClass(qos_class_t overrideClass);
 #endif
 
-BEXPORT void enableMiniMode();
+BEXPORT void enableMiniMode(bool forceMiniMode = false);
 
 // Used for debugging only.
 BEXPORT void disableScavenger();
-BEXPORT void forceEnablePGM();
+BEXPORT void forceEnablePGM(uint16_t guardMallocRate);
 
 #if BENABLE(MALLOC_SIZE)
 inline size_t mallocSize(const void* object)
 {
-    if (auto* debugHeap = DebugHeap::tryGet())
-        return debugHeap->mallocSize(object);
+    if (auto* systemHeap = SystemHeap::tryGetIfShouldSupplantBmalloc())
+        return systemHeap->mallocSize(object);
     return bmalloc_get_allocation_size(const_cast<void*>(object));
 }
 #endif
@@ -240,11 +280,15 @@ inline size_t mallocSize(const void* object)
 #if BENABLE(MALLOC_GOOD_SIZE)
 inline size_t mallocGoodSize(size_t size)
 {
-    if (auto* debugHeap = DebugHeap::tryGet())
-        return debugHeap->mallocGoodSize(size);
+    if (auto* systemHeap = SystemHeap::tryGetIfShouldSupplantBmalloc())
+        return systemHeap->mallocGoodSize(size);
     return size;
 }
 #endif
 
 } // namespace api
 } // namespace bmalloc
+
+BALLOW_UNSAFE_BUFFER_USAGE_END
+
+#endif // __cplusplus

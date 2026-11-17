@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -738,17 +738,20 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
         public void set(int index, int end, boolean isSet) {
             _beginChange();
-            size = -1;
             if (isSet) {
-                bitset.set(index, end, isSet);
+                bitset.set(index, end, true);
+                size = -1;
                 if (index <= lastGetValue) reset();
                 int indicesIndex = indexOf(index);
                 int span = end - index;
                 _nextAdd(indicesIndex, indicesIndex + span);
             } else {
-                // TODO handle remove
-                bitset.set(index, end, isSet);
+                int indicesIndex = indexOf(index);
+                bitset.set(index, end, false);
+                size = -1;
                 if (index <= lastGetValue) reset();
+                List<Integer> removed = IntStream.range(index, end).boxed().toList();
+                _nextRemove(indicesIndex, removed);
             }
             _endChange();
         }

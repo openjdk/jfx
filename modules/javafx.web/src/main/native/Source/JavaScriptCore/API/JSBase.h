@@ -82,7 +82,7 @@ typedef struct OpaqueJSValue* JSObjectRef;
 #if defined(JS_NO_EXPORT)
 #define JS_EXPORT
 #elif defined(WIN32) || defined(_WIN32) || defined(__CC_ARM) || defined(__ARMCC__) || (__has_declspec_attribute(dllimport) && __has_declspec_attribute(dllexport))
-#if defined(BUILDING_JavaScriptCore) || defined(STATICALLY_LINKED_WITH_JavaScriptCore) || (PLATFORM(JAVA) && defined(BUILDING_WebCore))
+#if defined(BUILDING_JavaScriptCore) || defined(STATICALLY_LINKED_WITH_JavaScriptCore)
 #define JS_EXPORT __declspec(dllexport)
 #else
 #define JS_EXPORT __declspec(dllimport)

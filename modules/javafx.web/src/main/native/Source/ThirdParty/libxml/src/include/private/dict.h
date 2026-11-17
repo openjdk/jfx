@@ -60,12 +60,14 @@ xmlDictComputeHash(const xmlDict *dict, const xmlChar *string);
 XML_HIDDEN unsigned
 xmlDictCombineHash(unsigned v1, unsigned v2);
 XML_HIDDEN xmlHashedString
-xmlDictLookupHashed(xmlDictPtr dict, const xmlChar *name, int len);
+xmlDictLookupHashed(xmlDict *dict, const xmlChar *name, int len);
 
 XML_HIDDEN void
 xmlInitRandom(void);
 XML_HIDDEN void
 xmlCleanupRandom(void);
+XML_HIDDEN unsigned
+xmlGlobalRandom(void);
 XML_HIDDEN unsigned
 xmlRandom(void);
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, Google Inc. All rights reserved.
+ * Copyright (c) 2010 Google Inc. All rights reserved.
  * Copyright (c) 2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,7 +29,7 @@
 
 #if ENABLE(WEBGL)
 
-#include "GraphicsContextGLAttributes.h"
+#include <WebCore/GraphicsContextGLAttributes.h>
 
 namespace WebCore {
 

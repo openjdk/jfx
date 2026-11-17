@@ -25,21 +25,21 @@
 
 #pragma once
 
-#include "JSCJSValueInlines.h"
-#include "Strong.h"
-#include "StrongInlines.h"
+#include <JavaScriptCore/JSCJSValueInlines.h>
+#include <JavaScriptCore/Strong.h>
+#include <JavaScriptCore/StrongInlines.h>
 #include <wtf/HashMap.h>
 
 namespace Inspector {
 
-class JS_EXPORT_PRIVATE PerGlobalObjectWrapperWorld {
+class PerGlobalObjectWrapperWorld {
 public:
-    JSC::JSValue getWrapper(JSC::JSGlobalObject*);
-    void addWrapper(JSC::JSGlobalObject*, JSC::JSObject*);
-    void clearAllWrappers();
+    JS_EXPORT_PRIVATE JSC::JSValue getWrapper(JSC::JSGlobalObject*);
+    JS_EXPORT_PRIVATE void addWrapper(JSC::JSGlobalObject*, JSC::JSObject*);
+    JS_EXPORT_PRIVATE void clearAllWrappers();
 
 private:
-    HashMap<JSC::JSGlobalObject*, JSC::Strong<JSC::JSObject>> m_wrappers;
+    UncheckedKeyHashMap<JSC::JSGlobalObject*, JSC::Strong<JSC::JSObject>> m_wrappers;
 };
 
 } // namespace Inspector

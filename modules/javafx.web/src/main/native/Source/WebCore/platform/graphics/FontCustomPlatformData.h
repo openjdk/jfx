@@ -25,10 +25,12 @@
 
 #pragma once
 
-#include "FontPlatformData.h"
-#include "RenderingResourceIdentifier.h"
+#include <WebCore/FontPlatformData.h>
+#include <WebCore/RenderingResourceIdentifier.h>
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/Platform.h>
+#include <wtf/TZoneMallocInlines.h>
 
 #if PLATFORM(WIN)
 #include <wtf/text/WTFString.h>
@@ -57,30 +59,28 @@ class FontDescription;
 class FontCreationContext;
 enum class FontTechnology : uint8_t;
 
-template <typename T> class FontTaggedSettings;
-typedef FontTaggedSettings<int> FontFeatureSettings;
+template<typename> class FontTaggedSettings;
+using FontFeatureSettings = FontTaggedSettings<int>;
 
-#if USE(CORE_TEXT)
 struct FontCustomPlatformSerializedData {
-    Vector<uint8_t> fontFaceData;
+    Ref<SharedBuffer> fontFaceData;
     String itemInCollection;
     RenderingResourceIdentifier renderingResourceIdentifier;
 };
-#endif
 
 struct FontCustomPlatformData : public RefCounted<FontCustomPlatformData> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(FontCustomPlatformData);
     WTF_MAKE_NONCOPYABLE(FontCustomPlatformData);
 public:
     WEBCORE_EXPORT static RefPtr<FontCustomPlatformData> create(SharedBuffer&, const String&);
     WEBCORE_EXPORT static RefPtr<FontCustomPlatformData> createMemorySafe(SharedBuffer&, const String&);
 
-#if PLATFORM(WIN)
+#if PLATFORM(WIN) && USE(CAIRO)
     FontCustomPlatformData(const String& name, FontPlatformData::CreationData&&);
 #elif USE(CORE_TEXT)
     FontCustomPlatformData(CTFontDescriptorRef fontDescriptor, FontPlatformData::CreationData&& creationData)
         : fontDescriptor(fontDescriptor)
-        , creationData(WTFMove(creationData))
+        , creationData(WTF::move(creationData))
         , m_renderingResourceIdentifier(RenderingResourceIdentifier::generate())
     {
     }
@@ -96,14 +96,19 @@ public:
 
     FontPlatformData fontPlatformData(const FontDescription&, bool bold, bool italic, const FontCreationContext&);
 
-#if USE(CORE_TEXT)
     WEBCORE_EXPORT FontCustomPlatformSerializedData serializedData() const;
     WEBCORE_EXPORT static std::optional<Ref<FontCustomPlatformData>> tryMakeFromSerializationData(FontCustomPlatformSerializedData&&, bool);
+
+#if USE(SKIA)
+    sk_sp<SkTypeface> retrieveOrAddCachedTypeface(const Vector<SkFontArguments::VariationPosition::Coordinate>&);
+    void clearVariationTypefacesCache() const;
+    void clearUnusedVariationTypefacesCacheEntries() const;
 #endif
+
     static bool supportsFormat(const String&);
     static bool supportsTechnology(const FontTechnology&);
 
-#if PLATFORM(WIN)
+#if PLATFORM(WIN) && USE(CAIRO)
     String name;
 #elif USE(CORE_TEXT)
     RetainPtr<CTFontDescriptorRef> fontDescriptor;
@@ -111,6 +116,7 @@ public:
     RefPtr<cairo_font_face_t> m_fontFace;
 #elif USE(SKIA)
     sk_sp<SkTypeface> m_typeface;
+    mutable HashMap<unsigned, sk_sp<SkTypeface>> m_variationTypefacesCache;
 #endif
     FontPlatformData::CreationData creationData;
 #if PLATFORM(JAVA)

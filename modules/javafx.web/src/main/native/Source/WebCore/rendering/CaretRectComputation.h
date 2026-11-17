@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "InlineRunAndOffset.h"
-#include "RenderObjectEnums.h"
+#include <WebCore/InlineRunAndOffset.h>
+#include <WebCore/RenderObjectEnums.h>
 
 #if HAVE(REDESIGNED_TEXT_CURSOR)
 #include <pal/spi/cocoa/FeatureFlagsSPI.h>
@@ -34,7 +34,7 @@
 
 namespace WebCore {
 
-enum class CaretRectMode {
+enum class CaretRectMode : bool {
     Normal,
     ExpandToEndOfLine
 };

@@ -127,6 +127,16 @@ pas_segregated_shared_view_can_bump(
     return result.new_bump <= bump_limit;
 }
 
+static PAS_ALWAYS_INLINE unsigned
+pas_segregated_shared_view_compute_minimum_size_for_bump_with_aligned_padding(
+    unsigned allocation_size,
+    unsigned trailing_padding_size,
+    unsigned trailing_padding_alignment)
+{
+    return (unsigned)pas_round_up_to_power_of_2(allocation_size, trailing_padding_alignment)
+        + trailing_padding_size;
+}
+
 static PAS_ALWAYS_INLINE pas_shared_view_computed_bump_result
 pas_segregated_shared_view_compute_new_bump(
     pas_segregated_shared_view* view,
@@ -137,12 +147,29 @@ pas_segregated_shared_view_compute_new_bump(
     pas_shared_view_computed_bump_result result;
     unsigned total_shift;
     unsigned bump_limit;
+    unsigned trailing_padding_size;
+    unsigned trailing_padding_alignment;
+    unsigned size_plus_padding;
+    unsigned padding_delta;
+
+    /* NOTE: we assume both (allocation_)alignment and trailing_padding_alignment
+     * are powers-of-2. We could assert here to ensure that is the case, but
+     * pas_segregated_shared_view_compute_initial_new_bump already decided not
+     * to so we adopt that decision here as well. */
+
+    trailing_padding_size = page_config.partial_view_padding;
+    trailing_padding_alignment = page_config.partial_view_padding ? PAS_PARTIAL_VIEW_PADDING_ALIGN : 1;
+    size_plus_padding = pas_segregated_shared_view_compute_minimum_size_for_bump_with_aligned_padding(
+        size, trailing_padding_size, trailing_padding_alignment);
+    padding_delta = size_plus_padding - size;
 
     total_shift = page_config.base.min_align_shift + page_config.sharing_shift;
     bump_limit = (unsigned)
         pas_segregated_page_config_payload_end_offset_for_role(page_config, pas_segregated_page_shared_role);
-    result = pas_segregated_shared_view_compute_initial_new_bump(view, size, alignment, page_config);
 
+    result = pas_segregated_shared_view_compute_initial_new_bump(
+        view, size_plus_padding, PAS_MAX(alignment, trailing_padding_alignment), page_config);
+    result.end_bump -= padding_delta;
     if (result.new_bump > bump_limit)
         return pas_shared_view_computed_bump_result_create_empty();
 
@@ -154,11 +181,23 @@ pas_segregated_shared_view_compute_new_bump(
             break;
         }
 
-        result.end_bump = result.new_bump;
+        result.end_bump = result.new_bump - padding_delta;
         result.num_objects++;
     }
 
     return result;
+}
+
+static PAS_ALWAYS_INLINE unsigned
+pas_segregated_shared_view_compute_minimum_size_for_bump(
+    unsigned size,
+    pas_segregated_page_config page_config)
+{
+    unsigned trailing_padding_alignment;
+
+    trailing_padding_alignment = page_config.partial_view_padding ? PAS_PARTIAL_VIEW_PADDING_ALIGN : 1;
+    return pas_segregated_shared_view_compute_minimum_size_for_bump_with_aligned_padding(
+        size, page_config.partial_view_padding, trailing_padding_alignment);
 }
 
 static PAS_ALWAYS_INLINE pas_shared_view_computed_bump_result

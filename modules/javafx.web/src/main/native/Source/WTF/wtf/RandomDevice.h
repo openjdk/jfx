@@ -26,6 +26,7 @@
 
 #pragma once
 
+#include <wtf/FastMalloc.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/StdLibExtras.h>
 
@@ -33,7 +34,7 @@ namespace WTF {
 
 class RandomDevice {
     WTF_MAKE_NONCOPYABLE(RandomDevice);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(RandomDevice);
 public:
 #if OS(DARWIN) || OS(FUCHSIA) || OS(WINDOWS)
     RandomDevice() = default;

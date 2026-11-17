@@ -25,6 +25,10 @@
 
 #pragma once
 
+#include <cstdint>
+#include <wtf/Compiler.h>
+#include <wtf/Platform.h>
+
 namespace JSC {
 
 #if ENABLE(JIT_OPERATION_VALIDATION) || ENABLE(JIT_OPERATION_DISASSEMBLY) || CPU(ARM64E)
@@ -37,7 +41,8 @@ namespace JSC {
     v(loopOSREntry, NoPtrTag) \
     v(entryOSREntry, NoPtrTag) \
     v(wasmOSREntry, NoPtrTag) \
-    v(wasmTailCallJSEntrySlowPathPtrTag, NoPtrTag) \
+    v(wasmTailCallWasmEntryPtrTag, NoPtrTag) \
+    v(wasmIPIntTailCallWasmEntryPtrTag, NoPtrTag) \
     v(exceptionHandler, NoPtrTag) \
     v(returnFromLLInt, NoPtrTag) \
     v(llint_function_for_call_arity_checkUntag, NoPtrTag) \
@@ -50,18 +55,18 @@ namespace JSC {
     v(op_call, JSEntryPtrTag) \
     v(op_call_ignore_result, JSEntryPtrTag) \
     v(op_construct, JSEntryPtrTag) \
+    v(op_super_construct, JSEntryPtrTag) \
     v(op_iterator_next, JSEntryPtrTag) \
     v(op_iterator_open, JSEntryPtrTag) \
     v(op_call_varargs, JSEntryPtrTag) \
     v(op_construct_varargs, JSEntryPtrTag) \
+    v(op_super_construct_varargs, JSEntryPtrTag) \
     v(op_call_direct_eval_slow, JSEntrySlowPathPtrTag) \
 
 #if ENABLE(WEBASSEMBLY)
 
 #define JSC_WASM_GATE_OPCODES(v) \
-    v(wasm_call, JSEntrySlowPathPtrTag) \
-    v(wasm_call_indirect, JSEntrySlowPathPtrTag) \
-    v(wasm_call_ref, JSEntrySlowPathPtrTag) \
+    v(wasm_ipint_call, WasmEntryPtrTag) \
 
 #else
 #define JSC_WASM_GATE_OPCODES(v)

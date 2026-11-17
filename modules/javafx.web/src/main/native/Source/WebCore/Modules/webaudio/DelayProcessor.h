@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, Google Inc. All rights reserved.
+ * Copyright (C) 2010 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,13 +28,15 @@
 #include "AudioParam.h"
 #include <memory>
 #include <wtf/RefPtr.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class AudioDSPKernel;
 
 class DelayProcessor final : public AudioDSPKernelProcessor {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(DelayProcessor);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DelayProcessor);
 public:
     DelayProcessor(BaseAudioContext&, float sampleRate, unsigned numberOfChannels, double maxDelayTime);
     virtual ~DelayProcessor();
@@ -45,7 +47,13 @@ public:
     double maxDelayTime() { return delayTime().maxValue(); }
 
 private:
-    Ref<AudioParam> m_delayTime;
+    Type processorType() const final { return Type::Delay; }
+
+    const Ref<AudioParam> m_delayTime;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::DelayProcessor) \
+    static bool isType(const WebCore::AudioProcessor& processor) { return processor.processorType() == WebCore::AudioProcessor::Type::Delay; } \
+SPECIALIZE_TYPE_TRAITS_END()

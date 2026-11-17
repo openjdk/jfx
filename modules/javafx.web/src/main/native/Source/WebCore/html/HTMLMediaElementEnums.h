@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "MediaPlayerEnums.h"
+#include <WebCore/MediaPlayerEnums.h>
 
 namespace WebCore {
 
@@ -36,13 +36,23 @@ public:
     enum ReadyState { HAVE_NOTHING, HAVE_METADATA, HAVE_CURRENT_DATA, HAVE_FUTURE_DATA, HAVE_ENOUGH_DATA };
     enum NetworkState { NETWORK_EMPTY, NETWORK_IDLE, NETWORK_LOADING, NETWORK_NO_SOURCE };
     enum TextTrackVisibilityCheckType { CheckTextTrackVisibility, AssumeTextTrackVisibilityChanged };
-    enum InvalidURLAction { DoNothing, Complain };
+    enum class InvalidURLAction : bool { DoNothing, Complain };
 
     typedef enum {
         NoSeek,
         Fast,
         Precise
     } SeekType;
+};
+
+enum class HTMLMediaElementSourceType : uint8_t {
+    File,
+    HLS,
+    MediaSource,
+    ManagedMediaSource,
+    MediaStream,
+    LiveStream,
+    StoredStream,
 };
 
 String convertEnumerationToString(HTMLMediaElementEnums::ReadyState);

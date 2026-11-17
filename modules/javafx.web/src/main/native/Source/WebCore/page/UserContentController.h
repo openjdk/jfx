@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "UserContentProvider.h"
-#include "UserScriptTypes.h"
-#include "UserStyleSheetTypes.h"
+#include <WebCore/UserContentProvider.h>
+#include <WebCore/UserScriptTypes.h>
+#include <WebCore/UserStyleSheetTypes.h>
 
 namespace WebCore {
 
@@ -50,13 +50,15 @@ private:
     UserContentController();
 
     // UserContentProvider
-    void forEachUserScript(Function<void(DOMWrapperWorld&, const UserScript&)>&&) const final;
-    void forEachUserStyleSheet(Function<void(const UserStyleSheet&)>&&) const final;
+    void forEachUserScript(NOESCAPE const Function<void(DOMWrapperWorld&, const UserScript&)>&) const final;
+    void forEachUserStyleSheet(NOESCAPE const Function<void(const UserStyleSheet&)>&) const final;
 #if ENABLE(USER_MESSAGE_HANDLERS)
-    void forEachUserMessageHandler(Function<void(const UserMessageHandlerDescriptor&)>&&) const final;
+    void forEachUserMessageHandler(NOESCAPE const Function<void(const UserMessageHandlerDescriptor&)>&) const final;
 #endif
+    bool hasBuffersForWorld(const DOMWrapperWorld&) const override { return false; }
+    WebKitBuffer* buffer(const DOMWrapperWorld&, const String&) const override { return nullptr; }
 #if ENABLE(CONTENT_EXTENSIONS)
-    ContentExtensions::ContentExtensionsBackend& userContentExtensionBackend() override { return m_contentExtensionBackend; }
+    const ContentExtensions::ContentExtensionsBackend& userContentExtensionBackend() const override { return m_contentExtensionBackend; }
 #endif
 
     UserScriptMap m_userScripts;

@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2011, 2012 Apple Inc. All Rights Reserved.
- * Copyright (C) 2014 Raspberry Pi Foundation. All Rights Reserved.
+ * Copyright (C) 2011, 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2014 Raspberry Pi Foundation. All rights reserved.
  * Copyright (C) 2018 Igalia S.L.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -37,6 +37,8 @@
 
 #if OS(LINUX)
 #include <wtf/linux/CurrentProcessMemoryStatus.h>
+#elif OS(HAIKU)
+#include <wtf/haiku/CurrentProcessMemoryStatus.h>
 #elif OS(FREEBSD)
 #include <sys/sysctl.h>
 #include <sys/types.h>
@@ -111,7 +113,7 @@ void MemoryPressureHandler::holdOff(Seconds seconds)
 
 static size_t processMemoryUsage()
 {
-#if OS(LINUX)
+#if OS(LINUX) || OS(HAIKU)
     ProcessMemoryStatus memoryStatus;
     currentProcessMemoryStatus(memoryStatus);
     return (memoryStatus.resident - memoryStatus.shared);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2007-2009 Torch Mobile, Inc.
  * Copyright (C) 2010, 2011 Research In Motion Limited. All rights reserved.
  * Copyright (C) 2013 Samsung Electronics. All rights reserved.
@@ -73,7 +73,15 @@
 /* ==== Platform additions: additions to PlatformEnable.h from outside the main repository ==== */
 
 #if USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/AdditionalFeatureDefines.h>)
+/* FIXME: Properly support using WKA in modules. */
+#if defined(__clang__) && defined(__has_feature) && __has_feature(modules)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnon-modular-include-in-module"
+#endif
 #include <WebKitAdditions/AdditionalFeatureDefines.h>
+#if defined(__clang__) && defined(__has_feature) && __has_feature(modules)
+#pragma clang diagnostic pop
+#endif
 #endif
 
 
@@ -104,12 +112,12 @@
 
 /* Do not use PLATFORM() tests in this section ! */
 
-#if !defined(ENABLE_CONJECTURE_ASSERT)
-#define ENABLE_CONJECTURE_ASSERT 0
-#endif
-
 #if !defined(ENABLE_ACCESSIBILITY_ANIMATION_CONTROL)
 #define ENABLE_ACCESSIBILITY_ANIMATION_CONTROL 0
+#endif
+
+#if !defined(ENABLE_ACCESSIBILITY_LOCAL_FRAME)
+#define ENABLE_ACCESSIBILITY_LOCAL_FRAME 0
 #endif
 
 #if !defined(ENABLE_ACCESSIBILITY_NON_BLINKING_CURSOR)
@@ -124,12 +132,20 @@
 #define ENABLE_AIRPLAY_PICKER 0
 #endif
 
-#if !defined(ENABLE_ALTERNATIVE_TEXT_REQUIRES_AUTOMATIC_SPELLING_CORRECTION)
-#define ENABLE_ALTERNATIVE_TEXT_REQUIRES_AUTOMATIC_SPELLING_CORRECTION 0
+#if !defined(ARKIT_INLINE_PREVIEW)
+#define ARKIT_INLINE_PREVIEW 0
 #endif
 
-#if !defined(ENABLE_ALTERNATE_WEBM_PLAYER)
-#define ENABLE_ALTERNATE_WEBM_PLAYER 0
+#if !defined(ENABLE_ARKIT_INLINE_PREVIEW_CAMERA_TRANSFORM)
+#define ENABLE_ARKIT_INLINE_PREVIEW_CAMERA_TRANSFORM 0
+#endif
+
+#if !defined(ENABLE_ARKIT_INLINE_PREVIEW_ANIMATIONS_CONTROL)
+#define ENABLE_ARKIT_INLINE_PREVIEW_ANIMATIONS_CONTROL 0
+#endif
+
+#if !defined(ENABLE_ARKIT_INLINE_PREVIEW_AUDIO_CONTROL)
+#define ENABLE_ARKIT_INLINE_PREVIEW_AUDIO_CONTROL 0
 #endif
 
 #if !defined(ENABLE_APP_HIGHLIGHTS)
@@ -152,6 +168,14 @@
 #define ENABLE_AUTOCAPITALIZE 0
 #endif
 
+#if !defined(ENABLE_COCOA_WEBM_PLAYER)
+#define ENABLE_COCOA_WEBM_PLAYER 0
+#endif
+
+#if !defined(ENABLE_CONJECTURE_ASSERT)
+#define ENABLE_CONJECTURE_ASSERT 0
+#endif
+
 #if !defined(ENABLE_CONTENT_CHANGE_OBSERVER)
 #define ENABLE_CONTENT_CHANGE_OBSERVER 0
 #endif
@@ -166,10 +190,6 @@
 
 #if !defined(ENABLE_CONTEXT_MENU_EVENT)
 #define ENABLE_CONTEXT_MENU_EVENT 1
-#endif
-
-#if !defined(ENABLE_CSS_TRANSFORM_STYLE_OPTIMIZED_3D)
-#define ENABLE_CSS_TRANSFORM_STYLE_OPTIMIZED_3D 0
 #endif
 
 #if !defined(ENABLE_CUSTOM_CURSOR_SUPPORT)
@@ -192,14 +212,6 @@
 #define ENABLE_DATACUE_VALUE 0
 #endif
 
-#if !defined(ENABLE_DATALIST_ELEMENT)
-#define ENABLE_DATALIST_ELEMENT 0
-#endif
-
-#if !defined(ENABLE_DATE_AND_TIME_INPUT_TYPES)
-#define ENABLE_DATE_AND_TIME_INPUT_TYPES 0
-#endif
-
 #if !defined(ENABLE_DECLARATIVE_WEB_PUSH)
 #define ENABLE_DECLARATIVE_WEB_PUSH 0
 #endif
@@ -210,6 +222,14 @@
 
 #if !defined(ENABLE_DESTINATION_COLOR_SPACE_DISPLAY_P3)
 #define ENABLE_DESTINATION_COLOR_SPACE_DISPLAY_P3 0
+#endif
+
+#if !defined(ENABLE_DESTINATION_COLOR_SPACE_EXTENDED_SRGB)
+#define ENABLE_DESTINATION_COLOR_SPACE_EXTENDED_SRGB 0
+#endif
+
+#if !defined(ENABLE_DESTINATION_COLOR_SPACE_EXTENDED_REC_2020)
+#define ENABLE_DESTINATION_COLOR_SPACE_EXTENDED_REC_2020 0
 #endif
 
 #if !defined(ENABLE_DRAG_SUPPORT)
@@ -252,6 +272,14 @@
 #define ENABLE_GPU_PROCESS_WEBGL_BY_DEFAULT 0
 #endif
 
+#if !defined(ENABLE_GPU_PROCESS_MODEL)
+#define ENABLE_GPU_PROCESS_MODEL 0
+#endif
+
+#if !defined(ENABLE_HDR_FOR_WEBGPU)
+#define ENABLE_HDR_FOR_WEBGPU 0
+#endif
+
 #if !defined(ENABLE_IMAGE_ANALYSIS)
 #define ENABLE_IMAGE_ANALYSIS 0
 #endif
@@ -266,30 +294,6 @@
 
 #if !defined(ENABLE_INLINE_PATH_DATA)
 #define ENABLE_INLINE_PATH_DATA 0
-#endif
-
-#if !defined(ENABLE_INPUT_TYPE_COLOR)
-#define ENABLE_INPUT_TYPE_COLOR 1
-#endif
-
-#if !defined(ENABLE_INPUT_TYPE_DATE)
-#define ENABLE_INPUT_TYPE_DATE 0
-#endif
-
-#if !defined(ENABLE_INPUT_TYPE_DATETIMELOCAL)
-#define ENABLE_INPUT_TYPE_DATETIMELOCAL 0
-#endif
-
-#if !defined(ENABLE_INPUT_TYPE_MONTH)
-#define ENABLE_INPUT_TYPE_MONTH 0
-#endif
-
-#if !defined(ENABLE_INPUT_TYPE_TIME)
-#define ENABLE_INPUT_TYPE_TIME 0
-#endif
-
-#if !defined(ENABLE_INPUT_TYPE_WEEK)
-#define ENABLE_INPUT_TYPE_WEEK 0
 #endif
 
 #if !defined(ENABLE_INPUT_TYPE_WEEK_PICKER)
@@ -347,6 +351,10 @@
 #define ENABLE_MEDIA_RECORDER 0
 #endif
 
+#if !defined(ENABLE_MEDIA_RECORDER_WEBM)
+#define ENABLE_MEDIA_RECORDER_WEBM 0
+#endif
+
 #if !defined(ENABLE_MEDIA_SOURCE)
 #define ENABLE_MEDIA_SOURCE 0
 #endif
@@ -371,8 +379,52 @@
 #define ENABLE_MHTML 0
 #endif
 
-#if !defined(ENABLE_MODERN_MEDIA_CONTROLS)
-#define ENABLE_MODERN_MEDIA_CONTROLS 0
+#if !defined(ENABLE_MODEL_CONTEXT)
+#define ENABLE_MODEL_CONTEXT 0
+#endif
+
+#if !defined(ENABLE_MODEL_ELEMENT)
+#define ENABLE_MODEL_ELEMENT 0
+#endif
+
+#if !defined(ENABLE_MODEL_ELEMENT_ACCESSIBILITY)
+#define ENABLE_MODEL_ELEMENT_ACCESSIBILITY 0
+#endif
+
+#if !defined(ENABLE_MODEL_ELEMENT_ANIMATIONS_CONTROL)
+#define ENABLE_MODEL_ELEMENT_ANIMATIONS_CONTROL 0
+#endif
+
+#if !defined(ENABLE_MODEL_ELEMENT_BOUNDING_BOX)
+#define ENABLE_MODEL_ELEMENT_BOUNDING_BOX 0
+#endif
+
+#if !defined(ENABLE_MODEL_ELEMENT_ENTITY_TRANSFORM)
+#define ENABLE_MODEL_ELEMENT_ENTITY_TRANSFORM 0
+#endif
+
+#if !defined(ENABLE_MODEL_ELEMENT_ENVIRONMENT_MAP)
+#define ENABLE_MODEL_ELEMENT_ENVIRONMENT_MAP 0
+#endif
+
+#if !defined(ENABLE_MODEL_ELEMENT_PORTAL)
+#define ENABLE_MODEL_ELEMENT_PORTAL 0
+#endif
+
+#if !defined(ENABLE_MODEL_ELEMENT_STAGE_MODE)
+#define ENABLE_MODEL_ELEMENT_STAGE_MODE 0
+#endif
+
+#if !defined(ENABLE_MODEL_ELEMENT_STAGE_MODE_INTERACTION)
+#define ENABLE_MODEL_ELEMENT_STAGE_MODE_INTERACTION 0
+#endif
+
+#if !defined(ENABLE_MODEL_PROCESS)
+#define ENABLE_MODEL_PROCESS 0
+#endif
+
+#if !defined(ENABLE_SCENE_GEOMETRY_UPDATE)
+#define ENABLE_SCENE_GEOMETRY_UPDATE 0
 #endif
 
 #if !defined(ENABLE_MONOSPACE_FONT_EXCEPTION)
@@ -412,10 +464,6 @@
 #define ENABLE_ORIENTATION_EVENTS 0
 #endif
 
-#if !defined(ENABLE_OVERFLOW_SCROLLING_TOUCH)
-#define ENABLE_OVERFLOW_SCROLLING_TOUCH 0
-#endif
-
 #if OS(WINDOWS)
 #if !defined(ENABLE_PAN_SCROLLING)
 #define ENABLE_PAN_SCROLLING 1
@@ -436,6 +484,18 @@
 
 #if !defined(ENABLE_PERIODIC_MEMORY_MONITOR)
 #define ENABLE_PERIODIC_MEMORY_MONITOR 0
+#endif
+
+#if !defined(ENABLE_PIXEL_FORMAT_RGB10)
+#define ENABLE_PIXEL_FORMAT_RGB10 0
+#endif
+
+#if !defined(ENABLE_PIXEL_FORMAT_RGB10A8)
+#define ENABLE_PIXEL_FORMAT_RGB10A8 0
+#endif
+
+#if !defined(ENABLE_PIXEL_FORMAT_RGBA16F)
+#define ENABLE_PIXEL_FORMAT_RGBA16F 0
 #endif
 
 #if !defined(ENABLE_PLATFORM_DRIVEN_TEXT_CHECKING)
@@ -493,10 +553,6 @@
 #define ENABLE_SPELLCHECK 0
 #endif
 
-#if !defined(ENABLE_STATIC_IPAD_USER_AGENT_VALUE)
-#define ENABLE_STATIC_IPAD_USER_AGENT_VALUE 0
-#endif
-
 #if !defined(ENABLE_TEXT_AUTOSIZING)
 #define ENABLE_TEXT_AUTOSIZING 0
 #endif
@@ -507,6 +563,10 @@
 
 #if !defined(ENABLE_TEXT_SELECTION)
 #define ENABLE_TEXT_SELECTION 1
+#endif
+
+#if !defined(ENABLE_THREADED_ANIMATIONS)
+#define ENABLE_THREADED_ANIMATIONS 0
 #endif
 
 #if !defined(ENABLE_THUNDER)
@@ -553,6 +613,14 @@
 #define ENABLE_WEB_PLAYBACK_CONTROLS_MANAGER 0
 #endif
 
+#if !defined(ENABLE_WEBKIT_OVERFLOW_SCROLLING_CSS_PROPERTY)
+#define ENABLE_WEBKIT_OVERFLOW_SCROLLING_CSS_PROPERTY 0
+#endif
+
+#if !defined(ENABLE_WEBKIT_TOUCH_CALLOUT_CSS_PROPERTY)
+#define ENABLE_WEBKIT_TOUCH_CALLOUT_CSS_PROPERTY 0
+#endif
+
 #if !defined(ENABLE_WEBXR)
 #define ENABLE_WEBXR 0
 #endif
@@ -561,8 +629,20 @@
 #define ENABLE_WEBXR_HANDS 0
 #endif
 
+#if !defined(ENABLE_WEBXR_WEBGPU_BY_DEFAULT)
+#define ENABLE_WEBXR_WEBGPU_BY_DEFAULT 0
+#endif
+
+#if !defined(ENABLE_WEBGPU)
+#define ENABLE_WEBGPU PLATFORM(COCOA)
+#endif
+
+#if !defined(ENABLE_WEBXR_HIT_TEST)
+#define ENABLE_WEBXR_HIT_TEST 0
+#endif
+
 #if !defined(ENABLE_WEBXR_LAYERS)
-#define ENABLE_WEBXR_LAYERS (PLATFORM(COCOA) && ENABLE_WEBXR)
+#define ENABLE_WEBXR_LAYERS (PLATFORM(VISION) && __VISION_OS_VERSION_MIN_REQUIRED >= 20200)
 #endif
 
 #if !defined(ENABLE_WHEEL_EVENT_LATCHING)
@@ -573,16 +653,12 @@
 #define ENABLE_WHEEL_EVENT_REGIONS 0
 #endif
 
+#if !defined(ENABLE_TOUCH_EVENT_REGIONS)
+#define ENABLE_TOUCH_EVENT_REGIONS 0
+#endif
+
 #if !defined(ENABLE_WRITING_TOOLS)
 #define ENABLE_WRITING_TOOLS 0
-#endif
-
-#if !defined(ENABLE_WRITING_TOOLS_UI)
-#define ENABLE_WRITING_TOOLS_UI 0
-#endif
-
-#if !defined(ENABLE_WKPDFVIEW)
-#define ENABLE_WKPDFVIEW 0
 #endif
 
 #if !defined(ENABLE_WK_WEB_EXTENSIONS)
@@ -599,6 +675,25 @@
  */
 #if !defined(ENABLE_MALLOC_HEAP_BREAKDOWN)
 #define ENABLE_MALLOC_HEAP_BREAKDOWN 0
+#endif
+
+/*
+ * Enable this to allocate types which prefer, but do not require, compact-compatible allocation
+ * (indicated by WTF_MAKE_PREFERABLY_COMPACT_TZONE_ALLOCATED and friends)
+ * via the compact allocation path. If disabled, they are allocated like normal, non-compact types.
+ */
+#if !defined(ENABLE_COMPACT_ALLOCATION_FOR_PREFERABLY_COMPACT_TYPES)
+#define ENABLE_COMPACT_ALLOCATION_FOR_PREFERABLY_COMPACT_TYPES 1
+#endif
+
+// See RefTrackerMixin.h
+#if ASSERT_ENABLED
+#undef ENABLE_REFTRACKER
+#define ENABLE_REFTRACKER 1
+#endif
+
+#if !defined(ENABLE_REFTRACKER)
+#define ENABLE_REFTRACKER 0
 #endif
 
 #if !defined(ENABLE_CFPREFS_DIRECT_MODE)
@@ -700,7 +795,7 @@
 #if !defined(ENABLE_DFG_JIT) && ENABLE(JIT)
 
 /* Enable the DFG JIT on X86 and X86_64. */
-#if CPU(X86_64) && (OS(DARWIN) || OS(LINUX) || OS(FREEBSD) || OS(HURD) || OS(WINDOWS))
+#if CPU(X86_64) && (OS(DARWIN) || OS(LINUX) || OS(FREEBSD) || OS(HAIKU) || OS(HURD) || OS(WINDOWS))
 #define ENABLE_DFG_JIT 1
 #endif
 
@@ -730,20 +825,14 @@
 #define ENABLE_FAST_TLS_JIT 1
 #endif
 
-/* FIXME: This should be turned into an #error invariant */
-/* If the baseline jit is not available, then disable upper tiers as well. */
-#if !ENABLE(JIT)
-#undef ENABLE_DFG_JIT
-#undef ENABLE_FTL_JIT
-#define ENABLE_DFG_JIT 0
-#define ENABLE_FTL_JIT 0
+/* Ensure that upper tiers are disabled if baseline JIT is not available */
+#if !ENABLE(JIT) && (ENABLE(DFG_JIT) || ENABLE(FTL_JIT))
+#error "DFG and FTL JIT require baseline JIT to be enabled"
 #endif
 
-/* FIXME: This should be turned into an #error invariant */
-/* If the DFG jit is not available, then disable upper tiers as well: */
-#if !ENABLE(DFG_JIT)
-#undef ENABLE_FTL_JIT
-#define ENABLE_FTL_JIT 0
+/* Ensure that FTL JIT is disabled if DFG JIT is not available */
+#if !ENABLE(DFG_JIT) && ENABLE(FTL_JIT)
+#error "FTL JIT requires DFG JIT to be enabled"
 #endif
 
 /* This controls whether B3 is built. B3 is needed for FTL JIT and WebAssembly */
@@ -755,7 +844,7 @@
 #undef ENABLE_B3_JIT
 #define ENABLE_B3_JIT 1
 #undef ENABLE_WEBASSEMBLY_OMGJIT
-#define ENABLE_WEBASSEMBLY_OMGJIT 1
+#define ENABLE_WEBASSEMBLY_OMGJIT 0
 #undef ENABLE_WEBASSEMBLY_BBQJIT
 #define ENABLE_WEBASSEMBLY_BBQJIT 1
 #endif
@@ -850,6 +939,11 @@
 #define ENABLE_YARR_JIT_UNICODE_EXPRESSIONS 1
 #endif
 
+/* Enables an optimiztion to advance two codepoints when we fail to match a non-BMP character */
+#if ENABLE(YARR_JIT) && CPU(ARM64)
+#define ENABLE_YARR_JIT_UNICODE_CAN_INCREMENT_INDEX_FOR_NON_BMP 1
+#endif
+
 /* If either the JIT or the RegExp JIT is enabled, then the Assembler must be
    enabled as well: */
 #if ENABLE(JIT) || ENABLE(YARR_JIT) || !ENABLE(C_LOOP)
@@ -872,7 +966,7 @@
 #endif
 
 #if !defined(ENABLE_EXCEPTION_SCOPE_VERIFICATION)
-#define ENABLE_EXCEPTION_SCOPE_VERIFICATION ASSERT_ENABLED
+#define ENABLE_EXCEPTION_SCOPE_VERIFICATION (ASSERT_ENABLED || ASAN_ENABLED)
 #endif
 
 #if ENABLE(DFG_JIT) && HAVE(MACHINE_CONTEXT) && (CPU(X86_64) || CPU(ARM64) || CPU(RISCV64))
@@ -906,7 +1000,7 @@
 #define ENABLE_GC_VALIDATION 1
 #endif
 
-#if OS(DARWIN) && ENABLE(JIT) && USE(APPLE_INTERNAL_SDK) && CPU(ARM64E) && HAVE(JIT_CAGE) && !PLATFORM(MAC)
+#if OS(DARWIN) && ENABLE(JIT) && USE(APPLE_INTERNAL_SDK) && CPU(ARM64E) && HAVE(JIT_CAGE) && !PLATFORM(MAC) && !PLATFORM(MACCATALYST)
 #define ENABLE_JIT_CAGE 1
 #endif
 
@@ -928,7 +1022,7 @@
 #define ENABLE_JIT_OPERATION_DISASSEMBLY 1
 #endif
 
-#if CPU(ARM64E)
+#if CPU(ARM64E) && ENABLE(JIT)
 #define ENABLE_JIT_SIGN_ASSEMBLER_BUFFER 1
 #endif
 
@@ -948,14 +1042,14 @@
    that executes each opcode. It cannot be supported by the CLoop since there's no way to embed the
    OpcodeID word in the CLoop's switch statement cases. It is also currently not implemented for MSVC.
 */
-#if !defined(ENABLE_LLINT_EMBEDDED_OPCODE_ID) && !ENABLE(C_LOOP) && !COMPILER(MSVC) && (CPU(X86) || CPU(X86_64) || CPU(ARM64) || (CPU(ARM_THUMB2) && OS(DARWIN)) || CPU(RISCV64))
+#if !defined(ENABLE_LLINT_EMBEDDED_OPCODE_ID) && !ENABLE(C_LOOP) && (CPU(X86) || CPU(X86_64) || CPU(ARM64) || (CPU(ARM_THUMB2) && OS(DARWIN)) || CPU(RISCV64))
 #define ENABLE_LLINT_EMBEDDED_OPCODE_ID 1
 #endif
 
 /* Asserts, invariants for macro definitions */
 
-#if ENABLE(ALTERNATE_WEBM_PLAYER) && !ENABLE(MEDIA_SOURCE)
-#error "ENABLE(ALTERNATE_WEBM_PLAYER) requires ENABLE(MEDIA_SOURCE)"
+#if ENABLE(COCOA_WEBM_PLAYER) && !ENABLE(MEDIA_SOURCE)
+#error "ENABLE(COCOA_WEBM_PLAYER) requires ENABLE(MEDIA_SOURCE)"
 #endif
 
 #if ENABLE(DECLARATIVE_WEB_PUSH) && !ENABLE(NOTIFICATION_EVENT)
@@ -982,20 +1076,16 @@
 #error "ENABLE(NOTIFICATION_EVENT) requires ENABLE(NOTIFICATIONS)"
 #endif
 
-#if USE(CG)
-
-#if ENABLE(DESTINATION_COLOR_SPACE_DISPLAY_P3) && !HAVE(CORE_GRAPHICS_DISPLAY_P3_COLOR_SPACE)
-#error "ENABLE(DESTINATION_COLOR_SPACE_DISPLAY_P3) requires HAVE(CORE_GRAPHICS_DISPLAY_P3_COLOR_SPACE) on platforms using CoreGraphics"
-#endif
-
-#endif
-
 #if ENABLE(PREDEFINED_COLOR_SPACE_DISPLAY_P3) && !ENABLE(DESTINATION_COLOR_SPACE_DISPLAY_P3)
 #error "ENABLE(PREDEFINED_COLOR_SPACE_DISPLAY_P3) requires ENABLE(DESTINATION_COLOR_SPACE_DISPLAY_P3)"
 #endif
 
 #if ENABLE(WEBXR_HANDS) && !ENABLE(WEBXR)
 #error "ENABLE(WEBXR_HANDS) requires ENABLE(WEBXR)"
+#endif
+
+#if ENABLE(WEBXR_HIT_TEST) && !ENABLE(WEBXR)
+#error "ENABLE(WEBXR_HIT_TEST) requires ENABLE(WEBXR)"
 #endif
 
 #if ENABLE(WEBXR_LAYERS) && !ENABLE(WEBXR)
@@ -1026,4 +1116,29 @@
 #if !defined(ENABLE_WRITING_SUGGESTIONS) \
     && (PLATFORM(COCOA) && HAVE(INLINE_PREDICTIONS) && !PLATFORM(MACCATALYST))
 #define ENABLE_WRITING_SUGGESTIONS 1
+#endif
+
+#if !defined(ENABLE_COOKIE_STORE_API_BY_DEFAULT)
+#define ENABLE_COOKIE_STORE_API_BY_DEFAULT 0
+#endif
+
+#if !defined(ENABLE_ALL_LEGACY_REGISTERED_SPECIAL_URL_SCHEMES) && !PLATFORM(COCOA)
+#define ENABLE_ALL_LEGACY_REGISTERED_SPECIAL_URL_SCHEMES 1
+#endif
+
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED < 260000
+#define ENABLE_TILED_CA_DRAWING_AREA 1
+#endif
+
+#if !defined(ENABLE_ALLOW_MULTIPLE_COMMIT_LAYER_TREE_PENDING)
+#define ENABLE_ALLOW_MULTIPLE_COMMIT_LAYER_TREE_PENDING 0
+#endif
+
+#if !defined(ENABLE_TLS_1_2_DEFAULT_MINIMUM) \
+    && ((PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 260000) \
+    || ((PLATFORM(IOS) || PLATFORM(MACCATALYST)) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 260000) \
+    || (PLATFORM(VISION) && __VISION_OS_VERSION_MIN_REQUIRED >= 260000) \
+    || (PLATFORM(WATCHOS) && __WATCH_OS_VERSION_MIN_REQUIRED >= 260000) \
+    || (PLATFORM(APPLETV) && __TV_OS_VERSION_MIN_REQUIRED >= 260000))
+#define ENABLE_TLS_1_2_DEFAULT_MINIMUM 1
 #endif

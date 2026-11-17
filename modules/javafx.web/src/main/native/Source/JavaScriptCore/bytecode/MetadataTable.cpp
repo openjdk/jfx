@@ -30,6 +30,8 @@
 #include "OpcodeInlines.h"
 #include "UnlinkedMetadataTableInlines.h"
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 MetadataTable::MetadataTable(UnlinkedMetadataTable& unlinkedMetadata)
@@ -67,7 +69,7 @@ void MetadataTable::destroy(MetadataTable* table)
         return;
     }
 
-    RefPtr<UnlinkedMetadataTable> unlinkedMetadata = WTFMove(table->linkingData().unlinkedMetadata);
+    RefPtr<UnlinkedMetadataTable> unlinkedMetadata = WTF::move(table->linkingData().unlinkedMetadata);
     ASSERT(table->isDestroyed());
 
     table->~MetadataTable();
@@ -97,3 +99,5 @@ void MetadataTable::validate() const
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

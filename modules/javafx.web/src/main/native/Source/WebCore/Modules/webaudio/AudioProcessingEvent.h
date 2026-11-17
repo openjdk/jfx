@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, Google Inc. All rights reserved.
+ * Copyright (C) 2010 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,11 +34,11 @@ class AudioBuffer;
 struct AudioProcessingEventInit;
 
 class AudioProcessingEvent final : public Event {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(AudioProcessingEvent);
+    WTF_MAKE_TZONE_ALLOCATED(AudioProcessingEvent);
 public:
     static Ref<AudioProcessingEvent> create(RefPtr<AudioBuffer>&& inputBuffer, RefPtr<AudioBuffer>&& outputBuffer, double playbackTime)
     {
-        return adoptRef(*new AudioProcessingEvent(WTFMove(inputBuffer), WTFMove(outputBuffer), playbackTime));
+        return adoptRef(*new AudioProcessingEvent(WTF::move(inputBuffer), WTF::move(outputBuffer), playbackTime));
     }
 
     static Ref<AudioProcessingEvent> create(const AtomString&, AudioProcessingEventInit&&);

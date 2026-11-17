@@ -104,15 +104,10 @@ enum
   PROP_VOLUME_FULL_RANGE
 };
 
-#if G_BYTE_ORDER == G_LITTLE_ENDIAN
 #define ALLOWED_CAPS \
-    GST_AUDIO_CAPS_MAKE ("{ F32LE, F64LE, S8, S16LE, S24LE, S32LE }") \
+    GST_AUDIO_CAPS_MAKE ("{ " GST_AUDIO_NE (F32) ", " GST_AUDIO_NE (F64) ", S8, " \
+    GST_AUDIO_NE (S16) ", " GST_AUDIO_NE (S24) ", " GST_AUDIO_NE (S32) " }") \
     ", layout = (string) interleaved"
-#else
-#define ALLOWED_CAPS \
-    GST_AUDIO_CAPS_MAKE ("{ F32BE, F64BE, S8, S16BE, S24BE, S32BE }") \
-    ", layout = (string) { interleaved, non-interleaved }"
-#endif
 
 #define gst_volume_parent_class parent_class
 G_DEFINE_TYPE_WITH_CODE (GstVolume, gst_volume,
@@ -421,6 +416,8 @@ gst_volume_class_init (GstVolumeClass * klass)
   trans_class->transform_ip_on_passthrough = FALSE;
 
   filter_class->setup = GST_DEBUG_FUNCPTR (volume_setup);
+
+  GST_DEBUG_CATEGORY_INIT (GST_CAT_DEFAULT, "volume", 0, "Volume gain");
 }
 
 static void
@@ -1052,8 +1049,6 @@ static gboolean
 plugin_init (GstPlugin * plugin)
 #endif // GSTREAMER_LITE
 {
-  GST_DEBUG_CATEGORY_INIT (GST_CAT_DEFAULT, "volume", 0, "Volume gain");
-
   return GST_ELEMENT_REGISTER (volume, plugin);
 }
 

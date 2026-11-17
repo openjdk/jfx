@@ -1,6 +1,6 @@
 /*
  * Copyright (C) Research In Motion Limited 2010. All rights reserved.
- * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2024 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -20,9 +20,9 @@
 
 #pragma once
 
-#include "Path.h"
-#include "SVGPathUtilities.h"
-#include "SVGPropertyTraits.h"
+#include <WebCore/Path.h>
+#include <WebCore/SVGPathUtilities.h>
+#include <WebCore/SVGPropertyTraits.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakPtr.h>
 
@@ -38,7 +38,7 @@ template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::SVGPathByteS
 namespace WebCore {
 
 class SVGPathByteStream final : public CanMakeSingleThreadWeakPtr<SVGPathByteStream> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(SVGPathByteStream);
 public:
     class Data final : public RefCounted<Data> {
     public:
@@ -48,7 +48,7 @@ public:
 
         static Ref<Data> create(Bytes&& bytes)
         {
-            return adoptRef(*new Data(WTFMove(bytes)));
+            return adoptRef(*new Data(WTF::move(bytes)));
         }
 
         void updatePath(const Path& path) const
@@ -99,7 +99,7 @@ public:
 
     private:
         Data(Bytes&& bytes)
-            : m_bytes(WTFMove(bytes))
+            : m_bytes(WTF::move(bytes))
         {
         }
 
@@ -140,12 +140,12 @@ public:
     }
 
     SVGPathByteStream(Ref<Data>&& data)
-        : m_data(WTFMove(data))
+        : m_data(WTF::move(data))
     {
     }
 
     SVGPathByteStream(Data::Bytes&& data)
-        : m_data(Data::create(WTFMove(data)))
+        : m_data(Data::create(WTF::move(data)))
     {
     }
 
@@ -181,8 +181,8 @@ public:
         return makeUnique<SVGPathByteStream>(*this);
     }
 
-    DataIterator begin() const { return m_data->bytes().begin(); }
-    DataIterator end() const { return m_data->bytes().end(); }
+    DataIterator begin() const LIFETIME_BOUND { return m_data->bytes().begin(); }
+    DataIterator end() const LIFETIME_BOUND { return m_data->bytes().end(); }
 
     void append(uint8_t byte) { m_data.access().append(byte); }
     void append(std::span<const uint8_t> bytes) { m_data.access().append(bytes); }
@@ -205,10 +205,10 @@ public:
         m_data->updatePath(path);
     }
 
-    const Data::Bytes& bytes() const { return m_data->bytes(); }
+    const Data::Bytes& bytes() const LIFETIME_BOUND { return m_data->bytes(); }
 
     DataRef<Data> data() const { return m_data; }
-    void setData(DataRef<Data>&& data) { m_data = WTFMove(data); }
+    void setData(DataRef<Data>&& data) { m_data = WTF::move(data); }
 
 private:
     DataRef<Data> m_data;

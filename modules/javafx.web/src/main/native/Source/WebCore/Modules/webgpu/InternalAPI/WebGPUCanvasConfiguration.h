@@ -25,11 +25,12 @@
 
 #pragma once
 
-#include "WebGPUCanvasAlphaMode.h"
-#include "WebGPUDevice.h"
-#include "WebGPUPredefinedColorSpace.h"
-#include "WebGPUTextureFormat.h"
-#include "WebGPUTextureUsage.h"
+#include <WebCore/WebGPUCanvasAlphaMode.h>
+#include <WebCore/WebGPUCanvasToneMappingMode.h>
+#include <WebCore/WebGPUDevice.h>
+#include <WebCore/WebGPUPredefinedColorSpace.h>
+#include <WebCore/WebGPUTextureFormat.h>
+#include <WebCore/WebGPUTextureUsage.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakRef.h>
 
@@ -41,8 +42,11 @@ struct CanvasConfiguration {
     TextureUsageFlags usage { TextureUsage::RenderAttachment };
     Vector<TextureFormat> viewFormats;
     PredefinedColorSpace colorSpace { PredefinedColorSpace::SRGB };
+    CanvasToneMappingMode toneMappingMode { CanvasToneMappingMode::Standard };
     CanvasAlphaMode compositingAlphaMode { CanvasAlphaMode::Opaque };
     bool reportValidationErrors { true };
+
+    Ref<Device> protectedDevice() const { return device.get(); }
 };
 
 } // namespace WebCore::WebGPU

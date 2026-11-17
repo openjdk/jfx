@@ -34,11 +34,14 @@
 #include "WebGPURenderBundleImpl.h"
 #include "WebGPURenderPipelineImpl.h"
 #include <WebGPU/WebGPUExt.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore::WebGPU {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderBundleEncoderImpl);
+
 RenderBundleEncoderImpl::RenderBundleEncoderImpl(WebGPUPtr<WGPURenderBundleEncoder>&& renderBundleEncoder, ConvertToBackingContext& convertToBackingContext)
-    : m_backing(WTFMove(renderBundleEncoder))
+    : m_backing(WTF::move(renderBundleEncoder))
     , m_convertToBackingContext(convertToBackingContext)
 {
 }
@@ -84,16 +87,15 @@ void RenderBundleEncoderImpl::drawIndexedIndirect(const Buffer& indirectBuffer, 
     wgpuRenderBundleEncoderDrawIndexedIndirect(m_backing.get(), m_convertToBackingContext->convertToBacking(indirectBuffer), indirectOffset);
 }
 
-void RenderBundleEncoderImpl::setBindGroup(Index32 index, const BindGroup& bindGroup,
+void RenderBundleEncoderImpl::setBindGroup(Index32 index, const BindGroup* bindGroup,
     std::optional<Vector<BufferDynamicOffset>>&& dynamicOffsets)
 {
     auto backingOffsets = valueOrDefault(dynamicOffsets);
-    wgpuRenderBundleEncoderSetBindGroupWithDynamicOffsets(m_backing.get(), index, m_convertToBackingContext->convertToBacking(bindGroup), WTFMove(dynamicOffsets));
+    wgpuRenderBundleEncoderSetBindGroupWithDynamicOffsets(m_backing.get(), index, bindGroup ? m_convertToBackingContext->convertToBacking(*bindGroup) : nullptr, WTF::move(dynamicOffsets));
 }
 
-void RenderBundleEncoderImpl::setBindGroup(Index32, const BindGroup&,
-    const uint32_t*,
-    size_t,
+void RenderBundleEncoderImpl::setBindGroup(Index32, const BindGroup*,
+    std::span<const uint32_t>,
     Size64,
     Size32)
 {
@@ -120,8 +122,7 @@ RefPtr<RenderBundle> RenderBundleEncoderImpl::finish(const RenderBundleDescripto
     auto label = descriptor.label.utf8();
 
     WGPURenderBundleDescriptor backingDescriptor {
-        nullptr,
-        label.data(),
+        .label = label.data(),
     };
 
     return RenderBundleImpl::create(adoptWebGPU(wgpuRenderBundleEncoderFinish(m_backing.get(), &backingDescriptor)), m_convertToBackingContext);

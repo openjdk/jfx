@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2011 Google Inc.  All rights reserved.
  * Copyright (C) Research In Motion Limited 2011. All rights reserved.
- * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -50,11 +50,12 @@
 #include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/SHA1.h>
 #include <wtf/StdLibExtras.h>
-#include <wtf/StringExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/Vector.h>
 #include <wtf/text/Base64.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/MakeString.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringToIntegerConversion.h>
 #include <wtf/text/StringView.h>
 #include <wtf/text/WTFString.h>
@@ -86,9 +87,10 @@ static String hostName(const URL& url, bool secure)
 static constexpr size_t maxInputSampleSize = 128;
 static String trimInputSample(std::span<const uint8_t> input)
 {
+    // FIXME: Unclear why this is Latin-1 and not UTF-8.
     if (input.size() <= maxInputSampleSize)
-        return input;
-    return makeString(input.first(maxInputSampleSize), horizontalEllipsis);
+        return byteCast<Latin1Character>(input);
+    return makeString(byteCast<Latin1Character>(input.first(maxInputSampleSize)), horizontalEllipsis);
 }
 
 static String generateSecWebSocketKey()
@@ -98,6 +100,8 @@ static String generateSecWebSocketKey()
     cryptographicallyRandomValues(key);
     return base64EncodeToString(key);
 }
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebSocketHandshake);
 
 String WebSocketHandshake::getExpectedWebSocketAccept(const String& secWebSocketKey)
 {
@@ -185,13 +189,13 @@ CString WebSocketHandshake::clientHandshakeMessage() const
         "\r\n"_s).utf8();
 }
 
-ResourceRequest WebSocketHandshake::clientHandshakeRequest(const Function<String(const URL&)>& cookieRequestHeaderFieldValue) const
+ResourceRequest WebSocketHandshake::clientHandshakeRequest(NOESCAPE const Function<String(const URL&)>& cookieRequestHeaderFieldValue) const
 {
     // Keep the following consistent with clientHandshakeMessage just above.
 
     auto cookie = m_allowCookies ? cookieRequestHeaderFieldValue(httpURLForAuthenticationAndCookies()) : emptyString();
     auto extensions = m_extensionDispatcher.createHeaderValue();
-    ResourceRequest request { m_url };
+    ResourceRequest request { URL { m_url } };
     request.setHTTPMethod("GET"_s);
     request.setHTTPHeaderField(HTTPHeaderName::Connection, "Upgrade"_s);
     request.setHTTPHeaderField(HTTPHeaderName::Host, hostName(m_url, m_secure));
@@ -234,7 +238,7 @@ int WebSocketHandshake::readServerHandshake(std::span<const uint8_t> header)
 
     m_serverHandshakeResponse = ResourceResponse();
     m_serverHandshakeResponse.setHTTPStatusCode(statusCode);
-    m_serverHandshakeResponse.setHTTPStatusText(WTFMove(statusText));
+    m_serverHandshakeResponse.setHTTPStatusText(WTF::move(statusText));
 
     if (statusCode != 101) {
         m_mode = Failed;
@@ -242,7 +246,7 @@ int WebSocketHandshake::readServerHandshake(std::span<const uint8_t> header)
         return header.size();
     }
     m_mode = Normal;
-    if (!memmem(header.data(), header.size(), "\r\n\r\n", 4)) {
+    if (!WTF::contains(header, "\r\n\r\n"_span8)) {
         // Just hasn't been received fully yet.
         m_mode = Incomplete;
         return -1;
@@ -310,7 +314,7 @@ const ResourceResponse& WebSocketHandshake::serverHandshakeResponse() const
 
 void WebSocketHandshake::addExtensionProcessor(std::unique_ptr<WebSocketExtensionProcessor> processor)
 {
-    m_extensionDispatcher.addProcessor(WTFMove(processor));
+    m_extensionDispatcher.addProcessor(WTF::move(processor));
 }
 
 URL WebSocketHandshake::httpURLForAuthenticationAndCookies() const
@@ -409,24 +413,24 @@ int WebSocketHandshake::readStatusLine(std::span<const uint8_t> header, int& sta
         return lineLength;
     }
 
-    StringView httpStatusLine(header.first(*firstSpaceIndex));
+    StringView httpStatusLine(byteCast<Latin1Character>(header.first(*firstSpaceIndex)));
     if (!headerHasValidHTTPVersion(httpStatusLine)) {
         m_failureReason = makeString("Invalid HTTP version string: "_s, httpStatusLine);
         return lineLength;
     }
 
-    StringView statusCodeString(header.subspan(*firstSpaceIndex + 1, *secondSpaceIndex - *firstSpaceIndex - 1));
-    if (statusCodeString.length() != 3) // Status code must consist of three digits.
+    auto statusCodeString = byteCast<Latin1Character>(header.subspan(*firstSpaceIndex + 1, *secondSpaceIndex - *firstSpaceIndex - 1));
+    if (statusCodeString.size() != 3) // Status code must consist of three digits.
         return lineLength;
-    for (int i = 0; i < 3; ++i) {
-        if (!isASCIIDigit(statusCodeString[i])) {
+    for (auto digit : statusCodeString) {
+        if (!isASCIIDigit(digit)) {
             m_failureReason = makeString("Invalid status code: "_s, statusCodeString);
             return lineLength;
         }
     }
 
     statusCode = parseInteger<int>(statusCodeString).value();
-    statusText = String(header.subspan(*secondSpaceIndex + 1, index - *secondSpaceIndex - 3)); // Exclude "\r\n".
+    statusText = String(byteCast<Latin1Character>(header.subspan(*secondSpaceIndex + 1, lineLength - *secondSpaceIndex - 3))); // Exclude "\r\n".
     return lineLength;
 }
 
@@ -441,7 +445,7 @@ std::span<const uint8_t> WebSocketHandshake::readHTTPHeaders(std::span<const uin
         size_t consumedLength = parseHTTPHeader(data, m_failureReason, name, value);
         if (!consumedLength)
             return { };
-        data = data.subspan(consumedLength);
+        skip(data, consumedLength);
 
         // Stop once we consumed an empty line.
         if (name.isEmpty())

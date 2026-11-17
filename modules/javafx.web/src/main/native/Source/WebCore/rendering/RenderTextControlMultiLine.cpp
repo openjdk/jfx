@@ -28,26 +28,23 @@
 #include "RenderBoxInlines.h"
 #include "RenderBoxModelObjectInlines.h"
 #include "RenderLayerScrollableArea.h"
-#include "RenderStyleSetters.h"
+#include "RenderStyle+SettersInlines.h"
 #include "ShadowRoot.h"
-#include "StyleInheritedData.h"
 #include "TextControlInnerElements.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderTextControlMultiLine);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderTextControlMultiLine);
 
 RenderTextControlMultiLine::RenderTextControlMultiLine(HTMLTextAreaElement& element, RenderStyle&& style)
-    : RenderTextControl(Type::TextControlMultiLine, element, WTFMove(style))
+    : RenderTextControl(Type::TextControlMultiLine, element, WTF::move(style))
 {
     ASSERT(isRenderTextControlMultiLine());
 }
 
-RenderTextControlMultiLine::~RenderTextControlMultiLine()
-{
-    // Do not add any code here. Add it to willBeDestroyed() instead.
-}
+// Do not add any code in below destructor. Add it to willBeDestroyed() instead.
+RenderTextControlMultiLine::~RenderTextControlMultiLine() = default;
 
 HTMLTextAreaElement& RenderTextControlMultiLine::textAreaElement() const
 {
@@ -86,7 +83,7 @@ LayoutUnit RenderTextControlMultiLine::preferredContentLogicalWidth(float charWi
 {
     float width = ceilf(charWidth * textAreaElement().cols());
 
-    auto overflow = style().isHorizontalWritingMode() ? style().overflowY() : style().overflowX();
+    auto overflow = writingMode().isHorizontal() ? style().overflowY() : style().overflowX();
 
     // We are able to have a vertical scrollbar if the overflow style is scroll or auto
     if ((overflow == Overflow::Scroll) || (overflow == Overflow::Auto))
@@ -100,20 +97,15 @@ LayoutUnit RenderTextControlMultiLine::computeControlLogicalHeight(LayoutUnit li
     return lineHeight * textAreaElement().rows() + nonContentHeight;
 }
 
-LayoutUnit RenderTextControlMultiLine::baselinePosition(FontBaseline baselineType, bool firstLine, LineDirectionMode direction, LinePositionMode linePositionMode) const
-{
-    return RenderBox::baselinePosition(baselineType, firstLine, direction, linePositionMode);
-}
-
-void RenderTextControlMultiLine::layoutExcludedChildren(bool relayoutChildren)
+void RenderTextControlMultiLine::layoutExcludedChildren(RelayoutChildren relayoutChildren)
 {
     RenderTextControl::layoutExcludedChildren(relayoutChildren);
-    HTMLElement* placeholder = textFormControlElement().placeholderElement();
+    RefPtr placeholder = textFormControlElement().placeholderElement();
     RenderElement* placeholderRenderer = placeholder ? placeholder->renderer() : 0;
     if (!placeholderRenderer)
         return;
     if (CheckedPtr placeholderBox = dynamicDowncast<RenderBox>(placeholderRenderer)) {
-        placeholderBox->mutableStyle().setLogicalWidth(Length(contentLogicalWidth() - placeholderBox->borderAndPaddingLogicalWidth(), LengthType::Fixed));
+        placeholderBox->mutableStyle().setLogicalWidth(Style::PreferredSize::Fixed { contentBoxLogicalWidth() - placeholderBox->borderAndPaddingLogicalWidth() });
         placeholderBox->layoutIfNeeded();
         placeholderBox->setX(borderLeft() + paddingLeft());
         placeholderBox->setY(borderTop() + paddingTop());

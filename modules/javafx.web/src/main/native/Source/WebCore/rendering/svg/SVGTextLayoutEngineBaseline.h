@@ -19,16 +19,17 @@
 
 #pragma once
 
-#include "SVGRenderStyleDefs.h"
+#include "FontCascade.h"
 #include <wtf/Noncopyable.h>
 
 namespace WebCore {
 
-class FontCascade;
-class RenderObject;
-class SVGElement;
-class SVGRenderStyle;
+class RenderElement;
+class RenderSVGInlineText;
+class RenderStyle;
 class SVGTextMetrics;
+
+enum class AlignmentBaseline : uint8_t;
 
 // Helper class used by SVGTextLayoutEngine to handle 'alignment-baseline' / 'dominant-baseline' and 'baseline-shift'.
 class SVGTextLayoutEngineBaseline {
@@ -36,15 +37,15 @@ class SVGTextLayoutEngineBaseline {
 public:
     SVGTextLayoutEngineBaseline(const FontCascade&);
 
-    float calculateBaselineShift(const SVGRenderStyle&, SVGElement* context) const;
-    float calculateAlignmentBaselineShift(bool isVerticalText, const RenderObject& textRenderer) const;
-    float calculateGlyphOrientationAngle(bool isVerticalText, const SVGRenderStyle&, const UChar& character) const;
+    float calculateBaselineShift(const RenderStyle&) const;
+    float calculateAlignmentBaselineShift(bool isVerticalText, const RenderSVGInlineText& textRenderer) const;
+    float calculateGlyphOrientationAngle(bool isVerticalText, const RenderStyle&, const char16_t& character) const;
     float calculateGlyphAdvanceAndOrientation(bool isVerticalText, SVGTextMetrics&, float angle, float& xOrientationShift, float& yOrientationShift) const;
 
 private:
-    AlignmentBaseline dominantBaselineToAlignmentBaseline(bool isVerticalText, const RenderObject* textRenderer) const;
+    AlignmentBaseline dominantBaselineToAlignmentBaseline(bool isVerticalText, const RenderElement& textRenderer) const;
 
-    const FontCascade& m_font;
+    CheckedRef<const FontCascade> m_font;
 };
 
 } // namespace WebCore

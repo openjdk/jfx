@@ -92,10 +92,10 @@ GST_API
 GType           gst_pipeline_get_type           (void);
 
 GST_API
-GstElement*     gst_pipeline_new                (const gchar *name) G_GNUC_MALLOC;
+GstElement*     gst_pipeline_new                (const gchar *name) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstBus*         gst_pipeline_get_bus            (GstPipeline *pipeline);
+GstBus*         gst_pipeline_get_bus            (GstPipeline *pipeline) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void            gst_pipeline_use_clock          (GstPipeline *pipeline, GstClock *clock);
@@ -104,10 +104,10 @@ GST_API
 gboolean        gst_pipeline_set_clock          (GstPipeline *pipeline, GstClock *clock);
 
 GST_API
-GstClock*       gst_pipeline_get_clock          (GstPipeline *pipeline);
+GstClock*       gst_pipeline_get_clock          (GstPipeline *pipeline) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstClock*       gst_pipeline_get_pipeline_clock (GstPipeline *pipeline);
+GstClock*       gst_pipeline_get_pipeline_clock (GstPipeline *pipeline) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void            gst_pipeline_auto_clock         (GstPipeline *pipeline);

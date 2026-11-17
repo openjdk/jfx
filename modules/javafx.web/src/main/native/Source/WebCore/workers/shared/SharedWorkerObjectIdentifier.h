@@ -25,11 +25,11 @@
 
 #pragma once
 
-#include "ProcessQualified.h"
+#include <WebCore/ProcessQualified.h>
 
 namespace WebCore {
 
 struct SharedWorkerObjectIdentifierType;
-using SharedWorkerObjectIdentifier = ProcessQualified<LegacyNullableObjectIdentifier<SharedWorkerObjectIdentifierType>>;
+using SharedWorkerObjectIdentifier = ProcessQualified<ObjectIdentifier<SharedWorkerObjectIdentifierType>>;
 
 } // namespace WebCore

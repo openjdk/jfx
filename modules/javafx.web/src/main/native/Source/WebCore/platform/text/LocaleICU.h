@@ -28,8 +28,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef LocaleICU_h
-#define LocaleICU_h
+#pragma once
 
 #include "PlatformLocale.h"
 #include <unicode/udat.h>
@@ -42,12 +41,13 @@ namespace WebCore {
 
 // We should use this class only for LocalizedNumberICU.cpp, LocalizedDateICU.cpp,
 // and LocalizedNumberICUTest.cpp.
-class LocaleICU : public Locale {
+class LocaleICU final : public Locale {
 public:
     explicit LocaleICU(const char*);
     virtual ~LocaleICU();
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
+    Locale::WritingDirection defaultWritingDirection() const override;
+
     String dateFormat() override;
     String monthFormat() override;
     String shortMonthFormat() override;
@@ -60,7 +60,6 @@ public:
     const Vector<String>& standAloneMonthLabels() override;
     const Vector<String>& shortStandAloneMonthLabels() override;
     const Vector<String>& timeAMPMLabels() override;
-#endif
 
 private:
 #if !UCONFIG_NO_FORMATTING
@@ -69,13 +68,11 @@ private:
 #endif
     void initializeLocaleData() override;
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
     bool initializeShortDateFormat();
     UDateFormat* openDateFormat(UDateFormatStyle timeStyle, UDateFormatStyle dateStyle) const;
 
     std::unique_ptr<Vector<String>> createLabelVector(const UDateFormat*, UDateFormatSymbolType, int32_t startIndex, int32_t size);
     void initializeDateTimeFormat();
-#endif
 
     CString m_locale;
 
@@ -84,7 +81,6 @@ private:
     bool m_didCreateDecimalFormat { false };
 #endif
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
     std::unique_ptr<Vector<String>> m_monthLabels;
     String m_dateFormat;
     String m_monthFormat;
@@ -102,8 +98,6 @@ private:
     Vector<String> m_timeAMPMLabels;
     bool m_didCreateShortDateFormat { false };
     bool m_didCreateTimeFormat { false };
-#endif
 };
 
 } // namespace WebCore
-#endif

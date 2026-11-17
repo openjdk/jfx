@@ -30,7 +30,7 @@ namespace WebCore {
 
 NativeNodeFilter::NativeNodeFilter(ScriptExecutionContext* context, Ref<NodeFilterCondition>&& condition)
     : NodeFilter(context)
-    , m_condition(WTFMove(condition))
+    , m_condition(WTF::move(condition))
 {
 }
 
@@ -42,6 +42,11 @@ bool NativeNodeFilter::hasCallback() const
 CallbackResult<unsigned short> NativeNodeFilter::acceptNode(Node& node)
 {
     return Ref { m_condition }->acceptNode(node);
+}
+
+CallbackResult<unsigned short> NativeNodeFilter::acceptNodeRethrowingException(Node& node)
+{
+    return acceptNode(node);
 }
 
 } // namespace WebCore

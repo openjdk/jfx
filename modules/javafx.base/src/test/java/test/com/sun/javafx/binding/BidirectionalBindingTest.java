@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,19 +25,35 @@
 
 package test.com.sun.javafx.binding;
 
-import com.sun.javafx.binding.BidirectionalBinding;
-import javafx.beans.binding.Bindings;
-import javafx.beans.property.*;
-
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.Arrays;
 import java.util.Collection;
+import javafx.beans.binding.Bindings;
+import javafx.beans.property.Property;
+import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.beans.property.ReadOnlyDoubleWrapper;
+import javafx.beans.property.ReadOnlyFloatWrapper;
+import javafx.beans.property.ReadOnlyIntegerWrapper;
+import javafx.beans.property.ReadOnlyLongWrapper;
+import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.beans.property.ReadOnlyStringWrapper;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.property.SimpleFloatProperty;
+import javafx.beans.property.SimpleIntegerProperty;
+import javafx.beans.property.SimpleLongProperty;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ObservableValue;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import com.sun.javafx.binding.BidirectionalBinding;
+import test.javafx.util.OutputRedirect;
 
 public class BidirectionalBindingTest<T> {
 
@@ -68,6 +84,16 @@ public class BidirectionalBindingTest<T> {
     private Property<T> op3;
     private Property<T> op4;
     private T[] v;
+
+    @BeforeEach
+    public void beforeEach() {
+        OutputRedirect.suppressStderr();
+    }
+
+    @AfterEach
+    public void afterEach() {
+        OutputRedirect.checkAndRestoreStderr();
+    }
 
     private void setUp(Factory<T> factory) {
         this.factory = factory;
@@ -305,6 +331,8 @@ public class BidirectionalBindingTest<T> {
         op2.setValue(v[2]);
         assertEquals(op3.getValue(), op1.getValue());
         assertEquals(op2.getValue(), op1.getValue());
+
+        OutputRedirect.checkAndRestoreStderr(RuntimeException.class);
     }
 
     @ParameterizedTest
@@ -325,6 +353,8 @@ public class BidirectionalBindingTest<T> {
         assertEquals(op3.getValue(), op1.getValue());
         assertEquals(v[0], op1.getValue());
         assertEquals(v[1], op2.getValue());
+
+        OutputRedirect.checkAndRestoreStderr(RuntimeException.class);
     }
 
     @ParameterizedTest

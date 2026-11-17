@@ -2,7 +2,7 @@
     Copyright (C) 1998 Lars Knoll (knoll@mpi-hd.mpg.de)
     Copyright (C) 2001 Dirk Mueller (mueller@kde.org)
     Copyright (C) 2002 Waldo Bastian (bastian@kde.org)
-    Copyright (C) 2004, 2005, 2006, 2007, 2008 Apple Inc. All rights reserved.
+    Copyright (C) 2004-2025 Apple Inc. All rights reserved.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Library General Public
@@ -162,7 +162,7 @@ void MemoryCache::revalidationSucceeded(CachedResource& revalidatingResource, co
     // one.
     std::pair key { resource->url(), resource->cachePartition() };
     if (auto* existingResources = sessionResourceMap(resource->sessionID())) {
-        if (CachedResourceHandle existingResource = existingResources->get(key).get())
+        if (CachedResourceHandle existingResource = existingResources->get(key))
             remove(*existingResource);
     }
 
@@ -208,8 +208,8 @@ CachedResource* MemoryCache::resourceForRequestImpl(const ResourceRequest& reque
     ASSERT(isMainThread());
     URL url = removeFragmentIdentifierIfNeeded(request.url());
 
-    auto key = std::make_pair(url, request.cachePartition());
-    return resources.get(key).get();
+    auto key = std::make_pair(WTF::move(url), request.cachePartition());
+    return resources.get(key);
 }
 
 unsigned MemoryCache::deadCapacity() const
@@ -239,7 +239,7 @@ void MemoryCache::pruneLiveResources(bool shouldDestroyDecodedDataForAllLiveReso
     pruneLiveResourcesToSize(targetSize, shouldDestroyDecodedDataForAllLiveResources);
 }
 
-void MemoryCache::forEachResource(const Function<void(CachedResource&)>& function)
+void MemoryCache::forEachResource(NOESCAPE const Function<void(CachedResource&)>& function)
 {
     RELEASE_ASSERT(isMainThread());
     Vector<WeakPtr<CachedResource>> allResources;
@@ -253,7 +253,7 @@ void MemoryCache::forEachResource(const Function<void(CachedResource&)>& functio
     }
 }
 
-void MemoryCache::forEachSessionResource(PAL::SessionID sessionID, const Function<void(CachedResource&)>& function)
+void MemoryCache::forEachSessionResource(PAL::SessionID sessionID, NOESCAPE const Function<void(CachedResource&)>& function)
 {
     RELEASE_ASSERT(isMainThread());
     RELEASE_ASSERT(m_sessionResources.isValidKey(sessionID));
@@ -365,7 +365,7 @@ void MemoryCache::pruneDeadResourcesToSize(unsigned targetSize)
         // destroyDecodedData() can alter the LRUList.
         auto lruList = copyToVector(*m_allResources[i]);
 
-        LOG(ResourceLoading, " lru list (size %lu) - flushing stage", lruList.size());
+        LOG(ResourceLoading, " lru list (size %zu) - flushing stage", lruList.size());
 
         // First flush all the decoded data in this queue.
         // Remove from the head, since this is the least frequently accessed of the objects.
@@ -392,7 +392,7 @@ void MemoryCache::pruneDeadResourcesToSize(unsigned targetSize)
             }
         }
 
-        LOG(ResourceLoading, " lru list (size %lu) - eviction stage", lruList.size());
+        LOG(ResourceLoading, " lru list (size %zu) - eviction stage", lruList.size());
 
         // Now evict objects from this list.
         // Remove from the head, since this is the least frequently accessed of the objects.
@@ -551,7 +551,7 @@ void MemoryCache::removeResourcesWithOrigin(const SecurityOrigin& origin, const 
                 continue;
             }
             auto resourceOrigin = SecurityOrigin::create(resource.url());
-            if (resourceOrigin->equal(&origin))
+            if (resourceOrigin->equal(origin))
                 resourcesWithOrigin.append(resource);
         }
     }
@@ -691,7 +691,7 @@ void MemoryCache::adjustSize(bool live, long long delta)
 void MemoryCache::removeRequestFromSessionCaches(ScriptExecutionContext& context, const ResourceRequest& request)
 {
     if (auto* globalScope = dynamicDowncast<WorkerGlobalScope>(context)) {
-        auto* workerLoaderProxy = globalScope->thread().workerLoaderProxy();
+        auto* workerLoaderProxy = globalScope->thread()->workerLoaderProxy();
         if (!workerLoaderProxy)
             return;
         workerLoaderProxy->postTaskToLoader([request = request.isolatedCopy()] (ScriptExecutionContext& context) {
@@ -700,10 +700,10 @@ void MemoryCache::removeRequestFromSessionCaches(ScriptExecutionContext& context
         return;
     }
 
-    auto& memoryCache = MemoryCache::singleton();
-    for (auto& resources : memoryCache.m_sessionResources) {
-        if (CachedResourceHandle resource = memoryCache.resourceForRequestImpl(request, *resources.value))
-            memoryCache.remove(*resource);
+    Ref memoryCache = MemoryCache::singleton();
+    for (auto& resources : memoryCache->m_sessionResources) {
+        if (CachedResourceHandle resource = memoryCache->resourceForRequestImpl(request, *resources.value))
+            memoryCache->remove(*resource);
     }
 }
 
@@ -728,6 +728,7 @@ MemoryCache::Statistics MemoryCache::getStatistics()
             case CachedResource::Type::CSSStyleSheet:
                 stats.cssStyleSheets.addResource(*resource);
                 break;
+            case CachedResource::Type::JSON:
             case CachedResource::Type::Script:
                 stats.scripts.addResource(*resource);
                 break;

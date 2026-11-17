@@ -105,8 +105,8 @@ public:
         BitVector::iterator m_fpIter;
     };
 
-    iterator begin() const { return iterator(m_gp.indices().begin(), m_fp.indices().begin()); }
-    iterator end() const { return iterator(m_gp.indices().end(), m_fp.indices().end()); }
+    iterator begin() const LIFETIME_BOUND { return iterator(m_gp.indices().begin(), m_fp.indices().begin()); }
+    iterator end() const LIFETIME_BOUND { return iterator(m_gp.indices().end(), m_fp.indices().end()); }
 
 private:
     IndexSet<Tmp::AbsolutelyIndexed<GP>> m_gp;

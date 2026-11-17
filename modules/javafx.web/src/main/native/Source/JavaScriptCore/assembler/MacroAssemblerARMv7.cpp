@@ -194,6 +194,8 @@ struct IncomingRecord {
     uintptr_t r0;
     uintptr_t r1;
     uintptr_t r2;
+    uintptr_t r3;
+    uintptr_t alignmentPadding;
 };
 
 #define IN_LR_OFFSET (0 * PTR_SIZE)
@@ -202,7 +204,9 @@ struct IncomingRecord {
 #define IN_R0_OFFSET (3 * PTR_SIZE)
 #define IN_R1_OFFSET (4 * PTR_SIZE)
 #define IN_R2_OFFSET (5 * PTR_SIZE)
-#define IN_SIZE      (6 * PTR_SIZE)
+#define IN_R3_OFFSET (6 * PTR_SIZE)
+#define IN_ALIGNMENT_PADDING_OFFSET (7 * PTR_SIZE)
+#define IN_SIZE      (8 * PTR_SIZE)
 
 static_assert(IN_LR_OFFSET == offsetof(IncomingRecord, lr), "IN_LR_OFFSET is incorrect");
 static_assert(IN_IP_OFFSET == offsetof(IncomingRecord, ip), "IN_IP_OFFSET is incorrect");
@@ -210,9 +214,11 @@ static_assert(IN_APSR_OFFSET == offsetof(IncomingRecord, apsr), "IN_APSR_OFFSET 
 static_assert(IN_R0_OFFSET == offsetof(IncomingRecord, r0), "IN_R0_OFFSET is incorrect");
 static_assert(IN_R1_OFFSET == offsetof(IncomingRecord, r1), "IN_R1_OFFSET is incorrect");
 static_assert(IN_R2_OFFSET == offsetof(IncomingRecord, r2), "IN_R2_OFFSET is incorrect");
+static_assert(IN_R3_OFFSET == offsetof(IncomingRecord, r3), "IN_R3_OFFSET is incorrect");
+static_assert(IN_ALIGNMENT_PADDING_OFFSET == offsetof(IncomingRecord, alignmentPadding), "IN_ALIGNMENT_PADDING_OFFSET is incorrect");
 static_assert(IN_SIZE == sizeof(IncomingRecord), "IN_SIZE is incorrect");
 
-asm (
+__asm__(
     ".text" "\n"
     ".align 2" "\n"
     ".globl " SYMBOL_STRING(ctiMasmProbeTrampoline) "\n"
@@ -363,7 +369,7 @@ asm (
     ".previous" "\n"
 );
 
-void MacroAssembler::probe(Probe::Function function, void* arg, SavedFPWidth)
+void MacroAssembler::probe(Probe::Function function, void* arg)
 {
     sub32(TrustedImm32(sizeof(IncomingRecord)), sp);
 
@@ -375,6 +381,7 @@ void MacroAssembler::probe(Probe::Function function, void* arg, SavedFPWidth)
     store32(r0, Address(sp, offsetof(IncomingRecord, r0)));
     store32(r1, Address(sp, offsetof(IncomingRecord, r1)));
     store32(r2, Address(sp, offsetof(IncomingRecord, r2)));
+    store32(r3, Address(sp, offsetof(IncomingRecord, r3)));
 
     // The following may emit a T1 mov instruction, which is effectively a movs.
     // This means we must first preserve the apsr flags above first.

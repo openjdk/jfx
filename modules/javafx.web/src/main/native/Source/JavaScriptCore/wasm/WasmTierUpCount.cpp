@@ -44,9 +44,9 @@ TierUpCount::TierUpCount()
 
 TierUpCount::~TierUpCount() = default;
 
-OSREntryData& TierUpCount::addOSREntryData(uint32_t functionIndex, uint32_t loopIndex, StackMap&& stackMap)
+OSREntryData& TierUpCount::addOSREntryData(FunctionCodeIndex functionIndex, uint32_t loopIndex, StackMap&& stackMap)
 {
-    m_osrEntryData.append(makeUnique<OSREntryData>(functionIndex, loopIndex, WTFMove(stackMap)));
+    m_osrEntryData.append(makeUnique<OSREntryData>(functionIndex, loopIndex, WTF::move(stackMap)));
     return *m_osrEntryData.last().get();
 }
 
@@ -57,4 +57,4 @@ OSREntryData& TierUpCount::osrEntryData(uint32_t loopIndex)
 
 } } // namespace JSC::Wasm
 
-#endif // ENABLE(WEBASSEMBLY_OMGJIT)
+#endif // ENABLE(WEBASSEMBLY_OMGJIT) || ENABLE(WEBASSEMBLY_BBQJIT)

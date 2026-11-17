@@ -25,17 +25,22 @@
 
 #pragma once
 
-#include "GraphicsLayer.h"
 #include <wtf/Forward.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
+class GraphicsLayer;
+class GraphicsLayerClient;
+
+enum class GraphicsLayerType : uint8_t;
+
 class GraphicsLayerFactory {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(GraphicsLayerFactory);
 public:
     virtual ~GraphicsLayerFactory() = default;
 
-    virtual Ref<GraphicsLayer> createGraphicsLayer(GraphicsLayer::Type, GraphicsLayerClient&) = 0;
+    virtual Ref<GraphicsLayer> createGraphicsLayer(GraphicsLayerType, GraphicsLayerClient&) = 0;
 };
 
 } // namespace WebCore

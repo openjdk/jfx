@@ -100,7 +100,7 @@ StorageTracker& StorageTracker::tracker()
 StorageTracker::StorageTracker(const String& storagePath)
     : m_storageDirectoryPath(storagePath.isolatedCopy())
     , m_client(0)
-    , m_thread(makeUnique<StorageThread>())
+    , m_thread(makeUniqueRef<StorageThread>())
     , m_isActive(false)
     , m_needsInitialization(false)
     , m_StorageDatabaseIdleInterval(defaultStorageDatabaseIdleInterval)
@@ -160,7 +160,6 @@ void StorageTracker::importOriginIdentifiers()
         return;
 
     ASSERT(isMainThread());
-    ASSERT(m_thread);
 
     m_thread->dispatch([this] {
         syncImportOriginIdentifiers();
@@ -301,8 +300,8 @@ void StorageTracker::setOriginDetails(const String& originIdentifier, const Stri
     };
 
     // FIXME: This weird ping-ponging was done to fix a deadlock. We should figure out a cleaner way to avoid it instead.
-    ensureOnMainThread([this, function = WTFMove(function)]() mutable {
-        m_thread->dispatch(WTFMove(function));
+    ensureOnMainThread([this, function = WTF::move(function)]() mutable {
+        m_thread->dispatch(WTF::move(function));
     });
 }
 
@@ -370,7 +369,6 @@ void StorageTracker::deleteAllOrigins()
 {
     ASSERT(m_isActive);
     ASSERT(isMainThread());
-    ASSERT(m_thread);
 
     if (!m_isActive)
         return;
@@ -472,7 +470,6 @@ void StorageTracker::deleteOrigin(const SecurityOriginData& origin)
 {
     ASSERT(m_isActive);
     ASSERT(isMainThread());
-    ASSERT(m_thread);
 
     if (!m_isActive)
         return;
@@ -493,7 +490,7 @@ void StorageTracker::deleteOrigin(const SecurityOriginData& origin)
         m_originSet.remove(originId);
     }
 
-    m_thread->dispatch([this, originId = WTFMove(originId).isolatedCopy()] {
+    m_thread->dispatch([this, originId = WTF::move(originId).isolatedCopy()] {
         syncDeleteOrigin(originId);
     });
 }

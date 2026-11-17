@@ -25,16 +25,23 @@
 
 #pragma once
 
-#include "Color.h"
+#include <WebCore/Color.h>
 #include <wtf/Forward.h>
 
 namespace WebCore {
 
+class LayoutRect;
 class Page;
+
+enum class PredominantColorType : uint8_t;
 
 class PageColorSampler {
 public:
     static std::optional<Color> sampleTop(Page&);
+    WEBCORE_EXPORT static bool colorsAreSimilar(const Color&, const Color&);
+
+    static constexpr auto nearlyTransparentAlphaThreshold = 0.1;
+    static Variant<PredominantColorType, Color> predominantColor(Page&, const LayoutRect&);
 };
 
 } // namespace WebCore

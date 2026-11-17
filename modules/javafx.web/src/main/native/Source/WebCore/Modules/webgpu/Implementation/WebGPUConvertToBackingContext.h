@@ -40,6 +40,7 @@
 #include <WebGPU/WebGPUExt.h>
 #include <cstdint>
 #include <wtf/RefCounted.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore::WebGPU {
 
@@ -103,7 +104,7 @@ class XRSubImage;
 class XRView;
 
 class ConvertToBackingContext : public RefCounted<ConvertToBackingContext> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ConvertToBackingContext);
 public:
     virtual ~ConvertToBackingContext() = default;
 
@@ -135,7 +136,6 @@ public:
     WGPUTextureViewDimension convertToBacking(TextureViewDimension);
     WGPUVertexFormat convertToBacking(VertexFormat);
     WGPUVertexStepMode convertToBacking(VertexStepMode);
-    WGPUXREye convertToBacking(XREye);
 
     WGPUBufferUsageFlags convertBufferUsageFlagsToBacking(BufferUsageFlags);
     WGPUColorWriteMaskFlags convertColorWriteFlagsToBacking(ColorWriteFlags);

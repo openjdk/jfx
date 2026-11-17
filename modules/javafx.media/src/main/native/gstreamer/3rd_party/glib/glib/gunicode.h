@@ -205,10 +205,10 @@ typedef enum
  * @G_UNICODE_BREAK_EMOJI_MODIFIER: Emoji Modifier (EM). Since: 2.50
  * @G_UNICODE_BREAK_ZERO_WIDTH_JOINER: Zero Width Joiner (ZWJ). Since: 2.50
  * @G_UNICODE_BREAK_AKSARA: Aksara (AK). Since: 2.80
- * @G_UNICODE_BREAK_AKSARA_PRE_BASE (AP). Since: 2.80
- * @G_UNICODE_BREAK_AKSARA_START (AS). Since: 2.80
- * @G_UNICODE_BREAK_VIRAMA_FINAL (VF). Since: 2.80
- * @G_UNICODE_BREAK_VIRAMA (VI). Since: 2.80
+ * @G_UNICODE_BREAK_AKSARA_PRE_BASE: Aksara Pre-Base (AP). Since: 2.80
+ * @G_UNICODE_BREAK_AKSARA_START: Aksara Start (AS). Since: 2.80
+ * @G_UNICODE_BREAK_VIRAMA_FINAL: Virama Final (VF). Since: 2.80
+ * @G_UNICODE_BREAK_VIRAMA: Virama (VI). Since: 2.80
  *
  * These are the possible line break classifications.
  *
@@ -450,6 +450,13 @@ typedef enum
  * @G_UNICODE_SCRIPT_MATH:                 Mathematical notation. Since: 2.72
  * @G_UNICODE_SCRIPT_KAWI:                 Kawi. Since 2.74
  * @G_UNICODE_SCRIPT_NAG_MUNDARI:          Nag Mundari. Since 2.74
+ * @G_UNICODE_SCRIPT_TODHRI:               Todhri. Since: 2.84
+ * @G_UNICODE_SCRIPT_GARAY:                Garay. Since: 2.84
+ * @G_UNICODE_SCRIPT_TULU_TIGALARI:        Tulu-Tigalari. Since: 2.84
+ * @G_UNICODE_SCRIPT_SUNUWAR:              Sunuwar. Since: 2.84
+ * @G_UNICODE_SCRIPT_GURUNG_KHEMA:         Gurung Khema. Since: 2.84
+ * @G_UNICODE_SCRIPT_KIRAT_RAI:            Kirat Rai. Since: 2.84
+ * @G_UNICODE_SCRIPT_OL_ONAL:              Ol Onal. Since: 2.84
  *
  * The #GUnicodeScript enumeration identifies different writing
  * systems. The values correspond to the names as defined in the
@@ -661,7 +668,16 @@ typedef enum
 
   /* Unicode 15.0 additions */
   G_UNICODE_SCRIPT_KAWI GLIB_AVAILABLE_ENUMERATOR_IN_2_74,          /* Kawi */
-  G_UNICODE_SCRIPT_NAG_MUNDARI GLIB_AVAILABLE_ENUMERATOR_IN_2_74,   /* Nag Mundari */
+  G_UNICODE_SCRIPT_NAG_MUNDARI GLIB_AVAILABLE_ENUMERATOR_IN_2_74,   /* Nagm */
+
+  /* Unicode 16.0 additions */
+  G_UNICODE_SCRIPT_TODHRI GLIB_AVAILABLE_ENUMERATOR_IN_2_84,         /* Todr */
+  G_UNICODE_SCRIPT_GARAY GLIB_AVAILABLE_ENUMERATOR_IN_2_84,          /* Gara */
+  G_UNICODE_SCRIPT_TULU_TIGALARI GLIB_AVAILABLE_ENUMERATOR_IN_2_84,  /* Tutg */
+  G_UNICODE_SCRIPT_SUNUWAR GLIB_AVAILABLE_ENUMERATOR_IN_2_84,        /* Sunu */
+  G_UNICODE_SCRIPT_GURUNG_KHEMA GLIB_AVAILABLE_ENUMERATOR_IN_2_84,   /* Gukh */
+  G_UNICODE_SCRIPT_KIRAT_RAI GLIB_AVAILABLE_ENUMERATOR_IN_2_84,      /* Krai */
+  G_UNICODE_SCRIPT_OL_ONAL GLIB_AVAILABLE_ENUMERATOR_IN_2_84,        /* Onao */
 } GUnicodeScript;
 
 GLIB_AVAILABLE_IN_ALL
@@ -671,6 +687,7 @@ GUnicodeScript g_unicode_script_from_iso15924 (guint32        iso15924);
 
 /* These are all analogs of the <ctype.h> functions.
  */
+#ifndef GSTREAMER_LITE
 GLIB_AVAILABLE_IN_ALL
 gboolean g_unichar_isalnum   (gunichar c) G_GNUC_CONST;
 GLIB_AVAILABLE_IN_ALL
@@ -726,6 +743,7 @@ gint g_unichar_xdigit_value (gunichar c) G_GNUC_CONST;
 /* Return the Unicode character type of a given character.  */
 GLIB_AVAILABLE_IN_ALL
 GUnicodeType g_unichar_type (gunichar c) G_GNUC_CONST;
+#endif // GSTREAMER_LITE
 
 /* Return the line break property for a given character */
 GLIB_AVAILABLE_IN_ALL
@@ -915,6 +933,7 @@ gboolean g_utf8_validate_len (const gchar  *str,
                               gsize         max_len,
                               const gchar **end);
 
+#ifndef GSTREAMER_LITE
 GLIB_AVAILABLE_IN_ALL
 gchar *g_utf8_strup   (const gchar *str,
                        gssize       len) G_GNUC_MALLOC;
@@ -924,6 +943,7 @@ gchar *g_utf8_strdown (const gchar *str,
 GLIB_AVAILABLE_IN_ALL
 gchar *g_utf8_casefold (const gchar *str,
                         gssize       len) G_GNUC_MALLOC;
+#endif // GSTREAMER_LITE
 
 /**
  * GNormalizeMode:

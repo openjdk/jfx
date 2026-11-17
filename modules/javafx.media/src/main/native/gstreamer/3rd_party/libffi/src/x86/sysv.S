@@ -912,7 +912,7 @@ ENDF(C(ffi_closure_raw_THISCALL))
 #elif defined __ELF__ && !(defined(__sun__) && defined(__svr4__))
 # define COMDAT(X)                                                      \
         .section .text.X,"axG",@progbits,X,comdat;                      \
-        .globl	X;                                                      \
+        .globl  X;                                                      \
         FFI_HIDDEN(X)
 #else
 # define COMDAT(X)
@@ -960,9 +960,9 @@ ENDF(C(__x86.get_pc_thunk.dx))
 #endif
 
 #ifdef HAVE_AS_X86_PCREL
-# define PCREL(X)	X-.
+# define PCREL(X)       X-.
 #else
-# define PCREL(X)	X@rel
+# define PCREL(X)       X@rel
 #endif
 
 #ifdef __APPLE__
@@ -1114,7 +1114,6 @@ L(SFDE7):
 #endif
         .balign 4
 L(EFDE7):
-
 #if !FFI_NO_RAW_API
         .set    L(set8),L(EFDE8)-L(SFDE8)
         .long   L(set8)                 /* FDE Length */

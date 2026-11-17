@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "Document.h"
-#include "SecurityOriginData.h"
-#include "TextBreakingPositionContext.h"
-#include "Timer.h"
+#include <WebCore/Document.h>
+#include <WebCore/SecurityOriginData.h>
+#include <WebCore/TextBreakingPositionContext.h>
+#include <WebCore/Timer.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 
@@ -36,7 +36,7 @@ namespace WebCore {
 namespace Layout {
 
 class TextBreakingPositionCache {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(TextBreakingPositionCache);
 public:
     static constexpr size_t minimumRequiredTextLengthForContentBreakCache = 5;
     static constexpr size_t minimumRequiredContentBreaks = 3;

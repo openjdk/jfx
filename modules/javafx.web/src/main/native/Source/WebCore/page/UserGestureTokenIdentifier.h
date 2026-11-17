@@ -25,12 +25,12 @@
 
 #pragma once
 
-#include "ProcessQualified.h"
+#include <WebCore/ProcessQualified.h>
 #include <wtf/ObjectIdentifier.h>
 
 namespace WebCore {
 
 struct UserGestureTokenIdentifierType;
-using UserGestureTokenIdentifier = ProcessQualified<LegacyNullableObjectIdentifier<UserGestureTokenIdentifierType>>;
+using UserGestureTokenIdentifier = ProcessQualified<ObjectIdentifier<UserGestureTokenIdentifierType>>;
 
 }

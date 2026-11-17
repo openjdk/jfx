@@ -25,12 +25,14 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(FTL_JIT)
 
-#include "FTLExitArgument.h"
-#include "FTLRecoveryOpcode.h"
-#include "JSCJSValue.h"
-#include "VirtualRegister.h"
+#include <JavaScriptCore/FTLExitArgument.h>
+#include <JavaScriptCore/FTLRecoveryOpcode.h>
+#include <JavaScriptCore/JSCJSValue.h>
+#include <JavaScriptCore/VirtualRegister.h>
 #include <wtf/PrintStream.h>
 
 namespace JSC {
@@ -81,7 +83,7 @@ public:
         result.m_kind = ExitValueInJSStack;
         UnionType u;
         u.virtualRegister = reg.offset();
-        result.m_value = WTFMove(u);
+        result.m_value = WTF::move(u);
         return result;
     }
 
@@ -91,7 +93,7 @@ public:
         result.m_kind = ExitValueInJSStackAsInt32;
         UnionType u;
         u.virtualRegister = reg.offset();
-        result.m_value = WTFMove(u);
+        result.m_value = WTF::move(u);
         return result;
     }
 
@@ -101,7 +103,7 @@ public:
         result.m_kind = ExitValueInJSStackAsInt52;
         UnionType u;
         u.virtualRegister = reg.offset();
-        result.m_value = WTFMove(u);
+        result.m_value = WTF::move(u);
         return result;
     }
 
@@ -111,7 +113,7 @@ public:
         result.m_kind = ExitValueInJSStackAsDouble;
         UnionType u;
         u.virtualRegister = reg.offset();
-        result.m_value = WTFMove(u);
+        result.m_value = WTF::move(u);
         return result;
     }
 
@@ -121,7 +123,7 @@ public:
         result.m_kind = ExitValueConstant;
         UnionType u;
         u.constant = JSValue::encode(value);
-        result.m_value = WTFMove(u);
+        result.m_value = WTF::move(u);
         return result;
     }
 
@@ -131,7 +133,7 @@ public:
         result.m_kind = ExitValueArgument;
         UnionType u;
         u.argument = argument.representation();
-        result.m_value = WTFMove(u);
+        result.m_value = WTF::move(u);
         return result;
     }
 
@@ -169,7 +171,7 @@ public:
         ASSERT(isArgument());
         UnionType u = m_value.get();
         u.argument.argument += offset;
-        m_value = WTFMove(u);
+        m_value = WTF::move(u);
     }
 
     JSValue constant() const
@@ -197,7 +199,7 @@ public:
         result.m_kind = m_kind;
         UnionType u;
         u.virtualRegister = virtualRegister.offset();
-        result.m_value = WTFMove(u);
+        result.m_value = WTF::move(u);
         return result;
     }
 

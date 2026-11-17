@@ -27,6 +27,8 @@
 #pragma once
 
 #include <wtf/EnumTraits.h>
+#include <wtf/Platform.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -163,8 +165,17 @@ enum ContextMenuAction {
     ContextMenuItemPDFTwoPages,
     ContextMenuItemPDFTwoPagesContinuous,
     ContextMenuItemTagShowMediaStats,
-    ContextMenuItemTagCopyLinkToHighlight,
-    ContextMenuItemLastNonCustomTag = ContextMenuItemTagCopyLinkToHighlight,
+    ContextMenuItemTagCopyLinkWithHighlight,
+    ContextMenuItemTagProofread,
+    ContextMenuItemTagRewrite,
+    ContextMenuItemTagSummarize,
+    ContextMenuItemCaptionDisplayStyleSubmenu,
+#if PLATFORM(COCOA)
+    ContextMenuItemTagSmartLists,
+    ContextMenuItemLastNonCustomTag = ContextMenuItemTagSmartLists,
+#else
+    ContextMenuItemLastNonCustomTag = ContextMenuItemCaptionDisplayStyleSubmenu,
+#endif
     ContextMenuItemBaseCustomTag = 5000,
     ContextMenuItemLastCustomTag = 5999,
     ContextMenuItemBaseApplicationTag = 10000
@@ -178,7 +189,7 @@ enum class ContextMenuItemType : uint8_t {
 };
 
 class ContextMenuItem {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(ContextMenuItem, WEBCORE_EXPORT);
 public:
     WEBCORE_EXPORT ContextMenuItem(ContextMenuItemType, ContextMenuAction, const String&, ContextMenu* subMenu = 0);
     WEBCORE_EXPORT ContextMenuItem(ContextMenuItemType, ContextMenuAction, const String&, bool enabled, bool checked, unsigned indentationLevel = 0);
@@ -207,6 +218,7 @@ public:
 
     bool isNull() const;
 
+    void setTitle(String&& title) { m_title = WTF::move(title); }
     void setTitle(const String& title) { m_title = title; }
     const String& title() const { return m_title; }
 
@@ -225,6 +237,6 @@ private:
 
 namespace WTF {
 
-template<> WEBCORE_EXPORT bool isValidEnum<WebCore::ContextMenuAction, void>(std::underlying_type_t<WebCore::ContextMenuAction>);
+template<> WEBCORE_EXPORT bool isValidEnum<WebCore::ContextMenuAction>(std::underlying_type_t<WebCore::ContextMenuAction>);
 
 } // namespace WTF

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,7 +30,7 @@ import com.sun.javafx.css.ParsedValueImpl;
 import javafx.animation.Interpolator;
 import javafx.animation.Interpolator.StepPosition;
 import javafx.css.ParsedValue;
-import java.util.List;
+import javafx.geometry.Point2D;
 import java.util.Locale;
 import org.junit.jupiter.api.Test;
 
@@ -46,6 +46,18 @@ public class InterpolatorConverterTest {
         var value = new ParsedValueImpl<Object, Interpolator>(new ParsedValueImpl<>("linear", null), null);
         var result = InterpolatorConverter.getInstance().convert(value, null);
         assertInterpolatorEquals(LINEAR, result);
+    }
+
+    @Test
+    public void testConvertLinearInterpolatorWithControlPoints() {
+        var value = new ParsedValueImpl<Object, Interpolator>(new ParsedValue[] {
+            new ParsedValueImpl<>("linear(", null),
+            new ParsedValueImpl<>(0.0, null), new ParsedValueImpl<>(0.0, null),
+            new ParsedValueImpl<>(0.5, null), new ParsedValueImpl<>(0.25, null),
+            new ParsedValueImpl<>(1.0, null), new ParsedValueImpl<>(1.0, null) },
+            null);
+        var result = InterpolatorConverter.getInstance().convert(value, null);
+        assertInterpolatorEquals(ofLinear(new Point2D(0, 0), new Point2D(0.5, 0.25), new Point2D(1, 1)), result);
     }
 
     @Test
@@ -101,10 +113,11 @@ public class InterpolatorConverterTest {
     public void testConvertCubicBezierInterpolator() {
         var value = new ParsedValueImpl<Object, Interpolator>(new ParsedValue[] {
             new ParsedValueImpl<>("cubic-bezier(", null),
-            new ParsedValueImpl<>(List.of(0.1, 0.2, 0.3, 0.4), null) },
+            new ParsedValueImpl<>(0.1, null), new ParsedValueImpl<>(0.2, null),
+            new ParsedValueImpl<>(0.3, null), new ParsedValueImpl<>(0.4, null) },
             null);
         var result = InterpolatorConverter.getInstance().convert(value, null);
-        assertInterpolatorEquals(SPLINE(0.1, 0.2, 0.3, 0.4), result);
+        assertInterpolatorEquals(ofSpline(0.1, 0.2, 0.3, 0.4), result);
     }
 
     @Test
@@ -127,10 +140,10 @@ public class InterpolatorConverterTest {
             var cssName = "jump-" + stepPosition.toString().toLowerCase(Locale.ROOT).replace('_', '-');
             var value = new ParsedValueImpl<Object, Interpolator>(new ParsedValue[] {
                 new ParsedValueImpl<>("steps(", null),
-                new ParsedValueImpl<>(List.of(3, cssName), null) },
+                new ParsedValueImpl<>(3, null), new ParsedValueImpl<>(cssName, null) },
                 null);
             var result = InterpolatorConverter.getInstance().convert(value, null);
-            assertInterpolatorEquals(STEPS(3, stepPosition), result);
+            assertInterpolatorEquals(ofSteps(3, stepPosition), result);
         }
     }
 
@@ -139,12 +152,14 @@ public class InterpolatorConverterTest {
         var result1 = InterpolatorConverter.getInstance().convert(
             new ParsedValueImpl<>(new ParsedValueImpl[] {
                 new ParsedValueImpl<>("cubic-bezier(", null),
-                new ParsedValueImpl<>(List.of(0.1, 0.2, 0.3, 0.4), null) }, null),
+                new ParsedValueImpl<>(0.1, null), new ParsedValueImpl<>(0.2, null),
+                new ParsedValueImpl<>(0.3, null), new ParsedValueImpl<>(0.4, null) }, null),
             null);
         var result2 = InterpolatorConverter.getInstance().convert(
             new ParsedValueImpl<>(new ParsedValueImpl[] {
                 new ParsedValueImpl<>("cubic-bezier(", null),
-                new ParsedValueImpl<>(List.of(0.1, 0.2, 0.3, 0.4), null) }, null),
+                new ParsedValueImpl<>(0.1, null), new ParsedValueImpl<>(0.2, null),
+                new ParsedValueImpl<>(0.3, null), new ParsedValueImpl<>(0.4, null) }, null),
             null);
         assertSame(result1, result2);
     }

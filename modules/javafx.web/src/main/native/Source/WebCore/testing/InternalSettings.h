@@ -26,7 +26,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "FontGenericFamilies.h"
 #include "InternalSettingsGenerated.h"
 #include "Settings.h"
@@ -34,6 +33,7 @@
 namespace WebCore {
 
 class Page;
+template<typename> class ExceptionOr;
 
 class InternalSettings : public InternalSettingsGenerated {
 public:
@@ -89,7 +89,6 @@ public:
     ExceptionOr<void> setCustomPasteboardDataEnabled(bool);
 
     bool vp9DecoderEnabled() const;
-    bool mediaSourceInlinePaintingEnabled() const;
 
     ExceptionOr<void> setShouldManageAudioSessionCategory(bool);
 
@@ -124,6 +123,8 @@ public:
 
 private:
     explicit InternalSettings(Page*);
+
+    bool isInternalSettings() const final { return true; }
 
     Settings& settings() const;
     static ASCIILiteral supplementName();
@@ -170,3 +171,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::InternalSettings)
+    static bool isType(const WebCore::InternalSettingsGenerated& settings) { return settings.isInternalSettings(); }
+SPECIALIZE_TYPE_TRAITS_END()

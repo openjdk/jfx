@@ -26,22 +26,10 @@
 #include "CSSPropertyParserConsumer+Primitives.h"
 
 #include "CSSParserTokenRange.h"
+#include "CSSPropertyParserOptions.h"
 
 namespace WebCore {
 namespace CSSPropertyParserHelpers {
-
-bool shouldAcceptUnitlessValue(double value, CSSPropertyParserOptions options)
-{
-    // FIXME: Presentational HTML attributes shouldn't use the CSS parser for lengths.
-
-    if (!value && options.unitlessZero == UnitlessZeroQuirk::Allow)
-        return true;
-
-    if (isUnitlessValueParsingEnabledForMode(options.parserMode))
-        return true;
-
-    return options.parserMode == HTMLQuirksMode && options.unitless == UnitlessQuirk::Allow;
-}
 
 bool consumeCommaIncludingWhitespace(CSSParserTokenRange& range)
 {
@@ -68,6 +56,34 @@ CSSParserTokenRange consumeFunction(CSSParserTokenRange& range)
     range.consumeWhitespace();
     contents.consumeWhitespace();
     return contents;
+}
+
+std::optional<CSSParserTokenRange> consumeArgument(CSSParserTokenRange& range, unsigned index)
+{
+    if (range.atEnd())
+        return std::nullopt;
+
+    if (index) {
+        ASSERT(range.peek().type() == CommaToken);
+        range.consume();
+    }
+
+    range.consumeWhitespace();
+
+    auto argumentStart = range;
+    while (!range.atEnd()) {
+        if (range.peek().type() == CommaToken)
+            break;
+
+        if (range.peek().getBlockType() == CSSParserToken::BlockStart) {
+            range.consumeBlock();
+            continue;
+        }
+
+        range.consume();
+    }
+
+    return argumentStart.rangeUntil(range);
 }
 
 } // namespace CSSPropertyParserHelpers

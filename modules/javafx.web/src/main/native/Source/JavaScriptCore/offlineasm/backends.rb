@@ -135,22 +135,29 @@ end
 class Label
     def lower(name)
         $asm.debugAnnotation codeOrigin.debugDirective if $enableDebugAnnotations
-        $asm.putsLabel(self.name[1..-1], @global, @export, @aligned, @alignTo)
+        $asm.putsLabel(self.name[1..-1], @global, @export, @aligned, @alignTo ? @alignTo.dump : @alignTo)
     end
 end
 
 class LocalLabel
+    def labelString
+        "jsc_llint_#{name[1..-1]}_#{codeOrigin.labelStringExtension}"
+    end
+
     def lower(name)
-        $asm.putsLocalLabel "jsc_llint_#{self.name[1..-1]}"
+        $asm.putsLocalLabel(self.labelString)
     end
 end
 
 class LabelReference
     def asmLabel
-        if extern?
-            Assembler.externLabelReference(name[1..-1])
+        # For historical reasons a LabelReference may reference a label which is neither
+        # extern nor global, in which case it should act as a LocalLabelReference.
+        # See https://bugs.webkit.org/show_bug.cgi?id=131205.
+        if extern? || label.global?
+            Assembler.externOrGlobalLabelReference(name[1..-1])
         else
-            Assembler.labelReference(name[1..-1])
+            Assembler.localLabelReference(name[1..-1])
         end
     end
 
@@ -161,11 +168,11 @@ end
 
 class LocalLabelReference
     def asmLabel
-        Assembler.localLabelReference("jsc_llint_"+name[1..-1])
+        Assembler.localLabelReference(@label.labelString)
     end
 
     def cLabel
-        Assembler.cLocalLabelReference("jsc_llint_"+name[1..-1])
+        Assembler.cLocalLabelReference(@label.labelString)
     end
 end
 

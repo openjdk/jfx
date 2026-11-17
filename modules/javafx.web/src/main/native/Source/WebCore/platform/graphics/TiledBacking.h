@@ -25,22 +25,19 @@
 
 #pragma once
 
-#include "IntPoint.h"
-#include "PlatformLayerIdentifier.h"
-#include "TileGridIdentifier.h"
+#include <WebCore/BoxExtents.h>
+#include <WebCore/IntPoint.h>
+#include <WebCore/PlatformLayerIdentifier.h>
+#include <WebCore/TileGridIdentifier.h>
+#include <wtf/AbstractThreadSafeRefCountedAndCanMakeWeakPtr.h>
 #include <wtf/CheckedRef.h>
-#include <wtf/FastMalloc.h>
 #include <wtf/MonotonicTime.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 
-namespace WebCore {
-class TiledBackingClient;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::TiledBackingClient> : std::true_type { };
-}
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
+#include <WebCore/DynamicContentScalingDisplayList.h>
+#endif
 
 namespace WebCore {
 
@@ -52,11 +49,6 @@ class IntSize;
 class PlatformCALayer;
 
 struct VelocityData;
-
-enum TileSizeMode {
-    StandardTileSizeMode,
-    GiantTileSizeMode
-};
 
 enum ScrollingModeIndication {
     SynchronousScrollingBecauseOfLackOfScrollingCoordinatorIndication,
@@ -71,10 +63,15 @@ enum class TiledBackingScrollability : uint8_t {
     VerticallyScrollable    = 1 << 1
 };
 
+enum class TileRevalidationType : uint8_t {
+    Partial,
+    Full
+};
+
 using TileIndex = IntPoint;
 class TiledBacking;
 
-class TiledBackingClient : public CanMakeWeakPtr<TiledBackingClient> {
+class TiledBackingClient : public AbstractThreadSafeRefCountedAndCanMakeWeakPtr {
 public:
     virtual ~TiledBackingClient() = default;
 
@@ -83,16 +80,26 @@ public:
     virtual void willRemoveTile(TiledBacking&, TileGridIdentifier, TileIndex) = 0;
     virtual void willRepaintAllTiles(TiledBacking&, TileGridIdentifier) = 0;
 
+    // The client will not receive `willRepaintTile()` for tiles needing display as part of a revalidation.
+    virtual void willRevalidateTiles(TiledBacking&, TileGridIdentifier, TileRevalidationType) = 0;
+    virtual void didRevalidateTiles(TiledBacking&, TileGridIdentifier, TileRevalidationType, const HashSet<TileIndex>& tilesNeedingDisplay) = 0;
+
     virtual void didAddGrid(TiledBacking&, TileGridIdentifier) = 0;
     virtual void willRemoveGrid(TiledBacking&, TileGridIdentifier) = 0;
 
     virtual void coverageRectDidChange(TiledBacking&, const FloatRect&) = 0;
-    virtual void tilingScaleFactorDidChange(TiledBacking&, float) = 0;
+
+    virtual void willRepaintTilesAfterScaleFactorChange(TiledBacking&, TileGridIdentifier) = 0;
+    virtual void didRepaintTilesAfterScaleFactorChange(TiledBacking&, TileGridIdentifier) = 0;
+
+#if ENABLE(RE_DYNAMIC_CONTENT_SCALING)
+    virtual std::optional<DynamicContentScalingDisplayList> dynamicContentScalingDisplayListForTile(TiledBacking&, TileGridIdentifier, TileIndex) = 0;
+#endif
 };
 
 
 class TiledBacking : public CanMakeCheckedPtr<TiledBacking> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(TiledBacking);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(TiledBacking);
 public:
     virtual ~TiledBacking() = default;
@@ -117,7 +124,7 @@ public:
     virtual bool tilesWouldChangeForCoverageRect(const FloatRect&) const = 0;
 
     virtual void setTiledScrollingIndicatorPosition(const FloatPoint&) = 0;
-    virtual void setTopContentInset(float) = 0;
+    virtual void setObscuredContentInsets(const FloatBoxExtent&) = 0;
 
     virtual void setVelocity(const VelocityData&) = 0;
 
@@ -188,6 +195,10 @@ public:
 #if USE(CA)
     virtual PlatformCALayer* tiledScrollingIndicatorLayer() = 0;
 #endif
+
+    virtual void clearObscuredInsetsAdjustments() = 0;
+    virtual void obscuredInsetsWillChange(FloatBoxExtent&&) = 0;
+    virtual FloatRect adjustedTileClipRectForObscuredInsets(const FloatRect&) const = 0;
 };
 
 } // namespace WebCore

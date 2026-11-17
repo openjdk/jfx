@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -214,11 +214,11 @@ public final class BorderImage implements Interpolatable<BorderImage> {
 
         // We don't check equals(endValue) here to prevent unnecessary equality checks,
         // and only check for equality with 'this' or 'endValue' after interpolation.
-        if (t <= 0) {
+        if (t == 0) {
             return this;
         }
 
-        if (t >= 1) {
+        if (t == 1) {
             return endValue;
         }
 
@@ -252,8 +252,7 @@ public final class BorderImage implements Interpolatable<BorderImage> {
             return endValue;
         }
 
-        return new BorderImage(endValue.image, newWidths, newInsets, newSlices,
-                               endValue.filled, endValue.repeatX, endValue.repeatY);
+        return new BorderImage(newImage, newWidths, newInsets, newSlices, newFilled, newRepeatX, newRepeatY);
     }
 
     private boolean isSame(Image image, BorderWidths widths, BorderWidths slices, boolean filled,

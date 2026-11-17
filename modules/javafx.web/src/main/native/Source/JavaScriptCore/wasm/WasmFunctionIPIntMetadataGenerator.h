@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,17 +25,23 @@
 
 #pragma once
 
+#include <wtf/Compiler.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
+#include <wtf/Platform.h>
+
 #if ENABLE(WEBASSEMBLY)
 
-#include "BytecodeConventions.h"
-#include "HandlerInfo.h"
-#include "InstructionStream.h"
-#include "MacroAssemblerCodeRef.h"
-#include "SIMDInfo.h"
-#include "WasmHandlerInfo.h"
-#include "WasmIPIntGenerator.h"
-#include "WasmIPIntTierUpCounter.h"
-#include "WasmOps.h"
+#include <JavaScriptCore/BytecodeConventions.h>
+#include <JavaScriptCore/HandlerInfo.h>
+#include <JavaScriptCore/InstructionStream.h>
+#include <JavaScriptCore/MacroAssemblerCodeRef.h>
+#include <JavaScriptCore/SIMDInfo.h>
+#include <JavaScriptCore/WasmHandlerInfo.h>
+#include <JavaScriptCore/WasmIPIntGenerator.h>
+#include <JavaScriptCore/WasmIPIntTierUpCounter.h>
+#include <JavaScriptCore/WasmOps.h>
 #include <wtf/BitVector.h>
 #include <wtf/HashMap.h>
 #include <wtf/TZoneMalloc.h>
@@ -57,8 +63,8 @@ struct JumpTableEntry;
 
 #define WRITE_TO_METADATA(dst, src, type) \
     do { \
-        type tmp = src; \
-        memcpy(dst, &tmp, sizeof(type)); \
+        type tmp = (src); \
+        memcpy((dst), &tmp, sizeof(type)); \
     } while (false)
 
 class FunctionIPIntMetadataGenerator {
@@ -69,41 +75,65 @@ class FunctionIPIntMetadataGenerator {
     friend class IPIntCallee;
 
 public:
-    FunctionIPIntMetadataGenerator(uint32_t functionIndex, std::span<const uint8_t> bytecode)
+    FunctionIPIntMetadataGenerator(FunctionCodeIndex functionIndex, std::span<const uint8_t> bytecode)
         : m_functionIndex(functionIndex)
         , m_bytecode(bytecode)
     {
     }
 
-    uint32_t functionIndex() const { return m_functionIndex; }
+    FunctionCodeIndex functionIndex() const { return m_functionIndex; }
+    bool hasTailCallSuccessors() const { return m_hasTailCallSuccessors; }
     const BitVector& tailCallSuccessors() const { return m_tailCallSuccessors; }
     bool tailCallClobbersInstance() const { return m_tailCallClobbersInstance ; }
+    void setTailCall(uint32_t, bool);
+    void setTailCallClobbersInstance() { m_tailCallClobbersInstance = true; }
 
     const uint8_t* getBytecode() const { return m_bytecode.data(); }
-    const uint8_t* getMetadata() const { return m_metadata.data(); }
+    const uint8_t* getMetadata() const { return m_metadata.span().data(); }
 
-    HashMap<IPIntPC, IPIntTierUpCounter::OSREntryData>& tierUpCounter() { return m_tierUpCounter; }
+    UncheckedKeyHashMap<IPIntPC, IPIntTierUpCounter::OSREntryData>& tierUpCounter() { return m_tierUpCounter; }
 
-    unsigned addSignature(const TypeDefinition&);
+    const RTT* addSignature(const TypeDefinition&);
+
+    void addCallTarget(unsigned callProfileIndex, FunctionSpaceIndex target)
+    {
+        if (callProfileIndex >= m_callTargets.size())
+            m_callTargets.insertFill(m_callTargets.size(), FunctionSpaceIndex { }, callProfileIndex - m_callTargets.size() + 1);
+        m_callTargets[callProfileIndex] = target;
+    }
 
 private:
+    struct MetadataBufferMalloc final : public FastMalloc {
+        static constexpr ALWAYS_INLINE size_t nextCapacity(size_t capacity) { return capacity + capacity; }
+    };
+    using MetadataBuffer = Vector<uint8_t, 0, UnsafeVectorOverflow, 16, MetadataBufferMalloc>;
 
-    void addBlankSpace(uint32_t size);
-    void addRawValue(uint64_t value);
-    void addLength(uint32_t length);
-    void addLEB128ConstantInt32AndLength(uint32_t value, uint32_t length);
-    void addCondensedLocalIndexAndLength(uint32_t index, uint32_t length);
-    void addLEB128ConstantAndLengthForType(Type, uint64_t value, uint32_t length);
-    void addLEB128V128Constant(v128_t value, uint32_t length);
-    void addReturnData(const Vector<Type, 16>& types);
+    inline void addBlankSpace(size_t);
+    template <typename T> inline void addBlankSpace() { addBlankSpace(sizeof(T)); };
 
-    uint32_t m_functionIndex;
+    template <typename T> inline void appendMetadata(T t)
+    {
+        auto size = m_metadata.size();
+        addBlankSpace<T>();
+        WRITE_TO_METADATA(m_metadata.mutableSpan().data() + size, t, T);
+    };
+
+    void addLength(size_t length);
+    void addLEB128ConstantInt32AndLength(uint32_t value, size_t length);
+    void addLEB128ConstantInt64AndLength(uint64_t value, size_t length);
+    void addLEB128ConstantAndLengthForType(Type, uint64_t value, size_t length);
+    void addLEB128V128Constant(v128_t value, size_t length);
+    void addReturnData(const FunctionSignature&, const CallInformation&);
+
+    FunctionCodeIndex m_functionIndex;
+    bool m_hasTailCallSuccessors { false };
     bool m_tailCallClobbersInstance { false };
     BitVector m_tailCallSuccessors;
 
     std::span<const uint8_t> m_bytecode;
-    Vector<uint8_t> m_metadata { };
-    uint32_t m_returnMetadata { 0 };
+    MetadataBuffer m_metadata { };
+    Vector<uint8_t, 8> m_uINTBytecode { };
+    unsigned m_topOfReturnStackFPOffset;
 
     uint32_t m_bytecodeOffset { 0 };
     unsigned m_maxFrameSizeInV128 { 0 };
@@ -112,17 +142,20 @@ private:
     unsigned m_numArguments { 0 };
     unsigned m_numArgumentsOnStack { 0 };
     unsigned m_nonArgLocalOffset { 0 };
+    Vector<FunctionSpaceIndex> m_callTargets { };
     Vector<uint8_t, 16> m_argumINTBytecode { };
 
-    Vector<const TypeDefinition*> m_signatures;
-    HashMap<IPIntPC, IPIntTierUpCounter::OSREntryData> m_tierUpCounter;
+    UncheckedKeyHashMap<IPIntPC, IPIntTierUpCounter::OSREntryData> m_tierUpCounter;
     Vector<UnlinkedHandlerInfo> m_exceptionHandlers;
-
-    // Optimization to skip large numbers of blocks
-
-    Vector<uint32_t> m_repeatedControlFlowInstructionMetadataOffsets;
 };
+
+void FunctionIPIntMetadataGenerator::addBlankSpace(size_t size)
+{
+    m_metadata.grow(m_metadata.size() + size);
+}
 
 } } // namespace JSC::Wasm
 
 #endif // ENABLE(WEBASSEMBLY)
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

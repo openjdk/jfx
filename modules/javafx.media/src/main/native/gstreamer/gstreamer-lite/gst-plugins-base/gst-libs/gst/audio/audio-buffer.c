@@ -33,13 +33,26 @@ static void
 gst_audio_buffer_unmap_internal (GstAudioBuffer * buffer, guint n_unmap)
 {
   guint i;
+
+  /* Allow to unmap even if not mapped, to work nicely with
+   * g_auto (GstAudioBuffer) buffer = GST_AUDIO_BUFFER_INIT;
+   * This is also more consistent with gst_buffer_unmap() */
+  if (!buffer->buffer)
+    return;
+
   for (i = 0; i < n_unmap; i++) {
     gst_buffer_unmap (buffer->buffer, &buffer->map_infos[i]);
   }
   if (buffer->planes != buffer->priv_planes_arr)
-    g_free (buffer->planes);
+    g_clear_pointer (&buffer->planes, g_free);
   if (buffer->map_infos != buffer->priv_map_infos_arr)
-    g_free (buffer->map_infos);
+    g_clear_pointer (&buffer->map_infos, g_free);
+
+  /* Reset various fields to avoid use-after-frees.
+   * This also makes it possible to call unmap() twice. */
+  buffer->buffer = NULL;
+  memset (&buffer->priv_planes_arr, 0, sizeof (buffer->priv_planes_arr));
+  memset (&buffer->priv_map_infos_arr, 0, sizeof (buffer->priv_map_infos_arr));
 }
 
 /**

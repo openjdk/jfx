@@ -30,7 +30,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLDivElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLDivElement);
 
 using namespace HTMLNames;
 

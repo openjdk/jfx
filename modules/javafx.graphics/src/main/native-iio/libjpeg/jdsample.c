@@ -207,7 +207,7 @@ int_upsample (j_decompress_ptr cinfo, jpeg_component_info * compptr,
     /* Generate any additional output rows by duplicating the first one */
     if (v_expand > 1) {
       jcopy_sample_rows(output_data, output_data + 1,
-            v_expand-1, cinfo->output_width);
+            v_expand - 1, cinfo->output_width);
     }
   }
 }

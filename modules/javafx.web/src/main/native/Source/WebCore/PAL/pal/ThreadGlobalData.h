@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2021 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,8 @@
 
 #pragma once
 
+#include <pal/ExportMacros.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/Threading.h>
 #include <wtf/text/StringHash.h>
@@ -35,26 +37,26 @@ namespace PAL {
 struct ICUConverterWrapper;
 
 class ThreadGlobalData : public WTF::Thread::ClientData {
+    WTF_MAKE_TZONE_ALLOCATED(ThreadGlobalData);
     WTF_MAKE_NONCOPYABLE(ThreadGlobalData);
-    WTF_MAKE_FAST_ALLOCATED;
 public:
     PAL_EXPORT virtual ~ThreadGlobalData();
 
-    ICUConverterWrapper& cachedConverterICU() { return *m_cachedConverterICU; }
+    ICUConverterWrapper& cachedConverterICU() { return m_cachedConverterICU; }
 
 protected:
-    PAL_EXPORT ThreadGlobalData();
+    PAL_EXPORT explicit ThreadGlobalData(Type);
 
 private:
-    PAL_EXPORT friend ThreadGlobalData& threadGlobalData();
+    PAL_EXPORT friend ThreadGlobalData& threadGlobalDataSingleton();
 
-    std::unique_ptr<ICUConverterWrapper> m_cachedConverterICU;
+    const UniqueRef<ICUConverterWrapper> m_cachedConverterICU;
 };
 
 #if USE(WEB_THREAD)
-PAL_EXPORT ThreadGlobalData& threadGlobalData();
+PAL_EXPORT ThreadGlobalData& threadGlobalDataSingleton();
 #else
-PAL_EXPORT ThreadGlobalData& threadGlobalData() PURE_FUNCTION;
+PAL_EXPORT ThreadGlobalData& threadGlobalDataSingleton() PURE_FUNCTION;
 #endif
 
 } // namespace PAL

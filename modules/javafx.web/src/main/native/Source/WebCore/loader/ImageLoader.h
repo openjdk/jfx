@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
- * Copyright (C) 2004, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -22,22 +22,15 @@
 
 #pragma once
 
-#include "CachedImageClient.h"
-#include "CachedResourceHandle.h"
-#include "Element.h"
-#include "LoaderMalloc.h"
-#include "Timer.h"
+#include <WebCore/CachedImage.h>
+#include <WebCore/CachedImageClient.h>
+#include <WebCore/CachedResourceHandle.h>
+#include <WebCore/Element.h>
+#include <WebCore/LoaderMalloc.h>
+#include <WebCore/NodeDocument.h>
+#include <WebCore/Timer.h>
 #include <wtf/Vector.h>
 #include <wtf/text/AtomString.h>
-
-namespace WebCore {
-class ImageLoader;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::ImageLoader> : std::true_type { };
-}
 
 namespace WebCore {
 
@@ -55,9 +48,13 @@ enum class RelevantMutation : bool { No, Yes };
 enum class LazyImageLoadState : uint8_t { None, Deferred, LoadImmediately, FullImage };
 
 class ImageLoader : public CachedImageClient {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(ImageLoader, Loader);
 public:
     virtual ~ImageLoader();
+
+    // CachedResourceClient.
+    void ref() const final;
+    void deref() const final;
 
     // This function should be called when the element is attached to a document; starts
     // loading if a load hasn't already been started.
@@ -87,6 +84,7 @@ public:
     void decode(Ref<DeferredPromise>&&);
 
     void setLoadManually(bool loadManually) { m_loadManually = loadManually; }
+    void setElementIsUserAgentShadowRootResource(bool value) { m_elementIsUserAgentShadowRootResource = value; }
 
     // FIXME: Delete this code. beforeload event no longer exists.
     bool hasPendingBeforeLoadEvent() const { return m_hasPendingBeforeLoadEvent; }
@@ -132,6 +130,8 @@ private:
 
     void timerFired();
 
+    void setImageCompleteAndMaybeUpdateRenderer();
+
     VisibleInViewportState imageVisibleInViewport(const Document&) const override;
 
     WeakRef<Element, WeakPtrImplWithEventTargetData> m_element;
@@ -140,13 +140,14 @@ private:
     RefPtr<Element> m_protectedElement;
     AtomString m_failedLoadURL;
     AtomString m_pendingURL;
-    Vector<RefPtr<DeferredPromise>> m_decodingPromises;
+    Vector<Ref<DeferredPromise>> m_decodingPromises;
     bool m_hasPendingBeforeLoadEvent : 1;
     bool m_hasPendingLoadEvent : 1;
     bool m_hasPendingErrorEvent : 1;
     bool m_imageComplete : 1;
     bool m_loadManually : 1;
     bool m_elementIsProtected : 1;
+    bool m_elementIsUserAgentShadowRootResource : 1 { false };
     LazyImageLoadState m_lazyImageLoadState { LazyImageLoadState::None };
 };
 

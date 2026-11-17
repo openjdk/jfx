@@ -34,7 +34,7 @@ namespace WebCore {
 
 NodeIteratorBase::NodeIteratorBase(Node& rootNode, unsigned whatToShow, RefPtr<NodeFilter>&& nodeFilter)
     : m_root(rootNode)
-    , m_filter(WTFMove(nodeFilter))
+    , m_filter(WTF::move(nodeFilter))
     , m_whatToShow(whatToShow)
 {
 }
@@ -50,7 +50,7 @@ ExceptionOr<unsigned short> NodeIteratorBase::acceptNodeSlowCase(Node& node)
         return NodeFilter::FILTER_SKIP;
 
     SetForScope isActive(m_isActive, true);
-    auto callbackResult = m_filter->acceptNode(node);
+    auto callbackResult = m_filter->acceptNodeRethrowingException(node);
     if (callbackResult.type() == CallbackResultType::ExceptionThrown)
         return Exception { ExceptionCode::ExistingExceptionError };
     return callbackResult.releaseReturnValue();

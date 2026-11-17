@@ -37,11 +37,11 @@ GetByVariant::GetByVariant(CacheableIdentifier identifier, const StructureSet& s
     , m_conditionSet(conditionSet)
     , m_viaGlobalProxy(viaGlobalProxy)
     , m_offset(offset)
-    , m_callLinkStatus(WTFMove(callLinkStatus))
+    , m_callLinkStatus(WTF::move(callLinkStatus))
     , m_intrinsicFunction(intrinsicFunction)
     , m_customAccessorGetter(customAccessorGetter)
-    , m_domAttribute(WTFMove(domAttribute))
-    , m_identifier(WTFMove(identifier))
+    , m_domAttribute(WTF::move(domAttribute))
+    , m_identifier(WTF::move(identifier))
 {
     if (!structureSet.size()) {
         ASSERT(offset == invalidOffset);
@@ -92,6 +92,15 @@ inline bool GetByVariant::canMergeIntrinsicStructures(const GetByVariant& other)
         ASSERT(isTypedView(thisType) && isTypedView(otherType));
 
         return logElementSize(thisType) == logElementSize(otherType);
+    }
+
+    case DataViewByteLengthIntrinsic: {
+#if ASSERT_ENABLED
+        TypedArrayType thisType = typedArrayType((*m_structureSet.begin())->typeInfo().type());
+        TypedArrayType otherType = typedArrayType((*other.m_structureSet.begin())->typeInfo().type());
+        ASSERT(thisType == TypeDataView && otherType == TypeDataView);
+#endif
+        return true;
     }
 
     default:

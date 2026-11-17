@@ -25,17 +25,19 @@
 
 #pragma once
 
-#include "WebGPUComputePipeline.h"
-#include "WebGPUDeviceLostInfo.h"
-#include "WebGPUError.h"
-#include "WebGPUErrorFilter.h"
-#include "WebGPURenderPipeline.h"
-#include "WebGPUSupportedFeatures.h"
-#include "WebGPUSupportedLimits.h"
+#include <WebCore/WebGPUComputePipeline.h>
+#include <WebCore/WebGPUDeviceLostInfo.h>
+#include <WebCore/WebGPUError.h>
+#include <WebCore/WebGPUErrorFilter.h>
+#include <WebCore/WebGPURenderPipeline.h>
+#include <WebCore/WebGPUSupportedFeatures.h>
+#include <WebCore/WebGPUSupportedLimits.h>
 #include <optional>
 #include <wtf/CompletionHandler.h>
 #include <wtf/HashSet.h>
+#include <wtf/Platform.h>
 #include <wtf/Ref.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
@@ -55,8 +57,10 @@ class BindGroupLayout;
 struct BindGroupLayoutDescriptor;
 class Buffer;
 struct BufferDescriptor;
+class CommandBuffer;
 class CommandEncoder;
 struct CommandEncoderDescriptor;
+class ComputePassEncoder;
 class ComputePipeline;
 struct ComputePipelineDescriptor;
 class ExternalTexture;
@@ -71,6 +75,7 @@ struct QuerySetDescriptor;
 class Queue;
 class RenderBundleEncoder;
 struct RenderBundleEncoderDescriptor;
+class RenderPassEncoder;
 class RenderPipeline;
 struct RenderPipelineDescriptor;
 class Sampler;
@@ -82,7 +87,7 @@ class Texture;
 struct TextureDescriptor;
 class XRBinding;
 
-class Device : public RefCounted<Device>, public CanMakeWeakPtr<Device> {
+class Device : public RefCountedAndCanMakeWeakPtr<Device> {
 public:
     virtual ~Device() = default;
 
@@ -90,7 +95,7 @@ public:
 
     void setLabel(String&& label)
     {
-        m_label = WTFMove(label);
+        m_label = WTF::move(label);
         setLabelInternal(m_label);
     }
 
@@ -131,17 +136,20 @@ public:
     virtual void popErrorScope(CompletionHandler<void(bool, std::optional<Error>&&)>&&) = 0;
     virtual void resolveUncapturedErrorEvent(CompletionHandler<void(bool, std::optional<Error>&&)>&&) = 0;
     virtual void resolveDeviceLostPromise(CompletionHandler<void(WebCore::WebGPU::DeviceLostReason)>&&) = 0;
-    class DeviceLostClient {
-        virtual ~DeviceLostClient() = default;
-        virtual void deviceLost() = 0;
-    };
-    void registerDeviceLostClient(DeviceLostClient& client) { m_deviceLostClients.add(&client); }
-    void unregisterDeviceLostClient(DeviceLostClient& client) { m_deviceLostClients.remove(&client); }
+    virtual Ref<CommandEncoder> invalidCommandEncoder() = 0;
+    virtual Ref<CommandBuffer> invalidCommandBuffer() = 0;
+    virtual Ref<RenderPassEncoder> invalidRenderPassEncoder() = 0;
+    virtual Ref<ComputePassEncoder> invalidComputePassEncoder() = 0;
+    virtual void pauseAllErrorReporting(bool pause) = 0;
+
+    virtual bool isRemoteDeviceProxy() const { return false; }
+    virtual bool isDeviceImpl() const { return false; }
+    virtual Ref<BindGroupLayout> emptyBindGroupLayout() const = 0;
 
 protected:
     Device(Ref<SupportedFeatures>&& features, Ref<SupportedLimits>&& limits)
-        : m_features(WTFMove(features))
-        , m_limits(WTFMove(limits))
+        : m_features(WTF::move(features))
+        , m_limits(WTF::move(limits))
     {
     }
 
@@ -154,9 +162,8 @@ private:
     virtual void setLabelInternal(const String&) = 0;
 
     String m_label;
-    HashSet<DeviceLostClient*> m_deviceLostClients;
-    Ref<SupportedFeatures> m_features;
-    Ref<SupportedLimits> m_limits;
+    const Ref<SupportedFeatures> m_features;
+    const Ref<SupportedLimits> m_limits;
 };
 
 } // namespace WebCore::WebGPU

@@ -25,20 +25,32 @@
 
 #pragma once
 
-#include "WebGPUTextureFormat.h"
-#include "WebGPUTextureUsage.h"
-#include "WebGPUXREye.h"
-#include "WebGPUXRProjectionLayer.h"
-#include "WebGPUXRSubImage.h"
+#include <WebCore/WebGPUTextureFormat.h>
+#include <WebCore/WebGPUTextureUsage.h>
+#include <WebCore/WebGPUXREye.h>
+#include <WebCore/WebGPUXRLayerBacking.h>
+#include <WebCore/WebGPUXRSubImage.h>
 
+#include <wtf/Platform.h>
 #include <wtf/Ref.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/WeakPtr.h>
+
+namespace WTF {
+class MachSendRight;
+}
+
+namespace WebCore {
+class WebXRRigidTransform;
+}
+
+namespace PlatformXR {
+struct RateMapDescription;
+}
 
 namespace WebCore::WebGPU {
 
 class Device;
-class WebXRRigidTransform;
 class XRGPUSubImage;
 class XRProjectionLayer;
 class XRFrame;
@@ -51,13 +63,9 @@ struct XRProjectionLayerInit {
     double scaleFactor { 1.0 };
 };
 
-class XRProjectionLayer : public RefCounted<XRProjectionLayer>, public CanMakeWeakPtr<XRProjectionLayer> {
+class XRProjectionLayer : public XRLayerBacking {
 public:
     virtual ~XRProjectionLayer() = default;
-
-    virtual uint32_t textureWidth() const = 0;
-    virtual uint32_t textureHeight() const = 0;
-    virtual uint32_t textureArrayLength() const = 0;
 
     virtual bool ignoreDepthValues() const = 0;
     virtual std::optional<float> fixedFoveation() const = 0;
@@ -65,9 +73,8 @@ public:
     virtual WebXRRigidTransform* deltaPose() const = 0;
     virtual void setDeltaPose(WebXRRigidTransform*) = 0;
 
-    // WebXRLayer
-    virtual void startFrame() = 0;
-    virtual void endFrame() = 0;
+    virtual bool isRemoteXRProjectionLayerProxy() const { return false; }
+    virtual bool isXRProjectionLayerImpl() const { return false; }
 
 protected:
     XRProjectionLayer() = default;

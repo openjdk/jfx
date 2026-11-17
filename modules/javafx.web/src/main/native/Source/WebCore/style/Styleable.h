@@ -25,22 +25,27 @@
 
 #pragma once
 
-#include "Element.h"
-#include "ElementRuleCollector.h"
-#include "KeyframeEffectStack.h"
-#include "PseudoElement.h"
-#include "PseudoElementIdentifier.h"
-#include "RenderStyleConstants.h"
-#include "WebAnimationTypes.h"
+#include <WebCore/Element.h>
+#include <WebCore/PseudoElement.h>
+#include <WebCore/PseudoElementIdentifier.h>
+#include <WebCore/RenderStyleConstants.h>
+#include <WebCore/WebAnimationTypes.h>
+#include <wtf/HashSet.h>
+#include <wtf/HashTraits.h>
+#include <wtf/text/AtomStringHash.h>
 
 namespace WebCore {
 
+class Element;
 class KeyframeEffectStack;
 class RenderElement;
 class RenderStyle;
 class WebAnimation;
 
 namespace Style {
+template<typename> struct CoordinatedValueList;
+struct Animation;
+using Animations = CoordinatedValueList<Animation>;
 enum class IsInDisplayNoneTree : bool;
 }
 
@@ -54,13 +59,7 @@ struct Styleable {
     {
     }
 
-    static const Styleable fromElement(Element& element)
-    {
-        if (auto* pseudoElement = dynamicDowncast<PseudoElement>(element))
-            return Styleable(*pseudoElement->hostElement(), Style::PseudoElementIdentifier { element.pseudoId() });
-        ASSERT(element.pseudoId() == PseudoId::None);
-        return Styleable(element, std::nullopt);
-    }
+    inline static const Styleable fromElement(Element&);
 
     static const std::optional<const Styleable> fromRenderer(const RenderElement&);
 
@@ -70,6 +69,7 @@ struct Styleable {
     }
 
     RenderElement* renderer() const;
+    Ref<Element> protectedElement() const { return element; }
 
     std::unique_ptr<RenderStyle> computeAnimatedStyle() const;
 
@@ -80,11 +80,12 @@ struct Styleable {
 
     bool mayHaveNonZeroOpacity() const;
 
-    bool isRunningAcceleratedTransformAnimation() const;
-
+    bool isRunningAcceleratedAnimationOfProperty(CSSPropertyID) const;
+    bool isRunningAcceleratedTransformRelatedAnimation() const;
     bool hasRunningAcceleratedAnimations() const;
 
     bool capturedInViewTransition() const;
+    void setCapturedInViewTransition(AtomString);
 
     KeyframeEffectStack* keyframeEffectStack() const
     {
@@ -101,10 +102,7 @@ struct Styleable {
         return element.hasKeyframeEffects(pseudoElementIdentifier);
     }
 
-    OptionSet<AnimationImpact> applyKeyframeEffects(RenderStyle& targetStyle, HashSet<AnimatableCSSProperty>& affectedProperties, const RenderStyle* previousLastStyleChangeEventStyle, const Style::ResolutionContext& resolutionContext) const
-    {
-        return element.ensureKeyframeEffectStack(pseudoElementIdentifier).applyKeyframeEffects(targetStyle, affectedProperties, previousLastStyleChangeEventStyle, resolutionContext);
-    }
+    OptionSet<AnimationImpact> applyKeyframeEffects(RenderStyle& targetStyle, HashSet<AnimatableCSSProperty>& affectedProperties, const RenderStyle* previousLastStyleChangeEventStyle, const Style::ResolutionContext&) const;
 
     const AnimationCollection* animations() const
     {
@@ -148,7 +146,7 @@ struct Styleable {
 
     void setAnimationsCreatedByMarkup(CSSAnimationCollection&& collection) const
     {
-        element.setAnimationsCreatedByMarkup(pseudoElementIdentifier, WTFMove(collection));
+        element.setAnimationsCreatedByMarkup(pseudoElementIdentifier, WTF::move(collection));
     }
 
     const RenderStyle* lastStyleChangeEventStyle() const
@@ -158,7 +156,7 @@ struct Styleable {
 
     void setLastStyleChangeEventStyle(std::unique_ptr<const RenderStyle>&& style) const
     {
-        element.setLastStyleChangeEventStyle(pseudoElementIdentifier, WTFMove(style));
+        element.setLastStyleChangeEventStyle(pseudoElementIdentifier, WTF::move(style));
     }
 
     bool hasPropertiesOverridenAfterAnimation() const
@@ -178,7 +176,7 @@ struct Styleable {
 
     void queryContainerDidChange() const;
 
-    bool animationListContainsNewlyValidAnimation(const AnimationList&) const;
+    bool animationListContainsNewlyValidAnimation(const Style::Animations&) const;
 
     void elementWasRemoved() const;
 
@@ -193,19 +191,36 @@ struct Styleable {
 
     void updateCSSAnimations(const RenderStyle* currentStyle, const RenderStyle& afterChangeStyle, const Style::ResolutionContext&, WeakStyleOriginatedAnimations&, Style::IsInDisplayNoneTree) const;
     void updateCSSTransitions(const RenderStyle& currentStyle, const RenderStyle& newStyle, WeakStyleOriginatedAnimations&) const;
+    void updateCSSScrollTimelines(const RenderStyle* currentStyle, const RenderStyle& afterChangeStyle) const;
+    void updateCSSViewTimelines(const RenderStyle* currentStyle, const RenderStyle& afterChangeStyle) const;
 };
 
 class WeakStyleable {
 public:
     WeakStyleable() = default;
 
+    WeakStyleable(AtomString name)
+    {
+        m_element = nullptr;
+        m_pseudoElementIdentifier = Style::PseudoElementIdentifier();
+        m_pseudoElementIdentifier->nameArgument = name;
+    }
+
     explicit operator bool() const { return !!m_element; }
+
+    bool operator==(const WeakStyleable& other) const = default;
 
     WeakStyleable& operator=(const Styleable& styleable)
     {
         m_element = styleable.element;
         m_pseudoElementIdentifier = styleable.pseudoElementIdentifier;
         return *this;
+    }
+
+    WeakStyleable(const Styleable& styleable)
+    {
+        m_element = styleable.element;
+        m_pseudoElementIdentifier = styleable.pseudoElementIdentifier;
     }
 
     std::optional<Styleable> styleable() const
@@ -215,9 +230,36 @@ public:
         return Styleable(*m_element, m_pseudoElementIdentifier);
     }
 
+    WeakPtr<Element, WeakPtrImplWithEventTargetData> element() const { return m_element; }
+    std::optional<Style::PseudoElementIdentifier> pseudoElementIdentifier() const { return m_pseudoElementIdentifier; }
+
 private:
     WeakPtr<Element, WeakPtrImplWithEventTargetData> m_element;
     std::optional<Style::PseudoElementIdentifier> m_pseudoElementIdentifier;
 };
+
+// FIXME: using PairHashTraits would give us constructDeletedValue() and isDeletedValue() for free.
+struct WeakStyleableHashTraits : HashTraits<WeakStyleable> {
+    static constexpr bool hasIsWeakNullValueFunction = true;
+    static bool isWeakNullValue(const WeakStyleable& value) { return !value; }
+    static void constructDeletedValue(WeakStyleable& slot) { slot = { AtomString { WTF::HashTableDeletedValue } }; }
+    static bool isDeletedValue(const WeakStyleable& value) { return !value.element() && value.pseudoElementIdentifier() && value.pseudoElementIdentifier()->nameArgument.isHashTableDeletedValue(); }
+};
+
+struct WeakStyleableHash {
+    static unsigned hash(const WeakStyleable& styleable) { return WTF::PairHash<Element*, std::optional<Style::PseudoElementIdentifier>>::hash({ styleable.element().get(), styleable.pseudoElementIdentifier() }); }
+    static bool equal(const WeakStyleable& a, const WeakStyleable& b)
+    {
+        if (!a || !b)
+            return false;
+        return a.element().get() == b.element().get() && a.pseudoElementIdentifier() == b.pseudoElementIdentifier();
+    }
+    static constexpr bool safeToCompareToEmptyOrDeleted = false;
+};
+
+using WeakStyleableHashSet = HashSet<WeakStyleable, WeakStyleableHash, WeakStyleableHashTraits>;
+
+WTF::TextStream& operator<<(WTF::TextStream&, const Styleable&);
+WTF::TextStream& operator<<(WTF::TextStream&, const WeakStyleable&);
 
 } // namespace WebCore

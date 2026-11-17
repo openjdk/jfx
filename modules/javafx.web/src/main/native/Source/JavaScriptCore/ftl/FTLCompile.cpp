@@ -60,13 +60,12 @@ void compile(State& state, Safepoint::Result& safepointResult)
     VM& vm = graph.m_vm;
 
     if (shouldDumpDisassembly() || vm.m_perBytecodeProfiler)
-        state.proc->code().setDisassembler(makeUnique<B3::Air::Disassembler>());
+        state.proc->code().setDisassembler(makeUniqueWithoutFastMallocCheck<B3::Air::Disassembler>());
 
-    if (!shouldDumpDisassembly() && !verboseCompilationEnabled() && !Options::verboseValidationFailure() && !Options::asyncDisassembly() && !graph.compilation() && !state.proc->needsPCToOriginMap())
+    if (!shouldDumpDisassembly() && !verboseCompilationEnabled() && !Options::verboseValidationFailure() && !graph.compilation() && !state.proc->needsPCToOriginMap())
         graph.freeDFGIRAfterLowering();
 
     {
-        SetForScope disallowFreeze { state.graph.m_frozenValuesAreFinalized, true };
         GraphSafepoint safepoint(state.graph, safepointResult);
         B3::prepareForGeneration(*state.proc);
     }
@@ -78,19 +77,17 @@ void compile(State& state, Safepoint::Result& safepointResult)
         return;
 
     RegisterAtOffsetList registerOffsets = state.proc->calleeSaveRegisterAtOffsetList();
-    if (shouldDumpDisassembly())
-        dataLog(tierName, "Unwind info for ", CodeBlockWithJITType(codeBlock, JITType::FTLJIT), ": ", registerOffsets, "\n");
-    state.jitCode->m_calleeSaveRegisters = RegisterAtOffsetList(WTFMove(registerOffsets));
+    dataLogLnIf(shouldDumpDisassembly(), tierName, "Unwind info for ", CodeBlockWithJITType(codeBlock, JITType::FTLJIT), ": ", registerOffsets);
+    state.jitCode->m_calleeSaveRegisters = RegisterAtOffsetList(WTF::move(registerOffsets));
     ASSERT(!(state.proc->frameSize() % sizeof(EncodedJSValue)));
     state.jitCode->common.frameRegisterCount = state.proc->frameSize() / sizeof(EncodedJSValue);
 
     int localsOffset =
         state.capturedValue->offsetFromFP() / sizeof(EncodedJSValue) + graph.m_nextMachineLocal;
-    if (shouldDumpDisassembly()) {
-        dataLog(tierName,
+    dataLogLnIf(shouldDumpDisassembly(),
+        tierName,
             "localsOffset = ", localsOffset, " for stack slot: ",
-            pointerDump(state.capturedValue), " at ", RawPointer(state.capturedValue), "\n");
-    }
+        pointerDump(state.capturedValue), " at ", RawPointer(state.capturedValue));
 
     for (unsigned i = graph.m_inlineVariableData.size(); i--;) {
         InlineCallFrame* inlineCallFrame = graph.m_inlineVariableData[i].inlineCallFrame;
@@ -128,7 +125,6 @@ void compile(State& state, Safepoint::Result& safepointResult)
 
     CCallHelpers jit(codeBlock);
     {
-        SetForScope disallowFreeze { state.graph.m_frozenValuesAreFinalized, true };
         GraphSafepoint safepoint(state.graph, safepointResult, true);
     B3::generate(*state.proc, jit);
     }
@@ -176,10 +172,7 @@ void compile(State& state, Safepoint::Result& safepointResult)
 
             stackOverflowWithEntry.link(&jit);
             jit.emitFunctionPrologue();
-            jit.move(CCallHelpers::TrustedImmPtr(codeBlock), GPRInfo::argumentGPR0);
-            jit.storePtr(GPRInfo::callFrameRegister, &vm.topCallFrame);
-            jit.callOperation<OperationPtrTag>(operationThrowStackOverflowError);
-            jit.jumpThunk(CodeLocationLabel(vm.getCTIStub(CommonJITThunkID::HandleExceptionWithCallFrameRollback).retaggedCode<NoPtrTag>()));
+            jit.jumpThunk(CodeLocationLabel(vm.getCTIStub(CommonJITThunkID::ThrowStackOverflowAtPrologue).retaggedCode<NoPtrTag>()));
             mainPathJumps.linkTo(mainPathLabel, &jit);
         }
         break;
@@ -212,7 +205,7 @@ void compile(State& state, Safepoint::Result& safepointResult)
 
     if (vm.shouldBuilderPCToCodeOriginMapping()) {
         B3::PCToOriginMap originMap = state.proc->releasePCToOriginMap();
-        state.jitCode->common.m_pcToCodeOriginMap = makeUnique<PCToCodeOriginMap>(PCToCodeOriginMapBuilder(PCToCodeOriginMapBuilder::JSCodeOriginMap, vm, WTFMove(originMap)), *state.b3CodeLinkBuffer);
+        state.jitCode->common.m_pcToCodeOriginMap = makeUnique<PCToCodeOriginMap>(PCToCodeOriginMapBuilder(PCToCodeOriginMapBuilder::JSCodeOriginMap, vm, WTF::move(originMap)), *state.b3CodeLinkBuffer);
     }
 
     state.jitCode->initializeAddressForCall(state.b3CodeLinkBuffer->locationOf<JSEntryPtrTag>(entryLabel));
@@ -223,15 +216,15 @@ void compile(State& state, Safepoint::Result& safepointResult)
         BytecodeIndex catchBytecodeIndex = pair.value;
         unsigned entrypointIndex = pair.key;
         Vector<FlushFormat> argumentFormats = state.graph.m_argumentFormats[entrypointIndex];
-        state.graph.appendCatchEntrypoint(catchBytecodeIndex, state.b3CodeLinkBuffer->locationOf<ExceptionHandlerPtrTag>(state.proc->code().entrypointLabel(entrypointIndex)), WTFMove(argumentFormats));
+        state.graph.appendCatchEntrypoint(catchBytecodeIndex, state.b3CodeLinkBuffer->locationOf<ExceptionHandlerPtrTag>(state.proc->code().entrypointLabel(entrypointIndex)), WTF::move(argumentFormats));
     }
-    state.jitCode->common.finalizeCatchEntrypoints(WTFMove(state.graph.m_catchEntrypoints));
+    state.jitCode->common.finalizeCatchEntrypoints(WTF::move(state.graph.m_catchEntrypoints));
 
     if (shouldDumpDisassembly())
         state.dumpDisassembly(WTF::dataFile(), *state.b3CodeLinkBuffer);
 
     Profiler::Compilation* compilation = graph.compilation();
-    if (UNLIKELY(compilation)) {
+    if (compilation) [[unlikely]] {
         compilation->addDescription(
             Profiler::OriginStack(),
             toCString("Generated FTL DFG IR for ", CodeBlockWithJITType(codeBlock, JITType::FTLJIT), ", instructions size = ", graph.m_codeBlock->instructionsSize(), ":\n"));

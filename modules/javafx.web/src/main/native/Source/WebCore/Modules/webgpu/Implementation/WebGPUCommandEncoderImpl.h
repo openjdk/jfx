@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,17 +30,18 @@
 #include "WebGPUCommandEncoder.h"
 #include "WebGPUPtr.h"
 #include <WebGPU/WebGPU.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore::WebGPU {
 
 class ConvertToBackingContext;
 
 class CommandEncoderImpl final : public CommandEncoder {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(CommandEncoderImpl);
 public:
     static Ref<CommandEncoderImpl> create(WebGPUPtr<WGPUCommandEncoder>&& commandEncoder, ConvertToBackingContext& convertToBackingContext)
     {
-        return adoptRef(*new CommandEncoderImpl(WTFMove(commandEncoder), convertToBackingContext));
+        return adoptRef(*new CommandEncoderImpl(WTF::move(commandEncoder), convertToBackingContext));
     }
 
     virtual ~CommandEncoderImpl();
@@ -56,6 +57,7 @@ private:
     CommandEncoderImpl& operator=(CommandEncoderImpl&&) = delete;
 
     WGPUCommandEncoder backing() const { return m_backing.get(); }
+    bool isCommandEncoderImpl() const final { return true; }
 
     RefPtr<RenderPassEncoder> beginRenderPass(const RenderPassDescriptor&) final;
     RefPtr<ComputePassEncoder> beginComputePass(const std::optional<ComputePassDescriptor>&) final;
@@ -105,9 +107,13 @@ private:
     void setLabelInternal(const String&) final;
 
     WebGPUPtr<WGPUCommandEncoder> m_backing;
-    Ref<ConvertToBackingContext> m_convertToBackingContext;
+    const Ref<ConvertToBackingContext> m_convertToBackingContext;
 };
 
 } // namespace WebCore::WebGPU
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WebGPU::CommandEncoderImpl)
+    static bool isType(const WebCore::WebGPU::CommandEncoder& commandEncoder) { return commandEncoder.isCommandEncoderImpl(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // HAVE(WEBGPU_IMPLEMENTATION)

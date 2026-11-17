@@ -71,6 +71,8 @@ public:
         return !m_structure && m_uid == deletedUID();
     }
 
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
+
     void dumpInContext(PrintStream& out, DumpContext* context) const
     {
         out.print(pointerDumpInContext(m_structure, context), "+", m_uid);
@@ -84,25 +86,16 @@ public:
 private:
     static UniquedStringImpl* deletedUID()
     {
-        return bitwise_cast<UniquedStringImpl*>(static_cast<intptr_t>(1));
+        return std::bit_cast<UniquedStringImpl*>(static_cast<intptr_t>(1));
     }
 
     Structure* m_structure;
     UniquedStringImpl* m_uid;
 };
 
-struct PropertyTypeKeyHash {
-    static unsigned hash(const PropertyTypeKey& key) { return key.hash(); }
-    static bool equal(const PropertyTypeKey& a, const PropertyTypeKey& b) { return a == b; }
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
-};
-
 } } // namespace JSC::DFG
 
 namespace WTF {
-
-template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::DFG::PropertyTypeKey> : JSC::DFG::PropertyTypeKeyHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::DFG::PropertyTypeKey> : SimpleClassHashTraits<JSC::DFG::PropertyTypeKey> {

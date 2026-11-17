@@ -26,6 +26,7 @@
 #include "config.h"
 #include "InternalObserverDrop.h"
 
+#include "ContextDestructionObserverInlines.h"
 #include "InternalObserver.h"
 #include "Observable.h"
 #include "ScriptExecutionContext.h"
@@ -52,9 +53,9 @@ public:
             return adoptRef(*new InternalObserverDrop::SubscriberCallbackDrop(context, source, amount));
         }
 
-        CallbackResult<void> handleEvent(Subscriber& subscriber) final
+        CallbackResult<void> invoke(Subscriber& subscriber) final
         {
-            auto context = scriptExecutionContext();
+            RefPtr context = scriptExecutionContext();
 
             if (!context) {
                 subscriber.complete();
@@ -62,10 +63,15 @@ public:
             }
 
             SubscribeOptions options;
-            options.signal = &subscriber.signal();
+            options.signal = subscriber.signal();
             m_sourceObservable->subscribeInternal(*context, InternalObserverDrop::create(*context, subscriber, m_amount), options);
 
             return { };
+        }
+
+        CallbackResult<void> invokeRethrowingException(Subscriber& subscriber) final
+        {
+            return invoke(subscriber);
         }
 
     private:
@@ -77,7 +83,7 @@ public:
 
         bool hasCallback() const final { return true; }
 
-        Ref<Observable> m_sourceObservable;
+        const Ref<Observable> m_sourceObservable;
         uint64_t m_amount;
     };
 
@@ -85,7 +91,7 @@ private:
     void next(JSC::JSValue value) final
     {
         if (!m_amount) {
-            m_subscriber->next(value);
+            protectedSubscriber()->next(value);
             return;
         }
 
@@ -94,13 +100,13 @@ private:
 
     void error(JSC::JSValue value) final
     {
-        m_subscriber->error(value);
+        protectedSubscriber()->error(value);
     }
 
     void complete() final
     {
         InternalObserver::complete();
-        m_subscriber->complete();
+        protectedSubscriber()->complete();
     }
 
     void visitAdditionalChildren(JSC::AbstractSlotVisitor& visitor) const final
@@ -108,10 +114,7 @@ private:
         m_subscriber->visitAdditionalChildren(visitor);
     }
 
-    void visitAdditionalChildren(JSC::SlotVisitor& visitor) const final
-    {
-        m_subscriber->visitAdditionalChildren(visitor);
-    }
+    Ref<Subscriber> protectedSubscriber() const { return m_subscriber; }
 
     InternalObserverDrop(ScriptExecutionContext& context, Ref<Subscriber> subscriber, uint64_t amount)
         : InternalObserver(context)
@@ -119,7 +122,7 @@ private:
         , m_amount(amount)
     { }
 
-    Ref<Subscriber> m_subscriber;
+    const Ref<Subscriber> m_subscriber;
     uint64_t m_amount;
 };
 

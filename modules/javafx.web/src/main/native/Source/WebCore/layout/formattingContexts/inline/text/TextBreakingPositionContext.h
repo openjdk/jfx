@@ -25,7 +25,8 @@
 
 #pragma once
 
-#include "RenderStyle.h"
+#include <WebCore/RenderStyle.h>
+#include <WebCore/StyleWebKitLocale.h>
 #include <wtf/HashFunctions.h>
 #include <wtf/HashMap.h>
 #include <wtf/Hasher.h>
@@ -33,8 +34,33 @@
 namespace WebCore {
 namespace Layout {
 
+enum class WhiteSpaceCollapseBehavior : uint8_t {
+    CollapseAll,
+    CollapseWhitespaceSequence,
+    Preserve
+};
+
+static WhiteSpaceCollapseBehavior BehaviorForWhiteSpaceCollapse(WhiteSpaceCollapse collapse)
+{
+    switch (collapse) {
+    case WhiteSpaceCollapse::Collapse:
+        return WhiteSpaceCollapseBehavior::CollapseAll;
+    case WhiteSpaceCollapse::PreserveBreaks:
+        return WhiteSpaceCollapseBehavior::CollapseWhitespaceSequence;
+    case WhiteSpaceCollapse::Preserve:
+    case WhiteSpaceCollapse::BreakSpaces:
+        // TODO: WhiteSpaceCollapse::PreserveSpaces should also be handled this way.
+        // WhiteSpaceCollapse::Preserve and WhiteSpaceCollapse::BreakSpaces
+        // have the same text breaking positions so we don't need to recalculate
+        // breaking points when switching between these behaviors.
+        return WhiteSpaceCollapseBehavior::Preserve;
+    }
+    ASSERT_NOT_REACHED();
+    return WhiteSpaceCollapseBehavior::CollapseAll;
+}
+
 struct TextBreakingPositionContext {
-    WhiteSpace whitespace { WhiteSpace::Normal };
+    WhiteSpaceCollapseBehavior whitespaceCollapseBehavior { WhiteSpaceCollapseBehavior::CollapseAll };
     OverflowWrap overflowWrap { OverflowWrap::Normal };
     LineBreak lineBreak { LineBreak::Normal };
     WordBreak wordBreak { WordBreak::Normal };
@@ -50,22 +76,16 @@ struct TextBreakingPositionContext {
 };
 
 inline TextBreakingPositionContext::TextBreakingPositionContext(const RenderStyle& style)
-    : whitespace(style.whiteSpace())
+    : whitespaceCollapseBehavior(BehaviorForWhiteSpaceCollapse(style.whiteSpaceCollapse()))
     , overflowWrap(style.overflowWrap())
     , lineBreak(style.lineBreak())
     , wordBreak(style.wordBreak())
     , nbspMode(style.nbspMode())
-    , locale(style.computedLocale())
+    , locale(Style::toPlatform(style.computedLocale()))
 {
 }
 
 void add(Hasher&, const TextBreakingPositionContext&);
-
-struct TextBreakingPositionContextHash {
-    static unsigned hash(const TextBreakingPositionContext& context) { return computeHash(context); }
-    static bool equal(const TextBreakingPositionContext& a, const TextBreakingPositionContext& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = false;
-};
 
 } // namespace Layout
 } // namespace WebCore
@@ -78,7 +98,5 @@ struct HashTraits<WebCore::Layout::TextBreakingPositionContext> : GenericHashTra
     static bool isDeletedValue(const WebCore::Layout::TextBreakingPositionContext& value) { return value.isHashTableDeletedValue; }
     static WebCore::Layout::TextBreakingPositionContext emptyValue() { return { }; }
 };
-
-template<> struct DefaultHash<WebCore::Layout::TextBreakingPositionContext> : WebCore::Layout::TextBreakingPositionContextHash { };
 
 } // namespace WTF

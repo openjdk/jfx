@@ -30,8 +30,11 @@
 #include "ScriptExecutionContext.h"
 #include "ServiceWorkerRegistration.h"
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ServiceWorkerRegistrationPushAPI);
 
 ServiceWorkerRegistrationPushAPI::ServiceWorkerRegistrationPushAPI(ServiceWorkerRegistration& serviceWorkerRegistration)
     : m_serviceWorkerRegistration(serviceWorkerRegistration)
@@ -48,25 +51,20 @@ PushManager& ServiceWorkerRegistrationPushAPI::pushManager(ServiceWorkerRegistra
 PushManager& ServiceWorkerRegistrationPushAPI::pushManager()
 {
     if (!m_pushManager)
-        m_pushManager = makeUniqueWithoutRefCountedCheck<PushManager>(m_serviceWorkerRegistration);
+        lazyInitialize(m_pushManager, makeUniqueWithoutRefCountedCheck<PushManager>(m_serviceWorkerRegistration));
 
     return *m_pushManager;
 }
 
 ServiceWorkerRegistrationPushAPI* ServiceWorkerRegistrationPushAPI::from(ServiceWorkerRegistration& serviceWorkerRegistration)
 {
-    auto* supplement = static_cast<ServiceWorkerRegistrationPushAPI*>(Supplement<ServiceWorkerRegistration>::from(&serviceWorkerRegistration, supplementName()));
+    auto* supplement = downcast<ServiceWorkerRegistrationPushAPI>(Supplement<ServiceWorkerRegistration>::from(&serviceWorkerRegistration, supplementName()));
     if (!supplement) {
         auto newSupplement = makeUnique<ServiceWorkerRegistrationPushAPI>(serviceWorkerRegistration);
         supplement = newSupplement.get();
-        provideTo(&serviceWorkerRegistration, supplementName(), WTFMove(newSupplement));
+        provideTo(&serviceWorkerRegistration, supplementName(), WTF::move(newSupplement));
     }
     return supplement;
 }
 
-ASCIILiteral ServiceWorkerRegistrationPushAPI::supplementName()
-{
-    return "ServiceWorkerRegistrationPushAPI"_s;
-}
-
-}
+} // namespace WebCore

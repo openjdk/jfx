@@ -27,34 +27,38 @@
 
 #if ENABLE(WEB_CODECS)
 
-#include "ActiveDOMObject.h"
+#include "WebCodecsBase.h"
 #include <wtf/Function.h>
 
 namespace WebCore {
 
-template <typename CodecType>
+enum class WebCodecsControlMessageOutcome : bool {
+    NotProcessed,
+    Processed
+};
+
 class WebCodecsControlMessage final {
 public:
-    WebCodecsControlMessage(CodecType& codec, Function<void()>&& message)
+    WebCodecsControlMessage(WebCodecsBase& codec, Function<WebCodecsControlMessageOutcome()>&& message)
         : m_pendingActivity(codec.makePendingActivity(codec))
-        , m_message(WTFMove(message))
+        , m_message(WTF::move(message))
     {
     }
 
     WebCodecsControlMessage(WebCodecsControlMessage&& other)
-        : m_pendingActivity(WTFMove(other.m_pendingActivity))
-        , m_message(WTFMove(other.m_message))
+        : m_pendingActivity(WTF::move(other.m_pendingActivity))
+        , m_message(WTF::move(other.m_message))
     {
     }
 
-    void operator()()
+    WebCodecsControlMessageOutcome operator()()
     {
-        m_message();
+        return m_message();
     }
 
 private:
-    Ref<ActiveDOMObject::PendingActivity<CodecType>> m_pendingActivity;
-    Function<void()> m_message;
+    Ref<ActiveDOMObject::PendingActivity<WebCodecsBase>> m_pendingActivity;
+    Function<WebCodecsControlMessageOutcome()> m_message;
 };
 
 }

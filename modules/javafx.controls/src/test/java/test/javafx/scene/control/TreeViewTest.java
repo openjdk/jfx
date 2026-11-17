@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,12 +35,16 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -750,6 +754,8 @@ public class TreeViewTest {
 
         TreeView<Person> tree = new TreeView<>(root);
 
+        stageLoader = new StageLoader(tree);
+
         VirtualFlowTestUtils.assertRowsNotEmpty(tree, 0, 6); // rows 0 - 6 should be filled
         VirtualFlowTestUtils.assertRowsEmpty(tree, 6, -1); // rows 6+ should be empty
 
@@ -758,6 +764,7 @@ public class TreeViewTest {
         root.getChildren().setAll(
                 new TreeItem(new Person("*_*Emma", "Jones", "emma.jones@example.com")),
                 new TreeItem(new Person("_Michael", "Brown", "michael.brown@example.com")));
+        Toolkit.getToolkit().firePulse();
 
         VirtualFlowTestUtils.assertRowsNotEmpty(tree, 0, 3); // rows 0 - 3 should be filled
         VirtualFlowTestUtils.assertRowsEmpty(tree, 3, -1); // rows 3+ should be empty
@@ -787,6 +794,8 @@ public class TreeViewTest {
         rootNode.getChildren().setAll(nodeList);
 
         TreeView<String> treeView = new TreeView<>(rootNode);
+
+        stageLoader = new StageLoader(treeView);
 
         final double indent = PlatformImpl.isCaspian() ? 31 :
                         PlatformImpl.isModena()  ? 35 :
@@ -988,6 +997,7 @@ public class TreeViewTest {
         treeView.setShowRoot(false);
         root.getChildren().setAll(persons);
 
+        stageLoader = new StageLoader(treeView);
         Toolkit.getToolkit().firePulse();
 
         // we want the vertical scrollbar
@@ -1124,6 +1134,8 @@ public class TreeViewTest {
                 CheckBoxTreeCell.forTreeView(
                         param -> new ReadOnlyBooleanWrapper(true)));
 
+        stageLoader = new StageLoader(treeView);
+
         // because only the first row has data, all other rows should be
         // empty (and not contain check boxes - we just check the first four here)
         VirtualFlowTestUtils.assertRowsNotEmpty(treeView, 0, 1);
@@ -1137,6 +1149,8 @@ public class TreeViewTest {
         installChildren();
         treeView.setEditable(true);
         treeView.setCellFactory(TextFieldTreeCell.forTreeView());
+
+        stageLoader = new StageLoader(treeView);
 
         IndexedCell cell = VirtualFlowTestUtils.getCell(treeView, 1);
         assertEquals(child1.getValue(), cell.getText());
@@ -1157,6 +1171,8 @@ public class TreeViewTest {
     @Test public void test_rt31404() {
         installChildren();
 
+        stageLoader = new StageLoader(treeView);
+
         IndexedCell cell = VirtualFlowTestUtils.getCell(treeView, 0);
         assertEquals("Root", cell.getText());
 
@@ -1167,6 +1183,8 @@ public class TreeViewTest {
 
     @Test public void test_rt31471() {
         installChildren();
+
+        stageLoader = new StageLoader(treeView);
 
         IndexedCell cell = VirtualFlowTestUtils.getCell(treeView, 0);
         assertEquals("Root", cell.getItem());
@@ -1242,6 +1260,8 @@ public class TreeViewTest {
                 };
             }
         });
+
+        stageLoader = new StageLoader(treeView);
 
         // First two four have content, so the graphic should show.
         // All other rows have no content, so graphic should not show.
@@ -1844,6 +1864,8 @@ public class TreeViewTest {
         textFieldTreeView.setOnEditCancel(t -> {
             rt_35889_cancel_count++;
         });
+
+        stageLoader = new StageLoader(textFieldTreeView);
 
         TreeCell cell0 = (TreeCell) VirtualFlowTestUtils.getCell(textFieldTreeView, 0);
         assertNull(cell0.getGraphic());
@@ -2784,7 +2806,7 @@ public class TreeViewTest {
 
         FocusModel<TreeItem<String>> fm = stringTreeView.getFocusModel();
 
-        StageLoader sl = new StageLoader(stringTreeView);
+        stageLoader = new StageLoader(stringTreeView);
 
         // test pre-conditions
         assertTrue(sm.isEmpty());
@@ -2824,8 +2846,6 @@ public class TreeViewTest {
         assertNotNull(anchor);
         assertTrue(TreeCellBehavior.hasNonDefaultAnchor(stringTreeView));
         assertEquals(1, (int)anchor);
-
-        sl.dispose();
     }
 
     private final ObservableList<TreeItem<String>> rt_39256_list = FXCollections.observableArrayList();
@@ -4075,6 +4095,50 @@ public class TreeViewTest {
         assertEquals("Node 0", table.getFocusModel().getFocusedItem().getValue());
     }
 
+    // JDK-8340344
+    @Test
+    public void testTreeItemsAlignment() {
+        root = new TreeItem<>("Root");
+        child1 = new TreeItem<>("Child 1");
+        child2 = new TreeItem<>("Child 2");
+        child3 = new TreeItem<>("Child 3");
+
+        TreeItem<String> child4 = new TreeItem<>("Child 4");
+        child3.getChildren().add(child4);
+        root.getChildren().addAll(child1, child2, child3);
+        root.setExpanded(true);
+
+        treeView = new TreeView<>(root);
+        treeView.setShowRoot(false);
+
+        Map<String, Double> layoutXMap = new LinkedHashMap<>();
+
+        treeView.setCellFactory(tv -> new TreeCell<>() {
+            @Override
+            protected void layoutChildren() {
+                super.layoutChildren();
+                if (getItem() != null && !isEmpty()) {
+                    Node container = lookup(".tree-cell > *");
+                    if (container != null) {
+                        layoutXMap.put(getItem(), container.getLayoutX());
+                    }
+                }
+            }
+        });
+
+        stageLoader = new StageLoader(treeView);
+        Toolkit.getToolkit().firePulse();
+
+        List<Double> values = new ArrayList<>(layoutXMap.values());
+        assertFalse(values.isEmpty(), "Expected layoutX values to be collected");
+
+        double first = values.get(0);
+        for (Map.Entry<String, Double> entry : layoutXMap.entrySet()) {
+            double x = entry.getValue();
+            assertEquals(first, x, 1e-6, "Alignment mismatch for item: " + entry.getKey());
+        }
+    }
+
     private List<TreeItem<String>> generateChildren(int lvl) {
         List<TreeItem<String>> children = new ArrayList<>();
         for (int idx = 0; idx < 10; idx++) {
@@ -4096,7 +4160,9 @@ public class TreeViewTest {
         rootNode.getChildren().addAll(generateChildren(1));
         TreeView<String> treeView = new TreeView<>(rootNode);
         treeView.scrollTo(100);
-        IndexedCell expandedCell = VirtualFlowTestUtils.getCell(treeView, 100);
+
+        stageLoader = new StageLoader(treeView);
+
         Toolkit.getToolkit().firePulse();
         rootNode.getChildren().get(1).setExpanded(false);
         Toolkit.getToolkit().firePulse();
@@ -4175,6 +4241,65 @@ public class TreeViewTest {
         }
     }
 
+    @Test
+    void testRefreshShouldNotResetCells() {
+        final AtomicInteger creationCounter = new AtomicInteger();
+
+        TreeView<Person> treeView = new TreeView<>();
+        treeView.setRoot(new TreeItem<>(new Person("text")));
+        treeView.setCellFactory(_ -> {
+            creationCounter.incrementAndGet();
+            return new TreeCell<>();
+        });
+
+        stageLoader = new StageLoader(treeView);
+        Toolkit.getToolkit().firePulse();
+
+        assertTrue(creationCounter.get() > 0);
+        creationCounter.set(0);
+
+        treeView.refresh();
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals(0, creationCounter.get());
+    }
+
+    @Test
+    void testRefreshShouldReflectChangeInCell() {
+        String initialName = "Initial";
+        Person person = new Person(initialName);
+
+        TreeView<Person> treeView = new TreeView<>();
+        treeView.setRoot(new TreeItem<>(person));
+        treeView.setCellFactory(_ -> new TreeCell<>() {
+            @Override
+            protected void updateItem(Person item, boolean empty) {
+                super.updateItem(item, empty);
+
+                if (empty) {
+                    setText(null);
+                } else {
+                    setText(item.getFirstName());
+                }
+            }
+        });
+
+        stageLoader = new StageLoader(treeView);
+        Toolkit.getToolkit().firePulse();
+
+        String newName = "Other Name";
+        person.setFirstName(newName);
+
+        IndexedCell<?> cell = VirtualFlowTestUtils.getCell(treeView, 0);
+        assertEquals(initialName, cell.getText());
+
+        treeView.refresh();
+        Toolkit.getToolkit().firePulse();
+
+        cell = VirtualFlowTestUtils.getCell(treeView, 0);
+        assertEquals(newName, cell.getText());
+    }
+
     public static class MisbehavingOnCancelTreeCell<S> extends TreeCell<S> {
 
         @Override
@@ -4185,4 +4310,135 @@ public class TreeViewTest {
 
     }
 
+    @Test
+    public void testGetTreeItem() {
+        List<TreeItem<String>> treeItems = new ArrayList<>(20);
+        for (int i = 0; i < 20; i++) {
+            treeItems.add(new TreeItem<>(Integer.toString(i)));
+        }
+
+        treeItems.get(0).getChildren().addAll(List.of(treeItems.get(1), treeItems.get(11), treeItems.get(12)));
+        treeItems.get(0).setExpanded(true);
+
+        treeItems.get(1).getChildren().add(treeItems.get(2));
+        treeItems.get(1).setExpanded(true);
+
+        treeItems.get(2).getChildren().add(treeItems.get(3));
+        treeItems.get(2).setExpanded(true);
+
+        treeItems.get(3).getChildren().add(treeItems.get(4));
+        treeItems.get(3).setExpanded(true);
+
+        treeItems.get(4).getChildren().addAll(List.of(treeItems.get(5), treeItems.get(6)));
+        treeItems.get(4).setExpanded(true);
+
+        treeItems.get(2).getChildren().add(treeItems.get(7));
+        treeItems.get(2).setExpanded(true);
+
+        treeItems.get(7).getChildren().add(treeItems.get(8));
+        treeItems.get(7).setExpanded(true);
+
+        treeItems.get(8).getChildren().addAll(List.of(treeItems.get(9), treeItems.get(10)));
+        treeItems.get(8).setExpanded(true);
+
+        treeItems.get(12).getChildren().addAll(List.of(treeItems.get(13), treeItems.get(14), treeItems.get(16)));
+        treeItems.get(12).setExpanded(true);
+
+        treeItems.get(14).getChildren().add(treeItems.get(15));
+        treeItems.get(14).setExpanded(true);
+
+        treeItems.get(16).getChildren().addAll(List.of(treeItems.get(17), treeItems.get(18), treeItems.get(19)));
+        treeItems.get(16).setExpanded(true);
+
+        TreeView<String> tv = new TreeView<>(treeItems.getFirst());
+
+        List<String> expectedValues, actualValues;
+
+        // the tree is fully expanded
+        // note: the nodes of the tree are labeled in pre-order, depth-first traversal order
+
+        // 0
+        // ├── 1
+        // │   └── 2
+        // │       ├── 3
+        // │       │   └── 4
+        // │       │       ├── 5
+        // │       │       └── 6
+        // │       └── 7
+        // │           └── 8
+        // │               ├── 9
+        // │               └── 10
+        // ├── 11
+        // └── 12
+        //     ├── 13
+        //     ├── 14
+        //     │   └── 15
+        //     └── 16
+        //         ├── 17
+        //         ├── 18
+        //         └── 19
+
+        assertEquals(20, tv.getExpandedItemCount());
+        expectedValues = IntStream.range(0, 20).mapToObj(String::valueOf).toList();
+        actualValues = IntStream.range(0, 20).mapToObj(i -> tv.getTreeItem(i).getValue()).toList();
+        assertEquals(expectedValues, actualValues);
+
+        // node 3 is collapsed
+        treeItems.get(3).setExpanded(false);
+
+        // 0
+        // ├── 1
+        // │   └── 2
+        // │       ├── 3*
+        // │       │
+        // │       │
+        // │       │
+        // │       └── 7
+        // │           └── 8
+        // │               ├── 9
+        // │               └── 10
+        // ├── 11
+        // └── 12
+        //     ├── 13
+        //     ├── 14
+        //     │   └── 15
+        //     └── 16
+        //         ├── 17
+        //         ├── 18
+        //         └── 19
+
+        assertEquals(17, tv.getExpandedItemCount());
+        expectedValues = Stream.of(0, 1, 2, 3, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19).map(String::valueOf).toList();
+        actualValues = IntStream.range(0, 17).mapToObj(i -> tv.getTreeItem(i).getValue()).toList();
+        assertEquals(expectedValues, actualValues);
+
+        // node 2 is collapsed
+        treeItems.get(2).setExpanded(false);
+
+        // 0
+        // ├── 1
+        // │   └── 2*
+        // │
+        // │
+        // │
+        // │
+        // │
+        // │
+        // │
+        // │
+        // ├── 11
+        // └── 12
+        //     ├── 13
+        //     ├── 14
+        //     │   └── 15
+        //     └── 16
+        //         ├── 17
+        //         ├── 18
+        //         └── 19
+
+        assertEquals(12, tv.getExpandedItemCount());
+        expectedValues = Stream.of(0, 1, 2, 11, 12, 13, 14, 15, 16, 17, 18, 19).map(String::valueOf).toList();
+        actualValues = IntStream.range(0, 12).mapToObj(i -> tv.getTreeItem(i).getValue()).toList();
+        assertEquals(expectedValues, actualValues);
+    }
 }

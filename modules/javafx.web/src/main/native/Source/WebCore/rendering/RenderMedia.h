@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2008, 2009, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,26 +27,27 @@
 
 #if ENABLE(VIDEO)
 
-#include "HTMLMediaElement.h"
-#include "RenderImage.h"
+#include <WebCore/RenderImage.h>
 
 namespace WebCore {
 
+class HTMLMediaElement;
+
 class RenderMedia : public RenderImage {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderMedia);
+    WTF_MAKE_TZONE_ALLOCATED(RenderMedia);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderMedia);
 public:
     RenderMedia(Type, HTMLMediaElement&, RenderStyle&&);
-    RenderMedia(Type, HTMLMediaElement&, RenderStyle&&, const IntSize& intrinsicSize);
     virtual ~RenderMedia();
 
-    HTMLMediaElement& mediaElement() const { return downcast<HTMLMediaElement>(nodeForNonAnonymous()); }
+    inline HTMLMediaElement& mediaElement() const; // Defined in RenderMediaInlines.h
+    inline Ref<HTMLMediaElement> protectedMediaElement() const; // Defined in RenderMediaInlines.h
 
     bool shouldDisplayBrokenImageIcon() const final { return false; }
 
 protected:
     void layout() override;
-    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
+    void styleDidChange(Style::Difference, const RenderStyle* oldStyle) override;
 
     void visibleInViewportStateChanged() override { }
 
@@ -59,11 +60,6 @@ private:
     bool isImage() const final { return false; }
     void paintReplaced(PaintInfo&, const LayoutPoint&) override;
 };
-
-inline RenderMedia* HTMLMediaElement::renderer() const
-{
-    return downcast<RenderMedia>(HTMLElement::renderer());
-}
 
 } // namespace WebCore
 

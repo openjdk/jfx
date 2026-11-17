@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -352,20 +352,6 @@ public class TreeTableRowSkinTest {
         assertEquals(5, row.getChildrenUnmodifiable().stream().filter(TreeTableCell.class::isInstance).count());
     }
 
-    /** TreeTableView.refresh() must release all discarded cells JDK-8307538 */
-    @Test
-    public void cellsMustBeCollectableAfterRefresh() {
-        IndexedCell<?> row = VirtualFlowTestUtils.getCell(treeTableView, 0);
-        assertNotNull(row);
-        WeakReference<Object> ref = new WeakReference<>(row);
-        row = null;
-
-        treeTableView.refresh();
-        Toolkit.getToolkit().firePulse();
-
-        JMemoryBuddy.assertCollectable(ref);
-    }
-
     /** TreeTableView.setRowFactory() must release all discarded cells JDK-8307538 */
     @Test
     public void cellsMustBeCollectableAfterRowFactoryChange() {
@@ -425,6 +411,50 @@ public class TreeTableRowSkinTest {
         Toolkit.getToolkit().firePulse();
         assertTrue(treeItem.isExpanded());
         assertEquals(treeItemSubNodeAfterExpand, treeItemSubNode.getGraphic().localToScene(treeItemSubNode.getGraphic().getBoundsInLocal()).getMinY());
+    }
+
+    @Test
+    public void testGraphicAndDisclosureVisibilityWithReducedMotion() {
+        TreeTableView<String> tree = new TreeTableView<>();
+        stageLoader = new StageLoader(tree);
+
+        TreeTableColumn<String, String> column = new TreeTableColumn<>("Column");
+        column.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getValue()));
+        column.setPrefWidth(200);
+        tree.getColumns().add(column);
+        tree.setPrefWidth(220);
+
+        Rectangle rootGraphic = new Rectangle(10, 10);
+        TreeItem<String> root = new TreeItem<>("Root", rootGraphic);
+        Rectangle parentGraphic = new Rectangle(10, 10);
+        TreeItem<String> parent = new TreeItem<>("Parent", parentGraphic);
+        parent.getChildren().add(new TreeItem<>("Child", new Rectangle(10, 10)));
+        root.getChildren().add(parent);
+        root.setExpanded(true);
+        tree.setRoot(root);
+
+        Toolkit.getToolkit().firePulse();
+
+        TreeTableRow<?> parentRow = (TreeTableRow<?>) VirtualFlowTestUtils.getCell(tree, 1);
+        Node disclosure = parentRow.lookup(".tree-disclosure-node");
+        assertNotNull(disclosure, "disclosure node must be present");
+        assertEquals(1.0, disclosure.getOpacity(), 0.0);
+        assertEquals(1.0, parentGraphic.getOpacity(), 0.0);
+
+        stageLoader.getStage().getScene().getPreferences().setReducedMotion(true);
+        column.setPrefWidth(24);
+        tree.setPrefWidth(24);
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals(0.0, disclosure.getOpacity(), 0.0);
+        assertEquals(0.0, parentGraphic.getOpacity(), 0.0);
+
+        column.setPrefWidth(200);
+        tree.setPrefWidth(220);
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals(1.0, disclosure.getOpacity(), 0.0);
+        assertEquals(1.0, parentGraphic.getOpacity(), 0.0);
     }
 
     @AfterEach

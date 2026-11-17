@@ -28,21 +28,25 @@
 #include "IDBCursorInfo.h"
 #include "IDBKeyData.h"
 #include "MemoryCursor.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 namespace IDBServer {
 
+class MemoryBackingStoreTransaction;
 class MemoryObjectStore;
 
 class MemoryObjectStoreCursor : public MemoryCursor {
+    WTF_MAKE_TZONE_ALLOCATED(MemoryObjectStoreCursor);
 public:
-    MemoryObjectStoreCursor(MemoryObjectStore&, const IDBCursorInfo&);
+    static Ref<MemoryObjectStoreCursor> create(MemoryObjectStore&, const IDBCursorInfo&, MemoryBackingStoreTransaction&);
 
     void objectStoreCleared();
     void keyDeleted(const IDBKeyData&);
     void keyAdded(IDBKeyDataSet::iterator);
 
 private:
+    MemoryObjectStoreCursor(MemoryObjectStore&, const IDBCursorInfo&, MemoryBackingStoreTransaction&);
     void currentData(IDBGetResult&) final;
     void iterate(const IDBKeyData&, const IDBKeyData& primaryKey, uint32_t count, IDBGetResult&) final;
 
@@ -55,7 +59,7 @@ private:
 
     bool hasValidPosition() const;
 
-    MemoryObjectStore& m_objectStore;
+    WeakRef<MemoryObjectStore> m_objectStore;
 
     IDBKeyRangeData m_remainingRange;
 

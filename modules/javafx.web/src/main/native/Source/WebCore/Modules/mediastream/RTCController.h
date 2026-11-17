@@ -24,9 +24,9 @@
 
 #pragma once
 
-#include "EventTarget.h"
-#include "SecurityOrigin.h"
-#include <wtf/RefCounted.h>
+#include <WebCore/EventTarget.h>
+#include <WebCore/SecurityOrigin.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakHashSet.h>
 
@@ -47,7 +47,8 @@ class LibWebRTCLogSink;
 #if USE(GSTREAMER_WEBRTC)
 class GStreamerWebRTCLogSink;
 #endif
-class RTCController : public RefCounted<RTCController>, public CanMakeWeakPtr<RTCController> {
+
+class RTCController : public RefCountedAndCanMakeWeakPtr<RTCController> {
 public:
     static Ref<RTCController> create() { return adoptRef(*new RTCController); }
 

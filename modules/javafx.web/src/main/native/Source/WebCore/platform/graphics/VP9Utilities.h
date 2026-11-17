@@ -25,7 +25,8 @@
 
 #pragma once
 
-#include "ScreenDataOverrides.h"
+#include <WebCore/PlatformVideoColorSpace.h>
+#include <WebCore/ScreenDataOverrides.h>
 #include <wtf/text/StringView.h>
 #include <wtf/text/WTFString.h>
 namespace WebCore {
@@ -127,5 +128,13 @@ struct VPCodecConfigurationRecord {
 
 WEBCORE_EXPORT std::optional<VPCodecConfigurationRecord> parseVPCodecParameters(StringView codecString);
 WEBCORE_EXPORT String createVPCodecParametersString(const VPCodecConfigurationRecord&);
+std::optional<VPCodecConfigurationRecord> createVPCodecConfigurationRecordFromVPCC(std::span<const uint8_t>);
+void setConfigurationColorSpaceFromVP9ColorSpace(VPCodecConfigurationRecord&, uint8_t);
+
+enum class VPXCodec : uint8_t { Vp8, Vp9 };
+std::optional<VPCodecConfigurationRecord> vPCodecConfigurationRecordFromVPXByteStream(VPXCodec, std::span<const uint8_t>);
+Vector<uint8_t> vpcCFromVPCodecConfigurationRecord(const VPCodecConfigurationRecord&);
+
+PlatformVideoColorSpace colorSpaceFromVPCodecConfigurationRecord(const VPCodecConfigurationRecord&);
 
 }

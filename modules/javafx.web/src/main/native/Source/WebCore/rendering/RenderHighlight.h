@@ -30,7 +30,7 @@
 
 #pragma once
 
-#include "RenderObject.h"
+#include <WebCore/RenderObject.h>
 
 namespace WebCore {
 
@@ -74,7 +74,7 @@ public:
 private:
     void checkForSpanner();
 
-    RenderObject* m_current { nullptr };
+    CheckedPtr<RenderObject> m_current;
     Vector<RenderMultiColumnSpannerPlaceholder*> m_spannerStack;
 };
 

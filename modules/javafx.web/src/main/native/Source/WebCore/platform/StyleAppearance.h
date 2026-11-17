@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2022 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,6 +35,7 @@ namespace WebCore {
 enum class StyleAppearance : uint8_t {
     None,
     Auto,
+    Base,
     Checkbox,
     Radio,
     PushButton,
@@ -63,16 +64,15 @@ enum class StyleAppearance : uint8_t {
     TextArea,
     TextField,
     // Internal-only Values
-#if ENABLE(INPUT_TYPE_COLOR)
     ColorWell,
-#endif
+    ColorWellSwatch,
+    ColorWellSwatchOverlay,
+    ColorWellSwatchWrapper,
 #if ENABLE(SERVICE_CONTROLS)
     ImageControlsButton,
 #endif
     InnerSpinButton,
-#if ENABLE(DATALIST_ELEMENT)
     ListButton,
-#endif
     SearchFieldDecoration,
     SearchFieldResultsDecoration,
     SearchFieldResultsButton,
@@ -85,6 +85,8 @@ enum class StyleAppearance : uint8_t {
     SwitchThumb,
     SwitchTrack
 };
+
+constexpr int appearanceBitWidth = 7;
 
 WTF::TextStream& operator<<(WTF::TextStream&, StyleAppearance);
 

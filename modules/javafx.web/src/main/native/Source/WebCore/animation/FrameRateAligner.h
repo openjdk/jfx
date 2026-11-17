@@ -25,16 +25,16 @@
 
 #pragma once
 
-#include "AnimationFrameRate.h"
-#include "AnimationMalloc.h"
-#include "ReducedResolutionSeconds.h"
+#include <WebCore/AnimationFrameRate.h>
+#include <WebCore/AnimationMalloc.h>
+#include <WebCore/ReducedResolutionSeconds.h>
 #include <wtf/HashMap.h>
 #include <wtf/Seconds.h>
 
 namespace WebCore {
 
 class FrameRateAligner {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Animation);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(FrameRateAligner, Animation);
 public:
     FrameRateAligner();
     ~FrameRateAligner();

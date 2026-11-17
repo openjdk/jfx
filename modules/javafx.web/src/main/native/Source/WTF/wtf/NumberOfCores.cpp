@@ -28,11 +28,14 @@
 
 #include <cstdio>
 #include <mutex>
+#include <wtf/text/StringToIntegerConversion.h>
 
 #if OS(DARWIN)
 #include <sys/sysctl.h>
-#elif OS(LINUX) || OS(AIX) || OS(OPENBSD) || OS(NETBSD) || OS(FREEBSD)
+#elif OS(LINUX) || OS(AIX) || OS(OPENBSD) || OS(NETBSD) || OS(FREEBSD) || OS(HAIKU)
 #include <unistd.h>
+#elif OS(QNX)
+#include <sys/syspage.h>
 #elif OS(WINDOWS)
 #include <windows.h>
 #endif
@@ -47,13 +50,12 @@ int numberOfProcessorCores()
     if (s_numberOfCores > 0)
         return s_numberOfCores;
 
-    if (const char* coresEnv = getenv("WTF_numberOfProcessorCores")) {
-        unsigned numberOfCores;
-        if (sscanf(coresEnv, "%u", &numberOfCores) == 1) {
-            s_numberOfCores = numberOfCores;
+    if (CString coresEnv = getenv("WTF_numberOfProcessorCores"); !coresEnv.isNull()) {
+        if (auto numberOfCores = parseInteger<unsigned>(coresEnv.span())) {
+            s_numberOfCores = *numberOfCores;
             return s_numberOfCores;
-        } else
-            fprintf(stderr, "WARNING: failed to parse WTF_numberOfProcessorCores=%s\n", coresEnv);
+    }
+        SAFE_FPRINTF(stderr, "WARNING: failed to parse WTF_numberOfProcessorCores=%s\n", coresEnv);
     }
 
 #if OS(DARWIN)
@@ -66,10 +68,13 @@ int numberOfProcessorCores()
     int sysctlResult = sysctl(name, sizeof(name) / sizeof(int), &result, &length, 0, 0);
 
     s_numberOfCores = sysctlResult < 0 ? defaultIfUnavailable : result;
-#elif OS(LINUX) || OS(AIX) || OS(OPENBSD) || OS(NETBSD) || OS(FREEBSD)
+#elif OS(LINUX) || OS(AIX) || OS(OPENBSD) || OS(NETBSD) || OS(FREEBSD) || OS(HAIKU)
     long sysconfResult = sysconf(_SC_NPROCESSORS_ONLN);
 
     s_numberOfCores = sysconfResult < 0 ? defaultIfUnavailable : static_cast<int>(sysconfResult);
+#elif OS(QNX)
+    int numCpuQNX = _syspage_ptr->num_cpu;
+    s_numberOfCores = numCpuQNX < 0 ? defaultIfUnavailable : numCpuQNX;
 #elif OS(WINDOWS)
     UNUSED_PARAM(defaultIfUnavailable);
     SYSTEM_INFO sysInfo;
@@ -85,16 +90,15 @@ int numberOfProcessorCores()
 #if OS(DARWIN)
 int numberOfPhysicalProcessorCores()
 {
-    const int32_t defaultIfUnavailable = 1;
-
-    static int32_t numCores = 0;
-    static std::once_flag onceKey;
-    std::call_once(onceKey, [&] {
+    static int32_t numCores = [] {
+        constexpr int32_t defaultIfUnavailable = 1;
         size_t valueSize = sizeof(numCores);
+        int32_t numCores = 0;
         int result = sysctlbyname("hw.physicalcpu_max", &numCores, &valueSize, nullptr, 0);
         if (result < 0)
-            numCores = defaultIfUnavailable;
-    });
+            return defaultIfUnavailable;
+        return numCores;
+    }();
 
     return numCores;
 }

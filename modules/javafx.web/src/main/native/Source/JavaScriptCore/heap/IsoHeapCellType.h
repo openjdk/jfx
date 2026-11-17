@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "HeapCellType.h"
+#include <JavaScriptCore/HeapCellType.h>
 #include <wtf/PtrTag.h>
 #include <wtf/TZoneMalloc.h>
 
@@ -41,7 +41,7 @@ public:
     template<typename CellType>
     struct Args {
         Args()
-            : mode(CellType::needsDestruction ? NeedsDestruction : DoesNotNeedDestruction)
+            : mode(CellType::needsDestruction)
             , functionPtr(&CellType::destroy)
         { }
 

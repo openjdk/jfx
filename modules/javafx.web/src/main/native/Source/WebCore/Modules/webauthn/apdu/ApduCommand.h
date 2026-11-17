@@ -44,11 +44,11 @@ namespace apdu {
 // byte, denoting the instruction code, P1 and P2, each one byte denoting
 // instruction parameters, a length field (Lc), a data field of length Lc, and
 // a maximum expected response length (Le).
-class WEBCORE_EXPORT ApduCommand {
+class ApduCommand {
     WTF_MAKE_NONCOPYABLE(ApduCommand);
 public:
     // Constructs an APDU command from the serialized message data.
-    static std::optional<ApduCommand> createFromMessage(const Vector<uint8_t>&);
+    WEBCORE_EXPORT static std::optional<ApduCommand> createFromMessage(const Vector<uint8_t>&);
 
     ApduCommand() = default;
     ApduCommand(
@@ -62,13 +62,13 @@ public:
     ApduCommand& operator=(ApduCommand&&) = default;
 
     // Returns serialized message data.
-    Vector<uint8_t> getEncodedCommand() const;
+    WEBCORE_EXPORT Vector<uint8_t> getEncodedCommand() const;
 
     void setCla(uint8_t cla) { m_cla = cla; }
     void setIns(uint8_t ins) { m_ins = ins; }
     void setP1(uint8_t p1) { m_p1 = p1; }
     void setP2(uint8_t p2) { m_p2 = p2; }
-    void setData(Vector<uint8_t>&& data) { m_data = WTFMove(data); }
+    void setData(Vector<uint8_t>&& data) { m_data = WTF::move(data); }
     void setResponseLength(size_t responseLength) { m_responseLength = responseLength; }
 
     uint8_t cla() const { return m_cla; }

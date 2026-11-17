@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,8 @@ import javafx.collections.ObservableList;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.chart.BarChart;
+import javafx.scene.chart.CategoryAxis;
+import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
 import javafx.scene.chart.XYChart.Series;
 import javafx.scene.control.ContextMenu;
@@ -49,7 +51,10 @@ public class BarChartPage extends XYChartPageBase {
     public BarChartPage() {
         super("BarChartPage");
 
-        chart = new BarChart<>(createCategoryAxis("X Axis"), createNumberAxis("Y Axis")) {
+        CategoryAxis xAxis = createCategoryAxis("X Axis");
+        NumberAxis yAxis = createNumberAxis("Y Axis");
+
+        chart = new BarChart<>(xAxis, yAxis) {
             @Override
             public Object queryAccessibleAttribute(AccessibleAttribute a, Object... ps) {
                 Object v = super.queryAccessibleAttribute(a, ps);
@@ -65,6 +70,8 @@ public class BarChartPage extends XYChartPageBase {
         op.section("BarChart");
         op.option("Bar Gap:", Options.gaps("barGap", chart.barGapProperty()));
         op.option("Category Gap:", Options.gaps("categoryGap", chart.categoryGapProperty()));
+        categoryAxisOptions("X Axis", "x", op, xAxis);
+        numberAxisOptions("Y Axis", "y", op, yAxis);
         XYChartPropertySheet.appendTo(this, op, chart);
 
         setContent(chart);

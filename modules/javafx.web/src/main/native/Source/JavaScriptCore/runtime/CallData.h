@@ -28,7 +28,7 @@
 
 #pragma once
 
-#include "NativeFunction.h"
+#include <JavaScriptCore/NativeFunction.h>
 #include <wtf/Forward.h>
 #include <wtf/NakedPtr.h>
 
@@ -48,6 +48,7 @@ struct CallData {
         struct {
             TaggedNativeFunction function;
             bool isBoundFunction;
+            bool isWasm;
         } native;
         struct {
             FunctionExecutable* functionExecutable;

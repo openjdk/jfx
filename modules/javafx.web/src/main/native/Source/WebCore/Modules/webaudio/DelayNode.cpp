@@ -30,12 +30,13 @@
 
 #include "DelayOptions.h"
 #include "DelayProcessor.h"
+#include "ExceptionOr.h"
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(DelayNode);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DelayNode);
 
 constexpr double maximumAllowedDelayTime = 180;
 
@@ -62,14 +63,19 @@ ExceptionOr<Ref<DelayNode>> DelayNode::create(BaseAudioContext& context, const D
     if (result.hasException())
         return result.releaseException();
 
-    delayNode->delayTime().setValue(options.delayTime);
+    delayNode->checkedDelayTime()->setValue(options.delayTime);
 
     return delayNode;
 }
 
 AudioParam& DelayNode::delayTime()
 {
-    return static_cast<DelayProcessor&>(*m_processor).delayTime();
+    return downcast<DelayProcessor>(*m_processor).delayTime();
+}
+
+CheckedRef<AudioParam> DelayNode::checkedDelayTime()
+{
+    return delayTime();
 }
 
 } // namespace WebCore

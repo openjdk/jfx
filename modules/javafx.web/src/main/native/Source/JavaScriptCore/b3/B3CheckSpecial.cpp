@@ -37,7 +37,7 @@
 
 namespace JSC { namespace B3 {
 
-WTF_MAKE_TZONE_ALLOCATED_IMPL(CheckSpecial);
+WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED_IMPL(CheckSpecial);
 
 using Inst = Air::Inst;
 using Arg = Air::Arg;
@@ -125,8 +125,14 @@ void CheckSpecial::forEachArg(Inst& inst, const ScopedLambda<Inst::EachArgCallba
         });
 
     std::optional<unsigned> firstRecoverableIndex;
-    if (m_checkKind.opcode == BranchAdd32 || m_checkKind.opcode == BranchAdd64)
+    switch (m_checkKind.opcode) {
+    case BranchAdd32:
+    case BranchAdd64:
         firstRecoverableIndex = 1;
+        break;
+    default:
+        break;
+    }
     forEachArgImpl(numB3Args(inst), m_numCheckArgs + 1, inst, m_stackmapRole, firstRecoverableIndex, callback, optionalDefArgWidth);
 }
 
@@ -175,7 +181,8 @@ CCallHelpers::Jump CheckSpecial::generate(Inst& inst, CCallHelpers& jit, Generat
     for (unsigned i = 0; i < m_numCheckArgs; ++i)
         args.append(inst.args[1 + i]);
 
-    context.latePaths.append(
+    context.latePaths.append(std::tuple {
+        inst.origin->origin(),
         createSharedTask<GenerationContext::LatePathFunction>(
             [=, this] (auto& jit, GenerationContext& context) {
                 fail.link(&jit);
@@ -236,14 +243,27 @@ CCallHelpers::Jump CheckSpecial::generate(Inst& inst, CCallHelpers& jit, Generat
                     } else
                         UNREACHABLE_FOR_PLATFORM();
                     break;
-                case BranchSub32:
+                case BranchSub32: {
+                    if (m_numCheckArgs == 4) {
+                        // Use, Use, EarlyDef. Thus Def register is different from both Use.
+                        // In this case, we do not need to recover them since Used registers are not clobbered.
+                    } else if (m_numCheckArgs == 3) {
+                        // In that case, just adding back will recover the original input in UseDef side.
                     Inst(Add32, nullptr, args[1], args[2]).generate(jit, context);
+                    }
                     break;
+                }
                 case BranchSub64:
                     // this instruction is only selectable on 64-bit platforms
-                    if constexpr (is64Bit())
+                    if constexpr (is64Bit()) {
+                        if (m_numCheckArgs == 4) {
+                            // Use, Use, EarlyDef. Thus Def register is different from both Use.
+                            // In this case, we do not need to recover them since Used registers are not clobbered.
+                        } else if (m_numCheckArgs == 3) {
+                            // In that case, just adding back will recover the original input in UseDef side.
                     Inst(Add64, nullptr, args[1], args[2]).generate(jit, context);
-                    else
+                        }
+                    } else
                         UNREACHABLE_FOR_PLATFORM();
                     break;
                 case BranchNeg32:
@@ -260,7 +280,8 @@ CCallHelpers::Jump CheckSpecial::generate(Inst& inst, CCallHelpers& jit, Generat
                     break;
                 }
                 value->m_generator->run(jit, StackmapGenerationParams(value, reps, context));
-            }));
+            })
+        });
     return CCallHelpers::Jump(); // As far as Air thinks, we are not a terminal.
 }
 

@@ -66,7 +66,7 @@ void MarkingConstraintSet::didStartMarking()
 
 void MarkingConstraintSet::add(CString abbreviatedName, CString name, MarkingConstraintExecutorPair&& executors, ConstraintVolatility volatility, ConstraintConcurrency concurrency, ConstraintParallelism parallelism)
 {
-    add(makeUnique<SimpleMarkingConstraint>(WTFMove(abbreviatedName), WTFMove(name), WTFMove(executors), volatility, concurrency, parallelism));
+    add(makeUnique<SimpleMarkingConstraint>(WTF::move(abbreviatedName), WTF::move(name), WTF::move(executors), volatility, concurrency, parallelism));
 }
 
 void MarkingConstraintSet::add(
@@ -76,7 +76,7 @@ void MarkingConstraintSet::add(
     m_ordered.append(constraint.get());
     if (constraint->volatility() == ConstraintVolatility::GreyedByMarking)
         m_outgrowths.append(constraint.get());
-    m_set.append(WTFMove(constraint));
+    m_set.append(WTF::move(constraint));
 }
 
 bool MarkingConstraintSet::executeConvergence(SlotVisitor& visitor)
@@ -132,9 +132,7 @@ bool MarkingConstraintSet::executeConvergenceImpl(SlotVisitor& visitor)
     // constraints before returning.
     bool isWavefrontAdvancing = this->isWavefrontAdvancing(visitor);
 
-    std::sort(
-        m_ordered.begin(), m_ordered.end(),
-        [&] (MarkingConstraint* a, MarkingConstraint* b) -> bool {
+    std::ranges::sort(m_ordered, [&](auto* a, auto* b) {
             // Remember: return true if a should come before b.
 
             auto volatilityScore = [] (MarkingConstraint* constraint) -> unsigned {

@@ -71,7 +71,7 @@ Value* ConstFloatValue::bitAndConstant(Procedure& proc, const Value* other) cons
 {
     if (!other->hasFloat())
         return nullptr;
-    float result = bitwise_cast<float>(bitwise_cast<uint32_t>(m_value) & bitwise_cast<uint32_t>(other->asFloat()));
+    float result = std::bit_cast<float>(std::bit_cast<uint32_t>(m_value) & std::bit_cast<uint32_t>(other->asFloat()));
     return proc.add<ConstFloatValue>(origin(), result);
 }
 
@@ -79,7 +79,7 @@ Value* ConstFloatValue::bitOrConstant(Procedure& proc, const Value* other) const
 {
     if (!other->hasFloat())
         return nullptr;
-    float result = bitwise_cast<float>(bitwise_cast<uint32_t>(m_value) | bitwise_cast<uint32_t>(other->asFloat()));
+    float result = std::bit_cast<float>(std::bit_cast<uint32_t>(m_value) | std::bit_cast<uint32_t>(other->asFloat()));
     return proc.add<ConstFloatValue>(origin(), result);
 }
 
@@ -87,13 +87,13 @@ Value* ConstFloatValue::bitXorConstant(Procedure& proc, const Value* other) cons
 {
     if (!other->hasFloat())
         return nullptr;
-    float result = bitwise_cast<float>(bitwise_cast<uint32_t>(m_value) ^ bitwise_cast<uint32_t>(other->asFloat()));
+    float result = std::bit_cast<float>(std::bit_cast<uint32_t>(m_value) ^ std::bit_cast<uint32_t>(other->asFloat()));
     return proc.add<ConstFloatValue>(origin(), result);
 }
 
 Value* ConstFloatValue::bitwiseCastConstant(Procedure& proc) const
 {
-    return proc.add<Const32Value>(origin(), bitwise_cast<int32_t>(m_value));
+    return proc.add<Const32Value>(origin(), std::bit_cast<int32_t>(m_value));
 }
 
 Value* ConstFloatValue::floatToDoubleConstant(Procedure& proc) const
@@ -116,9 +116,19 @@ Value* ConstFloatValue::floorConstant(Procedure& proc) const
     return proc.add<ConstFloatValue>(origin(), floorf(m_value));
 }
 
+Value* ConstFloatValue::fTruncConstant(Procedure& proc) const
+{
+    return proc.add<ConstFloatValue>(origin(), Math::truncFloat(m_value));
+}
+
 Value* ConstFloatValue::sqrtConstant(Procedure& proc) const
 {
     return proc.add<ConstFloatValue>(origin(), static_cast<float>(sqrt(m_value)));
+}
+
+Value* ConstFloatValue::purifyNaNConstant(Procedure& proc) const
+{
+    return proc.add<ConstFloatValue>(origin(), static_cast<float>(purifyNaN(m_value)));
 }
 
 Value* ConstFloatValue::divConstant(Procedure& proc, const Value* other) const
@@ -198,7 +208,7 @@ TriState ConstFloatValue::equalOrUnorderedConstant(const Value* other) const
 void ConstFloatValue::dumpMeta(CommaPrinter& comma, PrintStream& out) const
 {
     out.print(comma);
-    out.printf("%le(%u)", m_value, bitwise_cast<uint32_t>(m_value));
+    out.printf("%le(%u)", m_value, std::bit_cast<uint32_t>(m_value));
 }
 
 } } // namespace JSC::B3

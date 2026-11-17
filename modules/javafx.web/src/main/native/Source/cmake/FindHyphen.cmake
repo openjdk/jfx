@@ -6,7 +6,7 @@
 #  HYPHEN_LIBRARY - libraries required to link against libhyphen.
 #
 # Copyright (C) 2012 Intel Corporation. All rights reserved.
-# Copyright (C) 2015 Igalia S.L.
+# Copyright (C) 2015, 2025 Igalia S.L.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -29,18 +29,50 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#[=======================================================================[.rst:
+FindHyphen
+----------
 
-find_path(HYPHEN_INCLUDE_DIR NAMES hyphen.h)
-find_library(HYPHEN_LIBRARIES NAMES hyphen hnj)
+Find libhyphen header and library.
+
+Imported Targets
+^^^^^^^^^^^^^^^^
+
+``Hyphen::Hyphen``
+  The libhyphen library, if found.
+
+Result Variables
+^^^^^^^^^^^^^^^^
+
+This will define the following variables in your project:
+
+``Hyphen_FOUND``
+  true if libhyphen is available.
+
+#]=======================================================================]
+
+find_path(Hyphen_INCLUDE_DIR NAMES hyphen.h)
+find_library(Hyphen_LIBRARY NAMES hyphen hnj)
 
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(Hyphen REQUIRED_VARS HYPHEN_INCLUDE_DIR HYPHEN_LIBRARIES
-                                  FOUND_VAR HYPHEN_FOUND)
+find_package_handle_standard_args(Hyphen
+    REQUIRED_VARS Hyphen_LIBRARY Hyphen_INCLUDE_DIR
+)
 
-if (HYPHEN_INCLUDE_DIR AND HYPHEN_LIBRARIES)
-    set(HYPHEN_FOUND 1)
-else ()
-    set(HYPHEN_FOUND 0)
+if (Hyphen_FOUND AND NOT TARGET Hyphen::Hyphen)
+    add_library(Hyphen::Hyphen UNKNOWN IMPORTED GLOBAL)
+    set_target_properties(Hyphen::Hyphen PROPERTIES
+        IMPORTED_LOCATION "${Hyphen_LIBRARY}"
+        INTERFACE_INCLUDE_DIRECTORIES "${Hyphen_INCLUDE_DIR}"
+    )
 endif ()
 
-mark_as_advanced(HYPHEN_INCLUDE_DIR HYPHEN_LIBRARIES HYPHEN_FOUND)
+mark_as_advanced(
+    Hyphen_INCLUDE_DIR
+    Hyphen_LIBRARY
+)
+
+if (Hyphen_FOUND)
+    set(Hyphen_LIBRARIES ${Hyphen_LIBRARY})
+    set(Hyphen_INCLUDE_DIRS ${Hyphen_INCLUDE_DIR})
+endif ()

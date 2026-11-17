@@ -33,8 +33,8 @@ class HTMLAllCollection final : public AllDescendantsCollection {
 public:
     static Ref<HTMLAllCollection> create(Document&, CollectionType);
 
-    std::optional<std::variant<RefPtr<HTMLCollection>, RefPtr<Element>>> namedOrIndexedItemOrItems(const AtomString& nameOrIndex) const;
-    std::optional<std::variant<RefPtr<HTMLCollection>, RefPtr<Element>>> namedItemOrItems(const AtomString&) const;
+    std::optional<Variant<RefPtr<HTMLCollection>, RefPtr<Element>>> namedOrIndexedItemOrItems(const AtomString& nameOrIndex) const;
+    std::optional<Variant<RefPtr<HTMLCollection>, RefPtr<Element>>> namedItemOrItems(const AtomString&) const;
 
 private:
     HTMLAllCollection(Document&, CollectionType);
@@ -42,7 +42,7 @@ private:
 static_assert(sizeof(HTMLAllCollection) == sizeof(AllDescendantsCollection));
 
 class HTMLAllNamedSubCollection final : public CachedHTMLCollection<HTMLAllNamedSubCollection, CollectionTraversalType::Descendants> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLAllNamedSubCollection);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLAllNamedSubCollection);
 public:
     static Ref<HTMLAllNamedSubCollection> create(Document& document, CollectionType type, const AtomString& name)
     {

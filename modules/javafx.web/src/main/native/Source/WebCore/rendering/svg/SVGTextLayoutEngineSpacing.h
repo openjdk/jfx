@@ -20,25 +20,24 @@
 #pragma once
 
 #include <unicode/uchar.h>
+#include <wtf/CheckedRef.h>
 #include <wtf/Noncopyable.h>
 
 namespace WebCore {
 
 class FontCascade;
-class SVGRenderStyle;
-class SVGElement;
 
-// Helper class used by SVGTextLayoutEngine to handle 'kerning' / 'letter-spacing' and 'word-spacing'.
+// Helper class used by SVGTextLayoutEngine to handle 'letter-spacing' and 'word-spacing'.
 class SVGTextLayoutEngineSpacing {
     WTF_MAKE_NONCOPYABLE(SVGTextLayoutEngineSpacing);
 public:
     SVGTextLayoutEngineSpacing(const FontCascade&);
 
-    float calculateCSSKerningAndSpacing(const SVGRenderStyle*, SVGElement* lengthContext, const UChar* currentCharacter);
+    float calculateCSSSpacing(char16_t);
 
 private:
-    const FontCascade& m_font;
-    const UChar* m_lastCharacter;
+    const CheckedRef<const FontCascade> m_font;
+    char16_t m_lastCharacter { '\0' };
 };
 
 } // namespace WebCore

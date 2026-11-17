@@ -25,28 +25,33 @@
 #include "config.h"
 #include "Subscriber.h"
 
-#include "AbortController.h"
 #include "AbortSignal.h"
+#include "ContextDestructionObserverInlines.h"
 #include "Document.h"
 #include "InternalObserver.h"
 #include "JSDOMExceptionHandling.h"
+#include "ScriptWrappableInlines.h"
 #include "SubscriberCallback.h"
 #include "SubscriptionObserverCallback.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-Ref<Subscriber> Subscriber::create(ScriptExecutionContext& context, Ref<InternalObserver> observer)
+Ref<Subscriber> Subscriber::create(ScriptExecutionContext& context, Ref<InternalObserver>&& observer, const SubscribeOptions& options)
 {
-    return adoptRef(*new Subscriber(context, observer));
+    return adoptRef(*new Subscriber(context, WTF::move(observer), options));
 }
 
-Subscriber::Subscriber(ScriptExecutionContext& context, Ref<InternalObserver> observer)
+Subscriber::Subscriber(ScriptExecutionContext& context, Ref<InternalObserver>&& observer, const SubscribeOptions& options)
     : ActiveDOMObject(&context)
-    , m_abortController(AbortController::create(context))
+    , m_signal(AbortSignal::create(&context))
     , m_observer(observer)
+    , m_options(options)
 {
-    followSignal(m_abortController->signal());
+    relaxAdoptionRequirement();
+    followSignal(m_signal);
+    if (RefPtr signal = options.signal)
+        followSignal(*signal);
     suspendIfNeeded();
 }
 
@@ -92,7 +97,7 @@ void Subscriber::addTeardown(Ref<VoidCallback> callback)
         Locker locker { m_teardownsLock };
         m_teardowns.append(callback);
     } else
-        callback->handleEvent();
+        callback->invoke();
 }
 
 void Subscriber::followSignal(AbortSignal& signal)
@@ -100,28 +105,27 @@ void Subscriber::followSignal(AbortSignal& signal)
     if (signal.aborted())
         close(signal.reason().getValue());
     else {
-        signal.addAlgorithm([this](JSC::JSValue reason) {
-            close(reason);
+        signal.addAlgorithm([weakThis = WeakPtr { *this }](JSC::JSValue reason) {
+            if (RefPtr subscriber = weakThis.get())
+                subscriber->close(reason);
         });
     }
 }
 
 void Subscriber::close(JSC::JSValue reason)
 {
-    auto* context = scriptExecutionContext();
-    if (!context || !m_active)
+    if (!m_active || !scriptExecutionContext())
         return;
 
     m_active = false;
 
-    m_abortController->abort(*JSC::jsCast<JSDOMGlobalObject*>(context->globalObject()), reason);
+    m_signal->signalAbort(reason);
 
     {
         Locker locker { m_teardownsLock };
-        for (auto teardown = m_teardowns.rbegin(); teardown != m_teardowns.rend(); ++teardown) {
-            if (isInactiveDocument())
-                return;
-            (*teardown)->handleEvent();
+        for (Ref teardown : m_teardowns | std::views::reverse) {
+            if (!isInactiveDocument())
+                teardown->invoke();
         }
     }
 
@@ -136,7 +140,7 @@ bool Subscriber::isInactiveDocument() const
 
 void Subscriber::reportErrorObject(JSC::JSValue value)
 {
-    auto* context = scriptExecutionContext();
+    RefPtr context = scriptExecutionContext();
     if (!context)
         return;
 
@@ -150,35 +154,23 @@ void Subscriber::reportErrorObject(JSC::JSValue value)
     reportException(globalObject, JSC::Exception::create(vm, value));
 }
 
-Vector<VoidCallback*> Subscriber::teardownCallbacksConcurrently()
+template<typename Visitor>
+void Subscriber::visitAdditionalChildren(Visitor& visitor)
 {
+    // Do not ref anything in this function, which runs in a GC thread concurrently to the main thread.
+    {
     Locker locker { m_teardownsLock };
-    return m_teardowns.map([](auto& callback) {
-        return callback.ptr();
-    });
+        SUPPRESS_UNCOUNTED_LOCAL for (auto& teardown : m_teardowns)
+            SUPPRESS_UNCOUNTED_ARG teardown->visitJSFunction(visitor);
+    }
+
+    SUPPRESS_UNRETAINED_ARG m_observer->visitAdditionalChildren(visitor);
 }
 
-InternalObserver* Subscriber::observerConcurrently()
-{
-    return &m_observer.get();
-}
+DEFINE_VISIT_ADDITIONAL_CHILDREN(Subscriber);
 
-void Subscriber::visitAdditionalChildren(JSC::AbstractSlotVisitor& visitor)
-{
-    for (auto* teardown : teardownCallbacksConcurrently())
-        teardown->visitJSFunction(visitor);
+Subscriber::~Subscriber() = default;
 
-    observerConcurrently()->visitAdditionalChildren(visitor);
-}
-
-void Subscriber::visitAdditionalChildren(JSC::SlotVisitor& visitor)
-{
-    for (auto* teardown : teardownCallbacksConcurrently())
-        teardown->visitJSFunction(visitor);
-
-    observerConcurrently()->visitAdditionalChildren(visitor);
-}
-
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(Subscriber);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Subscriber);
 
 } // namespace WebCore

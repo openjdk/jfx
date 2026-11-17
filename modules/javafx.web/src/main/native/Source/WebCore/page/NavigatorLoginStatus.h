@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,8 @@
 #pragma once
 
 #include "Supplementable.h"
+#include <wtf/CheckedRef.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -36,7 +38,7 @@ class Navigator;
 enum class IsLoggedIn : uint8_t;
 
 class NavigatorLoginStatus final : public Supplement<Navigator>, public CanMakeWeakPtr<NavigatorLoginStatus> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(NavigatorLoginStatus);
 public:
     explicit NavigatorLoginStatus(Navigator& navigator)
         : m_navigator(navigator)
@@ -50,10 +52,15 @@ private:
     void isLoggedIn(Ref<DeferredPromise>&&);
 
     static NavigatorLoginStatus* from(Navigator&);
-    static ASCIILiteral supplementName();
+    static ASCIILiteral supplementName() { return "NavigatorLoginStatus"_s; }
+    bool isNavigatorLoginStatus() const final { return true; }
     bool hasSameOrigin() const;
 
-    Navigator& m_navigator;
+    const CheckedRef<Navigator> m_navigator;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::NavigatorLoginStatus)
+    static bool isType(const WebCore::SupplementBase& supplement) { return supplement.isNavigatorLoginStatus(); }
+SPECIALIZE_TYPE_TRAITS_END()

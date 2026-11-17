@@ -24,7 +24,6 @@
 #include <wtf/text/AtomString.h>
 
 #include <mutex>
-#include <wtf/Algorithms.h>
 #include <wtf/dtoa.h>
 #include <wtf/text/IntegerToStringConversion.h>
 #include <wtf/text/StringBuilder.h>
@@ -39,7 +38,7 @@ template<AtomString::CaseConvertType type>
 ALWAYS_INLINE AtomString AtomString::convertASCIICase() const
 {
     StringImpl* impl = this->impl();
-    if (UNLIKELY(!impl))
+    if (!impl) [[unlikely]]
         return nullAtom();
 
     // Convert short strings without allocating a new StringImpl, since
@@ -51,23 +50,30 @@ ALWAYS_INLINE AtomString AtomString::convertASCIICase() const
         auto characters = impl->span8();
         unsigned failingIndex;
         for (unsigned i = 0; i < length; ++i) {
-            if (type == CaseConvertType::Lower ? UNLIKELY(isASCIIUpper(characters[i])) : LIKELY(isASCIILower(characters[i]))) {
+            if constexpr (type == CaseConvertType::Lower) {
+                if (isASCIIUpper(characters[i])) [[unlikely]] {
                 failingIndex = i;
                 goto SlowPath;
+            }
+            } else {
+                if (isASCIILower(characters[i])) [[likely]] {
+                    failingIndex = i;
+                    goto SlowPath;
+        }
             }
         }
         return *this;
 SlowPath:
-        LChar localBuffer[localBufferSize];
+        std::array<Latin1Character, localBufferSize> localBuffer;
         for (unsigned i = 0; i < failingIndex; ++i)
             localBuffer[i] = characters[i];
         for (unsigned i = failingIndex; i < length; ++i)
             localBuffer[i] = type == CaseConvertType::Lower ? toASCIILower(characters[i]) : toASCIIUpper(characters[i]);
-        return std::span<const LChar> { localBuffer, length };
+        return std::span<const Latin1Character> { localBuffer }.first(length);
     }
 
     Ref<StringImpl> convertedString = type == CaseConvertType::Lower ? impl->convertToASCIILowercase() : impl->convertToASCIIUppercase();
-    if (LIKELY(convertedString.ptr() == impl))
+    if (convertedString.ptr() == impl) [[likely]]
         return *this;
 
     AtomString result;
@@ -108,19 +114,21 @@ AtomString AtomString::number(unsigned long long number)
 AtomString AtomString::number(float number)
 {
     NumberToStringBuffer buffer;
-    return AtomString::fromLatin1(numberToString(number, buffer));
+    auto span = numberToStringAndSize(number, buffer);
+    return AtomString { byteCast<Latin1Character>(span) };
 }
 
 AtomString AtomString::number(double number)
 {
     NumberToStringBuffer buffer;
-    return AtomString::fromLatin1(numberToString(number, buffer));
+    auto span = numberToStringAndSize(number, buffer);
+    return AtomString { byteCast<Latin1Character>(span) };
 }
 
 AtomString AtomString::fromUTF8Internal(std::span<const char> characters)
 {
     ASSERT(!characters.empty());
-    return AtomStringImpl::add(spanReinterpretCast<const char8_t>(characters));
+    return AtomStringImpl::add(byteCast<char8_t>(characters));
 }
 
 #ifndef NDEBUG
@@ -150,16 +158,16 @@ static inline StringBuilder replaceUnpairedSurrogatesWithReplacementCharacterInt
 AtomString replaceUnpairedSurrogatesWithReplacementCharacter(AtomString&& string)
 {
     // Fast path for the case where there are no unpaired surrogates.
-    if (LIKELY(!hasUnpairedSurrogate(string)))
-        return WTFMove(string);
+    if (!hasUnpairedSurrogate(string)) [[likely]]
+        return WTF::move(string);
     return replaceUnpairedSurrogatesWithReplacementCharacterInternal(string).toAtomString();
 }
 
 String replaceUnpairedSurrogatesWithReplacementCharacter(String&& string)
 {
     // Fast path for the case where there are no unpaired surrogates.
-    if (LIKELY(!hasUnpairedSurrogate(string)))
-        return WTFMove(string);
+    if (!hasUnpairedSurrogate(string)) [[likely]]
+        return WTF::move(string);
     return replaceUnpairedSurrogatesWithReplacementCharacterInternal(string).toString();
 }
 

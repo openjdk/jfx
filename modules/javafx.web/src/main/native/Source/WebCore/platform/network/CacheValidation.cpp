@@ -29,6 +29,7 @@
 #include "CookieJar.h"
 #include "HTTPHeaderMap.h"
 #include "NetworkStorageSession.h"
+#include "ResourceLoaderOptions.h"
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
 #include "SameSiteInfo.h"
@@ -41,7 +42,7 @@ namespace WebCore {
 // These response headers are not copied from a revalidated response to the
 // cached response headers. For compatibility, this list is based on Chromium's
 // net/http/http_response_headers.cc.
-static constexpr ASCIILiteral headersToIgnoreAfterRevalidation[] = {
+static constexpr std::array headersToIgnoreAfterRevalidation {
     "allow"_s,
     "connection"_s,
     "etag"_s,
@@ -60,7 +61,7 @@ static constexpr ASCIILiteral headersToIgnoreAfterRevalidation[] = {
 // Some header prefixes mean "Don't copy this header from a 304 response.".
 // Rather than listing all the relevant headers, we can consolidate them into
 // this list, also grabbed from Chromium's net/http/http_response_headers.cc.
-static constexpr ASCIILiteral headerPrefixesToIgnoreAfterRevalidation[] = {
+static constexpr std::array headerPrefixesToIgnoreAfterRevalidation {
     "content-"_s,
     "x-content-"_s,
     "x-webkit-"_s
@@ -147,11 +148,11 @@ Seconds computeFreshnessLifetimeForHTTPFamily(const ResourceResponse& response, 
     }
 }
 
-void updateRedirectChainStatus(RedirectChainCacheStatus& redirectChainCacheStatus, const ResourceResponse& response)
+void updateRedirectChainStatus(RedirectChainCacheStatus& redirectChainCacheStatus, const ResourceResponse& response, const ResourceLoaderOptions& options)
 {
     if (redirectChainCacheStatus.status == RedirectChainCacheStatus::Status::NotCachedRedirection)
         return;
-    if (response.cacheControlContainsNoStore() || response.cacheControlContainsNoCache() || response.cacheControlContainsMustRevalidate()) {
+    if (options.cachingPolicy != CachingPolicy::AllowCachingMainResourcePrefetch && (response.cacheControlContainsNoStore() || response.cacheControlContainsNoCache() || response.cacheControlContainsMustRevalidate())) {
         redirectChainCacheStatus.status = RedirectChainCacheStatus::Status::NotCachedRedirection;
         return;
     }
@@ -177,7 +178,7 @@ bool redirectChainAllowsReuse(RedirectChainCacheStatus redirectChainCacheStatus,
     return false;
 }
 
-inline bool isCacheHeaderSeparator(UChar c)
+inline bool isCacheHeaderSeparator(char16_t c)
 {
     // http://tools.ietf.org/html/rfc7230#section-3.2.6
     switch (c) {
@@ -206,7 +207,7 @@ inline bool isCacheHeaderSeparator(UChar c)
     }
 }
 
-inline bool isControlCharacterOrSpace(UChar character)
+inline bool isControlCharacterOrSpace(char16_t character)
 {
     return character <= ' ' || character == 127;
 }
@@ -348,7 +349,7 @@ CacheControlDirectives parseCacheControlDirectives(const HTTPHeaderMap& headers)
 
 static String cookieRequestHeaderFieldValue(const NetworkStorageSession& session, const ResourceRequest& request)
 {
-    return session.cookieRequestHeaderFieldValue(request.firstPartyForCookies(), SameSiteInfo::create(request), request.url(), std::nullopt, std::nullopt, request.url().protocolIs("https"_s) ? IncludeSecureCookies::Yes : IncludeSecureCookies::No, ApplyTrackingPrevention::Yes, ShouldRelaxThirdPartyCookieBlocking::No).first;
+    return session.cookieRequestHeaderFieldValue(request.firstPartyForCookies(), SameSiteInfo::create(request), request.url(), std::nullopt, std::nullopt, request.url().protocolIs("https"_s) ? IncludeSecureCookies::Yes : IncludeSecureCookies::No, ApplyTrackingPrevention::Yes, ShouldRelaxThirdPartyCookieBlocking::No, IsKnownCrossSiteTracker::No).first;
 }
 
 static String cookieRequestHeaderFieldValue(const CookieJar* cookieJar, const ResourceRequest& request)
@@ -359,7 +360,7 @@ static String cookieRequestHeaderFieldValue(const CookieJar* cookieJar, const Re
     return cookieJar->cookieRequestHeaderFieldValue(request.firstPartyForCookies(), SameSiteInfo::create(request), request.url(), std::nullopt, std::nullopt, request.url().protocolIs("https"_s) ? IncludeSecureCookies::Yes : IncludeSecureCookies::No).first;
 }
 
-static String headerValueForVary(const ResourceRequest& request, StringView headerName, Function<String()>&& cookieRequestHeaderFieldValueFunction)
+static String headerValueForVary(const ResourceRequest& request, StringView headerName, NOESCAPE const Function<String()>& cookieRequestHeaderFieldValueFunction)
 {
     // Explicit handling for cookies is needed because they are added magically by the networking layer.
     // FIXME: The value might have changed between making the request and retrieving the cookie here.
@@ -370,7 +371,7 @@ static String headerValueForVary(const ResourceRequest& request, StringView head
     return request.httpHeaderField(headerName);
 }
 
-static Vector<std::pair<String, String>> collectVaryingRequestHeadersInternal(const ResourceResponse& response, Function<String(StringView headerName)>&& headerValueForVaryFunction)
+static Vector<std::pair<String, String>> collectVaryingRequestHeadersInternal(const ResourceResponse& response, NOESCAPE const Function<String(StringView headerName)>& headerValueForVaryFunction)
 {
     auto varyValue = response.httpHeaderField(HTTPHeaderName::Vary);
     if (varyValue.isEmpty())
@@ -378,7 +379,7 @@ static Vector<std::pair<String, String>> collectVaryingRequestHeadersInternal(co
 
     Vector<std::pair<String, String>> headers;
     for (auto varyHeaderName : StringView(varyValue).split(',')) {
-        auto headerName = varyHeaderName.trim(isUnicodeCompatibleASCIIWhitespace<UChar>);
+        auto headerName = varyHeaderName.trim(isUnicodeCompatibleASCIIWhitespace<char16_t>);
         headers.append(std::pair { headerName.toString(), headerValueForVaryFunction(headerName) });
     }
     return headers;
@@ -404,7 +405,7 @@ Vector<std::pair<String, String>> collectVaryingRequestHeaders(const CookieJar* 
     });
 }
 
-static bool verifyVaryingRequestHeadersInternal(const Vector<std::pair<String, String>>& varyingRequestHeaders, Function<String(const String&)>&& headerValueForVary)
+static bool verifyVaryingRequestHeadersInternal(const Vector<std::pair<String, String>>& varyingRequestHeaders, NOESCAPE const Function<String(const String&)>& headerValueForVary)
 {
     for (auto& varyingRequestHeader : varyingRequestHeaders) {
         // FIXME: Vary: * in response would ideally trigger a cache delete instead of a store.

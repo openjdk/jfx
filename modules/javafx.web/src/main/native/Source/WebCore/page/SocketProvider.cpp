@@ -50,11 +50,11 @@ RefPtr<ThreadableWebSocketChannel> SocketProvider::createWebSocketChannel(Docume
 {
     return nullptr;
 }
-void SocketProvider::initializeWebTransportSession(WebCore::ScriptExecutionContext&, const URL&, CompletionHandler<void(RefPtr<WebCore::WebTransportSession>&&)>&& completionHandler)
+#if PLATFORM(JAVA)
+std::pair<RefPtr<WebCore::WebTransportSession>, Ref<WebCore::WebTransportSessionPromise>> SocketProvider::initializeWebTransportSession(WebCore::ScriptExecutionContext&, WebCore::WebTransportSessionClient&, const URL&, const WebCore::WebTransportOptions&)
 {
-    ASSERT_NOT_REACHED();
-    completionHandler(nullptr);
+    return { nullptr, WebCore::WebTransportSessionPromise::createAndReject() };
 }
-
+#endif
 }
 #endif

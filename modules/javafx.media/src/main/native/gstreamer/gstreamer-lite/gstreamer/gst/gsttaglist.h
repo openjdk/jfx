@@ -202,13 +202,13 @@ typedef enum {
 } GstTagScope;
 
 GST_API
-GstTagList * gst_tag_list_new_empty         (void) G_GNUC_MALLOC;
+GstTagList * gst_tag_list_new_empty         (void) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstTagList * gst_tag_list_new               (const gchar * tag, ...) G_GNUC_NULL_TERMINATED G_GNUC_MALLOC;
+GstTagList * gst_tag_list_new               (const gchar * tag, ...) G_GNUC_NULL_TERMINATED G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstTagList * gst_tag_list_new_valist        (va_list var_args) G_GNUC_MALLOC;
+GstTagList * gst_tag_list_new_valist        (va_list var_args) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void         gst_tag_list_set_scope         (GstTagList * list, GstTagScope scope);
@@ -217,10 +217,10 @@ GST_API
 GstTagScope  gst_tag_list_get_scope         (const GstTagList * list);
 
 GST_API
-gchar      * gst_tag_list_to_string         (const GstTagList * list) G_GNUC_MALLOC;
+gchar      * gst_tag_list_to_string         (const GstTagList * list) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
-GstTagList * gst_tag_list_new_from_string   (const gchar      * str) G_GNUC_MALLOC;
+GstTagList * gst_tag_list_new_from_string   (const gchar      * str) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 gint         gst_tag_list_n_tags            (const GstTagList * list);
@@ -241,7 +241,7 @@ void         gst_tag_list_insert            (GstTagList       * into,
 GST_API
 GstTagList * gst_tag_list_merge             (const GstTagList * list1,
                                              const GstTagList * list2,
-                                             GstTagMergeMode    mode) G_GNUC_MALLOC;
+                                             GstTagMergeMode    mode) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 GST_API
 guint        gst_tag_list_get_tag_size      (const GstTagList * list,
                                              const gchar      * tag);
@@ -422,23 +422,13 @@ gst_clear_tag_list (GstTagList ** taglist_ptr)
 {
   gst_clear_mini_object ((GstMiniObject **) taglist_ptr);
 }
-#else /* GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS */
-GST_API
-GstTagList *  gst_tag_list_ref   (GstTagList * taglist);
 
-GST_API
-void          gst_tag_list_unref (GstTagList * taglist);
+G_GNUC_WARN_UNUSED_RESULT static inline GstTagList *
+gst_tag_list_copy (const GstTagList * taglist)
+{
+  return (GstTagList *) (gst_mini_object_copy (GST_MINI_OBJECT_CONST_CAST (taglist)));
+}
 
-GST_API
-void          gst_clear_tag_list (GstTagList ** taglist_ptr);
-#endif /* GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS */
-
-GST_API
-GstTagList* gst_tag_list_copy(const GstTagList* taglist);
-
-#define gst_tag_list_copy(taglist) GST_TAG_LIST (gst_mini_object_copy (GST_MINI_OBJECT_CAST (taglist)))
-
-#ifndef GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS
 static inline gboolean
 gst_tag_list_replace (GstTagList **old_taglist, GstTagList *new_taglist)
 {
@@ -452,46 +442,44 @@ gst_tag_list_take (GstTagList **old_taglist, GstTagList *new_taglist)
   return gst_mini_object_take ((GstMiniObject **) old_taglist,
       (GstMiniObject *) new_taglist);
 }
+
+static inline gboolean
+gst_tag_list_is_writable (const GstTagList * taglist)
+{
+  return gst_mini_object_is_writable (GST_MINI_OBJECT_CONST_CAST (taglist));
+}
+
+G_GNUC_WARN_UNUSED_RESULT static inline GstTagList *
+gst_tag_list_make_writable (GstTagList * taglist)
+{
+  return (GstTagList *) (gst_mini_object_make_writable (GST_MINI_OBJECT_CAST (taglist)));
+}
 #else /* GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS */
 GST_API
-gboolean  gst_tag_list_replace (GstTagList ** old_taglist,
-                                GstTagList * new_taglist);
+GstTagList *  gst_tag_list_ref   (GstTagList * taglist);
 
 GST_API
-gboolean  gst_tag_list_take    (GstTagList ** old_taglist,
-                                GstTagList * new_taglist);
+void          gst_tag_list_unref (GstTagList * taglist);
+
+GST_API
+void          gst_clear_tag_list (GstTagList ** taglist_ptr);
+
+GST_API
+GstTagList*   gst_tag_list_copy  (const GstTagList* taglist) G_GNUC_WARN_UNUSED_RESULT;
+
+GST_API
+gboolean      gst_tag_list_replace (GstTagList ** old_taglist,
+                                    GstTagList * new_taglist);
+
+GST_API
+gboolean      gst_tag_list_take    (GstTagList ** old_taglist,
+                                    GstTagList * new_taglist);
+
+GST_API
+GstTagList * gst_tag_list_make_writable (GstTagList * taglist) G_GNUC_WARN_UNUSED_RESULT;
+GST_API
+gboolean     gst_tag_list_is_writable   (const GstTagList * taglist);
 #endif
-
-/**
- * gst_tag_list_is_writable:
- * @taglist: a #GstTagList
- *
- * Tests if you can safely modify @taglist. It is only safe to modify taglist
- * when there is only one owner of the taglist - ie, the refcount is 1.
- */
-#define gst_tag_list_is_writable(taglist)    gst_mini_object_is_writable (GST_MINI_OBJECT_CAST (taglist))
-
-/**
- * gst_tag_list_make_writable:
- * @taglist: (transfer full): a #GstTagList
- *
- * Returns a writable copy of @taglist.
- *
- * If there is only one reference count on @taglist, the caller must be the
- * owner, and so this function will return the taglist object unchanged. If on
- * the other hand there is more than one reference on the object, a new taglist
- * object will be returned (which will be a copy of @taglist). The caller's
- * reference on @taglist will be removed, and instead the caller will own a
- * reference to the returned object.
- *
- * In short, this function unrefs the taglist in the argument and refs the
- * taglist that it returns. Don't access the argument after calling this
- * function. See also: gst_tag_list_ref().
- *
- * Returns: (transfer full): a writable taglist which may or may not be the
- *     same as @taglist
- */
-#define gst_tag_list_make_writable(taglist)   GST_TAG_LIST (gst_mini_object_make_writable (GST_MINI_OBJECT_CAST (taglist)))
 
 /* GStreamer core tags */
 /**
@@ -797,9 +785,17 @@ gboolean  gst_tag_list_take    (GstTagList ** old_taglist,
 /**
  * GST_TAG_TRACK_GAIN:
  *
- * track gain in db (double)
+ * track gain in dB (double)
  */
 #define GST_TAG_TRACK_GAIN             "replaygain-track-gain"
+/**
+ * GST_TAG_TRACK_GAIN_R128:
+ *
+ * track gain in dB (double)
+ *
+ * Since: 1.28
+ */
+#define GST_TAG_TRACK_GAIN_R128        "r128-track-gain"
 /**
  * GST_TAG_TRACK_PEAK:
  *
@@ -809,9 +805,17 @@ gboolean  gst_tag_list_take    (GstTagList ** old_taglist,
 /**
  * GST_TAG_ALBUM_GAIN:
  *
- * album gain in db (double)
+ * album gain in dB (double)
  */
 #define GST_TAG_ALBUM_GAIN             "replaygain-album-gain"
+/**
+ * GST_TAG_ALBUM_GAIN_R128:
+ *
+ * track gain in dB (double)
+ *
+ * Since: 1.28
+ */
+#define GST_TAG_ALBUM_GAIN_R128        "r128-album-gain"
 /**
  * GST_TAG_ALBUM_PEAK:
  *

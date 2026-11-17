@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1060,7 +1060,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
 
     private void updateTextNodeCaretPos(int pos) {
         Text textNode = getTextNode();
-        if (isForwardBias()) {
+        if (pos == 0 || isForwardBias()) {
             textNode.setCaretPosition(pos);
         } else {
             textNode.setCaretPosition(pos - 1);

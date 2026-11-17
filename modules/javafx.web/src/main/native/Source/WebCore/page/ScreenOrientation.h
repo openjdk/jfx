@@ -26,8 +26,8 @@
 #pragma once
 
 #include "ActiveDOMObject.h"
-#include "ContextDestructionObserverInlines.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "ScreenOrientationLockType.h"
 #include "ScreenOrientationManager.h"
 #include "ScreenOrientationType.h"
@@ -39,14 +39,15 @@ namespace WebCore {
 class DeferredPromise;
 
 class ScreenOrientation final : public ActiveDOMObject, public EventTarget, public ScreenOrientationManagerObserver, public VisibilityChangeClient, public RefCounted<ScreenOrientation> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(ScreenOrientation);
+    WTF_MAKE_TZONE_ALLOCATED(ScreenOrientation);
 public:
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
     static Ref<ScreenOrientation> create(Document*);
     ~ScreenOrientation();
 
-    using ScreenOrientationManagerObserver::weakPtrFactory;
-    using ScreenOrientationManagerObserver::WeakValueType;
-    using ScreenOrientationManagerObserver::WeakPtrImplType;
+    USING_CAN_MAKE_WEAKPTR(ScreenOrientationManagerObserver);
 
     using LockType = ScreenOrientationLockType;
     using Type = ScreenOrientationType;
@@ -55,10 +56,6 @@ public:
     ExceptionOr<void> unlock();
     Type type() const;
     uint16_t angle() const;
-
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
 
 private:
     ScreenOrientation(Document*);
@@ -76,7 +73,7 @@ private:
 
     // EventTarget
     enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::ScreenOrientation; }
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
+    ScriptExecutionContext* scriptExecutionContext() const final;
     void refEventTarget() final { RefCounted::ref(); }
     void derefEventTarget() final { RefCounted::deref(); }
     void eventListenersDidChange() final;
@@ -91,3 +88,5 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(ScreenOrientation)

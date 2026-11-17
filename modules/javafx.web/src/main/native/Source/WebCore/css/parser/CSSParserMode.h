@@ -54,7 +54,7 @@ inline bool isUASheetBehavior(CSSParserMode mode)
     return mode == UASheetMode;
 }
 
-inline bool isUnitlessValueParsingEnabledForMode(CSSParserMode mode)
+inline bool isUnitlessValueParsingForcedForMode(CSSParserMode mode)
 {
     return mode == SVGAttributeMode;
 }

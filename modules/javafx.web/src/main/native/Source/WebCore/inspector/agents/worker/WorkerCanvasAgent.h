@@ -26,6 +26,7 @@
 #pragma once
 
 #include "InspectorCanvasAgent.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
@@ -33,7 +34,8 @@ class WorkerOrWorkletGlobalScope;
 
 class WorkerCanvasAgent final : public InspectorCanvasAgent {
     WTF_MAKE_NONCOPYABLE(WorkerCanvasAgent);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(WorkerCanvasAgent);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(WorkerCanvasAgent);
 public:
     WorkerCanvasAgent(WorkerAgentContext&);
     ~WorkerCanvasAgent();
@@ -45,7 +47,7 @@ public:
 private:
     bool matchesCurrentContext(ScriptExecutionContext*) const override;
 
-    WorkerOrWorkletGlobalScope& m_globalScope;
+    const CheckedRef<WorkerOrWorkletGlobalScope> m_globalScope;
 };
 
 } // namespace WebCore

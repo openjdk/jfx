@@ -47,7 +47,7 @@ enum SentinelTag { Sentinel };
 
 template<typename T, typename PassedPtrTraits = RawPtrTraits<T>>
 class BasicRawSentinelNode {
-    WTF_MAKE_FAST_COMPACT_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(BasicRawSentinelNode);
 public:
     using PtrTraits = typename PassedPtrTraits::template RebindTraits<BasicRawSentinelNode>;
 
@@ -84,7 +84,7 @@ template <typename T, typename RawNode = T> class SentinelLinkedList {
     WTF_MAKE_NONMOVABLE(SentinelLinkedList);
 public:
     template<typename RawNodeType, typename NodeType> class BaseIterator {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_FAST_ALLOCATED(BaseIterator);
     public:
         explicit BaseIterator(RawNodeType* node)
             : m_node(node)
@@ -135,10 +135,10 @@ public:
 
     bool isOnList(T*);
 
-    iterator begin();
-    iterator end();
-    const_iterator begin() const;
-    const_iterator end() const;
+    iterator begin() LIFETIME_BOUND;
+    iterator end() LIFETIME_BOUND;
+    const_iterator begin() const LIFETIME_BOUND;
+    const_iterator end() const LIFETIME_BOUND;
 
     bool isEmpty() { return begin() == end(); }
 
@@ -176,22 +176,22 @@ template <typename T, typename PtrTraits> void BasicRawSentinelNode<T, PtrTraits
         static_cast<T*>(this), static_cast<T*>(node));
 }
 
-template <typename T, typename RawNode> inline typename SentinelLinkedList<T, RawNode>::iterator SentinelLinkedList<T, RawNode>::begin()
+template <typename T, typename RawNode> inline typename SentinelLinkedList<T, RawNode>::iterator SentinelLinkedList<T, RawNode>::begin() LIFETIME_BOUND
 {
     return iterator { m_sentinel.next() };
 }
 
-template <typename T, typename RawNode> inline typename SentinelLinkedList<T, RawNode>::iterator SentinelLinkedList<T, RawNode>::end()
+template <typename T, typename RawNode> inline typename SentinelLinkedList<T, RawNode>::iterator SentinelLinkedList<T, RawNode>::end() LIFETIME_BOUND
 {
     return iterator { &m_sentinel };
 }
 
-template <typename T, typename RawNode> inline typename SentinelLinkedList<T, RawNode>::const_iterator SentinelLinkedList<T, RawNode>::begin() const
+template <typename T, typename RawNode> inline typename SentinelLinkedList<T, RawNode>::const_iterator SentinelLinkedList<T, RawNode>::begin() const LIFETIME_BOUND
 {
     return const_iterator { m_sentinel.next() };
 }
 
-template <typename T, typename RawNode> inline typename SentinelLinkedList<T, RawNode>::const_iterator SentinelLinkedList<T, RawNode>::end() const
+template <typename T, typename RawNode> inline typename SentinelLinkedList<T, RawNode>::const_iterator SentinelLinkedList<T, RawNode>::end() const LIFETIME_BOUND
 {
     return const_iterator { &m_sentinel };
 }
@@ -315,11 +315,7 @@ IGNORE_GCC_WARNINGS_END
     other.m_sentinel.setPrev(&other.m_sentinel);
 }
 
-template<typename T>
-using PackedRawSentinelNode = BasicRawSentinelNode<T, PackedPtrTraits<T>>;
-
 }
 
 using WTF::BasicRawSentinelNode;
-using WTF::PackedRawSentinelNode;
 using WTF::SentinelLinkedList;

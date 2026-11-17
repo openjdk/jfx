@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2023 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,14 +33,36 @@ DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StringSourceProvider);
 SourceProvider::SourceProvider(const SourceOrigin& sourceOrigin, String&& sourceURL, String&& preRedirectURL, SourceTaintedOrigin taintedness, const TextPosition& startPosition, SourceProviderSourceType sourceType)
     : m_sourceType(sourceType)
     , m_sourceOrigin(sourceOrigin)
-    , m_sourceURL(WTFMove(sourceURL))
-    , m_preRedirectURL(WTFMove(preRedirectURL))
+    , m_sourceURL(WTF::move(sourceURL))
+    , m_preRedirectURL(WTF::move(preRedirectURL))
     , m_startPosition(startPosition)
     , m_taintedness(taintedness)
 {
 }
 
 SourceProvider::~SourceProvider() = default;
+
+void SourceProvider::lockUnderlyingBuffer()
+{
+    if (!m_lockingCount++)
+        lockUnderlyingBufferImpl();
+}
+
+void SourceProvider::unlockUnderlyingBuffer()
+{
+    if (!--m_lockingCount)
+        unlockUnderlyingBufferImpl();
+}
+
+CodeBlockHash SourceProvider::codeBlockHashConcurrently(int startOffset, int endOffset, CodeSpecializationKind kind)
+{
+    auto entireSourceCode = source();
+    return CodeBlockHash { entireSourceCode.substring(startOffset, endOffset - startOffset), entireSourceCode, kind };
+}
+
+void SourceProvider::lockUnderlyingBufferImpl() { }
+
+void SourceProvider::unlockUnderlyingBufferImpl() { }
 
 void SourceProvider::getID()
 {
@@ -53,9 +75,9 @@ void SourceProvider::getID()
 
 const String& SourceProvider::sourceURLStripped()
 {
-    if (UNLIKELY(m_sourceURL.isNull()))
+    if (m_sourceURL.isNull()) [[unlikely]]
         return m_sourceURLStripped;
-    if (LIKELY(!m_sourceURLStripped.isNull()))
+    if (!m_sourceURLStripped.isNull()) [[likely]]
         return m_sourceURLStripped;
     m_sourceURLStripped = URL(m_sourceURL).strippedForUseAsReport();
     return m_sourceURLStripped;
@@ -63,7 +85,7 @@ const String& SourceProvider::sourceURLStripped()
 
 #if ENABLE(WEBASSEMBLY)
 BaseWebAssemblySourceProvider::BaseWebAssemblySourceProvider(const SourceOrigin& sourceOrigin, String&& sourceURL)
-    : SourceProvider(sourceOrigin, WTFMove(sourceURL), String(), SourceTaintedOrigin::Untainted, TextPosition(), SourceProviderSourceType::WebAssembly)
+    : SourceProvider(sourceOrigin, WTF::move(sourceURL), String(), SourceTaintedOrigin::Untainted, TextPosition(), SourceProviderSourceType::WebAssembly)
 {
 }
 #endif

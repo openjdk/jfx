@@ -28,7 +28,7 @@
 #include "config.h"
 #include "SharedMemory.h"
 
-#if USE(UNIX_DOMAIN_SOCKETS)
+#if USE(UNIX_DOMAIN_SOCKETS) && !OS(ANDROID)
 
 #include <errno.h>
 #include <fcntl.h>
@@ -52,9 +52,15 @@
 
 namespace WebCore {
 
+SharedMemoryHandle::SharedMemoryHandle(const SharedMemoryHandle& handle)
+{
+    m_handle = handle.m_handle.duplicate();
+    m_size = handle.m_size;
+}
+
 UnixFileDescriptor SharedMemoryHandle::releaseHandle()
 {
-    return WTFMove(m_handle);
+    return WTF::move(m_handle);
 }
 
 static inline int accessModeMMap(SharedMemory::Protection protection)
@@ -132,13 +138,17 @@ RefPtr<SharedMemory> SharedMemory::allocate(size_t size)
 
     RefPtr<SharedMemory> instance = adoptRef(new SharedMemory());
     instance->m_data = data;
-    instance->m_fileDescriptor = WTFMove(fileDescriptor);
+    instance->m_fileDescriptor = WTF::move(fileDescriptor);
     instance->m_size = size;
     return instance;
 }
 
-RefPtr<SharedMemory> SharedMemory::map(Handle&& handle, Protection protection)
+RefPtr<SharedMemory> SharedMemory::map(Handle&& handle, Protection protection, CopyOnWrite copyOnWrite)
 {
+    // Copy-on-write is not supported on this platform.
+    // FIXME: https://bugs.webkit.org/show_bug.cgi?id=305633
+    ASSERT_UNUSED(copyOnWrite, copyOnWrite == CopyOnWrite::No);
+
     void* data = mmap(0, handle.size(), accessModeMMap(protection), MAP_SHARED, handle.m_handle.value(), 0);
     if (data == MAP_FAILED)
         return nullptr;
@@ -180,9 +190,9 @@ auto SharedMemory::createHandle(Protection) -> std::optional<Handle>
         ASSERT_NOT_REACHED();
         return std::nullopt;
     }
-    return { Handle(WTFMove(duplicate), m_size) };
+    return { Handle(WTF::move(duplicate), m_size) };
 }
 
 } // namespace WebCore
 
-#endif
+#endif // !OS(ANDROID) && USE(UNIX_DOMAIN_SOCKETS)

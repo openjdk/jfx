@@ -36,31 +36,37 @@
 #include <systemd/sd-journal.h>
 #endif
 
+#if OS(ANDROID)
+#include <android/log.h>
+#endif
+
 namespace WTF {
 
 template<typename T>
 struct LogArgument {
-    template<typename U = T> static std::enable_if_t<std::is_same_v<U, bool>, String> toString(bool argument) { return argument ? "true"_s : "false"_s; }
-    template<typename U = T> static std::enable_if_t<std::is_same_v<U, int>, String> toString(int argument) { return String::number(argument); }
-    template<typename U = T> static std::enable_if_t<std::is_same_v<U, unsigned>, String> toString(unsigned argument) { return String::number(argument); }
-    template<typename U = T> static std::enable_if_t<std::is_same_v<U, unsigned long>, String> toString(unsigned long argument) { return String::number(argument); }
-    template<typename U = T> static std::enable_if_t<std::is_same_v<U, long>, String> toString(long argument) { return String::number(argument); }
-    template<typename U = T> static std::enable_if_t<std::is_same_v<U, unsigned long long>, String> toString(unsigned long long argument) { return String::number(argument); }
-    template<typename U = T> static std::enable_if_t<std::is_same_v<U, long long>, String> toString(long long argument) { return String::number(argument); }
-    template<typename U = T> static std::enable_if_t<std::is_same_v<U, unsigned short>, String> toString(unsigned short argument) { return String::number(argument); }
-    template<typename U = T> static std::enable_if_t<std::is_same_v<U, short>, String> toString(short argument) { return String::number(argument); }
-    template<typename U = T> static std::enable_if_t<std::is_enum_v<U>, String> toString(U argument) { return String::number(static_cast<typename std::underlying_type<U>::type>(argument)); }
-    template<typename U = T> static std::enable_if_t<std::is_same_v<U, float>, String> toString(float argument) { return String::number(argument); }
-    template<typename U = T> static std::enable_if_t<std::is_same_v<U, double>, String> toString(double argument) { return String::number(argument); }
-    template<typename U = T> static std::enable_if_t<std::is_same_v<typename std::remove_reference_t<U>, AtomString>, String> toString(const AtomString& argument) { return argument.string(); }
-    template<typename U = T> static std::enable_if_t<std::is_same_v<typename std::remove_reference_t<U>, String>, String> toString(String argument) { return argument; }
-    template<typename U = T> static std::enable_if_t<std::is_same_v<typename std::remove_reference_t<U>, StringBuilder*>, String> toString(StringBuilder* argument) { return argument->toString(); }
-    template<typename U = T> static std::enable_if_t<std::is_same_v<U, const char*>, String> toString(const char* argument) { return String::fromLatin1(argument); }
-    template<typename U = T> static std::enable_if_t<std::is_same_v<U, ASCIILiteral>, String> toString(ASCIILiteral argument) { return argument; }
+    template<typename U = T> requires (std::same_as<U, bool>) static String toString(bool argument) { return argument ? "true"_s : "false"_s; }
+    template<typename U = T> requires (std::same_as<U, int>) static String toString(int argument) { return String::number(argument); }
+    template<typename U = T> requires (std::same_as<U, unsigned>) static String toString(unsigned argument) { return String::number(argument); }
+    template<typename U = T> requires (std::same_as<U, unsigned long>) static String toString(unsigned long argument) { return String::number(argument); }
+    template<typename U = T> requires (std::same_as<U, long>) static String toString(long argument) { return String::number(argument); }
+    template<typename U = T> requires (std::same_as<U, unsigned long long>) static String toString(unsigned long long argument) { return String::number(argument); }
+    template<typename U = T> requires (std::same_as<U, long long>) static String toString(long long argument) { return String::number(argument); }
+    template<typename U = T> requires (std::same_as<U, unsigned short>) static String toString(unsigned short argument) { return String::number(argument); }
+    template<typename U = T> requires (std::same_as<U, short>) static String toString(short argument) { return String::number(argument); }
+    template<typename U = T> requires (std::is_enum_v<U>) static String toString(U argument) { return String::number(static_cast<typename std::underlying_type<U>::type>(argument)); }
+    template<typename U = T> requires (std::same_as<U, float>) static String toString(float argument) { return String::number(argument); }
+    template<typename U = T> requires (std::same_as<U, double>) static String toString(double argument) { return String::number(argument); }
+    template<typename U = T> requires (std::same_as<typename std::remove_reference_t<U>, AtomString>) static String toString(const AtomString& argument) { return argument.string(); }
+    template<typename U = T> requires (std::same_as<typename std::remove_reference_t<U>, String>) static String toString(String argument) { return argument; }
+    template<typename U = T> requires (std::same_as<typename std::remove_reference_t<U>, StringBuilder*>) static String toString(StringBuilder* argument) { return argument->toString(); }
+    template<typename U = T> requires (std::same_as<typename std::remove_reference_t<U>, StringView>) static String toString(const StringView& argument) { return argument.toString(); }
+    template<typename U = T> requires (std::same_as<U, const char*>) static String toString(const char* argument) { return String::fromLatin1(argument); }
+    template<typename U = T> requires (std::same_as<U, ASCIILiteral>) static String toString(ASCIILiteral argument) { return argument; }
+    template<typename U = T> requires (std::same_as<U, std::span<const char8_t>>) static String toString(std::span<const char8_t> argument) { return argument; }
 #ifdef __OBJC__
-    template<typename U = T> static std::enable_if_t<std::is_base_of_v<NSError, std::remove_pointer_t<U>>, String> toString(NSError *argument) { return String(argument.localizedDescription); }
-    template<typename U = T> static std::enable_if_t<std::is_base_of_v<NSObject, std::remove_pointer_t<U>>, String> toString(NSObject *argument) { return String(argument.description); }
-    template<typename U = T> static std::enable_if_t<std::is_base_of_v<NSProxy, std::remove_pointer_t<U>>, String> toString(NSProxy *argument) { return String(argument.description); }
+    template<typename U = T> requires (std::is_base_of_v<NSError, std::remove_pointer_t<U>>) static String toString(NSError *argument) { return String(argument.localizedDescription); }
+    template<typename U = T> requires (std::is_base_of_v<NSObject, std::remove_pointer_t<U>>) static String toString(NSObject *argument) { return String(argument.description); }
+    template<typename U = T> requires (std::is_base_of_v<NSProxy, std::remove_pointer_t<U>>) static String toString(NSProxy *argument) { return String(argument.description); }
 #endif
     template<size_t length> static String toString(const char (&argument)[length]) { return String::fromLatin1(argument); }
 };
@@ -136,6 +142,7 @@ public:
         // Can be called on any thread.
         virtual void didLogMessage(const WTFLogChannel&, WTFLogLevel, Vector<JSONLogValue>&&) = 0;
     };
+
     class MessageHandlerObserver {
     public:
         virtual ~MessageHandlerObserver() = default;
@@ -258,14 +265,16 @@ public:
     {
             if (!messageHandlerObserverLock().tryLock())
                 return false;
+
             Locker locker { AdoptLock, messageHandlerObserverLock() };
             for (MessageHandlerObserver& observer : messageHandlerObservers())
                 observer.handleLogMessage(channel, level, { ConsoleLogValue<Argument>::toValue(arguments)... });
         }
+
         if (!m_enabled)
             return false;
 
-#if ENABLE(JOURNALD_LOG)
+#if ENABLE(JOURNALD_LOG) || OS(ANDROID)
         if (channel.state == WTFLogChannelState::Off)
             return false;
 #endif
@@ -279,6 +288,15 @@ public:
         return true;
     }
 
+    template<typename... Arguments>
+    inline void toObservers(WTFLogChannel& channel, WTFLogLevel level, const Arguments&... arguments) const
+    {
+        if (!willLog(channel, level, arguments...))
+            return;
+
+        sendMessageToObservers(channel, level, arguments...);
+    }
+
     bool enabled() const { return m_enabled; }
     void setEnabled(const void* owner, bool enabled)
     {
@@ -288,16 +306,16 @@ public:
     }
 
     struct LogSiteIdentifier {
-        LogSiteIdentifier(const char* methodName, const void* objectPtr)
+        LogSiteIdentifier(const char* methodName, uint64_t objectIdentifier)
             : methodName { methodName }
-            , objectPtr { reinterpret_cast<uintptr_t>(objectPtr) }
+            , objectIdentifier { objectIdentifier }
         {
         }
 
-        LogSiteIdentifier(ASCIILiteral className, const char* methodName, const void* objectPtr)
+        LogSiteIdentifier(ASCIILiteral className, const char* methodName, uint64_t objectIdentifier)
             : className { className }
             , methodName { methodName }
-            , objectPtr { reinterpret_cast<uintptr_t>(objectPtr) }
+            , objectIdentifier { objectIdentifier }
         {
         }
 
@@ -305,7 +323,7 @@ public:
 
         ASCIILiteral className;
         const char* methodName { nullptr };
-        const uintptr_t objectPtr { 0 };
+        const uint64_t objectIdentifier { 0 };
     };
 
     static inline void addObserver(Observer& observer)
@@ -320,6 +338,7 @@ public:
             return &anObserver.get() == &observer;
         });
     }
+
     static inline void addMessageHandlerObserver(MessageHandlerObserver& observer)
     {
         Locker locker { messageHandlerObserverLock() };
@@ -333,11 +352,14 @@ public:
         });
     }
 
+    bool hasEnabledInspector() const { return m_hasEnabledInspector; }
+    void setHasEnabledInspector(bool hasEnabledInspector) { m_hasEnabledInspector = hasEnabledInspector; }
+
 private:
     friend class AggregateLogger;
     friend class NativePromiseBase;
 
-    Logger(const void* owner)
+    explicit Logger(const void* owner)
         : m_owner { owner }
     {
     }
@@ -350,13 +372,23 @@ private:
 #if RELEASE_LOG_DISABLED
         WTFLog(&channel, "%s", logMessage.utf8().data());
 #elif USE(OS_LOG)
-        os_log(channel.osLogChannel, "%{public}s", logMessage.utf8().data());
+        SUPPRESS_UNRETAINED_LOCAL os_log(channel.osLogChannel, "%{public}s", logMessage.utf8().data());
+#elif OS(ANDROID)
+        __android_log_print(ANDROID_LOG_VERBOSE, LOG_CHANNEL_WEBKIT_SUBSYSTEM, "[%s] %s", channel.name, logMessage.utf8().data());
 #elif ENABLE(JOURNALD_LOG)
-        sd_journal_send("WEBKIT_SUBSYSTEM=%s", channel.subsystem, "WEBKIT_CHANNEL=%s", channel.name, "MESSAGE=%s", logMessage.utf8().data(), nullptr);
+        sd_journal_send("WEBKIT_SUBSYSTEM=" LOG_CHANNEL_WEBKIT_SUBSYSTEM, "WEBKIT_CHANNEL=%s", channel.name, "MESSAGE=%s", logMessage.utf8().data(), nullptr);
 #else
-        fprintf(stderr, "[%s:%s:-] %s\n", channel.subsystem, channel.name, logMessage.utf8().data());
+        IGNORE_WARNINGS_BEGIN("unsafe-buffer-usage-in-libc-call")
+        fprintf(stderr, "[" LOG_CHANNEL_WEBKIT_SUBSYSTEM ":%s:-] %s\n", channel.name, logMessage.utf8().data());
+        IGNORE_WARNINGS_END
 #endif
 
+        sendMessageToObservers(channel, level, arguments...);
+    }
+
+    template<typename... Argument>
+    static inline void sendMessageToObservers(WTFLogChannel& channel, WTFLogLevel level, const Argument&... arguments)
+    {
         if (channel.state == WTFLogChannelState::Off || level > channel.level)
             return;
 
@@ -376,27 +408,21 @@ private:
 #if RELEASE_LOG_DISABLED
         WTFLogVerbose(file, line, function, &channel, "%s", logMessage.utf8().data());
 #elif USE(OS_LOG)
-        os_log(channel.osLogChannel, "%{public}s", logMessage.utf8().data());
+        SUPPRESS_UNRETAINED_LOCAL os_log(channel.osLogChannel, "%{public}s", logMessage.utf8().data());
         UNUSED_PARAM(file);
         UNUSED_PARAM(line);
         UNUSED_PARAM(function);
+#elif OS(ANDROID)
+        __android_log_print(ANDROID_LOG_VERBOSE, LOG_CHANNEL_WEBKIT_SUBSYSTEM, "[%s] %s FILE=%s:%d: %s", channel.name, logMessage.utf8().data(), file, line, function);
 #elif ENABLE(JOURNALD_LOG)
-        auto fileString = makeString("CODE_FILE="_s, span(file));
+        auto fileString = makeString("CODE_FILE="_s, unsafeSpan(file));
         auto lineString = makeString("CODE_LINE="_s, line);
-        sd_journal_send_with_location(fileString.utf8().data(), lineString.utf8().data(), function, "WEBKIT_SUBSYSTEM=%s", channel.subsystem, "WEBKIT_CHANNEL=%s", channel.name, "MESSAGE=%s", logMessage.utf8().data(), nullptr);
+        sd_journal_send_with_location(fileString.utf8().data(), lineString.utf8().data(), function, "WEBKIT_SUBSYSTEM=" LOG_CHANNEL_WEBKIT_SUBSYSTEM, "WEBKIT_CHANNEL=%s", channel.name, "MESSAGE=%s", logMessage.utf8().data(), nullptr);
 #else
-        fprintf(stderr, "[%s:%s:-] %s FILE=%s:%d %s\n", channel.subsystem, channel.name, logMessage.utf8().data(), file, line, function);
+        fprintf(stderr, "[" LOG_CHANNEL_WEBKIT_SUBSYSTEM ":%s:-] %s FILE=%s:%d %s\n", channel.name, logMessage.utf8().data(), file, line, function);
 #endif
 
-        if (channel.state == WTFLogChannelState::Off || level > channel.level)
-            return;
-
-        if (!observerLock().tryLock())
-            return;
-
-        Locker locker { AdoptLock, observerLock() };
-        for (Observer& observer : observers())
-            observer.didLogMessage(channel, level, { ConsoleLogValue<Argument>::toValue(arguments)... });
+        sendMessageToObservers(channel, level, arguments...);
     }
 
     WTF_EXPORT_PRIVATE static Vector<std::reference_wrapper<Observer>>& observers() WTF_REQUIRES_LOCK(observerLock());
@@ -407,20 +433,31 @@ private:
     }
 
     WTF_EXPORT_PRIVATE static Vector<std::reference_wrapper<MessageHandlerObserver>>& messageHandlerObservers() WTF_REQUIRES_LOCK(messageHandlerObserverLock());
+
     static Lock& messageHandlerObserverLock() WTF_RETURNS_LOCK(messageHandlerLoggerObserverLock)
     {
         return messageHandlerLoggerObserverLock;
     }
 
     bool m_enabled { true };
+    bool m_hasEnabledInspector { false };
     const void* m_owner;
 };
+
+WTF_EXPORT_PRIVATE const Logger& emptyLogger();
 
 template<> struct LogArgument<Logger::LogSiteIdentifier> {
     static String toString(const Logger::LogSiteIdentifier& value) { return value.toString(); }
 };
 template<> struct LogArgument<const void*> {
     WTF_EXPORT_PRIVATE static String toString(const void*);
+};
+template<typename T>
+struct LogArgument<std::optional<T>> {
+    static String toString(const std::optional<T>& value)
+    {
+        return value ? LogArgument<T>::toString(value.value()) : "nullopt"_s;
+    }
 };
 
 #ifdef __OBJC__
@@ -438,3 +475,4 @@ template<> struct LogArgument<id> {
 
 using WTF::Logger;
 using WTF::JSONLogValue;
+using WTF::emptyLogger;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,9 @@
 
 package test.javafx.scene;
 
+import com.sun.javafx.scene.LayoutFlags;
 import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.ParentHelper;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.sg.prism.NGGroup;
 import com.sun.javafx.tk.Toolkit;
@@ -36,12 +38,15 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import javafx.beans.property.Property;
 import javafx.scene.Group;
 import javafx.scene.GroupShim;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.ParentShim;
 import javafx.scene.Scene;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 
@@ -49,9 +54,11 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -68,6 +75,53 @@ public class ParentTest {
     @AfterEach
     public void tearDown() {
         stage.close();
+    }
+
+    /**
+     * Stylesheets list is lazily initialized.
+     * So if it is never accessed, it is null.
+     */
+    @Test
+    public void testStyleClassInitiallyNull() {
+        MockParent node = new MockParent();
+
+        List<String> stylesheets = ParentHelper.getStylesheetsOrNull(node);
+        assertNull(stylesheets);
+
+        stylesheets = node.getStylesheets();
+        assertNotNull(stylesheets);
+
+        // Should not return null anymore as we accessed the property above.
+        stylesheets = ParentHelper.getStylesheetsOrNull(node);
+        assertNotNull(stylesheets);
+
+        stylesheets.add("dummy");
+        assertEquals(1, stylesheets.size());
+    }
+
+    /**
+     * Stylesheets list is lazily initialized.
+     * CSS processing should not initialize it when null.
+     */
+    @Test
+    public void testCssProcessingDoesNotInitializeStylesheets() {
+        MockParent node = new MockParent();
+
+        List<String> stylesheets = ParentHelper.getStylesheetsOrNull(node);
+        assertNull(stylesheets);
+
+        Group g = new Group(node);
+        Scene s = new Scene(g);
+        stage.setScene(s);
+        stage.show();
+
+        stylesheets = ParentHelper.getStylesheetsOrNull(node);
+        assertNull(stylesheets);
+
+        toolkit.firePulse();
+
+        stylesheets = ParentHelper.getStylesheetsOrNull(node);
+        assertNull(stylesheets);
     }
 
     @Test
@@ -512,6 +566,30 @@ public class ParentTest {
         // there are assertions tested down the stack (see JDK-8115729)
     }
 
+    @Test
+    public void needsLayoutPropertyIsReadOnly() {
+        assertThrows(
+            ClassCastException.class,
+            () -> { var _ = (Property<Boolean>)new Group().needsLayoutProperty(); });
+    }
+
+    @Test
+    public void isNeedsLayoutReturnsCorrectValueInListener() {
+         var g = new Group();
+         g.layout();
+         assertFalse(g.isNeedsLayout());
+
+         boolean[] flags = new boolean[2];
+         g.needsLayoutProperty().subscribe(value -> {
+             flags[0] = value;
+             flags[1] = g.isNeedsLayout();
+         });
+
+         ParentShim.setNeedsLayout(g, true);
+         assertTrue(flags[0]);
+         assertTrue(flags[1]);
+    }
+
     private static class LGroup extends Group {
 
         private boolean layoutCalled;
@@ -530,7 +608,91 @@ public class ParentTest {
         public void clear() {
             layoutCalled = false;
         }
+    }
 
+    /**
+     * Checks if layout flags are always consistent, even when a 2nd layout
+     * pass is requested due to a modification while layout was running.
+     *
+     * This test needs at least a layout tree of 4 levels deep due to
+     * how the layout flags are propagated:
+     * - Node will force another layout on the PARENT of sibling
+     * - Parent code will then ask for another layout on its parent
+     * - If forceParentLayout flag is not propagated, then this does
+     *   not continue up to the root, leaving the root clean.
+     */
+    @Test
+    public void layoutPositionModificationDuringLayoutPassShouldNotLeaveLayoutFlagsInInconsistentState() {
+        AtomicBoolean modifySiblingDuringLayout = new AtomicBoolean();
+        HBox sibling = new HBox();
+        HBox leaf = new HBox() {
+            @Override
+            protected void layoutChildren() {
+                super.layoutChildren();
+
+                /*
+                 * Sometimes layout code modifies a sibling's position,
+                 * in which case Node will force its parent to do another
+                 * layout in a next pass (see layoutX and layoutY properties).
+                 *
+                 * The layout flags should not become inconsistent
+                 * when it does so.
+                 */
+
+                if (modifySiblingDuringLayout.get()) {
+                    sibling.setLayoutX(100);
+                }
+            }
+        };
+        VBox level2 = new VBox(leaf, sibling);
+        HBox level1 = new HBox(level2);
+        VBox root = new VBox(level1);
+
+        // Assert default state after controls are created:
+        assertEquals(LayoutFlags.NEEDS_LAYOUT, ParentShim.getLayoutFlag(root));
+        assertEquals(LayoutFlags.NEEDS_LAYOUT, ParentShim.getLayoutFlag(level1));
+        assertEquals(LayoutFlags.NEEDS_LAYOUT, ParentShim.getLayoutFlag(level2));
+        assertEquals(LayoutFlags.NEEDS_LAYOUT, ParentShim.getLayoutFlag(leaf));
+        assertEquals(LayoutFlags.NEEDS_LAYOUT, ParentShim.getLayoutFlag(sibling));
+
+        root.layout();
+
+        // Assert that all is clean after a layout pass:
+        assertEquals(LayoutFlags.CLEAN, ParentShim.getLayoutFlag(root));
+        assertEquals(LayoutFlags.CLEAN, ParentShim.getLayoutFlag(level1));
+        assertEquals(LayoutFlags.CLEAN, ParentShim.getLayoutFlag(level2));
+        assertEquals(LayoutFlags.CLEAN, ParentShim.getLayoutFlag(leaf));
+        assertEquals(LayoutFlags.CLEAN, ParentShim.getLayoutFlag(sibling));
+
+        leaf.requestLayout();
+
+        // Assert that all nodes between leaf and root are marked as needing layout:
+        assertEquals(LayoutFlags.NEEDS_LAYOUT, ParentShim.getLayoutFlag(root));
+        assertEquals(LayoutFlags.NEEDS_LAYOUT, ParentShim.getLayoutFlag(level1));
+        assertEquals(LayoutFlags.NEEDS_LAYOUT, ParentShim.getLayoutFlag(level2));
+        assertEquals(LayoutFlags.NEEDS_LAYOUT, ParentShim.getLayoutFlag(leaf));
+        assertEquals(LayoutFlags.CLEAN, ParentShim.getLayoutFlag(sibling));
+
+        // Trigger a layout that does a modification that needs a 2nd pass:
+        modifySiblingDuringLayout.set(true);
+        root.layout();
+
+        // Assert that the parent of the sibling, all the way to the root are marked as needing another layout pass:
+        assertEquals(LayoutFlags.NEEDS_LAYOUT, ParentShim.getLayoutFlag(root));
+        assertEquals(LayoutFlags.NEEDS_LAYOUT, ParentShim.getLayoutFlag(level1));
+        assertEquals(LayoutFlags.NEEDS_LAYOUT, ParentShim.getLayoutFlag(level2));
+        assertEquals(LayoutFlags.CLEAN, ParentShim.getLayoutFlag(leaf));
+        assertEquals(LayoutFlags.CLEAN, ParentShim.getLayoutFlag(sibling));
+
+        root.layout();
+
+        // Assert that after another layout pass all are clean again:
+        // Note: we still modify the sibling, but since its layoutX is unchanged now, no further pass is triggered
+        assertEquals(LayoutFlags.CLEAN, ParentShim.getLayoutFlag(root));
+        assertEquals(LayoutFlags.CLEAN, ParentShim.getLayoutFlag(level1));
+        assertEquals(LayoutFlags.CLEAN, ParentShim.getLayoutFlag(level2));
+        assertEquals(LayoutFlags.CLEAN, ParentShim.getLayoutFlag(leaf));
+        assertEquals(LayoutFlags.CLEAN, ParentShim.getLayoutFlag(sibling));
     }
 
     @Test

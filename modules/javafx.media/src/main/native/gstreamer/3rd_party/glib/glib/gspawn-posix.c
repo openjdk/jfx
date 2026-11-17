@@ -547,6 +547,8 @@ write_err_and_exit (gint fd, gint msg)
   write_all (fd, &msg, sizeof(msg));
   write_all (fd, &en, sizeof(en));
 
+  close (fd);
+
   _exit (1);
 }
 

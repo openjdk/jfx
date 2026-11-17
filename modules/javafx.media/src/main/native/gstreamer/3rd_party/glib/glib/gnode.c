@@ -51,7 +51,7 @@
  *            children are accessed by using the @next pointer of each
  *            child.
  *
- * The #GNode struct represents one node in a [n-ary tree][glib-N-ary-Trees].
+ * The #GNode struct represents one node in a [n-ary tree](data-structures.html#n-ary-trees).
  **/
 
 #define g_node_alloc0()         g_slice_new0 (GNode)
@@ -786,16 +786,16 @@ g_node_depth_traverse_level (GNode             *node,
 
 /**
  * GTraverseType:
- * @G_IN_ORDER: vists a node's left child first, then the node itself,
+ * @G_IN_ORDER: visits a node's left child first, then the node itself,
  *              then its right child. This is the one to use if you
  *              want the output sorted according to the compare
  *              function.
  * @G_PRE_ORDER: visits a node, then its children.
  * @G_POST_ORDER: visits the node's children, then the node itself.
  * @G_LEVEL_ORDER: is not implemented for
- *              [balanced binary trees][glib-Balanced-Binary-Trees].
- *              For [n-ary trees][glib-N-ary-Trees], it
- *              vists the root node first, then its children, then
+ *              [balanced binary trees](data-structures.html#binary-trees).
+ *              For [n-ary trees](data-structures.html#n-ary-trees), it
+ *              visits the root node first, then its children, then
  *              its grandchildren, and so on. Note that this is less
  *              efficient than the other orders.
  *

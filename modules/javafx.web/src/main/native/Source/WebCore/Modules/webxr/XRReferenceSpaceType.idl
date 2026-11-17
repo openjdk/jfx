@@ -33,5 +33,5 @@
     "local",
     "local-floor",
     "bounded-floor",
-    "unbounded"
+    "unbounded",
 };

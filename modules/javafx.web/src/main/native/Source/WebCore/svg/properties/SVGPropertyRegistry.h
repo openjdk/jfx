@@ -25,11 +25,10 @@
 
 #pragma once
 
-#include "SVGAttributeAnimator.h"
-
 namespace WebCore {
 
 class SVGAnimatedProperty;
+class SVGAttributeAnimator;
 
 class SVGPropertyRegistry {
 public:

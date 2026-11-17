@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,6 +40,7 @@
 #include <WebCore/JSExecState.h>
 #include <WebCore/SVGTests.h>
 #include <JavaScriptCore/APICast.h>
+#include "AddEventListenerOptionsInlines.h"
 
 #include <WebCore/DOMException.h>
 #include "com_sun_webkit_dom_JSObject.h"
@@ -133,7 +134,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_NodeImpl_getLocalNameImpl(JNIE
 
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_NodeImpl_getAttributesImpl(JNIEnv* env, jclass, jlong peer) {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<NamedNodeMap>(env, WTF::getPtr(IMPL->attributes()));
+    return JavaReturn<NamedNodeMap>(env, WTF::getPtr(IMPL->attributesMap()));
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_NodeImpl_getBaseURIImpl(JNIEnv* env, jclass, jlong peer) {
@@ -240,15 +241,6 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_NodeImpl_normalizeImpl(JNIEnv*, j
 {
     WebCore::JSMainThreadNullState state;
     IMPL->normalize();
-}
-
-
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_NodeImpl_isSupportedImpl(JNIEnv* env, jclass, jlong
-    , jstring feature
-    , jstring version)
-{
-    WebCore::JSMainThreadNullState state;
-    return SVGTests::hasFeatureForLegacyBindings(AtomString {String(env, feature)}, AtomString {String(env, version)});
 }
 
 

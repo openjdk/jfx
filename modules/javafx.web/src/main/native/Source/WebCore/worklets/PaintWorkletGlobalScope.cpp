@@ -26,6 +26,7 @@
 #include "config.h"
 #include "PaintWorkletGlobalScope.h"
 
+#include "ContentSecurityPolicy.h"
 #include "Document.h"
 #include "JSCSSPaintCallback.h"
 #include "JSDOMConvert.h"
@@ -37,36 +38,37 @@
 namespace WebCore {
 using namespace JSC;
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(PaintWorkletGlobalScope);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PaintWorkletGlobalScope);
 
 RefPtr<PaintWorkletGlobalScope> PaintWorkletGlobalScope::tryCreate(Document& document, ScriptSourceCode&& code)
 {
     RefPtr<VM> vm = VM::tryCreate();
     if (!vm)
         return nullptr;
-    auto scope = adoptRef(*new PaintWorkletGlobalScope(document, vm.releaseNonNull(), WTFMove(code)));
+    auto scope = adoptRef(*new PaintWorkletGlobalScope(document, vm.releaseNonNull(), WTF::move(code)));
     scope->addToContextsMap();
+    scope->applyContentSecurityPolicyResponseHeaders(document.checkedContentSecurityPolicy()->responseHeaders());
     return scope;
 }
 
 PaintWorkletGlobalScope::PaintWorkletGlobalScope(Document& document, Ref<VM>&& vm, ScriptSourceCode&& code)
-    : WorkletGlobalScope(document, WTFMove(vm), WTFMove(code))
+    : WorkletGlobalScope(document, WTF::move(vm), WTF::move(code))
 {
 }
 
 double PaintWorkletGlobalScope::devicePixelRatio() const
 {
-    if (!responsibleDocument() || !responsibleDocument()->domWindow())
+    if (!responsibleDocument() || !responsibleDocument()->window())
         return 1.0;
-    return responsibleDocument()->domWindow()->devicePixelRatio();
+    return responsibleDocument()->window()->devicePixelRatio();
 }
 
 PaintDefinition::PaintDefinition(const AtomString& name, JSC::JSObject* paintConstructor, Ref<CSSPaintCallback>&& paintCallback, Vector<AtomString>&& inputProperties, Vector<String>&& inputArguments)
     : name(name)
     , paintConstructor(paintConstructor)
-    , paintCallback(WTFMove(paintCallback))
-    , inputProperties(WTFMove(inputProperties))
-    , inputArguments(WTFMove(inputArguments))
+    , paintCallback(WTF::move(paintCallback))
+    , inputProperties(WTF::move(inputProperties))
+    , inputArguments(WTF::move(inputArguments))
 {
 }
 
@@ -96,7 +98,7 @@ ExceptionOr<void> PaintWorkletGlobalScope::registerPaint(JSC::JSGlobalObject& gl
         Vector<AtomString> inputProperties;
         if (!inputPropertiesIterableValue.isUndefined()) {
             auto inputPropertiesConversionResult = convert<IDLSequence<IDLAtomStringAdaptor<IDLDOMString>>>(globalObject, inputPropertiesIterableValue);
-            if (UNLIKELY(inputPropertiesConversionResult.hasException(scope)))
+            if (inputPropertiesConversionResult.hasException(scope)) [[unlikely]]
                 return Exception { ExceptionCode::ExistingExceptionError };
             inputProperties = inputPropertiesConversionResult.releaseReturnValue();
         }
@@ -109,7 +111,7 @@ ExceptionOr<void> PaintWorkletGlobalScope::registerPaint(JSC::JSGlobalObject& gl
         Vector<String> inputArguments;
         if (!inputArgumentsIterableValue.isUndefined()) {
             auto inputArgumentsConversionResult = convert<IDLSequence<IDLDOMString>>(globalObject, inputArgumentsIterableValue);
-            if (UNLIKELY(inputArgumentsConversionResult.hasException(scope)))
+            if (inputArgumentsConversionResult.hasException(scope)) [[unlikely]]
                 return Exception { ExceptionCode::ExistingExceptionError };
             inputArguments = inputArgumentsConversionResult.releaseReturnValue();
         }
@@ -138,11 +140,11 @@ ExceptionOr<void> PaintWorkletGlobalScope::registerPaint(JSC::JSGlobalObject& gl
             return Exception { ExceptionCode::TypeError, "The class must have a paint method"_s };
 
         auto paintCallback = convert<IDLCallbackFunction<JSCSSPaintCallback>>(globalObject, paintValue, *jsCast<JSDOMGlobalObject*>(&globalObject));
-        if (UNLIKELY(paintCallback.hasException(scope)))
+        if (paintCallback.hasException(scope)) [[unlikely]]
             return Exception { ExceptionCode::ExistingExceptionError };
 
-        auto paintDefinition = makeUnique<PaintDefinition>(name, paintConstructor.get(), paintCallback.releaseReturnValue(), WTFMove(inputProperties), WTFMove(inputArguments));
-        paintDefinitionMap().add(name, WTFMove(paintDefinition));
+        auto paintDefinition = makeUnique<PaintDefinition>(name, paintConstructor.get(), paintCallback.releaseReturnValue(), WTF::move(inputProperties), WTF::move(inputArguments));
+        paintDefinitionMap().add(name, WTF::move(paintDefinition));
     }
 
     // This is for the case when we have already visited the paint definition map, and the GC is currently running in the background.

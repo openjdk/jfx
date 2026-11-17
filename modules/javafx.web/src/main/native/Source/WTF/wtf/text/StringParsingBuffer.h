@@ -31,33 +31,34 @@ namespace WTF {
 
 template<typename T>
 class StringParsingBuffer final {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(StringParsingBuffer);
 public:
     using CharacterType = T;
 
     constexpr StringParsingBuffer() = default;
 
-    constexpr StringParsingBuffer(std::span<const CharacterType> characters)
+    constexpr StringParsingBuffer(std::span<const CharacterType> characters LIFETIME_BOUND)
         : m_data { characters }
     {
         ASSERT(m_data.data() || m_data.empty());
     }
 
-    constexpr auto position() const { return m_data.data(); }
-    constexpr auto end() const { return m_data.data() + m_data.size(); }
+    constexpr auto position() const LIFETIME_BOUND { return m_data.data(); }
+    constexpr auto end() const LIFETIME_BOUND { return std::to_address(m_data.end()); }
 
     constexpr bool hasCharactersRemaining() const { return !m_data.empty(); }
     constexpr bool atEnd() const { return m_data.empty(); }
 
     constexpr size_t lengthRemaining() const { return m_data.size(); }
 
-    constexpr void setPosition(const CharacterType* position)
+    constexpr void setPosition(std::span<const CharacterType> position)
     {
-        ASSERT(position <= m_data.data() + m_data.size());
-        m_data = { position, m_data.data() + m_data.size() };
+        ASSERT(position.data() <= std::to_address(m_data.end()));
+        ASSERT(std::to_address(position.end()) <= std::to_address(m_data.end()));
+        m_data = position;
     }
 
-    StringView stringViewOfCharactersRemaining() const { return span(); }
+    StringView stringViewOfCharactersRemaining() const LIFETIME_BOUND { return span(); }
 
     CharacterType consume()
     {
@@ -67,14 +68,20 @@ public:
         return character;
     }
 
-    std::span<const CharacterType> span() const { return m_data; }
+    std::span<const CharacterType> span() const LIFETIME_BOUND { return m_data; }
 
-    std::span<const CharacterType> consume(size_t count)
+    std::span<const CharacterType> consume(size_t count) LIFETIME_BOUND
     {
         ASSERT(count <= lengthRemaining());
-        auto result = m_data;
+        auto result = m_data.first(count);
         m_data = m_data.subspan(count);
         return result;
+    }
+
+    void dropLast(size_t amountToDrop = 1)
+    {
+        ASSERT(amountToDrop <= lengthRemaining());
+        m_data = m_data.first(lengthRemaining() - amountToDrop);
     }
 
     CharacterType operator[](size_t i) const
@@ -124,7 +131,7 @@ private:
     std::span<const CharacterType> m_data;
 };
 
-template<typename StringType, typename Function> decltype(auto) readCharactersForParsing(StringType&& string, Function&& functor)
+template<typename StringType, typename Function> decltype(auto) readCharactersForParsing(StringType&& string, NOESCAPE const Function& functor)
 {
     if (string.is8Bit())
         return functor(StringParsingBuffer { string.span8() });

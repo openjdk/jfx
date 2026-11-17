@@ -75,7 +75,7 @@ static inline const char* pas_mmap_capability_get_string(pas_mmap_capability cap
     case pas_may_mmap:
         return "may_mmap";
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 

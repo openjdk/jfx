@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,8 @@
 
 package test.com.sun.scenario.animation;
 
+import java.util.ArrayList;
+import java.util.List;
 import javafx.animation.AnimationTimer;
 import com.sun.scenario.DelayedRunnable;
 import com.sun.scenario.animation.AbstractPrimaryTimer;
@@ -88,6 +90,148 @@ public class AbstractPrimaryTimerTest {
         timer.removeAnimationTimer(timerReceiver);
         timer.simulatePulse();
         assertFalse(flag.isFlagged());
+    }
+
+    @Test
+    public void testExceptionInAnimationTimerIsHandledInPrimaryTimer() {
+        Thread currentThread = Thread.currentThread();
+        String currentMethodName = currentThread.getStackTrace()[0].getMethodName();
+        Throwable[] uncaughtException = new Exception[1];
+        Thread.UncaughtExceptionHandler exceptionHandler = currentThread.getUncaughtExceptionHandler();
+        currentThread.setUncaughtExceptionHandler((_, e) -> uncaughtException[0] = e);
+
+        try {
+            var timer1 = new AnimationTimer() {
+                @Override
+                public void handle(long now) {
+                    throw new RuntimeException(currentMethodName);
+                }
+            };
+
+            var flag = new Flag();
+            var timer2 = new AnimationTimer() {
+                @Override
+                public void handle(long now) {
+                    flag.flag();
+                }
+            };
+
+            timer.addAnimationTimer(timer1::handle);
+            timer.addAnimationTimer(timer2::handle);
+            assertFalse(flag.isFlagged());
+
+            timer.simulatePulse();
+            assertTrue(flag.isFlagged());
+            assertEquals(currentMethodName, uncaughtException[0].getMessage());
+        } finally {
+            currentThread.setUncaughtExceptionHandler(exceptionHandler);
+        }
+    }
+
+    @Test
+    public void testExceptionInPulseReceiverIsHandledInPrimaryTimer() {
+        Thread currentThread = Thread.currentThread();
+        String currentMethodName = currentThread.getStackTrace()[0].getMethodName();
+        Throwable[] uncaughtException = new Exception[1];
+        Thread.UncaughtExceptionHandler exceptionHandler = currentThread.getUncaughtExceptionHandler();
+        currentThread.setUncaughtExceptionHandler((_, e) -> uncaughtException[0] = e);
+
+        try {
+            var receiver1 = new PulseReceiver() {
+                @Override
+                public void timePulse(long now) {
+                    throw new RuntimeException(currentMethodName);
+                }
+            };
+
+            var flag = new Flag();
+            var receiver2 = new PulseReceiver() {
+                @Override
+                public void timePulse(long now) {
+                    flag.flag();
+                }
+            };
+
+            timer.addPulseReceiver(receiver1);
+            timer.addPulseReceiver(receiver2);
+            assertFalse(flag.isFlagged());
+
+            timer.simulatePulse();
+            assertTrue(flag.isFlagged());
+            assertEquals(currentMethodName, uncaughtException[0].getMessage());
+        } finally {
+            currentThread.setUncaughtExceptionHandler(exceptionHandler);
+        }
+    }
+
+    @Test
+    public void testExceptionsInNoisyFailingAnimationTimerAreNotReported() {
+        Thread currentThread = Thread.currentThread();
+        String currentMethodName = currentThread.getStackTrace()[0].getMethodName();
+        List<Throwable> uncaughtExceptions = new ArrayList<>();
+        Thread.UncaughtExceptionHandler exceptionHandler = currentThread.getUncaughtExceptionHandler();
+        currentThread.setUncaughtExceptionHandler((_, e) -> uncaughtExceptions.add(e));
+
+        try {
+            var animTimer = new AnimationTimer() {
+                @Override
+                public void handle(long now) {
+                    throw new RuntimeException(currentMethodName);
+                }
+            };
+
+            timer.addAnimationTimer(animTimer::handle);
+
+            for (int i = 0; i < AbstractPrimaryTimer.FAILING_TIMER_THRESHOLD; ++i) {
+                timer.simulatePulse();
+            }
+
+            assertEquals(AbstractPrimaryTimer.FAILING_TIMER_THRESHOLD, uncaughtExceptions.size());
+            assertTrue(uncaughtExceptions.stream().allMatch(e -> e.getMessage().equals(currentMethodName)));
+
+            // The following exceptions are not reported
+            for (int i = 0; i < 3; ++i) {
+                timer.simulatePulse();
+                assertEquals(AbstractPrimaryTimer.FAILING_TIMER_THRESHOLD, uncaughtExceptions.size());
+            }
+        } finally {
+            currentThread.setUncaughtExceptionHandler(exceptionHandler);
+        }
+    }
+
+    @Test
+    public void testExceptionsInNoisyFailingPulseReceiverAreNotReported() {
+        Thread currentThread = Thread.currentThread();
+        String currentMethodName = currentThread.getStackTrace()[0].getMethodName();
+        List<Throwable> uncaughtExceptions = new ArrayList<>();
+        Thread.UncaughtExceptionHandler exceptionHandler = currentThread.getUncaughtExceptionHandler();
+        currentThread.setUncaughtExceptionHandler((_, e) -> uncaughtExceptions.add(e));
+
+        try {
+            var receiver = new PulseReceiver() {
+                @Override
+                public void timePulse(long now) {
+                    throw new RuntimeException(currentMethodName);
+                }
+            };
+
+            timer.addPulseReceiver(receiver);
+
+            for (int i = 0; i < AbstractPrimaryTimer.FAILING_TIMER_THRESHOLD; ++i) {
+                timer.simulatePulse();
+            }
+
+            assertEquals(AbstractPrimaryTimer.FAILING_TIMER_THRESHOLD, uncaughtExceptions.size());
+            assertTrue(uncaughtExceptions.stream().allMatch(e -> e.getMessage().equals(currentMethodName)));
+
+            // The following exceptions are not reported
+            for (int i = 0; i < 3; ++i) {
+                timer.simulatePulse();
+                assertEquals(AbstractPrimaryTimer.FAILING_TIMER_THRESHOLD, uncaughtExceptions.size());
+            }
+        } finally {
+            currentThread.setUncaughtExceptionHandler(exceptionHandler);
+        }
     }
 
     private static class Flag {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2023 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2015-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,6 +34,7 @@ namespace JSC {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(CompactTDZEnvironment);
 WTF_MAKE_TZONE_ALLOCATED_IMPL(VariableEnvironment);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(VariableEnvironment::RareData);
 
 void VariableEnvironmentEntry::dump(PrintStream& out) const
 {
@@ -47,14 +48,14 @@ VariableEnvironment& VariableEnvironment::operator=(const VariableEnvironment& o
     return *this;
 }
 
-void VariableEnvironment::markVariableAsCapturedIfDefined(const RefPtr<UniquedStringImpl>& identifier)
+void VariableEnvironment::markVariableAsCapturedIfDefined(const UniquedStringImpl* identifier)
 {
     auto findResult = m_map.find(identifier);
     if (findResult != m_map.end())
         findResult->value.setIsCaptured();
 }
 
-void VariableEnvironment::markVariableAsCaptured(const RefPtr<UniquedStringImpl>& identifier)
+void VariableEnvironment::markVariableAsCaptured(const UniquedStringImpl* identifier)
 {
     auto findResult = m_map.find(identifier);
     RELEASE_ASSERT(findResult != m_map.end());
@@ -101,14 +102,14 @@ void VariableEnvironment::swap(VariableEnvironment& other)
     m_rareData.swap(other.m_rareData);
 }
 
-void VariableEnvironment::markVariableAsImported(const RefPtr<UniquedStringImpl>& identifier)
+void VariableEnvironment::markVariableAsImported(const UniquedStringImpl* identifier)
 {
     auto findResult = m_map.find(identifier);
     RELEASE_ASSERT(findResult != m_map.end());
     findResult->value.setIsImported();
 }
 
-void VariableEnvironment::markVariableAsExported(const RefPtr<UniquedStringImpl>& identifier)
+void VariableEnvironment::markVariableAsExported(const UniquedStringImpl* identifier)
 {
     auto findResult = m_map.find(identifier);
     RELEASE_ASSERT(findResult != m_map.end());
@@ -215,7 +216,7 @@ void VariableEnvironment::dump(PrintStream& out) const
 
 void CompactTDZEnvironment::sortCompact(Compact& compact)
 {
-    std::sort(compact.begin(), compact.end(), [] (auto& a, auto& b) {
+    std::ranges::sort(compact, [](auto& a, auto& b) {
         return a.get() < b.get();
     });
 }
@@ -229,7 +230,7 @@ CompactTDZEnvironment::CompactTDZEnvironment(const TDZEnvironment& env)
     });
 
     sortCompact(variables);
-    m_variables = WTFMove(variables);
+    m_variables = WTF::move(variables);
 }
 
 bool CompactTDZEnvironment::operator==(const CompactTDZEnvironment& other) const
@@ -284,7 +285,7 @@ TDZEnvironment& CompactTDZEnvironment::toTDZEnvironmentSlow() const
             ASSERT_UNUSED(addResult, addResult.isNewEntry);
         }
     }
-    m_variables = Variables(WTFMove(inflated));
+    m_variables = Variables(WTF::move(inflated));
     return const_cast<Inflated&>(std::get<Inflated>(m_variables));
 }
 

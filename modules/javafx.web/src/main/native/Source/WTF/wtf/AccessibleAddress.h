@@ -43,4 +43,3 @@ inline uintptr_t highestAccessibleAddress()
 
 using WTF::lowestAccessibleAddress;
 using WTF::highestAccessibleAddress;
-

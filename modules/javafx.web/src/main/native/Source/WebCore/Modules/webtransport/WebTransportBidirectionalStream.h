@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
+#include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 
 namespace WebCore {
@@ -40,11 +40,12 @@ public:
 
     WebTransportReceiveStream& readable() { return m_readable.get(); }
     WebTransportSendStream& writable() { return m_writable.get(); }
+
 private:
     WebTransportBidirectionalStream(Ref<WebTransportReceiveStream>&&, Ref<WebTransportSendStream>&&);
 
-    Ref<WebTransportReceiveStream> m_readable;
-    Ref<WebTransportSendStream> m_writable;
+    const Ref<WebTransportReceiveStream> m_readable;
+    const Ref<WebTransportSendStream> m_writable;
 };
 
 }

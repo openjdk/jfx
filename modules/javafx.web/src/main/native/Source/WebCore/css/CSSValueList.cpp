@@ -47,7 +47,7 @@ CSSValueContainingVector::CSSValueContainingVector(ClassType type, ValueSeparato
     } else {
         for (unsigned i = 0; i < maxInlineSize; ++i)
             m_inlineStorage[i] = &values[i].leakRef();
-        m_additionalStorage = static_cast<const CSSValue**>(fastMalloc(sizeof(const CSSValue*) * (m_size - maxInlineSize)));
+        m_additionalStorage = MallocSpan<const CSSValue*>::malloc(sizeof(const CSSValue*) * (m_size - maxInlineSize));
         for (unsigned i = maxInlineSize; i < m_size; ++i)
             m_additionalStorage[i - maxInlineSize] = &values[i].leakRef();
     }
@@ -92,58 +92,58 @@ CSSValueContainingVector::CSSValueContainingVector(ClassType type, ValueSeparato
 }
 
 CSSValueList::CSSValueList(ValueSeparator separator)
-    : CSSValueContainingVector(ValueListClass, separator)
+    : CSSValueContainingVector(ClassType::ValueList, separator)
 {
 }
 
 CSSValueList::CSSValueList(ValueSeparator separator, CSSValueListBuilder values)
-    : CSSValueContainingVector(ValueListClass, separator, WTFMove(values))
+    : CSSValueContainingVector(ClassType::ValueList, separator, WTF::move(values))
 {
 }
 
 CSSValueList::CSSValueList(ValueSeparator separator, Ref<CSSValue> value)
-    : CSSValueContainingVector(ValueListClass, separator, WTFMove(value))
+    : CSSValueContainingVector(ClassType::ValueList, separator, WTF::move(value))
 {
 }
 
 CSSValueList::CSSValueList(ValueSeparator separator, Ref<CSSValue> value1, Ref<CSSValue> value2)
-    : CSSValueContainingVector(ValueListClass, separator, WTFMove(value1), WTFMove(value2))
+    : CSSValueContainingVector(ClassType::ValueList, separator, WTF::move(value1), WTF::move(value2))
 {
 }
 
 CSSValueList::CSSValueList(ValueSeparator separator, Ref<CSSValue> value1, Ref<CSSValue> value2, Ref<CSSValue> value3)
-    : CSSValueContainingVector(ValueListClass, separator, WTFMove(value1), WTFMove(value2), WTFMove(value3))
+    : CSSValueContainingVector(ClassType::ValueList, separator, WTF::move(value1), WTF::move(value2), WTF::move(value3))
 {
 }
 
 CSSValueList::CSSValueList(ValueSeparator separator, Ref<CSSValue> value1, Ref<CSSValue> value2, Ref<CSSValue> value3, Ref<CSSValue> value4)
-    : CSSValueContainingVector(ValueListClass, separator, WTFMove(value1), WTFMove(value2), WTFMove(value3), WTFMove(value4))
+    : CSSValueContainingVector(ClassType::ValueList, separator, WTF::move(value1), WTF::move(value2), WTF::move(value3), WTF::move(value4))
 {
 }
 
 Ref<CSSValueList> CSSValueList::createCommaSeparated(CSSValueListBuilder values)
 {
-    return adoptRef(*new CSSValueList(CommaSeparator, WTFMove(values)));
+    return adoptRef(*new CSSValueList(CommaSeparator, WTF::move(values)));
 }
 
 Ref<CSSValueList> CSSValueList::createCommaSeparated(Ref<CSSValue> value)
 {
-    return adoptRef(*new CSSValueList(CommaSeparator, WTFMove(value)));
+    return adoptRef(*new CSSValueList(CommaSeparator, WTF::move(value)));
 }
 
 Ref<CSSValueList> CSSValueList::createSlashSeparated(CSSValueListBuilder values)
 {
-    return adoptRef(*new CSSValueList(SlashSeparator, WTFMove(values)));
+    return adoptRef(*new CSSValueList(SlashSeparator, WTF::move(values)));
 }
 
 Ref<CSSValueList> CSSValueList::createSlashSeparated(Ref<CSSValue> value)
 {
-    return adoptRef(*new CSSValueList(SlashSeparator, WTFMove(value)));
+    return adoptRef(*new CSSValueList(SlashSeparator, WTF::move(value)));
 }
 
 Ref<CSSValueList> CSSValueList::createSlashSeparated(Ref<CSSValue> value1, Ref<CSSValue> value2)
 {
-    return adoptRef(*new CSSValueList(SlashSeparator, WTFMove(value1), WTFMove(value2)));
+    return adoptRef(*new CSSValueList(SlashSeparator, WTF::move(value1), WTF::move(value2)));
 }
 
 Ref<CSSValueList> CSSValueList::createSpaceSeparated()
@@ -153,38 +153,38 @@ Ref<CSSValueList> CSSValueList::createSpaceSeparated()
 
 Ref<CSSValueList> CSSValueList::createSpaceSeparated(CSSValueListBuilder values)
 {
-    return adoptRef(*new CSSValueList(SpaceSeparator, WTFMove(values)));
+    return adoptRef(*new CSSValueList(SpaceSeparator, WTF::move(values)));
 }
 
 Ref<CSSValueList> CSSValueList::createSpaceSeparated(Ref<CSSValue> value)
 {
-    return adoptRef(*new CSSValueList(SpaceSeparator, WTFMove(value)));
+    return adoptRef(*new CSSValueList(SpaceSeparator, WTF::move(value)));
 }
 
 Ref<CSSValueList> CSSValueList::createSpaceSeparated(Ref<CSSValue> value1, Ref<CSSValue> value2)
 {
-    return adoptRef(*new CSSValueList(SpaceSeparator, WTFMove(value1), WTFMove(value2)));
+    return adoptRef(*new CSSValueList(SpaceSeparator, WTF::move(value1), WTF::move(value2)));
 }
 
 Ref<CSSValueList> CSSValueList::createSpaceSeparated(Ref<CSSValue> value1, Ref<CSSValue> value2, Ref<CSSValue> value3)
 {
-    return adoptRef(*new CSSValueList(SpaceSeparator, WTFMove(value1), WTFMove(value2), WTFMove(value3)));
+    return adoptRef(*new CSSValueList(SpaceSeparator, WTF::move(value1), WTF::move(value2), WTF::move(value3)));
 }
 
 Ref<CSSValueList> CSSValueList::createSpaceSeparated(Ref<CSSValue> value1, Ref<CSSValue> value2, Ref<CSSValue> value3, Ref<CSSValue> value4)
 {
-    return adoptRef(*new CSSValueList(SpaceSeparator, WTFMove(value1), WTFMove(value2), WTFMove(value3), WTFMove(value4)));
+    return adoptRef(*new CSSValueList(SpaceSeparator, WTF::move(value1), WTF::move(value2), WTF::move(value3), WTF::move(value4)));
 }
 
-Ref<CSSValueList> CSSValueList::create(UChar separator, CSSValueListBuilder builder)
+Ref<CSSValueList> CSSValueList::create(char16_t separator, CSSValueListBuilder builder)
 {
     switch (separator) {
     case ',':
-        return createCommaSeparated(WTFMove(builder));
+        return createCommaSeparated(WTF::move(builder));
     case '/':
-        return createSlashSeparated(WTFMove(builder));
+        return createSlashSeparated(WTF::move(builder));
     case ' ':
-        return createSpaceSeparated(WTFMove(builder));
+        return createSpaceSeparated(WTF::move(builder));
     default:
         break;
     }
@@ -216,21 +216,21 @@ CSSValueListBuilder CSSValueContainingVector::copyValues() const
     });
 }
 
-void CSSValueContainingVector::serializeItems(StringBuilder& builder) const
+void CSSValueContainingVector::serializeItems(StringBuilder& builder, const CSS::SerializationContext& context) const
 {
-    builder.append(interleave(*this, [](auto& value) { return value.cssText(); }, separatorCSSText()));
+    builder.append(interleave(*this, [&](auto& value) { return value.cssText(context); }, separatorCSSText()));
 }
 
-String CSSValueContainingVector::serializeItems() const
+String CSSValueContainingVector::serializeItems(const CSS::SerializationContext& context) const
 {
     StringBuilder result;
-    serializeItems(result);
+    serializeItems(result, context);
     return result.toString();
 }
 
-String CSSValueList::customCSSText() const
+String CSSValueList::customCSSText(const CSS::SerializationContext& context) const
 {
-    return serializeItems();
+    return serializeItems(context);
 }
 
 bool CSSValueContainingVector::itemsEqual(const CSSValueContainingVector& other) const
@@ -266,7 +266,7 @@ bool CSSValueContainingVector::addDerivedHash(Hasher& hasher) const
     return true;
 }
 
-bool CSSValueContainingVector::customTraverseSubresources(const Function<bool(const CachedResource&)>& handler) const
+bool CSSValueContainingVector::customTraverseSubresources(NOESCAPE const Function<bool(const CachedResource&)>& handler) const
 {
     for (auto& value : *this) {
         if (value.traverseSubresources(handler))
@@ -275,19 +275,7 @@ bool CSSValueContainingVector::customTraverseSubresources(const Function<bool(co
     return false;
 }
 
-void CSSValueContainingVector::customSetReplacementURLForSubresources(const HashMap<String, String>& replacementURLStrings)
-{
-    for (auto& value : *this)
-        const_cast<CSSValue&>(value).setReplacementURLForSubresources(replacementURLStrings);
-}
-
-void CSSValueContainingVector::customClearReplacementURLForSubresources()
-{
-    for (auto& value : *this)
-        const_cast<CSSValue&>(value).clearReplacementURLForSubresources();
-}
-
-IterationStatus CSSValueContainingVector::customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
+IterationStatus CSSValueContainingVector::customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const
 {
     for (auto& value : *this) {
         if (func(const_cast<CSSValue&>(value)) == IterationStatus::Done)

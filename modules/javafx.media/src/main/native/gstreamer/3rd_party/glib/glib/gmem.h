@@ -230,6 +230,9 @@ void     g_aligned_free_sized (gpointer  mem,
  * Since: 2.44
  */
 GLIB_AVAILABLE_STATIC_INLINE_IN_2_44
+static inline gpointer g_steal_pointer (gpointer pp);
+
+GLIB_AVAILABLE_STATIC_INLINE_IN_2_44
 static inline gpointer
 g_steal_pointer (gpointer pp)
 {

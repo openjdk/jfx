@@ -26,7 +26,7 @@
 // https://gpuweb.github.io/gpuweb/#dictdef-gpucommandbufferdescriptor
 
 [
-    EnabledBySetting=WebGPUEnabled
-]
-dictionary GPUCommandBufferDescriptor : GPUObjectDescriptorBase {
+    EnabledBySetting=WebGPUEnabled,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary GPUCommandBufferDescriptor : GPUObjectDescriptorBase {
 };

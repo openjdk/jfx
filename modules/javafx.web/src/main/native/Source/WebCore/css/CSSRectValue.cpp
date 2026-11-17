@@ -29,19 +29,19 @@
 namespace WebCore {
 
 CSSRectValue::CSSRectValue(Rect rect)
-    : CSSValue(RectClass)
-    , m_rect(WTFMove(rect))
+    : CSSValue(ClassType::Rect)
+    , m_rect(WTF::move(rect))
 {
 }
 
 Ref<CSSRectValue> CSSRectValue::create(Rect rect)
 {
-    return adoptRef(*new CSSRectValue(WTFMove(rect)));
+    return adoptRef(*new CSSRectValue(WTF::move(rect)));
 }
 
-String CSSRectValue::customCSSText() const
+String CSSRectValue::customCSSText(const CSS::SerializationContext& context) const
 {
-    return m_rect.cssText();
+    return m_rect.cssText(context);
 }
 
 bool CSSRectValue::equals(const CSSRectValue& other) const

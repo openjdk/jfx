@@ -27,25 +27,26 @@
 
 #if ENABLE(OFFSCREEN_CANVAS)
 
-#include "ActiveDOMObject.h"
-#include "AffineTransform.h"
-#include "CanvasBase.h"
-#include "ContextDestructionObserver.h"
-#include "EventTarget.h"
-#include "ExceptionOr.h"
-#include "IDLTypes.h"
-#include "ImageBuffer.h"
-#include "IntSize.h"
-#include "ScriptWrappable.h"
+#include <WebCore/ActiveDOMObject.h>
+#include <WebCore/AffineTransform.h>
+#include <WebCore/CanvasBase.h>
+#include <WebCore/ContextDestructionObserver.h>
+#include <WebCore/EventTarget.h>
+#include <WebCore/EventTargetInterfaces.h>
+#include <WebCore/IDLTypes.h>
+#include <WebCore/ImageBuffer.h>
+#include <WebCore/IntSize.h>
+#include <WebCore/ScriptWrappable.h>
 #include <wtf/FixedVector.h>
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 #if ENABLE(WEBGL)
-#include "WebGLContextAttributes.h"
+#include <WebCore/WebGLContextAttributes.h>
 #endif
 
 namespace WebCore {
@@ -63,7 +64,9 @@ class WebGL2RenderingContext;
 class WebGLRenderingContext;
 class WebGLRenderingContextBase;
 
-using OffscreenRenderingContext = std::variant<
+template<typename> class ExceptionOr;
+
+using OffscreenRenderingContext = Variant<
 #if ENABLE(WEBGL)
     RefPtr<WebGLRenderingContext>,
     RefPtr<WebGL2RenderingContext>,
@@ -77,8 +80,8 @@ class PlaceholderRenderingContext;
 class PlaceholderRenderingContextSource;
 
 class DetachedOffscreenCanvas {
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(DetachedOffscreenCanvas, WEBCORE_EXPORT);
     WTF_MAKE_NONCOPYABLE(DetachedOffscreenCanvas);
-    WTF_MAKE_FAST_ALLOCATED;
     friend class OffscreenCanvas;
 
 public:
@@ -86,6 +89,7 @@ public:
     WEBCORE_EXPORT ~DetachedOffscreenCanvas();
     const IntSize& size() const { return m_size; }
     bool originClean() const { return m_originClean; }
+    const RefPtr<PlaceholderRenderingContextSource>& placeholderSource() const { return m_placeholderSource; }
     RefPtr<PlaceholderRenderingContextSource> takePlaceholderSource();
 
 private:
@@ -94,10 +98,9 @@ private:
     bool m_originClean;
 };
 
-class OffscreenCanvas final : public ActiveDOMObject, public RefCounted<OffscreenCanvas>, public CanvasBase, public EventTarget {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(OffscreenCanvas, WEBCORE_EXPORT);
+class OffscreenCanvas final : public ActiveDOMObject, public CanvasBase, public RefCounted<OffscreenCanvas>, public EventTarget {
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(OffscreenCanvas, WEBCORE_EXPORT);
 public:
-
     struct ImageEncodeOptions {
         String type = "image/png"_s;
         double quality = 1.0;
@@ -118,14 +121,18 @@ public:
     static Ref<OffscreenCanvas> create(ScriptExecutionContext&, PlaceholderRenderingContext&);
     WEBCORE_EXPORT virtual ~OffscreenCanvas();
 
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
+
     void setWidth(unsigned);
     void setHeight(unsigned);
-
-    void setImageBufferAndMarkDirty(RefPtr<ImageBuffer>&&) final;
+    void setSizeForControllingContext(IntSize) final;
 
     CanvasRenderingContext* renderingContext() const final { return m_context.get(); }
 
-    const CSSParserContext& cssParserContext() const final;
+    std::unique_ptr<CSSParserContext> createCSSParserContext() const final;
 
     ExceptionOr<std::optional<OffscreenRenderingContext>> getContext(JSC::JSGlobalObject&, RenderingContextType, FixedVector<JSC::Strong<JSC::Unknown>>&& arguments);
     ExceptionOr<RefPtr<ImageBitmap>> transferToImageBitmap();
@@ -143,34 +150,30 @@ public:
 
     void commitToPlaceholderCanvas();
 
-    void queueTaskKeepingObjectAlive(TaskSource, Function<void()>&&) final;
+    void queueTaskKeepingObjectAlive(TaskSource, Function<void(CanvasBase&)>&&) final;
     void dispatchEvent(Event&) final;
     bool isDetached() const { return m_detached; };
-
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
 
 private:
     OffscreenCanvas(ScriptExecutionContext&, IntSize, RefPtr<PlaceholderRenderingContextSource>&&);
 
+    // ActiveDOMObject.
+    bool virtualHasPendingActivity() const final;
+
+    // EventTarget.
+    void eventListenersDidChange() final;
+
     bool isOffscreenCanvas() const final { return true; }
 
-    ScriptExecutionContext* scriptExecutionContext() const final { return ContextDestructionObserver::scriptExecutionContext(); }
-    ScriptExecutionContext* canvasBaseScriptExecutionContext() const final { return ContextDestructionObserver::scriptExecutionContext(); }
+    ScriptExecutionContext* scriptExecutionContext() const final;
+    ScriptExecutionContext* canvasBaseScriptExecutionContext() const final;
 
     enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::OffscreenCanvas; }
     void refEventTarget() final { RefCounted::ref(); }
     void derefEventTarget() final { RefCounted::deref(); }
 
-    void refCanvasBase() const final { RefCounted::ref(); }
-    void derefCanvasBase() const final { RefCounted::deref(); }
+    void didUpdateSizeProperties(bool sizeChanged);
 
-    void setSize(const IntSize&) final;
-
-    void createImageBuffer() const final;
-
-    void reset();
     void scheduleCommitToPlaceholderCanvas();
 
     std::unique_ptr<CanvasRenderingContext> m_context;
@@ -178,12 +181,16 @@ private:
     mutable RefPtr<Image> m_copiedImage;
     bool m_detached { false };
     bool m_hasScheduledCommit { false };
-
-    mutable std::unique_ptr<CSSParserContext> m_cssParserContext;
+#if ENABLE(WEBGL)
+    bool m_hasRelevantWebGLEventListener { false };
+#endif
 };
 
 }
 
-SPECIALIZE_TYPE_TRAITS_CANVAS(WebCore::OffscreenCanvas, isOffscreenCanvas())
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::OffscreenCanvas)
+    static bool isType(const WebCore::CanvasBase& base) { return base.isOffscreenCanvas(); }
+    static bool isType(const WebCore::EventTarget& target) { return target.eventTargetInterface() == WebCore::EventTargetInterfaceType::OffscreenCanvas; }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif

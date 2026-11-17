@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -65,13 +65,16 @@ NSImage* getImage(u_int8_t* data, int jWidth, int jHeight, int jOffset) {
             size_t width = (size_t) jWidth;
             size_t height = (size_t) jHeight;
 
-            CGDataProviderRef provider = CGDataProviderCreateWithData(NULL,
-                                            data + jOffset, width * height * 4, NULL);
-            if (provider != NULL) {
-                cgImage = CGImageCreate(width, height, 8, 32, 4 * width, colorSpace,
-                        kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little,
-                        provider, NULL, 1, kCGRenderingIntentDefault);
-                CGDataProviderRelease(provider);
+            CFDataRef cfData = CFDataCreate(NULL, data + jOffset, width * height * 4);
+            if (cfData != NULL) {
+                CGDataProviderRef provider = CGDataProviderCreateWithCFData(cfData);
+                if (provider != NULL) {
+                    cgImage = CGImageCreate(width, height, 8, 32, 4 * width, colorSpace,
+                            kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little,
+                            provider, NULL, 1, kCGRenderingIntentDefault);
+                    CGDataProviderRelease(provider);
+                }
+                CFRelease(cfData);
             }
         }
         CGColorSpaceRelease(colorSpace);

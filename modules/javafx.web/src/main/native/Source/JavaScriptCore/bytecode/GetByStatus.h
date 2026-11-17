@@ -50,7 +50,7 @@ enum class CacheType : int8_t;
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(GetByStatus);
 
 class GetByStatus final {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(GetByStatus);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(GetByStatus, GetByStatus);
 public:
     enum State : uint8_t {
         // It's uncached so we have no information.
@@ -76,6 +76,13 @@ public:
         ObservedSlowPathAndMakesCalls,
     };
 
+    enum class LookupMode : bool {
+        // Normal property lookups can traverse the prototype chain
+        Normal,
+        // Direct property lookups only work for own properties (see getByIdDirect)
+        Direct
+    };
+
     GetByStatus()
         : m_state(NoInformation)
     {
@@ -97,7 +104,7 @@ public:
     }
 
     static GetByStatus computeFor(CodeBlock* baselineBlock, ICStatusMap& baselineMap, ICStatusContextStack& dfgContextStack, CodeOrigin);
-    static GetByStatus computeFor(const StructureSet&, UniquedStringImpl*);
+    static GetByStatus computeFor(JSGlobalObject*, const StructureSet&, CacheableIdentifier, LookupMode);
 
     State state() const { return m_state; }
 
@@ -127,6 +134,7 @@ public:
 
     // Attempts to reduce the set of variants to fit the given structure set. This may be approximate.
     void filter(const StructureSet&);
+    void filterById(UniquedStringImpl*);
 
     JSModuleNamespaceObject* moduleNamespaceObject() const { return m_moduleNamespaceData->m_moduleNamespaceObject; }
     JSModuleEnvironment* moduleEnvironment() const { return m_moduleNamespaceData->m_moduleEnvironment; }

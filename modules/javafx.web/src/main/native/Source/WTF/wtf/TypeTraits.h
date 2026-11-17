@@ -30,11 +30,10 @@
 
 #pragma once
 
+#include <cstddef>
 #include <type_traits>
+#include <utility>
 #include <wtf/Forward.h>
-#include <wtf/FunctionDispatcher.h>
-#include <wtf/Ref.h>
-#include <wtf/RefPtr.h>
 
 // SFINAE depends on overload resolution. We indicate the overload we'd prefer
 // (if it can compile) using a higher priorty type (int), and the overload
@@ -100,7 +99,10 @@ struct RemoveSmartPointerHelper<T, Ref<Pointee>> {
 template<typename T>
 struct RemoveSmartPointer : detail::RemoveSmartPointerHelper<T, std::remove_cv_t<T>> { };
 
-// HasRefPtrMethods implementation
+template<typename T>
+using RemoveCVSmartPointer = std::remove_cvref_t<typename RemoveSmartPointer<T>::type>;
+
+// HasRefPtrMemberFunctions implementation
 namespace detail {
 
 template<typename>
@@ -110,32 +112,50 @@ template<class T>
 static auto HasRefPtrMemberFunctionsTest(SFINAE_OVERLOAD_PREFERRED) -> SFINAE1True<decltype(static_cast<std::remove_cv_t<T>*>(nullptr)->ref(), static_cast<std::remove_cv_t<T>*>(nullptr)->deref())>;
 template<class>
 static auto HasRefPtrMemberFunctionsTest(SFINAE_OVERLOAD_DEFAULT) -> std::false_type;
+
 } // namespace detail
+
 template<class T>
 struct HasRefPtrMemberFunctions : decltype(detail::HasRefPtrMemberFunctionsTest<T>(SFINAE_OVERLOAD)) { };
+
+// HasWeakPtrFunctions implementation
 namespace detail {
+
 template<class T>
-static auto HasRefPtrMethodsTest(SFINAE_OVERLOAD_PREFERRED) -> SFINAE1True<decltype(static_cast<std::remove_cv_t<T>*>(nullptr)->ref(), static_cast<std::remove_cv_t<T>*>(nullptr)->deref())>;
+static auto HasWeakPtrFunctionsTest(SFINAE_OVERLOAD_PREFERRED) -> SFINAE1True<decltype(static_cast<std::remove_cv_t<T>*>(nullptr)->weakImpl(), static_cast<std::remove_cv_t<T>*>(nullptr)->weakCount())>;
 template<class>
-static auto HasRefPtrMethodsTest(SFINAE_OVERLOAD_DEFAULT) -> std::false_type;
+static auto HasWeakPtrFunctionsTest(SFINAE_OVERLOAD_DEFAULT) -> std::false_type;
+
+}
+
+template<class T>
+struct HasWeakPtrFunctions : decltype(detail::HasWeakPtrFunctionsTest<T>(SFINAE_OVERLOAD)) { };
+
+// HasThreadSafeWeakPtrFunctions implementation
+namespace detail {
+
+template<class T>
+static auto HasThreadSafeWeakPtrFunctionsTest(SFINAE_OVERLOAD_PREFERRED) -> SFINAE1True<decltype(static_cast<std::remove_cv_t<T>*>(nullptr)->weakRefCount())>;
+template<class>
+static auto HasThreadSafeWeakPtrFunctionsTest(SFINAE_OVERLOAD_DEFAULT) -> std::false_type;
+
+}
+
+template<class T>
+struct HasThreadSafeWeakPtrFunctions : decltype(detail::HasThreadSafeWeakPtrFunctionsTest<T>(SFINAE_OVERLOAD)) { };
+
+// HasCheckedPtrMemberFunctions implementation
+namespace detail {
+
+template<class T>
+static auto HasCheckedPtrMemberFunctionsTest(SFINAE_OVERLOAD_PREFERRED) -> SFINAE1True<decltype(static_cast<std::remove_cv_t<T>*>(nullptr)->incrementCheckedPtrCount(), static_cast<std::remove_cv_t<T>*>(nullptr)->decrementCheckedPtrCount())>;
+template<class>
+static auto HasCheckedPtrMemberFunctionsTest(SFINAE_OVERLOAD_DEFAULT) -> std::false_type;
 
 } // namespace detail
 
 template<class T>
-struct HasRefPtrMethods : decltype(detail::HasRefPtrMethodsTest<T>(SFINAE_OVERLOAD)) { };
-
-// HasCheckedPtrMethods implementation
-namespace detail {
-
-template<class T>
-static auto HasCheckedPtrMethodsTest(SFINAE_OVERLOAD_PREFERRED) -> SFINAE1True<decltype(static_cast<std::remove_cv_t<T>*>(nullptr)->incrementPtrCount(), static_cast<std::remove_cv_t<T>*>(nullptr)->decrementPtrCount())>;
-template<class>
-static auto HasCheckedPtrMethodsTest(SFINAE_OVERLOAD_DEFAULT) -> std::false_type;
-
-} // namespace detail
-
-template<class T>
-struct HasCheckedPtrMethods : decltype(detail::HasCheckedPtrMethodsTest<T>(SFINAE_OVERLOAD)) { };
+struct HasCheckedPtrMemberFunctions : decltype(detail::HasCheckedPtrMemberFunctionsTest<T>(SFINAE_OVERLOAD)) { };
 
 // HasIsolatedCopy()
 namespace detail {
@@ -192,5 +212,26 @@ struct IsExpected : std::false_type { };
 
 template <typename T, typename E>
 struct IsExpected<Expected<T, E>> : std::true_type { };
+
+template <typename... Args>
+struct ParameterCountImpl {
+    static constexpr std::size_t value = sizeof...(Args);
+};
+
+template <typename ReturnType, typename... Args>
+constexpr std::size_t parameterCount(ReturnType(*)(Args...))
+{
+    return ParameterCountImpl<Args...>::value;
+}
+
+#if defined(__has_feature)
+#if __has_feature(objc_arc)
+struct ARCEnabled : std::true_type { };
+#else
+struct ARCEnabled : std::false_type { };
+#endif
+#else
+struct ARCEnabled : std::false_type { };
+#endif
 
 } // namespace NTF

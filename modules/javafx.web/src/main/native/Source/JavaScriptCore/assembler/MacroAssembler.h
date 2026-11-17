@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,58 +25,31 @@
 
 #pragma once
 
+#include <JavaScriptCore/TargetAssemblerDefinitions.h>
+#include <wtf/Compiler.h>
+#include <wtf/Platform.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 #if ENABLE(ASSEMBLER)
 
-#include "JSCJSValue.h"
-
-#define DEFINE_SIMD_FUNC(name, func, lane) \
-    template <typename ...Args> \
-    void name(Args&&... args) { func(lane, std::forward<Args>(args)...); }
-
-#define DEFINE_SIMD_FUNC_WITH_SIGN_EXTEND_MODE(name, func, lane, mode) \
-    template <typename ...Args> \
-    void name(Args&&... args) { func(lane, mode, std::forward<Args>(args)...); }
-
-#define DEFINE_SIMD_FUNCS(name) \
-    DEFINE_SIMD_FUNC(name##Int8, name, SIMDLane::i8x16) \
-    DEFINE_SIMD_FUNC(name##Int16, name, SIMDLane::i16x8) \
-    DEFINE_SIMD_FUNC(name##Int32, name, SIMDLane::i32x4) \
-    DEFINE_SIMD_FUNC(name##Int64, name, SIMDLane::i64x2) \
-    DEFINE_SIMD_FUNC(name##Float32, name, SIMDLane::f32x4) \
-    DEFINE_SIMD_FUNC(name##Float64, name, SIMDLane::f64x2)
-
-#define DEFINE_SIGNED_SIMD_FUNCS(name) \
-    DEFINE_SIMD_FUNC_WITH_SIGN_EXTEND_MODE(name##SignedInt8, name, SIMDLane::i8x16, SIMDSignMode::Signed) \
-    DEFINE_SIMD_FUNC_WITH_SIGN_EXTEND_MODE(name##UnsignedInt8, name, SIMDLane::i8x16, SIMDSignMode::Unsigned) \
-    DEFINE_SIMD_FUNC_WITH_SIGN_EXTEND_MODE(name##SignedInt16, name, SIMDLane::i16x8, SIMDSignMode::Signed) \
-    DEFINE_SIMD_FUNC_WITH_SIGN_EXTEND_MODE(name##UnsignedInt16, name, SIMDLane::i16x8, SIMDSignMode::Unsigned) \
-    DEFINE_SIMD_FUNC_WITH_SIGN_EXTEND_MODE(name##Int32, name, SIMDLane::i32x4, SIMDSignMode::None) \
-    DEFINE_SIMD_FUNC_WITH_SIGN_EXTEND_MODE(name##Int64, name, SIMDLane::i64x2, SIMDSignMode::None) \
-    DEFINE_SIMD_FUNC(name##Float32, name, SIMDLane::f32x4) \
-    DEFINE_SIMD_FUNC(name##Float64, name, SIMDLane::f64x2)
-
 #if CPU(ARM_THUMB2)
-#define TARGET_ASSEMBLER ARMv7Assembler
 #define TARGET_MACROASSEMBLER MacroAssemblerARMv7
-#include "MacroAssemblerARMv7.h"
+#include <JavaScriptCore/MacroAssemblerARMv7.h>
 
 #elif CPU(ARM64E)
-#define TARGET_ASSEMBLER ARM64EAssembler
 #define TARGET_MACROASSEMBLER MacroAssemblerARM64E
-#include "MacroAssemblerARM64E.h"
+#include <JavaScriptCore/MacroAssemblerARM64E.h>
 
 #elif CPU(ARM64)
-#define TARGET_ASSEMBLER ARM64Assembler
 #define TARGET_MACROASSEMBLER MacroAssemblerARM64
-#include "MacroAssemblerARM64.h"
+#include <JavaScriptCore/MacroAssemblerARM64.h>
 
 #elif CPU(X86_64)
-#define TARGET_ASSEMBLER X86Assembler
 #define TARGET_MACROASSEMBLER MacroAssemblerX86_64
-#include "MacroAssemblerX86_64.h"
+#include <JavaScriptCore/MacroAssemblerX86_64.h>
 
 #elif CPU(RISCV64)
-#define TARGET_ASSEMBLER RISCV64Assembler
 #define TARGET_MACROASSEMBLER MacroAssemblerRISCV64
 #include "MacroAssemblerRISCV64.h"
 
@@ -84,7 +57,7 @@
 #error "The MacroAssembler is not supported on this platform."
 #endif
 
-#include "MacroAssemblerHelpers.h"
+#include <JavaScriptCore/MacroAssemblerHelpers.h>
 
 namespace WTF {
 
@@ -97,17 +70,10 @@ namespace JSC {
 
 namespace Probe {
 
-enum class SavedFPWidth {
-    SaveVectors,
-    DontSaveVectors
-};
-
 class Context;
 typedef void (SYSV_ABI *Function)(Context&);
 
 } // namespace Probe
-
-using Probe::SavedFPWidth;
 
 namespace Printer {
 
@@ -119,6 +85,7 @@ typedef Vector<PrintRecord> PrintRecordList;
 using MacroAssemblerBase = TARGET_MACROASSEMBLER;
 
 class MacroAssembler : public MacroAssemblerBase {
+    WTF_MAKE_TZONE_NON_HEAP_ALLOCATABLE(MacroAssembler);
 public:
     using Base = MacroAssemblerBase;
 
@@ -152,13 +119,18 @@ public:
         return numberOfRegisters() + numberOfFPRegisters();
     }
 
+    DEFINE_PTR_FUNC(moveConditionallyTest)
+
     using MacroAssemblerBase::pop;
     using MacroAssemblerBase::jump;
     using MacroAssemblerBase::farJump;
     using MacroAssemblerBase::branch32;
     using MacroAssemblerBase::compare32;
     using MacroAssemblerBase::move;
+    using MacroAssemblerBase::move32ToFloat;
     using MacroAssemblerBase::moveDouble;
+    using MacroAssemblerBase::move64ToDouble;
+    using MacroAssemblerBase::moveVector;
     using MacroAssemblerBase::add32;
     using MacroAssemblerBase::mul32;
     using MacroAssemblerBase::and32;
@@ -199,8 +171,6 @@ public:
     {
         return value == static_cast<int32_t>(value);
     }
-
-    static const double twoToThe32; // This is super useful for some double code.
 
     // Utilities used by the DFG JIT.
     using AbstractMacroAssemblerBase::invert;
@@ -592,8 +562,16 @@ public:
 
     void moveDouble(Address src, Address dest, FPRegisterID scratch)
     {
+        if (src == dest)
+            return;
         loadDouble(src, scratch);
         storeDouble(scratch, dest);
+    }
+
+    void moveVector(Address src, Address dest, FPRegisterID scratch)
+    {
+        loadVector(src, scratch);
+        storeVector(scratch, dest);
     }
 
     // Ptr methods
@@ -632,6 +610,11 @@ public:
     void addPtr(TrustedImm32 imm, RegisterID src, RegisterID dest)
     {
         add32(imm, src, dest);
+    }
+
+    void addPtr(TrustedImmPtr imm, RegisterID src, RegisterID dest)
+    {
+        add32(TrustedImm32(imm), src, dest);
     }
 
     void addPtr(TrustedImm32 imm, AbsoluteAddress address)
@@ -679,6 +662,11 @@ public:
         urshift32(trustedImm32ForShift(imm), srcDest);
     }
 
+    void urshiftPtr(TrustedImm32 imm, RegisterID srcDest)
+    {
+        urshift32(imm, srcDest);
+    }
+
     void urshiftPtr(RegisterID shiftAmmount, RegisterID srcDest)
     {
         urshift32(shiftAmmount, srcDest);
@@ -707,6 +695,11 @@ public:
     void orPtr(TrustedImmPtr imm, RegisterID dest)
     {
         or32(TrustedImm32(imm), dest);
+    }
+
+    void orPtr(TrustedImm32 imm, RegisterID src, RegisterID dest)
+    {
+        or32(imm, src, dest);
     }
 
     void orPtr(TrustedImm32 imm, RegisterID dest)
@@ -992,6 +985,11 @@ public:
         add64(imm, src, dest);
     }
 
+    void addPtr(TrustedImmPtr imm, RegisterID src, RegisterID dest)
+    {
+        add64(TrustedImm64(imm), src, dest);
+    }
+
     void addPtr(TrustedImm32 imm, Address address)
     {
         add64(imm, address);
@@ -1042,6 +1040,11 @@ public:
         lshift64(src, imm, dest);
     }
 
+    void lshiftPtr(TrustedImm32 imm, RegisterID shiftAmount, RegisterID dest)
+    {
+        lshift64(imm, shiftAmount, dest);
+    }
+
     void rshiftPtr(Imm32 imm, RegisterID srcDest)
     {
         rshift64(trustedImm32ForShift(imm), srcDest);
@@ -1060,6 +1063,11 @@ public:
     void urshiftPtr(Imm32 imm, RegisterID srcDest)
     {
         urshift64(trustedImm32ForShift(imm), srcDest);
+    }
+
+    void urshiftPtr(TrustedImm32 imm, RegisterID srcDest)
+    {
+        urshift64(imm, srcDest);
     }
 
     void urshiftPtr(RegisterID shiftAmmount, RegisterID srcDest)
@@ -1469,7 +1477,7 @@ public:
 
         // Try to force normalisation, and check that there's no change
         // in the bit pattern
-        if (bitwise_cast<uint64_t>(value * 1.0) != bitwise_cast<uint64_t>(value))
+        if (std::bit_cast<uint64_t>(value * 1.0) != std::bit_cast<uint64_t>(value))
             return shouldConsiderBlinding();
 
         value = std::abs(value);
@@ -1603,7 +1611,7 @@ public:
             if (jsValue.isDouble() && !shouldBlindDouble(jsValue.asDouble()))
                 return false;
 
-            if (!shouldBlindDouble(bitwise_cast<double>(value)))
+            if (!shouldBlindDouble(std::bit_cast<double>(value)))
                 return false;
         }
         }
@@ -1818,31 +1826,27 @@ public:
 
 #endif // USE(JSVALUE64)
 
-#if CPU(X86_64) || CPU(RISCV64)
-    void moveFloat(Imm32 imm, FPRegisterID dest)
+#if CPU(X86_64)
+    void move32ToFloat(Imm32 imm, FPRegisterID dest)
     {
         move(imm, scratchRegister());
         move32ToFloat(scratchRegister(), dest);
     }
 
-    void moveDouble(Imm64 imm, FPRegisterID dest)
+    void move64ToDouble(Imm64 imm, FPRegisterID dest)
     {
         move(imm, scratchRegister());
         move64ToDouble(scratchRegister(), dest);
     }
-#endif
-
-#if CPU(ARM64)
-    void moveFloat(Imm32 imm, FPRegisterID dest)
+#else
+    void move32ToFloat(Imm32 imm, FPRegisterID dest)
     {
-        move(imm, getCachedMemoryTempRegisterIDAndInvalidate());
-        move32ToFloat(getCachedMemoryTempRegisterIDAndInvalidate(), dest);
+        MacroAssemblerBase::move32ToFloat(imm.asTrustedImm32(), dest);
     }
 
-    void moveDouble(Imm64 imm, FPRegisterID dest)
+    void move64ToDouble(Imm64 imm, FPRegisterID dest)
     {
-        move(imm, getCachedMemoryTempRegisterIDAndInvalidate());
-        move64ToDouble(getCachedMemoryTempRegisterIDAndInvalidate(), dest);
+        MacroAssemblerBase::move64ToDouble(imm.asTrustedImm64(), dest);
     }
 #endif
 
@@ -2327,6 +2331,11 @@ public:
         lshift32(src, trustedImm32ForShift(amount), dest);
     }
 
+    void lshift32(Imm32 amount, RegisterID shiftAmount, RegisterID dest)
+    {
+        lshift32(amount.asTrustedImm32(), shiftAmount, dest);
+    }
+
     void rshift32(Imm32 imm, RegisterID dest)
     {
         rshift32(trustedImm32ForShift(imm), dest);
@@ -2337,6 +2346,11 @@ public:
         rshift32(src, trustedImm32ForShift(amount), dest);
     }
 
+    void rshift32(Imm32 amount, RegisterID shiftAmount, RegisterID dest)
+    {
+        rshift32(amount.asTrustedImm32(), shiftAmount, dest);
+    }
+
     void urshift32(Imm32 imm, RegisterID dest)
     {
         urshift32(trustedImm32ForShift(imm), dest);
@@ -2345,6 +2359,11 @@ public:
     void urshift32(RegisterID src, Imm32 amount, RegisterID dest)
     {
         urshift32(src, trustedImm32ForShift(amount), dest);
+    }
+
+    void urshift32(Imm32 amount, RegisterID shiftAmount, RegisterID dest)
+    {
+        urshift32(amount.asTrustedImm32(), shiftAmount, dest);
     }
 
     void mul32(TrustedImm32 imm, RegisterID src, RegisterID dest)
@@ -2407,11 +2426,10 @@ public:
     //
     // Note: this version of probe() should be implemented by the target specific
     // MacroAssembler.
-    void probe(Probe::Function, void* arg, SavedFPWidth = SavedFPWidth::DontSaveVectors);
+    void probe(Probe::Function, void* arg);
 
     // This leaks memory. Must not be used for production.
     JS_EXPORT_PRIVATE void probeDebug(Function<void(Probe::Context&)>);
-    JS_EXPORT_PRIVATE void probeDebugSIMD(Function<void(Probe::Context&)>);
 
     // Let's you print from your JIT generated code.
     // See comments in MacroAssemblerPrinter.h for examples of how to use this.
@@ -2471,3 +2489,5 @@ public:
 } // namespace JSC
 
 #endif // ENABLE(ASSEMBLER)
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

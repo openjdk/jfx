@@ -74,9 +74,11 @@ void generateToAir(Procedure& procedure)
         dataLog(tierName, "Initial B3:\n");
         dataLog(procedure);
     }
-
     // We don't require the incoming IR to have predecessors computed.
     procedure.resetReachability();
+
+    if (Options::dumpIonGraph()) [[unlikely]]
+        procedure.appendIonGraphPass("InitialCFG"_s);
 
     if (shouldValidateIR())
         validate(procedure);
@@ -104,10 +106,6 @@ void generateToAir(Procedure& procedure)
     // This puts the IR in quirks mode.
     lowerMacros(procedure);
 
-#if USE(JSVALUE32_64)
-    lowerInt64(procedure);
-#endif
-
     if (procedure.optLevel() >= 2) {
         optimizeAssociativeExpressionTrees(procedure);
         reduceStrength(procedure);
@@ -115,6 +113,9 @@ void generateToAir(Procedure& procedure)
         // FIXME: Add more optimizations here.
         // https://bugs.webkit.org/show_bug.cgi?id=150507
     }
+#if USE(JSVALUE32_64)
+    lowerInt64(procedure);
+#endif
 
     lowerMacrosAfterOptimizations(procedure);
     legalizeMemoryOffsets(procedure);

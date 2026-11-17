@@ -30,11 +30,15 @@
 #include "ScriptBuffer.h"
 #include "ServiceWorkerRegistrationKey.h"
 #include <pal/crypto/CryptoDigest.h>
+#include <wtf/FileHandle.h>
 #include <wtf/MainThread.h>
 #include <wtf/PageBlock.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/Base64.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SWScriptStorage);
 
 static bool shouldUseFileMapping(uint64_t fileSize)
 {
@@ -53,7 +57,7 @@ String SWScriptStorage::sha2Hash(const String& input) const
     auto crypto = PAL::CryptoDigest::create(PAL::CryptoDigest::Algorithm::SHA_256);
     crypto->addBytes(m_salt);
     auto inputUTF8 = input.utf8();
-    crypto->addBytes(inputUTF8.span());
+    crypto->addBytes(byteCast<uint8_t>(inputUTF8.span()));
     return base64URLEncodeToString(crypto->computeHash());
 }
 
@@ -69,7 +73,7 @@ String SWScriptStorage::saltPath() const
 
 String SWScriptStorage::registrationDirectory(const ServiceWorkerRegistrationKey& registrationKey) const
 {
-    return FileSystem::pathByAppendingComponents(m_directory, { sha2Hash(registrationKey.topOrigin().toString()), sha2Hash(registrationKey.scope()) });
+    return FileSystem::pathByAppendingComponents(m_directory, std::initializer_list<StringView>({ sha2Hash(registrationKey.topOrigin().toString()), sha2Hash(registrationKey.scope()) }));
 }
 
 String SWScriptStorage::scriptPath(const ServiceWorkerRegistrationKey& registrationKey, const URL& scriptURL) const
@@ -84,10 +88,10 @@ ScriptBuffer SWScriptStorage::store(const ServiceWorkerRegistrationKey& registra
     auto scriptPath = this->scriptPath(registrationKey, scriptURL);
     FileSystem::makeAllDirectories(FileSystem::parentPath(scriptPath));
 
-    size_t size = script.buffer() ? script.buffer()->size() : 0;
+    size_t size = script.size();
 
-    auto iterateOverBufferAndWriteData = [&](const Function<bool(std::span<const uint8_t>)>& writeData) {
-        script.buffer()->forEachSegment([&](std::span<const uint8_t> span) {
+    auto iterateOverBufferAndWriteData = [&](NOESCAPE const Function<bool(std::span<const uint8_t>)>& writeData) {
+        script.protectedBuffer()->forEachSegment([&](std::span<const uint8_t> span) {
             writeData(span);
         });
     };
@@ -97,26 +101,25 @@ ScriptBuffer SWScriptStorage::store(const ServiceWorkerRegistrationKey& registra
 
     if (!shouldUseFileMapping(size)) {
         auto handle = FileSystem::openFile(scriptPath, FileSystem::FileOpenMode::Truncate);
-        if (!FileSystem::isHandleValid(handle)) {
+        if (!handle) {
             RELEASE_LOG_ERROR(ServiceWorker, "SWScriptStorage::store: Failure to store %s, FileSystem::openFile() failed", scriptPath.utf8().data());
             return { };
         }
         if (size) {
         iterateOverBufferAndWriteData([&](std::span<const uint8_t> span) {
-                FileSystem::writeToFile(handle, span);
+                handle.write(span);
             return true;
         });
         }
-        FileSystem::closeFile(handle);
         return script;
     }
 
-    auto mappedFile = FileSystem::mapToFile(scriptPath, size, WTFMove(iterateOverBufferAndWriteData));
+    auto mappedFile = FileSystem::mapToFile(scriptPath, size, WTF::move(iterateOverBufferAndWriteData));
     if (!mappedFile) {
         RELEASE_LOG_ERROR(ServiceWorker, "SWScriptStorage::store: Failure to store %s, FileSystem::mapToFile() failed", scriptPath.utf8().data());
         return { };
     }
-    return ScriptBuffer { SharedBuffer::create(WTFMove(mappedFile)) };
+    return ScriptBuffer { SharedBuffer::create(WTF::move(mappedFile)) };
 }
 
 ScriptBuffer SWScriptStorage::retrieve(const ServiceWorkerRegistrationKey& registrationKey, const URL& scriptURL)
@@ -131,8 +134,10 @@ ScriptBuffer SWScriptStorage::retrieve(const ServiceWorkerRegistrationKey& regis
     }
 
     // FIXME: Do we need to disable file mapping in more cases to avoid having too many file descriptors open?
-    RefPtr<FragmentedSharedBuffer> buffer = SharedBuffer::createWithContentsOfFile(scriptPath, FileSystem::MappedFileMode::Private, shouldUseFileMapping(*fileSize) ? SharedBuffer::MayUseFileMapping::Yes : SharedBuffer::MayUseFileMapping::No);
-    return buffer;
+    RefPtr buffer = SharedBuffer::createWithContentsOfFile(scriptPath, FileSystem::MappedFileMode::Private, shouldUseFileMapping(*fileSize) ? SharedBuffer::MayUseFileMapping::Yes : SharedBuffer::MayUseFileMapping::No);
+    if (!buffer)
+        return { };
+    return ScriptBuffer { *buffer };
 }
 
 void SWScriptStorage::clear(const ServiceWorkerRegistrationKey& registrationKey)

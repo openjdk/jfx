@@ -60,13 +60,15 @@ ScrollingStatePluginScrollingNode::ScrollingStatePluginScrollingNode(
     MouseLocationState&& mouseLocationState,
     ScrollbarHoverState&& scrollbarHoverState,
     ScrollbarEnabledState&& scrollbarEnabledState,
+    std::optional<ScrollbarColor>&& scrollbarColor,
     UserInterfaceLayoutDirection scrollbarLayoutDirection,
     ScrollbarWidth scrollbarWidth,
+    bool useDarkAppearanceForScrollbars,
     RequestedKeyboardScrollData&& scrollData
 ) : ScrollingStateScrollingNode(
     ScrollingNodeType::PluginScrolling,
     scrollingNodeID,
-    WTFMove(children),
+    WTF::move(children),
     changedProperties,
     layerID,
     scrollableAreaSize,
@@ -74,12 +76,12 @@ ScrollingStatePluginScrollingNode::ScrollingStatePluginScrollingNode(
     reachableContentsSize,
     scrollPosition,
     scrollOrigin,
-    WTFMove(scrollableAreaParameters),
+    WTF::move(scrollableAreaParameters),
 #if ENABLE(SCROLLING_THREAD)
     synchronousScrollingReasons,
 #endif
-    WTFMove(requestedScrollData),
-    WTFMove(snapOffsetsInfo),
+    WTF::move(requestedScrollData),
+    WTF::move(snapOffsetsInfo),
     currentHorizontalSnapPointIndex,
     currentVerticalSnapPointIndex,
     isMonitoringWheelEvents,
@@ -88,12 +90,14 @@ ScrollingStatePluginScrollingNode::ScrollingStatePluginScrollingNode(
     horizontalScrollbarLayer,
     verticalScrollbarLayer,
     mouseIsOverContentArea,
-    WTFMove(mouseLocationState),
-    WTFMove(scrollbarHoverState),
-    WTFMove(scrollbarEnabledState),
+    WTF::move(mouseLocationState),
+    WTF::move(scrollbarHoverState),
+    WTF::move(scrollbarEnabledState),
+    WTF::move(scrollbarColor),
     scrollbarLayoutDirection,
     scrollbarWidth,
-    WTFMove(scrollData)
+    useDarkAppearanceForScrollbars,
+    WTF::move(scrollData)
 )
 {
     ASSERT(isPluginScrollingNode());
@@ -119,7 +123,7 @@ Ref<ScrollingStateNode> ScrollingStatePluginScrollingNode::clone(ScrollingStateT
 
 void ScrollingStatePluginScrollingNode::dumpProperties(TextStream& ts, OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const
 {
-    ts << "Plugin scrolling node";
+    ts << "Plugin scrolling node"_s;
 
     ScrollingStateScrollingNode::dumpProperties(ts, behavior);
 }

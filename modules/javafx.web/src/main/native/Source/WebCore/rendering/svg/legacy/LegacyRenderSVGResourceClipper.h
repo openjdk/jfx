@@ -19,20 +19,19 @@
 
 #pragma once
 
+#include "ImageBuffer.h"
 #include "LegacyRenderSVGResourceContainer.h"
 #include "SVGUnitTypes.h"
-
 #include <wtf/EnumeratedArray.h>
 #include <wtf/HashMap.h>
 
 namespace WebCore {
 
 class GraphicsContext;
-class ImageBuffer;
 class SVGClipPathElement;
 
 struct ClipperData {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(ClipperData);
 
     struct Inputs {
         bool operator==(const Inputs& other) const = default;
@@ -58,7 +57,7 @@ struct ClipperData {
 };
 
 class LegacyRenderSVGResourceClipper final : public LegacyRenderSVGResourceContainer {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(LegacyRenderSVGResourceClipper);
+    WTF_MAKE_TZONE_ALLOCATED(LegacyRenderSVGResourceClipper);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(LegacyRenderSVGResourceClipper);
 public:
     LegacyRenderSVGResourceClipper(SVGClipPathElement&, RenderStyle&&);
@@ -67,8 +66,8 @@ public:
     inline SVGClipPathElement& clipPathElement() const;
     inline Ref<SVGClipPathElement> protectedClipPathElement() const;
 
-    void removeAllClientsFromCacheIfNeeded(bool markForInvalidation, SingleThreadWeakHashSet<RenderObject>* visitedRenderers) override;
-    void removeClientFromCache(RenderElement&, bool markForInvalidation = true) override;
+    void removeAllClientsFromCache() override;
+    void removeClientFromCache(RenderElement&) override;
 
     OptionSet<ApplyResult> applyResource(RenderElement&, const RenderStyle&, GraphicsContext*&, OptionSet<RenderSVGResourceMode>) override;
 
@@ -87,7 +86,7 @@ public:
     inline SVGUnitTypes::SVGUnitType clipPathUnits() const;
 
 private:
-    bool selfNeedsClientInvalidation() const override { return (everHadLayout() || m_clipperMap.size()) && selfNeedsLayout(); }
+    bool selfNeedsClientInvalidation() const override { return (everHadLayout() || !m_clipperMap.isEmptyIgnoringNullReferences()) && selfNeedsLayout(); }
 
     void element() const = delete;
 
@@ -99,7 +98,7 @@ private:
     void calculateClipContentRepaintRect(RepaintRectCalculation);
 
     EnumeratedArray<RepaintRectCalculation, FloatRect, RepaintRectCalculation::Accurate> m_clipBoundaries;
-    HashMap<SingleThreadWeakRef<const RenderObject>, std::unique_ptr<ClipperData>> m_clipperMap;
+    WeakHashMap<const RenderObject, std::unique_ptr<ClipperData>, SingleThreadWeakPtrImpl> m_clipperMap;
 };
 
 }
@@ -107,4 +106,5 @@ private:
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::LegacyRenderSVGResourceClipper)
 static bool isType(const WebCore::RenderObject& renderer) { return renderer.isLegacyRenderSVGResourceClipper(); }
 static bool isType(const WebCore::LegacyRenderSVGResource& resource) { return resource.resourceType() == WebCore::ClipperResourceType; }
+static bool isType(const WebCore::LegacyRenderSVGResourceContainer& resource) { return resource.resourceType() == WebCore::ClipperResourceType; }
 SPECIALIZE_TYPE_TRAITS_END()

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -390,28 +390,6 @@ final class MonocleWindow extends Window {
     @Override
     protected void _ungrabFocus(long ptr) {
         MonocleWindowManager.getInstance().ungrabFocus(this);
-    }
-
-    /**
-     * The functions below are used when the platform support modality natively.
-     * Currently only GTK is using it. This functionality is disabled by
-     * default. In order to enable it this class need to override Window::
-     * supportsPlatformModality() to return true.
-     *
-     */
-    @Override
-    protected void _enterModal(long ptr) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    protected void _enterModalWithWindow(long dialog, long window) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    protected void _exitModal(long ptr) {
-        throw new UnsupportedOperationException();
     }
 
     @Override

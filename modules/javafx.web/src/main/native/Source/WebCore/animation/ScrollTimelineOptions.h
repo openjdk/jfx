@@ -25,13 +25,13 @@
 
 #pragma once
 
-#include "Element.h"
-#include "ScrollAxis.h"
+#include <WebCore/Element.h>
+#include <WebCore/ScrollAxis.h>
 
 namespace WebCore {
 
 struct ScrollTimelineOptions {
-    RefPtr<Element> source;
+    std::optional<RefPtr<Element>> source;
     ScrollAxis axis;
 };
 

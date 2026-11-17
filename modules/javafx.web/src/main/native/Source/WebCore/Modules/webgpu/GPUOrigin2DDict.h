@@ -27,7 +27,6 @@
 
 #include "GPUIntegralTypes.h"
 #include "WebGPUOrigin2D.h"
-#include <variant>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -45,7 +44,7 @@ struct GPUOrigin2DDict {
     GPUIntegerCoordinate y { 0 };
 };
 
-using GPUOrigin2D = std::variant<Vector<GPUIntegerCoordinate>, GPUOrigin2DDict>;
+using GPUOrigin2D = Variant<Vector<GPUIntegerCoordinate>, GPUOrigin2DDict>;
 
 inline WebGPU::Origin2D convertToBacking(const GPUOrigin2D& origin2D)
 {

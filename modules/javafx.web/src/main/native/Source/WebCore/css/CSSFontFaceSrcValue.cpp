@@ -27,6 +27,7 @@
 #include "CSSFontFaceSrcValue.h"
 
 #include "CSSMarkup.h"
+#include "CSSSerializationContext.h"
 #include "CachedFont.h"
 #include "CachedFontLoadRequest.h"
 #include "CachedResourceLoader.h"
@@ -41,14 +42,14 @@
 namespace WebCore {
 
 CSSFontFaceSrcLocalValue::CSSFontFaceSrcLocalValue(AtomString&& fontFaceName)
-    : CSSValue(FontFaceSrcLocalClass)
-    , m_fontFaceName(WTFMove(fontFaceName))
+    : CSSValue(ClassType::FontFaceSrcLocal)
+    , m_fontFaceName(WTF::move(fontFaceName))
 {
 }
 
 Ref<CSSFontFaceSrcLocalValue> CSSFontFaceSrcLocalValue::create(AtomString fontFaceName)
 {
-    return adoptRef(*new CSSFontFaceSrcLocalValue { WTFMove(fontFaceName) });
+    return adoptRef(*new CSSFontFaceSrcLocalValue { WTF::move(fontFaceName) });
 }
 
 CSSFontFaceSrcLocalValue::~CSSFontFaceSrcLocalValue() = default;
@@ -60,10 +61,10 @@ SVGFontFaceElement* CSSFontFaceSrcLocalValue::svgFontFaceElement() const
 
 void CSSFontFaceSrcLocalValue::setSVGFontFaceElement(SVGFontFaceElement& element)
 {
-    m_element = &element;
+    m_element = element;
 }
 
-String CSSFontFaceSrcLocalValue::customCSSText() const
+String CSSFontFaceSrcLocalValue::customCSSText(const CSS::SerializationContext&) const
 {
     return makeString("local("_s, serializeString(m_fontFaceName), ')');
 }
@@ -73,30 +74,29 @@ bool CSSFontFaceSrcLocalValue::equals(const CSSFontFaceSrcLocalValue& other) con
     return m_fontFaceName == other.m_fontFaceName;
 }
 
-CSSFontFaceSrcResourceValue::CSSFontFaceSrcResourceValue(ResolvedURL&& location, String&& format, Vector<FontTechnology>&& technologies, LoadedFromOpaqueSource source)
-    : CSSValue(FontFaceSrcResourceClass)
-    , m_location(WTFMove(location))
-    , m_format(WTFMove(format))
-    , m_technologies(WTFMove(technologies))
-    , m_loadedFromOpaqueSource(source)
+CSSFontFaceSrcResourceValue::CSSFontFaceSrcResourceValue(CSS::URL&& location, String&& format, Vector<FontTechnology>&& technologies)
+    : CSSValue(ClassType::FontFaceSrcResource)
+    , m_location(CSS::resolve(WTF::move(location)))
+    , m_format(WTF::move(format))
+    , m_technologies(WTF::move(technologies))
 {
 }
 
-Ref<CSSFontFaceSrcResourceValue> CSSFontFaceSrcResourceValue::create(ResolvedURL location, String format, Vector<FontTechnology>&& technologies, LoadedFromOpaqueSource source)
+Ref<CSSFontFaceSrcResourceValue> CSSFontFaceSrcResourceValue::create(CSS::URL location, String format, Vector<FontTechnology>&& technologies)
 {
-    return adoptRef(*new CSSFontFaceSrcResourceValue { WTFMove(location), WTFMove(format), WTFMove(technologies), source });
+    return adoptRef(*new CSSFontFaceSrcResourceValue { WTF::move(location), WTF::move(format), WTF::move(technologies) });
 }
 
-std::unique_ptr<FontLoadRequest> CSSFontFaceSrcResourceValue::fontLoadRequest(ScriptExecutionContext& context, bool isInitiatingElementInUserAgentShadowTree)
+RefPtr<FontLoadRequest> CSSFontFaceSrcResourceValue::fontLoadRequest(ScriptExecutionContext& context, bool isInitiatingElementInUserAgentShadowTree)
 {
     if (m_cachedFont)
-        return makeUnique<CachedFontLoadRequest>(*m_cachedFont, context);
+        return CachedFontLoadRequest::create(*m_cachedFont, context);
 
     bool isFormatSVG;
     if (m_format.isEmpty()) {
         // In order to avoid conflicts with the old WinIE style of font-face, if there is no format specified,
         // we check to see if the URL ends with .eot. We will not try to load those.
-        if (m_location.resolvedURL.lastPathComponent().endsWithIgnoringASCIICase(".eot"_s) && !m_location.resolvedURL.protocolIsData())
+        if (m_location.resolved.lastPathComponent().endsWithIgnoringASCIICase(".eot"_s) && !m_location.resolved.protocolIsData())
             return nullptr;
         isFormatSVG = false;
     } else {
@@ -112,48 +112,29 @@ std::unique_ptr<FontLoadRequest> CSSFontFaceSrcResourceValue::fontLoadRequest(Sc
         }
     }
 
-    auto request = context.fontLoadRequest(m_location.resolvedURL.string(), isFormatSVG, isInitiatingElementInUserAgentShadowTree, m_loadedFromOpaqueSource);
-    if (auto* cachedRequest = dynamicDowncast<CachedFontLoadRequest>(request.get()))
+    RefPtr request = context.fontLoadRequest(m_location.resolved.string(), isFormatSVG, isInitiatingElementInUserAgentShadowTree, m_location.modifiers.loadedFromOpaqueSource);
+    if (RefPtr cachedRequest = dynamicDowncast<CachedFontLoadRequest>(request.get()))
         m_cachedFont = &cachedRequest->cachedFont();
 
     return request;
 }
 
-bool CSSFontFaceSrcResourceValue::customTraverseSubresources(const Function<bool(const CachedResource&)>& handler) const
+bool CSSFontFaceSrcResourceValue::customTraverseSubresources(NOESCAPE const Function<bool(const CachedResource&)>& handler) const
 {
     return m_cachedFont && handler(*m_cachedFont);
 }
 
-void CSSFontFaceSrcResourceValue::customSetReplacementURLForSubresources(const HashMap<String, String>& replacementURLStrings)
-{
-    auto replacementURLString = replacementURLStrings.get(m_location.resolvedURL.string());
-    if (!replacementURLString.isNull())
-        m_replacementURLString = replacementURLString;
-    m_shouldUseResolvedURLInCSSText = true;
-}
-
-void CSSFontFaceSrcResourceValue::customClearReplacementURLForSubresources()
-{
-    m_replacementURLString = { };
-    m_shouldUseResolvedURLInCSSText = false;
-}
-
 bool CSSFontFaceSrcResourceValue::customMayDependOnBaseURL() const
 {
-    return WebCore::mayDependOnBaseURL(m_location);
+    return WebCore::CSS::mayDependOnBaseURL(m_location);
 }
 
-String CSSFontFaceSrcResourceValue::customCSSText() const
+String CSSFontFaceSrcResourceValue::customCSSText(const CSS::SerializationContext& context) const
 {
     StringBuilder builder;
-    if (!m_replacementURLString.isEmpty())
-        builder.append(serializeURL(m_replacementURLString));
-    else {
-        if (m_shouldUseResolvedURLInCSSText)
-            builder.append(serializeURL(m_location.resolvedURL.string()));
-    else
-    builder.append(serializeURL(m_location.specifiedURLString));
-    }
+
+    CSS::serializationForCSS(builder, context, m_location);
+
     if (!m_format.isEmpty())
         builder.append(" format("_s, serializeString(m_format), ')');
     if (!m_technologies.isEmpty()) {
@@ -165,6 +146,7 @@ String CSSFontFaceSrcResourceValue::customCSSText() const
         }
         builder.append(')');
     }
+
     return builder.toString();
 }
 
@@ -172,8 +154,7 @@ bool CSSFontFaceSrcResourceValue::equals(const CSSFontFaceSrcResourceValue& othe
 {
     return m_location == other.m_location
         && m_format == other.m_format
-        && m_technologies == other.m_technologies
-        && m_loadedFromOpaqueSource == other.m_loadedFromOpaqueSource;
+        && m_technologies == other.m_technologies;
 }
 
 }

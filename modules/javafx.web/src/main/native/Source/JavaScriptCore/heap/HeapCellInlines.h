@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "CellContainer.h"
-#include "HeapCell.h"
-#include "PreciseAllocation.h"
-#include "VM.h"
+#include <JavaScriptCore/CellContainer.h>
+#include <JavaScriptCore/HeapCell.h>
+#include <JavaScriptCore/PreciseAllocation.h>
+#include <JavaScriptCore/VM.h>
 
 namespace JSC {
 
@@ -95,6 +95,13 @@ ALWAYS_INLINE Subspace* HeapCell::subspace() const
     if (isPreciseAllocation())
         return preciseAllocation().subspace();
     return markedBlock().subspace();
+}
+
+ALWAYS_INLINE void HeapCell::notifyNeedsDestruction() const
+{
+    ASSERT(!isPreciseAllocation());
+    ASSERT(destructionMode() == MayNeedDestruction);
+    markedBlock().handle().setIsDestructible(true);
 }
 
 } // namespace JSC

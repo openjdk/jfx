@@ -28,6 +28,7 @@
 
 G_BEGIN_DECLS
 
+#ifndef GSTREAMER_LITE
 GLIB_AVAILABLE_IN_ALL
 gboolean  g_hostname_is_non_ascii     (const gchar *hostname);
 GLIB_AVAILABLE_IN_ALL
@@ -39,6 +40,7 @@ GLIB_AVAILABLE_IN_ALL
 gchar    *g_hostname_to_ascii         (const gchar *hostname);
 GLIB_AVAILABLE_IN_ALL
 gchar    *g_hostname_to_unicode       (const gchar *hostname);
+#endif // GSTREAMER_LITE
 
 G_END_DECLS
 

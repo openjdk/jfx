@@ -29,6 +29,7 @@
 #include "LayoutRect.h"
 #include "PageOverlay.h"
 #include <wtf/OptionSet.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakPtr.h>
 
@@ -58,12 +59,21 @@ class ImageOverlayController final : private PageOverlayClient
     , DataDetectorHighlightClient
 #endif
 {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ImageOverlayController);
 public:
     explicit ImageOverlayController(Page&);
 
     void selectionQuadsDidChange(LocalFrame&, const Vector<FloatQuad>&);
     void elementUnderMouseDidChange(LocalFrame&, Element*);
+
+#if PLATFORM(MAC)
+    // DataDetectorHighlightClient.
+    void ref() const final;
+    void deref() const final;
+#else
+    void ref() const;
+    void deref() const;
+#endif
 
 #if ENABLE(DATA_DETECTION)
     WEBCORE_EXPORT bool hasActiveDataDetectorHighlightForTesting() const;
@@ -101,10 +111,10 @@ private:
     void platformUpdateElementUnderMouse(LocalFrame&, Element* elementUnderMouse);
     bool platformHandleMouseEvent(const PlatformMouseEvent&);
 
-    RefPtr<Page> protectedPage() const;
+    Ref<Page> protectedPage() const;
     RefPtr<PageOverlay> protectedOverlay() const { return m_overlay; }
 
-    WeakPtr<Page> m_page;
+    WeakRef<Page> m_page;
     RefPtr<PageOverlay> m_overlay;
     WeakPtr<HTMLElement, WeakPtrImplWithEventTargetData> m_hostElementForSelection;
     Vector<FloatQuad> m_selectionQuads;

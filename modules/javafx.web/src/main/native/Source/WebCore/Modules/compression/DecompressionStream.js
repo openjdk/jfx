@@ -27,12 +27,12 @@ function initializeDecompressionStream(format)
 {
     "use strict";
 
-    const errorMessage = "DecompressionStream requires a single argument with the value 'deflate', 'deflate-raw', or 'gzip'.";
+    const errorMessage = "DecompressionStream requires a single argument with the value 'brotli', 'deflate', 'deflate-raw', or 'gzip'.";
 
     if (arguments.length < 1)
         @throwTypeError(errorMessage);
 
-    const algorithms = ['gzip', 'deflate', 'deflate-raw'];
+    const algorithms = ['brotli', 'gzip', 'deflate', 'deflate-raw'];
     const lowercaseFormat = @toString(arguments[0]).toLowerCase();
     const findAlgorithm = (element) => element === lowercaseFormat;
 
@@ -45,11 +45,11 @@ function initializeDecompressionStream(format)
 
     // Setup Transform and Flush Algorithms
     const startAlgorithm = () => {
-        return @Promise.@resolve();
+        return @promiseResolve(@Promise, @undefined);
     };
     const transformAlgorithm = (chunk) => {
         if (!@isObject(chunk) || (!(chunk instanceof @ArrayBuffer) && !(chunk.buffer instanceof @ArrayBuffer)))
-            return @Promise.@reject(@makeTypeError("Invalid type should be ArrayBuffer"));
+            return @promiseReject(@Promise, @makeTypeError("Invalid type should be ArrayBuffer"));
 
         try {
             const decoder = @getByIdDirectPrivate(this, "DecompressionStreamDecoder");
@@ -61,10 +61,10 @@ function initializeDecompressionStream(format)
                 @transformStreamDefaultControllerEnqueue(controller, buffer);
             }
         } catch (e) {
-            return @Promise.@reject(@makeTypeError(e.message));
+            return @promiseReject(@Promise, @makeTypeError(e.message));
         }
 
-        return @Promise.@resolve();
+        return @promiseResolve(@Promise, @undefined);
     };
     const flushAlgorithm = () => {
         try {
@@ -77,10 +77,10 @@ function initializeDecompressionStream(format)
             @transformStreamDefaultControllerEnqueue(controller, buffer);
         }
         } catch (e) {
-            return @Promise.@reject(@makeTypeError(e.message));
+            return @promiseReject(@Promise, @makeTypeError(e.message));
         }
 
-        return @Promise.@resolve();
+        return @promiseResolve(@Promise, @undefined);
     };
 
     const [transform, readable, writable] = @createTransformStream(startAlgorithm, transformAlgorithm, flushAlgorithm);

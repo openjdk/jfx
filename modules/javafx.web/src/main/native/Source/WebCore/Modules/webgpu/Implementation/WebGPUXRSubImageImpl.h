@@ -37,11 +37,11 @@ namespace WebCore::WebGPU {
 class ConvertToBackingContext;
 
 class XRSubImageImpl final : public XRSubImage {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(XRSubImageImpl);
 public:
     static Ref<XRSubImageImpl> create(WebGPUPtr<WGPUXRSubImage>&& backing, ConvertToBackingContext& convertToBackingContext)
     {
-        return adoptRef(*new XRSubImageImpl(WTFMove(backing), convertToBackingContext));
+        return adoptRef(*new XRSubImageImpl(WTF::move(backing), convertToBackingContext));
     }
 
     virtual ~XRSubImageImpl();
@@ -55,13 +55,21 @@ private:
     XRSubImageImpl(XRSubImageImpl&&) = delete;
     XRSubImageImpl& operator=(const XRSubImageImpl&) = delete;
     XRSubImageImpl& operator=(XRSubImageImpl&&) = delete;
+    RefPtr<Texture> colorTexture() final;
+    RefPtr<Texture> depthStencilTexture() final;
+    RefPtr<Texture> motionVectorTexture() final;
 
     WGPUXRSubImage backing() const { return m_backing.get(); }
+    bool isXRSubImageImpl() const final { return true; }
 
     WebGPUPtr<WGPUXRSubImage> m_backing;
-    Ref<ConvertToBackingContext> m_convertToBackingContext;
+    const Ref<ConvertToBackingContext> m_convertToBackingContext;
 };
 
 } // namespace WebCore::WebGPU
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WebGPU::XRSubImageImpl)
+    static bool isType(const WebCore::WebGPU::XRSubImage& xrSubImage) { return xrSubImage.isXRSubImageImpl(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // HAVE(WEBGPU_IMPLEMENTATION)

@@ -26,30 +26,44 @@
 #include "config.h"
 #include "WakeLockManager.h"
 
+#include "ContextDestructionObserverInlines.h"
 #include "Document.h"
 #include "SleepDisabler.h"
 #include "VisibilityState.h"
 #include "WakeLockSentinel.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WakeLockManager);
 
 WakeLockManager::WakeLockManager(Document& document)
     : m_document(document)
 {
-    m_document.registerForVisibilityStateChangedCallbacks(*this);
+    m_document->registerForVisibilityStateChangedCallbacks(*this);
 }
 
 WakeLockManager::~WakeLockManager()
 {
-    m_document.unregisterForVisibilityStateChangedCallbacks(*this);
+    m_document->unregisterForVisibilityStateChangedCallbacks(*this);
+}
+
+void WakeLockManager::ref() const
+{
+    m_document->ref();
+}
+
+void WakeLockManager::deref() const
+{
+    m_document->deref();
 }
 
 void WakeLockManager::addWakeLock(Ref<WakeLockSentinel>&& lock, std::optional<PageIdentifier> pageID)
 {
     auto type = lock->type();
-    auto& locks = m_wakeLocks.ensure(type, [] { return Vector<RefPtr<WakeLockSentinel>>(); }).iterator->value;
+    auto& locks = m_wakeLocks.ensure(type, [] { return Vector<Ref<WakeLockSentinel>>(); }).iterator->value;
     ASSERT(!locks.contains(lock.ptr()));
-    locks.append(WTFMove(lock));
+    locks.append(WTF::move(lock));
 
     if (locks.size() != 1)
         return;
@@ -84,7 +98,7 @@ void WakeLockManager::removeWakeLock(WakeLockSentinel& lock)
 // https://www.w3.org/TR/screen-wake-lock/#handling-document-loss-of-visibility
 void WakeLockManager::visibilityStateChanged()
 {
-    if (m_document.visibilityState() != VisibilityState::Hidden)
+    if (m_document->visibilityState() != VisibilityState::Hidden)
         return;
 
     releaseAllLocks(WakeLockType::Screen);
@@ -98,7 +112,7 @@ void WakeLockManager::releaseAllLocks(WakeLockType type)
 
     auto& locks = it->value;
     while (!locks.isEmpty()) {
-        RefPtr lock = *locks.begin();
+        Ref lock = *locks.begin();
         lock->release(*this);
     }
 }

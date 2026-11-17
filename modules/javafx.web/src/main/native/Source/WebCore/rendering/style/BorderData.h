@@ -4,6 +4,7 @@
  *           (C) 2000 Dirk Mueller (mueller@kde.org)
  * Copyright (C) 2003, 2005, 2006, 2007, 2008 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Graham Dennis (graham.dennis@gmail.com)
+ * Copyright (C) 2025-2026 Samuel Weinig <sam@webkit.org>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -24,123 +25,114 @@
 
 #pragma once
 
-#include "BorderValue.h"
-#include "LengthSize.h"
-#include "NinePieceImage.h"
+#include <WebCore/BorderValue.h>
+#include <WebCore/RectCorners.h>
+#include <WebCore/RectEdges.h>
+#include <WebCore/StyleBorderImageData.h>
+#include <WebCore/StyleBorderRadius.h>
+#include <WebCore/StyleCornerShapeValue.h>
+#include <wtf/DataRef.h>
 
 namespace WebCore {
 
-class OutlineValue;
+using namespace CSS::Literals;
 
-struct BorderDataRadii {
-    LengthSize topLeft { LengthType::Fixed, LengthType::Fixed };
-    LengthSize topRight { LengthType::Fixed, LengthType::Fixed };
-    LengthSize bottomLeft { LengthType::Fixed, LengthType::Fixed };
-    LengthSize bottomRight { LengthType::Fixed, LengthType::Fixed };
+struct BorderData {
+    using Radii = Style::BorderRadius;
 
-    friend bool operator==(const BorderDataRadii&, const BorderDataRadii&) = default;
-};
-
-class BorderData {
-friend class RenderStyle;
-public:
-    using Radii = BorderDataRadii;
+    BorderData();
 
     bool hasBorder() const
     {
-        return m_left.nonZero() || m_right.nonZero() || m_top.nonZero() || m_bottom.nonZero();
+        return edges.anyOf([](const auto& edge) { return edge.nonZero(); });
     }
 
     bool hasVisibleBorder() const
     {
-        return m_left.isVisible() || m_right.isVisible() || m_top.isVisible() || m_bottom.isVisible();
+        return edges.anyOf([](const auto& edge) { return edge.isVisible(); });
     }
 
     bool hasBorderImage() const
     {
-        return m_image.hasImage();
+        return !borderImage->borderImage.borderImageSource.isNone();
     }
 
     bool hasBorderRadius() const
     {
-        return !m_radii.topLeft.isEmpty()
-            || !m_radii.topRight.isEmpty()
-            || !m_radii.bottomLeft.isEmpty()
-            || !m_radii.bottomRight.isEmpty();
+        return radii.anyOf([](auto& corner) { return !Style::isKnownEmpty(corner); });
     }
 
-    float borderLeftWidth() const
-    {
-        if (m_left.style() == BorderStyle::None || m_left.style() == BorderStyle::Hidden)
-            return 0;
-        if (m_image.overridesBorderWidths() && m_image.borderSlices().left().isFixed())
-            return m_image.borderSlices().left().value();
-        return m_left.width();
-    }
+    // `BorderEdgesView` provides a `RectEdges`-like interface for efficiently working with
+    // the values stored in `BorderValue` by edge. This allows `Style::ComputedStyle` code
+    // generation to work as if the `border-{edge}-*`properties were stored in a `RectEdges`,
+    // while instead storing them grouped together by edge in `BorderValue``.
+    template<bool isConst, template<BoxSide> typename Accessor, typename GetterType, typename SetterType = GetterType>
+    using BorderEdgesView = RectEdgesView<isConst, BorderData, Accessor, GetterType, SetterType>;
 
-    float borderRightWidth() const
-    {
-        if (m_right.style() == BorderStyle::None || m_right.style() == BorderStyle::Hidden)
-            return 0;
-        if (m_image.overridesBorderWidths() && m_image.borderSlices().right().isFixed())
-            return m_image.borderSlices().right().value();
-        return m_right.width();
-    }
+    template<BoxSide side> struct WidthAccessor {
+        static const Style::LineWidth& get(const BorderData& data) { return data.edges[side].width; }
+        static void set(BorderData& data, Style::LineWidth&& width) { data.edges[side].width = WTF::move(width); }
+    };
+    template<bool isConst> using BorderWidthsView = BorderEdgesView<isConst, WidthAccessor, const Style::LineWidth&, Style::LineWidth&&>;
+    BorderWidthsView<false> widths() { return { .data = *this }; }
+    BorderWidthsView<true> widths() const { return { .data = *this }; }
 
-    float borderTopWidth() const
-    {
-        if (m_top.style() == BorderStyle::None || m_top.style() == BorderStyle::Hidden)
-            return 0;
-        if (m_image.overridesBorderWidths() && m_image.borderSlices().top().isFixed())
-            return m_image.borderSlices().top().value();
-        return m_top.width();
-    }
+    template<BoxSide side> struct ColorAccessor {
+        static const Style::Color& get(const BorderData& data) { return data.edges[side].color; }
+        static void set(BorderData& data, Style::Color&& color) { data.edges[side].color = WTF::move(color); }
+    };
+    template<bool isConst> using BorderColorsView = BorderEdgesView<isConst, ColorAccessor, const Style::Color&, Style::Color&&>;
+    BorderColorsView<false> colors() { return { .data = *this }; }
+    BorderColorsView<true> colors() const { return { .data = *this }; }
 
-    float borderBottomWidth() const
-    {
-        if (m_bottom.style() == BorderStyle::None || m_bottom.style() == BorderStyle::Hidden)
-            return 0;
-        if (m_image.overridesBorderWidths() && m_image.borderSlices().bottom().isFixed())
-            return m_image.borderSlices().bottom().value();
-        return m_bottom.width();
-    }
+    template<BoxSide side> struct StyleAccessor {
+        static unsigned get(const BorderData& data) { return data.edges[side].style; }
+        static void set(BorderData& data, unsigned style) { data.edges[side].style = style; }
+    };
+    template<bool isConst> using BorderStylesView = BorderEdgesView<isConst, StyleAccessor, unsigned>;
+    BorderStylesView<false> styles() { return { .data = *this }; }
+    BorderStylesView<true> styles() const { return { .data = *this }; }
 
-    FloatBoxExtent borderWidth() const
-    {
-        return FloatBoxExtent(borderTopWidth(), borderRightWidth(), borderBottomWidth(), borderLeftWidth());
-    }
+    BorderValue& left() { return edges.left(); }
+    BorderValue& right() { return edges.right(); }
+    BorderValue& top() { return edges.top(); }
+    BorderValue& bottom() { return edges.bottom(); }
 
-    bool isEquivalentForPainting(const BorderData& other, bool currentColorDiffers) const;
+    const BorderValue& left() const { return edges.left(); }
+    const BorderValue& right() const { return edges.right(); }
+    const BorderValue& top() const { return edges.top(); }
+    const BorderValue& bottom() const { return edges.bottom(); }
 
-    friend bool operator==(const BorderData&, const BorderData&) = default;
+    Style::BorderRadiusValue& topLeftRadius() { return radii.topLeft(); }
+    Style::BorderRadiusValue& topRightRadius() { return radii.topRight(); }
+    Style::BorderRadiusValue& bottomLeftRadius() { return radii.bottomLeft(); }
+    Style::BorderRadiusValue& bottomRightRadius() { return radii.bottomRight(); }
 
-    const BorderValue& left() const { return m_left; }
-    const BorderValue& right() const { return m_right; }
-    const BorderValue& top() const { return m_top; }
-    const BorderValue& bottom() const { return m_bottom; }
+    const Style::BorderRadiusValue& topLeftRadius() const { return radii.topLeft(); }
+    const Style::BorderRadiusValue& topRightRadius() const { return radii.topRight(); }
+    const Style::BorderRadiusValue& bottomLeftRadius() const { return radii.bottomLeft(); }
+    const Style::BorderRadiusValue& bottomRightRadius() const { return radii.bottomRight(); }
 
-    const NinePieceImage& image() const { return m_image; }
+    const Style::CornerShapeValue& topLeftCornerShape() const { return cornerShapes.topLeft(); }
+    const Style::CornerShapeValue& topRightCornerShape() const { return cornerShapes.topRight(); }
+    const Style::CornerShapeValue& bottomLeftCornerShape() const { return cornerShapes.bottomLeft(); }
+    const Style::CornerShapeValue& bottomRightCornerShape() const { return cornerShapes.bottomRight(); }
 
-    const LengthSize& topLeftRadius() const { return m_radii.topLeft; }
-    const LengthSize& topRightRadius() const { return m_radii.topRight; }
-    const LengthSize& bottomLeftRadius() const { return m_radii.bottomLeft; }
-    const LengthSize& bottomRightRadius() const { return m_radii.bottomRight; }
+    bool containsCurrentColor() const;
+
+    bool operator==(const BorderData&) const = default;
 
     void dump(TextStream&, DumpStyleValues = DumpStyleValues::All) const;
+#if !LOG_DISABLED
+    void dumpDifferences(TextStream&, const BorderData&) const;
+#endif
 
-private:
-    BorderValue m_left;
-    BorderValue m_right;
-    BorderValue m_top;
-    BorderValue m_bottom;
-
-    NinePieceImage m_image;
-
-    Radii m_radii;
+    RectEdges<BorderValue> edges;
+    Style::BorderRadius radii { Style::BorderRadiusValue { 0_css_px, 0_css_px } };
+    Style::CornerShape cornerShapes { Style::CornerShapeValue(CSS::Keyword::Round { }) };
+    DataRef<Style::BorderImageData> borderImage;
 };
 
-WTF::TextStream& operator<<(WTF::TextStream&, const BorderValue&);
-WTF::TextStream& operator<<(WTF::TextStream&, const OutlineValue&);
 WTF::TextStream& operator<<(WTF::TextStream&, const BorderData&);
 
 } // namespace WebCore

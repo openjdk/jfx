@@ -146,7 +146,7 @@ static const int AVCODEC_LIBAV_EXPLICIT_VERSIONS[] = { 54, 56 };
 // For ffmpeg (libavcodec-ffmpeg.so)
 static const int AVCODEC_FFMPEG_EXPLICIT_VERSIONS[] = { 56 };
 // For libav or ffmpeg (libavcodec.so)
-static const int AVCODEC_EXPLICIT_VERSIONS[] = { 57, 58, 59, 60, 61 };
+static const int AVCODEC_EXPLICIT_VERSIONS[] = { 57, 58, 59, 60, 61, 62 };
 
 /*
  * Callback passed to dl_iterate_phdr(): finds the path of
@@ -186,6 +186,15 @@ static int dl_callback (struct dl_phdr_info *info, size_t size, void *data)
 # define GST_REGISTRY_FILE_SUFFIX TARGET_CPU
 #endif
 #define GST_REGISTRY_FILE_NAME "registry." GST_REGISTRY_FILE_SUFFIX ".bin"
+
+#ifdef G_OS_WIN32
+#define GST_MODULE_SUFFIX ".dll"
+#else
+#define GST_MODULE_SUFFIX ".so"
+#ifdef __APPLE__
+#define GST_EXTRA_MODULE_SUFFIX ".dylib"
+#endif
+#endif
 
 
 #define GST_CAT_DEFAULT GST_CAT_REGISTRY
@@ -717,9 +726,9 @@ gst_registry_remove_feature (GstRegistry * registry, GstPluginFeature * feature)
 /**
  * gst_registry_plugin_filter:
  * @registry: registry to query
- * @filter: (scope call): the filter to use
+ * @filter: (scope call) (closure user_data): the filter to use
  * @first: only return first match
- * @user_data: (closure): user data passed to the filter function
+ * @user_data: user data passed to the filter function
  *
  * Runs a filter against all plugins in the registry and returns a #GList with
  * the results. If the first flag is set, only the first match is
@@ -897,9 +906,9 @@ gst_registry_get_device_provider_factory_list (GstRegistry * registry)
 /**
  * gst_registry_feature_filter:
  * @registry: registry to query
- * @filter: (scope call): the filter to use
+ * @filter: (scope call) (closure user_data): the filter to use
  * @first: only return first match
- * @user_data: (closure): user data passed to the filter function
+ * @user_data: user data passed to the filter function
  *
  * Runs a filter against all features of the plugins in the registry
  * and returns a GList with the results.
@@ -1308,6 +1317,15 @@ skip_directory (const gchar * parent_path, const gchar * dirent)
   if (strcmp (dirent, "gst-integration-testsuites") == 0)
     return TRUE;
 
+  /* skip the directories ending in .dSYM, these contain mach-o files with
+   * only debugging sections */
+  if (g_str_has_suffix (dirent, ".dSYM"))
+    return TRUE;
+
+  /* skip any stray directories when its parent is a .dSYM bundle */
+  if (parent_path != NULL && g_str_has_suffix (parent_path, ".dSYM"))
+    return TRUE;
+
   /* Rust build dirs which may contain artefacts we should skip, can be
    * /target/{debug,release} or /target/{arch}/{debug,release} */
   target = strstr (parent_path, "/target/");
@@ -1334,6 +1352,7 @@ skip_directory (const gchar * parent_path, const gchar * dirent)
     }
   }
 
+  /* Any non-dot directories can be indexed now */
   if (G_LIKELY (dirent[0] != '.'))
     return FALSE;
 
@@ -1445,7 +1464,7 @@ gst_registry_scan_path_level (GstRegistryScanContext * context,
       g_free (filename);
       continue;
     }
-    if (!g_str_has_suffix (dirent, "." G_MODULE_SUFFIX)
+    if (!g_str_has_suffix (dirent, GST_MODULE_SUFFIX)
 #ifdef GST_EXTRA_MODULE_SUFFIX
         && !g_str_has_suffix (dirent, GST_EXTRA_MODULE_SUFFIX)
 #endif

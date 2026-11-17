@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "CPU.h"
+#include <JavaScriptCore/CPU.h>
 #include <wtf/StdLibExtras.h>
 
 namespace JSC {
@@ -94,8 +94,8 @@ inline void decodeResult(UGPRPair result, size_t& a, size_t& b)
 {
     UGPRPairEncoding u;
     u.i = result;
-    a = bitwise_cast<size_t>(u.pair.a);
-    b = bitwise_cast<size_t>(u.pair.b);
+    a = std::bit_cast<size_t>(u.pair.a);
+    b = std::bit_cast<size_t>(u.pair.b);
 }
 
 #endif // USE(JSVALUE32_64)

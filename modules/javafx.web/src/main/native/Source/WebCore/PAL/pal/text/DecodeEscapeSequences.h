@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2011 Daniel Bates (dbates@intudata.com). All Rights Reserved.
- * Copyright (c) 2012 Google, inc.  All Rights Reserved.
+ * Copyright (C) 2011 Daniel Bates (dbates@intudata.com). All rights reserved.
+ * Copyright (c) 2012 Google, inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -60,7 +60,7 @@ struct Unicode16BitEscapeSequence {
         StringBuilder builder;
         builder.reserveCapacity(numberOfSequences);
         while (numberOfSequences--) {
-            UChar codeUnit = (toASCIIHexValue(run[2]) << 12) | (toASCIIHexValue(run[3]) << 8) | (toASCIIHexValue(run[4]) << 4) | toASCIIHexValue(run[5]);
+            char16_t codeUnit = (toASCIIHexValue(run[2]) << 12) | (toASCIIHexValue(run[3]) << 8) | (toASCIIHexValue(run[4]) << 4) | toASCIIHexValue(run[5]);
             builder.append(codeUnit);
             run = run.substring(SequenceSize);
         }
@@ -102,18 +102,17 @@ struct URLEscapeSequence {
         // a valid escape sequence, but there may be characters between the sequences.
         Vector<uint8_t, 512> buffer;
         buffer.grow(run.length()); // Unescaping hex sequences only makes the length smaller.
-        uint8_t* p = buffer.data();
+        size_t bufferIndex = 0;
         while (!run.isEmpty()) {
             if (run[0] == '%') {
-                *p++ = (toASCIIHexValue(run[1]) << 4) | toASCIIHexValue(run[2]);
+                buffer[bufferIndex++] = (toASCIIHexValue(run[1]) << 4) | toASCIIHexValue(run[2]);
                 run = run.substring(SequenceSize);
             } else {
-                *p++ = run[0];
+                buffer[bufferIndex++] = run[0];
                 run = run.substring(1);
             }
         }
-        ASSERT(buffer.size() >= static_cast<size_t>(p - buffer.data())); // Prove buffer not overrun.
-        buffer.shrink(p - buffer.data());
+        buffer.shrink(bufferIndex);
         return buffer;
     }
 
@@ -186,4 +185,3 @@ inline Vector<uint8_t> decodeURLEscapeSequencesAsData(StringView string)
 }
 
 } // namespace PAL
-

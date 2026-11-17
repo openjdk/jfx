@@ -40,7 +40,7 @@ template<typename T> void deleteObject(T);
 
 template<typename T> class GDIObject {
     WTF_MAKE_NONCOPYABLE(GDIObject);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(GDIObject);
 public:
     GDIObject() : m_object(0) { }
     GDIObject(std::nullptr_t) : m_object(0) { }
@@ -49,7 +49,7 @@ public:
     T get() const { return m_object; }
 
     void clear();
-    T leak() WARN_UNUSED_RETURN;
+    [[nodiscard]] T leak();
 
     bool operator!() const { return !m_object; }
 
@@ -97,7 +97,7 @@ template<typename T> inline GDIObject<T>::GDIObject(GDIObject<T>&& other)
 
 template<typename T> inline GDIObject<T>& GDIObject<T>::operator=(GDIObject<T>&& other)
 {
-    auto object = WTFMove(other);
+    auto object = WTF::move(other);
     swap(object);
     return *this;
 }

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -30,93 +31,57 @@
 
 #pragma once
 
-#include "FileStreamClient.h"
-#include "ResourceHandle.h"
-#include <wtf/Vector.h>
-#include <wtf/text/WTFString.h>
+#include <WebCore/BlobResourceHandleBase.h>
+#include <WebCore/ResourceHandle.h>
 
 namespace WebCore {
 
-class AsyncFileStream;
-class BlobData;
-class FileStream;
 class ResourceHandleClient;
-class ResourceRequest;
-class BlobDataItem;
 
-class BlobResourceHandle final : public FileStreamClient, public ResourceHandle  {
+class BlobResourceHandle final : public BlobResourceHandleBase, public ResourceHandle  {
 public:
     static Ref<BlobResourceHandle> createAsync(BlobData*, const ResourceRequest&, ResourceHandleClient*);
 
     static void loadResourceSynchronously(BlobData*, const ResourceRequest&, ResourceError&, ResourceResponse&, Vector<uint8_t>& data);
 
-    void start();
+    using BlobResourceHandleBase::start;
     int readSync(std::span<uint8_t>);
 
     bool aborted() const { return m_aborted; }
 
-    enum class Error {
-        NoError = 0,
-        NotFoundError = 1,
-        SecurityError = 2,
-        RangeError = 3,
-        NotReadableError = 4,
-        MethodNotAllowed = 5
-    };
+    bool isBlobResourceHandle() const final { return true; }
+
+    // FileStreamClient.
+    void ref() const final { ResourceHandle::ref(); }
+    void deref() const final { ResourceHandle::deref(); }
 
 private:
     BlobResourceHandle(BlobData*, const ResourceRequest&, ResourceHandleClient*, bool async);
     virtual ~BlobResourceHandle();
 
-    // FileStreamClient methods.
-    void didGetSize(long long) override;
-    void didOpen(bool) override;
-    void didRead(int) override;
-
     // ResourceHandle methods.
-    void cancel() override;
+    void cancel() final;
+
+    // BlobResourceHandleBase.
+    bool didReceiveData(std::span<const uint8_t>) final;
+    void didReceiveResponse(ResourceResponse&&) final;
+    void didFail(Error) final;
+    bool erroredOrAborted() const final { return m_aborted || m_errorCode != Error::NoError; }
+    bool shouldAbortDispatchDidReceiveResponse() final;
+    void didFinish() final;
+    const ResourceRequest& firstRequest() const final { return ResourceHandle::firstRequest(); }
 
     void doStart();
-    void getSizeForNext();
-    std::optional<Error> seek();
-    void consumeData(std::span<const uint8_t>);
-    void failed(Error);
-
-    void readAsync();
-    void readDataAsync(const BlobDataItem&);
-    void readFileAsync(const BlobDataItem&);
 
     int readDataSync(const BlobDataItem&, std::span<uint8_t>);
     int readFileSync(const BlobDataItem&, std::span<uint8_t>);
 
-    void notifyResponse();
-    void notifyResponseOnSuccess();
-    void notifyResponseOnError();
-    void notifyReceiveData(std::span<const uint8_t>);
-    void notifyFail(Error);
-    void notifyFinish();
-
-    bool erroredOrAborted() const { return m_aborted || m_errorCode != Error::NoError; }
-
-    enum { kPositionNotSpecified = -1 };
-
-    RefPtr<BlobData> m_blobData;
-    bool m_async;
-    std::unique_ptr<AsyncFileStream> m_asyncStream; // For asynchronous loading.
-    std::unique_ptr<FileStream> m_stream; // For synchronous loading.
-    Vector<uint8_t> m_buffer;
-    Vector<long long> m_itemLengthList;
     Error m_errorCode { Error::NoError };
     bool m_aborted { false };
-    bool m_isRangeRequest { false };
-    long long m_rangeStart { kPositionNotSpecified };
-    long long m_rangeEnd { kPositionNotSpecified };
-    long long m_totalSize { 0 };
-    long long m_totalRemainingSize { 0 };
-    long long m_currentItemReadSize { 0 };
-    unsigned m_sizeItemCount { 0 };
-    unsigned m_readItemCount { 0 };
-    bool m_fileOpened { false };
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::BlobResourceHandle)
+    static bool isType(const WebCore::ResourceHandle& handle) { return handle.isBlobResourceHandle(); }
+SPECIALIZE_TYPE_TRAITS_END()

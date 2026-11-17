@@ -28,6 +28,7 @@
     ExportMacro=WEBCORE_EXPORT,
     JSGenerateToJSObject,
     JSGenerateToNativeObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary ApplePayDeferredPaymentRequest {
     DOMString billingAgreement;
     required ApplePayLineItem deferredBilling; // must be `paymentTiming: "deferred"

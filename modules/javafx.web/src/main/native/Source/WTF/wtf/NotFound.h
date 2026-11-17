@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include <cstddef>
+
 namespace WTF {
 
 constexpr size_t notFound = static_cast<size_t>(-1);

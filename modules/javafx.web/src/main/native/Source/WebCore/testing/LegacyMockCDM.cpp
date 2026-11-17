@@ -34,14 +34,25 @@
 #include <JavaScriptCore/JSCInlines.h>
 #include <JavaScriptCore/TypedArrayInlines.h>
 #include <JavaScriptCore/Uint8Array.h>
+#include <wtf/RefCounted.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-class MockCDMSession : public LegacyCDMSession {
-    WTF_MAKE_FAST_ALLOCATED;
+WTF_MAKE_TZONE_ALLOCATED_IMPL(LegacyMockCDM);
+
+class MockCDMSession : public LegacyCDMSession, public RefCounted<MockCDMSession> {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(MockCDMSession);
 public:
-    MockCDMSession(LegacyCDMSessionClient&);
+    static Ref<MockCDMSession> create(LegacyCDMSessionClient& client)
+    {
+        return adoptRef(*new MockCDMSession(client));
+    }
+
     virtual ~MockCDMSession() = default;
+
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     const String& sessionId() const override { return m_sessionId; }
     RefPtr<Uint8Array> generateKeyRequest(const String& mimeType, Uint8Array* initData, String& destinationURL, unsigned short& errorCode, uint32_t& systemCode) override;
@@ -50,6 +61,8 @@ public:
     RefPtr<ArrayBuffer> cachedKeyForKeyID(const String&) const override { return nullptr; }
 
 protected:
+    MockCDMSession(LegacyCDMSessionClient&);
+
     WeakPtr<LegacyCDMSessionClient> m_client;
     String m_sessionId;
 };
@@ -67,36 +80,46 @@ bool LegacyMockCDM::supportsKeySystemAndMimeType(const String& keySystem, const 
     return equalLettersIgnoringASCIICase(mimeType, "video/mock"_s);
 }
 
-bool LegacyMockCDM::supportsMIMEType(const String& mimeType)
+bool LegacyMockCDM::supportsMIMEType(const String& mimeType) const
 {
     return equalLettersIgnoringASCIICase(mimeType, "video/mock"_s);
 }
 
-std::unique_ptr<LegacyCDMSession> LegacyMockCDM::createSession(LegacyCDMSessionClient& client)
+RefPtr<LegacyCDMSession> LegacyMockCDM::createSession(LegacyCDMSessionClient& client)
 {
-    return makeUnique<MockCDMSession>(client);
+    return MockCDMSession::create(client);
+}
+
+void LegacyMockCDM::ref() const
+{
+    m_cdm->ref();
+}
+
+void LegacyMockCDM::deref() const
+{
+    m_cdm->deref();
 }
 
 static Uint8Array* initDataPrefix()
 {
-    const unsigned char prefixData[] = { 'm', 'o', 'c', 'k' };
-    static Uint8Array& prefix { Uint8Array::create(prefixData, std::size(prefixData)).leakRef() };
+    static constexpr std::array<uint8_t, 4> prefixData { 'm', 'o', 'c', 'k' };
+    static Uint8Array& prefix { Uint8Array::create(prefixData).leakRef() };
 
     return &prefix;
 }
 
 static Uint8Array* keyPrefix()
 {
-    static const unsigned char prefixData[] = {'k', 'e', 'y'};
-    static Uint8Array& prefix { Uint8Array::create(prefixData, std::size(prefixData)).leakRef() };
+    static constexpr std::array<uint8_t, 3> prefixData { 'k', 'e', 'y' };
+    static Uint8Array& prefix { Uint8Array::create(prefixData).leakRef() };
 
     return &prefix;
 }
 
 static Uint8Array* keyRequest()
 {
-    static const unsigned char requestData[] = {'r', 'e', 'q', 'u', 'e', 's', 't'};
-    static Uint8Array& request { Uint8Array::create(requestData, std::size(requestData)).leakRef() };
+    static constexpr std::array<uint8_t, 7> requestData { 'r', 'e', 'q', 'u', 'e', 's', 't' };
+    static Uint8Array& request { Uint8Array::create(requestData).leakRef() };
 
     return &request;
 }

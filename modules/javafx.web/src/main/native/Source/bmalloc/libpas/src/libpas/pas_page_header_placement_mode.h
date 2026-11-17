@@ -47,7 +47,7 @@ pas_page_header_placement_mode_get_string(
     case pas_page_header_in_table:
         return "in_table";
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 

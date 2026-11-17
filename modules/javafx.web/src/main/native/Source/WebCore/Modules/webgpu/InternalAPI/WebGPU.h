@@ -25,8 +25,9 @@
 
 #pragma once
 
-#include "WebGPURequestAdapterOptions.h"
+#include <WebCore/WebGPURequestAdapterOptions.h>
 #include <optional>
+#include <wtf/AbstractRefCounted.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
@@ -35,6 +36,11 @@ namespace WebCore {
 class NativeImage;
 class IntSize;
 class GraphicsContext;
+namespace DDModel {
+class DDMesh;
+struct DDImageAsset;
+struct DDMeshDescriptor;
+}
 }
 
 namespace WebCore::WebGPU {
@@ -73,13 +79,12 @@ class XRView;
 
 struct PresentationContextDescriptor;
 
-class GPU {
+class GPU : public AbstractRefCounted {
 public:
     virtual ~GPU() = default;
 
     virtual void requestAdapter(const RequestAdapterOptions&, CompletionHandler<void(RefPtr<Adapter>&&)>&&) = 0;
-    virtual void ref() const = 0;
-    virtual void deref() const = 0;
+    virtual RefPtr<DDModel::DDMesh> createModelBacking(unsigned width, unsigned height, const DDModel::DDImageAsset& diffuseTexture, const DDModel::DDImageAsset& specularTexture, CompletionHandler<void(Vector<MachSendRight>&&)>&&) = 0;
 
     virtual RefPtr<PresentationContext> createPresentationContext(const PresentationContextDescriptor&) = 0;
 
@@ -112,6 +117,9 @@ public:
     virtual bool isValid(const XRSubImage&) const = 0;
     virtual bool isValid(const XRProjectionLayer&) const = 0;
     virtual bool isValid(const XRView&) const = 0;
+
+    virtual bool isRemoteGPUProxy() const { return false; }
+    virtual bool isGPUImpl() const { return false; }
 
 protected:
     GPU() = default;

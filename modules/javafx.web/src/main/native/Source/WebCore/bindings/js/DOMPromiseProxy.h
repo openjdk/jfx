@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
-#include "JSDOMGlobalObject.h"
-#include "JSDOMPromiseDeferred.h"
+#include <WebCore/ExceptionOr.h>
+#include <WebCore/JSDOMGlobalObject.h>
+#include <WebCore/JSDOMPromiseDeferred.h>
 #include <wtf/Function.h>
 #include <wtf/Vector.h>
 
@@ -35,12 +35,9 @@ namespace WebCore {
 
 template<typename IDLType>
 class DOMPromiseProxy {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_TEMPLATE(DOMPromiseProxy);
 public:
     using Value = typename IDLType::StorageType;
-
-    DOMPromiseProxy() = default;
-    ~DOMPromiseProxy() = default;
 
     JSC::JSValue promise(JSC::JSGlobalObject&, JSDOMGlobalObject&);
 
@@ -53,19 +50,18 @@ public:
     void reject(Exception, RejectAsHandled = RejectAsHandled::No);
 
 private:
-    JSC::JSValue resolvePromise(JSC::JSGlobalObject&, JSDOMGlobalObject&, const Function<void(DeferredPromise&)>&);
+    JSC::JSValue resolvePromise(JSC::JSGlobalObject&, JSDOMGlobalObject&, NOESCAPE const Function<void(DeferredPromise&)>&);
 
     std::optional<ExceptionOr<Value>> m_valueOrException;
     Vector<Ref<DeferredPromise>, 1> m_deferredPromises;
 };
 
+WTF_MAKE_TZONE_ALLOCATED_TEMPLATE_IMPL(template<typename IDLType>, DOMPromiseProxy<IDLType>);
+
 template<>
 class DOMPromiseProxy<IDLUndefined> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_TEMPLATE(DOMPromiseProxy);
 public:
-    DOMPromiseProxy() = default;
-    ~DOMPromiseProxy() = default;
-
     JSC::JSValue promise(JSC::JSGlobalObject&, JSDOMGlobalObject&);
 
     void clear();
@@ -86,7 +82,7 @@ private:
 // FontFace and FontFaceSet.
 template<typename IDLType>
 class DOMPromiseProxyWithResolveCallback {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_TEMPLATE(DOMPromiseProxyWithResolveCallback);
 public:
     using ResolveCallback = Function<typename IDLType::ParameterType()>;
 
@@ -111,10 +107,12 @@ private:
     Vector<Ref<DeferredPromise>, 1> m_deferredPromises;
 };
 
+WTF_MAKE_TZONE_ALLOCATED_TEMPLATE_IMPL(template<typename IDLType>, DOMPromiseProxyWithResolveCallback<IDLType>);
+
 // MARK: - DOMPromiseProxy<IDLType> generic implementation
 
 template<typename IDLType>
-inline JSC::JSValue DOMPromiseProxy<IDLType>::resolvePromise(JSC::JSGlobalObject& lexicalGlobalObject, JSDOMGlobalObject& globalObject, const Function<void(DeferredPromise&)>& resolvePromiseCallback)
+inline JSC::JSValue DOMPromiseProxy<IDLType>::resolvePromise(JSC::JSGlobalObject& lexicalGlobalObject, JSDOMGlobalObject& globalObject, NOESCAPE const Function<void(DeferredPromise&)>& resolvePromiseCallback)
 {
     UNUSED_PARAM(lexicalGlobalObject);
     for (auto& deferredPromise : m_deferredPromises) {
@@ -210,7 +208,7 @@ inline void DOMPromiseProxy<IDLType>::reject(Exception exception, RejectAsHandle
 {
     ASSERT(!m_valueOrException);
 
-    m_valueOrException = ExceptionOr<Value> { WTFMove(exception) };
+    m_valueOrException = ExceptionOr<Value> { WTF::move(exception) };
     auto deferredPromisesCopy = m_deferredPromises;
     auto exceptionCopy = m_valueOrException->exception();
     for (auto& deferredPromise : deferredPromisesCopy)
@@ -269,7 +267,7 @@ inline void DOMPromiseProxy<IDLUndefined>::resolve()
 inline void DOMPromiseProxy<IDLUndefined>::reject(Exception exception, RejectAsHandled rejectAsHandled)
 {
     ASSERT(!m_valueOrException);
-    m_valueOrException = ExceptionOr<void> { WTFMove(exception) };
+    m_valueOrException = ExceptionOr<void> { WTF::move(exception) };
     auto deferredPromisesCopy = m_deferredPromises;
     auto exceptionCopy = m_valueOrException->exception();
     for (auto& deferredPromise : deferredPromisesCopy)
@@ -287,7 +285,7 @@ inline DOMPromiseProxyWithResolveCallback<IDLType>::DOMPromiseProxyWithResolveCa
 
 template<typename IDLType>
 inline DOMPromiseProxyWithResolveCallback<IDLType>::DOMPromiseProxyWithResolveCallback(ResolveCallback&& function)
-    : m_resolveCallback(WTFMove(function))
+    : m_resolveCallback(WTF::move(function))
 {
 }
 
@@ -358,7 +356,7 @@ inline void DOMPromiseProxyWithResolveCallback<IDLType>::reject(Exception except
 {
     ASSERT(!m_valueOrException);
 
-    m_valueOrException = ExceptionOr<void> { WTFMove(exception) };
+    m_valueOrException = ExceptionOr<void> { WTF::move(exception) };
     auto deferredPromisesCopy = m_deferredPromises;
     auto exceptionCopy = m_valueOrException->exception();
     for (auto& deferredPromise : deferredPromisesCopy)

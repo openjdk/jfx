@@ -27,6 +27,7 @@
 #include "LayoutState.h"
 
 #include "BlockFormattingState.h"
+#include "Document.h"
 #include "InlineContentCache.h"
 #include "LayoutBox.h"
 #include "LayoutBoxGeometry.h"
@@ -34,19 +35,25 @@
 #include "LayoutElementBox.h"
 #include "LayoutInitialContainingBlock.h"
 #include "RenderBox.h"
+#include "RenderStyle+GettersInlines.h"
+#include "Settings.h"
 #include "TableFormattingState.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 namespace Layout {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(LayoutState);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(LayoutState);
 
-LayoutState::LayoutState(const Document& document, const ElementBox& rootContainer, Type type, FormattingContextLayoutFunction&& formattingContextLayoutFunction)
+LayoutState::LayoutState(const Document& document, const ElementBox& rootContainer, Type type, FormattingContextLayoutFunction&& formattingContextLayoutFunction, FormattingContextLogicalWidthFunction&& formattingContextLogicalWidthFunction , FormattingContextLogicalHeightFunction&& formattingContextLogicalHeightFunction, FormattingContextLayoutForBlockInInlineFunction&& formattingContextLayoutForBlockInInlineFunction)
     : m_type(type)
+    , m_isTextShapingAcrossInlineBoxesEnabled(document.settings().textShapingAcrossInlineBoxes())
     , m_rootContainer(rootContainer)
     , m_securityOrigin(document.securityOrigin())
-    , m_formattingContextLayoutFunction(WTFMove(formattingContextLayoutFunction))
+    , m_formattingContextLayoutFunction(WTF::move(formattingContextLayoutFunction))
+    , m_formattingContextLogicalWidthFunction(WTF::move(formattingContextLogicalWidthFunction))
+    , m_formattingContextLogicalHeightFunction(WTF::move(formattingContextLogicalHeightFunction))
+    , m_formattingContextLayoutForBlockInInlineFunction(WTF::move(formattingContextLayoutForBlockInInlineFunction))
 {
     // It makes absolutely no sense to construct a dedicated layout state for a non-formatting context root (layout would be a no-op).
     ASSERT(root().establishesFormattingContext());
@@ -75,7 +82,7 @@ BoxGeometry& LayoutState::geometryForRootBox()
 
 BoxGeometry& LayoutState::ensureGeometryForBoxSlow(const Box& layoutBox)
 {
-    if (LIKELY(m_type == Type::Primary)) {
+    if (m_type == Type::Primary) [[likely]] {
 #if ASSERT_ENABLED
         ASSERT(!layoutBox.m_cachedGeometryForPrimaryLayoutState);
         ASSERT(!layoutBox.m_primaryLayoutState);
@@ -93,7 +100,7 @@ BoxGeometry& LayoutState::ensureGeometryForBoxSlow(const Box& layoutBox)
 bool LayoutState::hasFormattingState(const ElementBox& formattingContextRoot) const
 {
     ASSERT(formattingContextRoot.establishesFormattingContext());
-    return m_blockFormattingStates.contains(&formattingContextRoot) || m_tableFormattingStates.contains(&formattingContextRoot);
+    return m_blockFormattingStates.contains(formattingContextRoot) || m_tableFormattingStates.contains(formattingContextRoot);
 }
 
 FormattingState& LayoutState::formattingStateForFormattingContext(const ElementBox& formattingContextRoot) const
@@ -112,48 +119,63 @@ FormattingState& LayoutState::formattingStateForFormattingContext(const ElementB
 BlockFormattingState& LayoutState::formattingStateForBlockFormattingContext(const ElementBox& blockFormattingContextRoot) const
 {
     ASSERT(blockFormattingContextRoot.establishesBlockFormattingContext());
-    return *m_blockFormattingStates.get(&blockFormattingContextRoot);
+    return *m_blockFormattingStates.get(blockFormattingContextRoot);
 }
 
 TableFormattingState& LayoutState::formattingStateForTableFormattingContext(const ElementBox& tableFormattingContextRoot) const
 {
     ASSERT(tableFormattingContextRoot.establishesTableFormattingContext());
-    return *m_tableFormattingStates.get(&tableFormattingContextRoot);
+    return *m_tableFormattingStates.get(tableFormattingContextRoot);
 }
 
 InlineContentCache& LayoutState::inlineContentCache(const ElementBox& formattingContextRoot)
 {
     ASSERT(formattingContextRoot.establishesInlineFormattingContext());
-    return *m_inlineContentCaches.ensure(&formattingContextRoot, [&] { return makeUnique<InlineContentCache>(); }).iterator->value;
+    return *m_inlineContentCaches.ensure(formattingContextRoot, [&] { return makeUnique<InlineContentCache>(); }).iterator->value;
 }
 
 BlockFormattingState& LayoutState::ensureBlockFormattingState(const ElementBox& formattingContextRoot)
 {
     ASSERT(formattingContextRoot.establishesBlockFormattingContext());
-    return *m_blockFormattingStates.ensure(&formattingContextRoot, [&] { return makeUnique<BlockFormattingState>(*this, formattingContextRoot); }).iterator->value;
+    return *m_blockFormattingStates.ensure(formattingContextRoot, [&] { return makeUnique<BlockFormattingState>(*this, formattingContextRoot); }).iterator->value;
 }
 
 TableFormattingState& LayoutState::ensureTableFormattingState(const ElementBox& formattingContextRoot)
 {
     ASSERT(formattingContextRoot.establishesTableFormattingContext());
-    return *m_tableFormattingStates.ensure(&formattingContextRoot, [&] { return makeUnique<TableFormattingState>(*this, formattingContextRoot); }).iterator->value;
+    return *m_tableFormattingStates.ensure(formattingContextRoot, [&] { return makeUnique<TableFormattingState>(*this, formattingContextRoot); }).iterator->value;
 }
 
 void LayoutState::destroyBlockFormattingState(const ElementBox& formattingContextRoot)
 {
     ASSERT(formattingContextRoot.establishesBlockFormattingContext());
-    m_blockFormattingStates.remove(&formattingContextRoot);
+    m_blockFormattingStates.remove(formattingContextRoot);
 }
 
 void LayoutState::destroyInlineContentCache(const ElementBox& formattingContextRoot)
 {
     ASSERT(formattingContextRoot.establishesInlineFormattingContext());
-    m_inlineContentCaches.remove(&formattingContextRoot);
+    m_inlineContentCaches.remove(formattingContextRoot);
 }
 
-void LayoutState::layoutWithFormattingContextForBox(const ElementBox& box, std::optional<LayoutUnit> widthConstraint)
+void LayoutState::layoutWithFormattingContextForBox(const ElementBox& box, std::optional<LayoutUnit> widthConstraint, std::optional<LayoutUnit> heightConstraint) const
 {
-    return m_formattingContextLayoutFunction(box, widthConstraint, *this);
+    const_cast<LayoutState&>(*this).m_formattingContextLayoutFunction(box, widthConstraint, heightConstraint, const_cast<LayoutState&>(*this));
+}
+
+LayoutUnit LayoutState::logicalWidthWithFormattingContextForBox(const ElementBox& box, LayoutIntegration::LogicalWidthType logicalWidthType) const
+{
+    return const_cast<LayoutState&>(*this).m_formattingContextLogicalWidthFunction(box, logicalWidthType);
+}
+
+LayoutUnit LayoutState::logicalHeightWithFormattingContextForBox(const ElementBox& box, LayoutIntegration::LogicalHeightType logicalHeightType) const
+{
+    return const_cast<LayoutState&>(*this).m_formattingContextLogicalHeightFunction(box, logicalHeightType);
+}
+
+void LayoutState::layoutWithFormattingContextForBlockInInline(const Layout::ElementBox& block, LayoutPoint blockLineLogicalTopLeft, const InlineLayoutState& inlineLayoutState) const
+{
+    const_cast<LayoutState&>(*this).m_formattingContextLayoutForBlockInInlineFunction(block, blockLineLogicalTopLeft, const_cast<InlineLayoutState&>(inlineLayoutState), const_cast<LayoutState&>(*this));
 }
 
 }

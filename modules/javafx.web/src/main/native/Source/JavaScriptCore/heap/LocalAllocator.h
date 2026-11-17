@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "AllocationFailureMode.h"
-#include "FreeList.h"
-#include "MarkedBlock.h"
+#include <JavaScriptCore/AllocationFailureMode.h>
+#include <JavaScriptCore/FreeList.h>
+#include <JavaScriptCore/MarkedBlock.h>
 #include <wtf/Noncopyable.h>
 
 namespace JSC {
@@ -54,8 +54,6 @@ public:
 
     static constexpr ptrdiff_t offsetOfFreeList();
     static constexpr ptrdiff_t offsetOfCellSize();
-
-    bool isFreeListedCell(const void*) const;
 
     BlockDirectory& directory() const { return *m_directory; }
 

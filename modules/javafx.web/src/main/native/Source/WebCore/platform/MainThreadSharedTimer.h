@@ -26,19 +26,31 @@
 
 #pragma once
 
-#include "SharedTimer.h"
+#include <WebCore/SharedTimer.h>
 #include <wtf/Forward.h>
+#include <wtf/TZoneMalloc.h>
 
 #if !USE(CF) && !OS(WINDOWS)
+#include <wtf/CanMakeWeakPtr.h>
 #include <wtf/RunLoop.h>
 #endif
 
 namespace WebCore {
 
-class MainThreadSharedTimer final : public SharedTimer {
+class MainThreadSharedTimer final : public SharedTimer
+#if !USE(CF) && !OS(WINDOWS)
+    , public CanMakeWeakPtr<MainThreadSharedTimer>
+#endif
+{
+    WTF_MAKE_TZONE_ALLOCATED(MainThreadSharedTimer);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(MainThreadSharedTimer);
     friend class NeverDestroyed<MainThreadSharedTimer>;
 public:
     static MainThreadSharedTimer& singleton();
+
+    // Do nothing since this is a singleton.
+    void ref() const { }
+    void deref() const { }
 
     void setFiredFunction(Function<void()>&&) override;
     void setFireInterval(Seconds) override;

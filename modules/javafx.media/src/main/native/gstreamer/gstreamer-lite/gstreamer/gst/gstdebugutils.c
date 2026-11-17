@@ -60,8 +60,10 @@
 #include "gstobject.h"
 #include "gstghostpad.h"
 #include "gstpad.h"
+#include "gsttracer.h"
 #include "gstutils.h"
 #include "gstvalue.h"
+#include "gstidstr-private.h"
 
 /*** PIPELINE GRAPHS **********************************************************/
 
@@ -108,7 +110,8 @@ debug_dump_get_element_state (GstElement * element)
 
 static gchar *
 debug_dump_get_object_params (GObject * object,
-    GstDebugGraphDetails details, const char *const *ignored_propnames)
+    GstDebugGraphDetails details, const char *const *ignored_propnames,
+    const gchar * prop_separator)
 {
   gchar *param_name = NULL;
   GParamSpec **properties, *property;
@@ -116,6 +119,38 @@ debug_dump_get_object_params (GObject * object,
   guint i, number_of_properties;
   gchar *tmp, *value_str;
   const gchar *ellipses;
+
+  if (details == GST_DEBUG_GRAPH_SHOW_ALL) {
+    static gsize dots_tracer_enabled = 0;
+
+    if (g_once_init_enter (&dots_tracer_enabled)) {
+      GList *tracers, *tmp;
+      gsize enabled = 1;        /* 1 = not enabled, 2 = enabled */
+
+      tracers = gst_tracing_get_active_tracers ();
+
+      for (tmp = tracers; tmp; tmp = tmp->next) {
+        GObject *tracer = G_OBJECT (tmp->data);
+        const gchar *type_name = G_OBJECT_TYPE_NAME (tracer);
+
+        if (g_strcmp0 (type_name, "GstDotsTracer") == 0) {
+          enabled = 2;
+          break;
+        }
+      }
+
+      g_list_free_full (tracers, gst_object_unref);
+      g_once_init_leave (&dots_tracer_enabled, enabled);
+    }
+
+    /* If dots tracer is enabled, use SHOW_FULL_PARAMS instead of SHOW_ALL.
+     * The dots tracer is meant to be used with gst-dots-viewer which will
+     * ellipsize long lines for us, so we should always keep the full text
+     * in the dot files in that case. */
+    if (dots_tracer_enabled == 2) {
+      details = GST_DEBUG_GRAPH_SHOW_FULL_PARAMS;
+    }
+  }
 
   /* get paramspecs and show non-default properties */
   properties =
@@ -214,12 +249,13 @@ debug_dump_get_object_params (GObject * object,
           tmp = (char *) "";
 
         if (details & GST_DEBUG_GRAPH_SHOW_FULL_PARAMS) {
-          param_name = g_strdup_printf ("%s\\n%s=%s", tmp, property->name,
+          param_name =
+              g_strdup_printf ("%s%s%s=%s", tmp, prop_separator, property->name,
               value_str);
         } else {
-          param_name = g_strdup_printf ("%s\\n%s=%."
-              G_STRINGIFY (PARAM_MAX_LENGTH) "s%s", tmp, property->name,
-              value_str, ellipses);
+          param_name = g_strdup_printf ("%s%s%s=%."
+              G_STRINGIFY (PARAM_MAX_LENGTH) "s%s", tmp, prop_separator,
+              property->name, value_str, ellipses);
         }
 
         if (tmp[0] != '\0')
@@ -263,7 +299,8 @@ debug_dump_pad (GstPad * pad, const gchar * color_name,
   }
 
   param_name =
-      debug_dump_get_object_params (G_OBJECT (pad), details, ignore_propnames);
+      debug_dump_get_object_params (G_OBJECT (pad), details, ignore_propnames,
+      "\n");
   if (details & GST_DEBUG_GRAPH_SHOW_STATES) {
     gchar pad_flags[5];
     const gchar *activation_mode = "-><";
@@ -376,14 +413,14 @@ debug_dump_element_pad (GstPad * pad, GstElement * element,
 }
 
 static gboolean
-string_append_field (GQuark field, const GValue * value, gpointer ptr)
+string_append_field (const GstIdStr * field, const GValue * value, gpointer ptr)
 {
   GString *str = (GString *) ptr;
   gchar *value_str = gst_value_serialize (value);
   gchar *esc_value_str;
 
   if (value_str == NULL) {
-    g_string_append_printf (str, "  %18s: NULL\\l", g_quark_to_string (field));
+    g_string_append_printf (str, "  %18s: NULL\\l", gst_id_str_as_str (field));
     return TRUE;
   }
 
@@ -414,7 +451,7 @@ string_append_field (GQuark field, const GValue * value, gpointer ptr)
   }
   esc_value_str = g_strescape (value_str, NULL);
 
-  g_string_append_printf (str, "  %18s: %s\\l", g_quark_to_string (field),
+  g_string_append_printf (str, "  %18s: %s\\l", gst_id_str_as_str (field),
       esc_value_str);
 
   g_free (value_str);
@@ -458,7 +495,8 @@ debug_dump_describe_caps (GstCaps * caps, GstDebugGraphDetails details)
         }
         g_string_append (str, "\\l");
 
-        gst_structure_foreach (structure, string_append_field, (gpointer) str);
+        gst_structure_foreach_id_str (structure, string_append_field,
+            (gpointer) str);
       }
 
       media = g_string_free (str, FALSE);
@@ -641,7 +679,7 @@ debug_dump_element (GstBin * bin, GstDebugGraphDetails details,
         }
         if (details & GST_DEBUG_GRAPH_SHOW_NON_DEFAULT_PARAMS) {
           param_name = debug_dump_get_object_params (G_OBJECT (element),
-              details, ignore_propnames);
+              details, ignore_propnames, "\n");
         }
         /* elements */
         g_string_append_printf (str, "%ssubgraph cluster_%s {\n", spc,
@@ -757,17 +795,52 @@ debug_dump_element (GstBin * bin, GstDebugGraphDetails details,
   gst_iterator_free (element_iter);
 }
 
+static gchar *
+debug_dump_get_tracers_info (GstDebugGraphDetails details)
+{
+  GList *tracers, *tmp;
+
+  tracers = gst_tracing_get_active_tracers ();
+  if (!tracers)
+    return NULL;
+
+  GString *str = g_string_new ("Active Tracers:");
+  for (tmp = tracers; tmp; tmp = tmp->next) {
+    GObject *tracer = G_OBJECT (tmp->data);
+    gchar *props = NULL;
+
+    g_string_append_printf (str, "\\l    - %s", G_OBJECT_TYPE_NAME (tracer));
+    if (details & GST_DEBUG_GRAPH_SHOW_NON_DEFAULT_PARAMS) {
+      props =
+          debug_dump_get_object_params (tracer, details, NULL, "\\l        * ");
+      if (props) {
+        g_string_append_c (str, ':');
+        g_string_append_printf (str, "    %s", props);
+      }
+      g_free (props);
+    }
+
+    /* Make sure each tracer line ends with \l even if it has no properties */
+    g_string_append (str, "\\l");
+  }
+
+  g_list_free_full (tracers, gst_object_unref);
+  return g_string_free (str, FALSE);
+}
+
 static void
 debug_dump_header (GstBin * bin, GstDebugGraphDetails details, GString * str)
 {
   gchar *state_name = NULL;
   gchar *param_name = NULL;
+  gchar *tracers_info = NULL;
 
   if (details & GST_DEBUG_GRAPH_SHOW_STATES) {
     state_name = debug_dump_get_element_state (GST_ELEMENT (bin));
   }
   if (details & GST_DEBUG_GRAPH_SHOW_NON_DEFAULT_PARAMS) {
-    param_name = debug_dump_get_object_params (G_OBJECT (bin), details, NULL);
+    param_name =
+        debug_dump_get_object_params (G_OBJECT (bin), details, NULL, "\n");
   }
 
   /* write header */
@@ -793,10 +866,23 @@ debug_dump_header (GstBin * bin, GstDebugGraphDetails details, GString * str)
       (state_name ? state_name : ""), (param_name ? param_name : "")
       );
 
+  tracers_info = debug_dump_get_tracers_info (details);
+  if (tracers_info) {           /* More than just "Active Tracers:\l" */
+    g_string_append_printf (str,
+        "  tracers [\n"
+        "    pos=\"0,0!\",\n"
+        "    margin=\"0.05,0.05\",\n"
+        "    style=\"filled\",\n"
+        "    fillcolor=\"#e0e0ff\",\n"
+        "    label=\"%s\",\n" "  ];\n" "\n", tracers_info);
+  }
+
   if (state_name)
     g_free (state_name);
   if (param_name)
     g_free (param_name);
+  if (tracers_info)
+    g_free (tracers_info);
 }
 
 static void
@@ -852,7 +938,6 @@ gst_debug_bin_to_dot_file (GstBin * bin, GstDebugGraphDetails details,
     const gchar * file_name)
 {
   gchar *full_file_name = NULL;
-  FILE *out;
 
   g_return_if_fail (GST_IS_BIN (bin));
 
@@ -868,20 +953,17 @@ gst_debug_bin_to_dot_file (GstBin * bin, GstDebugGraphDetails details,
   full_file_name = g_strdup_printf ("%s" G_DIR_SEPARATOR_S "%s.dot",
       priv_gst_dump_dot_dir, file_name);
 
-  if ((out = fopen (full_file_name, "wb"))) {
-    gchar *buf;
+  GError *err = NULL;
+  gchar *buf;
 
-    buf = gst_debug_bin_to_dot_data (bin, details);
-    fputs (buf, out);
+  buf = gst_debug_bin_to_dot_data (bin, details);
+  if (!g_file_set_contents (full_file_name, buf, -1, &err)) {
+    GST_WARNING ("Failed to write file '%s' for writing: %s", full_file_name,
+        err->message);
 
-    g_free (buf);
-    fclose (out);
-
-    GST_INFO ("wrote bin graph to : '%s'", full_file_name);
-  } else {
-    GST_WARNING ("Failed to open file '%s' for writing: %s", full_file_name,
-        g_strerror (errno));
   }
+  g_clear_error (&err);
+  g_free (buf);
   g_free (full_file_name);
 }
 

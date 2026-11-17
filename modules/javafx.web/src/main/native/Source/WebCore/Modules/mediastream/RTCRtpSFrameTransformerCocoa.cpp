@@ -29,18 +29,20 @@
 #if ENABLE(WEB_RTC)
 
 #include "CryptoUtilitiesCocoa.h"
+#include "ExceptionOr.h"
+#include "SFrameUtils.h"
 #include <CommonCrypto/CommonCrypto.h>
 
 namespace WebCore {
 
 ExceptionOr<Vector<uint8_t>> RTCRtpSFrameTransformer::computeSaltKey(const Vector<uint8_t>& rawKey)
 {
-    return deriveHDKFSHA256Bits(rawKey.subspan(0, 16), "SFrame10"_span, "salt"_span, 96);
+    return deriveHDKFSHA256Bits(rawKey.subspan(0, 16), byteCast<uint8_t>("SFrame10"_span), byteCast<uint8_t>("salt"_span), 96);
 }
 
 static ExceptionOr<Vector<uint8_t>> createBaseSFrameKey(const Vector<uint8_t>& rawKey)
 {
-    return deriveHDKFSHA256Bits(rawKey.subspan(0, 16), "SFrame10"_span, "key"_span, 128);
+    return deriveHDKFSHA256Bits(rawKey.subspan(0, 16), byteCast<uint8_t>("SFrame10"_span), byteCast<uint8_t>("key"_span), 128);
 }
 
 ExceptionOr<Vector<uint8_t>> RTCRtpSFrameTransformer::computeAuthenticationKey(const Vector<uint8_t>& rawKey)
@@ -49,7 +51,7 @@ ExceptionOr<Vector<uint8_t>> RTCRtpSFrameTransformer::computeAuthenticationKey(c
     if (key.hasException())
         return key;
 
-    return deriveHDKFSHA256Bits(key.returnValue().subspan(0, 16), "SFrame10 AES CM AEAD"_span, "auth"_span, 256);
+    return deriveHDKFSHA256Bits(key.returnValue().subspan(0, 16), byteCast<uint8_t>("SFrame10 AES CM AEAD"_span), byteCast<uint8_t>("auth"_span), 256);
 }
 
 ExceptionOr<Vector<uint8_t>> RTCRtpSFrameTransformer::computeEncryptionKey(const Vector<uint8_t>& rawKey)
@@ -58,7 +60,7 @@ ExceptionOr<Vector<uint8_t>> RTCRtpSFrameTransformer::computeEncryptionKey(const
     if (key.hasException())
         return key;
 
-    return deriveHDKFSHA256Bits(key.returnValue().subspan(0, 16), "SFrame10 AES CM AEAD"_span, "enc"_span, 128);
+    return deriveHDKFSHA256Bits(key.returnValue().subspan(0, 16), byteCast<uint8_t>("SFrame10 AES CM AEAD"_span), byteCast<uint8_t>("enc"_span), 128);
 }
 
 ExceptionOr<Vector<uint8_t>> RTCRtpSFrameTransformer::decryptData(std::span<const uint8_t> data, const Vector<uint8_t>& iv, const Vector<uint8_t>& key)
@@ -71,16 +73,6 @@ ExceptionOr<Vector<uint8_t>> RTCRtpSFrameTransformer::encryptData(std::span<cons
     return transformAESCTR(kCCEncrypt, iv, iv.size(), key, data);
 }
 
-static inline Vector<uint8_t, 8> encodeBigEndian(uint64_t value)
-{
-    Vector<uint8_t, 8> result(8);
-    for (int i = 7; i >= 0; --i) {
-        result.data()[i] = value & 0xff;
-        value = value >> 8;
-    }
-    return result;
-}
-
 Vector<uint8_t> RTCRtpSFrameTransformer::computeEncryptedDataSignature(const Vector<uint8_t>& nonce, std::span<const uint8_t> header, std::span<const uint8_t> data, const Vector<uint8_t>& key)
 {
     auto headerLength = encodeBigEndian(header.size());
@@ -88,13 +80,13 @@ Vector<uint8_t> RTCRtpSFrameTransformer::computeEncryptedDataSignature(const Vec
 
     Vector<uint8_t> result(CC_SHA256_DIGEST_LENGTH);
     CCHmacContext context;
-    CCHmacInit(&context, kCCHmacAlgSHA256, key.data(), key.size());
-    CCHmacUpdate(&context, headerLength.data(), headerLength.size());
-    CCHmacUpdate(&context, dataLength.data(), dataLength.size());
-    CCHmacUpdate(&context, nonce.data(), 12);
+    CCHmacInit(&context, kCCHmacAlgSHA256, key.span().data(), key.size());
+    CCHmacUpdate(&context, headerLength.span().data(), headerLength.size());
+    CCHmacUpdate(&context, dataLength.span().data(), dataLength.size());
+    CCHmacUpdate(&context, nonce.span().data(), 12);
     CCHmacUpdate(&context, header.data(), header.size());
     CCHmacUpdate(&context, data.data(), data.size());
-    CCHmacFinal(&context, result.data());
+    CCHmacFinal(&context, result.mutableSpan().data());
 
     return result;
 }

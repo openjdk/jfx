@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.javafx.scene;
 
+import com.sun.javafx.scene.NodeHelper;
 import test.com.sun.javafx.test.NodeOrientationTestBase;
 import java.util.stream.Stream;
 import javafx.geometry.NodeOrientation;
@@ -32,6 +33,7 @@ import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -182,4 +184,21 @@ public final class Node_effectiveOrientation_Test
         return collectState(node, EFFECTIVE_ORIENTATION_ENCODER);
     }
 
+    @Test
+    public void overlayOrientationIsInheritedOnlyFromSceneOrientation() {
+        var node = new Group();
+        node.setNodeOrientation(NodeOrientation.INHERIT);
+        NodeHelper.setInheritOrientationFromScene(node, true);
+        var parent = new Group(node);
+        parent.setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
+        var scene = new Scene(parent);
+        scene.setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
+
+        NodeHelper.nodeResolvedOrientationInvalidated(node);
+        assertEquals(NodeOrientation.LEFT_TO_RIGHT, node.getEffectiveNodeOrientation());
+
+        scene.setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
+        NodeHelper.nodeResolvedOrientationInvalidated(node);
+        assertEquals(NodeOrientation.RIGHT_TO_LEFT, node.getEffectiveNodeOrientation());
+    }
 }

@@ -33,7 +33,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(AnimationEventBase);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(AnimationEventBase);
 
 AnimationEventBase::AnimationEventBase(enum EventInterfaceType eventInterface, const AtomString& type, WebAnimation* animation, std::optional<Seconds> scheduledTime)
     : Event(eventInterface, type, CanBubble::Yes, IsCancelable::No)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2011 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,9 +29,10 @@
 
 #pragma once
 
-#include "InspectorAgentBase.h"
-#include "InspectorBackendDispatchers.h"
-#include "InspectorFrontendDispatchers.h"
+#include <JavaScriptCore/InspectorAgentBase.h>
+#include <JavaScriptCore/InspectorBackendDispatchers.h>
+#include <JavaScriptCore/InspectorFrontendDispatchers.h>
+#include <wtf/CheckedPtr.h>
 #include <wtf/Forward.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
@@ -41,15 +42,16 @@ namespace Inspector {
 class BackendDispatcher;
 class InspectorEnvironment;
 
-class JS_EXPORT_PRIVATE InspectorAgent final : public InspectorAgentBase, public InspectorBackendDispatcherHandler {
+class JS_EXPORT_PRIVATE InspectorAgent final : public InspectorAgentBase, public InspectorBackendDispatcherHandler, public CanMakeCheckedPtr<InspectorAgent> {
     WTF_MAKE_NONCOPYABLE(InspectorAgent);
     WTF_MAKE_TZONE_ALLOCATED(InspectorAgent);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(InspectorAgent);
 public:
     InspectorAgent(AgentContext&);
     ~InspectorAgent() final;
 
     // InspectorAgentBase
-    void didCreateFrontendAndBackend(FrontendRouter*, BackendDispatcher*) final;
+    void didCreateFrontendAndBackend() final;
     void willDestroyFrontendAndBackend(DisconnectReason) final;
 
     // InspectorBackendDispatcherHandler
@@ -63,9 +65,11 @@ public:
     void evaluateForTestInFrontend(const String& script);
 
 private:
-    InspectorEnvironment& m_environment;
-    std::unique_ptr<InspectorFrontendDispatcher> m_frontendDispatcher;
-    Ref<InspectorBackendDispatcher> m_backendDispatcher;
+    CheckedRef<InspectorEnvironment> checkedEnvironment() { return m_environment.get(); }
+
+    WeakRef<InspectorEnvironment> m_environment;
+    const UniqueRef<InspectorFrontendDispatcher> m_frontendDispatcher;
+    const Ref<InspectorBackendDispatcher> m_backendDispatcher;
 
     Vector<String> m_pendingEvaluateTestCommands;
     std::pair<RefPtr<Protocol::Runtime::RemoteObject>, RefPtr<JSON::Object>> m_pendingInspectData;

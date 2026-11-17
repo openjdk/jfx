@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "JSDestructibleObject.h"
-#include "StackFrame.h"
+#include <JavaScriptCore/JSDestructibleObject.h>
+#include <JavaScriptCore/StackFrame.h>
 #include <wtf/Vector.h>
 
 namespace JSC {
@@ -35,7 +35,7 @@ class Exception final : public JSCell {
 public:
     using Base = JSCell;
     static constexpr unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
-    static constexpr bool needsDestruction = true;
+    static constexpr DestructionMode needsDestruction = NeedsDestruction;
 
     template<typename CellType, SubspaceAccess mode>
     static GCClient::IsoSubspace* subspaceFor(VM& vm)
@@ -43,11 +43,11 @@ public:
         return &vm.exceptionSpace();
     }
 
-    enum StackCaptureAction {
+    enum class StackCaptureAction {
         CaptureStack,
         DoNotCaptureStack
     };
-    JS_EXPORT_PRIVATE static Exception* create(VM&, JSValue thrownValue, StackCaptureAction = CaptureStack);
+    JS_EXPORT_PRIVATE static Exception* create(VM&, JSValue thrownValue, StackCaptureAction = StackCaptureAction::CaptureStack);
 
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue prototype);
 
@@ -65,6 +65,11 @@ public:
 
     bool didNotifyInspectorOfThrow() const { return m_didNotifyInspectorOfThrow; }
     void setDidNotifyInspectorOfThrow() { m_didNotifyInspectorOfThrow = true; }
+
+#if ENABLE(WEBASSEMBLY)
+    void tryUnwrapValueForJSTag(VM&);
+    void wrapValueForJSTag(JSGlobalObject*);
+#endif
 
     ~Exception();
 

@@ -25,7 +25,9 @@
 
 // https://drafts.fxtf.org/geometry-1/#DOMRect
 
-dictionary DOMRectInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary DOMRectInit {
     unrestricted double x = 0;
     unrestricted double y = 0;
     unrestricted double width = 0;

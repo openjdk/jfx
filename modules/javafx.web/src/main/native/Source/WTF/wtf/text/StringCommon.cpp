@@ -26,6 +26,10 @@
 #include "config.h"
 #include <wtf/text/StringCommon.h>
 
+#include <wtf/SIMDUTF.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace WTF {
 
 SUPPRESS_ASAN
@@ -90,7 +94,7 @@ const double* findDoubleAlignedImpl(const double* pointer, double target, size_t
 }
 
 SUPPRESS_ASAN
-const LChar* find8NonASCIIAlignedImpl(std::span<const LChar> data)
+const Latin1Character* find8NonASCIIAlignedImpl(std::span<const Latin1Character> data)
 {
     constexpr simde_uint8x16_t indexMask { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
 
@@ -99,7 +103,7 @@ const LChar* find8NonASCIIAlignedImpl(std::span<const LChar> data)
     ASSERT(length);
     ASSERT(!(reinterpret_cast<uintptr_t>(pointer) & 0xf));
     ASSERT((reinterpret_cast<uintptr_t>(pointer) & ~static_cast<uintptr_t>(0xf)) == reinterpret_cast<uintptr_t>(pointer));
-    const uint8_t* cursor = bitwise_cast<const uint8_t*>(pointer);
+    const uint8_t* cursor = std::bit_cast<const uint8_t*>(pointer);
     constexpr size_t stride = SIMD::stride<uint8_t>;
 
     simde_uint8x16_t charactersVector = simde_vdupq_n_u8(0x80);
@@ -110,7 +114,7 @@ const LChar* find8NonASCIIAlignedImpl(std::span<const LChar> data)
         if (simde_vmaxvq_u8(mask)) {
             simde_uint8x16_t ranked = simde_vornq_u8(indexMask, mask);
             uint8_t index = simde_vminvq_u8(ranked);
-            return bitwise_cast<const LChar*>((index < length) ? cursor + index : nullptr);
+            return std::bit_cast<const Latin1Character*>((index < length) ? cursor + index : nullptr);
         }
         if (length <= stride)
             return nullptr;
@@ -120,7 +124,7 @@ const LChar* find8NonASCIIAlignedImpl(std::span<const LChar> data)
 }
 
 SUPPRESS_ASAN
-const UChar* find16NonASCIIAlignedImpl(std::span<const UChar> data)
+const char16_t* find16NonASCIIAlignedImpl(std::span<const char16_t> data)
 {
     auto* pointer = data.data();
     auto length = data.size();
@@ -131,7 +135,7 @@ const UChar* find16NonASCIIAlignedImpl(std::span<const UChar> data)
     ASSERT(length);
     ASSERT(!(reinterpret_cast<uintptr_t>(pointer) & 0xf));
     ASSERT((reinterpret_cast<uintptr_t>(pointer) & ~static_cast<uintptr_t>(0xf)) == reinterpret_cast<uintptr_t>(pointer));
-    const uint16_t* cursor = bitwise_cast<const uint16_t*>(pointer);
+    const uint16_t* cursor = std::bit_cast<const uint16_t*>(pointer);
     constexpr size_t stride = SIMD::stride<uint16_t>;
 
     simde_uint16x8_t charactersVector = simde_vdupq_n_u16(0x80);
@@ -142,7 +146,7 @@ const UChar* find16NonASCIIAlignedImpl(std::span<const UChar> data)
         if (simde_vget_lane_u64(simde_vreinterpret_u64_u8(simde_vmovn_u16(mask)), 0)) {
             simde_uint16x8_t ranked = simde_vornq_u16(indexMask, mask);
             uint16_t index = simde_vminvq_u16(ranked);
-            return bitwise_cast<const UChar*>((index < length) ? cursor + index : nullptr);
+            return std::bit_cast<const char16_t*>((index < length) ? cursor + index : nullptr);
         }
         if (length <= stride)
             return nullptr;
@@ -151,4 +155,17 @@ const UChar* find16NonASCIIAlignedImpl(std::span<const UChar> data)
     }
 }
 
+bool isWellFormedUTF16(std::span<const char16_t> data)
+{
+    return simdutf::validate_utf16(data.data(), data.size());
+}
+
+void toWellFormedUTF16(std::span<const char16_t> input, std::span<char16_t> output)
+{
+    ASSERT(input.size() == output.size());
+    simdutf::to_well_formed_utf16(input.data(), input.size(), output.data());
+}
+
 } // namespace WTF
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

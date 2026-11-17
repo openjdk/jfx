@@ -25,15 +25,13 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "IDBCursorDirection.h"
-#include "IDBCursorInfo.h"
-#include "IDBKeyPath.h"
-#include "IDBRequest.h"
-#include "IDBValue.h"
-#include "JSValueInWrappedObject.h"
 #include <JavaScriptCore/Strong.h>
-#include <variant>
+#include <WebCore/IDBCursorInfo.h>
+#include <WebCore/IDBKeyPath.h>
+#include <WebCore/IDBRequest.h>
+#include <WebCore/IDBValue.h>
+#include <WebCore/JSValueInWrappedObject.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -42,24 +40,27 @@ class IDBGetResult;
 class IDBIndex;
 class IDBObjectStore;
 class IDBTransaction;
+template<typename> class ExceptionOr;
 
 class IDBCursor : public ScriptWrappable, public RefCounted<IDBCursor> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(IDBCursor);
+    WTF_MAKE_TZONE_ALLOCATED(IDBCursor);
 public:
     static Ref<IDBCursor> create(IDBObjectStore&, const IDBCursorInfo&);
     static Ref<IDBCursor> create(IDBIndex&, const IDBCursorInfo&);
 
     virtual ~IDBCursor();
 
-    using Source = std::variant<RefPtr<IDBObjectStore>, RefPtr<IDBIndex>>;
+    using Source = Variant<RefPtr<IDBObjectStore>, RefPtr<IDBIndex>>;
 
     const Source& source() const;
     IDBCursorDirection direction() const;
 
-    IDBKey* key() { return m_key.get(); };
-    IDBKey* primaryKey() { return m_primaryKey.get(); };
-    IDBValue value() { return m_value; };
-    const std::optional<IDBKeyPath>& primaryKeyPath() { return m_keyPath; };
+    IDBKey* key() { return m_key.get(); }
+    RefPtr<IDBKey> protectedKey() { return m_key; }
+    IDBKey* primaryKey() { return m_primaryKey.get(); }
+    RefPtr<IDBKey> protectedPrimaryKey() { return m_primaryKey; }
+    IDBValue value() { return m_value; }
+    const std::optional<IDBKeyPath>& primaryKeyPath() { return m_keyPath; }
     JSValueInWrappedObject& keyWrapper() { return m_keyWrapper; }
     JSValueInWrappedObject& primaryKeyWrapper() { return m_primaryKeyWrapper; }
     JSValueInWrappedObject& valueWrapper() { return m_valueWrapper; }
@@ -93,7 +94,9 @@ protected:
 private:
     bool sourcesDeleted() const;
     IDBObjectStore& effectiveObjectStore() const;
+    Ref<IDBObjectStore> protectedEffectiveObjectStore() const;
     IDBTransaction& transaction() const;
+    Ref<IDBTransaction> protectedTransaction() const;
 
     void uncheckedIterateCursor(const IDBKeyData&, unsigned count);
     void uncheckedIterateCursor(const IDBKeyData&, const IDBKeyData&);

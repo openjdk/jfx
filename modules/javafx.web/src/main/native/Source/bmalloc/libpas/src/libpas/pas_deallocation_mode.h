@@ -45,7 +45,7 @@ static inline const char* pas_deallocation_mode_get_string(pas_deallocation_mode
     case pas_deallocate_mode:
         return "deallocate";
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 

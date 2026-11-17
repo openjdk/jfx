@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,40 +25,36 @@
 
 #pragma once
 
+#include <cstdint>
+#include <wtf/Assertions.h>
 #include <wtf/Forward.h>
 
 namespace JSC { namespace Wasm {
 
 enum class CompilationMode : uint8_t {
-    LLIntMode,
     IPIntMode,
     BBQMode,
-    BBQForOSREntryMode,
     OMGMode,
     OMGForOSREntryMode,
-    JSEntrypointJITMode,
-    JITLessJSEntrypointMode,
+    JSToWasmMode,
     JSToWasmICMode,
     WasmToJSMode,
+    WasmBuiltinMode
 };
 
-ASCIILiteral makeString(CompilationMode);
-
-constexpr inline bool isOSREntry(CompilationMode compilationMode)
+constexpr inline bool isAnyInterpreter(CompilationMode compilationMode)
 {
     switch (compilationMode) {
-    case CompilationMode::LLIntMode:
     case CompilationMode::IPIntMode:
+        return true;
     case CompilationMode::BBQMode:
+    case CompilationMode::OMGForOSREntryMode:
     case CompilationMode::OMGMode:
-    case CompilationMode::JSEntrypointJITMode:
-    case CompilationMode::JITLessJSEntrypointMode:
+    case CompilationMode::JSToWasmMode:
     case CompilationMode::JSToWasmICMode:
     case CompilationMode::WasmToJSMode:
+    case CompilationMode::WasmBuiltinMode:
         return false;
-    case CompilationMode::BBQForOSREntryMode:
-    case CompilationMode::OMGForOSREntryMode:
-        return true;
     }
     RELEASE_ASSERT_NOT_REACHED_UNDER_CONSTEXPR_CONTEXT();
 }
@@ -67,16 +63,14 @@ constexpr inline bool isAnyBBQ(CompilationMode compilationMode)
 {
     switch (compilationMode) {
     case CompilationMode::BBQMode:
-    case CompilationMode::BBQForOSREntryMode:
         return true;
     case CompilationMode::OMGForOSREntryMode:
-    case CompilationMode::LLIntMode:
     case CompilationMode::IPIntMode:
     case CompilationMode::OMGMode:
-    case CompilationMode::JSEntrypointJITMode:
-    case CompilationMode::JITLessJSEntrypointMode:
+    case CompilationMode::JSToWasmMode:
     case CompilationMode::JSToWasmICMode:
     case CompilationMode::WasmToJSMode:
+    case CompilationMode::WasmBuiltinMode:
         return false;
     }
     RELEASE_ASSERT_NOT_REACHED_UNDER_CONSTEXPR_CONTEXT();
@@ -89,13 +83,28 @@ constexpr inline bool isAnyOMG(CompilationMode compilationMode)
     case CompilationMode::OMGForOSREntryMode:
         return true;
     case CompilationMode::BBQMode:
-    case CompilationMode::BBQForOSREntryMode:
-    case CompilationMode::LLIntMode:
     case CompilationMode::IPIntMode:
-    case CompilationMode::JSEntrypointJITMode:
-    case CompilationMode::JITLessJSEntrypointMode:
+    case CompilationMode::JSToWasmMode:
     case CompilationMode::JSToWasmICMode:
     case CompilationMode::WasmToJSMode:
+    case CompilationMode::WasmBuiltinMode:
+        return false;
+    }
+    RELEASE_ASSERT_NOT_REACHED_UNDER_CONSTEXPR_CONTEXT();
+}
+
+constexpr inline bool isAnyWasmToJS(CompilationMode compilationMode)
+{
+    switch (compilationMode) {
+    case CompilationMode::WasmToJSMode:
+        return true;
+    case CompilationMode::OMGMode:
+    case CompilationMode::OMGForOSREntryMode:
+    case CompilationMode::BBQMode:
+    case CompilationMode::IPIntMode:
+    case CompilationMode::JSToWasmMode:
+    case CompilationMode::JSToWasmICMode:
+    case CompilationMode::WasmBuiltinMode:
         return false;
     }
     RELEASE_ASSERT_NOT_REACHED_UNDER_CONSTEXPR_CONTEXT();

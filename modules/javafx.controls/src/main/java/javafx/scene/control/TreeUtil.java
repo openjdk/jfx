@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,11 @@
 
 package javafx.scene.control;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 /**
  * A package protected util class used by TreeView and TreeTableView to reduce
@@ -51,46 +55,6 @@ class TreeUtil {
 
             return count;
         }
-    }
-
-    static <T> TreeItem<T> getItem(TreeItem<T> parent, int itemIndex, boolean treeItemCountDirty) {
-        if (parent == null) return null;
-
-        // if itemIndex is 0 then our parent is what we were looking for
-        if (itemIndex == 0) return parent;
-
-        // if itemIndex is > the total item count, then it is out of range
-        if (itemIndex >= getExpandedDescendantCount(parent, treeItemCountDirty)) return null;
-
-        // if we got here, then one of our descendants is the item we're after
-        List<TreeItem<T>> children = parent.getChildren();
-        if (children == null) return null;
-
-        int idx = itemIndex - 1;
-
-        TreeItem<T> child;
-        for (int i = 0, max = children.size(); i < max; i++) {
-            child = children.get(i);
-            if (idx == 0) return child;
-
-            if (child.isLeaf() || ! child.isExpanded()) {
-                idx--;
-                continue;
-            }
-
-            int expandedChildCount = getExpandedDescendantCount(child, treeItemCountDirty);
-            if (idx >= expandedChildCount) {
-                idx -= expandedChildCount;
-                continue;
-            }
-
-            TreeItem<T> result = getItem(child, idx, treeItemCountDirty);
-            if (result != null) return result;
-            idx--;
-        }
-
-        // We might get here if getItem(0) is called on an empty tree
-        return null;
     }
 
     static <T> int getRow(TreeItem<T> item, TreeItem<T> root, boolean treeItemCountDirty, boolean isShowRoot) {
@@ -148,5 +112,44 @@ class TreeUtil {
         }
 
         return (p == null && row == 0) || parentIsCollapsed ? -1 : isShowRoot ? row : row - 1;
+    }
+
+     /**
+     * Returns an Iterable that traverses all expanded TreeItems in
+     * pre-order depth-first order, starting from root.
+     */
+    static <T> Iterable<TreeItem<T>> getItems(TreeItem<T> root) {
+        return () -> new Iterator<>() {
+            private final Deque<TreeItem<T>> stack = new ArrayDeque<>();
+
+            {
+                if (root != null) {
+                    stack.push(root);
+                }
+            }
+
+            @Override
+            public boolean hasNext() {
+                return !stack.isEmpty();
+            }
+
+            @Override
+            public TreeItem<T> next() {
+                if (stack.isEmpty()) {
+                    throw new NoSuchElementException();
+                }
+                TreeItem<T> item = stack.pop();
+                if (!item.isLeaf() && item.isExpanded()) {
+                    List<TreeItem<T>> children = item.getChildren();
+                    for (int i = children.size() - 1; i >= 0; i--) {
+                        TreeItem<T> child = children.get(i);
+                        if (child != null) {
+                            stack.push(child);
+                        }
+                    }
+                }
+                return item;
+            }
+        };
     }
 }

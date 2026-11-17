@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,7 +27,9 @@ package javafx.stage;
 
 import java.util.HashMap;
 
+import javafx.application.ColorScheme;
 import javafx.application.Platform;
+import javafx.beans.Observable;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.ObjectProperty;
@@ -40,6 +42,7 @@ import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
@@ -821,6 +824,7 @@ public class Window implements EventTarget {
     public final ReadOnlyObjectProperty<Scene> sceneProperty() { return scene.getReadOnlyProperty(); }
 
     private final class SceneModel extends ReadOnlyObjectWrapper<Scene> {
+        private final ChangeListener<ColorScheme> colorSchemeListener = this::updateDarkFrame;
         private Scene oldScene;
 
         @Override protected void invalidated() {
@@ -835,6 +839,7 @@ public class Window implements EventTarget {
             updatePeerScene(null);
             // Second, dispose scene peer
             if (oldScene != null) {
+                oldScene.getPreferences().colorSchemeProperty().removeListener(colorSchemeListener);
                 SceneHelper.setWindow(oldScene, null);
                 StyleManager.getInstance().forget(oldScene);
             }
@@ -864,6 +869,8 @@ public class Window implements EventTarget {
                         adjustSize(true);
                     }
                 }
+
+                newScene.getPreferences().colorSchemeProperty().addListener(colorSchemeListener);
             }
 
             oldScene = newScene;
@@ -883,6 +890,13 @@ public class Window implements EventTarget {
             if (peer != null) {
                 // Set scene impl on stage impl
                 peer.setScene(tkScene);
+            }
+        }
+
+        private void updateDarkFrame(Observable observable, ColorScheme oldValue, ColorScheme newValue) {
+            if (peer != null) {
+                Toolkit.getToolkit().checkFxUserThread();
+                peer.setDarkFrame(newValue == ColorScheme.DARK);
             }
         }
     }
@@ -945,24 +959,9 @@ public class Window implements EventTarget {
     public final EventHandler<WindowEvent> getOnCloseRequest() {
         return (onCloseRequest != null) ? onCloseRequest.get() : null;
     }
-    public final ObjectProperty<EventHandler<WindowEvent>>
-            onCloseRequestProperty() {
+    public final ObjectProperty<EventHandler<WindowEvent>> onCloseRequestProperty() {
         if (onCloseRequest == null) {
-            onCloseRequest = new ObjectPropertyBase<>() {
-                @Override protected void invalidated() {
-                    setEventHandler(WindowEvent.WINDOW_CLOSE_REQUEST, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Window.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onCloseRequest";
-                }
-            };
+            onCloseRequest = new EventHandlerProperty<>("onCloseRequest", WindowEvent.WINDOW_CLOSE_REQUEST);
         }
         return onCloseRequest;
     }
@@ -977,21 +976,7 @@ public class Window implements EventTarget {
     }
     public final ObjectProperty<EventHandler<WindowEvent>> onShowingProperty() {
         if (onShowing == null) {
-            onShowing = new ObjectPropertyBase<>() {
-                @Override protected void invalidated() {
-                    setEventHandler(WindowEvent.WINDOW_SHOWING, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Window.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onShowing";
-                }
-            };
+            onShowing = new EventHandlerProperty<>("onShowing", WindowEvent.WINDOW_SHOWING);
         }
         return onShowing;
     }
@@ -1006,21 +991,7 @@ public class Window implements EventTarget {
     }
     public final ObjectProperty<EventHandler<WindowEvent>> onShownProperty() {
         if (onShown == null) {
-            onShown = new ObjectPropertyBase<>() {
-                @Override protected void invalidated() {
-                    setEventHandler(WindowEvent.WINDOW_SHOWN, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Window.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onShown";
-                }
-            };
+            onShown = new EventHandlerProperty<>("onShown", WindowEvent.WINDOW_SHOWN);
         }
         return onShown;
     }
@@ -1035,21 +1006,7 @@ public class Window implements EventTarget {
     }
     public final ObjectProperty<EventHandler<WindowEvent>> onHidingProperty() {
         if (onHiding == null) {
-            onHiding = new ObjectPropertyBase<>() {
-                @Override protected void invalidated() {
-                    setEventHandler(WindowEvent.WINDOW_HIDING, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Window.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onHiding";
-                }
-            };
+            onHiding = new EventHandlerProperty<>("onHiding", WindowEvent.WINDOW_HIDING);
         }
         return onHiding;
     }
@@ -1067,21 +1024,7 @@ public class Window implements EventTarget {
     }
     public final ObjectProperty<EventHandler<WindowEvent>> onHiddenProperty() {
         if (onHidden == null) {
-            onHidden = new ObjectPropertyBase<>() {
-                @Override protected void invalidated() {
-                    setEventHandler(WindowEvent.WINDOW_HIDDEN, get());
-                }
-
-                @Override
-                public Object getBean() {
-                    return Window.this;
-                }
-
-                @Override
-                public String getName() {
-                    return "onHidden";
-                }
-            };
+            onHidden = new EventHandlerProperty<>("onHidden", WindowEvent.WINDOW_HIDDEN);
         }
         return onHidden;
     }
@@ -1139,7 +1082,30 @@ public class Window implements EventTarget {
                         SceneHelper.preferredSize(getScene());
                     }
 
-                    updateOutputScales(peer.getOutputScaleX(), peer.getOutputScaleY());
+                    /*
+                     * Based on the position of the Window, find out on what Screen
+                     * it is located to correctly set the output scales. The correct
+                     * output scale is required for the scene to be sized properly
+                     * as there may otherwise be slight differences in size depending
+                     * on the scale (which can cause controls to be cut-off and show
+                     * ellipsis for example).
+                     *
+                     * We don't apply the bounds to the peer just yet, as we need it
+                     * to trigger a width/height change to the Scene **after** we
+                     * set the Scene to its preferred size. Setting the size on the
+                     * scene cannot be skipped when both dimensions are set explicitly
+                     * as PopupWindow seems to be relying on it.
+                     */
+
+                    Screen windowScreen = Utils.getScreenForRectangle(new Rectangle2D(
+                        Double.isNaN(getX()) ? 0 : getX(),
+                        Double.isNaN(getY()) ? 0 : getY(),
+                        Double.isNaN(getWidth()) ? 0 : getWidth(),
+                        Double.isNaN(getHeight()) ? 0 : getHeight()
+                    ));
+
+                    updateOutputScales(windowScreen.getOutputScaleX(), windowScreen.getOutputScaleY());
+
                     // updateOutputScales may cause an update to the render
                     // scales in many cases, but if the scale has not changed
                     // then the lazy render scale properties might think
@@ -1594,6 +1560,31 @@ public class Window implements EventTarget {
                 Toolkit.getToolkit().requestNextPulse();
                 dirty = true;
             }
+        }
+    }
+
+    private final class EventHandlerProperty<T extends Event> extends ObjectPropertyBase<EventHandler<T>> {
+        private final String name;
+        private final EventType<T> eventType;
+
+        EventHandlerProperty(String name, EventType<T> eventType) {
+            this.name = name;
+            this.eventType = eventType;
+        }
+
+        @Override
+        public Object getBean() {
+            return Window.this;
+        }
+
+        @Override
+        public String getName() {
+            return name;
+        }
+
+        @Override
+        protected void invalidated() {
+            setEventHandler(eventType, get());
         }
     }
 }

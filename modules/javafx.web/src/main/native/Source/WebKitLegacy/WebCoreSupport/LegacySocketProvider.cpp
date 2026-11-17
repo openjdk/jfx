@@ -34,8 +34,7 @@ RefPtr<WebCore::ThreadableWebSocketChannel> LegacySocketProvider::createWebSocke
     return WebCore::WebSocketChannel::create(document, client, *this);
 }
 
-void LegacySocketProvider::initializeWebTransportSession(WebCore::ScriptExecutionContext&, const URL&, CompletionHandler<void(RefPtr<WebCore::WebTransportSession>&&)>&& completionHandler)
+std::pair<RefPtr<WebCore::WebTransportSession>, Ref<WebCore::WebTransportSessionPromise>> LegacySocketProvider::initializeWebTransportSession(WebCore::ScriptExecutionContext&, WebCore::WebTransportSessionClient&, const URL&, const WebCore::WebTransportOptions&)
 {
-    ASSERT_NOT_REACHED();
-    completionHandler(nullptr);
+    return { nullptr, WebCore::WebTransportSessionPromise::createAndReject() };
 }

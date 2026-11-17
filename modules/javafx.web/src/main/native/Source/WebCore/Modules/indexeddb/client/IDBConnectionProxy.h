@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,11 +25,15 @@
 
 #pragma once
 
-#include "IDBConnectionToServer.h"
-#include "IDBDatabaseNameAndVersionRequest.h"
-#include "IDBObjectStoreIdentifier.h"
-#include "IDBResourceIdentifier.h"
-#include "TransactionOperation.h"
+#include <WebCore/IDBConnectionToServer.h>
+#include <WebCore/IDBDatabaseNameAndVersionRequest.h>
+#include <WebCore/IDBIndexIdentifier.h>
+#include <WebCore/IDBObjectStoreIdentifier.h>
+#include <WebCore/IDBResourceIdentifier.h>
+#include <WebCore/IndexKey.h>
+#include <WebCore/ScriptExecutionContext.h>
+#include <WebCore/TransactionOperation.h>
+#include <pal/SessionID.h>
 #include <wtf/CrossThreadQueue.h>
 #include <wtf/CrossThreadTask.h>
 #include <wtf/Forward.h>
@@ -60,10 +64,10 @@ namespace IDBClient {
 
 class IDBConnectionToServer;
 
-class WEBCORE_EXPORT IDBConnectionProxy final {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(IDBConnectionProxy);
+class IDBConnectionProxy final {
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(IDBConnectionProxy, WEBCORE_EXPORT);
 public:
-    IDBConnectionProxy(IDBConnectionToServer&);
+    IDBConnectionProxy(IDBConnectionToServer&, PAL::SessionID);
 
     Ref<IDBOpenDBRequest> openDatabase(ScriptExecutionContext&, const IDBDatabaseIdentifier&, uint64_t version);
     void didOpenDatabase(const IDBResultData&);
@@ -76,7 +80,7 @@ public:
     void clearObjectStore(TransactionOperation&, IDBObjectStoreIdentifier);
     void createIndex(TransactionOperation&, const IDBIndexInfo&);
     void deleteIndex(TransactionOperation&, IDBObjectStoreIdentifier, const String& indexName);
-    void putOrAdd(TransactionOperation&, IDBKeyData&&, const IDBValue&, const IndexedDB::ObjectStoreOverwriteMode);
+    void putOrAdd(TransactionOperation&, IDBKeyData&&, const IDBValue&, const IndexIDToIndexKeyMap&, const IndexedDB::ObjectStoreOverwriteMode);
     void getRecord(TransactionOperation&, const IDBGetRecordData&);
     void getAllRecords(TransactionOperation&, const IDBGetAllRecordsData&);
     void getCount(TransactionOperation&, const IDBKeyRangeData&);
@@ -84,10 +88,12 @@ public:
     void openCursor(TransactionOperation&, const IDBCursorInfo&);
     void iterateCursor(TransactionOperation&, const IDBIterateCursorData&);
     void renameObjectStore(TransactionOperation&, IDBObjectStoreIdentifier, const String& newName);
-    void renameIndex(TransactionOperation&, IDBObjectStoreIdentifier, uint64_t indexIdentifier, const String& newName);
+    void renameIndex(TransactionOperation&, IDBObjectStoreIdentifier, IDBIndexIdentifier, const String& newName);
 
     void fireVersionChangeEvent(IDBDatabaseConnectionIdentifier, const IDBResourceIdentifier& requestIdentifier, uint64_t requestedVersion);
     void didFireVersionChangeEvent(IDBDatabaseConnectionIdentifier, const IDBResourceIdentifier& requestIdentifier, const IndexedDB::ConnectionClosedOnBehalfOfServer = IndexedDB::ConnectionClosedOnBehalfOfServer::No);
+    void generateIndexKeyForRecord(const IDBResourceIdentifier& requestIdentifier, const IDBIndexInfo&, const std::optional<IDBKeyPath>&, const IDBKeyData&, const IDBValue&, std::optional<int64_t> recordID);
+    void didGenerateIndexKeyForRecord(const IDBResourceIdentifier& transactionIdentifier, const IDBResourceIdentifier& requestIdentifier, const WebCore::IDBIndexInfo&, const IDBKeyData&, const IndexKey&, std::optional<int64_t> recordID);
 
     void notifyOpenDBRequestBlocked(const IDBResourceIdentifier& requestIdentifier, uint64_t oldVersion, uint64_t newVersion);
     void openDBRequestCancelled(const IDBOpenRequestData&);
@@ -123,10 +129,12 @@ public:
     void registerDatabaseConnection(IDBDatabase&, ScriptExecutionContextIdentifier);
     void unregisterDatabaseConnection(IDBDatabase&);
 
-    void forgetActiveOperations(const Vector<RefPtr<TransactionOperation>>&);
+    void forgetActiveOperations(const Vector<Ref<TransactionOperation>>&);
     void forgetTransaction(IDBTransaction&);
     void abortActivitiesForCurrentThread();
     void setContextSuspended(ScriptExecutionContext& currentContext, bool isContextSuspended);
+
+    PAL::SessionID sessionID() const;
 
 private:
     void completeOpenDBRequest(const IDBResultData&);
@@ -139,16 +147,16 @@ private:
     void callConnectionOnMainThread(void (IDBConnectionToServer::*method)(Parameters...), Arguments&&... arguments)
     {
         if (isMainThread())
-            (m_connectionToServer.*method)(std::forward<Arguments>(arguments)...);
+            (m_connectionToServer.get().*method)(std::forward<Arguments>(arguments)...);
         else
-            postMainThreadTask(m_connectionToServer, method, arguments...);
+            postMainThreadTask(m_connectionToServer.get(), method, arguments...);
     }
 
     template<typename... Arguments>
     void postMainThreadTask(Arguments&&... arguments)
     {
         auto task = createCrossThreadTask(arguments...);
-        m_mainThreadQueue.append(WTFMove(task));
+        m_mainThreadQueue.append(WTF::move(task));
 
         scheduleMainThreadTasks();
     }
@@ -156,7 +164,7 @@ private:
     void scheduleMainThreadTasks();
     void handleMainThreadTasks();
 
-    IDBConnectionToServer& m_connectionToServer;
+    const CheckedRef<IDBConnectionToServer> m_connectionToServer;
     IDBConnectionIdentifier m_serverConnectionIdentifier;
 
     Lock m_databaseConnectionMapLock;
@@ -171,15 +179,16 @@ private:
         std::optional<ScriptExecutionContextIdentifier> contextIdentifier;
     };
     HashMap<IDBDatabaseConnectionIdentifier, WeakIDBDatabase> m_databaseConnectionMap WTF_GUARDED_BY_LOCK(m_databaseConnectionMapLock);
-    HashMap<IDBResourceIdentifier, RefPtr<IDBOpenDBRequest>> m_openDBRequestMap WTF_GUARDED_BY_LOCK(m_openDBRequestMapLock);
-    HashMap<IDBResourceIdentifier, RefPtr<IDBTransaction>> m_pendingTransactions WTF_GUARDED_BY_LOCK(m_transactionMapLock);
-    HashMap<IDBResourceIdentifier, RefPtr<IDBTransaction>> m_committingTransactions WTF_GUARDED_BY_LOCK(m_transactionMapLock);
-    HashMap<IDBResourceIdentifier, RefPtr<IDBTransaction>> m_abortingTransactions WTF_GUARDED_BY_LOCK(m_transactionMapLock);
-    HashMap<IDBResourceIdentifier, RefPtr<TransactionOperation>> m_activeOperations WTF_GUARDED_BY_LOCK(m_transactionOperationLock);
+    HashMap<IDBResourceIdentifier, Ref<IDBOpenDBRequest>> m_openDBRequestMap WTF_GUARDED_BY_LOCK(m_openDBRequestMapLock);
+    HashMap<IDBResourceIdentifier, Ref<IDBTransaction>> m_pendingTransactions WTF_GUARDED_BY_LOCK(m_transactionMapLock);
+    HashMap<IDBResourceIdentifier, Ref<IDBTransaction>> m_committingTransactions WTF_GUARDED_BY_LOCK(m_transactionMapLock);
+    HashMap<IDBResourceIdentifier, Ref<IDBTransaction>> m_abortingTransactions WTF_GUARDED_BY_LOCK(m_transactionMapLock);
+    HashMap<IDBResourceIdentifier, Ref<TransactionOperation>> m_activeOperations WTF_GUARDED_BY_LOCK(m_transactionOperationLock);
     HashMap<IDBResourceIdentifier, Ref<IDBDatabaseNameAndVersionRequest>> m_databaseInfoCallbacks WTF_GUARDED_BY_LOCK(m_databaseInfoMapLock);
 
     CrossThreadQueue<CrossThreadTask> m_mainThreadQueue;
-    RefPtr<IDBConnectionToServer> m_mainThreadProtector WTF_GUARDED_BY_LOCK(m_mainThreadTaskLock);
+    bool m_hasScheduledMainThreadTasks WTF_GUARDED_BY_LOCK(m_mainThreadTaskLock) { false };
+    PAL::SessionID m_sessionID;
 };
 
 } // namespace IDBClient

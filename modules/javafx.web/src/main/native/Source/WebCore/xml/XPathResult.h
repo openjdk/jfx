@@ -26,10 +26,12 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
-#include "XPathValue.h"
+#include <WebCore/XPathValue.h>
+#include <wtf/Lock.h>
 
 namespace WebCore {
+
+template<typename> class ExceptionOr;
 
 class XPathResult : public RefCounted<XPathResult> {
 public:
@@ -65,12 +67,16 @@ public:
 
     const XPath::Value& value() const { return m_value; }
 
+    template<typename Visitor>
+    void visitAdditionalChildren(Visitor&);
+
 private:
     XPathResult(Document&, const XPath::Value&);
 
     XPath::Value m_value;
     unsigned m_nodeSetPosition { 0 };
-    XPath::NodeSet m_nodeSet; // FIXME: why duplicate the node set stored in m_value?
+    Lock m_nodeSetLock;
+    XPath::NodeSet m_nodeSet WTF_GUARDED_BY_LOCK(m_nodeSetLock);
     unsigned short m_resultType;
     RefPtr<Document> m_document;
     uint64_t m_domTreeVersion { 0 };

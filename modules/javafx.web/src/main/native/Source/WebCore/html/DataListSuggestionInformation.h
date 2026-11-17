@@ -25,10 +25,8 @@
 
 #pragma once
 
-#include "IntRect.h"
+#include <WebCore/IntRect.h>
 #include <wtf/Vector.h>
-
-#if ENABLE(DATALIST_ELEMENT)
 
 namespace WebCore {
 
@@ -51,5 +49,3 @@ struct DataListSuggestionInformation {
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(DATALIST_ELEMENT)

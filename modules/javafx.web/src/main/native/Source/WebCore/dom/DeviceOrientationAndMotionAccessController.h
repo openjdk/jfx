@@ -29,28 +29,21 @@
 
 #include "DeviceOrientationOrMotionPermissionState.h"
 #include "EventTarget.h"
-#include "ExceptionOr.h"
 #include "SecurityOriginData.h"
+#include <wtf/CheckedRef.h>
 #include <wtf/Function.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakPtr.h>
-
-namespace WebCore {
-class DeviceOrientationAndMotionAccessController;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::DeviceOrientationAndMotionAccessController> : std::true_type { };
-}
 
 namespace WebCore {
 
 class Document;
 class Page;
 
-class DeviceOrientationAndMotionAccessController : public CanMakeWeakPtr<DeviceOrientationAndMotionAccessController> {
-    WTF_MAKE_FAST_ALLOCATED;
+class DeviceOrientationAndMotionAccessController final : public CanMakeWeakPtr<DeviceOrientationAndMotionAccessController>, public CanMakeCheckedPtr<DeviceOrientationAndMotionAccessController> {
+    WTF_MAKE_TZONE_ALLOCATED(DeviceOrientationAndMotionAccessController);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DeviceOrientationAndMotionAccessController);
 public:
     explicit DeviceOrientationAndMotionAccessController(Document& topDocument);
 

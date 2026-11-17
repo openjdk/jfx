@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -66,7 +66,7 @@ class PlacardSupport extends MediaControllerSupport
         const media = this.mediaController.media;
 
         let placard = null;
-        if (media.webkitPresentationMode === "picture-in-picture")
+        if (media.webkitPresentationMode === "picture-in-picture" && this._controlsNeedJavascriptPipPlacard())
             placard = controls.pipPlacard;
         else if (media.webkitCurrentPlaybackTargetIsWireless) {
             this._updateAirPlayPlacard();
@@ -77,6 +77,13 @@ class PlacardSupport extends MediaControllerSupport
         controls.placard = placard;
     }
     
+    _controlsNeedJavascriptPipPlacard()
+    {
+        if (this.mediaController.controls instanceof IOSInlineMediaControls)
+            return false;
+        return true;
+    }
+
     _updateAirPlayPlacard()
     {
         var deviceName = "";

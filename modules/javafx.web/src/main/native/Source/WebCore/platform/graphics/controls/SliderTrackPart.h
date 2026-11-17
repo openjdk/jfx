@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "ControlPart.h"
-#include "IntRect.h"
+#include <WebCore/ControlPart.h>
+#include <WebCore/IntRect.h>
 
 namespace WebCore {
 
@@ -42,14 +42,12 @@ public:
     void setTrackBounds(IntRect trackBounds) { m_trackBounds = trackBounds; }
 
     const Vector<double>& tickRatios() const { return m_tickRatios; }
-    void setTickRatios(Vector<double>&& tickRatios) { m_tickRatios = WTFMove(tickRatios); }
+    void setTickRatios(Vector<double>&& tickRatios) { m_tickRatios = WTF::move(tickRatios); }
 
     double thumbPosition() const { return m_thumbPosition; }
     void setThumbPosition(double thumbPosition) { m_thumbPosition = thumbPosition; }
 
-#if ENABLE(DATALIST_ELEMENT)
     void drawTicks(GraphicsContext&, const FloatRect&, const ControlStyle&) const;
-#endif
 
 private:
     SliderTrackPart(StyleAppearance, const IntSize& thumbSize, const IntRect& trackBounds, Vector<double>&& tickRatios, double thumbPosition);

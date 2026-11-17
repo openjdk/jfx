@@ -26,6 +26,9 @@
 #include "config.h"
 #include "AXGeometryManager.h"
 
+#include "AXLoggerBase.h"
+#include "DocumentPage.h"
+
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
 #include "AXIsolatedTree.h"
 #include "AXObjectCache.h"
@@ -64,14 +67,10 @@ std::optional<IntRect> AXGeometryManager::cachedRectForID(AXID axID)
     return std::nullopt;
 }
 
-void AXGeometryManager::cacheRect(AXID axID, IntRect&& rect)
+bool AXGeometryManager::cacheRectIfNeeded(AXID axID, IntRect&& rect)
 {
-    // We shouldn't call this method on a geometry manager that has no page ID.
-    ASSERT(m_cache->pageID());
-    ASSERT(AXObjectCache::isIsolatedTreeEnabled());
+    AX_ASSERT(AXObjectCache::isIsolatedTreeEnabled());
 
-    if (!axID.isValid())
-        return;
     auto rectIterator = m_cachedRects.find(axID);
 
     bool rectChanged = false;
@@ -85,17 +84,18 @@ void AXGeometryManager::cacheRect(AXID axID, IntRect&& rect)
     }
 
     if (!rectChanged)
-        return;
+        return false;
 
-    RefPtr tree = AXIsolatedTree::treeForPageID(*m_cache->pageID());
+    RefPtr tree = AXIsolatedTree::treeForFrameID(m_cache->frameID());
     if (!tree)
-        return;
-    tree->updateFrame(axID, WTFMove(rect));
+        return false;
+    tree->updateFrame(axID, WTF::move(rect));
+    return true;
 }
 
 void AXGeometryManager::scheduleObjectRegionsUpdate(bool scheduleImmediately)
 {
-    if (LIKELY(!scheduleImmediately)) {
+    if (!scheduleImmediately) [[likely]] {
         if (!m_updateObjectRegionsTimer.isActive())
             m_updateObjectRegionsTimer.startOneShot(1_s);
         return;
@@ -116,16 +116,16 @@ void AXGeometryManager::willUpdateObjectRegions()
     if (!m_cache)
         return;
 
-    if (RefPtr tree = AXIsolatedTree::treeForPageID(m_cache->pageID()))
+    if (RefPtr tree = AXIsolatedTree::treeForFrameID(m_cache->frameID()))
         tree->updateRootScreenRelativePosition();
 }
 
 void AXGeometryManager::scheduleRenderingUpdate()
 {
-    if (!m_cache)
+    if (!m_cache || !m_cache->document())
         return;
 
-    if (RefPtr page = m_cache->document().page())
+    if (RefPtr page = m_cache->document()->page())
         page->scheduleRenderingUpdate(RenderingUpdateStep::AccessibilityRegionUpdate);
 }
 

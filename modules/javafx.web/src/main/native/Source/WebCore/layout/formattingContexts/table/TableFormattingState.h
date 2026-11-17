@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,7 +35,7 @@ namespace Layout {
 
 // TableFormattingState holds the state for a particular table formatting context tree.
 class TableFormattingState : public FormattingState {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(TableFormattingState);
+    WTF_MAKE_TZONE_ALLOCATED(TableFormattingState);
 public:
     TableFormattingState(LayoutState&, const ElementBox& tableBox);
     ~TableFormattingState();
@@ -44,7 +44,7 @@ public:
     const TableGrid& tableGrid() const { return m_tableGrid; }
 
 private:
-    UniqueRef<TableGrid> m_tableGrid;
+    const UniqueRef<TableGrid> m_tableGrid;
 };
 
 }

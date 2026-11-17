@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -106,6 +106,14 @@ public class GridPanePage extends TestPaneBase {
         return r;
     }
 
+    private Region createRegionUnmanaged() {
+        Region r = createRegion();
+        r.setManaged(false);
+        r.setPrefWidth(0);
+        r.setPrefHeight(0);
+        return r;
+    }
+
     public Node createChildrenOptions(ObservableList<Node> children) {
         ObjectSelector<Map<GridCoordinates, Node>> s = new ObjectSelector<>("children", (m) -> {
             children.clear();
@@ -119,14 +127,46 @@ public class GridPanePage extends TestPaneBase {
         });
         // TODO add more templates here
         s.addChoice("<empty>", new HashMap<>());
-        s.addChoiceSupplier("Diagonal", () -> {
-            Map<GridCoordinates, Node> m = new HashMap<>();
-            m.put(new GridCoordinates(0, 0), createRegion());
-            m.put(new GridCoordinates(1, 1), createRegion());
-            m.put(new GridCoordinates(2, 2), createRegion());
-            return m;
-        });
+        s.addChoiceSupplier("Diagonal", this::createDiagonal);
+        s.addChoiceSupplier("With Unmanaged Nodes", this::withUnmanaged);
+        s.addChoiceSupplier("With Unmanaged + Center", this::withUnmanagedCenter);
         return s;
+    }
+
+    private Map<GridCoordinates, Node> withUnmanaged() {
+        Map<GridCoordinates, Node> m = new HashMap<>();
+        m.put(new GridCoordinates(0, 0), createRegion());
+        m.put(new GridCoordinates(1, 0), createRegionUnmanaged());
+        m.put(new GridCoordinates(2, 0), createRegion());
+        m.put(new GridCoordinates(0, 1), createRegionUnmanaged());
+        m.put(new GridCoordinates(1, 1), createRegionUnmanaged());
+        m.put(new GridCoordinates(2, 1), createRegionUnmanaged());
+        m.put(new GridCoordinates(0, 2), createRegion());
+        m.put(new GridCoordinates(1, 2), createRegionUnmanaged());
+        m.put(new GridCoordinates(2, 2), createRegion());
+        return m;
+    }
+
+    private Map<GridCoordinates, Node> withUnmanagedCenter() {
+        Map<GridCoordinates, Node> m = new HashMap<>();
+        m.put(new GridCoordinates(0, 0), createRegion());
+        m.put(new GridCoordinates(1, 0), createRegionUnmanaged());
+        m.put(new GridCoordinates(2, 0), createRegion());
+        m.put(new GridCoordinates(0, 1), createRegionUnmanaged());
+        m.put(new GridCoordinates(1, 1), createRegion());
+        m.put(new GridCoordinates(2, 1), createRegionUnmanaged());
+        m.put(new GridCoordinates(0, 2), createRegion());
+        m.put(new GridCoordinates(1, 2), createRegionUnmanaged());
+        m.put(new GridCoordinates(2, 2), createRegion());
+        return m;
+    }
+
+    private Map<GridCoordinates, Node> createDiagonal() {
+        Map<GridCoordinates, Node> m = new HashMap<>();
+        m.put(new GridCoordinates(0, 0), createRegion());
+        m.put(new GridCoordinates(1, 1), createRegion());
+        m.put(new GridCoordinates(2, 2), createRegion());
+        return m;
     }
 
     private void createMenu(Node n) {

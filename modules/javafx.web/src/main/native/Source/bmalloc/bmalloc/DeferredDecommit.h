@@ -25,6 +25,11 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
+#include "BPlatform.h"
+
+#if !BUSE(TZONE)
 #if !BUSE(LIBPAS)
 
 namespace bmalloc {
@@ -44,3 +49,6 @@ struct DeferredDecommit {
 } // namespace bmalloc
 
 #endif
+#endif // !BUSE(TZONE)
+
+#endif // __cplusplus

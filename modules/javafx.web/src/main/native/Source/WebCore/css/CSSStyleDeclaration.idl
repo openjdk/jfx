@@ -31,7 +31,8 @@ typedef USVString CSSOMString;
     Exposed=Window,
 ] interface CSSStyleDeclaration {
     [CEReactions=Needed] attribute CSSOMString cssText;
-    readonly attribute CSSRuleList cssRules;
+    // FIXME: This is non-standard and always returns null. It should be removed.
+    readonly attribute CSSRuleList? cssRules;
     readonly attribute unsigned long length;
     getter CSSOMString item(unsigned long index);
     CSSOMString getPropertyValue(CSSOMString property);
@@ -39,7 +40,6 @@ typedef USVString CSSOMString;
     [CEReactions=Needed] undefined setProperty(CSSOMString property, [LegacyNullToEmptyString] CSSOMString value, optional [LegacyNullToEmptyString] CSSOMString priority = "");
     [CEReactions=Needed] CSSOMString removeProperty(CSSOMString property);
     readonly attribute CSSRule? parentRule;
-    [CEReactions=Needed] attribute [LegacyNullToEmptyString] CSSOMString cssFloat;
 
     // Non-standard.
     DeprecatedCSSOMValue? getPropertyCSSValue(DOMString propertyName);

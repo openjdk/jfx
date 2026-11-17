@@ -136,33 +136,33 @@ GstVideoTimeCode * gst_video_time_code_new          (guint                    fp
                                                      guint                    minutes,
                                                      guint                    seconds,
                                                      guint                    frames,
-                                                     guint                    field_count);
+                                                     guint                    field_count) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_VIDEO_API
-GstVideoTimeCode * gst_video_time_code_new_empty    (void);
+GstVideoTimeCode * gst_video_time_code_new_empty    (void) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_VIDEO_API
-GstVideoTimeCode * gst_video_time_code_new_from_string    (const gchar * tc_str);
+GstVideoTimeCode * gst_video_time_code_new_from_string    (const gchar * tc_str) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_VIDEO_DEPRECATED_FOR(gst_video_time_code_new_from_date_time_full)
 GstVideoTimeCode * gst_video_time_code_new_from_date_time (guint                    fps_n,
                                                            guint                    fps_d,
                                                            GDateTime              * dt,
                                                            GstVideoTimeCodeFlags    flags,
-                                                           guint                    field_count);
+                                                           guint                    field_count) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_VIDEO_API
 GstVideoTimeCode * gst_video_time_code_new_from_date_time_full (guint                    fps_n,
                                                                 guint                    fps_d,
                                                                 GDateTime              * dt,
                                                                 GstVideoTimeCodeFlags    flags,
-                                                                guint                    field_count);
+                                                                guint                    field_count) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_VIDEO_API
 void gst_video_time_code_free                       (GstVideoTimeCode       * tc);
 
 GST_VIDEO_API
-GstVideoTimeCode * gst_video_time_code_copy         (const GstVideoTimeCode * tc);
+GstVideoTimeCode * gst_video_time_code_copy         (const GstVideoTimeCode * tc) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_VIDEO_API
 void gst_video_time_code_init                       (GstVideoTimeCode       * tc,
@@ -209,10 +209,10 @@ void gst_video_time_code_add_frames                 (GstVideoTimeCode       * tc
                                                      gint64                   frames);
 
 GST_VIDEO_API
-gchar *gst_video_time_code_to_string                (const GstVideoTimeCode * tc);
+gchar *gst_video_time_code_to_string                (const GstVideoTimeCode * tc) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_VIDEO_API
-GDateTime *gst_video_time_code_to_date_time         (const GstVideoTimeCode * tc);
+GDateTime *gst_video_time_code_to_date_time         (const GstVideoTimeCode * tc) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_VIDEO_API
 guint64 gst_video_time_code_nsec_since_daily_jam    (const GstVideoTimeCode * tc);
@@ -221,7 +221,7 @@ GST_VIDEO_API
 guint64 gst_video_time_code_frames_since_daily_jam  (const GstVideoTimeCode * tc);
 
 GST_VIDEO_API
-GstVideoTimeCode * gst_video_time_code_add_interval (const GstVideoTimeCode * tc, const GstVideoTimeCodeInterval * tc_inter);
+GstVideoTimeCode * gst_video_time_code_add_interval (const GstVideoTimeCode * tc, const GstVideoTimeCodeInterval * tc_inter) G_GNUC_WARN_UNUSED_RESULT;
 
 #define GST_TYPE_VIDEO_TIME_CODE_INTERVAL (gst_video_time_code_interval_get_type())
 GST_VIDEO_API
@@ -231,16 +231,16 @@ GST_VIDEO_API
 GstVideoTimeCodeInterval * gst_video_time_code_interval_new  (guint                    hours,
                                                      guint                    minutes,
                                                      guint                    seconds,
-                                                     guint                    frames);
+                                                     guint                    frames) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_VIDEO_API
-GstVideoTimeCodeInterval * gst_video_time_code_interval_new_from_string    (const gchar * tc_inter_str);
+GstVideoTimeCodeInterval * gst_video_time_code_interval_new_from_string    (const gchar * tc_inter_str) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_VIDEO_API
 void gst_video_time_code_interval_free                   (GstVideoTimeCodeInterval       * tc);
 
 GST_VIDEO_API
-GstVideoTimeCodeInterval * gst_video_time_code_interval_copy (const GstVideoTimeCodeInterval * tc);
+GstVideoTimeCodeInterval * gst_video_time_code_interval_copy (const GstVideoTimeCodeInterval * tc) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_VIDEO_API
 void gst_video_time_code_interval_init                   (GstVideoTimeCodeInterval       * tc,

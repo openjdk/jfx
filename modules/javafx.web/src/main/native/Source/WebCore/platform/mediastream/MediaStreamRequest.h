@@ -27,8 +27,9 @@
 
 #if ENABLE(MEDIA_STREAM)
 
-#include "MediaConstraints.h"
-#include "PageIdentifier.h"
+#include <WebCore/MediaConstraints.h>
+#include <WebCore/PageIdentifier.h>
+#include <wtf/Markable.h>
 
 namespace WebCore {
 
@@ -42,7 +43,7 @@ struct MediaStreamRequest {
     MediaConstraints audioConstraints;
     MediaConstraints videoConstraints;
     bool isUserGesturePriviledged { false };
-    PageIdentifier pageIdentifier;
+    Markable<PageIdentifier> pageIdentifier;
 };
 
 } // namespace WebCore

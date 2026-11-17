@@ -35,8 +35,17 @@ import javafx.stage.Stage;
 
 public class ButtonMnemonicPositionTest extends Application {
 
+    private static boolean isWindows() {
+        return System.getProperty("os.name").contains("Windows");
+    }
+
     @Override
     public void start(Stage primaryStage) throws Exception {
+        if (!isWindows()) {
+            System.out.println("This test is supported only on Windows. Exiting.");
+            Platform.exit();
+            return;
+        }
 
         String str =
             "This test is to check mnemonic position is correctly shown " +
@@ -54,10 +63,12 @@ public class ButtonMnemonicPositionTest extends Application {
         Button fail = new Button("Test Failed");
 
         pass.setOnAction((e)->{
+            System.out.println("TEST PASSED");
             Platform.exit();
         });
 
         fail.setOnAction((e)->{
+            System.out.println("TEST FAILED");
             Platform.exit();
             throw new AssertionError("Mnemonic mark (line) is " +
                     "not drawn as expected.");

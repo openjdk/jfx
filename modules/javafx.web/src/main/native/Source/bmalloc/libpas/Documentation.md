@@ -120,7 +120,7 @@ calling functions declared in headers that `pas_foo.h` can't include), and `pas_
 
 Some libpas "classes" are singletons. The standard way of implementing a singleton in libpas is that there is
 really no struct, only global variables and functions that are declared in the header. See `pas_page_malloc` or
-`pas_debug_heap` for examples of singletons.
+`pas_system_heap` for examples of singletons.
 
 Not everything in libpas is a class. In cases where a bunch of not-class-like things can be grouped together in
 a way that makes sense, we usually do something like a singleton. In cases where a function can't easily be
@@ -1179,7 +1179,8 @@ The header file usually looks like this:
         .use_marge_bitfit = true, \
         .marge_bitfit_min_align_shift = PAS_MIN_MARGE_ALIGN_SHIFT, \
         .marge_bitfit_page_size = PAS_MARGE_PAGE_DEFAULT_SIZE, \
-        .pgm_enabled = false)
+        .pgm_enabled = false, \
+        .delegate_large_user_allocations = true, \
     
     PAS_API extern const pas_heap_config iso_heap_config;
     

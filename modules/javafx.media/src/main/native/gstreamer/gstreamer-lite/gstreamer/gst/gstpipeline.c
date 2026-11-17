@@ -400,7 +400,6 @@ gst_pipeline_change_state (GstElement * element, GstStateChange transition)
 {
   GstStateChangeReturn result = GST_STATE_CHANGE_SUCCESS;
   GstPipeline *pipeline = GST_PIPELINE_CAST (element);
-  GstClock *clock;
 
   switch (transition) {
     case GST_STATE_CHANGE_NULL_TO_NULL:
@@ -452,6 +451,7 @@ gst_pipeline_change_state (GstElement * element, GstStateChange transition)
       /* only do this for top-level, however */
       if (GST_OBJECT_PARENT (element) == NULL &&
           (update_clock || last_start_time != start_time)) {
+        GstClock *clock = NULL;
         GST_DEBUG_OBJECT (pipeline, "Need to update start_time");
 
         /* when going to PLAYING, select a clock when needed. If we just got
@@ -464,8 +464,7 @@ gst_pipeline_change_state (GstElement * element, GstStateChange transition)
               "Don't need to update clock, using old clock.");
           /* only try to ref if cur_clock is not NULL */
           if (cur_clock)
-            gst_object_ref (cur_clock);
-          clock = cur_clock;
+            clock = gst_object_ref (cur_clock);
         }
 
         if (clock) {
@@ -479,8 +478,17 @@ gst_pipeline_change_state (GstElement * element, GstStateChange transition)
           /* now distribute the clock (which could be NULL). If some
            * element refuses the clock, this will return FALSE and
            * we effectively fail the state change. */
-          if (!gst_element_set_clock (element, clock))
-            goto invalid_clock;
+          if (!gst_element_set_clock (element, clock)) {
+            /* selected clock was not accepted by some element */
+            GST_ELEMENT_ERROR (pipeline, CORE, CLOCK,
+                (_("Selected clock cannot be used in pipeline.")),
+                ("Pipeline cannot operate with selected clock"));
+            GST_DEBUG_OBJECT (pipeline,
+                "Pipeline cannot operate with selected clock %p", clock);
+            gst_clear_object (&clock);
+            gst_clear_object (&cur_clock);
+            return GST_STATE_CHANGE_FAILURE;
+          }
 
           /* if we selected and distributed a new clock, let the app
            * know about it */
@@ -488,8 +496,7 @@ gst_pipeline_change_state (GstElement * element, GstStateChange transition)
               gst_message_new_new_clock (GST_OBJECT_CAST (element), clock));
         }
 
-        if (clock)
-          gst_object_unref (clock);
+        gst_clear_object (&clock);
 
         if (start_time != GST_CLOCK_TIME_NONE && now != GST_CLOCK_TIME_NONE) {
           GstClockTime new_base_time = now - start_time + delay;
@@ -509,8 +516,7 @@ gst_pipeline_change_state (GstElement * element, GstStateChange transition)
             "NOT adjusting base_time because we selected one before");
       }
 
-      if (cur_clock)
-        gst_object_unref (cur_clock);
+      gst_clear_object (&cur_clock);
       break;
     }
     case GST_STATE_CHANGE_PLAYING_TO_PAUSED:
@@ -590,21 +596,6 @@ gst_pipeline_change_state (GstElement * element, GstStateChange transition)
     }
   }
   return result;
-
-  /* ERRORS */
-invalid_clock:
-  {
-    /* we generate this error when the selected clock was not
-     * accepted by some element */
-    GST_ELEMENT_ERROR (pipeline, CORE, CLOCK,
-        (_("Selected clock cannot be used in pipeline.")),
-        ("Pipeline cannot operate with selected clock"));
-    GST_DEBUG_OBJECT (pipeline,
-        "Pipeline cannot operate with selected clock %p", clock);
-    if (clock)
-      gst_object_unref (clock);
-    return GST_STATE_CHANGE_FAILURE;
-  }
 }
 
 /* intercept the bus messages from our children. We watch for the ASYNC_START
@@ -693,9 +684,6 @@ gst_pipeline_do_latency (GstBin * bin)
   latency = pipeline->priv->latency;
   GST_OBJECT_UNLOCK (pipeline);
 
-  if (latency == GST_CLOCK_TIME_NONE)
-    return GST_BIN_CLASS (parent_class)->do_latency (bin);
-
   GST_DEBUG_OBJECT (pipeline, "querying latency");
 
   query = gst_query_new_latency ();
@@ -703,10 +691,6 @@ gst_pipeline_do_latency (GstBin * bin)
     gboolean live;
 
     gst_query_parse_latency (query, &live, &min_latency, &max_latency);
-
-    GST_OBJECT_LOCK (pipeline);
-    pipeline->priv->min_latency = min_latency;
-    GST_OBJECT_UNLOCK (pipeline);
 
     GST_DEBUG_OBJECT (pipeline,
         "got min latency %" GST_TIME_FORMAT ", max latency %"
@@ -722,13 +706,27 @@ gst_pipeline_do_latency (GstBin * bin)
               GST_TIME_ARGS (max_latency), GST_TIME_ARGS (min_latency)));
     }
 
-    if (latency < min_latency) {
-      /* This is a problematic situation as we will most likely drop lots of
-       * data if we configure a too low latency */
-      GST_ELEMENT_WARNING (pipeline, CORE, CLOCK, (NULL),
-          ("Configured latency is lower than detected minimum latency: configured %"
-              GST_TIME_FORMAT " < min %" GST_TIME_FORMAT,
-              GST_TIME_ARGS (latency), GST_TIME_ARGS (min_latency)));
+    /* If no static latency was configured then select the minimum latency */
+    if (latency == GST_CLOCK_TIME_NONE) {
+      latency = min_latency;
+    } else {
+      if (latency < min_latency) {
+        /* This is a problematic situation as we will most likely drop lots of
+         * data if we configure a too low latency */
+        GST_ELEMENT_WARNING (pipeline, CORE, CLOCK, (NULL),
+            ("Configured latency is lower than detected minimum latency: configured %"
+                GST_TIME_FORMAT " < min %" GST_TIME_FORMAT,
+                GST_TIME_ARGS (latency), GST_TIME_ARGS (min_latency)));
+      }
+      if (max_latency < latency) {
+        /* and this is basically the same check as further above. There is not
+         * enough buffering and the pipeline might not work correctly. */
+        GST_ELEMENT_WARNING (pipeline, CORE, CLOCK, (NULL),
+            ("Impossible to configure latency: max %" GST_TIME_FORMAT
+                " < configured %" GST_TIME_FORMAT
+                ". Add queues or other buffering elements.",
+                GST_TIME_ARGS (max_latency), GST_TIME_ARGS (latency)));
+      }
     }
   } else {
     /* this is not a real problem, we just don't configure any latency. */
@@ -737,17 +735,23 @@ gst_pipeline_do_latency (GstBin * bin)
   gst_query_unref (query);
 
 
-  /* configure latency on elements */
-  res =
-      gst_element_send_event (GST_ELEMENT_CAST (pipeline),
-      gst_event_new_latency (latency));
-  if (res) {
-    GST_INFO_OBJECT (pipeline, "configured latency of %" GST_TIME_FORMAT,
-        GST_TIME_ARGS (latency));
-  } else {
-    GST_WARNING_OBJECT (pipeline,
-        "did not really configure latency of %" GST_TIME_FORMAT,
-        GST_TIME_ARGS (latency));
+  if (latency != GST_CLOCK_TIME_NONE) {
+    GST_OBJECT_LOCK (pipeline);
+    pipeline->priv->min_latency = latency;
+    GST_OBJECT_UNLOCK (pipeline);
+
+    /* configure latency on elements */
+    res =
+        gst_element_send_event (GST_ELEMENT_CAST (pipeline),
+        gst_event_new_latency (latency));
+    if (res) {
+      GST_INFO_OBJECT (pipeline, "configured latency of %" GST_TIME_FORMAT,
+          GST_TIME_ARGS (latency));
+    } else {
+      GST_WARNING_OBJECT (pipeline,
+          "did not really configure latency of %" GST_TIME_FORMAT,
+          GST_TIME_ARGS (latency));
+    }
   }
 
   return res;

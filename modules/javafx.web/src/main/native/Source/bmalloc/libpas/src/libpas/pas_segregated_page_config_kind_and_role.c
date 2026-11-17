@@ -43,7 +43,7 @@ pas_segregated_page_config_kind_and_role_get_string(pas_segregated_page_config_k
 #include "pas_segregated_page_config_kind.def"
 #undef PAS_DEFINE_SEGREGATED_PAGE_CONFIG_KIND
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 

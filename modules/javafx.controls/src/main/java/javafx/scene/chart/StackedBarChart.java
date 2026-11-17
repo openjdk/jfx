@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -85,10 +85,12 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
                         for (Data<X, Y> data : series.getData()) {
                             if ((cat).equals((orientation == orientation.VERTICAL) ?
                                     data.getXValue() : data.getYValue())) {
-                                boolean animatedOn = getAnimated();
-                                setAnimated(false);
-                                dataItemRemoved(data, series);
-                                setAnimated(animatedOn);
+                                try {
+                                    setSuppressAnimation(true);
+                                    dataItemRemoved(data, series);
+                                } finally {
+                                    setSuppressAnimation(false);
+                                }
                             }
                         }
                     }

@@ -53,7 +53,7 @@ pas_page_sharing_participant_kind_select_for_segregated_directory(
     case pas_segregated_shared_page_directory_kind:
         return pas_page_sharing_participant_segregated_shared_page_directory;
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return pas_page_sharing_participant_null;
 }
 
@@ -72,7 +72,7 @@ pas_page_sharing_participant_kind_get_string(pas_page_sharing_participant_kind k
     case pas_page_sharing_participant_large_sharing_pool:
         return "large_sharing_pool";
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 

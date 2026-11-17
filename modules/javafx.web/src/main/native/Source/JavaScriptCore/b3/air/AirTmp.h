@@ -199,6 +199,8 @@ public:
         return *this == Tmp(WTF::HashTableDeletedValue);
     }
 
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
+
     unsigned hash() const
     {
         return WTF::IntHash<int>::hash(m_value);
@@ -311,18 +313,9 @@ private:
     int m_value;
 };
 
-struct TmpHash {
-    static unsigned hash(const Tmp& key) { return key.hash(); }
-    static bool equal(const Tmp& a, const Tmp& b) { return a == b; }
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
-};
-
 } } } // namespace JSC::B3::Air
 
 namespace WTF {
-
-template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::B3::Air::Tmp> : JSC::B3::Air::TmpHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::B3::Air::Tmp> : SimpleClassHashTraits<JSC::B3::Air::Tmp> { };

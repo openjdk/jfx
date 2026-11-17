@@ -25,12 +25,12 @@
 
 #pragma once
 
-#include "JSCast.h"
-#include "JSTypeInfo.h"
-#include "PropertyDescriptor.h"
-#include "PutDirectIndexMode.h"
-#include "VM.h"
-#include "WriteBarrier.h"
+#include <JavaScriptCore/JSCast.h>
+#include <JavaScriptCore/JSTypeInfo.h>
+#include <JavaScriptCore/PropertyDescriptor.h>
+#include <JavaScriptCore/PutDirectIndexMode.h>
+#include <JavaScriptCore/VM.h>
+#include <JavaScriptCore/WriteBarrier.h>
 #include <wtf/HashMap.h>
 #include <wtf/TZoneMalloc.h>
 
@@ -44,7 +44,7 @@ public:
     static constexpr unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
 
 private:
-    typedef HashMap<uint64_t, SparseArrayEntry, WTF::IntHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>> Map;
+    typedef UncheckedKeyHashMap<uint64_t, SparseArrayEntry, WTF::IntHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>> Map;
 
     enum Flags {
         Normal = 0,
@@ -66,7 +66,7 @@ public:
 
     static SparseArrayValueMap* create(VM&);
 
-    static constexpr bool needsDestruction = true;
+    static constexpr DestructionMode needsDestruction = NeedsDestruction;
     static void destroy(JSCell*);
 
     template<typename CellType, SubspaceAccess>

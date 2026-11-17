@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include <wtf/Forward.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
@@ -35,6 +34,7 @@ namespace WebCore {
 class Pattern;
 class SourceImage;
 struct DOMMatrix2DInit;
+template<typename> class ExceptionOr;
 
 class CanvasPattern : public RefCounted<CanvasPattern> {
 public:
@@ -53,7 +53,7 @@ public:
 private:
     CanvasPattern(SourceImage&&, bool repeatX, bool repeatY, bool originClean);
 
-    Ref<Pattern> m_pattern;
+    const Ref<Pattern> m_pattern;
     bool m_originClean;
 };
 

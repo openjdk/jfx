@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
 # DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 #
 # This code is free software; you can redistribute it and/or modify it
@@ -72,6 +72,7 @@ INCLUDES = $(BASE_INCLUDES) \
 
 CFLAGS = -DWIN32 \
          -D_WINDOWS \
+         -D_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR \
          -D_USRDLL \
          -DJFXMEDIA_JNI_EXPORTS \
          -DTARGET_OS_WIN32=1 \

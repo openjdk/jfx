@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2008-2016 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2016 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Torch Mobile, Inc. http://www.torchmobile.com/
- * Copyright (C) 2010 Google, Inc. All Rights Reserved.
+ * Copyright (C) 2010 Google, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,14 +27,9 @@
 
 #pragma once
 
-#if COMPILER(MSVC)
-// Disable the "unreachable code" warning so we can compile the ASSERT_NOT_REACHED in the END_STATE macro.
-#pragma warning(disable: 4702)
-#endif
-
 namespace WebCore {
 
-inline bool isTokenizerWhitespace(UChar character)
+inline bool isTokenizerWhitespace(char16_t character)
 {
     return character == ' ' || character == '\x0A' || character == '\x09' || character == '\x0C';
 }

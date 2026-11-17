@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,6 @@
 #pragma once
 
 #include "ImageBufferBackend.h"
-#include <wtf/IsoMalloc.h>
 #include "ImageBuffer.h"
 
 #include "PlatformImage.h"
@@ -46,7 +45,7 @@ public:
 
     JLObject getWCImage() const;
     Vector<uint8_t> toDataJava(const String& mimeType, std::optional<double>) override;
-    void* getData();
+    std::pair<void*, size_t> getDataAndSize();
     void update() const;
 
     GraphicsContext& context() override;
@@ -61,15 +60,15 @@ public:
     String debugDescription() const override;
 
     void getPixelBuffer(const IntRect& srcRect, PixelBuffer& destination) override ;
-    void putPixelBuffer(const PixelBuffer&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat) override;
+    void putPixelBuffer(const PixelBufferSourceView&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat) override;
 
     bool canMapBackingStore() const final;
 
 protected:
     ImageBufferJavaBackend(const Parameters&, PlatformImagePtr, std::unique_ptr<GraphicsContext>&&, IntSize);
 
-    void getPixelBuffer(const IntRect& srcRect, const uint8_t* data, PixelBuffer& destination);
-    void putPixelBuffer(const PixelBuffer&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat, uint8_t* destination);
+    void getPixelBuffer(const IntRect& srcRect, std::span<const uint8_t> data, PixelBuffer& destination);
+    void putPixelBuffer(const PixelBufferSourceView&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat, std::span<uint8_t> destination);
 
 
     unsigned bytesPerRow() const override;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "Options.h"
+#include <JavaScriptCore/Options.h>
 #include <wtf/Nonmovable.h>
 #include <wtf/PrintStream.h>
 #include <wtf/TZoneMalloc.h>
@@ -55,24 +55,16 @@ inline int32_t formattedTotalExecutionCount(float value)
 
 template<CountingVariant countingVariant>
 class ExecutionCounter {
-    WTF_MAKE_TZONE_ALLOCATED(ExecutionCounter);
+    WTF_FORBID_HEAP_ALLOCATION_WITH_VALIDATION(ExecutionCounter);
     WTF_MAKE_NONMOVABLE(ExecutionCounter);
 public:
     ExecutionCounter();
     void forceSlowPathConcurrently(); // If you use this, checkIfThresholdCrossedAndSet() may still return false.
     bool checkIfThresholdCrossedAndSet(CodeBlock*);
-    bool hasCrossedThreshold() const { return m_counter >= 0; }
     void setNewThreshold(int32_t threshold, CodeBlock* = nullptr);
     void deferIndefinitely();
     double count() const { return static_cast<double>(m_totalCount) + m_counter; }
     void dump(PrintStream&) const;
-
-    void setNewThresholdForOSRExit(uint32_t activeThreshold, double memoryUsageAdjustedThreshold)
-    {
-        m_activeThreshold = activeThreshold;
-        m_counter = static_cast<int32_t>(-memoryUsageAdjustedThreshold);
-        m_totalCount = memoryUsageAdjustedThreshold;
-    }
 
     template<typename T>
     static T clippedThreshold(CodeBlock* codeBlock, T threshold)
@@ -107,6 +99,9 @@ public:
     // the memory usage heuristics.
     int32_t m_activeThreshold;
 };
+
+extern template class ExecutionCounter<CountingForBaseline>;
+extern template class ExecutionCounter<CountingForUpperTiers>;
 
 typedef ExecutionCounter<CountingForBaseline> BaselineExecutionCounter;
 typedef ExecutionCounter<CountingForUpperTiers> UpperTierExecutionCounter;

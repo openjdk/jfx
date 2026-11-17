@@ -23,9 +23,9 @@
 
 #pragma once
 
-#include "ExceptionDetails.h"
-#include "ExceptionOr.h"
 #include <JavaScriptCore/ThrowScope.h>
+#include <WebCore/ExceptionDetails.h>
+#include <WebCore/ExceptionOr.h>
 
 namespace JSC {
 class CatchScope;
@@ -80,22 +80,22 @@ ALWAYS_INLINE void propagateException(JSC::JSGlobalObject& lexicalGlobalObject, 
 {
     if (throwScope.exception())
         return;
-    propagateExceptionSlowPath(lexicalGlobalObject, throwScope, WTFMove(exception));
+    propagateExceptionSlowPath(lexicalGlobalObject, throwScope, WTF::move(exception));
 }
 
 inline void propagateException(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& throwScope, ExceptionOr<void>&& value)
 {
-    if (UNLIKELY(value.hasException()))
+    if (value.hasException()) [[unlikely]]
         propagateException(lexicalGlobalObject, throwScope, value.releaseException());
 }
 
-template<typename Functor> void invokeFunctorPropagatingExceptionIfNecessary(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& throwScope, Functor&& functor)
+template<typename Functor> void invokeFunctorPropagatingExceptionIfNecessary(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& throwScope, NOESCAPE Functor&& functor)
 {
     using ReturnType = std::invoke_result_t<Functor>;
 
     if constexpr (IsExceptionOr<ReturnType>) {
         auto result = functor();
-        if (UNLIKELY(result.hasException()))
+        if (result.hasException()) [[unlikely]]
             propagateException(lexicalGlobalObject, throwScope, result.releaseException());
     } else
         functor();

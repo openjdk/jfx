@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,14 +27,13 @@
 #import "com_sun_glass_ui_mac_MacApplication.h"
 #import "com_sun_glass_events_KeyEvent.h"
 
-
 #import "GlassMacros.h"
 #import "GlassApplication.h"
+#import "GlassAccessible.h"
 #import "GlassHelper.h"
 #import "GlassKey.h"
 #import "GlassScreen.h"
 #import "GlassWindow.h"
-#import "GlassTouches.h"
 #import "PlatformSupport.h"
 
 #import "ProcessInfo.h"
@@ -78,6 +77,11 @@ static NSString* JavaRunLoopMode = @"AWTRunLoopMode";
 // don't deadlock.
 static NSArray<NSString*> *runLoopModes = nil;
 
+// Custom event that is provided by AWT to allow libraries like
+// JavaFX to forward native events to AWT even if AWT runs in
+// embedded mode.
+static NSString* awtEmbeddedEvent = @"AWTEmbeddedEvent";
+
 #ifdef STATIC_BUILD
 jint JNICALL JNI_OnLoad_glass(JavaVM *vm, void *reserved)
 #else
@@ -99,9 +103,12 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 }
 
 - (id)initWithRunnable:(jobject)runnable;
+- (void)maybeRun;
 - (void)run;
 
 @end
+
+static NSMutableArray<GlassRunnable*> *deferredRunnables = nil;
 
 @implementation GlassRunnable
 
@@ -132,6 +139,27 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     [pool drain];
 }
 
+- (void)maybeRun
+{
+    if (isFullScreenExitingLoop) {
+        if (deferredRunnables == nil) {
+            deferredRunnables = [[NSMutableArray alloc] initWithCapacity: 2];
+        }
+        [deferredRunnables addObject: self];
+    } else {
+        [self run];
+    }
+}
+
++ (void)rescheduleDeferredRunnables
+{
+    if (deferredRunnables != nil) {
+        for (GlassRunnable *runnable in deferredRunnables) {
+            [runnable performSelectorOnMainThread:@selector(maybeRun) withObject:nil waitUntilDone:NO modes:runLoopModes];
+        }
+        [deferredRunnables removeAllObjects];
+    }
+}
 @end
 
 @implementation NSApplicationFX
@@ -474,6 +502,21 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     return YES;
 }
 
+- (void) application:(NSApplication *)theApplication openURLs:(NSArray<NSURL *> *)urls
+{
+    for (NSURL* url in urls) {
+         NSDictionary *userInfo = @{
+            @"name": @"openURL",
+            @"url": url.absoluteString
+        };
+
+        [[NSNotificationCenter defaultCenter]
+                postNotificationName:awtEmbeddedEvent
+                object:nil
+                userInfo:userInfo];
+    }
+}
+
 - (BOOL)applicationShouldOpenUntitledFile:(NSApplication *)sender
 {
     LOG("GlassApplication:applicationShouldOpenUntitledFile");
@@ -707,9 +750,6 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
             // enter runloop, this will not return until terminated
             [NSApp run];
 
-            // Abort listerning to global touch input events
-            [GlassTouches terminate];
-
             GLASS_CHECK_EXCEPTION(jEnv);
 
             (*jEnv)->CallVoidMethod(jEnv, self->jApplication, javaIDs.MacApplication.notifyApplicationDidTerminate);
@@ -805,6 +845,7 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
         (*env)->ExceptionClear(env);
     }
     isFullScreenExitingLoop = NO;
+    [GlassRunnable rescheduleDeferredRunnables];
 }
 
 + (void)leaveFullScreenExitingLoopIfNeeded
@@ -869,6 +910,10 @@ static void inputDidChangeCallback(CFNotificationCenterRef center, void *observe
 
 + (BOOL)syncRenderingDisabled {
     return disableSyncRendering;
+}
+
++ (BOOL)isEmbedded {
+    return isEmbedded;
 }
 
 @end
@@ -1113,7 +1158,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1submitForLater
     if (jEnv != NULL)
     {
         GlassRunnable *runnable = [[GlassRunnable alloc] initWithRunnable:(*env)->NewGlobalRef(env, jRunnable)];
-        [runnable performSelectorOnMainThread:@selector(run) withObject:nil waitUntilDone:NO modes:runLoopModes];
+        [runnable performSelectorOnMainThread:@selector(maybeRun) withObject:nil waitUntilDone:NO modes:runLoopModes];
     }
 }
 
@@ -1178,18 +1223,6 @@ JNIEXPORT jobjectArray JNICALL Java_com_sun_glass_ui_mac_MacApplication_staticSc
     GLASS_CHECK_EXCEPTION(env);
 
     return screenArray;
-}
-
-
-/*
- * Class:     com_sun_glass_ui_mac_MacApplication
- * Method:    _supportsSystemMenu
- * Signature: ()Z;
- */
-JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacApplication__1supportsSystemMenu
-(JNIEnv *env, jobject japplication)
-{
-    return !isEmbedded;
 }
 
 /*
@@ -1297,4 +1330,55 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacApplication__1getPlatform
     return appDelegate
         ? [(GlassApplication*)appDelegate getPlatformPreferences]
         : nil;
+}
+
+/*
+ * Class:       com_sun_glass_ui_mac_MacApplication
+ * Method:      _openURI
+ * Signature:   (java/lang/String;)I;
+ */
+JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacApplication__1openURI
+(JNIEnv *env, jclass jClass, jstring uri)
+{
+    __block OSStatus status = noErr;
+
+    GLASS_ASSERT_MAIN_JAVA_THREAD(env);
+    GLASS_POOL_ENTER;
+
+    NSURL *url = [NSURL URLWithString:jStringToNSString(env, uri)];
+
+    NSURL *httpsURL = [NSURL URLWithString:@"https://"];
+    NSWorkspace *workspace = [NSWorkspace sharedWorkspace];
+    NSURL *defaultBrowser = [workspace URLForApplicationToOpenURL:httpsURL];
+    if (defaultBrowser == nil) {
+        NSLog(@"Default browser not set");
+        return -1;
+    }
+    NSArray<NSURL *> *urls = @[url];
+    NSWorkspaceOpenConfiguration *configuration = [NSWorkspaceOpenConfiguration configuration];
+    configuration.activates = YES;
+    configuration.promptsUserIfNeeded = YES;
+    dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);
+    dispatch_time_t timeout = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(NSEC_PER_SEC)); // 1 second timeout
+
+    dispatch_retain(semaphore);
+    [workspace     openURLs:urls
+       withApplicationAtURL:defaultBrowser
+              configuration:configuration
+           completionHandler:^(NSRunningApplication *app, NSError *error) {
+               if (error) {
+                   NSLog(@"Error opening URI %@ : %@", url, error.localizedDescription);
+                   status = (OSStatus) error.code;
+               }
+               dispatch_semaphore_signal(semaphore);
+               dispatch_release(semaphore);
+           }];
+
+    dispatch_semaphore_wait(semaphore, timeout);
+    dispatch_release(semaphore);
+
+    GLASS_POOL_EXIT;
+    GLASS_CHECK_EXCEPTION(env);
+
+    return status;
 }

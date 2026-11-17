@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Google Inc. All Rights Reserved.
+ * Copyright (C) 2011 Google Inc. All rights reserved.
  * Copyright (C) 2020 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,11 +27,15 @@
 #include "config.h"
 #include "ScriptedAnimationController.h"
 
+#include "DocumentPage.h"
+#include "FrameDestructionObserverInlines.h"
 #include "InspectorInstrumentation.h"
 #include "Logging.h"
 #include "OpportunisticTaskScheduler.h"
 #include "Page.h"
+#include "RenderObjectStyle.h"
 #include "RequestAnimationFrameCallback.h"
+#include "ScriptController.h"
 #include "Settings.h"
 #include "UserGestureIndicator.h"
 #include <wtf/SystemTracing.h>
@@ -73,7 +77,7 @@ Seconds ScriptedAnimationController::interval() const
 
 Seconds ScriptedAnimationController::preferredScriptedAnimationInterval() const
 {
-    auto* page = this->page();
+    RefPtr page = this->page();
     if (!page)
         return FullSpeedAnimationInterval;
 
@@ -90,7 +94,7 @@ OptionSet<ThrottlingReason> ScriptedAnimationController::throttlingReasons() con
 
 bool ScriptedAnimationController::isThrottledRelativeToPage() const
 {
-    if (auto* page = this->page())
+    if (RefPtr page = this->page())
         return preferredScriptedAnimationInterval() > page->preferredRenderingUpdateInterval();
     return false;
 }
@@ -111,7 +115,7 @@ ScriptedAnimationController::CallbackId ScriptedAnimationController::registerCal
     RefPtr<ImminentlyScheduledWorkScope> workScope;
     if (RefPtr page = this->page())
         workScope = page->opportunisticTaskScheduler().makeScheduledWorkScope();
-    m_callbackDataList.append({ WTFMove(callback), UserGestureIndicator::currentUserGesture(), WTFMove(workScope) });
+    m_callbackDataList.append({ WTF::move(callback), UserGestureIndicator::currentUserGesture(), WTF::move(workScope) });
 
     if (RefPtr document = m_document.get())
         InspectorInstrumentation::didRequestAnimationFrame(*document, callbackId);
@@ -165,13 +169,13 @@ void ScriptedAnimationController::serviceRequestAnimationFrameCallbacks(ReducedR
             continue;
         callback->m_firedOrCancelled = true;
 
-        if (userGestureTokenToForward && userGestureTokenToForward->hasExpired(UserGestureToken::maximumIntervalForUserGestureForwarding))
+        if (userGestureTokenToForward && Ref { *userGestureTokenToForward }->hasExpired(UserGestureToken::maximumIntervalForUserGestureForwarding))
             userGestureTokenToForward = nullptr;
         UserGestureIndicator gestureIndicator(userGestureTokenToForward);
 
         auto identifier = callback->m_id;
         InspectorInstrumentation::willFireAnimationFrame(document, identifier);
-        callback->handleEvent(highResNowMs);
+        Ref { callback }->invoke(highResNowMs);
         InspectorInstrumentation::didFireAnimationFrame(document, identifier);
     }
 

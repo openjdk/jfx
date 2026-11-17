@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -138,6 +138,24 @@ public class StackedBarChartTest extends XYChartTestBase {
             pulse();
             assertEquals(0, XYChartShim.getPlotChildren(sbc).size());
         }
+    }
+
+    @Test
+    public void testSeriesRemoveImmediatelyWhenReducedMotionIsEnabled() {
+        createChart();
+        startApp();
+        sbc.setAnimated(true);
+        sbc.getData().addAll(series1);
+        pulse();
+        assertEquals(3, XYChartShim.getPlotChildren(sbc).size());
+
+        getTestScene().getPreferences().setReducedMotion(true);
+        pulse();
+
+        sbc.getData().remove(0);
+        pulse();
+
+        assertEquals(0, XYChartShim.getPlotChildren(sbc).size());
     }
 
     @Test

@@ -37,14 +37,17 @@ BytecodeSequence::BytecodeSequence(CodeBlock* codeBlock)
 {
     StringPrintStream out;
 
-    for (unsigned i = 0; i < codeBlock->numberOfArgumentValueProfiles(); ++i) {
+    {
+        unsigned index = 0;
         ConcurrentJSLocker locker(codeBlock->valueProfileLock());
-        CString description = codeBlock->valueProfileForArgument(i).briefDescription(locker);
+        for (auto& profile : codeBlock->argumentValueProfiles()) {
+            CString description = profile.briefDescription(locker);
         if (!description.length())
             continue;
         out.reset();
-        out.print("arg", i, ": ", description);
+            out.print("arg", index++, ": ", description);
         m_header.append(out.toCString());
+    }
     }
 
     ICStatusMap statusMap;
@@ -77,12 +80,12 @@ void BytecodeSequence::addSequenceProperties(Dumper& dumper, JSON::Object& resul
     Ref jsonHeader = JSON::Array::create();
     for (auto& header : m_header)
         jsonHeader->pushString(String::fromUTF8(header.span()));
-    result.setValue(dumper.keys().m_header, WTFMove(jsonHeader));
+    result.setValue(dumper.keys().m_header, WTF::move(jsonHeader));
 
     Ref jsonSequence = JSON::Array::create();
     for (auto& sequence : m_sequence)
         jsonSequence->pushValue(sequence.toJSON(dumper));
-    result.setValue(dumper.keys().m_bytecode, WTFMove(jsonSequence));
+    result.setValue(dumper.keys().m_bytecode, WTF::move(jsonSequence));
 }
 
 } } // namespace JSC::Profiler

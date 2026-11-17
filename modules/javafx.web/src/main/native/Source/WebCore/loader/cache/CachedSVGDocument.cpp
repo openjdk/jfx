@@ -30,14 +30,14 @@
 namespace WebCore {
 
 CachedSVGDocument::CachedSVGDocument(CachedResourceRequest&& request, PAL::SessionID sessionID, const CookieJar* cookieJar, const Settings& settings)
-    : CachedResource(WTFMove(request), Type::SVGDocumentResource, sessionID, cookieJar)
+    : CachedResource(WTF::move(request), Type::SVGDocumentResource, sessionID, cookieJar)
     , m_decoder(TextResourceDecoder::create("application/xml"_s))
     , m_settings(settings)
 {
 }
 
 CachedSVGDocument::CachedSVGDocument(CachedResourceRequest&& request, CachedSVGDocument& resource)
-    : CachedSVGDocument(WTFMove(request), resource.sessionID(), resource.cookieJar(), resource.m_settings)
+    : CachedSVGDocument(WTF::move(request), resource.sessionID(), resource.cookieJar(), resource.m_settings)
 {
 }
 
@@ -48,9 +48,9 @@ void CachedSVGDocument::setEncoding(const String& chs)
     protectedDecoder()->setEncoding(chs, TextResourceDecoder::EncodingFromHTTPHeader);
 }
 
-String CachedSVGDocument::encoding() const
+ASCIILiteral CachedSVGDocument::encoding() const
 {
-    return String::fromLatin1(protectedDecoder()->encoding().name());
+    return protectedDecoder()->encoding().name();
 }
 
 RefPtr<TextResourceDecoder> CachedSVGDocument::protectedDecoder() const
@@ -64,7 +64,7 @@ void CachedSVGDocument::finishLoading(const FragmentedSharedBuffer* data, const 
         // We don't need to create a new frame because the new document belongs to the parent UseElement.
         Ref document = SVGDocument::create(nullptr, m_settings.copyRef(), response().url());
         document->setMarkupUnsafe(protectedDecoder()->decodeAndFlush(data->makeContiguous()->span()), { ParserContentPolicy::AllowDeclarativeShadowRoots });
-        m_document = WTFMove(document);
+        m_document = WTF::move(document);
     }
     CachedResource::finishLoading(data, metrics);
 }

@@ -36,6 +36,7 @@
 #include "CSSUnparsedValue.h"
 #include "CSSVariableData.h"
 #include "Document.h"
+#include "ExceptionOr.h"
 #include "PaintWorkletGlobalScope.h"
 #include "StylePropertyShorthand.h"
 #include <wtf/text/MakeString.h>
@@ -54,46 +55,57 @@ Document* MainThreadStylePropertyMapReadOnly::documentFromContext(ScriptExecutio
 }
 
 // https://drafts.css-houdini.org/css-typed-om-1/#dom-stylepropertymapreadonly-get
-ExceptionOr<RefPtr<CSSStyleValue>> MainThreadStylePropertyMapReadOnly::get(ScriptExecutionContext& context, const AtomString& property) const
+ExceptionOr<MainThreadStylePropertyMapReadOnly::CSSStyleValueOrUndefined> MainThreadStylePropertyMapReadOnly::get(ScriptExecutionContext& context, const AtomString& property) const
 {
-    auto* document = documentFromContext(context);
+    RefPtr document = documentFromContext(context);
     if (!document)
-        return nullptr;
+        return { std::monostate { } };
 
-    if (isCustomPropertyName(property))
-        return reifyValue(customPropertyValue(property), std::nullopt, *document);
+    if (isCustomPropertyName(property)) {
+        if (auto value = reifyValue(*document, customPropertyValue(property), CSSPropertyCustom))
+            return { WTF::move(value) };
 
-    auto propertyID = cssPropertyID(property);
-    if (!isExposed(propertyID, &document->settings()))
-        return Exception { ExceptionCode::TypeError, makeString("Invalid property "_s, property) };
-
-    if (isShorthand(propertyID))
-        return CSSStyleValueFactory::constructStyleValueForShorthandSerialization(shorthandPropertySerialization(propertyID), { *document });
-
-    return reifyValue(propertyValue(propertyID), propertyID, *document);
-}
-
-// https://drafts.css-houdini.org/css-typed-om-1/#dom-stylepropertymapreadonly-getall
-ExceptionOr<Vector<RefPtr<CSSStyleValue>>> MainThreadStylePropertyMapReadOnly::getAll(ScriptExecutionContext& context, const AtomString& property) const
-{
-    auto* document = documentFromContext(context);
-    if (!document)
-        return Vector<RefPtr<CSSStyleValue>> { };
-
-    if (isCustomPropertyName(property))
-        return reifyValueToVector(customPropertyValue(property), std::nullopt, *document);
+        return { std::monostate { } };
+    }
 
     auto propertyID = cssPropertyID(property);
     if (!isExposed(propertyID, &document->settings()))
         return Exception { ExceptionCode::TypeError, makeString("Invalid property "_s, property) };
 
     if (isShorthand(propertyID)) {
-        if (RefPtr value = CSSStyleValueFactory::constructStyleValueForShorthandSerialization(shorthandPropertySerialization(propertyID), { *document }))
-            return Vector<RefPtr<CSSStyleValue>> { WTFMove(value) };
+        if (auto value = CSSStyleValueFactory::constructStyleValueForShorthandSerialization(*document, shorthandPropertySerialization(propertyID)))
+            return { WTF::move(value) };
+
+        return { std::monostate { } };
+    }
+
+    if (auto value = reifyValue(*document, propertyValue(propertyID), propertyID))
+        return { WTF::move(value) };
+
+    return { std::monostate { } };
+}
+
+// https://drafts.css-houdini.org/css-typed-om-1/#dom-stylepropertymapreadonly-getall
+ExceptionOr<Vector<RefPtr<CSSStyleValue>>> MainThreadStylePropertyMapReadOnly::getAll(ScriptExecutionContext& context, const AtomString& property) const
+{
+    RefPtr document = documentFromContext(context);
+    if (!document)
+        return Vector<RefPtr<CSSStyleValue>> { };
+
+    if (isCustomPropertyName(property))
+        return reifyValueToVector(*document, customPropertyValue(property), CSSPropertyCustom);
+
+    auto propertyID = cssPropertyID(property);
+    if (!isExposed(propertyID, &document->settings()))
+        return Exception { ExceptionCode::TypeError, makeString("Invalid property "_s, property) };
+
+    if (isShorthand(propertyID)) {
+        if (RefPtr value = CSSStyleValueFactory::constructStyleValueForShorthandSerialization(*document, shorthandPropertySerialization(propertyID)))
+            return Vector<RefPtr<CSSStyleValue>> { WTF::move(value) };
         return Vector<RefPtr<CSSStyleValue>> { };
     }
 
-    return reifyValueToVector(propertyValue(propertyID), propertyID, *document);
+    return reifyValueToVector(*document, propertyValue(propertyID), propertyID);
 }
 
 // https://drafts.css-houdini.org/css-typed-om-1/#dom-stylepropertymapreadonly-has
@@ -102,7 +114,16 @@ ExceptionOr<bool> MainThreadStylePropertyMapReadOnly::has(ScriptExecutionContext
     auto result = get(context, property);
     if (result.hasException())
         return result.releaseException();
-    return !!result.returnValue();
+
+    return WTF::switchOn(result.returnValue(),
+        [](const RefPtr<CSSStyleValue>& value) {
+            ASSERT(value);
+            return !!value;
+        },
+        [](std::monostate) {
+            return false;
+        }
+    );
 }
 
 } // namespace WebCore

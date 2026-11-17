@@ -25,12 +25,12 @@
 
 #pragma once
 
-#include "WebGPUXREye.h"
-#include "WebGPUXRProjectionLayer.h"
-#include "WebGPUXRSubImage.h"
+#include <WebCore/WebGPUXREye.h>
+#include <WebCore/WebGPUXRProjectionLayer.h>
+#include <WebCore/WebGPUXRSubImage.h>
 
 #include <wtf/Ref.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -44,14 +44,16 @@ class XRGPUSubImage;
 class XRProjectionLayer;
 class XRView;
 
-class XRBinding : public RefCounted<XRBinding>, public CanMakeWeakPtr<XRBinding> {
+class XRBinding : public RefCountedAndCanMakeWeakPtr<XRBinding> {
 public:
     virtual ~XRBinding() = default;
 
     virtual RefPtr<XRProjectionLayer> createProjectionLayer(const XRProjectionLayerInit&) = 0;
     virtual RefPtr<XRSubImage> getSubImage(XRProjectionLayer&, WebCore::WebXRFrame&, std::optional<XREye>/* = "none"*/) = 0;
-    virtual RefPtr<XRSubImage> getViewSubImage(XRProjectionLayer&, XREye) = 0;
+    virtual RefPtr<XRSubImage> getViewSubImage(XRProjectionLayer&) = 0;
     virtual TextureFormat getPreferredColorFormat() = 0;
+    virtual bool isRemoteXRBindingProxy() const { return false; }
+    virtual bool isXRBindingImpl() const { return false; }
 
 protected:
     XRBinding() = default;

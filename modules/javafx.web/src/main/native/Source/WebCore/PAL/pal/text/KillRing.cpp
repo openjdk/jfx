@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Google Inc. All Rights Reserved.
+ * Copyright (C) 2010 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,10 +25,13 @@
 
 #include "config.h"
 #include "KillRing.h"
+#include <wtf/TZoneMallocInlines.h>
 
 #if !PLATFORM(MAC)
 
 namespace PAL {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(KillRing);
 
 void KillRing::append(const String&)
 {

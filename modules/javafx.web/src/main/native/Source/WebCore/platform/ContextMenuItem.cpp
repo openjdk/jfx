@@ -27,10 +27,13 @@
 #include "ContextMenuItem.h"
 
 #include "ContextMenu.h"
+#include <wtf/TZoneMallocInlines.h>
 
 #if ENABLE(CONTEXT_MENUS)
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ContextMenuItem);
 
 ContextMenuItem::ContextMenuItem(ContextMenuItemType type, ContextMenuAction action, const String& title, ContextMenu* subMenu)
     : m_type(type)
@@ -234,7 +237,7 @@ static bool isValidContextMenuAction(WebCore::ContextMenuAction action)
     case ContextMenuAction::ContextMenuItemTagTextDirectionRightToLeft:
     case ContextMenuAction::ContextMenuItemTagAddHighlightToCurrentQuickNote:
     case ContextMenuAction::ContextMenuItemTagAddHighlightToNewQuickNote:
-    case ContextMenuAction::ContextMenuItemTagCopyLinkToHighlight:
+    case ContextMenuAction::ContextMenuItemTagCopyLinkWithHighlight:
 #if PLATFORM(COCOA)
     case ContextMenuAction::ContextMenuItemTagCorrectSpellingAutomatically:
     case ContextMenuAction::ContextMenuItemTagSubstitutionsMenu:
@@ -243,6 +246,7 @@ static bool isValidContextMenuAction(WebCore::ContextMenuAction action)
     case ContextMenuAction::ContextMenuItemTagSmartQuotes:
     case ContextMenuAction::ContextMenuItemTagSmartDashes:
     case ContextMenuAction::ContextMenuItemTagSmartLinks:
+    case ContextMenuAction::ContextMenuItemTagSmartLists:
     case ContextMenuAction::ContextMenuItemTagTextReplacement:
     case ContextMenuAction::ContextMenuItemTagTransformationsMenu:
     case ContextMenuAction::ContextMenuItemTagMakeUpperCase:
@@ -267,6 +271,10 @@ static bool isValidContextMenuAction(WebCore::ContextMenuAction action)
     case ContextMenuAction::ContextMenuItemTagLookUpImage:
     case ContextMenuAction::ContextMenuItemTagTranslate:
     case ContextMenuAction::ContextMenuItemTagWritingTools:
+    case ContextMenuAction::ContextMenuItemTagProofread:
+    case ContextMenuAction::ContextMenuItemTagRewrite:
+    case ContextMenuAction::ContextMenuItemTagSummarize:
+    case ContextMenuAction::ContextMenuItemCaptionDisplayStyleSubmenu:
     case ContextMenuAction::ContextMenuItemBaseCustomTag:
     case ContextMenuAction::ContextMenuItemLastCustomTag:
     case ContextMenuAction::ContextMenuItemBaseApplicationTag:
@@ -295,7 +303,7 @@ static bool isValidContextMenuAction(WebCore::ContextMenuAction action)
 
 namespace WTF {
 
-template<> bool isValidEnum<WebCore::ContextMenuAction, void>(std::underlying_type_t<WebCore::ContextMenuAction> action)
+template<> bool isValidEnum<WebCore::ContextMenuAction>(std::underlying_type_t<WebCore::ContextMenuAction> action)
 {
     return WebCore::isValidContextMenuAction(static_cast<WebCore::ContextMenuAction>(action));
 }

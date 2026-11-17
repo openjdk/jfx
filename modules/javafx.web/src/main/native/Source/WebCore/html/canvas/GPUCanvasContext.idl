@@ -28,6 +28,8 @@
 [
     ActiveDOMObject,
     EnabledBySetting=WebGPUEnabled,
+    ReportExtraMemoryCost,
+    ReportExternalMemoryCost,
     Exposed=(Window,Worker),
     SecureContext,
     SkipVTableValidation,
@@ -42,5 +44,6 @@ interface GPUCanvasContext {
     undefined configure(GPUCanvasConfiguration configuration);
     undefined unconfigure();
 
+    GPUCanvasConfiguration? getConfiguration();
     GPUTexture getCurrentTexture();
 };

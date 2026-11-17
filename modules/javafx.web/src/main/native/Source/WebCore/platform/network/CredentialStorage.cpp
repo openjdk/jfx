@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2009 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -130,7 +130,7 @@ HashSet<SecurityOriginData> CredentialStorage::originsWithCredentials() const
         }
 
         SecurityOriginData origin { protocol, protectionSpace.host(), static_cast<uint16_t>(protectionSpace.port())};
-        origins.add(WTFMove(origin));
+        origins.add(WTF::move(origin));
     }
     return origins;
 }

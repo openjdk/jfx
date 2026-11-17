@@ -28,7 +28,6 @@
 typedef sequence<Report> ReportList;
 
 [
-    EnabledBySetting=ReportingEnabled,
     Exposed=(Window,Worker),
     ActiveDOMObject,
     JSCustomMarkFunction
@@ -39,7 +38,9 @@ typedef sequence<Report> ReportList;
     ReportList takeRecords();
 };
 
-dictionary ReportingObserverOptions {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary ReportingObserverOptions {
     sequence<[AtomString] DOMString>? types;
     boolean buffered = false;
 };

@@ -23,10 +23,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef FontRanges_h
-#define FontRanges_h
+#pragma once
 
-#include "Font.h"
+#include <WebCore/Font.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -49,17 +48,11 @@ public:
         Range(char32_t from, char32_t to, Ref<FontAccessor>&& fontAccessor)
             : m_from(from)
             , m_to(to)
-            , m_fontAccessor(WTFMove(fontAccessor))
+            , m_fontAccessor(WTF::move(fontAccessor))
         {
         }
 
-        Range(const Range& range)
-            : m_from(range.m_from)
-            , m_to(range.m_to)
-            , m_fontAccessor(range.m_fontAccessor.copyRef())
-        {
-        }
-
+        Range(const Range&) = default;
         Range(Range&&) = default;
         Range& operator=(const Range&) = delete;
         Range& operator=(Range&&) = default;
@@ -85,7 +78,7 @@ public:
 
     bool isNull() const { return m_ranges.isEmpty(); }
 
-    void appendRange(Range&& range) { m_ranges.append(WTFMove(range)); }
+    void appendRange(Range&& range) { m_ranges.append(WTF::move(range)); }
     unsigned size() const { return m_ranges.size(); }
     const Range& rangeAt(unsigned i) const { return m_ranges[i]; }
 
@@ -103,5 +96,3 @@ private:
 };
 
 }
-
-#endif

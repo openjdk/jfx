@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -62,6 +62,8 @@ final class GtkApplication extends Application implements
     private static final String GTK_INVALID_VERSION_WARNING =
             "WARNING: A command line option tried to select an invalid GTK library version.";
     private static final String GTK3_FALLBACK_WARNING = "WARNING: The GTK 3 library will be used instead.";
+
+    private static native int _openURI(String uri);
 
     static  {
         String gtkVersion = System.getProperty("org.eclipse.swt.internal.gtk.version");
@@ -418,6 +420,11 @@ final class GtkApplication extends Application implements
     }
 
     @Override
+    protected void _showDocument(String uri) {
+        _openURI(uri);
+    }
+
+    @Override
     protected native long staticView_getMultiClickTime();
 
     @Override
@@ -436,6 +443,11 @@ final class GtkApplication extends Application implements
 
     @Override protected boolean _supportsUnifiedWindows() {
         return false;
+    }
+
+    @Override
+    protected boolean _supportsExtendedWindows() {
+        return true;
     }
 
     @Override

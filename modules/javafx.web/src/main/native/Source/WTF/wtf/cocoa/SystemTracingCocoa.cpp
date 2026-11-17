@@ -24,25 +24,22 @@
 */
 
 #import "config.h"
-#import "SystemTracing.h"
+#import <wtf/SystemTracing.h>
 
 #if HAVE(OS_SIGNPOST)
 
 #import <dispatch/dispatch.h>
 #import <mach/mach_time.h>
+#import <wtf/ContinuousTime.h>
+#import <wtf/NeverDestroyed.h>
+#import <wtf/OSObjectPtr.h>
 
 bool WTFSignpostIndirectLoggingEnabled;
 
 os_log_t WTFSignpostLogHandle()
 {
-    static dispatch_once_t once;
-    static os_log_t handle;
-
-    dispatch_once(&once, ^{
-        handle = os_log_create("com.apple.WebKit", "Signposts");
-    });
-
-    return handle;
+    SUPPRESS_RETAINPTR_CTOR_ADOPT static NeverDestroyed<OSObjectPtr<os_log_t>> handle = adoptOSObject(os_log_create("com.apple.WebKit", "Signposts"));
+    return handle.get().get();
 }
 
 #define WTF_SIGNPOST_EVENT_EMIT_FUNC_CASE_LABEL(emitFunc, name, timeFormat) \
@@ -100,9 +97,9 @@ static void emitSignpost(os_log_t log, WTFOSSignpostType type, WTFOSSignpostName
     }
 }
 
-bool WTFSignpostHandleIndirectLog(os_log_t log, pid_t pid, const char* logString)
+bool WTFSignpostHandleIndirectLog(os_log_t log, pid_t pid, std::span<const char> nullTerminatedLogString)
 {
-    if (log != WTFSignpostLogHandle() || !logString)
+    if (log != WTFSignpostLogHandle() || !nullTerminatedLogString.data())
         return false;
 
     int signpostType = 0;
@@ -111,8 +108,10 @@ bool WTFSignpostHandleIndirectLog(os_log_t log, pid_t pid, const char* logString
     uint64_t timestamp = 0;
     int bytesConsumed = 0;
 
-    if (sscanf(logString, "type=%d name=%d p=%" SCNuPTR " ts=%llu %n", &signpostType, &signpostName, &signpostIdentifierPointer, &timestamp, &bytesConsumed) != 4)
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+    if (sscanf(nullTerminatedLogString.data(), "type=%d name=%d p=%" SCNuPTR " ts=%llu %n", &signpostType, &signpostName, &signpostIdentifierPointer, &timestamp, &bytesConsumed) != 4)
         return false;
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     if (signpostType < 0 || signpostType >= WTFOSSignpostTypeCount)
         return false;
@@ -124,32 +123,13 @@ bool WTFSignpostHandleIndirectLog(os_log_t log, pid_t pid, const char* logString
     signpostIdentifierPointer ^= pid;
     auto signpostIdentifier = os_signpost_id_make_with_pointer(log, reinterpret_cast<const void *>(signpostIdentifierPointer));
 
-    emitSignpost(log, static_cast<WTFOSSignpostType>(signpostType), static_cast<WTFOSSignpostName>(signpostName), signpostIdentifier, timestamp, pid, logString + bytesConsumed);
+    emitSignpost(log, static_cast<WTFOSSignpostType>(signpostType), static_cast<WTFOSSignpostName>(signpostName), signpostIdentifier, timestamp, pid, nullTerminatedLogString.subspan(bytesConsumed).data());
     return true;
-}
-
-static const mach_timebase_info_data_t& machTimebaseInfo()
-{
-    static mach_timebase_info_data_t info;
-    static dispatch_once_t once;
-
-    dispatch_once(&once, ^{
-        mach_timebase_info(&info);
-    });
-
-    return info;
 }
 
 uint64_t WTFCurrentContinuousTime(Seconds deltaFromNow)
 {
-    if (!deltaFromNow)
-        return mach_continuous_time();
-
-    auto& info = machTimebaseInfo();
-    auto now = Seconds((mach_continuous_time() * info.numer) / (1.0e9 * info.denom));
-    auto timestamp = now + deltaFromNow;
-
-    return static_cast<uint64_t>((timestamp.seconds() * 1.0e9 * info.denom) / info.numer);
+    return (ContinuousTime::now() + deltaFromNow).toMachContinuousTime();
 }
 
 #endif

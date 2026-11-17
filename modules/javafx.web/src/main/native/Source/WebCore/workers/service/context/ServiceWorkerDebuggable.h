@@ -27,20 +27,20 @@
 
 #if ENABLE(REMOTE_INSPECTOR)
 
-#include "ServiceWorkerContextData.h"
 #include <JavaScriptCore/RemoteInspectionTarget.h>
+#include <WebCore/ServiceWorkerContextData.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class ServiceWorkerThreadProxy;
 
 class ServiceWorkerDebuggable final : public Inspector::RemoteInspectionTarget {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ServiceWorkerDebuggable);
     WTF_MAKE_NONCOPYABLE(ServiceWorkerDebuggable);
 public:
     static Ref<ServiceWorkerDebuggable> create(ServiceWorkerThreadProxy&, const ServiceWorkerContextData&);
-    ~ServiceWorkerDebuggable() = default;
 
     Inspector::RemoteControllableTarget::Type type() const final { return Inspector::RemoteControllableTarget::Type::ServiceWorker; }
 
@@ -51,6 +51,10 @@ public:
     void connect(Inspector::FrontendChannel&, bool isAutomaticConnection = false, bool immediatelyPause = false) final;
     void disconnect(Inspector::FrontendChannel&) final;
     void dispatchMessageFromRemote(String&& message) final;
+
+#if ENABLE(REMOTE_INSPECTOR_SERVICE_WORKER_AUTO_INSPECTION) && !ENABLE(REMOVE_XPC_AND_MACH_SANDBOX_EXTENSIONS_IN_WEBCONTENT)
+    bool automaticInspectionAllowed() const final { return true; }
+#endif
 
 private:
     ServiceWorkerDebuggable(ServiceWorkerThreadProxy&, const ServiceWorkerContextData&);

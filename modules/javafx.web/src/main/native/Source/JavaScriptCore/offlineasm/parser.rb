@@ -74,6 +74,10 @@ class CodeOrigin
     def to_s
         "#{@sourceFile.basename}:#{lineNumber}"
     end
+
+    def labelStringExtension
+        "#{@sourceFile.basename.sub(/\./, "_")}_#{lineNumber}"
+    end
 end
 
 class IncludeFile
@@ -377,7 +381,7 @@ class Parser
         if isRegister(@tokens[@idx])
             if @tokens[@idx] =~ VEC_PATTERN
                 result = VecRegisterID.forName(@tokens[@idx].codeOrigin, @tokens[@idx].string)
-            elsif @tokens[@idx] =~ FPR_PATTERN || @tokens[@idx] =~ WASM_FPR_PATTERN
+            elsif @tokens[@idx] =~ FPR_PATTERN
                 result = FPRegisterID.forName(@tokens[@idx].codeOrigin, @tokens[@idx].string)
             else
                 result = RegisterID.forName(@tokens[@idx].codeOrigin, @tokens[@idx].string)
@@ -500,9 +504,10 @@ class Parser
             @idx += 1
             BitnotImmediate.new(@tokens[@idx - 1].codeOrigin, parseExpressionAtom)
         elsif @tokens[@idx] == "("
+            originalIndex = @idx
             @idx += 1
             result = parseExpression
-            parseError unless @tokens[@idx] == ")"
+            parseError("expected ')' to match #{@tokens[originalIndex]}") unless @tokens[@idx] == ")"
             @idx += 1
             result
         elsif isInteger @tokens[@idx]
@@ -757,6 +762,7 @@ class Parser
                 name = @tokens[@idx].string
                 @idx += 1
                 align = @tokens[@idx].string
+                align = Variable.forName(codeOrigin, align) if align !=~ /[0-9]+/
                 @idx += 1
                 Label.setAsAligned(codeOrigin, name, align)
             elsif @tokens[@idx] == "unalignedglobalexport"

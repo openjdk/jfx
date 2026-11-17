@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -333,10 +333,10 @@ void GraphicsContextJava::drawFocusRing(const Vector<FloatRect>& rects, float of
                 needAdd = false;
                 break;
             } else if (focusRect.contains(rect)) {
-                toDraw.remove(j);
+                toDraw.removeAt(j);
             } else if (rect.intersects(focusRect)) {
                 focusRect.unite(rect);
-                toDraw.remove(j);
+                toDraw.removeAt(j);
             }
         }
         if (needAdd) {
@@ -355,12 +355,13 @@ void GraphicsContextJava::drawFocusRing(const Vector<FloatRect>& rects, float of
     }
 }
 
-void GraphicsContextJava::drawLinesForText(const FloatPoint& origin, float thickness, const DashArray& widths, bool, bool, StrokeStyle stroke) {
+void GraphicsContextJava::drawLinesForText(const FloatPoint& origin, float thickness,
+std::span<const FloatSegment> lineSegments, bool printing, bool, StrokeStyle stroke) {
 
     if (paintingDisabled())
         return;
 
-    if (widths.size() == 0)
+    if (lineSegments.empty())
         return;
 
     // This is a workaround for http://bugs.webkit.org/show_bug.cgi?id=15659
@@ -370,19 +371,20 @@ void GraphicsContextJava::drawLinesForText(const FloatPoint& origin, float thick
     setStrokeThickness(thickness);
 
     FloatPoint startPoint = origin + FloatPoint(0, thickness / 2);
-    FloatPoint endPoint = startPoint + FloatPoint(widths.last(), 0);
+    const FloatSegment& last = lineSegments.back();
+    FloatPoint endPoint = startPoint + FloatPoint(last.end, 0);
     drawLine(
         IntPoint(startPoint.x(), startPoint.y()),
         IntPoint(endPoint.x(), endPoint.y()));
-
     setStrokeStyle(savedStrokeStyle);
     setStrokeThickness(savedStrokeThickness);
 
 }
 
-void GraphicsContextJava::drawLineForText(const FloatRect& rect, bool printing, bool doubleLines, StrokeStyle stroke)
+void GraphicsContextJava::drawLineForText(const FloatRect& rect, bool isPrinting, bool doubleLines, StrokeStyle stroke)
 {
-    drawLinesForText(rect.location(), rect.height(), { rect.width() }, printing, doubleLines, stroke);
+    FloatSegment line[1] { { 0, rect.width() } };
+    drawLinesForText(rect.location(), rect.height(), line, isPrinting, doubleLines, stroke);
 }
 
 static inline void drawLineTo(GraphicsContext &gc, IntPoint &curPos, double x, double y)
@@ -1047,7 +1049,7 @@ void GraphicsContextJava::fillRoundedRectImpl(const FloatRoundedRect& rect, cons
     fillRoundedRect(rect, color, BlendMode::Normal);
 }
 
-void GraphicsContextJava::drawNativeImageInternal(NativeImage& image, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)
+void GraphicsContextJava::drawNativeImage(NativeImage& image, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)
 {
     /* flush ImageRq  to decode previous recorded  command buffer */
     flushImageRQ(platformContext(), image.platformImage());

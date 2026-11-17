@@ -44,6 +44,7 @@ G_BEGIN_DECLS
 typedef struct _GstAudioRingBuffer GstAudioRingBuffer;
 typedef struct _GstAudioRingBufferClass GstAudioRingBufferClass;
 typedef struct _GstAudioRingBufferSpec GstAudioRingBufferSpec;
+typedef struct _GstAudioRingBufferPrivate GstAudioRingBufferPrivate;
 
 /**
  * GstAudioRingBufferCallback:
@@ -247,7 +248,8 @@ struct _GstAudioRingBuffer {
   GDestroyNotify              cb_data_notify;
 
   /*< private >*/
-  gpointer _gst_reserved[GST_PADDING - 1];
+  GstAudioRingBufferPrivate   *priv;
+  gpointer _gst_reserved[GST_PADDING - 2];
 };
 
 /**
@@ -440,6 +442,15 @@ void            gst_audio_ring_buffer_advance         (GstAudioRingBuffer *buf, 
 
 GST_AUDIO_API
 void            gst_audio_ring_buffer_may_start       (GstAudioRingBuffer *buf, gboolean allowed);
+
+GST_AUDIO_API
+void            gst_audio_ring_buffer_set_segdone     (GstAudioRingBuffer *buf, guint64 segdone);
+
+GST_AUDIO_API
+guint64         gst_audio_ring_buffer_get_segdone     (GstAudioRingBuffer *buf);
+
+GST_AUDIO_API
+guint64         gst_audio_ring_buffer_get_segbase     (GstAudioRingBuffer *buf);
 
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstAudioRingBuffer, gst_object_unref)
 

@@ -44,14 +44,14 @@ EGLDisplay PlatformDisplay::angleEGLDisplay() const
 
     Vector<EGLint> displayAttributes {
         EGL_PLATFORM_ANGLE_TYPE_ANGLE, EGL_PLATFORM_ANGLE_TYPE_OPENGLES_ANGLE,
-#if !defined(__ANDROID__) && !defined(ANDROID)
+#if !OS(ANDROID)
         EGL_PLATFORM_ANGLE_DEVICE_TYPE_ANGLE, EGL_PLATFORM_ANGLE_DEVICE_TYPE_EGL_ANGLE,
         EGL_PLATFORM_ANGLE_NATIVE_PLATFORM_TYPE_ANGLE, m_anglePlatform.value(),
 #endif
         EGL_NONE,
     };
 
-    auto angleDisplay = EGL_GetPlatformDisplayEXT(EGL_PLATFORM_ANGLE_ANGLE, m_angleNativeDisplay ? m_angleNativeDisplay : EGL_DEFAULT_DISPLAY, displayAttributes.data());
+    auto angleDisplay = EGL_GetPlatformDisplayEXT(EGL_PLATFORM_ANGLE_ANGLE, m_angleNativeDisplay ? m_angleNativeDisplay : EGL_DEFAULT_DISPLAY, displayAttributes.span().data());
     if (angleDisplay == EGL_NO_DISPLAY)
         return EGL_NO_DISPLAY;
 
@@ -72,9 +72,6 @@ EGLContext PlatformDisplay::angleSharingGLContext()
 #if PLATFORM(WIN)
     return sharingGLContext()->platformContext();
 #else
-    if (m_angleSharingGLContext != EGL_NO_CONTEXT)
-        return m_angleSharingGLContext;
-
     ASSERT(m_angleEGLDisplay != EGL_NO_DISPLAY);
     auto sharingContext = sharingGLContext();
     if (!sharingContext)
@@ -103,25 +100,10 @@ EGLContext PlatformDisplay::angleSharingGLContext()
         EGL_EXTERNAL_CONTEXT_ANGLE, EGL_TRUE,
         EGL_NONE
     };
-    m_angleSharingGLContext = EGL_CreateContext(m_angleEGLDisplay, config, EGL_NO_CONTEXT, contextAttributes);
-    return m_angleSharingGLContext;
+
+    return EGL_CreateContext(m_angleEGLDisplay, config, EGL_NO_CONTEXT, contextAttributes);
 #endif
 }
-
-#if ENABLE(WEBGL) && !PLATFORM(WIN)
-void PlatformDisplay::clearANGLESharingGLContext()
-{
-    if (m_angleSharingGLContext == EGL_NO_CONTEXT)
-        return;
-
-    ASSERT(m_angleEGLDisplay);
-    ASSERT(m_sharingGLContext);
-    EGL_MakeCurrent(m_angleEGLDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
-    EGL_DestroyContext(m_angleEGLDisplay, m_angleSharingGLContext);
-    m_angleSharingGLContext = EGL_NO_CONTEXT;
-}
-#endif
-
 
 } // namespace WebCore
 

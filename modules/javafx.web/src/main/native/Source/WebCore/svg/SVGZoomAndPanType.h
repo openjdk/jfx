@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "SVGPropertyTraits.h"
+#include <WebCore/SVGPropertyTraits.h>
 
 namespace WebCore {
 
@@ -39,7 +39,7 @@ template<>
 struct SVGPropertyTraits<SVGZoomAndPanType> {
     static SVGZoomAndPanType initialValue() { return SVGZoomAndPanMagnify; }
     static String toString(SVGZoomAndPanType) { return emptyString(); }
-    static SVGZoomAndPanType fromString(const String& value)
+    static SVGZoomAndPanType fromString(SVGElement&, const String& value)
     {
         if (value == "disable"_s)
             return SVGZoomAndPanDisable;

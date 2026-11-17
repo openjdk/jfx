@@ -30,7 +30,8 @@
 
 #pragma once
 
-#include "WebSocketIdentifier.h"
+#include <WebCore/WebSocketIdentifier.h>
+#include <wtf/AbstractRefCounted.h>
 #include <wtf/Forward.h>
 #include <wtf/Identified.h>
 #include <wtf/Noncopyable.h>
@@ -53,29 +54,24 @@ class WebSocketChannel;
 class WebSocketChannelInspector;
 class WebSocketChannelClient;
 
-using WebSocketChannelIdentifier = LegacyNullableAtomicObjectIdentifier<WebSocketChannel>;
+using WebSocketChannelIdentifier = AtomicObjectIdentifier<WebSocketChannel>;
 
-class ThreadableWebSocketChannel : public Identified<WebSocketIdentifier> {
+class ThreadableWebSocketChannel : public AbstractRefCounted, public Identified<WebSocketIdentifier> {
     WTF_MAKE_NONCOPYABLE(ThreadableWebSocketChannel);
 public:
     static RefPtr<ThreadableWebSocketChannel> create(Document&, WebSocketChannelClient&, SocketProvider&);
     static RefPtr<ThreadableWebSocketChannel> create(ScriptExecutionContext&, WebSocketChannelClient&, SocketProvider&);
     WEBCORE_EXPORT ThreadableWebSocketChannel();
 
-    void ref() { refThreadableWebSocketChannel(); }
-    void deref() { derefThreadableWebSocketChannel(); }
-
     enum class ConnectStatus { KO, OK };
     virtual ConnectStatus connect(const URL&, const String& protocol) = 0;
     virtual String subprotocol() = 0; // Will be available after didConnect() callback is invoked.
     virtual String extensions() = 0; // Will be available after didConnect() callback is invoked.
 
-    enum SendResult { SendSuccess, SendFail };
-    virtual SendResult send(CString&&) = 0;
-    virtual SendResult send(const JSC::ArrayBuffer&, unsigned byteOffset, unsigned byteLength) = 0;
-    virtual SendResult send(Blob&) = 0;
+    virtual void send(CString&&) = 0;
+    virtual void send(const JSC::ArrayBuffer&, unsigned byteOffset, unsigned byteLength) = 0;
+    virtual void send(Blob&) = 0;
 
-    virtual unsigned bufferedAmount() const = 0;
     virtual void close(int code, const String& reason) = 0;
     // Log the reason text and close the connection. Will call didClose().
     virtual void fail(String&& reason) = 0;
@@ -113,8 +109,6 @@ public:
 
 protected:
     virtual ~ThreadableWebSocketChannel() = default;
-    virtual void refThreadableWebSocketChannel() = 0;
-    virtual void derefThreadableWebSocketChannel() = 0;
 
     struct ValidatedURL {
         URL url;

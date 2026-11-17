@@ -27,10 +27,15 @@
 #include "ScrollbarsController.h"
 
 #include "ScrollableArea.h"
+#include "ScrollbarsControllerInlines.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 #if !PLATFORM(MAC) && !PLATFORM(WPE) && !PLATFORM(GTK)
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ScrollbarsController);
+
 std::unique_ptr<ScrollbarsController> ScrollbarsController::create(ScrollableArea& scrollableArea)
 {
     return makeUnique<ScrollbarsController>(scrollableArea);
@@ -42,9 +47,11 @@ ScrollbarsController::ScrollbarsController(ScrollableArea& scrollableArea)
 {
 }
 
+ScrollbarsController::~ScrollbarsController() = default;
+
 bool ScrollbarsController::shouldSuspendScrollbarAnimations() const
 {
-    return scrollableArea().shouldSuspendScrollAnimations();
+    return checkedScrollableArea()->shouldSuspendScrollAnimations();
 }
 
 void ScrollbarsController::cancelAnimations()
@@ -69,11 +76,17 @@ void ScrollbarsController::mayBeginScrollGesture()
 
 void ScrollbarsController::updateScrollbarsThickness()
 {
-    if (auto verticalScrollbar = scrollableArea().verticalScrollbar())
+    CheckedRef scrollableArea = this->scrollableArea();
+    if (auto verticalScrollbar = scrollableArea->verticalScrollbar())
         verticalScrollbar->updateScrollbarThickness();
 
-    if (auto horizontalScrollbar = scrollableArea().horizontalScrollbar())
+    if (auto horizontalScrollbar = scrollableArea->horizontalScrollbar())
         horizontalScrollbar->updateScrollbarThickness();
+}
+
+void ScrollbarsController::scrollbarColorChanged(std::optional<ScrollbarColor>)
+{
+
 }
 
 } // namespace WebCore

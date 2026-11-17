@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,35 +33,47 @@ import javafx.scene.image.Image;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.Disabled;
 
-import static org.junit.Assert.assertNotNull;
+import java.util.concurrent.TimeUnit;
 
-public class SWTCursorsTest {
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-    @Rule
-    public SwtRule ctx = new SwtRule();
+public class SWTCursorsTest extends SWTTest {
 
-    @Test(timeout = 10000)
+    private FXCanvas canvas;
+
+    @Disabled("JDK-8367599")
+    @Test
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     public void testImageCursor() throws Throwable {
-        final Shell shell = new Shell(Display.getCurrent());
-        final FXCanvas canvas = new FXCanvas(shell, SWT.NONE);
-        shell.open();
+        runOnSwtThread(() -> {
+            Display display = Display.getCurrent();
+            final Shell shell = new Shell(display);
+            canvas = new FXCanvas(shell, SWT.NONE);
+            shell.open();
 
-        // create and hook scene
-        Scene scene = new Scene(new Group());
-        canvas.setScene(scene);
+            // create and hook scene
+            Scene scene = new Scene(new Group());
+            canvas.setScene(scene);
 
-        // set image cursor to scene
-        Image cursorImage = new Image("test/javafx/embed/swt/cursor.png");
-        scene.setCursor(new ImageCursor(cursorImage));
+            // set image cursor to scene
+            Image cursorImage = new Image("test/javafx/embed/swt/cursor.png");
+            scene.setCursor(new ImageCursor(cursorImage));
 
-        Display.getCurrent().asyncExec(() -> {
-            assertNotNull(canvas.getCursor());
+            display.asyncExec(() -> {
+                assertNotNull(canvas.getCursor());
 
-            // FIXME: We cannot close the shell here because of https://bugs.eclipse.org/bugs/show_bug.cgi?id=435066.
-            //shell.close();
+                shell.close();
+            });
+
+            while (!shell.isDisposed()) {
+                if (!display.readAndDispatch()) {
+                    display.sleep();
+                }
+            }
         });
     }
 }

@@ -25,6 +25,8 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
 #include "Algorithm.h"
 #include "BPlatform.h"
 #include <algorithm>
@@ -133,3 +135,5 @@ constexpr size_t smallLineCount(size_t vmPageSize)
 using namespace Sizes;
 
 } // namespace bmalloc
+
+#endif // __cplusplus

@@ -27,31 +27,41 @@
 
 #if ENABLE(USER_MESSAGE_HANDLERS)
 
-#include "ExceptionOr.h"
-#include "FrameDestructionObserver.h"
-#include "UserMessageHandlerDescriptor.h"
+#include <WebCore/FrameDestructionObserver.h>
+#include <WebCore/UserMessageHandlerDescriptor.h>
+
+namespace JSC {
+class JSGlobalObject;
+class JSValue;
+}
 
 namespace WebCore {
 
 class DeferredPromise;
+template<typename> class ExceptionOr;
 
 class UserMessageHandler : public RefCounted<UserMessageHandler>, public FrameDestructionObserver {
 public:
-    static Ref<UserMessageHandler> create(LocalFrame& frame, UserMessageHandlerDescriptor& descriptor)
+    static Ref<UserMessageHandler> create(LocalFrame& frame, const UserMessageHandlerDescriptor& descriptor)
     {
         return adoptRef(*new UserMessageHandler(frame, descriptor));
     }
     virtual ~UserMessageHandler();
 
-    ExceptionOr<void> postMessage(RefPtr<SerializedScriptValue>&&, Ref<DeferredPromise>&&);
+    // FrameDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
-    UserMessageHandlerDescriptor* descriptor() { return m_descriptor.get(); }
+    ExceptionOr<void> postMessage(JSC::JSGlobalObject&, JSC::JSValue, Ref<DeferredPromise>&&);
+    ExceptionOr<JSC::JSValue> postLegacySynchronousMessage(JSC::JSGlobalObject&, JSC::JSValue);
+
+    const UserMessageHandlerDescriptor* descriptor() const { return m_descriptor.get(); }
     void invalidateDescriptor() { m_descriptor = nullptr; }
 
 private:
-    UserMessageHandler(LocalFrame&, UserMessageHandlerDescriptor&);
+    UserMessageHandler(LocalFrame&, const UserMessageHandlerDescriptor&);
 
-    RefPtr<UserMessageHandlerDescriptor> m_descriptor;
+    RefPtr<const UserMessageHandlerDescriptor> m_descriptor;
 };
 
 } // namespace WebCore

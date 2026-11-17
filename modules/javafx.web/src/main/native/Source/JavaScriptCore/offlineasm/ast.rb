@@ -896,7 +896,7 @@ class BaseIndex < Node
     end
     
     def dump
-        "#{offset.dump}[#{base.dump}, #{index.dump}, #{scale.value}]"
+        "#{offset.dump}[#{base.dump}, #{index.dump}, #{scale.dump}]"
     end
     
     def address?
@@ -1085,7 +1085,7 @@ end
 $labelMapping = {}
 $referencedExternLabels = Array.new
 
-class Label < NoChildren
+class Label < Node
     def initialize(codeOrigin, name, definedInFile = false)
         super(codeOrigin)
         @name = name
@@ -1097,6 +1097,20 @@ class Label < NoChildren
         @export = false
     end
     
+    def children
+        if aligned? and @alignTo
+            [@alignTo]
+        else
+            []
+        end
+    end
+    
+    def mapChildren
+        # This is mutable, since labels are unique.
+        @alignTo = yield @alignTo if aligned? and @alignTo
+        self
+    end
+
     def self.forName(codeOrigin, name, definedInFile = false)
         if $labelMapping[name]
             raise "Label name collision: #{name}" unless $labelMapping[name].is_a? Label
@@ -1250,19 +1264,20 @@ class LocalLabel < NoChildren
         if $labelMapping[name]
             raise "Label name collision: #{name}" unless $labelMapping[name].is_a? LocalLabel
         else
+            raise "nil codeOrigin" if codeOrigin.nil?
             $labelMapping[name] = LocalLabel.new(codeOrigin, name)
         end
         $labelMapping[name]
     end
     
-    def self.unique(comment)
+    def self.unique(codeOrigin, comment)
         newName = "_#{comment}"
         if $labelMapping[newName]
             while $labelMapping[newName = "_#{@@uniqueNameCounter}_#{comment}"]
                 @@uniqueNameCounter += 1
             end
         end
-        forName(nil, newName)
+        forName(codeOrigin, newName)
     end
     
     def cleanName
@@ -1348,6 +1363,9 @@ class LocalLabelReference < NoChildren
     
     def initialize(codeOrigin, label)
         super(codeOrigin)
+        if label.is_a? LocalLabelReference
+            label = label.label
+        end
         @label = label
     end
     

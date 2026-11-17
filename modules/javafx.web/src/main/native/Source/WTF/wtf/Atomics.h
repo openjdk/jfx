@@ -27,6 +27,7 @@
 
 #include <atomic>
 #include <wtf/FastMalloc.h>
+#include <wtf/StdIntExtras.h>
 #include <wtf/StdLibExtras.h>
 
 namespace WTF {
@@ -45,7 +46,7 @@ ALWAYS_INLINE bool hasFence(std::memory_order order)
 
 template<typename T>
 struct Atomic {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(Atomic);
 
     // Don't pass a non-default value for the order parameter unless you really know
     // what you are doing and have thought about it very hard. The cost of seq_cst
@@ -126,8 +127,7 @@ struct Atomic {
 
     // func is supposed to return false if the value is already in the desired state.
     // Returns true if the value was changed. Else returns false.
-    template<typename Func>
-    ALWAYS_INLINE bool transaction(const Func& func, std::memory_order order = std::memory_order_seq_cst)
+    ALWAYS_INLINE bool transaction(const Invocable<bool(T&)> auto& func, std::memory_order order = std::memory_order_seq_cst)
     {
         for (;;) {
             T oldValue = load(std::memory_order_relaxed);
@@ -159,79 +159,79 @@ struct Atomic {
 template<typename T>
 inline T atomicLoad(T* location, std::memory_order order = std::memory_order_seq_cst)
 {
-    return bitwise_cast<Atomic<T>*>(location)->load(order);
+    return std::bit_cast<Atomic<T>*>(location)->load(order);
 }
 
 template<typename T>
 inline T atomicLoadFullyFenced(T* location)
 {
-    return bitwise_cast<Atomic<T>*>(location)->loadFullyFenced();
+    return std::bit_cast<Atomic<T>*>(location)->loadFullyFenced();
 }
 
 template<typename T>
 inline void atomicStore(T* location, T newValue, std::memory_order order = std::memory_order_seq_cst)
 {
-    bitwise_cast<Atomic<T>*>(location)->store(newValue, order);
+    std::bit_cast<Atomic<T>*>(location)->store(newValue, order);
 }
 
 template<typename T>
 inline void atomicStoreFullyFenced(T* location, T newValue)
 {
-    bitwise_cast<Atomic<T>*>(location)->storeFullyFenced(newValue);
+    std::bit_cast<Atomic<T>*>(location)->storeFullyFenced(newValue);
 }
 
 template<typename T>
 inline bool atomicCompareExchangeWeak(T* location, T expected, T newValue, std::memory_order order = std::memory_order_seq_cst)
 {
-    return bitwise_cast<Atomic<T>*>(location)->compareExchangeWeak(expected, newValue, order);
+    return std::bit_cast<Atomic<T>*>(location)->compareExchangeWeak(expected, newValue, order);
 }
 
 template<typename T>
 inline bool atomicCompareExchangeWeakRelaxed(T* location, T expected, T newValue)
 {
-    return bitwise_cast<Atomic<T>*>(location)->compareExchangeWeakRelaxed(expected, newValue);
+    return std::bit_cast<Atomic<T>*>(location)->compareExchangeWeakRelaxed(expected, newValue);
 }
 
 template<typename T>
 inline T atomicCompareExchangeStrong(T* location, T expected, T newValue, std::memory_order order = std::memory_order_seq_cst)
 {
-    return bitwise_cast<Atomic<T>*>(location)->compareExchangeStrong(expected, newValue, order);
+    return std::bit_cast<Atomic<T>*>(location)->compareExchangeStrong(expected, newValue, order);
 }
 
 template<typename T, typename U>
 inline T atomicExchangeAdd(T* location, U operand, std::memory_order order = std::memory_order_seq_cst)
 {
-    return bitwise_cast<Atomic<T>*>(location)->exchangeAdd(operand, order);
+    return std::bit_cast<Atomic<T>*>(location)->exchangeAdd(operand, order);
 }
 
 template<typename T, typename U>
 inline T atomicExchangeAnd(T* location, U operand, std::memory_order order = std::memory_order_seq_cst)
 {
-    return bitwise_cast<Atomic<T>*>(location)->exchangeAnd(operand, order);
+    return std::bit_cast<Atomic<T>*>(location)->exchangeAnd(operand, order);
 }
 
 template<typename T, typename U>
 inline T atomicExchangeOr(T* location, U operand, std::memory_order order = std::memory_order_seq_cst)
 {
-    return bitwise_cast<Atomic<T>*>(location)->exchangeOr(operand, order);
+    return std::bit_cast<Atomic<T>*>(location)->exchangeOr(operand, order);
 }
 
 template<typename T, typename U>
 inline T atomicExchangeSub(T* location, U operand, std::memory_order order = std::memory_order_seq_cst)
 {
-    return bitwise_cast<Atomic<T>*>(location)->exchangeSub(operand, order);
+    return std::bit_cast<Atomic<T>*>(location)->exchangeSub(operand, order);
 }
 
 template<typename T, typename U>
 inline T atomicExchangeXor(T* location, U operand, std::memory_order order = std::memory_order_seq_cst)
 {
-    return bitwise_cast<Atomic<T>*>(location)->exchangeXor(operand, order);
+    return std::bit_cast<Atomic<T>*>(location)->exchangeXor(operand, order);
 }
 
 template<typename T>
 inline T atomicExchange(T* location, T newValue, std::memory_order order = std::memory_order_seq_cst)
 {
-    return bitwise_cast<Atomic<T>*>(location)->exchange(newValue, order);
+    return std::bit_cast<Atomic<T>*>(location)->exchange(newValue, order);
 }
 
 // Just a compiler fence. Has no effect on the hardware, but tells the compiler
@@ -314,14 +314,36 @@ inline void dependentLoadLoadFence() { compilerFence(); }
 inline void dependentLoadLoadFence() { loadLoadFence(); }
 #endif
 
+// We use this primitive to hide an atomic variable from the optimizer.
 template<typename T>
-T opaque(T pointer)
+inline T opaque(T value)
 {
-    asm volatile("" : "+r"(pointer) ::);
-    return pointer;
+    asm volatile("" : "+r"(value) ::);
+    return value;
 }
 
-typedef unsigned InternalDependencyType;
+// We use this primitive on ARM to express memory ordering efficiently.
+template<typename T>
+inline T* addOpaqueZero(T* pointer, unsigned opaqueZero)
+{
+    ASSERT(!opaque(opaqueZero));
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // @safe
+    // Safety: This is bounds-safe because we're not actually adjusting the pointer, only pretending to.
+    return std::bit_cast<T*>(std::bit_cast<char*>(pointer) + opaqueZero);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+}
+
+using InternalDependencyType = UCPURegister;
+
+template<typename T>
+inline InternalDependencyType toInternalDependencyType(T value)
+{
+    if constexpr (std::is_pointer_v<T>)
+        return static_cast<InternalDependencyType>(reinterpret_cast<uintptr_t>(value));
+    else
+        return static_cast<InternalDependencyType>(value);
+}
 
 inline InternalDependencyType opaqueMixture()
 {
@@ -331,17 +353,11 @@ inline InternalDependencyType opaqueMixture()
 template<typename... Arguments, typename T>
 inline InternalDependencyType opaqueMixture(T value, Arguments... arguments)
 {
-    union {
-        InternalDependencyType copy;
-        T value;
-    } u;
-    u.copy = 0;
-    u.value = value;
-    return opaqueMixture(arguments...) + u.copy;
+    return opaqueMixture(arguments...) + toInternalDependencyType(opaque(value));
 }
 
 class Dependency {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(Dependency);
 public:
     constexpr Dependency()
         : m_value(0)
@@ -367,11 +383,11 @@ public:
         // ordering. This forces weak memory order CPUs to observe `location` and
         // dependent loads in their store order without the reader using a barrier
         // or an acquire load.
-        asm("eor %w[out], %w[in], %w[in]"
+        __asm__("eor %w[out], %w[in], %w[in]"
             : [out] "=r"(output)
             : [in] "r"(input));
 #elif CPU(ARM)
-        asm("eor %[out], %[in], %[in]"
+        __asm__("eor %[out], %[in], %[in]"
             : [out] "=r"(output)
             : [in] "r"(input));
 #else
@@ -440,7 +456,7 @@ public:
     T* consume(T* pointer)
     {
 #if CPU(ARM64) || CPU(ARM)
-        return bitwise_cast<T*>(bitwise_cast<char*>(pointer) + m_value);
+        return addOpaqueZero(pointer, m_value);
 #else
         UNUSED_PARAM(m_value);
         return pointer;
@@ -453,7 +469,7 @@ private:
 
 template<typename InputType, typename ValueType>
 struct InputAndValue {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(InputAndValue);
 
     InputAndValue() { }
 

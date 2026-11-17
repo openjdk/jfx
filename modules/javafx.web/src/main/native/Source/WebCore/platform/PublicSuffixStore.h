@@ -25,9 +25,10 @@
 
 #pragma once
 
-#include "PublicSuffix.h"
+#include <WebCore/PublicSuffix.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
+#include <wtf/Platform.h>
 #include <wtf/text/StringHash.h>
 #include <wtf/text/WTFString.h>
 
@@ -42,6 +43,8 @@ public:
     WEBCORE_EXPORT PublicSuffix publicSuffix(const URL&) const;
     WEBCORE_EXPORT String topPrivatelyControlledDomain(StringView host) const;
     WEBCORE_EXPORT void clearHostTopPrivatelyControlledDomainCache();
+    WEBCORE_EXPORT String topPrivatelyControlledDomainWithoutPublicSuffix(StringView host) const;
+    WEBCORE_EXPORT String domainWithoutPublicSuffix(StringView domain) const;
 
 #if PLATFORM(COCOA)
     WEBCORE_EXPORT void enablePublicSuffixCache();
@@ -49,7 +52,7 @@ public:
 #endif
 
 private:
-    friend LazyNeverDestroyed<PublicSuffixStore>;
+    friend NeverDestroyed<PublicSuffixStore>;
     PublicSuffixStore() = default;
 
     bool platformIsPublicSuffix(StringView domain) const;

@@ -25,9 +25,11 @@
 
 #pragma once
 
-#include "IntPoint.h"
-#include "Timer.h"
-#include <wtf/WallTime.h>
+#include <WebCore/IntPoint.h>
+#include <WebCore/Timer.h>
+#include <wtf/CheckedPtr.h>
+#include <wtf/MonotonicTime.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -53,8 +55,9 @@ enum class AutoscrollType : uint8_t {
 constexpr Seconds autoscrollInterval { 50_ms };
 
 // AutscrollController handles autoscroll and pan scroll for EventHandler.
-class AutoscrollController {
-    WTF_MAKE_FAST_ALLOCATED;
+class AutoscrollController final : public CanMakeCheckedPtr<AutoscrollController> {
+    WTF_MAKE_TZONE_ALLOCATED(AutoscrollController);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(AutoscrollController);
 public:
     AutoscrollController();
     RenderBox* autoscrollRenderer() const;
@@ -63,7 +66,7 @@ public:
     void startAutoscrollForSelection(RenderObject*);
     void stopAutoscrollTimer(bool rendererIsBeingDestroyed = false);
     void updateAutoscrollRenderer();
-    void updateDragAndDrop(Node* targetNode, const IntPoint& eventPosition, WallTime eventTime);
+    void updateDragAndDrop(Node* targetNode, const IntPoint& eventPosition, MonotonicTime eventTime);
 #if ENABLE(PAN_SCROLLING)
     void didPanScrollStart();
     void didPanScrollStop();
@@ -83,7 +86,7 @@ private:
     SingleThreadWeakPtr<RenderBox> m_autoscrollRenderer;
     AutoscrollType m_autoscrollType { AutoscrollType::None };
     IntPoint m_dragAndDropAutoscrollReferencePosition;
-    WallTime m_dragAndDropAutoscrollStartTime;
+    MonotonicTime m_dragAndDropAutoscrollStartTime;
 #if ENABLE(PAN_SCROLLING)
     IntPoint m_panScrollStartPos;
 #endif

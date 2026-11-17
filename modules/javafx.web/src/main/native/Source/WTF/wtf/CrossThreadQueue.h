@@ -36,7 +36,7 @@ namespace WTF {
 
 template<typename DataType>
 class CrossThreadQueue final {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(CrossThreadQueue);
     WTF_MAKE_NONCOPYABLE(CrossThreadQueue);
 public:
     CrossThreadQueue() = default;
@@ -62,7 +62,7 @@ void CrossThreadQueue<DataType>::append(DataType&& message)
 {
     Locker locker { m_lock };
     ASSERT(!m_killed);
-    m_queue.append(WTFMove(message));
+    m_queue.append(WTF::move(message));
     m_condition.notifyOne();
 }
 

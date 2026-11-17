@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "AbstractModuleRecord.h"
-#include "SourceCode.h"
-#include "VariableEnvironment.h"
+#include <JavaScriptCore/AbstractModuleRecord.h>
+#include <JavaScriptCore/SourceCode.h>
+#include <JavaScriptCore/VariableEnvironment.h>
 
 namespace JSC {
 
@@ -42,7 +42,9 @@ public:
 
     DECLARE_EXPORT_INFO;
 
-    static constexpr bool needsDestruction = true;
+    DECLARE_VISIT_CHILDREN;
+
+    static constexpr DestructionMode needsDestruction = NeedsDestruction;
     static void destroy(JSCell*);
 
     template<typename CellType, SubspaceAccess mode>
@@ -65,8 +67,6 @@ private:
     JSModuleRecord(VM&, Structure*, const Identifier&, const SourceCode&, const VariableEnvironment&, const VariableEnvironment&, CodeFeatures);
 
     void finishCreation(JSGlobalObject*, VM&);
-
-    DECLARE_VISIT_CHILDREN;
 
     void instantiateDeclarations(JSGlobalObject*, ModuleProgramExecutable*, JSValue scriptFetcher);
 

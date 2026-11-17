@@ -31,7 +31,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(StorageEvent);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(StorageEvent);
 
 Ref<StorageEvent> StorageEvent::createForBindings()
 {

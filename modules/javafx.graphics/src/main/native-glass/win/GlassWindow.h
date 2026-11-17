@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,7 +32,8 @@
 
 class GlassWindow : public BaseWnd, public ViewContainer {
 public:
-    GlassWindow(jobject jrefThis, bool isTransparent, bool isDecorated, bool isUnified, HWND parentOrOwner);
+    GlassWindow(jobject jrefThis, bool isTransparent, bool isDecorated, bool isUnified,
+                bool isExtended, HWND parentOrOwner);
     virtual ~GlassWindow();
 
     static GlassWindow* FromHandle(HWND hWnd) {
@@ -101,7 +102,17 @@ public:
     virtual void ExitFullScreenMode(BOOL animate);
 
     void SetIcon(HICON hIcon);
+    void SetDarkFrame(bool);
     void HandleWindowPosChangedEvent();
+    void ShowSystemMenu(int x, int y);
+
+    bool IsStartupClearPending() const {
+        return m_startupClearPending;
+    }
+
+    void SetStartupBrush(HBRUSH brush) {
+        m_startupBrush = brush;
+    }
 
 protected:
     virtual LRESULT WindowProc(UINT msg, WPARAM wParam, LPARAM lParam);
@@ -144,6 +155,7 @@ private:
     const bool m_isTransparent;
     const bool m_isDecorated;
     const bool m_isUnified;
+    const bool m_isExtended;
 
     bool m_isResizable;
 
@@ -156,6 +168,21 @@ private:
     //NOTE: this is not a rectangle. The left, top, right, and bottom
     //components contain corresponding insets values.
     RECT m_insets;
+
+    // Used to avoid the initial "white flash" before JavaFX renders its first frame.
+    // While m_startupClearPending is true, WM_ERASEBKGND fills the client area with m_startupBrush.
+    // After the first WM_PAINT message we stop erasing the background to prevent resize flicker.
+    // We deliberately do not set GCLP_HBRBACKGROUND (class background brush) because it enables automatic
+    // background erasing by DefWindowProc on every WM_ERASEBKGND message, causing the client area to be
+    // repeatedly cleared to a solid color between frames and producing visible flicker during resizing.
+    HBRUSH m_startupBrush = NULL;
+    bool m_startupClearPending = true;
+
+    struct {
+        bool entered = false;
+        bool tracking = false;
+        POINT dragStart = {};
+    } m_caption;
 
     static unsigned int sm_instanceCounter;
     static HHOOK sm_hCBTFilter;
@@ -184,6 +211,11 @@ private:
     void HandleDPIEvent(WPARAM wParam, LPARAM lParam);
     bool HandleCommand(WORD cmdID);
     void HandleFocusDisabledEvent();
+    bool HandleMouseEvents(UINT msg, WPARAM wParam, LPARAM lParam);
+    bool HandleCaptionMouseEvents(UINT msg, WPARAM wParam, LPARAM lParam);
+    void HandleNonClientMouseEvents(UINT msg, WPARAM wParam, LPARAM lParam);
+    LRESULT HandleNCCalcSizeEvent(UINT msg, WPARAM wParam, LPARAM lParam);
+    BOOL HandleNCHitTestEvent(SHORT, SHORT, LRESULT&);
 };
 
 

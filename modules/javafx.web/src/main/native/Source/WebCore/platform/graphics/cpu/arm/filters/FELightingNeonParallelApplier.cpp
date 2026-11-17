@@ -35,8 +35,11 @@
 #include "SpotLightSource.h"
 #include <wtf/Int128.h>
 #include <wtf/ParallelJobs.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FELightingNeonParallelApplier);
 
 // Otherwise: Distant Light.
 #define FLAG_POINT_LIGHT                 0x01
@@ -210,7 +213,7 @@ extern "C" {
 void neonDrawLighting(FELightingNeonParallelApplier::ApplyParameters*);
 }
 
-asm ( // NOLINT
+__asm__( // NOLINT
 ".globl " TOSTRING(neonDrawLighting) NL
 TOSTRING(neonDrawLighting) ":" NL
     // Because of the clever register allocation, nothing is stored on the stack

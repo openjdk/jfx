@@ -32,6 +32,7 @@
 #include <wtf/FastMalloc.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/ScopedLambda.h>
+#include <wtf/SequesteredMalloc.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/text/CString.h>
 
@@ -42,6 +43,7 @@ struct GenerationContext;
 
 class Special {
     WTF_MAKE_NONCOPYABLE(Special);
+    // TODO: move AirSpecial.h to use SequesteredMalloc
     WTF_MAKE_TZONE_ALLOCATED_EXPORT(Special, JS_EXPORT_PRIVATE);
 public:
     static const char* const dumpPrefix;
@@ -68,12 +70,12 @@ public:
     //    Air didn't duplicate code or that such duplication didn't cause any interesting changes to
     //    register assignment.
     //
-    // 2) Have the Special maintain a HashMap<Inst*, RegisterSetBuilder>. This works because the analysis
+    // 2) Have the Special maintain a UncheckedKeyHashMap<Inst*, RegisterSetBuilder>. This works because the analysis
     //    that feeds into this call is performed just before code generation and there is no way
     //    for the Vector<>'s that contain the Insts to be reallocated. This allows generate() to
-    //    consult the HashMap.
+    //    consult the UncheckedKeyHashMap.
     //
-    // 3) Hybrid: you could use (1) and fire up a HashMap if you see multiple calls.
+    // 3) Hybrid: you could use (1) and fire up a UncheckedKeyHashMap if you see multiple calls.
     //
     // Note that it's not possible to rely on reportUsedRegisters() being called in the same order
     // as generate(). If we could rely on that, then we could just have each Special instance

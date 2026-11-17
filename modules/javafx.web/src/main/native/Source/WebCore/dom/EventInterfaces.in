@@ -30,6 +30,7 @@ FormDataEvent
 HashChangeEvent
 InputEvent
 InputEvents interfaceName=InputEvent
+InstallEvent
 KeyboardEvent
 KeyboardEvents interfaceName=KeyboardEvent
 MediaQueryListEvent
@@ -47,7 +48,6 @@ PopStateEvent
 ProgressEvent
 PromiseRejectionEvent
 PushEvent
-PushNotificationEvent conditional=DECLARATIVE_WEB_PUSH
 PushSubscriptionChangeEvent
 SubmitEvent
 ToggleEvent

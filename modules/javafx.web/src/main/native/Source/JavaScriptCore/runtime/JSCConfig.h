@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,10 +25,12 @@
 
 #pragma once
 
-#include "Gate.h"
-#include "Opcode.h"
-#include "OptionsList.h"
-#include "SecureARM64EHashPins.h"
+#include <JavaScriptCore/Gate.h>
+#include <JavaScriptCore/Opcode.h>
+#include <JavaScriptCore/OptionsList.h>
+#include <JavaScriptCore/SecureARM64EHashPins.h>
+#include <JavaScriptCore/StopTheWorldCallback.h>
+#include <wtf/PtrTag.h>
 #include <wtf/WTFConfig.h>
 
 namespace JSC {
@@ -40,6 +42,9 @@ class VM;
 #if ENABLE(SEPARATED_WX_HEAP)
 using JITWriteSeparateHeapsFunction = void (*)(off_t, const void*, size_t);
 #endif
+
+#define JSC_CONFIG_METHOD(method) \
+    WTF_FUNCPTR_PTRAUTH_STR("JSCConfig." #method) method
 
 struct Config {
     static Config& singleton();
@@ -82,13 +87,13 @@ struct Config {
 #if CPU(ARM64E)
     bool canUseFPAC;
 #endif
-
     ExecutableAllocator* executableAllocator;
     FixedVMPoolExecutableAllocator* fixedVMPoolExecutableAllocator;
     void* startExecutableMemory;
     void* endExecutableMemory;
     uintptr_t startOfFixedWritableMemoryPool;
     uintptr_t startOfStructureHeap;
+    uintptr_t structureIDBase;
     uintptr_t sizeOfStructureHeap;
     void* defaultCallThunk;
     void* arityFixupThunk;
@@ -99,11 +104,16 @@ struct Config {
 
     OptionsStorage options;
 
-    void (*shellTimeoutCheckCallback)(VM&);
+    using ShellTimeoutCheckCallback = void (*)(VM&);
+    ShellTimeoutCheckCallback JSC_CONFIG_METHOD(shellTimeoutCheckCallback);
+
+    StopTheWorldCallback JSC_CONFIG_METHOD(wasmDebuggerOnStop);
+    using PostResumeCallback = void (*)();
+    PostResumeCallback JSC_CONFIG_METHOD(wasmDebuggerOnResume);
+    StopTheWorldCallback JSC_CONFIG_METHOD(memoryDebuggerStopTheWorld);
 
     struct {
         uint8_t exceptionInstructions[maxBytecodeStructLength + 1];
-        uint8_t wasmExceptionInstructions[maxBytecodeStructLength + 1];
         const void* gateMap[numberOfGates];
     } llint;
 
@@ -121,16 +131,29 @@ constexpr size_t alignmentOfJSCConfig = std::alignment_of<JSC::Config>::value;
 static_assert(WTF::offsetOfWTFConfigExtension + sizeof(JSC::Config) <= WTF::ConfigSizeToProtect);
 static_assert(roundUpToMultipleOf<alignmentOfJSCConfig>(WTF::offsetOfWTFConfigExtension) == WTF::offsetOfWTFConfigExtension);
 
-#define g_jscConfig (*bitwise_cast<JSC::Config*>(&g_wtfConfig.spaceForExtensions))
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
+// Workaround to localize bounds safety warnings to this file.
+// FIXME: Use real types to make materializing JSC::Config* bounds-safe and type-safe.
+inline Config* addressOfJSCConfig() { return std::bit_cast<Config*>(&g_wtfConfig.spaceForExtensions); }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+
+#define g_jscConfig (*JSC::addressOfJSCConfig())
 
 constexpr size_t offsetOfJSCConfigInitializeHasBeenCalled = offsetof(JSC::Config, initializeHasBeenCalled);
 constexpr size_t offsetOfJSCConfigGateMap = offsetof(JSC::Config, llint.gateMap);
-constexpr size_t offsetOfJSCConfigStartOfStructureHeap = offsetof(JSC::Config, startOfStructureHeap);
+constexpr size_t offsetOfJSCConfigStructureIDBase = offsetof(JSC::Config, structureIDBase);
 constexpr size_t offsetOfJSCConfigDefaultCallThunk = offsetof(JSC::Config, defaultCallThunk);
 
 ALWAYS_INLINE PURE_FUNCTION uintptr_t startOfStructureHeap()
 {
     return g_jscConfig.startOfStructureHeap;
+}
+
+ALWAYS_INLINE PURE_FUNCTION uintptr_t structureIDBase()
+{
+    return g_jscConfig.structureIDBase;
 }
 
 } // namespace JSC

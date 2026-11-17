@@ -31,6 +31,10 @@
 #include "Filter.h"
 #include <wtf/text/TextStream.h>
 
+#if USE(CORE_IMAGE)
+#include "FECompositeCoreImageApplier.h"
+#endif
+
 namespace WebCore {
 
 Ref<FEComposite> FEComposite::create(const CompositeOperationType& type, float k1, float k2, float k3, float k4, DestinationColorSpace colorSpace)
@@ -118,6 +122,25 @@ FloatRect FEComposite::calculateImageRect(const Filter& filter, std::span<const 
     }
 }
 
+OptionSet<FilterRenderingMode> FEComposite::supportedFilterRenderingModes(OptionSet<FilterRenderingMode> preferredFilterRenderingModes) const
+{
+    OptionSet<FilterRenderingMode> modes = FilterRenderingMode::Software;
+#if USE(CORE_IMAGE)
+    if (FECompositeCoreImageApplier::supportsCoreImageRendering(*this))
+        modes.add(FilterRenderingMode::Accelerated);
+#endif
+    return modes & preferredFilterRenderingModes;
+}
+
+std::unique_ptr<FilterEffectApplier> FEComposite::createAcceleratedApplier() const
+{
+#if USE(CORE_IMAGE)
+    return FilterEffectApplier::create<FECompositeCoreImageApplier>(*this);
+#else
+    return nullptr;
+#endif
+}
+
 std::unique_ptr<FilterEffectApplier> FEComposite::createSoftwareApplier() const
 {
     if (m_type != CompositeOperationType::FECOMPOSITE_OPERATOR_ARITHMETIC)
@@ -133,28 +156,28 @@ static TextStream& operator<<(TextStream& ts, const CompositeOperationType& type
 {
     switch (type) {
     case CompositeOperationType::FECOMPOSITE_OPERATOR_UNKNOWN:
-        ts << "UNKNOWN";
+        ts << "UNKNOWN"_s;
         break;
     case CompositeOperationType::FECOMPOSITE_OPERATOR_OVER:
-        ts << "OVER";
+        ts << "OVER"_s;
         break;
     case CompositeOperationType::FECOMPOSITE_OPERATOR_IN:
-        ts << "IN";
+        ts << "IN"_s;
         break;
     case CompositeOperationType::FECOMPOSITE_OPERATOR_OUT:
-        ts << "OUT";
+        ts << "OUT"_s;
         break;
     case CompositeOperationType::FECOMPOSITE_OPERATOR_ATOP:
-        ts << "ATOP";
+        ts << "ATOP"_s;
         break;
     case CompositeOperationType::FECOMPOSITE_OPERATOR_XOR:
-        ts << "XOR";
+        ts << "XOR"_s;
         break;
     case CompositeOperationType::FECOMPOSITE_OPERATOR_ARITHMETIC:
-        ts << "ARITHMETIC";
+        ts << "ARITHMETIC"_s;
         break;
     case CompositeOperationType::FECOMPOSITE_OPERATOR_LIGHTER:
-        ts << "LIGHTER";
+        ts << "LIGHTER"_s;
         break;
     }
     return ts;
@@ -162,14 +185,14 @@ static TextStream& operator<<(TextStream& ts, const CompositeOperationType& type
 
 TextStream& FEComposite::externalRepresentation(TextStream& ts, FilterRepresentation representation) const
 {
-    ts << indent << "[feComposite";
+    ts << indent << "[feComposite"_s;
     FilterEffect::externalRepresentation(ts, representation);
 
-    ts << " operation=\"" << m_type << "\"";
+    ts << " operation=\""_s << m_type << '"';
     if (m_type == CompositeOperationType::FECOMPOSITE_OPERATOR_ARITHMETIC)
-        ts << " k1=\"" << m_k1 << "\" k2=\"" << m_k2 << "\" k3=\"" << m_k3 << "\" k4=\"" << m_k4 << "\"";
+        ts << " k1=\""_s << m_k1 << "\" k2=\""_s << m_k2 << "\" k3=\""_s << m_k3 << "\" k4=\""_s << m_k4 << '"';
 
-    ts << "]\n";
+    ts << "]\n"_s;
     return ts;
 }
 

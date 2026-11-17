@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2013 Google Inc. All rights reserved.
- * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -36,7 +36,7 @@
 #include "ActiveDOMObject.h"
 #include "AudioTrackClient.h"
 #include "EventTarget.h"
-#include "ExceptionOr.h"
+#include "EventTargetInterfaces.h"
 #include "SourceBufferPrivate.h"
 #include "SourceBufferPrivateClient.h"
 #include "TextTrackClient.h"
@@ -56,12 +56,13 @@ class PlatformTimeRanges;
 class SourceBufferPrivate;
 class TextTrackList;
 class TimeRanges;
+class TrackOpaqueRoot;
 class VideoTrackList;
 class WebCoreOpaqueRoot;
+template<typename> class ExceptionOr;
 
 class SourceBuffer
     : public RefCounted<SourceBuffer>
-    , public CanMakeWeakPtr<SourceBuffer>
     , public ActiveDOMObject
     , public EventTarget
     , private AudioTrackClient
@@ -71,18 +72,15 @@ class SourceBuffer
     , private LoggerHelper
 #endif
 {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SourceBuffer);
+    WTF_MAKE_TZONE_ALLOCATED(SourceBuffer);
 public:
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
     static Ref<SourceBuffer> create(Ref<SourceBufferPrivate>&&, MediaSource&);
     virtual ~SourceBuffer();
 
-    using CanMakeWeakPtr<SourceBuffer>::weakPtrFactory;
-    using CanMakeWeakPtr<SourceBuffer>::WeakValueType;
-    using CanMakeWeakPtr<SourceBuffer>::WeakPtrImplType;
-
-    // ActiveDOMObject.
-    void ref() const final { RefCounted::ref(); }
-    void deref() const final { RefCounted::deref(); }
+    USING_CAN_MAKE_WEAKPTR(ActiveDOMObject);
 
     static bool enabledForContext(ScriptExecutionContext&);
 
@@ -115,14 +113,14 @@ public:
     void removedFromMediaSource();
     using ComputeSeekPromise = SourceBufferPrivate::ComputeSeekPromise;
     Ref<ComputeSeekPromise> computeSeekTime(const SeekTarget&);
-    void seekToTime(const MediaTime&);
 
     bool hasVideo() const;
 
     bool active() const { return m_active; }
 
     // EventTarget
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
+    ScriptExecutionContext* scriptExecutionContext() const final;
+    using ActiveDOMObject::protectedScriptExecutionContext;
 
     enum class AppendMode { Segments, Sequence };
     AppendMode mode() const { return m_mode; }
@@ -142,7 +140,7 @@ public:
 
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return m_logger.get(); }
-    const void* logIdentifier() const final { return m_logIdentifier; }
+    uint64_t logIdentifier() const final { return m_logIdentifier; }
     ASCIILiteral logClassName() const final { return "SourceBuffer"_s; }
     WTFLogChannel& logChannel() const final;
 #endif
@@ -151,6 +149,10 @@ public:
 
     virtual bool isManaged() const { return false; }
     void memoryPressure();
+
+    // Detachable MSE methods.
+    void detach();
+    void attach();
 
 protected:
     SourceBuffer(Ref<SourceBufferPrivate>&&, MediaSource&);
@@ -169,7 +171,7 @@ private:
     void sourceBufferPrivateHighestPresentationTimestampChanged(const MediaTime&);
     Ref<MediaPromise> sourceBufferPrivateDurationChanged(const MediaTime& duration);
     void sourceBufferPrivateDidDropSample();
-    void sourceBufferPrivateDidReceiveRenderingError(int64_t errorCode);
+    Ref<MediaPromise> sourceBufferPrivateDidAttach(SourceBufferPrivateClient::InitializationSegment&&);
 
     // AudioTrackClient
     void audioTrackEnabledChanged(AudioTrack&) final;
@@ -189,7 +191,7 @@ private:
     void videoTrackSelectedChanged(VideoTrack&) final;
 
     // EventTarget
-    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::SourceBuffer; }
+    enum EventTargetInterfaceType eventTargetInterface() const override { return EventTargetInterfaceType::SourceBuffer; }
 
     bool isRemoved() const;
     void scheduleEvent(const AtomString& eventName);
@@ -211,6 +213,10 @@ private:
     bool hasAudio() const;
 
     void rangeRemoval(const MediaTime&, const MediaTime&);
+    RefPtr<MediaSource> protectedSource() const;
+    RefPtr<VideoTrackList> protectedVideoTracks() const;
+    RefPtr<AudioTrackList> protectedAudioTracks() const;
+    RefPtr<TextTrackList> protectedTextTracks() const;
 
     friend class Internals;
     using SamplesPromise = NativePromise<Vector<String>, PlatformMediaError>;
@@ -223,13 +229,13 @@ private:
 
     void updateBuffered();
 
-    Ref<SourceBufferPrivate> m_private;
-    Ref<SourceBufferClientImpl> m_client;
+    const Ref<SourceBufferPrivate> m_private;
+    const Ref<SourceBufferClientImpl> m_client;
 
-    MediaSource* m_source;
+    WeakPtr<MediaSource> m_source;
     AppendMode m_mode { AppendMode::Segments };
 
-    WTF::Observer<WebCoreOpaqueRoot()> m_opaqueRootProvider;
+    const Ref<TrackOpaqueRoot> m_trackOpaqueRoot;
 
     RefPtr<SharedBuffer> m_pendingAppendData;
 
@@ -269,11 +275,13 @@ private:
     std::optional<uint64_t> m_maximumBufferSize;
 
 #if !RELEASE_LOG_DISABLED
-    Ref<const Logger> m_logger;
-    const void* m_logIdentifier;
+    const Ref<const Logger> m_logger;
+    const uint64_t m_logIdentifier;
 #endif
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(SourceBuffer)
 
 #endif

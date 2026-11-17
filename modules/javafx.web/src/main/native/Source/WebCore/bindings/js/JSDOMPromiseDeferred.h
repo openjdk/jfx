@@ -25,19 +25,21 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
-#include "JSDOMConvert.h"
-#include "JSDOMGuardedObject.h"
-#include "ScriptExecutionContext.h"
 #include <JavaScriptCore/CatchScope.h>
 #include <JavaScriptCore/JSPromise.h>
+#include <WebCore/ExceptionOr.h>
+#include <WebCore/JSDOMConvert.h>
+#include <WebCore/JSDOMGuardedObject.h>
+#include <WebCore/JSDOMPromise.h>
+#include <WebCore/ScriptExecutionContext.h>
 
 namespace WebCore {
 
+class DOMPromise;
 enum class RejectAsHandled : bool { No, Yes };
 
 #define DEFERRED_PROMISE_HANDLE_AND_RETURN_IF_EXCEPTION(scope, globalObject) do { \
-        if (UNLIKELY(scope.exception())) { \
+        if (scope.exception()) [[unlikely]] { \
             handleUncaughtException(scope, *jsCast<JSDOMGlobalObject*>(globalObject)); \
             return; \
         } \
@@ -124,7 +126,7 @@ public:
     }
 
     template<class IDLType>
-    void resolveCallbackValueWithNewlyCreated(const Function<typename IDLType::InnerParameterType(ScriptExecutionContext&)>& createValue)
+    void resolveCallbackValueWithNewlyCreated(NOESCAPE const Function<typename IDLType::InnerParameterType(ScriptExecutionContext&)>& createValue)
     {
         if (shouldIgnoreRequestToFulfill())
             return;
@@ -135,7 +137,7 @@ public:
         auto& vm = lexicalGlobalObject->vm();
         JSC::JSLockHolder locker(vm);
         auto scope = DECLARE_CATCH_SCOPE(vm);
-        auto jsValue = toJSNewlyCreated<IDLType>(*lexicalGlobalObject, *globalObject(), createValue(*globalObject()->scriptExecutionContext()));
+        auto jsValue = toJSNewlyCreated<IDLType>(*lexicalGlobalObject, *globalObject(), createValue(*globalObject()->protectedScriptExecutionContext()));
         DEFERRED_PROMISE_HANDLE_AND_RETURN_IF_EXCEPTION(scope, lexicalGlobalObject);
         resolve(*lexicalGlobalObject, jsValue);
     }
@@ -181,7 +183,7 @@ public:
     }
 
     template<typename Callback>
-    void rejectWithCallback(Callback callback, RejectAsHandled rejectAsHandled = RejectAsHandled::No)
+    void rejectWithCallback(const Callback& callback, RejectAsHandled rejectAsHandled = RejectAsHandled::No)
     {
         if (shouldIgnoreRequestToFulfill())
             return;
@@ -199,12 +201,19 @@ public:
 
     JSC::JSValue promise() const;
 
-    void whenSettled(Function<void()>&&);
+    void whenSettled(Function<void()>&& callback)
+    {
+        return whenSettledWithResult([callback = WTF::move(callback)](JSDOMGlobalObject*, bool, JSC::JSValue) {
+            callback();
+        });
+    }
+    void whenSettledWithResult(Function<void(JSDOMGlobalObject*, bool, JSC::JSValue)>&&);
+
     bool needsAbort() const { return m_needsAbort; }
 
     void markAsHandled() const
     {
-        deferred()->markAsHandled(globalObject());
+        deferred()->markAsHandled();
     }
 
 private:
@@ -235,15 +244,15 @@ private:
 };
 
 class DOMPromiseDeferredBase {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(DOMPromiseDeferredBase, WEBCORE_EXPORT);
 public:
     DOMPromiseDeferredBase(Ref<DeferredPromise>&& genericPromise)
-        : m_promise(WTFMove(genericPromise))
+        : m_promise(WTF::move(genericPromise))
     {
     }
 
     DOMPromiseDeferredBase(DOMPromiseDeferredBase&& promise)
-        : m_promise(WTFMove(promise.m_promise))
+        : m_promise(WTF::move(promise.m_promise))
     {
     }
 
@@ -260,7 +269,7 @@ public:
 
     DOMPromiseDeferredBase& operator=(DOMPromiseDeferredBase&& other)
     {
-        m_promise = WTFMove(other.m_promise);
+        m_promise = WTF::move(other.m_promise);
         return *this;
     }
 
@@ -275,6 +284,12 @@ public:
         m_promise->reject(std::forward<ErrorType>(error)...);
     }
 
+    template<typename Callback>
+    void rejectWithCallback(const Callback& callback, RejectAsHandled rejectAsHandled = RejectAsHandled::No)
+    {
+        m_promise->rejectWithCallback(callback, rejectAsHandled);
+    }
+
     template<typename IDLType>
     void rejectType(typename IDLType::ParameterType value, RejectAsHandled rejectAsHandled = RejectAsHandled::No)
     {
@@ -285,7 +300,7 @@ public:
 
     void whenSettled(Function<void()>&& function)
     {
-        m_promise->whenSettled(WTFMove(function));
+        m_promise->whenSettled(WTF::move(function));
     }
 
 protected:
@@ -344,9 +359,13 @@ void fulfillPromiseWithArrayBufferFromSpan(Ref<DeferredPromise>&&, std::span<con
 void fulfillPromiseWithUint8Array(Ref<DeferredPromise>&&, Uint8Array*);
 void fulfillPromiseWithUint8ArrayFromSpan(Ref<DeferredPromise>&&, std::span<const uint8_t>);
 WEBCORE_EXPORT void rejectPromiseWithExceptionIfAny(JSC::JSGlobalObject&, JSDOMGlobalObject&, JSC::JSPromise&, JSC::CatchScope&);
+WEBCORE_EXPORT void rejectPromisesWithExceptionIfAny(JSC::JSGlobalObject&, JSDOMGlobalObject&, JSC::JSPromise&, JSC::JSPromise&, JSC::CatchScope&);
 
 enum class RejectedPromiseWithTypeErrorCause { NativeGetter, InvalidThis };
 JSC::EncodedJSValue createRejectedPromiseWithTypeError(JSC::JSGlobalObject&, const String&, RejectedPromiseWithTypeErrorCause);
+
+std::pair<Ref<DOMPromise>, Ref<DeferredPromise>> createPromiseAndWrapper(Document&);
+std::pair<Ref<DOMPromise>, Ref<DeferredPromise>> createPromiseAndWrapper(JSDOMGlobalObject&);
 
 using PromiseFunction = void(JSC::JSGlobalObject&, JSC::CallFrame&, Ref<DeferredPromise>&&);
 
@@ -360,7 +379,7 @@ inline JSC::JSValue callPromiseFunction(JSC::JSGlobalObject& lexicalGlobalObject
     auto* promise = JSC::JSPromise::create(vm, globalObject.promiseStructure());
     ASSERT(promise);
 
-    promiseFunction(lexicalGlobalObject, callFrame, DeferredPromise::create(globalObject, *promise));
+    promiseFunction(globalObject, callFrame, DeferredPromise::create(globalObject, *promise));
 
     rejectPromiseWithExceptionIfAny(lexicalGlobalObject, globalObject, *promise, catchScope);
     // FIXME: We could have error since any JS call can throw stack-overflow errors.
@@ -379,7 +398,7 @@ inline JSC::JSValue callPromiseFunction(JSC::JSGlobalObject& lexicalGlobalObject
     auto* promise = JSC::JSPromise::create(vm, globalObject.promiseStructure());
     ASSERT(promise);
 
-    functor(lexicalGlobalObject, callFrame, DeferredPromise::create(globalObject, *promise));
+    functor(globalObject, callFrame, DeferredPromise::create(globalObject, *promise));
 
     rejectPromiseWithExceptionIfAny(lexicalGlobalObject, globalObject, *promise, catchScope);
     // FIXME: We could have error since any JS call can throw stack-overflow errors.
@@ -390,25 +409,41 @@ inline JSC::JSValue callPromiseFunction(JSC::JSGlobalObject& lexicalGlobalObject
 
 using PromisePairFunction = JSC::EncodedJSValue(JSC::JSGlobalObject&, JSC::CallFrame&, Ref<DeferredPromise>&&, Ref<DeferredPromise>&&);
 
-template<typename PromisePairFunctor>
+template<typename DictionaryType, typename PromisePairFunctor>
 inline JSC::EncodedJSValue callPromisePairFunction(JSC::JSGlobalObject& lexicalGlobalObject, JSC::CallFrame& callFrame, PromisePairFunctor functor)
 {
     JSC::VM& vm = JSC::getVM(&lexicalGlobalObject);
     auto catchScope = DECLARE_CATCH_SCOPE(vm);
 
     auto& globalObject = *JSC::jsSecureCast<JSDOMGlobalObject*>(&lexicalGlobalObject);
-    auto* promise = JSC::JSPromise::create(vm, globalObject.promiseStructure());
-    ASSERT(promise);
+    auto* promise1 = JSC::JSPromise::create(vm, globalObject.promiseStructure());
+    ASSERT(promise1);
     auto* promise2 = JSC::JSPromise::create(vm, globalObject.promiseStructure());
     ASSERT(promise2);
 
-    auto result = functor(lexicalGlobalObject, callFrame, DeferredPromise::create(globalObject, *promise, DeferredPromise::Mode::RetainPromiseOnResolve), DeferredPromise::create(globalObject, *promise2, DeferredPromise::Mode::RetainPromiseOnResolve));
+    auto result = functor(globalObject, callFrame, DeferredPromise::create(globalObject, *promise1, DeferredPromise::Mode::RetainPromiseOnResolve), DeferredPromise::create(globalObject, *promise2, DeferredPromise::Mode::RetainPromiseOnResolve));
 
-    rejectPromiseWithExceptionIfAny(lexicalGlobalObject, globalObject, *promise, catchScope);
-    rejectPromiseWithExceptionIfAny(lexicalGlobalObject, globalObject, *promise2, catchScope);
+    // The functor may have thrown — e.g. the generated missing-argument check
+    // returns throwVMError(...), which encodes a JSC::Exception* cell rather
+    // than an empty JSValue sentinel. Detect that before
+    // rejectPromisesWithExceptionIfAny clears the exception, so we never
+    // expose the raw Exception cell to JavaScript below.
+    bool functorThrew = !!catchScope.exception();
+
+    rejectPromisesWithExceptionIfAny(lexicalGlobalObject, globalObject, *promise1, *promise2, catchScope);
+
     // FIXME: We could have error since any JS call can throw stack-overflow errors.
     // https://bugs.webkit.org/show_bug.cgi?id=203402
     RETURN_IF_EXCEPTION(catchScope, JSC::encodedJSValue());
+
+    // When the functor threw or returned an empty JSValue sentinel (e.g. IDL
+    // argument conversion failure), rebuild a valid result dictionary from the
+    // (now rejected) promises via convertDictionaryToJS rather than returning
+    // the functor's return value.
+    if (functorThrew || !JSC::JSValue::decode(result)) [[unlikely]] {
+        result = JSC::JSValue::encode(convertDictionaryToJS(lexicalGlobalObject, globalObject, DictionaryType { DOMPromise::create(globalObject, *promise1), DOMPromise::create(globalObject, *promise2) }));
+        RETURN_IF_EXCEPTION(catchScope, JSC::encodedJSValue());
+    }
 
     return result;
 }
@@ -417,7 +452,7 @@ using BindingPromiseFunction = JSC::EncodedJSValue(JSC::JSGlobalObject*, JSC::Ca
 template<BindingPromiseFunction bindingFunction>
 inline void bindingPromiseFunctionAdapter(JSC::JSGlobalObject& lexicalGlobalObject, JSC::CallFrame& callFrame, Ref<DeferredPromise>&& promise)
 {
-    bindingFunction(&lexicalGlobalObject, &callFrame, WTFMove(promise));
+    bindingFunction(&lexicalGlobalObject, &callFrame, WTF::move(promise));
 }
 
 template<BindingPromiseFunction bindingPromiseFunction>

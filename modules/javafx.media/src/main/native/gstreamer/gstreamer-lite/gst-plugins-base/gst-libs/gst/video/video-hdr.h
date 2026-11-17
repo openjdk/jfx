@@ -47,7 +47,7 @@ struct _GstVideoMasteringDisplayInfoCoordinates
 
 /**
  * GstVideoMasteringDisplayInfo:
- * @display_primaries: the xy coordinates of primaries in the CIE 1931 color space.
+ * @display_primaries: (array fixed-size=3): the xy coordinates of primaries in the CIE 1931 color space.
  *   the index 0 contains red, 1 is for green and 2 is for blue.
  *   each value is normalized to 50000 (meaning that in unit of 0.00002)
  * @white_point: the xy coordinates of white point in the CIE 1931 color space.
@@ -76,20 +76,24 @@ struct _GstVideoMasteringDisplayInfo
 GST_VIDEO_API
 void      gst_video_mastering_display_info_init         (GstVideoMasteringDisplayInfo * minfo);
 
+#ifndef GSTREAMER_LITE
 GST_VIDEO_API
 gboolean  gst_video_mastering_display_info_from_string  (GstVideoMasteringDisplayInfo * minfo,
                                                          const gchar * mastering);
+#endif // GSTREAMER_LITE
 
 GST_VIDEO_API
-gchar *   gst_video_mastering_display_info_to_string    (const GstVideoMasteringDisplayInfo * minfo);
+gchar *   gst_video_mastering_display_info_to_string    (const GstVideoMasteringDisplayInfo * minfo) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_VIDEO_API
 gboolean  gst_video_mastering_display_info_is_equal     (const GstVideoMasteringDisplayInfo * minfo,
                                                          const GstVideoMasteringDisplayInfo * other);
 
+#ifndef GSTREAMER_LITE
 GST_VIDEO_API
 gboolean  gst_video_mastering_display_info_from_caps    (GstVideoMasteringDisplayInfo * minfo,
                                                          const GstCaps * caps);
+#endif // GSTREAMER_LITE
 
 GST_VIDEO_API
 gboolean  gst_video_mastering_display_info_add_to_caps  (const GstVideoMasteringDisplayInfo * minfo,
@@ -118,20 +122,24 @@ struct _GstVideoContentLightLevel
 GST_VIDEO_API
 void      gst_video_content_light_level_init         (GstVideoContentLightLevel * linfo);
 
+#ifndef GSTREAMER_LITE
 GST_VIDEO_API
 gboolean  gst_video_content_light_level_from_string  (GstVideoContentLightLevel * linfo,
                                                       const gchar * level);
+#endif // GSTREAMER_LITE
 
 GST_VIDEO_API
-gchar *   gst_video_content_light_level_to_string    (const GstVideoContentLightLevel * linfo);
+gchar *   gst_video_content_light_level_to_string    (const GstVideoContentLightLevel * linfo) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_VIDEO_API
 gboolean  gst_video_content_light_level_is_equal     (const GstVideoContentLightLevel * linfo,
                                                       const GstVideoContentLightLevel * other);
 
+#ifndef GSTREAMER_LITE
 GST_VIDEO_API
 gboolean  gst_video_content_light_level_from_caps    (GstVideoContentLightLevel * linfo,
                                                       const GstCaps * caps);
+#endif // GSTREAMER_LITE
 
 GST_VIDEO_API
 gboolean  gst_video_content_light_level_add_to_caps  (const GstVideoContentLightLevel * linfo,

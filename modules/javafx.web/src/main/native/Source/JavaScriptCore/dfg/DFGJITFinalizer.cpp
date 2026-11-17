@@ -41,7 +41,7 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(JITFinalizer);
 
 JITFinalizer::JITFinalizer(Plan& plan, Ref<DFG::JITCode>&& jitCode, CodePtr<JSEntryPtrTag> withArityCheck)
     : Finalizer(plan)
-    , m_jitCode(WTFMove(jitCode))
+    , m_jitCode(WTF::move(jitCode))
     , m_withArityCheck(withArityCheck)
 {
 }
@@ -66,15 +66,15 @@ bool JITFinalizer::finalize()
     codeBlock->setJITCode(m_jitCode.copyRef());
 
     auto data = m_plan.tryFinalizeJITData(m_jitCode.get());
-    if (UNLIKELY(!data))
+    if (!data) [[unlikely]]
         return false;
-    codeBlock->setDFGJITData(WTFMove(data));
+    codeBlock->setDFGJITData(WTF::move(data));
 
 #if ENABLE(FTL_JIT)
     m_jitCode->optimizeAfterWarmUp(codeBlock);
 #endif // ENABLE(FTL_JIT)
 
-    if (UNLIKELY(m_plan.compilation()))
+    if (m_plan.compilation()) [[unlikely]]
         vm.m_perBytecodeProfiler->addCompilation(codeBlock, *m_plan.compilation());
 
     if (!m_plan.willTryToTierUp())

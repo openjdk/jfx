@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,7 @@
 #include <WebCore/DOMException.h>
 #include <WebCore/HTMLCollection.h>
 #include <WebCore/HTMLElement.h>
+#include <WebCore/ElementInlines.h>
 #include <WebCore/HTMLFormElement.h>
 #include <WebCore/HTMLNames.h>
 #include <WebCore/HTMLOptGroupElement.h>
@@ -203,13 +204,6 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_getAutoc
     return JavaReturn<String>(env, IMPL->autocomplete());
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_setAutocompleteImpl(JNIEnv* env, jclass, jlong peer, jstring value)
-{
-    WebCore::JSMainThreadNullState state;
-    IMPL->setAutocomplete(AtomString{String(env, value)});
-}
-
-
 // Functions
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_itemImpl(JNIEnv* env, jclass, jlong peer
     , jint index)
@@ -238,7 +232,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_addImpl(JNI
     }
 
     auto& coreElement = *static_cast<HTMLElement*>(jlong_to_ptr(element));
-    std::variant<RefPtr<WebCore::HTMLOptionElement>, RefPtr<WebCore::HTMLOptGroupElement>> variantElement;
+    WTF::Variant<RefPtr<WebCore::HTMLOptionElement>, RefPtr<WebCore::HTMLOptGroupElement>> variantElement;
     if (is<WebCore::HTMLOptionElement>(coreElement))
         variantElement = &downcast<WebCore::HTMLOptionElement>(coreElement);
     else if (is<WebCore::HTMLOptGroupElement>(coreElement))
@@ -247,7 +241,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_addImpl(JNI
         raiseTypeErrorException(env);
         return;
     }
-    raiseOnDOMError(env, IMPL->add(WTFMove(variantElement), WebCore::HTMLSelectElement::HTMLElementOrInt(static_cast<HTMLElement*>(jlong_to_ptr(before)))));
+    raiseOnDOMError(env, IMPL->add(WTF::move(variantElement), WebCore::HTMLSelectElement::HTMLElementOrInt(static_cast<HTMLElement*>(jlong_to_ptr(before)))));
 }
 
 

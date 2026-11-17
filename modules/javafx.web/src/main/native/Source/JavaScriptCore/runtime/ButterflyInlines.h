@@ -25,11 +25,13 @@
 
 #pragma once
 
-#include "ArrayStorageInlines.h"
-#include "Butterfly.h"
-#include "JSObject.h"
-#include "Structure.h"
-#include "VM.h"
+#include <JavaScriptCore/ArrayStorageInlines.h>
+#include <JavaScriptCore/Butterfly.h>
+#include <JavaScriptCore/JSObject.h>
+#include <JavaScriptCore/Structure.h>
+#include <JavaScriptCore/VM.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -78,7 +80,7 @@ inline Butterfly* Butterfly::tryCreateUninitialized(VM& vm, JSObject*, size_t pr
 {
     size_t size = totalSize(preCapacity, propertyCapacity, hasIndexingHeader, indexingPayloadSizeInBytes);
     void* base = vm.auxiliarySpace().allocate(vm, size, deferralContext, AllocationFailureMode::ReturnNull);
-    if (UNLIKELY(!base))
+    if (!base) [[unlikely]]
         return nullptr;
 
     Butterfly* result = fromBase(base, preCapacity, propertyCapacity);
@@ -209,9 +211,9 @@ inline Butterfly* Butterfly::reallocArrayRightIfPossible(
     // We can eagerly destroy butterfly backed by PreciseAllocation if (1) concurrent collector is not active and (2) the butterfly does not contain any property storage.
     // This is because during deallocation concurrent collector can access butterfly and DFG concurrent compilers accesses properties.
     // Objects with no properties are common in arrays, and we are focusing on very large array crafted by repeating Array#push, so... that's fine!
-    bool canRealloc = !propertyCapacity && !vm.heap.mutatorShouldBeFenced() && bitwise_cast<HeapCell*>(theBase)->isPreciseAllocation();
+    bool canRealloc = !propertyCapacity && !vm.heap.mutatorShouldBeFenced() && std::bit_cast<HeapCell*>(theBase)->isPreciseAllocation();
     if (canRealloc) {
-        void* newBase = vm.auxiliarySpace().reallocatePreciseAllocationNonVirtual(vm, bitwise_cast<HeapCell*>(theBase), newSize, &deferralContext, AllocationFailureMode::ReturnNull);
+        void* newBase = vm.auxiliarySpace().reallocatePreciseAllocationNonVirtual(vm, std::bit_cast<HeapCell*>(theBase), newSize, &deferralContext, AllocationFailureMode::ReturnNull);
         if (!newBase)
             return nullptr;
         return fromBase(newBase, 0, propertyCapacity);
@@ -285,4 +287,32 @@ inline Butterfly* Butterfly::shift(Structure* structure, size_t numberOfSlots)
     return IndexingHeader::fromEndOf(propertyStorage() + numberOfSlots)->butterfly();
 }
 
+ALWAYS_INLINE void Butterfly::clearRange(IndexingType indexingType, Butterfly* butterfly, unsigned start, unsigned end)
+{
+    ASSERT(end >= start);
+
+    if (size_t remaining = end - start) {
+        // 32-bit, non-Darwin builds don't use `remaining`.
+        UNUSED_VARIABLE(remaining);
+        if (hasDouble(indexingType)) {
+#if OS(DARWIN)
+            constexpr double pattern = PNaN;
+            memset_pattern8(static_cast<void*>(butterfly->contiguous().data() + start), &pattern, sizeof(double) * remaining);
+#else
+            for (unsigned i = start; i < end; ++i)
+                butterfly->contiguousDouble().atUnsafe(i) = PNaN;
+#endif
+        } else {
+#if USE(JSVALUE64)
+            memset(static_cast<void*>(butterfly->contiguous().data() + start), 0, sizeof(JSValue) * remaining);
+#else
+            for (unsigned i = start; i < end; ++i)
+                butterfly->contiguous().atUnsafe(i).clear();
+#endif
+        }
+    }
+}
+
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

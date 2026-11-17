@@ -28,8 +28,10 @@
 
 #if ENABLE(MEDIA_SESSION)
 
-#include "DocumentInlines.h"
+#include "ContextDestructionObserverInlines.h"
 #include "DocumentLoader.h"
+#include "DocumentPage.h"
+#include "EventLoop.h"
 #include "EventNames.h"
 #include "HTMLMediaElement.h"
 #include "JSDOMPromiseDeferred.h"
@@ -42,18 +44,20 @@
 #include "MediaSessionCoordinator.h"
 #include "Navigator.h"
 #include "NowPlayingInfo.h"
-#include "Page.h"
 #include "PlatformMediaSessionManager.h"
+#include "Settings.h"
+#include "UserMediaController.h"
 #include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/JSONValues.h>
 #include <wtf/SortedArrayMap.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-static const void* nextLogIdentifier()
+static uint64_t nextLogIdentifier()
 {
     static uint64_t logIdentifier = cryptographicallyRandomNumber<uint32_t>();
-    return reinterpret_cast<const void*>(++logIdentifier);
+    return ++logIdentifier;
 }
 
 #if !RELEASE_LOG_DISABLED
@@ -70,7 +74,7 @@ static ASCIILiteral logClassName()
 
 static PlatformMediaSession::RemoteControlCommandType platformCommandForMediaSessionAction(MediaSessionAction action)
 {
-    static constexpr std::pair<MediaSessionAction, PlatformMediaSession::RemoteControlCommandType> mappings[] {
+    static constexpr SortedArrayMap map { std::to_array<std::pair<MediaSessionAction, PlatformMediaSession::RemoteControlCommandType>>({
         { MediaSessionAction::Play, PlatformMediaSession::RemoteControlCommandType::PlayCommand },
         { MediaSessionAction::Pause, PlatformMediaSession::RemoteControlCommandType::PauseCommand },
         { MediaSessionAction::Seekbackward, PlatformMediaSession::RemoteControlCommandType::SkipBackwardCommand },
@@ -80,8 +84,7 @@ static PlatformMediaSession::RemoteControlCommandType platformCommandForMediaSes
         { MediaSessionAction::Skipad, PlatformMediaSession::RemoteControlCommandType::NextTrackCommand },
         { MediaSessionAction::Stop, PlatformMediaSession::RemoteControlCommandType::StopCommand },
         { MediaSessionAction::Seekto, PlatformMediaSession::RemoteControlCommandType::SeekToPlaybackPositionCommand },
-    };
-    static constexpr SortedArrayMap map { mappings };
+    }) };
     return map.get(action, PlatformMediaSession::RemoteControlCommandType::NoCommand);
 }
 
@@ -128,6 +131,7 @@ static std::optional<std::pair<PlatformMediaSession::RemoteControlCommandType, P
     case MediaSessionAction::Togglecamera:
     case MediaSessionAction::Togglemicrophone:
     case MediaSessionAction::Togglescreenshare:
+    case MediaSessionAction::Voiceactivity:
         break;
     }
     if (command == PlatformMediaSession::RemoteControlCommandType::NoCommand)
@@ -135,6 +139,8 @@ static std::optional<std::pair<PlatformMediaSession::RemoteControlCommandType, P
 
     return std::make_pair(command, argument);
 }
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MediaSession);
 
 Ref<MediaSession> MediaSession::create(Navigator& navigator)
 {
@@ -147,15 +153,15 @@ MediaSession::MediaSession(Navigator& navigator)
     : ActiveDOMObject(navigator.scriptExecutionContext())
     , m_navigator(navigator)
 #if ENABLE(MEDIA_SESSION_COORDINATOR)
-    , m_coordinator(MediaSessionCoordinator::create(navigator.scriptExecutionContext()))
+    , m_coordinator(MediaSessionCoordinator::create(navigator.protectedScriptExecutionContext().get()))
 #endif
 {
-    m_logger = &Document::sharedLogger();
+    m_logger = Document::sharedLogger();
     m_logIdentifier = nextLogIdentifier();
 
 #if ENABLE(MEDIA_SESSION_COORDINATOR)
     RefPtr frame = navigator.frame();
-    auto* page = frame ? frame->page() : nullptr;
+    RefPtr page = frame ? frame->page() : nullptr;
     if (page && page->mediaSessionCoordinator())
         m_coordinator->setMediaSessionCoordinatorPrivate(*page->mediaSessionCoordinator());
     m_coordinator->setMediaSession(this);
@@ -199,7 +205,7 @@ void MediaSession::setMetadata(RefPtr<MediaMetadata>&& metadata)
     ALWAYS_LOG(LOGIDENTIFIER);
     if (m_metadata)
         m_metadata->resetMediaSession();
-    m_metadata = WTFMove(metadata);
+    m_metadata = WTF::move(metadata);
     if (m_metadata)
         m_metadata->setMediaSession(*this);
     notifyMetadataObservers(m_metadata);
@@ -234,7 +240,7 @@ ExceptionOr<void> MediaSession::setPlaylist(ScriptExecutionContext& context, Vec
         resolvedPlaylist.append(resolvedEntry.releaseReturnValue());
     }
 
-    m_playlist = WTFMove(resolvedPlaylist);
+    m_playlist = WTF::move(resolvedPlaylist);
 
     return { };
 }
@@ -257,19 +263,35 @@ ExceptionOr<void> MediaSession::setActionHandler(MediaSessionAction action, RefP
 {
 #if ENABLE(MEDIA_STREAM)
     RefPtr document = this->document();
-    if (document && !document->settings().mediaSessionCaptureToggleAPIEnabled() && (action == MediaSessionAction::Togglecamera || action == MediaSessionAction::Togglemicrophone || action == MediaSessionAction::Togglescreenshare))
+    if (document && !document->settings().mediaSessionCaptureToggleAPIEnabled() && (action == MediaSessionAction::Togglecamera || action == MediaSessionAction::Togglemicrophone || action == MediaSessionAction::Togglescreenshare || action == MediaSessionAction::Voiceactivity))
+        return Exception { ExceptionCode::TypeError, makeString("Argument 1 ('action') to MediaSession.setActionHandler must be a value other than '"_s, convertEnumerationToString(action), "'"_s) };
+
+#if PLATFORM(MAC) && !HAVE(VOICEACTIVITYDETECTION)
+    if (document && action == MediaSessionAction::Voiceactivity)
         return Exception { ExceptionCode::TypeError, makeString("Argument 1 ('action') to MediaSession.setActionHandler must be a value other than '"_s, convertEnumerationToString(action), "'"_s) };
 #endif
 
+    if (document && action == MediaSessionAction::Voiceactivity)
+            document->setShouldListenToVoiceActivity(!!handler);
+#endif
+
+    RefPtr sessionManager = this->sessionManager();
+    if (!sessionManager)
+        ERROR_LOG(LOGIDENTIFIER, "NULL session manager");
     if (handler) {
         ALWAYS_LOG(LOGIDENTIFIER, "adding ", action);
         {
             Locker lock { m_actionHandlersLock };
         m_actionHandlers.set(action, handler);
         }
+
+        if (sessionManager) {
         auto platformCommand = platformCommandForMediaSessionAction(action);
-        if (platformCommand != PlatformMediaSession::RemoteControlCommandType::NoCommand)
-            PlatformMediaSessionManager::sharedManager().addSupportedCommand(platformCommand);
+            if (platformCommand != PlatformMediaSession::RemoteControlCommandType::NoCommand) {
+                ALWAYS_LOG(LOGIDENTIFIER, "adding ", action);
+                sessionManager->addSupportedCommand(platformCommand);
+            }
+        }
     } else {
         bool containedAction;
         {
@@ -277,9 +299,11 @@ ExceptionOr<void> MediaSession::setActionHandler(MediaSessionAction action, RefP
             containedAction = m_actionHandlers.remove(action);
         }
 
+        if (sessionManager) {
         if (containedAction)
             ALWAYS_LOG(LOGIDENTIFIER, "removing ", action);
-        PlatformMediaSessionManager::sharedManager().removeSupportedCommand(platformCommandForMediaSessionAction(action));
+            sessionManager->removeSupportedCommand(platformCommandForMediaSessionAction(action));
+    }
     }
 
     notifyActionHandlerObservers();
@@ -298,6 +322,12 @@ void MediaSession::callActionHandler(const MediaSessionActionDetails& actionDeta
     promise.resolve();
 }
 
+bool MediaSession::hasActionHandler(const MediaSessionAction action) const
+{
+    Locker lock { m_actionHandlersLock };
+    return m_actionHandlers.contains(action);
+}
+
 bool MediaSession::callActionHandler(const MediaSessionActionDetails& actionDetails, TriggerGestureIndicator triggerGestureIndicator)
 {
     RefPtr<MediaSessionActionHandler> handler;
@@ -310,7 +340,7 @@ bool MediaSession::callActionHandler(const MediaSessionActionDetails& actionDeta
         std::optional<UserGestureIndicator> maybeGestureIndicator;
         if (triggerGestureIndicator == TriggerGestureIndicator::Yes)
             maybeGestureIndicator.emplace(IsProcessingUserGesture::Yes, document());
-        handler->handleEvent(actionDetails);
+        handler->invoke(actionDetails);
         return true;
     }
     auto element = activeMediaElement();
@@ -344,7 +374,7 @@ ExceptionOr<void> MediaSession::setPositionState(std::optional<MediaPositionStat
         && state->playbackRate))
         return Exception { ExceptionCode::TypeError };
 
-    m_positionState = WTFMove(state);
+    m_positionState = WTF::move(state);
     m_lastReportedPosition = m_positionState->position;
     m_timeAtLastPositionUpdate = MonotonicTime::now();
     notifyPositionStateObservers();
@@ -371,6 +401,24 @@ Document* MediaSession::document() const
     return m_navigator->window()->document();
 }
 
+RefPtr<Document> MediaSession::protectedDocument() const
+{
+    return document();
+}
+
+RefPtr<MediaSessionManagerInterface> MediaSession::sessionManager() const
+{
+    RefPtr document = this->document();
+    if (!document)
+        return nullptr;
+
+    RefPtr page = document->page();
+    if (!page)
+        return nullptr;
+
+    return page->mediaSessionManager();
+}
+
 void MediaSession::metadataUpdated(const MediaMetadata& metadata)
 {
     notifyMetadataObservers(const_cast<MediaMetadata*>(&metadata));
@@ -394,7 +442,7 @@ void MediaSession::removeObserver(MediaSessionObserver& observer)
     m_observers.remove(observer);
 }
 
-void MediaSession::forEachObserver(const Function<void(MediaSessionObserver&)>& apply)
+void MediaSession::forEachObserver(NOESCAPE const Function<void(MediaSessionObserver&)>& apply)
 {
     ASSERT(isMainThread());
     Ref protectedThis { *this };
@@ -435,7 +483,11 @@ RefPtr<HTMLMediaElement> MediaSession::activeMediaElement() const
     if (!document)
         return nullptr;
 
-    return HTMLMediaElement::bestMediaElementForRemoteControls(MediaElementSession::PlaybackControlsPurpose::MediaSession, document.get());
+    RefPtr page = document->page();
+    if (!page)
+        return nullptr;
+
+    return page->bestMediaElementForRemoteControls(MediaElementSession::PlaybackControlsPurpose::MediaSession, document.get());
 }
 
 void MediaSession::updateReportedPosition()
@@ -472,6 +524,7 @@ static Vector<URL> fallbackArtwork(DocumentLoader* loader)
     }
     if (!size)
         return { };
+
     Vector<URL> images;
     images.reserveInitialCapacity(size);
     for (const auto& icon : loader->linkIcons()) {
@@ -480,6 +533,7 @@ static Vector<URL> fallbackArtwork(DocumentLoader* loader)
     };
     return images;
 }
+
 void MediaSession::updateNowPlayingInfo(NowPlayingInfo& info)
 {
     if (auto positionState = this->positionState()) {
@@ -491,8 +545,8 @@ void MediaSession::updateNowPlayingInfo(NowPlayingInfo& info)
 
     if (!m_defaultArtworkAttempted && (!m_metadata || m_metadata->artwork().isEmpty())) {
         m_defaultArtworkAttempted = true;
-        if (auto images = fallbackArtwork(document() ? document()->loader() : nullptr); images.size())
-            m_defaultMetadata = MediaMetadata::create(*this, WTFMove(images));
+        if (auto images = fallbackArtwork(protectedDocument() ? protectedDocument()->loader() : nullptr); images.size())
+            m_defaultMetadata = MediaMetadata::create(*this, WTF::move(images));
     }
 
     if (RefPtr metadataWithImage = m_metadata && m_metadata->artworkImage() ? m_metadata : (m_defaultMetadata && m_defaultMetadata->artworkImage() ? m_defaultMetadata : nullptr)) {
@@ -505,6 +559,46 @@ void MediaSession::updateNowPlayingInfo(NowPlayingInfo& info)
         info.metadata.album = m_metadata->album();
     }
 }
+
+#if ENABLE(MEDIA_STREAM)
+void MediaSession::updateCaptureState(bool isActive, DOMPromiseDeferred<void>&& promise, MediaProducerMediaCaptureKind kind)
+{
+    RefPtr document = this->document();
+    if (!document || !document->isFullyActive()) {
+        promise.reject(Exception { ExceptionCode::InvalidStateError, "Document is not fully active or does not have focus"_s });
+        return;
+    }
+
+    if (isActive && (document->hidden() || !UserGestureIndicator::currentUserGesture())) {
+        promise.reject(Exception { ExceptionCode::InvalidStateError, "Activating capture must be called from a user gesture handler."_s });
+        return;
+    }
+
+    auto* controller = UserMediaController::from(document->page());
+    if (!controller) {
+        promise.reject(Exception { ExceptionCode::InvalidStateError, "Unable to proceed with the request."_s });
+        return;
+    }
+
+    if (!document->isCapturing()) {
+        promise.resolve();
+        return;
+    }
+
+    controller->updateCaptureState(*document, isActive, kind, [weakDocument = WeakPtr { document.get() }, promise = WTF::move(promise)] (auto&& exception) mutable {
+        RefPtr protectedDocument = weakDocument.get();
+        if (!protectedDocument)
+            return;
+        protectedDocument->eventLoop().queueTask(TaskSource::MediaElement, [promise = WTF::move(promise), exception = WTF::move(exception)] () mutable {
+            if (exception) {
+                promise.reject(WTF::move(*exception));
+                return;
+            }
+            promise.resolve();
+        });
+    });
+}
+#endif
 
 #if ENABLE(MEDIA_SESSION_COORDINATOR)
 void MediaSession::notifyReadyStateObservers()

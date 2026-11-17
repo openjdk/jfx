@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2017 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,20 +30,31 @@
 #include "WorkerDebuggerProxy.h"
 #include "WorkerLoaderProxy.h"
 #include "WorkerObjectProxy.h"
+#include <wtf/CheckedPtr.h>
 #include <wtf/MonotonicTime.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
 class DedicatedWorkerThread;
+class WeakPtrImplWithEventTargetData;
 class WorkerInspectorProxy;
 class WorkerUserGestureForwarder;
 
-class WorkerMessagingProxy final : public ThreadSafeRefCounted<WorkerMessagingProxy>, public WorkerGlobalScopeProxy, public WorkerObjectProxy, public WorkerLoaderProxy, public WorkerDebuggerProxy, public WorkerBadgeProxy {
-    WTF_MAKE_FAST_ALLOCATED;
+class WorkerMessagingProxy final : public ThreadSafeRefCounted<WorkerMessagingProxy>, public WorkerGlobalScopeProxy, public WorkerObjectProxy, public WorkerLoaderProxy, public WorkerDebuggerProxy, public WorkerBadgeProxy, public CanMakeThreadSafeCheckedPtr<WorkerMessagingProxy> {
+    WTF_MAKE_TZONE_ALLOCATED(WorkerMessagingProxy);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(WorkerMessagingProxy);
 public:
     explicit WorkerMessagingProxy(Worker&);
     virtual ~WorkerMessagingProxy();
+
+    uint32_t checkedPtrCount() const final { return CanMakeThreadSafeCheckedPtr<WorkerMessagingProxy>::checkedPtrCount(); }
+    uint32_t checkedPtrCountWithoutThreadCheck() const final { return CanMakeThreadSafeCheckedPtr<WorkerMessagingProxy>::checkedPtrCountWithoutThreadCheck(); }
+    void incrementCheckedPtrCount() const final { CanMakeThreadSafeCheckedPtr<WorkerMessagingProxy>::incrementCheckedPtrCount(); }
+    void decrementCheckedPtrCount() const final { CanMakeThreadSafeCheckedPtr<WorkerMessagingProxy>::decrementCheckedPtrCount(); }
+    void setDidBeginCheckedPtrDeletion() final { CanMakeThreadSafeCheckedPtr<WorkerMessagingProxy>::setDidBeginCheckedPtrDeletion(); }
 
 private:
     // Implementations of WorkerGlobalScopeProxy.
@@ -85,16 +96,17 @@ private:
     bool askedToTerminate() const final { return m_askedToTerminate; }
 
     void workerGlobalScopeDestroyedInternal();
-    Worker* workerObject() const { return m_workerObject; }
+    Worker* workerObject() const;
 
     // WorkerBadgeProxy
     void setAppBadge(std::optional<uint64_t>) final;
 
     RefPtr<ScriptExecutionContext> m_scriptExecutionContext;
+    Markable<ScriptExecutionContextIdentifier> m_scriptExecutionContextIdentifier;
     ScriptExecutionContextIdentifier m_loaderContextIdentifier;
-    RefPtr<WorkerInspectorProxy> m_inspectorProxy;
+    const Ref<WorkerInspectorProxy> m_inspectorProxy;
     RefPtr<WorkerUserGestureForwarder> m_userGestureForwarder;
-    Worker* m_workerObject;
+    WeakPtr<Worker, WeakPtrImplWithEventTargetData> m_workerObject;
     bool m_mayBeDestroyed { false };
     RefPtr<DedicatedWorkerThread> m_workerThread;
     URL m_scriptURL;

@@ -42,14 +42,22 @@ String GPUAdapter::name() const
     return m_backing->name();
 }
 
+GPUAdapter::GPUAdapter(Ref<WebGPU::Adapter>&& backing)
+    : m_backing(WTF::move(backing))
+    , m_features(GPUSupportedFeatures::create(WebGPU::SupportedFeatures::clone(m_backing->features())))
+    , m_limits(GPUSupportedLimits::create(WebGPU::SupportedLimits::clone(m_backing->limits())))
+    , m_info(GPUAdapterInfo::create(name()))
+{
+}
+
 Ref<GPUSupportedFeatures> GPUAdapter::features() const
 {
-    return GPUSupportedFeatures::create(WebGPU::SupportedFeatures::clone(m_backing->features()));
+    return m_features;
 }
 
 Ref<GPUSupportedLimits> GPUAdapter::limits() const
 {
-    return GPUSupportedLimits::create(WebGPU::SupportedLimits::clone(m_backing->limits()));
+    return m_limits;
 }
 
 bool GPUAdapter::isFallbackAdapter() const
@@ -67,21 +75,29 @@ static WebGPU::DeviceDescriptor convertToBacking(const std::optional<GPUDeviceDe
 
 static GPUFeatureName convertFeatureNameToEnum(const String& stringValue)
 {
-    static constexpr std::pair<ComparableASCIILiteral, GPUFeatureName> mappings[] = {
-        { "bgra8unorm-storage", GPUFeatureName::Bgra8unormStorage },
-        { "depth-clip-control", GPUFeatureName::DepthClipControl },
-        { "depth32float-stencil8", GPUFeatureName::Depth32floatStencil8 },
-        { "float32-filterable", GPUFeatureName::Float32Filterable },
-        { "indirect-first-instance", GPUFeatureName::IndirectFirstInstance },
-        { "rg11b10ufloat-renderable", GPUFeatureName::Rg11b10ufloatRenderable },
-        { "shader-f16", GPUFeatureName::ShaderF16 },
-        { "texture-compression-astc", GPUFeatureName::TextureCompressionAstc },
-        { "texture-compression-bc", GPUFeatureName::TextureCompressionBc },
-        { "texture-compression-etc2", GPUFeatureName::TextureCompressionEtc2 },
-        { "timestamp-query", GPUFeatureName::TimestampQuery },
-    };
-    static constexpr SortedArrayMap enumerationMapping { mappings };
-    if (auto* enumerationValue = enumerationMapping.tryGet(stringValue); LIKELY(enumerationValue))
+    static constexpr SortedArrayMap enumerationMapping { std::to_array<std::pair<ComparableASCIILiteral, GPUFeatureName>>({
+        { "bgra8unorm-storage"_s, GPUFeatureName::Bgra8unormStorage },
+        { "clip-distances"_s, GPUFeatureName::ClipDistances },
+        { "core-features-and-limits"_s, GPUFeatureName::CoreFeaturesAndLimits },
+        { "depth-clip-control"_s, GPUFeatureName::DepthClipControl },
+        { "depth32float-stencil8"_s, GPUFeatureName::Depth32floatStencil8 },
+        { "dual-source-blending"_s, GPUFeatureName::DualSourceBlending },
+        { "float16-renderable"_s, GPUFeatureName::Float16Renderable },
+        { "float32-blendable"_s, GPUFeatureName::Float32Blendable },
+        { "float32-filterable"_s, GPUFeatureName::Float32Filterable },
+        { "float32-renderable"_s, GPUFeatureName::Float32Renderable },
+        { "indirect-first-instance"_s, GPUFeatureName::IndirectFirstInstance },
+        { "rg11b10ufloat-renderable"_s, GPUFeatureName::Rg11b10ufloatRenderable },
+        { "shader-f16"_s, GPUFeatureName::ShaderF16 },
+        { "texture-compression-astc"_s, GPUFeatureName::TextureCompressionAstc },
+        { "texture-compression-astc-sliced-3d"_s, GPUFeatureName::TextureCompressionAstcSliced3d },
+        { "texture-compression-bc"_s, GPUFeatureName::TextureCompressionBc },
+        { "texture-compression-bc-sliced-3d"_s, GPUFeatureName::TextureCompressionBcSliced3d },
+        { "texture-compression-etc2"_s, GPUFeatureName::TextureCompressionEtc2 },
+        { "texture-formats-tier1"_s, GPUFeatureName::TextureFormatsTier1 },
+        { "timestamp-query"_s, GPUFeatureName::TimestampQuery },
+    }) };
+    if (auto* enumerationValue = enumerationMapping.tryGet(stringValue); enumerationValue) [[likely]]
         return *enumerationValue;
 
     RELEASE_ASSERT_NOT_REACHED();
@@ -109,26 +125,21 @@ void GPUAdapter::requestDevice(ScriptExecutionContext& scriptExecutionContext, c
         return;
     }
 
-    m_backing->requestDevice(convertToBacking(deviceDescriptor), [deviceDescriptor, promise = WTFMove(promise), scriptExecutionContextRef = Ref { scriptExecutionContext }](RefPtr<WebGPU::Device>&& device) mutable {
+    m_backing->requestDevice(convertToBacking(deviceDescriptor), [protectedThis = Ref { *this }, deviceDescriptor, promise = WTF::move(promise), scriptExecutionContextRef = Ref { scriptExecutionContext }](RefPtr<WebGPU::Device>&& device) mutable {
         if (!device.get())
             promise.reject(Exception(ExceptionCode::OperationError));
         else {
             auto queueLabel = deviceDescriptor->defaultQueue.label;
-            Ref<GPUDevice> gpuDevice = GPUDevice::create(scriptExecutionContextRef.ptr(), device.releaseNonNull(), deviceDescriptor ? WTFMove(queueLabel) : ""_s);
+            Ref<GPUDevice> gpuDevice = GPUDevice::create(scriptExecutionContextRef.ptr(), device.releaseNonNull(), deviceDescriptor ? WTF::move(queueLabel) : ""_s, GPUAdapterInfo::create(protectedThis->name()));
             gpuDevice->suspendIfNeeded();
-            promise.resolve(WTFMove(gpuDevice));
+            promise.resolve(WTF::move(gpuDevice));
         }
     });
 }
 
-void GPUAdapter::requestAdapterInfo(const std::optional<Vector<String>>&, RequestAdapterInfoPromise&& promise)
-{
-    promise.resolve(GPUAdapterInfo::create(name()));
-}
-
 Ref<GPUAdapterInfo> GPUAdapter::info()
 {
-    return GPUAdapterInfo::create(name());
+    return m_info;
 }
 
 }

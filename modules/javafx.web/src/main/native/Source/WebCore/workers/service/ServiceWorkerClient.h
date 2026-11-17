@@ -26,7 +26,6 @@
 #pragma once
 
 #include "ContextDestructionObserver.h"
-#include "ExceptionOr.h"
 #include "ScriptExecutionContextIdentifier.h"
 #include "ServiceWorkerClientData.h"
 #include <JavaScriptCore/Strong.h>
@@ -43,6 +42,8 @@ class ServiceWorkerGlobalScope;
 
 struct StructuredSerializeOptions;
 
+template<typename> class ExceptionOr;
+
 class ServiceWorkerClient : public RefCounted<ServiceWorkerClient>, public ContextDestructionObserver {
 public:
     using Identifier = ScriptExecutionContextIdentifier;
@@ -53,6 +54,10 @@ public:
     static Ref<ServiceWorkerClient> create(ServiceWorkerGlobalScope&, ServiceWorkerClientData&&);
 
     ~ServiceWorkerClient();
+
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     const URL& url() const;
     FrameType frameType() const;

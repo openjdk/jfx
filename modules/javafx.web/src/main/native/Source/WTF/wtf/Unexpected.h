@@ -65,6 +65,7 @@ inline namespace fundamentals_v3 {
 
 #include <cstdlib>
 #include <utility>
+#include <wtf/FastMalloc.h>
 #include <wtf/StdLibExtras.h>
 
 namespace std {
@@ -73,15 +74,15 @@ inline namespace fundamentals_v3 {
 
 template<class E>
 class unexpected {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(unexpected);
 public:
     unexpected() = delete;
     template <class U = E>
     constexpr explicit unexpected(U&& u) : val(std::forward<U>(u)) { }
     constexpr const E& value() const & { return val; }
     constexpr E& value() & { return val; }
-    constexpr E&& value() && { return WTFMove(val); }
-    constexpr const E&& value() const && { return WTFMove(val); }
+    constexpr E&& value() && { return WTF::move(val); }
+    constexpr const E&& value() const && { return WTF::move(val); }
 
 private:
     E val;

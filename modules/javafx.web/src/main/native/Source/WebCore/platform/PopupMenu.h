@@ -25,8 +25,8 @@
 
 namespace WebCore {
 
-class LocalFrameView;
 class IntRect;
+class LocalFrameView;
 
 class PopupMenu : public RefCounted<PopupMenu> {
 public:

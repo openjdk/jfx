@@ -19,7 +19,7 @@
 			<attribute name="optional" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/5">
+	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/6">
 		<attributes>
 			<attribute name="test" value="true"/>
 		</attributes>
@@ -42,6 +42,7 @@
 	<classpathentry kind="src" path="/graphics">
 		<attributes>
 			<attribute name="module" value="true"/>
+			<attribute name="add-exports" value="javafx.graphics/com.sun.javafx.tk=jfx.incubator.richtext"/>
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="src" path="/controls">

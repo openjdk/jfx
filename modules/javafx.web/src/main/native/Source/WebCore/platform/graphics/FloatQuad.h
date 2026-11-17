@@ -28,9 +28,10 @@
 
 #pragma once
 
-#include "FloatRect.h"
-#include "IntRect.h"
+#include <WebCore/FloatRect.h>
+#include <WebCore/IntRect.h>
 #include <wtf/Forward.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WTF {
 class TextStream;
@@ -44,7 +45,7 @@ namespace WebCore {
 // mapping a rectangle through transforms. When initialized from a rect, the
 // points are in clockwise order from top left.
 class FloatQuad {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(FloatQuad);
 public:
     FloatQuad()
     {

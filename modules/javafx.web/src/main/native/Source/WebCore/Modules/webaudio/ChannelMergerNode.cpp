@@ -35,11 +35,12 @@
 #include "AudioContext.h"
 #include "AudioNodeInput.h"
 #include "AudioNodeOutput.h"
+#include "ExceptionOr.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ChannelMergerNode);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ChannelMergerNode);
 
 ExceptionOr<Ref<ChannelMergerNode>> ChannelMergerNode::create(BaseAudioContext& context, const ChannelMergerOptions& options)
 {
@@ -72,16 +73,16 @@ ChannelMergerNode::ChannelMergerNode(BaseAudioContext& context, unsigned numberO
 
 void ChannelMergerNode::process(size_t framesToProcess)
 {
-    AudioNodeOutput* output = this->output(0);
+    CheckedPtr output = this->output(0);
     ASSERT(output);
-    ASSERT_UNUSED(framesToProcess, framesToProcess == output->bus()->length());
+    ASSERT_UNUSED(framesToProcess, framesToProcess == output->bus().length());
     ASSERT(numberOfInputs() == output->numberOfChannels());
 
     // Merge all the channels from all the inputs into one output.
     for (unsigned i = 0; i < numberOfInputs(); ++i) {
-        AudioNodeInput* input = this->input(i);
+        CheckedPtr input = this->input(i);
         ASSERT(input->numberOfChannels() == 1u);
-        auto* outputChannel = output->bus()->channel(i);
+        auto* outputChannel = output->bus().channel(i);
         if (input->isConnected()) {
             // The mixing rules will be applied so multiple channels are down-
             // mixed to mono (when the mixing rule is defined). Note that only
@@ -90,7 +91,7 @@ void ChannelMergerNode::process(size_t framesToProcess)
             //
             // See:
             // http://webaudio.github.io/web-audio-api/#channel-up-mixing-and-down-mixing
-            auto* inputChannel = input->bus()->channel(0);
+            auto* inputChannel = input->bus().channel(0);
             outputChannel->copyFrom(inputChannel);
         } else {
             // If input is unconnected, fill zeros in the channel.

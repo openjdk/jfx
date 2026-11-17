@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "AXObjectCache.h"
 #include "AccessibilityMockObject.h"
 
 namespace WebCore {
@@ -33,26 +34,30 @@ class RemoteFrame;
 
 class AXRemoteFrame final : public AccessibilityMockObject {
 public:
-    static Ref<AXRemoteFrame> create();
+    static Ref<AXRemoteFrame> create(AXID, AXObjectCache&);
 
 #if PLATFORM(COCOA)
-    void initializePlatformElementWithRemoteToken(std::span<const uint8_t>, int);
-    std::span<const uint8_t> generateRemoteToken() const;
+    void initializePlatformElementWithRemoteToken(AccessibilityRemoteToken, int);
+    AccessibilityRemoteToken generateRemoteToken() const;
     RetainPtr<id> remoteFramePlatformElement() const { return m_remoteFramePlatformElement; }
     pid_t processIdentifier() const { return m_processIdentifier; }
+    std::optional<FrameIdentifier> frameID() const { return m_frameID; }
+    void setFrameID(FrameIdentifier frameID) { m_frameID = frameID; }
 #endif
 
 private:
     virtual ~AXRemoteFrame() = default;
+    explicit AXRemoteFrame(AXID, AXObjectCache&);
 
-    AccessibilityRole determineAccessibilityRole() { return AccessibilityRole::RemoteFrame; }
-    bool computeAccessibilityIsIgnored() const { return false; }
-    bool isAXRemoteFrame() const { return true; }
-    LayoutRect elementRect() const;
+    AccessibilityRole determineAccessibilityRole() final { return AccessibilityRole::RemoteFrame; }
+    bool computeIsIgnored() const final { return false; }
+    bool isAXRemoteFrame() const final { return true; }
+    LayoutRect elementRect() const final;
 
 #if PLATFORM(COCOA)
     RetainPtr<id> m_remoteFramePlatformElement;
     pid_t m_processIdentifier { 0 };
+    std::optional<FrameIdentifier> m_frameID { };
 #endif
 };
 

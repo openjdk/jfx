@@ -26,22 +26,23 @@
 #pragma once
 
 #include "GraphicsContextSwitcher.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class ImageBuffer;
 
 class ImageBufferContextSwitcher final : public GraphicsContextSwitcher {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ImageBufferContextSwitcher);
 public:
-    ImageBufferContextSwitcher(GraphicsContext& destinationContext, const FloatRect &sourceImageRect, const DestinationColorSpace&, RefPtr<Filter>&& = nullptr, FilterResults* = nullptr);
+    ImageBufferContextSwitcher(GraphicsContext& destinationContext, const FloatRect& sourceImageRect, const DestinationColorSpace&, RefPtr<Filter>&& = nullptr, FilterResults* = nullptr);
 
 private:
     GraphicsContext* drawingContext(GraphicsContext& destinationContext) const override;
 
     bool hasSourceImage() const override { return m_sourceImage; }
 
-    void beginClipAndDrawSourceImage(GraphicsContext& destinationContext, const FloatRect& repaintRect, const FloatRect& clipRect) override;
+    void beginClipAndDrawSourceImage(GraphicsContext& destinationContext, const FloatRect& repaintRect, const FloatRect& clipRect, NOESCAPE const Function<void(GraphicsContext&)>& applyAdditionalDestinationClip) override;
     void endClipAndDrawSourceImage(GraphicsContext& destinationContext, const DestinationColorSpace&) override;
 
     void beginDrawSourceImage(GraphicsContext&, float = 1.f) override { }

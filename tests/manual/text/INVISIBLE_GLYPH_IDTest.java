@@ -70,7 +70,7 @@ public class INVISIBLE_GLYPH_IDTest extends Application {
         txt.setFont(font);
         box.getChildren().add(txt);
 
-        Image img = new Image("INVISIBLE_GLYPH_IDTest_Expected.png");
+        Image img = new Image(getClass().getResourceAsStream("INVISIBLE_GLYPH_IDTest_Expected.png"));
         ImageView iv = new ImageView();
         iv.setImage(img);
         box.getChildren().add(iv);

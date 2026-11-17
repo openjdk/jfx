@@ -25,10 +25,11 @@
 
 #pragma once
 
-#include "Identifier.h"
-#include "KeyAtomStringCache.h"
-#include "SmallStrings.h"
-#include "VM.h"
+#include <JavaScriptCore/Identifier.h>
+#include <JavaScriptCore/JSString.h>
+#include <JavaScriptCore/KeyAtomStringCache.h>
+#include <JavaScriptCore/SmallStrings.h>
+#include <JavaScriptCore/VM.h>
 
 namespace JSC {
 
@@ -53,7 +54,7 @@ ALWAYS_INLINE JSString* KeyAtomStringCache::make(VM& vm, Buffer& buffer, const F
     }
 
     JSString* result = func(vm, buffer);
-    if (LIKELY(result))
+    if (result) [[likely]]
         slot = result;
     return result;
 }

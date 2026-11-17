@@ -26,9 +26,8 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
-#include "JSDOMPromiseDeferred.h"
-#include "ScriptExecutionContext.h"
+#include <WebCore/JSDOMPromiseDeferred.h>
+#include <WebCore/ScriptExecutionContext.h>
 #include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
 
@@ -38,32 +37,34 @@ class JSValue;
 
 namespace WebCore {
 
+template<typename> class ExceptionOr;
+
 class WritableStreamSink : public RefCounted<WritableStreamSink> {
 public:
     virtual ~WritableStreamSink() = default;
 
     virtual void write(ScriptExecutionContext&, JSC::JSValue, DOMPromiseDeferred<void>&&) = 0;
     virtual void close() = 0;
-    virtual void error(String&&) = 0;
+    virtual void abort(JSC::JSValue) = 0;
 };
 
 class SimpleWritableStreamSink : public WritableStreamSink {
 public:
     using WriteCallback = Function<ExceptionOr<void>(ScriptExecutionContext&, JSC::JSValue)>;
-    static Ref<SimpleWritableStreamSink> create(WriteCallback&& writeCallback) { return adoptRef(*new SimpleWritableStreamSink(WTFMove(writeCallback))); }
+    static Ref<SimpleWritableStreamSink> create(WriteCallback&& writeCallback) { return adoptRef(*new SimpleWritableStreamSink(WTF::move(writeCallback))); }
 
 private:
     explicit SimpleWritableStreamSink(WriteCallback&&);
 
     void write(ScriptExecutionContext&, JSC::JSValue, DOMPromiseDeferred<void>&&) final;
     void close() final { }
-    void error(String&&) final { }
+    void abort(JSC::JSValue) final { }
 
     WriteCallback m_writeCallback;
 };
 
 inline SimpleWritableStreamSink::SimpleWritableStreamSink(WriteCallback&& writeCallback)
-    : m_writeCallback(WTFMove(writeCallback))
+    : m_writeCallback(WTF::move(writeCallback))
 {
 }
 

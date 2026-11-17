@@ -27,9 +27,9 @@
 
 #if ENABLE(WEB_AUTHN)
 
-#include "AuthenticationExtensionsClientOutputs.h"
-#include "AuthenticatorTransport.h"
 #include <JavaScriptCore/ArrayBuffer.h>
+#include <WebCore/AuthenticationExtensionsClientOutputs.h>
+#include <WebCore/AuthenticatorTransport.h>
 #include <wtf/Forward.h>
 
 namespace WebCore {
@@ -58,7 +58,7 @@ struct AuthenticatorAssertionResponseData {
     RefPtr<ArrayBuffer> userHandle;
 };
 
-using AuthenticatorResponseDataSerializableForm = std::variant<std::nullptr_t, AuthenticatorResponseBaseData, AuthenticatorAttestationResponseData, AuthenticatorAssertionResponseData>;
+using AuthenticatorResponseDataSerializableForm = Variant<std::nullptr_t, AuthenticatorResponseBaseData, AuthenticatorAttestationResponseData, AuthenticatorAssertionResponseData>;
 
 struct AuthenticatorResponseData {
     AuthenticatorResponseData() = default;

@@ -30,7 +30,13 @@
 #include "FEGaussianBlurSoftwareApplier.h"
 //#endif
 #include "Filter.h"
+#include "GraphicsContext.h"
+#include <numbers>
 #include <wtf/text/TextStream.h>
+
+#if USE(CORE_IMAGE)
+#include "FEGaussianBlurCoreImageApplier.h"
+#endif
 
 #if USE(SKIA)
 #include "FEGaussianBlurSkiaApplier.h"
@@ -85,7 +91,7 @@ bool FEGaussianBlur::setEdgeMode(EdgeModeType edgeMode)
 
 static inline float gaussianKernelFactor()
 {
-    return 3 / 4.f * sqrtf(2 * piFloat);
+    return 3 / 4.f * sqrtf(2 * std::numbers::pi_v<float>);
 }
 
 static int clampedToKernelSize(float value)
@@ -149,29 +155,33 @@ IntOutsets FEGaussianBlur::calculateOutsets(const FloatSize& stdDeviation)
     return { outsetSize.height(), outsetSize.width(), outsetSize.height(), outsetSize.width() };
 }
 
-bool FEGaussianBlur::resultIsAlphaImage(const FilterImageVector& inputs) const
+bool FEGaussianBlur::resultIsAlphaImage(std::span<const Ref<FilterImage>> inputs) const
 {
     return inputs[0]->isAlphaImage();
 }
 
-OptionSet<FilterRenderingMode> FEGaussianBlur::supportedFilterRenderingModes() const
+OptionSet<FilterRenderingMode> FEGaussianBlur::supportedFilterRenderingModes(OptionSet<FilterRenderingMode> preferredFilterRenderingModes) const
 {
     OptionSet<FilterRenderingMode> modes = FilterRenderingMode::Software;
-#if USE(SKIA)
+#if USE(CORE_IMAGE)
+    modes.add(FilterRenderingMode::Accelerated);
+#elif USE(SKIA)
     if (m_edgeMode == EdgeModeType::None)
         modes.add(FilterRenderingMode::Accelerated);
 #endif
     // FIXME: Ensure the correctness of the CG GaussianBlur filter (http://webkit.org/b/243816).
-#if 0 && HAVE(CGSTYLE_COLORMATRIX_BLUR)
-    if (m_stdX == m_stdY)
+#if HAVE(CGSTYLE_COLORMATRIX_BLUR) && HAVE(FIX_FOR_RADAR_163968203) && HAVE(FIX_FOR_RADAR_160309842)
+    if (m_stdX == m_stdY && preferredFilterRenderingModes.contains(FilterRenderingMode::GraphicsContext))
         modes.add(FilterRenderingMode::GraphicsContext);
 #endif
-    return modes;
+    return modes & preferredFilterRenderingModes;
 }
 
 std::unique_ptr<FilterEffectApplier> FEGaussianBlur::createAcceleratedApplier() const
 {
-#if USE(SKIA)
+#if USE(CORE_IMAGE)
+    return FilterEffectApplier::create<FEGaussianBlurCoreImageApplier>(*this);
+#elif USE(SKIA)
     return FilterEffectApplier::create<FEGaussianBlurSkiaApplier>(*this);
 #else
     return nullptr;
@@ -195,12 +205,12 @@ std::optional<GraphicsStyle> FEGaussianBlur::createGraphicsStyle(GraphicsContext
 
 TextStream& FEGaussianBlur::externalRepresentation(TextStream& ts, FilterRepresentation representation) const
 {
-    ts << indent << "[feGaussianBlur";
+    ts << indent << "[feGaussianBlur"_s;
     FilterEffect::externalRepresentation(ts, representation);
 
-    ts << " stdDeviation=\"" << m_stdX << ", " << m_stdY << "\"";
+    ts << " stdDeviation=\""_s << m_stdX << ", "_s << m_stdY << '"';
 
-    ts << "]\n";
+    ts << "]\n"_s;
     return ts;
 }
 

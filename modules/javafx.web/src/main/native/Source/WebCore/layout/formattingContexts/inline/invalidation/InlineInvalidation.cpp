@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,12 +30,16 @@
 #include "InlineSoftLineBreakItem.h"
 #include "LayoutElementBox.h"
 #include "LayoutUnit.h"
+#include "RenderStyle+GettersInlines.h"
 #include "TextBreakingPositionContext.h"
-#include "TextDirection.h"
+#include "WritingMode.h"
 #include <wtf/Range.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 namespace Layout {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(InlineDamage);
 
 InlineInvalidation::InlineInvalidation(InlineDamage& inlineDamage, const InlineItemList& inlineItemList, const InlineDisplay::Content& displayContent)
     : m_inlineDamage(inlineDamage)
@@ -48,8 +52,6 @@ bool InlineInvalidation::rootStyleWillChange(const ElementBox& formattingContext
 {
     ASSERT(formattingContextRoot.establishesInlineFormattingContext());
 
-    m_inlineDamage.setDamageReason(InlineDamage::Reason::StyleChange);
-
     if (m_inlineDamage.isInlineItemListDirty())
         return true;
 
@@ -59,18 +61,18 @@ bool InlineInvalidation::rootStyleWillChange(const ElementBox& formattingContext
         if (TextBreakingPositionContext { oldStyle } != TextBreakingPositionContext { newStyle })
             return true;
 
-        if (oldStyle.fontCascade() != newStyle.fontCascade())
+        if (!oldStyle.fontCascadeEqual(newStyle))
             return true;
 
-        auto* newFirstLineStyle = newStyle.getCachedPseudoStyle({ PseudoId::FirstLine });
-        auto* oldFirstLineStyle = oldStyle.getCachedPseudoStyle({ PseudoId::FirstLine });
-        if (newFirstLineStyle && oldFirstLineStyle && oldFirstLineStyle->fontCascade() != newFirstLineStyle->fontCascade())
+        auto* newFirstLineStyle = newStyle.getCachedPseudoStyle({ PseudoElementType::FirstLine });
+        auto* oldFirstLineStyle = oldStyle.getCachedPseudoStyle({ PseudoElementType::FirstLine });
+        if (newFirstLineStyle && oldFirstLineStyle && !oldFirstLineStyle->fontCascadeEqual(*newFirstLineStyle))
             return true;
 
-        if ((newFirstLineStyle && newFirstLineStyle->fontCascade() != oldStyle.fontCascade()) || (oldFirstLineStyle && oldFirstLineStyle->fontCascade() != newStyle.fontCascade()))
+        if ((newFirstLineStyle && !newFirstLineStyle->fontCascadeEqual(oldStyle)) || (oldFirstLineStyle && !oldFirstLineStyle->fontCascadeEqual(newStyle)))
             return true;
 
-        if (oldStyle.direction() != newStyle.direction() || oldStyle.unicodeBidi() != newStyle.unicodeBidi() || oldStyle.tabSize() != newStyle.tabSize() || oldStyle.textSecurity() != newStyle.textSecurity())
+        if (oldStyle.writingMode().bidiDirection() != newStyle.writingMode().bidiDirection() || oldStyle.unicodeBidi() != newStyle.unicodeBidi() || oldStyle.tabSize() != newStyle.tabSize() || oldStyle.textSecurity() != newStyle.textSecurity())
             return true;
 
         return false;
@@ -82,9 +84,12 @@ bool InlineInvalidation::rootStyleWillChange(const ElementBox& formattingContext
     return true;
 }
 
-bool InlineInvalidation::styleWillChange(const Box& layoutBox, const RenderStyle& newStyle)
+bool InlineInvalidation::styleWillChange(const Box& layoutBox, const RenderStyle& newStyle, Style::Difference diff)
 {
+    if (diff == Style::DifferenceResult::Layout) {
+        m_inlineDamage.resetLayoutPosition();
     m_inlineDamage.setDamageReason(InlineDamage::Reason::StyleChange);
+    }
 
     if (m_inlineDamage.isInlineItemListDirty())
         return true;
@@ -104,11 +109,11 @@ bool InlineInvalidation::styleWillChange(const Box& layoutBox, const RenderStyle
         if (!layoutBox.isInlineBox())
             return false;
 
-        auto contentMayNeedNewBreakingPositionsAndMeasuring = TextBreakingPositionContext { oldStyle } != TextBreakingPositionContext { newStyle } || oldStyle.fontCascade() != newStyle.fontCascade();
+        auto contentMayNeedNewBreakingPositionsAndMeasuring = TextBreakingPositionContext { oldStyle } != TextBreakingPositionContext { newStyle } || !oldStyle.fontCascadeEqual(newStyle);
         if (contentMayNeedNewBreakingPositionsAndMeasuring)
             return true;
 
-        auto bidiContextChanged = oldStyle.unicodeBidi() != newStyle.unicodeBidi() || oldStyle.direction() != newStyle.direction();
+        auto bidiContextChanged = oldStyle.unicodeBidi() != newStyle.unicodeBidi() || oldStyle.writingMode().bidiDirection() != newStyle.writingMode().bidiDirection();
         if (bidiContextChanged)
             return true;
 
@@ -438,7 +443,7 @@ bool InlineInvalidation::updateInlineDamage(const InvalidatedLine& invalidatedLi
     };
 
     m_inlineDamage.setDamageReason(reason);
-    m_inlineDamage.setLayoutStartPosition(WTFMove(layoutStartPosition));
+    m_inlineDamage.setLayoutStartPosition(WTF::move(layoutStartPosition));
 
     if (shouldApplyRangeLayout == ShouldApplyRangeLayout::Yes)
         m_inlineDamage.setTrailingDisplayBoxes(trailingDisplayBoxesAfterDamagedLine(invalidatedLine.index, m_displayContent));
@@ -466,6 +471,11 @@ bool InlineInvalidation::setFullLayoutIfNeeded(const Box& layoutBox)
 
     if (m_inlineItemList.isEmpty()) {
         // We must be under memory pressure.
+        m_inlineDamage.resetLayoutPosition();
+        return true;
+    }
+
+    if (m_inlineDamage.reasons().contains(InlineDamage::Reason::StyleChange)) {
         m_inlineDamage.resetLayoutPosition();
         return true;
     }

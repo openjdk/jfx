@@ -25,14 +25,9 @@
 
 #include "config.h"
 #include "SourceBrush.h"
+#include <wtf/text/TextStream.h>
 
 namespace WebCore {
-
-SourceBrush::SourceBrush(const Color& color, OptionalPatternGradient&& patternGradient)
-    : m_color(color)
-    , m_patternGradient(WTFMove(patternGradient))
-{
-}
 
 const AffineTransform& SourceBrush::gradientSpaceTransform() const
 {
@@ -43,29 +38,9 @@ const AffineTransform& SourceBrush::gradientSpaceTransform() const
 
 Gradient* SourceBrush::gradient() const
 {
-    if (auto* logicalGradient = std::get_if<SourceBrushLogicalGradient>(&m_patternGradient)) {
-        if (auto* gradient = std::get_if<Ref<Gradient>>(&logicalGradient->gradient))
-            return gradient->ptr();
-    }
+    if (auto* logicalGradient = std::get_if<SourceBrushLogicalGradient>(&m_patternGradient))
+        return logicalGradient->gradient.ptr();
     return nullptr;
-}
-
-std::optional<RenderingResourceIdentifier> SourceBrush::gradientIdentifier() const
-{
-    auto* gradient = std::get_if<SourceBrushLogicalGradient>(&m_patternGradient);
-    if (!gradient)
-        return std::nullopt;
-
-    return WTF::switchOn(gradient->gradient,
-        [] (const Ref<Gradient>& gradient) -> std::optional<RenderingResourceIdentifier> {
-            if (!gradient->hasValidRenderingResourceIdentifier())
-                return std::nullopt;
-            return gradient->renderingResourceIdentifier();
-        },
-        [] (RenderingResourceIdentifier renderingResourceIdentifier) -> std::optional<RenderingResourceIdentifier> {
-            return renderingResourceIdentifier;
-        }
-    );
 }
 
 Pattern* SourceBrush::pattern() const
@@ -77,25 +52,25 @@ Pattern* SourceBrush::pattern() const
 
 void SourceBrush::setGradient(Ref<Gradient>&& gradient, const AffineTransform& spaceTransform)
 {
-    m_patternGradient = SourceBrushLogicalGradient { WTFMove(gradient), spaceTransform };
+    m_patternGradient = SourceBrushLogicalGradient { WTF::move(gradient), spaceTransform };
 }
 
 void SourceBrush::setPattern(Ref<Pattern>&& pattern)
 {
-    m_patternGradient.emplace<Ref<Pattern>>(WTFMove(pattern));
+    m_patternGradient.emplace<Ref<Pattern>>(WTF::move(pattern));
 }
 
 WTF::TextStream& operator<<(TextStream& ts, const SourceBrush& brush)
 {
-    ts.dumpProperty("color", brush.color());
+    ts.dumpProperty("color"_s, brush.color());
 
-    if (auto gradient = brush.gradient()) {
-        ts.dumpProperty("gradient", *gradient);
-        ts.dumpProperty("gradient-space-transform", brush.gradientSpaceTransform());
+    if (RefPtr gradient = brush.gradient()) {
+        ts.dumpProperty("gradient"_s, *gradient);
+        ts.dumpProperty("gradient-space-transform"_s, brush.gradientSpaceTransform());
     }
 
-    if (auto pattern = brush.pattern())
-        ts.dumpProperty("pattern", pattern);
+    if (RefPtr pattern = brush.pattern())
+        ts.dumpProperty("pattern"_s, pattern.get());
 
     return ts;
 }

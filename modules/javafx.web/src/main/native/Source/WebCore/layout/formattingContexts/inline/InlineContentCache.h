@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,19 +25,18 @@
 
 #pragma once
 
-#include "FormattingConstraints.h"
-#include "InlineDisplayContent.h"
-#include "InlineItem.h"
-#include "LineLayoutResult.h"
-#include <wtf/TZoneMalloc.h>
-#include <wtf/TZoneMallocInlines.h>
+#include <WebCore/FormattingConstraints.h>
+#include <WebCore/InlineDisplayContent.h>
+#include <WebCore/InlineItem.h>
+#include <WebCore/LineLayoutResult.h>
+#include <wtf/HashMap.h>
 
 namespace WebCore {
 namespace Layout {
 
 // InlineContentCache is used to cache content for subsequent layouts.
 class InlineContentCache {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_INLINE(InlineContentCache);
+    WTF_MAKE_TZONE_ALLOCATED(InlineContentCache);
 public:
     struct InlineItems {
         InlineItemList& content() { return m_inlineItemList; }
@@ -47,10 +46,12 @@ public:
             bool requiresVisualReordering { false };
             // Note that <span>this is text</span> returns true as inline boxes are not considered 'content' here.
             bool hasTextAndLineBreakOnlyContent { false };
+            bool hasTextAutospace { false };
             size_t inlineBoxCount { 0 };
         };
-        void set(InlineItemList&&, ContentAttributes);
-        void replace(size_t insertionPosition, InlineItemList&&, ContentAttributes);
+        enum class IsPopulatedFromCache : bool { No, Yes };
+        void set(InlineItemList&&, ContentAttributes, IsPopulatedFromCache);
+        void replace(size_t insertionPosition, InlineItemList&&, ContentAttributes, IsPopulatedFromCache);
         void shrinkToFit() { m_inlineItemList.shrinkToFit(); }
 
         bool isEmpty() const { return content().isEmpty(); }
@@ -58,18 +59,20 @@ public:
 
         bool requiresVisualReordering() const { return m_contentAttributes.requiresVisualReordering; }
         bool hasTextAndLineBreakOnlyContent() const { return m_contentAttributes.hasTextAndLineBreakOnlyContent; }
+        bool hasTextAutospace() const { return m_contentAttributes.hasTextAutospace; }
         bool hasInlineBoxes() const { return !!inlineBoxCount(); }
         size_t inlineBoxCount() const { return m_contentAttributes.inlineBoxCount; }
+        bool isPopulatedFromCache() const { return m_isPopulatedFromCache; }
 
     private:
         ContentAttributes m_contentAttributes;
         InlineItemList m_inlineItemList;
-
+        bool m_isPopulatedFromCache { false };
     };
     const InlineItems& inlineItems() const { return m_inlineItems; }
     InlineItems& inlineItems() { return m_inlineItems; }
 
-    void setMaximumIntrinsicWidthLineContent(LineLayoutResult&& lineContent) { m_maximumIntrinsicWidthLineContent = WTFMove(lineContent); }
+    void setMaximumIntrinsicWidthLineContent(LineLayoutResult&& lineContent) { m_maximumIntrinsicWidthLineContent = WTF::move(lineContent); }
     void clearMaximumIntrinsicWidthLineContent() { m_maximumIntrinsicWidthLineContent = { }; }
     std::optional<LineLayoutResult>& maximumIntrinsicWidthLineContent() { return m_maximumIntrinsicWidthLineContent; }
 
@@ -79,8 +82,17 @@ public:
     std::optional<InlineLayoutUnit> maximumContentSize() const { return m_maximumContentSize; }
     void resetMinimumMaximumContentSizes();
 
+    const InlineBoxBoundaryTextSpacings& inlineBoxBoundaryTextSpacings() const { return m_textSpacingContext.inlineBoxBoundaryTextSpacings; }
+    void setInlineBoxBoundaryTextSpacings(InlineBoxBoundaryTextSpacings&& spacings) { m_textSpacingContext.inlineBoxBoundaryTextSpacings = WTF::move(spacings); }
+    const TrimmableTextSpacings& trimmableTextSpacings() const { return m_textSpacingContext.trimmableTextSpacings; }
+    void setTrimmableTextSpacings(TrimmableTextSpacings&& spacings) { m_textSpacingContext.trimmableTextSpacings = WTF::move(spacings); }
+
+    const TextSpacingContext& textSpacingContext() const { return m_textSpacingContext; }
+
 private:
     InlineItems m_inlineItems;
+    TextSpacingContext m_textSpacingContext;
+
     std::optional<LineLayoutResult> m_maximumIntrinsicWidthLineContent { };
     std::optional<InlineLayoutUnit> m_minimumContentSize { };
     std::optional<InlineLayoutUnit> m_maximumContentSize { };
@@ -93,17 +105,20 @@ inline void InlineContentCache::resetMinimumMaximumContentSizes()
     m_maximumIntrinsicWidthLineContent = { };
 }
 
-inline void InlineContentCache::InlineItems::set(InlineItemList&& inlineItemList, ContentAttributes contentAttributes)
+inline void InlineContentCache::InlineItems::set(InlineItemList&& inlineItemList, ContentAttributes contentAttributes, IsPopulatedFromCache isPopulatedFromCache)
 {
-    m_inlineItemList = WTFMove(inlineItemList);
+    m_inlineItemList = WTF::move(inlineItemList);
     m_contentAttributes = contentAttributes;
+    m_isPopulatedFromCache = isPopulatedFromCache == IsPopulatedFromCache::Yes;
 }
 
-inline void InlineContentCache::InlineItems::replace(size_t insertionPosition, InlineItemList&& inlineItemList, ContentAttributes contentAttributes)
+inline void InlineContentCache::InlineItems::replace(size_t insertionPosition, InlineItemList&& inlineItemList, ContentAttributes contentAttributes, IsPopulatedFromCache isPopulatedFromCache)
 {
-    m_inlineItemList.remove(insertionPosition, m_inlineItemList.size() - insertionPosition);
-    m_inlineItemList.appendVector(WTFMove(inlineItemList));
+    m_inlineItemList.removeAt(insertionPosition, m_inlineItemList.size() - insertionPosition);
+    m_inlineItemList.appendVector(WTF::move(inlineItemList));
     m_contentAttributes = contentAttributes;
+    if (isPopulatedFromCache == IsPopulatedFromCache::No)
+        m_isPopulatedFromCache = false;
 }
 
 }

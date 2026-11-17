@@ -36,12 +36,14 @@
 #include "BlobLoader.h"
 #include "BlobPart.h"
 #include "BlobURL.h"
+#include "ContextDestructionObserverInlines.h"
 #include "File.h"
+#include "JSDOMPromise.h"
 #include "JSDOMPromiseDeferred.h"
 #include "PolicyContainer.h"
 #include "ReadableStream.h"
-#include "ReadableStreamSource.h"
 #include "ScriptExecutionContext.h"
+#include "ScriptWrappableInlines.h"
 #include "SecurityOrigin.h"
 #include "SharedBuffer.h"
 #include "ThreadableBlobRegistry.h"
@@ -55,7 +57,8 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(Blob);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(BlobLoader);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Blob);
 
 class BlobURLRegistry final : public URLRegistry {
 public:
@@ -76,7 +79,7 @@ void BlobURLRegistry::registerURL(const ScriptExecutionContext& context, const U
         Locker locker { m_urlsPerContextLock };
         m_urlsPerContext.add(context.identifier(), HashSet<URL>()).iterator->value.add(publicURL.isolatedCopy());
     }
-    ThreadableBlobRegistry::registerBlobURL(context.securityOrigin(), context.policyContainer(), publicURL, static_cast<Blob&>(blob).url(), context.topOrigin().data());
+    ThreadableBlobRegistry::registerBlobURL(context.protectedSecurityOrigin().get(), context.policyContainer(), publicURL, downcast<Blob>(blob).url(), context.topOrigin().data());
 }
 
 void BlobURLRegistry::unregisterURL(const URL& url, const SecurityOriginData& topOrigin)
@@ -118,8 +121,8 @@ URLRegistry& BlobURLRegistry::registry()
 
 Blob::Blob(UninitializedContructor, ScriptExecutionContext* context, URL&& url, String&& type)
     : ActiveDOMObject(context)
-    , m_type(WTFMove(type))
-    , m_internalURL(WTFMove(url))
+    , m_type(WTF::move(type))
+    , m_internalURL(WTF::move(url))
 {
 }
 
@@ -154,7 +157,7 @@ static Vector<BlobPart> buildBlobData(Vector<BlobPartVariant>&& blobPartVariants
     for (auto& blobPartVariant : blobPartVariants) {
         WTF::switchOn(blobPartVariant,
             [&] (auto& part) {
-                builder.append(WTFMove(part));
+                builder.append(WTF::move(part));
             }
         );
     }
@@ -167,7 +170,7 @@ Blob::Blob(ScriptExecutionContext& context, Vector<BlobPartVariant>&& blobPartVa
     , m_memoryCost(computeMemoryCost(blobPartVariants))
     , m_internalURL(BlobURL::createInternalURL())
 {
-    ThreadableBlobRegistry::registerInternalBlobURL(m_internalURL, buildBlobData(WTFMove(blobPartVariants), propertyBag), m_type);
+    ThreadableBlobRegistry::registerInternalBlobURL(m_internalURL, buildBlobData(WTF::move(blobPartVariants), propertyBag), m_type);
 }
 
 Blob::Blob(ScriptExecutionContext* context, Vector<uint8_t>&& data, const String& contentType)
@@ -177,7 +180,19 @@ Blob::Blob(ScriptExecutionContext* context, Vector<uint8_t>&& data, const String
     , m_memoryCost(data.size())
     , m_internalURL(BlobURL::createInternalURL())
 {
-    ThreadableBlobRegistry::registerInternalBlobURL(m_internalURL, { BlobPart(WTFMove(data)) }, contentType);
+    ThreadableBlobRegistry::registerInternalBlobURL(m_internalURL, { BlobPart(WTF::move(data)) }, contentType);
+}
+
+Blob::Blob(ScriptExecutionContext* context, Ref<FragmentedSharedBuffer>&& buffer, const String& contentType)
+    : ActiveDOMObject(context)
+    , m_type(contentType)
+    , m_size(buffer->size())
+    , m_memoryCost(buffer->size())
+    , m_internalURL(BlobURL::createInternalURL())
+{
+    BlobBuilder builder(EndingType::Transparent);
+    builder.append(WTF::move(buffer));
+    ThreadableBlobRegistry::registerInternalBlobURL(m_internalURL, builder.finalize(), contentType);
 }
 
 Blob::Blob(ReferencingExistingBlobConstructor, ScriptExecutionContext* context, const Blob& blob)
@@ -217,7 +232,7 @@ Blob::~Blob()
 {
     ThreadableBlobRegistry::unregisterBlobURL(m_internalURL, std::nullopt);
     while (!m_blobLoaders.isEmpty())
-        (*m_blobLoaders.begin())->cancel();
+        RefPtr { (*m_blobLoaders.begin()).get() }->cancel();
 }
 
 Ref<Blob> Blob::slice(long long start, long long end, const String& contentType) const
@@ -265,22 +280,22 @@ String Blob::normalizedContentType(const String& contentType)
     return contentType.convertToASCIILowercase();
 }
 
-void Blob::loadBlob(FileReaderLoader::ReadType readType, CompletionHandler<void(BlobLoader&)>&& completionHandler)
+void Blob::loadBlob(FileReaderLoader::ReadType readType, Function<void(BlobLoader&)>&& completionHandler)
 {
-    auto blobLoader = makeUnique<BlobLoader>([this, pendingActivity = makePendingActivity(*this), completionHandler = WTFMove(completionHandler)](BlobLoader& blobLoader) mutable {
+    Ref blobLoader = BlobLoader::create([pendingActivity = makePendingActivity(*this), completionHandler = WTF::move(completionHandler)](BlobLoader& blobLoader) mutable {
         completionHandler(blobLoader);
-        m_blobLoaders.take(&blobLoader);
+        pendingActivity->object().m_blobLoaders.take(&blobLoader);
     });
 
-    blobLoader->start(*this, scriptExecutionContext(), readType);
+    blobLoader->start(*this, protectedScriptExecutionContext().get(), readType);
 
     if (blobLoader->isLoading())
-        m_blobLoaders.add(WTFMove(blobLoader));
+        m_blobLoaders.add(WTF::move(blobLoader));
 }
 
 void Blob::text(Ref<DeferredPromise>&& promise)
 {
-    loadBlob(FileReaderLoader::ReadAsText, [promise = WTFMove(promise)](BlobLoader& blobLoader) mutable {
+    loadBlob(FileReaderLoader::ReadAsText, [promise = WTF::move(promise)](BlobLoader& blobLoader) mutable {
         if (auto optionalErrorCode = blobLoader.errorCode()) {
             promise->reject(Exception { *optionalErrorCode });
             return;
@@ -301,67 +316,75 @@ static ExceptionOr<Ref<JSC::ArrayBuffer>> arrayBufferFromBlobLoader(BlobLoader& 
 
 void Blob::arrayBuffer(DOMPromiseDeferred<IDLArrayBuffer>&& promise)
 {
-    loadBlob(FileReaderLoader::ReadAsArrayBuffer, [promise = WTFMove(promise)](BlobLoader& blobLoader) mutable {
+    loadBlob(FileReaderLoader::ReadAsArrayBuffer, [promise = WTF::move(promise)](BlobLoader& blobLoader) mutable {
         promise.settle(arrayBufferFromBlobLoader(blobLoader));
+    });
+}
+
+void Blob::getArrayBuffer(CompletionHandler<void(ExceptionOr<Ref<JSC::ArrayBuffer>>)>&& completionHandler)
+{
+    loadBlob(FileReaderLoader::ReadAsArrayBuffer, [completionHandler = WTF::move(completionHandler)](BlobLoader& blobLoader) mutable {
+        completionHandler(arrayBufferFromBlobLoader(blobLoader));
     });
 }
 
 void Blob::bytes(Ref<DeferredPromise>&& promise)
 {
-    loadBlob(FileReaderLoader::ReadAsArrayBuffer, [promise = WTFMove(promise)](BlobLoader& blobLoader) mutable {
+    loadBlob(FileReaderLoader::ReadAsArrayBuffer, [promise = WTF::move(promise)](BlobLoader& blobLoader) mutable {
         auto arrayBuffer = arrayBufferFromBlobLoader(blobLoader);
         if (arrayBuffer.hasException()) {
             promise->reject(arrayBuffer.releaseException());
             return;
         }
         Ref view = Uint8Array::create(arrayBuffer.releaseReturnValue());
-        promise->resolve<IDLUint8Array>(WTFMove(view));
+        promise->resolve<IDLUint8Array>(WTF::move(view));
     });
 }
 
 ExceptionOr<Ref<ReadableStream>> Blob::stream()
 {
-    class BlobStreamSource : public FileReaderLoaderClient, public RefCountedReadableStreamSource {
+    class BlobStreamSource : public FileReaderLoaderClient, public RefCounted<BlobStreamSource> {
     public:
-        BlobStreamSource(ScriptExecutionContext& scriptExecutionContext, Blob& blob)
-            : m_loader(makeUniqueRef<FileReaderLoader>(FileReaderLoader::ReadType::ReadAsBinaryChunks, this))
+        static Ref<BlobStreamSource> create(ScriptExecutionContext& scriptExecutionContext, Blob& blob)
         {
-            m_loader->start(&scriptExecutionContext, blob);
+            return adoptRef(*new BlobStreamSource(scriptExecutionContext, blob));
         }
 
-    private:
-        // ReadableStreamSource
-        void setActive() final { }
-        void setInactive() final { }
-        void doStart() final
-        {
-            ASSERT(m_streamState == StreamState::NotStarted);
-            m_streamState = StreamState::Waiting;
+        // FileReaderLoaderClient.
+        void ref() const final { RefCounted::ref(); }
+        void deref() const final { RefCounted::deref(); }
 
-            closeStreamIfNeeded();
-        }
-
-        void doPull() final
+        void pull(JSDOMGlobalObject& globalObject, ReadableByteStreamController& controller, Ref<DeferredPromise>&& promise)
         {
-            if (closeStreamIfNeeded())
+            if (closeStreamIfNeeded(globalObject, controller, promise.get()))
                 return;
 
             if (m_queue.isEmpty()) {
-                m_streamState = StreamState::Waiting;
+                m_promise = WTF::move(promise);
+                m_controller = controller;
                 return;
             }
 
-            if (!tryEnqueuing(m_queue.takeFirst().get()))
-                return;
-
-            pullFinished();
+            tryEnqueuing(m_queue.takeFirst().get(), controller, WTF::move(promise), &globalObject);
         }
 
-        void doCancel() final
+        void cancel(Ref<DeferredPromise>&& promise)
         {
             m_loaderState = LoaderState::Cancelled;
             m_loader->cancel();
             m_queue.clear();
+            m_promise = nullptr;
+            m_controller = nullptr;
+
+            promise->resolve();
+        }
+
+    private:
+        BlobStreamSource(ScriptExecutionContext& scriptExecutionContext, Blob& blob)
+            : m_loader(FileReaderLoader::create(FileReaderLoader::ReadType::ReadAsBinaryChunks, this))
+        {
+            relaxAdoptionRequirement();
+            m_loader->start(&scriptExecutionContext, blob);
         }
 
         // FileReaderLoaderClient
@@ -369,22 +392,21 @@ ExceptionOr<Ref<ReadableStream>> Blob::stream()
         void didReceiveData() final { }
         void didReceiveBinaryChunk(const SharedBuffer& buffer) final
         {
-            if (m_streamState != StreamState::Waiting) {
+            if (!m_promise) {
                 m_queue.append(buffer.asFragmentedSharedBuffer());
                 return;
         }
 
-            m_streamState = StreamState::Started;
-            if (!tryEnqueuing(buffer))
-                return;
-
-            pullFinished();
+            RefPtr controller = m_controller.get();
+            tryEnqueuing(buffer, controller.releaseNonNull(), m_promise.releaseNonNull(), nullptr);
         }
 
         void didFinishLoading() final
         {
             m_loaderState = LoaderState::Completed;
-            closeStreamIfNeeded();
+
+            if (m_queue.isEmpty())
+                closeStreamIfPossible();
         }
 
         void didFail(ExceptionCode code) final
@@ -393,46 +415,98 @@ ExceptionOr<Ref<ReadableStream>> Blob::stream()
             m_exception = Exception { code };
 
             m_loaderState = LoaderState::Completed;
-            closeStreamIfNeeded();
+
+            closeStreamIfPossible();
         }
 
-        bool closeStreamIfNeeded()
+        void closeStreamIfPossible()
         {
-            if (m_loaderState != LoaderState::Completed || m_streamState == StreamState::NotStarted || !m_queue.isEmpty())
+            RefPtr promise = std::exchange(m_promise, { });
+            if (!promise)
+                return;
+
+            RefPtr controller = m_controller.get();
+            auto* globalObject = controller->protectedStream()->globalObject();
+            if (!globalObject)
+                return;
+
+            closeStream(*globalObject, *controller, *promise);
+        }
+
+        bool closeStreamIfNeeded(JSDOMGlobalObject& globalObject, ReadableByteStreamController& controller, DeferredPromise& promise)
+        {
+            if (m_loaderState != LoaderState::Completed || !m_queue.isEmpty())
                 return false;
 
-            if (m_exception) {
-                controller().error(*m_exception);
+            closeStream(globalObject, controller, promise);
                 return true;
             }
 
-            controller().close();
-            return true;
-        }
-
-        bool tryEnqueuing(const FragmentedSharedBuffer& buffer)
+        void closeStream(JSDOMGlobalObject& globalObject, ReadableByteStreamController& controller, DeferredPromise& promise)
         {
-            bool didSucceed = controller().enqueue(buffer.tryCreateArrayBuffer());
-            if (!didSucceed)
-                didFail(ExceptionCode::OutOfMemoryError);
+            if (m_exception) {
+                controller.error(globalObject, *m_exception);
+                promise.resolve();
+                return;
+            }
 
-            return didSucceed;
+            controller.closeAndRespondToPendingPullIntos(globalObject);
+            promise.resolve();
         }
 
-        UniqueRef<FileReaderLoader> m_loader;
+        void tryEnqueuing(const FragmentedSharedBuffer& sharedBuffer, ReadableByteStreamController& controller, Ref<DeferredPromise>&& promise, JSDOMGlobalObject* globalObject)
+        {
+            auto scope = makeScopeExit([promise = WTF::move(promise)] {
+                promise->resolve();
+            });
+
+            if (!globalObject) {
+                globalObject = controller.protectedStream()->globalObject();
+                if (!globalObject)
+                    return;
+            }
+
+            RefPtr buffer = sharedBuffer.tryCreateArrayBuffer();
+            if (!buffer) {
+                controller.error(*globalObject, Exception { ExceptionCode::OutOfMemoryError, "Unable to create buffer"_s });
+                return;
+            }
+
+            auto result = controller.enqueue(*globalObject, *buffer);
+            if (result.hasException())
+                controller.error(*globalObject, result.releaseException());
+        }
+
+        const Ref<FileReaderLoader> m_loader;
         Deque<Ref<FragmentedSharedBuffer>> m_queue;
         std::optional<Exception> m_exception;
-        enum class StreamState : uint8_t { NotStarted, Started, Waiting };
-        StreamState m_streamState { StreamState::NotStarted };
         enum class LoaderState : uint8_t { Started, Completed, Cancelled };
         LoaderState m_loaderState { LoaderState::Started };
+        RefPtr<DeferredPromise> m_promise;
+        WeakPtr<ReadableByteStreamController> m_controller;
     };
 
-    auto* context = scriptExecutionContext();
+    RefPtr context = scriptExecutionContext();
     auto* globalObject = context ? context->globalObject() : nullptr;
     if (!globalObject)
         return Exception { ExceptionCode::InvalidStateError };
-    return ReadableStream::create(*JSC::jsCast<JSDOMGlobalObject*>(globalObject), adoptRef(*new BlobStreamSource(*context, *this)));
+
+    Ref source = BlobStreamSource::create(*context, *this);
+    ReadableByteStreamController::PullAlgorithm pullAlgorithm = [source](auto& globalObject, auto&& controller) {
+        auto [promise, deferred] = createPromiseAndWrapper(globalObject);
+        source->pull(globalObject, controller, WTF::move(deferred));
+        return promise;
+    };
+
+    ReadableByteStreamController::CancelAlgorithm cancelAlgorithm = [source](auto& globalObject, auto&&, auto&&) {
+        auto [promise, deferred] = createPromiseAndWrapper(globalObject);
+        source->cancel(WTF::move(deferred));
+        return promise;
+    };
+
+    return ReadableStream::createReadableByteStream(*JSC::jsCast<JSDOMGlobalObject*>(globalObject), WTF::move(pullAlgorithm), WTF::move(cancelAlgorithm), {
+        .isSourceReachableFromOpaqueRoot = ReadableStream::IsSourceReachableFromOpaqueRoot::Yes
+    });
 }
 
 #if ASSERT_ENABLED
@@ -452,12 +526,10 @@ bool Blob::isNormalizedContentType(const String& contentType)
 bool Blob::isNormalizedContentType(const CString& contentType)
 {
     // FIXME: Do we really want to treat the empty string and null string as valid content types?
-    size_t length = contentType.length();
-    const char* characters = contentType.data();
-    for (size_t i = 0; i < length; ++i) {
-        if (characters[i] < 0x20 || characters[i] > 0x7e)
+    for (auto character : contentType.span()) {
+        if (character < 0x20 || character > 0x7e)
             return false;
-        if (isASCIIUpper(characters[i]))
+        if (isASCIIUpper(character))
             return false;
     }
     return true;

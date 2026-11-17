@@ -31,11 +31,14 @@
 #include "WebGPUConvertToBackingContext.h"
 #include "WebGPUExternalTextureImpl.h"
 #include <WebGPU/WebGPUExt.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore::WebGPU {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(BindGroupImpl);
+
 BindGroupImpl::BindGroupImpl(WebGPUPtr<WGPUBindGroup>&& bindGroup, ConvertToBackingContext& convertToBackingContext)
-    : m_backing(WTFMove(bindGroup))
+    : m_backing(WTF::move(bindGroup))
     , m_convertToBackingContext(convertToBackingContext)
 {
 }
@@ -47,9 +50,9 @@ void BindGroupImpl::setLabelInternal(const String& label)
     wgpuBindGroupSetLabel(m_backing.get(), label.utf8().data());
 }
 
-void BindGroupImpl::updateExternalTextures(const ExternalTexture& externalTexture)
+bool BindGroupImpl::updateExternalTextures(ExternalTexture& externalTexture)
 {
-    wgpuBindGroupUpdateExternalTextures(m_backing.get(), static_cast<const ExternalTextureImpl&>(externalTexture).backing());
+    return wgpuBindGroupUpdateExternalTextures(m_backing.get(), downcast<ExternalTextureImpl>(externalTexture).backing());
 }
 
 } // namespace WebCore::WebGPU

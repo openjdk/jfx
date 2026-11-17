@@ -1,6 +1,6 @@
 /*
  * Copyright 2014 The Chromium Authors. All rights reserved.
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,7 +38,8 @@ namespace WebCore {
 class AudioContext;
 
 class StereoPannerNode final : public AudioNode {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(StereoPannerNode);
+    WTF_MAKE_TZONE_ALLOCATED(StereoPannerNode);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(StereoPannerNode);
 public:
     static ExceptionOr<Ref<StereoPannerNode>> create(BaseAudioContext&, const StereoPannerOptions& = { });
 
@@ -60,10 +61,12 @@ private:
     double tailTime() const final { return 0; }
     double latencyTime() const final { return 0; }
 
-    Ref<AudioParam> m_pan;
+    const Ref<AudioParam> m_pan;
     AudioFloatArray m_sampleAccurateValues;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_AUDIONODE(StereoPannerNode, NodeTypeStereoPanner);
 
 #endif // ENABLE(WEB_AUDIO)

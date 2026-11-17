@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015-2016 Yusuke Suzuki <utatane.tea@gmail.com>.
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,26 +24,27 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-// 25.3.3.3 GeneratorResume ( generator, value )
-// 25.3.3.4 GeneratorResumeAbrupt(generator, abruptCompletion)
+// This implements https://tc39.es/ecma262/#sec-generatorresume and https://tc39.es/ecma262/#sec-generatorresumeabrupt
+// with exception of [[GeneratorBrand]] check and handling of [[GeneratorState]] equal to *completed*.
 @linkTimeConstant
-function generatorResume(generator, state, generatorThis, sentValue, value, resumeMode)
+function generatorResume(generator, state, value, resumeMode)
 {
     "use strict";
 
-    var done = state === @GeneratorStateCompleted;
-    if (!done) {
-        try {
+    var done = true;
+    if (state !== @GeneratorStateCompleted) {
             @putGeneratorInternalField(generator, @generatorFieldState, @GeneratorStateExecuting);
-            value = @getGeneratorInternalField(generator, @generatorFieldNext).@call(generatorThis, generator, state, sentValue, resumeMode, @getGeneratorInternalField(generator, @generatorFieldFrame));
-            if (@getGeneratorInternalField(generator, @generatorFieldState) === @GeneratorStateExecuting) {
-                @putGeneratorInternalField(generator, @generatorFieldState, @GeneratorStateCompleted);
-                done = true;
-            }
+
+    try {
+        var value = @getGeneratorInternalField(generator, @generatorFieldNext).@call(@getGeneratorInternalField(generator, @generatorFieldThis), generator, state, value, resumeMode, @getGeneratorInternalField(generator, @generatorFieldFrame));
         } catch (error) {
             @putGeneratorInternalField(generator, @generatorFieldState, @GeneratorStateCompleted);
             throw error;
         }
+
+        done = @getGeneratorInternalField(generator, @generatorFieldState) === @GeneratorStateExecuting;
+    if (done)
+        @putGeneratorInternalField(generator, @generatorFieldState, @GeneratorStateCompleted);
     }
     return { value, done };
 }
@@ -59,7 +60,10 @@ function next(value)
     if (state === @GeneratorStateExecuting)
         @throwTypeError("Generator is executing");
 
-    return @generatorResume(this, state, @getGeneratorInternalField(this, @generatorFieldThis), value, @undefined, @GeneratorResumeModeNormal);
+    if (state === @GeneratorStateCompleted)
+        value = @undefined;
+
+    return @generatorResume(this, state, value, @GeneratorResumeModeNormal);
 }
 
 function return(value)
@@ -73,7 +77,7 @@ function return(value)
     if (state === @GeneratorStateExecuting)
         @throwTypeError("Generator is executing");
 
-    return @generatorResume(this, state, @getGeneratorInternalField(this, @generatorFieldThis), value, value, @GeneratorResumeModeReturn);
+    return @generatorResume(this, state, value, @GeneratorResumeModeReturn);
 }
 
 function throw(exception)
@@ -90,5 +94,5 @@ function throw(exception)
     if (state === @GeneratorStateCompleted)
         throw exception;
 
-    return @generatorResume(this, state, @getGeneratorInternalField(this, @generatorFieldThis), exception, @undefined, @GeneratorResumeModeThrow);
+    return @generatorResume(this, state, exception, @GeneratorResumeModeThrow);
 }

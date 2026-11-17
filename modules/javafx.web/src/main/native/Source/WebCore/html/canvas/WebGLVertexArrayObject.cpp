@@ -34,11 +34,17 @@
 
 namespace WebCore {
 
-RefPtr<WebGLVertexArrayObject> WebGLVertexArrayObject::create(WebGLRenderingContextBase& context, Type type)
+
+Ref<WebGLVertexArrayObject> WebGLVertexArrayObject::createLost()
 {
-    auto object = context.protectedGraphicsContextGL()->createVertexArray();
+    return adoptRef(*new WebGLVertexArrayObject { });
+}
+
+Ref<WebGLVertexArrayObject> WebGLVertexArrayObject::create(WebGLRenderingContextBase& context, Type type)
+{
+    auto object = context.graphicsContextGL()->createVertexArray();
     if (!object)
-        return nullptr;
+        return createLost();
     return adoptRef(*new WebGLVertexArrayObject { context, object, type });
 }
 
@@ -55,6 +61,8 @@ WebGLVertexArrayObject::WebGLVertexArrayObject(WebGLRenderingContextBase& contex
 {
 }
 
+WebGLVertexArrayObject::WebGLVertexArrayObject() = default;
+
 void WebGLVertexArrayObject::deleteObjectImpl(const AbstractLocker& locker, GraphicsContextGL* context3d, PlatformGLObject object)
 {
     switch (m_type) {
@@ -65,12 +73,12 @@ void WebGLVertexArrayObject::deleteObjectImpl(const AbstractLocker& locker, Grap
         break;
     }
 
-    if (m_boundElementArrayBuffer)
-        m_boundElementArrayBuffer->onDetached(locker, context3d);
+    if (RefPtr boundElementArrayBuffer = m_boundElementArrayBuffer.get())
+        boundElementArrayBuffer->onDetached(locker, context3d);
 
     for (auto& state : m_vertexAttribState) {
-        if (state.bufferBinding)
-            state.bufferBinding->onDetached(locker, context3d);
+        if (RefPtr bufferBinding = state.bufferBinding.get())
+            bufferBinding->onDetached(locker, context3d);
     }
 }
 

@@ -23,18 +23,20 @@
 
 #include "FilterEffectGeometry.h"
 #include "FilterEffectVector.h"
+#include "SVGAnimatedPropertyImpl.h"
 #include "SVGElement.h"
 #include "SVGNames.h"
+#include "SVGUnitTypes.h"
 #include <wtf/RefPtr.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class Filter;
 class FilterEffect;
-class SVGFilter;
 
 class SVGFilterPrimitiveStandardAttributes : public SVGElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGFilterPrimitiveStandardAttributes);
+    WTF_MAKE_TZONE_ALLOCATED(SVGFilterPrimitiveStandardAttributes);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGFilterPrimitiveStandardAttributes);
 public:
     using PropertyRegistry = SVGPropertyOwnerRegistry<SVGFilterPrimitiveStandardAttributes, SVGElement>;

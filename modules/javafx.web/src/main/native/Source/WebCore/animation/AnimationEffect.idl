@@ -25,9 +25,8 @@
 
 [
     Exposed=Window,
-    CustomToJSObject
 ] interface AnimationEffect {
     [ImplementedAs=getBindingsTiming] EffectTiming getTiming();
     [ImplementedAs=getBindingsComputedTiming] ComputedEffectTiming getComputedTiming();
-    [ImplementedAs=bindingsUpdateTiming] undefined updateTiming(optional OptionalEffectTiming timing);
+    [ImplementedAs=bindingsUpdateTiming, CallWith=CurrentDocument] undefined updateTiming(optional OptionalEffectTiming timing);
 };

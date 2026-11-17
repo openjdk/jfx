@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "JSFunction.h"
-#include "JSImmutableButterfly.h"
+#include <JavaScriptCore/JSFunction.h>
+#include <JavaScriptCore/JSString.h>
 
 namespace JSC {
 
@@ -49,8 +49,8 @@ public:
         return vm.boundFunctionSpace<mode>();
     }
 
-    JS_EXPORT_PRIVATE static JSBoundFunction* create(VM&, JSGlobalObject*, JSObject* targetFunction, JSValue boundThis, ArgList, double length, JSString* nameMayBeNull);
-    static JSBoundFunction* createRaw(VM&, JSGlobalObject*, JSFunction* targetFunction, unsigned boundArgsLength, JSValue boundThis, JSValue arg0, JSValue arg1, JSValue arg2);
+    JS_EXPORT_PRIVATE static JSBoundFunction* create(VM&, JSGlobalObject*, JSObject* targetFunction, JSValue boundThis, ArgList, double length, JSString* nameMayBeNull, const SourceCode&);
+    static JSBoundFunction* createRaw(VM&, JSGlobalObject*, JSFunction* targetFunction, unsigned boundArgsLength, JSValue boundThis, JSValue arg0, JSValue arg1, JSValue arg2, const SourceCode&);
 
     static bool customHasInstance(JSObject*, JSGlobalObject*, JSValue);
 
@@ -100,24 +100,7 @@ public:
     static constexpr ptrdiff_t offsetOfLength() { return OBJECT_OFFSETOF(JSBoundFunction, m_length); }
     static constexpr ptrdiff_t offsetOfCanConstruct() { return OBJECT_OFFSETOF(JSBoundFunction, m_canConstruct); }
 
-    template<typename Functor>
-    void forEachBoundArg(const Functor& func)
-    {
-        unsigned length = boundArgsLength();
-        if (!length)
-            return;
-        if (length <= m_boundArgs.size()) {
-            for (unsigned index = 0; index < length; ++index) {
-                if (func(m_boundArgs[index].get()) == IterationStatus::Done)
-                    return;
-            }
-            return;
-        }
-        for (unsigned index = 0; index < length; ++index) {
-            if (func(jsCast<JSImmutableButterfly*>(m_boundArgs[0].get())->get(index)) == IterationStatus::Done)
-                return;
-        }
-    }
+    void forEachBoundArg(const Invocable<IterationStatus(JSValue)> auto& func);
 
     bool canConstruct()
     {
@@ -126,12 +109,19 @@ public:
         return m_canConstruct == TriState::True;
     }
 
+    bool isTainted() const
+    {
+        return m_isTainted;
+    }
+
     static bool canSkipNameAndLengthMaterialization(JSGlobalObject*, Structure*);
 
-    DECLARE_INFO;
+    DECLARE_EXPORT_INFO;
+
+    DECLARE_VISIT_CHILDREN;
 
 private:
-    JSBoundFunction(VM&, NativeExecutable*, JSGlobalObject*, Structure*, JSObject* targetFunction, JSValue boundThis, unsigned boundArgsLength, JSValue arg0, JSValue arg1, JSValue arg2, JSString* nameMayBeNull, double length);
+    JSBoundFunction(VM&, NativeExecutable*, JSGlobalObject*, Structure*, JSObject* targetFunction, JSValue boundThis, unsigned boundArgsLength, JSValue arg0, JSValue arg1, JSValue arg2, JSString* nameMayBeNull, double length, const SourceCode&);
 
     JSString* nameSlow(VM&);
     double lengthSlow(VM&);
@@ -139,7 +129,6 @@ private:
     String nameStringWithoutGCSlow(VM&);
 
     DECLARE_DEFAULT_FINISH_CREATION;
-    DECLARE_VISIT_CHILDREN;
 
     WriteBarrier<JSObject> m_targetFunction;
     WriteBarrier<Unknown> m_boundThis;
@@ -148,6 +137,7 @@ private:
     double m_length { PNaN };
     unsigned m_boundArgsLength { 0 };
     TriState m_canConstruct { TriState::Indeterminate };
+    bool m_isTainted;
 };
 
 JSC_DECLARE_HOST_FUNCTION(boundFunctionCall);

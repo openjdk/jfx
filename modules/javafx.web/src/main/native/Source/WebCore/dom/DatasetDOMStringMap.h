@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "ScriptWrappable.h"
 #include <wtf/WeakRef.h>
 
@@ -33,14 +32,17 @@ namespace WebCore {
 
 class Element;
 class WeakPtrImplWithEventTargetData;
+template<typename> class ExceptionOr;
 
 class DatasetDOMStringMap final : public ScriptWrappable {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(DatasetDOMStringMap);
+    WTF_MAKE_TZONE_ALLOCATED(DatasetDOMStringMap);
 public:
     explicit DatasetDOMStringMap(Element& element)
         : m_element(element)
     {
     }
+
+    ~DatasetDOMStringMap();
 
     void ref();
     void deref();

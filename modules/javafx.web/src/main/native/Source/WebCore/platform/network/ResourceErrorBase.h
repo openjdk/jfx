@@ -26,6 +26,8 @@
 
 #pragma once
 
+#include <source_location>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/URL.h>
 #include <wtf/text/WTFString.h>
 
@@ -45,7 +47,7 @@ enum class ResourceErrorBaseType : uint8_t {
 };
 
 class ResourceErrorBase {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(ResourceErrorBase, WEBCORE_EXPORT);
 public:
     WEBCORE_EXPORT ResourceError isolatedCopy() const;
 
@@ -111,11 +113,7 @@ private:
     const ResourceError& asResourceError() const;
 };
 
-// FIXME: Replace this with std::source_location when libc++ on the macOS and iOS bots is new enough to support C++ 20.
-// WEBCORE_EXPORT ResourceError internalError(const URL&, std::source_location = std::source_location::current());
-WEBCORE_EXPORT ResourceError createInternalError(const URL&, ASCIILiteral filename, uint32_t line, ASCIILiteral functionName);
-#define internalError(url) createInternalError(url, ASCIILiteral::fromLiteralUnsafe(__FILE__), __LINE__, ASCIILiteral::fromLiteralUnsafe(__FUNCTION__))
-
+WEBCORE_EXPORT ResourceError internalError(const URL&, std::source_location = std::source_location::current());
 WEBCORE_EXPORT ResourceError badResponseHeadersError(const URL&);
 
 inline bool operator==(const ResourceError& a, const ResourceError& b) { return ResourceErrorBase::compare(a, b); }

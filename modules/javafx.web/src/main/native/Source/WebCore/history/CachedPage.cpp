@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2008, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,9 +35,11 @@
 #include "HistoryController.h"
 #include "HistoryItem.h"
 #include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "LocalFrameLoaderClient.h"
 #include "LocalFrameView.h"
 #include "Navigation.h"
+#include "NavigationNavigationType.h"
 #include "Node.h"
 #include "Page.h"
 #include "PageTransitionEvent.h"
@@ -45,8 +47,8 @@
 #include "SelectionRestorationMode.h"
 #include "Settings.h"
 #include "VisitedLinkState.h"
-#include <wtf/RefCountedLeakCounter.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 
 #if PLATFORM(IOS_FAMILY)
 #include "FrameSelection.h"
@@ -56,28 +58,21 @@
 namespace WebCore {
 using namespace JSC;
 
-DEFINE_DEBUG_ONLY_GLOBAL(WTF::RefCountedLeakCounter, cachedPageCounter, ("CachedPage"));
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CachedPage);
 
 CachedPage::CachedPage(Page& page)
     : m_page(page)
     , m_expirationTime(MonotonicTime::now() + page.settings().backForwardCacheExpirationInterval())
-    , m_cachedMainFrame(makeUnique<CachedFrame>(page.mainFrame()))
+    , m_cachedMainFrame(makeUnique<CachedFrame>(page.protectedMainFrame()))
     , m_loadedSubresourceDomains([&] {
-        auto* localFrame = dynamicDowncast<LocalFrame>(page.mainFrame());
+        RefPtr localFrame = page.localMainFrame();
         return localFrame ? localFrame->loader().client().loadedSubresourceDomains() : Vector<RegistrableDomain>();
     }())
 {
-#ifndef NDEBUG
-    cachedPageCounter.increment();
-#endif
 }
 
 CachedPage::~CachedPage()
 {
-#ifndef NDEBUG
-    cachedPageCounter.decrement();
-#endif
-
     if (m_cachedMainFrame)
         m_cachedMainFrame->destroy();
 }
@@ -88,7 +83,7 @@ static void firePageShowEvent(Page& page)
     Ref mainFrame = page.mainFrame();
 
     Vector<Ref<LocalFrame>> childFrames;
-    for (auto* child = mainFrame->tree().traverseNextInPostOrder(CanWrap::Yes); child; child = child->tree().traverseNextInPostOrder(CanWrap::No)) {
+    for (RefPtr child = mainFrame->tree().traverseNextInPostOrder(CanWrap::Yes); child; child = child->tree().traverseNextInPostOrder(CanWrap::No)) {
         if (RefPtr localChild = dynamicDowncast<LocalFrame>(child))
             childFrames.append(localChild.releaseNonNull());
     }
@@ -100,6 +95,7 @@ static void firePageShowEvent(Page& page)
         if (!document)
             continue;
 
+        document->clearRevealForReactivation();
         // This takes care of firing the visibilitychange event and making sure the document is reported as visible.
         document->setVisibilityHiddenDueToDismissal(false);
 
@@ -131,15 +127,13 @@ void CachedPage::restore(Page& page)
     ASSERT(m_cachedMainFrame->view()->frame().isMainFrame());
     ASSERT(!page.subframeCount());
 
-    Ref mainFrame = page.mainFrame();
-    RefPtr localMainFrame = dynamicDowncast<LocalFrame>(mainFrame);
+    RefPtr localMainFrame = page.localMainFrame();
 
     CachedPageRestorationScope restorationScope(page);
     m_cachedMainFrame->open();
 
     // Restore the focus appearance for the focused element.
-    // FIXME: Right now we don't support pages w/ frames in the b/f cache.  This may need to be tweaked when we add support for that.
-    RefPtr focusedOrMainFrame = page.checkedFocusController()->focusedOrMainFrame();
+    RefPtr focusedOrMainFrame = page.focusController().focusedOrMainFrame();
     if (!focusedOrMainFrame)
         return;
 
@@ -152,7 +146,7 @@ void CachedPage::restore(Page& page)
         localMainFrame->selection().suppressScrolling();
 
         bool hadProhibitsScrolling = false;
-        RefPtr frameView = mainFrame->virtualView();
+        RefPtr frameView = localMainFrame->protectedVirtualView();
         if (frameView) {
             hadProhibitsScrolling = frameView->prohibitsScrolling();
             frameView->setProhibitsScrolling(true);
@@ -178,24 +172,46 @@ void CachedPage::restore(Page& page)
 #endif
 
     if (m_needsUpdateContentsSize) {
-        if (RefPtr frameView = mainFrame->virtualView())
+        if (RefPtr frameView = localMainFrame->protectedVirtualView())
             frameView->updateContentsSize();
-    }
-
-    if (auto& backForwardController = page.backForward(); page.settings().navigationAPIEnabled() && focusedDocument->domWindow() && backForwardController.currentItem()) {
-        Ref currentItem = *backForwardController.currentItem();
-        auto allItems = backForwardController.allItems();
-        focusedDocument->domWindow()->navigation().updateForReactivation(allItems, currentItem);
     }
 
     firePageShowEvent(page);
 
+    // Update Navigation API after pageshow events to ensure correct event ordering.
+    if (CheckedRef backForwardController = page.backForward(); page.settings().navigationAPIEnabled() && localMainFrame)
+        restoreNavigationAPIHistoryItems(*localMainFrame, backForwardController.ptr());
+
     for (auto& domain : m_loadedSubresourceDomains) {
         if (localMainFrame)
-            localMainFrame->checkedLoader()->client().didLoadFromRegistrableDomain(WTFMove(domain));
+            localMainFrame->loader().client().didLoadFromRegistrableDomain(WTF::move(domain));
     }
 
     clear();
+}
+
+void CachedPage::restoreNavigationAPIHistoryItems(LocalFrame& frame, BackForwardController* backForwardController)
+{
+    RefPtr window = frame.window();
+    if (!window)
+        return;
+
+    CheckedPtr checkedBackForwardController = backForwardController;
+    if (!checkedBackForwardController)
+        return;
+
+    if (RefPtr currentItem = frame.loader().history().currentItem()) {
+        RefPtr previousItem = checkedBackForwardController->forwardItem();
+        auto allItems = checkedBackForwardController->allItems(frame.frameID());
+        auto filteredItems = Navigation::filterHistoryItemsForNavigationAPI(WTF::move(allItems), *currentItem);
+
+        window->protectedNavigation()->updateForReactivation(WTF::move(filteredItems), *currentItem, previousItem.get());
+    }
+
+    for (RefPtr child = frame.tree().firstChild(); child; child = child->tree().nextSibling()) {
+        if (RefPtr localChild = dynamicDowncast<LocalFrame>(*child))
+            restoreNavigationAPIHistoryItems(*localChild, checkedBackForwardController.get());
+    }
 }
 
 void CachedPage::clear()

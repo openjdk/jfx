@@ -27,11 +27,13 @@
 
 #if ENABLE(ASYNC_SCROLLING) && ENABLE(SCROLLING_THREAD)
 
-#include "AsyncScrollingCoordinator.h"
+#include <WebCore/AsyncScrollingCoordinator.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class ThreadedScrollingCoordinator : public AsyncScrollingCoordinator {
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(ThreadedScrollingCoordinator, WEBCORE_EXPORT);
 protected:
     explicit ThreadedScrollingCoordinator(Page*);
     virtual ~ThreadedScrollingCoordinator();

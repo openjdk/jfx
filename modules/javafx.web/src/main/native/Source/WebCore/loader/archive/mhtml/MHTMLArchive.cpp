@@ -37,6 +37,7 @@
 #include "Document.h"
 #include "LegacySchemeRegistry.h"
 #include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "MHTMLParser.h"
 #include "MIMETypeRegistry.h"
 #include "Page.h"
@@ -201,7 +202,7 @@ Ref<FragmentedSharedBuffer> MHTMLArchive::generateMHTMLData(Page* page)
     asciiString = makeString("--"_s, boundary, "--\r\n"_s).utf8();
     mhtmlData.append(asciiString.span());
 
-    return mhtmlData.take();
+    return mhtmlData.takeBuffer();
 }
 
 }

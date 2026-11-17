@@ -25,15 +25,15 @@
 
 #pragma once
 
-#include "IDBDatabaseIdentifier.h"
-#include "IDBRequest.h"
+#include <WebCore/IDBDatabaseIdentifier.h>
+#include <WebCore/IDBRequest.h>
 
 namespace WebCore {
 
 class IDBResultData;
 
 class IDBOpenDBRequest final : public IDBRequest {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(IDBOpenDBRequest);
+    WTF_MAKE_TZONE_ALLOCATED(IDBOpenDBRequest);
 public:
     static Ref<IDBOpenDBRequest> createDeleteRequest(ScriptExecutionContext&, IDBClient::IDBConnectionProxy&, const IDBDatabaseIdentifier&);
     static Ref<IDBOpenDBRequest> createOpenRequest(ScriptExecutionContext&, IDBClient::IDBConnectionProxy&, const IDBDatabaseIdentifier&, uint64_t version);
@@ -60,6 +60,8 @@ private:
 
     void cancelForStop() final;
 
+    EventTargetInterfaceType eventTargetInterface() const final;
+
     void onError(const IDBResultData&);
     void onSuccess(const IDBResultData&);
     void onUpgradeNeeded(const IDBResultData&);
@@ -75,3 +77,5 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(IDBOpenDBRequest)

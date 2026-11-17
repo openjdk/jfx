@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -519,7 +519,7 @@ public class LinearGradientTest {
         }
 
         @Test
-        public void interpolationFactorSmallerThanOrEqualToZeroReturnsStartInstance() {
+        public void interpolationFactorZeroReturnsStartInstance() {
             var startValue = new LinearGradient(
                 10, 20, 30, 40,
                 true, CycleMethod.NO_CYCLE,
@@ -531,11 +531,10 @@ public class LinearGradientTest {
                 List.of(new Stop(0, Color.RED)));
 
             assertSame(startValue, startValue.interpolate(endValue, 0));
-            assertSame(startValue, startValue.interpolate(endValue, -1));
         }
 
         @Test
-        public void interpolationFactorGreaterThanOrEqualToOneReturnsEndInstance() {
+        public void interpolationFactorOneReturnsEndInstance() {
             var startValue = new LinearGradient(
                 10, 20, 30, 40,
                 true, CycleMethod.NO_CYCLE,
@@ -547,7 +546,60 @@ public class LinearGradientTest {
                 List.of(new Stop(0, Color.RED)));
 
             assertSame(endValue, startValue.interpolate(endValue, 1));
-            assertSame(endValue, startValue.interpolate(endValue, 1.5));
+        }
+
+        @Test
+        public void interpolationFactorLessThanZero() {
+            var startValue = new LinearGradient(
+                10, 20, 30, 40,
+                true, CycleMethod.NO_CYCLE,
+                List.of(new Stop(0, new Color(0.5, 0.5, 0.5, 1))));
+
+            var endValue = new LinearGradient(
+                20, 40, 60, 80,
+                true, CycleMethod.NO_CYCLE,
+                List.of(new Stop(0, new Color(1, 1, 1, 1))));
+
+            assertEquals(
+                new LinearGradient(
+                    0, 0, 0, 0,
+                    true, CycleMethod.NO_CYCLE,
+                    List.of(new Stop(0, new Color(0, 0, 0, 1)))),
+                startValue.interpolate(endValue, -1));
+
+            assertEquals(
+                new LinearGradient(
+                    -10, -20, -30, -40,
+                    true, CycleMethod.NO_CYCLE,
+                    List.of(new Stop(0, new Color(0, 0, 0, 1)))),
+                startValue.interpolate(endValue, -2));
+        }
+
+        @Test
+        public void interpolationFactorGreaterThanOne() {
+            var startValue = new LinearGradient(
+                10, 20, 30, 40,
+                true, CycleMethod.NO_CYCLE,
+                List.of(new Stop(0, new Color(0, 0, 0, 1))));
+
+            var endValue = new LinearGradient(
+                20, 40, 60, 80,
+                true, CycleMethod.NO_CYCLE,
+                List.of(new Stop(0, new Color(0.5, 0.5, 0.5, 1))));
+
+            assertEquals(
+                new LinearGradient(
+                    30, 60, 90, 120,
+                    true, CycleMethod.NO_CYCLE,
+                    List.of(new Stop(0, new Color(1, 1, 1, 1)))),
+                startValue.interpolate(endValue, 2));
+
+            assertEquals(
+                new LinearGradient(
+                    40, 80, 120, 160,
+                    true, CycleMethod.NO_CYCLE,
+                    List.of(new Stop(0, new Color(1, 1, 1, 1)))),
+                startValue.interpolate(endValue, 3));
         }
     }
 }

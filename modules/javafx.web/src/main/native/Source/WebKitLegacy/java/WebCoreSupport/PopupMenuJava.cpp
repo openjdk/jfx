@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,8 @@
 #include <WebCore/Color.h>
 #include <WebCore/Font.h>
 #include <WebCore/Frame.h>
+#include "FrameInlines.h"
+#include "DocumentPage.h"
 #include <WebCore/FrameView.h>
 #include <WebCore/NotImplemented.h>
 #include <WebCore/Page.h>
@@ -117,7 +119,7 @@ void PopupMenuJava::populate()
                             bool_to_jbool(client()->itemIsEnabled(i)),
                             (jint)(a1 << 24 | r1 << 16 | g1 << 8 | b1),
                             (jint)(a2 << 24 | r2 << 16 | g2 << 8 | b2),
-                            (jobject)*style.font().primaryFont().platformData().nativeFontData());
+                            (jobject)*style.font().primaryFont().get().platformData().nativeFontData());
         WTF::CheckAndClearException(env);
     }
 }
@@ -164,11 +166,11 @@ void PopupMenuJava::hide()
 
 void PopupMenuJava::updateFromElement()
 {
-    client()->setTextFromItem(client()->selectedIndex());
+    client()->setTextFromItem(client()->popupSelectedIndex());
     if (!m_popup) {
         return;
     }
-    setSelectedItem(m_popup, client()->selectedIndex());
+    setSelectedItem(m_popup, client()->popupSelectedIndex());
 }
 
 void PopupMenuJava::disconnectClient()

@@ -39,15 +39,13 @@ class StringDumper final : public Visitor {
 public:
     using Visitor::visit;
 
-    ~StringDumper() = default;
-
     String toString();
 
     // Visitor
     void visit(ShaderModule&) override;
 
     // Directive
-    void visit(DiagnosticDirective&) override;
+    void visit(Diagnostic&) override;
 
     // Attribute
     void visit(BindingAttribute&) override;
@@ -56,6 +54,7 @@ public:
     void visit(LocationAttribute&) override;
     void visit(StageAttribute&) override;
     void visit(WorkgroupSizeAttribute&) override;
+    void visit(DiagnosticAttribute&) override;
 
     // Declaration
     void visit(Function&) override;

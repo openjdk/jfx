@@ -26,14 +26,15 @@
 #include "config.h"
 #include "PushSubscriptionOptions.h"
 
+#include "ExceptionOr.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(PushSubscriptionOptions);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PushSubscriptionOptions);
 
 PushSubscriptionOptions::PushSubscriptionOptions(Vector<uint8_t>&& serverVAPIDPublicKey)
-    : m_serverVAPIDPublicKey(WTFMove(serverVAPIDPublicKey))
+    : m_serverVAPIDPublicKey(WTF::move(serverVAPIDPublicKey))
 {
 }
 

@@ -44,7 +44,7 @@ class PaymentMerchantSession {
 public:
     PaymentMerchantSession() = default;
     explicit PaymentMerchantSession(RetainPtr<PKPaymentMerchantSession>&& pkPaymentMerchantSession)
-        : m_pkPaymentMerchantSession { WTFMove(pkPaymentMerchantSession) }
+        : m_pkPaymentMerchantSession { WTF::move(pkPaymentMerchantSession) }
     {
     }
 
@@ -53,7 +53,7 @@ public:
     RetainPtr<PKPaymentMerchantSession> pkPaymentMerchantSession() const { return m_pkPaymentMerchantSession; }
 
 private:
-    RetainPtr<PKPaymentMerchantSession> m_pkPaymentMerchantSession;
+    const RetainPtr<PKPaymentMerchantSession> m_pkPaymentMerchantSession;
 };
 
 }

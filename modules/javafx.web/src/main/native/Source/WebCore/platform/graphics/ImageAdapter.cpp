@@ -27,9 +27,11 @@
 #include "ImageAdapter.h"
 
 #include "BitmapImage.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ImageAdapter);
 #if !PLATFORM(COCOA) && !PLATFORM(GTK) && !PLATFORM(WIN) && !PLATFORM(JAVA)
 Ref<Image> ImageAdapter::loadPlatformResource(const char* resource)
 {

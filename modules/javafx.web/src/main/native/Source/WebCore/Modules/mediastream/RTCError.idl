@@ -39,7 +39,9 @@
     readonly attribute unsigned long? sentAlert;
 };
 
-dictionary RTCErrorInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary RTCErrorInit {
     required RTCErrorDetailType errorDetail;
     long sdpLineNumber;
     long sctpCauseCode;

@@ -38,7 +38,7 @@ namespace WebCore {
 
 Ref<MockMediaSourcePrivate> MockMediaSourcePrivate::create(MockMediaPlayerMediaSource& parent, MediaSourcePrivateClient& client)
 {
-    auto source = adoptRef(*new MockMediaSourcePrivate(parent, client));
+    Ref source = adoptRef(*new MockMediaSourcePrivate(parent, client));
     client.setPrivateAndOpen(source.copyRef());
     return source;
 }
@@ -47,18 +47,18 @@ MockMediaSourcePrivate::MockMediaSourcePrivate(MockMediaPlayerMediaSource& paren
     : MediaSourcePrivate(client)
     , m_player(parent)
 #if !RELEASE_LOG_DISABLED
-    , m_logger(m_player->mediaPlayerLogger())
-    , m_logIdentifier(m_player->mediaPlayerLogIdentifier())
+    , m_logger(parent.mediaPlayerLogger())
+    , m_logIdentifier(parent.mediaPlayerLogIdentifier())
 #endif
 {
 #if !RELEASE_LOG_DISABLED
-    client.setLogIdentifier(m_player->mediaPlayerLogIdentifier());
+    client.setLogIdentifier(parent.mediaPlayerLogIdentifier());
 #endif
 }
 
 MockMediaSourcePrivate::~MockMediaSourcePrivate() = default;
 
-MediaSourcePrivate::AddStatus MockMediaSourcePrivate::addSourceBuffer(const ContentType& contentType, bool, RefPtr<SourceBufferPrivate>& outPrivate)
+MediaSourcePrivate::AddStatus MockMediaSourcePrivate::addSourceBuffer(const ContentType& contentType, const MediaSourceConfiguration&, RefPtr<SourceBufferPrivate>& outPrivate)
 {
     MediaEngineSupportParameters parameters;
     parameters.isMediaSource = true;
@@ -66,8 +66,11 @@ MediaSourcePrivate::AddStatus MockMediaSourcePrivate::addSourceBuffer(const Cont
     if (MockMediaPlayerMediaSource::supportsType(parameters) == MediaPlayer::SupportsType::IsNotSupported)
         return AddStatus::NotSupported;
 
+    {
+        Locker locker { m_lock };
     m_sourceBuffers.append(MockSourceBufferPrivate::create(*this));
     outPrivate = m_sourceBuffers.last();
+    }
     outPrivate->setMediaSourceDuration(duration());
 
     return AddStatus::Ok;
@@ -78,37 +81,22 @@ RefPtr<MediaPlayerPrivateInterface> MockMediaSourcePrivate::player() const
     return m_player.get();
 }
 
+void MockMediaSourcePrivate::setPlayer(MediaPlayerPrivateInterface* player)
+{
+    m_player = downcast<MockMediaPlayerMediaSource>(player);
+}
+
 void MockMediaSourcePrivate::durationChanged(const MediaTime& duration)
 {
     MediaSourcePrivate::durationChanged(duration);
-    if (m_player)
-        m_player->updateDuration(duration);
-}
-
-void MockMediaSourcePrivate::markEndOfStream(EndOfStreamStatus status)
-{
-    if (m_player && status == EndOfStreamStatus::NoError)
-        m_player->setNetworkState(MediaPlayer::NetworkState::Loaded);
-    MediaSourcePrivate::markEndOfStream(status);
-}
-
-MediaPlayer::ReadyState MockMediaSourcePrivate::mediaPlayerReadyState() const
-{
-    if (m_player)
-        return m_player->readyState();
-    return MediaPlayer::ReadyState::HaveNothing;
-}
-
-void MockMediaSourcePrivate::setMediaPlayerReadyState(MediaPlayer::ReadyState readyState)
-{
-    if (m_player)
-        m_player->setReadyState(readyState);
+    if (RefPtr player = m_player.get())
+        player->updateDuration(duration);
 }
 
 void MockMediaSourcePrivate::notifyActiveSourceBuffersChanged()
 {
-    if (m_player)
-        m_player->notifyActiveSourceBuffersChanged();
+    if (RefPtr player = m_player.get())
+        player->notifyActiveSourceBuffersChanged();
 }
 
 std::optional<VideoPlaybackQualityMetrics> MockMediaSourcePrivate::videoPlaybackQualityMetrics()

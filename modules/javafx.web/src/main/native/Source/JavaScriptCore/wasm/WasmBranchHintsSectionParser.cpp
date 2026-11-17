@@ -28,6 +28,7 @@
 #if ENABLE(WEBASSEMBLY)
 
 #include "WasmBranchHintsSectionParser.h"
+#include "WasmTypeDefinitionInlines.h"
 
 namespace JSC {
 namespace Wasm {
@@ -73,7 +74,7 @@ auto BranchHintsSectionParser::parse() -> PartialResult
 
             branchHintsForFunction.add(branchOffset, branchHint);
         }
-        m_info->branchHints.add(functionIndex, WTFMove(branchHintsForFunction));
+        m_info->branchHints.add(functionIndex, WTF::move(branchHintsForFunction));
     }
     return { };
 }

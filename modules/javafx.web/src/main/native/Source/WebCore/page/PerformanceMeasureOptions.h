@@ -26,16 +26,15 @@
 #pragma once
 
 #include <JavaScriptCore/JSCJSValue.h>
-#include <variant>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 struct PerformanceMeasureOptions {
     JSC::JSValue detail;
-    std::optional<std::variant<String, double>> start;
+    std::optional<Variant<String, double>> start;
     std::optional<double> duration;
-    std::optional<std::variant<String, double>> end;
+    std::optional<Variant<String, double>> end;
 };
 
 }

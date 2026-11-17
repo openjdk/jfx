@@ -29,6 +29,7 @@
 #include "ClientOrigin.h"
 #include "WebCorePersistentCoders.h"
 #include <pal/crypto/CryptoDigest.h>
+#include <wtf/FileHandle.h>
 #include <wtf/FileSystem.h>
 #include <wtf/Scope.h>
 #include <wtf/persistence/PersistentCoders.h>
@@ -48,19 +49,11 @@ std::optional<ClientOrigin> readOriginFromFile(const String& filePath)
     if (filePath.isEmpty() || !FileSystem::fileExists(filePath))
         return std::nullopt;
 
-    auto originFileHandle = FileSystem::openFile(filePath, FileSystem::FileOpenMode::Read);
-    auto closeFile = makeScopeExit([&] {
-        FileSystem::closeFile(originFileHandle);
-    });
-
-    if (!FileSystem::isHandleValid(originFileHandle))
-        return std::nullopt;
-
-    auto originContent = FileSystem::readEntireFile(originFileHandle);
+    auto originContent = FileSystem::readEntireFile(filePath);
     if (!originContent)
         return std::nullopt;
 
-    WTF::Persistence::Decoder decoder({ originContent->data(), originContent->size() });
+    WTF::Persistence::Decoder decoder(originContent->span());
     std::optional<ClientOrigin> origin;
     decoder >> origin;
     return origin;
@@ -73,18 +66,15 @@ bool writeOriginToFile(const String& filePath, const ClientOrigin& origin)
 
     FileSystem::makeAllDirectories(FileSystem::parentPath(filePath));
     auto originFileHandle = FileSystem::openFile(filePath, FileSystem::FileOpenMode::ReadWrite);
-    auto closeFile = makeScopeExit([&] {
-        FileSystem::closeFile(originFileHandle);
-    });
 
-    if (!FileSystem::isHandleValid(originFileHandle)) {
+    if (!originFileHandle) {
         LOG_ERROR("writeOriginToFile: Failed to open origin file '%s'", filePath.utf8().data());
         return false;
     }
 
     WTF::Persistence::Encoder encoder;
     encoder << origin;
-    FileSystem::writeToFile(originFileHandle, encoder.span());
+    originFileHandle.write(encoder.span());
     return true;
 }
 
@@ -92,7 +82,7 @@ String encodeSecurityOriginForFileName(FileSystem::Salt salt, const SecurityOrig
 {
     auto crypto = PAL::CryptoDigest::create(PAL::CryptoDigest::Algorithm::SHA_256);
     auto originString = origin.toString().utf8();
-    crypto->addBytes(originString.span());
+    crypto->addBytes(byteCast<uint8_t>(originString.span()));
     crypto->addBytes(salt);
     return base64URLEncodeToString(crypto->computeHash());
 }

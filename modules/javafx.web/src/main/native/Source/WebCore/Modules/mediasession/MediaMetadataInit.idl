@@ -25,6 +25,7 @@
 
 [
     Conditional=MEDIA_SESSION,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary MediaMetadataInit {
     DOMString title = "";
     DOMString artist = "";

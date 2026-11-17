@@ -31,9 +31,6 @@
 
 #include <wtf/ExportMacros.h>
 
-
-
-
 #if !defined(WEBCORE_EXPORT)
 
 #if defined(BUILDING_WebCore) || defined(STATICALLY_LINKED_WITH_WebCore)
@@ -53,4 +50,3 @@
 #endif
 
 #endif
-

@@ -25,13 +25,15 @@
 
 #pragma once
 
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 #include <wtf/Forward.h>
+#include <wtf/Platform.h>
 
 namespace WebCore {
 
 class SecurityOriginData;
 
-class DatabaseManagerClient {
+class DatabaseManagerClient : public AbstractRefCountedAndCanMakeWeakPtr<DatabaseManagerClient> {
 public:
     virtual ~DatabaseManagerClient() = default;
     virtual void dispatchDidModifyOrigin(const SecurityOriginData&) = 0;

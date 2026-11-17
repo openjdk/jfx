@@ -1,13 +1,14 @@
-## xmlsoft.org: libxml2 v2.12.7
+## xmlsoft.org: libxml2 v2.15.4
 
 ### libxml2 License
 ```
 
 Except where otherwise noted in the source code (e.g. the files dict.c,
-list.c, triodef.h, trionan.h, trionan.c, which are covered by a similar licence but
+list.c, which are covered by a similar licence but
 with different Copyright notices) all the files are:
 
 Copyright (C) 1998-2012 Daniel Veillard.  All Rights Reserved.
+Copyright (C) The Libxml2 Contributors.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -28,8 +29,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 ---------------------------------
-The below license and copyrights applies to the following files:
-timsort.h
+The below applies to the following file(s):
+libxml/src/timsort.h
 
 Copyright (C) 2010-2017 Christopher Swenson.
 Copyright (C) 2012 Vojtech Fried.
@@ -54,14 +55,12 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 
 
-=== copyright notices for dict.c, list.c, triodef.h, trionan.h and trionan.c  ===
+=== copyright notices for dict.c, list.c ===
 dict.c:
  * Copyright (C) 2003-2012 Daniel Veillard.
 list.c:
  * Copyright (C) 2000 Gary Pennington and Daniel Veillard.
-triodef.h, trionan.h, trionan.c
- * Copyright (C) 2001 Bjorn Reese <breese@users.sourceforge.net>
-=== license text for dict.c, list.c, triodef.h, trionan.h and trionan.c  ===
+=== license text for dict.c, list.c ===
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -85,4 +84,15 @@ Igor Zlatkovic for the Windows port
 Aleksey Sanin
 Nick Wellnhofer
 
+Thanks to the following contributors:
+
+- Brett Kail
+- Ion Nistor
+- Kevin Braun
+- Mohammad Seet
+- rootvector2
+- Ruben Thijssen
+- yirou_yang
+- Zhihan Zheng
+- zhuofeng
 ```

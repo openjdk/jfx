@@ -25,6 +25,9 @@
 
 [
     EnabledBySetting=WebTransportEnabled,
+    JSGenerateToJSObject,
+    JSGenerateToNativeObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary WebTransportCloseInfo {
     unsigned long closeCode = 0;
     USVString reason = "";

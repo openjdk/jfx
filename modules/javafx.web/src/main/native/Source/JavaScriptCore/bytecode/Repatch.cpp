@@ -87,6 +87,9 @@ void linkMonomorphicCall(VM& vm, JSCell* owner, CallLinkInfo& callLinkInfo, Code
     CodeBlock* callerCodeBlock = jsDynamicCast<CodeBlock*>(owner); // WebAssembly -> JS stubs don't have a valid CodeBlock.
     ASSERT(owner);
 
+    if (Options::forceICFailure()) [[unlikely]]
+        return;
+
     ASSERT(!callLinkInfo.isLinked());
     callLinkInfo.setMonomorphicCallee(vm, owner, callee, calleeCodeBlock, codePtr);
     callLinkInfo.setLastSeenCallee(vm, owner, callee);
@@ -97,7 +100,7 @@ void linkMonomorphicCall(VM& vm, JSCell* owner, CallLinkInfo& callLinkInfo, Code
     if (calleeCodeBlock)
         calleeCodeBlock->linkIncomingCall(owner, &callLinkInfo);
 
-    if (callLinkInfo.specializationKind() == CodeForCall)
+    if (callLinkInfo.specializationKind() == CodeSpecializationKind::CodeForCall)
         return;
     linkSlowFor(vm, callLinkInfo);
 }
@@ -107,10 +110,10 @@ CodePtr<JSEntryPtrTag> jsToWasmICCodePtr(CodeSpecializationKind kind, JSObject* 
 #if ENABLE(WEBASSEMBLY)
     if (!callee)
         return nullptr;
-    if (kind != CodeForCall)
+    if (kind != CodeSpecializationKind::CodeForCall)
         return nullptr;
     if (auto* wasmFunction = jsDynamicCast<WebAssemblyFunction*>(callee))
-        return wasmFunction->jsCallEntrypoint();
+        return wasmFunction->jsCallICEntrypoint();
 #else
     UNUSED_PARAM(kind);
     UNUSED_PARAM(callee);
@@ -217,11 +220,11 @@ void linkPolymorphicCall(VM& vm, JSCell* owner, CallFrame* callFrame, CallLinkIn
 
             codePtr = jsToWasmICCodePtr(callLinkInfo.specializationKind(), variant.function());
             if (!codePtr) {
-                ArityCheckMode arityCheck = ArityCheckNotRequired;
+                ArityCheckMode arityCheck = ArityCheckMode::ArityCheckNotRequired;
                 if (codeBlock) {
                     ASSERT(!variant.executable()->isHostFunction());
                     if ((callFrame->argumentCountIncludingThis() < static_cast<size_t>(codeBlock->numParameters()) || callLinkInfo.isVarargs()))
-                        arityCheck = MustCheckArity;
+                        arityCheck = ArityCheckMode::MustCheckArity;
 
                 }
                 codePtr = variant.executable()->generatedJITCodeForCall()->addressForCall(arityCheck);
@@ -229,7 +232,7 @@ void linkPolymorphicCall(VM& vm, JSCell* owner, CallFrame* callFrame, CallLinkIn
             }
         } else {
             ASSERT(variant.internalFunction());
-            codePtr = vm.getCTIInternalFunctionTrampolineFor(CodeForCall);
+            codePtr = vm.getCTIInternalFunctionTrampolineFor(CodeSpecializationKind::CodeForCall);
         }
 
         slot.m_index = callSlots.size();
@@ -237,7 +240,7 @@ void linkPolymorphicCall(VM& vm, JSCell* owner, CallFrame* callFrame, CallLinkIn
         slot.m_codeBlock = codeBlock;
         slot.m_calleeOrExecutable = caseValue;
 
-        callSlots.append(WTFMove(slot));
+        callSlots.append(WTF::move(slot));
     }
 
     bool notUsingCounting = isWebAssembly || callerCodeBlock->jitType() == JITCode::topTierJIT();
@@ -266,11 +269,11 @@ void linkPolymorphicCall(VM& vm, JSCell* owner, CallFrame* callFrame, CallLinkIn
             code = LLInt::getCodeRef<JITStubRoutinePtrTag>(llint_polymorphic_normal_call_trampoline);
     }
 
-    auto stubRoutine = PolymorphicCallStubRoutine::create(WTFMove(code), vm, owner, callerFrame, callLinkInfo, callSlots, notUsingCounting, isClosureCall);
+    auto stubRoutine = PolymorphicCallStubRoutine::create(WTF::move(code), vm, owner, callerFrame, callLinkInfo, callSlots, notUsingCounting, isClosureCall);
 
     // If there had been a previous stub routine, that one will die as soon as the GC runs and sees
     // that it's no longer on stack.
-    callLinkInfo.setStub(WTFMove(stubRoutine));
+    callLinkInfo.setStub(WTF::move(stubRoutine));
 }
 
 #if ENABLE(JIT)
@@ -494,6 +497,9 @@ static InlineCacheAction tryCacheGetBy(JSGlobalObject* globalObject, CodeBlock* 
                 newCase = AccessCase::create(vm, codeBlock, AccessCase::IndexedProxyObjectLoad, nullptr);
                 break;
             }
+            case GetByKind::PrivateName:
+            case GetByKind::PrivateNameById:
+                RELEASE_ASSERT_NOT_REACHED();
             default:
                 break;
             }
@@ -626,20 +632,21 @@ static InlineCacheAction tryCacheGetBy(JSGlobalObject* globalObject, CodeBlock* 
                 else
                     RELEASE_ASSERT_NOT_REACHED();
 
-                newCase = ProxyableAccessCase::create(vm, codeBlock, type, propertyName, offset, structure, conditionSet, loadTargetFromProxy, slot.watchpointSet(), WTFMove(prototypeAccessChain));
+                newCase = ProxyableAccessCase::create(vm, codeBlock, type, propertyName, offset, structure, conditionSet, loadTargetFromProxy, slot.watchpointSet(), WTF::move(prototypeAccessChain));
             } else if (!loadTargetFromProxy && getter && InlineCacheCompiler::canEmitIntrinsicGetter(stubInfo, getter, structure))
-                newCase = IntrinsicGetterAccessCase::create(vm, codeBlock, propertyName, slot.cachedOffset(), structure, conditionSet, getter, WTFMove(prototypeAccessChain));
+                newCase = IntrinsicGetterAccessCase::create(vm, codeBlock, propertyName, slot.cachedOffset(), structure, conditionSet, getter, WTF::move(prototypeAccessChain));
             else {
                 if (isPrivate) {
                     RELEASE_ASSERT(!slot.isUnset());
+                    RELEASE_ASSERT(conditionSet.isEmpty());
                     constexpr bool isGlobalProxy = false;
                     if (!slot.isCacheable())
                         return GiveUpOnCache;
                     newCase = ProxyableAccessCase::create(vm, codeBlock, AccessCase::Load, propertyName, offset, structure,
-                        conditionSet, isGlobalProxy, slot.watchpointSet(), WTFMove(prototypeAccessChain));
+                        conditionSet, isGlobalProxy, slot.watchpointSet(), WTF::move(prototypeAccessChain));
                 } else if (slot.isCacheableValue() || slot.isUnset()) {
                     newCase = ProxyableAccessCase::create(vm, codeBlock, slot.isUnset() ? AccessCase::Miss : AccessCase::Load,
-                        propertyName, offset, structure, conditionSet, loadTargetFromProxy, slot.watchpointSet(), WTFMove(prototypeAccessChain));
+                        propertyName, offset, structure, conditionSet, loadTargetFromProxy, slot.watchpointSet(), WTF::move(prototypeAccessChain));
                 } else {
                     AccessCase::AccessType type;
                     if (slot.isCacheableGetter())
@@ -659,14 +666,14 @@ static InlineCacheAction tryCacheGetBy(JSGlobalObject* globalObject, CodeBlock* 
                         vm, codeBlock, type, propertyName, offset, structure, conditionSet, loadTargetFromProxy,
                         slot.watchpointSet(), customAccessor,
                         slot.isCacheableCustom() && slot.slotBase() != baseValue ? slot.slotBase() : nullptr,
-                        domAttribute, WTFMove(prototypeAccessChain));
+                        domAttribute, WTF::move(prototypeAccessChain));
                 }
             }
         }
 
         LOG_IC((vm, ICEvent::GetByAddAccessCase, baseValue.classInfoOrNull(), Identifier::fromUid(vm, propertyName.uid()), slot.slotBase() == baseValue));
 
-        result = stubInfo.addAccessCase(locker, globalObject, codeBlock, ECMAMode::strict(), propertyName, WTFMove(newCase));
+        result = stubInfo.addAccessCase(locker, globalObject, codeBlock, ECMAMode::strict(), propertyName, WTF::move(newCase));
 
         if (result.generatedSomeCode())
             LOG_IC((vm, ICEvent::GetByReplaceWithJump, baseValue.classInfoOrNull(), Identifier::fromUid(vm, propertyName.uid()), slot.slotBase() == baseValue));
@@ -716,6 +723,7 @@ void repatchGetBy(JSGlobalObject* globalObject, CodeBlock* codeBlock, JSValue ba
 // Mainly used to transition from megamorphic case to generic case.
 void repatchGetBySlowPathCall(CodeBlock* codeBlock, StructureStubInfo& stubInfo, GetByKind kind)
 {
+    ConcurrentJSLocker locker(codeBlock->m_lock);
     resetGetBy(codeBlock, stubInfo, kind);
     repatchSlowPathCall(codeBlock, stubInfo, appropriateGetByGaveUpFunction(kind));
 }
@@ -920,6 +928,7 @@ static CodePtr<CFunctionPtrTag> appropriatePutByGaveUpFunction(PutByKind putByKi
 // Mainly used to transition from megamorphic case to generic case.
 void repatchPutBySlowPathCall(CodeBlock* codeBlock, StructureStubInfo& stubInfo, PutByKind kind)
 {
+    ConcurrentJSLocker locker(codeBlock->m_lock);
     resetPutBy(codeBlock, stubInfo, kind);
     repatchSlowPathCall(codeBlock, stubInfo, appropriatePutByGaveUpFunction(kind));
 }
@@ -1110,13 +1119,9 @@ static InlineCacheAction tryCachePutBy(JSGlobalObject* globalObject, CodeBlock* 
                     break;
                 }
                 case PutByKind::DefinePrivateNameById:
-                case PutByKind::DefinePrivateNameByVal: {
+                case PutByKind::DefinePrivateNameByVal:
                     ASSERT(ident.isPrivateName());
-                    conditionSet = generateConditionsForPropertyMiss(vm, codeBlock, globalObject, newStructure, ident.impl());
-                    if (!conditionSet.isValid())
-                        return GiveUpOnCache;
                     break;
-                }
                 case PutByKind::ByIdDirectStrict:
                 case PutByKind::ByIdDirectSloppy:
                 case PutByKind::ByValDirectStrict:
@@ -1126,7 +1131,7 @@ static InlineCacheAction tryCachePutBy(JSGlobalObject* globalObject, CodeBlock* 
                     break;
                 }
 
-                newCase = AccessCase::createTransition(vm, codeBlock, propertyName, offset, oldStructure, newStructure, conditionSet, WTFMove(prototypeAccessChain), stubInfo);
+                newCase = AccessCase::createTransition(vm, codeBlock, propertyName, offset, oldStructure, newStructure, conditionSet, WTF::move(prototypeAccessChain), stubInfo);
             }
         } else if (slot.isCacheableCustom() || slot.isCacheableSetter()) {
             if (slot.isCacheableCustom()) {
@@ -1156,7 +1161,7 @@ static InlineCacheAction tryCachePutBy(JSGlobalObject* globalObject, CodeBlock* 
 
                 newCase = GetterSetterAccessCase::create(
                     vm, codeBlock, slot.isCustomAccessor() ? AccessCase::CustomAccessorSetter : AccessCase::CustomValueSetter, oldStructure, propertyName,
-                    invalidOffset, conditionSet, WTFMove(prototypeAccessChain), isGlobalProxy, slot.customSetter(), slot.base() != baseValue ? slot.base() : nullptr);
+                    invalidOffset, conditionSet, WTF::move(prototypeAccessChain), isGlobalProxy, slot.customSetter(), slot.base() != baseValue ? slot.base() : nullptr);
             } else {
                 ASSERT(slot.isCacheableSetter());
                 ObjectPropertyConditionSet conditionSet;
@@ -1193,7 +1198,7 @@ static InlineCacheAction tryCachePutBy(JSGlobalObject* globalObject, CodeBlock* 
                 }
 
                 newCase = GetterSetterAccessCase::create(
-                    vm, codeBlock, AccessCase::Setter, oldStructure, propertyName, offset, conditionSet, WTFMove(prototypeAccessChain), isGlobalProxy);
+                    vm, codeBlock, AccessCase::Setter, oldStructure, propertyName, offset, conditionSet, WTF::move(prototypeAccessChain), isGlobalProxy);
             }
         } else if (!propertyName.isPrivateName() && isProxyObject) {
             switch (putByKind) {
@@ -1210,19 +1215,20 @@ static InlineCacheAction tryCachePutBy(JSGlobalObject* globalObject, CodeBlock* 
             }
             case PutByKind::DefinePrivateNameById:
             case PutByKind::DefinePrivateNameByVal:
+            case PutByKind::SetPrivateNameById:
+            case PutByKind::SetPrivateNameByVal:
+                RELEASE_ASSERT_NOT_REACHED();
             case PutByKind::ByIdDirectStrict:
             case PutByKind::ByIdDirectSloppy:
             case PutByKind::ByValDirectStrict:
             case PutByKind::ByValDirectSloppy:
-            case PutByKind::SetPrivateNameById:
-            case PutByKind::SetPrivateNameByVal:
                 return GiveUpOnCache;
             }
         }
 
         LOG_IC((vm, ICEvent::PutByAddAccessCase, oldStructure->classInfoForCells(), ident, slot.base() == baseValue));
 
-        result = stubInfo.addAccessCase(locker, globalObject, codeBlock, slot.isStrictMode() ? ECMAMode::strict() : ECMAMode::sloppy(), propertyName, WTFMove(newCase));
+        result = stubInfo.addAccessCase(locker, globalObject, codeBlock, slot.isStrictMode() ? ECMAMode::strict() : ECMAMode::sloppy(), propertyName, WTF::move(newCase));
 
         if (result.generatedSomeCode())
             LOG_IC((vm, ICEvent::PutByReplaceWithJump, oldStructure->classInfoForCells(), ident, slot.base() == baseValue));
@@ -1366,7 +1372,7 @@ static InlineCacheAction tryCacheArrayPutByVal(JSGlobalObject* globalObject, Cod
         if (!newCase)
             newCase = AccessCase::create(vm, codeBlock, accessType, nullptr);
 
-        result = stubInfo.addAccessCase(locker, globalObject, codeBlock, ecmaModeFor(putByKind), nullptr, WTFMove(newCase));
+        result = stubInfo.addAccessCase(locker, globalObject, codeBlock, ecmaModeFor(putByKind), nullptr, WTF::move(newCase));
 
         if (result.generatedSomeCode())
             LOG_IC((vm, ICEvent::PutByReplaceWithJump, baseValue.classInfoOrNull(), Identifier()));
@@ -1467,7 +1473,7 @@ static InlineCacheAction tryCacheDeleteBy(JSGlobalObject* globalObject, CodeBloc
         } else
             newCase = AccessCase::create(vm, codeBlock, AccessCase::DeleteMiss, propertyName, invalidOffset, oldStructure, { }, nullptr);
 
-        result = stubInfo.addAccessCase(locker, globalObject, codeBlock, ecmaMode, propertyName, WTFMove(newCase));
+        result = stubInfo.addAccessCase(locker, globalObject, codeBlock, ecmaMode, propertyName, WTF::move(newCase));
 
         if (result.generatedSomeCode())
             LOG_IC((vm, ICEvent::DelByReplaceWithJump, oldStructure->classInfoForCells(), Identifier::fromUid(vm, propertyName.uid())));
@@ -1529,6 +1535,7 @@ inline CodePtr<CFunctionPtrTag> appropriateInByGaveUpFunction(InByKind kind)
 // Mainly used to transition from megamorphic case to generic case.
 void repatchInBySlowPathCall(CodeBlock* codeBlock, StructureStubInfo& stubInfo, InByKind kind)
 {
+    ConcurrentJSLocker locker(codeBlock->m_lock);
     resetInBy(codeBlock, stubInfo, kind);
     repatchSlowPathCall(codeBlock, stubInfo, appropriateInByGaveUpFunction(kind));
 }
@@ -1563,7 +1570,7 @@ static InlineCacheAction tryCacheInBy(
                 break;
             }
             default:
-                break;
+                RELEASE_ASSERT_NOT_REACHED();
             }
         } else if (wasFound) {
             if (!structure->propertyAccessesAreCacheable())
@@ -1637,9 +1644,9 @@ static InlineCacheAction tryCacheInBy(
         LOG_IC((vm, ICEvent::InAddAccessCase, structure->classInfoForCells(), ident, slot.slotBase() == base));
 
         if (!newCase)
-            newCase = AccessCase::create(vm, codeBlock, wasFound ? AccessCase::InHit : AccessCase::InMiss, propertyName, wasFound ? slot.cachedOffset() : invalidOffset, structure, conditionSet, WTFMove(prototypeAccessChain));
+            newCase = AccessCase::create(vm, codeBlock, wasFound ? AccessCase::InHit : AccessCase::InMiss, propertyName, wasFound ? slot.cachedOffset() : invalidOffset, structure, conditionSet, WTF::move(prototypeAccessChain));
 
-        result = stubInfo.addAccessCase(locker, globalObject, codeBlock, ECMAMode::strict(), propertyName, WTFMove(newCase));
+        result = stubInfo.addAccessCase(locker, globalObject, codeBlock, ECMAMode::strict(), propertyName, WTF::move(newCase));
 
         if (result.generatedSomeCode())
             LOG_IC((vm, ICEvent::InReplaceWithJump, structure->classInfoForCells(), ident, slot.slotBase() == base));
@@ -1702,7 +1709,7 @@ static InlineCacheAction tryCacheHasPrivateBrand(JSGlobalObject* globalObject, C
 
         Ref<AccessCase> newCase = AccessCase::create(vm, codeBlock, wasFound ? AccessCase::InHit : AccessCase::InMiss, brandID, invalidOffset, structure, { }, { });
 
-        result = stubInfo.addAccessCase(locker, globalObject, codeBlock, ECMAMode::strict(), brandID, WTFMove(newCase));
+        result = stubInfo.addAccessCase(locker, globalObject, codeBlock, ECMAMode::strict(), brandID, WTF::move(newCase));
 
         if (result.generatedSomeCode())
             LOG_IC((vm, ICEvent::InReplaceWithJump, structure->classInfoForCells(), ident, isBaseProperty));
@@ -1744,7 +1751,7 @@ static InlineCacheAction tryCacheCheckPrivateBrand(
 
         Ref<AccessCase> newCase = AccessCase::createCheckPrivateBrand(vm, codeBlock, brandID, structure);
 
-        result = stubInfo.addAccessCase(locker, globalObject, codeBlock, ECMAMode::strict(), brandID, WTFMove(newCase));
+        result = stubInfo.addAccessCase(locker, globalObject, codeBlock, ECMAMode::strict(), brandID, WTF::move(newCase));
 
         if (result.generatedSomeCode())
             LOG_IC((vm, ICEvent::CheckPrivateBrandReplaceWithJump, structure->classInfoForCells(), ident, isBaseProperty));
@@ -1798,7 +1805,7 @@ static InlineCacheAction tryCacheSetPrivateBrand(
 
         Ref<AccessCase> newCase = AccessCase::createSetPrivateBrand(vm, codeBlock, brandID, oldStructure, newStructure);
 
-        result = stubInfo.addAccessCase(locker, globalObject, codeBlock, ECMAMode::strict(), brandID, WTFMove(newCase));
+        result = stubInfo.addAccessCase(locker, globalObject, codeBlock, ECMAMode::strict(), brandID, WTF::move(newCase));
 
         if (result.generatedSomeCode())
             LOG_IC((vm, ICEvent::SetPrivateBrandReplaceWithJump, oldStructure->classInfoForCells(), ident, isBaseProperty));
@@ -1859,7 +1866,7 @@ static InlineCacheAction tryCacheInstanceOf(JSGlobalObject* globalObject, CodeBl
 
         LOG_IC((vm, ICEvent::InstanceOfAddAccessCase, structure->classInfoForCells(), Identifier()));
 
-        result = stubInfo.addAccessCase(locker, globalObject, codeBlock, ECMAMode::strict(), nullptr, WTFMove(newCase));
+        result = stubInfo.addAccessCase(locker, globalObject, codeBlock, ECMAMode::strict(), nullptr, WTF::move(newCase));
 
         if (result.generatedSomeCode())
             LOG_IC((vm, ICEvent::InstanceOfReplaceWithJump, structure->classInfoForCells(), Identifier()));
@@ -1904,36 +1911,36 @@ static InlineCacheAction tryCacheArrayInByVal(JSGlobalObject* globalObject, Code
 #endif
             switch (typedArray->type()) {
             case Int8ArrayType:
-                accessType = typedArray->isResizableOrGrowableShared() ? AccessCase::IndexedResizableTypedArrayInt8InHit : AccessCase::IndexedTypedArrayInt8InHit;
+                accessType = typedArray->isResizableOrGrowableShared() ? AccessCase::IndexedResizableTypedArrayInt8In : AccessCase::IndexedTypedArrayInt8In;
                 break;
             case Uint8ArrayType:
-                accessType = typedArray->isResizableOrGrowableShared() ? AccessCase::IndexedResizableTypedArrayUint8InHit : AccessCase::IndexedTypedArrayUint8InHit;
+                accessType = typedArray->isResizableOrGrowableShared() ? AccessCase::IndexedResizableTypedArrayUint8In : AccessCase::IndexedTypedArrayUint8In;
                 break;
             case Uint8ClampedArrayType:
-                accessType = typedArray->isResizableOrGrowableShared() ? AccessCase::IndexedResizableTypedArrayUint8ClampedInHit : AccessCase::IndexedTypedArrayUint8ClampedInHit;
+                accessType = typedArray->isResizableOrGrowableShared() ? AccessCase::IndexedResizableTypedArrayUint8ClampedIn : AccessCase::IndexedTypedArrayUint8ClampedIn;
                 break;
             case Int16ArrayType:
-                accessType = typedArray->isResizableOrGrowableShared() ? AccessCase::IndexedResizableTypedArrayInt16InHit : AccessCase::IndexedTypedArrayInt16InHit;
+                accessType = typedArray->isResizableOrGrowableShared() ? AccessCase::IndexedResizableTypedArrayInt16In : AccessCase::IndexedTypedArrayInt16In;
                 break;
             case Uint16ArrayType:
-                accessType = typedArray->isResizableOrGrowableShared() ? AccessCase::IndexedResizableTypedArrayUint16InHit : AccessCase::IndexedTypedArrayUint16InHit;
+                accessType = typedArray->isResizableOrGrowableShared() ? AccessCase::IndexedResizableTypedArrayUint16In : AccessCase::IndexedTypedArrayUint16In;
                 break;
             case Int32ArrayType:
-                accessType = typedArray->isResizableOrGrowableShared() ? AccessCase::IndexedResizableTypedArrayInt32InHit : AccessCase::IndexedTypedArrayInt32InHit;
+                accessType = typedArray->isResizableOrGrowableShared() ? AccessCase::IndexedResizableTypedArrayInt32In : AccessCase::IndexedTypedArrayInt32In;
                 break;
             case Uint32ArrayType:
-                accessType = typedArray->isResizableOrGrowableShared() ? AccessCase::IndexedResizableTypedArrayUint32InHit : AccessCase::IndexedTypedArrayUint32InHit;
+                accessType = typedArray->isResizableOrGrowableShared() ? AccessCase::IndexedResizableTypedArrayUint32In : AccessCase::IndexedTypedArrayUint32In;
                 break;
             case Float16ArrayType:
                 if (!CCallHelpers::supportsFloat16())
                     return GiveUpOnCache;
-                accessType = typedArray->isResizableOrGrowableShared() ? AccessCase::IndexedResizableTypedArrayFloat16InHit : AccessCase::IndexedTypedArrayFloat16InHit;
+                accessType = typedArray->isResizableOrGrowableShared() ? AccessCase::IndexedResizableTypedArrayFloat16In : AccessCase::IndexedTypedArrayFloat16In;
                 break;
             case Float32ArrayType:
-                accessType = typedArray->isResizableOrGrowableShared() ? AccessCase::IndexedResizableTypedArrayFloat32InHit : AccessCase::IndexedTypedArrayFloat32InHit;
+                accessType = typedArray->isResizableOrGrowableShared() ? AccessCase::IndexedResizableTypedArrayFloat32In : AccessCase::IndexedTypedArrayFloat32In;
                 break;
             case Float64ArrayType:
-                accessType = typedArray->isResizableOrGrowableShared() ? AccessCase::IndexedResizableTypedArrayFloat64InHit : AccessCase::IndexedTypedArrayFloat64InHit;
+                accessType = typedArray->isResizableOrGrowableShared() ? AccessCase::IndexedResizableTypedArrayFloat64In : AccessCase::IndexedTypedArrayFloat64In;
                 break;
             // FIXME: Optimize BigInt64Array / BigUint64Array in IC
             // https://bugs.webkit.org/show_bug.cgi?id=221183

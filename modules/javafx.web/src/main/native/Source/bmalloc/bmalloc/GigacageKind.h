@@ -25,11 +25,17 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
 namespace Gigacage {
 
-enum Kind {
-    Primitive,
+enum class Kind {
+    Primitive = 0,
     NumberOfKinds
 };
 
+using enum Kind;
+
 } // namespace Gigacage
+
+#endif // __cplusplus

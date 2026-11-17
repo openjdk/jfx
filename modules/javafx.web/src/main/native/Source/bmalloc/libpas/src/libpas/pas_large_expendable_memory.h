@@ -96,7 +96,7 @@ static PAS_ALWAYS_INLINE bool pas_large_expendable_memory_touch(
     case pas_expendable_memory_touch_to_commit_if_necessary:
         return pas_large_expendable_memory_commit_if_necessary(object, size);
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return false;
 }
 

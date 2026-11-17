@@ -45,6 +45,8 @@
 
 using WTF::Range;
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC { namespace B3 { namespace Air {
 
 namespace {
@@ -298,11 +300,7 @@ private:
             }
         }
 
-        std::sort(
-            m_clobbers.begin(), m_clobbers.end(),
-            [] (Clobber& a, Clobber& b) -> bool {
-                return a.index < b.index;
-            });
+        std::ranges::sort(m_clobbers, { }, &Clobber::index);
 
         if (verbose()) {
             dataLog("Intervals:\n");
@@ -367,9 +365,7 @@ private:
                 m_tmps.append(tmp);
             });
 
-        std::sort(
-            m_tmps.begin(), m_tmps.end(),
-            [&] (Tmp& a, Tmp& b) {
+        std::ranges::sort(m_tmps, [&](auto& a, auto& b) {
                 return m_map[a].interval.begin() < m_map[b].interval.begin();
             });
 
@@ -692,5 +688,7 @@ void allocateRegistersAndStackByLinearScan(Code& code)
 }
 
 } } } // namespace JSC::B3::Air
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(B3_JIT)

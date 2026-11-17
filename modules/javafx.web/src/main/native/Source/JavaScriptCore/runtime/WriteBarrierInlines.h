@@ -25,8 +25,9 @@
 
 #pragma once
 
-#include "VM.h"
-#include "WriteBarrier.h"
+#include <JavaScriptCore/JSCJSValueInlines.h>
+#include <JavaScriptCore/VM.h>
+#include <JavaScriptCore/WriteBarrier.h>
 
 namespace JSC {
 
@@ -85,5 +86,26 @@ inline void WriteBarrierStructureID::setEarlyValue(VM& vm, const JSCell* owner, 
     m_structureID = StructureID::encode(value);
     vm.writeBarrier(owner, reinterpret_cast<JSCell*>(value));
 }
+
+inline bool WriteBarrierBase<Unknown, RawValueTraits<Unknown>>::isObject() const
+{
+    return get().isObject();
+}
+
+inline bool WriteBarrierBase<Unknown, RawValueTraits<Unknown>>::isNull() const
+{
+    return get().isNull();
+}
+
+inline bool WriteBarrierBase<Unknown, RawValueTraits<Unknown>>::isGetterSetter() const
+{
+    return get().isGetterSetter();
+}
+
+inline bool WriteBarrierBase<Unknown, RawValueTraits<Unknown>>::isCustomGetterSetter() const
+{
+    return get().isCustomGetterSetter();
+}
+
 
 } // namespace JSC

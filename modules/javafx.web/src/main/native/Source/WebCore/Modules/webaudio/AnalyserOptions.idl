@@ -25,6 +25,7 @@
 
 [
     Conditional=WEB_AUDIO,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary AnalyserOptions : AudioNodeOptions {
     unsigned long fftSize = 2048;
     double maxDecibels = -30;

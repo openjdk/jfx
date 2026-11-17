@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2010 Nokia Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -35,7 +35,7 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(LabelsNodeList);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(LabelsNodeList);
 
 LabelsNodeList::LabelsNodeList(HTMLElement& element)
     : CachedLiveNodeList(element, NodeListInvalidationType::InvalidateOnForTypeAttrChange)
@@ -54,7 +54,7 @@ LabelsNodeList::~LabelsNodeList()
 
 bool LabelsNodeList::elementMatches(Element& testNode) const
 {
-    auto* label = dynamicDowncast<HTMLLabelElement>(testNode);
+    RefPtr label = dynamicDowncast<HTMLLabelElement>(testNode);
     return label && label->control() == &ownerNode();
 }
 

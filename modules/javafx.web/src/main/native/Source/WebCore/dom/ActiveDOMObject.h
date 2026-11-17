@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,8 +26,9 @@
 
 #pragma once
 
-#include "ContextDestructionObserver.h"
-#include "TaskSource.h"
+#include <WebCore/ContextDestructionObserver.h>
+#include <WebCore/TaskSource.h>
+#include <wtf/AbstractRefCounted.h>
 #include <wtf/Assertions.h>
 #include <wtf/CancellableTask.h>
 #include <wtf/Forward.h>
@@ -70,9 +71,6 @@ public:
     virtual void suspend(ReasonForSuspension);
     virtual void resume();
 
-    virtual void ref() const = 0;
-    virtual void deref() const = 0;
-
     // This function must not have a side effect of creating an ActiveDOMObject.
     // That means it must not result in calls to arbitrary JavaScript.
     // It can, however, have a side effect of deleting an ActiveDOMObject.
@@ -93,8 +91,10 @@ public:
             --(m_thisObject->m_pendingActivityInstanceCount);
         }
 
+        T& object() { return m_thisObject.get(); }
+
     private:
-        Ref<T> m_thisObject;
+        const Ref<T> m_thisObject;
     };
 
     template<class T> Ref<PendingActivity<T>> makePendingActivity(T& thisObject)
@@ -106,23 +106,25 @@ public:
     bool isContextStopped() const;
     bool isAllowedToRunScript() const;
 
-    template<typename T>
-    static void queueTaskKeepingObjectAlive(T& object, TaskSource source, Function<void ()>&& task)
+    template<typename T, typename Task>
+    static void queueTaskKeepingObjectAlive(T& object, TaskSource source, Task&& task)
     {
         // Calls the template member function outside of lambda init-captures to work around a MSVC bug.
         auto activity = object.ActiveDOMObject::makePendingActivity(object);
-        object.queueTaskInEventLoop(source, [protectedObject = Ref { object }, activity = WTFMove(activity), task = WTFMove(task)] () {
-            task();
+        object.queueTaskInEventLoop(source, [protectedObject = Ref { object }, activity = WTF::move(activity), task = WTF::move(task)]() mutable {
+            task(protectedObject.get());
         });
     }
 
-    template<typename T>
-    static void queueCancellableTaskKeepingObjectAlive(T& object, TaskSource source, TaskCancellationGroup& cancellationGroup, Function<void()>&& task)
+    template<typename T, typename Task>
+    static void queueCancellableTaskKeepingObjectAlive(T& object, TaskSource source, TaskCancellationGroup& cancellationGroup, Task&& task)
     {
-        CancellableTask cancellableTask(cancellationGroup, WTFMove(task));
+        CancellableTask cancellableTask(cancellationGroup, [task = WTF::move(task), protectedObject = Ref { object }]() mutable {
+            task(protectedObject.get());
+        });
         // Calls the template member function outside of lambda init-captures to work around a MSVC bug.
         auto activity = object.ActiveDOMObject::makePendingActivity(object);
-        object.queueTaskInEventLoop(source, [protectedObject = Ref { object }, activity = WTFMove(activity), cancellableTask = WTFMove(cancellableTask)]() mutable {
+        object.queueTaskInEventLoop(source, [activity = WTF::move(activity), cancellableTask = WTF::move(cancellableTask)]() mutable {
             cancellableTask();
         });
     }
@@ -130,13 +132,13 @@ public:
     template<typename EventTargetType>
     static void queueTaskToDispatchEvent(EventTargetType& target, TaskSource source, Ref<Event>&& event)
     {
-        target.queueTaskToDispatchEventInternal(target, source, WTFMove(event));
+        target.queueTaskToDispatchEventInternal(target, source, WTF::move(event));
     }
 
     template<typename EventTargetType>
     static void queueCancellableTaskToDispatchEvent(EventTargetType& target, TaskSource source, TaskCancellationGroup& cancellationGroup, Ref<Event>&& event)
     {
-        target.queueCancellableTaskToDispatchEventInternal(target, source, cancellationGroup, WTFMove(event));
+        target.queueCancellableTaskToDispatchEventInternal(target, source, cancellationGroup, WTF::move(event));
     }
 
 protected:
@@ -160,7 +162,7 @@ private:
     uint64_t m_pendingActivityInstanceCount { 0 };
 #if ASSERT_ENABLED
     bool m_suspendIfNeededWasCalled { false };
-    Ref<Thread> m_creationThread { Thread::current() };
+    const Ref<Thread> m_creationThread { Thread::currentSingleton() };
 #endif
 
     friend class ActiveDOMObjectEventDispatchTask;

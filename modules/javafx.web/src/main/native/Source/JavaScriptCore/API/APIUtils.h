@@ -40,13 +40,13 @@ enum class ExceptionStatus {
 inline ExceptionStatus handleExceptionIfNeeded(JSC::CatchScope& scope, JSContextRef ctx, JSValueRef* returnedExceptionRef)
 {
     JSC::JSGlobalObject* globalObject = toJS(ctx);
-    if (UNLIKELY(scope.exception())) {
+    if (scope.exception()) [[unlikely]] {
         JSC::Exception* exception = scope.exception();
         if (returnedExceptionRef)
             *returnedExceptionRef = toRef(globalObject, exception->value());
         scope.clearException();
 #if ENABLE(REMOTE_INSPECTOR)
-        globalObject->inspectorController().reportAPIException(globalObject, exception);
+        globalObject->checkedInspectorController()->reportAPIException(globalObject, exception);
 #endif
         return ExceptionStatus::DidThrow;
     }
@@ -60,7 +60,7 @@ inline void setException(JSContextRef ctx, JSValueRef* returnedExceptionRef, JSC
         *returnedExceptionRef = toRef(globalObject, exception);
 #if ENABLE(REMOTE_INSPECTOR)
     JSC::VM& vm = getVM(globalObject);
-    globalObject->inspectorController().reportAPIException(globalObject, JSC::Exception::create(vm, exception));
+    globalObject->checkedInspectorController()->reportAPIException(globalObject, JSC::Exception::create(vm, exception));
 #endif
 }
 

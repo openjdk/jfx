@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -264,6 +264,7 @@ AVFAudioEqualizer::AVFAudioEqualizer() : CAudioEqualizer(),
                                          mEQBufferB(NULL),
                                          mSampleRate(0),
                                          mChannels(0) {
+    pthread_mutex_init(&mBandLock, NULL);
 }
 
 AVFAudioEqualizer::~AVFAudioEqualizer() {
@@ -284,6 +285,8 @@ AVFAudioEqualizer::~AVFAudioEqualizer() {
         }
     }
     mEQBands.clear();
+
+    pthread_mutex_destroy(&mBandLock);
 }
 
 bool AVFAudioEqualizer::IsEnabled() {
@@ -299,6 +302,7 @@ int AVFAudioEqualizer::GetNumBands() {
 }
 
 CEqualizerBand *AVFAudioEqualizer::AddBand(double frequency, double bandwidth, double gain) {
+    lockBands();
     if (!mEQBands[frequency]) {
         mEQBands[frequency] = new AVFEqualizerBand(this, frequency, bandwidth, gain);
     } else {
@@ -306,21 +310,27 @@ CEqualizerBand *AVFAudioEqualizer::AddBand(double frequency, double bandwidth, d
         mEQBands[frequency]->SetGain(gain);
     }
     ResetBandParameters();
-    return mEQBands[frequency];
+    CEqualizerBand *band = mEQBands[frequency];
+    unlockBands();
+    return band;
 }
 
 bool AVFAudioEqualizer::RemoveBand(double frequency) {
+    lockBands();
     AVFEqualizerBand *band = mEQBands[frequency];
     if (band) {
         mEQBands.erase(frequency);
         delete band;
         ResetBandParameters();
+        unlockBands();
         return true;
     }
+    unlockBands();
     return false;
 }
 
 void AVFAudioEqualizer::MoveBand(double oldFrequency, double newFrequency) {
+    lockBands();
     // only if freq actually changes
     if (oldFrequency != newFrequency) {
         AVFEqualizerBand *band = mEQBands[oldFrequency];
@@ -331,6 +341,7 @@ void AVFAudioEqualizer::MoveBand(double oldFrequency, double newFrequency) {
         }
         ResetBandParameters();
     }
+    unlockBands();
 }
 
 void AVFAudioEqualizer::ResetBandParameters() {
@@ -392,12 +403,14 @@ UInt32 AVFAudioEqualizer::GetChannels() {
 
 bool AVFAudioEqualizer::ProcessBufferLists(const AudioBufferList & buffer,
                                                UInt32 inFramesToProcess) {
+    lockBands();
     for (UInt32 i = 0; i < buffer.mNumberBuffers; i++) {
         RunFilter((const Float32 *) buffer.mBuffers[i].mData,
                   (Float32 *) buffer.mBuffers[i].mData,
                   inFramesToProcess,
                   i);
     }
+    unlockBands();
 
     return true;
 }

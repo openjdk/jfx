@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Inc.
+ * Copyright (C) 2006 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Torch Mobile Inc. http://www.torchmobile.com/
  * Copyright (C) 2012 Nokia Corporation and/or its subsidiary(-ies)
  *
@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "HitTestSource.h"
+#include <WebCore/HitTestSource.h>
 #include <wtf/Assertions.h>
 #include <wtf/OptionSet.h>
 
@@ -51,6 +51,8 @@ public:
         // When using list-based testing, continue hit testing even after a hit has been found.
         IncludeAllElementsUnderPoint = 1 << 16,
         PenEvent = 1 << 17,
+        ForFixedContainerSampling = 1 << 18,
+        SkipTransformToRootFrameCoordinates = 1 << 19,
     };
 
     static constexpr OptionSet defaultTypes = { Type::ReadOnly, Type::Active, Type::DisallowUserAgentShadowContent };
@@ -100,6 +102,7 @@ public:
     bool resultIsElementList() const { return m_type.contains(Type::CollectMultipleElements); }
     bool includesAllElementsUnderPoint() const { return m_type.contains(Type::IncludeAllElementsUnderPoint); }
     bool userTriggered() const { return m_source == HitTestSource::User; }
+    bool isForFixedContainerSampling() const { return m_type.contains(Type::ForFixedContainerSampling); }
 
     // Convenience functions
     bool touchMove() const { return move() && touchEvent(); }

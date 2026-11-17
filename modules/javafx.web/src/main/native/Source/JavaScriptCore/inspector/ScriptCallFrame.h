@@ -31,21 +31,21 @@
 
 #pragma once
 
-#include "DebuggerPrimitives.h"
-#include "InspectorProtocolObjects.h"
-#include "LineColumn.h"
+#include <JavaScriptCore/DebuggerPrimitives.h>
+#include <JavaScriptCore/InspectorProtocolObjects.h>
+#include <JavaScriptCore/LineColumn.h>
 #include <wtf/Forward.h>
 #include <wtf/text/WTFString.h>
 
 namespace Inspector {
 
-class JS_EXPORT_PRIVATE ScriptCallFrame  {
+class ScriptCallFrame  {
 public:
     using LineColumn = JSC::LineColumn;
 
     ScriptCallFrame(const String& functionName, const String& scriptName, JSC::SourceID, LineColumn);
     ScriptCallFrame(const String& functionName, const String& scriptName, const String& preRedirectURL, JSC::SourceID, LineColumn);
-    ~ScriptCallFrame();
+    JS_EXPORT_PRIVATE ~ScriptCallFrame();
 
     const String& functionName() const { return m_functionName; }
     const String& sourceURL() const { return m_scriptName; }
@@ -54,7 +54,7 @@ public:
     unsigned columnNumber() const { return m_lineColumn.column; }
     JSC::SourceID sourceID() const { return m_sourceID; }
 
-    bool isEqual(const ScriptCallFrame&) const;
+    JS_EXPORT_PRIVATE bool isEqual(const ScriptCallFrame&) const;
     bool isNative() const;
 
     bool operator==(const ScriptCallFrame& other) const { return isEqual(other); }

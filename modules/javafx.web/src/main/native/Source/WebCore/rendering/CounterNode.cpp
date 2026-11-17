@@ -25,6 +25,7 @@
 #include "LayoutIntegrationLineLayout.h"
 #include "RenderCounter.h"
 #include "RenderElement.h"
+#include "RenderObjectDocument.h"
 #include "RenderView.h"
 #include <stdio.h>
 #include <wtf/CheckedArithmetic.h>
@@ -108,7 +109,7 @@ CounterNode* CounterNode::nextInPreOrderAfterChildren(const CounterNode* stayWit
         if (!current || current == stayWithin)
             return nullptr;
     }
-    return next.get();
+    return next.unsafeGet();
 }
 
 CounterNode* CounterNode::nextInPreOrder(const CounterNode* stayWithin) const
@@ -347,11 +348,11 @@ static void showTreeAndMark(const CounterNode* node)
         root = root->parent();
 
     for (const CounterNode* current = root; current; current = current->nextInPreOrder()) {
-        fprintf(stderr, "%c", (current == node) ? '*' : ' ');
+        SAFE_FPRINTF(stderr, "%c", (current == node) ? '*' : ' ');
         for (const CounterNode* parent = current; parent && parent != root; parent = parent->parent())
             fprintf(stderr, "    ");
-        fprintf(stderr, "%p %s: %d %d P:%p PS:%p NS:%p R:%p\n",
-            current, current->actsAsReset() ? "reset____" : "increment", current->value(),
+        SAFE_FPRINTF(stderr, "%p %s: %d %d P:%p PS:%p NS:%p R:%p\n",
+            current, current->actsAsReset() ? "reset____"_s : "increment"_s, current->value(),
             current->countInParent(), current->parent(), current->previousSibling(),
             current->nextSibling(), &current->owner());
     }

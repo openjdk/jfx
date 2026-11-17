@@ -25,13 +25,11 @@
 
 #pragma once
 
-#include <wtf/OptionSet.h>
+#include <wtf/CheckedRef.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
-class GraphicsContext;
-class IntRect;
 class LayoutSize;
 class RenderView;
 
@@ -47,7 +45,7 @@ class FormattingContext;
 // subsequent layouts (subtree layout). A non-initial, subtree layout could be initiated on multiple formatting contexts.
 // Each formatting context has an entry point for layout, which potenitally means multiple entry points per layout frame.
 class LayoutContext {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(LayoutContext);
+    WTF_MAKE_TZONE_ALLOCATED(LayoutContext);
 public:
     LayoutContext(LayoutState&);
 
@@ -62,9 +60,9 @@ public:
 
 private:
     void layoutFormattingContextSubtree(const ElementBox&);
-    LayoutState& layoutState() { return m_layoutState; }
+    LayoutState& layoutState();
 
-    LayoutState& m_layoutState;
+    const CheckedRef<LayoutState> m_layoutState;
 };
 
 }

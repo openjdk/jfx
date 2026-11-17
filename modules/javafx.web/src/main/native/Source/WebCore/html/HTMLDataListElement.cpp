@@ -31,8 +31,6 @@
 
 #include "config.h"
 
-#if ENABLE(DATALIST_ELEMENT)
-
 #include "HTMLDataListElement.h"
 
 #include "GenericCachedHTMLCollection.h"
@@ -45,7 +43,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLDataListElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLDataListElement);
 
 inline HTMLDataListElement::HTMLDataListElement(const QualifiedName& tagName, Document& document)
     : HTMLElement(tagName, document, TypeFlag::HasDidMoveToNewDocument)
@@ -86,7 +84,7 @@ void HTMLDataListElement::optionElementChildrenChanged()
 {
     if (auto& id = getIdAttribute(); !id.isEmpty()) {
         if (CheckedPtr observerRegistry = treeScope().idTargetObserverRegistryIfExists())
-            observerRegistry->notifyObservers(id);
+            observerRegistry->notifyObservers(*this, id);
     }
 }
 
@@ -101,5 +99,3 @@ bool HTMLDataListElement::isSuggestion(const HTMLOptionElement& descendant)
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(DATALIST_ELEMENT)

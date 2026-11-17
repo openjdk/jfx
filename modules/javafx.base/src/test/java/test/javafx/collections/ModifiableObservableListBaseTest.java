@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,7 +27,10 @@ package test.javafx.collections;
 
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ModifiableObservableListBaseShim;
+import javafx.collections.ObservableList;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -57,10 +60,82 @@ public class ModifiableObservableListBaseTest {
 
     @Nested
     class SetAllTest {
+        private final ObservableList<String> list = FXCollections.observableArrayList(List.of("a", "b", "c"));
+        private final List<String> recordedChanges = new ArrayList<>();
+
+        {
+            list.addListener((Change<? extends String> c) -> recordedChanges.add(c.toString()));
+        }
+
         @Test
         public void testNullArgumentThrowsNPE() {
-            var list = new MockModifiableObservableList(new ArrayList<>(List.of("a", "b", "c")));
             assertThrows(NullPointerException.class, () -> list.setAll((Collection<? extends String>) null));
+            assertThrows(NullPointerException.class, () -> list.replaceRange(0, 0, (Collection<? extends String>) null));
+            assertEquals(List.of(), recordedChanges);
+        }
+
+        @Test
+        void shouldRejectIllegalRange() {
+            assertThrows(IndexOutOfBoundsException.class, () -> list.replaceRange(-1, 2, List.of("d", "e", "f")));
+            assertThrows(IndexOutOfBoundsException.class, () -> list.replaceRange(0, 5, List.of("d", "e", "f")));
+            assertThrows(IndexOutOfBoundsException.class, () -> list.replaceRange(2, 1, List.of("d", "e", "f")));
+            assertEquals(List.of(), recordedChanges);
+        }
+
+        @Test
+        void shouldNotModifyListWhenOperationIsANoOp() {
+            assertFalse(list.replaceRange(1, 1, List.of()));
+            assertEquals(List.of("a", "b", "c"), list);
+            assertEquals(List.of(), recordedChanges);
+        }
+
+        @Test
+        void shouldInsertWhenRangeIsEmpty() {
+            assertTrue(list.replaceRange(1, 1, List.of("A", "B", "C")));
+            assertEquals(List.of("a", "A", "B", "C", "b", "c"), list);
+            assertEquals(List.of("{ [A, B, C] added at 1 }"), recordedChanges);
+        }
+
+        @Test
+        void shouldReplaceElementsWithRangeAtEnd() {
+            assertTrue(list.replaceRange(1, 3, List.of("B", "C", "D")));
+            assertEquals(List.of("a", "B", "C", "D"), list);
+            assertEquals(List.of("{ [b, c] replaced by [B, C, D] at 1 }"), recordedChanges);
+        }
+
+        @Test
+        void shouldReplaceElementsWithRangeAtBeginning() {
+            assertTrue(list.replaceRange(0, 2, List.of("A", "B", "C")));
+            assertEquals(List.of("A", "B", "C", "c"), list);
+            assertEquals(List.of("{ [a, b] replaced by [A, B, C] at 0 }"), recordedChanges);
+        }
+
+        @Test
+        void shouldReplaceElementsWithRangeInMiddle() {
+            assertTrue(list.replaceRange(1, 2, List.of("A", "B", "C")));
+            assertEquals(List.of("a", "A", "B", "C", "c"), list);
+            assertEquals(List.of("{ [b] replaced by [A, B, C] at 1 }"), recordedChanges);
+        }
+
+        @Test
+        void shouldReplaceRangeWithFewerElementsThanAreRemovedAtEnd() {
+            assertTrue(list.replaceRange(1, 3, List.of("B")));
+            assertEquals(List.of("a", "B"), list);
+            assertEquals(List.of("{ [b, c] replaced by [B] at 1 }"), recordedChanges);
+        }
+
+        @Test
+        void shouldReplaceRangeWithFewerElementsThanAreRemovedAtBeginning() {
+            assertTrue(list.replaceRange(0, 2, List.of("B")));
+            assertEquals(List.of("B", "c"), list);
+            assertEquals(List.of("{ [a, b] replaced by [B] at 0 }"), recordedChanges);
+        }
+
+        @Test
+        void shouldOnlyRemoveRangeWhenCollectionWasEmpty() {
+            assertTrue(list.replaceRange(1, 3, List.of()));
+            assertEquals(List.of("a"), list);
+            assertEquals(List.of("{ [b, c] removed at 1 }"), recordedChanges);
         }
     }
 

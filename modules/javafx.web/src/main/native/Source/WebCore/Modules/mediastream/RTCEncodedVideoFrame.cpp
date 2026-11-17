@@ -32,18 +32,21 @@
 
 namespace WebCore {
 
+Ref<RTCEncodedVideoFrame> RTCEncodedVideoFrame::create(RTCEncodedVideoFrame& frame, const Options& options)
+{
+    auto rtcFrame = frame.serialize();
+    if (options.metadata)
+        rtcFrame->setOptions(*options.metadata);
+    return create(WTF::move(rtcFrame));
+}
+
 RTCEncodedVideoFrame::RTCEncodedVideoFrame(Ref<RTCRtpTransformableFrame>&& frame)
-    : RTCEncodedFrame(WTFMove(frame))
+    : RTCEncodedFrame(WTF::move(frame))
     , m_type(m_frame->isKeyFrame() ? Type::Key : Type::Delta)
 {
 }
 
 RTCEncodedVideoFrame::~RTCEncodedVideoFrame() = default;
-
-uint64_t RTCEncodedVideoFrame::timestamp() const
-{
-    return m_frame->timestamp();
-}
 
 const RTCEncodedVideoFrame::Metadata& RTCEncodedVideoFrame::getMetadata()
 {

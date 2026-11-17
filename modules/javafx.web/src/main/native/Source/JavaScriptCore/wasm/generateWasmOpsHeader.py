@@ -142,18 +142,16 @@ defines = ["#define FOR_EACH_WASM_SPECIAL_OP(macro)"]
 defines.extend([op for op in opcodeMacroizer(lambda op: not (isUnary(op) or isBinary(op) or op["category"] == "control" or op["category"] == "memory" or op["value"] == 0xfc or op["category"] == "gc" or isAtomic(op)))])
 defines.append("\n\n#define FOR_EACH_WASM_CONTROL_FLOW_OP(macro)")
 defines.extend([op for op in opcodeMacroizer(lambda op: op["category"] == "control")])
-defines.append("\n\n#define FOR_EACH_WASM_SIMPLE_UNARY_OP(macro)")
-defines.extend([op for op in opcodeWithTypesMacroizer(lambda op: isUnary(op) and isSimple(op))])
-defines.append("\n\n#define FOR_EACH_WASM_UNARY_OP(macro) \\\n    FOR_EACH_WASM_SIMPLE_UNARY_OP(macro)")
-defines.extend([op for op in opcodeWithTypesMacroizer(lambda op: isUnary(op) and not (isSimple(op)))])
-defines.append("\n\n#define FOR_EACH_WASM_SIMPLE_BINARY_OP(macro)")
-defines.extend([op for op in opcodeWithTypesMacroizer(lambda op: isBinary(op) and isSimple(op))])
-defines.append("\n\n#define FOR_EACH_WASM_BINARY_OP(macro) \\\n    FOR_EACH_WASM_SIMPLE_BINARY_OP(macro)")
-defines.extend([op for op in opcodeWithTypesMacroizer(lambda op: isBinary(op) and not (isSimple(op)))])
+defines.append("\n\n#define FOR_EACH_WASM_NON_COMPARE_UNARY_OP(macro)")
+defines.extend([op for op in opcodeWithTypesMacroizer(lambda op: isUnary(op) and not isCompare(op))])
 defines.append("\n\n#define FOR_EACH_WASM_COMPARE_UNARY_OP(macro)")
 defines.extend([op for op in opcodeWithTypesMacroizer(lambda op: isUnary(op) and isCompare(op))])
+defines.append("\n\n#define FOR_EACH_WASM_UNARY_OP(macro) \\\n    FOR_EACH_WASM_NON_COMPARE_UNARY_OP(macro) \\\n    FOR_EACH_WASM_COMPARE_UNARY_OP(macro)")
+defines.append("\n\n#define FOR_EACH_WASM_NON_COMPARE_BINARY_OP(macro)")
+defines.extend([op for op in opcodeWithTypesMacroizer(lambda op: isBinary(op) and not isCompare(op))])
 defines.append("\n\n#define FOR_EACH_WASM_COMPARE_BINARY_OP(macro)")
 defines.extend([op for op in opcodeWithTypesMacroizer(lambda op: isBinary(op) and isCompare(op))])
+defines.append("\n\n#define FOR_EACH_WASM_BINARY_OP(macro) \\\n    FOR_EACH_WASM_NON_COMPARE_BINARY_OP(macro) \\\n    FOR_EACH_WASM_COMPARE_BINARY_OP(macro)")
 defines.append("\n\n#define FOR_EACH_WASM_MEMORY_LOAD_OP(macro)")
 defines.extend([op for op in memoryLoadMacroizer()])
 defines.append("\n\n#define FOR_EACH_WASM_MEMORY_STORE_OP(macro)")
@@ -221,6 +219,12 @@ contents = wasm.header + """
 
 #pragma once
 
+#include <wtf/Compiler.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
+#include <wtf/Platform.h>
+
 #if ENABLE(WEBASSEMBLY)
 
 #include <cstdint>
@@ -266,7 +270,7 @@ struct Type {
 
     bool operator==(const Type& other) const
     {
-        return other.kind == kind && other.isNullable() == isNullable() && other.index == index;
+        return other.kind == kind && other.index == index;
     }
 
     bool isNullable() const
@@ -274,10 +278,14 @@ struct Type {
         return kind == TypeKind::RefNull || kind == TypeKind::Externref || kind == TypeKind::Funcref;
     }
 
+    // Saying conservatively.
+    bool definitelyIsCellOrNull() const;
+    bool definitelyIsWasmGCObjectOrNull() const;
+
     void dump(PrintStream& out) const;
     Width width() const;
 
-    // Use Wasm::isFuncref and Wasm::isExternref instead because they check againts all kind of representations of function referenes and external references.
+    // Use Wasm::isFuncref and Wasm::isExternref instead because they check against all kinds of representations of function references and external references.
 
     #define CREATE_PREDICATE(name, ...) bool is ## name() const { return kind == TypeKind::name; }
     FOR_EACH_WASM_TYPE_EXCEPT_FUNCREF_AND_EXTERNREF(CREATE_PREDICATE)
@@ -288,6 +296,7 @@ struct Type {
         switch(kind) {
         case TypeKind::I64:
         case TypeKind::Funcref:
+        case TypeKind::Exnref:
         case TypeKind::Externref:
         case TypeKind::RefNull:
         case TypeKind::Ref:
@@ -382,6 +391,12 @@ inline TypeKind linearizedToType(int i)
 
 
 """ + defines + """
+#define FOR_EACH_WASM_EXT_PREFIX_OP_WITH_ENUM(macro) \\
+    macro(ExtGC, 0xFB, Oops, 0, ExtGCOpType) \\
+    macro(Ext1, 0xFC, Oops, 0, Ext1OpType) \\
+    macro(ExtSIMD, 0xFD, Oops, 0, ExtSIMDOpType) \\
+    macro(ExtAtomic, 0xFE, Oops, 0, ExtAtomicOpType)
+
 #define FOR_EACH_WASM_OP(macro) \\
     FOR_EACH_WASM_SPECIAL_OP(macro) \\
     FOR_EACH_WASM_CONTROL_FLOW_OP(macro) \\
@@ -389,10 +404,7 @@ inline TypeKind linearizedToType(int i)
     FOR_EACH_WASM_BINARY_OP(macro) \\
     FOR_EACH_WASM_MEMORY_LOAD_OP(macro) \\
     FOR_EACH_WASM_MEMORY_STORE_OP(macro) \\
-    macro(ExtGC,  0xFB, Oops, 0) \\
-    macro(Ext1,  0xFC, Oops, 0) \\
-    macro(ExtSIMD, 0xFD, Oops, 0) \\
-    macro(ExtAtomic, 0xFE, Oops, 0)
+    FOR_EACH_WASM_EXT_PREFIX_OP_WITH_ENUM(macro)
 
 #define CREATE_ENUM_VALUE(name, id, ...) name = id,
 
@@ -457,11 +469,11 @@ inline bool isControlOp(OpType op)
     return false;
 }
 
-inline bool isSimple(UnaryOpType op)
+inline bool isControlFlowInstruction(OpType op)
 {
     switch (op) {
-#define CREATE_CASE(name, ...) case UnaryOpType::name:
-    FOR_EACH_WASM_SIMPLE_UNARY_OP(CREATE_CASE)
+#define CREATE_CASE(name, ...) case OpType::name:
+    FOR_EACH_WASM_CONTROL_FLOW_OP(CREATE_CASE)
         return true;
 #undef CREATE_CASE
     default:
@@ -470,16 +482,19 @@ inline bool isSimple(UnaryOpType op)
     return false;
 }
 
-inline bool isSimple(BinaryOpType op)
+// Enhanced version that includes ExtGC branch operations
+// This function requires access to the current extended opcode for ExtGC operations
+template<typename ExtendedOpcodeProvider>
+inline bool isControlFlowInstructionWithExtGC(OpType op, ExtendedOpcodeProvider&& getExtendedOpcode)
 {
-    switch (op) {
-#define CREATE_CASE(name, ...) case BinaryOpType::name:
-    FOR_EACH_WASM_SIMPLE_BINARY_OP(CREATE_CASE)
+    if (isControlFlowInstruction(op))
         return true;
-#undef CREATE_CASE
-    default:
-        break;
+
+    if (op == OpType::ExtGC) {
+        uint32_t extOp = getExtendedOpcode();
+        return extOp == static_cast<uint32_t>(ExtGCOpType::BrOnCast) || extOp == static_cast<uint32_t>(ExtGCOpType::BrOnCastFail);
     }
+
     return false;
 }
 
@@ -576,6 +591,8 @@ inline void printInternal(PrintStream& out, JSC::Wasm::ExtAtomicOpType op)
 } // namespace WTF
 
 #endif // ENABLE(WEBASSEMBLY)
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 """
 

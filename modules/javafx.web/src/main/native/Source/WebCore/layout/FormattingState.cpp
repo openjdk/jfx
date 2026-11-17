@@ -33,7 +33,7 @@
 namespace WebCore {
 namespace Layout {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(FormattingState);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FormattingState);
 
 FormattingState::FormattingState(Type type, LayoutState& layoutState)
     : m_layoutState(layoutState)
@@ -48,7 +48,7 @@ FormattingState::~FormattingState()
 BoxGeometry& FormattingState::boxGeometry(const Box& layoutBox)
 {
     // FIXME: Remove this when all FormattingStates transtioned to a cache setup.
-    return layoutState().ensureGeometryForBox(layoutBox);
+    return m_layoutState->ensureGeometryForBox(layoutBox);
 }
 
 }

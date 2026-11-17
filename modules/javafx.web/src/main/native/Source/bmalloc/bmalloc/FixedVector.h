@@ -25,6 +25,8 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
 #include "BAssert.h"
 #include <array>
 #include <cstddef>
@@ -115,3 +117,5 @@ inline void FixedVector<T, Capacity>::shrink(T* end)
 } // namespace bmalloc
 
 #endif
+
+#endif // __cplusplus

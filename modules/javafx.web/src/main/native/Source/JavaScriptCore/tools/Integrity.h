@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <JavaScriptCore/JSExportMacros.h>
 #include <wtf/AccessibleAddress.h>
 #include <wtf/Assertions.h>
 #include <wtf/Lock.h>
@@ -97,7 +98,11 @@ private:
 
 ALWAYS_INLINE static bool isSanePointer(const void* pointer)
 {
-    uintptr_t pointerAsInt = bitwise_cast<uintptr_t>(pointer);
+    uintptr_t pointerAsInt = std::bit_cast<uintptr_t>(pointer);
+#if CPU(ARM64) && CPU(ADDRESS64)
+    // On ARM64, top byte ignore means we can ignore these bits for addresses.
+    pointerAsInt &= std::numeric_limits<uintptr_t>::max() >> CHAR_BIT;
+#endif
     if (pointerAsInt < lowestAccessibleAddress())
         return false;
 #if CPU(ADDRESS64)
@@ -170,7 +175,7 @@ ALWAYS_INLINE void auditCell(VM&, JSValue);
 ALWAYS_INLINE void auditStructureID(StructureID);
 
 #if ENABLE(EXTRA_INTEGRITY_CHECKS) && USE(JSVALUE64)
-template<typename T> ALWAYS_INLINE T audit(T value) { return bitwise_cast<T>(doAudit(value)); }
+template<typename T> ALWAYS_INLINE T audit(T value) { return std::bit_cast<T>(doAudit(value)); }
 #else
 template<typename T> ALWAYS_INLINE T audit(T value) { return value; }
 #endif
@@ -182,7 +187,7 @@ template<typename T> ALWAYS_INLINE T audit(T value) { return value; }
     } while (false)
 
 #define IA_ASSERT_WITH_ACTION(assertion, action, ...) do { \
-        if (UNLIKELY(!(assertion))) { \
+        if (!(assertion)) [[unlikely]] { \
             IA_LOG(assertion, __VA_ARGS__); \
             WTFReportBacktraceWithPrefixAndPrintStream(Integrity::logFile(), "    "); \
             action; \
@@ -202,7 +207,7 @@ template<typename T> ALWAYS_INLINE T audit(T value) { return value; }
     } while (false)
 
 #define IA_ASSERT_WITH_ACTION(assertion, action, ...) do { \
-        if (UNLIKELY(!(assertion))) { \
+        if (!(assertion)) [[unlikely]] { \
             IA_LOG(assertion, __VA_ARGS__); \
             WTFReportBacktraceWithPrefixAndPrintStream(Integrity::logFile(), "    "); \
             action; \

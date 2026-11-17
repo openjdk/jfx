@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "FetchIdentifier.h"
-#include "ResourceResponse.h"
-#include "ScriptExecutionContextIdentifier.h"
-#include "ServiceWorkerTypes.h"
+#include <WebCore/FetchIdentifier.h>
+#include <WebCore/ResourceResponse.h>
+#include <WebCore/ScriptExecutionContextIdentifier.h>
+#include <WebCore/ServiceWorkerTypes.h>
 #include <wtf/Ref.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
@@ -45,12 +45,12 @@ class ServiceWorkerGlobalScope;
 class SharedBuffer;
 
 namespace ServiceWorkerFetch {
-class Client : public ThreadSafeRefCounted<Client, WTF::DestructionThread::Main> {
+class Client : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<Client, WTF::DestructionThread::Main> {
 public:
     virtual ~Client() = default;
 
     virtual void didReceiveRedirection(const ResourceResponse&) = 0;
-    virtual void didReceiveResponse(const ResourceResponse&) = 0;
+    virtual void didReceiveResponse(ResourceResponse&&) = 0;
     virtual void didReceiveData(const SharedBuffer&) = 0;
     virtual void didReceiveFormDataAndFinish(Ref<FormData>&&) = 0;
     virtual void didFail(const ResourceError&) = 0;

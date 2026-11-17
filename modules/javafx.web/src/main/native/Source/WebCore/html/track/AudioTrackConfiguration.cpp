@@ -29,8 +29,11 @@
 #if ENABLE(VIDEO)
 
 #include <wtf/JSONValues.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(AudioTrackConfiguration);
 
 Ref<JSON::Object> AudioTrackConfiguration::toJSON() const
 {
@@ -39,6 +42,7 @@ Ref<JSON::Object> AudioTrackConfiguration::toJSON() const
     json->setInteger("sampleRate"_s, sampleRate());
     json->setInteger("numberOfChannels"_s, numberOfChannels());
     json->setInteger("bitrate"_s, bitrate());
+    json->setBoolean("isProtected"_s, isProtected());
     return json;
 }
 

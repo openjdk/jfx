@@ -42,7 +42,6 @@ C_SOURCES = \
         ghostutils.c \
         giochannel.c \
         giowin32.c \
-        gkeyfile.c \
         glib-init.c \
         glib-private.c \
         glist.c \
@@ -91,7 +90,6 @@ C_SOURCES = \
         gunibreak.c \
         gunicollate.c \
         gunidecomp.c \
-        guniprop.c \
         guri.c \
         gutf8.c \
         gutils.c \
@@ -118,6 +116,7 @@ INCLUDES = $(addprefix -I$(SRCBASE_DIR)/glib/,$(DIRLIST)) \
 
 CFLAGS =   -DWIN32 \
            -D_WINDOWS \
+           -D_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR \
            -D_USRDLL \
            -DGLIB_COMPILATION \
            -DGSTREAMER_LITE \
@@ -144,9 +143,9 @@ CFLAGS =   -DWIN32 \
 LIBFLAGS = -out:$(shell cygpath -ma $(TARGET)) -nologo
 
 ifeq ($(BUILD_TYPE), Release)
-    CFLAGS += -DNDEBUG -DG_DISABLE_ASSERT -DG_DISABLE_CHECKS -O1 -Oy -MD -Gy -GF
+    CFLAGS += -DNDEBUG -DG_DISABLE_ASSERT -O1 -Oy -MD -Gy -GF
 else # debug
-    CFLAGS += -D_DEBUG -DG_DISABLE_ASSERT -DG_DISABLE_CHECKS -Od -Oy- -RTC1 -MDd -Zi -Fd$(PDB)
+    CFLAGS += -D_DEBUG -DG_DISABLE_ASSERT -Od -Oy- -RTC1 -MDd -Zi -Fd$(PDB)
     LIBFLAGS +=  -libpath:strmiids.lib
 endif
 

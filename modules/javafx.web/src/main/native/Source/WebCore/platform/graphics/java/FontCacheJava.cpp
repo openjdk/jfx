@@ -47,8 +47,7 @@ Ref<Font> FontCache::lastResortFallbackFont(const FontDescription& fontDescripti
 {
     // We want to return a fallback font here, otherwise the logic preventing FontConfig
     // matches for non-fallback fonts might return 0. See isFallbackFontAllowed.
-    static AtomString timesStr("serif"_s);
-    return *fontForFamily(fontDescription, timesStr);
+    return *fontForFamily(fontDescription, AtomString { "serif"_s });
 }
 
 Vector<String> FontCache::systemFontFamilies()
@@ -64,7 +63,7 @@ bool FontCache::isSystemFontForbiddenForEditing(const String&)
     return false;
 }
 
-std::optional<ASCIILiteral> FontCache::platformAlternateFamilyName(const String&)
+ASCIILiteral FontCache::platformAlternateFamilyName(const String&)
 {
     notImplemented();
     return { };
@@ -87,4 +86,3 @@ RefPtr<Font> FontCache::systemFallbackForCharacterCluster(const FontDescription&
     return nullptr;
 }
 }
-

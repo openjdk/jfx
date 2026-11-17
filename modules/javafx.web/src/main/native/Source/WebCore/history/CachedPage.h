@@ -25,19 +25,22 @@
 
 #pragma once
 
-#include "CachedFrame.h"
+#include <WebCore/CachedFrame.h>
 #include <wtf/CheckedRef.h>
 #include <wtf/MonotonicTime.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakRef.h>
 
 namespace WebCore {
 
+class BackForwardController;
 class Document;
 class DocumentLoader;
 class Page;
+class RegistrableDomain;
 
 class CachedPage final : public CanMakeCheckedPtr<CachedPage> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(CachedPage, WEBCORE_EXPORT);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(CachedPage);
 public:
     explicit CachedPage(Page&);
@@ -47,13 +50,14 @@ public:
     void clear();
 
     Page& page() const { return m_page.get(); }
+    Ref<Page> protectedPage() const { return page(); }
     Document* document() const { return m_cachedMainFrame->document(); }
     DocumentLoader* documentLoader() const { return m_cachedMainFrame->documentLoader(); }
     RefPtr<DocumentLoader> protectedDocumentLoader() const;
 
     bool hasExpired() const;
 
-    CachedFrame* cachedMainFrame() { return m_cachedMainFrame.get(); }
+    CachedFrame* cachedMainFrame() const { return m_cachedMainFrame.get(); }
 
 #if ENABLE(VIDEO)
     void markForCaptionPreferencesChanged() { m_needsCaptionPreferencesChanged = true; }
@@ -64,6 +68,8 @@ public:
     void markForContentsSizeChanged() { m_needsUpdateContentsSize = true; }
 
 private:
+    void restoreNavigationAPIHistoryItems(LocalFrame&, BackForwardController*);
+
     WeakRef<Page> m_page;
     MonotonicTime m_expirationTime;
     std::unique_ptr<CachedFrame> m_cachedMainFrame;

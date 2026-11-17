@@ -28,29 +28,30 @@
 #include <functional>
 #include <wtf/Deque.h>
 #include <wtf/Forward.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 class SharedBuffer;
 
 class KeyedDecoder {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(KeyedDecoder);
 public:
     WEBCORE_EXPORT static std::unique_ptr<KeyedDecoder> decoder(std::span<const uint8_t> data);
 
     virtual ~KeyedDecoder() = default;
 
-    virtual WARN_UNUSED_RETURN bool decodeBytes(const String& key, std::span<const uint8_t>&) = 0;
-    virtual WARN_UNUSED_RETURN bool decodeBool(const String& key, bool&) = 0;
-    virtual WARN_UNUSED_RETURN bool decodeUInt32(const String& key, uint32_t&) = 0;
-    virtual WARN_UNUSED_RETURN bool decodeUInt64(const String& key, uint64_t&) = 0;
-    virtual WARN_UNUSED_RETURN bool decodeInt32(const String& key, int32_t&) = 0;
-    virtual WARN_UNUSED_RETURN bool decodeInt64(const String& key, int64_t&) = 0;
-    virtual WARN_UNUSED_RETURN bool decodeFloat(const String& key, float&) = 0;
-    virtual WARN_UNUSED_RETURN bool decodeDouble(const String& key, double&) = 0;
-    virtual WARN_UNUSED_RETURN bool decodeString(const String& key, String&) = 0;
+    [[nodiscard]] virtual bool decodeBytes(const String& key, std::span<const uint8_t>&) = 0;
+    [[nodiscard]] virtual bool decodeBool(const String& key, bool&) = 0;
+    [[nodiscard]] virtual bool decodeUInt32(const String& key, uint32_t&) = 0;
+    [[nodiscard]] virtual bool decodeUInt64(const String& key, uint64_t&) = 0;
+    [[nodiscard]] virtual bool decodeInt32(const String& key, int32_t&) = 0;
+    [[nodiscard]] virtual bool decodeInt64(const String& key, int64_t&) = 0;
+    [[nodiscard]] virtual bool decodeFloat(const String& key, float&) = 0;
+    [[nodiscard]] virtual bool decodeDouble(const String& key, double&) = 0;
+    [[nodiscard]] virtual bool decodeString(const String& key, String&) = 0;
 
-    template<typename T> WARN_UNUSED_RETURN
+    template<typename T> [[nodiscard]]
     bool decodeBytes(const String& key, Vector<T>& vector)
     {
         static_assert(sizeof(T) == 1);
@@ -63,7 +64,7 @@ public:
         return true;
     }
 
-    template<typename T, typename F> WARN_UNUSED_RETURN
+    template<typename T, typename F> [[nodiscard]]
     bool decodeEnum(const String& key, T& value, F&& isValidEnumFunction)
     {
         static_assert(std::is_enum<T>::value, "T must be an enum type");
@@ -79,7 +80,7 @@ public:
         return true;
     }
 
-    template<typename T, typename F> WARN_UNUSED_RETURN
+    template<typename T, typename F> [[nodiscard]]
     bool decodeObject(const String& key, T& object, F&& function)
     {
         if (!beginObject(key))
@@ -89,7 +90,7 @@ public:
         return result;
     }
 
-    template<typename T, typename F> WARN_UNUSED_RETURN
+    template<typename T, typename F> [[nodiscard]]
     bool decodeConditionalObject(const String& key, T& object, F&& function)
     {
         // FIXME: beginObject can return false for two reasons: either the
@@ -104,7 +105,7 @@ public:
         return result;
     }
 
-    template<typename ContainerType, typename F> WARN_UNUSED_RETURN
+    template<typename ContainerType, typename F> [[nodiscard]]
     bool decodeObjects(const String& key, ContainerType& objects, F&& function)
     {
         if (!beginArray(key))
@@ -118,7 +119,7 @@ public:
                 endArrayElement();
                 break;
             }
-            objects.append(WTFMove(element));
+            objects.append(WTF::move(element));
             endArrayElement();
         }
 
@@ -142,7 +143,7 @@ private:
 };
 
 class KeyedEncoder {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(KeyedEncoder);
 public:
     WEBCORE_EXPORT static std::unique_ptr<KeyedEncoder> encoder();
 
@@ -185,13 +186,13 @@ public:
         encodeObject(key, *object, std::forward<F>(function));
     }
 
-    template<typename T, typename F>
-    void encodeObjects(const String& key, T begin, T end, F&& function)
+    template<typename CollectionType, typename F>
+    void encodeObjects(const String& key, const CollectionType& collection, F&& function)
     {
         beginArray(key);
-        for (T it = begin; it != end; ++it) {
+        for (auto& item : collection) {
             beginArrayElement();
-            function(*this, *it);
+            function(*this, item);
             endArrayElement();
         }
         endArray();

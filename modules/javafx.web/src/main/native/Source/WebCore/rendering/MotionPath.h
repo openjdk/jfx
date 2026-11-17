@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "FloatRoundedRect.h"
-#include "RenderLayerModelObject.h"
+#include <WebCore/FloatRoundedRect.h>
+#include <WebCore/RenderLayerModelObject.h>
 
 namespace WebCore {
 
@@ -47,14 +47,13 @@ struct MotionPathData {
 class MotionPath {
 public:
     static std::optional<MotionPathData> motionPathDataForRenderer(const RenderElement&);
-    static bool needsUpdateAfterContainingBlockLayout(const PathOperation&);
-    static void applyMotionPathTransform(TransformationMatrix&, const TransformOperationData&, const FloatPoint& transformOrigin, const PathOperation&, const LengthPoint& offsetAnchor, const Length& offsetDistance, const OffsetRotation&, TransformBox);
-    static void applyMotionPathTransform(const RenderStyle&, const TransformOperationData&, TransformationMatrix&);
-    WEBCORE_EXPORT static std::optional<Path> computePathForBox(const BoxPathOperation&, const TransformOperationData&);
+    static bool needsUpdateAfterContainingBlockLayout(const Style::OffsetPath&);
+
+    static void applyMotionPathTransform(TransformationMatrix&, const TransformOperationData&, FloatPoint transformOrigin, TransformBox, const Path&, std::optional<FloatPoint> offsetAnchor, float offsetDistance, float offsetRotate, bool offsetRotateHasAuto);
+
+    static std::optional<Path> computePathForBox(const BoxPathOperation&, const TransformOperationData&);
+    static std::optional<Path> computePathForShape(const ShapePathOperation&, const TransformOperationData&);
     static std::optional<Path> computePathForRay(const RayPathOperation&, const TransformOperationData&);
-    static double lengthForRayPath(const RayPathOperation&, const MotionPathData&);
-    static double lengthForRayContainPath(const FloatRect& elementRect, double computedPathLength);
-    WEBCORE_EXPORT static std::optional<Path> computePathForShape(const ShapePathOperation&, const TransformOperationData&);
 };
 
 } // namespace WebCore

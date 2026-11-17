@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1825,8 +1825,9 @@ public abstract class PrismFontFactory implements FontFactory {
                 try {
                     int screenDPI = Screen.getMainScreen().getResolutionY();
                     systemFontSize = screenDPI / 6f; // 12 points
-                } catch (NullPointerException npe) {
-                    // if no screen is defined
+                } catch (RuntimeException e) {
+                    // if no screen is defined or screens are not initialized,
+                    // this can throw a RuntimeException or NoSuchElementException
                     systemFontSize = 13f; // same as desktop Linux
                 }
             } else {

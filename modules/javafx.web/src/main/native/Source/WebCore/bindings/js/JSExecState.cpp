@@ -27,15 +27,20 @@
 #include "JSExecState.h"
 
 #include "EventLoop.h"
+#include "JSDOMExceptionHandling.h"
+#include "Microtasks.h"
 #include "RejectedPromiseTracker.h"
 #include "ScriptExecutionContext.h"
 #include "WorkerGlobalScope.h"
+#include <JavaScriptCore/ScriptProfilingScope.h>
+#include <JavaScriptCore/VMEntryScopeInlines.h>
+#include <JavaScriptCore/VMTrapsInlines.h>
 
 namespace WebCore {
 
 void JSExecState::didLeaveScriptContext(JSC::JSGlobalObject* lexicalGlobalObject)
 {
-    auto context = executionContext(lexicalGlobalObject);
+    RefPtr context = executionContext(lexicalGlobalObject);
     if (!context)
         return;
     context->eventLoop().performMicrotaskCheckpoint();
@@ -51,11 +56,33 @@ JSC::JSValue evaluateHandlerFromAnyThread(JSC::JSGlobalObject* lexicalGlobalObje
     return JSExecState::evaluate(lexicalGlobalObject, source, thisValue, returnedException);
 }
 
+void JSExecState::runTask(JSC::JSGlobalObject* globalObject, JSC::QueuedTask& task)
+{
+    JSC::VM& vm = globalObject->vm();
+    JSExecState currentState(globalObject);
+    JSC::VMEntryScope entryScope(vm, globalObject);
+    MicrotaskQueue::runJSMicrotask(globalObject, vm, task);
+}
+
+void JSExecState::runTaskWithDebugger(JSC::JSGlobalObject* globalObject, JSC::QueuedTask& task)
+{
+    JSC::VM& vm = globalObject->vm();
+    JSExecState currentState(globalObject);
+    JSC::VMEntryScope entryScope(vm, globalObject);
+    JSC::ScriptProfilingScope profilingScope(globalObject, JSC::ProfilingReason::Microtask);
+    MicrotaskQueue::runJSMicrotaskWithDebugger(globalObject, vm, task);
+}
+
 ScriptExecutionContext* executionContext(JSC::JSGlobalObject* globalObject)
 {
     if (!globalObject || !globalObject->inherits<JSDOMGlobalObject>())
         return nullptr;
     return JSC::jsCast<JSDOMGlobalObject*>(globalObject)->scriptExecutionContext();
+}
+
+RefPtr<ScriptExecutionContext> protectedExecutionContext(JSC::JSGlobalObject* globalObject)
+{
+    return executionContext(globalObject);
 }
 
 } // namespace WebCore

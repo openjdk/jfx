@@ -699,6 +699,7 @@ safe_fdwalk (int (*cb)(void *data, int fd), void *data)
  * fcntl(fd, F_PREVFD)
  * - return highest allocated file descriptor < fd.
  */
+  gint open_max;
   gint fd;
   gint res = 0;
 

@@ -38,6 +38,8 @@
 #include <wtf/DataLog.h>
 #endif
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 const unsigned opcodeLengths[] = {
@@ -49,18 +51,6 @@ const unsigned opcodeLengths[] = {
 const ASCIILiteral opcodeNames[] = {
 #define OPCODE_NAME_ENTRY(opcode, size) #opcode ## _s,
     FOR_EACH_OPCODE_ID(OPCODE_NAME_ENTRY)
-#undef OPCODE_NAME_ENTRY
-};
-
-const unsigned wasmOpcodeLengths[] = {
-#define OPCODE_LENGTH(opcode, length) length,
-    FOR_EACH_WASM_ID(OPCODE_LENGTH)
-#undef OPCODE_LENGTH
-};
-
-const char* const wasmOpcodeNames[] = {
-#define OPCODE_NAME_ENTRY(opcode, size) #opcode,
-    FOR_EACH_WASM_ID(OPCODE_NAME_ENTRY)
 #undef OPCODE_NAME_ENTRY
 };
 
@@ -253,3 +243,5 @@ void printInternal(PrintStream& out, OpcodeID opcode)
 }
 
 } // namespace WTF
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

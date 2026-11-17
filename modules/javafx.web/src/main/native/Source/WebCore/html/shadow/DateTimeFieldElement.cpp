@@ -27,16 +27,15 @@
 #include "config.h"
 #include "DateTimeFieldElement.h"
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
-
 #include "CSSPropertyNames.h"
 #include "DateComponents.h"
 #include "EventNames.h"
 #include "HTMLNames.h"
 #include "KeyboardEvent.h"
 #include "LocalizedStrings.h"
+#include "NodeDocument.h"
 #include "PlatformLocale.h"
-#include "RenderStyle.h"
+#include "RenderStyle+SettersInlines.h"
 #include "RenderTheme.h"
 #include "ResolvedStyle.h"
 #include "StyleResolver.h"
@@ -48,7 +47,7 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(DateTimeFieldElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DateTimeFieldElement);
 
 DateTimeFieldElementFieldOwner::~DateTimeFieldElementFieldOwner() = default;
 
@@ -58,16 +57,17 @@ DateTimeFieldElement::DateTimeFieldElement(Document& document, DateTimeFieldElem
 {
 }
 
-std::optional<Style::ResolvedStyle> DateTimeFieldElement::resolveCustomStyle(const Style::ResolutionContext& resolutionContext, const RenderStyle* shadowHostStyle)
+std::optional<Style::UnadjustedStyle> DateTimeFieldElement::resolveCustomStyle(const Style::ResolutionContext& resolutionContext, const RenderStyle* shadowHostStyle)
 {
     auto elementStyle = resolveStyle(resolutionContext);
 
-    adjustMinInlineSize(*elementStyle.style);
+    CheckedRef elementStyleStyle = *elementStyle.style;
+    adjustMinInlineSize(elementStyleStyle.get());
 
     if (!hasValue() && shadowHostStyle) {
-        auto textColor = shadowHostStyle->visitedDependentColorWithColorFilter(CSSPropertyColor);
-        auto backgroundColor = shadowHostStyle->visitedDependentColorWithColorFilter(CSSPropertyBackgroundColor);
-        elementStyle.style->setColor(RenderTheme::singleton().datePlaceholderTextColor(textColor, backgroundColor));
+        auto textColor = shadowHostStyle->visitedDependentColorApplyingColorFilter();
+        auto backgroundColor = shadowHostStyle->visitedDependentBackgroundColorApplyingColorFilter();
+        elementStyleStyle->setColor(RenderTheme::singleton().datePlaceholderTextColor(textColor, backgroundColor));
     }
 
     return elementStyle;
@@ -176,7 +176,7 @@ void DateTimeFieldElement::handleBlurEvent(Event& event)
 
 Locale& DateTimeFieldElement::localeForOwner() const
 {
-    return document().getCachedLocale(localeIdentifier());
+    return protectedDocument()->getCachedLocale(localeIdentifier());
 }
 
 AtomString DateTimeFieldElement::localeIdentifier() const
@@ -186,13 +186,15 @@ AtomString DateTimeFieldElement::localeIdentifier() const
 
 String DateTimeFieldElement::visibleValue() const
 {
-    return hasValue() ? value() : placeholderValue();
+    if (hasValue())
+        return value();
+    return placeholderValue();
 }
 
 void DateTimeFieldElement::updateVisibleValue(EventBehavior eventBehavior)
 {
     if (!firstChild())
-        appendChild(Text::create(document(), String { emptyString() }));
+        appendChild(Text::create(protectedDocument().get(), String { emptyString() }));
 
     Ref textNode = downcast<Text>(*firstChild());
     String newVisibleValue = visibleValue();
@@ -208,6 +210,15 @@ bool DateTimeFieldElement::supportsFocus() const
     return true;
 }
 
-} // namespace WebCore
+bool DateTimeFieldElement::transferredFocusToPicker() const
+{
+    return m_fieldOwner && m_fieldOwner->didFieldOwnerTransferFocusToPicker();
+}
 
-#endif // ENABLE(DATE_AND_TIME_INPUT_TYPES)
+void DateTimeFieldElement::didSuppressBlurDueToPickerFocusTransfer()
+{
+    if (m_fieldOwner)
+        m_fieldOwner->didSuppressBlurDueToPickerFocusTransfer();
+}
+
+} // namespace WebCore

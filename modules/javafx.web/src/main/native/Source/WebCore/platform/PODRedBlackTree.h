@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
- * Copyright (C) 2019-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -92,7 +92,7 @@ public:
 
     void add(T&& data)
     {
-        insertNode(new Node(WTFMove(data)));
+        insertNode(new Node(WTF::move(data)));
     }
 
     // Returns true if the datum was found in the tree.
@@ -144,11 +144,11 @@ protected:
     enum Color { Red, Black };
 
     class Node {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_MAKE_TZONE_ALLOCATED_TEMPLATE(Node);
         WTF_MAKE_NONCOPYABLE(Node);
     public:
         explicit Node(T&& data)
-            : m_data(WTFMove(data))
+            : m_data(WTF::move(data))
         {
         }
 
@@ -157,7 +157,7 @@ protected:
 
         T& data() { return m_data; }
 
-        void moveDataFrom(Node& src) { m_data = WTFMove(src.m_data); }
+        void moveDataFrom(Node& src) { m_data = WTF::move(src.m_data); }
 
         Node* left() const { return m_left; }
         void setLeft(Node* node) { m_left = node; }
@@ -631,5 +631,13 @@ private:
     bool m_verboseDebugging { false };
 #endif
 };
+
+#define TZONE_TEMPLATE_PARAMS template<typename T, typename NodeUpdaterType>
+#define TZONE_TYPE PODRedBlackTree<T, NodeUpdaterType>::Node
+
+WTF_MAKE_TZONE_ALLOCATED_TEMPLATE_IMPL_WITH_MULTIPLE_OR_SPECIALIZED_PARAMETERS();
+
+#undef TZONE_TEMPLATE_PARAMS
+#undef TZONE_TYPE
 
 } // namespace WebCore

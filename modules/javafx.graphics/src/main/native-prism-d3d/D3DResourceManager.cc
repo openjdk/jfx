@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -557,6 +557,7 @@ D3DResourceManager::CreateSwapChain(HWND hWnd, UINT numBuffers,
     newParams.Windowed = TRUE;
     newParams.BackBufferCount = numBuffers;
     newParams.SwapEffect = swapEffect;
+    newParams.BackBufferFormat = D3DFMT_A8R8G8B8;
     newParams.PresentationInterval = presentationInterval;
 
     IDirect3DSwapChain9 *pSwapChain = NULL;

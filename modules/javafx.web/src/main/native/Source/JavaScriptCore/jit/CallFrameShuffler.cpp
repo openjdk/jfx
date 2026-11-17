@@ -87,6 +87,7 @@ CallFrameShuffler::CallFrameShuffler(CCallHelpers& jit, const CallFrameShuffleDa
 #endif
 }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 void CallFrameShuffler::dump(PrintStream& out) const
 {
     static const char* delimiter             = " +-------------------------------+ ";
@@ -222,6 +223,7 @@ void CallFrameShuffler::dump(PrintStream& out) const
         out.print("   NumberTag is currently in ", m_numberTagRegister, "\n");
 #endif
 }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 CachedRecovery* CallFrameShuffler::getCachedRecovery(ValueRecovery recovery)
 {
@@ -588,7 +590,7 @@ bool CallFrameShuffler::performSafeWrites()
                 if (!tryWrites(*cachedRecovery))
                     stillFailing.append(failed);
             }
-            failures = WTFMove(stillFailing);
+            failures = WTF::move(stillFailing);
         }
         if (verbose && firstSafe != dangerFrontier() + 1)
             dataLog("  We freed up danger slots!\n");

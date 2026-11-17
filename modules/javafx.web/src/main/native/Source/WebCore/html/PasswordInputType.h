@@ -31,10 +31,13 @@
 #pragma once
 
 #include "BaseTextInputType.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class PasswordInputType final : public BaseTextInputType {
+    WTF_MAKE_TZONE_ALLOCATED(PasswordInputType);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(PasswordInputType);
 public:
     static Ref<PasswordInputType> create(HTMLInputElement& element)
     {

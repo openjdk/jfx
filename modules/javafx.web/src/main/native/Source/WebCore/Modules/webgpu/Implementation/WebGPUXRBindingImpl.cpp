@@ -37,7 +37,7 @@
 namespace WebCore::WebGPU {
 
 XRBindingImpl::XRBindingImpl(WebGPUPtr<WGPUXRBinding>&& binding, ConvertToBackingContext& convertToBackingContext)
-    : m_backing(WTFMove(binding))
+    : m_backing(WTF::move(binding))
     , m_convertToBackingContext(convertToBackingContext)
 {
 }
@@ -46,12 +46,14 @@ XRBindingImpl::~XRBindingImpl() = default;
 
 RefPtr<XRProjectionLayer> XRBindingImpl::createProjectionLayer(const XRProjectionLayerInit& init)
 {
-    WGPUTextureFormat colorFormat = m_convertToBackingContext->convertToBacking(init.colorFormat);
+    Ref convertToBackingContext = m_convertToBackingContext;
+
+    WGPUTextureFormat colorFormat = convertToBackingContext->convertToBacking(init.colorFormat);
     WGPUTextureFormat optionalDepthStencilFormat;
     if (init.depthStencilFormat)
-        optionalDepthStencilFormat = m_convertToBackingContext->convertToBacking(*init.depthStencilFormat);
-    WGPUTextureUsageFlags flags = m_convertToBackingContext->convertTextureUsageFlagsToBacking(init.textureUsage);
-    return XRProjectionLayerImpl::create(adoptWebGPU(wgpuBindingCreateXRProjectionLayer(m_backing.get(), colorFormat, init.depthStencilFormat ? &optionalDepthStencilFormat : nullptr, flags, init.scaleFactor)), m_convertToBackingContext);
+        optionalDepthStencilFormat = convertToBackingContext->convertToBacking(*init.depthStencilFormat);
+    WGPUTextureUsageFlags flags = convertToBackingContext->convertTextureUsageFlagsToBacking(init.textureUsage);
+    return XRProjectionLayerImpl::create(adoptWebGPU(wgpuBindingCreateXRProjectionLayer(m_backing.get(), colorFormat, init.depthStencilFormat ? &optionalDepthStencilFormat : nullptr, flags, init.scaleFactor)), convertToBackingContext);
 }
 
 RefPtr<XRSubImage> XRBindingImpl::getSubImage(XRProjectionLayer&, WebCore::WebXRFrame&, std::optional<XREye>/* = "none"*/)
@@ -60,10 +62,10 @@ RefPtr<XRSubImage> XRBindingImpl::getSubImage(XRProjectionLayer&, WebCore::WebXR
     return nullptr;
 }
 
-RefPtr<XRSubImage> XRBindingImpl::getViewSubImage(XRProjectionLayer& projectionLayer, XREye eye)
+RefPtr<XRSubImage> XRBindingImpl::getViewSubImage(XRProjectionLayer& projectionLayer)
 {
-    UNUSED_PARAM(projectionLayer);
-    return XRSubImageImpl::create(adoptWebGPU(wgpuBindingGetViewSubImage(m_backing.get(), m_convertToBackingContext->convertToBacking(eye))), m_convertToBackingContext);
+    auto& projectionLayerImpl = downcast<XRProjectionLayerImpl>(projectionLayer);
+    return XRSubImageImpl::create(adoptWebGPU(wgpuBindingGetViewSubImage(m_backing.get(), projectionLayerImpl.backing())), Ref { m_convertToBackingContext });
 }
 
 TextureFormat XRBindingImpl::getPreferredColorFormat()

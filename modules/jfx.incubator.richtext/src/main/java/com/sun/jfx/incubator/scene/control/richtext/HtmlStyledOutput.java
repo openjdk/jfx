@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,7 +47,7 @@ import jfx.incubator.scene.control.richtext.model.StyledSegment;
 // TODO should we size down font on windows?
 public class HtmlStyledOutput implements StyledOutput {
     // a synthetic attribute used only in Key
-    private static final StyleAttribute<Key> SS_AND_UNDERLINE = new StyleAttribute<>("SS_AND_UNDERLINE", Key.class, false);
+    private static final StyleAttribute<Key> SS_AND_UNDERLINE = StyleAttribute.character("SS_AND_UNDERLINE", Key.class);
     private final StyleResolver resolver;
     private final Writer wr;
     private final boolean inlineStyles;

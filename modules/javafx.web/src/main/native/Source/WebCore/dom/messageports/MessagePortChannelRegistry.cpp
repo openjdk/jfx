@@ -29,8 +29,11 @@
 #include "Logging.h"
 #include <wtf/CompletionHandler.h>
 #include <wtf/MainThread.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MessagePortChannelRegistry);
 
 MessagePortChannelRegistry::MessagePortChannelRegistry() = default;
 
@@ -128,7 +131,7 @@ bool MessagePortChannelRegistry::didPostMessageToRemote(MessageWithMessagePorts&
         return false;
     }
 
-    return channel->postMessageToRemote(WTFMove(message), remoteTarget);
+    return channel->postMessageToRemote(WTF::move(message), remoteTarget);
 }
 
 void MessagePortChannelRegistry::takeAllMessagesForPort(const MessagePortIdentifier& port, CompletionHandler<void(Vector<MessageWithMessagePorts>&&, CompletionHandler<void()>&&)>&& callback)
@@ -144,7 +147,7 @@ void MessagePortChannelRegistry::takeAllMessagesForPort(const MessagePortIdentif
         return;
     }
 
-    channel->takeAllMessagesForPort(port, WTFMove(callback));
+    channel->takeAllMessagesForPort(port, WTF::move(callback));
 }
 
 MessagePortChannel* MessagePortChannelRegistry::existingChannelContainingPort(const MessagePortIdentifier& port)

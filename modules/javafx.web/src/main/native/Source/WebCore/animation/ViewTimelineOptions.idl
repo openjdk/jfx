@@ -23,8 +23,12 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-dictionary ViewTimelineOptions {
+typedef (DOMString or CSSKeywordValue) CSSKeywordish;
+
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary ViewTimelineOptions {
     Element subject;
     ScrollAxis axis = "block";
-    (DOMString or sequence<(CSSNumericValue or CSSKeywordValue)>) inset = "auto";
+    (DOMString or sequence<(CSSNumericValue or CSSKeywordish)>) inset = "auto";
 };

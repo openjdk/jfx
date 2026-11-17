@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Google Inc. All Rights Reserved.
+ * Copyright (C) 2013 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,23 +28,16 @@
 #include "CachedResource.h"
 #include "CachedResourceRequest.h"
 #include "ScriptType.h"
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakRef.h>
-
-namespace WebCore {
-class HTMLResourcePreloader;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::HTMLResourcePreloader> : std::true_type { };
-}
 
 namespace WebCore {
 
 class PreloadRequest {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(PreloadRequest);
 public:
-    PreloadRequest(ASCIILiteral initiatorType, const String& resourceURL, const URL& baseURL, CachedResource::Type resourceType, const String& mediaAttribute, ScriptType scriptType, const ReferrerPolicy& referrerPolicy, RequestPriority fetchPriorityHint = RequestPriority::Auto)
+    PreloadRequest(ASCIILiteral initiatorType, const String& resourceURL, const URL& baseURL, CachedResource::Type resourceType, const String& mediaAttribute, ScriptType scriptType, const ReferrerPolicy& referrerPolicy, RequestPriority fetchPriority = RequestPriority::Auto)
         : m_initiatorType(initiatorType)
         , m_resourceURL(resourceURL)
         , m_baseURL(baseURL.isolatedCopy())
@@ -52,7 +45,7 @@ public:
         , m_mediaAttribute(mediaAttribute)
         , m_scriptType(scriptType)
         , m_referrerPolicy(referrerPolicy)
-        , m_fetchPriorityHint(fetchPriorityHint)
+        , m_fetchPriority(fetchPriority)
     {
     }
 
@@ -63,6 +56,7 @@ public:
     void setCharset(const String& charset) { m_charset = charset.isolatedCopy(); }
     void setCrossOriginMode(const String& mode) { m_crossOriginMode = mode; }
     void setNonce(const String& nonce) { m_nonceAttribute = nonce; }
+    void setIntegrity(const String& integrity) { m_integrityAttribute = integrity; }
     void setScriptIsAsync(bool value) { m_scriptIsAsync = value; }
     CachedResource::Type resourceType() const { return m_resourceType; }
 
@@ -77,29 +71,29 @@ private:
     String m_mediaAttribute;
     String m_crossOriginMode;
     String m_nonceAttribute;
+    String m_integrityAttribute;
     bool m_scriptIsAsync { false };
     ScriptType m_scriptType;
     ReferrerPolicy m_referrerPolicy;
-    RequestPriority m_fetchPriorityHint;
+    RequestPriority m_fetchPriority;
 };
 
 typedef Vector<std::unique_ptr<PreloadRequest>> PreloadRequestStream;
 
-class HTMLResourcePreloader : public CanMakeWeakPtr<HTMLResourcePreloader> {
-    WTF_MAKE_NONCOPYABLE(HTMLResourcePreloader); WTF_MAKE_FAST_ALLOCATED;
+class HTMLResourcePreloader : public RefCountedAndCanMakeWeakPtr<HTMLResourcePreloader> {
+    WTF_MAKE_TZONE_ALLOCATED(HTMLResourcePreloader);
+    WTF_MAKE_NONCOPYABLE(HTMLResourcePreloader);
 public:
-    explicit HTMLResourcePreloader(Document& document)
-        : m_document(document)
-    {
-    }
+    static Ref<HTMLResourcePreloader> create(Document&);
+    ~HTMLResourcePreloader();
 
     void preload(PreloadRequestStream);
     void preload(std::unique_ptr<PreloadRequest>);
 
 private:
-    Ref<Document> protectedDocument() const { return m_document.get(); }
+    explicit HTMLResourcePreloader(Document&);
 
-    WeakRef<Document, WeakPtrImplWithEventTargetData> m_document;
+    WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
 };
 
 } // namespace WebCore

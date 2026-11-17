@@ -27,13 +27,15 @@
 
 #if ENABLE(ASYNC_SCROLLING)
 
-#include "ScrollingTreeNode.h"
+#include <WebCore/ScrollingTreeNode.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class ScrollingTree;
 
 class ScrollingTreeFrameHostingNode : public ScrollingTreeNode {
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(ScrollingTreeFrameHostingNode, WEBCORE_EXPORT);
 public:
     WEBCORE_EXPORT static Ref<ScrollingTreeFrameHostingNode> create(ScrollingTree&, ScrollingNodeID);
     virtual ~ScrollingTreeFrameHostingNode();

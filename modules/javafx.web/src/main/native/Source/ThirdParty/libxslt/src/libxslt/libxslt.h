@@ -24,7 +24,7 @@
 #endif
 
 #if defined(_WIN32) && !defined (__MINGW32__)
-#include <win32config.h>
+#include "win32config.h"
 #else
 #include "config.h"
 #endif

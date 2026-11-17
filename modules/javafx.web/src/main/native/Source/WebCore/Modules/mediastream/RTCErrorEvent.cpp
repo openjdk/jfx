@@ -32,7 +32,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RTCErrorEvent);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RTCErrorEvent);
 
 RTCErrorEvent::RTCErrorEvent(const AtomString& type, Init&& initializer, IsTrusted isTrusted)
     : Event(EventInterfaceType::RTCErrorEvent, type, initializer, isTrusted)

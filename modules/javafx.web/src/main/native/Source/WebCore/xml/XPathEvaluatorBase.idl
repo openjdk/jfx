@@ -30,3 +30,4 @@ interface mixin XPathEvaluatorBase {
     // XPathResult.ANY_TYPE = 0
     XPathResult evaluate(DOMString expression, Node contextNode, optional XPathNSResolver? resolver, optional unsigned short type = 0, optional XPathResult? inResult);
 };
+

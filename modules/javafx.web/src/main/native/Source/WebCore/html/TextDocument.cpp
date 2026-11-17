@@ -31,9 +31,9 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(TextDocument);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TextDocument);
 
-TextDocument::TextDocument(LocalFrame* frame, const Settings& settings, const URL& url, ScriptExecutionContextIdentifier identifier)
+TextDocument::TextDocument(LocalFrame* frame, const Settings& settings, const URL& url, std::optional<ScriptExecutionContextIdentifier> identifier)
     : HTMLDocument(frame, settings, url, identifier, { DocumentClass::Text })
 {
     setCompatibilityMode(DocumentCompatibilityMode::NoQuirksMode);

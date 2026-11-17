@@ -25,24 +25,18 @@
 
 #pragma once
 
-#include "CachedResourceLoader.h"
-#include "ClientOrigin.h"
-#include "Document.h"
-#include "DocumentMarkerController.h"
-#include "DocumentParser.h"
-#include "Element.h"
-#include "ExtensionStyleSheets.h"
-#include "FocusOptions.h"
-#include "FrameDestructionObserverInlines.h"
-#include "FullscreenManager.h"
-#include "LocalDOMWindow.h"
-#include "MediaProducer.h"
-#include "NodeIterator.h"
-#include "ReportingScope.h"
-#include "SecurityOrigin.h"
-#include "TextResourceDecoder.h"
-#include "UndoManager.h"
-#include "WebCoreOpaqueRoot.h"
+#include <WebCore/ClientOrigin.h>
+#include <WebCore/Document.h>
+#include <WebCore/DocumentParser.h>
+#include <WebCore/DocumentSyncData.h>
+#include <WebCore/Element.h>
+#include <WebCore/ExtensionStyleSheets.h>
+#include <WebCore/FrameSelection.h>
+#include <WebCore/NodeIterator.h>
+#include <WebCore/ReportingScope.h>
+#include <WebCore/SecurityOrigin.h>
+#include <WebCore/TextResourceDecoder.h>
+#include <WebCore/UndoManager.h>
 
 namespace WebCore {
 
@@ -53,20 +47,14 @@ inline PAL::TextEncoding Document::textEncoding() const
     return PAL::TextEncoding();
 }
 
-inline String Document::charset() const { return Document::encoding(); }
-
-inline Quirks& Document::quirks()
+inline ASCIILiteral Document::encoding() const
 {
-    if (!m_quirks)
-        return ensureQuirks();
-    return *m_quirks;
+    return textEncoding().domName();
 }
 
-inline const Quirks& Document::quirks() const
+inline ASCIILiteral Document::charset() const
 {
-    if (!m_quirks)
-        return const_cast<Document&>(*this).ensureQuirks();
-    return *m_quirks;
+    return Document::encoding();
 }
 
 inline ExtensionStyleSheets& Document::extensionStyleSheets()
@@ -102,14 +90,14 @@ inline ScriptModuleLoader& Document::moduleLoader()
     return *m_moduleLoader;
 }
 
-CSSFontSelector& Document::fontSelector()
+inline CSSFontSelector& Document::fontSelector()
 {
     if (!m_fontSelector)
         return ensureFontSelector();
     return *m_fontSelector;
 }
 
-const CSSFontSelector& Document::fontSelector() const
+inline const CSSFontSelector& Document::fontSelector() const
 {
     if (!m_fontSelector)
         return const_cast<Document&>(*this).ensureFontSelector();
@@ -119,13 +107,6 @@ const CSSFontSelector& Document::fontSelector() const
 inline const Document* Document::templateDocument() const
 {
     return m_templateDocumentHost ? this : m_templateDocument.get();
-}
-
-inline AXObjectCache* Document::existingAXObjectCache() const
-{
-    if (!hasEverCreatedAnAXObjectCache)
-        return nullptr;
-    return existingAXObjectCacheSlow();
 }
 
 inline Ref<Document> Document::create(const Settings& settings, const URL& url)
@@ -142,82 +123,14 @@ bool Document::hasNodeIterators() const
 
 inline void Document::invalidateAccessKeyCache()
 {
-    if (UNLIKELY(m_accessKeyCache))
+    if (m_accessKeyCache) [[unlikely]]
         invalidateAccessKeyCacheSlowCase();
-}
-
-inline bool Document::isCapturing() const
-{
-    return MediaProducer::isCapturing(m_mediaState);
-}
-
-inline bool Document::hasMutationObserversOfType(MutationObserverOptionType type) const
-{
-    return m_mutationObserverTypes.containsAny(type);
 }
 
 inline ClientOrigin Document::clientOrigin() const { return { topOrigin().data(), securityOrigin().data() }; }
 
-inline bool Document::isSameOriginAsTopDocument() const { return securityOrigin().isSameOriginAs(topOrigin()); }
-
-inline bool Document::shouldMaskURLForBindings(const URL& urlToMask) const
-{
-    if (LIKELY(urlToMask.protocolIsInHTTPFamily()))
-        return false;
-    return shouldMaskURLForBindingsInternal(urlToMask);
-}
-
-inline const URL& Document::maskedURLForBindingsIfNeeded(const URL& url) const
-{
-    if (UNLIKELY(shouldMaskURLForBindings(url)))
-        return maskedURLForBindings();
-    return url;
-}
-
-// These functions are here because they require the Document class definition and we want to inline them.
-
-inline ScriptExecutionContext* Node::scriptExecutionContext() const
-{
-    return &document().contextDocument();
-}
-
-inline bool Document::hasBrowsingContext() const
-{
-    return !!frame();
-}
-
-inline WebCoreOpaqueRoot Node::opaqueRoot() const
-{
-    // FIXME: Possible race?
-    // https://bugs.webkit.org/show_bug.cgi?id=165713
-    if (isConnected())
-        return WebCoreOpaqueRoot { &document() };
-    return traverseToOpaqueRoot();
-}
 
 inline bool Document::wasLastFocusByClick() const { return m_latestFocusTrigger == FocusTrigger::Click; }
-
-inline Ref<Document> Node::protectedDocument() const
-{
-    return document();
-}
-
-inline RefPtr<LocalDOMWindow> Document::protectedWindow() const
-{
-    return m_domWindow;
-}
-
-inline CachedResourceLoader& Document::cachedResourceLoader()
-{
-    if (!m_cachedResourceLoader)
-        return ensureCachedResourceLoader();
-    return *m_cachedResourceLoader;
-}
-
-inline Ref<CachedResourceLoader> Document::protectedCachedResourceLoader() const
-{
-    return const_cast<Document&>(*this).cachedResourceLoader();
-}
 
 inline RefPtr<DocumentParser> Document::protectedParser() const
 {
@@ -263,59 +176,15 @@ inline RefPtr<Element> Document::protectedFocusedElement() const
     return m_focusedElement;
 }
 
-inline DocumentMarkerController& Document::markers()
+inline Ref<DocumentSyncData> Document::syncData()
 {
-    if (!m_markers)
-        return ensureMarkers();
-    return *m_markers;
+    return m_syncData.get();
 }
 
-inline const DocumentMarkerController& Document::markers() const
+// FIXME: Move to FrameSelectionInlines.h
+RefPtr<Document> FrameSelection::protectedDocument() const
 {
-    if (!m_markers)
-        return const_cast<Document&>(*this).ensureMarkers();
-    return *m_markers;
+    return m_document.get();
 }
-
-inline CheckedRef<DocumentMarkerController> Document::checkedMarkers()
-{
-    return markers();
-}
-
-inline CheckedRef<const DocumentMarkerController> Document::checkedMarkers() const
-{
-    return markers();
-}
-
-inline Ref<SecurityOrigin> Document::protectedSecurityOrigin() const
-{
-    return SecurityContext::protectedSecurityOrigin().releaseNonNull();
-}
-
-#if ENABLE(FULLSCREEN_API)
-inline FullscreenManager& Document::fullscreenManager()
-{
-    if (!m_fullscreenManager)
-        return ensureFullscreenManager();
-    return *m_fullscreenManager;
-}
-
-inline const FullscreenManager& Document::fullscreenManager() const
-{
-    if (!m_fullscreenManager)
-        return const_cast<Document&>(*this).ensureFullscreenManager();
-    return *m_fullscreenManager;
-}
-
-inline CheckedRef<FullscreenManager> Document::checkedFullscreenManager()
-{
-    return fullscreenManager();
-}
-
-inline CheckedRef<const FullscreenManager> Document::checkedFullscreenManager() const
-{
-    return fullscreenManager();
-}
-#endif
 
 } // namespace WebCore

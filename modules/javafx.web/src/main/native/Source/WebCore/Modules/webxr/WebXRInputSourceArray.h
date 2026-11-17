@@ -42,9 +42,10 @@ class XRInputSourceEvent;
 class WebXRSession;
 
 class WebXRInputSourceArray final : public ScriptWrappable {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(WebXRInputSourceArray);
-    friend UniqueRef<WebXRInputSourceArray> WTF::makeUniqueRefWithoutFastMallocCheck<WebXRInputSourceArray, WebCore::WebXRSession&>(WebCore::WebXRSession&);
+    WTF_MAKE_TZONE_ALLOCATED(WebXRInputSourceArray);
 public:
+    explicit WebXRInputSourceArray(WebXRSession&);
+
     using InputSourceList = Vector<PlatformXR::FrameData::InputSource>;
     static UniqueRef<WebXRInputSourceArray> create(WebXRSession&);
     ~WebXRInputSourceArray();
@@ -55,6 +56,7 @@ public:
     unsigned length() const;
     bool isSupportedPropertyIndex(unsigned index) const { return index < length(); }
     WebXRInputSource* item(unsigned) const;
+    RefPtr<WebXRInputSource> itemByHandle(PlatformXR::InputSourceHandle) const;
 
     void clear();
     void update(double timestamp, const InputSourceList&);
@@ -63,8 +65,6 @@ public:
     WebXRSession* session() const { return &m_session; }
 
 private:
-    WebXRInputSourceArray(WebXRSession&);
-
     void handleRemovedInputSources(const InputSourceList&, Vector<Ref<WebXRInputSource>>&, Vector<Ref<WebXRInputSource>>&, Vector<Ref<XRInputSourceEvent>>&);
     void handleAddedOrUpdatedInputSources(double timestamp, const InputSourceList&, Vector<Ref<WebXRInputSource>>&, Vector<Ref<WebXRInputSource>>&, Vector<Ref<WebXRInputSource>>&, Vector<Ref<XRInputSourceEvent>>&);
 

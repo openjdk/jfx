@@ -126,7 +126,7 @@ void pas_local_allocator_scavenger_data_commit_if_necessary_slow(
             done = true;
             break;
         default:
-            PAS_ASSERT(!"Should not be reached");
+            PAS_ASSERT_NOT_REACHED();
             break;
         }
         pas_lock_unlock_conditionally(&cache->node->scavenger_lock, scavenger_lock_hold_mode);
@@ -173,7 +173,7 @@ bool pas_local_allocator_scavenger_data_stop(
     case pas_local_allocator_view_cache_kind:
         return pas_local_view_cache_stop((pas_local_view_cache*)data, page_lock_mode);
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return false;
 }
 

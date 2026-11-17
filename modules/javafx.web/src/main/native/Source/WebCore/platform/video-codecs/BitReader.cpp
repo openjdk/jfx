@@ -60,4 +60,23 @@ std::optional<bool> BitReader::readBit()
     return value;
 }
 
+bool BitReader::skipBytes(size_t bytes)
+{
+    m_index += bytes;
+    if (m_index >= m_data.size()) {
+        bool over = m_index > m_data.size() || m_remainingBits;
+        m_index = m_data.size();
+        m_remainingBits = 0;
+        return !over;
+    }
+    m_currentByte = m_data[m_index];
+    return true;
 }
+
+size_t BitReader::bitOffset() const
+{
+    ASSERT(m_index <= m_data.size());
+    return (m_remainingBits ? 8 - m_remainingBits : 0) + m_index * 8;
+}
+
+} // namespace WebCore

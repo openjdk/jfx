@@ -75,7 +75,7 @@ struct Inst {
     }
 
     Inst(Kind kind, Value* origin, ArgList&& arguments)
-        : args(WTFMove(arguments))
+        : args(WTF::move(arguments))
         , origin(origin)
         , kind(kind)
     {

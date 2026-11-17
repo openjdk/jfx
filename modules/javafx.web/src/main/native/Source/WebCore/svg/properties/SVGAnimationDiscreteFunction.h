@@ -37,7 +37,7 @@ public:
 
     bool isDiscrete() const override { return true; }
 
-    void setToAtEndOfDurationValue(const String&) override
+    void setToAtEndOfDurationValue(SVGElement&, const String&) override
     {
         ASSERT_NOT_REACHED();
     }
@@ -49,7 +49,7 @@ public:
 
     void animate(SVGElement&, float progress, unsigned, ValueType& animated)
     {
-        if ((m_animationMode == AnimationMode::FromTo && progress > 0.5) || m_animationMode == AnimationMode::To || progress == 1)
+        if (((m_animationMode == AnimationMode::FromTo || m_animationMode == AnimationMode::To) && progress > 0.5) || progress == 1)
             animated = m_to;
         else
             animated = m_from;

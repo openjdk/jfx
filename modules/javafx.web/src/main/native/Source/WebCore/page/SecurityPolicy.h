@@ -28,7 +28,7 @@
 
 #pragma once
 
-#include "FetchOptions.h"
+#include <WebCore/FetchOptions.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -54,7 +54,7 @@ public:
 
     static String generateOriginHeader(ReferrerPolicy, const URL&, const SecurityOrigin&, const OriginAccessPatterns&);
 
-    static bool shouldInheritSecurityOriginFromOwner(const URL&);
+    WEBCORE_EXPORT static bool shouldInheritSecurityOriginFromOwner(const URL&);
 
     static bool isBaseURLSchemeAllowed(const URL&);
 

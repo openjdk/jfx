@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "CachedResourceClient.h"
+#include <WebCore/CachedResourceClient.h>
 #include <wtf/Forward.h>
 
 namespace WebCore {
@@ -37,7 +37,7 @@ public:
     virtual ~CachedStyleSheetClient() = default;
     static CachedResourceClientType expectedType() { return StyleSheetType; }
     CachedResourceClientType resourceClientType() const override { return expectedType(); }
-    virtual void setCSSStyleSheet(const String& /* href */, const URL& /* baseURL */, const String& /* charset */, const CachedCSSStyleSheet*) { }
+    virtual void setCSSStyleSheet(const String& /* href */, const URL& /* baseURL */, ASCIILiteral /* charset */, const CachedCSSStyleSheet*) { }
     virtual void setXSLStyleSheet(const String& /* href */, const URL& /* baseURL */, const String& /* sheet */) { }
 };
 

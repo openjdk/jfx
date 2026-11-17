@@ -89,7 +89,7 @@ const WasmCallingConvention& wasmCallingConvention()
         RELEASE_ASSERT(scratchGPRs.size() >= 3);
 #endif
 
-        staticWasmCallingConvention.construct(WTFMove(jsrArgumentRegisters), WTFMove(fprArgumentRegisters), WTFMove(scratchGPRs), RegisterSetBuilder::calleeSaveRegisters());
+        staticWasmCallingConvention.construct(WTF::move(jsrArgumentRegisters), WTF::move(fprArgumentRegisters), WTF::move(scratchGPRs), RegisterSetBuilder::calleeSaveRegisters());
     });
 
     return staticWasmCallingConvention;
@@ -126,7 +126,7 @@ const CCallingConventionArmThumb2& cCallingConventionArmThumb2()
         // Need at least one JSValue and an additional GPR
         RELEASE_ASSERT(scratchGPRs.size() >= 3);
 
-        staticCCallingConventionArmThumb2.construct(WTFMove(gprArgumentRegisters), WTFMove(fprArgumentRegisters), WTFMove(scratchGPRs), RegisterSetBuilder::calleeSaveRegisters());
+        staticCCallingConventionArmThumb2.construct(WTF::move(gprArgumentRegisters), WTF::move(fprArgumentRegisters), WTF::move(scratchGPRs), RegisterSetBuilder::calleeSaveRegisters());
     });
 
     return staticCCallingConventionArmThumb2;

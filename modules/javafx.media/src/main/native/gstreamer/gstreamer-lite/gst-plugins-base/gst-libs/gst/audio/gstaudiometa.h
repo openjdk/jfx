@@ -32,11 +32,11 @@ typedef struct _GstAudioDownmixMeta GstAudioDownmixMeta;
 /**
  * GstAudioDownmixMeta:
  * @meta: parent #GstMeta
- * @from_position: the channel positions of the source
- * @to_position: the channel positions of the destination
+ * @from_position: (array length=from_channels): the channel positions of the source
+ * @to_position: (array length=to_channels): the channel positions of the destination
  * @from_channels: the number of channels of the source
  * @to_channels: the number of channels of the destination
- * @matrix: the matrix coefficients.
+ * @matrix: (array) (element-type float*): the matrix coefficients.
  *
  * Extra buffer metadata describing audio downmixing matrix. This metadata is
  * attached to audio buffers and contains a matrix to downmix the buffer number
@@ -136,7 +136,7 @@ typedef struct _GstAudioMeta GstAudioMeta;
  * @meta: parent #GstMeta
  * @info: the audio properties of the buffer
  * @samples: the number of valid samples in the buffer
- * @offsets: the offsets (in bytes) where each channel plane starts in the
+ * @offsets: (array) (nullable): the offsets (in bytes) where each channel plane starts in the
  *   buffer or %NULL if the buffer has interleaved layout; if not %NULL, this
  *   is guaranteed to be an array of @info.channels elements
  *

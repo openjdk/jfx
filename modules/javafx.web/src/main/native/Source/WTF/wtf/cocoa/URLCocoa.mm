@@ -43,18 +43,22 @@ URL::URL(NSURL *cocoaURL)
 {
 }
 
-URL::operator NSURL *() const
+RetainPtr<NSURL> URL::createNSURL() const
 {
-    // Creating a toll-free bridged CFURL because creation with NSURL methods would not preserve the original string.
-    // We'll need fidelity when round-tripping via CFURLGetBytes().
-    return createCFURL().bridgingAutorelease();
+    return bridge_cast(createCFURL());
 }
 
-RetainPtr<CFURLRef> URL::emptyCFURL()
+CFURLRef URL::emptyCFURL()
 {
     // We use the toll-free bridge to create an empty value that is distinct from null that no CFURL function can create.
     // FIXME: When we originally wrote this, we thought that creating empty CF URLs was valuable; can we do without it now?
-    return bridge_cast(adoptNS([[NSURL alloc] initWithString:@""]));
+    return bridge_cast(emptyNSURL());
+}
+
+NSURL *URL::emptyNSURL()
+{
+    static const NeverDestroyed<RetainPtr<NSURL>> emptyURL = adoptNS([[NSURL alloc] initWithString:@""]);
+    return emptyURL.get().get();
 }
 
 bool URL::hostIsIPAddress(StringView host)

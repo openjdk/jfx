@@ -34,6 +34,8 @@
 #include "TypedArrays.h"
 #include <wtf/Gigacage.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 const ClassInfo JSArrayBufferView::s_info = {
@@ -327,7 +329,7 @@ ArrayBuffer* JSArrayBufferView::slowDownAndWasteMemory()
     }
     heap->addReference(this, buffer.get());
 
-    return buffer.get();
+    return buffer.unsafeGet();
 }
 
 // Allocates the full-on native buffer and moves data into the C heap if
@@ -430,3 +432,4 @@ void printInternal(PrintStream& out, TypedArrayMode mode)
 
 } // namespace WTF
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

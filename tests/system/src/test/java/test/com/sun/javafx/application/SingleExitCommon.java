@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,6 +39,7 @@ import javafx.scene.Scene;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import com.sun.javafx.application.PlatformImplShim;
+import test.javafx.util.OutputRedirect;
 import test.util.Util;
 
 /**
@@ -142,8 +143,28 @@ public class SingleExitCommon {
     }
 
     private void doTestCommon(boolean implicitExit,
+        boolean reEnableImplicitExit, boolean stageShown,
+        ThrowableType throwableType, boolean appShouldExit) {
+
+        Object[] expected = switch(throwableType) {
+        case ERROR ->
+            new Object[] { InternalError.class };
+        case EXCEPTION ->
+            new Object[] { RuntimeException.class };
+        case NONE ->
+            new Object[0];
+        };
+        OutputRedirect.suppressStderr();
+        try {
+            doTestCommon2(implicitExit, reEnableImplicitExit, stageShown, throwableType, appShouldExit);
+        } finally {
+            OutputRedirect.checkAndRestoreStderr(expected);
+        }
+    }
+
+    private void doTestCommon2(boolean implicitExit,
             boolean reEnableImplicitExit, boolean stageShown,
-            final ThrowableType throwableType, boolean appShouldExit) {
+            ThrowableType throwableType, boolean appShouldExit) {
 
         SingleExitCommon.implicitExit = implicitExit;
         SingleExitCommon.stageShown = stageShown;

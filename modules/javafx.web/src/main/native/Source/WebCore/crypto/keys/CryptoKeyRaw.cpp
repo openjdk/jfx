@@ -34,7 +34,7 @@ namespace WebCore {
 
 CryptoKeyRaw::CryptoKeyRaw(CryptoAlgorithmIdentifier identifier, Vector<uint8_t>&& keyData, CryptoKeyUsageBitmap usages)
     : CryptoKey(identifier, CryptoKeyType::Secret, false, usages)
-    , m_key(WTFMove(keyData))
+    , m_key(WTF::move(keyData))
 {
 }
 
@@ -43,6 +43,17 @@ auto CryptoKeyRaw::algorithm() const -> KeyAlgorithm
     CryptoKeyAlgorithm result;
     result.name = CryptoAlgorithmRegistry::singleton().name(algorithmIdentifier());
     return result;
+}
+
+CryptoKey::Data CryptoKeyRaw::data() const
+{
+    return CryptoKey::Data {
+        CryptoKeyClass::Raw,
+        algorithmIdentifier(),
+        extractable(),
+        usagesBitmap(),
+        { key() },
+    };
 }
 
 } // namespace WebCore

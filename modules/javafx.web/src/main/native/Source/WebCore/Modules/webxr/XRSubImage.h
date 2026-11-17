@@ -36,7 +36,11 @@ class WebXRViewport;
 // https://immersive-web.github.io/layers/#xrsubimagetype
 class XRSubImage : public RefCounted<XRSubImage> {
 public:
-    const WebXRViewport& viewport() const { RELEASE_ASSERT_NOT_REACHED(); }
+    virtual const WebXRViewport& viewport() const = 0;
+    virtual ~XRSubImage();
+
+    virtual bool isXRGPUSubImage() const { return false; }
+    virtual bool isXRWebGLSubImage() const { return false; }
 };
 
 } // namespace WebCore

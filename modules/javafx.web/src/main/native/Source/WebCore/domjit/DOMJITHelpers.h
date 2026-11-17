@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -175,17 +175,6 @@ void loadDocumentElement(MacroAssembler&, GPRReg document, GPRReg output);
 inline CCallHelpers::Jump branchTestIsElementFlagOnNode(MacroAssembler& jit, CCallHelpers::ResultCondition condition, GPRReg nodeAddress)
 {
     return jit.branchTest16(condition, CCallHelpers::Address(nodeAddress, Node::typeFlagsMemoryOffset()), CCallHelpers::TrustedImm32(Node::flagIsElement()));
-}
-
-inline CCallHelpers::Jump branchTestIsShadowRootFlagOnNode(MacroAssembler& jit, CCallHelpers::ResultCondition condition, GPRReg nodeAddress)
-{
-    return jit.branchTest16(condition, CCallHelpers::Address(nodeAddress, Node::typeFlagsMemoryOffset()), CCallHelpers::TrustedImm32(Node::flagIsShadowRoot()));
-}
-
-inline CCallHelpers::Jump branchTestIsElementOrShadowRootFlagOnNode(MacroAssembler& jit, CCallHelpers::ResultCondition condition, GPRReg nodeAddress)
-{
-    return jit.branchTest16(condition, CCallHelpers::Address(nodeAddress, Node::typeFlagsMemoryOffset()),
-        CCallHelpers::TrustedImm32(Node::flagIsShadowRoot() | Node::flagIsElement()));
 }
 
 inline CCallHelpers::Jump branchTestIsHTMLFlagOnNode(MacroAssembler& jit, CCallHelpers::ResultCondition condition, GPRReg nodeAddress)

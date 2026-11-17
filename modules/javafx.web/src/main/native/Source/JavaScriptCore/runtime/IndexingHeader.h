@@ -25,7 +25,9 @@
 
 #pragma once
 
-#include "PropertyStorage.h"
+#include <JavaScriptCore/PropertyStorage.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -136,3 +138,5 @@ private:
 };
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

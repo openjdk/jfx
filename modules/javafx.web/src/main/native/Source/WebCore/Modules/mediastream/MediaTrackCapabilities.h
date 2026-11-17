@@ -26,8 +26,8 @@
 
 #if ENABLE(MEDIA_STREAM)
 
-#include "DoubleRange.h"
-#include "LongRange.h"
+#include <WebCore/DoubleRange.h>
+#include <WebCore/LongRange.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
@@ -56,7 +56,7 @@ struct MediaTrackCapabilities {
     std::optional<Vector<bool>> powerEfficient;
 };
 
-MediaTrackCapabilities toMediaTrackCapabilities(const RealtimeMediaSourceCapabilities&, const String& groupId);
+MediaTrackCapabilities toMediaTrackCapabilities(const RealtimeMediaSourceCapabilities&);
 } // namespace WebCore
 
 #endif // ENABLE(MEDIA_STREAM)

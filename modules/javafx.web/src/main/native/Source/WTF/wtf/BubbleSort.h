@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,6 +25,9 @@
 
 #pragma once
 
+#include <algorithm>
+#include <span>
+
 namespace WTF {
 
 // Why would you want to use bubble sort? When you know that your input is already mostly
@@ -48,46 +51,44 @@ namespace WTF {
 // sorted, the sort must be stable, they are usually already sorted to begin with, and when they
 // are unsorted it's usually because of a few out-of-place elements.
 
-template<typename IteratorType, typename LessThan>
-void bubbleSort(IteratorType begin, IteratorType end, const LessThan& lessThan)
+template<typename T, typename LessThan>
+void bubbleSort(std::span<T> data, const LessThan& lessThan)
 {
     for (;;) {
         bool changed = false;
-        ASSERT(end >= begin);
-        size_t limit = end - begin;
+        size_t limit = data.size();
         for (size_t i = limit; i-- > 1;) {
-            if (lessThan(begin[i], begin[i - 1])) {
-                std::swap(begin[i], begin[i - 1]);
+            if (lessThan(data[i], data[i - 1])) {
+                std::swap(data[i], data[i - 1]);
                 changed = true;
             }
         }
         if (!changed)
             return;
         // After one run, the first element in the list is guaranteed to be the smallest.
-        begin++;
+        skip(data, 1);
 
         // Now go in the other direction. This eliminates most sorting pathologies.
         changed = false;
-        ASSERT(end >= begin);
-        limit = end - begin;
+        limit = data.size();
         for (size_t i = 1; i < limit; ++i) {
-            if (lessThan(begin[i], begin[i - 1])) {
-                std::swap(begin[i], begin[i - 1]);
+            if (lessThan(data[i], data[i - 1])) {
+                std::swap(data[i], data[i - 1]);
                 changed = true;
             }
         }
         if (!changed)
             return;
         // Now the last element is guaranteed to be the largest.
-        end--;
+        dropLast(data);
     }
 }
 
-template<typename IteratorType>
-void bubbleSort(IteratorType begin, IteratorType end)
+template<typename T>
+void bubbleSort(std::span<T> data)
 {
     bubbleSort(
-        begin, end,
+        data,
         [](auto& left, auto& right) {
             return left < right;
         });

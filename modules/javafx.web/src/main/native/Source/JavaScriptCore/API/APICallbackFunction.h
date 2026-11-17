@@ -57,7 +57,7 @@ EncodedJSValue APICallbackFunction::callImpl(JSGlobalObject* globalObject, CallF
     JSValueRef result;
     {
         JSLock::DropAllLocks dropAllLocks(globalObject);
-        result = jsCast<T*>(toJS(functionRef))->functionCallback()(execRef, functionRef, thisObjRef, argumentCount, arguments.data(), &exception);
+        result = jsCast<T*>(toJS(functionRef))->functionCallback()(execRef, functionRef, thisObjRef, argumentCount, arguments.span().data(), &exception);
     }
     if (exception) {
         throwException(globalObject, scope, toJS(globalObject, exception));
@@ -100,7 +100,7 @@ EncodedJSValue APICallbackFunction::constructImpl(JSGlobalObject* globalObject, 
         JSObjectRef result;
         {
             JSLock::DropAllLocks dropAllLocks(globalObject);
-            result = callback(ctx, constructorRef, argumentCount, arguments.data(), &exception);
+            result = callback(ctx, constructorRef, argumentCount, arguments.span().data(), &exception);
         }
 
         if (exception) {

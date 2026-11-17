@@ -142,7 +142,7 @@ function initializeTransformStream(stream, startPromise, writableHighWaterMark, 
     const pullAlgorithm = () => { return @transformStreamDefaultSourcePullAlgorithm(stream); };
     const cancelAlgorithm = (reason) => {
         @transformStreamErrorWritableAndUnblockWrite(stream, reason);
-        return @Promise.@resolve();
+        return @promiseResolve(@Promise, @undefined);
     };
     const underlyingSource = { };
     @putByIdDirectPrivate(underlyingSource, "start", startAlgorithm);
@@ -230,11 +230,11 @@ function setUpTransformStreamDefaultControllerFromTransformer(stream, transforme
         try {
             @transformStreamDefaultControllerEnqueue(controller, chunk);
         } catch (e) {
-            return @Promise.@reject(e);
+            return @promiseReject(@Promise, e);
         }
-        return @Promise.@resolve();
+        return @promiseResolve(@Promise, @undefined);
     };
-    let flushAlgorithm = () => { return @Promise.@resolve(); };
+    let flushAlgorithm = () => { return @promiseResolve(@Promise, @undefined); };
 
     if ("transform" in transformerDict)
         transformAlgorithm = (chunk) => {
@@ -366,7 +366,7 @@ function transformStreamDefaultSinkAbortAlgorithm(stream, reason)
     "use strict";
 
     @transformStreamError(stream, reason);
-    return @Promise.@resolve();
+    return @promiseResolve(@Promise, @undefined);
 }
 
 function transformStreamDefaultSinkCloseAlgorithm(stream)

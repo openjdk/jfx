@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,7 +35,7 @@ class WebCoreOpaqueRoot;
 
 class WorkerLocation : public RefCounted<WorkerLocation> {
 public:
-    static Ref<WorkerLocation> create(URL&& url, String&& origin) { return adoptRef(*new WorkerLocation(WTFMove(url), WTFMove(origin))); }
+    static Ref<WorkerLocation> create(URL&& url, String&& origin) { return adoptRef(*new WorkerLocation(WTF::move(url), WTF::move(origin))); }
 
     const URL& url() const { return m_url; }
     String href() const;
@@ -52,8 +52,8 @@ public:
 
 private:
     WorkerLocation(URL&& url, String&& origin)
-        : m_url(WTFMove(url))
-        , m_origin(WTFMove(origin))
+        : m_url(WTF::move(url))
+        , m_origin(WTF::move(origin))
     {
     }
 

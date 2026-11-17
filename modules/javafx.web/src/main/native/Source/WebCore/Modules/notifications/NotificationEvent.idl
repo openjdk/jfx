@@ -37,6 +37,7 @@ interface NotificationEvent : ExtendableEvent {
 
 [
     Conditional=NOTIFICATION_EVENT,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary NotificationEventInit : ExtendableEventInit {
     required Notification notification;
     DOMString action = "";

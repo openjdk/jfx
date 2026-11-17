@@ -117,7 +117,7 @@ InByStatus InByStatus::computeFor(
 #if ENABLE(DFG_JIT)
 InByStatus InByStatus::computeForStubInfoWithoutExitSiteFeedback(const ConcurrentJSLocker& locker, CodeBlock* profiledBlock, StructureStubInfo* stubInfo, CallLinkStatus::ExitSiteData callExitSiteData, CodeOrigin)
 {
-    StubInfoSummary summary = StructureStubInfo::summary(profiledBlock->vm(), stubInfo);
+    StubInfoSummary summary = StructureStubInfo::summary(locker, profiledBlock->vm(), stubInfo);
     if (!isInlineable(summary))
         return InByStatus(summary);
 
@@ -135,7 +135,7 @@ InByStatus InByStatus::computeForStubInfoWithoutExitSiteFeedback(const Concurren
         CacheableIdentifier identifier = stubInfo->identifier();
         UniquedStringImpl* uid = identifier.uid();
         RELEASE_ASSERT(uid);
-        InByVariant variant(WTFMove(identifier));
+        InByVariant variant(WTF::move(identifier));
         unsigned attributes;
         variant.m_offset = structure->getConcurrently(uid, attributes);
         if (!isValidOffset(variant.m_offset))
@@ -150,9 +150,9 @@ InByStatus InByStatus::computeForStubInfoWithoutExitSiteFeedback(const Concurren
     }
 
     case CacheType::Stub: {
-        PolymorphicAccess* list = stubInfo->m_stub.get();
-        if (list->size() == 1) {
-            const AccessCase& access = list->at(0);
+        auto list = stubInfo->listedAccessCases(locker);
+        if (list.size() == 1) {
+            const AccessCase& access = *list.at(0);
             switch (access.type()) {
             case AccessCase::InMegamorphic:
             case AccessCase::IndexedMegamorphicIn: {
@@ -166,7 +166,7 @@ InByStatus InByStatus::computeForStubInfoWithoutExitSiteFeedback(const Concurren
                 auto callLinkStatus = makeUnique<CallLinkStatus>();
                 if (CallLinkInfo* callLinkInfo = stubInfo->callLinkInfoAt(locker, 0, access))
                     *callLinkStatus = CallLinkStatus::computeFor(locker, profiledBlock, *callLinkInfo, callExitSiteData);
-                status.appendVariant(InByVariant(access.identifier(), { }, invalidOffset, { }, WTFMove(callLinkStatus)));
+                status.appendVariant(InByVariant(access.identifier(), { }, invalidOffset, { }, WTF::move(callLinkStatus)));
                 return status;
             }
             default:
@@ -174,8 +174,8 @@ InByStatus InByStatus::computeForStubInfoWithoutExitSiteFeedback(const Concurren
             }
         }
 
-        for (unsigned listIndex = 0; listIndex < list->size(); ++listIndex) {
-            const AccessCase& access = list->at(listIndex);
+        for (unsigned listIndex = 0; listIndex < list.size(); ++listIndex) {
+            const AccessCase& access = *list.at(listIndex);
             if (access.viaGlobalProxy())
                 return InByStatus(TakesSlowPath);
 

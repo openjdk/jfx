@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 2008 Nokia Corporation and/or its subsidiary(-ies)
- *  Copyright (C) 2008, 2015 Apple Inc. All rights reserved.
+ *  Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -21,24 +21,26 @@
 #include "DOMPluginArray.h"
 
 #include "DOMPlugin.h"
-#include "LocalFrame.h"
+#include "DocumentPage.h"
+#include "LocalFrameInlines.h"
 #include "Page.h"
+#include "ScriptWrappableInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/AtomString.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(DOMPluginArray);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DOMPluginArray);
 
 Ref<DOMPluginArray> DOMPluginArray::create(Navigator& navigator, Vector<Ref<DOMPlugin>>&& publiclyVisiblePlugins, Vector<Ref<DOMPlugin>>&& additionalWebVisibilePlugins)
 {
-    return adoptRef(*new DOMPluginArray(navigator, WTFMove(publiclyVisiblePlugins), WTFMove(additionalWebVisibilePlugins)));
+    return adoptRef(*new DOMPluginArray(navigator, WTF::move(publiclyVisiblePlugins), WTF::move(additionalWebVisibilePlugins)));
 }
 
 DOMPluginArray::DOMPluginArray(Navigator& navigator, Vector<Ref<DOMPlugin>>&& publiclyVisiblePlugins, Vector<Ref<DOMPlugin>>&& additionalWebVisibilePlugins)
     : m_navigator(navigator)
-    , m_publiclyVisiblePlugins(WTFMove(publiclyVisiblePlugins))
-    , m_additionalWebVisibilePlugins(WTFMove(additionalWebVisibilePlugins))
+    , m_publiclyVisiblePlugins(WTF::move(publiclyVisiblePlugins))
+    , m_additionalWebVisibilePlugins(WTF::move(additionalWebVisibilePlugins))
 {
 }
 
@@ -89,7 +91,7 @@ void DOMPluginArray::refresh(bool reloadPages)
     if (!m_navigator)
         return;
 
-    auto* frame = m_navigator->frame();
+    RefPtr frame = m_navigator->frame();
     if (!frame)
         return;
 

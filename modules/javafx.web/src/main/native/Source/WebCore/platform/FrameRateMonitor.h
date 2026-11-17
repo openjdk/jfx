@@ -28,11 +28,12 @@
 #include <wtf/Deque.h>
 #include <wtf/Function.h>
 #include <wtf/MonotonicTime.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class FrameRateMonitor {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(FrameRateMonitor, WEBCORE_EXPORT);
 public:
     struct LateFrameInfo {
         MonotonicTime frameTime;
@@ -56,7 +57,7 @@ private:
 };
 
 inline FrameRateMonitor::FrameRateMonitor(LateFrameCallback&& callback)
-    : m_lateFrameCallback(WTFMove(callback))
+    : m_lateFrameCallback(WTF::move(callback))
 {
 }
 

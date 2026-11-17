@@ -23,13 +23,16 @@
 #include "config.h"
 #include "SVGLocatable.h"
 
+#include "ContainerNodeInlines.h"
 #include "RenderElement.h"
+#include "RenderObjectDocument.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGGraphicsElement.h"
 #include "SVGImageElement.h"
 #include "SVGLayerTransformComputation.h"
 #include "SVGMatrix.h"
 #include "SVGNames.h"
+#include "Settings.h"
 #include "TransformState.h"
 
 namespace WebCore {
@@ -50,7 +53,7 @@ static bool isViewportElement(const SVGElement* element)
 SVGElement* SVGLocatable::nearestViewportElement(const SVGElement* element)
 {
     ASSERT(element);
-    for (Element* current = element->parentOrShadowHostElement(); current; current = current->parentOrShadowHostElement()) {
+    for (RefPtr current = element->parentOrShadowHostElement(); current; current = current->parentOrShadowHostElement()) {
         auto* svgElement = dynamicDowncast<SVGElement>(*current);
         if (isViewportElement(svgElement))
             return svgElement;
@@ -63,7 +66,7 @@ SVGElement* SVGLocatable::farthestViewportElement(const SVGElement* element)
 {
     ASSERT(element);
     SUPPRESS_UNCOUNTED_LOCAL SVGElement* farthest = nullptr;
-    for (Element* current = element->parentOrShadowHostElement(); current; current = current->parentOrShadowHostElement()) {
+    for (RefPtr current = element->parentOrShadowHostElement(); current; current = current->parentOrShadowHostElement()) {
         auto* svgElement = dynamicDowncast<SVGElement>(*current);
         if (isViewportElement(svgElement))
             farthest = svgElement;
@@ -75,7 +78,7 @@ FloatRect SVGLocatable::getBBox(SVGElement* element, StyleUpdateStrategy styleUp
 {
     ASSERT(element);
     if (styleUpdateStrategy == AllowStyleUpdate)
-        element->protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::ContentVisibilityForceLayout }, element);
+        element->protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::TreatContentVisibilityHiddenAsVisible, LayoutOptions::TreatContentVisibilityAutoAsVisible }, element);
 
     // FIXME: Eventually we should support getBBox for detached elements.
     if (!element->renderer())
@@ -88,9 +91,9 @@ AffineTransform SVGLocatable::computeCTM(SVGElement* element, CTMScope mode, Sty
 {
     ASSERT(element);
     if (styleUpdateStrategy == AllowStyleUpdate)
-        element->protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::ContentVisibilityForceLayout }, element);
+        element->protectedDocument()->updateLayoutIgnorePendingStylesheets({ LayoutOptions::TreatContentVisibilityHiddenAsVisible, LayoutOptions::TreatContentVisibilityAutoAsVisible }, element);
 
-    RefPtr stopAtElement = mode == NearestViewportScope ? nearestViewportElement(element) : nullptr;
+    RefPtr stopAtElement = mode == CTMScope::NearestViewportScope ? nearestViewportElement(element) : nullptr;
 
     if (element->document().settings().layerBasedSVGEngineEnabled()) {
         // Rudimentary support for operations on "detached" elements.
@@ -98,14 +101,14 @@ AffineTransform SVGLocatable::computeCTM(SVGElement* element, CTMScope mode, Sty
         if (!renderer)
             return element->localCoordinateSpaceTransform(mode);
 
-        auto trackingMode { mode == SVGLocatable::ScreenScope ? TransformState::TrackSVGScreenCTMMatrix : TransformState::TrackSVGCTMMatrix };
+        auto trackingMode { mode == CTMScope::ScreenScope ? TransformState::TrackSVGScreenCTMMatrix : TransformState::TrackSVGCTMMatrix };
         CheckedPtr stopAtRenderer = dynamicDowncast<RenderLayerModelObject>(stopAtElement ? stopAtElement->renderer() : nullptr);
         return SVGLayerTransformComputation(*renderer).computeAccumulatedTransform(stopAtRenderer.get(), trackingMode);
     }
 
     AffineTransform ctm;
 
-    for (Element* currentElement = element; currentElement; currentElement = currentElement->parentOrShadowHostElement()) {
+    for (RefPtr<Element> currentElement = element; currentElement; currentElement = currentElement->parentOrShadowHostElement()) {
         RefPtr svgElement = dynamicDowncast<SVGElement>(*currentElement);
         if (!svgElement)
             break;

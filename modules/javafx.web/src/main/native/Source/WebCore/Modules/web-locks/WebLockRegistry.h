@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021, Apple Inc. All rights reserved.
+ * Copyright (C) 2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,11 +24,11 @@
 
 #pragma once
 
-#include "ClientOrigin.h"
-#include "ProcessIdentifier.h"
-#include "ScriptExecutionContextIdentifier.h"
-#include "WebLockIdentifier.h"
-#include "WebLockMode.h"
+#include <WebCore/ClientOrigin.h>
+#include <WebCore/ProcessIdentifier.h>
+#include <WebCore/ScriptExecutionContextIdentifier.h>
+#include <WebCore/WebLockIdentifier.h>
+#include <WebCore/WebLockMode.h>
 #include <pal/SessionID.h>
 #include <wtf/Deque.h>
 #include <wtf/HashMap.h>
@@ -43,7 +43,7 @@ struct WebLockManagerSnapshot;
 
 class WebLockRegistry : public RefCounted<WebLockRegistry> {
 public:
-    static WebLockRegistry& shared();
+    static WebLockRegistry& singleton();
     WEBCORE_EXPORT static void setSharedRegistry(Ref<WebLockRegistry>&&);
 
     virtual ~WebLockRegistry() { }

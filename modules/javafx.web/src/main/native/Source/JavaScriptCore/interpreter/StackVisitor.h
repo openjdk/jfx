@@ -25,11 +25,11 @@
 
 #pragma once
 
-#include "BytecodeIndex.h"
-#include "CalleeBits.h"
-#include "LineColumn.h"
-#include "SourceID.h"
-#include "WasmIndexOrName.h"
+#include <JavaScriptCore/BytecodeIndex.h>
+#include <JavaScriptCore/CalleeBits.h>
+#include <JavaScriptCore/LineColumn.h>
+#include <JavaScriptCore/SourceID.h>
+#include <JavaScriptCore/WasmIndexOrName.h>
 #include <wtf/Function.h>
 #include <wtf/Indenter.h>
 #include <wtf/IterationStatus.h>
@@ -41,6 +41,7 @@ struct EntryFrame;
 struct InlineCallFrame;
 
 class CallFrame;
+class CallSiteIndex;
 class CodeBlock;
 class CodeOrigin;
 class JSCell;
@@ -48,6 +49,14 @@ class JSFunction;
 class ClonedArguments;
 class Register;
 class RegisterAtOffsetList;
+class StackVisitor;
+
+template<typename T>
+concept StackVisitorFunctor = requires(const T t, StackVisitor& visitor) {
+    { t.operator()(visitor) } -> std::same_as<IterationStatus>;
+    // in other words, requires a method:
+    //     IterationStatus operator()(StackVisitor&) const;
+};
 
 class StackVisitor {
 public:
@@ -65,6 +74,7 @@ public:
         size_t index() const { return m_index; }
         size_t argumentCountIncludingThis() const { return m_argumentCountIncludingThis; }
         bool callerIsEntryFrame() const { return m_callerIsEntryFrame; }
+        bool isWasmFrame() const { return m_isWasmFrame; }
         CallFrame* callerFrame() const { return m_callerFrame; }
         EntryFrame* entryFrame() const { return m_entryFrame; }
         CalleeBits callee() const { return m_callee; }
@@ -77,6 +87,7 @@ public:
             return nullptr;
 #endif
         }
+        void* returnPC() const { return m_returnPC; }
 
         bool isNativeFrame() const { return !codeBlock() && !isNativeCalleeFrame(); }
         bool isInlinedDFGFrame() const { return !isNativeCalleeFrame() && !!inlineCallFrame(); }
@@ -86,6 +97,9 @@ public:
             ASSERT(isNativeCalleeFrame());
             return m_wasmFunctionIndexOrName;
         }
+        size_t wasmFunctionIndex() const;
+
+        CallSiteIndex wasmCallSiteIndex() const;
 
         JS_EXPORT_PRIVATE String functionName() const;
         JS_EXPORT_PRIVATE String sourceURL() const;
@@ -117,34 +131,34 @@ public:
         void setToEnd();
 
 #if ENABLE(DFG_JIT)
-        InlineCallFrame* m_inlineDFGCallFrame;
+        InlineCallFrame* m_inlineDFGCallFrame { nullptr };
 #endif
         unsigned m_wasmDistanceFromDeepestInlineFrame { 0 };
-        CallFrame* m_callFrame;
-        EntryFrame* m_entryFrame;
-        EntryFrame* m_callerEntryFrame;
-        CallFrame* m_callerFrame;
-        CalleeBits m_callee;
-        CodeBlock* m_codeBlock;
-        size_t m_index;
-        size_t m_argumentCountIncludingThis;
-        BytecodeIndex m_bytecodeIndex;
-        bool m_callerIsEntryFrame : 1;
-        bool m_isWasmFrame : 1;
-        Wasm::IndexOrName m_wasmFunctionIndexOrName;
+        CallFrame* m_callFrame { nullptr };
+        EntryFrame* m_entryFrame { nullptr };
+        EntryFrame* m_callerEntryFrame { nullptr };
+        CallFrame* m_callerFrame { nullptr };
+        CalleeBits m_callee { };
+        CodeBlock* m_codeBlock { nullptr };
+        void* m_returnPC { nullptr };
+        size_t m_index { 0 };
+        size_t m_argumentCountIncludingThis { 0 };
+        BytecodeIndex m_bytecodeIndex { };
+        bool m_callerIsEntryFrame : 1 { false };
+        bool m_isWasmFrame : 1 { false };
+        Wasm::IndexOrName m_wasmFunctionIndexOrName { };
+        size_t m_wasmFunctionIndex { 0 };
+        uint32_t m_wasmCallSiteIndexBits { };
 
         friend class StackVisitor;
     };
-
-    // StackVisitor::visit() expects a Functor that implements the following method:
-    //     IterationStatus operator()(StackVisitor&) const;
 
     enum EmptyEntryFrameAction {
         ContinueIfTopEntryFrameIsEmpty,
         TerminateIfTopEntryFrameIsEmpty,
     };
 
-    template <EmptyEntryFrameAction action = ContinueIfTopEntryFrameIsEmpty, typename Functor>
+    template <EmptyEntryFrameAction action = ContinueIfTopEntryFrameIsEmpty, StackVisitorFunctor Functor>
     static void visit(CallFrame* startFrame, VM& vm, const Functor& functor, bool skipFirstFrame = false)
     {
         StackVisitor visitor(startFrame, vm, skipFirstFrame);
@@ -175,8 +189,10 @@ private:
 #if ENABLE(DFG_JIT)
     void readInlinedFrame(CallFrame*, CodeOrigin*);
 #endif
+    CallFrame* updatePreviousReturnPCIfNecessary(CallFrame*);
 
     Frame m_frame;
+    void* m_previousReturnPC { nullptr };
     bool m_topEntryFrameIsEmpty { false };
 };
 

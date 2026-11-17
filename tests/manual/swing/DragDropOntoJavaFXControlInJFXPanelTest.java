@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,6 +44,8 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.scene.input.Dragboard;
+import javafx.scene.input.TransferMode;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
@@ -109,8 +111,12 @@ public class DragDropOntoJavaFXControlInJFXPanelTest {
                         TextField textField = new TextField("Drop here");
                         Button passButton = new Button("Pass");
                         Button failButton = new Button("Fail");
-                        passButton.setOnAction(e -> frame.dispose());
+                        passButton.setOnAction(e -> {
+                            System.out.println("TEST PASSED");
+                            frame.dispose();
+                        });
                         failButton.setOnAction(e -> {
+                            System.out.println("TEST FAILED");
                             frame.dispose();
                             throw new AssertionError("Drag / drop onto a JavaFX control in a JFXPanel not working");
                         });
@@ -118,13 +124,36 @@ public class DragDropOntoJavaFXControlInJFXPanelTest {
                         HBox.setHgrow(textField, Priority.ALWAYS);
                         hBox1.getChildren().add(textField);
                         VBox rootNode = new VBox(6, hBox1,
-                            new Label("1. This is a test for drag / drop onto a JavaFX control in a JFXPanel."),
-                            new Label("2. Drag JLabel \"Drag Me\" text and drop into \"Drop here\" JavaFX textfield."),
-                            new Label("3. If \"Drag text\" text is added to existing text in JavaFX TextField control, click on Pass or else click on Fail"),
-                            new Label(""),
+                                new Label("""
+                                        1. This is a test for drag / drop onto a JavaFX control in a JFXPanel.
+                                        2. Drag JLabel "Drag Me" text and drop into "Drop here" JavaFX textfield.
+                                        3. If "Drag text" text replaces the existing text in JavaFX TextField control, click on Pass or else click on Fail
+                                        """),
                         new HBox(10, passButton, failButton));
                         Scene scene = new Scene(rootNode);
                         panel.setScene(scene);
+
+                        textField.setOnDragOver(event -> {
+                            if (event.getGestureSource() != textField &&
+                                    event.getDragboard().hasString()) {
+                                event.acceptTransferModes(TransferMode.COPY_OR_MOVE);
+                            }
+
+                            event.consume();
+                        });
+
+                        textField.setOnDragDropped(event -> {
+                            Dragboard db = event.getDragboard();
+                            boolean success = false;
+                            if (db.hasString()) {
+                                textField.setText(db.getString());
+                                success = true;
+                            }
+                            event.setDropCompleted(success);
+
+                            event.consume();
+                        });
+
                     }
                 });
 

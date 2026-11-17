@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "JSCJSValue.h"
-#include "JSCast.h"
+#include <JavaScriptCore/JSCJSValue.h>
+#include <JavaScriptCore/JSCast.h>
 #include <wtf/HashSet.h>
 #include <wtf/PrintStream.h>
 
@@ -46,7 +46,7 @@ public:
     void dump(PrintStream&) const;
 
 private:
-    HashSet<JSCell*> m_references;
+    UncheckedKeyHashSet<JSCell*> m_references;
 };
 
 } // namespace JSC

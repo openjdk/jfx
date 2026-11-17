@@ -19,8 +19,12 @@
 
 #pragma once
 
+#include "FourCC.h"
 #include <optional>
+#include <wtf/Lock.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/ThreadSafeWeakPtr.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
@@ -33,11 +37,10 @@ typedef unsigned EGLenum;
 
 namespace WebCore {
 
-class GLDisplay {
-    WTF_MAKE_NONCOPYABLE(GLDisplay); WTF_MAKE_FAST_ALLOCATED;
+class GLDisplay final : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<GLDisplay, WTF::DestructionThread::MainRunLoop> {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(GLDisplay);
 public:
-    static std::unique_ptr<GLDisplay> create(EGLDisplay);
-    explicit GLDisplay(EGLDisplay);
+    static RefPtr<GLDisplay> create(EGLDisplay);
     ~GLDisplay() = default;
 
     EGLDisplay eglDisplay() const { return m_display; }
@@ -57,18 +60,30 @@ public:
         bool EXT_image_dma_buf_import_modifiers { false };
         bool MESA_image_dma_buf_export { false };
         bool ANDROID_native_fence_sync { false };
+#if OS(ANDROID)
+        bool ANDROID_get_native_client_buffer { false };
+        bool ANDROID_image_native_buffer { false };
+#endif
     };
     const Extensions& extensions() const { return m_extensions; }
 
+#if USE(GBM) || OS(ANDROID)
+    struct BufferFormat {
+        FourCC fourcc { 0 };
 #if USE(GBM)
-    struct DMABufFormat {
-        uint32_t fourcc { 0 };
         Vector<uint64_t, 1> modifiers;
+#endif
     };
-    const Vector<DMABufFormat>& dmabufFormats();
+    const Vector<BufferFormat>& bufferFormats();
+#endif
+
+#if USE(GBM) && USE(GSTREAMER)
+    const Vector<BufferFormat>& bufferFormatsForVideo();
 #endif
 
 private:
+    explicit GLDisplay(EGLDisplay);
+
     EGLDisplay m_display { nullptr };
     struct {
         int major { 0 };
@@ -77,7 +92,14 @@ private:
     Extensions m_extensions;
 
 #if USE(GBM)
-    Vector<DMABufFormat> m_dmabufFormats;
+    Lock m_bufferFormatsLock;
+    bool m_bufferFormatsInitialized WTF_GUARDED_BY_LOCK(m_bufferFormatsLock) { false };
+    Vector<BufferFormat> m_bufferFormats;
+#if USE(GSTREAMER)
+    Lock m_bufferFormatsForVideoLock;
+    bool m_bufferFormatsForVideoInitialized WTF_GUARDED_BY_LOCK(m_bufferFormatsForVideoLock) { false };
+    Vector<BufferFormat> m_bufferFormatsForVideo;
+#endif
 #endif
 };
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc.
+ * Copyright (C) 2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,12 +26,13 @@
 
 #if ENABLE(WEB_RTC)
 
-#include "ExceptionOr.h"
 #include "RTCRtpTransceiverDirection.h"
 #include <wtf/Forward.h>
 
 namespace WebCore {
+
 struct RTCRtpCodecCapability;
+template<typename> class ExceptionOr;
 
 class RTCRtpTransceiverBackend {
 public:
@@ -45,6 +46,8 @@ public:
     virtual void stop() = 0;
     virtual bool stopped() const = 0;
     virtual ExceptionOr<void> setCodecPreferences(const Vector<RTCRtpCodecCapability>&) = 0;
+
+    virtual bool isLibWebRTCRtpTransceiverBackend() const { return false; }
 };
 
 } // namespace WebCore

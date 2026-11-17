@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc.  All rights reserved.
+ * Copyright (C) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,8 +35,8 @@ public:
     template<typename... Arguments>
     SVGAnimationAdditiveListFunction(AnimationMode animationMode, CalcMode calcMode, bool isAccumulated, bool isAdditive, Arguments&&... arguments)
         : SVGAnimationAdditiveFunction(animationMode, calcMode, isAccumulated, isAdditive)
-        , m_from(ListType::create(std::forward<Arguments>(arguments)...))
-        , m_to(ListType::create(std::forward<Arguments>(arguments)...))
+        , m_from(ListType::create(arguments...))
+        , m_to(ListType::create(arguments...))
         , m_toAtEndOfDuration(ListType::create(std::forward<Arguments>(arguments)...))
     {
     }
@@ -44,27 +44,27 @@ public:
 protected:
     const Ref<ListType>& toAtEndOfDuration() const { return !m_toAtEndOfDuration->isEmpty() ? m_toAtEndOfDuration : m_to; }
 
-    bool adjustAnimatedList(AnimationMode animationMode, float percentage, RefPtr<ListType>& animated, bool resizeAnimatedIfNeeded = true)
+    bool adjustAnimatedList(AnimationMode animationMode, float percentage, ListType& animated, bool resizeAnimatedIfNeeded = true)
     {
         if (!m_to->numberOfItems())
             return false;
 
         if (m_from->numberOfItems() && m_from->size() != m_to->size()) {
             if (percentage >= 0.5)
-                *animated = m_to;
+                animated = m_to;
             else if (animationMode != AnimationMode::To)
-                *animated = m_from;
+                animated = m_from;
             return false;
         }
 
-        if (resizeAnimatedIfNeeded && animated->size() < m_to->size())
-            animated->resize(m_to->size());
+        if (resizeAnimatedIfNeeded && animated.size() < m_to->size())
+            animated.resize(m_to->size());
         return true;
     }
 
-    Ref<ListType> m_from;
-    Ref<ListType> m_to;
-    Ref<ListType> m_toAtEndOfDuration;
+    const Ref<ListType> m_from;
+    const Ref<ListType> m_to;
+    const Ref<ListType> m_toAtEndOfDuration;
 };
 
 }

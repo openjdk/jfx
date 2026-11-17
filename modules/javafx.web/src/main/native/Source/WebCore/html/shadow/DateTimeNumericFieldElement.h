@@ -26,8 +26,6 @@
 
 #pragma once
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
-
 #include "DateTimeFieldElement.h"
 #include <wtf/MonotonicTime.h>
 #include <wtf/text/StringBuilder.h>
@@ -35,7 +33,7 @@
 namespace WebCore {
 
 class DateTimeNumericFieldElement : public DateTimeFieldElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(DateTimeNumericFieldElement);
+    WTF_MAKE_TZONE_ALLOCATED(DateTimeNumericFieldElement);
 public:
     struct Range {
         Range(int minimum, int maximum)
@@ -56,8 +54,8 @@ protected:
     bool hasValue() const final;
     void setEmptyValue(EventBehavior = DispatchNoEvent) final;
     void setValueAsInteger(int, EventBehavior = DispatchNoEvent) final;
-    void stepDown() final;
-    void stepUp() final;
+    void stepDown() override;
+    void stepUp() override;
     int valueAsInteger() const final { return m_hasValue ? m_value : -1; }
     int placeholderValueAsInteger() const final { return m_placeholderValue; }
 
@@ -65,7 +63,7 @@ protected:
 private:
     // DateTimeFieldElement functions:
     void adjustMinInlineSize(RenderStyle&) const final;
-    String value() const final;
+    ValueOrReference<String> value() const final;
     String placeholderValue() const final;
     void handleKeyboardEvent(KeyboardEvent&) final;
     void handleBlurEvent(Event&) final;
@@ -84,5 +82,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(DATE_AND_TIME_INPUT_TYPES)

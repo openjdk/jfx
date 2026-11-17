@@ -605,6 +605,9 @@ sub addBuiltinTypedefs()
 
     my $EpochTimeStampType = IDLType->new(name => "unsigned long long");
     $typedefs{"EpochTimeStamp"} = IDLTypedef->new(type => $EpochTimeStampType);
+
+    my $domStringType = IDLType->new(name => "DOMString");
+    $typedefs{"Base64URLString"} = IDLTypedef->new(type => $domStringType);
 }
 
 my $nextOptionallyReadonlyAttribute_1 = '^(readonly|attribute)$';
@@ -1356,7 +1359,7 @@ sub parseDictionary
         my $nameToken = $self->getToken();
         $self->assertTokenType($nameToken, IdentifierToken);
 
-        my $name = $nameToken->value();
+        my $name = identifierRemoveNullablePrefix($nameToken->value());
         $dictionary->type(makeSimpleType($name));
 
         $next = $self->nextToken();
@@ -1422,7 +1425,7 @@ sub parseDictionaryMember
 
         my $nameToken = $self->getToken();
         $self->assertTokenType($nameToken, IdentifierToken);
-        $member->name($nameToken->value);
+        $member->name(identifierRemoveNullablePrefix($nameToken->value));
         $member->default($self->parseDefault());
         $self->assertTokenValue($self->getToken(), ";", __LINE__);
         return $member;
@@ -2401,6 +2404,10 @@ sub parseExtendedAttributeRest2
     if ($next->type() == IdentifierToken) {
         my $name = $self->parseName();
         return $self->parseExtendedAttributeRest3($name);
+    }
+    if ($next->type() == StringToken) {
+        my $token = $self->getToken();
+        return $token->value();
     }
     if ($next->type() == IntegerToken) {
         my $token = $self->getToken();

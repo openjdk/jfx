@@ -33,7 +33,7 @@
 
 class WorkQueueItem {
 public:
-    virtual ~WorkQueueItem() { }
+    virtual ~WorkQueueItem() = default;
     virtual bool invoke() const = 0; // Returns true if this started a load.
 };
 

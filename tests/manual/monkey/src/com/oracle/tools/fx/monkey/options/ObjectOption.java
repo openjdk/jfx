@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,6 +42,7 @@ public class ObjectOption<T> extends ComboBox<NamedValue<T>> {
 
     public ObjectOption(String name, Property<T> p) {
         FX.name(this, name);
+        setMaxWidth(Double.MAX_VALUE);
         property.bindBidirectional(p);
 
         // TODO add the current value to choices and select it

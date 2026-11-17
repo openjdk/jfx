@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -690,7 +690,7 @@ void ViewContainer::HandleViewTypedEvent(HWND hwnd, UINT msg, WPARAM wParam, LPA
     SendViewTypedEvent(repCount, wChar);
 }
 
-BOOL ViewContainer::HandleViewMouseEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+BOOL ViewContainer::HandleViewMouseEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, BOOL extendedWindow)
 {
     if (!GetGlassView()) {
         return FALSE;
@@ -701,7 +701,62 @@ BOOL ViewContainer::HandleViewMouseEvent(HWND hwnd, UINT msg, WPARAM wParam, LPA
     POINT pt;   // client coords
     jdouble wheelRotation = 0.0;
 
-    if (msg == WM_MOUSELEAVE) {
+    // Windows with the EXTENDED style have an unusual anatomy: the entire window (excluding borders) comprises
+    // the client area with regards to geometry, but not with regards to hit testing. The title bar is classified
+    // as a non-client hit-testing area (by responding to the WM_NCHITTEST message), which enables window manager
+    // interactions (dragging, snap layouts, etc).
+    // When the mouse cursor moves from the client area to the title bar, we technically receive a WM_MOUSELEAVE
+    // message that would normally cause a MouseEvent.EXIT event to be emitted. However, from the point of view
+    // of the JavaFX application, the mouse cursor is still on the client-side title bar and therefore we wouldn't
+    // expect to receive an MouseEvent.EXIT event. The following code detects this situation and prevents the
+    // MouseEvent.EXIT event from being fired.
+    if (msg == WM_MOUSELEAVE && extendedWindow) {
+        DWORD msgPos = ::GetMessagePos(); // screen coordinates
+        pt.x = GET_X_LPARAM(msgPos);
+        pt.y = GET_Y_LPARAM(msgPos);
+
+        // If the cursor is not over our window, we reset mouse tracking and emit an EXIT event.
+        if (::ChildWindowFromPointEx(::GetDesktopWindow(), pt, CWP_SKIPINVISIBLE) != hwnd) {
+            type = com_sun_glass_events_MouseEvent_EXIT;
+            m_bTrackingMouse = FALSE;
+            m_lastMouseMovePosition = -1;
+        } else {
+            // If the cursor is still on our window, we need to detect whether it has moved from the client area
+            // to the title bar, and suppress the EXIT event in this case.
+            // Important: WM_MOUSELEAVE does not necessarily imply that the cursor physically left the client area.
+            // In particular, during OLE drag-and-drop, Windows can disrupt the TrackMouseEvent state and deliver
+            // WM_MOUSELEAVE even though the cursor is still over this window and still over the client area.
+            // Therefore we query WM_NCHITTEST at the current cursor position to determine what area the cursor
+            // is actually over. Only when the hit-test indicates a true non-client target (caption/buttons) do
+            // we switch tracking to TME_NONCLIENT and keep the mouse "entered".
+            LRESULT ht = ::SendMessage(hwnd, WM_NCHITTEST, 0, MAKELPARAM(pt.x, pt.y));
+
+            // If hit testing indicates that the cursor is over our client area, we reset mouse tracking.
+            // The hit-test return values that do not identify meaningful areas of our window are included
+            // here, but should not happen in practice (see ChildWindowFromPointEx).
+            if (ht == HTCLIENT || ht == HTNOWHERE || ht == HTERROR || ht == HTTRANSPARENT) {
+                type = com_sun_glass_events_MouseEvent_EXIT;
+                m_bTrackingMouse = FALSE;
+                m_lastMouseMovePosition = -1;
+            } else {
+                // In this branch, we know that the cursor is on the non-client area of our window, and we need
+                // to enable non-client mouse tracking to get a WM_NCMOUSELEAVE message when the cursor leaves
+                // the non-client area.
+                TRACKMOUSEEVENT trackData = {
+                    sizeof(trackData),
+                    TME_LEAVE | TME_NONCLIENT,
+                    hwnd,
+                    HOVER_DEFAULT
+                };
+
+                if (::TrackMouseEvent(&trackData)) {
+                    m_bTrackingMouse = TRUE;
+                }
+            }
+        }
+
+        ::ScreenToClient(hwnd, &pt);
+    } else if (msg == WM_MOUSELEAVE) {
         type = com_sun_glass_events_MouseEvent_EXIT;
         // get the coords (the message does not contain them)
         lParam = ::GetMessagePos();
@@ -934,6 +989,170 @@ BOOL ViewContainer::HandleViewMouseEvent(HWND hwnd, UINT msg, WPARAM wParam, LPA
     return TRUE;
 }
 
+void ViewContainer::HandleViewNonClientMouseEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    if (!GetGlassView()) {
+        return;
+    }
+
+    int type = 0;
+    int button = com_sun_glass_events_MouseEvent_BUTTON_NONE;
+    POINT pt;   // client coords
+
+    // Windows with the EXTENDED style have an unusual anatomy: the entire window (excluding borders) comprises
+    // the client area with regards to geometry, but not with regards to hit testing. The title bar is classified
+    // as a non-client hit-testing area (by responding to the WM_NCHITTEST message), which enables window manager
+    // interactions (dragging, snap layouts, etc).
+    // When the mouse cursor moves from the title bar to the client area, we technically receive a WM_NCMOUSELEAVE
+    // message that would normally cause a MouseEvent.EXIT event to be emitted. However, from the point of view
+    // of the JavaFX application, the mouse cursor is still on the window's client area and therefore we wouldn't
+    // expect to receive an MouseEvent.EXIT event. The following code detects this situation and prevents the
+    // MouseEvent.EXIT event from being fired.
+    if (msg == WM_NCMOUSELEAVE) {
+        DWORD msgPos = ::GetMessagePos(); // screen coordinates
+        pt.x = GET_X_LPARAM(msgPos);
+        pt.y = GET_Y_LPARAM(msgPos);
+
+        // Skip the MouseEvent.EXIT event when the cursor is now directly over our window. In contrast to
+        // similar code in ViewContainer::HandleViewMouseEvent(), we don't need to test whether the cursor
+        // is within the client area. If the cursor has left the non-client area, but is still directly over
+        // our window, it can't be anywhere else but in the client area.
+        if (::ChildWindowFromPointEx(::GetDesktopWindow(), pt, CWP_SKIPINVISIBLE) == hwnd) {
+            TRACKMOUSEEVENT trackData;
+            trackData.cbSize = sizeof(trackData);
+            trackData.dwFlags = TME_LEAVE;
+            trackData.hwndTrack = hwnd;
+            trackData.dwHoverTime = HOVER_DEFAULT;
+
+            // Since the cursor is now on the client area of our window, we need to enable mouse tracking
+            // to get a WM_MOUSELEAVE message when the cursor leaves the client area.
+            if (::TrackMouseEvent(&trackData)) {
+                m_bTrackingMouse = TRUE;
+            }
+        } else {
+            type = com_sun_glass_events_MouseEvent_EXIT;
+            m_bTrackingMouse = FALSE;
+            m_lastMouseMovePosition = -1;
+        }
+
+        ::ScreenToClient(hwnd, &pt);
+    } else if (msg == WM_NCMOUSEMOVE && wParam == HTTOP && m_bTrackingMouse) {
+        // We are here because the mouse cursor moved from the client area to the HTTOP non-client area.
+        // We emit an EXIT event to signal to JavaFX that the mouse cursor is no longer within the client area.
+        pt.x = GET_X_LPARAM(lParam);
+        pt.y = GET_Y_LPARAM(lParam);
+        ::MapWindowPoints(NULL, hwnd, &pt, 1);
+
+        type = com_sun_glass_events_MouseEvent_EXIT;
+        m_bTrackingMouse = FALSE;
+        m_lastMouseMovePosition = -1;
+    } else if (msg >= WM_NCMOUSEMOVE
+                   && msg <= WM_NCXBUTTONDBLCLK
+                   && (wParam == HTCAPTION || wParam == HTMINBUTTON || wParam == HTMAXBUTTON || wParam == HTCLOSE)) {
+        pt.x = GET_X_LPARAM(lParam);
+        pt.y = GET_Y_LPARAM(lParam);
+        ::MapWindowPoints(NULL, hwnd, &pt, 1);
+
+        switch (msg) {
+            case WM_NCMOUSEMOVE:
+                if (lParam == m_lastMouseMovePosition) {
+                    // Avoid sending synthetic NC_MOVE events if
+                    // the pointer hasn't moved actually.
+                    // Just consume the messages.
+                    return;
+                }
+
+                m_lastMouseMovePosition = lParam;
+                type = com_sun_glass_events_MouseEvent_MOVE;
+                break;
+            case WM_NCLBUTTONDOWN:
+                type = com_sun_glass_events_MouseEvent_DOWN;
+                button = com_sun_glass_events_MouseEvent_BUTTON_LEFT;
+                break;
+            case WM_NCLBUTTONUP:
+                type = com_sun_glass_events_MouseEvent_UP;
+                button = com_sun_glass_events_MouseEvent_BUTTON_LEFT;
+                break;
+            case WM_NCRBUTTONDOWN:
+                type = com_sun_glass_events_MouseEvent_DOWN;
+                button = com_sun_glass_events_MouseEvent_BUTTON_RIGHT;
+                break;
+            case WM_NCRBUTTONUP:
+                type = com_sun_glass_events_MouseEvent_UP;
+                button = com_sun_glass_events_MouseEvent_BUTTON_RIGHT;
+                break;
+            case WM_NCMBUTTONDOWN:
+                type = com_sun_glass_events_MouseEvent_DOWN;
+                button = com_sun_glass_events_MouseEvent_BUTTON_OTHER;
+                break;
+            case WM_NCMBUTTONUP:
+                type = com_sun_glass_events_MouseEvent_UP;
+                button = com_sun_glass_events_MouseEvent_BUTTON_OTHER;
+                break;
+            case WM_NCXBUTTONDOWN:
+                type = com_sun_glass_events_MouseEvent_DOWN;
+                button = GET_XBUTTON_WPARAM(wParam) == XBUTTON1
+                    ? com_sun_glass_events_MouseEvent_BUTTON_BACK
+                    : com_sun_glass_events_MouseEvent_BUTTON_FORWARD;
+                break;
+            case WM_NCXBUTTONUP:
+                type = com_sun_glass_events_MouseEvent_UP;
+                button = GET_XBUTTON_WPARAM(wParam) == XBUTTON1
+                    ? com_sun_glass_events_MouseEvent_BUTTON_BACK
+                    : com_sun_glass_events_MouseEvent_BUTTON_FORWARD;
+                break;
+        }
+    }
+
+    // Event was not handled
+    if (type == 0) {
+        return;
+    }
+
+    // get screen coords
+    POINT ptAbs = pt;
+    ::ClientToScreen(hwnd, &ptAbs);
+
+    // unmirror the x coordinate
+    LONG style = ::GetWindowLong(hwnd, GWL_EXSTYLE);
+    if (style & WS_EX_LAYOUTRTL) {
+        RECT rect = {0};
+        ::GetClientRect(hwnd, &rect);
+        pt.x = max(0, rect.right - rect.left) - pt.x;
+    }
+
+    jint jModifiers = GetModifiers();
+    jboolean isSynthesized = jboolean(IsTouchEvent());
+    JNIEnv* env = GetEnv();
+
+    if (!m_bTrackingMouse && type != com_sun_glass_events_MouseEvent_EXIT) {
+        TRACKMOUSEEVENT trackData;
+        trackData.cbSize = sizeof(trackData);
+        trackData.dwFlags = TME_LEAVE | TME_NONCLIENT;
+        trackData.hwndTrack = hwnd;
+        trackData.dwHoverTime = HOVER_DEFAULT;
+
+        if (::TrackMouseEvent(&trackData)) {
+            // Mouse tracking will be canceled automatically upon receiving WM_NCMOUSELEAVE
+            m_bTrackingMouse = TRUE;
+        }
+
+        env->CallVoidMethod(GetView(), javaIDs.View.notifyMouse,
+            com_sun_glass_events_MouseEvent_ENTER,
+            com_sun_glass_events_MouseEvent_BUTTON_NONE,
+            pt.x, pt.y, ptAbs.x, ptAbs.y,
+            jModifiers, JNI_FALSE, isSynthesized);
+        CheckAndClearException(env);
+    }
+
+    env->CallVoidMethod(GetView(), javaIDs.View.notifyMouse,
+        type, button, pt.x, pt.y, ptAbs.x, ptAbs.y,
+        jModifiers,
+        type == com_sun_glass_events_MouseEvent_UP && button == com_sun_glass_events_MouseEvent_BUTTON_RIGHT,
+        isSynthesized);
+    CheckAndClearException(env);
+}
+
 void ViewContainer::NotifyCaptureChanged(HWND hwnd, HWND to)
 {
     m_mouseButtonDownCounter = 0;
@@ -948,7 +1167,7 @@ void ViewContainer::ResetMouseTracking(HWND hwnd)
     // We don't expect WM_MOUSELEAVE anymore, so we cancel mouse tracking manually
     TRACKMOUSEEVENT trackData;
     trackData.cbSize = sizeof(trackData);
-    trackData.dwFlags = TME_LEAVE | TME_CANCEL;
+    trackData.dwFlags = TME_LEAVE | TME_NONCLIENT | TME_CANCEL;
     trackData.hwndTrack = hwnd;
     trackData.dwHoverTime = HOVER_DEFAULT;
     ::TrackMouseEvent(&trackData);

@@ -27,17 +27,15 @@
 
 #if ENABLE(WEB_AUTHN)
 
-#include "AttestationConveyancePreference.h"
-#include "AuthenticatorTransport.h"
-#include "BufferSource.h"
-#include "CBORValue.h"
-#include "SecurityOrigin.h"
-#include "WebAuthenticationConstants.h"
+#include <WebCore/AttestationConveyancePreference.h>
+#include <WebCore/AuthenticatorTransport.h>
+#include <WebCore/BufferSource.h>
+#include <WebCore/CBORValue.h>
+#include <WebCore/SecurityOrigin.h>
+#include <WebCore/WebAuthenticationConstants.h>
 #include <wtf/Forward.h>
 
 namespace WebCore {
-
-WEBCORE_EXPORT Vector<uint8_t> convertBytesToVector(const uint8_t byteArray[], const size_t length);
 
 // Produce a SHA-256 hash of the given RP ID.
 WEBCORE_EXPORT Vector<uint8_t> produceRpIdHash(const String& rpId);

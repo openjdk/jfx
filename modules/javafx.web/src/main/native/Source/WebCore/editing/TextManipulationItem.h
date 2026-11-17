@@ -25,17 +25,18 @@
 
 #pragma once
 
-#include "FrameIdentifier.h"
-#include "TextManipulationItemIdentifier.h"
-#include "TextManipulationToken.h"
+#include <WebCore/FrameIdentifier.h>
+#include <WebCore/TextManipulationItemIdentifier.h>
+#include <WebCore/TextManipulationToken.h>
+#include <wtf/Markable.h>
 
 namespace WebCore {
 
 struct TextManipulationItem {
-    FrameIdentifier frameID;
+    Markable<FrameIdentifier> frameID;
     bool isSubframe { false };
     bool isCrossSiteSubframe { false };
-    TextManipulationItemIdentifier identifier;
+    Markable<TextManipulationItemIdentifier> identifier;
     Vector<TextManipulationToken> tokens;
 };
 

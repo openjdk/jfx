@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,7 +27,6 @@ package com.oracle.tools.fx.monkey.pages;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import java.util.function.Function;
 import java.util.function.Supplier;
 import javafx.beans.property.ObjectProperty;
 import javafx.collections.ObservableList;
@@ -285,6 +284,7 @@ public class ListViewPage extends TestPaneBase implements HasSkinnable {
         s.addChoiceSupplier("10 Rows", createItems(10));
         s.addChoiceSupplier("200 Rows", createItems(200));
         s.addChoiceSupplier("10,000 Rows", createItems(10_000));
+        s.addChoiceSupplier("500,000 Rows", createItems(500_000));
         s.addChoiceSupplier("10 Variable Height Rows", createVariableItems(10));
         s.addChoiceSupplier("200 Variable HeightRows", createVariableItems(200));
         s.addChoiceSupplier("2,000 Variable HeightRows", createVariableItems(2000));

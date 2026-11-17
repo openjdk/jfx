@@ -30,13 +30,14 @@
 #pragma once
 
 #include "CachedHTMLCollection.h"
+#include "Document.h"
 #include "Element.h"
 #include "SpaceSplitString.h"
 
 namespace WebCore {
 
 class ClassCollection final : public CachedHTMLCollection<ClassCollection, CollectionTypeTraits<CollectionType::ByClass>::traversalType> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(ClassCollection);
+    WTF_MAKE_TZONE_ALLOCATED(ClassCollection);
 public:
     static Ref<ClassCollection> create(ContainerNode&, CollectionType, const AtomString& classNames);
 

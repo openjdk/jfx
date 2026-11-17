@@ -30,18 +30,18 @@
 
 namespace WebCore {
 
-String CSSOffsetRotateValue::customCSSText() const
+String CSSOffsetRotateValue::customCSSText(const CSS::SerializationContext& context) const
 {
     StringBuilder builder;
 
     if (m_modifier)
-        builder.append(m_modifier->cssText());
+        builder.append(m_modifier->cssText(context));
 
     if (m_angle) {
         if (!builder.isEmpty())
             builder.append(' ');
 
-        builder.append(m_angle->cssText());
+        builder.append(m_angle->cssText(context));
     }
 
     return builder.toString();
@@ -50,7 +50,7 @@ String CSSOffsetRotateValue::customCSSText() const
 bool CSSOffsetRotateValue::isInitialValue() const
 {
     return m_modifier && m_modifier->valueID() == CSSValueAuto
-        && (!m_angle || m_angle->computeDegrees() == 0.0);
+        && (!m_angle || m_angle->isZero().value_or(false));
 }
 
 bool CSSOffsetRotateValue::equals(const CSSOffsetRotateValue& o) const

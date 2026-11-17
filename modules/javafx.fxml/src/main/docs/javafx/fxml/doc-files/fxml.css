@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -77,7 +77,6 @@ a {
 
 p.subtitle {
     font-style: italic;
-    color:#999;
 }
 
 span.code {
@@ -88,7 +87,7 @@ span.code {
 pre.code {
     font-size: 10pt;
     font-family: Courier New;
-    background: #dddddd;
+    background: #f2f2f2;
     padding:12;
 }
 
@@ -145,4 +144,11 @@ p.copyright {
    top:10px;
    width:200px;
    text-align:right;
+}
+
+.skip-nav {
+    position: absolute;
+    top: auto;
+    left: -9999px;
+    overflow: hidden;
 }

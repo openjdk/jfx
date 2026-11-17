@@ -44,6 +44,8 @@
 #include "VirtualRegister.h"
 #include <wtf/TZoneMalloc.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC { namespace DFG {
 
 class GPRTemporary;
@@ -69,10 +71,9 @@ enum GeneratedOperandType { GeneratedOperandTypeUnknown, GeneratedOperandInteger
 // a speculative check has failed. This allows the SpeculativeJIT
 // to propagate type information (including information that has
 // only speculatively been asserted) through the dataflow.
-DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(SpeculativeJIT);
 class SpeculativeJIT : public JITCompiler {
     using Base = JITCompiler;
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(SpeculativeJIT);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(SpeculativeJIT);
     friend struct OSRExit;
 private:
     typedef JITCompiler::TrustedImm32 TrustedImm32;
@@ -139,7 +140,7 @@ public:
         }
 
         explicit TrustedImmPtr(size_t value)
-            : m_value(bitwise_cast<void*>(value))
+            : m_value(std::bit_cast<void*>(value))
         {
         }
 
@@ -241,8 +242,7 @@ public:
     }
     GPRReg allocate(GPRReg specific)
     {
-        if (specific == InvalidGPRReg)
-            allocate();
+        ASSERT(specific != InvalidGPRReg);
 #if ENABLE(DFG_REGISTER_ALLOCATION_VALIDATION)
         addRegisterAllocationAtOffset(debugOffset());
 #endif
@@ -570,7 +570,7 @@ public:
     bool isKnownNotCell(Node* node) { return !(m_state.forNode(node).m_type & SpecCell); }
     bool isKnownNotOther(Node* node) { return !(m_state.forNode(node).m_type & SpecOther); }
 
-    bool canBeRope(Edge&);
+    bool canBeRope(Edge);
 
     UniquedStringImpl* identifierUID(unsigned index)
     {
@@ -658,7 +658,7 @@ public:
         case ArithBitLShift:
             lshift32(op1, Imm32(shiftAmount), result);
             break;
-        case BitURShift:
+        case ArithBitURShift:
             urshift32(op1, Imm32(shiftAmount), result);
             break;
         default:
@@ -674,7 +674,7 @@ public:
         case ArithBitLShift:
             lshift32(op1, shiftAmount, result);
             break;
-        case BitURShift:
+        case ArithBitURShift:
             urshift32(op1, shiftAmount, result);
             break;
         default:
@@ -761,6 +761,7 @@ public:
 
     void emitAllocateButterfly(GPRReg storageGPR, GPRReg sizeGPR, GPRReg scratch1, GPRReg scratch2, GPRReg scratch3, JumpList& slowCases);
     void emitInitializeButterfly(GPRReg storageGPR, GPRReg sizeGPR, JSValueRegs emptyValueRegs, GPRReg scratchGPR);
+    void compileAllocateNewArrayWithSize(Node*, GPRReg resultGPR, GPRReg sizeGPR, RegisteredStructure, bool shouldConvertLargeSizeToArrayStorage = true);
     void compileAllocateNewArrayWithSize(Node*, GPRReg resultGPR, GPRReg sizeGPR, IndexingType, bool shouldConvertLargeSizeToArrayStorage = true);
 
     // Called once a node has completed code generation but prior to setting
@@ -1083,13 +1084,14 @@ public:
 
         if (exceptionReg != InvalidGPRReg) {
             RegisterSetBuilder spilledRegs = spilledRegsForSilentSpillPlans(plans);
-            if constexpr (std::is_same_v<GPRReg, ResultRegType> || std::is_same_v<JSValueRegs, ResultRegType>) {
+            if constexpr (std::same_as<GPRReg, ResultRegType> || std::same_as<JSValueRegs, ResultRegType>) {
                 spilledRegs.add(GPRInfo::returnValueGPR, IgnoreVectors);
                 spilledRegs.add(result, IgnoreVectors);
             }
+
             if constexpr (sizeof...(OtherSpilledRegTypes) > 0) {
                 constexpr auto addRegIfNeeded = [](auto& spilledRegs, auto& reg) ALWAYS_INLINE_LAMBDA {
-                    static_assert(std::is_same_v<GPRReg, std::decay_t<decltype(reg)>> || std::is_same_v<JSValueRegs, std::decay_t<decltype(reg)>>);
+                    static_assert(std::same_as<GPRReg, std::decay_t<decltype(reg)>> || std::same_as<JSValueRegs, std::decay_t<decltype(reg)>>);
                     spilledRegs.add(reg, IgnoreVectors);
                 };
                 (addRegIfNeeded(spilledRegs, otherSpilledRegs), ...);
@@ -1183,14 +1185,6 @@ public:
         if (exceptionReg)
             exceptionCheck(*exceptionReg);
 
-        return call;
-    }
-
-    JITCompiler::Call callThrowOperationWithCallFrameRollback(V_JITOperation_Cb operation, GPRReg codeBlockGPR)
-    {
-        setupArguments<V_JITOperation_Cb>(codeBlockGPR);
-        JITCompiler::Call call = appendCall(operation);
-        exceptionJumpWithCallFrameRollback();
         return call;
     }
 
@@ -1438,13 +1432,13 @@ public:
 
     void emitSwitchIntJump(SwitchData*, GPRReg value, GPRReg scratch);
     void emitSwitchImm(Node*, SwitchData*);
-    void emitSwitchCharStringJump(Node*, SwitchData*, GPRReg value, GPRReg scratch);
+    void emitSwitchCharStringJump(Node*, SwitchData*, GPRReg value, GPRReg scratch, Edge stringEdge);
     void emitSwitchChar(Node*, SwitchData*);
     void emitBinarySwitchStringRecurse(
         SwitchData*, const Vector<StringSwitchCase>&, unsigned numChecked,
         unsigned begin, unsigned end, GPRReg buffer, GPRReg length, GPRReg temp,
         unsigned alreadyCheckedLength, bool checkedExactLength);
-    void emitSwitchStringOnString(Node*, SwitchData*, GPRReg string);
+    void emitSwitchStringOnString(Node*, SwitchData*, GPRReg string, Edge stringEdge);
     void emitSwitchString(Node*, SwitchData*);
     void emitSwitch(Node*);
 
@@ -1458,6 +1452,7 @@ public:
     void compileNewSymbol(Node*);
     void compileNewMap(Node*);
     void compileNewSet(Node*);
+    void compileNewRegExpUntyped(Node*);
 
     void emitNewTypedArrayWithSizeInRegister(Node*, TypedArrayType, RegisteredStructure, GPRReg sizeGPR);
     void compileNewTypedArrayWithSize(Node*);
@@ -1498,6 +1493,7 @@ public:
     void compileMapIteratorKey(Node*);
     void compileMapIteratorValue(Node*);
     void compileMapStorage(Node*);
+    void compileMapStorageOrSentinel(Node*);
     void compileMapIterationNext(Node*);
     void compileMapIterationEntry(Node*);
     void compileMapIterationEntryKey(Node*);
@@ -1543,7 +1539,7 @@ public:
     void compileGetPrivateNameById(Node*);
     void compileGetPrivateNameByVal(Node*, JSValueRegs base, JSValueRegs property);
 
-    void compileGetScope(Node*);
+    void compileGetScopeOrGetEvalScope(Node*);
     void compileSkipScope(Node*);
     void compileGetGlobalObject(Node*);
     void compileGetGlobalThis(Node*);
@@ -1552,6 +1548,10 @@ public:
     void compileGetArrayLength(Node*);
 #if USE(LARGE_TYPED_ARRAYS)
     void compileGetTypedArrayLengthAsInt52(Node*);
+#endif
+    void compileDataViewGetByteLength(Node*);
+#if USE(LARGE_TYPED_ARRAYS)
+    void compileDataViewGetByteLengthAsInt52(Node*);
 #endif
 
     void compileCheckTypeInfoFlags(Node*);
@@ -1578,6 +1578,7 @@ public:
     void emitUntypedOrBigIntRightShiftBitOp(Node*);
     void compileValueLShiftOp(Node*);
     void compileValueBitRShift(Node*);
+    void compileValueBitURShift(Node*);
     void compileShiftOp(Node*);
 
     template <typename Generator, typename RepatchingFunction, typename NonRepatchingFunction>
@@ -1612,6 +1613,7 @@ public:
     void compileArithUnary(Node*);
     void compileArithSqrt(Node*);
     void compileArithMinMax(Node*);
+    void compilePurifyNaN(Node*);
     void compileConstantStoragePointer(Node*);
     void compileGetIndexedPropertyStorage(Node*);
     void compileResolveRope(Node*);
@@ -1660,7 +1662,7 @@ public:
     void compileNewFunction(Node*);
     void compileSetFunctionName(Node*);
     void compileNewBoundFunction(Node*);
-    void compileNewRegexp(Node*);
+    void compileNewRegExp(Node*);
     void compileForwardVarargs(Node*);
     void compileVarargsLength(Node*);
     void compileLoadVarargs(Node*);
@@ -1677,8 +1679,8 @@ public:
     void compileNewArrayWithSpread(Node*);
     void compileGetRestLength(Node*);
     void compileArraySlice(Node*);
-    void compileArraySpliceExtract(Node*);
-    void compileArrayIndexOf(Node*);
+    void compileArraySplice(Node*);
+    void compileArrayIndexOfOrArrayIncludes(Node*);
     void compileArrayPush(Node*);
     void compileNotifyWrite(Node*);
     void compileRegExpExec(Node*);
@@ -1687,7 +1689,9 @@ public:
     void compileRegExpMatchFastGlobal(Node*);
     void compileRegExpTest(Node*);
     void compileRegExpTestInline(Node*);
+    void compileRegExpSearch(Node*);
     void compileStringReplace(Node*);
+    void compileStringReplaceAll(Node*);
     void compileStringReplaceString(Node*);
     void compileIsObject(Node*);
     void compileTypeOfIsObject(Node*);
@@ -1750,10 +1754,13 @@ public:
     void compileSetArgumentCountIncludingThis(Node*);
     void compileStrCat(Node*);
     void compileNewArrayBuffer(Node*);
+    void compileNewButterflyWithSize(Node*);
     void compileNewArrayWithSize(Node*);
-    void compileNewArrayWithConstantSize(Node*);
+    void compileNewArrayWithButterfly(Node*);
     void compileNewArrayWithSpecies(Node*);
+    void compileNewArrayWithSizeAndStructure(Node*);
     void compileNewTypedArray(Node*);
+    void compileNewTypedArrayBuffer(Node*);
     void compileToThis(Node*);
     void compileOwnPropertyKeysVariant(Node*);
     void compileObjectAssign(Node*);
@@ -1785,8 +1792,17 @@ public:
     void compileDateSet(Node*);
     void compileGlobalIsNaN(Node*);
     void compileNumberIsNaN(Node*);
+    void compileGlobalIsFinite(Node*);
+    void compileNumberIsFinite(Node*);
+    void compileNumberIsSafeInteger(Node*);
     void compileToIntegerOrInfinity(Node*);
     void compileToLength(Node*);
+    void compileResolvePromiseFirstResolving(Node*);
+    void compileRejectPromiseFirstResolving(Node*);
+    void compileFulfillPromiseFirstResolving(Node*);
+    void compilePromiseResolve(Node*);
+    void compilePromiseReject(Node*);
+    void compilePromiseThen(Node*);
 
     template<typename JSClass, typename Operation>
     void compileCreateInternalFieldObject(Node*, Operation);
@@ -1867,11 +1883,14 @@ public:
     void speculationCheck(ExitKind, JSValueSource, Node*, Jump jumpToFail, const SpeculationRecovery&);
     void speculationCheck(ExitKind, JSValueSource, Edge, Jump jumpToFail, const SpeculationRecovery&);
 
+    void speculationCheckOutOfMemory(JSValueSource, Node*, const JumpList&);
+
     void compileInvalidationPoint(Node*);
 
     void unreachable(Node*);
 
     // Called when we statically determine that a speculation will fail.
+    void terminateUnreachableNode();
     void terminateSpeculativeExecution(ExitKind, JSValueRegs, Node*);
     void terminateSpeculativeExecution(ExitKind, JSValueRegs, Edge);
 
@@ -1884,10 +1903,10 @@ public:
     void speculateCellType(Edge, GPRReg cellGPR, SpeculatedType, JSType);
 
     void speculateInt32(Edge);
-#if USE(JSVALUE64)
-    void convertAnyInt(Edge, GPRReg resultGPR);
-    void speculateAnyInt(Edge);
     void speculateInt32(Edge, JSValueRegs);
+#if USE(JSVALUE64)
+    void convertAnyInt(Edge, GPRReg resultGPR, bool canIgnoreNegativeZero);
+    void speculateAnyInt(Edge);
     void speculateDoubleRepAnyInt(Edge);
 #endif // USE(JSVALUE64)
 #if USE(BIGINT32)
@@ -1921,8 +1940,8 @@ public:
     void speculateDateObject(Edge);
     void speculateDateObject(Edge, GPRReg cell);
     void speculateMapObject(Edge);
-    void speculateImmutableButterfly(Edge, GPRReg);
-    void speculateImmutableButterfly(Edge);
+    void speculateCellButterfly(Edge, GPRReg);
+    void speculateCellButterfly(Edge);
     void speculateMapObject(Edge, GPRReg cell);
     void speculateSetObject(Edge);
     void speculateSetObject(Edge, GPRReg cell);
@@ -1973,6 +1992,14 @@ public:
     void checkArray(Node*);
     void arrayify(Node*, GPRReg baseReg, GPRReg propertyReg);
     void arrayify(Node*);
+
+    unsigned appendOSRExit(OSRExit&&, bool isExceptionHandler = false);
+    unsigned appendExceptionHandlingOSRExit(ExitKind, unsigned eventStreamIndex, CodeOrigin, HandlerInfo* exceptionHandler, CallSiteIndex, MacroAssembler::JumpList jumpsToFail = MacroAssembler::JumpList());
+
+#if USE(JSVALUE64)
+    void unboxRealNumberDouble(Node*, FPRReg boxedFPR, FPRReg resultFPR, GPRReg scratchGPR);
+    void boxDoubleAsDouble(FPRReg inputFPR, FPRReg resultFPR);
+#endif
 
     template<bool strict>
     GPRReg fillSpeculateInt32Internal(Edge, DataFormat& returnFormat);
@@ -2071,7 +2098,7 @@ public:
 // in order to make space available for another.
 
 class JSValueOperand {
-    WTF_MAKE_TZONE_ALLOCATED(JSValueOperand);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(JSValueOperand);
 public:
     explicit JSValueOperand(SpeculativeJIT* jit, Edge edge, OperandSpeculationMode mode = AutomaticOperandSpeculation)
         : m_jit(jit)
@@ -2229,7 +2256,7 @@ private:
 };
 
 class StorageOperand {
-    WTF_MAKE_TZONE_ALLOCATED(StorageOperand);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(StorageOperand);
 public:
     StorageOperand() = default;
 
@@ -2270,7 +2297,7 @@ public:
         m_edge = edge;
         ASSERT(m_gprOrInvalid == InvalidGPRReg);
         ASSERT(m_jit);
-        ASSERT(edge.useKind() == UntypedUse || edge.useKind() == KnownCellUse);
+        ASSERT(edge.useKind() == KnownStorageUse);
         if (jit->isFilled(node()))
             gpr();
     }
@@ -2297,7 +2324,7 @@ private:
 enum ReuseTag { Reuse };
 
 class GPRTemporary {
-    WTF_MAKE_TZONE_ALLOCATED(GPRTemporary);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(GPRTemporary);
 public:
     GPRTemporary();
     GPRTemporary(SpeculativeJIT*);
@@ -2368,14 +2395,10 @@ private:
 };
 
 class JSValueRegsTemporary {
-    WTF_MAKE_TZONE_ALLOCATED(JSValueRegsTemporary);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(JSValueRegsTemporary);
 public:
     JSValueRegsTemporary();
     JSValueRegsTemporary(SpeculativeJIT*);
-    JSValueRegsTemporary(SpeculativeJIT*, GPRReg specificPayload);
-#if USE(JSVALUE32_64)
-    JSValueRegsTemporary(SpeculativeJIT*, GPRReg specificPayload, GPRReg specificTag);
-#endif
     template<typename T>
     JSValueRegsTemporary(SpeculativeJIT*, ReuseTag, T& operand, WhichValueWord resultRegWord = PayloadWord);
     JSValueRegsTemporary(SpeculativeJIT*, ReuseTag, JSValueOperand&);
@@ -2417,7 +2440,7 @@ JSValueRegsTemporary::JSValueRegsTemporary(SpeculativeJIT* jit, ReuseTag, T& ope
 #endif
 
 class FPRTemporary {
-    WTF_MAKE_TZONE_ALLOCATED(FPRTemporary);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(FPRTemporary);
 public:
     FPRTemporary(FPRTemporary&&);
     FPRTemporary(SpeculativeJIT*);
@@ -2429,7 +2452,7 @@ public:
 
     ~FPRTemporary()
     {
-        if (LIKELY(m_jit))
+        if (m_jit) [[likely]]
             m_jit->unlock(fpr());
     }
 
@@ -2489,7 +2512,7 @@ private:
 };
 
 class JSValueRegsFlushedCallResult {
-    WTF_MAKE_TZONE_ALLOCATED(JSValueRegsFlushedCallResult);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(JSValueRegsFlushedCallResult);
 public:
     JSValueRegsFlushedCallResult(SpeculativeJIT* jit)
 #if USE(JSVALUE64)
@@ -2531,7 +2554,7 @@ private:
 // a bail-out to the non-speculative path will be taken.
 
 class SpeculateInt32Operand {
-    WTF_MAKE_TZONE_ALLOCATED(SpeculateInt32Operand);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(SpeculateInt32Operand);
 public:
     explicit SpeculateInt32Operand(SpeculativeJIT* jit, Edge edge, OperandSpeculationMode mode = AutomaticOperandSpeculation)
         : m_jit(jit)
@@ -2590,7 +2613,7 @@ private:
 };
 
 class SpeculateStrictInt32Operand {
-    WTF_MAKE_TZONE_ALLOCATED(SpeculateStrictInt32Operand);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(SpeculateStrictInt32Operand);
 public:
     explicit SpeculateStrictInt32Operand(SpeculativeJIT* jit, Edge edge, OperandSpeculationMode mode = AutomaticOperandSpeculation)
         : m_jit(jit)
@@ -2639,7 +2662,7 @@ private:
 
 // Gives you a canonical Int52 (i.e. it's left-shifted by 12, low bits zero).
 class SpeculateInt52Operand {
-    WTF_MAKE_TZONE_ALLOCATED(SpeculateInt52Operand);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(SpeculateInt52Operand);
 public:
     explicit SpeculateInt52Operand(SpeculativeJIT* jit, Edge edge)
         : m_jit(jit)
@@ -2687,7 +2710,7 @@ private:
 
 // Gives you a strict Int52 (i.e. the payload is in the low 52 bits, high 12 bits are sign-extended).
 class SpeculateStrictInt52Operand {
-    WTF_MAKE_TZONE_ALLOCATED(SpeculateStrictInt52Operand);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(SpeculateStrictInt52Operand);
 public:
     explicit SpeculateStrictInt52Operand(SpeculativeJIT* jit, Edge edge)
         : m_jit(jit)
@@ -2736,7 +2759,7 @@ private:
 enum OppositeShiftTag { OppositeShift };
 
 class SpeculateWhicheverInt52Operand {
-    WTF_MAKE_TZONE_ALLOCATED(SpeculateWhicheverInt52Operand);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(SpeculateWhicheverInt52Operand);
 public:
     explicit SpeculateWhicheverInt52Operand(SpeculativeJIT* jit, Edge edge)
         : m_jit(jit)
@@ -2814,7 +2837,7 @@ private:
 };
 
 class SpeculateDoubleOperand {
-    WTF_MAKE_TZONE_ALLOCATED(SpeculateDoubleOperand);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(SpeculateDoubleOperand);
 public:
     explicit SpeculateDoubleOperand(SpeculativeJIT* jit, Edge edge)
         : m_jit(jit)
@@ -2862,7 +2885,7 @@ private:
 };
 
 class SpeculateCellOperand {
-    WTF_MAKE_TZONE_ALLOCATED(SpeculateCellOperand);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(SpeculateCellOperand);
 
 public:
     explicit SpeculateCellOperand(SpeculativeJIT* jit, Edge edge, OperandSpeculationMode mode = AutomaticOperandSpeculation)
@@ -2927,7 +2950,7 @@ private:
 };
 
 class SpeculateBooleanOperand {
-    WTF_MAKE_TZONE_ALLOCATED(SpeculateBooleanOperand);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(SpeculateBooleanOperand);
 public:
     explicit SpeculateBooleanOperand(SpeculativeJIT* jit, Edge edge, OperandSpeculationMode mode = AutomaticOperandSpeculation)
         : m_jit(jit)
@@ -2976,7 +2999,7 @@ private:
 
 #if USE(BIGINT32)
 class SpeculateBigInt32Operand {
-    WTF_MAKE_TZONE_ALLOCATED(SpeculateBigInt32Operand);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(SpeculateBigInt32Operand);
 public:
     explicit SpeculateBigInt32Operand(SpeculativeJIT* jit, Edge edge, OperandSpeculationMode mode = AutomaticOperandSpeculation)
         : m_jit(jit)
@@ -3037,5 +3060,7 @@ private:
     DFG_TYPE_CHECK_WITH_EXIT_KIND(BadType, source, edge, typesPassedThrough, jumpToFail)
 
 } } // namespace JSC::DFG
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif

@@ -25,24 +25,25 @@
 
 #pragma once
 
-#include "MediaPlayerIdentifier.h"
-#include "VideoFrame.h"
-#include "WebGPUObjectDescriptorBase.h"
-#include "WebGPUPredefinedColorSpace.h"
+#include <WebCore/MediaPlayerIdentifier.h>
+#include <WebCore/VideoFrame.h>
+#include <WebCore/WebGPUObjectDescriptorBase.h>
+#include <WebCore/WebGPUPredefinedColorSpace.h>
+#include <wtf/Platform.h>
 #include <wtf/Vector.h>
 
 #if ENABLE(VIDEO) && PLATFORM(COCOA)
-typedef struct __CVBuffer* CVPixelBufferRef;
+typedef struct CF_BRIDGED_TYPE(id) __CVBuffer* CVPixelBufferRef;
 #endif
 
 namespace WebCore::WebGPU {
 
 #if ENABLE(VIDEO) && PLATFORM(COCOA)
-using VideoSourceIdentifier = std::variant<std::optional<WebCore::MediaPlayerIdentifier>, RefPtr<WebCore::VideoFrame>, RetainPtr<CVPixelBufferRef>>;
+using VideoSourceIdentifier = Variant<std::optional<WebCore::MediaPlayerIdentifier>, RefPtr<WebCore::VideoFrame>, RetainPtr<CVPixelBufferRef>>;
 #elif ENABLE(VIDEO)
-using VideoSourceIdentifier = std::variant<std::optional<WebCore::MediaPlayerIdentifier>, RefPtr<WebCore::VideoFrame>, void*>;
+using VideoSourceIdentifier = Variant<std::optional<WebCore::MediaPlayerIdentifier>, RefPtr<WebCore::VideoFrame>, void*>;
 #else
-using VideoSourceIdentifier = std::variant<std::optional<WebCore::MediaPlayerIdentifier>, void*>;
+using VideoSourceIdentifier = Variant<std::optional<WebCore::MediaPlayerIdentifier>, void*>;
 #endif
 
 struct ExternalTextureDescriptor : public ObjectDescriptorBase {

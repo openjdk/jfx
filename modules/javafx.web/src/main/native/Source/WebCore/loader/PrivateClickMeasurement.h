@@ -25,13 +25,14 @@
 
 #pragma once
 
-#include "AttributionSecondsUntilSendData.h"
-#include "AttributionTimeToSendData.h"
-#include "AttributionTriggerData.h"
-#include "EphemeralNonce.h"
-#include "PCMSites.h"
-#include "RegistrableDomain.h"
+#include <WebCore/AttributionSecondsUntilSendData.h>
+#include <WebCore/AttributionTimeToSendData.h>
+#include <WebCore/AttributionTriggerData.h>
+#include <WebCore/EphemeralNonce.h>
+#include <WebCore/PCMSites.h>
+#include <WebCore/RegistrableDomain.h>
 #include <wtf/CompletionHandler.h>
+#include <wtf/Platform.h>
 #include <wtf/text/Base64.h>
 #include <wtf/text/WTFString.h>
 
@@ -59,16 +60,16 @@ public:
     }
 
     PrivateClickMeasurement(SourceID&& sourceID, PCM::SourceSite&& sourceSite, PCM::AttributionDestinationSite&& destinationSite, WallTime&& timeOfAdClick, PCM::AttributionEphemeral&& isEphemeral, std::optional<uint64_t>&& adamID, std::optional<PCM::AttributionTriggerData>&& attributionTriggerData, PCM::AttributionTimeToSendData&& timesToSend, std::optional<PCM::EphemeralNonce>&& ephemeralSourceNonce, String&& sourceApplicationBundleID)
-        : m_sourceID(WTFMove(sourceID))
-        , m_sourceSite(WTFMove(sourceSite))
-        , m_destinationSite(WTFMove(destinationSite))
-        , m_timeOfAdClick(WTFMove(timeOfAdClick))
-        , m_isEphemeral(WTFMove(isEphemeral))
-        , m_adamID(WTFMove(adamID))
-        , m_attributionTriggerData(WTFMove(attributionTriggerData))
-        , m_timesToSend(WTFMove(timesToSend))
-        , m_ephemeralSourceNonce(WTFMove(ephemeralSourceNonce))
-        , m_sourceApplicationBundleID(WTFMove(sourceApplicationBundleID))
+        : m_sourceID(WTF::move(sourceID))
+        , m_sourceSite(WTF::move(sourceSite))
+        , m_destinationSite(WTF::move(destinationSite))
+        , m_timeOfAdClick(WTF::move(timeOfAdClick))
+        , m_isEphemeral(WTF::move(isEphemeral))
+        , m_adamID(WTF::move(adamID))
+        , m_attributionTriggerData(WTF::move(attributionTriggerData))
+        , m_timesToSend(WTF::move(timesToSend))
+        , m_ephemeralSourceNonce(WTF::move(ephemeralSourceNonce))
+        , m_sourceApplicationBundleID(WTF::move(sourceApplicationBundleID))
     {
     }
 
@@ -88,7 +89,7 @@ public:
     void setTimesToSend(PCM::AttributionTimeToSendData data) { m_timesToSend = data; }
     const SourceID& sourceID() const { return m_sourceID; }
     const std::optional<PCM::AttributionTriggerData>& attributionTriggerData() const { return m_attributionTriggerData; }
-    void setAttribution(PCM::AttributionTriggerData&& attributionTriggerData) { m_attributionTriggerData = WTFMove(attributionTriggerData); }
+    void setAttribution(PCM::AttributionTriggerData&& attributionTriggerData) { m_attributionTriggerData = WTF::move(attributionTriggerData); }
     const String& sourceApplicationBundleID() const { return m_sourceApplicationBundleID; }
     WEBCORE_EXPORT void setSourceApplicationBundleIDForTesting(const String&);
 

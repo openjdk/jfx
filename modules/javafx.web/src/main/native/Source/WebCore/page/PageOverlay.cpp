@@ -27,6 +27,7 @@
 #include "PageOverlay.h"
 
 #include "GraphicsContext.h"
+#include "GraphicsLayer.h"
 #include "LocalFrame.h"
 #include "LocalFrameView.h"
 #include "Logging.h"
@@ -34,11 +35,14 @@
 #include "PageOverlayController.h"
 #include "PlatformMouseEvent.h"
 #include "ScrollbarTheme.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 static const Seconds fadeAnimationDuration { 200_ms };
 static const double fadeAnimationFrameRate = 30;
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PageOverlay);
 
 static PageOverlay::PageOverlayID generatePageOverlayID()
 {
@@ -81,7 +85,7 @@ IntRect PageOverlay::bounds() const
     if (!m_overrideFrame.isEmpty())
         return { { }, m_overrideFrame.size() };
 
-    RefPtr frameView = m_page->mainFrame().virtualView();
+    RefPtr frameView = m_page->protectedMainFrame()->virtualView();
     if (!frameView)
         return IntRect();
 
@@ -91,10 +95,10 @@ IntRect PageOverlay::bounds() const
         int height = frameView->height();
 
         if (!ScrollbarTheme::theme().usesOverlayScrollbars()) {
-            if (frameView->verticalScrollbar())
-                width -= frameView->verticalScrollbar()->width();
-            if (frameView->horizontalScrollbar())
-                height -= frameView->horizontalScrollbar()->height();
+            if (RefPtr scrollbar = frameView->verticalScrollbar())
+                width -= scrollbar->width();
+            if (RefPtr scrollbar = frameView->horizontalScrollbar())
+                height -= scrollbar->height();
         }
         return IntRect(0, 0, width, height);
     }
@@ -132,7 +136,7 @@ IntSize PageOverlay::viewToOverlayOffset() const
         return IntSize();
 
     case OverlayType::Document: {
-        RefPtr frameView = m_page->mainFrame().virtualView();
+        RefPtr frameView = m_page->protectedMainFrame()->virtualView();
         return frameView ? toIntSize(frameView->viewToContents(IntPoint())) : IntSize();
     }
     }
@@ -183,7 +187,7 @@ void PageOverlay::drawRect(GraphicsContext& graphicsContext, const IntRect& dirt
     GraphicsContextStateSaver stateSaver(graphicsContext);
 
     if (m_overlayType == PageOverlay::OverlayType::Document) {
-        if (auto* frameView = m_page->mainFrame().virtualView()) {
+        if (RefPtr frameView = m_page->protectedMainFrame()->virtualView()) {
             auto offset = frameView->scrollOrigin();
             graphicsContext.translate(toFloatSize(offset));
             paintRect.moveBy(-offset);
@@ -195,10 +199,10 @@ void PageOverlay::drawRect(GraphicsContext& graphicsContext, const IntRect& dirt
 
 bool PageOverlay::mouseEvent(const PlatformMouseEvent& mouseEvent)
 {
-    IntPoint mousePositionInOverlayCoordinates(mouseEvent.position());
+    IntPoint mousePositionInOverlayCoordinates(flooredIntPoint(mouseEvent.position()));
 
     if (m_overlayType == PageOverlay::OverlayType::Document)
-        mousePositionInOverlayCoordinates = m_page->mainFrame().virtualView()->windowToContents(mousePositionInOverlayCoordinates);
+        mousePositionInOverlayCoordinates = m_page->protectedMainFrame()->protectedVirtualView()->windowToContents(mousePositionInOverlayCoordinates);
     mousePositionInOverlayCoordinates.moveBy(-frame().location());
 
     // Ignore events outside the bounds.
@@ -301,9 +305,14 @@ void PageOverlay::clear()
         pageOverlayController->clearPageOverlay(*this);
 }
 
-GraphicsLayer& PageOverlay::layer()
+GraphicsLayer& PageOverlay::layer() const
 {
     return controller()->layerForOverlay(*this);
+}
+
+Ref<GraphicsLayer> PageOverlay::protectedLayer() const
+{
+    return layer();
 }
 
 } // namespace WebKit

@@ -24,7 +24,8 @@
  */
 
 [
-    Conditional=APPLE_PAY&PAYMENT_REQUEST
+    Conditional=APPLE_PAY&PAYMENT_REQUEST,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary ApplePayPaymentCompleteDetails {
     [Conditional=APPLE_PAY_PAYMENT_ORDER_DETAILS] ApplePayPaymentOrderDetails orderDetails;
 };

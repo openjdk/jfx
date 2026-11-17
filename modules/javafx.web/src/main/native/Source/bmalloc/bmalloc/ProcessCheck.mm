@@ -51,9 +51,7 @@ public:
     }
 
 private:
-    ProcessNames()
-    {
-    }
+    ProcessNames() = default;
 
     static void ensureSingleton()
     {
@@ -135,18 +133,18 @@ bool gigacageEnabledForProcess()
 
     @autoreleasepool {
         if (NSString *appName = ProcessNames::getAppName()) {
-        bool isWebProcess = [appName hasPrefix:@"com.apple.WebKit.WebContent"];
-        return isWebProcess;
-    }
+            bool isWebProcess = [appName hasPrefix:@"com.apple.WebKit.WebContent"];
+            return isWebProcess;
+        }
 
         NSString *processName = ProcessNames::getProcessName();
-    bool isOptInBinary = [processName isEqualToString:@"jsc"]
-        || [processName isEqualToString:@"DumpRenderTree"]
-        || [processName isEqualToString:@"wasm"]
-        || [processName hasPrefix:@"test"]
-        || [processName hasPrefix:@"Test"];
+        bool isOptInBinary = [processName isEqualToString:@"jsc"]
+            || [processName isEqualToString:@"DumpRenderTree"]
+            || [processName isEqualToString:@"wasm"]
+            || [processName hasPrefix:@"test"]
+            || [processName hasPrefix:@"Test"];
 
-    return isOptInBinary;
+        return isOptInBinary;
     }
 }
 #endif // BPLATFORM(COCOA) && !BPLATFORM(WATCHOS)
@@ -175,16 +173,16 @@ bool shouldProcessUnconditionallyUseBmalloc()
     std::call_once(onceFlag, [&] () {
         @autoreleasepool {
             if (NSString *appName = ProcessNames::getAppName()) {
-            auto contains = [&] (NSString *string) {
-                return [appName rangeOfString:string options:NSCaseInsensitiveSearch].location != NSNotFound;
-            };
-            result = contains(@"com.apple.WebKit") || contains(@"safari");
-        } else {
+                auto contains = [&] (NSString *string) {
+                    return [appName rangeOfString:string options:NSCaseInsensitiveSearch].location != NSNotFound;
+                };
+                result = contains(@"com.apple.WebKit") || contains(@"safari");
+            } else {
                 NSString *processName = ProcessNames::getProcessName();
-            result = [processName isEqualToString:@"jsc"]
-                || [processName isEqualToString:@"wasm"]
-                || [processName hasPrefix:@"test"];
-        }
+                result = [processName isEqualToString:@"jsc"]
+                    || [processName isEqualToString:@"wasm"]
+                    || [processName hasPrefix:@"test"];
+            }
         }
     });
 

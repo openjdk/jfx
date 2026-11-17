@@ -51,7 +51,7 @@ void CSSSegmentedFontFace::appendFontFace(Ref<CSSFontFace>&& fontFace)
 {
     m_cache.clear();
     fontFace->addClient(*this);
-    m_fontFaces.append(WTFMove(fontFace));
+    m_fontFaces.append(WTF::move(fontFace));
 }
 
 void CSSSegmentedFontFace::fontLoaded(CSSFontFace&)
@@ -70,7 +70,7 @@ public:
     {
         if (!m_result || (policy == ExternalResourceDownloadPolicy::Allow
             && (m_fontFace->status() == CSSFontFace::Status::Pending || m_fontFace->status() == CSSFontFace::Status::Loading || m_fontFace->status() == CSSFontFace::Status::TimedOut))) {
-            const auto result = m_fontFace->font(m_fontDescription, m_syntheticBold, m_syntheticItalic, policy, m_fontPaletteValues, m_fontFeatureValues);
+            const auto result = Ref { m_fontFace }->font(m_fontDescription, m_syntheticBold, m_syntheticItalic, policy, m_fontPaletteValues, m_fontFeatureValues);
             if (!m_result)
                 m_result = result;
         }
@@ -105,7 +105,7 @@ private:
 static void appendFont(FontRanges& ranges, Ref<FontAccessor>&& fontAccessor, const Vector<CSSFontFace::UnicodeRange>& unicodeRanges)
 {
     if (unicodeRanges.isEmpty()) {
-        ranges.appendRange({ 0, 0x7FFFFFFF, WTFMove(fontAccessor) });
+        ranges.appendRange({ 0, 0x7FFFFFFF, WTF::move(fontAccessor) });
         return;
     }
 
@@ -137,7 +137,7 @@ FontRanges CSSSegmentedFontFace::fontRanges(const FontDescription& fontDescripti
         if (ranges.isNull() && !fontAccessor->font(ExternalResourceDownloadPolicy::Forbid))
             continue;
 
-        appendFont(ranges, WTFMove(fontAccessor), face->ranges());
+        appendFont(ranges, WTF::move(fontAccessor), face->ranges());
     }
 
     ranges.shrinkToFit();

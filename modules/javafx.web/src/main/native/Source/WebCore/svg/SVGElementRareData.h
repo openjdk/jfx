@@ -1,5 +1,6 @@
 /*
  * Copyright (C) Research In Motion Limited 2010. All rights reserved.
+ * Copyright (C) 2024 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -34,7 +35,8 @@ class SVGCursorElement;
 class SVGElement;
 
 class SVGElementRareData {
-    WTF_MAKE_NONCOPYABLE(SVGElementRareData); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(SVGElementRareData);
+    WTF_MAKE_NONCOPYABLE(SVGElementRareData);
 public:
     SVGElementRareData()
         : m_instancesUpdatesBlocked(false)
@@ -55,7 +57,7 @@ public:
     const WeakHashSet<SVGElement, WeakPtrImplWithEventTargetData>& referencingElements() const { return m_referencingElements; }
     WeakHashSet<SVGElement, WeakPtrImplWithEventTargetData> takeReferencingElements() { return std::exchange(m_referencingElements, { }); }
     SVGElement* referenceTarget() const { return m_referenceTarget.get(); }
-    void setReferenceTarget(WeakPtr<SVGElement, WeakPtrImplWithEventTargetData>&& element) { m_referenceTarget = WTFMove(element); }
+    void setReferenceTarget(WeakPtr<SVGElement, WeakPtrImplWithEventTargetData>&& element) { m_referenceTarget = WTF::move(element); }
 
     void addReferencingCSSClient(SVGResourceElementClient& client) { m_referencingCSSClients.add(client); }
     void removeReferencingCSSClient(SVGResourceElementClient& client) { m_referencingCSSClients.remove(client); }

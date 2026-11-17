@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2012 Google Inc. All rights reserved.
+ * Copyright (C) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +27,7 @@
 #pragma once
 
 #include <wtf/Forward.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
@@ -33,14 +35,14 @@ class Document;
 class Element;
 
 class ValidationMessageClient {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(ValidationMessageClient);
 public:
     virtual ~ValidationMessageClient() = default;
 
     // Show validation message for the specified anchor element. An
     // implementation of this function may hide the message automatically after
     // some period.
-    virtual void showValidationMessage(const Element& anchor, const String& message) = 0;
+    virtual void showValidationMessage(const Element& anchor, String&& message) = 0;
 
     // Hide validation message for the specified anchor if the message for the
     // anchor is already visible.

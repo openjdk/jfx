@@ -27,8 +27,11 @@
 
 #if ENABLE(MEDIA_SOURCE)
 
-#include "MediaDescription.h"
-#include "PlatformMediaError.h"
+#include <WebCore/AudioTrackPrivate.h>
+#include <WebCore/InbandTextTrackPrivate.h>
+#include <WebCore/MediaDescription.h>
+#include <WebCore/PlatformMediaError.h>
+#include <WebCore/VideoTrackPrivate.h>
 #include <wtf/MediaTime.h>
 #include <wtf/Ref.h>
 #include <wtf/Vector.h>
@@ -37,18 +40,15 @@
 
 namespace WebCore {
 
-class AudioTrackPrivate;
-class InbandTextTrackPrivate;
 class MediaSample;
 class MediaDescription;
 class PlatformTimeRanges;
-class VideoTrackPrivate;
 
 struct SourceBufferEvictionData {
     uint64_t contentSize { 0 };
     int64_t evictableSize { 0 };
     uint64_t maximumBufferSize { 0 };
-    size_t numMediaSamples { 0 };
+    uint64_t numMediaSamples { 0 };
 
     bool operator!=(const SourceBufferEvictionData& other)
     {
@@ -73,18 +73,27 @@ public:
         struct AudioTrackInformation {
             RefPtr<MediaDescription> description;
             RefPtr<AudioTrackPrivate> track;
+
+            RefPtr<MediaDescription> protectedDescription() const { return description; }
+            RefPtr<AudioTrackPrivate> protectedTrack() const { return track; }
         };
         Vector<AudioTrackInformation> audioTracks;
 
         struct VideoTrackInformation {
             RefPtr<MediaDescription> description;
             RefPtr<VideoTrackPrivate> track;
+
+            RefPtr<MediaDescription> protectedDescription() const { return description; }
+            RefPtr<VideoTrackPrivate> protectedTrack() const { return track; }
         };
         Vector<VideoTrackInformation> videoTracks;
 
         struct TextTrackInformation {
             RefPtr<MediaDescription> description;
             RefPtr<InbandTextTrackPrivate> track;
+
+            RefPtr<MediaDescription> protectedDescription() const { return description; }
+            RefPtr<InbandTextTrackPrivate> protectedTrack() const { return track; }
         };
         Vector<TextTrackInformation> textTracks;
     };
@@ -94,8 +103,8 @@ public:
     virtual Ref<MediaPromise> sourceBufferPrivateDurationChanged(const MediaTime&) = 0;
     virtual void sourceBufferPrivateHighestPresentationTimestampChanged(const MediaTime&) = 0;
     virtual void sourceBufferPrivateDidDropSample() = 0;
-    virtual void sourceBufferPrivateDidReceiveRenderingError(int64_t errorCode) = 0;
     virtual void sourceBufferPrivateEvictionDataChanged(const SourceBufferEvictionData&) { }
+    virtual Ref<MediaPromise> sourceBufferPrivateDidAttach(InitializationSegment&&) = 0;
 };
 
 } // namespace WebCore

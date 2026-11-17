@@ -385,7 +385,11 @@ g_file_test (const gchar *filename,
   return TRUE;
 
       /* Check if it is one of the types listed in %PATHEXT% */
-
+#ifdef GSTREAMER_LITE
+      // We do not use PATHEXT enviroment variable in GStreamer Lite, so just
+      // ignore this code, to remove dependency on g_utf8_casefold.
+      break;
+#else // GSTREAMER_LITE
       pathext = g_getenv ("PATHEXT");
       if (pathext == NULL)
         break;
@@ -396,6 +400,7 @@ g_file_test (const gchar *filename,
       extlen = strlen (lastdot);
 
       p = pathext;
+#endif // GSTREAMER_LITE
       while (TRUE)
   {
     const gchar *q = strchr (p, ';');
@@ -1610,8 +1615,9 @@ wrap_g_open (const gchar *filename,
  * @tmpl: (type filename): template directory name
  * @mode: permissions to create the temporary directory with
  *
- * Creates a temporary directory. See the mkdtemp() documentation
- * on most UNIX-like systems.
+ * Creates a temporary directory in the current directory.
+ *
+ * See the [`mkdtemp()`](man:mkdtemp(3)) documentation on most UNIX-like systems.
  *
  * The parameter is a string that should follow the rules for
  * mkdtemp() templates, i.e. contain the string "XXXXXX".
@@ -1646,8 +1652,9 @@ g_mkdtemp_full (gchar *tmpl,
  * g_mkdtemp: (skip)
  * @tmpl: (type filename): template directory name
  *
- * Creates a temporary directory. See the mkdtemp() documentation
- * on most UNIX-like systems.
+ * Creates a temporary directory in the current directory.
+ *
+ * See the [`mkdtemp()`](man:mkdtemp(3)) documentation on most UNIX-like systems.
  *
  * The parameter is a string that should follow the rules for
  * mkdtemp() templates, i.e. contain the string "XXXXXX".
@@ -1681,8 +1688,9 @@ g_mkdtemp (gchar *tmpl)
  *   and O_CREAT, which are passed automatically
  * @mode: permissions to create the temporary file with
  *
- * Opens a temporary file. See the mkstemp() documentation
- * on most UNIX-like systems.
+ * Opens a temporary file in the current directory.
+ *
+ * See the [`mkstemp()`](man:mkstemp(3)) documentation on most UNIX-like systems.
  *
  * The parameter is a string that should follow the rules for
  * mkstemp() templates, i.e. contain the string "XXXXXX".
@@ -1714,8 +1722,9 @@ g_mkstemp_full (gchar *tmpl,
  * g_mkstemp: (skip)
  * @tmpl: (type filename): template filename
  *
- * Opens a temporary file. See the mkstemp() documentation
- * on most UNIX-like systems.
+ * Opens a temporary file in the current directory.
+ *
+ * See the [`mkstemp()`](man:mkstemp(3)) documentation on most UNIX-like systems.
  *
  * The parameter is a string that should follow the rules for
  * mkstemp() templates, i.e. contain the string "XXXXXX".
@@ -3004,6 +3013,7 @@ g_get_current_dir (void)
     {
       /* Fallback return value */
       g_assert (buffer_size >= 2);
+      g_assert (buffer != NULL);
       buffer[0] = G_DIR_SEPARATOR;
       buffer[1] = 0;
     }

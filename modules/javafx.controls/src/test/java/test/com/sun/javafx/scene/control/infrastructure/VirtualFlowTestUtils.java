@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,11 +24,8 @@
  */
 package test.com.sun.javafx.scene.control.infrastructure;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import java.util.List;
+import com.sun.javafx.scene.control.LabeledText;
+import com.sun.javafx.scene.control.VirtualScrollBar;
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
 import javafx.scene.control.Cell;
@@ -46,8 +43,13 @@ import javafx.scene.control.skin.TableHeaderRow;
 import javafx.scene.control.skin.TableViewSkinBase;
 import javafx.scene.control.skin.VirtualFlow;
 import javafx.util.Callback;
-import com.sun.javafx.scene.control.LabeledText;
-import com.sun.javafx.scene.control.VirtualScrollBar;
+
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class VirtualFlowTestUtils {
 
@@ -84,7 +86,6 @@ public class VirtualFlowTestUtils {
                 IndexedCell<?> childCell = (IndexedCell<?>)n;
                 MouseEventFirer mouse = new MouseEventFirer(childCell);
                 mouse.fireMousePressAndRelease(clickCount, modifiers);
-                mouse.dispose();
                 break;
             }
         } else {
@@ -94,11 +95,9 @@ public class VirtualFlowTestUtils {
                 MouseEventFirer mouse = new MouseEventFirer(cell);
                 mouse.fireMousePressed(cell.getWidth(), cell.getHeight() / 2.0, modifiers);
                 mouse.fireMouseReleased(cell.getWidth(), cell.getHeight() / 2.0, modifiers);
-                mouse.dispose();
             } else {
                 MouseEventFirer mouse = new MouseEventFirer(cell);
                 mouse.fireMousePressAndRelease(clickCount, modifiers);
-                mouse.dispose();
             }
         }
     }
@@ -332,11 +331,6 @@ public class VirtualFlowTestUtils {
     }
 
     public static VirtualFlow<?> getVirtualFlow(Control control) {
-        StageLoader sl = null;
-        if (control.getScene() == null) {
-            sl = new StageLoader(control);
-        }
-
         VirtualFlow<?> flow;
         if (control instanceof ComboBox) {
             final ComboBox cb = (ComboBox) control;
@@ -346,8 +340,9 @@ public class VirtualFlowTestUtils {
 
         flow = (VirtualFlow<?>)control.lookup("#virtual-flow");
 
-        if (sl != null) {
-            sl.dispose();
+        if (flow == null) {
+            throw new IllegalArgumentException("VirtualFlow could not be found for: " + control + ". "
+                    + "Make sure that the Control is inside a Scene.");
         }
 
         return flow;

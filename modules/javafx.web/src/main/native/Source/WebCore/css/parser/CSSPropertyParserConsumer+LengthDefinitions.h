@@ -24,43 +24,46 @@
 
 #pragma once
 
-#include "CSSParserToken.h"
+#include "CSSParserContext.h"
+#include "CSSProperty.h"
 #include "CSSPropertyParserConsumer+MetaConsumerDefinitions.h"
-#include "CSSPropertyParserConsumer+Primitives.h"
-#include "CSSPropertyParserConsumer+UnevaluatedCalc.h"
-#include <optional>
-#include <wtf/Brigand.h>
+#include "CSSPropertyParserState.h"
 
 namespace WebCore {
-
-class CSSCalcSymbolsAllowed;
-class CSSParserTokenRange;
-
 namespace CSSPropertyParserHelpers {
 
-std::optional<LengthRaw> validatedRange(LengthRaw, CSSPropertyParserOptions);
+struct LengthValidator {
+    static constexpr std::optional<CSS::LengthUnit> validate(CSSUnitType unitType, CSS::PropertyParserState& state, CSSPropertyParserOptions options)
+    {
+        if (unitType == CSSUnitType::CSS_QUIRKY_EM && !isUASheetBehavior(options.overrideParserMode.value_or(state.context.mode)))
+            return std::nullopt;
+        return CSS::UnitTraits<CSS::LengthUnit>::validate(unitType);
+    }
 
-struct LengthKnownTokenTypeFunctionConsumer {
-    static constexpr CSSParserTokenType tokenType = FunctionToken;
-    static std::optional<UnevaluatedCalc<LengthRaw>> consume(CSSParserTokenRange&, CSSCalcSymbolsAllowed, CSSPropertyParserOptions);
+    template<auto R, typename V> static bool isValid(CSS::LengthRaw<R, V> raw, CSSPropertyParserOptions)
+    {
+        // Values other than 0 and +/-∞ are not supported for <length> numeric ranges currently.
+        return isValidNonCanonicalizableDimensionValue(raw);
+    }
+
+    static bool shouldAcceptUnitlessValue(double value, CSS::PropertyParserState& state, CSSPropertyParserOptions options)
+    {
+        if (!value && options.unitlessZeroLength == UnitlessZeroQuirk::Allow)
+            return true;
+
+        auto mode = options.overrideParserMode.value_or(state.context.mode);
+
+        if (isUnitlessValueParsingForcedForMode(mode))
+            return true;
+
+        return mode == HTMLQuirksMode && CSSProperty::acceptsQuirkyLength(state.currentProperty);
+    }
 };
 
-struct LengthKnownTokenTypeDimensionConsumer {
-    static constexpr CSSParserTokenType tokenType = DimensionToken;
-    static std::optional<LengthRaw> consume(CSSParserTokenRange&, CSSCalcSymbolsAllowed, CSSPropertyParserOptions);
-};
-
-struct LengthKnownTokenTypeNumberConsumer {
-    static constexpr CSSParserTokenType tokenType = NumberToken;
-    static std::optional<LengthRaw> consume(CSSParserTokenRange&, CSSCalcSymbolsAllowed, CSSPropertyParserOptions);
-};
-
-template<> struct ConsumerDefinition<LengthRaw> {
-    using type = brigand::list<LengthRaw, UnevaluatedCalc<LengthRaw>>;
-
-    using FunctionToken = LengthKnownTokenTypeFunctionConsumer;
-    using DimensionToken = LengthKnownTokenTypeDimensionConsumer;
-    using NumberToken = LengthKnownTokenTypeNumberConsumer;
+template<auto R, typename V> struct ConsumerDefinition<CSS::Length<R, V>> {
+    using FunctionToken = FunctionConsumerForCalcValues<CSS::Length<R, V>>;
+    using DimensionToken = DimensionConsumer<CSS::Length<R, V>, LengthValidator>;
+    using NumberToken = NumberConsumerForUnitlessValues<CSS::Length<R, V>, LengthValidator, CSS::LengthUnit::Px>;
 };
 
 } // namespace CSSPropertyParserHelpers

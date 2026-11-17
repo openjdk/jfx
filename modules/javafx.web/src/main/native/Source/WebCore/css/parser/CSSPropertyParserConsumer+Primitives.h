@@ -24,33 +24,11 @@
 
 #pragma once
 
-#include "CSSParserMode.h"
-#include "CSSPropertyParserConsumer+RawTypes.h"
-#include "Length.h"
-#include <wtf/Ref.h>
-
 namespace WebCore {
 
 class CSSParserTokenRange;
 
 namespace CSSPropertyParserHelpers {
-
-enum class AnchorPolicy : bool { Forbid, Allow };
-enum class NegativePercentagePolicy : bool { Forbid, Allow };
-enum class UnitlessQuirk : bool { Allow, Forbid };
-enum class UnitlessZeroQuirk : bool { Allow, Forbid };
-
-struct CSSPropertyParserOptions {
-    CSSParserMode parserMode                    { HTMLStandardMode };
-    ValueRange valueRange                       { ValueRange::All };
-    AnchorPolicy anchorPolicy                   { AnchorPolicy::Forbid };
-    NegativePercentagePolicy negativePercentage { NegativePercentagePolicy::Forbid };
-    UnitlessQuirk unitless                      { UnitlessQuirk::Forbid };
-    UnitlessZeroQuirk unitlessZero              { UnitlessZeroQuirk::Forbid };
-};
-
-// FIXME: Presentational HTML attributes shouldn't use the CSS parser for lengths.
-bool shouldAcceptUnitlessValue(double, CSSPropertyParserOptions);
 
 // MARK: - Comma
 // FIXME: Rename to `consumeComma`.
@@ -63,6 +41,8 @@ bool consumeSlashIncludingWhitespace(CSSParserTokenRange&);
 // MARK: - Function
 // NOTE: consumeFunction expects the range starts with a FunctionToken.
 CSSParserTokenRange consumeFunction(CSSParserTokenRange&);
+
+std::optional<CSSParserTokenRange> consumeArgument(CSSParserTokenRange&, unsigned index);
 
 } // namespace CSSPropertyParserHelpers
 } // namespace WebCore

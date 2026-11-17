@@ -26,32 +26,57 @@
 #pragma once
 
 #include <span>
+#include <wtf/AbstractThreadSafeRefCountedAndCanMakeWeakPtr.h>
+#include <wtf/NativePromise.h>
 #include <wtf/ThreadSafeWeakPtr.h>
 
 namespace WebCore {
 
+class Exception;
 class ReadableStreamSource;
+class ScriptExecutionContext;
 class WebTransportBidirectionalStream;
 class WebTransportSendStream;
 class WebTransportSessionClient;
-class WritableStreamSink;
 
-struct WebTransportBidirectionalStreamConstructionParameters;
+struct WebTransportConnectionStats;
+struct WebTransportReceiveStreamStats;
+struct WebTransportSendGroupIdentifierType;
+struct WebTransportSendStreamStats;
+struct WebTransportStreamIdentifierType;
 
-class WEBCORE_EXPORT WebTransportSession {
+using WebTransportSendGroupIdentifier = ObjectIdentifier<WebTransportSendGroupIdentifierType>;
+using WebTransportStreamIdentifier = ObjectIdentifier<WebTransportStreamIdentifierType>;
+using WebTransportStreamPromise = NativePromise<WebTransportStreamIdentifier, void>;
+using WebTransportSendPromise = NativePromise<std::optional<Exception>, void>;
+using WebTransportConnectionStatsPromise = NativePromise<WebTransportConnectionStats, void>;
+using WebTransportSendStreamStatsPromise = NativePromise<WebTransportSendStreamStats, void>;
+using WebTransportReceiveStreamStatsPromise = NativePromise<WebTransportReceiveStreamStats, void>;
+
+using WebTransportSessionErrorCode = uint32_t;
+using WebTransportStreamErrorCode = uint64_t;
+
+class WEBCORE_EXPORT WebTransportSession : public AbstractThreadSafeRefCountedAndCanMakeWeakPtr {
 public:
     virtual ~WebTransportSession();
-    virtual void ref() const = 0;
-    virtual void deref() const = 0;
 
-    virtual void sendDatagram(std::span<const uint8_t>, CompletionHandler<void()>&&) = 0;
-    virtual void createOutgoingUnidirectionalStream(CompletionHandler<void(RefPtr<WritableStreamSink>&&)>&&) = 0;
-    virtual void createBidirectionalStream(CompletionHandler<void(std::optional<WebTransportBidirectionalStreamConstructionParameters>&&)>&&) = 0;
-    virtual void terminate(uint32_t, CString&&) = 0;
+    virtual Ref<WebTransportSendPromise> sendDatagram(std::optional<WebTransportSendGroupIdentifier>, std::span<const uint8_t>) = 0;
+    virtual Ref<WebTransportStreamPromise> createOutgoingUnidirectionalStream() = 0;
+    virtual Ref<WebTransportStreamPromise> createBidirectionalStream() = 0;
+    virtual Ref<WebTransportSendPromise> streamSendBytes(WebTransportStreamIdentifier, std::span<const uint8_t>, bool withFin) = 0;
+    virtual Ref<WebTransportConnectionStatsPromise> getStats() = 0;
+    virtual Ref<WebTransportSendStreamStatsPromise> getSendStreamStats(WebTransportStreamIdentifier) = 0;
+    virtual Ref<WebTransportReceiveStreamStatsPromise> getReceiveStreamStats(WebTransportStreamIdentifier) = 0;
+    virtual Ref<WebTransportSendStreamStatsPromise> getSendGroupStats(WebTransportSendGroupIdentifier) = 0;
 
-    void attachClient(WebTransportSessionClient&);
-protected:
-    ThreadSafeWeakPtr<WebTransportSessionClient> m_client;
+    virtual void cancelReceiveStream(WebTransportStreamIdentifier, std::optional<WebTransportStreamErrorCode>) = 0;
+    virtual void cancelSendStream(WebTransportStreamIdentifier, std::optional<WebTransportStreamErrorCode>) = 0;
+    virtual void destroyStream(WebTransportStreamIdentifier, std::optional<WebTransportStreamErrorCode>) = 0;
+    virtual void terminate(WebTransportSessionErrorCode, CString&&) = 0;
+    virtual void datagramIncomingMaxAgeUpdated(std::optional<double>) = 0;
+    virtual void datagramOutgoingMaxAgeUpdated(std::optional<double>) = 0;
+    virtual void datagramIncomingHighWaterMarkUpdated(double) = 0;
+    virtual void datagramOutgoingHighWaterMarkUpdated(double) = 0;
 };
 
 }

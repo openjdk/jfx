@@ -35,22 +35,22 @@ class CSSFontStyleRangeValue final : public CSSValue {
 public:
     static Ref<CSSFontStyleRangeValue> create(Ref<CSSPrimitiveValue>&& fontStyleValue)
     {
-        return adoptRef(*new CSSFontStyleRangeValue(WTFMove(fontStyleValue), nullptr));
+        return adoptRef(*new CSSFontStyleRangeValue(WTF::move(fontStyleValue), nullptr));
     }
     static Ref<CSSFontStyleRangeValue> create(Ref<CSSPrimitiveValue>&& fontStyleValue, RefPtr<CSSValueList>&& obliqueValues)
     {
-        return adoptRef(*new CSSFontStyleRangeValue(WTFMove(fontStyleValue), WTFMove(obliqueValues)));
+        return adoptRef(*new CSSFontStyleRangeValue(WTF::move(fontStyleValue), WTF::move(obliqueValues)));
     }
 
-    String customCSSText() const;
+    String customCSSText(const CSS::SerializationContext&) const;
 
     bool equals(const CSSFontStyleRangeValue&) const;
 
-    IterationStatus customVisitChildren(const Function<IterationStatus(CSSValue&)>& func) const
+    IterationStatus customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const
     {
         if (func(fontStyleValue.get()) == IterationStatus::Done)
             return IterationStatus::Done;
-        if (obliqueValues) {
+        if (RefPtr obliqueValues = this->obliqueValues) {
             if (func(*obliqueValues) == IterationStatus::Done)
                 return IterationStatus::Done;
         }
@@ -62,9 +62,9 @@ public:
 
 private:
     CSSFontStyleRangeValue(Ref<CSSPrimitiveValue>&& fontStyleValue, RefPtr<CSSValueList>&& obliqueValues)
-        : CSSValue(FontStyleRangeClass)
-        , fontStyleValue(WTFMove(fontStyleValue))
-        , obliqueValues(WTFMove(obliqueValues))
+        : CSSValue(ClassType::FontStyleRange)
+        , fontStyleValue(WTF::move(fontStyleValue))
+        , obliqueValues(WTF::move(obliqueValues))
     {
     }
 };

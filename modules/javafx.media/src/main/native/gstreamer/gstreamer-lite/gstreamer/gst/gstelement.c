@@ -67,7 +67,7 @@
  * Each element has a state (see #GstState).  You can get and set the state
  * of an element with gst_element_get_state() and gst_element_set_state().
  * Setting a state triggers a #GstStateChange. To get a string representation
- * of a #GstState, use gst_element_state_get_name().
+ * of a #GstState, use gst_state_get_name().
  *
  * You can get and set a #GstClock on an element using gst_element_get_clock()
  * and gst_element_set_clock().
@@ -98,7 +98,6 @@
 #include "gstghostpad.h"
 #include "gstutils.h"
 #include "gstinfo.h"
-#include "gstquark.h"
 #include "gsttracerutils.h"
 #include "gstvalue.h"
 #include <glib/gi18n-lib.h>
@@ -155,13 +154,8 @@ static GstPadTemplate
     * gst_element_class_request_pad_simple_template (GstElementClass *
     element_class, const gchar * name);
 
-static void gst_element_call_async_func (gpointer data, gpointer user_data);
-
 static GstObjectClass *parent_class = NULL;
 static guint gst_element_signals[LAST_SIGNAL] = { 0 };
-
-static GMutex _element_pool_lock;
-static GThreadPool *gst_element_pool = NULL;
 
 /* this is used in gstelementfactory.c:gst_element_register() */
 GQuark __gst_elementclass_factory = 0;
@@ -200,24 +194,6 @@ gst_element_get_type (void)
     g_once_init_leave (&gst_element_type, _type);
   }
   return gst_element_type;
-}
-
-static GThreadPool *
-gst_element_setup_thread_pool (void)
-{
-  GError *err = NULL;
-  GThreadPool *pool;
-
-  GST_DEBUG ("creating element thread pool");
-  pool =
-      g_thread_pool_new ((GFunc) gst_element_call_async_func, NULL, -1, FALSE,
-      &err);
-  if (err != NULL) {
-    g_critical ("could not alloc threadpool %s", err->message);
-    g_clear_error (&err);
-  }
-
-  return pool;
 }
 
 static void
@@ -1426,8 +1402,8 @@ gst_element_do_foreach_pad (GstElement * element,
 /**
  * gst_element_foreach_sink_pad:
  * @element: a #GstElement to iterate sink pads of
- * @func: (scope call): function to call for each sink pad
- * @user_data: (closure): user data passed to @func
+ * @func: (scope call) (closure user_data): function to call for each sink pad
+ * @user_data: user data passed to @func
  *
  * Call @func with @user_data for each of @element's sink pads. @func will be
  * called exactly once for each sink pad that exists at the time of this call,
@@ -1452,8 +1428,8 @@ gst_element_foreach_sink_pad (GstElement * element,
 /**
  * gst_element_foreach_src_pad:
  * @element: a #GstElement to iterate source pads of
- * @func: (scope call): function to call for each source pad
- * @user_data: (closure): user data passed to @func
+ * @func: (scope call) (closure user_data): function to call for each source pad
+ * @user_data: user data passed to @func
  *
  * Call @func with @user_data for each of @element's source pads. @func will be
  * called exactly once for each source pad that exists at the time of this call,
@@ -1478,8 +1454,8 @@ gst_element_foreach_src_pad (GstElement * element,
 /**
  * gst_element_foreach_pad:
  * @element: a #GstElement to iterate pads of
- * @func: (scope call): function to call for each pad
- * @user_data: (closure): user data passed to @func
+ * @func: (scope call) (closure user_data): function to call for each pad
+ * @user_data: user data passed to @func
  *
  * Call @func with @user_data for each of @element's pads. @func will be called
  * exactly once for each pad that exists at the time of this call, unless
@@ -1530,8 +1506,8 @@ gst_element_class_add_pad_template (GstElementClass * klass,
 
     /* Found pad with the same name, replace and return */
     if (strcmp (templ->name_template, padtempl->name_template) == 0) {
-      gst_object_ref_sink (padtempl);
       gst_object_unref (padtempl);
+      gst_object_ref_sink (templ);
       template_list->data = templ;
       return;
     }
@@ -1661,11 +1637,11 @@ gst_element_class_set_metadata (GstElementClass * klass,
   g_return_if_fail (description != NULL && *description != '\0');
   g_return_if_fail (author != NULL && *author != '\0');
 
-  gst_structure_id_set ((GstStructure *) klass->metadata,
-      GST_QUARK (ELEMENT_METADATA_LONGNAME), G_TYPE_STRING, longname,
-      GST_QUARK (ELEMENT_METADATA_KLASS), G_TYPE_STRING, classification,
-      GST_QUARK (ELEMENT_METADATA_DESCRIPTION), G_TYPE_STRING, description,
-      GST_QUARK (ELEMENT_METADATA_AUTHOR), G_TYPE_STRING, author, NULL);
+  gst_structure_set_static_str ((GstStructure *) klass->metadata,
+      GST_ELEMENT_METADATA_LONGNAME, G_TYPE_STRING, longname,
+      GST_ELEMENT_METADATA_KLASS, G_TYPE_STRING, classification,
+      GST_ELEMENT_METADATA_DESCRIPTION, G_TYPE_STRING, description,
+      GST_ELEMENT_METADATA_AUTHOR, G_TYPE_STRING, author, NULL);
 }
 
 /**
@@ -1706,17 +1682,17 @@ gst_element_class_set_static_metadata (GstElementClass * klass,
   g_value_init (&val, G_TYPE_STRING);
 
   g_value_set_static_string (&val, longname);
-  gst_structure_id_set_value (s, GST_QUARK (ELEMENT_METADATA_LONGNAME), &val);
+  gst_structure_set_value_static_str (s, GST_ELEMENT_METADATA_LONGNAME, &val);
 
   g_value_set_static_string (&val, classification);
-  gst_structure_id_set_value (s, GST_QUARK (ELEMENT_METADATA_KLASS), &val);
+  gst_structure_set_value_static_str (s, GST_ELEMENT_METADATA_KLASS, &val);
 
   g_value_set_static_string (&val, description);
-  gst_structure_id_set_value (s, GST_QUARK (ELEMENT_METADATA_DESCRIPTION),
+  gst_structure_set_value_static_str (s, GST_ELEMENT_METADATA_DESCRIPTION,
       &val);
 
   g_value_set_static_string (&val, author);
-  gst_structure_id_take_value (s, GST_QUARK (ELEMENT_METADATA_AUTHOR), &val);
+  gst_structure_take_value_static_str (s, GST_ELEMENT_METADATA_AUTHOR, &val);
 }
 
 /**
@@ -2467,10 +2443,10 @@ gst_element_sync_state_with_parent (GstElement * element)
 
     GST_CAT_DEBUG_OBJECT (GST_CAT_STATES, element,
         "syncing state (%s) to parent %s %s (%s, %s)",
-        gst_element_state_get_name (GST_STATE (element)),
-        GST_ELEMENT_NAME (parent), gst_element_state_get_name (target),
-        gst_element_state_get_name (parent_current),
-        gst_element_state_get_name (parent_pending));
+        gst_state_get_name (GST_STATE (element)),
+        GST_ELEMENT_NAME (parent), gst_state_get_name (target),
+        gst_state_get_name (parent_current),
+        gst_state_get_name (parent_pending));
 
     ret = gst_element_set_state (element, target);
     if (ret == GST_STATE_CHANGE_FAILURE)
@@ -2488,8 +2464,7 @@ gst_element_sync_state_with_parent (GstElement * element)
 failed:
   {
     GST_CAT_DEBUG_OBJECT (GST_CAT_STATES, element,
-        "syncing state failed (%s)",
-        gst_element_state_change_return_get_name (ret));
+        "syncing state failed (%s)", gst_state_change_return_get_name (ret));
     gst_object_unref (parent);
     return FALSE;
   }
@@ -2517,7 +2492,7 @@ gst_element_get_state_func (GstElement * element,
   do {
     ret = GST_STATE_RETURN (element);
     GST_CAT_DEBUG_OBJECT (GST_CAT_STATES, element, "RETURN is %s",
-        gst_element_state_change_return_get_name (ret));
+        gst_state_change_return_get_name (ret));
 
     /* we got an error, report immediately */
     if (ret == GST_STATE_CHANGE_FAILURE)
@@ -2585,9 +2560,9 @@ done:
 
   GST_CAT_DEBUG_OBJECT (GST_CAT_STATES, element,
       "state current: %s, pending: %s, result: %s",
-      gst_element_state_get_name (GST_STATE (element)),
-      gst_element_state_get_name (GST_STATE_PENDING (element)),
-      gst_element_state_change_return_get_name (ret));
+      gst_state_get_name (GST_STATE (element)),
+      gst_state_get_name (GST_STATE_PENDING (element)),
+      gst_state_change_return_get_name (ret));
   GST_OBJECT_UNLOCK (element);
 
   return ret;
@@ -2696,8 +2671,8 @@ gst_element_abort_state (GstElement * element)
   old_state = GST_STATE (element);
 
   GST_CAT_INFO_OBJECT (GST_CAT_STATES, element,
-      "aborting state from %s to %s", gst_element_state_get_name (old_state),
-      gst_element_state_get_name (pending));
+      "aborting state from %s to %s", gst_state_get_name (old_state),
+      gst_state_get_name (pending));
 #endif
 
   /* flag error */
@@ -2725,9 +2700,8 @@ _priv_gst_element_state_changed (GstElement * element, GstState oldstate,
 
   GST_CAT_INFO_OBJECT (GST_CAT_STATES, element,
       "notifying about state-changed %s to %s (%s pending)",
-      gst_element_state_get_name (oldstate),
-      gst_element_state_get_name (newstate),
-      gst_element_state_get_name (pending));
+      gst_state_get_name (oldstate),
+      gst_state_get_name (newstate), gst_state_get_name (pending));
 
   if (klass->state_changed)
     klass->state_changed (element, oldstate, newstate, pending);
@@ -2797,16 +2771,16 @@ gst_element_continue_state (GstElement * element, GstStateChangeReturn ret)
 
   GST_CAT_INFO_OBJECT (GST_CAT_STATES, element,
       "committing state from %s to %s, pending %s, next %s",
-      gst_element_state_get_name (old_state),
-      gst_element_state_get_name (old_next),
-      gst_element_state_get_name (pending), gst_element_state_get_name (next));
+      gst_state_get_name (old_state),
+      gst_state_get_name (old_next),
+      gst_state_get_name (pending), gst_state_get_name (next));
 
   _priv_gst_element_state_changed (element, old_state, old_next, pending);
 
   GST_CAT_INFO_OBJECT (GST_CAT_STATES, element,
       "continue state change %s to %s, final %s",
-      gst_element_state_get_name (current),
-      gst_element_state_get_name (next), gst_element_state_get_name (pending));
+      gst_state_get_name (current),
+      gst_state_get_name (next), gst_state_get_name (pending));
 
   ret = gst_element_change_state (element, transition);
 
@@ -2824,7 +2798,7 @@ complete:
     GST_STATE_NEXT (element) = GST_STATE_VOID_PENDING;
 
     GST_CAT_INFO_OBJECT (GST_CAT_STATES, element,
-        "completed state change to %s", gst_element_state_get_name (pending));
+        "completed state change to %s", gst_state_get_name (pending));
     GST_OBJECT_UNLOCK (element);
 
     /* don't post silly messages with the same state. This can happen
@@ -2890,8 +2864,8 @@ gst_element_lost_state (GstElement * element)
     new_state = old_state;
 
   GST_CAT_DEBUG_OBJECT (GST_CAT_STATES, element,
-      "lost state of %s to %s", gst_element_state_get_name (old_state),
-      gst_element_state_get_name (new_state));
+      "lost state of %s to %s", gst_state_get_name (old_state),
+      gst_state_get_name (new_state));
 
   GST_STATE (element) = new_state;
   GST_STATE_NEXT (element) = new_state;
@@ -2975,7 +2949,7 @@ gst_element_set_state_func (GstElement * element, GstState state)
   g_return_val_if_fail (GST_IS_ELEMENT (element), GST_STATE_CHANGE_FAILURE);
 
   GST_CAT_DEBUG_OBJECT (GST_CAT_STATES, element, "set_state to %s",
-      gst_element_state_get_name (state));
+      gst_state_get_name (state));
 
   /* state lock is taken to protect the set_state() and get_state()
    * procedures, it does not lock any variables. */
@@ -3000,7 +2974,7 @@ gst_element_set_state_func (GstElement * element, GstState state)
    * the element. */
   if (state != GST_STATE_TARGET (element)) {
     GST_CAT_DEBUG_OBJECT (GST_CAT_STATES, element,
-        "setting target state to %s", gst_element_state_get_name (state));
+        "setting target state to %s", gst_state_get_name (state));
     GST_STATE_TARGET (element) = state;
     /* increment state cookie so that we can track each state change. We only do
      * this if this is actually a new state change. */
@@ -3010,10 +2984,9 @@ gst_element_set_state_func (GstElement * element, GstState state)
 
   GST_CAT_DEBUG_OBJECT (GST_CAT_STATES, element,
       "current %s, old_pending %s, next %s, old return %s",
-      gst_element_state_get_name (current),
-      gst_element_state_get_name (old_pending),
-      gst_element_state_get_name (next),
-      gst_element_state_change_return_get_name (old_ret));
+      gst_state_get_name (current),
+      gst_state_get_name (old_pending),
+      gst_state_get_name (next), gst_state_change_return_get_name (old_ret));
 
   /* if the element was busy doing a state change, we just update the
    * target state, it'll get to it async then. */
@@ -3047,7 +3020,7 @@ gst_element_set_state_func (GstElement * element, GstState state)
   GST_CAT_DEBUG_OBJECT (GST_CAT_STATES, element,
       "%s: setting state from %s to %s",
       (next != state ? "intermediate" : "final"),
-      gst_element_state_get_name (current), gst_element_state_get_name (next));
+      gst_state_get_name (current), gst_state_get_name (next));
 
   /* now signal any waiters, they will error since the cookie was incremented */
   GST_STATE_BROADCAST (element);
@@ -3059,7 +3032,7 @@ gst_element_set_state_func (GstElement * element, GstState state)
   GST_STATE_UNLOCK (element);
 
   GST_CAT_DEBUG_OBJECT (GST_CAT_STATES, element, "returned %s",
-      gst_element_state_change_return_get_name (ret));
+      gst_state_change_return_get_name (ret));
 
   return ret;
 
@@ -3128,8 +3101,7 @@ gst_element_change_state (GstElement * element, GstStateChange transition)
       /* else we just continue the state change downwards */
       GST_CAT_INFO_OBJECT (GST_CAT_STATES, element,
           "forcing commit state %s <= %s",
-          gst_element_state_get_name (target),
-          gst_element_state_get_name (GST_STATE_READY));
+          gst_state_get_name (target), gst_state_get_name (GST_STATE_READY));
 
       ret = gst_element_continue_state (element, GST_STATE_CHANGE_SUCCESS);
       break;
@@ -3301,8 +3273,7 @@ gst_element_change_state_func (GstElement * element, GstStateChange transition)
 
   GST_CAT_LOG_OBJECT (GST_CAT_STATES, element,
       "default handler tries setting state from %s to %s (%04x)",
-      gst_element_state_get_name (state),
-      gst_element_state_get_name (next), transition);
+      gst_state_get_name (state), gst_state_get_name (next), transition);
 
   switch (transition) {
     case GST_STATE_CHANGE_NULL_TO_READY:
@@ -3352,8 +3323,7 @@ gst_element_change_state_func (GstElement * element, GstStateChange transition)
        * - somehow the element was asked to jump across an intermediate state
        */
       g_warning ("Unhandled state change from %s to %s",
-          gst_element_state_get_name (state),
-          gst_element_state_get_name (next));
+          gst_state_get_name (state), gst_state_get_name (next));
       break;
   }
   return result;
@@ -3363,8 +3333,7 @@ was_ok:
     GST_OBJECT_LOCK (element);
     result = GST_STATE_RETURN (element);
     GST_CAT_DEBUG_OBJECT (GST_CAT_STATES, element,
-        "element is already in the %s state",
-        gst_element_state_get_name (state));
+        "element is already in the %s state", gst_state_get_name (state));
     GST_OBJECT_UNLOCK (element);
 
     return result;
@@ -3466,8 +3435,7 @@ not_null:
         "This problem may also be caused by a refcounting bug in the\n"
         "application or some element.\n",
         GST_OBJECT_NAME (element),
-        gst_element_state_get_name (GST_STATE (element)),
-        is_locked ? " (locked)" : "");
+        gst_state_get_name (GST_STATE (element)), is_locked ? " (locked)" : "");
     return;
   }
 }
@@ -3826,26 +3794,6 @@ gst_element_remove_property_notify_watch (GstElement * element, gulong watch_id)
   g_signal_handler_disconnect (element, watch_id);
 }
 
-typedef struct
-{
-  GstElement *element;
-  GstElementCallAsyncFunc func;
-  gpointer user_data;
-  GDestroyNotify destroy_notify;
-} GstElementCallAsyncData;
-
-static void
-gst_element_call_async_func (gpointer data, gpointer user_data)
-{
-  GstElementCallAsyncData *async_data = data;
-
-  async_data->func (async_data->element, async_data->user_data);
-  if (async_data->destroy_notify)
-    async_data->destroy_notify (async_data->user_data);
-  gst_object_unref (async_data->element);
-  g_free (async_data);
-}
-
 /**
  * gst_element_call_async:
  * @element: a #GstElement
@@ -3864,38 +3812,18 @@ gst_element_call_async_func (gpointer data, gpointer user_data)
  *
  * MT safe.
  *
+ * Deprecated: 1.28: Use gst_object_call_async() or gst_call_async() instead.
+ *
  * Since: 1.10
  */
 void
 gst_element_call_async (GstElement * element, GstElementCallAsyncFunc func,
     gpointer user_data, GDestroyNotify destroy_notify)
 {
-  GstElementCallAsyncData *async_data;
-
   g_return_if_fail (GST_IS_ELEMENT (element));
 
-  async_data = g_new0 (GstElementCallAsyncData, 1);
-  async_data->element = gst_object_ref (element);
-  async_data->func = func;
-  async_data->user_data = user_data;
-  async_data->destroy_notify = destroy_notify;
-
-  g_mutex_lock (&_element_pool_lock);
-  if (G_UNLIKELY (gst_element_pool == NULL))
-    gst_element_pool = gst_element_setup_thread_pool ();
-  g_thread_pool_push ((GThreadPool *) gst_element_pool, async_data, NULL);
-  g_mutex_unlock (&_element_pool_lock);
-}
-
-void
-_priv_gst_element_cleanup (void)
-{
-  g_mutex_lock (&_element_pool_lock);
-  if (gst_element_pool) {
-    g_thread_pool_free ((GThreadPool *) gst_element_pool, FALSE, TRUE);
-    gst_element_pool = NULL;
-  }
-  g_mutex_unlock (&_element_pool_lock);
+  _priv_gst_object_call_async (GST_OBJECT_CAST (element), (GFunc) func,
+      user_data, destroy_notify);
 }
 
 /**

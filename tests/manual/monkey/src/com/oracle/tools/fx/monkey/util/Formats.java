@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,12 +26,18 @@ package com.oracle.tools.fx.monkey.util;
 
 import java.text.DecimalFormat;
 import javafx.geometry.Insets;
+import javafx.geometry.Rectangle2D;
+import javafx.scene.text.Font;
+import javafx.scene.text.HitInfo;
+import javafx.stage.Screen;
+import javafx.util.StringConverter;
 
 /**
  * Various formatting methods.
  */
 public class Formats {
-    private static final DecimalFormat FORMAT_2DP = new DecimalFormat("#0.##");
+    private static final DecimalFormat FORMAT_2DP = new DecimalFormat("0.##");
+    private static StringConverter universalConverter;
 
     public static String formatDouble(Number value) {
         if (value == null) {
@@ -44,19 +50,91 @@ public class Formats {
         return String.valueOf(v);
     }
 
-    public static String format2DP(double v) {
+    public static String hit(HitInfo h) {
+        StringBuilder sb = new StringBuilder(32);
+        sb.append("ix=").append(h.getInsertionIndex());
+        sb.append(" char=").append(h.getCharIndex());
+        if (h.isLeading()) {
+            sb.append(" leading");
+        }
+        return sb.toString();
+    }
+
+    public static String num2(double v) {
         return FORMAT_2DP.format(v);
     }
 
-    public static String formatInsets(Insets v) {
-        if(v == null) {
-            return "null";
+    public static String insets(Insets v) {
+        if (v == null) {
+            return "<null>";
         }
-        return "Insets {" +
-            "T=" + format2DP(v.getTop()) +
-            " R=" + format2DP(v.getRight()) +
-            " B=" + format2DP(v.getBottom()) +
-            " L=" + format2DP(v.getLeft()) +
-            "}";
+        if (
+            (v.getTop() == v.getBottom()) &&
+            (v.getBottom() == v.getLeft()) &&
+            (v.getLeft() == v.getRight()))
+        {
+            return "[" + num2(v.getTop()) + "]";
+        }
+        return "[" +
+            "t:" + num2(v.getTop()) +
+            " r:" + num2(v.getRight()) +
+            " b:" + num2(v.getBottom()) +
+            " l:" + num2(v.getLeft()) +
+            "]";
+    }
+
+    public static String screen(Screen s) {
+        if (s == null) {
+            return "<null>";
+        }
+        if (Screen.getPrimary().equals(s)) {
+            return "Primary";
+        }
+        Rectangle2D r = s.getBounds();
+        return
+            "[" +
+            Formats.formatDouble(r.getWidth()) +
+            " x " +
+            Formats.formatDouble(r.getHeight()) +
+            "] @(" +
+            Formats.formatDouble(r.getMinX()) +
+            ", " +
+            Formats.formatDouble(r.getMinY()) +
+            ")";
+    }
+
+    public static String font(Font f) {
+        if (f == null) {
+            return null;
+        }
+        String fam = f.getFamily();
+        String sty = f.getStyle();
+        double sz = f.getSize();
+        return fam + " " + sty + " " + num2(sz);
+    }
+
+    public static StringConverter universalConverter() {
+        if (universalConverter == null) {
+            // raw by design
+            universalConverter = new StringConverter() {
+                @Override
+                public String toString(Object x) {
+                    if (x == null) {
+                        return "<null>";
+                    } else if (x instanceof NamedValue v) {
+                        return v.getDisplay();
+                    } else if (x instanceof Insets m) {
+                        return Formats.insets(m);
+                    }
+                    return x.toString();
+                }
+
+                @Override
+                public Object fromString(String string) {
+                    throw new UnsupportedOperationException();
+                }
+            };
+        }
+        return universalConverter;
     }
 }

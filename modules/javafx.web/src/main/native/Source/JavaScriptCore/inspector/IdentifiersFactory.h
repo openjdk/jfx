@@ -25,14 +25,15 @@
 
 #pragma once
 
+#include <JavaScriptCore/JSExportMacros.h>
 #include <wtf/text/WTFString.h>
 
 namespace Inspector {
 
-class JS_EXPORT_PRIVATE IdentifiersFactory {
+class IdentifiersFactory {
 public:
-    static String createIdentifier();
-    static String requestId(unsigned long identifier);
+    JS_EXPORT_PRIVATE static String createIdentifier();
+    JS_EXPORT_PRIVATE static String requestId(unsigned long identifier);
 };
 
 } // namespace Inspector

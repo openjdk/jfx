@@ -35,6 +35,7 @@
 #include "ScrollAnimationSmooth.h"
 #include "ScrollExtents.h"
 #include "ScrollableArea.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
 
 #if ENABLE(KINETIC_SCROLLING) && !PLATFORM(MAC)
@@ -46,6 +47,8 @@
 #endif
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ScrollingEffectsControllerTimer);
 
 ScrollingEffectsController::ScrollingEffectsController(ScrollingEffectsControllerClient& client)
     : m_client(client)
@@ -180,7 +183,7 @@ void ScrollingEffectsController::stopAnimatedScroll()
         m_currentAnimation->stop();
 }
 
-bool ScrollingEffectsController::startMomentumScrollWithInitialVelocity(const FloatPoint& initialOffset, const FloatSize& initialVelocity, const FloatSize& initialDelta, const Function<FloatPoint(const FloatPoint&)>& destinationModifier)
+bool ScrollingEffectsController::startMomentumScrollWithInitialVelocity(const FloatPoint& initialOffset, const FloatSize& initialVelocity, const FloatSize& initialDelta, NOESCAPE const Function<FloatPoint(const FloatPoint&)>& destinationModifier)
 {
     if (m_currentAnimation) {
         m_currentAnimation->stop();
@@ -396,7 +399,7 @@ bool ScrollingEffectsController::handleWheelEvent(const PlatformWheelEvent& whee
         || (deltaY > 0 && scrollOffset.y() <= minPosition.y()))
         deltaY = 0;
 
-    if (wheelEvent.granularity() == ScrollByPageWheelEvent) {
+    if (wheelEvent.granularity() == PlatformWheelEventGranularity::ScrollByPageWheelEvent) {
         if (deltaX) {
             bool negative = deltaX < 0;
             deltaX = Scrollbar::pageStepDelta(extents.contentsSize.width());
@@ -545,8 +548,16 @@ void ScrollingEffectsController::scrollAnimationDidEnd(ScrollAnimation& animatio
     UNUSED_PARAM(animation);
 #endif
 
-    // FIXME: Need to track state better and only call this when the running animation is for CSS smooth scrolling. Calling should be harmless, though.
+    switch (animation.type()) {
+    case ScrollAnimation::Type::Smooth:
+    case ScrollAnimation::Type::Kinetic:
+    case ScrollAnimation::Type::Keyboard:
     m_client.didStopAnimatedScroll();
+        break;
+    case ScrollAnimation::Type::Momentum:
+    case ScrollAnimation::Type::RubberBand:
+        break;
+    }
 
     if (is<ScrollAnimationKeyboard>(animation)) {
         didStopKeyboardScrolling();

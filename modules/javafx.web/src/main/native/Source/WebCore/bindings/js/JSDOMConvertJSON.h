@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "IDLTypes.h"
-#include "JSDOMConvertBase.h"
 #include <JavaScriptCore/JSGlobalObject.h>
 #include <JavaScriptCore/JSONObject.h>
+#include <WebCore/IDLTypes.h>
+#include <WebCore/JSDOMConvertBase.h>
 
 namespace WebCore {
 
@@ -44,7 +44,7 @@ template<> struct Converter<IDLJSON> : DefaultConverter<IDLJSON> {
 
         RETURN_IF_EXCEPTION(throwScope, Result::exception());
 
-        return Result { WTFMove(conversionResult) };
+        return Result { WTF::move(conversionResult) };
     }
 };
 

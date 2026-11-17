@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Inc.
+ * Copyright (C) 2006 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Google, Inc.
  *
  * This library is free software; you can redistribute it and/or
@@ -30,7 +30,7 @@ namespace WebCore {
 class SVGForeignObjectElement;
 
 class LegacyRenderSVGForeignObject final : public RenderSVGBlock {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(LegacyRenderSVGForeignObject);
+    WTF_MAKE_TZONE_ALLOCATED(LegacyRenderSVGForeignObject);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(LegacyRenderSVGForeignObject);
 public:
     LegacyRenderSVGForeignObject(SVGForeignObjectElement&, RenderStyle&&);
@@ -44,8 +44,10 @@ public:
     void layout() override;
 
     FloatRect objectBoundingBox() const override { return FloatRect(FloatPoint(), m_viewport.size()); }
+    bool isObjectBoundingBoxValid() const { return !m_viewport.isEmpty(); }
     FloatRect strokeBoundingBox() const override { return FloatRect(FloatPoint(), m_viewport.size()); }
     FloatRect repaintRectInLocalCoordinates(RepaintRectCalculation = RepaintRectCalculation::Fast) const override { return FloatRect(FloatPoint(), m_viewport.size()); }
+    FloatRect decoratedBoundingBox() const override { return FloatRect(FloatPoint(), m_viewport.size()); }
 
     bool nodeAtFloatPoint(const HitTestRequest&, HitTestResult&, const FloatPoint& pointInParent, HitTestAction) override;
 
@@ -61,7 +63,7 @@ private:
     const AffineTransform& localToParentTransform() const override;
     AffineTransform localTransform() const override { return m_localTransform; }
 
-    LayoutSize offsetFromContainer(RenderElement&, const LayoutPoint&, bool* offsetDependsOnPoint = nullptr) const override;
+    LayoutSize offsetFromContainer(const RenderElement&, const LayoutPoint&, bool* offsetDependsOnPoint = nullptr) const override;
 
     AffineTransform m_localTransform;
     mutable AffineTransform m_localToParentTransform;

@@ -41,7 +41,7 @@ class Document;
 enum class LinkIconType : uint8_t;
 
 struct LinkRelAttribute {
-    Markable<LinkIconType, EnumMarkableTraits<LinkIconType>> iconType;
+    Markable<LinkIconType> iconType;
     bool isStyleSheet : 1 { false };
     bool isAlternate : 1 { false };
     bool isDNSPrefetch : 1 { false };
@@ -53,6 +53,9 @@ struct LinkRelAttribute {
     bool isApplicationManifest : 1 { false };
 #endif
     bool isInternalResourceLink : 1 { false };
+#if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
+    bool isSpatialBackdrop : 1 { false };
+#endif
 
     LinkRelAttribute() = default;
     LinkRelAttribute(Document&, StringView);

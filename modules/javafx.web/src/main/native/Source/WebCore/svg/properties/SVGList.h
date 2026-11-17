@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
-#include "SVGProperty.h"
+#include <WebCore/ExceptionOr.h>
+#include <WebCore/SVGProperty.h>
 
 namespace WebCore {
 
@@ -71,7 +71,7 @@ public:
         // Spec: Clears all existing current items from the list.
         clearItems();
 
-        auto item = append(WTFMove(newItem));
+        auto item = append(WTF::move(newItem));
         commitChange();
         return item;
     }
@@ -88,7 +88,7 @@ public:
         if (index > numberOfItems())
             index = numberOfItems();
 
-        auto item = insert(index, WTFMove(newItem));
+        auto item = insertAt(index, WTF::move(newItem));
         commitChange();
         return item;
     }
@@ -100,7 +100,7 @@ public:
             return result.releaseException();
         ASSERT(result.releaseReturnValue());
 
-        auto item = replace(index, WTFMove(newItem));
+        auto item = replaceAt(index, WTF::move(newItem));
         commitChange();
         return item;
     }
@@ -112,7 +112,7 @@ public:
             return result.releaseException();
         ASSERT(result.releaseReturnValue());
 
-        auto item = remove(index);
+        auto item = removeAt(index);
         commitChange();
         return item;
     }
@@ -124,14 +124,14 @@ public:
             return result.releaseException();
         ASSERT(result.releaseReturnValue());
 
-        auto item = append(WTFMove(newItem));
+        auto item = append(WTF::move(newItem));
         commitChange();
         return item;
     }
 
     ExceptionOr<void> setItem(unsigned index, ItemType&& newItem)
     {
-        auto result = replaceItem(WTFMove(newItem), index);
+        auto result = replaceItem(WTF::move(newItem), index);
         if (result.hasException())
             return result.releaseException();
         return { };
@@ -194,9 +194,9 @@ protected:
 
     virtual void detachItems() { }
     virtual ItemType at(unsigned index) const = 0;
-    virtual ItemType insert(unsigned index, ItemType&&) = 0;
-    virtual ItemType replace(unsigned index, ItemType&&) = 0;
-    virtual ItemType remove(unsigned index) = 0;
+    virtual ItemType insertAt(unsigned index, ItemType&&) = 0;
+    virtual ItemType replaceAt(unsigned index, ItemType&&) = 0;
+    virtual ItemType removeAt(unsigned index) = 0;
     virtual ItemType append(ItemType&&) = 0;
 
     Vector<ItemType> m_items;

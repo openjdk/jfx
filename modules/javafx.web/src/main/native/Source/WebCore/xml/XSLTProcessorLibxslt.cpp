@@ -1,7 +1,7 @@
 /*
  * This file is part of the XSL implementation.
  *
- * Copyright (C) 2004-2024 Apple, Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple, Inc. All rights reserved.
  * Copyright (C) 2005, 2006 Alexey Proskuryakov <ap@webkit.org>
  *
  * This library is free software; you can redistribute it and/or
@@ -27,18 +27,21 @@
 #include "XSLTProcessor.h"
 
 #include "CachedResourceLoader.h"
-#include "DocumentInlines.h"
+#include "DocumentResourceLoader.h"
+#include "DocumentSecurityOrigin.h"
+#include "FrameConsoleClient.h"
 #include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
 #include "LocalFrame.h"
+#include "NodeDocument.h"
 #include "OriginAccessPatterns.h"
 #include "Page.h"
-#include "PageConsoleClient.h"
 #include "ResourceError.h"
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
 #include "SecurityOrigin.h"
 #include "SharedBuffer.h"
+#include "Text.h"
 #include "TransformSource.h"
 #include "XMLDocumentParser.h"
 #include "XMLDocumentParserScope.h"
@@ -52,6 +55,7 @@
 #include <libxslt/xsltutils.h>
 #include <wtf/Assertions.h>
 #include <wtf/CheckedArithmetic.h>
+#include <wtf/MallocSpan.h>
 
 namespace WebCore {
 
@@ -66,7 +70,7 @@ void XSLTProcessor::parseErrorFunc(void* userData, const xmlError* error)
 void XSLTProcessor::parseErrorFunc(void* userData, xmlError* error)
 #endif
 {
-    PageConsoleClient* console = static_cast<PageConsoleClient*>(userData);
+    FrameConsoleClient* console = static_cast<FrameConsoleClient*>(userData);
     if (!console)
         return;
 
@@ -117,14 +121,15 @@ static xmlDocPtr docLoaderFunc(const xmlChar* uri,
         RefPtr<SharedBuffer> data;
         RefPtr cachedResourceLoader = globalCachedResourceLoader().get();
 
-        bool requestAllowed = cachedResourceLoader && cachedResourceLoader->frame() && cachedResourceLoader->document()->protectedSecurityOrigin()->canRequest(url, OriginAccessPatternsForWebProcess::singleton());
+        RefPtr cachedResourceLoaderDocument = cachedResourceLoader->document();
+        bool requestAllowed = cachedResourceLoader && cachedResourceLoader->frame() && cachedResourceLoaderDocument->protectedSecurityOrigin()->canRequest(url, OriginAccessPatternsForWebProcess::singleton());
         if (requestAllowed) {
             FetchOptions options;
             options.mode = FetchOptions::Mode::SameOrigin;
             options.credentials = FetchOptions::Credentials::Include;
-            cachedResourceLoader->frame()->loader().loadResourceSynchronously(url, ClientCredentialPolicy::MayAskClientForCredentials, options, { }, error, response, data);
+            cachedResourceLoader->frame()->loader().loadResourceSynchronously(URL { url }, ClientCredentialPolicy::MayAskClientForCredentials, options, { }, error, response, data);
             if (error.isNull())
-                requestAllowed = cachedResourceLoader->document()->protectedSecurityOrigin()->canRequest(response.url(), OriginAccessPatternsForWebProcess::singleton());
+                requestAllowed = cachedResourceLoaderDocument->protectedSecurityOrigin()->canRequest(response.url(), OriginAccessPatternsForWebProcess::singleton());
             else if (data)
                 data = nullptr;
         }
@@ -139,19 +144,20 @@ static xmlDocPtr docLoaderFunc(const xmlChar* uri,
         if (!data || !data->size())
             return nullptr;
 
-        PageConsoleClient* console = nullptr;
-        auto* frame = globalProcessor->xslStylesheet()->ownerDocument()->frame();
-        if (frame && frame->page())
-            console = &frame->page()->console();
+        FrameConsoleClient* console = nullptr;
+        if (RefPtr frame = globalProcessor->xslStylesheet()->ownerDocument()->frame())
+            console = &frame->console();
         XMLDocumentParserScope scope(cachedResourceLoader.get(), XSLTProcessor::genericErrorFunc, XSLTProcessor::parseErrorFunc, console);
 
         // We don't specify an encoding here. Neither Gecko nor WinIE respects
         // the encoding specified in the HTTP headers.
         auto dataSpan = byteCast<char>(data->span());
-        return xmlReadMemory(dataSpan.data(), dataSpan.size(), byteCast<char>(uri), nullptr, options);
+        if (dataSpan.size() > std::numeric_limits<int>::max())
+            return nullptr;
+        return xmlReadMemory(dataSpan.data(), static_cast<int>(dataSpan.size()), byteCast<char>(uri), nullptr, options);
     }
     case XSLT_LOAD_STYLESHEET:
-        return globalProcessor->xslStylesheet()->locateStylesheetSubResource(((xsltStylesheetPtr)ctxt)->doc, uri);
+        return RefPtr { globalProcessor->xslStylesheet() }->locateStylesheetSubResource(((xsltStylesheetPtr)ctxt)->doc, uri);
     default:
         break;
     }
@@ -166,12 +172,13 @@ static inline void setXSLTLoadCallBack(xsltDocLoaderFunc func, XSLTProcessor* pr
     globalCachedResourceLoader() = cachedResourceLoader;
 }
 
-static int writeToStringBuilder(void* context, const char* buffer, int length)
+static int writeToStringBuilder(void* context, const char* rawBuffer, int length)
 {
     auto& builder = *static_cast<StringBuilder*>(context);
     if (!length)
         return 0;
-    auto checkedString = WTF::Unicode::checkUTF8({ byteCast<char8_t>(buffer), static_cast<size_t>(length) });
+    auto buffer = byteCast<char8_t>(unsafeMakeSpan(rawBuffer, length));
+    auto checkedString = WTF::Unicode::checkUTF8(buffer);
     if (checkedString.characters.empty())
             return -1;
     builder.append(checkedString);
@@ -202,13 +209,13 @@ static bool saveResultToString(xmlDocPtr resultDoc, xsltStylesheetPtr sheet, Str
     return true;
 }
 
-static const char** xsltParamArrayFromParameterMap(XSLTProcessor::ParameterMap& parameters)
+static MallocSpan<const char*> xsltParamArrayFromParameterMap(XSLTProcessor::ParameterMap& parameters)
 {
     if (parameters.isEmpty())
-        return 0;
+        return { };
 
     auto size = (((Checked<size_t>(parameters.size()) * 2U) + 1U) * sizeof(char*)).value();
-    auto** parameterArray = static_cast<const char**>(fastMalloc(size));
+    auto parameterArray = MallocSpan<const char*>::malloc(size);
 
     size_t index = 0;
     for (auto& parameter : parameters) {
@@ -224,23 +231,21 @@ static const char** xsltParamArrayFromParameterMap(XSLTProcessor::ParameterMap& 
     return parameterArray;
 }
 
-static void freeXsltParamArray(const char** params)
+static void freeXsltParamsInArray(std::span<const char*> params)
 {
-    const char** temp = params;
-    if (!params)
+    if (!params.data())
         return;
 
-    while (*temp) {
-        fastFree((void*)*(temp++));
-        fastFree((void*)*(temp++));
-    }
-    fastFree(params);
+    ASSERT(!params.back());
+    for (auto* param : params.first(params.size() - 1))
+        fastFree(const_cast<char*>(param));
 }
 
 static xsltStylesheetPtr xsltStylesheetPointer(RefPtr<XSLStyleSheet>& cachedStylesheet, Node* stylesheetRootNode)
 {
     if (!cachedStylesheet && stylesheetRootNode) {
-        cachedStylesheet = XSLStyleSheet::createForXSLTProcessor(stylesheetRootNode->parentNode() ? stylesheetRootNode->parentNode() : stylesheetRootNode,
+        RefPtr parentNode = stylesheetRootNode->parentNode() ? stylesheetRootNode->parentNode() : stylesheetRootNode;
+        cachedStylesheet = XSLStyleSheet::createForXSLTProcessor(parentNode.get(),
             stylesheetRootNode->document().url().string(),
             stylesheetRootNode->document().url()); // FIXME: Should we use baseURL here?
 
@@ -264,7 +269,7 @@ static inline xmlDocPtr xmlDocPtrFromNode(Node& sourceNode, bool& shouldDelete)
     if (sourceIsDocument && ownerDocument->transformSource())
         sourceDoc = ownerDocument->transformSource()->platformSource();
     if (!sourceDoc) {
-        sourceDoc = xmlDocPtrForString(ownerDocument->cachedResourceLoader(), serializeFragment(sourceNode, SerializedNodes::SubtreeIncludingNode),
+        sourceDoc = xmlDocPtrForString(ownerDocument->protectedCachedResourceLoader(), serializeFragment(sourceNode, SerializedNodes::SubtreeIncludingNode),
             sourceIsDocument ? ownerDocument->url().string() : String());
         shouldDelete = sourceDoc;
     }
@@ -294,14 +299,21 @@ bool XSLTProcessor::transformToString(Node& sourceNode, String& mimeType, String
 {
     Ref<Document> ownerDocument(sourceNode.document());
 
-    setXSLTLoadCallBack(docLoaderFunc, this, &ownerDocument->cachedResourceLoader());
+    setXSLTLoadCallBack(docLoaderFunc, this, &ownerDocument->protectedCachedResourceLoader().get());
     xsltStylesheetPtr sheet = xsltStylesheetPointer(m_stylesheet, m_stylesheetRootNode.get());
     if (!sheet) {
         setXSLTLoadCallBack(nullptr, nullptr, nullptr);
+        // Clear dangling document pointers in the stylesheet tree. When compilation
+        // fails, libxslt may have already freed imported child docs via
+        // xsltParseStylesheetImport() → xmlFreeDoc(). Without this call, child
+        // stylesheets retain dangling m_stylesheetDoc pointers that can be
+        // dereferenced if a delayed subresource later triggers parseString().
+        if (RefPtr stylesheet = m_stylesheet)
+            stylesheet->clearDocuments();
         m_stylesheet = nullptr;
         return false;
     }
-    m_stylesheet->clearDocuments();
+    RefPtr { m_stylesheet }->clearDocuments();
 
     int origXsltMaxDepth = xsltMaxDepth;
     xsltMaxDepth = 1000;
@@ -334,18 +346,13 @@ bool XSLTProcessor::transformToString(Node& sourceNode, String& mimeType, String
         // <http://bugs.webkit.org/show_bug.cgi?id=16077>: XSLT processor <xsl:sort> algorithm only compares by code point.
         xsltSetCtxtSortFunc(transformContext, xsltUnicodeSortFunction);
 
-        // This is a workaround for a bug in libxslt.
-        // The bug has been fixed in version 1.1.13, so once we ship that this can be removed.
-        if (!transformContext->globalVars)
-           transformContext->globalVars = xmlHashCreate(20);
-
-        const char** params = xsltParamArrayFromParameterMap(m_parameters);
-        xsltQuoteUserParams(transformContext, params);
+        auto params = xsltParamArrayFromParameterMap(m_parameters);
+        xsltQuoteUserParams(transformContext, params.mutableSpan().data());
         xmlDocPtr resultDoc = xsltApplyStylesheetUser(sheet, sourceDoc, nullptr, nullptr, nullptr, transformContext);
 
         xsltFreeTransformContext(transformContext);
         xsltFreeSecurityPrefs(securityPrefs);
-        freeXsltParamArray(params);
+        freeXsltParamsInArray(params.mutableSpan());
 
         if (shouldFreeSourceDoc)
             xmlFreeDoc(sourceDoc);

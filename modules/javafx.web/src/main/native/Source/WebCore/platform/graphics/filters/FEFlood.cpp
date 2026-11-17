@@ -29,6 +29,10 @@
 #include "Filter.h"
 #include <wtf/text/TextStream.h>
 
+#if USE(CORE_IMAGE)
+#include "FEFloodCoreImageApplier.h"
+#endif
+
 namespace WebCore {
 
 Ref<FEFlood> FEFlood::create(const Color& floodColor, float floodOpacity, DestinationColorSpace colorSpace)
@@ -76,6 +80,24 @@ FloatRect FEFlood::calculateImageRect(const Filter& filter, std::span<const Floa
     return filter.maxEffectRect(primitiveSubregion);
 }
 
+OptionSet<FilterRenderingMode> FEFlood::supportedFilterRenderingModes(OptionSet<FilterRenderingMode> preferredFilterRenderingModes) const
+{
+    OptionSet<FilterRenderingMode> modes = FilterRenderingMode::Software;
+#if USE(CORE_IMAGE)
+    modes.add(FilterRenderingMode::Accelerated);
+#endif
+    return modes & preferredFilterRenderingModes;
+}
+
+std::unique_ptr<FilterEffectApplier> FEFlood::createAcceleratedApplier() const
+{
+#if USE(CORE_IMAGE)
+    return FilterEffectApplier::create<FEFloodCoreImageApplier>(*this);
+#else
+    return nullptr;
+#endif
+}
+
 std::unique_ptr<FilterEffectApplier> FEFlood::createSoftwareApplier() const
 {
     return FilterEffectApplier::create<FEFloodSoftwareApplier>(*this);
@@ -83,13 +105,13 @@ std::unique_ptr<FilterEffectApplier> FEFlood::createSoftwareApplier() const
 
 TextStream& FEFlood::externalRepresentation(TextStream& ts, FilterRepresentation representation) const
 {
-    ts << indent << "[feFlood";
+    ts << indent << "[feFlood"_s;
     FilterEffect::externalRepresentation(ts, representation);
 
-    ts << " flood-color=\"" << serializationForRenderTreeAsText(floodColor()) << "\"";
-    ts << " flood-opacity=\"" << floodOpacity() << "\"";
+    ts << " flood-color=\"" << serializationForRenderTreeAsText(floodColor()) << '"';
+    ts << " flood-opacity=\"" << floodOpacity() << '"';
 
-    ts << "]\n";
+    ts << "]\n"_s;
     return ts;
 }
 

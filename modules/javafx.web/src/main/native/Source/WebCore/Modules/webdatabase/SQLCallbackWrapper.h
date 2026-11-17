@@ -42,7 +42,7 @@ namespace WebCore {
 template<typename T> class SQLCallbackWrapper {
 public:
     SQLCallbackWrapper(RefPtr<T>&& callback, ScriptExecutionContext* scriptExecutionContext)
-        : m_callback(WTFMove(callback))
+        : m_callback(WTF::move(callback))
         , m_scriptExecutionContext(m_callback ? scriptExecutionContext : 0)
     {
         ASSERT(!m_callback || (m_scriptExecutionContext.get() && m_scriptExecutionContext->isContextThread()));
@@ -55,28 +55,27 @@ public:
 
     void clear()
     {
-        ScriptExecutionContext* scriptExecutionContextPtr;
-        T* callback;
+        RefPtr<ScriptExecutionContext> scriptExecutionContextToRelease;
+        RefPtr<T> callbackToRelease;
         {
             Locker locker { m_lock };
             if (!m_callback) {
                 ASSERT(!m_scriptExecutionContext);
                 return;
             }
-            if (m_scriptExecutionContext->isContextThread()) {
+            if (CheckedRef { *m_scriptExecutionContext }->isContextThread()) {
                 m_callback = nullptr;
                 m_scriptExecutionContext = nullptr;
                 return;
             }
-            scriptExecutionContextPtr = m_scriptExecutionContext.leakRef();
-            callback = m_callback.leakRef();
+            scriptExecutionContextToRelease = std::exchange(m_scriptExecutionContext, nullptr);
+            callbackToRelease = std::exchange(m_callback, nullptr);
         }
-        scriptExecutionContextPtr->postTask({
+        CheckedPtr context = scriptExecutionContextToRelease.get();
+        context->postTask({
             ScriptExecutionContext::Task::CleanupTask,
-            [callback, scriptExecutionContextPtr] (ScriptExecutionContext& context) {
-                ASSERT_UNUSED(context, &context == scriptExecutionContextPtr && context.isContextThread());
-                callback->deref();
-                scriptExecutionContextPtr->deref();
+            [callbackToRelease = WTF::move(callbackToRelease), scriptExecutionContextToRelease = WTF::move(scriptExecutionContextToRelease)](ScriptExecutionContext& context) {
+                ASSERT_UNUSED(context, &context == scriptExecutionContextToRelease.get() && context.isContextThread());
             }
         });
     }
@@ -86,7 +85,7 @@ public:
         Locker locker { m_lock };
         ASSERT(!m_callback || m_scriptExecutionContext->isContextThread());
         m_scriptExecutionContext = nullptr;
-        return WTFMove(m_callback);
+        return WTF::move(m_callback);
     }
 
     // Useful for optimizations only, please test the return value of unwrap to be sure.

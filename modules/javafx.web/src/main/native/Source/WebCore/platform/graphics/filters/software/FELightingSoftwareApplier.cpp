@@ -31,8 +31,11 @@
 #include "FELighting.h"
 #include "FELightingSoftwareApplierInlines.h"
 #include "Filter.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FELightingSoftwareApplier);
 
 void FELightingSoftwareApplier::setPixelInternal(int offset, const LightingData& data, const LightSource::PaintingData& paintingData, int x, int y, float factorX, float factorY, IntSize normal2DVector, float alpha)
 {
@@ -168,16 +171,16 @@ void FELightingSoftwareApplier::applyPlatform(const LightingData& data) const
     }
 }
 
-bool FELightingSoftwareApplier::apply(const Filter& filter, const FilterImageVector& inputs, FilterImage& result) const
+bool FELightingSoftwareApplier::apply(const Filter& filter, std::span<const Ref<FilterImage>> inputs, FilterImage& result) const
 {
-    auto& input = inputs[0].get();
+    Ref input = inputs[0];
 
-    auto destinationPixelBuffer = result.pixelBuffer(AlphaPremultiplication::Premultiplied);
+    RefPtr destinationPixelBuffer = result.pixelBuffer(AlphaPremultiplication::Premultiplied);
     if (!destinationPixelBuffer)
         return false;
 
     auto effectDrawingRect = result.absoluteImageRectRelativeTo(input);
-    input.copyPixelBuffer(*destinationPixelBuffer, effectDrawingRect);
+    input->copyPixelBuffer(*destinationPixelBuffer, effectDrawingRect);
 
     // FIXME: support kernelUnitLengths other than (1,1). The issue here is that the W3
     // standard has no test case for them, and other browsers (like Firefox) has strange
@@ -194,16 +197,16 @@ bool FELightingSoftwareApplier::apply(const Filter& filter, const FilterImageVec
     LightingData data;
     data.filter = &filter;
     data.result = &result;
-    data.filterType = m_effect.filterType();
-    data.lightingColor = m_effect.lightingColor();
-    data.surfaceScale = m_effect.surfaceScale() / 255.0f;
-    data.diffuseConstant = m_effect.diffuseConstant();
-    data.specularConstant = m_effect.specularConstant();
-    data.specularExponent = m_effect.specularExponent();
-    data.lightSource = m_effect.lightSource().ptr();
-    data.operatingColorSpace = &m_effect.operatingColorSpace();
+    data.filterType = m_effect->filterType();
+    data.lightingColor = m_effect->lightingColor();
+    data.surfaceScale = m_effect->surfaceScale() / 255.0f;
+    data.diffuseConstant = m_effect->diffuseConstant();
+    data.specularConstant = m_effect->specularConstant();
+    data.specularExponent = m_effect->specularExponent();
+    data.lightSource = &m_effect->lightSource();
+    data.operatingColorSpace = &m_effect->operatingColorSpace();
 
-    data.pixels = destinationPixelBuffer;
+    data.pixels = destinationPixelBuffer.get();
     data.widthMultipliedByPixelSize = size.width() * cPixelSize;
     data.width = size.width();
     data.height = size.height();

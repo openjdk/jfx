@@ -27,8 +27,9 @@
 
 #if ENABLE(VIDEO)
 
-#include "PlatformLayer.h"
+#include <WebCore/PlatformLayer.h>
 #include <wtf/Forward.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -45,7 +46,7 @@ public:
 };
 
 class TextTrackRepresentation {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(TextTrackRepresentation);
 public:
     static std::unique_ptr<TextTrackRepresentation> create(TextTrackRepresentationClient&, HTMLMediaElement&);
 

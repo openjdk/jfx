@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021, Apple Inc. All rights reserved.
+ * Copyright (C) 2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,7 +24,7 @@
 
 #pragma once
 
-#include "WebLockMode.h"
+#include <WebCore/WebLockMode.h>
 #include <wtf/CrossThreadCopier.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
@@ -38,14 +38,14 @@ struct WebLockManagerSnapshot {
         String clientId;
 
         Info isolatedCopy() const & { return { name.isolatedCopy(), mode, clientId.isolatedCopy() }; }
-        Info isolatedCopy() && { return { WTFMove(name).isolatedCopy(), mode, WTFMove(clientId).isolatedCopy() }; }
+        Info isolatedCopy() && { return { WTF::move(name).isolatedCopy(), mode, WTF::move(clientId).isolatedCopy() }; }
     };
 
     Vector<Info> held;
     Vector<Info> pending;
 
     WebLockManagerSnapshot isolatedCopy() const & { return { crossThreadCopy(held), crossThreadCopy(pending) }; }
-    WebLockManagerSnapshot isolatedCopy() && { return { crossThreadCopy(WTFMove(held)), crossThreadCopy(WTFMove(pending)) }; }
+    WebLockManagerSnapshot isolatedCopy() && { return { crossThreadCopy(WTF::move(held)), crossThreadCopy(WTF::move(pending)) }; }
 };
 
 } // namespace WebCore

@@ -24,6 +24,7 @@
 
 #include "AccessibilityAtspiEnums.h"
 #include "AccessibilityObject.h"
+#include "RenderObjectInlines.h"
 #include <gio/gio.h>
 
 namespace WebCore {

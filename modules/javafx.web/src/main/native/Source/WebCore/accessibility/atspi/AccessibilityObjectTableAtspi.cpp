@@ -24,9 +24,11 @@
 
 #include "AccessibilityAtspi.h"
 #include "AccessibilityObject.h" // NOLINT: check-webkit-style has problems with files that do not have primary header
+#include "ContainerNodeInlines.h"
 #include "HTMLTableCaptionElement.h"
 #include "HTMLTableElement.h"
 #include "RenderElement.h"
+#include "RenderElementInlines.h"
 #include <gio/gio.h>
 #include <wtf/text/StringBuilder.h>
 
@@ -187,7 +189,7 @@ std::optional<unsigned> AccessibilityObjectAtspi::cellIndex(unsigned row, unsign
 
     auto cells = m_coreObject->cells();
     AXCoreObject::AccessibilityChildrenVector::iterator position;
-    position = std::find(cells.begin(), cells.end(), cell);
+    position = std::find(cells.begin(), cells.end(), Ref { *cell });
     if (position == cells.end())
         return std::nullopt;
     return position - cells.begin();
@@ -329,7 +331,7 @@ unsigned AccessibilityObjectAtspi::columnExtent(unsigned row, unsigned column) c
     return cell ? cell->columnIndexRange().second : 0;
 }
 
-Vector<RefPtr<AccessibilityObjectAtspi>> AccessibilityObjectAtspi::cells() const
+Vector<Ref<AccessibilityObjectAtspi>> AccessibilityObjectAtspi::cells() const
 {
     if (!m_coreObject)
         return { };
@@ -337,7 +339,7 @@ Vector<RefPtr<AccessibilityObjectAtspi>> AccessibilityObjectAtspi::cells() const
     return wrapperVector(m_coreObject->cells());
 }
 
-Vector<RefPtr<AccessibilityObjectAtspi>> AccessibilityObjectAtspi::rows() const
+Vector<Ref<AccessibilityObjectAtspi>> AccessibilityObjectAtspi::rows() const
 {
     if (!m_coreObject)
         return { };
@@ -345,7 +347,7 @@ Vector<RefPtr<AccessibilityObjectAtspi>> AccessibilityObjectAtspi::rows() const
     return wrapperVector(m_coreObject->rows());
 }
 
-Vector<RefPtr<AccessibilityObjectAtspi>> AccessibilityObjectAtspi::rowHeaders() const
+Vector<Ref<AccessibilityObjectAtspi>> AccessibilityObjectAtspi::rowHeaders() const
 {
     if (!m_coreObject)
         return { };
@@ -353,7 +355,7 @@ Vector<RefPtr<AccessibilityObjectAtspi>> AccessibilityObjectAtspi::rowHeaders() 
     return wrapperVector(m_coreObject->rowHeaders());
 }
 
-Vector<RefPtr<AccessibilityObjectAtspi>> AccessibilityObjectAtspi::columnHeaders() const
+Vector<Ref<AccessibilityObjectAtspi>> AccessibilityObjectAtspi::columnHeaders() const
 {
     if (!m_coreObject)
         return { };

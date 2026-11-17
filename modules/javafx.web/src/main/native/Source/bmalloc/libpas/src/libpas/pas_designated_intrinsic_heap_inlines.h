@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 Apple Inc. All rights reserved.
+ * Copyright (c) 2020-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,8 @@
 #include "pas_designated_intrinsic_heap.h"
 #include "pas_local_allocator.h"
 #include "pas_segregated_size_directory_inlines.h"
+
+#if LIBPAS_ENABLED
 
 PAS_BEGIN_EXTERN_C;
 
@@ -128,5 +130,5 @@ static PAS_ALWAYS_INLINE pas_designated_index_result pas_designated_intrinsic_he
 
 PAS_END_EXTERN_C;
 
+#endif /* LIBPAS_ENABLED */
 #endif /* PAS_DESIGNATED_INTRINSIC_HEAP_INLINES_H */
-

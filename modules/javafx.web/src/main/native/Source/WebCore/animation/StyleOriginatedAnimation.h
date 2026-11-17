@@ -25,35 +25,34 @@
 
 #pragma once
 
-#include "AnimationEffect.h"
-#include "AnimationEffectPhase.h"
-#include "RenderStyleConstants.h"
-#include "Styleable.h"
-#include "WebAnimation.h"
+#include <WebCore/AnimationEffect.h>
+#include <WebCore/AnimationEffectPhase.h>
+#include <WebCore/RenderStyleConstants.h>
+#include <WebCore/Styleable.h>
+#include <WebCore/WebAnimation.h>
 #include <wtf/Ref.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
-class Animation;
 class StyleOriginatedAnimationEvent;
 class Element;
 class RenderStyle;
 
 class StyleOriginatedAnimation : public WebAnimation {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(StyleOriginatedAnimation);
+    WTF_MAKE_TZONE_ALLOCATED(StyleOriginatedAnimation);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(StyleOriginatedAnimation);
 public:
     ~StyleOriginatedAnimation();
 
     bool isStyleOriginatedAnimation() const final { return true; }
 
     const std::optional<const Styleable> owningElement() const;
-    const Animation& backingAnimation() const { return m_backingAnimation; }
-    void setBackingAnimation(const Animation&);
+
     void cancelFromStyle(WebAnimation::Silently = WebAnimation::Silently::No);
 
-    std::optional<double> bindingsStartTime() const final;
-    std::optional<double> bindingsCurrentTime() const final;
+    std::optional<WebAnimationTime> bindingsStartTime() const final;
+    std::optional<WebAnimationTime> bindingsCurrentTime() const final;
     WebAnimation::PlayState bindingsPlayState() const final;
     WebAnimation::ReplaceState bindingsReplaceState() const final;
     bool bindingsPending() const final;
@@ -71,32 +70,33 @@ public:
 
     void flushPendingStyleChanges() const;
 
+    virtual AnimationPlayState backingAnimationPlayState() const = 0;
+    virtual TimingFunction* backingAnimationTimingFunction() const = 0;
+
 protected:
-    StyleOriginatedAnimation(const Styleable&, const Animation&);
+    StyleOriginatedAnimation(const Styleable&);
 
     void initialize(const RenderStyle* oldStyle, const RenderStyle& newStyle, const Style::ResolutionContext&);
     virtual void syncPropertiesWithBackingAnimation();
     virtual Ref<StyleOriginatedAnimationEvent> createEvent(const AtomString& eventType, std::optional<Seconds> scheduledTime, double elapsedTime, const std::optional<Style::PseudoElementIdentifier>&) = 0;
 
-    enum class ShouldFireEvents : uint8_t { No, YesForCSSAnimation, YesForCSSTransition };
-    ShouldFireEvents shouldFireDOMEvents() const;
-    void invalidateDOMEvents(ShouldFireEvents, Seconds elapsedTime = 0_s);
-
 private:
     void disassociateFromOwningElement();
     AnimationEffectPhase phaseWithoutEffect() const;
-    void enqueueDOMEvent(const AtomString&, Seconds elapsedTime, Seconds scheduledEffectTime);
+    template<typename F> void invalidateDOMEvents(F&&);
+    void invalidateDOMEvents(WebAnimationTime cancelationTime = 0_s);
+    void enqueueDOMEvent(const AtomString&, WebAnimationTime elapsedTime, WebAnimationTime scheduledEffectTime);
 
-    Seconds effectTimeAtStart() const;
-    Seconds effectTimeAtIteration(double) const;
-    Seconds effectTimeAtEnd() const;
+    WebAnimationTime computeCancelationTime() const;
+    WebAnimationTime effectTimeAtStart() const;
+    WebAnimationTime effectTimeAtIteration(double) const;
+    WebAnimationTime effectTimeAtEnd() const;
 
     bool m_wasPending { false };
     AnimationEffectPhase m_previousPhase { AnimationEffectPhase::Idle };
 
     WeakPtr<Element, WeakPtrImplWithEventTargetData> m_owningElement;
     std::optional<Style::PseudoElementIdentifier> m_owningPseudoElementIdentifier;
-    Ref<Animation> m_backingAnimation;
     double m_previousIteration;
 };
 

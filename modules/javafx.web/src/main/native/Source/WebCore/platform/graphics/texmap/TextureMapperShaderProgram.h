@@ -19,9 +19,6 @@
  */
 
 #pragma once
-#if PLATFORM(JAVA)
-#if USE(TEXTURE_MAPPER_GL)
-#endif
 
 #if USE(TEXTURE_MAPPER)
 
@@ -48,6 +45,7 @@ namespace WebCore {
     macro(yuvToRgb) \
     macro(filterAmount) \
     macro(texelSize) \
+    macro(uvMax) \
     macro(gaussianKernel) \
     macro(gaussianKernelOffset) \
     macro(gaussianKernelHalfSize) \
@@ -111,6 +109,8 @@ public:
         TextureYUVA      = 1L << 25,
         TextureCopy      = 1L << 26,
         AlphaToShadow    = 1L << 27,
+        ToneMapPQ        = 1L << 28,
+        ClampUVBounds    = 1L << 29,
     };
 
     enum class VariableID {
@@ -147,6 +147,3 @@ private:
 } // namespace WebCore
 
 #endif // USE(TEXTURE_MAPPER)
-#if PLATFORM(JAVA)
-#endif // USE(TEXTURE_MAPPER_GL)
-#endif

@@ -41,12 +41,12 @@ class Structure;
 class StructureChain;
 class StructureStubInfo;
 
-typedef HashMap<CodeOrigin, StructureStubInfo*, CodeOriginApproximateHash> StubInfoMap;
+typedef UncheckedKeyHashMap<CodeOrigin, StructureStubInfo*, CodeOriginApproximateHash> StubInfoMap;
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PutByStatus);
 
 class PutByStatus final {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(PutByStatus);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(PutByStatus, PutByStatus);
 public:
     enum State {
         // It's uncached so we have no information.

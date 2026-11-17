@@ -25,18 +25,19 @@
 
 #pragma once
 
-#include "PageIdentifier.h"
-#include "PasteboardContext.h"
+#include <WebCore/PageIdentifier.h>
+#include <WebCore/PasteboardContext.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/TypeCasts.h>
 
 namespace WebCore {
 
 class PagePasteboardContext final : public PasteboardContext {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(PagePasteboardContext);
 public:
     PagePasteboardContext(std::optional<PageIdentifier>&& pageID = std::nullopt)
         : PasteboardContext()
-        , m_pageID(WTFMove(pageID))
+        , m_pageID(WTF::move(pageID))
     {
     }
 
@@ -44,7 +45,7 @@ public:
 
     static std::unique_ptr<PasteboardContext> create(std::optional<PageIdentifier>&& pageID = std::nullopt)
     {
-        return makeUnique<PagePasteboardContext>(WTFMove(pageID));
+        return makeUnique<PagePasteboardContext>(WTF::move(pageID));
     }
 
     std::optional<PageIdentifier> pageID() const { return m_pageID; }
@@ -59,3 +60,4 @@ private:
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::PagePasteboardContext)
     static bool isType(const WebCore::PasteboardContext& context) { return context.isPagePasteboardContext(); }
 SPECIALIZE_TYPE_TRAITS_END()
+

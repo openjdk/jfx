@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -68,6 +68,20 @@ public class PickResultChooser {
                 origin.x + dir.x * distance,
                 origin.y + dir.y * distance,
                 origin.z + dir.z * distance);
+    }
+
+    /**
+     * Resets this {@code PickResultChooser} instance so that it can be reused.
+     */
+    public void reset() {
+        distance = Double.POSITIVE_INFINITY;
+        node = null;
+        face = -1;
+        point = null;
+        normal = null;
+        texCoord = null;
+        empty = true;
+        closed = false;
     }
 
     /**
@@ -175,9 +189,8 @@ public class PickResultChooser {
      * @param texCoord The intersected texture coordinates
      * @return true if the offered intersection has been used
      */
-    private boolean processOffer(Node node, Node depthTestNode, double distance,
-            Point3D point, int face, Point3D normal, Point2D texCoord) {
-
+    protected boolean processOffer(Node node, Node depthTestNode, double distance,
+                                   Point3D point, int face, Point3D normal, Point2D texCoord) {
         final SubScene subScene = NodeHelper.getSubScene(depthTestNode);
         final boolean hasDepthBuffer = Platform.isSupported(ConditionalFeature.SCENE3D)
                 ? (subScene != null

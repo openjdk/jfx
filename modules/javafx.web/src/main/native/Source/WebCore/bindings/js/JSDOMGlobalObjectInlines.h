@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,13 +40,17 @@ inline JSC::Structure* JSDOMGlobalObject::createStructure(JSC::VM& vm, JSC::JSVa
 inline JSDOMStructureMap& JSDOMGlobalObject::structures(NoLockingNecessaryTag)
 {
     ASSERT(!vm().heap.mutatorShouldBeFenced());
+    IGNORE_CLANG_WARNINGS_BEGIN("thread-safety-reference-return")
     return m_structures;
+    IGNORE_CLANG_WARNINGS_END
 }
 
 inline DOMGuardedObjectSet& JSDOMGlobalObject::guardedObjects(NoLockingNecessaryTag)
 {
     ASSERT(!vm().heap.mutatorShouldBeFenced());
+    IGNORE_CLANG_WARNINGS_BEGIN("thread-safety-reference-return")
     return m_guardedObjects;
+    IGNORE_CLANG_WARNINGS_END
 }
 
 template<class ConstructorClass, DOMConstructorID constructorID>

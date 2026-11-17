@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "WebGPUIntegralTypes.h"
-#include "WebGPUOrigin3D.h"
-#include "WebGPUTexture.h"
-#include "WebGPUTextureAspect.h"
+#include <WebCore/WebGPUIntegralTypes.h>
+#include <WebCore/WebGPUOrigin3D.h>
+#include <WebCore/WebGPUTexture.h>
+#include <WebCore/WebGPUTextureAspect.h>
 #include <optional>
 #include <wtf/Ref.h>
 #include <wtf/WeakRef.h>
@@ -42,6 +42,8 @@ struct ImageCopyTexture {
     IntegerCoordinate mipLevel { 0 };
     std::optional<Origin3D> origin;
     TextureAspect aspect { TextureAspect::All };
+
+    Ref<Texture> protectedTexture() const { return texture.get(); }
 };
 
 } // namespace WebCore::WebGPU

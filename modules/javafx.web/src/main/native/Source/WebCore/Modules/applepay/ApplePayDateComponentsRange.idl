@@ -28,6 +28,7 @@
     ExportMacro=WEBCORE_EXPORT,
     JSGenerateToJSObject,
     JSGenerateToNativeObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary ApplePayDateComponentsRange {
     required ApplePayDateComponents startDateComponents;
     required ApplePayDateComponents endDateComponents;

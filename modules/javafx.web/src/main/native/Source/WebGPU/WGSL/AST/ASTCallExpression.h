@@ -26,6 +26,7 @@
 #pragma once
 
 #include "ASTExpression.h"
+#include "Types.h"
 #include <wtf/OptionSet.h>
 
 namespace WGSL {
@@ -55,13 +56,45 @@ public:
 
     bool isConstructor() const { return m_isConstructor; }
 
+    bool isFloatToIntConversion(const Type* result = nullptr) const
+    {
+        const auto& getPrimitiveType = [&](const Type* type) -> const Types::Primitive* {
+            if (auto* reference = std::get_if<Types::Reference>(type))
+                type = reference->element;
+            if (auto* vector = std::get_if<Types::Vector>(type))
+                type = vector->element;
+            return std::get_if<Types::Primitive>(type);
+        };
+
+        if (!m_isConstructor)
+            return false;
+
+        auto* resultPrimitive = getPrimitiveType(result ?: m_inferredType);
+        if (!resultPrimitive)
+            return false;
+        if (resultPrimitive->kind != Types::Primitive::I32 && resultPrimitive->kind != Types::Primitive::U32)
+            return false;
+
+        if (m_arguments.size() != 1)
+            return false;
+
+        auto& argument = m_arguments[0];
+        auto* argumentPrimitive = getPrimitiveType(argument.inferredType());
+        if (!argumentPrimitive)
+            return false;
+        if (argumentPrimitive->kind != Types::Primitive::F32 && argumentPrimitive->kind != Types::Primitive::F16 && argumentPrimitive->kind != Types::Primitive::AbstractFloat)
+            return false;
+
+        return true;
+    }
+
     const OptionSet<ShaderStage>& visibility() const { return m_visibility; }
 
 private:
     CallExpression(SourceSpan span, Expression::Ref&& target, Expression::List&& arguments)
         : Expression(span)
-        , m_target(WTFMove(target))
-        , m_arguments(WTFMove(arguments))
+        , m_target(WTF::move(target))
+        , m_arguments(WTF::move(arguments))
     { }
 
     // If m_target is a NamedType, it could either be a:

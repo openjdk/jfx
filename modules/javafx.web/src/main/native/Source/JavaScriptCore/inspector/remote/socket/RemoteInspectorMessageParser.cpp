@@ -42,10 +42,11 @@ namespace Inspector {
 */
 
 MessageParser::MessageParser(Function<void(Vector<uint8_t>&&)>&& listener)
-    : m_listener(WTFMove(listener))
+    : m_listener(WTF::move(listener))
 {
 }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 Vector<uint8_t> MessageParser::createMessage(std::span<const uint8_t> data)
 {
     if (data.empty() || data.size() > std::numeric_limits<uint32_t>::max())
@@ -57,6 +58,7 @@ Vector<uint8_t> MessageParser::createMessage(std::span<const uint8_t> data)
     memcpy(&messageBuffer[sizeof(uint32_t)], data.data(), data.size());
     return messageBuffer;
 }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 void MessageParser::pushReceivedData(std::span<const uint8_t> data)
 {
@@ -74,6 +76,7 @@ void MessageParser::clearReceivedData()
     m_buffer.clear();
 }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 bool MessageParser::parse()
 {
     while (m_buffer.size() >= sizeof(uint32_t)) {
@@ -95,13 +98,14 @@ bool MessageParser::parse()
         auto dataBuffer = Vector<uint8_t>(dataSize);
         memcpy(&dataBuffer[0], &m_buffer[sizeof(uint32_t)], dataSize);
 
-        m_listener(WTFMove(dataBuffer));
+        m_listener(WTF::move(dataBuffer));
 
-        m_buffer.remove(0, messageSize);
+        m_buffer.removeAt(0, messageSize);
     }
 
     return true;
 }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 } // namespace Inspector
 

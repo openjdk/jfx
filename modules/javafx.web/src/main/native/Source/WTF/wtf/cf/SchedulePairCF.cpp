@@ -35,11 +35,9 @@ bool SchedulePair::operator==(const SchedulePair& other) const
 {
     if (runLoop() != other.runLoop())
         return false;
-    CFStringRef thisMode = mode();
-    CFStringRef otherMode = other.mode();
-    if (!thisMode || !otherMode)
-        return thisMode == otherMode;
-    return CFEqual(thisMode, otherMode);
+    if (!m_mode || !other.m_mode)
+        return m_mode == other.m_mode;
+    return CFEqual(m_mode.get(), other.m_mode.get());
 }
 
 } // namespace

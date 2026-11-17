@@ -511,7 +511,9 @@ find_notify (GstMiniObject * object, GQuark quark, gboolean match_notify,
 static void
 remove_notify (GstMiniObject * object, gint index)
 {
+#ifndef G_DISABLE_ASSERT
   gint priv_state = g_atomic_int_get ((gint *) & object->priv_uint);
+#endif
   PrivData *priv_data;
 
   g_assert (priv_state == PRIV_DATA_STATE_PARENTS_OR_QDATA);
@@ -649,7 +651,12 @@ gst_mini_object_unref (GstMiniObject * mini_object)
 {
   gint old_refcount, new_refcount;
 
-  g_return_if_fail (mini_object != NULL);
+  /* FIXME: The GstBufferMapInfo clear function before 1.28 could call
+   * gst_memory_unref() with NULL, and because we use macros/inline functions
+   * all along the way to here this needs to be checked here. */
+  if (!mini_object)
+    return;
+
   g_return_if_fail (GST_MINI_OBJECT_REFCOUNT_VALUE (mini_object) > 0);
 
   old_refcount = g_atomic_int_add (&mini_object->refcount, -1);

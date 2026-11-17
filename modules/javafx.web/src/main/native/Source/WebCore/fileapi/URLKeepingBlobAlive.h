@@ -25,7 +25,8 @@
 
 #pragma once
 
-#include "SecurityOriginData.h"
+#include <WebCore/SecurityOriginData.h>
+#include <wtf/CrossThreadCopier.h>
 #include <wtf/URL.h>
 
 namespace WebCore {
@@ -51,14 +52,14 @@ public:
     void clear();
 
     // We do not introduce a && version since it might break the register/unregister balance.
-    WEBCORE_EXPORT URLKeepingBlobAlive WARN_UNUSED_RETURN isolatedCopy() const;
+    [[nodiscard]] WEBCORE_EXPORT URLKeepingBlobAlive isolatedCopy() const;
 
 private:
     void registerBlobURLHandleIfNecessary();
     void unregisterBlobURLHandleIfNecessary();
 
     URL m_url;
-    Markable<SecurityOriginData, SecurityOriginDataMarkableTraits> m_topOrigin;
+    Markable<SecurityOriginData> m_topOrigin;
 };
 
 } // namespace WebCore

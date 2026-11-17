@@ -25,7 +25,9 @@ namespace WebCore {
 
 class SVGImageElement;
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(SVGImageLoader);
 class SVGImageLoader final : public ImageLoader {
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(SVGImageLoader, SVGImageLoader);
 public:
     explicit SVGImageLoader(SVGImageElement&);
     virtual ~SVGImageLoader();

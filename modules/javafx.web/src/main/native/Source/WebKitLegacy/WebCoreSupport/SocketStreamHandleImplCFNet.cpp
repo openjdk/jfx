@@ -83,7 +83,7 @@ SocketStreamHandleImpl::SocketStreamHandleImpl(const URL& url, SocketStreamHandl
     , m_sentStoredCredentials(false)
     , m_shouldAcceptInsecureCertificates(acceptInsecureCertificates)
     , m_credentialPartition(credentialPartition)
-    , m_auditData(WTFMove(auditData))
+    , m_auditData(WTF::move(auditData))
     , m_storageSessionProvider(provider)
 {
     LOG(Network, "SocketStreamHandle %p new client %p", this, &m_client);
@@ -228,10 +228,10 @@ void SocketStreamHandleImpl::chooseProxyFromArray(CFArrayRef proxyArray)
 
     // PAC is always the first entry, if present.
     if (proxyArrayCount) {
-        if (auto proxyInfo = dynamic_cf_cast<CFDictionaryRef>(CFArrayGetValueAtIndex(proxyArray, 0))) {
-            if (auto proxyType = dynamic_cf_cast<CFStringRef>(CFDictionaryGetValue(proxyInfo, kCFProxyTypeKey)); proxyType && CFEqual(proxyType, kCFProxyTypeAutoConfigurationURL)) {
-                if (auto pacFileURL = dynamic_cf_cast<CFURLRef>(CFDictionaryGetValue(proxyInfo, kCFProxyAutoConfigurationURLKey))) {
-                    executePACFileURL(static_cast<CFURLRef>(pacFileURL));
+        if (RetainPtr proxyInfo = dynamic_cf_cast<CFDictionaryRef>(CFArrayGetValueAtIndex(proxyArray, 0))) {
+            if (RetainPtr proxyType = dynamic_cf_cast<CFStringRef>(CFDictionaryGetValue(proxyInfo.get(), kCFProxyTypeKey)); proxyType && CFEqual(proxyType.get(), kCFProxyTypeAutoConfigurationURL)) {
+                if (RetainPtr pacFileURL = dynamic_cf_cast<CFURLRef>(CFDictionaryGetValue(proxyInfo.get(), kCFProxyAutoConfigurationURLKey))) {
+                    executePACFileURL(static_cast<CFURLRef>(pacFileURL.get()));
                     return;
                 }
             }
@@ -240,16 +240,16 @@ void SocketStreamHandleImpl::chooseProxyFromArray(CFArrayRef proxyArray)
 
     CFDictionaryRef chosenProxy = nullptr;
     for (CFIndex i = 0; i < proxyArrayCount; ++i) {
-        if (auto proxyInfo = dynamic_cf_cast<CFDictionaryRef>(CFArrayGetValueAtIndex(proxyArray, i))) {
-            if (auto proxyType = dynamic_cf_cast<CFStringRef>(CFDictionaryGetValue(proxyInfo, kCFProxyTypeKey))) {
-                if (CFEqual(proxyType, kCFProxyTypeSOCKS)) {
+        if (RetainPtr proxyInfo = dynamic_cf_cast<CFDictionaryRef>(CFArrayGetValueAtIndex(proxyArray, i))) {
+            if (RetainPtr proxyType = dynamic_cf_cast<CFStringRef>(CFDictionaryGetValue(proxyInfo.get(), kCFProxyTypeKey))) {
+                if (CFEqual(proxyType.get(), kCFProxyTypeSOCKS)) {
                     m_connectionType = SOCKSProxy;
-                    chosenProxy = proxyInfo;
+                    chosenProxy = proxyInfo.get();
                     break;
                 }
-                if (CFEqual(proxyType, kCFProxyTypeHTTPS)) {
+                if (CFEqual(proxyType.get(), kCFProxyTypeHTTPS)) {
                     m_connectionType = CONNECTProxy;
-                    chosenProxy = proxyInfo;
+                    chosenProxy = proxyInfo.get();
                     // Keep looking for proxies, as a SOCKS one is preferable.
                 }
             }
@@ -260,12 +260,12 @@ void SocketStreamHandleImpl::chooseProxyFromArray(CFArrayRef proxyArray)
         ASSERT(m_connectionType != Unknown);
         ASSERT(m_connectionType != Direct);
 
-        auto proxyHost = dynamic_cf_cast<CFStringRef>(CFDictionaryGetValue(chosenProxy, kCFProxyHostNameKey));
-        auto proxyPort = dynamic_cf_cast<CFNumberRef>(CFDictionaryGetValue(chosenProxy, kCFProxyPortNumberKey));
+        RetainPtr proxyHost = dynamic_cf_cast<CFStringRef>(CFDictionaryGetValue(chosenProxy, kCFProxyHostNameKey));
+        RetainPtr proxyPort = dynamic_cf_cast<CFNumberRef>(CFDictionaryGetValue(chosenProxy, kCFProxyPortNumberKey));
 
         if (proxyHost && proxyPort) {
-            m_proxyHost = proxyHost;
-            m_proxyPort = proxyPort;
+            m_proxyHost = proxyHost.get();
+            m_proxyPort = proxyPort.get();
             return;
         }
     }
@@ -382,7 +382,11 @@ static ProtectionSpace::AuthenticationScheme authenticationSchemeFromAuthenticat
     if (CFEqual(method, kCFHTTPAuthenticationSchemeNegotiate))
         return ProtectionSpace::AuthenticationScheme::Negotiate;
     ASSERT_NOT_REACHED();
+#if PLATFORM(COCOA)
+    return ProtectionSpace::AuthenticationScheme::Default;
+#else
     return ProtectionSpace::AuthenticationScheme::Unknown;
+#endif
 }
 
 static void setCONNECTProxyAuthorizationForStream(CFReadStreamRef stream, CFStringRef proxyAuthorizationString)
@@ -656,7 +660,7 @@ ALLOW_DEPRECATED_DECLARATIONS_BEGIN
     if (CFEqual(CFErrorGetDomain(error), kCFErrorDomainOSStatus)) {
         const char* descriptionOSStatus = GetMacOSStatusCommentString(static_cast<OSStatus>(errorCode));
         if (descriptionOSStatus && descriptionOSStatus[0] != '\0')
-            description = makeString("OSStatus Error "_s, errorCode, ": "_s, span(descriptionOSStatus));
+            description = makeString("OSStatus Error "_s, errorCode, ": "_s, unsafeSpan(descriptionOSStatus));
     }
 
 ALLOW_DEPRECATED_DECLARATIONS_END

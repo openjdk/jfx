@@ -26,11 +26,14 @@
 #include "config.h"
 #include "JITStubRoutineSet.h"
 
+#include <wtf/TZoneMallocInlines.h>
+
 #if ENABLE(JIT)
 
 #include "GCAwareJITStubRoutine.h"
 #include "HeapInlines.h"
-#include <wtf/TZoneMallocInlines.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -82,11 +85,7 @@ void JITStubRoutineSet::prepareForConservativeScan()
         m_range = Range<uintptr_t> { 0, 0 };
         return;
     }
-    std::sort(
-        m_routines.begin(), m_routines.end(),
-        [&] (const Routine& a, const Routine& b) {
-            return a.startAddress < b.startAddress;
-        });
+    std::ranges::sort(m_routines, { }, &Routine::startAddress);
     m_range = Range<uintptr_t> {
         m_routines.first().startAddress,
         m_routines.last().routine->endAddress()
@@ -102,7 +101,7 @@ void JITStubRoutineSet::clearMarks()
 
 void JITStubRoutineSet::markSlow(uintptr_t address)
 {
-    ASSERT(isJITPC(bitwise_cast<void*>(address)));
+    ASSERT(isJITPC(std::bit_cast<void*>(address)));
     ASSERT(!m_routines.isEmpty());
 
     Routine* result = approximateBinarySearch<Routine>(
@@ -187,5 +186,14 @@ template void JITStubRoutineSet::traceMarkedStubRoutines(SlotVisitor&);
 
 } // namespace JSC
 
-#endif // ENABLE(JIT)
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
+#else
+
+namespace JSC {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(JITStubRoutineSet);
+
+} // namespace JSC
+
+#endif // ENABLE(JIT)

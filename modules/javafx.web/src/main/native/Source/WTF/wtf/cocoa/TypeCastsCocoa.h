@@ -25,8 +25,11 @@
 
 #pragma once
 
+#ifdef __OBJC__
+
 #import <wtf/Assertions.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/cf/TypeCastsCF.h>
 #import <wtf/cocoa/TollFreeBridging.h>
 
 namespace WTF {
@@ -35,7 +38,7 @@ namespace WTF {
 
 #if __has_feature(objc_arc)
 #define WTF_CF_TO_NS_BRIDGE_TRANSFER(type, value) ((__bridge_transfer type)value)
-#define WTF_NS_TO_CF_BRIDGE_TRANSFER(type, value) ((type)reinterpret_cast<uintptr_t>(value))
+#define WTF_NS_TO_CF_BRIDGE_TRANSFER(type, value) ((__bridge_retained type)value)
 #else
 #define WTF_CF_TO_NS_BRIDGE_TRANSFER(type, value) ((__bridge type)value)
 #define WTF_NS_TO_CF_BRIDGE_TRANSFER(type, value) ((__bridge type)value)
@@ -62,11 +65,7 @@ template<typename T> inline RetainPtr<std::remove_pointer_t<typename CFTollFreeB
 }
 
 // Use bridge_id_cast to convert from CF -> id without ref churn.
-
-inline id bridge_id_cast(CFTypeRef object)
-{
-    return (__bridge id)object;
-}
+// See also <wtf/cf/TypeCastsCF.h>.
 
 inline RetainPtr<id> bridge_id_cast(RetainPtr<CFTypeRef>&& object)
 {
@@ -84,31 +83,112 @@ inline RetainPtr<id> bridge_id_cast(RetainPtr<CFTypeRef>&& object)
 #define checked_objc_cast checked_objc_castARC
 #endif
 
-template<typename T> inline T* checked_objc_cast(id object)
+template <typename ExpectedType>
+struct ObjCTypeCastTraits {
+public:
+    static bool isType(id object) { return [object isKindOfClass:[ExpectedType class]]; }
+
+    template <typename ArgType>
+    static bool isType(const ArgType *object) { return [object isKindOfClass:[ExpectedType class]]; }
+};
+
+#define SPECIALIZE_OBJC_TYPE_TRAITS(ClassName, ClassExpresssion) \
+namespace WTF { \
+template <> \
+class ObjCTypeCastTraits<ClassName> { \
+public: \
+    static bool isType(id object) { return [object isKindOfClass:(ClassExpresssion)]; } \
+    static bool isType(const NSObject *object) { return [object isKindOfClass:(ClassExpresssion)]; } \
+}; \
+}
+
+template <typename ExpectedType, typename ArgType>
+inline bool is_objc(ArgType * source)
+{
+    return source && ObjCTypeCastTraits<ExpectedType>::isType(source);
+}
+
+template<typename T> inline T *checked_objc_cast(id object)
 {
     if (!object)
         return nullptr;
 
-    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION([object isKindOfClass:[T class]]);
+    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(is_objc<T>(object));
 
     return reinterpret_cast<T*>(object);
 }
 
+template<typename T, typename U> inline T *checked_objc_cast(U *object)
+{
+    static_assert(std::is_base_of_v<U, T>);
+    if (!object)
+        return nullptr;
+
+    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(is_objc<T>(object));
+
+    return static_cast<T*>(object);
+}
+
 // Use dynamic_objc_cast<> instead of checked_objc_cast<> when actively checking NS types,
-// similar to dynamic_cast<> in C++. Be sure to include a nil check.
+// similar to dynamic_cast<> in C++.
 
 // See RetainPtr.h for: template<typename T> T* dynamic_objc_cast(id object).
 
-template<typename T, typename U> RetainPtr<T> dynamic_objc_cast(RetainPtr<U>&& object)
+template<typename T, typename U>
+    requires (std::is_base_of_v<U, T>)
+RetainPtr<T> dynamic_objc_cast(RetainPtr<U>&& object)
 {
-    if (![object isKindOfClass:[T class]])
+    static_assert(std::is_base_of_v<U, T>);
+    static_assert(!std::is_same_v<U, T>);
+    if (!is_objc<T>(object.get()))
         return nullptr;
+    return adoptNS(static_cast<T*>(object.leakRef()));
+}
 
-    return WTFMove(object);
+template<typename T> RetainPtr<T> dynamic_objc_cast(RetainPtr<id>&& object)
+{
+    if (!is_objc<T>(object.get()))
+        return nullptr;
+    return adoptNS(reinterpret_cast<T*>(object.leakRef()));
+}
+
+template<typename T, typename U>
+    requires (std::is_base_of_v<U, T>)
+RetainPtr<T> dynamic_objc_cast(const RetainPtr<U>& object)
+{
+    static_assert(std::is_base_of_v<U, T>);
+    static_assert(!std::is_same_v<U, T>);
+    if (!is_objc<T>(object.get()))
+        return nullptr;
+    return static_cast<T*>(object.get());
+}
+
+template<typename T> RetainPtr<T> dynamic_objc_cast(const RetainPtr<id>& object)
+{
+    if (!is_objc<T>(object.get()))
+        return nullptr;
+    return reinterpret_cast<T*>(object.get());
+}
+
+template<typename T> T *dynamic_objc_cast(NSObject *object)
+{
+    if (!is_objc<T>(object))
+        return nullptr;
+    return static_cast<T*>(object);
+}
+
+template<typename T> T *dynamic_objc_cast(id object)
+{
+    if (!is_objc<T>(object))
+        return nullptr;
+    return reinterpret_cast<T*>(object);
 }
 
 } // namespace WTF
 
 using WTF::bridge_cast;
-using WTF::bridge_id_cast;
 using WTF::checked_objc_cast;
+using WTF::dynamic_objc_cast;
+using WTF::is_objc;
+
+#endif // __OBJC__

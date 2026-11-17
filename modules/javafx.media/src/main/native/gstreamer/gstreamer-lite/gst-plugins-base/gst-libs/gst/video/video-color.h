@@ -261,7 +261,7 @@ GST_VIDEO_API
 gboolean     gst_video_colorimetry_from_string (GstVideoColorimetry *cinfo, const gchar *color);
 
 GST_VIDEO_API
-gchar *      gst_video_colorimetry_to_string   (const GstVideoColorimetry *cinfo);
+gchar *      gst_video_colorimetry_to_string   (const GstVideoColorimetry *cinfo) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_VIDEO_API
 gboolean     gst_video_colorimetry_is_equal    (const GstVideoColorimetry *cinfo, const GstVideoColorimetry *other);

@@ -25,9 +25,10 @@
 
 #pragma once
 
-#include "WebKitFontFamilyNames.h"
+#include <WebCore/WebKitFontFamilyNames.h>
 #include <unicode/uscript.h>
 #include <wtf/HashMap.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/AtomString.h>
 #include <wtf/text/AtomStringHash.h>
 
@@ -42,10 +43,10 @@ struct UScriptCodeHashTraits : HashTraits<int> {
     static bool isDeletedValue(int value) { return value == -3; }
 };
 
-typedef HashMap<int, String, DefaultHash<int>, UScriptCodeHashTraits> ScriptFontFamilyMap;
+using ScriptFontFamilyMap = HashMap<int, String, DefaultHash<int>, UScriptCodeHashTraits>;
 
 class FontGenericFamilies {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(FontGenericFamilies);
 public:
     FontGenericFamilies();
 
@@ -59,6 +60,7 @@ public:
     const String& cursiveFontFamily(UScriptCode = USCRIPT_COMMON) const;
     const String& fantasyFontFamily(UScriptCode = USCRIPT_COMMON) const;
     const String& pictographFontFamily(UScriptCode = USCRIPT_COMMON) const;
+    const String& mathFontFamily(UScriptCode = USCRIPT_COMMON) const;
 
     const String* fontFamily(WebKitFontFamilyNames::FamilyNamesIndex, UScriptCode = USCRIPT_COMMON) const;
 
@@ -69,6 +71,7 @@ public:
     bool setCursiveFontFamily(const String&, UScriptCode);
     bool setFantasyFontFamily(const String&, UScriptCode);
     bool setPictographFontFamily(const String&, UScriptCode);
+    bool setMathFontFamily(const String&, UScriptCode);
 
 private:
     ScriptFontFamilyMap m_standardFontFamilyMap;
@@ -78,6 +81,7 @@ private:
     ScriptFontFamilyMap m_cursiveFontFamilyMap;
     ScriptFontFamilyMap m_fantasyFontFamilyMap;
     ScriptFontFamilyMap m_pictographFontFamilyMap;
+    ScriptFontFamilyMap m_mathFontFamilyMap;
 };
 
 }

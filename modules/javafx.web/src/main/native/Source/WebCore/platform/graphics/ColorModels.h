@@ -87,14 +87,16 @@ private:
     {
     }
 
-    template<typename C, typename std::enable_if_t<std::is_same_v<typename C::ComponentType, float>>* = nullptr>
+    template<typename C>
+        requires std::is_same_v<typename C::ComponentType, float>
     static constexpr C resolve(C color)
     {
         auto [c1, c2, c3, alpha] = resolveColorComponents(asColorComponents(ExposedColorType<C, typename C::Model> { color }));
         return ColorType { c1, c2, c3, alpha };
     }
 
-    template<typename C, typename std::enable_if_t<std::is_same_v<typename C::ComponentType, uint8_t>>* = nullptr>
+    template<typename C>
+        requires std::is_same_v<typename C::ComponentType, uint8_t>
     static constexpr C resolve(C color)
     {
         return color;
@@ -229,6 +231,8 @@ template<> struct LabModel<float> {
     } };
     static constexpr bool isInvertible = false;
     static constexpr auto coordinateSystem = ColorSpaceCoordinateSystem::RectangularOrthogonal;
+    // `achromaticEpsilon` is based on the value from color-js and derived from "reference extent" / 100000.
+    static constexpr auto achromaticEpsilon = 250.0 / 100000.0;
 };
 
 template<typename ColorType> struct ExposedColorType<ColorType, LabModel<typename ColorType::ComponentType>> : ColorType {
@@ -281,6 +285,8 @@ template<> struct OKLabModel<float> {
     } };
     static constexpr bool isInvertible = false;
     static constexpr auto coordinateSystem = ColorSpaceCoordinateSystem::RectangularOrthogonal;
+    // `achromaticEpsilon` is based on the value from color-js and derived from "reference extent" / 100000.
+    static constexpr auto achromaticEpsilon = 0.8 / 100000.0;
 };
 
 template<typename ColorType> struct ExposedColorType<ColorType, OKLabModel<typename ColorType::ComponentType>> : ColorType {

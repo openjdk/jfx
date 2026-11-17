@@ -33,7 +33,7 @@
 namespace WTF {
 
 class GregorianDateTime final {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(GregorianDateTime);
 public:
     GregorianDateTime() = default;
     WTF_EXPORT_PRIVATE explicit GregorianDateTime(double ms, LocalTimeOffset);
@@ -89,7 +89,7 @@ public:
     operator tm() const
     {
         tm ret;
-        memset(&ret, 0, sizeof(ret));
+        zeroBytes(ret);
 
         ret.tm_year = m_year - 1900;
         ret.tm_mon = m_month;

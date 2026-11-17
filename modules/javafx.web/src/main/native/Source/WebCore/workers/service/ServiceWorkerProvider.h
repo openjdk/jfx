@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "ServiceWorkerIdentifier.h"
+#include <WebCore/ServiceWorkerIdentifier.h>
 
 namespace WebCore {
 
@@ -41,6 +41,7 @@ public:
     static void setSharedProvider(ServiceWorkerProvider&);
 
     virtual SWClientConnection& serviceWorkerConnection() = 0;
+    Ref<SWClientConnection> protectedServiceWorkerConnection();
     virtual SWClientConnection* existingServiceWorkerConnection() = 0;
     virtual void terminateWorkerForTesting(ServiceWorkerIdentifier, CompletionHandler<void()>&&) = 0;
 

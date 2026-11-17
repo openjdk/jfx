@@ -73,6 +73,15 @@ static JSValueRef logScrollingStartEventsCallback(JSContextRef ctx, JSObjectRef,
     return JSValueMakeUndefined(ctx);
 }
 
+#if PLATFORM(MAC)
+static JSValueRef printTreesCallback(JSContextRef context, JSObjectRef, JSObjectRef thisObject, size_t, const JSValueRef[], JSValueRef*)
+{
+    AccessibilityController* controller = static_cast<AccessibilityController*>(JSObjectGetPrivate(thisObject));
+    controller->printTrees();
+    return JSValueMakeUndefined(context);
+}
+#endif // PLATFORM(MAC)
+
 static JSValueRef logAccessibilityEventsCallback(JSContextRef ctx, JSObjectRef, JSObjectRef thisObject, size_t, const JSValueRef[], JSValueRef*)
 {
     AccessibilityController* controller = static_cast<AccessibilityController*>(JSObjectGetPrivate(thisObject));
@@ -158,6 +167,9 @@ JSRetainPtr<JSClassRef> AccessibilityController::createJSClass()
         { "addNotificationListener", addNotificationListenerCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "removeNotificationListener", removeNotificationListenerCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "enableEnhancedAccessibility", enableEnhancedAccessibilityCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+#if PLATFORM(MAC)
+        { "printTrees", printTreesCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+#endif
         { 0, 0, 0 }
     };
     static constexpr JSStaticValue values[] = {

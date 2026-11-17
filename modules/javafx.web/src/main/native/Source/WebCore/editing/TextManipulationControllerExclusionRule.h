@@ -46,7 +46,7 @@ struct TextManipulationControllerExclusionRule {
     };
 
     Type type;
-    std::variant<ElementRule, AttributeRule, ClassRule> rule;
+    Variant<ElementRule, AttributeRule, ClassRule> rule;
 
     bool match(const Element&) const;
 };

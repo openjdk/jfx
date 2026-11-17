@@ -25,10 +25,11 @@
 
 #pragma once
 
-#include "JSDOMBinding.h"
-#include "JSDOMBindingSecurity.h"
-#include "JSDOMOperation.h"
-#include "LocalDOMWindow.h"
+#include <WebCore/EventTargetInlines.h>
+#include <WebCore/JSDOMBinding.h>
+#include <WebCore/JSDOMBindingSecurity.h>
+#include <WebCore/JSDOMOperation.h>
+#include <WebCore/LocalDOMWindow.h>
 
 namespace WebCore {
 
@@ -67,11 +68,11 @@ public:
 
         auto thisValue = callFrame.thisValue().toThis(&lexicalGlobalObject, JSC::ECMAMode::strict());
         auto thisObject = jsEventTargetCast(vm, thisValue.isUndefinedOrNull() ? JSC::JSValue(&lexicalGlobalObject) : thisValue);
-        if (UNLIKELY(thisObject.isNull()))
+        if (thisObject.isNull()) [[unlikely]]
             return throwThisTypeError(lexicalGlobalObject, throwScope, "EventTarget", operationName);
 
-        auto& wrapped = thisObject.wrapped();
-        if (auto window = dynamicDowncast<LocalDOMWindow>(wrapped)) {
+        Ref wrapped = thisObject.wrapped();
+        if (RefPtr window = dynamicDowncast<DOMWindow>(wrapped)) {
             if (!window->frame() || !BindingSecurity::shouldAllowAccessToDOMWindow(&lexicalGlobalObject, *window, ThrowSecurityError))
                 return JSC::JSValue::encode(JSC::jsUndefined());
         }

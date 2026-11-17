@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -280,19 +280,33 @@ public class CornerRadiiTest {
         }
 
         @Test
-        public void interpolationFactorSmallerThanOrEqualToZeroReturnsStartInstance() {
+        public void interpolationFactorZeroReturnsStartInstance() {
             var startValue = new CornerRadii(10, 20, 30, 40, false);
             var endValue = new CornerRadii(20, 30, 40, 50, false);
             assertSame(startValue, startValue.interpolate(endValue, 0));
-            assertSame(startValue, startValue.interpolate(endValue, -1));
         }
 
         @Test
-        public void interpolationFactorGreaterThanOrEqualToOneReturnsEndInstance() {
+        public void interpolationFactorOneReturnsEndInstance() {
             var startValue = new CornerRadii(10, 20, 30, 40, false);
             var endValue = new CornerRadii(20, 30, 40, 50, false);
             assertSame(endValue, startValue.interpolate(endValue, 1));
-            assertSame(endValue, startValue.interpolate(endValue, 1.5));
+        }
+
+        @Test
+        public void interpolationFactorLessThanZero() {
+            var startValue = new CornerRadii(10, 20, 30, 40, false);
+            var endValue = new CornerRadii(20, 30, 40, 50, false);
+            assertEquals(new CornerRadii(0, 10, 20, 30, false), startValue.interpolate(endValue, -1));
+            assertEquals(new CornerRadii(0, 0, 10, 20, false), startValue.interpolate(endValue, -2));
+        }
+
+        @Test
+        public void interpolationFactorGreaterThanOne() {
+            var startValue = new CornerRadii(10, 20, 30, 40, false);
+            var endValue = new CornerRadii(20, 30, 40, 50, false);
+            assertEquals(new CornerRadii(30, 40, 50, 60, false), startValue.interpolate(endValue, 2));
+            assertEquals(new CornerRadii(40, 50, 60, 70, false), startValue.interpolate(endValue, 3));
         }
     }
 }

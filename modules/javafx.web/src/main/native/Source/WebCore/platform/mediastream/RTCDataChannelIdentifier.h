@@ -24,14 +24,11 @@
 
 #pragma once
 
-#include "ProcessIdentifier.h"
-#include "RTCDataChannelLocalIdentifier.h"
+#include <WebCore/ProcessQualified.h>
+#include <WebCore/RTCDataChannelLocalIdentifier.h>
 
 namespace WebCore {
 
-struct RTCDataChannelIdentifier {
-    ProcessIdentifier processIdentifier;
-    RTCDataChannelLocalIdentifier channelIdentifier;
-};
+using RTCDataChannelIdentifier = ProcessQualified<RTCDataChannelLocalIdentifier>;
 
 } // namespace WebCore

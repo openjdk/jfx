@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "Color.h"
-#include "LayoutSize.h"
-#include "LengthBox.h"
+#include <WebCore/BoxExtents.h>
+#include <WebCore/Color.h>
+#include <WebCore/IntPoint.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/TypeCasts.h>
 #include <wtf/text/WTFString.h>
@@ -37,10 +37,7 @@ namespace WebCore {
 // CSS Filters
 
 struct BlendingContext;
-class CachedResourceLoader;
-class CachedSVGDocumentReference;
-class FilterEffect;
-struct ResourceLoaderOptions;
+using IntOutsets = IntBoxExtent;
 
 class FilterOperation : public ThreadSafeRefCounted<FilterOperation> {
 public:
@@ -57,6 +54,7 @@ public:
         Contrast,
         Blur,
         DropShadow,
+        DropShadowWithStyleColor,
         Passthrough,
         Default,
         None
@@ -110,6 +108,10 @@ public:
     virtual bool movesPixels() const { return false; }
     // True if the filter should not be allowed to work on content that is not available from this security origin.
     virtual bool shouldBeRestrictedBySecurityOrigin() const { return false; }
+
+    bool isDropShadowBase() const { return type() == WebCore::FilterOperation::Type::DropShadow || type() == WebCore::FilterOperation::Type::DropShadowWithStyleColor; }
+
+    virtual bool requiresRepaintForCurrentColorChange() const { return false; }
 
 protected:
     FilterOperation(Type type)
@@ -170,46 +172,6 @@ private:
         : FilterOperation(Type::Passthrough)
     {
     }
-};
-
-class ReferenceFilterOperation : public FilterOperation {
-public:
-    static Ref<ReferenceFilterOperation> create(const String& url, AtomString&& fragment)
-    {
-        return adoptRef(*new ReferenceFilterOperation(url, WTFMove(fragment)));
-    }
-    virtual ~ReferenceFilterOperation();
-
-    Ref<FilterOperation> clone() const final
-    {
-        // Reference filters cannot be cloned.
-        RELEASE_ASSERT_NOT_REACHED();
-    }
-
-    bool affectsOpacity() const override { return true; }
-    bool movesPixels() const override { return true; }
-    // FIXME: This only needs to return true for graphs that include ConvolveMatrix, DisplacementMap, Morphology and possibly Lighting.
-    // https://bugs.webkit.org/show_bug.cgi?id=171753
-    bool shouldBeRestrictedBySecurityOrigin() const override { return true; }
-
-    const String& url() const { return m_url; }
-    const AtomString& fragment() const { return m_fragment; }
-
-    void loadExternalDocumentIfNeeded(CachedResourceLoader&, const ResourceLoaderOptions&);
-
-    CachedSVGDocumentReference* cachedSVGDocumentReference() const { return m_cachedSVGDocumentReference.get(); }
-
-private:
-    ReferenceFilterOperation(const String& url, AtomString&& fragment);
-
-    bool operator==(const FilterOperation&) const override;
-
-    bool isIdentity() const override;
-    IntOutsets outsets() const override;
-
-    String m_url;
-    AtomString m_fragment;
-    std::unique_ptr<CachedSVGDocumentReference> m_cachedSVGDocumentReference;
 };
 
 // Grayscale, Sepia, Saturate and HueRotate are variations on a basic color matrix effect.
@@ -311,9 +273,9 @@ private:
 
 class WEBCORE_EXPORT BlurFilterOperation : public FilterOperation {
 public:
-    static Ref<BlurFilterOperation> create(Length stdDeviation)
+    static Ref<BlurFilterOperation> create(float stdDeviation)
     {
-        return adoptRef(*new BlurFilterOperation(WTFMove(stdDeviation)));
+        return adoptRef(*new BlurFilterOperation(WTF::move(stdDeviation)));
     }
 
     Ref<FilterOperation> clone() const override
@@ -321,7 +283,7 @@ public:
         return adoptRef(*new BlurFilterOperation(stdDeviation()));
     }
 
-    const Length& stdDeviation() const { return m_stdDeviation; }
+    float stdDeviation() const { return m_stdDeviation; }
 
     bool affectsOpacity() const override { return true; }
     bool movesPixels() const override { return true; }
@@ -331,19 +293,48 @@ public:
 private:
     bool operator==(const FilterOperation&) const override;
 
-    BlurFilterOperation(Length stdDeviation)
+    BlurFilterOperation(float stdDeviation)
         : FilterOperation(Type::Blur)
-        , m_stdDeviation(WTFMove(stdDeviation))
+        , m_stdDeviation(stdDeviation)
     {
     }
 
     bool isIdentity() const override;
     IntOutsets outsets() const override;
 
-    Length m_stdDeviation;
+    float m_stdDeviation;
 };
 
-class WEBCORE_EXPORT DropShadowFilterOperation : public FilterOperation {
+class WEBCORE_EXPORT DropShadowFilterOperationBase : public FilterOperation {
+public:
+    int x() const { return m_location.x(); }
+    int y() const { return m_location.y(); }
+    IntPoint location() const { return m_location; }
+    int stdDeviation() const { return m_stdDeviation; }
+
+    bool affectsOpacity() const override { return true; }
+    bool movesPixels() const override { return true; }
+
+    virtual void dump(TextStream&) const = 0;
+
+protected:
+    bool nonColorEqual(const DropShadowFilterOperationBase&) const;
+
+    DropShadowFilterOperationBase(Type type, const IntPoint& location, int stdDeviation)
+        : FilterOperation(type)
+        , m_location(location)
+        , m_stdDeviation(stdDeviation)
+    {
+    }
+
+    bool isIdentity() const override;
+    IntOutsets outsets() const override;
+
+    IntPoint m_location; // FIXME: Should m_location be a FloatPoint?
+    int m_stdDeviation; // FIXME: Should m_stdDeviation be a float?
+};
+
+class WEBCORE_EXPORT DropShadowFilterOperation : public DropShadowFilterOperationBase {
 public:
     static Ref<DropShadowFilterOperation> create(const IntPoint& location, int stdDeviation, const Color& color)
     {
@@ -352,36 +343,24 @@ public:
 
     Ref<FilterOperation> clone() const override
     {
-        return adoptRef(*new DropShadowFilterOperation(location(), stdDeviation(), color()));
+        return adoptRef(*new DropShadowFilterOperation(location(), stdDeviation(), m_color));
     }
 
-    int x() const { return m_location.x(); }
-    int y() const { return m_location.y(); }
-    IntPoint location() const { return m_location; }
-    int stdDeviation() const { return m_stdDeviation; }
     const Color& color() const { return m_color; }
-
-    bool affectsOpacity() const override { return true; }
-    bool movesPixels() const override { return true; }
 
     RefPtr<FilterOperation> blend(const FilterOperation* from, const BlendingContext&, bool blendToPassthrough = false) override;
 
 private:
     bool operator==(const FilterOperation&) const override;
 
+    void dump(TextStream&) const override;
+
     DropShadowFilterOperation(const IntPoint& location, int stdDeviation, const Color& color)
-        : FilterOperation(Type::DropShadow)
-        , m_location(location)
-        , m_stdDeviation(stdDeviation)
+        : DropShadowFilterOperationBase(Type::DropShadow, location, stdDeviation)
         , m_color(color)
     {
     }
 
-    bool isIdentity() const override;
-    IntOutsets outsets() const override;
-
-    IntPoint m_location; // FIXME: should location be in Lengths?
-    int m_stdDeviation;
     Color m_color;
 };
 
@@ -396,9 +375,9 @@ SPECIALIZE_TYPE_TRAITS_END()
 
 SPECIALIZE_TYPE_TRAITS_FILTEROPERATION(DefaultFilterOperation, type() == WebCore::FilterOperation::Type::Default)
 SPECIALIZE_TYPE_TRAITS_FILTEROPERATION(PassthroughFilterOperation, type() == WebCore::FilterOperation::Type::Passthrough)
-SPECIALIZE_TYPE_TRAITS_FILTEROPERATION(ReferenceFilterOperation, type() == WebCore::FilterOperation::Type::Reference)
 SPECIALIZE_TYPE_TRAITS_FILTEROPERATION(BasicColorMatrixFilterOperation, isBasicColorMatrixFilterOperation())
 SPECIALIZE_TYPE_TRAITS_FILTEROPERATION(BasicComponentTransferFilterOperation, isBasicComponentTransferFilterOperation())
 SPECIALIZE_TYPE_TRAITS_FILTEROPERATION(InvertLightnessFilterOperation, type() == WebCore::FilterOperation::Type::AppleInvertLightness)
 SPECIALIZE_TYPE_TRAITS_FILTEROPERATION(BlurFilterOperation, type() == WebCore::FilterOperation::Type::Blur)
 SPECIALIZE_TYPE_TRAITS_FILTEROPERATION(DropShadowFilterOperation, type() == WebCore::FilterOperation::Type::DropShadow)
+SPECIALIZE_TYPE_TRAITS_FILTEROPERATION(DropShadowFilterOperationBase, isDropShadowBase())

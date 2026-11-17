@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -57,6 +57,9 @@ import javafx.stage.StageStyle;
 import javafx.stage.Window;
 import java.io.File;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLConnection;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
@@ -92,6 +95,8 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.perf.PerformanceTracker;
 import com.sun.javafx.runtime.async.AbstractRemoteResource;
 import com.sun.javafx.runtime.async.AsyncOperationListener;
+import com.sun.javafx.runtime.async.AbstractRemoteResource.SizedStream;
+import com.sun.javafx.runtime.async.AbstractRemoteResource.SizedStreamSupplier;
 import com.sun.javafx.scene.text.TextLayoutFactory;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.CompletionListener;
@@ -336,7 +341,7 @@ public final class QuantumToolkit extends Toolkit {
             setFxUserThread(user);
 
             // Glass screens were inited in Application.run(), assign adapters
-            assignScreensAdapters();
+            Screen.updateAdapterOrdinals();
             /*
              *  Glass Application instance is now valid - create the ResourceFactory
              *  on the render thread
@@ -542,6 +547,16 @@ public final class QuantumToolkit extends Toolkit {
         pulseTimer.resume();
     }
 
+    private void stopTimer() {
+        // Stop the timer in a try/catch so that an IllegalStateException won't
+        // abort toolkit shutdown.
+        try {
+            pulseTimer.stop();
+        } catch (IllegalStateException ex) {
+            ex.printStackTrace();
+        }
+    }
+
     private String pulseString() {
         return ((toolkitRunning.get() ? "T" : "t") +
                 (animationRunning.get() ? "A" : "a") +
@@ -608,9 +623,10 @@ public final class QuantumToolkit extends Toolkit {
         }
     }
 
-    @Override public TKStage createTKStage(Window peerWindow, StageStyle stageStyle, boolean primary, Modality modality, TKStage owner, boolean rtl) {
+    @Override public TKStage createTKStage(Window peerWindow, StageStyle stageStyle, boolean primary,
+                                           Modality modality, TKStage owner, boolean rtl, boolean darkFrame) {
         assertToolkitRunning();
-        WindowStage stage = new WindowStage(peerWindow, stageStyle, modality, owner);
+        WindowStage stage = new WindowStage(peerWindow, stageStyle, modality, owner, darkFrame);
         if (primary) {
             stage.setIsPrimary();
         }
@@ -693,7 +709,7 @@ public final class QuantumToolkit extends Toolkit {
 
     @Override public TKStage createTKPopupStage(Window peerWindow, StageStyle popupStyle, TKStage owner) {
         assertToolkitRunning();
-        WindowStage stage = new WindowStage(peerWindow, popupStyle, null, owner);
+        WindowStage stage = new WindowStage(peerWindow, popupStyle, null, owner, false);
         stage.setIsPopup();
         stage.init(systemMenu);
         return stage;
@@ -752,15 +768,8 @@ public final class QuantumToolkit extends Toolkit {
         return screenAccessor;
     }
 
-    private static void assignScreensAdapters() {
-        GraphicsPipeline pipeline = GraphicsPipeline.getPipeline();
-        for (Screen screen : Screen.getScreens()) {
-            screen.setAdapterOrdinal(pipeline.getAdapterOrdinal(screen));
-        }
-    }
-
     private static void notifyScreenListener(TKScreenConfigurationListener listener) {
-        assignScreensAdapters();
+        Screen.updateAdapterOrdinals();
         listener.screenConfigurationChanged();
     }
 
@@ -813,10 +822,42 @@ public final class QuantumToolkit extends Toolkit {
         return new PrismImageLoader2(stream, width, height, preserveRatio, smooth);
     }
 
-    @Override public AbstractRemoteResource<? extends ImageLoader> loadImageAsync(
-            AsyncOperationListener listener, String url,
+    @Override public AbstractRemoteResource<ImageLoader> loadImageAsync(
+            AsyncOperationListener<ImageLoader> listener, String url,
             double width, double height, boolean preserveRatio, boolean smooth) {
-        return new PrismImageLoader2.AsyncImageLoader(listener, url, width, height, preserveRatio, smooth);
+
+        SizedStreamSupplier sizedStreamSupplier = () -> {
+            URL u = new URL(url);
+            String protocol = u.getProtocol();
+
+            if ("http".equals(protocol) || "https".equals(protocol)) {
+                HttpURLConnection conn = (HttpURLConnection) u.openConnection();
+
+                conn.setRequestMethod("GET");
+                conn.connect();
+
+                long size = conn.getContentLengthLong();
+
+                return new SizedStream(conn.getInputStream(), size);
+            }
+
+            // protocol is something other than http...
+            URLConnection conn = u.openConnection();
+            long size = conn.getContentLengthLong();
+
+            return new SizedStream(conn.getInputStream(), size);
+        };
+
+        return new PrismImageLoader2.AsyncImageLoader(listener, sizedStreamSupplier, width, height, preserveRatio, smooth);
+    }
+
+    @Override public AbstractRemoteResource<ImageLoader> loadImageAsync(
+            AsyncOperationListener<ImageLoader> listener, InputStream stream,
+            double width, double height, boolean preserveRatio, boolean smooth) {
+
+        SizedStreamSupplier sizedStreamSupplier = () -> new SizedStream(stream, -1);
+
+        return new PrismImageLoader2.AsyncImageLoader(listener, sizedStreamSupplier, width, height, preserveRatio, smooth);
     }
 
     // Note that this method should only be called by PlatformImpl.runLater
@@ -835,7 +876,7 @@ public final class QuantumToolkit extends Toolkit {
         checkFxUserThread();
 
         // Turn off pulses so no extraneous runnables are submitted
-        pulseTimer.stop();
+        stopTimer();
 
         // We need to wait for the last frame to finish so that the renderer
         // is not running while we are shutting down glass.
@@ -858,7 +899,7 @@ public final class QuantumToolkit extends Toolkit {
 
     public void dispose() {
         if (toolkitRunning.compareAndSet(true, false)) {
-            pulseTimer.stop();
+            stopTimer();
             renderer.stopRenderer();
 
             try {
@@ -1232,6 +1273,8 @@ public final class QuantumToolkit extends Toolkit {
                 return Application.GetApplication().supportsTransparentWindows();
             case UNIFIED_WINDOW:
                 return Application.GetApplication().supportsUnifiedWindows();
+            case EXTENDED_WINDOW:
+                return Application.GetApplication().supportsExtendedWindows();
             case TWO_LEVEL_FOCUS:
                 return Application.GetApplication().hasTwoLevelFocus();
             case VIRTUAL_KEYBOARD:

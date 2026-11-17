@@ -732,7 +732,8 @@ g_system_thread_new (GThreadFunc proxy,
   base_thread->thread.joinable = TRUE;
   base_thread->thread.func = func;
   base_thread->thread.data = data;
-  base_thread->name = g_strdup (name);
+  if (name)
+    g_strlcpy (base_thread->name, name, sizeof (base_thread->name));
   thread->proxy = proxy;
 
   posix_check_cmd (pthread_attr_init (&attr));
@@ -766,7 +767,6 @@ g_system_thread_new (GThreadFunc proxy,
     {
       g_set_error (error, G_THREAD_ERROR, G_THREAD_ERROR_AGAIN,
                    "Error creating thread: %s", g_strerror (ret));
-      g_free (thread->thread.name);
       g_slice_free (GThreadPosix, thread);
       return NULL;
     }
@@ -812,11 +812,30 @@ g_system_thread_set_name (const gchar *name)
 #if defined(HAVE_PTHREAD_SETNAME_NP_WITHOUT_TID)
   pthread_setname_np (name); /* on OS X and iOS */
 #elif defined(HAVE_PTHREAD_SETNAME_NP_WITH_TID)
-  pthread_setname_np (pthread_self (), name); /* on Linux and Solaris */
+#ifdef __LINUX__
+#define MAX_THREADNAME_LEN 16
+#else
+#define MAX_THREADNAME_LEN 32
+#endif
+  char name_[MAX_THREADNAME_LEN];
+  g_strlcpy (name_, name, MAX_THREADNAME_LEN);
+  pthread_setname_np (pthread_self (), name_); /* on Linux and Solaris */
 #elif defined(HAVE_PTHREAD_SETNAME_NP_WITH_TID_AND_ARG)
   pthread_setname_np (pthread_self (), "%s", (gchar *) name); /* on NetBSD */
 #elif defined(HAVE_PTHREAD_SET_NAME_NP)
   pthread_set_name_np (pthread_self (), name); /* on FreeBSD, DragonFlyBSD, OpenBSD */
+#endif
+}
+
+void
+g_system_thread_get_name (char  *buffer,
+                          gsize  length)
+{
+#ifdef HAVE_PTHREAD_GETNAME_NP
+  pthread_getname_np (pthread_self (), buffer, length);
+#else
+  g_assert (length >= 1);
+  buffer[0] = '\0';
 #endif
 }
 

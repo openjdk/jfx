@@ -31,7 +31,7 @@
 
 #pragma once
 
-#include "NotificationPermission.h"
+#include <WebCore/NotificationPermission.h>
 #include <wtf/Forward.h>
 
 namespace WebCore {
@@ -69,6 +69,8 @@ public:
 
     // Checks the current level of permission.
     virtual Permission checkPermission(ScriptExecutionContext*) = 0;
+
+    virtual bool isWebKit2WebNotificationClient() const { return false; }
 
     virtual ~NotificationClient() = default;
 };

@@ -42,7 +42,7 @@ class ContentSecurityPolicyResponseHeaders {
 public:
     ContentSecurityPolicyResponseHeaders() = default;
     ContentSecurityPolicyResponseHeaders(Vector<std::pair<String, ContentSecurityPolicyHeaderType>>&& headers, int httpStatusCode)
-        : m_headers(WTFMove(headers))
+        : m_headers(WTF::move(headers))
         , m_httpStatusCode(httpStatusCode)
     { }
 
@@ -52,28 +52,18 @@ public:
     ContentSecurityPolicyResponseHeaders isolatedCopy() &&;
 
     enum EmptyTag { Empty };
-    struct MarkableTraits {
-        static bool isEmptyValue(const ContentSecurityPolicyResponseHeaders& identifier)
-        {
-            return identifier.m_emptyForMarkable;
-        }
-
-        static ContentSecurityPolicyResponseHeaders emptyValue()
-        {
-            return ContentSecurityPolicyResponseHeaders(Empty);
-        }
-    };
 
     void addPolicyHeadersTo(ResourceResponse&) const;
 
     const Vector<std::pair<String, ContentSecurityPolicyHeaderType>>& headers() const { return m_headers; }
-    void setHeaders(Vector<std::pair<String, ContentSecurityPolicyHeaderType>>&& headers) { m_headers = WTFMove(headers); }
+    void setHeaders(Vector<std::pair<String, ContentSecurityPolicyHeaderType>>&& headers) { m_headers = WTF::move(headers); }
     int httpStatusCode() const { return m_httpStatusCode; }
     void setHTTPStatusCode(int httpStatusCode) { m_httpStatusCode = httpStatusCode; }
 
 private:
     friend bool operator==(const ContentSecurityPolicyResponseHeaders&, const ContentSecurityPolicyResponseHeaders&);
     friend class ContentSecurityPolicy;
+    friend struct MarkableTraits<ContentSecurityPolicyResponseHeaders>;
     ContentSecurityPolicyResponseHeaders(EmptyTag)
         : m_emptyForMarkable(true)
     { }
@@ -89,3 +79,20 @@ inline bool operator==(const ContentSecurityPolicyResponseHeaders&a, const Conte
 }
 
 } // namespace WebCore
+
+namespace WTF {
+
+template<>
+struct MarkableTraits<WebCore::ContentSecurityPolicyResponseHeaders> {
+    static bool isEmptyValue(const WebCore::ContentSecurityPolicyResponseHeaders& identifier)
+    {
+        return identifier.m_emptyForMarkable;
+    }
+
+    static WebCore::ContentSecurityPolicyResponseHeaders emptyValue()
+    {
+        return WebCore::ContentSecurityPolicyResponseHeaders(WebCore::ContentSecurityPolicyResponseHeaders::Empty);
+    }
+};
+
+} // namespace WTF

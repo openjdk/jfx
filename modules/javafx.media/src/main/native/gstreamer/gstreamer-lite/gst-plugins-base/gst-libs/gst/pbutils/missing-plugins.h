@@ -49,6 +49,13 @@ GST_PBUTILS_API
 GstMessage * gst_missing_encoder_message_new    (GstElement    * element,
                                                  const GstCaps * encode_caps);
 
+GST_PBUTILS_API
+void gst_missing_plugin_message_set_stream_id(GstMessage *msg,
+                                              const gchar *stream_id);
+
+GST_PBUTILS_API
+const gchar *gst_missing_plugin_message_get_stream_id (GstMessage *msg);
+
 /*
  * functions for use by applications when dealing with missing-plugin messages
  */

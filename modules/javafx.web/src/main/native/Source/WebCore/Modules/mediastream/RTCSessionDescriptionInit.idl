@@ -32,7 +32,8 @@
 [
     Conditional=WEB_RTC,
     JSGenerateToJSObject,
-    JSGenerateToNativeObject
+    JSGenerateToNativeObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary RTCSessionDescriptionInit {
     required RTCSdpType type;
     DOMString sdp = "";

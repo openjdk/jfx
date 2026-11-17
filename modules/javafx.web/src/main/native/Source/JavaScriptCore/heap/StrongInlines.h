@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,8 +25,12 @@
 
 #pragma once
 
-#include "JSCJSValueInlines.h"
-#include "VM.h"
+#include <JavaScriptCore/JSCJSValueInlines.h>
+#include <JavaScriptCore/VM.h>
+
+#if ENABLE(REFTRACKER)
+#include <JavaScriptCore/InitializeThreading.h>
+#endif
 
 namespace JSC {
 

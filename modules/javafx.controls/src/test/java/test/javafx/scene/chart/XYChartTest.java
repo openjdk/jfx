@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,6 @@
 
 package test.javafx.scene.chart;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import javafx.beans.property.ListProperty;
 import javafx.beans.property.SimpleListProperty;
 import javafx.collections.FXCollections;
@@ -46,6 +44,7 @@ import javafx.scene.chart.Chart;
 import javafx.scene.chart.ChartShim;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
+import javafx.scene.chart.XYChartShim;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
@@ -53,6 +52,9 @@ import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.Test;
 import test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils;
+import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 public class XYChartTest extends ChartTestBase {
 
@@ -145,6 +147,38 @@ public class XYChartTest extends ChartTestBase {
         startApp();
         assertEquals(0, ChartShim.getLegend(areachart).prefHeight(-1), 0);
         assertEquals(0, ChartShim.getLegend(areachart).prefWidth(-1), 0);
+    }
+
+    @Test
+    public void chartAnimationRespectsReducedMotionPreference() {
+        XYChart<String, Number> chart = new XYChart<>(new CategoryAxis(), new NumberAxis()) {
+            @Override protected void layoutPlotChildren() {}
+            @Override protected void dataItemChanged(Data<String, Number> item) {}
+            @Override protected void dataItemAdded(Series<String, Number> series, int itemIndex, Data<String, Number> item) {}
+            @Override protected void dataItemRemoved(Data<String, Number> item, Series<String, Number> series) {}
+            @Override protected void seriesAdded(Series<String, Number> series, int seriesIndex) {}
+            @Override protected void seriesRemoved(Series<String, Number> series) {}
+        };
+
+        chart.setData(FXCollections.observableArrayList());
+        chart.getData().add(new XYChart.Series<>(FXCollections.observableArrayList(
+            new XYChart.Data<>("A", 1),
+            new XYChart.Data<>("B", 2))));
+
+        StageLoader stageLoader = new StageLoader(chart);
+
+        try {
+            Scene scene = stageLoader.getStage().getScene();
+            pulse();
+            assertTrue(XYChartShim.shouldAnimate(chart));
+
+            scene.getPreferences().setReducedMotion(true);
+            pulse();
+
+            assertFalse(XYChartShim.shouldAnimate(chart));
+        } finally {
+            stageLoader.dispose();
+        }
     }
 
     @Test

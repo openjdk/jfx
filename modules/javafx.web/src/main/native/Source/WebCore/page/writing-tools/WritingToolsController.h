@@ -31,7 +31,7 @@
 #import "WritingToolsCompositionCommand.h"
 #import "WritingToolsTypes.h"
 #import <wtf/CheckedPtr.h>
-#import <wtf/FastMalloc.h>
+#import <wtf/TZoneMalloc.h>
 #import <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -49,7 +49,7 @@ struct SimpleRange;
 enum class TextAnimationRunMode : uint8_t;
 
 class WritingToolsController final : public CanMakeWeakPtr<WritingToolsController>, public CanMakeCheckedPtr<WritingToolsController> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(WritingToolsController);
     WTF_MAKE_NONCOPYABLE(WritingToolsController);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(WritingToolsController);
 
@@ -60,9 +60,11 @@ public:
 
     void didBeginWritingToolsSession(const WritingTools::Session&, const Vector<WritingTools::Context>&);
 
-    void proofreadingSessionDidReceiveSuggestions(const WritingTools::Session&, const Vector<WritingTools::TextSuggestion>&, const WritingTools::Context&, bool finished);
+    void proofreadingSessionDidReceiveSuggestions(const WritingTools::Session&, const Vector<WritingTools::TextSuggestion>&, const CharacterRange&, const WritingTools::Context&, bool finished);
 
     void proofreadingSessionDidUpdateStateForSuggestion(const WritingTools::Session&, WritingTools::TextSuggestion::State, const WritingTools::TextSuggestion&, const WritingTools::Context&);
+
+    void willEndWritingToolsSession(const WritingTools::Session&, bool accepted);
 
     void didEndWritingToolsSession(const WritingTools::Session&, bool accepted);
 
@@ -78,13 +80,43 @@ public:
     // FIXME: Refactor `TextAnimationController` in such a way so as to not explicitly depend on `WritingToolsController`,
     // and then remove these methods after doing so.
     std::optional<SimpleRange> activeSessionRange() const;
-    void showSelection() const;
+    void intelligenceTextAnimationsDidComplete();
 
-private:
-    struct CompositionState : CanMakeCheckedPtr<CompositionState> {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+
+    struct State : CanMakeCheckedPtr<State> {
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(State);
+        WTF_STRUCT_OVERRIDE_DELETE_FOR_CHECKED_PTR(State);
+
+        virtual ~State() { }
+        virtual bool isCompositionState() const { return false; };
+        virtual bool isProofreadingState() const { return false; };
+    };
+
+    struct CompositionState : State {
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(CompositionState);
         WTF_STRUCT_OVERRIDE_DELETE_FOR_CHECKED_PTR(CompositionState);
 
+        enum class ClearStateDeferralReason : uint8_t {
+            SessionInProgress = 1 << 0,
+            AnimationInProgress = 1 << 1,
+        };
+
+        static UniqueRef<CompositionState> create(const Vector<Ref<WritingToolsCompositionCommand>>& unappliedCommands, const Vector<Ref<WritingToolsCompositionCommand>>& reappliedCommands, const WritingTools::Session& session)
+        {
+            return UniqueRef { *new CompositionState(unappliedCommands, reappliedCommands, session) };
+        }
+
+        // These two vectors should never have the same command in both of them.
+        Vector<Ref<WritingToolsCompositionCommand>> unappliedCommands;
+        Vector<Ref<WritingToolsCompositionCommand>> reappliedCommands;
+        WritingTools::Session session;
+        OptionSet<ClearStateDeferralReason> clearStateDeferralReasons;
+
+        bool shouldCommitAfterReplacement { false };
+        std::optional<CharacterRange> replacedRange;
+        std::optional<CharacterRange> pendingReplacedRange;
+
+    private:
         CompositionState(const Vector<Ref<WritingToolsCompositionCommand>>& unappliedCommands, const Vector<Ref<WritingToolsCompositionCommand>>& reappliedCommands, const WritingTools::Session& session)
             : unappliedCommands(unappliedCommands)
             , reappliedCommands(reappliedCommands)
@@ -92,17 +124,23 @@ private:
         {
         }
 
-        // These two vectors should never have the same command in both of them.
-        Vector<Ref<WritingToolsCompositionCommand>> unappliedCommands;
-        Vector<Ref<WritingToolsCompositionCommand>> reappliedCommands;
-        WritingTools::Session session;
-        std::optional<SimpleRange> currentRange;
+        virtual bool isCompositionState() const { return true; };
     };
 
-    struct ProofreadingState : CanMakeCheckedPtr<ProofreadingState> {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    struct ProofreadingState : State {
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(ProofreadingState);
         WTF_STRUCT_OVERRIDE_DELETE_FOR_CHECKED_PTR(ProofreadingState);
 
+        static UniqueRef<ProofreadingState> create(const Ref<Range>& contextRange, const WritingTools::Session& session, int replacementLocationOffset)
+        {
+            return UniqueRef { *new ProofreadingState(contextRange, session, replacementLocationOffset) };
+        }
+
+        Ref<Range> contextRange;
+        WritingTools::Session session;
+        int replacementLocationOffset { 0 };
+
+    private:
         ProofreadingState(const Ref<Range>& contextRange, const WritingTools::Session& session, int replacementLocationOffset)
             : contextRange(contextRange)
             , session(session)
@@ -110,11 +148,10 @@ private:
         {
         }
 
-        Ref<Range> contextRange;
-        WritingTools::Session session;
-        int replacementLocationOffset { 0 };
+        virtual bool isProofreadingState() const { return true; };
     };
 
+private:
     template<WritingTools::Session::Type Type>
     struct StateFromSessionType { };
 
@@ -129,7 +166,8 @@ private:
     };
 
     class EditingScope {
-        WTF_MAKE_NONCOPYABLE(EditingScope); WTF_MAKE_FAST_ALLOCATED;
+        WTF_MAKE_TZONE_ALLOCATED(EditingScope);
+        WTF_MAKE_NONCOPYABLE(EditingScope);
     public:
         EditingScope(Document&);
         ~EditingScope();
@@ -147,6 +185,9 @@ private:
     template<WritingTools::Session::Type Type>
     StateFromSessionType<Type>::Value* currentState();
 
+    template<WritingTools::Session::Type Type>
+    const StateFromSessionType<Type>::Value* currentState() const;
+
     std::optional<std::tuple<Node&, DocumentMarker&>> findTextSuggestionMarkerContainingRange(const SimpleRange&) const;
     std::optional<std::tuple<Node&, DocumentMarker&>> findTextSuggestionMarkerByID(const SimpleRange& outerRange, const WritingTools::TextSuggestion::ID&) const;
 
@@ -154,27 +195,44 @@ private:
     void replaceContentsOfRangeInSession(CompositionState&, const SimpleRange&, const AttributedString&, WritingToolsCompositionCommand::State);
 
     void compositionSessionDidFinishReplacement();
-    void compositionSessionDidFinishReplacement(const CharacterRange&, const String&);
+    void compositionSessionDidFinishReplacement(const WTF::UUID& sourceAnimationUUID, const WTF::UUID& destinationAnimationUUID, const CharacterRange&, const String&);
 
-    void compositionSessionDidReceiveTextWithReplacementRangeAsync(const AttributedString&, const CharacterRange&, const WritingTools::Context&, bool finished, TextAnimationRunMode);
+    void smartReplySessionDidReceiveTextWithReplacementRange(const WritingTools::Session&, const AttributedString&, const CharacterRange&, const WritingTools::Context&, bool finished);
+
+    void compositionSessionDidReceiveTextWithReplacementRangeAsync(const WTF::UUID&, const WTF::UUID&, const AttributedString&, const CharacterRange&, const WritingTools::Context&, bool finished, TextAnimationRunMode);
 
     void showOriginalCompositionForSession();
     void showRewrittenCompositionForSession();
     void restartCompositionForSession();
 
+    template<CompositionState::ClearStateDeferralReason Reason>
+    void removeCompositionClearStateDeferralReason();
+
     template<WritingTools::Session::Type Type>
     void writingToolsSessionDidReceiveAction(WritingTools::Action);
 
     template<WritingTools::Session::Type Type>
+    void willEndWritingToolsSession(bool accepted);
+
+    template<WritingTools::Session::Type Type>
     void didEndWritingToolsSession(bool accepted);
+
+    void commitComposition(CompositionState&, Document&);
 
     RefPtr<Document> document() const;
 
     WeakPtr<Page> m_page;
-
-    std::variant<std::monostate, ProofreadingState, CompositionState> m_state;
+    std::unique_ptr<State> m_state;
 };
 
 } // namespace WebKit
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WritingToolsController::CompositionState)
+    static bool isType(const WebCore::WritingToolsController::State& state) { return state.isCompositionState(); }
+SPECIALIZE_TYPE_TRAITS_END()
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WritingToolsController::ProofreadingState)
+    static bool isType(const WebCore::WritingToolsController::State& state) { return state.isProofreadingState(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif

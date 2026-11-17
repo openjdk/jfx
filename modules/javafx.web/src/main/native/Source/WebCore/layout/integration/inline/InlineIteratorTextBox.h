@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "InlineIteratorBox.h"
-#include "RenderText.h"
+#include <WebCore/InlineIteratorBox.h>
+#include <WebCore/RenderText.h>
 
 namespace WebCore {
 
@@ -73,33 +73,19 @@ public:
     TextBoxIterator& traverseNextTextBox();
 
 private:
-    BoxIterator& traverseNextOnLine() = delete;
-    BoxIterator& traversePreviousOnLine() = delete;
-    BoxIterator& traverseNextOnLineIgnoringLineBreak() = delete;
-    BoxIterator& traversePreviousOnLineIgnoringLineBreak() = delete;
+    BoxIterator& traverseLineRightwardOnLine() = delete;
+    BoxIterator& traverseLineLeftwardOnLine() = delete;
+    BoxIterator& traverseLineRightwardOnLineIgnoringLineBreak() = delete;
+    BoxIterator& traverseLineLeftwardOnLineIgnoringLineBreak() = delete;
 
     const TextBox& get() const { return downcast<TextBox>(m_box); }
 };
 
-class TextBoxRange {
-public:
-    TextBoxRange(TextBoxIterator begin)
-        : m_begin(begin)
-    {
-    }
-
-    TextBoxIterator begin() const { return m_begin; }
-    EndIterator end() const { return { }; }
-
-private:
-    TextBoxIterator m_begin;
-};
-
-TextBoxIterator firstTextBoxFor(const RenderText&);
+TextBoxIterator lineLeftmostTextBoxFor(const RenderText&);
 TextBoxIterator textBoxFor(const LegacyInlineTextBox*);
 TextBoxIterator textBoxFor(const LayoutIntegration::InlineContent&, const InlineDisplay::Box&);
 TextBoxIterator textBoxFor(const LayoutIntegration::InlineContent&, size_t boxIndex);
-TextBoxRange textBoxesFor(const RenderText&);
+BoxRange<TextBoxIterator> textBoxesFor(const RenderText&);
 
 inline bool TextBox::hasHyphen() const
 {
@@ -109,7 +95,7 @@ inline bool TextBox::hasHyphen() const
 }
 
 inline TextBox::TextBox(PathVariant&& path)
-    : Box(WTFMove(path))
+    : Box(WTF::move(path))
 {
 }
 

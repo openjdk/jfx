@@ -30,15 +30,19 @@
 
 #pragma once
 
-#include "ContentSecurityPolicyResponseHeaders.h"
-#include "CrossOriginAccessControl.h"
-#include "CrossOriginEmbedderPolicy.h"
-#include "FetchIdentifier.h"
-#include "FetchOptions.h"
-#include "HTTPHeaderNames.h"
-#include "RequestPriority.h"
-#include "ServiceWorkerTypes.h"
-#include "StoredCredentialsPolicy.h"
+#include <WebCore/ContentSecurityPolicyResponseHeaders.h>
+#include <WebCore/CrossOriginAccessControl.h>
+#include <WebCore/CrossOriginEmbedderPolicy.h>
+#include <WebCore/FetchIdentifier.h>
+#include <WebCore/FetchOptions.h>
+#include <WebCore/FetchingWorkerIdentifier.h>
+#include <WebCore/HTTPHeaderNames.h>
+#include <WebCore/LoadedFromOpaqueSource.h>
+#include <WebCore/RequestPriority.h>
+#include <WebCore/ServiceWorkerIdentifier.h>
+#include <WebCore/ServiceWorkerTypes.h>
+#include <WebCore/SharedWorkerIdentifier.h>
+#include <WebCore/StoredCredentialsPolicy.h>
 #include <wtf/HashSet.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
@@ -91,9 +95,10 @@ static constexpr unsigned bitWidthOfDefersLoadingPolicy = 1;
 
 enum class CachingPolicy : uint8_t {
     AllowCaching,
-    DisallowCaching
+    DisallowCaching,
+    AllowCachingMainResourcePrefetch
 };
-static constexpr unsigned bitWidthOfCachingPolicy = 1;
+static constexpr unsigned bitWidthOfCachingPolicy = 2;
 
 enum class ClientCredentialPolicy : bool {
     CannotAskClientForCredentials,
@@ -132,12 +137,6 @@ enum class ServiceWorkersMode : uint8_t {
 };
 static constexpr unsigned bitWidthOfServiceWorkersMode = 2;
 
-enum class ApplicationCacheMode : uint8_t {
-    Use,
-    Bypass
-};
-static constexpr unsigned bitWidthOfApplicationCacheMode = 1;
-
 enum class ContentEncodingSniffingPolicy : bool {
     Default,
     Disable
@@ -154,9 +153,6 @@ static constexpr unsigned bitWidthOfPreflightPolicy = 2;
 enum class ShouldEnableContentExtensionsCheck : bool { No, Yes };
 static constexpr unsigned bitWidthOfShouldEnableContentExtensionsCheck = 1;
 
-enum class LoadedFromOpaqueSource : bool { No, Yes };
-static constexpr unsigned bitWidthOfLoadedFromOpaqueSource = 1;
-
 enum class LoadedFromPluginElement : bool { No, Yes };
 static constexpr unsigned bitWidthOfLoadedFromPluginElement = 1;
 
@@ -170,7 +166,7 @@ struct ResourceLoaderOptions : public FetchOptions {
     }
 
     ResourceLoaderOptions(FetchOptions options)
-        : FetchOptions { WTFMove(options) }
+        : FetchOptions { WTF::move(options) }
         , sendLoadCallbacks(SendCallbackPolicy::DoNotSendCallbacks)
         , sniffContent(ContentSniffingPolicy::DoNotSniffContent)
         , contentEncodingSniffingPolicy(ContentEncodingSniffingPolicy::Default)
@@ -185,13 +181,12 @@ struct ResourceLoaderOptions : public FetchOptions {
         , initiatorContext(InitiatorContext::Document)
         , initiator(Initiator::EmptyString)
         , serviceWorkersMode(ServiceWorkersMode::All)
-        , applicationCacheMode(ApplicationCacheMode::Use)
         , clientCredentialPolicy(ClientCredentialPolicy::CannotAskClientForCredentials)
         , preflightPolicy(PreflightPolicy::Consider)
         , loadedFromOpaqueSource(LoadedFromOpaqueSource::No)
         , loadedFromPluginElement(LoadedFromPluginElement::No)
         , loadedFromFetch(LoadedFromFetch::No)
-        , fetchPriorityHint(RequestPriority::Auto)
+        , fetchPriority(RequestPriority::Auto)
         , shouldEnableContentExtensionsCheck(ShouldEnableContentExtensionsCheck::Yes)
     { }
 
@@ -210,21 +205,20 @@ struct ResourceLoaderOptions : public FetchOptions {
         , initiatorContext(InitiatorContext::Document)
         , initiator(Initiator::EmptyString)
         , serviceWorkersMode(ServiceWorkersMode::All)
-        , applicationCacheMode(ApplicationCacheMode::Use)
         , clientCredentialPolicy(credentialPolicy)
         , preflightPolicy(PreflightPolicy::Consider)
         , loadedFromOpaqueSource(LoadedFromOpaqueSource::No)
         , loadedFromPluginElement(LoadedFromPluginElement::No)
         , loadedFromFetch(LoadedFromFetch::No)
-        , fetchPriorityHint(RequestPriority::Auto)
+        , fetchPriority(RequestPriority::Auto)
         , shouldEnableContentExtensionsCheck(ShouldEnableContentExtensionsCheck::Yes)
     {
         this->credentials = credentials;
         this->mode = mode;
     }
 
-    Markable<ServiceWorkerRegistrationIdentifier, ServiceWorkerRegistrationIdentifier::MarkableTraits> serviceWorkerRegistrationIdentifier;
-    Markable<ContentSecurityPolicyResponseHeaders, ContentSecurityPolicyResponseHeaders::MarkableTraits> cspResponseHeaders;
+    Markable<ServiceWorkerRegistrationIdentifier> serviceWorkerRegistrationIdentifier;
+    Markable<ContentSecurityPolicyResponseHeaders> cspResponseHeaders;
     std::optional<CrossOriginEmbedderPolicy> crossOriginEmbedderPolicy;
 
     uint8_t maxRedirectCount { 20 };
@@ -244,17 +238,17 @@ struct ResourceLoaderOptions : public FetchOptions {
     InitiatorContext initiatorContext : bitWidthOfInitiatorContext;
     Initiator initiator : bitWidthOfInitiator;
     ServiceWorkersMode serviceWorkersMode : bitWidthOfServiceWorkersMode;
-    ApplicationCacheMode applicationCacheMode : bitWidthOfApplicationCacheMode;
     ClientCredentialPolicy clientCredentialPolicy : bitWidthOfClientCredentialPolicy;
     PreflightPolicy preflightPolicy : bitWidthOfPreflightPolicy;
     LoadedFromOpaqueSource loadedFromOpaqueSource : bitWidthOfLoadedFromOpaqueSource;
     LoadedFromPluginElement loadedFromPluginElement : bitWidthOfLoadedFromPluginElement;
     LoadedFromFetch loadedFromFetch : bitWidthOfLoadedFromFetch;
-    RequestPriority fetchPriorityHint : bitWidthOfFetchPriorityHint;
+    RequestPriority fetchPriority : bitWidthOfRequestPriority;
     ShouldEnableContentExtensionsCheck shouldEnableContentExtensionsCheck : bitWidthOfShouldEnableContentExtensionsCheck;
 
-    FetchIdentifier navigationPreloadIdentifier;
+    Markable<FetchIdentifier> navigationPreloadIdentifier;
     String nonce;
+    FetchingWorkerIdentifier workerIdentifier;
 };
 
 } // namespace WebCore

@@ -31,6 +31,8 @@
 #include "PreciseJumpTargetsInlines.h"
 #include <wtf/BubbleSort.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 void BytecodeRewriter::applyModification()
@@ -38,7 +40,7 @@ void BytecodeRewriter::applyModification()
     for (size_t insertionIndex = m_insertions.size(); insertionIndex--;) {
         Insertion& insertion = m_insertions[insertionIndex];
         if (insertion.type == Insertion::Type::Remove)
-            m_writer.m_instructions.remove(insertion.index.bytecodeOffset, insertion.length());
+            m_writer.m_instructions.removeAt(insertion.index.bytecodeOffset, insertion.length());
         else {
             if (insertion.includeBranch == IncludeBranch::Yes) {
                 int finalOffset = insertion.index.bytecodeOffset + calculateDifference(m_insertions.begin(), m_insertions.begin() + insertionIndex);
@@ -52,7 +54,7 @@ void BytecodeRewriter::applyModification()
 
 void BytecodeRewriter::execute()
 {
-    WTF::bubbleSort(m_insertions.begin(), m_insertions.end(), [] (const Insertion& lhs, const Insertion& rhs) {
+    WTF::bubbleSort(m_insertions.mutableSpan(), [] (const Insertion& lhs, const Insertion& rhs) {
         return lhs.index < rhs.index;
     });
 
@@ -80,7 +82,7 @@ void BytecodeRewriter::insertImpl(InsertionPoint insertionPoint, IncludeBranch i
         Insertion::Type::Insert,
         includeBranch,
         0,
-        WTFMove(writer)
+        WTF::move(writer)
     });
 }
 
@@ -147,3 +149,5 @@ void BytecodeRewriter::adjustJumpTargets()
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

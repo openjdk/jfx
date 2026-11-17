@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -53,16 +53,13 @@ private:
     Ref<MediaPromise> appendInternal(Ref<SharedBuffer>&&) final;
     void resetParserStateInternal() final;
     bool canSetMinimumUpcomingPresentationTime(TrackID) const final;
-    void setMinimumUpcomingPresentationTime(TrackID, const MediaTime&) final;
-    void clearMinimumUpcomingPresentationTime(TrackID) final;
     bool canSwitchToType(const ContentType&) final;
 
-    void flush(TrackID) final { m_enqueuedSamples.clear(); m_minimumUpcomingPresentationTime = MediaTime::invalidTime(); }
+    void flush(TrackID) final { m_enqueuedSamples.clear(); }
     void enqueueSample(Ref<MediaSample>&&, TrackID) final;
     bool isReadyForMoreSamples(TrackID) final { return !m_maxQueueDepth || m_enqueuedSamples.size() < m_maxQueueDepth.value(); }
 
     Ref<SamplesPromise> enqueuedSamplesForTrackID(TrackID) final;
-    MediaTime minimumUpcomingPresentationTimeForTrackID(TrackID) final;
     void setMaximumQueueDepthForTrackID(TrackID, uint64_t) final;
 
     void didReceiveInitializationSegment(const MockInitializationBox&);
@@ -71,21 +68,20 @@ private:
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return m_logger.get(); }
     ASCIILiteral logClassName() const override { return "MockSourceBufferPrivate"_s; }
-    const void* logIdentifier() const final { return m_logIdentifier; }
+    uint64_t logIdentifier() const final { return m_logIdentifier; }
     WTFLogChannel& logChannel() const final;
 
     const Logger& sourceBufferLogger() const final { return m_logger.get(); }
-    const void* sourceBufferLogIdentifier() final { return logIdentifier(); }
+    uint64_t sourceBufferLogIdentifier() final { return logIdentifier(); }
 #endif
 
-    MediaTime m_minimumUpcomingPresentationTime;
     Vector<String> m_enqueuedSamples;
     std::optional<uint64_t> m_maxQueueDepth;
     Vector<uint8_t> m_inputBuffer;
 
 #if !RELEASE_LOG_DISABLED
-    Ref<const Logger> m_logger;
-    const void* m_logIdentifier;
+    const Ref<const Logger> m_logger;
+    const uint64_t m_logIdentifier;
 #endif
 };
 

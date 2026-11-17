@@ -37,9 +37,9 @@ namespace JSC {
 
 const ClassInfo IntlSegmentIterator::s_info = { "Object"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(IntlSegmentIterator) };
 
-IntlSegmentIterator* IntlSegmentIterator::create(VM& vm, Structure* structure, std::unique_ptr<UBreakIterator, UBreakIteratorDeleter>&& segmenter, Box<Vector<UChar>> buffer, JSString* string, IntlSegmenter::Granularity granularity)
+IntlSegmentIterator* IntlSegmentIterator::create(VM& vm, Structure* structure, std::unique_ptr<UBreakIterator, UBreakIteratorDeleter>&& segmenter, Box<Vector<char16_t>> buffer, JSString* string, IntlSegmenter::Granularity granularity)
 {
-    auto* object = new (NotNull, allocateCell<IntlSegmentIterator>(vm)) IntlSegmentIterator(vm, structure, WTFMove(segmenter), WTFMove(buffer), granularity, string);
+    auto* object = new (NotNull, allocateCell<IntlSegmentIterator>(vm)) IntlSegmentIterator(vm, structure, WTF::move(segmenter), WTF::move(buffer), granularity, string);
     object->finishCreation(vm);
     return object;
 }
@@ -49,10 +49,10 @@ Structure* IntlSegmentIterator::createStructure(VM& vm, JSGlobalObject* globalOb
     return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
 }
 
-IntlSegmentIterator::IntlSegmentIterator(VM& vm, Structure* structure, std::unique_ptr<UBreakIterator, UBreakIteratorDeleter>&& segmenter, Box<Vector<UChar>>&& buffer, IntlSegmenter::Granularity granularity, JSString* string)
+IntlSegmentIterator::IntlSegmentIterator(VM& vm, Structure* structure, std::unique_ptr<UBreakIterator, UBreakIteratorDeleter>&& segmenter, Box<Vector<char16_t>>&& buffer, IntlSegmenter::Granularity granularity, JSString* string)
     : Base(vm, structure)
-    , m_segmenter(WTFMove(segmenter))
-    , m_buffer(WTFMove(buffer))
+    , m_segmenter(WTF::move(segmenter))
+    , m_buffer(WTF::move(buffer))
     , m_string(string, WriteBarrierEarlyInit)
     , m_granularity(granularity)
 {

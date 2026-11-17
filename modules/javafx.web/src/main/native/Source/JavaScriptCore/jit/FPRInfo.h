@@ -25,8 +25,12 @@
 
 #pragma once
 
-#include "MacroAssembler.h"
+#include <JavaScriptCore/MacroAssembler.h>
+#include <wtf/Compiler.h>
+#include <wtf/Platform.h>
 #include <wtf/PrintStream.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -96,7 +100,7 @@ public:
     }
     static unsigned toIndex(FPRReg reg)
     {
-        unsigned result = (unsigned)reg;
+        auto result = static_cast<unsigned>(reg);
         if (result >= numberOfRegisters)
             return InvalidIndex;
         return result;
@@ -105,6 +109,13 @@ public:
     static constexpr FPRReg toArgumentRegister(unsigned index)
     {
         return (FPRReg)index;
+    }
+    static unsigned toArgumentIndex(FPRReg reg)
+    {
+        auto result = static_cast<unsigned>(reg);
+        if (result >= numberOfArgumentRegisters)
+            return InvalidIndex;
+        return result;
     }
 
     static ASCIILiteral debugName(FPRReg reg)
@@ -151,6 +162,12 @@ public:
     static constexpr FPRReg returnValueFPR = ARMRegisters::d0; // fpRegT0
     static constexpr FPRReg argumentFPR0 = ARMRegisters::d0; // fpRegT0
     static constexpr FPRReg argumentFPR1 = ARMRegisters::d1; // fpRegT1
+    static constexpr FPRReg argumentFPR2 = ARMRegisters::d2; // fpRegT2
+    static constexpr FPRReg argumentFPR3 = ARMRegisters::d3; // fpRegT3
+    static constexpr FPRReg argumentFPR4 = ARMRegisters::d4; // fpRegT4
+    static constexpr FPRReg argumentFPR5 = ARMRegisters::d5; // fpRegT5
+    static constexpr FPRReg argumentFPR6 = ARMRegisters::d6; // fpRegT6
+    static constexpr FPRReg argumentFPR7 = ARMRegisters::d7; // fpRegT7
 
     static constexpr FPRReg nonPreservedNonArgumentFPR0 = ARMRegisters::d14;
 
@@ -170,13 +187,17 @@ public:
     }
     static unsigned toIndex(FPRReg reg)
     {
-        return (unsigned)reg;
+        return static_cast<unsigned>(reg);
     }
 
     static constexpr FPRReg toArgumentRegister(unsigned index)
     {
         ASSERT_UNDER_CONSTEXPR_CONTEXT(index < numberOfArgumentRegisters);
         return static_cast<FPRReg>(index);
+    }
+    static unsigned toArgumentIndex(FPRReg reg)
+    {
+        return static_cast<unsigned>(reg);
     }
 
     static ASCIILiteral debugName(FPRReg reg)
@@ -273,6 +294,15 @@ public:
     {
         ASSERT_UNDER_CONSTEXPR_CONTEXT(index < 8);
         return static_cast<FPRReg>(index);
+    }
+
+    static unsigned toArgumentIndex(FPRReg reg)
+    {
+        ASSERT(reg != InvalidFPRReg);
+        ASSERT(static_cast<int>(reg) < 32);
+        if (reg > argumentFPR7)
+            return InvalidIndex;
+        return static_cast<unsigned>(reg);
     }
 
     static ASCIILiteral debugName(FPRReg reg)
@@ -372,6 +402,15 @@ public:
         return indexForRegister[reg];
     }
 
+    static unsigned toArgumentIndex(FPRReg reg)
+    {
+        ASSERT(reg != InvalidFPRReg);
+        ASSERT(static_cast<int>(reg) < 32);
+        if (reg < argumentFPR0 || reg > argumentFPR7)
+            return InvalidIndex;
+        return static_cast<unsigned>(reg) - 10;
+    }
+
     static ASCIILiteral debugName(FPRReg reg)
     {
         ASSERT(reg != InvalidFPRReg);
@@ -402,3 +441,5 @@ inline void printInternal(PrintStream& out, JSC::FPRReg reg)
 }
 
 } // namespace WTF
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

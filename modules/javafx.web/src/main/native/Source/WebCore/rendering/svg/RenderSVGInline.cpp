@@ -1,7 +1,8 @@
 /*
  * Copyright (C) 2006 Oliver Hunt <ojh16@student.canterbury.ac.nz>
- * Copyright (C) 2006 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2024 Apple Inc. All rights reserved.
  * Copyright (C) Research In Motion Limited 2010. All rights reserved.
+ * Copyright (C) 2013 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -24,6 +25,7 @@
 
 #include "LegacyRenderSVGResource.h"
 #include "RenderBoxModelObjectInlines.h"
+#include "RenderObjectInlines.h"
 #include "RenderSVGInlineInlines.h"
 #include "RenderSVGInlineText.h"
 #include "RenderSVGText.h"
@@ -31,14 +33,15 @@
 #include "SVGInlineFlowBox.h"
 #include "SVGRenderSupport.h"
 #include "SVGResourcesCache.h"
+#include "Settings.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderSVGInline);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderSVGInline);
 
 RenderSVGInline::RenderSVGInline(Type type, SVGGraphicsElement& element, RenderStyle&& style)
-    : RenderInline(type, element, WTFMove(style))
+    : RenderInline(type, element, WTF::move(style))
 {
     ASSERT(isRenderSVGInline());
 }
@@ -50,6 +53,19 @@ std::unique_ptr<LegacyInlineFlowBox> RenderSVGInline::createInlineFlowBox()
     auto box = makeUnique<SVGInlineFlowBox>(*this);
     box->setHasVirtualLogicalHeight();
     return box;
+}
+
+bool RenderSVGInline::isChildAllowed(const RenderObject& child, const RenderStyle& style) const
+{
+    auto isEmptySVGInlineText = [](const RenderObject* object) {
+        const auto svgInlineText = dynamicDowncast<RenderSVGInlineText>(object);
+        return svgInlineText && svgInlineText->hasEmptyText();
+    };
+
+    if (isEmptySVGInlineText(&child))
+        return false;
+
+    return RenderElement::isChildAllowed(child, style);
 }
 
 FloatRect RenderSVGInline::objectBoundingBox() const
@@ -74,6 +90,14 @@ FloatRect RenderSVGInline::repaintRectInLocalCoordinates(RepaintRectCalculation 
         return textAncestor->repaintRectInLocalCoordinates(repaintRectCalculation);
 
     return FloatRect();
+}
+
+FloatRect RenderSVGInline::decoratedBoundingBox() const
+{
+    if (auto* textAncestor = RenderSVGText::locateRenderSVGTextAncestor(*this))
+        return textAncestor->decoratedBoundingBox();
+
+    return { };
 }
 
 LayoutRect RenderSVGInline::clippedOverflowRect(const RenderLayerModelObject* repaintContainer, VisibleRectContext context) const
@@ -113,7 +137,7 @@ void RenderSVGInline::mapLocalToContainer(const RenderLayerModelObject* ancestor
     SVGRenderSupport::mapLocalToContainer(*this, ancestorContainer, transformState, wasFixed);
 }
 
-const RenderObject* RenderSVGInline::pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap& geometryMap) const
+const RenderElement* RenderSVGInline::pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap& geometryMap) const
 {
     if (document().settings().layerBasedSVGEngineEnabled())
         return RenderInline::pushMappingToContainer(ancestorToStopAt, geometryMap);
@@ -147,14 +171,14 @@ void RenderSVGInline::willBeDestroyed()
     RenderInline::willBeDestroyed();
 }
 
-void RenderSVGInline::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
+void RenderSVGInline::styleDidChange(Style::Difference diff, const RenderStyle* oldStyle)
 {
     if (document().settings().layerBasedSVGEngineEnabled()) {
         RenderInline::styleDidChange(diff, oldStyle);
         return;
     }
 
-    if (diff == StyleDifference::Layout)
+    if (diff == Style::DifferenceResult::Layout)
         invalidateCachedBoundaries();
     RenderInline::styleDidChange(diff, oldStyle);
     SVGResourcesCache::clientStyleChanged(*this, diff, oldStyle, style());

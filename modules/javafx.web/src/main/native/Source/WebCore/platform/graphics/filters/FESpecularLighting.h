@@ -22,11 +22,13 @@
 
 #pragma once
 
-#include "FELighting.h"
+#include <WebCore/FELighting.h>
 
 namespace WebCore {
 
-class FESpecularLighting : public FELighting {
+class FESpecularLighting final : public FELighting {
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(FESpecularLighting);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(FESpecularLighting);
 public:
     WEBCORE_EXPORT static Ref<FESpecularLighting> create(const Color& lightingColor, float surfaceScale, float specularConstant, float specularExponent, float kernelUnitLengthX, float kernelUnitLengthY, Ref<LightSource>&&, DestinationColorSpace = DestinationColorSpace::SRGB());
 

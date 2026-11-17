@@ -28,7 +28,7 @@ function initializeTextEncoderStream()
     "use strict";
 
     const startAlgorithm = () => {
-        return @Promise.@resolve();
+        return @promiseResolve(@Promise, @undefined);
     };
     const transformAlgorithm = (chunk) => {
         const encoder = @getByIdDirectPrivate(this, "textEncoderStreamEncoder");
@@ -36,14 +36,14 @@ function initializeTextEncoderStream()
         try {
             buffer = encoder.@encode(chunk);
         } catch (e) {
-            return @Promise.@reject(e);
+            return @promiseReject(@Promise, e);
         }
         if (buffer) {
             const transformStream = @getByIdDirectPrivate(this, "textEncoderStreamTransform");
             const controller = @getByIdDirectPrivate(transformStream, "controller");
             @transformStreamDefaultControllerEnqueue(controller, buffer);
         }
-        return @Promise.@resolve();
+        return @promiseResolve(@Promise, @undefined);
     };
     const flushAlgorithm = () => {
         const encoder = @getByIdDirectPrivate(this, "textEncoderStreamEncoder");
@@ -53,7 +53,7 @@ function initializeTextEncoderStream()
             const controller = @getByIdDirectPrivate(transformStream, "controller");
             @transformStreamDefaultControllerEnqueue(controller, buffer);
         }
-        return @Promise.@resolve();
+        return @promiseResolve(@Promise, @undefined);
     };
 
     const [transform, readable, writable] = @createTransformStream(startAlgorithm, transformAlgorithm, flushAlgorithm);

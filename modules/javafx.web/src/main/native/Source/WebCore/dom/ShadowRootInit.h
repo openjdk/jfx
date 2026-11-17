@@ -25,8 +25,10 @@
 
 #pragma once
 
-#include "ShadowRootMode.h"
-#include "SlotAssignmentMode.h"
+#include <JavaScriptCore/JSCJSValue.h>
+#include <WebCore/CustomElementRegistry.h>
+#include <WebCore/ShadowRootMode.h>
+#include <WebCore/SlotAssignmentMode.h>
 
 namespace WebCore {
 
@@ -36,6 +38,8 @@ struct ShadowRootInit {
     bool clonable { false };
     bool serializable { false };
     SlotAssignmentMode slotAssignment { SlotAssignmentMode::Named };
+    std::optional<RefPtr<CustomElementRegistry>> customElementRegistry;
+    String referenceTarget;
 };
 
 }

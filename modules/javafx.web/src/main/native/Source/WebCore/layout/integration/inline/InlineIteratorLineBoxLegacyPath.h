@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "InlineIteratorBoxLegacyPath.h"
-#include "LayoutIntegrationInlineContent.h"
-#include "LegacyRootInlineBox.h"
-#include "RenderBlockFlow.h"
+#include <WebCore/InlineIteratorBoxLegacyPath.h>
+#include <WebCore/LayoutIntegrationInlineContent.h>
+#include <WebCore/LegacyRootInlineBox.h>
+#include <WebCore/RenderBlockFlow.h>
 
 namespace WebCore {
 namespace InlineIterator {
@@ -76,14 +76,13 @@ public:
 
     const RenderBlockFlow& formattingContextRoot() const { return m_rootInlineBox->blockFlow(); }
 
-    RenderFragmentContainer* containingFragment() const { return nullptr; }
     bool isFirstAfterPageBreak() const { return false; }
+    bool hasBlockLevelBox() const { return false; }
 
     size_t lineIndex() const
     {
         return formattingContextRoot().legacyRootBox() ? 1 : 0;
     }
-
 
     void traverseNext()
     {

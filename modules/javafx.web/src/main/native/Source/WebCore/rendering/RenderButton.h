@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2022 Apple Inc.
+ * Copyright (C) 2005-2022 Apple Inc. All rights reserved.
  * Copyright (C) 2022 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -34,7 +34,7 @@ class RenderTextFragment;
 // For inputs, they will also generate an anonymous RenderText and keep its style and content up
 // to date as the button changes.
 class RenderButton final : public RenderFlexibleBox {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderButton);
+    WTF_MAKE_TZONE_ALLOCATED(RenderButton);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderButton);
 public:
     RenderButton(HTMLFormControlElement&, RenderStyle&&);
@@ -65,8 +65,6 @@ public:
 
     RenderBlock* innerRenderer() const { return m_inner.get(); }
     void setInnerRenderer(RenderBlock&);
-
-    LayoutUnit baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const override;
 
 private:
     void element() const = delete;

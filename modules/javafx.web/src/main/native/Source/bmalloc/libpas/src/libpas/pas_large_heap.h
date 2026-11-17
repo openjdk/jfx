@@ -44,12 +44,13 @@ struct pas_large_heap {
     pas_fast_large_free_heap free_heap;
     uint16_t index;
     pas_heap_table_state table_state : 8;
+    bool is_megapage_heap;
 };
 
 /* Note that all of these functions have to be called with the heap lock held. */
 
 /* NOTE: it's only valid to construct a large heap that is a member of a pas_heap. */
-PAS_API void pas_large_heap_construct(pas_large_heap* heap);
+PAS_API void pas_large_heap_construct(pas_large_heap* heap, bool is_megapage_heap);
 
 PAS_API pas_allocation_result
 pas_large_heap_try_allocate_and_forget(pas_large_heap* heap,
@@ -58,15 +59,19 @@ pas_large_heap_try_allocate_and_forget(pas_large_heap* heap,
                                        const pas_heap_config* config,
                                        pas_physical_memory_transaction* transaction);
 
+/*
+ * Should only be used to allocate memory for a user-facing allocation,
+ * i.e. one which represents a single object (or contiguous array of objects)
+ * to be returned by some malloc-equivalent API.
+ * This is because it may choose to delegate large allocations to the system
+ * malloc implementation depending on the libpas/heap configuration, which
+ * is not appropriate for libpas-internal metadata.
+ *
+ * An example of what would not qualify would be allocating space to be used
+ * for a megapage cache.
+ */
 PAS_API pas_allocation_result
-pas_large_heap_try_allocate(pas_large_heap* heap,
-                            size_t size, size_t alignment,
-                            pas_allocation_mode allocation_mode,
-                            const pas_heap_config* config,
-                            pas_physical_memory_transaction* transaction);
-
-PAS_API pas_allocation_result
-pas_large_heap_try_allocate_pgm(pas_large_heap* heap,
+pas_large_heap_try_allocate_user_allocation(pas_large_heap* heap,
                             size_t size, size_t alignment,
                             pas_allocation_mode allocation_mode,
                             const pas_heap_config* config,

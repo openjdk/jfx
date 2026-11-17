@@ -27,6 +27,7 @@
 #include "Attribute.h"
 #include "CSSValueKeywords.h"
 #include "CachedImage.h"
+#include "ContainerNodeInlines.h"
 #include "ElementChildIteratorInlines.h"
 #include "FrameLoader.h"
 #include "HTMLDocument.h"
@@ -38,6 +39,7 @@
 #include "LocalFrame.h"
 #include "MIMETypeRegistry.h"
 #include "NodeList.h"
+#include "NodeInlines.h"
 #include "NodeName.h"
 #include "Page.h"
 #include "RenderEmbeddedObject.h"
@@ -52,17 +54,17 @@
 #include <wtf/TZoneMallocInlines.h>
 
 #if PLATFORM(IOS_FAMILY)
-#include "RuntimeApplicationChecks.h"
+#include <wtf/RuntimeApplicationChecks.h>
 #endif
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(HTMLObjectElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLObjectElement);
 
 using namespace HTMLNames;
 
 inline HTMLObjectElement::HTMLObjectElement(const QualifiedName& tagName, Document& document, HTMLFormElement* form)
-    : HTMLPlugInImageElement(tagName, document)
+    : HTMLPlugInElement(tagName, document)
     , FormListedElement(form)
 {
     ASSERT(hasTagName(objectTag));
@@ -87,7 +89,7 @@ bool HTMLObjectElement::hasPresentationalHintsForAttribute(const QualifiedName& 
 {
     if (name == borderAttr)
         return true;
-    return HTMLPlugInImageElement::hasPresentationalHintsForAttribute(name);
+    return HTMLPlugInElement::hasPresentationalHintsForAttribute(name);
 }
 
 void HTMLObjectElement::collectPresentationalHintsForAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
@@ -95,12 +97,12 @@ void HTMLObjectElement::collectPresentationalHintsForAttribute(const QualifiedNa
     if (name == borderAttr)
         applyBorderAttributeToStyle(value, style);
     else
-        HTMLPlugInImageElement::collectPresentationalHintsForAttribute(name, value, style);
+        HTMLPlugInElement::collectPresentationalHintsForAttribute(name, value, style);
 }
 
 void HTMLObjectElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    HTMLPlugInImageElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
+    HTMLPlugInElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 
     bool invalidateRenderer = false;
     bool needsWidgetUpdate = false;
@@ -152,14 +154,14 @@ static void mapDataParamToSrc(Vector<AtomString>& paramNames, Vector<AtomString>
     }
     if (!foundSrcParam && !dataParamValue.isNull()) {
         paramNames.append(AtomString { "src"_s });
-        paramValues.append(WTFMove(dataParamValue));
+        paramValues.append(WTF::move(dataParamValue));
     }
 }
 
 void HTMLObjectElement::parametersForPlugin(Vector<AtomString>& paramNames, Vector<AtomString>& paramValues)
 {
     if (hasAttributes()) {
-        for (const Attribute& attribute : attributesIterator()) {
+        for (auto& attribute : attributes()) {
             paramNames.append(attribute.name().localName());
                 paramValues.append(attribute.value());
             }
@@ -182,7 +184,7 @@ bool HTMLObjectElement::hasFallbackContent() const
 }
 
 // FIXME: This should be unified with HTMLEmbedElement::updateWidget and
-// moved down into HTMLPluginImageElement.cpp
+// moved down into HTMLPlugInElement.cpp
 void HTMLObjectElement::updateWidget(CreatePlugins createPlugins)
 {
     ASSERT(!renderEmbeddedObject()->isPluginUnavailable());
@@ -237,7 +239,7 @@ void HTMLObjectElement::updateWidget(CreatePlugins createPlugins)
 
 Node::InsertedIntoAncestorResult HTMLObjectElement::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
 {
-    HTMLPlugInImageElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
+    HTMLPlugInElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
     FormListedElement::elementInsertedIntoAncestor(*this, insertionType);
     if (!insertionType.connectedToDocument)
         return InsertedIntoAncestorResult::Done;
@@ -251,7 +253,7 @@ void HTMLObjectElement::didFinishInsertingNode()
 
 void HTMLObjectElement::removedFromAncestor(RemovalType removalType, ContainerNode& oldParentOfRemovedTree)
 {
-    HTMLPlugInImageElement::removedFromAncestor(removalType, oldParentOfRemovedTree);
+    HTMLPlugInElement::removedFromAncestor(removalType, oldParentOfRemovedTree);
     FormListedElement::elementRemovedFromAncestor(*this, removalType);
 }
 
@@ -263,12 +265,12 @@ void HTMLObjectElement::childrenChanged(const ChildChange& change)
         scheduleUpdateForAfterStyleResolution();
         invalidateStyleForSubtree();
     }
-    HTMLPlugInImageElement::childrenChanged(change);
+    HTMLPlugInElement::childrenChanged(change);
 }
 
 bool HTMLObjectElement::isURLAttribute(const Attribute& attribute) const
 {
-    return attribute.name() == dataAttr || attribute.name() == codebaseAttr || HTMLPlugInImageElement::isURLAttribute(attribute);
+    return attribute.name() == dataAttr || attribute.name() == codebaseAttr || HTMLPlugInElement::isURLAttribute(attribute);
 }
 
 const AtomString& HTMLObjectElement::imageSourceURL() const
@@ -287,8 +289,13 @@ void HTMLObjectElement::renderFallbackContent()
     scheduleUpdateForAfterStyleResolution();
     invalidateStyleAndRenderersForSubtree();
 
+    // Presence of a UA shadow root indicates render invalidation during embedded PDF plugin bringup, and not a failed render.
+    // It's safe to special case here because UA shadow root cannot be attached to <object>/<embed> programmatically.
+    if (userAgentShadowRoot())
+        return;
+
     // Before we give up and use fallback content, check to see if this is a MIME type issue.
-    auto* loader = imageLoader();
+    RefPtr loader = imageLoader();
     if (loader && loader->image() && loader->image()->status() != CachedResource::LoadError) {
         m_serviceType = loader->image()->response().mimeType();
         if (!isImageType()) {
@@ -305,10 +312,10 @@ static inline bool preventsParentObjectFromExposure(const Element& child)
 {
     static NeverDestroyed mostKnownTags = [] {
         MemoryCompactLookupOnlyRobinHoodHashSet<QualifiedName> set;
-        auto* tags = HTMLNames::getHTMLTags();
-        set.reserveInitialCapacity(HTMLNames::HTMLTagsCount);
-        for (size_t i = 0; i < HTMLNames::HTMLTagsCount; i++) {
-            auto& tag = *tags[i];
+        auto tags = HTMLNames::getHTMLTags();
+        set.reserveInitialCapacity(tags.size());
+        for (auto* tagPtr : tags) {
+            auto& tag = *tagPtr;
             // Only the param element was explicitly mentioned in the HTML specification rule
             // we were trying to implement, but these are other known HTML elements that we
             // have decided, over the years, to treat as children that do not prevent object
@@ -319,8 +326,9 @@ static inline bool preventsParentObjectFromExposure(const Element& child)
                 || tag == figureTag
                 || tag == paramTag
                 || tag == summaryTag
-                || tag == trackTag)
+                || tag == trackTag) {
                 continue;
+            }
             set.add(tag);
         }
         return set;
@@ -380,15 +388,15 @@ void HTMLObjectElement::updateExposedState()
 
 void HTMLObjectElement::addSubresourceAttributeURLs(ListHashSet<URL>& urls) const
 {
-    HTMLPlugInImageElement::addSubresourceAttributeURLs(urls);
+    HTMLPlugInElement::addSubresourceAttributeURLs(urls);
 
-    addSubresourceURL(urls, document().completeURL(attributeWithoutSynchronization(dataAttr)));
+    addSubresourceURL(urls, protectedDocument()->completeURL(attributeWithoutSynchronization(dataAttr)));
 }
 
 void HTMLObjectElement::didMoveToNewDocument(Document& oldDocument, Document& newDocument)
 {
     FormListedElement::didMoveToNewDocument();
-    HTMLPlugInImageElement::didMoveToNewDocument(oldDocument, newDocument);
+    HTMLPlugInElement::didMoveToNewDocument(oldDocument, newDocument);
 }
 
 bool HTMLObjectElement::canContainRangeEndPoint() const

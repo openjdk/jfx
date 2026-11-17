@@ -26,6 +26,8 @@
 #include "config.h"
 #include "ApplePayMerchantCapability.h"
 
+#include "ExceptionOr.h"
+
 #if ENABLE(APPLE_PAY)
 
 namespace WebCore {
@@ -59,7 +61,7 @@ ExceptionOr<ApplePaySessionPaymentRequest::MerchantCapabilities> convertAndValid
         }
     }
 
-    return WTFMove(result);
+    return WTF::move(result);
 }
 
 } // namespace WebCore

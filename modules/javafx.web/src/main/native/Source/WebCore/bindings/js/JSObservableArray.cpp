@@ -68,14 +68,15 @@ void JSObservableArray::finishCreation(VM& vm, Ref<ObservableArray>&& array)
 {
     Base::finishCreation(vm);
     ASSERT(inherits(info()));
-    m_array = WTFMove(array);
+    m_array = WTF::move(array);
 }
 
 JSObservableArray::~JSObservableArray() = default;
 
 void JSObservableArray::destroy(JSCell* cell)
 {
-    static_cast<JSObservableArray*>(cell)->JSObservableArray::~JSObservableArray();
+    // We cannot rely on jsCast() during JSObject destruction.
+    SUPPRESS_MEMORY_UNSAFE_CAST static_cast<JSObservableArray*>(cell)->JSObservableArray::~JSObservableArray();
 }
 
 JSC_DEFINE_CUSTOM_GETTER(arrayLengthGetter, (JSGlobalObject* lexicalGlobalObject, EncodedJSValue thisValue, PropertyName))
@@ -89,7 +90,7 @@ JSC_DEFINE_CUSTOM_GETTER(arrayLengthGetter, (JSGlobalObject* lexicalGlobalObject
     return JSValue::encode(jsNumber(thisObject->length()));
 }
 
-void JSObservableArray::getOwnPropertyNames(JSObject* object, JSGlobalObject* lexicalGlobalObject, PropertyNameArray& propertyNames, DontEnumPropertiesMode mode)
+void JSObservableArray::getOwnPropertyNames(JSObject* object, JSGlobalObject* lexicalGlobalObject, PropertyNameArrayBuilder& propertyNames, DontEnumPropertiesMode mode)
 {
     VM& vm = lexicalGlobalObject->vm();
     JSObservableArray* thisObject = jsCast<JSObservableArray*>(object);
@@ -224,7 +225,7 @@ bool JSObservableArray::defineOwnProperty(JSObject* object, JSGlobalObject* glob
 
 JSC::GCClient::IsoSubspace* JSObservableArray::subspaceForImpl(JSC::VM& vm)
 {
-    return &static_cast<JSVMClientData*>(vm.clientData)->observableArraySpace();
+    return &downcast<JSVMClientData>(vm.clientData)->observableArraySpace();
 }
 
 } // namespace JSC

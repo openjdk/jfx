@@ -27,18 +27,21 @@
 #include "FormDataConsumer.h"
 
 #include "BlobLoader.h"
+#include "ExceptionOr.h"
 #include "FormData.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/WorkQueue.h>
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FormDataConsumer);
+
 FormDataConsumer::FormDataConsumer(const FormData& formData, ScriptExecutionContext& context, Callback&& callback)
     : m_formData(formData.copy())
     , m_context(&context)
-    , m_callback(WTFMove(callback))
+    , m_callback(WTF::move(callback))
     , m_fileQueue(WorkQueue::create("FormDataConsumer file queue"_s))
 {
-    read();
 }
 
 FormDataConsumer::~FormDataConsumer() = default;
@@ -52,7 +55,8 @@ void FormDataConsumer::read()
     ASSERT(!m_blobLoader);
 
     if (m_currentElementIndex >= m_formData->elements().size()) {
-        m_callback(std::span<const uint8_t> { });
+        auto callback = std::exchange(m_callback, nullptr);
+        callback(std::span<const uint8_t> { });
         return;
     }
 
@@ -72,43 +76,48 @@ void FormDataConsumer::consumeData(const Vector<uint8_t>& content)
 
 void FormDataConsumer::consumeFile(const String& filename)
 {
+    m_isReadingFile = true;
     m_fileQueue->dispatch([weakThis = WeakPtr { *this }, identifier = m_context->identifier(), path = filename.isolatedCopy()]() mutable {
-        ScriptExecutionContext::postTaskTo(identifier, [weakThis = WTFMove(weakThis), content = FileSystem::readEntireFile(path)](auto&) {
-            if (!weakThis)
+        ScriptExecutionContext::postTaskTo(identifier, [weakThis = WTF::move(weakThis), content = FileSystem::readEntireFile(path)](auto&) {
+            RefPtr protectedThis = weakThis.get();
+            if (!protectedThis || !protectedThis->m_isReadingFile)
                 return;
 
+            protectedThis->m_isReadingFile = false;
             if (!content) {
-                weakThis->didFail(Exception { ExceptionCode::InvalidStateError, "Unable to read form data file"_s });
+                protectedThis->didFail(Exception { ExceptionCode::InvalidStateError, "Unable to read form data file"_s });
                 return;
             }
 
-            weakThis->consume(*content);
+            protectedThis->consume(*content);
         });
     });
 }
 
 void FormDataConsumer::consumeBlob(const URL& blobURL)
 {
-    m_blobLoader = makeUnique<BlobLoader>([weakThis = WeakPtr { *this }](BlobLoader&) mutable {
-        if (!weakThis)
+    m_blobLoader = BlobLoader::create([weakThis = WeakPtr { *this }](BlobLoader&) mutable {
+        RefPtr protectedThis = weakThis.get();
+        if (!protectedThis)
             return;
 
-        auto loader = std::exchange(weakThis->m_blobLoader, { });
+        auto loader = std::exchange(protectedThis->m_blobLoader, { });
         if (!loader)
             return;
 
         if (auto optionalErrorCode = loader->errorCode()) {
-            weakThis->didFail(Exception { ExceptionCode::InvalidStateError, "Failed to read form data blob"_s });
+            protectedThis->didFail(Exception { ExceptionCode::InvalidStateError, "Failed to read form data blob"_s });
             return;
         }
 
         if (auto data = loader->arrayBufferResult())
-            weakThis->consume(data->span());
+            protectedThis->consume(data->span());
     });
-
-    m_blobLoader->start(blobURL, m_context.get(), FileReaderLoader::ReadAsArrayBuffer);
-
-    if (!m_blobLoader || !m_blobLoader->isLoading())
+    if (RefPtr blobLoader = m_blobLoader.get()) {
+        blobLoader->start(blobURL, m_context.get(), FileReaderLoader::ReadAsArrayBuffer);
+        if (blobLoader->isLoading())
+            return;
+    }
         didFail(Exception { ExceptionCode::InvalidStateError, "Unable to read form data blob"_s });
 }
 
@@ -118,7 +127,12 @@ void FormDataConsumer::consume(std::span<const uint8_t> content)
         return;
 
     if (!content.empty()) {
-    m_callback(WTFMove(content));
+        bool result = m_callback(WTF::move(content));
+        if (!result) {
+            cancel();
+            return;
+        }
+
     if (!m_callback)
         return;
     }
@@ -131,7 +145,7 @@ void FormDataConsumer::didFail(Exception&& exception)
     auto callback = std::exchange(m_callback, nullptr);
     cancel();
     if (callback)
-        callback(WTFMove(exception));
+        callback(WTF::move(exception));
 }
 
 void FormDataConsumer::cancel()
@@ -139,6 +153,7 @@ void FormDataConsumer::cancel()
     m_callback = nullptr;
     if (auto loader = std::exchange(m_blobLoader, { }))
         loader->cancel();
+    m_isReadingFile = false;
     m_context = nullptr;
 }
 

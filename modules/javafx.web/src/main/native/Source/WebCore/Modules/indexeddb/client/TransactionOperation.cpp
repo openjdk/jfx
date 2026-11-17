@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,15 +26,25 @@
 #include "config.h"
 #include "TransactionOperation.h"
 
+#include "IDBActiveDOMObjectInlines.h"
 #include "IDBCursor.h"
+#include "IDBDatabase.h"
 #include <JavaScriptCore/HeapInlines.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 namespace IDBClient {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(TransactionOperation);
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(TransactionOperationImpl);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TransactionOperation);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TransactionOperationImpl);
+
+TransactionOperation::TransactionOperation(IDBTransaction& transaction)
+    : m_transaction(transaction)
+    , m_identifier(transaction.connectionProxy())
+    , m_operationID(transaction.generateOperationID())
+    , m_scriptExecutionContextIdentifier(transaction.database().scriptExecutionContextIdentifier())
+{
+}
 
 TransactionOperation::TransactionOperation(IDBTransaction& transaction, IDBRequest& request)
     : TransactionOperation(transaction)
@@ -47,7 +57,20 @@ TransactionOperation::TransactionOperation(IDBTransaction& transaction, IDBReque
         m_cursorIdentifier = cursor->info().identifier();
 
     request.setTransactionOperationID(m_operationID);
-    m_idbRequest = &request;
+    m_idbRequest = request;
+}
+
+void TransactionOperation::transitionToComplete(const IDBResultData& data, RefPtr<TransactionOperation>&& lastRef)
+{
+    ASSERT(isMainThread());
+
+    if (canCurrentThreadAccessThreadLocalData(originThread()))
+        transitionToCompleteOnThisThread(data);
+    else {
+        m_transaction->performCallbackOnOriginThread(*this, &TransactionOperation::transitionToCompleteOnThisThread, data);
+        m_transaction->callFunctionOnOriginThread([lastRef = WTF::move(lastRef)]() {
+        });
+    }
 }
 
 } // namespace IDBClient

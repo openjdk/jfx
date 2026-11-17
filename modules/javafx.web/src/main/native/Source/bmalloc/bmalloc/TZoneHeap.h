@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,208 +25,264 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
 #include "BPlatform.h"
 
 #if BUSE(TZONE)
 
-#include "IsoConfig.h"
-#include "Mutex.h"
-
-#if BUSE(LIBPAS)
-#include "TZoneHeapManager.h"
-#include "TZoneLog.h"
-#include "bmalloc_heap_ref.h"
+#if !BUSE(LIBPAS)
+#error TZONE implementation requires LIBPAS
 #endif
 
-#if BENABLE_MALLOC_HEAP_BREAKDOWN
-#include <malloc/malloc.h>
+#include "Algorithm.h"
+#include "BInline.h"
+#include "CompactAllocationMode.h"
+
+#define BUSE_TZONE_SPEC_NAME_ARG 0
+#if BUSE_TZONE_SPEC_NAME_ARG
+#define TZONE_SPEC_NAME_ARG(x)  , x
+#else
+#define TZONE_SPEC_NAME_ARG(x)
 #endif
 
 namespace bmalloc {
 
-template<typename Config> class IsoHeapImpl;
+namespace TZone {
+
+static constexpr size_t sizeClassFor(size_t size)
+{
+    constexpr size_t tzoneSmallSizeThreshold = 512;
+    constexpr double tzoneMidSizeGrowthRate = 1.05;
+    constexpr size_t tzoneMidSizeThreshold = 7872;
+    constexpr double tzoneLargeSizeGrowthRate = 1.3;
+
+    if (size <= tzoneSmallSizeThreshold)
+        return roundUpToMultipleOf<16>(size);
+    double nextSize = tzoneSmallSizeThreshold;
+    size_t previousRoundedNextSize = 0;
+    size_t roundedNextSize = roundUpToMultipleOf<16>(tzoneSmallSizeThreshold);
+    do {
+        previousRoundedNextSize = roundedNextSize;
+        nextSize = nextSize * tzoneMidSizeGrowthRate;
+        roundedNextSize = roundUpToMultipleOf<16>(nextSize);
+        if (size < previousRoundedNextSize)
+            continue;
+        if (size <= roundedNextSize)
+            return roundedNextSize;
+    } while (roundedNextSize < tzoneMidSizeThreshold);
+    do {
+        previousRoundedNextSize = roundedNextSize;
+        nextSize = nextSize * tzoneLargeSizeGrowthRate;
+        roundedNextSize = roundUpToMultipleOf<16>(nextSize);
+        if (size < previousRoundedNextSize)
+            continue;
+    } while (size > roundedNextSize);
+    return roundedNextSize;
+}
+
+template<typename T>
+static constexpr size_t sizeClass()
+{
+    return sizeClassFor(sizeof(T));
+}
+
+template<typename T>
+static constexpr size_t alignment()
+{
+    return roundUpToMultipleOf<16>(alignof(T));
+}
+
+template<typename T>
+inline constexpr unsigned inheritedSizeClass()
+{
+    if constexpr (requires { std::remove_pointer_t<T>::inheritedSizeClass; })
+        return std::remove_pointer_t<T>::inheritedSizeClass();
+    return 0;
+}
+
+template<typename T>
+inline constexpr unsigned inheritedAlignment()
+{
+    if constexpr (requires { std::remove_pointer_t<T>::inheritedAlignment; })
+        return std::remove_pointer_t<T>::inheritedAlignment();
+    return 0;
+}
+
+template<typename T>
+inline constexpr bool usesTZoneHeap()
+{
+    if constexpr (requires { std::remove_pointer_t<T>::usesTZoneHeap; })
+        return std::remove_pointer_t<T>::usesTZoneHeap();
+    return false;
+}
+
+} // namespace TZone
 
 namespace api {
 
-// You have to declare TZoneHeaps this way:
-//
-// static TZoneHeap<type> myTypeHeap;
-//
-// It's not valid to create an TZoneHeap except in static storage.
+enum class TZoneMallocFallback : uint8_t {
+    Undecided,
+    // Currently, ForceFastMalloc and ForceDebugMalloc
+    // route to the same place (call into FastMalloc);
+    // however, they are semantically different, and
+    // set for different reasons.
+    ForceDebugMalloc,
+    ForceFastMalloc = ForceDebugMalloc,
+    DoNotFallBack
+};
 
-#if BUSE(LIBPAS)
-BEXPORT void* tzoneAllocate(pas_heap_ref&);
-BEXPORT void* tzoneTryAllocate(pas_heap_ref&);
-BEXPORT void* tzoneAllocateCompact(pas_heap_ref&);
-BEXPORT void* tzoneTryAllocateCompact(pas_heap_ref&);
-BEXPORT void tzoneDeallocate(void* ptr);
+extern BEXPORT TZoneMallocFallback tzoneMallocFallback;
 
-using TZoneAnnotation = bmalloc_type;
+using HeapRef = void*;
 
-static inline constexpr size_t roundUpToMulipleOf8(size_t x) { return ((x + 7) / 8) * 8; }
+struct SizeAndAlignment {
+    using Value = uint64_t;
 
-// The name "LibPasBmallocHeapType" is important for the pas_status_reporter to work right.
-template<typename LibPasBmallocHeapType>
-struct TZoneHeapBase {
-    constexpr TZoneHeapBase(const char* = nullptr) { }
-
-    void scavenge() { }
-    void initialize() { }
-
-    bool isInitialized()
+    static constexpr Value encode(unsigned size, unsigned alignment)
     {
-        return true;
+        return (static_cast<uint64_t>(alignment) << 32) | size;
     }
 
-    static pas_heap_ref& provideHeap()
+    template<typename T>
+    static constexpr Value encode()
     {
-        static bmalloc_type type = BMALLOC_TYPE_INITIALIZER(roundUpToMulipleOf8(sizeof(LibPasBmallocHeapType)), roundUpToMulipleOf8(alignof(LibPasBmallocHeapType)), __PRETTY_FUNCTION__);
-        static pas_heap_ref* heap = nullptr;
-
-        if (!heap)
-            heap = TZoneHeapManager::singleton().heapRefForTZoneType(&type);
-
-        return *heap;
+        size_t size = ::bmalloc::TZone::sizeClass<T>();
+        size_t alignment = ::bmalloc::TZone::alignment<T>();
+        return encode(size, alignment);
     }
 
-    static pas_heap_ref& provideHeap(size_t differentSize)
+    static unsigned decodeSize(Value value) { return value; }
+    static unsigned decodeAlignment(Value value) { return value >> 32; }
+
+    static constexpr unsigned long hash(Value value)
     {
-        bmalloc_type type = BMALLOC_TYPE_INITIALIZER((unsigned)roundUpToMulipleOf8(differentSize), roundUpToMulipleOf8(alignof(LibPasBmallocHeapType)), __PRETTY_FUNCTION__);
-
-        TZONE_LOG_DEBUG("Unannotated TZone type %s:%d:%s\n", __FILE__, __LINE__, __PRETTY_FUNCTION__);
-
-        //  &&&& Should we figure out a way to cache this different sized heap?
-        return *TZoneHeapManager::singleton().heapRefForTZoneType(&type);
+        return (decodeSize(value) ^ decodeAlignment(value)) >> 3;
     }
 };
 
-template<typename LibPasBmallocHeapType>
-struct TZoneHeap : public TZoneHeapBase<LibPasBmallocHeapType> {
-    using TZoneHeapBase<LibPasBmallocHeapType>::provideHeap;
-
-    constexpr TZoneHeap(const char* name = nullptr): TZoneHeapBase<LibPasBmallocHeapType>(name) { }
-
-    void* allocate()
-    {
-        return tzoneAllocate(provideHeap());
-    }
-
-    void* allocate(size_t differentSize)
-    {
-        return tzoneAllocate(provideHeap(differentSize));
-    }
-
-    void* tryAllocate()
-    {
-        return tzoneTryAllocate(provideHeap());
-    }
-
-    void deallocate(void* p)
-    {
-        tzoneDeallocate(p);
-    }
-};
-
-template<typename LibPasBmallocHeapType>
-struct CompactTZoneHeap : public TZoneHeapBase<LibPasBmallocHeapType> {
-    using TZoneHeapBase<LibPasBmallocHeapType>::provideHeap;
-
-    constexpr CompactTZoneHeap(const char* name = nullptr): TZoneHeapBase<LibPasBmallocHeapType>(name) { }
-
-    void* allocate()
-    {
-        return tzoneAllocateCompact(provideHeap());
-    }
-
-    void* allocate(size_t differentSize)
-    {
-        return tzoneAllocateCompact(provideHeap(differentSize));
-    }
-
-    void* tryAllocate()
-    {
-        return tzoneTryAllocateCompact(provideHeap());
-    }
-
-    void deallocate(void* p)
-    {
-        tzoneDeallocate(p);
-    }
-};
-#else // BUSE(LIBPAS) -> so !BUSE(LIBPAS)
-template<typename Type>
-struct TZoneHeapBase {
-    typedef IsoConfig<sizeof(Type)> Config;
-
-#if BENABLE_MALLOC_HEAP_BREAKDOWN
-    TZoneHeap(const char* = nullptr);
-#else
-    constexpr TZoneHeap(const char* = nullptr) { }
-#endif
-
-    void* allocate();
-    void* tryAllocate();
-    void deallocate(void* p);
-
-    void scavenge();
-
-    void initialize();
-    bool isInitialized();
-
-    unsigned allocatorOffset() { return m_allocatorOffsetPlusOne - 1; }
-    void setAllocatorOffset(unsigned value) { m_allocatorOffsetPlusOne = value + 1; }
-
-    unsigned deallocatorOffset() { return m_deallocatorOffsetPlusOne - 1; }
-    void setDeallocatorOffset(unsigned value) { m_deallocatorOffsetPlusOne = value + 1; }
-
-    IsoHeapImpl<Config>& impl();
-
-    Mutex m_initializationLock;
-    unsigned m_allocatorOffsetPlusOne { 0 };
-    unsigned m_deallocatorOffsetPlusOne { 0 };
-    IsoHeapImpl<Config>* m_impl { nullptr };
-
-#if BENABLE_MALLOC_HEAP_BREAKDOWN
-    malloc_zone_t* m_zone;
+struct TZoneSpecification {
+    HeapRef* addressOfHeapRef;
+    unsigned size;
+    CompactAllocationMode allocationMode;
+    SizeAndAlignment::Value sizeAndAlignment;
+#if BUSE_TZONE_SPEC_NAME_ARG
+    const char* name;
 #endif
 };
 
-template<typename Type>
-struct TZoneHeap : public TZoneHeapBase<Type> {
-    constexpr TZoneHeap(const char* name = nullptr): TZoneHeapBase<Type>(name) { }
-};
+template<typename T>
+inline constexpr CompactAllocationMode compactAllocationMode()
+{
+    if constexpr (requires { std::remove_pointer_t<T>::allowCompactPointers; })
+        return std::remove_pointer_t<T>::allowCompactPointers ? CompactAllocationMode::Compact : CompactAllocationMode::NonCompact;
+    return CompactAllocationMode::NonCompact;
+}
 
-template<typename Type>
-struct CompactTZoneHeap : public TZoneHeapBase<Type> {
-    constexpr CompactTZoneHeap(const char* name = nullptr): TZoneHeapBase<Type>(name) { }
-};
-#endif // BUSE(LIBPAS) -> so end of !BUSE(LIBPAS)
+BEXPORT void determineTZoneMallocFallback();
 
-// Use this together with MAKE_BISO_MALLOCED_IMPL.
-#define MAKE_BTZONE_MALLOCED(isoType, heapType, exportMacro) \
+BEXPORT void* tzoneAllocateCompact(HeapRef);
+BEXPORT void* tzoneAllocateNonCompact(HeapRef);
+BEXPORT void* tzoneAllocateCompactSlow(size_t requestedSize, const TZoneSpecification&);
+BEXPORT void* tzoneAllocateNonCompactSlow(size_t requestedSize, const TZoneSpecification&);
+
+BEXPORT void tzoneFree(void*);
+
+#define MAKE_BTZONE_MALLOCED_COMMON(_type, _compactMode, _exportMacro) \
 public: \
-    static exportMacro ::bmalloc::api::heapType<isoType>& btzoneHeap(); \
+    using HeapRef = ::bmalloc::api::HeapRef; \
+    using SizeAndAlignment = ::bmalloc::api::SizeAndAlignment; \
+    using TZoneMallocFallback = ::bmalloc::api::TZoneMallocFallback; \
+    using CompactAllocationMode = ::bmalloc::CompactAllocationMode; \
+private: \
+    static _exportMacro HeapRef s_heapRef; \
+    static _exportMacro const TZoneSpecification s_heapSpec; \
     \
-    void* operator new(size_t, void* p) { return p; } \
-    void* operator new[](size_t, void* p) { return p; } \
+public: \
+    static constexpr bool usesTZoneHeap() { return true; } \
+    static constexpr unsigned inheritedSizeClass() { return ::bmalloc::TZone::sizeClass<_type>(); } \
+    static constexpr unsigned inheritedAlignment() { return ::bmalloc::TZone::alignment<_type>(); } \
     \
-    exportMacro void* operator new(size_t size);\
-    exportMacro void operator delete(void* p);\
+    BINLINE void* operator new(size_t, void* p) { return p; } \
+    BINLINE void* operator new[](size_t, void* p) { return p; } \
     \
     void* operator new[](size_t size) = delete; \
     void operator delete[](void* p) = delete; \
     \
-    void* operator new(size_t, NotNullTag, void* location) \
+    BINLINE void* operator new(size_t, NotNullTag, void* location) \
     { \
         ASSERT(location); \
         return location; \
     } \
-    exportMacro static void freeAfterDestruction(void*); \
     \
-    using WTFIsFastAllocated = int; \
+    void* operator new(size_t size) \
+    { \
+        if (!s_heapRef || size != sizeof(_type)) [[unlikely]] \
+            BMUST_TAIL_CALL return operatorNewSlow(size); \
+        BASSERT(::bmalloc::api::tzoneMallocFallback == TZoneMallocFallback::DoNotFallBack); \
+        if constexpr (::bmalloc::api::compactAllocationMode<_type>() == CompactAllocationMode::Compact) \
+            return ::bmalloc::api::tzoneAllocateCompact(s_heapRef); \
+        return ::bmalloc::api::tzoneAllocate ## _compactMode(s_heapRef); \
+    } \
+    \
+    BINLINE void operator delete(void* p) \
+    { \
+        ::bmalloc::api::tzoneFree(p); \
+    } \
+    \
+    BINLINE static void freeAfterDestruction(void* p) \
+    { \
+        ::bmalloc::api::tzoneFree(p); \
+    } \
+    \
+    using WTFIsFastMallocAllocated = int;
+
+#define MAKE_BTZONE_MALLOCED_COMMON_NON_TEMPLATE(_type, _compactMode, _exportMacro) \
+private: \
+    static _exportMacro BNO_INLINE void* operatorNewSlow(size_t);
+
+#define MAKE_BTZONE_MALLOCED_COMMON_TEMPLATE(_type, _compactMode, _exportMacro) \
+private: \
+    static _exportMacro BNO_INLINE void* operatorNewSlow(size_t size) \
+    { \
+        static const TZoneSpecification s_heapSpec = { &s_heapRef, sizeof(_type), ::bmalloc::api::compactAllocationMode<_type>(), SizeAndAlignment::encode<_type>() TZONE_SPEC_NAME_ARG(#_type) }; \
+        if constexpr (::bmalloc::api::compactAllocationMode<_type>() == CompactAllocationMode::Compact) \
+            return ::bmalloc::api::tzoneAllocateCompactSlow(size, s_heapSpec); \
+        return ::bmalloc::api::tzoneAllocate ## _compactMode ## Slow(size, s_heapSpec); \
+    }
+
+#define MAKE_BTZONE_MALLOCED(_type, _compactMode, _exportMacro) \
+    MAKE_BTZONE_MALLOCED_COMMON(_type, _compactMode, _exportMacro) \
+    MAKE_BTZONE_MALLOCED_COMMON_NON_TEMPLATE(_type, _compactMode, _exportMacro) \
 private: \
     using __makeTZoneMallocedMacroSemicolonifier BUNUSED_TYPE_ALIAS = int
 
+#define MAKE_STRUCT_BTZONE_MALLOCED(_type, _compactMode, _exportMacro) \
+    MAKE_BTZONE_MALLOCED_COMMON(_type, _compactMode, _exportMacro) \
+    MAKE_BTZONE_MALLOCED_COMMON_NON_TEMPLATE(_type, _compactMode, _exportMacro) \
+public: \
+    using __makeTZoneMallocedMacroSemicolonifier BUNUSED_TYPE_ALIAS = int
+
+#define MAKE_BTZONE_MALLOCED_TEMPLATE(_type, _compactMode, _exportMacro) \
+    MAKE_BTZONE_MALLOCED_COMMON(_type, _compactMode, _exportMacro) \
+    MAKE_BTZONE_MALLOCED_COMMON_TEMPLATE(_type, _compactMode, _exportMacro) \
+private: \
+    using __makeTZoneMallocedMacroSemicolonifier BUNUSED_TYPE_ALIAS = int
+
+
+#define MAKE_BTZONE_MALLOCED_TEMPLATE_IMPL(_templateParameters, _type) \
+    _templateParameters ::bmalloc::api::HeapRef _type::s_heapRef
+
+// The following requires these 3 macros to be defined:
+// TZONE_TEMPLATE_PARAMS, TZONE_TYPE
+#define MAKE_BTZONE_MALLOCED_TEMPLATE_IMPL_WITH_MULTIPLE_PARAMETERS() \
+    TZONE_TEMPLATE_PARAMS \
+    ::bmalloc::api::HeapRef TZONE_TYPE::s_heapRef
+
 } } // namespace bmalloc::api
 
+using TZoneSpecification = ::bmalloc::api::TZoneSpecification;
+
 #endif // BUSE(TZONE)
+
+#endif // __cplusplus

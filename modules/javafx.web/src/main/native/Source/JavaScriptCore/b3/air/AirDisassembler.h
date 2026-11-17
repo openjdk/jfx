@@ -25,9 +25,12 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(B3_JIT)
 
-#include "MacroAssembler.h"
+#include <JavaScriptCore/MacroAssembler.h>
+#include <wtf/SequesteredMalloc.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace JSC {
@@ -42,7 +45,7 @@ class Code;
 struct Inst;
 
 class Disassembler {
-    WTF_MAKE_TZONE_ALLOCATED(Disassembler);
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(Disassembler);
 public:
     Disassembler() = default;
 
@@ -56,7 +59,7 @@ public:
     void dump(Code&, PrintStream&, LinkBuffer&, const char* airPrefix, const char* asmPrefix, const WTF::ScopedLambda<void(Inst&)>& doToEachInst);
 
 private:
-    HashMap<Inst*, std::pair<MacroAssembler::Label, MacroAssembler::Label>> m_instToRange;
+    UncheckedKeyHashMap<Inst*, std::pair<MacroAssembler::Label, MacroAssembler::Label>> m_instToRange;
     Vector<BasicBlock*> m_blocks;
     MacroAssembler::Label m_entrypointStart;
     MacroAssembler::Label m_entrypointEnd;

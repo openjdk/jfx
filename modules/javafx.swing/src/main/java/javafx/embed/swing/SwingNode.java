@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -273,15 +273,20 @@ public class SwingNode extends AbstractNode {
             TKStage tk = WindowHelper.getPeer(w);
             if (tk != null) {
                 if (isThreadMerged) {
-                    swNodeIOP.overrideNativeWindowHandle(lwFrame, 0L, null);
+                    var hFrame = lwFrame;
+                    if (hFrame != null) {
+                        swNodeIOP.overrideNativeWindowHandle(hFrame, 0L, null);
+                    }
                 } else {
                     // Postpone actual window closing to ensure that
                     // a native window handler is valid on a Swing side
                     tk.postponeClose();
                     SwingNodeHelper.runOnEDT(() -> {
-                        swNodeIOP.overrideNativeWindowHandle(lwFrame, 0L,
-                            (Runnable) () -> SwingNodeHelper.runOnFxThread(
+                        if (lwFrame != null) {
+                            swNodeIOP.overrideNativeWindowHandle(lwFrame, 0L,
+                                (Runnable) () -> SwingNodeHelper.runOnFxThread(
                                         () -> tk.closePostponed()));
+                        }
                     });
                 }
             }
@@ -301,7 +306,8 @@ public class SwingNode extends AbstractNode {
             hWindow = window;
         }
 
-        if (lwFrame != null) {
+        var hFrame = lwFrame;
+        if (hFrame != null) {
             long rawHandle = 0L;
             if (window != null) {
                 TKStage tkStage = WindowHelper.getPeer(window);
@@ -309,7 +315,7 @@ public class SwingNode extends AbstractNode {
                     rawHandle = tkStage.getRawHandle();
                 }
             }
-            swNodeIOP.overrideNativeWindowHandle(lwFrame, rawHandle, null);
+            swNodeIOP.overrideNativeWindowHandle(hFrame, rawHandle, null);
         }
     }
 
@@ -378,11 +384,10 @@ public class SwingNode extends AbstractNode {
             rec = swNodeIOP.createSwingNodeDisposer(lwFrame, swNodeIOP);
             disposerRecRef = Disposer.addRecord(this, rec);
 
-            if (getScene() != null) {
-                notifyNativeHandle(getScene().getWindow());
-            }
-
             SwingNodeHelper.runOnFxThread(() -> {
+                if (getScene() != null) {
+                    notifyNativeHandle(getScene().getWindow());
+                }
                 locateLwFrame();// initialize location
 
                 if (focusedProperty().get()) {
@@ -469,11 +474,7 @@ public class SwingNode extends AbstractNode {
             this.fxHeight = height;
             NodeHelper.geomChanged(this);
             NodeHelper.markDirty(this, DirtyBits.NODE_GEOMETRY);
-            SwingNodeHelper.runOnEDT(() -> {
-                if (lwFrame != null) {
-                    locateLwFrame();
-                }
-            });
+            locateLwFrame();
         }
     }
 
@@ -552,8 +553,9 @@ public class SwingNode extends AbstractNode {
 
     private final EventHandler<FocusUngrabEvent> ungrabHandler = event -> {
         if (!skipBackwardUnrgabNotification) {
-            if (lwFrame != null) {
-                postAWTEvent(swNodeIOP.createUngrabEvent(lwFrame));
+            var hFrame = lwFrame;
+            if (hFrame != null) {
+                postAWTEvent(swNodeIOP.createUngrabEvent(hFrame));
             }
         }
     };

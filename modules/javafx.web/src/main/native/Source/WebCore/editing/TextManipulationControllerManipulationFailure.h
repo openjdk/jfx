@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "FrameIdentifier.h"
-#include "TextManipulationItem.h"
+#include <WebCore/FrameIdentifier.h>
+#include <WebCore/TextManipulationItem.h>
 
 namespace WebCore {
 
@@ -40,9 +40,14 @@ struct TextManipulationControllerManipulationFailure {
     };
 
     FrameIdentifier frameID;
-    TextManipulationItemIdentifier identifier;
+    Markable<TextManipulationItemIdentifier> identifier;
     uint64_t index;
     Type type;
+};
+
+struct TextManipulationControllerManipulationResult {
+    Vector<TextManipulationControllerManipulationFailure> failures;
+    Vector<uint64_t> succeededIndexes;
 };
 
 } // namespace WebCore

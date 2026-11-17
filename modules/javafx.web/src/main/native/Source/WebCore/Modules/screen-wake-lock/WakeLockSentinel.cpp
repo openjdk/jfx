@@ -26,8 +26,11 @@
 #include "config.h"
 #include "WakeLockSentinel.h"
 
+#include "ContextDestructionObserverInlines.h"
 #include "Document.h"
+#include "Event.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "Exception.h"
 #include "JSDOMPromiseDeferred.h"
 #include "WakeLockManager.h"
@@ -35,7 +38,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(WakeLockSentinel);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WakeLockSentinel);
 
 WakeLockSentinel::WakeLockSentinel(Document& document, WakeLockType type)
     : ActiveDOMObject(&document)
@@ -46,8 +49,10 @@ WakeLockSentinel::WakeLockSentinel(Document& document, WakeLockType type)
 void WakeLockSentinel::release(Ref<DeferredPromise>&& promise)
 {
     if (!m_wasReleased) {
-        if (RefPtr document = downcast<Document>(scriptExecutionContext()))
-            Ref { *this }->release(document->wakeLockManager());
+        if (RefPtr document = downcast<Document>(scriptExecutionContext())) {
+            Ref wakeLockManagerRef { document->wakeLockManager() };
+            Ref { *this }->release(wakeLockManagerRef.get());
+        }
     }
     promise->resolve();
 }
@@ -67,6 +72,11 @@ void WakeLockSentinel::release(WakeLockManager& manager)
 bool WakeLockSentinel::virtualHasPendingActivity() const
 {
     return m_hasReleaseEventListener && !m_wasReleased;
+}
+
+ScriptExecutionContext* WakeLockSentinel::scriptExecutionContext() const
+{
+    return ActiveDOMObject::scriptExecutionContext();
 }
 
 void WakeLockSentinel::eventListenersDidChange()

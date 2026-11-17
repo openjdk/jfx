@@ -25,6 +25,7 @@
 #include <gst/video/video-prelude.h>
 
 typedef struct _GstVideoAlignment GstVideoAlignment;
+typedef struct _GstVideoRectangle GstVideoRectangle;
 
 #include <gst/video/video-format.h>
 #include <gst/video/video-color.h>
@@ -65,6 +66,22 @@ struct _GstVideoAlignment
 };
 
 /**
+ * GstVideoRectangle:
+ * @x: X coordinate of rectangle's top-left point
+ * @y: Y coordinate of rectangle's top-left point
+ * @w: width of the rectangle
+ * @h: height of the rectangle
+ *
+ * Helper structure representing a rectangular area.
+ */
+struct _GstVideoRectangle {
+  gint x;
+  gint y;
+  gint w;
+  gint h;
+};
+
+/**
  * GstVideoOrientationMethod:
  * @GST_VIDEO_ORIENTATION_IDENTITY: Identity (no rotation)
  * @GST_VIDEO_ORIENTATION_90R: Rotate clockwise 90 degrees
@@ -72,8 +89,8 @@ struct _GstVideoAlignment
  * @GST_VIDEO_ORIENTATION_90L: Rotate counter-clockwise 90 degrees
  * @GST_VIDEO_ORIENTATION_HORIZ: Flip horizontally
  * @GST_VIDEO_ORIENTATION_VERT: Flip vertically
- * @GST_VIDEO_ORIENTATION_UL_LR: Flip across upper left/lower right diagonal
- * @GST_VIDEO_ORIENTATION_UR_LL: Flip across upper right/lower left diagonal
+ * @GST_VIDEO_ORIENTATION_UL_LR: Rotate counter-clockwise 90 degrees and flip vertically
+ * @GST_VIDEO_ORIENTATION_UR_LL: Rotate clockwise 90 degrees and flip vertically
  * @GST_VIDEO_ORIENTATION_AUTO: Select flip method based on image-orientation tag
  * @GST_VIDEO_ORIENTATION_CUSTOM: Current status depends on plugin internal setup
  *
@@ -212,6 +229,7 @@ G_END_DECLS
 #include <gst/video/videooverlay.h>
 #ifndef GSTREAMER_LITE
 #include <gst/video/video-sei.h>
+#include <gst/video/gstvideodmabufpool.h>
 #endif // GSTREAMER_LITE
 
 #endif /* __GST_VIDEO_H__ */

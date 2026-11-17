@@ -20,15 +20,16 @@
 #include "config.h"
 #include "LegacyRenderSVGHiddenContainer.h"
 
+#include "VisibleRectContext.h"
 #include <wtf/StackStats.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(LegacyRenderSVGHiddenContainer);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(LegacyRenderSVGHiddenContainer);
 
 LegacyRenderSVGHiddenContainer::LegacyRenderSVGHiddenContainer(Type type, SVGElement& element, RenderStyle&& style, OptionSet<SVGModelObjectFlag> svgFlags)
-    : LegacyRenderSVGContainer(type, element, WTFMove(style), svgFlags | SVGModelObjectFlag::IsHiddenContainer)
+    : LegacyRenderSVGContainer(type, element, WTF::move(style), svgFlags | SVGModelObjectFlag::IsHiddenContainer)
 {
 }
 
@@ -43,6 +44,11 @@ void LegacyRenderSVGHiddenContainer::layout()
 void LegacyRenderSVGHiddenContainer::paint(PaintInfo&, const LayoutPoint&)
 {
     // This subtree does not paint.
+}
+
+LayoutRect LegacyRenderSVGHiddenContainer::clippedOverflowRect(const RenderLayerModelObject*, VisibleRectContext) const
+{
+    return { };
 }
 
 void LegacyRenderSVGHiddenContainer::absoluteQuads(Vector<FloatQuad>&, bool*) const

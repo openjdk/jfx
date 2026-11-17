@@ -26,13 +26,12 @@
 #include "config.h"
 #include "DateTimeFormat.h"
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
 #include <wtf/ASCIICType.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
-static const DateTimeFormat::FieldType lowerCaseToFieldTypeMap[26] = {
+static constexpr std::array lowerCaseToFieldTypeMap {
     DateTimeFormat::FieldTypePeriod, // a
     DateTimeFormat::FieldTypeInvalid, // b
     DateTimeFormat::FieldTypeLocalDayOfWeekStandAlon, // c
@@ -61,7 +60,7 @@ static const DateTimeFormat::FieldType lowerCaseToFieldTypeMap[26] = {
     DateTimeFormat::FieldTypeZone, // z
 };
 
-static const DateTimeFormat::FieldType upperCaseToFieldTypeMap[26] = {
+static constexpr std::array upperCaseToFieldTypeMap {
     DateTimeFormat::FieldTypeMillisecondsInDay, // A
     DateTimeFormat::FieldTypeInvalid, // B
     DateTimeFormat::FieldTypeInvalid, // C
@@ -90,7 +89,7 @@ static const DateTimeFormat::FieldType upperCaseToFieldTypeMap[26] = {
     DateTimeFormat::FieldTypeRFC822Zone, // Z
 };
 
-static DateTimeFormat::FieldType mapCharacterToFieldType(const UChar ch)
+static DateTimeFormat::FieldType mapCharacterToFieldType(const char16_t ch)
 {
     if (isASCIIUpper(ch))
         return upperCaseToFieldTypeMap[ch - 'A'];
@@ -116,7 +115,7 @@ bool DateTimeFormat::parse(const String& source, TokenHandler& tokenHandler)
     int fieldCounter = 0;
 
     for (unsigned int index = 0; index < source.length(); ++index) {
-        const UChar ch = source[index];
+        const char16_t ch = source[index];
         switch (state) {
         case StateInQuote:
             if (ch == '\'') {
@@ -241,7 +240,7 @@ bool DateTimeFormat::parse(const String& source, TokenHandler& tokenHandler)
     return false;
 }
 
-static bool isASCIIAlphabetOrQuote(UChar ch)
+static bool isASCIIAlphabetOrQuote(char16_t ch)
 {
     return isASCIIAlpha(ch) || ch == '\'';
 }
@@ -272,5 +271,3 @@ void DateTimeFormat::quoteAndAppendLiteral(const String& literal, StringBuilder&
 }
 
 } // namespace WebCore
-
-#endif

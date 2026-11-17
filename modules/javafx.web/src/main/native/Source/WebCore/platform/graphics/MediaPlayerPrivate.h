@@ -25,40 +25,48 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
 #if ENABLE(VIDEO)
 
-#include "MediaPlayer.h"
-#include "MediaPlayerIdentifier.h"
-#include "NativeImage.h"
-#include "PlatformTimeRanges.h"
-#include "ProcessIdentity.h"
+#include <WebCore/HostingContext.h>
+#include <WebCore/MediaPlayer.h>
+#include <WebCore/MediaPlayerIdentifier.h>
+#include <WebCore/NativeImage.h>
+#include <WebCore/PlatformTimeRanges.h>
+#include <WebCore/ProcessIdentity.h>
 #include <optional>
+#include <wtf/AbstractRefCounted.h>
 #include <wtf/CompletionHandler.h>
 
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA)
-#include "LegacyCDMSession.h"
+#include <WebCore/LegacyCDMSession.h>
 #endif
 
 namespace WebCore {
 
+class MessageClientForTesting;
 class VideoFrame;
 
-class MediaPlayerPrivateInterface {
+enum class MediaPlaybackTargetType : uint8_t;
+
+// MediaPlayerPrivateInterface subclasses should be ref-counted, but each subclass may choose whether
+// to be RefCounted or ThreadSafeRefCounted. Therefore, each subclass must implement a pair of
+// virtual ref()/deref() methods. See NullMediaPlayerPrivate for an example.
+class MediaPlayerPrivateInterface : public AbstractRefCounted {
 public:
     WEBCORE_EXPORT MediaPlayerPrivateInterface();
     WEBCORE_EXPORT virtual ~MediaPlayerPrivateInterface();
 
-    // MediaPlayerPrivateInterface subclasses should be ref-counted, but each subclass may choose whether
-    // to be RefCounted or ThreadSafeRefCounted. Therefore, each subclass must implement a pair of
-    // virtual ref()/deref() methods. See NullMediaPlayerPrivate for an example.
-    virtual void ref() = 0;
-    virtual void deref() = 0;
+    virtual constexpr MediaPlayerType mediaPlayerType() const = 0;
 
+    using LoadOptions = MediaPlayer::LoadOptions;
     virtual void load(const String&) { }
-    virtual void load(const URL& url, const ContentType&, const String&) { load(url.string()); }
+    virtual void load(const URL& url, const LoadOptions&) { load(url.string()); }
 
 #if ENABLE(MEDIA_SOURCE)
-    virtual void load(const URL&, const ContentType&, MediaSourcePrivateClient&) = 0;
+    virtual void load(const URL&, const LoadOptions&, MediaSourcePrivateClient&) = 0;
+    virtual void readyStateFromMediaSourceChanged() { }
+    virtual void characteristicsFromMediaSourceChanged() { }
 #endif
 #if ENABLE(MEDIA_STREAM)
     virtual void load(MediaStreamPrivate&) = 0;
@@ -83,17 +91,17 @@ public:
     virtual RetainPtr<PlatformLayer> createVideoFullscreenLayer() { return nullptr; }
     virtual void setVideoFullscreenLayer(PlatformLayer*, Function<void()>&& completionHandler) { completionHandler(); }
     virtual void updateVideoFullscreenInlineImage() { }
-    virtual void setVideoFullscreenFrame(FloatRect) { }
+    virtual void setVideoFullscreenFrame(const FloatRect&) { }
     virtual void setVideoFullscreenGravity(MediaPlayer::VideoGravity) { }
     virtual void setVideoFullscreenMode(MediaPlayer::VideoFullscreenMode) { }
     virtual void videoFullscreenStandbyChanged() { }
 #endif
 
-    using LayerHostingContextIDCallback = CompletionHandler<void(LayerHostingContextID)>;
-    virtual void requestHostingContextID(LayerHostingContextIDCallback&& completionHandler) { completionHandler({ }); }
-    virtual LayerHostingContextID hostingContextID() const { return 0; }
+    using LayerHostingContextCallback = CompletionHandler<void(HostingContext)>;
+    virtual void requestHostingContext(LayerHostingContextCallback&& completionHandler) { completionHandler({ }); }
+    virtual HostingContext hostingContext() const { return { }; }
     virtual FloatSize videoLayerSize() const { return { }; }
-    virtual void setVideoLayerSizeFenced(const FloatSize&, WTF::MachSendRight&&) { }
+    virtual void setVideoLayerSizeFenced(const FloatSize&, WTF::MachSendRightAnnotated&&) { }
 
 #if PLATFORM(IOS_FAMILY)
     virtual NSArray *timedMetadata() const { return nil; }
@@ -119,12 +127,13 @@ public:
     virtual bool hasVideo() const = 0;
     virtual bool hasAudio() const = 0;
 
-    virtual void setPageIsVisible(bool, String&& sceneIdentifier = ""_s) = 0;
+    virtual void setPageIsVisible(bool) = 0;
     virtual void setVisibleForCanvas(bool visible) { setPageIsVisible(visible); }
     virtual void setVisibleInViewport(bool) { }
 
     virtual MediaTime duration() const { return MediaTime::zeroTime(); }
 
+    // Methods need to be thread-safe should MSE be enabled in a worker.
     WEBCORE_EXPORT virtual MediaTime currentOrPendingSeekTime() const;
     virtual MediaTime currentTime() const { return MediaTime::zeroTime(); }
     virtual bool timeIsProgressing() const { return !paused(); }
@@ -154,6 +163,8 @@ public:
     // This excludes video potentially playing but having stalled.
     virtual bool paused() const = 0;
 
+    virtual void setVolumeLocked(bool) { }
+
     virtual void setVolume(float) { }
     virtual void setVolumeDouble(double volume) { return setVolume(volume); }
 #if PLATFORM(IOS_FAMILY) || USE(GSTREAMER)
@@ -170,6 +181,10 @@ public:
 
     virtual MediaPlayer::NetworkState networkState() const = 0;
     virtual MediaPlayer::ReadyState readyState() const = 0;
+
+#if ENABLE(MEDIA_SOURCE)
+    virtual void mediaSourceHasRetrievedAllData() { };
+#endif
 
     WEBCORE_EXPORT virtual const PlatformTimeRanges& seekable() const;
     virtual MediaTime maxTimeSeekable() const { return MediaTime::zeroTime(); }
@@ -190,12 +205,6 @@ public:
     virtual void paint(GraphicsContext&, const FloatRect&) = 0;
 
     virtual void paintCurrentFrameInContext(GraphicsContext& c, const FloatRect& r) { paint(c, r); }
-#if !USE(AVFOUNDATION)
-    virtual bool copyVideoTextureToPlatformTexture(GraphicsContextGL*, PlatformGLObject, GCGLenum, GCGLint, GCGLenum, GCGLenum, GCGLenum, bool, bool) { return false; }
-#endif
-#if PLATFORM(COCOA) && !HAVE(AVSAMPLEBUFFERDISPLAYLAYER_COPYDISPLAYEDPIXELBUFFER)
-    virtual void willBeAskedToPaintGL() { }
-#endif
 
     virtual RefPtr<VideoFrame> videoFrameForCurrentTime();
     virtual RefPtr<NativeImage> nativeImageForCurrentTime() { return nullptr; }
@@ -216,7 +225,7 @@ public:
     virtual bool wirelessVideoPlaybackDisabled() const { return true; }
     virtual void setWirelessVideoPlaybackDisabled(bool) { }
 
-    virtual bool canPlayToWirelessPlaybackTarget() const { return false; }
+    virtual OptionSet<MediaPlaybackTargetType> supportedPlaybackTargetTypes() const;
     virtual bool isCurrentPlaybackTargetWireless() const { return false; }
     virtual void setWirelessPlaybackTarget(Ref<MediaPlaybackTarget>&&) { }
 
@@ -235,20 +244,11 @@ public:
 
     virtual MediaPlayer::MovieLoadType movieLoadType() const { return MediaPlayer::MovieLoadType::Unknown; }
 
-    using VideoPlaybackConfiguration = MediaPlayer::VideoPlaybackConfiguration;
-    using VideoPlaybackConfigurationOption = MediaPlayer::VideoPlaybackConfigurationOption;
-    virtual VideoPlaybackConfiguration videoPlaybackConfiguration() const { return { }; }
-
     virtual void prepareForRendering() { }
 
     // Time value in the movie's time scale. It is only necessary to override this if the media
     // engine uses rational numbers to represent media time.
     virtual MediaTime mediaTimeForTimeValue(const MediaTime& timeValue) const { return timeValue; }
-
-    // Overide this if it is safe for HTMLMediaElement to cache movie time and report
-    // 'currentTime' as [cached time + elapsed wall time]. Returns the maximum wall time
-    // it is OK to calculate movie time before refreshing the cached time.
-    virtual double maximumDurationToCacheMediaTime() const { return 0; }
 
     virtual unsigned decodedFrameCount() const { return 0; }
     virtual unsigned droppedFrameCount() const { return 0; }
@@ -268,7 +268,7 @@ public:
 #endif
 
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA)
-    virtual std::unique_ptr<LegacyCDMSession> createSession(const String&, LegacyCDMSessionClient&) { return nullptr; }
+    virtual RefPtr<LegacyCDMSession> createSession(const String&, LegacyCDMSessionClient&) { return nullptr; }
     virtual void setCDM(LegacyCDM*) { }
     virtual void setCDMSession(LegacyCDMSession*) { }
     virtual void keyAdded() { }
@@ -292,9 +292,6 @@ public:
 #if USE(GSTREAMER)
     virtual void simulateAudioInterruption() { }
 #endif
-
-    virtual void beginSimulatedHDCPError() { }
-    virtual void endSimulatedHDCPError() { }
 
     virtual String languageOfPrimaryAudioTrack() const { return emptyString(); }
 
@@ -329,15 +326,16 @@ public:
     virtual AVPlayer *objCAVFoundationAVPlayer() const { return nullptr; }
 #endif
 
-    virtual bool performTaskAtTime(Function<void()>&&, const MediaTime&) { return false; }
+    virtual bool performTaskAtTime(Function<void(const MediaTime&)>&&, const MediaTime&) { return false; }
 
     virtual bool shouldIgnoreIntrinsicSize() { return false; }
 
     virtual void setPreferredDynamicRangeMode(DynamicRangeMode) { }
+    virtual void setPlatformDynamicRangeLimit(PlatformDynamicRangeLimit) { }
 
     virtual void audioOutputDeviceChanged() { }
 
-    virtual MediaPlayerIdentifier identifier() const { return { }; }
+    virtual std::optional<MediaPlayerIdentifier> identifier() const { return std::nullopt; }
 
     virtual bool supportsPlayAtHostTime() const { return false; }
     virtual bool supportsPauseAtHostTime() const { return false; }
@@ -366,10 +364,14 @@ public:
     virtual void setVideoTarget(const PlatformVideoTarget&) { }
 
 #if HAVE(SPATIAL_TRACKING_LABEL)
-    virtual const String& defaultSpatialTrackingLabel() const { return emptyString(); }
+    virtual String defaultSpatialTrackingLabel() const { return emptyString(); }
     virtual void setDefaultSpatialTrackingLabel(const String&) { }
-    virtual const String& spatialTrackingLabel() const { return emptyString(); }
+    virtual String spatialTrackingLabel() const { return emptyString(); }
     virtual void setSpatialTrackingLabel(const String&) { }
+#endif
+
+#if HAVE(SPATIAL_AUDIO_EXPERIENCE)
+    virtual void prefersSpatialAudioExperienceChanged() { }
 #endif
 
     virtual void isInFullscreenOrPictureInPictureChanged(bool) { }
@@ -377,6 +379,16 @@ public:
 #if ENABLE(LINEAR_MEDIA_PLAYER)
     virtual bool supportsLinearMediaPlayer() const { return false; }
 #endif
+
+#if PLATFORM(IOS_FAMILY)
+    virtual void sceneIdentifierDidChange() { }
+#endif
+
+    virtual void soundStageSizeDidChange() { }
+
+    virtual void setMessageClientForTesting(WeakPtr<MessageClientForTesting>) { }
+
+    virtual void elementIdChanged(const String&) const { }
 
 protected:
     mutable PlatformTimeRanges m_seekable;

@@ -24,21 +24,22 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
-#include "NodeFilter.h"
-#include "ScriptWrappable.h"
-#include "Traversal.h"
+#include <WebCore/NodeFilter.h>
+#include <WebCore/ScriptWrappable.h>
+#include <WebCore/Traversal.h>
 #include <wtf/RefCounted.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
+template<typename> class ExceptionOr;
+
 class TreeWalker final : public ScriptWrappable, public RefCounted<TreeWalker>, public NodeIteratorBase {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(TreeWalker, WEBCORE_EXPORT);
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(TreeWalker, WEBCORE_EXPORT);
 public:
     static Ref<TreeWalker> create(Node& rootNode, unsigned long whatToShow, RefPtr<NodeFilter>&& filter)
     {
-        return adoptRef(*new TreeWalker(rootNode, whatToShow, WTFMove(filter)));
+        return adoptRef(*new TreeWalker(rootNode, whatToShow, WTF::move(filter)));
     }
 
     Node& currentNode() { return m_current.get(); }

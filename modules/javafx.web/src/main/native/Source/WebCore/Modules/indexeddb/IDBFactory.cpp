@@ -26,7 +26,7 @@
 #include "config.h"
 #include "IDBFactory.h"
 
-#include "Document.h"
+#include "DocumentPage.h"
 #include "FrameDestructionObserverInlines.h"
 #include "IDBBindingUtilities.h"
 #include "IDBConnectionProxy.h"
@@ -43,7 +43,7 @@
 namespace WebCore {
 using namespace JSC;
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(IDBFactory);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(IDBFactory);
 
 static bool shouldThrowSecurityException(ScriptExecutionContext& context)
 {
@@ -130,7 +130,10 @@ ExceptionOr<short> IDBFactory::cmp(JSGlobalObject& execState, JSValue firstValue
     if (!second->isValid())
         return Exception { ExceptionCode::DataError, "Failed to execute 'cmp' on 'IDBFactory': The parameter is not a valid key."_s };
 
-    return first->compare(second.get());
+    auto comparison = first->compare(second.get());
+    if (is_eq(comparison))
+        return 0;
+    return is_lt(comparison) ? -1 : 1;
 }
 
 void IDBFactory::databases(ScriptExecutionContext& context, IDBDatabasesResponsePromise&& promise)
@@ -144,28 +147,28 @@ void IDBFactory::databases(ScriptExecutionContext& context, IDBDatabasesResponse
 
     ASSERT(context.securityOrigin());
 
-    m_connectionProxy->getAllDatabaseNamesAndVersions(context, [promise = WTFMove(promise)](auto&& result) mutable {
+    m_connectionProxy->getAllDatabaseNamesAndVersions(context, [promise = WTF::move(promise)](auto&& result) mutable {
         if (!result) {
             promise.reject(Exception { ExceptionCode::UnknownError });
             return;
         }
 
         promise.resolve(WTF::map(*result, [](auto&& info) {
-            return IDBFactory::DatabaseInfo { WTFMove(info.name), info.version };
+            return IDBFactory::DatabaseInfo { WTF::move(info.name), info.version };
         }));
     });
 }
 
 void IDBFactory::getAllDatabaseNames(ScriptExecutionContext& context, Function<void(const Vector<String>&)>&& callback)
 {
-    m_connectionProxy->getAllDatabaseNamesAndVersions(context, [callback = WTFMove(callback)](auto&& result) mutable {
+    m_connectionProxy->getAllDatabaseNamesAndVersions(context, [callback = WTF::move(callback)](auto&& result) mutable {
         if (!result) {
             callback({ });
             return;
         }
 
         callback(WTF::map(*result, [](auto&& info) {
-            return WTFMove(info.name);
+            return WTF::move(info.name);
         }));
     });
 }

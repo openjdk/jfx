@@ -40,7 +40,7 @@ JSValue JSHistory::state(JSGlobalObject& lexicalGlobalObject) const
 {
     auto throwScope = DECLARE_THROW_SCOPE(lexicalGlobalObject.vm());
     return cachedPropertyValue(throwScope, lexicalGlobalObject, *this, wrapped().cachedState(), [this, &throwScope, &lexicalGlobalObject](JSC::ThrowScope&) {
-        if (UNLIKELY(wrapped().state().hasException())) {
+        if (wrapped().state().hasException()) [[unlikely]] {
             propagateException(lexicalGlobalObject, throwScope, wrapped().state().releaseException());
             return jsNull();
         }

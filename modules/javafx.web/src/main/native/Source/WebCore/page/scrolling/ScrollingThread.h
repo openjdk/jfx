@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012, 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if ENABLE(SCROLLING_THREAD) || ENABLE(THREADED_ANIMATION_RESOLUTION)
+#if ENABLE(SCROLLING_THREAD) || ENABLE(THREADED_ANIMATIONS)
 
 #include <functional>
 #include <wtf/Condition.h>
@@ -51,7 +51,7 @@ public:
     WEBCORE_EXPORT static void dispatchBarrier(Function<void ()>&&);
 
 private:
-    friend LazyNeverDestroyed<ScrollingThread>;
+    friend NeverDestroyed<ScrollingThread>;
 
     static ScrollingThread& singleton();
 
@@ -59,9 +59,9 @@ private:
 
     RunLoop& runLoop() { return m_runLoop; }
 
-    Ref<RunLoop> m_runLoop;
+    const Ref<RunLoop> m_runLoop;
 };
 
 } // namespace WebCore
 
-#endif // ENABLE(SCROLLING_THREAD) || ENABLE(THREADED_ANIMATION_RESOLUTION)
+#endif // ENABLE(SCROLLING_THREAD) || ENABLE(THREADED_ANIMATIONS)

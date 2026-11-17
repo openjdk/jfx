@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,7 +43,7 @@ namespace JSC {
 class LinkBuffer;
 
 struct MathICGenerationState {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_MAKE_STRUCT_TZONE_ALLOCATED(MathICGenerationState);
     MacroAssembler::Label fastPathStart;
     MacroAssembler::Label fastPathEnd;
     MacroAssembler::Label slowPathStart;
@@ -56,7 +56,7 @@ struct MathICGenerationState {
 
 template <typename GeneratorType, typename ArithProfileType>
 class JITMathIC {
-    WTF_MAKE_TZONE_ALLOCATED(JITMathIC);
+    WTF_MAKE_TZONE_ALLOCATED_TEMPLATE(JITMathIC);
 public:
     JITMathIC(ArithProfileType* arithProfile)
         : m_arithProfile(arithProfile)
@@ -69,6 +69,8 @@ public:
 
     bool generateInline(CCallHelpers& jit, MathICGenerationState& state, bool shouldEmitProfiling = true)
     {
+        jit.padBeforePatch(); // Make sure that the first patchable jump below is aligned, but don't count alignment in the inline size.
+        // On ARMv7, this ensures that the patchable jump does not make the inline code too large.
         state.fastPathStart = jit.label();
         size_t startSize = jit.m_assembler.buffer().codeSize();
 
@@ -234,6 +236,14 @@ public:
     bool m_generateFastPathOnRepatch { false };
     GeneratorType m_generator;
 };
+
+#define TZONE_TEMPLATE_PARAMS template<typename GeneratorType, typename ArithProfileType>
+#define TZONE_TYPE JITMathIC<GeneratorType, ArithProfileType>
+
+WTF_MAKE_TZONE_ALLOCATED_TEMPLATE_IMPL_WITH_MULTIPLE_OR_SPECIALIZED_PARAMETERS();
+
+#undef TZONE_TEMPLATE_PARAMS
+#undef TZONE_TYPE
 
 template <typename GeneratorType>
 class JITBinaryMathIC : public JITMathIC<GeneratorType, BinaryArithProfile> {

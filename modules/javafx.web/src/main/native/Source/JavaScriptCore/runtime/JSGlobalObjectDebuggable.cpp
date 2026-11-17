@@ -55,8 +55,9 @@ JSGlobalObjectDebuggable::JSGlobalObjectDebuggable(JSGlobalObject& globalObject)
 
 String JSGlobalObjectDebuggable::name() const
 {
-    String name = m_globalObject->name();
-    return name.isEmpty() ? "JSContext"_s : name;
+    if (m_globalObject && !m_globalObject->name().isEmpty())
+        return m_globalObject->name();
+    return "JSContext"_s;
 }
 
 void JSGlobalObjectDebuggable::connect(FrontendChannel& frontendChannel, bool automaticInspection, bool immediatelyPause)
@@ -65,7 +66,7 @@ void JSGlobalObjectDebuggable::connect(FrontendChannel& frontendChannel, bool au
         return;
 
     JSLockHolder locker(&m_globalObject->vm());
-    m_globalObject->inspectorController().connectFrontend(frontendChannel, automaticInspection, immediatelyPause);
+    m_globalObject->checkedInspectorController()->connectFrontend(frontendChannel, automaticInspection, immediatelyPause);
 }
 
 void JSGlobalObjectDebuggable::disconnect(FrontendChannel& frontendChannel)
@@ -75,7 +76,7 @@ void JSGlobalObjectDebuggable::disconnect(FrontendChannel& frontendChannel)
 
     JSLockHolder locker(&m_globalObject->vm());
 
-    m_globalObject->inspectorController().disconnectFrontend(frontendChannel);
+    m_globalObject->checkedInspectorController()->disconnectFrontend(frontendChannel);
 }
 
 void JSGlobalObjectDebuggable::dispatchMessageFromRemote(String&& message)
@@ -85,7 +86,7 @@ void JSGlobalObjectDebuggable::dispatchMessageFromRemote(String&& message)
 
     JSLockHolder locker(&m_globalObject->vm());
 
-    m_globalObject->inspectorController().dispatchMessageFromFrontend(WTFMove(message));
+    m_globalObject->checkedInspectorController()->dispatchMessageFromFrontend(WTF::move(message));
 }
 
 void JSGlobalObjectDebuggable::pauseWaitingForAutomaticInspection()

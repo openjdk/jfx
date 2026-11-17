@@ -29,7 +29,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGDocument);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SVGDocument);
 
 SVGDocument::SVGDocument(LocalFrame* frame, const Settings& settings, const URL& url)
     : XMLDocument(frame, settings, url, { DocumentClass::SVG })
@@ -58,11 +58,6 @@ void SVGDocument::updatePan(const FloatPoint& position) const
     if (!element)
         return;
     element->setCurrentTranslate(position - m_panningOffset);
-}
-
-Ref<Document> SVGDocument::cloneDocumentWithoutChildren() const
-{
-    return create(nullptr, protectedSettings(), url());
 }
 
 }

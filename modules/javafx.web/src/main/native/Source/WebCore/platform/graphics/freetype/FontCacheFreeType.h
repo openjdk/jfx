@@ -36,8 +36,8 @@ struct VariationDefaults {
     float maximumValue;
 };
 
-typedef HashMap<FontTag, VariationDefaults, FourCharacterTagHash, FourCharacterTagHashTraits> VariationDefaultsMap;
-typedef HashMap<FontTag, float, FourCharacterTagHash, FourCharacterTagHashTraits> VariationsMap;
+using VariationDefaultsMap = HashMap<FontTag, VariationDefaults, FourCharacterTagHash, FourCharacterTagHashTraits>;
+using VariationsMap = HashMap<FontTag, float, FourCharacterTagHash, FourCharacterTagHashTraits>;
 
 VariationDefaultsMap defaultVariationValues(FT_Face, ShouldLocalizeAxisNames);
 

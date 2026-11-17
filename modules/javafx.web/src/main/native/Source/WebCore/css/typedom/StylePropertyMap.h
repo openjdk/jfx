@@ -33,8 +33,8 @@ class CSSVariableReferenceValue;
 
 class StylePropertyMap : public MainThreadStylePropertyMapReadOnly {
 public:
-    ExceptionOr<void> set(Document&, const AtomString& property, FixedVector<std::variant<RefPtr<CSSStyleValue>, String>>&& values);
-    ExceptionOr<void> append(Document&, const AtomString& property, FixedVector<std::variant<RefPtr<CSSStyleValue>, String>>&& values);
+    ExceptionOr<void> set(Document&, const AtomString& property, FixedVector<Variant<RefPtr<CSSStyleValue>, String>>&& values);
+    ExceptionOr<void> append(Document&, const AtomString& property, FixedVector<Variant<RefPtr<CSSStyleValue>, String>>&& values);
     ExceptionOr<void> remove(Document&, const AtomString& property);
     virtual void clear() = 0;
 
@@ -46,7 +46,12 @@ protected:
     virtual bool setCustomProperty(Document&, const AtomString&, Ref<CSSVariableReferenceValue>&&) = 0;
 
 private:
+    bool isStylePropertyMap() const final { return true; }
     RefPtr<CSSStyleValue> shorthandPropertyValue(Document&, CSSPropertyID) const;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::StylePropertyMap)
+    static bool isType(const WebCore::StylePropertyMapReadOnly& map) { return map.isStylePropertyMap(); }
+SPECIALIZE_TYPE_TRAITS_END()

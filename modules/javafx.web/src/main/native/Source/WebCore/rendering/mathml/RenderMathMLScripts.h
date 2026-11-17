@@ -36,7 +36,7 @@ namespace WebCore {
 
 // Render a base with scripts.
 class RenderMathMLScripts : public RenderMathMLRow {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderMathMLScripts);
+    WTF_MAKE_TZONE_ALLOCATED(RenderMathMLScripts);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderMathMLScripts);
 public:
     RenderMathMLScripts(Type, MathMLScriptsElement&, RenderStyle&&);
@@ -49,7 +49,7 @@ protected:
     ASCIILiteral renderName() const override { return "RenderMathMLScripts"_s; }
     MathMLScriptsElement::ScriptType scriptType() const;
     void computePreferredLogicalWidths() override;
-    void layoutBlock(bool relayoutChildren, LayoutUnit pageLogicalHeight = 0_lu) override;
+    void layoutBlock(RelayoutChildren, LayoutUnit pageLogicalHeight = 0_lu) override;
 
 private:
     MathMLScriptsElement& element() const;

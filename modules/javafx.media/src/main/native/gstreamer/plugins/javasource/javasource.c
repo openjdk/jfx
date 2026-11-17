@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -98,7 +98,6 @@ struct _JavaSource
     // Seek helper fields
     gboolean      is_seekable; // property controlled
     gboolean      is_random_access; // property controlled
-    gboolean      update;
     gboolean      discont;
 
     guint         mode; // property controlled and/or internally
@@ -485,7 +484,13 @@ static gboolean java_source_perform_seek(JavaSource *element, GstPad *pad, GstEv
             element->position_time = 0;
         }
         element->discont = TRUE;
-        element->update = FALSE;
+        result = TRUE;
+    }
+    else if ((element->mode & MODE_HLS) == MODE_HLS && new_position == -1)
+    {
+        element->pending_event = GST_EVENT_EOS;
+        element->position = 0;
+        element->discont = TRUE;
         result = TRUE;
     }
 
@@ -543,7 +548,7 @@ static void java_source_loop(void *user_data)
 next_event:
         switch (element->pending_event)
         {
-            case GST_EVENT_STREAM_START:
+        case GST_EVENT_STREAM_START:
             {
                 gchar *stream_id;
                 GstEvent *event;
@@ -553,6 +558,42 @@ next_event:
                 gst_event_set_group_id (event, gst_util_group_id_next ());
                 result = gst_pad_push_event (element->srcpad, event) ? GST_FLOW_OK : GST_FLOW_FLUSHING;
                 g_free (stream_id);
+
+                element->pending_event = GST_EVENT_CAPS;
+                break;
+            }
+
+        case GST_EVENT_CAPS:
+            {
+                // Set caps to mimetype if provided, we need to do this before pushing buffer,
+                // so downstream filters can configure itself correctly. Caps are set via event in GStreamer 1.0.
+                if (element->mimetype)
+                {
+                    GstCaps *caps = NULL;
+                    GstEvent *caps_event = NULL;
+                    // Special case for HLS AAC elementary stream.
+                    // It has "audio/aac" mimetype which is same as
+                    // "audio/mpeg" mpegversion=4. We changing it here
+                    // so downstream will undestand it.
+                    if (strstr(element->mimetype, "audio/aac") != NULL)
+                    {
+                        caps = gst_caps_new_simple("audio/mpeg",
+                                "mpegversion", G_TYPE_INT, 4,
+                                "stream-format", G_TYPE_STRING, "adts",
+                                NULL);
+                    }
+                    else
+                    {
+                        caps = gst_caps_new_simple(element->mimetype, NULL, NULL);
+                    }
+
+                    caps_event = gst_event_new_caps(caps);
+                    if (caps_event)
+                        gst_pad_push_event(element->srcpad, caps_event);
+                    gst_caps_unref(caps);
+                    g_free(element->mimetype);
+                    element->mimetype = NULL;
+                }
 
                 element->pending_event = GST_EVENT_SEGMENT;
                 break;
@@ -593,8 +634,6 @@ next_event:
                     }
 
                     gst_segment_init (&segment, GST_FORMAT_BYTES);
-                    if (element->update)
-                        segment.flags |= GST_SEGMENT_FLAG_UPDATE;
                     segment.rate = element->rate;
                     segment.start = ((gint64)start_time*GST_SECOND) / HLS_VALUE_FLOAT_MULTIPLIER;
                     segment.stop = result;
@@ -605,8 +644,6 @@ next_event:
                 else
                 {
                     gst_segment_init (&segment, GST_FORMAT_BYTES);
-                    if (element->update)
-                        segment.flags |= GST_SEGMENT_FLAG_UPDATE;
                     segment.rate = element->rate;
                     segment.start = element->position;
                     segment.stop = element->size;
@@ -620,6 +657,7 @@ next_event:
 
         case GST_EVENT_EOS:
             gst_pad_push_event (element->srcpad, gst_event_new_eos());
+            element->pending_event = GST_EVENT_UNKNOWN;
             result = GST_FLOW_EOS;
             break;
 
@@ -650,29 +688,6 @@ next_event:
                             buffer = gst_buffer_make_writable (buffer);
                             GST_BUFFER_FLAG_SET (buffer, GST_BUFFER_FLAG_DISCONT);
                             element->discont = FALSE;
-                        }
-
-                        // Set caps to mimetype if provided, we need to do this before pushing buffer,
-                        // so downstream filters can configure itself correctly. Caps are set via event in GStreamer 1.0.
-                        if (element->mimetype)
-                        {
-                            GstCaps *caps = NULL;
-                            GstEvent *caps_event = NULL;
-                            // Special case for HLS AAC elementary stream.
-                            // It has "audio/aac" mimetype which is same as
-                            // "audio/mpeg" mpegversion=4. We changing it here
-                            // so downstream will undestand it.
-                            if (strstr(element->mimetype, "audio/aac") != NULL)
-                                caps = gst_caps_new_simple("audio/mpeg", "mpegversion", G_TYPE_INT, 4, NULL);
-                            else
-                                caps = gst_caps_new_simple(element->mimetype, NULL, NULL);
-
-                            caps_event = gst_event_new_caps(caps);
-                            if (caps_event)
-                                gst_pad_push_event(element->srcpad, caps_event);
-                            gst_caps_unref(caps);
-                            g_free(element->mimetype);
-                            element->mimetype = NULL;
                         }
 
                         result = gst_pad_push(element->srcpad, buffer);
@@ -886,10 +901,6 @@ static GstStateChangeReturn java_source_change_state (GstElement *e,
             element->position = 0;
             element->position_time = 0;
             element->discont = FALSE;
-            if ((element->mode & MODE_HLS) == MODE_HLS)
-                element->update = FALSE;
-            else
-                element->update = TRUE;
             GST_PAD_STREAM_UNLOCK(element->srcpad);
 
             g_mutex_lock(&element->lock);

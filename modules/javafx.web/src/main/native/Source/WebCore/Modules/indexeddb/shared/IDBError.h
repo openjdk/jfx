@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "DOMException.h"
-#include "ExceptionCode.h"
+#include <WebCore/DOMException.h>
+#include <WebCore/ExceptionCode.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -56,7 +56,7 @@ public:
     operator bool() const { return !isNull(); }
 
     IDBError isolatedCopy() const & { return IDBError { m_code, m_message.isolatedCopy() }; }
-    IDBError isolatedCopy() && { return IDBError { m_code, WTFMove(m_message).isolatedCopy() }; }
+    IDBError isolatedCopy() && { return IDBError { m_code, WTF::move(m_message).isolatedCopy() }; }
 
 private:
     std::optional<ExceptionCode> m_code;

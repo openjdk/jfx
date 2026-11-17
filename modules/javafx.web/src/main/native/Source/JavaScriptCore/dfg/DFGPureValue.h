@@ -49,7 +49,7 @@ public:
     }
 
     PureValue(NodeType op, const AdjacencyList& children, const void* ptr)
-        : PureValue(op, children, bitwise_cast<uintptr_t>(ptr))
+        : PureValue(op, children, std::bit_cast<uintptr_t>(ptr))
     {
     }
 
@@ -131,6 +131,8 @@ public:
         return m_op == LastNodeType && m_info;
     }
 
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
+
     void dump(PrintStream& out) const;
 
 private:
@@ -142,18 +144,9 @@ private:
     Graph* m_graph { nullptr };
 };
 
-struct PureValueHash {
-    static unsigned hash(const PureValue& key) { return key.hash(); }
-    static bool equal(const PureValue& a, const PureValue& b) { return a == b; }
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
-};
-
 } } // namespace JSC::DFG
 
 namespace WTF {
-
-template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::DFG::PureValue> : JSC::DFG::PureValueHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::DFG::PureValue> : SimpleClassHashTraits<JSC::DFG::PureValue> {
@@ -164,8 +157,8 @@ template<> struct HashTraits<JSC::DFG::PureValue> : SimpleClassHashTraits<JSC::D
 
 namespace JSC { namespace DFG {
 
-typedef HashMap<PureValue, Node*> PureMap;
-typedef HashMap<PureValue, Vector<Node*>> PureMultiMap;
+typedef UncheckedKeyHashMap<PureValue, Node*> PureMap;
+typedef UncheckedKeyHashMap<PureValue, Vector<Node*>> PureMultiMap;
 
 } } // namespace JSC::DFG
 

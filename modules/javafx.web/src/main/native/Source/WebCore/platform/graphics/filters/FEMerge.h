@@ -22,11 +22,13 @@
 
 #pragma once
 
-#include "FilterEffect.h"
+#include <WebCore/FilterEffect.h>
 
 namespace WebCore {
 
-class FEMerge : public FilterEffect {
+class FEMerge final : public FilterEffect {
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(FEMerge);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(FEMerge);
 public:
     WEBCORE_EXPORT static Ref<FEMerge> create(unsigned numberOfEffectInputs, DestinationColorSpace = DestinationColorSpace::SRGB());
 
@@ -39,6 +41,8 @@ private:
 
     bool operator==(const FilterEffect& other) const override { return areEqual<FEMerge>(*this, other); }
 
+    OptionSet<FilterRenderingMode> supportedFilterRenderingModes(OptionSet<FilterRenderingMode>) const override;
+    std::unique_ptr<FilterEffectApplier> createAcceleratedApplier() const override;
     std::unique_ptr<FilterEffectApplier> createSoftwareApplier() const override;
 
     WTF::TextStream& externalRepresentation(WTF::TextStream&, FilterRepresentation) const override;

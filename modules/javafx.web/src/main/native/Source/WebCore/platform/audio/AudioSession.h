@@ -28,26 +28,18 @@
 #if USE(AUDIO_SESSION)
 
 #include <memory>
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
+#include <wtf/AbstractThreadSafeRefCountedAndCanMakeWeakPtr.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/Observer.h>
+#include <wtf/TZoneMalloc.h>
+#include <wtf/ThreadSafeRefCounted.h>
+#include <wtf/ThreadSafeWeakPtr.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/WeakHashSet.h>
 #include <wtf/text/WTFString.h>
-
-namespace WebCore {
-class AudioSessionInterruptionObserver;
-class AudioSessionRoutingArbitrationClient;
-class AudioSessionConfigurationChangeObserver;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::AudioSessionInterruptionObserver> : std::true_type { };
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::AudioSessionRoutingArbitrationClient> : std::true_type { };
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::AudioSessionConfigurationChangeObserver> : std::true_type { };
-}
 
 namespace WTF {
 class Logger;
@@ -86,28 +78,31 @@ enum class AudioSessionSoundStageSize : uint8_t {
     Large,
 };
 
+enum class AudioSessionMayResume : bool { No, Yes };
+
 class AudioSession;
 class AudioSessionRoutingArbitrationClient;
 class AudioSessionInterruptionObserver;
 
-class AudioSessionConfigurationChangeObserver : public CanMakeWeakPtr<AudioSessionConfigurationChangeObserver> {
+class AudioSessionConfigurationChangeObserver : public AbstractRefCountedAndCanMakeWeakPtr<AudioSessionConfigurationChangeObserver> {
 public:
     virtual ~AudioSessionConfigurationChangeObserver() = default;
 
-    virtual void hardwareMutedStateDidChange(const AudioSession&) = 0;
+    virtual void hardwareMutedStateDidChange(const AudioSession&) { }
     virtual void bufferSizeDidChange(const AudioSession&) { }
     virtual void sampleRateDidChange(const AudioSession&) { }
+    virtual void routingContextUIDDidChange(const AudioSession&) { }
 };
 
-class WEBCORE_EXPORT AudioSession {
-    WTF_MAKE_FAST_ALLOCATED;
+class WEBCORE_EXPORT AudioSession : public AbstractThreadSafeRefCountedAndCanMakeWeakPtr {
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(AudioSession, WEBCORE_EXPORT);
     WTF_MAKE_NONCOPYABLE(AudioSession);
-    friend class UniqueRef<AudioSession>;
-    friend UniqueRef<AudioSession> WTF::makeUniqueRefWithoutFastMallocCheck<AudioSession>();
 public:
-    static UniqueRef<AudioSession> create();
-    static void setSharedSession(UniqueRef<AudioSession>&&);
-    static AudioSession& sharedSession();
+    static Ref<AudioSession> create();
+    static void setSharedSession(Ref<AudioSession>&&);
+    static AudioSession& singleton();
+
+    static bool enableMediaPlayback();
 
     using ChangedObserver = WTF::Observer<void(AudioSession&)>;
     static void addAudioSessionChangedObserver(const ChangedObserver&);
@@ -136,6 +131,8 @@ public:
     virtual size_t preferredBufferSize() const;
     virtual void setPreferredBufferSize(size_t);
 
+    virtual size_t outputLatency() const { return 0; }
+
     virtual void addConfigurationChangeObserver(AudioSessionConfigurationChangeObserver&);
     virtual void removeConfigurationChangeObserver(AudioSessionConfigurationChangeObserver&);
 
@@ -146,22 +143,22 @@ public:
     virtual void handleMutedStateChange() { }
 
     virtual void beginInterruption();
-    enum class MayResume : bool { No, Yes };
+    using MayResume = WebCore::AudioSessionMayResume;
     virtual void endInterruption(MayResume);
 
     virtual void beginInterruptionForTesting() { beginInterruption(); }
     virtual void endInterruptionForTesting() { endInterruption(MayResume::Yes); }
     virtual void clearInterruptionFlagForTesting() { }
 
-    virtual void addInterruptionObserver(AudioSessionInterruptionObserver&);
-    virtual void removeInterruptionObserver(AudioSessionInterruptionObserver&);
+    static void addInterruptionObserver(AudioSessionInterruptionObserver&);
+    static void removeInterruptionObserver(AudioSessionInterruptionObserver&);
 
     virtual bool isActive() const { return m_active; }
 
-    virtual void setRoutingArbitrationClient(WeakPtr<AudioSessionRoutingArbitrationClient>&& client) { m_routingArbitrationClient = client; }
+    void setRoutingArbitrationClient(AudioSessionRoutingArbitrationClient& client) { m_routingArbitrationClient = client; }
 
-    static bool shouldManageAudioSessionCategory() { return s_shouldManageAudioSessionCategory; }
-    static void setShouldManageAudioSessionCategory(bool flag) { s_shouldManageAudioSessionCategory = flag; }
+    static bool shouldManageAudioSessionCategory();
+    static void setShouldManageAudioSessionCategory(bool);
 
     virtual void setHostProcessAttribution(audit_token_t) { };
     virtual void setPresentingProcesses(Vector<audit_token_t>&&) { };
@@ -185,21 +182,17 @@ protected:
     Logger& logger();
     ASCIILiteral logClassName() const { return "AudioSession"_s; }
     WTFLogChannel& logChannel() const;
-    const void* logIdentifier() const { return nullptr; }
+    uint64_t logIdentifier() const { return 0; }
 
     mutable RefPtr<Logger> m_logger;
-
-    WeakHashSet<AudioSessionInterruptionObserver> m_interruptionObservers;
 
     WeakPtr<AudioSessionRoutingArbitrationClient> m_routingArbitrationClient;
     AudioSession::CategoryType m_categoryOverride { AudioSession::CategoryType::None };
     bool m_active { false }; // Used only for testing.
     bool m_isInterrupted { false };
-
-    static bool s_shouldManageAudioSessionCategory;
 };
 
-class AudioSessionInterruptionObserver : public CanMakeWeakPtr<AudioSessionInterruptionObserver> {
+class AudioSessionInterruptionObserver : public AbstractRefCountedAndCanMakeWeakPtr<AudioSessionInterruptionObserver> {
 public:
     virtual ~AudioSessionInterruptionObserver() = default;
 
@@ -210,8 +203,10 @@ public:
 
 enum class AudioSessionRoutingArbitrationError : uint8_t { None, Failed, Cancelled };
 
-class WEBCORE_EXPORT AudioSessionRoutingArbitrationClient : public CanMakeWeakPtr<AudioSessionRoutingArbitrationClient> {
+class WEBCORE_EXPORT AudioSessionRoutingArbitrationClient : public AbstractRefCountedAndCanMakeWeakPtr<AudioSessionRoutingArbitrationClient> {
 public:
+    USING_CAN_MAKE_WEAKPTR(CanMakeWeakPtr<AudioSessionRoutingArbitrationClient>);
+
     virtual ~AudioSessionRoutingArbitrationClient() = default;
     using RoutingArbitrationError = AudioSessionRoutingArbitrationError;
 
@@ -220,12 +215,10 @@ public:
     using ArbitrationCallback = CompletionHandler<void(RoutingArbitrationError, DefaultRouteChanged)>;
 
     virtual void beginRoutingArbitrationWithCategory(AudioSession::CategoryType, ArbitrationCallback&&) = 0;
-    virtual void leaveRoutingAbritration() = 0;
+    virtual void leaveRoutingArbitration() = 0;
 
-    virtual const void* logIdentifier() const = 0;
+    virtual uint64_t logIdentifier() const = 0;
     virtual bool canLog() const = 0;
-
-    using WeakValueType = AudioSessionRoutingArbitrationClient;
 };
 
 WEBCORE_EXPORT String convertEnumerationToString(RouteSharingPolicy);

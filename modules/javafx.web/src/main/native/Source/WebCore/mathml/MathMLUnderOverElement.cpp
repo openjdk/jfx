@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  * Copyright (C) 2016 Igalia S.L. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,12 +30,16 @@
 
 #if ENABLE(MATHML)
 
+#include "ContainerNodeInlines.h"
+#include "MathMLNames.h"
+#include "NodeName.h"
 #include "RenderMathMLUnderOver.h"
+#include "RenderObjectInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(MathMLUnderOverElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MathMLUnderOverElement);
 
 using namespace MathMLNames;
 
@@ -60,10 +65,24 @@ const MathMLElement::BooleanValue& MathMLUnderOverElement::accentUnder()
 
 void MathMLUnderOverElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    if (name == accentAttr)
+    bool affectsLayout = false;
+    switch (name.nodeName()) {
+    case AttributeNames::accentAttr:
         m_accent = std::nullopt;
-    else if (name == accentunderAttr)
+        affectsLayout = true;
+        break;
+    case AttributeNames::accentunderAttr:
         m_accentUnder = std::nullopt;
+        affectsLayout = true;
+        break;
+    default:
+        break;
+    }
+
+    if (affectsLayout) {
+        if (CheckedPtr renderer = this->renderer())
+            renderer->setNeedsLayoutAndPreferredWidthsUpdate();
+    }
 
     MathMLElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
@@ -71,7 +90,7 @@ void MathMLUnderOverElement::attributeChanged(const QualifiedName& name, const A
 RenderPtr<RenderElement> MathMLUnderOverElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
     ASSERT(hasTagName(munderTag) || hasTagName(moverTag) || hasTagName(munderoverTag));
-    return createRenderer<RenderMathMLUnderOver>(*this, WTFMove(style));
+    return createRenderer<RenderMathMLUnderOver>(*this, WTF::move(style));
 }
 
 }

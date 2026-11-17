@@ -33,11 +33,7 @@ namespace WebCore {
 
 PublicSuffixStore& PublicSuffixStore::singleton()
 {
-    static LazyNeverDestroyed<PublicSuffixStore> store;
-    static std::once_flag flag;
-    std::call_once(flag, [&] {
-        store.construct();
-    });
+    static NeverDestroyed<PublicSuffixStore> store;
     return store.get();
 }
 
@@ -94,6 +90,34 @@ String PublicSuffixStore::topPrivatelyControlledDomain(StringView host) const
         m_hostTopPrivatelyControlledDomainCache.remove(m_hostTopPrivatelyControlledDomainCache.random());
 
     return result;
+}
+
+String PublicSuffixStore::topPrivatelyControlledDomainWithoutPublicSuffix(StringView host) const
+{
+    auto topPrivatelyControlledDomain = this->topPrivatelyControlledDomain(host);
+    if (topPrivatelyControlledDomain.isEmpty())
+        return { };
+
+    return domainWithoutPublicSuffix(topPrivatelyControlledDomain);
+}
+
+String PublicSuffixStore::domainWithoutPublicSuffix(StringView domain) const
+{
+    if (URL::hostIsIPAddress(domain))
+        return domain.toString();
+
+    size_t separatorPosition;
+    for (unsigned labelStart = 0; (separatorPosition = domain.find('.', labelStart)) != notFound; labelStart = separatorPosition + 1) {
+        auto candidate = domain.substring(separatorPosition + 1);
+        if (isPublicSuffix(candidate)) {
+            if (separatorPosition > 0 && domain.length() > separatorPosition) {
+                auto domainWithoutSuffix = domain.substring(0, separatorPosition);
+                return domainWithoutSuffix.toString();
+            }
+        }
+    }
+
+    return domain.toString();
 }
 
 #if PLATFORM(JAVA)

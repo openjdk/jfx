@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 Apple Inc. All rights reserved.
+ * Copyright (c) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,6 +32,8 @@
 #include "pas_log.h"
 #include "pas_segregated_heap_inlines.h"
 
+#if LIBPAS_ENABLED
+
 PAS_BEGIN_EXTERN_C;
 
 PAS_API pas_segregated_size_directory*
@@ -53,7 +55,7 @@ pas_heap_ensure_size_directory_for_size(
     unsigned* cached_index,
     pas_allocator_counts* counts)
 {
-    static const bool verbose = false;
+    static const bool verbose = PAS_SHOULD_LOG(PAS_LOG_HEAP_INFRASTRUCTURE);
 
     pas_segregated_size_directory* result;
 
@@ -79,5 +81,5 @@ pas_heap_ensure_size_directory_for_size(
 
 PAS_END_EXTERN_C;
 
+#endif /* LIBPAS_ENABLED */
 #endif /* PAS_HEAP_INLINES_H */
-

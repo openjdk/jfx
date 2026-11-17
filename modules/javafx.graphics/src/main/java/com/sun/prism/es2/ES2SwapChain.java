@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,7 +50,7 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
     private float pixelScaleFactorY;
     // a value of zero corresponds to the windowing system-provided
     // framebuffer object
-    int nativeDestHandle = 0;
+    long nativeDestHandle = 0;
     private final boolean msaa;
     /**
      * An offscreen surface that acts as a persistent backbuffer, currently
@@ -184,7 +184,7 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
     @Override
     public boolean present() {
         boolean presented = drawable.swapBuffers(context.getGLContext());
-        context.makeCurrent(null);
+        context.invalidateCurrentDrawable();  // no OpenGL call, just invalidating the drawable
         return presented;
     }
 
@@ -237,7 +237,9 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
 
     @Override
     public int getFboID() {
-        return nativeDestHandle;
+        // The nativeDestHandle holds the value returned by glGenFramebuffersEXT.
+        // Since glGenFramebuffersEXT returns a value of type GLuint, this type cast is safe.
+        return (int)nativeDestHandle;
     }
 
     @Override
@@ -306,6 +308,7 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
         }
 
         if (drawable != null) {
+            context.makeCurrent(null); // drawable must not be current when disposed
             drawable.dispose();
             drawable = null;
         }

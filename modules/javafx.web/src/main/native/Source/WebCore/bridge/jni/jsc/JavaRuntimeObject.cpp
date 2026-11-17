@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2024 Igalia S.L.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,9 +32,12 @@
 
 namespace JSC {
 namespace Bindings {
-
+#if !PLATFORM(JAVA)
+sk_sp<SkColorSpace> sRGBColorSpaceRef()
+#endif
+#if PLATFORM(JAVA)
 const ClassInfo JavaRuntimeObject::s_info = { "JavaRuntimeObject"_s, &RuntimeObject::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JavaRuntimeObject) };
-
+#endif
 JavaRuntimeObject::JavaRuntimeObject(JSGlobalObject* globalObject, Structure* structure, RefPtr<JavaInstance> instance)
     : RuntimeObject(globalObject->vm(), structure, instance) // todo tav
 {

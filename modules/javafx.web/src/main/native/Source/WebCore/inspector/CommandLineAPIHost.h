@@ -32,6 +32,7 @@
 #include "InstrumentingAgents.h"
 #include <JavaScriptCore/PerGlobalObjectWrapperWorld.h>
 #include <wtf/RefCounted.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
@@ -55,19 +56,12 @@ struct EventListenerInfo;
 class CommandLineAPIHost : public RefCounted<CommandLineAPIHost> {
 public:
     static Ref<CommandLineAPIHost> create();
-    ~CommandLineAPIHost();
-
-    void init(RefPtr<InstrumentingAgents> instrumentingAgents)
-    {
-        m_instrumentingAgents = instrumentingAgents;
-    }
-
-    void disconnect();
+    ~CommandLineAPIHost() = default;
 
     void copyText(const String& text);
 
     class InspectableObject {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_MAKE_TZONE_ALLOCATED(InspectableObject);
     public:
         virtual JSC::JSValue get(JSC::JSGlobalObject&);
         virtual ~InspectableObject() = default;
@@ -90,7 +84,6 @@ public:
     void gatherRTCLogs(JSC::JSGlobalObject&, RefPtr<RTCLogsCallback>&&);
 #endif
 
-    String databaseId(Database&);
     String storageId(Storage&);
 
     JSC::JSValue wrapper(JSC::JSGlobalObject*, JSDOMGlobalObject*);
@@ -99,7 +92,6 @@ public:
 private:
     CommandLineAPIHost();
 
-    RefPtr<InstrumentingAgents> m_instrumentingAgents;
     std::unique_ptr<InspectableObject> m_inspectedObject; // $0
     Inspector::PerGlobalObjectWrapperWorld m_wrappers;
 };

@@ -25,11 +25,13 @@
 
 #pragma once
 
-#include <wtf/MallocPtr.h>
+#include <memory>
+#include <wtf/EmbeddedFixedVector.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/Nonmovable.h>
 #include <wtf/Vector.h>
+#include <wtf/text/ParsingUtilities.h>
 
 #define WGSL_AST_BUILDER_NODE(Node) \
 protected: \
@@ -49,31 +51,18 @@ namespace AST {
 
 class Node;
 
-DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER_AND_EXPORT(WGSLAST, WTF_INTERNAL);
-
 class Builder {
     WTF_MAKE_NONCOPYABLE(Builder);
 
 public:
-    static constexpr size_t arenaSize = 0x4000;
-
     Builder() = default;
     Builder(Builder&&);
-    ~Builder();
 
     template<typename T, typename... Arguments, typename = std::enable_if_t<std::is_base_of_v<Node, T>>>
     T& construct(Arguments&&... arguments)
     {
-        constexpr size_t size = sizeof(T);
-        constexpr size_t alignedSize = alignSize(size);
-        static_assert(alignedSize <= arenaSize);
-        if (UNLIKELY(static_cast<size_t>(m_arenaEnd - m_arena) < alignedSize))
-            allocateArena();
-
-        auto* node = new (m_arena) T(std::forward<Arguments>(arguments)...);
-        m_arena += alignedSize;
-        m_nodes.append(node);
-        return *node;
+        m_nodes.append(std::unique_ptr<T>(new T(std::forward<Arguments>(arguments)...)));
+        return *uncheckedDowncast<T>(m_nodes.last().get());
     }
 
     class State {
@@ -81,12 +70,6 @@ public:
     private:
         State() = default;
 
-        uint8_t* m_arena;
-#if ASSERT_ENABLED
-        uint8_t* m_arenaStart;
-        uint8_t* m_arenaEnd;
-#endif
-        unsigned m_numberOfArenas;
         unsigned m_numberOfNodes;
     };
 
@@ -94,18 +77,7 @@ public:
     void restore(State&&);
 
 private:
-    static constexpr size_t alignSize(size_t size)
-    {
-        return (size + sizeof(WTF::AllocAlignmentInteger) - 1) & ~(sizeof(WTF::AllocAlignmentInteger) - 1);
-    }
-
-    uint8_t* arena();
-    void allocateArena();
-
-    uint8_t* m_arena { nullptr };
-    uint8_t* m_arenaEnd { nullptr };
-    Vector<MallocPtr<uint8_t, WGSLASTMalloc>> m_arenas;
-    Vector<Node*> m_nodes;
+    Vector<std::unique_ptr<Node>> m_nodes;
 };
 
 } // namespace AST

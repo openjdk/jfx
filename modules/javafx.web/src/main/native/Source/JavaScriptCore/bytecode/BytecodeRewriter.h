@@ -34,6 +34,8 @@
 #include "UnlinkedCodeBlock.h"
 #include <wtf/Insertion.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 // BytecodeRewriter offers the ability to insert and remove the bytecodes including jump operations.
@@ -82,7 +84,7 @@ class BytecodeRewriter {
 WTF_MAKE_NONCOPYABLE(BytecodeRewriter);
 public:
     enum class Position : int8_t {
-        EntryPoint = -2,
+        Entrypoint = -2,
         Before = -1,
         LabelPoint = 0,
         After = 1,
@@ -188,7 +190,7 @@ public:
         Fragment fragment(m_bytecodeGenerator, writer, includeBranch);
         function(fragment);
         fragment.align();
-        insertImpl(InsertionPoint(instruction.offset(), Position::Before), includeBranch, WTFMove(writer));
+        insertImpl(InsertionPoint(instruction.offset(), Position::Before), includeBranch, WTF::move(writer));
     }
 
     template<class Function>
@@ -199,7 +201,7 @@ public:
         Fragment fragment(m_bytecodeGenerator, writer, includeBranch);
         function(fragment);
         fragment.align(alignCongruent);
-        insertImpl(InsertionPoint(instruction.offset(), Position::After), includeBranch, WTFMove(writer));
+        insertImpl(InsertionPoint(instruction.offset(), Position::After), includeBranch, WTF::move(writer));
     }
 
     template<class Function>
@@ -216,7 +218,7 @@ public:
 
     int32_t adjustAbsoluteOffset(JSInstructionStream::Offset absoluteOffset)
     {
-        return adjustJumpTarget(InsertionPoint(0, Position::EntryPoint), InsertionPoint(absoluteOffset, Position::LabelPoint));
+        return adjustJumpTarget(InsertionPoint(0, Position::Entrypoint), InsertionPoint(absoluteOffset, Position::LabelPoint));
     }
 
     int32_t adjustJumpTarget(JSInstructionStream::Offset originalBytecodeOffset, int32_t originalJumpTarget)
@@ -274,3 +276,5 @@ void BytecodeRewriter::forEachLabelPoint(Func func)
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

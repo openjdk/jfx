@@ -25,21 +25,24 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(REMOTE_INSPECTOR)
 
-#include "RemoteControllableTarget.h"
+#include <JavaScriptCore/RemoteControllableTarget.h>
 #include <wtf/text/WTFString.h>
 
 namespace Inspector {
 
 class FrontendChannel;
 
-class JS_EXPORT_PRIVATE RemoteAutomationTarget : public RemoteControllableTarget {
+class RemoteAutomationTarget : public RemoteControllableTarget {
 public:
-    ~RemoteAutomationTarget() override;
+    JS_EXPORT_PRIVATE RemoteAutomationTarget();
+    JS_EXPORT_PRIVATE ~RemoteAutomationTarget() override;
 
     bool isPaired() const { return m_paired; }
-    void setIsPaired(bool);
+    JS_EXPORT_PRIVATE void setIsPaired(bool);
 
     bool isPendingTermination() const { return m_pendingTermination; }
     void setIsPendingTermination() { m_pendingTermination = true; }

@@ -24,9 +24,9 @@
 
 #pragma once
 
-#include "CSSToLengthConversionData.h"
-#include "CSSValue.h"
-#include "CSSValueKeywords.h"
+#include <WebCore/CSSToLengthConversionData.h>
+#include <WebCore/CSSValue.h>
+#include <WebCore/CSSValueKeywords.h>
 #include <wtf/CheckedPtr.h>
 #include <wtf/OptionSet.h>
 #include <wtf/text/AtomString.h>
@@ -47,6 +47,8 @@ struct FeatureSchema;
 struct Comparison {
     ComparisonOperator op;
     RefPtr<CSSValue> value;
+
+    RefPtr<CSSValue> protectedValue() const { return value; }
 };
 
 struct Feature {
@@ -65,7 +67,7 @@ struct GeneralEnclosed {
     String text;
 };
 
-using QueryInParens = std::variant<Condition, Feature, GeneralEnclosed>;
+using QueryInParens = Variant<Condition, Feature, GeneralEnclosed>;
 
 struct Condition {
     LogicalOperator logicalOperator { LogicalOperator::And };
@@ -76,6 +78,12 @@ struct Condition {
 
 enum class EvaluationResult : uint8_t { False, True, Unknown };
 
+enum class MediaQueryDynamicDependency : uint8_t  {
+    Viewport = 1 << 0,
+    Appearance = 1 << 1,
+    Accessibility = 1 << 2,
+};
+
 struct FeatureEvaluationContext {
     WeakRef<const Document, WeakPtrImplWithEventTargetData> document;
     CSSToLengthConversionData conversionData { };
@@ -83,7 +91,7 @@ struct FeatureEvaluationContext {
 };
 
 struct FeatureSchema {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(FeatureSchema);
 
     enum class Type : uint8_t { Discrete, Range };
     enum class ValueType : uint8_t { Integer, Number, Length, Ratio, Resolution, Identifier, CustomProperty };
@@ -91,15 +99,17 @@ struct FeatureSchema {
     AtomString name;
     Type type;
     ValueType valueType;
+    OptionSet<MediaQueryDynamicDependency> dependencies;
     FixedVector<CSSValueID> valueIdentifiers;
 
     virtual EvaluationResult evaluate(const Feature&, const FeatureEvaluationContext&) const { return EvaluationResult::Unknown; }
 
-    FeatureSchema(const AtomString& name, Type type, ValueType valueType, FixedVector<CSSValueID>&& valueIdentifiers = { })
+    FeatureSchema(const AtomString& name, Type type, ValueType valueType, OptionSet<MediaQueryDynamicDependency> dependencies, FixedVector<CSSValueID>&& valueIdentifiers = { })
         : name(name)
         , type(type)
         , valueType(valueType)
-        , valueIdentifiers(WTFMove(valueIdentifiers))
+        , dependencies(dependencies)
+        , valueIdentifiers(WTF::move(valueIdentifiers))
     { }
     virtual ~FeatureSchema() = default;
 };

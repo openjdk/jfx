@@ -30,17 +30,18 @@
 #include "WebGPUPtr.h"
 #include "WebGPURenderBundle.h"
 #include <WebGPU/WebGPU.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore::WebGPU {
 
 class ConvertToBackingContext;
 
 class RenderBundleImpl final : public RenderBundle {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(RenderBundleImpl);
 public:
     static Ref<RenderBundleImpl> create(WebGPUPtr<WGPURenderBundle>&& renderBundle, ConvertToBackingContext& convertToBackingContext)
     {
-        return adoptRef(*new RenderBundleImpl(WTFMove(renderBundle), convertToBackingContext));
+        return adoptRef(*new RenderBundleImpl(WTF::move(renderBundle), convertToBackingContext));
     }
 
     virtual ~RenderBundleImpl();
@@ -56,13 +57,18 @@ private:
     RenderBundleImpl& operator=(RenderBundleImpl&&) = delete;
 
     WGPURenderBundle backing() const { return m_backing.get(); }
+    bool isRenderBundleImpl() const final { return true; }
 
     void setLabelInternal(const String&) final;
 
     WebGPUPtr<WGPURenderBundle> m_backing;
-    Ref<ConvertToBackingContext> m_convertToBackingContext;
+    const Ref<ConvertToBackingContext> m_convertToBackingContext;
 };
 
 } // namespace WebCore::WebGPU
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WebGPU::RenderBundleImpl)
+    static bool isType(const WebCore::WebGPU::RenderBundle& bundle) { return bundle.isRenderBundleImpl(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // HAVE(WEBGPU_IMPLEMENTATION)

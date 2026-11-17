@@ -32,6 +32,7 @@
  */
 
 #include "config.h"
+#include "glib.h"
 #include "glibconfig.h"
 #include "glib_trace.h"
 
@@ -46,6 +47,15 @@
  * needed there...
  */
 #define G_MAIN_POLL_DEBUG
+#endif
+
+/* We need to include this as early as possible, because on some
+ * platforms like AIX, <poll.h> redefines the names we use for
+ * GPollFD struct members.
+ * See https://gitlab.gnome.org/GNOME/glib/-/issues/3500 */
+
+#ifdef HAVE_POLL_H
+#include <poll.h>
 #endif
 
 #ifdef G_OS_UNIX
@@ -68,10 +78,6 @@
 #endif /* G_OS_UNIX */
 #include <errno.h>
 #include <string.h>
-
-#ifdef HAVE_POLL_H
-#include <poll.h>
-#endif
 
 #ifdef HAVE_PIDFD
 #include <sys/syscall.h>
@@ -96,9 +102,8 @@
 #endif  /* HAVE_PIDFD */
 
 #ifdef G_OS_WIN32
-#define STRICT
 #include <windows.h>
-#endif /* G_OS_WIN32 */
+#endif
 
 #ifdef HAVE_MACH_MACH_TIME_H
 #include <mach/mach_time.h>
@@ -303,8 +308,10 @@ typedef struct _GSourceIter
 #define UNLOCK_CONTEXT(context) g_mutex_unlock (&context->mutex)
 #define G_THREAD_SELF g_thread_self ()
 
-#define SOURCE_DESTROYED(source) (((source)->flags & G_HOOK_FLAG_ACTIVE) == 0)
-#define SOURCE_BLOCKED(source) (((source)->flags & G_SOURCE_BLOCKED) != 0)
+#define SOURCE_DESTROYED(source) \
+  ((g_atomic_int_get (&((source)->flags)) & G_HOOK_FLAG_ACTIVE) == 0)
+#define SOURCE_BLOCKED(source) \
+  ((g_atomic_int_get (&((source)->flags)) & G_SOURCE_BLOCKED) != 0)
 
 /* Forward declarations */
 
@@ -738,7 +745,7 @@ static GPrivate thread_context_stack = G_PRIVATE_INIT (free_context_stack);
  *
  * Acquires @context and sets it as the thread-default context for the
  * current thread. This will cause certain asynchronous operations
- * (such as most [gio][gio]-based I/O) which are
+ * (such as most [Gio](../gio/index.html)-based I/O) which are
  * started in this thread to run under @context and deliver their
  * results to its main loop, rather than running under the global
  * default main context in the main thread. Note that calling this function
@@ -937,11 +944,11 @@ g_source_new (GSourceFuncs *source_funcs,
   }
 #endif // GSTREAMER_LITE
   source->source_funcs = source_funcs;
-  source->ref_count = 1;
+  g_atomic_int_set (&source->ref_count, 1);
 
   source->priority = G_PRIORITY_DEFAULT;
 
-  source->flags = G_HOOK_FLAG_ACTIVE;
+  g_atomic_int_set (&source->flags, G_HOOK_FLAG_ACTIVE);
 
   source->priv->ready_time = -1;
 
@@ -983,10 +990,14 @@ void
 g_source_set_dispose_function (GSource            *source,
                    GSourceDisposeFunc  dispose)
 {
+  gboolean was_unset G_GNUC_UNUSED;
+
   g_return_if_fail (source != NULL);
-  g_return_if_fail (source->priv->dispose == NULL);
   g_return_if_fail (g_atomic_int_get (&source->ref_count) > 0);
-  source->priv->dispose = dispose;
+
+  was_unset = g_atomic_pointer_compare_and_exchange (&source->priv->dispose,
+                                                     NULL, dispose);
+  g_return_if_fail (was_unset);
 }
 
 /* Holds context's lock */
@@ -1302,7 +1313,7 @@ g_source_destroy_internal (GSource      *source,
       gpointer old_cb_data;
       GSourceCallbackFuncs *old_cb_funcs;
 
-      source->flags &= ~G_HOOK_FLAG_ACTIVE;
+      g_atomic_int_and (&source->flags, ~G_HOOK_FLAG_ACTIVE);
 
       old_cb_data = source->callback_data;
       old_cb_funcs = source->callback_funcs;
@@ -1376,7 +1387,7 @@ g_source_destroy (GSource *source)
   if (context)
     g_source_destroy_internal (source, context, FALSE);
   else
-    source->flags &= ~G_HOOK_FLAG_ACTIVE;
+    g_atomic_int_and (&source->flags, ~G_HOOK_FLAG_ACTIVE);
 }
 
 /**
@@ -2051,9 +2062,9 @@ g_source_set_can_recurse (GSource  *source,
     LOCK_CONTEXT (context);
 
   if (can_recurse)
-    source->flags |= G_SOURCE_CAN_RECURSE;
+    g_atomic_int_or (&source->flags, G_SOURCE_CAN_RECURSE);
   else
-    source->flags &= ~G_SOURCE_CAN_RECURSE;
+    g_atomic_int_and (&source->flags, ~G_SOURCE_CAN_RECURSE);
 
   if (context)
     UNLOCK_CONTEXT (context);
@@ -2074,7 +2085,7 @@ g_source_get_can_recurse (GSource  *source)
   g_return_val_if_fail (source != NULL, FALSE);
   g_return_val_if_fail (g_atomic_int_get (&source->ref_count) > 0, FALSE);
 
-  return (source->flags & G_SOURCE_CAN_RECURSE) != 0;
+  return (g_atomic_int_get (&source->flags) & G_SOURCE_CAN_RECURSE) != 0;
 }
 
 static void
@@ -2235,12 +2246,13 @@ g_source_set_name_by_id (guint           tag,
 GSource *
 g_source_ref (GSource *source)
 {
+  int old_ref G_GNUC_UNUSED;
   g_return_val_if_fail (source != NULL, NULL);
+
+  old_ref = g_atomic_int_add (&source->ref_count, 1);
   /* We allow ref_count == 0 here to allow the dispose function to resurrect
    * the GSource if needed */
-  g_return_val_if_fail (g_atomic_int_get (&source->ref_count) >= 0, NULL);
-
-  g_atomic_int_inc (&source->ref_count);
+  g_return_val_if_fail (old_ref >= 0, NULL);
 
   return source;
 }
@@ -2254,34 +2266,62 @@ g_source_unref_internal (GSource      *source,
 {
   gpointer old_cb_data = NULL;
   GSourceCallbackFuncs *old_cb_funcs = NULL;
+  int old_ref;
 
   g_return_if_fail (source != NULL);
+
+  old_ref = g_atomic_int_get (&source->ref_count);
+
+retry_beginning:
+  if (old_ref > 1)
+    {
+      /* We have many references. If we can decrement the ref counter, we are done. */
+      if (!g_atomic_int_compare_and_exchange_full ((int *) &source->ref_count,
+                                                   old_ref, old_ref - 1,
+                                                   &old_ref))
+        goto retry_beginning;
+
+      return;
+    }
+
+  g_return_if_fail (old_ref > 0);
 
   if (!have_lock && context)
     LOCK_CONTEXT (context);
 
-  if (g_atomic_int_dec_and_test (&source->ref_count))
+  /* We are about to drop the last reference, there's not guarantee at this
+   * point that another thread already changed the value at this point or
+   * that is also entering the disposal phase, but there is no much we can do
+   * and dropping the reference too early would be still risky since it could
+   * lead to a preventive finalization.
+   * So let's just get all the threads that reached this point to get in, while
+   * the final check on whether is the case or not to continue with the
+   * finalization will be done by a final unique atomic dec and test.
+   */
+  if (old_ref == 1)
     {
       /* If there's a dispose function, call this first */
-      if (source->priv->dispose)
+      GSourceDisposeFunc dispose_func;
+
+      if ((dispose_func = g_atomic_pointer_get (&source->priv->dispose)))
         {
-          /* Temporarily increase the ref count again so that GSource methods
-           * can be called from dispose(). */
-          g_atomic_int_inc (&source->ref_count);
           if (context)
             UNLOCK_CONTEXT (context);
-          source->priv->dispose (source);
+          dispose_func (source);
           if (context)
             LOCK_CONTEXT (context);
+        }
 
-          /* Now the reference count might be bigger than 0 again, in which
-           * case we simply return from here before freeing the source */
-          if (!g_atomic_int_dec_and_test (&source->ref_count))
-            {
-              if (!have_lock && context)
-                UNLOCK_CONTEXT (context);
-              return;
-            }
+      /* At this point the source can have been revived by any of the threads
+       * acting on it or it's really ready for being finalized.
+       */
+      if (!g_atomic_int_compare_and_exchange_full ((int *) &source->ref_count,
+                                                   1, 0, &old_ref))
+        {
+          if (!have_lock && context)
+            UNLOCK_CONTEXT (context);
+
+          goto retry_beginning;
         }
 
       TRACE (GLIB_SOURCE_BEFORE_FREE (source, context,
@@ -2378,7 +2418,7 @@ void
 g_source_unref (GSource *source)
 {
   g_return_if_fail (source != NULL);
-  g_return_if_fail (g_atomic_int_get (&source->ref_count) > 0);
+  /* refcount is checked inside g_source_unref_internal() */
 #ifdef GSTREAMER_LITE
   if (source == NULL)
     return;
@@ -3288,7 +3328,7 @@ block_source (GSource *source)
 
   g_return_if_fail (!SOURCE_BLOCKED (source));
 
-  source->flags |= G_SOURCE_BLOCKED;
+  g_atomic_int_or (&source->flags, G_SOURCE_BLOCKED);
 
   if (source->context)
     {
@@ -3323,7 +3363,7 @@ unblock_source (GSource *source)
   g_return_if_fail (SOURCE_BLOCKED (source)); /* Source already unblocked */
   g_return_if_fail (!SOURCE_DESTROYED (source));
 
-  source->flags &= ~G_SOURCE_BLOCKED;
+  g_atomic_int_and (&source->flags, ~G_SOURCE_BLOCKED);
 
   tmp_list = source->poll_fds;
   while (tmp_list)
@@ -3360,7 +3400,7 @@ g_main_dispatch (GMainContext *context)
       context->pending_dispatches->pdata[i] = NULL;
       g_assert (source);
 
-      source->flags &= ~G_SOURCE_READY;
+      g_atomic_int_and (&source->flags, ~G_SOURCE_READY);
 
       if (!SOURCE_DESTROYED (source))
   {
@@ -3384,11 +3424,12 @@ g_main_dispatch (GMainContext *context)
     if (cb_funcs)
       cb_funcs->ref (cb_data);
 
-    if ((source->flags & G_SOURCE_CAN_RECURSE) == 0)
+    if ((g_atomic_int_get (&source->flags) & G_SOURCE_CAN_RECURSE) == 0)
       block_source (source);
 
-    was_in_call = source->flags & G_HOOK_FLAG_IN_CALL;
-    source->flags |= G_HOOK_FLAG_IN_CALL;
+          was_in_call = g_atomic_int_or (&source->flags,
+                                         (GSourceFlags) G_HOOK_FLAG_IN_CALL) &
+                                         G_HOOK_FLAG_IN_CALL;
 
     if (cb_funcs)
       cb_funcs->get (cb_data, source, &callback, &user_data);
@@ -3425,7 +3466,7 @@ g_main_dispatch (GMainContext *context)
     LOCK_CONTEXT (context);
 
     if (!was_in_call)
-      source->flags &= ~G_HOOK_FLAG_IN_CALL;
+            g_atomic_int_and (&source->flags, ~G_HOOK_FLAG_IN_CALL);
 
     if (SOURCE_BLOCKED (source) && !SOURCE_DESTROYED (source))
       unblock_source (source);
@@ -3794,7 +3835,7 @@ g_main_context_prepare_unlocked (GMainContext *context,
       if ((n_ready > 0) && (source->priority > current_priority))
   break;
 
-      if (!(source->flags & G_SOURCE_READY))
+      if (!(g_atomic_int_get (&source->flags) & G_SOURCE_READY))
   {
     gboolean result;
     gboolean (* prepare) (GSource  *source,
@@ -3855,13 +3896,13 @@ g_main_context_prepare_unlocked (GMainContext *context,
 
         while (ready_source)
     {
-      ready_source->flags |= G_SOURCE_READY;
+                  g_atomic_int_or (&ready_source->flags, G_SOURCE_READY);
       ready_source = ready_source->priv->parent_source;
     }
       }
   }
 
-      if (source->flags & G_SOURCE_READY)
+      if (g_atomic_int_get (&source->flags) & G_SOURCE_READY)
   {
     n_ready++;
     current_priority = source->priority;
@@ -4127,7 +4168,7 @@ g_main_context_check_unlocked (GMainContext *context,
       if ((n_ready > 0) && (source->priority > max_priority))
   break;
 
-      if (!(source->flags & G_SOURCE_READY))
+      if (!(g_atomic_int_get (&source->flags) & G_SOURCE_READY))
   {
           gboolean result;
           gboolean (* check) (GSource *source);
@@ -4198,13 +4239,13 @@ g_main_context_check_unlocked (GMainContext *context,
 
         while (ready_source)
     {
-      ready_source->flags |= G_SOURCE_READY;
+                  g_atomic_int_or (&ready_source->flags, G_SOURCE_READY);
       ready_source = ready_source->priv->parent_source;
     }
       }
   }
 
-      if (source->flags & G_SOURCE_READY)
+      if (g_atomic_int_get (&source->flags) & G_SOURCE_READY)
   {
           g_source_ref (source);
     g_ptr_array_add (context->pending_dispatches, source);
@@ -6650,24 +6691,3 @@ g_get_worker_context (void)
   return glib_worker_context;
 }
 
-/**
- * g_steal_fd:
- * @fd_ptr: (not optional) (inout): A pointer to a file descriptor
- *
- * Sets @fd_ptr to `-1`, returning the value that was there before.
- *
- * Conceptually, this transfers the ownership of the file descriptor
- * from the referenced variable to the caller of the function (i.e.
- * ‘steals’ the reference). This is very similar to [func@GLib.steal_pointer],
- * but for file descriptors.
- *
- * On POSIX platforms, this function is async-signal safe
- * (see [`signal(7)`](man:signal(7)) and
- * [`signal-safety(7)`](man:signal-safety(7))), making it safe to call from a
- * signal handler or a #GSpawnChildSetupFunc.
- *
- * This function preserves the value of `errno`.
- *
- * Returns: the value that @fd_ptr previously had
- * Since: 2.70
- */

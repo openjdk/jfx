@@ -28,13 +28,14 @@
 #if USE(CORE_IMAGE)
 
 #import "FilterEffectApplier.h"
+#import <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class FEColorMatrix;
 
 class FEColorMatrixCoreImageApplier final : public FilterEffectConcreteApplier<FEColorMatrix> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(FEColorMatrixCoreImageApplier);
     using Base = FilterEffectConcreteApplier<FEColorMatrix>;
 
 public:
@@ -43,7 +44,7 @@ public:
     static bool supportsCoreImageRendering(const FEColorMatrix&);
 
 private:
-    bool apply(const Filter&, const FilterImageVector& inputs, FilterImage& result) const final;
+    bool apply(const Filter&, std::span<const Ref<FilterImage>> inputs, FilterImage& result) const final;
 };
 
 } // namespace WebCore

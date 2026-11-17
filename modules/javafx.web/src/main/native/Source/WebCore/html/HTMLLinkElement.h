@@ -23,14 +23,15 @@
 
 #pragma once
 
-#include "CSSStyleSheet.h"
-#include "CachedStyleSheetClient.h"
-#include "CachedResourceHandle.h"
-#include "DOMTokenList.h"
-#include "HTMLElement.h"
-#include "LinkLoader.h"
-#include "LinkLoaderClient.h"
-#include "LinkRelAttribute.h"
+#include <WebCore/CSSStyleSheet.h>
+#include <WebCore/CachedResourceHandle.h>
+#include <WebCore/CachedStyleSheetClient.h>
+#include <WebCore/DOMTokenList.h>
+#include <WebCore/HTMLElement.h>
+#include <WebCore/LinkLoader.h>
+#include <WebCore/LinkLoaderClient.h>
+#include <WebCore/LinkRelAttribute.h>
+#include <wtf/CheckedPtr.h>
 
 namespace WebCore {
 
@@ -46,18 +47,25 @@ template<typename T, typename Counter> class EventSender;
 using LinkEventSender = EventSender<HTMLLinkElement, WeakPtrImplWithEventTargetData>;
 
 class HTMLLinkElement final : public HTMLElement, public CachedStyleSheetClient, public LinkLoaderClient {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLLinkElement);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLLinkElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLLinkElement);
 public:
-    using HTMLElement::weakPtrFactory;
-    using HTMLElement::WeakValueType;
-    using HTMLElement::WeakPtrImplType;
+    USING_CAN_MAKE_WEAKPTR(HTMLElement);
 
     static Ref<HTMLLinkElement> create(const QualifiedName&, Document&, bool createdByParser);
     virtual ~HTMLLinkElement();
 
+    // CachedResourceClient.
+    void ref() const final { HTMLElement::ref(); }
+    void deref() const final { HTMLElement::deref(); }
+
     URL href() const;
     WEBCORE_EXPORT const AtomString& rel() const;
+
+#if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
+    URL environmentMap() const;
+    bool isSpatialBackdrop() const { return m_relAttribute.isSpatialBackdrop; }
+#endif
 
     AtomString target() const final;
 
@@ -75,9 +83,7 @@ public:
 
     WEBCORE_EXPORT bool mediaAttributeMatches() const;
 
-    WEBCORE_EXPORT void setCrossOrigin(const AtomString&);
     WEBCORE_EXPORT String crossOrigin() const;
-    WEBCORE_EXPORT void setAs(const AtomString&);
     WEBCORE_EXPORT String as() const;
 
     void dispatchPendingEvent(LinkEventSender*, const AtomString& eventType);
@@ -92,15 +98,15 @@ public:
 
     void allowPrefetchLoadAndErrorForTesting() { m_allowPrefetchLoadAndErrorForTesting = true; }
 
-    void setReferrerPolicyForBindings(const AtomString&);
     String referrerPolicyForBindings() const;
     ReferrerPolicy referrerPolicy() const;
 
-    void setFetchPriorityForBindings(const AtomString&);
     String fetchPriorityForBindings() const;
-    RequestPriority fetchPriorityHint() const;
+    RequestPriority fetchPriority() const;
 
-    void processInternalResourceLink(HTMLAnchorElement* = nullptr);
+    // If element is specified, checks if that Element satisfies the link.
+    // Otherwise checks if any Element in the tree does.
+    void processInternalResourceLink(Element* = nullptr);
 
 private:
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
@@ -110,7 +116,9 @@ private:
     static void processCallback(Node*);
     void clearSheet();
 
+    void potentiallyBlockRendering();
     void unblockRendering();
+    bool isImplicitlyPotentiallyRenderBlocking() const;
 
     InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) final;
     void didFinishInsertingNode() final;
@@ -119,7 +127,7 @@ private:
     void initializeStyleSheet(Ref<StyleSheetContents>&&, const CachedCSSStyleSheet&, MediaQueryParserContext);
 
     // from CachedResourceClient
-    void setCSSStyleSheet(const String& href, const URL& baseURL, const String& charset, const CachedCSSStyleSheet*) final;
+    void setCSSStyleSheet(const String& href, const URL& baseURL, ASCIILiteral charset, const CachedCSSStyleSheet*) final;
     bool sheetLoaded() final;
     void notifyLoadedSheetAndAllCriticalSubresources(bool errorOccurred) final;
     void startLoadingDynamicSheet() final;
@@ -141,13 +149,15 @@ private:
 
     String debugDescription() const final;
 
-    enum PendingSheetType : uint8_t { Unknown, ActiveSheet, InactiveSheet };
+    enum class PendingSheetType : uint8_t { Unknown, Active, Inactive };
     void addPendingSheet(PendingSheetType);
 
     void removePendingSheet();
 
-    LinkLoader m_linkLoader;
-    Style::Scope* m_styleScope { nullptr };
+    CheckedPtr<Style::Scope> checkedStyleScope();
+
+    const Ref<LinkLoader> m_linkLoader;
+    CheckedPtr<Style::Scope> m_styleScope;
     CachedResourceHandle<CachedCSSStyleSheet> m_cachedSheet;
     RefPtr<CSSStyleSheet> m_sheet;
     enum DisabledState : uint8_t {
@@ -160,9 +170,12 @@ private:
     String m_media;
     String m_integrityMetadataForPendingSheetRequest;
     URL m_url;
-    std::unique_ptr<DOMTokenList> m_sizes;
-    std::unique_ptr<DOMTokenList> m_relList;
-    std::unique_ptr<DOMTokenList> m_blockingList;
+#if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
+    URL m_environmentMapURL;
+#endif
+    const std::unique_ptr<DOMTokenList> m_sizes;
+    const std::unique_ptr<DOMTokenList> m_relList;
+    const std::unique_ptr<DOMTokenList> m_blockingList;
     std::unique_ptr<ExpectIdTargetObserver> m_expectIdTargetObserver;
     DisabledState m_disabledState;
     LinkRelAttribute m_relAttribute;

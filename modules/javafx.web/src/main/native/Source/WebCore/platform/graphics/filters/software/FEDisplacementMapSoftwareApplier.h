@@ -23,20 +23,21 @@
 #pragma once
 
 #include "FilterEffectApplier.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class FEDisplacementMap;
 
 class FEDisplacementMapSoftwareApplier final : public FilterEffectConcreteApplier<FEDisplacementMap> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(FEDisplacementMapSoftwareApplier);
     using Base = FilterEffectConcreteApplier<FEDisplacementMap>;
 
 public:
     FEDisplacementMapSoftwareApplier(const FEDisplacementMap&);
 
 private:
-    bool apply(const Filter&, const FilterImageVector& inputs, FilterImage& result) const final;
+    bool apply(const Filter&, std::span<const Ref<FilterImage>> inputs, FilterImage& result) const final;
 
     static inline unsigned byteOffsetOfPixel(unsigned x, unsigned y, unsigned rowBytes)
     {

@@ -183,6 +183,52 @@ check_valid_channel_positions (const GstAudioChannelPosition * position,
 }
 
 /**
+ * gst_audio_reorder_channels_with_reorder_map:
+ * @data: (array length=size) (element-type guint8): The pointer to
+ *   the memory.
+ * @size: The size of the memory.
+ * @bps: The number of bytes per sample.
+ * @channels: The number of channels.
+ * @reorder_map: (array length=channels): The channel reorder map.
+ *
+ * Reorders @data with the given @reorder_map.
+ *
+ * The reorder map can be retrieved for example with
+ * gst_audio_get_channel_reorder_map().
+ *
+ * Note: this function assumes the audio data is in interleaved layout
+ *
+ * Since: 1.26
+ */
+void
+gst_audio_reorder_channels_with_reorder_map (gpointer data, gsize size,
+    gint bps, gint channels, const gint * reorder_map)
+{
+  gint bpf = bps * channels;
+  guint8 *ptr = data;
+  gsize n;
+
+  g_return_if_fail (data != NULL);
+  g_return_if_fail (size % (bps * channels) == 0);
+  g_return_if_fail (bps > 0);
+  g_return_if_fail (bps <= 64);
+  g_return_if_fail (channels > 0);
+  g_return_if_fail (channels <= 64);
+  g_return_if_fail (reorder_map != NULL);
+
+  n = size / bpf;
+  for (gsize i = 0; i < n; i++) {
+    guint8 tmp[64 * 8];
+
+    memcpy (tmp, ptr, bpf);
+    for (gint j = 0; j < channels; j++)
+      memcpy (ptr + reorder_map[j] * bps, tmp + j * bps, bps);
+
+    ptr += bpf;
+  }
+}
+
+/**
  * gst_audio_reorder_channels:
  * @data: (array length=size) (element-type guint8): The pointer to
  *   the memory.
@@ -196,6 +242,12 @@ check_valid_channel_positions (const GstAudioChannelPosition * position,
  * positions @to. @from and @to must contain the same number of
  * positions and the same positions, only in a different order.
  *
+ * This function internally calls gst_audio_get_channel_reorder_map() and
+ * gst_audio_reorder_channels_with_reorder_map(). It is more efficient to call
+ * gst_audio_get_channel_reorder_map() once to retrieve the reorder map and
+ * then call gst_audio_reorder_channels_with_reorder_map() with the same
+ * reorder map until the channel positions change.
+ *
  * Note: this function assumes the audio data is in interleaved layout
  *
  * Returns: %TRUE if the reordering was possible.
@@ -206,11 +258,7 @@ gst_audio_reorder_channels (gpointer data, gsize size, GstAudioFormat format,
     const GstAudioChannelPosition * to)
 {
   const GstAudioFormatInfo *info;
-  gint i, j, n;
   gint reorder_map[64] = { 0, };
-  guint8 *ptr;
-  gint bpf, bps;
-  guint8 tmp[64 * 8];
 
   info = gst_audio_format_get_info (format);
 
@@ -234,19 +282,8 @@ gst_audio_reorder_channels (gpointer data, gsize size, GstAudioFormat format,
   if (!gst_audio_get_channel_reorder_map (channels, from, to, reorder_map))
     return FALSE;
 
-  bps = info->width / 8;
-  bpf = bps * channels;
-  ptr = data;
-
-  n = size / bpf;
-  for (i = 0; i < n; i++) {
-
-    memcpy (tmp, ptr, bpf);
-    for (j = 0; j < channels; j++)
-      memcpy (ptr + reorder_map[j] * bps, tmp + j * bps, bps);
-
-    ptr += bpf;
-  }
+  gst_audio_reorder_channels_with_reorder_map (data, size, info->width / 8,
+      channels, reorder_map);
 
   return TRUE;
 }

@@ -37,7 +37,7 @@ class WebXRInputSource;
 class WebXRSession;
 
 class XRInputSourcesChangeEvent final : public Event {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(XRInputSourcesChangeEvent);
+    WTF_MAKE_TZONE_ALLOCATED(XRInputSourcesChangeEvent);
 public:
     struct Init : EventInit {
         RefPtr<WebXRSession> session;
@@ -55,7 +55,7 @@ public:
 private:
     XRInputSourcesChangeEvent(const AtomString&, const Init&, IsTrusted);
 
-    Ref<WebXRSession> m_session;
+    const Ref<WebXRSession> m_session;
     Vector<Ref<WebXRInputSource>> m_added;
     Vector<Ref<WebXRInputSource>> m_removed;
 };

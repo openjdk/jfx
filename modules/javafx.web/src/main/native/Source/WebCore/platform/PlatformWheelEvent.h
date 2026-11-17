@@ -25,9 +25,10 @@
 
 #pragma once
 
-#include "FloatPoint.h"
-#include "IntPoint.h"
-#include "PlatformEvent.h"
+#include <WebCore/FloatPoint.h>
+#include <WebCore/IntPoint.h>
+#include <WebCore/PlatformEvent.h>
+#include <wtf/Platform.h>
 #include <wtf/WindowsExtras.h>
 
 namespace WTF {
@@ -50,20 +51,21 @@ enum class WheelScrollGestureState : uint8_t {
 // In this case, WebKit built in paging behavior is used to page up and down.
 // This yields the same behavior as clicking in a scrollbar track to page up and down.
 
-enum PlatformWheelEventGranularity : uint8_t {
+enum class PlatformWheelEventGranularity : uint8_t {
     ScrollByPageWheelEvent,
     ScrollByPixelWheelEvent,
 };
 
 enum class PlatformWheelEventPhase : uint8_t {
-    None        = 0,
+    None,
 #if ENABLE(ASYNC_SCROLLING) || ENABLE(KINETIC_SCROLLING)
-    Began       = 1 << 0,
-    Stationary  = 1 << 1,
-    Changed     = 1 << 2,
-    Ended       = 1 << 3,
-    Cancelled   = 1 << 4,
-    MayBegin    = 1 << 5,
+    Began,
+    Stationary,
+    Changed,
+    Ended,
+    Cancelled,
+    MayBegin,
+    WillBegin,
 #endif
 };
 
@@ -148,7 +150,7 @@ public:
     unsigned scrollCount() const { return m_scrollCount; }
     FloatSize unacceleratedScrollingDelta() const { return { m_unacceleratedScrollingDeltaX, m_unacceleratedScrollingDeltaY }; }
 
-    WallTime ioHIDEventTimestamp() const { return m_ioHIDEventTimestamp; }
+    MonotonicTime ioHIDEventTimestamp() const { return m_ioHIDEventTimestamp; }
 
     std::optional<FloatSize> rawPlatformDelta() const { return m_rawPlatformDelta; }
 #endif
@@ -158,6 +160,7 @@ public:
     bool isGestureContinuation() const; // The fingers-down part of the gesture excluding momentum.
     bool shouldResetLatching() const;
     bool isEndOfMomentumScroll() const;
+    bool isMomentumEvent() const;
 #else
     bool useLatchedEventElement() const { return false; }
 #endif
@@ -188,7 +191,7 @@ public:
 
 #endif
 protected:
-    PlatformWheelEventGranularity m_granularity { ScrollByPixelWheelEvent };
+    PlatformWheelEventGranularity m_granularity { PlatformWheelEventGranularity::ScrollByPixelWheelEvent };
     bool m_directionInvertedFromDevice { false };
     bool m_hasPreciseScrollingDeltas { false };
 
@@ -206,7 +209,7 @@ protected:
     PlatformWheelEventPhase m_momentumPhase { PlatformWheelEventPhase::None };
 
 #if PLATFORM(COCOA)
-    WallTime m_ioHIDEventTimestamp;
+    MonotonicTime m_ioHIDEventTimestamp;
     std::optional<FloatSize> m_rawPlatformDelta;
     unsigned m_scrollCount { 0 };
     float m_unacceleratedScrollingDeltaX { 0 };
@@ -240,6 +243,8 @@ inline bool PlatformWheelEvent::isEndOfMomentumScroll() const
 {
     return m_phase == PlatformWheelEventPhase::None && m_momentumPhase == PlatformWheelEventPhase::Ended;
 }
+
+inline bool PlatformWheelEvent::isMomentumEvent() const { return momentumPhase() != PlatformWheelEventPhase::None && momentumPhase() != PlatformWheelEventPhase::WillBegin; }
 
 #endif // ENABLE(ASYNC_SCROLLING)
 

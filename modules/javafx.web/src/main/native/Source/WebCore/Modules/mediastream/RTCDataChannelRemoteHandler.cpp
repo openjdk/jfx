@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc.
+ * Copyright (C) 2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,8 +32,11 @@
 #include "RTCDataChannelRemoteHandlerConnection.h"
 #include "ScriptExecutionContextIdentifier.h"
 #include "SharedBuffer.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RTCDataChannelRemoteHandler);
 
 std::unique_ptr<RTCDataChannelRemoteHandler> RTCDataChannelRemoteHandler::create(RTCDataChannelIdentifier remoteIdentifier, RefPtr<RTCDataChannelRemoteHandlerConnection>&& connection)
 {
@@ -44,7 +47,7 @@ std::unique_ptr<RTCDataChannelRemoteHandler> RTCDataChannelRemoteHandler::create
 
 RTCDataChannelRemoteHandler::RTCDataChannelRemoteHandler(RTCDataChannelIdentifier remoteIdentifier, Ref<RTCDataChannelRemoteHandlerConnection>&& connection)
     : m_remoteIdentifier(remoteIdentifier)
-    , m_connection(WTFMove(connection))
+    , m_connection(WTF::move(connection))
 {
 }
 
@@ -52,27 +55,32 @@ RTCDataChannelRemoteHandler::~RTCDataChannelRemoteHandler() = default;
 
 void RTCDataChannelRemoteHandler::didChangeReadyState(RTCDataChannelState state)
 {
-    m_client->didChangeReadyState(state);
+    if (RefPtr client = m_client.get())
+        client->didChangeReadyState(state);
 }
 
 void RTCDataChannelRemoteHandler::didReceiveStringData(String&& text)
 {
-    m_client->didReceiveStringData(text);
+    if (RefPtr client = m_client.get())
+        client->didReceiveStringData(text);
 }
 
 void RTCDataChannelRemoteHandler::didReceiveRawData(std::span<const uint8_t> data)
 {
-    m_client->didReceiveRawData(data);
+    if (RefPtr client = m_client.get())
+        client->didReceiveRawData(data);
 }
 
 void RTCDataChannelRemoteHandler::didDetectError(Ref<RTCError>&& error)
 {
-    m_client->didDetectError(WTFMove(error));
+    if (RefPtr client = m_client.get())
+        client->didDetectError(WTF::move(error));
 }
 
 void RTCDataChannelRemoteHandler::bufferedAmountIsDecreasing(size_t amount)
 {
-    m_client->bufferedAmountIsDecreasing(amount);
+    if (RefPtr client = m_client.get())
+        client->bufferedAmountIsDecreasing(amount);
 }
 
 void RTCDataChannelRemoteHandler::readyToSend()
@@ -87,11 +95,10 @@ void RTCDataChannelRemoteHandler::readyToSend()
         m_connection->close(m_remoteIdentifier);
 }
 
-void RTCDataChannelRemoteHandler::setClient(RTCDataChannelHandlerClient& client, ScriptExecutionContextIdentifier contextIdentifier)
+void RTCDataChannelRemoteHandler::setClient(RTCDataChannelHandlerClient& client, std::optional<ScriptExecutionContextIdentifier> contextIdentifier)
 {
-    m_client = &client;
-    ASSERT(m_localIdentifier.channelIdentifier);
-    m_connection->connectToSource(*this, contextIdentifier, m_localIdentifier, m_remoteIdentifier);
+    m_client = client;
+    m_connection->connectToSource(*this, contextIdentifier, *m_localIdentifier, m_remoteIdentifier);
 }
 
 bool RTCDataChannelRemoteHandler::sendStringData(const CString& text)
@@ -100,7 +107,7 @@ bool RTCDataChannelRemoteHandler::sendStringData(const CString& text)
         m_pendingMessages.append(Message { false, SharedBuffer::create(text.span()) });
         return true;
     }
-    m_connection->sendData(m_remoteIdentifier, false, text.span());
+    m_connection->sendData(m_remoteIdentifier, false, byteCast<uint8_t>(text.span()));
     return true;
 }
 

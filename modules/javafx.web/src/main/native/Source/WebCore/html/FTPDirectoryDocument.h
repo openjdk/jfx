@@ -24,12 +24,13 @@
 
 #pragma once
 
+#include "DocumentSettingsValues.h"
 #include "HTMLDocument.h"
 
 namespace WebCore {
 
 class FTPDirectoryDocument final : public HTMLDocument {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(FTPDirectoryDocument);
+    WTF_MAKE_TZONE_ALLOCATED(FTPDirectoryDocument);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(FTPDirectoryDocument);
 public:
     static Ref<FTPDirectoryDocument> create(LocalFrame* frame, const Settings& settings, const URL& url)

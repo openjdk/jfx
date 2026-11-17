@@ -25,8 +25,11 @@
 
 #include "config.h"
 #include "RunLoopObserver.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RunLoopObserver);
 
 RunLoopObserver::~RunLoopObserver()
 {
@@ -35,7 +38,7 @@ RunLoopObserver::~RunLoopObserver()
 
 void RunLoopObserver::runLoopObserverFired()
 {
-#if USE(CF)
+#if USE(CF) || USE(GLIB)
     ASSERT(m_runLoopObserver);
 #endif
     m_callback();

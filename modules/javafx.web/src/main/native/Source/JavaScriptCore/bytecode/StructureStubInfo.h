@@ -139,14 +139,14 @@ public:
 
     // Check if the stub has weak references that are dead. If it does, then it resets itself,
     // either entirely or just enough to ensure that those dead pointers don't get used anymore.
-    void visitWeakReferences(const ConcurrentJSLockerBase&, CodeBlock*);
+    void visitWeak(const ConcurrentJSLockerBase&, CodeBlock*);
 
     // This returns true if it has marked everything that it will ever mark.
     template<typename Visitor> void propagateTransitions(Visitor&);
 
-    StubInfoSummary summary(VM&) const;
+    StubInfoSummary summary(const ConcurrentJSLocker&, VM&) const;
 
-    static StubInfoSummary summary(VM&, const StructureStubInfo*);
+    static StubInfoSummary summary(const ConcurrentJSLocker&, VM&, const StructureStubInfo*);
 
     CacheableIdentifier identifier() const { return m_identifier; }
 
@@ -233,10 +233,14 @@ public:
 
     bool useHandlerIC() const { return useDataIC && Options::useHandlerIC(); }
 
+    Vector<AccessCase*, 16> listedAccessCases(const AbstractLocker&) const;
+
 private:
+    AccessGenerationResult upgradeForPolyProtoIfNecessary(const GCSafeConcurrentJSLocker&, VM&, CodeBlock*, const Vector<AccessCase*, 16>&, AccessCase&);
+
     ALWAYS_INLINE bool considerRepatchingCacheImpl(VM& vm, CodeBlock* codeBlock, Structure* structure, CacheableIdentifier impl)
     {
-        DisallowGC disallowGC;
+        AssertNoGC assertNoGC;
 
 
         // This method is called from the Optimize variants of IC slow paths. The first part of this
@@ -411,15 +415,15 @@ public:
     };
 
     JSGlobalObject* m_globalObject { nullptr };
-    std::unique_ptr<PolymorphicAccess> m_stub;
 private:
+    std::unique_ptr<PolymorphicAccess> m_stub;
     RefPtr<InlineCacheHandler> m_inlinedHandler;
     RefPtr<InlineCacheHandler> m_handler;
     // Represents those structures that already have buffered AccessCases in the PolymorphicAccess.
     // Note that it's always safe to clear this. If we clear it prematurely, then if we see the same
     // structure again during this buffering countdown, we will create an AccessCase object for it.
     // That's not so bad - we'll get rid of the redundant ones once we regenerate.
-    std::variant<std::monostate, Vector<StructureID>, Vector<std::tuple<StructureID, CacheableIdentifier>>> m_bufferedStructures WTF_GUARDED_BY_LOCK(m_bufferedStructuresLock);
+    Variant<std::monostate, Vector<StructureID>, Vector<std::tuple<StructureID, CacheableIdentifier>>> m_bufferedStructures WTF_GUARDED_BY_LOCK(m_bufferedStructuresLock);
 public:
 
     ScalarRegisterSet usedRegisters;
@@ -588,7 +592,7 @@ struct BaselineUnlinkedStructureStubInfo : JSC::UnlinkedStructureStubInfo {
     BytecodeIndex bytecodeIndex;
 };
 
-using StubInfoMap = HashMap<CodeOrigin, StructureStubInfo*, CodeOriginApproximateHash>;
+using StubInfoMap = UncheckedKeyHashMap<CodeOrigin, StructureStubInfo*, CodeOriginApproximateHash>;
 
 #endif
 

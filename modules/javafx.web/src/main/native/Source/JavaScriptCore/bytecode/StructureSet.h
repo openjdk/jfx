@@ -25,9 +25,11 @@
 
 #pragma once
 
-#include "DumpContext.h"
-#include "Structure.h"
+#include <JavaScriptCore/DumpContext.h>
+#include <JavaScriptCore/Structure.h>
 #include <wtf/TinyPtrSet.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -60,3 +62,5 @@ public:
 };
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

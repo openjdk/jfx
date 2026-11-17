@@ -31,8 +31,11 @@
 #include "NotImplemented.h"
 #include <wtf/Assertions.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Cursor);
 
 IntPoint determineHotSpot(Image* image, const IntPoint& specifiedHotSpot)
 {
@@ -443,7 +446,7 @@ const Cursor& grabbingCursor()
     return c;
 }
 
-#if !HAVE(NSCURSOR) && !PLATFORM(GTK) && !PLATFORM(WIN)
+#if !HAVE(NSCURSOR) && !PLATFORM(WIN)
 void Cursor::ensurePlatformCursor() const
 {
     notImplemented();

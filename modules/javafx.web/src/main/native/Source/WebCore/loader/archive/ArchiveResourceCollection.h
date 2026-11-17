@@ -28,6 +28,7 @@
 
 #pragma once
 
+#include "LoaderMalloc.h"
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/Noncopyable.h>
@@ -40,7 +41,7 @@ class ArchiveResource;
 
 class ArchiveResourceCollection {
     WTF_MAKE_NONCOPYABLE(ArchiveResourceCollection);
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Loader);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(ArchiveResourceCollection, Loader);
 
 public:
     ArchiveResourceCollection() = default;
@@ -52,8 +53,8 @@ public:
     RefPtr<Archive> popSubframeArchive(const String& frameName, const URL&);
 
 private:
-    HashMap<String, RefPtr<ArchiveResource>> m_subresources;
-    HashMap<String, RefPtr<Archive>> m_subframes;
+    HashMap<String, Ref<ArchiveResource>> m_subresources;
+    HashMap<String, Ref<Archive>> m_subframes;
 };
 
 } // namespace WebCore

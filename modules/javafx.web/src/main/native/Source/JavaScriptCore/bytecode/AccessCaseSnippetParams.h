@@ -40,12 +40,12 @@ class AccessCaseSnippetParams final : public SnippetParams {
 public:
     friend class InlineCacheCompiler;
     AccessCaseSnippetParams(VM& vm, Vector<Value>&& regs, Vector<GPRReg>&& gpScratch, Vector<FPRReg>&& fpScratch)
-        : SnippetParams(vm, WTFMove(regs), WTFMove(gpScratch), WTFMove(fpScratch))
+        : SnippetParams(vm, WTF::move(regs), WTF::move(gpScratch), WTF::move(fpScratch))
     {
     }
 
     class SlowPathCallGenerator {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_FAST_ALLOCATED(SlowPathCallGenerator);
     public:
         virtual ~SlowPathCallGenerator() { }
         virtual CCallHelpers::JumpList generate(InlineCacheCompiler&, const RegisterSetBuilder& usedRegistersBySnippet, CCallHelpers&) = 0;

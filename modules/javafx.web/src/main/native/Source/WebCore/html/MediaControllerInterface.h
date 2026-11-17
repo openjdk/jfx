@@ -27,12 +27,13 @@
 
 #if ENABLE(VIDEO)
 
-#include "ExceptionOr.h"
-#include "HTMLMediaElementEnums.h"
+#include <WebCore/HTMLMediaElementEnums.h>
 
 namespace WebCore {
 
 class TimeRanges;
+
+template<typename> class ExceptionOr;
 
 class MediaControllerInterface : public HTMLMediaElementEnums {
 public:

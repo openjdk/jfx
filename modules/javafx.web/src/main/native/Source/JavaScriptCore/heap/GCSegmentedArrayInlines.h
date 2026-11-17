@@ -25,7 +25,9 @@
 
 #pragma once
 
-#include "GCSegmentedArray.h"
+#include <JavaScriptCore/GCSegmentedArray.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -221,3 +223,5 @@ inline size_t GCSegmentedArray<T>::size() const
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

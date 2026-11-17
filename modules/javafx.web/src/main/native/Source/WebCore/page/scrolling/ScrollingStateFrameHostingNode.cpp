@@ -29,9 +29,12 @@
 #if ENABLE(ASYNC_SCROLLING)
 
 #include "ScrollingStateTree.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ScrollingStateFrameHostingNode);
 
 Ref<ScrollingStateFrameHostingNode> ScrollingStateFrameHostingNode::create(ScrollingStateTree& stateTree, ScrollingNodeID nodeID)
 {
@@ -40,11 +43,11 @@ Ref<ScrollingStateFrameHostingNode> ScrollingStateFrameHostingNode::create(Scrol
 
 Ref<ScrollingStateFrameHostingNode> ScrollingStateFrameHostingNode::create(ScrollingNodeID nodeID, Vector<Ref<ScrollingStateNode>>&& children, OptionSet<ScrollingStateNodeProperty> changedProperties, std::optional<PlatformLayerIdentifier> layerID, std::optional<LayerHostingContextIdentifier> identifier)
 {
-    return adoptRef(*new ScrollingStateFrameHostingNode(nodeID, WTFMove(children), changedProperties, layerID, identifier));
+    return adoptRef(*new ScrollingStateFrameHostingNode(nodeID, WTF::move(children), changedProperties, layerID, identifier));
 }
 
 ScrollingStateFrameHostingNode::ScrollingStateFrameHostingNode(ScrollingNodeID nodeID, Vector<Ref<ScrollingStateNode>>&& children, OptionSet<ScrollingStateNodeProperty> changedProperties, std::optional<PlatformLayerIdentifier> layerID, std::optional<LayerHostingContextIdentifier> identifier)
-    : ScrollingStateNode(ScrollingNodeType::FrameHosting, nodeID, WTFMove(children), changedProperties, layerID)
+    : ScrollingStateNode(ScrollingNodeType::FrameHosting, nodeID, WTF::move(children), changedProperties, layerID)
     , m_hostingContext(identifier)
 {
     ASSERT(isFrameHostingNode());
@@ -79,7 +82,7 @@ Ref<ScrollingStateNode> ScrollingStateFrameHostingNode::clone(ScrollingStateTree
 
 void ScrollingStateFrameHostingNode::dumpProperties(TextStream& ts, OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const
 {
-    ts << "Frame hosting node";
+    ts << "Frame hosting node"_s;
     ScrollingStateNode::dumpProperties(ts, behavior);
 }
 

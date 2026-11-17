@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2013 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,7 +31,7 @@ namespace Inspector {
 using namespace JSC;
 
 JavaScriptCallFrame::JavaScriptCallFrame(Ref<DebuggerCallFrame>&& debuggerCallFrame)
-    : m_debuggerCallFrame(WTFMove(debuggerCallFrame))
+    : m_debuggerCallFrame(WTF::move(debuggerCallFrame))
 {
 }
 

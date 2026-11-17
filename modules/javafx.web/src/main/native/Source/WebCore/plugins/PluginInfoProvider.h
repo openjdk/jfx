@@ -25,13 +25,14 @@
 
 #pragma once
 
-#include "PluginData.h"
+#include <WebCore/PluginData.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/WeakHashSet.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
-class WEBCORE_EXPORT PluginInfoProvider : public RefCounted<PluginInfoProvider>, public CanMakeWeakPtr<PluginInfoProvider> {
+class WEBCORE_EXPORT PluginInfoProvider : public RefCountedAndCanMakeWeakPtr<PluginInfoProvider> {
 public:
     virtual ~PluginInfoProvider();
 

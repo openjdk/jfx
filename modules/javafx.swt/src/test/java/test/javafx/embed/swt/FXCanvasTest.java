@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,30 +31,42 @@ import javafx.scene.Scene;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
-import static org.junit.Assert.assertSame;
+import java.util.concurrent.TimeUnit;
 
-public class FXCanvasTest {
+import static org.junit.jupiter.api.Assertions.assertSame;
 
-    @Rule
-    public SwtRule ctx = new SwtRule();
+public class FXCanvasTest extends SWTTest {
 
-    @Test(timeout = 10000)
-    public void getFXCanvas() throws Throwable {
-        final Shell shell = new Shell(Display.getCurrent());
-        final FXCanvas canvas = new FXCanvas(shell, SWT.NONE);
-        shell.open();
+    private FXCanvas canvas;
 
-        // create and hook scene
-        Scene scene = new Scene(new Group());
-        canvas.setScene(scene);
+    @Test
+    @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
+    public void testFXCanvas() throws Throwable {
+        runOnSwtThread(() -> {
+            Display display = Display.getCurrent();
+            Shell shell = new Shell(display);
+            canvas = new FXCanvas(shell, SWT.NONE);
+            shell.open();
 
-        // check FXCanvas is properly retrieved
-        assertSame(canvas, FXCanvas.getFXCanvas(canvas.getScene()));
+            // create and hook scene
+            Scene scene = new Scene(new Group());
+            canvas.setScene(scene);
 
-        // FIXME: We cannot close the shell here because of https://bugs.eclipse.org/bugs/show_bug.cgi?id=435066.
-        // shell.close();
+            display.asyncExec(() -> {
+                // check FXCanvas is properly retrieved
+                assertSame(canvas, FXCanvas.getFXCanvas(canvas.getScene()));
+
+                shell.close();
+            });
+
+            while (!shell.isDisposed()) {
+                if (!display.readAndDispatch()) {
+                    display.sleep();
+                }
+            }
+        });
     }
 }

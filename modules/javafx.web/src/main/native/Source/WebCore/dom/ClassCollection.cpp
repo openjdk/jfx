@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2008, 2014, 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2007 David Smith (catfish.man@gmail.com)
  *
  * Redistribution and use in source and binary forms, with or without
@@ -36,7 +36,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(ClassCollection);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ClassCollection);
 
 Ref<ClassCollection> ClassCollection::create(ContainerNode& rootNode, CollectionType type, const AtomString& classNames)
 {
@@ -46,7 +46,7 @@ Ref<ClassCollection> ClassCollection::create(ContainerNode& rootNode, Collection
 
 ClassCollection::~ClassCollection()
 {
-    protectedOwnerNode()->nodeLists()->removeCachedCollection(this, m_originalClassNames);
+    ownerNode().nodeLists()->removeCachedCollection(this, m_originalClassNames);
 }
 
 } // namespace WebCore

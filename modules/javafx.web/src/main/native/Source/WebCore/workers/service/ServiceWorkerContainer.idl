@@ -48,7 +48,9 @@
     attribute EventHandler onmessageerror;
 };
 
-dictionary RegistrationOptions {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary RegistrationOptions {
     USVString scope;
     WorkerType type = "classic";
     ServiceWorkerUpdateViaCache updateViaCache = "imports";

@@ -29,6 +29,8 @@
 #if ENABLE(WEBASSEMBLY)
 
 #include "ExecutableAllocator.h"
+#include "JSCellInlines.h"
+#include "JSWebAssemblyInstance.h"
 #include "LLIntData.h"
 #include "MachineContext.h"
 #include "NativeCalleeRegistry.h"
@@ -42,6 +44,8 @@
 #include <wtf/HashSet.h>
 #include <wtf/Lock.h>
 #include <wtf/threads/Signals.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC { namespace Wasm {
 
@@ -70,39 +74,49 @@ static SignalAction trapHandler(Signal signal, SigInfo& sigInfo, PlatformRegiste
 #if ENABLE(JIT)
     dataLogLnIf(WasmFaultSignalHandlerInternal::verbose, "JIT memory start: ", RawPointer(startOfFixedExecutableMemoryPool()), " end: ", RawPointer(endOfFixedExecutableMemoryPool()));
 #endif
-    dataLogLnIf(WasmFaultSignalHandlerInternal::verbose, "WasmLLInt memory start: ", RawPointer(untagCodePtr<void*, CFunctionPtrTag>(LLInt::wasmLLIntPCRangeStart)), " end: ", RawPointer(untagCodePtr<void*, CFunctionPtrTag>(LLInt::wasmLLIntPCRangeEnd)));
-    // First we need to make sure we are in JIT code or Wasm LLInt code before we can aquire any locks. Otherwise,
+    dataLogLnIf(WasmFaultSignalHandlerInternal::verbose, "WasmIPInt memory start: ", RawPointer(untagCodePtr<void*, CFunctionPtrTag>(LLInt::wasmIPIntPCRangeStart)), " end: ", RawPointer(untagCodePtr<void*, CFunctionPtrTag>(LLInt::wasmIPIntPCRangeEnd)));
+    // First we need to make sure we are in JIT code or Wasm IPInt code before we can aquire any locks. Otherwise,
     // we might have crashed in code that is already holding one of the locks we want to aquire.
     assertIsNotTagged(faultingInstruction);
-    if (isJITPC(faultingInstruction) || LLInt::isWasmLLIntPC(faultingInstruction)) {
-        bool faultedInActiveGrowableMemory = false;
+    if (isJITPC(faultingInstruction) || LLInt::isWasmIPIntPC(faultingInstruction)) {
+        std::optional<Wasm::ExceptionType> exception;
         {
             void* faultingAddress = sigInfo.faultingAddress;
             dataLogLnIf(WasmFaultSignalHandlerInternal::verbose, "checking faulting address: ", RawPointer(faultingAddress), " is in an active fast memory");
-            faultedInActiveGrowableMemory = Wasm::Memory::addressIsInGrowableOrFastMemory(faultingAddress);
+
+            // Trapping null access for WasmGC Array / Struct.
+            if (std::bit_cast<uintptr_t>(faultingAddress) < lowestAccessibleAddress())
+                exception = ExceptionType::NullAccess;
+            else if (Wasm::Memory::addressIsInGrowableOrFastMemory(faultingAddress))
+                exception = ExceptionType::OutOfBoundsMemoryAccess;
         }
-        if (faultedInActiveGrowableMemory) {
+
+        if (exception) {
             dataLogLnIf(WasmFaultSignalHandlerInternal::verbose, "found active fast memory for faulting address");
 
-            auto didFaultInWasm = [](void* faultingInstruction) {
-                if (LLInt::isWasmLLIntPC(faultingInstruction))
-                    return true;
+            auto didFaultInWasm = [](void* faultingInstruction) -> std::tuple<bool, Wasm::Callee*> {
+                if (LLInt::isWasmIPIntPC(faultingInstruction))
+                    return { true, nullptr };
                 auto& calleeRegistry = NativeCalleeRegistry::singleton();
                 Locker locker { calleeRegistry.getLock() };
                 for (auto* callee : calleeRegistry.allCallees()) {
                     if (callee->category() != NativeCallee::Category::Wasm)
                         continue;
-                    auto [start, end] = static_cast<Wasm::Callee*>(callee)->range();
+                    auto* wasmCallee = uncheckedDowncast<Wasm::Callee>(callee);
+                    auto [start, end] = wasmCallee->range();
                     dataLogLnIf(WasmFaultSignalHandlerInternal::verbose, "function start: ", RawPointer(start), " end: ", RawPointer(end));
                     if (start <= faultingInstruction && faultingInstruction < end) {
                         dataLogLnIf(WasmFaultSignalHandlerInternal::verbose, "found match");
-                        return true;
+                        return { true, wasmCallee };
                     }
                 }
-                return false;
+                return { false, nullptr };
             };
 
-            if (didFaultInWasm(faultingInstruction)) {
+            auto [isWasm, callee] = didFaultInWasm(faultingInstruction);
+            if (isWasm) {
+                auto* instance = jsSecureCast<JSWebAssemblyInstance*>(static_cast<JSCell*>(MachineContext::wasmInstancePointer(context)));
+                instance->setFaultPC(exception.value(), faultingInstruction);
 #if CPU(ARM64E) && HAVE(HARDENED_MACH_EXCEPTIONS)
                 if (g_wtfConfig.signalHandlers.useHardenedHandler) {
                     MachineContext::setInstructionPointer(context, presignedTrampoline);
@@ -150,7 +164,25 @@ void prepareSignalingMemory()
     });
 }
 
+ptrdiff_t maxAcceptableOffsetForNullReference()
+{
+#if CPU(ADDRESS64)
+    if (!Options::useWasmFaultSignalHandler())
+        return 0;
+
+    ptrdiff_t address = lowestAccessibleAddress();
+    ptrdiff_t nullValue =JSValue::encode(jsNull());
+    ptrdiff_t accessed = sizeof(v128_t) * 2; // Paired v128_t access.
+    if (address < (nullValue + accessed))
+        return 0;
+    return address - nullValue - accessed;
+#else
+    return 0;
+#endif
+}
+
 } } // namespace JSC::Wasm
 
-#endif // ENABLE(WEBASSEMBLY)
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
+#endif // ENABLE(WEBASSEMBLY)

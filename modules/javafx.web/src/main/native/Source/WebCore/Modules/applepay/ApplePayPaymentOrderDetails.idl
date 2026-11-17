@@ -24,7 +24,8 @@
  */
 
 [
-    Conditional=APPLE_PAY_PAYMENT_ORDER_DETAILS
+    Conditional=APPLE_PAY_PAYMENT_ORDER_DETAILS,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary ApplePayPaymentOrderDetails {
     required DOMString orderTypeIdentifier;
     required DOMString orderIdentifier;

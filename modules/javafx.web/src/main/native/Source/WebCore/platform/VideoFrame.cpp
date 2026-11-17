@@ -32,13 +32,17 @@
 #include "VideoFrameGStreamer.h"
 #endif
 
+#if !PLATFORM(COCOA) && !USE(GSTREAMER)
+#include "ImageOrientation.h"
+#endif
+
 namespace WebCore {
 
 VideoFrame::VideoFrame(MediaTime presentationTime, bool isMirrored, Rotation rotation, PlatformVideoColorSpace&& colorSpace)
     : m_presentationTime(presentationTime)
     , m_isMirrored(isMirrored)
     , m_rotation(rotation)
-    , m_colorSpace(WTFMove(colorSpace))
+    , m_colorSpace(WTF::move(colorSpace))
 {
 }
 
@@ -108,9 +112,10 @@ void VideoFrame::copyTo(std::span<uint8_t>, VideoPixelFormat, Vector<ComputedPla
     callback({ });
 }
 
-void VideoFrame::paintInContext(GraphicsContext&, const FloatRect&, const ImageOrientation&, bool)
+RefPtr<NativeImage> VideoFrame::copyNativeImage() const
 {
     // FIXME: Add support.
+    return nullptr;
 }
 #endif // !PLATFORM(COCOA)
 

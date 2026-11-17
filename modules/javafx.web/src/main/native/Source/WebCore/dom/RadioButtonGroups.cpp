@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2024 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -21,15 +21,21 @@
 #include "config.h"
 #include "RadioButtonGroups.h"
 
+#include "AXObjectCache.h"
 #include "HTMLInputElement.h"
+#include "NodeDocument.h"
 #include "Range.h"
+#include <ranges>
 #include <wtf/HashSet.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RadioButtonGroups);
+
 class RadioButtonGroup {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(RadioButtonGroup);
 public:
     bool isEmpty() const { return m_members.isEmptyIgnoringNullReferences(); }
     bool isRequired() const { return m_requiredCount; }
@@ -52,6 +58,8 @@ private:
     size_t m_requiredCount { 0 };
 };
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RadioButtonGroup);
+
 inline bool RadioButtonGroup::isValid() const
 {
     return !isRequired() || m_checkedButton;
@@ -62,7 +70,7 @@ Vector<Ref<HTMLInputElement>> RadioButtonGroup::members() const
     auto sortedMembers = WTF::map(m_members, [](auto& element) -> Ref<HTMLInputElement> {
         return element;
     });
-    std::sort(sortedMembers.begin(), sortedMembers.end(), [](auto& a, auto& b) {
+    std::ranges::sort(sortedMembers, [](auto& a, auto& b) {
         return is_lt(treeOrder<ComposedTree>(a, b));
     });
     return sortedMembers;
@@ -197,6 +205,11 @@ bool RadioButtonGroup::contains(HTMLInputElement& button) const
 RadioButtonGroups::RadioButtonGroups() = default;
 RadioButtonGroups::~RadioButtonGroups() = default;
 
+void RadioButtonGroups::clear()
+{
+    m_nameToGroupMap.clear();
+}
+
 void RadioButtonGroups::addButton(HTMLInputElement& element)
 {
     ASSERT(element.isRadioButton());
@@ -207,6 +220,9 @@ void RadioButtonGroups::addButton(HTMLInputElement& element)
     if (!group)
         group = makeUnique<RadioButtonGroup>();
     group->add(element);
+
+    if (CheckedPtr cache = element.protectedDocument()->existingAXObjectCache())
+        cache->onRadioGroupMembershipChanged(element);
 }
 
 Vector<Ref<HTMLInputElement>> RadioButtonGroups::groupMembers(const HTMLInputElement& element) const
@@ -281,6 +297,9 @@ void RadioButtonGroups::removeButton(HTMLInputElement& element)
     it->value->remove(element);
     if (it->value->isEmpty())
         m_nameToGroupMap.remove(it);
+
+    if (CheckedPtr cache = element.protectedDocument()->existingAXObjectCache())
+        cache->onRadioGroupMembershipChanged(element);
 }
 
 } // namespace

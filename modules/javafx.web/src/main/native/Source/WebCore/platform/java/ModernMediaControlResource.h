@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,15 +33,18 @@
 class MediaControlResource {
 public:
     virtual String getValue(const String &key) = 0;
+    virtual const HashMap<String, String>& getImageMap() const = 0;
     virtual ~MediaControlResource() { }
 };
 
 class ModernMediaControlResource : public MediaControlResource {
 private:
+    HashMap<String, String> imageMapBase64;
     HashMap<String, String> imageMap;
 public:
     ModernMediaControlResource();
     String getValue(const String &resource_key) override;
+    const HashMap<String, String>& getImageMap() const override;
 };
 
 // Factory for creating MediaControlResource objects

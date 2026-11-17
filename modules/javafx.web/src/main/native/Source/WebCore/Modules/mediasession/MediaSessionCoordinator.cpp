@@ -28,8 +28,11 @@
 
 #if ENABLE(MEDIA_SESSION_COORDINATOR)
 
+#include "ContextDestructionObserverInlines.h"
 #include "Document.h"
+#include "Event.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "JSDOMException.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSMediaSessionCoordinatorState.h"
@@ -42,17 +45,20 @@
 #include <wtf/Logger.h>
 #include <wtf/LoggerHelper.h>
 #include <wtf/Seconds.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/MakeString.h>
 
 static const Seconds CommandTimeTolerance = 50_ms;
 
 namespace WebCore {
 
-static const void* nextCoordinatorLogIdentifier()
+static uint64_t nextCoordinatorLogIdentifier()
 {
     static uint64_t logIdentifier = cryptographicallyRandomNumber<uint32_t>();
-    return reinterpret_cast<const void*>(++logIdentifier);
+    return ++logIdentifier;
 }
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MediaSessionCoordinator);
 
 Ref<MediaSessionCoordinator> MediaSessionCoordinator::create(ScriptExecutionContext* context)
 {
@@ -74,7 +80,7 @@ void MediaSessionCoordinator::setMediaSessionCoordinatorPrivate(Ref<MediaSession
     ALWAYS_LOG(LOGIDENTIFIER);
     if (m_privateCoordinator)
         m_privateCoordinator->leave();
-    m_privateCoordinator = WTFMove(privateCoordinator);
+    m_privateCoordinator = WTF::move(privateCoordinator);
     m_privateCoordinator->setLogger(m_logger.copyRef(), m_logIdentifier);
     m_privateCoordinator->setClient(*this);
     coordinatorStateChanged(MediaSessionCoordinatorState::Waiting);
@@ -85,6 +91,11 @@ MediaSessionCoordinator::~MediaSessionCoordinator() = default;
 void MediaSessionCoordinator::eventListenersDidChange()
 {
     m_hasCoordinatorsStateChangeEventListener = hasEventListeners(eventNames().coordinatorstatechangeEvent);
+}
+
+ScriptExecutionContext* MediaSessionCoordinator::scriptExecutionContext() const
+{
+    return ContextDestructionObserver::scriptExecutionContext();
 }
 
 bool MediaSessionCoordinator::virtualHasPendingActivity() const
@@ -105,7 +116,7 @@ void MediaSessionCoordinator::join(DOMPromiseDeferred<void>&& promise)
     }
     ASSERT(m_privateCoordinator, "We must be in Waiting state if no private coordinator is set");
 
-    m_privateCoordinator->join([protectedThis = Ref { *this }, identifier, promise = WTFMove(promise)] (std::optional<Exception>&& exception) mutable {
+    m_privateCoordinator->join([protectedThis = Ref { *this }, identifier, promise = WTF::move(promise)] (std::optional<Exception>&& exception) mutable {
         if (!protectedThis->m_session) {
             promise.reject(Exception { ExceptionCode::InvalidStateError });
             return;
@@ -113,7 +124,7 @@ void MediaSessionCoordinator::join(DOMPromiseDeferred<void>&& promise)
 
         if (exception) {
             protectedThis->logger().error(protectedThis->logChannel(), identifier, "coordinator.join failed!");
-            promise.reject(WTFMove(*exception));
+            promise.reject(WTF::move(*exception));
             return;
         }
 
@@ -162,14 +173,14 @@ void MediaSessionCoordinator::seekTo(double time, DOMPromiseDeferred<void>&& pro
         return;
     }
 
-    m_privateCoordinator->seekTo(time, [protectedThis = Ref { *this }, identifier, promise = WTFMove(promise)] (std::optional<Exception>&& exception) mutable {
+    m_privateCoordinator->seekTo(time, [protectedThis = Ref { *this }, identifier, promise = WTF::move(promise)] (std::optional<Exception>&& exception) mutable {
         if (!protectedThis->m_session) {
             promise.reject(Exception { ExceptionCode::InvalidStateError });
             return;
         }
 
         if (exception) {
-            promise.reject(WTFMove(*exception));
+            promise.reject(WTF::move(*exception));
             protectedThis->logger().error(protectedThis->logChannel(), identifier, "coordinator.seekTo failed!");
             return;
         }
@@ -195,14 +206,14 @@ void MediaSessionCoordinator::play(DOMPromiseDeferred<void>&& promise)
         return;
     }
 
-    m_privateCoordinator->play([protectedThis = Ref { *this }, identifier, promise = WTFMove(promise)] (std::optional<Exception>&& exception) mutable {
+    m_privateCoordinator->play([protectedThis = Ref { *this }, identifier, promise = WTF::move(promise)] (std::optional<Exception>&& exception) mutable {
         if (!protectedThis->m_session) {
             promise.reject(Exception { ExceptionCode::InvalidStateError });
             return;
         }
 
         if (exception) {
-            promise.reject(WTFMove(*exception));
+            promise.reject(WTF::move(*exception));
             protectedThis->logger().error(protectedThis->logChannel(), identifier, "coordinator.play failed!");
             return;
         }
@@ -228,14 +239,14 @@ void MediaSessionCoordinator::pause(DOMPromiseDeferred<void>&& promise)
         return;
     }
 
-    m_privateCoordinator->pause([protectedThis = Ref { *this }, identifier, promise = WTFMove(promise)] (std::optional<Exception>&& exception) mutable {
+    m_privateCoordinator->pause([protectedThis = Ref { *this }, identifier, promise = WTF::move(promise)] (std::optional<Exception>&& exception) mutable {
         if (!protectedThis->m_session) {
             promise.reject(Exception { ExceptionCode::InvalidStateError });
             return;
         }
 
         if (exception) {
-            promise.reject(WTFMove(*exception));
+            promise.reject(WTF::move(*exception));
             protectedThis->logger().error(protectedThis->logChannel(), identifier, "coordinator.pause failed!");
             return;
         }
@@ -261,14 +272,14 @@ void MediaSessionCoordinator::setTrack(const String& track, DOMPromiseDeferred<v
         return;
     }
 
-    m_privateCoordinator->setTrack(track, [protectedThis = Ref { *this }, identifier, promise = WTFMove(promise)] (std::optional<Exception>&& exception) mutable {
+    m_privateCoordinator->setTrack(track, [protectedThis = Ref { *this }, identifier, promise = WTF::move(promise)] (std::optional<Exception>&& exception) mutable {
         if (!protectedThis->m_session) {
             promise.reject(Exception { ExceptionCode::InvalidStateError });
             return;
         }
 
         if (exception) {
-            promise.reject(WTFMove(*exception));
+            promise.reject(WTF::move(*exception));
             protectedThis->logger().error(protectedThis->logChannel(), identifier, "coordinator.setTrack failed!");
             return;
         }

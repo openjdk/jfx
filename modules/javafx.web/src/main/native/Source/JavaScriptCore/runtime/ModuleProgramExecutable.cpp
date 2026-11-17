@@ -70,12 +70,15 @@ UnlinkedModuleProgramCodeBlock* ModuleProgramExecutable::getUnlinkedCodeBlock(JS
     RELEASE_AND_RETURN(throwScope, unlinkedModuleProgramCode);
 }
 
-ModuleProgramExecutable* ModuleProgramExecutable::create(JSGlobalObject* globalObject, const SourceCode& source)
+ModuleProgramExecutable* ModuleProgramExecutable::tryCreate(JSGlobalObject* globalObject, const SourceCode& source)
 {
     VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
     ModuleProgramExecutable* executable = new (NotNull, allocateCell<ModuleProgramExecutable>(vm)) ModuleProgramExecutable(globalObject, source);
     executable->finishCreation(vm);
     executable->getUnlinkedCodeBlock(globalObject); // This generates and binds unlinked code block.
+    RETURN_IF_EXCEPTION(scope, nullptr);
     return executable;
 }
 

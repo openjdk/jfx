@@ -31,7 +31,18 @@
 enum class MemoryRestriction {
     kRwxToRw,
     kRwxToRx,
+    kRwToRw,
+    kRwToRo,
 };
+
+#if USE(APPLE_INTERNAL_SDK)
+// FIXME: Properly support using WKA in modules.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnon-modular-include-in-module"
+#include <WebKitAdditions/FastJITPermissionsAdditions.h>
+#include <WebKitAdditions/JSGlobalObjectAdditions.h>
+#pragma clang diagnostic pop
+#endif
 
 #if defined(OS_THREAD_SELF_RESTRICT) != defined(OS_THREAD_SELF_RESTRICT_SUPPORTED)
 #error Must override both or neither of OS_THREAD_SELF_RESTRICT and OS_THREAD_SELF_RESTRICT_SUPPORTED
@@ -53,18 +64,22 @@ static ALWAYS_INLINE void threadSelfRestrict()
 #else // Not defined(OS_THREAD_SELF_RESTRICT) && defined(OS_THREAD_SELF_RESTRICT_SUPPORTED)
 #if OS(DARWIN) && CPU(ARM64)
 
-#include "JSCConfig.h"
+#include <JavaScriptCore/JSCConfig.h>
 
 #include <wtf/Platform.h>
 
 #if USE(INLINE_JIT_PERMISSIONS_API)
 #include <BrowserEngineCore/BEMemory.h>
 
-template <MemoryRestriction>
+template <MemoryRestriction restriction>
 static ALWAYS_INLINE bool threadSelfRestrictSupported()
 {
+    if constexpr ((restriction == MemoryRestriction::kRwxToRw)
+        || (restriction == MemoryRestriction::kRwxToRx)) {
     return (&be_memory_inline_jit_restrict_with_witness_supported != nullptr
             && !!be_memory_inline_jit_restrict_with_witness_supported());
+    }
+    return false;
 }
 
 template <MemoryRestriction restriction>
@@ -82,10 +97,14 @@ static ALWAYS_INLINE void threadSelfRestrict()
 #elif USE(PTHREAD_JIT_PERMISSIONS_API)
 #include <pthread.h>
 
-template <MemoryRestriction>
+template <MemoryRestriction restriction>
 static ALWAYS_INLINE bool threadSelfRestrictSupported()
 {
+    if constexpr ((restriction == MemoryRestriction::kRwxToRw)
+        || (restriction == MemoryRestriction::kRwxToRx)) {
     return !!pthread_jit_write_protect_supported_np();
+    }
+    return false;
 }
 
 template <MemoryRestriction restriction>
@@ -96,27 +115,6 @@ static ALWAYS_INLINE void threadSelfRestrict()
     pthread_jit_write_protect_np(false);
     else if constexpr (restriction == MemoryRestriction::kRwxToRx)
     pthread_jit_write_protect_np(true);
-    else
-        RELEASE_ASSERT_NOT_REACHED();
-}
-
-#elif USE(APPLE_INTERNAL_SDK)
-#include <os/thread_self_restrict.h>
-
-template <MemoryRestriction>
-SUPPRESS_ASAN static ALWAYS_INLINE bool threadSelfRestrictSupported()
-{
-    return !!os_thread_self_restrict_rwx_is_supported();
-}
-
-template <MemoryRestriction restriction>
-static ALWAYS_INLINE void threadSelfRestrict()
-{
-    ASSERT(g_jscConfig.useFastJITPermissions);
-    if constexpr (restriction == MemoryRestriction::kRwxToRw)
-    os_thread_self_restrict_rwx_to_rw();
-    else if constexpr (restriction == MemoryRestriction::kRwxToRx)
-    os_thread_self_restrict_rwx_to_rx();
     else
         RELEASE_ASSERT_NOT_REACHED();
 }

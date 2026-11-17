@@ -27,6 +27,7 @@
 #include "DeclaredStylePropertyMap.h"
 
 #include "CSSCustomPropertyValue.h"
+#include "CSSSerializationContext.h"
 #include "CSSStyleRule.h"
 #include "CSSStyleSheet.h"
 #include "CSSUnparsedValue.h"
@@ -60,19 +61,19 @@ auto DeclaredStylePropertyMap::entries(ScriptExecutionContext* context) const ->
     if (!context)
         return { };
 
-    auto* styleRule = this->styleRule();
+    RefPtr styleRule = this->styleRule();
     if (!styleRule)
         return { };
 
     auto& document = downcast<Document>(*context);
     return map(styleRule->properties(), [&] (auto propertyReference) {
-        return StylePropertyMapEntry { propertyReference.cssName(), reifyValueToVector(RefPtr<CSSValue> { propertyReference.value() }, propertyReference.id(), document) };
+        return StylePropertyMapEntry { propertyReference.cssName(), reifyValueToVector(document, RefPtr<CSSValue> { propertyReference.value() }, propertyReference.id()) };
     });
 }
 
 RefPtr<CSSValue> DeclaredStylePropertyMap::propertyValue(CSSPropertyID propertyID) const
 {
-    auto* styleRule = this->styleRule();
+    RefPtr styleRule = this->styleRule();
     if (!styleRule)
         return nullptr;
     return styleRule->properties().getPropertyCSSValue(propertyID);
@@ -80,7 +81,7 @@ RefPtr<CSSValue> DeclaredStylePropertyMap::propertyValue(CSSPropertyID propertyI
 
 String DeclaredStylePropertyMap::shorthandPropertySerialization(CSSPropertyID propertyID) const
 {
-    auto* styleRule = this->styleRule();
+    RefPtr styleRule = this->styleRule();
     if (!styleRule)
         return { };
     return styleRule->properties().getPropertyValue(propertyID);
@@ -88,7 +89,7 @@ String DeclaredStylePropertyMap::shorthandPropertySerialization(CSSPropertyID pr
 
 RefPtr<CSSValue> DeclaredStylePropertyMap::customPropertyValue(const AtomString& propertyName) const
 {
-    auto* styleRule = this->styleRule();
+    RefPtr styleRule = this->styleRule();
     if (!styleRule)
         return nullptr;
     return styleRule->properties().getCustomPropertyCSSValue(propertyName.string());
@@ -96,7 +97,7 @@ RefPtr<CSSValue> DeclaredStylePropertyMap::customPropertyValue(const AtomString&
 
 bool DeclaredStylePropertyMap::setShorthandProperty(CSSPropertyID propertyID, const String& value)
 {
-    auto* styleRule = this->styleRule();
+    RefPtr styleRule = this->styleRule();
     if (!styleRule)
         return false;
 
@@ -108,31 +109,31 @@ bool DeclaredStylePropertyMap::setShorthandProperty(CSSPropertyID propertyID, co
 
 bool DeclaredStylePropertyMap::setProperty(CSSPropertyID propertyID, Ref<CSSValue>&& value)
 {
-    auto* styleRule = this->styleRule();
+    RefPtr styleRule = this->styleRule();
     if (!styleRule)
         return false;
 
     CSSStyleSheet::RuleMutationScope mutationScope(m_ownerRule.get());
     bool didFailParsing = false;
-    styleRule->mutableProperties().setProperty(propertyID, value->cssText(), IsImportant::No, &didFailParsing);
+    styleRule->mutableProperties().setProperty(propertyID, value->cssText(CSS::defaultSerializationContext()), IsImportant::No, &didFailParsing);
     return !didFailParsing;
 }
 
 bool DeclaredStylePropertyMap::setCustomProperty(Document&, const AtomString& property, Ref<CSSVariableReferenceValue>&& value)
 {
-    auto* styleRule = this->styleRule();
+    RefPtr styleRule = this->styleRule();
     if (!styleRule)
         return false;
 
     CSSStyleSheet::RuleMutationScope mutationScope(m_ownerRule.get());
-    auto customPropertyValue = CSSCustomPropertyValue::createUnresolved(property, WTFMove(value));
-    styleRule->mutableProperties().addParsedProperty(CSSProperty(CSSPropertyCustom, WTFMove(customPropertyValue)));
+    Ref customPropertyValue = CSSCustomPropertyValue::createUnresolved(property, WTF::move(value));
+    styleRule->mutableProperties().addParsedProperty(CSSProperty(CSSPropertyCustom, WTF::move(customPropertyValue)));
     return true;
 }
 
 void DeclaredStylePropertyMap::removeProperty(CSSPropertyID propertyID)
 {
-    auto* styleRule = this->styleRule();
+    RefPtr styleRule = this->styleRule();
     if (!styleRule)
         return;
 
@@ -142,7 +143,7 @@ void DeclaredStylePropertyMap::removeProperty(CSSPropertyID propertyID)
 
 void DeclaredStylePropertyMap::removeCustomProperty(const AtomString& property)
 {
-    auto* styleRule = this->styleRule();
+    RefPtr styleRule = this->styleRule();
     if (!styleRule)
         return;
 
@@ -157,7 +158,7 @@ StyleRule* DeclaredStylePropertyMap::styleRule() const
 
 void DeclaredStylePropertyMap::clear()
 {
-    auto* styleRule = this->styleRule();
+    RefPtr styleRule = this->styleRule();
     if (!styleRule)
         return;
 

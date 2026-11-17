@@ -26,6 +26,7 @@
 #include "SVGNames.h"
 #include "SVGPathByteStream.h"
 #include "SVGPathSegImpl.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -33,7 +34,7 @@ class SVGPathSegList;
 class SVGPoint;
 
 class SVGPathElement final : public SVGGeometryElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGPathElement);
+    WTF_MAKE_TZONE_ALLOCATED(SVGPathElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGPathElement);
 public:
     static Ref<SVGPathElement> create(const QualifiedName&, Document&);
@@ -94,8 +95,8 @@ public:
 
     FloatRect getBBox(StyleUpdateStrategy = AllowStyleUpdate) final;
 
-    Ref<SVGPathSegList>& pathSegList() { return m_pathSegList->baseVal(); }
-    RefPtr<SVGPathSegList>& animatedPathSegList() { return m_pathSegList->animVal(); }
+    SVGPathSegList& pathSegList() { return m_pathSegList->baseVal(); }
+    SVGPathSegList& animatedPathSegList() { return m_pathSegList->animVal(); }
 
     const SVGPathByteStream& pathByteStream() const;
     Path path() const;
@@ -105,10 +106,10 @@ public:
 
     static void clearCache();
 
+    using PropertyRegistry = SVGPropertyOwnerRegistry<SVGPathElement, SVGGeometryElement>;
+
 private:
     SVGPathElement(const QualifiedName&, Document&);
-
-    using PropertyRegistry = SVGPropertyOwnerRegistry<SVGPathElement, SVGGeometryElement>;
 
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
     void svgAttributeChanged(const QualifiedName&) final;

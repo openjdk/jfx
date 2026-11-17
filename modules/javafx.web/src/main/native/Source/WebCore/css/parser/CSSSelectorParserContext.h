@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "CSSParserMode.h"
+#include <WebCore/CSSParserMode.h>
 #include <wtf/HashFunctions.h>
 #include <wtf/Hasher.h>
 
@@ -36,21 +36,17 @@ class Document;
 
 struct CSSSelectorParserContext {
     CSSParserMode mode { CSSParserMode::HTMLStandardMode };
-    bool cssNestingEnabled { false };
-    bool customStateSetEnabled { false };
-    bool grammarAndSpellingPseudoElementsEnabled { false };
-    bool highlightAPIEnabled { false };
 #if ENABLE(SERVICE_CONTROLS)
-    bool imageControlsEnabled { false };
+    bool imageControlsEnabled : 1 { false };
 #endif
-    bool popoverAttributeEnabled { false };
-    bool targetTextPseudoElementEnabled { false };
-    bool thumbAndTrackPseudoElementsEnabled { false };
-    bool viewTransitionsEnabled { false };
-    bool viewTransitionClassesEnabled { false };
-    bool viewTransitionTypesEnabled { false };
+    bool popoverAttributeEnabled : 1 { false };
+    bool targetTextPseudoElementEnabled : 1 { false };
+    bool thumbAndTrackPseudoElementsEnabled : 1 { false };
+    bool viewTransitionsEnabled : 1 { false };
+    bool webkitMediaTextTrackDisplayQuirkEnabled : 1 { false };
+    bool openPseudoClassEnabled : 1 { false };
 
-    bool isHashTableDeletedValue { false };
+    bool isHashTableDeletedValue : 1 { false };
 
     CSSSelectorParserContext() = default;
     CSSSelectorParserContext(const CSSParserContext&);
@@ -61,12 +57,6 @@ struct CSSSelectorParserContext {
 
 void add(Hasher&, const CSSSelectorParserContext&);
 
-struct CSSSelectorParserContextHash {
-    static unsigned hash(const CSSSelectorParserContext& context) { return computeHash(context); }
-    static bool equal(const CSSSelectorParserContext& a, const CSSSelectorParserContext& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = false;
-};
-
 } // namespace WebCore
 
 namespace WTF {
@@ -76,7 +66,5 @@ template<> struct HashTraits<WebCore::CSSSelectorParserContext> : GenericHashTra
     static bool isDeletedValue(const WebCore::CSSSelectorParserContext& value) { return value.isHashTableDeletedValue; }
     static WebCore::CSSSelectorParserContext emptyValue() { return { }; }
 };
-
-template<> struct DefaultHash<WebCore::CSSSelectorParserContext> : WebCore::CSSSelectorParserContextHash { };
 
 } // namespace WTF

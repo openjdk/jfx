@@ -30,20 +30,20 @@
 namespace WebCore {
 
 CSSQuadValue::CSSQuadValue(Quad quad)
-    : CSSValue(QuadClass)
+    : CSSValue(ClassType::Quad)
     , m_coalesceIdenticalValues(true)
-    , m_quad(WTFMove(quad))
+    , m_quad(WTF::move(quad))
 {
 }
 
 Ref<CSSQuadValue> CSSQuadValue::create(Quad quad)
 {
-    return adoptRef(*new CSSQuadValue(WTFMove(quad)));
+    return adoptRef(*new CSSQuadValue(WTF::move(quad)));
 }
 
-String CSSQuadValue::customCSSText() const
+String CSSQuadValue::customCSSText(const CSS::SerializationContext& context) const
 {
-    return m_quad.cssText();
+    return m_quad.cssText(context);
 }
 
 bool CSSQuadValue::equals(const CSSQuadValue& other) const
@@ -59,4 +59,5 @@ bool CSSQuadValue::canBeCoalesced() const
     Ref bottom = m_quad.bottom();
     return m_coalesceIdenticalValues && top->equals(right) && top->equals(left) && top->equals(bottom);
 }
+
 } // namespace WebCore

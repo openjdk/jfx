@@ -22,13 +22,12 @@
 #pragma once
 
 #include "FEComposite.h"
+#include "SVGAnimatedPropertyImpl.h"
 #include "SVGFilterPrimitiveStandardAttributes.h"
 #include <wtf/SortedArrayMap.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
-
-template<>
-inline unsigned SVGIDLEnumLimits<CompositeOperationType>::highestExposedEnumValue() { return enumToUnderlyingType(CompositeOperationType::FECOMPOSITE_OPERATOR_ARITHMETIC); }
 
 template<>
 struct SVGPropertyTraits<CompositeOperationType> {
@@ -59,24 +58,23 @@ struct SVGPropertyTraits<CompositeOperationType> {
         return emptyString();
     }
 
-    static CompositeOperationType fromString(const String& value)
+    static CompositeOperationType fromString(SVGElement&, const String& value)
     {
-        static constexpr std::pair<ComparableASCIILiteral, CompositeOperationType> mappings[] = {
-            { "arithmetic", CompositeOperationType::FECOMPOSITE_OPERATOR_ARITHMETIC },
-            { "atop", CompositeOperationType::FECOMPOSITE_OPERATOR_ATOP },
-            { "in", CompositeOperationType::FECOMPOSITE_OPERATOR_IN },
-            { "lighter", CompositeOperationType::FECOMPOSITE_OPERATOR_LIGHTER },
-            { "out", CompositeOperationType::FECOMPOSITE_OPERATOR_OUT },
-            { "over", CompositeOperationType::FECOMPOSITE_OPERATOR_OVER },
-            { "xor", CompositeOperationType::FECOMPOSITE_OPERATOR_XOR },
-        };
-        static constexpr SortedArrayMap map { mappings };
+        static constexpr SortedArrayMap map { std::to_array<std::pair<ComparableASCIILiteral, CompositeOperationType>>({
+            { "arithmetic"_s, CompositeOperationType::FECOMPOSITE_OPERATOR_ARITHMETIC },
+            { "atop"_s, CompositeOperationType::FECOMPOSITE_OPERATOR_ATOP },
+            { "in"_s, CompositeOperationType::FECOMPOSITE_OPERATOR_IN },
+            { "lighter"_s, CompositeOperationType::FECOMPOSITE_OPERATOR_LIGHTER },
+            { "out"_s, CompositeOperationType::FECOMPOSITE_OPERATOR_OUT },
+            { "over"_s, CompositeOperationType::FECOMPOSITE_OPERATOR_OVER },
+            { "xor"_s, CompositeOperationType::FECOMPOSITE_OPERATOR_XOR },
+        }) };
         return map.get(value, CompositeOperationType::FECOMPOSITE_OPERATOR_UNKNOWN);
     }
 };
 
 class SVGFECompositeElement final : public SVGFilterPrimitiveStandardAttributes {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGFECompositeElement);
+    WTF_MAKE_TZONE_ALLOCATED(SVGFECompositeElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGFECompositeElement);
 public:
     static Ref<SVGFECompositeElement> create(const QualifiedName&, Document&);
@@ -97,10 +95,10 @@ public:
     SVGAnimatedNumber& k3Animated() { return m_k3; }
     SVGAnimatedNumber& k4Animated() { return m_k4; }
 
+    using PropertyRegistry = SVGPropertyOwnerRegistry<SVGFECompositeElement, SVGFilterPrimitiveStandardAttributes>;
+
 private:
     SVGFECompositeElement(const QualifiedName&, Document&);
-
-    using PropertyRegistry = SVGPropertyOwnerRegistry<SVGFECompositeElement, SVGFilterPrimitiveStandardAttributes>;
 
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) override;
     void svgAttributeChanged(const QualifiedName&) override;

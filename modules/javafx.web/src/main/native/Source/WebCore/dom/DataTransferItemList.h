@@ -33,7 +33,6 @@
 
 #include "ContextDestructionObserver.h"
 #include "DataTransfer.h"
-#include "ExceptionOr.h"
 #include "ScriptWrappable.h"
 #include <wtf/CheckedRef.h>
 #include <wtf/Forward.h>
@@ -46,17 +45,18 @@ namespace WebCore {
 class DataTransferItem;
 class Document;
 class File;
+template<typename> class ExceptionOr;
 
-class DataTransferItemList final : public ScriptWrappable, public ContextDestructionObserver, public CanMakeWeakPtr<DataTransferItemList> {
+class DataTransferItemList final : public ScriptWrappable, public ContextDestructionObserver {
     WTF_MAKE_NONCOPYABLE(DataTransferItemList);
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(DataTransferItemList);
+    WTF_MAKE_TZONE_ALLOCATED(DataTransferItemList);
 public:
     DataTransferItemList(Document&, DataTransfer&);
     ~DataTransferItemList();
 
     // DataTransfer owns DataTransferItemList, and DataTransfer is kept alive as long as DataTransferItemList is alive.
-    void ref() { m_dataTransfer->ref(); }
-    void deref() { m_dataTransfer->deref(); }
+    void ref() const final { m_dataTransfer->ref(); }
+    void deref() const final { m_dataTransfer->deref(); }
     DataTransfer& dataTransfer() { return m_dataTransfer.get(); }
 
     // DOM API

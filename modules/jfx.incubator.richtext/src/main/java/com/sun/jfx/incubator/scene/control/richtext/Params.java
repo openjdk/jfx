@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,15 +25,14 @@
 
 package com.sun.jfx.incubator.scene.control.richtext;
 
-import javafx.geometry.Insets;
 import javafx.util.Duration;
 
 /**
- * Various constants.
+ * Internal constants and defaults.
  */
 public class Params {
-    /** number of paragraph for accessibility window */
-    public static final int ACCESSIBILITY_WINDOW_SIZE = 64;
+    /** max number of paragraphs for accessible selected text */
+    public static final int ACCESSIBILITY_TEXT_MAX_PARAGRAPHS = 64;
 
     /** autoscroll animation period, milliseconds. */
     public static final int AUTO_SCROLL_PERIOD = 100;
@@ -73,6 +72,9 @@ public class Params {
 
     /** ensures the caret is always visible when reaching the edge of screen in unwrapped mode, in pixels. */
     public static final double HORIZONTAL_GUARD = 0; //10; FIX restore
+
+    /** maximum length of the text to pass to IME subsystem */
+    public static final int IME_MAX_TEXT_LENGTH = 4096;
 
     /** focus background outline size */
     public static final double LAYOUT_FOCUS_BORDER = 1;
@@ -118,4 +120,31 @@ public class Params {
 
     /** The number of paragraphs to lay out before and after the view point in VFlow. */
     public static final int SLIDING_WINDOW_EXTENT = 100;
+
+    /** Style name for text highlight (background color) 1 */
+    public static final String STYLE_TEXT_HIGHLIGHT_1 = "text-highlight-1";
+
+    /** Style name for text highlight (background color) 2 */
+    public static final String STYLE_TEXT_HIGHLIGHT_2 = "text-highlight-2";
+
+    /** Style name for text highlight (background color) 3 */
+    public static final String STYLE_TEXT_HIGHLIGHT_3 = "text-highlight-3";
+
+    /** Style name for text highlight (background color) 4 */
+    public static final String STYLE_TEXT_HIGHLIGHT_4 = "text-highlight-4";
+
+    /** Style name for text highlight (background color) 5 */
+    public static final String STYLE_TEXT_HIGHLIGHT_5 = "text-highlight-5";
+
+    /** Style name for wavy underline color 1 */
+    public static final String STYLE_WAVY_UNDERLINE_1 = "wavy-underline-1";
+
+    /** Style name for wavy underline color 2 */
+    public static final String STYLE_WAVY_UNDERLINE_2 = "wavy-underline-2";
+
+    /** Style name for wavy underline color 3 */
+    public static final String STYLE_WAVY_UNDERLINE_3 = "wavy-underline-3";
+
+    /** RichTextModel format version. */
+    public static final String VERSION_3 = "RichText-v3-Incubator";
 }

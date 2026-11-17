@@ -25,6 +25,12 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
+#include "BPlatform.h"
+
+#if !BUSE(TZONE)
+
 #include "BInline.h"
 #include "IsoDeallocator.h"
 #include "IsoPage.h"
@@ -43,9 +49,7 @@ IsoDeallocator<Config>::IsoDeallocator(Mutex& lock)
 }
 
 template<typename Config>
-IsoDeallocator<Config>::~IsoDeallocator()
-{
-}
+IsoDeallocator<Config>::~IsoDeallocator() = default;
 
 template<typename Config>
 template<typename Type>
@@ -85,3 +89,6 @@ BNO_INLINE void IsoDeallocator<Config>::scavenge()
 } // namespace bmalloc
 
 #endif
+#endif // !BUSE(TZONE)
+
+#endif // __cplusplus
