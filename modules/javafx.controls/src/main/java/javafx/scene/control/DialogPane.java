@@ -672,8 +672,8 @@ public class DialogPane extends Pane {
                 newExpandableContent.setVisible(isExpanded());
                 newExpandableContent.setManaged(isExpanded());
 
-                if (!newExpandableContent.getStyleClass().contains("expandable-content")) { //$NON-NLS-1$
-                    newExpandableContent.getStyleClass().add("expandable-content"); //$NON-NLS-1$
+                if (!newExpandableContent.getStyleClass().contains("expandable-content")) {
+                    newExpandableContent.getStyleClass().add("expandable-content");
                 }
 
                 getChildren().add(newExpandableContent);
@@ -864,15 +864,15 @@ public class DialogPane extends Pane {
      */
     protected Node createDetailsButton() {
         final Hyperlink detailsButton = new Hyperlink();
-        final String moreText = ControlResources.getString("Dialog.detail.button.more"); //$NON-NLS-1$
-        final String lessText = ControlResources.getString("Dialog.detail.button.less"); //$NON-NLS-1$
+        final String moreText = ControlResources.getString("Dialog.detail.button.more");
+        final String lessText = ControlResources.getString("Dialog.detail.button.less");
         final ObservableList<String> styleClasses = detailsButton.getStyleClass();
 
-        styleClasses.add("details-button");  //$NON-NLS-1$
+        styleClasses.add("details-button");
 
         expandedProperty().subscribe(expanded -> {
-            styleClasses.remove(expanded ? "more" : "less");  //$NON-NLS-1$ //$NON-NLS-2$
-            styleClasses.add(expanded ? "less" : "more");  //$NON-NLS-1$ //$NON-NLS-2$
+            styleClasses.remove(expanded ? "more" : "less");
+            styleClasses.add(expanded ? "less" : "more");
             detailsButton.setText(expanded ? lessText : moreText);
         });
 
@@ -1173,7 +1173,7 @@ public class DialogPane extends Pane {
             headerTextPanel.setMaxWidth(Double.MAX_VALUE);
 
             if (headerText != null && ! headerText.isEmpty()) {
-                headerTextPanel.getStyleClass().add("header-panel"); //$NON-NLS-1$
+                headerTextPanel.getStyleClass().add("header-panel");
             }
 
             // on left of header is the text
@@ -1192,7 +1192,7 @@ public class DialogPane extends Pane {
             final Node graphic = getGraphic();
             if (graphic != null) {
                 graphicContainer.getChildren().add(graphic);
-                graphicContainer.getStyleClass().add("graphic-container"); //$NON-NLS-1$
+                graphicContainer.getStyleClass().add("graphic-container");
             }
             headerTextPanel.add(graphicContainer, 1, 0);
 
