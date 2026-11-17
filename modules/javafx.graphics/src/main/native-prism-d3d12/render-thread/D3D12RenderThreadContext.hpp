@@ -279,6 +279,7 @@ class RenderThreadContext
     bool Build2DIndexBuffer();
     QuadVertices AssembleVertexQuadForBlit(const Coords_Box_UINT32& src, const Coords_Box_UINT32& dst);
     void AssembleVertexData(void* buffer, const float* vertices, const unsigned char* colors, size_t elementCount);
+    void DeclareVertexData(uint32_t vertexCount);
     VertexSubregion GetNewRegionForVertices(uint32_t vertexCount);
     void EnsureBoundTexturesState(D3D12_RESOURCE_STATES textureState);
     void SetVertexBuffer(const D3D12_VERTEX_BUFFER_VIEW& vbView);

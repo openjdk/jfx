@@ -137,12 +137,27 @@ void RenderThreadContext::AssembleVertexData(void* buffer, const float* vertices
     }
 }
 
-RenderThreadContext::VertexSubregion RenderThreadContext::GetNewRegionForVertices(uint32_t vertexCount)
+void RenderThreadContext::DeclareVertexData(uint32_t vertexCount)
 {
     if (vertexCount > (Constants::MAX_BATCH_VERTICES / 2))
     {
         // rendering more vertices might utilize the Ring Buffer better if we just reserve a separate space for them
         mVertexRingBuffer.DeclareRequired(vertexCount * 8 * sizeof(float));
+        return;
+    }
+
+    if (!m2DVertexBatch.Valid() || vertexCount > m2DVertexBatch.Available())
+    {
+        // declare space for the new Vertex Buffer if current one does not exist, or if it is full
+        mVertexRingBuffer.DeclareRequired(Constants::MAX_BATCH_VERTICES * 8 * sizeof(float));
+    }
+}
+
+RenderThreadContext::VertexSubregion RenderThreadContext::GetNewRegionForVertices(uint32_t vertexCount)
+{
+    if (vertexCount > (Constants::MAX_BATCH_VERTICES / 2))
+    {
+        // rendering more vertices might utilize the Ring Buffer better if we just reserve a separate space for them
         RingBuffer::Region region = mVertexRingBuffer.Reserve(vertexCount * 8 * sizeof(float));
         if (!region)
         {
@@ -161,9 +176,7 @@ RenderThreadContext::VertexSubregion RenderThreadContext::GetNewRegionForVertice
 
     if (!m2DVertexBatch.Valid() || vertexCount > m2DVertexBatch.Available())
     {
-        // reserve space on Ring Buffer
-        mVertexRingBuffer.DeclareRequired(Constants::MAX_BATCH_VERTICES * 8 * sizeof(float));
-
+        // reserve space on Ring Buffer for the new small-quad-count VB
         RingBuffer::Region newVertexRegion = mVertexRingBuffer.Reserve(Constants::MAX_BATCH_VERTICES * 8 * sizeof(float));
         if (!newVertexRegion)
         {
@@ -321,14 +334,6 @@ void RenderThreadContext::SubmitResourceTransitions()
 
 void RenderThreadContext::ApplySteps()
 {
-    // TODO error reporting
-    resourceManager.DeclareRingResources();
-    if (!resourceManager.PrepareResources())
-    {
-        D3D12NI_LOG_ERROR("RenderThread: Failed to prepare resources for draw call");
-        return;
-    }
-
     const D3D12GraphicsCommandListPtr& commandList = CommandList();
 
     indexBuffer.Apply(commandList);
@@ -423,6 +428,13 @@ void RenderThreadContext::UpdateSmallTexture(const NIPtr<Internal::ITrackedResou
 
 uint32_t RenderThreadContext::PrepareQuadsDraw(float* vertices, unsigned char* colors, uint32_t vertexCount)
 {
+    // TODO error reporting
+    // We'll first declare resources used by Ring Containers. That can trigger a CL flush
+    // and we want to ensure all data used for rendering will be available for the GPU.
+    resourceManager.DeclareRingResources();
+    DeclareVertexData(vertexCount);
+
+    // now that we potentially flushed the pipeline and have space for data, prepare IB and VB
     D3D12_INDEX_BUFFER_VIEW ibView;
     ibView.BufferLocation = m2DIndexBuffer.GetGPUPtr();
     ibView.SizeInBytes = static_cast<UINT>(m2DIndexBuffer.Size());
@@ -435,11 +447,27 @@ uint32_t RenderThreadContext::PrepareQuadsDraw(float* vertices, unsigned char* c
     AssembleVertexData(vertexRegion.subregion.cpu, vertices, colors, vertexCount);
     SetVertexBuffer(vertexRegion.view);
 
+    // finally, prepare remaining resources
+    if (!resourceManager.PrepareResources())
+    {
+        D3D12NI_LOG_ERROR("RenderThread: Failed to prepare resources for draw quads call");
+        return std::numeric_limits<uint32_t>::max();
+    }
+
     return vertexRegion.startOffset;
 }
 
 void RenderThreadContext::PrepareMeshDraw(const NIPtr<Internal::Buffer>& vertexBuffer, const NIPtr<Internal::Buffer>& indexBuffer, DXGI_FORMAT ibFormat)
 {
+    // declare and prepare resources for rendering
+    resourceManager.DeclareRingResources();
+    if (!resourceManager.PrepareResources())
+    {
+        D3D12NI_LOG_ERROR("RenderThread: Failed to prepare resources for draw mesh call");
+        return;
+    }
+
+    // set up VB and IB; those compared to PrepareQuadsDraw are preallocated and ready to directly use
     D3D12_VERTEX_BUFFER_VIEW vbView;
     vbView.BufferLocation = vertexBuffer->GetGPUPtr();
     vbView.SizeInBytes = static_cast<UINT>(vertexBuffer->Size());
