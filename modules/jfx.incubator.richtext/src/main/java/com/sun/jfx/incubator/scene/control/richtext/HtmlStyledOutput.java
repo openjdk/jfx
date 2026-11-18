@@ -374,15 +374,6 @@ public class HtmlStyledOutput implements StyledOutput {
         wr.write("<html>\n");
         wr.write("<head>\n");
         wr.write("<meta charset=\"utf-8\">\n");
-        if (font != null) {
-            wr.write("<style>\npre {\n");
-            wr.write("  font-family: \"");
-            wr.write(encode(font.getFamily()));
-            wr.write("\", monospace;\n  font-size: ");
-            wr.write(String.valueOf(font.getSize()));
-            wr.write("pt;\n  white-space: pre-wrap;\n");
-            wr.write("}\n</style>\n");
-        }
         if (!inlineStyles) {
             wr.write("<style>\n");
             for (Val v : styles.values()) {
@@ -396,7 +387,11 @@ public class HtmlStyledOutput implements StyledOutput {
         wr.write("</head>\n");
         wr.write("<body>\n");
         if (font != null) {
-            wr.write("<pre>");
+            wr.write("<pre style='font-family: \"");
+            wr.write(encode(font.getFamily()));
+            wr.write("\", monospace; font-size: ");
+            wr.write(String.valueOf(font.getSize()));
+            wr.write("pt; white-space: pre-wrap;'>");
         }
     }
 

@@ -189,31 +189,26 @@ public class CodeAreaTest {
     @Test
     public void copyHtml() {
         RTUtil.copyToClipboard("yo");
+        // including symbols that have to be escaped
         control.appendText("123<>\"&'\t\n\ttab");
         control.setFont(Font.font("Amble", FontPosture.REGULAR, 33));
         control.selectAll();
         control.copy();
         assertTrue(Clipboard.getSystemClipboard().getContentTypes().contains(DataFormat.HTML));
         String s = Clipboard.getSystemClipboard().getHtml();
-        assertNotNull(s);
-        assertEquals(
+
+        String expected =
             """
             <html>
             <head>
             <meta charset="utf-8">
-            <style>
-            pre {
-              font-family: "Amble", monospace;
-              font-size: 33.0pt;
-              white-space: pre-wrap;
-            }
-            </style>
             </head>
             <body>
-            <pre>123&lt;&gt;&#34;&amp;&#39;&#9;
+            <pre style='font-family: "Amble", monospace; font-size: 33.0pt; white-space: pre-wrap;'>123&lt;&gt;&#34;&amp;&#39;&#9;
             &#9;tab</pre>
             </body></html>
-            """, s);
+            """;
+        assertEquals(expected, s);
     }
 
     @Test
