@@ -25,6 +25,7 @@
 package test.javafx.stage;
 
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.layout.StackPane;
@@ -40,7 +41,7 @@ import java.util.concurrent.CountDownLatch;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class CloseWindowTest {
+public class CloseChildWindowTest {
 
     private static final CountDownLatch startupLatch = new CountDownLatch(1);
     private static final CountDownLatch doneLatch = new CountDownLatch(1);
@@ -70,7 +71,7 @@ public class CloseWindowTest {
         Util.runAndWait(() -> {
             // Close secondary stage, which hides the child stage
             secondaryStage.hide();
-            // Bring modal to front
+            // Request focus for the disabled main stage, which brings modal to front
             stage.requestFocus();
         });
 
@@ -85,6 +86,8 @@ public class CloseWindowTest {
     }
 
     public static class TestApp extends Application {
+
+        private boolean firstFocused;
 
         @Override
         public void start(Stage primaryStage) {
@@ -101,6 +104,19 @@ public class CloseWindowTest {
             modalStage = new Stage();
             modalStage.initModality(Modality.APPLICATION_MODAL);
             modalStage.setScene(new Scene(new StackPane(new Label("Modal stage")), 200, 120));
+            modalStage.focusedProperty().subscribe((_, focused) -> {
+                if (focused && !firstFocused) {
+                    firstFocused = true;
+                    Platform.runLater(() -> {
+                        // Show secondary and child stages only after modal stage is focused for the first time
+                        secondaryStage.show();
+                        childStage.show();
+                    });
+                } else if (focused) {
+                    // Finish test after modal stage is focused again
+                    doneLatch.countDown();
+                }
+            });
             modalStage.show();
 
             secondaryStage = new Stage();
@@ -109,13 +125,13 @@ public class CloseWindowTest {
             childStage = new Stage();
             childStage.initOwner(secondaryStage);
             childStage.setScene(new Scene(new StackPane(new Label("Child stage")), 200, 120));
-
-            childStage.setOnHidden(_ -> doneLatch.countDown());
+            childStage.focusedProperty().subscribe((_, focused) -> {
+                if (focused) {
+                    // Start test after child stage is focused
+                    startupLatch.countDown();
+                }
+            });
             secondaryStage.setOnHidden(_ -> childStage.hide());
-            secondaryStage.show();
-
-            childStage.setOnShown(_ -> startupLatch.countDown());
-            childStage.show();
         }
     }
 }
