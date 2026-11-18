@@ -391,7 +391,7 @@ public class HtmlStyledOutput implements StyledOutput {
             wr.write(encode(font.getFamily()));
             wr.write("\", monospace; font-size: ");
             wr.write(String.valueOf(font.getSize()));
-            wr.write("pt; white-space: pre-wrap;'>");
+            wr.write("pt; white-space: pre-wrap;'>\n");
         }
     }
 

@@ -204,7 +204,8 @@ public class CodeAreaTest {
             <meta charset="utf-8">
             </head>
             <body>
-            <pre style='font-family: "Amble", monospace; font-size: 33.0pt; white-space: pre-wrap;'>123&lt;&gt;&#34;&amp;&#39;&#9;
+            <pre style='font-family: "Amble", monospace; font-size: 33.0pt; white-space: pre-wrap;'>
+            123&lt;&gt;&#34;&amp;&#39;&#9;
             &#9;tab</pre>
             </body></html>
             """;
