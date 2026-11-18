@@ -40,6 +40,8 @@ class NativeMesh
     DXGI_FORMAT mIndexBufferFormat;
     uint32_t mIndexCount;
 
+    bool InitOrUpdateBuffer(NIPtr<Internal::Buffer>& buffer, const void* data, size_t size, D3D12_RESOURCE_STATES targetState);
+
 public:
     NativeMesh(const NIPtr<NativeDevice>& nativeDevice);
 

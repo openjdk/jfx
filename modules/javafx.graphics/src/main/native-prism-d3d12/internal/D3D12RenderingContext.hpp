@@ -158,6 +158,8 @@ public:
                      const NIPtr<TextureBase>& srcTexture, uint32_t srcx, uint32_t srcy, uint32_t srcw, uint32_t srch);
     void CopyTextureToBuffer(const NIPtr<Buffer>& dstBuffer, uint32_t dstStride, const NIPtr<NativeTexture>& srcTexture,
                              uint32_t srcx, uint32_t srcy, uint32_t srcw, uint32_t srch);
+    bool UpdateBuffer(const NIPtr<Buffer>& buffer, const void* srcData, size_t srcDataBytes);
+
     bool UpdateTexture(const NIPtr<NativeTexture>& dstTexture, uint32_t dstx, uint32_t dsty,
                        const void* srcData, size_t srcDataBytes, uint32_t srcx, uint32_t srcy,
                        uint32_t srcw, uint32_t srch, uint32_t srcStride, PixelFormat srcFormat);

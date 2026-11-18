@@ -46,14 +46,17 @@ bool RenderThreadContext::Build2DIndexBuffer()
         indexBufferArray[idx + 5] = vtx + 3;
     }
 
-    if (!m2DIndexBuffer.Init(indexBufferArray.data(), indexBufferArray.size() * sizeof(uint16_t),
-            D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_INDEX_BUFFER))
+    size_t ibSize = indexBufferArray.size() * sizeof(uint16_t);
+    if (!m2DIndexBuffer->Init(nullptr, ibSize, D3D12_HEAP_TYPE_DEFAULT))
     {
-        D3D12NI_LOG_ERROR("Failed to build 2D Index Buffer");
+        D3D12NI_LOG_ERROR("Failed to initialize 2D Index Buffer");
         return false;
     }
 
-    m2DIndexBuffer.SetName("2D Index Buffer");
+    UpdateSmallBuffer(m2DIndexBuffer, indexBufferArray.data(), ibSize);
+    QueueResourceTransition(m2DIndexBuffer, D3D12_RESOURCE_STATE_INDEX_BUFFER);
+
+    m2DIndexBuffer->SetName("2D Index Buffer");
 
     return true;
 }
@@ -207,6 +210,20 @@ void RenderThreadContext::EnsureBoundTexturesState(D3D12_RESOURCE_STATES texture
     SubmitResourceTransitions();
 }
 
+RingBuffer::Region RenderThreadContext::PushToDataRingBuffer(const void* data, size_t size)
+{
+    mDataRingBuffer.DeclareRequired(size);
+    RingBuffer::Region region = mDataRingBuffer.Reserve(size);
+    if (!region)
+    {
+        D3D12NI_LOG_ERROR("Failed to reserve space on Ring Buffer");
+        return RingBuffer::Region();
+    }
+
+    memcpy(region.cpu, data, size);
+    return region;
+}
+
 void RenderThreadContext::SetIndexBuffer(const D3D12_INDEX_BUFFER_VIEW& ibView)
 {
     if (indexBuffer.Get().BufferLocation == ibView.BufferLocation &&
@@ -230,7 +247,7 @@ void RenderThreadContext::SetVertexBuffer(const D3D12_VERTEX_BUFFER_VIEW& vbView
 RenderThreadContext::RenderThreadContext(const NIPtr<NativeDevice>& nativeDevice, const CheckpointCallback& flushCallback, const CheckpointCallback& waitCallback, const SignalCallback& signalCallback)
     : mCommandListPool(nativeDevice, waitCallback)
     , m2DVertexBatch()
-    , m2DIndexBuffer(nativeDevice)
+    , m2DIndexBuffer(std::make_shared<Internal::Buffer>(nativeDevice))
     , mVertexRingBuffer(nativeDevice, flushCallback, waitCallback)
     , mDataRingBuffer(nativeDevice, flushCallback, waitCallback)
     , PSOManager(nativeDevice)
@@ -400,18 +417,23 @@ void RenderThreadContext::Dispatch(uint32_t x, uint32_t y, uint32_t z)
     CommandList()->Dispatch(x, y, z);
 }
 
+void RenderThreadContext::UpdateSmallBuffer(const NIPtr<Internal::ITrackedResource>& dstBuffer,
+                                            const void* srcData, size_t srcDataSize)
+{
+    RingBuffer::Region region = PushToDataRingBuffer(srcData, srcDataSize);
+    if (!region) return;
+
+    QueueResourceTransition(dstBuffer, D3D12_RESOURCE_STATE_COPY_DEST);
+    SubmitResourceTransitions();
+
+    CommandList()->CopyBufferRegion(dstBuffer->GetD3D12Resource().Get(), 0, mDataRingBuffer.GetResource().Get(), region.offsetFromStart, srcDataSize);
+}
+
 void RenderThreadContext::UpdateSmallTexture(const NIPtr<Internal::ITrackedResource>& dstTexture, uint32_t dstx, uint32_t dsty,
                                              const void* srcData, size_t srcDataSize, const D3D12_TEXTURE_COPY_LOCATION& srcLoc)
 {
-    mDataRingBuffer.DeclareRequired(srcDataSize);
-    RingBuffer::Region region = mDataRingBuffer.Reserve(srcDataSize);
-    if (!region)
-    {
-        D3D12NI_LOG_ERROR("Failed to reserve space for small texture update");
-        return;
-    }
-
-    memcpy(region.cpu, srcData, srcDataSize);
+    RingBuffer::Region region = PushToDataRingBuffer(srcData, srcDataSize);
+    if (!region) return;
 
     D3D12_TEXTURE_COPY_LOCATION properSrcLoc(srcLoc);
     properSrcLoc.pResource = mDataRingBuffer.GetResource().Get();
@@ -422,6 +444,9 @@ void RenderThreadContext::UpdateSmallTexture(const NIPtr<Internal::ITrackedResou
     dstLoc.pResource = dstTexture->GetD3D12Resource().Get();
     dstLoc.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
     dstLoc.SubresourceIndex = 0;
+
+    QueueResourceTransition(dstTexture, D3D12_RESOURCE_STATE_COPY_DEST);
+    SubmitResourceTransitions();
 
     CommandList()->CopyTextureRegion(&dstLoc, dstx, dsty, 0, &properSrcLoc, nullptr);
 }
@@ -436,8 +461,8 @@ uint32_t RenderThreadContext::PrepareQuadsDraw(float* vertices, unsigned char* c
 
     // now that we potentially flushed the pipeline and have space for data, prepare IB and VB
     D3D12_INDEX_BUFFER_VIEW ibView;
-    ibView.BufferLocation = m2DIndexBuffer.GetGPUPtr();
-    ibView.SizeInBytes = static_cast<UINT>(m2DIndexBuffer.Size());
+    ibView.BufferLocation = m2DIndexBuffer->GetGPUPtr();
+    ibView.SizeInBytes = static_cast<UINT>(m2DIndexBuffer->Size());
     ibView.Format = DXGI_FORMAT_R16_UINT;
     SetIndexBuffer(ibView);
 

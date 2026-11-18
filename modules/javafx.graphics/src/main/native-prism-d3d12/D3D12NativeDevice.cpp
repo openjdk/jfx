@@ -308,8 +308,25 @@ void NativeDevice::Release()
 NIPtr<Internal::Buffer> NativeDevice::CreateBuffer(const void* initialData, size_t size, bool cpuWriteable, D3D12_RESOURCE_STATES finalState)
 {
     NIPtr<Internal::Buffer> ret = std::make_shared<Internal::Buffer>(shared_from_this());
-    if (!ret->Init(initialData, size, cpuWriteable ? D3D12_HEAP_TYPE_UPLOAD : D3D12_HEAP_TYPE_DEFAULT, finalState))
+    if (!ret->Init(cpuWriteable ? initialData : nullptr, size, cpuWriteable ? D3D12_HEAP_TYPE_UPLOAD : D3D12_HEAP_TYPE_DEFAULT))
+    {
         return nullptr;
+    }
+
+    if (!cpuWriteable && initialData && size > 0)
+    {
+        if (!mRenderingContext->UpdateBuffer(ret, initialData, size))
+        {
+            D3D12NI_LOG_ERROR("Failed to initialize Buffer");
+            MarkDisposed(ret);
+            return nullptr;
+        }
+    }
+
+    if (!cpuWriteable)
+    {
+        mRenderingContext->TransitionTrackedResource(ret, finalState);
+    }
 
     return ret;
 }
@@ -372,13 +389,14 @@ NIPtr<NativeTexture>* NativeDevice::CreateTexture(UINT width, UINT height, DXGI_
 
 int NativeDevice::GetMaximumMSAASampleSize(DXGI_FORMAT format) const
 {
-    int maxSamples = 2;
+    int maxSamples = 1;
 
     D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS msaaLevels;
     D3D12NI_ZERO_STRUCT(msaaLevels);
     msaaLevels.Format = format;
 
-    for (int i = maxSamples; i <= Constants::MAX_MSAA_SAMPLE_COUNT; i *= 2)
+    // start iterating from 2x MSAA
+    for (int i = 2; i <= Constants::MAX_MSAA_SAMPLE_COUNT; i *= 2)
     {
         msaaLevels.SampleCount = i;
         HRESULT hr = mDevice->CheckFeatureSupport(D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS, &msaaLevels, sizeof(msaaLevels));
@@ -720,7 +738,7 @@ bool NativeDevice::ReadTexture(const NIPtr<NativeTexture>& texture, void* buffer
     // TODO: D3D12: maybe this should be more than a simple Readback resource? investigate
     //              performance reasons, maybe we could avoid allocation here
     NIPtr<Internal::Buffer> readbackBuffer = std::make_shared<Internal::Buffer>(shared_from_this());
-    if (!readbackBuffer->Init(nullptr, readbackBufferSize, D3D12_HEAP_TYPE_READBACK, D3D12_RESOURCE_STATE_COPY_DEST))
+    if (!readbackBuffer->Init(nullptr, readbackBufferSize, D3D12_HEAP_TYPE_READBACK))
     {
         D3D12NI_LOG_ERROR("Failed to initialize readback buffer for texture read");
         return false;

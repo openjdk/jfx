@@ -26,6 +26,7 @@
 #include "D3D12RenderingContext.hpp"
 
 #include "../D3D12NativeDevice.hpp"
+#include "../D3D12Constants.hpp"
 
 #include "D3D12Config.hpp"
 #include "D3D12Debug.hpp"
@@ -194,7 +195,7 @@ void RenderingContext::ClearAppliedFlags()
 RenderingContext::RenderingContext(const NIPtr<NativeDevice>& nativeDevice)
     : mNativeDevice(nativeDevice)
     , mExtraPayloadDataAllocator(Config::MainRingBufferThreshold()) // this chunk size should match the main ring buffer threshold
-    , mPayloadAllocator(1024 * 1024) // for Payloads 1M should be sufficient
+    , mPayloadAllocator(Constants::LINEAR_ALLOCATOR_CHUNK_SIZE)
     , mRenderThread(nativeDevice)
     , mRTPayload(nullptr, LinearAllocatorDeleter<RenderPayload>(&mPayloadAllocator))
     , mClearOptState()
@@ -602,6 +603,57 @@ void RenderingContext::CopyTextureToBuffer(const NIPtr<Buffer>& dstBuffer, uint3
     AddToRTPayload(CreateRTExec<CopyTextureAction>(mPayloadAllocator, nullptr, dstLoc, 0, 0, srcTexture, srcLoc, srcBox));
 }
 
+bool RenderingContext::UpdateBuffer(const NIPtr<Buffer>& dstBuffer, const void* srcData, size_t srcDataBytes)
+{
+    if (srcData == nullptr || srcDataBytes == 0)
+    {
+        D3D12NI_LOG_ERROR("Buffer update failed; source data is too small");
+        return false;
+    }
+
+    if (dstBuffer->Size() < srcDataBytes)
+    {
+        D3D12NI_LOG_ERROR("Buffer update failed; destination D3D12 buffer is too small");
+        return false;
+    }
+
+    size_t copyThreshold = Internal::Config::MainRingBufferThreshold() / 2;
+    bool useStagingBuffer = srcDataBytes > copyThreshold;
+
+    RingBuffer::Region ringRegion;
+    NIPtr<Internal::Buffer> stagingBuffer;
+    if (useStagingBuffer)
+    {
+        stagingBuffer = std::make_shared<Internal::Buffer>(mNativeDevice);
+        // for larger buffer data allocate a dedicated staging buffer
+        if (!stagingBuffer ||
+            !stagingBuffer->Init(srcData, srcDataBytes, D3D12_HEAP_TYPE_UPLOAD))
+        {
+            D3D12NI_LOG_ERROR("Failed to allocate a staging buffer for large Buffer update");
+            return false;
+        }
+
+        // perform a copy
+        if (!AddToRTPayload(CreateRTExec<CopyResourceAction>(mPayloadAllocator, dstBuffer->GetD3D12Resource(), stagingBuffer->GetD3D12Resource())))
+        {
+            return false;
+        }
+
+        Dispose(stagingBuffer);
+    }
+    else
+    {
+        // copying smaller buffers will go via Payload's extra data allocator to prevent unnecessary malloc
+        // later on RenderThread will push this data through a Ring Buffer
+        if (!AddToRTPayload(CreateRTExec<CopyToBufferSmallAction>(mPayloadAllocator, mExtraPayloadDataAllocator, srcData, srcDataBytes, dstBuffer)))
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 bool RenderingContext::UpdateTexture(const NIPtr<NativeTexture>& dstTexture, uint32_t dstx, uint32_t dsty,
                                      const void* srcData, size_t srcDataBytes, uint32_t srcx, uint32_t srcy,
                                      uint32_t srcw, uint32_t srch, uint32_t srcStride, PixelFormat srcFormat)
@@ -645,7 +697,7 @@ bool RenderingContext::UpdateTexture(const NIPtr<NativeTexture>& dstTexture, uin
         // for larger textures allocate a dedicated staging buffer
         // uploader will handle its initialization
         if (!stagingBuffer ||
-            !stagingBuffer->Init(nullptr, targetSize, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ))
+            !stagingBuffer->Init(nullptr, targetSize, D3D12_HEAP_TYPE_UPLOAD))
         {
             D3D12NI_LOG_ERROR("Failed to allocate a staging buffer for large texture upload");
             return false;

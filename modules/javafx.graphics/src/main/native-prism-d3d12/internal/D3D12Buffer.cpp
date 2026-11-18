@@ -56,8 +56,13 @@ Buffer::~Buffer()
     }
 }
 
-bool Buffer::Init(const void* initialData, size_t size, D3D12_HEAP_TYPE heapType, D3D12_RESOURCE_STATES finalState)
+bool Buffer::Init(const void* initialData, size_t size, D3D12_HEAP_TYPE heapType)
 {
+    if (initialData != nullptr && size > 0 && heapType == D3D12_HEAP_TYPE_DEFAULT)
+    {
+        D3D12NI_LOG_WARN("Default-heap Buffers can only be initialized by RenderingContext::UpdateBuffer(); initialData will be ignored");
+    }
+
     mHeapType = heapType;
     mSize = size;
 
@@ -84,19 +89,21 @@ bool Buffer::Init(const void* initialData, size_t size, D3D12_HEAP_TYPE heapType
         D3D12NI_LOG_WARN("Readback buffer cannot have initial data. Initial data will be ignored.");
     }
 
-    D3D12_RESOURCE_STATES initialState = D3D12_RESOURCE_STATE_COMMON;
     switch (mHeapType)
     {
+    case D3D12_HEAP_TYPE_DEFAULT:
+        mResourceState = D3D12_RESOURCE_STATE_COMMON;
+        break;
     case D3D12_HEAP_TYPE_UPLOAD:
-        initialState = D3D12_RESOURCE_STATE_GENERIC_READ;
+        mResourceState = D3D12_RESOURCE_STATE_GENERIC_READ;
         break;
     case D3D12_HEAP_TYPE_READBACK:
-        initialState = D3D12_RESOURCE_STATE_COPY_DEST;
+        mResourceState = D3D12_RESOURCE_STATE_COPY_DEST;
         break;
     }
 
     HRESULT hr = mNativeDevice->GetDevice()->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE,
-        &resourceDesc, initialState, nullptr, IID_PPV_ARGS(&mResource));
+        &resourceDesc, mResourceState, nullptr, IID_PPV_ARGS(&mResource));
     D3D12NI_DEV_RET_IF_FAILED(mNativeDevice, hr, false, "Failed to create Buffer's Committed Resource");
 
     if (mHeapType == D3D12_HEAP_TYPE_UPLOAD)
@@ -122,55 +129,9 @@ bool Buffer::Init(const void* initialData, size_t size, D3D12_HEAP_TYPE heapType
         return true;
     }
 
-    // harder path since we'll have to ask the GPU to initialize the Resource for us.
-    // We might want to either preload it with data, or simply transition to the desired
-    // state (aka. finalState). All this can be only done via a Command Queue execution.
-
-    // CPU-accessible Resource, used to deliver data to D3D12 in case we preload a Default-heap resource
-    D3D12ResourcePtr stagingResource;
-
-    if (initialData != nullptr && mHeapType == D3D12_HEAP_TYPE_DEFAULT)
-    {
-        // create a staging CPU-readable buffer
-        D3D12_HEAP_PROPERTIES stagingHeapProps;
-        D3D12NI_ZERO_STRUCT(stagingHeapProps);
-        stagingHeapProps.Type = D3D12_HEAP_TYPE_UPLOAD;
-
-        HRESULT hr = mNativeDevice->GetDevice()->CreateCommittedResource(&stagingHeapProps, D3D12_HEAP_FLAG_NONE,
-            &resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&stagingResource));
-        D3D12NI_DEV_RET_IF_FAILED(mNativeDevice, hr, false, "Failed to create Staging Buffer's Committed Resource");
-
-        stagingResource->SetName(L"Buffer Init Staging Resource");
-
-        void* bufPtr;
-        hr = stagingResource->Map(0, nullptr, &bufPtr);
-        D3D12NI_DEV_RET_IF_FAILED(mNativeDevice, hr, false, "Failed to Map staging resource");
-
-        memcpy(bufPtr, initialData, size);
-        stagingResource->Unmap(0, nullptr);
-    }
-
-    // prepare a temporary Command List to transfer data and/or transition our resource
-    D3D12_RESOURCE_STATES postCopyOldState = initialState;
-    if (initialData != nullptr && mHeapType == D3D12_HEAP_TYPE_DEFAULT)
-    {
-        postCopyOldState = D3D12_RESOURCE_STATE_COPY_DEST;
-
-        mNativeDevice->GetRenderingContext()->TransitionResource(mResource, initialState, postCopyOldState);
-        mNativeDevice->GetRenderingContext()->CopyResource(mResource, stagingResource);
-    }
-
-    // transition our Default-heap resource to its desired state
-    mNativeDevice->GetRenderingContext()->TransitionResource(mResource, postCopyOldState, finalState);
-
-    // pass Staging Buffer along to release after the command list is flushed
-    if (stagingResource) mNativeDevice->MarkDisposed(stagingResource);
-
     mDebugName = "Buffer_#";
     mDebugName += std::to_string(counter++);
     mResource->SetName(Utils::ToWString(mDebugName).c_str());
-
-    stagingResource.Reset();
 
     D3D12NI_LOG_TRACE("--- Buffer %s created (size %u) ---", mDebugName.c_str(), mSize);
     return true;

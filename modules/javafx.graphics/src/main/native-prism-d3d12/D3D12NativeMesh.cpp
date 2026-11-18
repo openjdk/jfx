@@ -34,6 +34,40 @@
 
 namespace D3D12 {
 
+bool NativeMesh::InitOrUpdateBuffer(NIPtr<Internal::Buffer>& buffer, const void* data, size_t size, D3D12_RESOURCE_STATES targetState)
+{
+    if (buffer && size != buffer->Size())
+    {
+        mNativeDevice->MarkDisposed(buffer);
+        buffer.reset();
+    }
+
+    if (!buffer)
+    {
+        // NativeDevice will create the Buffer, initialize it and transition to desired state
+        buffer = mNativeDevice->CreateBuffer(data, size, false, targetState);
+        if (!buffer)
+        {
+            D3D12NI_LOG_ERROR("Failed to create a Buffer for mesh");
+            return false;
+        }
+    }
+    else
+    {
+        // preexisting buffer of same size, skip allocation and run an update of its data
+        if (!mNativeDevice->GetRenderingContext()->UpdateBuffer(buffer, data, size))
+        {
+            D3D12NI_LOG_ERROR("Failed to update Buffer for mesh");
+            return false;
+        }
+
+        // update will transition the Buffer to COPY_DEST state so transition to desired target state
+        mNativeDevice->GetRenderingContext()->TransitionTrackedResource(buffer, targetState);
+    }
+
+    return true;
+}
+
 NativeMesh::NativeMesh(const NIPtr<NativeDevice>& nativeDevice)
     : mNativeDevice(nativeDevice)
     , mVertexBuffer()
@@ -64,29 +98,15 @@ void NativeMesh::Release()
 
 bool NativeMesh::BuildGeometryBuffers(const void* vbData, size_t vbSize, const void* ibData, size_t ibSize, DXGI_FORMAT ibFormat)
 {
-    if (mVertexBuffer)
+    if (!InitOrUpdateBuffer(mVertexBuffer, vbData, vbSize, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER))
     {
-        mNativeDevice->MarkDisposed(mVertexBuffer);
-        mVertexBuffer.reset();
-    }
-
-    if (mIndexBuffer)
-    {
-        mNativeDevice->MarkDisposed(mIndexBuffer);
-        mIndexBuffer.reset();
-    }
-
-    mVertexBuffer = mNativeDevice->CreateBuffer(vbData, vbSize, false, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-    if (!mVertexBuffer)
-    {
-        D3D12NI_LOG_ERROR("Failed to create a Vertex Buffer for mesh");
+        D3D12NI_LOG_ERROR("Failed to build Vertex Buffer for Mesh");
         return false;
     }
 
-    mIndexBuffer = mNativeDevice->CreateBuffer(ibData, ibSize, false, D3D12_RESOURCE_STATE_INDEX_BUFFER);
-    if (!mIndexBuffer)
+    if (!InitOrUpdateBuffer(mIndexBuffer, ibData, ibSize, D3D12_RESOURCE_STATE_INDEX_BUFFER))
     {
-        D3D12NI_LOG_ERROR("Failed to create an Index Buffer for mesh");
+        D3D12NI_LOG_ERROR("Failed to build Index Buffer for Mesh");
         return false;
     }
 

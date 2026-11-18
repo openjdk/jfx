@@ -57,12 +57,8 @@ public:
      *
      * @p heapType determines on which heap the buffer will be allocated and can have
      * performance implications.
-     *
-     * @p finalState only matters when @p cpuWriteable is false - otherwise the Buffer is
-     * allocated on Upload Heap which only allows GENERIC_READ state (which also is the only
-     * state it can be initialized in).
      */
-    bool Init(const void* data, size_t size, D3D12_HEAP_TYPE heapType, D3D12_RESOURCE_STATES finalState);
+    bool Init(const void* data, size_t size, D3D12_HEAP_TYPE heapType);
 
     /**
      * Map D3D12 resource to CPU-visible memory. Returns a pointer to Resource's memory.

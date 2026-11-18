@@ -272,7 +272,7 @@ class RenderThreadContext
 
     CommandListPool mCommandListPool;
     VertexBatch m2DVertexBatch;
-    Internal::Buffer m2DIndexBuffer;
+    NIPtr<Internal::Buffer> m2DIndexBuffer;
     RingBuffer mVertexRingBuffer; // used for 2D Vertex data
     RingBuffer mDataRingBuffer; // used for small Texture upload and other stuff
 
@@ -282,6 +282,7 @@ class RenderThreadContext
     void DeclareVertexData(uint32_t vertexCount);
     VertexSubregion GetNewRegionForVertices(uint32_t vertexCount);
     void EnsureBoundTexturesState(D3D12_RESOURCE_STATES textureState);
+    RingBuffer::Region PushToDataRingBuffer(const void* data, size_t size);
     void SetVertexBuffer(const D3D12_VERTEX_BUFFER_VIEW& vbView);
     void SetIndexBuffer(const D3D12_INDEX_BUFFER_VIEW& ibView);
 
@@ -334,6 +335,8 @@ public:
     void PrepareMeshDraw(const NIPtr<Internal::Buffer>& vertexBuffer, const NIPtr<Internal::Buffer>& indexBuffer, DXGI_FORMAT ibFormat);
     void Draw(uint32_t elements, uint32_t vbOffset);
     void Dispatch(uint32_t x, uint32_t y, uint32_t z);
+    void UpdateSmallBuffer(const NIPtr<Internal::ITrackedResource>& dstBuffer,
+                           const void* srcData, size_t srcDataSize);
     void UpdateSmallTexture(const NIPtr<Internal::ITrackedResource>& dstTexture, uint32_t dstx, uint32_t dsty,
                             const void* srcData, size_t srcDataSize, const D3D12_TEXTURE_COPY_LOCATION& srcLoc);
 

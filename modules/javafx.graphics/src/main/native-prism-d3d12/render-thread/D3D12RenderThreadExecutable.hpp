@@ -109,6 +109,33 @@ struct CopyTextureArgs
     {}
 };
 
+struct CopyToBufferSmallArgs
+{
+public:
+    Internal::LinearAllocator& allocator;
+    size_t srcDataSize;
+    void* srcData;
+    NIPtr<Internal::ITrackedResource> dstResource;
+
+    CopyToBufferSmallArgs(Internal::LinearAllocator& allocator, const void* srcDataPtr, size_t srcDataSize, const NIPtr<Internal::ITrackedResource>& dstResource)
+        : allocator(allocator)
+        , srcDataSize(srcDataSize)
+        , srcData(this->allocator.Allocate(static_cast<uint32_t>(srcDataSize)))
+        , dstResource(dstResource)
+    {
+        memcpy(this->srcData, srcDataPtr, srcDataSize);
+    }
+
+    ~CopyToBufferSmallArgs()
+    {
+        if (srcData)
+        {
+            allocator.Free(srcData);
+            srcData = nullptr;
+        }
+    }
+};
+
 struct CopyToTextureSmallArgs
 {
 private:
@@ -530,6 +557,19 @@ public:
     }
 };
 
+class CopyToBufferSmallAction: public RenderThreadDataExecutable<CopyToBufferSmallArgs>
+{
+public:
+    CopyToBufferSmallAction(Internal::LinearAllocator& allocator, const void* srcDataPtr, size_t srcDataSize, const NIPtr<Internal::ITrackedResource>& dstResource)
+        : RenderThreadDataExecutable(allocator, srcDataPtr, srcDataSize, dstResource)
+    {}
+
+    void Execute(const RenderThreadContextPtr& context) override final
+    {
+        context->UpdateSmallBuffer(mData.dstResource, mData.srcData, mData.srcDataSize);
+    }
+};
+
 class CopyToTextureSmallAction: public RenderThreadDataExecutable<CopyToTextureSmallArgs>
 {
 public:
@@ -539,9 +579,6 @@ public:
 
     void Execute(const RenderThreadContextPtr& context) override final
     {
-        context->QueueResourceTransition(mData.dstResource, D3D12_RESOURCE_STATE_COPY_DEST);
-        context->SubmitResourceTransitions();
-
         context->UpdateSmallTexture(mData.dstResource, mData.dstx, mData.dsty, mData.GetSourceDataBuffer(), mData.GetSourceDataSize(), mData.srcLoc);
     }
 };
