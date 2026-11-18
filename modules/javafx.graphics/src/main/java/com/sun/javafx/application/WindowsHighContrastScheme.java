@@ -66,11 +66,21 @@ enum WindowsHighContrastScheme {
             return NONE;
         }
 
-        // Iterate over all resource bundles and try to find a value that matches the theme name
-        // we got from the OS. We can't just look in the properties file for the current locale,
-        // since we might be running on a JVM with a locale that is different from the OS.
+        // The OS gives us the theme name in the OS display language. In most cases, the default locale
+        // of the JVM matches that language, so we first try the resource bundle for the default locale.
+        // This is much faster than loading the resource bundles for all locales.
+        WindowsHighContrastScheme scheme = find(themeName, List.of(ResourceBundle.getBundle(BUNDLE_NAME)));
+        if (scheme != NONE) {
+            return scheme;
+        }
+
+        // The JVM might run with a locale that is different from the OS, so we try all resource bundles.
+        return find(themeName, ResourceBundleHolder.BUNDLES);
+    }
+
+    private static WindowsHighContrastScheme find(String themeName, List<ResourceBundle> resourceBundles) {
         for (WindowsHighContrastScheme item : values()) {
-            for (ResourceBundle resourceBundle : ResourceBundleHolder.BUNDLES) {
+            for (ResourceBundle resourceBundle : resourceBundles) {
                 if (item != NONE && themeName.equalsIgnoreCase(resourceBundle.getString(item.themeKey))) {
                     return item;
                 }
@@ -86,8 +96,10 @@ enum WindowsHighContrastScheme {
      */
     private static final class ResourceBundleHolder {
         static final List<ResourceBundle> BUNDLES = Arrays.stream(Locale.getAvailableLocales())
-            .map(locale -> ResourceBundle.getBundle("com/sun/glass/ui/win/themes", locale))
+            .map(locale -> ResourceBundle.getBundle(BUNDLE_NAME, locale))
             .distinct()
             .toList();
     }
+
+    private static final String BUNDLE_NAME = "com/sun/glass/ui/win/themes";
 }
