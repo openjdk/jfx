@@ -1494,7 +1494,7 @@ public class RichTextAreaTest {
         }
 
         Origin origin = null;
-        double xoff = Double.POSITIVE_INFINITY; 
+        double xoff = Double.POSITIVE_INFINITY;
         for (Args a : args) {
             control.select(a.p);
             control.setWrapText(a.wrap);
