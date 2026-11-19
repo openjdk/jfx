@@ -35,8 +35,7 @@ import java.util.Locale;
 /// immutable unless created with the [#DateTimeStringConverter(DateFormat)] constructor (with a non-`null` argument).
 ///
 /// @since JavaFX 2.1
-/// @deprecated Prefer [LocalDateTimeStringConverter] in JDK versions where [java.time.LocalDateTime] is available as a
-///     replacement for `Date`.
+/// @deprecated Use [LocalDateTimeStringConverter] instead.
 @Deprecated(forRemoval = false, since = "28")
 public class DateTimeStringConverter extends BaseStringConverter<Date> {
 
