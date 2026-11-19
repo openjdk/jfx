@@ -32,8 +32,7 @@ import java.util.Locale;
 /// A `StringConverter` implementation for [Date] values that represent time.
 ///
 /// @since JavaFX 2.1
-/// @deprecated Prefer [LocalTimeStringConverter] in JDK versions where [java.time.LocalTime] is available as a
-///     replacement for `Date`.
+/// @deprecated Use [LocalTimeStringConverter] instead.
 @Deprecated(forRemoval = false, since = "28")
 public class TimeStringConverter extends DateTimeStringConverter {
 
