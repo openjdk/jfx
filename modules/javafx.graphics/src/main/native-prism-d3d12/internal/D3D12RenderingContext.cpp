@@ -833,21 +833,6 @@ void RenderingContext::TransitionTrackedResource(const NIPtr<ITrackedResource>& 
     AddToRTPayload(CreateRTExec<ResourceTransitionAction>(mPayloadAllocator, resource, newState, subresource));
 }
 
-void RenderingContext::TransitionResource(const D3D12ResourcePtr& resource, D3D12_RESOURCE_STATES oldState, D3D12_RESOURCE_STATES newState, uint32_t subresource)
-{
-    if (oldState == newState) return;
-
-    D3D12_RESOURCE_BARRIER barrier;
-    D3D12NI_ZERO_STRUCT(barrier);
-    barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-    barrier.Transition.pResource = resource.Get();
-    barrier.Transition.StateBefore = oldState;
-    barrier.Transition.StateAfter = newState;
-    barrier.Transition.Subresource = subresource;
-
-    AddToRTPayload(CreateRTExec<ResourceBarrierAction>(mPayloadAllocator, barrier));
-}
-
 void RenderingContext::ClearTextureUnit(uint32_t unit)
 {
     if (!mTextures.GetTexture(unit)) return;

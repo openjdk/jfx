@@ -72,11 +72,6 @@ public:
     bool AddCheckpoint(CheckpointType type, Internal::Waitable&& waitable);
     bool WaitForNextCheckpoint(CheckpointType type);
     void PrintStats();
-
-    bool Empty() const
-    {
-        return mQueue.empty();
-    }
 };
 
 } // namespace RenderThread

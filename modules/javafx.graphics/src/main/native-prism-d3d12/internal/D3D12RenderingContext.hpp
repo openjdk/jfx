@@ -166,7 +166,6 @@ public:
     bool GenerateMipmaps(const NIPtr<NativeTexture>& texture);
 
     void TransitionTrackedResource(const NIPtr<ITrackedResource>& resource, D3D12_RESOURCE_STATES newState, uint32_t subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
-    void TransitionResource(const D3D12ResourcePtr& resource,  D3D12_RESOURCE_STATES oldState, D3D12_RESOURCE_STATES newState, uint32_t subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
 
     void ClearTextureUnit(uint32_t unit);
     void UnsetRenderTargetIfSet(IRenderTarget* rt);

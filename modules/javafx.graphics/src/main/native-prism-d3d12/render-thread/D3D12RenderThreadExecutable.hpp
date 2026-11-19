@@ -52,19 +52,9 @@ struct ClearRenderTargetArgs
     NIPtr<Internal::IRenderTarget> rt;
     Pixel_RGBA32_FLOAT rgba;
     D3D12_RECT clearRect;
-    bool hasRect;
-
-    ClearRenderTargetArgs(const NIPtr<Internal::IRenderTarget>& rt, float r, float g, float b, float a)
-        : rt(rt), rgba(), clearRect(), hasRect(false)
-    {
-        rgba.r = r;
-        rgba.g = g;
-        rgba.b = b;
-        rgba.a = a;
-    }
 
     ClearRenderTargetArgs(const NIPtr<Internal::IRenderTarget>& rt, float r, float g, float b, float a, const D3D12_RECT& clearRect)
-        : rt(rt), rgba(), clearRect(clearRect), hasRect(true)
+        : rt(rt), rgba(), clearRect(clearRect)
     {
         rgba.r = r;
         rgba.g = g;
@@ -201,16 +191,6 @@ struct CopyResourceArgs
     {}
 };
 
-struct DrawArgs
-{
-    uint32_t elements;
-    uint32_t vbOffset;
-
-    DrawArgs(uint32_t elements, uint32_t vbOffset)
-        : elements(elements), vbOffset(vbOffset)
-    {}
-};
-
 struct DispatchArgs
 {
     uint32_t x;
@@ -256,18 +236,6 @@ struct ResolveRegionArgs
     ResolveRegionArgs(const NIPtr<Internal::ITrackedResource>& dst, uint32_t dstx, uint32_t dsty, const NIPtr<Internal::ITrackedResource>& src, const D3D12_RECT& srcRect, DXGI_FORMAT format)
         : dst(dst), dstx(dstx), dsty(dsty), src(src), srcRect(srcRect), format(format)
     {}
-};
-
-struct GraphicsShaders
-{
-    NIPtr<Shaders::Shader> vertexShader;
-    NIPtr<Shaders::Shader> pixelShader;
-};
-
-struct DescriptorHeaps
-{
-    D3D12DescriptorHeapPtr heap;
-    D3D12DescriptorHeapPtr samplerHeap;
 };
 
 struct ResourceTransitionArgs
@@ -326,19 +294,6 @@ RenderThreadExecutablePtr CreateRTExec(Internal::LinearAllocator& allocator, Arg
 
 // Graphics render thread actions //
 
-class ApplyIndexBuffer: public RenderThreadDataExecutable<D3D12_INDEX_BUFFER_VIEW>
-{
-public:
-    ApplyIndexBuffer(const D3D12_INDEX_BUFFER_VIEW& data)
-        : RenderThreadDataExecutable(data)
-    {}
-
-    void Execute(const RenderThreadContextPtr& context) override final
-    {
-        context->indexBuffer.Set(mData);
-    }
-};
-
 class ApplyPipelineState: public RenderThreadDataExecutable<GraphicsPSOParameters>
 {
 public:
@@ -391,19 +346,6 @@ public:
     }
 };
 
-class ApplyVertexBuffer: public RenderThreadDataExecutable<D3D12_VERTEX_BUFFER_VIEW>
-{
-public:
-    ApplyVertexBuffer(const D3D12_VERTEX_BUFFER_VIEW& data)
-        : RenderThreadDataExecutable(data)
-    {}
-
-    void Execute(const RenderThreadContextPtr& context) override final
-    {
-        context->vertexBuffer.Set(mData);
-    }
-};
-
 class ApplyViewport: public RenderThreadDataExecutable<D3D12_VIEWPORT>
 {
 public:
@@ -423,10 +365,6 @@ public:
 class ClearRenderTargetAction: public RenderThreadDataExecutable<ClearRenderTargetArgs>
 {
 public:
-    ClearRenderTargetAction(const NIPtr<Internal::IRenderTarget>& rt, float r, float g, float b, float a)
-        : RenderThreadDataExecutable(ClearRenderTargetArgs(rt, r, g, b, a))
-    {}
-
     ClearRenderTargetAction(const NIPtr<Internal::IRenderTarget>& rt, float r, float g, float b, float a, const D3D12_RECT& clearRect)
         : RenderThreadDataExecutable(ClearRenderTargetArgs(rt, r, g, b, a, clearRect))
     {}
@@ -436,22 +374,9 @@ public:
         context->QueueResourceTransition(mData.rt->GetTexture(), D3D12_RESOURCE_STATE_RENDER_TARGET);
         context->SubmitResourceTransitions();
 
-        if (mData.hasRect)
-        {
-            context->CommandList()->ClearRenderTargetView(
-                mData.rt->GetRTVDescriptorData().CPU(0),
-                reinterpret_cast<const float*>(&mData.rgba),
-                1, &mData.clearRect
-            );
-        }
-        else
-        {
-            context->CommandList()->ClearRenderTargetView(
-                mData.rt->GetRTVDescriptorData().CPU(0),
-                reinterpret_cast<const float*>(&mData.rgba),
-                0, nullptr
-            );
-        }
+        context->CommandList()->ClearRenderTargetView(
+            mData.rt->GetRTVDescriptorData().CPU(0), reinterpret_cast<const float*>(&mData.rgba), 1, &mData.clearRect
+        );
     }
 };
 
@@ -568,19 +493,6 @@ public:
     }
 };
 
-class DrawAction: public RenderThreadDataExecutable<DrawArgs>
-{
-public:
-    DrawAction(uint32_t elements, uint32_t vbOffset)
-        : RenderThreadDataExecutable(elements, vbOffset)
-    {}
-
-    void Execute(const RenderThreadContextPtr& context) override final
-    {
-        context->CommandList()->DrawIndexedInstanced(mData.elements, 1, 0, mData.vbOffset, 0);
-    }
-};
-
 class PrepareSwapChainAction: public RenderThreadDataExecutable<PrepareSwapChainArgs>
 {
 public:
@@ -650,10 +562,6 @@ public:
 class ResourceTransitionAction: public RenderThreadDataExecutable<ResourceTransitionArgs>
 {
 public:
-    ResourceTransitionAction(const NIPtr<Internal::ITrackedResource>& resource, D3D12_RESOURCE_STATES newState)
-        : ResourceTransitionAction(resource, newState, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES)
-    {}
-
     ResourceTransitionAction(const NIPtr<Internal::ITrackedResource>& resource, D3D12_RESOURCE_STATES newState, uint32_t subresource)
         : RenderThreadDataExecutable(resource, newState, subresource)
     {}
@@ -662,21 +570,6 @@ public:
     {
         context->QueueResourceTransition(mData.resource, mData.newState, mData.subresource);
         context->SubmitResourceTransitions();
-    }
-};
-
-// this is a Barrier directly placed on the command list. This is separate as a helper when initializing
-// resources like Default-heap Buffers with data
-class ResourceBarrierAction: public RenderThreadDataExecutable<D3D12_RESOURCE_BARRIER>
-{
-public:
-    ResourceBarrierAction(const D3D12_RESOURCE_BARRIER& barrier)
-        : RenderThreadDataExecutable(barrier)
-    {}
-
-    void Execute(const RenderThreadContextPtr& context) override final
-    {
-        context->CommandList()->ResourceBarrier(1, &mData);
     }
 };
 

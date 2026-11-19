@@ -127,14 +127,6 @@ public:
     };
 
 private:
-    struct RuntimeParametersStash
-    {
-        NIPtr<Shaders::Shader> vertexShader;
-        NIPtr<Shaders::Shader> pixelShader;
-        Internal::TextureBank textures;
-        Internal::SamplerDescArray samplerDescs;
-    } mRuntimeParametersStash;
-
     struct ShaderConstantsData
     {
         bool dirty;
@@ -159,7 +151,6 @@ private:
     NIPtr<Shaders::Shader> mComputeShader;
     ShaderConstantsData mComputeShaderConstants;
 
-    void UpdateTextureDescriptorTable(const Internal::DescriptorData& dtable);
     bool PrepareConstants(const NIPtr<Shaders::Shader>& shaderResourceData, ShaderConstantsData& constants);
     bool PrepareTextureViews(const NIPtr<Shaders::Shader>& shaderResourceData);
     bool PrepareSamplers(const NIPtr<Shaders::Shader>& shaderResourceData);
@@ -177,7 +168,6 @@ public:
     bool PrepareComputeResources();
     void ApplyResources(const D3D12GraphicsCommandListPtr& commandList) const;
     void ApplyComputeResources(const D3D12GraphicsCommandListPtr& commandList) const;
-    void ClearTextureUnit(uint32_t slot);
     void SetVertexShader(const NIPtr<Shaders::Shader>& shader);
     void SetPixelShader(const NIPtr<Shaders::Shader>& shader);
     void SetComputeShader(const NIPtr<Shaders::Shader>& shader);
@@ -186,10 +176,6 @@ public:
     void SetComputeShaderConstants(ShaderConstants&& constants);
     void SetTextures(const Internal::TextureBank& bank, const Internal::SamplerDescArray& samplers);
     void SetTexture(uint32_t slot, const NIPtr<Internal::TextureBase>& tex, const Internal::SamplerDesc& samplerDesc);
-    void FinishFrame();
-
-    void StashParameters();
-    void RestoreStashedParameters();
 
     virtual void OnQueueSignal(uint64_t) override;
     virtual void OnFenceSignaled(uint64_t) override;

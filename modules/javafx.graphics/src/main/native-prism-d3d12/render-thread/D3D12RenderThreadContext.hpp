@@ -186,8 +186,6 @@ protected:
  */
 class RenderThreadContext
 {
-    using QuadVertices = std::array<Vertex_2D, 4>;
-
     struct VertexSubregion
     {
         uint32_t startOffset; // counted in vertices since start of entire region
@@ -277,7 +275,6 @@ class RenderThreadContext
     RingBuffer mDataRingBuffer; // used for small Texture upload and other stuff
 
     bool Build2DIndexBuffer();
-    QuadVertices AssembleVertexQuadForBlit(const Coords_Box_UINT32& src, const Coords_Box_UINT32& dst);
     void AssembleVertexData(void* buffer, const float* vertices, const unsigned char* colors, size_t elementCount);
     void DeclareVertexData(uint32_t vertexCount);
     VertexSubregion GetNewRegionForVertices(uint32_t vertexCount);
@@ -321,7 +318,6 @@ public:
     RenderThreadContext(const NIPtr<NativeDevice>& nativeDevice, const CheckpointCallback& flushCallback, const CheckpointCallback& waitCallback, const SignalCallback& signalCallback);
     bool Init();
     void Release();
-    void ExecuteCurrentCommandList();
 
     void QueueResourceTransition(const NIPtr<Internal::ITrackedResource>& resource, D3D12_RESOURCE_STATES newState, uint32_t subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
     void QueueD3D12ResourceTransition(const D3D12ResourcePtr& resource, D3D12_RESOURCE_STATES oldState, D3D12_RESOURCE_STATES newState, uint32_t subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);

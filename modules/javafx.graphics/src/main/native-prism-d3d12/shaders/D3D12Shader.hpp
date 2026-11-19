@@ -106,7 +106,6 @@ protected:
     DescriptorData mDescriptorData;
     bool mConstantsDirty;
 
-    void SetConstantBufferData(void* data, size_t size, size_t storageOffset);
     void AddShaderResource(const char* name, const ResourceAssignment& resource);
 
 public:

@@ -102,11 +102,6 @@ public:
         return mColorsPS;
     }
 
-    inline bool IsLightEnabled(int index) const
-    {
-        return mLightEnabled[index];
-    }
-
     inline D3D12_CULL_MODE GetCullMode() const
     {
         return mCullMode;

@@ -206,13 +206,10 @@ ResourceManager::~ResourceManager()
     for (uint32_t i = 0; i < Constants::MAX_TEXTURE_UNITS; ++i)
     {
         mTextures[i].reset();
-        mRuntimeParametersStash.textures[i].reset();
     }
 
     mVertexShader.reset();
     mPixelShader.reset();
-    mRuntimeParametersStash.vertexShader.reset();
-    mRuntimeParametersStash.pixelShader.reset();
 
     mNativeDevice->GetRenderingContext()->UnregisterWaitableOperation(this);
     mNativeDevice.reset();
@@ -355,13 +352,6 @@ void ResourceManager::ApplyComputeResources(const D3D12GraphicsCommandListPtr& c
     mComputeShader->ApplyDescriptors(commandList);
 }
 
-void ResourceManager::ClearTextureUnit(uint32_t slot)
-{
-    D3D12NI_ASSERT(slot < Constants::MAX_TEXTURE_UNITS, "Provided too high slot %u (max %u)", slot, Constants::MAX_TEXTURE_UNITS);
-
-    mTextures[slot].reset();
-}
-
 void ResourceManager::SetVertexShader(const NIPtr<Shaders::Shader>& shader)
 {
     if (shader == mVertexShader) return;
@@ -441,41 +431,6 @@ void ResourceManager::SetTexture(uint32_t slot, const NIPtr<Internal::TextureBas
     if (mTextures[slot] == tex) return;
 
     mTextures[slot] = tex;
-}
-
-void ResourceManager::FinishFrame()
-{
-    // invalidate shader constants, they will be reapplied and this will let us free space in the Allocator
-}
-
-void ResourceManager::StashParameters()
-{
-    mRuntimeParametersStash.vertexShader = mVertexShader;
-    mRuntimeParametersStash.pixelShader = mPixelShader;
-
-    for (size_t i = 0; i < mTextures.size(); ++i)
-    {
-        mRuntimeParametersStash.textures[i] = mTextures[i];
-        mRuntimeParametersStash.samplerDescs[i] = mCurrentSamplerBinding.descs[i];
-    }
-}
-
-void ResourceManager::RestoreStashedParameters()
-{
-    SetVertexShader(mRuntimeParametersStash.vertexShader);
-    SetPixelShader(mRuntimeParametersStash.pixelShader);
-
-    for (size_t i = 0; i < mTextures.size(); ++i)
-    {
-        if (mRuntimeParametersStash.textures[i])
-        {
-            SetTexture(static_cast<uint32_t>(i), mRuntimeParametersStash.textures[i], mRuntimeParametersStash.samplerDescs[i]);
-        }
-        else
-        {
-            ClearTextureUnit(static_cast<uint32_t>(i));
-        }
-    }
 }
 
 void ResourceManager::OnQueueSignal(uint64_t)

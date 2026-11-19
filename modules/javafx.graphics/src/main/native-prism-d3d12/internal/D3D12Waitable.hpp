@@ -59,11 +59,6 @@ public:
     // those will signal the EventHandle on their own.
     bool Signal();
 
-    inline void SetFinishedCallback(const WaitFinishedCallback& waitCallback)
-    {
-        mWaitFinishedCallback = waitCallback;
-    }
-
     inline const HANDLE& GetHandle() const
     {
         return mEventHandle;

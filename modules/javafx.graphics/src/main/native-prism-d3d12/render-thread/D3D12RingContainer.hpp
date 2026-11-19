@@ -66,7 +66,6 @@ private:
 
     std::string mDebugName;
 
-    void FlushCommandList();
     void CheckThreshold();
     bool AwaitNextCheckpoint(size_t needed);
     void PrintHumanReadableSize();
@@ -137,21 +136,6 @@ public:
     void OnFenceSignaled(uint64_t fenceValue) override;
 
     void SetDebugName(const std::string& name);
-
-    inline size_t Size() const
-    {
-        return mSize;
-    }
-
-    inline size_t FlushThreshold() const
-    {
-        return mFlushThreshold;
-    }
-
-    inline bool HasUncommittedData() const
-    {
-        return (mUncommitted > 0);
-    }
 };
 
 } // namespace RenderThread

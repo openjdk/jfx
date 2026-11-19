@@ -61,60 +61,6 @@ bool RenderThreadContext::Build2DIndexBuffer()
     return true;
 }
 
-RenderThreadContext::QuadVertices RenderThreadContext::AssembleVertexQuadForBlit(const Coords_Box_UINT32& src, const Coords_Box_UINT32& dst)
-{
-    uint32_t srcWidth = src.x1 - src.x0;
-    uint32_t srcHeight = src.y1 - src.y0;
-    uint32_t dstWidth = dst.x1 - dst.x0;
-    uint32_t dstHeight = dst.y1 - dst.y0;
-
-    // default viewport coordinates are from -1 to 1
-    // so destination has to be doubled and shifted from 0-2 range to -1-1 range
-    Coords_UV_FLOAT srcTexelSize{ 1.0f / srcWidth, 1.0f / srcHeight };
-    Coords_UV_FLOAT dstTexelSize{ 2.0f / dstWidth, 2.0f / dstHeight };
-
-    // dstBox V coord is inverted because of d3d12's coordinate system
-    Coords_UV_FLOAT srcBoxTexelsMin{ src.x0 * srcTexelSize.u, src.y0 * srcTexelSize.v };
-    Coords_UV_FLOAT srcBoxTexelsMax{ src.x1 * srcTexelSize.u, src.y1 * srcTexelSize.v };
-    Coords_UV_FLOAT dstBoxTexelsMin{ (dst.x0 * dstTexelSize.u) - 1.0f, (dst.y1 * dstTexelSize.v) - 1.0f };
-    Coords_UV_FLOAT dstBoxTexelsMax{ (dst.x1 * dstTexelSize.u) - 1.0f, (dst.y0 * dstTexelSize.v) - 1.0f };
-
-    QuadVertices result;
-
-    // Build a fullscreen quad used for slow blit path
-    result[0].pos.x = dstBoxTexelsMin.u;
-    result[0].pos.y = dstBoxTexelsMin.v;
-    result[0].uv1.u = srcBoxTexelsMin.u;
-    result[0].uv1.v = srcBoxTexelsMin.v;
-
-    result[1].pos.x = dstBoxTexelsMin.u;
-    result[1].pos.y = dstBoxTexelsMax.v;
-    result[1].uv1.u = srcBoxTexelsMin.u;
-    result[1].uv1.v = srcBoxTexelsMax.v;
-
-    result[2].pos.x = dstBoxTexelsMax.u;
-    result[2].pos.y = dstBoxTexelsMin.v;
-    result[2].uv1.u = srcBoxTexelsMax.u;
-    result[2].uv1.v = srcBoxTexelsMin.v;
-
-    result[3].pos.x = dstBoxTexelsMax.u;
-    result[3].pos.y = dstBoxTexelsMax.v;
-    result[3].uv1.u = srcBoxTexelsMax.u;
-    result[3].uv1.v = srcBoxTexelsMax.v;
-
-    for (uint32_t i = 0; i < result.size(); ++i)
-    {
-        result[i].pos.z = 0.0f;
-        result[i].color.r = 255;
-        result[i].color.g = 255;
-        result[i].color.b = 255;
-        result[i].color.a = 255;
-        result[i].uv2 = result[i].uv1;
-    }
-
-    return result;
-}
-
 // NOTE technically we don't query buffer ptr's size, but this function assumes we reserved enough
 // space already.
 void RenderThreadContext::AssembleVertexData(void* buffer, const float* vertices,

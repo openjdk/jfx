@@ -72,11 +72,6 @@ public:
         return data.allocatorId == mID;
     }
 
-    inline const D3D12DescriptorHeapPtr& GetHeap() const
-    {
-        return mHeap;
-    }
-
     inline bool Empty() const
     {
         return (mAllocatedCountTotal == 0);

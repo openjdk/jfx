@@ -317,13 +317,6 @@ struct Pixel_RGBA8_UNORM
     uint8_t a;
 };
 
-struct Pixel_RGB32_FLOAT
-{
-    float r;
-    float g;
-    float b;
-};
-
 struct Pixel_RGBA32_FLOAT
 {
     float r;
@@ -629,62 +622,3 @@ inline size_t GetPixelFormatBPP(PixelFormat f)
 #define D3D12NI_ASSERT(x, msg, ...) do { D3D12NI_UNUSED(x); } while (0)
 
 #endif // DEBUG
-
-
-namespace D3D12 {
-
-// Descriptor-related structs used to move to RenderPayload
-template <typename DescriptorType>
-struct DescriptorBinding
-{
-    uint32_t rootIndex;
-    DescriptorType handle;
-
-    DescriptorBinding()
-        : rootIndex(UINT32_MAX)
-        , handle()
-    {}
-
-    DescriptorBinding(uint32_t idx, DescriptorType h)
-        : rootIndex(idx)
-        , handle(h)
-    {}
-};
-
-template <typename DescriptorType>
-using DescriptorMappings = std::array<DescriptorBinding<DescriptorType>, 4>;
-
-struct Descriptors
-{
-    DescriptorMappings<D3D12_GPU_VIRTUAL_ADDRESS> CBVs;
-    uint32_t CBVCount;
-    DescriptorMappings<D3D12_GPU_DESCRIPTOR_HANDLE> DTs;
-    uint32_t DTCount;
-
-    Descriptors()
-        : CBVs()
-        , CBVCount(0)
-        , DTs()
-        , DTCount(0)
-    {}
-
-    void AddConstantBufferView(uint32_t rootIndex, const D3D12_GPU_VIRTUAL_ADDRESS& address)
-    {
-        D3D12NI_ASSERT(CBVCount < 4, "Cannot add more CBVs");
-
-        CBVs[CBVCount].rootIndex = rootIndex;
-        CBVs[CBVCount].handle = address;
-        ++CBVCount;
-    }
-
-    void AddDescriptorTable(uint32_t rootIndex, const D3D12_GPU_DESCRIPTOR_HANDLE& handle)
-    {
-        D3D12NI_ASSERT(DTCount < 4, "Cannot add more DTs");
-
-        DTs[DTCount].rootIndex = rootIndex;
-        DTs[DTCount].handle = handle;
-        ++DTCount;
-    }
-};
-
-} // namespace D3D12

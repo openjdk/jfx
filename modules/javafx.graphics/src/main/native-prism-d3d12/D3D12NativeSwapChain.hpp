@@ -94,11 +94,6 @@ public:
         return mTextureBuffers[index]->GetD3D12Resource();
     }
 
-    inline UINT GetBufferCount() const
-    {
-        return static_cast<UINT>(mBufferCount);
-    }
-
     inline UINT GetCurrentBufferIndex() const
     {
         return mCurrentBufferIdx;
