@@ -633,8 +633,8 @@ bool RenderingContext::UpdateBuffer(const NIPtr<Buffer>& dstBuffer, const void* 
             return false;
         }
 
-        // perform a copy
-        if (!AddToRTPayload(CreateRTExec<CopyResourceAction>(mPayloadAllocator, dstBuffer->GetD3D12Resource(), stagingBuffer->GetD3D12Resource())))
+        // perform a direct copy
+        if (!AddToRTPayload(CreateRTExec<CopyResourceAction>(mPayloadAllocator, dstBuffer, stagingBuffer)))
         {
             return false;
         }
@@ -766,16 +766,6 @@ bool RenderingContext::UpdateTexture(const NIPtr<NativeTexture>& dstTexture, uin
     }
 
     return true;
-}
-
-void RenderingContext::CopyBufferRegion(const D3D12ResourcePtr& dst, uint64_t dstOffset, const D3D12ResourcePtr& src, uint64_t srcOffset, uint64_t size)
-{
-    AddToRTPayload(CreateRTExec<CopyBufferRegionAction>(mPayloadAllocator, dst, dstOffset, src, srcOffset, size));
-}
-
-void RenderingContext::CopyResource(const D3D12ResourcePtr& dst, const D3D12ResourcePtr& src)
-{
-    AddToRTPayload(CreateRTExec<CopyResourceAction>(mPayloadAllocator, dst, src));
 }
 
 bool RenderingContext::GenerateMipmaps(const NIPtr<NativeTexture>& texture)

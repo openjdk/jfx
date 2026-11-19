@@ -163,8 +163,6 @@ public:
     bool UpdateTexture(const NIPtr<NativeTexture>& dstTexture, uint32_t dstx, uint32_t dsty,
                        const void* srcData, size_t srcDataBytes, uint32_t srcx, uint32_t srcy,
                        uint32_t srcw, uint32_t srch, uint32_t srcStride, PixelFormat srcFormat);
-    void CopyBufferRegion(const D3D12ResourcePtr& dst, uint64_t dstOffset, const D3D12ResourcePtr& src, uint64_t srcOffset, uint64_t size);
-    void CopyResource(const D3D12ResourcePtr& dst, const D3D12ResourcePtr& src);
     bool GenerateMipmaps(const NIPtr<NativeTexture>& texture);
 
     void TransitionTrackedResource(const NIPtr<ITrackedResource>& resource, D3D12_RESOURCE_STATES newState, uint32_t subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);

@@ -191,25 +191,12 @@ public:
     }
 };
 
-struct CopyBufferRegionArgs
-{
-    D3D12ResourcePtr dst;
-    uint64_t dstOffset;
-    D3D12ResourcePtr src;
-    uint64_t srcOffset;
-    uint64_t size;
-
-    CopyBufferRegionArgs(const D3D12ResourcePtr& dst, uint64_t dstOffset, const D3D12ResourcePtr& src, uint64_t srcOffset, uint64_t size)
-        : dst(dst), dstOffset(dstOffset), src(src), srcOffset(srcOffset), size(size)
-    {}
-};
-
 struct CopyResourceArgs
 {
-    D3D12ResourcePtr dst;
-    D3D12ResourcePtr src;
+    NIPtr<Internal::ITrackedResource> dst;
+    NIPtr<Internal::ITrackedResource> src;
 
-    CopyResourceArgs(const D3D12ResourcePtr& dst, const D3D12ResourcePtr& src)
+    CopyResourceArgs(const NIPtr<Internal::ITrackedResource>& dst, const NIPtr<Internal::ITrackedResource>& src)
         : dst(dst), src(src)
     {}
 };
@@ -531,29 +518,27 @@ public:
     }
 };
 
-class CopyBufferRegionAction: public RenderThreadDataExecutable<CopyBufferRegionArgs>
-{
-public:
-    CopyBufferRegionAction(const D3D12ResourcePtr& dst, uint64_t dstOffset, const D3D12ResourcePtr& src, uint64_t srcOffset, uint64_t size)
-        : RenderThreadDataExecutable(dst, dstOffset, src, srcOffset, size)
-    {}
-
-    void Execute(const RenderThreadContextPtr& context) override final
-    {
-        context->CommandList()->CopyBufferRegion(mData.dst.Get(), mData.dstOffset, mData.src.Get(), mData.srcOffset, mData.size);
-    }
-};
-
 class CopyResourceAction: public RenderThreadDataExecutable<CopyResourceArgs>
 {
 public:
-    CopyResourceAction(const D3D12ResourcePtr& dst, const D3D12ResourcePtr& src)
+    CopyResourceAction(const NIPtr<Internal::ITrackedResource>& dst, const NIPtr<Internal::ITrackedResource>& src)
         : RenderThreadDataExecutable(dst, src)
     {}
 
     void Execute(const RenderThreadContextPtr& context) override final
     {
-        context->CommandList()->CopyResource(mData.dst.Get(), mData.src.Get());
+        if (mData.src->NeedsStateTransitions())
+        {
+            context->QueueResourceTransition(mData.src, D3D12_RESOURCE_STATE_COPY_SOURCE);
+        }
+
+        if (mData.dst->NeedsStateTransitions())
+        {
+            context->QueueResourceTransition(mData.dst, D3D12_RESOURCE_STATE_COPY_DEST);
+        }
+
+        context->SubmitResourceTransitions();
+        context->CommandList()->CopyResource(mData.dst->GetD3D12Resource().Get(), mData.src->GetD3D12Resource().Get());
     }
 };
 
