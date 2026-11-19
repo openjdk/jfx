@@ -292,11 +292,11 @@ public class ComboBoxListCellTest {
     }
 
     @Test public void test_startEdit_listViewEditableIsTrue_isNotEmpty() {
-        ListView listView = new ListView();
+        ListView listView = new ListView(FXCollections.observableArrayList("TEST"));
         listView.setEditable(true);
         ComboBoxListCell<Object> cell = new ComboBoxListCell<>();
         cell.updateListView(listView);
-        cell.updateItem("TEST", false);
+        cell.updateIndex(0);
 
         cell.startEdit();
         assertTrue(cell.isEditing());
@@ -304,12 +304,12 @@ public class ComboBoxListCellTest {
     }
 
     @Test public void test_startEdit_listViewEditableIsTrue_cellEditableIsTrue_isNotEmpty() {
-        ListView listView = new ListView();
+        ListView listView = new ListView(FXCollections.observableArrayList("TEST"));
         listView.setEditable(true);
         ComboBoxListCell<Object> cell = new ComboBoxListCell<>();
         cell.setEditable(true);
         cell.updateListView(listView);
-        cell.updateItem("TEST", false);
+        cell.updateIndex(0);
 
         cell.startEdit();
         assertTrue(cell.isEditing());
@@ -318,11 +318,11 @@ public class ComboBoxListCellTest {
 
     // --- cancel edit
     @Test public void test_cancelEdit() {
-        ListView listView = new ListView();
+        ListView listView = new ListView(FXCollections.observableArrayList("TEST"));
         listView.setEditable(true);
         ComboBoxListCell<Object> cell = new ComboBoxListCell<>();
         cell.updateListView(listView);
-        cell.updateItem("TEST", false);
+        cell.updateIndex(0);
 
         cell.startEdit();
         assertTrue(cell.isEditing());
@@ -334,11 +334,11 @@ public class ComboBoxListCellTest {
     }
 
     @Test public void test_rt_29320() {
-        ListView listView = new ListView();
+        ListView listView = new ListView(FXCollections.observableArrayList("TEST"));
         listView.setEditable(true);
         ComboBoxListCell<Object> cell = new ComboBoxListCell<>();
         cell.updateListView(listView);
-        cell.updateItem("TEST", false);
+        cell.updateIndex(0);
         cell.setEditable(true);
 
         cell.startEdit();

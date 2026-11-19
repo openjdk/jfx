@@ -26,11 +26,16 @@ package test.javafx.scene.control;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
@@ -232,5 +237,231 @@ public class TableViewRowTest {
         for (TableCell<String, String> cell : cells) {
             assertEquals(1, cell.getIndex());
         }
+    }
+
+    @Test
+    public void testEditOnTableViewStartsEditingInRow() {
+        TableView<String> table = createEditableTableView();
+        TableRow<String> row = createRow(table, 1);
+
+        table.edit(1, null);
+
+        assertTrue(row.isEditing());
+    }
+
+    @Test
+    public void testEditOnTableViewWithAnotherIndexDoesNotStartEditingInRow() {
+        TableView<String> table = createEditableTableView();
+        TableRow<String> row = createRow(table, 1);
+
+        table.edit(0, null);
+
+        assertFalse(row.isEditing());
+    }
+
+    @Test
+    public void testStartEditOnNonEditableTableViewDoesNothing() {
+        TableView<String> table = createEditableTableView();
+        table.setEditable(false);
+        TableRow<String> row = createRow(table, 1);
+
+        row.startEdit();
+
+        assertFalse(row.isEditing());
+        assertNull(table.getEditingCell());
+    }
+
+    @Test
+    public void testStartEditOnNonEditableRowDoesNothing() {
+        TableView<String> table = createEditableTableView();
+        TableRow<String> row = createRow(table, 1);
+        row.setEditable(false);
+
+        row.startEdit();
+
+        assertFalse(row.isEditing());
+    }
+
+    @Test
+    public void testStartEditWithoutTableViewDoesNotThrow() {
+        TableRow<String> row = new TableRow<>();
+        row.updateIndex(1);
+
+        row.startEdit();
+    }
+
+    @Test
+    public void testStartEditFiresEditStartEvent() {
+        TableView<String> table = createEditableTableView();
+        TableRow<String> row = createRow(table, 1);
+
+        AtomicInteger counter = new AtomicInteger();
+        table.addEventHandler(TableView.editStartEvent(), event -> counter.incrementAndGet());
+
+        row.startEdit();
+
+        assertTrue(row.isEditing());
+        assertEquals(1, counter.get());
+    }
+
+    @Test
+    public void testCommitEditFiresEditCommitEventWithOldAndNewValue() {
+        TableView<String> table = createEditableTableView();
+        TableRow<String> row = createRow(table, 1);
+        row.startEdit();
+
+        List<TableView.EditEvent<String>> events = new ArrayList<>();
+        table.addEventHandler(TableView.<String>editCommitEvent(), events::add);
+
+        row.commitEdit("Watermelon");
+
+        assertEquals(1, events.size());
+        assertEquals("Oranges", events.get(0).getOldValue());
+        assertEquals("Watermelon", events.get(0).getNewValue());
+        assertSame(table, events.get(0).getSource());
+    }
+
+    @Test
+    public void testCommitEditUpdatesTheRowAndStopsEditing() {
+        TableView<String> table = createEditableTableView();
+        TableRow<String> row = createRow(table, 1);
+        row.startEdit();
+
+        row.commitEdit("Watermelon");
+
+        assertEquals("Watermelon", row.getItem());
+        assertFalse(row.isEditing());
+        assertNull(table.getEditingCell());
+    }
+
+    @Test
+    public void testCommitEditWithoutEditingDoesNothing() {
+        TableView<String> table = createEditableTableView();
+        TableRow<String> row = createRow(table, 1);
+
+        AtomicInteger counter = new AtomicInteger();
+        table.addEventHandler(TableView.editCommitEvent(), event -> counter.incrementAndGet());
+
+        row.commitEdit("Watermelon");
+
+        assertEquals("Oranges", row.getItem());
+        assertEquals(0, counter.get());
+    }
+
+    @Test
+    public void testCancelEditFiresEditCancelEventAndStopsEditing() {
+        TableView<String> table = createEditableTableView();
+        TableRow<String> row = createRow(table, 1);
+        row.startEdit();
+
+        AtomicInteger counter = new AtomicInteger();
+        table.addEventHandler(TableView.editCancelEvent(), event -> counter.incrementAndGet());
+
+        row.cancelEdit();
+
+        assertEquals(1, counter.get());
+        assertFalse(row.isEditing());
+        assertNull(table.getEditingCell());
+        assertEquals("Oranges", row.getItem());
+    }
+
+    @Test
+    public void testCancelEditWithoutEditingDoesNothing() {
+        TableView<String> table = createEditableTableView();
+        TableRow<String> row = createRow(table, 1);
+
+        AtomicInteger counter = new AtomicInteger();
+        table.addEventHandler(TableView.editCancelEvent(), event -> counter.incrementAndGet());
+
+        row.cancelEdit();
+
+        assertEquals(0, counter.get());
+    }
+
+    @Test
+    public void testEditEventsAreSubTypesOfEditAnyEvent() {
+        TableView<String> table = createEditableTableView();
+        TableRow<String> row = createRow(table, 1);
+
+        AtomicInteger counter = new AtomicInteger();
+        table.addEventHandler(TableView.editAnyEvent(), event -> counter.incrementAndGet());
+
+        row.startEdit();
+        row.commitEdit("Watermelon");
+
+        assertEquals(2, counter.get());
+    }
+
+    @Test
+    public void testStartEditOnEmptyRowDoesNotFireEditStartEvent() {
+        TableView<String> table = createEditableTableView();
+        // an index past the items, so that the row is empty
+        TableRow<String> row = createRow(table, table.getItems().size());
+
+        AtomicInteger counter = new AtomicInteger();
+        table.addEventHandler(TableView.editStartEvent(), event -> counter.incrementAndGet());
+
+        row.startEdit();
+
+        assertTrue(row.isEmpty());
+        assertFalse(row.isEditing());
+        assertEquals(0, counter.get());
+    }
+
+    private static TableView<String> createEditableTableView() {
+        TableView<String> table =
+                new TableView<>(FXCollections.observableArrayList("Apples", "Oranges", "Pears"));
+        table.getColumns().add(new TableColumn<>("C0"));
+        table.setEditable(true);
+        return table;
+    }
+
+    private static TableRow<String> createRow(TableView<String> table, int index) {
+        TableRow<String> row = new TableRow<>();
+        row.updateTableView(table);
+        row.updateIndex(index);
+        return row;
+    }
+
+    /**
+     * A row with a null item at a valid index is not empty, so it must be cleaned up when its index is moved off-range.
+     */
+    @Test
+    public void testNullItemUpdateIndexNegative() {
+        TableRow<String> row = setupNullItemRow();
+        row.updateIndex(0);
+        assertInRangeNullItemState(row, 0);
+        row.updateIndex(-1);
+        assertOffRangeState(row, -1);
+    }
+
+    @Test
+    public void testNullItemUpdateIndexOffRange() {
+        TableRow<String> row = setupNullItemRow();
+        row.updateIndex(0);
+        assertInRangeNullItemState(row, 0);
+        row.updateIndex(nullItemModel.size());
+        assertOffRangeState(row, nullItemModel.size());
+    }
+
+    private ObservableList<String> nullItemModel;
+
+    private TableRow<String> setupNullItemRow() {
+        nullItemModel = FXCollections.observableArrayList(null, "Oranges", "Pears");
+        TableRow<String> row = new TableRow<>();
+        row.updateTableView(new TableView<>(nullItemModel));
+        return row;
+    }
+
+    private void assertInRangeNullItemState(TableRow<String> row, int index) {
+        assertEquals(index, row.getIndex(), "in range index");
+        assertNull(row.getItem(), "in range row item must be null");
+        assertFalse(row.isEmpty(), "in range row with null item must not be empty");
+    }
+
+    private void assertOffRangeState(TableRow<String> row, int index) {
+        assertEquals(index, row.getIndex(), "off range index");
+        assertNull(row.getItem(), "off range row item must be null");
+        assertTrue(row.isEmpty(), "off range row must be empty");
     }
 }
