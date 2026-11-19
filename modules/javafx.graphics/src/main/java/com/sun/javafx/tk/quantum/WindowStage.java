@@ -771,6 +771,7 @@ public class WindowStage extends GlassStage {
                 }
                 platformWindow = null;
             }
+            removeActiveWindow(this);
             ViewScene oldScene = getViewScene();
             if (oldScene != null) {
                 oldScene.updateSceneState();
