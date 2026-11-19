@@ -106,7 +106,7 @@ bool Config::LoadConfiguration(JNIEnv* env, jclass psClass)
 
     // default settings
     mSettings.apiOpts = true;
-    mSettings.clearOpts = true;
+    mSettings.clearOpts = false;
     mSettings.mainRingBufferThreshold = 24 * 1024 * 1024;
     mSettings.constantRingBufferThreshold = 8 * 1024 * 1024;
     mSettings.srvRingHeapThreshold = 32 * 1024;
