@@ -26,13 +26,6 @@
 package com.sun.javafx.scene.control.behavior;
 
 
-import com.sun.javafx.geom.transform.Affine3D;
-import com.sun.javafx.scene.NodeHelper;
-import com.sun.javafx.scene.control.Properties;
-import com.sun.javafx.scene.control.skin.Utils;
-
-import static com.sun.javafx.PlatformUtil.*;
-
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WeakChangeListener;
 import javafx.event.ActionEvent;
@@ -42,19 +35,26 @@ import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.TextField;
+import javafx.scene.control.input.KeyBinding;
 import javafx.scene.control.skin.TextFieldSkin;
 import javafx.scene.input.ContextMenuEvent;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.text.HitInfo;
 import javafx.stage.Screen;
 import javafx.stage.Window;
+import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.geom.transform.Affine3D;
+import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.control.Properties;
+import com.sun.javafx.scene.control.skin.Utils;
 
 /**
  * Text field behavior.
  */
 public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
-    private TextFieldSkin skin;
+    private final TextFieldSkin skin;
     private TwoLevelFocusBehavior tlFocus;
 
     // listeners to focus-related state
@@ -65,12 +65,19 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
     private WeakChangeListener<Node> weakFocusOwnerListener;
 
 
-    public TextFieldBehavior(final TextField textField) {
-        super(textField);
-
+    public TextFieldBehavior(TextField c, TextFieldSkin skin) {
+        super(c);
+        this.skin = skin;
         if (Properties.IS_TOUCH_SUPPORTED) {
             contextMenu.getStyleClass().add("text-input-context-menu");
         }
+    }
+
+    @Override
+    protected void populateSkinInputMap() {
+        super.populateSkinInputMap();
+
+        TextField textField = getControl();
 
         focusListener = (observable, oldValue, newValue) -> {
             handleFocusChange();
@@ -114,20 +121,24 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
         if (Utils.isTwoLevelFocus()) {
             tlFocus = new TwoLevelFocusBehavior(textField); // needs to be last.
         }
+
+        addHandler(KeyBinding.of(KeyCode.ENTER), this::fire);
+        addHandler(KeyBinding.of(KeyCode.ESCAPE), this::cancelEdit);
     }
 
-    @Override public void dispose() {
-        getNode().focusedProperty().removeListener(focusListener);
-        getNode().sceneProperty().removeListener(weakSceneListener);
-        if (getNode().getScene() != null) {
-            getNode().getScene().focusOwnerProperty().removeListener(weakFocusOwnerListener);
+    @Override
+    public void dispose() {
+        getControl().focusedProperty().removeListener(focusListener);
+        getControl().sceneProperty().removeListener(weakSceneListener);
+        if (getControl().getScene() != null) {
+            getControl().getScene().focusOwnerProperty().removeListener(weakFocusOwnerListener);
         }
         if (tlFocus != null) tlFocus.dispose();
         super.dispose();
     }
 
     private void handleFocusChange() {
-        TextField textField = getNode();
+        TextField textField = getControl();
 
         if (textField.isFocused()) {
             if (!focusGainedByMouseClick) {
@@ -149,13 +160,8 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
         return transform;
     }
 
-    // An unholy back-reference!
-    public void setTextFieldSkin(TextFieldSkin skin) {
-        this.skin = skin;
-    }
-
-    @Override protected void fire(KeyEvent event) {
-        TextField textField = getNode();
+    protected void fire(KeyEvent event) {
+        TextField textField = getControl();
         EventHandler<ActionEvent> onAction = textField.getOnAction();
         // use textField as target to prevent immediate copy in dispatch
         ActionEvent actionEvent = new ActionEvent(textField, textField);
@@ -169,18 +175,16 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
         }
     }
 
-    @Override
     protected void cancelEdit(KeyEvent event) {
-        TextField textField = getNode();
+        TextField textField = getControl();
         if (textField.getTextFormatter() != null) {
             textField.cancelEdit();
             event.consume();
-        } else {
-            super.cancelEdit(event);
         }
     }
 
-    @Override protected void deleteChar(boolean previous) {
+    @Override
+    protected void deleteChar(boolean previous) {
         skin.deleteChar(previous);
     }
 
@@ -189,10 +193,10 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
         skin.replaceText(start, end, txt);
     }
 
-    @Override protected void deleteFromLineStart() {
-        TextField textField = getNode();
-        int end = textField.getCaretPosition();
-
+    @Override
+    protected void deleteFromLineStart() {
+        TextField c = getControl();
+        int end = c.getCaretPosition();
         if (end > 0) {
             replaceText(0, end, "");
         }
@@ -221,106 +225,128 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
     private boolean shiftDown = false;
     private boolean deferClick = false;
 
-    @Override public void mousePressed(MouseEvent e) {
-        TextField textField = getNode();
-        // We never respond to events if disabled
-        if (!textField.isDisabled()) {
-            // If the text field doesn't have focus, then we'll attempt to set
-            // the focus and we'll indicate that we gained focus by a mouse
-            // click, which will then NOT honor the selectOnFocus variable
-            // of the textInputControl
-            if (!textField.isFocused()) {
-                focusGainedByMouseClick = true;
-                textField.requestFocus();
-            }
-
-            // stop the caret animation
-            setCaretAnimating(false);
-            // only if there is no selection should we see the caret
-//            setCaretOpacity(if (textInputControl.dot == textInputControl.mark) then 1.0 else 0.0);
-
-            // if the primary button was pressed
-            if (e.isPrimaryButtonDown() && !(e.isMiddleButtonDown() || e.isSecondaryButtonDown())) {
-                HitInfo hit = skin.getIndex(e.getX(), e.getY());
-                int i = hit.getInsertionIndex();
-                final int anchor = textField.getAnchor();
-                final int caretPosition = textField.getCaretPosition();
-                if (e.getClickCount() < 2 &&
-                    (Properties.IS_TOUCH_SUPPORTED ||
-                     (anchor != caretPosition &&
-                      ((i > anchor && i < caretPosition) || (i < anchor && i > caretPosition))))) {
-                    // if there is a selection, then we will NOT handle the
-                    // press now, but will defer until the release. If you
-                    // select some text and then press down, we change the
-                    // caret and wait to allow you to drag the text (TODO).
-                    // When the drag concludes, then we handle the click
-
-                    deferClick = true;
-                    // TODO start a timer such that after some millis we
-                    // switch into text dragging mode, change the cursor
-                    // to indicate the text can be dragged, etc.
-                } else if (!(e.isControlDown() || e.isAltDown() || e.isShiftDown() || e.isMetaDown())) {
-                    switch (e.getClickCount()) {
-                        case 1: mouseSingleClick(hit); break;
-                        case 2: mouseDoubleClick(hit); break;
-                        case 3: mouseTripleClick(hit); break;
-                        default: // no-op
-                    }
-                } else if (e.isShiftDown() && !(e.isControlDown() || e.isAltDown() || e.isMetaDown()) && e.getClickCount() == 1) {
-                    // didn't click inside the selection, so select
-                    shiftDown = true;
-                    // if we are on mac os, then we will accumulate the
-                    // selection instead of just moving the dot. This happens
-                    // by figuring out past which (dot/mark) are extending the
-                    // selection, and set the mark to be the other side and
-                    // the dot to be the new position.
-                    // everywhere else we just move the dot.
-                    if (isMac()) {
-                        textField.extendSelection(i);
-                    } else {
-                        skin.positionCaret(hit, true);
-                    }
+    @Override
+    public void mousePressed(MouseEvent e) {
+        try {
+            TextField textField = getControl();
+            // We never respond to events if disabled
+            if (!textField.isDisabled()) {
+                // If the text field doesn't have focus, then we'll attempt to set
+                // the focus and we'll indicate that we gained focus by a mouse
+                // click, which will then NOT honor the selectOnFocus variable
+                // of the textInputControl
+                if (!textField.isFocused()) {
+                    focusGainedByMouseClick = true;
+                    textField.requestFocus();
                 }
-                skin.setForwardBias(hit.isLeading());
-//                if (textInputControl.editable)
-//                    displaySoftwareKeyboard(true);
-            }
-        }
-        if (contextMenu.isShowing()) {
-            contextMenu.hide();
-        }
-    }
 
-    @Override public void mouseDragged(MouseEvent e) {
-        final TextField textField = getNode();
-        // we never respond to events if disabled, but we do notify any onXXX
-        // event listeners on the control
-        if (!textField.isDisabled() && !deferClick) {
-            if (e.isPrimaryButtonDown() && !(e.isMiddleButtonDown() || e.isSecondaryButtonDown())) {
-                if (!(e.isControlDown() || e.isAltDown() || e.isShiftDown() || e.isMetaDown())) {
-                    skin.positionCaret(skin.getIndex(e.getX(), e.getY()), true);
+                // stop the caret animation
+                setCaretAnimating(false);
+                // only if there is no selection should we see the caret
+    //            setCaretOpacity(if (textInputControl.dot == textInputControl.mark) then 1.0 else 0.0);
+
+                // if the primary button was pressed
+                if (e.isPrimaryButtonDown() && !(e.isMiddleButtonDown() || e.isSecondaryButtonDown())) {
+                    HitInfo hit = skin.getIndex(e.getX(), e.getY());
+                    int i = hit.getInsertionIndex();
+                    final int anchor = textField.getAnchor();
+                    final int caretPosition = textField.getCaretPosition();
+                    if (e.getClickCount() < 2 &&
+                        (Properties.IS_TOUCH_SUPPORTED ||
+                         (anchor != caretPosition &&
+                          ((i > anchor && i < caretPosition) || (i < anchor && i > caretPosition))))) {
+                        // if there is a selection, then we will NOT handle the
+                        // press now, but will defer until the release. If you
+                        // select some text and then press down, we change the
+                        // caret and wait to allow you to drag the text (TODO).
+                        // When the drag concludes, then we handle the click
+
+                        deferClick = true;
+                        // TODO start a timer such that after some millis we
+                        // switch into text dragging mode, change the cursor
+                        // to indicate the text can be dragged, etc.
+                    } else if (!(e.isControlDown() || e.isAltDown() || e.isShiftDown() || e.isMetaDown())) {
+                        switch (e.getClickCount()) {
+                            case 1: mouseSingleClick(hit); break;
+                            case 2: mouseDoubleClick(hit); break;
+                            case 3: mouseTripleClick(hit); break;
+                            default: // no-op
+                        }
+                    } else if (e.isShiftDown() && !(e.isControlDown() || e.isAltDown() || e.isMetaDown()) && e.getClickCount() == 1) {
+                        // didn't click inside the selection, so select
+                        shiftDown = true;
+                        // if we are on mac os, then we will accumulate the
+                        // selection instead of just moving the dot. This happens
+                        // by figuring out past which (dot/mark) are extending the
+                        // selection, and set the mark to be the other side and
+                        // the dot to be the new position.
+                        // everywhere else we just move the dot.
+                        if (PlatformUtil.isMac()) {
+                            textField.extendSelection(i);
+                        } else {
+                            skin.positionCaret(hit, true);
+                        }
+                    }
+                    skin.setForwardBias(hit.isLeading());
+    //                if (textInputControl.editable)
+    //                    displaySoftwareKeyboard(true);
                 }
             }
-        }
-    }
-
-    @Override public void mouseReleased(MouseEvent e) {
-        final TextField textField = getNode();
-        // we never respond to events if disabled, but we do notify any onXXX
-        // event listeners on the control
-        if (!textField.isDisabled()) {
-            setCaretAnimating(false);
-            if (deferClick) {
-                deferClick = false;
-                skin.positionCaret(skin.getIndex(e.getX(), e.getY()), shiftDown);
-                shiftDown = false;
+            if (contextMenu.isShowing()) {
+                contextMenu.hide();
             }
-            setCaretAnimating(true);
+        } finally {
+            // TODO original logic is to always consume the event.
+            // we may want to change that
+            e.consume();
         }
     }
 
-    @Override public void contextMenuRequested(ContextMenuEvent e) {
-        final TextField textField = getNode();
+    @Override
+    public void mouseDragged(MouseEvent e) {
+        try {
+            final TextField textField = getControl();
+            // we never respond to events if disabled, but we do notify any onXXX
+            // event listeners on the control
+            if (!textField.isDisabled() && !deferClick) {
+                if (e.isPrimaryButtonDown() && !(e.isMiddleButtonDown() || e.isSecondaryButtonDown())) {
+                    if (!(e.isControlDown() || e.isAltDown() || e.isShiftDown() || e.isMetaDown())) {
+                        skin.positionCaret(skin.getIndex(e.getX(), e.getY()), true);
+                    }
+                }
+            }
+        } finally {
+            // TODO original logic is to always consume the event.
+            // we may want to change that
+            e.consume();
+        }
+    }
+
+    @Override
+    public void mouseReleased(MouseEvent e) {
+        try {
+            final TextField textField = getControl();
+            // we never respond to events if disabled, but we do notify any onXXX
+            // event listeners on the control
+            if (!textField.isDisabled()) {
+                setCaretAnimating(false);
+                if (deferClick) {
+                    deferClick = false;
+                    skin.positionCaret(skin.getIndex(e.getX(), e.getY()), shiftDown);
+                    shiftDown = false;
+                }
+                setCaretAnimating(true);
+            }
+        } finally {
+            // TODO original logic is to always consume the event.
+            // we may want to change that
+            e.consume();
+        }
+    }
+
+    @Override
+    public void contextMenuRequested(ContextMenuEvent e) {
+        final TextField textField = getControl();
 
         if (contextMenu.isShowing()) {
             contextMenu.hide();
@@ -344,8 +370,8 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
                 }
 
                 if (menuPos != null) {
-                    Point2D p = getNode().localToScene(menuPos);
-                    Scene scene = getNode().getScene();
+                    Point2D p = getControl().localToScene(menuPos);
+                    Scene scene = getControl().getScene();
                     Window window = scene.getWindow();
                     Point2D location = new Point2D(window.getX() + scene.getX() + p.getX(),
                                                    window.getY() + scene.getY() + p.getY());
@@ -362,18 +388,18 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
             Rectangle2D bounds = currentScreen.getBounds();
 
             if (menuX < bounds.getMinX()) {
-                getNode().getProperties().put("CONTEXT_MENU_SCREEN_X", screenX);
-                getNode().getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
-                contextMenu.show(getNode(), bounds.getMinX(), screenY);
+                getControl().getProperties().put("CONTEXT_MENU_SCREEN_X", screenX);
+                getControl().getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
+                contextMenu.show(getControl(), bounds.getMinX(), screenY);
             } else if (screenX + menuWidth > bounds.getMaxX()) {
                 double leftOver = menuWidth - ( bounds.getMaxX() - screenX);
-                getNode().getProperties().put("CONTEXT_MENU_SCREEN_X", screenX);
-                getNode().getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
-                contextMenu.show(getNode(), screenX - leftOver, screenY);
+                getControl().getProperties().put("CONTEXT_MENU_SCREEN_X", screenX);
+                getControl().getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
+                contextMenu.show(getControl(), screenX - leftOver, screenY);
             } else {
-                getNode().getProperties().put("CONTEXT_MENU_SCREEN_X", 0);
-                getNode().getProperties().put("CONTEXT_MENU_SCENE_X", 0);
-                contextMenu.show(getNode(), menuX, screenY);
+                getControl().getProperties().put("CONTEXT_MENU_SCREEN_X", 0);
+                getControl().getProperties().put("CONTEXT_MENU_SCENE_X", 0);
+                contextMenu.show(getControl(), menuX, screenY);
             }
         }
 
@@ -385,9 +411,9 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
     }
 
     protected void mouseDoubleClick(HitInfo hit) {
-        final TextField textField = getNode();
+        final TextField textField = getControl();
         textField.previousWord();
-        if (isWindows()) {
+        if (PlatformUtil.isWindows()) {
             textField.selectNextWord();
         } else {
             textField.selectEndOfNextWord();
@@ -395,7 +421,7 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
     }
 
     protected void mouseTripleClick(HitInfo hit) {
-        getNode().selectAll();
+        getControl().selectAll();
     }
 
     // Enumeration of all types of text input that can be simulated on
