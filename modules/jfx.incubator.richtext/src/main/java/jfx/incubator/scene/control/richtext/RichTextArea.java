@@ -2706,12 +2706,12 @@ public class RichTextArea extends Control {
      * @param verFraction the fraction of the viewport height
      * @since 28
      */
-    public final void scrollCaretToPosition(double horFraction, double verFraction) {
+    public final void scrollCaretInView(double horFraction, double verFraction) {
         VFlow f = RichTextAreaSkinHelper.getVFlow(this);
         if (f != null) {
             horFraction = RichUtils.normalizeFraction(horFraction);
             verFraction = RichUtils.normalizeFraction(verFraction);
-            f.scrollCaretToPosition(horFraction, verFraction);
+            f.scrollCaretInView(horFraction, verFraction);
         }
     }
 }

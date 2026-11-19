@@ -1002,8 +1002,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
         scrollHorizontalToVisible(x);
     }
 
-    public void scrollCaretToPosition(double hor, double ver) {
-        IO.println("scrollCaretToPosition h=" + hor + " v=" + ver); // FIX
+    public void scrollCaretInView(double hor, double ver) {
         TextPos caret = control.getCaretPosition();
         if (caret == null) {
             return;
@@ -1024,14 +1023,11 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
 
         double dy = ((targety < (viewPortHeight / 2.0)) ? c.getMinY() : c.getMaxY()) - targety;
         scrollVerticalPixels(dy);
-        IO.println(" dy=" + dy); // FIX
 
         if (!control.isWrapText()) {
-            // TODO small guard so as not to place the caret at the edge?
             double targetx = viewPortWidth * hor;
             double x = ((targetx < (viewPortWidth / 2.0)) ? c.getMinX() : c.getMaxX()) - targetx;
             setOffsetX(x);
-            IO.println(" x=" + x); // FIX
         }
     }
 

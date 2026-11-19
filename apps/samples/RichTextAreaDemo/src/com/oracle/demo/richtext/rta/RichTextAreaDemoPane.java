@@ -821,6 +821,6 @@ public class RichTextAreaDemoPane extends BorderPane {
     private void scrollTo() {
         double x = parseFraction(horFraction);
         double y = parseFraction(verFraction);
-        control.scrollCaretToPosition(x, y);
+        control.scrollCaretInView(x, y);
     }
 }
