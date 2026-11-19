@@ -119,17 +119,28 @@ void Log(LogLevel level, const char* file, int line, const char* fmt, ...)
             logFile.open(filename);
         }
 
-        if (Config::IsColorLogsEnabled())
+        bool colorLogsEnabled = Config::IsColorLogsEnabled();
+        if (colorLogsEnabled)
         {
-            GetConsoleScreenBufferInfo(stdOutHandle, &consoleInfo);
-            SetConsoleTextAttribute(stdOutHandle, consoleColor);
+            if (!GetConsoleScreenBufferInfo(stdOutHandle, &consoleInfo))
+            {
+                colorLogsEnabled = false;
+            }
+        }
+
+        if (colorLogsEnabled)
+        {
+            if (!SetConsoleTextAttribute(stdOutHandle, consoleColor))
+            {
+                colorLogsEnabled = false;
+            }
         }
 
         snprintf(logLine, sizeof(logLine), "[D3D12-%s] <%s:%d> %s\n", levelStr, actualFileStr.c_str(), line, logMsg);
         fprintf(stderr, "%s", logLine);
         if (logFile.is_open()) logFile << logLine;
 
-        if (Config::IsColorLogsEnabled())
+        if (colorLogsEnabled)
         {
             SetConsoleTextAttribute(stdOutHandle, consoleInfo.wAttributes);
         }

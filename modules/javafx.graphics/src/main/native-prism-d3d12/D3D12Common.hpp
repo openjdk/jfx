@@ -601,6 +601,13 @@ inline size_t GetPixelFormatBPP(PixelFormat f)
     } \
 } while (0)
 
+#define D3D12NI_JNI_ENV_CHECK(env, ret) do { \
+    if (env->ExceptionCheck()) { \
+        env->ExceptionClear(); \
+        return ret; \
+    } \
+} while(0)
+
 // zeros a structure, frequently used to initialize D3D12_*_DESC structs
 #define D3D12NI_ZERO_STRUCT(x) do { \
     memset(&x, 0x0, sizeof(x)); \

@@ -53,18 +53,21 @@ Config::Config()
 
 std::string Config::GetPropertyInternal(const char* propertyName)
 {
-    jstring propStr = mJNIEnv->NewStringUTF(propertyName);
-    jstring propValueStr = reinterpret_cast<jstring>(mJNIEnv->CallStaticObjectMethod(mSystemClass, mGetPropertyMethodID, propStr));
-    if (mJNIEnv->ExceptionCheck() == JNI_TRUE)
-    {
-        mJNIEnv->ExceptionClear();
-        return std::string();
-    }
+    if (propertyName == nullptr) return std::string();
 
+    jstring propStr = mJNIEnv->NewStringUTF(propertyName);
+    D3D12NI_JNI_ENV_CHECK(mJNIEnv, std::string());
+    if (propStr == nullptr) return std::string();
+
+    jstring propValueStr = reinterpret_cast<jstring>(mJNIEnv->CallStaticObjectMethod(mSystemClass, mGetPropertyMethodID, propStr));
+    D3D12NI_JNI_ENV_CHECK(mJNIEnv, std::string());
     if (propValueStr == nullptr) return std::string();
 
     jboolean isCopy = false;
     const char* propValue = mJNIEnv->GetStringUTFChars(propValueStr, &isCopy);
+    D3D12NI_JNI_ENV_CHECK(mJNIEnv, std::string());
+    if (propValue == nullptr) return std::string();
+
     std::string ret(propValue);
     mJNIEnv->ReleaseStringUTFChars(propValueStr, propValue);
     return ret;

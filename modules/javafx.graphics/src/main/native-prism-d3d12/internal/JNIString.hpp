@@ -53,6 +53,11 @@ public:
         }
     }
 
+    operator bool() const
+    {
+        return (mString != nullptr);
+    }
+
     operator const char*() const
     {
         return mString;

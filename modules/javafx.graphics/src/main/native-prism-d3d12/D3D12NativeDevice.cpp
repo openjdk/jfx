@@ -1005,8 +1005,9 @@ JNIEXPORT void JNICALL Java_com_sun_prism_d3d12_ni_D3D12NativeDevice_nRenderQuad
     if (elementCount <= 0) return;
 
     D3D12::Internal::JNIBuffer<jfloatArray> vertsArray(env, nullptr, vertices);
+    if (!vertsArray) return;
     D3D12::Internal::JNIBuffer<jbyteArray> colorsArray(env, nullptr, colors);
-    if (!vertsArray || !colorsArray) return;
+    if (!colorsArray) return;
 
     uint32_t elems = static_cast<uint32_t>(elementCount);
     if (elems > (std::numeric_limits<uint32_t>::max() / D3D12NI_FLOATS_PER_2D_VERTEX) ||
@@ -1100,6 +1101,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_d3d12_ni_D3D12NativeDevice_nSetSha
     if (!shader) return false;
 
     D3D12::Internal::JNIString nameJStr(env, name);
+    if (!nameJStr) return false;
     D3D12::Internal::JNIBuffer<jfloatArray> buffer(env, floatBuf, nullptr);
     if (!buffer) return false;
 
@@ -1127,6 +1129,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_d3d12_ni_D3D12NativeDevice_nSetSha
     if (!shader) return false;
 
     D3D12::Internal::JNIString nameJStr(env, name);
+    if (!nameJStr) return false;
     D3D12::Internal::JNIBuffer<jintArray> buffer(env, intBuf, nullptr);
     if (!buffer) return false;
 
