@@ -1029,6 +1029,10 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
             double x = ((targetx < (viewPortWidth / 2.0)) ? c.getMinX() : c.getMaxX()) - targetx;
             setOffsetX(x);
         }
+
+        // it's possible for the scrollbar(s) to appear and hide the caret
+        // most of time time, this will be a no-op
+        scrollCaretToVisible();
     }
 
     public void scrollCaretToVisible() {
