@@ -1008,7 +1008,6 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
             return;
         }
 
-        double targety = viewPortHeight * ver;
         CaretInfo c = getCaretInfo();
         if (c == null) {
             int ix = caret.index();
@@ -1021,6 +1020,7 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
             }
         }
 
+        double targety = viewPortHeight * ver;
         double dy = ((targety < (viewPortHeight / 2.0)) ? c.getMinY() : c.getMaxY()) - targety;
         scrollVerticalPixels(dy);
 
