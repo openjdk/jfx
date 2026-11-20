@@ -37,8 +37,8 @@ float rrmask(float2 abstco, float2 flatdim, float2 invarcradii)
 {
     float2 ecctco = max(abstco - flatdim, 0.001) * invarcradii;
     float ecclensq = dot(ecctco, ecctco);
-    float pix = dot(ecctco / ecclensq, invarcradii);
-    return clamp(0.5 + (1.0 + 0.25*pix*pix - ecclensq)/(2.0*pix), 0.0, 1.0);
+    float pix = dot(ecctco * ecctco, invarcradii) / ecclensq;
+    return clamp(0.5 + (1.0 - sqrt(ecclensq))/pix, 0.0, 1.0);
 }
 
 float pgrammask(float2 abstco, float2 tcc)
