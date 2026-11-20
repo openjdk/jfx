@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,7 +24,6 @@
  */
 package com.sun.glass.ui.gtk;
 
-import com.sun.glass.ui.HeaderButtonOverlay;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.View;
 import com.sun.javafx.tk.HeaderAreaType;
@@ -159,13 +158,5 @@ final class GtkView extends View {
                 window.showSystemMenu(x, y);
             }
         }
-    }
-
-    @Override
-    protected boolean handleNonClientMouseEvent(long time, int type, int button, int x, int y, int xAbs, int yAbs,
-                                                int modifiers, int clickCount) {
-        return getWindow() instanceof GtkWindow window
-            && window.headerButtonOverlayProperty().get() instanceof HeaderButtonOverlay overlay
-            && overlay.handleMouseEvent(type, button, x / window.getPlatformScaleX(), y / window.getPlatformScaleY());
     }
 }
