@@ -261,6 +261,8 @@ public class TextFlowSurrogatePairInsertionIndexTest {
 
     @Test
     public void testTextFlowInsertionIndexWhenMouseMovedOutsideText() throws Exception {
+        assumeFalse(Util.isUbuntu2604()); // JDK-8397922
+
         addTextAndEmojis();
         Util.waitForIdle(scene);
 
