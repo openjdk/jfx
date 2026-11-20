@@ -26,6 +26,7 @@
 package test.jfx.incubator.scene.control.richtext;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -38,6 +39,7 @@ import javafx.scene.input.Clipboard;
 import javafx.scene.input.DataFormat;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
+import javafx.scene.text.FontPosture;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -182,6 +184,47 @@ public class CodeAreaTest {
         control.copy();
         String nl = System.getProperty("line.separator");
         assertEquals(nl + "4", Clipboard.getSystemClipboard().getString());
+    }
+
+    @Test
+    public void copyHtml() {
+        RTUtil.copyToClipboard("yo");
+        // including symbols that have to be escaped
+        control.appendText("123<>\"&'\t\n\ttab");
+        control.setFont(Font.font("Amble", FontPosture.REGULAR, 33));
+        control.selectAll();
+        control.copy();
+        assertTrue(Clipboard.getSystemClipboard().getContentTypes().contains(DataFormat.HTML));
+        String s = Clipboard.getSystemClipboard().getHtml();
+
+        String expected =
+            """
+            <html>
+            <head>
+            <meta charset="utf-8">
+            </head>
+            <body>
+            <pre style='font-family: "Amble", monospace; font-size: 33.0pt; white-space: pre-wrap;'>
+            123&lt;&gt;&#34;&amp;&#39;&#9;
+            &#9;tab</pre>
+            </body></html>
+            """;
+        assertEquals(expected, s);
+    }
+
+    @Test
+    public void copyRTF() {
+        RTUtil.copyToClipboard("yo");
+        control.appendText("123");
+        control.setFont(Font.font("Amble", FontPosture.REGULAR, 33));
+        control.selectAll();
+        control.copy();
+        assertTrue(Clipboard.getSystemClipboard().getContentTypes().contains(DataFormat.RTF));
+        String s = Clipboard.getSystemClipboard().getRtf();
+        assertNotNull(s);
+        assertTrue(s.contains("123"));
+        assertTrue(s.contains("\\fnil Amble;"));
+        assertTrue(s.contains("\\fs66"));
     }
 
     @Test
