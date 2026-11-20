@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1962,7 +1962,7 @@ public abstract class BaseShaderGraphics
             // Note this also sets the current RenderTarget as the LCDBuffer
             BaseShaderGraphics bsg = (BaseShaderGraphics) context.getLCDBuffer().createGraphics();
             bsg.setCompositeMode(CompositeMode.SRC);
-            context.validateLCDOp(bsg, IDENT, (Texture) getRenderTarget(), null, true, null);
+            context.validateLCDOp(bsg, IDENT, (Texture) getRenderTarget(), null, true, false, null);
 
             int srch = getRenderTarget().getPhysicalHeight();
             int srcw = getRenderTarget().getPhysicalWidth();
@@ -2098,18 +2098,29 @@ public abstract class BaseShaderGraphics
             } else {
                 initLCDSampleRT();
             }
+
             float invgamma = PrismFontFactory.getLCDContrast();
             float gamma = 1.0f/invgamma;
+            boolean useContrast = PrismFontFactory.useContrastLCDRendering();
+            if (useContrast) {
+                // To convert sRGB to (approximately) linear the gamma we use
+                // is 2.233333 which more closely approximates the real sRGB
+                // function compared to the usual value of 2.2. These values
+                // are not used by the shader.
+                invgamma = 2.233333f;
+                gamma = 1.0f/invgamma;
+            }
+
             textColor = new Color((float)Math.pow(textColor.getRed(),   invgamma),
                                   (float)Math.pow(textColor.getGreen(), invgamma),
                                   (float)Math.pow(textColor.getBlue(),  invgamma),
-                                  (float)Math.pow(textColor.getAlpha(), invgamma));
+                                  (float)textColor.getAlpha());
             if (selectColor != null) {
                 selectColor = new Color(
                         (float)Math.pow(selectColor.getRed(),   invgamma),
                         (float)Math.pow(selectColor.getGreen(), invgamma),
                         (float)Math.pow(selectColor.getBlue(),  invgamma),
-                        (float)Math.pow(selectColor.getAlpha(), invgamma));
+                        (float)selectColor.getAlpha());
             }
 
             // In order to handle transparency, the LCD shader need to manually
@@ -2120,7 +2131,8 @@ public abstract class BaseShaderGraphics
             //set our 2nd LCD shader.
             Shader shader = context.validateLCDOp(this, IDENT,
                                                 context.getLCDBuffer(),
-                                                cacheTex, false, textColor);
+                                                cacheTex, false, useContrast,
+                                                textColor);
 
             float unitXCoord = 1.0f / cacheTex.getPhysicalWidth();
             shader.setConstant("gamma", gamma, invgamma, unitXCoord);
