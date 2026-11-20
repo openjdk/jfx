@@ -110,4 +110,13 @@ public class TextFieldBehaviorTest extends TextInputControlTestBase<TextField> {
     public final void testWordNonMac() {
         super.testWordNonMac();
     }
+
+    @Test
+    @Override
+    public void testDoubleClickWithSpecialChars() { super.testDoubleClickWithSpecialChars(); }
+
+    @Test
+    @Override
+    public void testDoubleClickOnLeadingChar() { super.testDoubleClickOnLeadingChar(); }
+
 }

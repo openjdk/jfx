@@ -51,6 +51,7 @@ import com.sun.javafx.scene.control.inputmap.KeyBinding;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.text.HitInfo;
 
 import java.text.Bidi;
 import java.util.function.Predicate;
@@ -643,6 +644,31 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         TextInputControl textInputControl = getNode();
         textInputControl.extendSelection(textInputControl.getLength());
     }
+
+    protected void selectHitWord(HitInfo hit) {
+        final TextInputControl textInputControl = getNode();
+        if (!isAtWordStart(textInputControl)) {
+            textInputControl.previousWord();
+        }
+        if (isWindows()) {
+            textInputControl.selectNextWord();
+        } else {
+            textInputControl.selectEndOfNextWord();
+        }
+    }
+
+    private boolean isAtWordStart(TextInputControl textInputControl) {
+        boolean atWordStart = false;
+        int pos = textInputControl.getCaretPosition();
+        if (pos == 0) {
+            atWordStart = true;
+        } else if (pos < textInputControl.getLength()) {
+            String text = textInputControl.getText();
+            atWordStart = Character.isWhitespace(text.charAt(pos - 1)) && !Character.isWhitespace(text.charAt(pos));
+        }
+        return atWordStart;
+    }
+
 
     private boolean editing = false;
     protected void setEditing(boolean b) {
