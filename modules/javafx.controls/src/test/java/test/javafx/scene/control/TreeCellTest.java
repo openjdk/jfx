@@ -1114,4 +1114,67 @@ public class TreeCellTest {
 
         assertTrue(isItemChangedCalled.get());
     }
+
+    @Test
+    void testEditStopEditIsCalledAndCancelsEdit() {
+        AtomicBoolean stopEditCalled = new AtomicBoolean();
+        AtomicBoolean cancelEditCalled = new AtomicBoolean();
+
+        tree.setEditable(true);
+        tree.setCellFactory(_ -> new TreeCell<>() {
+            @Override
+            public void stopEdit() {
+                super.stopEdit();
+                stopEditCalled.set(true);
+            }
+
+            @Override
+            public void cancelEdit() {
+                super.cancelEdit();
+                cancelEditCalled.set(true);
+            }
+        });
+
+        stageLoader = new StageLoader(tree);
+
+        tree.edit(tree.getTreeItem(0));
+        assertFalse(stopEditCalled.get());
+        assertFalse(cancelEditCalled.get());
+
+        tree.edit(null);
+        assertTrue(stopEditCalled.get());
+        assertTrue(cancelEditCalled.get());
+    }
+
+    @Test
+    void testUpdateItemStopEditIsCalledAndCancelsEdit() {
+        AtomicBoolean stopEditCalled = new AtomicBoolean();
+        AtomicBoolean cancelEditCalled = new AtomicBoolean();
+
+        tree.setEditable(true);
+        tree.setCellFactory(_ -> new TreeCell<>() {
+            @Override
+            public void stopEdit() {
+                super.stopEdit();
+                stopEditCalled.set(true);
+            }
+
+            @Override
+            public void cancelEdit() {
+                super.cancelEdit();
+                cancelEditCalled.set(true);
+            }
+        });
+
+        stageLoader = new StageLoader(tree);
+
+        tree.edit(tree.getTreeItem(0));
+        assertFalse(stopEditCalled.get());
+        assertFalse(cancelEditCalled.get());
+
+        IndexedCell<String> cell = VirtualFlowTestUtils.getCell(tree, 0);
+        cell.updateIndex(-1);
+        assertTrue(stopEditCalled.get());
+        assertTrue(cancelEditCalled.get());
+    }
 }
