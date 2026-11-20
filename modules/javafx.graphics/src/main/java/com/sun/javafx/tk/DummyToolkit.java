@@ -26,6 +26,7 @@
 package com.sun.javafx.tk;
 
 import javafx.geometry.Dimension2D;
+import javafx.scene.image.DrawingContext;
 import javafx.scene.image.Image;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.InputMethodRequests;
@@ -51,10 +52,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Future;
+import java.util.function.Consumer;
 import com.sun.glass.ui.CommonDialogs.FileChooserResult;
 import com.sun.glass.ui.GlassRobot;
 import com.sun.javafx.embed.HostInterface;
 import com.sun.javafx.geom.Path2D;
+import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.perf.PerformanceTracker;
@@ -148,6 +151,11 @@ final public class DummyToolkit extends Toolkit {
 
     @Override
     public PlatformImage createPlatformImage(int w, int h) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public DrawingContext createDrawingContext(PlatformImage image, Consumer<Rectangle> pixelsDirty) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 

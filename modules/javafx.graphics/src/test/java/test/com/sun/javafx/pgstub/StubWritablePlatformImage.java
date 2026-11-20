@@ -40,6 +40,8 @@ public class StubWritablePlatformImage implements PlatformImage {
     private final int w, h;
     private final int[] data;
 
+    private int bufferDirtyCount;
+
     public StubWritablePlatformImage(int w, int h) {
         this.w = w;
         this.h = h;
@@ -106,5 +108,22 @@ public class StubWritablePlatformImage implements PlatformImage {
 
     @Override
     public void bufferDirty(Rectangle rect) {
+        bufferDirtyCount++;
+    }
+
+    int getWidth() {
+        return w;
+    }
+
+    int getHeight() {
+        return h;
+    }
+
+    int[] getDataNoCopy() {
+        return data;
+    }
+
+    public int getBufferDirtyCount() {
+        return bufferDirtyCount;
     }
 }
