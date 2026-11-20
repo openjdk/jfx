@@ -47,6 +47,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import test.util.Util;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 /*
  * Test for verifying insertion index in TextFlow surrogate pairs
@@ -199,6 +200,8 @@ public class TextFlowSurrogatePairInsertionIndexTest {
 
     @Test
     public void testTextFlowInsertionIndexUsingMultipleEmojis() throws Exception {
+        assumeFalse(Util.isUbuntu2604()); // JDK-8397922
+
         addMultipleEmojis();
         Util.waitForIdle(scene);
 

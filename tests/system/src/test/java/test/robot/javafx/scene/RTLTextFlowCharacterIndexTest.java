@@ -291,6 +291,8 @@ public class RTLTextFlowCharacterIndexTest {
 
     @Test
     public void testTextAndTextFlowHitInfoForRTLMultipleMultiLineEnglishArabicTextNodes() throws Exception {
+        assumeFalse(Util.isUbuntu2604()); // JDK-8397451
+
         addMultiLineMultiNodeRTLEnglishArabicText();
         Util.waitForIdle(scene);
 
