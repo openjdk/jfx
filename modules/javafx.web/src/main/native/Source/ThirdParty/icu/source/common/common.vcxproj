@@ -53,7 +53,6 @@
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
     <ClCompile>
       <PreprocessorDefinitions>RBBI_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <BrowseInformation>true</BrowseInformation>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -275,6 +274,7 @@
     <ClCompile Include="utf_impl.cpp" />
     <ClCompile Include="static_unicode_sets.cpp" />
     <ClCompile Include="restrace.cpp" />
+    <ClCompile Include="fixedstring.cpp" />
     <ClInclude Include="localsvc.h" />
     <ClInclude Include="msvcres.h" />
     <ClInclude Include="pluralmap.h" />
@@ -393,6 +393,7 @@
     <ClInclude Include="static_unicode_sets.h" />
     <ClInclude Include="capi_helper.h" />
     <ClInclude Include="restrace.h" />
+    <ClInclude Include="fixedstring.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="common.rc" />

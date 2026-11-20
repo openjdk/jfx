@@ -1,20 +1,39 @@
 Updating icu4c in OpenJFX:
 
-1) Update the modules/javafx.web/src/main/legal/icu_web.md LICENSE file.
-Update the version at the top. Copy the license from icu4c/LICENSE.
-Update modules/javafx.web/src/main/native/Source/ThirdParty/icu/LICENSE as well.
+1) Navigate to relevant release from https://unicode-org.github.io/icu/download/
+   - Download the source bundle
+     - example: https://github.com/unicode-org/icu/releases/download/release-79.1/icu4c-79.1-sources.zip
+   - Get the data package file name and sha256 value
+     - example: https://github.com/unicode-org/icu/releases/download/release-79.1/icu4c-79.1-data-bin-l.zip
 
-2) Copy the files from common, i18n, stubdata and tools/toolutil directories.
-Remove Makefile.in files.
+2) Copy the files from common, common/unicode, i18n, i18n/unicode, stubdata and tools/toolutil directories.
+   - Remove any files that were deleted in the upstream icu source
+   - Remove Makefile.in and BUILD.bazel files.
 
-3) Update modules/javafx.web/src/main/native/Source/ThirdParty/icu/CMakeLists.txt.
-Update ICU_*_SOURCES using sources.txt file.
-Set ICU_DATA_FILE_NAME variable to the correct icudt*l.dat file.
+3) Update java/data/data_as_asm.cpp as per the API changes in toolutil/pkg_genc.h
 
-4) Update the ICU version in build.gradle.
+4) Retain the only one JavaFX specific change in the icu source file: common/unicode/platform.h
+   (The linux build may fail without this change)
 
-5) Expand tabs and remove trailing white spaces from source files.
+5) Update modules/javafx.web/src/main/native/Source/ThirdParty/icu/CMakeLists.txt:
+   - Update ICU_*_SOURCES using sources.txt file.
+   - Set ICU_DATA_FILE_NAME to the correct data filename: icudt*l
 
-6) Make sure that the Line Endings are UNIX style for all the files.
+6) Update the ICU version in build.properties.
 
-7) Verification: FX sdk build and all test run, on all supported platforms.
+7) Update gradle/verification-metadata.xml to reflect the new data package artifact name and sha256 value.
+
+8) In the source files:
+   - Expand tabs to 8 spaces
+   - Remove trailing white spaces
+
+9) Make sure that the Line Endings are UNIX style for all the files.
+
+10) Update the license files
+   - modules/javafx.web/src/main/native/Source/ThirdParty/icu/LICENSE
+     - Make sure that it matches with the upstream LICENSE file
+   - modules/javafx.web/src/main/legal/icu_web.md
+     - Update the version string at the beginning of file
+     - Update the license text or notices
+
+11) Verification: JavaFX sdk webkit build and all test run, on all supported platforms.

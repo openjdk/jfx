@@ -181,14 +181,14 @@ public abstract class GlyphLayout {
         while (i < length) {
             char ch = chars[i];
             int codePoint = ch;
+            int len = 1;
             boolean delimiter = ch == '\t' || ch == '\n' || ch == '\r';
-            int surrogate = 0;
 
             if (Character.isHighSurrogate(ch)) {
                 /* Only merge surrogate when the pair is in the same span. */
                 if (i + 1 < spanEnd && Character.isLowSurrogate(chars[i + 1])) {
-                    codePoint = Character.toCodePoint(ch, chars[++i]);
-                    surrogate = 1;
+                    len = 2;
+                    codePoint = Character.toCodePoint(ch, chars[i + 1]);
                 }
             }
             /*
@@ -209,14 +209,13 @@ public abstract class GlyphLayout {
 
             /* special handling for delimiters and Emoji */
             if (delimiter || isEmoji) {
-                if ((i - surrogate) != start) {
-                    run = addTextRun(layout, chars, start, i - surrogate - start,
-                                     font, span, bidiLevel, complex);
+                if (i != start) {
+                    run = addTextRun(layout, chars, start, i - start, font, span, bidiLevel, complex);
                     if (complex) {
                         flags |= FLAGS_HAS_COMPLEX;
                         complex = false;
                     }
-                    start = i - surrogate;
+                    start = i;
                 }
             }
 
@@ -247,16 +246,15 @@ public abstract class GlyphLayout {
                 if (spanChanged || levelChanged || scriptChanged) {
                     if (start != i) {
                         /* Create text run */
-                        run = addTextRun(layout, chars, start, i - start,
-                                         font, span, bidiLevel, oldComplex);
-                       if (complex) {
-                           flags |= FLAGS_HAS_COMPLEX;
-                           complex = false;
-                       }
-                       start = i;
+                        run = addTextRun(layout, chars, start, i - start, font, span, bidiLevel, oldComplex);
+                        if (complex) {
+                            flags |= FLAGS_HAS_COMPLEX;
+                            complex = false;
+                        }
+                        start = i;
                     }
                 }
-                i++;
+                i += len;
             }
             if (spanChanged) {
                 /* Only true for rich text (spans != null) */
@@ -305,7 +303,7 @@ public abstract class GlyphLayout {
                 start = i;
             }
             if (isEmoji) {
-                i++;
+                i += len;
                 /* Create Emoji run */
                 run = new TextRun(start, i - start, bidiLevel, false,
                                   ScriptMapper.COMMON, span, 0, false);

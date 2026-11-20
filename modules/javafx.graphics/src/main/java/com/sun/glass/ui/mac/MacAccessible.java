@@ -25,8 +25,12 @@
 
 package com.sun.glass.ui.mac;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -862,6 +866,47 @@ final class MacAccessible extends Accessible {
                              .filter(n -> n != 0)
                              .toArray();
         return NSAccessibilityUnignoredChildren(ids);
+    }
+
+    /**
+     * Initializes descendant peers and determines whether the popup's native
+     * window should be ignored. Do not use the native accessibility hierarchy
+     * here: resolving unignored children can query the window's ignored status
+     * again before this method returns.
+     */
+    private boolean accessibilityIsPopup() {
+        Application.checkEventThread();
+        boolean popup = false;
+        Deque<MacAccessible> pending = new ArrayDeque<>();
+        Set<MacAccessible> visited = Collections.newSetFromMap(new IdentityHashMap<>());
+        pending.push(this);
+        while (!pending.isEmpty()) {
+            MacAccessible accessible = pending.pop();
+            if (!visited.add(accessible)) {
+                continue;
+            }
+            accessible.getNativeAccessible();
+            AccessibleRole role = (AccessibleRole)accessible.getAttribute(ROLE);
+            if (role == AccessibleRole.CONTEXT_MENU || role == AccessibleRole.TOOLTIP) {
+                popup = true;
+            }
+            @SuppressWarnings("unchecked")
+            ObservableList<Node> children = (ObservableList<Node>)accessible.getAttribute(CHILDREN);
+            if (children != null) {
+                for (Node child : children) {
+                    if (!child.isVisible()) {
+                        continue;
+                    }
+                    // This will ensure that the native peer of this child
+                    // and all of his descendants are initialized
+                    MacAccessible childAccessible = (MacAccessible)getAccessible(child);
+                    if (childAccessible != null) {
+                        pending.push(childAccessible);
+                    }
+                }
+            }
+        }
+        return popup;
     }
 
     private Boolean inMenu;

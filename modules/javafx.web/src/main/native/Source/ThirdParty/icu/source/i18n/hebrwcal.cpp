@@ -437,23 +437,23 @@ int32_t startOfYear(int32_t year, UErrorCode &status)
             (235LL * static_cast<int64_t>(year) - 234LL), 19LL);
 
         int64_t frac = months * MONTH_FRACT + BAHARAD;  // Fractional part of day #
-        day  = months * 29LL + frac / DAY_PARTS;        // Whole # part of calculation
-        frac = frac % DAY_PARTS;                        // Time of day
+        int64_t fracDiv = ClockMath::floorDivideInt64(frac, DAY_PARTS);
+        day  = months * 29LL + fracDiv;                 // Whole # part of calculation
+        frac = frac - (fracDiv * DAY_PARTS);            // Time of day
 
-        int32_t wd = (day % 7);                        // Day of week (0 == Monday)
+        int32_t wd = static_cast<int32_t>((day % 7 + 7) % 7); // Day of week (0 == Monday)
 
         if (wd == 2 || wd == 4 || wd == 6) {
             // If the 1st is on Sun, Wed, or Fri, postpone to the next day
             day += 1;
-            wd = (day % 7);
-        }
-        if (wd == 1 && frac > 15*HOUR_PARTS+204 && !HebrewCalendar::isLeapYear(year) ) {
+            wd = static_cast<int32_t>((day % 7 + 7) % 7);
+        } else if (wd == 1 && frac >= 15*HOUR_PARTS+204 && !HebrewCalendar::isLeapYear(year) ) {
             // If the new moon falls after 3:11:20am (15h204p from the previous noon)
             // on a Tuesday and it is not a leap year, postpone by 2 days.
             // This prevents 356-day years.
             day += 2;
         }
-        else if (wd == 0 && frac > 21*HOUR_PARTS+589 && HebrewCalendar::isLeapYear(year-1) ) {
+        else if (wd == 0 && frac >= 21*HOUR_PARTS+589 && HebrewCalendar::isLeapYear(year-1) ) {
             // If the new moon falls after 9:32:43 1/3am (21h589p from yesterday noon)
             // on a Monday and *last* year was a leap year, postpone by 1 day.
             // Prevents 382-day years.
@@ -478,7 +478,7 @@ int32_t daysInYear(int32_t eyear, UErrorCode& status) {
 }
 
 /**
-* Returns the the type of a given year.
+* Returns the type of a given year.
 *  0   "Deficient" year with 353 or 383 days
 *  1   "Normal"    year with 354 or 384 days
 *  2   "Complete"  year with 355 or 385 days
@@ -522,9 +522,8 @@ int32_t yearType(int32_t year, UErrorCode& status)
 * The formula below performs the same test, believe it or not.
 */
 UBool HebrewCalendar::isLeapYear(int32_t year) {
-    //return (year * 12 + 17) % 19 >= 12;
-    int64_t x = (year*12LL + 17) % YEARS_IN_CYCLE;
-    return x >= ((x < 0) ? -7 : 12);
+    int64_t x = ((year*12LL + 17) % YEARS_IN_CYCLE + YEARS_IN_CYCLE) % YEARS_IN_CYCLE;
+    return x >= 12;
 }
 
 namespace{
@@ -791,23 +790,6 @@ int64_t HebrewCalendar::handleComputeMonthStart(
     return day + 347997LL;
 }
 
-constexpr uint32_t kHebrewRelatedYearDiff = -3760;
-
-int32_t HebrewCalendar::getRelatedYear(UErrorCode &status) const
-{
-    int32_t year = get(UCAL_EXTENDED_YEAR, status);
-    if (U_FAILURE(status)) {
-        return 0;
-    }
-    return year + kHebrewRelatedYearDiff;
-}
-
-void HebrewCalendar::setRelatedYear(int32_t year)
-{
-    // set extended year
-    set(UCAL_EXTENDED_YEAR, year - kHebrewRelatedYearDiff);
-}
-
 IMPL_SYSTEM_DEFAULT_CENTURY(HebrewCalendar, "@calendar=hebrew")
 
 bool HebrewCalendar::inTemporalLeapYear(UErrorCode& status) const {
@@ -871,6 +853,11 @@ int32_t HebrewCalendar::internalGetMonth(UErrorCode& status) const {
         }
     }
     return Calendar::internalGetMonth(status);
+}
+
+int32_t HebrewCalendar::getRelatedYearDifference() const {
+    constexpr int32_t kHebrewCalendarRelatedYearDifference = -3760;
+    return kHebrewCalendarRelatedYearDifference;
 }
 
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(HebrewCalendar)

@@ -30,11 +30,11 @@
 
 #include <stdlib.h>
 
-//Builtin library entrypoint
+#ifdef STATIC_BUILD
 JNIEXPORT jint JNICALL JNI_OnLoad_glass_monocle(JavaVM *vm, void *reserved) {
-    fprintf(stderr, "In JNI_OnLoad_glass)monocle\n");
     return JNI_VERSION_1_8;
 }
+#endif // STATIC_BUILD
 
 void setEGLAttrs(jint *attrs, int *eglAttrs) {
     int index = 0;
