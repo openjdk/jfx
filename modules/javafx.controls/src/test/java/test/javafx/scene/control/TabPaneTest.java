@@ -41,8 +41,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-
-import com.sun.javafx.scene.control.TabObservableList;
+import java.util.function.BiConsumer;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
@@ -58,9 +57,12 @@ import javafx.event.Event;
 import javafx.geometry.Bounds;
 import javafx.geometry.Side;
 import javafx.scene.Group;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ContextMenu;
+import javafx.scene.control.Label;
+import javafx.scene.control.MenuItem;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SelectionModel;
 import javafx.scene.control.SingleSelectionModel;
@@ -80,6 +82,7 @@ import javafx.stage.Stage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.sun.javafx.scene.SceneHelper;
+import com.sun.javafx.scene.control.TabObservableList;
 import com.sun.javafx.scene.input.KeyCodeMap;
 import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.pgstub.StubToolkit;
@@ -1396,5 +1399,69 @@ public class TabPaneTest {
             assertEquals(firstTabBounds.getMinX(), newFirstTabBounds.getMinX(), 0);
             assertEquals(firstTabBounds.getMinY() - deltaY, newFirstTabBounds.getMinY(), 0);
         }
+    }
+
+    private ContextMenu setupOverflowMenuDecorator() {
+        return setupOverflowMenuDecorator((tab, item) -> {
+            item.setGraphic(new Label(tab.getText()));
+        });
+    }
+
+    private ContextMenu setupOverflowMenuDecorator(BiConsumer<Tab, MenuItem> decorator) {
+        TabPaneSkin skin = new TabPaneSkin(tabPane);
+        skin.setOverflowMenuDecorator(decorator);
+        tabPane.setSkin(skin);
+
+        tabPane.setMaxSize(20, 20);
+        root.getChildren().add(tabPane);
+        tabPane.getTabs().addAll(tab1, tab2, tab3);
+        show();
+        tk.firePulse();
+
+        ContextMenu menu = TabPaneSkinShim.getTabsMenu(skin);
+        assertNotNull(menu);
+        assertEquals(3, menu.getItems().size());
+        return menu;
+    }
+
+    @Test
+    public void overflowMenuDecoratorNoop() {
+        ContextMenu menu = setupOverflowMenuDecorator((_, _) -> {
+            // no-op
+        });
+        for (int i = 0; i < menu.getItems().size(); i++) {
+            MenuItem mi = menu.getItems().get(i);
+            Node g = mi.getGraphic();
+            assertNull(g);
+            String tabText = tabPane.getTabs().get(i).getText();
+            assertEquals(tabText, mi.getText());
+        }
+    }
+
+    @Test
+    public void menuGraphicOverride() {
+        ContextMenu menu = setupOverflowMenuDecorator();
+        for (MenuItem mi : menu.getItems()) {
+            Node g = mi.getGraphic();
+            assertTrue(g instanceof Label);
+            assertEquals(mi.getText(), ((Label)g).getText());
+        }
+    }
+
+    @Test
+    public void menuBindings() {
+        ContextMenu menu = setupOverflowMenuDecorator();
+        MenuItem mi = menu.getItems().get(0);
+
+        assertFalse(mi.isDisable());
+        assertEquals("one", mi.getText());
+
+        tab1.setText("yo");
+        tab1.setDisable(true);
+
+        // disable is bound
+        assertTrue(mi.isDisable());
+        // text is not bound if decorator is on
+        assertEquals("one", mi.getText());
     }
 }
