@@ -31,10 +31,9 @@ import java.util.Locale;
 
 /// A `StringConverter` implementation for [Date] values that represent dates.
 ///
-/// Note that using `Date` is not recommended in JDK versions where [java.time.LocalDate] is available, in which case
-/// [LocalDateStringConverter] should be used.
-///
 /// @since JavaFX 2.1
+/// @deprecated Use [LocalDateStringConverter] instead.
+@Deprecated(forRemoval = false, since = "28")
 public class DateStringConverter extends DateTimeStringConverter {
 
     /// Creates a `DateStringConverter` that uses a formatter/parser based on [DateFormat#DEFAULT] for the date style,

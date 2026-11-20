@@ -91,6 +91,7 @@ public class NumberStringConverter extends BaseStringConverter<Number> {
         return NumberFormat.getNumberInstance(locale);
     }
 
+    /// @throws IllegalArgumentException if parsing fails
     @Override
     public Number fromString(String value) {
         return super.fromString(value);
