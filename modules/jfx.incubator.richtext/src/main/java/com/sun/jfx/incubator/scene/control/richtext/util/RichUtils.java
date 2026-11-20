@@ -865,6 +865,22 @@ public final class RichUtils {
         }
     }
 
+    /// Returns true if the model is null or empty.
+    public static boolean isEmpty(RichTextArea r) {
+        StyledTextModel m = r.getModel();
+        if (m == null) {
+            return true;
+        }
+        switch (m.size()) {
+        case 0:
+            return true;
+        case 1:
+            String s = m.getPlainText(0);
+            return s.length() == 0;
+        }
+        return false;
+    }
+
     public static Font codeAreaFont(StyleResolver r) {
         if (r instanceof VFlow f) {
             if (f.getRichTextArea() instanceof CodeArea c) {
