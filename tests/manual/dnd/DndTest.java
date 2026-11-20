@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -60,6 +60,7 @@ public class DndTest extends Application {
 
                 1. Drag "DRAG ME" onto "DROP HERE".
                 Expected: "DROP HERE" changes to "DRAG ME".
+                NOTE: On Windows the original DRAG ME text disappears.
 
                 2. Drag "DRAG ME" into a text editor that accepts text drops.
                 Expected: The editor shows the text "DRAG ME".

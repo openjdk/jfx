@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -105,9 +105,13 @@ public class DndBasic extends Application {
             modifiers =
                     "macOS: Use no modifier for COPY, 'Command' for MOVE, " +
                             "and 'Control' for LINK.";
+        } else if (os.startsWith("Windows")) {
+            modifiers =
+                    "Windows: Use no modifier for MOVE, " +
+                            "'Ctrl' for COPY, 'Shift' for MOVE, and 'Ctrl+Shift' for LINK.";
         } else {
             modifiers =
-                    "Windows/Linux: Use 'Ctrl' for COPY, 'Shift' for MOVE, " +
+                    "Linux: Use 'Ctrl' for COPY, 'Shift' for MOVE, " +
                             "and 'Ctrl+Shift' for LINK.";
         }
 
