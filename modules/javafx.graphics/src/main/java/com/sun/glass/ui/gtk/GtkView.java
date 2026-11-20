@@ -168,4 +168,8 @@ final class GtkView extends View {
             && window.headerButtonOverlayProperty().get() instanceof HeaderButtonOverlay overlay
             && overlay.handleMouseEvent(type, button, x / window.getPlatformScaleX(), y / window.getPlatformScaleY());
     }
+
+    void repaintEverything() {
+        notifyRepaint(0, 0, 0, 0);
+    }
 }
