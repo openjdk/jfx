@@ -364,4 +364,25 @@ class TextLayoutUtilsContractTest {
         assertNotNull(textLayout.getBounds());
     }
 
+    // verifies that the presence of TAB characters disables caching JDK-8395361
+    @Test
+    public void testTextLayoutWithTabsIsNotCached() {
+        Font font = Font.font("Amble", 11);
+        Object nativeFont = FontHelper.getNativeFont(font);
+        AtomicInteger glyphLayoutCreationCounter = new AtomicInteger();
+
+        StubTextLayout textLayout = new StubTextLayout(256) {
+            @Override
+            protected GlyphLayout glyphLayout() {
+                glyphLayoutCreationCounter.addAndGet(1);
+                return super.glyphLayout();
+            }
+        };
+        setTextLayout(textLayout, "TEXT\tTAB", nativeFont, TextLayout.BOUNDS_CENTER);
+        assertEquals(1, glyphLayoutCreationCounter.get());
+
+        // We set the same text again, but still expect a cache miss as the text contains tabs.
+        setTextLayout(textLayout, "TEXT\tTAB", nativeFont, TextLayout.BOUNDS_CENTER);
+        assertEquals(2, glyphLayoutCreationCounter.get());
+    }
 }

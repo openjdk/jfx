@@ -727,6 +727,9 @@ public class PrismTextLayout implements TextLayout {
      * @return true, if only the runs can be reused
      */
     private boolean onlyReuseRuns() {
+        if ((flags & FLAGS_HAS_TABS) != 0) {
+            return true;
+        }
         int align = flags & ALIGN_MASK;
         int boundsType = flags & BOUNDS_MASK;
         return wrapWidth != 0 || align != ALIGN_LEFT || boundsType == 0 || isMirrored();
