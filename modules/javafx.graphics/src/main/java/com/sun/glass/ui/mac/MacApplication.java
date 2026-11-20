@@ -32,11 +32,14 @@ import com.sun.javafx.application.preferences.PreferenceMapping;
 import com.sun.javafx.util.Logging;
 import javafx.scene.paint.Color;
 
+import java.awt.Toolkit;
+
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -101,6 +104,18 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
         } else {
             invokeLaterDispatcher = null;
         }
+    }
+
+    private static boolean initAwt() {
+        // initialize AWT on a separate thread to avoid a possible deadlock
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                Toolkit.getDefaultToolkit();
+                return true;
+            } catch (Exception e) {
+                return false;
+            }
+        }).join();
     }
 
     private Menu appleMenu;
@@ -541,5 +556,9 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
     @Override
     protected void _showDocument(String uri) {
         _openURI(uri);
+    }
+
+    private static void _initAwt() {
+
     }
 }
