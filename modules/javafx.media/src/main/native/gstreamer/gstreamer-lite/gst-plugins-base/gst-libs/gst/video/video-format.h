@@ -1131,7 +1131,7 @@ GST_VIDEO_API
 GstVideoFormat gst_video_format_from_fourcc          (guint32 fourcc) G_GNUC_CONST;
 
 GST_VIDEO_API
-GstVideoFormat gst_video_format_from_string          (const gchar *format) G_GNUC_CONST;
+GstVideoFormat gst_video_format_from_string          (const gchar *format);
 
 GST_VIDEO_API
 guint32        gst_video_format_to_fourcc            (GstVideoFormat format) G_GNUC_CONST;

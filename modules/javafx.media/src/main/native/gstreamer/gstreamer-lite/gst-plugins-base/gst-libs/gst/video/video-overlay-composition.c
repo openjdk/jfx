@@ -598,6 +598,13 @@ gst_video_overlay_composition_blend (GstVideoOverlayComposition * comp,
     if (needs_scaling) {
       gst_video_blend_scale_linear_RGBA (&rect->info, rect->pixels,
           rect->render_height, rect->render_width, &scaled_info, &pixels);
+
+      if (!pixels) {
+        GST_WARNING ("Couldn't get scaled rectangle %u", n);
+        ret = FALSE;
+        continue;
+      }
+
       vinfo = &scaled_info;
     } else {
       pixels = gst_buffer_ref (rect->pixels);

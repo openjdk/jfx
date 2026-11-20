@@ -31,6 +31,13 @@ import javax.inject.Inject
 class CompileResourceTask extends NativeCompileTask {
     @Input List<String> rcParams = new ArrayList<String>();
     @Input String compiler;
+    private Map<String, String> projectEnv;
+
+    @Override
+    protected void prepareCompile() {
+        super.prepareCompile();
+        projectEnv = fetchWinNativeCompileEnv();
+    }
 
     @Inject
     CompileResourceTask(ExecOperations execOperations) {
@@ -43,11 +50,12 @@ class CompileResourceTask extends NativeCompileTask {
     }
 
     protected void doCompile(File sourceFile, File outputFile){
+        final Map<String, String> _projectEnv = projectEnv;
         execCompile { spec ->
             spec.commandLine(compiler);
             if (rcParams) spec.args(rcParams);
             spec.args("/Fo$outputFile", "$sourceFile");
-            spec.environment(project.WINDOWS_NATIVE_COMPILE_ENVIRONMENT);
+            spec.environment(_projectEnv);
         }
     }
 }

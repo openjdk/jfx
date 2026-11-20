@@ -1,3 +1,4 @@
+; Next ordinal: 163
 EXPORTS
 _gst_buffer_type	@1	NONAME
 _gst_event_type	@2	NONAME

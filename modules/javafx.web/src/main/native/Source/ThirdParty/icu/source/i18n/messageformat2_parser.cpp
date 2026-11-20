@@ -90,7 +90,7 @@ static void copyContext(const UChar in[U_PARSE_CONTEXT_LEN], UChar out[U_PARSE_C
     // Translate absolute to relative offset
     parseError.offset = index                               // Start with total number of characters seen
                       - parseError.lengthBeforeCurrentLine; // Subtract all characters before the current line
-    // TODO: Fill this in with actual pre and post-context
+    // TODO(ICU-23427): Fill this in with actual pre and post-context
     parseError.preContext[0] = 0;
     parseError.postContext[0] = 0;
 }
@@ -188,25 +188,42 @@ UnicodeSet* initNameStartChars(UErrorCode& status) {
     if (U_FAILURE(status)) {
         return nullptr;
     }
-    UnicodeSet* result = new UnicodeSet(*isAlpha);
+    UnicodeSet* result = new UnicodeSet();
     if (result == nullptr) {
         status = U_MEMORY_ALLOCATION_ERROR;
         return nullptr;
     };
-    result->add(UNDERSCORE);
-    result->add(0x00C0, 0x00D6);
-    result->add(0x00D8, 0x00F6);
-    result->add(0x00F8, 0x02FF);
-    result->add(0x0370, 0x037D);
-    result->add(0x037F, 0x061B);
-    result->add(0x061D, 0x1FFF);
-    result->add(0x200C, 0x200D);
-    result->add(0x2070, 0x218F);
-    result->add(0x2C00, 0x2FEF);
+
+    result->addAll(*isAlpha);
+    result->add(0x002B);
+    result->add(0x005F);
+    result->add(0x00A1, 0x061B);
+    result->add(0x061D, 0x167F);
+    result->add(0x1681, 0x1FFF);
+    result->add(0x200B, 0x200D);
+    result->add(0x2010, 0x2027);
+    result->add(0x2030, 0x205E);
+    result->add(0x2060, 0x2065);
+    result->add(0x206A, 0x2FFF);
     result->add(0x3001, 0xD7FF);
-    result->add(0xF900, 0xFDCF);
+    result->add(0xE000, 0xFDCF);
     result->add(0xFDF0, 0xFFFD);
-    result->add(0x100000, 0xEFFFF);
+    result->add(0x10000, 0x1FFFD);
+    result->add(0x20000, 0x2FFFD);
+    result->add(0x30000, 0x3FFFD);
+    result->add(0x40000, 0x4FFFD);
+    result->add(0x50000, 0x5FFFD);
+    result->add(0x60000, 0x6FFFD);
+    result->add(0x70000, 0x7FFFD);
+    result->add(0x80000, 0x8FFFD);
+    result->add(0x90000, 0x9FFFD);
+    result->add(0xA0000, 0xAFFFD);
+    result->add(0xB0000, 0xBFFFD);
+    result->add(0xC0000, 0xCFFFD);
+    result->add(0xD0000, 0xDFFFD);
+    result->add(0xE0000, 0xEFFFD);
+    result->add(0xF0000, 0xFFFFD);
+    result->add(0x100000, 0x10FFFD);
     result->freeze();
     return result;
 }
@@ -230,9 +247,6 @@ UnicodeSet* initNameChars(UErrorCode& status) {
     result->addAll(*digit);
     result->add(HYPHEN);
     result->add(PERIOD);
-    result->add(0x00B7);
-    result->add(0x0300, 0x036F);
-    result->add(0x203F, 0x2040);
     result->freeze();
     return result;
 }
@@ -473,7 +487,7 @@ bool Parser::isDeclarationStart() {
 
 
 /*
-  TODO: Since handling the whitespace ambiguities needs to be repeated
+  TODO(ICU-23427): Since handling the whitespace ambiguities needs to be repeated
   in several different places and is hard to factor out,
   it probably would be better to replace the parser with a lexer + parser
   to separate tokenizing from parsing, which would simplify the code significantly.
@@ -743,6 +757,29 @@ void Parser::parseTokenWithWhitespace(UChar32 c, UErrorCode& errorCode) {
 }
 
 /*
+  Consumes a possibly-empty sequence of name-chars. Appends to `str`
+  and returns `str`.
+*/
+UnicodeString Parser::parseNameChars(UnicodeString& str, UErrorCode& errorCode) {
+    if (U_FAILURE(errorCode)) {
+        return {};
+    }
+
+    while (isNameChar(peek())) {
+        UChar32 c = peek();
+        str += c;
+        normalizedInput += c;
+        next();
+        if (!inBounds()) {
+            ERROR(errorCode);
+            break;
+        }
+    }
+
+    return str;
+}
+
+/*
   Consumes a non-empty sequence of `name-char`s, the first of which is
   also a `name-start`.
   that begins with a character `start` such that `isNameStart(start)`.
@@ -767,16 +804,7 @@ UnicodeString Parser::parseName(UErrorCode& errorCode) {
     parseOptionalBidi();
 
     // name-start *name-char
-    while (isNameChar(peek())) {
-        UChar32 c = peek();
-        name += c;
-        normalizedInput += c;
-        next();
-        if (!inBounds()) {
-            ERROR(errorCode);
-            break;
-        }
-    }
+    parseNameChars(name, errorCode);
 
     // [bidi]
     parseOptionalBidi();
@@ -999,91 +1027,15 @@ Literal Parser::parseUnquotedLiteral(UErrorCode& errorCode) {
     if (U_FAILURE(errorCode)) {
         return {};
     }
+    // unquoted-literal = 1*name-char
 
-    // unquoted -> name
-    if (isNameStart(peek())) {
-        return Literal(false, parseName(errorCode));
+    if (!(isNameChar(peek()))) {
+        ERROR(errorCode);
+        return {};
     }
 
-    // unquoted -> number
-    // Parse the contents
     UnicodeString contents;
-
-    // Parse the sign
-    if (peek() == HYPHEN) {
-        contents += peek();
-        normalizedInput += peek();
-        next();
-    }
-    if (!inBounds()) {
-        ERROR(errorCode);
-        return {};
-    }
-
-    // Parse the integer part
-    if (peek() == ((UChar32)0x0030) /* 0 */) {
-        contents += peek();
-        normalizedInput += peek();
-        next();
-    } else if (isDigit(peek())) {
-        contents += parseDigits(errorCode);
-    } else {
-        // Error -- nothing else can start a number literal
-        ERROR(errorCode);
-        return {};
-    }
-
-    // Parse the decimal point if present
-    if (peek() == PERIOD) {
-        contents += peek();
-        normalizedInput += peek();
-        next();
-        if (!inBounds()) {
-            ERROR(errorCode);
-            return {};
-        }
-        // Parse the fraction part
-        if (isDigit(peek())) {
-            contents += parseDigits(errorCode);
-        } else {
-            // '.' not followed by digit is a parse error
-            ERROR(errorCode);
-            return {};
-        }
-    }
-
-    if (!inBounds()) {
-        ERROR(errorCode);
-        return {};
-    }
-
-    // Parse the exponent part if present
-    if (peek() == UPPERCASE_E || peek() == LOWERCASE_E) {
-        contents += peek();
-        normalizedInput += peek();
-        next();
-        if (!inBounds()) {
-            ERROR(errorCode);
-            return {};
-        }
-        // Parse sign if present
-        if (peek() == PLUS || peek() == HYPHEN) {
-            contents += peek();
-            normalizedInput += peek();
-            next();
-            if (!inBounds()) {
-                ERROR(errorCode);
-                return {};
-            }
-        }
-        // Parse exponent digits
-        if (!isDigit(peek())) {
-            ERROR(errorCode);
-            return {};
-        }
-        contents += parseDigits(errorCode);
-    }
-
+    parseNameChars(contents, errorCode);
     return Literal(false, contents);
 }
 
@@ -1191,12 +1143,6 @@ void Parser::parseOption(OptionAdder<T>& addOption, UErrorCode& errorCode) {
       errors.setDuplicateOptionName(errorCode);
     }
 }
-
-/*
-  Note: there are multiple overloads of parseOptions() for parsing
-  options within markup, vs. within an expression, vs. parsing
-  attributes. This should be refactored. TODO
- */
 
 /*
   Consume optional whitespace followed by a sequence of options
@@ -2021,7 +1967,7 @@ void Parser::parseSelectors(UErrorCode& status) {
     // Parse selectors
     // "Backtracking" is required here. It's not clear if whitespace is
     // (`[s]` selector) or (`[s]` variant)
-    while (isWhitespace(peek()) || peek() == DOLLAR) {
+    while (isWhitespace(peek()) || isBidiControl(peek()) || peek() == DOLLAR) {
         int32_t whitespaceStart = index;
         parseRequiredWhitespace(status);
         // Restore precondition
@@ -2054,25 +2000,14 @@ void Parser::parseSelectors(UErrorCode& status) {
             break;                                 \
         }                                          \
 
-    // Parse variants
-    // matcher = match-statement s variant *(o variant)
-
-    // Parse first variant
+    // Parse required whitespace before first variant
     parseRequiredWhitespace(status);
-    if (!inBounds()) {
-        ERROR(status);
-        return;
-    }
-    parseVariant(status);
-    if (!inBounds()) {
-        // Not an error; there might be only one variant
-        return;
-    }
+
+    // Parse variants
 
     while (isWhitespace(peek()) || isBidiControl(peek()) || isKeyStart(peek())) {
-        parseOptionalWhitespace();
-        // Restore the precondition.
         // Trailing whitespace is allowed.
+        parseOptionalWhitespace();
         if (!inBounds()) {
             return;
         }
@@ -2107,12 +2042,6 @@ void Parser::errorPattern(UErrorCode& status) {
 
     // If still in bounds, then add the remaining input as a single text part
     // to the pattern
-    /*
-      TODO: this behavior isn't documented in the spec, but it comes from
-      https://github.com/messageformat/messageformat/blob/e0087bff312d759b67a9129eac135d318a1f0ce7/packages/mf2-messageformat/src/__fixtures/test-messages.json#L236
-      and a pending pull request https://github.com/unicode-org/message-format-wg/pull/462 will clarify
-      whether this is the intent behind the spec
-     */
     UnicodeString partStr(LEFT_CURLY_BRACE);
     while (inBounds()) {
         partStr += peek();

@@ -52,8 +52,8 @@ static void parse_obsolete_tdat_frame (ID3TagsWorking * work);
 static gboolean id3v2_tag_to_taglist (ID3TagsWorking * work,
     const gchar * tag_name, const gchar * tag_str);
 /* Parse a single string into an array of gchar* */
-static void parse_split_strings (guint8 encoding, gchar * data, gint data_size,
-    GArray ** out_fields);
+static void parse_split_strings (guint8 encoding, const gchar * data,
+    gsize data_size, GArray ** out_fields);
 static void free_tag_strings (GArray * fields);
 static gboolean
 id3v2_genre_fields_to_taglist (ID3TagsWorking * work, const gchar * tag_name,
@@ -72,8 +72,8 @@ id3v2_parse_frame (ID3TagsWorking * work)
   const gchar *tag_name;
   gboolean result = FALSE;
   gint i;
-  guint8 *frame_data = work->hdr.frame_data;
-  guint frame_data_size = work->cur_frame_size;
+  const guint8 *frame_data = work->hdr.frame_data;
+  gsize frame_data_size = work->cur_frame_size;
   gchar *tag_str = NULL;
   GArray *tag_fields = NULL;
   guint8 *uu_data = NULL;
@@ -118,11 +118,12 @@ id3v2_parse_frame (ID3TagsWorking * work)
     }
     frame_data += 4;
     frame_data_size -= 4;
-    GST_LOG ("Un-unsynced data size %d (of %d)", work->parse_size,
-        frame_data_size);
+    GST_LOG ("Un-unsynced data size %" G_GSIZE_FORMAT " (of %" G_GSIZE_FORMAT
+        ")", work->parse_size, frame_data_size);
     if (work->parse_size > frame_data_size) {
-      GST_WARNING ("ID3v2 frame %s data has invalid size %d (>%d)",
-          work->frame_id, work->parse_size, frame_data_size);
+      GST_WARNING ("ID3v2 frame %s data has invalid size %" G_GSIZE_FORMAT
+          " (>%" G_GSIZE_FORMAT ")", work->frame_id, work->parse_size,
+          frame_data_size);
       return FALSE;
     }
   }
@@ -159,8 +160,9 @@ id3v2_parse_frame (ID3TagsWorking * work)
     }
     if (destSize != work->parse_size) {
       GST_WARNING
-          ("Decompressing ID3v2 frame %s did not produce expected size %d bytes (got %lu)",
-          tag_name, work->parse_size, destSize);
+          ("Decompressing ID3v2 frame %s did not produce expected size %"
+          G_GSIZE_FORMAT " bytes (got %lu)", tag_name, work->parse_size,
+          destSize);
       g_free (uncompressed_data);
       g_free (uu_data);
       return FALSE;
@@ -258,7 +260,7 @@ parse_comment_frame (ID3TagsWorking * work)
   language[2] = g_ascii_tolower (work->parse_data[3]);
   language[3] = '\0';
 
-  parse_split_strings (encoding, (gchar *) work->parse_data + 4,
+  parse_split_strings (encoding, (const gchar *) work->parse_data + 4,
       work->parse_size - 4, &fields);
 
   if (fields == NULL || fields->len < 2) {
@@ -323,16 +325,16 @@ parse_text_identification_frame (ID3TagsWorking * work)
     return NULL;
 
   encoding = work->parse_data[0];
-  parse_split_strings (encoding, (gchar *) work->parse_data + 1,
+  parse_split_strings (encoding, (const gchar *) work->parse_data + 1,
       work->parse_size - 1, &fields);
   if (fields) {
     if (fields->len > 0) {
-      GST_LOG ("Read %d fields from Text ID frame of size %d with encoding %d"
-          ". First is '%s'", fields->len, work->parse_size - 1, encoding,
-          g_array_index (fields, gchar *, 0));
+      GST_LOG ("Read %d fields from Text ID frame of size %" G_GSIZE_FORMAT
+          " with encoding %d" ". First is '%s'", fields->len,
+          work->parse_size - 1, encoding, g_array_index (fields, gchar *, 0));
     } else {
-      GST_LOG ("Read 0 fields from Text ID frame of size %d with encoding %d",
-          work->parse_size - 1, encoding);
+      GST_LOG ("Read 0 fields from Text ID frame of size %" G_GSIZE_FORMAT
+          " with encoding %d", work->parse_size - 1, encoding);
     }
   }
 
@@ -349,14 +351,15 @@ static gchar *
 parse_url_link_frame (ID3TagsWorking * work, const gchar ** tag_name)
 {
   gsize len;
-  gchar *nul, *data, *link;
+  gchar *link;
+  const gchar *data, *nul;
 
   *tag_name = NULL;
 
   if (work->parse_size == 0)
     return NULL;
 
-  data = (gchar *) work->parse_data;
+  data = (const gchar *) work->parse_data;
   /* if there's more data then the string is long, we only want to parse the
    * data up to the terminating zero to g_convert and ignore the rest, as
    * per spec */
@@ -411,7 +414,7 @@ parse_user_text_identification_frame (ID3TagsWorking * work,
 
   encoding = work->parse_data[0];
 
-  parse_split_strings (encoding, (gchar *) work->parse_data + 1,
+  parse_split_strings (encoding, (const gchar *) work->parse_data + 1,
       work->parse_size - 1, &fields);
 
   if (fields == NULL)
@@ -426,9 +429,9 @@ parse_user_text_identification_frame (ID3TagsWorking * work,
   *tag_name =
       gst_tag_from_id3_user_tag ("TXXX", g_array_index (fields, gchar *, 0));
 
-  GST_LOG ("TXXX frame of size %d. Mapped descriptor '%s' to GStreamer tag %s",
-      work->parse_size - 1, g_array_index (fields, gchar *, 0),
-      GST_STR_NULL (*tag_name));
+  GST_LOG ("TXXX frame of size %" G_GSIZE_FORMAT
+      ". Mapped descriptor '%s' to GStreamer tag %s", work->parse_size - 1,
+      g_array_index (fields, gchar *, 0), GST_STR_NULL (*tag_name));
 
   if (*tag_name) {
     ret = g_strdup (g_array_index (fields, gchar *, 1));
@@ -442,10 +445,10 @@ parse_user_text_identification_frame (ID3TagsWorking * work,
 }
 
 static gboolean
-parse_id_string (ID3TagsWorking * work, gchar ** p_str, gint * p_len,
-    gint * p_datalen)
+parse_id_string (ID3TagsWorking * work, gchar ** p_str, gsize * p_len,
+    gsize * p_datalen)
 {
-  gint len, datalen;
+  gsize len, datalen;
 
   if (work->parse_size < 2)
     return FALSE;
@@ -459,7 +462,7 @@ parse_id_string (ID3TagsWorking * work, gchar ** p_str, gint * p_len,
   if (len == 0 || datalen <= 0)
     return FALSE;
 
-  *p_str = g_strndup ((gchar *) work->parse_data, len);
+  *p_str = g_strndup ((const gchar *) work->parse_data, len);
   *p_len = len;
   *p_datalen = datalen;
 
@@ -471,7 +474,7 @@ parse_private_frame_data (ID3TagsWorking * work)
 {
   GstBuffer *binary_data = NULL;
   GstStructure *owner_info = NULL;
-  guint8 *owner_str = NULL;
+  const guint8 *owner_str = NULL;
   gsize owner_len;
   GstSample *priv_frame = NULL;
 
@@ -480,8 +483,7 @@ parse_private_frame_data (ID3TagsWorking * work)
     return FALSE;
   }
 
-  owner_str =
-      (guint8 *) memchr ((guint8 *) work->parse_data, 0, work->parse_size);
+  owner_str = memchr (work->parse_data, 0, work->parse_size);
 
   if (owner_str == NULL) {
     GST_WARNING ("Invalid PRIV frame received");
@@ -512,16 +514,18 @@ parse_private_frame_data (ID3TagsWorking * work)
 static gchar *
 parse_unique_file_identifier (ID3TagsWorking * work, const gchar ** tag_name)
 {
-  gint len, datalen;
-  gchar *owner_id, *data, *ret = NULL;
+  gsize len, datalen;
+  const gchar *data;
+  gchar *owner_id, *ret = NULL;
 
-  GST_LOG ("parsing UFID frame of size %d", work->parse_size);
+  GST_LOG ("parsing UFID frame of size %" G_GSIZE_FORMAT, work->parse_size);
 
   if (!parse_id_string (work, &owner_id, &len, &datalen))
     return NULL;
 
-  data = (gchar *) work->parse_data + len + 1;
-  GST_LOG ("UFID owner ID: %s (+ %d bytes of data)", owner_id, datalen);
+  data = (const gchar *) work->parse_data + len + 1;
+  GST_LOG ("UFID owner ID: %s (+ %" G_GSIZE_FORMAT " bytes of data)", owner_id,
+      datalen);
 
   if (strcmp (owner_id, "http://musicbrainz.org") == 0 &&
       g_utf8_validate (data, datalen, NULL)) {
@@ -538,7 +542,7 @@ parse_unique_file_identifier (ID3TagsWorking * work, const gchar ** tag_name)
 /* parse data and return length of the next string in the given encoding,
  * including the NUL terminator */
 static gint
-scan_encoded_string (guint8 encoding, gchar * data, gint data_size)
+scan_encoded_string (guint8 encoding, const gchar * data, gsize data_size)
 {
   gint i;
 
@@ -571,7 +575,7 @@ parse_picture_frame (ID3TagsWorking * work)
 {
   guint8 txt_encoding, pic_type;
   gchar *mime_str = NULL;
-  gint len, datalen;
+  gsize len, datalen;
 
   GST_LOG ("APIC frame (ID3v2.%u)", ID3V2_VER_MAJOR (work->hdr.version));
 
@@ -589,7 +593,7 @@ parse_picture_frame (ID3TagsWorking * work)
     if (work->parse_size < 3)
       goto not_enough_data;
 
-    mime_str = g_strndup ((gchar *) work->parse_data, 3);
+    mime_str = g_strndup ((const gchar *) work->parse_data, 3);
     len = 3;
   } else {
     if (!parse_id_string (work, &mime_str, &len, &datalen))
@@ -614,14 +618,15 @@ parse_picture_frame (ID3TagsWorking * work)
   if (work->parse_size < 1 + 1)
     goto not_enough_data;
 
-  len = scan_encoded_string (txt_encoding, (gchar *) work->parse_data,
+  len = scan_encoded_string (txt_encoding, (const gchar *) work->parse_data,
       work->parse_size);
 
   if (len < 1)
     goto error;
 
   /* just skip the description string ... */
-  GST_LOG ("Skipping description string (%d bytes in original coding)", len);
+  GST_LOG ("Skipping description string (%" G_GSIZE_FORMAT
+      " bytes in original coding)", len);
 
   if (work->parse_size < len + 1)
     goto not_enough_data;
@@ -629,12 +634,12 @@ parse_picture_frame (ID3TagsWorking * work)
   work->parse_data += len;
   work->parse_size -= len;
 
-  GST_DEBUG ("image data is %u bytes", work->parse_size);
+  GST_DEBUG ("image data is %" G_GSIZE_FORMAT " bytes", work->parse_size);
 
   if (work->parse_size <= 0)
     goto not_enough_data;
 
-  if (!gst_tag_list_add_id3_image (work->tags, (guint8 *) work->parse_data,
+  if (!gst_tag_list_add_id3_image (work->tags, work->parse_data,
           work->parse_size, pic_type)) {
     goto error;
   }
@@ -663,16 +668,18 @@ parse_relative_volume_adjustment_two (ID3TagsWorking * work)
   const gchar *gain_tag_name = NULL;
   const gchar *peak_tag_name = NULL;
   gdouble gain_dB, peak_val;
-  guint64 peak;
-  guint8 *data, chan, peak_bits;
+  guint64 peak = 0;
+  const guint8 *data;
+  guint8 chan, peak_bits;
   gchar *id;
-  gint len, datalen, i;
+  gsize len, datalen, i;
 
   if (!parse_id_string (work, &id, &len, &datalen))
     return FALSE;
 
   if (datalen < (1 + 2 + 1)) {
-    GST_WARNING ("broken RVA2 frame, data size only %d bytes", datalen);
+    GST_WARNING ("broken RVA2 frame, data size only %" G_GSIZE_FORMAT " bytes",
+        datalen);
     g_free (id);
     return FALSE;
   }
@@ -691,6 +698,13 @@ parse_relative_volume_adjustment_two (ID3TagsWorking * work)
   }
   data += 1 + 2 + 1;
   datalen -= 1 + 2 + 1;
+
+  if (datalen < peak_bits / 8) {
+    GST_WARNING ("only %" G_GSIZE_FORMAT
+        " bytes left for %d peak bits, ignoring", datalen, (gint) peak_bits);
+    peak_bits = 0;
+  }
+
   if (peak_bits == 16) {
     peak = GST_READ_UINT16_BE (data);
   } else {
@@ -934,7 +948,7 @@ id3v2_genre_fields_to_taglist (ID3TagsWorking * work, const gchar * tag_name,
   gint i;
 
   for (i = 0; i < tag_fields->len; i++) {
-    gint len;
+    gsize len;
 
     tag_str = g_array_index (tag_fields, gchar *, i);
     if (tag_str == NULL)
@@ -947,7 +961,7 @@ id3v2_genre_fields_to_taglist (ID3TagsWorking * work, const gchar * tag_name,
       /* Check for genre numbers wrapped in parentheses, possibly
        * followed by a string */
       while (len >= 2) {
-        gint pos;
+        gsize pos;
         gboolean found = FALSE;
 
         /* Double parenthesis ends the numeric genres, but we need
@@ -996,7 +1010,7 @@ id3v2_genre_fields_to_taglist (ID3TagsWorking * work, const gchar * tag_name,
 }
 
 static gboolean
-find_utf16_bom (gchar * data, gint * p_data_endianness)
+find_utf16_bom (const gchar * data, gint * p_data_endianness)
 {
   guint16 marker = (GST_READ_UINT8 (data) << 8) | GST_READ_UINT8 (data + 1);
 
@@ -1082,7 +1096,7 @@ beach:
 }
 
 static void
-parse_insert_string_field (guint8 encoding, gchar * data, gint data_size,
+parse_insert_string_field (guint8 encoding, const gchar * data, gsize data_size,
     GArray * fields)
 {
   gchar *field = NULL;
@@ -1185,12 +1199,12 @@ parse_insert_string_field (guint8 encoding, gchar * data, gint data_size,
 }
 
 static void
-parse_split_strings (guint8 encoding, gchar * data, gint data_size,
+parse_split_strings (guint8 encoding, const gchar * data, gsize data_size,
     GArray ** out_fields)
 {
   GArray *fields = g_array_new (FALSE, TRUE, sizeof (gchar *));
-  gint text_pos;
-  gint prev = 0;
+  gsize text_pos;
+  gsize prev = 0;
 
   g_return_if_fail (out_fields != NULL);
 

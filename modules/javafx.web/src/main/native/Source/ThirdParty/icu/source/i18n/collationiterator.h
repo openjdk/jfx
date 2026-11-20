@@ -31,27 +31,15 @@ class UVector32;
 /* Large enough for CEs of most short strings. */
 #define CEBUFFER_INITIAL_CAPACITY 40
 
-// Export an explicit template instantiation of the MaybeStackArray that
-//    is used as a data member of CEBuffer.
-//
-//    When building DLLs for Windows this is required even though
-//    no direct access to the MaybeStackArray leaks out of the i18n library.
-//
-// See digitlst.h, pluralaffix.h, datefmt.h, and others for similar examples.
-//
-#if U_PF_WINDOWS <= U_PLATFORM && U_PLATFORM <= U_PF_CYGWIN
-template class U_I18N_API MaybeStackArray<int64_t, CEBUFFER_INITIAL_CAPACITY>;
-#endif
-
 /**
  * Collation element iterator and abstract character iterator.
  *
  * When a method returns a code point value, it must be in 0..10FFFF,
  * except it can be negative as a sentinel value.
  */
-class U_I18N_API CollationIterator : public UObject {
+class U_I18N_API_CLASS CollationIterator : public UObject {
 private:
-    class U_I18N_API CEBuffer {
+    class CEBuffer {
     private:
         /** Large enough for CEs of most short strings. */
         static const int32_t INITIAL_CAPACITY = CEBUFFER_INITIAL_CAPACITY;
@@ -69,7 +57,7 @@ private:
             buffer[length++] = ce;
         }
 
-        UBool ensureAppendCapacity(int32_t appCap, UErrorCode &errorCode);
+        U_I18N_API UBool ensureAppendCapacity(int32_t appCap, UErrorCode &errorCode);
 
         inline UBool incLength(UErrorCode &errorCode) {
             // Use INITIAL_CAPACITY for a very simple fastpath.
@@ -224,6 +212,22 @@ public:
 protected:
     CollationIterator(const CollationIterator &other);
 
+    /**
+     * A special constructor used by DataBuilderCollationIterator, which initializes
+     * the CollationData in the constructor. The public CollationIterator constructor
+     * initializes the trie pointer from the CollationData, but it's not yet available
+     * when DataBuilderCollationIterator invokes the CollationIterator constructor.
+     * The CollationData used by DataBuilderCollationIterator is the Normalizer2Impl,
+     * which does not have a trie, so the trie pointer is set to nullptr.
+     */
+    CollationIterator(const CollationData *d, std::nullptr_t nullTrie, UBool numeric)
+            : trie(nullTrie),
+              data(d),
+              cesIndex(0),
+              skipped(nullptr),
+              numCpFwd(-1),
+              isNumeric(numeric) {}
+
     void reset();
 
     /**
@@ -278,8 +282,8 @@ protected:
     const CollationData *data;
 
 private:
-    int64_t nextCEFromCE32(const CollationData *d, UChar32 c, uint32_t ce32,
-                           UErrorCode &errorCode);
+    U_I18N_API int64_t nextCEFromCE32(const CollationData *d, UChar32 c, uint32_t ce32,
+                                      UErrorCode &errorCode);
 
     uint32_t getCE32FromPrefix(const CollationData *d, uint32_t ce32,
                                UErrorCode &errorCode);
