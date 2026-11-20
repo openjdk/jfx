@@ -2694,4 +2694,24 @@ public class RichTextArea extends Control {
             documentAreaPropertyImpl().set(b);
         }
     }
+
+    /**
+     * Scrolls the caret to the location within the viewport determined by the fraction alongside each axis.
+     * For example, calling this method with (0, 0.5) positions the caret at the left side halfway down vertically.
+     * Both parameters are clamped to be within [0.0 ... 1.0] range, {@link Double#NaN} is treated as 0.0.
+     * The {@code horFraction} parameter is ignored when {@link #wrapTextProperty()} is {@code true}.
+     * This method is a no-op when the skin or the selection is {@code null}.
+     *
+     * @param horFraction the fraction of the viewport width
+     * @param verFraction the fraction of the viewport height
+     * @since 28
+     */
+    public final void scrollCaretInView(double horFraction, double verFraction) {
+        VFlow f = RichTextAreaSkinHelper.getVFlow(this);
+        if (f != null) {
+            horFraction = RichUtils.normalizeFraction(horFraction);
+            verFraction = RichUtils.normalizeFraction(verFraction);
+            f.scrollCaretInView(horFraction, verFraction);
+        }
+    }
 }

@@ -1006,6 +1006,39 @@ public class VFlow extends Pane implements StyleResolver, StyledTextModel.Listen
         scrollHorizontalToVisible(x);
     }
 
+    public void scrollCaretInView(double hor, double ver) {
+        TextPos caret = control.getCaretPosition();
+        if (caret == null) {
+            return;
+        }
+
+        CaretInfo c = getCaretInfo();
+        if (c == null) {
+            int ix = caret.index();
+            Origin or = new Origin(ix, 0.0);
+            setOrigin(or);
+            c = getCaretInfo();
+            if (c == null) {
+                // unlikely
+                return;
+            }
+        }
+
+        double targety = viewPortHeight * ver;
+        double dy = ((targety < (viewPortHeight / 2.0)) ? c.getMinY() : c.getMaxY()) - targety;
+        scrollVerticalPixels(dy);
+
+        if (!control.isWrapText()) {
+            double targetx = viewPortWidth * hor;
+            double x = ((targetx < (viewPortWidth / 2.0)) ? c.getMinX() : c.getMaxX()) - targetx;
+            setOffsetX(x);
+        }
+
+        // it's possible for the scrollbar(s) to appear and hide the caret
+        // most of time time, this will be a no-op
+        scrollCaretToVisible();
+    }
+
     public void scrollCaretToVisible() {
         TextPos caret = control.getCaretPosition();
         if (caret == null) {
