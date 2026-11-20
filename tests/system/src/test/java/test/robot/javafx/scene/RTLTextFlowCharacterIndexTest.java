@@ -264,8 +264,6 @@ public class RTLTextFlowCharacterIndexTest {
 
     @Test
     public void testTextAndTextFlowHitInfoForRTLMultipleTextNodes() throws Exception {
-        assumeFalse(Util.isUbuntu2604()); // JDK-8397451
-
         addMultiNodeRTLEnglishArabicText();
         Util.waitForIdle(scene);
 
@@ -293,8 +291,6 @@ public class RTLTextFlowCharacterIndexTest {
 
     @Test
     public void testTextAndTextFlowHitInfoForRTLMultipleMultiLineEnglishArabicTextNodes() throws Exception {
-        assumeFalse(Util.isUbuntu2604()); // JDK-8397451
-
         addMultiLineMultiNodeRTLEnglishArabicText();
         Util.waitForIdle(scene);
 
@@ -355,8 +351,6 @@ public class RTLTextFlowCharacterIndexTest {
 
     @Test
     public void testTextAndTextFlowHitInfoForRTLMultipleMultiLineArabicTextNodes() throws Exception {
-        assumeFalse(Util.isUbuntu2604()); // JDK-8397451
-
         addMutliLineMultiNodeRTLArabicText();
         Util.waitForIdle(scene);
 
@@ -432,6 +426,8 @@ public class RTLTextFlowCharacterIndexTest {
 
     @BeforeAll
     public static void initFX() {
+        assumeFalse(Util.isUbuntu2604()); // JDK-8397451
+
         long seed = new Random().nextLong();
         System.out.println("seed=" + seed);
         random = new Random(seed);
@@ -441,6 +437,8 @@ public class RTLTextFlowCharacterIndexTest {
 
     @AfterAll
     public static void exit() {
+        assumeFalse(Util.isUbuntu2604()); // JDK-8397451
+
         Util.shutdown();
     }
 

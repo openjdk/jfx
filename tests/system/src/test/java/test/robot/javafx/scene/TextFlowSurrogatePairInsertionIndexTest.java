@@ -200,8 +200,6 @@ public class TextFlowSurrogatePairInsertionIndexTest {
 
     @Test
     public void testTextFlowInsertionIndexUsingMultipleEmojis() throws Exception {
-        assumeFalse(Util.isUbuntu2604()); // JDK-8397922
-
         addMultipleEmojis();
         Util.waitForIdle(scene);
 
@@ -261,8 +259,6 @@ public class TextFlowSurrogatePairInsertionIndexTest {
 
     @Test
     public void testTextFlowInsertionIndexWhenMouseMovedOutsideText() throws Exception {
-        assumeFalse(Util.isUbuntu2604()); // JDK-8397922
-
         addTextAndEmojis();
         Util.waitForIdle(scene);
 
@@ -338,6 +334,8 @@ public class TextFlowSurrogatePairInsertionIndexTest {
 
     @BeforeAll
     public static void initFX() {
+        assumeFalse(Util.isUbuntu2604()); // JDK-8397922
+
         long seed = new Random().nextLong();
         // if any test fails, we can use the seed found in the log to reproduce exact sequence of events
         System.out.println("seed=" + seed);
@@ -348,6 +346,8 @@ public class TextFlowSurrogatePairInsertionIndexTest {
 
     @AfterAll
     public static void exit() {
+        assumeFalse(Util.isUbuntu2604()); // JDK-8397922
+
         Util.shutdown();
     }
 
