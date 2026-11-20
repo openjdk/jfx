@@ -43,6 +43,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import test.util.Util;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 /*
  * Test to verify treeTableView resizeColumnToFitContent with
@@ -67,6 +68,8 @@ public class TreeTableViewResizeColumnToFitContentTest {
 
     @Test
     public void resizeColumnToFitContentTest() {
+        assumeFalse(Util.isUbuntu2604()); // JDK-8322019
+
         double wid0 = treeTableView.getColumns().get(0).getWidth();
         double wid1 = treeTableView.getColumns().get(1).getWidth();
         double wid2 = treeTableView.getColumns().get(2).getWidth();

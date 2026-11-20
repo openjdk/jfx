@@ -47,6 +47,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import test.util.Util;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 /*
  * Test for verifying insertion index in TextFlow surrogate pairs
@@ -333,6 +334,8 @@ public class TextFlowSurrogatePairInsertionIndexTest {
 
     @BeforeAll
     public static void initFX() {
+        assumeFalse(Util.isUbuntu2604()); // JDK-8397922
+
         long seed = new Random().nextLong();
         // if any test fails, we can use the seed found in the log to reproduce exact sequence of events
         System.out.println("seed=" + seed);
@@ -343,6 +346,8 @@ public class TextFlowSurrogatePairInsertionIndexTest {
 
     @AfterAll
     public static void exit() {
+        assumeFalse(Util.isUbuntu2604()); // JDK-8397922
+
         Util.shutdown();
     }
 
