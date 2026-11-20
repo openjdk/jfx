@@ -53,6 +53,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import test.util.Util;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 /*
  * Test for verifying character index of Text nodes embedded in TextFlow in RTL orientation.
@@ -350,6 +351,8 @@ public class RTLTextFlowCharacterIndexTest {
 
     @Test
     public void testTextAndTextFlowHitInfoForRTLMultipleMultiLineArabicTextNodes() throws Exception {
+        assumeFalse(Util.isUbuntu2604()); // JDK-8397451
+
         addMutliLineMultiNodeRTLArabicText();
         Util.waitForIdle(scene);
 
