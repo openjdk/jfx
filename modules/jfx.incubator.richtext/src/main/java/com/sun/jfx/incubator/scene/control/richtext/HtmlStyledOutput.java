@@ -33,6 +33,7 @@ import javafx.scene.Node;
 import javafx.scene.image.WritableImage;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
 import com.sun.jfx.incubator.scene.control.richtext.util.RichUtils;
 import jfx.incubator.scene.control.richtext.StyleResolver;
 import jfx.incubator.scene.control.richtext.model.StyleAttribute;
@@ -42,6 +43,8 @@ import jfx.incubator.scene.control.richtext.model.StyledSegment;
 
 /**
  * A {@link StyledOutput} which generates HTML output.
+ * This class generates slightly different HTML for the {@code CodeArea} because all the paragraphs
+ * use the same font specified by the view instead of the model.
  */
 // TODO should 'monospaced' paragraphs use <pre> ?
 // TODO should we size down font on windows?
@@ -53,11 +56,13 @@ public class HtmlStyledOutput implements StyledOutput {
     private final boolean inlineStyles;
     private record Key(StyleAttribute attr, Object value) { }
     private final HashMap<Key,Val> styles = new HashMap<>();
+    private Font font;
 
     public HtmlStyledOutput(StyleResolver resolver, Writer wr, boolean inlineStyles) {
         this.resolver = resolver;
         this.wr = wr;
         this.inlineStyles = inlineStyles;
+        this.font = RichUtils.codeAreaFont(resolver);
     }
 
     @Override
@@ -68,8 +73,11 @@ public class HtmlStyledOutput implements StyledOutput {
             writeInlineNode(n);
             break;
         case LINE_BREAK:
-            // TODO perhaps use a boolean flag to emit separate p and /p tags
-            wr.write("<p/>\n");
+            if (font == null) {
+                wr.write("<p/>\n");
+            } else {
+                wr.write("\n");
+            }
             break;
         case TEXT:
             StyleAttributeMap a = seg.getStyleAttributeMap(resolver);
@@ -177,8 +185,7 @@ public class HtmlStyledOutput implements StyledOutput {
         wr.write(">");
     }
 
-    // TODO unit test!
-    private static String encode(String text) {
+    private String encode(String text) {
         if (text == null) {
             return "";
         }
@@ -197,7 +204,11 @@ public class HtmlStyledOutput implements StyledOutput {
             if (c < 0x20) {
                 switch (c) {
                 case '\t':
-                    sb.append("<pre>\t</pre>");
+                    if (font == null) {
+                        sb.append("<pre>\t</pre>");
+                    } else {
+                        sb.append("&#9;");
+                    }
                     break;
                 default:
                     sb.append("&#");
@@ -320,7 +331,7 @@ public class HtmlStyledOutput implements StyledOutput {
         };
     }
 
-    private static String createCss(StyleAttribute a, Object v) {
+    private String createCss(StyleAttribute a, Object v) {
         if (a == StyleAttributeMap.BOLD) {
             return Boolean.TRUE.equals(v) ? "font-weight: bold;" : null;
         } else if (a == StyleAttributeMap.FONT_FAMILY) {
@@ -342,7 +353,7 @@ public class HtmlStyledOutput implements StyledOutput {
         }
     }
 
-    private static String encodeFontFamily(String name) {
+    private String encodeFontFamily(String name) {
         switch (name.toLowerCase()) {
         case "monospaced":
             return "monospace";
@@ -375,9 +386,19 @@ public class HtmlStyledOutput implements StyledOutput {
         }
         wr.write("</head>\n");
         wr.write("<body>\n");
+        if (font != null) {
+            wr.write("<pre style='font-family: \"");
+            wr.write(encode(font.getFamily()));
+            wr.write("\", monospace; font-size: ");
+            wr.write(String.valueOf(font.getSize()));
+            wr.write("pt; white-space: pre-wrap;'>\n");
+        }
     }
 
     public void writeEpilogue() throws IOException {
+        if (font != null) {
+            wr.write("</pre>");
+        }
         wr.write("\n</body></html>\n");
     }
 }
