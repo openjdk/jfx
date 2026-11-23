@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 #pragma once
 
 #include <jni.h>
+#include <gtk/gtk.h>
 
 class PlatformSupport final
 {
@@ -46,9 +47,13 @@ public:
      */
     void updatePreferences() const;
 
+    /**
+     * Schedule a single call to updatePreferences() for the next main loop iteration.
+     */
+    void scheduleUpdatePreferences();
+
 private:
     static constexpr const char* OBSERVED_SETTINGS[] = {
-        "notify::gtk-theme-name",
         "notify::gtk-enable-animations",
         "notify::gtk-overlay-scrolling"
     };
@@ -57,7 +62,10 @@ private:
 
     JNIEnv* env;
     jobject application;
+    GtkStyleContext* styleContext;
     unsigned long settingChangedHandlers[NUM_OBSERVED_SETTINGS] = {};
     unsigned long networkChangedHandler = 0;
+    unsigned long styleChangedHandler = 0;
+    unsigned int scheduledUpdateId = 0;
     mutable jobject preferences;
 };
