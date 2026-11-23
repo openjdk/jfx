@@ -119,4 +119,15 @@ public class TextFieldBehaviorTest extends TextInputControlTestBase<TextField> {
     @Override
     public void testDoubleClickOnLeadingChar() { super.testDoubleClickOnLeadingChar(); }
 
+    @Test
+    @Override
+    public void testDoubleClickAfterNoBreakSpace() { super.testDoubleClickAfterNoBreakSpace(); }
+
+    @Test
+    @Override
+    public void testDoubleClickAfterFigureSpace() { super.testDoubleClickAfterFigureSpace(); }
+
+    @Test
+    @Override
+    public void testDoubleClickAfterNarrowNoBreakSpace() { super.testDoubleClickAfterNarrowNoBreakSpace(); }
 }

@@ -431,6 +431,30 @@ public abstract class TextInputControlTestBase<T extends TextInputControl> exten
         assertEquals("bbb", control.getSelectedText());
     }
 
+    protected void testDoubleClickAfterNoBreakSpace() {
+        execute(
+                setText("aaa\u00a0bbb"),
+                clickCharacter(4, 2, true)
+        );
+        assertEquals("bbb", control.getSelectedText());
+    }
+
+    protected void testDoubleClickAfterFigureSpace() {
+        execute(
+                setText("aaa\u2007bbb"),
+                clickCharacter(4, 2, true)
+        );
+        assertEquals("bbb", control.getSelectedText());
+    }
+
+    protected void testDoubleClickAfterNarrowNoBreakSpace() {
+        execute(
+                setText("aaa\u202fbbb"),
+                clickCharacter(4, 2, true)
+        );
+        assertEquals("bbb", control.getSelectedText());
+    }
+
     /**
      * Returns a Runnable that sets the specified text on the control.
      * @param text the text to set

@@ -124,8 +124,22 @@ public class TextAreaBehaviorTest extends TextInputControlTestBase<TextArea> {
     }
 
     @Test
+    @Override
     public void testDoubleClickWithSpecialChars() { super.testDoubleClickWithSpecialChars(); }
 
     @Test
+    @Override
     public void testDoubleClickOnLeadingChar() { super.testDoubleClickOnLeadingChar(); }
+
+    @Test
+    @Override
+    public void testDoubleClickAfterNoBreakSpace() { super.testDoubleClickAfterNoBreakSpace(); }
+
+    @Test
+    @Override
+    public void testDoubleClickAfterFigureSpace() { super.testDoubleClickAfterFigureSpace(); }
+
+    @Test
+    @Override
+    public void testDoubleClickAfterNarrowNoBreakSpace() { super.testDoubleClickAfterNarrowNoBreakSpace(); }
 }

@@ -664,9 +664,14 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
             atWordStart = true;
         } else if (pos < textInputControl.getLength()) {
             String text = textInputControl.getText();
-            atWordStart = Character.isWhitespace(text.charAt(pos - 1)) && !Character.isWhitespace(text.charAt(pos));
+            atWordStart = isWordSeparatingSpace(pos - 1) && !isWordSeparatingSpace(pos);
         }
         return atWordStart;
+    }
+
+    private boolean isWordSeparatingSpace(int pos) {
+        char ch = textInputControl.getText().charAt(pos);
+        return Character.isWhitespace(ch) || Character.isSpaceChar(ch);
     }
 
 
