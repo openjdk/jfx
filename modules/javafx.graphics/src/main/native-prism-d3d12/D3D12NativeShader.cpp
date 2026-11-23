@@ -172,7 +172,7 @@ bool NativeShader::Init(const std::string& name, const void* code, size_t size)
         case JSLC::ResourceBindingType::CONSTANT_128BIT:
         {
             uint32_t bindingSizeBytes = GetTotalBindingSize(binding) * sizeof(DWORD);
-            uint32_t paddedBindingSize = Internal::Utils::Align<uint32_t>(bindingSizeBytes, 16);
+            uint32_t paddedBindingSize = Internal::Utils::Align<uint32_t>(bindingSizeBytes, Constants::SHADER_CONSTANT_DATA_ALIGNMENT_BYTES);
 
             // emplace the assignment for future reference in SetConstants()
             AddShaderResource(

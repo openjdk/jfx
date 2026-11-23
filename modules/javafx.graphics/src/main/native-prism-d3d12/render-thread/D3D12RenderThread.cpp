@@ -148,7 +148,7 @@ void RenderThread::ExecuteCurrentCommandList(bool advanceAllocator)
 uint64_t RenderThread::Signal(CheckpointType type)
 {
     mFenceValue++;
-    if (mFenceValue == D3D12NI_INVALID_FENCE_VALUE) mFenceValue++;
+    if (mFenceValue == Constants::INVALID_FENCE_VALUE) mFenceValue++;
 
     // mark this point in time in places that need it
     {
@@ -173,10 +173,10 @@ uint64_t RenderThread::Signal(CheckpointType type)
     });
 
     HRESULT hr = mCommandQueue->Signal(mCommandQueueFence.Get(), mFenceValue);
-    D3D12NI_DEV_RET_IF_FAILED(mNativeDevice, hr, D3D12NI_INVALID_FENCE_VALUE, "Failed to signal event on completion");
+    D3D12NI_DEV_RET_IF_FAILED(mNativeDevice, hr, Constants::INVALID_FENCE_VALUE, "Failed to signal event on completion");
 
     hr = mCommandQueueFence->SetEventOnCompletion(mFenceValue, waitable.GetHandle());
-    D3D12NI_DEV_RET_IF_FAILED(mNativeDevice, hr, D3D12NI_INVALID_FENCE_VALUE, "Failed to set Fence event on completion");
+    D3D12NI_DEV_RET_IF_FAILED(mNativeDevice, hr, Constants::INVALID_FENCE_VALUE, "Failed to set Fence event on completion");
 
     mCheckpointQueue.AddCheckpoint(type, std::move(waitable));
     return mFenceValue;

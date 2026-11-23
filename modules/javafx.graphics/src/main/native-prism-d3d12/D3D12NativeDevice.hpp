@@ -41,7 +41,6 @@
 #include "internal/D3D12Waitable.hpp"
 #include "internal/D3D12Debug.hpp"
 #include "internal/D3D12Matrix.hpp"
-#include "internal/JNIBuffer.hpp"
 #include "internal/MemoryView.hpp"
 
 #include "shaders/D3D12ShaderLibrary.hpp"
@@ -56,8 +55,8 @@ namespace D3D12 {
 class NativeDevice: public std::enable_shared_from_this<NativeDevice>
 {
     // quads have 4 vertices in the array
-    using QuadVertices = std::array<float, FLOATS_PER_2D_VERTEX * 4>;
-    using QuadColors = std::array<unsigned char, COLORS_PER_2D_VERTEX * 4>;
+    using QuadVertices = std::array<float, Constants::FLOATS_PER_2D_QUAD>;
+    using QuadColors = std::array<unsigned char, Constants::COLORS_PER_2D_QUAD>;
 
     NIPtr<NativeInstance> mNativeInstance;
     DXGIAdapterPtr mAdapter;

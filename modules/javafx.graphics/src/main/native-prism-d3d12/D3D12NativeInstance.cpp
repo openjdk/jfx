@@ -119,7 +119,7 @@ int NativeInstance::GetAdapterCount()
 
 int NativeInstance::GetAdapterOrdinal(HMONITOR monitor)
 {
-    int ret = D3D12NI_DEFAULT_ADAPTER;
+    int ret = Constants::DEFAULT_ADAPTER;
     bool found = false;
     HRESULT hr = S_OK;
 
@@ -187,7 +187,7 @@ bool NativeInstance::CanCreateDevice(uint32_t adapterIdx, Internal::DeviceInform
 
     info.description = Internal::Utils::ToString(mDXGIAdapterDescs[adapterIdx].Description);
 
-    HRESULT hr = D3D12CreateDevice(mDXGIAdapters[adapterIdx].Get(), D3D12NI_FEATURE_LEVEL, _uuidof(ID3D12Device), nullptr);
+    HRESULT hr = D3D12CreateDevice(mDXGIAdapters[adapterIdx].Get(), Constants::FEATURE_LEVEL, _uuidof(ID3D12Device), nullptr);
     D3D12NI_FILL_DEVICE_ERROR(hr, info);
     return SUCCEEDED(hr);
 }
@@ -222,7 +222,7 @@ bool NativeInstance::GetDeviceInformation(uint32_t adapterIdx, Internal::DeviceI
     info.description = Internal::Utils::ToString(mDXGIAdapterDescs[adapterIdx].Description);
 
     D3D12DevicePtr device;
-    HRESULT hr = D3D12CreateDevice(mDXGIAdapters[adapterIdx].Get(), D3D12NI_FEATURE_LEVEL, IID_PPV_ARGS(&device));
+    HRESULT hr = D3D12CreateDevice(mDXGIAdapters[adapterIdx].Get(), Constants::FEATURE_LEVEL, IID_PPV_ARGS(&device));
     if (FAILED(hr))
     {
         D3D12NI_LOG_ERROR("GetDeviceInformation: Failed to fetch device information for adapter %ws - D3D12CreateDevice failed", mDXGIAdapterDescs[adapterIdx].Description);

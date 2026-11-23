@@ -34,6 +34,7 @@
 #include "internal/D3D12TextureUploader.hpp"
 #include "internal/D3D12Utils.hpp"
 #include "internal/JNIString.hpp"
+#include "internal/JNIBuffer.hpp"
 #include "shaders/D3D12MipmapGenComputeShader.hpp"
 
 #include <com_sun_prism_d3d12_ni_D3D12NativeDevice.h>
@@ -55,7 +56,7 @@ const NIPtr<Shaders::Shader>& NativeDevice::GetPhongPixelShader(const PhongShade
     };
 
     uint32_t lightCount = spec.lightCount;
-    if (lightCount > 3) lightCount = 3;
+    if (lightCount > Constants::MAX_LIGHTS) lightCount = Constants::MAX_LIGHTS;
 
     if (lightCount == 0)
     {
@@ -126,21 +127,21 @@ void NativeDevice::AssembleVertexQuadForBlit(const Coords_Box_UINT32& src, uint6
     vertices[idx + 1] = dstBoxTexelsMin.v; // pos.y
     vertices[idx + 3] = srcBoxTexelsMin.u; // uv1.u
     vertices[idx + 4] = srcBoxTexelsMin.v; // uv1.v
-    idx += FLOATS_PER_2D_VERTEX;
+    idx += Constants::FLOATS_PER_2D_VERTEX;
 
     // vertex 1
     vertices[idx + 0] = dstBoxTexelsMin.u; // pos.x
     vertices[idx + 1] = dstBoxTexelsMax.v; // pos.y
     vertices[idx + 3] = srcBoxTexelsMin.u; // uv1.u
     vertices[idx + 4] = srcBoxTexelsMax.v; // uv1.v
-    idx += FLOATS_PER_2D_VERTEX;
+    idx += Constants::FLOATS_PER_2D_VERTEX;
 
     // vertex 2
     vertices[idx + 0] = dstBoxTexelsMax.u; // pos.x
     vertices[idx + 1] = dstBoxTexelsMin.v; // pos.y
     vertices[idx + 3] = srcBoxTexelsMax.u; // uv1.u
     vertices[idx + 4] = srcBoxTexelsMin.v; // uv1.v
-    idx += FLOATS_PER_2D_VERTEX;
+    idx += Constants::FLOATS_PER_2D_VERTEX;
 
     // vertex 3
     vertices[idx + 0] = dstBoxTexelsMax.u; // pos.x
@@ -149,7 +150,7 @@ void NativeDevice::AssembleVertexQuadForBlit(const Coords_Box_UINT32& src, uint6
     vertices[idx + 4] = srcBoxTexelsMax.v; // uv1.v
 
     // fill remaining fields
-    for (size_t i = 0; i < vertices.size(); i += FLOATS_PER_2D_VERTEX)
+    for (size_t i = 0; i < vertices.size(); i += Constants::FLOATS_PER_2D_VERTEX)
     {
         vertices[i + 2] = 0.0f; // pos.z
         vertices[i + 5] = vertices[i + 3]; // uv2.u == uv1.u
@@ -212,7 +213,7 @@ bool NativeDevice::Init(const DXGIAdapterPtr& adapter, const NIPtr<Shaders::Shad
     // we're asking for FL 12_0 for highest compatibility
     // we probably won't need anything higher than that
     // FL 11_0 is an option but requires extra care to resource binding in D3D12ResourceManager - see Sampler Heaps
-    HRESULT hr = D3D12CreateDevice(mAdapter.Get(), D3D12NI_FEATURE_LEVEL, IID_PPV_ARGS(&mDevice));
+    HRESULT hr = D3D12CreateDevice(mAdapter.Get(), Constants::FEATURE_LEVEL, IID_PPV_ARGS(&mDevice));
     if (FAILED(hr))
     {
         _com_error err(hr);
@@ -1010,9 +1011,9 @@ JNIEXPORT void JNICALL Java_com_sun_prism_d3d12_ni_D3D12NativeDevice_nRenderQuad
     if (!colorsArray) return;
 
     uint32_t elems = static_cast<uint32_t>(elementCount);
-    if (elems > (std::numeric_limits<uint32_t>::max() / D3D12NI_FLOATS_PER_2D_VERTEX) ||
-        elems * D3D12NI_FLOATS_PER_2D_VERTEX > vertsArray.Count() ||
-        elems * D3D12NI_CHARS_PER_2D_VERTEX > colorsArray.Count()) return;
+    if (elems > (std::numeric_limits<uint32_t>::max() / D3D12::Constants::FLOATS_PER_2D_VERTEX) ||
+        elems * D3D12::Constants::FLOATS_PER_2D_VERTEX > vertsArray.Count() ||
+        elems * D3D12::Constants::COLORS_PER_2D_VERTEX > colorsArray.Count()) return;
 
     D3D12::GetNIObject<D3D12::NativeDevice>(ptr)->RenderQuads(
         D3D12::Internal::MemoryView<float>(reinterpret_cast<const float*>(vertsArray.Data()), vertsArray.Size()),

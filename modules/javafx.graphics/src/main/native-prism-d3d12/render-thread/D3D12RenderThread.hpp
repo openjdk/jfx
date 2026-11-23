@@ -29,10 +29,10 @@
 
 #include "../D3D12NativeTexture.hpp"
 
+#include "D3D12CheckpointQueue.hpp"
 #include "D3D12CommandListPool.hpp"
 #include "D3D12IRenderTarget.hpp"
 #include "D3D12LinearAllocator.hpp"
-#include "D3D12Matrix.hpp"
 #include "D3D12RenderThreadContext.hpp"
 #include "D3D12RenderPayload.hpp"
 #include "D3D12PSOManager.hpp"
@@ -66,9 +66,6 @@ class RenderThread
     std::mutex mWaitableOpsMutex;
     CheckpointQueue mCheckpointQueue;
     RenderThreadContextPtr mContext;
-
-    //NIPtr<Internal::RingBuffer> mVertexRingBuffer; // used for small texture uploads to prevent Committed Resource allocation
-    //NIPtr<Internal::RingBuffer> mDataRingBuffer; // used for small texture uploads to prevent Committed Resource allocation
 
     RenderPayloadPtr mNullPayload; // used to leave FetchPayload() without returning a temporary ref
 

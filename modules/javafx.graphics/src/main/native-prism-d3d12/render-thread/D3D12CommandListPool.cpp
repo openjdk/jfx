@@ -233,11 +233,11 @@ void CommandListPool::OnFenceSignaled(uint64_t fenceValue)
 
     for (size_t i = 0; i < mCommandAllocators.size(); ++i)
     {
-        if (mCommandAllocators[i].closedFenceValue != D3D12NI_INVALID_FENCE_VALUE && mCommandAllocators[i].closedFenceValue <= fenceValue)
+        if (mCommandAllocators[i].closedFenceValue != Constants::INVALID_FENCE_VALUE && mCommandAllocators[i].closedFenceValue <= fenceValue)
         {
             D3D12NI_ASSERT(mCommandAllocators[i].state == CommandListState::Closed, "Invalid command allocator state while refreshing post-fence");
             mCommandAllocators[i].state = CommandListState::Available;
-            mCommandAllocators[i].closedFenceValue = D3D12NI_INVALID_FENCE_VALUE;
+            mCommandAllocators[i].closedFenceValue = Constants::INVALID_FENCE_VALUE;
         }
     }
 }

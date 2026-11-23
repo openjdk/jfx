@@ -32,7 +32,7 @@ namespace RenderThread {
 bool RenderThreadContext::Build2DIndexBuffer()
 {
     // For 2D, Index Buffer is provided by the backend and has the same structure.
-    std::array<uint16_t, Constants::MAX_BATCH_QUADS * 6> indexBufferArray;
+    std::array<uint16_t, Constants::MAX_BATCH_INDICES> indexBufferArray;
 
     // stolen from D3DContext.cc
     for (uint16_t i = 0; i != Constants::MAX_BATCH_QUADS; ++i) {
@@ -107,7 +107,7 @@ RenderThreadContext::VertexSubregion RenderThreadContext::GetNewRegionForVertice
     if (vertexCount > (Constants::MAX_BATCH_VERTICES / 2))
     {
         // rendering more vertices might utilize the Ring Buffer better if we just reserve a separate space for them
-        RingBuffer::Region region = mVertexRingBuffer.Reserve(vertexCount * 8 * sizeof(float));
+        RingBuffer::Region region = mVertexRingBuffer.Reserve(vertexCount * Constants::VERTEX_2D_SIZE_BYTES);
         if (!region)
         {
             D3D12NI_LOG_ERROR("2D Vertex Ring Buffer allocation failed");
@@ -126,7 +126,7 @@ RenderThreadContext::VertexSubregion RenderThreadContext::GetNewRegionForVertice
     if (!m2DVertexBatch.Valid() || vertexCount > m2DVertexBatch.Available())
     {
         // reserve space on Ring Buffer for the new small-quad-count VB
-        RingBuffer::Region newVertexRegion = mVertexRingBuffer.Reserve(Constants::MAX_BATCH_VERTICES * 8 * sizeof(float));
+        RingBuffer::Region newVertexRegion = mVertexRingBuffer.Reserve(Constants::MAX_BATCH_VERTICES_BYTES);
         if (!newVertexRegion)
         {
             D3D12NI_LOG_ERROR("2D Vertex Ring Buffer allocation failed");
@@ -246,7 +246,11 @@ bool RenderThreadContext::Init()
     // NOTE: Command List Pool requires to have as many Command Allocators as SwapChain buffers + 1
     // This is the minimum we need (one per frame) and also ensures an extra one to pre-record more commands
     // if both SwapChain buffers are full.
-    if (!mCommandListPool.Init(D3D12_COMMAND_LIST_TYPE_DIRECT, 16, 4))
+    if (!mCommandListPool.Init(
+            D3D12_COMMAND_LIST_TYPE_DIRECT,
+            Constants::COMMAND_LIST_POOL_MAX_LISTS,
+            Constants::COMMAND_LIST_POOL_MAX_ALLOCATORS
+        ))
     {
         D3D12NI_LOG_ERROR("Failed to initialize Command List Pool");
         return false;
@@ -442,7 +446,7 @@ void RenderThreadContext::PrepareMeshDraw(const NIPtr<Internal::Buffer>& vertexB
     D3D12_VERTEX_BUFFER_VIEW vbView;
     vbView.BufferLocation = vertexBuffer->GetGPUPtr();
     vbView.SizeInBytes = static_cast<UINT>(vertexBuffer->Size());
-    vbView.StrideInBytes = 9 * sizeof(float); // 3 * modelVertexPos; 2 * texD; 4 * modelVertexNormal
+    vbView.StrideInBytes = Constants::VERTEX_BUFFER_3D_STRIDE;
     SetVertexBuffer(vbView);
 
     D3D12_INDEX_BUFFER_VIEW ibView;

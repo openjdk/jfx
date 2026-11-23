@@ -31,7 +31,6 @@
 
 #include "D3D12Buffer.hpp"
 #include "D3D12PSOManager.hpp"
-#include "D3D12CheckpointQueue.hpp"
 #include "D3D12CommandListPool.hpp"
 #include "D3D12IRenderTarget.hpp"
 #include "D3D12ResourceManager.hpp"
@@ -287,7 +286,7 @@ public:
     PSOManager PSOManager;
     ResourceManager resourceManager;
     ResourceDisposer resourceDisposer;
-    std::array<D3D12_RESOURCE_BARRIER, 8> barrierQueue;
+    std::array<D3D12_RESOURCE_BARRIER, Constants::RESOURCE_BARRIERS_QUEUE_SIZE> barrierQueue;
     uint32_t barrierQueueSize;
 
     // RT callbacks to control command lists

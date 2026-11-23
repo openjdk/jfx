@@ -158,7 +158,7 @@ BBox RenderingContext::EstimateDirtyBBox(const MemoryView<float>& vertices, uint
     // bbox merging though and might be too heavy CPU wise
     if (vertexCount == 4)
     {
-        for (uint32_t i = 0; i < vertexCount * FLOATS_PER_2D_VERTEX; i += FLOATS_PER_2D_VERTEX)
+        for (uint32_t i = 0; i < vertexCount * Constants::FLOATS_PER_2D_VERTEX; i += Constants::FLOATS_PER_2D_VERTEX)
         {
             const Coords_XYZ_FLOAT* vertex = reinterpret_cast<const Coords_XYZ_FLOAT*>(&vertices.Data()[i]);
             Coords_XYZW_FLOAT v{ vertex->x, vertex->y, vertex->z, 1.0f };

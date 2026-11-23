@@ -26,6 +26,7 @@
 #pragma once
 
 #include "../D3D12Common.hpp"
+#include "../D3D12Constants.hpp"
 
 #include "../D3D12NativeMeshView.hpp"
 #include "../D3D12NativeSwapChain.hpp"
@@ -777,8 +778,8 @@ public:
     DrawQuadsAction(Internal::LinearAllocator& allocator, const Internal::MemoryView<float>& vertices, const Internal::MemoryView<unsigned char>& colors, uint32_t vertexCount)
         : mAllocator(allocator)
         , mVertexCount(vertexCount)
-        , mVerticesBytes(vertexCount * D3D12NI_FLOATS_PER_2D_VERTEX * sizeof(float))
-        , mColorsBytes(vertexCount * D3D12NI_CHARS_PER_2D_VERTEX * sizeof(signed char))
+        , mVerticesBytes(vertexCount * Constants::FLOATS_PER_2D_VERTEX_BYTES)
+        , mColorsBytes(vertexCount * Constants::COLORS_PER_2D_VERTEX_BYTES)
         , mVertexData(reinterpret_cast<float*>(allocator.Allocate(mVerticesBytes)))
         , mColorData(reinterpret_cast<unsigned char*>(allocator.Allocate(mColorsBytes)))
     {
