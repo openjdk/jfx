@@ -158,7 +158,7 @@ final class MonocleWindow extends Window {
     //creates the native window
     @Override
     protected long _createWindow(long NativeWindow, long NativeScreen,
-                                 int mask) {
+                                 int mask, int backdropID) {
         id = MonocleWindowManager.getInstance().addWindow(this);
         return id;
     }
