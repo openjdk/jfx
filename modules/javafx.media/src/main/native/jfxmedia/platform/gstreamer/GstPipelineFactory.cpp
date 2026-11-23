@@ -104,8 +104,8 @@ uint32_t CGstPipelineFactory::CreatePlayerPipeline(CLocator* locator, CPipelineO
     if (NULL == callbacks)
         return ERROR_LOCATOR_NULL;
 
-    int hlsMode = callbacks->Property(HLS_PROP_GET_HLS_MODE, 0);
-    pOptions->SetHLSModeEnabled(hlsMode == 1);
+    bool hlsMode = (callbacks->Property(HLS_PROP_GET_HLS_MODE, 0) == 1);
+    pOptions->SetHLSModeEnabled(hlsMode);
     int streamMimeType = callbacks->Property(HLS_PROP_GET_MIMETYPE, 0);
     pOptions->SetStreamMimeType(streamMimeType);
 
