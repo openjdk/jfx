@@ -1373,10 +1373,11 @@ public class NGCanvas extends NGNode {
                 float x = buf.getFloat();
                 float y = buf.getFloat();
                 float maxWidth = buf.getFloat();
-                boolean rtl = buf.getBoolean();
+                boolean textRtl = buf.getBoolean();
+                boolean mirror = buf.getBoolean();
                 String string = (String) buf.getObject();
-                int dir = rtl ? PrismTextLayout.DIRECTION_RTL :
-                                PrismTextLayout.DIRECTION_LTR;
+                int dir = textRtl ? PrismTextLayout.DIRECTION_RTL :
+                                    PrismTextLayout.DIRECTION_LTR;
 
                 textLayout.setContent(string, pgfont);
                 textLayout.setAlignment(align);
@@ -1399,7 +1400,7 @@ public class NGCanvas extends NGNode {
                 float layoutY = y - yAlign;
                 if (maxWidth > 0.0 && layoutWidth > maxWidth) {
                     float sx = maxWidth / layoutWidth;
-                    if (rtl) {
+                    if (mirror) {
                         layoutX = -((x + maxWidth) / sx - xAlign);
                         scaleX = -sx;
                     } else {
@@ -1407,7 +1408,7 @@ public class NGCanvas extends NGNode {
                         scaleX = sx;
                     }
                 } else {
-                    if (rtl) {
+                    if (mirror) {
                         layoutX = -(x - xAlign + layoutWidth);
                         scaleX = -1;
                     } else {

@@ -202,7 +202,7 @@ public class PixelBuffer<T extends Buffer> {
         }
     }
 
-    private void bufferDirty(Rectangle rect) {
+    void bufferDirty(Rectangle rect) {
         Iterator<WeakReference<WritableImage>> iter = imageRefs.iterator();
         while (iter.hasNext()) {
             final WritableImage image = iter.next().get();

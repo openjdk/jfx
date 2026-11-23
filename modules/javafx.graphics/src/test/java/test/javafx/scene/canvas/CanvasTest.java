@@ -25,11 +25,13 @@
 
 package test.javafx.scene.canvas;
 
+import javafx.geometry.NodeOrientation;
 import javafx.geometry.VPos;
 import test.javafx.scene.NodeTest;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.effect.BlendMode;
+import javafx.scene.effect.DropShadow;
 import test.javafx.scene.image.ImageForTesting;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.ArcType;
@@ -47,6 +49,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -156,6 +159,18 @@ public class CanvasTest {
     }
 
     @Test
+    public void testGCMalformedPolygonArraysAreIgnored() {
+        assertDoesNotThrow(() -> {
+            gc.fillPolygon(new double[] {0, 10}, new double[] {0, 10, 20}, 3);
+            gc.fillPolygon(new double[] {0, 10, 20}, new double[] {0, 10}, 3);
+            gc.fillPolygon(null, new double[] {0, 10, 20}, 3);
+            gc.strokePolygon(new double[] {0}, new double[] {0, 10}, 2);
+            gc.strokePolygon(null, new double[] {0, 10}, 2);
+            gc.strokePolyline(new double[] {0, 10}, new double[] {0}, 2);
+        });
+    }
+
+    @Test
     public void testGCdrawArc_basic() throws Exception {
         gc.strokeArc(10, 10, 100, 100, 0, 40, ArcType.OPEN);
         gc.strokeArc(10, 10, 100, 100, 0, 360, ArcType.CHORD);
@@ -186,6 +201,21 @@ public class CanvasTest {
         gc.arcTo(0, 0, 5, 5, 5);
         gc.closePath();
         gc.clip();
+    }
+
+    @Test
+    public void testClipRectDoesNotResetCurrentPath() {
+        gc.beginPath();
+        gc.moveTo(10, 10);
+        gc.lineTo(50, 10);
+        gc.lineTo(30, 50);
+        gc.closePath();
+
+        assertTrue(gc.isPointInPath(30, 30));  // inside the triangle
+
+        gc.clipRect(0, 0, 20, 20);  // clip rect does not contain (30, 30)
+
+        assertTrue(gc.isPointInPath(30, 30));  // clipRect must not reset the current path
     }
 
     @Test
@@ -535,6 +565,38 @@ public class CanvasTest {
     @Test
     public void testGCapplyEffect_Null() {
         gc.applyEffect(null);
+    }
+
+    @Test
+    public void testGCGetEffect() {
+        assertNull(gc.getEffect());
+
+        gc.setEffect(new DropShadow());
+
+        assertNotNull(gc.getEffect());
+
+        gc.setEffect(null);
+
+        assertNull(gc.getEffect());
+    }
+
+    @Test
+    public void testGCTextDirection() {
+        assertEquals(NodeOrientation.INHERIT, gc.getTextDirection());
+
+        gc.setTextDirection(NodeOrientation.RIGHT_TO_LEFT);
+
+        assertEquals(NodeOrientation.RIGHT_TO_LEFT, gc.getTextDirection());
+
+        gc.setTextDirection(null);  // a null value is ignored and leaves the value unchanged
+
+        assertEquals(NodeOrientation.RIGHT_TO_LEFT, gc.getTextDirection());
+
+        gc.save();
+        gc.setTextDirection(NodeOrientation.LEFT_TO_RIGHT);
+        gc.restore();
+
+        assertEquals(NodeOrientation.RIGHT_TO_LEFT, gc.getTextDirection());
     }
 
     @Test

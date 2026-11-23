@@ -35,6 +35,10 @@ public class WindowStageShim {
         return WindowStage.findBestImage(icons, width, height);
     }
 
+    public static Image createIconImage(Image image, int width, int height) {
+        return WindowStage.createIconImage(image, width, height);
+    }
+
     public static StageStyle getStyle(final Window window) {
         return ((WindowStage) com.sun.javafx.stage.WindowHelper.getPeer(window)).getStyle();
     }
