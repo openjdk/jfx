@@ -56,6 +56,7 @@ import javafx.scene.control.Menu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.ScrollPane.ScrollBarPolicy;
+import javafx.scene.control.Separator;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.SplitPane;
 import javafx.scene.input.Clipboard;
@@ -99,6 +100,8 @@ public class RichTextAreaDemoPane extends BorderPane {
     public final ROptionPane op;
     public final RichTextArea control;
     public final ComboBox<ModelChoice> modelField;
+    private final ComboBox<String> horFraction;
+    private final ComboBox<String> verFraction;
 
     public RichTextAreaDemoPane(boolean useContentSize) {
         FX.name(this, "RichTextAreaDemoPane");
@@ -256,6 +259,13 @@ public class RichTextAreaDemoPane extends BorderPane {
             control.setSkin(new RichTextAreaSkin(control));
         });
 
+        horFraction = fractionCombo("horFraction");
+        verFraction = fractionCombo("verFraction");
+        Button scrollButton = new Button("Scroll to");
+        scrollButton.setOnAction((ev) -> {
+            scrollTo();
+        });
+
         op = new ROptionPane();
         op.label("Model:");
         op.option(modelField);
@@ -275,7 +285,9 @@ public class RichTextAreaDemoPane extends BorderPane {
         op.option(rightDecorator);
         op.option(trackWidth);
         op.option(trackHeight);
+        op.option(new Separator());
         op.option(replaceSkin);
+        op.option(new HBox(2, scrollButton, horFraction, verFraction));
 
         setCenter(vsplit);
 
@@ -761,5 +773,54 @@ public class RichTextAreaDemoPane extends BorderPane {
             c.getItems().add(value);
         }
         c.getSelectionModel().select(ix);
+    }
+
+    private ComboBox<String> fractionCombo(String name) {
+        ComboBox<String> c = new ComboBox<>();
+        FX.name(c, name);
+        c.setEditable(true);
+        c.getItems().setAll(
+            "0.0",
+            "0.5",
+            "1.0",
+            "MAX",
+            "MIN",
+            "+Infinity",
+            "-Infinity",
+            "NaN"
+        );
+        c.getSelectionModel().select(0);
+        c.setPrefWidth(80);
+        return c;
+    }
+
+    private static double parseFraction(ComboBox<String> c) {
+        String v = c.getValue();
+        if (v != null) {
+            try {
+                switch(v) {
+                case "MAX":
+                    return Double.MAX_VALUE;
+                case "MIN":
+                    return -Double.MAX_VALUE;
+                case "+Infinity":
+                    return Double.POSITIVE_INFINITY;
+                case "-Infinity":
+                    return Double.NEGATIVE_INFINITY;
+                case "NaN":
+                    return Double.NaN;
+                }
+                return Double.parseDouble(v);
+            } catch (Exception e) {
+                // ignore
+            }
+        }
+        return Double.NaN;
+    }
+
+    private void scrollTo() {
+        double x = parseFraction(horFraction);
+        double y = parseFraction(verFraction);
+        control.scrollCaretInView(x, y);
     }
 }

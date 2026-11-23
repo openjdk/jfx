@@ -865,6 +865,16 @@ public final class RichUtils {
         }
     }
 
+    /// Clamps the value within `[0.0 ... 1.0]` range, treating `Double.NaN` as `0.0`.
+    public static double normalizeFraction(double f) {
+        if (Double.isNaN(f) || (f < 0.0)) {
+            return 0.0;
+        } else if (f > 1.0) {
+            return 1.0;
+        }
+        return f;
+    }
+
     public static Font codeAreaFont(StyleResolver r) {
         if (r instanceof VFlow f) {
             if (f.getRichTextArea() instanceof CodeArea c) {

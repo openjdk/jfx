@@ -70,6 +70,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.jfx.incubator.scene.control.richtext.CaretInfo;
 import com.sun.jfx.incubator.scene.control.richtext.EmbeddedImageHelper;
+import com.sun.jfx.incubator.scene.control.richtext.Origin;
 import com.sun.jfx.incubator.scene.control.richtext.SegmentStyledInput;
 import com.sun.jfx.incubator.scene.control.richtext.TextCell;
 import com.sun.jfx.incubator.scene.control.richtext.VFlow;
@@ -119,6 +120,7 @@ public class RichTextAreaTest {
     @AfterEach
     public void afterEach() {
         if (stage != null) {
+            stage.setScene(null);
             stage.hide();
             stage = null;
         }
@@ -1445,5 +1447,62 @@ public class RichTextAreaTest {
         assertEquals(containerWidth, container.getWidth(), EPSILON, "container width");
         assertEquals(expectedWidth, b.getWidth(), EPSILON, "width");
         assertEquals(expectedHeight, b.getHeight(), EPSILON, "height");
+    }
+
+    /// Tests `scrollCaretInView()` by cycling through all of the combinations of
+    /// (wrapText, horFraction, verFraction, caret position)
+    /// and checks that either the origin or xoffset has changed as a result.
+    /// Due to `StubLayout` limitations this test does not verify the actual caret position within the viewport.
+    @Test
+    public void scrollCaretInView() {
+        String text =
+            (
+                "1".repeat(128) + "\n" +
+                "2".repeat(64) + "\n" +
+                "3".repeat(32) + "\n" +
+                "4".repeat(128) + "\n" +
+                "5".repeat(64) + "\n" +
+                "6".repeat(32) + "\n" +
+                "7".repeat(128) + "\n" +
+                "8".repeat(128) + "\n" +
+                "9".repeat(128) + "\n" +
+                "0".repeat(128) + "\n"
+            ).repeat(128);
+
+        Scene scene = new Scene(control, 100, 100);
+        stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+
+        control.appendText(text);
+
+        TextPos p0 = TextPos.ZERO;
+        TextPos p1 = TextPos.ofLeading(6, 128);
+        TextPos p2 = control.getDocumentEnd();
+
+        record Args(boolean wrap, double hf, double vf, TextPos p) { }
+
+        ArrayList<Args> args = new ArrayList<>();
+        for (boolean wrap : new boolean[] { true, false }) {
+            for (double hf : new double[] { 0.0, 0.5, 1.0 }) {
+                for (double vf : new double[] { 0.0, 0.5, 1.0 }) {
+                    for (TextPos p : new TextPos[] { p0, p1, p2 }) {
+                        args.add(new Args(wrap, hf, vf, p));
+                    }
+                }
+            }
+        }
+
+        Origin origin = null;
+        double xoff = Double.POSITIVE_INFINITY;
+        for (Args a : args) {
+            control.select(a.p);
+            control.setWrapText(a.wrap);
+            control.scrollCaretInView(a.hf, a.vf);
+            VFlow f = RichTextAreaShim.vflow(control);
+            assertTrue(!f.getOrigin().equals(origin) || (xoff != f.getOffsetX()), "args=" + a);
+            origin = f.getOrigin();
+            xoff = f.getOffsetX();
+        }
     }
 }
