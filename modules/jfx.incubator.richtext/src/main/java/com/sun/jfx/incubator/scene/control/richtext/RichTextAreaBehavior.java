@@ -269,12 +269,12 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
 
         String typed = getValidKeyTyped(ev);
         if (typed != null) {
-            vflow.setSuppressBlink(true);
+            vflow.setSuppressBlink(VFlow.MASK_KEY, true);
             boolean consume = handleTypedChar(typed);
             if (consume) {
                 ev.consume();
             }
-            vflow.setSuppressBlink(false);
+            vflow.setSuppressBlink(VFlow.MASK_KEY, false);
         }
     }
 
@@ -376,6 +376,8 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
     }
 
     protected void handleMousePressed(MouseEvent ev) {
+        vflow.setSuppressBlink(VFlow.MASK_MOUSE, true);
+
         if (ev.isPopupTrigger() || (ev.getButton() != MouseButton.PRIMARY)) {
             return;
         }
@@ -384,8 +386,6 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
         if (pos == null) {
             return;
         }
-
-        vflow.setSuppressBlink(true);
 
         RichTextArea control = getControl();
         if (ev.isShiftDown()) {
@@ -406,7 +406,7 @@ public class RichTextAreaBehavior extends BehaviorBase<RichTextArea> {
     protected void handleMouseReleased(MouseEvent ev) {
         stopAutoScroll();
         //vflow.scrollCaretToVisible();
-        vflow.setSuppressBlink(false);
+        vflow.setSuppressBlink(VFlow.MASK_MOUSE, false);
         clearPhantomX();
     }
 
