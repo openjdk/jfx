@@ -131,6 +131,7 @@ bool PSOManager::ConstructNewPSO(const GraphicsPSOParameters& params)
     desc.RasterizerState.FillMode = params.fillMode;
     desc.RasterizerState.FrontCounterClockwise = true;
     desc.RasterizerState.DepthClipEnable = true;
+    desc.RasterizerState.MultisampleEnable = (params.msaaSamples > 1);
 
     desc.DepthStencilState.StencilEnable = false;
 
