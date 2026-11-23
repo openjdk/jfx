@@ -57,6 +57,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class TableViewContextMenuSortTest {
@@ -79,6 +80,7 @@ public class TableViewContextMenuSortTest {
     @Test
     public void testContextMenuRequestDoesNotSort() {
         assumeTrue(!PlatformUtil.isWindows()); // JDK-8364116
+        assumeFalse(Util.isUbuntu2604()); // JDK-8364116
 
         Node header = table.lookupAll(".column-header").stream()
                 .filter(Objects::nonNull)

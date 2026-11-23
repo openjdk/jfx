@@ -42,6 +42,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import test.util.Util;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 /*
  * Test to verify TableView resizeColumnToFitContent with
@@ -66,6 +67,8 @@ public class TableViewResizeColumnToFitContentTest {
 
     @Test
     public void resizeColumnToFitContentTest() {
+        assumeFalse(Util.isUbuntu2604()); // JDK-8322019
+
         double wid0 = table.getColumns().get(0).getWidth();
         double wid1 = table.getColumns().get(1).getWidth();
         double wid2 = table.getColumns().get(2).getWidth();
