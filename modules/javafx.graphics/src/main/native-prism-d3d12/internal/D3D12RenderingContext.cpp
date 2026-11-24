@@ -872,17 +872,6 @@ void RenderingContext::UnsetRenderTargetIfSet(IRenderTarget* rt)
     }
 }
 
-void RenderingContext::UnsetTextureIfSet(const NIPtr<TextureBase>& tex)
-{
-    for (uint32_t i = 0; i < Constants::MAX_TEXTURE_UNITS; ++i)
-    {
-        if (mTextures.GetTexture(i) == tex)
-        {
-            ClearTextureUnit(i);
-        }
-    }
-}
-
 void RenderingContext::SetRenderTarget(const NIPtr<IRenderTarget>& renderTarget)
 {
     if (renderTarget == mRenderTarget.Get())

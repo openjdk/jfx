@@ -432,15 +432,6 @@ void NativeDevice::MarkDisposed(const NIPtr<Internal::ITrackedResource>& resourc
     if (mRenderingContext && resource) mRenderingContext->Dispose(resource);
 }
 
-void NativeDevice::MarkDisposed(const NIPtr<NativeTexture>& tex)
-{
-    if (mRenderingContext && tex)
-    {
-        mRenderingContext->UnsetTextureIfSet(tex);
-        mRenderingContext->Dispose(tex);
-    }
-}
-
 void NativeDevice::MarkDisposed(const NIPtr<NativeRenderTarget>& rtt)
 {
     if (mRenderingContext && rtt)
