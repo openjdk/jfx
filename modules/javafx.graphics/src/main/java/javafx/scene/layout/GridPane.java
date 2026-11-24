@@ -1234,7 +1234,7 @@ public class GridPane extends Pane {
             final CompositeSize heights = height == -1 ? null : computeHeightsToFit(height);
 
             return snapSpaceX(getInsets().getLeft()) +
-                    computeMinWidths(heights).computeTotalWithMultiSize() +
+                    snapSizeX(computeMinWidths(heights).computeTotalWithMultiSize()) +
                     snapSpaceX(getInsets().getRight());
         } finally {
             performingLayout = false;
@@ -1249,7 +1249,7 @@ public class GridPane extends Pane {
             final CompositeSize widths = width == -1 ? null : computeWidthsToFit(width);
 
             return snapSpaceY(getInsets().getTop()) +
-                    computeMinHeights(widths).computeTotalWithMultiSize() +
+                    snapSizeY(computeMinHeights(widths).computeTotalWithMultiSize()) +
                     snapSpaceY(getInsets().getBottom());
         } finally {
             performingLayout = false;
@@ -1263,7 +1263,7 @@ public class GridPane extends Pane {
             final CompositeSize heights = height == -1 ? null : computeHeightsToFit(height);
 
             return snapSpaceX(getInsets().getLeft()) +
-                    computePrefWidths(heights).computeTotalWithMultiSize() +
+                    snapSizeX(computePrefWidths(heights).computeTotalWithMultiSize()) +
                     snapSpaceX(getInsets().getRight());
         } finally {
             performingLayout = false;
@@ -1277,7 +1277,7 @@ public class GridPane extends Pane {
             final CompositeSize widths = width == -1 ? null : computeWidthsToFit(width);
 
             return snapSpaceY(getInsets().getTop()) +
-                    computePrefHeights(widths).computeTotalWithMultiSize() +
+                    snapSizeY(computePrefHeights(widths).computeTotalWithMultiSize()) +
                     snapSpaceY(getInsets().getBottom());
         } finally {
             performingLayout = false;

@@ -3857,4 +3857,44 @@ public class GridPaneTest {
 
         assertEquals(100, gridpane.getCellBounds(2, 1).getMaxX(), 1e-10);
     }
+
+    @ParameterizedTest
+    @MethodSource("scales")
+    public void testAutosizedPercentageColumnsKeepMinWidth(double scale) {
+        ColumnConstraints column0 = new ColumnConstraints();
+        column0.setPercentWidth(70);
+        ColumnConstraints column1 = new ColumnConstraints();
+        column1.setPercentWidth(30);
+        gridpane.getColumnConstraints().addAll(column0, column1);
+        MockResizable child0 = new MockResizable(100, 0, 20, 10, 5000, 5000);
+        MockResizable child1 = new MockResizable(0, 0, 20, 10, 5000, 5000);
+        gridpane.add(child0, 0, 0);
+        gridpane.add(child1, 1, 0);
+        setRenderScale(scale);
+
+        gridpane.autosize();
+        gridpane.layout();
+
+        assertTrue(gridpane.getCellBounds(0, 0).getWidth() >= 100 - 1e-10);
+    }
+
+    @ParameterizedTest
+    @MethodSource("scales")
+    public void testAutosizedPercentageRowsKeepMinHeight(double scale) {
+        RowConstraints row0 = new RowConstraints();
+        row0.setPercentHeight(70);
+        RowConstraints row1 = new RowConstraints();
+        row1.setPercentHeight(30);
+        gridpane.getRowConstraints().addAll(row0, row1);
+        MockResizable child0 = new MockResizable(0, 100, 10, 20, 5000, 5000);
+        MockResizable child1 = new MockResizable(0, 0, 10, 20, 5000, 5000);
+        gridpane.add(child0, 0, 0);
+        gridpane.add(child1, 0, 1);
+        setRenderScale(scale);
+
+        gridpane.autosize();
+        gridpane.layout();
+
+        assertTrue(gridpane.getCellBounds(0, 0).getHeight() >= 100 - 1e-10);
+    }
 }
