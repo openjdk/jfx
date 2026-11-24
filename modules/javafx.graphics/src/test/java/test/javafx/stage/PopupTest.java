@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,6 +48,9 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.shape.Rectangle;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javafx.scene.Node;
 import javafx.scene.ParentShim;
@@ -63,6 +66,7 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import test.com.sun.javafx.stage.PopupRootHelper;
@@ -108,10 +112,8 @@ public class PopupTest {
         assertFalse(p2.isShowing());
 
         // test showing popup without parent
-        // TODO should result in an exception
-//        Popup p3 = new Popup();
-//        p3.show(null);
-//        assertFalse(p3.isVisible());
+        Popup p3 = new Popup();
+        assertThrows(NullPointerException.class, () -> p3.show(null));
     }
 
     @Test
@@ -498,7 +500,7 @@ public class PopupTest {
     }
 
     @Test
-    public void testDefautValueOfAutofix() {
+    public void testDefaultValueOfAutofix() {
         Popup p = new Popup();
         assertTrue(p.isAutoFix());
         assertTrue(p.autoFixProperty().get());
@@ -800,6 +802,104 @@ public class PopupTest {
         popup.show(stage);
         assertEquals(Cursor.CLOSED_HAND, popup.getScene().getCursor());
 
+    }
+
+    @Test
+    public void testShowWithOwnerWithoutRootWindow() {
+        final Popup ownerPopup = new Popup();
+        final Popup popup = new Popup();
+
+        popup.show(ownerPopup);
+
+        assertFalse(popup.isShowing());
+    }
+
+    @Test
+    public void testShowWithOwnerWithoutScene() {
+        final Stage ownerWithoutScene = new Stage();
+
+        final Popup popup = new Popup();
+
+        popup.show(ownerWithoutScene);
+
+        assertFalse(popup.isShowing());
+    }
+
+    @Test
+    public void testShowKeepsCursorOfPopup() {
+        stage.getScene().setCursor(Cursor.CLOSED_HAND);
+
+        final Popup popup = new Popup();
+        popup.getScene().setCursor(Cursor.TEXT);
+
+        popup.show(stage);
+
+        assertEquals(Cursor.TEXT, popup.getScene().getCursor());
+    }
+
+    @Test
+    public void testShowAppliesUserAgentStylesheetOfOwnerWhenPopupHasNone() {
+        final String ownerUserAgentStylesheet = toBase64(".owner-ua { -fx-fill: red; }");
+        scene.setUserAgentStylesheet(ownerUserAgentStylesheet);
+
+        final Popup popup = new Popup();
+        assertNull(popup.getScene().getUserAgentStylesheet());
+
+        popup.show(stage);
+
+        assertEquals(ownerUserAgentStylesheet, popup.getScene().getUserAgentStylesheet());
+    }
+
+    @Test
+    public void testShowKeepsStylesheetsOfPopupAndAddsStylesheetsOfOwner() {
+        final String ownerUserAgentStylesheet = toBase64(".owner-ua { -fx-fill: red; }");
+        final String ownerStylesheet = toBase64(".owner { -fx-fill: green; }");
+        final String popupUserAgentStylesheet = toBase64(".popup-ua { -fx-fill: blue; }");
+        final String popupStylesheet = toBase64(".popup { -fx-fill: yellow; }");
+
+        scene.setUserAgentStylesheet(ownerUserAgentStylesheet);
+        scene.getStylesheets().add(ownerStylesheet);
+
+        final Popup popup = new Popup();
+        popup.getScene().setUserAgentStylesheet(popupUserAgentStylesheet);
+        popup.getScene().getStylesheets().add(popupStylesheet);
+
+        popup.show(stage);
+
+        assertEquals(popupUserAgentStylesheet, popup.getScene().getUserAgentStylesheet());
+        assertEquals(List.of(popupStylesheet, ownerStylesheet), popup.getScene().getStylesheets());
+    }
+
+    @Test
+    public void testShowTwiceAddsStylesheetOfOwnerOnlyOnce() {
+        final String ownerStylesheet = toBase64(".owner { -fx-fill: green; }");
+        scene.getStylesheets().add(ownerStylesheet);
+
+        final Popup popup = new Popup();
+
+        popup.show(stage);
+        popup.hide();
+        popup.show(stage);
+
+        assertEquals(List.of(ownerStylesheet), popup.getScene().getStylesheets());
+    }
+
+    @Test
+    public void testShowDoesNotAddStylesheetTwiceWhenPopupAndOwnerShareIt() {
+        final String sharedStylesheet = toBase64(".owner { -fx-fill: green; }");
+
+        scene.getStylesheets().addAll(sharedStylesheet);
+
+        final Popup popup = new Popup();
+        popup.getScene().getStylesheets().add(sharedStylesheet);
+
+        popup.show(stage);
+
+        assertEquals(List.of(sharedStylesheet), popup.getScene().getStylesheets());
+    }
+
+    private String toBase64(String stylesheet) {
+        return "data:base64," + Base64.getEncoder().encodeToString(stylesheet.getBytes(StandardCharsets.UTF_8));
     }
 
     private static final class EventCounter implements EventHandler<Event> {
