@@ -1264,13 +1264,22 @@ public class TreeView<T> extends Control {
          */
         public static final EventType<?> ANY = EDIT_ANY_EVENT;
 
-        @SuppressWarnings("doclint:missing")
+        /**
+         * The {@link TreeView} this event is sent to.
+         */
         private final TreeView<T> source;
-        @SuppressWarnings("doclint:missing")
+        /**
+         * The old value.
+         */
         private final T oldValue;
-        @SuppressWarnings("doclint:missing")
+        /**
+         * The new value. This is NOT the value to necessary go back into the tree item.
+         */
         private final T newValue;
-        private transient final TreeItem<T> treeItem;
+        /**
+         * The {@link TreeItem} this event belongs to.
+         */
+        private final TreeItem<T> treeItem;
 
         /**
          * Creates a new EditEvent instance to represent an edit event. This
@@ -1283,7 +1292,7 @@ public class TreeView<T> extends Control {
          * @param newValue the newValue
          */
         public EditEvent(TreeView<T> source,
-                         EventType<? extends EditEvent> eventType,
+                         EventType<? extends TreeView.EditEvent<T>> eventType,
                          TreeItem<T> treeItem, T oldValue, T newValue) {
             super(source, Event.NULL_SOURCE_TARGET, eventType);
             this.source = source;
@@ -1325,12 +1334,6 @@ public class TreeView<T> extends Control {
             return oldValue;
         }
     }
-
-
-
-
-
-
 
     // package for testing
     static class TreeViewBitSetSelectionModel<T> extends MultipleSelectionModelBase<TreeItem<T>> {
