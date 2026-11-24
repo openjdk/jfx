@@ -602,6 +602,10 @@ bool WindowContextBase::grab_mouse_drag_focus() {
 }
 
 void WindowContextBase::ungrab_mouse_drag_focus() {
+    WindowContextBase::reset_mouse_drag_focus();
+}
+
+void WindowContextBase::reset_mouse_drag_focus() {
     WindowContextBase::sm_mouse_drag_window = NULL;
     glass_gdk_mouse_devices_ungrab();
     if (WindowContextBase::sm_grab_window) {
