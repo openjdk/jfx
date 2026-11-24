@@ -23,7 +23,7 @@
  * questions.
  */
 
-package jfx.incubator.scene.control.input;
+package javafx.scene.control.input;
 
 import java.util.EnumSet;
 import java.util.Objects;
@@ -41,11 +41,9 @@ import com.sun.javafx.PlatformUtil;
  * <p>
  * This class also provides a set of convenience methods for refering to keys found on macOS platform.
  *
- * @since 24
+ * @since 999 TODO
  */
-public class KeyBinding
-//implements EventCriteria<KeyEvent>
-{
+public class KeyBinding implements EventCriteria<KeyEvent> {
     /**
      * Condition used to build input key mappings.
      * <p>
@@ -439,21 +437,21 @@ public class KeyBinding
      * Returns the event type for this key binding.
      * @return KeyEvent
      */
-//    @Override
-//    public EventType<KeyEvent> getEventType() {
-//        if (isKeyPressed()) {
-//            return KeyEvent.KEY_PRESSED;
-//        } else if (isKeyReleased()) {
-//            return KeyEvent.KEY_RELEASED;
-//        } else {
-//            return KeyEvent.KEY_TYPED;
-//        }
-//    }
-//
-//    @Override
-//    public boolean isEventAcceptable(KeyEvent ev) {
-//        return equals(KeyBinding.from(ev));
-//    }
+    @Override
+    public EventType<KeyEvent> getEventType() {
+        if (isKeyPressed()) {
+            return KeyEvent.KEY_PRESSED;
+        } else if (isKeyReleased()) {
+            return KeyEvent.KEY_RELEASED;
+        } else {
+            return KeyEvent.KEY_TYPED;
+        }
+    }
+
+    @Override
+    public boolean isEventAcceptable(KeyEvent ev) {
+        return equals(KeyBinding.from(ev));
+    }
 
     /**
      * A builder for {@code KeyBinding} objects.

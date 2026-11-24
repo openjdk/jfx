@@ -164,7 +164,10 @@ public class TextAreaBehaviorRobotTest extends TextInputBehaviorRobotTest<TextAr
             HOME, checkSelection(0), shortcut(A), checkSelection(0, 7)
         );
         */
+    }
 
+    @Test
+    public void testPageSelection() {
         execute(
             setText("1\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n====\n"),
             checkSelection(0),

@@ -50,26 +50,25 @@
 			<attribute name="add-exports" value="java.desktop/sun.awt.datatransfer=ALL-UNNAMED"/>
 		</attributes>
 	</classpathentry>
-    <classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/6">
-        <attributes>
-            <attribute name="test" value="true"/>
-        </attributes>
-    </classpathentry>
+	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/6">
+		<attributes>
+			<attribute name="test" value="true"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry kind="src" output="bin" path="java">
-	    <attributes>
-            <attribute name="gradle_scope" value="test"/>
-            <attribute name="gradle_used_by_scope" value="test"/>
-            <attribute name="test" value="true"/>
-        </attributes>
+		<attributes>
+			<attribute name="test" value="true"/>
+			<attribute name="gradle_scope" value="test"/>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
 	</classpathentry>
 	<classpathentry kind="src" output="bin" path="resources">
-        <attributes>
-            <attribute name="gradle_scope" value="test"/>
-            <attribute name="gradle_used_by_scope" value="test"/>
-            <attribute name="test" value="true"/>
-        </attributes>
-    </classpathentry>
-    <classpathentry kind="src" path="/incubator.richtext"/>
-    <classpathentry kind="src" path="/incubator.input"/>
+		<attributes>
+			<attribute name="test" value="true"/>
+			<attribute name="gradle_scope" value="test"/>
+			<attribute name="gradle_used_by_scope" value="test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="src" path="/incubator.richtext"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

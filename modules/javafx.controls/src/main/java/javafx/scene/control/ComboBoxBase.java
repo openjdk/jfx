@@ -42,6 +42,7 @@ import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
+import javafx.scene.control.input.FunctionTag;
 import com.sun.javafx.tk.Toolkit;
 
 /**
@@ -78,13 +79,9 @@ import com.sun.javafx.tk.Toolkit;
  * @since JavaFX 2.1
  */
 public abstract class ComboBoxBase<T> extends Control {
-
-
-    /* *************************************************************************
-     *                                                                         *
-     * Static properties and methods                                           *
-     *                                                                         *
-     **************************************************************************/
+    /** Denotes the function that toggles this combo box popup. */
+    public static final FunctionTag TOGGLE_POPUP = new FunctionTag();
+    //CANCEL_EDIT, // TODO forwards to parent, child class logic in the base class, looks poorly thought out
 
     /**
      * <p>Called prior to the ComboBox showing its popup/display after the user

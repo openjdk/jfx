@@ -23,11 +23,14 @@
  * questions.
  */
 
-package com.sun.jfx.incubator.scene.control.input;
+package com.sun.javafx.scene.control.input;
 
+import javafx.scene.control.Control;
+import javafx.scene.control.Skin;
+import javafx.scene.control.input.FunctionTag;
+import javafx.scene.control.input.InputMap;
+import javafx.scene.control.input.SkinInputMap;
 import com.sun.javafx.util.Utils;
-import jfx.incubator.scene.control.input.FunctionTag;
-import jfx.incubator.scene.control.input.InputMap;
 
 /**
  * Hides execute() methods in InputMap from the public.
@@ -36,7 +39,7 @@ public class InputMapHelper {
     public interface Accessor {
         public void execute(Object source, InputMap inputMap, FunctionTag tag);
         public void executeDefault(Object source, InputMap inputMap, FunctionTag tag);
-        public void setSkinInputMap(InputMap inputMap, SkinInputMap sm);
+        public void setSkinInputMap(InputMap m, SkinInputMap sm);
     }
 
     static {
@@ -60,7 +63,13 @@ public class InputMapHelper {
         accessor.executeDefault(source, inputMap, tag);
     }
 
-    public static void setSkinInputMap(InputMap inputMap, SkinInputMap sm) {
-        accessor.setSkinInputMap(inputMap, sm);
+    /// skin can be null
+    public static void setSkinInputMap(InputMap m, Skin<?> skin) {
+        if (skin != null) {
+            SkinInputMap sm = skin.getSkinInputMap();
+            if (sm != null) {
+                accessor.setSkinInputMap(m, sm);
+            }
+        }
     }
 }
