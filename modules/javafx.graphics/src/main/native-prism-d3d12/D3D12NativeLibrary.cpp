@@ -53,6 +53,13 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_d3d12_D3D12Pipeline_nInit
     return true;
 }
 
+#ifdef STATIC_BUILD
+JNIEXPORT jint JNICALL JNI_OnLoad_prism_d3d12(JavaVM *vm, void *reserved)
+{
+    return JNI_VERSION_1_8;
+}
+#endif // STATIC_BUILD
+
 #ifdef __cplusplus
 }
 #endif
