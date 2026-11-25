@@ -648,6 +648,54 @@ public class TableViewTest {
         table.sort();
     }
 
+    // JDK-8381974
+    @Test public void testNullSortPolicyDoesNotBreakSelection() {
+        initSortTestStructure();
+        sm.select(0);
+        table.setSortPolicy(null);
+
+        assertClearAndSelectFiresSelectionChanges(1);
+    }
+
+    // JDK-8381974
+    @Test public void testNullThenDefaultSortPolicyDoesNotBreakSelection() {
+        initSortTestStructure();
+        var defaultPolicy = table.getSortPolicy();
+        sm.select(0);
+        table.setSortPolicy(null);
+        table.setSortPolicy(defaultPolicy);
+
+        assertClearAndSelectFiresSelectionChanges(1);
+    }
+
+    // JDK-8381974
+    @Test public void testNullSortPolicyMouseSelectionUpdatesRows() {
+        initSortTestStructure();
+        stageLoader = new StageLoader(table);
+        sm.select(0);
+        table.setSortPolicy(null);
+
+        new MouseEventFirer(VirtualFlowTestUtils.getCell(table, 1, 0)).fireMousePressAndRelease();
+
+        // check before any pulse, as a relayout would refresh the rows from the selection model
+        assertFalse(VirtualFlowTestUtils.getCell(table, 0).isSelected());
+        assertTrue(VirtualFlowTestUtils.getCell(table, 1).isSelected());
+    }
+
+    private void assertClearAndSelectFiresSelectionChanges(int row) {
+        AtomicInteger indicesChanges = new AtomicInteger();
+        AtomicInteger cellsChanges = new AtomicInteger();
+        sm.getSelectedIndices().addListener((ListChangeListener<Integer>) c -> indicesChanges.incrementAndGet());
+        sm.getSelectedCells().addListener((ListChangeListener<TablePosition>) c -> cellsChanges.incrementAndGet());
+
+        sm.clearAndSelect(row);
+
+        assertEquals(row, sm.getSelectedIndex());
+        assertEquals(List.of(row), sm.getSelectedIndices());
+        assertEquals(1, indicesChanges.get());
+        assertEquals(1, cellsChanges.get());
+    }
+
     @Test public void testChangingSortPolicyUpdatesItemsList() {
         TableColumn<String, String> col = initSortTestStructure();
         col.setSortType(DESCENDING);
