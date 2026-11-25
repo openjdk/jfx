@@ -45,8 +45,15 @@ float mask(float2 tco, float2 oflatdim)
     // 4 - convert to the eccentric coordinates by multiplying by 1/arcradii.
     float2 absecctco = max(abs(tco) - oflatdim, 0.001) * oinvarcradii;
     // p is now normalized to an ellipse-relative eccentric coordinate vector
-    // Now apply the equations from FillEllipse.jsl
+
+    // The coverage goes linearly from 1.0 at half a pixel inside of the
+    // edge of the ellipse (|p| = 1) to 0.0 at half a pixel outside of it.
+    // The pixel size is computed as a weighted sum of 1/rx and 1/ry weighted by
+    // cos^2 and sin^2 (x*x/rx + y*y/ry, normalized by |p|^2). This makes
+    // the pixel size exactly 1/r along the straight edges, where p lies on
+    // one of the axes, so those edges are rendered like the edges of a
+    // non-rounded rectangle.
     float ecclensq = dot(absecctco, absecctco);
-    float pix = dot(absecctco / ecclensq, oinvarcradii);
-    return clamp(0.5 + (1.0 + 0.25*pix*pix - ecclensq)/(2.0*pix), 0.0, 1.0);
+    float pix = dot(absecctco * absecctco, oinvarcradii) / ecclensq;
+    return clamp(0.5 + (1.0 - sqrt(ecclensq))/pix, 0.0, 1.0);
 }
