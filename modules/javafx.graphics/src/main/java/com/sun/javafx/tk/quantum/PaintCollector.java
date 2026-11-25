@@ -305,12 +305,6 @@ final class PaintCollector implements CompletionListener {
             }
 
             Application.GetApplication().notifyRenderingFinished();
-
-            // If pulse logging is enabled, then we must call renderEnd now
-            // that we know that all of the scene's being rendered are finished
-            if (PULSE_LOGGING_ENABLED) {
-                PulseLogger.renderEnd();
-            }
         }
 
         // Count down the latch, indicating that drawing has
@@ -447,6 +441,13 @@ final class PaintCollector implements CompletionListener {
         }
 
         dirtyScenes.clear();
+
+        // If pulse logging is enabled, then we must call renderEnd once all of
+        // the scenes of this pass have been rendered. Render jobs are run in
+        // order, so a job submitted after the ones of all scenes does this
+        if (PULSE_LOGGING_ENABLED) {
+            toolkit.addRenderJob(new RenderJob(() -> {}, job -> PulseLogger.renderEnd()));
+        }
 
         if (toolkit.shouldWaitForRenderingToComplete()) {
             waitForRenderingToComplete();
