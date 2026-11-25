@@ -1704,6 +1704,10 @@ public class TableView<S> extends Control {
             return;
         }
 
+        // get the sort policy and run it
+        Callback<TableView<S>, Boolean> sortPolicy = getSortPolicy();
+        if (sortPolicy == null) return;
+
         TableViewSelectionModel<S> selectionModel = getSelectionModel();
         final List<TablePosition<S,?>> prevState = selectionModel == null ?
                 null :
@@ -1716,9 +1720,6 @@ public class TableView<S> extends Control {
             selectionModel.startAtomic();
         }
 
-        // get the sort policy and run it
-        Callback<TableView<S>, Boolean> sortPolicy = getSortPolicy();
-        if (sortPolicy == null) return;
         Boolean success = sortPolicy.call(this);
 
         if (selectionModel != null) {

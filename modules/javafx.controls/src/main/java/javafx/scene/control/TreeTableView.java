@@ -1995,6 +1995,13 @@ public class TreeTableView<S> extends Control {
             return;
         }
 
+        // get the sort policy and run it
+        Callback<TreeTableView<S>, Boolean> sortPolicy = getSortPolicy();
+        if (sortPolicy == null) {
+            sortingInProgress = false;
+            return;
+        }
+
         TreeTableViewSelectionModel<S> selectionModel = getSelectionModel();
         final List<TreeTablePosition<S,?>> prevState = (selectionModel == null) ?
                 null :
@@ -2007,12 +2014,6 @@ public class TreeTableView<S> extends Control {
             selectionModel.startAtomic();
         }
 
-        // get the sort policy and run it
-        Callback<TreeTableView<S>, Boolean> sortPolicy = getSortPolicy();
-        if (sortPolicy == null) {
-            sortingInProgress = false;
-            return;
-        }
         Boolean success = sortPolicy.call(this);
 
         if (prevState != null) {
