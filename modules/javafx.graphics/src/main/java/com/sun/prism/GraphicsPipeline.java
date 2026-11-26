@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -60,7 +60,12 @@ public abstract class GraphicsPipeline {
          * The pipeline supports Shader Model 3 features, including Pixel Shader
          * 3.0 and Vertex Shader 3.0 programs.
          */
-        SM3
+        SM3,
+        /**
+         * The pipeline supports Shader Model 6 features, including Pixel Shader
+         * 6.0 and Vertex Shader 6.0 programs.
+         */
+        SM6
     }
     private FontFactory fontFactory;
     private final Set<Runnable> disposeHooks = new HashSet<>();
