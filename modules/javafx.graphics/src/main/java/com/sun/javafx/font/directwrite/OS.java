@@ -359,6 +359,7 @@ class OS {
     static final native int EndDraw(long ptr);
     static final native void Clear(long ptr, D2D1_COLOR_F clearColor);
     static final native void SetTextAntialiasMode(long ptr, int textAntialiasMode);
+    static final native void SetTextRenderingMode(long ptr, long factoryPtr, int renderingMode);
     static final native void SetTransform(long ptr, D2D1_MATRIX_3X2_F transform);
     static final native void DrawGlyphRun(long ptr, D2D1_POINT_2F baselineOrigin, DWRITE_GLYPH_RUN glyphRun, long foregroundBrush, int measuringMode);
     static final native long CreateSolidColorBrush(long ptr, D2D1_COLOR_F color);

@@ -61,6 +61,9 @@ public abstract class PrismFontFactory implements FontFactory {
 
     private static boolean lcdEnabled;
     private static float lcdContrast = -1;
+    private static boolean contrastLCDRendering;
+    private static boolean symmetricGlyphs;
+
     private static String jreFontDir;
     private static final String jreDefaultFont   = "Lucida Sans Regular";
     private static final String jreDefaultFontLC = "lucida sans regular";
@@ -129,6 +132,19 @@ public abstract class PrismFontFactory implements FontFactory {
         String defLCDProp = lcdTextOff ? "false" : "true";
         String lcdProp = System.getProperty("prism.lcdtext", defLCDProp);
         lcdEnabled = lcdProp.equals("true");
+
+        // This property only applies if LCD text is enabled (see
+        // `prism.lcdtext`) and text is being drawing using a hardware
+        // renderer. If this property is set to `increasecontrast` a shader
+        // will be chosen that draws the text with more contrast than the
+        // default shader.
+        String lcdRenderProp = System.getProperty("prism.lcdrendering", "default");
+        contrastLCDRendering = lcdEnabled && lcdRenderProp.equals("increasecontrast");
+
+        // A value of `symmetric` alters the way glyphs are shaped on Windows
+        // to enhance curved horizontal stems.
+        String glyphShapingProp = System.getProperty("prism.glyphshaping", "default");
+        symmetricGlyphs = glyphShapingProp.equals("symmetric");
 
         s = System.getProperty("prism.cacheLayoutSize");
         if (s != null) {
@@ -1289,6 +1305,14 @@ public abstract class PrismFontFactory implements FontFactory {
 
     public boolean isLCDTextSupported() {
         return lcdEnabled;
+    }
+
+    public static boolean useContrastLCDRendering() {
+        return contrastLCDRendering;
+    }
+
+    public static boolean useSymmetricGlyphs() {
+        return symmetricGlyphs;
     }
 
     @Override
