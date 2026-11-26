@@ -102,6 +102,8 @@ public:
     NIPtr<Internal::Buffer> CreateBuffer(const void* initialData, size_t size, bool cpuWriteable, D3D12_RESOURCE_STATES finalState);
 
     bool CheckFormatSupport(DXGI_FORMAT format);
+    void SetDeviceParametersFor3D();
+
     NIPtr<NativeMesh>* CreateMesh();
     NIPtr<NativeMeshView>* CreateMeshView(const NIPtr<NativeMesh>& mesh);
     NIPtr<NativePhongMaterial>* CreatePhongMaterial();

@@ -305,11 +305,12 @@ void RenderingContext::Clear(float r, float g, float b, float a, bool clearDepth
     // if the RTT was NOT fully used we don't have to clear the whole thing
     // determine how much of the space actually needs to be cleared (unless the request is for a smaller section)
     D3D12_RECT clearRect = GetScissor().Get();
-    const BBox& rttDirtyBBox = mRenderTarget.Get()->BBoxEnabled() ? mRenderTarget.Get()->GetDirtyBBox() : BBox();
 
     if (Config::Instance().IsClearOptsEnabled() && mRenderTarget.Get()->BBoxEnabled() &&
         r == 0.0f && g == 0.0f && b == 0.0f && a == 0.0f)
     {
+        const BBox& rttDirtyBBox = mRenderTarget.Get()->GetDirtyBBox();
+
         if (rttDirtyBBox.Valid() && rttDirtyBBox.Inside(clearRect))
         {
             // if RTT was dirited by less area than the clear rect demands it AND the clear area

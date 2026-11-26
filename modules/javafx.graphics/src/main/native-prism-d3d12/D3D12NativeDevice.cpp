@@ -357,6 +357,12 @@ bool NativeDevice::CheckFormatSupport(DXGI_FORMAT format)
     return (fmtSupport.Support1 & D3D12_FORMAT_SUPPORT1_TEXTURE2D);
 }
 
+void NativeDevice::SetDeviceParametersFor3D()
+{
+    // in some corner-cases Prism expects Scissor to be off when we start rendering 3D
+    mRenderingContext->SetScissor(false, D3D12_RECT());
+}
+
 NIPtr<NativeMesh>* NativeDevice::CreateMesh()
 {
     return CreateNIDeviceObject<NativeMesh>(shared_from_this());
@@ -880,6 +886,14 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_d3d12_ni_D3D12NativeDevice_nCheckF
     if (format < 0) return false;
 
     return D3D12::GetNIObject<D3D12::NativeDevice>(ptr)->CheckFormatSupport(static_cast<DXGI_FORMAT>(format));
+}
+
+JNIEXPORT void JNICALL Java_com_sun_prism_d3d12_ni_D3D12NativeDevice_nSetDeviceParametersFor3D
+    (JNIEnv* env, jobject obj, jlong ptr)
+{
+    if (!ptr) return;
+
+    D3D12::GetNIObject<D3D12::NativeDevice>(ptr)->SetDeviceParametersFor3D();
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_prism_d3d12_ni_D3D12NativeDevice_nCreateMesh

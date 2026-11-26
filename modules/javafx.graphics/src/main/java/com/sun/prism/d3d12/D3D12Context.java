@@ -94,6 +94,13 @@ class D3D12Context extends BaseShaderContext {
     }
 
     @Override
+    protected void setDeviceParametersFor3D() {
+        if (checkDisposed()) return;
+
+        mDevice.setDeviceParametersFor3D();
+    }
+
+    @Override
     protected State updateRenderTarget(RenderTarget target, NGCamera camera, boolean depthTest) {
         if (checkDisposed()) return null;
 

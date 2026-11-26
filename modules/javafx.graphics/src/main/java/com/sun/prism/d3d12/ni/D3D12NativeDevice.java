@@ -46,6 +46,7 @@ public final class D3D12NativeDevice extends D3D12NativeObject {
     @Override protected native void nReleaseNativeObject(long ptr);
     private native boolean nIsDeviceReady(long ptr);
     private native boolean nCheckFormatSupport(long ptr, int dxgiFormat);
+    private native void nSetDeviceParametersFor3D(long ptr);
     private native long nCreateMesh(long ptr);
     private native long nCreateMeshView(long ptr, long meshPtr);
     private native long nCreatePhongMaterial(long ptr);
@@ -114,6 +115,10 @@ public final class D3D12NativeDevice extends D3D12NativeObject {
 
     public boolean checkFormatSupport(PixelFormat format) {
         return nCheckFormatSupport(ptr, DXGIFormat.fromPixelFormat(format).format);
+    }
+
+    public void setDeviceParametersFor3D() {
+        nSetDeviceParametersFor3D(ptr);
     }
 
     public D3D12NativeMesh createMesh() {
