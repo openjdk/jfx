@@ -55,6 +55,14 @@ float4 paint(float2 texCoord, float2 texCoord2, float4 jslVertexColor)
     float4 c = jslVertexColor;
     float4 dstClr = sample(dstColor, texCoord2);
 
+    // Linearize the destination
+    float3 sRGBToLinear = float3(2.2333333);
+    if (dstClr.a > 0.0) {
+        dstClr.rgb /= dstClr.a;
+        dstClr.rgb = pow(dstClr.rgb, sRGBToLinear);
+        dstClr.rgb *= dstClr.a;
+    }
+
     // Apply contrast. The allowed values are from 0.0 to 1.0. On Windows a
     // user can tweak this setting using the ClearType tuner but most don't
     // so we just hard-code a default. Brighter colors tend to bloom outward
@@ -120,14 +128,6 @@ float4 paint(float2 texCoord, float2 texCoord2, float4 jslVertexColor)
     * which simplifies to:
     * f(d.a) = d*(1-g*s) + s * mix(avg(g), g, d.a)
     */
-
-    // Linearize the destination
-    float3 sRGBToLinear = float3(2.2333333);
-    if (dstClr.a > 0.0) {
-        dstClr.rgb /= dstClr.a;
-        dstClr.rgb = pow(dstClr.rgb, sRGBToLinear);
-        dstClr.rgb *= dstClr.a;
-    }
 
     // Source over LCD blend equation, which handles transparency.
     // REMIND this does not work with default alpha blending:
