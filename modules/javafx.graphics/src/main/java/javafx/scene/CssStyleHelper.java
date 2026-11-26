@@ -938,8 +938,10 @@ final class CssStyleHelper {
             return;
         }
 
+        List<CssMetaData<? extends Styleable, ?>> styleables = node.getCssMetaData();
         resetProperties(node, cssMetaData ->
-                getCalculatedValue(node, cssMetaData, styleMap, transitionStates, cachedFont, cacheEntry) == SKIP);
+                (cssMetaData == TransitionDefinitionCssMetaData.getInstance() || styleables.contains(cssMetaData))
+                && getCalculatedValue(node, cssMetaData, styleMap, transitionStates, cachedFont, cacheEntry) == SKIP);
     }
 
     /**

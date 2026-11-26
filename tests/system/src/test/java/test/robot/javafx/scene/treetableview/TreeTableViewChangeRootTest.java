@@ -54,6 +54,7 @@ import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 public class TreeTableViewChangeRootTest {
 
@@ -78,6 +79,8 @@ public class TreeTableViewChangeRootTest {
 
     @Test
     public void testChangeRoot() {
+        assumeFalse(Util.isUbuntu2604()); // JDK-8397446
+
         Node buttonNode = scene.lookup(".button");
         Bounds bounds = buttonNode.localToScreen(buttonNode.getBoundsInLocal());
         double x = bounds.getMinX() + bounds.getWidth() / 2;

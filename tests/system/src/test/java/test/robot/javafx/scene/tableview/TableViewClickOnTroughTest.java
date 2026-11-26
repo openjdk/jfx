@@ -51,6 +51,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import test.util.Util;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 /*
  * [openjdk/jfx] 8173321: Click on trough has no effect when cell height > viewport (PR #985):
@@ -76,6 +77,8 @@ public class TableViewClickOnTroughTest {
 
     @Test
     public void moveTroughTest() {
+        assumeFalse(Util.isUbuntu2604()); // JDK-8344462
+
         ScrollBar verticalBar = (ScrollBar) table.lookup(".scroll-bar:vertical");
         assertNotNull(verticalBar);
         StackPane thumb = (StackPane) verticalBar.getChildrenUnmodifiable().stream()

@@ -45,6 +45,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import test.util.Util;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 /*
  * Test for verifying context menu NPE error
@@ -102,6 +103,7 @@ public class ContextMenuNPETest {
 
     @Test
     public void testContextMenuNPE() throws Throwable {
+        assumeFalse(Util.isUbuntu2604()); // JDK-8397453
 
         showMenuButtonContextMenu();
         selectSubmenuItem();

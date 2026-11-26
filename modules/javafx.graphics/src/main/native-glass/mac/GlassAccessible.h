@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,6 +32,7 @@
 }
 - (id)initWithEnv:(JNIEnv*)env accessible:(jobject)jAccessible;
 - (jobject)getJAccessible;
+- (BOOL)accessibilityIsPopup;
 @end
 
 /* The following blocks are used by jArrayToNSArray() to convert java types
@@ -54,6 +55,7 @@ jmethodID jAccessibilityAttributeNames;
 jmethodID jAccessibilityAttributeValue;
 jmethodID jAccessibilityActionNames;
 jmethodID jAccessibilityIsIgnored;
+jmethodID jAccessibilityIsPopup;
 jmethodID jAccessibilityFocusedUIElement;
 jmethodID jAccessibilityHitTest;
 jmethodID jAccessibilityPerformAction;

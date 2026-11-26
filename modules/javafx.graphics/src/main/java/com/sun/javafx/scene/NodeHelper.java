@@ -295,8 +295,8 @@ public abstract class NodeHelper {
         nodeAccessor.reapplyCSS(node);
     }
 
-    public static void scheduleReapplyCSS(Node node) {
-        nodeAccessor.scheduleReapplyCSS(node);
+    public static void scheduleReapplyCSS(Node node, boolean requestPulse) {
+        nodeAccessor.scheduleReapplyCSS(node, requestPulse);
     }
 
     public static boolean isInitialCssState(Node node) {
@@ -417,7 +417,7 @@ public abstract class NodeHelper {
         void setLabeledBy(Node node, Node labeledBy);
         Accessible getAccessible(Node node);
         void reapplyCSS(Node node);
-        void scheduleReapplyCSS(Node node);
+        void scheduleReapplyCSS(Node node, boolean requestPulse);
         boolean isInitialCssState(Node node);
         void recalculateRelativeSizeProperties(Node node, Font fontForRelativeSizes);
         boolean isTreeVisible(Node node);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,6 +36,7 @@ import java.util.List;
 import javafx.scene.Node;
 import javafx.scene.image.WritableImage;
 import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
 import com.sun.jfx.incubator.scene.control.richtext.util.RichUtils;
 import jfx.incubator.scene.control.richtext.StyleResolver;
 import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
@@ -63,10 +64,15 @@ public class RtfStyledOutput implements StyledOutput {
     private boolean strike;
     private String fontFamily;
     private Double fontSize;
+    private Font font;
 
     public RtfStyledOutput(StyleResolver r, Writer wr) {
         this.resolver = new CachingStyleResolver(r);
         this.writer = wr;
+        this.font = RichUtils.codeAreaFont(r);
+        if (font != null) {
+            fontTable.add(font.getFamily());
+        }
     }
 
     public StyledOutput firstPassBuilder() {
@@ -90,7 +96,7 @@ public class RtfStyledOutput implements StyledOutput {
                         //                        colorTable.add(c);
                         //                    }
 
-                        // TODO font table
+                        // font table
                         String family = a.getFontFamily();
                         if (family != null) {
                             fontTable.add(family);
@@ -282,6 +288,10 @@ public class RtfStyledOutput implements StyledOutput {
                 str = a.isStrikeThrough();
                 fam = a.getFontFamily();
                 fsize = a.getFontSize();
+            }
+            if (font != null) {
+                fam = font.getFamily();
+                fsize = font.getSize();
             }
 
             prevStyle = a;
