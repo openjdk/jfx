@@ -113,6 +113,7 @@ public class HeaderBarTest {
 
     @Test
     void emptyHeaderBar() {
+        assertTrue(headerBar.getStyleClass().contains("header-bar"));
         assertNull(headerBar.getLeft());
         assertNull(headerBar.getCenter());
         assertNull(headerBar.getRight());

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,6 +36,7 @@ import java.util.List;
 import javafx.scene.Node;
 import javafx.scene.image.WritableImage;
 import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
 import com.sun.jfx.incubator.scene.control.richtext.util.RichUtils;
 import jfx.incubator.scene.control.richtext.StyleResolver;
 import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
@@ -63,10 +64,15 @@ public class RtfStyledOutput implements StyledOutput {
     private boolean strike;
     private String fontFamily;
     private Double fontSize;
+    private Font font;
 
     public RtfStyledOutput(StyleResolver r, Writer wr) {
         this.resolver = new CachingStyleResolver(r);
         this.writer = wr;
+        this.font = RichUtils.codeAreaFont(r);
+        if (font != null) {
+            fontTable.add(font.getFamily());
+        }
     }
 
     public StyledOutput firstPassBuilder() {
@@ -90,7 +96,7 @@ public class RtfStyledOutput implements StyledOutput {
                         //                        colorTable.add(c);
                         //                    }
 
-                        // TODO font table
+                        // font table
                         String family = a.getFontFamily();
                         if (family != null) {
                             fontTable.add(family);
@@ -153,7 +159,7 @@ public class RtfStyledOutput implements StyledOutput {
             if (fam == null) {
                 write("\\fnil");
                 write(" ");
-                write(name);
+                write(encode(name, true));
             } else {
                 write(fam);
             }
@@ -283,6 +289,10 @@ public class RtfStyledOutput implements StyledOutput {
                 fam = a.getFontFamily();
                 fsize = a.getFontSize();
             }
+            if (font != null) {
+                fam = font.getFamily();
+                fsize = font.getSize();
+            }
 
             prevStyle = a;
 
@@ -359,7 +369,7 @@ public class RtfStyledOutput implements StyledOutput {
         }
 
         String text = seg.getText();
-        String encoded = encode(text);
+        String encoded = encode(text, false);
         write(encoded);
     }
 
@@ -405,12 +415,12 @@ public class RtfStyledOutput implements StyledOutput {
     }
 
     // TODO unit test!
-    private static String encode(String text) {
+    private static String encode(String text, boolean semiColon) {
         if (text == null) {
             return "";
         }
 
-        int ix = indexOfSpecialChar(text);
+        int ix = indexOfSpecialChar(text, semiColon);
         if (ix < 0) {
             return text;
         }
@@ -441,6 +451,13 @@ public class RtfStyledOutput implements StyledOutput {
                 case '}':
                     sb.append("\\}");
                     break;
+                case ';':
+                    if (semiColon) {
+                        sb.append("\\;");
+                    } else {
+                        sb.append(c);
+                    }
+                    break;
                 default:
                     sb.append(c);
                     break;
@@ -455,7 +472,7 @@ public class RtfStyledOutput implements StyledOutput {
         return sb.toString();
     }
 
-    private static int indexOfSpecialChar(String text) {
+    private static int indexOfSpecialChar(String text, boolean semiColon) {
         int len = text.length();
         for (int i = 0; i < len; i++) {
             char c = text.charAt(i);
@@ -472,6 +489,11 @@ public class RtfStyledOutput implements StyledOutput {
                 case '{':
                 case '}':
                     return i;
+                case ';':
+                    if (semiColon) {
+                        return i;
+                    }
+                    continue;
                 default:
                     continue;
                 }

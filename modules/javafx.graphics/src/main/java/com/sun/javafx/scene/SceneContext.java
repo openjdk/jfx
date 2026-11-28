@@ -87,7 +87,7 @@ public final class SceneContext implements Scene.Preferences, MediaQueryContext 
             .anyMatch(entry -> entry.getKey().evaluate(this) != entry.getValue());
 
         if (changed && scene.getRoot() instanceof Node root) {
-            NodeHelper.scheduleReapplyCSS(root);
+            NodeHelper.scheduleReapplyCSS(root, true);
         }
     }
 
@@ -229,7 +229,7 @@ public final class SceneContext implements Scene.Preferences, MediaQueryContext 
             .anyMatch(entry -> entry.getKey().evaluate(this) != entry.getValue());
 
         if (changed && scene.getRoot() instanceof Node root) {
-            NodeHelper.scheduleReapplyCSS(root);
+            NodeHelper.scheduleReapplyCSS(root, true);
         }
     }
 
@@ -259,7 +259,7 @@ public final class SceneContext implements Scene.Preferences, MediaQueryContext 
         protected void onInvalidated() {
             Node root = scene.getRoot();
             if (root != null) {
-                NodeHelper.scheduleReapplyCSS(root);
+                NodeHelper.scheduleReapplyCSS(root, true);
             }
         }
     }

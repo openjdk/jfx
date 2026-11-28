@@ -58,10 +58,6 @@ else
     CFLAGS += -O0 -g -Wall
 endif
 
-ifneq ($(ARCH), arm64)
-    CFLAGS += -msse2
-endif
-
 INCLUDES = $(addprefix -I$(SRCBASE_DIR)/,$(DIRLIST)) \
            -I$(BASE_DIR)/plugins/ \
            -I$(SRCBASE_DIR)/projects/plugins \

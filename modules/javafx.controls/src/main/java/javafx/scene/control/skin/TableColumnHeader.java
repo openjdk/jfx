@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -569,7 +569,7 @@ public class TableColumnHeader extends Region {
     }
 
     private boolean isSortingEnabled() {
-        // this used to check if ! PlatformUtil.isEmbedded(), but has been changed
+        // this used to check if !GlassPlatform.isEmbedded(), but has been changed
         // to always return true (for now), as we want to support column sorting
         // everywhere
         return true;

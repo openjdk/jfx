@@ -38,7 +38,7 @@ public class ErrorLoggingUtility {
     private static ErrorLogger errorLogger = Logging.getLogger();
 
     public static void reset() {
-        Logging.setKeepException(true);
+        Logging.setKeepLastLogRecord(true);
         errorLogger.setErrorLogRecord(null);
     }
 
@@ -61,11 +61,11 @@ public class ErrorLoggingUtility {
     }
 
     public static void check(Level expectedLevel, Class<?> expectedException) {
-        assertTrue(Logging.getKeepException());
+        assertTrue(Logging.getKeepLastLogRecord());
         ErrorLogRecord errorLogRecord = errorLogger.getErrorLogRecord();
         assertNotNull(errorLogRecord);
-        assertEquals(expectedLevel, errorLogRecord.getLevel());
-        assertTrue(expectedException.isAssignableFrom(errorLogRecord.getThrown().getClass()));
+        assertEquals(expectedLevel, errorLogRecord.level());
+        assertTrue(expectedException.isAssignableFrom(errorLogRecord.throwable().getClass()));
         reset();
     }
 }

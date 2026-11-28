@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,18 +26,17 @@
 package test.util;
 
 import static org.junit.jupiter.api.Assertions.fail;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Rectangle2D;
@@ -454,6 +453,57 @@ public class Util {
         return waylandDisplay != null && !waylandDisplay.isEmpty();
     }
 
+    // Reads the specified properties file and returns a Map of key,value pairs.
+    // Returns an empty map if the file cannot be read.
+    private static Map<String,String> getOsReleaseProperties(Path osReleasePath) {
+        try {
+            List<String> lines = Files.readAllLines(osReleasePath);
+            return lines.stream()
+                    .filter(s -> !s.startsWith("#"))
+                    .filter(s -> s.contains("="))
+                    .map(s -> s.split("=", 2))
+                    .collect(Collectors.toMap(
+                            keyVal -> keyVal[0],
+                            keyVal -> keyVal[1],
+                            (first, second) -> second));
+        } catch (IOException ex) {
+            return Map.of();
+        }
+    }
+
+    // Reads the properties file "/etc/os-release" or "/usr/lib/os-release"
+    // and returns a Map of key,value pairs. Returns an empty Map if neither
+    // file can be read.
+    private static Map<String,String> getOsReleaseProperties() {
+        List<String> dirList = List.of("/etc", "/usr/lib");
+        for (String dir : dirList) {
+            Path osReleasePath = Path.of(dir, "os-release");
+            if (Files.exists(osReleasePath)) {
+                return getOsReleaseProperties(osReleasePath);
+            }
+        }
+        return Map.of();
+    }
+
+    /**
+     * Checks if the system is running Ubuntu 26.04 Linux.
+     *
+     * @return true if running on Ubuntu 26.04, false otherwise
+     */
+    public static boolean isUbuntu2604() {
+        if (!PlatformUtil.isLinux()) return false;
+
+        Map<String, String> osReleaseProps = getOsReleaseProperties();
+        String id = osReleaseProps.get("ID");
+        if (id == null) return false;
+        String version_id = osReleaseProps.get("VERSION_ID");
+        if (version_id == null) return false;
+
+        id = id.replaceAll("[\"']", "");
+        version_id = version_id.replaceAll("[\"']", "");
+        return "ubuntu".equals(id) && "26.04".equals(version_id);
+    }
+
     /**
      * Returns true if two pixel values are "near", i.e. the distance between them is less than
      * an arbitrarily chosen constant (0.1).
@@ -463,5 +513,16 @@ public class Util {
      */
     public static boolean isNear(double a, double b) {
         return Math.abs(a - b) < 0.1;
+    }
+
+    /**
+     * Parses hex string into a byte array.
+     * Example: "0001" -> byte[] { 0x00, 0x01 }
+     * No spaces or symbols other than upper/lower case hex digits is allowed.
+     * @param hexPattern hex string
+     * @return the byte array
+     */
+    public static byte[] hexToByteArray(String hexPattern) {
+        return HexFormat.of().parseHex(hexPattern);
     }
 }

@@ -115,6 +115,16 @@ public class FX {
         return mi;
     }
 
+    public static CheckMenuItem checkItem(Menu m, String name, boolean selected, Consumer<Boolean> client) {
+        CheckMenuItem mi = new CheckMenuItem(name);
+        mi.setSelected(selected);
+        mi.selectedProperty().addListener((s, p, on) -> {
+            client.accept(on);
+        });
+        m.getItems().add(mi);
+        return mi;
+    }
+
     public static CheckMenuItem checkItem(ContextMenu m, String name, boolean selected, Consumer<Boolean> client) {
         CheckMenuItem mi = new CheckMenuItem(name);
         mi.setSelected(selected);
@@ -146,6 +156,12 @@ public class FX {
     public static SeparatorMenuItem separator(MenuBar b) {
         SeparatorMenuItem s = new SeparatorMenuItem();
         lastMenu(b).getItems().add(s);
+        return s;
+    }
+
+    public static SeparatorMenuItem separator(Menu m) {
+        SeparatorMenuItem s = new SeparatorMenuItem();
+        m.getItems().add(s);
         return s;
     }
 
@@ -305,27 +321,27 @@ public class FX {
                     m = null;
                 }
 
-                if (m != null) {
-                    if (m.getItems().size() > 0) {
-                        Platform.runLater(() -> {
-                            // javafx does not dismiss the popup when the user
-                            // clicks on the owner node
-                            EventHandler<MouseEvent> li = new EventHandler<MouseEvent>() {
-                                @Override
-                                public void handle(MouseEvent event) {
-                                    m.hide();
-                                    owner.removeEventFilter(MouseEvent.MOUSE_PRESSED, this);
-                                    event.consume();
-                                }
-                            };
+                if ((m != null) && (m.getItems().size() > 0)) {
+                    Platform.runLater(() -> {
+                        // javafx does not dismiss the popup when the user
+                        // clicks on the owner node
+                        EventHandler<MouseEvent> li = new EventHandler<MouseEvent>() {
+                            @Override
+                            public void handle(MouseEvent event) {
+                                m.hide();
+                                owner.removeEventFilter(MouseEvent.MOUSE_PRESSED, this);
+                                event.consume();
+                            }
+                        };
 
-                            owner.addEventFilter(MouseEvent.MOUSE_PRESSED, li);
-                            m.show(owner, ev.getScreenX(), ev.getScreenY());
+                        owner.addEventFilter(MouseEvent.MOUSE_PRESSED, li);
+                        m.setOnHidden((_) -> {
+                            owner.removeEventFilter(MouseEvent.MOUSE_PRESSED, li);
                         });
-                        ev.consume();
-                    }
+                        m.show(owner, ev.getScreenX(), ev.getScreenY());
+                    });
+                    ev.consume();
                 }
-                ev.consume();
             }
         });
     }

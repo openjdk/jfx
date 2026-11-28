@@ -56,7 +56,6 @@ import javafx.scene.AccessibleRole;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Parent;
-import javafx.scene.Scene;
 import javafx.scene.control.Cell;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.control.ScrollBar;
@@ -1099,6 +1098,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             releaseCell(accumCell);
 
             resetIndex(cells);
+            resetIndex(pile);
 
             addAllToPile();
             releaseAllPrivateCells();
@@ -1706,10 +1706,13 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
             // Add any necessary leading cells
             if (firstCell != null) {
-                // NOTE: The index might be -1, but the call to addLeadingCells() is still required.
-                int previousIndex = getCellIndex(firstCell) - 1;
-                double prevIndexSize = getCellLength(previousIndex);
-                addLeadingCells(previousIndex, getCellPosition(firstCell) - prevIndexSize);
+                double firstCellPosition = getCellPosition(firstCell);
+                if (firstCellPosition > 0) {
+                    // NOTE: The index might be -1, but the call to addLeadingCells() is still required.
+                    int previousIndex = getCellIndex(firstCell) - 1;
+                    double prevIndexSize = getCellLength(previousIndex);
+                    addLeadingCells(previousIndex, firstCellPosition - prevIndexSize);
+                }
             } else {
                 int currentIndex = computeCurrentIndex();
 
@@ -2846,46 +2849,52 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     }
 
     private void cleanPile() {
-        boolean wasFocusOwner = false;
+        boolean focusOwnerWithScene = hasFocusOwnerWithScene();
 
-        for (int i = 0, max = pile.size(); i < max; i++) {
-            T cell = pile.get(i);
-            wasFocusOwner = wasFocusOwner || doesCellContainFocus(cell);
+        for (T cell : pile) {
             cell.setVisible(false);
+
+            // Notify the cell that it is now empty (as it will land in the pile, removed from the viewport).
+            if (cell.getIndex() != -1) {
+                cell.updateIndex(-1);
+            }
         }
 
-        // Remove all cells that are in the pile and therefore not relevant anymore.
-        if (sheetChildren.size() != cells.size()) {
-            sheetChildren.removeAll(pile);
+        // Remove all cells that are still in the viewport, but in the pile and therefore not used anymore.
+        List<T> removedCells = null;
+        for (T cell : pile) {
+            if (cell.getParent() != null) {
+                if (removedCells == null) {
+                    removedCells = new ArrayList<>();
+                }
+                removedCells.add(cell);
+            }
         }
 
-        // Fix for JDK-8095710: Rather than have the cells do weird things with
-        // focus (in particular, have focus jump between cells), we return focus
-        // to the VirtualFlow itself.
-        if (wasFocusOwner) {
-            requestFocus();
+        if (removedCells != null) {
+            sheetChildren.removeAll(removedCells);
+        }
+
+        // Since we update the cell index and remove them from the viewport, the focus may be cleared.
+        // If that happened, we will request focus.
+        // If the cells did shift the focus away to something else, we will NOT steal it.
+        if (focusOwnerWithScene) {
+            if (!hasFocusOwnerWithScene()) {
+                requestFocus();
+            }
         }
     }
 
-    private boolean doesCellContainFocus(T c) {
-        Scene scene = c.getScene();
-        final Node focusOwner = scene == null ? null : scene.getFocusOwner();
-
-        if (focusOwner != null) {
-            if (c.equals(focusOwner)) {
-                return true;
-            }
-
-            Parent p = focusOwner.getParent();
-            while (p != null && ! (p instanceof VirtualFlow)) {
-                if (c.equals(p)) {
-                    return true;
-                }
-                p = p.getParent();
-            }
+    private boolean hasFocusOwnerWithScene() {
+        if (getScene() == null) {
+            return false;
         }
 
-        return false;
+        if (getScene().getFocusOwner() == null) {
+            return false;
+        }
+
+        return getScene().getFocusOwner().getScene() != null;
     }
 
     private double getPrefBreadth(double oppDimension) {

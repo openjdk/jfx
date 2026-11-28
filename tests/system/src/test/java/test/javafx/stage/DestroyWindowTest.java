@@ -62,6 +62,10 @@ public class DestroyWindowTest {
     @Test
     public void closingOwnerWindowDoesNotThrowTest() throws Throwable {
         assertTrue(stage.isShowing());
+
+        // Close primary stage, which should hide the dialog, which should bring secondary stage to front
+        Platform.runLater(stage::close);
+
         Util.waitForLatch(doneLatch, 10, "The test didn't finish");
         assertFalse(stage.isShowing());
         assertTrue(secondaryStage.isShowing());
@@ -97,9 +101,6 @@ public class DestroyWindowTest {
             dialog.setOnHiding(_ -> secondaryStage.toFront());
             dialog.setOnHidden(_ -> doneLatch.countDown());
             dialog.show();
-
-            // Close primary stage, which should hide the dialog, which should bring secondary stage to front
-            Platform.runLater(stage::close);
         }
     }
 

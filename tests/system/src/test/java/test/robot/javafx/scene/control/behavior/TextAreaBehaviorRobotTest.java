@@ -390,10 +390,11 @@ public class TextAreaBehaviorRobotTest extends TextInputBehaviorRobotTest<TextAr
             TAB, checkText("a\t", 2),
             ENTER, checkText("a\t\n", 3)
         );
-
-        // not editable
-        control.setText(null);
-        control.setEditable(false);
+        execute(exe(() -> {
+            // not editable
+            control.setText(null);
+            control.setEditable(false);
+        }));
         execute(
             "\t", checkText(null),
             ENTER, checkText(null)

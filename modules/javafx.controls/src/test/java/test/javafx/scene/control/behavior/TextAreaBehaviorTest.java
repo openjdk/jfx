@@ -25,10 +25,14 @@
 package test.javafx.scene.control.behavior;
 
 import static javafx.scene.input.KeyCode.ENTER;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static com.sun.javafx.PlatformUtil.isWindows;
+
 import javafx.scene.control.TextArea;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -117,5 +121,84 @@ public class TextAreaBehaviorTest extends TextInputControlTestBase<TextArea> {
     @Override
     public final void testWordNonMac() {
         super.testWordNonMac();
+    }
+
+    @Test
+    public void testDoubleClickWithSpecialChars() {
+        execute(
+                setText("Bug #123"),
+                clickCharacter(0, 2, true)
+        );
+        if (isWindows()) {
+            assertEquals("Bug ", control.getSelectedText());
+        } else {
+            assertEquals("Bug", control.getSelectedText());
+        }
+
+        execute(
+                clickCharacter(6, 2, true)
+        );
+        assertEquals("#123", control.getSelectedText());
+
+        execute(
+                clickCharacter(4, 2, false)
+        );
+        assertEquals("#123", control.getSelectedText());
+    }
+
+    @Test
+    @Disabled("JDK-8393470")
+    public void testDoubleClickSelectsCharacterClassBlocks() {
+        execute(
+                setText("Bug #123"),
+                clickCharacter(6, 2, true)
+        );
+        assertEquals("123", control.getSelectedText());
+
+        execute(
+                clickCharacter(4, 2, true)
+        );
+        assertEquals("#", control.getSelectedText());
+
+        execute(
+                clickCharacter(3, 2, true)
+        );
+        assertEquals(" ", control.getSelectedText());
+
+        execute(
+                setText("aaa.3x3"),
+                clickCharacter(5, 2, false)
+        );
+        assertEquals("3x3", control.getSelectedText());
+
+        execute(
+                setText("aaa bbb"),
+                clickCharacter(4, 2, false)
+        );
+        assertEquals("bbb", control.getSelectedText());
+
+        execute(
+                setText("aaa bbb"),
+                clickCharacter(4, 2, true)
+        );
+        assertEquals("bbb", control.getSelectedText());
+
+        execute(
+                setText("aaa,,,bbb"),
+                clickCharacter(4, 2, true)
+        );
+        assertEquals(",,,", control.getSelectedText());
+
+        execute(
+                setText("aaa    bbb"),
+                clickCharacter(5, 2, true)
+        );
+        assertEquals("    ", control.getSelectedText());
+
+        execute(
+                setText("aaa\t\t\tbbb"),
+                clickCharacter(4, 2, true)
+        );
+        assertEquals("\t\t\t", control.getSelectedText());
     }
 }

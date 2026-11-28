@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,9 +30,9 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
-import com.sun.javafx.PlatformUtil;
 
 import com.sun.glass.ui.Application;
+import com.sun.glass.ui.GlassPlatform;
 import com.sun.glass.ui.Window;
 import com.sun.javafx.tk.CompletionListener;
 import com.sun.javafx.tk.RenderJob;
@@ -403,7 +403,7 @@ final class PaintCollector implements CompletionListener {
                             needsHint = vs.isSynchronous();
                         }
                     }
-                    if (!PlatformUtil.useEGL() || i == (n - 1)) {
+                    if (!GlassPlatform.useEGL() || i == (n - 1)) {
                         // for platforms without a native window manager, we only want to do the
                         // swap to the screen after the last window has been rendered
                         vs.setDoPresent(true);

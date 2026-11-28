@@ -44,6 +44,7 @@ import com.sun.javafx.PlatformUtil;
 import test.util.Util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class MouseWheelScaleTest {
@@ -95,6 +96,8 @@ public class MouseWheelScaleTest {
     @Test
     public void testWheelRotationIsNotScaled() {
         assumeTrue(PlatformUtil.isLinux() || PlatformUtil.isWindows());
+        assumeFalse(Util.isUbuntu2604()); // JDK-8397452
+
         assertEquals(SCALE, stage.getOutputScaleY(), EPSILON, "Wrong output scale");
 
         Util.runAndWait(() -> {

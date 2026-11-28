@@ -53,6 +53,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import test.util.Util;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 /*
  * Test for verifying character index of Text nodes embedded in TextFlow in RTL orientation.
@@ -425,6 +426,8 @@ public class RTLTextFlowCharacterIndexTest {
 
     @BeforeAll
     public static void initFX() {
+        assumeFalse(Util.isUbuntu2604()); // JDK-8397451
+
         long seed = new Random().nextLong();
         System.out.println("seed=" + seed);
         random = new Random(seed);
@@ -434,6 +437,8 @@ public class RTLTextFlowCharacterIndexTest {
 
     @AfterAll
     public static void exit() {
+        assumeFalse(Util.isUbuntu2604()); // JDK-8397451
+
         Util.shutdown();
     }
 

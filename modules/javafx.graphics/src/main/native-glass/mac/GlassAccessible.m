@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -58,10 +58,24 @@
 
 /* Attributes */
 
+/*
+ * Initializes descendant accessibility peers and determines whether the window
+ * contains context-menu or tooltip content.
+ * Move this method to the appropriate window accessibility peer once implemented.
+ */
+- (BOOL)accessibilityIsPopup
+{
+    GET_MAIN_JENV_NOWARN;
+    if (env == NULL) return NO;
+    jboolean result = (*env)->CallBooleanMethod(env, self->jAccessible, jAccessibilityIsPopup);
+    GLASS_CHECK_EXCEPTION(env);
+    return result;
+}
+
 - (NSArray *)accessibilityAttributeNames
 {
     jlongArray jresult = NULL;
-    GET_MAIN_JENV;
+    GET_MAIN_JENV_NOWARN;
     if (env == NULL) return NULL;
     jresult = (jlongArray)(*env)->CallObjectMethod(env, self->jAccessible, jAccessibilityAttributeNames);
     GLASS_CHECK_EXCEPTION(env);
@@ -71,7 +85,7 @@
 - (id)accessibilityAttributeValue:(NSString *)attribute
 {
     jobject jresult = NULL;
-    GET_MAIN_JENV;
+    GET_MAIN_JENV_NOWARN;
     if (env == NULL) return NULL;
     jresult = (jobject)(*env)->CallLongMethod(env, self->jAccessible, jAccessibilityAttributeValue, (jlong)attribute);
     GLASS_CHECK_EXCEPTION(env);
@@ -81,7 +95,7 @@
 - (BOOL)accessibilityIsAttributeSettable:(NSString *)attribute
 {
     jboolean jresult = FALSE;
-    GET_MAIN_JENV;
+    GET_MAIN_JENV_NOWARN;
     if (env == NULL) return FALSE;
     jresult = (*env)->CallBooleanMethod(env, self->jAccessible, jAccessibilityIsAttributeSettable, (jlong)attribute);
     GLASS_CHECK_EXCEPTION(env);
@@ -90,7 +104,7 @@
 
 - (void)accessibilitySetValue:(id)value forAttribute:(NSString *)attribute
 {
-    GET_MAIN_JENV;
+    GET_MAIN_JENV_NOWARN;
     if (env == NULL) return;
     (*env)->CallVoidMethod(env, self->jAccessible, jAccessibilitySetValue, (jlong)value, (jlong)attribute);
     GLASS_CHECK_EXCEPTION(env);
@@ -99,7 +113,7 @@
 - (NSUInteger)accessibilityIndexOfChild:(id)child
 {
     jlong jresult = 0;
-    GET_MAIN_JENV;
+    GET_MAIN_JENV_NOWARN;
     if (env == NULL) return 0;
     jresult = (*env)->CallLongMethod(env, self->jAccessible, jAccessibilityIndexOfChild, (jlong)child);
     GLASS_CHECK_EXCEPTION(env);
@@ -114,7 +128,7 @@
 - (NSUInteger)accessibilityArrayAttributeCount:(NSString *)attribute
 {
     jint jresult = -1;
-    GET_MAIN_JENV;
+    GET_MAIN_JENV_NOWARN;
     if (env == NULL) return -1;
     jresult = (*env)->CallIntMethod(env, self->jAccessible, jAccessibilityArrayAttributeCount, (jlong)attribute);
     GLASS_CHECK_EXCEPTION(env);
@@ -125,7 +139,7 @@
 - (NSArray *)accessibilityArrayAttributeValues:(NSString *)attribute index:(NSUInteger)index maxCount:(NSUInteger)maxCount
 {
     jlongArray jresult = NULL;
-    GET_MAIN_JENV;
+    GET_MAIN_JENV_NOWARN;
     if (env == NULL) return NULL;
     jresult = (jlongArray)(*env)->CallObjectMethod(env, self->jAccessible, jAccessibilityArrayAttributeValues, (jlong)attribute, (jint)index, (jint)maxCount);
     GLASS_CHECK_EXCEPTION(env);
@@ -138,7 +152,7 @@
 - (NSArray *)accessibilityParameterizedAttributeNames
 {
     jlongArray jresult = NULL;
-    GET_MAIN_JENV;
+    GET_MAIN_JENV_NOWARN;
     if (env == NULL) return NULL;
     jresult = (jlongArray)(*env)->CallObjectMethod(env, self->jAccessible, jAccessibilityParameterizedAttributeNames);
     GLASS_CHECK_EXCEPTION(env);
@@ -148,7 +162,7 @@
 - (id)accessibilityAttributeValue:(NSString *)attribute forParameter:(id)parameter
 {
     jobject jresult = NULL;
-    GET_MAIN_JENV;
+    GET_MAIN_JENV_NOWARN;
     if (env == NULL) return NULL;
     jresult = (jobject)(*env)->CallLongMethod(env, self->jAccessible, jAccessibilityAttributeValueForParameter, (jlong)attribute, (jlong)parameter);
     GLASS_CHECK_EXCEPTION(env);
@@ -160,7 +174,7 @@
 - (NSArray *)accessibilityActionNames
 {
     jlongArray jresult = NULL;
-    GET_MAIN_JENV;
+    GET_MAIN_JENV_NOWARN;
     if (env == NULL) return NULL;
     jresult = (jlongArray)(*env)->CallObjectMethod(env, self->jAccessible, jAccessibilityActionNames);
     GLASS_CHECK_EXCEPTION(env);
@@ -170,7 +184,7 @@
 - (NSString *)accessibilityActionDescription:(NSString *)action
 {
     jobject jresult = NULL;
-    GET_MAIN_JENV;
+    GET_MAIN_JENV_NOWARN;
     if (env == NULL) return NULL;
     jresult = (jobject)(*env)->CallLongMethod(env, self->jAccessible, jAccessibilityActionDescription, (jlong)action);
     GLASS_CHECK_EXCEPTION(env);
@@ -179,7 +193,7 @@
 
 - (void)accessibilityPerformAction:(NSString *)action
 {
-    GET_MAIN_JENV;
+    GET_MAIN_JENV_NOWARN;
     if (env == NULL) return;
     (*env)->CallVoidMethod(env, self->jAccessible, jAccessibilityPerformAction, (jlong)action);
     GLASS_CHECK_EXCEPTION(env);
@@ -190,7 +204,7 @@
 - (BOOL)accessibilityIsIgnored
 {
     BOOL result = FALSE;
-    GET_MAIN_JENV;
+    GET_MAIN_JENV_NOWARN;
     if (env == NULL) return FALSE;
     result = (BOOL)(*env)->CallBooleanMethod(env, self->jAccessible, jAccessibilityIsIgnored);
     GLASS_CHECK_EXCEPTION(env);
@@ -200,7 +214,7 @@
 - (id)accessibilityHitTest:(NSPoint)point
 {
     id result = NULL;
-    GET_MAIN_JENV;
+    GET_MAIN_JENV_NOWARN;
     if (env == NULL) return NULL;
     result = (id)(*env)->CallLongMethod(env, self->jAccessible, jAccessibilityHitTest, point.x, point.y);
     GLASS_CHECK_EXCEPTION(env);
@@ -210,7 +224,7 @@
 - (id)accessibilityFocusedUIElement
 {
     id result = NULL;
-    GET_MAIN_JENV;
+    GET_MAIN_JENV_NOWARN;
     if (env == NULL) return NULL;
     result = (id)(*env)->CallLongMethod(env, self->jAccessible, jAccessibilityFocusedUIElement);
     GLASS_CHECK_EXCEPTION(env);
@@ -449,6 +463,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacAccessible__1initIDs
         jAccessibilityFocusedUIElement = (*env)->GetMethodID(env, jAccessibleClass, "accessibilityFocusedUIElement", "()J");
         if ((*env)->ExceptionCheck(env)) return;
         jAccessibilityIsIgnored = (*env)->GetMethodID(env, jAccessibleClass, "accessibilityIsIgnored", "()Z");
+        if ((*env)->ExceptionCheck(env)) return;
+        jAccessibilityIsPopup = (*env)->GetMethodID(env, jAccessibleClass, "accessibilityIsPopup", "()Z");
         if ((*env)->ExceptionCheck(env)) return;
         jAccessibilityHitTest = (*env)->GetMethodID(env, jAccessibleClass, "accessibilityHitTest", "(FF)J");
         if ((*env)->ExceptionCheck(env)) return;

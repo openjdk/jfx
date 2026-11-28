@@ -29,6 +29,14 @@ namespace message2 {
         addError(DynamicError(DynamicErrorType::FormattingError, UnicodeString("unknown formatter")), status);
     }
 
+    void DynamicErrors::setBadOption(const FunctionName& formatterName, UErrorCode& status) {
+        addError(DynamicError(DynamicErrorType::BadOptionError, formatterName), status);
+    }
+
+    void DynamicErrors::setBadOption(UErrorCode& status) {
+        addError(DynamicError(DynamicErrorType::BadOptionError, UnicodeString("unknown formatter")), status);
+    }
+
     void DynamicErrors::setOperandMismatchError(const FunctionName& formatterName, UErrorCode& status) {
         addError(DynamicError(DynamicErrorType::OperandMismatchError, formatterName), status);
     }
@@ -115,7 +123,7 @@ namespace message2 {
         }
 
         // Just handle the first error
-        // TODO: Eventually want to return all errors to caller
+        // TODO(ICU-23427): Eventually want to return all errors to caller
         if (count() == 0) {
             return;
         }
@@ -135,6 +143,10 @@ namespace message2 {
             }
             case DynamicErrorType::FormattingError: {
                 status = U_MF_FORMATTING_ERROR;
+                break;
+            }
+            case DynamicErrorType::BadOptionError: {
+                status = U_MF_BAD_OPTION;
                 break;
             }
             case DynamicErrorType::OperandMismatchError: {
@@ -225,6 +237,11 @@ namespace message2 {
         }
         case DynamicErrorType::UnknownFunction: {
             unknownFunctionError = true;
+            resolutionAndFormattingErrors->adoptElement(errorP, status);
+            break;
+        }
+        case DynamicErrorType::BadOptionError: {
+            badOptionError = true;
             resolutionAndFormattingErrors->adoptElement(errorP, status);
             break;
         }

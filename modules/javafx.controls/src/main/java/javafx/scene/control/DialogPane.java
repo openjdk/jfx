@@ -35,7 +35,6 @@ import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.scene.control.skin.Utils;
 import com.sun.javafx.scene.control.skin.resources.ControlResources;
 import javafx.beans.DefaultProperty;
-import javafx.beans.InvalidationListener;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -673,8 +672,8 @@ public class DialogPane extends Pane {
                 newExpandableContent.setVisible(isExpanded());
                 newExpandableContent.setManaged(isExpanded());
 
-                if (!newExpandableContent.getStyleClass().contains("expandable-content")) { //$NON-NLS-1$
-                    newExpandableContent.getStyleClass().add("expandable-content"); //$NON-NLS-1$
+                if (!newExpandableContent.getStyleClass().contains("expandable-content")) {
+                    newExpandableContent.getStyleClass().add("expandable-content");
                 }
 
                 getChildren().add(newExpandableContent);
@@ -865,18 +864,17 @@ public class DialogPane extends Pane {
      */
     protected Node createDetailsButton() {
         final Hyperlink detailsButton = new Hyperlink();
-        final String moreText = ControlResources.getString("Dialog.detail.button.more"); //$NON-NLS-1$
-        final String lessText = ControlResources.getString("Dialog.detail.button.less"); //$NON-NLS-1$
+        final String moreText = ControlResources.getString("Dialog.detail.button.more");
+        final String lessText = ControlResources.getString("Dialog.detail.button.less");
+        final ObservableList<String> styleClasses = detailsButton.getStyleClass();
 
-        InvalidationListener expandedListener = o -> {
-            final boolean isExpanded = isExpanded();
-            detailsButton.setText(isExpanded ? lessText : moreText);
-            detailsButton.getStyleClass().setAll("details-button", (isExpanded ? "less" : "more")); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-        };
+        styleClasses.add("details-button");
 
-        // we call the listener immediately to ensure the state is correct at start up
-        expandedListener.invalidated(null);
-        expandedProperty().addListener(expandedListener);
+        expandedProperty().subscribe(expanded -> {
+            styleClasses.remove(expanded ? "more" : "less");
+            styleClasses.add(expanded ? "less" : "more");
+            detailsButton.setText(expanded ? lessText : moreText);
+        });
 
         detailsButton.setOnAction(ae -> setExpanded(!isExpanded()));
         return detailsButton;
@@ -1175,7 +1173,7 @@ public class DialogPane extends Pane {
             headerTextPanel.setMaxWidth(Double.MAX_VALUE);
 
             if (headerText != null && ! headerText.isEmpty()) {
-                headerTextPanel.getStyleClass().add("header-panel"); //$NON-NLS-1$
+                headerTextPanel.getStyleClass().add("header-panel");
             }
 
             // on left of header is the text
@@ -1194,7 +1192,7 @@ public class DialogPane extends Pane {
             final Node graphic = getGraphic();
             if (graphic != null) {
                 graphicContainer.getChildren().add(graphic);
-                graphicContainer.getStyleClass().add("graphic-container"); //$NON-NLS-1$
+                graphicContainer.getStyleClass().add("graphic-container");
             }
             headerTextPanel.add(graphicContainer, 1, 0);
 

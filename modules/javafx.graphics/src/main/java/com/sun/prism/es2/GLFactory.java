@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package com.sun.prism.es2;
 
+import com.sun.glass.ui.GlassPlatform;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.javafx.PlatformUtil;
 import java.util.HashMap;
@@ -61,10 +62,11 @@ abstract class GLFactory {
 
         final String factoryClassName;
         if (PlatformUtil.isUnix()) {
-            if ("monocle".equals(PlatformUtil.getEmbeddedType()))
+            if (GlassPlatform.isMonocle()) {
                 factoryClassName = "com.sun.prism.es2.MonocleGLFactory";
-            else
+            } else {
                 factoryClassName = "com.sun.prism.es2.X11GLFactory";
+            }
         } else if (PlatformUtil.isWindows()) {
             factoryClassName = "com.sun.prism.es2.WinGLFactory";
         } else if (PlatformUtil.isMac()) {

@@ -134,6 +134,7 @@ plugin_init (GstPlugin * plugin)
   GST_TYPE_FIND_REGISTER (h265_video, plugin);
   GST_TYPE_FIND_REGISTER (h266_video, plugin);
   GST_TYPE_FIND_REGISTER (nuv, plugin);
+  GST_TYPE_FIND_REGISTER (nut, plugin);
   /* ISO formats */
   GST_TYPE_FIND_REGISTER (m4a, plugin);
   GST_TYPE_FIND_REGISTER (q3gp, plugin);
@@ -221,6 +222,18 @@ plugin_init (GstPlugin * plugin)
   GST_TYPE_FIND_REGISTER (gxf, plugin);
   GST_TYPE_FIND_REGISTER (iff, plugin);
   GST_TYPE_FIND_REGISTER (av1, plugin);
+  GST_TYPE_FIND_REGISTER (idcin, plugin);
+  GST_TYPE_FIND_REGISTER (ipmovie, plugin);
+  GST_TYPE_FIND_REGISTER (mm, plugin);
+  GST_TYPE_FIND_REGISTER (mmf, plugin);
+  GST_TYPE_FIND_REGISTER (nsv, plugin);
+  GST_TYPE_FIND_REGISTER (pxstr, plugin);
+  GST_TYPE_FIND_REGISTER (smk, plugin);
+  GST_TYPE_FIND_REGISTER (sol, plugin);
+  GST_TYPE_FIND_REGISTER (vmd, plugin);
+  GST_TYPE_FIND_REGISTER (wc3movie, plugin);
+  GST_TYPE_FIND_REGISTER (wsaud, plugin);
+  GST_TYPE_FIND_REGISTER (wsvqa, plugin);
 #endif // GSTREAMER_LITE
 
   return TRUE;

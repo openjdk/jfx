@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package com.sun.webkit;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.List;
@@ -115,10 +116,50 @@ public abstract class Utilities {
         }
 
         try {
-            return MethodHelper.invoke(method, instance, args);
+            return ReflectionHelper.invoke(method, instance, args);
         } catch (InvocationTargetException ex) {
             Throwable cause = ex.getCause();
             throw cause != null ? cause : ex;
         }
     }
+
+    private static void checkFieldAccess(Field field) {
+        final Class<?> clazz = field.getDeclaringClass();
+
+        // reject java.lang.Class
+        if (clazz.equals(java.lang.Class.class)) {
+            throw new UnsupportedOperationException("field access not supported");
+        }
+        // check list of rejected class names
+        final String className = clazz.getName();
+        if (CLASSES_REJECT_LIST.contains(className)) {
+            throw new UnsupportedOperationException("field access not supported");
+        }
+        // check list of rejected packages
+        PACKAGES_REJECT_LIST.forEach(packageName -> {
+            if (className.startsWith(packageName + ".")) {
+                throw new UnsupportedOperationException("field access not supported");
+            }
+        });
+    }
+
+    private static Object fwkGetFieldWithContext(final Field field,
+                                                 final Object instance,
+                                                 Object dummyAcc) // UNUSED
+            throws Throwable {
+
+        checkFieldAccess(field);
+        return ReflectionHelper.get(field, instance);
+    }
+
+    private static void fwkSetFieldWithContext(final Field field,
+                                               final Object instance,
+                                               final Object value,
+                                               Object dummyAcc) // UNUSED
+            throws Throwable {
+
+        checkFieldAccess(field);
+        ReflectionHelper.set(field, instance, value);
+    }
+
 }

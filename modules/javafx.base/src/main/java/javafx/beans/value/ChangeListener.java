@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,7 +32,8 @@ package javafx.beans.value;
  * {@link ObservableValue#removeListener(ChangeListener)}
  * <p>
  * For an in-depth explanation of change events and how they differ from
- * invalidation events, see the documentation of {@code ObservableValue}.
+ * invalidation events, and for the guarantees provided by the implementations in
+ * the JavaFX library, see the documentation of {@link ObservableValue}.
  * <p>
  * The same instance of {@code ChangeListener} can be registered to listen to
  * multiple {@code ObservableValues}.

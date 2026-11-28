@@ -67,7 +67,10 @@ import com.sun.javafx.scene.text.TextFlowHelper;
 import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.scene.text.TextLine;
 import com.sun.javafx.util.ImageUtils;
+import com.sun.jfx.incubator.scene.control.richtext.VFlow;
+import jfx.incubator.scene.control.richtext.CodeArea;
 import jfx.incubator.scene.control.richtext.RichTextArea;
+import jfx.incubator.scene.control.richtext.StyleResolver;
 import jfx.incubator.scene.control.richtext.TextPos;
 import jfx.incubator.scene.control.richtext.model.StyleAttribute;
 import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
@@ -110,6 +113,27 @@ public final class RichUtils {
         }
 
         return text.substring(start, end);
+    }
+
+    public static String toCssFont(String name) {
+        if (name == null) {
+            return null;
+        }
+        int len = name.length();
+        for (int i = 0; i < len; i++) {
+            char c = name.charAt(i);
+            switch (c) {
+            case '\'':
+            case '"':
+            case '\\':
+                return null;
+            default:
+                if (Character.isISOControl(c)) {
+                    return null;
+                }
+            }
+        }
+        return name;
     }
 
     /** Converts Color to "#rrggbb" or "rgba(r,g,b,a)" string */
@@ -431,6 +455,17 @@ public final class RichUtils {
             sb.append((char)c);
         }
         return sb.toString();
+    }
+
+    /**
+     * Writes an Image to a byte array in JPG format.
+     *
+     * @param im source image
+     * @return byte array containing JPG image
+     * @throws IOException if an I/O error occurs
+     */
+    public static byte[] writeJPG(Image im) throws IOException {
+        return ImageUtils.writeImage(im, "JPG");
     }
 
     /**
@@ -758,6 +793,13 @@ public final class RichUtils {
         return false;
     }
 
+    public static boolean canMerge(StyleAttributeMap a, StyleAttributeMap b) {
+        if (a.equals(b)) {
+            return !containsInlineNodes(a);
+        }
+        return false;
+    }
+
     public static StyleAttributeMap filterUnsupportedAttributes(StyleAttributeMap map, Set<StyleAttribute<?>> supported) {
         if (supported != null) {
             Set<StyleAttribute<?>> as = map.getAttributes();
@@ -821,5 +863,14 @@ public final class RichUtils {
         } else {
             System.out.println(x);
         }
+    }
+
+    public static Font codeAreaFont(StyleResolver r) {
+        if (r instanceof VFlow f) {
+            if (f.getRichTextArea() instanceof CodeArea c) {
+                return c.getFont();
+            }
+        }
+        return null;
     }
 }

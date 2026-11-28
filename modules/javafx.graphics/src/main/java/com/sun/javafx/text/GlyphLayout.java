@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -63,8 +63,6 @@ import static com.sun.javafx.scene.text.TextLayout.FLAGS_HAS_COMPLEX;
 import static com.sun.javafx.scene.text.TextLayout.FLAGS_HAS_EMBEDDED;
 import static com.sun.javafx.scene.text.TextLayout.FLAGS_HAS_TABS;
 import static com.sun.javafx.scene.text.TextLayout.FLAGS_RTL_BASE;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.text.Bidi;
 import com.sun.javafx.font.FontResource;
 import com.sun.javafx.font.FontStrike;
@@ -95,23 +93,6 @@ public abstract class GlyphLayout {
     public static final int LAYOUT_NO_LIMIT_CONTEXT = 1 << 3;
 
     public static final int HINTING = 1 << 4;
-
-    /**
-     * Android versions that still run a dalvik based on JDK 6 (API level 18 and
-     * before) don't have the method Character.isIdeographic.
-     * On devices with a JVM that does not have Character.isIdeographic, there will
-     * be non-optimal line breaking for CJKV.
-     * The reflection-based approach should be removed in a later version,
-     * when the Android base version moves to API level 19.
-     */
-    private static Method isIdeographicMethod = null;
-    static {
-        try {
-            isIdeographicMethod = Character.class.getMethod("isIdeographic", int.class);
-        } catch (NoSuchMethodException | SecurityException e) {
-            isIdeographicMethod = null;
-        }
-    }
 
     protected TextRun addTextRun(PrismTextLayout layout, char[] chars,
                                  int start, int length,
@@ -200,14 +181,14 @@ public abstract class GlyphLayout {
         while (i < length) {
             char ch = chars[i];
             int codePoint = ch;
+            int len = 1;
             boolean delimiter = ch == '\t' || ch == '\n' || ch == '\r';
-            int surrogate = 0;
 
             if (Character.isHighSurrogate(ch)) {
                 /* Only merge surrogate when the pair is in the same span. */
                 if (i + 1 < spanEnd && Character.isLowSurrogate(chars[i + 1])) {
-                    codePoint = Character.toCodePoint(ch, chars[++i]);
-                    surrogate = 1;
+                    len = 2;
+                    codePoint = Character.toCodePoint(ch, chars[i + 1]);
                 }
             }
             /*
@@ -228,14 +209,13 @@ public abstract class GlyphLayout {
 
             /* special handling for delimiters and Emoji */
             if (delimiter || isEmoji) {
-                if ((i - surrogate) != start) {
-                    run = addTextRun(layout, chars, start, i - surrogate - start,
-                                     font, span, bidiLevel, complex);
+                if (i != start) {
+                    run = addTextRun(layout, chars, start, i - start, font, span, bidiLevel, complex);
                     if (complex) {
                         flags |= FLAGS_HAS_COMPLEX;
                         complex = false;
                     }
-                    start = i - surrogate;
+                    start = i;
                 }
             }
 
@@ -247,7 +227,7 @@ public abstract class GlyphLayout {
                 boolean oldComplex = complex;
                 if (checkComplex) {
 
-                    if (isIdeographic(codePoint)) {
+                    if (Character.isIdeographic(codePoint)) {
                         flags |= FLAGS_HAS_CJK;
                     }
 
@@ -266,16 +246,15 @@ public abstract class GlyphLayout {
                 if (spanChanged || levelChanged || scriptChanged) {
                     if (start != i) {
                         /* Create text run */
-                        run = addTextRun(layout, chars, start, i - start,
-                                         font, span, bidiLevel, oldComplex);
-                       if (complex) {
-                           flags |= FLAGS_HAS_COMPLEX;
-                           complex = false;
-                       }
-                       start = i;
+                        run = addTextRun(layout, chars, start, i - start, font, span, bidiLevel, oldComplex);
+                        if (complex) {
+                            flags |= FLAGS_HAS_COMPLEX;
+                            complex = false;
+                        }
+                        start = i;
                     }
                 }
-                i++;
+                i += len;
             }
             if (spanChanged) {
                 /* Only true for rich text (spans != null) */
@@ -324,7 +303,7 @@ public abstract class GlyphLayout {
                 start = i;
             }
             if (isEmoji) {
-                i++;
+                i += len;
                 /* Create Emoji run */
                 run = new TextRun(start, i - start, bidiLevel, false,
                                   ScriptMapper.COMMON, span, 0, false);
@@ -385,15 +364,4 @@ public abstract class GlyphLayout {
     }
 
     public abstract void dispose();
-
-    private static boolean isIdeographic(int codePoint) {
-        if (isIdeographicMethod != null) {
-            try {
-                return (boolean) isIdeographicMethod.invoke(null, codePoint);
-            } catch (IllegalAccessException | InvocationTargetException ex) {
-                return false;
-            }
-        }
-        return false;
-    }
 }

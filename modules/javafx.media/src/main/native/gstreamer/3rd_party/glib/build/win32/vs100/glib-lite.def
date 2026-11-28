@@ -1,3 +1,4 @@
+; Next ordinal: 553
 EXPORTS
 g_array_append_vals	@1	NONAME
 g_array_free	@2	NONAME
@@ -305,6 +306,7 @@ g_ptr_array_remove_index	@303	NONAME
 g_ptr_array_set_size	@304	NONAME
 g_ptr_array_sized_new	@305	NONAME
 g_ptr_array_sort	@306	NONAME
+g_ptr_array_unref	@552	NONAME
 g_qsort_with_data	@307	NONAME
 g_quark_from_static_string	@308	NONAME
 g_quark_from_string	@309	NONAME
